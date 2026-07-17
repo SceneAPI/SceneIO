@@ -1,0 +1,38 @@
+[project]
+name = "sceneapi-io"
+version = "0.1.0"
+description = "The I/O contract for SceneAPI — wire codecs, storage/source protocols, and on-disk data-format schemas."
+readme = "README.md"
+license = { text = "Apache-2.0" }
+classifiers = [
+    "License :: OSI Approved :: Apache Software License",
+]
+requires-python = ">=3.12,<3.13"
+# Leaf package: stdlib only. No numpy / boto3 / core imports —
+# points_binary, colmap_db, and mapping_input are pure standard library.
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3",
+    "ruff>=0.8",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/sceneapi_io"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "PT", "RUF"]
+ignore = ["E501"]
