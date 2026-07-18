@@ -123,6 +123,10 @@ def assert_mapper_conformance(
     - ``emits_dense=True``: the result must carry a dense payload.
     - ``metric_capable=False``: the result must not claim metric scale.
 
+    Result alignment is enforced positionally: one pose per input view,
+    where ``None`` marks an unregistered view (allowed, as long as at
+    least one view registers — validated by ``MappingResult`` itself).
+
     Returns the (validated) :class:`MappingResult` for extra checks.
     """
     import pytest
@@ -151,6 +155,12 @@ def assert_mapper_conformance(
     )
     assert len(result.poses) == len(views), (
         f"poses must align to views: {len(views)} views, {len(result.poses)} poses"
+    )
+    # Unregistered views (poses[i] is None) are allowed — alignment is
+    # positional, and MappingResult itself guarantees >= 1 registered view.
+    mask = result.registered_mask
+    assert mask.shape == (len(views),), (
+        f"registered_mask must align to views: {len(views)} views, shape {mask.shape}"
     )
     if traits.emits_dense:
         assert result.dense is not None, (

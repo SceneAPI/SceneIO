@@ -63,11 +63,23 @@ CLASSICAL_TRAITS = MapperTraits(
 
 
 class FakeMapper:
-    """Reference in-memory Mapper honoring its declared traits."""
+    """Reference in-memory Mapper honoring its declared traits.
 
-    def __init__(self, traits: MapperTraits = FEED_FORWARD_TRAITS, *, honest: bool = True) -> None:
+    ``unregister_last=True`` leaves the final view unregistered
+    (``poses[-1] is None``, with the aligned ``dense`` entry None too) —
+    the amended-contract fixture for partially-registered results.
+    """
+
+    def __init__(
+        self,
+        traits: MapperTraits = FEED_FORWARD_TRAITS,
+        *,
+        honest: bool = True,
+        unregister_last: bool = False,
+    ) -> None:
         self._traits = traits
         self._honest = honest
+        self._unregister_last = unregister_last
 
     def traits(self) -> MapperTraits:
         return self._traits
@@ -81,11 +93,16 @@ class FakeMapper:
     ) -> MappingResult:
         if self._honest and self._traits.requires_correspondences and correspondences is None:
             raise ContractViolation("FakeMapper requires a correspondence graph")
-        poses = tuple(SE3.identity() for _ in views)
+        poses: tuple[SE3 | None, ...] = tuple(SE3.identity() for _ in views)
+        if self._unregister_last and len(views) > 1:
+            poses = (*poses[:-1], None)
         dense = None
         if self._traits.emits_dense:
             dense = []
-            for view in views:
+            for index, view in enumerate(views):
+                if poses[index] is None:
+                    dense.append(None)
+                    continue
                 image = view.image
                 h, w = (image.shape[0], image.shape[1]) if isinstance(image, np.ndarray) else (8, 8)
                 dense.append(
@@ -195,6 +212,23 @@ class TestMapperConformanceKit:
         assert len(result.poses) == 4
         assert result.dense is not None
         assert result.dense[0][0].shape == (6, 5)
+
+    def test_mapper_with_unregistered_view_passes(self) -> None:
+        # Amended contract: a mapper may leave views unregistered as long
+        # as alignment holds and >= 1 view registers; the kit must accept it.
+        result = assert_mapper_conformance(FakeMapper(FEED_FORWARD_TRAITS, unregister_last=True))
+        assert result.poses[-1] is None
+        assert result.dense is not None
+        assert result.dense[-1] is None
+        np.testing.assert_array_equal(
+            result.registered_mask,
+            np.array([True] * (len(result.poses) - 1) + [False]),
+        )
+
+    def test_classical_mapper_with_unregistered_view_passes(self) -> None:
+        result = assert_mapper_conformance(FakeMapper(CLASSICAL_TRAITS, unregister_last=True))
+        assert result.poses[-1] is None
+        assert bool(result.registered_mask.any())
 
     def test_fake_mapper_satisfies_runtime_protocol(self) -> None:
         assert isinstance(FakeMapper(), Mapper)

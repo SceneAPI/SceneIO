@@ -15,6 +15,10 @@ Honesty rules a conforming implementation must follow (exercised by
 - ``emits_dense=True`` mappers return a non-None ``dense`` payload.
 - A result may only claim ``frame.scale == "metric"`` when the mapper's
   traits say ``metric_capable=True``.
+- Results stay index-aligned to the input views even when a view fails
+  to register: ``poses[i] is None`` means view ``i`` is unregistered
+  (same per-view ``None`` for ``calibrations`` / ``dense`` entries).
+  At least one view must be registered.
 
 This namespace imports only :mod:`sceneapi_io.data` — never
 :mod:`sceneapi_io.matching` (guard-tested), so either can graduate to
@@ -26,6 +30,8 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Protocol, runtime_checkable
+
+import numpy as np
 
 from sceneapi_io.data import (
     Calibration,
@@ -119,26 +125,34 @@ class MappingOptions:
 class MappingResult:
     """A mapping run's output, index-aligned to the input views.
 
-    ``poses[i]`` is view ``i``'s pose (one shared convention);
-    ``calibrations`` and ``dense`` are likewise aligned when present.
+    ``poses[i]`` is view ``i``'s pose (one shared convention) or
+    ``None`` when view ``i`` was not registered; ``calibrations`` and
+    ``dense`` are likewise aligned when present, with per-view ``None``
+    entries allowed. At least one view must be registered;
+    :attr:`registered_mask` is the derived per-view bool array.
     ``geometry`` is the sparse tracked cloud (classical mappers);
     ``dense`` the per-view (Pointmap, ConfidenceMap) payload
     (feed-forward mappers). ``frame`` declares world frame + scale +
     scale provenance; ``stats`` is free-form run metadata.
     """
 
-    poses: tuple[SE3, ...]
+    poses: tuple[SE3 | None, ...]
     frame: FrameMeta
-    calibrations: tuple[Calibration, ...] | None = None
+    calibrations: tuple[Calibration | None, ...] | None = None
     geometry: TrackedPointCloud | None = None
-    dense: tuple[tuple[Pointmap, ConfidenceMap], ...] | None = None
+    dense: tuple[tuple[Pointmap, ConfidenceMap] | None, ...] | None = None
     stats: Mapping[str, object] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
-        poses = _typed_tuple("MappingResult.poses", self.poses, SE3)
+        poses = _typed_optional_tuple("MappingResult.poses", self.poses, SE3)
         if not poses:
             raise ContractViolation("MappingResult.poses: expected at least one pose")
-        conventions = {pose.convention for pose in poses}
+        registered = [pose for pose in poses if pose is not None]
+        if not registered:
+            raise ContractViolation(
+                "MappingResult.poses: expected at least one registered view (every pose is None)"
+            )
+        conventions = {pose.convention for pose in registered}
         if len(conventions) > 1:
             raise ContractViolation(
                 f"MappingResult.poses: mixed pose conventions {sorted(conventions)}"
@@ -146,7 +160,7 @@ class MappingResult:
         object.__setattr__(self, "poses", poses)
         ensure_instance("MappingResult.frame", self.frame, FrameMeta, "FrameMeta")
         if self.calibrations is not None:
-            calibrations = _typed_tuple(
+            calibrations = _typed_optional_tuple(
                 "MappingResult.calibrations", self.calibrations, Calibration
             )
             if len(calibrations) != len(poses):
@@ -171,10 +185,17 @@ class MappingResult:
             )
         object.__setattr__(self, "stats", dict(self.stats))
 
+    @property
+    def registered_mask(self) -> np.ndarray:
+        """Per-view bool array: ``True`` where the view is registered."""
+        return np.fromiter(
+            (pose is not None for pose in self.poses), dtype=bool, count=len(self.poses)
+        )
+
     @staticmethod
     def _validated_dense(
         dense: object, num_views: int
-    ) -> tuple[tuple[Pointmap, ConfidenceMap], ...]:
+    ) -> tuple[tuple[Pointmap, ConfidenceMap] | None, ...]:
         if isinstance(dense, str | bytes) or not isinstance(dense, Sequence):
             raise ContractViolation(
                 f"MappingResult.dense: expected a sequence of "
@@ -185,8 +206,11 @@ class MappingResult:
                 f"MappingResult.dense: expected one (Pointmap, ConfidenceMap) "
                 f"per view ({num_views}), got {len(dense)}"
             )
-        out: list[tuple[Pointmap, ConfidenceMap]] = []
+        out: list[tuple[Pointmap, ConfidenceMap] | None] = []
         for index, item in enumerate(dense):
+            if item is None:
+                out.append(None)
+                continue
             if not isinstance(item, tuple) or len(item) != 2:
                 raise ContractViolation(
                     f"MappingResult.dense[{index}]: expected a "
@@ -212,15 +236,16 @@ class MappingResult:
         return len(self.poses)
 
 
-def _typed_tuple(name: str, value: object, expected: type) -> tuple:
+def _typed_optional_tuple(name: str, value: object, expected: type) -> tuple:
+    """A tuple whose entries are ``expected`` or ``None`` (= unregistered)."""
     if isinstance(value, str | bytes) or not isinstance(value, Sequence):
         raise ContractViolation(
-            f"{name}: expected a sequence of {expected.__name__}, got {type(value).__name__}"
+            f"{name}: expected a sequence of {expected.__name__} | None, got {type(value).__name__}"
         )
     for index, item in enumerate(value):
-        if not isinstance(item, expected):
+        if item is not None and not isinstance(item, expected):
             raise ContractViolation(
-                f"{name}[{index}]: expected {expected.__name__}, got {type(item).__name__}"
+                f"{name}[{index}]: expected {expected.__name__} or None, got {type(item).__name__}"
             )
     return tuple(value)
 

@@ -125,6 +125,53 @@ class TestMappingResult:
         with pytest.raises(ContractViolation, match="mixed pose conventions"):
             MappingResult(poses=poses, frame=FrameMeta())
 
+    def test_unregistered_views_allowed(self) -> None:
+        result = MappingResult(poses=(SE3.identity(), None, SE3.identity()), frame=FrameMeta())
+        assert len(result) == 3
+        mask = result.registered_mask
+        assert mask.dtype == np.bool_
+        np.testing.assert_array_equal(mask, np.array([True, False, True]))
+
+    def test_registered_mask_all_registered(self) -> None:
+        result = MappingResult(poses=self._poses(2), frame=FrameMeta())
+        np.testing.assert_array_equal(result.registered_mask, np.array([True, True]))
+
+    def test_all_unregistered_raises(self) -> None:
+        with pytest.raises(ContractViolation, match="at least one registered view"):
+            MappingResult(poses=(None, None), frame=FrameMeta())
+
+    def test_mixed_conventions_check_skips_unregistered(self) -> None:
+        poses = (SE3.identity(convention="opencv_world2cam"), None)
+        result = MappingResult(poses=poses, frame=FrameMeta())
+        assert result.poses[1] is None
+
+    def test_calibration_entries_may_be_none(self) -> None:
+        calibration = Calibration.from_intrinsics(
+            CameraIntrinsics(
+                model=CameraModel.SIMPLE_PINHOLE,
+                width=4,
+                height=4,
+                params=np.array([4.0, 2.0, 2.0]),
+            )
+        )
+        result = MappingResult(
+            poses=(SE3.identity(), None),
+            frame=FrameMeta(),
+            calibrations=(calibration, None),
+        )
+        assert result.calibrations is not None
+        assert result.calibrations[1] is None
+
+    def test_dense_entries_may_be_none(self) -> None:
+        result = MappingResult(
+            poses=(SE3.identity(), None),
+            frame=FrameMeta(),
+            dense=(dense_pair(), None),
+        )
+        assert result.dense is not None
+        assert result.dense[0] is not None
+        assert result.dense[1] is None
+
     def test_wrong_frame_type_raises(self) -> None:
         with pytest.raises(ContractViolation, match=r"MappingResult\.frame"):
             MappingResult(poses=self._poses(1), frame="world")  # type: ignore[arg-type]
