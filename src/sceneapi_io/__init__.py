@@ -89,6 +89,9 @@ if TYPE_CHECKING:
     from sceneapi_io import (
         data,
         formats,
+        mapping,
+        matching,
+        testing,
     )
 
 __version__ = "0.2.0"
@@ -96,7 +99,7 @@ __version__ = "0.2.0"
 # The contract namespaces are import-isolated: they are loaded lazily on
 # first attribute access so that `import sceneapi_io` alone stays cheap
 # and no namespace ever depends on a sibling being imported.
-_NAMESPACES = frozenset({"data", "formats"})
+_NAMESPACES = frozenset({"data", "formats", "mapping", "matching", "testing"})
 
 
 def __getattr__(name: str) -> object:
@@ -148,10 +151,13 @@ __all__ = [
     "latest_checkpoint",
     "list_checkpoints",
     "make_database_version_number",
+    "mapping",
     "matches_are_type_compatible",
+    "matching",
     "pair_id_to_image_pair",
     "read_header",
     "read_record",
+    "testing",
     "validate_sha",
     "write_checkpoint",
     "write_header",
