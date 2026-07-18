@@ -1,23 +1,38 @@
-"""sceneapi-io — the I/O contract package for SceneAPI.
+"""sceneapi-io — the contract plane for SceneAPI.
 
-This is a *contract*, not an implementation: it owns the wire codecs
-(the ``application/x-sfm-points-v1`` binary points format), the
-storage / image-source Protocols (`BlobStore`, `ImageSourceImpl`), the
-on-disk data-format schemas (the extended COLMAP scene-database
-contract, the ``PCMAPIN`` checkpoint helpers), and the shared error
-base (`SceneIoError`).
+This is a *contract*, not an implementation. It owns both the **data
+contracts** and the **procedure contracts** the SceneAPI family agrees
+on, organized as import-isolated namespaces:
 
-Concrete backends (filesystem / S3 / in-memory blob stores, the
-FastAPI service, the engine adapters) live in the sceneapi core and in
-third-party backend packages; they depend on this package for the
-interfaces and codecs they must agree on. The generated SDKs decode the
-same formats defined here.
+- :mod:`sceneapi_io.data` — numpy-native datatypes (calibration,
+  SE3/Sim3, priors, depth/pointmaps/confidence/masks, features,
+  correspondences, tracked point clouds, view inputs, frame metadata).
+- :mod:`sceneapi_io.formats` — the disk/wire format-id registry.
+- :mod:`sceneapi_io.mapping` — the neutral `Mapper` contract + traits.
+- :mod:`sceneapi_io.matching` — `FeatureExtractor` / `PairMatcher` /
+  `GeometricVerifier` + traits.
+- :mod:`sceneapi_io.testing` — conformance kits for implementations.
 
-This package is a leaf: it imports nothing from ``sceneapi`` / ``app``
-and depends only on the Python standard library.
+Plus the pre-0.2 surface, unchanged and re-exported flat off this
+module: the ``application/x-sfm-points-v1`` wire codec
+(``points_binary``), the storage / image-source Protocols
+(`BlobStore`, `ImageSourceImpl`), the extended COLMAP scene-database
+schema (``colmap_db``), the ``PCMAPIN`` checkpoint helpers
+(``mapping_input``), and the shared error base (`SceneIoError`, with
+`ContractViolation` for contract breaches).
+
+Concrete backends (blob stores, the FastAPI service, engine adapters,
+the SceneMap / SceneMatch implementation bundles) live elsewhere; they
+depend on this package for the contracts they must agree on. This
+package is a leaf: it imports **nothing from the SceneAPI family**
+(``sceneapi`` / ``sfm_hub`` / ``app``; guard-tested). numpy is its one
+hard dependency — the contracts are numpy-native.
 """
 
 from __future__ import annotations
+
+import importlib
+from typing import TYPE_CHECKING
 
 from sceneapi_io.blobstore import BlobStore, validate_sha
 from sceneapi_io.colmap_db import (
@@ -45,7 +60,7 @@ from sceneapi_io.colmap_db import (
     matches_are_type_compatible,
     pair_id_to_image_pair,
 )
-from sceneapi_io.errors import SceneIoError
+from sceneapi_io.errors import ContractViolation, SceneIoError
 from sceneapi_io.imagesource import ImageSourceImpl, MaterializedImage
 from sceneapi_io.mapping_input import (
     CheckpointRef,
@@ -70,7 +85,25 @@ from sceneapi_io.points_binary import (
     write_record,
 )
 
-__version__ = "0.1.0"
+if TYPE_CHECKING:
+    from sceneapi_io import (
+        data,
+        formats,
+    )
+
+__version__ = "0.2.0"
+
+# The contract namespaces are import-isolated: they are loaded lazily on
+# first attribute access so that `import sceneapi_io` alone stays cheap
+# and no namespace ever depends on a sibling being imported.
+_NAMESPACES = frozenset({"data", "formats"})
+
+
+def __getattr__(name: str) -> object:
+    if name in _NAMESPACES:
+        return importlib.import_module(f"sceneapi_io.{name}")
+    raise AttributeError(f"module 'sceneapi_io' has no attribute {name!r}")
+
 
 __all__ = [
     "COLMAP_DB_TABLES",
@@ -94,6 +127,7 @@ __all__ = [
     "BlobStore",
     "CheckpointRef",
     "ColumnDef",
+    "ContractViolation",
     "ImageSourceImpl",
     "MaterializedImage",
     "Point3DRecord",
@@ -102,8 +136,10 @@ __all__ = [
     "__version__",
     "checkpoint_root",
     "contract_dict",
+    "data",
     "decode_records",
     "encode_all",
+    "formats",
     "gc_checkpoints",
     "image_pair_to_pair_id",
     "is_colmap_native_extractor_type",

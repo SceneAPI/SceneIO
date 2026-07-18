@@ -1,16 +1,17 @@
 [project]
 name = "sceneapi-io"
-version = "0.1.0"
-description = "The I/O contract for SceneAPI — wire codecs, storage/source protocols, and on-disk data-format schemas."
+version = "0.2.0"
+description = "The contract plane for SceneAPI — numpy-native data contracts, mapping/matching procedure contracts, wire codecs, and format registries."
 readme = "README.md"
 license = { text = "Apache-2.0" }
 classifiers = [
     "License :: OSI Approved :: Apache Software License",
 ]
 requires-python = ">=3.12,<3.13"
-# Leaf package: stdlib only. No numpy / boto3 / core imports —
-# points_binary, colmap_db, and mapping_input are pure standard library.
-dependencies = []
+# Leaf package: imports nothing from the SceneAPI family (guard-tested).
+# numpy is a hard dependency — the data/procedure contracts are
+# numpy-native (np.ndarray in the contract surface).
+dependencies = ["numpy>=1.26"]
 
 [project.optional-dependencies]
 dev = [

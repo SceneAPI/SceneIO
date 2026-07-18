@@ -1,44 +1,115 @@
 # sceneapi-io
 
-The **I/O contract** for [SceneAPI](https://github.com/SceneAPI). This is a
-contract package — interfaces, wire codecs, and on-disk data-format schemas —
-not an implementation. It is the single place where the SceneAPI core, the
-backend packages, and the generated SDKs agree on how bytes are read, written,
-and validated.
+The **contract plane** for [SceneAPI](https://github.com/SceneAPI): the data
+contracts *and* the procedure contracts the whole family agrees on. This is a
+contract package — datatypes, Protocols, wire codecs, and format registries —
+not an implementation. The SceneAPI core, the implementation bundles
+(SceneMap, SceneMatch, ...), and the generated SDKs all meet here.
 
 - Distribution: `sceneapi-io`
 - Import package: `sceneapi_io`
-- Version: `0.1.0`
-- Dependencies: **none** (Python standard library only)
+- Version: `0.2.0`
+- Dependencies: `numpy>=1.26` (the contracts are numpy-native)
+- Leaf property: imports **nothing from the SceneAPI family**
+  (`sceneapi` / `sfm_hub` / `app`) — guard-tested
 
 ## What it owns
 
-- **Wire codecs** — the `application/x-sfm-points-v1` binary points format
-  (44-byte header + fixed 26-byte records) via
-  `sceneapi_io.points_binary` (`encode_all`, `decode_records`,
-  `write_header` / `read_header`, `write_record` / `read_record`,
-  `Point3DRecord`, and the `MAGIC` / `HEADER_SIZE` / `RECORD_SIZE` constants).
-- **Storage / source protocols** — `BlobStore` (the sha256-keyed binary-store
-  Protocol) and `validate_sha` (the content-address format check) in
-  `sceneapi_io.blobstore`; `ImageSourceImpl` and `MaterializedImage` in
-  `sceneapi_io.imagesource`.
-- **Schema contracts** — the extended COLMAP scene-database schema
-  (`sceneapi_io.colmap_db`: table/column model, `pair_id` encoding, extractor /
-  matcher registries, and the serialized cross-tier `contract_dict()`) and the
-  `PCMAPIN` resume-checkpoint helpers in `sceneapi_io.mapping_input`.
-- **Error base** — `SceneIoError`, the root of every format/codec/contract
-  error raised here.
+### Data contracts — `sceneapi_io.data`
+
+Numpy-native, construction-validated datatypes (violations raise
+`ContractViolation`):
+
+- **Calibration** — `CameraIntrinsics` (COLMAP camera-model enum + params
+  array) | `RayMap` (per-pixel unit ray directions, the first-class
+  non-pinhole alternative), unioned exclusively by `Calibration`.
+- **Transforms** — `SE3` / `Sim3` with explicit convention tags (default
+  `"opencv_cam2world"`) and to/from COLMAP world-to-camera quaternion form.
+- **Priors** — `PosePrior` (SE3 + weight/covariance + `is_metric`).
+- **Dense per-view** — `DepthMap`, `Pointmap` (declared frame),
+  `ConfidenceMap`, `Mask`.
+- **Sparse correspondence** — `FeatureSet`, `PairCorrespondences`
+  (`indexed` = detector-based | `coordinates` = detector-free),
+  `CorrespondenceGraph`, `TwoViewGeometry`, `TrackedPointCloud`.
+- **View inputs** — `ViewInput` (image ref via the imagesource types or an
+  in-memory array + optional calibration/priors/mask), `PosedViewSet`, and
+  `FrameMeta` (`world_frame="first_view"`, scale
+  `arbitrary | normalized | metric` + scale provenance).
+
+### Procedure contracts — `sceneapi_io.mapping` / `sceneapi_io.matching`
+
+- `Mapper` (+ `MapperTraits`, `MappingOptions`, `MappingResult`): the neutral
+  mapping contract. Correspondences are **optional** — classical mappers
+  declare `requires_correspondences=True`; feed-forward mappers accept raw
+  views. Traits declare what priors/calibration a backend consumes and
+  whether it emits dense geometry or metric scale.
+- `FeatureExtractor`, `PairMatcher`, `GeometricVerifier` (+ `MatcherTraits`):
+  the matching contracts, honest about detector-based vs detector-free
+  operation.
+- The two namespaces never import each other (guard-tested), so either can
+  graduate to its own distribution later.
+
+### Conformance kits — `sceneapi_io.testing`
+
+`assert_mapper_conformance` / `assert_matcher_conformance` exercise any
+Protocol implementation against tiny synthetic fixtures and check traits
+honesty. pytest is imported lazily inside functions — importing the module
+keeps pytest-free consumers clean.
+
+### Wire codecs, storage protocols, schema contracts (pre-0.2 surface, unchanged)
+
+- The `application/x-sfm-points-v1` binary points codec
+  (`sceneapi_io.points_binary`).
+- `BlobStore` / `validate_sha` (`sceneapi_io.blobstore`), `ImageSourceImpl` /
+  `MaterializedImage` (`sceneapi_io.imagesource`).
+- The extended COLMAP scene-database schema (`sceneapi_io.colmap_db`) and the
+  `PCMAPIN` resume-checkpoint helpers (`sceneapi_io.mapping_input`).
+
+### Format registry — `sceneapi_io.formats`
+
+`FormatSpec` + `CORE_FORMATS`: the identity registry for the family's
+disk/wire format ids. Seeded with the exact `sfmapi.*.v1` ids from the core's
+artifacts vocabulary — wire identity unchanged.
+
+### Errors
+
+`SceneIoError` is the root; `ContractViolation` is raised for every
+data/procedure contract breach.
 
 ## Who depends on it
 
-The SceneAPI **core** (`sceneapi`) re-exports these names from its historic
-module paths as thin shims and ships the concrete backends (filesystem / S3 /
-in-memory blob stores, the FastAPI service, engine adapters) that implement the
-protocols defined here. The Python / TypeScript / C++ **SDKs** decode the same
-wire formats. Keeping the contract in one leaf package means all of them move in
-lockstep.
+The SceneAPI **core** (`sceneapi`) re-exports these contracts from its
+historic module paths and orchestrates implementations of them. Backend
+bundles (SceneMap, SceneMatch, 3DGS trainers) are *conforming
+implementations*: they depend on `sceneapi-io` for the datatypes and
+Protocols, and prove conformance with the kits in `sceneapi_io.testing`. The
+Python / TypeScript / C++ SDKs decode the same wire formats. Keeping every
+contract in one leaf package means all of them move in lockstep — and
+because each namespace is import-isolated, a domain contract can graduate to
+its own distribution once it stabilizes.
 
 ## Usage
+
+```python
+import numpy as np
+from sceneapi_io.data import ViewInput, FrameMeta, SE3
+
+view = ViewInput(image=np.zeros((480, 640, 3), dtype=np.uint8), name="frame0")
+pose = SE3.from_colmap_world2cam([1.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0])
+frame = FrameMeta(scale="arbitrary", scale_provenance="unknown")
+```
+
+```python
+from sceneapi_io.mapping import Mapper, MapperTraits, MappingResult
+
+class MyMapper:
+    def traits(self) -> MapperTraits: ...
+    def map(self, views, *, correspondences=None, options=None) -> MappingResult: ...
+
+# prove conformance in your test suite:
+from sceneapi_io.testing import assert_mapper_conformance
+assert_mapper_conformance(MyMapper())
+```
 
 ```python
 from sceneapi_io import Point3DRecord, encode_all, decode_records
@@ -51,28 +122,10 @@ blob = encode_all(
 records, bbox_min, bbox_max = decode_records(blob)
 ```
 
-```python
-from sceneapi_io import BlobStore, validate_sha, SceneIoError
-
-validate_sha("a" * 64)          # ok
-try:
-    validate_sha("not-a-sha")   # raises SceneIoError
-except SceneIoError:
-    ...
-```
-
-```python
-from sceneapi_io import colmap_db  # noqa: F401 — schema contract, plain data
-
-# or the flattened surface:
-from sceneapi_io import COLMAP_DB_TABLES, contract_dict, image_pair_to_pair_id
-```
-
 ## Development
 
 ```powershell
-uv venv --seed
-uv pip install -e ".[dev]"
+uv sync --extra dev
 uv run ruff check src tests
 uv run pytest -q
 ```
