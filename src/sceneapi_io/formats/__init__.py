@@ -1,14 +1,23 @@
-"""Disk/wire format-id registry for the SceneAPI family.
+"""Disk/wire format-id + DataType-id registries for the SceneAPI family.
 
 The single home for the *identity* of every serialized format the
-family exchanges. Wire identity is untouched: the ids seeded here are
-the exact strings the sceneapi core's artifacts vocabulary uses today
-(``sfmapi.*.v1``); the core re-homes its format vocabulary onto this
-registry in a later migration step.
+family exchanges (``registry``) and for the logical DataType vocabulary
+those formats serialize (``datatypes``). Wire identity is untouched:
+the ids seeded here are the exact strings the sceneapi core's
+artifacts/datatypes vocabularies use today (``sfmapi.*.v1`` format ids,
+``feature_set``-style DataType ids); the core re-homes its vocabulary
+modules onto these registries.
 """
 
 from __future__ import annotations
 
+from sceneapi_io.formats.datatypes import (
+    CORE_DATA_TYPES,
+    CORE_DATA_TYPES_BY_ID,
+    DATA_TYPE_KINDS,
+    DataType,
+    is_data_type,
+)
 from sceneapi_io.formats.registry import (
     CORE_FORMAT_IDS,
     CORE_FORMATS,
@@ -18,9 +27,14 @@ from sceneapi_io.formats.registry import (
 )
 
 __all__ = [
+    "CORE_DATA_TYPES",
+    "CORE_DATA_TYPES_BY_ID",
     "CORE_FORMATS",
     "CORE_FORMAT_IDS",
+    "DATA_TYPE_KINDS",
+    "DataType",
     "FormatSpec",
     "get_format",
     "is_core_format",
+    "is_data_type",
 ]
