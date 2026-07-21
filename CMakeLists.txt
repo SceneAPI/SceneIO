@@ -22,7 +22,8 @@ find_package(nanobind CONFIG REQUIRED)
 nanobind_add_module(_core STABLE_ABI NB_STATIC
   src/cpp/module.cpp
   src/cpp/pfm.cpp
-  src/cpp/colmap.cpp)
+  src/cpp/colmap.cpp
+  src/cpp/ply_gaussian.cpp)
 target_include_directories(_core PRIVATE src/cpp)
 
 # Land the extension inside the importable `sceneio` package as sceneio._core.
