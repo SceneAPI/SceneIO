@@ -31,6 +31,29 @@ build-dir = "build/{wheel_tag}"
 wheel.packages = ["src/sceneio"]
 # abi3 wheel from CPython 3.12 (matches nanobind STABLE_ABI in CMakeLists).
 wheel.py-api = "cp312"
+# zstd is statically linked into _core; its FetchContent `install()` rules
+# otherwise leak dev artifacts (headers, the static lib, CMake configs) into the
+# wheel root. The runtime wheel is just the `sceneio` package + `_core`.
+wheel.exclude = ["include/**", "lib/**", "share/**", "bin/**"]
+
+# Cross-platform wheel builds for the compiled core (Thread 2A). One abi3 wheel
+# per platform; `requires-python` currently caps at <3.13, so only cp312 is
+# built — relaxing that cap ships the same abi3 wheel to 3.13+ with no rebuild.
+# Deps (miniz/nlohmann-json/zstd) are fetched by CMake FetchContent at build
+# time, so each wheel job needs network access (a candidate to vendor later).
+[tool.cibuildwheel]
+build = "cp312-*"
+skip = "*-musllinux* *_i686 *-win32"
+test-requires = ["numpy"]
+# Cross-platform smoke: import the package + round-trip the reference codec
+# (numpy-only; no quotes in the -c body so it is shell-safe on cmd and sh).
+test-command = 'python -c "import numpy as np, sceneio; from sceneio import _core; a = np.arange(12, dtype=np.float32).reshape(3, 4); assert np.array_equal(_core.read_pfm(_core.write_pfm(a)), a); print(_core.__phase__)"'
+
+[tool.cibuildwheel.linux]
+manylinux-x86-64-image = "manylinux2014"
+
+[tool.cibuildwheel.macos]
+environment = { MACOSX_DEPLOYMENT_TARGET = "11.0" }
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -1,57 +1,73 @@
 name: Release
 
+# Compiled sceneio ships as abi3 wheels (one per platform) + an sdist.
+# A `v*.*.*` tag builds and PUBLISHES; a manual run builds only (dry run).
 on:
   push:
     tags: ["v*.*.*"]
-  workflow_dispatch:
-    inputs:
-      tag:
-        description: "Tag to release (vX.Y.Z). Required for manual run."
-        required: true
+  workflow_dispatch: {}
 
 permissions:
   contents: read
-  id-token: write
 
 concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
-  publish:
+  wheels:
+    name: wheels (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      # Builds cp312 abi3 wheels per [tool.cibuildwheel] and runs the smoke
+      # test-command against each. Bump the pin as cibuildwheel releases.
+      - name: Build + smoke-test wheels
+        uses: pypa/cibuildwheel@v2.21.3
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.os }}
+          path: wheelhouse/*.whl
+
+  sdist:
+    name: sdist
     runs-on: ubuntu-latest
-    environment: pypi
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v7
-      - name: Resolve version
-        id: version
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            TAG="${{ github.event.inputs.tag }}"
-          else
-            TAG="${GITHUB_REF#refs/tags/}"
-          fi
-          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
-      - name: Check package version
-        env:
-          VERSION: ${{ steps.version.outputs.version }}
-        run: |
-          python - <<'PY'
-          import os
-          import tomllib
-          from pathlib import Path
+      - run: uv build --sdist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sdist
+          path: dist/*.tar.gz
 
-          actual = tomllib.loads(Path("pyproject.toml").read_text())["project"]["version"]
-          expected = os.environ["VERSION"]
-          if actual != expected:
-              raise SystemExit(f"pyproject version {actual!r} does not match tag {expected!r}")
-          PY
-      - name: Build package
+  publish:
+    name: publish to PyPI
+    needs: [wheels, sdist]
+    # Only a real tag push publishes; workflow_dispatch stops after the build.
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify tag matches package version
         run: |
-          uv venv --seed
-          uv pip install build
-          .venv/bin/python -m build --sdist --wheel
-      - name: Publish to PyPI
-        if: github.event_name == 'push'
-        uses: pypa/gh-action-pypi-publish@release/v1
+          TAG="${GITHUB_REF#refs/tags/v}"
+          VER=$(python3 -c "import tomllib, pathlib; print(tomllib.loads(pathlib.Path('pyproject.toml').read_text())['project']['version'])")
+          echo "tag=$TAG pyproject=$VER"
+          test "$TAG" = "$VER" || { echo "::error::tag v$TAG != pyproject version $VER"; exit 1; }
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: List artifacts
+        run: ls -R dist
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist
