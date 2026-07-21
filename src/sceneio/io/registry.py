@@ -129,7 +129,7 @@ register(
         "spz",
         (".spz",),
         _bytes_reader(_core.read_spz),
-        None,
+        _bytes_writer(_core.write_spz),
         record=_core.GaussianCloud,
         datatype="splat",
         magic=(b"\x1f\x8b", b"NGSP"),

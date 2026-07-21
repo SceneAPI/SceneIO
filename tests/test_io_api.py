@@ -36,10 +36,11 @@ def test_unknown_format_raises(tmp_path):
         sceneio.detect(p)
 
 
-def test_read_only_codec_rejects_write(tmp_path):
+def test_splat_roundtrips_ply_to_spz(tmp_path):
+    # end-to-end through the public API: PLY -> GaussianCloud -> SPZ -> back.
     gsply = pytest.importorskip("gsply")
     rng = np.random.default_rng(0)
-    n = 3
+    n = 5
     p = tmp_path / "g.ply"
     gsply.plywrite(
         str(p),
@@ -50,8 +51,32 @@ def test_read_only_codec_rejects_write(tmp_path):
         sh0=rng.standard_normal((n, 3)).astype(np.float32),
     )
     cloud = sceneio.read(p)
-    with pytest.raises(sceneio.FormatError, match=r"no writer|read-only"):
-        sceneio.write(cloud, tmp_path / "out.spz")
+    out = tmp_path / "out.spz"
+    sceneio.write(cloud, out)  # dispatch by .spz extension
+    assert sceneio.detect(out) == "spz"
+    back = sceneio.read(out)
+    assert isinstance(back, sceneio.GaussianCloud)
+    assert back.num_gaussians == n and back.sh_degree == cloud.sh_degree
+
+
+def test_write_unsupported_extension_raises(tmp_path):
+    with pytest.raises(sceneio.FormatError, match="no writer"):
+        sceneio.write(np.zeros((2, 2), np.float32), tmp_path / "x.bogus")
+
+
+def test_write_to_read_only_format_raises(tmp_path):
+    # a codec with write=None rejects an explicit write() cleanly.
+    from sceneio.io import registry
+
+    ro = registry.Codec(
+        "ro_test", (".rotest",), lambda p: None, None, record=None, datatype="depth_map"
+    )
+    registry.REGISTRY["ro_test"] = ro
+    try:
+        with pytest.raises(sceneio.FormatError, match="read-only"):
+            sceneio.write(object(), tmp_path / "x.rotest", format="ro_test")
+    finally:
+        del registry.REGISTRY["ro_test"]
 
 
 def test_conventions_are_metadata(tmp_path):

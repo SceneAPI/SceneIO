@@ -147,9 +147,80 @@ GaussianCloud read_spz(nb::bytes data) {
     return g;
 }
 
+// Encode a GaussianCloud into an SPZ v3 (gzip, smallest-three) file. The
+// quantization mirrors gsply's reference encode.
+nb::bytes write_spz(const GaussianCloud &g, int version, int fractional_bits) {
+    if (version != 3)
+        throw std::invalid_argument("write_spz: only version 3 (gzip, smallest-three) is supported");
+    if (fractional_bits < 1 || fractional_bits > 24)
+        throw std::invalid_argument("write_spz: fractional_bits must be 1..24");
+    const size_t n = g.n;
+    const int sh_dim = static_cast<int>(g.num_rest / 3);
+    const int sh_degree = sh_dim == 0 ? 0 : (sh_dim == 3 ? 1 : (sh_dim == 8 ? 2 : 3));
+
+    LeWriter w;  // 16-byte header (gzipped together with the payload)
+    w.put<uint32_t>(NGSP_MAGIC);
+    w.put<uint32_t>(3);
+    w.put<uint32_t>(static_cast<uint32_t>(n));
+    w.put<uint8_t>(static_cast<uint8_t>(sh_degree));
+    w.put<uint8_t>(static_cast<uint8_t>(fractional_bits));
+    w.put<uint8_t>(0);
+    w.put<uint8_t>(0);
+
+    auto b = [](float f) { return static_cast<char>(static_cast<uint8_t>(std::min(std::max(f, 0.0f), 255.0f))); };
+    // positions (9N): round(mean * 2^frac), clip to signed 24-bit, 3 bytes LE
+    const float pscale = static_cast<float>(1u << fractional_bits);
+    for (size_t i = 0; i < n * 3; i++) {
+        float f = std::min(std::max(std::nearbyintf(g.means[i] * pscale), -8388608.0f), 8388607.0f);
+        int32_t q = static_cast<int32_t>(f) & 0xFFFFFF;
+        w.out.push_back(static_cast<char>(q & 0xff));
+        w.out.push_back(static_cast<char>((q >> 8) & 0xff));
+        w.out.push_back(static_cast<char>((q >> 16) & 0xff));
+    }
+    // alphas (N): sigmoid(opacity) -> byte
+    for (size_t i = 0; i < n; i++)
+        w.out.push_back(b(std::nearbyintf(1.0f / (1.0f + std::exp(-g.opacity[i])) * 255.0f)));
+    // colors (3N): sh_dc -> byte
+    const float cmul = static_cast<float>(0.15 * 255.0);
+    for (size_t i = 0; i < n * 3; i++) w.out.push_back(b(std::nearbyintf(g.sh_dc[i] * cmul + 127.5f)));
+    // scales (3N): (log_scale + 10) * 16 -> byte
+    for (size_t i = 0; i < n * 3; i++) w.out.push_back(b(std::nearbyintf((g.scales[i] + 10.0f) * 16.0f)));
+    // rotations (4N): smallest-three pack of xyzw
+    for (size_t i = 0; i < n; i++) {
+        float q[4] = {g.quats[i * 4 + 1], g.quats[i * 4 + 2], g.quats[i * 4 + 3], g.quats[i * 4]};  // xyzw
+        float norm = std::sqrt(q[0] * q[0] + q[1] * q[1] + q[2] * q[2] + q[3] * q[3]);
+        for (float &c : q) c /= norm;
+        int lg = 0;
+        for (int k = 1; k < 4; k++)
+            if (std::fabs(q[k]) > std::fabs(q[lg])) lg = k;
+        float sgn = q[lg] < 0.0f ? -1.0f : 1.0f;
+        for (float &c : q) c *= sgn;
+        uint32_t packed = 0;
+        for (int axis = 0; axis < 4; axis++) {
+            if (axis == lg) continue;
+            float m = std::nearbyintf(static_cast<float>(C_MASK) * std::fabs(q[axis]) / INV_SQRT2);
+            uint32_t mag = static_cast<uint32_t>(std::min(std::max(m, 0.0f), static_cast<float>(C_MASK)));
+            packed = (packed << 10) | ((q[axis] < 0.0f ? 1u : 0u) << 9) | mag;
+        }
+        packed |= static_cast<uint32_t>(lg) << 30;
+        for (int k = 0; k < 4; k++) w.out.push_back(static_cast<char>((packed >> (8 * k)) & 0xff));
+    }
+    // sh (sh_dim*3*N): our channel-grouped [ch*sh_dim+kk] -> file's [kk*3+ch]
+    for (size_t i = 0; i < n; i++)
+        for (int kk = 0; kk < sh_dim; kk++)
+            for (int ch = 0; ch < 3; ch++)
+                w.out.push_back(b(std::nearbyintf(
+                    g.sh_rest[i * g.num_rest + static_cast<size_t>(ch) * sh_dim + kk] * 128.0f + 128.0f)));
+
+    std::string gz = gzip_compress(reinterpret_cast<const uint8_t *>(w.out.data()), w.out.size());
+    return nb::bytes(gz.data(), gz.size());
+}
+
 }  // namespace
 
 void register_spz(nb::module_ &m) {
     m.def("read_spz", &read_spz, "data"_a,
           "Decode a Niantic SPZ file (gzip legacy v1/v2/v3) into a GaussianCloud.");
+    m.def("write_spz", &write_spz, "cloud"_a, "version"_a = 3, "fractional_bits"_a = 12,
+          "Encode a GaussianCloud to Niantic SPZ bytes (gzip v3, smallest-three).");
 }

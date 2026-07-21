@@ -6,6 +6,7 @@
 
 #include <cstdint>
 #include <stdexcept>
+#include <string>
 #include <vector>
 
 namespace sio {
@@ -31,6 +32,25 @@ inline std::vector<uint8_t> gunzip(const uint8_t *p, size_t n) {
     std::vector<uint8_t> res(static_cast<uint8_t *>(out), static_cast<uint8_t *>(out) + out_len);
     mz_free(out);
     return res;
+}
+
+// Wrap `payload` in a gzip stream (10-byte header + raw deflate + CRC32 +
+// ISIZE trailer). Any valid gzip reader (incl. gsply) can inflate it.
+inline std::string gzip_compress(const uint8_t *p, size_t n) {
+    size_t dlen = 0;
+    void *deflated = tdefl_compress_mem_to_heap(p, n, &dlen, TDEFL_DEFAULT_MAX_PROBES);
+    if (!deflated) throw std::runtime_error("gzip: deflate failed");
+    std::string out;
+    out.reserve(dlen + 18);
+    const char hdr[10] = {0x1f, static_cast<char>(0x8b), 0x08, 0, 0, 0, 0, 0, 0, static_cast<char>(0xff)};
+    out.append(hdr, 10);
+    out.append(static_cast<char *>(deflated), dlen);
+    mz_free(deflated);
+    const uint32_t crc = static_cast<uint32_t>(mz_crc32(MZ_CRC32_INIT, p, n));
+    const uint32_t isize = static_cast<uint32_t>(n);
+    for (int i = 0; i < 4; i++) out.push_back(static_cast<char>((crc >> (8 * i)) & 0xff));
+    for (int i = 0; i < 4; i++) out.push_back(static_cast<char>((isize >> (8 * i)) & 0xff));
+    return out;
 }
 
 }  // namespace sio
