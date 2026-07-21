@@ -21,6 +21,7 @@ from sceneio.io.registry import REGISTRY, Codec, FormatError, detect, get, regis
 # Record types produced by the codecs (re-exported for convenience/isinstance).
 Reconstruction = _core.Reconstruction
 GaussianCloud = _core.GaussianCloud
+PosedViewSet = _core.PosedViewSet
 Camera = _core.Camera
 
 
@@ -60,10 +61,12 @@ def _detect_write(obj, path) -> str:
     # dispatch by extension (or directory) first, then disambiguate on the
     # record type if several writable codecs share an extension.
     ext = Path(path).suffix.lower()
+    name = Path(path).name
     cands = [
         c
         for c in REGISTRY.values()
-        if c.write is not None and (ext in c.extensions or (c.is_directory and ext == ""))
+        if c.write is not None
+        and (ext in c.extensions or name in c.filenames or (c.is_directory and ext == ""))
     ]
     if not cands:
         raise FormatError(f"no writer for {type(obj).__name__} at {str(path)!r} (ext {ext!r})")
@@ -79,6 +82,7 @@ __all__ = [
     "Codec",
     "FormatError",
     "GaussianCloud",
+    "PosedViewSet",
     "Reconstruction",
     "codecs",
     "detect",

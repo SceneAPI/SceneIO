@@ -113,6 +113,7 @@ _IO_FORWARDS = frozenset(
         "Camera",
         "FormatError",
         "GaussianCloud",
+        "PosedViewSet",
         "Reconstruction",
     }
 )
@@ -155,6 +156,7 @@ __all__ = [
     "ImageSourceImpl",
     "MaterializedImage",
     "Point3DRecord",
+    "PosedViewSet",
     "Reconstruction",
     "SceneIoError",
     "TableDef",

@@ -32,6 +32,7 @@ class Codec:
     record: type | None  # record type produced, for write dispatch
     datatype: str  # the DataType id this format serializes
     magic: tuple[bytes, ...] = ()  # leading-byte signatures (single-file formats)
+    filenames: tuple[str, ...] = ()  # exact filenames that identify the format (e.g. transforms.json)
     is_directory: bool = False  # reads/writes a directory (e.g. COLMAP)
 
 
@@ -61,6 +62,9 @@ def detect(path) -> str:
             if c.is_directory and (p / "cameras.bin").exists():
                 return c.id
         raise FormatError(f"no directory format matches {str(path)!r}")
+    for c in REGISTRY.values():
+        if p.name in c.filenames:
+            return c.id
     ext = p.suffix.lower()
     for c in REGISTRY.values():
         if ext in c.extensions:
@@ -133,5 +137,39 @@ register(
         record=_core.GaussianCloud,
         datatype="splat",
         magic=(b"\x1f\x8b", b"NGSP"),
+    )
+)
+# Camera-pose formats -> PosedViewSet. `datatype` here is informational; a
+# vocabulary id is pending, like `splat` (see formats/datatypes.py). TUM/KITTI
+# claim no extension (`.txt` is ambiguous) so they are explicit-`format=` only.
+register(
+    Codec(
+        "transforms_json",
+        (),
+        _bytes_reader(_core.read_transforms_json),
+        _bytes_writer(_core.write_transforms_json),
+        record=_core.PosedViewSet,
+        datatype="posed_views",
+        filenames=("transforms.json",),
+    )
+)
+register(
+    Codec(
+        "tum",
+        (),
+        _bytes_reader(_core.read_tum),
+        _bytes_writer(_core.write_tum),
+        record=_core.PosedViewSet,
+        datatype="posed_views",
+    )
+)
+register(
+    Codec(
+        "kitti",
+        (),
+        _bytes_reader(_core.read_kitti),
+        _bytes_writer(_core.write_kitti),
+        record=_core.PosedViewSet,
+        datatype="posed_views",
     )
 )

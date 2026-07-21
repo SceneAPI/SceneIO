@@ -29,16 +29,39 @@ add_library(miniz_static STATIC ${miniz_SOURCE_DIR}/miniz.c)
 target_include_directories(miniz_static PUBLIC ${miniz_SOURCE_DIR})
 set_property(TARGET miniz_static PROPERTY POSITION_INDEPENDENT_CODE ON)
 
+# nlohmann/json (MIT), header-only — for the transforms.json codec.
+FetchContent_Declare(nlohmann_json
+  URL https://github.com/nlohmann/json/releases/download/v3.11.3/json.tar.xz)
+set(JSON_BuildTests OFF CACHE INTERNAL "")
+set(JSON_Install OFF CACHE INTERNAL "")
+FetchContent_MakeAvailable(nlohmann_json)
+
+# zstd (BSD) — for the SPZ v4 (NGSP) container. Build only the static lib.
+set(ZSTD_BUILD_SHARED OFF CACHE BOOL "" FORCE)
+set(ZSTD_BUILD_STATIC ON CACHE BOOL "" FORCE)
+set(ZSTD_BUILD_PROGRAMS OFF CACHE BOOL "" FORCE)
+set(ZSTD_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(ZSTD_BUILD_CONTRIB OFF CACHE BOOL "" FORCE)
+set(ZSTD_LEGACY_SUPPORT OFF CACHE BOOL "" FORCE)
+FetchContent_Declare(zstd
+  URL https://github.com/facebook/zstd/releases/download/v1.5.6/zstd-1.5.6.tar.gz
+  SOURCE_SUBDIR build/cmake)
+FetchContent_MakeAvailable(zstd)
+set_property(TARGET libzstd_static PROPERTY POSITION_INDEPENDENT_CODE ON)
+
 nanobind_add_module(_core STABLE_ABI NB_STATIC
   src/cpp/module.cpp
   src/cpp/records/reconstruction.cpp
   src/cpp/records/gaussian_cloud.cpp
+  src/cpp/records/posed_view_set.cpp
   src/cpp/codecs/pfm.cpp
   src/cpp/codecs/colmap.cpp
   src/cpp/codecs/ply_gaussian.cpp
-  src/cpp/codecs/spz.cpp)
-target_include_directories(_core PRIVATE src/cpp)
-target_link_libraries(_core PRIVATE miniz_static)
+  src/cpp/codecs/spz.cpp
+  src/cpp/codecs/transforms_json.cpp
+  src/cpp/codecs/pose_text.cpp)
+target_include_directories(_core PRIVATE src/cpp ${zstd_SOURCE_DIR}/lib)
+target_link_libraries(_core PRIVATE miniz_static nlohmann_json::nlohmann_json libzstd_static)
 
 # Land the extension inside the importable `sceneio` package as sceneio._core.
 install(TARGETS _core LIBRARY DESTINATION sceneio)
