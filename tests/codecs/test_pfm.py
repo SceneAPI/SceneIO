@@ -93,7 +93,7 @@ def test_output_is_numpy_float32(samples):
 
 
 def test_bad_magic_raises():
-    with pytest.raises(Exception):
+    with pytest.raises(ValueError, match="bad magic"):
         _core.read_pfm(b"XX\n2 2\n-1.0\n" + b"\x00" * 16)
 
 

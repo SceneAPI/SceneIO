@@ -8,7 +8,7 @@
 //   [R.. G.. B..] with R in {0,9,24,45}.
 #pragma once
 
-#include "common.hpp"
+#include "io/common.hpp"
 
 struct GaussianCloud {
     size_t n = 0;

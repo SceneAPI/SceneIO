@@ -1,5 +1,5 @@
 // PFM codec (Tier-1 float depth/disparity container, formats_survey.md §6).
-#include "common.hpp"
+#include "io/common.hpp"
 
 using namespace nb::literals;
 using namespace sio;

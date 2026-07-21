@@ -31,10 +31,12 @@ set_property(TARGET miniz_static PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 nanobind_add_module(_core STABLE_ABI NB_STATIC
   src/cpp/module.cpp
-  src/cpp/pfm.cpp
-  src/cpp/colmap.cpp
-  src/cpp/ply_gaussian.cpp
-  src/cpp/spz.cpp)
+  src/cpp/records/reconstruction.cpp
+  src/cpp/records/gaussian_cloud.cpp
+  src/cpp/codecs/pfm.cpp
+  src/cpp/codecs/colmap.cpp
+  src/cpp/codecs/ply_gaussian.cpp
+  src/cpp/codecs/spz.cpp)
 target_include_directories(_core PRIVATE src/cpp)
 target_link_libraries(_core PRIVATE miniz_static)
 

@@ -89,6 +89,7 @@ if TYPE_CHECKING:
     from sceneio import (
         data,
         formats,
+        io,
         mapping,
         matching,
         testing,
@@ -99,12 +100,29 @@ __version__ = "0.2.0"
 # The contract namespaces are import-isolated: they are loaded lazily on
 # first attribute access so that `import sceneio` alone stays cheap
 # and no namespace ever depends on a sibling being imported.
-_NAMESPACES = frozenset({"data", "formats", "mapping", "matching", "testing"})
+_NAMESPACES = frozenset({"data", "formats", "io", "mapping", "matching", "testing"})
+
+# Names forwarded flat off `sceneio` from `sceneio.io`, kept lazy so the
+# compiled codecs load on first use rather than at `import sceneio`.
+_IO_FORWARDS = frozenset(
+    {
+        "read",
+        "write",
+        "detect",
+        "codecs",
+        "Camera",
+        "FormatError",
+        "GaussianCloud",
+        "Reconstruction",
+    }
+)
 
 
 def __getattr__(name: str) -> object:
     if name in _NAMESPACES:
         return importlib.import_module(f"sceneio.{name}")
+    if name in _IO_FORWARDS:
+        return getattr(importlib.import_module("sceneio.io"), name)
     raise AttributeError(f"module 'sceneio' has no attribute {name!r}")
 
 
@@ -128,23 +146,30 @@ __all__ = [
     "UNDEFINED_EXTRACTOR_TYPE",
     "UPSTREAM_TABLES",
     "BlobStore",
+    "Camera",
     "CheckpointRef",
     "ColumnDef",
     "ContractViolation",
+    "FormatError",
+    "GaussianCloud",
     "ImageSourceImpl",
     "MaterializedImage",
     "Point3DRecord",
+    "Reconstruction",
     "SceneIoError",
     "TableDef",
     "__version__",
     "checkpoint_root",
+    "codecs",
     "contract_dict",
     "data",
     "decode_records",
+    "detect",
     "encode_all",
     "formats",
     "gc_checkpoints",
     "image_pair_to_pair_id",
+    "io",
     "is_colmap_native_extractor_type",
     "is_extension_column",
     "is_extension_table",
@@ -155,10 +180,12 @@ __all__ = [
     "matches_are_type_compatible",
     "matching",
     "pair_id_to_image_pair",
+    "read",
     "read_header",
     "read_record",
     "testing",
     "validate_sha",
+    "write",
     "write_checkpoint",
     "write_header",
     "write_record",

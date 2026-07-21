@@ -67,7 +67,11 @@ def test_read_matches_gsply(ref, tmp_path):
 
 def test_writer_readable_by_gsply(ref, tmp_path):
     gc = _core.gaussian_cloud(
-        ref["means"], ref["scales"], ref["quats"], ref["opacities"], ref["sh0"],
+        ref["means"],
+        ref["scales"],
+        ref["quats"],
+        ref["opacities"],
+        ref["sh0"],
         _rest_file_order(ref["shN"]),
     )
     p = os.path.join(str(tmp_path), "ours.ply")

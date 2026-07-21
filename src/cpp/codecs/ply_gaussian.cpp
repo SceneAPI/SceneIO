@@ -14,8 +14,8 @@
 #include <sstream>
 #include <unordered_map>
 
-#include "common.hpp"
-#include "gaussian.hpp"
+#include "io/common.hpp"
+#include "records/gaussian_cloud.hpp"
 
 using namespace nb::literals;
 using namespace sio;
@@ -185,30 +185,9 @@ GaussianCloud make_gc(arr means, arr scales, arr quats, arr opacities, arr sh_dc
     return g;
 }
 
-template <typename T>
-nb::ndarray<nb::numpy, T> vw(const std::vector<T> &v, std::vector<size_t> shape) {
-    return nb::ndarray<nb::numpy, T>(const_cast<T *>(v.data()), shape.size(), shape.data());
-}
-
 }  // namespace
 
 void register_ply_gaussian(nb::module_ &m) {
-    auto ri = nb::rv_policy::reference_internal;
-    nb::class_<GaussianCloud>(m, "GaussianCloud")
-        .def_prop_ro("num_gaussians", [](const GaussianCloud &g) { return g.n; })
-        .def_prop_ro("sh_degree", [](const GaussianCloud &g) { return g.sh_degree; })
-        .def_prop_ro("num_rest", [](const GaussianCloud &g) { return g.num_rest; })
-        .def_prop_ro("means", [](const GaussianCloud &g) { return vw(g.means, {g.n, 3}); }, ri)
-        .def_prop_ro("scales", [](const GaussianCloud &g) { return vw(g.scales, {g.n, 3}); }, ri)
-        .def_prop_ro("quaternions", [](const GaussianCloud &g) { return vw(g.quats, {g.n, 4}); }, ri)
-        .def_prop_ro("opacities", [](const GaussianCloud &g) { return vw(g.opacity, {g.n}); }, ri)
-        .def_prop_ro("sh_dc", [](const GaussianCloud &g) { return vw(g.sh_dc, {g.n, 3}); }, ri)
-        .def_prop_ro("sh_rest", [](const GaussianCloud &g) { return vw(g.sh_rest, {g.n, g.num_rest}); }, ri)
-        .def("__repr__", [](const GaussianCloud &g) {
-            return "<GaussianCloud n=" + std::to_string(g.n) +
-                   " sh_degree=" + std::to_string(g.sh_degree) + ">";
-        });
-
     m.def("read_gaussian_ply", &read_gaussian_ply, "data"_a,
           "Decode a 3DGS Gaussian .ply (binary) into a GaussianCloud (raw/pre-activation values).");
     m.def("write_gaussian_ply", &write_gaussian_ply, "cloud"_a,

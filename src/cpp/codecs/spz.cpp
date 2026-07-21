@@ -7,12 +7,11 @@
 //   sh_degree u8 | fractional_bits u8 | flags u8 | reserved u8
 // then contiguous sections: positions(9N) alphas(N) colors(3N) scales(3N)
 // rotations(rot_stride*N) sh(sh_dim*3*N). Values are quantized/fixed-point.
-#include <miniz.h>
-
 #include <algorithm>
 #include <cmath>
 
-#include "gaussian.hpp"
+#include "io/gzip.hpp"
+#include "records/gaussian_cloud.hpp"
 
 using namespace nb::literals;
 using namespace sio;
@@ -35,28 +34,6 @@ int sh_dim_for_degree(int d) {
     }
 }
 
-// Inflate a gzip stream: skip the gzip header (honoring FLG optional fields)
-// then raw-deflate-decompress the body via miniz's tinfl.
-std::vector<uint8_t> gunzip(const uint8_t *p, size_t n) {
-    if (n < 18 || p[0] != 0x1f || p[1] != 0x8b || p[2] != 0x08)
-        throw std::invalid_argument("SPZ: not a gzip stream");
-    const uint8_t flg = p[3];
-    size_t off = 10;
-    if (flg & 4) {  // FEXTRA
-        if (off + 2 > n) throw std::invalid_argument("SPZ: truncated gzip FEXTRA");
-        off += 2 + (static_cast<size_t>(p[off]) | (static_cast<size_t>(p[off + 1]) << 8));
-    }
-    if (flg & 8) { while (off < n && p[off] != 0) off++; off++; }   // FNAME
-    if (flg & 16) { while (off < n && p[off] != 0) off++; off++; }  // FCOMMENT
-    if (flg & 2) off += 2;                                          // FHCRC
-    if (off + 8 > n) throw std::invalid_argument("SPZ: truncated gzip body");
-    size_t out_len = 0;
-    void *out = tinfl_decompress_mem_to_heap(p + off, n - off - 8, &out_len, 0);
-    if (!out) throw std::invalid_argument("SPZ: gzip inflate failed (corrupt container?)");
-    std::vector<uint8_t> res(static_cast<uint8_t *>(out), static_cast<uint8_t *>(out) + out_len);
-    mz_free(out);
-    return res;
-}
 
 GaussianCloud read_spz(nb::bytes data) {
     const uint8_t *fp = reinterpret_cast<const uint8_t *>(data.c_str());
