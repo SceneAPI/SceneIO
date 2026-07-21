@@ -32,7 +32,9 @@ class Codec:
     record: type | None  # record type produced, for write dispatch
     datatype: str  # the DataType id this format serializes
     magic: tuple[bytes, ...] = ()  # leading-byte signatures (single-file formats)
-    filenames: tuple[str, ...] = ()  # exact filenames that identify the format (e.g. transforms.json)
+    filenames: tuple[
+        str, ...
+    ] = ()  # exact filenames that identify the format (e.g. transforms.json)
     is_directory: bool = False  # reads/writes a directory (e.g. COLMAP)
 
 
