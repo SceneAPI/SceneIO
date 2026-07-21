@@ -15,31 +15,12 @@
 #include <unordered_map>
 
 #include "common.hpp"
+#include "gaussian.hpp"
 
 using namespace nb::literals;
 using namespace sio;
 
 namespace {
-
-struct GaussianCloud {
-    size_t n = 0;
-    std::vector<float> means;     // n*3
-    std::vector<float> sh_dc;     // n*3  (f_dc)
-    std::vector<float> sh_rest;   // n*R  (f_rest, channel-grouped [R.. G.. B..])
-    std::vector<float> opacity;   // n
-    std::vector<float> scales;    // n*3
-    std::vector<float> quats;     // n*4  (WXYZ)
-    size_t num_rest = 0;          // R
-    int sh_degree = 0;
-};
-
-int deg_from_rest(size_t R) {
-    if (R == 0) return 0;
-    if (R == 9) return 1;
-    if (R == 24) return 2;
-    if (R == 45) return 3;
-    return -1;
-}
 
 std::vector<std::string> tokens(const std::string &s) {
     std::vector<std::string> t;
@@ -110,7 +91,7 @@ GaussianCloud read_gaussian_ply(nb::bytes data) {
     };
     size_t R = 0;
     while (col.count("f_rest_" + std::to_string(R))) R++;
-    int deg = deg_from_rest(R);
+    int deg = gc_deg_from_rest(R);
     if (deg < 0) throw std::invalid_argument("PLY: unexpected f_rest count " + std::to_string(R));
 
     if (hp + static_cast<size_t>(vcount) * P * 4 > n)
@@ -195,10 +176,10 @@ GaussianCloud make_gc(arr means, arr scales, arr quats, arr opacities, arr sh_dc
     g.sh_dc.assign(sh_dc.data(), sh_dc.data() + nn * 3);
     if (sh_rest) {
         size_t R = sh_rest->ndim() >= 2 ? sh_rest->shape(1) : 0;
-        if (sh_rest->shape(0) != nn || deg_from_rest(R) < 0)
+        if (sh_rest->shape(0) != nn || gc_deg_from_rest(R) < 0)
             throw std::invalid_argument("gaussian_cloud: bad sh_rest shape (n, {0,9,24,45})");
         g.num_rest = R;
-        g.sh_degree = deg_from_rest(R);
+        g.sh_degree = gc_deg_from_rest(R);
         g.sh_rest.assign(sh_rest->data(), sh_rest->data() + nn * R);
     }
     return g;
