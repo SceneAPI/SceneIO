@@ -7,8 +7,8 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from sceneapi_io.data._validation import ensure_array
-from sceneapi_io.errors import ContractViolation
+from sceneio.data._validation import ensure_array
+from sceneio.errors import ContractViolation
 
 
 @dataclass(frozen=True)

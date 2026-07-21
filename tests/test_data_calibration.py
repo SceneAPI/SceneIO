@@ -1,12 +1,12 @@
-"""Validation tests for sceneapi_io.data.calibration."""
+"""Validation tests for sceneio.data.calibration."""
 
 from __future__ import annotations
 
 import numpy as np
 import pytest
 
-from sceneapi_io.data import Calibration, CameraIntrinsics, CameraModel, RayMap
-from sceneapi_io.errors import ContractViolation
+from sceneio.data import Calibration, CameraIntrinsics, CameraModel, RayMap
+from sceneio.errors import ContractViolation
 
 
 def pinhole(width: int = 640, height: int = 480) -> CameraIntrinsics:

@@ -1,4 +1,4 @@
-"""Locks the COLMAP scene-database contract (sceneapi_io.colmap_db).
+"""Locks the COLMAP scene-database contract (sceneio.colmap_db).
 
 The contract mirrors the extended colmap_mod schema. These tests pin
 the version, the fork-extension surface, and the pair_id encoding so
@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import pytest
 
-from sceneapi_io import colmap_db as db
+from sceneio import colmap_db as db
 
 
 def test_database_version_number_matches_colmap_mod() -> None:
@@ -145,7 +145,7 @@ def test_contract_dict_tables_match_the_table_model() -> None:
 def test_contract_is_a_leaf_and_imports_no_backend() -> None:
     # The contract is a data standard, not a dependency: importing it must
     # not pull in the sceneapi core, the deprecated ``app``/``sfmapi``
-    # aliases, or any ``sfmapi_*`` backend plugin. sceneapi_io is a leaf.
+    # aliases, or any ``sfmapi_*`` backend plugin. sceneio is a leaf.
     import importlib
     import sys
 

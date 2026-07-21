@@ -12,7 +12,7 @@ from collections.abc import Sequence
 import numpy as np
 import pytest
 
-from sceneapi_io.data import (
+from sceneio.data import (
     SE3,
     ConfidenceMap,
     CorrespondenceGraph,
@@ -25,16 +25,16 @@ from sceneapi_io.data import (
     TwoViewGeometry,
     ViewInput,
 )
-from sceneapi_io.errors import ContractViolation
-from sceneapi_io.mapping import Mapper, MapperTraits, MappingOptions, MappingResult
-from sceneapi_io.matching import (
+from sceneio.errors import ContractViolation
+from sceneio.mapping import Mapper, MapperTraits, MappingOptions, MappingResult
+from sceneio.matching import (
     FeatureExtractor,
     GeometricVerifier,
     MatcherTraits,
     MatchingOptions,
     PairMatcher,
 )
-from sceneapi_io.testing import (
+from sceneio.testing import (
     assert_mapper_conformance,
     assert_matcher_conformance,
     make_synthetic_correspondence_graph,

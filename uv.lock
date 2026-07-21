@@ -108,7 +108,7 @@ wheels = [
 ]
 
 [[package]]
-name = "sceneapi-io"
+name = "sceneio"
 version = "0.2.0"
 source = { editable = "." }
 dependencies = [

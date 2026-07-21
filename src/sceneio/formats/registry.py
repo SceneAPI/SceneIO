@@ -20,7 +20,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from sceneapi_io.errors import ContractViolation
+from sceneio.errors import ContractViolation
 
 
 @dataclass(frozen=True)

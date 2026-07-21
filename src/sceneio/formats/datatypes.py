@@ -3,7 +3,7 @@
 The contract-plane home of the DataType vocabulary the SceneAPI family
 agrees on. DataTypes are the nouns: the logical objects that flow
 between operations, independent of serialization. One type has many
-*formats* (the :mod:`sceneapi_io.formats.registry` axis); keeping the
+*formats* (the :mod:`sceneio.formats.registry` axis); keeping the
 axes separate means composition is format-independent and a
 cross-format coercion is a type-preserving execution detail, not a
 pipeline edge.

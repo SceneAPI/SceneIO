@@ -16,13 +16,13 @@ from typing import Literal
 
 import numpy as np
 
-from sceneapi_io.data._validation import (
+from sceneio.data._validation import (
     ensure_array,
     ensure_choice,
     ensure_instance,
     ensure_integer_array,
 )
-from sceneapi_io.errors import ContractViolation
+from sceneio.errors import ContractViolation
 
 CORRESPONDENCE_MODES: frozenset[str] = frozenset({"indexed", "coordinates"})
 

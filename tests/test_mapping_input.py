@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from sceneapi_io.errors import SceneIoError
-from sceneapi_io.mapping_input import (
+from sceneio.errors import SceneIoError
+from sceneio.mapping_input import (
     gc_checkpoints,
     latest_checkpoint,
     list_checkpoints,

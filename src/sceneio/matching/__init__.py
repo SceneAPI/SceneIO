@@ -11,21 +11,21 @@ Three runtime-checkable Protocols cover the matching stage:
     two :class:`FeatureSet` operands and returns ``mode="indexed"``
     correspondences (index pairs into those sets).
   * detector-free (``detector_free=True``): ``match_pair`` receives two
-    image refs (:data:`~sceneapi_io.data.ImageRef`) and returns
+    image refs (:data:`~sceneio.data.ImageRef`) and returns
     ``mode="coordinates"`` correspondences — there are no persistent
     per-image keypoints to index into.
 
   The operand type is therefore ``FeatureSet | ImageRef``, and
   ``traits()`` tells the caller which to pass; a conforming matcher
-  raises :class:`~sceneapi_io.errors.ContractViolation` when handed the
+  raises :class:`~sceneio.errors.ContractViolation` when handed the
   wrong operand kind.
 
 - :class:`GeometricVerifier` — filters a pair's correspondences and may
   attach the estimated two-view geometry. Mode is preserved; the output
   is a subset (``len(out) <= len(in)``).
 
-This namespace imports only :mod:`sceneapi_io.data` — never
-:mod:`sceneapi_io.mapping` (guard-tested), so either can graduate to
+This namespace imports only :mod:`sceneio.data` — never
+:mod:`sceneio.mapping` (guard-tested), so either can graduate to
 its own distribution later.
 """
 
@@ -35,9 +35,9 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Protocol, runtime_checkable
 
-from sceneapi_io.data import FeatureSet, ImageRef, PairCorrespondences
-from sceneapi_io.data._validation import ensure_bool
-from sceneapi_io.errors import ContractViolation
+from sceneio.data import FeatureSet, ImageRef, PairCorrespondences
+from sceneio.data._validation import ensure_bool
+from sceneio.errors import ContractViolation
 
 __all__ = [
     "FeatureExtractor",

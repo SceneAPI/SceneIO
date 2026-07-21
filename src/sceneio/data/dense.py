@@ -2,7 +2,7 @@
 
 These are the image-aligned array types: strict dtype (no silent
 conversion of large buffers) and strict shape, validated on
-construction with :class:`~sceneapi_io.errors.ContractViolation`.
+construction with :class:`~sceneio.errors.ContractViolation`.
 """
 
 from __future__ import annotations
@@ -12,8 +12,8 @@ from typing import Literal
 
 import numpy as np
 
-from sceneapi_io.data._validation import ensure_array, ensure_choice
-from sceneapi_io.errors import ContractViolation
+from sceneio.data._validation import ensure_array, ensure_choice
+from sceneio.errors import ContractViolation
 
 POINTMAP_FRAMES: frozenset[str] = frozenset({"world", "camera"})
 

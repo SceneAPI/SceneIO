@@ -1,7 +1,7 @@
 """Content-addressed blob store contract.
 
 `BlobStore` is the sha256-keyed binary-store Protocol every concrete
-backend implements. It lives here, in the sceneapi-io contract package,
+backend implements. It lives here, in the sceneio contract package,
 so backends and the sceneapi core agree on one interface: the core ships
 the concrete `FSBlobStore` / `S3BlobStore` / `InMemoryBlobStore` stores
 (and the `get_blob_store()` factory), while this module owns only the
@@ -19,7 +19,7 @@ from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import BinaryIO, Protocol, runtime_checkable
 
-from sceneapi_io.errors import SceneIoError
+from sceneio.errors import SceneIoError
 
 
 @runtime_checkable

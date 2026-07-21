@@ -1,16 +1,16 @@
 """The neutral mapping procedure contract.
 
-A :class:`Mapper` turns a sequence of :class:`~sceneapi_io.data.ViewInput`
+A :class:`Mapper` turns a sequence of :class:`~sceneio.data.ViewInput`
 into a :class:`MappingResult`. The contract is neutral between the
 classical and feed-forward families: correspondences are *optional* at
 the signature level, and :class:`MapperTraits` declares what a concrete
 implementation actually requires and consumes.
 
 Honesty rules a conforming implementation must follow (exercised by
-:func:`sceneapi_io.testing.assert_mapper_conformance`):
+:func:`sceneio.testing.assert_mapper_conformance`):
 
 - ``requires_correspondences=True`` mappers MUST raise
-  :class:`~sceneapi_io.errors.ContractViolation` when called with
+  :class:`~sceneio.errors.ContractViolation` when called with
   ``correspondences=None``; ``False`` mappers MUST accept ``None``.
 - ``emits_dense=True`` mappers return a non-None ``dense`` payload.
 - A result may only claim ``frame.scale == "metric"`` when the mapper's
@@ -20,8 +20,8 @@ Honesty rules a conforming implementation must follow (exercised by
   (same per-view ``None`` for ``calibrations`` / ``dense`` entries).
   At least one view must be registered.
 
-This namespace imports only :mod:`sceneapi_io.data` — never
-:mod:`sceneapi_io.matching` (guard-tested), so either can graduate to
+This namespace imports only :mod:`sceneio.data` — never
+:mod:`sceneio.matching` (guard-tested), so either can graduate to
 its own distribution later.
 """
 
@@ -33,7 +33,7 @@ from typing import Protocol, runtime_checkable
 
 import numpy as np
 
-from sceneapi_io.data import (
+from sceneio.data import (
     Calibration,
     ConfidenceMap,
     CorrespondenceGraph,
@@ -42,9 +42,9 @@ from sceneapi_io.data import (
     TrackedPointCloud,
     ViewInput,
 )
-from sceneapi_io.data._validation import ensure_bool, ensure_instance
-from sceneapi_io.data.transforms import SE3
-from sceneapi_io.errors import ContractViolation
+from sceneio.data._validation import ensure_bool, ensure_instance
+from sceneio.data.transforms import SE3
+from sceneio.errors import ContractViolation
 
 __all__ = [
     "Mapper",
@@ -256,7 +256,7 @@ class Mapper(Protocol):
 
     Implementations MUST honor their own :class:`MapperTraits` (see the
     module docstring for the honesty rules); conformance is provable
-    with :func:`sceneapi_io.testing.assert_mapper_conformance`.
+    with :func:`sceneio.testing.assert_mapper_conformance`.
     """
 
     def traits(self) -> MapperTraits: ...

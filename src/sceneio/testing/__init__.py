@@ -15,15 +15,15 @@ from __future__ import annotations
 
 import numpy as np
 
-from sceneapi_io.data import (
+from sceneio.data import (
     CorrespondenceGraph,
     FeatureSet,
     PairCorrespondences,
     ViewInput,
 )
-from sceneapi_io.errors import ContractViolation
-from sceneapi_io.mapping import Mapper, MapperTraits, MappingResult
-from sceneapi_io.matching import (
+from sceneio.errors import ContractViolation
+from sceneio.mapping import Mapper, MapperTraits, MappingResult
+from sceneio.matching import (
     FeatureExtractor,
     GeometricVerifier,
     MatcherTraits,

@@ -19,7 +19,7 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
-from sceneapi_io.errors import SceneIoError
+from sceneio.errors import SceneIoError
 
 
 @dataclass(frozen=True)

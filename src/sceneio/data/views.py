@@ -20,17 +20,17 @@ from typing import Literal
 
 import numpy as np
 
-from sceneapi_io.data._validation import (
+from sceneio.data._validation import (
     ensure_choice,
     ensure_instance,
     ensure_optional_instance,
 )
-from sceneapi_io.data.calibration import Calibration
-from sceneapi_io.data.dense import DepthMap, Mask
-from sceneapi_io.data.priors import PosePrior
-from sceneapi_io.data.transforms import SE3
-from sceneapi_io.errors import ContractViolation
-from sceneapi_io.imagesource import MaterializedImage
+from sceneio.data.calibration import Calibration
+from sceneio.data.dense import DepthMap, Mask
+from sceneio.data.priors import PosePrior
+from sceneio.data.transforms import SE3
+from sceneio.errors import ContractViolation
+from sceneio.imagesource import MaterializedImage
 
 # An image reference: the persisted-source form (existing imagesource
 # contract) or an in-memory uint8 array — (H, W, 3) RGB or (H, W) gray.

@@ -1,11 +1,11 @@
-"""Validation tests for sceneapi_io.matching contract types."""
+"""Validation tests for sceneio.matching contract types."""
 
 from __future__ import annotations
 
 import pytest
 
-from sceneapi_io.errors import ContractViolation
-from sceneapi_io.matching import MatcherTraits, MatchingOptions
+from sceneio.errors import ContractViolation
+from sceneio.matching import MatcherTraits, MatchingOptions
 
 
 class TestMatcherTraits:

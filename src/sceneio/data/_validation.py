@@ -1,6 +1,6 @@
 """Internal array/scalar validation helpers for the data contracts.
 
-Every helper raises :class:`sceneapi_io.errors.ContractViolation` with a
+Every helper raises :class:`sceneio.errors.ContractViolation` with a
 precise, field-qualified message (``"DepthMap.depth: expected dtype
 float32, got float64"``). Not public API — the contract types own the
 messages, this module only keeps them uniform.
@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from sceneapi_io.errors import ContractViolation
+from sceneio.errors import ContractViolation
 
 
 def _shape_desc(shape: tuple[int | None, ...]) -> str:

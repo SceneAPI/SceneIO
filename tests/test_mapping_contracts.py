@@ -1,11 +1,11 @@
-"""Validation tests for sceneapi_io.mapping contract types."""
+"""Validation tests for sceneio.mapping contract types."""
 
 from __future__ import annotations
 
 import numpy as np
 import pytest
 
-from sceneapi_io.data import (
+from sceneio.data import (
     SE3,
     Calibration,
     CameraIntrinsics,
@@ -15,8 +15,8 @@ from sceneapi_io.data import (
     Pointmap,
     TrackedPointCloud,
 )
-from sceneapi_io.errors import ContractViolation
-from sceneapi_io.mapping import MapperTraits, MappingOptions, MappingResult
+from sceneio.errors import ContractViolation
+from sceneio.mapping import MapperTraits, MappingOptions, MappingResult
 
 TRAITS_KW = {
     "requires_correspondences": False,

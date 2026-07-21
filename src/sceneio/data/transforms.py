@@ -18,8 +18,8 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from sceneapi_io.data._validation import as_float64, ensure_choice
-from sceneapi_io.errors import ContractViolation
+from sceneio.data._validation import as_float64, ensure_choice
+from sceneio.errors import ContractViolation
 
 DEFAULT_CONVENTION = "opencv_cam2world"
 

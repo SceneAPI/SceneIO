@@ -1,12 +1,12 @@
-"""Validation tests for sceneapi_io.data.dense."""
+"""Validation tests for sceneio.data.dense."""
 
 from __future__ import annotations
 
 import numpy as np
 import pytest
 
-from sceneapi_io.data import ConfidenceMap, DepthMap, Mask, Pointmap
-from sceneapi_io.errors import ContractViolation
+from sceneio.data import ConfidenceMap, DepthMap, Mask, Pointmap
+from sceneio.errors import ContractViolation
 
 
 class TestDepthMap:

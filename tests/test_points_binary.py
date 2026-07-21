@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from sceneapi_io.points_binary import (
+from sceneio.points_binary import (
     HEADER_SIZE,
     RECORD_SIZE,
     Point3DRecord,

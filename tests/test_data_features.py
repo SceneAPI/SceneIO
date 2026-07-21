@@ -1,17 +1,17 @@
-"""Validation tests for sceneapi_io.data.features."""
+"""Validation tests for sceneio.data.features."""
 
 from __future__ import annotations
 
 import numpy as np
 import pytest
 
-from sceneapi_io.data import (
+from sceneio.data import (
     CorrespondenceGraph,
     FeatureSet,
     PairCorrespondences,
     TwoViewGeometry,
 )
-from sceneapi_io.errors import ContractViolation
+from sceneio.errors import ContractViolation
 
 
 def feature_set(n: int = 5, d: int = 8, dtype: type = np.float32) -> FeatureSet:

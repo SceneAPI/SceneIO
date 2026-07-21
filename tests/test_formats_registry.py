@@ -1,11 +1,11 @@
-"""Tests for the sceneapi_io.formats registry."""
+"""Tests for the sceneio.formats registry."""
 
 from __future__ import annotations
 
 import pytest
 
-from sceneapi_io.errors import ContractViolation
-from sceneapi_io.formats import (
+from sceneio.errors import ContractViolation
+from sceneio.formats import (
     CORE_FORMAT_IDS,
     CORE_FORMATS,
     FormatSpec,

@@ -1,12 +1,12 @@
-"""Validation tests for sceneapi_io.data.pointcloud and .priors."""
+"""Validation tests for sceneio.data.pointcloud and .priors."""
 
 from __future__ import annotations
 
 import numpy as np
 import pytest
 
-from sceneapi_io.data import SE3, PosePrior, TrackedPointCloud, TrackObservation
-from sceneapi_io.errors import ContractViolation
+from sceneio.data import SE3, PosePrior, TrackedPointCloud, TrackObservation
+from sceneio.errors import ContractViolation
 
 
 class TestTrackObservation:

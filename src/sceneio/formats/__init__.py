@@ -11,14 +11,14 @@ modules onto these registries.
 
 from __future__ import annotations
 
-from sceneapi_io.formats.datatypes import (
+from sceneio.formats.datatypes import (
     CORE_DATA_TYPES,
     CORE_DATA_TYPES_BY_ID,
     DATA_TYPE_KINDS,
     DataType,
     is_data_type,
 )
-from sceneapi_io.formats.registry import (
+from sceneio.formats.registry import (
     CORE_FORMAT_IDS,
     CORE_FORMATS,
     FormatSpec,

@@ -1,18 +1,18 @@
-"""Tests for the sceneapi_io.formats DataType vocabulary."""
+"""Tests for the sceneio.formats DataType vocabulary."""
 
 from __future__ import annotations
 
 import json
 
-import sceneapi_io
-from sceneapi_io.formats import (
+import sceneio
+from sceneio.formats import (
     CORE_DATA_TYPES,
     CORE_DATA_TYPES_BY_ID,
     CORE_FORMATS,
     DATA_TYPE_KINDS,
     is_data_type,
 )
-from sceneapi_io.formats import datatypes as dt
+from sceneio.formats import datatypes as dt
 
 # The exact DataType ids of the core's vocabulary
 # (sceneapi/server/core/datatypes.py::CORE_DATA_TYPES). Wire identity is
@@ -83,7 +83,7 @@ def test_contract_dict_is_json_serializable_and_self_describing() -> None:
 
 
 def test_exported_via_formats_namespace_and_lazy_top_level() -> None:
-    formats = sceneapi_io.formats  # lazy top-level namespace access
+    formats = sceneio.formats  # lazy top-level namespace access
     assert formats.CORE_DATA_TYPES is CORE_DATA_TYPES
     assert formats.DATA_TYPE_KINDS is DATA_TYPE_KINDS
     assert formats.DataType is dt.DataType

@@ -1,4 +1,4 @@
-"""Validation tests for sceneapi_io.data.views (+ FrameMeta)."""
+"""Validation tests for sceneio.data.views (+ FrameMeta)."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from sceneapi_io.data import (
+from sceneio.data import (
     SE3,
     Calibration,
     CameraIntrinsics,
@@ -20,8 +20,8 @@ from sceneapi_io.data import (
     RayMap,
     ViewInput,
 )
-from sceneapi_io.errors import ContractViolation
-from sceneapi_io.imagesource import MaterializedImage
+from sceneio.errors import ContractViolation
+from sceneio.imagesource import MaterializedImage
 
 
 def rgb(h: int = 4, w: int = 6) -> np.ndarray:

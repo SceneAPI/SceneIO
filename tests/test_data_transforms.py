@@ -1,12 +1,12 @@
-"""Validation + conversion tests for sceneapi_io.data.transforms."""
+"""Validation + conversion tests for sceneio.data.transforms."""
 
 from __future__ import annotations
 
 import numpy as np
 import pytest
 
-from sceneapi_io.data import DEFAULT_CONVENTION, POSE_CONVENTIONS, SE3, Sim3
-from sceneapi_io.errors import ContractViolation, SceneIoError
+from sceneio.data import DEFAULT_CONVENTION, POSE_CONVENTIONS, SE3, Sim3
+from sceneio.errors import ContractViolation, SceneIoError
 
 
 def _rot_z(angle: float) -> np.ndarray:

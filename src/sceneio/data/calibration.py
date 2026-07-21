@@ -17,8 +17,8 @@ from typing import Literal
 
 import numpy as np
 
-from sceneapi_io.data._validation import as_float64, ensure_array, ensure_positive_int
-from sceneapi_io.errors import ContractViolation
+from sceneio.data._validation import as_float64, ensure_array, ensure_positive_int
+from sceneio.errors import ContractViolation
 
 
 class CameraModel(enum.Enum):

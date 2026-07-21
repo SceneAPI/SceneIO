@@ -1,17 +1,17 @@
-"""sceneapi-io — the contract plane for SceneAPI.
+"""sceneio — the contract plane for SceneAPI.
 
 This is a *contract*, not an implementation. It owns both the **data
 contracts** and the **procedure contracts** the SceneAPI family agrees
 on, organized as import-isolated namespaces:
 
-- :mod:`sceneapi_io.data` — numpy-native datatypes (calibration,
+- :mod:`sceneio.data` — numpy-native datatypes (calibration,
   SE3/Sim3, priors, depth/pointmaps/confidence/masks, features,
   correspondences, tracked point clouds, view inputs, frame metadata).
-- :mod:`sceneapi_io.formats` — the disk/wire format-id registry.
-- :mod:`sceneapi_io.mapping` — the neutral `Mapper` contract + traits.
-- :mod:`sceneapi_io.matching` — `FeatureExtractor` / `PairMatcher` /
+- :mod:`sceneio.formats` — the disk/wire format-id registry.
+- :mod:`sceneio.mapping` — the neutral `Mapper` contract + traits.
+- :mod:`sceneio.matching` — `FeatureExtractor` / `PairMatcher` /
   `GeometricVerifier` + traits.
-- :mod:`sceneapi_io.testing` — conformance kits for implementations.
+- :mod:`sceneio.testing` — conformance kits for implementations.
 
 Plus the pre-0.2 surface, unchanged and re-exported flat off this
 module: the ``application/x-sfm-points-v1`` wire codec
@@ -34,8 +34,8 @@ from __future__ import annotations
 import importlib
 from typing import TYPE_CHECKING
 
-from sceneapi_io.blobstore import BlobStore, validate_sha
-from sceneapi_io.colmap_db import (
+from sceneio.blobstore import BlobStore, validate_sha
+from sceneio.colmap_db import (
     COLMAP_DB_TABLES,
     COLMAP_DB_TABLES_BY_NAME,
     COLMAP_KNOWN_EXTRACTOR_TYPES,
@@ -60,9 +60,9 @@ from sceneapi_io.colmap_db import (
     matches_are_type_compatible,
     pair_id_to_image_pair,
 )
-from sceneapi_io.errors import ContractViolation, SceneIoError
-from sceneapi_io.imagesource import ImageSourceImpl, MaterializedImage
-from sceneapi_io.mapping_input import (
+from sceneio.errors import ContractViolation, SceneIoError
+from sceneio.imagesource import ImageSourceImpl, MaterializedImage
+from sceneio.mapping_input import (
     CheckpointRef,
     checkpoint_root,
     gc_checkpoints,
@@ -70,7 +70,7 @@ from sceneapi_io.mapping_input import (
     list_checkpoints,
     write_checkpoint,
 )
-from sceneapi_io.points_binary import (
+from sceneio.points_binary import (
     HEADER_FMT,
     HEADER_SIZE,
     MAGIC,
@@ -86,7 +86,7 @@ from sceneapi_io.points_binary import (
 )
 
 if TYPE_CHECKING:
-    from sceneapi_io import (
+    from sceneio import (
         data,
         formats,
         mapping,
@@ -97,15 +97,15 @@ if TYPE_CHECKING:
 __version__ = "0.2.0"
 
 # The contract namespaces are import-isolated: they are loaded lazily on
-# first attribute access so that `import sceneapi_io` alone stays cheap
+# first attribute access so that `import sceneio` alone stays cheap
 # and no namespace ever depends on a sibling being imported.
 _NAMESPACES = frozenset({"data", "formats", "mapping", "matching", "testing"})
 
 
 def __getattr__(name: str) -> object:
     if name in _NAMESPACES:
-        return importlib.import_module(f"sceneapi_io.{name}")
-    raise AttributeError(f"module 'sceneapi_io' has no attribute {name!r}")
+        return importlib.import_module(f"sceneio.{name}")
+    raise AttributeError(f"module 'sceneio' has no attribute {name!r}")
 
 
 __all__ = [

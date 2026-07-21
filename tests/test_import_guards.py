@@ -1,13 +1,13 @@
-"""AST-level import guards over the sceneapi_io package.
+"""AST-level import guards over the sceneio package.
 
-1. ``sceneapi_io`` imports nothing from the SceneAPI family
+1. ``sceneio`` imports nothing from the SceneAPI family
    (``sceneapi`` / ``sfm_hub`` / ``sfmapi`` / ``app``) — the leaf
    property the contract plane depends on.
-2. ``sceneapi_io.mapping`` and ``sceneapi_io.matching`` never import
+2. ``sceneio.mapping`` and ``sceneio.matching`` never import
    each other (the extraction option for each domain contract). Both
-   may import ``sceneapi_io.data``.
+   may import ``sceneio.data``.
 3. Every name in each namespace's ``__all__`` imports.
-4. ``import sceneapi_io.testing`` never imports pytest (pytest stays a
+4. ``import sceneio.testing`` never imports pytest (pytest stays a
    lazy, in-function import) — verified in a subprocess.
 """
 
@@ -21,9 +21,9 @@ from pathlib import Path
 
 import pytest
 
-import sceneapi_io
+import sceneio
 
-SRC_ROOT = Path(sceneapi_io.__file__).resolve().parent
+SRC_ROOT = Path(sceneio.__file__).resolve().parent
 
 FORBIDDEN_FAMILY_ROOTS = {"sceneapi", "sfm_hub", "sfmapi", "app"}
 
@@ -41,7 +41,7 @@ def _imported_modules(path: Path) -> set[str]:
     ``from ..matching import x`` cannot slip past the guard.
     """
     tree = ast.parse(path.read_text(encoding="utf-8"))
-    package_parts = ("sceneapi_io", *path.relative_to(SRC_ROOT).parent.parts)
+    package_parts = ("sceneio", *path.relative_to(SRC_ROOT).parent.parts)
     modules: set[str] = set()
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
@@ -62,7 +62,7 @@ def test_no_family_imports(path: Path) -> None:
     for module in _imported_modules(path):
         root = module.split(".", 1)[0]
         assert root not in FORBIDDEN_FAMILY_ROOTS, (
-            f"{path.relative_to(SRC_ROOT)} imports {module!r} — sceneapi_io is a "
+            f"{path.relative_to(SRC_ROOT)} imports {module!r} — sceneio is a "
             f"leaf and must import nothing from the SceneAPI family"
         )
 
@@ -77,7 +77,7 @@ def test_mapping_and_matching_never_import_each_other(
     namespace_dir = SRC_ROOT / namespace
     files = sorted(namespace_dir.rglob("*.py"))
     assert files, f"no python files under {namespace_dir}"
-    forbidden_prefix = f"sceneapi_io.{forbidden_sibling}"
+    forbidden_prefix = f"sceneio.{forbidden_sibling}"
     for path in files:
         for module in _imported_modules(path):
             imports_sibling = module == forbidden_prefix or module.startswith(
@@ -93,19 +93,19 @@ def test_mapping_and_matching_may_import_data() -> None:
     # Positive control: the isolation guard must not be trivially green.
     mapping_imports = _imported_modules(SRC_ROOT / "mapping" / "__init__.py")
     matching_imports = _imported_modules(SRC_ROOT / "matching" / "__init__.py")
-    assert any(m.startswith("sceneapi_io.data") for m in mapping_imports)
-    assert any(m.startswith("sceneapi_io.data") for m in matching_imports)
+    assert any(m.startswith("sceneio.data") for m in mapping_imports)
+    assert any(m.startswith("sceneio.data") for m in matching_imports)
 
 
 @pytest.mark.parametrize(
     "namespace",
     [
-        "sceneapi_io",
-        "sceneapi_io.data",
-        "sceneapi_io.formats",
-        "sceneapi_io.mapping",
-        "sceneapi_io.matching",
-        "sceneapi_io.testing",
+        "sceneio",
+        "sceneio.data",
+        "sceneio.formats",
+        "sceneio.mapping",
+        "sceneio.matching",
+        "sceneio.testing",
     ],
 )
 def test_public_surface_imports(namespace: str) -> None:
@@ -120,9 +120,9 @@ def test_public_surface_imports(namespace: str) -> None:
 def test_testing_module_import_is_pytest_free() -> None:
     code = (
         "import sys\n"
-        "import sceneapi_io.testing\n"
+        "import sceneio.testing\n"
         "assert 'pytest' not in sys.modules, "
-        "'importing sceneapi_io.testing must not import pytest'\n"
+        "'importing sceneio.testing must not import pytest'\n"
     )
     result = subprocess.run(
         [sys.executable, "-c", code], capture_output=True, text=True, check=False
@@ -131,14 +131,14 @@ def test_testing_module_import_is_pytest_free() -> None:
 
 
 def test_plain_import_is_numpy_lazy() -> None:
-    # `import sceneapi_io` alone must not pull numpy — the numpy-native
+    # `import sceneio` alone must not pull numpy — the numpy-native
     # contracts live in the lazily-imported namespaces.
     code = (
         "import sys\n"
-        "import sceneapi_io\n"
+        "import sceneio\n"
         "assert 'numpy' not in sys.modules, "
-        "'plain `import sceneapi_io` should not import numpy'\n"
-        "import sceneapi_io.data\n"
+        "'plain `import sceneio` should not import numpy'\n"
+        "import sceneio.data\n"
         "assert 'numpy' in sys.modules\n"
     )
     result = subprocess.run(

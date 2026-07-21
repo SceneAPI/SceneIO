@@ -5,9 +5,9 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 
-from sceneapi_io.data._validation import as_float64, ensure_instance
-from sceneapi_io.data.transforms import SE3
-from sceneapi_io.errors import ContractViolation
+from sceneio.data._validation import as_float64, ensure_instance
+from sceneio.data.transforms import SE3
+from sceneio.errors import ContractViolation
 
 
 @dataclass(frozen=True)
