@@ -18,6 +18,17 @@ dev = [
     "pytest>=8.3",
     "ruff>=0.8",
 ]
+# Codec parity oracles — kept out of runtime and `dev` so `import sceneio` stays
+# a numpy-only leaf. gsply (3DGS PLY + SPZ, incl. its C++ backend for v4),
+# pycolmap (COLMAP). numpy is capped <2.5 because gsply's numba needs NumPy
+# <=2.4, and pinned >=2.0 to keep the NEP-50 float32 semantics the SPZ encode
+# parity relies on. (torch is intentionally omitted; its interop tests skip.)
+test = [
+    "pytest>=8.3",
+    "numpy>=2.0,<2.5",
+    "gsply>=0.4",
+    "pycolmap>=4.1",
+]
 
 [build-system]
 requires = ["scikit-build-core>=0.10", "nanobind>=2.4"]

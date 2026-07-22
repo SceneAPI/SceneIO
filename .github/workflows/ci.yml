@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, phase0-nanobind-core]
   pull_request:
 
 permissions:
@@ -15,14 +15,16 @@ concurrency:
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v7
       - name: Install
+        # [test] pulls the parity oracles (gsply, pycolmap) so the codec parity
+        # suites actually run in CI instead of skipping; builds the _core ext.
         run: |
           uv venv --seed
-          uv pip install -e ".[dev]"
+          uv pip install -e ".[dev,test]"
       - name: Ruff
         run: .venv/bin/ruff check src tests
       - name: Test
