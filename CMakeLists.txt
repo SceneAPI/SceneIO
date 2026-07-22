@@ -56,6 +56,8 @@ nanobind_add_module(_core STABLE_ABI NB_STATIC
   src/cpp/records/posed_view_set.cpp
   src/cpp/records/tensor_dict.cpp
   src/cpp/records/image.cpp
+  src/cpp/records/point_cloud.cpp
+  src/cpp/records/depth_map.cpp
   src/cpp/codecs/pfm.cpp
   src/cpp/codecs/colmap.cpp
   src/cpp/codecs/ply_gaussian.cpp
@@ -63,7 +65,10 @@ nanobind_add_module(_core STABLE_ABI NB_STATIC
   src/cpp/codecs/transforms_json.cpp
   src/cpp/codecs/pose_text.cpp
   src/cpp/codecs/npy_npz.cpp
-  src/cpp/codecs/netpbm.cpp)
+  src/cpp/codecs/netpbm.cpp
+  src/cpp/codecs/colmap_txt.cpp
+  src/cpp/codecs/xyz.cpp
+  src/cpp/codecs/flo.cpp)
 target_include_directories(_core PRIVATE src/cpp ${zstd_SOURCE_DIR}/lib)
 target_link_libraries(_core PRIVATE miniz_static nlohmann_json::nlohmann_json libzstd_static)
 

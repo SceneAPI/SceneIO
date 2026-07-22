@@ -11,6 +11,8 @@ void register_gaussian_cloud(nb::module_ &);
 void register_posed_view_set(nb::module_ &);
 void register_tensor_dict(nb::module_ &);
 void register_image(nb::module_ &);
+void register_point_cloud(nb::module_ &);
+void register_depth_map(nb::module_ &);
 // codecs/
 void register_pfm(nb::module_ &);
 void register_colmap(nb::module_ &);
@@ -20,6 +22,9 @@ void register_transforms_json(nb::module_ &);
 void register_pose_text(nb::module_ &);
 void register_npy_npz(nb::module_ &);
 void register_netpbm(nb::module_ &);
+void register_colmap_txt(nb::module_ &);
+void register_xyz(nb::module_ &);
+void register_flo(nb::module_ &);
 
 NB_MODULE(_core, m) {
     m.doc() = "sceneio compiled core (nanobind): codecs + SoA memory representations";
@@ -30,6 +35,8 @@ NB_MODULE(_core, m) {
     register_posed_view_set(m);
     register_tensor_dict(m);
     register_image(m);
+    register_point_cloud(m);
+    register_depth_map(m);
 
     register_pfm(m);
     register_colmap(m);
@@ -39,4 +46,7 @@ NB_MODULE(_core, m) {
     register_pose_text(m);
     register_npy_npz(m);
     register_netpbm(m);
+    register_colmap_txt(m);
+    register_xyz(m);
+    register_flo(m);
 }

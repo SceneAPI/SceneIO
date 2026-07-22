@@ -38,6 +38,7 @@ class Codec:
         str, ...
     ] = ()  # exact filenames that identify the format (e.g. transforms.json)
     is_directory: bool = False  # reads/writes a directory (e.g. COLMAP)
+    dir_marker: str = "cameras.bin"  # the file whose presence identifies a directory format
 
 
 REGISTRY: dict[str, Codec] = {}
@@ -63,7 +64,7 @@ def detect(path) -> str:
     p = Path(path)
     if p.is_dir():
         for c in REGISTRY.values():
-            if c.is_directory and (p / "cameras.bin").exists():
+            if c.is_directory and (p / c.dir_marker).exists():
                 return c.id
         raise FormatError(f"no directory format matches {str(path)!r}")
     for c in REGISTRY.values():
@@ -224,5 +225,40 @@ register(
         record=_core.Image,
         datatype="image",
         magic=(b"P2", b"P3", b"P5", b"P6"),
+    )
+)
+# COLMAP text sparse (cameras.txt/images.txt/points3D.txt) — the text twin of
+# colmap_sparse; a directory format distinguished by its cameras.txt marker.
+register(
+    Codec(
+        "colmap_sparse_txt",
+        (),
+        _core.read_colmap_txt,
+        _core.write_colmap_txt,
+        record=_core.Reconstruction,
+        datatype="sparse_model",
+        is_directory=True,
+        dir_marker="cameras.txt",
+    )
+)
+register(
+    Codec(
+        "xyz",
+        (".xyz",),
+        _bytes_reader(_core.read_xyz),
+        _bytes_writer(_core.write_xyz),
+        record=_core.PointCloud,
+        datatype="point_cloud",
+    )
+)
+register(
+    Codec(
+        "flo",
+        (".flo",),
+        _bytes_reader(_core.read_flo),
+        _bytes_writer(_core.write_flo),
+        record=None,
+        datatype="flow",
+        magic=(b"PIEH",),
     )
 )

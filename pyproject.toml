@@ -83,4 +83,4 @@ ignore = ["E501"]
 [tool.ruff.lint.per-file-ignores]
 # Tests favor terse fixtures: one-shot file reads, compound asserts, and
 # throwaway unpacking are fine here.
-"tests/**" = ["SIM115", "PT018", "PT011", "RUF059"]
+"tests/**" = ["SIM105", "SIM115", "PT018", "PT011", "RUF059"]

@@ -24,6 +24,8 @@ GaussianCloud = _core.GaussianCloud
 PosedViewSet = _core.PosedViewSet
 TensorDict = _core.TensorDict
 Image = _core.Image
+PointCloud = _core.PointCloud
+DepthMap = _core.DepthMap
 Camera = _core.Camera
 
 
@@ -82,9 +84,11 @@ def _detect_write(obj, path) -> str:
 __all__ = [
     "Camera",
     "Codec",
+    "DepthMap",
     "FormatError",
     "GaussianCloud",
     "Image",
+    "PointCloud",
     "PosedViewSet",
     "Reconstruction",
     "TensorDict",
