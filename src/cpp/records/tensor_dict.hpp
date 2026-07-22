@@ -18,6 +18,7 @@
 // byte_order="little" / order="C" record that.
 #pragma once
 
+#include <cassert>
 #include <string_view>
 #include <unordered_map>
 #include <utility>
@@ -62,7 +63,16 @@ inline constexpr DTypeInfo kDTypes[12] = {
     {DType::F64, 2, 64, 8, "<f8", "float64"},
 };
 
-inline const DTypeInfo &dtype_info(DType t) { return kDTypes[static_cast<size_t>(t)]; }
+// Look up a table row by a DType known to be valid: every DType value in this
+// process originates from a kDTypes row (via dtype_from_dlpack / dtype_from_descr
+// / dtype_from_tag), so this is always in bounds. A raw byte read off disk MUST
+// NOT be cast to DType and passed here — route it through dtype_from_tag, which
+// bounds-checks. The assert documents that invariant in debug builds.
+inline const DTypeInfo &dtype_info(DType t) {
+    assert(static_cast<size_t>(t) < std::size(kDTypes) &&
+           "dtype_info: out-of-range DType — deserialized tags must go through dtype_from_tag");
+    return kDTypes[static_cast<size_t>(t)];
+}
 
 // Map an imported array's DLPack dtype back to a table row. Only lanes==1 is
 // supported; returns nullptr for anything outside the 12 rows (complex,
@@ -88,6 +98,16 @@ inline const DTypeInfo *dtype_from_descr(std::string_view descr) {
         if (canon == descr) return &info;
     }
     return nullptr;
+}
+
+// Map a raw serialized tag byte (a persisted DType enum value — the enum notes
+// "codecs may serialize the tag") back to a table row. This is the checked
+// restore seam every deserializer MUST use: any byte outside the 12 rows yields
+// nullptr (mirroring dtype_from_dlpack / dtype_from_descr's contract), which the
+// caller turns into a typed error — instead of static_cast<DType>(byte) driving
+// an out-of-bounds read of kDTypes in dtype_info.
+inline const DTypeInfo *dtype_from_tag(uint8_t raw) {
+    return static_cast<size_t>(raw) < std::size(kDTypes) ? &kDTypes[raw] : nullptr;
 }
 
 }  // namespace sio

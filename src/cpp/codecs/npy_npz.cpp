@@ -172,6 +172,15 @@ NpyInfo parse_npy_header(const uint8_t *p, size_t n) {
         if (sep == '}') { c.i++; break; }
         throw std::invalid_argument("npy: malformed header (expected ',' or '}')");
     }
+    // numpy pads the header dict to the alignment boundary with spaces and terminates
+    // it with a single '\n'; any non-whitespace byte in the hlen tail is junk that
+    // np.load itself rejects, so we reject it too (leniency here would accept files the
+    // reference implementation refuses).
+    while (c.i < c.n) {
+        const char t = c.s[c.i++];
+        if (t != ' ' && t != '\t' && t != '\r' && t != '\n')
+            throw std::invalid_argument("npy: malformed header (junk after '}')");
+    }
     if (!have_descr || !have_fortran || !have_shape)
         throw std::invalid_argument("npy: header is missing descr/fortran_order/shape");
 
@@ -399,6 +408,12 @@ TensorDict read_npz(nb::bytes data) {
 }
 
 nb::bytes write_npz(const TensorDict &td, bool compress) {
+    // .npz has no attrs side channel; refuse a TensorDict carrying attrs rather than
+    // silently drop them, so read(write(x)) == x can never lose metadata (attrs-bearing
+    // formats like HDF5 / safetensors exist for that). Checked with the GIL held.
+    if (!td.attrs.empty())
+        throw std::invalid_argument(
+            "npz: TensorDict attrs cannot be represented in .npz; drop attrs or use HDF5/safetensors");
     std::string result;
     {
         nb::gil_scoped_release rel;
@@ -426,8 +441,13 @@ nb::bytes write_npz(const TensorDict &td, bool compress) {
         size_t olen = 0;
         if (!mz_zip_writer_finalize_heap_archive(&zip, &out, &olen))
             throw std::runtime_error("npz: could not finalize the archive");
+        // finalize detaches `out` from the zip state, so ZipGuard won't free it; an RAII
+        // holder frees it even if result.assign throws bad_alloc (peak memory ~2x here).
+        struct HeapBuf {
+            void *p;
+            ~HeapBuf() { mz_free(p); }
+        } hb{out};
         result.assign(static_cast<const char *>(out), olen);
-        mz_free(out);
     }
     return nb::bytes(result.data(), result.size());
 }

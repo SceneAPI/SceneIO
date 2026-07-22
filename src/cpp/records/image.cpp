@@ -75,6 +75,9 @@ Image make_image(anyarr pixels, std::optional<std::string> color_space,
             throw std::invalid_argument("image: maxval for uint8 must be in 1..255");
         if (im.dtype == PixelType::U16 && (im.maxval < 1 || im.maxval > 65535))
             throw std::invalid_argument("image: maxval for uint16 must be in 1..65535");
+        if (im.dtype == PixelType::F32 && im.maxval != 0)
+            throw std::invalid_argument(
+                "image: maxval applies to integer dtypes (uint8/uint16); omit it for float32");
     } else {
         im.maxval = im.dtype == PixelType::U8    ? 255u
                     : im.dtype == PixelType::U16 ? 65535u

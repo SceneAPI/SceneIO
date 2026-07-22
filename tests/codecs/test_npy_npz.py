@@ -101,6 +101,21 @@ def _make_npy(descr_repr: str, shape_repr: str, payload: bytes = b"") -> bytes:
     return b"\x93NUMPY\x01\x00" + struct.pack("<H", len(full)) + full.encode("latin1") + payload
 
 
+def _make_npy_raw(
+    dict_str: str, payload: bytes = b"", magic: bytes = b"\x93NUMPY\x01\x00"
+) -> bytes:
+    """Build a v1.0 .npy from a *verbatim* header-dict string (accept-grammar seeds).
+
+    Unlike _make_npy this does not impose the canonical `{'descr': ..., }` layout, so it
+    can exercise the parser's full accept-grammar: double quotes, reordered keys, a bare
+    or '='-prefixed descr, a missing key, or a non-zero v1 minor byte.
+    """
+    hlen = len(dict_str) + 1
+    padlen = 64 - ((10 + hlen) % 64)
+    full = dict_str + " " * padlen + "\n"
+    return magic + struct.pack("<H", len(full)) + full.encode("latin1") + payload
+
+
 def _assert_same(out: np.ndarray, ref: np.ndarray, ctx=None) -> None:
     assert out.dtype == ref.dtype, ctx
     assert out.shape == ref.shape, ctx
@@ -163,6 +178,7 @@ def test_parity_npz_oracle_write_ours_read():
     for compress in (False, True):
         td = _core.read_npz(_save_npz(compress, **arrays))
         assert list(td.keys()) == list(arrays.keys())  # savez preserves kwargs order
+        assert td.attrs == {}  # npz has no attrs channel; the read side yields empty attrs
         for k, v in arrays.items():
             _assert_same(np.asarray(td[k]), v, (k, compress))
 
@@ -206,13 +222,23 @@ def test_convention_write_header_fields():
 
 
 def test_convention_big_endian_read():
-    arr = _rand("float32", (3, 5), np.random.default_rng(9))
-    data = _save_npy(arr.astype(">f4"))  # numpy writes a '>f4' descr
-    out = _core.read_npy(data)
-    assert out.dtype == np.dtype(np.float32)  # canonicalized to native, not '>f4'
-    assert out.dtype.byteorder in ("=", "<")
-    assert np.array_equal(out, np.load(io.BytesIO(data)))
-    assert out.tobytes() == arr.tobytes()  # bit-identical native little-endian
+    # '>' payloads are byteswapped to native across itemsizes 2/4/8 and int/float kinds,
+    # not just the single '>f4' case (a byteswap bug at another width would else hide).
+    rng = np.random.default_rng(9)
+    for native, be in [
+        ("uint16", ">u2"),
+        ("int64", ">i8"),
+        ("float64", ">f8"),
+        ("float16", ">f2"),
+        ("float32", ">f4"),
+    ]:
+        arr = _rand(native, (3, 5), rng)
+        data = _save_npy(arr.astype(be))  # numpy writes a '>' descr
+        out = _core.read_npy(data)
+        assert out.dtype == np.dtype(native)  # canonicalized to native, not '>...'
+        assert out.dtype.byteorder in ("=", "<")
+        assert np.array_equal(out, np.load(io.BytesIO(data)))
+        assert out.tobytes() == arr.tobytes()  # bit-identical native little-endian
 
 
 def test_convention_hand_big_endian_fixture():
@@ -226,12 +252,25 @@ def test_convention_hand_big_endian_fixture():
 
 
 def test_convention_fortran_order_read():
-    arr = np.asfortranarray(_rand("float64", (3, 4), np.random.default_rng(10)))
-    data = _save_npy(arr)
-    assert b"'fortran_order': True" in data  # numpy marked the F-contiguous array
-    out = _core.read_npy(data)
-    assert out.flags["C_CONTIGUOUS"]  # we de-permute to C order
-    assert np.array_equal(out, np.load(io.BytesIO(data)))
+    # de-permutation must hold across ndim (2/3/4) and itemsize (8/4/2), not just 2-D f8.
+    rng = np.random.default_rng(10)
+    for dtype, shape in [("float64", (3, 4)), ("float32", (2, 3, 4)), ("uint16", (2, 3, 4, 5))]:
+        arr = np.asfortranarray(_rand(dtype, shape, rng))
+        data = _save_npy(arr)
+        assert b"'fortran_order': True" in data  # numpy marked the F-contiguous array
+        out = _core.read_npy(data)
+        assert out.flags["C_CONTIGUOUS"]  # we de-permute to C order
+        assert np.array_equal(out, np.load(io.BytesIO(data)))
+        assert out.tobytes() == np.ascontiguousarray(arr).tobytes()  # bit-exact de-permutation
+    # byteswap + fortran combined: a '>f4' F-contiguous array must be both de-permuted
+    # and byteswapped (order='K' in astype keeps the F layout, descr becomes '>f4').
+    farr = np.asfortranarray(_rand("float32", (3, 4), rng))
+    be_data = _save_npy(farr.astype(">f4"))
+    assert b"'fortran_order': True" in be_data
+    out = _core.read_npy(be_data)
+    assert out.dtype == np.dtype(np.float32) and out.flags["C_CONTIGUOUS"]
+    assert np.array_equal(out, np.load(io.BytesIO(be_data)))
+    assert out.tobytes() == np.ascontiguousarray(farr).tobytes()
 
 
 def test_version_tolerance():
@@ -240,6 +279,55 @@ def test_version_tolerance():
         bio = io.BytesIO()
         np.lib.format.write_array(bio, arr, version=version)
         _assert_same(_core.read_npy(bio.getvalue()), arr, version)
+
+
+@pytest.mark.parametrize(
+    "dict_str",
+    [
+        '{"descr": "<f4", "fortran_order": False, "shape": (2,)}',  # double quotes, no trailing comma
+        "{'shape': (2,), 'fortran_order': False, 'descr': '<f4'}",  # keys in a non-canonical order
+        "{'descr': '=f4', 'fortran_order': False, 'shape': (2,)}",  # '=' (native) byte-order char
+        "{'descr': 'f4', 'fortran_order': False, 'shape': (2,)}",  # bare descr, no byte-order char
+    ],
+)
+def test_accept_header_grammar_variants(dict_str):
+    # The parser advertises a wider accept-grammar than numpy's one canonical form;
+    # pin the non-canonical shapes real third-party .npy producers emit.
+    vals = np.array([1.5, -2.5], dtype="<f4")
+    _assert_same(_core.read_npy(_make_npy_raw(dict_str, vals.tobytes())), vals, dict_str)
+
+
+def test_accept_nonzero_v1_minor():
+    vals = np.array([1.5, -2.5], dtype="<f4")
+    data = _make_npy_raw(
+        "{'descr': '<f4', 'fortran_order': False, 'shape': (2,)}",
+        vals.tobytes(),
+        magic=b"\x93NUMPY\x01\x05",  # v1 with a non-zero minor byte (numpy ignores minor)
+    )
+    _assert_same(_core.read_npy(data), vals)
+
+
+def test_accept_tab_newline_header_padding():
+    # numpy pads with spaces, but the grammar tolerates any whitespace before the '\n'.
+    vals = np.array([1.5, -2.5], dtype="<f4")
+    dict_str = "{'descr': '<f4', 'fortran_order': False, 'shape': (2,)}"
+    hlen = len(dict_str) + 1
+    padlen = 64 - ((10 + hlen) % 64)
+    full = dict_str + "\t" * padlen + "\n"  # tab padding instead of spaces
+    data = (
+        b"\x93NUMPY\x01\x00" + struct.pack("<H", len(full)) + full.encode("latin1") + vals.tobytes()
+    )
+    _assert_same(_core.read_npy(data), vals)
+
+
+def test_specials_bit_exact():
+    # NaN / ±inf / -0.0 / subnormal payloads must survive byte-for-byte on both the read
+    # and byte-exact write paths; a refactor routing values through numeric conversion
+    # (canonicalizing NaN bits, dropping -0.0, flushing f16 subnormals) would break this.
+    for dt in ("float16", "float32", "float64"):
+        arr = np.array([np.nan, -np.inf, np.inf, -0.0, 0.0, np.finfo(dt).tiny, 6e-8], dtype=dt)
+        assert _core.read_npy(_save_npy(arr)).tobytes() == arr.tobytes(), dt
+        assert _core.write_npy(arr) == _save_npy(arr), dt
 
 
 # --- npz specifics ----------------------------------------------------------
@@ -286,6 +374,15 @@ def test_npz_duplicate_member_raises():
         _core.read_npz(bio.getvalue())
 
 
+def test_npz_attrs_refused():
+    # .npz has no attrs side channel, so writing a TensorDict that carries attrs must
+    # fail loudly rather than silently drop them (the read(write(x)) == x guarantee).
+    rng = np.random.default_rng(19)
+    td = _core.tensor_dict({"x": _rand("float32", (2,), rng)}, attrs={"unit": "m"})
+    with pytest.raises(ValueError, match="attrs"):
+        _core.write_npz(td)
+
+
 # --- error paths (raise, never crash) --------------------------------------
 def test_error_bad_magic():
     with pytest.raises(ValueError, match="magic"):
@@ -301,6 +398,52 @@ def test_error_truncated_payload():
 def test_error_header_len_past_eof():
     with pytest.raises(ValueError):
         _core.read_npy(b"\x93NUMPY\x01\x00\xff\xff")  # claims a 65535-byte header, has none
+
+
+@pytest.mark.parametrize(
+    "shape_repr",
+    [
+        "(18446744073709551616,)",  # a single dim > SIZE_MAX (digit accumulation wraps)
+        "(4294967296, 4294967296)",  # prod of dims wraps 2**64
+        "(2305843009213693952,)",  # count * itemsize (8) wraps 2**64
+    ],
+)
+def test_error_hostile_shape_overflow(shape_repr):
+    # A ~70-byte header must never drive an allocation: each crafted shape trips an
+    # overflow guard in parse_shape / load_npy_payload and raises before own_bytes.
+    # Routed through read_npy (load_npy_payload is the sole guard there; read_npz is
+    # additionally double-guarded by TensorDict::add).
+    with pytest.raises(ValueError, match="overflows"):
+        _core.read_npy(_make_npy("'<f8'", shape_repr))
+
+
+def test_error_too_many_dimensions():
+    # ndim > 64 must be rejected before the shape vector can grow unbounded.
+    with pytest.raises(ValueError, match="dimensions"):
+        _core.read_npy(_make_npy("'<f4'", "(" + "1, " * 65 + ")"))
+
+
+def test_error_missing_header_key():
+    # A header dict missing 'fortran_order' must be rejected, never silently defaulted.
+    with pytest.raises(ValueError, match="missing"):
+        _core.read_npy(_make_npy_raw("{'descr': '<f4', 'shape': (2,)}", b"\x00" * 8))
+
+
+def test_error_unsupported_version():
+    # A v4 magic (major byte 4) is a format we do not know; reject, never guess.
+    with pytest.raises(ValueError, match="version"):
+        _core.read_npy(b"\x93NUMPY\x04\x00\x00\x00\x00\x00")
+
+
+def test_error_header_junk_after_dict():
+    # Non-whitespace bytes in the hlen padding region are junk numpy itself rejects.
+    dict_str = "{'descr': '<f4', 'fortran_order': False, 'shape': (2,)}"
+    hlen = len(dict_str) + 1
+    padlen = 64 - ((10 + hlen) % 64)
+    full = dict_str + "X" * padlen + "\n"  # junk instead of space padding
+    data = b"\x93NUMPY\x01\x00" + struct.pack("<H", len(full)) + full.encode("latin1") + b"\x00" * 8
+    with pytest.raises(ValueError, match="junk"):
+        _core.read_npy(data)
 
 
 @pytest.mark.parametrize(
@@ -345,6 +488,20 @@ def test_error_npz_corrupt_tail():
 def test_error_write_unrepresentable(bad):
     with pytest.raises((TypeError, ValueError)):
         _core.write_npy(bad)
+
+
+def test_error_write_non_contiguous():
+    # write_npy takes a strided view (no c_contig on the signature), so it must reject
+    # non-C-contiguous inputs — else it would serialize base-buffer bytes under a header
+    # claiming C order and silently corrupt the file.
+    rng = np.random.default_rng(18)
+    base = _rand("float32", (4, 6), rng)
+    for view in (base[:, ::2], base.T, base[::-1]):
+        with pytest.raises(ValueError, match="contiguous"):
+            _core.write_npy(view)
+    # a size-1 axis may carry any stride and is still representable (is_c_contig exempts it)
+    arr = np.zeros((3, 1, 4), np.float32)[:, :1]
+    _assert_same(_load_npy(_core.write_npy(arr)), np.ascontiguousarray(arr))
 
 
 # --- cross-framework (torch) ------------------------------------------------

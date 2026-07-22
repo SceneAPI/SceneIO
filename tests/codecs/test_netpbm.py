@@ -166,6 +166,17 @@ def test_pin_16bit_big_endian():
     assert out.endswith(b"\x01\x02")
 
 
+def test_pin_narrow_wide_boundary_maxval_256():
+    # maxval=256 is the FIRST wide value (wide = maxval > 255): the single sample
+    # is read as two big-endian bytes -> uint16 (0x0100 == 256), never one byte.
+    # An off-by-one regression to `maxval > 256` would decode this as 1 byte/
+    # sample uint8 and corrupt every wide raster at the boundary.
+    rec = _core.read_netpbm(b"P5\n1 1\n256\n\x01\x00")
+    assert rec.dtype == "uint16"
+    assert rec.maxval == 256
+    assert int(np.asarray(rec.pixels)[0, 0]) == 256
+
+
 def test_pin_comment_skipping():
     data = b"P6 #c\n#c2\n2 1\n#c3\n255\n" + bytes([10, 20, 30, 40, 50, 60])
     rec = _core.read_netpbm(data)
@@ -190,19 +201,64 @@ def test_pin_maxval_is_metadata():
     assert int(np.asarray(rec.pixels)[0, 0]) == 50
     assert rec.maxval == 100
     assert rec.dtype == "uint8"
+    # a sample BETWEEN maxval and the dtype cap is stored raw too: the ASCII
+    # sample cap is the dtype max (255), NOT maxval, so a value of 200 above the
+    # declared maxval of 100 is recorded verbatim (reader records, does not judge).
+    rec2 = _core.read_netpbm(b"P2\n1 1\n100\n200\n")
+    assert int(np.asarray(rec2.pixels)[0, 0]) == 200
+    assert rec2.maxval == 100
 
 
 def test_pin_rows_top_to_bottom():
-    arr = np.arange(12, dtype=np.uint8).reshape(3, 4)  # arr[0,0] == 0 at top-left
-    got = np.asarray(_core.read_netpbm(_core.write_netpbm(_core.image(arr))).pixels)
-    assert got[0, 0] == 0
-    assert got[-1, -1] == 11
-    np.testing.assert_array_equal(got, arr)
+    # External pin on hand-built reader bytes (NOT a self-round-trip, which a
+    # symmetric writer+reader flip would pass): the first raster byte is the
+    # top-left pixel by construction, so rows are read top-to-bottom.
+    got = np.asarray(_core.read_netpbm(b"P5\n2 2\n255\n\x00\x01\x02\x03").pixels)
+    np.testing.assert_array_equal(got, np.array([[0, 1], [2, 3]], dtype=np.uint8))
 
 
 def test_golden_writer_blob():
     img = _core.image(np.arange(12, dtype=np.uint8).reshape(2, 2, 3))
     assert _core.write_netpbm(img) == b"P6\n2 2\n255\n" + bytes(range(12))
+
+
+def test_golden_writer_blob_ascii():
+    # Pin the plain P2 layout byte-for-byte: space-separated decimal tokens with
+    # exactly one newline at each image-row boundary. Deleting the per-row
+    # newline (netpbm.cpp:258) or the token spacing changes these exact bytes.
+    img = _core.image(np.array([[0, 1], [2, 3]], dtype=np.uint8))
+    assert _core.write_netpbm(img, True) == b"P2\n2 2\n255\n0 1\n2 3\n"
+
+
+def test_ascii_wrap_70_columns():
+    # The plain-format writer wraps so no output line exceeds 70 chars (the
+    # plain-format line limit; strict readers reject longer lines). Deleting the
+    # wrap block (netpbm.cpp:247-250) emits one 200+ char line and fails here,
+    # while the oracle must still recover the full array.
+    arr = np.full((2, 40), 65535 - 1, dtype=np.uint16)
+    out = _core.write_netpbm(_core.image(arr), True)
+    assert all(len(line) <= 70 for line in out.split(b"\n"))
+    got, _ = oracle_read_netpbm(out)
+    np.testing.assert_array_equal(got, arr)
+
+
+def test_writer_emits_noncanonical_maxval():
+    # maxval is metadata: the writer must emit img.maxval verbatim in the header,
+    # not a hardcoded 255/65535. A writer that ignored img.maxval would pass every
+    # canonical-maxval test but fail here (u8 case).
+    img = _core.image(np.array([[7, 42]], dtype=np.uint8), maxval=100)
+    out = _core.write_netpbm(img)
+    assert b"\n100\n" in out
+    assert _core.read_netpbm(out).maxval == 100
+    # u16 twin: also exercises the wide sample<=maxval scan (netpbm.cpp:207)
+    # against a non-65535 bound, and the big-endian 2-byte emission of raw values.
+    img16 = _core.image(np.array([[300, 999]], dtype=np.uint16), maxval=1000)
+    out16 = _core.write_netpbm(img16)
+    assert b"\n1000\n" in out16
+    rec = _core.read_netpbm(out16)
+    assert rec.maxval == 1000
+    assert rec.dtype == "uint16"
+    np.testing.assert_array_equal(np.asarray(rec.pixels), np.array([[300, 999]], dtype=np.uint16))
 
 
 # --- malformed input raises (FormatError-mappable ValueError), never crashes -
@@ -222,11 +278,22 @@ def test_golden_writer_blob():
         (b"P5\n2 2\n255\n\x01", "truncated"),  # binary raster truncated
         (b"P2\n1 1\n255\n300\n", "out of range"),  # ascii sample overflows dtype
         (b"P5\n999999999 999999999\n255\n", "truncated"),  # huge header, must not allocate
+        (b"P5\n0 1\n255\n", "non-positive"),  # zero width
+        (b"P5\n1 1\n255", "whitespace"),  # binary: no delimiter before raster (EOF)
+        (b"P5\n1 1\n255#c", "truncated header"),  # comment glued to maxval, then EOF
+        (b"P2\n2 2\n255\n1 2 3\n", "expected a number"),  # ascii raster truncated mid-scan
     ],
 )
 def test_malformed_raises(data, match):
     with pytest.raises(ValueError, match=match):
         _core.read_netpbm(data)
+
+
+def test_reader_trailing_bytes_ignored():
+    # Bytes after the declared raster are silently ignored (PFM precedent):
+    # 0x2a == 42 is the single sample; "JUNK" past it is dropped, not an error.
+    rec = _core.read_netpbm(b"P5\n1 1\n255\n\x2aJUNK")
+    assert int(np.asarray(rec.pixels)[0, 0]) == 42
 
 
 # --- writer guards (refuse foreign conventions rather than convert) ---------
@@ -245,6 +312,14 @@ def test_writer_guard_rgba():
 def test_writer_guard_linear_colorspace():
     img = _core.image(np.zeros((2, 2, 3), dtype=np.uint8), color_space="linear")
     with pytest.raises(ValueError, match="srgb"):
+        _core.write_netpbm(img)
+
+
+def test_writer_guard_gray_colorspace():
+    # A 1-channel image must carry color_space 'gray'; 'srgb' on a PGM is a
+    # foreign pairing the writer refuses (the factory admits it as metadata).
+    img = _core.image(np.zeros((2, 2), dtype=np.uint8), color_space="srgb")
+    with pytest.raises(ValueError, match="gray"):
         _core.write_netpbm(img)
 
 

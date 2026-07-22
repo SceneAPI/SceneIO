@@ -86,7 +86,9 @@ void register_tensor_dict(nb::module_ &m) {
         .def("__iter__",
              [](const TensorDict &t) {  // iterate keys, dict-like
                  nb::list ks;
-                 for (const auto &e : t.entries) ks.append(nb::str(e.name.c_str()));
+                 // size-aware ctor (PyUnicode_FromStringAndSize) so names with an
+                 // embedded NUL agree with keys()/items() instead of truncating
+                 for (const auto &e : t.entries) ks.append(nb::str(e.name.data(), e.name.size()));
                  return nb::iter(ks);  // iterator holds the snapshot list alive
              })
         .def("__getitem__",
@@ -119,8 +121,11 @@ void register_tensor_dict(nb::module_ &m) {
         .def_prop_ro("attrs",
                      [](const TensorDict &t) {
                          nb::dict d;
+                         // size-aware ctor so keys/values with an embedded NUL are
+                         // preserved (matching keys()/items()), not truncated at '\0'
                          for (const auto &kv : t.attrs)
-                             d[nb::str(kv.first.c_str())] = nb::str(kv.second.c_str());
+                             d[nb::str(kv.first.data(), kv.first.size())] =
+                                 nb::str(kv.second.data(), kv.second.size());
                          return d;
                      })
         // conventions (metadata; the canonical form readers normalize into,
