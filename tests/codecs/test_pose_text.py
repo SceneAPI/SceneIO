@@ -375,6 +375,56 @@ def test_kitti_rotation_is_orthonormal():
         np.testing.assert_allclose(np.linalg.det(R), 1.0, atol=1e-12)
 
 
+def test_write_tum_rejects_foreign_convention():
+    pvs = _core.posed_view_set(
+        np.array([[0.0, 0.0, 0.0, 1.0]]),
+        np.array([[0.0, 0.0, 0.0]]),
+        quaternion_order="xyzw",
+        axis_frame="opengl",
+    )
+    with pytest.raises(ValueError, match="opencv"):
+        _core.write_tum(pvs)
+
+
+def test_write_kitti_rejects_foreign_convention():
+    pvs = _core.posed_view_set(
+        np.array([[1.0, 0.0, 0.0, 0.0]]),
+        np.array([[0.0, 0.0, 0.0]]),
+        pose_convention="world_to_camera",
+    )
+    with pytest.raises(ValueError, match="camera_to_world"):
+        _core.write_kitti(pvs)
+
+
+def test_tum_stores_quaternion_verbatim():
+    # TUM stores the xyzw quaternion as-is (no normalization); a non-unit quat
+    # survives verbatim, including through our writer.
+    p = _core.read_tum(b"0.0 1.0 2.0 3.0 1.0 2.0 3.0 4.0\n")
+    np.testing.assert_array_equal(np.asarray(p.quaternions)[0], [1.0, 2.0, 3.0, 4.0])
+    back = _core.read_tum(_core.write_tum(p))
+    np.testing.assert_array_equal(np.asarray(back.quaternions)[0], [1.0, 2.0, 3.0, 4.0])
+
+
+def test_kitti_reader_skips_comments_and_blanks():
+    canon, _ = _rand_rotations(2, 40)
+    t = _rand_trans(2, 41)
+    rows = oracle_write_kitti(canon, t).decode().strip().split("\n")
+    mixed = ("# a KITTI poses file\n\n" + rows[0] + "\n   \n" + rows[1] + "\n").encode()
+    p = _core.read_kitti(mixed)
+    assert p.num_views == 2
+    q_ref, t_ref = oracle_read_kitti(oracle_write_kitti(canon, t))
+    assert_quats_upto_sign(np.asarray(p.quaternions), q_ref)
+    np.testing.assert_allclose(np.asarray(p.translations), t_ref, atol=1e-12)
+
+
+def test_pose_text_empty_inputs():
+    assert _core.read_tum(b"").num_views == 0
+    assert _core.read_kitti(b"").num_views == 0
+    # writing an empty (native-convention) record yields no lines
+    assert bytes(_core.write_tum(_core.read_tum(b""))) == b""
+    assert bytes(_core.write_kitti(_core.read_kitti(b""))) == b""
+
+
 def test_kitti_torch_interop():
     torch = pytest.importorskip("torch")
     canon, mats = _rand_rotations(5, 32)

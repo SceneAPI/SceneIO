@@ -241,6 +241,14 @@ PosedViewSet read_transforms_json(nb::bytes data) {
 }
 
 nb::bytes write_transforms_json(const PosedViewSet &views) {
+    // record-don't-convert: refuse to emit a foreign-convention record under
+    // transforms.json's implicit camera_to_world / OpenGL / meters labeling
+    // rather than silently mislabel it (normalize the PosedViewSet first).
+    if (views.pose_convention != "camera_to_world" || views.axis_frame != "opengl" ||
+        views.scale_to_meters != 1.0)
+        throw std::invalid_argument(
+            "transforms.json needs a camera_to_world / opengl / scale-1.0 PosedViewSet; got " +
+            views.pose_convention + " / " + views.axis_frame + " — normalize it first");
     const size_t nv = views.num_views();
     json d = json::object();
 

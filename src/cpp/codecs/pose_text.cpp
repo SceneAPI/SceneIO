@@ -5,9 +5,11 @@
 // Each reader RECORDS the source's conventions as metadata rather than
 // canonicalizing (docs/io_implementation_plan.md): TUM is an XYZW quaternion,
 // camera_to_world, meters; KITTI is a row-major 3x4 [R|t] matrix that we
-// convert to a WXYZ quaternion (camera_to_world). read->write->read
-// round-trips exactly. (g2o pose graphs are deferred — their edges don't fit
-// PosedViewSet.)
+// convert to a WXYZ quaternion (camera_to_world). TUM round-trips exactly (the
+// quaternion is stored verbatim); KITTI round-trips to floating-point tolerance
+// (it passes through R->quat->R). The writers refuse a foreign-convention
+// record rather than mislabel it. (g2o pose graphs are deferred — their edges
+// don't fit PosedViewSet.)
 #include <cmath>
 #include <cstdio>
 #include <sstream>
@@ -155,6 +157,10 @@ PosedViewSet read_tum(nb::bytes data) {
 }
 
 nb::bytes write_tum(const PosedViewSet &p) {
+    if (p.pose_convention != "camera_to_world" || p.axis_frame != "opencv" || p.scale_to_meters != 1.0)
+        throw std::invalid_argument(
+            "TUM needs a camera_to_world / opencv / scale-1.0 PosedViewSet; got " + p.pose_convention +
+            " / " + p.axis_frame + " — normalize it first");
     const size_t nv = p.num_views();
     const bool has_stamps = p.stamps.size() == nv;
     std::string out;
@@ -217,6 +223,10 @@ PosedViewSet read_kitti(nb::bytes data) {
 }
 
 nb::bytes write_kitti(const PosedViewSet &p) {
+    if (p.pose_convention != "camera_to_world" || p.axis_frame != "opencv" || p.scale_to_meters != 1.0)
+        throw std::invalid_argument(
+            "KITTI needs a camera_to_world / opencv / scale-1.0 PosedViewSet; got " + p.pose_convention +
+            " / " + p.axis_frame + " — normalize it first");
     const size_t nv = p.num_views();
     std::string out;
     for (size_t i = 0; i < nv; i++) {

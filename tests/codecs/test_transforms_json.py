@@ -399,6 +399,68 @@ def test_missing_frames_raises():
         _core.read_transforms_json(b"{}")
 
 
+def test_write_rejects_foreign_convention():
+    # a record whose tags aren't transforms.json-native (opencv here, the factory
+    # default) must be rejected, not silently relabeled opengl on the next read.
+    pvs = _core.posed_view_set(
+        np.array([[1.0, 0.0, 0.0, 0.0]]), np.array([[0.0, 0.0, 0.0]]), axis_frame="opencv"
+    )
+    with pytest.raises(ValueError, match="opengl"):
+        _core.write_transforms_json(pvs)
+
+
+def test_empty_frames():
+    a = _core.read_transforms_json(b'{"frames": []}')
+    assert a.num_views == 0 and a.num_cameras == 0
+    data = json.dumps(
+        {
+            "camera_model": "PINHOLE",
+            "fl_x": 500,
+            "fl_y": 500,
+            "cx": 320,
+            "cy": 240,
+            "w": 640,
+            "h": 480,
+            "frames": [],
+        }
+    ).encode()
+    b = _core.read_transforms_json(data)
+    assert b.num_views == 0 and b.num_cameras == 1
+    back = _core.read_transforms_json(_core.write_transforms_json(b))
+    assert back.num_views == 0 and back.num_cameras == 1
+
+
+@pytest.mark.parametrize(
+    ("fields", "model_id"),
+    [
+        ({"fl_x": 500, "fl_y": 500, "cx": 320, "cy": 240, "w": 640, "h": 480}, 1),  # PINHOLE
+        ({"fl_x": 500, "cx": 320, "cy": 240, "w": 640, "h": 480}, 0),  # SIMPLE_PINHOLE
+        (
+            {
+                "fl_x": 500,
+                "fl_y": 500,
+                "cx": 320,
+                "cy": 240,
+                "k1": 0.1,
+                "k2": 0.0,
+                "p1": 0.0,
+                "p2": 0.0,
+                "w": 640,
+                "h": 480,
+            },
+            4,
+        ),  # distortion -> OPENCV
+    ],
+)
+def test_camera_model_inference(fields, model_id):
+    # real Instant-NGP/Nerfstudio files usually omit "camera_model"; the reader
+    # infers it from which fields are present.
+    data = json.dumps(
+        {**fields, "frames": [{"file_path": "a.png", "transform_matrix": np.eye(4).tolist()}]}
+    ).encode()
+    assert _core.read_transforms_json(data).cameras[0].model_id == model_id
+
+
 def test_quaternions_are_numpy(rng):
     pvs = _core.read_transforms_json(build_transforms(rng, "PINHOLE"))
     q = pvs.quaternions
