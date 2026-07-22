@@ -21,16 +21,16 @@ SoA, zero-copy to numpy/torch (DLPack), conventions carried as metadata.
 | `GaussianCloud` | `splat` | ✅ record / ⬜ datatype | DataType registration is **Phase‑C** (needs a wire‑format id); the codecs use `"splat"` as an informal label |
 | `PosedViewSet` | `camera` + poses | ✅ record / ⬜ datatype | SE3/view + optional `Camera` intrinsics; per‑source convention tags (order/direction/axis/scale). `"posed_views"` label is informal, Phase‑C |
 | `Camera` | (shared) | ✅ | COLMAP model id + `params[]`; reused by `Reconstruction` and `PosedViewSet` |
-| `DepthMap` / `Dense` | `dense` / `depth_map` | ⬜ | PFM already decodes to a raw ndarray; the *typed* depth record (scale/unit/invalid metadata) is Phase 4 |
-| `FeatureSet` | `feature_set` | ⬜ | Phase 1/3 — keypoints + descriptors + scores |
-| `MatchGraph` | `match_graph` | ⬜ | Phase 1/3 — per‑pair matches + F/E/H + inliers |
-| `PointCloud` | `point_cloud` (new) | ⬜ | Phase 5 — xyz + rgb + normals + intensity |
-| `Image` | `image_sequence` elem | ⬜ | Phase 4 — pixels + color space + EXIF |
-| `TensorDict` | (named arrays) | ⬜ | Phase 3 — HDF5 / npz / safetensors |
+| `Image` | `image_sequence` elem | ✅ | interleaved HxWxC (u8/u16/f32), color_space/alpha_mode/maxval metadata, owner‑safe zero‑copy `pixels` |
+| `TensorDict` | (named arrays) | ✅ | dict‑like, 12 numpy dtypes (dtype‑erased), zero‑copy views; backs npz now, HDF5/safetensors later |
+| `PointCloud` | `point_cloud` (new) | 🟡 | Phase 1b (in progress) — xyz + rgb + normals + intensity |
+| `DepthMap` / `Dense` | `dense` / `depth_map` | 🟡 | Phase 1b (in progress) — typed depth + scale/unit/invalid + confidence |
+| `FeatureSet` | `feature_set` | ⬜ | Phase 3 — keypoints + descriptors + scores |
+| `MatchGraph` | `match_graph` | ⬜ | Phase 3 — per‑pair matches + F/E/H + inliers |
 
 ## Formats (codecs)
 
-### ✅ Implemented (7 codecs)
+### ✅ Implemented (10 codecs)
 
 | Format id | Record | R/W | Oracle | Notes |
 |---|---|---|---|---|
@@ -41,14 +41,17 @@ SoA, zero-copy to numpy/torch (DLPack), conventions carried as metadata.
 | `transforms_json` | `PosedViewSet` | R+W | pure‑Python | NeRF/Instant‑NGP/Nerfstudio; records OpenGL c2w |
 | `tum` | `PosedViewSet` | R+W | pure‑Python | TUM trajectory (xyzw, verbatim) |
 | `kitti` | `PosedViewSet` | R+W | pure‑Python | KITTI 3×4 [R\|t] poses |
+| `npy` | ndarray | R+W | **numpy** | numpy 1.0/2.0/3.0 header; byte‑exact v1.0 writer (== np.save) |
+| `npz` | `TensorDict` | R+W | **numpy** | ZIP (stored+deflate) via vendored miniz; 12 dtypes |
+| `netpbm` | `Image` | R+W | pure‑Python | PGM P5/P2 + PPM P6/P3; 16‑bit big‑endian, comment‑tolerant |
 
-### ⬜ Pending — Tier‑1 spine (Phase 1, zero external deps)
+### 🟡 In progress — Tier‑1 spine (Phase 1b, zero external deps)
 
 | Format | Record | Oracle | Notes |
 |---|---|---|---|
-| `.npy` / `.npz` | `TensorDict`/ndarray | numpy | trivial; low marginal value (numpy does it) |
-| PPM / PGM | `Image` | imageio | no‑dep image I/O |
-| COLMAP `.txt` | `Reconstruction` | pycolmap | text variant (only `.bin` done) |
+| COLMAP `.txt` | `Reconstruction` | pycolmap | text twin of `.bin` |
+| `.xyz` / `.pts` | `PointCloud` | pure‑Python | point‑cloud text |
+| `.flo` | ndarray (H,W,2) | pure‑Python | Middlebury optical flow |
 | g2o poses | `PosedViewSet` | manual | deferred — pose‑graph *edges* don't fit `PosedViewSet` |
 
 ### ⬜ Pending — Phase 2 (splat, mostly done)
