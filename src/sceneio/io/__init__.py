@@ -22,6 +22,8 @@ from sceneio.io.registry import REGISTRY, Codec, FormatError, detect, get, regis
 Reconstruction = _core.Reconstruction
 GaussianCloud = _core.GaussianCloud
 PosedViewSet = _core.PosedViewSet
+TensorDict = _core.TensorDict
+Image = _core.Image
 Camera = _core.Camera
 
 
@@ -82,8 +84,10 @@ __all__ = [
     "Codec",
     "FormatError",
     "GaussianCloud",
+    "Image",
     "PosedViewSet",
     "Reconstruction",
+    "TensorDict",
     "codecs",
     "detect",
     "read",

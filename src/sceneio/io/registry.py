@@ -13,6 +13,8 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
+import numpy as np
+
 from sceneio import _core
 from sceneio.errors import SceneIoError
 
@@ -96,6 +98,21 @@ def _bytes_writer(fn: Callable[[object], bytes]) -> Callable[[object, str], None
     return write
 
 
+# --- npy/npz adapters: the compiled writers require C-contiguous, native-endian
+# input, and .npz accepts either a TensorDict or a plain {name: array} dict.
+def _canon(a):
+    a = np.ascontiguousarray(a)
+    if a.dtype.byteorder == ">":
+        a = a.astype(a.dtype.newbyteorder("="))
+    return a
+
+
+def _npz_bytes(obj) -> bytes:
+    if isinstance(obj, _core.TensorDict):
+        return _core.write_npz(obj)
+    return _core.write_npz(_core.tensor_dict({k: _canon(v) for k, v in dict(obj).items()}))
+
+
 # --- built-in codecs (the compiled `_core` functions, uniformly wrapped) ---
 register(
     Codec(
@@ -173,5 +190,39 @@ register(
         _bytes_writer(_core.write_kitti),
         record=_core.PosedViewSet,
         datatype="posed_views",
+    )
+)
+# Array / tensor + raster-image formats (Tier-1, zero-dep). datatype ids are
+# informational (vocabulary registration is Phase-C, like posed_views).
+register(
+    Codec(
+        "npy",
+        (".npy",),
+        _bytes_reader(_core.read_npy),
+        _bytes_writer(lambda a: _core.write_npy(_canon(a))),
+        record=None,
+        datatype="tensor",
+        magic=(b"\x93NUMPY",),
+    )
+)
+register(
+    Codec(
+        "npz",
+        (".npz",),
+        _bytes_reader(_core.read_npz),
+        _bytes_writer(_npz_bytes),
+        record=_core.TensorDict,
+        datatype="tensor_dict",
+    )
+)
+register(
+    Codec(
+        "netpbm",
+        (".ppm", ".pgm", ".pnm"),
+        _bytes_reader(_core.read_netpbm),
+        _bytes_writer(_core.write_netpbm),
+        record=_core.Image,
+        datatype="image",
+        magic=(b"P2", b"P3", b"P5", b"P6"),
     )
 )

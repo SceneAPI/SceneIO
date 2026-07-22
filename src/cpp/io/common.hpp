@@ -78,6 +78,17 @@ nb::ndarray<nb::numpy, T> own_array(std::vector<T> &&v, std::vector<size_t> shap
     return nb::ndarray<nb::numpy, T>(held->data(), shape.size(), shape.data(), owner);
 }
 
+// Runtime-dtype twin of own_array: wrap a moved byte buffer as an owning ndarray
+// whose dtype is chosen at runtime (for the generic tensor codecs — npy/npz,
+// later HDF5/safetensors). `dt` is a DLPack dtype {code, bits, lanes}.
+inline nb::ndarray<nb::numpy> own_bytes(std::vector<uint8_t> &&v, std::vector<size_t> shape,
+                                        nb::dlpack::dtype dt) {
+    auto *held = new std::vector<uint8_t>(std::move(v));
+    nb::capsule owner(held, [](void *q) noexcept { delete static_cast<std::vector<uint8_t> *>(q); });
+    return nb::ndarray<nb::numpy>(held->data(), shape.size(), shape.data(), owner,
+                                  /*strides=*/nullptr, dt);
+}
+
 static_assert(sizeof(double) == 8 && sizeof(float) == 4 && sizeof(uint64_t) == 8);
 
 }  // namespace sio

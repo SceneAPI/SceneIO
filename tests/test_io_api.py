@@ -11,7 +11,52 @@ import sceneio
 
 
 def test_registry_has_builtins():
-    assert {"pfm", "colmap_sparse", "gaussian_ply", "spz"} <= set(sceneio.codecs())
+    assert {
+        "pfm",
+        "colmap_sparse",
+        "gaussian_ply",
+        "spz",
+        "transforms_json",
+        "tum",
+        "kitti",
+        "npy",
+        "npz",
+        "netpbm",
+    } <= set(sceneio.codecs())
+
+
+def test_npy_roundtrip_via_public_api(tmp_path):
+    arr = np.arange(24, dtype=np.float32).reshape(2, 3, 4)
+    p = tmp_path / "a.npy"
+    sceneio.write(arr, p)  # dispatch by .npy extension
+    assert sceneio.detect(p) == "npy"
+    np.testing.assert_array_equal(sceneio.read(p), arr)
+
+
+def test_npy_detected_by_magic(tmp_path):
+    p = tmp_path / "noext"
+    sceneio.write(np.zeros(3, np.float32), p, format="npy")  # extensionless -> magic sniff
+    assert sceneio.detect(p) == "npy"
+
+
+def test_npz_roundtrip_via_public_api(tmp_path):
+    arrays = {"x": np.arange(6, dtype=np.int16).reshape(2, 3), "y": np.ones(4, np.uint8)}
+    p = tmp_path / "a.npz"
+    sceneio.write(arrays, p)  # a plain {name: array} dict -> TensorDict
+    td = sceneio.read(p)
+    assert isinstance(td, sceneio.TensorDict) and list(td.keys()) == ["x", "y"]
+    np.testing.assert_array_equal(np.asarray(td["x"]), arrays["x"])
+
+
+def test_netpbm_roundtrip_via_public_api(tmp_path):
+    p = tmp_path / "a.ppm"
+    p.write_bytes(b"P6\n2 1\n255\n" + bytes([10, 20, 30, 40, 50, 60]))
+    assert sceneio.detect(p) == "netpbm"
+    img = sceneio.read(p)
+    assert isinstance(img, sceneio.Image)
+    out = tmp_path / "b.ppm"
+    sceneio.write(img, out)  # dispatch by .ppm + record=Image
+    np.testing.assert_array_equal(np.asarray(sceneio.read(out).pixels), np.asarray(img.pixels))
 
 
 def test_pfm_roundtrip_via_public_api(tmp_path):

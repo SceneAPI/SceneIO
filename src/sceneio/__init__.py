@@ -113,8 +113,10 @@ _IO_FORWARDS = frozenset(
         "Camera",
         "FormatError",
         "GaussianCloud",
+        "Image",
         "PosedViewSet",
         "Reconstruction",
+        "TensorDict",
     }
 )
 
@@ -153,6 +155,7 @@ __all__ = [
     "ContractViolation",
     "FormatError",
     "GaussianCloud",
+    "Image",
     "ImageSourceImpl",
     "MaterializedImage",
     "Point3DRecord",
@@ -160,6 +163,7 @@ __all__ = [
     "Reconstruction",
     "SceneIoError",
     "TableDef",
+    "TensorDict",
     "__version__",
     "checkpoint_root",
     "codecs",

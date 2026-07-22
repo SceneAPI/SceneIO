@@ -69,6 +69,8 @@ environment = { MACOSX_DEPLOYMENT_TARGET = "11.0" }
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra"
+# the npz duplicate-member test intentionally writes a duplicate zip entry
+filterwarnings = ["ignore:Duplicate name:UserWarning"]
 
 [tool.ruff]
 line-length = 100
@@ -81,4 +83,4 @@ ignore = ["E501"]
 [tool.ruff.lint.per-file-ignores]
 # Tests favor terse fixtures: one-shot file reads, compound asserts, and
 # throwaway unpacking are fine here.
-"tests/**" = ["SIM115", "PT018", "RUF059"]
+"tests/**" = ["SIM115", "PT018", "PT011", "RUF059"]
