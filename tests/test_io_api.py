@@ -8,6 +8,7 @@ import numpy as np
 import pytest
 
 import sceneio
+from sceneio import _core
 
 
 def test_registry_has_builtins():
@@ -160,3 +161,54 @@ def test_colmap_directory_detected_and_read(tmp_path):
     assert isinstance(R, sceneio.Reconstruction)
     assert R.num_points3D == rec.num_points3D()
     assert R.quaternion_order == "wxyz" and R.pose_convention == "world_to_camera"
+
+
+# --- E2E dispatch for the vendored image/point codecs -----------------------
+# The per-codec parity suites (tests/codecs/) call _core.read_X/write_X DIRECTLY
+# and never touch the public path: extension/magic detection -> registry lookup
+# -> the _bytes_reader/_bytes_writer adapter -> _core.*. These round-trip through
+# the real sceneio.write/detect/read on disk, so a wrong reader/extension/magic in
+# a registry entry is caught. Fidelity itself is the parity suites' job, so lossy
+# codecs (jpeg/hdr) only assert the record shape/dtype survived the round-trip.
+def _img_u8():
+    a = np.random.default_rng(1).integers(0, 256, (6, 8, 3), dtype=np.uint8)
+    return _core.image(a, color_space="srgb"), a
+
+
+def _img_f32():
+    a = (np.random.default_rng(2).random((6, 8, 3), dtype=np.float32) * 10.0).astype(np.float32)
+    return _core.image(a, color_space="linear"), a
+
+
+def _pc():
+    a = (np.random.default_rng(3).random((20, 3), dtype=np.float32) * 100.0).astype(np.float32)
+    return _core.point_cloud(a), a
+
+
+@pytest.mark.parametrize(
+    ("fmt", "ext", "build", "lossless"),
+    [
+        ("png", ".png", _img_u8, True),
+        ("jpeg", ".jpg", _img_u8, False),  # lossy: dispatch-only
+        ("hdr", ".hdr", _img_f32, False),  # lossy: dispatch-only
+        ("exr", ".exr", _img_f32, True),
+        ("webp", ".webp", _img_u8, True),  # write defaults to lossless
+        ("las", ".las", _pc, None),
+    ],
+)
+def test_image_point_codec_roundtrip_via_public_api(tmp_path, fmt, ext, build, lossless):
+    record, original = build()
+    p = tmp_path / f"x{ext}"
+    sceneio.write(record, p)          # dispatch by extension -> the codec's writer
+    assert sceneio.detect(p) == fmt   # extension/magic detection routes back to it
+    back = sceneio.read(p)            # public read via the registry adapter
+    if fmt == "las":
+        assert isinstance(back, sceneio.PointCloud) and back.num_points == len(original)
+        true = np.asarray(back.positions).astype(np.float64) + np.asarray(back.origin)
+        np.testing.assert_allclose(true, original, atol=0.001)  # i32 grid, within scale/2
+    else:
+        assert isinstance(back, sceneio.Image) and back.channels == 3
+        px = np.asarray(back.pixels)
+        assert px.shape == original.shape and px.dtype == original.dtype
+        if lossless:
+            np.testing.assert_array_equal(px, original)  # png/exr/webp are byte-exact
