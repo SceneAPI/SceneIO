@@ -93,3 +93,6 @@ ignore = ["E501"]
 # Tests favor terse fixtures: one-shot file reads, compound asserts, and
 # throwaway unpacking are fine here.
 "tests/**" = ["SIM105", "SIM115", "PT018", "PT011", "RUF059"]
+# The bench harness times lambdas synchronously inside a loop (invoked before the
+# loop var advances), so the loop-var-binding warning is a false positive here.
+"bench/**" = ["B023"]
