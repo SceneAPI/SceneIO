@@ -186,8 +186,19 @@ def _view(img_id, filename, id_intrinsic, id_pose, w=640, h=480, local_path="", 
     }
 
 
-def _intr(cam_id, name, focal, ppx, ppy, w=640, h=480, disto=None, poly_id=None, with_name=True,
-          ptr_id=2147483650):
+def _intr(
+    cam_id,
+    name,
+    focal,
+    ppx,
+    ppy,
+    w=640,
+    h=480,
+    disto=None,
+    poly_id=None,
+    with_name=True,
+    ptr_id=2147483650,
+):
     data = {"width": w, "height": h, "focal_length": focal, "principal_point": [ppx, ppy]}
     if disto is not None:
         data[disto[0]] = disto[1]
@@ -227,6 +238,8 @@ def _sfm(views, intrinsics, extrinsics, structure=None, control_points=None, roo
 
 _IDENT = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
 _PERM = [[0, 1, 0], [0, 0, 1], [1, 0, 0]]  # -> q=[-0.5,0.5,0.5,0.5], -R*[1,2,3]=[-2,-3,-1]
+_DIAG_X = [[1, 0, 0], [0, -1, 0], [0, 0, -1]]  # 180deg about x; Shepperd branch 2 (m00-major)
+_DIAG_Y = [[-1, 0, 0], [0, 1, 0], [0, 0, -1]]  # 180deg about y; Shepperd branch 3 (m11-major)
 
 # A canonical fixture: 3 views (view 2 unposed -> skipped), 2 intrinsics of
 # different types (one pinhole, one pinhole_radial_k3 -> FULL_OPENCV), 3 landmarks
@@ -239,8 +252,17 @@ CANONICAL = _sfm(
     ],
     intrinsics=[
         _intr(0, "pinhole", 800.0, 320.0, 240.0, w=640, h=480, poly_id=2147483649),
-        _intr(1, "pinhole_radial_k3", 1000.0, 500.0, 375.0, w=1000, h=750,
-              disto=("disto_k3", [0.1, 0.01, 0.001]), poly_id=2147483650),
+        _intr(
+            1,
+            "pinhole_radial_k3",
+            1000.0,
+            500.0,
+            375.0,
+            w=1000,
+            h=750,
+            disto=("disto_k3", [0.1, 0.01, 0.001]),
+            poly_id=2147483650,
+        ),
     ],
     extrinsics=[_extr(0, _IDENT, [0, 0, 0]), _extr(1, _PERM, [1, 2, 3])],
     structure=[
@@ -285,13 +307,27 @@ def test_cross_impl_oracle_parity():
 
 
 def test_pose_convention_pin_R_center_to_t():
-    # THE mandated external pin (hand-derived from X_cam = R*(X - C)):
-    #   R = perm, C = (1,2,3) -> q = (-0.5,0.5,0.5,0.5), t = (-2,-3,-1)
-    #   R = I,    C = (1,2,3) -> q = (1,0,0,0),          t = (-1,-2,-3)
+    # THE mandated external pin (hand-derived from X_cam = R*(X - C)), extended
+    # to hit ALL FOUR Shepperd matrix_to_quat branches with exact-arithmetic
+    # rotations so a transpose/sign typo in ANY branch fails bit-exactly:
+    #   R = perm,          C=(1,2,3) -> q=(-0.5,0.5,0.5,0.5), t=(-2,-3,-1) [branch 4, z-major]
+    #   R = I,             C=(1,2,3) -> q=(1,0,0,0),          t=(-1,-2,-3) [branch 1, tr>0]
+    #   R = diag(1,-1,-1), C=(1,2,3) -> q=(0,1,0,0),          t=(-1,2,3)   [branch 2, m00-major]
+    #   R = diag(-1,1,-1), C=(1,2,3) -> q=(0,0,1,0),          t=(1,-2,3)   [branch 3, m11-major]
     fixture = _sfm(
-        views=[_view(0, "a.jpg", 0, 0), _view(1, "b.jpg", 0, 1)],
+        views=[
+            _view(0, "a.jpg", 0, 0),
+            _view(1, "b.jpg", 0, 1),
+            _view(2, "c.jpg", 0, 2),
+            _view(3, "d.jpg", 0, 3),
+        ],
         intrinsics=[_intr(0, "pinhole", 100.0, 0.0, 0.0, poly_id=2147483649)],
-        extrinsics=[_extr(0, _PERM, [1, 2, 3]), _extr(1, _IDENT, [1, 2, 3])],
+        extrinsics=[
+            _extr(0, _PERM, [1, 2, 3]),
+            _extr(1, _IDENT, [1, 2, 3]),
+            _extr(2, _DIAG_X, [1, 2, 3]),
+            _extr(3, _DIAG_Y, [1, 2, 3]),
+        ],
     )
     R = _core.read_openmvg(fixture)
     q, t = np.asarray(R.quaternions), np.asarray(R.translations)
@@ -299,9 +335,76 @@ def test_pose_convention_pin_R_center_to_t():
     np.testing.assert_array_equal(t[0], [-2.0, -3.0, -1.0])
     np.testing.assert_array_equal(q[1], [1.0, 0.0, 0.0, 0.0])
     np.testing.assert_array_equal(t[1], [-1.0, -2.0, -3.0])
+    np.testing.assert_array_equal(q[2], [0.0, 1.0, 0.0, 0.0])  # branch 2 (m00-major)
+    np.testing.assert_array_equal(t[2], [-1.0, 2.0, 3.0])
+    np.testing.assert_array_equal(q[3], [0.0, 0.0, 1.0, 0.0])  # branch 3 (m11-major)
+    np.testing.assert_array_equal(t[3], [1.0, -2.0, 3.0])
     np.testing.assert_allclose(_quat_wxyz_to_R(q[0]), _PERM, atol=1e-15)
+    np.testing.assert_allclose(_quat_wxyz_to_R(q[2]), _DIAG_X, atol=1e-15)
+    np.testing.assert_allclose(_quat_wxyz_to_R(q[3]), _DIAG_Y, atol=1e-15)
     assert R.pose_convention == "world_to_camera"
     assert R.quaternion_order == "wxyz"
+
+
+def test_generic_rotation_hits_branch2_and_roundtrips(tmp_path):
+    # The exact-arithmetic pins above reach branches 2/3 only via SYMMETRIC
+    # diagonal matrices, on which a transposed matrix_to_quat is invisible. This
+    # ASYMMETRIC, irrational rotation lands in branch 2 (m00-major, tr<0,
+    # x-dominant) and DOES discriminate a camera_to_world (conjugated) quaternion:
+    # _quat_wxyz_to_R(q) reconstructs R only for the world_to_camera quat (the
+    # conjugate reconstructs R^T != R). It also exercises the non-exact arithmetic
+    # path and the contractual left-to-right t = -R*C association.
+    R_mat = _quat_wxyz_to_R([0.3, 0.9, 0.2, 0.1])  # w small, x dominant -> branch 2
+    C = np.array([1.5, -2.5, 3.5])
+    fixture = _sfm(
+        views=[_view(0, "g.jpg", 0, 0)],
+        intrinsics=[_intr(0, "pinhole", 800.0, 320.0, 240.0, poly_id=2147483649)],
+        extrinsics=[_extr(0, R_mat.tolist(), C.tolist())],
+    )
+    R = _core.read_openmvg(fixture)
+    q = np.asarray(R.quaternions)[0]
+    t = np.asarray(R.translations)[0]
+    np.testing.assert_allclose(_quat_wxyz_to_R(q), R_mat, atol=1e-13)  # reconstructs R, not R^T
+    np.testing.assert_allclose(t, -(R_mat @ C), atol=1e-13)  # t = -R*C
+    # cross-impl parity with the branch-mirroring oracle on the non-exact path
+    o = oracle_read(fixture)
+    np.testing.assert_allclose(_quat_align(o["quats"], q[None, :]), o["quats"], atol=1e-12)
+    np.testing.assert_allclose(t, o["trans"][0], atol=1e-12)
+    # writer inverts the reader on the generic path (value-stable round-trip)
+    R2 = _core.read_openmvg(_core.write_openmvg(R))
+    q2 = np.asarray(R2.quaternions)[0]
+    np.testing.assert_allclose(_quat_align(q[None, :], q2[None, :]), q[None, :], atol=1e-12)
+    np.testing.assert_allclose(np.asarray(R2.translations)[0], t, atol=1e-12)
+
+
+def test_projection_consistency_pin(tmp_path):
+    # End-to-end FRAME pin: OpenMVG projects x_cam = R*(X - C) and COLMAP
+    # SIMPLE_PINHOLE projects the SAME frame (u = f*x/z + cx), so NO axis flip.
+    # A Bundler-style y-up/z-back frame would make the reprojection disagree with
+    # the stored observation. Hand-computed with _PERM, C=(1,2,3), f=800:
+    #   X=(5,4,6) -> X-C=(4,2,3) -> R*(X-C)=(2,3,4) -> u=800*2/4+320=720, v=840
+    f, ppx, ppy = 800.0, 320.0, 240.0
+    X, C, obs = [5.0, 4.0, 6.0], [1.0, 2.0, 3.0], [720.0, 840.0]
+    fixture = _sfm(
+        views=[_view(0, "a.jpg", 0, 0)],
+        intrinsics=[_intr(0, "pinhole", f, ppx, ppy, poly_id=2147483649)],
+        extrinsics=[_extr(0, _PERM, C)],
+        structure=[_struct(0, X, [(0, 0, obs[0], obs[1])])],
+    )
+    R = _core.read_openmvg(fixture)
+    q = np.asarray(R.quaternions)[0]
+    t = np.asarray(R.translations)[0]
+    p = np.asarray(R.cameras[0].params)  # SIMPLE_PINHOLE: [f, cx, cy]
+    Xw = np.asarray(R.xyz)[0]
+    # reproject X through COLMAP SIMPLE_PINHOLE using ONLY the record's pose+intrinsic
+    xc = _quat_wxyz_to_R(q) @ Xw + t
+    uv = [p[0] * xc[0] / xc[2] + p[1], p[0] * xc[1] / xc[2] + p[2]]
+    np.testing.assert_allclose(uv, obs, atol=1e-9)
+    # and the stored observation, surfaced via the colmap_txt writer, is verbatim
+    out = tmp_path / "proj"
+    out.mkdir()
+    _core.write_colmap_txt(R, str(out))
+    assert b"a.jpg\n720 840 0\n" in (out / "images.txt").read_bytes()
 
 
 @pytest.mark.parametrize(
@@ -309,19 +412,32 @@ def test_pose_convention_pin_R_center_to_t():
     [
         ("pinhole", None, 0, [800.0, 320.0, 240.0]),
         ("pinhole_radial_k1", ("disto_k1", [0.1]), 2, [800.0, 320.0, 240.0, 0.1]),
-        ("pinhole_radial_k3", ("disto_k3", [0.1, 0.01, 0.001]), 6,
-         [800.0, 800.0, 320.0, 240.0, 0.1, 0.01, 0.0, 0.0, 0.001, 0.0, 0.0, 0.0]),
-        ("pinhole_brown_t2", ("disto_t2", [0.1, 0.01, 0.001, 0.002, 0.003]), 6,
-         [800.0, 800.0, 320.0, 240.0, 0.1, 0.01, 0.002, 0.003, 0.001, 0.0, 0.0, 0.0]),
-        ("fisheye", ("fisheye", [0.1, 0.01, 0.001, 0.0001]), 5,
-         [800.0, 800.0, 320.0, 240.0, 0.1, 0.01, 0.001, 0.0001]),
+        (
+            "pinhole_radial_k3",
+            ("disto_k3", [0.1, 0.01, 0.001]),
+            6,
+            [800.0, 800.0, 320.0, 240.0, 0.1, 0.01, 0.0, 0.0, 0.001, 0.0, 0.0, 0.0],
+        ),
+        (
+            "pinhole_brown_t2",
+            ("disto_t2", [0.1, 0.01, 0.001, 0.002, 0.003]),
+            6,
+            [800.0, 800.0, 320.0, 240.0, 0.1, 0.01, 0.002, 0.003, 0.001, 0.0, 0.0, 0.0],
+        ),
+        (
+            "fisheye",
+            ("fisheye", [0.1, 0.01, 0.001, 0.0001]),
+            5,
+            [800.0, 800.0, 320.0, 240.0, 0.1, 0.01, 0.001, 0.0001],
+        ),
     ],
 )
 def test_intrinsic_model_mapping(name, disto, exp_model, exp_params):
     fixture = _sfm(
         views=[_view(0, "a.jpg", 0, 0)],
-        intrinsics=[_intr(0, name, 800.0, 320.0, 240.0, w=640, h=480, disto=disto,
-                          poly_id=2147483649)],
+        intrinsics=[
+            _intr(0, name, 800.0, 320.0, 240.0, w=640, h=480, disto=disto, poly_id=2147483649)
+        ],
         extrinsics=[_extr(0, _IDENT, [0, 0, 0])],
     )
     R = _core.read_openmvg(fixture)
@@ -410,13 +526,24 @@ def test_observations_tracks_csr_via_colmap_text(tmp_path):
 def test_roundtrip_bitexact_crafted(tmp_path):
     R1 = _core.read_openmvg(CANONICAL)
     R2 = _core.read_openmvg(_core.write_openmvg(R1))
-    for attr in ("quaternions", "translations", "xyz", "rgb", "errors", "image_ids",
-                 "point3D_ids", "image_camera_ids"):
+    for attr in (
+        "quaternions",
+        "translations",
+        "xyz",
+        "rgb",
+        "errors",
+        "image_ids",
+        "point3D_ids",
+        "image_camera_ids",
+    ):
         np.testing.assert_array_equal(np.asarray(getattr(R2, attr)), np.asarray(getattr(R1, attr)))
     assert list(R2.image_names) == list(R1.image_names)
     for c2, c1 in zip(R2.cameras, R1.cameras, strict=True):
         assert (int(c2.model_id), int(c2.width), int(c2.height)) == (
-            int(c1.model_id), int(c1.width), int(c1.height))
+            int(c1.model_id),
+            int(c1.width),
+            int(c1.height),
+        )
         np.testing.assert_array_equal(np.asarray(c2.params), np.asarray(c1.params))
     # coupling gate: the obs/track CSR the binding can't surface must survive too.
     a, b = tmp_path / "a", tmp_path / "b"
@@ -437,8 +564,9 @@ def test_oracle_reads_our_writer():
     assert o["image_ids"] == [int(x) for x in np.asarray(R.image_ids)]
     assert o["names"] == list(R.image_names)
     assert o["img_cam_ids"] == [int(x) for x in np.asarray(R.image_camera_ids)]
-    np.testing.assert_allclose(_quat_align(np.asarray(R.quaternions), o["quats"]),
-                               np.asarray(R.quaternions), atol=1e-12)
+    np.testing.assert_allclose(
+        _quat_align(np.asarray(R.quaternions), o["quats"]), np.asarray(R.quaternions), atol=1e-12
+    )
     np.testing.assert_allclose(o["trans"], np.asarray(R.translations), atol=1e-12)
     np.testing.assert_array_equal(o["xyz"], np.asarray(R.xyz))
     assert o["pt_ids"] == [int(x) for x in np.asarray(R.point3D_ids)]
@@ -480,8 +608,20 @@ def test_writer_back_reference_for_repeated_type(tmp_path):
 # ==========================================================================
 GOLD_IN = _sfm(
     views=[_view(0, "0.jpg", 0, 0, w=640, h=480, ptr_id=42)],
-    intrinsics=[_intr(0, "pinhole_radial_k1", 800.0, 320.0, 240.0, w=640, h=480,
-                      disto=("disto_k1", [0.5]), poly_id=2147483649, ptr_id=99)],
+    intrinsics=[
+        _intr(
+            0,
+            "pinhole_radial_k1",
+            800.0,
+            320.0,
+            240.0,
+            w=640,
+            h=480,
+            disto=("disto_k1", [0.5]),
+            poly_id=2147483649,
+            ptr_id=99,
+        )
+    ],
     extrinsics=[_extr(0, _PERM, [1, 2, 3])],
     structure=[_struct(0, [1.5, -2.5, 3.5], [(0, 7, 10.5, -20.5)])],
     control_points=[],
@@ -496,22 +636,63 @@ def _golden_expected() -> bytes:
     expected = {
         "sfm_data_version": "0.3",
         "root_path": "",
-        "views": [{"key": 0, "value": {
-            "polymorphic_id": 1073741824,
-            "ptr_wrapper": {"id": 2147483649, "data": {
-                "local_path": "", "filename": "0.jpg", "width": 640, "height": 480,
-                "id_view": 0, "id_intrinsic": 0, "id_pose": 0}}}}],
-        "intrinsics": [{"key": 0, "value": {
-            "polymorphic_id": 2147483649, "polymorphic_name": "pinhole_radial_k1",
-            "ptr_wrapper": {"id": 2147483650, "data": {
-                "width": 640, "height": 480, "focal_length": 800.0,
-                "principal_point": [320.0, 240.0], "disto_k1": [0.5]}}}}],
-        "extrinsics": [{"key": 0, "value": {
-            "rotation": [[0.0, 1.0, 0.0], [0.0, 0.0, 1.0], [1.0, 0.0, 0.0]],
-            "center": [1.0, 2.0, 3.0]}}],
-        "structure": [{"key": 0, "value": {
-            "X": [1.5, -2.5, 3.5],
-            "observations": [{"key": 0, "value": {"id_feat": 0, "x": [10.5, -20.5]}}]}}],
+        "views": [
+            {
+                "key": 0,
+                "value": {
+                    "polymorphic_id": 1073741824,
+                    "ptr_wrapper": {
+                        "id": 2147483649,
+                        "data": {
+                            "local_path": "",
+                            "filename": "0.jpg",
+                            "width": 640,
+                            "height": 480,
+                            "id_view": 0,
+                            "id_intrinsic": 0,
+                            "id_pose": 0,
+                        },
+                    },
+                },
+            }
+        ],
+        "intrinsics": [
+            {
+                "key": 0,
+                "value": {
+                    "polymorphic_id": 2147483649,
+                    "polymorphic_name": "pinhole_radial_k1",
+                    "ptr_wrapper": {
+                        "id": 2147483650,
+                        "data": {
+                            "width": 640,
+                            "height": 480,
+                            "focal_length": 800.0,
+                            "principal_point": [320.0, 240.0],
+                            "disto_k1": [0.5],
+                        },
+                    },
+                },
+            }
+        ],
+        "extrinsics": [
+            {
+                "key": 0,
+                "value": {
+                    "rotation": [[0.0, 1.0, 0.0], [0.0, 0.0, 1.0], [1.0, 0.0, 0.0]],
+                    "center": [1.0, 2.0, 3.0],
+                },
+            }
+        ],
+        "structure": [
+            {
+                "key": 0,
+                "value": {
+                    "X": [1.5, -2.5, 3.5],
+                    "observations": [{"key": 0, "value": {"id_feat": 0, "x": [10.5, -20.5]}}],
+                },
+            }
+        ],
         "control_points": [],
     }
     return json.dumps(expected, separators=(",", ":"), ensure_ascii=False).encode()
@@ -526,8 +707,9 @@ def test_golden_writer_blob():
 # writer model mapping + guards (records built through the COLMAP text reader,
 # since Reconstruction has no Python constructor)
 # ==========================================================================
-def _colmap_record(tmp_path, cameras, images=b"1 1 0 0 0 0 0 0 1 a.jpg\n\n",
-                   points=b"1 0 0 0 0 0 0 -1\n", sub="m"):
+def _colmap_record(
+    tmp_path, cameras, images=b"1 1 0 0 0 0 0 0 1 a.jpg\n\n", points=b"1 0 0 0 0 0 0 -1\n", sub="m"
+):
     d = tmp_path / sub
     d.mkdir(parents=True, exist_ok=True)
     (d / "cameras.txt").write_bytes(cameras)
@@ -550,8 +732,10 @@ def _written_type(data: bytes) -> str:
         (b"1 OPENCV 640 480 800 800 320 240 0.1 0.01 0.002 0.003\n", "pinhole_brown_t2"),
         (b"1 OPENCV_FISHEYE 640 480 800 800 320 240 0.1 0.01 0.001 0.0001\n", "fisheye"),
         # FULL_OPENCV with tangential -> brown_t2; without -> radial_k3
-        (b"1 FULL_OPENCV 640 480 800 800 320 240 0.1 0.01 0.002 0.003 0.001 0 0 0\n",
-         "pinhole_brown_t2"),
+        (
+            b"1 FULL_OPENCV 640 480 800 800 320 240 0.1 0.01 0.002 0.003 0.001 0 0 0\n",
+            "pinhole_brown_t2",
+        ),
         (b"1 FULL_OPENCV 640 480 800 800 320 240 0.1 0.01 0 0 0.001 0 0 0\n", "pinhole_radial_k3"),
     ],
 )
@@ -563,13 +747,15 @@ def test_writer_model_mapping(tmp_path, camera_line, exp_type):
 def test_writer_radial_maps_to_k3_with_zero_and_reads_back_full_opencv(tmp_path):
     R = _colmap_record(tmp_path, b"1 RADIAL 640 480 800 320 240 0.1 0.01\n")
     d = json.loads(_core.write_openmvg(R))
-    np.testing.assert_array_equal(d["intrinsics"][0]["value"]["ptr_wrapper"]["data"]["disto_k3"],
-                                  [0.1, 0.01, 0.0])  # RADIAL k1,k2 with an appended k3=0
+    np.testing.assert_array_equal(
+        d["intrinsics"][0]["value"]["ptr_wrapper"]["data"]["disto_k3"], [0.1, 0.01, 0.0]
+    )  # RADIAL k1,k2 with an appended k3=0
     back = _core.read_openmvg(_core.write_openmvg(R))
     assert int(back.cameras[0].model_id) == 6  # documented RADIAL(3) -> FULL_OPENCV(6) asymmetry
     np.testing.assert_allclose(
         np.asarray(back.cameras[0].params),
-        [800.0, 800.0, 320.0, 240.0, 0.1, 0.01, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+        [800.0, 800.0, 320.0, 240.0, 0.1, 0.01, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+    )
 
 
 @pytest.mark.parametrize(
@@ -581,14 +767,85 @@ def test_writer_radial_maps_to_k3_with_zero_and_reads_back_full_opencv(tmp_path)
         (b"1 FULL_OPENCV 640 480 800 800 320 240 0.1 0.01 0 0 0.001 0.5 0 0\n", "k4"),  # k4!=0
         (b"1 FOV 640 480 800 800 320 240 0.9\n", "not representable"),
         # THIN_PRISM_FISHEYE has 12 COLMAP params (fx fy cx cy k1 k2 p1 p2 k3 k4 sx1 sy1)
-        (b"1 THIN_PRISM_FISHEYE 640 480 800 800 320 240 0.1 0.01 0 0 0.001 0 0 0\n",
-         "not representable"),
+        (
+            b"1 THIN_PRISM_FISHEYE 640 480 800 800 320 240 0.1 0.01 0 0 0.001 0 0 0\n",
+            "not representable",
+        ),
     ],
 )
 def test_writer_guards_raise(tmp_path, camera_line, match):
     R = _colmap_record(tmp_path, camera_line)  # unique tmp_path per parametrization
     with pytest.raises(ValueError, match=match):
         _core.write_openmvg(R)
+
+
+def test_writer_csr_guards_raise(tmp_path):
+    # The writer's two load-bearing CSR bounds guards are the only barrier between
+    # a hostile record and an OOB obs_xy read. read_colmap_txt does NOT cross-
+    # validate points3D track pairs, so a bad track reaches write_openmvg.
+    # (1) POINT2D_IDX beyond the image's observation count:
+    R1 = _colmap_record(
+        tmp_path,
+        b"1 SIMPLE_PINHOLE 640 480 800 320 240\n",
+        images=b"1 1 0 0 0 0 0 0 1 a.jpg\n10 20 -1\n",  # image 1 has exactly one obs
+        points=b"1 0 0 0 0 0 0 -1 1 5\n",  # track -> (image 1, point2D idx 5)
+        sub="csr1",
+    )
+    with pytest.raises(ValueError, match="point2D index out of range"):
+        _core.write_openmvg(R1)
+    # (2) track references a nonexistent image:
+    R2 = _colmap_record(
+        tmp_path,
+        b"1 SIMPLE_PINHOLE 640 480 800 320 240\n",
+        images=b"1 1 0 0 0 0 0 0 1 a.jpg\n10 20 -1\n",
+        points=b"1 0 0 0 0 0 0 -1 9 0\n",  # image 9 does not exist
+        sub="csr2",
+    )
+    with pytest.raises(ValueError, match="unknown image"):
+        _core.write_openmvg(R2)
+
+
+def test_writer_nonfinite_pose_raises(tmp_path):
+    # write_openmvg must REFUSE non-finite values: sfm_data.json is JSON and
+    # nlohmann would serialize NaN/Inf as `null` (a silently schema-invalid file
+    # that only fails on re-read). read_colmap_txt parses 'nan'/'inf' tokens
+    # verbatim, so the record is reachable through the public API.
+    R = _colmap_record(
+        tmp_path,
+        b"1 SIMPLE_PINHOLE 640 480 800 320 240\n",
+        images=b"1 nan 0 0 0 0 0 0 1 a.jpg\n\n",  # QW = NaN
+        sub="nf",
+    )
+    with pytest.raises(ValueError, match="non-finite"):
+        _core.write_openmvg(R)
+
+
+def test_writer_drops_untriangulated_observations(tmp_path):
+    # Mixed observation line: one untriangulated 2D point (POINT3D_ID == -1) and
+    # one triangulated. write_openmvg drops the -1 obs (not representable as an
+    # OpenMVG landmark observation), and a read-back compacts the per-image CSR
+    # so the surviving obs is index 0.
+    R = _colmap_record(
+        tmp_path,
+        b"1 SIMPLE_PINHOLE 640 480 800 320 240\n",
+        images=b"1 1 0 0 0 0 0 0 1 a.jpg\n10.5 20.5 -1 30.5 40.5 1\n",
+        points=b"1 0 0 0 0 0 0 -1 1 1\n",  # track -> (image 1, point2D idx 1)
+        sub="drop",
+    )
+    written = _core.write_openmvg(R)
+    obs = json.loads(written)["structure"][0]["value"]["observations"]
+    assert len(obs) == 1  # the -1 observation is dropped
+    assert obs[0]["value"]["x"] == [30.5, 40.5]  # only the triangulated obs remains
+    # read-back compacts the CSR: the surviving obs is now index 0
+    R2 = _core.read_openmvg(written)
+    cm = tmp_path / "drop_cm"
+    cm.mkdir()
+    _core.write_colmap_txt(R2, str(cm))
+    images = (cm / "images.txt").read_bytes()
+    points = (cm / "points3D.txt").read_bytes()
+    assert b"a.jpg\n30.5 40.5 1\n" in images  # surviving obs (point id 1)
+    assert b"10.5" not in images  # untriangulated obs gone
+    assert b"1 0 0 0 0 0 0 -1 1 0\n" in points  # track POINT2D_IDX compacted to 0
 
 
 # ==========================================================================
@@ -644,20 +901,62 @@ _VALID_EXTR = [_extr(0, _IDENT, [0, 0, 0])]
         (json.dumps({"views": [], "extrinsics": []}).encode(), "intrinsics"),
         (json.dumps({"views": [], "intrinsics": []}).encode(), "extrinsics"),
         # view without ptr_wrapper
-        (json.dumps({"intrinsics": [_VALID_INTR[0]], "extrinsics": [_VALID_EXTR[0]],
-                     "views": [{"key": 0, "value": {"polymorphic_id": 1073741824}}]}).encode(),
-         "ptr_wrapper"),
+        (
+            json.dumps(
+                {
+                    "intrinsics": [_VALID_INTR[0]],
+                    "extrinsics": [_VALID_EXTR[0]],
+                    "views": [{"key": 0, "value": {"polymorphic_id": 1073741824}}],
+                }
+            ).encode(),
+            "ptr_wrapper",
+        ),
         # view without filename
-        (_sfm([{"key": 0, "value": {"polymorphic_id": 1073741824, "ptr_wrapper": {"id": 1,
-               "data": {"id_intrinsic": 0, "id_pose": 0}}}}], _VALID_INTR, _VALID_EXTR), "filename"),
+        (
+            _sfm(
+                [
+                    {
+                        "key": 0,
+                        "value": {
+                            "polymorphic_id": 1073741824,
+                            "ptr_wrapper": {"id": 1, "data": {"id_intrinsic": 0, "id_pose": 0}},
+                        },
+                    }
+                ],
+                _VALID_INTR,
+                _VALID_EXTR,
+            ),
+            "filename",
+        ),
         # view without id_pose
-        (_sfm([{"key": 0, "value": {"polymorphic_id": 1073741824, "ptr_wrapper": {"id": 1,
-               "data": {"filename": "a.jpg", "id_intrinsic": 0}}}}], _VALID_INTR, _VALID_EXTR),
-         "id_pose"),
+        (
+            _sfm(
+                [
+                    {
+                        "key": 0,
+                        "value": {
+                            "polymorphic_id": 1073741824,
+                            "ptr_wrapper": {
+                                "id": 1,
+                                "data": {"filename": "a.jpg", "id_intrinsic": 0},
+                            },
+                        },
+                    }
+                ],
+                _VALID_INTR,
+                _VALID_EXTR,
+            ),
+            "id_pose",
+        ),
         # unknown polymorphic_name
-        (_sfm([_view(0, "a.jpg", 0, 0)],
-              [_intr(0, "spherical", 800.0, 0.0, 0.0, poly_id=2147483649)], _VALID_EXTR),
-         "spherical"),
+        (
+            _sfm(
+                [_view(0, "a.jpg", 0, 0)],
+                [_intr(0, "spherical", 800.0, 0.0, 0.0, poly_id=2147483649)],
+                _VALID_EXTR,
+            ),
+            "spherical",
+        ),
         # extrinsic missing rotation
         (_sfm([], _VALID_INTR, [{"key": 0, "value": {"center": [0, 0, 0]}}]), "rotation"),
         # rotation not 3x3
@@ -667,33 +966,154 @@ _VALID_EXTR = [_extr(0, _IDENT, [0, 0, 0])]
         # center not length 3
         (_sfm([], _VALID_INTR, [_extr(0, _IDENT, [0, 0])]), "center"),
         # principal_point not length 2
-        (_sfm([], [{"key": 0, "value": {"polymorphic_id": 2147483649,
-               "polymorphic_name": "pinhole", "ptr_wrapper": {"id": 1, "data": {"width": 1,
-               "height": 1, "focal_length": 800.0, "principal_point": [0]}}}}], _VALID_EXTR),
-         "principal_point"),
+        (
+            _sfm(
+                [],
+                [
+                    {
+                        "key": 0,
+                        "value": {
+                            "polymorphic_id": 2147483649,
+                            "polymorphic_name": "pinhole",
+                            "ptr_wrapper": {
+                                "id": 1,
+                                "data": {
+                                    "width": 1,
+                                    "height": 1,
+                                    "focal_length": 800.0,
+                                    "principal_point": [0],
+                                },
+                            },
+                        },
+                    }
+                ],
+                _VALID_EXTR,
+            ),
+            "principal_point",
+        ),
         # disto_k3 not length 3
-        (_sfm([], [_intr(0, "pinhole_radial_k3", 800.0, 0.0, 0.0, disto=("disto_k3", [0, 0]),
-               poly_id=2147483649)], _VALID_EXTR), "disto_k3"),
+        (
+            _sfm(
+                [],
+                [
+                    _intr(
+                        0,
+                        "pinhole_radial_k3",
+                        800.0,
+                        0.0,
+                        0.0,
+                        disto=("disto_k3", [0, 0]),
+                        poly_id=2147483649,
+                    )
+                ],
+                _VALID_EXTR,
+            ),
+            "disto_k3",
+        ),
         # landmark X not length 3
-        (_sfm([], _VALID_INTR, _VALID_EXTR,
-              structure=[{"key": 0, "value": {"X": [1, 2], "observations": []}}]), "landmark X"),
+        (
+            _sfm(
+                [],
+                _VALID_INTR,
+                _VALID_EXTR,
+                structure=[{"key": 0, "value": {"X": [1, 2], "observations": []}}],
+            ),
+            "landmark X",
+        ),
         # observation x not length 2
-        (_sfm([_view(0, "a.jpg", 0, 0)], _VALID_INTR, _VALID_EXTR,
-              structure=[{"key": 0, "value": {"X": [1, 2, 3],
-                          "observations": [{"key": 0, "value": {"id_feat": 0, "x": [1]}}]}}]),
-         "observation x"),
+        (
+            _sfm(
+                [_view(0, "a.jpg", 0, 0)],
+                _VALID_INTR,
+                _VALID_EXTR,
+                structure=[
+                    {
+                        "key": 0,
+                        "value": {
+                            "X": [1, 2, 3],
+                            "observations": [{"key": 0, "value": {"id_feat": 0, "x": [1]}}],
+                        },
+                    }
+                ],
+            ),
+            "observation x",
+        ),
         # observation references an unposed / unknown view
-        (_sfm([_view(0, "a.jpg", 0, 0)], _VALID_INTR, _VALID_EXTR,
-              structure=[_struct(0, [1, 2, 3], [(5, 0, 1.0, 2.0)])]), "posed view"),
+        (
+            _sfm(
+                [_view(0, "a.jpg", 0, 0)],
+                _VALID_INTR,
+                _VALID_EXTR,
+                structure=[_struct(0, [1, 2, 3], [(5, 0, 1.0, 2.0)])],
+            ),
+            "posed view",
+        ),
         # negative view key
         (_sfm([_view(-1, "a.jpg", 0, 0)], _VALID_INTR, _VALID_EXTR), "uint32"),
         # structure key overflowing int64
-        (_sfm([], _VALID_INTR, _VALID_EXTR,
-              structure=[{"key": 2 ** 63, "value": {"X": [1, 2, 3], "observations": []}}]), "int64"),
+        (
+            _sfm(
+                [],
+                _VALID_INTR,
+                _VALID_EXTR,
+                structure=[{"key": 2**63, "value": {"X": [1, 2, 3], "observations": []}}],
+            ),
+            "int64",
+        ),
         # negative id_intrinsic
-        (_sfm([{"key": 0, "value": {"polymorphic_id": 1073741824, "ptr_wrapper": {"id": 1,
-               "data": {"filename": "a.jpg", "id_intrinsic": -1, "id_pose": 0}}}}],
-              _VALID_INTR, _VALID_EXTR), "uint32"),
+        (
+            _sfm(
+                [
+                    {
+                        "key": 0,
+                        "value": {
+                            "polymorphic_id": 1073741824,
+                            "ptr_wrapper": {
+                                "id": 1,
+                                "data": {"filename": "a.jpg", "id_intrinsic": -1, "id_pose": 0},
+                            },
+                        },
+                    }
+                ],
+                _VALID_INTR,
+                _VALID_EXTR,
+            ),
+            "uint32",
+        ),
+        # duplicate cereal map keys are rejected (cereal itself keeps first/last
+        # silently; this codec refuses so it never emits a corrupt record)
+        (
+            _sfm(
+                [_view(0, "a.jpg", 0, 0)],
+                [
+                    _intr(0, "pinhole", 800.0, 0.0, 0.0, poly_id=2147483649),
+                    _intr(0, "pinhole", 900.0, 0.0, 0.0, poly_id=2147483651, ptr_id=2147483651),
+                ],
+                _VALID_EXTR,
+            ),
+            "duplicate intrinsic key",
+        ),
+        (
+            _sfm(
+                [_view(0, "a.jpg", 0, 0)],
+                _VALID_INTR,
+                [_extr(0, _IDENT, [0, 0, 0]), _extr(0, _PERM, [1, 2, 3])],
+            ),
+            "duplicate extrinsic key",
+        ),
+        (
+            _sfm([_view(0, "a.jpg", 0, 0), _view(0, "b.jpg", 0, 0)], _VALID_INTR, _VALID_EXTR),
+            "duplicate view key",
+        ),
+        (
+            _sfm(
+                [_view(0, "a.jpg", 0, 0)],
+                _VALID_INTR,
+                _VALID_EXTR,
+                structure=[_struct(0, [1, 2, 3], []), _struct(0, [4, 5, 6], [])],
+            ),
+            "duplicate structure key",
+        ),
     ],
 )
 def test_malformed_raises(data, match):
@@ -706,14 +1126,23 @@ def test_fuzz_single_byte_mutation_no_crash():
     # -- never crash (nlohmann is bounds-safe and the whole reader body is wrapped).
     base = _sfm(
         views=[_view(0, "a.jpg", 0, 0)],
-        intrinsics=[_intr(0, "pinhole_radial_k1", 800.0, 320.0, 240.0,
-                          disto=("disto_k1", [0.1]), poly_id=2147483649)],
+        intrinsics=[
+            _intr(
+                0,
+                "pinhole_radial_k1",
+                800.0,
+                320.0,
+                240.0,
+                disto=("disto_k1", [0.1]),
+                poly_id=2147483649,
+            )
+        ],
         extrinsics=[_extr(0, _PERM, [1, 2, 3])],
         structure=[_struct(0, [1, 2, 3], [(0, 0, 10.0, 20.0)])],
     )
     for i in range(len(base)):
         for repl in (0x00, 0x22, 0x7D, 0x39, 0xFF, 0x2D):  # NUL " } 9 0xFF -
-            mutated = base[:i] + bytes([repl]) + base[i + 1:]
+            mutated = base[:i] + bytes([repl]) + base[i + 1 :]
             try:
                 _core.read_openmvg(mutated)
             except ValueError:
@@ -757,6 +1186,9 @@ def test_registry_detect_and_roundtrip(tmp_path):
     assert registry.detect(str(out)) == codec.id  # filename match
     R2 = io_read(str(out))  # detected by filename, no explicit format
     assert (R2.num_cameras, R2.num_images, R2.num_points3D) == (
-        R.num_cameras, R.num_images, R.num_points3D)
+        R.num_cameras,
+        R.num_images,
+        R.num_points3D,
+    )
     np.testing.assert_array_equal(np.asarray(R2.xyz), np.asarray(R.xyz))
     np.testing.assert_array_equal(np.asarray(R2.quaternions), np.asarray(R.quaternions))

@@ -61,7 +61,9 @@
 // this codec needs no fast_float (the roadmap's fast_float rule targets
 // hand-rolled text parsers). The pure-C++ decode/encode runs with the GIL released
 // (xyz.cpp precedent); nb objects are only touched outside that scope. Every
-// malformed/missing-key condition raises std::invalid_argument (prefixed
+// malformed/missing-key condition -- including a duplicate views/intrinsics/
+// extrinsics/structure map key, and (on write) a non-finite value JSON cannot
+// represent -- raises std::invalid_argument (prefixed
 // "OpenMVG sfm_data: ") -> Python ValueError -> FormatError at the io layer; the
 // whole reader body is wrapped so nlohmann's own type/parse errors surface as
 // ValueError too, and every integer field goes through a range-checked helper
@@ -126,6 +128,17 @@ void matrix_to_quat(const double R[9], double q[4]) {
 // --- error + JSON access helpers -------------------------------------------
 [[noreturn]] void bad(const std::string &msg) {
     throw std::invalid_argument("OpenMVG sfm_data: " + msg);
+}
+
+// Reject a non-finite value on the WRITE path. sfm_data.json is JSON and
+// nlohmann serializes NaN/Inf as the literal `null` (schema-invalid -- it only
+// fails later, on re-read, with "field ... must be a number"), so refuse to
+// emit rather than silently mislabel: the house refuse-not-convert policy
+// (xyz.cpp writes canonical nan/inf spellings; JSON cannot, so it raises).
+void require_finite(double v, const char *what, uint64_t id) {
+    if (!std::isfinite(v))
+        bad("cannot encode non-finite " + std::string(what) + " (id " + std::to_string(id) +
+            "); sfm_data.json is JSON, NaN/Inf are not representable");
 }
 
 const json &member(const json &o, const char *k, const char *ctx) {
@@ -230,7 +243,9 @@ void map_intrinsic(const std::string &name, const json &data, double f, double p
         c.model_id = 5;  // OPENCV_FISHEYE equidistant polynomial
         c.params = {f, f, ppx, ppy, k1, k2, k3, k4};
     } else {
-        bad("intrinsic polymorphic_name '" + name +
+        // Bound the echoed file-controlled name (xyz.cpp's 40-char token cap).
+        const std::string shown = name.size() > 40 ? name.substr(0, 40) + "..." : name;
+        bad("intrinsic polymorphic_name '" + shown +
             "' is not supported (pinhole, pinhole_radial_k1, pinhole_radial_k3, "
             "pinhole_brown_t2, fisheye)");
     }
@@ -254,6 +269,8 @@ void parse_sfm(const char *p, size_t n, Reconstruction &r) {
         r.cameras.reserve(intr.size());
         for (const json &e : intr) {
             const uint32_t cid = get_u32(member(e, "key", "intrinsic entry"), "intrinsic key");
+            if (!known_cams.insert(cid).second)
+                bad("duplicate intrinsic key " + std::to_string(cid));
             const json &v = member(e, "value", "intrinsic entry");
             const std::string name = resolve_poly(v, by_id, std::to_string(cid).c_str());
             const json &data = unwrap_ptr(v, "intrinsic");
@@ -266,7 +283,6 @@ void parse_sfm(const char *p, size_t n, Reconstruction &r) {
                 fixed_array(member(data, "principal_point", "intrinsic"), 2, "principal_point");
             map_intrinsic(name, data, f, get_f64(pp[0], "principal_point"),
                           get_f64(pp[1], "principal_point"), c);
-            known_cams.insert(cid);
             r.cameras.push_back(std::move(c));
         }
 
@@ -291,7 +307,8 @@ void parse_sfm(const char *p, size_t n, Reconstruction &r) {
             matrix_to_quat(R, pq.q);
             for (int i = 0; i < 3; i++)
                 pq.t[i] = -(R[i * 3 + 0] * C0 + R[i * 3 + 1] * C1 + R[i * 3 + 2] * C2);
-            poses[pid] = pq;
+            if (!poses.emplace(pid, pq).second)
+                bad("duplicate extrinsic key " + std::to_string(pid));
         }
 
         // 3. views -> images (skip unreconstructed) + img_id -> row index ----
@@ -318,7 +335,8 @@ void parse_sfm(const char *p, size_t n, Reconstruction &r) {
             if (!known_cams.count(id_intrinsic))
                 bad("view " + std::to_string(iid) + " references missing intrinsic " +
                     std::to_string(id_intrinsic));
-            img_index[iid] = r.img_ids.size();
+            if (!img_index.emplace(iid, r.img_ids.size()).second)
+                bad("duplicate view key " + std::to_string(iid));
             r.img_ids.push_back(iid);
             const PoseQT &pq = pose_it->second;
             r.quats.insert(r.quats.end(), {pq.q[0], pq.q[1], pq.q[2], pq.q[3]});
@@ -362,9 +380,12 @@ void parse_sfm(const char *p, size_t n, Reconstruction &r) {
 
         if (has_structure) {
             r.pt_ids.reserve(sit->size());
+            std::unordered_set<uint64_t> seen_pts;
             for (const json &lm : *sit) {
                 const int64_t pid_i = get_i64(member(lm, "key", "structure entry"), "structure key");
                 if (pid_i < 0) bad("structure key must be non-negative");
+                if (!seen_pts.insert(static_cast<uint64_t>(pid_i)).second)
+                    bad("duplicate structure key " + std::to_string(pid_i));
                 const json &v = member(lm, "value", "structure entry");
                 const json &X = fixed_array(member(v, "X", "landmark"), 3, "landmark X");
                 r.pt_ids.push_back(static_cast<uint64_t>(pid_i));
@@ -400,8 +421,14 @@ void parse_sfm(const char *p, size_t n, Reconstruction &r) {
     } catch (const json::exception &e) {
         // nlohmann parse/type errors surface as ValueError too (bad() throws
         // std::invalid_argument, which is not a json::exception, so our own
-        // messages propagate untouched).
-        bad(e.what());
+        // messages propagate untouched). Bound the echoed text: nlohmann embeds
+        // the entire current token (control bytes expanded to 8-char "<U+00XX>"
+        // escapes) in parse errors, so a hostile ~100MB token would otherwise be
+        // copied verbatim -- cap it (the useful position/reason prefix comes
+        // first), mirroring xyz.cpp's bounded-echo rule.
+        std::string msg = e.what();
+        if (msg.size() > 200) { msg.resize(200); msg += "..."; }
+        bad(msg);
     }
 }
 
@@ -519,6 +546,7 @@ std::string write_impl(const Reconstruction &r) {
     std::unordered_map<std::string, uint32_t> type_id;  // type_name -> local type id
     uint32_t type_next = 0;
     for (const Camera &c : r.cameras) {
+        for (double pv : c.params) require_finite(pv, "camera parameter", c.id);
         const MvgIntr mi = camera_to_mvg(c);  // guards + maps
         json data = json::object();
         data["width"] = c.width;
@@ -550,6 +578,8 @@ std::string write_impl(const Reconstruction &r) {
     // extrinsics (one per image; R = quat_to_matrix(q), C = -R^T t)
     json jextr = json::array();
     for (size_t i = 0; i < N; i++) {
+        for (int k = 0; k < 4; k++) require_finite(r.quats[i * 4 + k], "image quaternion", r.img_ids[i]);
+        for (int k = 0; k < 3; k++) require_finite(r.trans[i * 3 + k], "image translation", r.img_ids[i]);
         const double q[4] = {r.quats[i * 4], r.quats[i * 4 + 1], r.quats[i * 4 + 2],
                              r.quats[i * 4 + 3]};
         double R[9];
@@ -577,6 +607,9 @@ std::string write_impl(const Reconstruction &r) {
     json jstruct = json::array();
     const size_t M = r.pt_ids.size();
     for (size_t k = 0; k < M; k++) {
+        require_finite(r.xyz[k * 3], "point xyz", r.pt_ids[k]);
+        require_finite(r.xyz[k * 3 + 1], "point xyz", r.pt_ids[k]);
+        require_finite(r.xyz[k * 3 + 2], "point xyz", r.pt_ids[k]);
         json obsarr = json::array();
         const uint64_t a = r.track_off[k], e = r.track_off[k + 1];
         for (uint64_t j = a; j < e; j++) {
@@ -589,6 +622,8 @@ std::string write_impl(const Reconstruction &r) {
             if (p2d >= r.obs_off[row + 1] - r.obs_off[row])
                 bad("structure track references a point2D index out of range");
             const uint64_t slot = r.obs_off[row] + p2d;
+            require_finite(r.obs_xy[2 * slot], "observation x", r.pt_ids[k]);
+            require_finite(r.obs_xy[2 * slot + 1], "observation x", r.pt_ids[k]);
             json ov = json::object();
             ov["id_feat"] = p2d;  // re-emit the compact POINT2D_IDX (id_feat is not kept)
             ov["x"] = json::array({r.obs_xy[2 * slot], r.obs_xy[2 * slot + 1]});
@@ -642,5 +677,6 @@ void register_openmvg(nb::module_ &m) {
           "sfm_data_version 0.3, ptr_wrapper / polymorphic wrappers). Extrinsics store the camera "
           "center C = -R^T t. Guards intrinsics not representable as a single-focal OpenMVG "
           "pinhole model (PINHOLE/OPENCV/FULL_OPENCV require fx == fy; FOV and the fisheye/thin "
-          "-prism variants are refused). rgb, error and untriangulated observations are dropped.");
+          "-prism variants are refused). Non-finite (NaN/Inf) pose/point/param values are refused "
+          "(JSON has no such literals). rgb, error and untriangulated observations are dropped.");
 }

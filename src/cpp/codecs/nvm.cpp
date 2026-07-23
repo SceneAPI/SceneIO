@@ -53,8 +53,11 @@
 // cameras discarded; everything after the terminating 0 (the PLY section, which
 // may hold free text) is ignored; NVM feature indices (into external .sift files)
 // are DISCARDED and the writer re-emits the compact per-image observation index in
-// their place (so re-writing a foreign NVM renumbers feature indices; write∘read is
-// a byte-exact fixpoint after the first read); err has no NVM field and is set to
+// their place (so re-writing a foreign NVM renumbers feature indices); a read-then-
+// write is byte-pinned once (the golden test), while further write/read cycles are
+// value-stable but NOT byte-stable: the C = -R^T*t <-> t = -R*C re-derivation drifts
+// by ~1 ulp per cycle since R*R^T != I in FP (see test_write_read_write_is_value_stable);
+// err has no NVM field and is set to
 // the -1.0 COLMAP unknown-error sentinel; ids (camera/image/point) are synthesized
 // 1-based; filenames are stored verbatim including VisualSFM's '"'-for-space escape
 // (recorded, not translated).
@@ -296,7 +299,18 @@ void decode_nvm(const char *p, size_t n, Reconstruction &r) {
     // scan order. obs_off/track_off carry the leading 0 sentinel even when empty.
     r.obs_off.resize(N + 1);
     r.obs_off[0] = 0;
-    for (size_t i = 0; i < N; ++i) r.obs_off[i + 1] = r.obs_off[i] + cnt[i];
+    // Guard the per-image count against the uint32 point2D-index width BEFORE the
+    // prefix sum, mirroring the ncam id guard above: the re-based index stored at
+    // line ~324 is a uint32, so a single image with >2^32-1 measurements would wrap
+    // it into a corrupt-but-in-bounds record. Raise instead (file-header contract:
+    // malformed/degenerate input always raises, never silently corrupts).
+    for (size_t i = 0; i < N; ++i) {
+        if (cnt[i] > 0xFFFFFFFFULL)
+            throw std::invalid_argument(
+                "NVM: image " + std::to_string(i) +
+                " has too many measurements for a uint32 point2D index");
+        r.obs_off[i + 1] = r.obs_off[i] + cnt[i];
+    }
     const uint64_t sumK = r.obs_off[N];
     r.obs_xy.resize(2 * sumK);
     r.obs_pt3d.resize(sumK);
@@ -413,6 +427,19 @@ void encode_nvm(const Reconstruction &r, std::string &out) {
             out += ' ';
             append_f64(out, r.quats[i * 4 + k]);
         }
+        // Mirror the reader's guard (lines ~240-243): a zero/non-finite quaternion has
+        // no rotation, so the camera center C = -R^T*t is undefined. Refuse rather than
+        // fabricate one - an all-zero quat (reachable via read_colmap_txt, which stores
+        // quats raw) would silently write C = -t; a NaN quat, 'nan ... -nan' centers.
+        const double nq = r.quats[i * 4 + 0] * r.quats[i * 4 + 0] +
+                          r.quats[i * 4 + 1] * r.quats[i * 4 + 1] +
+                          r.quats[i * 4 + 2] * r.quats[i * 4 + 2] +
+                          r.quats[i * 4 + 3] * r.quats[i * 4 + 3];
+        if (!std::isfinite(nq) || nq == 0.0)
+            throw std::invalid_argument(
+                "NVM: image " + std::to_string(r.img_ids[i]) +
+                " has a zero/non-finite quaternion; the camera center C = -R^T*t cannot be "
+                "derived - fix the pose first");
         double R[9];
         quat_to_matrix(&r.quats[i * 4], R);
         const double *t = &r.trans[i * 3];

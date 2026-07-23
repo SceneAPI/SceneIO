@@ -138,7 +138,9 @@ def _synth(ncam=6, npts=40, seed=0):
     cams = []
     for k in range(ncam):
         q = rng.standard_normal(4)
-        q = q / np.linalg.norm(q)
+        # Non-unit norm on purpose: the codec MUST normalize before deriving t = -R*C,
+        # so a non-normalizing reader diverges here too (not only at the exact-FP pin).
+        q = q / np.linalg.norm(q) * (2.0 + k)
         cams.append(
             {
                 "name": f"img{k}.jpg",
@@ -156,9 +158,7 @@ def _synth(ncam=6, npts=40, seed=0):
             (int(im), int(j * 100 + e), float(rng.standard_normal()), float(rng.standard_normal()))
             for e, im in enumerate(imgs)
         ]
-        pts.append(
-            {"xyz": rng.standard_normal(3), "rgb": rng.integers(0, 256, 3), "meas": meas}
-        )
+        pts.append({"xyz": rng.standard_normal(3), "rgb": rng.integers(0, 256, 3), "meas": meas})
     return cams, pts
 
 
@@ -179,11 +179,7 @@ HAND_NVM = (
 # The golden fixture: exactly-representable doubles so %.17g emits short, stable
 # strings; read -> write must reproduce it byte-for-byte (canonical layout).
 GOLDEN_NVM = (
-    b"NVM_V3\n1\n"
-    b"a.jpg 800 0.5 0.5 0.5 0.5 1 2 3 0 0\n"
-    b"1\n"
-    b"1.5 -2.5 3.5 10 20 30 1 0 0 4.5 -5.5\n"
-    b"0\n"
+    b"NVM_V3\n1\na.jpg 800 0.5 0.5 0.5 0.5 1 2 3 0 0\n1\n1.5 -2.5 3.5 10 20 30 1 0 0 4.5 -5.5\n0\n"
 )
 
 
@@ -244,28 +240,57 @@ def test_cross_impl_equality_synthesized():
 # ==========================================================================
 def test_center_to_translation_pin():
     data = (
-        b"NVM_V3\n3\n"
+        b"NVM_V3\n4\n"
         b"a.jpg 800 0.5 0.5 0.5 0.5 1 2 3 0 0\n"  # R = perm [[0,0,1],[1,0,0],[0,1,0]]
         b"b.jpg 700 1 0 0 0 4 5 6 0 0\n"  # identity
-        b"c.jpg 600 2 0 0 0 7 8 9 0 0\n"  # unnormalized quat
+        b"c.jpg 600 2 0 0 0 7 8 9 0 0\n"  # unnormalized scalar quat (still R = I)
+        b"d.jpg 500 0 2 0 0 11 12 13 0 0\n"  # scaled VECTOR quat: norm 2 -> q_hat=(0,1,0,0)
         b"0\n0\n"
     )
     R = _core.read_nvm(data)
     q, t = np.asarray(R.quaternions), np.asarray(R.translations)
 
-    # quaternions stored VERBATIM (including the unnormalized [2,0,0,0]).
+    # quaternions stored VERBATIM (including the unnormalized [2,0,0,0] / [0,2,0,0]).
     np.testing.assert_array_equal(q[0], [0.5, 0.5, 0.5, 0.5])
     np.testing.assert_array_equal(q[1], [1.0, 0.0, 0.0, 0.0])
     np.testing.assert_array_equal(q[2], [2.0, 0.0, 0.0, 0.0])
+    np.testing.assert_array_equal(q[3], [0.0, 2.0, 0.0, 0.0])
 
     # t = -R(q_hat)*C, BIT-EXACT for these exact-arithmetic rotations.
     np.testing.assert_array_equal(t[0], [-3.0, -1.0, -2.0])
     np.testing.assert_array_equal(t[1], [-4.0, -5.0, -6.0])
-    np.testing.assert_array_equal(t[2], [-7.0, -8.0, -9.0])  # normalize-before-derive
+    np.testing.assert_array_equal(t[2], [-7.0, -8.0, -9.0])
+    # NORMALIZE-BEFORE-DERIVE (non-vacuous): q=(0,2,0,0) normalizes to (0,1,0,0) so
+    # R = diag(1,-1,-1) and t = -R*(11,12,13) = (-11, 12, 13). An impl that derives R
+    # from the RAW quat gets diag(1,-7,-7) -> t = (-11, 84, 91) and FAILS this line.
+    np.testing.assert_array_equal(t[3], [-11.0, 12.0, 13.0])
 
-    # writer inverse: the emitted camera centers reappear verbatim.
+    # writer inverse: emitted centers reappear verbatim. Centers are DISTINCT per camera
+    # (d uses 11,12,13, not 1,2,3) so b" 1 2 3 " stays a genuine camera-a discriminator:
+    # d's symmetric R=diag(1,-1,-1) would otherwise satisfy b" 1 2 3 " under a transpose.
     out = bytes(_core.write_nvm(R))
     assert b" 1 2 3 " in out and b" 4 5 6 " in out and b" 7 8 9 " in out
+    assert b" 11 12 13 " in out
+
+
+def test_projection_consistency_pin():
+    # End-to-end pin tying pose CONVENTION + focal + the image-center 2D anchor: the
+    # 3D point projected through the RECORD's (q, t, f) must reproduce the stored
+    # measurement. Uses an ASYMMETRIC rotation (cyclic permutation, R != R^T), so a
+    # transposed/conjugated pose fails here. q=(0.5,0.5,0.5,0.5) -> R = (x->y->z->x);
+    # C=(1,2,3) -> t=(-3,-1,-2); X=(3,6,4) -> P = R@X + t = (1,2,4); obs = 800*(1/4, 2/4).
+    data = b"NVM_V3\n1\na.jpg 800 0.5 0.5 0.5 0.5 1 2 3 0 0\n1\n3 6 4 10 20 30 1 0 0 200 400\n0\n"
+    R = _core.read_nvm(data)
+    q = np.asarray(R.quaternions)[0]
+    t = np.asarray(R.translations)[0]
+    f = np.asarray({c.id: c for c in R.cameras}[1].params)[0]
+
+    X = np.array([3.0, 6.0, 4.0])
+    P = quat_wxyz_to_mat(q) @ X + t  # (1, 2, 4), exact (R has 0/1 entries, t integral)
+    predicted = np.array([f * P[0] / P[2], f * P[1] / P[2]])
+    np.testing.assert_array_equal(predicted, [200.0, 400.0])  # 800*1/4, 800*2/4 -> exact
+    # and the stored measurement recovered through the independent writer matches.
+    assert our_measurements(R) == [[(0, 200.0, 400.0)]]
 
 
 def test_pose_convention_metadata_and_identity():
@@ -323,9 +348,10 @@ def test_write_read_write_is_value_stable():
     cams, pts = _synth(seed=7)
     R = _core.read_nvm(oracle_write_nvm(cams, pts))
     R2 = _core.read_nvm(_core.write_nvm(R))
-    np.testing.assert_allclose(
-        np.asarray(R2.quaternions), np.asarray(R.quaternions), rtol=0, atol=1e-12
-    )
+    # quaternions are stored VERBATIM and round-trip bit-exact through %.17g, so this
+    # is an EXACT equality -- strictly stronger than the old atol=1e-12, which would
+    # have let a small quaternion corruption slip past unnoticed.
+    np.testing.assert_array_equal(np.asarray(R2.quaternions), np.asarray(R.quaternions))
     np.testing.assert_allclose(
         np.asarray(R2.translations), np.asarray(R.translations), rtol=0, atol=1e-9
     )
@@ -364,6 +390,21 @@ def test_observations_via_colmap_txt(tmp_path):
     _core.write_colmap_txt(R, str(out))
     img_txt = (out / "images.txt").read_bytes()
     assert b"a.jpg\n4.5 -5.5 1\n" in img_txt  # image 1's sole obs -> (4.5, -5.5), point id 1
+
+    # HAND_NVM (2 images, 3 points, 4 INTERLEAVED measurements) pins the parts the
+    # Reconstruction binding cannot surface: per-image bucket attribution, in-bucket
+    # file-scan order, AND the obs_pt3d point back-references -- all through the
+    # INDEPENDENT colmap_txt writer. write_nvm re-emits per-point so it is blind to a
+    # reader that scrambled obs_pt3d or mis-ordered a multi-obs bucket; this is not.
+    Rh = _core.read_nvm(HAND_NVM)
+    outh = tmp_path / "hand_colmap"
+    outh.mkdir()
+    _core.write_colmap_txt(Rh, str(outh))
+    img_txt_h = (outh / "images.txt").read_bytes()
+    # a.jpg bucket: point 0's (4.5,-5.5)->id 1, then point 2's (0.5,0.5)->id 3.
+    assert b"a.jpg\n4.5 -5.5 1 0.5 0.5 3\n" in img_txt_h
+    # b.jpg bucket: point 0's (6.5,-7.5)->id 1, then point 1's (8.5,-9.5)->id 2.
+    assert b"b.jpg\n6.5 -7.5 1 8.5 -9.5 2\n" in img_txt_h
 
 
 # ==========================================================================
@@ -451,6 +492,11 @@ _CAM = b"a.jpg 800 1 0 0 0 0 0 0 0 0\n"
         (b"NVM_V3\n1\n" + _CAM + b"1\n1 2 3 10 20 30 1 1 0 5 6\n0\n", "out of range"),  # img idx
         (b"NVM_V3\n1\n" + _CAM + b"1\n1 2 3 10 20 30 5 0 0 5 6\n0\n", "missing field"),  # #meas
         (b"NVM_V3\n1\n" + _CAM + b"0\nGARBAGE\n", "trailing garbage"),  # junk after model
+        # overflow / edge-guard branches (each exercises a distinct code guard)
+        (b"NVM_V3\n4294967295\n", "too large"),  # ncam == 0xFFFFFFFF -> camera-id overflow guard
+        (b"NVM_V3\n99999999999999999999\n", "calibration"),  # uint64-overflow count -> calib path
+        (b"NVM_V3\n0\n4000000000\n", "missing field"),  # hostile POINT count (reserve-cap, no OOM)
+        (b"NVM_V3\n1\na.jpg 800 inf 0 0 0 1 2 3 0 0\n0\n", "quaternion"),  # non-finite (inf) quat
     ],
 )
 def test_malformed_raises(data, match):
@@ -484,7 +530,11 @@ def test_writer_guard_dimensions(tmp_path):
 
 def test_writer_guard_name_whitespace(tmp_path):
     R = _colmap_record(
-        tmp_path, "g4", b"1 SIMPLE_PINHOLE 0 0 500 0 0\n", b"1 1 0 0 0 0 0 0 1 my image.png\n\n", b""
+        tmp_path,
+        "g4",
+        b"1 SIMPLE_PINHOLE 0 0 500 0 0\n",
+        b"1 1 0 0 0 0 0 0 1 my image.png\n\n",
+        b"",
     )
     with pytest.raises(ValueError, match="whitespace"):
         _core.write_nvm(R)
@@ -494,7 +544,11 @@ def test_writer_guard_untriangulated_obs(tmp_path):
     # A COLMAP-borne record with a -1 observation sentinel is refused, not
     # silently mislabeled as NVM.
     R = _colmap_record(
-        tmp_path, "g5", b"1 SIMPLE_PINHOLE 0 0 500 0 0\n", b"1 1 0 0 0 0 0 0 1 a.png\n100 200 -1\n", b""
+        tmp_path,
+        "g5",
+        b"1 SIMPLE_PINHOLE 0 0 500 0 0\n",
+        b"1 1 0 0 0 0 0 0 1 a.png\n100 200 -1\n",
+        b"",
     )
     with pytest.raises(ValueError, match="3D point"):
         _core.write_nvm(R)
@@ -521,6 +575,26 @@ def test_writer_guard_point2d_out_of_range(tmp_path):
         b"5 1 2 3 10 20 30 0.5 1 99\n",  # track point2D idx 99 is out of range
     )
     with pytest.raises(ValueError, match="out of range"):
+        _core.write_nvm(R)
+
+
+def test_writer_guard_zero_quaternion(tmp_path):
+    # A COLMAP-borne record with an all-zero quaternion has no rotation, so the NVM
+    # camera center C = -R^T*t is undefined. The writer must refuse (mirroring the
+    # reader) rather than silently fabricate R = I and emit C = -t.
+    R = _colmap_record(
+        tmp_path, "gqz", b"1 SIMPLE_PINHOLE 0 0 500 0 0\n", b"1 0 0 0 0 0 0 0 1 a.png\n\n", b""
+    )
+    with pytest.raises(ValueError, match="quaternion"):
+        _core.write_nvm(R)
+
+
+def test_writer_guard_nonfinite_quaternion(tmp_path):
+    # A NaN quaternion is likewise refused instead of emitting 'nan ... -nan' centers.
+    R = _colmap_record(
+        tmp_path, "gqn", b"1 SIMPLE_PINHOLE 0 0 500 0 0\n", b"1 nan 0 0 0 0 0 0 1 a.png\n\n", b""
+    )
+    with pytest.raises(ValueError, match="quaternion"):
         _core.write_nvm(R)
 
 

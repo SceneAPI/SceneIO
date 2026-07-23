@@ -161,9 +161,14 @@ T uint_(std::string_view t, const char *what) {
 }
 
 // "%.17g" == COLMAP's ostream precision(17): round-trips every double exactly
-// through fast_float (colmap_txt::fmt17 copy; non-finite handling is out of
-// scope — Bundler poses come from quat->matrix and are finite for finite input).
+// through fast_float (colmap_txt::fmt17 copy). Non-finite values are REFUSED here
+// (raise) rather than emitted: fast_float accepts "nan"/"inf" tokens on read, so a
+// foreign .out can carry a non-finite pose, and "%.17g" would then emit MSVC's
+// unparseable "nan(ind)" — refuse-not-convert, matching resolve_camera's rule.
 void fmt17(std::string &out, double v) {
+    if (!std::isfinite(v))
+        throw std::invalid_argument(
+            "Bundler: cannot serialize a non-finite value (NaN or Inf); fix the pose/point first");
     if (v == 0.0) v = 0.0;  // normalize -0.0 (from the diag(1,-1,-1) flip) to "0"
     char buf[64];
     const int len = std::snprintf(buf, sizeof(buf), "%.17g", v);
@@ -301,7 +306,15 @@ void decode(const char *p, size_t n, Reconstruction &r) {
     // -- CSR build: obs grouped by image (ordered by point then view-list
     //    position); tracks in file order with the compact per-image index. --
     r.obs_off.assign(N + 1, 0);
-    for (size_t i = 0; i < N; ++i) r.obs_off[i + 1] = r.obs_off[i] + per_img_count[i];
+    for (size_t i = 0; i < N; ++i) {
+        // point2D_idx is a compact uint32 (the narrowing at `local` below); guard
+        // the per-image count so a hostile file wraps into a raise, not corruption
+        // (mirrors the ncam uint32 id guard above).
+        if (per_img_count[i] > 0xFFFFFFFFull)
+            throw std::invalid_argument("Bundler: image " + std::to_string(r.img_ids[i]) +
+                                        " has too many observations for a uint32 point2D_idx");
+        r.obs_off[i + 1] = r.obs_off[i] + per_img_count[i];
+    }
     const size_t total = static_cast<size_t>(r.obs_off[N]);
     r.obs_xy.assign(total * 2, 0.0);
     r.obs_pt3d.assign(total, -1);

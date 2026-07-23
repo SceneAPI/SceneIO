@@ -81,9 +81,7 @@ def oracle_read_bundler(data: bytes) -> dict:
         xyz = np.array([float(next(it)) for _ in range(3)], np.float64)
         rgb = np.array([int(next(it)) for _ in range(3)], np.int64)
         m = int(next(it))
-        views = [
-            (int(next(it)), int(next(it)), float(next(it)), float(next(it))) for _ in range(m)
-        ]
+        views = [(int(next(it)), int(next(it)), float(next(it)), float(next(it))) for _ in range(m)]
         pts.append(dict(xyz=xyz, rgb=rgb, views=views))
     exhausted = False
     try:
@@ -269,6 +267,13 @@ FLIP_FIXTURE = bundler_build(
     cams=[
         (800.0, 0.0, 0.0, np.eye(3), [1.0, 2.0, 3.0]),
         (600.0, 0.0, 0.0, np.array([[0, -1, 0], [1, 0, 0], [0, 0, 1]], float), [0.0, 0.0, 0.0]),
+        # camera 2 — ASYMMETRIC flip: R_b = [[0,0,1],[-1,0,0],[0,-1,0]] gives
+        # R' = F @ R_b = the cyclic permutation [[0,0,1],[1,0,0],[0,1,0]], which is
+        # NOT symmetric (R' != R'^T), so its quaternion discriminates a transposed /
+        # conjugated (camera_to_world-stored) implementation that cams 0 and 1 — both
+        # with symmetric R' — cannot. Hand-derived q = (0.5,0.5,0.5,0.5) (120 deg
+        # about (1,1,1)/sqrt3, Shepperd z-branch with s=2 -> every quotient dyadic).
+        (700.0, 0.0, 0.0, np.array([[0, 0, 1], [-1, 0, 0], [0, -1, 0]], float), [0.0, 0.0, 0.0]),
     ],
     pts=[],
 )
@@ -291,6 +296,12 @@ def test_axis_flip_pin():
     s = np.sqrt(2.0) / 2.0
     assert_quats_upto_sign(quats[1], np.array([0.0, -s, s, 0.0]), atol=1e-12)
 
+    # camera 2: asymmetric R' = [[0,0,1],[1,0,0],[0,1,0]] -> q = (0.5,0.5,0.5,0.5)
+    # BIT-EXACT (Shepperd z-branch, s=2). A camera_to_world (transposed) impl would
+    # store q = (-0.5,0.5,0.5,0.5), which fails this even up to sign, so this pin —
+    # not just the allclose-vs-oracle parity test — anchors R vs R^T directly.
+    np.testing.assert_array_equal(quats[2], [0.5, 0.5, 0.5, 0.5])
+
 
 # ==========================================================================
 # end-to-end projection-consistency pin (pose + intrinsics + obs frame)
@@ -310,9 +321,14 @@ def _colmap_simple_radial_project(X, R_c, t_c, f, k1, cx=0.0, cy=0.0):
 
 
 def test_projection_consistency_pin():
-    X = np.array([0.5, -0.3, 4.0])
-    R_b = np.array([[0, -1, 0], [1, 0, 0], [0, 0, 1]], float)  # Rz(90)
-    t_b = np.array([0.1, 0.2, 0.3])
+    # X is IN FRONT of the Bundler camera: P = R_b @ X + t_b = (0.6, -0.4, -2.3) has
+    # P.z < 0 (Bundler looks down -Z), so this models a real, visible observation
+    # (COLMAP-frame depth +2.3). R_b = Rx(90) is chosen so R' = F @ Rx90 =
+    # [[1,0,0],[0,0,1],[0,-1,0]] is NON-symmetric — the end-to-end pin then also
+    # discriminates a transposed rotation (R vs R^T), not only sign/flip errors.
+    X = np.array([0.5, -0.3, 0.6])
+    R_b = np.array([[1, 0, 0], [0, 0, -1], [0, 1, 0]], float)  # Rx(90)
+    t_b = np.array([0.1, 0.2, -2.0])
     f, k1 = 1000.0, 0.01
     xb, yb = _bundler_project(X, R_b, t_b, f, k1)
 
@@ -354,6 +370,22 @@ def test_obs_and_ids_pin():
     assert (cam, x, y) == (0, 10.5, 20.25)
 
 
+def test_observations_via_colmap_txt(tmp_path):
+    # The Reconstruction binding exposes no obs/track arrays, and the bundler
+    # writer never reads obs_pt3d, so route the record through the already-wired,
+    # INDEPENDENT colmap_txt writer to pin what the bundler suite otherwise can't
+    # see: the per-image CSR obs order, the stored y-flip (x, -y), AND the 1-based
+    # obs->point3D_id back-references (obs_pt3d) — scrambling or zeroing them would
+    # silently corrupt bundler->COLMAP exports yet pass every other test here.
+    R = _core.read_bundler(FIXTURE_A)
+    _core.write_colmap_txt(R, str(tmp_path))
+    img_txt = (tmp_path / "images.txt").read_bytes()
+    # image 1 CSR: (10.5,-20.25)->pt 1, (1.25,2.5)->pt 2, (-7.5,-8.5)->pt 3
+    assert b"10.5 -20.25 1 1.25 2.5 2 -7.5 -8.5 3" in img_txt
+    # image 2 CSR: (-3.5,-4.5)->pt 1, (5,-6)->pt 3
+    assert b"-3.5 -4.5 1 5 -6 3" in img_txt
+
+
 # ==========================================================================
 # golden writer blob + documented key renumbering
 # ==========================================================================
@@ -388,6 +420,18 @@ def test_unregistered_camera_skip():
     np.testing.assert_array_equal(np.asarray(R.image_ids), [1, 3])  # 1-based file position
     assert [c.id for c in R.cameras] == [1, 3]
 
+    # write-side COMPACTION: the 3-camera file (with a hole at file position 1)
+    # re-writes as a DENSE 2-camera file, so the point's view-list camera indices
+    # must remap to the compact record rows [0, 1] — NOT the original file
+    # positions [0, 2]. A writer emitting img_id-1 would put camera index 2 in a
+    # 2-camera file (an invalid .out); this pins the remap to the record row.
+    written = bytes(_core.write_bundler(R))
+    o = oracle_read_bundler(written)
+    assert o["ncam"] == 2
+    assert sorted(v[0] for v in o["pts"][0]["views"]) == [0, 1]
+    R2 = _core.read_bundler(written)  # the compacted file re-reads with dense ids
+    np.testing.assert_array_equal(np.asarray(R2.image_ids), [1, 2])
+
 
 def test_view_list_references_unregistered_raises():
     with pytest.raises(ValueError, match="unregistered"):
@@ -398,6 +442,18 @@ def test_zero_focal_with_nonzero_block_raises():
     data = bundler_build(cams=[(0.0, 0.0, 0.0, np.eye(3), [1, 2, 3])], pts=[])  # f=0, R=I nonzero
     with pytest.raises(ValueError, match="zero focal"):
         _core.read_bundler(data)
+
+
+def test_nonfinite_pose_reader_accepts_writer_rejects():
+    # fast_float accepts "nan"/"inf" tokens, so a foreign .out reads a non-finite
+    # translation into the record VERBATIM (documented acceptance) ...
+    data = bundler_build(cams=[(800.0, 0.0, 0.0, np.eye(3), [float("nan"), 2.0, 3.0])], pts=[])
+    R = _core.read_bundler(data)
+    assert np.isnan(np.asarray(R.translations)[0, 0])
+    # ... but the writer REFUSES to serialize it rather than emitting MSVC's
+    # unparseable "nan(ind)" via "%.17g" (refuse-not-convert, forcing the decision).
+    with pytest.raises(ValueError, match="non-finite"):
+        _core.write_bundler(R)
 
 
 # ==========================================================================
@@ -416,6 +472,10 @@ def _one_cam_one_pt(pt_body: bytes) -> bytes:
         (b"2 3\n800 0 0\n", "header"),  # missing header line
         (b"# Bundle file v0.4\n0 0\n", "unsupported"),  # wrong version
         (b"# Bundle file v0.3\nfoo 0\n", "bad integer"),  # non-integer count
+        (
+            b"# Bundle file v0.3\n5000000000 0\n",
+            "too large",
+        ),  # ncam > 0xFFFFFFFE (uint32 id overflow)
         (b"# Bundle file v0.3\n999999999 1\n800 0 0\n", "exceed file size"),  # count bomb
         (b"# Bundle file v0.3\n1 0\n800 0 0\n1 0 0\n0 1 0\n", "missing field"),  # truncated mid-R
         (
@@ -424,11 +484,23 @@ def _one_cam_one_pt(pt_body: bytes) -> bytes:
         ),  # non-numeric focal
         (_one_cam_one_pt(b"1.5 -2.5 3.5\n300 20 30\n1 0 0 10.5 20.25\n"), "0..255"),  # rgb 300
         (_one_cam_one_pt(b"1.5 -2.5 3.5\n-1 20 30\n1 0 0 10.5 20.25\n"), "bad integer"),  # rgb -1
-        (_one_cam_one_pt(b"1.5 -2.5 3.5\n12.5 20 30\n1 0 0 10.5 20.25\n"), "bad integer"),  # rgb float
-        (_one_cam_one_pt(b"1.5 -2.5 3.5\n10 20 30\n5 0 0 10.5 20.25\n"), "missing field"),  # m>entries
-        (_one_cam_one_pt(b"1.5 -2.5 3.5\n10 20 30\n1 1 0 10.5 20.25\n"), "out of range"),  # cam>=ncam
+        (
+            _one_cam_one_pt(b"1.5 -2.5 3.5\n12.5 20 30\n1 0 0 10.5 20.25\n"),
+            "bad integer",
+        ),  # rgb float
+        (
+            _one_cam_one_pt(b"1.5 -2.5 3.5\n10 20 30\n5 0 0 10.5 20.25\n"),
+            "missing field",
+        ),  # m>entries
+        (
+            _one_cam_one_pt(b"1.5 -2.5 3.5\n10 20 30\n1 1 0 10.5 20.25\n"),
+            "out of range",
+        ),  # cam>=ncam
         (b"# Bundle file v0.3\n# 0\n", "bad integer"),  # '#' token where a count is expected
-        (_one_cam_one_pt(b"1.5 -2.5 3.5\n10 20 30\n0\nEXTRA\n"), "trailing data"),  # junk after last
+        (
+            _one_cam_one_pt(b"1.5 -2.5 3.5\n10 20 30\n0\nEXTRA\n"),
+            "trailing data",
+        ),  # junk after last
     ],
 )
 def test_malformed_raises(data, match):
@@ -467,7 +539,11 @@ def test_writer_guard_unsupported_model(tmp_path):
 
 def test_writer_guard_pinhole_fx_ne_fy(tmp_path):
     R = _recon_from_colmap_txt(
-        tmp_path, "pin_ne", b"1 PINHOLE 640 480 500 510 320 240\n", _IMG_0OBS, b"5 1 2 3 10 20 30 0.5\n"
+        tmp_path,
+        "pin_ne",
+        b"1 PINHOLE 640 480 500 510 320 240\n",
+        _IMG_0OBS,
+        b"5 1 2 3 10 20 30 0.5\n",
     )
     with pytest.raises(ValueError, match="fx != fy"):
         _core.write_bundler(R)
@@ -475,7 +551,11 @@ def test_writer_guard_pinhole_fx_ne_fy(tmp_path):
 
 def test_writer_guard_non_positive_focal(tmp_path):
     R = _recon_from_colmap_txt(
-        tmp_path, "zerof", b"1 SIMPLE_PINHOLE 640 480 0 320 240\n", _IMG_0OBS, b"5 1 2 3 10 20 30 0.5\n"
+        tmp_path,
+        "zerof",
+        b"1 SIMPLE_PINHOLE 640 480 0 320 240\n",
+        _IMG_0OBS,
+        b"5 1 2 3 10 20 30 0.5\n",
     )
     with pytest.raises(ValueError, match="focal"):
         _core.write_bundler(R)
@@ -559,9 +639,7 @@ def test_pycolmap_export_parity(tmp_path):
     theirs = np.array([np.asarray(p.xyz) for p in rec.points3D.values()], np.float64)
     ours = np.asarray(R.xyz)
     assert ours.shape == theirs.shape
-    np.testing.assert_allclose(
-        ours[np.lexsort(ours.T)], theirs[np.lexsort(theirs.T)], atol=1e-4
-    )
+    np.testing.assert_allclose(ours[np.lexsort(ours.T)], theirs[np.lexsort(theirs.T)], atol=1e-4)
 
     # pose parity, aligned by list.txt order: our stored R' == pycolmap's
     # cam_from_world rotation (Bundler stores R_b = F @ R'); guarded on name lookup.
