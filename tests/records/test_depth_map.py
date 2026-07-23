@@ -156,9 +156,24 @@ def test_unit_scale_pairing_guards():
         ("unknown", 0.001),
         ("custom", 0.0),
         ("custom", -1.0),
+        # non-finite custom scale via the both-given path pins the isfinite()
+        # conjunct in depth_map_unit_scale_consistent (s > 0.0 alone accepts +inf).
+        ("custom", float("inf")),
+        ("custom", float("nan")),
     ]:
         with pytest.raises(ValueError, match="mismatch"):
             _core.depth_map(depth, unit=u, scale_to_meters=s)
+
+    # both-given with an out-of-vocabulary unit raises the VOCAB error (not the
+    # pairing error), pinning that the both-given branch validates the token and
+    # does so BEFORE the pairing check. Match "unit must" (not bare "unit": the
+    # "unit/scale mismatch" message also contains "unit" and would not
+    # discriminate). scale 0.0 kills a dropped vocab check (the pairing fallthrough
+    # would accept any token at s==0.0); the nonzero feet/0.3048 case kills a
+    # reordering that ran the pairing check first.
+    for tok, s in [("mm", 0.0), ("feet", 0.0), ("Meters", 0.0), ("feet", 0.3048)]:
+        with pytest.raises(ValueError, match="unit must"):
+            _core.depth_map(depth, unit=tok, scale_to_meters=s)
 
     # negative / NaN / inf scale (scale-only branch) is not a usable scale
     for bad in (-1.0, -0.5, float("nan"), float("inf"), float("-inf")):
@@ -273,6 +288,22 @@ def test_views_keep_record_alive_after_gc():
     np.testing.assert_array_equal(px, expected_big)
     assert scribble[0][0] == 0xAB  # keep the churn alive until after the compare
 
+    # Same deterministic big-buffer gate for the .confidence accessor -- a
+    # DISTINCT owner-attachment path (nb::cast(sio::view(self, ...)) inside an
+    # nb::object-returning lambda), so the depth gate above does NOT cover it. A
+    # broken confidence owner (lost handle / wrong owner) faults here instead of
+    # passing by luck on a small freed heap block.
+    big_d = np.zeros((1024, 1024), np.float32)
+    big_c = np.arange(1 << 20, dtype=np.float32).reshape(1024, 1024)  # 4 MiB, < 2**24 exact
+    expected_bc = big_c.copy()
+    cv2 = _core.depth_map(big_d, confidence=big_c).confidence
+    del big_d, big_c
+    gc.collect()
+    gc.collect()
+    scribble2 = [np.full(1 << 20, 0xAB, np.uint8) for _ in range(4)]  # churn the heap
+    np.testing.assert_array_equal(cv2, expected_bc)
+    assert scribble2[0][0] == 0xAB  # keep the churn alive until after the compare
+
 
 # --- factory validation -----------------------------------------------------
 def test_validation_errors():
@@ -349,3 +380,38 @@ def test_repr():
         )
         == "<DepthMap 4x6 custom invalid=nonfinite +confidence>"
     )
+
+
+# --- big-endian input (endianness cannot silently byteswap-misread) ---------
+def test_big_endian_input_rejected_or_byte_preserved():
+    # '>f4' is exactly what np.frombuffer on big-endian float depth data
+    # produces. The factory's DLPack dtype guard compares {code,bits,lanes},
+    # which carries NO endianness, so protection against memcpy'ing byte-swapped
+    # values relies entirely on numpy refusing the non-native export; if a future
+    # numpy/nanobind accepted it, the values must be preserved (native), never
+    # silently byteswap-misread. (test_image.py precedent.)
+    depth = np.arange(3 * 4, dtype=np.float32).reshape(3, 4)
+    be = depth.astype(">f4")
+    try:
+        rec = _core.depth_map(be)
+    except (TypeError, ValueError):
+        pass  # rejection is the pinned-safe outcome
+    else:
+        np.testing.assert_array_equal(rec.depth, depth)  # never a byteswap misread
+
+
+# --- public re-export identity (the item's scaffold seam) -------------------
+def test_reexport_identity():
+    # The suite otherwise uses only _core, so a wrong-class typo in the io
+    # re-export or the flat sceneio forward would pass everything. Pin that both
+    # bind THIS record and that the deliberate cross-namespace name split is
+    # intact: sceneio.data.DepthMap (the frozen validation contract) is a DISTINCT
+    # class, not this raw-values record.
+    import sceneio
+    import sceneio.data
+    import sceneio.io
+
+    assert sceneio.io.DepthMap is _core.DepthMap
+    assert sceneio.DepthMap is _core.DepthMap  # flat forward off sceneio
+    assert sceneio.data.DepthMap is not _core.DepthMap  # distinct validation contract
+    assert isinstance(_core.depth_map(np.zeros((1, 1), np.float32)), sceneio.io.DepthMap)

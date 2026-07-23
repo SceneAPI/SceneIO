@@ -9,10 +9,11 @@
 // divides. No in-tree codec consumer yet: the record lands before its first
 // codec (the Image-before-netpbm precedent).
 //
-// Optical flow (.flo) is deliberately NOT this record -- it ships later as a
-// bare (H,W,2) float32 ndarray codec (the read_pfm precedent), because .flo
-// fixes every convention in its spec and a (H,W,2) field would break this
-// record's scalar contract.
+// Optical flow (.flo) is deliberately NOT this record -- it ships separately as
+// a bare (H,W,2) float32 ndarray codec (in-tree at src/cpp/codecs/flo.cpp; the
+// read_pfm precedent), because .flo fixes every convention in its spec and a
+// (H,W,2) field would break this record's scalar contract. The design-sanctioned
+// escape for typed flow is a separate FlowField record, never widening DepthMap.
 //
 // Mirrors the Phase-1a Image record exactly: a plain struct with inline
 // vocabulary / pairing validators, an owner-carrying zero-copy binding

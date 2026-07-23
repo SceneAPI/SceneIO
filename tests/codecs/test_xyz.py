@@ -408,3 +408,183 @@ def test_torch_interop():
     view = np.asarray(rec.positions)
     back = torch.from_dlpack(rec.positions)
     assert np.array_equal(back.numpy(), view)
+
+
+# --- non-finite / special floats (reader accepts; writer canonicalizes) ------
+def test_nonfinite_reader_pin():
+    # nan / inf / -inf tokens are accepted and stored raw (fast_float parses them
+    # portably); pin it so a parser change that rejects them fails loudly.
+    pos = np.asarray(_core.read_xyz(b"nan inf -inf\n").positions)
+    assert pos.shape == (1, 3)
+    assert np.isnan(pos[0, 0])
+    assert np.isposinf(pos[0, 1])
+    assert np.isneginf(pos[0, 2])
+
+
+def test_nonfinite_writer_canonical_and_oracle_parseable():
+    # A record with non-finite coordinates must be written with CANONICAL
+    # nan/inf/-inf spellings -- never the MSVC/UCRT "-nan(ind)" / "1.#INF" forms
+    # that float()/np.loadtxt reject. This is parity kind 2 for specials:
+    # oracle_read_xyz(write_xyz(pc)) must SUCCEED (it raised on Windows before).
+    xyz = np.array([[np.inf, -np.inf, np.nan], [-0.0, 1.5, -2.5]], np.float32)
+    out = _core.write_xyz(_core.point_cloud(xyz))
+    toks = out.split()
+    assert b"inf" in toks and b"-inf" in toks and b"nan" in toks
+    for bad in (b"-nan(ind)", b"nan(ind)", b"1.#INF", b"1.#QNAN", b"1.#IND", b"-1.#IND"):
+        assert bad not in out
+    got = oracle_read_xyz(out)  # the pure-Python float() oracle must not raise
+    assert got["xyz"].shape == (2, 3)
+    assert np.isnan(got["xyz"][0, 2])
+    assert np.isposinf(got["xyz"][0, 0]) and np.isneginf(got["xyz"][0, 1])
+
+
+def test_nonfinite_roundtrip_bit_exact():
+    # inf / -inf / -0.0 / smallest-denormal / +0.0 / smallest-normal round-trip
+    # bit-for-bit through the text writer+reader (their %.17g and canonical
+    # spellings reparse to the identical float32). Compared via .tobytes() so a
+    # dropped sign bit (-0.0) or a mangled special cannot pass.
+    xyz = (
+        np.array(
+            [0x7F800000, 0xFF800000, 0x80000000, 0x00000001, 0x00000000, 0x00800000],
+            np.uint32,
+        )
+        .view(np.float32)
+        .reshape(2, 3)
+    )
+    rec = _core.read_xyz(_core.write_xyz(_core.point_cloud(xyz)))
+    assert np.asarray(rec.positions).tobytes() == xyz.tobytes()
+
+
+def test_nan_survives_roundtrip_both_signs():
+    # NaN stays NaN through the text round-trip for both sign bits (the exact
+    # payload is not promised across a decimal round-trip, but non-finiteness is).
+    for bits in (0x7FC00000, 0xFFC00000):
+        x = np.array([[np.uint32(bits)]], np.uint32).view(np.float32)
+        xyz = np.concatenate([x, np.zeros((1, 2), np.float32)], axis=1)
+        rec = _core.read_xyz(_core.write_xyz(_core.point_cloud(xyz)))
+        assert np.isnan(np.asarray(rec.positions)[0, 0])
+
+
+# --- layout= override (force a schema; disambiguate the 6-column dialect) -----
+def test_layout_xyzn_forces_normals_over_rgb():
+    # Identical bytes, two interpretations: integral 6-col data auto-detects as
+    # rgb, but layout="xyzn" reads the SAME bytes as normals (nx ny nz) -- the
+    # design's escape hatch for the inherently ambiguous 6-column form.
+    data = b"1 2 3 0 0 1\n4 5 6 0 1 0\n"
+    auto = _core.read_xyz(data)
+    assert auto.has_rgb and not auto.has_normals
+    np.testing.assert_array_equal(
+        np.asarray(auto.colors), np.array([[0, 0, 1], [0, 1, 0]], np.uint8)
+    )
+    rec = _core.read_xyz(data, layout="xyzn")
+    assert rec.has_normals and not rec.has_rgb and not rec.has_intensity
+    np.testing.assert_array_equal(
+        np.asarray(rec.normals), np.array([[0, 0, 1], [0, 1, 0]], np.float32)
+    )
+    np.testing.assert_array_equal(
+        np.asarray(rec.positions), np.array([[1, 2, 3], [4, 5, 6]], np.float32)
+    )
+
+
+def test_layout_xyzn_rescues_fractional_normals():
+    # A 6-col normals file with fractional components is rejected as rgb WITHOUT
+    # the override (and the error points at layout="xyzn"); the override reads it.
+    data = b"1 2 3 0.267 0.535 0.802\n"
+    with pytest.raises(ValueError, match="xyzn"):
+        _core.read_xyz(data)
+    rec = _core.read_xyz(data, layout="xyzn")
+    assert rec.has_normals and not rec.has_rgb
+    np.testing.assert_array_equal(
+        np.asarray(rec.normals), np.array([[0.267, 0.535, 0.802]], np.float32)
+    )
+
+
+def test_layout_forces_declared_schema():
+    # A layout that agrees with the data forces the schema auto-detect would pick.
+    rec = _core.read_xyz(b"1 2 3 7\n", layout="xyzi")
+    assert rec.has_intensity and not rec.has_rgb and not rec.has_normals
+    np.testing.assert_array_equal(np.asarray(rec.intensities), np.array([7.0], np.float32))
+
+
+@pytest.mark.parametrize(
+    ("data", "layout"),
+    [
+        (b"1 2 3 4\n", "xyzrgb"),  # 4 cols vs declared 6
+        (b"1 2 3 4 5 6\n", "xyz"),  # 6 cols vs declared 3
+        (b"1 2 3\n", "xyzn"),  # 3 cols vs declared 6
+        (b"1 2 3 4 5 6 7\n", "xyzrgbn"),  # 7 cols vs declared 9
+    ],
+)
+def test_layout_column_mismatch_raises(data, layout):
+    # A declared layout whose column count differs from the first data line must
+    # raise loudly (not silently reinterpret the file).
+    with pytest.raises(ValueError, match="layout"):
+        _core.read_xyz(data, layout=layout)
+
+
+def test_layout_unknown_name_raises():
+    with pytest.raises(ValueError, match="unknown layout"):
+        _core.read_xyz(b"1 2 3\n", layout="xyzw")
+
+
+def test_layout_none_is_autodetect():
+    # layout=None (the default) is plain auto-detection.
+    rec = _core.read_xyz(b"1 2 3 10 20 30\n", layout=None)
+    assert rec.has_rgb and not rec.has_normals
+
+
+# --- writer guards on MIXED records (refuse, never silently drop a field) -----
+@pytest.mark.parametrize(
+    ("kwargs", "match"),
+    [
+        (
+            dict(colors=np.zeros((2, 3), np.uint8), normals=np.ones((2, 3), np.float32)),
+            "normals",
+        ),
+        (
+            dict(colors=np.zeros((2, 3), np.uint8), intensity=np.ones((2,), np.float32)),
+            "intensity",
+        ),
+        (
+            dict(
+                colors=np.zeros((2, 3), np.uint8),
+                normals=np.ones((2, 3), np.float32),
+                intensity=np.ones((2,), np.float32),
+            ),
+            "normals|intensity",
+        ),
+    ],
+)
+def test_writer_guard_mixed_records(kwargs, match):
+    # rgb present must NOT let normals/intensity be silently dropped: an if/else
+    # regression that emits "x y z r g b" whenever rgb exists would drop the other
+    # fields; the writer must refuse instead.
+    pc = _core.point_cloud(np.zeros((2, 3), np.float32), **kwargs)
+    with pytest.raises(ValueError, match=match):
+        _core.write_xyz(pc)
+
+
+# --- strict number grammar (deliberately narrower than CPython float()) -------
+@pytest.mark.parametrize("data", [b"1 2 +1.5\n", b"1 2 1_0\n"])
+def test_strict_number_grammar_raises(data):
+    # These tokens are readable by CPython float()/np.loadtxt but the codec's
+    # fast_float grammar is deliberately stricter (no leading '+', no digit
+    # separators): pin that they raise loudly rather than silently mis-parse.
+    with pytest.raises(ValueError, match="could not parse"):
+        _core.read_xyz(data)
+
+
+# --- error line numbers count PHYSICAL lines (comments/blanks included) --------
+def test_error_line_number_counts_physical_lines():
+    # The bad row is physical line 4 though it is only the 2nd data row; a
+    # regression that numbers data rows only would report "line 2".
+    with pytest.raises(ValueError, match="line 4: expected 3 numbers"):
+        _core.read_xyz(b"# hdr\n\n1 2 3\n1 2\n")
+
+
+# --- separator-only line is treated as blank (not a zero-column row) ----------
+def test_separator_only_line_is_blank():
+    # A run of commas carries no token -> skipped like a blank line, so it neither
+    # sets a 0-column schema nor breaks the row count.
+    assert _core.read_xyz(b"1 2 3\n,,\n4 5 6\n").num_points == 2
+    assert _core.read_xyz(b",,,\n").num_points == 0

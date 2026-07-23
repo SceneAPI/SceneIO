@@ -157,5 +157,7 @@ void register_depth_map(nb::module_ &m) {
           "confidence; unit/scale_to_meters/invalid_policy recorded as metadata (arrays never "
           "rescaled). unit in {meters,millimeters,custom,unitless,unknown}; scale_to_meters is the "
           "machine-usable twin (meters=1.0, millimeters=0.001, custom=finite>0, unitless|unknown=0.0) "
-          "and is derived from unit (or vice-versa) when only one is given.");
+          "and is derived from unit (or vice-versa) when only one is given. The meters/millimeters "
+          "pairings compare scale_to_meters by exact IEEE-double equality (literal 1.0 / 0.001); for "
+          "a computed scale of any other provenance pass unit='custom' with an explicit scale.");
 }

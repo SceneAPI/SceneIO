@@ -70,7 +70,11 @@ environment = { MACOSX_DEPLOYMENT_TARGET = "11.0" }
 testpaths = ["tests"]
 addopts = "-ra"
 # the npz duplicate-member test intentionally writes a duplicate zip entry
-filterwarnings = ["ignore:Duplicate name:UserWarning"]
+filterwarnings = [
+    "ignore:Duplicate name:UserWarning",
+    # a point_cloud foreign-dtype pin intentionally casts 1e40 -> float32 inf
+    "ignore:overflow encountered in cast:RuntimeWarning",
+]
 
 [tool.ruff]
 line-length = 100

@@ -25,9 +25,10 @@
 // Unlike pfm/netpbm (which hold the GIL through decode/encode), this releases the
 // GIL around the pure-C++ body (the npy_npz precedent, roadmap §1.3): no Python
 // object is touched inside the release scope — the nb::bytes/own_array results are
-// built outside it. The file is always little-endian; the float payload is byte-
-// swapped on big-endian hosts (the pfm.cpp path), while the header ints follow the
-// LeReader/LeWriter little-endian-host convention (common.hpp).
+// built outside it. The file is always little-endian on disk; on a big-endian
+// host both the int32 header fields (width/height) and the float payload are
+// byte-swapped on read/write (the pfm.cpp payload path, extended to the header)
+// so the on-disk bytes are LE throughout — magic, dimensions, and samples.
 #include "io/common.hpp"
 
 using namespace nb::literals;
@@ -44,16 +45,28 @@ constexpr uint64_t kDimCap = 1000000000ull;
 // (struct.pack('<f', 202021.25) == b"PIEH"). Compared as raw bytes, not a float.
 constexpr char kFloMagic[4] = {'P', 'I', 'E', 'H'};
 
-// Byte-swap a float32 (copied verbatim from pfm.cpp:9). The .flo file is always
-// little-endian, so a big-endian host swaps on read/write. Practically untested
-// (hosts are LE in practice, common.hpp:24); kept trivially simple.
+// Byte-swap primitives for the big-endian host path. The .flo file is always
+// little-endian on disk, so a big-endian host swaps the int32 width/height header
+// AND the float payload on read/write. Practically untested (hosts are LE in
+// practice, common.hpp:24); kept trivially simple. bswap32f is the pfm.cpp:9 float
+// path; bswap32i reuses the same 32-bit swap for the int32 header fields.
+uint32_t bswap32(uint32_t u) {
+    return (u >> 24) | ((u >> 8) & 0x0000ff00u) | ((u << 8) & 0x00ff0000u) | (u << 24);
+}
 float bswap32f(float f) {
     uint32_t u;
     std::memcpy(&u, &f, 4);
-    u = (u >> 24) | ((u >> 8) & 0x0000ff00u) | ((u << 8) & 0x00ff0000u) | (u << 24);
+    u = bswap32(u);
     float r;
     std::memcpy(&r, &u, 4);
     return r;
+}
+int32_t bswap32i(int32_t v) {
+    uint32_t u;
+    std::memcpy(&u, &v, 4);
+    u = bswap32(u);
+    std::memcpy(&v, &u, 4);
+    return v;
 }
 
 nb::ndarray<nb::numpy, float> read_flo(nb::bytes data) {
@@ -68,8 +81,12 @@ nb::ndarray<nb::numpy, float> read_flo(nb::bytes data) {
         if (std::memcmp(p, kFloMagic, 4) != 0)
             throw std::invalid_argument("flo: bad magic (expected float32 202021.25 == 'PIEH')");
         int32_t w32, h32;
-        std::memcpy(&w32, p + 4, 4);  // little-endian int32 on disk (LE-host convention)
+        std::memcpy(&w32, p + 4, 4);  // int32 stored little-endian on disk
         std::memcpy(&h32, p + 8, 4);
+        if (!host_is_le()) {  // BE host: swap the LE-on-disk bytes into host order
+            w32 = bswap32i(w32);
+            h32 = bswap32i(h32);
+        }
         // Reject non-positive dims BEFORE any unsigned cast (a negative int32 cast
         // to uint64 becomes huge and would slip past the cap check).
         if (w32 <= 0 || h32 <= 0) throw std::invalid_argument("flo: non-positive dimensions");
@@ -107,8 +124,13 @@ nb::bytes write_flo(nb::ndarray<const float, nb::c_contig, nb::device::cpu> flow
         LeWriter w;
         w.out.reserve(12 + count * 4);
         w.out.append(kFloMagic, 4);                       // endian-explicit magic bytes
-        w.put<int32_t>(static_cast<int32_t>(W));          // little-endian int32 (LE-host convention)
-        w.put<int32_t>(static_cast<int32_t>(H));
+        int32_t w_disk = static_cast<int32_t>(W), h_disk = static_cast<int32_t>(H);
+        if (!host_is_le()) {  // BE host: pre-swap so the on-disk header bytes are LE
+            w_disk = bswap32i(w_disk);
+            h_disk = bswap32i(h_disk);
+        }
+        w.put<int32_t>(w_disk);                           // int32 little-endian on disk
+        w.put<int32_t>(h_disk);
         if (host_is_le())
             w.out.append(reinterpret_cast<const char *>(src),
                          count * 4);                       // bulk copy: bit-exact incl. NaN/sentinels

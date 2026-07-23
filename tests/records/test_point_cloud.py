@@ -145,8 +145,14 @@ def test_validation_errors(sample):
         _core.point_cloud(good, colors=np.zeros((n - 1, 3), np.uint8))
     with pytest.raises(ValueError, match="colors"):  # (N,4)
         _core.point_cloud(good, colors=np.zeros((n, 4), np.uint8))
+    with pytest.raises(ValueError, match="colors"):  # 3-D (N,3,1) -> colors ndim clause
+        _core.point_cloud(good, colors=np.zeros((n, 3, 1), np.uint8))
     with pytest.raises(ValueError, match="normals"):  # (N,2)
         _core.point_cloud(good, normals=np.zeros((n, 2), np.float32))
+    with pytest.raises(ValueError, match="normals"):  # row mismatch (N-1,3) -> normals shape(0)
+        _core.point_cloud(good, normals=np.zeros((n - 1, 3), np.float32))
+    with pytest.raises(ValueError, match="normals"):  # 3-D (N,3,1) -> normals ndim clause
+        _core.point_cloud(good, normals=np.zeros((n, 3, 1), np.float32))
     with pytest.raises(ValueError, match="intensity must be"):  # (N+1,)
         _core.point_cloud(good, intensity=np.zeros((n + 1,), np.float32))
     with pytest.raises(ValueError, match="intensity must be"):  # 2-D (N,1)
@@ -333,3 +339,39 @@ def test_foreign_dtype_input_behavior_pin():
     else:
         assert pc.colors.dtype == np.uint8
         np.testing.assert_array_equal(pc.colors, rgb)
+
+    # Lossy narrowing must be OBSERVABLE, else the convert-branch is vacuous: the
+    # lossless inputs above pass whether the caster narrows or is a no-op. These
+    # inputs cannot survive an identity path — int32 wraps to uint8 (300->44,
+    # -1->255, 256->0) and float64 overflows to f32 inf — so the else-branch is
+    # falsifiable and pins the caster's unchecked C-cast (or forces a rejection).
+    bad_rgb = np.array([[300, -1, 256]], np.int32)
+    try:
+        pc = _core.point_cloud(np.zeros((1, 3), np.float32), colors=bad_rgb)
+    except (TypeError, ValueError):
+        pass  # a documented rejection is the other pinned-safe outcome
+    else:
+        assert pc.colors.dtype == np.uint8
+        np.testing.assert_array_equal(pc.colors, bad_rgb.astype(np.uint8))  # [[44,255,0]]
+
+    xyz64 = np.array([[0.1, 2**25 + 1, 1e40]])  # f64: unrepresentable-in-f32 + overflow
+    try:
+        pc = _core.point_cloud(xyz64)
+    except (TypeError, ValueError):
+        pass
+    else:
+        assert pc.positions.dtype == np.float32
+        np.testing.assert_array_equal(pc.positions, xyz64.astype(np.float32))  # ...,inf
+
+
+# --- public surface (io re-export identity) --------------------------------
+def test_public_reexport_identity():
+    # The wired seam `sceneio.io.PointCloud` must BE the compiled class and be in
+    # __all__: a wrong-class typo in the re-export (e.g. `= _core.PosedViewSet`)
+    # would otherwise pass the entire suite, since every other test uses `_core`
+    # directly. Mirrors test_io_api.py's GaussianCloud isinstance pin.
+    import sceneio
+
+    assert sceneio.io.PointCloud is _core.PointCloud
+    assert "PointCloud" in sceneio.io.__all__
+    assert isinstance(_core.point_cloud(np.zeros((1, 3), np.float32)), sceneio.io.PointCloud)

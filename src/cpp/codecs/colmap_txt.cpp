@@ -5,9 +5,11 @@
 // populating the identical SoA / CSR fields in the identical order so a
 // bin->txt->bin round-trip is byte-exact against the binary codec.
 //
-// Parsing is a single pointer pass (no std::istringstream): std::from_chars for
-// both ints and doubles (MSVC C++17 has the FP overload), '#'-comment and blank
-// tolerance, CRLF tolerance (a trailing '\r' is stripped per physical line).
+// Parsing is a single pointer pass (no std::istringstream): fast_float::from_chars
+// for doubles (portable across every wheel toolchain — std::from_chars<double> is
+// absent on manylinux2014 GCC-10 and older macOS libc++) and std::from_chars for
+// integers (complete everywhere), '#'-comment and blank tolerance, CRLF tolerance
+// (a trailing '\r' is stripped per physical line).
 // MODEL names map to ids by reverse-scanning the existing colmap_model_info
 // table (no new header symbol). The GIL is released for the whole read/write
 // body (npy_npz precedent): every helper is Python-free (plain std::string /
@@ -25,12 +27,14 @@
 #include <nanobind/stl/string.h>
 
 #include <charconv>
+#include <cstdint>
 #include <cstdio>
 #include <fstream>
 #include <iterator>
 #include <string_view>
 #include <system_error>  // std::errc (from_chars_result::ec)
 
+#include "fast_float/fast_float.h"
 #include "records/reconstruction.hpp"
 
 using namespace nb::literals;
@@ -98,7 +102,7 @@ std::string_view require_token(std::string_view line, size_t &pos, const char *w
 
 double parse_f64(std::string_view t, const char *what) {
     double v = 0.0;
-    const auto r = std::from_chars(t.data(), t.data() + t.size(), v);
+    const auto r = fast_float::from_chars(t.data(), t.data() + t.size(), v);
     if (r.ec != std::errc{} || r.ptr != t.data() + t.size())
         throw std::invalid_argument(std::string("COLMAP text: bad number for ") + what);
     return v;
@@ -115,7 +119,10 @@ T parse_uint(std::string_view t, const char *what) {
 // int64 (the record's sentinel model, matching the .bin reader's UINT64_MAX->-1).
 int64_t parse_pt3d_id(std::string_view t) {
     if (t == "-1") return -1;
-    return static_cast<int64_t>(parse_uint<uint64_t>(t, "POINT3D_ID"));
+    const uint64_t v = parse_uint<uint64_t>(t, "POINT3D_ID");
+    if (v > static_cast<uint64_t>(INT64_MAX))
+        throw std::invalid_argument("COLMAP text: POINT3D_ID out of int64 range");
+    return static_cast<int64_t>(v);
 }
 
 // MODEL name -> id via the EXISTING colmap_model_info table (no new symbol).
@@ -272,8 +279,14 @@ std::string write_cameras_text(const Reconstruction &r) {
 
 std::string write_images_text(const Reconstruction &r) {
     const size_t N = r.num_images();
-    const double mean_obs =
-        N == 0 ? 0.0 : static_cast<double>(r.obs_pt3d.size()) / static_cast<double>(N);
+    // mean observations per image = triangulated 2D points / images, matching
+    // COLMAP's ComputeMeanObservationsPerRegImage (which sums Image::NumPoints3D,
+    // counting only points2D WITH a 3D point). The -1 "no 3D point" sentinels are
+    // excluded, so this differs from obs_pt3d.size()/N whenever any are present.
+    size_t tri = 0;
+    for (int64_t id : r.obs_pt3d)
+        if (id >= 0) ++tri;
+    const double mean_obs = N == 0 ? 0.0 : static_cast<double>(tri) / static_cast<double>(N);
     std::string out;
     out.reserve(256 + N * 96 + r.obs_pt3d.size() * 24);
     out += "# Image list with two lines of data per image:\n";

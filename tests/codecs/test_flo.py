@@ -147,6 +147,36 @@ def test_nan_and_unknown_flow_passthrough():
     assert abs(oracle[0, 1, 1]) > 1e9 and abs(oracle[1, 0, 0]) > 1e9  # unknown-flow sentinels
 
 
+def test_noncanonical_bit_patterns_passthrough():
+    # Canonical specials (np.nan/+-inf/-0.0) alone cannot catch a payload-
+    # canonicalizing or sNaN-quieting regression (e.g. a stray float->double->float
+    # round-trip): for canonical inputs the buggy output is byte-identical. Stamp
+    # NON-canonical 32-bit patterns so any bit-mangling on either path is caught.
+    specials = (
+        np.array(
+            [
+                0x7FC01234,  # qNaN with a non-zero payload
+                0xFFC00000,  # negative qNaN (sign-set)
+                0x7F800001,  # signaling NaN (top mantissa bit clear)
+                0x00000001,  # smallest positive denormal
+                0x80000000,  # -0.0
+                0x7F7FFFFF,  # FLT_MAX (largest finite, exact bit pattern)
+            ],
+            np.uint32,
+        )
+        .view(np.float32)
+        .reshape(1, 3, 2)
+    )  # deterministic literals; (H,W,2)=(1,3,2)
+    out = _core.write_flo(specials)
+    # writer pinned: the payload after the 12-byte header is the input's bytes
+    # verbatim (no canonicalization) — assert_array_equal would miss NaN payloads.
+    assert out[12:] == specials.tobytes()
+    # reader pinned: round-trip preserves every payload bit incl. the -0.0 sign
+    # and the sNaN signaling bit (0.0 == -0.0 and NaN == NaN under value compares).
+    got = np.asarray(_core.read_flo(out))
+    assert got.tobytes() == specials.tobytes()
+
+
 # --- malformed input raises (FormatError-mappable ValueError), never crashes -
 @pytest.mark.parametrize(
     ("data", "match"),
@@ -157,6 +187,18 @@ def test_nan_and_unknown_flow_passthrough():
         (struct.pack("<f", 202021.24) + struct.pack("<ii", 1, 1) + b"\x00" * 8, "bad magic"),
         (b"PIEH" + struct.pack("<ii", -1, 1), "non-positive"),  # negative width
         (b"PIEH" + struct.pack("<ii", 0, 5), "non-positive"),  # zero width
+        (b"PIEH" + struct.pack("<ii", 5, 0), "non-positive"),  # zero height (twin of zero width)
+        (
+            b"PIEH" + struct.pack("<ii", 1, -1),
+            "non-positive",
+        ),  # negative height (twin of neg width)
+        # cap branch: dims in (1e9, INT32_MAX] must raise BEFORE any allocation
+        # (kills a mutant that drops/mistypes the kDimCap check or caps one axis only)
+        (b"PIEH" + struct.pack("<ii", 1000000001, 1), "out of range"),  # width just over 1e9 cap
+        (
+            b"PIEH" + struct.pack("<ii", 1, 2000000000),
+            "out of range",
+        ),  # height over cap, < INT32_MAX
         (b"PIEH" + struct.pack("<ii", 999999999, 999999999), "truncated"),  # huge: must not alloc
         (b"PIEH" + struct.pack("<ii", 2, 2) + b"\x00" * 31, "truncated"),  # payload one byte short
     ],
@@ -184,7 +226,11 @@ def test_writer_guards():
         with pytest.raises(ValueError, match=r"expected float32 \(H,W,2\)"):
             _core.write_flo(bad)
     with pytest.raises(ValueError, match="non-positive"):
-        _core.write_flo(np.zeros((0, 5, 2), np.float32))
+        _core.write_flo(np.zeros((0, 5, 2), np.float32))  # zero height
+    with pytest.raises(ValueError, match="non-positive"):
+        _core.write_flo(np.zeros((5, 0, 2), np.float32))  # zero width (kills the W < 1 half)
+    with pytest.raises(ValueError, match="non-positive"):
+        _core.write_flo(np.zeros((0, 0, 2), np.float32))  # both zero
 
 
 # --- registry dispatch through the public API -------------------------------

@@ -49,6 +49,14 @@ FetchContent_Declare(zstd
 FetchContent_MakeAvailable(zstd)
 set_property(TARGET libzstd_static PROPERTY POSITION_INDEPENDENT_CODE ON)
 
+# fast_float (Apache-2.0 / MIT / BSL, header-only) — portable + fast float
+# parsing for the text codecs. std::from_chars<double> is unavailable on
+# manylinux2014 (GCC 10) and older libc++ (macOS), so the wheels would not
+# build with it; fast_float::from_chars is a drop-in that works on all three.
+FetchContent_Declare(fast_float
+  URL https://github.com/fastfloat/fast_float/archive/refs/tags/v6.1.6.tar.gz)
+FetchContent_MakeAvailable(fast_float)
+
 nanobind_add_module(_core STABLE_ABI NB_STATIC
   src/cpp/module.cpp
   src/cpp/records/reconstruction.cpp
@@ -69,7 +77,7 @@ nanobind_add_module(_core STABLE_ABI NB_STATIC
   src/cpp/codecs/colmap_txt.cpp
   src/cpp/codecs/xyz.cpp
   src/cpp/codecs/flo.cpp)
-target_include_directories(_core PRIVATE src/cpp ${zstd_SOURCE_DIR}/lib)
+target_include_directories(_core PRIVATE src/cpp ${zstd_SOURCE_DIR}/lib ${fast_float_SOURCE_DIR}/include)
 target_link_libraries(_core PRIVATE miniz_static nlohmann_json::nlohmann_json libzstd_static)
 
 # Land the extension inside the importable `sceneio` package as sceneio._core.

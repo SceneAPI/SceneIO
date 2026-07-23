@@ -79,7 +79,7 @@ GOLD_IMAGES_OUT = (
     b"# Image list with two lines of data per image:\n"
     b"#   IMAGE_ID, QW, QX, QY, QZ, TX, TY, TZ, CAMERA_ID, NAME\n"
     b"#   POINTS2D[] as (X, Y, POINT3D_ID)\n"
-    b"# Number of images: 3, mean observations per image: 1\n"
+    b"# Number of images: 3, mean observations per image: 0.66666666666666663\n"
     b"1 1 0 0 0 0 0 0 1 img1.png\n"
     b"100.5 200.5 5 150.25 250.75 -1 10.5 20.5 5\n"
     b"2 1 0 0 0 1 2 3 1 img2.png\n"
@@ -103,6 +103,11 @@ def ref(tmp_path_factory):
     pycolmap = pytest.importorskip("pycolmap")
     opts = pycolmap.SyntheticDatasetOptions()
     opts.num_points3D = 40
+    # Force some 2D points to lack a 3D point so the -1 sentinel and the
+    # triangulated-only mean-observations stat are exercised regardless of the
+    # pycolmap default.
+    if hasattr(opts, "num_points2D_without_point3D"):
+        opts.num_points2D_without_point3D = 10
     rec = pycolmap.synthesize_dataset(opts)
     base = tmp_path_factory.mktemp("colmap_txt")
     tdir = base / "text"
@@ -200,6 +205,46 @@ def test_bin_txt_bin_byte_identity(ref, tmp_path):
         assert a == b, f"{f} is not byte-identical after bin->txt->bin"
 
 
+def test_text_reader_matches_binary_ground_truth(ref, tmp_path):
+    # One-sided EXTERNAL anchor for the text READER. The self-inverse bin->txt->bin
+    # gate above cannot catch a both-sides-consistent transposition of observation
+    # X/Y or track pairs; this can. pycolmap wrote tdir (text) and bdir (binary)
+    # from ONE rec in one process, so their record order is identical and "%.17g"
+    # round-trips doubles bit-exactly — therefore our binary, written from the text
+    # we read, must be byte-identical to pycolmap's binary. Pins obs X/Y order, the
+    # -1 sentinel, and track (IMAGE_ID, POINT2D_IDX) order against ground truth.
+    _, tdir, bdir = ref
+    R = _core.read_colmap_txt(tdir)
+    out = tmp_path / "txt2bin"
+    out.mkdir()
+    _core.write_colmap_sparse(R, str(out))
+    for f in ("cameras.bin", "images.bin", "points3D.bin"):
+        a = (Path(bdir) / f).read_bytes()
+        b = (out / f).read_bytes()
+        assert a == b, f"{f}: text reader disagrees with binary ground truth"
+
+
+def test_images_header_matches_pycolmap(ref, tmp_path):
+    # The "mean observations per image" header stat must equal COLMAP's
+    # ComputeMeanObservationsPerRegImage (triangulated points only): compare our
+    # emitted header line to pycolmap's for the same reconstruction.
+    _, tdir, _ = ref
+    R = _core.read_colmap_txt(tdir)
+    out = tmp_path / "hdr"
+    out.mkdir()
+    _core.write_colmap_txt(R, str(out))
+
+    def mean_obs_line(raw: bytes) -> bytes:
+        for ln in raw.replace(b"\r\n", b"\n").split(b"\n"):
+            if ln.startswith(b"# Number of images:"):
+                return ln
+        raise AssertionError("no image-count header line found")
+
+    ours = mean_obs_line((out / "images.txt").read_bytes())
+    theirs = mean_obs_line((Path(tdir) / "images.txt").read_bytes())
+    assert ours == theirs
+
+
 # ==========================================================================
 # pycolmap-free coverage (runs in any built tree)
 # ==========================================================================
@@ -211,7 +256,7 @@ def test_hand_authored_pin(tmp_path):
     images = (
         b"# Image list\r\n"
         b"#   IMAGE_ID, QW, QX, QY, QZ, TX, TY, TZ, CAMERA_ID, NAME\r\n"
-        b"10   0.5 0.5 0.5 0.5\t1 2 3   2 frame_a.png\r\n"
+        b"10   0.125 0.25 0.375 0.5\t1 2 3   2 frame_a.png\r\n"
         b"1.5 2.5 -1\r\n"  # image 10: one observation, POINT3D_ID == -1
         b"20 1 0 0 0 4 5 6 2 frame_b.png\r\n"
         b"\r\n"  # image 20: empty observations line
@@ -231,7 +276,9 @@ def test_hand_authored_pin(tmp_path):
     assert list(R.image_names) == ["frame_a.png", "frame_b.png", "frame_c.png"]
     np.testing.assert_array_equal(np.asarray(R.image_camera_ids), np.array([2, 2, 2]))
     q, t = np.asarray(R.quaternions), np.asarray(R.translations)
-    np.testing.assert_array_equal(q[0], [0.5, 0.5, 0.5, 0.5])  # stored raw (not normalized)
+    np.testing.assert_array_equal(
+        q[0], [0.125, 0.25, 0.375, 0.5]
+    )  # asymmetric: pins each WXYZ slot; stored raw
     np.testing.assert_array_equal(q[1], [1, 0, 0, 0])
     np.testing.assert_array_equal(t, [[1, 2, 3], [4, 5, 6], [7, 8, 9]])
     np.testing.assert_array_equal(np.asarray(R.xyz)[0], [1, 2, 3])
@@ -320,6 +367,22 @@ _GOOD_PTS = b"5 1 2 3 10 20 30 0.5\n"
         (_GOOD_CAM, _GOOD_IMG, b"5 1 2 3 10 20 30 0.5 7\n", "multiple of 2"),  # odd track
         (_GOOD_CAM, _GOOD_IMG, b"5 1 2 3 300 20 30 0.5\n", "0..255"),  # rgb overflow
         (_GOOD_CAM, _GOOD_IMG, b"5 1 2 3 -1 20 30 0.5\n", "bad integer"),  # rgb negative
+        # truncated image pose line (only 7 fields -> translation cut short)
+        (_GOOD_CAM, b"1 1 0 0 0 0 0\n", _GOOD_PTS, "missing field"),
+        # points3D line missing the ERROR field
+        (_GOOD_CAM, _GOOD_IMG, b"5 1 2 3 10 20 30\n", "missing field"),
+        # observation POINT3D_ID that is negative but not the -1 sentinel
+        (_GOOD_CAM, b"1 1 0 0 0 0 0 0 1 a.png\n1.5 2.5 -2\n", _GOOD_PTS, "bad integer"),
+        # a '#' line in the observations slot is DATA, not a skipped comment
+        (_GOOD_CAM, b"1 1 0 0 0 0 0 0 1 a.png\n# not obs\n", _GOOD_PTS, "bad number"),
+        # observation POINT3D_ID overflowing int64 (2^63) must raise, not wrap to a
+        # negative id (which the writer would then emit and a re-read reject)
+        (
+            _GOOD_CAM,
+            b"1 1 0 0 0 0 0 0 1 a.png\n1.5 2.5 9223372036854775808\n",
+            _GOOD_PTS,
+            "int64 range",
+        ),
     ],
 )
 def test_malformed_raises(tmp_path, cameras, images, points, match):
@@ -353,6 +416,69 @@ def test_fuzz_single_byte_mutation_no_crash(tmp_path):
                 _core.read_colmap_txt(str(d))
             except ValueError:
                 pass
+
+
+def test_special_and_full_precision_doubles(tmp_path):
+    # %.17g precision (a regression to %.15g/%.16g drops digits) and IEEE-754
+    # special values (nan bit-pattern, +/-inf, -0.0 sign) must survive the reader
+    # and the writer round-trip byte-exactly. .tobytes() catches the -0.0 sign loss
+    # that assert_array_equal (0.0 == -0.0) cannot, and pins the nan bit-pattern.
+    cameras = b"1 PINHOLE 640 480 500 500 320 240\n"
+    images = b"1 1 0 0 0 -0 inf -inf 1 a.png\n\n"  # translation = [-0.0, +inf, -inf]
+    points = b"5 0.1 nan -0 10 20 30 inf\n"  # xyz = [0.1, nan, -0.0], error = +inf
+    d = _write_model(tmp_path / "special_src", cameras, images, points)
+    R = _core.read_colmap_txt(d)
+
+    # Reader pins (byte-exact, independent of the writer):
+    assert np.asarray(R.xyz)[0].tobytes() == np.array([0.1, np.nan, -0.0]).tobytes()
+    assert np.asarray(R.translations)[0].tobytes() == np.array([-0.0, np.inf, -np.inf]).tobytes()
+    assert np.isposinf(np.asarray(R.errors)[0])
+
+    out = tmp_path / "special_out"
+    out.mkdir()
+    _core.write_colmap_txt(R, str(out))
+    # Full-precision %.17g pin: 0.1 renders with all 17 significant digits.
+    assert b"0.10000000000000001" in (out / "points3D.txt").read_bytes()
+
+    # Writer round-trip: every special re-reads to identical bits.
+    R2 = _core.read_colmap_txt(str(out))
+    for attr in ("xyz", "translations", "errors"):
+        assert np.asarray(getattr(R2, attr)).tobytes() == np.asarray(getattr(R, attr)).tobytes()
+
+
+# COLMAP's camera-model table hand-copied from the COLMAP docs (external ground
+# truth): every MODEL name and its parameter count. The .txt codec is the first
+# consumer of the table's name STRINGS (the .bin codec only round-trips numeric
+# ids), so a typo'd name or wrong nparams in reconstruction.hpp would mis-read or
+# reject real COLMAP files using that model while the rest of the suite stays green.
+_COLMAP_MODELS = [
+    ("SIMPLE_PINHOLE", 3),
+    ("PINHOLE", 4),
+    ("SIMPLE_RADIAL", 4),
+    ("RADIAL", 5),
+    ("OPENCV", 8),
+    ("OPENCV_FISHEYE", 8),
+    ("FULL_OPENCV", 12),
+    ("FOV", 5),
+    ("SIMPLE_RADIAL_FISHEYE", 4),
+    ("RADIAL_FISHEYE", 5),
+    ("THIN_PRISM_FISHEYE", 12),
+]
+
+
+@pytest.mark.parametrize(("model", "nparams"), _COLMAP_MODELS)
+def test_camera_model_name_id_roundtrip(tmp_path, model, nparams):
+    params = " ".join(str(i + 1) for i in range(nparams))
+    cameras = f"1 {model} 640 480 {params}\n".encode()
+    d = _write_model(tmp_path / f"m_{model}", cameras, _GOOD_IMG, _GOOD_PTS)
+    R = _core.read_colmap_txt(d)
+    cam = R.cameras[0]
+    assert cam.model == model
+    assert len(np.asarray(cam.params)) == nparams
+    out = tmp_path / f"o_{model}"
+    out.mkdir()
+    _core.write_colmap_txt(R, str(out))
+    assert f"1 {model} 640 480".encode() in (out / "cameras.txt").read_bytes()
 
 
 # --- registry integration (skips until the integrator wires the codec) ------
@@ -389,6 +515,25 @@ def test_registry_roundtrip(tmp_path):
         R.num_images,
         R.num_points3D,
     )
+    # Beyond counts: the values must survive the registry round-trip too, so a
+    # value-corrupting path adapter cannot stay green.
+    np.testing.assert_array_equal(np.asarray(R2.xyz), np.asarray(R.xyz))
+    np.testing.assert_array_equal(np.asarray(R2.quaternions), np.asarray(R.quaternions))
+
+
+def test_registry_detect_binary_precedence(tmp_path):
+    # A directory holding BOTH cameras.bin and cameras.txt must detect as the
+    # binary codec (colmap_sparse), never the text twin — registry insertion order
+    # (binary registered first) encodes that precedence. Skips until both wired.
+    try:
+        from sceneio.io import registry
+    except Exception:
+        pytest.skip("registry not importable")
+    if "colmap_sparse" not in registry.REGISTRY or _find_text_codec() is None:
+        pytest.skip("COLMAP binary+text codecs not both wired yet")
+    d = _write_model(tmp_path / "both", GOLD_CAMERAS_IN, GOLD_IMAGES_IN, GOLD_POINTS_IN)
+    (Path(d) / "cameras.bin").write_bytes(b"\x00")  # binary marker alongside the text files
+    assert registry.detect(d) == "colmap_sparse"
 
 
 # --- numpy/torch interop (test_colmap.py pattern) ---------------------------
