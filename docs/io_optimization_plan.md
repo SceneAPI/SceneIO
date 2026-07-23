@@ -1,0 +1,211 @@
+# I/O Optimization, Testing & Verification Plan
+
+Status: proposed. Scope: the compiled `sceneio._core` I/O path on
+`phase0-nanobind-core`. Companion to `coverage_roadmap.md` (this makes its "Phase 7"
+hardening/perf work concrete).
+
+**Committed scope (decided):** the **full O0–O5 program**, applied **uniformly to
+all 23 codecs**, with **qualitative** success criteria — every step must show a
+*measured* improvement with *no regression* and *bit-exact correctness*; no hard
+numeric SLAs are bound. Measurement orders the work and proves each gain; it does
+**not** gate whether a phase happens (all phases are in scope).
+
+## 0. Guiding principle — measure to order & verify (not to gate)
+
+The representation layer is already near-optimal (zero-copy SoA records → numpy/
+torch/DLPack; per-format hand-tuned decoders; GIL released). The **file-I/O model
+is the deliberately-simple whole-file-bytes path** (`registry.py:_bytes_reader/
+_bytes_writer`): read materializes the whole file as a Python `bytes` before
+decode; write materializes the whole output as `bytes` before disk — **~2 full
+copies each way, peak memory ≈ file-size + decoded-size, no mmap/stream/partial
+reads.**
+
+So the harness comes first — but because scope is full and uniform, it decides the
+*order* of the sweep (worst `sceneio/oracle` ratios first) and supplies the
+before/after numbers, not whether a codec or phase is included.
+
+Every work item follows the same loop: **implement → differential + memory test →
+benchmark delta → fable memory-safety review → commit.**
+
+---
+
+## Phase O0 — Baseline & measurement harness (first)
+
+Permanent verification tool and the ordering input for the sweep.
+
+| Piece | What | Where |
+|---|---|---|
+| Throughput bench | read+write MB/s, Mpix/s (images), Mpts/s (clouds), **all 23 codecs** | `bench/bench_io.py` |
+| Peak-memory bench | `tracemalloc` peak + RSS for read & write | same harness |
+| Oracle comparison | same op via Pillow / laspy / OpenEXR / numpy / pycolmap / gsply | reuse `[test]` oracles |
+| Fixtures | small (typical) + large (100 MB–1 GB synthetic) per format | `bench/fixtures.py` (generated) |
+
+**Exit criteria:** baseline table across all 23 codecs, committed and reproducible
+(pinned methodology: warm/cold split, median of N). It orders the O1+ sweep
+(worst-ratio codecs first); every codec and phase proceeds regardless.
+
+---
+
+## Phase O1 — mmap-backed reader (uniform across all 23 codecs)
+
+Replace the whole-file `Path.read_bytes()` with a memory-map handed to the codec as
+a **zero-copy buffer view**, removing one full-file copy on read and letting the OS
+page lazily.
+
+- **Adapter:** `_mmap_reader` (Python `mmap`, cross-platform) becomes the default
+  for every codec; `_bytes_reader` stays as the fallback.
+- **Core signature:** every `_core.read_X` accepts a **buffer-protocol** object
+  (mmap / memoryview / `nb::ndarray<const uint8_t>`), not only `nb::bytes`, verified
+  to NOT copy. One shared buffer-accepting entry per codec.
+- **Lifetime:** decode-into-vectors codecs release the mmap after decode (record
+  owns copies) — the safe O1 default. Raw formats keep it alive in O2.
+- **Uniform application:** all 23 codecs get the mmap path **and** the differential
+  + memory test. The payoff is largest on the big binary formats (LAS/EXR/PLY/SPZ/
+  npy) but the sweep covers everything for consistency and regression coverage.
+
+**Testing (per codec):** `read(mmap) == read(bytes)` **bit-exact**; a peak-memory
+test asserting the mmap path does not allocate a whole-file `bytes`; empty/
+truncated/locked file over the mmap path. **Verify:** harness delta (read peak-
+memory drops by ~file-size). fable **memory-safety** review is mandatory (mmap
+use-after-unmap is the top risk).
+
+---
+
+## Phase O2 — Zero-copy decode for raw/uncompressed formats
+
+Evaluated uniformly; applies where the on-disk payload *is* the array — mmap +
+return an ndarray **view** over the mapped bytes, mmap kept alive by the array
+(capsule owner, the `own_array`/`sio::view` lifetime model).
+
+| Format | Zero-copy? | Note |
+|---|---|---|
+| `.npy` | ✅ high value | contiguous typed array; view directly (endianness/contiguity permitting) |
+| `.pfm`, `.flo` | ✅ likely | contiguous float payload after a small header |
+| uncompressed `.las` | ❌ | needs quantize→f32 + origin rebase (a real transform) |
+| png/jpeg/webp/exr/spz/npz | ❌ | compressed — a decode is physically unavoidable |
+
+The compressed codecs pass through O2 unchanged (nothing to view); the raw ones get
+the zero-copy path. Uniform *evaluation*, format-nature-limited *application*.
+
+**Testing:** view equals copy-decode bit-exact; **lifetime test** — the array
+outlives the file handle (`gc.collect()` then still-valid, the Image lifetime
+pattern); mutation isolation. **Verify:** npy read peak-memory → ~0 above the mmap.
+
+---
+
+## Phase O3 — Streaming writes (all codecs)
+
+Writers build the full output then copy into `nb::bytes`. Add a **file-sink** write
+path (`write_X_to_file(record, path)` or a sink callback) for every codec, so large
+outputs stream to disk without a full in-memory copy. Swept across all 23 writers;
+the harness orders which land first (largest write-memory first).
+
+**Testing:** sink-written file byte-identical to the buffer-written one, per codec.
+**Verify:** write peak-memory drops by ~output-size.
+
+---
+
+## Phase O4 — Intra-file parallelism / SIMD
+
+Committed for the decode-bound hot paths the harness surfaces:
+- Enable tinyexr/libwebp worker threads for large images (currently off).
+- SIMD/vectorize the scalar transform loops: PNG 16-bit byteswap, EXR
+  planar→interleave, LAS per-point unpack, and any others the harness flags.
+
+**Testing:** identical output with threads on/off and 1 vs N lanes. **Verify:**
+throughput delta on the large fixtures.
+
+---
+
+## Phase O5 — Partial / lazy reads (new API)
+
+New public surface, applied to every format for which it's meaningful:
+- header-only `inspect(path)` → dims/count/dtype/channels without a full decode
+  (all formats have a cheap header);
+- pixel-window (images), point-subset (clouds), single-image (COLMAP) reads where
+  the container permits.
+
+**Testing:** partial read equals the slice of the full read; `inspect` matches the
+decoded record's shape/dtype. **Verify:** header-only/partial peak-memory and
+latency vs the full read.
+
+---
+
+## Testing strategy (correctness bar never moves)
+
+The 23 per-codec **parity suites + the public-API E2E test remain the ground-truth
+oracle**. Optimizations add exactly these guards, **run across all 23 codecs**:
+
+1. **Differential (path-equivalence) tests** — for every fast path: `fast == slow`
+   **bit-exact** (mmap==bytes, zero-copy==copy, sink==buffer, partial==slice). One
+   parametrized sweep; the parity suites already prove `slow == oracle`.
+2. **Memory-bound tests** — peak allocation for a large-file read/write stays
+   bounded (mmap must NOT materialize a whole-file `bytes`); `tracemalloc` asserts.
+3. **Large-file tests** — a generated multi-hundred-MB fixture per format; bounded
+   memory + correctness.
+4. **Lifetime/ownership tests** — zero-copy arrays outlive their file handle; no
+   use-after-unmap.
+5. **Edge/fuzz** — mmap on empty/truncated/locked files; existing malformed suites
+   re-run through every fast path.
+
+---
+
+## Verification (prove it helped AND stayed correct)
+
+| Instrument | Proves | Cadence |
+|---|---|---|
+| Benchmark harness (O0) | measured improvement; **no regression** (any regress fails CI) | per-item + CI guard |
+| `tracemalloc`/RSS deltas | peak-memory dropped as expected | per-item |
+| Differential correctness | fast-path == slow-path == oracle, bit-exact, all codecs | CI, every run |
+| **ASan/UBSan/LSan CI job** | no mmap-lifetime/leak/UB (the class the reviews caught by hand) | CI (new) |
+| Differential fuzzer | random valid+malformed: fast==slow==oracle | nightly CI (new) |
+| fable adversarial review | memory-safety of each mmap/lifetime/sink change | per-item |
+
+Success is **qualitative**: a *measured* improvement (direction, not a bound) with
+**zero regression** and bit-exact correctness — not a numeric SLA. The **sanitizer
+CI job is the linchpin**: it de-risks the mmap/lifetime/sink work and retroactively
+guards the whole tree (it would have caught the NaN→cast UB and the stb short-read
+mechanically).
+
+---
+
+## Sequencing & effort
+
+```
+O0 harness+baseline ─┬─► O1 mmap reader (all codecs) ─► O2 raw-format zero-copy ─► (re-measure)
+                     └─► ASan/UBSan/LSan CI (lands with O1)                            │
+                                                                                       ▼
+                                              O3 streaming writes (all) ─► O4 threads/SIMD (hot paths)
+                                                                                       │
+                                                                                       ▼
+                                                                         O5 partial/lazy-read API
+```
+
+- **O0** ~1 unit. Harness + baseline; orders the sweep.
+- **O1 + ASan CI** ~2–3 units. Structural read win + the safety net, all 23 codecs.
+- **O2** ~1–2 units. Zero-copy for the raw formats.
+- **O3** ~2 units. Sink writers, all 23.
+- **O4** ~1–2 units. Thread flags + SIMD on the flagged loops.
+- **O5** ~2–3 units. New inspect/partial API.
+
+The harness re-measures between phases so the sweep order stays honest, but all
+phases are committed.
+
+## Risks & mitigations
+
+| Risk | Mitigation |
+|---|---|
+| mmap use-after-unmap (top risk) | ASan CI + lifetime tests + fable memory-safety review, every O1/O2 item |
+| Windows vs POSIX mmap | drive mmap from Python's cross-platform `mmap` at the adapter; keep the C++ side buffer-agnostic |
+| nanobind copies the buffer anyway | verify zero-copy with a memory test before building on it |
+| Zero-copy record lifetime (O2) | attach the mmap as the ndarray capsule owner; test outlives-handle |
+| Sink writers diverge from buffer writers | byte-identical differential test per codec (O3) |
+| Uniform sweep = large surface | the parametrized differential/memory tests scale across codecs; harness auto-covers all |
+| Benchmark noise → wrong order | pinned methodology (warm/cold split, median of N); commit the harness |
+
+## Definition of done (per item)
+
+**Bit-exact vs the slow path and the oracle**, a *measured* throughput/memory
+improvement in the committed harness with **no regression**, green under
+ASan/UBSan/LSan, and a fable memory-safety sign-off. Correctness is never traded
+for speed.
