@@ -54,24 +54,31 @@ SoA, zero-copy to numpy/torch (DLPack), conventions carried as metadata.
 
 Deferred within Tier‑1: g2o poses (pose‑graph *edges* don't fit `PosedViewSet`).
 
-### ⬜ Next — image / HDR / depth tier via **vendored permissive source** (no system libs)
+### 🟡 In progress — image / HDR tier via **vendored permissive source** (no system libs)
 
-Key reframing: most "needs a C lib" image formats have permissive, self‑contained
-single‑header/source libraries that drop into the **existing FetchContent/vendored
-pattern** (miniz, zstd, nlohmann/json, fast_float) — so they need **no vcpkg/conda
-`SCENEIO_WITH_*` gate** and keep the runtime dep numpy‑only. Target Image/PointCloud.
+Key reframing (proven out over lodepng + stb): most "needs a C lib" image formats
+have permissive, self‑contained single‑header/source libraries that drop into the
+**existing FetchContent/vendored pattern** (miniz, zstd, nlohmann/json, fast_float)
+— so they need **no vcpkg/conda `SCENEIO_WITH_*` gate** and keep runtime numpy‑only.
 
-| Format | Record | Vendorable lib (license) | Notes |
+| Format | Record | Vendorable lib (license) | Status |
 |---|---|---|---|
-| PNG (incl. 16‑bit depth) | `Image` | lodepng (zlib) — self‑contained inflate | Pillow/imageio as test oracle |
-| JPEG (baseline) | `Image` | stb_image / stb_image_write (public domain) | decode+encode; lossy |
-| Radiance `.hdr` | `Image`(f32) | stb_image / stb_image_write (public domain) | |
-| OpenEXR | `Image`(f32) | tinyexr (BSD) — reuses our miniz | half/float, tiled |
-| WebP | `Image` | libwebp (BSD) — CMake FetchContent from source | moderate build |
-| plain `.las` | `PointCloud` | **none** — documented binary, like colmap `.bin` | LAZ (laszip) deferred |
+| PNG (incl. 16‑bit depth) | `Image` | lodepng (zlib) — self‑contained inflate | ✅ R+W; pillow+pypng oracles; palette/16‑bit/interlace |
+| JPEG (baseline+progressive) | `Image` | stb (public domain) | ✅ R (gray+RGB) / W (RGB‑only); pillow oracle; lossy |
+| Radiance `.hdr` | `Image`(f32) | stb (public domain) | ✅ R+W; numpy RGBE oracle; lossy encode |
+| OpenEXR | `Image`(f32) | tinyexr (BSD) — reuses our miniz | ⬜ next; half/float, tiled, premult‑alpha |
+| plain `.las` | `PointCloud` | **none** — documented binary, like colmap `.bin` | ⬜ next; needs origin+rgb16 record fields |
+| WebP | `Image` | libwebp (BSD) — CMake FetchContent | ⬜ last (only real wheel‑build risk) |
+
+Cross‑cutting: the 3 shipped image codecs are validated on the **local MSVC build
+only**; the plan gates the tier on a **cibuildwheel dry‑run** (Linux/macOS) — a user
+action (push + `gh workflow run publish.yml`), pending. Vendored stb carries one
+**local security patch** (truncated‑`.hdr` short‑read → uninitialized pixels; see
+`stb/COMMIT.txt`). CMYK JPEG is best‑effort stb→RGB (documented, not color‑managed).
 
 Genuinely need the system‑lib `SCENEIO_WITH_*` gate (deferred): HDF5 (+hloc), TIFF
-(libtiff), LAZ (laszip). COLMAP DB `.db` (sqlite) and safetensors are separate.
+(libtiff). **LAZ is vendorable after all** — laz‑perf (Apache‑2.0), point‑cloud
+tier. COLMAP DB `.db` (sqlite) and safetensors are separate.
 
 ### ⬜ Pending — later phases (meshes + niche)
 glTF / GLB (+Draco) · OBJ / STL / OFF · USD / USDZ · OpenVDB · Zarr · Parquet · AVIF / JPEG‑XL · PlayCanvas SOG · PCD.
