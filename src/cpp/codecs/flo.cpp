@@ -176,7 +176,7 @@ nb::bytes write_flo(nb::ndarray<const float, nb::c_contig, nb::device::cpu> flow
                 w.put<float>(bswap32f(src[i]));
         out = std::move(w.out);
     }
-    return nb::bytes(out.data(), out.size());
+    return emit_bytes(out.data(), out.size());
 }
 
 }  // namespace

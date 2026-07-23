@@ -226,7 +226,7 @@ nb::bytes write_png(const Image &img) {
         if (err) throw std::invalid_argument(std::string("png: encode: ") + lodepng_error_text(err));
         out_bytes.assign(reinterpret_cast<const char *>(out), outsize);
     }
-    return nb::bytes(out_bytes.data(), out_bytes.size());
+    return emit_bytes(out_bytes.data(), out_bytes.size());
 }
 
 }  // namespace

@@ -125,7 +125,7 @@ nb::bytes write_jpeg(const Image &img, int quality) {
                                     img.u8.data(), quality))
             throw std::invalid_argument("jpeg: encode failed");
     }
-    return nb::bytes(out.data(), out.size());
+    return emit_bytes(out.data(), out.size());
 }
 
 }  // namespace

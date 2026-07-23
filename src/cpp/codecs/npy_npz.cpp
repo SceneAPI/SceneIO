@@ -24,6 +24,7 @@
 // constructed with the GIL held.
 #include <miniz.h>
 
+#include <ctime>
 #include <cstring>
 #include <string>
 #include <utility>
@@ -393,7 +394,7 @@ nb::bytes write_npy(nb::ndarray<nb::ro, nb::device::cpu> array) {
         nb::gil_scoped_release rel;      // pure C++ header build + payload memcpy
         out = serialize_npy(descr, shape, src, nbytes);
     }
-    return nb::bytes(out.data(), out.size());
+    return emit_bytes(out.data(), out.size());
 }
 
 TensorDict read_npz(nb::handle source) {
@@ -472,6 +473,19 @@ nb::bytes write_npz(const TensorDict &td, bool compress) {
             ~ZipGuard() { mz_zip_end(z); }
         } guard{&zip};
 
+        // mz_zip_writer_add_mem() records wall-clock time, making otherwise
+        // identical archives differ whenever a call crosses a two-second DOS
+        // timestamp boundary. Construct a fixed *local* DOS epoch so miniz's
+        // localtime conversion emits 1980-01-01 00:00:00 in every timezone.
+        std::tm fixed_tm{};
+        fixed_tm.tm_year = 80;
+        fixed_tm.tm_mon = 0;
+        fixed_tm.tm_mday = 1;
+        fixed_tm.tm_isdst = -1;
+        MZ_TIME_T fixed_time = std::mktime(&fixed_tm);
+        if (fixed_time == static_cast<MZ_TIME_T>(-1))
+            throw std::runtime_error("npz: could not construct deterministic ZIP time");
+
         for (const TensorEntry &e : td.entries) {  // insertion order == member order
             if (e.name.find('\0') != std::string::npos)
                 throw std::invalid_argument("npz: tensor name contains NUL");
@@ -484,7 +498,10 @@ nb::bytes write_npz(const TensorDict &td, bool compress) {
             const std::string arcname = e.name + ".npy";
             const mz_uint level = compress ? static_cast<mz_uint>(MZ_DEFAULT_LEVEL)   // deflate
                                            : static_cast<mz_uint>(MZ_NO_COMPRESSION);  // stored
-            if (!mz_zip_writer_add_mem(&zip, arcname.c_str(), member.data(), member.size(), level))
+            if (!mz_zip_writer_add_mem_ex_v2(
+                    &zip, arcname.c_str(), member.data(), member.size(),
+                    nullptr, 0, level, 0, 0, &fixed_time,
+                    nullptr, 0, nullptr, 0))
                 throw std::runtime_error("npz: could not add member '" + e.name + "'");
         }
         void *out = nullptr;
@@ -499,7 +516,7 @@ nb::bytes write_npz(const TensorDict &td, bool compress) {
         } hb{out};
         result.assign(static_cast<const char *>(out), olen);
     }
-    return nb::bytes(result.data(), result.size());
+    return emit_bytes(result.data(), result.size());
 }
 
 }  // namespace

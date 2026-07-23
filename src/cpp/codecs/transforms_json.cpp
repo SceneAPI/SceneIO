@@ -19,6 +19,7 @@
 #include "records/posed_view_set.hpp"
 
 using namespace nb::literals;
+using sio::emit_bytes;
 using json = nlohmann::json;
 
 namespace {
@@ -301,7 +302,7 @@ nb::bytes write_transforms_json(const PosedViewSet &views) {
     d["frames"] = std::move(frames);
 
     const std::string s = d.dump();
-    return nb::bytes(s.data(), s.size());
+    return emit_bytes(s.data(), s.size());
 }
 
 }  // namespace

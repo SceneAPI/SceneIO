@@ -260,7 +260,7 @@ nb::bytes write_netpbm(const Image &img, bool ascii) {
             line_len = 0;
         }
     }
-    return nb::bytes(out.data(), out.size());
+    return emit_bytes(out.data(), out.size());
 }
 
 }  // namespace

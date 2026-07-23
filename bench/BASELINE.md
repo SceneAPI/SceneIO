@@ -126,3 +126,45 @@ the process-level memory delta. NPY byte-swapped/Fortran inputs intentionally
 retain the canonical copy fallback. PFM was evaluated but its mandatory
 bottom-to-top row reversal remains an owned positive-stride decode: the rejected
 negative-stride view could make ordinary NumPy-to-DLPack normalization abort.
+
+## O3 direct file-sink delta — 2026-07-23
+
+Local MSVC run after the signed-off O3 implementation (`bench_io.py --runs 7`).
+`bytesW` is the former public
+shape—encode to Python `bytes`, then `Path.write_bytes`—while `sinkW` writes the
+encoder's existing C++ buffer directly to an unbuffered file descriptor without
+exposing the pointer to Python. `bPeakMB`/`sPeakMB` are the corresponding peak
+traced Python allocations.
+
+```
+codec              fileMB  bytesW MB/s  sinkW MB/s  bPeakMB  sPeakMB
+--------------------------------------------------------------------
+png                    3.1           45           46      3.2      0.0
+jpeg                   2.5           57           57      2.5      0.0
+webp                   3.1           13           13      3.2      0.0
+hdr                    4.1          701          740      4.1      0.0
+exr                   12.5           53           54     12.5      0.0
+netpbm                 3.1         1316         1858      3.2      0.0
+xyz                   56.5           18           18     56.5      0.0
+las                   26.0          167          176     26.0      0.0
+gaussian_ply          11.2         1468         1995     11.2      0.0
+spz                    3.4           99          102      3.4      0.0
+splat                  6.4          813          897      6.4      0.0
+npy                    8.4         1941         2878      8.4      0.0
+pfm                    4.2         1839         2456      4.2      0.0
+flo                    8.4         2068         2956      8.4      0.0
+npz                    1.1          408          407      1.1      0.0
+transforms_json        1.2           29           32      1.2      0.0
+tum                    0.2           69           71      0.2      0.0
+kitti                  0.2           38           38      0.2      0.0
+bundler                0.2           83           84      0.2      0.0
+nvm                    0.2           80           80      0.2      0.0
+openmvg                0.6           44           43      0.6      0.0
+```
+
+All 21 single-file outputs were byte-identical. The two COLMAP directory codecs
+already used direct file sinks and remain byte-identical through the public
+registry. At table precision every output-sized Python allocation disappeared;
+the 16 MiB NPY bound asserts the exact property independent of timer/RSS noise.
+Sink throughput was equal or faster within normal run noise (NPZ's 408 vs
+407 MB/s and OpenMVG's 44 vs 43 MB/s are sub-millisecond-scale differences).

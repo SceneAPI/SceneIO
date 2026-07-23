@@ -50,6 +50,32 @@ NB_MODULE(_core, m) {
               return reinterpret_cast<uintptr_t>(data.data());
           },
           "data"_a);
+    // Private registry adapter: run a direct compiled bytes encoder with a
+    // lazy binary-file sink. Python-side conversion must finish before this
+    // call because arbitrary protocol callbacks could otherwise re-enter an
+    // encoder while the sink is active. emit_bytes() writes the encoder's C++
+    // buffer directly and returns an empty sentinel instead of allocating the
+    // usual output-sized Python bytes object.
+    m.def("_write_to_file",
+          [](nb::callable encoder, nb::handle value, nb::handle path,
+             size_t max_chunk, size_t test_short_write,
+             size_t test_fail_after) {
+              sio::FileSinkScope sink(path, max_chunk, test_short_write,
+                                      test_fail_after);
+              try {
+                  encoder(value);
+                  if (sink.calls() == 0)
+                      throw std::runtime_error(
+                          "file sink encoder returned without emitting output");
+                  sink.close();
+                  return sink.native_write_calls();
+              } catch (...) {
+                  sink.close_noexcept();
+                  throw;
+              }
+          },
+          "encoder"_a, "value"_a, "path"_a, "_max_chunk"_a = 0,
+          "_test_short_write"_a = 0, "_test_fail_after"_a = 0);
 
     register_reconstruction(m);
     register_gaussian_cloud(m);

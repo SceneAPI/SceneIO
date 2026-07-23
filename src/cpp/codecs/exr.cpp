@@ -204,7 +204,7 @@ nb::bytes write_exr(const Image &img) {
         }
         out.assign(reinterpret_cast<char *>(mem), static_cast<size_t>(rc));
     }
-    return nb::bytes(out.data(), out.size());
+    return emit_bytes(out.data(), out.size());
 }
 
 }  // namespace

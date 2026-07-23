@@ -216,7 +216,7 @@ nb::bytes write_las(const PointCloud &pc, double scale) {
         }
         out = std::move(w.out);
     }
-    return nb::bytes(out.data(), out.size());
+    return emit_bytes(out.data(), out.size());
 }
 
 }  // namespace

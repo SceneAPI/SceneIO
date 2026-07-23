@@ -342,6 +342,17 @@ def test_npz_insertion_order_preserved():
     assert list(td.keys()) == ["z", "a", "m"]  # not sorted
 
 
+def test_npz_write_is_byte_deterministic_with_fixed_member_time():
+    td = _core.tensor_dict({"x": np.arange(8, dtype=np.int32)})
+    first = bytes(_core.write_npz(td))
+    second = bytes(_core.write_npz(td))
+    assert second == first
+    with zipfile.ZipFile(io.BytesIO(first)) as archive:
+        assert [info.date_time for info in archive.infolist()] == [
+            (1980, 1, 1, 0, 0, 0)
+        ]
+
+
 def test_npz_empty():
     td = _core.read_npz(_save_npz(False))  # np.savez() with no arrays
     assert len(td) == 0

@@ -516,7 +516,7 @@ nb::bytes write_nvm(const Reconstruction &r) {
         nb::gil_scoped_release rel;  // pure-C++ encode; no Python objects touched
         encode_nvm(r, out);
     }
-    return nb::bytes(out.data(), out.size());
+    return emit_bytes(out.data(), out.size());
 }
 
 }  // namespace

@@ -143,7 +143,7 @@ nb::bytes write_pfm(nb::ndarray<const float, nb::c_contig, nb::device::cpu> img)
         }
         w.out.append(reinterpret_cast<const char *>(sr), row * 4);
     }
-    return nb::bytes(w.out.data(), w.out.size());
+    return emit_bytes(w.out.data(), w.out.size());
 }
 
 }  // namespace

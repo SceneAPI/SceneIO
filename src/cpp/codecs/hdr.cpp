@@ -103,7 +103,7 @@ nb::bytes write_hdr(const Image &img) {
                                     static_cast<int>(img.height), 3, img.f32.data()))
             throw std::invalid_argument("hdr: encode failed");
     }
-    return nb::bytes(out.data(), out.size());
+    return emit_bytes(out.data(), out.size());
 }
 
 }  // namespace

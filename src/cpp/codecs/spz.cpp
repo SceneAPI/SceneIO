@@ -347,7 +347,7 @@ nb::bytes write_spz(const GaussianCloud &g, int version, int fractional_bits, in
         for (const auto &sec : sections)
             w.out.append(reinterpret_cast<const char *>(sec.data()), sec.size());
         std::string gz = gzip_compress(reinterpret_cast<const uint8_t *>(w.out.data()), w.out.size());
-        return nb::bytes(gz.data(), gz.size());
+        return emit_bytes(gz.data(), gz.size());
     }
 
     // version == 4: NGSP zstd container — compress each non-empty section
@@ -385,7 +385,7 @@ nb::bytes write_spz(const GaussianCloud &g, int version, int fractional_bits, in
     }
     for (const auto &s : streams)
         w.out.append(reinterpret_cast<const char *>(s.data()), s.size());
-    return nb::bytes(w.out.data(), w.out.size());
+    return emit_bytes(w.out.data(), w.out.size());
 }
 
 }  // namespace

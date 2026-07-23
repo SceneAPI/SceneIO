@@ -164,9 +164,18 @@ def _mmap_view_reader(
     return read
 
 
-def _bytes_writer(fn: Callable[[object], bytes]) -> Callable[[object, str], None]:
+def _file_sink_writer(
+    fn: Callable[[object], bytes],
+    prepare: Callable[[object], object] | None = None,
+) -> Callable[[object, str], None]:
     def write(obj, path: str):
-        Path(path).write_bytes(fn(obj))
+        # Preparation must finish before the C++ sink becomes active: NumPy,
+        # DLPack, and mapping protocols are arbitrary Python callbacks and may
+        # re-enter an encoder.  Only direct compiled encoders receive the
+        # prepared value inside _write_to_file.
+        if prepare is not None:
+            obj = prepare(obj)
+        _core._write_to_file(fn, obj, path)
 
     return write
 
@@ -180,10 +189,10 @@ def _canon(a):
     return a
 
 
-def _npz_bytes(obj) -> bytes:
+def _prepare_npz(obj):
     if isinstance(obj, _core.TensorDict):
-        return _core.write_npz(obj)
-    return _core.write_npz(_core.tensor_dict({k: _canon(v) for k, v in dict(obj).items()}))
+        return obj
+    return _core.tensor_dict({k: _canon(v) for k, v in dict(obj).items()})
 
 
 # --- built-in codecs (the compiled `_core` functions, uniformly wrapped) ---
@@ -192,7 +201,7 @@ register(
         "pfm",
         (".pfm",),
         _mmap_reader(_core.read_pfm),
-        _bytes_writer(_core.write_pfm),
+        _file_sink_writer(_core.write_pfm, prepare=_canon),
         record=None,
         datatype="depth_map",
         magic=(b"PF", b"Pf"),
@@ -214,7 +223,7 @@ register(
         "gaussian_ply",
         (".ply",),
         _mmap_reader(_core.read_gaussian_ply),
-        _bytes_writer(_core.write_gaussian_ply),
+        _file_sink_writer(_core.write_gaussian_ply),
         record=_core.GaussianCloud,
         datatype="splat",
         magic=(b"ply",),
@@ -225,7 +234,7 @@ register(
         "spz",
         (".spz",),
         _mmap_reader(_core.read_spz),
-        _bytes_writer(_core.write_spz),
+        _file_sink_writer(_core.write_spz),
         record=_core.GaussianCloud,
         datatype="splat",
         magic=(b"\x1f\x8b", b"NGSP"),
@@ -239,7 +248,7 @@ register(
         "transforms_json",
         (),
         _mmap_reader(_core.read_transforms_json),
-        _bytes_writer(_core.write_transforms_json),
+        _file_sink_writer(_core.write_transforms_json),
         record=_core.PosedViewSet,
         datatype="posed_views",
         filenames=("transforms.json",),
@@ -250,7 +259,7 @@ register(
         "tum",
         (),
         _mmap_reader(_core.read_tum),
-        _bytes_writer(_core.write_tum),
+        _file_sink_writer(_core.write_tum),
         record=_core.PosedViewSet,
         datatype="posed_views",
     )
@@ -260,7 +269,7 @@ register(
         "kitti",
         (),
         _mmap_reader(_core.read_kitti),
-        _bytes_writer(_core.write_kitti),
+        _file_sink_writer(_core.write_kitti),
         record=_core.PosedViewSet,
         datatype="posed_views",
     )
@@ -272,7 +281,7 @@ register(
         "npy",
         (".npy",),
         _mmap_view_reader(_core.read_npy_view, _core.read_npy),
-        _bytes_writer(lambda a: _core.write_npy(_canon(a))),
+        _file_sink_writer(_core.write_npy, prepare=_canon),
         record=None,
         datatype="tensor",
         magic=(b"\x93NUMPY",),
@@ -283,7 +292,7 @@ register(
         "npz",
         (".npz",),
         _mmap_reader(_core.read_npz),
-        _bytes_writer(_npz_bytes),
+        _file_sink_writer(_core.write_npz, prepare=_prepare_npz),
         record=_core.TensorDict,
         datatype="tensor_dict",
     )
@@ -293,7 +302,7 @@ register(
         "netpbm",
         (".ppm", ".pgm", ".pnm"),
         _mmap_reader(_core.read_netpbm),
-        _bytes_writer(_core.write_netpbm),
+        _file_sink_writer(_core.write_netpbm),
         record=_core.Image,
         datatype="image",
         magic=(b"P2", b"P3", b"P5", b"P6"),
@@ -306,7 +315,7 @@ register(
         "png",
         (".png",),
         _mmap_reader(_core.read_png),
-        _bytes_writer(_core.write_png),
+        _file_sink_writer(_core.write_png),
         record=_core.Image,
         datatype="image",
         magic=(b"\x89PNG\r\n\x1a\n",),
@@ -320,7 +329,7 @@ register(
         "jpeg",
         (".jpg", ".jpeg"),
         _mmap_reader(_core.read_jpeg),
-        _bytes_writer(_core.write_jpeg),
+        _file_sink_writer(_core.write_jpeg),
         record=_core.Image,
         datatype="image",
         magic=(b"\xff\xd8\xff",),
@@ -333,7 +342,7 @@ register(
         "hdr",
         (".hdr",),
         _mmap_reader(_core.read_hdr),
-        _bytes_writer(_core.write_hdr),
+        _file_sink_writer(_core.write_hdr),
         record=_core.Image,
         datatype="image",
         magic=(b"#?RADIANCE", b"#?RGBE"),
@@ -346,7 +355,7 @@ register(
         "exr",
         (".exr",),
         _mmap_reader(_core.read_exr),
-        _bytes_writer(_core.write_exr),
+        _file_sink_writer(_core.write_exr),
         record=_core.Image,
         datatype="image",
         magic=(b"\x76\x2f\x31\x01",),
@@ -360,7 +369,7 @@ register(
         "webp",
         (".webp",),
         _mmap_reader(_core.read_webp),
-        _bytes_writer(_core.write_webp),
+        _file_sink_writer(_core.write_webp),
         record=_core.Image,
         datatype="image",
     )
@@ -384,7 +393,7 @@ register(
         "xyz",
         (".xyz",),
         _mmap_reader(_core.read_xyz),
-        _bytes_writer(_core.write_xyz),
+        _file_sink_writer(_core.write_xyz),
         record=_core.PointCloud,
         datatype="point_cloud",
     )
@@ -396,7 +405,7 @@ register(
         "las",
         (".las",),
         _mmap_reader(_core.read_las),
-        _bytes_writer(_core.write_las),
+        _file_sink_writer(_core.write_las),
         record=_core.PointCloud,
         datatype="point_cloud",
         magic=(b"LASF",),
@@ -407,7 +416,7 @@ register(
         "flo",
         (".flo",),
         _mmap_view_reader(_core.read_flo_view, _core.read_flo),
-        _bytes_writer(_core.write_flo),
+        _file_sink_writer(_core.write_flo, prepare=_canon),
         record=None,
         datatype="flow",
         magic=(b"PIEH",),
@@ -419,7 +428,7 @@ register(
         "bundler",
         (".out",),
         _mmap_reader(_core.read_bundler),
-        _bytes_writer(_core.write_bundler),
+        _file_sink_writer(_core.write_bundler),
         record=_core.Reconstruction,
         datatype="sparse_model",
         magic=(b"# Bundle file",),
@@ -430,7 +439,7 @@ register(
         "nvm",
         (".nvm",),
         _mmap_reader(_core.read_nvm),
-        _bytes_writer(_core.write_nvm),
+        _file_sink_writer(_core.write_nvm),
         record=_core.Reconstruction,
         datatype="sparse_model",
         magic=(b"NVM_V3",),
@@ -441,7 +450,7 @@ register(
         "openmvg",
         (),
         _mmap_reader(_core.read_openmvg),
-        _bytes_writer(_core.write_openmvg),
+        _file_sink_writer(_core.write_openmvg),
         record=_core.Reconstruction,
         datatype="sparse_model",
         filenames=("sfm_data.json",),
@@ -454,7 +463,7 @@ register(
         "splat",
         (".splat",),
         _mmap_reader(_core.read_splat),
-        _bytes_writer(_core.write_splat),
+        _file_sink_writer(_core.write_splat),
         record=_core.GaussianCloud,
         datatype="splat",
     )

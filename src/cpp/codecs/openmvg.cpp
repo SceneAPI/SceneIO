@@ -659,7 +659,7 @@ nb::bytes write_openmvg(const Reconstruction &r) {
         nb::gil_scoped_release rel;  // pure-C++ encode
         out = write_impl(r);
     }
-    return nb::bytes(out.data(), out.size());  // constructed with the GIL re-held
+    return emit_bytes(out.data(), out.size());  // constructed with the GIL re-held
 }
 
 }  // namespace

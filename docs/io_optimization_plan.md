@@ -1,6 +1,6 @@
 # I/O Optimization, Testing & Verification Plan
 
-Status: active — O0–O2 complete; O3–O5 pending. Scope: the compiled `sceneio._core` I/O path on
+Status: active — O0–O3 complete; O4–O5 pending. Scope: the compiled `sceneio._core` I/O path on
 `phase0-nanobind-core`. Companion to `coverage_roadmap.md` (this makes its "Phase 7"
 hardening/perf work concrete).
 
@@ -17,7 +17,7 @@ torch/DLPack; per-format hand-tuned decoders; GIL released). **Before O1**, the
 file-I/O model used the deliberately simple whole-file `_bytes_reader`: read
 materialized the whole file as Python `bytes` before decode, while writes still
 materialize the whole output as `bytes` before disk. O1 replaces the read side;
-the remaining write copy/stream/partial limitations are O3/O5 work.
+the remaining partial-read limitation is O5 work.
 
 So the harness comes first — but because scope is full and uniform, it decides the
 *order* of the sweep (worst `sceneio/oracle` ratios first) and supplies the
@@ -147,15 +147,45 @@ lenses all signed off with no remaining blockers.
 
 ---
 
-## Phase O3 — Streaming writes (all codecs)
+## Phase O3 — Streaming writes (all codecs) (complete)
 
-Writers build the full output then copy into `nb::bytes`. Add a **file-sink** write
-path (`write_X_to_file(record, path)` or a sink callback) for every codec, so large
-outputs stream to disk without a full in-memory copy. Swept across all 23 writers;
-the harness orders which land first (largest write-memory first).
+The 21 single-file writers now share a compiled file-sink path. Each existing
+encoder still constructs the native C++ output required by its library/format,
+but `emit_bytes()` writes that buffer directly through the lazily opened file's
+native descriptor instead of exposing its pointer to Python or copying it into
+a second, output-sized Python `bytes`.
+The low-level `write_X(record) -> bytes` APIs remain unchanged. The two COLMAP
+directory writers already wrote their three outputs directly and are covered by
+the same 23-codec differential sweep.
 
-**Testing:** sink-written file byte-identical to the buffer-written one, per codec.
-**Verify:** write peak-memory drops by ~output-size.
+The sink opens the Unicode Python path lazily only after validation/encoding
+succeeds, so guard failures do not truncate an existing destination. It handles
+partial writes, closes on every exception path, and restores its thread-local
+scope after success or failure. The raw encoder pointer is never handed to an
+overridable Python `write()` method. Overridable `open`/`fileno`/`close`
+callbacks run with sink interception suppressed. NPY, NPZ, PFM, and FLO finish
+all NumPy/DLPack/mapping protocol conversion before activating the sink, so
+those arbitrary Python callbacks can re-enter an encoder without interleaving
+the outer file.
+
+**Testing:** sink-written file is byte-identical to the buffer writer for all 21
+single-file codecs; direct/public directory outputs are identical for the other
+two. Cross-platform tests cover Unicode paths, descriptor failures,
+deterministic short native returns and failure after partial progress,
+native-sink pointer isolation, callback/protocol reentrancy, scope restoration,
+and non-truncation after rejected conversion or encoding. A 16 MiB NPY write
+proves the sink does not allocate an output-sized Python object. Final local
+gates: 1,150 passed / 3 skipped on MSVC and 1,087 passed / 44 optional-platform
+skips under ASan/UBSan/LSan on Linux. The memory-safety, correctness, and
+test-soundness review lenses all signed off with no remaining blockers.
+
+**Measured:** every single-file `tracemalloc` peak fell by approximately the
+encoded size (largest: XYZ 56.5 MB → 0.0 MB, LAS 26.0 → 0.0, EXR 12.5 → 0.0,
+Gaussian PLY 11.2 → 0.0, NPY/FLO 8.4 → 0.0). The final seven-run MSVC sweep
+showed no material throughput regression against the legacy
+`bytes + Path.write_bytes` route; representative sink gains were NPY
+1.94→2.88 GB/s, FLO 2.07→2.96 GB/s, Gaussian PLY 1.47→2.00 GB/s, and PNG
+45→46 MB/s.
 
 ---
 

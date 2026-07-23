@@ -302,7 +302,7 @@ nb::bytes write_xyz(const PointCloud &pc) {
         nb::gil_scoped_release rel;  // pure C++ encode
         encode_xyz(pc, out);
     }
-    return nb::bytes(out.data(), out.size());
+    return emit_bytes(out.data(), out.size());
 }
 
 }  // namespace

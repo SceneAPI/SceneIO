@@ -195,7 +195,7 @@ nb::bytes write_gaussian_ply(const GaussianCloud &g) {
         row[j++] = g.quats[i * 4 + 2]; row[j++] = g.quats[i * 4 + 3];
         out.append(reinterpret_cast<const char *>(row.data()), P * 4);  // little-endian (host LE)
     }
-    return nb::bytes(out.data(), out.size());
+    return emit_bytes(out.data(), out.size());
 }
 
 using arr = nb::ndarray<const float, nb::c_contig, nb::device::cpu>;

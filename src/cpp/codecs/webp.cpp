@@ -128,7 +128,7 @@ nb::bytes write_webp(const Image &img, bool lossless, float quality) {
                                         std::to_string(static_cast<int>(pic.error_code)) + ")");
         out.assign(reinterpret_cast<const char *>(writer.mem), writer.size);
     }
-    return nb::bytes(out.data(), out.size());
+    return emit_bytes(out.data(), out.size());
 }
 
 }  // namespace

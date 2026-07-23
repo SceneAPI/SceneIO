@@ -100,7 +100,7 @@ nb::bytes write_splat(const GaussianCloud &g) {
             for (int k = 0; k < 4; k++) out.push_back(clampb(std::nearbyintf(q[k] / norm * 128.0f + 128.0f)));
         }
     }
-    return nb::bytes(out.data(), out.size());
+    return emit_bytes(out.data(), out.size());
 }
 }  // namespace
 

@@ -20,6 +20,7 @@
 #include "records/posed_view_set.hpp"
 
 using namespace nb::literals;
+using sio::emit_bytes;
 
 namespace {
 
@@ -187,7 +188,7 @@ nb::bytes write_tum(const PosedViewSet &p) {
         out += fmt(w);
         out += '\n';
     }
-    return nb::bytes(out.data(), out.size());
+    return emit_bytes(out.data(), out.size());
 }
 
 // --- KITTI: 12 numbers = row-major 3x4 [R|t] (camera_to_world; R<->WXYZ) ----
@@ -244,7 +245,7 @@ nb::bytes write_kitti(const PosedViewSet &p) {
             out += (k == 11) ? '\n' : ' ';
         }
     }
-    return nb::bytes(out.data(), out.size());
+    return emit_bytes(out.data(), out.size());
 }
 
 }  // namespace

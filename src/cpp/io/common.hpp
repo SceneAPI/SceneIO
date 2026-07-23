@@ -5,6 +5,9 @@
 #include <nanobind/nanobind.h>
 #include <nanobind/ndarray.h>
 
+#include <algorithm>
+#include <cerrno>
+#include <climits>
 #include <cstdint>
 #include <cstring>
 #include <limits>
@@ -14,9 +17,186 @@
 #include <type_traits>
 #include <vector>
 
+#ifdef _WIN32
+#include <io.h>
+#else
+#include <unistd.h>
+#endif
+
 namespace nb = nanobind;
 
 namespace sio {
+
+class FileSink;
+inline thread_local FileSink *active_file_sink = nullptr;
+
+// Python's open()/fileno()/close() are overridable and can re-enter a compiled
+// encoder. Disable interception during those callbacks so a reentrant encoder
+// returns its ordinary bytes instead of corrupting the in-progress file sink.
+class FileSinkSuppression {
+public:
+    FileSinkSuppression()
+        : previous_(active_file_sink) {
+        active_file_sink = nullptr;
+    }
+    FileSinkSuppression(const FileSinkSuppression &) = delete;
+    FileSinkSuppression &operator=(const FileSinkSuppression &) = delete;
+    ~FileSinkSuppression() { active_file_sink = previous_; }
+
+private:
+    FileSink *previous_;
+};
+
+// Direct-to-file encoder sink. It opens the Python path lazily on the first
+// emission, after codec validation/encoding succeeds, preserving both Unicode
+// path handling and the previous rule that guard failures do not truncate an
+// existing destination. Codec writers call emit_bytes() exactly as before;
+// inside an active scope it writes the existing C++ output buffer through the
+// file's native descriptor instead of exposing its non-owning pointer to Python
+// or allocating a second, output-sized Python bytes object.
+class FileSink {
+public:
+    explicit FileSink(nb::handle path, size_t max_chunk = 0,
+                      size_t test_short_write = 0,
+                      size_t test_fail_after = 0)
+        : path_(nb::borrow<nb::object>(path)),
+          max_chunk_(max_chunk == 0 ? std::numeric_limits<size_t>::max()
+                                    : max_chunk),
+          test_short_write_(test_short_write),
+          test_fail_after_(test_fail_after) {}
+
+    void write(const char *data, size_t size) {
+        calls_++;
+        int fd;
+        {
+            FileSinkSuppression suppress;
+            if (!file_.is_valid())
+                file_ = nb::module_::import_("builtins").attr("open")(
+                    path_, "wb", 0);  // C++ buffer is already complete
+            fd = PyObject_AsFileDescriptor(file_.ptr());
+            if (fd < 0) throw nb::python_error();
+        }
+        {
+            nb::gil_scoped_release rel;
+            while (size != 0) {
+#ifdef _WIN32
+                const unsigned int chunk = static_cast<unsigned int>(
+                    std::min({size, static_cast<size_t>(INT_MAX), max_chunk_}));
+                const unsigned int request = static_cast<unsigned int>(
+                    test_short_write_ == 0
+                        ? chunk
+                        : std::min(static_cast<size_t>(chunk),
+                                   test_short_write_));
+                native_write_calls_++;
+                int written;
+                if (test_fail_after_ != 0 &&
+                    native_write_calls_ > test_fail_after_) {
+                    errno = EIO;
+                    written = -1;
+                } else {
+                    written = ::_write(fd, data, request);
+                }
+#else
+                const size_t chunk =
+                    std::min({size,
+                              static_cast<size_t>(
+                                  std::numeric_limits<ssize_t>::max()),
+                              max_chunk_});
+                const size_t request =
+                    test_short_write_ == 0
+                        ? chunk
+                        : std::min(chunk, test_short_write_);
+                native_write_calls_++;
+                ssize_t written;
+                if (test_fail_after_ != 0 &&
+                    native_write_calls_ > test_fail_after_) {
+                    errno = EIO;
+                    written = -1;
+                } else {
+                    written = ::write(fd, data, request);
+                }
+#endif
+                if (written < 0) {
+                    if (errno == EINTR) continue;
+                    throw std::runtime_error(
+                        std::string("file sink write failed: ") +
+                        std::strerror(errno));
+                }
+                if (written == 0)
+                    throw std::runtime_error("file sink write made no progress");
+                const size_t count = static_cast<size_t>(written);
+                data += count;
+                size -= count;
+                bytes_ += count;
+            }
+        }
+    }
+
+    void close() {
+        if (!file_.is_valid()) return;
+        FileSinkSuppression suppress;
+        nb::object file = std::move(file_);
+        file.attr("close")();
+    }
+    void close_noexcept() noexcept {
+        if (!file_.is_valid()) return;
+        FileSinkSuppression suppress;
+        nb::object file = std::move(file_);
+        PyObject *result = PyObject_CallMethod(file.ptr(), "close", nullptr);
+        if (result)
+            Py_DECREF(result);
+        else
+            PyErr_Clear();
+    }
+    size_t calls() const { return calls_; }
+    size_t bytes() const { return bytes_; }
+    size_t native_write_calls() const { return native_write_calls_; }
+
+private:
+    nb::object path_;
+    nb::object file_;
+    size_t max_chunk_;
+    // Private deterministic test shim. It models a native write returning less
+    // than the logical chunk and, optionally, failing after prior progress.
+    // Production callers always leave both values at zero.
+    size_t test_short_write_;
+    size_t test_fail_after_;
+    size_t calls_ = 0;
+    size_t bytes_ = 0;
+    size_t native_write_calls_ = 0;
+};
+
+class FileSinkScope {
+public:
+    explicit FileSinkScope(nb::handle path, size_t max_chunk = 0,
+                           size_t test_short_write = 0,
+                           size_t test_fail_after = 0)
+        : sink_(path, max_chunk, test_short_write, test_fail_after),
+          previous_(active_file_sink) {
+        active_file_sink = &sink_;
+    }
+    FileSinkScope(const FileSinkScope &) = delete;
+    FileSinkScope &operator=(const FileSinkScope &) = delete;
+    ~FileSinkScope() { active_file_sink = previous_; }
+
+    void close() { sink_.close(); }
+    void close_noexcept() noexcept { sink_.close_noexcept(); }
+    size_t calls() const { return sink_.calls(); }
+    size_t bytes() const { return sink_.bytes(); }
+    size_t native_write_calls() const { return sink_.native_write_calls(); }
+
+private:
+    FileSink sink_;
+    FileSink *previous_;
+};
+
+inline nb::bytes emit_bytes(const char *data, size_t size) {
+    if (active_file_sink) {
+        active_file_sink->write(data, size);
+        return nb::bytes("", 0);
+    }
+    return nb::bytes(data, size);
+}
 
 // Private buffer-exporter type used as numpy.ndarray.base for mmap-backed
 // arrays. It holds a live Py_buffer but deliberately exposes no close/release

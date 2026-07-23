@@ -1,13 +1,14 @@
-"""O0-O2 I/O benchmark harness for docs/io_optimization_plan.md.
+"""O0-O3 I/O benchmark harness for docs/io_optimization_plan.md.
 
 Measures, per codec, encode (write) + decode (read) throughput (MB/s over the raw
 payload) and peak Python allocation (tracemalloc), for sceneio._core vs the oracle
 library where one exists, on representative payloads for all 23 codecs. Read
 measurements retain the legacy whole-file bytes/copy-decode path beside the
 public registry mmap path, so their peak delta captures the input copy O1
-    removes and, for NPY/FLO, the decoded-array copy O2 removes. The encoded
-size is the write peak O3 targets. Oracle failures degrade to "-" so the
-SceneIO measurements always print.
+removes and, for NPY/FLO, the decoded-array copy O2 removes. Write measurements
+retain the in-memory bytes encoder beside the public file sink, so their peak
+delta captures the output-sized Python allocation O3 removes. Oracle failures
+degrade to "-" so the SceneIO measurements always print.
 
 Run: python bench/bench_io.py [--runs N] [--scale S] [--cold-cache]
 Synthetic fixtures are generated in a temporary directory and never committed.
@@ -618,6 +619,7 @@ def _run_benchmark(args, tmp):
     specs = _specs(args.scale, pose_bundle)
     failures = []
     results = []
+    write_rows = []
 
     hdr = (
         f"{'codec':<14}{'payloadMB':>10}{'fileMB':>9}{'sioW':>9}{'sioR':>9}"
@@ -638,11 +640,41 @@ def _run_benchmark(args, tmp):
             rt, _ = _measure(lambda: s.r(enc), args.runs)
             sioW, sioR = pmb / wt, pmb / rt
 
-            # Compare legacy whole-file bytes + copy decode with the public mmap
-            # path. NPY/FLO additionally expose the O2 mapped output view.
+            # Compare the legacy bytes+Path.write_bytes route with the public O3
+            # file sink, then compare whole-file bytes + copy decode with the
+            # public mmap path. NPY/FLO also expose the O2 mapped output view.
             fp = os.path.join(tmp, f"{s.id}.bin")
-            with open(fp, "wb") as fh:
-                fh.write(enc)
+
+            def _bytes_write(fp=fp, w=s.w, value=rec):
+                return Path(fp).write_bytes(w(value))
+
+            def _sink_write(fp=fp, codec_id=s.id, value=rec):
+                return sceneio.write(value, fp, format=codec_id)
+
+            bytes_write_time, bytes_write_peak = _measure(
+                _bytes_write, args.runs
+            )
+            bytes_write_rss = _measure_rss(_bytes_write)
+            sink_time, sink_write_peak = _measure(_sink_write, args.runs)
+            sink_write_rss = _measure_rss(_sink_write)
+            with open(fp, "rb") as fh:
+                if fh.read() != enc:
+                    raise AssertionError("file sink output differs from buffer encoder")
+            path_write = pmb / sink_time
+            bytes_path_write = pmb / bytes_write_time
+            write_rows.append(
+                (
+                    s.id,
+                    pmb,
+                    fmb,
+                    bytes_path_write,
+                    path_write,
+                    bytes_write_peak / 1e6,
+                    sink_write_peak / 1e6,
+                    bytes_write_rss / 1e6,
+                    sink_write_rss / 1e6,
+                )
+            )
 
             def _bytes_read(fp=fp, r=s.r):
                 with open(fp, "rb") as fh:
@@ -675,6 +707,8 @@ def _run_benchmark(args, tmp):
                     "payload_mb": pmb,
                     "file_mb": fmb,
                     "write_mbps": sioW,
+                    "bytes_path_write_mbps": bytes_path_write,
+                    "path_write_mbps": path_write,
                     "read_mbps": sioR,
                     "path_read_mbps": path_read,
                     "oracle_write_mbps": oraW,
@@ -683,6 +717,10 @@ def _run_benchmark(args, tmp):
                     "mmap_peak_mb": mmap_peak / 1e6,
                     "bytes_rss_mb": bytes_rss / 1e6,
                     "mmap_rss_mb": mmap_rss / 1e6,
+                    "bytes_write_peak_mb": bytes_write_peak / 1e6,
+                    "sink_write_peak_mb": sink_write_peak / 1e6,
+                    "bytes_write_rss_mb": bytes_write_rss / 1e6,
+                    "sink_write_rss_mb": sink_write_rss / 1e6,
                 }
             )
             print(
@@ -707,7 +745,25 @@ def _run_benchmark(args, tmp):
             payload_bytes = _record_nbytes(reconstruction)
             pmb = payload_bytes / 1e6
             fmb = file_bytes / 1e6
-            write_time, _ = _measure(lambda: spec.w(reconstruction, str(path)), args.runs)
+            write_time, write_peak = _measure(
+                lambda: spec.w(reconstruction, str(path)), args.runs
+            )
+            write_rss = _measure_rss(
+                lambda: spec.w(reconstruction, str(path))
+            )
+            write_rows.append(
+                (
+                    spec.id,
+                    pmb,
+                    fmb,
+                    None,
+                    pmb / write_time,
+                    None,
+                    write_peak / 1e6,
+                    None,
+                    write_rss / 1e6,
+                )
+            )
 
             def _directory_read(path=path, codec_id=spec.id):
                 if args.cold_cache:
@@ -725,10 +781,13 @@ def _run_benchmark(args, tmp):
                     "payload_mb": pmb,
                     "file_mb": fmb,
                     "write_mbps": pmb / write_time,
+                    "path_write_mbps": pmb / write_time,
                     "read_mbps": pmb / core_read_time,
                     "path_read_mbps": pmb / path_read_time,
                     "mmap_peak_mb": read_peak / 1e6,
                     "mmap_rss_mb": read_rss / 1e6,
+                    "sink_write_peak_mb": write_peak / 1e6,
+                    "sink_write_rss_mb": write_rss / 1e6,
                 }
             )
             print(
@@ -747,6 +806,27 @@ def _run_benchmark(args, tmp):
     print("sioR = in-memory copy decode; pathR = public registry mmap read/view.")
     print("bPeakMB/mPeakMB = peak Python allocation for bytes/mmap reads (O1 delta).")
     print("bRSSMB/mRSSMB = sampled resident-set growth for bytes/mmap reads.")
+    print("\nO3 write-path delta:")
+    write_header = (
+        f"{'codec':<18}{'payloadMB':>10}{'fileMB':>9}{'bytesW':>9}{'sinkW':>9}"
+        f"{'bPeakMB':>9}{'sPeakMB':>9}{'bRSSMB':>9}{'sRSSMB':>9}"
+    )
+    print(write_header)
+    print("-" * len(write_header))
+    for row in write_rows:
+        codec_id, pmb, fmb, bufw, sinkw, bpeak, speak, brss, srss = row
+        print(
+            f"{codec_id:<18}{pmb:>10.1f}{fmb:>9.1f}"
+            f"{(f'{bufw:.0f}' if bufw is not None else '-'):>9}"
+            f"{sinkw:>9.0f}"
+            f"{(f'{bpeak:.1f}' if bpeak is not None else '-'):>9}"
+            f"{speak:>9.1f}"
+            f"{(f'{brss:.1f}' if brss is not None else '-'):>9}"
+            f"{srss:>9.1f}"
+        )
+    print("bytesW/sinkW = legacy bytes+file/public file-sink write MB/s.")
+    print("bPeakMB/sPeakMB = peak Python allocation for bytes/file-sink writes (O3 delta).")
+    print("bRSSMB/sRSSMB = sampled resident-set growth for bytes/file-sink writes.")
     if args.cold_cache and not (
         hasattr(os, "posix_fadvise") and hasattr(os, "POSIX_FADV_DONTNEED")
     ):

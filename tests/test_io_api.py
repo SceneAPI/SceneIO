@@ -166,7 +166,7 @@ def test_colmap_directory_detected_and_read(tmp_path):
 # --- E2E dispatch for the vendored image/point codecs -----------------------
 # The per-codec parity suites (tests/codecs/) call _core.read_X/write_X DIRECTLY
 # and never touch the public path: extension/magic detection -> registry lookup
-# -> the _bytes_reader/_bytes_writer adapter -> _core.*. These round-trip through
+# -> the mmap reader/file-sink writer adapters -> _core.*. These round-trip through
 # the real sceneio.write/detect/read on disk, so a wrong reader/extension/magic in
 # a registry entry is caught. Fidelity itself is the parity suites' job, so lossy
 # codecs (jpeg/hdr) only assert the record shape/dtype survived the round-trip.

@@ -55,7 +55,13 @@ def read(path, *, format: str | None = None):
 
 def write(obj, path, *, format: str | None = None) -> None:
     """Write a record to ``path``, dispatching on ``format``, the object
-    type, and the extension."""
+    type, and the extension.
+
+    Single-file codecs write their C++ encoder buffer directly to the file
+    without materializing a second output-sized Python ``bytes`` object. The
+    file opens lazily after validation and encoding, so a rejected record does
+    not truncate an existing destination.
+    """
     fmt = format or _detect_write(obj, path)
     codec = get(fmt)
     if codec.write is None:

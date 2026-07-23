@@ -476,7 +476,7 @@ nb::bytes write_bundler(const Reconstruction &r) {
         nb::gil_scoped_release rel;  // pure-C++ encode; the record's C++ fields only
         encode(r, out);
     }
-    return nb::bytes(out.data(), out.size());  // built with the GIL re-held
+    return emit_bytes(out.data(), out.size());  // built with the GIL re-held
 }
 
 }  // namespace
