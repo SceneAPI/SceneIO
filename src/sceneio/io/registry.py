@@ -280,6 +280,19 @@ register(
         magic=(b"\x76\x2f\x31\x01",),
     )
 )
+# WebP (libwebp) -> Image (uint8 sRGB). Ext-only: the WEBP tag sits at byte 8 of
+# the RIFF container, which detect()'s startswith sniff can't match without a bare
+# b"RIFF" that would also claim .wav/.avi.
+register(
+    Codec(
+        "webp",
+        (".webp",),
+        _bytes_reader(_core.read_webp),
+        _bytes_writer(_core.write_webp),
+        record=_core.Image,
+        datatype="image",
+    )
+)
 # COLMAP text sparse (cameras.txt/images.txt/points3D.txt) — the text twin of
 # colmap_sparse; a directory format distinguished by its cameras.txt marker.
 register(
