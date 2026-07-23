@@ -66,7 +66,7 @@ have permissive, self‑contained single‑header/source libraries that drop int
 | PNG (incl. 16‑bit depth) | `Image` | lodepng (zlib) — self‑contained inflate | ✅ R+W; pillow+pypng oracles; palette/16‑bit/interlace |
 | JPEG (baseline+progressive) | `Image` | stb (public domain) | ✅ R (gray+RGB) / W (RGB‑only); pillow oracle; lossy |
 | Radiance `.hdr` | `Image`(f32) | stb (public domain) | ✅ R+W; numpy RGBE oracle; lossy encode |
-| OpenEXR | `Image`(f32) | tinyexr (BSD) — reuses our miniz | ⬜ next; half/float, tiled, premult‑alpha |
+| OpenEXR | `Image`(f32) | tinyexr (BSD) — reuses our miniz | ✅ R+W; OpenEXR‑python oracle; HALF→FLOAT, premult‑alpha, PIZ/ZIP/RLE |
 | plain `.las` | `PointCloud` | **none** — documented binary, like colmap `.bin` | ⬜ next; needs origin+rgb16 record fields |
 | WebP | `Image` | libwebp (BSD) — CMake FetchContent | ⬜ last (only real wheel‑build risk) |
 
