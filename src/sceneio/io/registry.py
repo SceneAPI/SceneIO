@@ -262,3 +262,37 @@ register(
         magic=(b"PIEH",),
     )
 )
+# SfM pose formats -> Reconstruction (convention-converted to WXYZ/world_to_camera).
+register(
+    Codec(
+        "bundler",
+        (".out",),
+        _bytes_reader(_core.read_bundler),
+        _bytes_writer(_core.write_bundler),
+        record=_core.Reconstruction,
+        datatype="sparse_model",
+        magic=(b"# Bundle file",),
+    )
+)
+register(
+    Codec(
+        "nvm",
+        (".nvm",),
+        _bytes_reader(_core.read_nvm),
+        _bytes_writer(_core.write_nvm),
+        record=_core.Reconstruction,
+        datatype="sparse_model",
+        magic=(b"NVM_V3",),
+    )
+)
+register(
+    Codec(
+        "openmvg",
+        (),
+        _bytes_reader(_core.read_openmvg),
+        _bytes_writer(_core.write_openmvg),
+        record=_core.Reconstruction,
+        datatype="sparse_model",
+        filenames=("sfm_data.json",),
+    )
+)
