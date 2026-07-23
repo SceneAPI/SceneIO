@@ -1,0 +1,8 @@
+nothings/stb @ 31c1ad37456438565541f4919958214b6e762fb4
+
+LOCAL PATCHES (re-apply after any re-vendor):
+- stb_image.h, stbi__hdr_load flat/RLE-fallback loop: the upstream
+  `stbi__getn(s, rgbe, 4);` ignores its return value, so a truncated Radiance
+  .hdr leaves the per-pixel rgbe[] buffer uninitialized and leaks stack bytes
+  into the decoded image (no error). Patched to check the return and fail with
+  "corrupt HDR" (freeing hdr_data). Marked in-source with "[sceneio LOCAL PATCH]".

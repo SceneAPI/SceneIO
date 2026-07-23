@@ -240,6 +240,33 @@ register(
         magic=(b"\x89PNG\r\n\x1a\n",),
     )
 )
+# JPEG (vendored stb) -> Image. Lossy 8-bit gray/RGB; the SOI+marker prefix is
+# the standard signature. write uses the default quality (95); io.save can't pass
+# a quality knob yet, so callers wanting other qualities use _core.write_jpeg.
+register(
+    Codec(
+        "jpeg",
+        (".jpg", ".jpeg"),
+        _bytes_reader(_core.read_jpeg),
+        _bytes_writer(_core.write_jpeg),
+        record=_core.Image,
+        datatype="image",
+        magic=(b"\xff\xd8\xff",),
+    )
+)
+# Radiance RGBE (vendored stb) -> Image (float32 linear RGB). The HDR float twin
+# of the integer image codecs; both ASCII signature variants.
+register(
+    Codec(
+        "hdr",
+        (".hdr",),
+        _bytes_reader(_core.read_hdr),
+        _bytes_writer(_core.write_hdr),
+        record=_core.Image,
+        datatype="image",
+        magic=(b"#?RADIANCE", b"#?RGBE"),
+    )
+)
 # COLMAP text sparse (cameras.txt/images.txt/points3D.txt) — the text twin of
 # colmap_sparse; a directory format distinguished by its cameras.txt marker.
 register(
