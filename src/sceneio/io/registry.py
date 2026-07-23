@@ -296,3 +296,15 @@ register(
         filenames=("sfm_data.json",),
     )
 )
+# antimatter15 .splat -> GaussianCloud. Headerless (no magic), so ext-only; a
+# down-converted, web-viewer sibling of spz (both carry the `splat` datatype).
+register(
+    Codec(
+        "splat",
+        (".splat",),
+        _bytes_reader(_core.read_splat),
+        _bytes_writer(_core.write_splat),
+        record=_core.GaussianCloud,
+        datatype="splat",
+    )
+)

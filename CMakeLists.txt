@@ -79,7 +79,8 @@ nanobind_add_module(_core STABLE_ABI NB_STATIC
   src/cpp/codecs/flo.cpp
   src/cpp/codecs/bundler.cpp
   src/cpp/codecs/nvm.cpp
-  src/cpp/codecs/openmvg.cpp)
+  src/cpp/codecs/openmvg.cpp
+  src/cpp/codecs/splat.cpp)
 target_include_directories(_core PRIVATE src/cpp ${zstd_SOURCE_DIR}/lib ${fast_float_SOURCE_DIR}/include)
 target_link_libraries(_core PRIVATE miniz_static nlohmann_json::nlohmann_json libzstd_static)
 

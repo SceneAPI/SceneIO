@@ -244,8 +244,8 @@ GaussianCloud read_spz(nb::bytes data) {
 void encode_sections(const GaussianCloud &g, int fractional_bits, int sh_dim,
                      std::vector<std::vector<uint8_t>> &sections) {
     const size_t n = g.n;
-    auto clampb = [](float f) -> uint8_t {
-        return static_cast<uint8_t>(std::min(std::max(f, 0.0f), 255.0f));
+    auto clampb = [](float f) -> uint8_t {  // fmin/fmax return the non-NaN operand -> NaN maps to 0, keeping the float->uint8 cast defined for a NaN sh_dc/opacity from a down-converted cloud
+        return static_cast<uint8_t>(std::fmin(std::fmax(f, 0.0f), 255.0f));
     };
 
     // positions (9N): round(mean * 2^frac), clip to signed 24-bit, 3 bytes LE
@@ -253,7 +253,7 @@ void encode_sections(const GaussianCloud &g, int fractional_bits, int sh_dim,
     pos.reserve(n * 9);
     const float pscale = static_cast<float>(1u << fractional_bits);
     for (size_t i = 0; i < n * 3; i++) {
-        float f = std::min(std::max(std::nearbyintf(g.means[i] * pscale), -8388608.0f), 8388607.0f);
+        float f = std::fmin(std::fmax(std::nearbyintf(g.means[i] * pscale), -8388608.0f), 8388607.0f);  // fmin/fmax: a NaN mean clamps to -8388608 rather than making the int32 cast UB
         int32_t q = static_cast<int32_t>(f) & 0xFFFFFF;
         pos.push_back(static_cast<uint8_t>(q & 0xff));
         pos.push_back(static_cast<uint8_t>((q >> 8) & 0xff));
@@ -287,7 +287,7 @@ void encode_sections(const GaussianCloud &g, int fractional_bits, int sh_dim,
     for (size_t i = 0; i < n; i++) {
         float q[4] = {g.quats[i * 4 + 1], g.quats[i * 4 + 2], g.quats[i * 4 + 3], g.quats[i * 4]};  // xyzw
         float norm = std::sqrt(q[0] * q[0] + q[1] * q[1] + q[2] * q[2] + q[3] * q[3]);
-        if (!(norm > 0.0f)) { q[0] = q[1] = q[2] = 0.0f; q[3] = 1.0f; norm = 1.0f; }  // degenerate -> identity
+        if (!(norm > 0.0f) || !std::isfinite(norm)) { q[0] = q[1] = q[2] = 0.0f; q[3] = 1.0f; norm = 1.0f; }  // 0- or non-finite-norm -> identity
         for (float &c : q) c /= norm;
         int lg = 0;
         for (int k = 1; k < 4; k++)
@@ -298,7 +298,7 @@ void encode_sections(const GaussianCloud &g, int fractional_bits, int sh_dim,
         for (int axis = 0; axis < 4; axis++) {
             if (axis == lg) continue;
             float m = std::nearbyintf(static_cast<float>(C_MASK) * std::fabs(q[axis]) / INV_SQRT2);
-            uint32_t mag = static_cast<uint32_t>(std::min(std::max(m, 0.0f), static_cast<float>(C_MASK)));
+            uint32_t mag = static_cast<uint32_t>(std::fmin(std::fmax(m, 0.0f), static_cast<float>(C_MASK)));  // fmin/fmax: NaN -> 0 keeps the uint32 cast defined
             packed = (packed << 10) | ((q[axis] < 0.0f ? 1u : 0u) << 9) | mag;
         }
         packed |= static_cast<uint32_t>(lg) << 30;
