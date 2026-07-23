@@ -142,7 +142,10 @@ def _fingerprint(value):
         )
     else:  # pragma: no cover - every registered O1 codec is represented above
         raise AssertionError(f"unhandled result type {type(value)!r}")
-    return type(value), fields
+    # O2 raw mapped arrays use a private ndarray subtype solely to make DLPack
+    # export copy-safe; normalize it to the same public ndarray record kind.
+    result_type = np.ndarray if isinstance(value, np.ndarray) else type(value)
+    return result_type, fields
 
 
 @pytest.fixture(scope="module")

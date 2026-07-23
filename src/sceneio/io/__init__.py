@@ -32,9 +32,16 @@ Camera = _core.Camera
 def read(path, *, format: str | None = None):
     """Read ``path`` into a record, dispatching on ``format`` or detection.
 
-    The file must remain byte-stable for this synchronous call. Single-file
-    codecs use a read-only mmap; concurrent writes race the decoder, and
-    shrinking a live mapping is process-fatal on POSIX.
+    Single-file codecs use a read-only mmap. The file must remain byte-stable
+    during decoding. Native-endian, C-order NPY and FLO results are read-only
+    views that retain the mapping, so their backing file must not be modified or
+    truncated until the returned array and all derived views are released; a
+    POSIX shrink can otherwise cause ``SIGBUS`` on later access. Atomic path
+    replacement is safe because the live mapping retains the old file. On
+    Windows the mapped file remains locked for the same lifetime. DLPack export
+    makes an isolated contiguous copy because writable tensor consumers cannot
+    safely alias a read-only file mapping. PFM remains an owned, positive-stride
+    decode because its bottom-to-top row order requires a real transform.
     """
     fmt = format or detect(path)
     codec = get(fmt)

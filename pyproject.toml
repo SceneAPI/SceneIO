@@ -23,7 +23,8 @@ dev = [
 # pycolmap (COLMAP), pillow + pypng (PNG; pypng gives exact 16-bit RGB/RGBA that
 # Pillow's rgb48 handling truncates). numpy is capped <2.5 because gsply's numba
 # needs NumPy <=2.4, and pinned >=2.0 to keep the NEP-50 float32 semantics the
-# SPZ encode parity relies on. (torch is intentionally omitted; its interop tests skip.)
+# SPZ encode parity relies on. Torch remains outside package extras/runtime;
+# the required Linux CI lane installs a CPU wheel solely for interop tests.
 test = [
     "pytest>=8.3",
     "numpy>=2.0,<2.5",

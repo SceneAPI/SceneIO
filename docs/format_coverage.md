@@ -34,7 +34,7 @@ SoA, zero-copy to numpy/torch (DLPack), conventions carried as metadata.
 
 | Format id | Record | R/W | Oracle | Notes |
 |---|---|---|---|---|
-| `pfm` | ndarray | R+W | pure‑Python | reference codec; PFM depth/gray/color |
+| `pfm` | ndarray | R+W | pure‑Python | PFM depth/gray/color; mmap input + owned positive-stride row-flip |
 | `colmap_sparse` | `Reconstruction` | R+W | **pycolmap** | `.bin`; byte‑identical to pycolmap 4.1.1 |
 | `colmap_txt` | `Reconstruction` | R+W | **pycolmap** | text twin of `.bin` |
 | `gaussian_ply` | `GaussianCloud` | R+W | **gsply** | 3DGS Gaussian PLY, channel‑grouped f_rest |
@@ -46,11 +46,11 @@ SoA, zero-copy to numpy/torch (DLPack), conventions carried as metadata.
 | `bundler` | `Reconstruction` | R+W | pycolmap | Bundler `.out` |
 | `nvm` | `Reconstruction` | R+W | manual | VisualSFM `.nvm` (NVM_V3) |
 | `openmvg` | `Reconstruction` | R+W | manual | openMVG `sfm_data.json` |
-| `npy` | ndarray | R+W | **numpy** | numpy 1.0/2.0/3.0 header; byte‑exact v1.0 writer (== np.save) |
+| `npy` | ndarray | R+W | **numpy** | pinned mapped native/C-order view; byte‑exact v1.0 writer (== np.save) |
 | `npz` | `TensorDict` | R+W | **numpy** | ZIP (stored+deflate) via vendored miniz; 12 dtypes |
 | `netpbm` | `Image` | R+W | pure‑Python | PGM P5/P2 + PPM P6/P3; 16‑bit big‑endian, comment‑tolerant |
 | `.xyz` / `.pts` | `PointCloud` | R+W | pure‑Python | point‑cloud text (fast_float parsing) |
-| `.flo` | ndarray (H,W,2) | R+W | pure‑Python | Middlebury optical flow |
+| `.flo` | ndarray (H,W,2) | R+W | pure‑Python | Middlebury optical flow; pinned mapped view |
 
 Deferred within Tier‑1: g2o poses (pose‑graph *edges* don't fit `PosedViewSet`).
 
@@ -87,7 +87,8 @@ glTF / GLB (+Draco) · OBJ / STL / OFF · USD / USDZ · OpenVDB · Zarr · Parqu
 
 ### 🟡 In progress — Phase 7 (hardening)
 ✅ mmap-backed reads for all 21 single-file codecs (the two COLMAP directory
-codecs already read paths directly in C++) · ✅ bytes/mmap differential +
+codecs already read paths directly in C++) · ✅ zero-copy read-only mapped
+ndarray views for native NPY/FLO payloads (PFM row-flips into owned storage) · ✅ bytes/mmap differential +
 scheduled 100-case backing-store mutation sweep · ✅ ASan/UBSan/LSan workflow
 (local Linux green; remote run user-gated) · ⬜ randomized oracle-triangulated
 fuzzing · ⬜ streaming writes · ⬜ partial/lazy reads · ⬜ GPU-via-DLPack
@@ -107,7 +108,7 @@ fuzzing · ⬜ streaming writes · ⬜ partial/lazy reads · ⬜ GPU-via-DLPack
 | Vendored deps (miniz, zstd, nlohmann/json, fast_float) | ✅ | permissive; statically linked / header‑only |
 | Vendored image libs (lodepng/stb/tinyexr/libwebp) | ⬜ | **next tier** — FetchContent, no system libs, numpy‑only runtime kept |
 | Feature‑flagged optional C libs (`SCENEIO_WITH_*`) | ⬜ | deferred — only for HDF5 / TIFF / LAZ (no permissive single‑header option) |
-| mmap / streaming sources | 🟡 | mmap reads complete; streaming writes pending (O3) |
+| mmap / streaming sources | 🟡 | mmap reads + raw NPY/FLO views complete; streaming writes pending (O3) |
 | Sanitizer + mmap differential CI | ✅ | local Linux green; scheduled remote lane activates on default branch |
 | Capability flags (`reads/writes/streams/lossy/needs_dep`) | ⬜ | surface per codec |
 | `splat` / `posed_views` DataTypes in the vocabulary | ⬜ | **Phase‑C** (wire identity; cross‑repo) |

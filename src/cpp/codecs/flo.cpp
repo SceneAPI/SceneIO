@@ -1,6 +1,8 @@
 // Middlebury .flo optical-flow codec (Tier-1, zero-dep; formats_survey §3g).
-// Returns a bare (H,W,2) float32 ndarray (u,v interleaved) via sio::own_array —
-// the PFM bare-ndarray precedent (registry record=None), NOT a new record: .flo
+// Returns a bare (H,W,2) float32 ndarray (u,v interleaved). The copy reader
+// uses sio::own_array; the public path views the raw mmap payload directly on
+// little-endian hosts. This follows the PFM bare-ndarray precedent
+// (registry record=None), NOT a new record: .flo
 // carries no metadata beyond W/H, so the future Dense/DepthMap record absorbs it
 // later exactly as PFM will.
 //
@@ -23,9 +25,9 @@
 // header can never trigger a large/OOM allocation.
 //
 // Unlike pfm/netpbm (which hold the GIL through decode/encode), this releases the
-// GIL around the pure-C++ body (the npy_npz precedent, roadmap §1.3): no Python
-// object is touched inside the release scope — the nb::bytes/own_array results are
-// built outside it. The file is always little-endian on disk; on a big-endian
+// GIL around pure-C++ parsing/copy/encode work (the npy_npz precedent, roadmap
+// §1.3); Python view construction runs after reacquiring it. The file is always
+// little-endian on disk; on a big-endian
 // host both the int32 header fields (width/height) and the float payload are
 // byte-swapped on read/write (the pfm.cpp payload path, extended to the header)
 // so the on-disk bytes are LE throughout — magic, dimensions, and samples.
@@ -69,44 +71,78 @@ int32_t bswap32i(int32_t v) {
     return v;
 }
 
+struct FloInfo {
+    size_t height;
+    size_t width;
+    size_t count;
+};
+
+FloInfo parse_flo(const uint8_t *p, size_t n) {
+    if (n < 12)
+        throw std::invalid_argument("flo: truncated header (need 12 bytes: magic, width, height)");
+    if (std::memcmp(p, kFloMagic, 4) != 0)
+        throw std::invalid_argument("flo: bad magic (expected float32 202021.25 == 'PIEH')");
+    int32_t w32, h32;
+    std::memcpy(&w32, p + 4, 4);  // int32 stored little-endian on disk
+    std::memcpy(&h32, p + 8, 4);
+    if (!host_is_le()) {  // BE host: swap the LE-on-disk bytes into host order
+        w32 = bswap32i(w32);
+        h32 = bswap32i(h32);
+    }
+    // Reject non-positive dims BEFORE any unsigned cast (a negative int32 cast
+    // to uint64 becomes huge and would slip past the cap check).
+    if (w32 <= 0 || h32 <= 0) throw std::invalid_argument("flo: non-positive dimensions");
+    if (static_cast<uint64_t>(w32) > kDimCap || static_cast<uint64_t>(h32) > kDimCap)
+        throw std::invalid_argument("flo: dimensions out of range");
+    const uint64_t count = static_cast<uint64_t>(w32) * static_cast<uint64_t>(h32) * 2ull;
+    // Bounds-check before allocating: a 12-byte file claiming a huge raster
+    // raises here without ever reserving memory (netpbm.cpp:125 rule).
+    if (count * 4ull > static_cast<uint64_t>(n - 12))
+        throw std::invalid_argument("flo: truncated flow raster");
+    // Trailing bytes after the raster are ignored (PFM/netpbm precedent).
+    return {static_cast<size_t>(h32), static_cast<size_t>(w32),
+            static_cast<size_t>(count)};
+}
+
+std::vector<float> copy_flo(const uint8_t *p, const FloInfo &info) {
+    std::vector<float> buf(info.count);
+    std::memcpy(buf.data(), p + 12, info.count * sizeof(float));  // one bulk copy; NO flip
+    if (!host_is_le())
+        for (float &f : buf) f = bswap32f(f);
+    return buf;
+}
+
 nb::ndarray<nb::numpy, float> read_flo(nb::handle source) {
     sio::ByteView data(source);
     const uint8_t *p = data.data();
-    const size_t n = data.size();
+    FloInfo info;
     std::vector<float> buf;
-    size_t H = 0, W = 0;
     {
         nb::gil_scoped_release rel;  // pure C++ decode; touches no Python object
-        if (n < 12)
-            throw std::invalid_argument("flo: truncated header (need 12 bytes: magic, width, height)");
-        if (std::memcmp(p, kFloMagic, 4) != 0)
-            throw std::invalid_argument("flo: bad magic (expected float32 202021.25 == 'PIEH')");
-        int32_t w32, h32;
-        std::memcpy(&w32, p + 4, 4);  // int32 stored little-endian on disk
-        std::memcpy(&h32, p + 8, 4);
-        if (!host_is_le()) {  // BE host: swap the LE-on-disk bytes into host order
-            w32 = bswap32i(w32);
-            h32 = bswap32i(h32);
-        }
-        // Reject non-positive dims BEFORE any unsigned cast (a negative int32 cast
-        // to uint64 becomes huge and would slip past the cap check).
-        if (w32 <= 0 || h32 <= 0) throw std::invalid_argument("flo: non-positive dimensions");
-        if (static_cast<uint64_t>(w32) > kDimCap || static_cast<uint64_t>(h32) > kDimCap)
-            throw std::invalid_argument("flo: dimensions out of range");
-        const uint64_t count = static_cast<uint64_t>(w32) * static_cast<uint64_t>(h32) * 2ull;
-        // Bounds-check before allocating: a 12-byte file claiming a huge raster
-        // raises here without ever reserving memory (netpbm.cpp:125 rule).
-        if (count * 4ull > static_cast<uint64_t>(n - 12))
-            throw std::invalid_argument("flo: truncated flow raster");
-        buf.resize(static_cast<size_t>(count));
-        std::memcpy(buf.data(), p + 12, static_cast<size_t>(count) * 4);  // one bulk copy; NO flip
-        if (!host_is_le())
-            for (float &f : buf) f = bswap32f(f);
-        H = static_cast<size_t>(h32);
-        W = static_cast<size_t>(w32);
-        // Trailing bytes after the raster are ignored (PFM/netpbm precedent).
+        info = parse_flo(p, data.size());
+        buf = copy_flo(p, info);
     }
-    return own_array(std::move(buf), {H, W, 2});  // capsule (a Python object) built after release
+    return own_array(std::move(buf), {info.height, info.width, 2});
+}
+
+nb::object read_flo_view(nb::handle source) {
+    sio::ByteView data(source);
+    const uint8_t *p = data.data();
+    FloInfo info;
+    {
+        nb::gil_scoped_release rel;
+        info = parse_flo(p, data.size());
+    }
+    if (host_is_le())
+        return borrowed_bytes(data, p + 12, {info.height, info.width, 2},
+                              "float32", sizeof(float));
+
+    std::vector<float> buf;
+    {
+        nb::gil_scoped_release rel;
+        buf = copy_flo(p, info);
+    }
+    return nb::cast(own_array(std::move(buf), {info.height, info.width, 2}));
 }
 
 nb::bytes write_flo(nb::ndarray<const float, nb::c_contig, nb::device::cpu> flow) {
@@ -150,6 +186,10 @@ void register_flo(nb::module_ &m) {
           "Decode Middlebury .flo bytes to a float32 (H,W,2) ndarray: [...,0]=u horizontal "
           "(+right), [...,1]=v vertical (+down), rows top-to-bottom, units pixels; |value|>1e9 "
           "conventionally marks unknown flow (sentinel 1e10) and is passed through raw.");
+    m.def("read_flo_view", &read_flo_view, "data"_a,
+          "Decode little-endian .flo as a read-only zero-copy (H,W,2) view on native "
+          "little-endian hosts; big-endian hosts use the canonical copy path. The backing storage "
+          "must remain byte-stable for the returned array and all derived views.");
     m.def("write_flo", &write_flo, "flow"_a,
           "Encode a float32 (H,W,2) flow array (numpy or torch) to Middlebury .flo bytes "
           "(little-endian, magic 202021.25 'PIEH'); values incl. NaN/unknown-flow sentinels "

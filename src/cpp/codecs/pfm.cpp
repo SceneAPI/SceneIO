@@ -1,6 +1,8 @@
 // PFM codec (Tier-1 float depth/disparity container, formats_survey.md §6).
 #include "io/common.hpp"
 
+#include <charconv>
+#include <cmath>
 #include <limits>
 
 using namespace nb::literals;
@@ -24,29 +26,51 @@ std::string next_token(const uint8_t *p, size_t n, size_t &pos) {
     return std::string(reinterpret_cast<const char *>(p + s), pos - s);
 }
 
-nb::ndarray<nb::numpy, float> read_pfm(nb::handle source) {
-    sio::ByteView data(source);
-    const uint8_t *p = data.data();
-    const size_t n = data.size();
+size_t positive_dimension(const std::string &token) {
+    if (token.empty())
+        throw std::invalid_argument("dimension");
+    size_t value = 0;
+    const char *begin = token.data(), *end = begin + token.size();
+    const auto parsed = std::from_chars(begin, end, value);
+    if (parsed.ec != std::errc{} || parsed.ptr != end || value == 0)
+        throw std::invalid_argument("dimension");
+    return value;
+}
+
+struct PfmInfo {
+    size_t width;
+    size_t height;
+    size_t channels;
+    size_t row;
+    size_t count;
+    size_t data_ofs;
+    bool swap;
+};
+
+PfmInfo parse_pfm(const uint8_t *p, size_t n) {
     size_t pos = 0;
     const std::string magic = next_token(p, n, pos);
     int C;
     if (magic == "PF") C = 3;
     else if (magic == "Pf") C = 1;
     else throw std::invalid_argument("PFM: bad magic (expected 'PF' or 'Pf')");
-    long W, H;
+    size_t width, height;
     double scale;
     try {
-        W = std::stol(next_token(p, n, pos));
-        H = std::stol(next_token(p, n, pos));
-        scale = std::stod(next_token(p, n, pos));
+        width = positive_dimension(next_token(p, n, pos));
+        height = positive_dimension(next_token(p, n, pos));
+        const std::string scale_token = next_token(p, n, pos);
+        size_t consumed = 0;
+        scale = std::stod(scale_token, &consumed);
+        if (consumed != scale_token.size())
+            throw std::invalid_argument("scale");
     } catch (const std::exception &) {
         throw std::invalid_argument("PFM: malformed header (width/height/scale)");
     }
-    if (W <= 0 || H <= 0) throw std::invalid_argument("PFM: non-positive dimensions");
-    const bool file_le = scale < 0.0;
+    if (!std::isfinite(scale) || scale == 0.0)
+        throw std::invalid_argument("PFM: scale must be finite and nonzero");
+    const bool file_le = std::signbit(scale);
     if (pos < n && is_ws(p[pos])) pos++;
-    const size_t width = static_cast<size_t>(W), height = static_cast<size_t>(H);
     if (width > std::numeric_limits<size_t>::max() / static_cast<size_t>(C))
         throw std::invalid_argument("PFM: dimensions overflow address space");
     const size_t row = width * static_cast<size_t>(C);
@@ -55,18 +79,37 @@ nb::ndarray<nb::numpy, float> read_pfm(nb::handle source) {
     const size_t count = row * height;
     if (count > (n - pos) / sizeof(float))
         throw std::invalid_argument("PFM: truncated pixel data");
-    std::vector<float> buf(count);
-    const uint8_t *src = p + pos;
-    const bool swap = (file_le != host_is_le());
-    for (long y = 0; y < H; y++) {  // PFM rows are bottom-to-top -> flip
-        const uint8_t *sr = src + static_cast<size_t>(H - 1 - y) * row * sizeof(float);
-        float *dr = buf.data() + static_cast<size_t>(y) * row;
-        std::memcpy(dr, sr, row * sizeof(float));
-        if (swap)
-            for (size_t i = 0; i < row; i++) dr[i] = bswap32f(dr[i]);
+    return {width, height, static_cast<size_t>(C), row, count, pos,
+            file_le != host_is_le()};
+}
+
+std::vector<float> copy_pfm(const uint8_t *p, const PfmInfo &info) {
+    std::vector<float> buf(info.count);
+    const uint8_t *src = p + info.data_ofs;
+    for (size_t y = 0; y < info.height; y++) {  // PFM rows are bottom-to-top -> flip
+        const uint8_t *sr =
+            src + (info.height - 1 - y) * info.row * sizeof(float);
+        float *dr = buf.data() + y * info.row;
+        std::memcpy(dr, sr, info.row * sizeof(float));
+        if (info.swap)
+            for (size_t i = 0; i < info.row; i++) dr[i] = bswap32f(dr[i]);
     }
-    if (C == 1) return own_array(std::move(buf), {static_cast<size_t>(H), static_cast<size_t>(W)});
-    return own_array(std::move(buf), {static_cast<size_t>(H), static_cast<size_t>(W), 3});
+    return buf;
+}
+
+nb::ndarray<nb::numpy, float> read_pfm(nb::handle source) {
+    sio::ByteView data(source);
+    const uint8_t *p = data.data();
+    PfmInfo info;
+    std::vector<float> buf;
+    {
+        nb::gil_scoped_release rel;
+        info = parse_pfm(p, data.size());
+        buf = copy_pfm(p, info);
+    }
+    if (info.channels == 1)
+        return own_array(std::move(buf), {info.height, info.width});
+    return own_array(std::move(buf), {info.height, info.width, 3});
 }
 
 nb::bytes write_pfm(nb::ndarray<const float, nb::c_contig, nb::device::cpu> img) {

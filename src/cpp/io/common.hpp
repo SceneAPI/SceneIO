@@ -7,6 +7,7 @@
 
 #include <cstdint>
 #include <cstring>
+#include <limits>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -16,6 +17,50 @@
 namespace nb = nanobind;
 
 namespace sio {
+
+// Private buffer-exporter type used as numpy.ndarray.base for mmap-backed
+// arrays. It holds a live Py_buffer but deliberately exposes no close/release
+// method. Returning a nanobind ndarray directly would make numpy install a
+// releasable memoryview as `.base`; calling array.base.release() could then
+// unpin an mmap while the array still held its raw pointer.
+struct PinnedBufferObject {
+    PyObject_HEAD
+    Py_buffer view;
+};
+
+inline int pinned_buffer_getbuffer(PyObject *self, Py_buffer *view, int flags) {
+    auto *held = reinterpret_cast<PinnedBufferObject *>(self);
+    return PyBuffer_FillInfo(view, self, held->view.buf, held->view.len,
+                             /*readonly=*/1, flags);
+}
+
+inline void pinned_buffer_dealloc(PyObject *self) {
+    auto *held = reinterpret_cast<PinnedBufferObject *>(self);
+    PyTypeObject *type = Py_TYPE(self);
+    PyBuffer_Release(&held->view);
+    PyObject_Free(self);
+    // PyType_GenericAlloc retains heap types for each instance. A custom
+    // tp_dealloc must release that reference after freeing the instance.
+    Py_DECREF(reinterpret_cast<PyObject *>(type));
+}
+
+inline nb::object make_pinned_buffer_type() {
+    static PyType_Slot slots[] = {
+        {Py_tp_dealloc, reinterpret_cast<void *>(pinned_buffer_dealloc)},
+        {Py_bf_getbuffer, reinterpret_cast<void *>(pinned_buffer_getbuffer)},
+        {0, nullptr},
+    };
+    static PyType_Spec spec = {
+        "sceneio._core._PinnedBuffer",
+        static_cast<int>(sizeof(PinnedBufferObject)),
+        0,
+        Py_TPFLAGS_DEFAULT | Py_TPFLAGS_IMMUTABLETYPE,
+        slots,
+    };
+    nb::object type = nb::steal<nb::object>(PyType_FromSpec(&spec));
+    if (!type.is_valid()) throw nb::python_error();
+    return type;
+}
 
 inline bool valid_utf8(std::string_view text) {
     const auto *p = reinterpret_cast<const unsigned char *>(text.data());
@@ -79,6 +124,22 @@ public:
 
     const uint8_t *data() const { return static_cast<const uint8_t *>(buffer_.buf); }
     size_t size() const { return static_cast<size_t>(buffer_.len); }
+
+    // Transfer the live export into an uncloseable private Python owner.
+    nb::object pin() {
+        if (!acquired_) throw std::logic_error("ByteView buffer was already transferred");
+        // The fresh heap type is retained by its instance. This avoids a
+        // process-global or deletable module-attribute type cache, and remains
+        // correct across independent Python interpreters.
+        nb::object type = make_pinned_buffer_type();
+        auto *type_ptr = reinterpret_cast<PyTypeObject *>(type.ptr());
+        auto *held = reinterpret_cast<PinnedBufferObject *>(
+            PyType_GenericAlloc(type_ptr, 0));
+        if (!held) throw nb::python_error();
+        held->view = buffer_;
+        acquired_ = false;
+        return nb::steal<nb::object>(reinterpret_cast<PyObject *>(held));
+    }
 
 private:
     Py_buffer buffer_{};
@@ -156,6 +217,58 @@ inline nb::ndarray<nb::numpy> own_bytes(std::vector<uint8_t> &&v, std::vector<si
     nb::capsule owner(held, [](void *q) noexcept { delete static_cast<std::vector<uint8_t> *>(q); });
     return nb::ndarray<nb::numpy>(held->data(), shape.size(), shape.data(), owner,
                                   /*strides=*/nullptr, dt);
+}
+
+// Return a read-only numpy array that aliases a slice of `source`. Strides use
+// DLPack/nanobind element units (not bytes). ByteView::pin keeps the exact
+// Py_buffer export alive, preventing an mmap exporter from being closed while
+// numpy still holds the raw pointer. The exporter/backing file must remain
+// byte-stable for the lifetime of the returned array and all derived views.
+inline nb::object borrowed_bytes(ByteView &source, const uint8_t *data,
+                                 const std::vector<size_t> &shape, const char *dtype_name,
+                                 size_t itemsize,
+                                 const std::vector<int64_t> &strides = {}) {
+    if (!strides.empty() && strides.size() != shape.size())
+        throw std::logic_error("borrowed array shape/stride rank mismatch");
+    if (data < source.data() ||
+        static_cast<size_t>(data - source.data()) > source.size())
+        throw std::logic_error("borrowed array data is outside its source buffer");
+    const size_t offset = static_cast<size_t>(data - source.data());
+    nb::object owner = source.pin();
+    nb::tuple py_shape = nb::steal<nb::tuple>(
+        PyTuple_New(static_cast<Py_ssize_t>(shape.size())));
+    if (!py_shape.is_valid()) throw nb::python_error();
+    for (size_t i = 0; i < shape.size(); i++) {
+        PyObject *value = PyLong_FromSize_t(shape[i]);
+        if (!value) throw nb::python_error();
+        PyTuple_SetItem(py_shape.ptr(), static_cast<Py_ssize_t>(i), value);
+    }
+    nb::object py_strides = nb::none();
+    if (!strides.empty()) {
+        if (itemsize == 0 ||
+            itemsize > static_cast<size_t>(std::numeric_limits<int64_t>::max()))
+            throw std::invalid_argument("array item size cannot be represented");
+        const int64_t signed_itemsize = static_cast<int64_t>(itemsize);
+        nb::tuple values = nb::steal<nb::tuple>(
+            PyTuple_New(static_cast<Py_ssize_t>(strides.size())));
+        if (!values.is_valid()) throw nb::python_error();
+        for (size_t i = 0; i < strides.size(); i++) {
+            if (strides[i] > std::numeric_limits<int64_t>::max() / signed_itemsize ||
+                strides[i] < std::numeric_limits<int64_t>::min() / signed_itemsize)
+                throw std::invalid_argument("array byte stride overflows int64");
+            PyObject *value = PyLong_FromLongLong(strides[i] * signed_itemsize);
+            if (!value) throw nb::python_error();
+            PyTuple_SetItem(values.ptr(), static_cast<Py_ssize_t>(i), value);
+        }
+        py_strides = std::move(values);
+    }
+    nb::module_ numpy = nb::module_::import_("numpy");
+    nb::object dtype = numpy.attr("dtype")(dtype_name);
+    nb::object array_type =
+        nb::module_::import_("sceneio._mapped_array").attr("_MappedArray");
+    using namespace nb::literals;
+    return array_type(py_shape, "dtype"_a = dtype, "buffer"_a = owner,
+                      "offset"_a = offset, "strides"_a = py_strides);
 }
 
 static_assert(sizeof(double) == 8 && sizeof(float) == 4 && sizeof(uint64_t) == 8);

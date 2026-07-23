@@ -1,6 +1,6 @@
 # I/O Optimization, Testing & Verification Plan
 
-Status: active — O0 and O1 complete; O2–O5 pending. Scope: the compiled `sceneio._core` I/O path on
+Status: active — O0–O2 complete; O3–O5 pending. Scope: the compiled `sceneio._core` I/O path on
 `phase0-nanobind-core`. Companion to `coverage_roadmap.md` (this makes its "Phase 7"
 hardening/perf work concrete).
 
@@ -92,16 +92,24 @@ workflow run remains user-gated.
 
 ---
 
-## Phase O2 — Zero-copy decode for raw/uncompressed formats
+## Phase O2 — Zero-copy decode for raw/uncompressed formats (complete)
 
 Evaluated uniformly; applies where the on-disk payload *is* the array — mmap +
-return an ndarray **view** over the mapped bytes, mmap kept alive by the array
-(capsule owner, the `own_array`/`sio::view` lifetime model).
+return an ndarray **view** over the mapped bytes, mmap kept alive by the array.
+The owner is a private, read-only buffer exporter that retains the exact
+`Py_buffer`; this both blocks `mmap.close()` while a view exists and avoids
+exposing a manually releasable `memoryview` as `ndarray.base`.
+The public adapter maps these raw formats with private copy-on-write access but
+presents a read-only memoryview to C++; this is a last-resort guard for consumers
+such as `torch.from_numpy` that may ignore NumPy's non-writeable flag. The private
+`_MappedArray` subtype exports DLPack through an isolated C-contiguous copy,
+because DLPack has no read-only bit.
 
 | Format | Zero-copy? | Note |
 |---|---|---|
 | `.npy` | ✅ high value | contiguous typed array; view directly (endianness/contiguity permitting) |
-| `.pfm`, `.flo` | ✅ likely | contiguous float payload after a small header |
+| `.flo` | ✅ | contiguous float payload after a small header |
+| `.pfm` | ❌ | mandated bottom-to-top rows require a row flip; a negative-stride mapped view is unsafe for common DLPack normalization |
 | uncompressed `.las` | ❌ | needs quantize→f32 + origin rebase (a real transform) |
 | png/jpeg/webp/exr/spz/npz | ❌ | compressed — a decode is physically unavoidable |
 
@@ -111,6 +119,31 @@ the zero-copy path. Uniform *evaluation*, format-nature-limited *application*.
 **Testing:** view equals copy-decode bit-exact; **lifetime test** — the array
 outlives the file handle (`gc.collect()` then still-valid, the Image lifetime
 pattern); mutation isolation. **Verify:** npy read peak-memory → ~0 above the mmap.
+
+**Landed:** `_core.read_npy_view` and `read_flo_view` back the public registry
+path. NPY views native-endian C-order payloads and preserves all 12 supported
+dtypes; byte-swapped and multi-dimensional Fortran payloads retain the canonical
+owned-copy fallback. FLO directly views its little-endian interleaved payload on
+the supported little-endian build matrix. Every direct view is read-only, aliases
+the exact mapped payload address, pins the export until all derived views die,
+and remains valid after the file handle closes and `gc.collect()` runs.
+On Windows this intentionally keeps the mapped file locked for the array's
+lifetime. The mmap-unavailable/empty-file fallback remains the copy decoder.
+Writable Torch interop is process-safe and file-isolated: DLPack receives an
+owned copy, while the private mapping prevents a `torch.from_numpy` alias from
+writing through to the source file. PFM was evaluated but keeps its canonical
+owned, positive-stride row-flip decode: exposing the stored row order as a
+negative-stride view can make ordinary `np.asarray` + DLPack consumers abort.
+
+The final local MSVC benchmark measured public-path throughput of 63.6 GB/s NPY
+and 72.3 GB/s FLO for warm mapped fixtures (header parse + view construction),
+versus 4.9/4.9 GB/s for the in-memory copy decoders. Sampled RSS growth fell
+from 16.8/16.8 MB to 0.0 MB at table precision, and the 16 MiB NPY
+traced-allocation bound plus exact address identity remained green. The final
+Windows gate passed 1,133 tests (3 optional skips); the full instrumented Linux
+gate passed 1,070 tests (44 expected oracle/platform skips) under
+ASan/UBSan/LSan. The memory-safety, correctness, and test-soundness review
+lenses all signed off with no remaining blockers.
 
 ---
 
@@ -218,10 +251,10 @@ phases are committed.
 | Risk | Mitigation |
 |---|---|
 | mmap use-after-unmap (top risk) | ASan CI + lifetime tests + fable memory-safety review, every O1/O2 item |
-| concurrent input mutation / POSIX shrink → race or `SIGBUS` | byte-stable input required for the call; use atomically replaced files |
+| concurrent input mutation / POSIX shrink → race or `SIGBUS` | byte-stable input required through every mapped array/derived-view lifetime; atomic path replacement is safe |
 | Windows vs POSIX mmap | drive mmap from Python's cross-platform `mmap` at the adapter; keep the C++ side buffer-agnostic |
 | binding copies or accepts a mutable exporter | strict pinned `Py_buffer`, pointer-identity and memory-bound tests |
-| Zero-copy record lifetime (O2) | attach the mmap as the ndarray capsule owner; test outlives-handle |
+| Zero-copy record lifetime (O2) | retain an uncloseable private `Py_buffer` owner; test original + derived views outlive the handle |
 | Sink writers diverge from buffer writers | byte-identical differential test per codec (O3) |
 | Uniform sweep = large surface | the parametrized differential/memory tests scale across codecs; harness auto-covers all |
 | Benchmark noise → wrong order | pinned methodology (warm/cold split, median of N); commit the harness |

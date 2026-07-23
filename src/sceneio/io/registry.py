@@ -120,6 +120,50 @@ def _mmap_reader(fn: Callable[[object], object]) -> Callable[[str], object]:
     return read
 
 
+def _mmap_view_reader(
+    view_fn: Callable[[object], object],
+    fallback_fn: Callable[[object], object],
+) -> Callable[[str], object]:
+    """Return a raw ndarray view whose owner keeps the mmap export alive.
+
+    The compiled view reader pins the mmap's buffer export into the returned
+    ndarray, so this adapter deliberately does not close a successful mapping.
+    It is released automatically when the last array view is collected. Empty
+    files and filesystems without mmap support use the established copy reader.
+    The mapped file must not be modified or truncated for the lifetime of the
+    returned array and all derived views; atomic replacement of the path is safe.
+    A private copy-on-write mapping is presented to C++ through a read-only
+    memoryview so consumers that disregard NumPy's flag still cannot alter disk.
+    """
+
+    def read(path: str):
+        p = Path(path)
+        with p.open("rb") as stream:
+            try:
+                # ACCESS_COPY is demand-paged like ACCESS_READ but supplies a
+                # private writable backing as a last-resort safeguard for
+                # consumers (notably torch.from_numpy) that ignore NumPy's
+                # WRITEABLE=False flag. Present only a read-only memoryview to
+                # the compiled parser; writes never reach the source file.
+                mapped = mmap.mmap(stream.fileno(), 0, access=mmap.ACCESS_COPY)
+            except (OSError, ValueError):
+                stream.seek(0)
+                return fallback_fn(stream.read())
+            readonly = None
+            try:
+                readonly = memoryview(mapped).toreadonly()
+                return view_fn(readonly)
+            except BaseException:
+                # Do not let the chained FormatError traceback retain a live
+                # mapping (and Windows file lock) after a failed decode.
+                if readonly is not None:
+                    readonly.release()
+                mapped.close()
+                raise
+
+    return read
+
+
 def _bytes_writer(fn: Callable[[object], bytes]) -> Callable[[object, str], None]:
     def write(obj, path: str):
         Path(path).write_bytes(fn(obj))
@@ -227,7 +271,7 @@ register(
     Codec(
         "npy",
         (".npy",),
-        _mmap_reader(_core.read_npy),
+        _mmap_view_reader(_core.read_npy_view, _core.read_npy),
         _bytes_writer(lambda a: _core.write_npy(_canon(a))),
         record=None,
         datatype="tensor",
@@ -362,7 +406,7 @@ register(
     Codec(
         "flo",
         (".flo",),
-        _mmap_reader(_core.read_flo),
+        _mmap_view_reader(_core.read_flo_view, _core.read_flo),
         _bytes_writer(_core.write_flo),
         record=None,
         datatype="flow",

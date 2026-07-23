@@ -224,7 +224,7 @@ std::vector<uint8_t> fortran_to_c(const std::vector<uint8_t> &src,
     return dst;
 }
 
-std::vector<uint8_t> load_npy_payload(const uint8_t *p, size_t n, const NpyInfo &h) {
+size_t checked_npy_nbytes(size_t n, const NpyInfo &h) {
     size_t count = 1;
     for (size_t d : h.shape) {
         if (d != 0 && count > SIZE_MAX / d)
@@ -236,6 +236,12 @@ std::vector<uint8_t> load_npy_payload(const uint8_t *p, size_t n, const NpyInfo 
     const size_t nbytes = count * h.itemsize;
     if (nbytes > n - h.data_ofs)  // data_ofs <= n (established in parse_npy_header)
         throw std::invalid_argument("npy: truncated array data");
+    return nbytes;
+}
+
+std::vector<uint8_t> load_npy_payload(const uint8_t *p, size_t n, const NpyInfo &h) {
+    const size_t nbytes = checked_npy_nbytes(n, h);
+    const size_t count = nbytes / h.itemsize;
     std::vector<uint8_t> buf(nbytes);
     if (nbytes) std::memcpy(buf.data(), p + h.data_ofs, nbytes);
     if (h.byteswap && h.itemsize > 1) {  // reverse each element in place (no complex here)
@@ -331,6 +337,35 @@ nb::ndarray<nb::numpy> read_npy(nb::handle source) {
     // mirroring the record's empty-array sentinel.
     if (buf.empty()) buf.resize(1);
     return own_bytes(std::move(buf), std::move(shape), dt);
+}
+
+nb::object read_npy_view(nb::handle source) {
+    sio::ByteView data(source);
+    const uint8_t *p = data.data();
+    const size_t n = data.size();
+    NpyInfo info;
+    {
+        nb::gil_scoped_release rel;
+        info = parse_npy_header(p, n);
+        checked_npy_nbytes(n, info);
+    }
+    const DTypeInfo &di = dtype_info(info.tag);
+    const nb::dlpack::dtype dt{di.code, di.bits, 1};
+
+    // Native-endian C-order payloads can be exposed directly. Fortran-order
+    // matrices and non-native payloads still take the established canonical
+    // copy path so the public result remains native-endian and C-contiguous.
+    if (!info.byteswap && (!info.fortran || info.shape.size() < 2))
+        return borrowed_bytes(data, p + info.data_ofs, info.shape, di.name,
+                              di.itemsize);
+
+    std::vector<uint8_t> buf;
+    {
+        nb::gil_scoped_release rel;
+        buf = load_npy_payload(p, n, info);
+    }
+    if (buf.empty()) buf.resize(1);
+    return nb::cast(own_bytes(std::move(buf), std::move(info.shape), dt));
 }
 
 nb::bytes write_npy(nb::ndarray<nb::ro, nb::device::cpu> array) {
@@ -473,6 +508,10 @@ void register_npy_npz(nb::module_ &m) {
     m.def("read_npy", &read_npy, "data"_a,
           "Decode .npy bytes to a native-endian, C-contiguous numpy ndarray (any of the 12 "
           "supported dtypes; '>' payloads are byteswapped and fortran_order is de-permuted).");
+    m.def("read_npy_view", &read_npy_view, "data"_a,
+          "Decode .npy through a read-only zero-copy view when its payload is native-endian and "
+          "C-order; non-native/Fortran payloads use the canonical copy path. The backing storage "
+          "must remain byte-stable for the returned array and all derived views.");
     m.def("write_npy", &write_npy, "array"_a,
           "Encode a C-contiguous CPU ndarray (numpy or torch) to byte-exact numpy v1.0 .npy bytes.");
     m.def("read_npz", &read_npz, "data"_a,

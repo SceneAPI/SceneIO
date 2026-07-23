@@ -103,3 +103,26 @@ file and retained a 0.0 MB displayed mmap peak. RSS columns include decoded
 output, allocator reuse, and mmap page residency, so the input-copy proof is the
 traced-allocation delta plus exact exporter/core pointer identity; RSS remains a
 whole-process diagnostic rather than an isolated-copy assertion.
+
+## O2 raw zero-copy delta — 2026-07-23
+
+Local MSVC run after O2 (`bench_io.py --runs 3`). `sioR` is the unchanged
+in-memory copy decoder; `pathR` is the public warm mmap path, which now parses
+the small header and returns a pinned read-only ndarray view. `bRSSMB` includes
+the legacy Python file bytes plus decoded C++ vector, while `mRSSMB` samples the
+view path.
+
+```
+codec   payloadMB  sioR MB/s  pathR MB/s  bRSSMB  mRSSMB
+--------------------------------------------------------
+npy           8.4       4919       63647     16.8      0.0
+flo           8.4       4936       72316     16.8      0.0
+```
+
+The throughput improvement is the expected removal of the payload-sized copy;
+the path operation now measures header validation plus ndarray construction.
+Exact mapped-address assertions are the copy-proof, while sampled RSS supplies
+the process-level memory delta. NPY byte-swapped/Fortran inputs intentionally
+retain the canonical copy fallback. PFM was evaluated but its mandatory
+bottom-to-top row reversal remains an owned positive-stride decode: the rejected
+negative-stride view could make ordinary NumPy-to-DLPack normalization abort.

@@ -1,12 +1,13 @@
-"""O0/O1 I/O benchmark harness for docs/io_optimization_plan.md.
+"""O0-O2 I/O benchmark harness for docs/io_optimization_plan.md.
 
 Measures, per codec, encode (write) + decode (read) throughput (MB/s over the raw
 payload) and peak Python allocation (tracemalloc), for sceneio._core vs the oracle
 library where one exists, on representative payloads for all 23 codecs. Read
-measurements retain the legacy whole-file bytes path beside the public registry
-mmap path, so their peak delta captures the copy O1 removes. The encoded size is
-the write peak O3 targets. Oracle failures degrade to "-" so the SceneIO
-measurements always print.
+measurements retain the legacy whole-file bytes/copy-decode path beside the
+public registry mmap path, so their peak delta captures the input copy O1
+    removes and, for NPY/FLO, the decoded-array copy O2 removes. The encoded
+size is the write peak O3 targets. Oracle failures degrade to "-" so the
+SceneIO measurements always print.
 
 Run: python bench/bench_io.py [--runs N] [--scale S] [--cold-cache]
 Synthetic fixtures are generated in a temporary directory and never committed.
@@ -637,7 +638,8 @@ def _run_benchmark(args, tmp):
             rt, _ = _measure(lambda: s.r(enc), args.runs)
             sioW, sioR = pmb / wt, pmb / rt
 
-            # Compare the legacy whole-file bytes adapter with the O1 mmap path.
+            # Compare legacy whole-file bytes + copy decode with the public mmap
+            # path. NPY/FLO additionally expose the O2 mapped output view.
             fp = os.path.join(tmp, f"{s.id}.bin")
             with open(fp, "wb") as fh:
                 fh.write(enc)
@@ -742,7 +744,7 @@ def _run_benchmark(args, tmp):
 
     assert len(specs) + len(_directory_specs()) == 23
     print("\nMB/s over raw payload; fileMB = encoded size (= the whole-file copy O1/O3 remove).")
-    print("sioR = in-memory decode; pathR = public registry mmap read.")
+    print("sioR = in-memory copy decode; pathR = public registry mmap read/view.")
     print("bPeakMB/mPeakMB = peak Python allocation for bytes/mmap reads (O1 delta).")
     print("bRSSMB/mRSSMB = sampled resident-set growth for bytes/mmap reads.")
     if args.cold_cache and not (

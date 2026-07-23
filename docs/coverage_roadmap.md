@@ -58,7 +58,9 @@ green. Don't land a codec that skips a box — file a follow‑up instead.
       **not** `std::istringstream >> double` (retrofit the TUM/KITTI/OBJ/PPM‑ascii
       readers — iostream float parse is ~10–50× slower).
 - [x] **mmap sources** for all single-file codecs; COLMAP directory codecs read
-      paths directly in C++. **Streaming sinks remain O3**.
+      paths directly in C++. Native NPY/FLO payloads return pinned read-only
+      mapped ndarray views; PFM retains an owned positive-stride row-flip decode.
+      **Streaming sinks remain O3**.
 - [ ] **SIMD‑friendly hot loops** (quant/dequant, byte‑pack, endian‑swap):
       contiguous, branch‑light, auto‑vectorizable; measure before hand‑writing
       intrinsics.
