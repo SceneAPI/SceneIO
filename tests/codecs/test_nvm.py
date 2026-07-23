@@ -483,6 +483,7 @@ _CAM = b"a.jpg 800 1 0 0 0 0 0 0 0 0\n"
         (b"NVM_V3\n2.5\n", "calibration"),  # non-integer camera count
         (b"NVM_V3\n1\na.jpg foo 1 0 0 0 0 0 0 0 0\n0\n", "bad number"),  # focal
         (b"NVM_V3\n1\na.jpg 800 1 0 0\n", "missing field"),  # EOF mid-camera
+        (b"NVM_V3\n1\n\xff.jpg 800 1 0 0 0 0 0 0 0 0\n", "UTF-8"),
         (b"NVM_V3\n5\n" + _CAM, "missing field"),  # count exceeds actual cameras
         (b"NVM_V3\n4000000000\n", "missing field"),  # hostile count (reserve-cap, no OOM)
         (b"NVM_V3\n1\na.jpg 800 0 0 0 0 1 2 3 0 0\n0\n", "quaternion"),  # zero quaternion

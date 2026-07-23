@@ -210,6 +210,8 @@ void decode_nvm(const char *p, size_t n, Reconstruction &r) {
     // 2. CAMERAS (one Camera + one image per line; NVM focal is per-image).
     for (uint64_t i = 0; i < ncam; ++i) {
         const std::string_view name = toks.require("camera name");
+        if (!valid_utf8(name))
+            throw std::invalid_argument("NVM: camera name is not valid UTF-8");
         const double f = parse_f64(toks.require("camera focal"), "camera focal");
         double q[4];
         for (int k = 0; k < 4; ++k) q[k] = parse_f64(toks.require("camera quaternion"), "camera quaternion");
@@ -496,8 +498,9 @@ void encode_nvm(const Reconstruction &r, std::string &out) {
     out += "0\n";  // minimal spec-valid model-list terminator
 }
 
-Reconstruction read_nvm(nb::bytes data) {
-    const char *p = data.c_str();  // grab the buffer while the GIL is held
+Reconstruction read_nvm(nb::handle source) {
+    sio::ByteView data(source);
+    const char *p = reinterpret_cast<const char *>(data.data());
     const size_t n = data.size();
     Reconstruction r;
     {

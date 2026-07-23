@@ -37,8 +37,9 @@ constexpr float SH_C0 = 0.28209479177387814f;  // 1/(2*sqrt(pi)); antimatter15/g
 constexpr float EPS = 1e-6f;                    // alpha clamp before logit (spz.cpp)
 constexpr float kScaleFloor = 1e-30f;           // guard scale<=0 on read: log(1e-30) ~ -69
 
-GaussianCloud read_splat(nb::bytes data) {
-    const uint8_t *p = reinterpret_cast<const uint8_t *>(data.c_str());
+GaussianCloud read_splat(nb::handle source) {
+    sio::ByteView data(source);
+    const uint8_t *p = data.data();
     const size_t fn = data.size();
     GaussianCloud g;
     {

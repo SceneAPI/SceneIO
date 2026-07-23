@@ -97,6 +97,11 @@ def test_bad_magic_raises():
         _core.read_pfm(b"XX\n2 2\n-1.0\n" + b"\x00" * 16)
 
 
+def test_hostile_dimensions_cannot_overflow():
+    with pytest.raises(ValueError, match=r"overflow|truncated|malformed"):
+        _core.read_pfm(b"Pf\n4611686018427387904 4\n-1\n")
+
+
 def test_torch_interop(samples):
     torch = pytest.importorskip("torch")
     arr = samples["color"]

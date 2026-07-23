@@ -6,6 +6,21 @@ if(NOT CMAKE_CXX_STANDARD)
 endif()
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Opt-in sanitizer build used by .github/workflows/sanitizers.yml. Defining the
+# flags globally instruments both _core and the vendored C/C++ codec libraries;
+# ASan includes LSan on Linux, while UBSan covers undefined behavior.
+option(SCENEIO_ENABLE_SANITIZERS "Build SceneIO and vendored codecs with ASan/UBSan/LSan" OFF)
+if(SCENEIO_ENABLE_SANITIZERS)
+  if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    add_compile_options(-fsanitize=address,undefined -fno-omit-frame-pointer
+                        -fno-sanitize-recover=all)
+    add_link_options(-fsanitize=address,undefined)
+  else()
+    message(FATAL_ERROR
+      "SCENEIO_ENABLE_SANITIZERS supports Linux GCC/Clang (ASan includes LSan)")
+  endif()
+endif()
+
 # Python (scikit-build-core provides the hints for the target interpreter).
 find_package(Python 3.12 REQUIRED COMPONENTS Interpreter Development.Module)
 

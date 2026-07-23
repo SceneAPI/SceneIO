@@ -29,8 +29,9 @@ namespace {
 constexpr uint64_t kExrPixelCap = 250000000ull;  // 250 MP; worst-case f32 RGBA buffer ~4 GB
 constexpr int64_t kExrAxisCap = 1 << 20;          // 1M per axis
 
-Image read_exr(nb::bytes data) {
-    const unsigned char *in = reinterpret_cast<const unsigned char *>(data.c_str());
+Image read_exr(nb::handle source) {
+    sio::ByteView data(source);
+    const unsigned char *in = data.data();
     const size_t size = data.size();
     Image im;
     {

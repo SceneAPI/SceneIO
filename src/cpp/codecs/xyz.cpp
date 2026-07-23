@@ -220,8 +220,9 @@ void decode_xyz(const char *p, size_t n, PointCloud &pc, const std::optional<Sch
     pc.n = pc.xyz.size() / 3;
 }
 
-PointCloud read_xyz(nb::bytes data, std::optional<std::string> layout) {
-    const char *p = data.c_str();   // grab the buffer while the GIL is held
+PointCloud read_xyz(nb::handle source, std::optional<std::string> layout) {
+    sio::ByteView data(source);
+    const char *p = reinterpret_cast<const char *>(data.data());
     const size_t n = data.size();
     // Resolve the layout override (string work + vocabulary check) before the GIL
     // is released; decode_xyz then runs pure-C++ with the forced schema.

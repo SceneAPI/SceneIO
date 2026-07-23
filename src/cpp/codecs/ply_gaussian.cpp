@@ -10,6 +10,8 @@
 #include <nanobind/stl/optional.h>
 #include <nanobind/stl/string.h>
 
+#include <algorithm>
+#include <limits>
 #include <optional>
 #include <sstream>
 #include <unordered_map>
@@ -39,8 +41,9 @@ float maybe_swap(float v, bool swap) {
     return v;
 }
 
-GaussianCloud read_gaussian_ply(nb::bytes data) {
-    const uint8_t *p = reinterpret_cast<const uint8_t *>(data.c_str());
+GaussianCloud read_gaussian_ply(nb::handle source) {
+    sio::ByteView data(source);
+    const uint8_t *p = data.data();
     const size_t n = data.size();
     size_t hp = 0;
     auto readline = [&]() {
@@ -54,7 +57,7 @@ GaussianCloud read_gaussian_ply(nb::bytes data) {
     };
     if (readline() != "ply") throw std::invalid_argument("PLY: missing 'ply' magic");
 
-    bool le = true, is_ascii = false;
+    bool le = true, is_ascii = false, saw_format = false;
     std::string cur;
     size_t vcount = 0;
     std::vector<std::string> vprops;
@@ -65,20 +68,51 @@ GaussianCloud read_gaussian_ply(nb::bytes data) {
         auto tk = tokens(line);
         if (tk.empty()) continue;
         if (tk[0] == "format") {
+            if (tk.size() != 3)
+                throw std::invalid_argument("PLY: malformed format header");
+            if (saw_format)
+                throw std::invalid_argument("PLY: duplicate format header");
+            if (tk[2] != "1.0")
+                throw std::invalid_argument("PLY: unsupported format version");
+            saw_format = true;
             if (tk[1] == "binary_little_endian") le = true;
             else if (tk[1] == "binary_big_endian") le = false;
             else if (tk[1] == "ascii") is_ascii = true;
+            else throw std::invalid_argument("PLY: unsupported format");
         } else if (tk[0] == "element") {
+            if (tk.size() != 3)
+                throw std::invalid_argument("PLY: malformed element header");
             cur = tk[1];
-            if (cur == "vertex") vcount = std::stoul(tk[2]);
+            if (cur == "vertex") {
+                try {
+                    if (tk[2].empty() ||
+                        !std::all_of(tk[2].begin(), tk[2].end(),
+                                     [](unsigned char c) { return c >= '0' && c <= '9'; }))
+                        throw std::invalid_argument("vertex count");
+                    size_t consumed = 0;
+                    const unsigned long long count = std::stoull(tk[2], &consumed);
+                    if (consumed != tk[2].size())
+                        throw std::invalid_argument("vertex count");
+                    if (count > std::numeric_limits<size_t>::max())
+                        throw std::out_of_range("vertex count");
+                    vcount = static_cast<size_t>(count);
+                } catch (const std::exception &) {
+                    throw std::invalid_argument("PLY: malformed vertex count");
+                }
+            }
         } else if (tk[0] == "property" && cur == "vertex") {
+            if (tk.size() < 2)
+                throw std::invalid_argument("PLY: malformed property header");
             if (tk[1] == "list")
                 throw std::invalid_argument("PLY: list properties unsupported (not a Gaussian PLY)");
+            if (tk.size() != 3)
+                throw std::invalid_argument("PLY: malformed property header");
             if (tk[1] != "float" && tk[1] != "float32")
                 throw std::invalid_argument("PLY: only float32 vertex properties are supported");
             vprops.push_back(tk.back());
         }
     }
+    if (!saw_format) throw std::invalid_argument("PLY: missing format header");
     if (is_ascii) throw std::invalid_argument("PLY: ASCII bodies are not supported (binary Gaussian PLY expected)");
 
     const size_t P = vprops.size();
@@ -94,9 +128,19 @@ GaussianCloud read_gaussian_ply(nb::bytes data) {
     int deg = gc_deg_from_rest(R);
     if (deg < 0) throw std::invalid_argument("PLY: unexpected f_rest count " + std::to_string(R));
 
-    if (hp + static_cast<size_t>(vcount) * P * 4 > n)
+    const size_t cx = need("x"), cy = need("y"), cz = need("z");
+    const size_t d0 = need("f_dc_0"), d1 = need("f_dc_1"), d2 = need("f_dc_2");
+    const size_t co = need("opacity");
+    const size_t s0 = need("scale_0"), s1 = need("scale_1"), s2 = need("scale_2");
+    const size_t r0 = need("rot_0"), r1 = need("rot_1"), r2 = need("rot_2"), r3 = need("rot_3");
+    std::vector<size_t> cr(R);
+    for (size_t i = 0; i < R; i++) cr[i] = need("f_rest_" + std::to_string(i));
+
+    if (P > std::numeric_limits<size_t>::max() / sizeof(float))
+        throw std::invalid_argument("PLY: vertex stride overflows address space");
+    const size_t stride = P * sizeof(float);
+    if (stride == 0 || vcount > (n - hp) / stride)
         throw std::invalid_argument("PLY: truncated vertex data");
-    const float *body = reinterpret_cast<const float *>(p + hp);
     const bool swap = (le != host_is_le());
 
     GaussianCloud g;
@@ -110,14 +154,11 @@ GaussianCloud read_gaussian_ply(nb::bytes data) {
     g.scales.resize(vcount * 3);
     g.quats.resize(vcount * 4);
 
-    const size_t cx = need("x"), cy = need("y"), cz = need("z");
-    const size_t d0 = need("f_dc_0"), d1 = need("f_dc_1"), d2 = need("f_dc_2");
-    const size_t co = need("opacity");
-    const size_t s0 = need("scale_0"), s1 = need("scale_1"), s2 = need("scale_2");
-    const size_t r0 = need("rot_0"), r1 = need("rot_1"), r2 = need("rot_2"), r3 = need("rot_3");
-    std::vector<size_t> cr(R);
-    for (size_t i = 0; i < R; i++) cr[i] = need("f_rest_" + std::to_string(i));
-    auto v = [&](size_t row, size_t c) { return maybe_swap(body[row * P + c], swap); };
+    auto v = [&](size_t row, size_t c) {
+        float value;
+        std::memcpy(&value, p + hp + row * stride + c * sizeof(float), sizeof(value));
+        return maybe_swap(value, swap);
+    };
     for (size_t i = 0; i < vcount; i++) {
         g.means[i * 3] = v(i, cx); g.means[i * 3 + 1] = v(i, cy); g.means[i * 3 + 2] = v(i, cz);
         g.sh_dc[i * 3] = v(i, d0); g.sh_dc[i * 3 + 1] = v(i, d1); g.sh_dc[i * 3 + 2] = v(i, d2);

@@ -374,6 +374,27 @@ def test_npz_duplicate_member_raises():
         _core.read_npz(bio.getvalue())
 
 
+def test_npz_non_utf8_member_name_rejected():
+    archive = bytes(_core.write_npz(_core.tensor_dict({"a": np.arange(3, dtype=np.int16)})))
+    assert archive.count(b"a.npy") == 2  # local header and central directory
+    corrupt = archive.replace(b"a.npy", b"a.np\xff")
+    with pytest.raises(ValueError, match="member filename is not valid UTF-8"):
+        _core.read_npz(corrupt)
+
+
+def test_npz_long_member_name_roundtrips_without_truncation():
+    name = "x" * 600
+    archive = _core.write_npz(_core.tensor_dict({name: np.arange(3, dtype=np.int16)}))
+    decoded = _core.read_npz(archive)
+    assert list(decoded.keys()) == [name]
+
+
+def test_npz_embedded_nul_name_rejected():
+    tensors = _core.tensor_dict({"a\0b": np.arange(3, dtype=np.int16)})
+    with pytest.raises(ValueError, match="contains NUL"):
+        _core.write_npz(tensors)
+
+
 def test_npz_attrs_refused():
     # .npz has no attrs side channel, so writing a TensorDict that carries attrs must
     # fail loudly rather than silently drop them (the read(write(x)) == x guarantee).

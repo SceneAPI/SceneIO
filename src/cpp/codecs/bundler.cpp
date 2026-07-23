@@ -338,8 +338,9 @@ void decode(const char *p, size_t n, Reconstruction &r) {
     }
 }
 
-Reconstruction read_bundler(nb::bytes data) {
-    const char *p = data.c_str();  // grab the buffer while the GIL is held
+Reconstruction read_bundler(nb::handle source) {
+    sio::ByteView data(source);
+    const char *p = reinterpret_cast<const char *>(data.data());
     const size_t n = data.size();
     Reconstruction r;
     {

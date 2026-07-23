@@ -105,6 +105,27 @@ def test_read_rejects_hdr_bytes():
         _core.read_jpeg(hdr)
 
 
+def test_corrupt_dht_is_rejected_instead_of_returning_uninitialized_pixels():
+    # Regression for the pinned stb revision's decode_jpeg_image bug: a failed
+    # process_marker call returned success, so an overlong Huffman table reached
+    # color conversion with partially uninitialized component buffers.
+    data = bytearray(_core.write_jpeg(_core.image(gradient_rgb(), color_space="srgb"), 95))
+    dht = data.index(b"\xff\xc4")
+    first_code_length_count = dht + 5  # marker(2), length(2), table id(1)
+    data[first_code_length_count] = 255  # total symbol count > 256 => invalid DHT
+    immutable = bytes(data)
+    for view in (immutable, memoryview(immutable)):
+        with pytest.raises(ValueError, match=r"DHT|Corrupt JPEG|jpeg"):
+            _core.read_jpeg(view)
+
+
+def test_missing_eoi_is_rejected_before_decode():
+    data = bytes(_core.write_jpeg(_core.image(gradient_rgb(), color_space="srgb"), 95))
+    assert data.endswith(b"\xff\xd9")
+    with pytest.raises(ValueError, match=r"missing FF D9 EOI"):
+        _core.read_jpeg(data[:-2])
+
+
 def test_write_rejects_oversized():
     # JPEG SOF dims are 16-bit; a >65535 axis would silently truncate to a corrupt file
     with pytest.raises(ValueError, match=r"16-bit|65535"):

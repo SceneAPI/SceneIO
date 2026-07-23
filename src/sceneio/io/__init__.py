@@ -30,7 +30,12 @@ Camera = _core.Camera
 
 
 def read(path, *, format: str | None = None):
-    """Read ``path`` into a record, dispatching on ``format`` or detection."""
+    """Read ``path`` into a record, dispatching on ``format`` or detection.
+
+    The file must remain byte-stable for this synchronous call. Single-file
+    codecs use a read-only mmap; concurrent writes race the decoder, and
+    shrinking a live mapping is process-fatal on POSIX.
+    """
     fmt = format or detect(path)
     codec = get(fmt)
     try:

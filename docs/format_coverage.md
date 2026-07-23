@@ -73,9 +73,10 @@ pattern** (miniz, zstd, nlohmann/json, fast_float) — so they needed **no vcpkg
 Cross‑cutting: all 6 codecs are validated on the **local MSVC build only** — the plan
 gates the tier on a **cibuildwheel dry‑run** (Linux/macOS), still a pending user
 action (push + `gh workflow run publish.yml`). libwebp‑from‑source is the one real
-wheel‑build risk to confirm there. Vendored stb carries one **local security patch**
-(truncated‑`.hdr` short‑read → uninitialized pixels; see `stb/COMMIT.txt`). CMYK JPEG
-is best‑effort stb→RGB and opaque RGBA collapses to RGB in WebP (both documented).
+wheel‑build risk to confirm there. Vendored stb carries documented **local
+hardening patches** for truncated HDR input, corrupt JPEG marker failure, and a
+signed-shift UB in JPEG entropy output (see `stb/COMMIT.txt`). CMYK JPEG is
+best‑effort stb→RGB and opaque RGBA collapses to RGB in WebP (both documented).
 
 Genuinely need the system‑lib `SCENEIO_WITH_*` gate (deferred): HDF5 (+hloc), TIFF
 (libtiff). **LAZ is vendorable after all** — laz‑perf (Apache‑2.0), point‑cloud
@@ -84,8 +85,13 @@ tier. COLMAP DB `.db` (sqlite) and safetensors are separate.
 ### ⬜ Pending — later phases (meshes + niche)
 glTF / GLB (+Draco) · OBJ / STL / OFF · USD / USDZ · OpenVDB · Zarr · Parquet · AVIF / JPEG‑XL · PlayCanvas SOG · PCD.
 
-### ⬜ Pending — Phase 7 (hardening)
-Differential fuzzing at scale · big‑file mmap/streaming · GPU‑via‑DLPack (torch‑cuda/cupy) · benchmarks vs oracles · ASan/leak runs.
+### 🟡 In progress — Phase 7 (hardening)
+✅ mmap-backed reads for all 21 single-file codecs (the two COLMAP directory
+codecs already read paths directly in C++) · ✅ bytes/mmap differential +
+scheduled 100-case backing-store mutation sweep · ✅ ASan/UBSan/LSan workflow
+(local Linux green; remote run user-gated) · ⬜ randomized oracle-triangulated
+fuzzing · ⬜ streaming writes · ⬜ partial/lazy reads · ⬜ GPU-via-DLPack
+(torch-cuda/cupy) · 🟡 expanded 23-codec benchmark/oracles.
 
 ## Infrastructure & capabilities
 
@@ -101,6 +107,7 @@ Differential fuzzing at scale · big‑file mmap/streaming · GPU‑via‑DLPack
 | Vendored deps (miniz, zstd, nlohmann/json, fast_float) | ✅ | permissive; statically linked / header‑only |
 | Vendored image libs (lodepng/stb/tinyexr/libwebp) | ⬜ | **next tier** — FetchContent, no system libs, numpy‑only runtime kept |
 | Feature‑flagged optional C libs (`SCENEIO_WITH_*`) | ⬜ | deferred — only for HDF5 / TIFF / LAZ (no permissive single‑header option) |
-| mmap / streaming sources | ⬜ | Phase 7 (early for COLMAP/LAS) |
+| mmap / streaming sources | 🟡 | mmap reads complete; streaming writes pending (O3) |
+| Sanitizer + mmap differential CI | ✅ | local Linux green; scheduled remote lane activates on default branch |
 | Capability flags (`reads/writes/streams/lossy/needs_dep`) | ⬜ | surface per codec |
 | `splat` / `posed_views` DataTypes in the vocabulary | ⬜ | **Phase‑C** (wire identity; cross‑repo) |

@@ -432,8 +432,9 @@ void parse_sfm(const char *p, size_t n, Reconstruction &r) {
     }
 }
 
-Reconstruction read_openmvg(nb::bytes data) {
-    const char *p = data.c_str();  // grabbed with the GIL held; `data` stays alive
+Reconstruction read_openmvg(nb::handle source) {
+    sio::ByteView data(source);
+    const char *p = reinterpret_cast<const char *>(data.data());
     const size_t n = data.size();
     Reconstruction r;
     {

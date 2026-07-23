@@ -27,8 +27,9 @@ namespace {
 constexpr uint64_t kLasMaxPoints = 4000000000ull;  // ~4e9; bounds a crafted count
 constexpr double kI32Max = 2147483647.0;
 
-PointCloud read_las(nb::bytes data) {
-    const uint8_t *buf = reinterpret_cast<const uint8_t *>(data.c_str());
+PointCloud read_las(nb::handle source) {
+    sio::ByteView data(source);
+    const uint8_t *buf = data.data();
     const size_t size = data.size();
     PointCloud pc;
     {

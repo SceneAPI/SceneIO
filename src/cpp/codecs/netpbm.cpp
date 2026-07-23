@@ -63,8 +63,9 @@ uint64_t next_uint(const uint8_t *p, size_t n, size_t &pos, uint64_t cap, const 
     return v;
 }
 
-Image read_netpbm(nb::bytes data) {
-    const uint8_t *p = reinterpret_cast<const uint8_t *>(data.c_str());
+Image read_netpbm(nb::handle source) {
+    sio::ByteView data(source);
+    const uint8_t *p = data.data();
     const size_t n = data.size();
     if (n < 2 || p[0] != 'P')
         throw std::invalid_argument("netpbm: bad magic (expected P2/P3/P5/P6)");

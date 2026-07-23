@@ -32,8 +32,9 @@ void guard_dims(size_t w, size_t h, const char *fmt) {
         throw std::invalid_argument(std::string(fmt) + ": image dimensions exceed the supported limit");
 }
 
-Image read_hdr(nb::bytes data) {
-    const stbi_uc *in = reinterpret_cast<const stbi_uc *>(data.c_str());
+Image read_hdr(nb::handle source) {
+    sio::ByteView data(source);
+    const stbi_uc *in = data.data();
     if (data.size() > static_cast<size_t>(INT_MAX))
         throw std::invalid_argument("hdr: input larger than 2 GiB is not supported");
     const int len = static_cast<int>(data.size());

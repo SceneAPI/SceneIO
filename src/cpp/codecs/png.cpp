@@ -38,8 +38,9 @@ inline void be16_to_native(const unsigned char *src, uint16_t *dst, size_t n) {
                                        static_cast<uint16_t>(src[2 * i + 1]));
 }
 
-Image read_png(nb::bytes data) {
-    const unsigned char *in = reinterpret_cast<const unsigned char *>(data.c_str());
+Image read_png(nb::handle source) {
+    sio::ByteView data(source);
+    const unsigned char *in = data.data();
     const size_t insize = data.size();
     Image im;
     {

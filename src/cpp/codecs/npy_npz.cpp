@@ -310,8 +310,9 @@ bool is_c_contig(const nb::ndarray<nb::ro, nb::device::cpu> &a) {
 // bound functions
 // ---------------------------------------------------------------------------
 
-nb::ndarray<nb::numpy> read_npy(nb::bytes data) {
-    const uint8_t *p = reinterpret_cast<const uint8_t *>(data.c_str());
+nb::ndarray<nb::numpy> read_npy(nb::handle source) {
+    sio::ByteView data(source);
+    const uint8_t *p = data.data();
     const size_t n = data.size();
     std::vector<uint8_t> buf;
     std::vector<size_t> shape;
@@ -360,8 +361,9 @@ nb::bytes write_npy(nb::ndarray<nb::ro, nb::device::cpu> array) {
     return nb::bytes(out.data(), out.size());
 }
 
-TensorDict read_npz(nb::bytes data) {
-    const uint8_t *p = reinterpret_cast<const uint8_t *>(data.c_str());
+TensorDict read_npz(nb::handle source) {
+    sio::ByteView data(source);
+    const uint8_t *p = data.data();
     const size_t n = data.size();
     TensorDict td;  // plain C++ struct — populated with the GIL released
     {
@@ -382,24 +384,33 @@ TensorDict read_npz(nb::bytes data) {
             mz_zip_archive_file_stat st;
             if (!mz_zip_reader_file_stat(&zip, i, &st))
                 throw std::invalid_argument("npz: could not read a member header");
+            std::vector<char> filename(65536);
+            const mz_uint filename_size =
+                mz_zip_reader_get_filename(&zip, i, filename.data(), filename.size());
+            if (filename_size == 0 || filename_size > filename.size())
+                throw std::invalid_argument("npz: could not read a complete member filename");
+            std::string key(filename.data(), filename_size - 1);
+            if (key.find('\0') != std::string::npos)
+                throw std::invalid_argument("npz: member filename contains NUL");
+            // Strip one trailing ".npy" for the tensor name.
+            if (key.size() >= 4 && key.compare(key.size() - 4, 4, ".npy") == 0)
+                key.resize(key.size() - 4);
+            if (!valid_utf8(key))
+                throw std::invalid_argument("npz: member filename is not valid UTF-8");
             size_t usz = 0;
             void *buf = mz_zip_reader_extract_to_heap(&zip, i, &usz, 0);  // handles store + deflate
             if (!buf)
                 throw std::invalid_argument(std::string("npz: could not extract member '") +
-                                            st.m_filename + "'");
+                                            key + "'");
             try {
                 const NpyInfo info = parse_npy_header(static_cast<const uint8_t *>(buf), usz);
                 const std::vector<uint8_t> payload =
                     load_npy_payload(static_cast<const uint8_t *>(buf), usz, info);
-                std::string key = st.m_filename;  // strip one trailing ".npy" for the tensor name
-                if (key.size() >= 4 && key.compare(key.size() - 4, 4, ".npy") == 0)
-                    key.resize(key.size() - 4);
-                TensorEntry &e = td.add(std::move(key), info.tag, info.shape);  // rejects duplicates
+                TensorEntry &e = td.add(key, info.tag, info.shape);  // rejects duplicates
                 if (!e.bytes.empty()) std::memcpy(e.bytes.data(), payload.data(), e.bytes.size());
             } catch (const std::exception &ex) {
                 mz_free(buf);
-                throw std::invalid_argument(std::string("npz: member '") + st.m_filename +
-                                            "': " + ex.what());
+                throw std::invalid_argument(std::string("npz: member '") + key + "': " + ex.what());
             }
             mz_free(buf);
         }
@@ -427,6 +438,10 @@ nb::bytes write_npz(const TensorDict &td, bool compress) {
         } guard{&zip};
 
         for (const TensorEntry &e : td.entries) {  // insertion order == member order
+            if (e.name.find('\0') != std::string::npos)
+                throw std::invalid_argument("npz: tensor name contains NUL");
+            if (e.name.size() > 65531)
+                throw std::invalid_argument("npz: tensor name exceeds the ZIP filename limit");
             const std::string member = serialize_entry(e);
             if (member.size() > 0xFFFFFFFFull)
                 throw std::invalid_argument("npz: member '" + e.name +

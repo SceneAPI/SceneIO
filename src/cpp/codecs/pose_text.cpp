@@ -128,8 +128,9 @@ void view_quat_wxyz(const PosedViewSet &p, size_t i, double &w, double &x, doubl
 
 // --- TUM: `timestamp tx ty tz qx qy qz qw` (XYZW, camera_to_world, meters) --
 
-PosedViewSet read_tum(nb::bytes data) {
-    std::string text(data.c_str(), data.size());
+PosedViewSet read_tum(nb::handle source) {
+    sio::ByteView data(source);
+    std::string text(reinterpret_cast<const char *>(data.data()), data.size());
     std::istringstream stream(text);
     std::string line;
     PosedViewSet p;
@@ -191,8 +192,9 @@ nb::bytes write_tum(const PosedViewSet &p) {
 
 // --- KITTI: 12 numbers = row-major 3x4 [R|t] (camera_to_world; R<->WXYZ) ----
 
-PosedViewSet read_kitti(nb::bytes data) {
-    std::string text(data.c_str(), data.size());
+PosedViewSet read_kitti(nb::handle source) {
+    sio::ByteView data(source);
+    std::string text(reinterpret_cast<const char *>(data.data()), data.size());
     std::istringstream stream(text);
     std::string line;
     PosedViewSet p;

@@ -69,8 +69,9 @@ int32_t bswap32i(int32_t v) {
     return v;
 }
 
-nb::ndarray<nb::numpy, float> read_flo(nb::bytes data) {
-    const uint8_t *p = reinterpret_cast<const uint8_t *>(data.c_str());
+nb::ndarray<nb::numpy, float> read_flo(nb::handle source) {
+    sio::ByteView data(source);
+    const uint8_t *p = data.data();
     const size_t n = data.size();
     std::vector<float> buf;
     size_t H = 0, W = 0;

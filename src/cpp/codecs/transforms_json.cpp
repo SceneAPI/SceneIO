@@ -172,10 +172,12 @@ void write_intrinsics(json &o, const Camera &c) {
     o["h"] = c.height;
 }
 
-PosedViewSet read_transforms_json(nb::bytes data) {
+PosedViewSet read_transforms_json(nb::handle source) {
+    sio::ByteView data(source);
     json d;
     try {  // map JSON parse/type errors to ValueError, per the codec bad-input contract
-        d = json::parse(std::string(data.c_str(), data.size()));
+        d = json::parse(
+            std::string(reinterpret_cast<const char *>(data.data()), data.size()));
     } catch (const json::exception &e) {
         throw std::invalid_argument(std::string("transforms.json: ") + e.what());
     }

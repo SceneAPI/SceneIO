@@ -1,6 +1,8 @@
 // PFM codec (Tier-1 float depth/disparity container, formats_survey.md §6).
 #include "io/common.hpp"
 
+#include <limits>
+
 using namespace nb::literals;
 using namespace sio;
 
@@ -22,8 +24,9 @@ std::string next_token(const uint8_t *p, size_t n, size_t &pos) {
     return std::string(reinterpret_cast<const char *>(p + s), pos - s);
 }
 
-nb::ndarray<nb::numpy, float> read_pfm(nb::bytes data) {
-    const uint8_t *p = reinterpret_cast<const uint8_t *>(data.c_str());
+nb::ndarray<nb::numpy, float> read_pfm(nb::handle source) {
+    sio::ByteView data(source);
+    const uint8_t *p = data.data();
     const size_t n = data.size();
     size_t pos = 0;
     const std::string magic = next_token(p, n, pos);
@@ -43,15 +46,22 @@ nb::ndarray<nb::numpy, float> read_pfm(nb::bytes data) {
     if (W <= 0 || H <= 0) throw std::invalid_argument("PFM: non-positive dimensions");
     const bool file_le = scale < 0.0;
     if (pos < n && is_ws(p[pos])) pos++;
-    const size_t row = static_cast<size_t>(W) * C, count = row * static_cast<size_t>(H);
-    if (pos + count * 4 > n) throw std::invalid_argument("PFM: truncated pixel data");
+    const size_t width = static_cast<size_t>(W), height = static_cast<size_t>(H);
+    if (width > std::numeric_limits<size_t>::max() / static_cast<size_t>(C))
+        throw std::invalid_argument("PFM: dimensions overflow address space");
+    const size_t row = width * static_cast<size_t>(C);
+    if (height > std::numeric_limits<size_t>::max() / row)
+        throw std::invalid_argument("PFM: dimensions overflow address space");
+    const size_t count = row * height;
+    if (count > (n - pos) / sizeof(float))
+        throw std::invalid_argument("PFM: truncated pixel data");
     std::vector<float> buf(count);
     const uint8_t *src = p + pos;
     const bool swap = (file_le != host_is_le());
     for (long y = 0; y < H; y++) {  // PFM rows are bottom-to-top -> flip
-        const uint8_t *sr = src + static_cast<size_t>(H - 1 - y) * row * 4;
+        const uint8_t *sr = src + static_cast<size_t>(H - 1 - y) * row * sizeof(float);
         float *dr = buf.data() + static_cast<size_t>(y) * row;
-        std::memcpy(dr, sr, row * 4);
+        std::memcpy(dr, sr, row * sizeof(float));
         if (swap)
             for (size_t i = 0; i < row; i++) dr[i] = bswap32f(dr[i]);
     }

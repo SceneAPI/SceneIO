@@ -227,8 +227,9 @@ GaussianCloud read_ngsp_v4(const uint8_t *fp, size_t fn) {
     return decode_spz_payload(payload.data(), n, sh_degree, frac_bits, /*uses_st=*/true, rot_stride);
 }
 
-GaussianCloud read_spz(nb::bytes data) {
-    const uint8_t *fp = reinterpret_cast<const uint8_t *>(data.c_str());
+GaussianCloud read_spz(nb::handle source) {
+    sio::ByteView data(source);
+    const uint8_t *fp = data.data();
     const size_t fn = data.size();
     if (fn >= 4) {
         uint32_t m;

@@ -1,0 +1,46 @@
+name: Sanitizers
+
+on:
+  push:
+    branches: [main, phase0-nanobind-core]
+  pull_request:
+  schedule:
+    - cron: "23 5 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sanitizers-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  asan-ubsan-lsan:
+    name: ASan + UBSan + LSan
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      CMAKE_ARGS: -DSCENEIO_ENABLE_SANITIZERS=ON
+      PYTHONMALLOC: malloc
+      ASAN_OPTIONS: detect_leaks=1:leak_check_at_exit=0:check_initialization_order=1:strict_string_checks=1:halt_on_error=1
+      UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
+      SCENEIO_MMAP_FUZZ_CASES: ${{ github.event_name == 'schedule' && '100' || '3' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v7
+      - name: Install instrumented extension and test oracles
+        run: |
+          uv venv --seed
+          uv pip install -e ".[dev,test]"
+          # gsply's Numba/LLVM JIT and pycolmap's native type registry retain
+          # process-lifetime objects that obscure LSan results. Their parity
+          # tests remain enabled in normal CI; exclude only those unsanitized
+          # external stacks from this memory-safety lane.
+          uv pip uninstall gsply numba llvmlite pycolmap
+      - name: Run full suite under sanitizers
+        run: |
+          # The host Python executable does not link libstdc++; preload it after
+          # ASan so ASan can install its __cxa_throw interceptor before _core.
+          export LD_PRELOAD="$(gcc -print-file-name=libasan.so):$(gcc -print-file-name=libstdc++.so.6)"
+          .venv/bin/python .github/run_sanitized_tests.py -q

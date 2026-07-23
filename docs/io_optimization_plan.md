@@ -1,6 +1,6 @@
 # I/O Optimization, Testing & Verification Plan
 
-Status: proposed. Scope: the compiled `sceneio._core` I/O path on
+Status: active — O0 and O1 complete; O2–O5 pending. Scope: the compiled `sceneio._core` I/O path on
 `phase0-nanobind-core`. Companion to `coverage_roadmap.md` (this makes its "Phase 7"
 hardening/perf work concrete).
 
@@ -13,12 +13,11 @@ numeric SLAs are bound. Measurement orders the work and proves each gain; it doe
 ## 0. Guiding principle — measure to order & verify (not to gate)
 
 The representation layer is already near-optimal (zero-copy SoA records → numpy/
-torch/DLPack; per-format hand-tuned decoders; GIL released). The **file-I/O model
-is the deliberately-simple whole-file-bytes path** (`registry.py:_bytes_reader/
-_bytes_writer`): read materializes the whole file as a Python `bytes` before
-decode; write materializes the whole output as `bytes` before disk — **~2 full
-copies each way, peak memory ≈ file-size + decoded-size, no mmap/stream/partial
-reads.**
+torch/DLPack; per-format hand-tuned decoders; GIL released). **Before O1**, the
+file-I/O model used the deliberately simple whole-file `_bytes_reader`: read
+materialized the whole file as Python `bytes` before decode, while writes still
+materialize the whole output as `bytes` before disk. O1 replaces the read side;
+the remaining write copy/stream/partial limitations are O3/O5 work.
 
 So the harness comes first — but because scope is full and uniform, it decides the
 *order* of the sweep (worst `sceneio/oracle` ratios first) and supplies the
@@ -46,28 +45,50 @@ Permanent verification tool and the ordering input for the sweep.
 
 ---
 
-## Phase O1 — mmap-backed reader (uniform across all 23 codecs)
+## Phase O1 — mmap-backed reader (complete)
 
 Replace the whole-file `Path.read_bytes()` with a memory-map handed to the codec as
 a **zero-copy buffer view**, removing one full-file copy on read and letting the OS
 page lazily.
 
 - **Adapter:** `_mmap_reader` (Python `mmap`, cross-platform) becomes the default
-  for every codec; `_bytes_reader` stays as the fallback.
-- **Core signature:** every `_core.read_X` accepts a **buffer-protocol** object
-  (mmap / memoryview / `nb::ndarray<const uint8_t>`), not only `nb::bytes`, verified
-  to NOT copy. One shared buffer-accepting entry per codec.
+  for every single-file codec; mmap-unavailable and empty files use a
+  same-open-stream bytes fallback. `_bytes_reader` remains only as a legacy
+  comparison helper.
+- **Core signature:** every `_core.read_X` accepts an exact read-only,
+  C-contiguous unsigned-byte **buffer-protocol** object (mmap / memoryview /
+  numpy `uint8`), not only `nb::bytes`, verified to NOT copy. One shared
+  buffer-accepting entry per codec.
 - **Lifetime:** decode-into-vectors codecs release the mmap after decode (record
   owns copies) — the safe O1 default. Raw formats keep it alive in O2.
-- **Uniform application:** all 23 codecs get the mmap path **and** the differential
-  + memory test. The payoff is largest on the big binary formats (LAS/EXR/PLY/SPZ/
-  npy) but the sweep covers everything for consistency and regression coverage.
+- **Uniform application:** all 21 single-file codecs get the mmap path and the
+  differential + memory sweep; the two COLMAP directory codecs already consume
+  paths directly. The payoff is largest on the big binary formats
+  (LAS/EXR/PLY/SPZ/npy), but all 23 remain in the harness and API E2E coverage.
 
 **Testing (per codec):** `read(mmap) == read(bytes)` **bit-exact**; a peak-memory
 test asserting the mmap path does not allocate a whole-file `bytes`; empty/
 truncated/locked file over the mmap path. **Verify:** harness delta (read peak-
 memory drops by ~file-size). fable **memory-safety** review is mandatory (mmap
 use-after-unmap is the top risk).
+
+**Landed:** the 21 single-file codecs accept the shared read-only contiguous
+`sio::ByteView` and use `_mmap_reader`; the COLMAP binary/text directory codecs
+already take paths and read their component files directly in C++, so no Python
+whole-file `bytes` exists there. Empty files and mmap-unavailable files use the
+same already-open stream for their bytes fallback. Extensionless detection now
+reads only its 16-byte prefix. The differential sweep covers bit-exact bytes/mmap results,
+post-unmap lifetime, empty/truncated/mutated data, Windows exclusive locks, and a
+16 MiB `tracemalloc` bound plus exact exporter/core pointer identity. The
+23-codec harness includes public-path throughput, traced allocation, sampled
+RSS, cold-cache hints, and generated scaling; every mapped read peak changed
+from the encoded file size (up to 56.5 MB normally and 113 MB generated) to
+below 0.05 MB. A local Linux run passed the full in-tree suite under ASan/UBSan
+and an explicit pre-shutdown LSan check, excluding the unsanitized gsply/Numba
+and pycolmap native oracle stacks that normal CI retains. The committed workflow repeats it and raises
+the backing-store mutation sweep from 3 to 100 cases on its schedule. Scheduled
+execution begins once this workflow reaches the default branch; the remote
+workflow run remains user-gated.
 
 ---
 
@@ -154,11 +175,12 @@ oracle**. Optimizations add exactly these guards, **run across all 23 codecs**:
 
 | Instrument | Proves | Cadence |
 |---|---|---|
-| Benchmark harness (O0) | measured improvement; **no regression** (any regress fails CI) | per-item + CI guard |
+| Benchmark harness (O0) | measured improvement and comparable throughput | per-item; all-format smoke in CI |
 | `tracemalloc`/RSS deltas | peak-memory dropped as expected | per-item |
 | Differential correctness | fast-path == slow-path == oracle, bit-exact, all codecs | CI, every run |
-| **ASan/UBSan/LSan CI job** | no mmap-lifetime/leak/UB (the class the reviews caught by hand) | CI (new) |
-| Differential fuzzer | random valid+malformed: fast==slow==oracle | nightly CI (new) |
+| **ASan/UBSan/LSan CI job** | no mmap-lifetime/leak/UB (the class the reviews caught by hand) | CI (landed O1) |
+| Differential fuzzer | malformed bytes/mmap backing-store equivalence | scheduled CI (landed O1) |
+| Randomized oracle triangulation | random valid/malformed fast==slow==oracle | pending nightly expansion |
 | fable adversarial review | memory-safety of each mmap/lifetime/sink change | per-item |
 
 Success is **qualitative**: a *measured* improvement (direction, not a bound) with
@@ -196,8 +218,9 @@ phases are committed.
 | Risk | Mitigation |
 |---|---|
 | mmap use-after-unmap (top risk) | ASan CI + lifetime tests + fable memory-safety review, every O1/O2 item |
+| concurrent input mutation / POSIX shrink → race or `SIGBUS` | byte-stable input required for the call; use atomically replaced files |
 | Windows vs POSIX mmap | drive mmap from Python's cross-platform `mmap` at the adapter; keep the C++ side buffer-agnostic |
-| nanobind copies the buffer anyway | verify zero-copy with a memory test before building on it |
+| binding copies or accepts a mutable exporter | strict pinned `Py_buffer`, pointer-identity and memory-bound tests |
 | Zero-copy record lifetime (O2) | attach the mmap as the ndarray capsule owner; test outlives-handle |
 | Sink writers diverge from buffer writers | byte-identical differential test per codec (O3) |
 | Uniform sweep = large surface | the parametrized differential/memory tests scale across codecs; harness auto-covers all |

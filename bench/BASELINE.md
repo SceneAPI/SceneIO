@@ -51,8 +51,55 @@ gaussian/spz/splat have no in-process oracle wired yet.
    optimization order: O1 (kill the copy) before O4 (speed the decode), because the
    copy is the bigger, universal cost.
 
-## Not yet covered
+## Harness coverage added with O1
 
-Reconstruction/pose codecs (colmap/bundler/nvm/openmvg/tum/kitti/transforms) — need
-a `Reconstruction`/`PosedViewSet` builder; they're metadata-sized, low perf
-priority. npz, and hdr/exr/netpbm oracles (imageio/OpenEXR) — add as O1 lands.
+The harness now builds non-empty `Reconstruction` and `PosedViewSet` inputs and
+covers all 23 codecs, including both COLMAP directory variants, Bundler, NVM,
+OpenMVG, transforms.json, TUM, KITTI, and NPZ. ImageIO/OpenEXR-backed oracle
+adapters are wired for Netpbm/HDR/EXR and degrade cleanly when the installed
+ImageIO backend cannot handle Radiance HDR. `--scale` generates large fixtures,
+`--cold-cache` requests `POSIX_FADV_DONTNEED` where supported, and the table
+reports both `tracemalloc` and sampled RSS.
+
+## O1 mmap delta — 2026-07-23
+
+Local MSVC run after O1 (`bench_io.py --runs 3`). `bPeakMB` retains the legacy
+`read_bytes()` measurement and `mPeakMB` measures the same decoder over a
+read-only mmap. Throughput columns remain in-memory codec measurements and are
+within baseline noise; the deterministic result is that the Python whole-file
+allocation disappears for every single-file codec.
+
+```
+codec          fileMB  bPeakMB  mPeakMB
+---------------------------------------
+png                3.1       3.2       0.0
+jpeg               2.5       2.5       0.0
+webp               3.1       3.2       0.0
+hdr                4.1       4.1       0.0
+exr               12.5      12.5       0.0
+netpbm             3.1       3.2       0.0
+xyz               56.5      56.5       0.0
+las               26.0      26.0       0.0
+gaussian_ply      11.2      11.2       0.0
+spz                3.4       3.4       0.0
+splat              6.4       6.4       0.0
+npy                8.4       8.4       0.0
+pfm                4.2       4.2       0.0
+flo                8.4       8.4       0.0
+npz                1.1       1.1       0.0
+transforms_json     0.0       0.0       0.0
+tum                0.0       0.0       0.0
+kitti              0.0       0.0       0.0
+bundler            0.0       0.0       0.0
+nvm                0.0       0.0       0.0
+openmvg            0.0       0.0       0.0
+```
+
+The exact traced mmap peaks were below the table's 0.05 MB display precision.
+The committed 16 MiB `.npy` memory test also requires mmap peak allocation below
+one eighth of file size while the bytes path must account for at least 90% of
+the file size. A generated `--scale 2 --runs 1` sweep exercised a 113.0 MB XYZ
+file and retained a 0.0 MB displayed mmap peak. RSS columns include decoded
+output, allocator reuse, and mmap page residency, so the input-copy proof is the
+traced-allocation delta plus exact exporter/core pointer identity; RSS remains a
+whole-process diagnostic rather than an isolated-copy assertion.

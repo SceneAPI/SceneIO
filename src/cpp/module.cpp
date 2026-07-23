@@ -3,7 +3,10 @@
 // docs/core_architecture.md for how to add a codec.
 #include <nanobind/nanobind.h>
 
+#include "io/common.hpp"
+
 namespace nb = nanobind;
+using namespace nb::literals;
 
 // records/
 void register_reconstruction(nb::module_ &);
@@ -39,6 +42,14 @@ void register_webp(nb::module_ &);
 NB_MODULE(_core, m) {
     m.doc() = "sceneio compiled core (nanobind): codecs + SoA memory representations";
     m.attr("__phase__") = 2;
+    // Private verification hook: tests compare this address with NumPy's view
+    // of the same exporter to prove the buffer caster aliases rather than copies.
+    m.def("_buffer_address",
+          [](nb::handle source) {
+              sio::ByteView data(source);
+              return reinterpret_cast<uintptr_t>(data.data());
+          },
+          "data"_a);
 
     register_reconstruction(m);
     register_gaussian_cloud(m);

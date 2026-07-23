@@ -9,6 +9,7 @@ through this registry, so **adding a format is one** :func:`register` call
 
 from __future__ import annotations
 
+import mmap
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -75,7 +76,8 @@ def detect(path) -> str:
         if ext in c.extensions:
             return c.id
     try:
-        head = p.read_bytes()[:16]
+        with p.open("rb") as stream:
+            head = stream.read(16)
     except OSError:
         head = b""
     for c in REGISTRY.values():
@@ -88,6 +90,32 @@ def detect(path) -> str:
 def _bytes_reader(fn: Callable[[bytes], object]) -> Callable[[str], object]:
     def read(path: str):
         return fn(Path(path).read_bytes())
+
+    return read
+
+
+def _mmap_reader(fn: Callable[[object], object]) -> Callable[[str], object]:
+    """Decode a file through a read-only mmap without materializing its bytes.
+
+    Empty files cannot be mapped portably (notably on Windows), and a few
+    filesystems do not support mmap. Those cases read from the same already-open
+    stream as a compatibility fallback, preserving file identity across rename
+    races. The current O1 decoders copy their payload into record-owned storage
+    before returning, so the mapping can close here. Callers must not truncate a
+    file or aliased backing storage during a read: changing bytes races the
+    GIL-released decoder, and POSIX delivers SIGBUS for a shrunken live map.
+    """
+
+    def read(path: str):
+        p = Path(path)
+        with p.open("rb") as stream:
+            try:
+                mapped = mmap.mmap(stream.fileno(), 0, access=mmap.ACCESS_READ)
+            except (OSError, ValueError):
+                stream.seek(0)
+                return fn(stream.read())
+            with mapped:
+                return fn(mapped)
 
     return read
 
@@ -119,7 +147,7 @@ register(
     Codec(
         "pfm",
         (".pfm",),
-        _bytes_reader(_core.read_pfm),
+        _mmap_reader(_core.read_pfm),
         _bytes_writer(_core.write_pfm),
         record=None,
         datatype="depth_map",
@@ -141,7 +169,7 @@ register(
     Codec(
         "gaussian_ply",
         (".ply",),
-        _bytes_reader(_core.read_gaussian_ply),
+        _mmap_reader(_core.read_gaussian_ply),
         _bytes_writer(_core.write_gaussian_ply),
         record=_core.GaussianCloud,
         datatype="splat",
@@ -152,7 +180,7 @@ register(
     Codec(
         "spz",
         (".spz",),
-        _bytes_reader(_core.read_spz),
+        _mmap_reader(_core.read_spz),
         _bytes_writer(_core.write_spz),
         record=_core.GaussianCloud,
         datatype="splat",
@@ -166,7 +194,7 @@ register(
     Codec(
         "transforms_json",
         (),
-        _bytes_reader(_core.read_transforms_json),
+        _mmap_reader(_core.read_transforms_json),
         _bytes_writer(_core.write_transforms_json),
         record=_core.PosedViewSet,
         datatype="posed_views",
@@ -177,7 +205,7 @@ register(
     Codec(
         "tum",
         (),
-        _bytes_reader(_core.read_tum),
+        _mmap_reader(_core.read_tum),
         _bytes_writer(_core.write_tum),
         record=_core.PosedViewSet,
         datatype="posed_views",
@@ -187,7 +215,7 @@ register(
     Codec(
         "kitti",
         (),
-        _bytes_reader(_core.read_kitti),
+        _mmap_reader(_core.read_kitti),
         _bytes_writer(_core.write_kitti),
         record=_core.PosedViewSet,
         datatype="posed_views",
@@ -199,7 +227,7 @@ register(
     Codec(
         "npy",
         (".npy",),
-        _bytes_reader(_core.read_npy),
+        _mmap_reader(_core.read_npy),
         _bytes_writer(lambda a: _core.write_npy(_canon(a))),
         record=None,
         datatype="tensor",
@@ -210,7 +238,7 @@ register(
     Codec(
         "npz",
         (".npz",),
-        _bytes_reader(_core.read_npz),
+        _mmap_reader(_core.read_npz),
         _bytes_writer(_npz_bytes),
         record=_core.TensorDict,
         datatype="tensor_dict",
@@ -220,7 +248,7 @@ register(
     Codec(
         "netpbm",
         (".ppm", ".pgm", ".pnm"),
-        _bytes_reader(_core.read_netpbm),
+        _mmap_reader(_core.read_netpbm),
         _bytes_writer(_core.write_netpbm),
         record=_core.Image,
         datatype="image",
@@ -233,7 +261,7 @@ register(
     Codec(
         "png",
         (".png",),
-        _bytes_reader(_core.read_png),
+        _mmap_reader(_core.read_png),
         _bytes_writer(_core.write_png),
         record=_core.Image,
         datatype="image",
@@ -247,7 +275,7 @@ register(
     Codec(
         "jpeg",
         (".jpg", ".jpeg"),
-        _bytes_reader(_core.read_jpeg),
+        _mmap_reader(_core.read_jpeg),
         _bytes_writer(_core.write_jpeg),
         record=_core.Image,
         datatype="image",
@@ -260,7 +288,7 @@ register(
     Codec(
         "hdr",
         (".hdr",),
-        _bytes_reader(_core.read_hdr),
+        _mmap_reader(_core.read_hdr),
         _bytes_writer(_core.write_hdr),
         record=_core.Image,
         datatype="image",
@@ -273,7 +301,7 @@ register(
     Codec(
         "exr",
         (".exr",),
-        _bytes_reader(_core.read_exr),
+        _mmap_reader(_core.read_exr),
         _bytes_writer(_core.write_exr),
         record=_core.Image,
         datatype="image",
@@ -287,7 +315,7 @@ register(
     Codec(
         "webp",
         (".webp",),
-        _bytes_reader(_core.read_webp),
+        _mmap_reader(_core.read_webp),
         _bytes_writer(_core.write_webp),
         record=_core.Image,
         datatype="image",
@@ -311,7 +339,7 @@ register(
     Codec(
         "xyz",
         (".xyz",),
-        _bytes_reader(_core.read_xyz),
+        _mmap_reader(_core.read_xyz),
         _bytes_writer(_core.write_xyz),
         record=_core.PointCloud,
         datatype="point_cloud",
@@ -323,7 +351,7 @@ register(
     Codec(
         "las",
         (".las",),
-        _bytes_reader(_core.read_las),
+        _mmap_reader(_core.read_las),
         _bytes_writer(_core.write_las),
         record=_core.PointCloud,
         datatype="point_cloud",
@@ -334,7 +362,7 @@ register(
     Codec(
         "flo",
         (".flo",),
-        _bytes_reader(_core.read_flo),
+        _mmap_reader(_core.read_flo),
         _bytes_writer(_core.write_flo),
         record=None,
         datatype="flow",
@@ -346,7 +374,7 @@ register(
     Codec(
         "bundler",
         (".out",),
-        _bytes_reader(_core.read_bundler),
+        _mmap_reader(_core.read_bundler),
         _bytes_writer(_core.write_bundler),
         record=_core.Reconstruction,
         datatype="sparse_model",
@@ -357,7 +385,7 @@ register(
     Codec(
         "nvm",
         (".nvm",),
-        _bytes_reader(_core.read_nvm),
+        _mmap_reader(_core.read_nvm),
         _bytes_writer(_core.write_nvm),
         record=_core.Reconstruction,
         datatype="sparse_model",
@@ -368,7 +396,7 @@ register(
     Codec(
         "openmvg",
         (),
-        _bytes_reader(_core.read_openmvg),
+        _mmap_reader(_core.read_openmvg),
         _bytes_writer(_core.write_openmvg),
         record=_core.Reconstruction,
         datatype="sparse_model",
@@ -381,7 +409,7 @@ register(
     Codec(
         "splat",
         (".splat",),
-        _bytes_reader(_core.read_splat),
+        _mmap_reader(_core.read_splat),
         _bytes_writer(_core.write_splat),
         record=_core.GaussianCloud,
         datatype="splat",

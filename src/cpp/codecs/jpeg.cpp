@@ -30,19 +30,28 @@ void guard_dims(size_t w, size_t h) {
         throw std::invalid_argument("jpeg: image dimensions exceed the supported limit");
 }
 
-Image read_jpeg(nb::bytes data) {
-    const stbi_uc *in = reinterpret_cast<const stbi_uc *>(data.c_str());
+Image read_jpeg(nb::handle source) {
+    sio::ByteView data(source);
+    const stbi_uc *in = data.data();
     if (data.size() > static_cast<size_t>(INT_MAX))
         throw std::invalid_argument("jpeg: input larger than 2 GiB is not supported");
     const int len = static_cast<int>(data.size());
+    // stb compiles the JPEG *and* HDR decoders into one library and sniffs both,
+    // so require the SOI before applying JPEG-specific integrity checks.
+    if (len < 2 || in[0] != 0xFF || in[1] != 0xD8)
+        throw std::invalid_argument("jpeg: not a JPEG stream (missing FF D8 SOI marker)");
+    bool has_eoi = false;
+    for (int i = 2; i < len; i++) {
+        if (in[i - 1] == 0xFF && in[i] == 0xD9) {
+            has_eoi = true;
+            break;
+        }
+    }
+    if (!has_eoi)
+        throw std::invalid_argument("jpeg: truncated stream (missing FF D9 EOI marker)");
     Image im;
     {
         nb::gil_scoped_release rel;
-        // stb compiles the JPEG *and* HDR decoders into one library and sniffs both,
-        // so without this a .hdr fed to read_jpeg would be tone-mapped to u8 and
-        // returned. Require the SOI marker so only real JPEG streams decode here.
-        if (len < 2 || in[0] != 0xFF || in[1] != 0xD8)
-            throw std::invalid_argument("jpeg: not a JPEG stream (missing FF D8 SOI marker)");
         int w = 0, h = 0, comp = 0;
         if (!stbi_info_from_memory(in, len, &w, &h, &comp))
             throw std::invalid_argument(std::string("jpeg: ") + stbi_failure_reason());

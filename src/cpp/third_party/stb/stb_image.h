@@ -3437,7 +3437,12 @@ static int stbi__decode_jpeg_image(stbi__jpeg *j)
          if (NL != j->s->img_y) return stbi__err("bad DNL height", "Corrupt JPEG");
          m = stbi__get_marker(j);
       } else {
-         if (!stbi__process_marker(j, m)) return 1;
+         // [sceneio LOCAL PATCH] This pinned stb revision returned success when a
+         // malformed marker (notably an overlong DHT table) failed validation.
+         // The caller then color-converted partially uninitialized component
+         // buffers, producing nondeterministic pixels that depended on allocator
+         // and input backing storage. Current upstream returns failure here.
+         if (!stbi__process_marker(j, m)) return 0;
          m = stbi__get_marker(j);
       }
    }

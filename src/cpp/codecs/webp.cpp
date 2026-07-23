@@ -24,8 +24,9 @@ namespace {
 // 16384^2 (~1 GB) anyway, and this rejects that largest legal raster consistently.
 constexpr uint64_t kWebpPixelCap = 250000000ull;
 
-Image read_webp(nb::bytes data) {
-    const uint8_t *in = reinterpret_cast<const uint8_t *>(data.c_str());
+Image read_webp(nb::handle source) {
+    sio::ByteView data(source);
+    const uint8_t *in = data.data();
     const size_t size = data.size();
     Image im;
     {
