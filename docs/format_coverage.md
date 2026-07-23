@@ -54,27 +54,28 @@ SoA, zero-copy to numpy/torch (DLPack), conventions carried as metadata.
 
 Deferred within Tier‑1: g2o poses (pose‑graph *edges* don't fit `PosedViewSet`).
 
-### 🟡 In progress — image / HDR tier via **vendored permissive source** (no system libs)
+### ✅ Complete — image / point tier via **vendored permissive source** (no system libs)
 
-Key reframing (proven out over lodepng + stb): most "needs a C lib" image formats
-have permissive, self‑contained single‑header/source libraries that drop into the
-**existing FetchContent/vendored pattern** (miniz, zstd, nlohmann/json, fast_float)
-— so they need **no vcpkg/conda `SCENEIO_WITH_*` gate** and keep runtime numpy‑only.
+Key reframing (proven out): most "needs a C lib" formats have permissive,
+self‑contained source libraries that drop into the **existing FetchContent/vendored
+pattern** (miniz, zstd, nlohmann/json, fast_float) — so they needed **no vcpkg/conda
+`SCENEIO_WITH_*` gate** and kept runtime numpy‑only.
 
-| Format | Record | Vendorable lib (license) | Status |
+| Format | Record | Vendored lib (license) | Status |
 |---|---|---|---|
 | PNG (incl. 16‑bit depth) | `Image` | lodepng (zlib) — self‑contained inflate | ✅ R+W; pillow+pypng oracles; palette/16‑bit/interlace |
 | JPEG (baseline+progressive) | `Image` | stb (public domain) | ✅ R (gray+RGB) / W (RGB‑only); pillow oracle; lossy |
 | Radiance `.hdr` | `Image`(f32) | stb (public domain) | ✅ R+W; numpy RGBE oracle; lossy encode |
 | OpenEXR | `Image`(f32) | tinyexr (BSD) — reuses our miniz | ✅ R+W; OpenEXR‑python oracle; HALF→FLOAT, premult‑alpha, PIZ/ZIP/RLE |
-| plain `.las` | `PointCloud` | **none** — documented binary, like colmap `.bin` | ⬜ next; needs origin+rgb16 record fields |
-| WebP | `Image` | libwebp (BSD) — CMake FetchContent | ⬜ last (only real wheel‑build risk) |
+| plain `.las` | `PointCloud` | **none** — hand‑parsed binary, like colmap `.bin` | ✅ R+W; laspy oracle; formats 0‑3/6‑8, origin+rgb16, georef rebase |
+| WebP | `Image` | libwebp (BSD) — CMake FetchContent from source | ✅ R+W; pillow oracle; lossless byte‑exact + lossy; built clean on MSVC |
 
-Cross‑cutting: the 3 shipped image codecs are validated on the **local MSVC build
-only**; the plan gates the tier on a **cibuildwheel dry‑run** (Linux/macOS) — a user
-action (push + `gh workflow run publish.yml`), pending. Vendored stb carries one
-**local security patch** (truncated‑`.hdr` short‑read → uninitialized pixels; see
-`stb/COMMIT.txt`). CMYK JPEG is best‑effort stb→RGB (documented, not color‑managed).
+Cross‑cutting: all 6 codecs are validated on the **local MSVC build only** — the plan
+gates the tier on a **cibuildwheel dry‑run** (Linux/macOS), still a pending user
+action (push + `gh workflow run publish.yml`). libwebp‑from‑source is the one real
+wheel‑build risk to confirm there. Vendored stb carries one **local security patch**
+(truncated‑`.hdr` short‑read → uninitialized pixels; see `stb/COMMIT.txt`). CMYK JPEG
+is best‑effort stb→RGB and opaque RGBA collapses to RGB in WebP (both documented).
 
 Genuinely need the system‑lib `SCENEIO_WITH_*` gate (deferred): HDF5 (+hloc), TIFF
 (libtiff). **LAZ is vendorable after all** — laz‑perf (Apache‑2.0), point‑cloud
