@@ -288,6 +288,14 @@ nb::bytes write_xyz(const PointCloud &pc) {
         throw std::invalid_argument(
             "xyz: writer emits 'x y z [r g b]'; a record with intensity cannot round-trip -- "
             "drop intensity first");
+    if (pc.has_rgb16())
+        throw std::invalid_argument(
+            "xyz: writer emits 8-bit 'x y z [r g b]'; a record with 16-bit colors16 cannot "
+            "round-trip -- narrow to 8-bit rgb first");
+    if (pc.origin[0] != 0.0 || pc.origin[1] != 0.0 || pc.origin[2] != 0.0)
+        throw std::invalid_argument(
+            "xyz: writer emits local coordinates; a georeferenced record (origin != 0) would lose "
+            "its anchor -- bake origin into positions first");
     std::string out;
     {
         nb::gil_scoped_release rel;  // pure C++ encode

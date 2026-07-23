@@ -37,10 +37,13 @@ nb::ndarray<nb::numpy, T> vw(const std::vector<T> &v, std::vector<size_t> shape)
 // vectors, so the caster's temporary lifetime is irrelevant.
 using farr = nb::ndarray<const float, nb::c_contig, nb::device::cpu>;
 using carr = nb::ndarray<const uint8_t, nb::c_contig, nb::device::cpu>;
+using c16arr = nb::ndarray<const uint16_t, nb::c_contig, nb::device::cpu>;
+using darr = nb::ndarray<const double, nb::c_contig, nb::device::cpu>;
 
 PointCloud make_pc(farr positions, std::optional<carr> colors, std::optional<farr> normals,
                    std::optional<farr> intensity, const std::string &coordinate_frame,
-                   double scale_to_meters, const std::string &intensity_range) {
+                   double scale_to_meters, const std::string &intensity_range,
+                   std::optional<c16arr> colors16, std::optional<darr> origin) {
     // 1. positions (N,3): ndim==2 && shape(1)==3; N==0 is legal (an empty .xyz
     //    file must round-trip once the codec lands).
     if (positions.ndim() != 2 || positions.shape(1) != 3)
@@ -66,6 +69,16 @@ PointCloud make_pc(farr positions, std::optional<carr> colors, std::optional<far
             throw std::invalid_argument("point_cloud: intensity must be (N,) float32");
         p.intensity.assign(intensity->data(), intensity->data() + N);
     }
+    if (colors16) {
+        if (colors16->ndim() != 2 || colors16->shape(1) != 3 || colors16->shape(0) != N)
+            throw std::invalid_argument("point_cloud: colors16 must be (N,3) uint16");
+        p.rgb16.assign(colors16->data(), colors16->data() + N * 3);
+    }
+    if (origin) {
+        if (origin->ndim() != 1 || origin->shape(0) != 3)
+            throw std::invalid_argument("point_cloud: origin must be (3,) float64");
+        for (int i = 0; i < 3; i++) p.origin[i] = origin->data()[i];
+    }
 
     // 3. conventions: validate the closed vocabulary (Image's color_space
     //    precedent; stricter than make_pvs, which validates nothing).
@@ -90,18 +103,26 @@ void register_point_cloud(nb::module_ &m) {
         .def_prop_ro(
             "colors", [](const PointCloud &p) { return vw(p.rgb, {p.has_rgb() ? p.n : 0, 3}); }, ri)
         .def_prop_ro(
+            "colors16", [](const PointCloud &p) { return vw(p.rgb16, {p.has_rgb16() ? p.n : 0, 3}); },
+            ri)
+        .def_prop_ro(
             "normals",
             [](const PointCloud &p) { return vw(p.normals, {p.has_normals() ? p.n : 0, 3}); }, ri)
         .def_prop_ro(
             "intensities", [](const PointCloud &p) { return vw(p.intensity, {p.intensity.size()}); },
             ri)
         .def_prop_ro("has_rgb", [](const PointCloud &p) { return p.has_rgb(); })
+        .def_prop_ro("has_rgb16", [](const PointCloud &p) { return p.has_rgb16(); })
         .def_prop_ro("has_normals", [](const PointCloud &p) { return p.has_normals(); })
         .def_prop_ro("has_intensity", [](const PointCloud &p) { return p.has_intensity(); })
         // conventions the codec recorded (metadata, not fixed):
         .def_prop_ro("coordinate_frame", [](const PointCloud &p) { return p.coordinate_frame; })
         .def_prop_ro("scale_to_meters", [](const PointCloud &p) { return p.scale_to_meters; })
         .def_prop_ro("intensity_range", [](const PointCloud &p) { return p.intensity_range; })
+        .def_prop_ro("origin",
+                     [](const PointCloud &p) {
+                         return nb::make_tuple(p.origin[0], p.origin[1], p.origin[2]);
+                     })
         .def("__repr__", [](const PointCloud &p) {
             return "<PointCloud n=" + std::to_string(p.n) + (p.has_rgb() ? " rgb" : "") +
                    (p.has_normals() ? " normals" : "") + (p.has_intensity() ? " intensity" : "") +
@@ -110,9 +131,9 @@ void register_point_cloud(nb::module_ &m) {
 
     m.def("point_cloud", &make_pc, "positions"_a, "colors"_a = nb::none(), "normals"_a = nb::none(),
           "intensity"_a = nb::none(), "coordinate_frame"_a = "unknown", "scale_to_meters"_a = 1.0,
-          "intensity_range"_a = "unknown",
+          "intensity_range"_a = "unknown", "colors16"_a = nb::none(), "origin"_a = nb::none(),
           "Build a PointCloud from arrays (numpy/torch): positions (N,3) float32, optional "
-          "colors (N,3) uint8 / normals (N,3) float32 / intensity (N,) float32 (foreign dtypes "
-          "are copy-converted by the caster), plus recorded convention tags "
-          "(coordinate_frame, scale_to_meters, intensity_range).");
+          "colors (N,3) uint8 / colors16 (N,3) uint16 / normals (N,3) float32 / intensity (N,) "
+          "float32 (foreign dtypes are copy-converted), recorded convention tags "
+          "(coordinate_frame, scale_to_meters, intensity_range), and a georef origin (3,) float64.");
 }

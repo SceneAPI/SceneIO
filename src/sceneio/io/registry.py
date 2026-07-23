@@ -304,6 +304,19 @@ register(
         datatype="point_cloud",
     )
 )
+# ASPRS LAS (hand-parsed binary, no library) -> PointCloud. The "LASF" signature
+# is unambiguous; LAZ (compressed) is deferred (needs laz-perf).
+register(
+    Codec(
+        "las",
+        (".las",),
+        _bytes_reader(_core.read_las),
+        _bytes_writer(_core.write_las),
+        record=_core.PointCloud,
+        datatype="point_cloud",
+        magic=(b"LASF",),
+    )
+)
 register(
     Codec(
         "flo",

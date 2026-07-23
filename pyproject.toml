@@ -32,6 +32,7 @@ test = [
     "pillow>=10.0",
     "pypng>=0.20220715",
     "openexr>=3.2",
+    "laspy>=2.5",
 ]
 
 [build-system]

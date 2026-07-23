@@ -36,6 +36,18 @@ wheels = [
 ]
 
 [[package]]
+name = "laspy"
+version = "2.7.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/9c/5d/5a540ac25dcc57fa77691363bb753363b192a3759aefef4b40e1250ddb17/laspy-2.7.0.tar.gz", hash = "sha256:f56feb5445e75d6ff12ee814aab6a35339290e75264ff277c6bf553f3025a3f5", size = 1929624, upload-time = "2026-01-14T22:18:42.856Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ed/fb/ae27ebca327117e35cc717a3a87afdcbbf10d5aac52e405d16ebe777357e/laspy-2.7.0-py3-none-any.whl", hash = "sha256:15f5344c62a1023461996bdf5d1ba5fdd813e96694a524fee712931134f3792f", size = 86056, upload-time = "2026-01-14T22:18:40.779Z" },
+]
+
+[[package]]
 name = "llvmlite"
 version = "0.48.0"
 source = { registry = "https://pypi.org/simple" }
@@ -83,12 +95,48 @@ wheels = [
 ]
 
 [[package]]
+name = "openexr"
+version = "3.4.13"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/ac/c4/11e2377b53c195136e76186c98ea1756a92d4fba01f241bc8741868d6833/openexr-3.4.13.tar.gz", hash = "sha256:ae5135e39ff0b9086a56e02f3d8b5cf52c5ca7cfcde5e57080b1c12c82e3ec8a", size = 25618192, upload-time = "2026-06-19T19:13:46.099Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d3/7f/4dac13c484a408ed132c0c17ff14e2017ffefc98773215119e60cef6ffe1/openexr-3.4.13-cp312-cp312-macosx_10_15_universal2.whl", hash = "sha256:1721a8806e1d3f6903332dffa7b800b2f342e898ec6b67725bf5bd1e48a41141", size = 2118164, upload-time = "2026-06-19T19:12:47.798Z" },
+    { url = "https://files.pythonhosted.org/packages/d6/c5/3b644a8211532a7458abd02e20fe069f328053851810d8fd77d0c43a424f/openexr-3.4.13-cp312-cp312-macosx_10_15_x86_64.whl", hash = "sha256:8747d43540fee603064d5dfaa1c1cf3fa7848dc655cc9930fa6f31d4eb9f0d09", size = 1124510, upload-time = "2026-06-19T19:12:49.57Z" },
+    { url = "https://files.pythonhosted.org/packages/b8/6a/197ab3510fc382b350da56d8c673e3984b697678eb293d56887a27c5d350/openexr-3.4.13-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:a7b1b8137f778c4f119a436e4937845ea8d42fe83518f9ac4ff7e253b5909de7", size = 1001601, upload-time = "2026-06-19T19:12:51.264Z" },
+    { url = "https://files.pythonhosted.org/packages/a7/fa/133be7685697c99bbaf5c339fe7e3165bc1417514b27404c8e830789fa04/openexr-3.4.13-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:98794bb381da3c69cc917c81c22f0aa66d98b7e4d89a7535a7e6fab262d8c316", size = 1146372, upload-time = "2026-06-19T19:12:52.963Z" },
+    { url = "https://files.pythonhosted.org/packages/af/40/895b2d93da037640cb3b40107c20386896a9b0d5fa9b3781041bbe159a97/openexr-3.4.13-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:b8b1264e80e40a1cc3492dc5a923b101eae5981d4ac1bc6f8e08fc40734383d9", size = 1275350, upload-time = "2026-06-19T19:12:54.677Z" },
+    { url = "https://files.pythonhosted.org/packages/76/d0/96275ba2d68b6e49e51a67f4916ad9dd188340d93ad6e36f4caece22cf34/openexr-3.4.13-cp312-cp312-musllinux_1_2_aarch64.whl", hash = "sha256:2d774ae7e0254f68f936b275fc6a99b99be36c2d6e5658de28e2576cb7f90cef", size = 2136135, upload-time = "2026-06-19T19:12:57.015Z" },
+    { url = "https://files.pythonhosted.org/packages/c5/d4/68dd4d9bf951bfa725945e4fb7c6affa9a666cc299369124c8fb8b56c1fd/openexr-3.4.13-cp312-cp312-musllinux_1_2_x86_64.whl", hash = "sha256:c5401a17dbe210cb2c6d19e92db10ea4a49b8037cf1e7500d69d6f335b9f9964", size = 2319378, upload-time = "2026-06-19T19:12:58.725Z" },
+    { url = "https://files.pythonhosted.org/packages/5e/96/26079e021f6bb76c4135269842220b86743e0e2185f45642cb521dae1eb5/openexr-3.4.13-cp312-cp312-win_amd64.whl", hash = "sha256:a07e028fa8238c5d7f43e420a545bb046c31aac4d62f5bd4e2b941b1e44f2100", size = 728379, upload-time = "2026-06-19T19:13:00.131Z" },
+]
+
+[[package]]
 name = "packaging"
 version = "26.2"
 source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/d7/f1/e7a6dd94a8d4a5626c03e4e99c87f241ba9e350cd9e6d75123f992427270/packaging-26.2.tar.gz", hash = "sha256:ff452ff5a3e828ce110190feff1178bb1f2ea2281fa2075aadb987c2fb221661", size = 228134, upload-time = "2026-04-24T20:15:23.917Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/df/b2/87e62e8c3e2f4b32e5fe99e0b86d576da1312593b39f47d8ceef365e95ed/packaging-26.2-py3-none-any.whl", hash = "sha256:5fc45236b9446107ff2415ce77c807cee2862cb6fac22b8a73826d0693b0980e", size = 100195, upload-time = "2026-04-24T20:15:22.081Z" },
+]
+
+[[package]]
+name = "pillow"
+version = "12.3.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/1c/3d/bb7fca845737cf9d7dbde16ed1843984665ff2e0a518f5db43e77ec540b9/pillow-12.3.0.tar.gz", hash = "sha256:3b8182a766685eaa002637e28b4ec8d6b18819a0c71f579bf0dbaa5830297cce", size = 47025035, upload-time = "2026-07-01T11:56:38.965Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/37/bf/fb3ebff8ddcb76aac5a01389251bbbb9519922a9b520d8247c1ca864a25d/pillow-12.3.0-cp312-cp312-macosx_10_13_x86_64.whl", hash = "sha256:ba09209fbe443b4acccebe845d8a138b89a8f4fbaeedd44953490b5315d5e965", size = 5345969, upload-time = "2026-07-01T11:54:06.397Z" },
+    { url = "https://files.pythonhosted.org/packages/d8/66/9a386a92561f402389a4fc70c18838bf6d35eb5eb5c6850b4b2dc64f5048/pillow-12.3.0-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:ffd0c5368496f41b0944be820fcb7a838aa6e623d250b01acf2643939c3f99d7", size = 4780323, upload-time = "2026-07-01T11:54:09.351Z" },
+    { url = "https://files.pythonhosted.org/packages/25/27/ac8f99618ffd3dde21db0f4d4b1d2ab00c0880595bfd17df103f7f39fd0c/pillow-12.3.0-cp312-cp312-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:d9c7f76c0673154f044e9d78c8655fb4213f6ca31a836df48b40fe5d187717b9", size = 6266838, upload-time = "2026-07-01T11:54:11.71Z" },
+    { url = "https://files.pythonhosted.org/packages/84/21/a35af28dcc61f37ed850a2d64c65c701321dfbf25085e469d5559360cbbf/pillow-12.3.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:78cb2c6865a35ab8ff8b75fd122f6033b92a62c82801110e48ddd6c936a45d91", size = 6940830, upload-time = "2026-07-01T11:54:13.732Z" },
+    { url = "https://files.pythonhosted.org/packages/eb/51/8b08617af3ad95e33ce6d7dd2c99ed6c8298f7fb131636303956be022e25/pillow-12.3.0-cp312-cp312-musllinux_1_2_aarch64.whl", hash = "sha256:e491916b378fba47242221bb9ead245211b70d504f495d105d17b14a24b4907c", size = 6344383, upload-time = "2026-07-01T11:54:15.756Z" },
+    { url = "https://files.pythonhosted.org/packages/1d/72/cf78ac9780bb93c28328f408973845a309d4d145041665f734572ced1b52/pillow-12.3.0-cp312-cp312-musllinux_1_2_x86_64.whl", hash = "sha256:0dd2064cbc55aaec028ef5fbb60fa47bb6c3e7918e07ff17935284b227a9d2df", size = 7052934, upload-time = "2026-07-01T11:54:17.721Z" },
+    { url = "https://files.pythonhosted.org/packages/20/20/25e0f4dc178a6bc0696793720055519a0de89e7661dae886992decbd2f81/pillow-12.3.0-cp312-cp312-win32.whl", hash = "sha256:dbce0b29841537a2fa4a214c2bbf14de3587c9680caa9b4e217568472490b28f", size = 6472684, upload-time = "2026-07-01T11:54:19.839Z" },
+    { url = "https://files.pythonhosted.org/packages/45/89/da2f7971a317f83d807fdd4065c0af40208e59e692cc43d315a71a0e96d1/pillow-12.3.0-cp312-cp312-win_amd64.whl", hash = "sha256:a2b55dd6b2a4c4b7d87ffa56bdb33fdc5fdb9a462173861a7bc097f17d91cb09", size = 7227137, upload-time = "2026-07-01T11:54:22.025Z" },
+    { url = "https://files.pythonhosted.org/packages/de/47/4845a0a6c0dbf1db8456bd9fc791f13c5ced7ced20606d08a0aacfd25b49/pillow-12.3.0-cp312-cp312-win_arm64.whl", hash = "sha256:331b624368d4f1d069149002f25f44bc61c8919ce8ddb3c45bdad8f6e2d89510", size = 2568267, upload-time = "2026-07-01T11:54:24.051Z" },
 ]
 
 [[package]]
@@ -120,6 +168,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/c3/b2/bc9c9196916376152d655522fdcebac55e66de6603a76a02bca1b6414f6c/pygments-2.20.0.tar.gz", hash = "sha256:6757cd03768053ff99f3039c1a36d6c0aa0b263438fcab17520b30a303a82b5f", size = 4955991, upload-time = "2026-03-29T13:29:33.898Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/f4/7e/a72dd26f3b0f4f2bf1dd8923c85f7ceb43172af56d63c7383eb62b332364/pygments-2.20.0-py3-none-any.whl", hash = "sha256:81a9e26dd42fd28a23a2d169d86d7ac03b46e2f8b59ed4698fb4785f946d0176", size = 1231151, upload-time = "2026-03-29T13:29:30.038Z" },
+]
+
+[[package]]
+name = "pypng"
+version = "0.20220715.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/93/cd/112f092ec27cca83e0516de0a3368dbd9128c187fb6b52aaaa7cde39c96d/pypng-0.20220715.0.tar.gz", hash = "sha256:739c433ba96f078315de54c0db975aee537cbc3e1d0ae4ed9aab0ca1e427e2c1", size = 128992, upload-time = "2022-07-15T14:11:05.301Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/3e/b9/3766cc361d93edb2ce81e2e1f87dd98f314d7d513877a342d31b30741680/pypng-0.20220715.0-py3-none-any.whl", hash = "sha256:4a43e969b8f5aaafb2a415536c1a8ec7e341cd6a3f957fd5b5f32a4cfeed902c", size = 58057, upload-time = "2022-07-15T14:11:03.713Z" },
 ]
 
 [[package]]
@@ -178,17 +235,25 @@ dev = [
 ]
 test = [
     { name = "gsply" },
+    { name = "laspy" },
     { name = "numpy" },
+    { name = "openexr" },
+    { name = "pillow" },
     { name = "pycolmap" },
+    { name = "pypng" },
     { name = "pytest" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "gsply", marker = "extra == 'test'", specifier = ">=0.4" },
+    { name = "laspy", marker = "extra == 'test'", specifier = ">=2.5" },
     { name = "numpy", specifier = ">=1.26" },
     { name = "numpy", marker = "extra == 'test'", specifier = ">=2.0,<2.5" },
+    { name = "openexr", marker = "extra == 'test'", specifier = ">=3.2" },
+    { name = "pillow", marker = "extra == 'test'", specifier = ">=10.0" },
     { name = "pycolmap", marker = "extra == 'test'", specifier = ">=4.1" },
+    { name = "pypng", marker = "extra == 'test'", specifier = ">=0.20220715" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.3" },
     { name = "pytest", marker = "extra == 'test'", specifier = ">=8.3" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.8" },

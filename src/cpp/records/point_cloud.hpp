@@ -20,17 +20,22 @@
 #include "io/common.hpp"
 
 struct PointCloud {
-    size_t n = 0;                  // point count (explicit, GaussianCloud precedent)
-    std::vector<float> xyz;        // n*3 (required; bound as `positions`)
-    std::vector<uint8_t> rgb;      // n*3 or empty
-    std::vector<float> normals;    // n*3 or empty (stored raw; unit length not enforced)
-    std::vector<float> intensity;  // n or empty (raw values, never rescaled)
+    size_t n = 0;                   // point count (explicit, GaussianCloud precedent)
+    std::vector<float> xyz;         // n*3 (required; bound as `positions`)
+    std::vector<uint8_t> rgb;       // n*3 or empty (8-bit color)
+    std::vector<uint16_t> rgb16;    // n*3 or empty (16-bit color, e.g. LAS; NOT narrowed to rgb)
+    std::vector<float> normals;     // n*3 or empty (stored raw; unit length not enforced)
+    std::vector<float> intensity;   // n or empty (raw values, never rescaled)
     // conventions the codec recorded (metadata, not fixed like GaussianCloud's):
     std::string coordinate_frame = "unknown";  // "unknown"|"opencv"|"opengl"|"enu"|"ned"
     double scale_to_meters = 1.0;              // multiply xyz by this to get meters
     std::string intensity_range = "unknown";   // "unknown"|"unit"|"u8"|"u16"
+    // georef anchor (LAS/E57): true position = xyz + origin. Kept in double so a
+    // large offset (UTM easting ~1e6) doesn't crush the f32 xyz precision.
+    double origin[3] = {0.0, 0.0, 0.0};
 
     bool has_rgb() const { return !rgb.empty(); }
+    bool has_rgb16() const { return !rgb16.empty(); }
     bool has_normals() const { return !normals.empty(); }
     bool has_intensity() const { return !intensity.empty(); }
     size_t num_points() const { return n; }
