@@ -23,56 +23,58 @@ SoA, zero-copy to numpy/torch (DLPack), conventions carried as metadata.
 | `Camera` | (shared) | ✅ | COLMAP model id + `params[]`; reused by `Reconstruction` and `PosedViewSet` |
 | `Image` | `image_sequence` elem | ✅ | interleaved HxWxC (u8/u16/f32), color_space/alpha_mode/maxval metadata, owner‑safe zero‑copy `pixels` |
 | `TensorDict` | (named arrays) | ✅ | dict‑like, 12 numpy dtypes (dtype‑erased), zero‑copy views; backs npz now, HDF5/safetensors later |
-| `PointCloud` | `point_cloud` (new) | 🟡 | Phase 1b (in progress) — xyz + rgb + normals + intensity |
-| `DepthMap` / `Dense` | `dense` / `depth_map` | 🟡 | Phase 1b (in progress) — typed depth + scale/unit/invalid + confidence |
+| `PointCloud` | `point_cloud` (new) | ✅ | xyz + rgb + normals + intensity; backs `.xyz`/`.pts` (and plain `.las` next) |
+| `DepthMap` / `Dense` | `dense` / `depth_map` | ✅ | typed depth + scale/unit/invalid + confidence |
 | `FeatureSet` | `feature_set` | ⬜ | Phase 3 — keypoints + descriptors + scores |
 | `MatchGraph` | `match_graph` | ⬜ | Phase 3 — per‑pair matches + F/E/H + inliers |
 
 ## Formats (codecs)
 
-### ✅ Implemented (10 codecs)
+### ✅ Implemented — Tier‑1 zero‑dep spine (17 codecs, Phase 1a/1b/1c + 2)
 
 | Format id | Record | R/W | Oracle | Notes |
 |---|---|---|---|---|
 | `pfm` | ndarray | R+W | pure‑Python | reference codec; PFM depth/gray/color |
 | `colmap_sparse` | `Reconstruction` | R+W | **pycolmap** | `.bin`; byte‑identical to pycolmap 4.1.1 |
+| `colmap_txt` | `Reconstruction` | R+W | **pycolmap** | text twin of `.bin` |
 | `gaussian_ply` | `GaussianCloud` | R+W | **gsply** | 3DGS Gaussian PLY, channel‑grouped f_rest |
 | `spz` | `GaussianCloud` | R+W | **gsply** | v1/2/3 read, **v3+v4 write**, v4 read; bit‑exact v3 encode |
+| `splat` | `GaussianCloud` | R+W | numpy oracle | antimatter15 blob; WXYZ+SH_C0 verified; lossy 8‑bit, SH‑drop |
 | `transforms_json` | `PosedViewSet` | R+W | pure‑Python | NeRF/Instant‑NGP/Nerfstudio; records OpenGL c2w |
 | `tum` | `PosedViewSet` | R+W | pure‑Python | TUM trajectory (xyzw, verbatim) |
 | `kitti` | `PosedViewSet` | R+W | pure‑Python | KITTI 3×4 [R\|t] poses |
+| `bundler` | `Reconstruction` | R+W | pycolmap | Bundler `.out` |
+| `nvm` | `Reconstruction` | R+W | manual | VisualSFM `.nvm` (NVM_V3) |
+| `openmvg` | `Reconstruction` | R+W | manual | openMVG `sfm_data.json` |
 | `npy` | ndarray | R+W | **numpy** | numpy 1.0/2.0/3.0 header; byte‑exact v1.0 writer (== np.save) |
 | `npz` | `TensorDict` | R+W | **numpy** | ZIP (stored+deflate) via vendored miniz; 12 dtypes |
 | `netpbm` | `Image` | R+W | pure‑Python | PGM P5/P2 + PPM P6/P3; 16‑bit big‑endian, comment‑tolerant |
+| `.xyz` / `.pts` | `PointCloud` | R+W | pure‑Python | point‑cloud text (fast_float parsing) |
+| `.flo` | ndarray (H,W,2) | R+W | pure‑Python | Middlebury optical flow |
 
-### 🟡 In progress — Tier‑1 spine (Phase 1b, zero external deps)
+Deferred within Tier‑1: g2o poses (pose‑graph *edges* don't fit `PosedViewSet`).
 
-| Format | Record | Oracle | Notes |
+### ⬜ Next — image / HDR / depth tier via **vendored permissive source** (no system libs)
+
+Key reframing: most "needs a C lib" image formats have permissive, self‑contained
+single‑header/source libraries that drop into the **existing FetchContent/vendored
+pattern** (miniz, zstd, nlohmann/json, fast_float) — so they need **no vcpkg/conda
+`SCENEIO_WITH_*` gate** and keep the runtime dep numpy‑only. Target Image/PointCloud.
+
+| Format | Record | Vendorable lib (license) | Notes |
 |---|---|---|---|
-| COLMAP `.txt` | `Reconstruction` | pycolmap | text twin of `.bin` |
-| `.xyz` / `.pts` | `PointCloud` | pure‑Python | point‑cloud text |
-| `.flo` | ndarray (H,W,2) | pure‑Python | Middlebury optical flow |
-| g2o poses | `PosedViewSet` | manual | deferred — pose‑graph *edges* don't fit `PosedViewSet` |
+| PNG (incl. 16‑bit depth) | `Image` | lodepng (zlib) — self‑contained inflate | Pillow/imageio as test oracle |
+| JPEG (baseline) | `Image` | stb_image / stb_image_write (public domain) | decode+encode; lossy |
+| Radiance `.hdr` | `Image`(f32) | stb_image / stb_image_write (public domain) | |
+| OpenEXR | `Image`(f32) | tinyexr (BSD) — reuses our miniz | half/float, tiled |
+| WebP | `Image` | libwebp (BSD) — CMake FetchContent from source | moderate build |
+| plain `.las` | `PointCloud` | **none** — documented binary, like colmap `.bin` | LAZ (laszip) deferred |
 
-### ⬜ Pending — Phase 2 (splat, mostly done)
+Genuinely need the system‑lib `SCENEIO_WITH_*` gate (deferred): HDF5 (+hloc), TIFF
+(libtiff), LAZ (laszip). COLMAP DB `.db` (sqlite) and safetensors are separate.
 
-| Format | Record | Oracle | Notes |
-|---|---|---|---|
-| `.splat` | `GaussianCloud` | ref loaders | the simple splat blob |
-| SuperSplat compressed `.ply` | `GaussianCloud` | ref loaders | |
-| *(3DGS `.ply` ✅, `.spz` ✅)* | | | already done |
-
-### ⬜ Pending — Phase 3 (arrays / features · first C libs)
-HDF5 + hloc layout (h5py) · COLMAP DB `.db` sqlite (pycolmap) · safetensors.
-
-### ⬜ Pending — Phase 4 (images / HDR / depth)
-PNG · JPEG · TIFF · WebP (Pillow/imageio) · **OpenEXR** · 16‑bit depth PNG · `.flo` optical flow.
-
-### ⬜ Pending — Phase 5 (point clouds)
-PCD (open3d) · LAS / LAZ (laspy / lazrs).
-
-### ⬜ Pending — Phase 6 (meshes + niche)
-glTF / GLB (+Draco) · OBJ / STL / OFF · USD / USDZ · OpenVDB · Zarr · Parquet · AVIF / JPEG‑XL · PlayCanvas SOG.
+### ⬜ Pending — later phases (meshes + niche)
+glTF / GLB (+Draco) · OBJ / STL / OFF · USD / USDZ · OpenVDB · Zarr · Parquet · AVIF / JPEG‑XL · PlayCanvas SOG · PCD.
 
 ### ⬜ Pending — Phase 7 (hardening)
 Differential fuzzing at scale · big‑file mmap/streaming · GPU‑via‑DLPack (torch‑cuda/cupy) · benchmarks vs oracles · ASan/leak runs.
@@ -88,8 +90,9 @@ Differential fuzzing at scale · big‑file mmap/streaming · GPU‑via‑DLPack
 | Zero‑copy numpy + torch (DLPack) | ✅ | validated per codec |
 | Conventions‑as‑metadata + write guards | ✅ | record‑don't‑convert enforced |
 | Parity kit (`sceneio.testing.parity`) | ✅ | cross‑impl + round‑trip + convention pins |
-| Vendored deps (miniz, zstd, nlohmann/json) | ✅ | permissive; statically linked |
-| Feature‑flagged optional C libs (`SCENEIO_WITH_*`) | ⬜ | Phase 3+ (HDF5/PNG/EXR/LAS/…) |
+| Vendored deps (miniz, zstd, nlohmann/json, fast_float) | ✅ | permissive; statically linked / header‑only |
+| Vendored image libs (lodepng/stb/tinyexr/libwebp) | ⬜ | **next tier** — FetchContent, no system libs, numpy‑only runtime kept |
+| Feature‑flagged optional C libs (`SCENEIO_WITH_*`) | ⬜ | deferred — only for HDF5 / TIFF / LAZ (no permissive single‑header option) |
 | mmap / streaming sources | ⬜ | Phase 7 (early for COLMAP/LAS) |
 | Capability flags (`reads/writes/streams/lossy/needs_dep`) | ⬜ | surface per codec |
 | `splat` / `posed_views` DataTypes in the vocabulary | ⬜ | **Phase‑C** (wire identity; cross‑repo) |
