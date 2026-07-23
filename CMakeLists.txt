@@ -96,9 +96,11 @@ nanobind_add_module(_core STABLE_ABI NB_STATIC
   src/cpp/codecs/png.cpp
   src/cpp/codecs/jpeg.cpp
   src/cpp/codecs/hdr.cpp
-  src/cpp/third_party/stb/stb_impl.cpp)
+  src/cpp/codecs/exr.cpp
+  src/cpp/third_party/stb/stb_impl.cpp
+  src/cpp/third_party/tinyexr/tinyexr_impl.cpp)
 target_include_directories(_core PRIVATE src/cpp ${zstd_SOURCE_DIR}/lib ${fast_float_SOURCE_DIR}/include
-  src/cpp/third_party/stb)
+  src/cpp/third_party/stb src/cpp/third_party/tinyexr)
 target_link_libraries(_core PRIVATE miniz_static nlohmann_json::nlohmann_json libzstd_static lodepng_static)
 
 # Land the extension inside the importable `sceneio` package as sceneio._core.

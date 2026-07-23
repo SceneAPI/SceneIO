@@ -267,6 +267,19 @@ register(
         magic=(b"#?RADIANCE", b"#?RGBE"),
     )
 )
+# OpenEXR (vendored tinyexr, reuses our miniz) -> Image (float32 linear). The
+# 4-byte magic 0x76 0x2f 0x31 0x01 is the EXR signature.
+register(
+    Codec(
+        "exr",
+        (".exr",),
+        _bytes_reader(_core.read_exr),
+        _bytes_writer(_core.write_exr),
+        record=_core.Image,
+        datatype="image",
+        magic=(b"\x76\x2f\x31\x01",),
+    )
+)
 # COLMAP text sparse (cameras.txt/images.txt/points3D.txt) — the text twin of
 # colmap_sparse; a directory format distinguished by its cameras.txt marker.
 register(

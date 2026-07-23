@@ -32,6 +32,7 @@ void register_splat(nb::module_ &);
 void register_png(nb::module_ &);
 void register_jpeg(nb::module_ &);
 void register_hdr(nb::module_ &);
+void register_exr(nb::module_ &);
 
 NB_MODULE(_core, m) {
     m.doc() = "sceneio compiled core (nanobind): codecs + SoA memory representations";
@@ -63,4 +64,5 @@ NB_MODULE(_core, m) {
     register_png(m);
     register_jpeg(m);
     register_hdr(m);
+    register_exr(m);
 }

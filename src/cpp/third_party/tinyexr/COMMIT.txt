@@ -1,0 +1,10 @@
+syoyo/tinyexr @ 1b106618644dbf8a0935c2348ba51a2d863dd7c2 (branch: release)
+
+Vendored files (the release branch splits the header, so all are required):
+- tinyexr.h        (public API + implementation, guarded by TINYEXR_IMPLEMENTATION)
+- exr_reader.hh    (included by tinyexr.h)
+- streamreader.hh  (included by exr_reader.hh)
+
+Uses OUR vendored miniz (TINYEXR_USE_MINIZ=1 -> #include <miniz.h>, resolved via
+miniz_static's PUBLIC include dir); tinyexr's own deps/miniz is NEVER compiled.
+No local patches.
