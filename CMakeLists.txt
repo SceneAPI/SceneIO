@@ -57,6 +57,18 @@ FetchContent_Declare(fast_float
   URL https://github.com/fastfloat/fast_float/archive/refs/tags/v6.1.6.tar.gz)
 FetchContent_MakeAvailable(fast_float)
 
+# lodepng (zlib license) — PNG codec. Vendored in-repo at
+# src/cpp/third_party/lodepng (COMMIT.txt pins the source); it has its own
+# self-contained inflate/deflate (lodepng_*-prefixed, no miniz interaction), so
+# it builds as a tiny static lib with no external deps. LODEPNG_NO_COMPILE_DISK
+# drops the fopen paths (bytes-only API); hidden visibility keeps its symbols out
+# of _core's export table.
+add_library(lodepng_static STATIC src/cpp/third_party/lodepng/lodepng.cpp)
+target_include_directories(lodepng_static PUBLIC src/cpp/third_party/lodepng)
+target_compile_definitions(lodepng_static PUBLIC LODEPNG_NO_COMPILE_DISK)
+set_property(TARGET lodepng_static PROPERTY POSITION_INDEPENDENT_CODE ON)
+set_property(TARGET lodepng_static PROPERTY CXX_VISIBILITY_PRESET hidden)
+
 nanobind_add_module(_core STABLE_ABI NB_STATIC
   src/cpp/module.cpp
   src/cpp/records/reconstruction.cpp
@@ -80,9 +92,10 @@ nanobind_add_module(_core STABLE_ABI NB_STATIC
   src/cpp/codecs/bundler.cpp
   src/cpp/codecs/nvm.cpp
   src/cpp/codecs/openmvg.cpp
-  src/cpp/codecs/splat.cpp)
+  src/cpp/codecs/splat.cpp
+  src/cpp/codecs/png.cpp)
 target_include_directories(_core PRIVATE src/cpp ${zstd_SOURCE_DIR}/lib ${fast_float_SOURCE_DIR}/include)
-target_link_libraries(_core PRIVATE miniz_static nlohmann_json::nlohmann_json libzstd_static)
+target_link_libraries(_core PRIVATE miniz_static nlohmann_json::nlohmann_json libzstd_static lodepng_static)
 
 # Land the extension inside the importable `sceneio` package as sceneio._core.
 install(TARGETS _core LIBRARY DESTINATION sceneio)

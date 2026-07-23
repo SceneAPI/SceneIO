@@ -29,6 +29,7 @@ void register_bundler(nb::module_ &);
 void register_nvm(nb::module_ &);
 void register_openmvg(nb::module_ &);
 void register_splat(nb::module_ &);
+void register_png(nb::module_ &);
 
 NB_MODULE(_core, m) {
     m.doc() = "sceneio compiled core (nanobind): codecs + SoA memory representations";
@@ -57,4 +58,5 @@ NB_MODULE(_core, m) {
     register_nvm(m);
     register_openmvg(m);
     register_splat(m);
+    register_png(m);
 }

@@ -227,6 +227,19 @@ register(
         magic=(b"P2", b"P3", b"P5", b"P6"),
     )
 )
+# PNG via vendored lodepng -> Image. gray/RGB/RGBA at 8/16-bit + palette; the
+# 8-byte signature is unambiguous. 16-bit PNG is the depth-map workhorse.
+register(
+    Codec(
+        "png",
+        (".png",),
+        _bytes_reader(_core.read_png),
+        _bytes_writer(_core.write_png),
+        record=_core.Image,
+        datatype="image",
+        magic=(b"\x89PNG\r\n\x1a\n",),
+    )
+)
 # COLMAP text sparse (cameras.txt/images.txt/points3D.txt) — the text twin of
 # colmap_sparse; a directory format distinguished by its cameras.txt marker.
 register(
