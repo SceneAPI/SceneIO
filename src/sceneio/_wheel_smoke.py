@@ -117,6 +117,32 @@ def _point_depth_and_flow(root: Path, values: np.ndarray) -> None:
     )
     assert sceneio.inspect(ply).metadata["byte_order"] == "big"
 
+    pcd = root / "points.pcd"
+    pcd_record = _core.point_cloud(
+        values[:, :3],
+        colors=np.arange(9, dtype=np.uint8).reshape(3, 3),
+        width=1,
+        height=3,
+        viewpoint=np.asarray(
+            [1, 2, 3, 1, 0, 0, 0],
+            dtype=np.float64,
+        ),
+    )
+    pcd.write_bytes(_core.write_pcd(pcd_record, "binary_compressed"))
+    assert sceneio.detect(pcd) == "pcd"
+    pcd_decoded = sceneio.read(pcd)
+    assert np.array_equal(pcd_decoded.positions, values[:, :3])
+    assert np.array_equal(pcd_decoded.colors, pcd_record.colors)
+    assert (pcd_decoded.width, pcd_decoded.height) == (1, 3)
+    assert pcd_decoded.viewpoint == pcd_record.viewpoint
+    assert sceneio.inspect(pcd).metadata["storage"] == "binary_compressed"
+
+    pcd.write_bytes(_core.write_pcd(pcd_record, "binary"))
+    assert np.array_equal(
+        sceneio.read_partial(pcd, points=(1, 3)).colors,
+        pcd_record.colors[1:3],
+    )
+
     depth_values = np.arange(20, dtype=np.float32).reshape(4, 5)
     depth = _core.depth_map(
         depth_values,

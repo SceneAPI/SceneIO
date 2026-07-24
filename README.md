@@ -73,7 +73,7 @@ artifacts vocabulary — wire identity unchanged.
 
 ### Compiled format I/O — `read` / `write` / `inspect` / `read_partial`
 
-The lazy-loaded compiled core reads and writes 30 image, depth, tensor,
+The lazy-loaded compiled core reads and writes 31 image, depth, tensor,
 point-cloud, Gaussian, pose, and reconstruction formats.
 `sceneio.inspect(path)` returns an immutable `Inspection` with shape, dtype,
 channels, repeated-record counts, and format-specific scalar metadata without
@@ -164,6 +164,19 @@ assert sceneio.inspect("scan.ply").metadata["encoding"] in {
     "ascii",
     "binary_little_endian",
     "binary_big_endian",
+}
+
+# PCD 0.7 preserves organized WIDTH/HEIGHT and VIEWPOINT. Public writes use
+# little-endian binary; the core also supports ASCII and LZF binary_compressed.
+organized = sceneio.read("organized.pcd")
+assert organized.width * organized.height == organized.num_points
+pcd_part = sceneio.read_partial(
+    "organized.pcd", points=(10_000, 20_000)
+)
+assert sceneio.inspect("organized.pcd").metadata["storage"] in {
+    "ascii",
+    "binary",
+    "binary_compressed",
 }
 
 # One COLMAP pose and its camera, without opening points3D.

@@ -33,7 +33,7 @@ jobs:
         run: .venv/bin/ruff check src tests
       - name: Test
         run: .venv/bin/python -m pytest -q
-      - name: Benchmark harness smoke (all 30 codecs)
+      - name: Benchmark harness smoke (all 31 codecs)
         run: .venv/bin/python bench/bench_io.py --runs 1 --scale 0.001 --json "${{ runner.temp }}/sceneio-benchmark.json"
       - name: I/O throughput and memory regression guard
         run: .venv/bin/python bench/bench_io.py --runs 5 --require-o4-gains --require-o5-inspect-gains --require-o5-partial-gains --json "${{ runner.temp }}/sceneio-benchmark-guard.json"
@@ -60,8 +60,8 @@ jobs:
           uv venv --seed
           uv pip install -e ".[dev,test]"
       - name: Cross-platform mmap, partial-read, zero-copy, file-sink, and locked-file tests
-        run: .venv/Scripts/python.exe -m pytest -q tests/test_io_mmap.py tests/test_io_partial.py tests/test_io_zero_copy.py tests/test_io_parallel.py tests/codecs/test_safetensors.py tests/codecs/test_pts.py tests/codecs/test_dmb.py tests/codecs/test_bal.py tests/codecs/test_bmp_tga.py
+        run: .venv/Scripts/python.exe -m pytest -q tests/test_io_mmap.py tests/test_io_partial.py tests/test_io_zero_copy.py tests/test_io_parallel.py tests/codecs/test_safetensors.py tests/codecs/test_pts.py tests/codecs/test_dmb.py tests/codecs/test_bal.py tests/codecs/test_bmp_tga.py tests/codecs/test_pcd.py
         if: runner.os == 'Windows'
       - name: Cross-platform mmap, partial-read, zero-copy, and file-sink tests
-        run: .venv/bin/python -m pytest -q tests/test_io_mmap.py tests/test_io_partial.py tests/test_io_zero_copy.py tests/test_io_parallel.py tests/codecs/test_safetensors.py tests/codecs/test_pts.py tests/codecs/test_dmb.py tests/codecs/test_bal.py tests/codecs/test_bmp_tga.py
+        run: .venv/bin/python -m pytest -q tests/test_io_mmap.py tests/test_io_partial.py tests/test_io_zero_copy.py tests/test_io_parallel.py tests/codecs/test_safetensors.py tests/codecs/test_pts.py tests/codecs/test_dmb.py tests/codecs/test_bal.py tests/codecs/test_bmp_tga.py tests/codecs/test_pcd.py
         if: runner.os != 'Windows'

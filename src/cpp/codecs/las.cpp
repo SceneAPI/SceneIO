@@ -169,6 +169,9 @@ nb::bytes write_las(const PointCloud &pc, double scale, size_t lanes) {
         throw std::invalid_argument(
             "las: LAS intensity is 16-bit; a '" + pc.intensity_range +
             "'-ranged intensity must be rescaled to u16 first");
+    if (!pc.has_default_organization() || !pc.has_default_viewpoint())
+        throw std::invalid_argument(
+            "las: organized shape and acquisition viewpoint metadata are not representable");
     if (!(scale > 0.0))
         throw std::invalid_argument("las: scale must be positive");
     if (pc.n > 0xFFFFFFFFull)

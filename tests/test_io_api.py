@@ -220,6 +220,7 @@ def _pc():
         ("exr", ".exr", _img_f32, True),
         ("webp", ".webp", _img_u8, True),  # write defaults to lossless
         ("ply", ".ply", _pc, True),
+        ("pcd", ".pcd", _pc, True),
         ("las", ".las", _pc, None),
     ],
 )
@@ -233,7 +234,7 @@ def test_image_point_codec_roundtrip_via_public_api(tmp_path, fmt, ext, build, l
         assert isinstance(back, sceneio.PointCloud) and back.num_points == len(original)
         true = np.asarray(back.positions).astype(np.float64) + np.asarray(back.origin)
         np.testing.assert_allclose(true, original, atol=0.001)  # i32 grid, within scale/2
-    elif fmt == "ply":
+    elif fmt in {"ply", "pcd"}:
         assert isinstance(back, sceneio.PointCloud) and back.num_points == len(original)
         np.testing.assert_array_equal(back.positions, original)
     else:

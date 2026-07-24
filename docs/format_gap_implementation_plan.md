@@ -2,11 +2,12 @@
 
 - **Status:** execution in progress after SceneIO 0.2.0. G0, safetensors, PTS,
   scalar DMB, BAL, BMP/TGA, the compiled `FlowField` record, typed FLO, typed
-  PFM depth, typed PNG depth, typed scalar EXR depth, and generic point PLY are
-  complete locally. PCD is the next codec in the default-wheel sequence.
+  PFM depth, typed PNG depth, typed scalar EXR depth, generic point PLY, and
+  PCD are complete locally. The small pose/calibration records are next in the
+  default-wheel sequence.
   Cross-platform wheel and instrumented validation remains a user-gated remote
   action.
-- **Current branch:** 30 compiled codecs, all read/write and inspectable, with
+- **Current branch:** 31 compiled codecs, all read/write and inspectable, with
   bounded partial reads where their containers permit them.
 - **Scope:** close every unblocked format gap declared by SceneIO's coverage
   documents without reimplementing the 0.2.0 codec tier.
@@ -125,7 +126,7 @@ exit gate and the validation matrix in section 8 both pass.
 |---|---|---|
 | Reconstruction and pose | COLMAP database, EuRoC state CSV, g2o | BAL |
 | Splat | SuperSplat SOG / compressed PLY, KSplat | — |
-| Point cloud | PCD, LAS waveform formats 4/5/9/10, LAZ, E57 | count-prefixed PTS and generic point PLY |
+| Point cloud | LAS waveform formats 4/5/9/10, LAZ, E57 | count-prefixed PTS, generic point PLY, and PCD |
 | Mesh | mesh PLY, OBJ/MTL, STL, OFF, glTF/GLB, USD/USDZ; optional Draco is policy-gated | — |
 | Tensor/feature/table | COLMAP features/matches, HDF5, hloc layout, Zarr v2/v3, Parquet | safetensors |
 | Image and depth | TIFF | BMP, TGA, typed PFM depth, typed PNG depth, typed scalar EXR depth, scalar DMB |
@@ -244,7 +245,7 @@ G0 capability truth
  ├─ G1 Mesh/MaterialSet ── G3 mesh codecs ───── optional USD/Draco
  ├─ G1 Feature/Match ───── COLMAP DB ────────── HDF5/hloc
  ├─ existing TensorDict ── safetensors ──────── Zarr
- ├─ existing PointCloud ── generic point PLY ✅ ── PCD ── LAZ/E57
+ ├─ existing PointCloud ── generic point PLY ✅ ── PCD ✅ ── LAZ/E57
  ├─ G1 CameraRig/PoseGraph/StateTrajectory ─ calibration/g2o/EuRoC
  ├─ G1 ImageSequence ───── image-dir/Y4M ────── animated formats
  └─ G1 Table/Grid/Scene ── Parquet/OpenVDB/USD
@@ -335,7 +336,7 @@ Benchmark:
 - bulk feature/match insertion, one-image read, one-pair read, and full scan;
 - compare prepared statements/transactions against the test-side reference.
 
-#### G2.3 PTS and generic point PLY complete locally; PCD pending
+#### G2.3 PTS, generic point PLY, and PCD complete locally
 
 PTS implementation:
 
@@ -359,24 +360,30 @@ PTS completion evidence (2026-07-24):
 - Linux instrumentation and Linux/macOS wheel validation remain pending until
   the user authorizes the branch push and remote workflows.
 
-Remaining implementation:
+PCD completion:
 
-- Support PCD ASCII, binary, and `binary_compressed` LZF layouts.
-- Map organized PCD width/height and viewpoint into metadata.
-- Inspect PCD headers without reading payloads.
-- Provide point ranges for fixed-record binary PCD. Text and compressed
-  variants expose partial reads only if a bounded index can be constructed
-  without full payload materialization.
+- PCD 0.7 ASCII, little-endian binary, and LZF `binary_compressed` map required
+  x/y/z plus optional normals, packed RGB, and intensity into `PointCloud`.
+- The record now carries optional organized width/height and
+  tx/ty/tz/qw/qx/qy/qz viewpoint metadata; older point codecs retain implicit
+  `(N,1)` plus identity defaults and refuse PCD-only metadata on write.
+- Header-only inspection validates schema and file extents without decoding
+  payloads. Uncompressed binary point ranges allocate only the selected rows;
+  ASCII and compressed ranges reject explicitly.
+- Public binary sinks stream fixed-record chunks rather than materializing a
+  full native output buffer. Compressed writes retain the unavoidable
+  field-major transform and LZF buffer.
 
 Oracles:
 
-- independent PTS/PLY parsers plus Open3D in test extras. `plyfile` is
+- independent PTS/PLY/PCD parsers plus Open3D in test extras. `plyfile` is
   deliberately excluded: its current GPLv3 license violates the project's
   permissive-license-only constraint.
 
 Verification:
 
-- organized clouds, PCD field counts/types, and LZF blocks;
+- organized clouds, every PCD scalar field type, packed RGB encodings, field
+  ordering, malformed counts/sizes, and LZF literal/back-reference bounds;
 - PTS declared-count mismatch, missing count, supported column layouts, and
   canonical writer header;
 - writer refusal when the selected output format cannot represent a record
@@ -384,8 +391,9 @@ Verification:
 
 Benchmark:
 
-- PCD LZF compression;
-- point-range memory versus full decode.
+- PCD ASCII/binary/LZF encode and decode throughput;
+- header inspection, mmap and sink allocation, and point-range memory versus
+  full decode.
 
 #### G2.4 Small reconstruction, depth, calibration, and splat formats
 
@@ -1591,15 +1599,16 @@ estimates.
 
 The current local checkpoint is:
 
-- 30 compiled registry codecs with read, write, inspect, mmap input, and direct
+- 31 compiled registry codecs with read, write, inspect, mmap input, and direct
   file sinks;
 - O0-O5 complete for the existing codec tier;
 - `FlowField`, typed FLO, typed PFM depth, typed PNG depth, and typed scalar EXR
   depth complete;
-- 1,898 local tests pass with 3 documented optional skips, Ruff and
+- 1,976 local tests pass with 3 documented optional skips, Ruff and
   `git diff --check` are clean;
 - the all-codec benchmark guard and packaged numpy-only wheel smoke pass;
-- generic point PLY is complete locally; PCD is the next unfinished codec;
+- generic point PLY and PCD are complete locally; the small
+  pose/calibration records are next;
 - instrumented Linux and Linux/macOS wheels have not yet been run for this
   dependency wave because pushing and dispatching remote workflows are
   user-gated.
@@ -1736,19 +1745,67 @@ Verification and validation evidence (2026-07-24):
   Linux sanitizer and Linux/macOS wheel validation remain user-gated remote
   actions.
 
-#### B2. PCD
+#### B2. PCD — complete locally
 
-- Support ASCII, binary, and `binary_compressed` LZF; preserve `FIELDS`,
-  `SIZE`, `TYPE`, `COUNT`, organized `WIDTH`/`HEIGHT`, and `VIEWPOINT`.
-- Define the exact supported mapping into `PointCloud`; refuse unknown
-  multi-count fields or metadata that cannot round-trip.
-- Add header-only inspect and fixed-record uncompressed ranges. Compressed
-  ranges are unsupported until chunk-bounded behavior is real.
-- Verify independent Open3D plus specification-based parser parity, endian and
-  field layouts, LZF block bounds, organized clouds, malformed counts, and
-  deterministic sink output.
-- Benchmark text, binary, LZF, inspect, range selection, and memory at
-  100 MiB-class payloads.
+Implementation:
+
+- The native PCD 0.7 reader accepts ASCII, little-endian binary, and LZF
+  `binary_compressed`, arbitrary supported field order, every standard
+  integer/float size, required x/y/z, complete normal triples, packed
+  SIZE-4 TYPE-F/U RGB, and optional intensity.
+- `PointCloud` additively records organized width/height and the seven-value
+  acquisition viewpoint. Full reads preserve both; point subsets become
+  unorganized while retaining viewpoint. XYZ, PTS, generic PLY, and LAS
+  writers reject nondefault values they cannot serialize.
+- Unknown fields, COUNT other than one, incomplete normals, unsupported RGB,
+  finite float64 overflow, inconsistent WIDTH/HEIGHT/POINTS, malformed header
+  order, oversized headers, truncated/trailing bodies, size bombs, and invalid
+  LZF streams reject before record allocation.
+- The deterministic writer defaults publicly to binary and exposes private
+  ASCII/binary/LZF variants for verification. Binary and ASCII file sinks emit
+  bounded chunks; LZF output uses a clean in-tree compatible implementation
+  with no new native or runtime dependency.
+- Registry detection, mmap input, direct sinks, header-only inspection,
+  capabilities, public E2E dispatch, and fixed-record binary ranges cover PCD.
+  ASCII and compressed ranges intentionally reject.
+
+Verification and validation evidence (2026-07-24):
+
+- 76 focused cases triangulate the native reader/writer with an independent
+  NumPy/stdlib parser, an independently implemented LZF decoder, and Open3D
+  0.19 in both directions across all three storage modes.
+- The cases cover scalar widths, field ordering, packed RGB F/U, intensity
+  tags, signed zero/infinity/NaN behavior, organized metadata, empty clouds,
+  malformed counts/extents/LZF tokens, mmap lifetime and mutation isolation,
+  bounded inspection, streaming sinks, partial reads, and guard-before-open
+  behavior.
+- Shared mmap/sink/inspection/partial/capability/E2E tests include PCD. The
+  full local MSVC suite passes 1,976 tests with 3 documented optional skips;
+  Ruff is clean and the numpy-only wheel smoke passes.
+- On a generated 4,000,000-point fixture (108 MB logical, 112 MB binary),
+  binary write/read measured 1,937/3,595 MB/s, LZF 168/1,566 MB/s, and ASCII
+  25/113 MB/s. Header inspection was 1,015x faster and the middle 1/16 point
+  range was 22.48x faster than full public decode.
+- Mmap removed 112.0 MB of traced input allocation. The chunked binary sink
+  reduced traced output allocation from 112.0 MB to 0.001 MB and sampled RSS
+  from 112.0 MB to 1.9 MB. The partial path used 12.9 MB sampled RSS versus
+  219.2 MB for the full mapping plus decoded record.
+- A 100,000-point oracle run measured SceneIO binary write/read at
+  1,894/3,233 MB/s versus Open3D at 25/63 MB/s. Random data made LZF slightly
+  larger, and that honest incompressible result is recorded rather than
+  filtered.
+- The accepted five-run 31-codec harness leaves every retained O4/O5
+  directional and mmap/sink allocation guard green.
+- A clean Windows cp312-abi3 wheel contains 36 entries, no leaked
+  include/lib/share/bin artifacts, retains numpy as its only unconditional
+  runtime requirement, exports all three PCD symbols, and passes the packaged
+  smoke under NumPy 2.5.
+- Manual memory-safety, format-correctness, and test-soundness review found and
+  fixed overflow-prone worst-case LZF sizing, noncanonical empty organization,
+  missing valid overlap-match coverage, and inspection-parser failure gaps.
+  The Fable executable was unavailable locally, so the same three lenses were
+  applied manually. Linux sanitizer and Linux/macOS wheel validation remain
+  user-gated remote actions.
 
 #### B3. Small record-backed pose and calibration formats
 
@@ -1794,7 +1851,7 @@ Wave B exit:
   registry-wide E2E sweep;
 - the default install remains numpy-only and all native code is vendored,
   pinned, permissively licensed, and statically linked;
-- the original 29-codec behavior, benchmarks, and golden bytes remain green;
+- the original 30-codec behavior, benchmarks, and golden bytes remain green;
 - the dependency-wave remote validation in section 12.10 passes.
 
 ### 12.4 Wave C — canonical mesh tier

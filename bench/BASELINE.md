@@ -573,3 +573,46 @@ The accepted five-run 30-codec guard then measured the default 1,000,000-point
 PLY row at 753 MB/s write and 851 MB/s read, with a 469x inspection gain and
 20.76x partial-read gain. Every retained O4/O5 directional and mmap/sink
 allocation guard passed.
+
+## PCD baseline — 2026-07-24
+
+The harness now covers 31 codecs and reports PCD 0.7 ASCII, little-endian
+binary, and LZF `binary_compressed` variants. A three-run generated
+4,000,000-point fixture carries float32 positions/normals plus uint8 RGB:
+108.0 MB of logical arrays, 112.0 MB as binary (packed RGB occupies four
+bytes), 310.1 MB as ASCII, and 114.9 MB as LZF. The random fixture is
+intentionally incompressible; LZF correctly grows it slightly rather than
+claiming a synthetic compression win.
+
+```text
+encoding / operation                 result
+-------------------------------------------------------------
+binary write                          1,937 MB/s
+binary read                           3,595 MB/s
+binary_compressed write                 168 MB/s
+binary_compressed read                1,566 MB/s
+ASCII write                              25 MB/s
+ASCII read                              113 MB/s
+public mmap binary read               1,238 MB/s
+direct streaming binary sink          1,155 MB/s
+header-only inspect                   0.086 ms
+middle 1/16 point range               3.882 ms
+full public read                     87.258 ms
+```
+
+Inspection was 1,015x faster than full decode and added 0.02 MB sampled RSS.
+The fixed-record range was 22.48x faster and used 12.9 MB sampled RSS versus
+219.2 MB for the full mapping plus output record. Mmap removed 112.0 MB of
+traced input allocation. The chunked binary sink reduced traced allocation
+from 112.0 MB to 0.001 MB and sampled RSS from 112.0 MB to 1.9 MB while
+remaining byte-identical to the buffer writer.
+
+A separate three-run 100,000-point oracle pass measured SceneIO binary write
+and read at 1,894 and 3,233 MB/s versus Open3D 0.19 at 25 and 63 MB/s.
+Open3D is MIT-licensed and test-only; no new native or runtime dependency was
+added.
+
+The accepted five-run 31-codec guard measured the default 1,000,000-point PCD
+row at 1,933 MB/s write and 3,414 MB/s read, with a 276x inspection gain and
+26.34x partial-read gain. Every retained O4/O5 directional and mmap/sink
+allocation guard passed.

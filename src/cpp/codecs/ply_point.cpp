@@ -650,6 +650,10 @@ void validate_writer(const PointCloud &cloud) {
         cloud.origin[2] != 0.0)
         throw std::invalid_argument(
             "PLY point cloud: georeferenced origin is not representable");
+    if (!cloud.has_default_organization() ||
+        !cloud.has_default_viewpoint())
+        throw std::invalid_argument(
+            "PLY point cloud: organized shape and acquisition viewpoint metadata are not representable");
     if (!cloud.has_intensity() && cloud.intensity_range != "unknown")
         throw std::invalid_argument(
             "PLY point cloud: intensity range metadata has no intensity field");

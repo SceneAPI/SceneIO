@@ -616,6 +616,9 @@ nb::bytes write_xyz(const PointCloud &pc, size_t lanes) {
         throw std::invalid_argument(
             "xyz: writer emits local coordinates; a georeferenced record (origin != 0) would lose "
             "its anchor -- bake origin into positions first");
+    if (!pc.has_default_organization() || !pc.has_default_viewpoint())
+        throw std::invalid_argument(
+            "xyz: organized shape and acquisition viewpoint metadata are not representable");
     std::string out;
     {
         nb::gil_scoped_release rel;  // pure C++ encode
@@ -640,6 +643,9 @@ nb::bytes write_pts(const PointCloud &pc, size_t lanes) {
     if (pc.coordinate_frame != "unknown" || pc.scale_to_meters != 1.0)
         throw std::invalid_argument(
             "pts: coordinate frame and scale metadata are not representable");
+    if (!pc.has_default_organization() || !pc.has_default_viewpoint())
+        throw std::invalid_argument(
+            "pts: organized shape and acquisition viewpoint metadata are not representable");
     if (pc.intensity_range != "unknown")
         throw std::invalid_argument(
             "pts: intensity range metadata is not representable");

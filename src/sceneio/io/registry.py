@@ -518,6 +518,37 @@ register(
 )
 register(
     Codec(
+        "pcd",
+        (".pcd",),
+        _mmap_reader(_core.read_pcd),
+        _file_sink_writer(_core.write_pcd),
+        record=_core.PointCloud,
+        datatype="point_cloud",
+        magic=(b"# .PCD",),
+        read_points=_mmap_selector_reader(_core.read_pcd_points),
+        supported_features=(
+            "pcd_0_7",
+            "ascii",
+            "binary",
+            "binary_compressed",
+            "organized",
+            "viewpoint",
+            "standard_scalar_types_read",
+            "normals",
+            "packed_rgb8",
+            "intensity",
+        ),
+        unsupported_features=(
+            "unknown_fields",
+            "multi_count_fields",
+            "rgb16",
+            "ascii_point_ranges",
+            "compressed_point_ranges",
+        ),
+    )
+)
+register(
+    Codec(
         "spz",
         (".spz",),
         _mmap_reader(_core.read_spz),

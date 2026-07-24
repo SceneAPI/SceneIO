@@ -4,6 +4,11 @@ Status: complete — O0–O5 landed. Scope: the compiled `sceneio._core` I/O pat
 `phase0-nanobind-core`. Companion to `coverage_roadmap.md` (this makes its "Phase 7"
 hardening/perf work concrete).
 
+Post-0.2 format expansion inherits the same gates. The registry currently has
+31 codecs (29 single-file plus two COLMAP directories); PCD is the latest
+addition and includes mmap input, bounded binary point ranges, header-only
+inspection, and a genuinely chunked binary file sink in the all-codec harness.
+
 **Committed scope (decided):** the **full O0–O5 program**, applied **uniformly to
 all 23 codecs**, with **qualitative** success criteria — every step must show a
 *measured* improvement with *no regression* and *bit-exact correctness*; no hard

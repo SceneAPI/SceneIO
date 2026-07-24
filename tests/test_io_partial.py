@@ -232,11 +232,13 @@ def _assert_point_range(partial, full, start, stop):
             partial.scale_to_meters,
             partial.intensity_range,
             partial.origin,
+            partial.viewpoint,
         ) == (
             full.coordinate_frame,
             full.scale_to_meters,
             full.intensity_range,
             full.origin,
+            full.viewpoint,
         )
         for name in (
             "positions",
@@ -292,6 +294,7 @@ def test_point_ranges_equal_full_read_slices(tmp_path):
         ("xyz", bytes(_core.write_xyz(xyz))),
         ("pts", bytes(_core.write_pts(xyz))),
         ("ply", bytes(_core.write_ply(xyz))),
+        ("pcd", bytes(_core.write_pcd(xyz))),
         ("las", bytes(_core.write_las(las))),
         ("gaussian_ply", bytes(_core.write_gaussian_ply(gaussians))),
         ("splat", bytes(_core.write_splat(gaussians))),
@@ -610,6 +613,11 @@ def test_partial_paths_reject_truncated_selected_payloads(tmp_path):
         (
             "ply",
             bytes(_core.write_ply(point_cloud))[:-1],
+            {"points": (0, 1)},
+        ),
+        (
+            "pcd",
+            bytes(_core.write_pcd(point_cloud))[:-1],
             {"points": (0, 1)},
         ),
         (

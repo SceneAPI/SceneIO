@@ -1,6 +1,6 @@
 // records/point_cloud.cpp — PointCloud nanobind binding. Registered once (after
-// the other records) and shared by the point codecs (.xyz/.pts now; PCD,
-// LAS/LAZ, E57, PLY-point later). Array accessors are fixed-dtype zero-copy
+// the other records) and shared by the point codecs (.xyz/.pts, point PLY,
+// PCD, and LAS; LAZ/E57 later). Array accessors are fixed-dtype zero-copy
 // views (the vw + rv_policy::reference_internal pattern, like GaussianCloud /
 // PosedViewSet — NOT the sio::view(self,...) trick, which Image needs only
 // because its getter returns a dtype-polymorphic nb::object). Conventions are
@@ -9,6 +9,7 @@
 #include <nanobind/stl/optional.h>
 #include <nanobind/stl/string.h>
 
+#include <cmath>
 #include <optional>
 
 #include "records/point_cloud.hpp"
@@ -43,7 +44,9 @@ using darr = nb::ndarray<const double, nb::c_contig, nb::device::cpu>;
 PointCloud make_pc(farr positions, std::optional<carr> colors, std::optional<farr> normals,
                    std::optional<farr> intensity, const std::string &coordinate_frame,
                    double scale_to_meters, const std::string &intensity_range,
-                   std::optional<c16arr> colors16, std::optional<darr> origin) {
+                   std::optional<c16arr> colors16, std::optional<darr> origin,
+                   std::optional<size_t> width, std::optional<size_t> height,
+                   std::optional<darr> viewpoint) {
     // 1. positions (N,3): ndim==2 && shape(1)==3; N==0 is legal (an empty .xyz
     //    file must round-trip once the codec lands).
     if (positions.ndim() != 2 || positions.shape(1) != 3)
@@ -78,6 +81,32 @@ PointCloud make_pc(farr positions, std::optional<carr> colors, std::optional<far
         if (origin->ndim() != 1 || origin->shape(0) != 3)
             throw std::invalid_argument("point_cloud: origin must be (3,) float64");
         for (int i = 0; i < 3; i++) p.origin[i] = origin->data()[i];
+    }
+    if (width.has_value() != height.has_value())
+        throw std::invalid_argument(
+            "point_cloud: width and height must be provided together");
+    if (width) {
+        if (*height == 0 || (*width == 0 && *height != 1) ||
+            (*width != 0 &&
+             *height > std::numeric_limits<size_t>::max() / *width) ||
+            *width * *height != N)
+            throw std::invalid_argument(
+                "point_cloud: width*height must equal the point count");
+        p.organized_width = *width;
+        p.organized_height = *height;
+    }
+    if (viewpoint) {
+        if (viewpoint->ndim() != 1 || viewpoint->shape(0) != 7)
+            throw std::invalid_argument(
+                "point_cloud: viewpoint must be (7,) float64 "
+                "(tx,ty,tz,qw,qx,qy,qz)");
+        for (int i = 0; i < 7; ++i) {
+            const double value = viewpoint->data()[i];
+            if (!std::isfinite(value))
+                throw std::invalid_argument(
+                    "point_cloud: viewpoint values must be finite");
+            p.viewpoint[i] = value;
+        }
     }
 
     // 3. conventions: validate the closed vocabulary (Image's color_space
@@ -115,6 +144,9 @@ void register_point_cloud(nb::module_ &m) {
         .def_prop_ro("has_rgb16", [](const PointCloud &p) { return p.has_rgb16(); })
         .def_prop_ro("has_normals", [](const PointCloud &p) { return p.has_normals(); })
         .def_prop_ro("has_intensity", [](const PointCloud &p) { return p.has_intensity(); })
+        .def_prop_ro("width", [](const PointCloud &p) { return p.width(); })
+        .def_prop_ro("height", [](const PointCloud &p) { return p.height(); })
+        .def_prop_ro("is_organized", [](const PointCloud &p) { return p.is_organized(); })
         // conventions the codec recorded (metadata, not fixed):
         .def_prop_ro("coordinate_frame", [](const PointCloud &p) { return p.coordinate_frame; })
         .def_prop_ro("scale_to_meters", [](const PointCloud &p) { return p.scale_to_meters; })
@@ -123,17 +155,29 @@ void register_point_cloud(nb::module_ &m) {
                      [](const PointCloud &p) {
                          return nb::make_tuple(p.origin[0], p.origin[1], p.origin[2]);
                      })
+        .def_prop_ro(
+            "viewpoint",
+            [](const PointCloud &p) {
+                return nb::make_tuple(
+                    p.viewpoint[0], p.viewpoint[1], p.viewpoint[2],
+                    p.viewpoint[3], p.viewpoint[4], p.viewpoint[5],
+                    p.viewpoint[6]);
+            })
         .def("__repr__", [](const PointCloud &p) {
             return "<PointCloud n=" + std::to_string(p.n) + (p.has_rgb() ? " rgb" : "") +
                    (p.has_normals() ? " normals" : "") + (p.has_intensity() ? " intensity" : "") +
+                   (p.is_organized() ? " organized" : "") +
                    " " + p.coordinate_frame + ">";
         });
 
     m.def("point_cloud", &make_pc, "positions"_a, "colors"_a = nb::none(), "normals"_a = nb::none(),
           "intensity"_a = nb::none(), "coordinate_frame"_a = "unknown", "scale_to_meters"_a = 1.0,
           "intensity_range"_a = "unknown", "colors16"_a = nb::none(), "origin"_a = nb::none(),
+          "width"_a = nb::none(), "height"_a = nb::none(),
+          "viewpoint"_a = nb::none(),
           "Build a PointCloud from arrays (numpy/torch): positions (N,3) float32, optional "
           "colors (N,3) uint8 / colors16 (N,3) uint16 / normals (N,3) float32 / intensity (N,) "
           "float32 (foreign dtypes are copy-converted), recorded convention tags "
-          "(coordinate_frame, scale_to_meters, intensity_range), and a georef origin (3,) float64.");
+          "(coordinate_frame, scale_to_meters, intensity_range), a georef origin (3,) float64, "
+          "optional organized width/height, and viewpoint (tx,ty,tz,qw,qx,qy,qz).");
 }

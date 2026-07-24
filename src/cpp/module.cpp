@@ -22,6 +22,7 @@ void register_pfm(nb::module_ &);
 void register_colmap(nb::module_ &);
 void register_ply_gaussian(nb::module_ &);
 void register_ply_point(nb::module_ &);
+void register_pcd(nb::module_ &);
 void register_spz(nb::module_ &);
 void register_transforms_json(nb::module_ &);
 void register_pose_text(nb::module_ &);
@@ -104,6 +105,7 @@ NB_MODULE(_core, m) {
     register_colmap(m);
     register_ply_gaussian(m);
     register_ply_point(m);
+    register_pcd(m);
     register_spz(m);
     register_transforms_json(m);
     register_pose_text(m);

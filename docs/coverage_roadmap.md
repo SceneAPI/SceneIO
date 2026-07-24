@@ -110,7 +110,7 @@ zero‑copy + convention tags.
 | `Image` | `pixels` HxWxC (u8/u16/f16/f32) + `color_space` + alpha/maxval metadata | PNG/JPEG/HDR/WebP/EXR/Netpbm | ✅ |
 | `DepthMap` | `depth` HxW f32 + `scale`/`unit`/`invalid` meta + `confidence` HxW | typed depth adapters, `.dmb` | ✅ record + scalar DMB + typed PFM/PNG/EXR |
 | `FlowField` | `vectors` HxWx2 f32 + component/axis/row/unit/invalid meta | typed `.flo` adapter | ✅ |
-| `PointCloud` | `xyz` Nx3, `rgb` Nx3 u8, `normals` Nx3, `intensity` N | PLY‑point, PCD, LAS/LAZ, E57, `.xyz` | ✅ |
+| `PointCloud` | `xyz` Nx3, `rgb`/`rgb16`, `normals`, `intensity`, optional organized shape + viewpoint | PLY‑point, PCD, LAS/LAZ, E57, `.xyz` | ✅ |
 | `Mesh` | `vertices` Nx3, `faces` Mx3 u32, `normals`, `uv`, `vertex_color` | OBJ, STL, OFF, PLY‑mesh, glTF, USD | ⬜ |
 | `FeatureSet` | `keypoints` Nx{2,4,6} f32, `descriptors` NxD, `scores` N, `image_size` 2 | HDF5/hloc, COLMAP DB | ⬜ |
 | `MatchGraph` | per‑pair `matches` Mx2 u32, `scores` M, `F/E/H` 3x3, `inliers` | HDF5/hloc, COLMAP DB | ⬜ |
@@ -153,7 +153,7 @@ Columns: **Ext/id** · **Record** · **Lib/oracle (license)** · **R/W** ·
 | Format | Record | Lib / oracle | R/W | Notes |
 |---|---|---|---|---|
 | ✅ PLY (point) / ⬜ PLY (mesh) | `PointCloud`/`Mesh` | independent parser + Open3D (MIT) | R+W | point ASCII+binary LE/BE complete; mesh waits for `Mesh` |
-| ⬜ PCD | `PointCloud` | open3d | R+W | ascii/binary/binary_compressed (lzf) |
+| ✅ PCD | `PointCloud` | independent parser + Open3D (MIT) | R+W | PCD 0.7 ASCII/binary/LZF `binary_compressed`; organization/viewpoint; binary point ranges |
 | ✅ LAS | `PointCloud` | laspy (BSD) | R+W | mmap; point formats 0‑3 and 6‑8 |
 | ⬜ LAZ | `PointCloud` | lazrs (Apache) / laszip | R+W | LAS compression |
 | ⬜ E57 | `PointCloud` | libE57Format (BSD) | R+W | optional C lib |

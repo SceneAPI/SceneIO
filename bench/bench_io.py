@@ -2,7 +2,7 @@
 
 Measures, per codec, encode (write) + decode (read) throughput (MB/s over the raw
 payload) and peak Python allocation (tracemalloc), for sceneio._core vs the oracle
-library where one exists, on representative payloads for all 30 codecs. Read
+library where one exists, on representative payloads for all 31 codecs. Read
 measurements retain the legacy whole-file bytes/copy-decode path beside the
 public registry mmap path, so their peak delta captures the input copy O1
 removes and, for NPY/FLO, the decoded-array copy O2 removes. Write measurements
@@ -425,6 +425,35 @@ def _open3d_ply_r(data):
         os.remove(path)
 
 
+def _open3d_pcd_w(payload):
+    cloud = o3d.geometry.PointCloud()
+    cloud.points = o3d.utility.Vector3dVector(payload["positions"])
+    cloud.normals = o3d.utility.Vector3dVector(payload["normals"])
+    cloud.colors = o3d.utility.Vector3dVector(
+        payload["colors"].astype(np.float64) / 255.0
+    )
+    fd, path = tempfile.mkstemp(suffix=".pcd")
+    os.close(fd)
+    try:
+        if not o3d.io.write_point_cloud(
+            path, cloud, write_ascii=False, compressed=False
+        ):
+            raise RuntimeError("Open3D rejected PCD write")
+        return Path(path).read_bytes()
+    finally:
+        os.remove(path)
+
+
+def _open3d_pcd_r(data):
+    fd, path = tempfile.mkstemp(suffix=".pcd")
+    os.close(fd)
+    try:
+        Path(path).write_bytes(data)
+        return o3d.io.read_point_cloud(path)
+    finally:
+        os.remove(path)
+
+
 def _np_w(a):
     b = io.BytesIO()
     np.save(b, a)
@@ -695,6 +724,15 @@ def _specs(scale, pose_bundle=None):
             lambda rec, p: sum(value.nbytes for value in p.values()),
         ),
         Spec(
+            "pcd",
+            lambda: _pc_ply(points),
+            _core.write_pcd,
+            _core.read_pcd,
+            (_open3d_pcd_w if o3d else None),
+            (_open3d_pcd_r if o3d else None),
+            lambda rec, p: sum(value.nbytes for value in p.values()),
+        ),
+        Spec(
             "las",
             lambda: _pc(points, True),
             lambda pc: _core.write_las(pc, 0.001),
@@ -891,7 +929,15 @@ def _partial_request(codec_id, info, full_record=None):
                 col_start + out_width,
             )
         }
-    if codec_id in {"xyz", "pts", "ply", "las", "gaussian_ply", "splat"}:
+    if codec_id in {
+        "xyz",
+        "pts",
+        "ply",
+        "pcd",
+        "las",
+        "gaussian_ply",
+        "splat",
+    }:
         selected = max(1, info.count // 16)
         start = (info.count - selected) // 2
         return {"points": (start, start + selected)}
@@ -1167,6 +1213,7 @@ def _run_benchmark(args, tmp):
             o4_metrics = {}
             typed_adapter_metrics = None
             ply_variant_metrics = None
+            pcd_variant_metrics = None
 
             if s.id == "ply":
                 ply_variant_metrics = {
@@ -1197,6 +1244,40 @@ def _run_benchmark(args, tmp):
                             f"PLY {encoding} variant changed decoded values"
                         )
                     ply_variant_metrics[encoding] = {
+                        "file_mb": len(variant) / 1e6,
+                        "write_mbps": pmb / variant_write_time,
+                        "read_mbps": pmb / variant_read_time,
+                    }
+
+            if s.id == "pcd":
+                pcd_variant_metrics = {
+                    "binary": {
+                        "file_mb": fmb,
+                        "write_mbps": sioW,
+                        "read_mbps": sioR,
+                    }
+                }
+                reference_fields = {
+                    name: np.asarray(getattr(rec, name))
+                    for name in ("positions", "colors", "normals")
+                }
+                for encoding in ("ascii", "binary_compressed"):
+                    writer = partial(_core.write_pcd, rec, encoding)
+                    variant_write_time, _ = _measure(writer, args.runs)
+                    variant = bytes(writer())
+                    reader = partial(_core.read_pcd, variant)
+                    variant_read_time, _ = _measure(reader, args.runs)
+                    decoded = reader()
+                    if not all(
+                        np.array_equal(
+                            np.asarray(getattr(decoded, name)), expected
+                        )
+                        for name, expected in reference_fields.items()
+                    ):
+                        raise AssertionError(
+                            f"PCD {encoding} variant changed decoded values"
+                        )
+                    pcd_variant_metrics[encoding] = {
                         "file_mb": len(variant) / 1e6,
                         "write_mbps": pmb / variant_write_time,
                         "read_mbps": pmb / variant_read_time,
@@ -1956,6 +2037,7 @@ def _run_benchmark(args, tmp):
                     "o4": o4_metrics or None,
                     "typed_adapter": typed_adapter_metrics,
                     "ply_variants": ply_variant_metrics,
+                    "pcd_variants": pcd_variant_metrics,
                 }
             )
             print(
@@ -1983,6 +2065,13 @@ def _run_benchmark(args, tmp):
                     for encoding, metrics in ply_variant_metrics.items()
                 )
                 print(f"  PLY encodings: {summary}")
+            if pcd_variant_metrics is not None:
+                summary = ", ".join(
+                    f"{encoding}: W={metrics['write_mbps']:.0f}/"
+                    f"R={metrics['read_mbps']:.0f} MB/s"
+                    for encoding, metrics in pcd_variant_metrics.items()
+                )
+                print(f"  PCD encodings: {summary}")
         except Exception as e:
             failures.append(s.id)
             results.append({"codec": s.id, "error": f"{type(e).__name__}: {e}"})
@@ -2115,7 +2204,7 @@ def _run_benchmark(args, tmp):
             print(f"{spec.id:<14} ERROR: {type(e).__name__}: {e}")
 
     if not args.only:
-        assert len(specs) + len(directory_specs) == 30
+        assert len(specs) + len(directory_specs) == 31
     print("\nMB/s over raw payload; fileMB = encoded size (= the whole-file copy O1/O3 remove).")
     print("sioR = in-memory copy decode; pathR = public registry mmap read/view.")
     print("bPeakMB/mPeakMB = peak Python allocation for bytes/mmap reads (O1 delta).")

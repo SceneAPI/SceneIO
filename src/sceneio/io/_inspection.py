@@ -24,9 +24,18 @@ from typing import BinaryIO
 import numpy as np
 
 from sceneio import _core
+from sceneio.io._pcd import parse_pcd_header, validate_point_pcd_header
 from sceneio.io._ply import parse_ply_header, validate_point_ply_header
 
-MetadataValue = str | int | float | bool | tuple[int, ...] | tuple[str, ...]
+MetadataValue = (
+    str
+    | int
+    | float
+    | bool
+    | tuple[int, ...]
+    | tuple[float, ...]
+    | tuple[str, ...]
+)
 _HEADER_LIMIT = 1024 * 1024
 _IMAGE_PIXEL_CAP = 250_000_000
 
@@ -80,6 +89,8 @@ def inspect_path(path: str | Path, format_id: str, datatype: str) -> Inspection:
         return _inspect_gaussian_ply(p, datatype)
     if format_id == "ply":
         return _inspect_ply(p, datatype)
+    if format_id == "pcd":
+        return _inspect_pcd(p, datatype)
     if format_id == "spz":
         return _inspect_spz(p, datatype)
     if format_id == "transforms_json":
@@ -1042,6 +1053,21 @@ def _inspect_ply(path: Path, datatype: str) -> Inspection:
         shape=(count, 3),
         dtype="float32",
         count=count,
+        metadata=metadata,
+    )
+
+
+def _inspect_pcd(path: Path, datatype: str) -> Inspection:
+    file_size = _size(path)
+    header = parse_pcd_header(path)
+    metadata = validate_point_pcd_header(header, path)
+    return Inspection(
+        "pcd",
+        datatype,
+        file_size,
+        shape=(header.points, 3),
+        dtype="float32",
+        count=header.points,
         metadata=metadata,
     )
 
