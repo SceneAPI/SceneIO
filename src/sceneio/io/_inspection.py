@@ -99,6 +99,13 @@ def inspect_path(path: str | Path, format_id: str, datatype: str) -> Inspection:
         return _inspect_pose_text(p, format_id, datatype)
     if format_id == "euroc_state":
         return _inspect_euroc_state(p, datatype)
+    if format_id in {
+        "opencv_yaml",
+        "opencv_xml",
+        "ros_camera_info",
+        "kalibr",
+    }:
+        return _inspect_camera_rig(p, format_id, datatype)
     if format_id == "npy":
         return _inspect_npy(p, datatype)
     if format_id == "npz":
@@ -1204,6 +1211,31 @@ def _inspect_euroc_state(path: Path, datatype: str) -> Inspection:
         dtype="float64",
         count=count,
         metadata=metadata,
+    )
+
+
+def _inspect_camera_rig(
+    path: Path, format_id: str, datatype: str
+) -> Inspection:
+    function = {
+        "opencv_yaml": _core._inspect_opencv_yaml,
+        "opencv_xml": _core._inspect_opencv_xml,
+        "ros_camera_info": _core._inspect_ros_camera_info,
+        "kalibr": _core._inspect_kalibr,
+    }[format_id]
+    count, flat_resolutions = _compiled_buffer_inspect(path, function)
+    resolutions = tuple(int(value) for value in flat_resolutions)
+    return Inspection(
+        format_id,
+        datatype,
+        _size(path),
+        shape=(count,),
+        dtype="float64",
+        count=count,
+        metadata={
+            "resolutions": resolutions,
+            "axis_frame": "opencv",
+        },
     )
 
 

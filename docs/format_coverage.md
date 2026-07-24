@@ -13,8 +13,9 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 
 > Status note: everything marked ✅ is implemented by the compiled
 > `sceneio._core`. The original 23 codecs ship in SceneIO 0.2.0; safetensors,
-> PTS, DMB, BAL, BMP, TGA, generic point PLY, PCD, and EuRoC state CSV are
-> post-0.2 formats on `phase0-nanobind-core` and are not released yet.
+> PTS, DMB, BAL, BMP, TGA, generic point PLY, PCD, EuRoC state CSV, and the
+> OpenCV/ROS/Kalibr calibration codecs are post-0.2 formats on
+> `phase0-nanobind-core` and are not released yet.
 
 ## Data structures (memory Records)
 
@@ -32,6 +33,7 @@ SoA, zero-copy to numpy/torch (DLPack), conventions carried as metadata.
 | `DepthMap` | `depth_map` | ✅ | scalar f32 depth + scale/unit/invalid + confidence; backs scalar DMB and explicit typed PFM/PNG/EXR adapters |
 | `FlowField` | `flow` | ✅ | HxWx2 f32 vectors with component/axis/row/unit/invalid metadata; raw FLO API remains ndarray-compatible |
 | `StateTrajectory` | `state_trajectory` | ✅ record / ⬜ datatype | exact int64 nanosecond timestamps plus float64 position, WXYZ orientation, velocity, gyro bias, and accelerometer bias; explicit frame/unit/sign metadata |
+| `CameraRig` | `camera_rig` | ✅ record / ⬜ datatype | ordered cameras; ragged model parameters; exact optional K/R/P; extrinsic, ROI/binning, topic, and time-offset metadata with explicit conventions |
 | `FeatureSet` | `feature_set` | ⬜ | Phase 3 — keypoints + descriptors + scores |
 | `MatchGraph` | `match_graph` | ⬜ | Phase 3 — per‑pair matches + F/E/H + inliers |
 
@@ -102,20 +104,23 @@ tier. COLMAP DB `.db` (sqlite) remains a separate self-contained package.
 | `ply` | `PointCloud` | R+W | independent NumPy/stdlib parser + **Open3D 0.19** | ASCII and binary LE/BE; all standard scalar input types; exact rgb8/rgb16; schema-aware Gaussian/point/mesh dispatch; binary point ranges |
 | `pcd` | `PointCloud` | R+W | independent NumPy/stdlib parser + **Open3D 0.19** | PCD 0.7 ASCII, little-endian binary, and LZF `binary_compressed`; organized dimensions and viewpoint; packed RGB/intensity; bounded binary point ranges |
 | `euroc_state` | `StateTrajectory` | R+W | independent stdlib CSV parser + EuRoC schema | exact int64-ns timestamps; p/q(WXYZ)/v/gyro-bias/accel-bias; canonical-header detection; bounded state ranges |
+| `opencv_yaml` / `opencv_xml` | `CameraRig` | R+W | **PyYAML** / stdlib ElementTree | exact K/D plus optional R/P; schema-signature detection; generic YAML/XML extensions intentionally unclaimed |
+| `ros_camera_info` | `CameraRig` | R+W | **PyYAML** + ROS CameraInfo schema | exact K/D/R/P, distortion model, binning, ROI, and rectify flag |
+| `kalibr` | `CameraRig` | R+W | **PyYAML** + Kalibr schema | pinhole/omni intrinsics, distortion, topics, camera-chain or IMU extrinsics, and camera↔IMU time offsets |
 
 ### ⬜ Pending — later phases (meshes + niche)
 glTF / GLB (+Draco) · OBJ / STL / OFF / mesh PLY · USD / USDZ · OpenVDB · Zarr · Parquet · AVIF / JPEG‑XL · PlayCanvas SOG.
 
 ### 🟡 In progress — Phase 7 (hardening)
-✅ mmap-backed reads for all 30 single-file codecs (the two COLMAP directory
+✅ mmap-backed reads for all 34 single-file codecs (the two COLMAP directory
 codecs already read paths directly in C++) · ✅ zero-copy read-only mapped
 ndarray views for native NPY/FLO payloads (PFM row-flips into owned storage) · ✅ bytes/mmap differential +
 scheduled 100-case backing-store mutation sweep · ✅ ASan/UBSan/LSan workflow
 (local and branch Linux runs green) · ⬜ randomized oracle-triangulated
 fuzzing · ✅ direct file-sink writes · ✅ bounded measured-path workers
 (XYZ/LAS/EXR/PNG16/WebP lossless) · ✅ partial/lazy reads (`inspect` covers all
-32; bounded pixel/point/state/COLMAP-image/tensor subsets cover capable containers) ·
-⬜ GPU-via-DLPack (torch-cuda/cupy) · ✅ expanded 32-codec benchmark/oracles.
+36; bounded pixel/point/state/COLMAP-image/tensor subsets cover capable containers) ·
+⬜ GPU-via-DLPack (torch-cuda/cupy) · ✅ expanded 36-codec benchmark/oracles.
 
 ## Infrastructure & capabilities
 
@@ -124,7 +129,7 @@ fuzzing · ✅ direct file-sink writes · ✅ bounded measured-path workers
 | nanobind + scikit‑build‑core build | ✅ | abi3/cp312, `NB_STATIC` |
 | cibuildwheel release path | ✅ | Linux/macOS/Windows; `publish.yml` |
 | CI parity (oracles in CI) | ✅ | gsply + pycolmap; runs on the branch |
-| Codec registry + `read`/`write`/`inspect`/`read_partial`/`detect` | ✅ | inspection covers all 32; bounded partial hooks are capability-specific |
+| Codec registry + `read`/`write`/`inspect`/`read_partial`/`detect` | ✅ | inspection covers all 36; bounded partial hooks are capability-specific |
 | Zero‑copy numpy + torch (DLPack) | ✅ | validated per codec |
 | Conventions‑as‑metadata + write guards | ✅ | record‑don't‑convert enforced |
 | Parity kit (`sceneio.testing.parity`) | ✅ | cross‑impl + round‑trip + convention pins |
@@ -161,18 +166,22 @@ incremental.
 | `gaussian_ply` | file | yes | yes | yes | points | yes | yes | no | - |
 | `hdr` | file | yes | yes | yes | - | yes | yes | yes | - |
 | `jpeg` | file | yes | yes | yes | - | yes | yes | yes | - |
+| `kalibr` | file | yes | yes | yes | - | yes | yes | no | - |
 | `kitti` | file | yes | yes | yes | - | yes | yes | no | - |
 | `las` | file | yes | yes | yes | points | yes | yes | yes | - |
 | `netpbm` | file | yes | yes | yes | window | yes | yes | no | - |
 | `npy` | file | yes | yes | yes | - | yes | yes | no | - |
 | `npz` | file | yes | yes | yes | - | yes | yes | no | - |
 | `nvm` | file | yes | yes | yes | - | yes | yes | no | - |
+| `opencv_xml` | file | yes | yes | yes | - | yes | yes | no | - |
+| `opencv_yaml` | file | yes | yes | yes | - | yes | yes | no | - |
 | `openmvg` | file | yes | yes | yes | - | yes | yes | no | - |
 | `pcd` | file | yes | yes | yes | points | yes | yes | no | - |
 | `pfm` | file | yes | yes | yes | window | yes | yes | no | - |
 | `ply` | file | yes | yes | yes | points | yes | yes | no | - |
 | `png` | file | yes | yes | yes | - | yes | yes | no | - |
 | `pts` | file | yes | yes | yes | points | yes | yes | no | - |
+| `ros_camera_info` | file | yes | yes | yes | - | yes | yes | no | - |
 | `safetensors` | file | yes | yes | yes | tensors, slices | yes | yes | no | - |
 | `splat` | file | yes | yes | yes | points | yes | yes | yes | - |
 | `spz` | file | yes | yes | yes | - | yes | yes | yes | - |

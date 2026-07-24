@@ -115,7 +115,7 @@ zero‑copy + convention tags.
 | `FeatureSet` | `keypoints` Nx{2,4,6} f32, `descriptors` NxD, `scores` N, `image_size` 2 | HDF5/hloc, COLMAP DB | ⬜ |
 | `MatchGraph` | per‑pair `matches` Mx2 u32, `scores` M, `F/E/H` 3x3, `inliers` | HDF5/hloc, COLMAP DB | ⬜ |
 | `TensorDict` | named ndarrays + attrs | npz, HDF5, safetensors, zarr, parquet | ✅ |
-| `CameraRig` | N `Camera` + extrinsics + convention tag | OpenCV/ROS/Kalibr calib | ⬜ |
+| `CameraRig` | lossless ragged intrinsics/distortion, exact K/R/P, extrinsics, operational/time/topic metadata + convention tags | OpenCV/ROS/Kalibr calib | ✅ |
 | `StateTrajectory` | int64-ns timestamps + p/q/v/gyro-bias/accel-bias with frame/unit/sign tags | EuRoC state CSV | ✅ |
 
 *(Done: `Reconstruction`, `GaussianCloud`, `PosedViewSet`, `Camera`.)*
@@ -207,9 +207,9 @@ Columns: **Ext/id** · **Record** · **Lib/oracle (license)** · **R/W** ·
 ### 3h. Camera calibration
 | Format | Record | Lib / oracle | R/W | Notes |
 |---|---|---|---|---|
-| ⬜ OpenCV `.yml`/`.xml` | `Camera`/`CameraRig` | manual yaml | R+W | model → COLMAP model map |
-| ⬜ ROS `camera_info` yaml | `Camera` | manual | R+W | K,D,R,P |
-| ⬜ Kalibr yaml | `CameraRig` | manual | R+W | multi‑cam + extrinsics |
+| ✅ OpenCV YAML/XML | `CameraRig` | native bounded subset + PyYAML/ElementTree oracle | R+W | exact K/D and optional R/P; distinct syntax ids; generic extensions unclaimed |
+| ✅ ROS `camera_info` yaml | `CameraRig` | native bounded subset + PyYAML oracle | R+W | exact K,D,R,P, binning, ROI, rectify flag |
+| ✅ Kalibr yaml | `CameraRig` | native bounded subset + PyYAML oracle | R+W | multi-camera models/coefficients, chained or IMU extrinsics, topics, signed time offsets |
 
 ### 3i. Video — constrained (no ffmpeg / patented codecs)
 | Format | Record | Lib / oracle | R/W | Notes |

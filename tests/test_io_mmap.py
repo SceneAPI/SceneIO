@@ -164,6 +164,47 @@ def _fingerprint(value):
                 )
             ),
         )
+    elif isinstance(value, _core.CameraRig):
+        fields = (
+            value.num_cameras,
+            tuple(value.names),
+            tuple(value.projection_models),
+            tuple(value.distortion_models),
+            tuple(value.topics),
+            value.quaternion_order,
+            value.quaternion_sign,
+            value.transform_convention,
+            value.axis_frame,
+            value.reference_frame,
+            value.scale_to_meters,
+            value.time_offset_convention,
+            *(
+                _array_fingerprint(getattr(value, name))
+                for name in (
+                    "camera_ids",
+                    "resolutions",
+                    "intrinsic_offsets",
+                    "intrinsics",
+                    "distortion_offsets",
+                    "distortion_coefficients",
+                    "quaternions",
+                    "translations",
+                    "has_extrinsics",
+                    "camera_matrices",
+                    "has_camera_matrix",
+                    "rectification_matrices",
+                    "has_rectification",
+                    "projection_matrices",
+                    "has_projection_matrix",
+                    "binning",
+                    "roi",
+                    "roi_do_rectify",
+                    "has_operational",
+                    "time_offsets",
+                    "has_time_offset",
+                )
+            ),
+        )
     elif isinstance(value, _core.Reconstruction):
         fields = (
             value.num_cameras,
@@ -294,6 +335,61 @@ def buffer_codecs():
         rng.standard_normal((13, 3)),
         rng.standard_normal((13, 3)),
     )
+    camera_matrix = np.array(
+        [[[500.0, 0.0, 320.0], [0.0, 510.0, 240.0], [0.0, 0.0, 1.0]]]
+    )
+    camera_rig = _core.camera_rig(
+        np.array([0], np.uint32),
+        np.array([[640, 480]], np.uint64),
+        ["pinhole"],
+        np.array([0, 4], np.uint64),
+        np.array([500.0, 510.0, 320.0, 240.0]),
+        ["plumb_bob"],
+        np.array([0, 5], np.uint64),
+        np.array([0.1, -0.2, 0.01, 0.02, -0.001]),
+        np.array([[1.0, 0.0, 0.0, 0.0]]),
+        np.zeros((1, 3)),
+        has_extrinsics=np.zeros(1, np.uint8),
+        camera_matrices=camera_matrix,
+    )
+    ros_camera_rig = _core.camera_rig(
+        np.array([0], np.uint32),
+        np.array([[640, 480]], np.uint64),
+        ["pinhole"],
+        np.array([0, 4], np.uint64),
+        np.array([500.0, 510.0, 320.0, 240.0]),
+        ["plumb_bob"],
+        np.array([0, 5], np.uint64),
+        np.array([0.1, -0.2, 0.01, 0.02, -0.001]),
+        np.array([[1.0, 0.0, 0.0, 0.0]]),
+        np.zeros((1, 3)),
+        has_extrinsics=np.zeros(1, np.uint8),
+        camera_matrices=camera_matrix,
+        rectification_matrices=np.eye(3)[None],
+        projection_matrices=np.array(
+            [[[500.0, 0.0, 320.0, 0.0],
+              [0.0, 510.0, 240.0, 0.0],
+              [0.0, 0.0, 1.0, 0.0]]]
+        ),
+        binning=np.array([[0, 0]], np.uint32),
+        roi=np.array([[0, 0, 0, 0]], np.uint32),
+        roi_do_rectify=np.array([0], np.uint8),
+        has_operational=np.array([1], np.uint8),
+    )
+    kalibr_rig = _core.read_kalibr(
+        b"cam0:\n"
+        b"  camera_model: pinhole\n"
+        b"  intrinsics: [500, 510, 320, 240]\n"
+        b"  distortion_model: radtan\n"
+        b"  distortion_coeffs: [0.1, -0.2, 0.01, 0.02]\n"
+        b"  resolution: [640, 480]\n"
+        b"  rostopic: /cam0/image_raw\n"
+        b"  T_cam_imu:\n"
+        b"  - [1, 0, 0, 0.1]\n"
+        b"  - [0, 1, 0, 0.2]\n"
+        b"  - [0, 0, 1, 0.3]\n"
+        b"  - [0, 0, 0, 1]\n"
+    )
 
     def spec(codec_id, reader, writer, value):
         return BufferCodec(codec_id, reader, writer, value, bytes(writer(value)))
@@ -315,6 +411,30 @@ def buffer_codecs():
             _core.read_euroc_state,
             _core.write_euroc_state,
             state_trajectory,
+        ),
+        spec(
+            "opencv_yaml",
+            _core.read_opencv_yaml,
+            _core.write_opencv_yaml,
+            camera_rig,
+        ),
+        spec(
+            "opencv_xml",
+            _core.read_opencv_xml,
+            _core.write_opencv_xml,
+            camera_rig,
+        ),
+        spec(
+            "ros_camera_info",
+            _core.read_ros_camera_info,
+            _core.write_ros_camera_info,
+            ros_camera_rig,
+        ),
+        spec(
+            "kalibr",
+            _core.read_kalibr,
+            _core.write_kalibr,
+            kalibr_rig,
         ),
         spec("npy", _core.read_npy, _core.write_npy, tensor),
         spec("npz", _core.read_npz, _core.write_npz, tensors),
@@ -365,8 +485,8 @@ def _outcome(call, argument):
 
 
 def test_all_single_file_codecs_mmap_equal_bytes_bit_exact(tmp_path, buffer_codecs):
-    """All 30 buffer codecs decode mmap and bytes to bit-exact records."""
-    assert len(buffer_codecs) == 30
+    """All 34 buffer codecs decode mmap and bytes to bit-exact records."""
+    assert len(buffer_codecs) == 34
     for spec in buffer_codecs:
         expected = _fingerprint(spec.reader(spec.data))
         path = tmp_path / f"sample-{spec.id}.bin"
@@ -384,8 +504,8 @@ def test_all_single_file_codecs_mmap_equal_bytes_bit_exact(tmp_path, buffer_code
 
 
 def test_all_single_file_sinks_are_byte_identical(tmp_path, buffer_codecs):
-    """All 30 compiled encoders emit the exact bytes their buffer API returns."""
-    assert len(buffer_codecs) == 30
+    """All 34 compiled encoders emit the exact bytes their buffer API returns."""
+    assert len(buffer_codecs) == 34
     for spec in buffer_codecs:
         direct = tmp_path / f"direct-{spec.id}.bin"
         _core._write_to_file(spec.writer, spec.value, direct)
@@ -458,6 +578,14 @@ def _assert_inspection_matches(info, decoded):
         assert info.count == decoded.num_states
         assert info.metadata["timestamp_unit"] == "nanoseconds"
         assert info.metadata["quaternion_order"] == "wxyz"
+    elif isinstance(decoded, _core.CameraRig):
+        assert info.shape == (decoded.num_cameras,)
+        assert info.dtype == "float64"
+        assert info.count == decoded.num_cameras
+        assert info.metadata["resolutions"] == tuple(
+            np.asarray(decoded.resolutions).ravel()
+        )
+        assert info.metadata["axis_frame"] == "opencv"
     elif isinstance(decoded, _core.Reconstruction):
         assert info.shape == (decoded.num_images,)
         assert info.dtype == decoded.quaternions.dtype.name
@@ -540,8 +668,8 @@ print(max(0, peak[0] - baseline))
     return int(completed.stdout.strip())
 
 
-def test_inspect_matches_decoded_metadata_all_32_codecs(tmp_path, buffer_codecs):
-    assert len(buffer_codecs) == 30
+def test_inspect_matches_decoded_metadata_all_36_codecs(tmp_path, buffer_codecs):
+    assert len(buffer_codecs) == 34
     for spec in buffer_codecs:
         path = tmp_path / f"inspect-{spec.id}.data"
         path.write_bytes(spec.data)
@@ -1788,7 +1916,7 @@ def test_registry_uses_mmap_for_every_nonempty_single_file_codec(
         value = sceneio.codecs()[spec.id].read(str(path))
         gc.collect()
         assert _fingerprint(value) == _fingerprint(spec.reader(spec.data))
-    assert mapped_paths == len(buffer_codecs) == 30
+    assert mapped_paths == len(buffer_codecs) == 34
 
 
 def test_all_buffer_entries_accept_readonly_protocol_exporters(buffer_codecs):

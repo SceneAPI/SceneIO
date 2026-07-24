@@ -647,3 +647,35 @@ traced output allocation from 35.2 MB to effectively zero and sampled RSS from
 42.1 MB to effectively zero while remaining byte-identical to the buffer
 writer. Every retained 32-codec O4/O5 directional and mmap/sink allocation
 guard passed.
+
+## Camera calibration baseline — 2026-07-24
+
+The harness now covers 36 codecs (34 single-file plus the two COLMAP
+directories). OpenCV YAML, OpenCV XML, ROS CameraInfo YAML, and Kalibr YAML use
+the new lossless `CameraRig` record. The representative OpenCV and ROS fixtures
+contain one camera (452 logical bytes); the Kalibr fixture contains 64 cameras
+(27,408 logical bytes, 23,644 encoded bytes). Five-run medians were:
+
+```text
+codec             native W/R MB/s    oracle W/R MB/s    native/oracle read
+---------------------------------------------------------------------------
+opencv_yaml            129 / 52             2 / 1              62.75x
+opencv_xml             119 / 89            19 / 36              2.43x
+ros_camera_info         77 / 38             1 / <1             76.92x
+kalibr                  134 / 81             2 / 1              91.56x
+```
+
+The independent oracles are test-only PyYAML for all YAML schemas and stdlib
+ElementTree for XML. The tiny single-camera files make filesystem latency
+dominate public-path timing, but the direct sink was consistently faster than
+buffer-plus-file output (roughly 3–4 MB/s versus 2–3 MB/s; Kalibr 82 versus
+75 MB/s) and remained byte-identical.
+
+A separate 1.65 MB comment-padded valid OpenCV YAML fixture isolates transport
+allocation: bytes input traced 1.659 MB while the warmed mmap public path
+traced 0.010 MB. The complete one-run 36-codec harness completed without codec
+failures, preserving the established mmap/sink allocation directions and all
+retained O4/O5 controls. Calibration inspection validates the complete small
+metadata document; because these formats contain no bulk payload beyond that
+metadata, it intentionally has approximately the same latency as a full
+record decode.

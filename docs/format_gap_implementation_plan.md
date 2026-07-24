@@ -3,11 +3,12 @@
 - **Status:** execution in progress after SceneIO 0.2.0. G0, safetensors, PTS,
   scalar DMB, BAL, BMP/TGA, the compiled `FlowField` record, typed FLO, typed
   PFM depth, typed PNG depth, typed scalar EXR depth, generic point PLY, and
-  PCD are complete locally. The small pose/calibration records are next in the
+  PCD, `StateTrajectory`/EuRoC, and `CameraRig` with OpenCV/ROS/Kalibr
+  calibration are complete locally. `PoseGraph`/g2o is next in the
   default-wheel sequence.
   Cross-platform wheel and instrumented validation remains a user-gated remote
   action.
-- **Current branch:** 32 compiled codecs, all read/write and inspectable, with
+- **Current branch:** 36 compiled codecs, all read/write and inspectable, with
   bounded partial reads where their containers permit them.
 - **Scope:** close every unblocked format gap declared by SceneIO's coverage
   documents without reimplementing the 0.2.0 codec tier.
@@ -1599,16 +1600,16 @@ estimates.
 
 The current local checkpoint is:
 
-- 32 compiled registry codecs with read, write, inspect, mmap input, and direct
+- 36 compiled registry codecs with read, write, inspect, mmap input, and direct
   file sinks;
 - O0-O5 complete for the existing codec tier;
 - `FlowField`, typed FLO, typed PFM depth, typed PNG depth, and typed scalar EXR
   depth complete;
-- 1,976 local tests pass with 3 documented optional skips, Ruff and
+- 2,147 local tests pass with 3 documented optional skips, Ruff and
   `git diff --check` are clean;
 - the all-codec benchmark guard and packaged numpy-only wheel smoke pass;
-- generic point PLY and PCD are complete locally; the small
-  pose/calibration records are next;
+- generic point PLY, PCD, StateTrajectory/EuRoC, and CameraRig calibration are
+  complete locally; PoseGraph/g2o is next;
 - instrumented Linux and Linux/macOS wheels have not yet been run for this
   dependency wave because pushing and dispatching remote workflows are
   user-gated.
@@ -1813,7 +1814,8 @@ Land each record with its first consumer, then add the remaining syntax
 adapters:
 
 1. ✅ `StateTrajectory` plus EuRoC state CSV (B3.1 complete locally).
-2. `CameraRig` plus OpenCV YAML/XML, then ROS `camera_info` and Kalibr YAML.
+2. ✅ `CameraRig` plus OpenCV YAML/XML, ROS `camera_info`, and Kalibr YAML
+   (B3.2 complete locally).
 3. `PoseGraph` plus g2o.
 
 Every record commit must pin coordinate frames, units, timestamp precision,
@@ -1879,6 +1881,81 @@ Verification and validation evidence (2026-07-24):
   applied manually. Linux sanitizer and Linux/macOS wheel validation remain
   user-gated remote actions.
 
+##### B3.2 CameraRig + OpenCV/ROS/Kalibr calibration — complete locally
+
+Implementation:
+
+- `CameraRig` is a lossless record for ordered camera ids/names and positive
+  resolutions; source model names with ragged float64 intrinsic and distortion
+  vectors; exact optional row-major K/R/P matrices; reference-to-camera WXYZ
+  extrinsics with explicit presence; ROS binning/ROI/rectify state; Kalibr
+  topics and signed camera-to-reference time offsets; and closed
+  frame/direction/sign/unit convention tags. Factories copy into record-owned
+  storage while properties expose lifetime-safe zero-copy views.
+- `opencv_yaml` and `opencv_xml` preserve K/D plus optional R/P and reject
+  records whose ids, pinhole/K relationship, frames, extrinsics, operational
+  state, topics, or time offsets cannot be represented. The two syntaxes have
+  separate format ids and canonical signatures rather than claiming generic
+  YAML/XML suffixes.
+- `ros_camera_info` preserves exact K/D/R/P, the distortion model (including
+  the valid empty uncalibrated spelling), binning, ROI bounds, and rectify
+  flag. `kalibr` preserves per-camera model vectors, distortion vectors,
+  resolutions, ROS topics, `T_cam_imu` / `T_cn_cnm1` semantics, and
+  `timeshift_cam_imu` with the explicit
+  `reference_time = camera_time + time_offset_seconds` convention. Chained
+  transforms are composed into one reference frame on read and reconstructed
+  on write.
+- All four native entries accept contiguous buffer exporters, release the GIL
+  around parsing/formatting, use mmap and direct sinks through the public
+  registry, validate complete documents during inspection, and keep the
+  runtime dependency set NumPy-only. PyYAML was added only to `[test]` as an
+  independent permissively licensed oracle.
+- The shared native YAML subset is deliberately bounded and schema-specific:
+  mappings, quoted/bare scalars, inline/block numeric sequences, multiline
+  flow sequences, and OpenCV's exact `!!opencv-matrix` tag are supported.
+  Duplicate nodes, aliases, arbitrary tags/directives, tab indentation,
+  overlong lines/documents, non-finite values, invalid extents, and malformed
+  transforms reject. The XML subset requires the real `opencv_storage` root,
+  exact matrix type tags, one occurrence per known node, supported entities,
+  and no trailing wrapper/content.
+
+Verification and validation evidence (2026-07-24):
+
+- 75 focused record/codec cases cover source-copy isolation, view lifetime and
+  DLPack, empty records, ragged offsets, every presence mask, XYZW identity,
+  canonical sign, controls/duplicates, K/D/R/P bit identity, empty ROS
+  distortion, hand-derived Kalibr chain composition, camera0 versus IMU
+  references, 40 randomized coefficient round trips, malformed documents,
+  mmap-buffer address equality, closed-map lifetime, sink byte identity,
+  public detection/inspection/capabilities, and non-truncating writer guards.
+- Independent PyYAML and stdlib ElementTree oracles validate all serialized
+  fields. The four new codecs are also in the 34-entry single-file
+  bytes-versus-mmap, direct-sink, inspection, readonly-buffer, truncation, and
+  mutation-fuzz sweeps. The full registry is now 36 codecs including the two
+  COLMAP directory formats.
+- Five-run representative medians measured native/oracle read ratios of
+  62.75x (`opencv_yaml`), 2.43x (`opencv_xml`), 76.92x
+  (`ros_camera_info`), and 91.56x (`kalibr`). A 1.65 MB valid padded YAML
+  fixture reduced traced input allocation from 1.659 MB on the bytes path to
+  0.010 MB on the warmed mmap path. The complete one-run 36-codec benchmark
+  sweep completed without failures.
+- The final full local MSVC suite passes 2,147 tests with three documented
+  optional skips. Repository-wide Ruff and `git diff --check` are clean; the
+  pre-existing nanobind interpreter-shutdown diagnostics remain non-fatal.
+- The clean local cp312-abi3 Windows wheel exposes all 36 registry entries and
+  `CameraRig`, passes the installed-wheel smoke for all four calibration
+  formats, contains no leaked build/include/library directories, and retains
+  NumPy as its only unconditional runtime dependency. The isolated validation
+  used a refreshed package cache because the wheel version and filename were
+  intentionally unchanged during local rebuilds.
+- Manual memory-safety, format-correctness, and test-soundness review found and
+  fixed null-range construction for empty optional arrays, public/input matrix
+  shape disagreement, XYZW absent-transform identity, writer-generated
+  overlong lines, shadowable YAML duplicates, silently ignored malformed
+  optional matrices, and an XML root/trailing-content gap. Fable remains
+  unavailable locally; Linux sanitizer and Linux/macOS cibuildwheel validation
+  remain user-gated remote actions.
+
 #### B4. COLMAP database
 
 - Land `FeatureSet` and `MatchGraph` first, including keypoint layout,
@@ -1908,7 +1985,8 @@ Wave B exit:
   registry-wide E2E sweep;
 - the default install remains numpy-only and all native code is vendored,
   pinned, permissively licensed, and statically linked;
-- the original 32-codec behavior, benchmarks, and golden bytes remain green;
+- all 36 currently registered codec behaviors, benchmarks, and golden bytes
+  remain green;
 - the dependency-wave remote validation in section 12.10 passes.
 
 ### 12.4 Wave C — canonical mesh tier

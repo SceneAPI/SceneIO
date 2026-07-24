@@ -18,6 +18,7 @@ void register_point_cloud(nb::module_ &);
 void register_depth_map(nb::module_ &);
 void register_flow_field(nb::module_ &);
 void register_state_trajectory(nb::module_ &);
+void register_camera_rig(nb::module_ &);
 // codecs/
 void register_pfm(nb::module_ &);
 void register_colmap(nb::module_ &);
@@ -47,6 +48,7 @@ void register_webp(nb::module_ &);
 void register_safetensors(nb::module_ &);
 void register_dmb(nb::module_ &);
 void register_euroc_state(nb::module_ &);
+void register_camera_calibration(nb::module_ &);
 
 NB_MODULE(_core, m) {
     m.doc() = "sceneio compiled core (nanobind): codecs + SoA memory representations";
@@ -103,6 +105,7 @@ NB_MODULE(_core, m) {
     register_depth_map(m);
     register_flow_field(m);
     register_state_trajectory(m);
+    register_camera_rig(m);
 
     register_pfm(m);
     register_colmap(m);
@@ -132,4 +135,5 @@ NB_MODULE(_core, m) {
     register_safetensors(m);
     register_dmb(m);
     register_euroc_state(m);
+    register_camera_calibration(m);
 }

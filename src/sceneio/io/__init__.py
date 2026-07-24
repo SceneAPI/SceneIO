@@ -46,6 +46,7 @@ PointCloud = _core.PointCloud
 DepthMap = _core.DepthMap
 FlowField = _core.FlowField
 Camera = _core.Camera
+CameraRig = _core.CameraRig
 
 _FLOW_READER = _mmap_reader(_core.read_flo_field)
 _FLOW_WRITER = _file_sink_writer(_core.write_flo_field)
@@ -399,6 +400,7 @@ def _detect_write(obj, path) -> str:
 __all__ = [
     "ArrayInspection",
     "Camera",
+    "CameraRig",
     "Codec",
     "CodecCapabilities",
     "DepthEncoding",

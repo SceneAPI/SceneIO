@@ -219,6 +219,85 @@ def _state_trajectory(root: Path) -> None:
     assert np.array_equal(selected.timestamps_ns, timestamps[1:2])
 
 
+def _camera_calibration(root: Path) -> None:
+    matrix = np.array(
+        [[[500.0, 0.0, 320.0], [0.0, 510.0, 240.0], [0.0, 0.0, 1.0]]]
+    )
+    rig = _core.camera_rig(
+        np.array([0], np.uint32),
+        np.array([[640, 480]], np.uint64),
+        ["pinhole"],
+        np.array([0, 4], np.uint64),
+        np.array([500.0, 510.0, 320.0, 240.0]),
+        ["plumb_bob"],
+        np.array([0, 4], np.uint64),
+        np.array([0.1, -0.2, 0.01, 0.02]),
+        np.array([[1.0, 0.0, 0.0, 0.0]]),
+        np.zeros((1, 3)),
+        has_extrinsics=np.zeros(1, np.uint8),
+        camera_matrices=matrix,
+    )
+    assert sceneio.CameraRig is _core.CameraRig
+    for format_id in ("opencv_yaml", "opencv_xml"):
+        path = root / format_id
+        sceneio.write(rig, path, format=format_id)
+        assert sceneio.detect(path) == format_id
+        decoded = sceneio.read(path)
+        assert np.array_equal(decoded.camera_matrices, matrix)
+        assert sceneio.inspect(path).count == 1
+
+    ros_rig = _core.camera_rig(
+        np.array([0], np.uint32),
+        np.array([[640, 480]], np.uint64),
+        ["pinhole"],
+        np.array([0, 4], np.uint64),
+        np.array([500.0, 510.0, 320.0, 240.0]),
+        ["plumb_bob"],
+        np.array([0, 4], np.uint64),
+        np.array([0.1, -0.2, 0.01, 0.02]),
+        np.array([[1.0, 0.0, 0.0, 0.0]]),
+        np.zeros((1, 3)),
+        has_extrinsics=np.zeros(1, np.uint8),
+        camera_matrices=matrix,
+        rectification_matrices=np.eye(3)[None],
+        projection_matrices=np.array(
+            [
+                [
+                    [500.0, 0.0, 320.0, 0.0],
+                    [0.0, 510.0, 240.0, 0.0],
+                    [0.0, 0.0, 1.0, 0.0],
+                ]
+            ]
+        ),
+        binning=np.zeros((1, 2), np.uint32),
+        roi=np.zeros((1, 4), np.uint32),
+        has_operational=np.ones(1, np.uint8),
+    )
+    ros = root / "ros-camera-info"
+    sceneio.write(ros_rig, ros, format="ros_camera_info")
+    assert sceneio.detect(ros) == "ros_camera_info"
+    assert np.array_equal(sceneio.read(ros).projection_matrices, ros_rig.projection_matrices)
+
+    kalibr = root / "kalibr"
+    kalibr.write_bytes(
+        b"cam0:\n"
+        b"  camera_model: pinhole\n"
+        b"  intrinsics: [500, 510, 320, 240]\n"
+        b"  distortion_model: radtan\n"
+        b"  distortion_coeffs: [0.1, -0.2, 0.01, 0.02]\n"
+        b"  resolution: [640, 480]\n"
+        b"  rostopic: /cam0/image_raw\n"
+        b"  T_cam_imu:\n"
+        b"  - [1, 0, 0, 0]\n"
+        b"  - [0, 1, 0, 0]\n"
+        b"  - [0, 0, 1, 0]\n"
+        b"  - [0, 0, 0, 1]\n"
+    )
+    decoded = sceneio.read(kalibr)
+    assert decoded.reference_frame == "imu"
+    sceneio.write(decoded, root / "kalibr-copy", format="kalibr")
+
+
 def main() -> None:
     with tempfile.TemporaryDirectory(prefix="sceneio-wheel-smoke-") as directory:
         root = Path(directory)
@@ -228,6 +307,7 @@ def main() -> None:
         _point_depth_and_flow(root, values)
         _reconstruction_and_images(root)
         _state_trajectory(root)
+        _camera_calibration(root)
     print(_core.__phase__)
 
 

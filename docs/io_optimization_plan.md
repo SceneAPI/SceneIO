@@ -5,10 +5,10 @@ Status: complete — O0–O5 landed. Scope: the compiled `sceneio._core` I/O pat
 hardening/perf work concrete).
 
 Post-0.2 format expansion inherits the same gates. The registry currently has
-32 codecs (30 single-file plus two COLMAP directories); EuRoC state CSV is the
-latest addition and includes mmap input, exact int64 timestamps, validated
-state ranges, metadata inspection, and a genuinely chunked text file sink in
-the all-codec harness.
+36 codecs (34 single-file plus two COLMAP directories). The latest calibration
+wave adds OpenCV YAML/XML, ROS CameraInfo YAML, and Kalibr YAML over the
+lossless `CameraRig` record; each inherits mmap input, direct file sinks,
+metadata inspection, and the all-codec differential/memory harness.
 
 **Committed scope (decided):** the **full O0–O5 program**, applied **uniformly to
 all 23 codecs**, with **qualitative** success criteria — every step must show a
