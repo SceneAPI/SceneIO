@@ -110,6 +110,7 @@ nanobind_add_module(_core STABLE_ABI NB_STATIC
   src/cpp/records/image.cpp
   src/cpp/records/point_cloud.cpp
   src/cpp/records/depth_map.cpp
+  src/cpp/records/flow_field.cpp
   src/cpp/codecs/pfm.cpp
   src/cpp/codecs/colmap.cpp
   src/cpp/codecs/ply_gaussian.cpp

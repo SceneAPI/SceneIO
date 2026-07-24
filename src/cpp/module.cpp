@@ -16,6 +16,7 @@ void register_tensor_dict(nb::module_ &);
 void register_image(nb::module_ &);
 void register_point_cloud(nb::module_ &);
 void register_depth_map(nb::module_ &);
+void register_flow_field(nb::module_ &);
 // codecs/
 void register_pfm(nb::module_ &);
 void register_colmap(nb::module_ &);
@@ -96,6 +97,7 @@ NB_MODULE(_core, m) {
     register_image(m);
     register_point_cloud(m);
     register_depth_map(m);
+    register_flow_field(m);
 
     register_pfm(m);
     register_colmap(m);

@@ -39,6 +39,7 @@ TensorDict = _core.TensorDict
 Image = _core.Image
 PointCloud = _core.PointCloud
 DepthMap = _core.DepthMap
+FlowField = _core.FlowField
 Camera = _core.Camera
 
 
@@ -309,6 +310,7 @@ __all__ = [
     "Codec",
     "CodecCapabilities",
     "DepthMap",
+    "FlowField",
     "FormatError",
     "GaussianCloud",
     "Image",

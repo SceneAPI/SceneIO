@@ -410,7 +410,7 @@ Land one codec per green commit:
 
 Typed depth/flow adapter contract and landing sequence:
 
-1. **FlowField record**
+1. **FlowField record — complete locally**
    - Add a compiled SoA record with one contiguous `(H,W,2)` float32 vector
      buffer and immutable semantic metadata:
      `component_order="uv"`, `u_axis="right"`, `v_axis="down"`,
@@ -516,6 +516,41 @@ Land this slice as five independently green commits: `FlowField`, typed FLO,
 typed PFM depth, typed PNG depth, then typed EXR depth plus public integration.
 Each commit records its benchmark delta and the three review lenses before the
 next one starts.
+
+FlowField record completion evidence (2026-07-24):
+
+- the compiled record owns one exact float32 `(H,W,2)` copy and exposes
+  owner-retaining zero-copy NumPy views; direct, derived, and DLPack views
+  remain valid after the record temporary is collected;
+- signed zero, infinities, NaN payloads, subnormals, and the Middlebury `1e10`
+  sentinel survive bit-for-bit under every declared invalid policy;
+- shape, dtype, zero extent, checked element-count arithmetic, metadata
+  vocabularies, immutable metadata, non-contiguous input, source mutation
+  isolation, and big-endian rejection-or-correctness are pinned;
+- the raw FLO codec and public `sceneio.read` behavior are unchanged; the
+  record is re-exported through `sceneio.io` and the flat package and included
+  in wheel smoke;
+- the local MSVC extension rebuild succeeds, the focused record/FLO suite
+  passes 40 tests with one documented optional OpenCV skip, and the full suite
+  passes 1,627 tests with the same three documented optional skips.
+
+Three-lens FlowField record review:
+
+- **memory/lifetime:** both dimension products are checked before allocation,
+  the factory owns its copy, every NumPy view carries the record as owner, and
+  large direct/derived/DLPack lifetime tests churn freed-size heap blocks;
+- **correctness:** values are never normalized or scrubbed, component and axis
+  directions remain independent closed metadata, ambiguous normalized units
+  were excluded, and the `.flo` defaults pin UV, +right/+down, top-to-bottom,
+  pixels, and per-component absolute threshold semantics;
+- **test soundness:** bit patterns are stamped through uint32 rather than
+  produced by floating arithmetic, mutation proves pointer aliasing, source
+  mutation proves ownership isolation, and the unchanged raw FLO suite guards
+  source compatibility.
+
+No unresolved finding remains in the local FlowField record review.
+Instrumented Linux and Linux/macOS wheel validation remain pending until the
+next dependency-wave remote validation authorized by the user.
 
 DMB completion evidence (2026-07-24):
 

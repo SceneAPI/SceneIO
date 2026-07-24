@@ -2,9 +2,9 @@
 // Returns a bare (H,W,2) float32 ndarray (u,v interleaved). The copy reader
 // uses sio::own_array; the public path views the raw mmap payload directly on
 // little-endian hosts. This follows the PFM bare-ndarray precedent
-// (registry record=None), NOT a new record: .flo
-// carries no metadata beyond W/H, so the future Dense/DepthMap record absorbs it
-// later exactly as PFM will.
+// (registry record=None) for source compatibility. The additive typed API
+// copies these same bits into FlowField, which records the conventions that
+// .flo fixes but does not serialize as explicit metadata.
 //
 // Byte layout (little-endian throughout, total = 12 + W*H*2*4 bytes):
 //   [0,4)   float32 magic 202021.25 == the ASCII bytes "PIEH" (validated by

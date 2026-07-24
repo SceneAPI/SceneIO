@@ -29,7 +29,8 @@ SoA, zero-copy to numpy/torch (DLPack), conventions carried as metadata.
 | `Image` | `image_sequence` elem | ✅ | interleaved HxWxC (u8/u16/f32), color_space/alpha_mode/maxval metadata, owner‑safe zero‑copy `pixels` |
 | `TensorDict` | (named arrays) | ✅ | dict‑like, 12 numpy dtypes (dtype‑erased), zero‑copy views; backs NPZ and mapped safetensors |
 | `PointCloud` | `point_cloud` (new) | ✅ | xyz + rgb + normals + intensity; backs `.xyz`, count-prefixed `.pts`, and plain `.las` |
-| `DepthMap` / `Dense` | `dense` / `depth_map` | ✅ | typed depth + scale/unit/invalid + confidence; backs scalar DMB |
+| `DepthMap` | `depth_map` | ✅ | scalar f32 depth + scale/unit/invalid + confidence; backs scalar DMB |
+| `FlowField` | `flow` | ✅ record / ⬜ typed adapter | HxWx2 f32 vectors with component/axis/row/unit/invalid metadata; raw FLO API remains ndarray-compatible |
 | `FeatureSet` | `feature_set` | ⬜ | Phase 3 — keypoints + descriptors + scores |
 | `MatchGraph` | `match_graph` | ⬜ | Phase 3 — per‑pair matches + F/E/H + inliers |
 

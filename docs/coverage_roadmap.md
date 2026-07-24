@@ -109,6 +109,7 @@ zero‑copy + convention tags.
 |---|---|---|---|
 | `Image` | `pixels` HxWxC (u8/u16/f16/f32) + `color_space` + alpha/maxval metadata | PNG/JPEG/HDR/WebP/EXR/Netpbm | ✅ |
 | `DepthMap` | `depth` HxW f32 + `scale`/`unit`/`invalid` meta + `confidence` HxW | typed depth adapters, `.dmb` | ✅ record + scalar DMB codec |
+| `FlowField` | `vectors` HxWx2 f32 + component/axis/row/unit/invalid meta | typed `.flo` adapter | ✅ record / ⬜ typed adapter |
 | `PointCloud` | `xyz` Nx3, `rgb` Nx3 u8, `normals` Nx3, `intensity` N | PLY‑point, PCD, LAS/LAZ, E57, `.xyz` | ✅ |
 | `Mesh` | `vertices` Nx3, `faces` Mx3 u32, `normals`, `uv`, `vertex_color` | OBJ, STL, OFF, PLY‑mesh, glTF, USD | ⬜ |
 | `FeatureSet` | `keypoints` Nx{2,4,6} f32, `descriptors` NxD, `scores` N, `image_size` 2 | HDF5/hloc, COLMAP DB | ⬜ |
