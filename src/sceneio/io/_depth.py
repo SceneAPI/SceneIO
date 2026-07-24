@@ -10,12 +10,12 @@ from __future__ import annotations
 
 import math
 import operator
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from numbers import Real
 from pathlib import Path
 
 from sceneio import _core
-from sceneio.io._inspection import Inspection
+from sceneio.io._inspection import Inspection, inspect_path
 from sceneio.io.registry import (
     FormatError,
     _mmap_reader,
@@ -25,7 +25,7 @@ from sceneio.io.registry import (
 
 _UNITS = frozenset({"meters", "millimeters", "custom", "unitless", "unknown"})
 _INVALID_POLICIES = frozenset({"none", "zero", "nonfinite", "negative"})
-_TYPED_DEPTH_FORMATS = frozenset({"pfm"})
+_TYPED_DEPTH_FORMATS = frozenset({"pfm", "png"})
 
 
 @dataclass(frozen=True)
@@ -88,6 +88,7 @@ class DepthEncoding:
 _PFM_DEPTH_READER = _mmap_selector_reader(_core.read_pfm_depth)
 _PFM_DEPTH_WINDOW_READER = _mmap_selector_reader(_core.read_pfm_depth_window)
 _PFM_DEPTH_INSPECTOR = _mmap_reader(_core._inspect_pfm_depth)
+_PNG_DEPTH_READER = _mmap_selector_reader(_core.read_png_depth)
 
 
 def _require_encoding(encoding) -> DepthEncoding:
@@ -168,13 +169,19 @@ def read_depth(
     )
     selected_window = None if window is None else _window(window)
     try:
-        if selected_window is None:
-            return _PFM_DEPTH_READER(str(path), *arguments)
-        return _PFM_DEPTH_WINDOW_READER(
-            str(path),
-            *selected_window,
-            *arguments,
-        )
+        if resolved == "pfm":
+            if selected_window is None:
+                return _PFM_DEPTH_READER(str(path), *arguments)
+            return _PFM_DEPTH_WINDOW_READER(
+                str(path),
+                *selected_window,
+                *arguments,
+            )
+        if selected_window is not None:
+            raise FormatError(
+                "typed PNG depth does not support bounded pixel-window reads"
+            )
+        return _PNG_DEPTH_READER(str(path), *arguments)
     except FormatError:
         raise
     except Exception as exc:
@@ -195,19 +202,38 @@ def inspect_depth(
     selected_encoding = _require_encoding(encoding)
     _require_unnamed_channel(selected_encoding, resolved)
     try:
-        height, width, channels, little_endian, header_scale, byte_size = (
-            _PFM_DEPTH_INSPECTOR(str(path))
-        )
-        return Inspection(
-            resolved,
-            "depth_map",
-            byte_size,
-            shape=(height, width),
+        if resolved == "pfm":
+            height, width, channels, little_endian, header_scale, byte_size = (
+                _PFM_DEPTH_INSPECTOR(str(path))
+            )
+            return Inspection(
+                resolved,
+                "depth_map",
+                byte_size,
+                shape=(height, width),
+                dtype="float32",
+                channels=channels,
+                metadata={
+                    "byte_order": "little" if little_endian else "big",
+                    "header_scale": header_scale,
+                    "row_order": "top_to_bottom",
+                    "unit": selected_encoding.unit,
+                    "scale_to_meters": selected_encoding.scale_to_meters,
+                    "invalid_policy": selected_encoding.invalid_policy,
+                },
+            )
+        result = inspect_path(path, resolved, "depth_map")
+        if result.channels != 1 or result.dtype != "uint16":
+            raise ValueError(
+                "PNG depth: expected grayscale uint16 samples"
+            )
+        return replace(
+            result,
             dtype="float32",
-            channels=channels,
             metadata={
-                "byte_order": "little" if little_endian else "big",
-                "header_scale": header_scale,
+                **result.metadata,
+                "stored_dtype": "uint16",
+                "decoded_dtype": "float32",
                 "row_order": "top_to_bottom",
                 "unit": selected_encoding.unit,
                 "scale_to_meters": selected_encoding.scale_to_meters,
@@ -231,8 +257,9 @@ def write_depth(
 ) -> None:
     """Write a DepthMap whose metadata exactly matches ``encoding``.
 
-    PFM carries only float samples and endian/row-order syntax, so the supplied
-    encoding remains an external contract and must be supplied again on read.
+    The payload format does not carry the complete semantic encoding, so it
+    remains an external contract and must be supplied again on read. PNG also
+    requires every stored float32 value to be exactly representable as uint16.
     """
 
     resolved = _resolve_depth_format(path, format, writing=True)
@@ -246,9 +273,14 @@ def write_depth(
         selected_encoding.scale_to_meters,
         selected_encoding.invalid_policy,
     )
+    encoder = (
+        _core._write_pfm_depth_request
+        if resolved == "pfm"
+        else _core._write_png_depth_request
+    )
     try:
         _core._write_to_file(
-            _core._write_pfm_depth_request,
+            encoder,
             request,
             str(path),
         )

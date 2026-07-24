@@ -517,7 +517,7 @@ def _inspect_png(path: Path, datatype: str) -> Inspection:
     return _image(
         "png",
         datatype,
-        _size(path),
+        file_size,
         height,
         width,
         channels,

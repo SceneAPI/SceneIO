@@ -485,3 +485,27 @@ byte-identical to the raw writer and independent oracle. A generated 128 MiB
 sparse-file test keeps typed inspection plus an 8x8 bounded window below 1 MiB
 of traced Python allocation. The five-run 29-codec O4/O5 throughput and memory
 regression guard passed.
+
+## Typed PNG depth-adapter delta — 2026-07-24
+
+A nested PNG row measures the explicit `DepthMap` adapter on a 1024x1024
+grayscale uint16 raster, reported over the 4.194 MB widened float32 depth
+payload:
+
+```text
+operation                         result
+-------------------------------------------------------------
+typed mmap read                     979 MB/s
+typed direct-sink write             193 MB/s
+typed header inspection           0.052 ms
+typed read/write traced peak      0.011 / 0.001 MB
+```
+
+The reader losslessly widens uint16 samples to float32 and records only the
+mandatory external `DepthEncoding`; it never applies a scale. The writer scans
+for exact integral `[0,65535]` representability, rejects negative zero,
+non-finite/fractional/out-of-range values and confidence, then produces bytes
+identical to the existing deterministic grayscale uint16 Image writer. The
+compressed container cannot provide a bounded window without a full inflate, so
+the typed API rejects that selector explicitly. The five-run 29-codec O4/O5
+throughput and memory regression guard passed.

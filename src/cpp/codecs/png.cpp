@@ -18,8 +18,11 @@
 // the netpbm writer discipline, and writes exactly the declared color type
 // (auto_convert=0) so the bytes are deterministic and oracle-pinnable.
 #include <cstdlib>
+#include <nanobind/stl/string.h>
+#include <nanobind/stl/tuple.h>
 
 #include "lodepng.h"
+#include "records/depth_map.hpp"
 #include "records/image.hpp"
 
 using namespace nb::literals;
@@ -156,6 +159,52 @@ Image read_png(nb::handle source, size_t lanes) {
     return im;
 }
 
+void require_png_depth_encoding(const std::string &unit,
+                                double scale_to_meters,
+                                const std::string &invalid_policy) {
+    if (!depth_map_valid_unit(unit))
+        throw std::invalid_argument(
+            "PNG depth: unit must be "
+            "meters|millimeters|custom|unitless|unknown");
+    if (!depth_map_unit_scale_consistent(unit, scale_to_meters))
+        throw std::invalid_argument(
+            "PNG depth: unit/scale_to_meters mismatch");
+    if (!depth_map_valid_invalid_policy(invalid_policy))
+        throw std::invalid_argument(
+            "PNG depth: invalid_policy must be "
+            "none|zero|nonfinite|negative");
+}
+
+DepthMap read_png_depth(nb::handle source, const std::string &unit,
+                        double scale_to_meters,
+                        const std::string &invalid_policy, size_t lanes) {
+    require_png_depth_encoding(unit, scale_to_meters, invalid_policy);
+    Image image = read_png(source, lanes);
+    if (image.channels != 1 || image.dtype != PixelType::U16 ||
+        image.color_space != "gray" || image.maxval != 65535)
+        throw std::invalid_argument(
+            "PNG depth: expected grayscale uint16 samples");
+
+    DepthMap result;
+    result.height = image.height;
+    result.width = image.width;
+    result.unit = unit;
+    result.scale_to_meters = scale_to_meters;
+    result.invalid_policy = invalid_policy;
+    result.depth.resize(image.u16.size());
+    {
+        nb::gil_scoped_release release;
+        parallel_for_blocks(
+            image.u16.size(), lanes, 262144,
+            [&](size_t begin, size_t end, size_t) {
+                for (size_t index = begin; index < end; ++index)
+                    result.depth[index] =
+                        static_cast<float>(image.u16[index]);
+            });
+    }
+    return result;
+}
+
 nb::bytes write_png(const Image &img, size_t lanes) {
     // --- guards: refuse conventions PNG cannot represent (never convert) ---
     // Dimensions first: width/height are size_t but lodepng_encode takes unsigned,
@@ -243,6 +292,70 @@ nb::bytes write_png(const Image &img, size_t lanes) {
     return emit_bytes(out_bytes.data(), out_bytes.size());
 }
 
+nb::bytes write_png_depth(const DepthMap &depth, const std::string &unit,
+                          double scale_to_meters,
+                          const std::string &invalid_policy, size_t lanes) {
+    require_png_depth_encoding(unit, scale_to_meters, invalid_policy);
+    if (depth.unit != unit || depth.scale_to_meters != scale_to_meters ||
+        depth.invalid_policy != invalid_policy)
+        throw std::invalid_argument(
+            "PNG depth: DepthMap metadata does not match DepthEncoding");
+    if (depth.has_confidence())
+        throw std::invalid_argument(
+            "PNG depth: confidence cannot be represented");
+    if (depth.height == 0 || depth.width == 0 ||
+        depth.width > std::numeric_limits<size_t>::max() / depth.height)
+        throw std::invalid_argument(
+            "PNG depth: invalid or overflowing dimensions");
+    if (depth.width > kPngAxisCap || depth.height > kPngAxisCap ||
+        static_cast<uint64_t>(depth.width) * depth.height > kPngPixelCap)
+        throw std::invalid_argument(
+            "PNG depth: image dimensions exceed the supported limit");
+    const size_t count = depth.height * depth.width;
+    if (depth.depth.size() != count)
+        throw std::invalid_argument(
+            "PNG depth: DepthMap storage disagrees with its dimensions");
+
+    Image image;
+    image.height = depth.height;
+    image.width = depth.width;
+    image.channels = 1;
+    image.dtype = PixelType::U16;
+    image.color_space = "gray";
+    image.alpha_mode = "none";
+    image.maxval = 65535;
+    image.u16.resize(count);
+    {
+        nb::gil_scoped_release release;
+        parallel_for_blocks(
+            count, lanes, 262144,
+            [&](size_t begin, size_t end, size_t) {
+                for (size_t index = begin; index < end; ++index) {
+                    const float value = depth.depth[index];
+                    if (!std::isfinite(value) || value < 0.0f ||
+                        value > 65535.0f || std::trunc(value) != value ||
+                        (value == 0.0f && std::signbit(value)))
+                        throw std::invalid_argument(
+                            "PNG depth: every stored value must be an exact "
+                            "non-negative integer in [0,65535]");
+                    image.u16[index] = static_cast<uint16_t>(value);
+                }
+            });
+    }
+    return write_png(image, lanes);
+}
+
+nb::bytes write_png_depth_request(nb::tuple request) {
+    if (request.size() != 4)
+        throw std::invalid_argument(
+            "PNG depth: internal write request must contain four values");
+    return write_png_depth(
+        nb::cast<const DepthMap &>(request[0]),
+        nb::cast<std::string>(request[1]),
+        nb::cast<double>(request[2]),
+        nb::cast<std::string>(request[3]), 0);
+}
+
 }  // namespace
 
 void register_png(nb::module_ &m) {
@@ -255,4 +368,14 @@ void register_png(nb::module_ &m) {
           "channel/color_space and alpha pairings and refuses float32 / linear / premultiplied / "
           "partial-maxval records rather than converting. Large 16-bit byte-order transforms "
           "use bounded parallel lanes.");
+    m.def("read_png_depth", &read_png_depth, "data"_a, "unit"_a,
+          "scale_to_meters"_a, "invalid_policy"_a, "_lanes"_a = 0,
+          "Decode grayscale uint16 PNG into an owning float32 DepthMap by "
+          "exact widening, using the caller-supplied external depth encoding.");
+    m.def("write_png_depth", &write_png_depth, "depth"_a, "unit"_a,
+          "scale_to_meters"_a, "invalid_policy"_a, "_lanes"_a = 0,
+          "Encode an externally tagged DepthMap as deterministic grayscale "
+          "uint16 PNG after exact-integral range and confidence guards.");
+    m.def("_write_png_depth_request", &write_png_depth_request, "request"_a,
+          "Encode the private (DepthMap, unit, scale, invalid_policy) sink request.");
 }

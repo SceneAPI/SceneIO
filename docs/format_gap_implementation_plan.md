@@ -455,7 +455,7 @@ Typed depth/flow adapter contract and landing sequence:
      confidence-bearing `DepthMap` writes. Every current depth unit and invalid
      policy remains available through the required external encoding because
      the float payload is passed through rather than normalized.
-5. **PNG depth**
+5. **PNG depth — complete locally**
    - Accept only grayscale 16-bit PNG for typed depth. Widen uint16 samples to
      float32 exactly and record the supplied scale; never divide or multiply
      samples during decode.
@@ -645,6 +645,54 @@ Three-lens typed PFM review:
   exercise the optimized paths.
 
 No unresolved finding remains in the local typed PFM review. The local
+cp312-abi3 Windows wheel is validated; instrumented Linux and Linux/macOS wheel
+validation remain pending until the next user-authorized remote dependency-wave
+run.
+
+Typed PNG depth completion evidence (2026-07-24):
+
+- compiled typed readers accept only grayscale uint16 PNG, exactly widen every
+  sample to float32, preserve top-to-bottom rows, and attach the required
+  external encoding without multiplying, dividing, or classifying values;
+- typed writers verify encoding equality and absent confidence, reject
+  non-finite, fractional, negative, above-65535, and negative-zero samples, and
+  produce the same deterministic bytes as the existing Image writer and pypng
+  oracle;
+- TUM 1/5000 and ScanNet millimeter profiles, zero/max samples, interlaced
+  input, raw grayscale/RGB/RGBA/palette compatibility, wrong modes, mmap
+  fallback, mapping/result lifetime, every truncated prefix, 100 mutations,
+  50 randomized rasters, and one-vs-many lane identity are pinned;
+- compressed PNG exposes no false typed window: a requested selector raises
+  before the decoder runs, while typed inspection validates the supported
+  subset and reports the decoded float32 dtype plus stored uint16 dtype;
+- generated 16 MiB encoded-size read/write fixtures avoid a whole-file Python
+  allocation and multi-megabyte inspection remains below 1 MiB traced
+  allocation;
+- the five-run all-codec harness reports about 979 MB/s typed read,
+  193 MB/s typed sink write, 0.052 ms typed inspection, and 0.011/0.001 MB
+  traced read/write peaks; all O4/O5 directional and memory guards pass;
+- the final local MSVC suite passes 1,787 tests with 3 documented optional
+  skips, Ruff and `git diff --check` are clean, the cross-shell wheel smoke is
+  now a packaged numpy-only private module, and a clean Python 3.12 environment
+  passes it against the locally built cp312-abi3 Windows wheel.
+
+Three-lens typed PNG review:
+
+- **memory/lifetime:** lodepng state and malloc buffers remain RAII-guarded;
+  dimensions are capped before typed conversion allocation; input exporters
+  remain pinned across decode; bounded worker exceptions are joined and
+  rethrown; returned `DepthMap` storage owns all widened values;
+- **correctness:** typed mode checks occur against the decoded source mode,
+  widening is exact for all uint16 values, representability is checked before
+  narrowing, negative zero is rejected rather than silently canonicalized, and
+  raw Image behavior and deterministic bytes remain unchanged;
+- **test soundness:** pypng independently reads and writes big-endian uint16
+  samples, hand-computable profiles prove no implicit rescale, wrong raw modes
+  remain accepted by the raw API while typed calls reject them, and public
+  mmap/sink/inspect, short-write, mutation, lane, and lifetime paths are
+  exercised directly.
+
+No unresolved finding remains in the local typed PNG review. The local
 cp312-abi3 Windows wheel is validated; instrumented Linux and Linux/macOS wheel
 validation remain pending until the next user-authorized remote dependency-wave
 run.

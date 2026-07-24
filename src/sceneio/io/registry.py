@@ -605,7 +605,15 @@ register(
         record=_core.Image,
         datatype="image",
         magic=(b"\x89PNG\r\n\x1a\n",),
-        supported_features=("grayscale", "rgb", "rgba", "palette", "uint8", "uint16"),
+        supported_features=(
+            "grayscale",
+            "rgb",
+            "rgba",
+            "palette",
+            "uint8",
+            "uint16",
+            "typed_depth_adapter",
+        ),
     )
 )
 # JPEG (vendored stb) -> Image. Lossy 8-bit gray/RGB; the SOI+marker prefix is

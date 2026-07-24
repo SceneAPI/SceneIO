@@ -110,6 +110,18 @@ sceneio.write_depth(depth, "depth-copy.pfm", encoding=depth_encoding)
 depth_info = sceneio.inspect_depth("depth.pfm", encoding=depth_encoding)
 assert depth_info.metadata["scale_to_meters"] == 1.0
 
+# A ScanNet-style uint16 millimeter PNG uses the same explicit API. Stored
+# integers are widened exactly to float32; they are not divided on read.
+millimeter_encoding = sceneio.DepthEncoding(
+    unit="millimeters",
+    scale_to_meters=0.001,
+    invalid_policy="zero",
+)
+millimeter_depth = sceneio.read_depth(
+    "depth.png",
+    encoding=millimeter_encoding,
+)
+
 # Half-open row/column bounds; returns the normal Image/ndarray type.
 tile = sceneio.read_partial("flow.flo", window=(100, 356, 200, 712))
 

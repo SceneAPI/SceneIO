@@ -183,7 +183,7 @@ Columns: **Ext/id** · **Record** · **Lib/oracle (license)** · **R/W** ·
 |---|---|---|---|---|
 | ✅ PFM | ndarray (raw) + `DepthMap` (typed) | pure‑Python | R+W | owned positive-stride decode; mandatory external `DepthEncoding`; unit-magnitude scalar subset and bounded typed windows |
 | ✅ PPM / PGM / PNM | `Image` | pypng/manual | R+W | P2/P3/P5/P6, 8/16-bit |
-| ✅ PNG | `Image` | Pillow+pypng / lodepng (zlib) | R+W | 8/16‑bit, palette, interlace |
+| ✅ PNG | `Image` (raw) + `DepthMap` (typed) | Pillow+pypng / lodepng (zlib) | R+W | 8/16‑bit, palette, interlace; explicit grayscale uint16 typed-depth adapter |
 | ✅ JPEG | `Image` | Pillow / stb (public domain) | R+W | lossy; gray/RGB read, RGB write |
 | ✅ Radiance HDR | `Image` | numpy RGBE / stb (public domain) | R+W | float32 RGB; lossy RGBE encode |
 | ⬜ TIFF | `Image` | libtiff (BSD‑like) | R+W | tiled/striped; multi‑page |
@@ -196,7 +196,7 @@ Columns: **Ext/id** · **Record** · **Lib/oracle (license)** · **R/W** ·
 ### 3g. Depth / flow / spatial‑AI
 | Format | Record | Lib / oracle | R/W | Notes |
 |---|---|---|---|---|
-| ⬜ 16‑bit depth PNG | `DepthMap` | libpng + scale meta | R+W | TUM 1/5000, ScanNet mm — **scale pin** |
+| ✅ 16‑bit depth PNG | `DepthMap` | pypng oracle + lodepng | R+W | mandatory external encoding; TUM 1/5000 and ScanNet mm profiles tested; no implicit scale |
 | ✅ `.flo` (Middlebury) | ndarray (raw) + `FlowField` (typed) | manual | R+W | magic 202021.25; mapped raw view; typed semantic adapters with strict writer guards |
 | ✅ `.dmb` (Gipuma/COLMAP) | `DepthMap` | independent NumPy parser | R+W | scalar float32 dense MVS depth; unknown scale, zero-invalid; bounded windows |
 | ✅ transforms.json | `PosedViewSet` | pure‑Python | R+W | done (OpenGL c2w) |

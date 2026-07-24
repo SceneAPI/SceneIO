@@ -1549,6 +1549,104 @@ def _run_benchmark(args, tmp):
                     "partial_peak_mb": typed_partial_peak / 1e6,
                     "partial_rss_mb": typed_partial_rss / 1e6,
                 }
+            elif s.id == "png":
+                typed_side = max(1, int(1024 * args.scale**0.5))
+                stored_depth = (
+                    (
+                        np.arange(
+                            typed_side * typed_side,
+                            dtype=np.uint32,
+                        )
+                        * 40503
+                    )
+                    & 0xFFFF
+                ).astype(np.uint16).reshape(typed_side, typed_side)
+                depth_values = stored_depth.astype(np.float32)
+                depth_encoding = sceneio.DepthEncoding(
+                    "millimeters", 0.001, "zero"
+                )
+                typed_record = _core.depth_map(
+                    depth_values,
+                    unit="millimeters",
+                    invalid_policy="zero",
+                )
+                typed_source = os.path.join(tmp, "png-depth-source.bin")
+                typed_path = os.path.join(tmp, "png-depth-output.bin")
+                typed_bytes = bytes(
+                    _core.write_png(
+                        _core.image(stored_depth, color_space="gray")
+                    )
+                )
+                Path(typed_source).write_bytes(typed_bytes)
+                typed_mb = depth_values.nbytes / 1e6
+
+                def _typed_read(fp=typed_source):
+                    if args.cold_cache:
+                        _evict_file_cache(fp)
+                    return sceneio.read_depth(
+                        fp,
+                        format="png",
+                        encoding=depth_encoding,
+                    )
+
+                def _typed_write(
+                    destination=typed_path,
+                    value=typed_record,
+                ):
+                    return sceneio.write_depth(
+                        value,
+                        destination,
+                        format="png",
+                        encoding=depth_encoding,
+                    )
+
+                def _typed_inspect(fp=typed_source):
+                    if args.cold_cache:
+                        _evict_file_cache(fp)
+                    return sceneio.inspect_depth(
+                        fp,
+                        format="png",
+                        encoding=depth_encoding,
+                    )
+
+                typed_read_time, typed_read_peak = _measure(
+                    _typed_read, args.runs
+                )
+                typed_read_rss = _measure_rss(_typed_read)
+                typed_write_time, typed_write_peak = _measure(
+                    _typed_write, args.runs
+                )
+                typed_write_rss = _measure_rss(_typed_write)
+                typed_inspect_time, typed_inspect_peak = _measure(
+                    _typed_inspect, args.runs
+                )
+                typed_inspect_rss = _measure_rss(_typed_inspect)
+                if not np.array_equal(
+                    np.asarray(_typed_read().depth),
+                    depth_values,
+                ):
+                    raise AssertionError("typed PNG depth values differ")
+                if Path(typed_path).read_bytes() != typed_bytes:
+                    raise AssertionError("typed PNG depth sink bytes differ")
+                typed_info = _typed_inspect()
+                if (
+                    typed_info.shape != depth_values.shape
+                    or typed_info.dtype != "float32"
+                    or typed_info.metadata.get("stored_dtype") != "uint16"
+                ):
+                    raise AssertionError("typed PNG depth inspection differs")
+                typed_adapter_metrics = {
+                    "format": "png",
+                    "read_mbps": typed_mb / typed_read_time,
+                    "read_peak_mb": typed_read_peak / 1e6,
+                    "read_rss_mb": typed_read_rss / 1e6,
+                    "write_mbps": typed_mb / typed_write_time,
+                    "write_peak_mb": typed_write_peak / 1e6,
+                    "write_rss_mb": typed_write_rss / 1e6,
+                    "inspect_ms": typed_inspect_time * 1000,
+                    "inspect_peak_mb": typed_inspect_peak / 1e6,
+                    "inspect_rss_mb": typed_inspect_rss / 1e6,
+                }
             partial_request = _partial_request(s.id, _inspect())
             partial_metrics = None
             if partial_request is not None:
