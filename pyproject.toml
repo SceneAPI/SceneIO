@@ -70,6 +70,10 @@ test-command = '''python -c "import mmap, pathlib, tempfile, numpy as np, scenei
 
 [tool.cibuildwheel.linux]
 manylinux-x86_64-image = "manylinux2014"
+# New NumPy releases no longer publish glibc-2.17 wheels. During the wheel
+# smoke test, select the newest compatible binary (currently 2.2.x) instead of
+# attempting to build an incompatible newer NumPy sdist with GCC 10.2.
+environment = { PIP_ONLY_BINARY = "numpy" }
 
 [tool.cibuildwheel.macos]
 environment = { MACOSX_DEPLOYMENT_TARGET = "11.0" }
