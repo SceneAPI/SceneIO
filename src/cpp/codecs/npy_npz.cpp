@@ -321,7 +321,7 @@ std::string serialize_npy(const char *descr, const std::vector<size_t> &shape,
 
 std::string serialize_entry(const TensorEntry &e) {  // one TensorDict entry -> a .npy member
     const DTypeInfo &info = dtype_info(e.dtype);
-    return serialize_npy(info.npy_descr, e.shape, e.bytes.data(), e.bytes.size());
+    return serialize_npy(info.npy_descr, e.shape, e.data(), e.size_bytes());
 }
 
 // ndarray strides are in ELEMENTS; a null stride pointer (DLPack compact form)
@@ -496,7 +496,8 @@ TensorDict read_npz(nb::handle source) {
                 const std::vector<uint8_t> payload =
                     load_npy_payload(static_cast<const uint8_t *>(buf), usz, info);
                 TensorEntry &e = td.add(key, info.tag, info.shape);  // rejects duplicates
-                if (!e.bytes.empty()) std::memcpy(e.bytes.data(), payload.data(), e.bytes.size());
+                if (e.size_bytes() != 0)
+                    std::memcpy(e.bytes.data(), payload.data(), e.size_bytes());
             } catch (const std::exception &ex) {
                 mz_free(buf);
                 throw std::invalid_argument(std::string("npz: member '") + key + "': " + ex.what());

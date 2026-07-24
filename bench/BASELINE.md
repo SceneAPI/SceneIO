@@ -293,3 +293,35 @@ material rows require a directional ratio gain. The paired five-run CI guard
 passed together with all retained O4 and O5
 inspection controls. Final verification passed 1,289 tests / 3 optional skips
 on Windows and 1,208 / 62 expected skips under ASan/UBSan/LSan on Linux.
+
+## Safetensors expansion delta — 2026-07-24
+
+The 24-codec harness now includes safetensors and its independent
+`safetensors.numpy 0.8.0` oracle. The dedicated large-fixture mode generates
+files in a temporary directory and commits no payload:
+
+```text
+python bench/bench_io.py --runs 3 --large-safetensors-mib 128
+python bench/bench_io.py --runs 1 --large-safetensors-mib 1024
+```
+
+`full` is SceneIO's complete mapped `TensorDict` construction without touching
+tensor pages. `selected` maps only the named 2 KiB tensor. Oracle full-read
+numbers use `safetensors.numpy.load_file`, which materializes the arrays.
+Write is SceneIO's native chunked file sink versus the oracle's file writer.
+
+```text
+fixture       write ms  full ms  inspect ms  selected ms  traced peak MB  RSS MB
+-------------------------------------------------------------------------------
+SceneIO 128M      76.76      0.12        0.11         0.05            0.01    0.02
+oracle  128M      79.45     58.96        0.04         0.05          134.22  268.47
+SceneIO   1G     673.91      0.21        0.11         0.08            0.01    0.02
+oracle    1G     651.07    503.19        0.08         0.07         1073.75 2147.51
+```
+
+The measured result validates the intended qualitative target: SceneIO's
+mapped full and selected paths remain effectively constant in traced
+allocation/RSS as the fixture grows from 128 MiB to 1 GiB, while streaming
+write throughput stays comparable to the reference writer. Inspection and
+single-tensor selection are sub-millisecond for both implementations. The
+ordinary all-codec smoke was also extended from 23 to 24 entries.

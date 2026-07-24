@@ -1,7 +1,9 @@
 # Format-gap implementation, verification, and validation plan
 
-- **Status:** execution in progress after SceneIO 0.2.0; G0 is complete.
-- **Baseline:** 23 compiled codecs, all read/write, all inspectable, with
+- **Status:** execution in progress after SceneIO 0.2.0; G0 and G2.1 are
+  complete locally. Cross-platform wheel and instrumented validation remains a
+  user-gated remote action.
+- **Current branch:** 24 compiled codecs, all read/write and inspectable, with
   bounded partial reads where their containers permit them.
 - **Scope:** close every unblocked format gap declared by SceneIO's coverage
   documents without reimplementing the 0.2.0 codec tier.
@@ -243,7 +245,7 @@ Each numbered work package is independently committable and releasable.
 
 ### G2 — High-value self-contained coverage
 
-#### G2.1 Safetensors
+#### G2.1 Safetensors — complete locally
 
 Implementation:
 
@@ -278,6 +280,19 @@ Benchmark:
 - full read, inspect, single-tensor read, and write versus the oracle;
 - generated 128 MiB and 1 GiB multi-tensor fixtures;
 - traced allocation and RSS above the unavoidable mapping.
+
+Completion evidence (2026-07-24):
+
+- all 12 supported dtypes, scalar/empty shapes, canonical bytes, malformed
+  offsets/JSON, duplicate keys, selectors, mmap aliasing/lifetime, DLPack copy
+  isolation, chunked file sinks, and randomized oracle triangulation pass;
+- the complete local MSVC suite passes 1,475 tests with 3 documented optional
+  skips, and Ruff is clean;
+- generated 128 MiB and 1 GiB runs show constant-size SceneIO traced
+  allocation/RSS for full and selected mapped reads, with comparable streaming
+  write throughput to `safetensors.numpy`;
+- Linux instrumentation and Linux/macOS wheel validation remain pending until
+  the user authorizes the branch push and remote workflows.
 
 #### G2.2 COLMAP database
 

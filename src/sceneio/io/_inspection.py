@@ -87,6 +87,8 @@ def inspect_path(path: str | Path, format_id: str, datatype: str) -> Inspection:
         return _inspect_npy(p, datatype)
     if format_id == "npz":
         return _inspect_npz(p, datatype)
+    if format_id == "safetensors":
+        return _inspect_safetensors(p, datatype)
     if format_id == "netpbm":
         return _inspect_netpbm(p, datatype)
     if format_id == "png":
@@ -360,6 +362,24 @@ def _inspect_npz(path: Path, datatype: str) -> Inspection:
         _size(path),
         count=len(arrays),
         arrays=tuple(arrays),
+    )
+
+
+def _inspect_safetensors(path: Path, datatype: str) -> Inspection:
+    arrays_raw, attrs = _compiled_buffer_inspect(
+        path, _core._inspect_safetensors
+    )
+    arrays = tuple(
+        ArrayInspection(name, tuple(shape), dtype)
+        for name, shape, dtype in arrays_raw
+    )
+    return Inspection(
+        "safetensors",
+        datatype,
+        _size(path),
+        count=len(arrays),
+        arrays=arrays,
+        metadata={"metadata_keys": tuple(attrs)},
     )
 
 

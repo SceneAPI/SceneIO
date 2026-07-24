@@ -2,7 +2,7 @@
 
 Measures, per codec, encode (write) + decode (read) throughput (MB/s over the raw
 payload) and peak Python allocation (tracemalloc), for sceneio._core vs the oracle
-library where one exists, on representative payloads for all 23 codecs. Read
+library where one exists, on representative payloads for all 24 codecs. Read
 measurements retain the legacy whole-file bytes/copy-decode path beside the
 public registry mmap path, so their peak delta captures the input copy O1
 removes and, for NPY/FLO, the decoded-array copy O2 removes. Write measurements
@@ -62,6 +62,18 @@ try:
     import psutil
 except Exception:
     psutil = None
+try:
+    from safetensors import safe_open as safetensors_open
+    from safetensors.numpy import load as safetensors_load
+    from safetensors.numpy import load_file as safetensors_load_file
+    from safetensors.numpy import save as safetensors_save
+    from safetensors.numpy import save_file as safetensors_save_file
+except Exception:
+    safetensors_open = None
+    safetensors_load = None
+    safetensors_load_file = None
+    safetensors_save = None
+    safetensors_save_file = None
 
 
 def _measure(fn: Callable[[], object], runs: int) -> tuple[float, int]:
@@ -541,6 +553,19 @@ def _specs(scale, pose_bundle=None):
             lambda rec, p: sum(array.nbytes for array in p.values()),
         ),
         Spec(
+            "safetensors",
+            lambda: (tensors, npz_arrays),
+            _core.write_safetensors,
+            _core.read_safetensors,
+            (
+                (lambda arrays: safetensors_save(arrays))
+                if safetensors_save
+                else None
+            ),
+            safetensors_load,
+            lambda rec, p: sum(array.nbytes for array in p.values()),
+        ),
+        Spec(
             "transforms_json",
             lambda: (transforms, transforms),
             _core.write_transforms_json,
@@ -637,6 +662,8 @@ def _partial_request(codec_id, info, full_record=None):
     if codec_id in {"colmap_sparse", "colmap_sparse_txt"}:
         image_ids = np.asarray(full_record.image_ids)
         return {"image_id": int(image_ids[len(image_ids) // 2])}
+    if codec_id == "safetensors":
+        return {"tensors": ("b",)}
     return None
 
 
@@ -653,6 +680,15 @@ def main():
         "--cold-cache",
         action="store_true",
         help="request POSIX_FADV_DONTNEED before each path read when supported",
+    )
+    ap.add_argument(
+        "--large-safetensors-mib",
+        type=int,
+        default=0,
+        help=(
+            "run only the generated safetensors full/inspect/single-tensor/"
+            "stream-write fixture at this MiB size (use 128 or 1024)"
+        ),
     )
     ap.add_argument(
         "--require-o4-gains",
@@ -676,13 +712,153 @@ def main():
     args = ap.parse_args()
     if args.scale <= 0:
         ap.error("--scale must be positive")
+    if args.large_safetensors_mib < 0:
+        ap.error("--large-safetensors-mib must be non-negative")
     with tempfile.TemporaryDirectory(prefix="sceneio_bench_") as tmp:
-        failures, results = _run_benchmark(args, tmp)
+        if args.large_safetensors_mib:
+            failures, results = _run_large_safetensors(args, tmp)
+        else:
+            failures, results = _run_benchmark(args, tmp)
     if args.json:
         args.json.parent.mkdir(parents=True, exist_ok=True)
         args.json.write_text(json.dumps(results, indent=2) + "\n", encoding="utf-8")
     if failures:
         raise RuntimeError("benchmark failures: " + ", ".join(failures))
+
+
+def _run_large_safetensors(args, tmp):
+    size_bytes = args.large_safetensors_mib * 1024 * 1024
+    count = max(1, size_bytes // np.dtype(np.float32).itemsize)
+    large = np.arange(count, dtype=np.float32)
+    small = np.arange(1024, dtype=np.int16)
+    arrays = {"large": large, "small": small}
+    record = _core.tensor_dict(arrays, {"fixture": "generated"})
+    path = Path(tmp) / "large.safetensors"
+    oracle_path = Path(tmp) / "large-oracle.safetensors"
+
+    def write_sceneio():
+        sceneio.write(record, path, format="safetensors")
+
+    write_time, write_peak = _measure(write_sceneio, args.runs)
+    write_rss = _measure_rss(write_sceneio)
+
+    def full_read():
+        if args.cold_cache:
+            _evict_file_cache(path)
+        return sceneio.read(path, format="safetensors")
+
+    def inspect_read():
+        if args.cold_cache:
+            _evict_file_cache(path)
+        return sceneio.inspect(path, format="safetensors")
+
+    def selected_read():
+        if args.cold_cache:
+            _evict_file_cache(path)
+        return sceneio.read_partial(
+            path, format="safetensors", tensors=("small",)
+        )
+
+    full_time, full_peak = _measure(full_read, args.runs)
+    full_rss = _measure_rss(full_read)
+    inspect_time, inspect_peak = _measure(inspect_read, args.runs)
+    inspect_rss = _measure_rss(inspect_read)
+    selected_time, selected_peak = _measure(selected_read, args.runs)
+    selected_rss = _measure_rss(selected_read)
+
+    oracle_metrics = {}
+    if (
+        safetensors_save_file
+        and safetensors_load_file
+        and safetensors_open
+    ):
+        def oracle_full():
+            if args.cold_cache:
+                _evict_file_cache(path)
+            return safetensors_load_file(path)
+
+        oracle_write_time, oracle_write_peak = _measure(
+            lambda: safetensors_save_file(arrays, oracle_path), args.runs
+        )
+        oracle_write_rss = _measure_rss(
+            lambda: safetensors_save_file(arrays, oracle_path)
+        )
+        oracle_full_time, oracle_full_peak = _measure(
+            oracle_full, args.runs
+        )
+        oracle_full_rss = _measure_rss(oracle_full)
+
+        def oracle_inspect():
+            if args.cold_cache:
+                _evict_file_cache(path)
+            with safetensors_open(path, framework="np") as handle:
+                return tuple(
+                    (
+                        name,
+                        tuple(handle.get_slice(name).get_shape()),
+                        handle.get_slice(name).get_dtype(),
+                    )
+                    for name in tuple(handle.keys())
+                )
+
+        def oracle_selected():
+            if args.cold_cache:
+                _evict_file_cache(path)
+            with safetensors_open(path, framework="np") as handle:
+                return handle.get_tensor("small")
+
+        oracle_inspect_time, oracle_inspect_peak = _measure(
+            oracle_inspect, args.runs
+        )
+        oracle_inspect_rss = _measure_rss(oracle_inspect)
+        oracle_selected_time, oracle_selected_peak = _measure(
+            oracle_selected, args.runs
+        )
+        oracle_selected_rss = _measure_rss(oracle_selected)
+        oracle_metrics = {
+            "oracle_write_ms": oracle_write_time * 1000,
+            "oracle_write_peak_mb": oracle_write_peak / 1e6,
+            "oracle_write_rss_mb": oracle_write_rss / 1e6,
+            "oracle_full_ms": oracle_full_time * 1000,
+            "oracle_full_peak_mb": oracle_full_peak / 1e6,
+            "oracle_full_rss_mb": oracle_full_rss / 1e6,
+            "oracle_inspect_ms": oracle_inspect_time * 1000,
+            "oracle_inspect_peak_mb": oracle_inspect_peak / 1e6,
+            "oracle_inspect_rss_mb": oracle_inspect_rss / 1e6,
+            "oracle_selected_ms": oracle_selected_time * 1000,
+            "oracle_selected_peak_mb": oracle_selected_peak / 1e6,
+            "oracle_selected_rss_mb": oracle_selected_rss / 1e6,
+        }
+
+    decoded = full_read()
+    selected = selected_read()
+    np.testing.assert_array_equal(decoded["small"], small)
+    np.testing.assert_array_equal(selected["small"], small)
+    inspected = {array.name: array for array in inspect_read().arrays}
+    assert inspected["large"].shape == large.shape
+    del decoded, selected
+    gc.collect()
+
+    result = {
+        "codec": "safetensors-large",
+        "fixture_mib": args.large_safetensors_mib,
+        "file_mb": path.stat().st_size / 1e6,
+        "write_ms": write_time * 1000,
+        "write_peak_mb": write_peak / 1e6,
+        "write_rss_mb": write_rss / 1e6,
+        "full_ms": full_time * 1000,
+        "full_peak_mb": full_peak / 1e6,
+        "full_rss_mb": full_rss / 1e6,
+        "inspect_ms": inspect_time * 1000,
+        "inspect_peak_mb": inspect_peak / 1e6,
+        "inspect_rss_mb": inspect_rss / 1e6,
+        "selected_ms": selected_time * 1000,
+        "selected_peak_mb": selected_peak / 1e6,
+        "selected_rss_mb": selected_rss / 1e6,
+        **oracle_metrics,
+    }
+    print(json.dumps(result, indent=2))
+    return [], [result]
 
 
 def _run_benchmark(args, tmp):
@@ -1253,7 +1429,7 @@ def _run_benchmark(args, tmp):
             results.append({"codec": spec.id, "error": f"{type(e).__name__}: {e}"})
             print(f"{spec.id:<14} ERROR: {type(e).__name__}: {e}")
 
-    assert len(specs) + len(_directory_specs()) == 23
+    assert len(specs) + len(_directory_specs()) == 24
     print("\nMB/s over raw payload; fileMB = encoded size (= the whole-file copy O1/O3 remove).")
     print("sioR = in-memory copy decode; pathR = public registry mmap read/view.")
     print("bPeakMB/mPeakMB = peak Python allocation for bytes/mmap reads (O1 delta).")
@@ -1329,7 +1505,7 @@ def _run_benchmark(args, tmp):
         )
     print(
         "Partial reads return the normal record type while materializing only "
-        "the selected pixel, point, or COLMAP-image subset."
+        "the selected pixel, point, tensor, or COLMAP-image subset."
     )
     if args.require_o5_inspect_gains:
         stable = {"exr", "gaussian_ply", "las", "png", "spz"}

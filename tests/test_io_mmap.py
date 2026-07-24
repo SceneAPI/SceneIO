@@ -222,6 +222,12 @@ def buffer_codecs():
         spec("kitti", _core.read_kitti, _core.write_kitti, kitti),
         spec("npy", _core.read_npy, _core.write_npy, tensor),
         spec("npz", _core.read_npz, _core.write_npz, tensors),
+        spec(
+            "safetensors",
+            _core.read_safetensors,
+            _core.write_safetensors,
+            tensors,
+        ),
         spec("netpbm", _core.read_netpbm, _core.write_netpbm, image_u16),
         spec("png", _core.read_png, _core.write_png, image_rgba16),
         spec("jpeg", _core.read_jpeg, _core.write_jpeg, image_u8),
@@ -256,8 +262,8 @@ def _outcome(call, argument):
 
 
 def test_all_single_file_codecs_mmap_equal_bytes_bit_exact(tmp_path, buffer_codecs):
-    """All 21 buffer codecs decode mmap and bytes to bit-exact records."""
-    assert len(buffer_codecs) == 21
+    """All 22 buffer codecs decode mmap and bytes to bit-exact records."""
+    assert len(buffer_codecs) == 22
     for spec in buffer_codecs:
         expected = _fingerprint(spec.reader(spec.data))
         path = tmp_path / f"sample-{spec.id}.bin"
@@ -275,8 +281,8 @@ def test_all_single_file_codecs_mmap_equal_bytes_bit_exact(tmp_path, buffer_code
 
 
 def test_all_single_file_sinks_are_byte_identical(tmp_path, buffer_codecs):
-    """All 21 compiled encoders emit the exact bytes their buffer API returns."""
-    assert len(buffer_codecs) == 21
+    """All 22 compiled encoders emit the exact bytes their buffer API returns."""
+    assert len(buffer_codecs) == 22
     for spec in buffer_codecs:
         direct = tmp_path / f"direct-{spec.id}.bin"
         _core._write_to_file(spec.writer, spec.value, direct)
@@ -416,8 +422,8 @@ print(max(0, peak[0] - baseline))
     return int(completed.stdout.strip())
 
 
-def test_inspect_matches_decoded_metadata_all_23_codecs(tmp_path, buffer_codecs):
-    assert len(buffer_codecs) == 21
+def test_inspect_matches_decoded_metadata_all_24_codecs(tmp_path, buffer_codecs):
+    assert len(buffer_codecs) == 22
     for spec in buffer_codecs:
         path = tmp_path / f"inspect-{spec.id}.data"
         path.write_bytes(spec.data)
@@ -1571,7 +1577,7 @@ def test_registry_uses_mmap_for_every_nonempty_single_file_codec(
         value = sceneio.codecs()[spec.id].read(str(path))
         gc.collect()
         assert _fingerprint(value) == _fingerprint(spec.reader(spec.data))
-    assert mapped_paths == len(buffer_codecs) == 21
+    assert mapped_paths == len(buffer_codecs) == 22
 
 
 def test_all_buffer_entries_accept_readonly_protocol_exporters(buffer_codecs):

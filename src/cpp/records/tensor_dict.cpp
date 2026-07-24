@@ -31,13 +31,22 @@ namespace {
 // owner directly (rather than rv_policy::reference_internal) is what lets a
 // container of views — items() — keep every element alive individually.
 // strides=nullptr => C-contiguous.
-nb::ndarray<nb::numpy> view_entry(nb::handle owner, const TensorEntry &e) {
+nb::object view_entry(nb::handle owner, const TensorDict &t,
+                      const TensorEntry &e) {
     const DTypeInfo &info = dtype_info(e.dtype);
+    if (e.borrowed) {
+        if (!t.backing_owner.is_valid())
+            throw std::logic_error(
+                "TensorDict borrowed entry has no backing owner");
+        return borrowed_bytes_from_owner(
+            t.backing_owner, t.backing_data, t.backing_size, e.data(),
+            e.shape, info.name, info.itemsize);
+    }
     static uint8_t sentinel = 0;  // never hand numpy a null base pointer for empty arrays
     void *p = e.bytes.empty() ? &sentinel : const_cast<uint8_t *>(e.bytes.data());
-    return nb::ndarray<nb::numpy>(p, e.shape.size(), e.shape.data(), owner,
-                                  /*strides=*/nullptr,
-                                  nb::dlpack::dtype{info.code, info.bits, 1});
+    return nb::cast(nb::ndarray<nb::numpy>(
+        p, e.shape.size(), e.shape.data(), owner,
+        /*strides=*/nullptr, nb::dlpack::dtype{info.code, info.bits, 1}));
 }
 
 // dtype-ERASED input: accepts any supported dtype / framework (numpy, torch),
@@ -61,7 +70,8 @@ TensorDict make_td(nb::dict arrays, std::optional<nb::dict> attrs) {
                 "' (supported: bool, int8..64, uint8..64, float16/32/64)");
         std::vector<size_t> shape(a.shape_ptr(), a.shape_ptr() + a.ndim());
         TensorEntry &e = t.add(std::move(name), info->tag, std::move(shape));
-        if (!e.bytes.empty()) std::memcpy(e.bytes.data(), a.data(), e.bytes.size());
+        if (e.size_bytes() != 0)
+            std::memcpy(e.bytes.data(), a.data(), e.size_bytes());
     }
     if (attrs)
         for (auto [k, v] : *attrs)
@@ -96,14 +106,15 @@ void register_tensor_dict(nb::module_ &m) {
                  const TensorDict &t = nb::cast<const TensorDict &>(self);
                  const TensorEntry *e = t.find(k);
                  if (!e) throw nb::key_error(k.c_str());
-                 return view_entry(self, *e);
+                 return view_entry(self, t, *e);
              })
         .def("items",
              [](nb::handle_t<TensorDict> self) {
                  const TensorDict &t = nb::cast<const TensorDict &>(self);
-                 std::vector<std::pair<std::string, nb::ndarray<nb::numpy>>> out;
+                 std::vector<std::pair<std::string, nb::object>> out;
                  out.reserve(t.entries.size());
-                 for (const auto &e : t.entries) out.emplace_back(e.name, view_entry(self, e));
+                 for (const auto &e : t.entries)
+                     out.emplace_back(e.name, view_entry(self, t, e));
                  return out;
              })
         .def("dtype_of",

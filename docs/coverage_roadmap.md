@@ -173,7 +173,7 @@ Columns: **Ext/id** · **Record** · **Lib/oracle (license)** · **R/W** ·
 | ✅ `.npy` / `.npz` | ndarray / `TensorDict` | numpy (BSD) | R+W | NPY native C-order mmap view; NPZ stored/deflate |
 | ⬜ HDF5 `.h5` | `TensorDict` | h5py (BSD) + libhdf5 (BSD) | R+W | optional C lib; streaming |
 | ⬜ hloc feature layout | `FeatureSet`/`MatchGraph` | hloc (Apache) + h5py | R+W | h5 group conventions |
-| ⬜ safetensors | `TensorDict` | safetensors (Apache) | R+W | json header + mmap tensors |
+| ✅ safetensors | `TensorDict` | safetensors (Apache) | R+W | JSON header, mmap tensors, name/slice selectors |
 | ⬜ Zarr | `TensorDict` | zarr (MIT) | R+W | chunked; blosc (BSD) |
 | ⬜ Parquet / Arrow | table | pyarrow (Apache) | R+W | columnar; optional |
 
@@ -228,8 +228,7 @@ hardening work shipped in 0.2.0. The remaining dependency-ordered sequence is
 maintained in `format_gap_implementation_plan.md`:
 
 1. machine-readable capabilities and optional-feature state;
-2. safetensors, COLMAP DB, generic PLY/PCD, calibration, and other
-   self-contained formats;
+2. COLMAP DB, generic PLY/PCD, calibration, and other self-contained formats;
 3. meshes and vendorable LAZ;
 4. lazy sequence/dataset containers;
 5. independently gated HDF5/TIFF/E57/Arrow integrations;

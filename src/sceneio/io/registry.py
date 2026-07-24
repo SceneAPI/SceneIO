@@ -44,6 +44,10 @@ class Codec:
     read_window: Callable[[str, int, int, int, int], object] | None = None
     read_points: Callable[[str, int, int], object] | None = None
     read_image: Callable[[str, int], object] | None = None
+    read_tensors: Callable[[str, tuple[str, ...]], object] | None = None
+    read_slices: Callable[
+        [str, tuple[tuple[str, int, int], ...]], object
+    ] | None = None
     streams_read: bool = True
     streams_write: bool = True
     lossy: bool = False
@@ -97,6 +101,10 @@ class Codec:
             selectors.append("points")
         if self.read_image is not None:
             selectors.append("image_id")
+        if self.read_tensors is not None:
+            selectors.append("tensors")
+        if self.read_slices is not None:
+            selectors.append("slices")
         return CodecCapabilities(
             format=self.id,
             datatype=self.datatype,
@@ -308,20 +316,20 @@ def _mmap_selector_reader(fn: Callable[..., object]) -> Callable[..., object]:
 def _mmap_view_reader(
     view_fn: Callable[[object], object],
     fallback_fn: Callable[[object], object],
-) -> Callable[[str], object]:
-    """Return a raw ndarray view whose owner keeps the mmap export alive.
+) -> Callable[..., object]:
+    """Return mapped views whose owner keeps the mmap export alive.
 
     The compiled view reader pins the mmap's buffer export into the returned
-    ndarray, so this adapter deliberately does not close a successful mapping.
-    It is released automatically when the last array view is collected. Empty
-    files and filesystems without mmap support use the established copy reader.
-    The mapped file must not be modified or truncated for the lifetime of the
-    returned array and all derived views; atomic replacement of the path is safe.
-    A private copy-on-write mapping is presented to C++ through a read-only
-    memoryview so consumers that disregard NumPy's flag still cannot alter disk.
+    ndarray or record, so this adapter deliberately does not close a successful
+    mapping. It is released automatically when the last owning record/array
+    view is collected. Empty files and filesystems without mmap support use the
+    established copy reader. The mapped file must not be modified or truncated
+    for the lifetime of the returned views; atomic path replacement is safe. A
+    private copy-on-write mapping is presented through a read-only memoryview so
+    consumers that disregard NumPy's flag still cannot alter disk.
     """
 
-    def read(path: str):
+    def read(path: str, *args):
         p = Path(path)
         with p.open("rb") as stream:
             try:
@@ -333,11 +341,11 @@ def _mmap_view_reader(
                 mapped = mmap.mmap(stream.fileno(), 0, access=mmap.ACCESS_COPY)
             except (OSError, ValueError):
                 stream.seek(0)
-                return fallback_fn(stream.read())
+                return fallback_fn(stream.read(), *args)
             readonly = None
             try:
                 readonly = memoryview(mapped).toreadonly()
-                return view_fn(readonly)
+                return view_fn(readonly, *args)
             except BaseException:
                 # Do not let the chained FormatError traceback retain a live
                 # mapping (and Windows file lock) after a failed decode.
@@ -403,7 +411,7 @@ def _canon(a):
     return a
 
 
-def _prepare_npz(obj):
+def _prepare_tensor_dict(obj):
     if isinstance(obj, _core.TensorDict):
         return obj
     return _core.tensor_dict({k: _canon(v) for k, v in dict(obj).items()})
@@ -516,11 +524,53 @@ register(
         "npz",
         (".npz",),
         _mmap_reader(_core.read_npz),
-        _file_sink_writer(_core.write_npz, prepare=_prepare_npz),
+        _file_sink_writer(_core.write_npz, prepare=_prepare_tensor_dict),
         record=_core.TensorDict,
         datatype="tensor_dict",
         supported_features=("stored", "deflate", "numeric_dtypes"),
         unsupported_features=("object_dtype",),
+    )
+)
+register(
+    Codec(
+        "safetensors",
+        (".safetensors",),
+        _mmap_view_reader(
+            _core.read_safetensors_view,
+            _core.read_safetensors,
+        ),
+        _file_sink_writer(
+            _core.write_safetensors,
+            prepare=_prepare_tensor_dict,
+        ),
+        record=_core.TensorDict,
+        datatype="tensor_dict",
+        read_tensors=_mmap_view_reader(
+            _core.read_safetensors_tensors_view,
+            _core.read_safetensors_tensors,
+        ),
+        read_slices=_mmap_view_reader(
+            _core.read_safetensors_slices_view,
+            _core.read_safetensors_slices,
+        ),
+        supported_features=(
+            "metadata",
+            "bool",
+            "signed_integers",
+            "unsigned_integers",
+            "float16",
+            "float32",
+            "float64",
+            "mmap_views",
+            "leading_axis_slices",
+        ),
+        unsupported_features=(
+            "bfloat16",
+            "float8",
+            "complex64",
+            "sub_byte_dtypes",
+            "strided_tensors",
+        ),
     )
 )
 register(

@@ -29,6 +29,7 @@ _BUILTINS = {
     "openmvg",
     "pfm",
     "png",
+    "safetensors",
     "splat",
     "spz",
     "transforms_json",
@@ -45,6 +46,7 @@ _PARTIAL = {
     "las": ("points",),
     "netpbm": ("window",),
     "pfm": ("window",),
+    "safetensors": ("tensors", "slices"),
     "splat": ("points",),
     "webp": ("window",),
     "xyz": ("points",),
@@ -124,6 +126,14 @@ def test_capability_details_pin_current_fidelity_boundaries():
     webp = sceneio.capabilities("webp")
     assert {"lossless", "lossy"} <= set(webp.supported_features)
     assert {"animation", "lossy_window"} <= set(webp.unsupported_features)
+
+    safetensors = sceneio.capabilities("safetensors")
+    assert {"metadata", "mmap_views", "leading_axis_slices"} <= set(
+        safetensors.supported_features
+    )
+    assert {"bfloat16", "float8", "complex64"} <= set(
+        safetensors.unsupported_features
+    )
 
 
 def test_unknown_capability_format_is_normalized():

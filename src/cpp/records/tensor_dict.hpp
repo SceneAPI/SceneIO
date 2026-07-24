@@ -117,13 +117,22 @@ inline const DTypeInfo *dtype_from_tag(uint8_t raw) {
 struct TensorEntry {
     std::string name;
     sio::DType dtype = sio::DType::U8;
-    std::vector<size_t> shape;   // ndim >= 0; 0-d scalar and zero-size dims are legal
-    std::vector<uint8_t> bytes;  // len == prod(shape) * itemsize, native-endian, C-order
+    std::vector<size_t> shape;  // ndim >= 0; 0-d scalar and zero-size dims are legal
+    std::vector<uint8_t> bytes;
+    const uint8_t *borrowed_data = nullptr;
+    size_t borrowed_size = 0;
+    bool borrowed = false;
 
     size_t num_elems() const {  // prod(shape); 1 for a 0-d scalar
         size_t n = 1;
         for (size_t d : shape) n *= d;
         return n;
+    }
+    const uint8_t *data() const {
+        return borrowed ? borrowed_data : bytes.data();
+    }
+    size_t size_bytes() const {
+        return borrowed ? borrowed_size : bytes.size();
     }
 };
 
@@ -134,6 +143,14 @@ struct TensorDict {
     std::vector<TensorEntry> entries;
     std::vector<std::pair<std::string, std::string>> attrs;
     std::unordered_map<std::string, size_t> index;  // name -> entries index, O(1) find
+    // A safetensors view retains an uncloseable PinnedBuffer here. Accessors
+    // create read-only arrays that retain this owner independently, so either
+    // the record or any derived array is sufficient to keep the mapping alive.
+    // All construction, move, and destruction of this nb::object happens with
+    // the Python GIL held; pure-C++ decode work only touches the fields above.
+    nb::object backing_owner;
+    const uint8_t *backing_data = nullptr;
+    size_t backing_size = 0;
 
     size_t size() const { return entries.size(); }
 
@@ -150,9 +167,8 @@ struct TensorDict {
     // drive a heap write past the buffer (the crafted-64-bit-length lesson from
     // spz.cpp). Throws std::invalid_argument on a duplicate name (readers must
     // reject two members that map to the same key, never silently overwrite).
-    TensorEntry &add(std::string name, sio::DType dt, std::vector<size_t> shape) {
-        if (index.count(name))
-            throw std::invalid_argument("TensorDict: duplicate tensor name '" + name + "'");
+    static size_t checked_size(const std::string &name, sio::DType dt,
+                               const std::vector<size_t> &shape) {
         const size_t itemsize = sio::dtype_info(dt).itemsize;
         size_t elems = 1;
         for (size_t d : shape) {
@@ -164,14 +180,42 @@ struct TensorDict {
         if (itemsize != 0 && elems > SIZE_MAX / itemsize)
             throw std::invalid_argument("TensorDict: tensor '" + name +
                                         "' byte size overflows size_t");
+        return elems * itemsize;
+    }
+
+    TensorEntry &append(std::string name, sio::DType dt,
+                        std::vector<size_t> shape) {
+        if (index.count(name))
+            throw std::invalid_argument("TensorDict: duplicate tensor name '" + name + "'");
         const size_t idx = entries.size();
         TensorEntry e;
         e.name = name;
         e.dtype = dt;
         e.shape = std::move(shape);
-        e.bytes.resize(elems * itemsize);  // zero-filled
         entries.push_back(std::move(e));   // push first: exception-safe vs the index
         index.emplace(entries[idx].name, idx);
         return entries[idx];
+    }
+
+    TensorEntry &add(std::string name, sio::DType dt,
+                     std::vector<size_t> shape) {
+        const size_t byte_size = checked_size(name, dt, shape);
+        TensorEntry &entry = append(std::move(name), dt, std::move(shape));
+        entry.bytes.resize(byte_size);  // zero-filled
+        return entry;
+    }
+
+    TensorEntry &add_borrowed(std::string name, sio::DType dt,
+                              std::vector<size_t> shape,
+                              const uint8_t *data, size_t byte_size) {
+        const size_t expected = checked_size(name, dt, shape);
+        if (byte_size != expected)
+            throw std::invalid_argument("TensorDict: tensor '" + name +
+                                        "' borrowed byte size disagrees with shape");
+        TensorEntry &entry = append(std::move(name), dt, std::move(shape));
+        entry.borrowed_data = data;
+        entry.borrowed_size = byte_size;
+        entry.borrowed = true;
+        return entry;
     }
 };

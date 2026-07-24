@@ -14,6 +14,7 @@ is one :func:`sceneio.io.register` call over a compiled codec. See
 from __future__ import annotations
 
 import operator
+from collections.abc import Mapping
 from pathlib import Path
 
 from sceneio import _core
@@ -46,14 +47,16 @@ def read(path, *, format: str | None = None):
 
     Single-file codecs use a read-only mmap. The file must remain byte-stable
     during decoding. Native-endian, C-order NPY and FLO results are read-only
-    views that retain the mapping, so their backing file must not be modified or
-    truncated until the returned array and all derived views are released; a
-    POSIX shrink can otherwise cause ``SIGBUS`` on later access. Atomic path
-    replacement is safe because the live mapping retains the old file. On
-    Windows the mapped file remains locked for the same lifetime. DLPack export
-    makes an isolated contiguous copy because writable tensor consumers cannot
-    safely alias a read-only file mapping. PFM remains an owned, positive-stride
-    decode because its bottom-to-top row order requires a real transform.
+    views that retain the mapping. Safetensors returns a ``TensorDict`` whose
+    aligned tensors are likewise read-only mapped views. Their backing file must
+    not be modified or truncated until the record, returned arrays, and all
+    derived views are released; a POSIX shrink can otherwise cause ``SIGBUS`` on
+    later access. Atomic path replacement is safe because the live mapping
+    retains the old file. On Windows the mapped file remains locked for the same
+    lifetime. DLPack export makes an isolated contiguous copy because writable
+    tensor consumers cannot safely alias a read-only file mapping. PFM remains
+    an owned, positive-stride decode because its bottom-to-top row order requires
+    a real transform.
     """
     fmt = format or detect(path)
     codec = get(fmt)
@@ -99,6 +102,8 @@ def read_partial(
     window=None,
     points=None,
     image_id=None,
+    tensors=None,
+    slices=None,
     format: str | None = None,
 ):
     """Read only one file-backed region while preserving the normal record type.
@@ -106,13 +111,20 @@ def read_partial(
     Exactly one selector is required. ``window`` is the half-open pixel box
     ``(row_start, row_stop, column_start, column_stop)``. ``points`` is the
     half-open record range ``(start, stop)``. ``image_id`` selects one COLMAP
-    image by its persisted id. A format that cannot access the selected region
-    without a full payload decode raises :class:`FormatError`.
+    image by its persisted id. ``tensors`` selects complete named tensors.
+    ``slices`` maps tensor names to half-open leading-axis ``(start, stop)``
+    ranges. A format that cannot access the selected region without a full
+    payload decode raises :class:`FormatError`.
     """
 
-    selected = sum(value is not None for value in (window, points, image_id))
+    selected = sum(
+        value is not None
+        for value in (window, points, image_id, tensors, slices)
+    )
     if selected != 1:
-        raise ValueError("read_partial requires exactly one of window, points, or image_id")
+        raise ValueError(
+            "read_partial requires exactly one selector family"
+        )
     fmt = format or detect(path)
     codec = get(fmt)
     if window is not None:
@@ -125,7 +137,7 @@ def read_partial(
         if codec.read_points is None:
             raise FormatError(f"format {fmt!r} does not support point-subset reads")
         operation = codec.read_points
-    else:
+    elif image_id is not None:
         selected_image = _selector_int(image_id, "image_id")
         if selected_image < 0 or selected_image > 0xFFFFFFFF:
             raise ValueError("image_id must be in 0..4294967295")
@@ -133,6 +145,22 @@ def read_partial(
             raise FormatError(f"format {fmt!r} does not support single-image reads")
         operation = codec.read_image
         values = (selected_image,)
+    elif tensors is not None:
+        selected_tensors = _tensor_names(tensors)
+        if codec.read_tensors is None:
+            raise FormatError(
+                f"format {fmt!r} does not support named-tensor reads"
+            )
+        operation = codec.read_tensors
+        values = (selected_tensors,)
+    else:
+        selected_slices = _tensor_slices(slices)
+        if codec.read_slices is None:
+            raise FormatError(
+                f"format {fmt!r} does not support tensor-slice reads"
+            )
+        operation = codec.read_slices
+        values = (selected_slices,)
     try:
         return operation(str(path), *values)
     except FormatError:
@@ -162,6 +190,44 @@ def _selector_ints(value, length: int, name: str) -> tuple[int, ...]:
     if len(values) != length:
         raise ValueError(f"{name} must contain exactly {length} integers")
     return tuple(_selector_int(item, name) for item in values)
+
+
+def _tensor_names(value) -> tuple[str, ...]:
+    if isinstance(value, (str, bytes)):
+        raise TypeError("tensors must be a non-empty iterable of names")
+    try:
+        names = tuple(value)
+    except TypeError:
+        raise TypeError(
+            "tensors must be a non-empty iterable of names"
+        ) from None
+    if not names:
+        raise ValueError("tensors must contain at least one name")
+    if any(not isinstance(name, str) for name in names):
+        raise TypeError("tensor names must be strings")
+    if len(names) != len(set(names)):
+        raise ValueError("tensor names must be unique")
+    return names
+
+
+def _tensor_slices(value) -> tuple[tuple[str, int, int], ...]:
+    if not isinstance(value, Mapping):
+        raise TypeError(
+            "slices must be a non-empty mapping of tensor names to ranges"
+        )
+    if not value:
+        raise ValueError("slices must contain at least one tensor")
+    result = []
+    for name, bounds in value.items():
+        if not isinstance(name, str):
+            raise TypeError("tensor slice names must be strings")
+        start, stop = _selector_ints(bounds, 2, f"slice for {name!r}")
+        if start < 0 or start >= stop:
+            raise ValueError(
+                f"slice for {name!r} must satisfy 0 <= start < stop"
+            )
+        result.append((name, start, stop))
+    return tuple(result)
 
 
 def write(obj, path, *, format: str | None = None) -> None:

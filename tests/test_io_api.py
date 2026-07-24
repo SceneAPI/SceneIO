@@ -49,6 +49,21 @@ def test_npz_roundtrip_via_public_api(tmp_path):
     np.testing.assert_array_equal(np.asarray(td["x"]), arrays["x"])
 
 
+def test_safetensors_roundtrip_via_public_api(tmp_path):
+    arrays = {
+        "x": np.arange(12, dtype=np.float32).reshape(3, 4),
+        "y": np.arange(5, dtype=np.uint16),
+    }
+    path = tmp_path / "weights.safetensors"
+    sceneio.write(arrays, path)
+    assert sceneio.detect(path) == "safetensors"
+    actual = sceneio.read(path)
+    assert isinstance(actual, sceneio.TensorDict)
+    for name, expected in arrays.items():
+        np.testing.assert_array_equal(actual[name], expected)
+        assert not actual[name].flags.writeable
+
+
 def test_netpbm_roundtrip_via_public_api(tmp_path):
     p = tmp_path / "a.ppm"
     p.write_bytes(b"P6\n2 1\n255\n" + bytes([10, 20, 30, 40, 50, 60]))

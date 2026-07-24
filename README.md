@@ -73,7 +73,7 @@ artifacts vocabulary — wire identity unchanged.
 
 ### Compiled format I/O — `read` / `write` / `inspect` / `read_partial`
 
-The lazy-loaded compiled core reads and writes 23 image, tensor, point-cloud,
+The lazy-loaded compiled core reads and writes 24 image, tensor, point-cloud,
 Gaussian, pose, and reconstruction formats. `sceneio.inspect(path)` returns an
 immutable `Inspection` with shape, dtype, channels, repeated-record counts, and
 format-specific scalar metadata without decoding bulk pixel/point arrays:
@@ -99,6 +99,15 @@ points = sceneio.read_partial(
 # One COLMAP pose and its camera, without opening points3D.
 view = sceneio.read_partial("sparse/0", image_id=42)
 
+# Safetensors tensors are read-only mmap views. Slices are half-open on the
+# leading axis and do not decode or copy unrelated tensor payloads.
+weights = sceneio.read_partial(
+    "model.safetensors", tensors=("encoder.weight", "encoder.bias")
+)
+rows = sceneio.read_partial(
+    "model.safetensors", slices={"embedding.weight": (10_000, 20_000)}
+)
+
 # Frozen discovery metadata: no trial import/read is needed.
 caps = sceneio.capabilities("webp")
 assert caps.can_read and caps.can_write and caps.can_inspect
@@ -113,7 +122,8 @@ Partial reads are available only when the container has a genuine bounded
 access path; requesting one from a codec that would have to decode the complete
 payload raises `FormatError`. Pixel windows support PFM, binary P5/P6 Netpbm,
 lossless VP8L WebP, and FLO; lossy WebP and ASCII P2/P3 reject because they
-cannot provide a bit-exact bounded slice.
+cannot provide a bit-exact bounded slice. Safetensors supports complete
+named-tensor selection and contiguous leading-axis slices.
 
 ### Errors
 

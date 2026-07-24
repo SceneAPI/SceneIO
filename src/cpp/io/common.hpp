@@ -277,6 +277,16 @@ inline nb::bytes emit_bytes(const char *data, size_t size) {
     return nb::bytes(data, size);
 }
 
+// Streaming-codec seam: write one native chunk when a public file sink is
+// active. Unlike emit_bytes(), this does not construct a returned Python bytes
+// object. Call it with the GIL held: the first chunk lazily opens the Python
+// path, and FileSink releases the GIL itself around each native write.
+inline bool emit_file_chunk(const char *data, size_t size) {
+    if (!active_file_sink) return false;
+    active_file_sink->write(data, size);
+    return true;
+}
+
 // Private buffer-exporter type used as numpy.ndarray.base for mmap-backed
 // arrays. It holds a live Py_buffer but deliberately exposes no close/release
 // method. Returning a nanobind ndarray directly would make numpy install a
@@ -483,17 +493,35 @@ inline nb::ndarray<nb::numpy> own_bytes(std::vector<uint8_t> &&v, std::vector<si
 // Py_buffer export alive, preventing an mmap exporter from being closed while
 // numpy still holds the raw pointer. The exporter/backing file must remain
 // byte-stable for the lifetime of the returned array and all derived views.
-inline nb::object borrowed_bytes(ByteView &source, const uint8_t *data,
-                                 const std::vector<size_t> &shape, const char *dtype_name,
-                                 size_t itemsize,
-                                 const std::vector<int64_t> &strides = {}) {
+inline nb::object borrowed_bytes_from_owner(
+    nb::handle owner, const uint8_t *owner_data, size_t owner_size,
+    const uint8_t *data, const std::vector<size_t> &shape,
+    const char *dtype_name, size_t itemsize,
+    const std::vector<int64_t> &strides = {}) {
     if (!strides.empty() && strides.size() != shape.size())
         throw std::logic_error("borrowed array shape/stride rank mismatch");
-    if (data < source.data() ||
-        static_cast<size_t>(data - source.data()) > source.size())
+    const uintptr_t owner_address = reinterpret_cast<uintptr_t>(owner_data);
+    const uintptr_t data_address = reinterpret_cast<uintptr_t>(data);
+    if (data_address < owner_address ||
+        data_address - owner_address > owner_size)
         throw std::logic_error("borrowed array data is outside its source buffer");
-    const size_t offset = static_cast<size_t>(data - source.data());
-    nb::object owner = source.pin();
+    const size_t offset = static_cast<size_t>(data_address - owner_address);
+    if (strides.empty()) {
+        size_t elements = 1;
+        for (size_t dimension : shape) {
+            if (dimension != 0 && elements > SIZE_MAX / dimension)
+                throw std::invalid_argument(
+                    "borrowed array element count overflows size_t");
+            elements *= dimension;
+        }
+        if (itemsize != 0 && elements > SIZE_MAX / itemsize)
+            throw std::invalid_argument(
+                "borrowed array byte size overflows size_t");
+        const size_t byte_size = elements * itemsize;
+        if (byte_size > owner_size - offset)
+            throw std::logic_error(
+                "borrowed array extends past its source buffer");
+    }
     nb::tuple py_shape = nb::steal<nb::tuple>(
         PyTuple_New(static_cast<Py_ssize_t>(shape.size())));
     if (!py_shape.is_valid()) throw nb::python_error();
@@ -528,6 +556,18 @@ inline nb::object borrowed_bytes(ByteView &source, const uint8_t *data,
     using namespace nb::literals;
     return array_type(py_shape, "dtype"_a = dtype, "buffer"_a = owner,
                       "offset"_a = offset, "strides"_a = py_strides);
+}
+
+inline nb::object borrowed_bytes(ByteView &source, const uint8_t *data,
+                                 const std::vector<size_t> &shape,
+                                 const char *dtype_name, size_t itemsize,
+                                 const std::vector<int64_t> &strides = {}) {
+    const uint8_t *owner_data = source.data();
+    const size_t owner_size = source.size();
+    nb::object owner = source.pin();
+    return borrowed_bytes_from_owner(
+        owner, owner_data, owner_size, data, shape, dtype_name, itemsize,
+        strides);
 }
 
 static_assert(sizeof(double) == 8 && sizeof(float) == 4 && sizeof(uint64_t) == 8);

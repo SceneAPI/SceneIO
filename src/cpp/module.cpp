@@ -38,10 +38,12 @@ void register_hdr(nb::module_ &);
 void register_exr(nb::module_ &);
 void register_las(nb::module_ &);
 void register_webp(nb::module_ &);
+void register_safetensors(nb::module_ &);
 
 NB_MODULE(_core, m) {
     m.doc() = "sceneio compiled core (nanobind): codecs + SoA memory representations";
     m.attr("__phase__") = 2;
+    m.attr("__native_features__") = nb::make_tuple();
     // Private verification hook: tests compare this address with NumPy's view
     // of the same exporter to prove the buffer caster aliases rather than copies.
     m.def("_buffer_address",
@@ -113,4 +115,5 @@ NB_MODULE(_core, m) {
     register_exr(m);
     register_las(m);
     register_webp(m);
+    register_safetensors(m);
 }

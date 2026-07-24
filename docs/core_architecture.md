@@ -9,7 +9,7 @@ things that keep this expansible as the format list from
 ```
 sceneio (Python)                     public, stable surface
   read() / write() / inspect()       format-dispatched I/O + metadata-only probes
-  read_partial()                     bounded pixel/point/COLMAP-image reads
+  read_partial()                     bounded pixel/point/tensor/COLMAP-image reads
   detect()
   io.registry                        one entry per format + optional inspect/partial hooks
   Reconstruction, GaussianCloud, …   re-exported record types
@@ -103,6 +103,10 @@ same public record kind as `read()`:
   for PFM, binary P5/P6 Netpbm, lossless VP8L WebP, and FLO;
 - `points=(start, stop)` selects a half-open range from XYZ, LAS, binary Gaussian
   PLY, and `.splat`;
+- `tensors=("name", ...)` selects named tensors from safetensors without
+  materializing unrelated payload tensors;
+- `slices={"name": (start, stop), ...}` selects half-open leading-axis ranges
+  from named safetensors tensors;
 - `image_id=<persisted COLMAP id>` returns a one-image `Reconstruction` with its
   referenced camera from binary or text COLMAP. It deliberately leaves the
   point arrays empty and does not open `points3D.bin` / `points3D.txt`.
@@ -114,6 +118,9 @@ decoding; lossy VP8 rejects because crop-local chroma upsampling is not
 guaranteed to match a full-decode slice. Fixed-record
 cloud formats index their selected records; XYZ scans text for row boundaries
 but allocates and parses numeric values only for the requested range.
+Safetensors selection returns read-only mmap-backed tensor views where host
+byte order and payload alignment permit; each view retains its mapping owner
+after the file handle leaves scope.
 Unsupported codecs raise `FormatError` rather than disguising a full decode as
 a partial read. COLMAP text caps non-name tokens at 1 MiB consistently in its
 full and partial readers; image names retain their unbounded format behavior.
