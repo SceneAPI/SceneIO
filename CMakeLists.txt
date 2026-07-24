@@ -129,6 +129,7 @@ nanobind_add_module(_core STABLE_ABI NB_STATIC
   src/cpp/codecs/png.cpp
   src/cpp/codecs/jpeg.cpp
   src/cpp/codecs/hdr.cpp
+  src/cpp/codecs/bmp_tga.cpp
   src/cpp/codecs/exr.cpp
   src/cpp/codecs/las.cpp
   src/cpp/codecs/webp.cpp

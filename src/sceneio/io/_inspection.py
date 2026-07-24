@@ -95,6 +95,10 @@ def inspect_path(path: str | Path, format_id: str, datatype: str) -> Inspection:
         return _inspect_png(p, datatype)
     if format_id == "jpeg":
         return _inspect_jpeg(p, datatype)
+    if format_id == "bmp":
+        return _inspect_bmp(p, datatype)
+    if format_id == "tga":
+        return _inspect_tga(p, datatype)
     if format_id == "hdr":
         return _inspect_hdr(p, datatype)
     if format_id == "exr":
@@ -172,6 +176,7 @@ def _image(
         raise ValueError("zero-dimension image")
     axis_cap = {
         "png": 200_000,
+        "tga": 65_535,
         "hdr": 1 << 24,
         "exr": 1 << 20,
         "netpbm": 1_000_000_000,
@@ -180,7 +185,7 @@ def _image(
     if axis_cap is not None and (height > axis_cap or width > axis_cap):
         raise ValueError(f"{format_id}: image dimensions exceed the supported limit")
     if (
-        format_id in {"png", "jpeg", "hdr", "exr", "webp"}
+        format_id in {"png", "jpeg", "bmp", "tga", "hdr", "exr", "webp"}
         and height * width > _IMAGE_PIXEL_CAP
     ):
         raise ValueError(f"{format_id}: image dimensions exceed the supported limit")
@@ -587,6 +592,56 @@ def _inspect_jpeg(path: Path, datatype: str) -> Inspection:
                     precision=precision,
                     progressive=progressive,
                 )
+
+
+def _inspect_bmp(path: Path, datatype: str) -> Inspection:
+    (
+        height,
+        width,
+        channels,
+        bits_per_pixel,
+        compression,
+        palette,
+        top_down,
+    ) = _compiled_buffer_inspect(path, _core._inspect_bmp)
+    return _image(
+        "bmp",
+        datatype,
+        _size(path),
+        height,
+        width,
+        channels,
+        "uint8",
+        bits_per_pixel=bits_per_pixel,
+        compression={0: "BI_RGB", 3: "BI_BITFIELDS"}[compression],
+        palette=palette,
+        top_down=top_down,
+    )
+
+
+def _inspect_tga(path: Path, datatype: str) -> Inspection:
+    (
+        height,
+        width,
+        channels,
+        bits_per_pixel,
+        rle,
+        palette,
+        top_origin,
+    ) = _compiled_buffer_inspect(path, _core._inspect_tga)
+    return _image(
+        "tga",
+        datatype,
+        _size(path),
+        height,
+        width,
+        channels,
+        "uint8",
+        bits_per_pixel=bits_per_pixel,
+        rle=rle,
+        palette=palette,
+        origin="top_left" if top_origin else "bottom_left",
+    )
 
 
 _HDR_RESOLUTION = re.compile(rb"^-Y\s+(\d+)\s+\+X\s+(\d+)\s*$")

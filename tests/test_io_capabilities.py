@@ -13,6 +13,7 @@ from sceneio.io import registry
 
 _BUILTINS = {
     "bal",
+    "bmp",
     "bundler",
     "colmap_sparse",
     "colmap_sparse_txt",
@@ -37,6 +38,7 @@ _BUILTINS = {
     "spz",
     "transforms_json",
     "tum",
+    "tga",
     "webp",
     "xyz",
 }

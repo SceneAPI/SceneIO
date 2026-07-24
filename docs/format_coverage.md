@@ -13,8 +13,8 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 
 > Status note: everything marked ✅ is implemented by the compiled
 > `sceneio._core`. The original 23 codecs ship in SceneIO 0.2.0; safetensors,
-> PTS, DMB, and BAL are post-0.2 formats on `phase0-nanobind-core` and are not
-> released yet.
+> PTS, DMB, BAL, BMP, and TGA are post-0.2 formats on
+> `phase0-nanobind-core` and are not released yet.
 
 ## Data structures (memory Records)
 
@@ -95,20 +95,22 @@ tier. COLMAP DB `.db` (sqlite) remains a separate self-contained package.
 | `safetensors` | `TensorDict` | R+W | **safetensors.numpy 0.8** | deterministic canonical writer; all 12 TensorDict dtypes; string metadata; read-only mmap views; named-tensor and leading-axis slice reads |
 | `dmb` | `DepthMap` | R+W | independent NumPy parser | scalar Gipuma/COLMAP float32 depth; exact little-endian payload; unknown scale; zero-invalid; bounded windows |
 | `bal` | `Reconstruction` | R+W | UW BAL specification + independent parser | zero-based observations; angle-axis cameras with focal and two radial terms; explicit BAL↔SceneIO frame transform; strict canonical writer |
+| `bmp` | `Image` | R+W | **Pillow** + Microsoft DIB specification | Windows V3/V4/V5 BI_RGB/BI_BITFIELDS; palette and packed-16 reads; top/bottom orientation; deterministic RGB/RGBA writers |
+| `tga` | `Image` | R+W | **Pillow** + Truevision 2.0 specification | grayscale/RGB/RGBA and zero-origin palettes; raw/RLE; top/bottom orientation; deterministic RLE writer |
 
 ### ⬜ Pending — later phases (meshes + niche)
 glTF / GLB (+Draco) · OBJ / STL / OFF · USD / USDZ · OpenVDB · Zarr · Parquet · AVIF / JPEG‑XL · PlayCanvas SOG · PCD.
 
 ### 🟡 In progress — Phase 7 (hardening)
-✅ mmap-backed reads for all 25 single-file codecs (the two COLMAP directory
+✅ mmap-backed reads for all 27 single-file codecs (the two COLMAP directory
 codecs already read paths directly in C++) · ✅ zero-copy read-only mapped
 ndarray views for native NPY/FLO payloads (PFM row-flips into owned storage) · ✅ bytes/mmap differential +
 scheduled 100-case backing-store mutation sweep · ✅ ASan/UBSan/LSan workflow
 (local and branch Linux runs green) · ⬜ randomized oracle-triangulated
 fuzzing · ✅ direct file-sink writes · ✅ bounded measured-path workers
 (XYZ/LAS/EXR/PNG16/WebP lossless) · ✅ partial/lazy reads (`inspect` covers all
-27; bounded pixel/point/COLMAP-image/tensor subsets cover capable containers) ·
-⬜ GPU-via-DLPack (torch-cuda/cupy) · ✅ expanded 27-codec benchmark/oracles.
+29; bounded pixel/point/COLMAP-image/tensor subsets cover capable containers) ·
+⬜ GPU-via-DLPack (torch-cuda/cupy) · ✅ expanded 29-codec benchmark/oracles.
 
 ## Infrastructure & capabilities
 
@@ -117,7 +119,7 @@ fuzzing · ✅ direct file-sink writes · ✅ bounded measured-path workers
 | nanobind + scikit‑build‑core build | ✅ | abi3/cp312, `NB_STATIC` |
 | cibuildwheel release path | ✅ | Linux/macOS/Windows; `publish.yml` |
 | CI parity (oracles in CI) | ✅ | gsply + pycolmap; runs on the branch |
-| Codec registry + `read`/`write`/`inspect`/`read_partial`/`detect` | ✅ | inspection covers all 27; bounded partial hooks are capability-specific |
+| Codec registry + `read`/`write`/`inspect`/`read_partial`/`detect` | ✅ | inspection covers all 29; bounded partial hooks are capability-specific |
 | Zero‑copy numpy + torch (DLPack) | ✅ | validated per codec |
 | Conventions‑as‑metadata + write guards | ✅ | record‑don't‑convert enforced |
 | Parity kit (`sceneio.testing.parity`) | ✅ | cross‑impl + round‑trip + convention pins |
@@ -143,6 +145,7 @@ incremental.
 |---|---|---|---|---|---|---|---|---|---|
 <!-- sceneio-capability-rows:start -->
 | `bal` | file | yes | yes | yes | - | yes | yes | no | - |
+| `bmp` | file | yes | yes | yes | - | yes | yes | no | - |
 | `bundler` | file | yes | yes | yes | - | yes | yes | no | - |
 | `colmap_sparse` | directory | yes | yes | yes | image_id | yes | yes | no | - |
 | `colmap_sparse_txt` | directory | yes | yes | yes | image_id | yes | yes | no | - |
@@ -165,6 +168,7 @@ incremental.
 | `safetensors` | file | yes | yes | yes | tensors, slices | yes | yes | no | - |
 | `splat` | file | yes | yes | yes | points | yes | yes | yes | - |
 | `spz` | file | yes | yes | yes | - | yes | yes | yes | - |
+| `tga` | file | yes | yes | yes | - | yes | yes | no | - |
 | `transforms_json` | file | yes | yes | yes | - | yes | yes | no | - |
 | `tum` | file | yes | yes | yes | - | yes | yes | no | - |
 | `webp` | file | yes | yes | yes | window | yes | yes | yes | - |

@@ -36,6 +36,7 @@ void register_splat(nb::module_ &);
 void register_png(nb::module_ &);
 void register_jpeg(nb::module_ &);
 void register_hdr(nb::module_ &);
+void register_bmp_tga(nb::module_ &);
 void register_exr(nb::module_ &);
 void register_las(nb::module_ &);
 void register_webp(nb::module_ &);
@@ -115,6 +116,7 @@ NB_MODULE(_core, m) {
     register_png(m);
     register_jpeg(m);
     register_hdr(m);
+    register_bmp_tga(m);
     register_exr(m);
     register_las(m);
     register_webp(m);

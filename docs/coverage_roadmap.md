@@ -188,7 +188,7 @@ Columns: **Ext/id** · **Record** · **Lib/oracle (license)** · **R/W** ·
 | ⬜ TIFF | `Image` | libtiff (BSD‑like) | R+W | tiled/striped; multi‑page |
 | ✅ WebP | `Image` | Pillow / libwebp (BSD) | R+W | lossy+lossless RGB/RGBA |
 | ✅ OpenEXR | `Image` | OpenEXR (BSD‑3) / tinyexr | R+W | HALF→FLOAT; PIZ/ZIP/RLE |
-| ⬜ BMP / TGA | `Image` | stb_image (PD) | R+W | trivial fallbacks |
+| ✅ BMP / TGA | `Image` | stb_image (PD/MIT) + Pillow | R+W | BMP BI_RGB/bitfields/palette and TGA raw/RLE/palette; strict unsupported-variant guards |
 | ⬜ AVIF | `Image` | libavif+aom (BSD, royalty‑free) | R+W | AV1 still |
 | ⬜ JPEG‑XL | `Image` | libjxl (BSD, royalty‑free) | R+W | |
 

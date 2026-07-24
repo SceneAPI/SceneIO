@@ -3,10 +3,10 @@
 // by BOTH the implementation TU (stb_impl.cpp) and every codec TU, so the gates
 // never drift — a mismatch would silently change the compiled API surface.
 //
-// STBI_ONLY_JPEG + STBI_ONLY_HDR compile ONLY the JPEG and Radiance-HDR decoders
-// (dropping PNG/BMP/GIF/PSD/PIC/PNM/TGA and, with PNG, stb's own zlib — we never
-// link it; PNG is lodepng's job). STBI_NO_STDIO drops the decode-side fopen paths
-// (we only decode from memory).
+// The STBI_ONLY_* gates compile only JPEG, Radiance-HDR, Windows BMP, and
+// Truevision TGA decoders (dropping PNG/GIF/PSD/PIC/PNM and, with PNG, stb's
+// own zlib — we never link it; PNG is lodepng's job). STBI_NO_STDIO drops the
+// decode-side fopen paths (we only decode from memory).
 //
 // NOTE: we deliberately DON'T define STBI_WRITE_NO_STDIO. In this stb version the
 // whole HDR write section — including the memory-based stbi_write_hdr_to_func we
@@ -17,3 +17,5 @@
 #define STBI_NO_STDIO
 #define STBI_ONLY_JPEG
 #define STBI_ONLY_HDR
+#define STBI_ONLY_BMP
+#define STBI_ONLY_TGA

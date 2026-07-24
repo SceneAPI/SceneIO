@@ -406,3 +406,31 @@ the chunked sink retains buffer-writer throughput without returning an
 output-sized `bytes`. A separate generated 64 MiB sparse-file test bounds
 header-only inspection below 1 MiB traced allocation. The complete same-run
 O4/O5 throughput and memory regression guard passed with BAL included.
+
+## BMP/TGA image expansion delta — 2026-07-24
+
+BMP and TGA extend the harness to 29 codecs with Pillow as the independent
+pixel oracle. The five-run CI-equivalent sweep uses a 1024x1024 uint8 RGB image
+(3.146 MB raw; 3.146 MB BMP and 3.154 MB RLE TGA):
+
+```text
+operation                    BMP result          TGA result
+----------------------------------------------------------------
+buffer / public mmap read    1,097 / 940 MB/s    561 / 512 MB/s
+buffer / public sink write   527 / 778 MB/s      420 / 550 MB/s
+Pillow writer / reader       851 / 1,161 MB/s    889 / 1,136 MB/s
+buffer / mmap read peak      3.2 / 0.0 MB        3.2 / 0.0 MB
+buffer / sink write peak     3.2 / 0.0 MB        3.2 / 0.0 MB
+full / inspect latency       3.346 / 0.048 ms    6.145 / 0.058 ms
+full / inspect RSS growth    6.3 / 0.0 MB        6.3 / 0.0 MB
+```
+
+Both mmap readers remove the encoded-size Python input copy. Their native
+256 KiB callback staging makes direct file writes genuinely bounded and also
+faster than returning a complete Python `bytes` on this fixture. Header-only
+inspection is about 69.4x faster for BMP and 105.6x faster for TGA. Pixel
+correctness is separately triangulated across Windows top/bottom orientation,
+BMP palettes and 16-bit bitfields, TGA raw/RLE top/bottom orientation,
+zero-origin palettes, packed 16-bit color, and gray/RGB/RGBA modes. The
+complete same-run O4/O5 throughput and memory regression guard passed with both
+formats included.

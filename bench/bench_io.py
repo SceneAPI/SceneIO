@@ -2,7 +2,7 @@
 
 Measures, per codec, encode (write) + decode (read) throughput (MB/s over the raw
 payload) and peak Python allocation (tracemalloc), for sceneio._core vs the oracle
-library where one exists, on representative payloads for all 27 codecs. Read
+library where one exists, on representative payloads for all 29 codecs. Read
 measurements retain the legacy whole-file bytes/copy-decode path beside the
 public registry mmap path, so their peak delta captures the input copy O1
 removes and, for NPY/FLO, the decoded-array copy O2 removes. Write measurements
@@ -565,6 +565,24 @@ def _specs(scale, pose_bundle=None):
             lambda im: _core.write_jpeg(im, 95),
             _core.read_jpeg,
             (_pil_w("JPEG") if PILImage else None),
+            (_pil_r if PILImage else None),
+            lambda rec, p: p.nbytes,
+        ),
+        Spec(
+            "bmp",
+            lambda: _img_u8(side, side),
+            _core.write_bmp,
+            _core.read_bmp,
+            (_pil_w("BMP") if PILImage else None),
+            (_pil_r if PILImage else None),
+            lambda rec, p: p.nbytes,
+        ),
+        Spec(
+            "tga",
+            lambda: _img_u8(side, side),
+            _core.write_tga,
+            _core.read_tga,
+            (_pil_w("TGA") if PILImage else None),
             (_pil_r if PILImage else None),
             lambda rec, p: p.nbytes,
         ),
@@ -1593,7 +1611,7 @@ def _run_benchmark(args, tmp):
             results.append({"codec": spec.id, "error": f"{type(e).__name__}: {e}"})
             print(f"{spec.id:<14} ERROR: {type(e).__name__}: {e}")
 
-    assert len(specs) + len(_directory_specs()) == 27
+    assert len(specs) + len(_directory_specs()) == 29
     print("\nMB/s over raw payload; fileMB = encoded size (= the whole-file copy O1/O3 remove).")
     print("sioR = in-memory copy decode; pathR = public registry mmap read/view.")
     print("bPeakMB/mPeakMB = peak Python allocation for bytes/mmap reads (O1 delta).")

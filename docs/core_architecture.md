@@ -94,6 +94,15 @@ farther into the mapping, so malformed no-newline inputs do not fault the whole
 file into RSS. Inspection reports structural metadata and is not a substitute
 for decoding and validating every payload sample.
 
+BMP and TGA use the already-vendored stb raster implementation only after a
+format-specific bounded preflight. BMP preflight validates Windows DIB
+dimensions, palette layout, row size, BI_RGB/BI_BITFIELDS masks, and complete
+pixel storage. TGA preflight validates image type, palette origin/extent,
+orientation flags, raw or RLE packet counts, and complete pixel storage.
+Unsupported conventions are refused rather than approximated. Both inspectors
+stop after these small headers, while their deterministic writers stream native
+callback output through a bounded 256 KiB staging buffer on public file writes.
+
 BAL inspection reads only the three header counts. Full BAL decoding maps
 zero-based observations and angle-axis camera blocks into a `Reconstruction`,
 using the explicit self-inverse `diag(1,-1,-1)` camera-frame transform and a

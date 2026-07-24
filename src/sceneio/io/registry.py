@@ -618,6 +618,66 @@ register(
         unsupported_features=("cmyk_write", "rgba_write"),
     )
 )
+# Windows BMP through the existing vendored stb implementation. The "BM"
+# signature is unambiguous; readers preserve explicit V4/V5 alpha and otherwise
+# return canonical RGB. Writers are deterministic RGB/RGBA only.
+register(
+    Codec(
+        "bmp",
+        (".bmp",),
+        _mmap_reader(_core.read_bmp),
+        _file_sink_writer(_core.write_bmp),
+        record=_core.Image,
+        datatype="image",
+        magic=(b"BM",),
+        supported_features=(
+            "windows_v3_v4_v5",
+            "bottom_up",
+            "top_down",
+            "palette_read",
+            "packed_16bit_read",
+            "rgb",
+            "rgba_bitfields",
+        ),
+        unsupported_features=(
+            "os2",
+            "rle4",
+            "rle8",
+            "embedded_jpeg_png",
+            "alphabitfields",
+            "grayscale_write",
+        ),
+    )
+)
+# TGA has no reliable magic and is therefore extension-detected. Supported
+# variants are validated before stb decode; ambiguous orientation/palette
+# conventions that stb cannot preserve are rejected.
+register(
+    Codec(
+        "tga",
+        (".tga",),
+        _mmap_reader(_core.read_tga),
+        _file_sink_writer(_core.write_tga),
+        record=_core.Image,
+        datatype="image",
+        supported_features=(
+            "uncompressed",
+            "rle",
+            "grayscale",
+            "rgb",
+            "rgba",
+            "palette_read",
+            "packed_15_16bit_read",
+            "top_bottom_origin",
+        ),
+        unsupported_features=(
+            "right_to_left",
+            "interleaving",
+            "nonzero_palette_origin",
+            "grayscale_alpha",
+        ),
+    )
+)
 # Radiance RGBE (vendored stb) -> Image (float32 linear RGB). The HDR float twin
 # of the integer image codecs; both ASCII signature variants.
 register(

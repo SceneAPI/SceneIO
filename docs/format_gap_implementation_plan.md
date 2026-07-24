@@ -2,9 +2,9 @@
 
 - **Status:** execution in progress after SceneIO 0.2.0; G0, G2.1, the PTS
   slice of G2.3, and scalar DMB plus BAL from G2.4 are complete locally.
-  Cross-platform wheel and instrumented validation remains a user-gated remote
-  action.
-- **Current branch:** 27 compiled codecs, all read/write and inspectable, with
+  BMP/TGA image codecs are also complete locally. Cross-platform wheel and
+  instrumented validation remains a user-gated remote action.
+- **Current branch:** 29 compiled codecs, all read/write and inspectable, with
   bounded partial reads where their containers permit them.
 - **Scope:** close every unblocked format gap declared by SceneIO's coverage
   documents without reimplementing the 0.2.0 codec tier.
@@ -405,7 +405,7 @@ Land one codec per green commit:
 | g2o | `PoseGraph` | vertices, typed edges, information matrices | independent parser plus generated goldens |
 | SuperSplat SOG | `GaussianCloud` | clustered/quantized fields, explicit lossy metadata | reference loader vectors |
 | KSplat | `GaussianCloud` | supported versioned reader first; writer only after canonical output is identified | reference loader vectors |
-| BMP/TGA | `Image` | existing stb decode plus deterministic writers or explicit read-only status | Pillow/imageio |
+| BMP/TGA — complete locally | `Image` | bounded existing-stb decode plus deterministic writers | Pillow + format specifications |
 
 DMB completion evidence (2026-07-24):
 
@@ -486,6 +486,52 @@ Three-lens BAL review:
 No unresolved finding remains in the local BAL review. Linux instrumentation
 and Linux/macOS wheel validation remain pending until the user authorizes the
 remote workflows.
+
+BMP/TGA completion evidence (2026-07-24):
+
+- BMP support covers Windows 40/56/108/124-byte DIB headers, BI_RGB and
+  BI_BITFIELDS, 1/4/8-bit palettes, packed 16-bit color, 24-bit RGB, explicit
+  32-bit alpha bitfields, and both top-down and bottom-up rows; 32-bit BI_RGB's
+  specification-defined unused high byte is ignored;
+- TGA support covers grayscale/RGB/RGBA and zero-origin palettes, raw and RLE
+  storage, packed 15/16-bit color, image IDs, and top/bottom origins;
+  right-to-left/interleaved layouts, nonzero palette origins, and
+  grayscale+alpha are explicitly refused because the pinned decoder or
+  `Image` record cannot preserve them;
+- independent Pillow parity covers every supported channel/orientation/storage
+  family plus 40 randomized image cases; manual BMP/TGA builders independently
+  pin row order, 16-bit packing, bitfield masks, and exact header metadata;
+- every truncated prefix of canonical BMP and TGA output rejects, malformed
+  palettes/masks/RLE packets reject before stb decode, and both decoded images
+  remain valid after their mmap closes;
+- generated 64 MiB sparse files keep inspection below 1 MiB traced allocation;
+  native writer callbacks stage at most 256 KiB for direct sinks, remain
+  byte-identical under forced short writes, and avoid output-sized Python
+  allocations.
+- final local MSVC validation passed 1,612 tests with 3 documented optional
+  skips, Ruff and `git diff --check` are clean, the wheel smoke command runs,
+  and the five-run 29-codec O4/O5 throughput and memory guard passed.
+
+Three-lens BMP/TGA review:
+
+- **memory/lifetime:** dimensions, pixel products, palette extents, BMP row
+  spans, and TGA raw/RLE packet spans are bounded before allocation or decode;
+  mask widths are capped; stb buffers have RAII ownership; `ByteView` remains
+  live through decode; returned `Image` vectors own their pixels; sink callbacks
+  reacquire the GIL before bounded file emission and no native pointer escapes;
+- **format correctness:** Microsoft DIB orientation/plane/bit-depth/compression
+  rules and Truevision type/depth/descriptor rules are pinned; the review found
+  and fixed a signed top-down BMP height propagation defect and added explicit
+  contiguous, non-overlapping BMP mask validation;
+- **test soundness:** Pillow is independent of stb, manual binary builders break
+  writer/reader symmetry, randomized dimensions/modes exercise both
+  orientations and TGA storage modes, complete-prefix truncation tests the
+  preflight rather than the oracle, and public mmap/sink/inspection paths are
+  measured directly.
+
+No unresolved finding remains in the local BMP/TGA review. Linux
+instrumentation and Linux/macOS wheel validation remain pending until the user
+authorizes the remote workflows.
 
 YAML support must use a permissive native parser or a deliberately bounded
 format-specific parser; it may not add a runtime Python dependency.
@@ -1194,25 +1240,18 @@ G0 without waiting for the mesh or optional-library paths.
 
 ## 12. Current execution queue
 
-G0, safetensors, PTS, scalar DMB, and BAL have exercised the expansion
-machinery without adding a heavyweight dependency. Continue with small green
-commits in this order:
+G0, safetensors, PTS, scalar DMB, BAL, BMP, and TGA have exercised the
+expansion machinery without adding a heavyweight dependency. Continue with
+small green commits in this order:
 
-1. **BMP and TGA**
-   - use the existing `Image` record and approved stb decode surface; either
-     implement deterministic writers or declare read-only capabilities;
-   - cover orientation, grayscale/RGB/RGBA, alpha, palette/RLE variants, and
-     unsupported conversions against Pillow/imageio;
-   - measure decode/write paths and run the full image lifetime/mmap/sink
-     matrix.
-2. **Typed depth and flow adapters**
+1. **Typed depth and flow adapters**
    - add explicit adapters for PFM/PNG/EXR depth and a dedicated flow record
      before changing the existing raw codec return types;
    - preserve existing calls and bytes; pin units, scale, invalid-value, row
      order, confidence, and writer guards;
    - prove adapter output equals the existing raw decode plus declared
      metadata, with no silent numerical conversion.
-3. **Generic point PLY and PCD**
+2. **Generic point PLY and PCD**
    - ship point-cloud schemas first, including ASCII and binary endian paths,
      then add mesh PLY only after the canonical ragged `Mesh` record lands;
    - implement header-only inspection, fixed-record point ranges, PCD LZF,
@@ -1220,7 +1259,7 @@ commits in this order:
      Gaussian PLY;
    - validate against `plyfile` and Open3D and benchmark text, binary, endian,
      compressed, and partial paths.
-4. **Record-dependent packages**
+3. **Record-dependent packages**
    - `Mesh`/`MaterialSet` unlock OBJ, STL, OFF, glTF/GLB, and mesh PLY;
    - `FeatureSet`/`MatchGraph` unlock COLMAP DB and later hloc/HDF5;
    - `StateTrajectory`/`CameraRig`/`PoseGraph` unlock EuRoC, OpenCV, ROS,
