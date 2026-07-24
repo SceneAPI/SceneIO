@@ -1,6 +1,6 @@
 # Format-gap implementation, verification, and validation plan
 
-- **Status:** proposed execution plan after SceneIO 0.2.0.
+- **Status:** execution in progress after SceneIO 0.2.0; G0 is complete.
 - **Baseline:** 23 compiled codecs, all read/write, all inspectable, with
   bounded partial reads where their containers permit them.
 - **Scope:** close every unblocked format gap declared by SceneIO's coverage

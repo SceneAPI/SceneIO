@@ -117,8 +117,76 @@ fuzzing · ✅ direct file-sink writes · ✅ bounded measured-path workers
 | mmap / streaming sources | ✅ | mmap reads + raw NPY/FLO views + direct file-sink writes complete |
 | Bounded intra-file workers | ✅ | measured O4 paths; deterministic one-vs-many lane tests |
 | Sanitizer + mmap differential CI | ✅ | local Linux green; scheduled remote lane activates on default branch |
-| Capability flags (`reads/writes/streams/lossy/needs_dep`) | ⬜ | surface per codec |
+| Capability flags (`reads/writes/inspect/partial/streams/lossy/needs_dep`) | ✅ | frozen metadata through `sceneio.capabilities()`; snapshot below is CI-validated |
 | `splat` / `posed_views` DataTypes in the vocabulary | ⬜ | **Phase‑C** (wire identity; cross‑repo) |
+
+<!-- sceneio-capabilities:start -->
+### Registry capability snapshot
+
+This table is generated conceptually from `sceneio.capabilities()` and checked
+byte-for-byte against the live registry by `tests/test_io_capabilities.py`.
+Streaming means the public path avoids a whole-file/output-sized Python
+`bytes`; it does not imply that the underlying compression algorithm is
+incremental.
+
+| Format id | Container | Read | Write | Inspect | Partial selectors | Stream read | Stream write | Lossy-capable | Native feature |
+|---|---|---|---|---|---|---|---|---|---|
+<!-- sceneio-capability-rows:start -->
+| `bundler` | file | yes | yes | yes | - | yes | yes | no | - |
+| `colmap_sparse` | directory | yes | yes | yes | image_id | yes | yes | no | - |
+| `colmap_sparse_txt` | directory | yes | yes | yes | image_id | yes | yes | no | - |
+| `exr` | file | yes | yes | yes | - | yes | yes | no | - |
+| `flo` | file | yes | yes | yes | window | yes | yes | no | - |
+| `gaussian_ply` | file | yes | yes | yes | points | yes | yes | no | - |
+| `hdr` | file | yes | yes | yes | - | yes | yes | yes | - |
+| `jpeg` | file | yes | yes | yes | - | yes | yes | yes | - |
+| `kitti` | file | yes | yes | yes | - | yes | yes | no | - |
+| `las` | file | yes | yes | yes | points | yes | yes | yes | - |
+| `netpbm` | file | yes | yes | yes | window | yes | yes | no | - |
+| `npy` | file | yes | yes | yes | - | yes | yes | no | - |
+| `npz` | file | yes | yes | yes | - | yes | yes | no | - |
+| `nvm` | file | yes | yes | yes | - | yes | yes | no | - |
+| `openmvg` | file | yes | yes | yes | - | yes | yes | no | - |
+| `pfm` | file | yes | yes | yes | window | yes | yes | no | - |
+| `png` | file | yes | yes | yes | - | yes | yes | no | - |
+| `splat` | file | yes | yes | yes | points | yes | yes | yes | - |
+| `spz` | file | yes | yes | yes | - | yes | yes | yes | - |
+| `transforms_json` | file | yes | yes | yes | - | yes | yes | no | - |
+| `tum` | file | yes | yes | yes | - | yes | yes | no | - |
+| `webp` | file | yes | yes | yes | window | yes | yes | yes | - |
+| `xyz` | file | yes | yes | yes | points | yes | yes | no | - |
+<!-- sceneio-capability-rows:end -->
+
+Supported and intentionally unsupported subfeatures, such as LAS point formats
+or WebP animation/window behavior, are carried by each immutable capability
+record rather than expanded into this summary.
+<!-- sceneio-capabilities:end -->
+
+<!-- sceneio-native-features:start -->
+### Optional native-feature manifest
+
+`sceneio.native_features()` reports build-time integrations even when they are
+not compiled into the current extension. The table is checked byte-for-byte
+against that public manifest.
+
+| Feature | CMake option | Compiled | Planned format ids |
+|---|---|---|---|
+<!-- sceneio-native-feature-rows:start -->
+| `arrow` | `SCENEIO_WITH_ARROW` | no | `parquet` |
+| `avif` | `SCENEIO_WITH_AVIF` | no | `avif` |
+| `draco` | `SCENEIO_WITH_DRACO` | no | `gltf`, `glb` |
+| `e57` | `SCENEIO_WITH_E57` | no | `e57` |
+| `hdf5` | `SCENEIO_WITH_HDF5` | no | `hdf5`, `hloc_features`, `hloc_matches` |
+| `jxl` | `SCENEIO_WITH_JXL` | no | `jpeg_xl` |
+| `openvdb` | `SCENEIO_WITH_OPENVDB` | no | `openvdb` |
+| `tiff` | `SCENEIO_WITH_TIFF` | no | `tiff` |
+| `usd` | `SCENEIO_WITH_USD` | no | `usd`, `usdz` |
+<!-- sceneio-native-feature-rows:end -->
+
+An unknown feature name raises the same normalized `FormatError` family used
+by codec discovery. Future feature-enabled builds must export their compiled
+names from `_core.__native_features__`.
+<!-- sceneio-native-features:end -->
 
 ## Partial-read capability
 

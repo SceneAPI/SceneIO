@@ -18,7 +18,17 @@ from pathlib import Path
 
 from sceneio import _core
 from sceneio.io._inspection import ArrayInspection, Inspection, inspect_path
-from sceneio.io.registry import REGISTRY, Codec, FormatError, detect, get, register
+from sceneio.io.registry import (
+    REGISTRY,
+    Codec,
+    CodecCapabilities,
+    FormatError,
+    NativeFeatureCapabilities,
+    detect,
+    get,
+    native_feature_capabilities,
+    register,
+)
 
 # Record types produced by the codecs (re-exported for convenience/isinstance).
 Reconstruction = _core.Reconstruction
@@ -180,6 +190,33 @@ def codecs() -> dict[str, Codec]:
     return dict(REGISTRY)
 
 
+def capabilities(
+    format: str | None = None,
+) -> CodecCapabilities | dict[str, CodecCapabilities]:
+    """Return immutable discovery metadata for one or every registered codec.
+
+    The no-argument form returns a new dictionary, so changing the mapping
+    cannot mutate the registry. Each :class:`CodecCapabilities` value is frozen.
+    """
+
+    if format is not None:
+        return get(format).capabilities()
+    return {format_id: codec.capabilities() for format_id, codec in REGISTRY.items()}
+
+
+def native_features(
+    name: str | None = None,
+) -> NativeFeatureCapabilities | dict[str, NativeFeatureCapabilities]:
+    """Return compiled-state metadata for optional native integrations.
+
+    Known integrations remain present with ``available=False`` when the
+    extension was built without their ``SCENEIO_WITH_*`` option. The
+    no-argument mapping is detached and its values are frozen.
+    """
+
+    return native_feature_capabilities(name)
+
+
 def _detect_write(obj, path) -> str:
     # dispatch by extension (or directory) first, then disambiguate on the
     # record type if several writable codecs share an extension.
@@ -204,18 +241,22 @@ __all__ = [
     "ArrayInspection",
     "Camera",
     "Codec",
+    "CodecCapabilities",
     "DepthMap",
     "FormatError",
     "GaussianCloud",
     "Image",
     "Inspection",
+    "NativeFeatureCapabilities",
     "PointCloud",
     "PosedViewSet",
     "Reconstruction",
     "TensorDict",
+    "capabilities",
     "codecs",
     "detect",
     "inspect",
+    "native_features",
     "read",
     "read_partial",
     "register",

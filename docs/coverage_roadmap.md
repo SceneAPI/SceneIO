@@ -1,8 +1,9 @@
 # SceneIO — comprehensive coverage roadmap & execution checklist
 
-> Current shipped status is tracked in `format_coverage.md`. This document
-> contains the original build-out checklist and some pre-0.2 status markers.
-> The authoritative plan for reconciling those markers and implementing the
+> Current shipped status is tracked in `format_coverage.md`. The status markers
+> below have been reconciled to the 0.2.0 registry; broader checklist boxes
+> remain open where a shipped codec has not completed that aspirational,
+> per-format hardening gate. The authoritative implementation sequence for the
 > remaining formats is
 > [`format_gap_implementation_plan.md`](format_gap_implementation_plan.md).
 
@@ -106,13 +107,13 @@ zero‑copy + convention tags.
 
 | Record | Fields (canonical dtype/shape) | Needed by | Status |
 |---|---|---|---|
-| `Image` | `pixels` HxWxC (u8/u16/f16/f32) + `color_space` + EXIF | PNG/JPEG/TIFF/WebP/EXR/PPM | ⬜ |
-| `DepthMap` / `Dense` | `depth` HxW f32 + `scale`/`unit`/`invalid` meta + `confidence` HxW | 16‑bit PNG, EXR/PFM depth, `.dmb`, `.flo` | ⬜ |
-| `PointCloud` | `xyz` Nx3, `rgb` Nx3 u8, `normals` Nx3, `intensity` N | PLY‑point, PCD, LAS/LAZ, E57, `.xyz` | ⬜ |
+| `Image` | `pixels` HxWxC (u8/u16/f16/f32) + `color_space` + alpha/maxval metadata | PNG/JPEG/HDR/WebP/EXR/Netpbm | ✅ |
+| `DepthMap` | `depth` HxW f32 + `scale`/`unit`/`invalid` meta + `confidence` HxW | typed depth adapters, `.dmb` | ✅ record / ⬜ typed codecs |
+| `PointCloud` | `xyz` Nx3, `rgb` Nx3 u8, `normals` Nx3, `intensity` N | PLY‑point, PCD, LAS/LAZ, E57, `.xyz` | ✅ |
 | `Mesh` | `vertices` Nx3, `faces` Mx3 u32, `normals`, `uv`, `vertex_color` | OBJ, STL, OFF, PLY‑mesh, glTF, USD | ⬜ |
 | `FeatureSet` | `keypoints` Nx{2,4,6} f32, `descriptors` NxD, `scores` N, `image_size` 2 | HDF5/hloc, COLMAP DB | ⬜ |
 | `MatchGraph` | per‑pair `matches` Mx2 u32, `scores` M, `F/E/H` 3x3, `inliers` | HDF5/hloc, COLMAP DB | ⬜ |
-| `TensorDict` | named ndarrays + attrs | npz, HDF5, safetensors, zarr, parquet | ⬜ |
+| `TensorDict` | named ndarrays + attrs | npz, HDF5, safetensors, zarr, parquet | ✅ |
 | `CameraRig` | N `Camera` + extrinsics + convention tag | OpenCV/ROS/Kalibr calib | ⬜ |
 
 *(Done: `Reconstruction`, `GaussianCloud`, `PosedViewSet`, `Camera`.)*
@@ -128,11 +129,11 @@ Columns: **Ext/id** · **Record** · **Lib/oracle (license)** · **R/W** ·
 | Format | Record | Lib / oracle | R/W | Notes |
 |---|---|---|---|---|
 | ✅ COLMAP `.bin` | `Reconstruction` | pycolmap (BSD) | R+W | byte‑identical; rigs/frames in 4.1.1 |
-| ⬜ COLMAP `.txt` | `Reconstruction` | pycolmap | R+W | text twin; fast_float parse |
+| ✅ COLMAP `.txt` | `Reconstruction` | pycolmap | R+W | text twin; fast_float parse |
 | ⬜ COLMAP `.db` | `FeatureSet`/`MatchGraph` | pycolmap + sqlite3 (PD) | R+W | sqlite; contract at `colmap_db` |
-| ⬜ Bundler `.out` | `Reconstruction` | manual (spec) | R+W | y‑down cam convention pin |
-| ⬜ VisualSFM `.nvm` | `Reconstruction` | manual | R+W | quat WXYZ, focal in px |
-| ⬜ OpenMVG `sfm_data.json` | `Reconstruction` | manual json (nlohmann) | R+W | pose = center+rotation |
+| ✅ Bundler `.out` | `Reconstruction` | pycolmap/manual | R+W | y‑down camera convention pinned |
+| ✅ VisualSFM `.nvm` | `Reconstruction` | manual | R+W | quat WXYZ, focal in px |
+| ✅ OpenMVG `sfm_data.json` | `Reconstruction` | manual json (nlohmann) | R+W | pose = center+rotation |
 | ⬜ BAL `.txt` | `Reconstruction` | manual | R | Bundle‑Adjustment‑in‑the‑Large |
 | ✅ TUM / ✅ KITTI | `PosedViewSet` | pure‑Python | R+W | done (retrofit fast_float) |
 | ⬜ EuRoC `state_groundtruth` | `PosedViewSet` | manual csv | R+W | ts,p,q,v,bw,ba |
@@ -143,7 +144,7 @@ Columns: **Ext/id** · **Record** · **Lib/oracle (license)** · **R/W** ·
 |---|---|---|---|---|
 | ✅ Gaussian `.ply` | `GaussianCloud` | gsply (MIT) | R+W | done |
 | ✅ `.spz` v1‑4 | `GaussianCloud` | gsply | R+W | done |
-| ⬜ `.splat` | `GaussianCloud` | ref loader → test vectors | R+W | 32B/point; no SH |
+| ✅ `.splat` | `GaussianCloud` | numpy oracle/test vectors | R+W | 32B/point; lossy 8-bit, SH dropped |
 | ⬜ SuperSplat SOG / `.compressed.ply` | `GaussianCloud` | ref loaders | R+W | clustered/quantized |
 | ⬜ `.ksplat` | `GaussianCloud` | ref loader | R | mkkellogg viewer format |
 
@@ -152,10 +153,10 @@ Columns: **Ext/id** · **Record** · **Lib/oracle (license)** · **R/W** ·
 |---|---|---|---|---|
 | ⬜ PLY (point/mesh) | `PointCloud`/`Mesh` | plyfile (BSD)/open3d (MIT) | R+W | ascii+binary LE/BE; generic PLY reader |
 | ⬜ PCD | `PointCloud` | open3d | R+W | ascii/binary/binary_compressed (lzf) |
-| ⬜ LAS | `PointCloud` | laspy (BSD) | R+W | mmap; point formats 0‑10 |
+| ✅ LAS | `PointCloud` | laspy (BSD) | R+W | mmap; point formats 0‑3 and 6‑8 |
 | ⬜ LAZ | `PointCloud` | lazrs (Apache) / laszip | R+W | LAS compression |
 | ⬜ E57 | `PointCloud` | libE57Format (BSD) | R+W | optional C lib |
-| ⬜ `.xyz` / `.pts` | `PointCloud` | manual | R+W | trivial text; fast_float |
+| ✅ `.xyz` / ⬜ count-prefixed `.pts` | `PointCloud` | manual | R+W | `.pts` is a distinct grammar, not an alias |
 
 ### 3d. Meshes
 | Format | Record | Lib / oracle | R/W | Notes |
@@ -169,7 +170,7 @@ Columns: **Ext/id** · **Record** · **Lib/oracle (license)** · **R/W** ·
 ### 3e. Arrays / tensors / features
 | Format | Record | Lib / oracle | R/W | Notes |
 |---|---|---|---|---|
-| ⬜ `.npy` / `.npz` | `TensorDict` | numpy (BSD) | R+W | header parse; zero‑copy mmap |
+| ✅ `.npy` / `.npz` | ndarray / `TensorDict` | numpy (BSD) | R+W | NPY native C-order mmap view; NPZ stored/deflate |
 | ⬜ HDF5 `.h5` | `TensorDict` | h5py (BSD) + libhdf5 (BSD) | R+W | optional C lib; streaming |
 | ⬜ hloc feature layout | `FeatureSet`/`MatchGraph` | hloc (Apache) + h5py | R+W | h5 group conventions |
 | ⬜ safetensors | `TensorDict` | safetensors (Apache) | R+W | json header + mmap tensors |
@@ -179,13 +180,14 @@ Columns: **Ext/id** · **Record** · **Lib/oracle (license)** · **R/W** ·
 ### 3f. Images (feature‑flagged C libs)
 | Format | Record | Lib / oracle | R/W | Notes |
 |---|---|---|---|---|
-| ✅ PFM | ndarray→`DepthMap` | pure‑Python | R+W | done (raw ndarray; typed record TBD) |
-| ⬜ PPM / PGM / PNM | `Image` | imageio (BSD) | R+W | trivial; ascii+binary |
-| ⬜ PNG | `Image` | libpng (libpng)/lodepng (zlib) | R+W | 8/16‑bit; used for depth too |
-| ⬜ JPEG | `Image` | libjpeg‑turbo (BSD) | R+W | lossy (eps pin) |
+| ✅ PFM | ndarray | pure‑Python | R+W | owned positive-stride decode; typed depth adapter pending |
+| ✅ PPM / PGM / PNM | `Image` | pypng/manual | R+W | P2/P3/P5/P6, 8/16-bit |
+| ✅ PNG | `Image` | Pillow+pypng / lodepng (zlib) | R+W | 8/16‑bit, palette, interlace |
+| ✅ JPEG | `Image` | Pillow / stb (public domain) | R+W | lossy; gray/RGB read, RGB write |
+| ✅ Radiance HDR | `Image` | numpy RGBE / stb (public domain) | R+W | float32 RGB; lossy RGBE encode |
 | ⬜ TIFF | `Image` | libtiff (BSD‑like) | R+W | tiled/striped; multi‑page |
-| ⬜ WebP | `Image` | libwebp (BSD) | R+W | lossy+lossless |
-| ⬜ OpenEXR | `Image`/`DepthMap` | OpenEXR (BSD‑3) | R+W | HDR, half, AOVs, deep |
+| ✅ WebP | `Image` | Pillow / libwebp (BSD) | R+W | lossy+lossless RGB/RGBA |
+| ✅ OpenEXR | `Image` | OpenEXR (BSD‑3) / tinyexr | R+W | HALF→FLOAT; PIZ/ZIP/RLE |
 | ⬜ BMP / TGA | `Image` | stb_image (PD) | R+W | trivial fallbacks |
 | ⬜ AVIF | `Image` | libavif+aom (BSD, royalty‑free) | R+W | AV1 still |
 | ⬜ JPEG‑XL | `Image` | libjxl (BSD, royalty‑free) | R+W | |
@@ -194,7 +196,7 @@ Columns: **Ext/id** · **Record** · **Lib/oracle (license)** · **R/W** ·
 | Format | Record | Lib / oracle | R/W | Notes |
 |---|---|---|---|---|
 | ⬜ 16‑bit depth PNG | `DepthMap` | libpng + scale meta | R+W | TUM 1/5000, ScanNet mm — **scale pin** |
-| ⬜ `.flo` (Middlebury) | `Dense` (flow) | manual | R+W | magic 202021.25 |
+| ✅ `.flo` (Middlebury) | ndarray (H,W,2) | manual | R+W | magic 202021.25; mapped view |
 | ⬜ `.dmb` (Gipuma/COLMAP) | `DepthMap` | manual | R+W | dense MVS depth |
 | ✅ transforms.json | `PosedViewSet` | pure‑Python | R+W | done (OpenGL c2w) |
 | ⬜ RTMV / synthetic sets | `PosedViewSet`+`Image` | manual | R | dataset layout |
@@ -221,20 +223,17 @@ niche, anything GPL/AGPL/NC.
 
 ## 4. Sequencing & critical path
 
-Ship order follows value × cost and the record/dep dependency graph:
+The original Tier‑1, splat, vendored image/HDR, plain-LAS, and O1–O5
+hardening work shipped in 0.2.0. The remaining dependency-ordered sequence is
+maintained in `format_gap_implementation_plan.md`:
 
-1. **Tier‑1 finish (zero‑dep)** — `.npy`/`.npz`, PPM/PGM, COLMAP `.txt`, `.xyz`,
-   `.flo`, Bundler/NVM/OpenMVG poses. New records: `Image`, `DepthMap`,
-   `PointCloud`, `TensorDict`. *No new C libs → no wheel‑matrix risk.*
-2. **Splat finish** — `.splat`, SuperSplat SOG. (Reuses `GaussianCloud`.)
-3. **Arrays/features (first C libs)** — HDF5 + hloc, safetensors, COLMAP `.db`.
-   New records: `FeatureSet`, `MatchGraph`. Adds `libhdf5` behind `SCENEIO_WITH_HDF5`.
-4. **Images/HDR/depth** — PNG/JPEG/TIFF/WebP + OpenEXR + 16‑bit‑depth PNG.
-   Adds `libpng`/`libjpeg-turbo`/`libtiff`/`libwebp`/`OpenEXR` behind flags.
-5. **Point clouds** — PCD, LAS/LAZ, E57.
-6. **Meshes + niche** — OBJ/STL/OFF/glTF, USD, Zarr, Parquet, AVIF/JXL.
-7. **Hardening** — fuzzing at scale, mmap/streaming everywhere, GPU‑DLPack,
-   benchmark suite, ASan/UBSan lanes.
+1. machine-readable capabilities and optional-feature state;
+2. safetensors, COLMAP DB, generic PLY/PCD, calibration, and other
+   self-contained formats;
+3. meshes and vendorable LAZ;
+4. lazy sequence/dataset containers;
+5. independently gated HDF5/TIFF/E57/Arrow integrations;
+6. heavyweight scene/volume integrations and policy-gated codecs.
 
 **Gates:** (a) each C‑lib phase needs the cibuildwheel matrix to provision that
 lib (vcpkg/conda) and a `needs_dep` clean‑error path; (b) the `splat`/`posed_views`

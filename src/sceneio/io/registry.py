@@ -44,6 +44,170 @@ class Codec:
     read_window: Callable[[str, int, int, int, int], object] | None = None
     read_points: Callable[[str, int, int], object] | None = None
     read_image: Callable[[str, int], object] | None = None
+    streams_read: bool = True
+    streams_write: bool = True
+    lossy: bool = False
+    requires_features: tuple[str, ...] = ()
+    supported_features: tuple[str, ...] = ()
+    unsupported_features: tuple[str, ...] = ()
+    container_kind: str | None = None
+
+    def __post_init__(self) -> None:
+        kind = self.container_kind or ("directory" if self.is_directory else "file")
+        if kind not in {"file", "directory", "multi_file"}:
+            raise ValueError(
+                "container_kind must be 'file', 'directory', or 'multi_file'"
+            )
+        if self.is_directory != (kind == "directory"):
+            raise ValueError("is_directory and container_kind disagree")
+        object.__setattr__(self, "container_kind", kind)
+        for field_name in (
+            "extensions",
+            "magic",
+            "filenames",
+            "requires_features",
+            "supported_features",
+            "unsupported_features",
+        ):
+            object.__setattr__(self, field_name, tuple(getattr(self, field_name)))
+        for field_name in (
+            "requires_features",
+            "supported_features",
+            "unsupported_features",
+        ):
+            values = getattr(self, field_name)
+            if any(not isinstance(value, str) or not value for value in values):
+                raise ValueError(f"{field_name} entries must be non-empty strings")
+            if len(values) != len(set(values)):
+                raise ValueError(f"{field_name} entries must be unique")
+        overlap = set(self.supported_features) & set(self.unsupported_features)
+        if overlap:
+            raise ValueError(
+                "supported_features and unsupported_features overlap: "
+                + ", ".join(sorted(overlap))
+            )
+
+    def capabilities(self) -> CodecCapabilities:
+        """Return the immutable public capability snapshot for this codec."""
+
+        selectors = []
+        if self.read_window is not None:
+            selectors.append("window")
+        if self.read_points is not None:
+            selectors.append("points")
+        if self.read_image is not None:
+            selectors.append("image_id")
+        return CodecCapabilities(
+            format=self.id,
+            datatype=self.datatype,
+            record_type=self.record.__name__ if self.record is not None else None,
+            extensions=self.extensions,
+            filenames=self.filenames,
+            container_kind=self.container_kind,
+            available=True,
+            can_read=True,
+            can_write=self.write is not None,
+            can_inspect=True,
+            partial_selectors=tuple(selectors),
+            streams_read=self.streams_read,
+            streams_write=self.write is not None and self.streams_write,
+            lossy=self.lossy,
+            requires_features=self.requires_features,
+            supported_features=self.supported_features,
+            unsupported_features=self.unsupported_features,
+        )
+
+
+@dataclass(frozen=True)
+class CodecCapabilities:
+    """Stable, immutable discovery metadata for one registered format.
+
+    ``streams_read`` means the public path avoids a whole-file Python
+    ``bytes`` allocation through mmap or native directory I/O. ``streams_write``
+    means it uses a direct native file sink instead of an output-sized Python
+    ``bytes`` object. These flags do not claim that a compression library itself
+    is incremental.
+    """
+
+    format: str
+    datatype: str
+    record_type: str | None
+    extensions: tuple[str, ...]
+    filenames: tuple[str, ...]
+    container_kind: str
+    available: bool
+    can_read: bool
+    can_write: bool
+    can_inspect: bool
+    partial_selectors: tuple[str, ...]
+    streams_read: bool
+    streams_write: bool
+    lossy: bool
+    requires_features: tuple[str, ...]
+    supported_features: tuple[str, ...]
+    unsupported_features: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class NativeFeatureCapabilities:
+    """Build-time state for one optional native integration.
+
+    ``available`` is derived from the feature names exported by the compiled
+    extension. Keeping unavailable integrations in this manifest lets callers
+    distinguish a known build option from an unknown feature name without
+    importing an optional Python package.
+    """
+
+    name: str
+    build_option: str
+    available: bool
+    formats: tuple[str, ...]
+
+
+_NATIVE_FEATURE_FORMATS = {
+    "arrow": ("parquet",),
+    "avif": ("avif",),
+    "draco": ("gltf", "glb"),
+    "e57": ("e57",),
+    "hdf5": ("hdf5", "hloc_features", "hloc_matches"),
+    "jxl": ("jpeg_xl",),
+    "openvdb": ("openvdb",),
+    "tiff": ("tiff",),
+    "usd": ("usd", "usdz"),
+}
+
+
+def native_feature_capabilities(
+    name: str | None = None,
+) -> NativeFeatureCapabilities | dict[str, NativeFeatureCapabilities]:
+    """Return immutable compiled-state metadata for optional native features."""
+
+    compiled = frozenset(getattr(_core, "__native_features__", ()))
+    unknown_compiled = compiled - _NATIVE_FEATURE_FORMATS.keys()
+    if unknown_compiled:
+        raise RuntimeError(
+            "compiled extension reports unknown native features: "
+            + ", ".join(sorted(unknown_compiled))
+        )
+
+    def snapshot(feature_name: str) -> NativeFeatureCapabilities:
+        try:
+            formats = _NATIVE_FEATURE_FORMATS[feature_name]
+        except KeyError:
+            raise FormatError(f"unknown native feature {feature_name!r}") from None
+        return NativeFeatureCapabilities(
+            name=feature_name,
+            build_option=f"SCENEIO_WITH_{feature_name.upper()}",
+            available=feature_name in compiled,
+            formats=formats,
+        )
+
+    if name is not None:
+        return snapshot(name)
+    return {
+        feature_name: snapshot(feature_name)
+        for feature_name in sorted(_NATIVE_FEATURE_FORMATS)
+    }
 
 
 REGISTRY: dict[str, Codec] = {}
@@ -256,6 +420,8 @@ register(
         datatype="depth_map",
         magic=(b"PF", b"Pf"),
         read_window=_mmap_selector_reader(_core.read_pfm_window),
+        supported_features=("grayscale", "rgb", "float32", "little_endian", "big_endian"),
+        unsupported_features=("native_positive_stride_mmap_view",),
     )
 )
 register(
@@ -268,6 +434,7 @@ register(
         datatype="sparse_model",
         is_directory=True,
         read_image=_core.read_colmap_sparse_image,
+        supported_features=("cameras", "images", "points3D", "tracks"),
     )
 )
 register(
@@ -291,6 +458,8 @@ register(
         record=_core.GaussianCloud,
         datatype="splat",
         magic=(b"\x1f\x8b", b"NGSP"),
+        lossy=True,
+        supported_features=("v1_read", "v2_read", "v3_read_write", "v4_read_write"),
     )
 )
 # Camera-pose formats -> PosedViewSet. `datatype` here is informational; a
@@ -338,6 +507,8 @@ register(
         record=None,
         datatype="tensor",
         magic=(b"\x93NUMPY",),
+        supported_features=("v1", "c_order", "native_endian_mmap_view"),
+        unsupported_features=("fortran_order", "object_dtype"),
     )
 )
 register(
@@ -348,6 +519,8 @@ register(
         _file_sink_writer(_core.write_npz, prepare=_prepare_npz),
         record=_core.TensorDict,
         datatype="tensor_dict",
+        supported_features=("stored", "deflate", "numeric_dtypes"),
+        unsupported_features=("object_dtype",),
     )
 )
 register(
@@ -360,6 +533,8 @@ register(
         datatype="image",
         magic=(b"P2", b"P3", b"P5", b"P6"),
         read_window=_mmap_selector_reader(_core.read_netpbm_window),
+        supported_features=("p2", "p3", "p5", "p6", "uint8", "uint16"),
+        unsupported_features=("ascii_window",),
     )
 )
 # PNG via vendored lodepng -> Image. gray/RGB/RGBA at 8/16-bit + palette; the
@@ -373,6 +548,7 @@ register(
         record=_core.Image,
         datatype="image",
         magic=(b"\x89PNG\r\n\x1a\n",),
+        supported_features=("grayscale", "rgb", "rgba", "palette", "uint8", "uint16"),
     )
 )
 # JPEG (vendored stb) -> Image. Lossy 8-bit gray/RGB; the SOI+marker prefix is
@@ -387,6 +563,9 @@ register(
         record=_core.Image,
         datatype="image",
         magic=(b"\xff\xd8\xff",),
+        lossy=True,
+        supported_features=("baseline", "progressive", "grayscale_read", "rgb"),
+        unsupported_features=("cmyk_write", "rgba_write"),
     )
 )
 # Radiance RGBE (vendored stb) -> Image (float32 linear RGB). The HDR float twin
@@ -400,6 +579,8 @@ register(
         record=_core.Image,
         datatype="image",
         magic=(b"#?RADIANCE", b"#?RGBE"),
+        lossy=True,
+        supported_features=("rgbe", "rle", "float32_rgb"),
     )
 )
 # OpenEXR (vendored tinyexr, reuses our miniz) -> Image (float32 linear). The
@@ -427,6 +608,9 @@ register(
         record=_core.Image,
         datatype="image",
         read_window=_mmap_selector_reader(_core.read_webp_window),
+        lossy=True,
+        supported_features=("lossless", "lossy", "rgb", "rgba"),
+        unsupported_features=("animation", "lossy_window"),
     )
 )
 # COLMAP text sparse (cameras.txt/images.txt/points3D.txt) — the text twin of
@@ -442,6 +626,7 @@ register(
         is_directory=True,
         dir_marker="cameras.txt",
         read_image=_core.read_colmap_txt_image,
+        supported_features=("cameras", "images", "points3D", "tracks"),
     )
 )
 register(
@@ -467,6 +652,9 @@ register(
         datatype="point_cloud",
         magic=(b"LASF",),
         read_points=_mmap_selector_reader(_core.read_las_points),
+        lossy=True,
+        supported_features=("point_formats_0_3", "point_formats_6_8", "rgb16", "georef"),
+        unsupported_features=("point_formats_4_5", "point_formats_9_10", "laz"),
     )
 )
 register(
@@ -481,6 +669,7 @@ register(
         read_window=_array_window_reader(
             _mmap_view_reader(_core.read_flo_view, _core.read_flo)
         ),
+        supported_features=("float32", "native_endian_mmap_view"),
     )
 )
 # SfM pose formats -> Reconstruction (convention-converted to WXYZ/world_to_camera).
@@ -528,5 +717,8 @@ register(
         record=_core.GaussianCloud,
         datatype="splat",
         read_points=_mmap_selector_reader(_core.read_splat_points),
+        lossy=True,
+        supported_features=("rgb8", "opacity8", "scale8", "quaternion8"),
+        unsupported_features=("spherical_harmonics",),
     )
 )

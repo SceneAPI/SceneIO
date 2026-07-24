@@ -98,6 +98,15 @@ points = sceneio.read_partial(
 
 # One COLMAP pose and its camera, without opening points3D.
 view = sceneio.read_partial("sparse/0", image_id=42)
+
+# Frozen discovery metadata: no trial import/read is needed.
+caps = sceneio.capabilities("webp")
+assert caps.can_read and caps.can_write and caps.can_inspect
+assert caps.partial_selectors == ("window",)
+assert "animation" in caps.unsupported_features
+
+# Optional compiled integrations remain discoverable when unavailable.
+assert not sceneio.native_features("hdf5").available
 ```
 
 Partial reads are available only when the container has a genuine bounded
