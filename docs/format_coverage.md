@@ -13,7 +13,7 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 
 > Status note: everything marked ✅ is implemented by the compiled
 > `sceneio._core`. The original 23 codecs ship in SceneIO 0.2.0; safetensors,
-> PTS, DMB, BAL, BMP, and TGA are post-0.2 formats on
+> PTS, DMB, BAL, BMP, TGA, and generic point PLY are post-0.2 formats on
 > `phase0-nanobind-core` and are not released yet.
 
 ## Data structures (memory Records)
@@ -28,7 +28,7 @@ SoA, zero-copy to numpy/torch (DLPack), conventions carried as metadata.
 | `Camera` | (shared) | ✅ | COLMAP model id + `params[]`; reused by `Reconstruction` and `PosedViewSet` |
 | `Image` | `image_sequence` elem | ✅ | interleaved HxWxC (u8/u16/f32), color_space/alpha_mode/maxval metadata, owner‑safe zero‑copy `pixels` |
 | `TensorDict` | (named arrays) | ✅ | dict‑like, 12 numpy dtypes (dtype‑erased), zero‑copy views; backs NPZ and mapped safetensors |
-| `PointCloud` | `point_cloud` (new) | ✅ | xyz + rgb + normals + intensity; backs `.xyz`, count-prefixed `.pts`, and plain `.las` |
+| `PointCloud` | `point_cloud` (new) | ✅ | xyz + rgb/rgb16 + normals + intensity; backs `.xyz`, count-prefixed `.pts`, generic point `.ply`, and plain `.las` |
 | `DepthMap` | `depth_map` | ✅ | scalar f32 depth + scale/unit/invalid + confidence; backs scalar DMB and explicit typed PFM/PNG/EXR adapters |
 | `FlowField` | `flow` | ✅ | HxWx2 f32 vectors with component/axis/row/unit/invalid metadata; raw FLO API remains ndarray-compatible |
 | `FeatureSet` | `feature_set` | ⬜ | Phase 3 — keypoints + descriptors + scores |
@@ -36,7 +36,7 @@ SoA, zero-copy to numpy/torch (DLPack), conventions carried as metadata.
 
 ## Formats (codecs)
 
-### ✅ Implemented — Tier‑1 zero‑dep spine (17 codecs, Phase 1a/1b/1c + 2)
+### ✅ Implemented — Tier‑1 zero‑dep spine (18 codecs, Phase 1a/1b/1c + 2)
 
 | Format id | Record | R/W | Oracle | Notes |
 |---|---|---|---|---|
@@ -98,20 +98,21 @@ tier. COLMAP DB `.db` (sqlite) remains a separate self-contained package.
 | `bal` | `Reconstruction` | R+W | UW BAL specification + independent parser | zero-based observations; angle-axis cameras with focal and two radial terms; explicit BAL↔SceneIO frame transform; strict canonical writer |
 | `bmp` | `Image` | R+W | **Pillow** + Microsoft DIB specification | Windows V3/V4/V5 BI_RGB/BI_BITFIELDS; palette and packed-16 reads; top/bottom orientation; deterministic RGB/RGBA writers |
 | `tga` | `Image` | R+W | **Pillow** + Truevision 2.0 specification | grayscale/RGB/RGBA and zero-origin palettes; raw/RLE; top/bottom orientation; deterministic RLE writer |
+| `ply` | `PointCloud` | R+W | independent NumPy/stdlib parser + **Open3D 0.19** | ASCII and binary LE/BE; all standard scalar input types; exact rgb8/rgb16; schema-aware Gaussian/point/mesh dispatch; binary point ranges |
 
 ### ⬜ Pending — later phases (meshes + niche)
-glTF / GLB (+Draco) · OBJ / STL / OFF · USD / USDZ · OpenVDB · Zarr · Parquet · AVIF / JPEG‑XL · PlayCanvas SOG · PCD.
+glTF / GLB (+Draco) · OBJ / STL / OFF / mesh PLY · USD / USDZ · OpenVDB · Zarr · Parquet · AVIF / JPEG‑XL · PlayCanvas SOG · PCD.
 
 ### 🟡 In progress — Phase 7 (hardening)
-✅ mmap-backed reads for all 27 single-file codecs (the two COLMAP directory
+✅ mmap-backed reads for all 28 single-file codecs (the two COLMAP directory
 codecs already read paths directly in C++) · ✅ zero-copy read-only mapped
 ndarray views for native NPY/FLO payloads (PFM row-flips into owned storage) · ✅ bytes/mmap differential +
 scheduled 100-case backing-store mutation sweep · ✅ ASan/UBSan/LSan workflow
 (local and branch Linux runs green) · ⬜ randomized oracle-triangulated
 fuzzing · ✅ direct file-sink writes · ✅ bounded measured-path workers
 (XYZ/LAS/EXR/PNG16/WebP lossless) · ✅ partial/lazy reads (`inspect` covers all
-29; bounded pixel/point/COLMAP-image/tensor subsets cover capable containers) ·
-⬜ GPU-via-DLPack (torch-cuda/cupy) · ✅ expanded 29-codec benchmark/oracles.
+30; bounded pixel/point/COLMAP-image/tensor subsets cover capable containers) ·
+⬜ GPU-via-DLPack (torch-cuda/cupy) · ✅ expanded 30-codec benchmark/oracles.
 
 ## Infrastructure & capabilities
 
@@ -120,7 +121,7 @@ fuzzing · ✅ direct file-sink writes · ✅ bounded measured-path workers
 | nanobind + scikit‑build‑core build | ✅ | abi3/cp312, `NB_STATIC` |
 | cibuildwheel release path | ✅ | Linux/macOS/Windows; `publish.yml` |
 | CI parity (oracles in CI) | ✅ | gsply + pycolmap; runs on the branch |
-| Codec registry + `read`/`write`/`inspect`/`read_partial`/`detect` | ✅ | inspection covers all 29; bounded partial hooks are capability-specific |
+| Codec registry + `read`/`write`/`inspect`/`read_partial`/`detect` | ✅ | inspection covers all 30; bounded partial hooks are capability-specific |
 | Zero‑copy numpy + torch (DLPack) | ✅ | validated per codec |
 | Conventions‑as‑metadata + write guards | ✅ | record‑don't‑convert enforced |
 | Parity kit (`sceneio.testing.parity`) | ✅ | cross‑impl + round‑trip + convention pins |
@@ -164,6 +165,7 @@ incremental.
 | `nvm` | file | yes | yes | yes | - | yes | yes | no | - |
 | `openmvg` | file | yes | yes | yes | - | yes | yes | no | - |
 | `pfm` | file | yes | yes | yes | window | yes | yes | no | - |
+| `ply` | file | yes | yes | yes | points | yes | yes | no | - |
 | `png` | file | yes | yes | yes | - | yes | yes | no | - |
 | `pts` | file | yes | yes | yes | points | yes | yes | no | - |
 | `safetensors` | file | yes | yes | yes | tensors, slices | yes | yes | no | - |
@@ -214,12 +216,12 @@ names from `_core.__native_features__`.
 | Selector | Formats | Result |
 |---|---|---|
 | pixel `window=(r0,r1,c0,c1)` | PFM, binary P5/P6 Netpbm, lossless VP8L WebP, FLO, scalar DMB | ndarray, `Image`, or `DepthMap`, matching the full-read slice with metadata preserved |
-| point range `points=(start,stop)` | XYZ, PTS, LAS, Gaussian PLY, SPLAT | `PointCloud` / `GaussianCloud`, with convention metadata preserved |
+| point range `points=(start,stop)` | XYZ, PTS, binary generic PLY, LAS, Gaussian PLY, SPLAT | `PointCloud` / `GaussianCloud`, with convention metadata preserved |
 | `image_id` | COLMAP binary + text | one-image `Reconstruction` + its camera; no point-container read |
 | `tensors=(...)` | safetensors | selected complete tensors as a mapped `TensorDict`; other payload pages remain untouched |
 | `slices={name: (start, stop)}` | safetensors | contiguous leading-axis slices as a mapped `TensorDict` |
 
-PNG, JPEG, HDR, EXR, SPZ, and other compressed/scene containers intentionally
+PNG, JPEG, HDR, EXR, SPZ, ASCII generic PLY, and other compressed/scene containers intentionally
 do not advertise a partial hook when their current decoder would still
 materialize the complete payload. ASCII P2/P3 Netpbm rejects because it must
 token-decode the complete raster; lossy VP8 rejects because a crop-local decode

@@ -18,6 +18,7 @@ import numpy as np
 
 from sceneio import _core
 from sceneio.errors import SceneIoError
+from sceneio.io._ply import classify_ply
 
 
 class FormatError(SceneIoError):
@@ -248,6 +249,20 @@ def detect(path) -> str:
         if p.name in c.filenames:
             return c.id
     ext = p.suffix.lower()
+    # A .ply suffix and the bare "ply" magic are shared by three semantically
+    # different schemas. Header dispatch must happen before registry order:
+    # silently sending Gaussian properties to PointCloud would discard them,
+    # while sending ordinary points to GaussianCloud would fail misleadingly.
+    if ext == ".ply":
+        try:
+            kind = classify_ply(p)
+        except (OSError, ValueError) as exc:
+            raise FormatError(f"cannot classify PLY {str(path)!r}: {exc}") from exc
+        if kind == "ply_mesh":
+            raise FormatError(
+                "PLY mesh schema detected, but the Mesh record/codec is not available yet"
+            )
+        return kind
     for c in REGISTRY.values():
         if ext in c.extensions:
             return c.id
@@ -256,6 +271,16 @@ def detect(path) -> str:
             head = stream.read(16)
     except OSError:
         head = b""
+    if head.startswith(b"ply"):
+        try:
+            kind = classify_ply(p)
+        except (OSError, ValueError) as exc:
+            raise FormatError(f"cannot classify PLY {str(path)!r}: {exc}") from exc
+        if kind == "ply_mesh":
+            raise FormatError(
+                "PLY mesh schema detected, but the Mesh record/codec is not available yet"
+            )
+        return kind
     for c in REGISTRY.values():
         if any(head.startswith(m) for m in c.magic):
             return c.id
@@ -462,6 +487,33 @@ register(
         datatype="splat",
         magic=(b"ply",),
         read_points=_mmap_selector_reader(_core.read_gaussian_ply_points),
+    )
+)
+register(
+    Codec(
+        "ply",
+        (".ply",),
+        _mmap_reader(_core.read_ply),
+        _file_sink_writer(_core.write_ply),
+        record=_core.PointCloud,
+        datatype="point_cloud",
+        read_points=_mmap_selector_reader(_core.read_ply_points),
+        supported_features=(
+            "ascii",
+            "binary_little_endian",
+            "binary_big_endian",
+            "standard_scalar_types_read",
+            "normals",
+            "rgb8",
+            "rgb16",
+            "intensity",
+        ),
+        unsupported_features=(
+            "vertex_lists",
+            "unknown_vertex_properties",
+            "non_vertex_elements",
+            "ascii_point_ranges",
+        ),
     )
 )
 register(

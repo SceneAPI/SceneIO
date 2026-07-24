@@ -21,7 +21,9 @@ dev = [
 # Codec parity oracles — kept out of runtime and `dev` so `import sceneio` stays
 # a numpy-only leaf. gsply (3DGS PLY + SPZ, incl. its C++ backend for v4),
 # pycolmap (COLMAP), pillow + pypng (PNG; pypng gives exact 16-bit RGB/RGBA that
-# Pillow's rgb48 handling truncates). numpy is capped <2.5 because gsply's numba
+# Pillow's rgb48 handling truncates). Open3D is the MIT-licensed generic PLY/PCD
+# oracle; the current GPLv3 `plyfile` package is intentionally excluded.
+# numpy is capped <2.5 because gsply's numba
 # needs NumPy <=2.4, and pinned >=2.0 to keep the NEP-50 float32 semantics the
 # SPZ encode parity relies on. Torch remains outside package extras/runtime;
 # the required Linux CI lane installs a CPU wheel solely for interop tests.
@@ -37,6 +39,7 @@ test = [
     "imageio>=2.37",
     "psutil>=6.0",
     "safetensors>=0.8",
+    "open3d>=0.19",
 ]
 
 [build-system]

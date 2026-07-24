@@ -533,3 +533,43 @@ channel name; typed `Y` output is byte-identical to the original raw scalar
 writer. EXR compression cannot provide a bounded typed window without full
 decode, so that selector rejects before invoking the reader. The accepted
 five-run 29-codec O4/O5 throughput and memory regression guard passed.
+
+## Generic point PLY baseline — 2026-07-24
+
+The harness now covers 30 codecs and reports all three generic point PLY
+encodings. A three-run generated 4,000,000-point fixture carries float32
+positions/normals plus uint8 RGB: 108.0 MB of logical data and 108.0 MB for
+either binary file (319.6 MB as canonical ASCII).
+
+```text
+encoding / operation                 result
+-------------------------------------------------------------
+binary little-endian write             762 MB/s
+binary little-endian read              891 MB/s
+binary big-endian write                547 MB/s
+binary big-endian read                 546 MB/s
+ASCII write                             22 MB/s
+ASCII read                             108 MB/s
+public mmap read                       612 MB/s
+direct file-sink write                 521 MB/s
+header-only inspect                  0.082 ms
+middle 1/16 point range             12.559 ms
+full read                           176.338 ms
+```
+
+Inspection was 2,148x faster than full decode and touched no measurable payload
+RSS. The fixed-record point range was 14.04x faster, with 12.3 MB sampled RSS
+versus 215.4 MB for the full mapping plus output record. The public mmap path
+removed the 108.0 MB traced whole-file `bytes` allocation, and the direct sink
+removed the corresponding 108.0 MB Python write allocation.
+
+A separate three-run 100,000-point oracle pass measured SceneIO at 768 MB/s
+write and 930 MB/s read versus Open3D 0.19 at 23 MB/s and 128 MB/s. Open3D is
+MIT-licensed and test-only. The plan's earlier `plyfile` suggestion was
+discarded because its current GPLv3 license violates SceneIO's
+permissive-license-only rule.
+
+The accepted five-run 30-codec guard then measured the default 1,000,000-point
+PLY row at 753 MB/s write and 851 MB/s read, with a 469x inspection gain and
+20.76x partial-read gain. Every retained O4/O5 directional and mmap/sink
+allocation guard passed.

@@ -291,6 +291,7 @@ def test_point_ranges_equal_full_read_slices(tmp_path):
     cases = (
         ("xyz", bytes(_core.write_xyz(xyz))),
         ("pts", bytes(_core.write_pts(xyz))),
+        ("ply", bytes(_core.write_ply(xyz))),
         ("las", bytes(_core.write_las(las))),
         ("gaussian_ply", bytes(_core.write_gaussian_ply(gaussians))),
         ("splat", bytes(_core.write_splat(gaussians))),
@@ -366,7 +367,6 @@ def test_las_point_format_partial_parity(tmp_path, point_format):
     )
     _assert_point_range(partial, full, 2, 11)
 
-
 def test_partial_reads_handle_non_native_endian_payloads(tmp_path):
     pfm_values = np.arange(4 * 5, dtype=np.float32).reshape(4, 5)
     pfm_path = tmp_path / "big-endian.pfm"
@@ -399,6 +399,17 @@ def test_partial_reads_handle_non_native_endian_payloads(tmp_path):
         ply_path, format="gaussian_ply", points=(2, 11)
     )
     _assert_point_range(partial, full, 2, 11)
+
+    point_cloud = _point_cloud_case(rng)
+    point_ply_path = tmp_path / "big-endian-points.ply"
+    point_ply_path.write_bytes(
+        bytes(_core.write_ply(point_cloud, "binary_big_endian"))
+    )
+    point_full = sceneio.read(point_ply_path, format="ply")
+    point_partial = sceneio.read_partial(
+        point_ply_path, format="ply", points=(2, 11)
+    )
+    _assert_point_range(point_partial, point_full, 2, 11)
 
 
 def _three_view_reconstruction():
@@ -594,6 +605,11 @@ def test_partial_paths_reject_truncated_selected_payloads(tmp_path):
         (
             "gaussian_ply",
             bytes(_core.write_gaussian_ply(gaussians))[:-1],
+            {"points": (0, 1)},
+        ),
+        (
+            "ply",
+            bytes(_core.write_ply(point_cloud))[:-1],
             {"points": (0, 1)},
         ),
         (

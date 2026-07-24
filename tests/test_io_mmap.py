@@ -197,6 +197,12 @@ def buffer_codecs():
         colors=rng.integers(0, 256, (13, 3), dtype=np.uint8),
         intensity=rng.standard_normal(13).astype(np.float32),
     )
+    points_ply = _core.point_cloud(
+        positions,
+        colors=rng.integers(0, 256, (13, 3), dtype=np.uint8),
+        normals=rng.standard_normal((13, 3)).astype(np.float32),
+        intensity=rng.standard_normal(13).astype(np.float32),
+    )
     points_las = _core.point_cloud(
         positions,
         colors16=rng.integers(0, 65536, (13, 3), dtype=np.uint16),
@@ -270,6 +276,7 @@ def buffer_codecs():
         spec("webp", _core.read_webp, _core.write_webp, image_rgba),
         spec("xyz", _core.read_xyz, _core.write_xyz, points_xyz),
         spec("pts", _core.read_pts, _core.write_pts, points_pts),
+        spec("ply", _core.read_ply, _core.write_ply, points_ply),
         spec("las", _core.read_las, _core.write_las, points_las),
         spec("flo", _core.read_flo, _core.write_flo, flow),
         spec("dmb", _core.read_dmb, _core.write_dmb, depth),
@@ -299,8 +306,8 @@ def _outcome(call, argument):
 
 
 def test_all_single_file_codecs_mmap_equal_bytes_bit_exact(tmp_path, buffer_codecs):
-    """All 27 buffer codecs decode mmap and bytes to bit-exact records."""
-    assert len(buffer_codecs) == 27
+    """All 28 buffer codecs decode mmap and bytes to bit-exact records."""
+    assert len(buffer_codecs) == 28
     for spec in buffer_codecs:
         expected = _fingerprint(spec.reader(spec.data))
         path = tmp_path / f"sample-{spec.id}.bin"
@@ -318,8 +325,8 @@ def test_all_single_file_codecs_mmap_equal_bytes_bit_exact(tmp_path, buffer_code
 
 
 def test_all_single_file_sinks_are_byte_identical(tmp_path, buffer_codecs):
-    """All 27 compiled encoders emit the exact bytes their buffer API returns."""
-    assert len(buffer_codecs) == 27
+    """All 28 compiled encoders emit the exact bytes their buffer API returns."""
+    assert len(buffer_codecs) == 28
     for spec in buffer_codecs:
         direct = tmp_path / f"direct-{spec.id}.bin"
         _core._write_to_file(spec.writer, spec.value, direct)
@@ -468,8 +475,8 @@ print(max(0, peak[0] - baseline))
     return int(completed.stdout.strip())
 
 
-def test_inspect_matches_decoded_metadata_all_29_codecs(tmp_path, buffer_codecs):
-    assert len(buffer_codecs) == 27
+def test_inspect_matches_decoded_metadata_all_30_codecs(tmp_path, buffer_codecs):
+    assert len(buffer_codecs) == 28
     for spec in buffer_codecs:
         path = tmp_path / f"inspect-{spec.id}.data"
         path.write_bytes(spec.data)
@@ -486,6 +493,41 @@ def test_inspect_matches_decoded_metadata_all_29_codecs(tmp_path, buffer_codecs)
                 "sh_degree": decoded.sh_degree,
                 "num_rest": decoded.num_rest,
                 "byte_order": "little",
+            }
+        elif spec.id == "ply":
+            assert info.metadata == {
+                "encoding": "binary_little_endian",
+                "byte_order": "little",
+                "properties": (
+                    "x",
+                    "y",
+                    "z",
+                    "nx",
+                    "ny",
+                    "nz",
+                    "red",
+                    "green",
+                    "blue",
+                    "intensity",
+                ),
+                "property_types": (
+                    "float",
+                    "float",
+                    "float",
+                    "float",
+                    "float",
+                    "float",
+                    "uchar",
+                    "uchar",
+                    "uchar",
+                    "float",
+                ),
+                "has_normals": True,
+                "has_color": True,
+                "color_dtype": "uint8",
+                "has_intensity": True,
+                "intensity_range": "unknown",
+                "vertex_stride": 31,
             }
         elif spec.id == "spz":
             assert info.metadata == {
@@ -1654,7 +1696,7 @@ def test_registry_uses_mmap_for_every_nonempty_single_file_codec(
         value = sceneio.codecs()[spec.id].read(str(path))
         gc.collect()
         assert _fingerprint(value) == _fingerprint(spec.reader(spec.data))
-    assert mapped_paths == len(buffer_codecs) == 27
+    assert mapped_paths == len(buffer_codecs) == 28
 
 
 def test_all_buffer_entries_accept_readonly_protocol_exporters(buffer_codecs):

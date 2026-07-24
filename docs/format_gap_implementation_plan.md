@@ -2,11 +2,11 @@
 
 - **Status:** execution in progress after SceneIO 0.2.0. G0, safetensors, PTS,
   scalar DMB, BAL, BMP/TGA, the compiled `FlowField` record, typed FLO, typed
-  PFM depth, typed PNG depth, and typed scalar EXR depth are complete locally.
-  The active depth/flow slice is complete; generic point PLY is next.
+  PFM depth, typed PNG depth, typed scalar EXR depth, and generic point PLY are
+  complete locally. PCD is the next codec in the default-wheel sequence.
   Cross-platform wheel and instrumented validation remains a user-gated remote
   action.
-- **Current branch:** 29 compiled codecs, all read/write and inspectable, with
+- **Current branch:** 30 compiled codecs, all read/write and inspectable, with
   bounded partial reads where their containers permit them.
 - **Scope:** close every unblocked format gap declared by SceneIO's coverage
   documents without reimplementing the 0.2.0 codec tier.
@@ -125,7 +125,7 @@ exit gate and the validation matrix in section 8 both pass.
 |---|---|---|
 | Reconstruction and pose | COLMAP database, EuRoC state CSV, g2o | BAL |
 | Splat | SuperSplat SOG / compressed PLY, KSplat | — |
-| Point cloud | generic point PLY, PCD, LAS waveform formats 4/5/9/10, LAZ, E57 | count-prefixed PTS |
+| Point cloud | PCD, LAS waveform formats 4/5/9/10, LAZ, E57 | count-prefixed PTS and generic point PLY |
 | Mesh | mesh PLY, OBJ/MTL, STL, OFF, glTF/GLB, USD/USDZ; optional Draco is policy-gated | — |
 | Tensor/feature/table | COLMAP features/matches, HDF5, hloc layout, Zarr v2/v3, Parquet | safetensors |
 | Image and depth | TIFF | BMP, TGA, typed PFM depth, typed PNG depth, typed scalar EXR depth, scalar DMB |
@@ -244,7 +244,7 @@ G0 capability truth
  ├─ G1 Mesh/MaterialSet ── G3 mesh codecs ───── optional USD/Draco
  ├─ G1 Feature/Match ───── COLMAP DB ────────── HDF5/hloc
  ├─ existing TensorDict ── safetensors ──────── Zarr
- ├─ existing PointCloud ── PCD/generic PLY ──── LAZ/E57
+ ├─ existing PointCloud ── generic point PLY ✅ ── PCD ── LAZ/E57
  ├─ G1 CameraRig/PoseGraph/StateTrajectory ─ calibration/g2o/EuRoC
  ├─ G1 ImageSequence ───── image-dir/Y4M ────── animated formats
  └─ G1 Table/Grid/Scene ── Parquet/OpenVDB/USD
@@ -335,7 +335,7 @@ Benchmark:
 - bulk feature/match insertion, one-image read, one-pair read, and full scan;
 - compare prepared statements/transactions against the test-side reference.
 
-#### G2.3 PTS complete locally; generic PLY and PCD pending
+#### G2.3 PTS and generic point PLY complete locally; PCD pending
 
 PTS implementation:
 
@@ -361,38 +361,29 @@ PTS completion evidence (2026-07-24):
 
 Remaining implementation:
 
-- Keep `gaussian_ply` bespoke; add separate generic `ply` dispatch for
-  point-cloud and mesh schemas.
-- Support PLY ASCII, binary little-endian, and binary big-endian; preserve
-  declared scalar/list property types and reject unsupported semantic mappings.
 - Support PCD ASCII, binary, and `binary_compressed` LZF layouts.
 - Map organized PCD width/height and viewpoint into metadata.
-- Inspect headers without reading payloads.
-- Provide point ranges for fixed-record binary PLY/PCD. Text and compressed
+- Inspect PCD headers without reading payloads.
+- Provide point ranges for fixed-record binary PCD. Text and compressed
   variants expose partial reads only if a bounded index can be constructed
   without full payload materialization.
 
 Oracles:
 
-- independent PTS parser plus `plyfile` and Open3D in test extras.
+- independent PTS/PLY parsers plus Open3D in test extras. `plyfile` is
+  deliberately excluded: its current GPLv3 license violates the project's
+  permissive-license-only constraint.
 
 Verification:
 
-- property ordering, endian variants, polygon list lengths, normals, color,
-  intensity, NaNs, organized clouds, PCD field counts/types, and LZF blocks;
+- organized clouds, PCD field counts/types, and LZF blocks;
 - PTS declared-count mismatch, missing count, supported column layouts, and
   canonical writer header;
-- generic PLY must never auto-detect a Gaussian PLY as a generic point cloud
-  when `gaussian_ply` fidelity is required;
-- detection reads enough PLY header metadata to choose generic point, generic
-  mesh, or Gaussian schemas before extension fallback;
 - writer refusal when the selected output format cannot represent a record
   field.
 
 Benchmark:
 
-- ASCII and binary parse/write;
-- endian transform;
 - PCD LZF compression;
 - point-range memory versus full decode.
 
@@ -1600,15 +1591,15 @@ estimates.
 
 The current local checkpoint is:
 
-- 29 compiled registry codecs with read, write, inspect, mmap input, and direct
+- 30 compiled registry codecs with read, write, inspect, mmap input, and direct
   file sinks;
 - O0-O5 complete for the existing codec tier;
 - `FlowField`, typed FLO, typed PFM depth, typed PNG depth, and typed scalar EXR
   depth complete;
-- 1,829 local tests pass with 3 documented optional skips, Ruff and
+- 1,898 local tests pass with 3 documented optional skips, Ruff and
   `git diff --check` are clean;
 - the all-codec benchmark guard and packaged numpy-only wheel smoke pass;
-- generic point PLY is the next unfinished codec;
+- generic point PLY is complete locally; PCD is the next unfinished codec;
 - instrumented Linux and Linux/macOS wheels have not yet been run for this
   dependency wave because pushing and dispatching remote workflows are
   user-gated.
@@ -1688,21 +1679,62 @@ Validation and exit:
 Land each numbered item as its own verified commit. Do not combine records or
 codecs merely to make the ledger look complete.
 
-#### B1. Generic point PLY
+#### B1. Generic point PLY — complete locally
 
-- Add schema-aware `ply` dispatch for point clouds while keeping
-  `gaussian_ply` authoritative for Gaussian schemas.
-- Support ASCII, binary little-endian, and binary big-endian vertex records;
-  map only fields represented by `PointCloud` and reject unrepresentable
-  properties on write.
-- Add header-only inspect and fixed-record binary point ranges. Do not advertise
-  bounded ASCII ranges unless an index can be built without full
-  materialization.
-- Verify independent `plyfile`/Open3D parity, property order and type matrices,
-  endian conversion, NaNs, normals/colors/intensity, ambiguous detection, and
-  raw Gaussian non-regression.
-- Benchmark ASCII parse/format, both binary endian paths, inspect, range read,
-  mmap, and sink output.
+Implementation:
+
+- A separate `ply` registry codec maps point-only PLY into `PointCloud`; the
+  bounded shared header classifier routes complete Gaussian schemas to
+  `gaussian_ply`, ordinary point schemas to `ply`, and mesh/list/non-vertex
+  schemas to an explicit not-yet-supported mesh result before extension-order
+  fallback.
+- The native reader accepts PLY 1.0 ASCII, binary little-endian, and binary
+  big-endian bodies, arbitrary property ordering, every standard scalar
+  spelling for numeric point fields, float32 canonicalization, exact uint8 or
+  uint16 RGB, optional normals, and optional intensity with u8/u16 range tags.
+- Unknown or list-valued vertex properties, incomplete semantic groups,
+  non-vertex elements, finite float64 values outside float32 range, malformed
+  counts, oversized headers/tokens, truncated/trailing payloads, and hybrid
+  Gaussian schemas are refused instead of discarded.
+- The deterministic writer supports all three encodings through a private
+  verification seam and defaults publicly to binary little-endian. It guards
+  georeferenced origins, coordinate/scale metadata, simultaneous rgb/rgb16,
+  unit intensity semantics, and non-integral integer-tagged intensity.
+- Inspection reads at most the 1 MiB header and validates fixed binary extent
+  from file size. Binary point ranges validate the complete record extent
+  before allocating only the requested slice; ASCII ranges remain
+  intentionally unsupported.
+
+Verification and validation evidence (2026-07-24):
+
+- 67 focused cases triangulate the native codec with an independent
+  NumPy/stdlib parser and Open3D 0.19, including all scalar families, both
+  endians, ASCII, property order, NaNs, normals, rgb8/rgb16, intensity,
+  malformed schemas, count bombs, mmap lifetime/mutation isolation, direct
+  sinks, header-only inspection, schema-aware detection, and Gaussian
+  non-regression.
+- The shared public/mmap/sink/inspection/partial/capability suites include PLY;
+  the complete local MSVC gate passes 1,898 tests with 3 documented optional
+  skips.
+- A three-run 4,000,000-point (108 MB logical) harness run measured 762 MB/s
+  binary-LE write, 891 MB/s binary-LE read, 547/546 MB/s binary-BE write/read,
+  and 22/108 MB/s ASCII write/read. Header inspection was 2,148x faster than
+  full read and the 1/16 range was 14.04x faster with 12.3 MB versus 215.4 MB
+  sampled RSS.
+- The mmap path removed 108.0 MB of traced input allocation and the direct
+  sink removed 108.0 MB of traced Python output allocation. A separate
+  100,000-point pass measured 930 MB/s SceneIO read versus 128 MB/s Open3D and
+  768 MB/s SceneIO write versus 23 MB/s Open3D.
+- A clean Windows cp312-abi3 wheel contains 35 entries, no leaked
+  include/lib/share/bin build artifacts, retains numpy as its only runtime
+  requirement, exports all three PLY symbols, and passes the expanded
+  numpy-only wheel smoke.
+- The accepted five-run 30-codec harness leaves every retained O4/O5
+  directional and mmap/sink memory guard green.
+- Manual memory-safety, format-correctness, and test-soundness review found and
+  fixed pre-allocation count validation and hybrid-schema dispatch gaps.
+  Linux sanitizer and Linux/macOS wheel validation remain user-gated remote
+  actions.
 
 #### B2. PCD
 

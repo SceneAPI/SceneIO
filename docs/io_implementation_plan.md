@@ -223,8 +223,8 @@ read → compare to oracle; and byte-mutated real files must raise, not crash).
 | Format(s) | Oracle | License |
 |---|---|---|
 | COLMAP `.bin`/`.txt`/`.db` + camera models | **pycolmap** | BSD |
-| PLY, PCD | **open3d** (MIT) / **plyfile** (BSD) | MIT/BSD |
-| 3DGS `.ply` | plyfile + **gsplat/nerfstudio** loader cross-check | Apache |
+| PLY, PCD | **open3d** (MIT) + independent NumPy/stdlib parser | MIT / in-tree |
+| 3DGS `.ply` | **gsply** + gsplat/nerfstudio loader cross-check | MIT / Apache |
 | `.splat` / `.spz` / SuperSplat | reference py/JS loaders → **captured test vectors** | MIT |
 | HDF5, hloc layout | **h5py** (BSD) + **hloc** (Apache) | BSD/Apache |
 | LAS / LAZ | **laspy** + `lazrs` | BSD/Apache |
@@ -257,7 +257,7 @@ docs, and closes with "all parity green."
   end-to-end** (`.npy` or PFM) as the reference codec pattern.
 - **Phase 1 — Tier-1 spine, zero external deps.** COLMAP `.bin`/`.txt` +
   camera models, PLY, `.npy`/`.npz`, PFM, PPM/PGM, `transforms.json`,
-  TUM/KITTI/g2o text. Oracles: pycolmap, plyfile, numpy, imageio. *(Also:
+  TUM/KITTI/g2o text. Oracles: pycolmap, Open3D, numpy, imageio. *(Also:
   wire the `Reconstruction`/`FeatureSet` Records to the existing
   `sparse_model`/`feature_set` DataTypes.)*
 - **Phase 2 — 3DGS splat → unblocks the `splat` DataType.** 3DGS `.ply`,

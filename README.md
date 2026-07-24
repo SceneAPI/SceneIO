@@ -73,7 +73,7 @@ artifacts vocabulary — wire identity unchanged.
 
 ### Compiled format I/O — `read` / `write` / `inspect` / `read_partial`
 
-The lazy-loaded compiled core reads and writes 29 image, depth, tensor,
+The lazy-loaded compiled core reads and writes 30 image, depth, tensor,
 point-cloud, Gaussian, pose, and reconstruction formats.
 `sceneio.inspect(path)` returns an immutable `Inspection` with shape, dtype,
 channels, repeated-record counts, and format-specific scalar metadata without
@@ -155,6 +155,17 @@ points = sceneio.read_partial(
     "survey.las", points=(1_000_000, 1_010_000)
 )
 
+# `.ply` detection reads the header schema: ordinary vertices become a
+# PointCloud, 3DGS properties remain a GaussianCloud, and mesh faces fail
+# explicitly until the Mesh record lands. Binary point ranges are bounded.
+cloud = sceneio.read("scan.ply")
+cloud_part = sceneio.read_partial("scan.ply", points=(10_000, 20_000))
+assert sceneio.inspect("scan.ply").metadata["encoding"] in {
+    "ascii",
+    "binary_little_endian",
+    "binary_big_endian",
+}
+
 # One COLMAP pose and its camera, without opening points3D.
 view = sceneio.read_partial("sparse/0", image_id=42)
 
@@ -184,7 +195,9 @@ lossless VP8L WebP, FLO, and scalar DMB; lossy WebP and ASCII P2/P3 reject becau
 cannot provide a bit-exact bounded slice. Safetensors supports complete
 named-tensor selection and contiguous leading-axis slices.
 Count-prefixed PTS supports bounded point ranges while validating the declared
-point count and preserving supported intensity/RGB columns.
+point count and preserving supported intensity/RGB columns. Generic PLY reads
+ASCII and binary little/big endian point schemas; only fixed-record binary PLY
+advertises bounded point ranges.
 
 ### Errors
 

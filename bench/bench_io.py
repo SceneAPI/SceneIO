@@ -2,7 +2,7 @@
 
 Measures, per codec, encode (write) + decode (read) throughput (MB/s over the raw
 payload) and peak Python allocation (tracemalloc), for sceneio._core vs the oracle
-library where one exists, on representative payloads for all 29 codecs. Read
+library where one exists, on representative payloads for all 30 codecs. Read
 measurements retain the legacy whole-file bytes/copy-decode path beside the
 public registry mmap path, so their peak delta captures the input copy O1
 removes and, for NPY/FLO, the decoded-array copy O2 removes. Write measurements
@@ -59,6 +59,10 @@ try:
     import OpenEXR
 except Exception:
     OpenEXR = None
+try:
+    import open3d as o3d
+except Exception:
+    o3d = None
 try:
     import psutil
 except Exception:
@@ -191,6 +195,18 @@ def _pc(n, color):
         kw["colors16"] = (rng.random((n, 3)) * 65535).astype(np.uint16)
         kw["intensity"] = (rng.random(n) * 60000).astype(np.float32)
     return _core.point_cloud(xyz, **kw), xyz
+
+
+def _pc_ply(n):
+    rng = np.random.default_rng(17)
+    xyz = (rng.random((n, 3), dtype=np.float32) * 100.0).astype(np.float32)
+    normals = rng.standard_normal((n, 3)).astype(np.float32)
+    colors = rng.integers(0, 256, (n, 3), dtype=np.uint8)
+    payload = {"positions": xyz, "normals": normals, "colors": colors}
+    return (
+        _core.point_cloud(xyz, colors=colors, normals=normals),
+        payload,
+    )
 
 
 def _gauss(n):
@@ -378,6 +394,35 @@ def _laspy_w(payload):
 
 def _laspy_r(data):
     return laspy.read(io.BytesIO(data))
+
+
+def _open3d_ply_w(payload):
+    cloud = o3d.geometry.PointCloud()
+    cloud.points = o3d.utility.Vector3dVector(payload["positions"])
+    cloud.normals = o3d.utility.Vector3dVector(payload["normals"])
+    cloud.colors = o3d.utility.Vector3dVector(
+        payload["colors"].astype(np.float64) / 255.0
+    )
+    fd, path = tempfile.mkstemp(suffix=".ply")
+    os.close(fd)
+    try:
+        if not o3d.io.write_point_cloud(
+            path, cloud, write_ascii=False, compressed=False
+        ):
+            raise RuntimeError("Open3D rejected PLY write")
+        return Path(path).read_bytes()
+    finally:
+        os.remove(path)
+
+
+def _open3d_ply_r(data):
+    fd, path = tempfile.mkstemp(suffix=".ply")
+    os.close(fd)
+    try:
+        Path(path).write_bytes(data)
+        return o3d.io.read_point_cloud(path)
+    finally:
+        os.remove(path)
 
 
 def _np_w(a):
@@ -641,6 +686,15 @@ def _specs(scale, pose_bundle=None):
             lambda rec, p: p.nbytes,
         ),
         Spec(
+            "ply",
+            lambda: _pc_ply(points),
+            _core.write_ply,
+            _core.read_ply,
+            (_open3d_ply_w if o3d else None),
+            (_open3d_ply_r if o3d else None),
+            lambda rec, p: sum(value.nbytes for value in p.values()),
+        ),
+        Spec(
             "las",
             lambda: _pc(points, True),
             lambda pc: _core.write_las(pc, 0.001),
@@ -837,7 +891,7 @@ def _partial_request(codec_id, info, full_record=None):
                 col_start + out_width,
             )
         }
-    if codec_id in {"xyz", "pts", "las", "gaussian_ply", "splat"}:
+    if codec_id in {"xyz", "pts", "ply", "las", "gaussian_ply", "splat"}:
         selected = max(1, info.count // 16)
         start = (info.count - selected) // 2
         return {"points": (start, start + selected)}
@@ -862,6 +916,20 @@ def main():
         "--cold-cache",
         action="store_true",
         help="request POSIX_FADV_DONTNEED before each path read when supported",
+    )
+    ap.add_argument(
+        "--only",
+        action="append",
+        metavar="FORMAT",
+        help=(
+            "benchmark only this registered format id; repeat for multiple "
+            "formats (the default remains the complete codec sweep)"
+        ),
+    )
+    ap.add_argument(
+        "--skip-oracles",
+        action="store_true",
+        help="skip independent-library timing while retaining SceneIO verification",
     )
     ap.add_argument(
         "--large-safetensors-mib",
@@ -896,6 +964,14 @@ def main():
         ap.error("--scale must be positive")
     if args.large_safetensors_mib < 0:
         ap.error("--large-safetensors-mib must be non-negative")
+    if args.only and (
+        args.require_o4_gains
+        or args.require_o5_inspect_gains
+        or args.require_o5_partial_gains
+    ):
+        ap.error("--only cannot be combined with complete-sweep regression guards")
+    if args.only and args.large_safetensors_mib:
+        ap.error("--only cannot be combined with --large-safetensors-mib")
     with tempfile.TemporaryDirectory(prefix="sceneio_bench_") as tmp:
         if args.large_safetensors_mib:
             failures, results = _run_large_safetensors(args, tmp)
@@ -953,6 +1029,7 @@ def _run_large_safetensors(args, tmp):
         safetensors_save_file
         and safetensors_load_file
         and safetensors_open
+        and not args.skip_oracles
     ):
         def oracle_full():
             if args.cold_cache:
@@ -1047,6 +1124,21 @@ def _run_benchmark(args, tmp):
     pose_bundle = _poses_and_reconstruction(args.scale)
     reconstruction = pose_bundle[0]
     specs = _specs(args.scale, pose_bundle)
+    directory_specs = _directory_specs()
+    if args.only:
+        requested = set(args.only)
+        known = {spec.id for spec in specs} | {
+            spec.id for spec in directory_specs
+        }
+        unknown = requested - known
+        if unknown:
+            raise ValueError(
+                "unknown --only format: " + ", ".join(sorted(unknown))
+            )
+        specs = [spec for spec in specs if spec.id in requested]
+        directory_specs = [
+            spec for spec in directory_specs if spec.id in requested
+        ]
     failures = []
     results = []
     write_rows = []
@@ -1074,6 +1166,41 @@ def _run_benchmark(args, tmp):
             sioW, sioR = pmb / wt, pmb / rt
             o4_metrics = {}
             typed_adapter_metrics = None
+            ply_variant_metrics = None
+
+            if s.id == "ply":
+                ply_variant_metrics = {
+                    "binary_little_endian": {
+                        "file_mb": fmb,
+                        "write_mbps": sioW,
+                        "read_mbps": sioR,
+                    }
+                }
+                reference_fields = {
+                    name: np.asarray(getattr(rec, name))
+                    for name in ("positions", "colors", "normals")
+                }
+                for encoding in ("ascii", "binary_big_endian"):
+                    writer = partial(_core.write_ply, rec, encoding)
+                    variant_write_time, _ = _measure(writer, args.runs)
+                    variant = bytes(writer())
+                    reader = partial(_core.read_ply, variant)
+                    variant_read_time, _ = _measure(reader, args.runs)
+                    decoded = reader()
+                    if not all(
+                        np.array_equal(
+                            np.asarray(getattr(decoded, name)), expected
+                        )
+                        for name, expected in reference_fields.items()
+                    ):
+                        raise AssertionError(
+                            f"PLY {encoding} variant changed decoded values"
+                        )
+                    ply_variant_metrics[encoding] = {
+                        "file_mb": len(variant) / 1e6,
+                        "write_mbps": pmb / variant_write_time,
+                        "read_mbps": pmb / variant_read_time,
+                    }
 
             # O4 controls retain a deterministic one-lane/worker-off reference
             # beside the optimized defaults. WebP separately measures the old
@@ -1779,7 +1906,7 @@ def _run_benchmark(args, tmp):
                 )
 
             oraW = oraR = None
-            if s.ow and payload is not None:
+            if s.ow and payload is not None and not args.skip_oracles:
                 ob = _try(lambda: bytes(s.ow(payload)))
                 if ob is not None:
                     m = _try(lambda: _measure(lambda: s.ow(payload), args.runs))
@@ -1828,6 +1955,7 @@ def _run_benchmark(args, tmp):
                     "sink_write_rss_mb": sink_write_rss / 1e6,
                     "o4": o4_metrics or None,
                     "typed_adapter": typed_adapter_metrics,
+                    "ply_variants": ply_variant_metrics,
                 }
             )
             print(
@@ -1848,12 +1976,19 @@ def _run_benchmark(args, tmp):
                     f"{typed_adapter_metrics['read_peak_mb']:.3f}/"
                     f"{typed_adapter_metrics['write_peak_mb']:.3f} MB"
                 )
+            if ply_variant_metrics is not None:
+                summary = ", ".join(
+                    f"{encoding}: W={metrics['write_mbps']:.0f}/"
+                    f"R={metrics['read_mbps']:.0f} MB/s"
+                    for encoding, metrics in ply_variant_metrics.items()
+                )
+                print(f"  PLY encodings: {summary}")
         except Exception as e:
             failures.append(s.id)
             results.append({"codec": s.id, "error": f"{type(e).__name__}: {e}"})
             print(f"{s.id:<14} ERROR: {type(e).__name__}: {e}")
 
-    for spec in _directory_specs():
+    for spec in directory_specs:
         try:
             path = Path(tmp) / spec.id
             path.mkdir()
@@ -1979,7 +2114,8 @@ def _run_benchmark(args, tmp):
             results.append({"codec": spec.id, "error": f"{type(e).__name__}: {e}"})
             print(f"{spec.id:<14} ERROR: {type(e).__name__}: {e}")
 
-    assert len(specs) + len(_directory_specs()) == 29
+    if not args.only:
+        assert len(specs) + len(directory_specs) == 30
     print("\nMB/s over raw payload; fileMB = encoded size (= the whole-file copy O1/O3 remove).")
     print("sioR = in-memory copy decode; pathR = public registry mmap read/view.")
     print("bPeakMB/mPeakMB = peak Python allocation for bytes/mmap reads (O1 delta).")

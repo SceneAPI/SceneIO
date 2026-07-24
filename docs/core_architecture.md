@@ -66,7 +66,7 @@ exposes them:
    `Inspection`.
 6. **Parity test** — `tests/codecs/test_<fmt>.py` using
    `sceneio.testing.assert_codec_parity(...)` against the reference oracle
-   (pycolmap / gsply / plyfile / imageio / …). Cover: cross-impl equality,
+   (pycolmap / gsply / Open3D / imageio / …). Cover: cross-impl equality,
    round-trip identity, a convention pin, and numpy↔torch.
 
 Everything else — dispatch, error mapping, public API wiring, and DataType

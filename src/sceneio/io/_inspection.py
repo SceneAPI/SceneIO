@@ -24,6 +24,7 @@ from typing import BinaryIO
 import numpy as np
 
 from sceneio import _core
+from sceneio.io._ply import parse_ply_header, validate_point_ply_header
 
 MetadataValue = str | int | float | bool | tuple[int, ...] | tuple[str, ...]
 _HEADER_LIMIT = 1024 * 1024
@@ -77,6 +78,8 @@ def inspect_path(path: str | Path, format_id: str, datatype: str) -> Inspection:
         return _inspect_colmap_binary(p, datatype)
     if format_id == "gaussian_ply":
         return _inspect_gaussian_ply(p, datatype)
+    if format_id == "ply":
+        return _inspect_ply(p, datatype)
     if format_id == "spz":
         return _inspect_spz(p, datatype)
     if format_id == "transforms_json":
@@ -1024,6 +1027,22 @@ def _inspect_gaussian_ply(path: Path, datatype: str) -> Inspection:
             "num_rest": rest,
             "byte_order": byte_order,
         },
+    )
+
+
+def _inspect_ply(path: Path, datatype: str) -> Inspection:
+    file_size = _size(path)
+    header = parse_ply_header(path)
+    metadata = validate_point_ply_header(header, file_size)
+    count = header.vertex.count
+    return Inspection(
+        "ply",
+        datatype,
+        file_size,
+        shape=(count, 3),
+        dtype="float32",
+        count=count,
+        metadata=metadata,
     )
 
 

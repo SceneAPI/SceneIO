@@ -152,7 +152,7 @@ Columns: **Ext/id** · **Record** · **Lib/oracle (license)** · **R/W** ·
 ### 3c. Point clouds
 | Format | Record | Lib / oracle | R/W | Notes |
 |---|---|---|---|---|
-| ⬜ PLY (point/mesh) | `PointCloud`/`Mesh` | plyfile (BSD)/open3d (MIT) | R+W | ascii+binary LE/BE; generic PLY reader |
+| ✅ PLY (point) / ⬜ PLY (mesh) | `PointCloud`/`Mesh` | independent parser + Open3D (MIT) | R+W | point ASCII+binary LE/BE complete; mesh waits for `Mesh` |
 | ⬜ PCD | `PointCloud` | open3d | R+W | ascii/binary/binary_compressed (lzf) |
 | ✅ LAS | `PointCloud` | laspy (BSD) | R+W | mmap; point formats 0‑3 and 6‑8 |
 | ⬜ LAZ | `PointCloud` | lazrs (Apache) / laszip | R+W | LAS compression |
@@ -230,7 +230,8 @@ hardening work shipped in 0.2.0. The remaining dependency-ordered sequence is
 maintained in `format_gap_implementation_plan.md`:
 
 1. machine-readable capabilities and optional-feature state;
-2. COLMAP DB, generic PLY/PCD, calibration, and other self-contained formats;
+2. COLMAP DB, PCD, calibration, and other self-contained formats (generic
+   point PLY is complete);
 3. meshes and vendorable LAZ;
 4. lazy sequence/dataset containers;
 5. independently gated HDF5/TIFF/E57/Arrow integrations;

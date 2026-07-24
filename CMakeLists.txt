@@ -114,6 +114,7 @@ nanobind_add_module(_core STABLE_ABI NB_STATIC
   src/cpp/codecs/pfm.cpp
   src/cpp/codecs/colmap.cpp
   src/cpp/codecs/ply_gaussian.cpp
+  src/cpp/codecs/ply_point.cpp
   src/cpp/codecs/spz.cpp
   src/cpp/codecs/transforms_json.cpp
   src/cpp/codecs/pose_text.cpp

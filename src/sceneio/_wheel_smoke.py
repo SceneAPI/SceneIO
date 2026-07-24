@@ -103,6 +103,20 @@ def _point_depth_and_flow(root: Path, values: np.ndarray) -> None:
     selected = sceneio.read_partial(points, points=(1, 3))
     assert np.array_equal(selected.positions, values[1:3, :3])
 
+    ply = root / "points.ply"
+    ply_record = _core.point_cloud(
+        values[:, :3],
+        colors=np.arange(9, dtype=np.uint8).reshape(3, 3),
+    )
+    ply.write_bytes(_core.write_ply(ply_record, "binary_big_endian"))
+    assert sceneio.detect(ply) == "ply"
+    assert np.array_equal(sceneio.read(ply).positions, values[:, :3])
+    assert np.array_equal(
+        sceneio.read_partial(ply, points=(1, 3)).colors,
+        ply_record.colors[1:3],
+    )
+    assert sceneio.inspect(ply).metadata["byte_order"] == "big"
+
     depth_values = np.arange(20, dtype=np.float32).reshape(4, 5)
     depth = _core.depth_map(
         depth_values,
