@@ -15,6 +15,7 @@ _BUILTINS = {
     "bundler",
     "colmap_sparse",
     "colmap_sparse_txt",
+    "dmb",
     "exr",
     "flo",
     "gaussian_ply",
@@ -42,6 +43,7 @@ _BUILTINS = {
 _PARTIAL = {
     "colmap_sparse": ("image_id",),
     "colmap_sparse_txt": ("image_id",),
+    "dmb": ("window",),
     "flo": ("window",),
     "gaussian_ply": ("points",),
     "las": ("points",),

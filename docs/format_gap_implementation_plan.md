@@ -1,9 +1,9 @@
 # Format-gap implementation, verification, and validation plan
 
-- **Status:** execution in progress after SceneIO 0.2.0; G0, G2.1, and the PTS
-  slice of G2.3 are complete locally. Cross-platform wheel and instrumented
-  validation remains a user-gated remote action.
-- **Current branch:** 25 compiled codecs, all read/write and inspectable, with
+- **Status:** execution in progress after SceneIO 0.2.0; G0, G2.1, the PTS
+  slice of G2.3, and scalar DMB from G2.4 are complete locally. Cross-platform
+  wheel and instrumented validation remains a user-gated remote action.
+- **Current branch:** 26 compiled codecs, all read/write and inspectable, with
   bounded partial reads where their containers permit them.
 - **Scope:** close every unblocked format gap declared by SceneIO's coverage
   documents without reimplementing the 0.2.0 codec tier.
@@ -395,7 +395,7 @@ Land one codec per green commit:
 |---|---|---|---|
 | BAL | `Reconstruction` | camera/point/observation text, read first; write after a canonical convention is pinned | independent parser |
 | EuRoC state CSV | `StateTrajectory` | timestamps, pose, velocity and biases with no field loss | independent CSV parser |
-| DMB | `DepthMap` | dimensions/type header, float payload, scale/unit metadata | independent numpy parser |
+| DMB — complete locally | `DepthMap` | dimensions/type header, float payload, scale/unit metadata | independent NumPy parser |
 | Typed PFM/PNG/EXR depth | `DepthMap` | explicit scale, unit, invalid-value and confidence semantics layered over existing payload codecs | numpy/Pillow/OpenEXR |
 | Typed FLO flow | `Dense` | preserve flow semantics rather than returning an untagged ndarray | independent numpy parser |
 | OpenCV YAML/XML | `Camera`/`CameraRig` | matrices, distortion models, explicit model mapping | OpenCV test extra |
@@ -405,6 +405,39 @@ Land one codec per green commit:
 | SuperSplat SOG | `GaussianCloud` | clustered/quantized fields, explicit lossy metadata | reference loader vectors |
 | KSplat | `GaussianCloud` | supported versioned reader first; writer only after canonical output is identified | reference loader vectors |
 | BMP/TGA | `Image` | existing stb decode plus deterministic writers or explicit read-only status | Pillow/imageio |
+
+DMB completion evidence (2026-07-24):
+
+- independent little-endian oracle parity covers special float32 values,
+  canonical bytes, randomized values, and 100 single-byte mutations;
+- reads enforce scalar type/channels, positive bounded dimensions, and exact
+  payload length; writers reject confidence and unrepresentable scale/unit or
+  invalid-value conventions;
+- mmap and bytes decodes are bit-identical, direct file sinks are
+  byte-identical under forced short writes, and bounded windows equal full-read
+  `DepthMap` slices while preserving metadata;
+- generated 64 MiB sparse-file inspection and 8x8 window reads stay below
+  1 MiB traced allocation;
+- the all-codec suite, benchmark evidence, and local MSVC result are recorded
+  with the codec commit; Linux instrumentation and Linux/macOS wheel validation
+  remain pending until the user authorizes the remote workflows.
+
+Three-lens DMB review:
+
+- **memory/lifetime:** dimensions and total pixels are capped before allocation,
+  exact payload size is checked before pointer arithmetic, `ByteView` remains
+  alive for every native read, returned `DepthMap` buffers own their data, no
+  pointer escapes the mapping, and sink callbacks run with the GIL held;
+- **format correctness:** header order, signed-field rejection, fixed
+  little-endian encoding, scalar-only channels, row-major order, special
+  float32 bit patterns, exact trailing-byte policy, and unknown-scale/
+  zero-invalid metadata are pinned;
+- **test soundness:** the oracle uses only `struct` and NumPy, writer bytes are
+  consumed independently, public and compiled paths are both exercised,
+  randomized mutations compare outcomes, and large sparse-file assertions
+  measure inspection/window allocation rather than a mirrored implementation.
+
+No unresolved finding remains in the local review.
 
 YAML support must use a permissive native parser or a deliberately bounded
 format-specific parser; it may not add a runtime Python dependency.
@@ -1111,21 +1144,58 @@ G0 -> Scene/SparseGrid scope -> USD/OpenVDB
 Safetensors, PCD, DMB, and the small pose/calibration formats can proceed after
 G0 without waiting for the mesh or optional-library paths.
 
-## 12. First concrete execution slice
+## 12. Current execution queue
 
-Start with G0, then safetensors:
+G0, safetensors, PTS, and scalar DMB have exercised the expansion machinery
+without adding a heavyweight dependency. Continue with small green commits in
+this order:
 
-1. Reconcile the two coverage documents with the 0.2.0 registry.
-2. Add immutable codec capability metadata and contract tests.
-3. Add `sceneio.capabilities()`.
-4. Implement safetensors over the existing `TensorDict`, JSON, mmap, inspector,
-   and partial-read ownership patterns.
-5. Add oracle parity, deterministic writer goldens, mapped lifetime, selected
-   tensor memory tests, and benchmark rows.
-6. Run the full local and instrumented gates.
-7. Perform and record the fable three-lens review.
-8. Commit locally; request user approval before any push/release workflow.
+1. **Finish scalar DMB**
+   - land the compiled reader/writer/inspector/window path, registry capability,
+     independent parity suite, 64 MiB memory fixture, 26-codec differential,
+     benchmark baseline, wheel smoke, and documentation;
+   - local exit: full MSVC suite and Ruff green, three-lens findings resolved;
+   - remote exit: instrumented Linux plus Windows/macOS wheel smoke after the
+     user authorizes the workflow.
+2. **BAL reconstruction text**
+   - pin camera parameter order, observation indices, quaternion/pose
+     conversion policy, and whether the first release is read-only;
+   - triangulate with an independent parser and hand-computable camera/point
+     fixtures; reject indices or fields that cannot map losslessly;
+   - benchmark metadata inspection, full text parse, and sink write if write
+     support meets the canonical-output gate.
+3. **BMP and TGA**
+   - use the existing `Image` record and approved stb decode surface; either
+     implement deterministic writers or declare read-only capabilities;
+   - cover orientation, grayscale/RGB/RGBA, alpha, palette/RLE variants, and
+     unsupported conversions against Pillow/imageio;
+   - measure decode/write paths and run the full image lifetime/mmap/sink
+     matrix.
+4. **Typed depth and flow adapters**
+   - add explicit adapters for PFM/PNG/EXR depth and a dedicated flow record
+     before changing the existing raw codec return types;
+   - preserve existing calls and bytes; pin units, scale, invalid-value, row
+     order, confidence, and writer guards;
+   - prove adapter output equals the existing raw decode plus declared
+     metadata, with no silent numerical conversion.
+5. **Generic point PLY and PCD**
+   - ship point-cloud schemas first, including ASCII and binary endian paths,
+     then add mesh PLY only after the canonical ragged `Mesh` record lands;
+   - implement header-only inspection, fixed-record point ranges, PCD LZF,
+     organized-cloud metadata, and schema-aware dispatch that cannot steal
+     Gaussian PLY;
+   - validate against `plyfile` and Open3D and benchmark text, binary, endian,
+     compressed, and partial paths.
+6. **Record-dependent packages**
+   - `Mesh`/`MaterialSet` unlock OBJ, STL, OFF, glTF/GLB, and mesh PLY;
+   - `FeatureSet`/`MatchGraph` unlock COLMAP DB and later hloc/HDF5;
+   - `StateTrajectory`/`CameraRig`/`PoseGraph` unlock EuRoC, OpenCV, ROS,
+     Kalibr, and g2o;
+   - each record lands only with its first codec and the record-level
+     zero-copy, lifetime, offset/index, and wheel matrix from G1.
 
-This slice validates the new expansion machinery with a format that needs no
-new record and no heavyweight native dependency before mesh and optional
-library work begins.
+After each numbered slice, update the capability snapshot and coverage ledger,
+run the common all-codec matrix, record same-run benchmark deltas, complete the
+three review lenses, and commit locally. Dependency waves trigger the sdist and
+cibuildwheel validation matrix; branch pushes, release workflow dispatches,
+tags, and PyPI publication remain explicit user-gated actions.

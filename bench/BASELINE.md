@@ -351,3 +351,30 @@ faster while allocating only its selected records. The range reader still
 scans the count-prefixed text to validate row structure and the declared total,
 so resident pages can approach the encoded file size even though heap output
 does not.
+
+## Scalar DMB expansion delta — 2026-07-24
+
+DMB extends the harness to 26 codecs and uses an independent little-endian
+NumPy/`struct` oracle. The five-run CI-equivalent regression sweep uses a
+1024x1024 scalar float32 depth map (4.194 MB raw and encoded):
+
+```text
+operation                         result
+-------------------------------------------------------------
+buffer / public mmap read         7,123 / 3,530 MB/s
+buffer / public sink write        1,975 / 6,264 MB/s
+oracle writer                     4,609 MB/s
+buffer / mmap traced read peak    4.203 / 0.010 MB
+buffer / sink traced write peak   4.205 / 0.001 MB
+full / inspect latency            1.188 / 0.050 ms
+128x128 middle-window latency     0.129 ms
+inspect / partial traced peak     0.010 / 0.011 MB
+```
+
+The mmap and direct-sink paths remove the encoded-size Python allocation.
+Header inspection is about 23.6x faster than full record construction and the
+bounded middle window is about 9.2x faster. The generated 4096x4096 (64 MiB)
+sparse-file test is the larger structural memory gate and keeps both inspection
+and a selected 8x8 window below 1 MiB of traced allocation. All payloads are
+generated during the run or test and are not committed. The complete
+same-run O4/O5 regression guard passed with DMB included.

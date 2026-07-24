@@ -2,7 +2,7 @@
 
 Measures, per codec, encode (write) + decode (read) throughput (MB/s over the raw
 payload) and peak Python allocation (tracemalloc), for sceneio._core vs the oracle
-library where one exists, on representative payloads for all 25 codecs. Read
+library where one exists, on representative payloads for all 26 codecs. Read
 measurements retain the legacy whole-file bytes/copy-decode path beside the
 public registry mmap path, so their peak delta captures the input copy O1
 removes and, for NPY/FLO, the decoded-array copy O2 removes. Write measurements
@@ -22,6 +22,7 @@ import io
 import json
 import os
 import statistics
+import struct
 import tempfile
 import threading
 import time
@@ -168,6 +169,18 @@ def _img_webp_palette(h, w):
     yy, xx = np.indices((h, w))
     a = palette[((xx // 7) + (yy // 11)) % len(palette)]
     return _core.image(a, color_space="srgb"), a
+
+
+def _depth_map(h, w):
+    values = np.random.default_rng(7).standard_normal((h, w)).astype(np.float32)
+    return (
+        _core.depth_map(
+            values,
+            unit="unknown",
+            invalid_policy="zero",
+        ),
+        values,
+    )
 
 
 def _pc(n, color):
@@ -406,6 +419,25 @@ def _pts_oracle_read(data):
     return points
 
 
+def _dmb_oracle_write(values):
+    values = np.asarray(values, dtype=np.float32)
+    height, width = values.shape
+    return (
+        struct.pack("<4i", 1, height, width, 1)
+        + values.astype("<f4", copy=False).tobytes()
+    )
+
+
+def _dmb_oracle_read(data):
+    image_type, height, width, channels = struct.unpack_from("<4i", data)
+    if image_type != 1 or channels != 1:
+        raise ValueError("unsupported DMB header")
+    expected = 16 + height * width * 4
+    if height < 1 or width < 1 or len(data) != expected:
+        raise ValueError("invalid DMB payload")
+    return np.frombuffer(data, dtype="<f4", offset=16).reshape(height, width)
+
+
 def _evict_file_cache(path):
     """Best-effort cold-cache hint (effective where POSIX_FADV_DONTNEED exists)."""
     if not hasattr(os, "posix_fadvise") or not hasattr(os, "POSIX_FADV_DONTNEED"):
@@ -571,6 +603,15 @@ def _specs(scale, pose_bundle=None):
             lambda rec, p: p.nbytes,
         ),
         Spec(
+            "dmb",
+            lambda: _depth_map(side, side),
+            _core.write_dmb,
+            _core.read_dmb,
+            _dmb_oracle_write,
+            _dmb_oracle_read,
+            lambda rec, p: p.nbytes,
+        ),
+        Spec(
             "npz",
             lambda: (tensors, npz_arrays),
             _core.write_npz,
@@ -668,7 +709,7 @@ def _directory_size(path):
 
 
 def _partial_request(codec_id, info, full_record=None):
-    if codec_id in {"pfm", "netpbm", "webp", "flo"}:
+    if codec_id in {"pfm", "netpbm", "webp", "flo", "dmb"}:
         height, width = info.shape[:2]
         out_height = max(1, height // 8)
         out_width = max(1, width // 8)
@@ -1456,7 +1497,7 @@ def _run_benchmark(args, tmp):
             results.append({"codec": spec.id, "error": f"{type(e).__name__}: {e}"})
             print(f"{spec.id:<14} ERROR: {type(e).__name__}: {e}")
 
-    assert len(specs) + len(_directory_specs()) == 25
+    assert len(specs) + len(_directory_specs()) == 26
     print("\nMB/s over raw payload; fileMB = encoded size (= the whole-file copy O1/O3 remove).")
     print("sioR = in-memory copy decode; pathR = public registry mmap read/view.")
     print("bPeakMB/mPeakMB = peak Python allocation for bytes/mmap reads (O1 delta).")

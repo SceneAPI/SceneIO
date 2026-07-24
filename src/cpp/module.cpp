@@ -39,6 +39,7 @@ void register_exr(nb::module_ &);
 void register_las(nb::module_ &);
 void register_webp(nb::module_ &);
 void register_safetensors(nb::module_ &);
+void register_dmb(nb::module_ &);
 
 NB_MODULE(_core, m) {
     m.doc() = "sceneio compiled core (nanobind): codecs + SoA memory representations";
@@ -116,4 +117,5 @@ NB_MODULE(_core, m) {
     register_las(m);
     register_webp(m);
     register_safetensors(m);
+    register_dmb(m);
 }

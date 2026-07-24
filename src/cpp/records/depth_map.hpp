@@ -6,8 +6,7 @@
 // pixel values. Backs the depth codecs later (16-bit depth PNG, ScanNet/Azure
 // mm PNG, Gipuma/COLMAP .dmb, EXR/PFM metric depth) without ABI breaks -- a
 // 16-bit-PNG codec widens u16->f32 losslessly and records the scale, it never
-// divides. No in-tree codec consumer yet: the record lands before its first
-// codec (the Image-before-netpbm precedent).
+// divides. Gipuma/COLMAP DMB is the first in-tree consumer.
 //
 // Optical flow (.flo) is deliberately NOT this record -- it ships separately as
 // a bare (H,W,2) float32 ndarray codec (in-tree at src/cpp/codecs/flo.cpp; the

@@ -111,6 +111,8 @@ def inspect_path(path: str | Path, format_id: str, datatype: str) -> Inspection:
         return _inspect_las(p, datatype)
     if format_id == "flo":
         return _inspect_flo(p, datatype)
+    if format_id == "dmb":
+        return _inspect_dmb(p, datatype)
     if format_id == "bundler":
         return _inspect_bundler(p, datatype)
     if format_id == "nvm":
@@ -782,6 +784,28 @@ def _inspect_flo(path: Path, datatype: str) -> Inspection:
     if width < 1 or height < 1 or expected > file_size:
         raise ValueError("flo: invalid dimensions or payload size")
     return _image("flo", datatype, file_size, height, width, 2, "float32")
+
+
+def _inspect_dmb(path: Path, datatype: str) -> Inspection:
+    height, width, channels, image_type = _compiled_buffer_inspect(
+        path, _core._inspect_dmb
+    )
+    return Inspection(
+        "dmb",
+        datatype,
+        _size(path),
+        shape=(height, width),
+        dtype="float32",
+        count=height * width,
+        channels=channels,
+        metadata={
+            "channels": channels,
+            "image_type": image_type,
+            "unit": "unknown",
+            "scale_to_meters": 0.0,
+            "invalid_policy": "zero",
+        },
+    )
 
 
 def _inspect_las(path: Path, datatype: str) -> Inspection:

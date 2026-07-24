@@ -66,6 +66,22 @@ def _fingerprint(value):
             value.row_order,
             _array_fingerprint(value.pixels),
         )
+    elif isinstance(value, _core.DepthMap):
+        fields = (
+            value.height,
+            value.width,
+            value.has_confidence,
+            value.unit,
+            value.scale_to_meters,
+            value.invalid_policy,
+            value.row_order,
+            _array_fingerprint(value.depth),
+            (
+                _array_fingerprint(value.confidence)
+                if value.has_confidence
+                else None
+            ),
+        )
     elif isinstance(value, _core.GaussianCloud):
         fields = (
             value.num_gaussians,
@@ -188,6 +204,11 @@ def buffer_codecs():
         intensity_range="u16",
     )
     flow = rng.standard_normal((5, 6, 2)).astype(np.float32)
+    depth = _core.depth_map(
+        rng.standard_normal((5, 6)).astype(np.float32),
+        unit="unknown",
+        invalid_policy="zero",
+    )
     tensor = rng.standard_normal((4, 5, 3)).astype(np.float32)
     tensors = _core.tensor_dict({"a": tensor, "b": np.arange(9, dtype=np.int16)})
     gaussians = _core.gaussian_cloud(
@@ -243,6 +264,7 @@ def buffer_codecs():
         spec("pts", _core.read_pts, _core.write_pts, points_pts),
         spec("las", _core.read_las, _core.write_las, points_las),
         spec("flo", _core.read_flo, _core.write_flo, flow),
+        spec("dmb", _core.read_dmb, _core.write_dmb, depth),
         spec("bundler", _core.read_bundler, _core.write_bundler, reconstruction),
         spec("nvm", _core.read_nvm, _core.write_nvm, reconstruction),
         spec("openmvg", _core.read_openmvg, _core.write_openmvg, reconstruction),
@@ -268,8 +290,8 @@ def _outcome(call, argument):
 
 
 def test_all_single_file_codecs_mmap_equal_bytes_bit_exact(tmp_path, buffer_codecs):
-    """All 23 buffer codecs decode mmap and bytes to bit-exact records."""
-    assert len(buffer_codecs) == 23
+    """All 24 buffer codecs decode mmap and bytes to bit-exact records."""
+    assert len(buffer_codecs) == 24
     for spec in buffer_codecs:
         expected = _fingerprint(spec.reader(spec.data))
         path = tmp_path / f"sample-{spec.id}.bin"
@@ -287,8 +309,8 @@ def test_all_single_file_codecs_mmap_equal_bytes_bit_exact(tmp_path, buffer_code
 
 
 def test_all_single_file_sinks_are_byte_identical(tmp_path, buffer_codecs):
-    """All 23 compiled encoders emit the exact bytes their buffer API returns."""
-    assert len(buffer_codecs) == 23
+    """All 24 compiled encoders emit the exact bytes their buffer API returns."""
+    assert len(buffer_codecs) == 24
     for spec in buffer_codecs:
         direct = tmp_path / f"direct-{spec.id}.bin"
         _core._write_to_file(spec.writer, spec.value, direct)
@@ -335,6 +357,11 @@ def _assert_inspection_matches(info, decoded):
         assert info.shape == decoded.pixels.shape
         assert info.dtype == decoded.dtype
         assert info.channels == decoded.channels
+    elif isinstance(decoded, _core.DepthMap):
+        assert info.shape == decoded.depth.shape
+        assert info.dtype == decoded.depth.dtype.name
+        assert info.count == decoded.height * decoded.width
+        assert info.channels == 1
     elif isinstance(decoded, _core.GaussianCloud):
         assert info.shape == (decoded.num_gaussians,)
         assert info.dtype == "float32"
@@ -428,8 +455,8 @@ print(max(0, peak[0] - baseline))
     return int(completed.stdout.strip())
 
 
-def test_inspect_matches_decoded_metadata_all_25_codecs(tmp_path, buffer_codecs):
-    assert len(buffer_codecs) == 23
+def test_inspect_matches_decoded_metadata_all_26_codecs(tmp_path, buffer_codecs):
+    assert len(buffer_codecs) == 24
     for spec in buffer_codecs:
         path = tmp_path / f"inspect-{spec.id}.data"
         path.write_bytes(spec.data)
@@ -478,6 +505,14 @@ def test_inspect_matches_decoded_metadata_all_25_codecs(tmp_path, buffer_codecs)
             }
         elif spec.id == "splat":
             assert info.metadata == {"sh_degree": 0}
+        elif spec.id == "dmb":
+            assert info.metadata == {
+                "channels": 1,
+                "image_type": 1,
+                "unit": "unknown",
+                "scale_to_meters": 0.0,
+                "invalid_policy": "zero",
+            }
 
     nvm = next(spec for spec in buffer_codecs if spec.id == "nvm")
     reconstruction = nvm.reader(nvm.data)
@@ -1585,7 +1620,7 @@ def test_registry_uses_mmap_for_every_nonempty_single_file_codec(
         value = sceneio.codecs()[spec.id].read(str(path))
         gc.collect()
         assert _fingerprint(value) == _fingerprint(spec.reader(spec.data))
-    assert mapped_paths == len(buffer_codecs) == 23
+    assert mapped_paths == len(buffer_codecs) == 24
 
 
 def test_all_buffer_entries_accept_readonly_protocol_exporters(buffer_codecs):

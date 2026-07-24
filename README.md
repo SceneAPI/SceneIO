@@ -73,10 +73,11 @@ artifacts vocabulary — wire identity unchanged.
 
 ### Compiled format I/O — `read` / `write` / `inspect` / `read_partial`
 
-The lazy-loaded compiled core reads and writes 25 image, tensor, point-cloud,
-Gaussian, pose, and reconstruction formats. `sceneio.inspect(path)` returns an
-immutable `Inspection` with shape, dtype, channels, repeated-record counts, and
-format-specific scalar metadata without decoding bulk pixel/point arrays:
+The lazy-loaded compiled core reads and writes 26 image, depth, tensor,
+point-cloud, Gaussian, pose, and reconstruction formats.
+`sceneio.inspect(path)` returns an immutable `Inspection` with shape, dtype,
+channels, repeated-record counts, and format-specific scalar metadata without
+decoding bulk pixel/point arrays:
 
 ```python
 import sceneio
@@ -90,6 +91,9 @@ sceneio.write(image, "copy.exr")
 
 # Half-open row/column bounds; returns the normal Image/ndarray type.
 tile = sceneio.read_partial("flow.flo", window=(100, 356, 200, 712))
+
+# Scalar DMB windows preserve DepthMap unit and invalid-value metadata.
+depth = sceneio.read_partial("depth.dmb", window=(100, 356, 200, 712))
 
 # Fixed-record point containers allocate only the selected range.
 points = sceneio.read_partial(
@@ -121,7 +125,7 @@ assert not sceneio.native_features("hdf5").available
 Partial reads are available only when the container has a genuine bounded
 access path; requesting one from a codec that would have to decode the complete
 payload raises `FormatError`. Pixel windows support PFM, binary P5/P6 Netpbm,
-lossless VP8L WebP, and FLO; lossy WebP and ASCII P2/P3 reject because they
+lossless VP8L WebP, FLO, and scalar DMB; lossy WebP and ASCII P2/P3 reject because they
 cannot provide a bit-exact bounded slice. Safetensors supports complete
 named-tensor selection and contiguous leading-axis slices.
 Count-prefixed PTS supports bounded point ranges while validating the declared

@@ -108,7 +108,7 @@ zero‑copy + convention tags.
 | Record | Fields (canonical dtype/shape) | Needed by | Status |
 |---|---|---|---|
 | `Image` | `pixels` HxWxC (u8/u16/f16/f32) + `color_space` + alpha/maxval metadata | PNG/JPEG/HDR/WebP/EXR/Netpbm | ✅ |
-| `DepthMap` | `depth` HxW f32 + `scale`/`unit`/`invalid` meta + `confidence` HxW | typed depth adapters, `.dmb` | ✅ record / ⬜ typed codecs |
+| `DepthMap` | `depth` HxW f32 + `scale`/`unit`/`invalid` meta + `confidence` HxW | typed depth adapters, `.dmb` | ✅ record + scalar DMB codec |
 | `PointCloud` | `xyz` Nx3, `rgb` Nx3 u8, `normals` Nx3, `intensity` N | PLY‑point, PCD, LAS/LAZ, E57, `.xyz` | ✅ |
 | `Mesh` | `vertices` Nx3, `faces` Mx3 u32, `normals`, `uv`, `vertex_color` | OBJ, STL, OFF, PLY‑mesh, glTF, USD | ⬜ |
 | `FeatureSet` | `keypoints` Nx{2,4,6} f32, `descriptors` NxD, `scores` N, `image_size` 2 | HDF5/hloc, COLMAP DB | ⬜ |
@@ -197,7 +197,7 @@ Columns: **Ext/id** · **Record** · **Lib/oracle (license)** · **R/W** ·
 |---|---|---|---|---|
 | ⬜ 16‑bit depth PNG | `DepthMap` | libpng + scale meta | R+W | TUM 1/5000, ScanNet mm — **scale pin** |
 | ✅ `.flo` (Middlebury) | ndarray (H,W,2) | manual | R+W | magic 202021.25; mapped view |
-| ⬜ `.dmb` (Gipuma/COLMAP) | `DepthMap` | manual | R+W | dense MVS depth |
+| ✅ `.dmb` (Gipuma/COLMAP) | `DepthMap` | independent NumPy parser | R+W | scalar float32 dense MVS depth; unknown scale, zero-invalid; bounded windows |
 | ✅ transforms.json | `PosedViewSet` | pure‑Python | R+W | done (OpenGL c2w) |
 | ⬜ RTMV / synthetic sets | `PosedViewSet`+`Image` | manual | R | dataset layout |
 

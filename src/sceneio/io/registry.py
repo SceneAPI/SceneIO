@@ -740,6 +740,28 @@ register(
         supported_features=("float32", "native_endian_mmap_view"),
     )
 )
+register(
+    Codec(
+        "dmb",
+        (".dmb",),
+        _mmap_reader(_core.read_dmb),
+        _file_sink_writer(_core.write_dmb),
+        record=_core.DepthMap,
+        datatype="depth_map",
+        read_window=_mmap_selector_reader(_core.read_dmb_window),
+        supported_features=(
+            "scalar_float32",
+            "little_endian",
+            "zero_invalid",
+            "pixel_windows",
+        ),
+        unsupported_features=(
+            "normal_maps",
+            "confidence",
+            "embedded_scale",
+        ),
+    )
+)
 # SfM pose formats -> Reconstruction (convention-converted to WXYZ/world_to_camera).
 register(
     Codec(

@@ -100,7 +100,7 @@ for decoding and validating every payload sample.
 same public record kind as `read()`:
 
 - `window=(row_start, row_stop, column_start, column_stop)` uses half-open bounds
-  for PFM, binary P5/P6 Netpbm, lossless VP8L WebP, and FLO;
+  for PFM, binary P5/P6 Netpbm, lossless VP8L WebP, FLO, and scalar DMB;
 - `points=(start, stop)` selects a half-open range from XYZ, count-prefixed PTS,
   LAS, binary Gaussian PLY, and `.splat`;
 - `tensors=("name", ...)` selects named tensors from safetensors without
@@ -111,9 +111,9 @@ same public record kind as `read()`:
   referenced camera from binary or text COLMAP. It deliberately leaves the
   point arrays empty and does not open `points3D.bin` / `points3D.txt`.
 
-PFM and binary Netpbm copy only selected rows, lossless WebP uses libwebp's
-cropped decoder, and FLO returns a read-only derived view whose owner retains
-the mmap. ASCII P2/P3 reject because they require complete-payload token
+PFM, binary Netpbm, and DMB copy only selected rows, lossless WebP uses
+libwebp's cropped decoder, and FLO returns a read-only derived view whose owner
+retains the mmap. ASCII P2/P3 reject because they require complete-payload token
 decoding; lossy VP8 rejects because crop-local chroma upsampling is not
 guaranteed to match a full-decode slice. Fixed-record
 cloud formats index their selected records; XYZ and PTS scan text for row
