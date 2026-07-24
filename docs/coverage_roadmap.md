@@ -1,5 +1,11 @@
 # SceneIO — comprehensive coverage roadmap & execution checklist
 
+> Current shipped status is tracked in `format_coverage.md`. This document
+> contains the original build-out checklist and some pre-0.2 status markers.
+> The authoritative plan for reconciling those markers and implementing the
+> remaining formats is
+> [`format_gap_implementation_plan.md`](format_gap_implementation_plan.md).
+
 The granular, per‑format execution plan for covering **every relevant file type
 that has a permissively‑licensed open‑source option**. Sits below the strategy
 (`io_implementation_plan.md`) and the status snapshot (`format_coverage.md`):

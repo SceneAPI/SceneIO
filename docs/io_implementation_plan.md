@@ -1,5 +1,10 @@
 # SceneIO I/O + memory implementation plan (nanobind core)
 
+> This document records the original compiled-core build-out. SceneIO 0.2.0
+> completed its 23-codec baseline. Remaining format work now follows
+> [`format_gap_implementation_plan.md`](format_gap_implementation_plan.md),
+> including per-codec verification and cross-platform wheel validation.
+
 **Status: DRAFT for review.** How to implement read/write **and** the
 in-memory representation for the safe format set
 (`docs/formats_survey.md`), as a **nanobind (C++)** core that hands back

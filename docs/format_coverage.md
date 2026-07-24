@@ -5,11 +5,15 @@ vs. what's planned**. Consolidates the catalog (`formats_survey.md`) and the
 roadmap (`io_implementation_plan.md` §3, §6, §7) against the actual codec
 registry (`src/sceneio/io/registry.py`).
 
+The detailed execution, verification, and wheel-validation sequence for the
+remaining formats is in
+[`format_gap_implementation_plan.md`](format_gap_implementation_plan.md).
+
 Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 
-> Status note: everything marked ✅ lives on branch `phase0-nanobind-core`
-> (compiled `sceneio._core`), not yet merged to `main` or published. See the
-> release path in `io_implementation_plan.md` §8.
+> Status note: everything marked ✅ is implemented by the compiled
+> `sceneio._core` and ships in SceneIO 0.2.0. The
+> `phase0-nanobind-core` branch may contain later CI or documentation updates.
 
 ## Data structures (memory Records)
 
@@ -23,7 +27,7 @@ SoA, zero-copy to numpy/torch (DLPack), conventions carried as metadata.
 | `Camera` | (shared) | ✅ | COLMAP model id + `params[]`; reused by `Reconstruction` and `PosedViewSet` |
 | `Image` | `image_sequence` elem | ✅ | interleaved HxWxC (u8/u16/f32), color_space/alpha_mode/maxval metadata, owner‑safe zero‑copy `pixels` |
 | `TensorDict` | (named arrays) | ✅ | dict‑like, 12 numpy dtypes (dtype‑erased), zero‑copy views; backs npz now, HDF5/safetensors later |
-| `PointCloud` | `point_cloud` (new) | ✅ | xyz + rgb + normals + intensity; backs `.xyz`/`.pts` (and plain `.las` next) |
+| `PointCloud` | `point_cloud` (new) | ✅ | xyz + rgb + normals + intensity; backs `.xyz` and plain `.las`; count-prefixed `.pts` is planned |
 | `DepthMap` / `Dense` | `dense` / `depth_map` | ✅ | typed depth + scale/unit/invalid + confidence |
 | `FeatureSet` | `feature_set` | ⬜ | Phase 3 — keypoints + descriptors + scores |
 | `MatchGraph` | `match_graph` | ⬜ | Phase 3 — per‑pair matches + F/E/H + inliers |
@@ -36,7 +40,7 @@ SoA, zero-copy to numpy/torch (DLPack), conventions carried as metadata.
 |---|---|---|---|---|
 | `pfm` | ndarray | R+W | pure‑Python | PFM depth/gray/color; mmap input + owned positive-stride row-flip |
 | `colmap_sparse` | `Reconstruction` | R+W | **pycolmap** | `.bin`; byte‑identical to pycolmap 4.1.1 |
-| `colmap_txt` | `Reconstruction` | R+W | **pycolmap** | text twin of `.bin` |
+| `colmap_sparse_txt` | `Reconstruction` | R+W | **pycolmap** | text twin of `.bin` |
 | `gaussian_ply` | `GaussianCloud` | R+W | **gsply** | 3DGS Gaussian PLY, channel‑grouped f_rest |
 | `spz` | `GaussianCloud` | R+W | **gsply** | v1/2/3 read, **v3+v4 write**, v4 read; bit‑exact v3 encode |
 | `splat` | `GaussianCloud` | R+W | numpy oracle | antimatter15 blob; WXYZ+SH_C0 verified; lossy 8‑bit, SH‑drop |
@@ -49,7 +53,7 @@ SoA, zero-copy to numpy/torch (DLPack), conventions carried as metadata.
 | `npy` | ndarray | R+W | **numpy** | pinned mapped native/C-order view; byte‑exact v1.0 writer (== np.save) |
 | `npz` | `TensorDict` | R+W | **numpy** | ZIP (stored+deflate) via vendored miniz; 12 dtypes |
 | `netpbm` | `Image` | R+W | pure‑Python | PGM P5/P2 + PPM P6/P3; 16‑bit big‑endian, comment‑tolerant |
-| `.xyz` / `.pts` | `PointCloud` | R+W | pure‑Python | point‑cloud text (fast_float parsing) |
+| `.xyz` | `PointCloud` | R+W | pure‑Python | point-cloud text (fast_float parsing); count-prefixed `.pts` remains planned |
 | `.flo` | ndarray (H,W,2) | R+W | pure‑Python | Middlebury optical flow; pinned mapped view |
 
 Deferred within Tier‑1: g2o poses (pose‑graph *edges* don't fit `PosedViewSet`).
@@ -109,7 +113,7 @@ fuzzing · ✅ direct file-sink writes · ✅ bounded measured-path workers
 | Parity kit (`sceneio.testing.parity`) | ✅ | cross‑impl + round‑trip + convention pins |
 | Vendored deps (miniz, zstd, nlohmann/json, fast_float) | ✅ | permissive; statically linked / header‑only |
 | Vendored image libs (lodepng/stb/tinyexr/libwebp) | ✅ | permissive, pinned/local-patched; no system libs, numpy‑only runtime kept |
-| Feature‑flagged optional C libs (`SCENEIO_WITH_*`) | ⬜ | deferred — only for HDF5 / TIFF / LAZ (no permissive single‑header option) |
+| Feature‑flagged optional C libs (`SCENEIO_WITH_*`) | ⬜ | planned for HDF5, TIFF, E57, Arrow, USD, and OpenVDB; LAZ uses vendored LAZperf instead |
 | mmap / streaming sources | ✅ | mmap reads + raw NPY/FLO views + direct file-sink writes complete |
 | Bounded intra-file workers | ✅ | measured O4 paths; deterministic one-vs-many lane tests |
 | Sanitizer + mmap differential CI | ✅ | local Linux green; scheduled remote lane activates on default branch |
