@@ -719,6 +719,14 @@ register(
         record=_core.Image,
         datatype="image",
         magic=(b"\x76\x2f\x31\x01",),
+        supported_features=(
+            "single_channel",
+            "rgb",
+            "rgba",
+            "half_to_float",
+            "typed_depth_adapter",
+        ),
+        unsupported_features=("multipart", "deep", "tiled", "uint_channels"),
     )
 )
 # WebP (libwebp) -> Image (uint8 sRGB). Ext-only: the WEBP tag sits at byte 8 of

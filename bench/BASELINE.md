@@ -509,3 +509,27 @@ identical to the existing deterministic grayscale uint16 Image writer. The
 compressed container cannot provide a bounded window without a full inflate, so
 the typed API rejects that selector explicitly. The five-run 29-codec O4/O5
 throughput and memory regression guard passed.
+
+## Typed EXR depth-adapter delta — 2026-07-24
+
+A nested EXR row measures the explicit named-channel `DepthMap` adapter on a
+1024x1024 scalar FLOAT raster, reported over the 4.194 MB raw float32 payload:
+
+```text
+operation                         result
+-------------------------------------------------------------
+typed mmap read                   1,341 MB/s
+typed direct-sink write             304 MB/s
+typed header inspection           0.057 ms
+typed read/write traced peak      0.011 / 0.001 MB
+```
+
+The reader checks the exact selected channel in the same TinyEXR parse that
+decodes the raster, preventing a mutable-source gap between validation and
+decode. FLOAT bits are preserved exactly and HALF uses the unchanged exact
+widening path; no scale, transfer function, or invalid-value policy is applied.
+The typed writer shares the raw encoder while supplying an explicit scalar
+channel name; typed `Y` output is byte-identical to the original raw scalar
+writer. EXR compression cannot provide a bounded typed window without full
+decode, so that selector rejects before invoking the reader. The accepted
+five-run 29-codec O4/O5 throughput and memory regression guard passed.

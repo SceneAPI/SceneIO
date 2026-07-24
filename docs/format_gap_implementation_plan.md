@@ -2,8 +2,8 @@
 
 - **Status:** execution in progress after SceneIO 0.2.0. G0, safetensors, PTS,
   scalar DMB, BAL, BMP/TGA, the compiled `FlowField` record, typed FLO, typed
-  PFM depth, and typed PNG depth are complete locally. Typed scalar EXR depth
-  is the only unfinished item in the active depth/flow slice.
+  PFM depth, typed PNG depth, and typed scalar EXR depth are complete locally.
+  The active depth/flow slice is complete; generic point PLY is next.
   Cross-platform wheel and instrumented validation remains a user-gated remote
   action.
 - **Current branch:** 29 compiled codecs, all read/write and inspectable, with
@@ -128,7 +128,7 @@ exit gate and the validation matrix in section 8 both pass.
 | Point cloud | generic point PLY, PCD, LAS waveform formats 4/5/9/10, LAZ, E57 | count-prefixed PTS |
 | Mesh | mesh PLY, OBJ/MTL, STL, OFF, glTF/GLB, USD/USDZ; optional Draco is policy-gated | — |
 | Tensor/feature/table | COLMAP features/matches, HDF5, hloc layout, Zarr v2/v3, Parquet | safetensors |
-| Image and depth | typed scalar EXR depth, TIFF | BMP, TGA, typed PFM depth, typed PNG depth, scalar DMB |
+| Image and depth | TIFF | BMP, TGA, typed PFM depth, typed PNG depth, typed scalar EXR depth, scalar DMB |
 | Optical flow | — | compiled `FlowField` plus typed FLO |
 | Calibration | OpenCV YAML/XML, ROS `camera_info`, Kalibr YAML | — |
 | Sequence/dataset | image directory, Y4M, animated WebP, APNG, RTMV layout | — |
@@ -405,7 +405,7 @@ Land one codec per green commit:
 | BAL — complete locally | `Reconstruction` | camera/point/observation text with a pinned canonical writer | UW specification + independent parser |
 | EuRoC state CSV | `StateTrajectory` | timestamps, pose, velocity and biases with no field loss | independent CSV parser |
 | DMB — complete locally | `DepthMap` | dimensions/type header, float payload, scale/unit metadata | independent NumPy parser |
-| Typed PFM/PNG depth — complete locally; typed EXR pending | `DepthMap` | explicit scale, unit, invalid-value and confidence semantics layered over existing payload codecs | numpy/Pillow/OpenEXR |
+| Typed PFM/PNG/EXR depth — complete locally | `DepthMap` | explicit scale, unit, invalid-value and confidence semantics layered over existing payload codecs | numpy/Pillow/OpenEXR |
 | Typed FLO flow — complete locally | `FlowField` | preserve component, axis, unit, row-order, and unknown-value semantics rather than returning an untagged ndarray | independent numpy parser |
 | OpenCV YAML/XML | `Camera`/`CameraRig` | matrices, distortion models, explicit model mapping | OpenCV test extra |
 | ROS `camera_info` | `Camera` | K/D/R/P and distortion model | independent YAML parser |
@@ -472,7 +472,7 @@ Typed depth/flow adapter contract and landing sequence:
    - Pin named test profiles for TUM (`scale_to_meters=1/5000`, zero invalid)
      and ScanNet/millimeter depth (`scale_to_meters=0.001`, zero invalid)
      without making a profile implicit.
-6. **EXR depth**
+6. **EXR depth — complete locally**
    - In the first typed subset, accept an exactly one-channel EXR whose header
      name matches the explicitly selected channel. Do not infer a depth
      channel or silently select one from a multi-channel/AOV file.
@@ -700,6 +700,60 @@ Three-lens typed PNG review:
   exercised directly.
 
 No unresolved finding remains in the local typed PNG review. The local
+cp312-abi3 Windows wheel is validated; instrumented Linux and Linux/macOS wheel
+validation remain pending until the next user-authorized remote dependency-wave
+run.
+
+Typed scalar EXR depth completion evidence (2026-07-24):
+
+- compiled `read_exr_depth` validates the exact selected channel in the same
+  native header/decode pass that returns its pixels, accepts scalar HALF/FLOAT,
+  widens through the unchanged raw path, and moves the decoded float32 buffer
+  into an owning `DepthMap` without rescaling or classifying values;
+- the dedicated writer requires matching external metadata and absent
+  confidence, emits an exact caller-selected UTF-8 channel name up to 255 bytes,
+  and shares the raw writer implementation; typed channel `Y` is byte-identical
+  to the unchanged raw scalar writer;
+- OpenEXR bidirectional parity covers FLOAT bit patterns (signed zero,
+  subnormals, infinities, and NaN payloads), exact HALF widening, five lossless
+  compression modes, named/layered channels, 50 randomized rasters, every
+  truncated prefix, 100 mutations, dimension limits, and multipart/deep/tiled/
+  UINT/multi-channel rejection;
+- public read/write/inspect, magic detection, extensionless explicit format,
+  mmap fallback, source-mutation isolation, mapping/result lifetime, forced
+  short writes, pre-truncation writer guards, capability metadata, and packaged
+  wheel smoke are pinned by 42 typed-EXR cases;
+- compressed EXR advertises no false typed window; inspection validates the
+  scalar channel and stored HALF/FLOAT dtype from bounded header reads and
+  rejects non-UTF-8 stored names that the native typed API cannot select;
+- generated 32 MiB-class read/write fixtures avoid encoded-size Python
+  allocations and inspection remains below 1 MiB traced allocation;
+- the accepted five-run all-codec harness reports about 1,341 MB/s typed read,
+  304 MB/s typed sink write, 0.057 ms typed inspection, and 0.011/0.001 MB
+  traced read/write peaks; all retained O4/O5 directional and memory guards
+  pass;
+- the final local MSVC suite passes 1,829 tests with 3 documented optional
+  skips, Ruff and `git diff --check` are clean, and a clean Python 3.12
+  environment containing only NumPy passes the packaged smoke against the
+  locally built cp312-abi3 Windows wheel; its 34 entries contain no headers,
+  build tree, or static libraries.
+
+Three-lens typed EXR review:
+
+- **memory/lifetime:** TinyEXR headers, images, errors, and encoded buffers use
+  RAII; dimensions and channel tables are validated before allocation or
+  indexing; one `ByteView` pins the exporter through channel validation and
+  decode; returned depth storage owns its values; no source pointer escapes;
+- **correctness:** channel validation and raster decode use one parse, removing
+  the review-found mutable-backing-store TOCTOU; typed and raw writers share one
+  implementation, raw scalar output remains `Y`, HALF/FLOAT bits are never
+  color-converted or rescaled, and every unrepresentable field is rejected;
+- **test soundness:** OpenEXR is independent of TinyEXR, explicit uint32 bit
+  patterns pin NaN payloads and signed zero, typed/raw/oracle paths are
+  triangulated, hand-patched headers break round-trip symmetry, and public
+  mmap/sink/inspect/lifetime/memory paths are exercised directly.
+
+No unresolved finding remains in the local typed EXR review. The local
 cp312-abi3 Windows wheel is validated; instrumented Linux and Linux/macOS wheel
 validation remain pending until the next user-authorized remote dependency-wave
 run.
@@ -1544,16 +1598,17 @@ estimates.
 
 ### 12.1 Current checkpoint and status vocabulary
 
-The checkpoint at commit `913e981` is:
+The current local checkpoint is:
 
 - 29 compiled registry codecs with read, write, inspect, mmap input, and direct
   file sinks;
 - O0-O5 complete for the existing codec tier;
-- `FlowField`, typed FLO, typed PFM depth, and typed PNG depth complete;
-- 1,787 local tests passing with 3 documented optional skips, Ruff clean, the
-  all-codec benchmark guard green, and a clean cp312-abi3 Windows wheel smoke
-  passing;
-- typed scalar EXR depth is the next unfinished commit;
+- `FlowField`, typed FLO, typed PFM depth, typed PNG depth, and typed scalar EXR
+  depth complete;
+- 1,829 local tests pass with 3 documented optional skips, Ruff and
+  `git diff --check` are clean;
+- the all-codec benchmark guard and packaged numpy-only wheel smoke pass;
+- generic point PLY is the next unfinished codec;
 - instrumented Linux and Linux/macOS wheels have not yet been run for this
   dependency wave because pushing and dispatching remote workflows are
   user-gated.
@@ -1569,18 +1624,18 @@ Status terms are strict:
 | Shipped | validated artifacts were published from a matching version tag |
 | Policy-gated | implementation cannot start until the named project decision is recorded |
 
-### 12.2 Wave A — finish the active typed-depth slice
+### 12.2 Wave A — typed-depth slice complete locally
 
-#### A1. Typed scalar EXR depth
+#### A1. Typed scalar EXR depth — complete locally
 
 Implementation:
 
 1. Extend `DepthEncoding.channel_name` validation to require a nonempty,
    NUL-free UTF-8 name of at most 255 encoded bytes for EXR. PFM and PNG
    continue to require no channel name.
-2. Add a bounded native scalar-header helper that rejects multipart, deep,
-   tiled, UINT, and multi-channel EXR before raster decode and returns the exact
-   stored channel name.
+2. Extend the single native header/decode pass to reject multipart, deep,
+   tiled, UINT, and multi-channel EXR and validate the exact stored channel
+   before raster decode.
 3. Add `_core.read_exr_depth` using the existing raw EXR decoder. It accepts
    exactly one HALF/FLOAT channel whose name equals the explicit encoding,
    widens HALF according to the existing raw path, and copies decoded float32

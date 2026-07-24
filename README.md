@@ -122,6 +122,17 @@ millimeter_depth = sceneio.read_depth(
     encoding=millimeter_encoding,
 )
 
+# Scalar EXR depth also requires the exact stored channel name. HALF input
+# widens to float32; values are otherwise preserved without color conversion.
+exr_encoding = sceneio.DepthEncoding(
+    unit="meters",
+    scale_to_meters=1.0,
+    invalid_policy="nonfinite",
+    channel_name="Z",
+)
+exr_depth = sceneio.read_depth("depth.exr", encoding=exr_encoding)
+sceneio.write_depth(exr_depth, "depth-copy.exr", encoding=exr_encoding)
+
 # Half-open row/column bounds; returns the normal Image/ndarray type.
 tile = sceneio.read_partial("flow.flo", window=(100, 356, 200, 712))
 

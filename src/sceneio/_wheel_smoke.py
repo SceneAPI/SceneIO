@@ -69,6 +69,18 @@ def _pfm_and_typed_depth(root: Path, values: np.ndarray) -> None:
     assert png_info.metadata["stored_dtype"] == "uint16"
     assert isinstance(sceneio.read(typed_png), _core.Image)
 
+    exr_encoding = sceneio.DepthEncoding("meters", 1.0, "none", "Z")
+    typed_exr = root / "typed.exr"
+    sceneio.write_depth(pfm_depth, typed_exr, encoding=exr_encoding)
+    assert np.array_equal(
+        sceneio.read_depth(typed_exr, encoding=exr_encoding).depth,
+        values,
+    )
+    exr_info = sceneio.inspect_depth(typed_exr, encoding=exr_encoding)
+    assert exr_info.dtype == "float32"
+    assert exr_info.metadata["channel_name"] == "Z"
+    assert isinstance(sceneio.read(typed_exr), _core.Image)
+
 
 def _mapped_safetensors(root: Path, values: np.ndarray) -> None:
     path = root / "values.safetensors"

@@ -689,6 +689,9 @@ def _cstr(stream: BinaryIO, what: str, limit: int = 4096) -> bytes:
 
 def _inspect_exr(path: Path, datatype: str) -> Inspection:
     with path.open("rb") as stream:
+        stream.seek(0, 2)
+        file_size = stream.tell()
+        stream.seek(0)
         if _exact(stream, 4, "EXR magic") != b"\x76\x2f\x31\x01":
             raise ValueError("exr: bad signature")
         version = struct.unpack("<I", _exact(stream, 4, "EXR version"))[0]
@@ -698,6 +701,7 @@ def _inspect_exr(path: Path, datatype: str) -> Inspection:
             raise ValueError("exr: tiled, deep, and multipart images are unsupported")
         data_window = None
         channel_names = []
+        channel_name_encodings = []
         channel_types = []
         channels_seen = False
         while name := _cstr(stream, "EXR attribute name"):
@@ -718,7 +722,16 @@ def _inspect_exr(path: Path, datatype: str) -> Inspection:
                     end = value.find(b"\0", offset)
                     if end < 0 or end + 17 > len(value):
                         raise ValueError("exr: malformed channel list")
-                    channel_names.append(value[offset:end].decode("latin1"))
+                    raw_name = value[offset:end]
+                    try:
+                        channel_name = raw_name.decode("utf-8")
+                    except UnicodeDecodeError:
+                        channel_name = raw_name.decode("latin1")
+                        channel_name_encoding = "latin1"
+                    else:
+                        channel_name_encoding = "utf8"
+                    channel_names.append(channel_name)
+                    channel_name_encodings.append(channel_name_encoding)
                     channel_types.append(struct.unpack_from("<i", value, end + 1)[0])
                     if len(channel_names) > 4:
                         raise ValueError("exr: unsupported channel set")
@@ -726,7 +739,7 @@ def _inspect_exr(path: Path, datatype: str) -> Inspection:
                 if offset >= len(value) or value[offset] != 0 or offset + 1 != len(value):
                     raise ValueError("exr: malformed channel list terminator")
             else:
-                remaining = _size(path) - stream.tell()
+                remaining = file_size - stream.tell()
                 if attr_size > remaining:
                     raise ValueError(f"truncated EXR {name!r} attribute")
                 stream.seek(attr_size, 1)
@@ -748,12 +761,17 @@ def _inspect_exr(path: Path, datatype: str) -> Inspection:
     return _image(
         "exr",
         datatype,
-        _size(path),
+        file_size,
         height,
         width,
         channels,
         "float32",
         channel_names=tuple(channel_names),
+        channel_name_encodings=tuple(channel_name_encodings),
+        channel_dtypes=tuple(
+            "float16" if pixel_type == 1 else "float32"
+            for pixel_type in channel_types
+        ),
     )
 
 

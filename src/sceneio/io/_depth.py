@@ -25,7 +25,7 @@ from sceneio.io.registry import (
 
 _UNITS = frozenset({"meters", "millimeters", "custom", "unitless", "unknown"})
 _INVALID_POLICIES = frozenset({"none", "zero", "nonfinite", "negative"})
-_TYPED_DEPTH_FORMATS = frozenset({"pfm", "png"})
+_TYPED_DEPTH_FORMATS = frozenset({"exr", "pfm", "png"})
 
 
 @dataclass(frozen=True)
@@ -83,12 +83,23 @@ class DepthEncoding:
                 raise ValueError(
                     "DepthEncoding.channel_name must be non-empty and contain no NUL"
                 )
+            try:
+                encoded_channel_name = self.channel_name.encode("utf-8")
+            except UnicodeEncodeError:
+                raise ValueError(
+                    "DepthEncoding.channel_name must be valid UTF-8"
+                ) from None
+            if len(encoded_channel_name) > 255:
+                raise ValueError(
+                    "DepthEncoding.channel_name must be at most 255 UTF-8 bytes"
+                )
 
 
 _PFM_DEPTH_READER = _mmap_selector_reader(_core.read_pfm_depth)
 _PFM_DEPTH_WINDOW_READER = _mmap_selector_reader(_core.read_pfm_depth_window)
 _PFM_DEPTH_INSPECTOR = _mmap_reader(_core._inspect_pfm_depth)
 _PNG_DEPTH_READER = _mmap_selector_reader(_core.read_png_depth)
+_EXR_DEPTH_READER = _mmap_selector_reader(_core.read_exr_depth)
 
 
 def _require_encoding(encoding) -> DepthEncoding:
@@ -116,8 +127,13 @@ def _resolve_depth_format(path, format: str | None, *, writing: bool) -> str:
     return selected
 
 
-def _require_unnamed_channel(encoding: DepthEncoding, format_id: str) -> None:
-    if encoding.channel_name is not None:
+def _require_channel(encoding: DepthEncoding, format_id: str) -> None:
+    if format_id == "exr":
+        if encoding.channel_name is None:
+            raise ValueError(
+                "EXR depth requires an explicit DepthEncoding.channel_name"
+            )
+    elif encoding.channel_name is not None:
         raise ValueError(
             f"{format_id} depth has no named channel; "
             "DepthEncoding.channel_name must be None"
@@ -161,7 +177,7 @@ def read_depth(
 
     resolved = _resolve_depth_format(path, format, writing=False)
     selected_encoding = _require_encoding(encoding)
-    _require_unnamed_channel(selected_encoding, resolved)
+    _require_channel(selected_encoding, resolved)
     arguments = (
         selected_encoding.unit,
         selected_encoding.scale_to_meters,
@@ -179,9 +195,14 @@ def read_depth(
             )
         if selected_window is not None:
             raise FormatError(
-                "typed PNG depth does not support bounded pixel-window reads"
+                f"typed {resolved.upper()} depth does not support bounded "
+                "pixel-window reads"
             )
-        return _PNG_DEPTH_READER(str(path), *arguments)
+        if resolved == "png":
+            return _PNG_DEPTH_READER(str(path), *arguments)
+        return _EXR_DEPTH_READER(
+            str(path), *arguments, selected_encoding.channel_name
+        )
     except FormatError:
         raise
     except Exception as exc:
@@ -200,7 +221,7 @@ def inspect_depth(
 
     resolved = _resolve_depth_format(path, format, writing=False)
     selected_encoding = _require_encoding(encoding)
-    _require_unnamed_channel(selected_encoding, resolved)
+    _require_channel(selected_encoding, resolved)
     try:
         if resolved == "pfm":
             height, width, channels, little_endian, header_scale, byte_size = (
@@ -223,21 +244,51 @@ def inspect_depth(
                 },
             )
         result = inspect_path(path, resolved, "depth_map")
-        if result.channels != 1 or result.dtype != "uint16":
-            raise ValueError(
-                "PNG depth: expected grayscale uint16 samples"
+        if resolved == "png":
+            if result.channels != 1 or result.dtype != "uint16":
+                raise ValueError(
+                    "PNG depth: expected grayscale uint16 samples"
+                )
+            stored_dtype = "uint16"
+        else:
+            channel_names = result.metadata.get("channel_names")
+            channel_name_encodings = result.metadata.get(
+                "channel_name_encodings"
             )
+            if result.channels != 1 or channel_names != (
+                selected_encoding.channel_name,
+            ):
+                raise ValueError(
+                    "EXR depth: expected exactly the explicitly selected "
+                    f"channel {selected_encoding.channel_name!r}"
+                )
+            if channel_name_encodings != ("utf8",):
+                raise ValueError(
+                    "EXR depth: stored channel name is not valid UTF-8"
+                )
+            channel_dtypes = result.metadata.get("channel_dtypes")
+            if (
+                not isinstance(channel_dtypes, tuple)
+                or len(channel_dtypes) != 1
+            ):
+                raise ValueError("EXR depth: missing scalar channel dtype")
+            stored_dtype = channel_dtypes[0]
         return replace(
             result,
             dtype="float32",
             metadata={
                 **result.metadata,
-                "stored_dtype": "uint16",
+                "stored_dtype": stored_dtype,
                 "decoded_dtype": "float32",
                 "row_order": "top_to_bottom",
                 "unit": selected_encoding.unit,
                 "scale_to_meters": selected_encoding.scale_to_meters,
                 "invalid_policy": selected_encoding.invalid_policy,
+                **(
+                    {"channel_name": selected_encoding.channel_name}
+                    if resolved == "exr"
+                    else {}
+                ),
             },
         )
     except FormatError:
@@ -264,7 +315,7 @@ def write_depth(
 
     resolved = _resolve_depth_format(path, format, writing=True)
     selected_encoding = _require_encoding(encoding)
-    _require_unnamed_channel(selected_encoding, resolved)
+    _require_channel(selected_encoding, resolved)
     if not isinstance(depth, _core.DepthMap):
         raise TypeError("depth must be a DepthMap")
     request = (
@@ -272,15 +323,20 @@ def write_depth(
         selected_encoding.unit,
         selected_encoding.scale_to_meters,
         selected_encoding.invalid_policy,
+        *(
+            (selected_encoding.channel_name,)
+            if resolved == "exr"
+            else ()
+        ),
     )
-    encoder = (
-        _core._write_pfm_depth_request
-        if resolved == "pfm"
-        else _core._write_png_depth_request
-    )
+    encoders = {
+        "pfm": _core._write_pfm_depth_request,
+        "png": _core._write_png_depth_request,
+        "exr": _core._write_exr_depth_request,
+    }
     try:
         _core._write_to_file(
-            encoder,
+            encoders[resolved],
             request,
             str(path),
         )

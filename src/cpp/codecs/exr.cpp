@@ -17,8 +17,13 @@
 #include <cstddef>
 #include <cstdlib>
 #include <cstring>
+#include <nanobind/stl/string.h>
+#include <nanobind/stl/tuple.h>
+#include <string>
+#include <utility>
 #include <vector>
 
+#include "records/depth_map.hpp"
 #include "records/image.hpp"
 #include "tinyexr.h"
 
@@ -29,7 +34,36 @@ namespace {
 constexpr uint64_t kExrPixelCap = 250000000ull;  // 250 MP; worst-case f32 RGBA buffer ~4 GB
 constexpr int64_t kExrAxisCap = 1 << 20;          // 1M per axis
 
-Image read_exr(nb::handle source, size_t lanes) {
+void require_exr_depth_encoding(const std::string &unit,
+                                double scale_to_meters,
+                                const std::string &invalid_policy) {
+    if (!depth_map_valid_unit(unit))
+        throw std::invalid_argument(
+            "EXR depth: unit must be "
+            "meters|millimeters|custom|unitless|unknown");
+    if (!depth_map_unit_scale_consistent(unit, scale_to_meters))
+        throw std::invalid_argument(
+            "EXR depth: unit/scale_to_meters mismatch");
+    if (!depth_map_valid_invalid_policy(invalid_policy))
+        throw std::invalid_argument(
+            "EXR depth: invalid_policy must be "
+            "none|zero|nonfinite|negative");
+}
+
+void require_exr_channel_name(const std::string &channel_name) {
+    if (channel_name.empty())
+        throw std::invalid_argument(
+            "EXR depth: channel_name must be non-empty");
+    if (channel_name.find('\0') != std::string::npos)
+        throw std::invalid_argument(
+            "EXR depth: channel_name must contain no NUL");
+    if (channel_name.size() > 255)
+        throw std::invalid_argument(
+            "EXR depth: channel_name must be at most 255 UTF-8 bytes");
+}
+
+Image read_exr_impl(nb::handle source, size_t lanes,
+                    const std::string *required_scalar_channel) {
     sio::ByteView data(source);
     const unsigned char *in = data.data();
     const size_t size = data.size();
@@ -66,6 +100,29 @@ Image read_exr(nb::handle source, size_t lanes) {
         if (W > kExrAxisCap || H > kExrAxisCap ||
             static_cast<uint64_t>(W) * static_cast<uint64_t>(H) > kExrPixelCap)
             throw std::invalid_argument("exr: image dimensions exceed the supported limit");
+
+        if (header.num_channels <= 0 || !header.channels ||
+            !header.pixel_types || !header.requested_pixel_types)
+            throw std::invalid_argument("exr: malformed channel table");
+        if (required_scalar_channel) {
+            if (header.num_channels != 1)
+                throw std::invalid_argument(
+                    "EXR depth: expected exactly one scalar channel");
+            const char *name = header.channels[0].name;
+            const void *terminator = std::memchr(name, '\0', 256);
+            if (!terminator)
+                throw std::invalid_argument(
+                    "EXR depth: channel name is not NUL-terminated");
+            const size_t name_size =
+                static_cast<const char *>(terminator) - name;
+            if (name_size == 0)
+                throw std::invalid_argument(
+                    "EXR depth: channel name must be non-empty");
+            if (std::string(name, name_size) != *required_scalar_channel)
+                throw std::invalid_argument(
+                    "EXR depth: stored channel does not match requested "
+                    "channel");
+        }
 
         for (int c = 0; c < header.num_channels; c++) {
             if (header.pixel_types[c] == TINYEXR_PIXELTYPE_UINT)
@@ -134,7 +191,35 @@ Image read_exr(nb::handle source, size_t lanes) {
     return im;
 }
 
-nb::bytes write_exr(const Image &img, size_t lanes) {
+Image read_exr(nb::handle source, size_t lanes) {
+    return read_exr_impl(source, lanes, nullptr);
+}
+
+DepthMap read_exr_depth(nb::handle source, const std::string &unit,
+                        double scale_to_meters,
+                        const std::string &invalid_policy,
+                        const std::string &channel_name, size_t lanes) {
+    require_exr_depth_encoding(unit, scale_to_meters, invalid_policy);
+    require_exr_channel_name(channel_name);
+
+    Image image = read_exr_impl(source, lanes, &channel_name);
+    if (image.channels != 1 || image.dtype != PixelType::F32 ||
+        image.color_space != "linear")
+        throw std::invalid_argument(
+            "EXR depth: decoded image is not scalar float32 linear data");
+
+    DepthMap result;
+    result.height = image.height;
+    result.width = image.width;
+    result.depth = std::move(image.f32);
+    result.unit = unit;
+    result.scale_to_meters = scale_to_meters;
+    result.invalid_policy = invalid_policy;
+    return result;
+}
+
+nb::bytes write_exr_impl(const Image &img, size_t lanes,
+                         const std::string &single_channel_name) {
     // --- guards: refuse what this EXR mapping cannot represent (never convert) ---
     if (img.dtype != PixelType::F32)
         throw std::invalid_argument("exr: OpenEXR here stores float32 pixels (got " +
@@ -149,7 +234,8 @@ nb::bytes write_exr(const Image &img, size_t lanes) {
             "exr: RGBA EXR requires alpha_mode 'premultiplied' (EXR uses associated alpha)");
     if (img.width == 0 || img.height == 0)
         throw std::invalid_argument("exr: cannot write a zero-dimension image");
-    if (static_cast<int64_t>(img.width) > kExrAxisCap || static_cast<int64_t>(img.height) > kExrAxisCap ||
+    if (img.width > static_cast<size_t>(kExrAxisCap) ||
+        img.height > static_cast<size_t>(kExrAxisCap) ||
         static_cast<uint64_t>(img.width) * img.height > kExrPixelCap)
         throw std::invalid_argument("exr: image dimensions exceed the supported limit");
 
@@ -190,7 +276,7 @@ nb::bytes write_exr(const Image &img, size_t lanes) {
         };
         // (A)BGR order — what EXR viewers expect (mirrors tinyexr's SaveEXRToMemory)
         if (C == 1) {
-            set_channel(0, 0, "Y");  // single luminance channel (not "A"): correct for depth/gray
+            set_channel(0, 0, single_channel_name.c_str());
         } else if (C == 3) {
             set_channel(0, 2, "B"); set_channel(1, 1, "G"); set_channel(2, 0, "R");
         } else {
@@ -223,6 +309,65 @@ nb::bytes write_exr(const Image &img, size_t lanes) {
     return emit_bytes(out.data(), out.size());
 }
 
+nb::bytes write_exr(const Image &img, size_t lanes) {
+    return write_exr_impl(img, lanes, "Y");
+}
+
+nb::bytes write_exr_depth(const DepthMap &depth, const std::string &unit,
+                          double scale_to_meters,
+                          const std::string &invalid_policy,
+                          const std::string &channel_name, size_t lanes) {
+    require_exr_depth_encoding(unit, scale_to_meters, invalid_policy);
+    require_exr_channel_name(channel_name);
+    if (depth.unit != unit ||
+        depth.scale_to_meters != scale_to_meters ||
+        depth.invalid_policy != invalid_policy)
+        throw std::invalid_argument(
+            "EXR depth: DepthMap metadata does not match DepthEncoding");
+    if (depth.has_confidence())
+        throw std::invalid_argument(
+            "EXR depth: confidence cannot be represented");
+    if (depth.width == 0 || depth.height == 0)
+        throw std::invalid_argument(
+            "EXR depth: cannot write a zero-dimension image");
+    if (depth.width > static_cast<size_t>(kExrAxisCap) ||
+        depth.height > static_cast<size_t>(kExrAxisCap) ||
+        static_cast<uint64_t>(depth.width) * depth.height > kExrPixelCap)
+        throw std::invalid_argument(
+            "EXR depth: image dimensions exceed the supported limit");
+    const size_t count = depth.width * depth.height;
+    if (depth.depth.size() != count)
+        throw std::invalid_argument(
+            "EXR depth: DepthMap storage disagrees with its dimensions");
+
+    Image image;
+    image.height = depth.height;
+    image.width = depth.width;
+    image.channels = 1;
+    image.dtype = PixelType::F32;
+    image.color_space = "linear";
+    image.alpha_mode = "none";
+    image.maxval = 0;
+    {
+        nb::gil_scoped_release release;
+        image.f32 = depth.depth;
+    }
+    return write_exr_impl(image, lanes, channel_name);
+}
+
+nb::bytes write_exr_depth_request(nb::tuple request) {
+    if (request.size() != 5)
+        throw std::invalid_argument(
+            "EXR depth: internal write request must contain five values");
+    return write_exr_depth(
+        nb::cast<const DepthMap &>(request[0]),
+        nb::cast<std::string>(request[1]),
+        nb::cast<double>(request[2]),
+        nb::cast<std::string>(request[3]),
+        nb::cast<std::string>(request[4]),
+        0);
+}
+
 }  // namespace
 
 void register_exr(nb::module_ &m) {
@@ -230,9 +375,22 @@ void register_exr(nb::module_ &m) {
           "Decode single-part scanline OpenEXR bytes into an Image (float32, color_space='linear'): "
           "{R,G,B,A}->RGBA (premultiplied), {R,G,B}->RGB, a single channel->1-channel; HALF widens "
           "to FLOAT. Multipart/deep/tiled EXR, UINT channels, and multi-layer sets raise.");
+    m.def("read_exr_depth", &read_exr_depth, "data"_a, "unit"_a,
+          "scale_to_meters"_a, "invalid_policy"_a, "channel_name"_a,
+          "_lanes"_a = 0,
+          "Decode exactly one explicitly named HALF/FLOAT EXR channel into an "
+          "owning DepthMap using the caller-supplied external depth encoding.");
     m.def("write_exr", &write_exr, "img"_a, "_lanes"_a = 0,
           "Encode a float32 linear Image to OpenEXR bytes (scanline, FLOAT, ZIP). Channels are "
           "written in (A)BGR order. Independent ZIP scanline blocks and large planar transforms "
           "use bounded worker lanes. Refuses non-float32 / non-linear records and RGBA whose "
           "alpha_mode isn't 'premultiplied' rather than converting.");
+    m.def("write_exr_depth", &write_exr_depth, "depth"_a, "unit"_a,
+          "scale_to_meters"_a, "invalid_policy"_a, "channel_name"_a,
+          "_lanes"_a = 0,
+          "Encode a scalar DepthMap to FLOAT+ZIP EXR under the explicitly "
+          "requested channel after verifying its external depth encoding.");
+    m.def("_write_exr_depth_request", &write_exr_depth_request, "request"_a,
+          "Encode the private "
+          "(DepthMap, unit, scale, invalid_policy, channel_name) sink request.");
 }
