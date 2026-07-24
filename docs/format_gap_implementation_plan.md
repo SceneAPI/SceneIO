@@ -102,6 +102,7 @@ G0 must also reconcile these shipped-surface details:
 | `PoseGraph` | pose nodes, typed edges, relative transforms, information matrices | g2o |
 | `StateTrajectory` | timestamps, position/orientation, velocity, gyroscope bias, accelerometer bias, frame/unit metadata | EuRoC state CSV |
 | `CameraRig` | ordered cameras, rig-to-camera extrinsics, names/ids, frame and unit metadata | OpenCV, ROS, Kalibr |
+| `FlowField` | HxWx2 f32 vectors plus component order, axes, row order, units, and invalid-value convention | typed FLO adapter |
 | `ImageSequence` | lazy frame references, timestamps/durations, dimensions, packed images or native planar frames with chroma subsampling metadata | image directories, Y4M, animated WebP/APNG |
 | `Table` | named typed columns, null validity, UTF-8 offsets/data, row count, metadata | Parquet |
 | `SparseGrid` / `Scene` | sparse grid values/transforms; scene nodes, transforms, mesh/camera references | OpenVDB, USD/USDZ |
@@ -398,7 +399,7 @@ Land one codec per green commit:
 | EuRoC state CSV | `StateTrajectory` | timestamps, pose, velocity and biases with no field loss | independent CSV parser |
 | DMB — complete locally | `DepthMap` | dimensions/type header, float payload, scale/unit metadata | independent NumPy parser |
 | Typed PFM/PNG/EXR depth | `DepthMap` | explicit scale, unit, invalid-value and confidence semantics layered over existing payload codecs | numpy/Pillow/OpenEXR |
-| Typed FLO flow | `Dense` | preserve flow semantics rather than returning an untagged ndarray | independent numpy parser |
+| Typed FLO flow | `FlowField` | preserve component, axis, unit, row-order, and unknown-value semantics rather than returning an untagged ndarray | independent numpy parser |
 | OpenCV YAML/XML | `Camera`/`CameraRig` | matrices, distortion models, explicit model mapping | OpenCV test extra |
 | ROS `camera_info` | `Camera` | K/D/R/P and distortion model | independent YAML parser |
 | Kalibr YAML | `CameraRig` | chained extrinsics, camera models, time offsets | independent YAML parser |
@@ -406,6 +407,115 @@ Land one codec per green commit:
 | SuperSplat SOG | `GaussianCloud` | clustered/quantized fields, explicit lossy metadata | reference loader vectors |
 | KSplat | `GaussianCloud` | supported versioned reader first; writer only after canonical output is identified | reference loader vectors |
 | BMP/TGA — complete locally | `Image` | bounded existing-stb decode plus deterministic writers | Pillow + format specifications |
+
+Typed depth/flow adapter contract and landing sequence:
+
+1. **FlowField record**
+   - Add a compiled SoA record with one contiguous `(H,W,2)` float32 vector
+     buffer and immutable semantic metadata:
+     `component_order="uv"`, `u_axis="right"`, `v_axis="down"`,
+     `row_order="top_to_bottom"`, `unit="pixels"`, and
+     `invalid_policy="component_abs_gt_1e9"`.
+   - Expose a zero-copy NumPy view whose base retains the record. The record
+     owns typed-read output; the existing raw `read_flo_view` remains the
+     mmap-backed path and remains source-compatible.
+   - Guard exact shape, C contiguity, dtype, checked `H*W*2` arithmetic, and
+     the closed metadata vocabulary before construction.
+2. **Typed FLO adapter**
+   - Add `read_flow(path, *, format=None)` and
+     `write_flow(flow, path, *, format=None)` as explicit public adapters.
+     Existing `read(path)` and `_core.read_flo*` continue returning an ndarray,
+     and existing writer bytes cannot change.
+   - Copy the raw decoded values bit-for-bit into `FlowField`; do not replace
+     NaN, infinity, or Middlebury's unknown-flow sentinel.
+   - The writer accepts only the canonical `.flo` conventions above and
+     rejects any future `FlowField` convention that `.flo` cannot represent.
+3. **Depth encoding contract**
+   - Add a frozen public `DepthEncoding` value containing `unit`,
+     `scale_to_meters`, `invalid_policy`, and optional EXR channel name.
+   - Add `read_depth(path, *, encoding, format=None)` and
+     `write_depth(depth, path, *, encoding, format=None)`. The encoding is
+     mandatory because PFM, PNG, and EXR do not serialize all `DepthMap`
+     semantics. A write verifies that `DepthMap` metadata equals `encoding`;
+     a later read must be given the same encoding. No sidecar is implied.
+   - Keep `sceneio.read`/`write` and every existing raw codec unchanged.
+     Typed adapters are additive and never change registry dispatch by
+     extension.
+4. **PFM depth**
+   - Accept only one-channel float32 PFM payloads. Preserve raw stored values,
+     including signed zero and non-finite bit patterns, after the format's
+     required bottom-to-top row transform.
+   - Extend typed inspection to expose the signed third header token. The
+     original PFM definition uses its sign for endian selection and does not
+     portably encode depth units in its magnitude, so the supported typed
+     subset requires absolute magnitude `1.0`. `DepthEncoding` remains the
+     external semantic contract; the existing and typed writers both emit
+     `-1.0` on little-endian output.
+   - Reject RGB PFM, ambiguous non-unit header magnitudes, and
+     confidence-bearing `DepthMap` writes. Every current depth unit and invalid
+     policy remains available through the required external encoding because
+     the float payload is passed through rather than normalized.
+5. **PNG depth**
+   - Accept only grayscale 16-bit PNG for typed depth. Widen uint16 samples to
+     float32 exactly and record the supplied scale; never divide or multiply
+     samples during decode.
+   - The writer requires every stored float32 sample to be an exact integer in
+     `[0,65535]`, rejects confidence and unsupported metadata, and emits the
+     same deterministic 16-bit PNG bytes as the existing image writer.
+   - Pin named test profiles for TUM (`scale_to_meters=1/5000`, zero invalid)
+     and ScanNet/millimeter depth (`scale_to_meters=0.001`, zero invalid)
+     without making a profile implicit.
+6. **EXR depth**
+   - In the first typed subset, accept an exactly one-channel EXR whose header
+     name matches the explicitly selected channel. Do not infer a depth
+     channel or silently select one from a multi-channel/AOV file.
+   - Preserve float32 values without color conversion or transfer-function
+     changes. A dedicated typed writer emits the requested scalar channel name
+     while the existing raw one-channel writer continues to emit `Y`. Reject
+     confidence and multi-channel selection until a documented mapping can
+     round-trip them without ambiguity.
+7. **Public inspection and partial reads**
+   - `inspect_depth` overlays the caller-supplied encoding on the existing
+     payload inspection and confirms the payload is in the supported typed
+     subset without allocating the full raster.
+   - PFM/PNG/EXR typed windows are advertised only where the underlying codec
+     can return a bounded window. Otherwise the typed API raises a normalized
+     unsupported-selector error rather than decoding the whole image
+     implicitly.
+
+Verification for this slice:
+
+- hand-computable convention fixtures for row order, axes, scale, invalid
+  values, and EXR channel selection;
+- typed result equals the existing raw decode bit-for-bit before metadata is
+  attached;
+- SceneIO-written files reopen in NumPy/Pillow/OpenEXR or the independent FLO
+  parser, and oracle-written files produce the same values in SceneIO;
+- all supported special float32 bit patterns, zero/max uint16 values, empty or
+  malformed headers, wrong channel count/dtype, non-integral PNG writes,
+  mismatched encoding metadata, and confidence rejection;
+- bytes versus mmap/path equality, deterministic buffer versus file-sink
+  bytes, record/view lifetime after `gc.collect()`, DLPack isolation, and
+  mutation isolation;
+- generated 100 MiB-class fixtures proving mmap input avoids a whole-file
+  Python `bytes`, inspection remains header-bounded, and sink output avoids an
+  output-sized Python `bytes`;
+- registry-wide E2E, capability snapshot, randomized valid/malformed
+  differential cases, and unchanged raw-codec golden bytes.
+
+Validation for this slice:
+
+- local editable MSVC rebuild, compiled-symbol smoke, affected suites, full
+  suite, Ruff, `git diff --check`, and the all-codec benchmark guard;
+- instrumented Linux full suite and minimal/full-feature configurations;
+- cp312-abi3 manylinux2014 x86-64, macOS arm64, and Windows amd64 wheel build,
+  clean-wheel import, typed adapter smoke, and original-codec smoke;
+- no new runtime Python dependency or external shared-library dependency.
+
+Land this slice as five independently green commits: `FlowField`, typed FLO,
+typed PFM depth, typed PNG depth, then typed EXR depth plus public integration.
+Each commit records its benchmark delta and the three review lenses before the
+next one starts.
 
 DMB completion evidence (2026-07-24):
 
