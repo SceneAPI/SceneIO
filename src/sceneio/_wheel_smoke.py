@@ -189,6 +189,36 @@ def _reconstruction_and_images(root: Path) -> None:
         assert sceneio.inspect(path).shape == (3, 4, 3)
 
 
+def _state_trajectory(root: Path) -> None:
+    timestamps = np.array(
+        [1_403_636_580_000_000_000, 1_403_636_580_005_000_000],
+        dtype=np.int64,
+    )
+    positions = np.arange(6, dtype=np.float64).reshape(2, 3)
+    quaternions = np.array(
+        [[1.0, 0.0, 0.0, 0.0], [0.5, 0.5, 0.5, 0.5]],
+        dtype=np.float64,
+    )
+    zeros = np.zeros((2, 3), dtype=np.float64)
+    trajectory = _core.state_trajectory(
+        timestamps,
+        positions,
+        quaternions,
+        zeros,
+        zeros,
+        zeros,
+    )
+    path = root / "euroc.csv"
+    sceneio.write(trajectory, path, format="euroc_state")
+    assert sceneio.detect(path) == "euroc_state"
+    decoded = sceneio.read(path)
+    assert np.array_equal(decoded.timestamps_ns, timestamps)
+    assert np.array_equal(decoded.positions, positions)
+    assert sceneio.inspect(path).count == 2
+    selected = sceneio.read_partial(path, states=(1, 2))
+    assert np.array_equal(selected.timestamps_ns, timestamps[1:2])
+
+
 def main() -> None:
     with tempfile.TemporaryDirectory(prefix="sceneio-wheel-smoke-") as directory:
         root = Path(directory)
@@ -197,6 +227,7 @@ def main() -> None:
         _mapped_safetensors(root, values)
         _point_depth_and_flow(root, values)
         _reconstruction_and_images(root)
+        _state_trajectory(root)
     print(_core.__phase__)
 
 

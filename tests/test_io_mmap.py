@@ -138,6 +138,32 @@ def _fingerprint(value):
                 for name in ("quaternions", "translations", "camera_indices", "timestamps")
             ),
         )
+    elif isinstance(value, _core.StateTrajectory):
+        fields = (
+            value.num_states,
+            value.quaternion_order,
+            value.quaternion_sign,
+            value.pose_convention,
+            value.position_frame,
+            value.velocity_frame,
+            value.bias_frame,
+            value.position_unit,
+            value.velocity_unit,
+            value.gyro_bias_unit,
+            value.accel_bias_unit,
+            value.timestamp_unit,
+            *(
+                _array_fingerprint(getattr(value, name))
+                for name in (
+                    "timestamps_ns",
+                    "positions",
+                    "quaternions",
+                    "velocities",
+                    "gyro_biases",
+                    "accel_biases",
+                )
+            ),
+        )
     elif isinstance(value, _core.Reconstruction):
         fields = (
             value.num_cameras,
@@ -259,6 +285,15 @@ def buffer_codecs():
     )
     tum = _core.read_tum(b"0 1 2 3 0 0 0 1\n")
     kitti = _core.read_kitti(b"1 0 0 1 0 1 0 2 0 0 1 3\n")
+    state_quaternions = rng.standard_normal((13, 4))
+    state_trajectory = _core.state_trajectory(
+        np.arange(13, dtype=np.int64) + 1_400_000_000_000_000_000,
+        rng.standard_normal((13, 3)),
+        state_quaternions,
+        rng.standard_normal((13, 3)),
+        rng.standard_normal((13, 3)),
+        rng.standard_normal((13, 3)),
+    )
 
     def spec(codec_id, reader, writer, value):
         return BufferCodec(codec_id, reader, writer, value, bytes(writer(value)))
@@ -275,6 +310,12 @@ def buffer_codecs():
         ),
         spec("tum", _core.read_tum, _core.write_tum, tum),
         spec("kitti", _core.read_kitti, _core.write_kitti, kitti),
+        spec(
+            "euroc_state",
+            _core.read_euroc_state,
+            _core.write_euroc_state,
+            state_trajectory,
+        ),
         spec("npy", _core.read_npy, _core.write_npy, tensor),
         spec("npz", _core.read_npz, _core.write_npz, tensors),
         spec(
@@ -324,8 +365,8 @@ def _outcome(call, argument):
 
 
 def test_all_single_file_codecs_mmap_equal_bytes_bit_exact(tmp_path, buffer_codecs):
-    """All 29 buffer codecs decode mmap and bytes to bit-exact records."""
-    assert len(buffer_codecs) == 29
+    """All 30 buffer codecs decode mmap and bytes to bit-exact records."""
+    assert len(buffer_codecs) == 30
     for spec in buffer_codecs:
         expected = _fingerprint(spec.reader(spec.data))
         path = tmp_path / f"sample-{spec.id}.bin"
@@ -343,8 +384,8 @@ def test_all_single_file_codecs_mmap_equal_bytes_bit_exact(tmp_path, buffer_code
 
 
 def test_all_single_file_sinks_are_byte_identical(tmp_path, buffer_codecs):
-    """All 29 compiled encoders emit the exact bytes their buffer API returns."""
-    assert len(buffer_codecs) == 29
+    """All 30 compiled encoders emit the exact bytes their buffer API returns."""
+    assert len(buffer_codecs) == 30
     for spec in buffer_codecs:
         direct = tmp_path / f"direct-{spec.id}.bin"
         _core._write_to_file(spec.writer, spec.value, direct)
@@ -411,6 +452,12 @@ def _assert_inspection_matches(info, decoded):
         assert info.count == decoded.num_views
         if "num_cameras" in info.metadata:
             assert info.metadata["num_cameras"] == decoded.num_cameras
+    elif isinstance(decoded, _core.StateTrajectory):
+        assert info.shape == (decoded.num_states,)
+        assert info.dtype == "float64"
+        assert info.count == decoded.num_states
+        assert info.metadata["timestamp_unit"] == "nanoseconds"
+        assert info.metadata["quaternion_order"] == "wxyz"
     elif isinstance(decoded, _core.Reconstruction):
         assert info.shape == (decoded.num_images,)
         assert info.dtype == decoded.quaternions.dtype.name
@@ -493,8 +540,8 @@ print(max(0, peak[0] - baseline))
     return int(completed.stdout.strip())
 
 
-def test_inspect_matches_decoded_metadata_all_31_codecs(tmp_path, buffer_codecs):
-    assert len(buffer_codecs) == 29
+def test_inspect_matches_decoded_metadata_all_32_codecs(tmp_path, buffer_codecs):
+    assert len(buffer_codecs) == 30
     for spec in buffer_codecs:
         path = tmp_path / f"inspect-{spec.id}.data"
         path.write_bytes(spec.data)
@@ -1741,7 +1788,7 @@ def test_registry_uses_mmap_for_every_nonempty_single_file_codec(
         value = sceneio.codecs()[spec.id].read(str(path))
         gc.collect()
         assert _fingerprint(value) == _fingerprint(spec.reader(spec.data))
-    assert mapped_paths == len(buffer_codecs) == 29
+    assert mapped_paths == len(buffer_codecs) == 30
 
 
 def test_all_buffer_entries_accept_readonly_protocol_exporters(buffer_codecs):

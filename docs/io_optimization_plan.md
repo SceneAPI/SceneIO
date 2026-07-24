@@ -5,9 +5,10 @@ Status: complete — O0–O5 landed. Scope: the compiled `sceneio._core` I/O pat
 hardening/perf work concrete).
 
 Post-0.2 format expansion inherits the same gates. The registry currently has
-31 codecs (29 single-file plus two COLMAP directories); PCD is the latest
-addition and includes mmap input, bounded binary point ranges, header-only
-inspection, and a genuinely chunked binary file sink in the all-codec harness.
+32 codecs (30 single-file plus two COLMAP directories); EuRoC state CSV is the
+latest addition and includes mmap input, exact int64 timestamps, validated
+state ranges, metadata inspection, and a genuinely chunked text file sink in
+the all-codec harness.
 
 **Committed scope (decided):** the **full O0–O5 program**, applied **uniformly to
 all 23 codecs**, with **qualitative** success criteria — every step must show a

@@ -97,6 +97,8 @@ def inspect_path(path: str | Path, format_id: str, datatype: str) -> Inspection:
         return _inspect_transforms(p, datatype)
     if format_id in {"tum", "kitti"}:
         return _inspect_pose_text(p, format_id, datatype)
+    if format_id == "euroc_state":
+        return _inspect_euroc_state(p, datatype)
     if format_id == "npy":
         return _inspect_npy(p, datatype)
     if format_id == "npz":
@@ -1171,6 +1173,37 @@ def _inspect_pose_text(path: Path, format_id: str, datatype: str) -> Inspection:
         shape=(count,),
         dtype="float64",
         count=count,
+    )
+
+
+def _inspect_euroc_state(path: Path, datatype: str) -> Inspection:
+    count, first_timestamp, last_timestamp = _compiled_buffer_inspect(
+        path, _core._inspect_euroc_state
+    )
+    metadata: dict[str, MetadataValue] = {
+        "timestamp_unit": "nanoseconds",
+        "quaternion_order": "wxyz",
+        "quaternion_sign": "preserved",
+        "pose_convention": "sensor_to_reference",
+        "position_frame": "reference",
+        "velocity_frame": "reference",
+        "bias_frame": "sensor",
+        "position_unit": "meters",
+        "velocity_unit": "meters_per_second",
+        "gyro_bias_unit": "radians_per_second",
+        "accel_bias_unit": "meters_per_second_squared",
+    }
+    if count:
+        metadata["first_timestamp_ns"] = first_timestamp
+        metadata["last_timestamp_ns"] = last_timestamp
+    return Inspection(
+        "euroc_state",
+        datatype,
+        _size(path),
+        shape=(count,),
+        dtype="float64",
+        count=count,
+        metadata=metadata,
     )
 
 

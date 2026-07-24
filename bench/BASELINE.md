@@ -616,3 +616,34 @@ The accepted five-run 31-codec guard measured the default 1,000,000-point PCD
 row at 1,933 MB/s write and 3,414 MB/s read, with a 276x inspection gain and
 26.34x partial-read gain. Every retained O4/O5 directional and mmap/sink
 allocation guard passed.
+
+## EuRoC state CSV baseline — 2026-07-24
+
+The harness now covers 32 codecs. The default generated fixture contains
+100,000 complete navigation states: 13.6 MB of logical int64/float64 SoA data
+and 35.2 MB of deterministic 17-column CSV.
+
+```text
+operation                              result
+-------------------------------------------------------------
+buffer write                           42 MB/s
+buffer read                           202 MB/s
+public mmap read                      176 MB/s
+stdlib CSV oracle write/read        16 / 18 MB/s
+direct streaming sink                 42 MB/s
+metadata inspection                 73.407 ms
+middle 1/16 state range             73.730 ms
+full public read                    77.434 ms
+```
+
+The separate oracle run measured the compiled reader at 11.19x the independent
+stdlib CSV reader. In the accepted five-run all-codec guard, metadata
+inspection and the selected range were each 1.05x faster than full decode and
+avoided constructing most of the 13.6 MB state arrays. The selected range
+reduced sampled RSS from 48.4 MB to 35.1 MB while validating every unselected
+row.
+Mmap removed the 35.2 MB traced input allocation. The chunked file sink reduced
+traced output allocation from 35.2 MB to effectively zero and sampled RSS from
+42.1 MB to effectively zero while remaining byte-identical to the buffer
+writer. Every retained 32-codec O4/O5 directional and mmap/sink allocation
+guard passed.

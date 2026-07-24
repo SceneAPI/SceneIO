@@ -39,6 +39,7 @@ from sceneio.io.registry import (
 Reconstruction = _core.Reconstruction
 GaussianCloud = _core.GaussianCloud
 PosedViewSet = _core.PosedViewSet
+StateTrajectory = _core.StateTrajectory
 TensorDict = _core.TensorDict
 Image = _core.Image
 PointCloud = _core.PointCloud
@@ -184,6 +185,7 @@ def read_partial(
     *,
     window=None,
     points=None,
+    states=None,
     image_id=None,
     tensors=None,
     slices=None,
@@ -192,8 +194,9 @@ def read_partial(
     """Read only one file-backed region while preserving the normal record type.
 
     Exactly one selector is required. ``window`` is the half-open pixel box
-    ``(row_start, row_stop, column_start, column_stop)``. ``points`` is the
-    half-open record range ``(start, stop)``. ``image_id`` selects one COLMAP
+    ``(row_start, row_stop, column_start, column_stop)``. ``points`` and
+    ``states`` are half-open record ranges ``(start, stop)``. ``image_id``
+    selects one COLMAP
     image by its persisted id. ``tensors`` selects complete named tensors.
     ``slices`` maps tensor names to half-open leading-axis ``(start, stop)``
     ranges. A format that cannot access the selected region without a full
@@ -202,7 +205,7 @@ def read_partial(
 
     selected = sum(
         value is not None
-        for value in (window, points, image_id, tensors, slices)
+        for value in (window, points, states, image_id, tensors, slices)
     )
     if selected != 1:
         raise ValueError(
@@ -220,6 +223,13 @@ def read_partial(
         if codec.read_points is None:
             raise FormatError(f"format {fmt!r} does not support point-subset reads")
         operation = codec.read_points
+    elif states is not None:
+        values = _selector_ints(states, 2, "states")
+        if codec.read_states is None:
+            raise FormatError(
+                f"format {fmt!r} does not support state-subset reads"
+            )
+        operation = codec.read_states
     elif image_id is not None:
         selected_image = _selector_int(image_id, "image_id")
         if selected_image < 0 or selected_image > 0xFFFFFFFF:
@@ -402,6 +412,7 @@ __all__ = [
     "PointCloud",
     "PosedViewSet",
     "Reconstruction",
+    "StateTrajectory",
     "TensorDict",
     "capabilities",
     "codecs",

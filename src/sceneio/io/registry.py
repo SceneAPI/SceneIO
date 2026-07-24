@@ -44,6 +44,7 @@ class Codec:
     inspect: Callable[[str], object] | None = None  # optional metadata-only extension hook
     read_window: Callable[[str, int, int, int, int], object] | None = None
     read_points: Callable[[str, int, int], object] | None = None
+    read_states: Callable[[str, int, int], object] | None = None
     read_image: Callable[[str, int], object] | None = None
     read_tensors: Callable[[str, tuple[str, ...]], object] | None = None
     read_slices: Callable[
@@ -100,6 +101,8 @@ class Codec:
             selectors.append("window")
         if self.read_points is not None:
             selectors.append("points")
+        if self.read_states is not None:
+            selectors.append("states")
         if self.read_image is not None:
             selectors.append("image_id")
         if self.read_tensors is not None:
@@ -592,6 +595,29 @@ register(
         _file_sink_writer(_core.write_kitti),
         record=_core.PosedViewSet,
         datatype="posed_views",
+    )
+)
+register(
+    Codec(
+        "euroc_state",
+        (),
+        _mmap_reader(_core.read_euroc_state),
+        _file_sink_writer(_core.write_euroc_state),
+        record=_core.StateTrajectory,
+        datatype="state_trajectory",
+        magic=(b"#timestamp [ns],",),
+        read_states=_mmap_selector_reader(
+            _core.read_euroc_state_states
+        ),
+        supported_features=(
+            "int64_nanosecond_timestamps",
+            "position",
+            "wxyz_orientation",
+            "velocity",
+            "gyroscope_bias",
+            "accelerometer_bias",
+            "state_ranges",
+        ),
     )
 )
 # Array / tensor + raster-image formats (Tier-1, zero-dep). datatype ids are

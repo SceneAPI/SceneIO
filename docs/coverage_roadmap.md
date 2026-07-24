@@ -116,6 +116,7 @@ zero‑copy + convention tags.
 | `MatchGraph` | per‑pair `matches` Mx2 u32, `scores` M, `F/E/H` 3x3, `inliers` | HDF5/hloc, COLMAP DB | ⬜ |
 | `TensorDict` | named ndarrays + attrs | npz, HDF5, safetensors, zarr, parquet | ✅ |
 | `CameraRig` | N `Camera` + extrinsics + convention tag | OpenCV/ROS/Kalibr calib | ⬜ |
+| `StateTrajectory` | int64-ns timestamps + p/q/v/gyro-bias/accel-bias with frame/unit/sign tags | EuRoC state CSV | ✅ |
 
 *(Done: `Reconstruction`, `GaussianCloud`, `PosedViewSet`, `Camera`.)*
 
@@ -137,7 +138,7 @@ Columns: **Ext/id** · **Record** · **Lib/oracle (license)** · **R/W** ·
 | ✅ OpenMVG `sfm_data.json` | `Reconstruction` | manual json (nlohmann) | R+W | pose = center+rotation |
 | ✅ BAL `.txt` / `.bal` | `Reconstruction` | UW specification + independent parser | R+W | angle-axis cameras, centered observations, strict canonical writer; generic `.txt` requires `format="bal"` |
 | ✅ TUM / ✅ KITTI | `PosedViewSet` | pure‑Python | R+W | done (retrofit fast_float) |
-| ⬜ EuRoC `state_groundtruth` | `PosedViewSet` | manual csv | R+W | ts,p,q,v,bw,ba |
+| ✅ EuRoC `state_groundtruth` | `StateTrajectory` | independent stdlib CSV parser | R+W | exact int64 ns; p_RS_R, q_RS WXYZ, v_RS_R, b_w_RS_S, b_a_RS_S; mmap/sink/inspect/state ranges |
 | ⬜ g2o | `PoseGraph` (new) | manual | R+W | edges → needs a pose‑graph record |
 
 ### 3b. 3DGS / splat

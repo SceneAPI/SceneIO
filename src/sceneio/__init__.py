@@ -134,6 +134,7 @@ _IO_FORWARDS = frozenset(
         "PointCloud",
         "PosedViewSet",
         "Reconstruction",
+        "StateTrajectory",
         "TensorDict",
     }
 )
@@ -188,6 +189,7 @@ __all__ = [
     "PosedViewSet",
     "Reconstruction",
     "SceneIoError",
+    "StateTrajectory",
     "TableDef",
     "TensorDict",
     "__version__",

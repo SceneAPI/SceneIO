@@ -13,8 +13,8 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 
 > Status note: everything marked ✅ is implemented by the compiled
 > `sceneio._core`. The original 23 codecs ship in SceneIO 0.2.0; safetensors,
-> PTS, DMB, BAL, BMP, TGA, generic point PLY, and PCD are post-0.2 formats on
-> `phase0-nanobind-core` and are not released yet.
+> PTS, DMB, BAL, BMP, TGA, generic point PLY, PCD, and EuRoC state CSV are
+> post-0.2 formats on `phase0-nanobind-core` and are not released yet.
 
 ## Data structures (memory Records)
 
@@ -31,6 +31,7 @@ SoA, zero-copy to numpy/torch (DLPack), conventions carried as metadata.
 | `PointCloud` | `point_cloud` (new) | ✅ | xyz + rgb/rgb16 + normals + intensity, optional organized width/height and acquisition viewpoint; backs `.xyz`, count-prefixed `.pts`, point `.ply`, PCD, and plain `.las` |
 | `DepthMap` | `depth_map` | ✅ | scalar f32 depth + scale/unit/invalid + confidence; backs scalar DMB and explicit typed PFM/PNG/EXR adapters |
 | `FlowField` | `flow` | ✅ | HxWx2 f32 vectors with component/axis/row/unit/invalid metadata; raw FLO API remains ndarray-compatible |
+| `StateTrajectory` | `state_trajectory` | ✅ record / ⬜ datatype | exact int64 nanosecond timestamps plus float64 position, WXYZ orientation, velocity, gyro bias, and accelerometer bias; explicit frame/unit/sign metadata |
 | `FeatureSet` | `feature_set` | ⬜ | Phase 3 — keypoints + descriptors + scores |
 | `MatchGraph` | `match_graph` | ⬜ | Phase 3 — per‑pair matches + F/E/H + inliers |
 
@@ -100,20 +101,21 @@ tier. COLMAP DB `.db` (sqlite) remains a separate self-contained package.
 | `tga` | `Image` | R+W | **Pillow** + Truevision 2.0 specification | grayscale/RGB/RGBA and zero-origin palettes; raw/RLE; top/bottom orientation; deterministic RLE writer |
 | `ply` | `PointCloud` | R+W | independent NumPy/stdlib parser + **Open3D 0.19** | ASCII and binary LE/BE; all standard scalar input types; exact rgb8/rgb16; schema-aware Gaussian/point/mesh dispatch; binary point ranges |
 | `pcd` | `PointCloud` | R+W | independent NumPy/stdlib parser + **Open3D 0.19** | PCD 0.7 ASCII, little-endian binary, and LZF `binary_compressed`; organized dimensions and viewpoint; packed RGB/intensity; bounded binary point ranges |
+| `euroc_state` | `StateTrajectory` | R+W | independent stdlib CSV parser + EuRoC schema | exact int64-ns timestamps; p/q(WXYZ)/v/gyro-bias/accel-bias; canonical-header detection; bounded state ranges |
 
 ### ⬜ Pending — later phases (meshes + niche)
 glTF / GLB (+Draco) · OBJ / STL / OFF / mesh PLY · USD / USDZ · OpenVDB · Zarr · Parquet · AVIF / JPEG‑XL · PlayCanvas SOG.
 
 ### 🟡 In progress — Phase 7 (hardening)
-✅ mmap-backed reads for all 29 single-file codecs (the two COLMAP directory
+✅ mmap-backed reads for all 30 single-file codecs (the two COLMAP directory
 codecs already read paths directly in C++) · ✅ zero-copy read-only mapped
 ndarray views for native NPY/FLO payloads (PFM row-flips into owned storage) · ✅ bytes/mmap differential +
 scheduled 100-case backing-store mutation sweep · ✅ ASan/UBSan/LSan workflow
 (local and branch Linux runs green) · ⬜ randomized oracle-triangulated
 fuzzing · ✅ direct file-sink writes · ✅ bounded measured-path workers
 (XYZ/LAS/EXR/PNG16/WebP lossless) · ✅ partial/lazy reads (`inspect` covers all
-31; bounded pixel/point/COLMAP-image/tensor subsets cover capable containers) ·
-⬜ GPU-via-DLPack (torch-cuda/cupy) · ✅ expanded 31-codec benchmark/oracles.
+32; bounded pixel/point/state/COLMAP-image/tensor subsets cover capable containers) ·
+⬜ GPU-via-DLPack (torch-cuda/cupy) · ✅ expanded 32-codec benchmark/oracles.
 
 ## Infrastructure & capabilities
 
@@ -122,7 +124,7 @@ fuzzing · ✅ direct file-sink writes · ✅ bounded measured-path workers
 | nanobind + scikit‑build‑core build | ✅ | abi3/cp312, `NB_STATIC` |
 | cibuildwheel release path | ✅ | Linux/macOS/Windows; `publish.yml` |
 | CI parity (oracles in CI) | ✅ | gsply + pycolmap; runs on the branch |
-| Codec registry + `read`/`write`/`inspect`/`read_partial`/`detect` | ✅ | inspection covers all 31; bounded partial hooks are capability-specific |
+| Codec registry + `read`/`write`/`inspect`/`read_partial`/`detect` | ✅ | inspection covers all 32; bounded partial hooks are capability-specific |
 | Zero‑copy numpy + torch (DLPack) | ✅ | validated per codec |
 | Conventions‑as‑metadata + write guards | ✅ | record‑don't‑convert enforced |
 | Parity kit (`sceneio.testing.parity`) | ✅ | cross‑impl + round‑trip + convention pins |
@@ -153,6 +155,7 @@ incremental.
 | `colmap_sparse` | directory | yes | yes | yes | image_id | yes | yes | no | - |
 | `colmap_sparse_txt` | directory | yes | yes | yes | image_id | yes | yes | no | - |
 | `dmb` | file | yes | yes | yes | window | yes | yes | no | - |
+| `euroc_state` | file | yes | yes | yes | states | yes | yes | no | - |
 | `exr` | file | yes | yes | yes | - | yes | yes | no | - |
 | `flo` | file | yes | yes | yes | window | yes | yes | no | - |
 | `gaussian_ply` | file | yes | yes | yes | points | yes | yes | no | - |

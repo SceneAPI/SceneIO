@@ -7,7 +7,7 @@
   default-wheel sequence.
   Cross-platform wheel and instrumented validation remains a user-gated remote
   action.
-- **Current branch:** 31 compiled codecs, all read/write and inspectable, with
+- **Current branch:** 32 compiled codecs, all read/write and inspectable, with
   bounded partial reads where their containers permit them.
 - **Scope:** close every unblocked format gap declared by SceneIO's coverage
   documents without reimplementing the 0.2.0 codec tier.
@@ -1599,7 +1599,7 @@ estimates.
 
 The current local checkpoint is:
 
-- 31 compiled registry codecs with read, write, inspect, mmap input, and direct
+- 32 compiled registry codecs with read, write, inspect, mmap input, and direct
   file sinks;
 - O0-O5 complete for the existing codec tier;
 - `FlowField`, typed FLO, typed PFM depth, typed PNG depth, and typed scalar EXR
@@ -1812,7 +1812,7 @@ Verification and validation evidence (2026-07-24):
 Land each record with its first consumer, then add the remaining syntax
 adapters:
 
-1. `StateTrajectory` plus EuRoC state CSV.
+1. ✅ `StateTrajectory` plus EuRoC state CSV (B3.1 complete locally).
 2. `CameraRig` plus OpenCV YAML/XML, then ROS `camera_info` and Kalibr YAML.
 3. `PoseGraph` plus g2o.
 
@@ -1821,6 +1821,63 @@ quaternion ordering/sign policy, covariance/information layouts, ragged
 offsets, zero-copy view ownership, source-mutation isolation, and exact writer
 guards. YAML/XML parsing must remain native and bounded; no runtime Python
 dependency is added.
+
+##### B3.1 StateTrajectory + EuRoC state CSV — complete locally
+
+Implementation:
+
+- `StateTrajectory` owns exact signed-int64 nanosecond timestamps and float64
+  SoA arrays for position, WXYZ/XYZW quaternion coefficients, velocity,
+  gyroscope bias, and accelerometer bias. Its closed convention metadata pins
+  quaternion order/sign policy, pose direction, vector frames, SI units, and
+  timestamp units. The factory validates rank/shape alignment, finite values,
+  nonzero quaternions, strict nonnegative timestamps, and a declared
+  canonical-positive-W policy before copying into record-owned storage.
+- `euroc_state` implements the official 17-column
+  `t,p_RS_R,q_RS,v_RS_R,b_w_RS_S,b_a_RS_S` CSV schema. It preserves
+  epoch-scale timestamps and every float64 coefficient, writes deterministic
+  17-digit text, accepts read-only contiguous buffer exporters, releases the
+  GIL around pure C++, and rejects headers, fields, frames, units, signs, or
+  values it cannot represent.
+- Canonical header magic detects standard EuRoC files without claiming the
+  ambiguous `.csv` extension. Public reads use mmap, public writes emit the
+  header plus bounded 2,048-row chunks, native inspection validates the stream
+  without constructing state arrays, and `read_partial(..., states=(a,b))`
+  materializes only the selected half-open range while validating all rows.
+- Lines are capped at 1 MiB; NULs, non-ASCII schema drift, wrong/empty column
+  counts, non-int64/duplicate/decreasing timestamps, non-finite values, zero
+  quaternions, and oversized extents reject. No dependency was added.
+
+Verification and validation evidence (2026-07-24):
+
+- 96 focused record/codec cases include an independent stdlib CSV oracle,
+  hand-derived 90-degree WXYZ convention pin, exact timestamps beyond float64
+  integer precision, extreme finite/subnormal doubles, 40 randomized valid
+  round trips, 200 randomized malformed-row differentials, source mutation,
+  view lifetime/DLPack, mmap-vs-bytes, bounded inspection, sink identity and
+  error behavior, partial equality, and writer guards.
+- The shared mmap/sink/inspection/capability and public API paths include
+  EuRoC. The full local MSVC suite passes 2,072 tests with 3 documented
+  optional skips; repository-wide Ruff and `git diff --check` are clean.
+- The accepted five-run 32-codec guard passes every retained O4/O5 direction
+  and mmap/sink memory bound. On 100,000 states (13.6 MB logical, 35.2 MB CSV),
+  buffer write/read measured 42/202 MB/s and public mmap read 176 MB/s.
+  A separate oracle run measured the compiled reader at 11.19x stdlib CSV.
+- Mmap removes the 35.2 MB traced input allocation. The direct sink removes the
+  35.2 MB traced output allocation and reduced sampled output RSS from 42.1 MB
+  to effectively zero. Inspection and the middle 1/16 state range each
+  measured 1.05x faster than full decode; the range reduced sampled RSS from
+  48.4 MB to 35.1 MB.
+- A clean Windows cp312-abi3 wheel has 36 entries, no leaked
+  include/lib/share/bin artifacts, NumPy as its sole unconditional runtime
+  dependency, and passes the installed-wheel smoke with EuRoC
+  read/write/detect/inspect/state-range coverage.
+- Manual memory-safety, format-correctness, and test-soundness review found and
+  fixed empty-range null-pointer arithmetic, unchecked claimed quaternion sign
+  metadata, and missing hand-derived/malformed differential coverage. The
+  Fable executable was unavailable locally, so the same three lenses were
+  applied manually. Linux sanitizer and Linux/macOS wheel validation remain
+  user-gated remote actions.
 
 #### B4. COLMAP database
 
@@ -1851,7 +1908,7 @@ Wave B exit:
   registry-wide E2E sweep;
 - the default install remains numpy-only and all native code is vendored,
   pinned, permissively licensed, and statically linked;
-- the original 30-codec behavior, benchmarks, and golden bytes remain green;
+- the original 32-codec behavior, benchmarks, and golden bytes remain green;
 - the dependency-wave remote validation in section 12.10 passes.
 
 ### 12.4 Wave C — canonical mesh tier

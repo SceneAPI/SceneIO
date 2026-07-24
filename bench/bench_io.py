@@ -2,7 +2,7 @@
 
 Measures, per codec, encode (write) + decode (read) throughput (MB/s over the raw
 payload) and peak Python allocation (tracemalloc), for sceneio._core vs the oracle
-library where one exists, on representative payloads for all 31 codecs. Read
+library where one exists, on representative payloads for all 32 codecs. Read
 measurements retain the legacy whole-file bytes/copy-decode path beside the
 public registry mmap path, so their peak delta captures the input copy O1
 removes and, for NPY/FLO, the decoded-array copy O2 removes. Write measurements
@@ -17,6 +17,7 @@ Synthetic fixtures are generated in a temporary directory and never committed.
 from __future__ import annotations
 
 import argparse
+import csv
 import gc
 import io
 import json
@@ -263,10 +264,102 @@ def _record_nbytes(record):
         "xyz",
         "rgb",
         "errors",
+        "positions",
+        "velocities",
+        "gyro_biases",
+        "accel_biases",
+        "timestamps_ns",
     )
     total = sum(np.asarray(getattr(record, name)).nbytes for name in names if hasattr(record, name))
     total += sum(np.asarray(camera.params).nbytes for camera in getattr(record, "cameras", ()))
     return max(total, 1)
+
+
+_EUROC_HEADER = (
+    "#timestamp [ns]",
+    "p_RS_R_x [m]",
+    "p_RS_R_y [m]",
+    "p_RS_R_z [m]",
+    "q_RS_w []",
+    "q_RS_x []",
+    "q_RS_y []",
+    "q_RS_z []",
+    "v_RS_R_x [m s^-1]",
+    "v_RS_R_y [m s^-1]",
+    "v_RS_R_z [m s^-1]",
+    "b_w_RS_S_x [rad s^-1]",
+    "b_w_RS_S_y [rad s^-1]",
+    "b_w_RS_S_z [rad s^-1]",
+    "b_a_RS_S_x [m s^-2]",
+    "b_a_RS_S_y [m s^-2]",
+    "b_a_RS_S_z [m s^-2]",
+)
+
+
+def _euroc_fixture(scale):
+    count = max(1, int(100_000 * scale))
+    rng = np.random.default_rng(20260724)
+    timestamps = (
+        1_403_636_580_000_000_000
+        + np.arange(count, dtype=np.int64) * 5_000_000
+    )
+    arrays = {
+        "timestamps": timestamps,
+        "positions": rng.standard_normal((count, 3)),
+        "quaternions": rng.standard_normal((count, 4)),
+        "velocities": rng.standard_normal((count, 3)),
+        "gyro_biases": rng.standard_normal((count, 3)) * 0.01,
+        "accel_biases": rng.standard_normal((count, 3)) * 0.1,
+    }
+    record = _core.state_trajectory(
+        arrays["timestamps"],
+        arrays["positions"],
+        arrays["quaternions"],
+        arrays["velocities"],
+        arrays["gyro_biases"],
+        arrays["accel_biases"],
+    )
+    return record, arrays
+
+
+def _euroc_oracle_write(payload):
+    output = io.StringIO(newline="")
+    writer = csv.writer(output, lineterminator="\n")
+    writer.writerow(_EUROC_HEADER)
+    combined = np.concatenate(
+        (
+            payload["positions"],
+            payload["quaternions"],
+            payload["velocities"],
+            payload["gyro_biases"],
+            payload["accel_biases"],
+        ),
+        axis=1,
+    )
+    for timestamp, values in zip(
+        payload["timestamps"], combined, strict=True
+    ):
+        writer.writerow((int(timestamp), *map(float, values)))
+    return output.getvalue().encode()
+
+
+def _euroc_oracle_read(data):
+    reader = csv.reader(io.StringIO(data.decode()))
+    header = tuple(next(reader))
+    if header != _EUROC_HEADER:
+        raise ValueError("unexpected EuRoC header")
+    rows = list(reader)
+    return {
+        "timestamps": np.asarray([int(row[0]) for row in rows], np.int64),
+        "states": np.asarray(
+            [[float(value) for value in row[1:]] for row in rows],
+            np.float64,
+        ),
+    }
+
+
+def _euroc_payload_nbytes(payload):
+    return sum(value.nbytes for value in payload.values())
 
 
 # --- codec specs: (id, build, sio_write, sio_read, oracle_write, oracle_read, payload_bytes) ---
@@ -858,6 +951,15 @@ def _specs(scale, pose_bundle=None):
             lambda rec, p: _record_nbytes(rec),
         ),
         Spec(
+            "euroc_state",
+            lambda: _euroc_fixture(scale),
+            _core.write_euroc_state,
+            _core.read_euroc_state,
+            _euroc_oracle_write,
+            _euroc_oracle_read,
+            lambda rec, payload: _euroc_payload_nbytes(payload),
+        ),
+        Spec(
             "bundler",
             lambda: (reconstruction, reconstruction),
             _core.write_bundler,
@@ -946,6 +1048,10 @@ def _partial_request(codec_id, info, full_record=None):
         return {"image_id": int(image_ids[len(image_ids) // 2])}
     if codec_id == "safetensors":
         return {"tensors": ("b",)}
+    if codec_id == "euroc_state":
+        selected = max(1, info.count // 16)
+        start = (info.count - selected) // 2
+        return {"states": (start, start + selected)}
     return None
 
 
@@ -2204,7 +2310,7 @@ def _run_benchmark(args, tmp):
             print(f"{spec.id:<14} ERROR: {type(e).__name__}: {e}")
 
     if not args.only:
-        assert len(specs) + len(directory_specs) == 31
+        assert len(specs) + len(directory_specs) == 32
     print("\nMB/s over raw payload; fileMB = encoded size (= the whole-file copy O1/O3 remove).")
     print("sioR = in-memory copy decode; pathR = public registry mmap read/view.")
     print("bPeakMB/mPeakMB = peak Python allocation for bytes/mmap reads (O1 delta).")

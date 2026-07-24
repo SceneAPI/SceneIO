@@ -73,8 +73,8 @@ artifacts vocabulary — wire identity unchanged.
 
 ### Compiled format I/O — `read` / `write` / `inspect` / `read_partial`
 
-The lazy-loaded compiled core reads and writes 31 image, depth, tensor,
-point-cloud, Gaussian, pose, and reconstruction formats.
+The lazy-loaded compiled core reads and writes 32 image, depth, tensor,
+point-cloud, Gaussian, pose/state, and reconstruction formats.
 `sceneio.inspect(path)` returns an immutable `Inspection` with shape, dtype,
 channels, repeated-record counts, and format-specific scalar metadata without
 decoding bulk pixel/point arrays:
@@ -178,6 +178,14 @@ assert sceneio.inspect("organized.pcd").metadata["storage"] in {
     "binary",
     "binary_compressed",
 }
+
+# EuRoC ground-truth CSV keeps epoch timestamps exact as int64 nanoseconds and
+# records its reference/sensor frame, WXYZ, sign, and SI-unit conventions.
+states = sceneio.read("state_groundtruth_estimate0/data.csv")
+assert states.timestamps_ns.dtype.name == "int64"
+state_part = sceneio.read_partial(
+    "state_groundtruth_estimate0/data.csv", states=(1_000, 2_000)
+)
 
 # One COLMAP pose and its camera, without opening points3D.
 view = sceneio.read_partial("sparse/0", image_id=42)
