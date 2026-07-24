@@ -1478,13 +1478,19 @@ def _run_benchmark(args, tmp):
             and by_codec[codec_id][4]
             >= max(4.0, 0.5 * by_codec[codec_id][3])
         )
-        # XYZ scans mapped text to find record boundaries, so the OS may fault
-        # most file pages into RSS even though no whole-file bytes or unselected
-        # output arrays are allocated. Require a meaningful absolute reduction.
-        if (
-            by_codec["xyz"][3] >= 8.0
-            and by_codec["xyz"][4] >= by_codec["xyz"][3] - 4.0
-        ):
+        # XYZ must scan every mapped line to validate record boundaries. Linux
+        # therefore charges the whole file to RSS, while warmed allocator reuse
+        # can make the full record's output vector invisible to this delta.
+        # Bound resident growth above the unavoidable file mapping instead of
+        # comparing two platform-dependent deltas. The selected vector is under
+        # 1 MB here, so 8 MB allows page/allocator granularity but not a full
+        # 12 MB output materialization.
+        xyz_file_mb = next(
+            result["file_mb"]
+            for result in results
+            if result.get("codec") == "xyz" and "file_mb" in result
+        )
+        if by_codec["xyz"][4] > xyz_file_mb + 8.0:
             rss_gain_regressions.append("xyz")
         if rss_gain_regressions:
             raise RuntimeError(

@@ -88,8 +88,9 @@ below 0.05 MB. A local Linux run passed the full in-tree suite under ASan/UBSan
 and an explicit pre-shutdown LSan check, excluding the unsanitized gsply/Numba
 and pycolmap native oracle stacks that normal CI retains. The committed workflow repeats it and raises
 the backing-store mutation sweep from 3 to 100 cases on its schedule. Scheduled
-execution begins once this workflow reaches the default branch; the remote
-workflow run remains user-gated.
+execution begins once this workflow reaches the default branch. The branch
+workflow has also passed remotely with the full suite and explicit pre-shutdown
+leak check.
 
 ---
 
@@ -305,8 +306,10 @@ already-zero-copy FLO path effectively tied at displayed precision.
 Representative results were Netpbm 8.35×, LAS 11.21×, Gaussian PLY 19.55×,
 SPLAT 18.79×, PFM 10.25×, binary COLMAP 53.19×, and text COLMAP 85.11×.
 Sampled RSS fell to 0.0–1.4 MB for those material binary paths.
-XYZ still scans mapped text to validate record boundaries, so its 68.5→56.5 MB
-RSS reduction is guarded as an absolute gain rather than a ratio. FLO and
+XYZ still scans mapped text to validate record boundaries, so kernels may
+charge the entire file mapping to RSS even though no input copy is made. Its
+guard caps resident growth at the encoded file size plus 8 MB instead of
+requiring a platform-dependent full/partial delta. FLO and
 COLMAP are too small for a stable RSS signal but retain directional latency and
 allocation checks. Final gates passed 1,289 tests / 3 optional skips on Windows
 and 1,208 / 62 expected oracle, interop, platform, and RSS skips under the

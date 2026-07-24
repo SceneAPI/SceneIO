@@ -70,10 +70,10 @@ pattern** (miniz, zstd, nlohmann/json, fast_float) — so they needed **no vcpkg
 | plain `.las` | `PointCloud` | **none** — hand‑parsed binary, like colmap `.bin` | ✅ R+W; laspy oracle; formats 0‑3/6‑8, origin+rgb16, georef rebase |
 | WebP | `Image` | libwebp (BSD) — CMake FetchContent from source | ✅ R+W; pillow oracle; lossless byte‑exact + lossy; built clean on MSVC |
 
-Cross‑cutting: all 6 codecs are validated on the **local MSVC build only** — the plan
-gates the tier on a **cibuildwheel dry‑run** (Linux/macOS), still a pending user
-action (push + `gh workflow run publish.yml`). libwebp‑from‑source is the one real
-wheel‑build risk to confirm there. Vendored stb carries documented **local
+Cross‑cutting: the cibuildwheel dry run and tagged release both built and
+smoke‑tested the abi3 wheels on Linux, macOS, and Windows. SceneIO 0.2.0 is
+published on PyPI from the tag workflow; libwebp‑from‑source therefore clears
+the outstanding wheel‑build gate. Vendored stb carries documented **local
 hardening patches** for truncated HDR input, corrupt JPEG marker failure, and a
 signed-shift UB in JPEG entropy output (see `stb/COMMIT.txt`). CMYK JPEG is
 best‑effort stb→RGB and opaque RGBA collapses to RGB in WebP (both documented).
@@ -90,7 +90,7 @@ glTF / GLB (+Draco) · OBJ / STL / OFF · USD / USDZ · OpenVDB · Zarr · Parqu
 codecs already read paths directly in C++) · ✅ zero-copy read-only mapped
 ndarray views for native NPY/FLO payloads (PFM row-flips into owned storage) · ✅ bytes/mmap differential +
 scheduled 100-case backing-store mutation sweep · ✅ ASan/UBSan/LSan workflow
-(local Linux green; remote run user-gated) · ⬜ randomized oracle-triangulated
+(local and branch Linux runs green) · ⬜ randomized oracle-triangulated
 fuzzing · ✅ direct file-sink writes · ✅ bounded measured-path workers
 (XYZ/LAS/EXR/PNG16/WebP lossless) · ✅ partial/lazy reads (`inspect` covers all
 23; bounded pixel/point/COLMAP-image subsets cover capable containers) · ⬜ GPU-via-DLPack

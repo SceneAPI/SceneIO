@@ -287,8 +287,9 @@ Every partial traced-allocation peak remained below the table's 0.05 MB
 display precision. WebP measures a lossless VP8L crop; binary P5/P6 is the
 bounded Netpbm path. ASCII P2/P3 and lossy VP8 reject rather than performing a
 non-bounded or non-slice-exact operation. XYZ must still scan mapped text to
-find and validate row boundaries, so its guard requires at least a 4 MB
-absolute RSS reduction; the other material rows require a directional ratio
-gain. The paired five-run CI guard passed together with all retained O4 and O5
+find and validate row boundaries, so kernels may charge the whole encoded file
+to RSS. Its guard caps resident growth at the encoded size plus 8 MB; the other
+material rows require a directional ratio gain. The paired five-run CI guard
+passed together with all retained O4 and O5
 inspection controls. Final verification passed 1,289 tests / 3 optional skips
 on Windows and 1,208 / 62 expected skips under ASan/UBSan/LSan on Linux.
