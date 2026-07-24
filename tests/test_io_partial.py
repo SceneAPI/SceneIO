@@ -909,7 +909,9 @@ def test_colmap_text_selected_malformed_token_is_memory_bounded(tmp_path):
         _fresh_process_colmap_error_rss(
             directory, "colmap_sparse_txt", 1
         )
-        < 16 * 1024 * 1024
+        # Hosted Linux allocators vary by several MiB. This remains below the
+        # malformed 32 MiB token and therefore catches a whole-line mirror.
+        < 24 * 1024 * 1024
     )
 
 

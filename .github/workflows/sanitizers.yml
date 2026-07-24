@@ -31,7 +31,11 @@ jobs:
       - uses: astral-sh/setup-uv@v7
       - name: Install instrumented extension and test oracles
         run: |
-          uv venv --seed
+          # Use uv's deterministic CPython build. Ubuntu's system Python keeps
+          # small interpreter allocations alive at the explicit pre-shutdown
+          # LSan checkpoint; the same managed interpreter is used by the local
+          # sanitizer gate.
+          uv venv --managed-python --python 3.12 --seed
           uv pip install -e ".[dev,test]"
           # gsply's Numba/LLVM JIT and pycolmap's native type registry retain
           # process-lifetime objects that obscure LSan results. Their parity
