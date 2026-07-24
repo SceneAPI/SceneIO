@@ -36,11 +36,15 @@
 #include <cmath>
 #include <cstdio>
 #include <cstring>
+#include <filesystem>
+#include <fstream>
 #include <optional>
 #include <string>
 #include <system_error>
 
+#include <nanobind/stl/filesystem.h>
 #include <nanobind/stl/optional.h>
+#include <nanobind/stl/pair.h>
 #include <nanobind/stl/string.h>
 
 #include "fast_float/fast_float.h"
@@ -221,6 +225,103 @@ void decode_xyz(const char *p, size_t n, PointCloud &pc, const std::optional<Sch
     pc.n = pc.xyz.size() / 3;
 }
 
+std::pair<size_t, size_t> inspect_xyz(nb::handle source) {
+    sio::ByteView data(source);
+    const char *p = reinterpret_cast<const char *>(data.data());
+    const size_t n = data.size();
+    size_t rows = 0;
+    size_t columns = 0;
+    {
+        nb::gil_scoped_release rel;
+        size_t i = 0;
+        while (i < n) {
+            const char *ls = p + i;
+            while (i < n && p[i] != '\n') ++i;
+            const char *le = p + i;
+            if (i < n) ++i;
+            const char *cursor = ls;
+            while (cursor < le &&
+                   (*cursor == ' ' || *cursor == '\t' || *cursor == '\r'))
+                ++cursor;
+            if (cursor >= le || *cursor == '#') continue;
+            LineToks peek{ls, le};
+            const char *tb, *te;
+            if (!peek.next(tb, te)) continue;
+            const size_t current = count_tokens(ls, le);
+            if (columns == 0) {
+                schema_from_cols(current);
+                columns = current;
+            } else if (current != columns) {
+                throw std::invalid_argument(
+                    "xyz: inconsistent column count in metadata scan");
+            }
+            ++rows;
+        }
+    }
+    return {rows, columns == 0 ? 3 : columns};
+}
+
+std::pair<size_t, size_t> inspect_xyz_file(
+    const std::filesystem::path &path) {
+    size_t rows = 0;
+    size_t columns = 0;
+    {
+        nb::gil_scoped_release rel;
+        std::ifstream file(path, std::ios::binary);
+        if (!file) throw std::invalid_argument("xyz: cannot open file");
+        char block[65536];
+        size_t current = 0;
+        bool prefix = true;
+        bool comment = false;
+        bool in_token = false;
+        auto finish_line = [&]() {
+            if (!comment && current != 0) {
+                if (columns == 0) {
+                    schema_from_cols(current);
+                    columns = current;
+                } else if (current != columns) {
+                    throw std::invalid_argument(
+                        "xyz: inconsistent column count in metadata scan");
+                }
+                ++rows;
+            }
+            current = 0;
+            prefix = true;
+            comment = false;
+            in_token = false;
+        };
+        while (file) {
+            file.read(block, sizeof(block));
+            const std::streamsize got = file.gcount();
+            for (std::streamsize i = 0; i < got; ++i) {
+                const char c = block[i];
+                if (c == '\n') {
+                    finish_line();
+                    continue;
+                }
+                if (comment) continue;
+                if (prefix) {
+                    if (c == ' ' || c == '\t' || c == '\r') continue;
+                    if (c == '#') {
+                        comment = true;
+                        continue;
+                    }
+                    prefix = false;
+                }
+                if (is_sep(c)) {
+                    in_token = false;
+                } else if (!in_token) {
+                    ++current;
+                    in_token = true;
+                }
+            }
+        }
+        if (file.bad()) throw std::invalid_argument("xyz: file read failed");
+        if (!prefix || comment || current != 0) finish_line();
+    }
+    return {rows, columns == 0 ? 3 : columns};
+}
+
 PointCloud read_xyz(nb::handle source, std::optional<std::string> layout) {
     sio::ByteView data(source);
     const char *p = reinterpret_cast<const char *>(data.data());
@@ -365,6 +466,11 @@ nb::bytes write_xyz(const PointCloud &pc, size_t lanes) {
 // .pts file therefore fails loudly at extension dispatch (never silently
 // mis-parsed); when it lands it belongs in this same file next to read_xyz.
 void register_xyz(nb::module_ &m) {
+    m.def("_inspect_xyz", &inspect_xyz, "data"_a,
+          "Return (point_count, column_count) without parsing numeric samples.");
+    m.def("_inspect_xyz_file", &inspect_xyz_file, "path"_a,
+          "Stream a file and return (point_count, column_count) without parsing "
+          "numeric samples.");
     m.def("read_xyz", &read_xyz, "data"_a, "layout"_a = nb::none(),
           "Decode .xyz point-cloud text into a PointCloud. Columns are auto-detected from the "
           "first data line (3 = x y z; 4 = + intensity; 6 = + rgb; 7 = + intensity + rgb; "

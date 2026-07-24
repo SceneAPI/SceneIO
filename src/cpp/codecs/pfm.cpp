@@ -4,6 +4,7 @@
 #include <charconv>
 #include <cmath>
 #include <limits>
+#include <nanobind/stl/tuple.h>
 
 using namespace nb::literals;
 using namespace sio;
@@ -22,7 +23,12 @@ bool is_ws(uint8_t c) { return c == ' ' || c == '\n' || c == '\r' || c == '\t'; 
 std::string next_token(const uint8_t *p, size_t n, size_t &pos) {
     while (pos < n && is_ws(p[pos])) pos++;
     size_t s = pos;
-    while (pos < n && !is_ws(p[pos])) pos++;
+    while (pos < n && !is_ws(p[pos])) {
+        if (pos - s >= 1024 * 1024)
+            throw std::invalid_argument(
+                "PFM: metadata token exceeds 1 MiB");
+        pos++;
+    }
     return std::string(reinterpret_cast<const char *>(p + s), pos - s);
 }
 
@@ -112,6 +118,23 @@ nb::ndarray<nb::numpy, float> read_pfm(nb::handle source) {
     return own_array(std::move(buf), {info.height, info.width, 3});
 }
 
+std::tuple<size_t, size_t, size_t, bool> inspect_pfm(
+    nb::handle source) {
+    sio::ByteView data(source);
+    PfmInfo info;
+    {
+        nb::gil_scoped_release rel;
+        info = parse_pfm(data.data(), data.size());
+    }
+    const bool file_little_endian = info.swap != host_is_le();
+    return {
+        info.height,
+        info.width,
+        info.channels,
+        file_little_endian,
+    };
+}
+
 nb::bytes write_pfm(nb::ndarray<const float, nb::c_contig, nb::device::cpu> img) {
     const size_t nd = img.ndim();
     long H, W, C;
@@ -149,6 +172,8 @@ nb::bytes write_pfm(nb::ndarray<const float, nb::c_contig, nb::device::cpu> img)
 }  // namespace
 
 void register_pfm(nb::module_ &m) {
+    m.def("_inspect_pfm", &inspect_pfm, "data"_a,
+          "Return (height, width, channels, little_endian) without decoding pixels.");
     m.def("read_pfm", &read_pfm, "data"_a,
           "Decode PFM bytes to a float32 ndarray (H,W)/(H,W,3), top-to-bottom, native-endian.");
     m.def("write_pfm", &write_pfm, "img"_a,

@@ -1,5 +1,5 @@
-"""Public format I/O for SceneIO — format-dispatched ``read`` / ``write``
-over the compiled codecs, plus the record types.
+"""Public format I/O for SceneIO — format-dispatched ``read`` / ``write`` /
+``inspect`` over the compiled codecs, plus the record types.
 
     import sceneio
     recon = sceneio.read("sparse/0")     # -> Reconstruction  (COLMAP dir)
@@ -16,6 +16,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from sceneio import _core
+from sceneio.io._inspection import ArrayInspection, Inspection, inspect_path
 from sceneio.io.registry import REGISTRY, Codec, FormatError, detect, get, register
 
 # Record types produced by the codecs (re-exported for convenience/isinstance).
@@ -51,6 +52,34 @@ def read(path, *, format: str | None = None):
         raise
     except Exception as exc:  # normalize codec faults to FormatError
         raise FormatError(f"reading {str(path)!r} as {fmt!r}: {exc}") from exc
+
+
+def inspect(path, *, format: str | None = None) -> Inspection:
+    """Return dimensions, dtype, and element counts without decoding bulk data.
+
+    Binary image/array/cloud formats read only their container headers.
+    Headerless text formats are streamed to count records, and JSON scene
+    formats parse their metadata document without constructing compiled record
+    arrays.
+    """
+    fmt = format or detect(path)
+    codec = get(fmt)
+    try:
+        result = (
+            inspect_path(path, fmt, codec.datatype)
+            if codec.inspect is None
+            else codec.inspect(str(path))
+        )
+        if not isinstance(result, Inspection):
+            raise TypeError(
+                f"format {fmt!r} inspector returned {type(result).__name__}, "
+                "expected Inspection"
+            )
+        return result
+    except FormatError:
+        raise
+    except Exception as exc:
+        raise FormatError(f"inspecting {str(path)!r} as {fmt!r}: {exc}") from exc
 
 
 def write(obj, path, *, format: str | None = None) -> None:
@@ -100,18 +129,21 @@ def _detect_write(obj, path) -> str:
 
 
 __all__ = [
+    "ArrayInspection",
     "Camera",
     "Codec",
     "DepthMap",
     "FormatError",
     "GaussianCloud",
     "Image",
+    "Inspection",
     "PointCloud",
     "PosedViewSet",
     "Reconstruction",
     "TensorDict",
     "codecs",
     "detect",
+    "inspect",
     "read",
     "register",
     "write",

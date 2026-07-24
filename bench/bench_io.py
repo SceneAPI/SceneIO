@@ -1,4 +1,4 @@
-"""O0-O4 I/O benchmark harness for docs/io_optimization_plan.md.
+"""O0-O5 I/O benchmark harness for docs/io_optimization_plan.md.
 
 Measures, per codec, encode (write) + decode (read) throughput (MB/s over the raw
 payload) and peak Python allocation (tracemalloc), for sceneio._core vs the oracle
@@ -65,19 +65,28 @@ except Exception:
 
 
 def _measure(fn: Callable[[], object], runs: int) -> tuple[float, int]:
-    """Median wall time (s) and peak traced Python allocation (bytes) over `runs`."""
+    """Median wall time and a separate peak traced-allocation pass.
+
+    Keeping tracemalloc out of the timing loop matters for Python metadata
+    scanners: tracing each small token allocation can otherwise dominate the
+    operation and invert the measured O5 latency relationship.
+    """
     fn()  # warm
-    times, peak = [], 0
+    times = []
     for _ in range(runs):
-        tracemalloc.start()
         t0 = time.perf_counter()
         r = fn()
         dt = time.perf_counter() - t0
-        _, pk = tracemalloc.get_traced_memory()
-        tracemalloc.stop()
         times.append(dt)
-        peak = max(peak, pk)
         del r
+    gc.collect()
+    tracemalloc.start()
+    try:
+        r = fn()
+        _, peak = tracemalloc.get_traced_memory()
+        del r
+    finally:
+        tracemalloc.stop()
     return statistics.median(times), peak
 
 
@@ -628,6 +637,11 @@ def main():
             "traced allocations remain bounded"
         ),
     )
+    ap.add_argument(
+        "--require-o5-inspect-gains",
+        action="store_true",
+        help="fail unless stable metadata-only inspections beat full reads",
+    )
     ap.add_argument("--json", type=Path, help="write machine-readable results to this path")
     args = ap.parse_args()
     if args.scale <= 0:
@@ -649,6 +663,7 @@ def _run_benchmark(args, tmp):
     results = []
     write_rows = []
     o4_rows = []
+    inspect_rows = []
 
     hdr = (
         f"{'codec':<14}{'payloadMB':>10}{'fileMB':>9}{'sioW':>9}{'sioR':>9}"
@@ -963,6 +978,25 @@ def _run_benchmark(args, tmp):
             mmap_rss = _measure_rss(_mmap_read)
             path_read = pmb / path_time
 
+            def _inspect(fp=fp, codec_id=s.id):
+                if args.cold_cache:
+                    _evict_file_cache(fp)
+                return sceneio.inspect(fp, format=codec_id)
+
+            inspect_time, inspect_peak = _measure(_inspect, args.runs)
+            inspect_rss = _measure_rss(_inspect)
+            inspect_rows.append(
+                (
+                    s.id,
+                    path_time,
+                    inspect_time,
+                    mmap_peak / 1e6,
+                    inspect_peak / 1e6,
+                    mmap_rss / 1e6,
+                    inspect_rss / 1e6,
+                )
+            )
+
             oraW = oraR = None
             if s.ow and payload is not None:
                 ob = _try(lambda: bytes(s.ow(payload)))
@@ -989,6 +1023,9 @@ def _run_benchmark(args, tmp):
                     "mmap_peak_mb": mmap_peak / 1e6,
                     "bytes_rss_mb": bytes_rss / 1e6,
                     "mmap_rss_mb": mmap_rss / 1e6,
+                    "inspect_ms": inspect_time * 1000,
+                    "inspect_peak_mb": inspect_peak / 1e6,
+                    "inspect_rss_mb": inspect_rss / 1e6,
                     "bytes_write_peak_mb": bytes_write_peak / 1e6,
                     "sink_write_peak_mb": sink_write_peak / 1e6,
                     "bytes_write_rss_mb": bytes_write_rss / 1e6,
@@ -1048,6 +1085,29 @@ def _run_benchmark(args, tmp):
             core_read_time, _ = _measure(lambda: spec.r(str(path)), args.runs)
             path_read_time, read_peak = _measure(_directory_read, args.runs)
             read_rss = _measure_rss(_directory_read)
+
+            def _directory_inspect(path=path, codec_id=spec.id):
+                if args.cold_cache:
+                    for entry in path.iterdir():
+                        if entry.is_file():
+                            _evict_file_cache(entry)
+                return sceneio.inspect(path, format=codec_id)
+
+            inspect_time, inspect_peak = _measure(
+                _directory_inspect, args.runs
+            )
+            inspect_rss = _measure_rss(_directory_inspect)
+            inspect_rows.append(
+                (
+                    spec.id,
+                    path_read_time,
+                    inspect_time,
+                    read_peak / 1e6,
+                    inspect_peak / 1e6,
+                    read_rss / 1e6,
+                    inspect_rss / 1e6,
+                )
+            )
             results.append(
                 {
                     "codec": spec.id,
@@ -1059,6 +1119,9 @@ def _run_benchmark(args, tmp):
                     "path_read_mbps": pmb / path_read_time,
                     "mmap_peak_mb": read_peak / 1e6,
                     "mmap_rss_mb": read_rss / 1e6,
+                    "inspect_ms": inspect_time * 1000,
+                    "inspect_peak_mb": inspect_peak / 1e6,
+                    "inspect_rss_mb": inspect_rss / 1e6,
                     "sink_write_peak_mb": write_peak / 1e6,
                     "sink_write_rss_mb": write_rss / 1e6,
                 }
@@ -1117,6 +1180,107 @@ def _run_benchmark(args, tmp):
         "Identity is encoded bytes where compression settings are unchanged; "
         "otherwise decoded values/pixels."
     )
+    print("\nO5 metadata-only inspection delta:")
+    inspect_header = (
+        f"{'codec':<18}{'full ms':>11}{'inspect ms':>12}{'speedup':>10}"
+        f"{'fullPeak':>11}{'inspPeak':>10}{'fullRSS':>10}{'inspRSS':>9}"
+    )
+    print(inspect_header)
+    print("-" * len(inspect_header))
+    for codec_id, full, inspected, full_peak, inspected_peak, full_rss, inspected_rss in (
+        inspect_rows
+    ):
+        print(
+            f"{codec_id:<18}{full * 1000:>11.3f}{inspected * 1000:>12.3f}"
+            f"{full / inspected:>9.2f}x{full_peak:>11.1f}{inspected_peak:>10.1f}"
+            f"{full_rss:>10.1f}{inspected_rss:>9.1f}"
+        )
+    print("Inspection reads headers/streamed metadata and constructs no compiled record arrays.")
+    if args.require_o5_inspect_gains:
+        stable = {"exr", "gaussian_ply", "las", "png", "spz"}
+        by_codec = {
+            codec_id: (
+                full,
+                inspected,
+                inspected_peak,
+                full_rss,
+                inspected_rss,
+            )
+            for (
+                codec_id,
+                full,
+                inspected,
+                _,
+                inspected_peak,
+                full_rss,
+                inspected_rss,
+            ) in inspect_rows
+        }
+        missing = stable - by_codec.keys()
+        if missing:
+            raise RuntimeError(
+                "missing O5 inspect guard rows: " + ", ".join(sorted(missing))
+            )
+        regressions = [
+            codec_id
+            for codec_id in sorted(stable)
+            if by_codec[codec_id][1] >= by_codec[codec_id][0]
+        ]
+        if regressions:
+            raise RuntimeError(
+                "O5 inspection failed directional latency guard: "
+                + ", ".join(regressions)
+            )
+        json_controls = {"transforms_json", "openmvg"}
+        missing_json = json_controls - by_codec.keys()
+        if missing_json:
+            raise RuntimeError(
+                "missing O5 JSON read-control rows: "
+                + ", ".join(sorted(missing_json))
+            )
+        json_read_regressions = sorted(
+            codec_id
+            for codec_id in json_controls
+            if by_codec[codec_id][0] > 3.0 * by_codec[codec_id][1]
+        )
+        if json_read_regressions:
+            raise RuntimeError(
+                "O5 full JSON read exceeded 3x its independent metadata "
+                "parser control: "
+                + ", ".join(json_read_regressions)
+            )
+        allocation_regressions = sorted(
+            codec_id
+            for codec_id, (_, _, inspected_peak, _, _) in by_codec.items()
+            if inspected_peak >= 1.0
+        )
+        if allocation_regressions:
+            raise RuntimeError(
+                "O5 inspection exceeded 1 MB traced allocation: "
+                + ", ".join(allocation_regressions)
+            )
+        rss_regressions = sorted(
+            codec_id
+            for codec_id, (_, _, _, full_rss, inspected_rss) in by_codec.items()
+            if inspected_rss > max(8.0, full_rss + 4.0)
+        )
+        if rss_regressions:
+            raise RuntimeError(
+                "O5 inspection exceeded the sampled RSS guard: "
+                + ", ".join(rss_regressions)
+            )
+        rss_gain_regressions = sorted(
+            codec_id
+            for codec_id in stable
+            if by_codec[codec_id][3] >= 8.0
+            and by_codec[codec_id][4]
+            >= max(4.0, 0.5 * by_codec[codec_id][3])
+        )
+        if rss_gain_regressions:
+            raise RuntimeError(
+                "O5 inspection failed the directional RSS gain guard: "
+                + ", ".join(rss_gain_regressions)
+            )
     if args.require_o4_gains:
         guarded = {
             ("webp", "balanced-config"),

@@ -25,6 +25,7 @@
 // layer) and never crashes: from_chars is bounded by an explicit end pointer and
 // the tokenizer is bounded by the line length.
 #include <nanobind/stl/string.h>
+#include <nanobind/stl/tuple.h>
 
 #include <charconv>
 #include <cstdint>
@@ -240,6 +241,66 @@ Reconstruction read_colmap_txt(const std::string &dir) {
     return r;
 }
 
+size_t count_metadata_records(const std::string &path,
+                              bool image_records) {
+    std::ifstream file(path, std::ios::binary);
+    if (!file) throw std::invalid_argument("COLMAP text: cannot open " + path);
+    size_t count = 0;
+    char block[65536];
+    bool prefix = true;
+    bool comment = false;
+    bool data = false;
+    bool skip_line = false;
+    auto finish_line = [&]() {
+        if (skip_line) {
+            skip_line = false;
+        } else if (data) {
+            ++count;
+            if (image_records) skip_line = true;
+        }
+        prefix = true;
+        comment = false;
+        data = false;
+    };
+    while (file) {
+        file.read(block, sizeof(block));
+        const std::streamsize got = file.gcount();
+        for (std::streamsize i = 0; i < got; ++i) {
+            const char c = block[i];
+            if (c == '\n') {
+                finish_line();
+                continue;
+            }
+            if (skip_line || comment) continue;
+            if (prefix) {
+                if (c == ' ' || c == '\t' || c == '\r') continue;
+                prefix = false;
+                if (c == '#') {
+                    comment = true;
+                } else {
+                    data = true;
+                }
+            }
+        }
+    }
+    if (file.bad())
+        throw std::invalid_argument("COLMAP text: file read failed");
+    if (!skip_line && (!prefix || comment || data)) finish_line();
+    return count;
+}
+
+std::tuple<size_t, size_t, size_t> inspect_colmap_txt(
+    const std::string &dir) {
+    size_t cameras, images, points;
+    {
+        nb::gil_scoped_release rel;
+        cameras = count_metadata_records(dir + "/cameras.txt", false);
+        images = count_metadata_records(dir + "/images.txt", true);
+        points = count_metadata_records(dir + "/points3D.txt", false);
+    }
+    return {cameras, images, points};
+}
+
 // ---- writers (COLMAP WriteCamerasText/WriteImagesText/WritePoints3DText) ----
 // "%.17g" == COLMAP's ostream precision(17): round-trips every double exactly.
 void fmt17(std::string &out, double v) {
@@ -372,6 +433,9 @@ void write_colmap_txt(const Reconstruction &r, const std::string &dir) {
 }  // namespace
 
 void register_colmap_txt(nb::module_ &m) {
+    m.def("_inspect_colmap_txt", &inspect_colmap_txt, "path"_a,
+          "Return (camera_count, image_count, point_count) without constructing "
+          "reconstruction arrays.");
     m.def("read_colmap_txt", &read_colmap_txt, "path"_a,
           "Read a COLMAP text sparse model directory (cameras.txt/images.txt/points3D.txt) into "
           "a Reconstruction (WXYZ quaternions, world_to_camera; the text twin of read_colmap_sparse).");

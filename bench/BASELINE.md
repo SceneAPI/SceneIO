@@ -213,3 +213,50 @@ when mmap/file-sink traced allocation rises above one quarter of the retained
 whole-file bytes control for material fixtures. Small compression-dominated
 PNG16/EXR-planar timing deltas remain recorded but do not create a flaky timing
 gate.
+
+## O5 metadata-only inspection delta — 2026-07-24
+
+Final local MSVC five-run sweep for the first O5 unit (`bench_io.py --runs 5
+--require-o4-gains --require-o5-inspect-gains`). `full ms` is the public
+mmap-backed full read; `inspect ms` constructs only immutable scalar metadata.
+RSS is sampled process growth. Bounded compiled scans keep headerless text
+inspection at effectively 0 MB growth, including malformed no-newline inputs.
+
+```
+codec               full ms  inspect ms  speedup  full RSS MB  inspect RSS MB
+-----------------------------------------------------------------------------
+png                    14.99        0.05  331.7x          10.9             0.0
+jpeg                   23.59        0.04  581.1x           8.5             0.0
+webp                   14.22        0.04  333.0x          10.5             0.0
+hdr                    13.81        0.06  221.0x          28.0             0.0
+exr                    11.09        0.09  128.8x          35.1             0.0
+netpbm                  0.87        0.04   19.6x           6.3             0.0
+xyz                   183.12       72.77    2.5x          68.5             0.0
+las                     6.28        0.04  167.1x          43.8             0.0
+gaussian_ply            5.46        0.05  108.6x          21.6             0.0
+spz                    17.14        0.12  148.8x          13.8             0.0
+splat                   7.68        0.01  745.7x          16.8             0.0
+npy                     0.05        0.05    0.9x           0.0             0.0
+pfm                     1.29        0.05   25.5x           7.4             0.0
+flo                     0.05        0.03    1.4x           0.0             0.0
+npz                     2.26        0.12   19.5x           2.1             0.0
+transforms_json        27.60       10.69    2.6x           1.2             1.2
+tum                    14.47        2.75    5.3x           0.2             0.0
+kitti                  21.78        3.13    7.0x           0.3             0.0
+bundler                 1.27        0.04   29.8x           0.2             0.0
+nvm                     1.29        0.04   30.5x           0.2             0.0
+openmvg                17.91       16.46    1.1x           0.6             0.6
+colmap_sparse           2.28        0.15   15.2x           0.0             0.0
+colmap_sparse_txt       2.88        0.37    7.8x           0.0             0.0
+```
+
+NPY and FLO full reads were already O2 header-parse + mapped-view construction,
+so their complete public reads are as cheap as inspection within sub-millisecond
+noise; inspection adds a Python metadata object but no payload allocation.
+Transforms/OpenMVG are JSON metadata containers, so JSON parsing dominates both
+paths and record-array avoidance is a smaller gain. The stable binary rows
+(PNG/EXR/LAS/Gaussian PLY/SPZ) retain directional CI latency and RSS-gain
+guards, every inspection must stay below 1 MB of traced Python allocation, and
+the two JSON readers retain a coarse full-read/SAX ratio bound that catches
+large decode-path regressions. This committed table remains the historical
+control for smaller timing movement.

@@ -71,6 +71,24 @@ keeps pytest-free consumers clean.
 disk/wire format ids. Seeded with the exact `sfmapi.*.v1` ids from the core's
 artifacts vocabulary — wire identity unchanged.
 
+### Compiled format I/O — `sceneio.read` / `sceneio.write`
+
+The lazy-loaded compiled core reads and writes 23 image, tensor, point-cloud,
+Gaussian, pose, and reconstruction formats. `sceneio.inspect(path)` returns an
+immutable `Inspection` with shape, dtype, channels, repeated-record counts, and
+format-specific scalar metadata without decoding bulk pixel/point arrays:
+
+```python
+import sceneio
+
+info = sceneio.inspect("frame.exr")
+assert info.shape == (1080, 1920, 3)
+assert info.dtype == "float32"
+
+image = sceneio.read("frame.exr")
+sceneio.write(image, "copy.exr")
+```
+
 ### Errors
 
 `SceneIoError` is the root; `ContractViolation` is raised for every

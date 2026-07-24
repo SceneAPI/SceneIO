@@ -10,8 +10,10 @@
 // (it passes through R->quat->R). The writers refuse a foreign-convention
 // record rather than mislabel it. (g2o pose graphs are deferred — their edges
 // don't fit PosedViewSet.)
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <cstring>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -42,6 +44,31 @@ bool skip_line(const std::string &line) {
         return c == '#';
     }
     return true;  // all whitespace
+}
+
+template <typename Callback>
+void for_each_bounded_line(const sio::ByteView &data, const char *format,
+                           Callback callback) {
+    constexpr size_t kLineLimit = 1024 * 1024;
+    const char *cursor = reinterpret_cast<const char *>(data.data());
+    const char *const end = cursor + data.size();
+    while (cursor < end) {
+        const size_t remaining = static_cast<size_t>(end - cursor);
+        const size_t search_size =
+            std::min(remaining, kLineLimit + 1);
+        const void *found = std::memchr(cursor, '\n', search_size);
+        if (!found && remaining > kLineLimit)
+            throw std::invalid_argument(
+                std::string(format) + ": metadata line exceeds 1 MiB");
+        const char *const line_end =
+            found ? static_cast<const char *>(found) : end;
+        const size_t line_size = static_cast<size_t>(line_end - cursor);
+        if (line_size > kLineLimit)
+            throw std::invalid_argument(
+                std::string(format) + ": metadata line exceeds 1 MiB");
+        callback(std::string(cursor, line_size));
+        cursor = found ? line_end + 1 : end;
+    }
 }
 
 // --- rotation <-> quaternion (WXYZ) for KITTI's 3x3 [R] block --------------
@@ -131,12 +158,9 @@ void view_quat_wxyz(const PosedViewSet &p, size_t i, double &w, double &x, doubl
 
 PosedViewSet read_tum(nb::handle source) {
     sio::ByteView data(source);
-    std::string text(reinterpret_cast<const char *>(data.data()), data.size());
-    std::istringstream stream(text);
-    std::string line;
     PosedViewSet p;
-    while (std::getline(stream, line)) {
-        if (skip_line(line)) continue;
+    for_each_bounded_line(data, "TUM", [&](const std::string &line) {
+        if (skip_line(line)) return;
         std::istringstream ls(line);
         double ts, tx, ty, tz, qx, qy, qz, qw;
         if (!(ls >> ts >> tx >> ty >> tz >> qx >> qy >> qz >> qw))
@@ -150,7 +174,7 @@ PosedViewSet read_tum(nb::handle source) {
         p.quats.push_back(qy);
         p.quats.push_back(qz);
         p.quats.push_back(qw);
-    }
+    });
     p.quaternion_order = "xyzw";
     p.pose_convention = "camera_to_world";
     p.axis_frame = "opencv";
@@ -195,12 +219,9 @@ nb::bytes write_tum(const PosedViewSet &p) {
 
 PosedViewSet read_kitti(nb::handle source) {
     sio::ByteView data(source);
-    std::string text(reinterpret_cast<const char *>(data.data()), data.size());
-    std::istringstream stream(text);
-    std::string line;
     PosedViewSet p;
-    while (std::getline(stream, line)) {
-        if (skip_line(line)) continue;
+    for_each_bounded_line(data, "KITTI", [&](const std::string &line) {
+        if (skip_line(line)) return;
         std::istringstream ls(line);
         double m[12];
         for (int k = 0; k < 12; k++)
@@ -217,7 +238,7 @@ PosedViewSet read_kitti(nb::handle source) {
         p.trans.push_back(m[3]);
         p.trans.push_back(m[7]);
         p.trans.push_back(m[11]);
-    }
+    });
     p.quaternion_order = "wxyz";
     p.pose_convention = "camera_to_world";
     p.axis_frame = "opencv";

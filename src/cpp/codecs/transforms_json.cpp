@@ -10,12 +10,14 @@
 // the top-right 3x1 the translation. read->write->read reproduces poses +
 // intrinsics + tags exactly (nlohmann's shortest-round-trip float dump).
 #include <nlohmann/json.hpp>
+#include <nanobind/stl/pair.h>
 
 #include <cmath>
 #include <stdexcept>
 #include <string>
 #include <vector>
 
+#include "io/json_metadata_guard.hpp"
 #include "records/posed_view_set.hpp"
 
 using namespace nb::literals;
@@ -177,8 +179,10 @@ PosedViewSet read_transforms_json(nb::handle source) {
     sio::ByteView data(source);
     json d;
     try {  // map JSON parse/type errors to ValueError, per the codec bad-input contract
-        d = json::parse(
-            std::string(reinterpret_cast<const char *>(data.data()), data.size()));
+        sio::guard_json_metadata_tokens(
+            data.data(), data.size(), "transforms.json");
+        d = json::parse(std::string(
+            reinterpret_cast<const char *>(data.data()), data.size()));
     } catch (const json::exception &e) {
         throw std::invalid_argument(std::string("transforms.json: ") + e.what());
     }
@@ -241,6 +245,151 @@ PosedViewSet read_transforms_json(nb::handle source) {
         idx++;
     }
     return p;
+}
+
+struct TransformsInspectSax : nlohmann::json_sax<json> {
+    enum class Key { Other, Frames };
+    struct Node {
+        bool object = false;
+        bool root = false;
+        bool frames_array = false;
+        bool frame = false;
+        Key pending = Key::Other;
+    };
+
+    std::vector<Node> stack;
+    size_t views = 0;
+    bool top_intrinsics = false;
+    bool frame_intrinsics = false;
+    bool saw_root = false;
+    bool saw_frames = false;
+    bool frames_valid = true;
+    bool valid = true;
+
+    bool scalar() {
+        if (stack.empty()) {
+            valid = false;
+        } else {
+            if (stack.back().frames_array) frames_valid = false;
+            if (stack.back().root &&
+                stack.back().pending == Key::Frames)
+                frames_valid = false;
+            stack.back().pending = Key::Other;
+        }
+        return true;
+    }
+    bool null() override { return scalar(); }
+    bool boolean(bool) override { return scalar(); }
+    bool number_integer(number_integer_t) override { return scalar(); }
+    bool number_unsigned(number_unsigned_t) override { return scalar(); }
+    bool number_float(number_float_t, const string_t &) override {
+        return scalar();
+    }
+    bool string(string_t &) override { return scalar(); }
+    bool binary(binary_t &) override { return scalar(); }
+
+    bool start_object(std::size_t) override {
+        Node node;
+        node.object = true;
+        if (stack.empty()) {
+            node.root = true;
+            if (saw_root) valid = false;
+            saw_root = true;
+        } else {
+            Node &parent = stack.back();
+            if (parent.frames_array) {
+                node.frame = true;
+                ++views;
+            }
+            if (parent.root && parent.pending == Key::Frames)
+                frames_valid = false;
+            parent.pending = Key::Other;
+        }
+        stack.push_back(node);
+        return true;
+    }
+
+    bool key(string_t &value) override {
+        if (stack.empty() || !stack.back().object) {
+            valid = false;
+            return true;
+        }
+        Node &node = stack.back();
+        node.pending = Key::Other;
+        if (node.root) {
+            if (value == "frames") {
+                views = 0;
+                frame_intrinsics = false;
+                saw_frames = false;
+                frames_valid = true;
+                node.pending = Key::Frames;
+            }
+            if (value == "fl_x" || value == "fl_y") top_intrinsics = true;
+        } else if (node.frame &&
+                   (value == "fl_x" || value == "fl_y")) {
+            frame_intrinsics = true;
+        }
+        return true;
+    }
+
+    bool end_object() override {
+        if (stack.empty() || !stack.back().object) {
+            valid = false;
+        } else {
+            stack.pop_back();
+        }
+        return true;
+    }
+
+    bool start_array(std::size_t) override {
+        Node node;
+        if (stack.empty()) {
+            valid = false;
+        } else {
+            Node &parent = stack.back();
+            if (parent.frames_array) frames_valid = false;
+            if (parent.root && parent.pending == Key::Frames) {
+                node.frames_array = true;
+                saw_frames = true;
+            }
+            parent.pending = Key::Other;
+        }
+        stack.push_back(node);
+        return true;
+    }
+
+    bool end_array() override {
+        if (stack.empty() || stack.back().object) {
+            valid = false;
+        } else {
+            stack.pop_back();
+        }
+        return true;
+    }
+
+    bool parse_error(std::size_t, const std::string &,
+                     const nlohmann::detail::exception &) override {
+        valid = false;
+        return false;
+    }
+};
+
+std::pair<size_t, size_t> inspect_transforms_json(nb::handle source) {
+    sio::ByteView data(source);
+    TransformsInspectSax sax;
+    {
+        nb::gil_scoped_release rel;
+        sio::guard_json_metadata_tokens(
+            data.data(), data.size(), "transforms.json");
+        if (!json::sax_parse(data.data(), data.data() + data.size(), &sax) ||
+            !sax.valid || !sax.frames_valid || !sax.saw_root ||
+            !sax.saw_frames ||
+            !sax.stack.empty())
+            throw std::invalid_argument("transforms.json: malformed JSON");
+    }
+    const size_t cameras =
+        sax.frame_intrinsics ? sax.views : (sax.top_intrinsics ? 1 : 0);
+    return {sax.views, cameras};
 }
 
 nb::bytes write_transforms_json(const PosedViewSet &views) {
@@ -308,6 +457,8 @@ nb::bytes write_transforms_json(const PosedViewSet &views) {
 }  // namespace
 
 void register_transforms_json(nb::module_ &m) {
+    m.def("_inspect_transforms_json", &inspect_transforms_json, "data"_a,
+          "Return (view_count, camera_count) without constructing pose arrays.");
     m.def("read_transforms_json", &read_transforms_json, "data"_a,
           "Decode transforms.json (NeRF/Instant-NGP/Nerfstudio) bytes into a PosedViewSet.");
     m.def("write_transforms_json", &write_transforms_json, "views"_a,

@@ -68,6 +68,8 @@
 #include <system_error>  // std::errc (from_chars_result::ec)
 #include <unordered_map>
 #include <vector>
+#include <nanobind/stl/pair.h>
+#include <nanobind/stl/tuple.h>
 
 #include "fast_float/fast_float.h"
 #include "records/reconstruction.hpp"
@@ -123,7 +125,12 @@ struct Toks {
         while (p < end && is_ws(*p)) ++p;
         if (p >= end) return false;
         const char *s = p;
-        while (p < end && !is_ws(*p)) ++p;
+        while (p < end && !is_ws(*p)) {
+            if (p - s >= 1024 * 1024)
+                throw std::invalid_argument(
+                    "Bundler: metadata token exceeds 1 MiB");
+            ++p;
+        }
         tok = std::string_view(s, static_cast<size_t>(p - s));
         return true;
     }
@@ -350,6 +357,61 @@ Reconstruction read_bundler(nb::handle source) {
     return r;  // nanobind converts to the Python Reconstruction with the GIL re-held
 }
 
+std::pair<size_t, uint64_t> inspect_bundler(nb::handle source) {
+    sio::ByteView data(source);
+    const char *p = reinterpret_cast<const char *>(data.data());
+    const size_t n = data.size();
+    size_t cameras = 0;
+    uint64_t points = 0;
+    {
+        nb::gil_scoped_release rel;
+        constexpr size_t kSignatureLimit = 256;
+        const size_t search_size = std::min(n, kSignatureLimit + 1);
+        const char *nl = static_cast<const char *>(
+            std::memchr(p, '\n', search_size));
+        if (!nl && n > kSignatureLimit)
+            throw std::invalid_argument(
+                "Bundler: signature line exceeds 256 bytes");
+        size_t hlen = nl ? static_cast<size_t>(nl - p) : n;
+        if (hlen && p[hlen - 1] == '\r') --hlen;
+        while (hlen &&
+               (p[hlen - 1] == ' ' || p[hlen - 1] == '\t'))
+            --hlen;
+        if (std::string_view(p, hlen) != "# Bundle file v0.3")
+            throw std::invalid_argument(
+                "Bundler: missing '# Bundle file v0.3' header");
+        Toks tokens{nl ? nl + 1 : p + n, p + n};
+        const uint64_t declared = uint_<uint64_t>(
+            tokens.require("num_cameras"), "num_cameras");
+        points = uint_<uint64_t>(
+            tokens.require("num_points"), "num_points");
+        if (declared > 0xFFFFFFFEull)
+            throw std::invalid_argument(
+                "Bundler: declared camera count is too large");
+        if (declared > n / 29 + 1 || points > n / 13 + 1)
+            throw std::invalid_argument(
+                "Bundler: declared counts exceed file size");
+        for (uint64_t i = 0; i < declared; ++i) {
+            double values[15];
+            for (double &value : values)
+                value = f64(tokens.require("camera field"),
+                            "camera field");
+            bool all_zero = true;
+            for (double value : values)
+                if (value != 0.0) {
+                    all_zero = false;
+                    break;
+                }
+            if (all_zero) continue;
+            if (values[0] == 0.0)
+                throw std::invalid_argument(
+                    "Bundler: registered camera has zero focal length");
+            ++cameras;
+        }
+    }
+    return {cameras, points};
+}
+
 // ============================ WRITER =======================================
 // Resolve a COLMAP Camera to Bundler intrinsics (f, k1, k2) + its principal
 // point (cx, cy). Refuses a record it cannot represent rather than silently
@@ -482,6 +544,8 @@ nb::bytes write_bundler(const Reconstruction &r) {
 }  // namespace
 
 void register_bundler(nb::module_ &m) {
+    m.def("_inspect_bundler", &inspect_bundler, "data"_a,
+          "Return (registered_camera_count, point_count) without decoding records.");
     m.def("read_bundler", &read_bundler, "data"_a,
           "Decode Bundler v0.3 `.out` bytes into a Reconstruction (WXYZ quaternions, "
           "world_to_camera). Bundler poses are world->camera in an OpenGL-style camera frame "

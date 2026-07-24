@@ -40,6 +40,7 @@ class Codec:
     ] = ()  # exact filenames that identify the format (e.g. transforms.json)
     is_directory: bool = False  # reads/writes a directory (e.g. COLMAP)
     dir_marker: str = "cameras.bin"  # the file whose presence identifies a directory format
+    inspect: Callable[[str], object] | None = None  # optional metadata-only extension hook
 
 
 REGISTRY: dict[str, Codec] = {}

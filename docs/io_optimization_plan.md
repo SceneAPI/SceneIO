@@ -247,7 +247,7 @@ mmap/file-sink traced-allocation bounds.
 
 ---
 
-## Phase O5 — Partial / lazy reads (new API)
+## Phase O5 — Partial / lazy reads (in progress: inspection complete)
 
 New public surface, applied to every format for which it's meaningful:
 - header-only `inspect(path)` → dims/count/dtype/channels without a full decode
@@ -258,6 +258,29 @@ New public surface, applied to every format for which it's meaningful:
 **Testing:** partial read equals the slice of the full read; `inspect` matches the
 decoded record's shape/dtype. **Verify:** header-only/partial peak-memory and
 latency vs the full read.
+
+**Inspection landed:** `sceneio.inspect(path, format=None)` covers all 23 codecs
+and returns frozen `Inspection` / `ArrayInspection` metadata. Binary codecs read
+only public headers (NPZ decompresses member headers only; legacy SPZ inflates
+its 16-byte prefix), while headerless text is streamed. XYZ, transforms.json,
+OpenMVG, and COLMAP text use small GIL-released compiled metadata paths so the
+probe does not create Python-sized mirrors of the file. The all-codec
+differential compares shape/dtype/counts with a full decode, a generated 128 MiB
+NPY fixture holds peak Python allocation below 256 KiB, fresh-process RSS bounds
+cover large NPY/XYZ/COLMAP, valid/malformed JSON, and capped text-token/line
+scanners, and format-specific malformed/truncated header matrices normalize to
+`FormatError`. JSON scene metadata uses bounded SAX passes rather than a
+document DOM. The benchmark times operations without tracemalloc, measures
+traced allocation separately, and records sampled RSS beside full reads; CI
+directionally guards latency, traced allocation, and RSS on the stable large
+binary rows. Transforms/OpenMVG full-read latency also has a coarse
+full-read/SAX ratio sanity bound, which catches severe decode-path regressions
+rather than allowing a much slower denominator to inflate the inspection gain;
+the committed five-run baseline remains the historical control for smaller
+timing movement.
+
+Pixel windows, point subsets, and single-image COLMAP reads remain the next O5
+unit.
 
 ---
 

@@ -111,16 +111,27 @@ def test_write_unsupported_extension_raises(tmp_path):
 
 
 def test_write_to_read_only_format_raises(tmp_path):
-    # a codec with write=None rejects an explicit write() cleanly.
+    # A codec with write=None rejects writes, while its optional third-party
+    # inspection hook participates in the public metadata API.
     from sceneio.io import registry
 
+    expected = sceneio.Inspection(
+        "ro_test", "depth_map", 0, shape=(2, 3), dtype="float32"
+    )
     ro = registry.Codec(
-        "ro_test", (".rotest",), lambda p: None, None, record=None, datatype="depth_map"
+        "ro_test",
+        (".rotest",),
+        lambda p: None,
+        None,
+        record=None,
+        datatype="depth_map",
+        inspect=lambda path: expected,
     )
     registry.REGISTRY["ro_test"] = ro
     try:
         with pytest.raises(sceneio.FormatError, match="read-only"):
             sceneio.write(object(), tmp_path / "x.rotest", format="ro_test")
+        assert sceneio.inspect(tmp_path / "x.rotest", format="ro_test") == expected
     finally:
         del registry.REGISTRY["ro_test"]
 

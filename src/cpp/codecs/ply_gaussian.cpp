@@ -50,6 +50,9 @@ GaussianCloud read_gaussian_ply(nb::handle source) {
         std::string s;
         while (hp < n && p[hp] != '\n') {
             if (p[hp] != '\r') s.push_back(static_cast<char>(p[hp]));
+            if (s.size() > 4096)
+                throw std::invalid_argument(
+                    "PLY: header line exceeds 4096 bytes");
             hp++;
         }
         if (hp < n) hp++;

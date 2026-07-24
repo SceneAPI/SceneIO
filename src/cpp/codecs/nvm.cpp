@@ -74,6 +74,7 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
+#include <nanobind/stl/pair.h>
 #include <string>
 #include <string_view>
 #include <system_error>  // std::errc (from_chars_result::ec)
@@ -113,7 +114,12 @@ struct Toks {
         while (p < end && is_ws(*p)) ++p;
         if (p >= end) return false;
         const char *s = p;
-        while (p < end && !is_ws(*p)) ++p;
+        while (p < end && !is_ws(*p)) {
+            if (p - s >= 1024 * 1024)
+                throw std::invalid_argument(
+                    "NVM: metadata token exceeds 1 MiB");
+            ++p;
+        }
         tok = std::string_view(s, static_cast<size_t>(p - s));
         return true;
     }
@@ -510,6 +516,35 @@ Reconstruction read_nvm(nb::handle source) {
     return r;  // nanobind converts to the Python Reconstruction with the GIL re-held
 }
 
+std::pair<size_t, size_t> inspect_nvm(nb::handle source) {
+    sio::ByteView data(source);
+    const char *p = reinterpret_cast<const char *>(data.data());
+    const size_t n = data.size();
+    uint64_t cameras = 0;
+    uint64_t points = 0;
+    {
+        nb::gil_scoped_release rel;
+        Toks toks{p, p + n};
+        if (toks.require("NVM_V3 header") != "NVM_V3")
+            throw std::invalid_argument("NVM: bad header");
+        cameras =
+            parse_uint<uint64_t>(toks.require("camera count"), "camera count");
+        if (cameras >= 0xFFFFFFFFULL)
+            throw std::invalid_argument("NVM: camera count too large");
+        for (uint64_t i = 0; i < cameras; ++i) {
+            const std::string_view name = toks.require("camera name");
+            if (!valid_utf8(name))
+                throw std::invalid_argument(
+                    "NVM: camera name is not valid UTF-8");
+            for (int field = 0; field < 10; ++field)
+                toks.require("camera field");
+        }
+        points =
+            parse_uint<uint64_t>(toks.require("point count"), "point count");
+    }
+    return {static_cast<size_t>(cameras), static_cast<size_t>(points)};
+}
+
 nb::bytes write_nvm(const Reconstruction &r) {
     std::string out;
     {
@@ -531,6 +566,8 @@ void register_nvm(nb::module_ &m) {
           "(no NVM field); ids are synthesized 1-based; NVM feature indices are re-based to compact "
           "per-image observation indices. NVM_V3_R9T, FixedK, and true multi-model files are refused; "
           "a trailing unregistered-images model and the PLY section are ignored.");
+    m.def("_inspect_nvm", &inspect_nvm, "data"_a,
+          "Inspect VisualSFM NVM_V3 camera and point counts without decoding.");
     m.def("write_nvm", &write_nvm, "recon"_a,
           "Encode a Reconstruction as VisualSFM NVM_V3 bytes (%.17g doubles, LF endings, camera "
           "center C = -R^T*t). Guards a record NVM cannot represent rather than mislabeling it: "

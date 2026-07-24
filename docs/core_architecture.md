@@ -8,8 +8,9 @@ things that keep this expansible as the format list from
 
 ```
 sceneio (Python)                     public, stable surface
-  read() / write() / detect()        format-dispatched I/O
-  io.registry                        one entry per format (ext · magic · reader · writer · record · datatype)
+  read() / write() / inspect()       format-dispatched I/O + metadata-only probes
+  detect()
+  io.registry                        one entry per format (ext · magic · reader · writer · optional inspector)
   Reconstruction, GaussianCloud, …   re-exported record types
   errors                             C++ faults mapped to SceneIO exceptions
         │  (thin wrappers over)
@@ -32,8 +33,9 @@ sceneio._core (C++ / nanobind)
   and `write_<fmt>(Record) -> bytes|path`. It depends on `records/` and
   `io/`, never on another codec.
 - The **Python `io` layer** is the UX + extensibility seam: a registry maps
-  a format id to its extensions, magic sniff, reader, writer, record type,
-  and DataType; `read()`/`write()`/`detect()` dispatch through it and map
+  a format id to its extensions, magic sniff, reader, writer, optional
+  third-party inspector, record type,
+  and DataType; `read()`/`write()`/`inspect()`/`detect()` dispatch through it and map
   errors. Adding a format touches the registry in exactly one place.
 
 ## Conventions are data, not comments
@@ -57,10 +59,36 @@ exposes them:
    codecs) and the source to `CMakeLists.txt`.
 4. **Register in Python** — one `Codec(...)` entry in `sceneio/io/registry.py`
    (id, extensions, magic bytes, reader, writer, record, datatype).
-5. **Parity test** — `tests/codecs/test_<fmt>.py` using
+5. **Inspect metadata** — add the built-in parser and `inspect_path()` dispatch
+   branch, or provide the optional `Codec.inspect` hook for a third-party
+   codec. Match the reader's supported header grammar and return an
+   `Inspection`.
+6. **Parity test** — `tests/codecs/test_<fmt>.py` using
    `sceneio.testing.assert_codec_parity(...)` against the reference oracle
    (pycolmap / gsply / plyfile / imageio / …). Cover: cross-impl equality,
    round-trip identity, a convention pin, and numpy↔torch.
 
-Everything else — dispatch, error mapping, `read()`/`write()`,
-DataType binding — is handled by the layer and needs no per-codec code.
+Everything else — dispatch, error mapping, public API wiring, and DataType
+binding — is handled by the layer.
+
+## Metadata-only inspection
+
+`sceneio.inspect(path, format=None)` returns a frozen `Inspection`:
+
+- `shape`, `dtype`, and `channels` describe the primary decoded array;
+- `count` describes repeated points, Gaussians, views/images, or tensors;
+- `arrays` carries per-member shape/dtype for NPZ;
+- `metadata` is a read-only mapping for scalar details such as reconstruction
+  camera/image/point counts, SH degree, LAS point format, or Netpbm maxval;
+- `byte_size` is the encoded file or directory size.
+
+Binary formats stop at their public headers. NPY/NPZ read only array headers,
+legacy gzip SPZ inflates only its 16-byte metadata prefix, and COLMAP binary
+reads the three leading counts. Headerless text formats stream their records;
+XYZ and COLMAP text use GIL-released compiled scans. The JSON scene formats use
+bounded nlohmann SAX passes and do not construct a document DOM or record
+arrays; individual metadata tokens are capped at 1 MiB and JSON nesting at 256
+levels. Bounded text scanners enforce their line/token limit before searching
+farther into the mapping, so malformed no-newline inputs do not fault the whole
+file into RSS. Inspection reports structural metadata and is not a substitute
+for decoding and validating every payload sample.

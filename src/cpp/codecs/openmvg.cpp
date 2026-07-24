@@ -69,6 +69,7 @@
 // ValueError too, and every integer field goes through a range-checked helper
 // (nlohmann's get<unsigned> silently wraps negatives).
 #include <nlohmann/json.hpp>
+#include <nanobind/stl/tuple.h>
 
 #include <cmath>
 #include <cstdint>
@@ -78,6 +79,7 @@
 #include <unordered_set>
 #include <vector>
 
+#include "io/json_metadata_guard.hpp"
 #include "records/reconstruction.hpp"
 
 using namespace nb::literals;
@@ -258,6 +260,8 @@ struct PoseQT {
 
 void parse_sfm(const char *p, size_t n, Reconstruction &r) {
     try {
+        sio::guard_json_metadata_tokens(
+            reinterpret_cast<const uint8_t *>(p), n, "OpenMVG");
         const json d = json::parse(p, p + n);
         if (!d.is_object()) bad("root must be a JSON object");
 
@@ -442,6 +446,675 @@ Reconstruction read_openmvg(nb::handle source) {
         parse_sfm(p, n, r);
     }
     return r;  // nanobind converts to the Python Reconstruction with the GIL re-held
+}
+
+struct OpenMvgInspectSax : nlohmann::json_sax<json> {
+    enum class Section { None, Views, Intrinsics, Extrinsics, Structure };
+    enum class Role {
+        Other,
+        Root,
+        SectionArray,
+        Entry,
+        Value,
+        PtrWrapper,
+        ViewData,
+        ObservationsArray,
+        ObservationEntry,
+    };
+    enum class Key {
+        Other,
+        Views,
+        Intrinsics,
+        Extrinsics,
+        Structure,
+        EntryKey,
+        Value,
+        PtrWrapper,
+        Data,
+        IdIntrinsic,
+        IdPose,
+        Observations,
+        ObservationKey,
+    };
+    struct Node {
+        bool object = false;
+        Section section = Section::None;
+        Role role = Role::Other;
+        Key pending = Key::Other;
+        bool have_entry_key = false;
+        uint64_t entry_key = 0;
+        bool saw_value = false;
+        bool value_object = false;
+        bool value_valid = true;
+        bool saw_ptr_wrapper = false;
+        bool ptr_wrapper_object = false;
+        bool ptr_wrapper_valid = true;
+        bool saw_data = false;
+        bool data_object = false;
+        bool data_valid = true;
+        bool saw_view_data = false;
+        bool posed_view = false;
+        bool have_intrinsic = false;
+        bool have_pose = false;
+        uint32_t intrinsic = 0;
+        uint32_t pose = 0;
+        bool saw_observations = false;
+        bool observations_array = false;
+        bool observations_valid = true;
+        bool have_observation_key = false;
+        uint32_t observation_key = 0;
+    };
+
+    std::vector<Node> stack;
+    std::unordered_set<uint32_t> *intrinsic_output = nullptr;
+    std::unordered_set<uint32_t> *pose_output = nullptr;
+    std::unordered_set<uint32_t> *view_output = nullptr;
+    std::unordered_set<uint64_t> *point_output = nullptr;
+    const std::unordered_set<uint32_t> *known_intrinsics = nullptr;
+    const std::unordered_set<uint32_t> *known_poses = nullptr;
+    const std::unordered_set<uint32_t> *known_views = nullptr;
+    size_t cameras = 0;
+    size_t images = 0;
+    size_t points = 0;
+    bool saw_root = false;
+    bool saw_views = false;
+    bool saw_intrinsics = false;
+    bool saw_extrinsics = false;
+    bool views_valid = true;
+    bool intrinsics_valid = true;
+    bool extrinsics_valid = true;
+    bool structure_valid = true;
+    bool valid = true;
+
+    OpenMvgInspectSax(
+        std::unordered_set<uint32_t> *intrinsic_ids,
+        std::unordered_set<uint32_t> *pose_ids,
+        std::unordered_set<uint32_t> *view_ids,
+        std::unordered_set<uint64_t> *point_ids,
+        const std::unordered_set<uint32_t> *known_intrinsic_ids,
+        const std::unordered_set<uint32_t> *known_pose_ids,
+        const std::unordered_set<uint32_t> *known_view_ids)
+        : intrinsic_output(intrinsic_ids),
+          pose_output(pose_ids),
+          view_output(view_ids),
+          point_output(point_ids),
+          known_intrinsics(known_intrinsic_ids),
+          known_poses(known_pose_ids),
+          known_views(known_view_ids) {}
+
+    bool &section_valid(Section section) {
+        if (section == Section::Views) return views_valid;
+        if (section == Section::Intrinsics) return intrinsics_valid;
+        if (section == Section::Extrinsics) return extrinsics_valid;
+        return structure_valid;
+    }
+
+    void invalidate(Section section) {
+        if (section == Section::None)
+            valid = false;
+        else
+            section_valid(section) = false;
+    }
+
+    void reset_section(Section section) {
+        section_valid(section) = true;
+        if (section == Section::Views) {
+            images = 0;
+            saw_views = false;
+            if (view_output) view_output->clear();
+        } else if (section == Section::Intrinsics) {
+            cameras = 0;
+            saw_intrinsics = false;
+            if (intrinsic_output) intrinsic_output->clear();
+        } else if (section == Section::Extrinsics) {
+            saw_extrinsics = false;
+            if (pose_output) pose_output->clear();
+        } else if (section == Section::Structure) {
+            points = 0;
+            if (point_output) point_output->clear();
+        }
+    }
+
+    static Section section_for_key(Key key) {
+        if (key == Key::Views) return Section::Views;
+        if (key == Key::Intrinsics) return Section::Intrinsics;
+        if (key == Key::Extrinsics) return Section::Extrinsics;
+        if (key == Key::Structure) return Section::Structure;
+        return Section::None;
+    }
+
+    void mark_view_data() {
+        for (auto it = stack.rbegin(); it != stack.rend(); ++it) {
+            if (it->role == Role::Entry &&
+                it->section == Section::Views) {
+                it->saw_view_data = true;
+                return;
+            }
+        }
+        valid = false;
+    }
+
+    void reset_view_data() {
+        for (auto it = stack.rbegin(); it != stack.rend(); ++it) {
+            if (it->role == Role::Entry &&
+                it->section == Section::Views) {
+                it->saw_view_data = false;
+                it->posed_view = false;
+                return;
+            }
+        }
+    }
+
+    void mark_posed_view() {
+        for (auto it = stack.rbegin(); it != stack.rend(); ++it) {
+            if (it->role == Role::Entry &&
+                it->section == Section::Views) {
+                it->posed_view = true;
+                return;
+            }
+        }
+        valid = false;
+    }
+
+    void invalidate_entry_value() {
+        for (auto it = stack.rbegin(); it != stack.rend(); ++it) {
+            if (it->role == Role::Entry) {
+                it->value_valid = false;
+                return;
+            }
+        }
+        invalidate(Section::None);
+    }
+
+    void invalidate_ptr_wrapper() {
+        for (auto it = stack.rbegin(); it != stack.rend(); ++it) {
+            if (it->role == Role::Value) {
+                it->ptr_wrapper_valid = false;
+                return;
+            }
+        }
+        invalidate(Section::None);
+    }
+
+    void invalidate_ptr_data() {
+        for (auto it = stack.rbegin(); it != stack.rend(); ++it) {
+            if (it->role == Role::PtrWrapper) {
+                it->data_valid = false;
+                return;
+            }
+        }
+        invalidate(Section::None);
+    }
+
+    void invalidate_observations() {
+        for (auto it = stack.rbegin(); it != stack.rend(); ++it) {
+            if (it->role == Role::Value &&
+                it->section == Section::Structure) {
+                it->observations_valid = false;
+                return;
+            }
+        }
+        invalidate(Section::None);
+    }
+
+    bool consume_integer(uint64_t value, bool negative = false) {
+        if (stack.empty()) {
+            valid = false;
+            return true;
+        }
+        Node &node = stack.back();
+        if (node.role == Role::SectionArray) {
+            invalidate(node.section);
+        } else if (node.role == Role::ObservationsArray) {
+            invalidate_observations();
+        } else if (node.role == Role::Entry &&
+                   node.pending == Key::EntryKey) {
+            const uint64_t limit = node.section == Section::Structure
+                                       ? static_cast<uint64_t>(INT64_MAX)
+                                       : static_cast<uint64_t>(UINT32_MAX);
+            if (negative || node.section == Section::None || value > limit) {
+                node.have_entry_key = false;
+            } else {
+                node.have_entry_key = true;
+                node.entry_key = value;
+            }
+        } else if (node.role == Role::ViewData &&
+                   (node.pending == Key::IdIntrinsic ||
+                    node.pending == Key::IdPose)) {
+            if (negative || value > UINT32_MAX) {
+                if (node.pending == Key::IdIntrinsic)
+                    node.have_intrinsic = false;
+                else
+                    node.have_pose = false;
+            } else if (node.pending == Key::IdIntrinsic) {
+                node.have_intrinsic = true;
+                node.intrinsic = static_cast<uint32_t>(value);
+            } else {
+                node.have_pose = true;
+                node.pose = static_cast<uint32_t>(value);
+            }
+        } else if (node.role == Role::ObservationEntry &&
+                   node.pending == Key::ObservationKey) {
+            if (negative || value > UINT32_MAX) {
+                node.have_observation_key = false;
+            } else {
+                node.have_observation_key = true;
+                node.observation_key = static_cast<uint32_t>(value);
+            }
+        } else if (node.role == Role::Root &&
+                   node.pending != Key::Other) {
+            invalidate(section_for_key(node.pending));
+        }
+        node.pending = Key::Other;
+        return true;
+    }
+
+    bool consume_noninteger(bool is_null = false) {
+        if (stack.empty()) {
+            valid = false;
+            return true;
+        }
+        Node &node = stack.back();
+        if (node.role == Role::Root &&
+            node.pending == Key::Structure && is_null) {
+            node.pending = Key::Other;
+            return true;
+        }
+        if (node.role == Role::SectionArray) {
+            invalidate(node.section);
+        } else if (node.role == Role::ObservationsArray) {
+            invalidate_observations();
+        } else if (node.role == Role::Entry &&
+                   node.pending == Key::EntryKey) {
+            node.have_entry_key = false;
+        } else if (node.role == Role::ViewData &&
+                   node.pending == Key::IdIntrinsic) {
+            node.have_intrinsic = false;
+        } else if (node.role == Role::ViewData &&
+                   node.pending == Key::IdPose) {
+            node.have_pose = false;
+        } else if (node.role == Role::ObservationEntry &&
+                   node.pending == Key::ObservationKey) {
+            node.have_observation_key = false;
+        } else if (node.role == Role::Root &&
+                   node.pending != Key::Other) {
+            invalidate(section_for_key(node.pending));
+        } else if (
+            (node.role == Role::Entry &&
+             node.pending == Key::Value) ||
+            (node.role == Role::Value &&
+             node.pending == Key::PtrWrapper) ||
+            (node.role == Role::PtrWrapper &&
+             node.pending == Key::Data)) {
+            if (node.role == Role::Entry) {
+                node.saw_value = true;
+                node.value_object = false;
+            } else if (node.role == Role::Value) {
+                node.saw_ptr_wrapper = true;
+                node.ptr_wrapper_object = false;
+            } else {
+                node.saw_data = true;
+                node.data_object = false;
+            }
+        } else if (node.role == Role::Value &&
+                   node.pending == Key::Observations) {
+            node.saw_observations = true;
+            node.observations_array = false;
+        }
+        node.pending = Key::Other;
+        return true;
+    }
+
+    bool null() override { return consume_noninteger(true); }
+    bool boolean(bool) override { return consume_noninteger(); }
+    bool number_integer(number_integer_t value) override {
+        return value < 0
+                   ? consume_integer(
+                         static_cast<uint64_t>(-(value + 1)) + 1, true)
+                   : consume_integer(static_cast<uint64_t>(value));
+    }
+    bool number_unsigned(number_unsigned_t value) override {
+        return consume_integer(static_cast<uint64_t>(value));
+    }
+    bool number_float(number_float_t, const string_t &) override {
+        return consume_noninteger();
+    }
+    bool string(string_t &) override { return consume_noninteger(); }
+    bool binary(binary_t &) override { return consume_noninteger(); }
+
+    bool start_object(std::size_t) override {
+        Node node;
+        node.object = true;
+        if (stack.empty()) {
+            node.role = Role::Root;
+            if (saw_root) valid = false;
+            saw_root = true;
+        } else {
+            Node &parent = stack.back();
+            node.section = parent.section;
+            if (parent.role == Role::ObservationsArray) {
+                node.role = Role::ObservationEntry;
+            } else if (parent.role == Role::SectionArray) {
+                node.role = Role::Entry;
+            } else if (parent.role == Role::Entry &&
+                       parent.pending == Key::Value) {
+                node.role = Role::Value;
+                parent.saw_value = true;
+                parent.value_object = true;
+            } else if (parent.role == Role::Value &&
+                       parent.pending == Key::PtrWrapper) {
+                node.role = Role::PtrWrapper;
+                parent.saw_ptr_wrapper = true;
+                parent.ptr_wrapper_object = true;
+            } else if (parent.role == Role::PtrWrapper &&
+                       parent.pending == Key::Data) {
+                parent.saw_data = true;
+                parent.data_object = true;
+                if (parent.section == Section::Views) {
+                    node.role = Role::ViewData;
+                    mark_view_data();
+                }
+            }
+            if (parent.role == Role::Entry &&
+                parent.pending == Key::EntryKey)
+                parent.have_entry_key = false;
+            if (parent.role == Role::ViewData &&
+                parent.pending == Key::IdIntrinsic)
+                parent.have_intrinsic = false;
+            if (parent.role == Role::ViewData &&
+                parent.pending == Key::IdPose)
+                parent.have_pose = false;
+            if (parent.role == Role::ObservationEntry &&
+                parent.pending == Key::ObservationKey)
+                parent.have_observation_key = false;
+            if (parent.role == Role::Value &&
+                parent.pending == Key::Observations) {
+                parent.saw_observations = true;
+                parent.observations_array = false;
+            }
+            if (parent.role == Role::Root &&
+                parent.pending != Key::Other)
+                invalidate(section_for_key(parent.pending));
+            parent.pending = Key::Other;
+        }
+        stack.push_back(node);
+        return true;
+    }
+
+    bool key(string_t &value) override {
+        if (stack.empty() || !stack.back().object) {
+            valid = false;
+            return true;
+        }
+        Node &node = stack.back();
+        node.pending = Key::Other;
+        if (node.role == Role::Root) {
+            if (value == "views") {
+                reset_section(Section::Views);
+                node.pending = Key::Views;
+            } else if (value == "intrinsics") {
+                reset_section(Section::Intrinsics);
+                node.pending = Key::Intrinsics;
+            } else if (value == "extrinsics") {
+                reset_section(Section::Extrinsics);
+                node.pending = Key::Extrinsics;
+            } else if (value == "structure") {
+                reset_section(Section::Structure);
+                node.pending = Key::Structure;
+            }
+        } else if (node.role == Role::Entry) {
+            if (value == "key") node.pending = Key::EntryKey;
+            else if (value == "value") {
+                node.pending = Key::Value;
+                node.saw_value = false;
+                node.value_object = false;
+                node.value_valid = true;
+                if (node.section == Section::Views) {
+                    node.saw_view_data = false;
+                    node.posed_view = false;
+                }
+            }
+        } else if (node.role == Role::Value &&
+                   value == "ptr_wrapper") {
+            if (node.section == Section::Views) reset_view_data();
+            node.saw_ptr_wrapper = false;
+            node.ptr_wrapper_object = false;
+            node.ptr_wrapper_valid = true;
+            node.pending = Key::PtrWrapper;
+        } else if (node.role == Role::Value &&
+                   node.section == Section::Structure &&
+                   value == "observations") {
+            node.saw_observations = false;
+            node.observations_array = false;
+            node.observations_valid = true;
+            node.pending = Key::Observations;
+        } else if (node.role == Role::PtrWrapper && value == "data") {
+            node.pending = Key::Data;
+            node.saw_data = false;
+            node.data_object = false;
+            node.data_valid = true;
+            if (node.section == Section::Views) reset_view_data();
+        } else if (node.role == Role::ViewData) {
+            if (value == "id_intrinsic") {
+                node.have_intrinsic = false;
+                node.pending = Key::IdIntrinsic;
+            } else if (value == "id_pose") {
+                node.have_pose = false;
+                node.pending = Key::IdPose;
+            }
+        } else if (node.role == Role::ObservationEntry &&
+                   value == "key") {
+            node.have_observation_key = false;
+            node.pending = Key::ObservationKey;
+        }
+        return true;
+    }
+
+    bool end_object() override {
+        if (stack.empty() || !stack.back().object) {
+            valid = false;
+            return true;
+        }
+        const Node node = stack.back();
+        if (node.role == Role::ViewData) {
+            if (!node.have_intrinsic || !node.have_pose) {
+                invalidate_ptr_data();
+            } else if (known_poses &&
+                       known_intrinsics &&
+                       node.intrinsic != UINT32_MAX &&
+                       known_poses->count(node.pose)) {
+                if (!known_intrinsics->count(node.intrinsic))
+                    invalidate_ptr_data();
+                else
+                    mark_posed_view();
+            }
+        }
+        if (node.role == Role::Value &&
+            (node.section == Section::Views ||
+             node.section == Section::Intrinsics) &&
+            (!node.saw_ptr_wrapper || !node.ptr_wrapper_object ||
+             !node.ptr_wrapper_valid))
+            invalidate_entry_value();
+        if (node.role == Role::Value &&
+            node.section == Section::Structure &&
+            (!node.saw_observations || !node.observations_array ||
+             !node.observations_valid))
+            invalidate_entry_value();
+        if (node.role == Role::PtrWrapper &&
+            (node.section == Section::Views ||
+             node.section == Section::Intrinsics) &&
+            (!node.saw_data || !node.data_object || !node.data_valid))
+            invalidate_ptr_wrapper();
+        if (node.role == Role::ObservationEntry &&
+            (!node.have_observation_key ||
+             (known_views &&
+              !known_views->count(node.observation_key))))
+            invalidate_observations();
+        if (node.role == Role::Entry) {
+            if (!node.have_entry_key)
+                invalidate(node.section);
+            if (!node.saw_value || !node.value_object)
+                invalidate(node.section);
+            if (!node.value_valid)
+                invalidate(node.section);
+            if (node.section == Section::Views) {
+                if (!node.saw_view_data) {
+                    invalidate(node.section);
+                } else if (node.posed_view) {
+                    if (view_output &&
+                        !view_output
+                             ->insert(static_cast<uint32_t>(node.entry_key))
+                             .second)
+                        invalidate(node.section);
+                    ++images;
+                }
+            } else if (node.section == Section::Intrinsics) {
+                if (intrinsic_output &&
+                    !intrinsic_output
+                         ->insert(static_cast<uint32_t>(node.entry_key))
+                         .second)
+                    invalidate(node.section);
+                ++cameras;
+            } else if (node.section == Section::Extrinsics) {
+                if (pose_output &&
+                    !pose_output
+                         ->insert(static_cast<uint32_t>(node.entry_key))
+                         .second)
+                    invalidate(node.section);
+            } else if (node.section == Section::Structure) {
+                if (point_output &&
+                    !point_output->insert(node.entry_key).second)
+                    invalidate(node.section);
+                ++points;
+            }
+        }
+        stack.pop_back();
+        return true;
+    }
+
+    bool start_array(std::size_t) override {
+        Node node;
+        if (stack.empty()) {
+            valid = false;
+        } else {
+            Node &parent = stack.back();
+            if (parent.role == Role::Root) {
+                if (parent.pending == Key::Views) {
+                    node.section = Section::Views;
+                    node.role = Role::SectionArray;
+                    saw_views = true;
+                } else if (parent.pending == Key::Intrinsics) {
+                    node.section = Section::Intrinsics;
+                    node.role = Role::SectionArray;
+                    saw_intrinsics = true;
+                } else if (parent.pending == Key::Extrinsics) {
+                    node.section = Section::Extrinsics;
+                    node.role = Role::SectionArray;
+                    saw_extrinsics = true;
+                } else if (parent.pending == Key::Structure) {
+                    node.section = Section::Structure;
+                    node.role = Role::SectionArray;
+                }
+            } else if (parent.role == Role::Value &&
+                       parent.section == Section::Structure &&
+                       parent.pending == Key::Observations) {
+                node.section = Section::Structure;
+                node.role = Role::ObservationsArray;
+                parent.saw_observations = true;
+                parent.observations_array = true;
+            } else if (parent.role == Role::SectionArray) {
+                invalidate(parent.section);
+                node.section = parent.section;
+            } else if (parent.role == Role::ObservationsArray) {
+                invalidate_observations();
+                node.section = parent.section;
+            }
+            if (parent.role == Role::Entry &&
+                parent.pending == Key::Value) {
+                parent.saw_value = true;
+                parent.value_object = false;
+            } else if (parent.role == Role::Value &&
+                       parent.pending == Key::PtrWrapper) {
+                parent.saw_ptr_wrapper = true;
+                parent.ptr_wrapper_object = false;
+            } else if (parent.role == Role::PtrWrapper &&
+                       parent.pending == Key::Data) {
+                parent.saw_data = true;
+                parent.data_object = false;
+            }
+            if (parent.role == Role::Entry &&
+                parent.pending == Key::EntryKey)
+                parent.have_entry_key = false;
+            if (parent.role == Role::ViewData &&
+                parent.pending == Key::IdIntrinsic)
+                parent.have_intrinsic = false;
+            if (parent.role == Role::ViewData &&
+                parent.pending == Key::IdPose)
+                parent.have_pose = false;
+            if (parent.role == Role::ObservationEntry &&
+                parent.pending == Key::ObservationKey)
+                parent.have_observation_key = false;
+            parent.pending = Key::Other;
+        }
+        stack.push_back(node);
+        return true;
+    }
+
+    bool end_array() override {
+        if (stack.empty() || stack.back().object) {
+            valid = false;
+        } else {
+            stack.pop_back();
+        }
+        return true;
+    }
+
+    bool parse_error(std::size_t, const std::string &,
+                     const nlohmann::detail::exception &) override {
+        valid = false;
+        return false;
+    }
+};
+
+void require_valid_openmvg_inspection(const OpenMvgInspectSax &sax,
+                                      bool parsed) {
+    if (!parsed || !sax.valid || !sax.saw_root || !sax.saw_views ||
+        !sax.saw_intrinsics || !sax.saw_extrinsics ||
+        !sax.views_valid || !sax.intrinsics_valid ||
+        !sax.extrinsics_valid || !sax.structure_valid ||
+        !sax.stack.empty())
+        bad("malformed metadata JSON");
+}
+
+std::tuple<size_t, size_t, size_t> inspect_openmvg(nb::handle source) {
+    sio::ByteView data(source);
+    std::unordered_set<uint32_t> intrinsic_ids;
+    std::unordered_set<uint32_t> pose_ids;
+    std::unordered_set<uint32_t> view_ids;
+    std::unordered_set<uint64_t> point_ids;
+    OpenMvgInspectSax first(
+        &intrinsic_ids, &pose_ids, nullptr, &point_ids, nullptr, nullptr,
+        nullptr);
+    OpenMvgInspectSax second(
+        nullptr, nullptr, &view_ids, nullptr, &intrinsic_ids, &pose_ids,
+        nullptr);
+    OpenMvgInspectSax third(
+        nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, &view_ids);
+    {
+        nb::gil_scoped_release rel;
+        sio::guard_json_metadata_tokens(
+            data.data(), data.size(), "OpenMVG");
+        const bool parsed_first = json::sax_parse(
+            data.data(), data.data() + data.size(), &first);
+        require_valid_openmvg_inspection(first, parsed_first);
+        const bool parsed_second = json::sax_parse(
+            data.data(), data.data() + data.size(), &second);
+        require_valid_openmvg_inspection(second, parsed_second);
+        const bool parsed_third = json::sax_parse(
+            data.data(), data.data() + data.size(), &third);
+        require_valid_openmvg_inspection(third, parsed_third);
+    }
+    return {first.cameras, second.images, first.points};
 }
 
 // --- writer: COLMAP model -> OpenMVG pinhole family ------------------------
@@ -665,6 +1338,9 @@ nb::bytes write_openmvg(const Reconstruction &r) {
 }  // namespace
 
 void register_openmvg(nb::module_ &m) {
+    m.def("_inspect_openmvg", &inspect_openmvg, "data"_a,
+          "Return (camera_count, image_count, point_count) without constructing "
+          "reconstruction arrays.");
     m.def("read_openmvg", &read_openmvg, "data"_a,
           "Decode OpenMVG sfm_data.json bytes into a Reconstruction (WXYZ quaternions, "
           "world_to_camera). Poses are converted from OpenMVG's rotation + world-space camera "

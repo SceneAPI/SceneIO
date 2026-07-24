@@ -92,7 +92,8 @@ ndarray views for native NPY/FLO payloads (PFM row-flips into owned storage) · 
 scheduled 100-case backing-store mutation sweep · ✅ ASan/UBSan/LSan workflow
 (local Linux green; remote run user-gated) · ⬜ randomized oracle-triangulated
 fuzzing · ✅ direct file-sink writes · ✅ bounded measured-path workers
-(XYZ/LAS/EXR/PNG16/WebP lossless) · ⬜ partial/lazy reads · ⬜ GPU-via-DLPack
+(XYZ/LAS/EXR/PNG16/WebP lossless) · 🟡 partial/lazy reads (`inspect` complete
+for all 23; pixel/point/image subsets pending) · ⬜ GPU-via-DLPack
 (torch-cuda/cupy) · ✅ expanded 23-codec benchmark/oracles.
 
 ## Infrastructure & capabilities
@@ -102,7 +103,7 @@ fuzzing · ✅ direct file-sink writes · ✅ bounded measured-path workers
 | nanobind + scikit‑build‑core build | ✅ | abi3/cp312, `NB_STATIC` |
 | cibuildwheel release path | ✅ | Linux/macOS/Windows; `publish.yml` |
 | CI parity (oracles in CI) | ✅ | gsply + pycolmap; runs on the branch |
-| Codec registry + `read`/`write`/`detect` | ✅ | one‑entry‑per‑format |
+| Codec registry + `read`/`write`/`inspect`/`detect` | ✅ | metadata-only inspection covers all 23 |
 | Zero‑copy numpy + torch (DLPack) | ✅ | validated per codec |
 | Conventions‑as‑metadata + write guards | ✅ | record‑don't‑convert enforced |
 | Parity kit (`sceneio.testing.parity`) | ✅ | cross‑impl + round‑trip + convention pins |

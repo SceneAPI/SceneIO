@@ -23,6 +23,9 @@
 // run with the GIL released; nb::bytes / TensorDict / ndarray objects are only
 // constructed with the GIL held.
 #include <miniz.h>
+#include <nanobind/stl/string.h>
+#include <nanobind/stl/tuple.h>
+#include <nanobind/stl/vector.h>
 
 #include <ctime>
 #include <cstring>
@@ -138,6 +141,8 @@ NpyInfo parse_npy_header(const uint8_t *p, size_t n) {
     } else {
         throw std::invalid_argument("npy: unsupported format version " + std::to_string(major));
     }
+    if (hlen > 1024 * 1024)
+        throw std::invalid_argument("npy: header exceeds 1 MiB");
     if (hlen > n - dict_start)  // n - dict_start is safe (n >= dict_start checked above)
         throw std::invalid_argument("npy: header length runs past end of file");
 
@@ -253,6 +258,26 @@ std::vector<uint8_t> load_npy_payload(const uint8_t *p, size_t n, const NpyInfo 
     }
     if (h.fortran && h.shape.size() >= 2) buf = fortran_to_c(buf, h.shape, h.itemsize);
     return buf;
+}
+
+std::tuple<std::vector<size_t>, std::string, bool> inspect_npy(
+    nb::handle source) {
+    sio::ByteView data(source);
+    const NpyInfo info = parse_npy_header(data.data(), data.size());
+    size_t count = 1;
+    for (size_t dimension : info.shape) {
+        if (dimension != 0 && count > SIZE_MAX / dimension)
+            throw std::invalid_argument(
+                "npy: element count overflows size_t");
+        count *= dimension;
+    }
+    if (count > SIZE_MAX / info.itemsize)
+        throw std::invalid_argument("npy: byte size overflows size_t");
+    return {
+        info.shape,
+        dtype_info(info.tag).name,
+        info.fortran,
+    };
 }
 
 // ---------------------------------------------------------------------------
@@ -416,7 +441,6 @@ TensorDict read_npz(nb::handle source) {
 
         const mz_uint num = mz_zip_reader_get_num_files(&zip);
         for (mz_uint i = 0; i < num; i++) {
-            if (mz_zip_reader_is_file_a_directory(&zip, i)) continue;
             mz_zip_archive_file_stat st;
             if (!mz_zip_reader_file_stat(&zip, i, &st))
                 throw std::invalid_argument("npz: could not read a member header");
@@ -425,6 +449,35 @@ TensorDict read_npz(nb::handle source) {
                 mz_zip_reader_get_filename(&zip, i, filename.data(), filename.size());
             if (filename_size == 0 || filename_size > filename.size())
                 throw std::invalid_argument("npz: could not read a complete member filename");
+            if (st.m_local_header_ofs > n ||
+                n - static_cast<size_t>(st.m_local_header_ofs) < 30)
+                throw std::invalid_argument(
+                    "npz: truncated local member header");
+            const uint8_t *local =
+                p + static_cast<size_t>(st.m_local_header_ofs);
+            if (std::memcmp(local, "PK\003\004", 4) != 0)
+                throw std::invalid_argument(
+                    "npz: malformed local member header");
+            const auto le16 = [](const uint8_t *q) {
+                return static_cast<uint16_t>(
+                    q[0] | (static_cast<uint16_t>(q[1]) << 8));
+            };
+            const uint16_t local_flags = le16(local + 6);
+            const uint16_t local_method = le16(local + 8);
+            const uint16_t local_name_size = le16(local + 26);
+            const size_t local_offset =
+                static_cast<size_t>(st.m_local_header_ofs);
+            if (local_name_size != filename_size - 1 ||
+                n - local_offset - 30 < local_name_size ||
+                std::memcmp(local + 30, filename.data(),
+                            local_name_size) != 0)
+                throw std::invalid_argument(
+                    "npz: local and central member filenames disagree");
+            if (local_flags != st.m_bit_flag ||
+                local_method != st.m_method)
+                throw std::invalid_argument(
+                    "npz: local and central member metadata disagree");
+            if (mz_zip_reader_is_file_a_directory(&zip, i)) continue;
             std::string key(filename.data(), filename_size - 1);
             if (key.find('\0') != std::string::npos)
                 throw std::invalid_argument("npz: member filename contains NUL");
@@ -522,6 +575,8 @@ nb::bytes write_npz(const TensorDict &td, bool compress) {
 }  // namespace
 
 void register_npy_npz(nb::module_ &m) {
+    m.def("_inspect_npy", &inspect_npy, "data"_a,
+          "Return (shape, dtype, fortran_order) from an NPY header.");
     m.def("read_npy", &read_npy, "data"_a,
           "Decode .npy bytes to a native-endian, C-contiguous numpy ndarray (any of the 12 "
           "supported dtypes; '>' payloads are byteswapped and fortran_order is de-permuted).");

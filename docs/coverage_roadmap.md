@@ -71,6 +71,9 @@ green. Don't land a codec that skips a box — file a follow‑up instead.
       tests keep it deterministic.
 - [x] Minimize allocations on measured hot paths: fixed-capacity XYZ blocks,
       pre-sized LAS records, and reused codec scratch buffers.
+- [x] **Metadata-only inspection** for every registered format: binary headers
+      are read directly; headerless text is streamed; no pixel/point/record
+      arrays are constructed.
 
 ### 1.4 Verification gates (per‑format Definition of Done)
 - [ ] All §1.2 tests green **in CI on all 3 platforms** (parity oracles installed).
