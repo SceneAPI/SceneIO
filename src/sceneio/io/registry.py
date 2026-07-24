@@ -41,6 +41,9 @@ class Codec:
     is_directory: bool = False  # reads/writes a directory (e.g. COLMAP)
     dir_marker: str = "cameras.bin"  # the file whose presence identifies a directory format
     inspect: Callable[[str], object] | None = None  # optional metadata-only extension hook
+    read_window: Callable[[str, int, int, int, int], object] | None = None
+    read_points: Callable[[str, int, int], object] | None = None
+    read_image: Callable[[str, int], object] | None = None
 
 
 REGISTRY: dict[str, Codec] = {}
@@ -121,6 +124,23 @@ def _mmap_reader(fn: Callable[[object], object]) -> Callable[[str], object]:
     return read
 
 
+def _mmap_selector_reader(fn: Callable[..., object]) -> Callable[..., object]:
+    """Call a compiled partial decoder over a temporary read-only mapping."""
+
+    def read(path: str, *selector):
+        p = Path(path)
+        with p.open("rb") as stream:
+            try:
+                mapped = mmap.mmap(stream.fileno(), 0, access=mmap.ACCESS_READ)
+            except (OSError, ValueError):
+                stream.seek(0)
+                return fn(stream.read(), *selector)
+            with mapped:
+                return fn(mapped, *selector)
+
+    return read
+
+
 def _mmap_view_reader(
     view_fn: Callable[[object], object],
     fallback_fn: Callable[[object], object],
@@ -161,6 +181,35 @@ def _mmap_view_reader(
                     readonly.release()
                 mapped.close()
                 raise
+
+    return read
+
+
+def _array_window_reader(reader: Callable[[str], object]) -> Callable[..., object]:
+    """Slice a mapped raw raster while retaining its ndarray mapping owner."""
+
+    def read(path: str, row_start: int, row_stop: int, col_start: int, col_stop: int):
+        value = reader(path)
+        if value.ndim < 2:
+            raise ValueError("pixel-window reads require an array with at least two axes")
+        height, width = value.shape[:2]
+        if (
+            row_start < 0
+            or row_start >= row_stop
+            or row_stop > height
+            or col_start < 0
+            or col_start >= col_stop
+            or col_stop > width
+        ):
+            message = (
+                f"window {(row_start, row_stop, col_start, col_stop)!r} "
+                f"is outside raster shape {(height, width)!r}"
+            )
+            # The mapped ndarray owns the mmap. Remove this reference before
+            # raising so a retained traceback cannot pin its Windows file lock.
+            del value
+            raise ValueError(message)
+        return value[row_start:row_stop, col_start:col_stop, ...]
 
     return read
 
@@ -206,6 +255,7 @@ register(
         record=None,
         datatype="depth_map",
         magic=(b"PF", b"Pf"),
+        read_window=_mmap_selector_reader(_core.read_pfm_window),
     )
 )
 register(
@@ -217,6 +267,7 @@ register(
         record=_core.Reconstruction,
         datatype="sparse_model",
         is_directory=True,
+        read_image=_core.read_colmap_sparse_image,
     )
 )
 register(
@@ -228,6 +279,7 @@ register(
         record=_core.GaussianCloud,
         datatype="splat",
         magic=(b"ply",),
+        read_points=_mmap_selector_reader(_core.read_gaussian_ply_points),
     )
 )
 register(
@@ -307,6 +359,7 @@ register(
         record=_core.Image,
         datatype="image",
         magic=(b"P2", b"P3", b"P5", b"P6"),
+        read_window=_mmap_selector_reader(_core.read_netpbm_window),
     )
 )
 # PNG via vendored lodepng -> Image. gray/RGB/RGBA at 8/16-bit + palette; the
@@ -373,6 +426,7 @@ register(
         _file_sink_writer(_core.write_webp),
         record=_core.Image,
         datatype="image",
+        read_window=_mmap_selector_reader(_core.read_webp_window),
     )
 )
 # COLMAP text sparse (cameras.txt/images.txt/points3D.txt) — the text twin of
@@ -387,6 +441,7 @@ register(
         datatype="sparse_model",
         is_directory=True,
         dir_marker="cameras.txt",
+        read_image=_core.read_colmap_txt_image,
     )
 )
 register(
@@ -397,6 +452,7 @@ register(
         _file_sink_writer(_core.write_xyz),
         record=_core.PointCloud,
         datatype="point_cloud",
+        read_points=_mmap_selector_reader(_core.read_xyz_points),
     )
 )
 # ASPRS LAS (hand-parsed binary, no library) -> PointCloud. The "LASF" signature
@@ -410,6 +466,7 @@ register(
         record=_core.PointCloud,
         datatype="point_cloud",
         magic=(b"LASF",),
+        read_points=_mmap_selector_reader(_core.read_las_points),
     )
 )
 register(
@@ -421,6 +478,9 @@ register(
         record=None,
         datatype="flow",
         magic=(b"PIEH",),
+        read_window=_array_window_reader(
+            _mmap_view_reader(_core.read_flo_view, _core.read_flo)
+        ),
     )
 )
 # SfM pose formats -> Reconstruction (convention-converted to WXYZ/world_to_camera).
@@ -467,5 +527,6 @@ register(
         _file_sink_writer(_core.write_splat),
         record=_core.GaussianCloud,
         datatype="splat",
+        read_points=_mmap_selector_reader(_core.read_splat_points),
     )
 )

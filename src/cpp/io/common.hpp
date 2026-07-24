@@ -32,6 +32,17 @@ namespace sio {
 
 constexpr size_t kMaxParallelLanes = 64;
 
+inline size_t checked_half_open_range(size_t start, size_t stop, size_t total,
+                                      const char *what) {
+    if (start >= stop)
+        throw std::invalid_argument(std::string(what) +
+                                    " must be a non-empty half-open range");
+    if (stop > total)
+        throw std::invalid_argument(std::string(what) +
+                                    " exceeds the available extent");
+    return stop - start;
+}
+
 inline size_t parallel_lane_count(size_t count, size_t requested,
                                   size_t min_items_per_lane) {
     if (requested > kMaxParallelLanes)

@@ -34,7 +34,8 @@ void put_native(char *&dst, T value) {
     dst += sizeof(T);
 }
 
-PointCloud read_las(nb::handle source, size_t lanes) {
+PointCloud read_las_impl(nb::handle source, size_t lanes, bool partial,
+                         size_t start, size_t stop) {
     sio::ByteView data(source);
     const uint8_t *buf = data.data();
     const size_t size = data.size();
@@ -89,7 +90,14 @@ PointCloud read_las(nb::handle source, size_t lanes) {
         if (offset_to_points < 227 || need > size)
             throw std::invalid_argument("las: truncated or malformed point data");
 
-        const size_t n = static_cast<size_t>(count);
+        const size_t total = static_cast<size_t>(count);
+        if (!partial) {
+            start = 0;
+            stop = total;
+        } else {
+            checked_half_open_range(start, stop, total, "las point range");
+        }
+        const size_t n = stop - start;
         pc.n = n;
         pc.xyz.resize(n * 3);
         pc.intensity.resize(n);
@@ -101,7 +109,7 @@ PointCloud read_las(nb::handle source, size_t lanes) {
         // A file with offset=(0,0,0) carries the full UTM coordinate in X, which
         // would otherwise land in f32 and lose ~0.1 m; the offset stays in double.
         int32_t ax = 0, ay = 0, az = 0;
-        if (n > 0) {
+        if (total > 0) {
             LeReader a0(buf + offset_to_points, record_length);
             ax = a0.get<int32_t>(); ay = a0.get<int32_t>(); az = a0.get<int32_t>();
         }
@@ -115,7 +123,7 @@ PointCloud read_las(nb::handle source, size_t lanes) {
                             [&](size_t begin, size_t end, size_t) {
             for (size_t i = begin; i < end; ++i) {
                 const uint8_t *rec =
-                    buf + offset_to_points + i * record_length;
+                    buf + offset_to_points + (start + i) * record_length;
                 LeReader pr(rec, record_length);
                 const int32_t X = pr.get<int32_t>();
                 const int32_t Y = pr.get<int32_t>();
@@ -139,6 +147,15 @@ PointCloud read_las(nb::handle source, size_t lanes) {
         });
     }
     return pc;
+}
+
+PointCloud read_las(nb::handle source, size_t lanes) {
+    return read_las_impl(source, lanes, false, 0, 0);
+}
+
+PointCloud read_las_points(nb::handle source, size_t start, size_t stop,
+                           size_t lanes) {
+    return read_las_impl(source, lanes, true, start, stop);
 }
 
 nb::bytes write_las(const PointCloud &pc, double scale, size_t lanes) {
@@ -307,6 +324,10 @@ void register_las(nb::module_ &m) {
           "Decode ASPRS LAS bytes into a PointCloud: XYZ (i32*scale, relative to the header offset "
           "kept as .origin), intensity (u16, intensity_range='u16'), and RGB (u16 -> colors16, "
           "formats 2/3/7/8). Point formats 0-3 and 6-8; LAZ / waveform formats raise.");
+    m.def("read_las_points", &read_las_points, "data"_a, "start"_a,
+          "stop"_a, "_lanes"_a = 0,
+          "Decode a non-empty half-open LAS point range while retaining the "
+          "full file's georeference anchor.");
     m.def("write_las", &write_las, "cloud"_a, "scale"_a = 0.001,
           "_lanes"_a = 0,
           "Encode a PointCloud to LAS 1.2 bytes (point format 0, or 2 when colors16 is present). "

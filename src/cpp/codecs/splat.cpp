@@ -37,7 +37,8 @@ constexpr float SH_C0 = 0.28209479177387814f;  // 1/(2*sqrt(pi)); antimatter15/g
 constexpr float EPS = 1e-6f;                    // alpha clamp before logit (spz.cpp)
 constexpr float kScaleFloor = 1e-30f;           // guard scale<=0 on read: log(1e-30) ~ -69
 
-GaussianCloud read_splat(nb::handle source) {
+GaussianCloud read_splat_impl(nb::handle source, bool partial, size_t start,
+                              size_t stop) {
     sio::ByteView data(source);
     const uint8_t *p = data.data();
     const size_t fn = data.size();
@@ -47,7 +48,15 @@ GaussianCloud read_splat(nb::handle source) {
         if (fn % kRecordSize != 0)
             throw std::invalid_argument("splat: file size " + std::to_string(fn) +
                                         " is not a multiple of the 32-byte record");
-        const size_t n = fn / kRecordSize;
+        const size_t total = fn / kRecordSize;
+        if (!partial) {
+            start = 0;
+            stop = total;
+        } else {
+            checked_half_open_range(start, stop, total,
+                                    "splat point range");
+        }
+        const size_t n = stop - start;
         g.n = n;
         g.sh_degree = 0;
         g.num_rest = 0;
@@ -57,7 +66,7 @@ GaussianCloud read_splat(nb::handle source) {
         g.opacity.resize(n);
         g.sh_dc.resize(n * 3);
         for (size_t i = 0; i < n; i++) {
-            const uint8_t *rec = p + i * kRecordSize;
+            const uint8_t *rec = p + (start + i) * kRecordSize;
             float f[6];
             std::memcpy(f, rec, 24);  // pos[3] + LINEAR scale[3], little-endian
             for (int j = 0; j < 3; j++) {
@@ -76,6 +85,14 @@ GaussianCloud read_splat(nb::handle source) {
         }
     }
     return g;
+}
+
+GaussianCloud read_splat(nb::handle source) {
+    return read_splat_impl(source, false, 0, 0);
+}
+
+GaussianCloud read_splat_points(nb::handle source, size_t start, size_t stop) {
+    return read_splat_impl(source, true, start, stop);
 }
 
 nb::bytes write_splat(const GaussianCloud &g) {
@@ -109,6 +126,10 @@ void register_splat(nb::module_ &m) {
           "Decode antimatter15 .splat bytes (headerless 32 B/Gaussian: pos 3xf32, LINEAR scale "
           "3xf32, RGBA u8, quat u8[4] WXYZ) into a GaussianCloud (log scales, logit opacity, sh_dc "
           "via SH_C0=0.28209479...; sh_degree=0).");
+    m.def("read_splat_points", &read_splat_points, "data"_a, "start"_a,
+          "stop"_a,
+          "Decode a non-empty half-open .splat point range without allocating "
+          "the full Gaussian cloud.");
     m.def("write_splat", &write_splat, "cloud"_a,
           "Encode a GaussianCloud to antimatter15 .splat bytes. Lossy: color/alpha/rotation "
           "quantize to 8 bits and SH bands above the DC term are discarded; input order is kept.");

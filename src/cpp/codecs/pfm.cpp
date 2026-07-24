@@ -118,6 +118,42 @@ nb::ndarray<nb::numpy, float> read_pfm(nb::handle source) {
     return own_array(std::move(buf), {info.height, info.width, 3});
 }
 
+nb::ndarray<nb::numpy, float> read_pfm_window(
+    nb::handle source, size_t row_start, size_t row_stop, size_t col_start,
+    size_t col_stop) {
+    sio::ByteView data(source);
+    const uint8_t *p = data.data();
+    PfmInfo info;
+    std::vector<float> buf;
+    {
+        nb::gil_scoped_release rel;
+        info = parse_pfm(p, data.size());
+        const size_t out_h = checked_half_open_range(
+            row_start, row_stop, info.height, "PFM row window");
+        const size_t out_w = checked_half_open_range(
+            col_start, col_stop, info.width, "PFM column window");
+        const size_t out_row = out_w * info.channels;
+        buf.resize(out_h * out_row);
+        const uint8_t *src = p + info.data_ofs;
+        for (size_t y = 0; y < out_h; ++y) {
+            const size_t source_y = info.height - 1 - (row_start + y);
+            const uint8_t *source_row =
+                src + (source_y * info.row + col_start * info.channels) *
+                          sizeof(float);
+            float *destination = buf.data() + y * out_row;
+            std::memcpy(destination, source_row, out_row * sizeof(float));
+            if (info.swap)
+                for (size_t i = 0; i < out_row; ++i)
+                    destination[i] = bswap32f(destination[i]);
+        }
+    }
+    const size_t out_h = row_stop - row_start;
+    const size_t out_w = col_stop - col_start;
+    if (info.channels == 1)
+        return own_array(std::move(buf), {out_h, out_w});
+    return own_array(std::move(buf), {out_h, out_w, 3});
+}
+
 std::tuple<size_t, size_t, size_t, bool> inspect_pfm(
     nb::handle source) {
     sio::ByteView data(source);
@@ -176,6 +212,10 @@ void register_pfm(nb::module_ &m) {
           "Return (height, width, channels, little_endian) without decoding pixels.");
     m.def("read_pfm", &read_pfm, "data"_a,
           "Decode PFM bytes to a float32 ndarray (H,W)/(H,W,3), top-to-bottom, native-endian.");
+    m.def("read_pfm_window", &read_pfm_window, "data"_a, "row_start"_a,
+          "row_stop"_a, "column_start"_a, "column_stop"_a,
+          "Decode one non-empty half-open PFM pixel window without allocating "
+          "the full raster.");
     m.def("write_pfm", &write_pfm, "img"_a,
           "Encode a float32 (H,W)/(H,W,3) array (numpy or torch) to PFM bytes (little-endian).");
 }

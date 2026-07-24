@@ -9,8 +9,9 @@ things that keep this expansible as the format list from
 ```
 sceneio (Python)                     public, stable surface
   read() / write() / inspect()       format-dispatched I/O + metadata-only probes
+  read_partial()                     bounded pixel/point/COLMAP-image reads
   detect()
-  io.registry                        one entry per format (ext · magic · reader · writer · optional inspector)
+  io.registry                        one entry per format + optional inspect/partial hooks
   Reconstruction, GaussianCloud, …   re-exported record types
   errors                             C++ faults mapped to SceneIO exceptions
         │  (thin wrappers over)
@@ -34,9 +35,9 @@ sceneio._core (C++ / nanobind)
   `io/`, never on another codec.
 - The **Python `io` layer** is the UX + extensibility seam: a registry maps
   a format id to its extensions, magic sniff, reader, writer, optional
-  third-party inspector, record type,
-  and DataType; `read()`/`write()`/`inspect()`/`detect()` dispatch through it and map
-  errors. Adding a format touches the registry in exactly one place.
+  third-party inspector, partial readers, record type, and DataType;
+  `read()`/`write()`/`inspect()`/`read_partial()`/`detect()` dispatch through it
+  and map errors. Adding a format touches the registry in exactly one place.
 
 ## Conventions are data, not comments
 
@@ -92,3 +93,27 @@ levels. Bounded text scanners enforce their line/token limit before searching
 farther into the mapping, so malformed no-newline inputs do not fault the whole
 file into RSS. Inspection reports structural metadata and is not a substitute
 for decoding and validating every payload sample.
+
+## Partial reads
+
+`sceneio.read_partial(path, ...)` requires exactly one selector and returns the
+same public record kind as `read()`:
+
+- `window=(row_start, row_stop, column_start, column_stop)` uses half-open bounds
+  for PFM, binary P5/P6 Netpbm, lossless VP8L WebP, and FLO;
+- `points=(start, stop)` selects a half-open range from XYZ, LAS, binary Gaussian
+  PLY, and `.splat`;
+- `image_id=<persisted COLMAP id>` returns a one-image `Reconstruction` with its
+  referenced camera from binary or text COLMAP. It deliberately leaves the
+  point arrays empty and does not open `points3D.bin` / `points3D.txt`.
+
+PFM and binary Netpbm copy only selected rows, lossless WebP uses libwebp's
+cropped decoder, and FLO returns a read-only derived view whose owner retains
+the mmap. ASCII P2/P3 reject because they require complete-payload token
+decoding; lossy VP8 rejects because crop-local chroma upsampling is not
+guaranteed to match a full-decode slice. Fixed-record
+cloud formats index their selected records; XYZ scans text for row boundaries
+but allocates and parses numeric values only for the requested range.
+Unsupported codecs raise `FormatError` rather than disguising a full decode as
+a partial read. COLMAP text caps non-name tokens at 1 MiB consistently in its
+full and partial readers; image names retain their unbounded format behavior.

@@ -4,8 +4,10 @@
 // its conventions live in records/reconstruction.hpp.
 #include <nanobind/stl/string.h>
 
+#include <algorithm>
 #include <fstream>
 #include <iterator>
+#include <limits>
 
 #include "records/reconstruction.hpp"
 
@@ -23,6 +25,88 @@ void write_file(const std::string &path, const std::string &data) {
     std::ofstream f(path, std::ios::binary);
     if (!f) throw std::invalid_argument("COLMAP: cannot write " + path);
     f.write(data.data(), static_cast<std::streamsize>(data.size()));
+}
+
+template <typename T>
+T read_stream_le(std::ifstream &file, const char *what) {
+    static_assert(std::is_trivially_copyable_v<T>);
+    uint8_t raw[sizeof(T)];
+    file.read(reinterpret_cast<char *>(raw),
+              static_cast<std::streamsize>(sizeof(T)));
+    if (!file)
+        throw std::invalid_argument(std::string("COLMAP: truncated ") + what);
+    if (!host_is_le()) std::reverse(raw, raw + sizeof(T));
+    T value;
+    std::memcpy(&value, raw, sizeof(T));
+    return value;
+}
+
+std::string read_stream_cstr(std::ifstream &file) {
+    const std::streampos start = file.tellg();
+    if (start == std::streampos(-1))
+        throw std::invalid_argument("COLMAP: cannot locate image name");
+    // Validate the terminator without growing a string from malformed input.
+    file.ignore(std::numeric_limits<std::streamsize>::max(), '\0');
+    if (!file || file.eof())
+        throw std::invalid_argument("COLMAP: truncated image name");
+    const std::streampos after = file.tellg();
+    if (after == std::streampos(-1) || after <= start)
+        throw std::invalid_argument("COLMAP: cannot size image name");
+    const auto raw_length = after - start - std::streamoff{1};
+    const uintmax_t length_u = static_cast<uintmax_t>(raw_length);
+    if (length_u > std::numeric_limits<size_t>::max() ||
+        length_u >
+            static_cast<uintmax_t>(
+                std::numeric_limits<std::streamsize>::max()))
+        throw std::invalid_argument(
+            "COLMAP: image name exceeds address space");
+    const size_t length = static_cast<size_t>(length_u);
+    file.seekg(start);
+    if (!file)
+        throw std::invalid_argument("COLMAP: cannot seek image name");
+    std::string value(length, '\0');
+    if (length != 0) {
+        file.read(value.data(), static_cast<std::streamsize>(length));
+        if (!file)
+            throw std::invalid_argument("COLMAP: truncated image name");
+    }
+    if (file.get() != 0)
+        throw std::invalid_argument("COLMAP: truncated image name");
+    return value;
+}
+
+void skip_stream_cstr(std::ifstream &file) {
+    file.ignore(std::numeric_limits<std::streamsize>::max(), '\0');
+    if (!file || file.eof())
+        throw std::invalid_argument("COLMAP: truncated image name");
+}
+
+uint64_t stream_remaining_bytes(std::ifstream &file, const char *what) {
+    const std::streampos current = file.tellg();
+    if (current == std::streampos(-1))
+        throw std::invalid_argument(std::string("COLMAP: cannot locate ") +
+                                    what);
+    file.seekg(0, std::ios::end);
+    const std::streampos end = file.tellg();
+    if (end == std::streampos(-1) || end < current)
+        throw std::invalid_argument(std::string("COLMAP: cannot size ") +
+                                    what);
+    file.seekg(current);
+    if (!file)
+        throw std::invalid_argument(std::string("COLMAP: cannot seek ") +
+                                    what);
+    return static_cast<uint64_t>(end - current);
+}
+
+void skip_stream_bytes(std::ifstream &file, uint64_t count, const char *what) {
+    if (count >
+        static_cast<uint64_t>(std::numeric_limits<std::streamoff>::max()))
+        throw std::invalid_argument(std::string("COLMAP: oversized ") + what);
+    if (count > stream_remaining_bytes(file, what))
+        throw std::invalid_argument(std::string("COLMAP: truncated ") + what);
+    file.seekg(static_cast<std::streamoff>(count), std::ios::cur);
+    if (!file)
+        throw std::invalid_argument(std::string("COLMAP: truncated ") + what);
 }
 
 void read_cameras(const std::string &b, Reconstruction &r) {
@@ -87,6 +171,111 @@ Reconstruction read_sparse(const std::string &dir) {
     return r;
 }
 
+Reconstruction read_sparse_image(const std::string &dir, uint32_t image_id) {
+    nb::gil_scoped_release rel;
+    Reconstruction r;
+    r.obs_off.push_back(0);
+    r.track_off.push_back(0);
+
+    std::ifstream images(dir + "/images.bin", std::ios::binary);
+    if (!images)
+        throw std::invalid_argument("COLMAP: cannot open " + dir +
+                                    "/images.bin");
+    const uint64_t image_count =
+        read_stream_le<uint64_t>(images, "images.bin header");
+    bool found = false;
+    uint32_t camera_id = 0;
+    for (uint64_t i = 0; i < image_count; ++i) {
+        const uint32_t current =
+            read_stream_le<uint32_t>(images, "image id");
+        double quat[4], trans[3];
+        for (double &value : quat)
+            value = read_stream_le<double>(images, "image quaternion");
+        for (double &value : trans)
+            value = read_stream_le<double>(images, "image translation");
+        const uint32_t current_camera =
+            read_stream_le<uint32_t>(images, "image camera id");
+        std::string name;
+        if (current == image_id)
+            name = read_stream_cstr(images);
+        else
+            skip_stream_cstr(images);
+        const uint64_t observation_count =
+            read_stream_le<uint64_t>(images, "image observation count");
+        if (observation_count >
+            std::numeric_limits<uint64_t>::max() / 24)
+            throw std::invalid_argument(
+                "COLMAP: image observation byte count overflows");
+
+        if (current != image_id) {
+            skip_stream_bytes(images, observation_count * 24,
+                              "image observations");
+            continue;
+        }
+
+        if (observation_count >
+            static_cast<uint64_t>(std::numeric_limits<size_t>::max() / 2))
+            throw std::invalid_argument(
+                "COLMAP: image observation count exceeds address space");
+        const uint64_t observation_bytes = observation_count * 24;
+        if (observation_bytes >
+            stream_remaining_bytes(images, "image observations"))
+            throw std::invalid_argument(
+                "COLMAP: truncated image observations");
+        const size_t count = static_cast<size_t>(observation_count);
+        r.img_ids.push_back(current);
+        r.quats.assign(quat, quat + 4);
+        r.trans.assign(trans, trans + 3);
+        r.img_cam_ids.push_back(current_camera);
+        r.img_names.push_back(std::move(name));
+        r.obs_xy.resize(count * 2);
+        r.obs_pt3d.resize(count);
+        for (size_t j = 0; j < count; ++j) {
+            r.obs_xy[j * 2] =
+                read_stream_le<double>(images, "observation x");
+            r.obs_xy[j * 2 + 1] =
+                read_stream_le<double>(images, "observation y");
+            const uint64_t point_id =
+                read_stream_le<uint64_t>(images, "observation point id");
+            r.obs_pt3d[j] =
+                point_id == UINT64_MAX ? -1 : static_cast<int64_t>(point_id);
+        }
+        r.obs_off.push_back(count);
+        camera_id = current_camera;
+        found = true;
+        break;
+    }
+    if (!found)
+        throw std::invalid_argument("COLMAP: image id " +
+                                    std::to_string(image_id) + " not found");
+
+    std::ifstream cameras(dir + "/cameras.bin", std::ios::binary);
+    if (!cameras)
+        throw std::invalid_argument("COLMAP: cannot open " + dir +
+                                    "/cameras.bin");
+    const uint64_t camera_count =
+        read_stream_le<uint64_t>(cameras, "cameras.bin header");
+    for (uint64_t i = 0; i < camera_count; ++i) {
+        Camera camera;
+        camera.id = read_stream_le<uint32_t>(cameras, "camera id");
+        camera.model_id =
+            read_stream_le<int32_t>(cameras, "camera model id");
+        camera.width = read_stream_le<uint64_t>(cameras, "camera width");
+        camera.height = read_stream_le<uint64_t>(cameras, "camera height");
+        const int params = colmap_model_info(camera.model_id).nparams;
+        camera.params.resize(static_cast<size_t>(params));
+        for (double &value : camera.params)
+            value = read_stream_le<double>(cameras, "camera parameter");
+        if (camera.id == camera_id) {
+            r.cameras.push_back(std::move(camera));
+            return r;
+        }
+    }
+    throw std::invalid_argument("COLMAP: camera id " +
+                                std::to_string(camera_id) +
+                                " referenced by image was not found");
+}
+
 std::string write_cameras(const Reconstruction &r) {
     LeWriter w;
     w.put<uint64_t>(r.cameras.size());
@@ -149,6 +338,10 @@ void write_sparse(const Reconstruction &r, const std::string &dir) {
 void register_colmap(nb::module_ &m) {
     m.def("read_colmap_sparse", &read_sparse, "path"_a,
           "Read a COLMAP binary sparse model directory (cameras.bin/images.bin/points3D.bin).");
+    m.def("read_colmap_sparse_image", &read_sparse_image, "path"_a,
+          "image_id"_a,
+          "Read one COLMAP binary image and its camera without opening "
+          "points3D.bin or materializing unrelated images.");
     m.def("write_colmap_sparse", &write_sparse, "recon"_a, "path"_a,
           "Write a Reconstruction as a COLMAP binary sparse model directory.");
 }

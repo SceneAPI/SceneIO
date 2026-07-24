@@ -615,6 +615,31 @@ def _directory_size(path):
     return sum(entry.stat().st_size for entry in Path(path).iterdir() if entry.is_file())
 
 
+def _partial_request(codec_id, info, full_record=None):
+    if codec_id in {"pfm", "netpbm", "webp", "flo"}:
+        height, width = info.shape[:2]
+        out_height = max(1, height // 8)
+        out_width = max(1, width // 8)
+        row_start = (height - out_height) // 2
+        col_start = (width - out_width) // 2
+        return {
+            "window": (
+                row_start,
+                row_start + out_height,
+                col_start,
+                col_start + out_width,
+            )
+        }
+    if codec_id in {"xyz", "las", "gaussian_ply", "splat"}:
+        selected = max(1, info.count // 16)
+        start = (info.count - selected) // 2
+        return {"points": (start, start + selected)}
+    if codec_id in {"colmap_sparse", "colmap_sparse_txt"}:
+        image_ids = np.asarray(full_record.image_ids)
+        return {"image_id": int(image_ids[len(image_ids) // 2])}
+    return None
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--runs", type=int, default=7)
@@ -642,6 +667,11 @@ def main():
         action="store_true",
         help="fail unless stable metadata-only inspections beat full reads",
     )
+    ap.add_argument(
+        "--require-o5-partial-gains",
+        action="store_true",
+        help="fail unless stable partial reads beat full record materialization",
+    )
     ap.add_argument("--json", type=Path, help="write machine-readable results to this path")
     args = ap.parse_args()
     if args.scale <= 0:
@@ -664,6 +694,7 @@ def _run_benchmark(args, tmp):
     write_rows = []
     o4_rows = []
     inspect_rows = []
+    partial_rows = []
 
     hdr = (
         f"{'codec':<14}{'payloadMB':>10}{'fileMB':>9}{'sioW':>9}{'sioR':>9}"
@@ -996,6 +1027,41 @@ def _run_benchmark(args, tmp):
                     inspect_rss / 1e6,
                 )
             )
+            partial_request = _partial_request(s.id, _inspect())
+            partial_metrics = None
+            if partial_request is not None:
+
+                def _partial_read(
+                    fp=fp,
+                    codec_id=s.id,
+                    request=partial_request,
+                ):
+                    if args.cold_cache:
+                        _evict_file_cache(fp)
+                    return sceneio.read_partial(
+                        fp, format=codec_id, **request
+                    )
+
+                partial_time, partial_peak = _measure(
+                    _partial_read, args.runs
+                )
+                partial_rss = _measure_rss(_partial_read)
+                partial_metrics = (
+                    partial_time,
+                    partial_peak / 1e6,
+                    partial_rss / 1e6,
+                )
+                partial_rows.append(
+                    (
+                        s.id,
+                        path_time,
+                        partial_time,
+                        mmap_peak / 1e6,
+                        partial_peak / 1e6,
+                        mmap_rss / 1e6,
+                        partial_rss / 1e6,
+                    )
+                )
 
             oraW = oraR = None
             if s.ow and payload is not None:
@@ -1026,6 +1092,21 @@ def _run_benchmark(args, tmp):
                     "inspect_ms": inspect_time * 1000,
                     "inspect_peak_mb": inspect_peak / 1e6,
                     "inspect_rss_mb": inspect_rss / 1e6,
+                    "partial_ms": (
+                        partial_metrics[0] * 1000
+                        if partial_metrics is not None
+                        else None
+                    ),
+                    "partial_peak_mb": (
+                        partial_metrics[1]
+                        if partial_metrics is not None
+                        else None
+                    ),
+                    "partial_rss_mb": (
+                        partial_metrics[2]
+                        if partial_metrics is not None
+                        else None
+                    ),
                     "bytes_write_peak_mb": bytes_write_peak / 1e6,
                     "sink_write_peak_mb": sink_write_peak / 1e6,
                     "bytes_write_rss_mb": bytes_write_rss / 1e6,
@@ -1108,6 +1189,38 @@ def _run_benchmark(args, tmp):
                     inspect_rss / 1e6,
                 )
             )
+            partial_request = _partial_request(
+                spec.id, _directory_inspect(), reconstruction
+            )
+
+            def _directory_partial(
+                path=path,
+                codec_id=spec.id,
+                request=partial_request,
+            ):
+                if args.cold_cache:
+                    for entry in path.iterdir():
+                        if entry.is_file():
+                            _evict_file_cache(entry)
+                return sceneio.read_partial(
+                    path, format=codec_id, **request
+                )
+
+            partial_time, partial_peak = _measure(
+                _directory_partial, args.runs
+            )
+            partial_rss = _measure_rss(_directory_partial)
+            partial_rows.append(
+                (
+                    spec.id,
+                    path_read_time,
+                    partial_time,
+                    read_peak / 1e6,
+                    partial_peak / 1e6,
+                    read_rss / 1e6,
+                    partial_rss / 1e6,
+                )
+            )
             results.append(
                 {
                     "codec": spec.id,
@@ -1122,6 +1235,9 @@ def _run_benchmark(args, tmp):
                     "inspect_ms": inspect_time * 1000,
                     "inspect_peak_mb": inspect_peak / 1e6,
                     "inspect_rss_mb": inspect_rss / 1e6,
+                    "partial_ms": partial_time * 1000,
+                    "partial_peak_mb": partial_peak / 1e6,
+                    "partial_rss_mb": partial_rss / 1e6,
                     "sink_write_peak_mb": write_peak / 1e6,
                     "sink_write_rss_mb": write_rss / 1e6,
                 }
@@ -1196,6 +1312,25 @@ def _run_benchmark(args, tmp):
             f"{full_rss:>10.1f}{inspected_rss:>9.1f}"
         )
     print("Inspection reads headers/streamed metadata and constructs no compiled record arrays.")
+    print("\nO5 partial-read delta:")
+    partial_header = (
+        f"{'codec':<18}{'full ms':>11}{'partial ms':>12}{'speedup':>10}"
+        f"{'fullPeak':>11}{'partPeak':>10}{'fullRSS':>10}{'partRSS':>9}"
+    )
+    print(partial_header)
+    print("-" * len(partial_header))
+    for codec_id, full, partial_time, full_peak, part_peak, full_rss, part_rss in (
+        partial_rows
+    ):
+        print(
+            f"{codec_id:<18}{full * 1000:>11.3f}{partial_time * 1000:>12.3f}"
+            f"{full / partial_time:>9.2f}x{full_peak:>11.1f}{part_peak:>10.1f}"
+            f"{full_rss:>10.1f}{part_rss:>9.1f}"
+        )
+    print(
+        "Partial reads return the normal record type while materializing only "
+        "the selected pixel, point, or COLMAP-image subset."
+    )
     if args.require_o5_inspect_gains:
         stable = {"exr", "gaussian_ply", "las", "png", "spz"}
         by_codec = {
@@ -1279,6 +1414,81 @@ def _run_benchmark(args, tmp):
         if rss_gain_regressions:
             raise RuntimeError(
                 "O5 inspection failed the directional RSS gain guard: "
+                + ", ".join(rss_gain_regressions)
+            )
+    if args.require_o5_partial_gains:
+        stable = {
+            "pfm",
+            "netpbm",
+            "webp",
+            "xyz",
+            "las",
+            "gaussian_ply",
+            "splat",
+            "colmap_sparse",
+            "colmap_sparse_txt",
+        }
+        by_codec = {
+            codec_id: (
+                full,
+                partial_time,
+                part_peak,
+                full_rss,
+                part_rss,
+            )
+            for (
+                codec_id,
+                full,
+                partial_time,
+                _,
+                part_peak,
+                full_rss,
+                part_rss,
+            ) in partial_rows
+        }
+        missing = stable - by_codec.keys()
+        if missing:
+            raise RuntimeError(
+                "missing O5 partial guard rows: " + ", ".join(sorted(missing))
+            )
+        regressions = sorted(
+            codec_id
+            for codec_id in stable
+            if by_codec[codec_id][1] >= by_codec[codec_id][0]
+        )
+        if regressions:
+            raise RuntimeError(
+                "O5 partial read failed directional latency guard: "
+                + ", ".join(regressions)
+            )
+        allocation_regressions = sorted(
+            codec_id
+            for codec_id, (_, _, part_peak, _, _) in by_codec.items()
+            if part_peak >= 1.0
+        )
+        if allocation_regressions:
+            raise RuntimeError(
+                "O5 partial read exceeded 1 MB traced allocation: "
+                + ", ".join(allocation_regressions)
+            )
+        rss_gain_regressions = sorted(
+            codec_id
+            for codec_id in stable - {"xyz"}
+            if by_codec[codec_id][3] >= 8.0
+            and by_codec[codec_id][4]
+            >= max(4.0, 0.5 * by_codec[codec_id][3])
+        )
+        # XYZ scans mapped text to find record boundaries, so the OS may fault
+        # most file pages into RSS even though no whole-file bytes or unselected
+        # output arrays are allocated. Require a meaningful absolute reduction.
+        if (
+            by_codec["xyz"][3] >= 8.0
+            and by_codec["xyz"][4] >= by_codec["xyz"][3] - 4.0
+        ):
+            rss_gain_regressions.append("xyz")
+        if rss_gain_regressions:
+            raise RuntimeError(
+                "O5 partial read failed the directional RSS gain guard: "
                 + ", ".join(rss_gain_regressions)
             )
     if args.require_o4_gains:

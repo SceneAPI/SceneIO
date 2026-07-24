@@ -32,6 +32,7 @@
 #include <cstdio>
 #include <fstream>
 #include <iterator>
+#include <limits>
 #include <string_view>
 #include <system_error>  // std::errc (from_chars_result::ec)
 
@@ -77,6 +78,7 @@ struct Lines {
 };
 
 inline bool is_sep(char c) { return c == ' ' || c == '\t' || c == '\r'; }
+constexpr size_t kStreamTokenLimit = 1024 * 1024;
 
 // A blank (all-whitespace) or '#'-comment line (leading ws allowed).
 bool blank_or_comment(std::string_view line) {
@@ -91,6 +93,9 @@ bool next_token(std::string_view line, size_t &pos, std::string_view &tok) {
     if (pos >= line.size()) return false;
     size_t s = pos;
     while (pos < line.size() && !is_sep(line[pos])) pos++;
+    if (pos - s > kStreamTokenLimit)
+        throw std::invalid_argument(
+            "COLMAP text: token exceeds 1 MiB");
     tok = line.substr(s, pos - s);
     return true;
 }
@@ -124,6 +129,125 @@ int64_t parse_pt3d_id(std::string_view t) {
     if (v > static_cast<uint64_t>(INT64_MAX))
         throw std::invalid_argument("COLMAP text: POINT3D_ID out of int64 range");
     return static_cast<int64_t>(v);
+}
+
+struct StreamToken {
+    std::string value;
+    bool present = false;
+    bool line_end = false;
+    bool eof = false;
+};
+
+// Read one token without ever materializing the physical line. Tokens are
+// bounded because no valid numeric/model field needs to be large; selected
+// image names use a separate unbounded remainder reader to retain full-reader
+// behavior.
+StreamToken read_line_token(std::ifstream &file, const char *what) {
+    StreamToken result;
+    char value;
+    while (file.get(value)) {
+        if (value == '\n') {
+            result.line_end = true;
+            return result;
+        }
+        if (is_sep(value)) continue;
+        result.present = true;
+        result.value.push_back(value);
+        break;
+    }
+    if (!result.present) {
+        if (file.bad())
+            throw std::invalid_argument(std::string("COLMAP text: ") + what +
+                                        " read failed");
+        result.line_end = true;
+        result.eof = file.eof();
+        return result;
+    }
+    while (file.get(value)) {
+        if (value == '\n') {
+            result.line_end = true;
+            return result;
+        }
+        if (is_sep(value)) return result;
+        if (result.value.size() >= kStreamTokenLimit)
+            throw std::invalid_argument(std::string("COLMAP text: ") + what +
+                                        " token exceeds 1 MiB");
+        result.value.push_back(value);
+    }
+    if (file.bad())
+        throw std::invalid_argument(std::string("COLMAP text: ") + what +
+                                    " read failed");
+    result.line_end = true;
+    result.eof = true;
+    return result;
+}
+
+void ignore_line_remainder(std::ifstream &file, const char *what) {
+    file.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+    if (file.bad())
+        throw std::invalid_argument(std::string("COLMAP text: ") + what +
+                                    " skip failed");
+}
+
+StreamToken read_data_line_first(std::ifstream &file, const char *what) {
+    for (;;) {
+        StreamToken token;
+        char value;
+        while (file.get(value)) {
+            if (value == '\n') break;
+            if (is_sep(value)) continue;
+            if (value == '#') {
+                ignore_line_remainder(file, what);
+                break;
+            }
+            token.present = true;
+            token.value.push_back(value);
+            while (file.get(value)) {
+                if (value == '\n') {
+                    token.line_end = true;
+                    return token;
+                }
+                if (is_sep(value)) return token;
+                if (token.value.size() >= kStreamTokenLimit)
+                    throw std::invalid_argument(
+                        std::string("COLMAP text: ") + what +
+                        " token exceeds 1 MiB");
+                token.value.push_back(value);
+            }
+            if (file.bad())
+                throw std::invalid_argument(
+                    std::string("COLMAP text: ") + what +
+                    " read failed");
+            token.line_end = true;
+            token.eof = true;
+            return token;
+        }
+        if (file.bad())
+            throw std::invalid_argument(std::string("COLMAP text: ") + what +
+                                        " read failed");
+        if (file.eof()) {
+            token.line_end = true;
+            token.eof = true;
+            return token;
+        }
+    }
+}
+
+std::string read_name_remainder(std::ifstream &file) {
+    std::string name;
+    bool started = false;
+    char value;
+    while (file.get(value)) {
+        if (value == '\n') break;
+        if (!started && is_sep(value)) continue;
+        started = true;
+        name.push_back(value);
+    }
+    if (file.bad())
+        throw std::invalid_argument(
+            "COLMAP text: images.txt image name read failed");
+    if (!name.empty() && name.back() == '\r') name.pop_back();
+    return name;
 }
 
 // MODEL name -> id via the EXISTING colmap_model_info table (no new symbol).
@@ -239,6 +363,157 @@ Reconstruction read_colmap_txt(const std::string &dir) {
     read_images_text(read_file(dir + "/images.txt"), r);
     read_points_text(read_file(dir + "/points3D.txt"), r);
     return r;
+}
+
+Reconstruction read_colmap_txt_image(const std::string &dir,
+                                     uint32_t image_id) {
+    nb::gil_scoped_release rel;
+    Reconstruction r;
+    r.obs_off.push_back(0);
+    r.track_off.push_back(0);
+
+    std::ifstream images(dir + "/images.txt", std::ios::binary);
+    if (!images)
+        throw std::invalid_argument("COLMAP text: cannot open " + dir +
+                                    "/images.txt");
+    bool found = false;
+    uint32_t camera_id = 0;
+    for (;;) {
+        StreamToken token =
+            read_data_line_first(images, "images.txt image line");
+        if (!token.present) break;
+        const uint32_t current =
+            parse_uint<uint32_t>(token.value, "IMAGE_ID");
+        bool line_end = token.line_end;
+        auto required = [&](const char *what) {
+            if (line_end)
+                throw std::invalid_argument(
+                    std::string("COLMAP text: missing field ") + what);
+            StreamToken next = read_line_token(images, what);
+            if (!next.present)
+                throw std::invalid_argument(
+                    std::string("COLMAP text: missing field ") + what);
+            line_end = next.line_end;
+            return next.value;
+        };
+        double quat[4], trans[3];
+        for (double &value : quat)
+            value = parse_f64(required("quaternion"), "quaternion");
+        for (double &value : trans)
+            value = parse_f64(required("translation"), "translation");
+        const uint32_t current_camera = parse_uint<uint32_t>(
+            required("CAMERA_ID"), "CAMERA_ID");
+        std::string name;
+        if (!line_end) {
+            if (current == image_id)
+                name = read_name_remainder(images);
+            else
+                ignore_line_remainder(images, "images.txt image name");
+        }
+
+        if (current != image_id) {
+            // Line 2 is the immediately following physical line. It is
+            // intentionally skipped without allocation for unrelated images.
+            ignore_line_remainder(images, "images.txt observations");
+            continue;
+        }
+
+        r.img_ids.push_back(current);
+        r.quats.assign(quat, quat + 4);
+        r.trans.assign(trans, trans + 3);
+        r.img_cam_ids.push_back(current_camera);
+        r.img_names.push_back(std::move(name));
+        size_t token_index = 0;
+        double x = 0.0, y = 0.0;
+        for (;;) {
+            StreamToken observation =
+                read_line_token(images, "images.txt observation");
+            if (observation.present) {
+                if (token_index % 3 == 0)
+                    x = parse_f64(observation.value, "observation X");
+                else if (token_index % 3 == 1)
+                    y = parse_f64(observation.value, "observation Y");
+                else {
+                    r.obs_xy.push_back(x);
+                    r.obs_xy.push_back(y);
+                    r.obs_pt3d.push_back(
+                        parse_pt3d_id(observation.value));
+                }
+                ++token_index;
+            }
+            if (observation.line_end) break;
+        }
+        if (token_index % 3 != 0)
+            throw std::invalid_argument(
+                "COLMAP text: images.txt observation tokens are not a "
+                "multiple of 3");
+        r.obs_off.push_back(r.obs_pt3d.size());
+        camera_id = current_camera;
+        found = true;
+        break;
+    }
+    if (images.bad())
+        throw std::invalid_argument("COLMAP text: images.txt read failed");
+    if (!found)
+        throw std::invalid_argument("COLMAP text: image id " +
+                                    std::to_string(image_id) + " not found");
+
+    std::ifstream cameras(dir + "/cameras.txt", std::ios::binary);
+    if (!cameras)
+        throw std::invalid_argument("COLMAP text: cannot open " + dir +
+                                    "/cameras.txt");
+    for (;;) {
+        StreamToken token =
+            read_data_line_first(cameras, "cameras.txt line");
+        if (!token.present) break;
+        Camera camera;
+        camera.id = parse_uint<uint32_t>(token.value, "CAMERA_ID");
+        bool line_end = token.line_end;
+        auto required = [&](const char *what) {
+            if (line_end)
+                throw std::invalid_argument(
+                    std::string("COLMAP text: missing field ") + what);
+            StreamToken next = read_line_token(cameras, what);
+            if (!next.present)
+                throw std::invalid_argument(
+                    std::string("COLMAP text: missing field ") + what);
+            line_end = next.line_end;
+            return next.value;
+        };
+        camera.model_id = model_id_from_name(required("MODEL"));
+        camera.width =
+            parse_uint<uint64_t>(required("WIDTH"), "WIDTH");
+        camera.height =
+            parse_uint<uint64_t>(required("HEIGHT"), "HEIGHT");
+        const int expected = colmap_model_info(camera.model_id).nparams;
+        for (int i = 0; i < expected; ++i)
+            camera.params.push_back(
+                parse_f64(required("camera param"), "camera param"));
+        bool extra = false;
+        if (!line_end) {
+            StreamToken tail =
+                read_line_token(cameras, "camera param");
+            extra = tail.present;
+            if (!tail.line_end)
+                ignore_line_remainder(cameras, "cameras.txt line");
+        }
+        if (extra)
+            throw std::invalid_argument(
+                "COLMAP text: camera " + std::to_string(camera.id) + " has " +
+                "more than " + std::to_string(expected) +
+                " params, expected " + std::to_string(expected) +
+                " for model " +
+                colmap_model_info(camera.model_id).name);
+        if (camera.id == camera_id) {
+            r.cameras.push_back(std::move(camera));
+            return r;
+        }
+    }
+    if (cameras.bad())
+        throw std::invalid_argument("COLMAP text: cameras.txt read failed");
+    throw std::invalid_argument("COLMAP text: camera id " +
+                                std::to_string(camera_id) +
+                                " referenced by image was not found");
 }
 
 size_t count_metadata_records(const std::string &path,
@@ -439,6 +714,10 @@ void register_colmap_txt(nb::module_ &m) {
     m.def("read_colmap_txt", &read_colmap_txt, "path"_a,
           "Read a COLMAP text sparse model directory (cameras.txt/images.txt/points3D.txt) into "
           "a Reconstruction (WXYZ quaternions, world_to_camera; the text twin of read_colmap_sparse).");
+    m.def("read_colmap_txt_image", &read_colmap_txt_image, "path"_a,
+          "image_id"_a,
+          "Read one COLMAP text image and its camera without opening "
+          "points3D.txt or materializing unrelated images.");
     m.def("write_colmap_txt", &write_colmap_txt, "recon"_a, "path"_a,
           "Write a Reconstruction as a COLMAP text sparse model directory (%.17g doubles, LF line "
           "endings; guards unknown camera models and wrong per-model param counts).");

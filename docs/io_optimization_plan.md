@@ -1,6 +1,6 @@
 # I/O Optimization, Testing & Verification Plan
 
-Status: active — O0–O4 complete; O5 pending. Scope: the compiled `sceneio._core` I/O path on
+Status: complete — O0–O5 landed. Scope: the compiled `sceneio._core` I/O path on
 `phase0-nanobind-core`. Companion to `coverage_roadmap.md` (this makes its "Phase 7"
 hardening/perf work concrete).
 
@@ -16,8 +16,9 @@ The representation layer is already near-optimal (zero-copy SoA records → nump
 torch/DLPack; per-format hand-tuned decoders; GIL released). **Before O1**, the
 file-I/O model used the deliberately simple whole-file `_bytes_reader`: read
 materialized the whole file as Python `bytes` before decode, while writes still
-materialize the whole output as `bytes` before disk. O1 replaces the read side;
-the remaining partial-read limitation is O5 work.
+materialize the whole output as `bytes` before disk. O1 replaced the read side,
+O3 removed the Python output copy, and O5 added metadata and bounded subset
+access.
 
 So the harness comes first — but because scope is full and uniform, it decides the
 *order* of the sweep (worst `sceneio/oracle` ratios first) and supplies the
@@ -247,7 +248,7 @@ mmap/file-sink traced-allocation bounds.
 
 ---
 
-## Phase O5 — Partial / lazy reads (in progress: inspection complete)
+## Phase O5 — Partial / lazy reads (complete)
 
 New public surface, applied to every format for which it's meaningful:
 - header-only `inspect(path)` → dims/count/dtype/channels without a full decode
@@ -279,8 +280,38 @@ rather than allowing a much slower denominator to inflate the inspection gain;
 the committed five-run baseline remains the historical control for smaller
 timing movement.
 
-Pixel windows, point subsets, and single-image COLMAP reads remain the next O5
-unit.
+**Partial reads landed:** `sceneio.read_partial()` requires exactly one
+half-open pixel `window`, half-open `points` range, or persisted COLMAP
+`image_id`. Bounded pixel paths cover PFM, binary P5/P6 Netpbm, lossless VP8L
+WebP, and FLO; point paths cover XYZ, LAS, binary Gaussian PLY, and SPLAT;
+binary/text COLMAP return one image and its referenced camera without opening
+the point container. ASCII P2/P3 and lossy VP8 deliberately reject: the former
+requires complete-payload token decoding and the latter cannot guarantee that
+libwebp's cropped chroma upsampling equals a full-decode slice.
+
+The 48-case focused suite compares values, dtypes, and convention metadata
+against full-read slices across binary Netpbm type/channel combinations,
+lossless RGB/RGBA WebP windows, every automatic XYZ layout plus forced normals,
+and LAS point formats 0–3 and 6–8. It also covers non-native-endian payloads,
+empty/out-of-range/truncated selectors, mapping lifetime and retained-exception
+lock release, COLMAP names over 1 MiB, missing point containers, and bounded
+malformed observation/name handling. COLMAP text applies the same 1 MiB limit
+to non-name tokens in full and partial readers while leaving selected image
+names unbounded.
+
+The final post-fix five-run MSVC sweep recorded directional latency gains for
+every guarded partial row: 1.70×–85.11× on material operations, with the
+already-zero-copy FLO path effectively tied at displayed precision.
+Representative results were Netpbm 8.35×, LAS 11.21×, Gaussian PLY 19.55×,
+SPLAT 18.79×, PFM 10.25×, binary COLMAP 53.19×, and text COLMAP 85.11×.
+Sampled RSS fell to 0.0–1.4 MB for those material binary paths.
+XYZ still scans mapped text to validate record boundaries, so its 68.5→56.5 MB
+RSS reduction is guarded as an absolute gain rather than a ratio. FLO and
+COLMAP are too small for a stable RSS signal but retain directional latency and
+allocation checks. Final gates passed 1,289 tests / 3 optional skips on Windows
+and 1,208 / 62 expected oracle, interop, platform, and RSS skips under the
+instrumented Linux ASan/UBSan/LSan build. The correctness, memory-safety, and
+test-soundness review lenses signed off with no remaining blockers.
 
 ---
 

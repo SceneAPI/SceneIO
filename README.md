@@ -71,7 +71,7 @@ keeps pytest-free consumers clean.
 disk/wire format ids. Seeded with the exact `sfmapi.*.v1` ids from the core's
 artifacts vocabulary — wire identity unchanged.
 
-### Compiled format I/O — `sceneio.read` / `sceneio.write`
+### Compiled format I/O — `read` / `write` / `inspect` / `read_partial`
 
 The lazy-loaded compiled core reads and writes 23 image, tensor, point-cloud,
 Gaussian, pose, and reconstruction formats. `sceneio.inspect(path)` returns an
@@ -87,7 +87,24 @@ assert info.dtype == "float32"
 
 image = sceneio.read("frame.exr")
 sceneio.write(image, "copy.exr")
+
+# Half-open row/column bounds; returns the normal Image/ndarray type.
+tile = sceneio.read_partial("flow.flo", window=(100, 356, 200, 712))
+
+# Fixed-record point containers allocate only the selected range.
+points = sceneio.read_partial(
+    "survey.las", points=(1_000_000, 1_010_000)
+)
+
+# One COLMAP pose and its camera, without opening points3D.
+view = sceneio.read_partial("sparse/0", image_id=42)
 ```
+
+Partial reads are available only when the container has a genuine bounded
+access path; requesting one from a codec that would have to decode the complete
+payload raises `FormatError`. Pixel windows support PFM, binary P5/P6 Netpbm,
+lossless VP8L WebP, and FLO; lossy WebP and ASCII P2/P3 reject because they
+cannot provide a bit-exact bounded slice.
 
 ### Errors
 

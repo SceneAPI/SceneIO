@@ -63,7 +63,8 @@ uint64_t next_uint(const uint8_t *p, size_t n, size_t &pos, uint64_t cap, const 
     return v;
 }
 
-Image read_netpbm(nb::handle source) {
+Image read_netpbm_impl(nb::handle source, bool partial, size_t row_start,
+                       size_t row_stop, size_t col_start, size_t col_stop) {
     sio::ByteView data(source);
     const uint8_t *p = data.data();
     const size_t n = data.size();
@@ -85,6 +86,10 @@ Image read_netpbm(nb::handle source) {
         default:
             throw std::invalid_argument("netpbm: bad magic (expected P2/P3/P5/P6)");
     }
+    if (partial && ascii)
+        throw std::invalid_argument(
+            "netpbm: pixel-window reads require binary P5/P6; ASCII P2/P3 "
+            "requires complete-payload token decoding");
 
     size_t pos = 2;
     const uint64_t W = next_uint(p, n, pos, kDimCap, "width");
@@ -92,13 +97,27 @@ Image read_netpbm(nb::handle source) {
     const uint64_t maxval = next_uint(p, n, pos, 65535ull, "maxval");
     if (W == 0 || H == 0) throw std::invalid_argument("netpbm: non-positive dimensions");
     if (maxval < 1) throw std::invalid_argument("netpbm: maxval must be >= 1");
+    if (!partial) {
+        row_start = 0;
+        row_stop = static_cast<size_t>(H);
+        col_start = 0;
+        col_stop = static_cast<size_t>(W);
+    } else {
+        checked_half_open_range(row_start, row_stop, static_cast<size_t>(H),
+                                "netpbm row window");
+        checked_half_open_range(col_start, col_stop, static_cast<size_t>(W),
+                                "netpbm column window");
+    }
 
     const bool wide = maxval > 255;  // 2 bytes/sample, big-endian on disk
     const uint64_t count = W * H * static_cast<uint64_t>(C);  // <= 3e18, no overflow (dims capped)
+    const size_t out_h = row_stop - row_start;
+    const size_t out_w = col_stop - col_start;
+    const size_t out_count = out_h * out_w * C;
 
     Image im;
-    im.height = static_cast<size_t>(H);
-    im.width = static_cast<size_t>(W);
+    im.height = out_h;
+    im.width = out_w;
     im.channels = C;
     im.dtype = wide ? PixelType::U16 : PixelType::U8;
     im.color_space = (C == 1) ? "gray" : "srgb";  // reconciled Image vocabulary
@@ -128,12 +147,36 @@ Image read_netpbm(nb::handle source) {
         const uint8_t *src = p + pos;
         const size_t cnt = static_cast<size_t>(count);
         if (!wide) {
-            im.u8.assign(src, src + cnt);  // zero-transform bulk copy
+            if (!partial) {
+                im.u8.assign(src, src + cnt);  // zero-transform bulk copy
+            } else {
+                im.u8.resize(out_count);
+                const size_t src_row = static_cast<size_t>(W) * C;
+                const size_t dst_row = out_w * C;
+                for (size_t y = row_start; y < row_stop; ++y)
+                    std::memcpy(
+                        im.u8.data() + (y - row_start) * dst_row,
+                        src + y * src_row + col_start * C, dst_row);
+            }
         } else {
-            im.u16.resize(cnt);
-            for (size_t i = 0; i < cnt; i++)  // big-endian on disk -> native
-                im.u16[i] = static_cast<uint16_t>((static_cast<uint16_t>(src[2 * i]) << 8) |
-                                                  static_cast<uint16_t>(src[2 * i + 1]));
+            im.u16.resize(partial ? out_count : cnt);
+            if (!partial) {
+                for (size_t i = 0; i < cnt; i++)  // big-endian on disk -> native
+                    im.u16[i] = static_cast<uint16_t>(
+                        (static_cast<uint16_t>(src[2 * i]) << 8) |
+                        static_cast<uint16_t>(src[2 * i + 1]));
+            } else {
+                size_t dst = 0;
+                for (size_t y = row_start; y < row_stop; ++y) {
+                    size_t sample =
+                        (y * static_cast<size_t>(W) + col_start) * C;
+                    const size_t end = sample + out_w * C;
+                    for (; sample < end; ++sample)
+                        im.u16[dst++] = static_cast<uint16_t>(
+                            (static_cast<uint16_t>(src[2 * sample]) << 8) |
+                            static_cast<uint16_t>(src[2 * sample + 1]));
+                }
+            }
         }
     } else {
         // ASCII: pre-guard against an OOM alloc from a tiny file (each sample
@@ -145,17 +188,57 @@ Image read_netpbm(nb::handle source) {
         const uint64_t cap = wide ? 65535ull : 255ull;  // dtype max, not maxval
         const size_t cnt = static_cast<size_t>(count);
         if (!wide) {
-            im.u8.resize(cnt);
-            for (size_t i = 0; i < cnt; i++)
-                im.u8[i] = static_cast<uint8_t>(next_uint(p, n, pos, cap, "sample"));
+            im.u8.resize(partial ? out_count : cnt);
+            if (!partial) {
+                for (size_t i = 0; i < cnt; ++i)
+                    im.u8[i] = static_cast<uint8_t>(
+                        next_uint(p, n, pos, cap, "sample"));
+            } else {
+                size_t dst = 0;
+                for (size_t i = 0; i < cnt; ++i) {
+                    const uint8_t value = static_cast<uint8_t>(
+                        next_uint(p, n, pos, cap, "sample"));
+                    const size_t pixel = i / C;
+                    const size_t y = pixel / static_cast<size_t>(W);
+                    const size_t x = pixel % static_cast<size_t>(W);
+                    if (y >= row_start && y < row_stop && x >= col_start &&
+                        x < col_stop)
+                        im.u8[dst++] = value;
+                }
+            }
         } else {
-            im.u16.resize(cnt);
-            for (size_t i = 0; i < cnt; i++)
-                im.u16[i] = static_cast<uint16_t>(next_uint(p, n, pos, cap, "sample"));
+            im.u16.resize(partial ? out_count : cnt);
+            if (!partial) {
+                for (size_t i = 0; i < cnt; ++i)
+                    im.u16[i] = static_cast<uint16_t>(
+                        next_uint(p, n, pos, cap, "sample"));
+            } else {
+                size_t dst = 0;
+                for (size_t i = 0; i < cnt; ++i) {
+                    const uint16_t value = static_cast<uint16_t>(
+                        next_uint(p, n, pos, cap, "sample"));
+                    const size_t pixel = i / C;
+                    const size_t y = pixel / static_cast<size_t>(W);
+                    const size_t x = pixel % static_cast<size_t>(W);
+                    if (y >= row_start && y < row_stop && x >= col_start &&
+                        x < col_stop)
+                        im.u16[dst++] = value;
+                }
+            }
         }
     }
     // Trailing bytes after the raster are ignored (PFM precedent).
     return im;
+}
+
+Image read_netpbm(nb::handle source) {
+    return read_netpbm_impl(source, false, 0, 0, 0, 0);
+}
+
+Image read_netpbm_window(nb::handle source, size_t row_start, size_t row_stop,
+                         size_t col_start, size_t col_stop) {
+    return read_netpbm_impl(source, true, row_start, row_stop, col_start,
+                            col_stop);
 }
 
 nb::bytes write_netpbm(const Image &img, bool ascii) {
@@ -270,6 +353,11 @@ void register_netpbm(nb::module_ &m) {
           "Decode PGM (P5/P2) or PPM (P6/P3) bytes into an Image: top-to-bottom rows, "
           "raw samples (no rescale), 16-bit read big-endian-on-disk -> native uint16; "
           "maxval and color_space (gray/srgb) recorded as metadata.");
+    m.def("read_netpbm_window", &read_netpbm_window, "data"_a,
+          "row_start"_a, "row_stop"_a, "column_start"_a, "column_stop"_a,
+          "Decode one non-empty half-open binary P5/P6 pixel window without "
+          "allocating the full image; ASCII P2/P3 rejects because it requires "
+          "complete-payload token decoding.");
     m.def("write_netpbm", &write_netpbm, "img"_a, "ascii"_a = false,
           "Encode an Image to PGM/PPM bytes: binary P5/P6 by default, ASCII P2/P3 when "
           "ascii=True (70-column wrap). Guards dtype/maxval and channel/color_space "

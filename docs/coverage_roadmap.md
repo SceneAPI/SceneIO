@@ -74,6 +74,11 @@ green. Don't land a codec that skips a box — file a follow‑up instead.
 - [x] **Metadata-only inspection** for every registered format: binary headers
       are read directly; headerless text is streamed; no pixel/point/record
       arrays are constructed.
+- [x] **Partial reads where the container permits**: PFM/binary P5-P6
+      Netpbm/lossless VP8L WebP/FLO pixel windows; XYZ/LAS/Gaussian
+      PLY/SPLAT point ranges; single-image COLMAP binary/text without opening
+      the point container. Unsupported subformats and codecs fail explicitly
+      instead of falling back to a full decode.
 
 ### 1.4 Verification gates (per‑format Definition of Done)
 - [ ] All §1.2 tests green **in CI on all 3 platforms** (parity oracles installed).

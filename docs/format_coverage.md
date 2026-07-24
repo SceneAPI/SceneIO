@@ -92,8 +92,8 @@ ndarray views for native NPY/FLO payloads (PFM row-flips into owned storage) · 
 scheduled 100-case backing-store mutation sweep · ✅ ASan/UBSan/LSan workflow
 (local Linux green; remote run user-gated) · ⬜ randomized oracle-triangulated
 fuzzing · ✅ direct file-sink writes · ✅ bounded measured-path workers
-(XYZ/LAS/EXR/PNG16/WebP lossless) · 🟡 partial/lazy reads (`inspect` complete
-for all 23; pixel/point/image subsets pending) · ⬜ GPU-via-DLPack
+(XYZ/LAS/EXR/PNG16/WebP lossless) · ✅ partial/lazy reads (`inspect` covers all
+23; bounded pixel/point/COLMAP-image subsets cover capable containers) · ⬜ GPU-via-DLPack
 (torch-cuda/cupy) · ✅ expanded 23-codec benchmark/oracles.
 
 ## Infrastructure & capabilities
@@ -103,7 +103,7 @@ for all 23; pixel/point/image subsets pending) · ⬜ GPU-via-DLPack
 | nanobind + scikit‑build‑core build | ✅ | abi3/cp312, `NB_STATIC` |
 | cibuildwheel release path | ✅ | Linux/macOS/Windows; `publish.yml` |
 | CI parity (oracles in CI) | ✅ | gsply + pycolmap; runs on the branch |
-| Codec registry + `read`/`write`/`inspect`/`detect` | ✅ | metadata-only inspection covers all 23 |
+| Codec registry + `read`/`write`/`inspect`/`read_partial`/`detect` | ✅ | inspection covers all 23; bounded partial hooks are capability-specific |
 | Zero‑copy numpy + torch (DLPack) | ✅ | validated per codec |
 | Conventions‑as‑metadata + write guards | ✅ | record‑don't‑convert enforced |
 | Parity kit (`sceneio.testing.parity`) | ✅ | cross‑impl + round‑trip + convention pins |
@@ -115,3 +115,19 @@ for all 23; pixel/point/image subsets pending) · ⬜ GPU-via-DLPack
 | Sanitizer + mmap differential CI | ✅ | local Linux green; scheduled remote lane activates on default branch |
 | Capability flags (`reads/writes/streams/lossy/needs_dep`) | ⬜ | surface per codec |
 | `splat` / `posed_views` DataTypes in the vocabulary | ⬜ | **Phase‑C** (wire identity; cross‑repo) |
+
+## Partial-read capability
+
+`sceneio.read_partial` exposes only measured bounded paths:
+
+| Selector | Formats | Result |
+|---|---|---|
+| pixel `window=(r0,r1,c0,c1)` | PFM, binary P5/P6 Netpbm, lossless VP8L WebP, FLO | ndarray or `Image`, matching the full-read slice |
+| point range `points=(start,stop)` | XYZ, LAS, Gaussian PLY, SPLAT | `PointCloud` / `GaussianCloud`, with convention metadata preserved |
+| `image_id` | COLMAP binary + text | one-image `Reconstruction` + its camera; no point-container read |
+
+PNG, JPEG, HDR, EXR, SPZ, and other compressed/scene containers intentionally
+do not advertise a partial hook when their current decoder would still
+materialize the complete payload. ASCII P2/P3 Netpbm rejects because it must
+token-decode the complete raster; lossy VP8 rejects because a crop-local decode
+cannot promise bit-exact parity with the full decoder's chroma context.

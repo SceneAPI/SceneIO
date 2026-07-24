@@ -107,6 +107,7 @@ _NAMESPACES = frozenset({"data", "formats", "io", "mapping", "matching", "testin
 _IO_FORWARDS = frozenset(
     {
         "read",
+        "read_partial",
         "write",
         "detect",
         "inspect",
@@ -198,6 +199,7 @@ __all__ = [
     "pair_id_to_image_pair",
     "read",
     "read_header",
+    "read_partial",
     "read_record",
     "testing",
     "validate_sha",

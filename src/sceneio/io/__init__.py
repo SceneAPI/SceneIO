@@ -1,5 +1,5 @@
 """Public format I/O for SceneIO — format-dispatched ``read`` / ``write`` /
-``inspect`` over the compiled codecs, plus the record types.
+``inspect`` / ``read_partial`` over the compiled codecs, plus the record types.
 
     import sceneio
     recon = sceneio.read("sparse/0")     # -> Reconstruction  (COLMAP dir)
@@ -13,6 +13,7 @@ is one :func:`sceneio.io.register` call over a compiled codec. See
 
 from __future__ import annotations
 
+import operator
 from pathlib import Path
 
 from sceneio import _core
@@ -82,6 +83,77 @@ def inspect(path, *, format: str | None = None) -> Inspection:
         raise FormatError(f"inspecting {str(path)!r} as {fmt!r}: {exc}") from exc
 
 
+def read_partial(
+    path,
+    *,
+    window=None,
+    points=None,
+    image_id=None,
+    format: str | None = None,
+):
+    """Read only one file-backed region while preserving the normal record type.
+
+    Exactly one selector is required. ``window`` is the half-open pixel box
+    ``(row_start, row_stop, column_start, column_stop)``. ``points`` is the
+    half-open record range ``(start, stop)``. ``image_id`` selects one COLMAP
+    image by its persisted id. A format that cannot access the selected region
+    without a full payload decode raises :class:`FormatError`.
+    """
+
+    selected = sum(value is not None for value in (window, points, image_id))
+    if selected != 1:
+        raise ValueError("read_partial requires exactly one of window, points, or image_id")
+    fmt = format or detect(path)
+    codec = get(fmt)
+    if window is not None:
+        values = _selector_ints(window, 4, "window")
+        if codec.read_window is None:
+            raise FormatError(f"format {fmt!r} does not support pixel-window reads")
+        operation = codec.read_window
+    elif points is not None:
+        values = _selector_ints(points, 2, "points")
+        if codec.read_points is None:
+            raise FormatError(f"format {fmt!r} does not support point-subset reads")
+        operation = codec.read_points
+    else:
+        selected_image = _selector_int(image_id, "image_id")
+        if selected_image < 0 or selected_image > 0xFFFFFFFF:
+            raise ValueError("image_id must be in 0..4294967295")
+        if codec.read_image is None:
+            raise FormatError(f"format {fmt!r} does not support single-image reads")
+        operation = codec.read_image
+        values = (selected_image,)
+    try:
+        return operation(str(path), *values)
+    except FormatError:
+        raise
+    except Exception as exc:
+        raise FormatError(
+            f"partially reading {str(path)!r} as {fmt!r}: {exc}"
+        ) from exc
+
+
+def _selector_int(value, name: str) -> int:
+    if isinstance(value, bool):
+        raise TypeError(f"{name} values must be integers, not bool")
+    try:
+        return operator.index(value)
+    except TypeError:
+        raise TypeError(f"{name} values must be integers") from None
+
+
+def _selector_ints(value, length: int, name: str) -> tuple[int, ...]:
+    if isinstance(value, (str, bytes)):
+        raise TypeError(f"{name} must contain {length} integers")
+    try:
+        values = tuple(value)
+    except TypeError:
+        raise TypeError(f"{name} must contain {length} integers") from None
+    if len(values) != length:
+        raise ValueError(f"{name} must contain exactly {length} integers")
+    return tuple(_selector_int(item, name) for item in values)
+
+
 def write(obj, path, *, format: str | None = None) -> None:
     """Write a record to ``path``, dispatching on ``format``, the object
     type, and the extension.
@@ -145,6 +217,7 @@ __all__ = [
     "detect",
     "inspect",
     "read",
+    "read_partial",
     "register",
     "write",
 ]

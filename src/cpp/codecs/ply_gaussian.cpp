@@ -41,7 +41,8 @@ float maybe_swap(float v, bool swap) {
     return v;
 }
 
-GaussianCloud read_gaussian_ply(nb::handle source) {
+GaussianCloud read_gaussian_ply_impl(nb::handle source, bool partial,
+                                     size_t start, size_t stop) {
     sio::ByteView data(source);
     const uint8_t *p = data.data();
     const size_t n = data.size();
@@ -145,33 +146,51 @@ GaussianCloud read_gaussian_ply(nb::handle source) {
     if (stride == 0 || vcount > (n - hp) / stride)
         throw std::invalid_argument("PLY: truncated vertex data");
     const bool swap = (le != host_is_le());
+    if (!partial) {
+        start = 0;
+        stop = vcount;
+    } else {
+        checked_half_open_range(start, stop, vcount,
+                                "PLY Gaussian point range");
+    }
+    const size_t selected = stop - start;
 
     GaussianCloud g;
-    g.n = vcount;
+    g.n = selected;
     g.num_rest = R;
     g.sh_degree = deg;
-    g.means.resize(vcount * 3);
-    g.sh_dc.resize(vcount * 3);
-    g.sh_rest.resize(vcount * R);
-    g.opacity.resize(vcount);
-    g.scales.resize(vcount * 3);
-    g.quats.resize(vcount * 4);
+    g.means.resize(selected * 3);
+    g.sh_dc.resize(selected * 3);
+    g.sh_rest.resize(selected * R);
+    g.opacity.resize(selected);
+    g.scales.resize(selected * 3);
+    g.quats.resize(selected * 4);
 
     auto v = [&](size_t row, size_t c) {
         float value;
         std::memcpy(&value, p + hp + row * stride + c * sizeof(float), sizeof(value));
         return maybe_swap(value, swap);
     };
-    for (size_t i = 0; i < vcount; i++) {
-        g.means[i * 3] = v(i, cx); g.means[i * 3 + 1] = v(i, cy); g.means[i * 3 + 2] = v(i, cz);
-        g.sh_dc[i * 3] = v(i, d0); g.sh_dc[i * 3 + 1] = v(i, d1); g.sh_dc[i * 3 + 2] = v(i, d2);
-        for (size_t k = 0; k < R; k++) g.sh_rest[i * R + k] = v(i, cr[k]);
-        g.opacity[i] = v(i, co);
-        g.scales[i * 3] = v(i, s0); g.scales[i * 3 + 1] = v(i, s1); g.scales[i * 3 + 2] = v(i, s2);
-        g.quats[i * 4] = v(i, r0); g.quats[i * 4 + 1] = v(i, r1);
-        g.quats[i * 4 + 2] = v(i, r2); g.quats[i * 4 + 3] = v(i, r3);
+    for (size_t i = 0; i < selected; i++) {
+        const size_t row = start + i;
+        g.means[i * 3] = v(row, cx); g.means[i * 3 + 1] = v(row, cy); g.means[i * 3 + 2] = v(row, cz);
+        g.sh_dc[i * 3] = v(row, d0); g.sh_dc[i * 3 + 1] = v(row, d1); g.sh_dc[i * 3 + 2] = v(row, d2);
+        for (size_t k = 0; k < R; k++) g.sh_rest[i * R + k] = v(row, cr[k]);
+        g.opacity[i] = v(row, co);
+        g.scales[i * 3] = v(row, s0); g.scales[i * 3 + 1] = v(row, s1); g.scales[i * 3 + 2] = v(row, s2);
+        g.quats[i * 4] = v(row, r0); g.quats[i * 4 + 1] = v(row, r1);
+        g.quats[i * 4 + 2] = v(row, r2); g.quats[i * 4 + 3] = v(row, r3);
     }
     return g;
+}
+
+GaussianCloud read_gaussian_ply(nb::handle source) {
+    return read_gaussian_ply_impl(source, false, 0, 0);
+}
+
+GaussianCloud read_gaussian_ply_points(nb::handle source, size_t start,
+                                       size_t stop) {
+    return read_gaussian_ply_impl(source, true, start, stop);
 }
 
 nb::bytes write_gaussian_ply(const GaussianCloud &g) {
@@ -234,6 +253,10 @@ GaussianCloud make_gc(arr means, arr scales, arr quats, arr opacities, arr sh_dc
 void register_ply_gaussian(nb::module_ &m) {
     m.def("read_gaussian_ply", &read_gaussian_ply, "data"_a,
           "Decode a 3DGS Gaussian .ply (binary) into a GaussianCloud (raw/pre-activation values).");
+    m.def("read_gaussian_ply_points", &read_gaussian_ply_points, "data"_a,
+          "start"_a, "stop"_a,
+          "Decode a non-empty half-open binary Gaussian PLY point range "
+          "without allocating the full cloud.");
     m.def("write_gaussian_ply", &write_gaussian_ply, "cloud"_a,
           "Encode a GaussianCloud to 3DGS Gaussian .ply bytes (binary little-endian).");
     m.def("gaussian_cloud", &make_gc, "means"_a, "scales"_a, "quaternions"_a, "opacities"_a,

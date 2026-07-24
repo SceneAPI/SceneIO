@@ -175,18 +175,26 @@ void parse_row(const char *ls, const char *le, const Schema &sch, size_t line_no
 // override: when set, it fixes the schema and the first data line's column count
 // must equal it (else raise) instead of being auto-detected.
 void decode_xyz(const char *p, size_t n, PointCloud &pc, const std::optional<Schema> &forced,
-                const std::string &forced_name) {
+                const std::string &forced_name, bool partial = false,
+                size_t start = 0, size_t stop = 0) {
+    if (partial && start >= stop)
+        throw std::invalid_argument(
+            "xyz point range must be a non-empty half-open range");
     size_t newlines = 0;  // reserve capacity proportional to the input (not a header)
     for (size_t k = 0; k < n; ++k)
         if (p[k] == '\n') ++newlines;
     // Cap the reservation by the byte budget: a minimal data row ("0 0 0\n") is
     // 6 bytes, so n/6 bounds the possible data rows -- a newline/comment bomb then
     // cannot force an ~12x-input up-front allocation before a single row is parsed.
-    pc.xyz.reserve(3 * std::min<size_t>(newlines + 1, n / 6 + 1));
+    const size_t possible_rows = std::min<size_t>(newlines + 1, n / 6 + 1);
+    const size_t reserved_rows =
+        partial ? std::min(stop - start, possible_rows) : possible_rows;
+    pc.xyz.reserve(3 * reserved_rows);
 
     bool schema_set = false;
     Schema sch{};
     size_t line_no = 0;
+    size_t data_row = 0;
     size_t i = 0;
     while (i < n) {
         const char *ls = p + i;
@@ -220,8 +228,17 @@ void decode_xyz(const char *p, size_t n, PointCloud &pc, const std::optional<Sch
             }
             schema_set = true;
         }
-        parse_row(ls, le, sch, line_no, pc);
+        if (!partial || (data_row >= start && data_row < stop)) {
+            parse_row(ls, le, sch, line_no, pc);
+        } else if (count_tokens(ls, le) != sch.cols) {
+            throw std::invalid_argument(
+                "xyz: line " + std::to_string(line_no) + ": expected " +
+                std::to_string(sch.cols) + " numbers");
+        }
+        ++data_row;
     }
+    if (partial && stop > data_row)
+        throw std::invalid_argument("xyz point range exceeds the available extent");
     pc.n = pc.xyz.size() / 3;
 }
 
@@ -340,6 +357,25 @@ PointCloud read_xyz(nb::handle source, std::optional<std::string> layout) {
         decode_xyz(p, n, pc, forced, forced_name);
     }
     return pc;  // nanobind converts to the Python PointCloud with the GIL re-held
+}
+
+PointCloud read_xyz_points(nb::handle source, size_t start, size_t stop,
+                           std::optional<std::string> layout) {
+    sio::ByteView data(source);
+    const char *p = reinterpret_cast<const char *>(data.data());
+    const size_t n = data.size();
+    std::optional<Schema> forced;
+    std::string forced_name;
+    if (layout.has_value()) {
+        forced = schema_from_name(*layout);
+        forced_name = *layout;
+    }
+    PointCloud pc;
+    {
+        nb::gil_scoped_release rel;
+        decode_xyz(p, n, pc, forced, forced_name, true, start, stop);
+    }
+    return pc;
 }
 
 // Append one coordinate as canonical text. Finite values use %.17g (a float
@@ -479,6 +515,10 @@ void register_xyz(nb::module_ &m) {
           "columns -- one of \"xyz\", \"xyzi\", \"xyzrgb\", \"xyzn\", \"xyzirgb\", \"xyzrgbn\"; "
           "\"xyzn\" reads the ambiguous 6-column form as normals (nx ny nz) instead of rgb. A "
           "declared layout whose column count differs from the first data line raises.");
+    m.def("read_xyz_points", &read_xyz_points, "data"_a, "start"_a,
+          "stop"_a, "layout"_a = nb::none(),
+          "Decode one non-empty half-open point range from .xyz text while "
+          "allocating only the selected records.");
     m.def("write_xyz", &write_xyz, "pc"_a, "_lanes"_a = 0,
           "Encode a PointCloud as .xyz text: 'x y z' or 'x y z r g b' rows with %.17g doubles "
           "(parse-exact round-trip; non-finite values emitted as canonical nan/inf/-inf). "

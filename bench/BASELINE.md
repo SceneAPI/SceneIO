@@ -260,3 +260,35 @@ guards, every inspection must stay below 1 MB of traced Python allocation, and
 the two JSON readers retain a coarse full-read/SAX ratio bound that catches
 large decode-path regressions. This committed table remains the historical
 control for smaller timing movement.
+
+## O5 bounded partial-read delta — 2026-07-24
+
+Final local MSVC five-run sweep (`bench_io.py --runs 5 --require-o4-gains
+--require-o5-inspect-gains --require-o5-partial-gains`). `full ms` is the
+normal public mmap-backed read and `partial ms` returns the normal record type
+while materializing only the selected window, point range, or COLMAP image.
+
+```
+codec                 full ms  partial ms  speedup  full RSS MB  part RSS MB
+----------------------------------------------------------------------------
+webp                     11.84        6.14    1.93x          9.8          4.3
+netpbm                    0.87        0.10    8.35x          6.3          0.0
+xyz                     173.16      101.92    1.70x         68.5         56.5
+las                       5.84        0.52   11.21x         47.3          1.4
+gaussian_ply              5.16        0.26   19.55x         21.6          0.7
+splat                      6.14        0.33   18.79x         16.7          0.2
+pfm                        1.36        0.13   10.25x          8.0          0.4
+flo                        0.04        0.04    1.00x          0.0          0.0
+colmap_sparse              2.21        0.04   53.19x          0.0          0.0
+colmap_sparse_txt          3.12        0.04   85.11x          0.0          0.0
+```
+
+Every partial traced-allocation peak remained below the table's 0.05 MB
+display precision. WebP measures a lossless VP8L crop; binary P5/P6 is the
+bounded Netpbm path. ASCII P2/P3 and lossy VP8 reject rather than performing a
+non-bounded or non-slice-exact operation. XYZ must still scan mapped text to
+find and validate row boundaries, so its guard requires at least a 4 MB
+absolute RSS reduction; the other material rows require a directional ratio
+gain. The paired five-run CI guard passed together with all retained O4 and O5
+inspection controls. Final verification passed 1,289 tests / 3 optional skips
+on Windows and 1,208 / 62 expected skips under ASan/UBSan/LSan on Linux.

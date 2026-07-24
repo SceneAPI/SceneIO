@@ -90,6 +90,91 @@ Image read_webp(nb::handle source) {
     return im;
 }
 
+Image read_webp_window(nb::handle source, size_t row_start, size_t row_stop,
+                       size_t col_start, size_t col_stop) {
+    sio::ByteView data(source);
+    const uint8_t *in = data.data();
+    const size_t size = data.size();
+    Image im;
+    {
+        nb::gil_scoped_release rel;
+        WebPDecoderConfig config;
+        if (!WebPInitDecoderConfig(&config))
+            throw std::invalid_argument(
+                "webp: decoder config init failed (ABI mismatch?)");
+        struct ConfigGuard {
+            WebPDecoderConfig *config;
+            ~ConfigGuard() { WebPFreeDecBuffer(&config->output); }
+        } guard{&config};
+        if (WebPGetFeatures(in, size, &config.input) != VP8_STATUS_OK)
+            throw std::invalid_argument("webp: not a valid WebP stream");
+        if (config.input.has_animation)
+            throw std::invalid_argument(
+                "webp: animated WebP is not supported");
+        // VP8 cropping changes chroma/fancy-upsampling context at the crop
+        // boundary, so it is not guaranteed to equal a full-decode slice.
+        // VP8L has no such context dependency and remains slice-exact.
+        if (config.input.format != 2)
+            throw std::invalid_argument(
+                "webp: pixel-window reads require lossless VP8L for "
+                "slice-exact decoding");
+        if (config.input.width <= 0 || config.input.height <= 0 ||
+            static_cast<uint64_t>(config.input.width) * config.input.height >
+                kWebpPixelCap)
+            throw std::invalid_argument(
+                "webp: image dimensions exceed the supported limit");
+        const size_t height = static_cast<size_t>(config.input.height);
+        const size_t width = static_cast<size_t>(config.input.width);
+        const size_t out_h = checked_half_open_range(
+            row_start, row_stop, height, "webp row window");
+        const size_t out_w = checked_half_open_range(
+            col_start, col_stop, width, "webp column window");
+
+        // libwebp snaps crop origins down to even coordinates. Decode at most
+        // one extra leading row/column, then copy the exact requested box.
+        const size_t decode_top = row_start & ~size_t{1};
+        const size_t decode_left = col_start & ~size_t{1};
+        const size_t decode_h = row_stop - decode_top;
+        const size_t decode_w = col_stop - decode_left;
+        const size_t channels = config.input.has_alpha ? 4 : 3;
+        std::vector<uint8_t> decoded(decode_h * decode_w * channels);
+
+        config.output.colorspace =
+            config.input.has_alpha ? MODE_RGBA : MODE_RGB;
+        config.output.is_external_memory = 1;
+        config.output.u.RGBA.rgba = decoded.data();
+        config.output.u.RGBA.stride =
+            static_cast<int>(decode_w * channels);
+        config.output.u.RGBA.size = decoded.size();
+        config.options.use_cropping = 1;
+        config.options.crop_left = static_cast<int>(decode_left);
+        config.options.crop_top = static_cast<int>(decode_top);
+        config.options.crop_width = static_cast<int>(decode_w);
+        config.options.crop_height = static_cast<int>(decode_h);
+        const VP8StatusCode status = WebPDecode(in, size, &config);
+        if (status != VP8_STATUS_OK)
+            throw std::invalid_argument("webp: window decode failed");
+
+        im.height = out_h;
+        im.width = out_w;
+        im.channels = channels;
+        im.dtype = PixelType::U8;
+        im.color_space = "srgb";
+        im.alpha_mode = config.input.has_alpha ? "straight" : "none";
+        im.maxval = 255;
+        im.u8.resize(out_h * out_w * channels);
+        const size_t row_offset = row_start - decode_top;
+        const size_t col_offset = col_start - decode_left;
+        for (size_t y = 0; y < out_h; ++y)
+            std::memcpy(
+                im.u8.data() + y * out_w * channels,
+                decoded.data() +
+                    ((row_offset + y) * decode_w + col_offset) * channels,
+                out_w * channels);
+    }
+    return im;
+}
+
 nb::bytes write_webp(const Image &img, bool lossless, float quality,
                      bool threads, int effort, int method) {
     // --- guards: refuse what WebP cannot represent (never convert) ---
@@ -179,6 +264,10 @@ void register_webp(nb::module_ &m) {
     m.def("read_webp", &read_webp, "data"_a,
           "Decode WebP bytes into an Image (uint8 sRGB; RGB, or RGBA with straight alpha when the "
           "file has alpha). Animated WebP raises.");
+    m.def("read_webp_window", &read_webp_window, "data"_a, "row_start"_a,
+          "row_stop"_a, "column_start"_a, "column_stop"_a,
+          "Decode one non-empty half-open lossless VP8L pixel window; lossy "
+          "VP8 rejects because crop-local chroma upsampling is not slice-exact.");
     m.def("write_webp", &write_webp, "img"_a, "lossless"_a = true,
           "quality"_a = 90.0f, "_threads"_a = true, "_effort"_a = 75,
           "_method"_a = 5,
