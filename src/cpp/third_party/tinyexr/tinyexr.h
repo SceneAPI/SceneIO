@@ -756,6 +756,8 @@ extern const char* EXRGetSpectralUnits(const EXRHeader *exr_header);
 
 #if TINYEXR_USE_THREAD
 #include <atomic>
+#include <exception>
+#include <mutex>
 #include <thread>
 #endif
 
@@ -6799,10 +6801,25 @@ static int DecodeChunk(EXRImage *exr_image, const EXRHeader *exr_header,
       }
       return TINYEXR_ERROR_INVALID_DATA;
     }
+    // SceneIO local exception-safety patch: publish the channel count as soon
+    // as AllocateImage succeeds so FreeEXRImage can release every plane if a
+    // later worker/vector allocation throws.
+    exr_image->num_channels = num_channels;
 
 #if TINYEXR_HAS_CXX11 && (TINYEXR_USE_THREAD > 0)
     std::vector<std::thread> workers;
     std::atomic<int> y_count(0);
+    std::exception_ptr worker_error;
+    std::mutex worker_error_mutex;
+    // SceneIO local correctness patch: malformed files may repeat or overlap
+    // scanline destinations even when their offset-table entries are distinct.
+    // Claim each aligned destination block before DecodePixelData writes it so
+    // worker threads can never race on exr_image->images.
+    std::vector<std::atomic<bool> > claimed_blocks(
+        static_cast<size_t>(num_blocks));
+    for (size_t i = 0; i < claimed_blocks.size(); ++i) {
+      claimed_blocks[i].store(false, std::memory_order_relaxed);
+    }
 
     int num_threads = std::max(1, int(std::thread::hardware_concurrency()));
 #if (TINYEXR_MAX_THREADS > 0)
@@ -6811,12 +6828,18 @@ static int DecodeChunk(EXRImage *exr_image, const EXRHeader *exr_header,
     if (num_threads > int(num_blocks)) {
       num_threads = int(num_blocks);
     }
-    for (int t = 0; t < num_threads; t++) {
-      workers.emplace_back(std::thread([&]() {
-        int y = 0;
-        while ((y = y_count++) < int(num_blocks)) {
+    workers.reserve(static_cast<size_t>(num_threads));
+    try {
+      for (int t = 0; t < num_threads; t++) {
+        workers.emplace_back([&]() {
+          try {
+            int y = 0;
+            while ((y = y_count++) < int(num_blocks)) {
 
 #else
+
+    std::vector<unsigned char> claimed_blocks(
+        static_cast<size_t>(num_blocks), 0);
 
 #if TINYEXR_USE_OPENMP
 #pragma omp parallel for
@@ -6882,22 +6905,44 @@ static int DecodeChunk(EXRImage *exr_image, const EXRHeader *exr_header,
                   line_no -= exr_header->data_window.min_y;
                 }
 
-                if (line_no < 0) {
+                if (line_no < 0 ||
+                    (line_no % num_scanline_blocks) != 0) {
                   invalid_data = true;
                 } else {
-                  // Line order is increasing because we read in line offset table order.
-                  if (!tinyexr::DecodePixelData(
-                          exr_image->images, exr_header->requested_pixel_types,
-                          data_ptr, static_cast<size_t>(data_len),
-                          exr_header->compression_type, /* line_order*/ 0,
-                          int(data_width), int(data_height), int(data_width), y, line_no,
-                          num_lines, static_cast<size_t>(pixel_data_size),
-                          static_cast<size_t>(
-                              exr_header->num_custom_attributes),
-                          exr_header->custom_attributes,
-                          static_cast<size_t>(exr_header->num_channels),
-                          exr_header->channels, channel_offset_list)) {
+                  const size_t destination_block =
+                      static_cast<size_t>(line_no / num_scanline_blocks);
+                  bool already_claimed = true;
+                  if (destination_block < claimed_blocks.size()) {
+#if TINYEXR_HAS_CXX11 && (TINYEXR_USE_THREAD > 0)
+                    already_claimed =
+                        claimed_blocks[destination_block].exchange(
+                            true, std::memory_order_relaxed);
+#else
+                    already_claimed =
+                        claimed_blocks[destination_block] != 0;
+                    claimed_blocks[destination_block] = 1;
+#endif
+                  }
+                  if (already_claimed) {
                     invalid_data = true;
+                  } else {
+                    // Line order is increasing because we read in line offset
+                    // table order.
+                    if (!tinyexr::DecodePixelData(
+                            exr_image->images,
+                            exr_header->requested_pixel_types, data_ptr,
+                            static_cast<size_t>(data_len),
+                            exr_header->compression_type, /* line_order*/ 0,
+                            int(data_width), int(data_height), int(data_width),
+                            y, line_no, num_lines,
+                            static_cast<size_t>(pixel_data_size),
+                            static_cast<size_t>(
+                                exr_header->num_custom_attributes),
+                            exr_header->custom_attributes,
+                            static_cast<size_t>(exr_header->num_channels),
+                            exr_header->channels, channel_offset_list)) {
+                      invalid_data = true;
+                    }
                   }
                 }
               }
@@ -6905,12 +6950,28 @@ static int DecodeChunk(EXRImage *exr_image, const EXRHeader *exr_header,
           }
 
 #if TINYEXR_HAS_CXX11 && (TINYEXR_USE_THREAD > 0)
-        }
-      }));
+            }
+          } catch (...) {
+            invalid_data = true;
+            std::lock_guard<std::mutex> lock(worker_error_mutex);
+            if (!worker_error) {
+              worker_error = std::current_exception();
+            }
+          }
+        });
+      }
+    } catch (...) {
+      for (size_t i = 0; i < workers.size(); ++i) {
+        if (workers[i].joinable()) workers[i].join();
+      }
+      throw;
     }
 
     for (auto &t : workers) {
       t.join();
+    }
+    if (worker_error) {
+      std::rethrow_exception(worker_error);
     }
 #else
     }  // omp parallel
@@ -9117,15 +9178,22 @@ static int EncodeChunk(const EXRImage* exr_image, const EXRHeader* exr_header,
     std::atomic<bool> invalid_data(false);
     std::vector<std::thread> workers;
     std::atomic<int> block_count(0);
+    std::exception_ptr worker_error;
+    std::mutex worker_error_mutex;
+    std::vector<std::string> block_errors(
+        static_cast<size_t>(num_blocks));
 
     int num_threads = std::min(std::max(1, int(std::thread::hardware_concurrency())), num_blocks);
 #if (TINYEXR_MAX_THREADS > 0)
     num_threads = std::min(num_threads,TINYEXR_MAX_THREADS);
 #endif
-    for (int t = 0; t < num_threads; t++) {
-      workers.emplace_back(std::thread([&]() {
-        int i = 0;
-        while ((i = block_count++) < num_blocks) {
+    workers.reserve(static_cast<size_t>(num_threads));
+    try {
+      for (int t = 0; t < num_threads; t++) {
+        workers.emplace_back([&]() {
+          try {
+            int i = 0;
+            while ((i = block_count++) < num_blocks) {
 
 #else
     bool invalid_data(false);
@@ -9157,7 +9225,11 @@ static int EncodeChunk(const EXRImage* exr_image, const EXRHeader* exr_header,
                                  pixel_data_size,
                                  channels,
                                  channel_offset_list,
+#if TINYEXR_HAS_CXX11 && (TINYEXR_USE_THREAD > 0)
+                                 &block_errors[static_cast<size_t>(i)],
+#else
                                  err,
+#endif
                                  compression_param);
       if (!ret) {
         invalid_data = true;
@@ -9174,12 +9246,35 @@ static int EncodeChunk(const EXRImage* exr_image, const EXRHeader* exr_header,
       swap4(reinterpret_cast<int*>(&data_list[i][0]));
       swap4(reinterpret_cast<int*>(&data_list[i][4]));
 #if TINYEXR_HAS_CXX11 && (TINYEXR_USE_THREAD > 0)
-        }
-                                       }));
+            }
+          } catch (...) {
+            invalid_data = true;
+            std::lock_guard<std::mutex> lock(worker_error_mutex);
+            if (!worker_error) {
+              worker_error = std::current_exception();
+            }
+          }
+        });
+      }
+    } catch (...) {
+      for (size_t i = 0; i < workers.size(); ++i) {
+        if (workers[i].joinable()) workers[i].join();
+      }
+      throw;
     }
 
     for (auto &t : workers) {
       t.join();
+    }
+    if (worker_error) {
+      std::rethrow_exception(worker_error);
+    }
+    if (err) {
+      for (size_t i = 0; i < block_errors.size(); ++i) {
+        if (!block_errors[i].empty()) {
+          (*err) += block_errors[i];
+        }
+      }
     }
 #else
     }  // omp parallel

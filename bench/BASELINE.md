@@ -168,3 +168,48 @@ registry. At table precision every output-sized Python allocation disappeared;
 the 16 MiB NPY bound asserts the exact property independent of timer/RSS noise.
 Sink throughput was equal or faster within normal run noise (NPZ's 408 vs
 407 MB/s and OpenMVG's 44 vs 43 MB/s are sub-millisecond-scale differences).
+
+## O4 measured hot-path delta — 2026-07-23
+
+Final local MSVC run (`bench_io.py --runs 7`). Each base is the retained
+one-lane/worker-off or old-effort control measured in the same process. `bytes`
+means encoded output is identical; `values`/`pixels` means decoded arrays and
+record metadata are identical where compression settings intentionally changed.
+
+```
+codec   operation           base MB/s  optimized MB/s  gain   identity
+----------------------------------------------------------------------
+png16   swap-write                 68              69  1.02x  bytes
+png16   swap-read                 417             421  1.01x  values
+webp    balanced-config            12              34  2.75x  pixels
+webp    workers-palette            10              19  1.93x  bytes
+exr     planar-write              254             252  0.99x  bytes
+exr     planar-read              1133            1293  1.14x  values
+xyz     format-write               20             101  5.16x  bytes
+las     points-write              347            1054  3.03x  bytes
+las     points-read              1997            2765  1.38x  values
+```
+
+PNG16's conversion and the outer EXR planar write are small fractions of their
+whole-codec costs. Repeated sweeps placed those ratios on both sides of 1.0, so
+the table records the final run but makes no speedup claim for them. The larger
+targets are stable and directional. WebP's balanced production default is
+method 5 / effort 75 / workers enabled; the worker row uses a structured palette
+case that makes libwebp create independent lossless candidates and verifies a
+native side-worker launch rather than merely toggling `thread_level`. Lossy WebP
+retains the pre-O4 method-4/worker-off configuration.
+
+All controlled one-vs-many paths compare their actual bytes or decoded
+values/metadata before reporting a row. TinyEXR output also matches a pinned
+pre-O4 SHA-256, and a malformed duplicate-destination scanline fixture is
+required to reject. Final verification: 1,165 passed / 3 optional skips on
+Windows and 1,102 passed / 44 optional-platform skips under the instrumented
+Linux ASan/UBSan/LSan build.
+
+CI runs the all-23-codec smoke and uploads its JSON. A second five-run sweep
+fails when any retained stable high-signal O4 control (WebP balanced config and
+palette workers, XYZ write, LAS read/write) loses its paired in-process gain, or
+when mmap/file-sink traced allocation rises above one quarter of the retained
+whole-file bytes control for material fixtures. Small compression-dominated
+PNG16/EXR-planar timing deltas remain recorded but do not create a flaky timing
+gate.

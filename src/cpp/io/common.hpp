@@ -10,10 +10,13 @@
 #include <climits>
 #include <cstdint>
 #include <cstring>
+#include <exception>
 #include <limits>
+#include <mutex>
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <thread>
 #include <type_traits>
 #include <vector>
 
@@ -26,6 +29,71 @@
 namespace nb = nanobind;
 
 namespace sio {
+
+constexpr size_t kMaxParallelLanes = 64;
+
+inline size_t parallel_lane_count(size_t count, size_t requested,
+                                  size_t min_items_per_lane) {
+    if (requested > kMaxParallelLanes)
+        throw std::invalid_argument("parallel lane count exceeds 64");
+    if (count == 0) return 1;
+    size_t lanes = requested;
+    if (lanes == 0) {
+        lanes = std::max<size_t>(1, std::thread::hardware_concurrency());
+        lanes = std::min<size_t>(lanes, 8);
+        const size_t useful =
+            1 + (count - 1) / std::max<size_t>(1, min_items_per_lane);
+        lanes = std::min(lanes, useful);
+    }
+    return std::max<size_t>(1, std::min(lanes, count));
+}
+
+// Run deterministic contiguous blocks on a bounded number of threads. An
+// explicit lane count is a private verification seam; zero selects up to eight
+// hardware lanes but retains the serial path for small inputs. Worker
+// exceptions are captured, every started thread is joined, then the first error
+// is rethrown on the caller.
+template <typename Fn>
+size_t parallel_for_blocks(size_t count, size_t requested,
+                           size_t min_items_per_lane, Fn &&fn) {
+    const size_t lanes =
+        parallel_lane_count(count, requested, min_items_per_lane);
+    if (count == 0) return lanes;
+    if (lanes == 1) {
+        fn(0, count, 0);
+        return lanes;
+    }
+
+    std::exception_ptr error;
+    std::mutex error_mutex;
+    auto run = [&](size_t lane) {
+        const size_t base = count / lanes;
+        const size_t extra = count % lanes;
+        const size_t begin = lane * base + std::min(lane, extra);
+        const size_t end = begin + base + (lane < extra ? 1 : 0);
+        try {
+            fn(begin, end, lane);
+        } catch (...) {
+            std::lock_guard<std::mutex> lock(error_mutex);
+            if (!error) error = std::current_exception();
+        }
+    };
+
+    std::vector<std::thread> workers;
+    workers.reserve(lanes - 1);
+    try {
+        for (size_t lane = 1; lane < lanes; ++lane)
+            workers.emplace_back(run, lane);
+    } catch (...) {
+        for (std::thread &worker : workers)
+            if (worker.joinable()) worker.join();
+        throw;
+    }
+    run(0);
+    for (std::thread &worker : workers) worker.join();
+    if (error) std::rethrow_exception(error);
+    return lanes;
+}
 
 class FileSink;
 inline thread_local FileSink *active_file_sink = nullptr;

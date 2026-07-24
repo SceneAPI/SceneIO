@@ -35,6 +35,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <cstring>
 #include <optional>
 #include <string>
 #include <system_error>
@@ -246,38 +247,87 @@ PointCloud read_xyz(nb::handle source, std::optional<std::string> layout) {
 // the platform CRT spellings (MSVC/UCRT "-nan(ind)" / "1.#INF"), which
 // float()/np.loadtxt and other external readers reject; the canonical tokens
 // keep the output parseable everywhere and re-read through our fast_float reader.
-void append_coord(std::string &out, float f) {
+void append_coord(char *&out, float f) {
     if (std::isnan(f)) {
-        out += std::signbit(f) ? "-nan" : "nan";
+        const char *token = std::signbit(f) ? "-nan" : "nan";
+        const size_t size = std::signbit(f) ? 4 : 3;
+        std::memcpy(out, token, size);
+        out += size;
     } else if (std::isinf(f)) {
-        out += std::signbit(f) ? "-inf" : "inf";
+        const char *token = std::signbit(f) ? "-inf" : "inf";
+        const size_t size = std::signbit(f) ? 4 : 3;
+        std::memcpy(out, token, size);
+        out += size;
     } else {
         char buf[64];
-        std::snprintf(buf, sizeof(buf), "%.17g", static_cast<double>(f));
-        out += buf;
+        const int size =
+            std::snprintf(buf, sizeof(buf), "%.17g", static_cast<double>(f));
+        if (size < 0 || static_cast<size_t>(size) >= sizeof(buf))
+            throw std::runtime_error("xyz: float formatter failed");
+        std::memcpy(out, buf, static_cast<size_t>(size));
+        out += size;
     }
+}
+
+void append_u8(char *&out, uint8_t value) {
+    const unsigned v = value;
+    if (v >= 100) {
+        *out++ = static_cast<char>('0' + v / 100);
+        *out++ = static_cast<char>('0' + (v / 10) % 10);
+    } else if (v >= 10) {
+        *out++ = static_cast<char>('0' + v / 10);
+    }
+    *out++ = static_cast<char>('0' + v % 10);
 }
 
 // Pure-C++ encode of "x y z [r g b]" rows.
-void encode_xyz(const PointCloud &pc, std::string &out) {
+void encode_xyz(const PointCloud &pc, std::string &out, size_t requested_lanes) {
     const bool rgb = pc.has_rgb();
-    out.reserve(pc.n * (rgb ? 96 : 72));
-    for (size_t i = 0; i < pc.n; ++i) {
-        for (int k = 0; k < 3; ++k) {
-            if (k) out.push_back(' ');
-            append_coord(out, pc.xyz[3 * i + k]);
-        }
-        if (rgb) {
-            for (int k = 0; k < 3; ++k) {
-                out.push_back(' ');
-                out += std::to_string(static_cast<unsigned>(pc.rgb[3 * i + k]));
+    const size_t row_capacity = rgb ? 96 : 72;
+    if (pc.n > out.max_size() / row_capacity)
+        throw std::length_error("xyz: encoded text is too large");
+    out.resize(pc.n * row_capacity);
+    std::vector<size_t> starts(kMaxParallelLanes);
+    std::vector<size_t> used(kMaxParallelLanes);
+    const size_t lanes = parallel_for_blocks(
+        pc.n, requested_lanes, 32768,
+        [&](size_t begin, size_t end, size_t lane) {
+            char *dst = out.data() + begin * row_capacity;
+            starts[lane] = begin * row_capacity;
+            char *const block_begin = dst;
+            for (size_t i = begin; i < end; ++i) {
+                char row[96];
+                char *cursor = row;
+                for (int k = 0; k < 3; ++k) {
+                    if (k) *cursor++ = ' ';
+                    append_coord(cursor, pc.xyz[3 * i + k]);
+                }
+                if (rgb) {
+                    for (int k = 0; k < 3; ++k) {
+                        *cursor++ = ' ';
+                        append_u8(cursor, pc.rgb[3 * i + k]);
+                    }
+                }
+                *cursor++ = '\n';
+                const size_t row_size = static_cast<size_t>(cursor - row);
+                if (row_size > row_capacity)
+                    throw std::logic_error("xyz: formatted row exceeded its bound");
+                std::memcpy(dst, row, row_size);
+                dst += row_size;
             }
-        }
-        out.push_back('\n');
+            used[lane] = static_cast<size_t>(dst - block_begin);
+        });
+
+    size_t compacted = 0;
+    for (size_t lane = 0; lane < lanes; ++lane) {
+        std::memmove(out.data() + compacted, out.data() + starts[lane],
+                     used[lane]);
+        compacted += used[lane];
     }
+    out.resize(compacted);
 }
 
-nb::bytes write_xyz(const PointCloud &pc) {
+nb::bytes write_xyz(const PointCloud &pc, size_t lanes) {
     // Guards: the .xyz row is exactly "x y z [r g b]"; refuse a record whose
     // normals/intensity it cannot carry rather than silently dropping them (the
     // netpbm refuse-not-convert rule -- a normalizer converts, on request).
@@ -300,7 +350,7 @@ nb::bytes write_xyz(const PointCloud &pc) {
     std::string out;
     {
         nb::gil_scoped_release rel;  // pure C++ encode
-        encode_xyz(pc, out);
+        encode_xyz(pc, out, lanes);
     }
     return emit_bytes(out.data(), out.size());
 }
@@ -323,9 +373,10 @@ void register_xyz(nb::module_ &m) {
           "columns -- one of \"xyz\", \"xyzi\", \"xyzrgb\", \"xyzn\", \"xyzirgb\", \"xyzrgbn\"; "
           "\"xyzn\" reads the ambiguous 6-column form as normals (nx ny nz) instead of rgb. A "
           "declared layout whose column count differs from the first data line raises.");
-    m.def("write_xyz", &write_xyz, "pc"_a,
+    m.def("write_xyz", &write_xyz, "pc"_a, "_lanes"_a = 0,
           "Encode a PointCloud as .xyz text: 'x y z' or 'x y z r g b' rows with %.17g doubles "
           "(parse-exact round-trip; non-finite values emitted as canonical nan/inf/-inf). "
+          "Large clouds use bounded parallel formatting. "
           "Refuses a record carrying normals or intensity (which the 'x y z [r g b]' layout "
           "cannot represent) rather than dropping them.");
 }

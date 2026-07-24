@@ -50,6 +50,13 @@ NB_MODULE(_core, m) {
               return reinterpret_cast<uintptr_t>(data.data());
           },
           "data"_a);
+    m.def("_parallel_hardware_lane_cap",
+          []() {
+              return std::min<size_t>(
+                  std::max<size_t>(1, std::thread::hardware_concurrency()), 8);
+          });
+    m.def("_parallel_lane_count", &sio::parallel_lane_count, "count"_a,
+          "requested"_a, "min_items_per_lane"_a);
     // Private registry adapter: run a direct compiled bytes encoder with a
     // lazy binary-file sink. Python-side conversion must finish before this
     // call because arbitrary protocol callbacks could otherwise re-enter an

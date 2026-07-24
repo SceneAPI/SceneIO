@@ -1,4 +1,4 @@
-"""O0-O3 I/O benchmark harness for docs/io_optimization_plan.md.
+"""O0-O4 I/O benchmark harness for docs/io_optimization_plan.md.
 
 Measures, per codec, encode (write) + decode (read) throughput (MB/s over the raw
 payload) and peak Python allocation (tracemalloc), for sceneio._core vs the oracle
@@ -29,6 +29,7 @@ import tracemalloc
 import warnings
 from collections.abc import Callable
 from dataclasses import dataclass
+from functools import partial
 from pathlib import Path
 
 import numpy as np
@@ -127,6 +128,25 @@ def _img_u8(h, w):
 def _img_f32(h, w):
     a = (np.random.default_rng(0).random((h, w, 3), dtype=np.float32) * 10.0).astype(np.float32)
     return _core.image(a, color_space="linear"), a
+
+
+def _img_webp_palette(h, w):
+    palette = np.array(
+        [
+            [0, 0, 0],
+            [255, 255, 255],
+            [255, 0, 0],
+            [0, 255, 0],
+            [0, 0, 255],
+            [255, 255, 0],
+            [255, 0, 255],
+            [0, 255, 255],
+        ],
+        dtype=np.uint8,
+    )
+    yy, xx = np.indices((h, w))
+    a = palette[((xx // 7) + (yy // 11)) % len(palette)]
+    return _core.image(a, color_space="srgb"), a
 
 
 def _pc(n, color):
@@ -600,6 +620,14 @@ def main():
         action="store_true",
         help="request POSIX_FADV_DONTNEED before each path read when supported",
     )
+    ap.add_argument(
+        "--require-o4-gains",
+        action="store_true",
+        help=(
+            "fail unless stable high-signal O4 controls improve and mmap/sink "
+            "traced allocations remain bounded"
+        ),
+    )
     ap.add_argument("--json", type=Path, help="write machine-readable results to this path")
     args = ap.parse_args()
     if args.scale <= 0:
@@ -620,6 +648,7 @@ def _run_benchmark(args, tmp):
     failures = []
     results = []
     write_rows = []
+    o4_rows = []
 
     hdr = (
         f"{'codec':<14}{'payloadMB':>10}{'fileMB':>9}{'sioW':>9}{'sioR':>9}"
@@ -639,6 +668,249 @@ def _run_benchmark(args, tmp):
             wt, _ = _measure(lambda: s.w(rec), args.runs)
             rt, _ = _measure(lambda: s.r(enc), args.runs)
             sioW, sioR = pmb / wt, pmb / rt
+            o4_metrics = {}
+
+            # O4 controls retain a deterministic one-lane/worker-off reference
+            # beside the optimized defaults. WebP separately measures the old
+            # forced effort=100 setting and a palette input on which libwebp
+            # actually schedules its lossless side worker.
+            if s.id == "webp":
+                old_webp = partial(
+                    _core.write_webp, rec, True, 90.0, False, 100, 4
+                )
+                old_time, _ = _measure(old_webp, args.runs)
+                original = np.asarray(rec.pixels)
+                if not np.array_equal(
+                    np.asarray(_core.read_webp(old_webp()).pixels), original
+                ):
+                    raise AssertionError("lower WebP effort changed decoded pixels")
+
+                palette_rec, palette_values = _img_webp_palette(
+                    max(32, int(1024 * args.scale**0.5)),
+                    max(32, int(1024 * args.scale**0.5)),
+                )
+                worker_off = partial(
+                    _core.write_webp,
+                    palette_rec,
+                    True,
+                    90.0,
+                    False,
+                )
+                worker_on = partial(_core.write_webp, palette_rec)
+                worker_off_time, _ = _measure(worker_off, args.runs)
+                launch_count = _core._webp_worker_launch_count()
+                worker_on_time, _ = _measure(worker_on, args.runs)
+                if _core._webp_worker_launch_count() <= launch_count:
+                    raise AssertionError("WebP side-worker path was not reached")
+                worker_off_bytes = bytes(worker_off())
+                worker_on_bytes = bytes(worker_on())
+                if worker_off_bytes != worker_on_bytes:
+                    raise AssertionError("WebP worker output differs")
+                if not np.array_equal(
+                    np.asarray(_core.read_webp(worker_on_bytes).pixels),
+                    palette_values,
+                ):
+                    raise AssertionError("WebP worker decode differs")
+                palette_mb = palette_values.nbytes / 1e6
+                o4_rows.extend(
+                    [
+                        (
+                            "webp",
+                            "balanced-config",
+                            pmb / old_time,
+                            sioW,
+                            "pixels",
+                        ),
+                        (
+                            "webp",
+                            "workers-palette",
+                            palette_mb / worker_off_time,
+                            palette_mb / worker_on_time,
+                            "bytes",
+                        ),
+                    ]
+                )
+                o4_metrics.update(
+                    {
+                        "write_old_mbps": pmb / old_time,
+                        "write_worker_off_mbps": palette_mb
+                        / worker_off_time,
+                        "write_optimized_mbps": sioW,
+                        "write_worker_on_mbps": palette_mb / worker_on_time,
+                    }
+                )
+            elif s.id in {"xyz", "exr", "las"}:
+                if s.id == "xyz":
+                    one_lane_write = partial(
+                        _core.write_xyz, rec, _lanes=1
+                    )
+                    label = "format"
+                elif s.id == "exr":
+                    one_lane_write = partial(
+                        _core.write_exr, rec, _lanes=1
+                    )
+                    label = "planar"
+                else:
+                    one_lane_write = partial(
+                        _core.write_las, rec, _lanes=1
+                    )
+                    label = "points"
+                one_write_time, _ = _measure(one_lane_write, args.runs)
+                if bytes(one_lane_write()) != enc:
+                    raise AssertionError(f"{s.id} lane output differs")
+                o4_rows.append(
+                    (s.id, f"{label}-write", pmb / one_write_time, sioW, "bytes")
+                )
+                o4_metrics.update(
+                    {
+                        "write_one_lane_mbps": pmb / one_write_time,
+                        "write_optimized_mbps": sioW,
+                    }
+                )
+                if s.id in {"exr", "las"}:
+                    if s.id == "exr":
+                        one_lane_read = partial(
+                            _core.read_exr, enc, _lanes=1
+                        )
+                    else:
+                        one_lane_read = partial(
+                            _core.read_las, enc, _lanes=1
+                        )
+                    one_read_time, _ = _measure(one_lane_read, args.runs)
+                    one_decoded = one_lane_read()
+                    optimized_decoded = s.r(enc)
+                    if s.id == "exr":
+                        same_values = np.array_equal(
+                            np.asarray(one_decoded.pixels),
+                            np.asarray(optimized_decoded.pixels),
+                        )
+                        same_metadata = (
+                            one_decoded.height,
+                            one_decoded.width,
+                            one_decoded.channels,
+                            one_decoded.dtype,
+                            one_decoded.color_space,
+                            one_decoded.alpha_mode,
+                            one_decoded.maxval,
+                        ) == (
+                            optimized_decoded.height,
+                            optimized_decoded.width,
+                            optimized_decoded.channels,
+                            optimized_decoded.dtype,
+                            optimized_decoded.color_space,
+                            optimized_decoded.alpha_mode,
+                            optimized_decoded.maxval,
+                        )
+                    else:
+                        same_values = all(
+                            np.array_equal(
+                                np.asarray(getattr(one_decoded, field)),
+                                np.asarray(getattr(optimized_decoded, field)),
+                            )
+                            for field in (
+                                "positions",
+                                "colors16",
+                                "intensities",
+                            )
+                        ) and np.array_equal(
+                            one_decoded.origin, optimized_decoded.origin
+                        )
+                        same_metadata = (
+                            one_decoded.num_points,
+                            one_decoded.coordinate_frame,
+                            one_decoded.scale_to_meters,
+                            one_decoded.intensity_range,
+                        ) == (
+                            optimized_decoded.num_points,
+                            optimized_decoded.coordinate_frame,
+                            optimized_decoded.scale_to_meters,
+                            optimized_decoded.intensity_range,
+                        )
+                    if not same_values or not same_metadata:
+                        raise AssertionError(
+                            f"{s.id} lane decode differs"
+                        )
+                    o4_rows.append(
+                        (
+                            s.id,
+                            f"{label}-read",
+                            pmb / one_read_time,
+                            sioR,
+                            "values",
+                        )
+                    )
+                    o4_metrics.update(
+                        {
+                            "read_one_lane_mbps": pmb / one_read_time,
+                            "read_optimized_mbps": sioR,
+                        }
+                    )
+
+            if s.id == "png":
+                u16_side = max(1, int(1024 * args.scale**0.5))
+                u16 = (
+                    (
+                        np.arange(u16_side * u16_side * 3, dtype=np.uint32)
+                        * 40503
+                    )
+                    & 0xFFFF
+                ).astype(np.uint16).reshape(u16_side, u16_side, 3)
+                u16_image = _core.image(u16, color_space="srgb")
+                png16_one_write = partial(
+                    _core.write_png, u16_image, _lanes=1
+                )
+                png16_fast_write = partial(_core.write_png, u16_image)
+                png16_one_time, _ = _measure(png16_one_write, args.runs)
+                png16_fast_time, _ = _measure(png16_fast_write, args.runs)
+                png16_data = bytes(png16_fast_write())
+                if bytes(png16_one_write()) != png16_data:
+                    raise AssertionError("PNG16 lane output differs")
+                png16_one_read = partial(
+                    _core.read_png, png16_data, _lanes=1
+                )
+                png16_fast_read = partial(_core.read_png, png16_data)
+                png16_one_read_time, _ = _measure(png16_one_read, args.runs)
+                png16_fast_read_time, _ = _measure(
+                    png16_fast_read, args.runs
+                )
+                png16_one_values = np.asarray(png16_one_read().pixels)
+                png16_fast_values = np.asarray(png16_fast_read().pixels)
+                if not (
+                    np.array_equal(png16_one_values, png16_fast_values)
+                    and np.array_equal(png16_fast_values, u16)
+                ):
+                    raise AssertionError("PNG16 lane decode differs")
+                png16_mb = u16.nbytes / 1e6
+                o4_rows.extend(
+                    [
+                        (
+                            "png16",
+                            "swap-write",
+                            png16_mb / png16_one_time,
+                            png16_mb / png16_fast_time,
+                            "bytes",
+                        ),
+                        (
+                            "png16",
+                            "swap-read",
+                            png16_mb / png16_one_read_time,
+                            png16_mb / png16_fast_read_time,
+                            "values",
+                        ),
+                    ]
+                )
+                o4_metrics.update(
+                    {
+                        "png16_write_one_lane_mbps": png16_mb
+                        / png16_one_time,
+                        "png16_write_optimized_mbps": png16_mb
+                        / png16_fast_time,
+                        "png16_read_one_lane_mbps": png16_mb
+                        / png16_one_read_time,
+                        "png16_read_optimized_mbps": png16_mb
+                        / png16_fast_read_time,
+                    }
+                )
 
             # Compare the legacy bytes+Path.write_bytes route with the public O3
             # file sink, then compare whole-file bytes + copy decode with the
@@ -721,6 +993,7 @@ def _run_benchmark(args, tmp):
                     "sink_write_peak_mb": sink_write_peak / 1e6,
                     "bytes_write_rss_mb": bytes_write_rss / 1e6,
                     "sink_write_rss_mb": sink_write_rss / 1e6,
+                    "o4": o4_metrics or None,
                 }
             )
             print(
@@ -827,6 +1100,63 @@ def _run_benchmark(args, tmp):
     print("bytesW/sinkW = legacy bytes+file/public file-sink write MB/s.")
     print("bPeakMB/sPeakMB = peak Python allocation for bytes/file-sink writes (O3 delta).")
     print("bRSSMB/sRSSMB = sampled resident-set growth for bytes/file-sink writes.")
+    print("\nO4 one-lane/old-setting delta:")
+    o4_header = (
+        f"{'codec':<12}{'operation':<18}{'base MB/s':>12}"
+        f"{'opt MB/s':>12}{'gain':>9}{'identity':>11}"
+    )
+    print(o4_header)
+    print("-" * len(o4_header))
+    for codec_id, operation, base, optimized, identity in o4_rows:
+        print(
+            f"{codec_id:<12}{operation:<18}{base:>12.0f}"
+            f"{optimized:>12.0f}{optimized / base:>8.2f}x"
+            f"{identity:>11}"
+        )
+    print(
+        "Identity is encoded bytes where compression settings are unchanged; "
+        "otherwise decoded values/pixels."
+    )
+    if args.require_o4_gains:
+        guarded = {
+            ("webp", "balanced-config"),
+            ("webp", "workers-palette"),
+            ("xyz", "format-write"),
+            ("las", "points-write"),
+            ("las", "points-read"),
+        }
+        measured = {
+            (codec_id, operation): (base, optimized)
+            for codec_id, operation, base, optimized, _ in o4_rows
+        }
+        for key in sorted(guarded):
+            base, optimized = measured[key]
+            if optimized <= base:
+                failures.append(f"o4-regression:{key[0]}:{key[1]}")
+
+        for result in results:
+            if "error" in result or "bytes_peak_mb" not in result:
+                continue
+            bytes_peak = result["bytes_peak_mb"]
+            mmap_peak = result["mmap_peak_mb"]
+            if bytes_peak >= 0.5 and mmap_peak >= bytes_peak * 0.25:
+                failures.append(
+                    f"mmap-memory-regression:{result['codec']}"
+                )
+            bytes_write_peak = result["bytes_write_peak_mb"]
+            sink_write_peak = result["sink_write_peak_mb"]
+            if (
+                bytes_write_peak >= 0.5
+                and sink_write_peak >= bytes_write_peak * 0.25
+            ):
+                failures.append(
+                    f"sink-memory-regression:{result['codec']}"
+                )
+        if not failures:
+            print(
+                "CI regression guard: stable O4 gains and mmap/sink memory "
+                "bounds passed."
+            )
     if args.cold_cache and not (
         hasattr(os, "posix_fadvise") and hasattr(os, "POSIX_FADV_DONTNEED")
     ):

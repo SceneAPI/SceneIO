@@ -23,6 +23,7 @@ endif()
 
 # Python (scikit-build-core provides the hints for the target interpreter).
 find_package(Python 3.12 REQUIRED COMPONENTS Interpreter Development.Module)
+find_package(Threads REQUIRED)
 
 # Locate the pip-installed nanobind and load its CMake package.
 execute_process(
@@ -133,8 +134,10 @@ nanobind_add_module(_core STABLE_ABI NB_STATIC
   src/cpp/third_party/stb/stb_impl.cpp
   src/cpp/third_party/tinyexr/tinyexr_impl.cpp)
 target_include_directories(_core PRIVATE src/cpp ${zstd_SOURCE_DIR}/lib ${fast_float_SOURCE_DIR}/include
-  src/cpp/third_party/stb src/cpp/third_party/tinyexr ${libwebp_SOURCE_DIR}/src)
-target_link_libraries(_core PRIVATE miniz_static nlohmann_json::nlohmann_json libzstd_static lodepng_static webp)
+  src/cpp/third_party/stb src/cpp/third_party/tinyexr ${libwebp_SOURCE_DIR}
+  ${libwebp_SOURCE_DIR}/src)
+target_link_libraries(_core PRIVATE miniz_static nlohmann_json::nlohmann_json
+  libzstd_static lodepng_static webp Threads::Threads)
 
 # Land the extension inside the importable `sceneio` package as sceneio._core.
 install(TARGETS _core LIBRARY DESTINATION sceneio)

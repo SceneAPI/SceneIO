@@ -7,4 +7,24 @@ Vendored files (the release branch splits the header, so all are required):
 
 Uses OUR vendored miniz (TINYEXR_USE_MINIZ=1 -> #include <miniz.h>, resolved via
 miniz_static's PUBLIC include dir); tinyexr's own deps/miniz is NEVER compiled.
-No local patches.
+
+Local integration configuration:
+- tinyexr_impl.cpp defines TINYEXR_USE_THREAD=1 and TINYEXR_MAX_THREADS=8 for
+  independent scanline-block decode/encode; CMake links Threads::Threads.
+
+Local correctness patch:
+- Threaded scanline decode rejects unaligned, duplicate, or overlapping
+  destination blocks before DecodePixelData writes output. Upstream assigns
+  work by offset-table entry while trusting each entry's file-controlled
+  line number; without the claim check, malformed duplicate destinations race.
+- Thread creation is guarded so already-started scanline workers are always
+  joined if a later std::thread constructor throws. Worker vectors reserve
+  before launch and construct threads in-place, so a throwing vector growth
+  cannot destroy a joinable temporary. Worker exceptions are captured and
+  rethrown only after every worker is joined.
+- Threaded scanline encode gives each block its own error string and merges the
+  strings after joining, avoiding concurrent writes through TinyEXR's shared
+  error pointer.
+- Decode publishes the allocated channel count immediately after AllocateImage,
+  allowing FreeEXRImage to release all channel planes if any later allocation
+  or worker setup throws.

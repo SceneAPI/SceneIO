@@ -35,12 +35,14 @@ jobs:
         run: .venv/bin/python -m pytest -q
       - name: Benchmark harness smoke (all 23 codecs)
         run: .venv/bin/python bench/bench_io.py --runs 1 --scale 0.001 --json "${{ runner.temp }}/sceneio-benchmark.json"
+      - name: I/O throughput and memory regression guard
+        run: .venv/bin/python bench/bench_io.py --runs 5 --require-o4-gains --json "${{ runner.temp }}/sceneio-benchmark-guard.json"
       - name: Upload benchmark smoke results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: sceneio-benchmark-smoke
-          path: ${{ runner.temp }}/sceneio-benchmark.json
+          name: sceneio-benchmark-results
+          path: ${{ runner.temp }}/sceneio-benchmark*.json
 
   mmap-platform:
     name: mmap (${{ matrix.os }})
@@ -58,8 +60,8 @@ jobs:
           uv venv --seed
           uv pip install -e ".[dev]"
       - name: Cross-platform mmap, zero-copy, file-sink, and locked-file tests
-        run: .venv/Scripts/python.exe -m pytest -q tests/test_io_mmap.py tests/test_io_zero_copy.py
+        run: .venv/Scripts/python.exe -m pytest -q tests/test_io_mmap.py tests/test_io_zero_copy.py tests/test_io_parallel.py
         if: runner.os == 'Windows'
       - name: Cross-platform mmap, zero-copy, and file-sink tests
-        run: .venv/bin/python -m pytest -q tests/test_io_mmap.py tests/test_io_zero_copy.py
+        run: .venv/bin/python -m pytest -q tests/test_io_mmap.py tests/test_io_zero_copy.py tests/test_io_parallel.py
         if: runner.os != 'Windows'

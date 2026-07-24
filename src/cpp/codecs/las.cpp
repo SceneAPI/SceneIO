@@ -27,7 +27,14 @@ namespace {
 constexpr uint64_t kLasMaxPoints = 4000000000ull;  // ~4e9; bounds a crafted count
 constexpr double kI32Max = 2147483647.0;
 
-PointCloud read_las(nb::handle source) {
+template <typename T>
+void put_native(char *&dst, T value) {
+    static_assert(std::is_trivially_copyable_v<T>);
+    std::memcpy(dst, &value, sizeof(T));
+    dst += sizeof(T);
+}
+
+PointCloud read_las(nb::handle source, size_t lanes) {
     sio::ByteView data(source);
     const uint8_t *buf = data.data();
     const size_t size = data.size();
@@ -104,27 +111,37 @@ PointCloud read_las(nb::handle source) {
 
         const bool color = rgb_off >= 0;
         if (color) pc.rgb16.resize(n * 3);
-        for (size_t i = 0; i < n; i++) {
-            const uint8_t *rec = buf + offset_to_points + i * record_length;
-            LeReader pr(rec, record_length);
-            const int32_t X = pr.get<int32_t>(), Y = pr.get<int32_t>(), Z = pr.get<int32_t>();
-            pc.intensity[i] = static_cast<float>(pr.get<uint16_t>());
-            // (X - anchor) in int64 (can't overflow) -> local coord relative to origin
-            pc.xyz[i * 3] = static_cast<float>((static_cast<int64_t>(X) - ax) * sx);
-            pc.xyz[i * 3 + 1] = static_cast<float>((static_cast<int64_t>(Y) - ay) * sy);
-            pc.xyz[i * 3 + 2] = static_cast<float>((static_cast<int64_t>(Z) - az) * sz);
-            if (color) {
-                pr.pos = static_cast<size_t>(rgb_off);
-                pc.rgb16[i * 3] = pr.get<uint16_t>();
-                pc.rgb16[i * 3 + 1] = pr.get<uint16_t>();
-                pc.rgb16[i * 3 + 2] = pr.get<uint16_t>();
+        parallel_for_blocks(n, lanes, 65536,
+                            [&](size_t begin, size_t end, size_t) {
+            for (size_t i = begin; i < end; ++i) {
+                const uint8_t *rec =
+                    buf + offset_to_points + i * record_length;
+                LeReader pr(rec, record_length);
+                const int32_t X = pr.get<int32_t>();
+                const int32_t Y = pr.get<int32_t>();
+                const int32_t Z = pr.get<int32_t>();
+                pc.intensity[i] = static_cast<float>(pr.get<uint16_t>());
+                // (X - anchor) in int64 (can't overflow) -> local coord
+                // relative to origin.
+                pc.xyz[i * 3] =
+                    static_cast<float>((static_cast<int64_t>(X) - ax) * sx);
+                pc.xyz[i * 3 + 1] =
+                    static_cast<float>((static_cast<int64_t>(Y) - ay) * sy);
+                pc.xyz[i * 3 + 2] =
+                    static_cast<float>((static_cast<int64_t>(Z) - az) * sz);
+                if (color) {
+                    pr.pos = static_cast<size_t>(rgb_off);
+                    pc.rgb16[i * 3] = pr.get<uint16_t>();
+                    pc.rgb16[i * 3 + 1] = pr.get<uint16_t>();
+                    pc.rgb16[i * 3 + 2] = pr.get<uint16_t>();
+                }
             }
-        }
+        });
     }
     return pc;
 }
 
-nb::bytes write_las(const PointCloud &pc, double scale) {
+nb::bytes write_las(const PointCloud &pc, double scale, size_t lanes) {
     // --- guards: refuse what LAS cannot represent (never convert) ---
     if (pc.has_normals())
         throw std::invalid_argument("las: LAS cannot store normals");
@@ -152,23 +169,66 @@ nb::bytes write_las(const PointCloud &pc, double scale) {
         // pre-pass: quantize-range guard (the negated form also rejects NaN) + the
         // header bounding box computed from the QUANTIZED true coords, so no written
         // point can fall outside the declared min/max.
-        double minx = 0, miny = 0, minz = 0, maxx = 0, maxy = 0, maxz = 0;
-        for (size_t i = 0; i < n; i++) {
-            const double lx = pc.xyz[i * 3], ly = pc.xyz[i * 3 + 1], lz = pc.xyz[i * 3 + 2];
-            if (!(std::fabs(lx / scale) <= kI32Max) || !(std::fabs(ly / scale) <= kI32Max) ||
-                !(std::fabs(lz / scale) <= kI32Max))
-                throw std::invalid_argument(
-                    "las: a coordinate is non-finite or does not fit LAS's 32-bit grid at this scale");
-            const double tx = std::lround(lx / scale) * scale + pc.origin[0];
-            const double ty = std::lround(ly / scale) * scale + pc.origin[1];
-            const double tz = std::lround(lz / scale) * scale + pc.origin[2];
-            if (i == 0) { minx = maxx = tx; miny = maxy = ty; minz = maxz = tz; }
-            else {
-                minx = std::min(minx, tx); maxx = std::max(maxx, tx);
-                miny = std::min(miny, ty); maxy = std::max(maxy, ty);
-                minz = std::min(minz, tz); maxz = std::max(maxz, tz);
+        struct Bounds {
+            bool set = false;
+            double minx = 0, miny = 0, minz = 0;
+            double maxx = 0, maxy = 0, maxz = 0;
+        };
+        std::vector<Bounds> lane_bounds(kMaxParallelLanes);
+        const size_t active_lanes = parallel_for_blocks(
+            n, lanes, 65536,
+            [&](size_t begin, size_t end, size_t lane) {
+                Bounds local;
+                for (size_t i = begin; i < end; ++i) {
+                    const double lx = pc.xyz[i * 3];
+                    const double ly = pc.xyz[i * 3 + 1];
+                    const double lz = pc.xyz[i * 3 + 2];
+                    if (!(std::fabs(lx / scale) <= kI32Max) ||
+                        !(std::fabs(ly / scale) <= kI32Max) ||
+                        !(std::fabs(lz / scale) <= kI32Max))
+                        throw std::invalid_argument(
+                            "las: a coordinate is non-finite or does not fit "
+                            "LAS's 32-bit grid at this scale");
+                    const double tx =
+                        std::lround(lx / scale) * scale + pc.origin[0];
+                    const double ty =
+                        std::lround(ly / scale) * scale + pc.origin[1];
+                    const double tz =
+                        std::lround(lz / scale) * scale + pc.origin[2];
+                    if (!local.set) {
+                        local.set = true;
+                        local.minx = local.maxx = tx;
+                        local.miny = local.maxy = ty;
+                        local.minz = local.maxz = tz;
+                    } else {
+                        local.minx = std::min(local.minx, tx);
+                        local.maxx = std::max(local.maxx, tx);
+                        local.miny = std::min(local.miny, ty);
+                        local.maxy = std::max(local.maxy, ty);
+                        local.minz = std::min(local.minz, tz);
+                        local.maxz = std::max(local.maxz, tz);
+                    }
+                }
+                lane_bounds[lane] = local;
+            });
+        Bounds bounds;
+        for (size_t lane = 0; lane < active_lanes; ++lane) {
+            const Bounds &local = lane_bounds[lane];
+            if (!local.set) continue;
+            if (!bounds.set) {
+                bounds = local;
+            } else {
+                bounds.minx = std::min(bounds.minx, local.minx);
+                bounds.maxx = std::max(bounds.maxx, local.maxx);
+                bounds.miny = std::min(bounds.miny, local.miny);
+                bounds.maxy = std::max(bounds.maxy, local.maxy);
+                bounds.minz = std::min(bounds.minz, local.minz);
+                bounds.maxz = std::max(bounds.maxz, local.maxz);
             }
         }
+        const double minx = bounds.minx, miny = bounds.miny;
+        const double minz = bounds.minz, maxx = bounds.maxx;
+        const double maxy = bounds.maxy, maxz = bounds.maxz;
 
         LeWriter w;
         w.out.append("LASF", 4);
@@ -196,24 +256,45 @@ nb::bytes write_las(const PointCloud &pc, double scale) {
         w.put<double>(maxy); w.put<double>(miny);  // max/min Y
         w.put<double>(maxz); w.put<double>(minz);  // max/min Z
 
-        for (size_t i = 0; i < n; i++) {
-            w.put<int32_t>(static_cast<int32_t>(std::lround(pc.xyz[i * 3] / scale)));
-            w.put<int32_t>(static_cast<int32_t>(std::lround(pc.xyz[i * 3 + 1] / scale)));
-            w.put<int32_t>(static_cast<int32_t>(std::lround(pc.xyz[i * 3 + 2] / scale)));
-            double iv = have_i ? pc.intensity[i] : 0.0;
-            if (!std::isfinite(iv)) iv = 0.0;  // a NaN intensity -> 0 rather than lround(NaN) garbage
-            w.put<uint16_t>(static_cast<uint16_t>(std::lround(std::min(std::max(iv, 0.0), 65535.0))));
-            w.put<uint8_t>(0x09);  // return bits: return 1 of 1 (LAS requires 1..5, not 0)
-            w.put<uint8_t>(0);   // classification
-            w.put<int8_t>(0);    // scan angle rank
-            w.put<uint8_t>(0);   // user data
-            w.put<uint16_t>(0);  // point source ID
-            if (color) {
-                w.put<uint16_t>(pc.rgb16[i * 3]);
-                w.put<uint16_t>(pc.rgb16[i * 3 + 1]);
-                w.put<uint16_t>(pc.rgb16[i * 3 + 2]);
+        if (w.out.size() != 227)
+            throw std::logic_error("las: internal header size mismatch");
+        if (n > (w.out.max_size() - 227) / rec_len)
+            throw std::length_error("las: encoded point data is too large");
+        w.out.resize(227 + n * rec_len);
+        parallel_for_blocks(n, lanes, 65536,
+                            [&](size_t begin, size_t end, size_t) {
+            for (size_t i = begin; i < end; ++i) {
+                char *dst = w.out.data() + 227 + i * rec_len;
+                char *const record_begin = dst;
+                put_native<int32_t>(
+                    dst, static_cast<int32_t>(
+                             std::lround(pc.xyz[i * 3] / scale)));
+                put_native<int32_t>(
+                    dst, static_cast<int32_t>(
+                             std::lround(pc.xyz[i * 3 + 1] / scale)));
+                put_native<int32_t>(
+                    dst, static_cast<int32_t>(
+                             std::lround(pc.xyz[i * 3 + 2] / scale)));
+                double iv = have_i ? pc.intensity[i] : 0.0;
+                if (!std::isfinite(iv)) iv = 0.0;
+                put_native<uint16_t>(
+                    dst, static_cast<uint16_t>(std::lround(
+                             std::min(std::max(iv, 0.0), 65535.0))));
+                put_native<uint8_t>(dst, 0x09);
+                put_native<uint8_t>(dst, 0);
+                put_native<int8_t>(dst, 0);
+                put_native<uint8_t>(dst, 0);
+                put_native<uint16_t>(dst, 0);
+                if (color) {
+                    put_native<uint16_t>(dst, pc.rgb16[i * 3]);
+                    put_native<uint16_t>(dst, pc.rgb16[i * 3 + 1]);
+                    put_native<uint16_t>(dst, pc.rgb16[i * 3 + 2]);
+                }
+                if (static_cast<size_t>(dst - record_begin) != rec_len)
+                    throw std::logic_error(
+                        "las: internal point-record size mismatch");
             }
-        }
+        });
         out = std::move(w.out);
     }
     return emit_bytes(out.data(), out.size());
@@ -222,12 +303,14 @@ nb::bytes write_las(const PointCloud &pc, double scale) {
 }  // namespace
 
 void register_las(nb::module_ &m) {
-    m.def("read_las", &read_las, "data"_a,
+    m.def("read_las", &read_las, "data"_a, "_lanes"_a = 0,
           "Decode ASPRS LAS bytes into a PointCloud: XYZ (i32*scale, relative to the header offset "
           "kept as .origin), intensity (u16, intensity_range='u16'), and RGB (u16 -> colors16, "
           "formats 2/3/7/8). Point formats 0-3 and 6-8; LAZ / waveform formats raise.");
     m.def("write_las", &write_las, "cloud"_a, "scale"_a = 0.001,
+          "_lanes"_a = 0,
           "Encode a PointCloud to LAS 1.2 bytes (point format 0, or 2 when colors16 is present). "
-          "X = round(xyz/scale) as i32 with a range guard; the header offset is .origin. Refuses "
-          "normals and u8-only color (provide colors16).");
+          "X = round(xyz/scale) as i32 with a range guard; the header offset is .origin. Large "
+          "point transforms use bounded parallel lanes. Refuses normals and u8-only color "
+          "(provide colors16).");
 }

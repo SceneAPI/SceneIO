@@ -29,7 +29,7 @@ namespace {
 constexpr uint64_t kExrPixelCap = 250000000ull;  // 250 MP; worst-case f32 RGBA buffer ~4 GB
 constexpr int64_t kExrAxisCap = 1 << 20;          // 1M per axis
 
-Image read_exr(nb::handle source) {
+Image read_exr(nb::handle source, size_t lanes) {
     sio::ByteView data(source);
     const unsigned char *in = data.data();
     const size_t size = data.size();
@@ -119,14 +119,22 @@ Image read_exr(nb::handle source) {
         im.dtype = PixelType::F32; im.color_space = "linear"; im.maxval = 0;
         im.f32.resize(n * static_cast<size_t>(C));
         float **planar = reinterpret_cast<float **>(image.images);
-        for (size_t p = 0; p < n; p++)
-            for (int c = 0; c < C; c++)
-                im.f32[p * C + c] = planar[planes[c]][p];
+        if (C == 1) {
+            std::memcpy(im.f32.data(), planar[planes[0]], n * sizeof(float));
+        } else {
+            parallel_for_blocks(n, lanes, 131072,
+                                [&](size_t begin, size_t end, size_t) {
+                for (size_t p = begin; p < end; ++p)
+                    for (int c = 0; c < C; ++c)
+                        im.f32[p * C + static_cast<size_t>(c)] =
+                            planar[planes[c]][p];
+            });
+        }
     }
     return im;
 }
 
-nb::bytes write_exr(const Image &img) {
+nb::bytes write_exr(const Image &img, size_t lanes) {
     // --- guards: refuse what this EXR mapping cannot represent (never convert) ---
     if (img.dtype != PixelType::F32)
         throw std::invalid_argument("exr: OpenEXR here stores float32 pixels (got " +
@@ -151,8 +159,16 @@ nb::bytes write_exr(const Image &img) {
         const size_t W = img.width, H = img.height, n = W * H;
         // deinterleave RGBA... -> planar per-channel buffers (planar[0]=R, [1]=G, ...)
         std::vector<std::vector<float>> planar(C, std::vector<float>(n));
-        for (size_t p = 0; p < n; p++)
-            for (size_t c = 0; c < C; c++) planar[c][p] = img.f32[p * C + c];
+        if (C == 1) {
+            std::memcpy(planar[0].data(), img.f32.data(), n * sizeof(float));
+        } else {
+            parallel_for_blocks(n, lanes, 131072,
+                                [&](size_t begin, size_t end, size_t) {
+                for (size_t p = begin; p < end; ++p)
+                    for (size_t c = 0; c < C; ++c)
+                        planar[c][p] = img.f32[p * C + c];
+            });
+        }
 
         // header/image reference OUR stack vectors; tinyexr only READS them and must
         // NOT free them, so we never call FreeEXRHeader/FreeEXRImage on this path.
@@ -210,12 +226,13 @@ nb::bytes write_exr(const Image &img) {
 }  // namespace
 
 void register_exr(nb::module_ &m) {
-    m.def("read_exr", &read_exr, "data"_a,
+    m.def("read_exr", &read_exr, "data"_a, "_lanes"_a = 0,
           "Decode single-part scanline OpenEXR bytes into an Image (float32, color_space='linear'): "
           "{R,G,B,A}->RGBA (premultiplied), {R,G,B}->RGB, a single channel->1-channel; HALF widens "
           "to FLOAT. Multipart/deep/tiled EXR, UINT channels, and multi-layer sets raise.");
-    m.def("write_exr", &write_exr, "img"_a,
+    m.def("write_exr", &write_exr, "img"_a, "_lanes"_a = 0,
           "Encode a float32 linear Image to OpenEXR bytes (scanline, FLOAT, ZIP). Channels are "
-          "written in (A)BGR order. Refuses non-float32 / non-linear records and RGBA whose "
+          "written in (A)BGR order. Independent ZIP scanline blocks and large planar transforms "
+          "use bounded worker lanes. Refuses non-float32 / non-linear records and RGBA whose "
           "alpha_mode isn't 'premultiplied' rather than converting.");
 }

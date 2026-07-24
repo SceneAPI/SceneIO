@@ -91,8 +91,9 @@ codecs already read paths directly in C++) · ✅ zero-copy read-only mapped
 ndarray views for native NPY/FLO payloads (PFM row-flips into owned storage) · ✅ bytes/mmap differential +
 scheduled 100-case backing-store mutation sweep · ✅ ASan/UBSan/LSan workflow
 (local Linux green; remote run user-gated) · ⬜ randomized oracle-triangulated
-fuzzing · ✅ direct file-sink writes · ⬜ partial/lazy reads · ⬜ GPU-via-DLPack
-(torch-cuda/cupy) · 🟡 expanded 23-codec benchmark/oracles.
+fuzzing · ✅ direct file-sink writes · ✅ bounded measured-path workers
+(XYZ/LAS/EXR/PNG16/WebP lossless) · ⬜ partial/lazy reads · ⬜ GPU-via-DLPack
+(torch-cuda/cupy) · ✅ expanded 23-codec benchmark/oracles.
 
 ## Infrastructure & capabilities
 
@@ -106,9 +107,10 @@ fuzzing · ✅ direct file-sink writes · ⬜ partial/lazy reads · ⬜ GPU-via-
 | Conventions‑as‑metadata + write guards | ✅ | record‑don't‑convert enforced |
 | Parity kit (`sceneio.testing.parity`) | ✅ | cross‑impl + round‑trip + convention pins |
 | Vendored deps (miniz, zstd, nlohmann/json, fast_float) | ✅ | permissive; statically linked / header‑only |
-| Vendored image libs (lodepng/stb/tinyexr/libwebp) | ⬜ | **next tier** — FetchContent, no system libs, numpy‑only runtime kept |
+| Vendored image libs (lodepng/stb/tinyexr/libwebp) | ✅ | permissive, pinned/local-patched; no system libs, numpy‑only runtime kept |
 | Feature‑flagged optional C libs (`SCENEIO_WITH_*`) | ⬜ | deferred — only for HDF5 / TIFF / LAZ (no permissive single‑header option) |
 | mmap / streaming sources | ✅ | mmap reads + raw NPY/FLO views + direct file-sink writes complete |
+| Bounded intra-file workers | ✅ | measured O4 paths; deterministic one-vs-many lane tests |
 | Sanitizer + mmap differential CI | ✅ | local Linux green; scheduled remote lane activates on default branch |
 | Capability flags (`reads/writes/streams/lossy/needs_dep`) | ⬜ | surface per codec |
 | `splat` / `posed_views` DataTypes in the vocabulary | ⬜ | **Phase‑C** (wire identity; cross‑repo) |

@@ -32,13 +32,30 @@ namespace {
 constexpr uint64_t kPngPixelCap = 250000000ull;
 constexpr unsigned kPngAxisCap = 200000u;
 
-inline void be16_to_native(const unsigned char *src, uint16_t *dst, size_t n) {
-    for (size_t i = 0; i < n; i++)
-        dst[i] = static_cast<uint16_t>((static_cast<uint16_t>(src[2 * i]) << 8) |
-                                       static_cast<uint16_t>(src[2 * i + 1]));
+inline void be16_to_native(const unsigned char *src, uint16_t *dst, size_t n,
+                           size_t lanes) {
+    parallel_for_blocks(n, lanes, 262144,
+                        [&](size_t begin, size_t end, size_t) {
+        for (size_t i = begin; i < end; ++i)
+            dst[i] = static_cast<uint16_t>(
+                (static_cast<uint16_t>(src[2 * i]) << 8) |
+                static_cast<uint16_t>(src[2 * i + 1]));
+    });
 }
 
-Image read_png(nb::handle source) {
+inline void native_to_be16(const uint16_t *src, unsigned char *dst, size_t n,
+                           size_t lanes) {
+    parallel_for_blocks(n, lanes, 262144,
+                        [&](size_t begin, size_t end, size_t) {
+        for (size_t i = begin; i < end; ++i) {
+            dst[2 * i] =
+                static_cast<unsigned char>((src[i] >> 8) & 0xff);
+            dst[2 * i + 1] = static_cast<unsigned char>(src[i] & 0xff);
+        }
+    });
+}
+
+Image read_png(nb::handle source, size_t lanes) {
     sio::ByteView data(source);
     const unsigned char *in = data.data();
     const size_t insize = data.size();
@@ -129,7 +146,7 @@ Image read_png(nb::handle source) {
             im.dtype = PixelType::U16;
             im.maxval = 65535;
             im.u16.resize(cnt);
-            be16_to_native(out.data(), im.u16.data(), cnt);
+            be16_to_native(out.data(), im.u16.data(), cnt, lanes);
         } else {
             im.dtype = PixelType::U8;
             im.maxval = 255;
@@ -139,7 +156,7 @@ Image read_png(nb::handle source) {
     return im;
 }
 
-nb::bytes write_png(const Image &img) {
+nb::bytes write_png(const Image &img, size_t lanes) {
     // --- guards: refuse conventions PNG cannot represent (never convert) ---
     // Dimensions first: width/height are size_t but lodepng_encode takes unsigned,
     // so an oversized record would silently truncate to a wrong-but-valid PNG.
@@ -195,10 +212,7 @@ nb::bytes write_png(const Image &img) {
         const unsigned char *pixels;
         if (wide) {
             scratch.resize(cnt * 2);
-            for (size_t i = 0; i < cnt; i++) {
-                scratch[2 * i] = static_cast<unsigned char>((img.u16[i] >> 8) & 0xff);
-                scratch[2 * i + 1] = static_cast<unsigned char>(img.u16[i] & 0xff);
-            }
+            native_to_be16(img.u16.data(), scratch.data(), cnt, lanes);
             pixels = scratch.data();
         } else {
             pixels = img.u8.data();
@@ -232,12 +246,13 @@ nb::bytes write_png(const Image &img) {
 }  // namespace
 
 void register_png(nb::module_ &m) {
-    m.def("read_png", &read_png, "data"_a,
+    m.def("read_png", &read_png, "data"_a, "_lanes"_a = 0,
           "Decode PNG bytes into an Image: gray/RGB/RGBA at 8 or 16 bit (16-bit read "
           "big-endian-on-disk -> native uint16), palette expanded to RGB/RGBA; top-to-bottom "
           "rows, straight alpha. Sub-8-bit gray, gray+alpha, and non-palette colorkey tRNS raise.");
-    m.def("write_png", &write_png, "img"_a,
+    m.def("write_png", &write_png, "img"_a, "_lanes"_a = 0,
           "Encode an Image to PNG bytes (writes exactly the record's color type). Guards "
           "channel/color_space and alpha pairings and refuses float32 / linear / premultiplied / "
-          "partial-maxval records rather than converting.");
+          "partial-maxval records rather than converting. Large 16-bit byte-order transforms "
+          "use bounded parallel lanes.");
 }

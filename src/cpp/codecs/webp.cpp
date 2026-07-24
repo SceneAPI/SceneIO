@@ -10,9 +10,12 @@
 // uint16 / float32 are refused (not expanded), and animated WebP is rejected.
 // Decode/encode run with the GIL released; the decoder's malloc'd buffer and the
 // encoder's picture/writer are freed via RAII.
+#include <atomic>
+#include <mutex>
 #include <string>
 
 #include "records/image.hpp"
+#include "src/utils/thread_utils.h"
 #include "webp/decode.h"
 #include "webp/encode.h"
 
@@ -23,6 +26,31 @@ namespace {
 // 250 MP, matching the other image codecs; a WebP decode-bomb is format-bounded to
 // 16384^2 (~1 GB) anyway, and this rejects that largest legal raster consistently.
 constexpr uint64_t kWebpPixelCap = 250000000ull;
+
+std::atomic<uint64_t> webp_worker_launches{0};
+WebPWorkerInterface webp_base_worker{};
+std::once_flag webp_worker_counter_once;
+
+void counting_webp_worker_launch(WebPWorker *worker) {
+    webp_worker_launches.fetch_add(1, std::memory_order_relaxed);
+    webp_base_worker.Launch(worker);
+}
+
+void install_webp_worker_counter() {
+    // libwebp's worker interface is process-global and must be replaced before
+    // the first worker starts. Module registration is the single-threaded point
+    // at which _core can safely wrap it. All operations except Launch delegate
+    // directly; the counter provides deterministic coverage that `_threads`
+    // reaches libwebp's real side-worker path.
+    std::call_once(webp_worker_counter_once, []() {
+        webp_base_worker = *WebPGetWorkerInterface();
+        WebPWorkerInterface counting_worker = webp_base_worker;
+        counting_worker.Launch = counting_webp_worker_launch;
+        if (!WebPSetWorkerInterface(&counting_worker))
+            throw std::runtime_error(
+                "webp: could not install worker interface");
+    });
+}
 
 Image read_webp(nb::handle source) {
     sio::ByteView data(source);
@@ -62,7 +90,8 @@ Image read_webp(nb::handle source) {
     return im;
 }
 
-nb::bytes write_webp(const Image &img, bool lossless, float quality) {
+nb::bytes write_webp(const Image &img, bool lossless, float quality,
+                     bool threads, int effort, int method) {
     // --- guards: refuse what WebP cannot represent (never convert) ---
     if (img.dtype != PixelType::U8)
         throw std::invalid_argument("webp: WebP stores 8-bit samples (got " +
@@ -82,8 +111,13 @@ nb::bytes write_webp(const Image &img, bool lossless, float quality) {
         throw std::invalid_argument("webp: cannot write a zero-dimension image");
     if (img.width > 16383 || img.height > 16383)
         throw std::invalid_argument("webp: WebP dimensions are limited to 16383 per axis");
-    if (!lossless && !(quality >= 0.0f && quality <= 100.0f))  // negated form also rejects NaN
+    if (!lossless &&
+        !(quality >= 0.0f && quality <= 100.0f))  // negated form also rejects NaN
         throw std::invalid_argument("webp: quality must be in 0..100");
+    if (effort < 0 || effort > 100)
+        throw std::invalid_argument("webp: lossless effort must be in 0..100");
+    if (method < 0 || method > 6)
+        throw std::invalid_argument("webp: encoder method must be in 0..6");
 
     std::string out;
     {
@@ -93,10 +127,17 @@ nb::bytes write_webp(const Image &img, bool lossless, float quality) {
             throw std::invalid_argument("webp: config init failed (ABI mismatch?)");
         if (lossless) {
             config.lossless = 1;
-            config.quality = 100.0f;  // for lossless, quality drives the compression effort
+            // Lossless effort affects only compression time/size, never decoded
+            // pixels. O4 lowers the old forced-100 setting to a balanced 75;
+            // method 5 lets libwebp split independent palette candidates.
+            config.quality = static_cast<float>(effort);
             config.exact = 1;         // preserve RGB under alpha=0 -> byte-exact lossless round-trip
+            config.method = method;
+            config.thread_level = threads ? 1 : 0;
         } else {
             config.quality = quality;
+            // O4 targets lossless only. Preserve libwebp's prior lossy defaults
+            // (method 4, worker-off) so lossy bytes/performance do not drift.
         }
         if (!WebPValidateConfig(&config))
             throw std::invalid_argument("webp: invalid encoder configuration");
@@ -134,12 +175,21 @@ nb::bytes write_webp(const Image &img, bool lossless, float quality) {
 }  // namespace
 
 void register_webp(nb::module_ &m) {
+    install_webp_worker_counter();
     m.def("read_webp", &read_webp, "data"_a,
           "Decode WebP bytes into an Image (uint8 sRGB; RGB, or RGBA with straight alpha when the "
           "file has alpha). Animated WebP raises.");
-    m.def("write_webp", &write_webp, "img"_a, "lossless"_a = true, "quality"_a = 90.0f,
+    m.def("write_webp", &write_webp, "img"_a, "lossless"_a = true,
+          "quality"_a = 90.0f, "_threads"_a = true, "_effort"_a = 75,
+          "_method"_a = 5,
           "Encode a uint8 sRGB RGB/RGBA Image to WebP bytes. Lossless by default (exact=1): RGB "
           "and transparent RGBA round-trip byte-exactly, but a fully-opaque alpha channel is "
-          "dropped to RGB by the format. Lossy when lossless=False (quality 0..100). Refuses "
+          "dropped to RGB by the format. Quality selects fidelity for lossy mode; lossless uses "
+          "a balanced internal effort of 75 (0..100). Worker threads are enabled by default. Refuses "
           "non-uint8, grayscale (no WebP gray plane), and non-straight alpha.");
+    m.def("_webp_worker_launch_count",
+          []() { return webp_worker_launches.load(std::memory_order_relaxed); },
+          "Return the number of libwebp side-worker launches (private test hook).");
+    m.def("_install_webp_worker_counter", &install_webp_worker_counter,
+          "Re-run the idempotent libwebp worker setup (private test hook).");
 }

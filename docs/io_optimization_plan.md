@@ -1,6 +1,6 @@
 # I/O Optimization, Testing & Verification Plan
 
-Status: active — O0–O3 complete; O4–O5 pending. Scope: the compiled `sceneio._core` I/O path on
+Status: active — O0–O4 complete; O5 pending. Scope: the compiled `sceneio._core` I/O path on
 `phase0-nanobind-core`. Companion to `coverage_roadmap.md` (this makes its "Phase 7"
 hardening/perf work concrete).
 
@@ -189,15 +189,61 @@ showed no material throughput regression against the legacy
 
 ---
 
-## Phase O4 — Intra-file parallelism / SIMD
+## Phase O4 — Intra-file parallelism / SIMD (complete)
 
-Committed for the decode-bound hot paths the harness surfaces:
-- Enable tinyexr/libwebp worker threads for large images (currently off).
-- SIMD/vectorize the scalar transform loops: PNG 16-bit byteswap, EXR
-  planar→interleave, LAS per-point unpack, and any others the harness flags.
+The measured hot paths now use deterministic bounded work partitioning. A shared
+helper selects at most eight automatic lanes, keeps small inputs serial, joins
+every started worker on both success and exception paths, and rethrows worker
+errors only after joining. Private lane controls retain a true one-lane
+differential reference.
 
-**Testing:** identical output with threads on/off and 1 vs N lanes. **Verify:**
-throughput delta on the large fixtures.
+- **XYZ:** rows are formatted independently into fixed-capacity blocks, then
+  compacted in order. This preserves the previous bytes exactly while avoiding
+  synchronized appends.
+- **LAS:** decode, quantized bounds, and fixed-record packing run over disjoint
+  point ranges. The writer pre-sizes its record area instead of repeatedly
+  growing it.
+- **EXR:** large planar/interleaved transforms use bounded lanes, and TinyEXR's
+  independent ZIP scanline blocks use up to eight workers.
+- **PNG16:** endian transforms use contiguous, branch-light blocks. Whole-codec
+  throughput is compression-dominated, so the measured write gain is small and
+  read throughput remains neutral within run-to-run noise.
+- **WebP lossless:** the old method-4/effort-100 configuration is now method 5
+  with balanced effort 75, while `thread_level` is enabled. Libwebp schedules a
+  side worker only when its analyzed lossless configuration has independent
+  candidates; a structured palette fixture and a private launch counter prove
+  that real branch under the production defaults. The lossy path retains its
+  prior method-4/worker-off behavior.
+
+Enabling TinyEXR workers exposed an upstream malformed-input race: distinct
+offset-table entries could name the same destination scanline block. The local
+vendored patch atomically claims aligned destinations before decode, rejects
+duplicates/overlaps, joins already-started workers if thread construction
+throws, publishes channel ownership before later allocations can fail, reserves
+worker vectors before in-place thread construction, and uses per-block encode
+error strings. `tinyexr/COMMIT.txt` pins these changes so a re-vendor cannot
+silently drop them.
+
+**Testing:** encoded bytes are identical for 1 vs N lanes for XYZ, PNG16, EXR,
+and LAS; decoded arrays/metadata are bit-exact; WebP worker-off/on bytes match
+and the launch counter proves the side-worker branch; the pre-O4 EXR SHA-256 is
+pinned; malformed overlapping EXR scanline chunks must reject. Automatic
+threshold selection and background-worker exception propagation are directly
+covered. The 23-codec parity/E2E suite is unchanged.
+
+**Measured:** the final seven-run MSVC sweep recorded the WebP balanced default
+12→34 MB/s (2.75×), WebP default-config palette worker-off/on
+10→19 MB/s (1.93×), XYZ formatting 20→101 MB/s (5.16×), LAS write
+347→1,054 MB/s (3.03×) and read 1,997→2,765 MB/s (1.38×), and EXR
+planar read 1,133→1,293 MB/s (1.14×). PNG16 write/read measured
+68→69 / 417→421 MB/s (1.02× / 1.01×) in that run. PNG16 and EXR
+planar-write deltas cross 1.0 under ordinary run-to-run noise and are treated as
+neutral rather than claimed speedups; TinyEXR scanline workers still account for
+the large whole-codec EXR improvement over O3. Final local gates passed 1,165
+tests / 3 optional skips on MSVC and 1,102 / 44 optional-platform skips under
+ASan/UBSan/LSan on Linux. CI retains the all-format smoke artifact and adds a
+paired directional guard for the stable high-signal O4 rows plus deterministic
+mmap/file-sink traced-allocation bounds.
 
 ---
 
@@ -238,7 +284,7 @@ oracle**. Optimizations add exactly these guards, **run across all 23 codecs**:
 
 | Instrument | Proves | Cadence |
 |---|---|---|
-| Benchmark harness (O0) | measured improvement and comparable throughput | per-item; all-format smoke in CI |
+| Benchmark harness (O0) | measured improvement and comparable throughput | per-item; all-format smoke + stable-gain guard in CI |
 | `tracemalloc`/RSS deltas | peak-memory dropped as expected | per-item |
 | Differential correctness | fast-path == slow-path == oracle, bit-exact, all codecs | CI, every run |
 | **ASan/UBSan/LSan CI job** | no mmap-lifetime/leak/UB (the class the reviews caught by hand) | CI (landed O1) |
