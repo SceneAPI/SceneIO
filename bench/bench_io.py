@@ -1434,6 +1434,7 @@ def _run_benchmark(args, tmp):
                 ):
                     raise AssertionError("typed FLO inspection differs")
                 typed_adapter_metrics = {
+                    "format": "flo",
                     "read_mbps": pmb / typed_read_time,
                     "read_peak_mb": typed_read_peak / 1e6,
                     "read_rss_mb": typed_read_rss / 1e6,
@@ -1443,6 +1444,110 @@ def _run_benchmark(args, tmp):
                     "inspect_ms": typed_inspect_time * 1000,
                     "inspect_peak_mb": typed_inspect_peak / 1e6,
                     "inspect_rss_mb": typed_inspect_rss / 1e6,
+                }
+            elif s.id == "pfm":
+                depth_encoding = sceneio.DepthEncoding(
+                    "meters", 1.0, "none"
+                )
+                typed_record = _core.depth_map(rec)
+                typed_path = os.path.join(tmp, "pfm-typed.bin")
+                height, width = rec.shape
+                typed_window = (
+                    height // 4,
+                    max(height // 4 + 1, 3 * height // 4),
+                    width // 4,
+                    max(width // 4 + 1, 3 * width // 4),
+                )
+
+                def _typed_read(fp=fp):
+                    if args.cold_cache:
+                        _evict_file_cache(fp)
+                    return sceneio.read_depth(
+                        fp,
+                        format="pfm",
+                        encoding=depth_encoding,
+                    )
+
+                def _typed_write(
+                    destination=typed_path,
+                    value=typed_record,
+                ):
+                    return sceneio.write_depth(
+                        value,
+                        destination,
+                        format="pfm",
+                        encoding=depth_encoding,
+                    )
+
+                def _typed_inspect(fp=fp):
+                    if args.cold_cache:
+                        _evict_file_cache(fp)
+                    return sceneio.inspect_depth(
+                        fp,
+                        format="pfm",
+                        encoding=depth_encoding,
+                    )
+
+                def _typed_partial(fp=fp):
+                    if args.cold_cache:
+                        _evict_file_cache(fp)
+                    return sceneio.read_depth(
+                        fp,
+                        format="pfm",
+                        encoding=depth_encoding,
+                        window=typed_window,
+                    )
+
+                typed_read_time, typed_read_peak = _measure(
+                    _typed_read, args.runs
+                )
+                typed_read_rss = _measure_rss(_typed_read)
+                typed_write_time, typed_write_peak = _measure(
+                    _typed_write, args.runs
+                )
+                typed_write_rss = _measure_rss(_typed_write)
+                typed_inspect_time, typed_inspect_peak = _measure(
+                    _typed_inspect, args.runs
+                )
+                typed_inspect_rss = _measure_rss(_typed_inspect)
+                typed_partial_time, typed_partial_peak = _measure(
+                    _typed_partial, args.runs
+                )
+                typed_partial_rss = _measure_rss(_typed_partial)
+                typed_decoded = _typed_read()
+                if not np.array_equal(
+                    np.asarray(typed_decoded.depth), rec, equal_nan=True
+                ):
+                    raise AssertionError("typed PFM values differ")
+                if Path(typed_path).read_bytes() != enc:
+                    raise AssertionError("typed PFM sink bytes differ")
+                typed_info = _typed_inspect()
+                if (
+                    typed_info.shape != rec.shape
+                    or typed_info.metadata.get("scale_to_meters") != 1.0
+                ):
+                    raise AssertionError("typed PFM inspection differs")
+                row_start, row_stop, col_start, col_stop = typed_window
+                if not np.array_equal(
+                    np.asarray(_typed_partial().depth),
+                    rec[row_start:row_stop, col_start:col_stop],
+                    equal_nan=True,
+                ):
+                    raise AssertionError("typed PFM window differs")
+                typed_adapter_metrics = {
+                    "format": "pfm",
+                    "read_mbps": pmb / typed_read_time,
+                    "read_peak_mb": typed_read_peak / 1e6,
+                    "read_rss_mb": typed_read_rss / 1e6,
+                    "write_mbps": pmb / typed_write_time,
+                    "write_peak_mb": typed_write_peak / 1e6,
+                    "write_rss_mb": typed_write_rss / 1e6,
+                    "inspect_ms": typed_inspect_time * 1000,
+                    "inspect_peak_mb": typed_inspect_peak / 1e6,
+                    "inspect_rss_mb": typed_inspect_rss / 1e6,
+                    "partial_ms": typed_partial_time * 1000,
+                    "partial_peak_mb": typed_partial_peak / 1e6,
+                    "partial_rss_mb": typed_partial_rss / 1e6,
                 }
             partial_request = _partial_request(s.id, _inspect())
             partial_metrics = None
@@ -1542,7 +1647,7 @@ def _run_benchmark(args, tmp):
             )
             if typed_adapter_metrics is not None:
                 print(
-                    "  flo typed adapter:"
+                    f"  {typed_adapter_metrics['format']} typed adapter:"
                     f" read={typed_adapter_metrics['read_mbps']:.0f} MB/s"
                     f" write={typed_adapter_metrics['write_mbps']:.0f} MB/s"
                     f" inspect={typed_adapter_metrics['inspect_ms']:.3f} ms"

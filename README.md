@@ -98,8 +98,27 @@ sceneio.write_flow(flow, "motion-copy.flo")
 flow_info = sceneio.inspect_flow("motion.flo")
 assert flow_info.metadata["unit"] == "pixels"
 
+# PFM does not portably serialize depth units or invalid-value semantics.
+# The immutable encoding is therefore explicit on every typed operation.
+depth_encoding = sceneio.DepthEncoding(
+    unit="meters",
+    scale_to_meters=1.0,
+    invalid_policy="nonfinite",
+)
+depth = sceneio.read_depth("depth.pfm", encoding=depth_encoding)
+sceneio.write_depth(depth, "depth-copy.pfm", encoding=depth_encoding)
+depth_info = sceneio.inspect_depth("depth.pfm", encoding=depth_encoding)
+assert depth_info.metadata["scale_to_meters"] == 1.0
+
 # Half-open row/column bounds; returns the normal Image/ndarray type.
 tile = sceneio.read_partial("flow.flo", window=(100, 356, 200, 712))
+
+# Typed PFM windows return a DepthMap and read only the selected rows.
+depth_tile = sceneio.read_depth(
+    "depth.pfm",
+    encoding=depth_encoding,
+    window=(100, 356, 200, 712),
+)
 
 # Scalar DMB windows preserve DepthMap unit and invalid-value metadata.
 depth = sceneio.read_partial("depth.dmb", window=(100, 356, 200, 712))

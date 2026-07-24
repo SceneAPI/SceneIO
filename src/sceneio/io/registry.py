@@ -428,7 +428,14 @@ register(
         datatype="depth_map",
         magic=(b"PF", b"Pf"),
         read_window=_mmap_selector_reader(_core.read_pfm_window),
-        supported_features=("grayscale", "rgb", "float32", "little_endian", "big_endian"),
+        supported_features=(
+            "grayscale",
+            "rgb",
+            "float32",
+            "little_endian",
+            "big_endian",
+            "typed_depth_adapter",
+        ),
         unsupported_features=("native_positive_stride_mmap_view",),
     )
 )

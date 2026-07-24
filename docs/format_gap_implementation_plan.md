@@ -430,7 +430,7 @@ Typed depth/flow adapter contract and landing sequence:
      NaN, infinity, or Middlebury's unknown-flow sentinel.
    - The writer accepts only the canonical `.flo` conventions above and
      rejects any future `FlowField` convention that `.flo` cannot represent.
-3. **Depth encoding contract**
+3. **Depth encoding contract — complete locally**
    - Add a frozen public `DepthEncoding` value containing `unit`,
      `scale_to_meters`, `invalid_policy`, and optional EXR channel name.
    - Add `read_depth(path, *, encoding, format=None)` and
@@ -441,7 +441,7 @@ Typed depth/flow adapter contract and landing sequence:
    - Keep `sceneio.read`/`write` and every existing raw codec unchanged.
      Typed adapters are additive and never change registry dispatch by
      extension.
-4. **PFM depth**
+4. **PFM depth — complete locally**
    - Accept only one-channel float32 PFM payloads. Preserve raw stored values,
      including signed zero and non-finite bit patterns, after the format's
      required bottom-to-top row transform.
@@ -596,6 +596,58 @@ Three-lens typed FLO review:
 No unresolved finding remains in the local typed FLO review. The local
 cp312-abi3 Windows wheel is validated; instrumented Linux and Linux/macOS wheel
 validation remain pending until the user-authorized remote dependency-wave run.
+
+Typed PFM depth completion evidence (2026-07-24):
+
+- frozen `DepthEncoding` validates the complete `DepthMap` unit/scale/invalid
+  vocabulary and an optional nonempty, NUL-free channel name; PFM requires the
+  channel name to be absent;
+- compiled full/window readers accept only scalar float32 PFM with an exact
+  unit-magnitude signed header token, preserve bottom-to-top row conversion and
+  every float bit, and attach external encoding metadata without rescaling or
+  invalid-value scrubbing;
+- typed writers reject metadata mismatch and confidence before the lazy
+  destination opens, emit the same deterministic bytes as the unchanged raw
+  writer and independent parser, and handle deterministic seven-byte native
+  short writes;
+- little- and big-endian inputs, hand-computable row/scale fixtures, all unit
+  and invalid policies, signed zeros, infinities, NaN payloads, subnormals,
+  every truncated prefix, 100 payload mutations, and 75 randomized bit-pattern
+  rasters triangulate typed, raw, and independent paths;
+- a 32 MiB full read/write avoids an encoded-size Python allocation, and
+  inspection plus an 8x8 window over a generated 128 MiB sparse PFM stays below
+  1 MiB traced allocation;
+- the five-run all-codec harness reports about 2,026 MB/s typed read,
+  1,955 MB/s typed sink write, 0.056 ms typed inspection, and
+  0.011/0.001 MB traced read/write peaks; all O4/O5 directional and memory
+  guards pass;
+- the final local MSVC suite passes 1,739 tests with 3 documented optional
+  skips, Ruff and `git diff --check` are clean, the parsed cibuildwheel smoke
+  command passes, and a clean Python 3.12 environment containing only NumPy
+  passes typed full/window read, sink write, inspect, and unchanged raw-read
+  smoke from the locally built cp312-abi3 Windows wheel.
+
+Three-lens typed PFM review:
+
+- **memory/lifetime:** header-derived products are checked before pointer
+  arithmetic or allocation; `ByteView` pins the exporter throughout
+  GIL-released row copies; selected-window allocation is proportional only to
+  the requested region; returned records own their values; no source pointer
+  escapes;
+- **correctness:** one parser and one encoder serve raw and typed paths, the
+  signed PFM header token controls endian only, its magnitude must be exactly
+  one for typed depth, values are never transformed semantically, and external
+  metadata plus confidence guards prevent unrepresentable writes;
+- **test soundness:** the oracle uses only ASCII header construction and NumPy
+  endian dtypes, raw compatibility is asserted alongside every typed
+  restriction, special values originate as uint32 bit patterns, and sparse,
+  mmap-fallback, short-write, randomized, lifetime, and public API tests all
+  exercise the optimized paths.
+
+No unresolved finding remains in the local typed PFM review. The local
+cp312-abi3 Windows wheel is validated; instrumented Linux and Linux/macOS wheel
+validation remain pending until the next user-authorized remote dependency-wave
+run.
 
 DMB completion evidence (2026-07-24):
 

@@ -19,6 +19,7 @@ from dataclasses import replace
 from pathlib import Path
 
 from sceneio import _core
+from sceneio.io._depth import DepthEncoding, inspect_depth, read_depth, write_depth
 from sceneio.io._inspection import ArrayInspection, Inspection, inspect_path
 from sceneio.io.registry import (
     REGISTRY,
@@ -390,6 +391,7 @@ __all__ = [
     "Camera",
     "Codec",
     "CodecCapabilities",
+    "DepthEncoding",
     "DepthMap",
     "FlowField",
     "FormatError",
@@ -405,12 +407,15 @@ __all__ = [
     "codecs",
     "detect",
     "inspect",
+    "inspect_depth",
     "inspect_flow",
     "native_features",
     "read",
+    "read_depth",
     "read_flow",
     "read_partial",
     "register",
     "write",
+    "write_depth",
     "write_flow",
 ]

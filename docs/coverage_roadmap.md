@@ -108,8 +108,8 @@ zero‑copy + convention tags.
 | Record | Fields (canonical dtype/shape) | Needed by | Status |
 |---|---|---|---|
 | `Image` | `pixels` HxWxC (u8/u16/f16/f32) + `color_space` + alpha/maxval metadata | PNG/JPEG/HDR/WebP/EXR/Netpbm | ✅ |
-| `DepthMap` | `depth` HxW f32 + `scale`/`unit`/`invalid` meta + `confidence` HxW | typed depth adapters, `.dmb` | ✅ record + scalar DMB codec |
-| `FlowField` | `vectors` HxWx2 f32 + component/axis/row/unit/invalid meta | typed `.flo` adapter | ✅ record / ⬜ typed adapter |
+| `DepthMap` | `depth` HxW f32 + `scale`/`unit`/`invalid` meta + `confidence` HxW | typed depth adapters, `.dmb` | ✅ record + scalar DMB + typed PFM |
+| `FlowField` | `vectors` HxWx2 f32 + component/axis/row/unit/invalid meta | typed `.flo` adapter | ✅ |
 | `PointCloud` | `xyz` Nx3, `rgb` Nx3 u8, `normals` Nx3, `intensity` N | PLY‑point, PCD, LAS/LAZ, E57, `.xyz` | ✅ |
 | `Mesh` | `vertices` Nx3, `faces` Mx3 u32, `normals`, `uv`, `vertex_color` | OBJ, STL, OFF, PLY‑mesh, glTF, USD | ⬜ |
 | `FeatureSet` | `keypoints` Nx{2,4,6} f32, `descriptors` NxD, `scores` N, `image_size` 2 | HDF5/hloc, COLMAP DB | ⬜ |
@@ -181,7 +181,7 @@ Columns: **Ext/id** · **Record** · **Lib/oracle (license)** · **R/W** ·
 ### 3f. Images (feature‑flagged C libs)
 | Format | Record | Lib / oracle | R/W | Notes |
 |---|---|---|---|---|
-| ✅ PFM | ndarray | pure‑Python | R+W | owned positive-stride decode; typed depth adapter pending |
+| ✅ PFM | ndarray (raw) + `DepthMap` (typed) | pure‑Python | R+W | owned positive-stride decode; mandatory external `DepthEncoding`; unit-magnitude scalar subset and bounded typed windows |
 | ✅ PPM / PGM / PNM | `Image` | pypng/manual | R+W | P2/P3/P5/P6, 8/16-bit |
 | ✅ PNG | `Image` | Pillow+pypng / lodepng (zlib) | R+W | 8/16‑bit, palette, interlace |
 | ✅ JPEG | `Image` | Pillow / stb (public domain) | R+W | lossy; gray/RGB read, RGB write |

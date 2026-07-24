@@ -457,3 +457,31 @@ typed read intentionally owns one native copy so its `FlowField` outlives the
 mapping. Both paths avoid an encoded-size Python `bytes`; typed sink output is
 byte-identical to the raw writer and independent NumPy oracle. The five-run
 29-codec O4/O5 throughput and memory regression guard passed.
+
+## Typed PFM depth-adapter delta — 2026-07-24
+
+The raw PFM benchmark row remains the compatibility reference for grayscale
+and RGB ndarray I/O. A nested row measures the explicit scalar `DepthMap`
+adapter on the same 1024x1024 float32 raster (4.194 MB), including a bounded
+middle window:
+
+```text
+operation                         result
+-------------------------------------------------------------
+typed mmap read                   2,026 MB/s
+typed direct-sink write           1,955 MB/s
+typed header inspection           0.056 ms
+typed read/write traced peak      0.011 / 0.001 MB
+typed middle-window latency       0.55 ms
+raw public mmap read              2,059 MB/s
+raw direct-sink write             2,198 MB/s
+```
+
+The typed reader owns exactly one native float32 raster because PFM's required
+bottom-to-top transform prevents a positive-stride mapped view. It avoids an
+additional encoded-size Python `bytes`, preserves every float bit, and attaches
+only the caller-supplied immutable `DepthEncoding`. Typed output is
+byte-identical to the raw writer and independent oracle. A generated 128 MiB
+sparse-file test keeps typed inspection plus an 8x8 bounded window below 1 MiB
+of traced Python allocation. The five-run 29-codec O4/O5 throughput and memory
+regression guard passed.
