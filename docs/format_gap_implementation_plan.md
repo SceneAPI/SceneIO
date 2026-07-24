@@ -1,9 +1,11 @@
 # Format-gap implementation, verification, and validation plan
 
-- **Status:** execution in progress after SceneIO 0.2.0; G0, G2.1, the PTS
-  slice of G2.3, and scalar DMB plus BAL from G2.4 are complete locally.
-  BMP/TGA image codecs are also complete locally. Cross-platform wheel and
-  instrumented validation remains a user-gated remote action.
+- **Status:** execution in progress after SceneIO 0.2.0. G0, safetensors, PTS,
+  scalar DMB, BAL, BMP/TGA, the compiled `FlowField` record, typed FLO, typed
+  PFM depth, and typed PNG depth are complete locally. Typed scalar EXR depth
+  is the only unfinished item in the active depth/flow slice.
+  Cross-platform wheel and instrumented validation remains a user-gated remote
+  action.
 - **Current branch:** 29 compiled codecs, all read/write and inspectable, with
   bounded partial reads where their containers permit them.
 - **Scope:** close every unblocked format gap declared by SceneIO's coverage
@@ -102,7 +104,7 @@ G0 must also reconcile these shipped-surface details:
 | `PoseGraph` | pose nodes, typed edges, relative transforms, information matrices | g2o |
 | `StateTrajectory` | timestamps, position/orientation, velocity, gyroscope bias, accelerometer bias, frame/unit metadata | EuRoC state CSV |
 | `CameraRig` | ordered cameras, rig-to-camera extrinsics, names/ids, frame and unit metadata | OpenCV, ROS, Kalibr |
-| `FlowField` | HxWx2 f32 vectors plus component order, axes, row order, units, and invalid-value convention | typed FLO adapter |
+| `FlowField` — complete locally | HxWx2 f32 vectors plus component order, axes, row order, units, and invalid-value convention | typed FLO adapter |
 | `ImageSequence` | lazy frame references, timestamps/durations, dimensions, packed images or native planar frames with chroma subsampling metadata | image directories, Y4M, animated WebP/APNG |
 | `Table` | named typed columns, null validity, UTF-8 offsets/data, row count, metadata | Parquet |
 | `SparseGrid` / `Scene` | sparse grid values/transforms; scene nodes, transforms, mesh/camera references | OpenVDB, USD/USDZ |
@@ -113,20 +115,25 @@ therefore insufficient. Codecs that inherently require triangles may reject
 non-triangular faces at write time or perform an explicit, opt-in conversion
 outside the codec.
 
-### 2.2 Format gaps
+### 2.2 Format-gap ledger
 
-| Family | Remaining formats |
-|---|---|
-| Reconstruction and pose | COLMAP database, BAL, EuRoC state CSV, g2o |
-| Splat | SuperSplat SOG / compressed PLY, KSplat |
-| Point cloud | PTS text, generic point PLY, PCD, LAS waveform formats 4/5/9/10, LAZ, E57 |
-| Mesh | mesh PLY, OBJ/MTL, STL, OFF, glTF/GLB, optional Draco, USD/USDZ |
-| Tensor/feature/table | safetensors, HDF5, hloc layout, Zarr v2/v3, Parquet |
-| Image and depth | TIFF, BMP, TGA, typed PFM/PNG/EXR depth, typed FLO flow, DMB |
-| Calibration | OpenCV YAML/XML, ROS `camera_info`, Kalibr YAML |
-| Sequence/dataset | image directory, Y4M, animated WebP, APNG, RTMV layout |
-| Volumetric/niche | OpenVDB |
-| Policy-gated | AVIF, JPEG-XL, Draco compression |
+The completed column records branch-local work beyond the original 23-codec
+baseline. A remaining item is not considered covered until its work-package
+exit gate and the validation matrix in section 8 both pass.
+
+| Family | Remaining work | Complete locally on this branch |
+|---|---|---|
+| Reconstruction and pose | COLMAP database, EuRoC state CSV, g2o | BAL |
+| Splat | SuperSplat SOG / compressed PLY, KSplat | — |
+| Point cloud | generic point PLY, PCD, LAS waveform formats 4/5/9/10, LAZ, E57 | count-prefixed PTS |
+| Mesh | mesh PLY, OBJ/MTL, STL, OFF, glTF/GLB, USD/USDZ; optional Draco is policy-gated | — |
+| Tensor/feature/table | COLMAP features/matches, HDF5, hloc layout, Zarr v2/v3, Parquet | safetensors |
+| Image and depth | typed scalar EXR depth, TIFF | BMP, TGA, typed PFM depth, typed PNG depth, scalar DMB |
+| Optical flow | — | compiled `FlowField` plus typed FLO |
+| Calibration | OpenCV YAML/XML, ROS `camera_info`, Kalibr YAML | — |
+| Sequence/dataset | image directory, Y4M, animated WebP, APNG, RTMV layout | — |
+| Volumetric/niche | OpenVDB | — |
+| Policy-gated | AVIF, JPEG-XL, Draco compression | — |
 
 ## 3. Architecture work that precedes codec growth
 
@@ -398,8 +405,8 @@ Land one codec per green commit:
 | BAL — complete locally | `Reconstruction` | camera/point/observation text with a pinned canonical writer | UW specification + independent parser |
 | EuRoC state CSV | `StateTrajectory` | timestamps, pose, velocity and biases with no field loss | independent CSV parser |
 | DMB — complete locally | `DepthMap` | dimensions/type header, float payload, scale/unit metadata | independent NumPy parser |
-| Typed PFM/PNG/EXR depth | `DepthMap` | explicit scale, unit, invalid-value and confidence semantics layered over existing payload codecs | numpy/Pillow/OpenEXR |
-| Typed FLO flow | `FlowField` | preserve component, axis, unit, row-order, and unknown-value semantics rather than returning an untagged ndarray | independent numpy parser |
+| Typed PFM/PNG depth — complete locally; typed EXR pending | `DepthMap` | explicit scale, unit, invalid-value and confidence semantics layered over existing payload codecs | numpy/Pillow/OpenEXR |
+| Typed FLO flow — complete locally | `FlowField` | preserve component, axis, unit, row-order, and unknown-value semantics rather than returning an untagged ndarray | independent numpy parser |
 | OpenCV YAML/XML | `Camera`/`CameraRig` | matrices, distortion models, explicit model mapping | OpenCV test extra |
 | ROS `camera_info` | `Camera` | K/D/R/P and distortion model | independent YAML parser |
 | Kalibr YAML | `CameraRig` | chained extrinsics, camera models, time offsets | independent YAML parser |
@@ -1528,37 +1535,400 @@ G0 -> Scene/SparseGrid scope -> USD/OpenVDB
 Safetensors, PCD, DMB, and the small pose/calibration formats can proceed after
 G0 without waiting for the mesh or optional-library paths.
 
-## 12. Current execution queue
+## 12. Detailed implementation and closure plan
 
-G0, safetensors, PTS, scalar DMB, BAL, BMP, and TGA have exercised the
-expansion machinery without adding a heavyweight dependency. Continue with
-small green commits in this order:
+This section is the operational queue. The package specifications above define
+what each format means; this queue defines the exact landing order and evidence
+required to call it covered. Relative units are intentionally not calendar
+estimates.
 
-1. **Typed depth and flow adapters**
-   - add explicit adapters for PFM/PNG/EXR depth and a dedicated flow record
-     before changing the existing raw codec return types;
-   - preserve existing calls and bytes; pin units, scale, invalid-value, row
-     order, confidence, and writer guards;
-   - prove adapter output equals the existing raw decode plus declared
-     metadata, with no silent numerical conversion.
-2. **Generic point PLY and PCD**
-   - ship point-cloud schemas first, including ASCII and binary endian paths,
-     then add mesh PLY only after the canonical ragged `Mesh` record lands;
-   - implement header-only inspection, fixed-record point ranges, PCD LZF,
-     organized-cloud metadata, and schema-aware dispatch that cannot steal
-     Gaussian PLY;
-   - validate against `plyfile` and Open3D and benchmark text, binary, endian,
-     compressed, and partial paths.
-3. **Record-dependent packages**
-   - `Mesh`/`MaterialSet` unlock OBJ, STL, OFF, glTF/GLB, and mesh PLY;
-   - `FeatureSet`/`MatchGraph` unlock COLMAP DB and later hloc/HDF5;
-   - `StateTrajectory`/`CameraRig`/`PoseGraph` unlock EuRoC, OpenCV, ROS,
-     Kalibr, and g2o;
-   - each record lands only with its first codec and the record-level
-     zero-copy, lifetime, offset/index, and wheel matrix from G1.
+### 12.1 Current checkpoint and status vocabulary
 
-After each numbered slice, update the capability snapshot and coverage ledger,
-run the common all-codec matrix, record same-run benchmark deltas, complete the
-three review lenses, and commit locally. Dependency waves trigger the sdist and
-cibuildwheel validation matrix; branch pushes, release workflow dispatches,
-tags, and PyPI publication remain explicit user-gated actions.
+The checkpoint at commit `913e981` is:
+
+- 29 compiled registry codecs with read, write, inspect, mmap input, and direct
+  file sinks;
+- O0-O5 complete for the existing codec tier;
+- `FlowField`, typed FLO, typed PFM depth, and typed PNG depth complete;
+- 1,787 local tests passing with 3 documented optional skips, Ruff clean, the
+  all-codec benchmark guard green, and a clean cp312-abi3 Windows wheel smoke
+  passing;
+- typed scalar EXR depth is the next unfinished commit;
+- instrumented Linux and Linux/macOS wheels have not yet been run for this
+  dependency wave because pushing and dispatching remote workflows are
+  user-gated.
+
+Status terms are strict:
+
+| Status | Meaning |
+|---|---|
+| Planned | contract exists, but implementation has not started |
+| Implemented locally | code, focused parity tests, and documentation exist |
+| Verified locally | full suite, lint, differential/memory tests, benchmark guard, and three-lens review pass |
+| Validated | required compiler, instrumented, sdist, and wheel lanes pass |
+| Shipped | validated artifacts were published from a matching version tag |
+| Policy-gated | implementation cannot start until the named project decision is recorded |
+
+### 12.2 Wave A — finish the active typed-depth slice
+
+#### A1. Typed scalar EXR depth
+
+Implementation:
+
+1. Extend `DepthEncoding.channel_name` validation to require a nonempty,
+   NUL-free UTF-8 name of at most 255 encoded bytes for EXR. PFM and PNG
+   continue to require no channel name.
+2. Add a bounded native scalar-header helper that rejects multipart, deep,
+   tiled, UINT, and multi-channel EXR before raster decode and returns the exact
+   stored channel name.
+3. Add `_core.read_exr_depth` using the existing raw EXR decoder. It accepts
+   exactly one HALF/FLOAT channel whose name equals the explicit encoding,
+   widens HALF according to the existing raw path, and copies decoded float32
+   values bit-for-bit into an owning `DepthMap`.
+4. Refactor the existing writer through one internal implementation. Raw
+   one-channel `Image` writes continue to emit channel `Y`; the new typed writer
+   emits the explicitly requested scalar name. Neither path rescales,
+   color-converts, classifies invalid values, or changes raw golden bytes.
+5. Add the native file-sink request, public `read_depth`, `write_depth`, and
+   `inspect_depth` dispatch, the `typed_depth_adapter` capability marker, and
+   numpy-only wheel smoke coverage.
+6. Reject confidence, encoding mismatch, multi-channel selection, and typed
+   windows before opening a write destination or invoking a full compressed
+   decode.
+
+Verification:
+
+- OpenEXR-written HALF/FLOAT scalar files read identically through raw, typed,
+  bytes, mmap, and public path APIs.
+- SceneIO typed output reopens in OpenEXR with the exact channel name and float
+  bit patterns, including signed zero, infinities, subnormals, and NaN payloads.
+- Raw one-channel output remains byte-identical and retains `Y`.
+- Hand-built and oracle files cover channel mismatch, RGB/RGBA/extra channels,
+  UINT, every truncated prefix, bounded mutations, dimension/product limits,
+  unsupported multipart/deep/tiled layouts, and all supported compressions.
+- One versus multiple lanes is deterministic; forced short file writes equal
+  buffer output; destination preflight failures leave no file behind.
+- A generated multi-megabyte fixture proves mmap reading and direct sink writing
+  do not allocate an encoded-size Python `bytes`; header inspection remains
+  below the documented bounded threshold; returned data outlives mapping
+  closure and `gc.collect()`.
+- `bench/bench_io.py --runs 5` records typed read/write/inspect rows and leaves
+  every retained O4/O5 directional and memory guard green.
+
+Validation and exit:
+
+- Rebuild the extension, verify the three new native symbols, run the focused
+  EXR/raw-compatibility suites, then run the common local gate in section 12.9.
+- Complete and record the memory/lifetime, format-correctness, and
+  test-soundness review with no unresolved finding.
+- Update README, both coverage documents, this ledger, the benchmark baseline,
+  and wheel smoke.
+- Land one green commit, `feat(io): add typed EXR depth adapters`, with the
+  required co-author trailer.
+- Wave A is locally complete only when PFM, PNG, and EXR expose the same typed
+  public contract without changing any raw codec result or byte stream.
+
+### 12.3 Wave B — finish default-wheel, self-contained G2 coverage
+
+Land each numbered item as its own verified commit. Do not combine records or
+codecs merely to make the ledger look complete.
+
+#### B1. Generic point PLY
+
+- Add schema-aware `ply` dispatch for point clouds while keeping
+  `gaussian_ply` authoritative for Gaussian schemas.
+- Support ASCII, binary little-endian, and binary big-endian vertex records;
+  map only fields represented by `PointCloud` and reject unrepresentable
+  properties on write.
+- Add header-only inspect and fixed-record binary point ranges. Do not advertise
+  bounded ASCII ranges unless an index can be built without full
+  materialization.
+- Verify independent `plyfile`/Open3D parity, property order and type matrices,
+  endian conversion, NaNs, normals/colors/intensity, ambiguous detection, and
+  raw Gaussian non-regression.
+- Benchmark ASCII parse/format, both binary endian paths, inspect, range read,
+  mmap, and sink output.
+
+#### B2. PCD
+
+- Support ASCII, binary, and `binary_compressed` LZF; preserve `FIELDS`,
+  `SIZE`, `TYPE`, `COUNT`, organized `WIDTH`/`HEIGHT`, and `VIEWPOINT`.
+- Define the exact supported mapping into `PointCloud`; refuse unknown
+  multi-count fields or metadata that cannot round-trip.
+- Add header-only inspect and fixed-record uncompressed ranges. Compressed
+  ranges are unsupported until chunk-bounded behavior is real.
+- Verify independent Open3D plus specification-based parser parity, endian and
+  field layouts, LZF block bounds, organized clouds, malformed counts, and
+  deterministic sink output.
+- Benchmark text, binary, LZF, inspect, range selection, and memory at
+  100 MiB-class payloads.
+
+#### B3. Small record-backed pose and calibration formats
+
+Land each record with its first consumer, then add the remaining syntax
+adapters:
+
+1. `StateTrajectory` plus EuRoC state CSV.
+2. `CameraRig` plus OpenCV YAML/XML, then ROS `camera_info` and Kalibr YAML.
+3. `PoseGraph` plus g2o.
+
+Every record commit must pin coordinate frames, units, timestamp precision,
+quaternion ordering/sign policy, covariance/information layouts, ragged
+offsets, zero-copy view ownership, source-mutation isolation, and exact writer
+guards. YAML/XML parsing must remain native and bounded; no runtime Python
+dependency is added.
+
+#### B4. COLMAP database
+
+- Land `FeatureSet` and `MatchGraph` first, including keypoint layout,
+  descriptor dtype/width, ragged matches, pair ids, and optional geometry.
+- Vendor the public-domain SQLite amalgamation at an exact recorded SHA and
+  statically build only the required surface.
+- Use read-only connections for reads and transactions for writes. Add
+  one-image and one-pair partial selectors plus metadata-only inspection.
+- Verify bidirectionally with `sqlite3` and pycolmap, sparse ids, empty blobs,
+  pair ordering, geometry matrices, rollback, handle release, and bounded BLOB
+  validation.
+- Benchmark bulk insert, full scan, one-image read, one-pair read, and inspect.
+
+#### B5. Self-contained splat formats
+
+- Implement SuperSplat SOG/compressed PLY with explicit quantization and lossy
+  metadata.
+- Implement only identified KSplat versions; begin read-only if no canonical
+  writer can be independently established.
+- Verify against reference loader vectors and preserve every
+  `GaussianCloud` field or reject the file. Benchmark decode, encode where
+  supported, inspect, point selection, and large-cloud memory.
+
+Wave B exit:
+
+- every default-wheel G2 item appears in `sceneio.capabilities()` and the
+  registry-wide E2E sweep;
+- the default install remains numpy-only and all native code is vendored,
+  pinned, permissively licensed, and statically linked;
+- the original 29-codec behavior, benchmarks, and golden bytes remain green;
+- the dependency-wave remote validation in section 12.10 passes.
+
+### 12.4 Wave C — canonical mesh tier
+
+The mesh record is the gate; codec work must not invent format-specific
+topology containers.
+
+1. **`Mesh` and `MaterialSet`**
+   - represent polygon boundaries with offsets plus indices;
+   - distinguish vertex, corner, face, primitive, and material domains;
+   - preserve normals, UV sets, colors, material ranges, transforms, texture
+     references, alpha mode, and coordinate metadata;
+   - validate offsets, indices, aliasing, lifetime, empty meshes, and very large
+     ragged topology before any codec lands.
+2. **Mesh PLY**
+   - reuse the generic PLY parser while preserving face lists and
+     vertex/face properties;
+   - dispatch point, mesh, and Gaussian schemas without extension-order
+     ambiguity.
+3. **OBJ/MTL**
+   - preserve separate position/UV/normal indices, polygon boundaries,
+     smoothing groups, objects/groups, material assignment, negative indices,
+     and relative resource resolution;
+   - do not silently triangulate or merge index domains.
+4. **STL and OFF**
+   - support binary/ASCII STL with explicit triangle-only write guards;
+   - preserve OFF polygon boundaries and supported attributes without implicit
+     triangulation.
+5. **Plain glTF/GLB**
+   - implement buffers, buffer views, accessors, sparse accessors, node
+     transforms, meshes/primitives, PBR materials, and image references for a
+     documented core subset;
+   - reject unsupported extensions and Draco payloads explicitly.
+
+Verification uses trimesh/tinygltf-compatible readers plus hand-built binary
+fixtures that break SceneIO reader/writer symmetry. Required cases include
+non-triangular faces, disjoint index streams, sparse accessors, normalized
+integer attributes, byte strides, malformed offsets, external/embedded
+resources, cyclic nodes, and path/resource lifetime. Large-mesh benchmarks
+cover topology decode, attribute interleave, inspect, primitive selection, and
+direct sinks.
+
+Wave C exits only after all five units pass the default wheel matrix with no
+silent triangulation, dropped attributes, or material loss.
+
+### 12.5 Wave D — compressed points and sequences
+
+1. Extend the point-cloud contract for LAS waveform packet fields and first add
+   lossless plain-LAS formats 4/5/9/10 parity.
+2. Vendor laz-perf (Apache-2.0) for LAZ, retain the same point semantics, add
+   chunk-aware selection, and prove bounded decompression memory.
+3. Land `ImageSequence` with frame timestamps/durations, dimensions, ownership,
+   and native planar/chroma metadata.
+4. Add image-directory and raw Y4M support first; these establish sequence and
+   frame-selection semantics without an animation library.
+5. Extend WebP and PNG to animated WebP/APNG only after blend, disposal,
+   duration, loop count, and partial-frame semantics round-trip.
+6. Add RTMV as a multi-file layout over existing camera, image, depth, and
+   sequence records.
+
+Verification includes chunk/frame boundary corruption, long sequences,
+timestamp precision, odd chroma dimensions, disposal/blend goldens, random
+access equal to full-decode slices, deterministic directory manifests, and
+100 MiB/1 GiB-class RSS tests. Wave D requires a new dependency-wave wheel run
+because laz-perf changes the native build.
+
+### 12.6 Wave E — optional scientific libraries
+
+First add one common `SCENEIO_WITH_*` build/manifest pattern with disabled,
+enabled, and unavailable states. Then land:
+
+1. HDF5 and hloc layouts;
+2. TIFF;
+3. E57;
+4. Parquet plus the canonical `Table` record.
+
+Each library is pinned and statically built where the license and platform
+permit. Default wheels must continue importing and passing the original suite
+with every optional feature off. Full-feature wheels must expose accurate
+capabilities and pass oracle parity. The validation matrix covers both
+configurations on GCC 10, AppleClang, and MSVC and checks wheel dependencies,
+artifact size, import time, thread behavior, and clean process shutdown.
+
+TIFF starts with unambiguous strips/tiles, numeric sample formats, and explicit
+photometric handling. HDF5 starts with numeric datasets and hloc's documented
+layout. E57 starts with supported point scans. Parquet starts with the canonical
+column types represented by `Table`. Unsupported filters, schemas, null/union
+types, or metadata are rejected rather than coerced.
+
+### 12.7 Wave F — chunked and heavyweight ecosystems
+
+1. Implement Zarr v2, then v3, over a native `TensorDict` store abstraction;
+   validate directory trees, chunk codecs, array selection, and consolidated
+   metadata against zarr-python.
+2. Define the minimal `Scene` contract before optional OpenUSD; start with
+   meshes, cameras, nodes, and transforms and reject unrepresented composition,
+   variants, instancing, and animation.
+3. Define `SparseGrid` before optional OpenVDB; begin with named scalar numeric
+   grids, transforms, background values, active bounds, and grid/window
+   selection.
+
+No G6 format enters release wheels until correctness passes and wheel size,
+startup cost, platform support, and dependency closure are measured and
+explicitly accepted.
+
+### 12.8 Wave G — explicit policy decisions
+
+AVIF, JPEG-XL, and Draco-compressed glTF remain policy-gated. For each, record:
+
+- the approved implementation and exact license;
+- the patent-policy decision;
+- static-build and wheel-matrix evidence;
+- supported fidelity subset and oracle;
+- artifact-size/performance impact;
+- explicit user approval to enter the implementation queue.
+
+An exclusion is a valid closed state. An unexplained pending row is not.
+
+### 12.9 Per-commit verification gate
+
+For every C++/CMake unit, use the repository interpreter and this order:
+
+```powershell
+uv pip install -e ".[dev,test]"
+.venv/Scripts/python.exe -c "from sceneio import _core; print(_core)"
+.venv/Scripts/python.exe -m pytest -q tests/codecs/test_<format>.py
+.venv/Scripts/python.exe -m pytest -q tests/test_io_api.py
+.venv/Scripts/python.exe -m pytest -q
+.venv/Scripts/python.exe -m ruff check
+git diff --check
+.venv/Scripts/python.exe bench/bench_io.py --runs 5 --require-o4-gains --require-o5-inspect-gains --require-o5-partial-gains
+.venv/Scripts/python.exe -m sceneio._wheel_smoke
+```
+
+Replace the symbol smoke with explicit new symbol assertions and add
+record-focused tests where applicable. A unit does not commit if any of these
+is true:
+
+- the oracle and SceneIO disagree outside a documented lossy tolerance;
+- raw/public compatibility or a golden byte stream changes unintentionally;
+- mmap, lifetime, partial, or sink memory structure regresses;
+- the same-run benchmark guard reports a retained-path regression;
+- any of the three review lenses has an unresolved finding;
+- capabilities, docs, test collection, and registry entries disagree.
+
+The commit must include the codec/record, parity and memory tests, benchmark
+builder/result, capability metadata, wheel smoke, documentation, and this exact
+trailer:
+
+```text
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+```
+
+### 12.10 Dependency-wave validation gate
+
+After all local commits in a dependency wave are green:
+
+1. Build an sdist and a clean local cp312-abi3 Windows wheel.
+2. Install the wheel in a fresh Python 3.12 environment containing only NumPy
+   plus smoke-only oracle dependencies; run `_wheel_smoke`, explicit new-symbol
+   checks, and one public read/write/inspect/partial case per new codec.
+3. Inspect the Windows wheel contents and native dependencies; ensure no build
+   tree, headers, static libraries, or undeclared DLLs leaked into it.
+4. With explicit user authorization, push the branch and dispatch:
+
+   ```powershell
+   gh workflow run sanitizers.yml --ref phase0-nanobind-core
+   gh workflow run publish.yml --ref phase0-nanobind-core
+   ```
+
+   The manual `publish.yml` run is build-only: it creates and smoke-tests
+   manylinux2014 x86-64, macOS arm64, and Windows amd64 abi3 wheels plus the
+   sdist; it cannot publish.
+5. Require green normal CI, instrumented Linux, minimal-feature, full-feature,
+   and cibuildwheel lanes as applicable. Download artifacts and verify wheel
+   tags, imports, capabilities, smoke results, and `auditwheel`/`otool`/Windows
+   dependency closure.
+6. Record workflow links, artifact names/hashes, compiler/platform results,
+   skips, and any platform-specific thresholds in the completion evidence.
+
+Remote validation failure reopens the responsible work package. A local pass
+does not override a compiler, instrumented, or clean-wheel failure.
+
+### 12.11 Release and PyPI validation
+
+Publication uses `.github/workflows/publish.yml`; no local `twine upload` or
+manual artifact replacement is part of this plan.
+
+Before the first release, the user must create the SceneIO PyPI trusted
+publisher for the GitHub repository, workflow `publish.yml`, and environment
+`pypi`. Then:
+
+1. confirm every release format is `Validated`, not merely implemented locally;
+2. reconcile the capability manifest and both coverage documents;
+3. set one version in `pyproject.toml`, build locally, and verify package
+   metadata;
+4. create a signed/annotated matching `vX.Y.Z` tag only with explicit user
+   approval;
+5. push the tag, which rebuilds all wheels and the sdist and publishes through
+   OIDC only after all artifact jobs pass;
+6. verify the PyPI file set, hashes, metadata, and clean installation on each
+   supported platform;
+7. run public read/write/inspect smoke from the published artifacts before
+   marking the release shipped.
+
+Branch pushes, workflow dispatches, tags, and PyPI publication remain explicit
+user-gated actions. The next authorized remote action should be a build-only
+`publish.yml` dry run plus the sanitizer workflow, not a release tag.
+
+### 12.12 Program completion criteria
+
+The format-gap program is complete only when:
+
+- every row in section 2.2 is `Shipped`, `Optional` with tested off/on behavior,
+  or `Excluded/policy-gated` with an owner and decision;
+- every available codec satisfies the registry-driven E2E, oracle parity,
+  malformed-input, lifetime, large-memory, inspect/partial, sink, benchmark, and
+  wheel contracts;
+- the default runtime dependency remains NumPy only;
+- all native dependencies have approved provenance and close on the supported
+  wheel matrix;
+- docs, capabilities, installed artifacts, and PyPI metadata describe the same
+  supported subsets;
+- no pending remote validation result or unresolved three-lens finding remains.
