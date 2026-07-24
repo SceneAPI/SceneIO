@@ -434,3 +434,26 @@ BMP palettes and 16-bit bitfields, TGA raw/RLE top/bottom orientation,
 zero-origin palettes, packed 16-bit color, and gray/RGB/RGBA modes. The
 complete same-run O4/O5 throughput and memory regression guard passed with both
 formats included.
+
+## Typed FLO semantic-adapter delta — 2026-07-24
+
+The raw FLO benchmark row remains unchanged and continues to measure the
+zero-copy mapped ndarray path. A dedicated nested row now measures the owning
+`FlowField` adapter on the same 1024x1024 float32 UV raster (8.389 MB):
+
+```text
+operation                         result
+-------------------------------------------------------------
+typed mmap read                   2,864 MB/s
+typed direct-sink write           2,253 MB/s
+typed header inspection           0.038 ms
+typed read/write traced peak      0.011 / 0.001 MB
+raw public mmap read              180,400 MB/s
+raw direct-sink write             2,515 MB/s
+```
+
+The large raw-read number reflects the intended O2 mapped view, whereas the
+typed read intentionally owns one native copy so its `FlowField` outlives the
+mapping. Both paths avoid an encoded-size Python `bytes`; typed sink output is
+byte-identical to the raw writer and independent NumPy oracle. The five-run
+29-codec O4/O5 throughput and memory regression guard passed.

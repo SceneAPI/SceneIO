@@ -89,6 +89,15 @@ assert info.dtype == "float32"
 image = sceneio.read("frame.exr")
 sceneio.write(image, "copy.exr")
 
+# The raw `.flo` API remains an mmap-backed ndarray. Explicit typed adapters
+# attach the format's fixed component, axis, row, unit, and invalid semantics.
+flow = sceneio.read_flow("motion.flo")
+assert flow.component_order == "uv"
+assert flow.u_axis == "right" and flow.v_axis == "down"
+sceneio.write_flow(flow, "motion-copy.flo")
+flow_info = sceneio.inspect_flow("motion.flo")
+assert flow_info.metadata["unit"] == "pixels"
+
 # Half-open row/column bounds; returns the normal Image/ndarray type.
 tile = sceneio.read_partial("flow.flo", window=(100, 356, 200, 712))
 

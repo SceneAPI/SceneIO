@@ -797,7 +797,11 @@ register(
         read_window=_array_window_reader(
             _mmap_view_reader(_core.read_flo_view, _core.read_flo)
         ),
-        supported_features=("float32", "native_endian_mmap_view"),
+        supported_features=(
+            "float32",
+            "native_endian_mmap_view",
+            "typed_flow_adapter",
+        ),
     )
 )
 register(

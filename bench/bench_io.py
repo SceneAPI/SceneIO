@@ -1073,6 +1073,7 @@ def _run_benchmark(args, tmp):
             rt, _ = _measure(lambda: s.r(enc), args.runs)
             sioW, sioR = pmb / wt, pmb / rt
             o4_metrics = {}
+            typed_adapter_metrics = None
 
             # O4 controls retain a deterministic one-lane/worker-off reference
             # beside the optimized defaults. WebP separately measures the old
@@ -1385,6 +1386,64 @@ def _run_benchmark(args, tmp):
                     inspect_rss / 1e6,
                 )
             )
+            if s.id == "flo":
+                typed_record = _core.flow_field(rec)
+                typed_path = os.path.join(tmp, "flo-typed.bin")
+
+                def _typed_read(fp=fp):
+                    if args.cold_cache:
+                        _evict_file_cache(fp)
+                    return sceneio.read_flow(fp, format="flo")
+
+                def _typed_write(
+                    destination=typed_path,
+                    value=typed_record,
+                ):
+                    return sceneio.write_flow(
+                        value, destination, format="flo"
+                    )
+
+                def _typed_inspect(fp=fp):
+                    if args.cold_cache:
+                        _evict_file_cache(fp)
+                    return sceneio.inspect_flow(fp, format="flo")
+
+                typed_read_time, typed_read_peak = _measure(
+                    _typed_read, args.runs
+                )
+                typed_read_rss = _measure_rss(_typed_read)
+                typed_write_time, typed_write_peak = _measure(
+                    _typed_write, args.runs
+                )
+                typed_write_rss = _measure_rss(_typed_write)
+                typed_inspect_time, typed_inspect_peak = _measure(
+                    _typed_inspect, args.runs
+                )
+                typed_inspect_rss = _measure_rss(_typed_inspect)
+                typed_decoded = _typed_read()
+                if not np.array_equal(
+                    np.asarray(typed_decoded.vectors), rec, equal_nan=True
+                ):
+                    raise AssertionError("typed FLO values differ")
+                if Path(typed_path).read_bytes() != enc:
+                    raise AssertionError("typed FLO sink bytes differ")
+                typed_info = _typed_inspect()
+                if (
+                    typed_info.shape != rec.shape
+                    or typed_info.metadata.get("component_order") != "uv"
+                ):
+                    raise AssertionError("typed FLO inspection differs")
+                typed_adapter_metrics = {
+                    "read_mbps": pmb / typed_read_time,
+                    "read_peak_mb": typed_read_peak / 1e6,
+                    "read_rss_mb": typed_read_rss / 1e6,
+                    "write_mbps": pmb / typed_write_time,
+                    "write_peak_mb": typed_write_peak / 1e6,
+                    "write_rss_mb": typed_write_rss / 1e6,
+                    "inspect_ms": typed_inspect_time * 1000,
+                    "inspect_peak_mb": typed_inspect_peak / 1e6,
+                    "inspect_rss_mb": typed_inspect_rss / 1e6,
+                }
             partial_request = _partial_request(s.id, _inspect())
             partial_metrics = None
             if partial_request is not None:
@@ -1470,6 +1529,7 @@ def _run_benchmark(args, tmp):
                     "bytes_write_rss_mb": bytes_write_rss / 1e6,
                     "sink_write_rss_mb": sink_write_rss / 1e6,
                     "o4": o4_metrics or None,
+                    "typed_adapter": typed_adapter_metrics,
                 }
             )
             print(
@@ -1480,6 +1540,16 @@ def _run_benchmark(args, tmp):
                 f"{bytes_rss / 1e6:>9.1f}{mmap_rss / 1e6:>9.1f}"
                 f"{(ratio if ratio else 0):>9.2f}"
             )
+            if typed_adapter_metrics is not None:
+                print(
+                    "  flo typed adapter:"
+                    f" read={typed_adapter_metrics['read_mbps']:.0f} MB/s"
+                    f" write={typed_adapter_metrics['write_mbps']:.0f} MB/s"
+                    f" inspect={typed_adapter_metrics['inspect_ms']:.3f} ms"
+                    f" traced read/write="
+                    f"{typed_adapter_metrics['read_peak_mb']:.3f}/"
+                    f"{typed_adapter_metrics['write_peak_mb']:.3f} MB"
+                )
         except Exception as e:
             failures.append(s.id)
             results.append({"codec": s.id, "error": f"{type(e).__name__}: {e}"})

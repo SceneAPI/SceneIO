@@ -107,10 +107,13 @@ _NAMESPACES = frozenset({"data", "formats", "io", "mapping", "matching", "testin
 _IO_FORWARDS = frozenset(
     {
         "read",
+        "read_flow",
         "read_partial",
         "write",
+        "write_flow",
         "detect",
         "inspect",
+        "inspect_flow",
         "capabilities",
         "codecs",
         "native_features",
@@ -195,6 +198,7 @@ __all__ = [
     "gc_checkpoints",
     "image_pair_to_pair_id",
     "inspect",
+    "inspect_flow",
     "io",
     "is_colmap_native_extractor_type",
     "is_extension_column",
@@ -208,6 +212,7 @@ __all__ = [
     "native_features",
     "pair_id_to_image_pair",
     "read",
+    "read_flow",
     "read_header",
     "read_partial",
     "read_record",
@@ -215,6 +220,7 @@ __all__ = [
     "validate_sha",
     "write",
     "write_checkpoint",
+    "write_flow",
     "write_header",
     "write_record",
 ]

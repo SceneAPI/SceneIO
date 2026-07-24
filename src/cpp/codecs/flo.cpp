@@ -32,6 +32,7 @@
 // byte-swapped on read/write (the pfm.cpp payload path, extended to the header)
 // so the on-disk bytes are LE throughout — magic, dimensions, and samples.
 #include "io/common.hpp"
+#include "records/flow_field.hpp"
 
 using namespace nb::literals;
 using namespace sio;
@@ -112,6 +113,43 @@ std::vector<float> copy_flo(const uint8_t *p, const FloInfo &info) {
     return buf;
 }
 
+size_t checked_value_count(size_t height, size_t width) {
+    if (height < 1 || width < 1)
+        throw std::invalid_argument("flo: non-positive dimensions");
+    if (height > kDimCap || width > kDimCap)
+        throw std::invalid_argument(
+            "flo: dimensions exceed int32");
+    const uint64_t count = static_cast<uint64_t>(height) *
+                           static_cast<uint64_t>(width) * 2ull;
+    constexpr size_t max_size = std::numeric_limits<size_t>::max();
+    if (count > max_size || static_cast<size_t>(count) > (max_size - 12) / 4)
+        throw std::invalid_argument(
+            "flo: dimensions overflow address space");
+    return static_cast<size_t>(count);
+}
+
+std::string encode_flo(const float *source, size_t height, size_t width,
+                       size_t count) {
+    LeWriter writer;
+    writer.out.reserve(12 + count * 4);
+    writer.out.append(kFloMagic, 4);
+    int32_t width_disk = static_cast<int32_t>(width);
+    int32_t height_disk = static_cast<int32_t>(height);
+    if (!host_is_le()) {
+        width_disk = bswap32i(width_disk);
+        height_disk = bswap32i(height_disk);
+    }
+    writer.put<int32_t>(width_disk);
+    writer.put<int32_t>(height_disk);
+    if (host_is_le()) {
+        writer.out.append(reinterpret_cast<const char *>(source), count * 4);
+    } else {
+        for (size_t index = 0; index < count; ++index)
+            writer.put<float>(bswap32f(source[index]));
+    }
+    return writer.out;
+}
+
 nb::ndarray<nb::numpy, float> read_flo(nb::handle source) {
     sio::ByteView data(source);
     const uint8_t *p = data.data();
@@ -123,6 +161,21 @@ nb::ndarray<nb::numpy, float> read_flo(nb::handle source) {
         buf = copy_flo(p, info);
     }
     return own_array(std::move(buf), {info.height, info.width, 2});
+}
+
+FlowField read_flo_field(nb::handle source) {
+    sio::ByteView data(source);
+    const uint8_t *bytes = data.data();
+    FloInfo info;
+    FlowField result;
+    {
+        nb::gil_scoped_release release;
+        info = parse_flo(bytes, data.size());
+        result.height = info.height;
+        result.width = info.width;
+        result.vectors = copy_flo(bytes, info);
+    }
+    return result;
 }
 
 nb::object read_flo_view(nb::handle source) {
@@ -149,32 +202,47 @@ nb::bytes write_flo(nb::ndarray<const float, nb::c_contig, nb::device::cpu> flow
     if (flow.ndim() != 3 || flow.shape(2) != 2)
         throw std::invalid_argument(
             "write_flo: expected float32 (H,W,2) flow (u=[...,0] horizontal, v=[...,1] vertical)");
-    const size_t H = flow.shape(0), W = flow.shape(1);
-    if (H < 1 || W < 1) throw std::invalid_argument("flo: non-positive dimensions");
-    if (H > kDimCap || W > kDimCap)
-        throw std::invalid_argument("flo: dimensions exceed int32");  // < INT32_MAX -> safe casts
-    const float *src = flow.data();  // valid while `flow` is alive (whole call)
-    const size_t count = H * W * 2;
+    const size_t height = flow.shape(0);
+    const size_t width = flow.shape(1);
+    const size_t count = checked_value_count(height, width);
+    const float *source = flow.data();
     std::string out;
     {
-        nb::gil_scoped_release rel;  // pure C++ header build + payload copy
-        LeWriter w;
-        w.out.reserve(12 + count * 4);
-        w.out.append(kFloMagic, 4);                       // endian-explicit magic bytes
-        int32_t w_disk = static_cast<int32_t>(W), h_disk = static_cast<int32_t>(H);
-        if (!host_is_le()) {  // BE host: pre-swap so the on-disk header bytes are LE
-            w_disk = bswap32i(w_disk);
-            h_disk = bswap32i(h_disk);
-        }
-        w.put<int32_t>(w_disk);                           // int32 little-endian on disk
-        w.put<int32_t>(h_disk);
-        if (host_is_le())
-            w.out.append(reinterpret_cast<const char *>(src),
-                         count * 4);                       // bulk copy: bit-exact incl. NaN/sentinels
-        else
-            for (size_t i = 0; i < count; i++)  // BE host: swap so on-disk bytes are LE (pfm.cpp:83)
-                w.put<float>(bswap32f(src[i]));
-        out = std::move(w.out);
+        nb::gil_scoped_release release;
+        out = encode_flo(source, height, width, count);
+    }
+    return emit_bytes(out.data(), out.size());
+}
+
+nb::bytes write_flo_field(const FlowField &flow) {
+    const size_t count = checked_value_count(flow.height, flow.width);
+    if (flow.vectors.size() != count)
+        throw std::invalid_argument(
+            "flo: FlowField storage disagrees with its dimensions");
+    if (flow.component_order != "uv")
+        throw std::invalid_argument(
+            "flo: requires FlowField component_order 'uv'");
+    if (flow.u_axis != "right")
+        throw std::invalid_argument(
+            "flo: requires FlowField u_axis 'right'");
+    if (flow.v_axis != "down")
+        throw std::invalid_argument(
+            "flo: requires FlowField v_axis 'down'");
+    if (flow.row_order != "top_to_bottom")
+        throw std::invalid_argument(
+            "flo: requires FlowField row_order 'top_to_bottom'");
+    if (flow.unit != "pixels")
+        throw std::invalid_argument(
+            "flo: requires FlowField unit 'pixels'");
+    if (flow.invalid_policy != "component_abs_gt_1e9")
+        throw std::invalid_argument(
+            "flo: requires FlowField invalid_policy "
+            "'component_abs_gt_1e9'");
+
+    std::string out;
+    {
+        nb::gil_scoped_release release;
+        out = encode_flo(flow.vectors.data(), flow.height, flow.width, count);
     }
     return emit_bytes(out.data(), out.size());
 }
@@ -194,4 +262,10 @@ void register_flo(nb::module_ &m) {
           "Encode a float32 (H,W,2) flow array (numpy or torch) to Middlebury .flo bytes "
           "(little-endian, magic 202021.25 'PIEH'); values incl. NaN/unknown-flow sentinels "
           "pass through bit-exact.");
+    m.def("read_flo_field", &read_flo_field, "data"_a,
+          "Decode Middlebury .flo bytes into an owning FlowField with uv, +right/+down, "
+          "top-to-bottom, pixel, and component-abs-greater-than-1e9 conventions.");
+    m.def("write_flo_field", &write_flo_field, "flow"_a,
+          "Encode a canonical Middlebury-convention FlowField to .flo bytes. Foreign "
+          "component, axis, row, unit, or invalid-value conventions are rejected.");
 }

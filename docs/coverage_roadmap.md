@@ -197,7 +197,7 @@ Columns: **Ext/id** · **Record** · **Lib/oracle (license)** · **R/W** ·
 | Format | Record | Lib / oracle | R/W | Notes |
 |---|---|---|---|---|
 | ⬜ 16‑bit depth PNG | `DepthMap` | libpng + scale meta | R+W | TUM 1/5000, ScanNet mm — **scale pin** |
-| ✅ `.flo` (Middlebury) | ndarray (H,W,2) | manual | R+W | magic 202021.25; mapped view |
+| ✅ `.flo` (Middlebury) | ndarray (raw) + `FlowField` (typed) | manual | R+W | magic 202021.25; mapped raw view; typed semantic adapters with strict writer guards |
 | ✅ `.dmb` (Gipuma/COLMAP) | `DepthMap` | independent NumPy parser | R+W | scalar float32 dense MVS depth; unknown scale, zero-invalid; bounded windows |
 | ✅ transforms.json | `PosedViewSet` | pure‑Python | R+W | done (OpenGL c2w) |
 | ⬜ RTMV / synthetic sets | `PosedViewSet`+`Image` | manual | R | dataset layout |

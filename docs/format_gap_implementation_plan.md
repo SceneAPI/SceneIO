@@ -421,7 +421,7 @@ Typed depth/flow adapter contract and landing sequence:
      mmap-backed path and remains source-compatible.
    - Guard exact shape, C contiguity, dtype, checked `H*W*2` arithmetic, and
      the closed metadata vocabulary before construction.
-2. **Typed FLO adapter**
+2. **Typed FLO adapter — complete locally**
    - Add `read_flow(path, *, format=None)` and
      `write_flow(flow, path, *, format=None)` as explicit public adapters.
      Existing `read(path)` and `_core.read_flo*` continue returning an ndarray,
@@ -551,6 +551,51 @@ Three-lens FlowField record review:
 No unresolved finding remains in the local FlowField record review.
 Instrumented Linux and Linux/macOS wheel validation remain pending until the
 next dependency-wave remote validation authorized by the user.
+
+Typed FLO adapter completion evidence (2026-07-24):
+
+- compiled `read_flo_field` and `write_flo_field` share the established raw
+  parser/encoder, while public `read_flow`, `write_flow`, and `inspect_flow`
+  add mmap input, direct native sink output, normalized errors, and fixed
+  convention metadata without changing `sceneio.read(.flo)` or raw bytes;
+- raw, typed, and independent NumPy paths are bit-identical across signed
+  zero, infinities, NaN payloads, subnormals, both `1e10` sentinel signs,
+  75 randomized rasters, and every truncated prefix of a canonical file;
+- each noncanonical component, axis, row, unit, and invalid convention is
+  rejected before the destination opens; forced seven-byte native short writes
+  reproduce the canonical raw/oracle bytes;
+- a generated 32 MiB file keeps typed mmap read and sink write below one eighth
+  of encoded size in traced Python allocation, a generated 256 MiB sparse file
+  keeps typed inspection below 1 MiB, and the owning result remains usable
+  after the source path is deleted;
+- the five-run all-codec harness reports about 2,864 MB/s typed read,
+  2,253 MB/s typed sink write, 0.038 ms typed inspection, and
+  0.011/0.001 MB traced read/write peaks; all existing O4/O5 directional and
+  memory guards pass;
+- the final local MSVC suite passes 1,648 tests with 3 documented optional
+  skips, Ruff and `git diff --check` are clean, and a clean Python 3.12
+  environment containing only NumPy imports the locally built cp312-abi3
+  Windows wheel and passes typed read/write/inspect plus unchanged raw-read
+  smoke.
+
+Three-lens typed FLO review:
+
+- **memory/lifetime:** read input remains pinned for the entire GIL-released
+  copy, no source pointer escapes, output size arithmetic includes header and
+  payload overflow checks, typed records own their values, and sink callbacks
+  receive only the finished native buffer;
+- **correctness:** typed and raw paths use one parser/encoder, writer guards
+  every convention the file cannot serialize, raw APIs retain ndarray/mapped
+  behavior, and special values remain raw rather than being classified or
+  rewritten;
+- **test soundness:** the oracle uses only `struct` and NumPy, hand-built bytes
+  pin UV and row order independently of SceneIO, randomized cases triangulate
+  all three paths, complete-prefix truncation exercises native bounds, and
+  mmap/sparse/sink tests measure the public optimized adapters.
+
+No unresolved finding remains in the local typed FLO review. The local
+cp312-abi3 Windows wheel is validated; instrumented Linux and Linux/macOS wheel
+validation remain pending until the user-authorized remote dependency-wave run.
 
 DMB completion evidence (2026-07-24):
 

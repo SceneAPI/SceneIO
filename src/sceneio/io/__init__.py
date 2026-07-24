@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import operator
 from collections.abc import Mapping
+from dataclasses import replace
 from pathlib import Path
 
 from sceneio import _core
@@ -25,6 +26,8 @@ from sceneio.io.registry import (
     CodecCapabilities,
     FormatError,
     NativeFeatureCapabilities,
+    _file_sink_writer,
+    _mmap_reader,
     detect,
     get,
     native_feature_capabilities,
@@ -41,6 +44,84 @@ PointCloud = _core.PointCloud
 DepthMap = _core.DepthMap
 FlowField = _core.FlowField
 Camera = _core.Camera
+
+_FLOW_READER = _mmap_reader(_core.read_flo_field)
+_FLOW_WRITER = _file_sink_writer(_core.write_flo_field)
+
+
+def _resolve_flow_format(path, format: str | None, *, writing: bool) -> str:
+    if format is not None:
+        selected = format
+    elif writing:
+        selected = "flo" if Path(path).suffix.lower() == ".flo" else ""
+    else:
+        selected = detect(path)
+    if selected != "flo":
+        operation = "write" if writing else "read"
+        rendered = selected or Path(path).suffix.lower() or "<none>"
+        raise FormatError(
+            f"{operation}_flow supports only Middlebury 'flo' "
+            f"(selected {rendered!r})"
+        )
+    return selected
+
+
+def read_flow(path, *, format: str | None = None) -> FlowField:
+    """Read Middlebury ``.flo`` into a convention-tagged :class:`FlowField`.
+
+    The file is decoded through a read-only mmap into record-owned storage.
+    Existing :func:`read` behavior is unchanged and continues to return the raw
+    mapped ``(H,W,2)`` ndarray.
+    """
+
+    _resolve_flow_format(path, format, writing=False)
+    try:
+        return _FLOW_READER(str(path))
+    except FormatError:
+        raise
+    except Exception as exc:
+        raise FormatError(f"reading {str(path)!r} as typed flow: {exc}") from exc
+
+
+def write_flow(
+    flow: FlowField,
+    path,
+    *,
+    format: str | None = None,
+) -> None:
+    """Write a canonical Middlebury-convention :class:`FlowField`.
+
+    The writer refuses component, axis, row, unit, or invalid-value
+    conventions that ``.flo`` cannot preserve. It uses the direct native file
+    sink and does not materialize an output-sized Python ``bytes`` object.
+    """
+
+    _resolve_flow_format(path, format, writing=True)
+    try:
+        _FLOW_WRITER(flow, str(path))
+    except FormatError:
+        raise
+    except Exception as exc:
+        raise FormatError(f"writing {str(path)!r} as typed flow: {exc}") from exc
+
+
+def inspect_flow(path, *, format: str | None = None) -> Inspection:
+    """Inspect a ``.flo`` header and attach its fixed semantic conventions."""
+
+    selected = _resolve_flow_format(path, format, writing=False)
+    result = inspect(path, format=selected)
+    return replace(
+        result,
+        metadata={
+            **result.metadata,
+            "component_order": "uv",
+            "u_axis": "right",
+            "v_axis": "down",
+            "row_order": "top_to_bottom",
+            "unit": "pixels",
+            "invalid_policy": "component_abs_gt_1e9",
+        },
+    )
 
 
 def read(path, *, format: str | None = None):
@@ -324,9 +405,12 @@ __all__ = [
     "codecs",
     "detect",
     "inspect",
+    "inspect_flow",
     "native_features",
     "read",
+    "read_flow",
     "read_partial",
     "register",
     "write",
+    "write_flow",
 ]
