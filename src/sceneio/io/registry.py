@@ -776,6 +776,31 @@ register(
 )
 register(
     Codec(
+        "bal",
+        (".bal",),
+        _mmap_reader(_core.read_bal),
+        _file_sink_writer(_core.write_bal),
+        record=_core.Reconstruction,
+        datatype="sparse_model",
+        supported_features=(
+            "angle_axis",
+            "radial_k1_k2",
+            "centered_observations",
+            "deterministic_17_digit_writer",
+        ),
+        unsupported_features=(
+            "bzip2",
+            "image_names",
+            "image_dimensions",
+            "principal_points",
+            "point_colors",
+            "point_errors",
+            "untriangulated_observations",
+        ),
+    )
+)
+register(
+    Codec(
         "nvm",
         (".nvm",),
         _mmap_reader(_core.read_nvm),

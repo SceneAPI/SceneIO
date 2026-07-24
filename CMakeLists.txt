@@ -122,6 +122,7 @@ nanobind_add_module(_core STABLE_ABI NB_STATIC
   src/cpp/codecs/xyz.cpp
   src/cpp/codecs/flo.cpp
   src/cpp/codecs/bundler.cpp
+  src/cpp/codecs/bal.cpp
   src/cpp/codecs/nvm.cpp
   src/cpp/codecs/openmvg.cpp
   src/cpp/codecs/splat.cpp

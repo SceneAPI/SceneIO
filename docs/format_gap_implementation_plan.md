@@ -1,9 +1,10 @@
 # Format-gap implementation, verification, and validation plan
 
 - **Status:** execution in progress after SceneIO 0.2.0; G0, G2.1, the PTS
-  slice of G2.3, and scalar DMB from G2.4 are complete locally. Cross-platform
-  wheel and instrumented validation remains a user-gated remote action.
-- **Current branch:** 26 compiled codecs, all read/write and inspectable, with
+  slice of G2.3, and scalar DMB plus BAL from G2.4 are complete locally.
+  Cross-platform wheel and instrumented validation remains a user-gated remote
+  action.
+- **Current branch:** 27 compiled codecs, all read/write and inspectable, with
   bounded partial reads where their containers permit them.
 - **Scope:** close every unblocked format gap declared by SceneIO's coverage
   documents without reimplementing the 0.2.0 codec tier.
@@ -393,7 +394,7 @@ Land one codec per green commit:
 
 | Format | Record | Implementation focus | Oracle |
 |---|---|---|---|
-| BAL | `Reconstruction` | camera/point/observation text, read first; write after a canonical convention is pinned | independent parser |
+| BAL — complete locally | `Reconstruction` | camera/point/observation text with a pinned canonical writer | UW specification + independent parser |
 | EuRoC state CSV | `StateTrajectory` | timestamps, pose, velocity and biases with no field loss | independent CSV parser |
 | DMB — complete locally | `DepthMap` | dimensions/type header, float payload, scale/unit metadata | independent NumPy parser |
 | Typed PFM/PNG/EXR depth | `DepthMap` | explicit scale, unit, invalid-value and confidence semantics layered over existing payload codecs | numpy/Pillow/OpenEXR |
@@ -438,6 +439,53 @@ Three-lens DMB review:
   measure inspection/window allocation rather than a mirrored implementation.
 
 No unresolved finding remains in the local review.
+
+BAL completion evidence (2026-07-24):
+
+- the grammar and camera parameter order are pinned to the University of
+  Washington BAL description and Ceres reference reader: three header counts,
+  zero-based observation indices, four fields per observation, nine
+  angle-axis/translation/intrinsic values per camera, then XYZ triples;
+- an independent Python parser/writer and independent Rodrigues/projection math
+  cover hand-computable fixtures, zero- and pi-angle branches, 50 randomized
+  valid problems, deterministic 17-digit output, and malformed counts, indices,
+  numeric tokens, trailing data, and oversized tokens;
+- BAL's centered, +Y-up, -Z-forward camera convention is mapped explicitly
+  through `F=diag(1,-1,-1)` and pinned by a projected-point test rather than
+  only a round trip;
+- bytes and mmap reads are record-identical and the decoded reconstruction
+  remains valid after its mapping closes; the 64 MiB sparse inspection fixture
+  stays below 1 MiB traced allocation and the large direct sink is byte-identical
+  under forced short writes while avoiding an output-sized Python `bytes`;
+- the writer validates the complete canonical subset before opening the file:
+  contiguous one-based IDs, one zero-dimension RADIAL camera per image,
+  zero principal point, empty names, zero point colors, sentinel point errors,
+  and an exact one-to-one observation/track relation.
+- final local MSVC validation passed 1,567 tests with 3 documented optional
+  skips, Ruff and `git diff --check` are clean, and the five-run 27-codec
+  O4/O5 throughput and memory regression guard passed.
+
+Three-lens BAL review:
+
+- **memory/lifetime:** bounded token lengths, header-derived token budgets, and
+  explicit `size_t` product limits precede allocations; signed counts and
+  indices are checked before casts;
+  `ByteView` remains scoped to parsing; returned reconstruction arrays own their
+  memory; no mapping pointer escapes; the complete sink plan is validated
+  before the first write and callbacks run with the GIL held;
+- **format correctness:** primary-source grammar, zero-based indexing, all nine
+  camera parameters, centered observations, the camera-frame transform,
+  canonical quaternion sign, small-angle and pi rotations, deterministic
+  numeric text, unsupported field guards, and the exact observation/track
+  relation are independently pinned;
+- **test soundness:** the oracle does not call the compiled codec, projection
+  tests break read/write symmetry, randomized cases include observation order
+  independent of point order, malformed cases exercise every bounded scanner
+  edge, and mmap/sparse-file/short-sink tests measure the optimized public paths.
+
+No unresolved finding remains in the local BAL review. Linux instrumentation
+and Linux/macOS wheel validation remain pending until the user authorizes the
+remote workflows.
 
 YAML support must use a permissive native parser or a deliberately bounded
 format-specific parser; it may not add a runtime Python dependency.
@@ -1146,39 +1194,25 @@ G0 without waiting for the mesh or optional-library paths.
 
 ## 12. Current execution queue
 
-G0, safetensors, PTS, and scalar DMB have exercised the expansion machinery
-without adding a heavyweight dependency. Continue with small green commits in
-this order:
+G0, safetensors, PTS, scalar DMB, and BAL have exercised the expansion
+machinery without adding a heavyweight dependency. Continue with small green
+commits in this order:
 
-1. **Finish scalar DMB**
-   - land the compiled reader/writer/inspector/window path, registry capability,
-     independent parity suite, 64 MiB memory fixture, 26-codec differential,
-     benchmark baseline, wheel smoke, and documentation;
-   - local exit: full MSVC suite and Ruff green, three-lens findings resolved;
-   - remote exit: instrumented Linux plus Windows/macOS wheel smoke after the
-     user authorizes the workflow.
-2. **BAL reconstruction text**
-   - pin camera parameter order, observation indices, quaternion/pose
-     conversion policy, and whether the first release is read-only;
-   - triangulate with an independent parser and hand-computable camera/point
-     fixtures; reject indices or fields that cannot map losslessly;
-   - benchmark metadata inspection, full text parse, and sink write if write
-     support meets the canonical-output gate.
-3. **BMP and TGA**
+1. **BMP and TGA**
    - use the existing `Image` record and approved stb decode surface; either
      implement deterministic writers or declare read-only capabilities;
    - cover orientation, grayscale/RGB/RGBA, alpha, palette/RLE variants, and
      unsupported conversions against Pillow/imageio;
    - measure decode/write paths and run the full image lifetime/mmap/sink
      matrix.
-4. **Typed depth and flow adapters**
+2. **Typed depth and flow adapters**
    - add explicit adapters for PFM/PNG/EXR depth and a dedicated flow record
      before changing the existing raw codec return types;
    - preserve existing calls and bytes; pin units, scale, invalid-value, row
      order, confidence, and writer guards;
    - prove adapter output equals the existing raw decode plus declared
      metadata, with no silent numerical conversion.
-5. **Generic point PLY and PCD**
+3. **Generic point PLY and PCD**
    - ship point-cloud schemas first, including ASCII and binary endian paths,
      then add mesh PLY only after the canonical ragged `Mesh` record lands;
    - implement header-only inspection, fixed-record point ranges, PCD LZF,
@@ -1186,7 +1220,7 @@ this order:
      Gaussian PLY;
    - validate against `plyfile` and Open3D and benchmark text, binary, endian,
      compressed, and partial paths.
-6. **Record-dependent packages**
+4. **Record-dependent packages**
    - `Mesh`/`MaterialSet` unlock OBJ, STL, OFF, glTF/GLB, and mesh PLY;
    - `FeatureSet`/`MatchGraph` unlock COLMAP DB and later hloc/HDF5;
    - `StateTrajectory`/`CameraRig`/`PoseGraph` unlock EuRoC, OpenCV, ROS,

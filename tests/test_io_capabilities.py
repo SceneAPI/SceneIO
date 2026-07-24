@@ -12,6 +12,7 @@ import sceneio
 from sceneio.io import registry
 
 _BUILTINS = {
+    "bal",
     "bundler",
     "colmap_sparse",
     "colmap_sparse_txt",

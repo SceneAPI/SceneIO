@@ -223,6 +223,12 @@ def buffer_codecs():
         b"NVM_V3\n1\na.jpg 800 0.5 0.5 0.5 0.5 1 2 3 0 0\n"
         b"1\n1.5 -2.5 3.5 10 20 30 1 0 0 4.5 -5.5\n0\n"
     )
+    bal_reconstruction = _core.read_bal(
+        b"1 1 1\n"
+        b"0 0 10.5 20.25\n"
+        b"0\n0\n0\n1\n2\n3\n800\n0.5\n0.25\n"
+        b"1.5\n-2.5\n3.5\n"
+    )
     transforms = _core.read_transforms_json(
         b'{"camera_model":"PINHOLE","fl_x":500,"fl_y":510,"cx":320,"cy":240,'
         b'"w":640,"h":480,"frames":[{"file_path":"a.png","transform_matrix":'
@@ -266,6 +272,7 @@ def buffer_codecs():
         spec("flo", _core.read_flo, _core.write_flo, flow),
         spec("dmb", _core.read_dmb, _core.write_dmb, depth),
         spec("bundler", _core.read_bundler, _core.write_bundler, reconstruction),
+        spec("bal", _core.read_bal, _core.write_bal, bal_reconstruction),
         spec("nvm", _core.read_nvm, _core.write_nvm, reconstruction),
         spec("openmvg", _core.read_openmvg, _core.write_openmvg, reconstruction),
         spec("splat", _core.read_splat, _core.write_splat, gaussians),
@@ -290,8 +297,8 @@ def _outcome(call, argument):
 
 
 def test_all_single_file_codecs_mmap_equal_bytes_bit_exact(tmp_path, buffer_codecs):
-    """All 24 buffer codecs decode mmap and bytes to bit-exact records."""
-    assert len(buffer_codecs) == 24
+    """All 25 buffer codecs decode mmap and bytes to bit-exact records."""
+    assert len(buffer_codecs) == 25
     for spec in buffer_codecs:
         expected = _fingerprint(spec.reader(spec.data))
         path = tmp_path / f"sample-{spec.id}.bin"
@@ -309,8 +316,8 @@ def test_all_single_file_codecs_mmap_equal_bytes_bit_exact(tmp_path, buffer_code
 
 
 def test_all_single_file_sinks_are_byte_identical(tmp_path, buffer_codecs):
-    """All 24 compiled encoders emit the exact bytes their buffer API returns."""
-    assert len(buffer_codecs) == 24
+    """All 25 compiled encoders emit the exact bytes their buffer API returns."""
+    assert len(buffer_codecs) == 25
     for spec in buffer_codecs:
         direct = tmp_path / f"direct-{spec.id}.bin"
         _core._write_to_file(spec.writer, spec.value, direct)
@@ -381,11 +388,15 @@ def _assert_inspection_matches(info, decoded):
         assert info.shape == (decoded.num_images,)
         assert info.dtype == decoded.quaternions.dtype.name
         assert info.count == decoded.num_images
-        assert info.metadata == {
+        expected = {
             "num_cameras": decoded.num_cameras,
             "num_images": decoded.num_images,
             "num_points3D": decoded.num_points3D,
         }
+        assert {
+            key: info.metadata[key] for key in expected
+        } == expected
+        assert set(info.metadata) <= {*expected, "num_observations"}
     elif isinstance(decoded, _core.TensorDict):
         assert info.count == len(decoded)
         assert tuple((item.name, item.shape, item.dtype) for item in info.arrays) == tuple(
@@ -455,8 +466,8 @@ print(max(0, peak[0] - baseline))
     return int(completed.stdout.strip())
 
 
-def test_inspect_matches_decoded_metadata_all_26_codecs(tmp_path, buffer_codecs):
-    assert len(buffer_codecs) == 24
+def test_inspect_matches_decoded_metadata_all_27_codecs(tmp_path, buffer_codecs):
+    assert len(buffer_codecs) == 25
     for spec in buffer_codecs:
         path = tmp_path / f"inspect-{spec.id}.data"
         path.write_bytes(spec.data)
@@ -512,6 +523,13 @@ def test_inspect_matches_decoded_metadata_all_26_codecs(tmp_path, buffer_codecs)
                 "unit": "unknown",
                 "scale_to_meters": 0.0,
                 "invalid_policy": "zero",
+            }
+        elif spec.id == "bal":
+            assert info.metadata == {
+                "num_cameras": 1,
+                "num_images": 1,
+                "num_points3D": 1,
+                "num_observations": 1,
             }
 
     nvm = next(spec for spec in buffer_codecs if spec.id == "nvm")
@@ -840,7 +858,7 @@ def test_inspect_bundler_header_allocation_is_bounded(tmp_path):
 
 
 @pytest.mark.parametrize(
-    "format_id", ["bundler", "nvm", "pfm", "tum", "kitti"]
+    "format_id", ["bal", "bundler", "nvm", "pfm", "tum", "kitti"]
 )
 def test_inspect_text_token_or_line_caps_bound_mapped_rss(
     tmp_path, format_id
@@ -1620,7 +1638,7 @@ def test_registry_uses_mmap_for_every_nonempty_single_file_codec(
         value = sceneio.codecs()[spec.id].read(str(path))
         gc.collect()
         assert _fingerprint(value) == _fingerprint(spec.reader(spec.data))
-    assert mapped_paths == len(buffer_codecs) == 24
+    assert mapped_paths == len(buffer_codecs) == 25
 
 
 def test_all_buffer_entries_accept_readonly_protocol_exporters(buffer_codecs):

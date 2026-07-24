@@ -134,7 +134,7 @@ Columns: **Ext/id** · **Record** · **Lib/oracle (license)** · **R/W** ·
 | ✅ Bundler `.out` | `Reconstruction` | pycolmap/manual | R+W | y‑down camera convention pinned |
 | ✅ VisualSFM `.nvm` | `Reconstruction` | manual | R+W | quat WXYZ, focal in px |
 | ✅ OpenMVG `sfm_data.json` | `Reconstruction` | manual json (nlohmann) | R+W | pose = center+rotation |
-| ⬜ BAL `.txt` | `Reconstruction` | manual | R | Bundle‑Adjustment‑in‑the‑Large |
+| ✅ BAL `.txt` / `.bal` | `Reconstruction` | UW specification + independent parser | R+W | angle-axis cameras, centered observations, strict canonical writer; generic `.txt` requires `format="bal"` |
 | ✅ TUM / ✅ KITTI | `PosedViewSet` | pure‑Python | R+W | done (retrofit fast_float) |
 | ⬜ EuRoC `state_groundtruth` | `PosedViewSet` | manual csv | R+W | ts,p,q,v,bw,ba |
 | ⬜ g2o | `PoseGraph` (new) | manual | R+W | edges → needs a pose‑graph record |

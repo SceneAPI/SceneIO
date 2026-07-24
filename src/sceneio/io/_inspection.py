@@ -115,6 +115,8 @@ def inspect_path(path: str | Path, format_id: str, datatype: str) -> Inspection:
         return _inspect_dmb(p, datatype)
     if format_id == "bundler":
         return _inspect_bundler(p, datatype)
+    if format_id == "bal":
+        return _inspect_bal(p, datatype)
     if format_id == "nvm":
         return _inspect_nvm(p, datatype)
     if format_id == "openmvg":
@@ -1070,6 +1072,26 @@ def _inspect_bundler(path: Path, datatype: str) -> Inspection:
             "num_cameras": cameras,
             "num_images": cameras,
             "num_points3D": points,
+        },
+    )
+
+
+def _inspect_bal(path: Path, datatype: str) -> Inspection:
+    cameras, points, observations = _compiled_buffer_inspect(
+        path, _core._inspect_bal
+    )
+    return Inspection(
+        "bal",
+        datatype,
+        _size(path),
+        shape=(cameras,),
+        dtype="float64",
+        count=cameras,
+        metadata={
+            "num_cameras": cameras,
+            "num_images": cameras,
+            "num_points3D": points,
+            "num_observations": observations,
         },
     )
 

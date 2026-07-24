@@ -378,3 +378,31 @@ sparse-file test is the larger structural memory gate and keeps both inspection
 and a selected 8x8 window below 1 MiB of traced allocation. All payloads are
 generated during the run or test and are not committed. The complete
 same-run O4/O5 regression guard passed with DMB included.
+
+## BAL reconstruction expansion delta — 2026-07-24
+
+BAL extends the harness to 27 codecs and is compared with an independent
+NumPy/text parser and writer. The five-run CI-equivalent regression sweep uses
+1,000 cameras, 10,000 points, and 20,000 observations (0.8 MB decoded numeric
+payload, 1.6 MB encoded text):
+
+```text
+operation                         result
+-------------------------------------------------------------
+buffer / public mmap read         206 / 190 MB/s
+buffer / public sink write        44 / 46 MB/s
+independent writer / reader       21 / 38 MB/s
+buffer / mmap traced read peak    1.6 / 0.0 MB
+buffer / sink traced write peak   1.6 / 0.0 MB
+full / inspect latency            4.161 / 0.045 ms
+full / inspect RSS growth         1.2 / 0.0 MB
+```
+
+The mmap and direct-sink paths remove the encoded-size Python allocation while
+preserving exact records and canonical bytes. Three-count header inspection is
+about 92.9x faster than full reconstruction parsing. The compiled reader is
+about 5.5x faster than the independent parser on the same numeric payload, and
+the chunked sink retains buffer-writer throughput without returning an
+output-sized `bytes`. A separate generated 64 MiB sparse-file test bounds
+header-only inspection below 1 MiB traced allocation. The complete same-run
+O4/O5 throughput and memory regression guard passed with BAL included.

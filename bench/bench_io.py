@@ -2,7 +2,7 @@
 
 Measures, per codec, encode (write) + decode (read) throughput (MB/s over the raw
 payload) and peak Python allocation (tracemalloc), for sceneio._core vs the oracle
-library where one exists, on representative payloads for all 26 codecs. Read
+library where one exists, on representative payloads for all 27 codecs. Read
 measurements retain the legacy whole-file bytes/copy-decode path beside the
 public registry mmap path, so their peak delta captures the input copy O1
 removes and, for NPY/FLO, the decoded-array copy O2 removes. Write measurements
@@ -438,6 +438,93 @@ def _dmb_oracle_read(data):
     return np.frombuffer(data, dtype="<f4", offset=16).reshape(height, width)
 
 
+def _bal_oracle_write(payload):
+    cameras = payload["cameras"]
+    points = payload["points"]
+    camera_indices = payload["camera_indices"]
+    point_indices = payload["point_indices"]
+    observations = payload["observations"]
+    lines = [
+        f"{len(cameras)} {len(points)} {len(observations)}",
+    ]
+    lines.extend(
+        f"{int(camera)} {int(point)} {xy[0]:.17g} {xy[1]:.17g}"
+        for camera, point, xy in zip(
+            camera_indices,
+            point_indices,
+            observations,
+            strict=True,
+        )
+    )
+    lines.extend(f"{value:.17g}" for value in cameras.flat)
+    lines.extend(f"{value:.17g}" for value in points.flat)
+    return ("\n".join(lines) + "\n").encode()
+
+
+def _bal_oracle_read(data):
+    values = np.fromstring(data.decode("ascii"), sep=" ")
+    if len(values) < 3:
+        raise ValueError("truncated BAL header")
+    cameras, points, observations = (
+        int(values[0]),
+        int(values[1]),
+        int(values[2]),
+    )
+    expected = 3 + observations * 4 + cameras * 9 + points * 3
+    if min(cameras, points, observations) < 0 or len(values) != expected:
+        raise ValueError("invalid BAL token count")
+    cursor = 3
+    observed = values[cursor : cursor + observations * 4].reshape(
+        observations, 4
+    )
+    cursor += observations * 4
+    camera_values = values[cursor : cursor + cameras * 9].reshape(
+        cameras, 9
+    )
+    cursor += cameras * 9
+    point_values = values[cursor:].reshape(points, 3)
+    return {
+        "observations": observed,
+        "cameras": camera_values,
+        "points": point_values,
+    }
+
+
+def _bal_fixture(scale):
+    camera_count = max(1, int(1000 * scale))
+    point_count = max(1, int(10_000 * scale))
+    views_per_point = min(camera_count, 2)
+    point_indices = np.repeat(
+        np.arange(point_count, dtype=np.int32), views_per_point
+    )
+    camera_indices = np.tile(
+        np.arange(views_per_point, dtype=np.int32), point_count
+    )
+    rng = np.random.default_rng(8)
+    observations = rng.normal(
+        0, 500, (len(point_indices), 2)
+    ).astype(np.float64)
+    cameras = np.zeros((camera_count, 9), dtype=np.float64)
+    cameras[:, 2] = np.arange(camera_count) * 1e-5
+    cameras[:, 3] = np.arange(camera_count) * 0.01
+    cameras[:, 6] = 800 + np.arange(camera_count) % 200
+    cameras[:, 7] = 0.01
+    cameras[:, 8] = 0.001
+    points = rng.normal(0, 100, (point_count, 3)).astype(np.float64)
+    payload = {
+        "camera_indices": camera_indices,
+        "point_indices": point_indices,
+        "observations": observations,
+        "cameras": cameras,
+        "points": points,
+    }
+    return _core.read_bal(_bal_oracle_write(payload)), payload
+
+
+def _bal_payload_nbytes(payload):
+    return sum(value.nbytes for value in payload.values())
+
+
 def _evict_file_cache(path):
     """Best-effort cold-cache hint (effective where POSIX_FADV_DONTNEED exists)."""
     if not hasattr(os, "posix_fadvise") or not hasattr(os, "POSIX_FADV_DONTNEED"):
@@ -668,6 +755,15 @@ def _specs(scale, pose_bundle=None):
             None,
             None,
             lambda rec, p: _record_nbytes(rec),
+        ),
+        Spec(
+            "bal",
+            lambda: _bal_fixture(scale),
+            _core.write_bal,
+            _core.read_bal,
+            _bal_oracle_write,
+            _bal_oracle_read,
+            lambda rec, p: _bal_payload_nbytes(p),
         ),
         Spec(
             "nvm",
@@ -1497,7 +1593,7 @@ def _run_benchmark(args, tmp):
             results.append({"codec": spec.id, "error": f"{type(e).__name__}: {e}"})
             print(f"{spec.id:<14} ERROR: {type(e).__name__}: {e}")
 
-    assert len(specs) + len(_directory_specs()) == 26
+    assert len(specs) + len(_directory_specs()) == 27
     print("\nMB/s over raw payload; fileMB = encoded size (= the whole-file copy O1/O3 remove).")
     print("sioR = in-memory copy decode; pathR = public registry mmap read/view.")
     print("bPeakMB/mPeakMB = peak Python allocation for bytes/mmap reads (O1 delta).")

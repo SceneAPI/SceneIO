@@ -94,6 +94,15 @@ farther into the mapping, so malformed no-newline inputs do not fault the whole
 file into RSS. Inspection reports structural metadata and is not a substitute
 for decoding and validating every payload sample.
 
+BAL inspection reads only the three header counts. Full BAL decoding maps
+zero-based observations and angle-axis camera blocks into a `Reconstruction`,
+using the explicit self-inverse `diag(1,-1,-1)` camera-frame transform and a
+Y-coordinate sign flip for centered observations. Its writer accepts only the
+lossless canonical subset (one zero-dimension RADIAL camera per image, no
+names/colors/errors/principal point or untracked observations) and refuses
+unsupported record fields. The unambiguous `.bal` suffix is auto-detected;
+official datasets using the generic `.txt` suffix require `format="bal"`.
+
 ## Partial reads
 
 `sceneio.read_partial(path, ...)` requires exactly one selector and returns the

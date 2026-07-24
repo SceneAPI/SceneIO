@@ -73,7 +73,7 @@ artifacts vocabulary — wire identity unchanged.
 
 ### Compiled format I/O — `read` / `write` / `inspect` / `read_partial`
 
-The lazy-loaded compiled core reads and writes 26 image, depth, tensor,
+The lazy-loaded compiled core reads and writes 27 image, depth, tensor,
 point-cloud, Gaussian, pose, and reconstruction formats.
 `sceneio.inspect(path)` returns an immutable `Inspection` with shape, dtype,
 channels, repeated-record counts, and format-specific scalar metadata without
@@ -94,6 +94,10 @@ tile = sceneio.read_partial("flow.flo", window=(100, 356, 200, 712))
 
 # Scalar DMB windows preserve DepthMap unit and invalid-value metadata.
 depth = sceneio.read_partial("depth.dmb", window=(100, 356, 200, 712))
+
+# `.bal` is detected directly. Official BAL datasets commonly use the generic
+# `.txt` suffix, which requires an explicit format to avoid text ambiguity.
+problem = sceneio.read("problem-16-22106-pre.txt", format="bal")
 
 # Fixed-record point containers allocate only the selected range.
 points = sceneio.read_partial(
