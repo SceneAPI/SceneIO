@@ -176,6 +176,11 @@ def buffer_codecs():
     image_f32_rgba = _core.image(linear_rgba, color_space="linear", alpha_mode="premultiplied")
     positions = rng.random((13, 3), dtype=np.float32) * 10
     points_xyz = _core.point_cloud(positions, colors=rng.integers(0, 256, (13, 3), dtype=np.uint8))
+    points_pts = _core.point_cloud(
+        positions,
+        colors=rng.integers(0, 256, (13, 3), dtype=np.uint8),
+        intensity=rng.standard_normal(13).astype(np.float32),
+    )
     points_las = _core.point_cloud(
         positions,
         colors16=rng.integers(0, 65536, (13, 3), dtype=np.uint16),
@@ -235,6 +240,7 @@ def buffer_codecs():
         spec("exr", _core.read_exr, _core.write_exr, image_f32_rgba),
         spec("webp", _core.read_webp, _core.write_webp, image_rgba),
         spec("xyz", _core.read_xyz, _core.write_xyz, points_xyz),
+        spec("pts", _core.read_pts, _core.write_pts, points_pts),
         spec("las", _core.read_las, _core.write_las, points_las),
         spec("flo", _core.read_flo, _core.write_flo, flow),
         spec("bundler", _core.read_bundler, _core.write_bundler, reconstruction),
@@ -262,8 +268,8 @@ def _outcome(call, argument):
 
 
 def test_all_single_file_codecs_mmap_equal_bytes_bit_exact(tmp_path, buffer_codecs):
-    """All 22 buffer codecs decode mmap and bytes to bit-exact records."""
-    assert len(buffer_codecs) == 22
+    """All 23 buffer codecs decode mmap and bytes to bit-exact records."""
+    assert len(buffer_codecs) == 23
     for spec in buffer_codecs:
         expected = _fingerprint(spec.reader(spec.data))
         path = tmp_path / f"sample-{spec.id}.bin"
@@ -281,8 +287,8 @@ def test_all_single_file_codecs_mmap_equal_bytes_bit_exact(tmp_path, buffer_code
 
 
 def test_all_single_file_sinks_are_byte_identical(tmp_path, buffer_codecs):
-    """All 22 compiled encoders emit the exact bytes their buffer API returns."""
-    assert len(buffer_codecs) == 22
+    """All 23 compiled encoders emit the exact bytes their buffer API returns."""
+    assert len(buffer_codecs) == 23
     for spec in buffer_codecs:
         direct = tmp_path / f"direct-{spec.id}.bin"
         _core._write_to_file(spec.writer, spec.value, direct)
@@ -422,8 +428,8 @@ print(max(0, peak[0] - baseline))
     return int(completed.stdout.strip())
 
 
-def test_inspect_matches_decoded_metadata_all_24_codecs(tmp_path, buffer_codecs):
-    assert len(buffer_codecs) == 22
+def test_inspect_matches_decoded_metadata_all_25_codecs(tmp_path, buffer_codecs):
+    assert len(buffer_codecs) == 23
     for spec in buffer_codecs:
         path = tmp_path / f"inspect-{spec.id}.data"
         path.write_bytes(spec.data)
@@ -576,7 +582,9 @@ def test_inspect_all_single_file_codecs_reject_truncated_headers(
 ):
     for spec in buffer_codecs:
         path = tmp_path / f"truncated-{spec.id}.bin"
-        path.write_bytes(spec.data[:4])
+        # PTS metadata is complete after its short decimal count line; use a
+        # genuinely missing header rather than truncating into the first row.
+        path.write_bytes(b"" if spec.id == "pts" else spec.data[:4])
         with pytest.raises(sceneio.FormatError):
             sceneio.inspect(path, format=spec.id)
 
@@ -1577,7 +1585,7 @@ def test_registry_uses_mmap_for_every_nonempty_single_file_codec(
         value = sceneio.codecs()[spec.id].read(str(path))
         gc.collect()
         assert _fingerprint(value) == _fingerprint(spec.reader(spec.data))
-    assert mapped_paths == len(buffer_codecs) == 22
+    assert mapped_paths == len(buffer_codecs) == 23
 
 
 def test_all_buffer_entries_accept_readonly_protocol_exporters(buffer_codecs):

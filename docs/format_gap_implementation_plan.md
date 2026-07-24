@@ -1,9 +1,9 @@
 # Format-gap implementation, verification, and validation plan
 
-- **Status:** execution in progress after SceneIO 0.2.0; G0 and G2.1 are
-  complete locally. Cross-platform wheel and instrumented validation remains a
-  user-gated remote action.
-- **Current branch:** 24 compiled codecs, all read/write and inspectable, with
+- **Status:** execution in progress after SceneIO 0.2.0; G0, G2.1, and the PTS
+  slice of G2.3 are complete locally. Cross-platform wheel and instrumented
+  validation remains a user-gated remote action.
+- **Current branch:** 25 compiled codecs, all read/write and inspectable, with
   bounded partial reads where their containers permit them.
 - **Scope:** close every unblocked format gap declared by SceneIO's coverage
   documents without reimplementing the 0.2.0 codec tier.
@@ -326,14 +326,32 @@ Benchmark:
 - bulk feature/match insertion, one-image read, one-pair read, and full scan;
 - compare prepared statements/transactions against the test-side reference.
 
-#### G2.3 PTS, generic PLY, and PCD
+#### G2.3 PTS complete locally; generic PLY and PCD pending
 
-Implementation:
+PTS implementation:
 
 - Add `pts` as a distinct text format with an optional/required count-header
   policy chosen from documented dialect fixtures. Validate the declared count,
   define supported XYZ/intensity/RGB columns, and reuse the fast numeric parser
   without making `xyz` accept ambiguous one-column rows.
+
+PTS completion evidence (2026-07-24):
+
+- mandatory decimal count headers and XYZ/XYZI/XYZRGB/XYZIRGB rows pass
+  independent bidirectional parity, canonical-byte, count-mismatch, malformed
+  input, and 100-case mutation tests;
+- mmap/bytes results and 1-lane/8-lane output are bit-identical; partial ranges
+  equal full-read slices and remain bounded in traced allocation;
+- the complete local MSVC suite passes 1,507 tests with 3 documented optional
+  skips, and Ruff is clean;
+- the generated 100,000-point benchmark shows zero encoded-size traced
+  allocation on mmap/sink paths, header inspection about 282x faster than full
+  parsing, and the bounded middle range about 1.85x faster;
+- Linux instrumentation and Linux/macOS wheel validation remain pending until
+  the user authorizes the branch push and remote workflows.
+
+Remaining implementation:
+
 - Keep `gaussian_ply` bespoke; add separate generic `ply` dispatch for
   point-cloud and mesh schemas.
 - Support PLY ASCII, binary little-endian, and binary big-endian; preserve

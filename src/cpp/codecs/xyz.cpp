@@ -33,6 +33,7 @@
 // runs with the GIL released (the npy_npz.cpp precedent); nb objects are only
 // touched outside that scope.
 #include <algorithm>
+#include <charconv>
 #include <cmath>
 #include <cstdio>
 #include <cstring>
@@ -174,9 +175,10 @@ void parse_row(const char *ls, const char *le, const Schema &sch, size_t line_no
 // `forced` (with its `forced_name` for messages) is the read_xyz(layout=...)
 // override: when set, it fixes the schema and the first data line's column count
 // must equal it (else raise) instead of being auto-detected.
-void decode_xyz(const char *p, size_t n, PointCloud &pc, const std::optional<Schema> &forced,
-                const std::string &forced_name, bool partial = false,
-                size_t start = 0, size_t stop = 0) {
+size_t decode_xyz(const char *p, size_t n, PointCloud &pc,
+                  const std::optional<Schema> &forced,
+                  const std::string &forced_name, bool partial = false,
+                  size_t start = 0, size_t stop = 0) {
     if (partial && start >= stop)
         throw std::invalid_argument(
             "xyz point range must be a non-empty half-open range");
@@ -240,6 +242,106 @@ void decode_xyz(const char *p, size_t n, PointCloud &pc, const std::optional<Sch
     if (partial && stop > data_row)
         throw std::invalid_argument("xyz point range exceeds the available extent");
     pc.n = pc.xyz.size() / 3;
+    return data_row;
+}
+
+struct PtsHeader {
+    size_t declared_count = 0;
+    size_t body_offset = 0;
+};
+
+PtsHeader parse_pts_header(const char *p, size_t n) {
+    size_t i = 0;
+    size_t line_no = 0;
+    while (i < n) {
+        const char *line = p + i;
+        while (i < n && p[i] != '\n') ++i;
+        const char *end = p + i;
+        if (i < n) ++i;
+        ++line_no;
+
+        const char *cursor = line;
+        while (cursor < end &&
+               (*cursor == ' ' || *cursor == '\t' || *cursor == '\r'))
+            ++cursor;
+        if (cursor >= end || *cursor == '#') continue;
+
+        const char *begin = cursor;
+        while (cursor < end &&
+               *cursor != ' ' && *cursor != '\t' && *cursor != '\r')
+            ++cursor;
+        const char *token_end = cursor;
+        while (cursor < end &&
+               (*cursor == ' ' || *cursor == '\t' || *cursor == '\r'))
+            ++cursor;
+        if (cursor != end)
+            throw std::invalid_argument(
+                "pts: count header on line " + std::to_string(line_no) +
+                " must contain exactly one unsigned integer");
+        uint64_t declared = 0;
+        const auto parsed = std::from_chars(begin, token_end, declared);
+        if (parsed.ec != std::errc{} || parsed.ptr != token_end)
+            throw std::invalid_argument(
+                "pts: count header on line " + std::to_string(line_no) +
+                " must contain exactly one unsigned integer");
+        if (declared > static_cast<uint64_t>(SIZE_MAX))
+            throw std::invalid_argument(
+                "pts: declared point count exceeds size_t");
+        return {static_cast<size_t>(declared), i};
+    }
+    throw std::invalid_argument(
+        "pts: missing mandatory leading point-count line");
+}
+
+[[noreturn]] void rethrow_pts_error(const std::invalid_argument &error) {
+    std::string message = error.what();
+    if (message.rfind("xyz:", 0) == 0)
+        message.replace(0, 3, "pts");
+    else if (message.rfind("xyz ", 0) == 0)
+        message.replace(0, 3, "pts");
+    throw std::invalid_argument(std::move(message));
+}
+
+void decode_pts(const char *p, size_t n, PointCloud &pc,
+                bool partial = false, size_t start = 0, size_t stop = 0) {
+    const PtsHeader header = parse_pts_header(p, n);
+    if (partial) {
+        if (start >= stop)
+            throw std::invalid_argument(
+                "pts point range must be a non-empty half-open range");
+        if (stop > header.declared_count)
+            throw std::invalid_argument(
+                "pts point range exceeds the declared point count");
+    }
+    size_t actual = 0;
+    try {
+        actual = decode_xyz(
+            p + header.body_offset, n - header.body_offset, pc, {},
+            "", partial, start, stop);
+    } catch (const std::invalid_argument &error) {
+        rethrow_pts_error(error);
+    }
+    if (pc.has_normals())
+        throw std::invalid_argument(
+            "pts: 9-column normal rows are unsupported; supported layouts are "
+            "XYZ, XYZI, XYZRGB, and XYZIRGB");
+    if (actual != header.declared_count)
+        throw std::invalid_argument(
+            "pts: declared point count " +
+            std::to_string(header.declared_count) +
+            " does not match " + std::to_string(actual) + " data rows");
+}
+
+size_t inspect_pts(nb::handle source) {
+    sio::ByteView data(source);
+    size_t count;
+    {
+        nb::gil_scoped_release rel;
+        count = parse_pts_header(
+                    reinterpret_cast<const char *>(data.data()), data.size())
+                    .declared_count;
+    }
+    return count;
 }
 
 std::pair<size_t, size_t> inspect_xyz(nb::handle source) {
@@ -378,6 +480,29 @@ PointCloud read_xyz_points(nb::handle source, size_t start, size_t stop,
     return pc;
 }
 
+PointCloud read_pts(nb::handle source) {
+    sio::ByteView data(source);
+    PointCloud pc;
+    {
+        nb::gil_scoped_release rel;
+        decode_pts(
+            reinterpret_cast<const char *>(data.data()), data.size(), pc);
+    }
+    return pc;
+}
+
+PointCloud read_pts_points(nb::handle source, size_t start, size_t stop) {
+    sio::ByteView data(source);
+    PointCloud pc;
+    {
+        nb::gil_scoped_release rel;
+        decode_pts(
+            reinterpret_cast<const char *>(data.data()), data.size(), pc, true,
+            start, stop);
+    }
+    return pc;
+}
+
 // Append one coordinate as canonical text. Finite values use %.17g (a float
 // promoted to double is exact, so %.17g reparses to the identical float32).
 // Non-finite values are written as canonical "nan"/"-nan"/"inf"/"-inf" -- NEVER
@@ -417,10 +542,13 @@ void append_u8(char *&out, uint8_t value) {
     *out++ = static_cast<char>('0' + v % 10);
 }
 
-// Pure-C++ encode of "x y z [r g b]" rows.
-void encode_xyz(const PointCloud &pc, std::string &out, size_t requested_lanes) {
+// Pure-C++ encode of "x y z [intensity] [r g b]" rows. XYZ disables the
+// intensity branch; PTS enables it when the record carries that field.
+void encode_xyz(const PointCloud &pc, std::string &out,
+                size_t requested_lanes, bool include_intensity = false) {
     const bool rgb = pc.has_rgb();
-    const size_t row_capacity = rgb ? 96 : 72;
+    const size_t row_capacity =
+        include_intensity ? (rgb ? 128 : 104) : (rgb ? 96 : 72);
     if (pc.n > out.max_size() / row_capacity)
         throw std::length_error("xyz: encoded text is too large");
     out.resize(pc.n * row_capacity);
@@ -433,11 +561,15 @@ void encode_xyz(const PointCloud &pc, std::string &out, size_t requested_lanes) 
             starts[lane] = begin * row_capacity;
             char *const block_begin = dst;
             for (size_t i = begin; i < end; ++i) {
-                char row[96];
+                char row[128];
                 char *cursor = row;
                 for (int k = 0; k < 3; ++k) {
                     if (k) *cursor++ = ' ';
                     append_coord(cursor, pc.xyz[3 * i + k]);
+                }
+                if (include_intensity) {
+                    *cursor++ = ' ';
+                    append_coord(cursor, pc.intensity[i]);
                 }
                 if (rgb) {
                     for (int k = 0; k < 3; ++k) {
@@ -492,15 +624,36 @@ nb::bytes write_xyz(const PointCloud &pc, size_t lanes) {
     return emit_bytes(out.data(), out.size());
 }
 
+nb::bytes write_pts(const PointCloud &pc, size_t lanes) {
+    if (pc.has_normals())
+        throw std::invalid_argument(
+            "pts: supported rows are XYZ, XYZI, XYZRGB, or XYZIRGB; a record "
+            "with normals cannot round-trip");
+    if (pc.has_rgb16())
+        throw std::invalid_argument(
+            "pts: colors are 8-bit integers; a record with 16-bit colors16 "
+            "cannot round-trip");
+    if (pc.origin[0] != 0.0 || pc.origin[1] != 0.0 || pc.origin[2] != 0.0)
+        throw std::invalid_argument(
+            "pts: georeferenced origin metadata is not representable; bake "
+            "the origin into positions first");
+    if (pc.coordinate_frame != "unknown" || pc.scale_to_meters != 1.0)
+        throw std::invalid_argument(
+            "pts: coordinate frame and scale metadata are not representable");
+    if (pc.intensity_range != "unknown")
+        throw std::invalid_argument(
+            "pts: intensity range metadata is not representable");
+    std::string out;
+    {
+        nb::gil_scoped_release rel;
+        encode_xyz(pc, out, lanes, pc.has_intensity());
+        out.insert(0, std::to_string(pc.n) + "\n");
+    }
+    return emit_bytes(out.data(), out.size());
+}
+
 }  // namespace
 
-// NOTE (Phase 1b descope): the codec:xyz design also specified a .pts twin
-// (read_pts/write_pts with a leading bounded point-count line and a separate
-// Codec('pts', ('.pts',), ...) registry entry). That half is DELIBERATELY
-// DEFERRED, not implemented here: only read_xyz/write_xyz ship and only '.xyz'
-// is registered. Tracked as a descope in docs/coverage_roadmap.md section 3c. A
-// .pts file therefore fails loudly at extension dispatch (never silently
-// mis-parsed); when it lands it belongs in this same file next to read_xyz.
 void register_xyz(nb::module_ &m) {
     m.def("_inspect_xyz", &inspect_xyz, "data"_a,
           "Return (point_count, column_count) without parsing numeric samples.");
@@ -525,4 +678,19 @@ void register_xyz(nb::module_ &m) {
           "Large clouds use bounded parallel formatting. "
           "Refuses a record carrying normals or intensity (which the 'x y z [r g b]' layout "
           "cannot represent) rather than dropping them.");
+    m.def("_inspect_pts", &inspect_pts, "data"_a,
+          "Return the declared PTS point count after parsing only its leading "
+          "count header.");
+    m.def("read_pts", &read_pts, "data"_a,
+          "Decode count-prefixed PTS text into a PointCloud. The mandatory "
+          "first data line is an unsigned point count; supported point rows "
+          "are XYZ, XYZI, XYZRGB, and XYZIRGB.");
+    m.def("read_pts_points", &read_pts_points, "data"_a, "start"_a,
+          "stop"_a,
+          "Decode one non-empty half-open point range from count-prefixed PTS "
+          "while allocating only the selected rows.");
+    m.def("write_pts", &write_pts, "pc"_a, "_lanes"_a = 0,
+          "Encode a PointCloud as deterministic count-prefixed PTS text using "
+          "XYZ, XYZI, XYZRGB, or XYZIRGB rows. Refuses normals, 16-bit colors, "
+          "georeferencing, and non-default convention tags.");
 }

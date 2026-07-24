@@ -73,7 +73,7 @@ artifacts vocabulary — wire identity unchanged.
 
 ### Compiled format I/O — `read` / `write` / `inspect` / `read_partial`
 
-The lazy-loaded compiled core reads and writes 24 image, tensor, point-cloud,
+The lazy-loaded compiled core reads and writes 25 image, tensor, point-cloud,
 Gaussian, pose, and reconstruction formats. `sceneio.inspect(path)` returns an
 immutable `Inspection` with shape, dtype, channels, repeated-record counts, and
 format-specific scalar metadata without decoding bulk pixel/point arrays:
@@ -124,6 +124,8 @@ payload raises `FormatError`. Pixel windows support PFM, binary P5/P6 Netpbm,
 lossless VP8L WebP, and FLO; lossy WebP and ASCII P2/P3 reject because they
 cannot provide a bit-exact bounded slice. Safetensors supports complete
 named-tensor selection and contiguous leading-axis slices.
+Count-prefixed PTS supports bounded point ranges while validating the declared
+point count and preserving supported intensity/RGB columns.
 
 ### Errors
 

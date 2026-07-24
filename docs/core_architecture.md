@@ -101,8 +101,8 @@ same public record kind as `read()`:
 
 - `window=(row_start, row_stop, column_start, column_stop)` uses half-open bounds
   for PFM, binary P5/P6 Netpbm, lossless VP8L WebP, and FLO;
-- `points=(start, stop)` selects a half-open range from XYZ, LAS, binary Gaussian
-  PLY, and `.splat`;
+- `points=(start, stop)` selects a half-open range from XYZ, count-prefixed PTS,
+  LAS, binary Gaussian PLY, and `.splat`;
 - `tensors=("name", ...)` selects named tensors from safetensors without
   materializing unrelated payload tensors;
 - `slices={"name": (start, stop), ...}` selects half-open leading-axis ranges
@@ -116,8 +116,9 @@ cropped decoder, and FLO returns a read-only derived view whose owner retains
 the mmap. ASCII P2/P3 reject because they require complete-payload token
 decoding; lossy VP8 rejects because crop-local chroma upsampling is not
 guaranteed to match a full-decode slice. Fixed-record
-cloud formats index their selected records; XYZ scans text for row boundaries
-but allocates and parses numeric values only for the requested range.
+cloud formats index their selected records; XYZ and PTS scan text for row
+boundaries but allocate and parse numeric values only for the requested range.
+PTS additionally validates its mandatory declared point count.
 Safetensors selection returns read-only mmap-backed tensor views where host
 byte order and payload alignment permit; each view retains its mapping owner
 after the file handle leaves scope.

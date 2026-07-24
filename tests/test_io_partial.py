@@ -252,6 +252,7 @@ def test_point_ranges_equal_full_read_slices(tmp_path):
     gaussians = _gaussian_case(rng)
     cases = (
         ("xyz", bytes(_core.write_xyz(xyz))),
+        ("pts", bytes(_core.write_pts(xyz))),
         ("las", bytes(_core.write_las(las))),
         ("gaussian_ply", bytes(_core.write_gaussian_ply(gaussians))),
         ("splat", bytes(_core.write_splat(gaussians))),
@@ -471,6 +472,8 @@ def test_partial_selector_validation_and_unsupported_formats(tmp_path):
         ("netpbm", {"window": (0, 4, 0, 1)}, "available extent"),
         ("xyz", {"points": (2, 2)}, "non-empty"),
         ("xyz", {"points": (0, 9)}, "available extent"),
+        ("pts", {"points": (2, 2)}, "non-empty"),
+        ("pts", {"points": (0, 9)}, "declared point count"),
     ],
 )
 def test_partial_ranges_reject_empty_or_out_of_bounds(
@@ -482,8 +485,10 @@ def test_partial_ranges_reject_empty_or_out_of_bounds(
                 _core.image(np.arange(12, dtype=np.uint8).reshape(3, 4))
             )
         )
-    else:
+    elif format_id == "xyz":
         encoded = b"0 0 0\n1 1 1\n"
+    else:
+        encoded = b"2\n0 0 0\n1 1 1\n"
     path = tmp_path / f"bounds-{format_id}.data"
     path.write_bytes(encoded)
     with pytest.raises(FormatError, match=message):

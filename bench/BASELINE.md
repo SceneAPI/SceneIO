@@ -325,3 +325,29 @@ allocation/RSS as the fixture grows from 128 MiB to 1 GiB, while streaming
 write throughput stays comparable to the reference writer. Inspection and
 single-tensor selection are sub-millisecond for both implementations. The
 ordinary all-codec smoke was also extended from 23 to 24 entries.
+
+## Count-prefixed PTS expansion delta — 2026-07-24
+
+PTS is measured by the 25-codec harness against an independent NumPy text
+parser/writer. A three-run `--scale 0.1` fixture contains 100,000 XYZ points
+(1.2 MB raw, 5.7 MB encoded):
+
+```text
+operation                         SceneIO          oracle / control
+-------------------------------------------------------------------
+write throughput                  55 MB/s          12 MB/s
+buffer read throughput            81 MB/s          62 MB/s
+public mmap read throughput       75 MB/s          -
+buffer/mmap traced read peak      5.7 / 0.0 MB     -
+buffer/sink traced write peak     5.7 / 0.0 MB     -
+inspect latency                   0.056 ms          full read 15.903 ms
+middle point-range latency        8.585 ms          full read 15.903 ms
+```
+
+The result validates the intended qualitative gains: mmap and file-sink paths
+remove the encoded-size Python allocation, header-only inspection is roughly
+282x faster than full parsing, and a bounded middle range is about 1.85x
+faster while allocating only its selected records. The range reader still
+scans the count-prefixed text to validate row structure and the declared total,
+so resident pages can approach the encoded file size even though heap output
+does not.

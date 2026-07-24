@@ -2,7 +2,7 @@
 
 Measures, per codec, encode (write) + decode (read) throughput (MB/s over the raw
 payload) and peak Python allocation (tracemalloc), for sceneio._core vs the oracle
-library where one exists, on representative payloads for all 24 codecs. Read
+library where one exists, on representative payloads for all 25 codecs. Read
 measurements retain the legacy whole-file bytes/copy-decode path beside the
 public registry mmap path, so their peak delta captures the input copy O1
 removes and, for NPY/FLO, the decoded-array copy O2 removes. Write measurements
@@ -388,6 +388,24 @@ def _load_npz_oracle(data):
         return {name: np.array(archive[name], copy=True) for name in archive.files}
 
 
+def _pts_oracle_write(points):
+    text = io.StringIO()
+    text.write(f"{len(points)}\n")
+    np.savetxt(text, points, fmt="%.9g")
+    return text.getvalue().encode()
+
+
+def _pts_oracle_read(data):
+    first, _, body = data.partition(b"\n")
+    declared = int(first)
+    points = np.loadtxt(
+        io.BytesIO(body), dtype=np.float32, ndmin=2
+    ).reshape(-1, 3)
+    if len(points) != declared:
+        raise ValueError("PTS count mismatch")
+    return points
+
+
 def _evict_file_cache(path):
     """Best-effort cold-cache hint (effective where POSIX_FADV_DONTNEED exists)."""
     if not hasattr(os, "posix_fadvise") or not hasattr(os, "POSIX_FADV_DONTNEED"):
@@ -474,6 +492,15 @@ def _specs(scale, pose_bundle=None):
             _core.read_xyz,
             None,
             None,
+            lambda rec, p: p.nbytes,
+        ),
+        Spec(
+            "pts",
+            lambda: _pc(points, False),
+            _core.write_pts,
+            _core.read_pts,
+            _pts_oracle_write,
+            _pts_oracle_read,
             lambda rec, p: p.nbytes,
         ),
         Spec(
@@ -655,7 +682,7 @@ def _partial_request(codec_id, info, full_record=None):
                 col_start + out_width,
             )
         }
-    if codec_id in {"xyz", "las", "gaussian_ply", "splat"}:
+    if codec_id in {"xyz", "pts", "las", "gaussian_ply", "splat"}:
         selected = max(1, info.count // 16)
         start = (info.count - selected) // 2
         return {"points": (start, start + selected)}
@@ -1429,7 +1456,7 @@ def _run_benchmark(args, tmp):
             results.append({"codec": spec.id, "error": f"{type(e).__name__}: {e}"})
             print(f"{spec.id:<14} ERROR: {type(e).__name__}: {e}")
 
-    assert len(specs) + len(_directory_specs()) == 24
+    assert len(specs) + len(_directory_specs()) == 25
     print("\nMB/s over raw payload; fileMB = encoded size (= the whole-file copy O1/O3 remove).")
     print("sioR = in-memory copy decode; pathR = public registry mmap read/view.")
     print("bPeakMB/mPeakMB = peak Python allocation for bytes/mmap reads (O1 delta).")

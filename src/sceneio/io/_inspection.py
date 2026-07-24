@@ -105,6 +105,8 @@ def inspect_path(path: str | Path, format_id: str, datatype: str) -> Inspection:
         return _inspect_colmap_text(p, datatype)
     if format_id == "xyz":
         return _inspect_xyz(p, datatype)
+    if format_id == "pts":
+        return _inspect_pts(p, datatype)
     if format_id == "las":
         return _inspect_las(p, datatype)
     if format_id == "flo":
@@ -995,6 +997,19 @@ def _inspect_xyz(path: Path, datatype: str) -> Inspection:
             "has_intensity": columns in {4, 7},
             "has_normals": columns == 9,
         },
+    )
+
+
+def _inspect_pts(path: Path, datatype: str) -> Inspection:
+    count = _compiled_buffer_inspect(path, _core._inspect_pts)
+    return Inspection(
+        "pts",
+        datatype,
+        _size(path),
+        shape=(count, 3),
+        dtype="float32",
+        count=count,
+        metadata={"declared_count": count},
     )
 
 

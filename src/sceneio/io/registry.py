@@ -690,6 +690,24 @@ register(
         read_points=_mmap_selector_reader(_core.read_xyz_points),
     )
 )
+register(
+    Codec(
+        "pts",
+        (".pts",),
+        _mmap_reader(_core.read_pts),
+        _file_sink_writer(_core.write_pts),
+        record=_core.PointCloud,
+        datatype="point_cloud",
+        read_points=_mmap_selector_reader(_core.read_pts_points),
+        supported_features=(
+            "count_header",
+            "xyz",
+            "intensity",
+            "rgb8",
+        ),
+        unsupported_features=("normals", "rgb16", "georef"),
+    )
+)
 # ASPRS LAS (hand-parsed binary, no library) -> PointCloud. The "LASF" signature
 # is unambiguous; LAZ (compressed) is deferred (needs laz-perf).
 register(

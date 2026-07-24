@@ -156,7 +156,7 @@ Columns: **Ext/id** · **Record** · **Lib/oracle (license)** · **R/W** ·
 | ✅ LAS | `PointCloud` | laspy (BSD) | R+W | mmap; point formats 0‑3 and 6‑8 |
 | ⬜ LAZ | `PointCloud` | lazrs (Apache) / laszip | R+W | LAS compression |
 | ⬜ E57 | `PointCloud` | libE57Format (BSD) | R+W | optional C lib |
-| ✅ `.xyz` / ⬜ count-prefixed `.pts` | `PointCloud` | manual | R+W | `.pts` is a distinct grammar, not an alias |
+| ✅ `.xyz` / ✅ count-prefixed `.pts` | `PointCloud` | independent parser | R+W | `.pts` is a distinct count-validated grammar, not an alias |
 
 ### 3d. Meshes
 | Format | Record | Lib / oracle | R/W | Notes |
