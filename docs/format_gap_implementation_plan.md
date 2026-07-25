@@ -9,10 +9,11 @@
   v0.1 are complete locally. The polygon-preserving `Mesh` record and generic
   mesh PLY are also complete locally; canonical `MaterialSet`, strict
   polygon-preserving OBJ/MTL, strict STL/OFF, the `MeshScene` record, and plain
-  glTF/GLB and LAZ point formats 0-3/6-8 are complete locally.
+  glTF/GLB, LAZ point formats 0-3/6-8, the `ImageSequence` record, lazy image
+  directories, and raw planar Y4M are complete locally.
   Cross-platform wheel and instrumented validation remains a user-gated remote
   action.
-- **Current branch:** 48 compiled codecs, all read/write and inspectable, with
+- **Current branch:** 50 compiled codecs, all read/write and inspectable, with
   bounded partial reads where their containers permit them.
 - **Scope:** close every unblocked format gap declared by SceneIO's coverage
   documents without reimplementing the 0.2.0 codec tier.
@@ -1299,7 +1300,7 @@ Plain-LAS waveform checkpoint — complete locally (2026-07-25):
   waveform round-trip failure. Fable is unavailable locally; the Linux
   instrumented and Linux/macOS wheel lanes remain user-gated.
 
-#### G4.2 ImageSequence and raw Y4M
+#### G4.2 ImageSequence and raw Y4M — complete locally
 
 Implementation:
 
@@ -1310,12 +1311,41 @@ Implementation:
   explicit operation outside the codec.
 - Support only explicitly listed uncompressed Y4M chroma layouts and reject
   layouts the planar frame contract cannot represent.
-- Add frame-range and single-frame selectors.
+- Add frame-range selectors; a one-frame half-open range is the single-frame
+  operation.
 - Writers stream frames and never concatenate the full sequence in memory.
 
 Oracles:
 
-- independent Y4M parser and imageio/Pillow for individual frame files.
+- an independent dependency-free Y4M parser/writer, exact golden bytes, and
+  existing independently verified image inspectors for individual frame files.
+
+Local verification:
+
+- all six supported Y4M layout tokens (`mono`, three 4:2:0 sitings, 4:2:2,
+  and 4:4:4) round-trip against the independent oracle, including odd
+  dimensions, CRLF headers, exact rational timing, bytes/memoryview/mmap,
+  malformed prefixes, direct-sink short writes, and selected-frame parity;
+- image directories preserve encoded bytes, deterministic natural or manifest
+  order, optional exact timing, same-directory replacement, bounded copying,
+  and rollback on a failed staging copy; heterogeneous or missing frames reject;
+- the universal buffer sweep is now 44 codecs and proves Y4M bytes/mmap and
+  buffer/direct-sink identity; the public registry/capability snapshot is
+  50 codecs;
+- the representative 6.3 MB Y4M fixture measured 2,574 MB/s public mmap read,
+  removed the 6.3 MB traced input allocation, and showed 33.48x inspection and
+  4.19x one-sixteenth frame-range speedups. The 6.3 MB lazy directory fixture
+  remained bounded and showed 1.45x inspection and 1.61x range gains;
+- a manual three-lens review covered memory/lifetime, format correctness, and
+  test soundness. It found and fixed mapped-view ownership, exact-timing,
+  chroma-siting, inspector/parser agreement, duplicate-tag, source-metadata,
+  natural-order tie, and duplicate-JSON-key defects. The Fable review tool was
+  unavailable in this environment, so the manual review and focused tests are
+  recorded explicitly rather than claiming an automated Fable sign-off;
+- a 240-entry staged sdist rebuilt a 40-entry cp312-abi3 Windows wheel with
+  exactly one native extension, no video-framework artifacts, NumPy as the
+  sole runtime dependency, and a passing packaged sequence smoke in an
+  environment containing only NumPy and SceneIO.
 
 #### G4.3 Animated WebP and APNG
 
@@ -1891,21 +1921,22 @@ estimates.
 
 The current local checkpoint is:
 
-- 48 compiled registry codecs with read, write, inspect, mmap or path-native
+- 50 compiled registry codecs with read, write, inspect, mmap or path-native
   input, and direct file sinks;
 - O0-O5 complete for the existing codec tier;
 - `FlowField`, typed FLO, typed PFM depth, typed PNG depth, and typed scalar EXR
   depth complete;
-- 2,768 local tests pass with 4 documented platform/optional skips, Ruff and
+- 2,909 local tests pass with 4 documented platform/optional skips, Ruff and
   `git diff --check` are clean;
-- the complete 48-codec benchmark, staged source-distribution rebuild, and
+- the complete 50-codec benchmark, staged source-distribution rebuild, and
   packaged NumPy-only wheel smoke pass;
 - generic point PLY, PCD, StateTrajectory/EuRoC, CameraRig calibration,
   PoseGraph/g2o, the COLMAP feature database, SuperSplat compressed PLY,
   PlayCanvas SOG v2, KSplat v0.1, the canonical `Mesh` record, generic mesh PLY,
   canonical `MaterialSet`, OBJ/MTL, STL/OFF, `MeshScene`, and plain glTF/GLB
   are complete locally; plain LAS point formats 4/5/9/10 now retain internal
-  waveform data losslessly through an optional `PointCloud` sidecar;
+  waveform data losslessly through an optional `PointCloud` sidecar; lazy
+  image directories and raw Y4M are complete over the new `ImageSequence`;
 - instrumented Linux and Linux/macOS wheels have not yet been run for this
   dependency wave because pushing and dispatching remote workflows are
   user-gated.
@@ -2578,10 +2609,11 @@ silent triangulation, dropped attributes, or material loss.
    (Apache-2.0/BSD-3-Clause/BSD-2-Clause) for
    LAZ, retain the same point semantics, add chunk-aware selection, and prove
    bounded decompression memory.
-3. Land `ImageSequence` with frame timestamps/durations, dimensions, ownership,
-   and native planar/chroma metadata.
-4. Add image-directory and raw Y4M support first; these establish sequence and
-   frame-selection semantics without an animation library.
+3. **Complete locally:** land `ImageSequence` with frame timestamps/durations,
+   dimensions, ownership, and native planar/chroma metadata.
+4. **Complete locally:** add image-directory and raw Y4M support; these
+   establish sequence and frame-selection semantics without an animation
+   library.
 5. Extend WebP and PNG to animated WebP/APNG only after blend, disposal,
    duration, loop count, and partial-frame semantics round-trip.
 6. Add RTMV as a multi-file layout over existing camera, image, depth, and

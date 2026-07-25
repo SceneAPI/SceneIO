@@ -73,7 +73,7 @@ artifacts vocabulary — wire identity unchanged.
 
 ### Compiled format I/O — `read` / `write` / `inspect` / `read_partial`
 
-The lazy-loaded compiled core reads and writes 47 image, depth, tensor,
+The lazy-loaded compiled core reads and writes 50 image, image-sequence, depth, tensor,
 point-cloud, Gaussian, mesh/scene, pose/state, reconstruction, calibration,
 graph, and feature-database formats.
 `sceneio.inspect(path)` returns an immutable `Inspection` with shape, dtype,
@@ -220,6 +220,18 @@ state_part = sceneio.read_partial(
     "state_groundtruth_estimate0/data.csv", states=(1_000, 2_000)
 )
 
+# A marked image directory returns lazy encoded-frame paths; individual pixels
+# are decoded only when those paths are passed back to sceneio.read().
+sequence = sceneio.read("frames")
+first_frame = sceneio.read(sequence.frame_paths[0])
+middle = sceneio.read_partial("frames", frames=(100, 200))
+
+# Raw Y4M preserves native uint8 planar Y/U/V sampling without RGB conversion.
+planar = sceneio.read("capture.y4m")
+assert planar.storage_mode == "yuv_planar"
+assert planar.chroma_subsampling in {"mono", "420", "422", "444"}
+selected = sceneio.read_partial("capture.y4m", frames=(100, 200))
+
 # One COLMAP pose and its camera, without opening points3D.
 view = sceneio.read_partial("sparse/0", image_id=42)
 
@@ -250,7 +262,8 @@ assert not sceneio.native_features("hdf5").available
 ```
 
 `sceneio.FeatureSet`, `sceneio.MatchGraph`, `sceneio.ColmapDatabase`,
-`sceneio.Mesh`, `sceneio.MaterialSet`, and `sceneio.MeshScene` are compiled,
+`sceneio.Mesh`, `sceneio.MaterialSet`, `sceneio.MeshScene`, and
+`sceneio.ImageSequence` are compiled,
 storage-faithful I/O records. The procedure-contract `sceneio.data.FeatureSet`
 remains a separate Python record for matcher APIs.
 
@@ -260,6 +273,8 @@ payload raises `FormatError`. Pixel windows support PFM, binary P5/P6 Netpbm,
 lossless VP8L WebP, FLO, and scalar DMB; lossy WebP and ASCII P2/P3 reject because they
 cannot provide a bit-exact bounded slice. Safetensors supports complete
 named-tensor selection and contiguous leading-axis slices.
+Image directories return lazy validated frame paths, while raw Y4M frame
+ranges copy only the selected planar frames.
 Count-prefixed PTS supports bounded point ranges while validating the declared
 point count and preserving supported intensity/RGB columns. Generic PLY reads
 ASCII and binary little/big endian point schemas; only fixed-record binary PLY

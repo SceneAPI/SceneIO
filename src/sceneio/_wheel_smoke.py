@@ -733,6 +733,53 @@ def _colmap_database(root: Path) -> None:
     assert inspected.metadata["num_matches"] == 1
 
 
+def _image_sequences(root: Path) -> None:
+    assert sceneio.ImageSequence is _core.ImageSequence
+    frames = root / "frames"
+    frames.mkdir()
+    first = b"P5\n3 2\n255\n" + bytes(range(6))
+    second = b"P5\n3 2\n255\n" + bytes(range(6, 12))
+    (frames / "frame10.pgm").write_bytes(second)
+    (frames / "frame2.pgm").write_bytes(first)
+    lazy = sceneio.read(frames, format="image_sequence")
+    assert lazy.frame_names == ["frame2.pgm", "frame10.pgm"]
+    assert lazy.y.shape == (0, 0, 0)
+    copied = root / "frames-copy"
+    sceneio.write(lazy, copied)
+    assert sceneio.detect(copied) == "image_sequence"
+    assert (copied / "frame2.pgm").read_bytes() == first
+    assert sceneio.read_partial(copied, frames=(1, 2)).num_frames == 1
+
+    empty = np.empty(0, np.int64)
+    y = np.arange(2 * 3 * 5, dtype=np.uint8).reshape(2, 3, 5)
+    u = np.arange(2 * 2 * 3, dtype=np.uint8).reshape(2, 2, 3)
+    v = u + 50
+    planar = _core.image_sequence_yuv(
+        y,
+        u,
+        v,
+        empty,
+        empty,
+        "420",
+        "jpeg",
+        "full",
+        "bt709",
+        "progressive",
+        25,
+        1,
+        1,
+        1,
+    )
+    path = root / "sequence.y4m"
+    sceneio.write(planar, path)
+    assert sceneio.detect(path) == "y4m"
+    decoded = sceneio.read(path)
+    assert decoded.y.tobytes() == y.tobytes()
+    assert decoded.u.tobytes() == u.tobytes()
+    assert sceneio.inspect(path).shape == (2, 3, 5, 3)
+    assert sceneio.read_partial(path, frames=(1, 2)).y.tobytes() == y[1:].tobytes()
+
+
 def main() -> None:
     with tempfile.TemporaryDirectory(prefix="sceneio-wheel-smoke-") as directory:
         root = Path(directory)
@@ -754,6 +801,7 @@ def main() -> None:
         _camera_calibration(root)
         _pose_graph(root)
         _colmap_database(root)
+        _image_sequences(root)
     print(_core.__phase__)
 
 

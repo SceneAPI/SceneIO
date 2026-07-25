@@ -222,8 +222,8 @@ Columns: **Ext/id** · **Record** · **Lib/oracle (license)** · **R/W** ·
 ### 3i. Video — constrained (no ffmpeg / patented codecs)
 | Format | Record | Lib / oracle | R/W | Notes |
 |---|---|---|---|---|
-| ⬜ image sequence (dir) | `ImageSequence` | via image codecs | R+W | the primary "video" path |
-| ⬜ `.y4m` (raw YUV) | `ImageSequence` | manual | R+W | uncompressed, unpatented |
+| ✅ image sequence (dir) | `ImageSequence` | existing image inspectors + independent manifest/PGM fixtures | R+W | lazy flat frames, natural order or exact-timing manifest, bounded transactional copy |
+| ✅ `.y4m` (raw YUV) | `ImageSequence` | original native codec + independent Python oracle | R+W | uint8 mono/420/422/444 planar frames; uncompressed and unpatented |
 | ⬜ animated WebP / APNG | `ImageSequence` | libwebp / libpng | R | royalty‑free frame stacks |
 
 **Excluded (out of scope):** FBX (proprietary SDK), H.264/H.265/ProRes and any

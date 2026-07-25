@@ -15,8 +15,9 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > `sceneio._core`. The original 23 codecs ship in SceneIO 0.2.0; safetensors,
 > PTS, DMB, BAL, BMP, TGA, generic point PLY, PCD, EuRoC state CSV, and the
 > OpenCV/ROS/Kalibr calibration codecs, g2o pose graphs, and the COLMAP
-> feature database, SuperSplat compressed PLY, PlayCanvas SOG, and KSplat are
-> post-0.2 formats on
+> feature database, SuperSplat compressed PLY, PlayCanvas SOG, KSplat,
+> mesh/scene codecs, LAZ, lazy image directories, and raw Y4M are post-0.2
+> formats on
 > `phase0-nanobind-core` and are not released yet.
 
 ## Data structures (memory Records)
@@ -29,7 +30,8 @@ SoA, zero-copy to numpy/torch (DLPack), conventions carried as metadata.
 | `GaussianCloud` | `splat` | ✅ record / ⬜ datatype | DataType registration is **Phase‑C** (needs a wire‑format id); the codecs use `"splat"` as an informal label |
 | `PosedViewSet` | `camera` + poses | ✅ record / ⬜ datatype | SE3/view + optional `Camera` intrinsics; per‑source convention tags (order/direction/axis/scale). `"posed_views"` label is informal, Phase‑C |
 | `Camera` | (shared) | ✅ | COLMAP model id + `params[]`; reused by `Reconstruction` and `PosedViewSet` |
-| `Image` | `image_sequence` elem | ✅ | interleaved HxWxC (u8/u16/f32), color_space/alpha_mode/maxval metadata, owner‑safe zero‑copy `pixels` |
+| `Image` | `image_sequence` elem | ✅ | interleaved HxWxC (u8/u16/f32), color_space/alpha_mode/maxval metadata, owner-safe zero-copy `pixels` |
+| `ImageSequence` | `image_sequence` | ✅ | owned lazy encoded-frame paths or owned uint8 planar Y/U/V frames; exact optional int64-ns timing, dimensions, chroma sampling/siting, range, matrix, interlace, rate, and aspect metadata |
 | `TensorDict` | (named arrays) | ✅ | dict‑like, 12 numpy dtypes (dtype‑erased), zero‑copy views; backs NPZ and mapped safetensors |
 | `PointCloud` | `point_cloud` (new) | ✅ | xyz + rgb/rgb16 + normals + intensity, optional organized width/height and acquisition viewpoint, plus an optional validated lossless LAS waveform sidecar; backs `.xyz`, count-prefixed `.pts`, point `.ply`, PCD, plain `.las`, and `.laz` |
 | `DepthMap` | `depth_map` | ✅ | scalar f32 depth + scale/unit/invalid + confidence; backs scalar DMB and explicit typed PFM/PNG/EXR adapters |
@@ -126,9 +128,11 @@ statically linked into `_core`.
 | `kalibr` | `CameraRig` | R+W | **PyYAML** + Kalibr schema | pinhole/omni intrinsics, distortion, topics, camera-chain or IMU extrinsics, and camera↔IMU time offsets |
 | `g2o` | `PoseGraph` | R+W | independent strict parser + g2o BSD-3 source semantics | `VERTEX_SE3:QUAT`, `EDGE_SE3:QUAT`, `FIX`; XYZW; exact upper-triangle information; unsupported mixed types/parameters reject |
 | `colmap_db` | `ColmapDatabase` (`FeatureSet` + `MatchGraph`) | R+W | stdlib **sqlite3** + **pycolmap 4.1.1** | current six-table cameras/images/features/matches/two-view geometry subset; exact pair ids and absent/empty BLOB state; transactional writes; one-image/one-pair selectors |
-| `laz` | `PointCloud` | R+W | **laspy 2.7 + lazrs 0.8.1** | pinned LAZperf 3.4.0; standard formats 0‑3/6‑8; strict LASzip VLR/chunk extents; chunk-aware ranges; seekable streaming sink |
+| `laz` | `PointCloud` | R+W | **laspy 2.7 + lazrs 0.8.1** | pinned LAZperf 3.4.0; standard formats 0–3/6–8; strict LASzip VLR/chunk extents; chunk-aware ranges; seekable streaming sink |
+| `image_sequence` | `ImageSequence` | R+W | independent manifest/PGM fixtures + existing image-codec parity suites | flat image directories; deterministic natural order or strict versioned manifest; lazy owned paths; exact optional timing; heterogeneous frames reject; transactional bounded-copy writer; frame ranges |
+| `y4m` | `ImageSequence` | R+W | independent Python parser/writer + exact golden bytes | original dependency-free YUV4MPEG2 subset; uint8 mono/4:2:0/4:2:2/4:4:4 planar frames, odd dimensions, exact rational timing, mmap, streaming sink, inspect, and frame ranges; no RGB conversion or video-framework dependency |
 
-### ⬜ Pending — later phases (meshes + niche)
+### ⬜ Pending — later optional and niche formats
 USD / USDZ · OpenVDB · Zarr · Parquet · AVIF / JPEG‑XL.
 
 Draco-compressed glTF remains policy-gated. Plain glTF/GLB is implemented and
@@ -146,9 +150,9 @@ scheduled 100-case backing-store mutation sweep · ✅ ASan/UBSan/LSan workflow
 (local and branch Linux runs green) · ⬜ randomized oracle-triangulated
 fuzzing · ✅ direct file-sink writes · ✅ bounded measured-path workers
 (XYZ/LAS/LAZ/EXR/PNG16/WebP lossless) · ✅ partial/lazy reads (`inspect` covers all
-48; bounded pixel/point/face/mesh/primitive/state/COLMAP-image/COLMAP-pair/tensor
+50; bounded pixel/point/face/mesh/primitive/state/frame/COLMAP-image/COLMAP-pair/tensor
 subsets cover capable containers) · ⬜ GPU-via-DLPack (torch-cuda/cupy) · ✅
-expanded 48-codec benchmark/oracles.
+expanded 50-codec benchmark/oracles.
 
 ## Infrastructure & capabilities
 
@@ -157,7 +161,7 @@ expanded 48-codec benchmark/oracles.
 | nanobind + scikit‑build‑core build | ✅ | abi3/cp312, `NB_STATIC` |
 | cibuildwheel release path | ✅ | Linux/macOS/Windows; `publish.yml` |
 | CI parity (oracles in CI) | ✅ | gsply + pycolmap; runs on the branch |
-| Codec registry + `read`/`write`/`inspect`/`read_partial`/`detect` | ✅ | inspection covers all 48; bounded partial hooks are capability-specific |
+| Codec registry + `read`/`write`/`inspect`/`read_partial`/`detect` | ✅ | inspection covers all 50; bounded partial hooks are capability-specific |
 | Zero‑copy numpy + torch (DLPack) | ✅ | validated per codec |
 | Conventions‑as‑metadata + write guards | ✅ | record‑don't‑convert enforced |
 | Parity kit (`sceneio.testing.parity`) | ✅ | cross‑impl + round‑trip + convention pins |
@@ -198,6 +202,7 @@ incremental.
 | `glb` | file | yes | yes | yes | mesh_id, primitive_id | yes | yes | no | - |
 | `gltf` | multi_file | yes | yes | yes | mesh_id, primitive_id | yes | yes | no | - |
 | `hdr` | file | yes | yes | yes | - | yes | yes | yes | - |
+| `image_sequence` | directory | yes | yes | yes | frames | yes | yes | no | - |
 | `jpeg` | file | yes | yes | yes | - | yes | yes | yes | - |
 | `kalibr` | file | yes | yes | yes | - | yes | yes | no | - |
 | `kitti` | file | yes | yes | yes | - | yes | yes | no | - |
@@ -230,6 +235,7 @@ incremental.
 | `tum` | file | yes | yes | yes | - | yes | yes | no | - |
 | `webp` | file | yes | yes | yes | window | yes | yes | yes | - |
 | `xyz` | file | yes | yes | yes | points | yes | yes | no | - |
+| `y4m` | file | yes | yes | yes | frames | yes | yes | no | - |
 <!-- sceneio-capability-rows:end -->
 
 Supported and intentionally unsupported subfeatures, such as LAS point formats
@@ -273,6 +279,7 @@ names from `_core.__native_features__`.
 | point range `points=(start,stop)` | XYZ, PTS, binary generic PLY, uncompressed binary PCD, LAS, Gaussian PLY, compressed PLY, SOG, KSplat, SPLAT | `PointCloud` / `GaussianCloud`, with convention metadata preserved |
 | face range `faces=(start,stop)` | generic mesh PLY, STL, OFF | `Mesh`; PLY/OFF retain the complete vertex domain, while STL returns local canonical triangle soup |
 | state range `states=(start,stop)` | EuRoC state CSV | `StateTrajectory` with convention metadata preserved |
+| frame range `frames=(start,stop)` | image directories, raw Y4M | `ImageSequence`; directory frames remain lazy encoded paths and Y4M copies only selected planar frames |
 | `image_id` | COLMAP binary + text | one-image `Reconstruction` + its camera; no point-container read |
 | `image_id` | COLMAP SQLite database | one compiled `FeatureSet`; unrelated keypoint/descriptor BLOBs remain unread |
 | unordered `pair=(image_id1,image_id2)` | COLMAP SQLite database | one compiled `MatchGraph` with raw/verified matches and optional geometry |

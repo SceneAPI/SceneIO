@@ -19,6 +19,7 @@ import numpy as np
 from sceneio import _core
 from sceneio.errors import SceneIoError
 from sceneio.io import _gltf as _gltf_adapter
+from sceneio.io import _image_sequence as _image_sequence_adapter
 from sceneio.io import _obj as _obj_adapter
 from sceneio.io._ply import classify_ply
 
@@ -50,6 +51,7 @@ class Codec:
     read_mesh: Callable[[str, int], object] | None = None
     read_primitive: Callable[[str, int], object] | None = None
     read_states: Callable[[str, int, int], object] | None = None
+    read_frames: Callable[[str, int, int], object] | None = None
     read_image: Callable[[str, int], object] | None = None
     read_pair: Callable[[str, int, int], object] | None = None
     read_tensors: Callable[[str, tuple[str, ...]], object] | None = None
@@ -117,6 +119,8 @@ class Codec:
             selectors.append("primitive_id")
         if self.read_states is not None:
             selectors.append("states")
+        if self.read_frames is not None:
+            selectors.append("frames")
         if self.read_image is not None:
             selectors.append("image_id")
         if self.read_pair is not None:
@@ -1387,6 +1391,64 @@ register(
 )
 # COLMAP text sparse (cameras.txt/images.txt/points3D.txt) — the text twin of
 # colmap_sparse; a directory format distinguished by its cameras.txt marker.
+# YUV4MPEG2 is a raw planar sequence container. The compiled codec preserves
+# native uint8 Y/U/V planes and explicit sampling metadata; it does not perform
+# RGB conversion or depend on a video framework.
+register(
+    Codec(
+        "y4m",
+        (".y4m",),
+        _mmap_reader(_core.read_y4m),
+        _file_sink_writer(_core.write_y4m),
+        record=_core.ImageSequence,
+        datatype="image_sequence",
+        magic=(b"YUV4MPEG2",),
+        read_frames=_mmap_selector_reader(_core.read_y4m_frames),
+        supported_features=(
+            "uint8",
+            "mono",
+            "yuv420",
+            "yuv422",
+            "yuv444",
+            "frame_ranges",
+            "exact_frame_timing",
+        ),
+        unsupported_features=(
+            "rgb_conversion",
+            "high_bit_depth",
+            "per_frame_tags",
+        ),
+    )
+)
+# A deterministic directory of individually encoded image frames. Reading is
+# lazy: frame headers are validated, while the compiled record owns only paths,
+# names, and optional exact timing. Writing copies each encoded frame through a
+# bounded buffer into a transactional sibling directory.
+register(
+    Codec(
+        "image_sequence",
+        (),
+        _image_sequence_adapter.read_image_sequence_directory,
+        _image_sequence_adapter.write_image_sequence_directory,
+        record=_core.ImageSequence,
+        datatype="image_sequence",
+        is_directory=True,
+        dir_marker="sceneio_sequence.json",
+        inspect=_image_sequence_adapter.inspect_image_sequence_directory,
+        read_frames=_image_sequence_adapter.read_image_sequence_directory_frames,
+        supported_features=(
+            "lazy_encoded_frames",
+            "natural_order",
+            "manifest_timing",
+            "frame_ranges",
+        ),
+        unsupported_features=(
+            "recursive_directories",
+            "heterogeneous_frames",
+            "pixel_decode",
+        ),
+    )
+)
 register(
     Codec(
         "colmap_sparse_txt",

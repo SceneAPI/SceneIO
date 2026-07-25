@@ -66,6 +66,35 @@ def _fingerprint(value):
             value.row_order,
             _array_fingerprint(value.pixels),
         )
+    elif isinstance(value, _core.ImageSequence):
+        fields = (
+            value.num_frames,
+            value.height,
+            value.width,
+            value.channels,
+            value.chroma_height,
+            value.chroma_width,
+            value.storage_mode,
+            value.frame_dtype,
+            value.color_space,
+            value.alpha_mode,
+            value.chroma_subsampling,
+            value.chroma_siting,
+            value.color_range,
+            value.matrix,
+            value.interlace,
+            value.frame_rate_numerator,
+            value.frame_rate_denominator,
+            value.pixel_aspect_numerator,
+            value.pixel_aspect_denominator,
+            tuple(value.frame_paths),
+            tuple(value.frame_names),
+            _array_fingerprint(value.timestamps_ns),
+            _array_fingerprint(value.durations_ns),
+            _array_fingerprint(value.y),
+            _array_fingerprint(value.u),
+            _array_fingerprint(value.v),
+        )
     elif isinstance(value, _core.DepthMap):
         fields = (
             value.height,
@@ -490,6 +519,26 @@ def buffer_codecs():
         unit="unknown",
         invalid_policy="zero",
     )
+    sequence_y = rng.integers(0, 256, (4, 5, 7), dtype=np.uint8)
+    sequence_u = rng.integers(0, 256, (4, 3, 4), dtype=np.uint8)
+    sequence_v = rng.integers(0, 256, (4, 3, 4), dtype=np.uint8)
+    empty_timing = np.empty(0, np.int64)
+    image_sequence = _core.image_sequence_yuv(
+        sequence_y,
+        sequence_u,
+        sequence_v,
+        empty_timing,
+        empty_timing,
+        "420",
+        "jpeg",
+        "limited",
+        "bt709",
+        "progressive",
+        25,
+        1,
+        1,
+        1,
+    )
     tensor = rng.standard_normal((4, 5, 3)).astype(np.float32)
     tensors = _core.tensor_dict({"a": tensor, "b": np.arange(9, dtype=np.int16)})
     gaussians = _core.gaussian_cloud(
@@ -682,6 +731,7 @@ def buffer_codecs():
         spec("hdr", _core.read_hdr, _core.write_hdr, image_f32),
         spec("exr", _core.read_exr, _core.write_exr, image_f32_rgba),
         spec("webp", _core.read_webp, _core.write_webp, image_rgba),
+        spec("y4m", _core.read_y4m, _core.write_y4m, image_sequence),
         spec("xyz", _core.read_xyz, _core.write_xyz, points_xyz),
         spec("pts", _core.read_pts, _core.write_pts, points_pts),
         spec("ply", _core.read_ply, _core.write_ply, points_ply),
@@ -725,8 +775,8 @@ def _outcome(call, argument):
 
 
 def test_all_single_file_codecs_mmap_equal_bytes_bit_exact(tmp_path, buffer_codecs):
-    """All 43 buffer codecs decode mmap and bytes to bit-exact records."""
-    assert len(buffer_codecs) == 43
+    """All 44 buffer codecs decode mmap and bytes to bit-exact records."""
+    assert len(buffer_codecs) == 44
     for spec in buffer_codecs:
         expected = _fingerprint(spec.reader(spec.data))
         path = tmp_path / f"sample-{spec.id}.bin"
@@ -744,8 +794,8 @@ def test_all_single_file_codecs_mmap_equal_bytes_bit_exact(tmp_path, buffer_code
 
 
 def test_all_single_file_sinks_are_byte_identical(tmp_path, buffer_codecs):
-    """All 43 compiled encoders emit the exact bytes their buffer API returns."""
-    assert len(buffer_codecs) == 43
+    """All 44 compiled encoders emit the exact bytes their buffer API returns."""
+    assert len(buffer_codecs) == 44
     for spec in buffer_codecs:
         direct = tmp_path / f"direct-{spec.id}.bin"
         _core._write_to_file(spec.writer, spec.value, direct)
@@ -792,6 +842,29 @@ def _assert_inspection_matches(info, decoded):
         assert info.shape == decoded.pixels.shape
         assert info.dtype == decoded.dtype
         assert info.channels == decoded.channels
+    elif isinstance(decoded, _core.ImageSequence):
+        assert info.shape == (
+            decoded.num_frames,
+            decoded.height,
+            decoded.width,
+            decoded.channels,
+        )
+        assert info.dtype == decoded.frame_dtype
+        assert info.count == decoded.num_frames
+        assert info.channels == decoded.channels
+        assert info.metadata["storage_mode"] == decoded.storage_mode
+        if decoded.storage_mode == "yuv_planar":
+            assert tuple(
+                (item.name, item.shape, item.dtype) for item in info.arrays
+            ) == tuple(
+                (
+                    name,
+                    getattr(decoded, name).shape,
+                    getattr(decoded, name).dtype.name,
+                )
+                for name in ("y", "u", "v")
+                if getattr(decoded, name).size
+            )
     elif isinstance(decoded, _core.DepthMap):
         assert info.shape == decoded.depth.shape
         assert info.dtype == decoded.depth.dtype.name
@@ -944,7 +1017,7 @@ print(max(0, peak[0] - baseline))
 def test_inspect_matches_decoded_metadata_for_buffer_and_directory_codecs(
     tmp_path, buffer_codecs
 ):
-    assert len(buffer_codecs) == 43
+    assert len(buffer_codecs) == 44
     for spec in buffer_codecs:
         path = tmp_path / f"inspect-{spec.id}.data"
         path.write_bytes(spec.data)
@@ -2281,7 +2354,7 @@ def test_registry_uses_mmap_for_every_nonempty_single_file_codec(
         value = sceneio.codecs()[spec.id].read(str(path))
         gc.collect()
         assert _fingerprint(value) == _fingerprint(spec.reader(spec.data))
-    assert mapped_paths == len(buffer_codecs) == 43
+    assert mapped_paths == len(buffer_codecs) == 44
 
 
 def test_all_buffer_entries_accept_readonly_protocol_exporters(buffer_codecs):

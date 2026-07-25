@@ -190,6 +190,7 @@ nanobind_add_module(_core STABLE_ABI NB_STATIC
   src/cpp/records/posed_view_set.cpp
   src/cpp/records/tensor_dict.cpp
   src/cpp/records/image.cpp
+  src/cpp/records/image_sequence.cpp
   src/cpp/records/point_cloud.cpp
   src/cpp/records/depth_map.cpp
   src/cpp/records/flow_field.cpp
@@ -232,6 +233,7 @@ nanobind_add_module(_core STABLE_ABI NB_STATIC
   src/cpp/codecs/exr.cpp
   src/cpp/codecs/las.cpp
   src/cpp/codecs/laz.cpp
+  src/cpp/codecs/y4m.cpp
   src/cpp/codecs/webp.cpp
   src/cpp/codecs/safetensors.cpp
   src/cpp/codecs/dmb.cpp

@@ -124,6 +124,8 @@ same public record kind as `read()`:
   for PFM, binary P5/P6 Netpbm, lossless VP8L WebP, FLO, and scalar DMB;
 - `points=(start, stop)` selects a half-open range from XYZ, count-prefixed PTS,
   LAS, binary Gaussian PLY, and `.splat`;
+- `frames=(start, stop)` selects lazy encoded paths from image directories or
+  selected native planar frames from raw Y4M;
 - `tensors=("name", ...)` selects named tensors from safetensors without
   materializing unrelated payload tensors;
 - `slices={"name": (start, stop), ...}` selects half-open leading-axis ranges

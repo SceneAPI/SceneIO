@@ -42,6 +42,7 @@ PosedViewSet = _core.PosedViewSet
 StateTrajectory = _core.StateTrajectory
 TensorDict = _core.TensorDict
 Image = _core.Image
+ImageSequence = _core.ImageSequence
 PointCloud = _core.PointCloud
 MaterialSet = _core.MaterialSet
 Mesh = _core.Mesh
@@ -197,6 +198,7 @@ def read_partial(
     mesh_id=None,
     primitive_id=None,
     states=None,
+    frames=None,
     image_id=None,
     pair=None,
     tensors=None,
@@ -207,7 +209,8 @@ def read_partial(
 
     Exactly one selector is required. ``window`` is the half-open pixel box
     ``(row_start, row_stop, column_start, column_stop)``. ``points``, ``faces``,
-    and ``states`` are half-open record ranges ``(start, stop)``. A mesh face
+    ``states``, and ``frames`` are half-open record ranges ``(start, stop)``.
+    A mesh face
     selection retains the complete vertex domain and slices all face/corner
     domains. ``mesh_id`` selects one glTF mesh object; ``primitive_id`` selects
     one glTF primitive in flattened source order. Both return a ``MeshScene``
@@ -229,6 +232,7 @@ def read_partial(
             mesh_id,
             primitive_id,
             states,
+            frames,
             image_id,
             pair,
             tensors,
@@ -283,6 +287,13 @@ def read_partial(
                 f"format {fmt!r} does not support state-subset reads"
             )
         operation = codec.read_states
+    elif frames is not None:
+        values = _selector_ints(frames, 2, "frames")
+        if codec.read_frames is None:
+            raise FormatError(
+                f"format {fmt!r} does not support frame-subset reads"
+            )
+        operation = codec.read_frames
     elif image_id is not None:
         selected_image = _selector_int(image_id, "image_id")
         if selected_image < 0 or selected_image > 0xFFFFFFFF:
@@ -507,6 +518,7 @@ __all__ = [
     "FormatError",
     "GaussianCloud",
     "Image",
+    "ImageSequence",
     "Inspection",
     "MatchGraph",
     "MaterialSet",

@@ -995,3 +995,44 @@ item schemas, unbounded chunk metadata, and trailing unindexed bytes. Bytes,
 memoryview, mmap, one/many lanes, direct sink, short writes, empty files,
 multi-chunk ranges, every truncated prefix, and isolated lifetime/memory paths
 are checked separately from the benchmark.
+
+## ImageSequence directory and raw Y4M baseline — 2026-07-25
+
+The sequence wave raises the registry and complete harness to 50 codecs and
+the buffer-backed differential/direct-sink sweep to 44. `ImageSequence`
+supports owned lazy encoded paths or owned uint8 planar Y/U/V frames, with
+exact optional nanosecond timing and explicit chroma/range/matrix/rate/aspect
+metadata.
+
+The representative Y4M fixture contains four odd-dimension-ready 4:2:0 frames
+(6.3 MB of canonical planes and a 6.3 MB file). Five-run local MSVC medians:
+
+```text
+operation                                  result
+--------------------------------------------------------------
+direct native encode                    1,932 MB/s
+in-memory decode                        7,584 MB/s
+public mmap decode                      2,574 MB/s
+metadata inspection                    0.073 ms (33.48x)
+one-sixteenth frame range               0.583 ms (4.19x)
+```
+
+The mmap path removes the full 6.3 MB traced Python input allocation, and the
+direct sink removes the matching 6.3 MB output allocation while reaching
+3,902 MB/s versus 1,113 MB/s for buffer-plus-file writing. Full decode sampled
+12.4 MB RSS growth; the selected range sampled 1.5 MB. A separate oracle-enabled
+three-run pass measured the independent Python writer/reader at 676/804 MB/s.
+All six supported
+layout tokens (mono, three 4:2:0 sitings, 4:2:2, and 4:4:4), odd dimensions,
+exact rational timing, CRLF, malformed prefixes, mmap lifetime, and short
+writes are independently pinned. The implementation performs no RGB
+conversion and has no video-framework dependency.
+
+The companion directory fixture stores 32 independently encoded PPM frames
+(6.3 MB). Lazy reads retain only validated absolute frame paths and optional
+manifest timing. The bounded transactional copy writer measured 242 MB/s with
+a 1.3 MB traced peak, independent of total output size; full lazy read measured
+1,565 MB/s, inspection was 1.45x faster, and a middle frame range was 1.61x
+faster. Exact encoded bytes, natural ordering, deterministic manifests,
+same-directory replacement, heterogeneous-frame rejection, and failed-stage
+rollback are covered separately from timing.

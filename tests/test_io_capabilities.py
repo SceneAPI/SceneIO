@@ -28,6 +28,7 @@ _BUILTINS = {
     "glb",
     "gltf",
     "hdr",
+    "image_sequence",
     "jpeg",
     "kitti",
     "kalibr",
@@ -60,6 +61,7 @@ _BUILTINS = {
     "tga",
     "webp",
     "xyz",
+    "y4m",
 }
 
 _PARTIAL = {
@@ -68,6 +70,7 @@ _PARTIAL = {
     "colmap_sparse_txt": ("image_id",),
     "dmb": ("window",),
     "euroc_state": ("states",),
+    "image_sequence": ("frames",),
     "flo": ("window",),
     "gaussian_ply": ("points",),
     "glb": ("mesh_id", "primitive_id"),
@@ -89,6 +92,7 @@ _PARTIAL = {
     "stl": ("faces",),
     "webp": ("window",),
     "xyz": ("points",),
+    "y4m": ("frames",),
 }
 
 _LOSSY = {

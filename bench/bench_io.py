@@ -2,7 +2,7 @@
 
 Measures, per codec, encode (write) + decode (read) throughput (MB/s over the raw
 payload) and peak Python allocation (tracemalloc), for sceneio._core vs the oracle
-library where one exists, on representative payloads for all 48 codecs. Read
+library where one exists, on representative payloads for all 50 codecs. Read
 measurements retain the legacy whole-file bytes/copy-decode path beside the
 public registry mmap path, so their peak delta captures the input copy O1
 removes and, for NPY/FLO, the decoded-array copy O2 removes. Write measurements
@@ -197,6 +197,120 @@ def _depth_map(h, w):
         ),
         values,
     )
+
+
+def _y4m_fixture(side):
+    frames = 4
+    rng = np.random.default_rng(31)
+    y = rng.integers(
+        0, 256, (frames, side, side), dtype=np.uint8
+    )
+    chroma_side = (side + 1) // 2
+    u = rng.integers(
+        0, 256, (frames, chroma_side, chroma_side), dtype=np.uint8
+    )
+    v = rng.integers(
+        0, 256, (frames, chroma_side, chroma_side), dtype=np.uint8
+    )
+    empty = np.empty(0, np.int64)
+    record = _core.image_sequence_yuv(
+        y,
+        u,
+        v,
+        empty,
+        empty,
+        "420",
+        "jpeg",
+        "limited",
+        "bt709",
+        "progressive",
+        25,
+        1,
+        1,
+        1,
+    )
+    return record, {"y": y, "u": u, "v": v}
+
+
+def _y4m_oracle_write(payload):
+    """Independent serializer for the benchmark's fixed raw 4:2:0 fixture."""
+
+    y = np.asarray(payload["y"], np.uint8)
+    u = np.asarray(payload["u"], np.uint8)
+    v = np.asarray(payload["v"], np.uint8)
+    frames, height, width = y.shape
+    expected_chroma = (frames, (height + 1) // 2, (width + 1) // 2)
+    if u.shape != expected_chroma or v.shape != expected_chroma:
+        raise ValueError("benchmark Y4M oracle: chroma shape mismatch")
+    output = bytearray(
+        (
+            f"YUV4MPEG2 W{width} H{height} F25:1 Ip A1:1 "
+            "C420jpeg XYSCSS=420JPEG XCOLORRANGE=LIMITED "
+            "XCOLORSPACE=BT709\n"
+        ).encode("ascii")
+    )
+    for index in range(frames):
+        output += b"FRAME\n"
+        output += y[index].tobytes()
+        output += u[index].tobytes()
+        output += v[index].tobytes()
+    return bytes(output)
+
+
+def _y4m_oracle_read(data):
+    """Independent parser for the benchmark's fixed raw 4:2:0 fixture."""
+
+    header, payload = bytes(data).split(b"\n", 1)
+    fields = header.decode("ascii").split()
+    if not fields or fields[0] != "YUV4MPEG2":
+        raise ValueError("benchmark Y4M oracle: bad magic")
+    tokens = {
+        field[0]: field[1:]
+        for field in fields[1:]
+        if not field.startswith("X")
+    }
+    width = int(tokens["W"])
+    height = int(tokens["H"])
+    if (
+        tokens["F"] != "25:1"
+        or tokens["I"] != "p"
+        or tokens["A"] != "1:1"
+        or tokens["C"] != "420jpeg"
+    ):
+        raise ValueError("benchmark Y4M oracle: unexpected metadata")
+    y_bytes = height * width
+    chroma_height = (height + 1) // 2
+    chroma_width = (width + 1) // 2
+    chroma_bytes = chroma_height * chroma_width
+    frame_bytes = y_bytes + 2 * chroma_bytes
+    y_planes = []
+    u_planes = []
+    v_planes = []
+    while payload:
+        if not payload.startswith(b"FRAME\n"):
+            raise ValueError("benchmark Y4M oracle: bad frame marker")
+        frame = payload[6 : 6 + frame_bytes]
+        if len(frame) != frame_bytes:
+            raise ValueError("benchmark Y4M oracle: truncated frame")
+        payload = payload[6 + frame_bytes :]
+        y_planes.append(
+            np.frombuffer(frame[:y_bytes], np.uint8).reshape(height, width)
+        )
+        u_planes.append(
+            np.frombuffer(
+                frame[y_bytes : y_bytes + chroma_bytes], np.uint8
+            ).reshape(chroma_height, chroma_width)
+        )
+        v_planes.append(
+            np.frombuffer(frame[y_bytes + chroma_bytes :], np.uint8).reshape(
+                chroma_height, chroma_width
+            )
+        )
+    return {
+        "y": np.asarray(y_planes),
+        "u": np.asarray(u_planes),
+        "v": np.asarray(v_planes),
+    }
 
 
 def _pc(n, color):
@@ -1911,6 +2025,15 @@ def _specs(scale, pose_bundle=None):
             lambda rec, p: p.nbytes,
         ),
         Spec(
+            "y4m",
+            lambda: _y4m_fixture(side),
+            _core.write_y4m,
+            _core.read_y4m,
+            _y4m_oracle_write,
+            _y4m_oracle_read,
+            lambda rec, p: sum(value.nbytes for value in p.values()),
+        ),
+        Spec(
             "hdr",
             lambda: _img_f32(side, side),
             _core.write_hdr,
@@ -2275,14 +2398,83 @@ def _specs(scale, pose_bundle=None):
 @dataclass
 class DirectorySpec:
     id: str
+    make: Callable
     w: Callable
     r: Callable
+    nbytes: Callable
 
 
-def _directory_specs():
+def _image_sequence_directory_fixture(root, scale):
+    source = Path(root) / "_image_sequence_input"
+    source.mkdir()
+    frame_count = 32
+    side = max(8, int(256 * scale**0.5))
+    rng = np.random.default_rng(37)
+    paths = []
+    names = []
+    for index in range(frame_count):
+        name = f"frame{index:04d}.ppm"
+        path = source / name
+        pixels = rng.integers(
+            0, 256, (side, side, 3), dtype=np.uint8
+        )
+        path.write_bytes(
+            f"P6\n{side} {side}\n255\n".encode("ascii")
+            + pixels.tobytes()
+        )
+        paths.append(str(path))
+        names.append(name)
+    duration = 40_000_000
+    timestamps = (
+        np.arange(frame_count, dtype=np.int64) * duration
+    )
+    durations = np.full(frame_count, duration, np.int64)
+    record = _core.image_sequence_paths(
+        paths,
+        names,
+        timestamps,
+        durations,
+        side,
+        side,
+        3,
+        "uint8",
+        "unknown",
+        "none",
+    )
+    return record, frame_count * side * side * 3
+
+
+def _directory_specs(reconstruction, scale, root):
     return [
-        DirectorySpec("colmap_sparse", _core.write_colmap_sparse, _core.read_colmap_sparse),
-        DirectorySpec("colmap_sparse_txt", _core.write_colmap_txt, _core.read_colmap_txt),
+        DirectorySpec(
+            "colmap_sparse",
+            lambda: (reconstruction, reconstruction),
+            _core.write_colmap_sparse,
+            _core.read_colmap_sparse,
+            lambda record, payload: _record_nbytes(payload),
+        ),
+        DirectorySpec(
+            "colmap_sparse_txt",
+            lambda: (reconstruction, reconstruction),
+            _core.write_colmap_txt,
+            _core.read_colmap_txt,
+            lambda record, payload: _record_nbytes(payload),
+        ),
+        DirectorySpec(
+            "image_sequence",
+            partial(
+                _image_sequence_directory_fixture,
+                root,
+                scale,
+            ),
+            lambda value, path: sceneio.write(
+                value, path, format="image_sequence"
+            ),
+            lambda path: sceneio.read(
+                path, format="image_sequence"
+            ),
+            lambda record, payload: payload,
+        ),
     ]
 
 
@@ -2333,6 +2525,10 @@ def _partial_request(codec_id, info, full_record=None):
     if codec_id in {"colmap_sparse", "colmap_sparse_txt"}:
         image_ids = np.asarray(full_record.image_ids)
         return {"image_id": int(image_ids[len(image_ids) // 2])}
+    if codec_id in {"image_sequence", "y4m"}:
+        selected = max(1, info.count // 16)
+        start = (info.count - selected) // 2
+        return {"frames": (start, start + selected)}
     if codec_id == "safetensors":
         return {"tensors": ("b",)}
     if codec_id == "euroc_state":
@@ -3001,7 +3197,9 @@ def _run_benchmark(args, tmp):
     pose_bundle = _poses_and_reconstruction(args.scale)
     reconstruction = pose_bundle[0]
     specs = _specs(args.scale, pose_bundle)
-    directory_specs = _directory_specs()
+    directory_specs = _directory_specs(
+        reconstruction, args.scale, tmp
+    )
     include_colmap_db = True
     include_gltf = True
     if args.only:
@@ -4007,18 +4205,19 @@ def _run_benchmark(args, tmp):
 
     for spec in directory_specs:
         try:
+            value, payload = spec.make()
             path = Path(tmp) / spec.id
             path.mkdir()
-            spec.w(reconstruction, str(path))
+            spec.w(value, str(path))
             file_bytes = _directory_size(path)
-            payload_bytes = _record_nbytes(reconstruction)
+            payload_bytes = spec.nbytes(value, payload)
             pmb = payload_bytes / 1e6
             fmb = file_bytes / 1e6
             write_time, write_peak = _measure(
-                lambda: spec.w(reconstruction, str(path)), args.runs
+                lambda: spec.w(value, str(path)), args.runs
             )
             write_rss = _measure_rss(
-                lambda: spec.w(reconstruction, str(path))
+                lambda: spec.w(value, str(path))
             )
             write_rows.append(
                 (
@@ -4068,7 +4267,7 @@ def _run_benchmark(args, tmp):
                 )
             )
             partial_request = _partial_request(
-                spec.id, _directory_inspect(), reconstruction
+                spec.id, _directory_inspect(), value
             )
 
             def _directory_partial(
@@ -4137,7 +4336,7 @@ def _run_benchmark(args, tmp):
             + len(directory_specs)
             + int(include_colmap_db)
             + int(include_gltf)
-            == 48
+            == 50
         )
     print("\nMB/s over raw payload; fileMB = encoded size (= the whole-file copy O1/O3 remove).")
     print("sioR = in-memory copy decode; pathR = public registry mmap read/view.")
@@ -4214,7 +4413,7 @@ def _run_benchmark(args, tmp):
         )
     print(
         "Partial reads return the normal record type while materializing only "
-        "the selected pixel, point, face, state, tensor, COLMAP-image, or "
+        "the selected pixel, point, face, state, frame, tensor, COLMAP-image, or "
         "match-pair subset."
     )
     if args.require_o5_inspect_gains:
@@ -4227,6 +4426,7 @@ def _run_benchmark(args, tmp):
             "png",
             "spz",
             "stl",
+            "y4m",
         }
         by_codec = {
             codec_id: (
@@ -4326,6 +4526,7 @@ def _run_benchmark(args, tmp):
             "splat",
             "colmap_sparse",
             "colmap_sparse_txt",
+            "y4m",
         }
         by_codec = {
             codec_id: (

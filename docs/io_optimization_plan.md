@@ -5,9 +5,10 @@ Status: complete — O0–O5 landed. Scope: the compiled `sceneio._core` I/O pat
 hardening/perf work concrete).
 
 Post-0.2 format expansion inherits the same gates. The registry currently has
-48 codecs: 43 file containers, three multi-file containers, and two COLMAP
-directory containers. COLMAP SQLite remains path-native; SOG, OBJ/MTL, and
-glTF/external buffers have explicit multi-file adapters.
+50 codecs: 44 file containers, three multi-file containers, and three directory
+containers (two COLMAP layouts plus lazy image sequences). COLMAP SQLite
+remains path-native; SOG, OBJ/MTL, and glTF/external buffers have explicit
+multi-file adapters.
 The latest record waves add the four calibration formats over `CameraRig`, g2o
 over `PoseGraph`, `colmap_db` over
 `ColmapDatabase`/`FeatureSet`/`MatchGraph`, polygonal PLY over `Mesh`, and
@@ -15,6 +16,16 @@ OBJ/MTL over `Mesh` + `MaterialSet`, STL/OFF over `Mesh`, plain glTF/GLB over
 `MeshScene`, and LAZperf-backed LAZ over `PointCloud`; each inherits direct
 file sinks, metadata inspection, partial reads where meaningful, and the
 all-codec differential/memory harness.
+
+The latest sequence wave adds owned `ImageSequence` storage, lazy image
+directories, and an original dependency-free raw Y4M codec. On representative
+6.3 MB fixtures, Y4M measured 2,574 MB/s public mmap read while removing the
+full 6.3 MB traced input copy; its direct sink removed the matching output
+copy. Metadata inspection was 33.48x faster than full decode and a middle
+one-sixteenth frame range was 4.19x faster with bounded selected-frame RSS.
+The lazy directory adapter retained encoded paths, used bounded 1 MiB copying,
+and measured 1.45x inspection / 1.61x selected-range gains without decoding
+pixels.
 
 The representative 12.0 MB LAZ point fixture encodes to 14.6 MB. Five-run
 local MSVC medians measure 66 MB/s direct-sink write, 235 MB/s buffer decode,
