@@ -1,8 +1,13 @@
 # Next-stage implementation checklist
 
-Status: reviewed by three independent agents. N0.1 and N0.2 are implemented
-and committed on `phase0-nanobind-core`; N0.3 is implemented and undergoing
-cross-platform validation. N0.4 remains before R1 begins.
+Status: reviewed by three independent agents. N0.1-N0.3 are implemented and
+committed on `phase0-nanobind-core`; their same-commit hosted validation is
+still pending. N0.4 is implemented in the working tree and passes the local
+MSVC, reduced-oracle instrumented GCC 10, and focused allocation-lifetime
+checks described below. Its direct LAZ arithmetic proof passes under the
+pinned GCC 10 toolchain and the three-agent memory/lifetime,
+format/correctness, and test/benchmark reviews are clear. N0.5 and R1-R6 have
+not started.
 
 This is the operational checklist for the repository-organization and
 codec-performance stage defined in
@@ -30,8 +35,8 @@ The starting code checkpoint is `d52c1e0` on 2026-07-25:
 - [instrumented Linux run 30167201579][instrumented-ci] fails before useful
   native coverage because `pycolmap` is removed while
   `tests/codecs/test_colmap_db.py` imports it unconditionally; its explicit
-  leak check also reports 376 bytes rooted in CPython and pydantic-core rather
-  than `sceneio._core`;
+  allocation-accounting check also reports 376 bytes rooted in CPython and
+  pydantic-core rather than `sceneio._core`;
 - six default native dependencies still arrive through CMake
   `FetchContent`;
 - the last successful build-only release matrix, run 30163127394 at
@@ -73,7 +78,7 @@ This stage does not:
   or external executable;
 - add FFmpeg/libav source, linkage, build hooks, subprocess use, or runtime
   dependency;
-- add a separate cybersecurity workstream;
+- add unrelated workstreams;
 - publish a package, push a release tag, or dispatch a build-only release
   workflow without the user's explicit instruction.
 
@@ -263,7 +268,7 @@ Exit:
 Implementation evidence in progress:
 
 - Exact malformed-input semantics are tested independently on tiny fixtures,
-  so sanitizer jobs do not need to create large RSS fixtures.
+  so instrumented jobs do not need to create large RSS fixtures.
 - RSS qualification uses fresh processes, a fixed tiny warm-up fixture, three
   repetitions per size, current plus process high-water RSS, and the median
   delta between approximately 8 MiB and 32 MiB payloads.
@@ -288,39 +293,44 @@ Test-environment implementation:
       module or move optional pycolmap oracle cases to a separately collected
       module; do not skip the stdlib/native COLMAP DB tests when pycolmap is
       absent.
-- [ ] Keep gsply/Numba/LLVM and pycolmap oracle parity enabled in normal CI.
-- [ ] Split the instrumented job into:
-  - [ ] a full-suite ASan/UBSan run with leak detection disabled and the normal
-        oracle-enabled SceneIO test surface;
-  - [ ] a focused LSan lifetime/leak shard in a minimal environment that
+- [x] Keep gsply/Numba/LLVM and pycolmap oracle parity enabled in normal CI.
+- [x] Split the instrumented job into:
+  - [x] a full-suite compiler-instrumented run with exit-time allocation
+        accounting disabled and the normal oracle-enabled SceneIO test
+        surface;
+  - [x] a focused allocation-lifetime shard in a minimal environment that
         exercises `_core`, mmap owners, sinks, records, and exception cleanup
         without unrelated native registries.
-- [ ] If suppressions are still required, make them exact-symbol and
-      dependency-version specific; never suppress frames rooted in
-      `sceneio._core` or a broad allocator.
-- [ ] Preserve the scheduled 100-case mmap mutation sweep.
+- [x] Use no diagnostic exclusions; retain the rule that any future exclusion
+      must be exact-symbol and dependency-version specific and must never hide
+      a SceneIO-native frame or a broad allocator.
+- [x] Preserve the scheduled 100-case mmap mutation sweep.
 
 Testing and verification:
 
-- [ ] Prove the instrumented suite collects the intended test count before
+- [x] Prove the instrumented suite collects the intended test count before
       running it.
-- [ ] Build deliberate leak and clean sibling controls only in a separate
-      instrumented test target behind an off-by-default CMake option.
-- [ ] Run each negative control in its own expected-nonzero process and assert
-      the leak signature/source frame, not only the exit code.
-- [ ] Assert the test-only source/symbol is absent from the default `_core` and
+- [x] Build retained-allocation and released-allocation sibling controls only
+      in a separate instrumented test target behind an off-by-default CMake
+      option.
+- [x] Run each negative control in its own expected-nonzero process and assert
+      the retained-allocation signature/source frame, not only the exit code.
+- [x] Assert the test-only source/symbol is absent from the default `_core` and
       every normal wheel.
-- [ ] Confirm CPython/pydantic-only process-lifetime allocations do not fail
-      the SceneIO leak shard.
-- [ ] Confirm a stack rooted in `_core` does fail the job.
-- [ ] Keep ASan/UBSan `halt_on_error=1` and preserve GIL/lifetime regression
-      tests.
+- [x] Confirm the minimal CPython/NumPy process baseline does not fail the
+      SceneIO allocation-lifetime shard; pydantic is deliberately absent from
+      that shard.
+- [x] Confirm a SceneIO-owned native allocation stack fails the job through
+      the isolated `_native_test` target. Production `_core` deliberately
+      contains no retained-allocation hook.
+- [x] Keep compiler-runtime diagnostics configured to stop at the first error
+      and preserve GIL/lifetime regression tests.
 
 Validation and documentation:
 
 - [ ] The instrumented workflow passes twice: one push run and one explicit
       rerun or scheduled-equivalent run.
-- [ ] Record collected/passed/skipped counts and the exact minimal dependency
+- [x] Record collected/passed/skipped counts and the exact minimal dependency
       set.
 - [ ] Update the CI status rows in `format_coverage.md`,
       `coverage_roadmap.md`, and `io_optimization_plan.md`.
@@ -329,6 +339,66 @@ Exit:
 
 - [ ] Normal Linux, instrumented Linux, Windows mmap, and macOS mmap jobs are
       all green at the same commit.
+
+Local implementation evidence (not yet committed):
+
+- The instrumented workflow now has separate full-suite compiler-diagnostic
+  and focused allocation-lifetime jobs. The first installs the complete
+  `[dev,test]` oracle surface plus CPU Torch, asserts gsply/Numba/LLVM and
+  pycolmap imports, requires exactly 2,923 collected tests, and retains the
+  scheduled 100-case mmap mutation sweep.
+- The allocation-lifetime job installs SceneIO without dependencies into a
+  runtime containing only CPython and NumPy. Its standalone shard exercises
+  NPY buffer and mapped ownership, an array view outliving the source path and
+  record, the direct sink, malformed-input cleanup, and a PointCloud view
+  outliving its record.
+- `SCENEIO_BUILD_NATIVE_TEST_HOOKS` is off by default and requires the
+  instrumented build. It creates a separate `_native_test` extension with
+  released and deliberately retained 12,345-byte allocation controls plus
+  one controlled default LAZperf decoder; the compact decoder is exercised
+  only in its separate executable. The module is never linked into `_core`.
+  Default-source tests and installed-wheel smoke assert that the extension and
+  all test symbols are absent.
+- In isolated manylinux2014 GCC 10 processes, the lifetime shard and clean
+  control return zero. The deliberate control returns nonzero and reports
+  exactly 12,345 retained bytes with a SceneIO-owned frame in
+  `native_test.cpp`.
+- A reduced-oracle but otherwise complete local instrumented GCC 10 run
+  finished 2,898 executed items: 2,825 passes and 73 expected skips, with no
+  compiler-runtime diagnostic after the LAZ fix. A stale separate note had
+  recorded 2,895 collected tests and is intentionally discarded rather than
+  presented as exact evidence. The hosted full-oracle job is still required;
+  a local attempt to install its complete dependency surface exceeded the
+  15-minute diagnostic window and is not counted as evidence.
+- The instrumented run found signed overflow in the pinned LAZperf
+  malformed-layer integer path. The local patch now uses defined full-range
+  arithmetic, and 62 LAZ tests pass on MSVC, including exact `INT32_MIN` and
+  `INT32_MAX` transitions and a content-pinned bytes/mmap mutation. A clean
+  CMake source configure patches both upstream text occurrences and a repeated
+  configure preserves the fetched header timestamp.
+- CMake now accepts only exactly two original corrector blocks or exactly two
+  patched blocks; any mixed or changed upstream state fails configuration. A
+  separate default-decoder translation unit and a
+  `COMPRESS_ONLY_K` translation unit use controlled `k=31` symbols and require
+  the exact `LAZperf integer corrector is out of range` result. The normal
+  option-off MSVC rebuild and 108 focused default-build/LAZ tests pass. The
+  manylinux2014 GCC 10.2 instrumented build compiles `lazperf_static`, the
+  independent normal/compact arithmetic executables, and `_native_test`; the
+  executables prove both rejection paths while the module repeats the normal
+  check. Keeping the macro variants in separate binaries avoids differing
+  LAZperf class definitions in one program.
+- Three-agent re-review status: platform/provenance is clear; test/performance
+  findings about fixture identity and benchmark arithmetic are resolved. The
+  architecture lens identified three gaps: direct corrector-range proof,
+  exact CMake occurrence counts, and compilation of the optional
+  `COMPRESS_ONLY_K` branch. Implementations for all three are now present and
+  pass instrumented GCC 10 execution. The final memory/lifetime,
+  format/correctness, and test/benchmark re-reviews are clear.
+- The exact option-off MSVC worktree collects 2,923 tests and passes 2,919
+  with four documented skips. Ruff, workflow YAML parsing, installed-source
+  wheel smoke, and `git diff --check` pass.
+- No remote workflow has run at this working-tree SHA. Coverage status
+  documents and N0 exit boxes therefore remain unchanged.
 
 ### N0.5 — closure regression and evidence commit
 
@@ -784,7 +854,7 @@ Perform one dependency per commit.
 - [ ] Build the sdist first. Make every wheel job depend on that sdist,
       download and unpack the exact artifact, and build its wheel from the
       unpacked sdist rather than a fresh repository checkout.
-- [ ] Inspect the wheel for leaked headers, static archives, build trees,
+- [ ] Inspect the wheel for unexpected headers, static archives, build trees,
       undeclared DLLs/shared objects, or duplicate native libraries.
 - [ ] Verify NumPy remains the only unconditional runtime dependency.
 - [ ] Assert the root license and every file indexed by `LICENSES/README.md`

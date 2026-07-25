@@ -145,3 +145,10 @@ def test_plain_import_is_numpy_lazy() -> None:
         [sys.executable, "-c", code], capture_output=True, text=True, check=False
     )
     assert result.returncode == 0, result.stderr
+
+
+def test_native_test_controls_are_absent_from_default_build() -> None:
+    from sceneio import _core
+
+    assert importlib.util.find_spec("sceneio._native_test") is None
+    assert not any("test" in name.lower() for name in dir(_core))

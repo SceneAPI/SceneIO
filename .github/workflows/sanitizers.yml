@@ -16,35 +16,97 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  asan-ubsan-lsan:
-    name: ASan + UBSan + LSan
+  asan-ubsan-full:
+    name: ASan + UBSan full suite
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 40
     env:
       CMAKE_ARGS: -DSCENEIO_ENABLE_SANITIZERS=ON
       PYTHONMALLOC: malloc
-      ASAN_OPTIONS: detect_leaks=1:leak_check_at_exit=0:check_initialization_order=1:strict_string_checks=1:halt_on_error=1
+      ASAN_OPTIONS: detect_leaks=0:check_initialization_order=1:strict_string_checks=1:halt_on_error=1
       UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
       SCENEIO_MMAP_FUZZ_CASES: ${{ github.event_name == 'schedule' && '100' || '3' }}
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v7
-      - name: Install instrumented extension and test oracles
+      - name: Install instrumented extension and complete oracle surface
         run: |
-          # Use uv's deterministic CPython build. Ubuntu's system Python keeps
-          # small interpreter allocations alive at the explicit pre-shutdown
-          # LSan checkpoint; the same managed interpreter is used by the local
-          # sanitizer gate.
           uv venv --managed-python --python 3.12 --seed
           uv pip install -e ".[dev,test]"
-          # gsply's Numba/LLVM JIT and pycolmap's native type registry retain
-          # process-lifetime objects that obscure LSan results. Their parity
-          # tests remain enabled in normal CI; exclude only those unsanitized
-          # external stacks from this memory-safety lane.
-          uv pip uninstall gsply numba llvmlite pycolmap
-      - name: Run full suite under sanitizers
+          uv pip install torch --index https://download.pytorch.org/whl/cpu
+      - name: Verify oracle imports and exact full-suite collection
         run: |
-          # The host Python executable does not link libstdc++; preload it after
-          # ASan so ASan can install its __cxa_throw interceptor before _core.
           export LD_PRELOAD="$(gcc -print-file-name=libasan.so):$(gcc -print-file-name=libstdc++.so.6)"
-          .venv/bin/python .github/run_sanitized_tests.py -q
+          .venv/bin/python -c "import gsply, llvmlite, numba, pycolmap"
+          set -o pipefail
+          .venv/bin/python -m pytest --collect-only -q | tee "${{ runner.temp }}/asan-collection.txt"
+          grep -F "tests/codecs/test_ply.py::test_read_matches_gsply" "${{ runner.temp }}/asan-collection.txt"
+          grep -F "tests/codecs/test_colmap.py::test_writer_byte_identical_to_pycolmap" "${{ runner.temp }}/asan-collection.txt"
+          grep -E "^2923 tests collected in " "${{ runner.temp }}/asan-collection.txt"
+      - name: Run full suite under ASan and UBSan
+        run: |
+          export LD_PRELOAD="$(gcc -print-file-name=libasan.so):$(gcc -print-file-name=libstdc++.so.6)"
+          .venv/bin/python -m pytest -q
+      - name: Upload instrumented collection evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: asan-ubsan-collection
+          path: ${{ runner.temp }}/asan-collection.txt
+
+  lsan-lifetimes:
+    name: LSan native lifetime shard
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      CMAKE_ARGS: -DSCENEIO_ENABLE_SANITIZERS=ON -DSCENEIO_BUILD_NATIVE_TEST_HOOKS=ON
+      PYTHONMALLOC: malloc
+      ASAN_OPTIONS: detect_leaks=1:leak_check_at_exit=0:check_initialization_order=1:strict_string_checks=1:halt_on_error=1
+      UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v7
+      - name: Install instrumented extension in a NumPy-only runtime
+        run: |
+          uv venv --managed-python --python 3.12 --seed
+          uv pip install "numpy>=2.0,<2.5"
+          uv pip install --no-deps -e .
+      - name: Verify test hooks are isolated from the production core
+        run: |
+          export LD_PRELOAD="$(gcc -print-file-name=libasan.so):$(gcc -print-file-name=libstdc++.so.6)"
+          .venv/bin/python -c "from sceneio import _core, _native_test; assert not any('test' in name.lower() for name in dir(_core)); print(_native_test.__name__)"
+      - name: Prove both LAZperf corrector guards directly
+        run: |
+          export LD_PRELOAD="$(gcc -print-file-name=libasan.so):$(gcc -print-file-name=libstdc++.so.6)"
+          default_check="$(find build -type f -name sceneio_native_arithmetic_default_check -perm -111 -print -quit)"
+          compact_check="$(find build -type f -name sceneio_native_arithmetic_compact_check -perm -111 -print -quit)"
+          test -n "$default_check"
+          test -n "$compact_check"
+          "$default_check"
+          "$compact_check"
+          .venv/bin/python .github/run_native_arithmetic.py
+      - name: Run focused native lifetime and cleanup shard
+        run: |
+          export LD_PRELOAD="$(gcc -print-file-name=libasan.so):$(gcc -print-file-name=libstdc++.so.6)"
+          .venv/bin/python .github/run_lsan_lifetime.py
+      - name: Prove clean and leaking LSan controls
+        run: |
+          export LD_PRELOAD="$(gcc -print-file-name=libasan.so):$(gcc -print-file-name=libstdc++.so.6)"
+          .venv/bin/python .github/run_lsan_control.py clean >"${{ runner.temp }}/lsan-clean.log" 2>&1
+          set +e
+          .venv/bin/python .github/run_lsan_control.py leak >"${{ runner.temp }}/lsan-leak.log" 2>&1
+          leak_status=$?
+          set -e
+          cat "${{ runner.temp }}/lsan-clean.log"
+          cat "${{ runner.temp }}/lsan-leak.log"
+          test "$leak_status" -ne 0
+          grep -F "LeakSanitizer: detected memory leaks" "${{ runner.temp }}/lsan-leak.log"
+          grep -E "sceneio_lsan_test_allocate_leak|native_test.cpp" "${{ runner.temp }}/lsan-leak.log"
+      - name: Upload LSan control evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lsan-control-logs
+          path: |
+            ${{ runner.temp }}/lsan-clean.log
+            ${{ runner.temp }}/lsan-leak.log

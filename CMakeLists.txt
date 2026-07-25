@@ -10,6 +10,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # flags globally instruments both _core and the vendored C/C++ codec libraries;
 # ASan includes LSan on Linux, while UBSan covers undefined behavior.
 option(SCENEIO_ENABLE_SANITIZERS "Build SceneIO and vendored codecs with ASan/UBSan/LSan" OFF)
+option(SCENEIO_BUILD_NATIVE_TEST_HOOKS
+  "Build the separate, sanitizer-only native control extension" OFF)
 if(SCENEIO_ENABLE_SANITIZERS)
   if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     add_compile_options(-fsanitize=address,undefined -fno-omit-frame-pointer
@@ -19,6 +21,10 @@ if(SCENEIO_ENABLE_SANITIZERS)
     message(FATAL_ERROR
       "SCENEIO_ENABLE_SANITIZERS supports Linux GCC/Clang (ASan includes LSan)")
   endif()
+endif()
+if(SCENEIO_BUILD_NATIVE_TEST_HOOKS AND NOT SCENEIO_ENABLE_SANITIZERS)
+  message(FATAL_ERROR
+    "SCENEIO_BUILD_NATIVE_TEST_HOOKS requires SCENEIO_ENABLE_SANITIZERS=ON")
 endif()
 
 # Python (scikit-build-core provides the hints for the target interpreter).
@@ -124,6 +130,200 @@ unset(_sceneio_lazperf_streams)
 unset(_sceneio_lazperf_streams_text)
 unset(_sceneio_lazperf_getbyte_old)
 unset(_sceneio_lazperf_getbyte_new)
+unset(_sceneio_lazperf_patch_applied)
+unset(_sceneio_lazperf_patch_target)
+
+# LAZperf's integer decompressor performs predictor addition and k=31
+# corrector translation in signed int32 arithmetic. Valid streams stay within
+# the intended domain, but malformed layered streams can overflow before the
+# wrapper can normalize the codec error. Use defined full-range wrapping,
+# wider bounded intermediates, and reject an unrepresentable corrector.
+set(_sceneio_lazperf_decompressor
+  "${lazperf_SOURCE_DIR}/cpp/lazperf/decompressor.hpp")
+file(READ "${_sceneio_lazperf_decompressor}"
+  _sceneio_lazperf_decompressor_text)
+set(_sceneio_lazperf_decompressor_original
+  "${_sceneio_lazperf_decompressor_text}")
+
+set(_sceneio_lazperf_include_old [=[
+#include "model.hpp"
+]=])
+set(_sceneio_lazperf_include_intermediate [=[
+#include "excepts.hpp"
+#include "model.hpp"
+
+#include <cstdint>
+]=])
+set(_sceneio_lazperf_include_new [=[
+#include "excepts.hpp"
+#include "model.hpp"
+
+#include <cstdint>
+#include <limits>
+]=])
+string(FIND "${_sceneio_lazperf_decompressor_text}"
+  "${_sceneio_lazperf_include_new}" _sceneio_lazperf_patch_applied)
+if(_sceneio_lazperf_patch_applied EQUAL -1)
+  string(FIND "${_sceneio_lazperf_decompressor_text}"
+    "${_sceneio_lazperf_include_intermediate}"
+    _sceneio_lazperf_patch_target)
+  if(_sceneio_lazperf_patch_target EQUAL -1)
+    string(FIND "${_sceneio_lazperf_decompressor_text}"
+      "${_sceneio_lazperf_include_old}" _sceneio_lazperf_patch_target)
+    if(_sceneio_lazperf_patch_target EQUAL -1)
+      message(FATAL_ERROR
+        "Pinned LAZperf decompressor includes no longer match the documented "
+        "SceneIO local patch target")
+    endif()
+    string(REPLACE "${_sceneio_lazperf_include_old}"
+      "${_sceneio_lazperf_include_new}" _sceneio_lazperf_decompressor_text
+      "${_sceneio_lazperf_decompressor_text}")
+  else()
+    string(REPLACE "${_sceneio_lazperf_include_intermediate}"
+      "${_sceneio_lazperf_include_new}" _sceneio_lazperf_decompressor_text
+      "${_sceneio_lazperf_decompressor_text}")
+  endif()
+endif()
+
+set(_sceneio_lazperf_predictor_old [=[
+				int32_t real = pred + readCorrector(dec, mBits[context]);
+				if (real < 0) real += corr_range;
+				else if ((uint32_t)(real) >= corr_range) real -= corr_range;
+
+				return real;
+]=])
+set(_sceneio_lazperf_predictor_new [=[
+				const int32_t corrector = readCorrector(dec, mBits[context]);
+				if (corr_range == 0)
+				{
+					const uint32_t wrapped =
+						static_cast<uint32_t>(pred) +
+						static_cast<uint32_t>(corrector);
+					const uint32_t i32_max =
+						static_cast<uint32_t>((std::numeric_limits<int32_t>::max)());
+					return wrapped <= i32_max ?
+						static_cast<int32_t>(wrapped) :
+						-1 - static_cast<int32_t>(
+							(std::numeric_limits<uint32_t>::max)() - wrapped);
+				}
+
+				int64_t real =
+					static_cast<int64_t>(pred) +
+					static_cast<int64_t>(corrector);
+				if (real < 0) real += corr_range;
+				else if (static_cast<uint64_t>(real) >= corr_range)
+					real -= corr_range;
+				return static_cast<int32_t>(real);
+]=])
+string(FIND "${_sceneio_lazperf_decompressor_text}"
+  "${_sceneio_lazperf_predictor_new}" _sceneio_lazperf_patch_applied)
+if(_sceneio_lazperf_patch_applied EQUAL -1)
+  string(FIND "${_sceneio_lazperf_decompressor_text}"
+    "${_sceneio_lazperf_predictor_old}" _sceneio_lazperf_patch_target)
+  if(_sceneio_lazperf_patch_target EQUAL -1)
+    message(FATAL_ERROR
+      "Pinned LAZperf predictor arithmetic no longer matches the documented "
+      "SceneIO local patch target")
+  endif()
+  string(REPLACE "${_sceneio_lazperf_predictor_old}"
+    "${_sceneio_lazperf_predictor_new}" _sceneio_lazperf_decompressor_text
+    "${_sceneio_lazperf_decompressor_text}")
+endif()
+
+# Normalize one upstream comment's trailing space so the exact patch target can
+# remain whitespace-clean in SceneIO's tracked CMake source.
+string(REPLACE "by adding 1 \n" "by adding 1\n"
+  _sceneio_lazperf_decompressor_text
+  "${_sceneio_lazperf_decompressor_text}")
+set(_sceneio_lazperf_compact_corrector_old [=[
+						if (c >= (1<<(k-1))) // if c is in the interval [ 2^(k-1)  ...  + 2^k - 1 ]
+						{
+							// so we translate c back into the interval [ 2^(k-1) + 1  ...  2^k ] by adding 1
+							c += 1;
+						}
+						else // otherwise c is in the interval [ 0 ...  + 2^(k-1) - 1 ]
+						{
+							// so we translate c back into the interval [ - (2^k - 1)  ...  - (2^(k-1)) ] by subtracting (2^k - 1)
+							c -= ((1<<k) - 1);
+						}
+]=])
+set(_sceneio_lazperf_compact_corrector_new [=[
+						// Translate in int64 so the optional compact decoder
+						// has the same defined malformed-input behavior.
+						const int64_t threshold = int64_t{1} << (k - 1);
+						int64_t translated = c;
+						if (translated >= threshold)
+							translated += 1;
+						else
+							translated -= (int64_t{1} << k) - 1;
+						if (translated < (std::numeric_limits<int32_t>::min)() ||
+							translated > (std::numeric_limits<int32_t>::max)())
+							throw error("LAZperf integer corrector is out of range");
+						c = static_cast<int32_t>(translated);
+]=])
+string(LENGTH "${_sceneio_lazperf_decompressor_text}"
+  _sceneio_lazperf_corrector_source_length)
+string(LENGTH "${_sceneio_lazperf_compact_corrector_old}"
+  _sceneio_lazperf_corrector_old_length)
+string(REPLACE "${_sceneio_lazperf_compact_corrector_old}" ""
+  _sceneio_lazperf_corrector_without_old
+  "${_sceneio_lazperf_decompressor_text}")
+string(LENGTH "${_sceneio_lazperf_corrector_without_old}"
+  _sceneio_lazperf_corrector_without_old_length)
+math(EXPR _sceneio_lazperf_corrector_old_count
+  "(${_sceneio_lazperf_corrector_source_length} - ${_sceneio_lazperf_corrector_without_old_length}) / ${_sceneio_lazperf_corrector_old_length}")
+
+string(LENGTH "${_sceneio_lazperf_compact_corrector_new}"
+  _sceneio_lazperf_corrector_new_length)
+string(REPLACE "${_sceneio_lazperf_compact_corrector_new}" ""
+  _sceneio_lazperf_corrector_without_new
+  "${_sceneio_lazperf_decompressor_text}")
+string(LENGTH "${_sceneio_lazperf_corrector_without_new}"
+  _sceneio_lazperf_corrector_without_new_length)
+math(EXPR _sceneio_lazperf_corrector_new_count
+  "(${_sceneio_lazperf_corrector_source_length} - ${_sceneio_lazperf_corrector_without_new_length}) / ${_sceneio_lazperf_corrector_new_length}")
+
+if(_sceneio_lazperf_corrector_old_count EQUAL 2 AND
+   _sceneio_lazperf_corrector_new_count EQUAL 0)
+  string(REPLACE "${_sceneio_lazperf_compact_corrector_old}"
+    "${_sceneio_lazperf_compact_corrector_new}"
+    _sceneio_lazperf_decompressor_text
+    "${_sceneio_lazperf_decompressor_text}")
+elseif(_sceneio_lazperf_corrector_old_count EQUAL 0 AND
+       _sceneio_lazperf_corrector_new_count EQUAL 2)
+  # Already patched.
+else()
+  message(FATAL_ERROR
+    "Pinned LAZperf corrector patch expected exactly two original or two "
+    "patched decoder branches; found "
+    "${_sceneio_lazperf_corrector_old_count} original and "
+    "${_sceneio_lazperf_corrector_new_count} patched")
+endif()
+if(NOT _sceneio_lazperf_decompressor_text STREQUAL
+    _sceneio_lazperf_decompressor_original)
+  file(WRITE "${_sceneio_lazperf_decompressor}"
+    "${_sceneio_lazperf_decompressor_text}")
+endif()
+
+unset(_sceneio_lazperf_decompressor)
+unset(_sceneio_lazperf_decompressor_text)
+unset(_sceneio_lazperf_decompressor_original)
+unset(_sceneio_lazperf_include_old)
+unset(_sceneio_lazperf_include_intermediate)
+unset(_sceneio_lazperf_include_new)
+unset(_sceneio_lazperf_predictor_old)
+unset(_sceneio_lazperf_predictor_new)
+unset(_sceneio_lazperf_compact_corrector_old)
+unset(_sceneio_lazperf_compact_corrector_new)
+unset(_sceneio_lazperf_corrector_source_length)
+unset(_sceneio_lazperf_corrector_old_length)
+unset(_sceneio_lazperf_corrector_without_old)
+unset(_sceneio_lazperf_corrector_without_old_length)
+unset(_sceneio_lazperf_corrector_old_count)
+unset(_sceneio_lazperf_corrector_new_length)
+unset(_sceneio_lazperf_corrector_without_new)
+unset(_sceneio_lazperf_corrector_without_new_length)
+unset(_sceneio_lazperf_corrector_new_count)
 unset(_sceneio_lazperf_patch_applied)
 unset(_sceneio_lazperf_patch_target)
 
@@ -253,3 +453,34 @@ target_link_libraries(_core PRIVATE miniz_static nlohmann_json::nlohmann_json
 
 # Land the extension inside the importable `sceneio` package as sceneio._core.
 install(TARGETS _core LIBRARY DESTINATION sceneio)
+
+# A separate, off-by-default extension supplies LSan controls and controlled
+# LAZperf arithmetic decoders for the focused native workflow. These hooks
+# must never be linked into _core or a normal wheel.
+if(SCENEIO_BUILD_NATIVE_TEST_HOOKS)
+  add_executable(sceneio_native_arithmetic_default_check
+    src/cpp/testing/lazperf_default_main.cpp
+    src/cpp/testing/lazperf_default_test.cpp)
+  target_compile_options(
+    sceneio_native_arithmetic_default_check PRIVATE -g)
+  target_link_libraries(
+    sceneio_native_arithmetic_default_check PRIVATE lazperf_static)
+
+  # Keep the COMPRESS_ONLY_K header instantiation in a separate binary. The
+  # macro changes LAZperf's integer class definition, so linking both variants
+  # into one program would violate the C++ one-definition rule.
+  add_executable(sceneio_native_arithmetic_compact_check
+    src/cpp/testing/lazperf_compact_main.cpp
+    src/cpp/testing/lazperf_compact_test.cpp)
+  target_compile_options(
+    sceneio_native_arithmetic_compact_check PRIVATE -g)
+  target_link_libraries(
+    sceneio_native_arithmetic_compact_check PRIVATE lazperf_static)
+
+  nanobind_add_module(_native_test STABLE_ABI NB_STATIC
+    src/cpp/testing/native_test.cpp
+    src/cpp/testing/lazperf_default_test.cpp)
+  target_compile_options(_native_test PRIVATE -g)
+  target_link_libraries(_native_test PRIVATE lazperf_static)
+  install(TARGETS _native_test LIBRARY DESTINATION sceneio)
+endif()

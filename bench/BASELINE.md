@@ -1006,6 +1006,31 @@ memoryview, mmap, one/many lanes, direct sink, short writes, empty files,
 multi-chunk ranges, every truncated prefix, and isolated lifetime/memory paths
 are checked separately from the benchmark.
 
+The N0 instrumented run exposed signed overflow in upstream LAZperf while
+decoding a malformed format-1.4 integer layer. SceneIO's local arithmetic patch
+keeps valid full-int32 transitions bit-exact and makes that mutation reject.
+The ordinary five-run harness measured the exact pre-patch commit at
+178/168 MB/s for buffer/mmap read and the patched build at 179/168 MB/s after
+unrelated background build load was removed.
+A same-machine, alternating direct-kernel check used the unchanged one-million
+point fixture and identical 14,584,870-byte output
+(`d35a9d4e38cb907a5d7a39607890b59548f0c2c0fc9e802dc40100b759468ef0`):
+
+```text
+pair/order       unpatched read   patched read   patched delta
+----------------------------------------------------------------
+old then new        162.01 MB/s     184.27 MB/s          +13.7%
+new then old        193.37 MB/s     185.08 MB/s           -4.3%
+old then new        205.41 MB/s     201.56 MB/s           -1.9%
+```
+
+There is no consistent directional loss. The median of the three paired
+deltas is -1.9%; independently dividing the two column medians gives -4.3%.
+Both are within the observed same-host run-order variation. The surrounding
+five-run harness also remained structurally green: mmap removed the 14.6 MB
+Python allocation, the sink removed the output allocation, inspection stayed
+above 1,000x, and partial decode stayed above 2.8x.
+
 ## ImageSequence directory and raw Y4M baseline — 2026-07-25
 
 The sequence wave raises the registry and complete harness to 50 codecs and

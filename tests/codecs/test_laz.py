@@ -63,6 +63,30 @@ def _oracle_bytes(point_format: int, count: int = 257) -> tuple[bytes, object]:
     return output.getvalue(), las
 
 
+def _full_range_oracle_bytes(point_format: int) -> tuple[bytes, object]:
+    header = laspy.LasHeader(
+        version="1.4" if point_format >= 6 else "1.2",
+        point_format=point_format,
+    )
+    header.scales = np.ones(3)
+    header.offsets = np.zeros(3)
+    las = laspy.LasData(header)
+    limits = np.iinfo(np.int32)
+    edge = np.array(
+        [0, limits.max, limits.min, limits.max - 1, limits.min + 1, -1, 1],
+        dtype=np.int32,
+    )
+    las.X = edge
+    las.Y = edge[::-1]
+    las.Z = np.roll(edge, 1)
+    las.intensity = np.arange(edge.size, dtype=np.uint16)
+    if point_format >= 6:
+        las.gps_time = np.arange(edge.size, dtype=np.float64)
+    output = io.BytesIO()
+    las.write(output, do_compress=True)
+    return output.getvalue(), las
+
+
 def _true_positions(cloud) -> np.ndarray:
     return np.asarray(cloud.positions, dtype=np.float64) + np.asarray(cloud.origin)
 
@@ -102,6 +126,20 @@ def test_reads_lazrs_all_supported_point_formats(point_format):
     assert cloud.num_points == len(expected.points)
     assert cloud.intensity_range == "u16"
     _assert_cloud_matches_las(cloud, expected)
+
+
+@pytest.mark.parametrize("point_format", [0, 6])
+def test_reads_lazrs_full_int32_coordinate_transitions(point_format):
+    data, expected = _full_range_oracle_bytes(point_format)
+    cloud = _core.read_laz(data)
+    raw = np.column_stack((expected.X, expected.Y, expected.Z))
+    expected_origin = raw[0].astype(np.float64)
+    expected_positions = (raw.astype(np.float64) - expected_origin).astype(
+        np.float32
+    )
+    np.testing.assert_array_equal(cloud.origin, expected_origin)
+    np.testing.assert_array_equal(cloud.positions, expected_positions)
+    np.testing.assert_array_equal(cloud.intensities, expected.intensity)
 
 
 @pytest.mark.parametrize("point_format", [0, 1, 2, 3])
@@ -334,6 +372,45 @@ for path in Path(sys.argv[1]).glob("*.laz"):
         f"mutated LAZ layer terminated the decoder process: "
         f"{completed.stdout}{completed.stderr}"
     )
+
+
+def test_format_14_integer_layer_overflow_mutation_is_rejected(tmp_path):
+    data, _expected = _oracle_bytes(6, count=257)
+    point_offset = struct.unpack_from("<I", data, 96)[0]
+    record_length = struct.unpack_from("<H", data, 105)[0]
+    stream_count = 9
+    chunk_start = point_offset + 8
+    sizes = struct.unpack_from(
+        f"<{stream_count}I",
+        data,
+        chunk_start + record_length + 4,
+    )
+    assert sizes == (1338, 627, 0, 0, 525, 0, 0, 0, 1320)
+    stream_index = 8
+    stream_start = (
+        chunk_start
+        + record_length
+        + 4
+        + stream_count * 4
+        + sum(sizes[:stream_index])
+    )
+    mutation_offset = stream_start + sizes[stream_index] // 2
+    assert data[mutation_offset] == 0x0B
+    corrupted = bytearray(data)
+    corrupted[mutation_offset] ^= 0xA5
+    candidate = bytes(corrupted)
+
+    with pytest.raises(ValueError, match="laz: point decompression failed"):
+        _core.read_laz(candidate)
+
+    path = tmp_path / "integer-overflow-mutation.laz"
+    path.write_bytes(candidate)
+    with (
+        path.open("rb") as stream,
+        mmap.mmap(stream.fileno(), 0, access=mmap.ACCESS_READ) as mapped,
+        pytest.raises(ValueError, match="laz: point decompression failed"),
+    ):
+        _core.read_laz(mapped)
 
 
 def test_direct_sink_is_byte_identical_and_oracle_readable(tmp_path):

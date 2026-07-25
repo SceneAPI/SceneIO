@@ -1271,7 +1271,20 @@ Local implementation checkpoint (2026-07-25):
   arithmetic termination. A documented local patch also bounds LAZperf's
   internal format-1.4 `MemoryStream::getByte`; deterministic mutations across
   every nonempty layered stream now either decode or raise a normal codec
-  error without terminating the interpreter. Waveform formats, extra-byte
+  error without terminating the interpreter. The instrumented N0 gate also
+  found signed overflow in LAZperf's malformed-stream integer-corrector path;
+  the documented local arithmetic patch now uses defined full-range wrapping,
+  wider bounded intermediates in both decoder configurations, and rejects
+  unrepresentable correctors. Valid lazrs streams traverse `INT32_MIN` and
+  `INT32_MAX` transitions bit-exactly in legacy and format-1.4 decoders; the
+  preserved UBSan-triggering layer mutation rejects for both bytes and mmap.
+  The content-conditional CMake patch leaves the fetched header timestamp
+  unchanged on a repeated configure and requires exactly two original or two
+  patched corrector blocks. Separate off-by-default native correctness
+  executables compile the normal and `COMPRESS_ONLY_K` decoders without mixing
+  their class definitions, and drive controlled `k=31` symbols to the exact
+  range rejection under the pinned manylinux2014 GCC 10 toolchain. Waveform
+  formats, extra-byte
   strides, unrelated VLR/EVLR metadata, COPC, deferred chunk tables, and
   unrepresented global encoding flags reject instead of being discarded.
 - Public `.laz` dispatch uses read-only mmap, a seekable direct file sink,
@@ -1284,8 +1297,8 @@ Local implementation checkpoint (2026-07-25):
   mmap and one-versus-many lanes, lifetime, forced short writes, every
   truncated prefix, bounded metadata mutations, and large-file traced-memory
   checks.
-- The dedicated suite passes 59 tests. The complete local MSVC suite passes
-  2,827 tests with four documented skips; Ruff and `git diff --check` are
+- The dedicated suite passes 62 tests. The complete local MSVC suite passes
+  2,919 tests with four documented skips; Ruff and `git diff --check` are
   clean.
 - On the 12.0 MB logical/14.6 MB encoded benchmark fixture, five-run medians
   are 66 MB/s direct-sink write, 235 MB/s buffer read, and 184 MB/s public mmap

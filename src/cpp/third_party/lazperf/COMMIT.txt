@@ -28,6 +28,18 @@ Local correctness patch:
   corrupt arithmetic layer's over-read into the same clean codec error as an
   exhausted outer callback. CMake applies an exact idempotent replacement and
   fails if the pinned target changes.
+- cpp/lazperf/decompressor.hpp performs full-range predictor addition with
+  defined uint32 wrapping, computes bounded predictor/corrector arithmetic in
+  int64 in both the normal and optional COMPRESS_ONLY_K decoder branches, and
+  rejects a malformed k=31 corrector that cannot fit int32. The patch includes
+  its own cstdint and limits headers. This preserves valid LASzip arithmetic
+  while making corrupted layered streams raise lazperf::error instead of
+  executing signed-overflow behavior. CMake applies exact idempotent
+  replacements, requires exactly two original or two patched corrector blocks,
+  writes the fetched header only when its content changes, and fails if the
+  pinned targets change. Off-by-default native correctness targets compile the
+  normal and COMPRESS_ONLY_K branches in separate executables and drive
+  controlled k=31 symbols to the exact range rejection.
 
 The wrapper also validates container extents and supplies bounded callbacks
 before calling the codec.

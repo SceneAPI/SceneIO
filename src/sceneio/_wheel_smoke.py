@@ -7,6 +7,7 @@ wheel and NumPy before invoking it on Windows, Linux, and macOS.
 from __future__ import annotations
 
 import gc
+import importlib.util
 import mmap
 import struct
 import tempfile
@@ -781,6 +782,8 @@ def _image_sequences(root: Path) -> None:
 
 
 def main() -> None:
+    assert importlib.util.find_spec("sceneio._native_test") is None
+    assert not any("test" in name.lower() for name in dir(_core))
     with tempfile.TemporaryDirectory(prefix="sceneio-wheel-smoke-") as directory:
         root = Path(directory)
         values = np.arange(12, dtype=np.float32).reshape(3, 4)
