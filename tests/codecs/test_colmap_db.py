@@ -6,11 +6,13 @@ import gc
 import hashlib
 import os
 import sqlite3
+import subprocess
+import sys
+import time
 import tracemalloc
 from pathlib import Path
 
 import numpy as np
-import pycolmap
 import pytest
 
 import sceneio
@@ -389,6 +391,7 @@ def test_sceneio_roundtrip_sqlite_oracle_and_all_geometry_fields(tmp_path):
 
 
 def test_pycolmap_reads_sceneio_writer(tmp_path):
+    pycolmap = pytest.importorskip("pycolmap")
     path = tmp_path / "sceneio.db"
     sceneio.write(_database(), path)
     database = pycolmap.Database.open(path)
@@ -418,6 +421,7 @@ def test_pycolmap_reads_sceneio_writer(tmp_path):
 
 
 def test_sceneio_reads_pycolmap_writer(tmp_path):
+    pycolmap = pytest.importorskip("pycolmap")
     path = tmp_path / "pycolmap.db"
     database = pycolmap.Database.open(path)
     camera = pycolmap.Camera.create_from_model_id(
@@ -712,18 +716,121 @@ def test_decoded_arrays_outlive_closed_and_removed_database(tmp_path):
     np.testing.assert_array_equal(matches, expected_matches)
 
 
-def test_exclusive_lock_fails_cleanly_then_releases(tmp_path):
+def test_wal_writer_exposes_only_the_last_committed_snapshot(tmp_path):
+    path = tmp_path / "snapshot.db"
+    sceneio.write(_database(), path)
+    connection = sqlite3.connect(path)
+    try:
+        mode = connection.execute("PRAGMA journal_mode=WAL").fetchone()
+        assert mode == ("wal",)
+        connection.execute("BEGIN IMMEDIATE")
+        cursor = connection.execute(
+            "UPDATE images SET name='uncommitted.jpg' WHERE image_id=2"
+        )
+        assert cursor.rowcount == 1
+        own_value = connection.execute(
+            "SELECT name FROM images WHERE image_id=2"
+        ).fetchone()
+        assert own_value == ("uncommitted.jpg",)
+        assert sceneio.read(path).feature(2).image_name == "a.jpg"
+        assert sceneio.read_partial(path, image_id=2).image_name == "a.jpg"
+        info = sceneio.inspect(path)
+        assert info.count == 2
+        assert info.metadata["image_names"] == ("a.jpg", "b.jpg")
+    finally:
+        connection.rollback()
+        connection.close()
+    verification = sqlite3.connect(path)
+    try:
+        rolled_back = verification.execute(
+            "SELECT name FROM images WHERE image_id=2"
+        ).fetchone()
+        assert rolled_back == ("a.jpg",)
+    finally:
+        verification.close()
+    assert sceneio.read(path).feature(2).image_name == "a.jpg"
+
+
+def test_cross_process_exclusive_lock_fails_cleanly_then_releases(tmp_path):
     path = tmp_path / "locked.db"
     sceneio.write(_database(), path)
     connection = sqlite3.connect(path)
     try:
-        connection.execute("BEGIN EXCLUSIVE")
+        mode = connection.execute("PRAGMA journal_mode=DELETE").fetchone()
+        assert mode == ("delete",)
+    finally:
+        connection.close()
+
+    ready = tmp_path / "lock-ready"
+    release = tmp_path / "lock-release"
+    holder_script = """
+import sqlite3
+import sys
+import time
+from pathlib import Path
+
+database = Path(sys.argv[1])
+ready = Path(sys.argv[2])
+release = Path(sys.argv[3])
+connection = sqlite3.connect(database)
+try:
+    connection.execute("BEGIN EXCLUSIVE")
+    connection.execute(
+        "UPDATE cameras SET prior_focal_length=0 WHERE camera_id=5"
+    )
+    ready.write_text("locked", encoding="ascii")
+    deadline = time.monotonic() + 30
+    while not release.exists() and time.monotonic() < deadline:
+        time.sleep(0.01)
+    if not release.exists():
+        raise RuntimeError("parent did not release the SQLite lock")
+    connection.rollback()
+finally:
+    connection.close()
+"""
+    holder = subprocess.Popen(
+        [
+            sys.executable,
+            "-c",
+            holder_script,
+            str(path),
+            str(ready),
+            str(release),
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    try:
+        deadline = time.monotonic() + 20
+        while not ready.exists() and time.monotonic() < deadline:
+            if holder.poll() is not None:
+                _stdout, stderr = holder.communicate()
+                pytest.fail(f"SQLite lock holder exited early: {stderr}")
+            time.sleep(0.01)
+        assert ready.is_file(), "SQLite lock holder did not become ready"
+
         with pytest.raises(sceneio.FormatError, match="locked"):
             sceneio.read(path)
+        with pytest.raises(sceneio.FormatError, match="locked"):
+            sceneio.read_partial(path, image_id=2)
+        with pytest.raises(sceneio.FormatError, match="locked"):
+            sceneio.inspect(path)
     finally:
-        connection.rollback()
-        connection.close()
-    assert sceneio.read(path).num_images == 2
+        release.write_text("release", encoding="ascii")
+        try:
+            stdout, stderr = holder.communicate(timeout=20)
+        except subprocess.TimeoutExpired:
+            holder.kill()
+            stdout, stderr = holder.communicate()
+            pytest.fail(
+                "SQLite lock holder did not release: "
+                f"stdout={stdout!r}, stderr={stderr!r}"
+            )
+    assert holder.returncode == 0, stderr
+    assert _database_fingerprint(sceneio.read(path)) == _database_fingerprint(
+        _database()
+    )
 
 
 def test_nonempty_unrepresented_table_is_rejected_and_handle_released(tmp_path):
