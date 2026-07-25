@@ -5,11 +5,11 @@
   PFM depth, typed PNG depth, typed scalar EXR depth, generic point PLY, and
   PCD, `StateTrajectory`/EuRoC, `CameraRig` with OpenCV/ROS/Kalibr
   calibration, `PoseGraph`/g2o, and the `FeatureSet`/`MatchGraph`-backed
-  COLMAP database, SuperSplat compressed PLY, and PlayCanvas SOG v2 are
-  complete locally. KSplat is next in the default-wheel sequence.
+  COLMAP database, SuperSplat compressed PLY, PlayCanvas SOG v2, and KSplat
+  v0.1 are complete locally.
   Cross-platform wheel and instrumented validation remains a user-gated remote
   action.
-- **Current branch:** 40 compiled codecs, all read/write and inspectable, with
+- **Current branch:** 41 compiled codecs, all read/write and inspectable, with
   bounded partial reads where their containers permit them.
 - **Scope:** close every unblocked format gap declared by SceneIO's coverage
   documents without reimplementing the 0.2.0 codec tier.
@@ -127,7 +127,7 @@ exit gate and the validation matrix in section 8 both pass.
 | Family | Remaining work | Complete locally on this branch |
 |---|---|---|
 | Reconstruction and pose | — | BAL, COLMAP database, EuRoC state CSV, g2o |
-| Splat | KSplat | SuperSplat compressed PLY and PlayCanvas SOG v2 |
+| Splat | — | SuperSplat compressed PLY, PlayCanvas SOG v2, and KSplat v0.1 |
 | Point cloud | LAS waveform formats 4/5/9/10, LAZ, E57 | count-prefixed PTS, generic point PLY, and PCD |
 | Mesh | mesh PLY, OBJ/MTL, STL, OFF, glTF/GLB, USD/USDZ; optional Draco is policy-gated | — |
 | Tensor/feature/table | HDF5, hloc layout, Zarr v2/v3, Parquet | safetensors, COLMAP features/matches |
@@ -441,7 +441,7 @@ Land one codec per green commit:
 | Kalibr YAML — complete locally | `CameraRig` | chained extrinsics, camera models, time offsets | independent YAML parser |
 | g2o — complete locally | `PoseGraph` | vertices, typed edges, information matrices | independent parser plus generated goldens |
 | PlayCanvas SOG v2 — complete locally | `GaussianCloud` | clustered/quantized fields, explicit lossy metadata | pinned reference loader plus independent oracle |
-| KSplat | `GaussianCloud` | supported versioned reader first; writer only after canonical output is identified | reference loader vectors |
+| KSplat v0.1 — complete locally | `GaussianCloud` | levels 0–2, multi-section reads, guarded deterministic single-section writer | pinned loader vectors plus independent struct/NumPy oracle |
 | BMP/TGA — complete locally | `Image` | bounded existing-stb decode plus deterministic writers | Pillow + format specifications |
 
 Typed depth/flow adapter contract and landing sequence:
@@ -1629,17 +1629,17 @@ estimates.
 
 The current local checkpoint is:
 
-- 40 compiled registry codecs with read, write, inspect, mmap or path-native
+- 41 compiled registry codecs with read, write, inspect, mmap or path-native
   input, and direct file sinks;
 - O0-O5 complete for the existing codec tier;
 - `FlowField`, typed FLO, typed PFM depth, typed PNG depth, and typed scalar EXR
   depth complete;
-- 2,315 local tests pass with 4 documented platform/optional skips, Ruff and
+- 2,350 local tests pass with 4 documented platform/optional skips, Ruff and
   `git diff --check` are clean;
-- the complete 40-codec benchmark and packaged NumPy-only wheel smoke pass;
+- the complete 41-codec benchmark and packaged NumPy-only wheel smoke pass;
 - generic point PLY, PCD, StateTrajectory/EuRoC, CameraRig calibration,
   PoseGraph/g2o, the COLMAP feature database, and SuperSplat compressed PLY
-  and PlayCanvas SOG v2 are complete locally;
+  PlayCanvas SOG v2, and KSplat v0.1 are complete locally;
 - instrumented Linux and Linux/macOS wheels have not yet been run for this
   dependency wave because pushing and dispatching remote workflows are
   user-gated.
@@ -2212,13 +2212,44 @@ Verification and validation evidence (2026-07-24):
   locally; Linux sanitizer and Linux/macOS cibuildwheel validation remain
   user-gated.
 
-##### B5.3 KSplat — queued after SOG
+##### B5.3 KSplat v0.1 — complete locally
 
-- Implement only identified KSplat versions; begin read-only if no canonical
-  writer can be independently established.
-- Verify against reference loader vectors and preserve every
-  `GaussianCloud` field or reject the file. Benchmark decode, encode where
-  supported, inspect, point selection, and large-cloud memory.
+- The compiled codec reads every identified v0.1 section and compression level
+  (0–2), including degree-0 through degree-2 SH, and writes one deterministic
+  bucketed section. The pinned project includes a canonical generator, so
+  read/write support is justified; degree-3 SH and unknown versions reject.
+- Buffer, public mmap/path, direct-sink, metadata-inspection, and point-range
+  paths are wired through the registry with explicit lossy capability
+  metadata. Multi-section point ranges allocate only selected record rows.
+- Pinned official vectors and an independent struct/NumPy oracle cover all
+  compression levels and SH degrees. SceneIO-produced degree-2 files at all
+  three compression levels also decode through the pinned JavaScript loader:
+  means, normalized WXYZ quaternions, and SH are exact; scale-log conversion
+  is exact for levels 1 and 2 and differs by at most one float32 rounding step
+  (`7.45e-09`) at level 0.
+- Thirty-five dedicated tests cover all nine compression-level/SH-degree
+  writer combinations, official vectors, twenty randomized valid cases,
+  multi-section ranges, mmap and read-only lifetime, mutation isolation,
+  malformed headers/buckets/records, half subnormals, exact block boundaries,
+  truncation, trailing bytes, writer guards, and empty clouds. The focused
+  registry/API/mmap/partial sweep passes 228 tests; the complete local MSVC
+  suite passes 2,350 tests with four documented skips.
+- A generated 2,400,000-point, 105.6 MB level-0 fixture keeps traced Python
+  allocation below 4 MiB for an eight-row point selection. On the standard
+  fixture, five-run medians are 568 MB/s write, 988 MB/s in-memory decode, and
+  874 MB/s public mmap decode. Inspection is 332.84× faster and point
+  selection 16.56× faster than full decode; mmap and direct-sink paths remove
+  the 4.8 MB whole-file Python allocation. The complete 41-codec benchmark
+  also finishes without an error.
+- A clean ABI3 wheel contains 36 expected members, leaks no build headers or
+  libraries, declares only `numpy>=1.26` unconditionally, links only standard
+  Python/Windows runtimes, and passes the isolated NumPy-only wheel smoke.
+- Manual memory-safety, format-correctness, and test-soundness review found
+  and fixed a half-subnormal exponent error, a multi-section partial-range
+  underflow with out-of-bounds-read potential, bucket-ID aliasing at exact
+  block boundaries and planar extents, and an unsafe float-to-uint64 boundary
+  check. Fable is unavailable locally; Linux sanitizer and Linux/macOS
+  cibuildwheel validation remain user-gated.
 
 Wave B exit:
 

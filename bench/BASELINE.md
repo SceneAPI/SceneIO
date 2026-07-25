@@ -799,3 +799,27 @@ pinned `splat-transform` 3.1.6 commit
 bit-identical after the reference re-exported them as Gaussian PLY. The
 committed independent Pillow/NumPy/ZIP oracle covers every SH degree without
 sharing the SceneIO codec.
+
+## mkkellogg KSplat v0.1 baseline — 2026-07-24
+
+KSplat raises the harness to 41 codecs and the buffer-backed
+differential/sink sweep to 38. The representative degree-0 cloud contains
+200,000 Gaussians (11.2 MB of canonical values) and encodes to 4.8 MB with the
+default level-1 float16/bucket representation. Five-run local MSVC medians:
+
+```text
+operation                              result
+-------------------------------------------------------------
+deterministic bucketed write             568 MB/s
+in-memory decode                         988 MB/s
+public mmap decode                       874 MB/s
+metadata inspection                    0.039 ms (332.84x vs full)
+1/16 point selection                   0.774 ms (16.56x vs full)
+```
+
+The public mmap path removes the 4.8 MB whole-file Python allocation, and the
+direct sink removes the same output-sized allocation while retaining 542 MB/s
+throughput. Full decode sampled 15.2 MB RSS growth; the selector sampled
+0.1 MB because it validates the complete section layout but allocates only the
+selected `GaussianCloud` rows. A generated 105.6 MB level-0 fixture keeps
+traced Python allocation below 4 MiB for an eight-row selection.

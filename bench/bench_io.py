@@ -2,7 +2,7 @@
 
 Measures, per codec, encode (write) + decode (read) throughput (MB/s over the raw
 payload) and peak Python allocation (tracemalloc), for sceneio._core vs the oracle
-library where one exists, on representative payloads for all 40 codecs. Read
+library where one exists, on representative payloads for all 41 codecs. Read
 measurements retain the legacy whole-file bytes/copy-decode path beside the
 public registry mmap path, so their peak delta captures the input copy O1
 removes and, for NPY/FLO, the decoded-array copy O2 removes. Write measurements
@@ -1643,6 +1643,15 @@ def _specs(scale, pose_bundle=None):
             lambda rec, p: rec.num_gaussians * 14 * 4,
         ),
         Spec(
+            "ksplat",
+            lambda: _gauss(gaussians),
+            _core.write_ksplat,
+            _core.read_ksplat,
+            None,
+            None,
+            lambda rec, p: rec.num_gaussians * 14 * 4,
+        ),
+        Spec(
             "spz",
             lambda: _gauss(gaussians),
             _core.write_spz,
@@ -1884,6 +1893,7 @@ def _partial_request(codec_id, info, full_record=None):
         "gaussian_ply",
         "compressed_ply",
         "sog",
+        "ksplat",
         "splat",
     }:
         selected = max(1, info.count // 16)
@@ -3454,7 +3464,7 @@ def _run_benchmark(args, tmp):
             print(f"{spec.id:<14} ERROR: {type(e).__name__}: {e}")
 
     if not args.only:
-        assert len(specs) + len(directory_specs) + int(include_colmap_db) == 40
+        assert len(specs) + len(directory_specs) + int(include_colmap_db) == 41
     print("\nMB/s over raw payload; fileMB = encoded size (= the whole-file copy O1/O3 remove).")
     print("sioR = in-memory copy decode; pathR = public registry mmap read/view.")
     print("bPeakMB/mPeakMB = peak Python allocation for bytes/mmap reads (O1 delta).")

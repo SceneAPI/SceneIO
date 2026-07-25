@@ -15,7 +15,7 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > `sceneio._core`. The original 23 codecs ship in SceneIO 0.2.0; safetensors,
 > PTS, DMB, BAL, BMP, TGA, generic point PLY, PCD, EuRoC state CSV, and the
 > OpenCV/ROS/Kalibr calibration codecs, g2o pose graphs, and the COLMAP
-> feature database, SuperSplat compressed PLY, and PlayCanvas SOG are
+> feature database, SuperSplat compressed PLY, PlayCanvas SOG, and KSplat are
 > post-0.2 formats on
 > `phase0-nanobind-core` and are not released yet.
 
@@ -53,6 +53,7 @@ SoA, zero-copy to numpy/torch (DLPack), conventions carried as metadata.
 | `gaussian_ply` | `GaussianCloud` | R+W | **gsply** | 3DGS Gaussian PLY, channel‑grouped f_rest |
 | `compressed_ply` | `GaussianCloud` | R+W | pinned **PlayCanvas splat-transform 3.1.6** vector + NumPy oracle | SuperSplat chunked PLY; deterministic Morton writer; lossy position/scale/quaternion/RGBA/SH quantization; degree 0–3; bounded point reads |
 | `sog` | `GaussianCloud` | R+W | pinned **PlayCanvas splat-transform 3.1.6** source + independent Pillow/NumPy/ZIP oracle | SOG v2 bundled ZIP and unbundled directory; strict lossless-WebP layers; deterministic Morton/codebook/palette writer; degree 0–3; bounded point allocation |
+| `ksplat` | `GaussianCloud` | R+W | pinned **GaussianSplats3D 0.4.7** vectors + independent struct/NumPy oracle | mkkellogg v0.1; compression levels 0–2; SH degrees 0–2; multi-section read; deterministic single-section bucketed writer; bounded point allocation |
 | `spz` | `GaussianCloud` | R+W | **gsply** | v1/2/3 read, **v3+v4 write**, v4 read; bit‑exact v3 encode |
 | `splat` | `GaussianCloud` | R+W | numpy oracle | antimatter15 blob; WXYZ+SH_C0 verified; lossy 8‑bit, SH‑drop |
 | `transforms_json` | `PosedViewSet` | R+W | pure‑Python | NeRF/Instant‑NGP/Nerfstudio; records OpenGL c2w |
@@ -116,10 +117,10 @@ statically linked into `_core`.
 | `colmap_db` | `ColmapDatabase` (`FeatureSet` + `MatchGraph`) | R+W | stdlib **sqlite3** + **pycolmap 4.1.1** | current six-table cameras/images/features/matches/two-view geometry subset; exact pair ids and absent/empty BLOB state; transactional writes; one-image/one-pair selectors |
 
 ### ⬜ Pending — later phases (meshes + niche)
-glTF / GLB (+Draco) · OBJ / STL / OFF / mesh PLY · USD / USDZ · OpenVDB · Zarr · Parquet · AVIF / JPEG‑XL · KSplat.
+glTF / GLB (+Draco) · OBJ / STL / OFF / mesh PLY · USD / USDZ · OpenVDB · Zarr · Parquet · AVIF / JPEG‑XL.
 
 ### 🟡 In progress — Phase 7 (hardening)
-✅ mmap-backed reads for all 37 buffer codecs (SOG additionally supports an
+✅ mmap-backed reads for all 38 buffer codecs (SOG additionally supports an
 unbundled native multi-file path; COLMAP DB and the two COLMAP directory codecs
 read paths directly in native code) · ✅ zero-copy read-only mapped
 ndarray views for native NPY/FLO payloads (PFM row-flips into owned storage) · ✅ bytes/mmap differential +
@@ -127,9 +128,9 @@ scheduled 100-case backing-store mutation sweep · ✅ ASan/UBSan/LSan workflow
 (local and branch Linux runs green) · ⬜ randomized oracle-triangulated
 fuzzing · ✅ direct file-sink writes · ✅ bounded measured-path workers
 (XYZ/LAS/EXR/PNG16/WebP lossless) · ✅ partial/lazy reads (`inspect` covers all
-40; bounded pixel/point/state/COLMAP-image/COLMAP-pair/tensor subsets cover
+41; bounded pixel/point/state/COLMAP-image/COLMAP-pair/tensor subsets cover
 capable containers) · ⬜ GPU-via-DLPack (torch-cuda/cupy) · ✅ expanded
-40-codec benchmark/oracles.
+41-codec benchmark/oracles.
 
 ## Infrastructure & capabilities
 
@@ -180,6 +181,7 @@ incremental.
 | `jpeg` | file | yes | yes | yes | - | yes | yes | yes | - |
 | `kalibr` | file | yes | yes | yes | - | yes | yes | no | - |
 | `kitti` | file | yes | yes | yes | - | yes | yes | no | - |
+| `ksplat` | file | yes | yes | yes | points | yes | yes | yes | - |
 | `las` | file | yes | yes | yes | points | yes | yes | yes | - |
 | `netpbm` | file | yes | yes | yes | window | yes | yes | no | - |
 | `npy` | file | yes | yes | yes | - | yes | yes | no | - |

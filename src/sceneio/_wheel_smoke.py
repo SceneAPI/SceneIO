@@ -145,6 +145,27 @@ def _sog(root: Path) -> None:
     assert np.array_equal(sceneio.read(directory).means, decoded.means)
 
 
+def _ksplat(root: Path) -> None:
+    count = 9
+    cloud = _core.gaussian_cloud(
+        np.arange(count * 3, dtype=np.float32).reshape(count, 3) / 8,
+        np.arange(count * 3, dtype=np.float32).reshape(count, 3) / 32,
+        np.tile(np.array([[1.0, 0.1, 0.2, 0.3]], np.float32), (count, 1)),
+        np.linspace(-2, 2, count, dtype=np.float32),
+        np.arange(count * 3, dtype=np.float32).reshape(count, 3) / 64,
+        np.arange(count * 24, dtype=np.float32).reshape(count, 24) / 128,
+    )
+    path = root / "smoke.ksplat"
+    sceneio.write(cloud, path)
+    assert sceneio.detect(path) == "ksplat"
+    decoded = sceneio.read(path)
+    assert decoded.num_gaussians == count
+    assert decoded.sh_degree == 2
+    assert sceneio.inspect(path).metadata["compression_level"] == 1
+    selected = sceneio.read_partial(path, points=(2, 7))
+    assert np.array_equal(selected.means, decoded.means[2:7])
+
+
 def _point_depth_and_flow(root: Path, values: np.ndarray) -> None:
     points = root / "points.pts"
     sceneio.write(_core.point_cloud(values[:, :3]), points)
@@ -439,6 +460,7 @@ def main() -> None:
         _mapped_safetensors(root, values)
         _compressed_ply(root)
         _sog(root)
+        _ksplat(root)
         _point_depth_and_flow(root, values)
         _reconstruction_and_images(root)
         _state_trajectory(root)

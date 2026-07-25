@@ -336,6 +336,14 @@ def buffer_codecs():
         rng.standard_normal((11, 3)).astype(np.float32),
         rng.standard_normal((11, 45)).astype(np.float32),
     )
+    gaussians_ksplat = _core.gaussian_cloud(
+        np.asarray(gaussians.means),
+        np.asarray(gaussians.scales),
+        np.asarray(gaussians.quaternions),
+        np.asarray(gaussians.opacities),
+        np.asarray(gaussians.sh_dc),
+        np.asarray(gaussians.sh_rest)[:, :24],
+    )
     reconstruction = _core.read_nvm(
         b"NVM_V3\n1\na.jpg 800 0.5 0.5 0.5 0.5 1 2 3 0 0\n"
         b"1\n1.5 -2.5 3.5 10 20 30 1 0 0 4.5 -5.5\n0\n"
@@ -448,6 +456,12 @@ def buffer_codecs():
             gaussians,
         ),
         spec("sog", _core.read_sog, _core.write_sog, gaussians),
+        spec(
+            "ksplat",
+            _core.read_ksplat,
+            _core.write_ksplat,
+            gaussians_ksplat,
+        ),
         spec("spz", _core.read_spz, _core.write_spz, gaussians),
         spec(
             "transforms_json",
@@ -537,8 +551,8 @@ def _outcome(call, argument):
 
 
 def test_all_single_file_codecs_mmap_equal_bytes_bit_exact(tmp_path, buffer_codecs):
-    """All 37 buffer codecs decode mmap and bytes to bit-exact records."""
-    assert len(buffer_codecs) == 37
+    """All 38 buffer codecs decode mmap and bytes to bit-exact records."""
+    assert len(buffer_codecs) == 38
     for spec in buffer_codecs:
         expected = _fingerprint(spec.reader(spec.data))
         path = tmp_path / f"sample-{spec.id}.bin"
@@ -556,8 +570,8 @@ def test_all_single_file_codecs_mmap_equal_bytes_bit_exact(tmp_path, buffer_code
 
 
 def test_all_single_file_sinks_are_byte_identical(tmp_path, buffer_codecs):
-    """All 37 compiled encoders emit the exact bytes their buffer API returns."""
-    assert len(buffer_codecs) == 37
+    """All 38 compiled encoders emit the exact bytes their buffer API returns."""
+    assert len(buffer_codecs) == 38
     for spec in buffer_codecs:
         direct = tmp_path / f"direct-{spec.id}.bin"
         _core._write_to_file(spec.writer, spec.value, direct)
@@ -732,8 +746,8 @@ print(max(0, peak[0] - baseline))
     return int(completed.stdout.strip())
 
 
-def test_inspect_matches_decoded_metadata_all_40_codecs(tmp_path, buffer_codecs):
-    assert len(buffer_codecs) == 37
+def test_inspect_matches_decoded_metadata_all_41_codecs(tmp_path, buffer_codecs):
+    assert len(buffer_codecs) == 38
     for spec in buffer_codecs:
         path = tmp_path / f"inspect-{spec.id}.data"
         path.write_bytes(spec.data)
@@ -773,6 +787,21 @@ def test_inspect_matches_decoded_metadata_all_40_codecs(tmp_path, buffer_codecs)
                 "palette_count": 8,
                 "packaging": "zip",
                 "texture_codec": "lossless_webp",
+            }
+        elif spec.id == "ksplat":
+            assert info.metadata == {
+                "version": "0.1",
+                "compression_level": 1,
+                "sh_degree": decoded.sh_degree,
+                "num_rest": decoded.num_rest,
+                "section_count": 1,
+                "loaded_section_count": 1,
+                "loaded_count": decoded.num_gaussians,
+                "scene_center": (0.0, 0.0, 0.0),
+                "sh_quantization_range": (
+                    float(np.min(np.asarray(spec.value.sh_rest))),
+                    float(np.max(np.asarray(spec.value.sh_rest))),
+                ),
             }
         elif spec.id == "ply":
             assert info.metadata == {
@@ -2011,7 +2040,7 @@ def test_registry_uses_mmap_for_every_nonempty_single_file_codec(
         value = sceneio.codecs()[spec.id].read(str(path))
         gc.collect()
         assert _fingerprint(value) == _fingerprint(spec.reader(spec.data))
-    assert mapped_paths == len(buffer_codecs) == 37
+    assert mapped_paths == len(buffer_codecs) == 38
 
 
 def test_all_buffer_entries_accept_readonly_protocol_exporters(buffer_codecs):

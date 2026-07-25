@@ -599,6 +599,34 @@ register(
 )
 register(
     Codec(
+        "ksplat",
+        (".ksplat",),
+        _mmap_reader(_core.read_ksplat),
+        _file_sink_writer(_core.write_ksplat),
+        record=_core.GaussianCloud,
+        datatype="splat",
+        read_points=_mmap_selector_reader(_core.read_ksplat_points),
+        lossy=True,
+        supported_features=(
+            "mkkellogg_v0_1",
+            "compression_levels_0_2",
+            "float16_scale_rotation",
+            "bucketed_position_uint16",
+            "rgba8",
+            "sh_degrees_0_2",
+            "sh_uint8_level_2",
+            "multi_section_read",
+            "deterministic_single_section_write",
+        ),
+        unsupported_features=(
+            "sh_degree_3",
+            "unknown_versions",
+            "streamed_lod",
+        ),
+    )
+)
+register(
+    Codec(
         "ply",
         (".ply",),
         _mmap_reader(_core.read_ply),

@@ -223,6 +223,17 @@ def _gaussian_case(rng):
     )
 
 
+def _ksplat_case(cloud):
+    return _core.gaussian_cloud(
+        np.asarray(cloud.means),
+        np.asarray(cloud.scales),
+        np.asarray(cloud.quaternions),
+        np.asarray(cloud.opacities),
+        np.asarray(cloud.sh_dc),
+        np.asarray(cloud.sh_rest)[:, :24],
+    )
+
+
 def _assert_point_range(partial, full, start, stop):
     if isinstance(full, _core.PointCloud):
         assert isinstance(partial, _core.PointCloud)
@@ -299,6 +310,7 @@ def test_point_ranges_equal_full_read_slices(tmp_path):
         ("gaussian_ply", bytes(_core.write_gaussian_ply(gaussians))),
         ("compressed_ply", bytes(_core.write_compressed_ply(gaussians))),
         ("sog", bytes(_core.write_sog(gaussians))),
+        ("ksplat", bytes(_core.write_ksplat(_ksplat_case(gaussians)))),
         ("splat", bytes(_core.write_splat(gaussians))),
     )
     for index, (format_id, encoded) in enumerate(cases):
@@ -620,6 +632,11 @@ def test_partial_paths_reject_truncated_selected_payloads(tmp_path):
         (
             "sog",
             bytes(_core.write_sog(gaussians))[:-1],
+            {"points": (0, 1)},
+        ),
+        (
+            "ksplat",
+            bytes(_core.write_ksplat(_ksplat_case(gaussians)))[:-1],
             {"points": (0, 1)},
         ),
         (

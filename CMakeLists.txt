@@ -134,6 +134,7 @@ nanobind_add_module(_core STABLE_ABI NB_STATIC
   src/cpp/codecs/ply_gaussian.cpp
   src/cpp/codecs/compressed_ply.cpp
   src/cpp/codecs/sog.cpp
+  src/cpp/codecs/ksplat.cpp
   src/cpp/codecs/ply_point.cpp
   src/cpp/codecs/pcd.cpp
   src/cpp/codecs/spz.cpp

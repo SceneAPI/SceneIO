@@ -95,6 +95,8 @@ def inspect_path(path: str | Path, format_id: str, datatype: str) -> Inspection:
         return _inspect_compressed_ply(p, datatype)
     if format_id == "sog":
         return _inspect_sog(p, datatype)
+    if format_id == "ksplat":
+        return _inspect_ksplat(p, datatype)
     if format_id == "ply":
         return _inspect_ply(p, datatype)
     if format_id == "pcd":
@@ -1272,6 +1274,58 @@ def _inspect_sog(path: Path, datatype: str) -> Inspection:
             "palette_count": palette_count,
             "packaging": packaging,
             "texture_codec": "lossless_webp",
+        },
+    )
+
+
+def _inspect_ksplat(path: Path, datatype: str) -> Inspection:
+    file_size = _size(path)
+    if file_size < 4096:
+        raise ValueError("ksplat: truncated 4096-byte header")
+    with path.open("rb") as stream:
+        base = _exact(stream, 4096, "KSplat header")
+        section_count = struct.unpack_from("<I", base, 4)[0]
+        header_extent = 4096 + section_count * 1024
+        if header_extent > file_size:
+            raise ValueError("ksplat: truncated section headers")
+        section_headers = _exact(
+            stream,
+            header_extent - 4096,
+            "KSplat section headers",
+        )
+    (
+        count,
+        degree,
+        compression,
+        declared_sections,
+        loaded_sections,
+        loaded_count,
+        scene_x,
+        scene_y,
+        scene_z,
+        sh_min,
+        sh_max,
+    ) = _core._inspect_ksplat_metadata(
+        base + section_headers,
+        file_size,
+    )
+    return Inspection(
+        "ksplat",
+        datatype,
+        file_size,
+        shape=(count,),
+        dtype="float32",
+        count=count,
+        metadata={
+            "version": "0.1",
+            "compression_level": compression,
+            "sh_degree": degree,
+            "num_rest": (0, 9, 24)[degree],
+            "section_count": declared_sections,
+            "loaded_section_count": loaded_sections,
+            "loaded_count": loaded_count,
+            "scene_center": (scene_x, scene_y, scene_z),
+            "sh_quantization_range": (sh_min, sh_max),
         },
     )
 
