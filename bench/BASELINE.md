@@ -1031,6 +1031,29 @@ five-run harness also remained structurally green: mmap removed the 14.6 MB
 Python allocation, the sink removed the output allocation, inspection stayed
 above 1,000x, and partial decode stayed above 2.8x.
 
+## N0.5 local closure checkpoint — 2026-07-25
+
+The one-run, `--scale 0.001` all-50-codec smoke completed successfully. The
+first production-scale five-run guard had one non-reproduced reversal for LAS
+parallel read (0.75x). An immediate `--only las --runs 5` diagnostic measured
+1.43x, and the complete 50-codec rerun measured 1.82x for the same row while
+passing every retained O4/O5 directional and mmap/sink allocation guard. The
+isolated diagnostic changed only scope to LAS; the two complete guards used
+identical thresholds, fixtures, codec set, and lane counts.
+
+The exact sequence was `bench/bench_io.py --runs 1 --scale 0.001`,
+`bench/bench_io.py --runs 5 --require-o4-gains --require-o5-inspect-gains
+--require-o5-partial-gains`, `bench/bench_io.py --only las --runs 5`, then the
+unchanged complete five-run guard again. Each invocation also used `--json`
+to retain its result under `build/`.
+
+The corresponding option-off MSVC tree collected 2,923 tests and passed 2,919
+with four documented skips. An sdist-first Windows wheel build, exact license
+and payload audit, native dependency inspection, and clean Python 3.12
+environment containing only SceneIO plus NumPy all passed. Artifact hashes and
+entry-level evidence are recorded in
+`docs/next_stage_implementation_checklist.md`.
+
 ## ImageSequence directory and raw Y4M baseline — 2026-07-25
 
 The sequence wave raises the registry and complete harness to 50 codecs and

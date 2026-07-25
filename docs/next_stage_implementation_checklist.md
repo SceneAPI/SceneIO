@@ -2,12 +2,13 @@
 
 Status: reviewed by three independent agents. N0.1-N0.3 are implemented and
 committed on `phase0-nanobind-core`; their same-commit hosted validation is
-still pending. N0.4 is implemented in the working tree and passes the local
-MSVC, reduced-oracle instrumented GCC 10, and focused allocation-lifetime
-checks described below. Its direct LAZ arithmetic proof passes under the
-pinned GCC 10 toolchain and the three-agent memory/lifetime,
-format/correctness, and test/benchmark reviews are clear. N0.5 and R1-R6 have
-not started.
+still pending. N0.4 is committed as `0a2db6e` and passes the local MSVC,
+reduced-oracle instrumented GCC 10, and focused allocation-lifetime checks
+described below. Its direct LAZ arithmetic proof passes under the pinned GCC
+10 toolchain and the three-agent memory/lifetime, format/correctness, and
+test/benchmark reviews are clear. N0.5 local closure evidence is prepared in
+this change; creating and validating a resulting candidate commit still
+remain. R1-R6 have not started.
 
 This is the operational checklist for the repository-organization and
 codec-performance stage defined in
@@ -340,7 +341,7 @@ Exit:
 - [ ] Normal Linux, instrumented Linux, Windows mmap, and macOS mmap jobs are
       all green at the same commit.
 
-Local implementation evidence (not yet committed):
+Local implementation evidence (committed as `0a2db6e`):
 
 - The instrumented workflow now has separate full-suite compiler-diagnostic
   and focused allocation-lifetime jobs. The first installs the complete
@@ -397,16 +398,16 @@ Local implementation evidence (not yet committed):
 - The exact option-off MSVC worktree collects 2,923 tests and passes 2,919
   with four documented skips. Ruff, workflow YAML parsing, installed-source
   wheel smoke, and `git diff --check` pass.
-- No remote workflow has run at this working-tree SHA. Coverage status
-  documents and N0 exit boxes therefore remain unchanged.
+- No remote workflow has run at `0a2db6e`. Coverage status documents and N0
+  exit boxes therefore remain unchanged.
 
 ### N0.5 — closure regression and evidence commit
 
-- [ ] Run the complete local MSVC suite.
-- [ ] Run Ruff and `git diff --check`.
-- [ ] Run the 50-codec benchmark smoke and retained O4/O5 guard.
-- [ ] Rebuild an sdist and Windows cp312-abi3 wheel.
-- [ ] Install the wheel into a clean NumPy-only environment and run
+- [x] Run the complete local MSVC suite.
+- [x] Run Ruff and `git diff --check`.
+- [x] Run the 50-codec benchmark smoke and retained O4/O5 guard.
+- [x] Rebuild an sdist and Windows cp312-abi3 wheel.
+- [x] Install the wheel into a clean NumPy-only environment and run
       `sceneio._wheel_smoke`.
 - [ ] Create a locally green candidate commit; do not amend it after push.
 - [ ] With explicit user authorization, push the candidate commit and require
@@ -416,6 +417,43 @@ Local implementation evidence (not yet committed):
       pushed validation SHA.
 - [ ] Mark N0 complete and update the latest tested checkpoint/workflow links
       only after all required jobs are green at one exact commit.
+
+Local pre-candidate evidence:
+
+- The exact option-off worktree collects 2,923 tests and passes 2,919 with four
+  documented skips. Ruff, workflow YAML parsing, installed-source smoke, and
+  `git diff --check` pass.
+- The one-run, `--scale 0.001` 50-codec smoke passes. The first
+  production-scale five-run guard reported one non-reproduced LAS
+  parallel-read reversal at 0.75x. An immediate `--only las --runs 5`
+  diagnostic measured 1.43x, and the complete 50-codec rerun measured 1.82x
+  for the same row while passing every retained O4/O5 directional and
+  mmap/sink memory guard. The isolated diagnostic changed only scope to LAS;
+  the two complete guards used identical thresholds, fixtures, codec set, and
+  lane counts.
+- Reproduction sequence:
+  `bench/bench_io.py --runs 1 --scale 0.001`,
+  `bench/bench_io.py --runs 5 --require-o4-gains
+  --require-o5-inspect-gains --require-o5-partial-gains`,
+  `bench/bench_io.py --only las --runs 5`, then the unchanged complete
+  five-run guard again. Each invocation also used `--json` to retain its
+  result under `build/`.
+- The sdist-first build from `0a2db6e` produced
+  `sceneio-0.2.0.tar.gz` (3,990,113 bytes,
+  SHA-256 `549f0b9c90abc3ee62dcc0b5c984461304beb43796dd70e5323036551f1707eb`).
+  Building the Windows wheel from that exact archive produced
+  `sceneio-0.2.0-cp312-abi3-win_amd64.whl` (2,155,041 bytes,
+  SHA-256 `b9dbe7cb73dc43f5f58d4231f00752ce4c03bef76193e295059794da1268e17b`).
+- The wheel has 53 entries, exactly one native module (`sceneio._core`), no
+  native test target, and no top-level build/include/lib/share/bin content.
+  Its packaged `LICENSES/` set exactly equals the repository inventory, and
+  NumPy is its only unconditional dependency.
+- A fresh Python 3.12 environment resolved only SceneIO 0.2.0 and NumPy 2.5.1;
+  `sceneio._wheel_smoke` passed. The installed `_core` depends only on
+  `python312.dll`, standard Windows system libraries, and the Microsoft C/C++
+  runtimes.
+- No candidate SHA exists yet, and the hosted jobs have not run for this
+  change. Their checkboxes and the N0 exit remain open.
 
 ## 5. R1 — freeze contracts and evidence
 
