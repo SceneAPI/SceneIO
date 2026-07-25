@@ -18,6 +18,7 @@ import numpy as np
 
 from sceneio import _core
 from sceneio.errors import SceneIoError
+from sceneio.io import _gltf as _gltf_adapter
 from sceneio.io import _obj as _obj_adapter
 from sceneio.io._ply import classify_ply
 
@@ -46,6 +47,8 @@ class Codec:
     read_window: Callable[[str, int, int, int, int], object] | None = None
     read_points: Callable[[str, int, int], object] | None = None
     read_faces: Callable[[str, int, int], object] | None = None
+    read_mesh: Callable[[str, int], object] | None = None
+    read_primitive: Callable[[str, int], object] | None = None
     read_states: Callable[[str, int, int], object] | None = None
     read_image: Callable[[str, int], object] | None = None
     read_pair: Callable[[str, int, int], object] | None = None
@@ -108,6 +111,10 @@ class Codec:
             selectors.append("points")
         if self.read_faces is not None:
             selectors.append("faces")
+        if self.read_mesh is not None:
+            selectors.append("mesh_id")
+        if self.read_primitive is not None:
+            selectors.append("primitive_id")
         if self.read_states is not None:
             selectors.append("states")
         if self.read_image is not None:
@@ -766,6 +773,103 @@ register(
             "corner_attributes",
             "material_metadata",
             "coordinate_metadata",
+        ),
+    )
+)
+register(
+    Codec(
+        "gltf",
+        (".gltf",),
+        _gltf_adapter.read_gltf,
+        _gltf_adapter.write_gltf,
+        record=_core.MeshScene,
+        datatype="mesh_scene",
+        inspect=_gltf_adapter.inspect_gltf,
+        read_mesh=_gltf_adapter.read_gltf_mesh,
+        read_primitive=_gltf_adapter.read_gltf_primitive,
+        container_kind="multi_file",
+        supported_features=(
+            "gltf_2_0_json",
+            "external_buffers",
+            "base64_data_buffers",
+            "buffer_views",
+            "strided_accessors",
+            "sparse_accessors",
+            "triangle_primitives",
+            "uint8_uint16_uint32_indices",
+            "vertex_normals",
+            "texcoord_0",
+            "normalized_rgba8",
+            "node_hierarchy",
+            "node_transforms",
+            "multiple_scenes",
+            "metallic_roughness_materials",
+            "uri_image_references",
+        ),
+        unsupported_features=(
+            "non_triangle_primitive_modes",
+            "corner_attributes",
+            "texcoord_sets_above_zero",
+            "float_or_uint16_colors",
+            "buffer_view_images",
+            "double_sided_materials",
+            "texture_transforms",
+            "skins",
+            "morph_targets",
+            "animations",
+            "cameras",
+            "lights",
+            "extensions",
+            "draco",
+            "meshopt",
+        ),
+    )
+)
+register(
+    Codec(
+        "glb",
+        (".glb",),
+        _gltf_adapter.read_glb,
+        _gltf_adapter.write_glb,
+        record=_core.MeshScene,
+        datatype="mesh_scene",
+        magic=(b"glTF",),
+        inspect=_gltf_adapter.inspect_glb,
+        read_mesh=_gltf_adapter.read_glb_mesh,
+        read_primitive=_gltf_adapter.read_glb_primitive,
+        supported_features=(
+            "glb_2_0",
+            "embedded_binary_buffer",
+            "buffer_views",
+            "strided_accessors",
+            "sparse_accessors",
+            "triangle_primitives",
+            "uint8_uint16_uint32_indices",
+            "vertex_normals",
+            "texcoord_0",
+            "normalized_rgba8",
+            "node_hierarchy",
+            "node_transforms",
+            "multiple_scenes",
+            "metallic_roughness_materials",
+            "uri_image_references",
+        ),
+        unsupported_features=(
+            "non_triangle_primitive_modes",
+            "corner_attributes",
+            "texcoord_sets_above_zero",
+            "float_or_uint16_colors",
+            "buffer_view_images",
+            "double_sided_materials",
+            "texture_transforms",
+            "skins",
+            "morph_targets",
+            "animations",
+            "cameras",
+            "lights",
+            "extensions",
+            "draco",
+            "meshopt",
         ),
     )
 )

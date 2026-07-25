@@ -288,8 +288,6 @@ def test_texture_domain_validation(kwargs, message):
 @pytest.mark.parametrize(
     "names",
     [
-        [""],
-        ["a", "a"],
         ["nul\0name"],
         pytest.param(["x" * (1024 * 1024 + 1)], id="oversized"),
     ],
@@ -297,6 +295,12 @@ def test_texture_domain_validation(kwargs, message):
 def test_material_name_validation(names):
     with pytest.raises(ValueError, match=r"name|unique|MiB|NUL"):
         _core.material_set(names)
+
+
+def test_empty_and_duplicate_material_names_are_preserved():
+    materials = _core.material_set(["", "same", "same"])
+
+    assert materials.names == ["", "same", "same"]
 
 
 @pytest.mark.parametrize(

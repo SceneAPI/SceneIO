@@ -753,6 +753,16 @@ def test_obj_writer_guard_does_not_silently_drop_conventions():
     with pytest.raises(ValueError, match="without materials"):
         _core.write_obj(without_materials, "materials.mtl")
 
+    for names, message in [
+        (["", "glass"], "non-empty"),
+        (["same", "same"], "unique"),
+    ]:
+        invalid = _rebuild_mesh(
+            mesh, materials=_core.material_set(names)
+        )
+        with pytest.raises(ValueError, match=message):
+            _core.write_mtl(invalid.materials)
+
     cases = [
         ({"coordinate_frame": "opencv"}, "coordinate frame"),
         ({"scale_to_meters": 0.01}, "coordinate frame"),

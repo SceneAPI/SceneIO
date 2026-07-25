@@ -46,6 +46,9 @@ exposes them:
 - `Reconstruction.quaternion_order == "wxyz"`, `.pose_convention == "world_to_camera"`
 - `GaussianCloud.quaternion_order == "wxyz"`, `.scale_space == "log"`,
   `.opacity_space == "logit"`, `.sh_layout == "channel_grouped"`
+- `Mesh.coordinate_frame == "opengl"` for canonical glTF geometry;
+  `MeshScene` retains the source node hierarchy, local transforms, scenes, and
+  mesh-to-primitive ranges instead of baking or flattening transforms.
 
 ## Adding a codec — the recipe
 
@@ -132,6 +135,9 @@ same public record kind as `read()`:
   `FeatureSet`; `pair=(image_id1, image_id2)` returns the unordered pair's
   compiled `MatchGraph`. Both use indexed SQL queries and do not fetch
   unrelated feature or match BLOBs.
+- `mesh_id=<source mesh index>` or `primitive_id=<flattened source primitive
+  index>` on glTF/GLB returns a `MeshScene` containing only those selected
+  primitive arrays and the shared materials.
 
 PFM, binary Netpbm, and DMB copy only selected rows, lossless WebP uses
 libwebp's cropped decoder, and FLO returns a read-only derived view whose owner
@@ -147,3 +153,25 @@ after the file handle leaves scope.
 Unsupported codecs raise `FormatError` rather than disguising a full decode as
 a partial read. COLMAP text caps non-name tokens at 1 MiB consistently in its
 full and partial readers; image names retain their unbounded format behavior.
+
+## Plain glTF/GLB scene subset
+
+The compiled cgltf-backed path preserves multiple meshes/primitives, node
+parent/child relationships, local matrix/TRS transforms, multiple scenes,
+default-scene identity, metallic-roughness material factors, URI image
+references, and sampler metadata in `MeshScene` + `MaterialSet`. JSON glTF maps
+each relative external buffer beside the document; data-URI buffers and the
+GLB BIN chunk are also supported. Dense, strided, and sparse accessors normalize
+to canonical record arrays while preserving their values.
+
+The canonical geometry subset is triangle primitives with POSITION float32 and
+optional NORMAL float32, TEXCOORD_0 (float or normalized u8/u16), normalized
+RGBA/RGB u8 colors, and u8/u16/u32 indices. Writers produce deterministic dense
+float32 attributes, RGBA8 colors, and u32 indices. A `.gltf` write encodes once,
+writes sibling JSON/BIN temporaries through native sinks, then atomically
+publishes the pair; `.glb` uses the normal single-file sink.
+
+Features without a faithful record contract reject explicitly: non-triangle
+primitive modes, corner-domain attributes, additional UV sets, bufferView
+images, double-sided or extended material properties, skins, morph targets,
+animation, cameras, lights, unknown extensions, Draco, and meshopt.

@@ -73,9 +73,9 @@ artifacts vocabulary — wire identity unchanged.
 
 ### Compiled format I/O — `read` / `write` / `inspect` / `read_partial`
 
-The lazy-loaded compiled core reads and writes 38 image, depth, tensor,
-point-cloud, Gaussian, pose/state, reconstruction, calibration, graph, and
-feature-database formats.
+The lazy-loaded compiled core reads and writes 47 image, depth, tensor,
+point-cloud, Gaussian, mesh/scene, pose/state, reconstruction, calibration,
+graph, and feature-database formats.
 `sceneio.inspect(path)` returns an immutable `Inspection` with shape, dtype,
 channels, repeated-record counts, and format-specific scalar metadata without
 decoding bulk pixel/point arrays:
@@ -179,6 +179,14 @@ triangle_part = sceneio.read_partial("part.stl", faces=(1_000, 2_000))
 polygon_mesh = sceneio.read("model.off")
 polygon_part = sceneio.read_partial("model.off", faces=(100, 200))
 
+# Plain glTF/GLB keeps source mesh/primitive ranges, node hierarchy and local
+# transforms, scenes, shared metallic-roughness materials, and URI images in a
+# MeshScene. JSON glTF maps sibling buffers; GLB maps its embedded BIN chunk.
+mesh_scene = sceneio.read("asset.gltf")
+primitive = sceneio.read_partial("asset.gltf", primitive_id=3)
+assert sceneio.inspect("asset.gltf").metadata["num_primitives"] >= 4
+sceneio.write(mesh_scene, "asset-copy.glb")
+
 # PCD 0.7 preserves organized WIDTH/HEIGHT and VIEWPOINT. Public writes use
 # little-endian binary; the core also supports ASCII and LZF binary_compressed.
 organized = sceneio.read("organized.pcd")
@@ -229,9 +237,10 @@ assert "animation" in caps.unsupported_features
 assert not sceneio.native_features("hdf5").available
 ```
 
-`sceneio.FeatureSet`, `sceneio.MatchGraph`, and `sceneio.ColmapDatabase` are
-the compiled, storage-faithful I/O records. The procedure-contract
-`sceneio.data.FeatureSet` remains a separate Python record for matcher APIs.
+`sceneio.FeatureSet`, `sceneio.MatchGraph`, `sceneio.ColmapDatabase`,
+`sceneio.Mesh`, `sceneio.MaterialSet`, and `sceneio.MeshScene` are compiled,
+storage-faithful I/O records. The procedure-contract `sceneio.data.FeatureSet`
+remains a separate Python record for matcher APIs.
 
 Partial reads are available only when the container has a genuine bounded
 access path; requesting one from a codec that would have to decode the complete
@@ -243,8 +252,9 @@ Count-prefixed PTS supports bounded point ranges while validating the declared
 point count and preserving supported intensity/RGB columns. Generic PLY reads
 ASCII and binary little/big endian point schemas; only fixed-record binary PLY
 supports bounded point ranges. COLMAP SQLite supports one-image features and
-one-pair raw/verified matches through native indexed SQL queries.
-advertises bounded point ranges.
+one-pair raw/verified matches through native indexed SQL queries. Plain
+glTF/GLB supports source mesh and flattened primitive selection while rejecting
+unrepresented scene features instead of silently dropping them.
 
 ### Errors
 

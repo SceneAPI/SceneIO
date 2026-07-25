@@ -149,6 +149,58 @@ def _fingerprint(value):
                 )
             ),
         )
+    elif isinstance(value, _core.MeshScene):
+        materials = value.materials
+        material_fields = (
+            tuple(materials.names),
+            tuple(materials.alpha_modes),
+            tuple(materials.texture_semantics),
+            tuple(materials.texture_paths),
+            *(
+                _array_fingerprint(getattr(materials, name))
+                for name in (
+                    "base_colors",
+                    "emissive_colors",
+                    "metallic",
+                    "roughness",
+                    "alpha_cutoffs",
+                    "texture_materials",
+                    "texture_uv_sets",
+                    "texture_wrap_s_codes",
+                    "texture_wrap_t_codes",
+                    "texture_min_filter_codes",
+                    "texture_mag_filter_codes",
+                )
+            ),
+        )
+        fields = (
+            value.num_meshes,
+            value.num_primitives,
+            value.num_nodes,
+            value.num_scenes,
+            value.has_materials,
+            value.default_scene,
+            tuple(value.mesh_names),
+            tuple(value.node_names),
+            tuple(value.scene_names),
+            material_fields,
+            tuple(
+                _fingerprint(value.primitive_at(index))
+                for index in range(value.num_primitives)
+            ),
+            *(
+                _array_fingerprint(getattr(value, name))
+                for name in (
+                    "mesh_primitive_offsets",
+                    "node_meshes",
+                    "node_child_offsets",
+                    "node_children",
+                    "node_local_transforms",
+                    "scene_root_offsets",
+                    "scene_roots",
+                )
+            ),
+        )
     elif isinstance(value, _core.PosedViewSet):
         fields = (
             value.num_views,
@@ -399,6 +451,39 @@ def buffer_codecs():
             np.uint8,
         ),
     )
+    mesh_glb = _core.mesh(
+        np.array(
+            [[0, 0, 0], [1, 0, 0], [0, 1, 0]],
+            np.float32,
+        ),
+        np.array([0, 3], np.uint64),
+        np.array([0, 1, 2], np.uint64),
+        vertex_normals=np.array([[0, 0, 1]] * 3, np.float32),
+        vertex_uvs=np.array([[0, 0], [1, 0], [0, 1]], np.float32),
+        vertex_colors=np.array(
+            [
+                [255, 0, 0, 255],
+                [0, 255, 0, 255],
+                [0, 0, 255, 255],
+            ],
+            np.uint8,
+        ),
+        coordinate_frame="opengl",
+    )
+    mesh_scene = _core.mesh_scene(
+        [mesh_glb],
+        np.array([0, 1], np.uint64),
+        mesh_names=["triangle"],
+        node_meshes=np.array([0], np.int64),
+        node_child_offsets=np.array([0, 0], np.uint64),
+        node_children=np.array([], np.uint64),
+        node_local_transforms=np.eye(4, dtype=np.float64)[None],
+        node_names=["node"],
+        scene_root_offsets=np.array([0, 1], np.uint64),
+        scene_roots=np.array([0], np.uint64),
+        scene_names=["scene"],
+        default_scene=0,
+    )
     flow = rng.standard_normal((5, 6, 2)).astype(np.float32)
     depth = _core.depth_map(
         rng.standard_normal((5, 6)).astype(np.float32),
@@ -608,6 +693,7 @@ def buffer_codecs():
         ),
         spec("stl", _core.read_stl, _core.write_stl, mesh_stl),
         spec("off", _core.read_off, _core.write_off, mesh_off),
+        spec("glb", _core.read_glb, _core.write_glb, mesh_scene),
         spec("pcd", _core.read_pcd, _core.write_pcd, points_pcd),
         spec("las", _core.read_las, _core.write_las, points_las),
         spec("flo", _core.read_flo, _core.write_flo, flow),
@@ -638,8 +724,8 @@ def _outcome(call, argument):
 
 
 def test_all_single_file_codecs_mmap_equal_bytes_bit_exact(tmp_path, buffer_codecs):
-    """All 41 buffer codecs decode mmap and bytes to bit-exact records."""
-    assert len(buffer_codecs) == 41
+    """All 42 buffer codecs decode mmap and bytes to bit-exact records."""
+    assert len(buffer_codecs) == 42
     for spec in buffer_codecs:
         expected = _fingerprint(spec.reader(spec.data))
         path = tmp_path / f"sample-{spec.id}.bin"
@@ -657,8 +743,8 @@ def test_all_single_file_codecs_mmap_equal_bytes_bit_exact(tmp_path, buffer_code
 
 
 def test_all_single_file_sinks_are_byte_identical(tmp_path, buffer_codecs):
-    """All 41 compiled encoders emit the exact bytes their buffer API returns."""
-    assert len(buffer_codecs) == 41
+    """All 42 compiled encoders emit the exact bytes their buffer API returns."""
+    assert len(buffer_codecs) == 42
     for spec in buffer_codecs:
         direct = tmp_path / f"direct-{spec.id}.bin"
         _core._write_to_file(spec.writer, spec.value, direct)
@@ -725,6 +811,21 @@ def _assert_inspection_matches(info, decoded):
         assert info.count == decoded.num_vertices
         assert info.metadata["num_vertices"] == decoded.num_vertices
         assert info.metadata["num_faces"] == decoded.num_faces
+    elif isinstance(decoded, _core.MeshScene):
+        vertices = sum(
+            decoded.primitive_at(index).num_vertices
+            for index in range(decoded.num_primitives)
+        )
+        faces = sum(
+            decoded.primitive_at(index).num_faces
+            for index in range(decoded.num_primitives)
+        )
+        assert info.shape == (vertices, 3)
+        assert info.dtype == "float32"
+        assert info.count == vertices
+        assert info.metadata["num_meshes"] == decoded.num_meshes
+        assert info.metadata["num_primitives"] == decoded.num_primitives
+        assert info.metadata["num_faces"] == faces
     elif isinstance(decoded, _core.PosedViewSet):
         assert info.shape == (decoded.num_views,)
         assert info.dtype == decoded.quaternions.dtype.name
@@ -842,7 +943,7 @@ print(max(0, peak[0] - baseline))
 def test_inspect_matches_decoded_metadata_for_buffer_and_directory_codecs(
     tmp_path, buffer_codecs
 ):
-    assert len(buffer_codecs) == 41
+    assert len(buffer_codecs) == 42
     for spec in buffer_codecs:
         path = tmp_path / f"inspect-{spec.id}.data"
         path.write_bytes(spec.data)
@@ -2178,7 +2279,7 @@ def test_registry_uses_mmap_for_every_nonempty_single_file_codec(
         value = sceneio.codecs()[spec.id].read(str(path))
         gc.collect()
         assert _fingerprint(value) == _fingerprint(spec.reader(spec.data))
-    assert mapped_paths == len(buffer_codecs) == 41
+    assert mapped_paths == len(buffer_codecs) == 42
 
 
 def test_all_buffer_entries_accept_readonly_protocol_exporters(buffer_codecs):

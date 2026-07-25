@@ -87,11 +87,12 @@ void encode_strings(
     const std::vector<std::string> &values,
     std::vector<uint64_t> &offsets,
     std::vector<uint8_t> &utf8,
-    const char *context) {
+    const char *context,
+    bool allow_empty) {
     offsets.reserve(values.size() + 1);
     offsets.push_back(0);
     for (const std::string &value : values) {
-        validate_text(value, context);
+        validate_text(value, context, allow_empty);
         if (value.size() >
             std::numeric_limits<size_t>::max() - utf8.size())
             throw std::length_error(
@@ -110,16 +111,19 @@ std::vector<std::string> decode_strings(
         throw std::invalid_argument(
             "material set: malformed string table extents");
     result.reserve(offsets.size() - 1);
+    const char *data = utf8.empty()
+                           ? ""
+                           : reinterpret_cast<const char *>(utf8.data());
     for (size_t index = 0; index + 1 < offsets.size(); ++index) {
         const uint64_t begin_value = offsets[index];
         const uint64_t end_value = offsets[index + 1];
-        if (begin_value >= end_value || end_value > utf8.size())
+        if (begin_value > end_value || end_value > utf8.size())
             throw std::invalid_argument(
                 "material set: malformed string table offsets");
         const size_t begin = static_cast<size_t>(begin_value);
         const size_t end = static_cast<size_t>(end_value);
         result.emplace_back(
-            reinterpret_cast<const char *>(utf8.data() + begin),
+            data + begin,
             end - begin);
     }
     return result;
@@ -266,15 +270,8 @@ MaterialSet make_material_set(
         throw std::length_error("material set: material count is too large");
     if (result.t == std::numeric_limits<size_t>::max())
         throw std::length_error("material set: texture count is too large");
-    {
-        std::unordered_set<std::string> unique_names;
-        for (const std::string &name : names) {
-            validate_text(name, "material set: material name");
-            if (!unique_names.insert(name).second)
-                throw std::invalid_argument(
-                    "material set: material names must be unique");
-        }
-    }
+    for (const std::string &name : names)
+        validate_text(name, "material set: material name", true);
     if (texture_semantics.size() != result.t)
         throw std::invalid_argument(
             "material set: texture_semantics and texture_paths "
@@ -431,7 +428,7 @@ void assign_material_names(
     materials.name_utf8.clear();
     encode_strings(
         names, materials.name_offsets, materials.name_utf8,
-        "material set: material name");
+        "material set: material name", true);
 }
 
 void assign_material_texture_paths(
@@ -443,7 +440,7 @@ void assign_material_texture_paths(
     encode_strings(
         paths, materials.texture_path_offsets,
         materials.texture_path_utf8,
-        "material set: texture path");
+        "material set: texture path", false);
 }
 
 void validate_material_set(
@@ -473,7 +470,8 @@ void validate_material_set(
 
     auto validate_table = [&](const std::vector<uint64_t> &offsets,
                               const std::vector<uint8_t> &utf8,
-                              const char *name) {
+                              const char *name,
+                              bool allow_empty) {
         if (offsets.empty() || offsets[0] != 0 ||
             offsets.back() != utf8.size())
             throw std::invalid_argument(
@@ -482,7 +480,8 @@ void validate_material_set(
         for (size_t row = 0; row + 1 < offsets.size(); ++row) {
             const uint64_t begin_value = offsets[row];
             const uint64_t end_value = offsets[row + 1];
-            if (end_value <= begin_value || end_value > utf8.size())
+            if (end_value < begin_value || end_value > utf8.size() ||
+                (!allow_empty && end_value == begin_value))
                 throw std::invalid_argument(
                     prefix + name +
                     " entries must be non-empty and monotonic");
@@ -490,22 +489,20 @@ void validate_material_set(
             const size_t end = static_cast<size_t>(end_value);
             validate_text(
                 std::string(
-                    reinterpret_cast<const char *>(utf8.data() + begin),
+                    utf8.empty()
+                        ? ""
+                        : reinterpret_cast<const char *>(
+                              utf8.data() + begin),
                     end - begin),
-                (prefix + name).c_str());
+                (prefix + name).c_str(), allow_empty);
         }
     };
     validate_table(
-        materials.name_offsets, materials.name_utf8, "material name");
+        materials.name_offsets, materials.name_utf8,
+        "material name", true);
     validate_table(
         materials.texture_path_offsets,
-        materials.texture_path_utf8, "texture path");
-
-    std::unordered_set<std::string> unique_names;
-    for (const std::string &name : material_names(materials))
-        if (!unique_names.insert(name).second)
-            throw std::invalid_argument(
-                prefix + "material names must be unique");
+        materials.texture_path_utf8, "texture path", false);
 
     auto finite_range = [&](const std::vector<float> &values,
                             float minimum, float maximum,

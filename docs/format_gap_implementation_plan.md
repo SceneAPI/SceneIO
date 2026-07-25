@@ -8,10 +8,11 @@
   COLMAP database, SuperSplat compressed PLY, PlayCanvas SOG v2, and KSplat
   v0.1 are complete locally. The polygon-preserving `Mesh` record and generic
   mesh PLY are also complete locally; canonical `MaterialSet`, strict
-  polygon-preserving OBJ/MTL, and strict STL/OFF are complete locally.
+  polygon-preserving OBJ/MTL, strict STL/OFF, the `MeshScene` record, and plain
+  glTF/GLB are complete locally.
   Cross-platform wheel and instrumented validation remains a user-gated remote
   action.
-- **Current branch:** 45 compiled codecs, all read/write and inspectable, with
+- **Current branch:** 47 compiled codecs, all read/write and inspectable, with
   bounded partial reads where their containers permit them.
 - **Scope:** close every unblocked format gap declared by SceneIO's coverage
   documents without reimplementing the 0.2.0 codec tier.
@@ -1100,30 +1101,64 @@ Completion evidence:
   Fable is unavailable locally; the remote instrumented/wheel matrix remains
   user-gated.
 
-#### G3.4 glTF/GLB core
+#### G3.4 glTF/GLB core — complete locally
 
 Implementation:
 
-- Vendor cgltf for glTF 2.0 JSON/GLB parsing and writing.
-- Support external buffers, data URIs, buffer views, accessors, sparse
-  accessors, node transforms, mesh primitives, normals, UVs, colors, and
-  indices.
-- Define a minimal scene wrapper so multiple nodes/primitives are not silently
-  flattened.
-- PBR materials map through `MaterialSet`. Morph targets, skins, animation, and
-  cameras are added only when the corresponding record fields exist; otherwise
-  reject them clearly.
-- `inspect` lists scenes, nodes, primitives, accessors, dtypes, and counts from
-  metadata.
-- Partial reads select a scene/node/primitive or accessor where the buffer
-  layout permits bounded access.
-- Add optional Draco only after the policy gate is resolved; it must never be
-  required for uncompressed glTF/GLB.
+- Pinned MIT cgltf 1.15 provides glTF 2.0 JSON/GLB parsing, validation, and
+  deterministic JSON writing; SceneIO owns checked binary packing.
+- `MeshScene` retains ordered source meshes/primitives, a shared `MaterialSet`,
+  node hierarchy and row-major local transforms, scenes/roots/names, and the
+  default scene rather than flattening the document.
+- Readers cover external mapped buffers, base64 data buffers, GLB BIN,
+  bufferViews/strides, dense and sparse accessors, u8/u16/u32 indices,
+  normalized UV/color attributes, TRIANGLES, node matrix/TRS transforms,
+  multiple scenes, metallic-roughness factors, URI image references, and
+  sampler metadata.
+- Inspect parses structural metadata without loading external payloads.
+  `mesh_id` and flattened `primitive_id` partial reads validate the whole
+  container while materializing only the selected primitive arrays.
+- The paired `.gltf` + `.bin` writer encodes once into temporary native sinks
+  and publishes both atomically; GLB uses the standard single-file native sink.
+- Non-triangles, corner attributes, additional UV sets, unrepresentable color
+  encodings, embedded bufferView images, double-sided/extended materials,
+  skins, morph targets, animation, cameras, lights, extensions, Draco, and
+  meshopt reject clearly.
 
 Oracle:
 
-- pygltflib and trimesh, plus Khronos conformance/sample assets whose licenses
-  permit redistribution.
+- Hand-built binary/JSON fixtures break writer/reader symmetry; pygltflib 1.16
+  and trimesh 4 independently consume both SceneIO writers.
+
+Local verification:
+
+- 100 focused record/material/glTF cases pass, including external and data URI
+  buffers, stride/normalization/sparse accessors, duplicate/empty material
+  names, hierarchy/TRS, bytes-versus-memoryview, lifetime after file removal,
+  sink identity and rollback, numeric-locale independence, missing resources,
+  unsupported features, random truncation, and a generated 3.6 MB external
+  buffer whose public read stays below one-third of the payload in traced
+  Python allocation.
+- The 47-codec one-run harness completes. On the 13.2/14.7 MB canonical
+  glTF/GLB fixtures, five-run local MSVC medians measure 904/948 MB/s core
+  decode and 739/751 MB/s public mmap decode. Mmap removes 12.0/13.3 MB of
+  traced Python input allocation; native sinks remove the same output-sized
+  allocation. Inspection is 220x/201x faster, and one-of-four primitive reads
+  are 4.29x/3.87x faster with about one-fifth the full-read RSS growth.
+- Cross-platform wheel and instrumented validation remain part of the
+  user-gated remote matrix; Draco remains separately policy-gated.
+- A staged source distribution contains the codec, record, Python adapter,
+  and byte-exact cgltf headers/license/provenance. Building that archive from
+  a short Windows path produces the ABI3 wheel; an isolated environment with
+  only NumPy passes `_wheel_smoke`, and archive inspection finds one native
+  extension with no installed dependency headers, libraries, or vendor files.
+- Manual native-lifetime, format-correctness, and test-soundness review found
+  and closed recursive hierarchy validation on deep valid scenes, unchecked
+  output-size arithmetic, divergent inspect/read accessor validation,
+  unordered sparse destinations, duplicate writer work in the paired sink,
+  and locale-dependent JSON float arrays. No local review finding remains;
+  Fable is unavailable locally, and the remote instrumented/wheel matrix
+  remains user-gated.
 
 Validation for G3:
 
@@ -1762,18 +1797,20 @@ estimates.
 
 The current local checkpoint is:
 
-- 45 compiled registry codecs with read, write, inspect, mmap or path-native
+- 47 compiled registry codecs with read, write, inspect, mmap or path-native
   input, and direct file sinks;
 - O0-O5 complete for the existing codec tier;
 - `FlowField`, typed FLO, typed PFM depth, typed PNG depth, and typed scalar EXR
   depth complete;
-- 2,663 local tests pass with 4 documented platform/optional skips, Ruff and
+- 2,715 local tests pass with 4 documented platform/optional skips, Ruff and
   `git diff --check` are clean;
-- the complete 45-codec benchmark and packaged NumPy-only wheel smoke pass;
+- the complete 47-codec benchmark, staged source-distribution rebuild, and
+  packaged NumPy-only wheel smoke pass;
 - generic point PLY, PCD, StateTrajectory/EuRoC, CameraRig calibration,
   PoseGraph/g2o, the COLMAP feature database, SuperSplat compressed PLY,
   PlayCanvas SOG v2, KSplat v0.1, the canonical `Mesh` record, generic mesh PLY,
-  canonical `MaterialSet`, OBJ/MTL, and STL/OFF are complete locally;
+  canonical `MaterialSet`, OBJ/MTL, STL/OFF, `MeshScene`, and plain glTF/GLB
+  are complete locally;
 - instrumented Linux and Linux/macOS wheels have not yet been run for this
   dependency wave because pushing and dispatching remote workflows are
   user-gated.
@@ -2421,7 +2458,7 @@ topology containers.
    - support binary/ASCII STL with explicit triangle-only write guards;
    - preserve OFF polygon boundaries and supported attributes without implicit
      triangulation.
-5. **Plain glTF/GLB**
+5. **Plain glTF/GLB — complete locally**
    - implement buffers, buffer views, accessors, sparse accessors, node
      transforms, meshes/primitives, PBR materials, and image references for a
      documented core subset;

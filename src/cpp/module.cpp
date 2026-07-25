@@ -23,6 +23,7 @@ void register_pose_graph(nb::module_ &);
 void register_feature_match(nb::module_ &);
 void register_material_set(nb::module_ &);
 void register_mesh(nb::module_ &);
+void register_mesh_scene(nb::module_ &);
 // codecs/
 void register_pfm(nb::module_ &);
 void register_colmap(nb::module_ &);
@@ -34,6 +35,7 @@ void register_ply_point(nb::module_ &);
 void register_ply_mesh(nb::module_ &);
 void register_obj_mtl(nb::module_ &);
 void register_stl_off(nb::module_ &);
+void register_gltf(nb::module_ &);
 void register_pcd(nb::module_ &);
 void register_spz(nb::module_ &);
 void register_transforms_json(nb::module_ &);
@@ -122,6 +124,7 @@ NB_MODULE(_core, m) {
     register_feature_match(m);
     register_material_set(m);
     register_mesh(m);
+    register_mesh_scene(m);
 
     register_pfm(m);
     register_colmap(m);
@@ -133,6 +136,7 @@ NB_MODULE(_core, m) {
     register_ply_mesh(m);
     register_obj_mtl(m);
     register_stl_off(m);
+    register_gltf(m);
     register_pcd(m);
     register_spz(m);
     register_transforms_json(m);

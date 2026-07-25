@@ -114,6 +114,7 @@ zero‑copy + convention tags.
 | `FlowField` | `vectors` HxWx2 f32 + component/axis/row/unit/invalid meta | typed `.flo` adapter | ✅ |
 | `PointCloud` | `xyz` Nx3, `rgb`/`rgb16`, `normals`, `intensity`, optional organized shape + viewpoint | PLY‑point, PCD, LAS/LAZ, E57, `.xyz` | ✅ |
 | `Mesh` | positions; ragged face offsets/indices; vertex/corner normals, UVs, RGBA; primitive/material ranges; coordinate metadata and transform | PLY‑mesh, OBJ, STL, OFF, glTF, USD | ✅ |
+| `MeshScene` | ordered `Mesh` primitives; mesh ranges/names; shared `MaterialSet`; node hierarchy and local transforms; scene roots/names/default | glTF/GLB, future USD | ✅ |
 | `FeatureSet` | `keypoints` Nx{2,4,6} f32, `descriptors` NxD, `scores` N, image identity/size and absent-state metadata | HDF5/hloc, COLMAP DB | ✅ |
 | `MatchGraph` | ragged per-pair raw/verified `matches` Mx2 u32, `scores` M, `F/E/H` 3x3, config and relative pose | HDF5/hloc, COLMAP DB | ✅ |
 | `ColmapDatabase` | cameras, prior-focal flags, ordered features, match graph, schema version | COLMAP DB | ✅ |
@@ -172,7 +173,8 @@ Columns: **Ext/id** · **Record** · **Lib/oracle (license)** · **R/W** ·
 | ✅ OBJ (+MTL) | `Mesh` + `MaterialSet` | pinned tinyobjloader/trimesh (MIT) | R+W | strict polygon-preserving independent indices; factors/textures and sampler clamp preserved; mmap read, paired direct-sink write, metadata inspect |
 | ✅ STL | `Mesh` | independent parser + trimesh (MIT) | R+W | strict ASCII + binary LE; unwelded triangle soup and facet normals; bounded face ranges |
 | ✅ OFF | `Mesh` | independent parser + trimesh (MIT) | R+W | polygon-preserving ASCII vertex variants with normals, UVs, and exact RGBA8; bounded face ranges |
-| ⬜ glTF / GLB (+Draco) | `Mesh` | pygltflib (MIT); Draco (Apache) | R+W | json+bin; Draco optional |
+| ✅ glTF / GLB (plain) | `MeshScene` | cgltf (MIT); pygltflib + trimesh oracles | R+W | 2.0 JSON/external or data buffers and GLB BIN; sparse/strided accessors, nodes/scenes, PBR subset, mesh/primitive selectors; unsupported extensions/Draco reject |
+| policy-gated Draco glTF | `MeshScene` | Draco (Apache) | R+W | requires a separate patented-codec policy decision; never required for plain glTF/GLB |
 | ⬜ USD / USDZ | `Mesh`/scene | usd‑core/pxr (Apache) | R | heavyweight C lib; feature‑flag |
 
 ### 3e. Arrays / tensors / features

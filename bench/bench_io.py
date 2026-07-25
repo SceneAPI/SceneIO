@@ -2,7 +2,7 @@
 
 Measures, per codec, encode (write) + decode (read) throughput (MB/s over the raw
 payload) and peak Python allocation (tracemalloc), for sceneio._core vs the oracle
-library where one exists, on representative payloads for all 45 codecs. Read
+library where one exists, on representative payloads for all 47 codecs. Read
 measurements retain the legacy whole-file bytes/copy-decode path beside the
 public registry mmap path, so their peak delta captures the input copy O1
 removes and, for NPY/FLO, the decoded-array copy O2 removes. Write measurements
@@ -34,6 +34,7 @@ import xml.etree.ElementTree as ET
 from collections.abc import Callable
 from dataclasses import dataclass
 from functools import partial
+from itertools import pairwise
 from pathlib import Path
 
 import numpy as np
@@ -348,6 +349,62 @@ def _mesh_off(n):
         _core.mesh(positions, offsets, indices.reshape(-1)),
         payload,
     )
+
+
+def _mesh_scene(n):
+    rng = np.random.default_rng(41)
+    vertices = max(3, (n // 3) * 3)
+    faces = max(1, vertices // 3)
+    corners = vertices
+    positions = rng.standard_normal((vertices, 3)).astype(np.float32)
+    normals = rng.standard_normal((vertices, 3)).astype(np.float32)
+    uvs = rng.random((vertices, 2), dtype=np.float32)
+    colors = rng.integers(0, 256, (vertices, 4), dtype=np.uint8)
+    indices = np.arange(corners, dtype=np.uint64)
+    primitive_count = min(4, faces)
+    face_bounds = np.linspace(
+        0, faces, primitive_count + 1, dtype=np.int64
+    )
+    primitives = []
+    for start_face, stop_face in pairwise(face_bounds):
+        start = int(start_face) * 3
+        stop = int(stop_face) * 3
+        local_vertices = stop - start
+        primitives.append(
+            _core.mesh(
+                positions[start:stop],
+                np.arange(
+                    0, local_vertices + 1, 3, dtype=np.uint64
+                ),
+                np.arange(local_vertices, dtype=np.uint64),
+                vertex_normals=normals[start:stop],
+                vertex_uvs=uvs[start:stop],
+                vertex_colors=colors[start:stop],
+                coordinate_frame="opengl",
+            )
+        )
+    scene = _core.mesh_scene(
+        primitives,
+        np.array([0, primitive_count], np.uint64),
+        mesh_names=["mesh"],
+        node_meshes=np.array([0], np.int64),
+        node_child_offsets=np.array([0, 0], np.uint64),
+        node_children=np.array([], np.uint64),
+        node_local_transforms=np.eye(4, dtype=np.float64)[None],
+        node_names=["node"],
+        scene_root_offsets=np.array([0, 1], np.uint64),
+        scene_roots=np.array([0], np.uint64),
+        scene_names=["scene"],
+        default_scene=0,
+    )
+    payload = {
+        "positions": positions,
+        "faces": indices.reshape(faces, 3),
+        "normals": normals,
+        "uvs": uvs,
+        "colors": colors,
+    }
+    return scene, payload
 
 
 def _gauss(n):
@@ -967,6 +1024,56 @@ def _trimesh_off_r(data):
         process=False,
         maintain_order=True,
         force="mesh",
+    )
+
+
+def _trimesh_glb_w(payload):
+    mesh = trimesh.Trimesh(
+        vertices=payload["positions"],
+        faces=payload["faces"],
+        vertex_normals=payload["normals"],
+        vertex_colors=payload["colors"],
+        process=False,
+    )
+    return trimesh.exchange.gltf.export_glb(
+        trimesh.Scene(mesh)
+    )
+
+
+def _trimesh_glb_r(data):
+    return trimesh.load(
+        io.BytesIO(data),
+        file_type="glb",
+        process=False,
+        maintain_order=True,
+        force="scene",
+    )
+
+
+def _trimesh_gltf_w(payload):
+    mesh = trimesh.Trimesh(
+        vertices=payload["positions"],
+        faces=payload["faces"],
+        vertex_normals=payload["normals"],
+        vertex_colors=payload["colors"],
+        process=False,
+    )
+    return trimesh.exchange.gltf.export_gltf(
+        trimesh.Scene(mesh)
+    )
+
+
+def _trimesh_gltf_r(files):
+    document = next(
+        name for name in files if name.endswith(".gltf")
+    )
+    return trimesh.load(
+        io.BytesIO(files[document]),
+        file_type="gltf",
+        resolver=files,
+        process=False,
+        maintain_order=True,
+        force="scene",
     )
 
 
@@ -1855,6 +1962,15 @@ def _specs(scale, pose_bundle=None):
             lambda rec, p: sum(value.nbytes for value in p.values()),
         ),
         Spec(
+            "glb",
+            lambda: _mesh_scene(max(3, points // 3)),
+            _core.write_glb,
+            _core.read_glb,
+            (_trimesh_glb_w if trimesh else None),
+            (_trimesh_glb_r if trimesh else None),
+            lambda rec, p: sum(value.nbytes for value in p.values()),
+        ),
+        Spec(
             "pcd",
             lambda: _pc_ply(points),
             _core.write_pcd,
@@ -2127,6 +2243,8 @@ def _directory_size(path):
 
 
 def _partial_request(codec_id, info, full_record=None):
+    if codec_id in {"gltf", "glb"}:
+        return {"primitive_id": 0}
     if codec_id in {"ply_mesh", "stl", "off"}:
         faces = info.metadata["num_faces"]
         if faces == 0:
@@ -2646,17 +2764,202 @@ def _benchmark_colmap_db(args, tmp):
     return result, write_row, inspect_row, partial_rows, display
 
 
+def _benchmark_gltf(args, tmp):
+    points = max(3, int(300_000 * args.scale))
+    record, payload = _mesh_scene(points)
+    payload_bytes = sum(value.nbytes for value in payload.values())
+    payload_mb = payload_bytes / 1e6
+    path = Path(tmp) / "gltf_scene.gltf"
+    peer = path.with_suffix(".bin")
+    buffer_uri = peer.name
+
+    def _encode():
+        return _core.write_gltf(record, buffer_uri)
+
+    json_bytes, binary_bytes = _encode()
+    json_bytes = bytes(json_bytes)
+    binary_bytes = bytes(binary_bytes)
+    file_mb = (len(json_bytes) + len(binary_bytes)) / 1e6
+
+    core_write_time, bytes_write_peak = _measure(
+        _encode, args.runs
+    )
+    bytes_write_rss = _measure_rss(_encode)
+
+    def _buffer_write():
+        document, binary = _encode()
+        path.write_bytes(document)
+        peer.write_bytes(binary)
+
+    def _sink_write():
+        return sceneio.write(record, path, format="gltf")
+
+    bytes_path_write_time, _ = _measure(
+        _buffer_write, args.runs
+    )
+    sink_write_time, sink_write_peak = _measure(
+        _sink_write, args.runs
+    )
+    sink_write_rss = _measure_rss(_sink_write)
+    if (
+        path.read_bytes() != json_bytes
+        or peer.read_bytes() != binary_bytes
+    ):
+        raise AssertionError(
+            "glTF file sink output differs from buffer encoder")
+
+    def _core_read():
+        return _core.read_gltf(
+            json_bytes, {buffer_uri: binary_bytes})
+
+    core_read_time, _ = _measure(_core_read, args.runs)
+
+    def _bytes_read():
+        return _core.read_gltf(
+            path.read_bytes(), {buffer_uri: peer.read_bytes()})
+
+    def _path_read():
+        if args.cold_cache:
+            _evict_file_cache(path)
+            _evict_file_cache(peer)
+        return sceneio.read(path, format="gltf")
+
+    _, bytes_peak = _measure(_bytes_read, args.runs)
+    path_read_time, mmap_peak = _measure(
+        _path_read, args.runs
+    )
+    bytes_rss = _measure_rss(_bytes_read)
+    mmap_rss = _measure_rss(_path_read)
+
+    def _inspect():
+        if args.cold_cache:
+            _evict_file_cache(path)
+        return sceneio.inspect(path, format="gltf")
+
+    inspect_time, inspect_peak = _measure(
+        _inspect, args.runs
+    )
+    inspect_rss = _measure_rss(_inspect)
+
+    def _partial():
+        if args.cold_cache:
+            _evict_file_cache(path)
+            _evict_file_cache(peer)
+        return sceneio.read_partial(
+            path, format="gltf", primitive_id=0)
+
+    partial_time, partial_peak = _measure(
+        _partial, args.runs
+    )
+    partial_rss = _measure_rss(_partial)
+
+    oracle_write_time = None
+    oracle_read_time = None
+    if trimesh is not None and not args.skip_oracles:
+        oracle_files = _try(
+            lambda: _trimesh_gltf_w(payload))
+        if oracle_files is not None:
+            measured = _try(
+                lambda: _measure(
+                    lambda: _trimesh_gltf_w(payload),
+                    args.runs,
+                ))
+            oracle_write_time = measured[0] if measured else None
+            measured = _try(
+                lambda: _measure(
+                    lambda: _trimesh_gltf_r(oracle_files),
+                    args.runs,
+                ))
+            oracle_read_time = measured[0] if measured else None
+
+    result = {
+        "codec": "gltf",
+        "payload_mb": payload_mb,
+        "file_mb": file_mb,
+        "write_mbps": payload_mb / core_write_time,
+        "bytes_path_write_mbps": (
+            payload_mb / bytes_path_write_time),
+        "path_write_mbps": payload_mb / sink_write_time,
+        "read_mbps": payload_mb / core_read_time,
+        "path_read_mbps": payload_mb / path_read_time,
+        "oracle_write_mbps": (
+            payload_mb / oracle_write_time
+            if oracle_write_time is not None else None),
+        "oracle_read_mbps": (
+            payload_mb / oracle_read_time
+            if oracle_read_time is not None else None),
+        "bytes_peak_mb": bytes_peak / 1e6,
+        "mmap_peak_mb": mmap_peak / 1e6,
+        "bytes_rss_mb": bytes_rss / 1e6,
+        "mmap_rss_mb": mmap_rss / 1e6,
+        "inspect_ms": inspect_time * 1000,
+        "inspect_peak_mb": inspect_peak / 1e6,
+        "inspect_rss_mb": inspect_rss / 1e6,
+        "partial_ms": partial_time * 1000,
+        "partial_peak_mb": partial_peak / 1e6,
+        "partial_rss_mb": partial_rss / 1e6,
+        "bytes_write_peak_mb": bytes_write_peak / 1e6,
+        "sink_write_peak_mb": sink_write_peak / 1e6,
+        "bytes_write_rss_mb": bytes_write_rss / 1e6,
+        "sink_write_rss_mb": sink_write_rss / 1e6,
+    }
+    write_row = (
+        "gltf",
+        payload_mb,
+        file_mb,
+        payload_mb / bytes_path_write_time,
+        payload_mb / sink_write_time,
+        bytes_write_peak / 1e6,
+        sink_write_peak / 1e6,
+        bytes_write_rss / 1e6,
+        sink_write_rss / 1e6,
+    )
+    inspect_row = (
+        "gltf",
+        path_read_time,
+        inspect_time,
+        mmap_peak / 1e6,
+        inspect_peak / 1e6,
+        mmap_rss / 1e6,
+        inspect_rss / 1e6,
+    )
+    partial_row = (
+        "gltf",
+        path_read_time,
+        partial_time,
+        mmap_peak / 1e6,
+        partial_peak / 1e6,
+        mmap_rss / 1e6,
+        partial_rss / 1e6,
+    )
+    display = (
+        payload_mb,
+        file_mb,
+        payload_mb / core_write_time,
+        payload_mb / core_read_time,
+        payload_mb / path_read_time,
+        result["oracle_write_mbps"],
+        result["oracle_read_mbps"],
+        bytes_peak / 1e6,
+        mmap_peak / 1e6,
+        bytes_rss / 1e6,
+        mmap_rss / 1e6,
+    )
+    return result, write_row, inspect_row, partial_row, display
+
+
 def _run_benchmark(args, tmp):
     pose_bundle = _poses_and_reconstruction(args.scale)
     reconstruction = pose_bundle[0]
     specs = _specs(args.scale, pose_bundle)
     directory_specs = _directory_specs()
     include_colmap_db = True
+    include_gltf = True
     if args.only:
         requested = set(args.only)
         known = {spec.id for spec in specs} | {
             spec.id for spec in directory_specs
-        } | {"colmap_db"}
+        } | {"colmap_db", "gltf"}
         unknown = requested - known
         if unknown:
             raise ValueError(
@@ -2667,6 +2970,7 @@ def _run_benchmark(args, tmp):
             spec for spec in directory_specs if spec.id in requested
         ]
         include_colmap_db = "colmap_db" in requested
+        include_gltf = "gltf" in requested
     failures = []
     results = []
     write_rows = []
@@ -3559,6 +3863,57 @@ def _run_benchmark(args, tmp):
             results.append({"codec": s.id, "error": f"{type(e).__name__}: {e}"})
             print(f"{s.id:<14} ERROR: {type(e).__name__}: {e}")
 
+    if include_gltf:
+        try:
+            (
+                gltf_result,
+                gltf_write_row,
+                gltf_inspect_row,
+                gltf_partial_row,
+                gltf_display,
+            ) = _benchmark_gltf(args, tmp)
+            results.append(gltf_result)
+            write_rows.append(gltf_write_row)
+            inspect_rows.append(gltf_inspect_row)
+            partial_rows.append(gltf_partial_row)
+            (
+                payload_mb,
+                file_mb,
+                write_mbps,
+                read_mbps,
+                path_read_mbps,
+                oracle_write_mbps,
+                oracle_read_mbps,
+                bytes_peak_mb,
+                mmap_peak_mb,
+                bytes_rss_mb,
+                mmap_rss_mb,
+            ) = gltf_display
+            ratio = (
+                read_mbps / oracle_read_mbps
+                if oracle_read_mbps else 0)
+            print(
+                f"{'gltf':<14}{payload_mb:>10.1f}{file_mb:>9.1f}"
+                f"{write_mbps:>9.0f}{read_mbps:>9.0f}"
+                f"{path_read_mbps:>9.0f}"
+                f"{(oracle_write_mbps or 0):>9.0f}"
+                f"{(oracle_read_mbps or 0):>9.0f}"
+                f"{bytes_peak_mb:>9.1f}{mmap_peak_mb:>9.1f}"
+                f"{bytes_rss_mb:>9.1f}{mmap_rss_mb:>9.1f}"
+                f"{ratio:>9.2f}"
+            )
+        except Exception as e:
+            failures.append("gltf")
+            results.append(
+                {
+                    "codec": "gltf",
+                    "error": f"{type(e).__name__}: {e}",
+                }
+            )
+            print(
+                f"{'gltf':<14} ERROR: "
+                f"{type(e).__name__}: {e}")
+
     if include_colmap_db:
         try:
             (
@@ -3728,7 +4083,13 @@ def _run_benchmark(args, tmp):
             print(f"{spec.id:<14} ERROR: {type(e).__name__}: {e}")
 
     if not args.only:
-        assert len(specs) + len(directory_specs) + int(include_colmap_db) == 45
+        assert (
+            len(specs)
+            + len(directory_specs)
+            + int(include_colmap_db)
+            + int(include_gltf)
+            == 47
+        )
     print("\nMB/s over raw payload; fileMB = encoded size (= the whole-file copy O1/O3 remove).")
     print("sioR = in-memory copy decode; pathR = public registry mmap read/view.")
     print("bPeakMB/mPeakMB = peak Python allocation for bytes/mmap reads (O1 delta).")

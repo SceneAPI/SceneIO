@@ -5,14 +5,15 @@ Status: complete — O0–O5 landed. Scope: the compiled `sceneio._core` I/O pat
 hardening/perf work concrete).
 
 Post-0.2 format expansion inherits the same gates. The registry currently has
-45 codecs (42 buffer-backed entries, one path-native SQLite database, and two
-COLMAP directory-only entries; SOG also exposes an unbundled multi-file path).
+47 codecs: 42 file containers, three multi-file containers, and two COLMAP
+directory containers. COLMAP SQLite remains path-native; SOG, OBJ/MTL, and
+glTF/external buffers have explicit multi-file adapters.
 The latest record waves add the four calibration formats over `CameraRig`, g2o
 over `PoseGraph`, `colmap_db` over
 `ColmapDatabase`/`FeatureSet`/`MatchGraph`, polygonal PLY over `Mesh`, and
-OBJ/MTL over `Mesh` + `MaterialSet`, and STL/OFF over `Mesh`; each inherits
-direct file sinks, metadata inspection, partial reads where meaningful, and the all-codec
-differential/memory harness.
+OBJ/MTL over `Mesh` + `MaterialSet`, STL/OFF over `Mesh`, and plain glTF/GLB
+over `MeshScene`; each inherits direct file sinks, metadata inspection, partial
+reads where meaningful, and the all-codec differential/memory harness.
 
 The representative COLMAP database fixture contains 9.65 MB of logical
 features and match data in a 9.92 MB SQLite file. On local MSVC it measured
@@ -36,6 +37,15 @@ and 396 MB/s public mmap read. Mmap/direct-sink traced allocation drops from
 5.57/5.57 MB to about 0.01/0.001 MB for STL and from 7.56/7.56 MB to the same
 bounded overhead for OFF. Inspection is 3.67Ã—/1.98Ã— faster than full read,
 and 1/16 face selection is 3.26Ã—/1.21Ã— faster.
+
+Plain glTF/GLB extends the same contract to a scene-preserving multi-primitive
+record. On 13.2/14.7 MB canonical fixtures, five-run local MSVC medians measured
+904/948 MB/s in-memory decode and 739/751 MB/s public mmap decode, close to the
+trimesh oracle. Mmap removes 12.0/13.3 MB of traced Python allocation. Native
+file sinks remove the same output-sized allocation and use one encode for the
+paired JSON/BIN output. Metadata inspection is 220x/201x faster than full read;
+one-of-four primitive selection is 4.29x/3.87x faster and reduces sampled RSS
+from 26.4/29.2 MB to 5.1/5.7 MB.
 
 **Committed scope (decided):** the **full O0–O5 program**, applied **uniformly to
 all 23 codecs**, with **qualitative** success criteria — every step must show a

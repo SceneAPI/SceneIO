@@ -45,6 +45,7 @@ Image = _core.Image
 PointCloud = _core.PointCloud
 MaterialSet = _core.MaterialSet
 Mesh = _core.Mesh
+MeshScene = _core.MeshScene
 PoseGraph = _core.PoseGraph
 FeatureSet = _core.FeatureSet
 MatchGraph = _core.MatchGraph
@@ -193,6 +194,8 @@ def read_partial(
     window=None,
     points=None,
     faces=None,
+    mesh_id=None,
+    primitive_id=None,
     states=None,
     image_id=None,
     pair=None,
@@ -206,7 +209,10 @@ def read_partial(
     ``(row_start, row_stop, column_start, column_stop)``. ``points``, ``faces``,
     and ``states`` are half-open record ranges ``(start, stop)``. A mesh face
     selection retains the complete vertex domain and slices all face/corner
-    domains. ``image_id`` selects one COLMAP image by its persisted id. ``pair``
+    domains. ``mesh_id`` selects one glTF mesh object; ``primitive_id`` selects
+    one glTF primitive in flattened source order. Both return a ``MeshScene``
+    geometry projection with the shared material table and no node/scene rows.
+    ``image_id`` selects one COLMAP image by its persisted id. ``pair``
     selects one unordered pair of persisted COLMAP image ids. ``tensors``
     selects complete named tensors.
     ``slices`` maps tensor names to half-open leading-axis ``(start, stop)``
@@ -220,6 +226,8 @@ def read_partial(
             window,
             points,
             faces,
+            mesh_id,
+            primitive_id,
             states,
             image_id,
             pair,
@@ -248,6 +256,26 @@ def read_partial(
         if codec.read_faces is None:
             raise FormatError(f"format {fmt!r} does not support face-subset reads")
         operation = codec.read_faces
+    elif mesh_id is not None:
+        selected_mesh = _selector_int(mesh_id, "mesh_id")
+        if selected_mesh < 0:
+            raise ValueError("mesh_id must be non-negative")
+        if codec.read_mesh is None:
+            raise FormatError(
+                f"format {fmt!r} does not support mesh-subset reads"
+            )
+        operation = codec.read_mesh
+        values = (selected_mesh,)
+    elif primitive_id is not None:
+        selected_primitive = _selector_int(primitive_id, "primitive_id")
+        if selected_primitive < 0:
+            raise ValueError("primitive_id must be non-negative")
+        if codec.read_primitive is None:
+            raise FormatError(
+                f"format {fmt!r} does not support primitive-subset reads"
+            )
+        operation = codec.read_primitive
+        values = (selected_primitive,)
     elif states is not None:
         values = _selector_ints(states, 2, "states")
         if codec.read_states is None:
@@ -483,6 +511,7 @@ __all__ = [
     "MatchGraph",
     "MaterialSet",
     "Mesh",
+    "MeshScene",
     "NativeFeatureCapabilities",
     "PointCloud",
     "PoseGraph",

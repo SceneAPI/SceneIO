@@ -25,6 +25,8 @@ def test_registry_has_builtins():
         "npy",
         "npz",
         "netpbm",
+        "gltf",
+        "glb",
     } <= set(sceneio.codecs())
 
 
@@ -316,3 +318,34 @@ def test_mesh_off_roundtrip_via_public_api(tmp_path):
     np.testing.assert_array_equal(decoded.positions, positions)
     np.testing.assert_array_equal(decoded.face_offsets, [0, 4])
     np.testing.assert_array_equal(decoded.face_indices, [0, 1, 2, 3])
+
+
+@pytest.mark.parametrize(("suffix", "format_id"), [(".gltf", "gltf"), (".glb", "glb")])
+def test_mesh_scene_roundtrip_via_public_api(tmp_path, suffix, format_id):
+    positions = np.array(
+        [[0, 0, 0], [1, 0, 0], [0, 1, 0]],
+        dtype=np.float32,
+    )
+    primitive = _core.mesh(
+        positions,
+        np.array([0, 3], np.uint64),
+        np.array([0, 1, 2], np.uint64),
+        coordinate_frame="opengl",
+    )
+    source = _core.mesh_scene(
+        [primitive],
+        np.array([0, 1], np.uint64),
+        mesh_names=["triangle"],
+    )
+    path = tmp_path / f"scene{suffix}"
+
+    sceneio.write(source, path)
+
+    assert sceneio.detect(path) == format_id
+    decoded = sceneio.read(path)
+    assert isinstance(decoded, sceneio.MeshScene)
+    assert decoded.mesh_names == ["triangle"]
+    np.testing.assert_array_equal(decoded.primitive_at(0).positions, positions)
+    assert sceneio.inspect(path).metadata["num_primitives"] == 1
+    selected = sceneio.read_partial(path, primitive_id=0)
+    np.testing.assert_array_equal(selected.primitive_at(0).positions, positions)

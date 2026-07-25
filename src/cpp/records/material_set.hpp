@@ -15,6 +15,9 @@ struct MaterialSet {
     size_t n = 0;
     size_t t = 0;
 
+    // glTF material names are optional and non-identifying, so empty and
+    // duplicate values are valid. Codecs such as MTL that address materials
+    // by name must guard those values at write time.
     std::vector<uint64_t> name_offsets;  // n+1
     std::vector<uint8_t> name_utf8;
 

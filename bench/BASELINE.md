@@ -929,3 +929,35 @@ normal policy, and malformed extent/index handling. Trimesh consumes both
 writers and supplies independent binary/ASCII STL and OFF inputs. Face
 selection validates the complete mapped input while materializing only the
 selected topology; OFF deliberately retains its complete vertex domain.
+
+## Plain glTF/GLB scene baseline — 2026-07-25
+
+Plain glTF and GLB raise the registry and harness to 47 codecs. The benchmark
+scene has one source mesh split into four triangle primitives, one node, and one
+scene. Its canonical buffers total 13.2 MB for the trimesh-compatible glTF
+payload view and 14.7 MB including SceneIO's GLB attribute accounting; the
+deterministic outputs are 12.0 MB JSON+BIN and 13.3 MB GLB. Five-run local MSVC
+medians were:
+
+```text
+codec  core write  core read  mmap read  oracle W/R  inspect             partial
+----------------------------------------------------------------------------------
+gltf   573 MB/s    904 MB/s   739 MB/s   231/1045    0.081 ms (220.26x)  4.168 ms (4.29x)
+glb    526 MB/s    948 MB/s   751 MB/s   215/746     0.097 ms (200.61x)  5.044 ms (3.87x)
+```
+
+The public mmap readers remove the complete 12.0/13.3 MB encoded-size Python
+allocation (traced peaks fall to displayed 0.0 MB). Direct sinks likewise
+remove the output-sized Python allocation and match the buffer writers
+byte-for-byte. The paired glTF sink encodes once, writes JSON and BIN native
+temporaries, and atomically installs the pair; at this size it measured
+451 MB/s versus 467 MB/s for non-atomic buffer-plus-direct-file writes. GLB
+measured 471 versus 431 MB/s. One-of-four primitive reads reduce sampled RSS
+from 26.4 to 5.1 MB for glTF and from 29.2 to 5.7 MB for GLB.
+
+Hand-built independent JSON/GLB fixtures exercise external and data URI
+buffers, byte strides, normalized u16 UVs, normalized RGB8 colors, sparse
+accessors, duplicate/empty material names, samplers, and node TRS. Both
+pygltflib and trimesh consume SceneIO output. Lifetime, truncation, malformed
+extent, convention-guard, missing-resource, rollback, sink-identity, and
+large-external-buffer allocation tests cover the optimized paths.

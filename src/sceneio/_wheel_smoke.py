@@ -313,6 +313,48 @@ def _stl_off(root: Path) -> None:
     )
 
 
+def _gltf_glb(root: Path) -> None:
+    primitive = _core.mesh(
+        np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0]], np.float32),
+        np.array([0, 3], np.uint64),
+        np.array([0, 1, 2], np.uint64),
+        vertex_normals=np.array([[0, 0, 1]] * 3, np.float32),
+        vertex_uvs=np.array([[0, 0], [1, 0], [0, 1]], np.float32),
+        coordinate_frame="opengl",
+    )
+    mesh_scene = _core.mesh_scene(
+        [primitive],
+        np.array([0, 1], np.uint64),
+        mesh_names=["triangle"],
+        node_meshes=np.array([0], np.int64),
+        node_child_offsets=np.array([0, 0], np.uint64),
+        node_children=np.array([], np.uint64),
+        node_local_transforms=np.eye(4, dtype=np.float64)[None],
+        node_names=["node"],
+        scene_root_offsets=np.array([0, 1], np.uint64),
+        scene_roots=np.array([0], np.uint64),
+        scene_names=["main"],
+        default_scene=0,
+    )
+    assert sceneio.MeshScene is _core.MeshScene
+    for suffix, format_id in ((".gltf", "gltf"), (".glb", "glb")):
+        path = root / f"mesh{suffix}"
+        sceneio.write(mesh_scene, path)
+        assert sceneio.detect(path) == format_id
+        decoded = sceneio.read(path)
+        assert decoded.mesh_names == ["triangle"]
+        assert np.array_equal(
+            decoded.primitive_at(0).positions, primitive.positions
+        )
+        assert sceneio.inspect(path).metadata["num_nodes"] == 1
+        selected = sceneio.read_partial(path, primitive_id=0)
+        assert selected.num_primitives == 1
+        assert np.array_equal(
+            selected.primitive_at(0).face_indices,
+            primitive.face_indices,
+        )
+
+
 def _point_depth_and_flow(root: Path, values: np.ndarray) -> None:
     points = root / "points.pts"
     sceneio.write(_core.point_cloud(values[:, :3]), points)
@@ -611,6 +653,7 @@ def main() -> None:
         _mesh_ply(root)
         _obj_mtl(root)
         _stl_off(root)
+        _gltf_glb(root)
         _point_depth_and_flow(root, values)
         _reconstruction_and_images(root)
         _state_trajectory(root)

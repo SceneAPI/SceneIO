@@ -929,6 +929,16 @@ std::string encode_mtl(const MaterialSet &materials) {
     const std::vector<std::string> paths =
         material_texture_paths(materials);
 
+    std::unordered_set<std::string> unique_names;
+    for (const std::string &name : names) {
+        if (name.empty())
+            throw std::invalid_argument(
+                "MTL writer: material names must be non-empty");
+        if (!unique_names.insert(name).second)
+            throw std::invalid_argument(
+                "MTL writer: material names must be unique");
+    }
+
     for (size_t material = 0; material < materials.n; ++material) {
         const float alpha = materials.base_colors[material * 4 + 3];
         const uint8_t mode = materials.alpha_modes[material];

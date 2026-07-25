@@ -1,3 +1,5 @@
 src/cpp/third_party/sqlite/sqlite3.c -whitespace
 src/cpp/third_party/sqlite/sqlite3.h -whitespace
+src/cpp/third_party/cgltf/cgltf.h -whitespace
+src/cpp/third_party/cgltf/cgltf_write.h -whitespace
 src/cpp/third_party/tinyobjloader/LICENSE -whitespace
