@@ -8,12 +8,13 @@ claim that every compression/parser kernel is the fastest viable backend.
 Backend qualification is the next prerequisite in
 [`repository_organization_plan.md`](repository_organization_plan.md), with the
 JPEG backend already recorded as a known encode/decode gap requiring a measured
-libjpeg-turbo comparison.
+libjpeg-turbo comparison. The reviewed, commit-sized verification checklist is
+[`next_stage_implementation_checklist.md`](next_stage_implementation_checklist.md).
 
 Scope: the compiled `sceneio._core` I/O path on `phase0-nanobind-core`.
 Companion to `coverage_roadmap.md` (this makes its "Phase 7" hardening/perf work
 concrete). Phase landing notes below are historical evidence from the commit at
-which each phase closed. At the 2026-07-25 `ea622ac` code checkpoint, local
+which each phase closed. At the 2026-07-25 `d52c1e0` code checkpoint, local
 MSVC passes 2,912 tests with 4 skips and Windows/macOS mmap CI passes; Linux
 normal and instrumented CI still have the portability/environment blockers
 listed in `format_gap_implementation_plan.md`, so the current expanded tier is

@@ -351,6 +351,9 @@ Engineering status and extension work are tracked in:
 - [`docs/repository_organization_plan.md`](docs/repository_organization_plan.md)
   — the required family split, offline-source closure, and per-codec backend
   performance qualification before another format wave;
+- [`docs/next_stage_implementation_checklist.md`](docs/next_stage_implementation_checklist.md)
+  — the reviewed commit-by-commit implementation, testing, benchmark, and
+  cross-platform validation checklist for that gate;
 - [`docs/format_gap_implementation_plan.md`](docs/format_gap_implementation_plan.md)
   — the dependency-ordered remaining format plan.
 

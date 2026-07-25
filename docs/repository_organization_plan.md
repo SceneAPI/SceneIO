@@ -6,6 +6,10 @@ This plan keeps SceneIO manageable as the registry grows beyond 50 codecs. It
 is a behavior-preserving architecture and evidence pass: no format is added,
 removed, or semantically changed while this gate is open.
 
+The commit-sized execution order, tests, verification, validation, and
+documentation checklist is
+[`next_stage_implementation_checklist.md`](next_stage_implementation_checklist.md).
+
 ## Current checkpoint
 
 The codec-per-file C++ layer remains reasonably isolated, but orchestration and
@@ -152,22 +156,25 @@ compatible facades. Moving files is not permission to redesign contracts.
 
 ## One manifest, several consumers
 
-The current registry is already the runtime source of truth. The organization
-pass adds a small declarative internal manifest boundary so one family module
-owns each codec registration and reusable test/benchmark metadata can be
-joined by format id.
+The mutable registry remains the runtime extension surface. The organization
+pass adds immutable built-in family definitions and a canonical aggregate so
+one family module owns each built-in codec registration and reusable
+test/benchmark metadata can be joined by format id. Repository completeness
+rules apply to built-ins, not third-party codecs registered at runtime.
 
 Required invariants:
 
-1. Every format id is registered exactly once and belongs to exactly one
-   family.
+1. Every built-in format id is registered exactly once and belongs to exactly
+   one family; third-party runtime registrations are not required to appear in
+   repository manifests.
 2. The union of family registrations is the same 50-id set before and after
    migration.
 3. Detection precedence remains explicitly tested, especially PLY and generic
    text/directory formats.
 4. Capability and native-feature snapshots remain byte-identical.
 5. The benchmark and cross-codec fixture catalogs fail when a new available
-   codec lacks an explicit inclusion or documented exemption.
+   built-in codec lacks an explicit inclusion or documented exemption; runtime
+   extension registrations remain outside repository-completeness checks.
 6. Coverage documents fail when their current-status inventory disagrees with
    the live manifest.
 7. Every default native dependency has provenance, license, patch, and offline
@@ -196,11 +203,18 @@ Before selecting or retaining a stable backend:
    - one lane and bounded automatic lanes where supported;
    - deterministic bytes or semantic equality;
    - binary size and import/startup impact.
+   Decoder candidates consume the same hashed encoded corpus, with producer,
+   settings, provenance, and accepted-subset coverage recorded. Where
+   possible, that corpus includes both retained-writer and independent
+   reference/spec fixtures.
 3. Run representative small, normal, and generated 100 MiB-class fixtures.
 4. Verify the candidate on MSVC, manylinux2014 GCC 10, and AppleClang.
 5. Select the fastest candidate that also satisfies fidelity, deterministic
    behavior, permissive licensing, static/offline buildability, maintenance,
    and artifact-size constraints.
+   Lossy profiles use predeclared comparative non-inferiority margins,
+   aggregation/confidence rules, and file-size matching bounds against the
+   retained backend.
 6. Record the candidates, results, selection, and any accepted tradeoff in
    `bench/PERFORMANCE_STATUS.toml` and `bench/BASELINE.md`.
 
@@ -208,24 +222,28 @@ Prefer the upstream optimized kernel. Write a SceneIO-native kernel only when
 no suitable upstream project meets the format contract, or when measurement
 proves the bounded native implementation is materially better and maintainable.
 
-The performance ledger contains one entry per live codec:
+The performance ledger contains one entry per built-in codec, performance
+profile, and direction cell:
 
 ```toml
-[[codec]]
-id = "jpeg"
+schema_version = 1
+
+[[operation]]
+codec_id = "jpeg"
+profile = "rgb8_q90_420"
+direction = "encode"
 adapter = "repo"
-read_backend = "stb_image"
-write_backend = "stb_image_write"
-backend_source = "third_party"
+backend = "stb_image_write"
+backend_source = "src/cpp/third_party/stb"
 transport_status = "qualified"
-decode_status = "known_gap"
-encode_status = "known_gap"
+status = "known_gap"
 evidence = "bench/BASELINE.md#o0-baseline"
 next_candidate = "libjpeg-turbo"
 ```
 
-Encode and decode are qualified separately; read-only/write-only formats use
-`not_applicable` for the missing direction. Allowed operation states are:
+Encode and decode are qualified separately for every materially different
+profile; a declared direction that a codec does not expose uses
+`not_applicable`. Allowed operation states are:
 
 - `qualified`: the viable candidate set and exclusions are recorded, the
   finalists are measured through SceneIO on all supported toolchains, and the
@@ -251,7 +269,8 @@ entries rather than inheriting a blanket claim.
 
 - Snapshot the 50 ids, capabilities, native features, detection precedence,
   public imports, and `_core` symbol set.
-- Add the performance ledger schema and enforce one entry per registry id.
+- Add the performance ledger schema and enforce required operation cells for
+  every id in `BUILTIN_DEFINITIONS`.
 - Add import-cycle and family-ownership tests.
 - Give each documentation surface one job: keep current status in
   `format_coverage.md`, active work in `format_gap_implementation_plan.md`, and
@@ -259,6 +278,8 @@ entries rather than inheriting a blanket claim.
 
 ### R2. Split Python orchestration
 
+- Invert the sequence adapter's deferred imports of registry/inspection
+  services before moving families; inject lower-level catalogs and dispatchers.
 - Extract registry value types, shared adapters, detection, and native-feature
   metadata behind the existing `registry.py` facade.
 - Move registrations one family at a time; run capability and full public API
@@ -270,7 +291,11 @@ entries rather than inheriting a blanket claim.
 - Move fixture builders and oracles by family.
 - Keep `bench/bench_io.py` as a compatible CLI entry.
 - Centralize buffer/path/directory codec cases in `tests/_support/codec_cases.py`.
-- Split large behavior tests without duplicating parameter matrices.
+- Split large behavior tests one behavior/family at a time without duplicating
+  parameter matrices, and compare exact pytest node ids and skip reasons.
+- Preserve the current warmed-process RSS metric during the mechanical split,
+  then add a separately tested child-process RSS protocol for qualification.
+- Make required oracles and RSS sampling strict in qualification mode.
 
 ### R4. Organize native build and bindings
 
@@ -278,14 +303,25 @@ entries rather than inheriting a blanket claim.
   `CMakeLists.txt`.
 - Replace manual declarations in `module.cpp` with family registration
   functions while preserving binding order.
+- Expose a private machine-readable native codec inventory from those same
+  family tables and compare it with the native/hybrid projection of the
+  built-in Python manifest. Built-in definitions declare whether their adapter
+  owner is native, Python, or hybrid.
 - Move codecs by family in mechanical commits; do not mix semantic edits with
   moves.
 
 ### R5. Qualify performance
 
 - Populate the 50-codec ledger from existing baseline evidence.
-- Re-run missing candidate comparisons.
+- Re-run missing candidate comparisons per performance profile and direction,
+  using one provenance-recorded, accepted-subset corpus from retained and
+  independent producers for every decoder candidate.
 - Resolve `known_gap` entries, beginning with JPEG encode/decode.
+- Integrate candidates behind non-default qualification targets, switch a
+  selected default in a dedicated revertible commit, and retain the old
+  backend until a user-authorized three-platform A/B matrix passes.
+- Before removing an old backend, install a persistent same-run regression
+  guard against the ledger's pinned qualified commit.
 - Keep a backend only when the evidence supports `qualified`,
   `native_by_necessity`, or an explicit documented provisional exception.
 
@@ -308,23 +344,27 @@ earlier gate.
 
 | Unit | Implementation boundary | Focused verification | Validation and exit evidence |
 |---|---|---|---|
-| R1a | Add contract snapshots, family ownership, manifest schema, and the 50-entry performance-ledger skeleton without moving behavior | capability/document snapshot; extension/magic precedence; public imports; `_core` symbols; one ledger row per id and applicable direction | focused architecture tests, full local suite, Ruff, benchmark smoke; zero snapshot delta |
+| R1a | Add contract snapshots, built-in family ownership, manifest schema, and the performance-ledger skeleton without moving behavior | capability/document snapshot; extension/magic precedence; public imports; `_core` symbols; one ledger row per required profile and direction | focused architecture tests, full local suite, Ruff, benchmark smoke; zero snapshot delta |
 | R1b | Separate active documentation from completed wave evidence while preserving the three authoritative entry points | relative-link/anchor check; live capability table and current checkpoint remain generated/validated; no historical result is rewritten | documentation-consistency tests, full link check, Ruff, `git diff --check`; active plan is concise and every archived wave is reachable |
 | R2a-R2h | Move one Python registry family at a time behind `registry.py`; then move its inspectors behind `_inspection.py` | family ids/capabilities, detect ambiguity, bytes/mmap/path, inspect/full agreement, selector validation order | full public API E2E after each family; import-cycle test; no import/startup regression outside the recorded noise band |
-| R3a-R3h | Move one benchmark/fixture/oracle family at a time; centralize cross-codec cases | old and new CLI JSON schemas match; the exact 50 ids are included or explicitly exempted; representative fixture bytes/hashes match | one-run all-codec smoke after each family, then five-run retained O4/O5 guards; no missing oracle or silently skipped row |
+| R3a-R3h | Move one benchmark/fixture/oracle family at a time; centralize cross-codec cases in staged consumer migrations | old and new CLI JSON schemas match; exact pytest node ids/parameters/skips match; the exact 50 built-ins are included or explicitly exempted; representative fixture bytes/hashes match | one-run all-codec smoke after each family, then five-run retained O4/O5 guards; strict qualification rejects a missing oracle/RSS sampler |
 | R4a | Extract CMake dependency/source manifests without moving native files | configure option/cache equivalence; compiled source list and feature macros match | rebuild editable wheel on MSVC; `_core` symbol snapshot and full suite pass |
-| R4b-R4h | Move native codec files and binding registration by family; preserve record-before-codec order | byte/mmap/sink/inspect/partial differential for the moved family; symbol visibility and registration order | rebuild after every family; full local suite and benchmark guard; no semantic diff mixed into move commits |
+| R4b-R4h | Move native codec files and binding registration by family; preserve record-before-codec order | byte/mmap/sink/inspect/partial differential for the moved family; native inventory, source ownership, symbol visibility, and registration order | rebuild after every family; full local suite and benchmark guard; no semantic diff mixed into move commits |
 | R5a | Populate existing evidence per codec and mark every unproved direction `provisional`, never `qualified` by inference | ledger schema/id coverage; evidence links resolve; current backend and build source match CMake | reviewable 50-codec matrix committed before candidate replacement starts |
-| R5b+ | Research and benchmark viable permissive candidates one codec/backend at a time, starting with JPEG | same production API, fixtures, settings, output-quality/subset, warm/cold runs, sinks, memory, determinism, size/startup; oracle parity and malformed-input equivalence | build the shortlist on MSVC, then compare finalists on GCC 10 and AppleClang before selection; commit selection/rejection evidence and update baseline/ledger |
+| R5b+ | Research and benchmark viable permissive candidates one profile/direction at a time, starting with JPEG | same production API, provenance-complete hashed decode corpus, predeclared lossy non-inferiority bounds, warm/cold runs, sinks, child-process RSS, determinism, size/startup; oracle parity and malformed-input equivalence | build the shortlist on MSVC, then run a user-authorized nonpublishing A/B matrix on GCC 10 and AppleClang before final selection; switch defaults in revertible commits, add the persistent qualified-commit guard, and update baseline/ledger |
 | R6a+ | Store each selected fetched dependency in-tree with provenance, license, hashes, options, and patches; switch only that dependency to local source | golden output, focused codec parity, dependency revision/options, benchmark within recorded variance | editable rebuild/full suite/Ruff per dependency; `FETCHCONTENT_FULLY_DISCONNECTED=ON` configure and sdist build |
-| R6-final | Remove all default native-source network fetches and validate the packaged result | clean source checkout, offline sdist-to-wheel, wheel contents/native dependencies, NumPy-only install smoke | local MSVC plus user-authorized manylinux2014 and macOS build-only wheel matrix; docs and license inventory synchronized |
+| R6-final | Remove all default native-source network fetches and validate the packaged result | clean source checkout, empty native caches, `PIP_NO_INDEX=1`, offline sdist, wheels built from that exact sdist, wheel contents/native dependencies, exact 50-id NumPy-only smoke, positive license inventory | local MSVC plus user-authorized manylinux2014 and macOS build-only wheel matrix; docs and license inventory synchronized |
 
-Candidate comparisons use repeated same-process medians for hot-path
-throughput and fresh-process samples for RSS/startup. Record raw JSON,
+Candidate comparisons use randomized/interleaved repeated samples for hot-path
+throughput and child-process samples for RSS/startup. Record raw JSON,
 toolchain/CPU/library revisions, fixture hashes, codec settings, output size or
-quality, and confidence/noise. A backend wins only when correctness and the
-format subset are equal; a smaller or differently lossy output is not a valid
-speed comparison.
+quality, median, MAD, paired ratios, and a predeclared no-deletion/outlier
+policy. Decoder candidates consume the same encoded bytes. A backend wins only
+when correctness and the format subset are equal; a smaller or differently
+lossy output is not a valid speed comparison. After selection, affected
+codec/backend/build changes and a scheduled workflow compare the current
+checkout with the ledger's pinned qualified commit on the same runner; noisy
+failures require a confirming rerun.
 
 ## Exit gate
 
@@ -335,8 +375,8 @@ No animated, RTMV, optional-library, or heavyweight codec starts until:
   family boundaries or an explicitly accepted smaller equivalent;
 - the 50-id API/capability/detection snapshots are unchanged;
 - default native dependencies build offline from repository-contained source;
-- every current codec has a performance-ledger entry and no unexplained
-  `known_gap`;
+- every current built-in codec/profile/direction has a performance-ledger
+  entry and no unexplained `known_gap`;
 - local MSVC, Linux normal, Linux instrumented, Windows/macOS mmap, Ruff,
   sdist, wheel, and NumPy-only installed smoke all pass;
 - `format_coverage.md`, `coverage_roadmap.md`, and

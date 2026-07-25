@@ -10,7 +10,9 @@ remaining formats is in
 [`format_gap_implementation_plan.md`](format_gap_implementation_plan.md).
 The prerequisite module-boundary, offline-source, and measured codec-backend
 gate is in
-[`repository_organization_plan.md`](repository_organization_plan.md).
+[`repository_organization_plan.md`](repository_organization_plan.md); its
+commit-sized execution checklist is
+[`next_stage_implementation_checklist.md`](next_stage_implementation_checklist.md).
 
 Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 
@@ -23,15 +25,21 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > formats on
 > `phase0-nanobind-core` and are not released yet.
 >
-> **Latest tested code checkpoint (2026-07-25, `ea622ac`):** the live registry contains
+> **Latest tested code checkpoint (2026-07-25, `d52c1e0`):** the live registry contains
 > 50 available codecs. Every codec reports read, write, inspect, streaming read,
 > and streaming write support; 28 advertise a bounded partial selector. Local
 > MSVC validation passes 2,912 tests with 4 documented skips, the 50-codec
 > benchmark guard, sdist/wheel rebuild, and a NumPy-only installed-wheel smoke.
-> The latest Windows and macOS mmap jobs pass. The current Linux normal and
-> instrumented jobs are not green; their exact blockers are recorded below and
-> in `format_gap_implementation_plan.md` rather than being described as pending
-> remote work.
+> The Windows and macOS mmap jobs in [CI run 30167201539][current-ci] pass.
+> Linux normal CI fails six cases: three Y4M inspection `std::bad_cast`
+> failures, one SQLite lock expectation, and two absolute RSS bounds. The
+> [instrumented run 30167201579][current-instrumented] fails because its
+> dependency filtering removes an unconditionally imported oracle; its
+> focused leak check reports only process-lifetime CPython/pydantic-core
+> allocations. These are active N0 blockers, not pending remote work.
+
+[current-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30167201539
+[current-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30167201579
 
 ## Data structures (memory Records)
 
@@ -113,9 +121,10 @@ signed-shift UB in JPEG entropy output (see `stb/COMMIT.txt`). CMYK JPEG is
 best‑effort stb→RGB and opaque RGBA collapses to RGB in WebP (both documented).
 
 Genuinely need the system‑lib `SCENEIO_WITH_*` gate (deferred): HDF5 (+hloc),
-TIFF (libtiff). **LAZ is vendored** through pinned LAZperf 3.4.0
-(Apache‑2.0/BSD‑3-Clause/BSD‑2-Clause), with formats 0‑3 and 6‑8 in its supported
-compression set. COLMAP DB `.db` is covered by a pinned public-domain SQLite amalgamation
+TIFF (libtiff). **LAZ is statically built from pinned LAZperf 3.4.0 source
+fetched at configure time** (Apache‑2.0/BSD‑3-Clause/BSD‑2-Clause), with
+formats 0‑3 and 6‑8 in its supported compression set; R6 will make that source
+repository-contained. COLMAP DB `.db` is covered by a pinned public-domain SQLite amalgamation
 statically linked into `_core`.
 
 ### ✅ Post-0.2 self-contained expansion
@@ -181,7 +190,7 @@ expanded 50-codec benchmark/oracles.
 |---|---|---|
 | nanobind + scikit‑build‑core build | ✅ | abi3/cp312, `NB_STATIC` |
 | cibuildwheel release path | ✅ | Linux/macOS/Windows; `publish.yml` |
-| CI parity (oracles in CI) | 🟡 | Windows/macOS mmap jobs pass at `ea622ac`; Linux normal CI has six unresolved portability failures: three Y4M inspection `std::bad_cast` failures, one SQLite exclusive-lock expectation, and two environment-sensitive RSS bounds |
+| CI parity (oracles in CI) | 🟡 | At `d52c1e0`, Windows/macOS mmap jobs pass; Linux normal CI has six unresolved portability failures and the instrumented lane fails during oracle-dependent collection before useful full-suite native coverage |
 | Codec registry + `read`/`write`/`inspect`/`read_partial`/`detect` | ✅ | inspection covers all 50; bounded partial hooks are capability-specific |
 | Repo-maintained stable codec adapters | ✅ | all 50 production adapters, grammars, convention guards, inspectors, partial capability policies/available paths, and sinks live in `src/cpp` / `src/sceneio`; separately installed implementations and executables are test/reference oracles only |
 | Offline native-source closure | 🟡 | lodepng, stb, tinyexr, SQLite, tinyobjloader, and cgltf are stored in-tree; miniz, nlohmann/json, zstd, fast_float, LAZperf, and libwebp still use pinned CMake `FetchContent` and must move under `src/cpp/third_party/` before the post-0.2 tier is called stable |

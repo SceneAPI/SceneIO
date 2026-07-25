@@ -11,10 +11,11 @@
   polygon-preserving OBJ/MTL, strict STL/OFF, the `MeshScene` record, and plain
   glTF/GLB, LAZ point formats 0-3/6-8, the `ImageSequence` record, lazy image
   directories, and raw planar Y4M are complete locally.
-  The remote workflows have now been dispatched. Windows and macOS mmap jobs
-  pass at `ea622ac`, but Linux normal CI and the instrumented reliability lane
-  are red; the current blockers are listed in section 12.1. Cross-platform
-  validation therefore remains incomplete rather than merely user-gated.
+  The remote workflows have now been dispatched. At `d52c1e0`, Windows and
+  macOS mmap jobs pass, but Linux normal CI and the instrumented reliability
+  lane are red; the current blockers are listed in section 12.1.
+  Cross-platform validation therefore remains incomplete rather than merely
+  user-gated.
 - **Current branch:** 50 compiled codecs, all read/write and inspectable, with
   bounded partial reads where their containers permit them.
 - **Scope:** close every unblocked format gap declared by SceneIO's coverage
@@ -26,7 +27,9 @@ registry; Phase G0 below records the mechanism that keeps the three documents
 and public capability manifest aligned. Repository restructuring and backend
 performance qualification are specified in
 [`repository_organization_plan.md`](repository_organization_plan.md) and are
-prerequisites for the next codec wave.
+prerequisites for the next codec wave. The reviewed, commit-sized checklist
+for executing those gates is
+[`next_stage_implementation_checklist.md`](next_stage_implementation_checklist.md).
 
 ## 1. Outcome and boundaries
 
@@ -1307,8 +1310,10 @@ Local implementation checkpoint (2026-07-25):
   passed at commit `daf991ab426d2db6ea9bd1d2ccea0f6ddc2d83b9`:
   manylinux2014, macOS, and Windows ABI3 wheels all built and passed their
   packaged smoke, and the sdist built successfully. The tag-only PyPI job was
-  skipped as intended. PyPI trusted-publisher configuration remains a
-  user-owned release prerequisite.
+  skipped as intended. Trusted publishing was still a user-owned prerequisite
+  at that checkpoint and was subsequently configured and exercised
+  successfully by the SceneIO 0.2.0
+  [release run 30097907487](https://github.com/SceneAPI/SceneIO/actions/runs/30097907487).
 
 The same package resolves plain LAS waveform point formats 4/5/9/10. Add the
 wave-packet fields to `PointCloud` only if they can be represented without
@@ -1840,20 +1845,24 @@ large fixtures.
 At the end of every dependency wave:
 
 1. Build the sdist.
-2. Build cp312-abi3 wheels for:
+2. Make every wheel job consume and build from that exact sdist, then build
+   cp312-abi3 wheels for:
    - manylinux2014 x86-64;
    - macOS arm64;
    - Windows amd64.
-3. Install each wheel in a clean environment containing only numpy plus
-   test-only smoke dependencies.
+3. Install each wheel in a clean environment containing only NumPy.
 4. Run:
-   - `_core` symbol/capability check;
-   - one read/write/inspect/partial smoke per newly enabled library;
-   - original 23-codec smoke;
+   - `_core` symbol/capability check and exact equality between the installed
+     built-in registry and wheel-smoke manifest;
+   - public write/read/inspect plus declared streaming/partial operations for
+     every built-in codec;
    - shared-library dependency inspection with `auditwheel`, `otool`, or the
      Windows dependency tools as appropriate.
-5. Confirm the tag version matches `pyproject.toml`.
-6. Confirm Linux artifacts retain the manylinux2014/glibc 2.17 tag, numpy is
+   Run external oracles separately from the NumPy-only installed-wheel smoke.
+5. Verify the root license and every item indexed by `LICENSES/README.md` is
+   present in the sdist and each wheel.
+6. Confirm the tag version matches `pyproject.toml`.
+7. Confirm Linux artifacts retain the manylinux2014/glibc 2.17 tag, NumPy is
    installed from a compatible binary wheel rather than built from source, and
    no optional library is accidentally left as an unresolved external
    dependency.
@@ -1992,7 +2001,7 @@ The current local checkpoint is:
 - the build-only dependency-wave release run at `daf991ab` produced successful
   Windows, macOS, Linux wheels and an sdist with publication skipped. It
   predates `ImageSequence`, Y4M, and the centralized license inventory;
-- at the latest tested code checkpoint `ea622ac`, Windows and macOS mmap jobs
+- at the latest tested code checkpoint `d52c1e0`, Windows and macOS mmap jobs
   pass. Linux normal CI fails six portability assertions and the instrumented
   reliability job stops during test collection/filtering, so that checkpoint
   is **verified locally, not validated**.
@@ -2045,23 +2054,29 @@ three-lens review, documentation, license inventory, and required platform
 lane before starting the next unit.
 
 1. **Repository organization gate (R1-R4).**
-   Freeze the 50-codec contracts, introduce the single codec/performance
-   manifest, split the Python registry and inspectors by format family, split
-   benchmark/test data builders, and organize native dependency and binding
-   registration by family. Preserve the existing public facades and prove the
-   capability, detection, `_core` symbol, and full E2E snapshots after every
-   mechanical unit. Follow
-   [`repository_organization_plan.md`](repository_organization_plan.md);
+   Freeze the 50-codec contracts, separate immutable built-in definitions from
+   the mutable extension registry, introduce the performance ledger, split the
+   Python registry and inspectors by format family, split benchmark/test data
+   builders, and organize native dependency and binding registration by
+   family. Preserve the existing public facades and prove the capability,
+   detection, `_core` symbol/native inventory, and full E2E snapshots after
+   every mechanical unit. Follow the commit units in
+   [`next_stage_implementation_checklist.md`](next_stage_implementation_checklist.md);
    do not combine file moves with codec behavior changes.
 2. **Backend performance qualification (R5).**
-   Create one `bench/PERFORMANCE_STATUS.toml` entry for every live codec and
-   compare each viable permissive upstream backend through SceneIO's production
-   read/write paths. Measure encode/decode, warm/cold path I/O, direct sinks,
-   traced allocation, fresh-process RSS, determinism, artifact size, and
-   startup on representative and generated fixtures. Resolve known gaps
-   beginning with JPEG encode/decode by evaluating libjpeg-turbo; retain or
-   replace a backend only from measured evidence. Existing optimized transport
-   does not by itself qualify every codec kernel.
+   Create one `bench/PERFORMANCE_STATUS.toml` operation cell for every required
+   built-in codec/profile/direction and compare each viable permissive upstream
+   backend through SceneIO's production read/write paths. Decoder candidates
+   consume the same hashed encoded corpus. Measure encode/decode, warm path I/O,
+   confirmed or explicitly best-effort cold I/O, direct sinks, traced
+   allocation, child-process RSS, determinism, artifact size, and startup on
+   representative and generated fixtures. Resolve known gaps beginning with
+   JPEG encode/decode by evaluating libjpeg-turbo; retain or replace a backend
+   only from measured evidence and a user-authorized three-platform A/B gate.
+   Lossy replacements require predeclared comparative non-inferiority bounds.
+   Before removing a retained backend, install a persistent same-run guard
+   against the ledger's pinned qualified commit.
+   Existing optimized transport does not by itself qualify every codec kernel.
 3. **Repository source closure for the stable tier (R6).**
    Vendor the exact selected revisions under `src/cpp/third_party/`. The
    current closure set is miniz 3.0.2, nlohmann/json 3.11.3, zstd 1.5.6,
@@ -2071,7 +2086,9 @@ lane before starting the next unit.
    `COMMIT.txt` provenance/hashes, retain all `LICENSES/` notices, and remove
    default-build network fetches. Verify golden codec output and benchmark
    results are unchanged. Validate an sdist-to-wheel build with network source
-   fetching disabled on MSVC, manylinux2014 GCC 10, and AppleClang.
+   fetching disabled on MSVC, manylinux2014 GCC 10, and AppleClang, using
+   either disabled PEP 517 isolation with pinned tools or a locked offline
+   wheelhouse.
 4. **Animation-capable `ImageSequence`.**
    Add an owned packed-frame mode with exact canvas size, pixel dtype/channels,
    per-frame duration, loop count, blend operation, disposal operation, and
@@ -2885,9 +2902,11 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
 After all local commits in a dependency wave are green:
 
 1. Build an sdist and a clean local cp312-abi3 Windows wheel.
-2. Install the wheel in a fresh Python 3.12 environment containing only NumPy
-   plus smoke-only oracle dependencies; run `_wheel_smoke`, explicit new-symbol
-   checks, and one public read/write/inspect/partial case per new codec.
+2. Install the wheel in a fresh Python 3.12 environment containing only NumPy;
+   run `_wheel_smoke`, assert its manifest union equals the exact installed
+   built-in registry, and exercise public write/read/inspect plus declared
+   streaming/partial capabilities for every built-in codec. Run external
+   oracles separately from installed-wheel smoke.
 3. Inspect the Windows wheel contents and native dependencies; ensure no build
    tree, headers, static libraries, or undeclared DLLs leaked into it.
 4. With explicit user authorization, push the branch and dispatch:
@@ -2897,14 +2916,17 @@ After all local commits in a dependency wave are green:
    gh workflow run publish.yml --ref phase0-nanobind-core
    ```
 
-   The manual `publish.yml` run is build-only: it creates and smoke-tests
-   manylinux2014 x86-64, macOS arm64, and Windows amd64 abi3 wheels plus the
-   sdist; it cannot publish.
+   The manual `publish.yml` run is build-only: its sdist job creates the source
+   artifact first, then the manylinux2014 x86-64, macOS arm64, and Windows
+   amd64 abi3 jobs must build and smoke-test wheels from that exact sdist; it
+   cannot publish.
 5. Require green normal CI, instrumented Linux, minimal-feature, full-feature,
    and cibuildwheel lanes as applicable. Download artifacts and verify wheel
    tags, imports, capabilities, smoke results, and `auditwheel`/`otool`/Windows
    dependency closure.
-6. Record workflow links, artifact names/hashes, compiler/platform results,
+6. Verify the root license and every item in `LICENSES/README.md` is present in
+   the sdist and each wheel.
+7. Record workflow links, artifact names/hashes, compiler/platform results,
    skips, and any platform-specific thresholds in the completion evidence.
 
 Remote validation failure reopens the responsible work package. A local pass
@@ -2915,9 +2937,11 @@ does not override a compiler, instrumented, or clean-wheel failure.
 Publication uses `.github/workflows/publish.yml`; no local `twine upload` or
 manual artifact replacement is part of this plan.
 
-Before the first release, the user must create the SceneIO PyPI trusted
-publisher for the GitHub repository, workflow `publish.yml`, and environment
-`pypi`. Then:
+[Release run 30097907487](https://github.com/SceneAPI/SceneIO/actions/runs/30097907487)
+successfully published SceneIO 0.2.0 through the PyPI trusted publisher,
+workflow `publish.yml`, and environment `pypi`. Re-verify that configuration
+before the next release; changing it, pushing a tag, and publishing remain
+user-controlled actions. Then:
 
 1. confirm every release format is `Validated`, not merely implemented locally;
 2. reconcile the capability manifest and both coverage documents;

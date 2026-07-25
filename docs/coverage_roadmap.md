@@ -7,7 +7,9 @@
 > implementation sequence for the remaining formats is
 > [`format_gap_implementation_plan.md`](format_gap_implementation_plan.md);
 > the prerequisite maintainability and backend-selection work is in
-> [`repository_organization_plan.md`](repository_organization_plan.md).
+> [`repository_organization_plan.md`](repository_organization_plan.md), with
+> its reviewed execution checklist in
+> [`next_stage_implementation_checklist.md`](next_stage_implementation_checklist.md).
 
 The granular, per‑format execution plan for covering **every relevant file type
 that has a permissively‑licensed open‑source option**. Sits below the strategy
@@ -16,11 +18,13 @@ this is the *how* — implementation, parity, C++ optimization, and verification
 for each remaining item.
 
 **Latest tested code checkpoint (2026-07-25):** `phase0-nanobind-core` at
-`ea622ac` has 50 readable, writable, inspectable, and streamed codecs; 28 have
+`d52c1e0` has 50 readable, writable, inspectable, and streamed codecs; 28 have
 bounded partial selectors. Local MSVC validation passes 2,912 tests with 4
-documented skips. Windows and macOS mmap jobs pass at that checkpoint. Linux
-normal CI and the instrumented reliability lane are red, so this dependency
-wave is implemented and locally verified but not cross-platform validated.
+documented skips. Windows and macOS mmap jobs pass in CI run 30167201539.
+Linux normal CI has six portability/test-contract failures, and instrumented
+run 30167201579 fails during oracle-dependent collection before useful
+full-suite native coverage, so this dependency wave is implemented and locally
+verified but not cross-platform validated.
 The next execution order is: close those portability/CI blockers, complete the
 repository-organization and codec-backend performance gates, close default
 native sources for offline builds, then finish animated WebP/APNG and RTMV.
