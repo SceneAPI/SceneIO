@@ -14,8 +14,8 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > Status note: everything marked ✅ is implemented by the compiled
 > `sceneio._core`. The original 23 codecs ship in SceneIO 0.2.0; safetensors,
 > PTS, DMB, BAL, BMP, TGA, generic point PLY, PCD, EuRoC state CSV, and the
-> OpenCV/ROS/Kalibr calibration codecs plus g2o pose graphs are post-0.2
-> formats on
+> OpenCV/ROS/Kalibr calibration codecs, g2o pose graphs, and the COLMAP
+> feature database are post-0.2 formats on
 > `phase0-nanobind-core` and are not released yet.
 
 ## Data structures (memory Records)
@@ -36,8 +36,9 @@ SoA, zero-copy to numpy/torch (DLPack), conventions carried as metadata.
 | `StateTrajectory` | `state_trajectory` | ✅ record / ⬜ datatype | exact int64 nanosecond timestamps plus float64 position, WXYZ orientation, velocity, gyro bias, and accelerometer bias; explicit frame/unit/sign metadata |
 | `CameraRig` | `camera_rig` | ✅ record / ⬜ datatype | ordered cameras; ragged model parameters; exact optional K/R/P; extrinsic, ROI/binning, topic, and time-offset metadata with explicit conventions |
 | `PoseGraph` | `pose_graph` | ✅ record / ⬜ datatype | ordered typed SE(3) nodes/edges, fixed-node flags, exact ids, XYZW transforms, and symmetric 6×6 information matrices with explicit direction/order metadata |
-| `FeatureSet` | `feature_set` | ⬜ | Phase 3 — keypoints + descriptors + scores |
-| `MatchGraph` | `match_graph` | ⬜ | Phase 3 — per‑pair matches + F/E/H + inliers |
+| `FeatureSet` | `feature_set` | ✅ record / ⬜ datatype | per-image id/name/camera/size; Nx{2,4,6} f32 keypoints; optional u8/f32 descriptors and f32 scores with absent-vs-empty fidelity |
+| `MatchGraph` | `match_graph` | ✅ record / ⬜ datatype | canonical COLMAP image pairs and pair ids; ragged raw/verified u32 matches; optional scores, F/E/H, config, and relative pose |
+| `ColmapDatabase` | `match_graph` | ✅ record / ⬜ datatype | cameras, prior-focal flags, ordered `FeatureSet` values, `MatchGraph`, and schema user version |
 
 ## Formats (codecs)
 
@@ -90,7 +91,8 @@ best‑effort stb→RGB and opaque RGBA collapses to RGB in WebP (both documente
 
 Genuinely need the system‑lib `SCENEIO_WITH_*` gate (deferred): HDF5 (+hloc), TIFF
 (libtiff). **LAZ is vendorable after all** — laz‑perf (Apache‑2.0), point‑cloud
-tier. COLMAP DB `.db` (sqlite) remains a separate self-contained package.
+tier. COLMAP DB `.db` is covered by a pinned public-domain SQLite amalgamation
+statically linked into `_core`.
 
 ### ✅ Post-0.2 self-contained expansion
 
@@ -108,20 +110,22 @@ tier. COLMAP DB `.db` (sqlite) remains a separate self-contained package.
 | `ros_camera_info` | `CameraRig` | R+W | **PyYAML** + ROS CameraInfo schema | exact K/D/R/P, distortion model, binning, ROI, and rectify flag |
 | `kalibr` | `CameraRig` | R+W | **PyYAML** + Kalibr schema | pinhole/omni intrinsics, distortion, topics, camera-chain or IMU extrinsics, and camera↔IMU time offsets |
 | `g2o` | `PoseGraph` | R+W | independent strict parser + g2o BSD-3 source semantics | `VERTEX_SE3:QUAT`, `EDGE_SE3:QUAT`, `FIX`; XYZW; exact upper-triangle information; unsupported mixed types/parameters reject |
+| `colmap_db` | `ColmapDatabase` (`FeatureSet` + `MatchGraph`) | R+W | stdlib **sqlite3** + **pycolmap 4.1.1** | current six-table cameras/images/features/matches/two-view geometry subset; exact pair ids and absent/empty BLOB state; transactional writes; one-image/one-pair selectors |
 
 ### ⬜ Pending — later phases (meshes + niche)
 glTF / GLB (+Draco) · OBJ / STL / OFF / mesh PLY · USD / USDZ · OpenVDB · Zarr · Parquet · AVIF / JPEG‑XL · PlayCanvas SOG.
 
 ### 🟡 In progress — Phase 7 (hardening)
-✅ mmap-backed reads for all 35 single-file codecs (the two COLMAP directory
-codecs already read paths directly in C++) · ✅ zero-copy read-only mapped
+✅ mmap-backed reads for all 35 buffer codecs (COLMAP DB and the two COLMAP
+directory codecs read paths directly in native code) · ✅ zero-copy read-only mapped
 ndarray views for native NPY/FLO payloads (PFM row-flips into owned storage) · ✅ bytes/mmap differential +
 scheduled 100-case backing-store mutation sweep · ✅ ASan/UBSan/LSan workflow
 (local and branch Linux runs green) · ⬜ randomized oracle-triangulated
 fuzzing · ✅ direct file-sink writes · ✅ bounded measured-path workers
 (XYZ/LAS/EXR/PNG16/WebP lossless) · ✅ partial/lazy reads (`inspect` covers all
-37; bounded pixel/point/state/COLMAP-image/tensor subsets cover capable containers) ·
-⬜ GPU-via-DLPack (torch-cuda/cupy) · ✅ expanded 37-codec benchmark/oracles.
+38; bounded pixel/point/state/COLMAP-image/COLMAP-pair/tensor subsets cover
+capable containers) · ⬜ GPU-via-DLPack (torch-cuda/cupy) · ✅ expanded
+38-codec benchmark/oracles.
 
 ## Infrastructure & capabilities
 
@@ -130,7 +134,7 @@ fuzzing · ✅ direct file-sink writes · ✅ bounded measured-path workers
 | nanobind + scikit‑build‑core build | ✅ | abi3/cp312, `NB_STATIC` |
 | cibuildwheel release path | ✅ | Linux/macOS/Windows; `publish.yml` |
 | CI parity (oracles in CI) | ✅ | gsply + pycolmap; runs on the branch |
-| Codec registry + `read`/`write`/`inspect`/`read_partial`/`detect` | ✅ | inspection covers all 37; bounded partial hooks are capability-specific |
+| Codec registry + `read`/`write`/`inspect`/`read_partial`/`detect` | ✅ | inspection covers all 38; bounded partial hooks are capability-specific |
 | Zero‑copy numpy + torch (DLPack) | ✅ | validated per codec |
 | Conventions‑as‑metadata + write guards | ✅ | record‑don't‑convert enforced |
 | Parity kit (`sceneio.testing.parity`) | ✅ | cross‑impl + round‑trip + convention pins |
@@ -158,6 +162,7 @@ incremental.
 | `bal` | file | yes | yes | yes | - | yes | yes | no | - |
 | `bmp` | file | yes | yes | yes | - | yes | yes | no | - |
 | `bundler` | file | yes | yes | yes | - | yes | yes | no | - |
+| `colmap_db` | file | yes | yes | yes | image_id, pair | yes | yes | no | - |
 | `colmap_sparse` | directory | yes | yes | yes | image_id | yes | yes | no | - |
 | `colmap_sparse_txt` | directory | yes | yes | yes | image_id | yes | yes | no | - |
 | `dmb` | file | yes | yes | yes | window | yes | yes | no | - |
@@ -234,6 +239,8 @@ names from `_core.__native_features__`.
 | pixel `window=(r0,r1,c0,c1)` | PFM, binary P5/P6 Netpbm, lossless VP8L WebP, FLO, scalar DMB | ndarray, `Image`, or `DepthMap`, matching the full-read slice with metadata preserved |
 | point range `points=(start,stop)` | XYZ, PTS, binary generic PLY, uncompressed binary PCD, LAS, Gaussian PLY, SPLAT | `PointCloud` / `GaussianCloud`, with convention metadata preserved |
 | `image_id` | COLMAP binary + text | one-image `Reconstruction` + its camera; no point-container read |
+| `image_id` | COLMAP SQLite database | one compiled `FeatureSet`; unrelated keypoint/descriptor BLOBs remain unread |
+| unordered `pair=(image_id1,image_id2)` | COLMAP SQLite database | one compiled `MatchGraph` with raw/verified matches and optional geometry |
 | `tensors=(...)` | safetensors | selected complete tensors as a mapped `TensorDict`; other payload pages remain untouched |
 | `slices={name: (start, stop)}` | safetensors | contiguous leading-axis slices as a mapped `TensorDict` |
 

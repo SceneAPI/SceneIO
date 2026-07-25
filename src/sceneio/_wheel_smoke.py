@@ -326,6 +326,62 @@ def _pose_graph(root: Path) -> None:
     assert inspected.metadata["num_fixed_nodes"] == 1
 
 
+def _colmap_database(root: Path) -> None:
+    camera = _core.camera(
+        5,
+        1,
+        640,
+        480,
+        np.array([500.0, 501.0, 320.0, 240.0]),
+    )
+    features = [
+        _core.feature_set(
+            np.array([[10.0, 20.0], [30.0, 40.0]], np.float32),
+            np.arange(8, dtype=np.uint8).reshape(2, 4) + image_id,
+            image_id=image_id,
+            image_name=f"{image_id}.jpg",
+            camera_id=5,
+            image_size=(640, 480),
+            extractor_type=0,
+        )
+        for image_id in (2, 11)
+    ]
+    graph = _core.match_graph(
+        np.array([[2, 11]], np.uint32),
+        np.array([0, 1], np.uint64),
+        np.array([[0, 1]], np.uint32),
+        np.array([0, 1], np.uint64),
+        np.array([[0, 1]], np.uint32),
+        configs=np.array([2], np.int32),
+        fundamental_matrices=np.eye(3)[None],
+        fundamental_present=np.array([1], np.uint8),
+        geometry_present=np.array([1], np.uint8),
+        match_present=np.array([1], np.uint8),
+    )
+    database = _core.colmap_database(
+        [camera],
+        features,
+        graph,
+        prior_focal_length=np.array([1], np.uint8),
+    )
+    assert sceneio.FeatureSet is _core.FeatureSet
+    assert sceneio.MatchGraph is _core.MatchGraph
+    assert sceneio.ColmapDatabase is _core.ColmapDatabase
+    path = root / "database.db"
+    sceneio.write(database, path)
+    assert sceneio.detect(path) == "colmap_db"
+    decoded = sceneio.read(path)
+    assert decoded.num_images == 2
+    assert decoded.match_graph.image_pairs.tolist() == [[2, 11]]
+    selected_image = sceneio.read_partial(path, image_id=11)
+    assert selected_image.image_name == "11.jpg"
+    selected_pair = sceneio.read_partial(path, pair=(11, 2))
+    assert selected_pair.matches.tolist() == [[0, 1]]
+    inspected = sceneio.inspect(path)
+    assert inspected.metadata["num_cameras"] == 1
+    assert inspected.metadata["num_matches"] == 1
+
+
 def main() -> None:
     with tempfile.TemporaryDirectory(prefix="sceneio-wheel-smoke-") as directory:
         root = Path(directory)
@@ -337,6 +393,7 @@ def main() -> None:
         _state_trajectory(root)
         _camera_calibration(root)
         _pose_graph(root)
+        _colmap_database(root)
     print(_core.__phase__)
 
 

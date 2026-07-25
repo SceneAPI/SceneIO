@@ -1,0 +1,25 @@
+SQLite amalgamation 3.53.4
+
+Upstream: https://sqlite.org/
+Release date: 2026-07-24
+Artifact: https://sqlite.org/2026/sqlite-amalgamation-3530400.zip
+Artifact SHA3-256:
+628a44cfe82c66aed1ccbbe85a562d2e33ebe64b3288981ed76285612227934e
+SQLITE_SOURCE_ID:
+2026-07-24 19:02:57 bf7c7f30031888f4e796e429ab3978879485813aaca6f641c7b33e4e09459bcc
+sqlite3.c SHA3-256:
+67f423e9ebbbdc473cbc4772c872ee6b89f31fde4ed0279a5c25d5f65c043a16
+
+Vendored files:
+- sqlite3.c
+- sqlite3.h
+
+SQLite is in the public domain. No local source patch is applied. The build
+defines only these compile-time options in CMakeLists.txt:
+- SQLITE_DQS=0
+- SQLITE_DEFAULT_MEMSTATUS=0
+- SQLITE_OMIT_DEPRECATED
+- SQLITE_OMIT_LOAD_EXTENSION
+
+URI filename interpretation is not enabled globally; SceneIO passes literal
+UTF-8 filesystem paths and never requests SQLITE_OPEN_URI.

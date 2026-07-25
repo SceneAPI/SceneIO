@@ -73,8 +73,9 @@ artifacts vocabulary — wire identity unchanged.
 
 ### Compiled format I/O — `read` / `write` / `inspect` / `read_partial`
 
-The lazy-loaded compiled core reads and writes 32 image, depth, tensor,
-point-cloud, Gaussian, pose/state, and reconstruction formats.
+The lazy-loaded compiled core reads and writes 38 image, depth, tensor,
+point-cloud, Gaussian, pose/state, reconstruction, calibration, graph, and
+feature-database formats.
 `sceneio.inspect(path)` returns an immutable `Inspection` with shape, dtype,
 channels, repeated-record counts, and format-specific scalar metadata without
 decoding bulk pixel/point arrays:
@@ -190,6 +191,13 @@ state_part = sceneio.read_partial(
 # One COLMAP pose and its camera, without opening points3D.
 view = sceneio.read_partial("sparse/0", image_id=42)
 
+# COLMAP SQLite databases return the compiled I/O FeatureSet and MatchGraph
+# records. A pair request is unordered and uses persisted image ids.
+features = sceneio.read_partial("database.db", image_id=42)
+pair_matches = sceneio.read_partial("database.db", pair=(42, 91))
+assert features.image_id == 42
+assert pair_matches.image_pairs.tolist() == [[42, 91]]
+
 # Safetensors tensors are read-only mmap views. Slices are half-open on the
 # leading axis and do not decode or copy unrelated tensor payloads.
 weights = sceneio.read_partial(
@@ -209,6 +217,10 @@ assert "animation" in caps.unsupported_features
 assert not sceneio.native_features("hdf5").available
 ```
 
+`sceneio.FeatureSet`, `sceneio.MatchGraph`, and `sceneio.ColmapDatabase` are
+the compiled, storage-faithful I/O records. The procedure-contract
+`sceneio.data.FeatureSet` remains a separate Python record for matcher APIs.
+
 Partial reads are available only when the container has a genuine bounded
 access path; requesting one from a codec that would have to decode the complete
 payload raises `FormatError`. Pixel windows support PFM, binary P5/P6 Netpbm,
@@ -218,6 +230,8 @@ named-tensor selection and contiguous leading-axis slices.
 Count-prefixed PTS supports bounded point ranges while validating the declared
 point count and preserving supported intensity/RGB columns. Generic PLY reads
 ASCII and binary little/big endian point schemas; only fixed-record binary PLY
+supports bounded point ranges. COLMAP SQLite supports one-image features and
+one-pair raw/verified matches through native indexed SQL queries.
 advertises bounded point ranges.
 
 ### Errors

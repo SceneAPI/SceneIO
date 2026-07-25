@@ -4,11 +4,12 @@
   scalar DMB, BAL, BMP/TGA, the compiled `FlowField` record, typed FLO, typed
   PFM depth, typed PNG depth, typed scalar EXR depth, generic point PLY, and
   PCD, `StateTrajectory`/EuRoC, `CameraRig` with OpenCV/ROS/Kalibr
-  calibration, and `PoseGraph`/g2o are complete locally. The COLMAP database
-  record/codec unit is next in the default-wheel sequence.
+  calibration, `PoseGraph`/g2o, and the `FeatureSet`/`MatchGraph`-backed
+  COLMAP database are complete locally. Self-contained splat formats are next
+  in the default-wheel sequence.
   Cross-platform wheel and instrumented validation remains a user-gated remote
   action.
-- **Current branch:** 37 compiled codecs, all read/write and inspectable, with
+- **Current branch:** 38 compiled codecs, all read/write and inspectable, with
   bounded partial reads where their containers permit them.
 - **Scope:** close every unblocked format gap declared by SceneIO's coverage
   documents without reimplementing the 0.2.0 codec tier.
@@ -101,8 +102,8 @@ G0 must also reconcile these shipped-surface details:
 |---|---|---|
 | `Mesh` | vertex positions; ragged face indices; optional vertex/corner normals, UVs, colors; primitive/material ranges; coordinate metadata | generic PLY, OBJ, STL, OFF, glTF |
 | `MaterialSet` | material names; base/emissive factors; metallic/roughness; alpha mode; texture image references, UV sets, and sampler metadata | OBJ/MTL, glTF, USD |
-| `FeatureSet` | keypoints, descriptors with dtype/shape metadata, scores, image size, image id/name | COLMAP DB, hloc |
-| `MatchGraph` | image-pair ids, ragged match pairs, scores, optional F/E/H models and inlier masks | COLMAP DB, hloc |
+| `FeatureSet` — complete locally | keypoints, descriptors with dtype/shape metadata, scores, image size, image id/name | COLMAP DB, hloc |
+| `MatchGraph` — complete locally | image-pair ids, ragged raw/verified match pairs, scores, optional F/E/H models and relative pose | COLMAP DB, hloc |
 | `PoseGraph` | pose nodes, typed edges, relative transforms, information matrices | g2o |
 | `StateTrajectory` | timestamps, position/orientation, velocity, gyroscope bias, accelerometer bias, frame/unit metadata | EuRoC state CSV |
 | `CameraRig` | ordered cameras, rig-to-camera extrinsics, names/ids, frame and unit metadata | OpenCV, ROS, Kalibr |
@@ -125,11 +126,11 @@ exit gate and the validation matrix in section 8 both pass.
 
 | Family | Remaining work | Complete locally on this branch |
 |---|---|---|
-| Reconstruction and pose | COLMAP database, EuRoC state CSV, g2o | BAL |
+| Reconstruction and pose | — | BAL, COLMAP database, EuRoC state CSV, g2o |
 | Splat | SuperSplat SOG / compressed PLY, KSplat | — |
 | Point cloud | LAS waveform formats 4/5/9/10, LAZ, E57 | count-prefixed PTS, generic point PLY, and PCD |
 | Mesh | mesh PLY, OBJ/MTL, STL, OFF, glTF/GLB, USD/USDZ; optional Draco is policy-gated | — |
-| Tensor/feature/table | COLMAP features/matches, HDF5, hloc layout, Zarr v2/v3, Parquet | safetensors |
+| Tensor/feature/table | HDF5, hloc layout, Zarr v2/v3, Parquet | safetensors, COLMAP features/matches |
 | Image and depth | TIFF | BMP, TGA, typed PFM depth, typed PNG depth, typed scalar EXR depth, scalar DMB |
 | Optical flow | — | compiled `FlowField` plus typed FLO |
 | Calibration | OpenCV YAML/XML, ROS `camera_info`, Kalibr YAML | — |
@@ -305,7 +306,7 @@ Completion evidence (2026-07-24):
 - Linux instrumentation and Linux/macOS wheel validation remain pending until
   the user authorizes the branch push and remote workflows.
 
-#### G2.2 COLMAP database
+#### G2.2 COLMAP database — complete locally
 
 Implementation:
 
@@ -336,6 +337,34 @@ Benchmark:
 
 - bulk feature/match insertion, one-image read, one-pair read, and full scan;
 - compare prepared statements/transactions against the test-side reference.
+
+Completion evidence (2026-07-24):
+
+- pinned public-domain SQLite 3.53.4 is compiled privately with the extension;
+  the source archive SHA3-256, amalgamation hash, release id, and local compile
+  options are recorded in `third_party/sqlite/COMMIT.txt`;
+- `FeatureSet`, `MatchGraph`, and `ColmapDatabase` preserve sparse ids,
+  2/4/6-column keypoints, descriptor metadata, absent-versus-empty rows,
+  ragged raw/verified matches, exact COLMAP pair ids, F/E/H/config, and
+  optional relative pose with owner-safe zero-copy views;
+- native read-only full/image/pair paths, transactional replacement writes,
+  SQL-only inspection, public detection/capabilities, and the NumPy-only wheel
+  smoke pass locally;
+- 45 focused cases pass on MSVC with one POSIX-only literal-path case skipped;
+  they include independent stdlib `sqlite3` and pycolmap 4.1.1 compatibility,
+  20 randomized exact round trips, malformed schema/BLOB/index bounds,
+  duplicate rows, rollback, file-lock/handle release, Unicode paths, and
+  post-close array lifetime;
+- the 9.65 MB five-run fixture measured 178 MB/s transactional write,
+  1,405 MB/s full read, 0.808 ms inspection, and 0.525/0.421 ms image/pair
+  selection; inspection and selectors remain below 0.05 MB traced Python
+  allocation;
+- manual memory-safety, format-correctness, and test-soundness review fixed
+  ownerless optional-array views, partial-statement cleanup, new-file rollback
+  cleanup, literal-path/URI ambiguity, partial duplicate-row acceptance,
+  endpoint/index validation, and UTF-8 filesystem handling. Fable remains
+  unavailable locally; Linux instrumentation and Linux/macOS wheel validation
+  remain user-gated remote actions.
 
 #### G2.3 PTS, generic point PLY, and PCD complete locally
 
@@ -1237,8 +1266,8 @@ Add keyword-only selectors as their records land:
 | Selector | Applies to |
 |---|---|
 | `tensors=(...)`, `slices={...}` | safetensors, HDF5, Zarr |
-| `features_for=image_id` | COLMAP DB, hloc |
-| `matches_for=(image_id1, image_id2)` | COLMAP DB, hloc |
+| `image_id=<persisted id>` | COLMAP directory image/camera, COLMAP DB `FeatureSet`, future hloc |
+| `pair=(image_id1, image_id2)` | COLMAP DB `MatchGraph`, future hloc |
 | `columns=(...)`, `rows=(start, stop)` | Parquet |
 | `mesh_id` / `primitive_id` | glTF, USD |
 | `frames=(start, stop)` | image sequences, Y4M, animated WebP/APNG, TIFF |
@@ -1600,16 +1629,16 @@ estimates.
 
 The current local checkpoint is:
 
-- 37 compiled registry codecs with read, write, inspect, mmap input, and direct
-  file sinks;
+- 38 compiled registry codecs with read, write, inspect, mmap or path-native
+  input, and direct file sinks;
 - O0-O5 complete for the existing codec tier;
 - `FlowField`, typed FLO, typed PFM depth, typed PNG depth, and typed scalar EXR
   depth complete;
-- 2,221 local tests pass with 3 documented optional skips, Ruff and
+- 2,266 local tests pass with 4 documented platform/optional skips, Ruff and
   `git diff --check` are clean;
-- the all-codec benchmark guard and packaged numpy-only wheel smoke pass;
-- generic point PLY, PCD, StateTrajectory/EuRoC, CameraRig calibration, and
-  PoseGraph/g2o are complete locally; the COLMAP database unit is next;
+- the complete 38-codec benchmark and packaged NumPy-only wheel smoke pass;
+- generic point PLY, PCD, StateTrajectory/EuRoC, CameraRig calibration,
+  PoseGraph/g2o, and the COLMAP feature database are complete locally;
 - instrumented Linux and Linux/macOS wheels have not yet been run for this
   dependency wave because pushing and dispatching remote workflows are
   user-gated.
@@ -2022,18 +2051,66 @@ Verification and validation evidence (2026-07-24):
   Linux sanitizer and Linux/macOS cibuildwheel validation remain user-gated
   remote actions.
 
-#### B4. COLMAP database
+#### B4. COLMAP database — complete locally
 
-- Land `FeatureSet` and `MatchGraph` first, including keypoint layout,
-  descriptor dtype/width, ragged matches, pair ids, and optional geometry.
-- Vendor the public-domain SQLite amalgamation at an exact recorded SHA and
-  statically build only the required surface.
-- Use read-only connections for reads and transactions for writes. Add
-  one-image and one-pair partial selectors plus metadata-only inspection.
-- Verify bidirectionally with `sqlite3` and pycolmap, sparse ids, empty blobs,
-  pair ordering, geometry matrices, rollback, handle release, and bounded BLOB
-  validation.
-- Benchmark bulk insert, full scan, one-image read, one-pair read, and inspect.
+Implementation:
+
+- `FeatureSet` owns canonical float32 keypoints in all COLMAP 2/4/6-column
+  layouts, optional uint8/float32 descriptors, optional scores, persisted image
+  identity/size/camera/time/extractor metadata, and explicit absent-versus-empty
+  SQL-row state. `MatchGraph` owns canonical low/high image pairs and exact
+  pair ids, ragged raw and verified u32 matches, optional scores,
+  F/E/H/config, and WXYZ second-from-first relative poses.
+- `ColmapDatabase` couples validated cameras and prior-focal flags to ordered
+  features, the match graph, and `PRAGMA user_version`. Aggregate validation
+  checks unique ids/names/pairs, camera references and dimensions, match
+  endpoint/index bounds, finite values, canonical flags, and SQLite INTEGER
+  limits before a writer opens its destination.
+- SQLite 3.53.4 is vendored as the official public-domain amalgamation with
+  SHA3-256 provenance. It is linked privately with double-quoted string
+  literals, deprecated APIs, loadable extensions, and default memory-status
+  accounting disabled; filename URI interpretation remains disabled so paths
+  are literal.
+- `_core.read_colmap_db`, `read_colmap_db_image`,
+  `read_colmap_db_pair`, `write_colmap_db`, and `inspect_colmap_db` use native
+  read-only connections or one rollback-capable write transaction. Reads
+  refuse unknown schema payload, unsupported nonempty tables, malformed BLOB
+  extents, duplicate rows, missing endpoints, and invalid match indices.
+- The public `colmap_db` registry entry detects SQLite magic and
+  `database.db`, exposes `image_id` and unordered `pair` selectors, and reports
+  SQL-only row/count/shape metadata without fetching feature or match BLOBs.
+  Writes preserve the existing database on failure and remove a newly-created
+  incomplete file.
+
+Verification and validation evidence (2026-07-24):
+
+- The 45-pass focused MSVC suite (one POSIX-only literal-filename case skipped)
+  triangulates exact SQL rows with stdlib `sqlite3`, reads pycolmap-created
+  databases, and has pycolmap 4.1.1 read SceneIO output. It covers sparse ids,
+  reversed pair requests, all geometry, absent/empty BLOBs, float write guards,
+  large BLOB bounds, two injected rollback points, locked/read-only databases,
+  exception handle release, owner lifetime after file removal, schema drift,
+  Unicode paths, duplicate target rows, and 20 randomized exact round trips.
+- The related public I/O, mmap, partial, and capability sweep passes 242 tests
+  with the one POSIX-only case skipped; the complete final suite and clean
+  wheel result are recorded in the current checkpoint above.
+- A five-run 9.65 MB logical fixture in a 9.92 MB database measured native and
+  independent transaction writes at 178/185 MB/s and full materializing reads
+  at 1,405/1,634 MB/s. Metadata inspection was 8.50× faster than full native
+  read; one-image and one-pair selectors were 13.10× and 16.31× faster.
+  Native write/read/inspect/select paths each traced below 0.05 MB of Python
+  allocation.
+- The complete one-run 38-codec benchmark sweep finishes without failures.
+  The local cp312-abi3 Windows wheel retains NumPy as its only unconditional
+  dependency, contains no leaked build/include/library trees, links SQLite
+  statically, and passes the installed-wheel database smoke. A clean sdist
+  contains every pinned SQLite/codec/record source, excludes generated
+  workspace output, rebuilds in isolation, and passes the same smoke.
+- Manual three-lens review found and fixed ownerless score arrays, statement
+  cleanup on prepare failure, newly-created-file cleanup after rollback,
+  literal filename semantics, partial duplicate-row/index/endpoint validation,
+  and UTF-8 filesystem handling. Fable remains unavailable locally; Linux
+  sanitizer and Linux/macOS cibuildwheel validation remain user-gated.
 
 #### B5. Self-contained splat formats
 
@@ -2051,7 +2128,7 @@ Wave B exit:
   registry-wide E2E sweep;
 - the default install remains numpy-only and all native code is vendored,
   pinned, permissively licensed, and statically linked;
-- all 37 currently registered codec behaviors, benchmarks, and golden bytes
+- all 38 currently registered codec behaviors, benchmarks, and golden bytes
   remain green;
 - the dependency-wave remote validation in section 12.10 passes.
 

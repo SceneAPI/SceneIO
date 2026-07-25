@@ -108,6 +108,8 @@ def inspect_path(path: str | Path, format_id: str, datatype: str) -> Inspection:
         return _inspect_camera_rig(p, format_id, datatype)
     if format_id == "g2o":
         return _inspect_g2o(p, datatype)
+    if format_id == "colmap_db":
+        return _inspect_colmap_db(p, datatype)
     if format_id == "npy":
         return _inspect_npy(p, datatype)
     if format_id == "npz":
@@ -157,6 +159,60 @@ def inspect_path(path: str | Path, format_id: str, datatype: str) -> Inspection:
 
 def _size(path: Path) -> int:
     return path.stat().st_size
+
+
+def _inspect_colmap_db(path: Path, datatype: str) -> Inspection:
+    """Inspect SQL metadata without fetching any feature/match BLOB."""
+
+    values = _core.inspect_colmap_db(str(path))
+    arrays = []
+    for image_id, keypoint_count, keypoint_dim, descriptor_count, descriptor_dim in zip(
+        values["image_ids"],
+        values["keypoint_counts"],
+        values["keypoint_dimensions"],
+        values["descriptor_counts"],
+        values["image_descriptor_dimensions"],
+        strict=True,
+    ):
+        if keypoint_count >= 0:
+            arrays.append(
+                ArrayInspection(
+                    f"{image_id}/keypoints",
+                    (keypoint_count, keypoint_dim),
+                    "float32",
+                )
+            )
+        if descriptor_count >= 0:
+            arrays.append(
+                ArrayInspection(
+                    f"{image_id}/descriptors",
+                    (descriptor_count, descriptor_dim),
+                    "uint8",
+                )
+            )
+    return Inspection(
+        format="colmap_db",
+        datatype=datatype,
+        byte_size=_size(path),
+        shape=(values["num_images"],),
+        count=values["num_images"],
+        arrays=tuple(arrays),
+        metadata={
+            "user_version": values["user_version"],
+            "sqlite_version": values["sqlite_version"],
+            "num_cameras": values["num_cameras"],
+            "num_images": values["num_images"],
+            "num_keypoint_rows": values["num_keypoint_rows"],
+            "num_descriptor_rows": values["num_descriptor_rows"],
+            "num_match_pairs": values["num_match_pairs"],
+            "num_verified_pairs": values["num_verified_pairs"],
+            "num_matches": values["num_matches"],
+            "num_verified_matches": values["num_verified_matches"],
+            "descriptor_dimensions": tuple(values["descriptor_dimensions"]),
+            "image_ids": tuple(values["image_ids"]),
+            "image_names": tuple(values["image_names"]),
+        },
+    )
 
 
 def _directory_size(path: Path) -> int:

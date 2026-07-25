@@ -112,8 +112,9 @@ zero‑copy + convention tags.
 | `FlowField` | `vectors` HxWx2 f32 + component/axis/row/unit/invalid meta | typed `.flo` adapter | ✅ |
 | `PointCloud` | `xyz` Nx3, `rgb`/`rgb16`, `normals`, `intensity`, optional organized shape + viewpoint | PLY‑point, PCD, LAS/LAZ, E57, `.xyz` | ✅ |
 | `Mesh` | `vertices` Nx3, `faces` Mx3 u32, `normals`, `uv`, `vertex_color` | OBJ, STL, OFF, PLY‑mesh, glTF, USD | ⬜ |
-| `FeatureSet` | `keypoints` Nx{2,4,6} f32, `descriptors` NxD, `scores` N, `image_size` 2 | HDF5/hloc, COLMAP DB | ⬜ |
-| `MatchGraph` | per‑pair `matches` Mx2 u32, `scores` M, `F/E/H` 3x3, `inliers` | HDF5/hloc, COLMAP DB | ⬜ |
+| `FeatureSet` | `keypoints` Nx{2,4,6} f32, `descriptors` NxD, `scores` N, image identity/size and absent-state metadata | HDF5/hloc, COLMAP DB | ✅ |
+| `MatchGraph` | ragged per-pair raw/verified `matches` Mx2 u32, `scores` M, `F/E/H` 3x3, config and relative pose | HDF5/hloc, COLMAP DB | ✅ |
+| `ColmapDatabase` | cameras, prior-focal flags, ordered features, match graph, schema version | COLMAP DB | ✅ |
 | `TensorDict` | named ndarrays + attrs | npz, HDF5, safetensors, zarr, parquet | ✅ |
 | `CameraRig` | lossless ragged intrinsics/distortion, exact K/R/P, extrinsics, operational/time/topic metadata + convention tags | OpenCV/ROS/Kalibr calib | ✅ |
 | `StateTrajectory` | int64-ns timestamps + p/q/v/gyro-bias/accel-bias with frame/unit/sign tags | EuRoC state CSV | ✅ |
@@ -133,7 +134,7 @@ Columns: **Ext/id** · **Record** · **Lib/oracle (license)** · **R/W** ·
 |---|---|---|---|---|
 | ✅ COLMAP `.bin` | `Reconstruction` | pycolmap (BSD) | R+W | byte‑identical; rigs/frames in 4.1.1 |
 | ✅ COLMAP `.txt` | `Reconstruction` | pycolmap | R+W | text twin; fast_float parse |
-| ⬜ COLMAP `.db` | `FeatureSet`/`MatchGraph` | pycolmap + sqlite3 (PD) | R+W | sqlite; contract at `colmap_db` |
+| ✅ COLMAP `.db` | `ColmapDatabase` (`FeatureSet`/`MatchGraph`) | pycolmap + sqlite3 (PD) | R+W | pinned SQLite 3.53.4; transaction-safe write, metadata inspect, one-image/one-pair selectors |
 | ✅ Bundler `.out` | `Reconstruction` | pycolmap/manual | R+W | y‑down camera convention pinned |
 | ✅ VisualSFM `.nvm` | `Reconstruction` | manual | R+W | quat WXYZ, focal in px |
 | ✅ OpenMVG `sfm_data.json` | `Reconstruction` | manual json (nlohmann) | R+W | pose = center+rotation |

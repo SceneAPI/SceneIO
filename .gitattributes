@@ -1,0 +1,2 @@
+src/cpp/third_party/sqlite/sqlite3.c -whitespace
+src/cpp/third_party/sqlite/sqlite3.h -whitespace

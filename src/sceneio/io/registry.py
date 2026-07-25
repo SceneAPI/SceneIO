@@ -46,6 +46,7 @@ class Codec:
     read_points: Callable[[str, int, int], object] | None = None
     read_states: Callable[[str, int, int], object] | None = None
     read_image: Callable[[str, int], object] | None = None
+    read_pair: Callable[[str, int, int], object] | None = None
     read_tensors: Callable[[str, tuple[str, ...]], object] | None = None
     read_slices: Callable[
         [str, tuple[tuple[str, int, int], ...]], object
@@ -105,6 +106,8 @@ class Codec:
             selectors.append("states")
         if self.read_image is not None:
             selectors.append("image_id")
+        if self.read_pair is not None:
+            selectors.append("pair")
         if self.read_tensors is not None:
             selectors.append("tensors")
         if self.read_slices is not None:
@@ -722,6 +725,42 @@ register(
             "mixed_edge_types",
             "parameters",
             "robust_kernels",
+        ),
+    )
+)
+register(
+    Codec(
+        "colmap_db",
+        (".db",),
+        _core.read_colmap_db,
+        _core.write_colmap_db,
+        record=_core.ColmapDatabase,
+        datatype="match_graph",
+        magic=(b"SQLite format 3\x00",),
+        filenames=("database.db",),
+        read_image=_core.read_colmap_db_image,
+        read_pair=_core.read_colmap_db_pair,
+        supported_features=(
+            "cameras",
+            "images",
+            "keypoints_2_4_6",
+            "uint8_descriptors",
+            "extractor_type",
+            "raw_matches",
+            "verified_matches",
+            "F_E_H",
+            "relative_pose",
+            "sparse_ids",
+            "read_only_reads",
+            "transactional_writes",
+        ),
+        unsupported_features=(
+            "rigs",
+            "frames",
+            "pose_priors",
+            "scores",
+            "float_descriptors",
+            "fork_extension_tables",
         ),
     )
 )

@@ -2,7 +2,7 @@
 
 Measures, per codec, encode (write) + decode (read) throughput (MB/s over the raw
 payload) and peak Python allocation (tracemalloc), for sceneio._core vs the oracle
-library where one exists, on representative payloads for all 37 codecs. Read
+library where one exists, on representative payloads for all 38 codecs. Read
 measurements retain the legacy whole-file bytes/copy-decode path beside the
 public registry mmap path, so their peak delta captures the input copy O1
 removes and, for NPY/FLO, the decoded-array copy O2 removes. Write measurements
@@ -22,6 +22,7 @@ import gc
 import io
 import json
 import os
+import sqlite3
 import statistics
 import struct
 import tempfile
@@ -1013,6 +1014,465 @@ def _bal_payload_nbytes(payload):
     return sum(value.nbytes for value in payload.values())
 
 
+_COLMAP_PAIR_MULTIPLIER = 2_147_483_647
+
+
+def _colmap_db_fixture(scale):
+    image_count = 64
+    feature_count = max(1, int(1024 * scale))
+    match_count = min(feature_count, max(1, int(256 * scale)))
+    descriptor_columns = 128
+    camera = _core.camera(
+        1,
+        1,
+        1920,
+        1080,
+        np.array([1200.0, 1200.0, 960.0, 540.0], np.float64),
+    )
+    keypoints = np.empty((feature_count, 4), np.float32)
+    indices = np.arange(feature_count, dtype=np.float32)
+    keypoints[:, 0] = np.remainder(indices * 17.0, 1920.0)
+    keypoints[:, 1] = np.remainder(indices * 29.0, 1080.0)
+    keypoints[:, 2] = 1.0 + np.remainder(indices, 8.0) * 0.125
+    keypoints[:, 3] = np.remainder(indices * 0.01, 2.0 * np.pi)
+    descriptor_template = np.arange(
+        feature_count * descriptor_columns, dtype=np.uint32
+    ).reshape(feature_count, descriptor_columns)
+    features = [
+        _core.feature_set(
+            keypoints,
+            np.asarray(
+                descriptor_template + image_id * 31,
+                dtype=np.uint8,
+            ),
+            image_id=image_id,
+            image_name=f"images/frame_{image_id:06d}.jpg",
+            camera_id=1,
+            image_size=(1920, 1080),
+            extractor_type=0,
+        )
+        for image_id in range(1, image_count + 1)
+    ]
+    image_pairs = np.column_stack(
+        (
+            np.arange(1, image_count, dtype=np.uint32),
+            np.arange(2, image_count + 1, dtype=np.uint32),
+        )
+    )
+    pair_count = len(image_pairs)
+    one_pair = np.column_stack(
+        (
+            np.arange(match_count, dtype=np.uint32),
+            np.arange(match_count, dtype=np.uint32),
+        )
+    )
+    matches = np.tile(one_pair, (pair_count, 1))
+    match_offsets = np.arange(
+        0, (pair_count + 1) * match_count, match_count, dtype=np.uint64
+    )
+    verified_count = max(1, match_count // 2)
+    verified_matches = np.tile(one_pair[:verified_count], (pair_count, 1))
+    verified_offsets = np.arange(
+        0,
+        (pair_count + 1) * verified_count,
+        verified_count,
+        dtype=np.uint64,
+    )
+    identity = np.tile(np.eye(3, dtype=np.float64), (pair_count, 1, 1))
+    qvecs = np.zeros((pair_count, 4), np.float64)
+    qvecs[:, 0] = 1.0
+    tvecs = np.zeros((pair_count, 3), np.float64)
+    tvecs[:, 0] = np.arange(pair_count, dtype=np.float64) * 0.01
+    present = np.ones(pair_count, np.uint8)
+    graph = _core.match_graph(
+        image_pairs,
+        match_offsets,
+        matches,
+        verified_offsets,
+        verified_matches,
+        configs=np.full(pair_count, 2, np.int32),
+        fundamental_matrices=identity,
+        fundamental_present=present,
+        essential_matrices=identity,
+        essential_present=present,
+        homographies=identity,
+        homography_present=present,
+        qvecs=qvecs,
+        tvecs=tvecs,
+        pose_present=present,
+        match_present=present,
+        geometry_present=present,
+    )
+    return _core.colmap_database(
+        [camera],
+        features,
+        graph,
+        prior_focal_length=np.array([1], np.uint8),
+    )
+
+
+def _colmap_db_payload_nbytes(value):
+    total = sum(np.asarray(camera.params).nbytes for camera in value.cameras)
+    total += np.asarray(value.prior_focal_length).nbytes
+    for index in range(value.num_images):
+        feature = value.feature_at(index)
+        total += np.asarray(feature.keypoints).nbytes
+        if feature.descriptors is not None:
+            total += np.asarray(feature.descriptors).nbytes
+        if feature.scores is not None:
+            total += np.asarray(feature.scores).nbytes
+    graph = value.match_graph
+    for name in (
+        "image_pairs",
+        "match_offsets",
+        "matches",
+        "verified_offsets",
+        "verified_matches",
+        "configs",
+        "fundamental_matrices",
+        "essential_matrices",
+        "homographies",
+        "qvecs",
+        "tvecs",
+    ):
+        total += np.asarray(getattr(graph, name)).nbytes
+    return total
+
+
+def _colmap_blob(value):
+    return memoryview(np.asarray(value)).cast("B")
+
+
+def _sqlite_reference_write_colmap_db(value, path):
+    destination = Path(path)
+    destination.unlink(missing_ok=True)
+    connection = sqlite3.connect(destination)
+    try:
+        connection.executescript(
+            """
+            CREATE TABLE cameras(
+              camera_id INTEGER PRIMARY KEY NOT NULL,
+              model INTEGER NOT NULL,
+              width INTEGER NOT NULL,
+              height INTEGER NOT NULL,
+              params BLOB,
+              prior_focal_length INTEGER NOT NULL);
+            CREATE TABLE images(
+              image_id INTEGER PRIMARY KEY NOT NULL,
+              name TEXT NOT NULL UNIQUE,
+              camera_id INTEGER NOT NULL,
+              time_id INTEGER);
+            CREATE TABLE keypoints(
+              image_id INTEGER PRIMARY KEY NOT NULL,
+              rows INTEGER NOT NULL,
+              cols INTEGER NOT NULL,
+              data BLOB);
+            CREATE TABLE descriptors(
+              image_id INTEGER PRIMARY KEY NOT NULL,
+              type INTEGER NOT NULL,
+              rows INTEGER NOT NULL,
+              cols INTEGER NOT NULL,
+              data BLOB);
+            CREATE TABLE matches(
+              pair_id INTEGER PRIMARY KEY NOT NULL,
+              rows INTEGER NOT NULL,
+              cols INTEGER NOT NULL,
+              data BLOB);
+            CREATE TABLE two_view_geometries(
+              pair_id INTEGER PRIMARY KEY NOT NULL,
+              rows INTEGER NOT NULL,
+              cols INTEGER NOT NULL,
+              data BLOB,
+              config INTEGER NOT NULL,
+              F BLOB,
+              E BLOB,
+              H BLOB,
+              qvec BLOB,
+              tvec BLOB);
+            """
+        )
+        connection.execute("BEGIN IMMEDIATE")
+        connection.executemany(
+            "INSERT INTO cameras VALUES(?,?,?,?,?,?)",
+            (
+                (
+                    camera.id,
+                    camera.model_id,
+                    camera.width,
+                    camera.height,
+                    _colmap_blob(camera.params),
+                    int(value.prior_focal_length[index]),
+                )
+                for index, camera in enumerate(value.cameras)
+            ),
+        )
+        image_rows = []
+        keypoint_rows = []
+        descriptor_rows = []
+        for index in range(value.num_images):
+            feature = value.feature_at(index)
+            image_rows.append(
+                (
+                    feature.image_id,
+                    feature.image_name,
+                    feature.camera_id,
+                    feature.time_id,
+                )
+            )
+            if feature.keypoints_present:
+                keypoint_rows.append(
+                    (
+                        feature.image_id,
+                        feature.num_keypoints,
+                        feature.keypoint_columns,
+                        _colmap_blob(feature.keypoints),
+                    )
+                )
+            if feature.descriptors is not None:
+                descriptor_rows.append(
+                    (
+                        feature.image_id,
+                        feature.extractor_type,
+                        feature.num_keypoints,
+                        feature.descriptor_dim,
+                        _colmap_blob(feature.descriptors),
+                    )
+                )
+        connection.executemany(
+            "INSERT INTO images VALUES(?,?,?,?)", image_rows
+        )
+        connection.executemany(
+            "INSERT INTO keypoints VALUES(?,?,?,?)", keypoint_rows
+        )
+        connection.executemany(
+            "INSERT INTO descriptors VALUES(?,?,?,?,?)", descriptor_rows
+        )
+        graph = value.match_graph
+        match_rows = []
+        geometry_rows = []
+        for pair in range(graph.num_pairs):
+            pair_id = int(graph.pair_ids[pair])
+            match_begin = int(graph.match_offsets[pair])
+            match_end = int(graph.match_offsets[pair + 1])
+            if graph.match_present[pair]:
+                match_rows.append(
+                    (
+                        pair_id,
+                        match_end - match_begin,
+                        2,
+                        _colmap_blob(
+                            graph.matches[match_begin:match_end]
+                        ),
+                    )
+                )
+            verified_begin = int(graph.verified_offsets[pair])
+            verified_end = int(graph.verified_offsets[pair + 1])
+            if graph.geometry_present[pair]:
+                geometry_rows.append(
+                    (
+                        pair_id,
+                        verified_end - verified_begin,
+                        2,
+                        _colmap_blob(
+                            graph.verified_matches[
+                                verified_begin:verified_end
+                            ]
+                        ),
+                        int(graph.configs[pair]),
+                        _colmap_blob(graph.fundamental_matrices[pair]),
+                        _colmap_blob(graph.essential_matrices[pair]),
+                        _colmap_blob(graph.homographies[pair]),
+                        _colmap_blob(graph.qvecs[pair]),
+                        _colmap_blob(graph.tvecs[pair]),
+                    )
+                )
+        connection.executemany(
+            "INSERT INTO matches VALUES(?,?,?,?)", match_rows
+        )
+        connection.executemany(
+            "INSERT INTO two_view_geometries VALUES(?,?,?,?,?,?,?,?,?,?)",
+            geometry_rows,
+        )
+        connection.execute(f"PRAGMA user_version={value.user_version}")
+        connection.commit()
+    except BaseException:
+        connection.rollback()
+        raise
+    finally:
+        connection.close()
+
+
+def _sqlite_reference_query(path, statements):
+    connection = sqlite3.connect(f"file:{Path(path).as_posix()}?mode=ro", uri=True)
+    try:
+        connection.execute("PRAGMA query_only=ON")
+        return tuple(
+            connection.execute(statement, parameters).fetchall()
+            for statement, parameters in statements
+        )
+    finally:
+        connection.close()
+
+
+def _sqlite_reference_read_colmap_db(path):
+    return _sqlite_reference_query(
+        path,
+        (
+            ("SELECT * FROM cameras ORDER BY camera_id", ()),
+            ("SELECT * FROM images ORDER BY image_id", ()),
+            ("SELECT * FROM keypoints ORDER BY image_id", ()),
+            ("SELECT * FROM descriptors ORDER BY image_id", ()),
+            ("SELECT * FROM matches ORDER BY pair_id", ()),
+            (
+                "SELECT * FROM two_view_geometries ORDER BY pair_id",
+                (),
+            ),
+        ),
+    )
+
+
+def _sqlite_reference_inspect_colmap_db(path):
+    return _sqlite_reference_query(
+        path,
+        (
+            ("SELECT count(*) FROM cameras", ()),
+            ("SELECT count(*) FROM images", ()),
+            ("SELECT coalesce(sum(rows),0) FROM keypoints", ()),
+            ("SELECT coalesce(sum(rows),0) FROM descriptors", ()),
+            ("SELECT coalesce(sum(rows),0) FROM matches", ()),
+            (
+                "SELECT coalesce(sum(rows),0) "
+                "FROM two_view_geometries",
+                (),
+            ),
+            (
+                "SELECT image_id,name,camera_id,time_id "
+                "FROM images ORDER BY image_id",
+                (),
+            ),
+            (
+                "SELECT image_id,rows,cols "
+                "FROM keypoints ORDER BY image_id",
+                (),
+            ),
+            (
+                "SELECT image_id,type,rows,cols "
+                "FROM descriptors ORDER BY image_id",
+                (),
+            ),
+        ),
+    )
+
+
+def _sqlite_reference_read_colmap_db_image(path, image_id):
+    return _sqlite_reference_query(
+        path,
+        (
+            (
+                "SELECT * FROM images WHERE image_id=?",
+                (image_id,),
+            ),
+            (
+                "SELECT * FROM keypoints WHERE image_id=?",
+                (image_id,),
+            ),
+            (
+                "SELECT * FROM descriptors WHERE image_id=?",
+                (image_id,),
+            ),
+        ),
+    )
+
+
+def _sqlite_reference_read_colmap_db_pair(path, image_id1, image_id2):
+    low, high = sorted((image_id1, image_id2))
+    pair_id = low * _COLMAP_PAIR_MULTIPLIER + high
+    return _sqlite_reference_query(
+        path,
+        (
+            ("SELECT * FROM matches WHERE pair_id=?", (pair_id,)),
+            (
+                "SELECT * FROM two_view_geometries WHERE pair_id=?",
+                (pair_id,),
+            ),
+        ),
+    )
+
+
+def _assert_colmap_db_equal(actual, expected):
+    assert actual.user_version == expected.user_version
+    assert len(actual.cameras) == len(expected.cameras)
+    for left, right in zip(actual.cameras, expected.cameras, strict=True):
+        assert (
+            left.id,
+            left.model_id,
+            left.width,
+            left.height,
+        ) == (
+            right.id,
+            right.model_id,
+            right.width,
+            right.height,
+        )
+        np.testing.assert_array_equal(left.params, right.params)
+    np.testing.assert_array_equal(
+        actual.prior_focal_length, expected.prior_focal_length
+    )
+    assert actual.num_images == expected.num_images
+    for index in range(actual.num_images):
+        left = actual.feature_at(index)
+        right = expected.feature_at(index)
+        assert (
+            left.image_id,
+            left.image_name,
+            left.camera_id,
+            tuple(left.image_size),
+            left.time_id,
+            left.extractor_type,
+            left.keypoints_present,
+        ) == (
+            right.image_id,
+            right.image_name,
+            right.camera_id,
+            tuple(right.image_size),
+            right.time_id,
+            right.extractor_type,
+            right.keypoints_present,
+        )
+        np.testing.assert_array_equal(left.keypoints, right.keypoints)
+        if left.descriptors is None or right.descriptors is None:
+            assert left.descriptors is right.descriptors
+        else:
+            np.testing.assert_array_equal(
+                left.descriptors, right.descriptors
+            )
+    left_graph = actual.match_graph
+    right_graph = expected.match_graph
+    for name in (
+        "pair_ids",
+        "image_pairs",
+        "match_present",
+        "geometry_present",
+        "match_offsets",
+        "matches",
+        "verified_offsets",
+        "verified_matches",
+        "configs",
+        "F_present",
+        "E_present",
+        "H_present",
+        "fundamental_matrices",
+        "essential_matrices",
+        "homographies",
+        "pose_present",
+        "qvecs",
+        "tvecs",
+    ):
+        np.testing.assert_array_equal(
+            getattr(left_graph, name), getattr(right_graph, name)
+        )
+
+
 def _evict_file_cache(path):
     """Best-effort cold-cache hint (effective where POSIX_FADV_DONTNEED exists)."""
     if not hasattr(os, "posix_fadvise") or not hasattr(os, "POSIX_FADV_DONTNEED"):
@@ -1638,16 +2098,271 @@ def _run_large_safetensors(args, tmp):
     return [], [result]
 
 
+def _benchmark_colmap_db(args, tmp):
+    value = _colmap_db_fixture(args.scale)
+    native_path = Path(tmp) / "colmap-database.db"
+    oracle_path = Path(tmp) / "colmap-database-oracle.db"
+    payload_bytes = _colmap_db_payload_nbytes(value)
+    payload_mb = payload_bytes / 1e6
+    selected_image_id = value.feature_at(value.num_images // 2).image_id
+    selected_pair = tuple(
+        int(item)
+        for item in value.match_graph.image_pairs[
+            value.match_graph.num_pairs // 2
+        ]
+    )
+
+    def native_write():
+        return sceneio.write(value, native_path, format="colmap_db")
+
+    def oracle_write():
+        return _sqlite_reference_write_colmap_db(value, oracle_path)
+
+    native_write_time, native_write_peak = _measure(
+        native_write, args.runs
+    )
+    native_write_rss = _measure_rss(native_write)
+    oracle_write_time = oracle_write_peak = oracle_write_rss = None
+    if not args.skip_oracles:
+        oracle_write_time, oracle_write_peak = _measure(
+            oracle_write, args.runs
+        )
+        oracle_write_rss = _measure_rss(oracle_write)
+
+    def native_full_read():
+        if args.cold_cache:
+            _evict_file_cache(native_path)
+        return sceneio.read(native_path, format="colmap_db")
+
+    def oracle_full_read():
+        if args.cold_cache:
+            _evict_file_cache(native_path)
+        return _sqlite_reference_read_colmap_db(native_path)
+
+    def native_inspect():
+        if args.cold_cache:
+            _evict_file_cache(native_path)
+        return sceneio.inspect(native_path, format="colmap_db")
+
+    def oracle_inspect():
+        if args.cold_cache:
+            _evict_file_cache(native_path)
+        return _sqlite_reference_inspect_colmap_db(native_path)
+
+    def native_image_read():
+        if args.cold_cache:
+            _evict_file_cache(native_path)
+        return sceneio.read_partial(
+            native_path,
+            format="colmap_db",
+            image_id=selected_image_id,
+        )
+
+    def oracle_image_read():
+        if args.cold_cache:
+            _evict_file_cache(native_path)
+        return _sqlite_reference_read_colmap_db_image(
+            native_path, selected_image_id
+        )
+
+    def native_pair_read():
+        if args.cold_cache:
+            _evict_file_cache(native_path)
+        return sceneio.read_partial(
+            native_path,
+            format="colmap_db",
+            pair=selected_pair,
+        )
+
+    def oracle_pair_read():
+        if args.cold_cache:
+            _evict_file_cache(native_path)
+        return _sqlite_reference_read_colmap_db_pair(
+            native_path, *selected_pair
+        )
+
+    native_full_time, native_full_peak = _measure(
+        native_full_read, args.runs
+    )
+    native_full_rss = _measure_rss(native_full_read)
+    inspect_time, inspect_peak = _measure(native_inspect, args.runs)
+    inspect_rss = _measure_rss(native_inspect)
+    image_time, image_peak = _measure(native_image_read, args.runs)
+    image_rss = _measure_rss(native_image_read)
+    pair_time, pair_peak = _measure(native_pair_read, args.runs)
+    pair_rss = _measure_rss(native_pair_read)
+
+    oracle_metrics = {}
+    oracle_full_time = None
+    if not args.skip_oracles:
+        oracle_full_time, oracle_full_peak = _measure(
+            oracle_full_read, args.runs
+        )
+        oracle_full_rss = _measure_rss(oracle_full_read)
+        oracle_inspect_time, oracle_inspect_peak = _measure(
+            oracle_inspect, args.runs
+        )
+        oracle_inspect_rss = _measure_rss(oracle_inspect)
+        oracle_image_time, oracle_image_peak = _measure(
+            oracle_image_read, args.runs
+        )
+        oracle_image_rss = _measure_rss(oracle_image_read)
+        oracle_pair_time, oracle_pair_peak = _measure(
+            oracle_pair_read, args.runs
+        )
+        oracle_pair_rss = _measure_rss(oracle_pair_read)
+        oracle_metrics = {
+            "oracle_write_mbps": payload_mb / oracle_write_time,
+            "oracle_write_peak_mb": oracle_write_peak / 1e6,
+            "oracle_write_rss_mb": oracle_write_rss / 1e6,
+            "oracle_read_mbps": payload_mb / oracle_full_time,
+            "oracle_read_peak_mb": oracle_full_peak / 1e6,
+            "oracle_read_rss_mb": oracle_full_rss / 1e6,
+            "oracle_inspect_ms": oracle_inspect_time * 1000,
+            "oracle_inspect_peak_mb": oracle_inspect_peak / 1e6,
+            "oracle_inspect_rss_mb": oracle_inspect_rss / 1e6,
+            "oracle_image_ms": oracle_image_time * 1000,
+            "oracle_image_peak_mb": oracle_image_peak / 1e6,
+            "oracle_image_rss_mb": oracle_image_rss / 1e6,
+            "oracle_pair_ms": oracle_pair_time * 1000,
+            "oracle_pair_peak_mb": oracle_pair_peak / 1e6,
+            "oracle_pair_rss_mb": oracle_pair_rss / 1e6,
+        }
+
+    decoded = native_full_read()
+    _assert_colmap_db_equal(decoded, value)
+    if not args.skip_oracles:
+        oracle_decoded = sceneio.read(oracle_path, format="colmap_db")
+        _assert_colmap_db_equal(oracle_decoded, value)
+        assert len(oracle_full_read()[1]) == value.num_images
+    selected_feature = native_image_read()
+    expected_feature = decoded.feature(selected_image_id)
+    assert (
+        selected_feature.image_id,
+        selected_feature.image_name,
+        selected_feature.camera_id,
+    ) == (
+        expected_feature.image_id,
+        expected_feature.image_name,
+        expected_feature.camera_id,
+    )
+    np.testing.assert_array_equal(
+        selected_feature.keypoints, expected_feature.keypoints
+    )
+    np.testing.assert_array_equal(
+        selected_feature.descriptors, expected_feature.descriptors
+    )
+    selected_graph = native_pair_read()
+    expected_pair_index = value.match_graph.num_pairs // 2
+    match_begin = int(value.match_graph.match_offsets[expected_pair_index])
+    match_end = int(value.match_graph.match_offsets[expected_pair_index + 1])
+    np.testing.assert_array_equal(
+        selected_graph.matches,
+        value.match_graph.matches[match_begin:match_end],
+    )
+    inspected = native_inspect()
+    assert inspected.count == value.num_images
+    assert inspected.metadata["num_matches"] == value.match_graph.num_matches
+
+    file_mb = native_path.stat().st_size / 1e6
+    result = {
+        "codec": "colmap_db",
+        "payload_mb": payload_mb,
+        "file_mb": file_mb,
+        "write_mbps": payload_mb / native_write_time,
+        "path_write_mbps": payload_mb / native_write_time,
+        "read_mbps": payload_mb / native_full_time,
+        "path_read_mbps": payload_mb / native_full_time,
+        "mmap_peak_mb": native_full_peak / 1e6,
+        "mmap_rss_mb": native_full_rss / 1e6,
+        "inspect_ms": inspect_time * 1000,
+        "inspect_peak_mb": inspect_peak / 1e6,
+        "inspect_rss_mb": inspect_rss / 1e6,
+        "partial_ms": image_time * 1000,
+        "partial_peak_mb": image_peak / 1e6,
+        "partial_rss_mb": image_rss / 1e6,
+        "partial_image_ms": image_time * 1000,
+        "partial_image_peak_mb": image_peak / 1e6,
+        "partial_image_rss_mb": image_rss / 1e6,
+        "partial_pair_ms": pair_time * 1000,
+        "partial_pair_peak_mb": pair_peak / 1e6,
+        "partial_pair_rss_mb": pair_rss / 1e6,
+        "sink_write_peak_mb": native_write_peak / 1e6,
+        "sink_write_rss_mb": native_write_rss / 1e6,
+        **oracle_metrics,
+    }
+    write_row = (
+        "colmap_db",
+        payload_mb,
+        file_mb,
+        None,
+        payload_mb / native_write_time,
+        None,
+        native_write_peak / 1e6,
+        None,
+        native_write_rss / 1e6,
+    )
+    inspect_row = (
+        "colmap_db",
+        native_full_time,
+        inspect_time,
+        native_full_peak / 1e6,
+        inspect_peak / 1e6,
+        native_full_rss / 1e6,
+        inspect_rss / 1e6,
+    )
+    partial_rows = [
+        (
+            "colmap_db:image",
+            native_full_time,
+            image_time,
+            native_full_peak / 1e6,
+            image_peak / 1e6,
+            native_full_rss / 1e6,
+            image_rss / 1e6,
+        ),
+        (
+            "colmap_db:pair",
+            native_full_time,
+            pair_time,
+            native_full_peak / 1e6,
+            pair_peak / 1e6,
+            native_full_rss / 1e6,
+            pair_rss / 1e6,
+        ),
+    ]
+    display = (
+        payload_mb,
+        file_mb,
+        payload_mb / native_write_time,
+        payload_mb / native_full_time,
+        (
+            payload_mb / oracle_write_time
+            if oracle_write_time is not None
+            else None
+        ),
+        (
+            payload_mb / oracle_full_time
+            if oracle_full_time is not None
+            else None
+        ),
+        native_full_peak / 1e6,
+        native_full_rss / 1e6,
+    )
+    return result, write_row, inspect_row, partial_rows, display
+
+
 def _run_benchmark(args, tmp):
     pose_bundle = _poses_and_reconstruction(args.scale)
     reconstruction = pose_bundle[0]
     specs = _specs(args.scale, pose_bundle)
     directory_specs = _directory_specs()
+    include_colmap_db = True
     if args.only:
         requested = set(args.only)
         known = {spec.id for spec in specs} | {
             spec.id for spec in directory_specs
-        }
+        } | {"colmap_db"}
         unknown = requested - known
         if unknown:
             raise ValueError(
@@ -1657,6 +2372,7 @@ def _run_benchmark(args, tmp):
         directory_specs = [
             spec for spec in directory_specs if spec.id in requested
         ]
+        include_colmap_db = "colmap_db" in requested
     failures = []
     results = []
     write_rows = []
@@ -2549,6 +3265,48 @@ def _run_benchmark(args, tmp):
             results.append({"codec": s.id, "error": f"{type(e).__name__}: {e}"})
             print(f"{s.id:<14} ERROR: {type(e).__name__}: {e}")
 
+    if include_colmap_db:
+        try:
+            (
+                database_result,
+                database_write_row,
+                database_inspect_row,
+                database_partial_rows,
+                database_display,
+            ) = _benchmark_colmap_db(args, tmp)
+            results.append(database_result)
+            write_rows.append(database_write_row)
+            inspect_rows.append(database_inspect_row)
+            partial_rows.extend(database_partial_rows)
+            (
+                payload_mb,
+                file_mb,
+                write_mbps,
+                read_mbps,
+                oracle_write_mbps,
+                oracle_read_mbps,
+                read_peak_mb,
+                read_rss_mb,
+            ) = database_display
+            print(
+                f"{'colmap_db':<14}{payload_mb:>10.1f}{file_mb:>9.1f}"
+                f"{write_mbps:>9.0f}{read_mbps:>9.0f}"
+                f"{read_mbps:>9.0f}"
+                f"{(oracle_write_mbps or 0):>9.0f}"
+                f"{(oracle_read_mbps or 0):>9.0f}"
+                f"{'-':>9}{read_peak_mb:>9.1f}"
+                f"{'-':>9}{read_rss_mb:>9.1f}{'-':>9}"
+            )
+        except Exception as e:
+            failures.append("colmap_db")
+            results.append(
+                {
+                    "codec": "colmap_db",
+                    "error": f"{type(e).__name__}: {e}",
+                }
+            )
+            print(f"{'colmap_db':<14} ERROR: {type(e).__name__}: {e}")
+
     for spec in directory_specs:
         try:
             path = Path(tmp) / spec.id
@@ -2676,7 +3434,7 @@ def _run_benchmark(args, tmp):
             print(f"{spec.id:<14} ERROR: {type(e).__name__}: {e}")
 
     if not args.only:
-        assert len(specs) + len(directory_specs) == 37
+        assert len(specs) + len(directory_specs) + int(include_colmap_db) == 38
     print("\nMB/s over raw payload; fileMB = encoded size (= the whole-file copy O1/O3 remove).")
     print("sioR = in-memory copy decode; pathR = public registry mmap read/view.")
     print("bPeakMB/mPeakMB = peak Python allocation for bytes/mmap reads (O1 delta).")
@@ -2752,7 +3510,7 @@ def _run_benchmark(args, tmp):
         )
     print(
         "Partial reads return the normal record type while materializing only "
-        "the selected pixel, point, tensor, or COLMAP-image subset."
+        "the selected pixel, point, tensor, COLMAP-image, or match-pair subset."
     )
     if args.require_o5_inspect_gains:
         stable = {"exr", "gaussian_ply", "las", "png", "spz"}

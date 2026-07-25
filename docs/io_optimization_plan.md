@@ -5,10 +5,18 @@ Status: complete — O0–O5 landed. Scope: the compiled `sceneio._core` I/O pat
 hardening/perf work concrete).
 
 Post-0.2 format expansion inherits the same gates. The registry currently has
-37 codecs (35 single-file plus two COLMAP directories). The latest small-record
-wave adds OpenCV YAML/XML, ROS CameraInfo YAML, and Kalibr YAML over
-`CameraRig`, followed by g2o over `PoseGraph`; each inherits mmap input, direct
-file sinks, metadata inspection, and the all-codec differential/memory harness.
+38 codecs (35 buffer-backed files, one path-native SQLite database, and two
+COLMAP directories). The latest record wave adds the four calibration formats
+over `CameraRig`, g2o over `PoseGraph`, and `colmap_db` over
+`ColmapDatabase`/`FeatureSet`/`MatchGraph`; each inherits direct file sinks,
+metadata inspection, partial reads where meaningful, and the all-codec
+differential/memory harness.
+
+The representative COLMAP database fixture contains 9.65 MB of logical
+features and match data in a 9.92 MB SQLite file. On local MSVC it measured
+1.41 GB/s full native read, 0.81 ms metadata inspection (8.50× faster), and
+0.53/0.42 ms one-image/one-pair reads (13.10×/16.31× faster), while traced
+Python allocation stayed below 0.05 MB on every native path.
 
 **Committed scope (decided):** the **full O0–O5 program**, applied **uniformly to
 all 23 codecs**, with **qualitative** success criteria — every step must show a
@@ -288,13 +296,14 @@ the committed five-run baseline remains the historical control for smaller
 timing movement.
 
 **Partial reads landed:** `sceneio.read_partial()` requires exactly one
-half-open pixel `window`, half-open `points` range, or persisted COLMAP
-`image_id`. Bounded pixel paths cover PFM, binary P5/P6 Netpbm, lossless VP8L
-WebP, and FLO; point paths cover XYZ, LAS, binary Gaussian PLY, and SPLAT;
-binary/text COLMAP return one image and its referenced camera without opening
-the point container. ASCII P2/P3 and lossy VP8 deliberately reject: the former
-requires complete-payload token decoding and the latter cannot guarantee that
-libwebp's cropped chroma upsampling equals a full-decode slice.
+half-open pixel `window`, half-open point/state range, persisted COLMAP
+`image_id`, unordered database `pair`, or safetensors name/slice selector.
+Bounded pixel paths cover PFM, binary P5/P6 Netpbm, lossless VP8L WebP, FLO,
+and scalar DMB; point paths include XYZ, PTS, binary PLY/PCD, LAS, Gaussian
+PLY, and SPLAT. Binary/text COLMAP return one image and its camera; COLMAP
+SQLite returns one `FeatureSet` or one pair `MatchGraph`; safetensors returns
+only requested tensors or leading-axis slices. Unsupported compressed/text
+variants reject rather than disguising a full decode as a partial read.
 
 The 48-case focused suite compares values, dtypes, and convention metadata
 against full-read slices across binary Netpbm type/channel combinations,

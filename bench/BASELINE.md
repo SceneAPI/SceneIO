@@ -713,3 +713,31 @@ owned graph arrays and hash tables (about 56–59 MB on read); inspection reduce
 that to about 39 MB by retaining only ids/endpoints needed for whole-graph
 referential validation. No partial selector is claimed because a range slice
 would need a separately specified induced/subgraph contract.
+
+## COLMAP feature-database baseline — 2026-07-24
+
+The harness now covers 38 codecs: 35 buffer-backed files, the path-native
+SQLite database, and two COLMAP directory formats. The representative database
+contains one camera, 64 images with 1,024 four-column keypoints and 128-byte
+descriptors each, and 63 consecutive image pairs with raw and verified
+matches. That is 9.65 MB of logical record data in a 9.92 MB SQLite file.
+Five-run medians were:
+
+```text
+operation                              result
+-------------------------------------------------------------
+native transactional write            178 MB/s
+stdlib sqlite3 transaction             185 MB/s
+native full read                     1,405 MB/s
+stdlib sqlite3 full materialization  1,634 MB/s
+metadata inspection                  0.808 ms  (8.50x vs full)
+one-image partial read               0.525 ms (13.10x vs full)
+one-pair partial read                0.421 ms (16.31x vs full)
+```
+
+The independent reference uses stdlib `sqlite3` prepared statements and an
+explicit transaction; pycolmap separately verifies both directions in the
+parity suite. Native full read, inspection, both selectors, and transactional
+write each stayed below 0.05 MB traced Python allocation. Full-read sampled RSS
+was 8.9 MB for the owned decoded arrays; inspection and either selector stayed
+near zero above the SQLite page cache and selected output.

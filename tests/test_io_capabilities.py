@@ -15,6 +15,7 @@ _BUILTINS = {
     "bal",
     "bmp",
     "bundler",
+    "colmap_db",
     "colmap_sparse",
     "colmap_sparse_txt",
     "dmb",
@@ -52,6 +53,7 @@ _BUILTINS = {
 }
 
 _PARTIAL = {
+    "colmap_db": ("image_id", "pair"),
     "colmap_sparse": ("image_id",),
     "colmap_sparse_txt": ("image_id",),
     "dmb": ("window",),

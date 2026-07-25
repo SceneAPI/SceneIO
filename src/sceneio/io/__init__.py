@@ -44,6 +44,9 @@ TensorDict = _core.TensorDict
 Image = _core.Image
 PointCloud = _core.PointCloud
 PoseGraph = _core.PoseGraph
+FeatureSet = _core.FeatureSet
+MatchGraph = _core.MatchGraph
+ColmapDatabase = _core.ColmapDatabase
 DepthMap = _core.DepthMap
 FlowField = _core.FlowField
 Camera = _core.Camera
@@ -189,6 +192,7 @@ def read_partial(
     points=None,
     states=None,
     image_id=None,
+    pair=None,
     tensors=None,
     slices=None,
     format: str | None = None,
@@ -198,8 +202,9 @@ def read_partial(
     Exactly one selector is required. ``window`` is the half-open pixel box
     ``(row_start, row_stop, column_start, column_stop)``. ``points`` and
     ``states`` are half-open record ranges ``(start, stop)``. ``image_id``
-    selects one COLMAP
-    image by its persisted id. ``tensors`` selects complete named tensors.
+    selects one COLMAP image by its persisted id. ``pair`` selects one
+    unordered pair of persisted COLMAP image ids. ``tensors`` selects complete
+    named tensors.
     ``slices`` maps tensor names to half-open leading-axis ``(start, stop)``
     ranges. A format that cannot access the selected region without a full
     payload decode raises :class:`FormatError`.
@@ -207,7 +212,15 @@ def read_partial(
 
     selected = sum(
         value is not None
-        for value in (window, points, states, image_id, tensors, slices)
+        for value in (
+            window,
+            points,
+            states,
+            image_id,
+            pair,
+            tensors,
+            slices,
+        )
     )
     if selected != 1:
         raise ValueError(
@@ -240,6 +253,25 @@ def read_partial(
             raise FormatError(f"format {fmt!r} does not support single-image reads")
         operation = codec.read_image
         values = (selected_image,)
+    elif pair is not None:
+        image_a, image_b = _selector_ints(pair, 2, "pair")
+        if (
+            image_a < 0
+            or image_a >= 2_147_483_647
+            or image_b < 0
+            or image_b >= 2_147_483_647
+        ):
+            raise ValueError(
+                "pair image ids must be in 0..2147483646"
+            )
+        if image_a == image_b:
+            raise ValueError("pair image ids must be distinct")
+        if codec.read_pair is None:
+            raise FormatError(
+                f"format {fmt!r} does not support image-pair reads"
+            )
+        operation = codec.read_pair
+        values = (image_a, image_b)
     elif tensors is not None:
         selected_tensors = _tensor_names(tensors)
         if codec.read_tensors is None:
@@ -404,13 +436,16 @@ __all__ = [
     "CameraRig",
     "Codec",
     "CodecCapabilities",
+    "ColmapDatabase",
     "DepthEncoding",
     "DepthMap",
+    "FeatureSet",
     "FlowField",
     "FormatError",
     "GaussianCloud",
     "Image",
     "Inspection",
+    "MatchGraph",
     "NativeFeatureCapabilities",
     "PointCloud",
     "PoseGraph",

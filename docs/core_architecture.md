@@ -128,6 +128,10 @@ same public record kind as `read()`:
 - `image_id=<persisted COLMAP id>` returns a one-image `Reconstruction` with its
   referenced camera from binary or text COLMAP. It deliberately leaves the
   point arrays empty and does not open `points3D.bin` / `points3D.txt`.
+- `image_id=<persisted COLMAP id>` on `colmap_db` returns that image's compiled
+  `FeatureSet`; `pair=(image_id1, image_id2)` returns the unordered pair's
+  compiled `MatchGraph`. Both use indexed SQL queries and do not fetch
+  unrelated feature or match BLOBs.
 
 PFM, binary Netpbm, and DMB copy only selected rows, lossless WebP uses
 libwebp's cropped decoder, and FLO returns a read-only derived view whose owner
