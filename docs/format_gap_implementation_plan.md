@@ -1253,8 +1253,13 @@ Local implementation checkpoint (2026-07-25):
   `inspect` with read-time scale/offset/waveform/EVLR rules. The test-soundness
   lens corrected the benchmark oracle so both writers receive identical
   format-2 fields. No local findings remain open.
-- Linux instrumented and Linux/macOS wheel results remain explicitly
-  user-gated remote evidence.
+- The user-gated `publish.yml` dry run
+  [30163127394](https://github.com/SceneAPI/SceneIO/actions/runs/30163127394)
+  passed at commit `daf991ab426d2db6ea9bd1d2ccea0f6ddc2d83b9`:
+  manylinux2014, macOS, and Windows ABI3 wheels all built and passed their
+  packaged smoke, and the sdist built successfully. The tag-only PyPI job was
+  skipped as intended. PyPI trusted-publisher configuration remains a
+  user-owned release prerequisite.
 
 The same package resolves plain LAS waveform point formats 4/5/9/10. Add the
 wave-packet fields to `PointCloud` only if they can be represented without
