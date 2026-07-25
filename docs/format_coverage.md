@@ -110,6 +110,8 @@ statically linked into `_core`.
 | `ply` | `PointCloud` | R+W | independent NumPy/stdlib parser + **Open3D 0.19** | ASCII and binary LE/BE; all standard scalar input types; exact rgb8/rgb16; schema-aware Gaussian/point/mesh dispatch; binary point ranges |
 | `ply_mesh` | `Mesh` | R+W | independent struct/NumPy oracle | polygon-preserving ASCII and binary LE/BE; vertex/corner normals, UVs, RGBA; primitive/material ranges; coordinate metadata and local transforms |
 | `obj` | `Mesh` + `MaterialSet` | R+W | pinned **TinyObjLoader** + **trimesh 4** | polygon-preserving independent indices; vertex/corner normals and UVs; RGB8, object/group/smoothing domains; strict single-library MTL factors and texture maps; adjacent paired OBJ/MTL output |
+| `stl` | `Mesh` | R+W | independent `struct`/text parsers + **trimesh 4** | strict binary LE and ASCII; canonical unwelded triangle soup; facet normals; bounded face ranges; ambiguous facet attributes/colors reject |
+| `off` | `Mesh` | R+W | independent token parser + **trimesh 4** | strict record-per-line (1 MiB cap) polygon-preserving ASCII OFF/NOFF/COFF/ST variants; exact vertex normals, UVs, and RGBA8; bounded face ranges |
 | `pcd` | `PointCloud` | R+W | independent NumPy/stdlib parser + **Open3D 0.19** | PCD 0.7 ASCII, little-endian binary, and LZF `binary_compressed`; organized dimensions and viewpoint; packed RGB/intensity; bounded binary point ranges |
 | `euroc_state` | `StateTrajectory` | R+W | independent stdlib CSV parser + EuRoC schema | exact int64-ns timestamps; p/q(WXYZ)/v/gyro-bias/accel-bias; canonical-header detection; bounded state ranges |
 | `opencv_yaml` / `opencv_xml` | `CameraRig` | R+W | **PyYAML** / stdlib ElementTree | exact K/D plus optional R/P; schema-signature detection; generic YAML/XML extensions intentionally unclaimed |
@@ -119,10 +121,10 @@ statically linked into `_core`.
 | `colmap_db` | `ColmapDatabase` (`FeatureSet` + `MatchGraph`) | R+W | stdlib **sqlite3** + **pycolmap 4.1.1** | current six-table cameras/images/features/matches/two-view geometry subset; exact pair ids and absent/empty BLOB state; transactional writes; one-image/one-pair selectors |
 
 ### ⬜ Pending — later phases (meshes + niche)
-glTF / GLB (+Draco) · STL / OFF · USD / USDZ · OpenVDB · Zarr · Parquet · AVIF / JPEG‑XL.
+glTF / GLB (+Draco) · USD / USDZ · OpenVDB · Zarr · Parquet · AVIF / JPEG‑XL.
 
 ### 🟡 In progress — Phase 7 (hardening)
-✅ mmap-backed reads for all 39 single-buffer codecs plus paired OBJ/MTL
+✅ mmap-backed reads for all 41 single-buffer codecs plus paired OBJ/MTL
 mappings (SOG additionally supports an unbundled native multi-file path; COLMAP
 DB and the two COLMAP directory codecs read paths directly in native code) · ✅
 zero-copy read-only mapped
@@ -131,9 +133,9 @@ scheduled 100-case backing-store mutation sweep · ✅ ASan/UBSan/LSan workflow
 (local and branch Linux runs green) · ⬜ randomized oracle-triangulated
 fuzzing · ✅ direct file-sink writes · ✅ bounded measured-path workers
 (XYZ/LAS/EXR/PNG16/WebP lossless) · ✅ partial/lazy reads (`inspect` covers all
-43; bounded pixel/point/face/state/COLMAP-image/COLMAP-pair/tensor subsets cover
+45; bounded pixel/point/face/state/COLMAP-image/COLMAP-pair/tensor subsets cover
 capable containers) · ⬜ GPU-via-DLPack (torch-cuda/cupy) · ✅ expanded
-43-codec benchmark/oracles.
+45-codec benchmark/oracles.
 
 ## Infrastructure & capabilities
 
@@ -142,7 +144,7 @@ capable containers) · ⬜ GPU-via-DLPack (torch-cuda/cupy) · ✅ expanded
 | nanobind + scikit‑build‑core build | ✅ | abi3/cp312, `NB_STATIC` |
 | cibuildwheel release path | ✅ | Linux/macOS/Windows; `publish.yml` |
 | CI parity (oracles in CI) | ✅ | gsply + pycolmap; runs on the branch |
-| Codec registry + `read`/`write`/`inspect`/`read_partial`/`detect` | ✅ | inspection covers all 43; bounded partial hooks are capability-specific |
+| Codec registry + `read`/`write`/`inspect`/`read_partial`/`detect` | ✅ | inspection covers all 45; bounded partial hooks are capability-specific |
 | Zero‑copy numpy + torch (DLPack) | ✅ | validated per codec |
 | Conventions‑as‑metadata + write guards | ✅ | record‑don't‑convert enforced |
 | Parity kit (`sceneio.testing.parity`) | ✅ | cross‑impl + round‑trip + convention pins |
@@ -191,6 +193,7 @@ incremental.
 | `npz` | file | yes | yes | yes | - | yes | yes | no | - |
 | `nvm` | file | yes | yes | yes | - | yes | yes | no | - |
 | `obj` | multi_file | yes | yes | yes | - | yes | yes | no | - |
+| `off` | file | yes | yes | yes | faces | yes | yes | no | - |
 | `opencv_xml` | file | yes | yes | yes | - | yes | yes | no | - |
 | `opencv_yaml` | file | yes | yes | yes | - | yes | yes | no | - |
 | `openmvg` | file | yes | yes | yes | - | yes | yes | no | - |
@@ -205,6 +208,7 @@ incremental.
 | `sog` | multi_file | yes | yes | yes | points | yes | yes | yes | - |
 | `splat` | file | yes | yes | yes | points | yes | yes | yes | - |
 | `spz` | file | yes | yes | yes | - | yes | yes | yes | - |
+| `stl` | file | yes | yes | yes | faces | yes | yes | no | - |
 | `tga` | file | yes | yes | yes | - | yes | yes | no | - |
 | `transforms_json` | file | yes | yes | yes | - | yes | yes | no | - |
 | `tum` | file | yes | yes | yes | - | yes | yes | no | - |
@@ -251,7 +255,7 @@ names from `_core.__native_features__`.
 |---|---|---|
 | pixel `window=(r0,r1,c0,c1)` | PFM, binary P5/P6 Netpbm, lossless VP8L WebP, FLO, scalar DMB | ndarray, `Image`, or `DepthMap`, matching the full-read slice with metadata preserved |
 | point range `points=(start,stop)` | XYZ, PTS, binary generic PLY, uncompressed binary PCD, LAS, Gaussian PLY, compressed PLY, SOG, KSplat, SPLAT | `PointCloud` / `GaussianCloud`, with convention metadata preserved |
-| face range `faces=(start,stop)` | generic mesh PLY | `Mesh` with the complete vertex domain and sliced face/corner/primitive domains |
+| face range `faces=(start,stop)` | generic mesh PLY, STL, OFF | `Mesh`; PLY/OFF retain the complete vertex domain, while STL returns local canonical triangle soup |
 | state range `states=(start,stop)` | EuRoC state CSV | `StateTrajectory` with convention metadata preserved |
 | `image_id` | COLMAP binary + text | one-image `Reconstruction` + its camera; no point-container read |
 | `image_id` | COLMAP SQLite database | one compiled `FeatureSet`; unrelated keypoint/descriptor BLOBs remain unread |

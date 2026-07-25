@@ -7,11 +7,11 @@
   calibration, `PoseGraph`/g2o, and the `FeatureSet`/`MatchGraph`-backed
   COLMAP database, SuperSplat compressed PLY, PlayCanvas SOG v2, and KSplat
   v0.1 are complete locally. The polygon-preserving `Mesh` record and generic
-  mesh PLY are also complete locally; canonical `MaterialSet` and strict
-  polygon-preserving OBJ/MTL are complete locally.
+  mesh PLY are also complete locally; canonical `MaterialSet`, strict
+  polygon-preserving OBJ/MTL, and strict STL/OFF are complete locally.
   Cross-platform wheel and instrumented validation remains a user-gated remote
   action.
-- **Current branch:** 43 compiled codecs, all read/write and inspectable, with
+- **Current branch:** 45 compiled codecs, all read/write and inspectable, with
   bounded partial reads where their containers permit them.
 - **Scope:** close every unblocked format gap declared by SceneIO's coverage
   documents without reimplementing the 0.2.0 codec tier.
@@ -1052,13 +1052,53 @@ Completion evidence:
   compiled records. No local review finding remains; Fable is unavailable
   locally, and the remote instrumented/wheel matrix remains user-gated.
 
-#### G3.3 STL and OFF
+#### G3.3 STL and OFF — complete locally
 
 - STL: binary and ASCII, triangle-only write guard, facet-normal preservation
   policy, and robust binary/ASCII detection.
 - OFF: polygonal OFF plus explicitly selected color variants; preserve polygon
   boundaries.
 - Oracle with trimesh and independent minimal parsers.
+
+Completion evidence:
+
+- STL accepts exact-length binary little-endian records and a strict
+  case-insensitive ASCII grammar. Exact binary extent wins even when the
+  80-byte header begins with `solid`, and nonzero facet attribute words reject
+  because the competing color extensions are ambiguous.
+- STL decodes each stored corner to a distinct `Mesh` vertex, preserving the
+  format's lack of indexed connectivity. Facet normals become three
+  bit-identical corner normals; an entirely zero normal stream is canonical
+  absence. The writer accepts only canonical triangle soup and rejects shared
+  topology, polygons, vertex normals, nonuniform facet normals, colors, UVs,
+  materials, primitive segmentation, and coordinate metadata.
+- OFF preserves the complete indexed vertex domain and polygon offsets for
+  `OFF`, `NOFF`, `COFF`, `CNOFF`, `STOFF`, `STNOFF`, `STCOFF`, and
+  `STCNOFF`. Vertex normals, UVs, and exact RGBA8 colors round-trip. Binary
+  OFF, homogeneous/n-dimensional coordinates, face colors, corner-domain
+  attributes, and unrepresentable metadata reject explicitly.
+- Both codecs accept read-only contiguous buffers, use mmap-backed public
+  reads, stream deterministic output through bounded direct-sink chunks,
+  inspect without constructing record arrays, and implement bounded face
+  selection. OFF selections retain the complete vertex domain; STL selections
+  return canonical local triangle soup.
+- Seventy-seven codec tests use independent `struct` and token parsers,
+  hand-built malformed fixtures, and
+  trimesh cross-consumption cover binary/ASCII detection, all OFF variants,
+  polygon preservation, writer guards, read-only mmap lifetime, public
+  detection/inspection/partial reads, sink byte identity, numeric-locale
+  independence, and malformed count/index/extent handling.
+- Representative five-run local MSVC medians measured STL at 1,021 MB/s write,
+  1,166 MB/s decode, and 935 MB/s public mmap decode; OFF measured 206, 442,
+  and 396 MB/s respectively. Traced mmap and sink allocation fall from the
+  5.57 MB STL and 7.56 MB OFF file sizes to about 0.01 MB or less. Inspection
+  is 3.67x/1.98x faster and 1/16 face selection is 3.26x/1.21x faster.
+- Manual native-lifetime, format-correctness, and test-soundness review added
+  impossible-count extent checks before OFF allocation and checked STL count
+  arithmetic, then caught and closed an OFF writer/reader mismatch for
+  polygons whose emitted record would exceed the parser's 1 MiB line cap.
+  Fable is unavailable locally; the remote instrumented/wheel matrix remains
+  user-gated.
 
 #### G3.4 glTF/GLB core
 
@@ -1722,18 +1762,18 @@ estimates.
 
 The current local checkpoint is:
 
-- 43 compiled registry codecs with read, write, inspect, mmap or path-native
+- 45 compiled registry codecs with read, write, inspect, mmap or path-native
   input, and direct file sinks;
 - O0-O5 complete for the existing codec tier;
 - `FlowField`, typed FLO, typed PFM depth, typed PNG depth, and typed scalar EXR
   depth complete;
-- 2,584 local tests pass with 4 documented platform/optional skips, Ruff and
+- 2,663 local tests pass with 4 documented platform/optional skips, Ruff and
   `git diff --check` are clean;
-- the complete 43-codec benchmark and packaged NumPy-only wheel smoke pass;
+- the complete 45-codec benchmark and packaged NumPy-only wheel smoke pass;
 - generic point PLY, PCD, StateTrajectory/EuRoC, CameraRig calibration,
   PoseGraph/g2o, the COLMAP feature database, SuperSplat compressed PLY,
   PlayCanvas SOG v2, KSplat v0.1, the canonical `Mesh` record, generic mesh PLY,
-  canonical `MaterialSet`, and OBJ/MTL are complete locally;
+  canonical `MaterialSet`, OBJ/MTL, and STL/OFF are complete locally;
 - instrumented Linux and Linux/macOS wheels have not yet been run for this
   dependency wave because pushing and dispatching remote workflows are
   user-gated.
@@ -2377,7 +2417,7 @@ topology containers.
      smoothing groups, objects/groups, material assignment, negative indices,
      and relative resource resolution;
    - do not silently triangulate or merge index domains.
-4. **STL and OFF**
+4. **STL and OFF — complete locally**
    - support binary/ASCII STL with explicit triangle-only write guards;
    - preserve OFF polygon boundaries and supported attributes without implicit
      triangulation.

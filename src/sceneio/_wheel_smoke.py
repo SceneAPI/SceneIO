@@ -251,6 +251,68 @@ def _obj_mtl(root: Path) -> None:
     assert inspected.metadata["num_textures"] == 1
 
 
+def _stl_off(root: Path) -> None:
+    soup = _core.mesh(
+        np.array(
+            [
+                [0, 0, 0],
+                [1, 0, 0],
+                [0, 1, 0],
+                [0, 0, 1],
+                [1, 0, 1],
+                [0, 1, 1],
+            ],
+            np.float32,
+        ),
+        np.array([0, 3, 6], np.uint64),
+        np.arange(6, dtype=np.uint64),
+        corner_normals=np.array(
+            [[0, 0, 1]] * 3 + [[0, 0, -1]] * 3,
+            np.float32,
+        ),
+    )
+    stl = root / "mesh.stl"
+    sceneio.write(soup, stl)
+    assert sceneio.detect(stl) == "stl"
+    assert np.array_equal(sceneio.read(stl).positions, soup.positions)
+    assert sceneio.inspect(stl).metadata["encoding"] == "binary"
+    assert np.array_equal(
+        sceneio.read_partial(stl, faces=(1, 2)).positions,
+        soup.positions[3:6],
+    )
+
+    polygon = _core.mesh(
+        np.array(
+            [[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0]],
+            np.float32,
+        ),
+        np.array([0, 4], np.uint64),
+        np.array([0, 1, 2, 3], np.uint64),
+        vertex_normals=np.array([[0, 0, 1]] * 4, np.float32),
+        vertex_uvs=np.array([[0, 0], [1, 0], [1, 1], [0, 1]], np.float32),
+        vertex_colors=np.array(
+            [
+                [255, 0, 0, 255],
+                [0, 255, 0, 255],
+                [0, 0, 255, 255],
+                [255, 255, 255, 255],
+            ],
+            np.uint8,
+        ),
+    )
+    off = root / "mesh.off"
+    sceneio.write(polygon, off)
+    assert sceneio.detect(off) == "off"
+    decoded = sceneio.read(off)
+    assert np.array_equal(decoded.face_offsets, polygon.face_offsets)
+    assert np.array_equal(decoded.vertex_colors, polygon.vertex_colors)
+    assert sceneio.inspect(off).metadata["variant"] == "STCNOFF"
+    assert np.array_equal(
+        sceneio.read_partial(off, faces=(0, 1)).face_indices,
+        polygon.face_indices,
+    )
+
+
 def _point_depth_and_flow(root: Path, values: np.ndarray) -> None:
     points = root / "points.pts"
     sceneio.write(_core.point_cloud(values[:, :3]), points)
@@ -548,6 +610,7 @@ def main() -> None:
         _ksplat(root)
         _mesh_ply(root)
         _obj_mtl(root)
+        _stl_off(root)
         _point_depth_and_flow(root, values)
         _reconstruction_and_images(root)
         _state_trajectory(root)

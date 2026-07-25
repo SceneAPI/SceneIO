@@ -2,7 +2,7 @@
 
 Measures, per codec, encode (write) + decode (read) throughput (MB/s over the raw
 payload) and peak Python allocation (tracemalloc), for sceneio._core vs the oracle
-library where one exists, on representative payloads for all 43 codecs. Read
+library where one exists, on representative payloads for all 45 codecs. Read
 measurements retain the legacy whole-file bytes/copy-decode path beside the
 public registry mmap path, so their peak delta captures the input copy O1
 removes and, for NPY/FLO, the decoded-array copy O2 removes. Write measurements
@@ -302,6 +302,50 @@ def _mesh_obj(n):
             vertex_uvs=vertex_uvs,
             vertex_colors=vertex_colors,
         ),
+        payload,
+    )
+
+
+def _mesh_stl(n):
+    rng = np.random.default_rng(31)
+    faces = max(1, n // 3)
+    corners = faces * 3
+    positions = rng.standard_normal((corners, 3)).astype(np.float32)
+    indices = np.arange(corners, dtype=np.uint64).reshape(faces, 3)
+    offsets = np.arange(0, corners + 1, 3, dtype=np.uint64)
+    face_normals = rng.standard_normal((faces, 3)).astype(np.float32)
+    corner_normals = np.repeat(face_normals, 3, axis=0)
+    payload = {
+        "positions": positions,
+        "faces": indices,
+        "face_normals": face_normals,
+    }
+    return (
+        _core.mesh(
+            positions,
+            offsets,
+            indices.reshape(-1),
+            corner_normals=corner_normals,
+        ),
+        payload,
+    )
+
+
+def _mesh_off(n):
+    rng = np.random.default_rng(37)
+    # Indexed formats commonly reuse a much smaller vertex domain across many
+    # faces. Keep face records dominant so bounded face selection measures the
+    # work and allocations it is designed to remove.
+    vertices = max(3, n // 10)
+    faces = max(1, n)
+    positions = rng.standard_normal((vertices, 3)).astype(np.float32)
+    indices = (
+        np.arange(faces * 3, dtype=np.uint64) % vertices
+    ).reshape(faces, 3)
+    offsets = np.arange(0, faces * 3 + 1, 3, dtype=np.uint64)
+    payload = {"positions": positions, "faces": indices}
+    return (
+        _core.mesh(positions, offsets, indices.reshape(-1)),
         payload,
     )
 
@@ -881,6 +925,45 @@ def _trimesh_obj_r(data):
     return trimesh.load(
         io.BytesIO(data),
         file_type="obj",
+        process=False,
+        maintain_order=True,
+        force="mesh",
+    )
+
+
+def _trimesh_stl_w(payload):
+    mesh = trimesh.Trimesh(
+        vertices=payload["positions"],
+        faces=payload["faces"],
+        process=False,
+    )
+    return trimesh.exchange.stl.export_stl(mesh)
+
+
+def _trimesh_stl_r(data):
+    return trimesh.load(
+        io.BytesIO(data),
+        file_type="stl",
+        process=False,
+        maintain_order=True,
+        force="mesh",
+    )
+
+
+def _trimesh_off_w(payload):
+    mesh = trimesh.Trimesh(
+        vertices=payload["positions"],
+        faces=payload["faces"],
+        process=False,
+    )
+    exported = mesh.export(file_type="off")
+    return exported.encode() if isinstance(exported, str) else exported
+
+
+def _trimesh_off_r(data):
+    return trimesh.load(
+        io.BytesIO(data),
+        file_type="off",
         process=False,
         maintain_order=True,
         force="mesh",
@@ -1754,6 +1837,24 @@ def _specs(scale, pose_bundle=None):
             lambda rec, p: sum(value.nbytes for value in p.values()),
         ),
         Spec(
+            "stl",
+            lambda: _mesh_stl(max(3, points // 3)),
+            _core.write_stl,
+            _core.read_stl,
+            (_trimesh_stl_w if trimesh else None),
+            (_trimesh_stl_r if trimesh else None),
+            lambda rec, p: sum(value.nbytes for value in p.values()),
+        ),
+        Spec(
+            "off",
+            lambda: _mesh_off(max(3, points // 3)),
+            _core.write_off,
+            _core.read_off,
+            (_trimesh_off_w if trimesh else None),
+            (_trimesh_off_r if trimesh else None),
+            lambda rec, p: sum(value.nbytes for value in p.values()),
+        ),
+        Spec(
             "pcd",
             lambda: _pc_ply(points),
             _core.write_pcd,
@@ -2026,7 +2127,7 @@ def _directory_size(path):
 
 
 def _partial_request(codec_id, info, full_record=None):
-    if codec_id == "ply_mesh":
+    if codec_id in {"ply_mesh", "stl", "off"}:
         faces = info.metadata["num_faces"]
         if faces == 0:
             return None
@@ -3627,7 +3728,7 @@ def _run_benchmark(args, tmp):
             print(f"{spec.id:<14} ERROR: {type(e).__name__}: {e}")
 
     if not args.only:
-        assert len(specs) + len(directory_specs) + int(include_colmap_db) == 43
+        assert len(specs) + len(directory_specs) + int(include_colmap_db) == 45
     print("\nMB/s over raw payload; fileMB = encoded size (= the whole-file copy O1/O3 remove).")
     print("sioR = in-memory copy decode; pathR = public registry mmap read/view.")
     print("bPeakMB/mPeakMB = peak Python allocation for bytes/mmap reads (O1 delta).")
@@ -3707,7 +3808,15 @@ def _run_benchmark(args, tmp):
         "match-pair subset."
     )
     if args.require_o5_inspect_gains:
-        stable = {"exr", "gaussian_ply", "las", "png", "spz"}
+        stable = {
+            "exr",
+            "gaussian_ply",
+            "las",
+            "off",
+            "png",
+            "spz",
+            "stl",
+        }
         by_codec = {
             codec_id: (
                 full,
@@ -3798,6 +3907,8 @@ def _run_benchmark(args, tmp):
             "webp",
             "xyz",
             "ply_mesh",
+            "stl",
+            "off",
             "las",
             "gaussian_ply",
             "splat",

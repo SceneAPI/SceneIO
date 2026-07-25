@@ -33,6 +33,7 @@ void register_ksplat(nb::module_ &);
 void register_ply_point(nb::module_ &);
 void register_ply_mesh(nb::module_ &);
 void register_obj_mtl(nb::module_ &);
+void register_stl_off(nb::module_ &);
 void register_pcd(nb::module_ &);
 void register_spz(nb::module_ &);
 void register_transforms_json(nb::module_ &);
@@ -131,6 +132,7 @@ NB_MODULE(_core, m) {
     register_ply_point(m);
     register_ply_mesh(m);
     register_obj_mtl(m);
+    register_stl_off(m);
     register_pcd(m);
     register_spz(m);
     register_transforms_json(m);

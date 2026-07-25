@@ -140,6 +140,7 @@ nanobind_add_module(_core STABLE_ABI NB_STATIC
   src/cpp/codecs/ply_point.cpp
   src/cpp/codecs/ply_mesh.cpp
   src/cpp/codecs/obj_mtl.cpp
+  src/cpp/codecs/stl_off.cpp
   src/cpp/codecs/pcd.cpp
   src/cpp/codecs/spz.cpp
   src/cpp/codecs/transforms_json.cpp

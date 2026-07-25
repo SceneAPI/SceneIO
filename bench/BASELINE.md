@@ -900,3 +900,32 @@ polygon, negative-index, object/group/smoothing, MTL-factor, and texture-map
 fixtures. Both core and public-path suites preserve vertex- versus corner-domain
 normal/UV indexing, and malformed/lossy constructs reject rather than being
 silently triangulated or discarded.
+
+## Strict STL/OFF mesh baseline — 2026-07-25
+
+STL and OFF raise the harness to 45 codecs and the buffer-backed differential
+and direct-sink sweep to 42. The representative STL contains 111,111
+independent triangles with explicit facet normals (8.0 MB of canonical arrays,
+5.56 MB binary file). The indexed OFF fixture contains 33,333 vertices reused
+by 333,333 triangles (8.4 MB of canonical arrays, 7.55 MB ASCII file). Five-run
+local MSVC medians:
+
+```text
+codec  write     read      mmap read  oracle W/R  inspect            partial
+--------------------------------------------------------------------------------
+stl    1,021 MB/s 1,166 MB/s 935 MB/s   362/204     2.331 ms (3.67x)  2.624 ms (3.26x)
+off      206 MB/s   442 MB/s 396 MB/s    41/13     10.685 ms (1.98x) 17.487 ms (1.21x)
+```
+
+STL's public mmap read removes the 5.57 MB traced input allocation and its
+direct sink removes the 5.57 MB output allocation (both fall to about
+0.01/0.001 MB). OFF removes the corresponding 7.56 MB input and output
+allocations. The STL sink reaches 1,047 MB/s versus 814 MB/s for the
+buffer-plus-file path; OFF reaches 201 versus 189 MB/s.
+
+Independent binary `struct` and ASCII token parsers validate exact file
+records, all eight supported OFF vertex variants, polygon boundaries, facet
+normal policy, and malformed extent/index handling. Trimesh consumes both
+writers and supplies independent binary/ASCII STL and OFF inputs. Face
+selection validates the complete mapped input while materializing only the
+selected topology; OFF deliberately retains its complete vertex domain.

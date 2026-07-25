@@ -5,13 +5,13 @@ Status: complete — O0–O5 landed. Scope: the compiled `sceneio._core` I/O pat
 hardening/perf work concrete).
 
 Post-0.2 format expansion inherits the same gates. The registry currently has
-43 codecs (40 buffer-backed entries, one path-native SQLite database, and two
+45 codecs (42 buffer-backed entries, one path-native SQLite database, and two
 COLMAP directory-only entries; SOG also exposes an unbundled multi-file path).
 The latest record waves add the four calibration formats over `CameraRig`, g2o
 over `PoseGraph`, `colmap_db` over
 `ColmapDatabase`/`FeatureSet`/`MatchGraph`, polygonal PLY over `Mesh`, and
-OBJ/MTL over `Mesh` + `MaterialSet`; each inherits direct file sinks, metadata
-inspection, partial reads where meaningful, and the all-codec
+OBJ/MTL over `Mesh` + `MaterialSet`, and STL/OFF over `Mesh`; each inherits
+direct file sinks, metadata inspection, partial reads where meaningful, and the all-codec
 differential/memory harness.
 
 The representative COLMAP database fixture contains 9.65 MB of logical
@@ -28,6 +28,14 @@ metadata inspection is 2.12× faster with sampled RSS reduced from 265.5 MB to
 appends under an explicit C numeric locale improved deterministic write
 throughput from 7.4 to 20.4 MB/s without changing round-trip values or output
 when the process uses a comma-decimal locale.
+
+The representative STL/OFF fixtures extend the same guarantees to mesh
+triangle soup and indexed polygons. Five-run local MSVC medians measured STL
+at 1,021 MB/s write and 935 MB/s public mmap read, and OFF at 206 MB/s write
+and 396 MB/s public mmap read. Mmap/direct-sink traced allocation drops from
+5.57/5.57 MB to about 0.01/0.001 MB for STL and from 7.56/7.56 MB to the same
+bounded overhead for OFF. Inspection is 3.67Ã—/1.98Ã— faster than full read,
+and 1/16 face selection is 3.26Ã—/1.21Ã— faster.
 
 **Committed scope (decided):** the **full O0–O5 program**, applied **uniformly to
 all 23 codecs**, with **qualitative** success criteria — every step must show a
@@ -316,9 +324,11 @@ SQLite returns one `FeatureSet` or one pair `MatchGraph`; safetensors returns
 only requested tensors or leading-axis slices. Unsupported compressed/text
 variants reject rather than disguising a full decode as a partial read.
 
-Generic mesh PLY additionally accepts `faces=(start, stop)`. It retains the
-complete vertex domain, slices every face/corner field, clips and renormalizes
-primitive ranges, and validates skipped faces. On the 28.0 MB canonical
+Mesh PLY, STL, and OFF additionally accept `faces=(start, stop)`. Mesh PLY
+retains the complete vertex domain, slices every face/corner field, clips and
+renormalizes primitive ranges, and validates skipped faces. OFF likewise
+retains its complete indexed vertex domain; STL returns a local canonical
+triangle soup. On the 28.0 MB canonical mesh-PLY
 fixture, the five-run MSVC median improves from 96.918 ms full decode to
 72.240 ms for a 1/16 face selection (1.34x); sampled RSS falls from 63.4 MB to
 42.1 MB with no traced Python payload allocation. A generated 50.0 MB fixture

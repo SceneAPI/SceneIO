@@ -102,6 +102,10 @@ def inspect_path(path: str | Path, format_id: str, datatype: str) -> Inspection:
         return _inspect_ply(p, datatype)
     if format_id == "ply_mesh":
         return _inspect_ply_mesh(p, datatype)
+    if format_id == "stl":
+        return _inspect_stl(p, datatype)
+    if format_id == "off":
+        return _inspect_off(p, datatype)
     if format_id == "pcd":
         return _inspect_pcd(p, datatype)
     if format_id == "spz":
@@ -1361,6 +1365,32 @@ def _inspect_ply_mesh(path: Path, datatype: str) -> Inspection:
         shape=(count, 3),
         dtype="float32",
         count=count,
+        metadata=metadata,
+    )
+
+
+def _inspect_stl(path: Path, datatype: str) -> Inspection:
+    metadata = dict(_compiled_buffer_inspect(path, _core._inspect_stl))
+    return Inspection(
+        "stl",
+        datatype,
+        _size(path),
+        shape=(metadata["num_vertices"], 3),
+        dtype="float32",
+        count=metadata["num_vertices"],
+        metadata=metadata,
+    )
+
+
+def _inspect_off(path: Path, datatype: str) -> Inspection:
+    metadata = dict(_compiled_buffer_inspect(path, _core._inspect_off))
+    return Inspection(
+        "off",
+        datatype,
+        _size(path),
+        shape=(metadata["num_vertices"], 3),
+        dtype="float32",
+        count=metadata["num_vertices"],
         metadata=metadata,
     )
 

@@ -701,6 +701,76 @@ register(
 )
 register(
     Codec(
+        "stl",
+        (".stl",),
+        _mmap_reader(_core.read_stl),
+        _file_sink_writer(_core.write_stl),
+        record=_core.Mesh,
+        datatype="mesh",
+        magic=(b"solid",),
+        read_faces=_mmap_selector_reader(_core.read_stl_faces),
+        supported_features=(
+            "ascii",
+            "binary_little_endian",
+            "triangle_soup",
+            "facet_normals",
+            "face_ranges",
+        ),
+        unsupported_features=(
+            "indexed_connectivity",
+            "non_triangle_faces",
+            "binary_facet_attributes",
+            "binary_color_extensions",
+            "vertex_colors",
+            "corner_colors",
+            "uvs",
+            "coordinate_metadata",
+        ),
+    )
+)
+register(
+    Codec(
+        "off",
+        (".off",),
+        _mmap_reader(_core.read_off),
+        _file_sink_writer(_core.write_off),
+        record=_core.Mesh,
+        datatype="mesh",
+        magic=(
+            b"OFF",
+            b"NOFF",
+            b"COFF",
+            b"CNOFF",
+            b"STOFF",
+            b"STNOFF",
+            b"STCOFF",
+            b"STCNOFF",
+        ),
+        read_faces=_mmap_selector_reader(_core.read_off_faces),
+        supported_features=(
+            "ascii",
+            "record_per_line",
+            "polygon_boundaries",
+            "vertex_normals",
+            "vertex_uvs",
+            "vertex_rgba8",
+            "face_ranges",
+        ),
+        unsupported_features=(
+            "binary",
+            "face_colors",
+            "homogeneous_coordinates",
+            "n_dimensional_vertices",
+            "cross_line_records",
+            "records_over_1_mib",
+            "corner_attributes",
+            "material_metadata",
+            "coordinate_metadata",
+        ),
+    )
+)
+register(
+    Codec(
         "ply",
         (".ply",),
         _mmap_reader(_core.read_ply),

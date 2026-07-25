@@ -84,7 +84,7 @@ green. Don't land a codec that skips a box — file a follow‑up instead.
 - [x] **Partial reads where the container permits**: PFM/binary P5-P6
       Netpbm/lossless VP8L WebP/FLO/DMB pixel windows; XYZ/PTS/binary
       PLY/PCD/LAS/Gaussian PLY/compressed PLY/SOG/KSplat/SPLAT point ranges;
-      mesh PLY face ranges; EuRoC state ranges; selected safetensors tensors
+      mesh PLY/STL/OFF face ranges; EuRoC state ranges; selected safetensors tensors
       and slices; single-image COLMAP binary/text; and COLMAP database image
       and pair selectors. Unsupported subformats and codecs fail explicitly
       instead of falling back to a full decode.
@@ -170,8 +170,8 @@ Columns: **Ext/id** · **Record** · **Lib/oracle (license)** · **R/W** ·
 |---|---|---|---|---|
 | ✅ PLY mesh | `Mesh` | independent struct/NumPy + trimesh (MIT) | R+W | polygon-preserving; vertex/corner attributes and primitive/material ranges |
 | ✅ OBJ (+MTL) | `Mesh` + `MaterialSet` | pinned tinyobjloader/trimesh (MIT) | R+W | strict polygon-preserving independent indices; factors/textures and sampler clamp preserved; mmap read, paired direct-sink write, metadata inspect |
-| ⬜ STL | `Mesh` | numpy‑stl/trimesh | R+W | ascii + binary |
-| ⬜ OFF | `Mesh` | trimesh | R+W | trivial |
+| ✅ STL | `Mesh` | independent parser + trimesh (MIT) | R+W | strict ASCII + binary LE; unwelded triangle soup and facet normals; bounded face ranges |
+| ✅ OFF | `Mesh` | independent parser + trimesh (MIT) | R+W | polygon-preserving ASCII vertex variants with normals, UVs, and exact RGBA8; bounded face ranges |
 | ⬜ glTF / GLB (+Draco) | `Mesh` | pygltflib (MIT); Draco (Apache) | R+W | json+bin; Draco optional |
 | ⬜ USD / USDZ | `Mesh`/scene | usd‑core/pxr (Apache) | R | heavyweight C lib; feature‑flag |
 

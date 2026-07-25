@@ -173,6 +173,12 @@ assert sceneio.inspect("scan.ply").metadata["encoding"] in {
 mesh = sceneio.read("asset.obj")
 sceneio.write(mesh, "asset-copy.obj")
 
+# STL maps its format-native triangle soup and facet normals without welding.
+# OFF preserves indexed polygon boundaries and its supported vertex attributes.
+triangle_part = sceneio.read_partial("part.stl", faces=(1_000, 2_000))
+polygon_mesh = sceneio.read("model.off")
+polygon_part = sceneio.read_partial("model.off", faces=(100, 200))
+
 # PCD 0.7 preserves organized WIDTH/HEIGHT and VIEWPOINT. Public writes use
 # little-endian binary; the core also supports ASCII and LZF binary_compressed.
 organized = sceneio.read("organized.pcd")

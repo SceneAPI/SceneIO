@@ -361,6 +361,44 @@ def buffer_codecs():
         coordinate_frame="opengl",
         scale_to_meters=0.01,
     )
+    mesh_stl = _core.mesh(
+        np.array(
+            [
+                [0, 0, 0],
+                [1, 0, 0],
+                [0, 1, 0],
+                [0, 0, 1],
+                [1, 0, 1],
+                [0, 1, 1],
+            ],
+            np.float32,
+        ),
+        np.array([0, 3, 6], np.uint64),
+        np.arange(6, dtype=np.uint64),
+        corner_normals=np.array(
+            [[0, 0, 1]] * 3 + [[0, 0, -1]] * 3,
+            np.float32,
+        ),
+    )
+    mesh_off = _core.mesh(
+        np.array(
+            [[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0]],
+            np.float32,
+        ),
+        np.array([0, 4], np.uint64),
+        np.array([0, 1, 2, 3], np.uint64),
+        vertex_normals=np.array([[0, 0, 1]] * 4, np.float32),
+        vertex_uvs=np.array([[0, 0], [1, 0], [1, 1], [0, 1]], np.float32),
+        vertex_colors=np.array(
+            [
+                [255, 0, 0, 255],
+                [0, 255, 0, 255],
+                [0, 0, 255, 255],
+                [255, 255, 255, 255],
+            ],
+            np.uint8,
+        ),
+    )
     flow = rng.standard_normal((5, 6, 2)).astype(np.float32)
     depth = _core.depth_map(
         rng.standard_normal((5, 6)).astype(np.float32),
@@ -568,6 +606,8 @@ def buffer_codecs():
             _core.write_ply_mesh,
             mesh,
         ),
+        spec("stl", _core.read_stl, _core.write_stl, mesh_stl),
+        spec("off", _core.read_off, _core.write_off, mesh_off),
         spec("pcd", _core.read_pcd, _core.write_pcd, points_pcd),
         spec("las", _core.read_las, _core.write_las, points_las),
         spec("flo", _core.read_flo, _core.write_flo, flow),
@@ -598,8 +638,8 @@ def _outcome(call, argument):
 
 
 def test_all_single_file_codecs_mmap_equal_bytes_bit_exact(tmp_path, buffer_codecs):
-    """All 39 buffer codecs decode mmap and bytes to bit-exact records."""
-    assert len(buffer_codecs) == 39
+    """All 41 buffer codecs decode mmap and bytes to bit-exact records."""
+    assert len(buffer_codecs) == 41
     for spec in buffer_codecs:
         expected = _fingerprint(spec.reader(spec.data))
         path = tmp_path / f"sample-{spec.id}.bin"
@@ -617,8 +657,8 @@ def test_all_single_file_codecs_mmap_equal_bytes_bit_exact(tmp_path, buffer_code
 
 
 def test_all_single_file_sinks_are_byte_identical(tmp_path, buffer_codecs):
-    """All 39 compiled encoders emit the exact bytes their buffer API returns."""
-    assert len(buffer_codecs) == 39
+    """All 41 compiled encoders emit the exact bytes their buffer API returns."""
+    assert len(buffer_codecs) == 41
     for spec in buffer_codecs:
         direct = tmp_path / f"direct-{spec.id}.bin"
         _core._write_to_file(spec.writer, spec.value, direct)
@@ -802,7 +842,7 @@ print(max(0, peak[0] - baseline))
 def test_inspect_matches_decoded_metadata_for_buffer_and_directory_codecs(
     tmp_path, buffer_codecs
 ):
-    assert len(buffer_codecs) == 39
+    assert len(buffer_codecs) == 41
     for spec in buffer_codecs:
         path = tmp_path / f"inspect-{spec.id}.data"
         path.write_bytes(spec.data)
@@ -2138,7 +2178,7 @@ def test_registry_uses_mmap_for_every_nonempty_single_file_codec(
         value = sceneio.codecs()[spec.id].read(str(path))
         gc.collect()
         assert _fingerprint(value) == _fingerprint(spec.reader(spec.data))
-    assert mapped_paths == len(buffer_codecs) == 39
+    assert mapped_paths == len(buffer_codecs) == 41
 
 
 def test_all_buffer_entries_accept_readonly_protocol_exporters(buffer_codecs):
