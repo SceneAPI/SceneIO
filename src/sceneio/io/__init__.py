@@ -43,6 +43,7 @@ StateTrajectory = _core.StateTrajectory
 TensorDict = _core.TensorDict
 Image = _core.Image
 PointCloud = _core.PointCloud
+PoseGraph = _core.PoseGraph
 DepthMap = _core.DepthMap
 FlowField = _core.FlowField
 Camera = _core.Camera
@@ -412,6 +413,7 @@ __all__ = [
     "Inspection",
     "NativeFeatureCapabilities",
     "PointCloud",
+    "PoseGraph",
     "PosedViewSet",
     "Reconstruction",
     "StateTrajectory",

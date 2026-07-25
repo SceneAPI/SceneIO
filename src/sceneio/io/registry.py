@@ -698,6 +698,33 @@ register(
         ),
     )
 )
+register(
+    Codec(
+        "g2o",
+        (".g2o",),
+        _mmap_reader(_core.read_g2o),
+        _file_sink_writer(_core.write_g2o),
+        record=_core.PoseGraph,
+        datatype="pose_graph",
+        magic=(
+            b"# g2o pose graph",
+            b"VERTEX_SE3:QUAT",
+            b"EDGE_SE3:QUAT",
+        ),
+        supported_features=(
+            "vertex_se3_quat",
+            "edge_se3_quat",
+            "fixed_vertices",
+            "symmetric_information_6x6",
+        ),
+        unsupported_features=(
+            "mixed_vertex_types",
+            "mixed_edge_types",
+            "parameters",
+            "robust_kernels",
+        ),
+    )
+)
 # Array / tensor + raster-image formats (Tier-1, zero-dep). datatype ids are
 # informational (vocabulary registration is Phase-C, like posed_views).
 register(

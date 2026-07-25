@@ -2,7 +2,7 @@
 
 Measures, per codec, encode (write) + decode (read) throughput (MB/s over the raw
 payload) and peak Python allocation (tracemalloc), for sceneio._core vs the oracle
-library where one exists, on representative payloads for all 36 codecs. Read
+library where one exists, on representative payloads for all 37 codecs. Read
 measurements retain the legacy whole-file bytes/copy-decode path beside the
 public registry mmap path, so their peak delta captures the input copy O1
 removes and, for NPY/FLO, the decoded-array copy O2 removes. Write measurements
@@ -286,6 +286,14 @@ def _record_nbytes(record):
         "binning",
         "roi",
         "time_offsets",
+        "node_ids",
+        "node_translations",
+        "node_quaternions",
+        "fixed",
+        "edge_endpoints",
+        "edge_translations",
+        "edge_quaternions",
+        "information_matrices",
     )
     total = sum(np.asarray(getattr(record, name)).nbytes for name in names if hasattr(record, name))
     total += sum(np.asarray(camera.params).nbytes for camera in getattr(record, "cameras", ()))
@@ -549,6 +557,129 @@ def _euroc_oracle_read(data):
 
 
 def _euroc_payload_nbytes(payload):
+    return sum(value.nbytes for value in payload.values())
+
+
+def _g2o_fixture(scale):
+    count = max(2, int(25_000 * scale))
+    ids = np.arange(count, dtype=np.int64) * 2 + 1
+    node_translations = np.column_stack(
+        (
+            np.arange(count, dtype=np.float64) * 0.05,
+            np.sin(np.arange(count, dtype=np.float64) * 0.01),
+            np.zeros(count),
+        )
+    )
+    node_quaternions = np.zeros((count, 4), np.float64)
+    node_quaternions[:, 3] = 1
+    edge_endpoints = np.column_stack((ids[:-1], ids[1:]))
+    edges = len(edge_endpoints)
+    edge_translations = np.column_stack(
+        (
+            np.full(edges, 0.05),
+            np.diff(node_translations[:, 1]),
+            np.zeros(edges),
+        )
+    )
+    edge_quaternions = np.zeros((edges, 4), np.float64)
+    edge_quaternions[:, 3] = 1
+    information = np.tile(np.eye(6), (edges, 1, 1))
+    fixed = np.zeros(count, np.uint8)
+    fixed[0] = 1
+    payload = {
+        "node_ids": ids,
+        "node_translations": node_translations,
+        "node_quaternions": node_quaternions,
+        "fixed": fixed,
+        "edge_endpoints": edge_endpoints,
+        "edge_translations": edge_translations,
+        "edge_quaternions": edge_quaternions,
+        "information_matrices": information,
+    }
+    return (
+        _core.pose_graph(
+            ids,
+            node_translations,
+            node_quaternions,
+            edge_endpoints,
+            edge_translations,
+            edge_quaternions,
+            information,
+            fixed=fixed,
+        ),
+        payload,
+    )
+
+
+def _g2o_oracle_write(payload):
+    lines = ["# independent g2o oracle"]
+    for node_id, translation, quaternion in zip(
+        payload["node_ids"],
+        payload["node_translations"],
+        payload["node_quaternions"],
+        strict=True,
+    ):
+        values = (*translation, *quaternion)
+        lines.append(
+            "VERTEX_SE3:QUAT "
+            + str(int(node_id))
+            + " "
+            + " ".join(f"{float(value):.17g}" for value in values)
+        )
+    lines.extend(
+        f"FIX {int(node_id)}"
+        for node_id, fixed in zip(
+            payload["node_ids"], payload["fixed"], strict=True
+        )
+        if fixed
+    )
+    for endpoints, translation, quaternion, information in zip(
+        payload["edge_endpoints"],
+        payload["edge_translations"],
+        payload["edge_quaternions"],
+        payload["information_matrices"],
+        strict=True,
+    ):
+        upper = (
+            information[row, column]
+            for row in range(6)
+            for column in range(row, 6)
+        )
+        values = (*translation, *quaternion, *upper)
+        lines.append(
+            "EDGE_SE3:QUAT "
+            + f"{int(endpoints[0])} {int(endpoints[1])} "
+            + " ".join(f"{float(value):.17g}" for value in values)
+        )
+    return ("\n".join(lines) + "\n").encode()
+
+
+def _g2o_oracle_read(data):
+    nodes = 0
+    edges = 0
+    fixed = 0
+    for raw in data.splitlines():
+        fields = raw.partition(b"#")[0].split()
+        if not fields:
+            continue
+        if fields[0] == b"VERTEX_SE3:QUAT" and len(fields) == 9:
+            int(fields[1])
+            np.asarray([float(value) for value in fields[2:]])
+            nodes += 1
+        elif fields[0] == b"EDGE_SE3:QUAT" and len(fields) == 31:
+            int(fields[1])
+            int(fields[2])
+            np.asarray([float(value) for value in fields[3:]])
+            edges += 1
+        elif fields[0] == b"FIX" and len(fields) == 2:
+            int(fields[1])
+            fixed += 1
+        else:
+            raise ValueError("unsupported g2o record")
+    return {"nodes": nodes, "edges": edges, "fixed": fixed}
+
+
+def _g2o_payload_nbytes(payload):
     return sum(value.nbytes for value in payload.values())
 
 
@@ -1184,6 +1315,15 @@ def _specs(scale, pose_bundle=None):
             _yaml_oracle_write if yaml else None,
             _yaml_oracle_read if yaml else None,
             lambda rec, payload: _record_nbytes(rec),
+        ),
+        Spec(
+            "g2o",
+            partial(_g2o_fixture, scale),
+            _core.write_g2o,
+            _core.read_g2o,
+            _g2o_oracle_write,
+            _g2o_oracle_read,
+            lambda rec, payload: _g2o_payload_nbytes(payload),
         ),
         Spec(
             "bundler",
@@ -2536,7 +2676,7 @@ def _run_benchmark(args, tmp):
             print(f"{spec.id:<14} ERROR: {type(e).__name__}: {e}")
 
     if not args.only:
-        assert len(specs) + len(directory_specs) == 36
+        assert len(specs) + len(directory_specs) == 37
     print("\nMB/s over raw payload; fileMB = encoded size (= the whole-file copy O1/O3 remove).")
     print("sioR = in-memory copy decode; pathR = public registry mmap read/view.")
     print("bPeakMB/mPeakMB = peak Python allocation for bytes/mmap reads (O1 delta).")

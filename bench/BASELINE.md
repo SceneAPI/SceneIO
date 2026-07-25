@@ -679,3 +679,37 @@ retained O4/O5 controls. Calibration inspection validates the complete small
 metadata document; because these formats contain no bulk payload beyond that
 metadata, it intentionally has approximately the same latency as a full
 record decode.
+
+## g2o pose-graph baseline — 2026-07-24
+
+The harness now covers 37 codecs (35 single-file plus the two COLMAP
+directories). The representative g2o fixture contains 25,000 SE3 nodes, 24,999
+SE3 edges, one fixed node, and full symmetric float64 information matrices:
+10.6 MB of logical record arrays and 4.7 MB of deterministic text. Five-run
+medians were:
+
+```text
+operation                         throughput
+------------------------------------------------
+native buffer write              104 MB/s
+native direct-sink write          106 MB/s
+independent writer                50 MB/s
+native in-memory read             248 MB/s
+native public mmap read           255 MB/s
+independent reader                98 MB/s
+native/oracle read                2.53x
+full read / inspection            41.714 / 31.929 ms (1.31x)
+```
+
+The independent implementation is a strict stdlib/NumPy parser/writer rather
+than the SceneIO reader reflected through Python. It validates vertex ids,
+XYZ+XYZW coefficients, fixed declarations, edge endpoints, all 21
+upper-triangle information coefficients, and exact record widths.
+
+Bytes input traced 4.7 MB while the public mmap path traced effectively zero.
+Buffer-plus-file output traced 4.7 MB while the chunked direct sink traced
+effectively zero and remained byte-identical. Sampled RSS is dominated by the
+owned graph arrays and hash tables (about 56–59 MB on read); inspection reduces
+that to about 39 MB by retaining only ids/endpoints needed for whole-graph
+referential validation. No partial selector is claimed because a range slice
+would need a separately specified induced/subgraph contract.

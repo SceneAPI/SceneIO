@@ -113,6 +113,7 @@ nanobind_add_module(_core STABLE_ABI NB_STATIC
   src/cpp/records/flow_field.cpp
   src/cpp/records/state_trajectory.cpp
   src/cpp/records/camera_rig.cpp
+  src/cpp/records/pose_graph.cpp
   src/cpp/codecs/pfm.cpp
   src/cpp/codecs/colmap.cpp
   src/cpp/codecs/ply_gaussian.cpp
@@ -142,6 +143,7 @@ nanobind_add_module(_core STABLE_ABI NB_STATIC
   src/cpp/codecs/dmb.cpp
   src/cpp/codecs/euroc_state.cpp
   src/cpp/codecs/camera_calibration.cpp
+  src/cpp/codecs/g2o.cpp
   src/cpp/third_party/stb/stb_impl.cpp
   src/cpp/third_party/tinyexr/tinyexr_impl.cpp)
 target_include_directories(_core PRIVATE src/cpp ${zstd_SOURCE_DIR}/lib ${fast_float_SOURCE_DIR}/include

@@ -117,6 +117,7 @@ zero‑copy + convention tags.
 | `TensorDict` | named ndarrays + attrs | npz, HDF5, safetensors, zarr, parquet | ✅ |
 | `CameraRig` | lossless ragged intrinsics/distortion, exact K/R/P, extrinsics, operational/time/topic metadata + convention tags | OpenCV/ROS/Kalibr calib | ✅ |
 | `StateTrajectory` | int64-ns timestamps + p/q/v/gyro-bias/accel-bias with frame/unit/sign tags | EuRoC state CSV | ✅ |
+| `PoseGraph` | typed SE3 nodes/edges, exact ids/fixed flags, XYZW transforms, symmetric 6×6 information + convention tags | g2o | ✅ |
 
 *(Done: `Reconstruction`, `GaussianCloud`, `PosedViewSet`, `Camera`.)*
 
@@ -139,7 +140,7 @@ Columns: **Ext/id** · **Record** · **Lib/oracle (license)** · **R/W** ·
 | ✅ BAL `.txt` / `.bal` | `Reconstruction` | UW specification + independent parser | R+W | angle-axis cameras, centered observations, strict canonical writer; generic `.txt` requires `format="bal"` |
 | ✅ TUM / ✅ KITTI | `PosedViewSet` | pure‑Python | R+W | done (retrofit fast_float) |
 | ✅ EuRoC `state_groundtruth` | `StateTrajectory` | independent stdlib CSV parser | R+W | exact int64 ns; p_RS_R, q_RS WXYZ, v_RS_R, b_w_RS_S, b_a_RS_S; mmap/sink/inspect/state ranges |
-| ⬜ g2o | `PoseGraph` (new) | manual | R+W | edges → needs a pose‑graph record |
+| ✅ g2o | `PoseGraph` | independent strict parser + g2o BSD-3 source semantics | R+W | SE3:QUAT nodes/edges, FIX, XYZW, symmetric 6×6 information; mmap/sink/inspect |
 
 ### 3b. 3DGS / splat
 | Format | Record | Lib / oracle | R/W | Notes |

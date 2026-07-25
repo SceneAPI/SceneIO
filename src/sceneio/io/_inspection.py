@@ -106,6 +106,8 @@ def inspect_path(path: str | Path, format_id: str, datatype: str) -> Inspection:
         "kalibr",
     }:
         return _inspect_camera_rig(p, format_id, datatype)
+    if format_id == "g2o":
+        return _inspect_g2o(p, datatype)
     if format_id == "npy":
         return _inspect_npy(p, datatype)
     if format_id == "npz":
@@ -1235,6 +1237,29 @@ def _inspect_camera_rig(
         metadata={
             "resolutions": resolutions,
             "axis_frame": "opencv",
+        },
+    )
+
+
+def _inspect_g2o(path: Path, datatype: str) -> Inspection:
+    nodes, edges, fixed = _compiled_buffer_inspect(path, _core._inspect_g2o)
+    return Inspection(
+        "g2o",
+        datatype,
+        _size(path),
+        shape=(nodes,),
+        dtype="float64",
+        count=nodes,
+        metadata={
+            "num_nodes": nodes,
+            "num_edges": edges,
+            "num_fixed_nodes": fixed,
+            "quaternion_order": "xyzw",
+            "quaternion_sign": "preserved",
+            "node_transform_convention": "node_to_reference",
+            "edge_transform_convention": "source_inverse_times_target",
+            "translation_unit": "unspecified",
+            "information_variable_order": "tx_ty_tz_qx_qy_qz",
         },
     )
 

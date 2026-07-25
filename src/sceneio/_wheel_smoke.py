@@ -298,6 +298,34 @@ def _camera_calibration(root: Path) -> None:
     sceneio.write(decoded, root / "kalibr-copy", format="kalibr")
 
 
+def _pose_graph(root: Path) -> None:
+    information = np.tile(np.eye(6), (1, 1, 1))
+    graph = _core.pose_graph(
+        np.array([3, 9], np.int64),
+        np.array([[0.0, 0, 0], [1.0, 0, 0]]),
+        np.array([[0.0, 0.0, 0.0, 1.0]] * 2),
+        np.array([[3, 9]], np.int64),
+        np.array([[1.0, 0, 0]]),
+        np.array([[0.0, 0.0, 0.0, 1.0]]),
+        information,
+        fixed=np.array([1, 0], np.uint8),
+    )
+    assert sceneio.PoseGraph is _core.PoseGraph
+    path = root / "graph.g2o"
+    sceneio.write(graph, path)
+    assert sceneio.detect(path) == "g2o"
+    decoded = sceneio.read(path)
+    assert np.array_equal(decoded.node_ids, graph.node_ids)
+    assert np.array_equal(decoded.edge_endpoints, graph.edge_endpoints)
+    assert np.array_equal(
+        decoded.information_matrices, graph.information_matrices
+    )
+    inspected = sceneio.inspect(path)
+    assert inspected.count == 2
+    assert inspected.metadata["num_edges"] == 1
+    assert inspected.metadata["num_fixed_nodes"] == 1
+
+
 def main() -> None:
     with tempfile.TemporaryDirectory(prefix="sceneio-wheel-smoke-") as directory:
         root = Path(directory)
@@ -308,6 +336,7 @@ def main() -> None:
         _reconstruction_and_images(root)
         _state_trajectory(root)
         _camera_calibration(root)
+        _pose_graph(root)
     print(_core.__phase__)
 
 

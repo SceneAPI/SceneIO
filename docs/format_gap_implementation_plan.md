@@ -3,12 +3,12 @@
 - **Status:** execution in progress after SceneIO 0.2.0. G0, safetensors, PTS,
   scalar DMB, BAL, BMP/TGA, the compiled `FlowField` record, typed FLO, typed
   PFM depth, typed PNG depth, typed scalar EXR depth, generic point PLY, and
-  PCD, `StateTrajectory`/EuRoC, and `CameraRig` with OpenCV/ROS/Kalibr
-  calibration are complete locally. `PoseGraph`/g2o is next in the
-  default-wheel sequence.
+  PCD, `StateTrajectory`/EuRoC, `CameraRig` with OpenCV/ROS/Kalibr
+  calibration, and `PoseGraph`/g2o are complete locally. The COLMAP database
+  record/codec unit is next in the default-wheel sequence.
   Cross-platform wheel and instrumented validation remains a user-gated remote
   action.
-- **Current branch:** 36 compiled codecs, all read/write and inspectable, with
+- **Current branch:** 37 compiled codecs, all read/write and inspectable, with
   bounded partial reads where their containers permit them.
 - **Scope:** close every unblocked format gap declared by SceneIO's coverage
   documents without reimplementing the 0.2.0 codec tier.
@@ -1600,16 +1600,16 @@ estimates.
 
 The current local checkpoint is:
 
-- 36 compiled registry codecs with read, write, inspect, mmap input, and direct
+- 37 compiled registry codecs with read, write, inspect, mmap input, and direct
   file sinks;
 - O0-O5 complete for the existing codec tier;
 - `FlowField`, typed FLO, typed PFM depth, typed PNG depth, and typed scalar EXR
   depth complete;
-- 2,147 local tests pass with 3 documented optional skips, Ruff and
+- 2,221 local tests pass with 3 documented optional skips, Ruff and
   `git diff --check` are clean;
 - the all-codec benchmark guard and packaged numpy-only wheel smoke pass;
-- generic point PLY, PCD, StateTrajectory/EuRoC, and CameraRig calibration are
-  complete locally; PoseGraph/g2o is next;
+- generic point PLY, PCD, StateTrajectory/EuRoC, CameraRig calibration, and
+  PoseGraph/g2o are complete locally; the COLMAP database unit is next;
 - instrumented Linux and Linux/macOS wheels have not yet been run for this
   dependency wave because pushing and dispatching remote workflows are
   user-gated.
@@ -1816,7 +1816,7 @@ adapters:
 1. ✅ `StateTrajectory` plus EuRoC state CSV (B3.1 complete locally).
 2. ✅ `CameraRig` plus OpenCV YAML/XML, ROS `camera_info`, and Kalibr YAML
    (B3.2 complete locally).
-3. `PoseGraph` plus g2o.
+3. ✅ `PoseGraph` plus g2o (B3.3 complete locally).
 
 Every record commit must pin coordinate frames, units, timestamp precision,
 quaternion ordering/sign policy, covariance/information layouts, ragged
@@ -1956,6 +1956,72 @@ Verification and validation evidence (2026-07-24):
   unavailable locally; Linux sanitizer and Linux/macOS cibuildwheel validation
   remain user-gated remote actions.
 
+##### B3.3 PoseGraph + g2o — complete locally
+
+Implementation:
+
+- `PoseGraph` owns ordered signed-int64 node ids, float64 node translations and
+  XYZW quaternions, canonical fixed-node flags, typed edges by endpoint id,
+  float64 relative translations/quaternions, and full bitwise-symmetric 6×6
+  information matrices. Closed metadata pins preserved quaternion sign,
+  node-to-reference estimates, the exact
+  `source.inverse() * target` edge convention, unspecified source translation
+  units, and `(tx,ty,tz,qx,qy,qz)` information-variable order. Factories copy
+  sources while all numeric properties expose lifetime-safe zero-copy views.
+- `g2o` accepts exactly `VERTEX_SE3:QUAT`, `EDGE_SE3:QUAT`, `FIX`, blank lines,
+  and comments. Vertex ids use g2o's nonnegative signed-32-bit domain;
+  quaternions are XYZW and unit-length checked; each edge expands the 21
+  row-major upper-triangle coefficients into an exact symmetric matrix.
+  Duplicate/missing ids, duplicate fixes, unknown parameter or mixed graph
+  records, non-finite values, non-unit quaternions, wrong token counts, NULs,
+  and lines over 1 MiB reject rather than dropping graph content.
+- The deterministic writer emits vertices in record order, fixed declarations
+  in node order, then edges, formats doubles with 17 significant digits, and
+  refuses non-SE3 types or foreign transform/unit/order conventions. The
+  public `.g2o` entry uses mmap input, bounded native sink chunks, full-stream
+  metadata validation, distinctive extension/magic detection, and no new
+  dependency. A partial selector is intentionally absent: returning a node or
+  edge range without an explicit induced/subgraph contract would create
+  dangling endpoints or silently change graph meaning.
+
+Verification and validation evidence (2026-07-24):
+
+- 74 focused record/codec cases cover every field and dtype/shape, source-copy
+  isolation, view lifetime and DLPack, empty graphs, explicit empty optionals,
+  closed metadata, typed edges, fixed nodes before/after vertices, edge-before-
+  vertex ordering, hand-derived 90-degree transform composition, exact
+  upper-triangle placement, signed zero, 40 randomized bit-exact round trips,
+  bounded malformed inputs, readonly mmap address identity, post-unmap
+  lifetime, source mutation isolation, direct-sink identity, destination
+  preflight, public detection/read/write/inspect, and capabilities.
+- An independent strict stdlib/NumPy parser validates every writer field and
+  generated golden graph. The convention follows the BSD-3 g2o implementation:
+  `EdgeSE3::setMeasurementFromState` stores
+  `from.estimate().inverse() * to.estimate()`, and its six error/information
+  variables are translation followed by compact quaternion components.
+- g2o joins the 35-entry single-file bytes-versus-mmap, direct-sink,
+  inspection, readonly-buffer, empty/truncation, and mutation-fuzz sweeps. The
+  full registry is now 37 codecs including the two COLMAP directory formats.
+  The final local MSVC suite passes 2,221 tests with three documented optional
+  skips; Ruff and `git diff --check` are clean.
+- On the representative 25,000-node graph (10.6 MB logical, 4.7 MB encoded),
+  five-run medians are 104 MB/s write, 248 MB/s in-memory read, and 255 MB/s
+  public mmap read. The independent writer/reader measure 50/98 MB/s, so the
+  native reader is 2.53× faster. Mmap and the direct sink each remove the full
+  4.7 MB traced Python allocation; sink throughput is 106 versus 103 MB/s, and
+  inspection is 1.31× faster than full decode while omitting record arrays.
+- The clean local cp312-abi3 Windows wheel exposes all 37 registry codecs,
+  `PoseGraph`, and the g2o capability metadata; the refreshed isolated install
+  passes the packaged g2o read/write/detect/inspect smoke. Its 36 archive
+  members contain no leaked build/include/library directories, and NumPy
+  remains the only unconditional runtime dependency.
+- Manual memory-safety, format-correctness, and test-soundness review found and
+  fixed a possible empty-buffer null-pointer arithmetic path and a signed-zero
+  fidelity hole where numerically symmetric but bitwise-different matrix
+  triangles could pass the writer guard. Fable remains unavailable locally;
+  Linux sanitizer and Linux/macOS cibuildwheel validation remain user-gated
+  remote actions.
+
 #### B4. COLMAP database
 
 - Land `FeatureSet` and `MatchGraph` first, including keypoint layout,
@@ -1985,7 +2051,7 @@ Wave B exit:
   registry-wide E2E sweep;
 - the default install remains numpy-only and all native code is vendored,
   pinned, permissively licensed, and statically linked;
-- all 36 currently registered codec behaviors, benchmarks, and golden bytes
+- all 37 currently registered codec behaviors, benchmarks, and golden bytes
   remain green;
 - the dependency-wave remote validation in section 12.10 passes.
 

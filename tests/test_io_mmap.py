@@ -205,6 +205,33 @@ def _fingerprint(value):
                 )
             ),
         )
+    elif isinstance(value, _core.PoseGraph):
+        fields = (
+            value.num_nodes,
+            value.num_edges,
+            tuple(value.node_types),
+            tuple(value.edge_types),
+            value.quaternion_order,
+            value.quaternion_sign,
+            value.node_transform_convention,
+            value.edge_transform_convention,
+            value.translation_unit,
+            value.information_variable_order,
+            value.information_storage,
+            *(
+                _array_fingerprint(getattr(value, name))
+                for name in (
+                    "node_ids",
+                    "node_translations",
+                    "node_quaternions",
+                    "fixed",
+                    "edge_endpoints",
+                    "edge_translations",
+                    "edge_quaternions",
+                    "information_matrices",
+                )
+            ),
+        )
     elif isinstance(value, _core.Reconstruction):
         fields = (
             value.num_cameras,
@@ -390,6 +417,23 @@ def buffer_codecs():
         b"  - [0, 0, 1, 0.3]\n"
         b"  - [0, 0, 0, 1]\n"
     )
+    pose_information = np.tile(np.eye(6), (2, 1, 1))
+    pose_graph = _core.pose_graph(
+        np.array([3, 7, 11], np.int64),
+        rng.standard_normal((3, 3)),
+        np.array(
+            [[0.0, 0.0, 0.0, 1.0]] * 3,
+            np.float64,
+        ),
+        np.array([[3, 7], [7, 11]], np.int64),
+        rng.standard_normal((2, 3)),
+        np.array(
+            [[0.0, 0.0, 0.0, 1.0]] * 2,
+            np.float64,
+        ),
+        pose_information,
+        fixed=np.array([1, 0, 0], np.uint8),
+    )
 
     def spec(codec_id, reader, writer, value):
         return BufferCodec(codec_id, reader, writer, value, bytes(writer(value)))
@@ -436,6 +480,7 @@ def buffer_codecs():
             _core.write_kalibr,
             kalibr_rig,
         ),
+        spec("g2o", _core.read_g2o, _core.write_g2o, pose_graph),
         spec("npy", _core.read_npy, _core.write_npy, tensor),
         spec("npz", _core.read_npz, _core.write_npz, tensors),
         spec(
@@ -485,8 +530,8 @@ def _outcome(call, argument):
 
 
 def test_all_single_file_codecs_mmap_equal_bytes_bit_exact(tmp_path, buffer_codecs):
-    """All 34 buffer codecs decode mmap and bytes to bit-exact records."""
-    assert len(buffer_codecs) == 34
+    """All 35 buffer codecs decode mmap and bytes to bit-exact records."""
+    assert len(buffer_codecs) == 35
     for spec in buffer_codecs:
         expected = _fingerprint(spec.reader(spec.data))
         path = tmp_path / f"sample-{spec.id}.bin"
@@ -504,8 +549,8 @@ def test_all_single_file_codecs_mmap_equal_bytes_bit_exact(tmp_path, buffer_code
 
 
 def test_all_single_file_sinks_are_byte_identical(tmp_path, buffer_codecs):
-    """All 34 compiled encoders emit the exact bytes their buffer API returns."""
-    assert len(buffer_codecs) == 34
+    """All 35 compiled encoders emit the exact bytes their buffer API returns."""
+    assert len(buffer_codecs) == 35
     for spec in buffer_codecs:
         direct = tmp_path / f"direct-{spec.id}.bin"
         _core._write_to_file(spec.writer, spec.value, direct)
@@ -586,6 +631,18 @@ def _assert_inspection_matches(info, decoded):
             np.asarray(decoded.resolutions).ravel()
         )
         assert info.metadata["axis_frame"] == "opencv"
+    elif isinstance(decoded, _core.PoseGraph):
+        assert info.shape == (decoded.num_nodes,)
+        assert info.dtype == "float64"
+        assert info.count == decoded.num_nodes
+        assert info.metadata["num_nodes"] == decoded.num_nodes
+        assert info.metadata["num_edges"] == decoded.num_edges
+        assert info.metadata["num_fixed_nodes"] == int(decoded.fixed.sum())
+        assert info.metadata["quaternion_order"] == decoded.quaternion_order
+        assert (
+            info.metadata["edge_transform_convention"]
+            == decoded.edge_transform_convention
+        )
     elif isinstance(decoded, _core.Reconstruction):
         assert info.shape == (decoded.num_images,)
         assert info.dtype == decoded.quaternions.dtype.name
@@ -668,8 +725,8 @@ print(max(0, peak[0] - baseline))
     return int(completed.stdout.strip())
 
 
-def test_inspect_matches_decoded_metadata_all_36_codecs(tmp_path, buffer_codecs):
-    assert len(buffer_codecs) == 34
+def test_inspect_matches_decoded_metadata_all_37_codecs(tmp_path, buffer_codecs):
+    assert len(buffer_codecs) == 35
     for spec in buffer_codecs:
         path = tmp_path / f"inspect-{spec.id}.data"
         path.write_bytes(spec.data)
@@ -915,7 +972,15 @@ def test_inspect_all_single_file_codecs_reject_truncated_headers(
         path = tmp_path / f"truncated-{spec.id}.bin"
         # PTS metadata is complete after its short decimal count line; use a
         # genuinely missing header rather than truncating into the first row.
-        path.write_bytes(b"" if spec.id == "pts" else spec.data[:4])
+        if spec.id == "pts":
+            truncated = b""
+        elif spec.id == "g2o":
+            # The canonical prefix is a comment and an empty graph is valid;
+            # truncate a data-record tag instead.
+            truncated = b"VERT"
+        else:
+            truncated = spec.data[:4]
+        path.write_bytes(truncated)
         with pytest.raises(sceneio.FormatError):
             sceneio.inspect(path, format=spec.id)
 
@@ -1916,7 +1981,7 @@ def test_registry_uses_mmap_for_every_nonempty_single_file_codec(
         value = sceneio.codecs()[spec.id].read(str(path))
         gc.collect()
         assert _fingerprint(value) == _fingerprint(spec.reader(spec.data))
-    assert mapped_paths == len(buffer_codecs) == 34
+    assert mapped_paths == len(buffer_codecs) == 35
 
 
 def test_all_buffer_entries_accept_readonly_protocol_exporters(buffer_codecs):

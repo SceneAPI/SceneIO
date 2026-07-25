@@ -22,6 +22,7 @@ _BUILTINS = {
     "exr",
     "flo",
     "gaussian_ply",
+    "g2o",
     "hdr",
     "jpeg",
     "kitti",
