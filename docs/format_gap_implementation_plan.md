@@ -5,11 +5,11 @@
   PFM depth, typed PNG depth, typed scalar EXR depth, generic point PLY, and
   PCD, `StateTrajectory`/EuRoC, `CameraRig` with OpenCV/ROS/Kalibr
   calibration, `PoseGraph`/g2o, and the `FeatureSet`/`MatchGraph`-backed
-  COLMAP database are complete locally. Self-contained splat formats are next
-  in the default-wheel sequence.
+  COLMAP database and SuperSplat compressed PLY are complete locally.
+  PlayCanvas SOG and KSplat are next in the default-wheel sequence.
   Cross-platform wheel and instrumented validation remains a user-gated remote
   action.
-- **Current branch:** 38 compiled codecs, all read/write and inspectable, with
+- **Current branch:** 39 compiled codecs, all read/write and inspectable, with
   bounded partial reads where their containers permit them.
 - **Scope:** close every unblocked format gap declared by SceneIO's coverage
   documents without reimplementing the 0.2.0 codec tier.
@@ -1629,16 +1629,17 @@ estimates.
 
 The current local checkpoint is:
 
-- 38 compiled registry codecs with read, write, inspect, mmap or path-native
+- 39 compiled registry codecs with read, write, inspect, mmap or path-native
   input, and direct file sinks;
 - O0-O5 complete for the existing codec tier;
 - `FlowField`, typed FLO, typed PFM depth, typed PNG depth, and typed scalar EXR
   depth complete;
-- 2,266 local tests pass with 4 documented platform/optional skips, Ruff and
+- 2,287 local tests pass with 4 documented platform/optional skips, Ruff and
   `git diff --check` are clean;
-- the complete 38-codec benchmark and packaged NumPy-only wheel smoke pass;
+- the complete 39-codec benchmark and packaged NumPy-only wheel smoke pass;
 - generic point PLY, PCD, StateTrajectory/EuRoC, CameraRig calibration,
-  PoseGraph/g2o, and the COLMAP feature database are complete locally;
+  PoseGraph/g2o, the COLMAP feature database, and SuperSplat compressed PLY
+  are complete locally;
 - instrumented Linux and Linux/macOS wheels have not yet been run for this
   dependency wave because pushing and dispatching remote workflows are
   user-gated.
@@ -2114,8 +2115,67 @@ Verification and validation evidence (2026-07-24):
 
 #### B5. Self-contained splat formats
 
-- Implement SuperSplat SOG/compressed PLY with explicit quantization and lossy
-  metadata.
+##### B5.1 SuperSplat compressed PLY — complete locally
+
+Implementation:
+
+- `_core.read_compressed_ply`, `read_compressed_ply_points`, and
+  `write_compressed_ply` implement the binary-little-endian PlayCanvas schema:
+  256-row chunks, 11/10/11-bit positions and log scales, largest-three
+  2/10/10/10 quaternions, RGBA8, and optional 9/24/45-byte SH rows.
+- The reader accepts both the current 18-float per-chunk color-range schema and
+  the legacy 12-float direct-color schema. It rejects unknown elements or
+  properties, invalid element order/counts, non-finite/reversed chunk ranges,
+  float32 SH overflow, and any truncated or trailing payload.
+- The deterministic writer uses the reference recursive Morton ordering and
+  current color-range schema. Loss is explicit in capability metadata. It
+  refuses NaNs, zero/non-finite quaternions, non-finite positions/SH, and log
+  scales outside the reference writer's `[-20, 20]` interval rather than
+  clamping them. Infinite logit opacity is retained because RGBA8 exactly
+  represents alpha endpoints.
+- Public `.compressed.ply` compound-extension dispatch outranks plain `.ply`;
+  header classification distinguishes compressed Gaussian, raw Gaussian,
+  point, and future mesh schemas. Inspection parses only the bounded PLY header,
+  and point selection validates the complete container while allocating only
+  selected record rows.
+
+Verification and validation evidence (2026-07-24):
+
+- The encoded body for a deterministic 513-point SH2 vector is byte-identical
+  to PlayCanvas `splat-transform` 3.1.6 commit
+  `6b07ba05d731eac1163ad4ff1b14e47e5e3f162c`; an independent NumPy/struct
+  decoder triangulates all four SH degrees and the legacy schema.
+- Twenty-one focused cases cover deterministic bytes, quantized decode,
+  current/legacy layouts, public detect/read/write/inspect/partial dispatch,
+  mmap lifetime, source-mutation isolation, malformed headers and extents,
+  writer destination preflight, alpha endpoints, empty containers, and a
+  generated 100 MiB-class sparse partial-read fixture. The codec also joins
+  every registry-wide mmap/bytes, direct-sink, inspection, partial,
+  readonly-buffer, truncation, and mutation-fuzz sweep.
+- The complete local MSVC suite passes 2,287 tests with four documented skips;
+  Ruff, `git diff --check`, and the NumPy-only packaged smoke are clean.
+- On the representative 200,000-point cloud (11.2 MB logical, 3.3 MB encoded),
+  five-run medians are 341 MB/s write and 97 MB/s public mmap decode.
+  Inspection is 1,230.84× faster than full decode and a 1/16 point selection is
+  15.01× faster. Mmap and the direct sink each remove the 3.3 MB Python
+  whole-file allocation; the partial path sampled 0.3 MB versus 13.7 MB RSS
+  growth for full decode.
+- Manual memory-safety, format-correctness, and test-soundness review found and
+  fixed a possible null pointer passed to a zero-length SH append, rejection of
+  valid decoded alpha endpoints on rewrite, and finite chunk colors that would
+  overflow float32 SH storage. Fable remains unavailable locally; Linux
+  sanitizer and Linux/macOS cibuildwheel validation remain user-gated.
+
+##### B5.2 PlayCanvas SOG — next
+
+- Implement bundled ZIP and unbundled-directory SOG v2 with explicit
+  quantization and lossy metadata.
+- Decode every required lossless-WebP layer and preserve all representable
+  `GaussianCloud` fields; reject missing, lossy, mismatched, or unsupported
+  layers.
+
+##### B5.3 KSplat — queued after SOG
+
 - Implement only identified KSplat versions; begin read-only if no canonical
   writer can be independently established.
 - Verify against reference loader vectors and preserve every
@@ -2128,7 +2188,7 @@ Wave B exit:
   registry-wide E2E sweep;
 - the default install remains numpy-only and all native code is vendored,
   pinned, permissively licensed, and statically linked;
-- all 38 currently registered codec behaviors, benchmarks, and golden bytes
+- all codec behaviors registered at Wave B exit, benchmarks, and golden bytes
   remain green;
 - the dependency-wave remote validation in section 12.10 passes.
 

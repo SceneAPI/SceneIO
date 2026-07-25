@@ -412,17 +412,42 @@ def native_features(
 
 def _detect_write(obj, path) -> str:
     # dispatch by extension (or directory) first, then disambiguate on the
-    # record type if several writable codecs share an extension.
-    ext = Path(path).suffix.lower()
+    # record type if several writable codecs share an extension. Compound
+    # extensions (notably `.compressed.ply`) outrank their shorter suffix.
     name = Path(path).name
+    lower_name = name.lower()
+    extension_matches = {
+        c.id: max(
+            (
+                len(extension)
+                for extension in c.extensions
+                if lower_name.endswith(extension.lower())
+            ),
+            default=0,
+        )
+        for c in REGISTRY.values()
+        if c.write is not None
+    }
+    longest_extension = max(extension_matches.values(), default=0)
     cands = [
         c
         for c in REGISTRY.values()
         if c.write is not None
-        and (ext in c.extensions or name in c.filenames or (c.is_directory and ext == ""))
+        and (
+            (
+                longest_extension
+                and extension_matches.get(c.id) == longest_extension
+            )
+            or name in c.filenames
+            or (c.is_directory and Path(path).suffix == "")
+        )
     ]
     if not cands:
-        raise FormatError(f"no writer for {type(obj).__name__} at {str(path)!r} (ext {ext!r})")
+        ext = Path(path).suffix.lower()
+        raise FormatError(
+            f"no writer for {type(obj).__name__} at {str(path)!r} "
+            f"(ext {ext!r})"
+        )
     if len(cands) > 1:
         for c in cands:
             if c.record is type(obj):

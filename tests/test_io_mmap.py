@@ -441,6 +441,12 @@ def buffer_codecs():
     return [
         spec("pfm", _core.read_pfm, _core.write_pfm, tensor),
         spec("gaussian_ply", _core.read_gaussian_ply, _core.write_gaussian_ply, gaussians),
+        spec(
+            "compressed_ply",
+            _core.read_compressed_ply,
+            _core.write_compressed_ply,
+            gaussians,
+        ),
         spec("spz", _core.read_spz, _core.write_spz, gaussians),
         spec(
             "transforms_json",
@@ -530,8 +536,8 @@ def _outcome(call, argument):
 
 
 def test_all_single_file_codecs_mmap_equal_bytes_bit_exact(tmp_path, buffer_codecs):
-    """All 35 buffer codecs decode mmap and bytes to bit-exact records."""
-    assert len(buffer_codecs) == 35
+    """All 36 buffer codecs decode mmap and bytes to bit-exact records."""
+    assert len(buffer_codecs) == 36
     for spec in buffer_codecs:
         expected = _fingerprint(spec.reader(spec.data))
         path = tmp_path / f"sample-{spec.id}.bin"
@@ -549,8 +555,8 @@ def test_all_single_file_codecs_mmap_equal_bytes_bit_exact(tmp_path, buffer_code
 
 
 def test_all_single_file_sinks_are_byte_identical(tmp_path, buffer_codecs):
-    """All 35 compiled encoders emit the exact bytes their buffer API returns."""
-    assert len(buffer_codecs) == 35
+    """All 36 compiled encoders emit the exact bytes their buffer API returns."""
+    assert len(buffer_codecs) == 36
     for spec in buffer_codecs:
         direct = tmp_path / f"direct-{spec.id}.bin"
         _core._write_to_file(spec.writer, spec.value, direct)
@@ -725,8 +731,8 @@ print(max(0, peak[0] - baseline))
     return int(completed.stdout.strip())
 
 
-def test_inspect_matches_decoded_metadata_all_37_codecs(tmp_path, buffer_codecs):
-    assert len(buffer_codecs) == 35
+def test_inspect_matches_decoded_metadata_all_39_codecs(tmp_path, buffer_codecs):
+    assert len(buffer_codecs) == 36
     for spec in buffer_codecs:
         path = tmp_path / f"inspect-{spec.id}.data"
         path.write_bytes(spec.data)
@@ -743,6 +749,20 @@ def test_inspect_matches_decoded_metadata_all_37_codecs(tmp_path, buffer_codecs)
                 "sh_degree": decoded.sh_degree,
                 "num_rest": decoded.num_rest,
                 "byte_order": "little",
+            }
+        elif spec.id == "compressed_ply":
+            assert info.metadata == {
+                "encoding": "binary_little_endian",
+                "byte_order": "little",
+                "chunk_size": 256,
+                "num_chunks": 1,
+                "sh_degree": decoded.sh_degree,
+                "num_rest": decoded.num_rest,
+                "chunk_color_ranges": True,
+                "position_bits": (11, 10, 11),
+                "scale_bits": (11, 10, 11),
+                "quaternion_bits": (2, 10, 10, 10),
+                "color_bits": (8, 8, 8, 8),
             }
         elif spec.id == "ply":
             assert info.metadata == {
@@ -1981,7 +2001,7 @@ def test_registry_uses_mmap_for_every_nonempty_single_file_codec(
         value = sceneio.codecs()[spec.id].read(str(path))
         gc.collect()
         assert _fingerprint(value) == _fingerprint(spec.reader(spec.data))
-    assert mapped_paths == len(buffer_codecs) == 35
+    assert mapped_paths == len(buffer_codecs) == 36
 
 
 def test_all_buffer_entries_accept_readonly_protocol_exporters(buffer_codecs):

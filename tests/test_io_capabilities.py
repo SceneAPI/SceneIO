@@ -18,6 +18,7 @@ _BUILTINS = {
     "colmap_db",
     "colmap_sparse",
     "colmap_sparse_txt",
+    "compressed_ply",
     "dmb",
     "euroc_state",
     "exr",
@@ -60,6 +61,7 @@ _PARTIAL = {
     "euroc_state": ("states",),
     "flo": ("window",),
     "gaussian_ply": ("points",),
+    "compressed_ply": ("points",),
     "las": ("points",),
     "netpbm": ("window",),
     "pcd": ("points",),
@@ -72,7 +74,15 @@ _PARTIAL = {
     "xyz": ("points",),
 }
 
-_LOSSY = {"hdr", "jpeg", "las", "splat", "spz", "webp"}
+_LOSSY = {
+    "compressed_ply",
+    "hdr",
+    "jpeg",
+    "las",
+    "splat",
+    "spz",
+    "webp",
+}
 
 _NATIVE_FEATURES = {
     "arrow": ("SCENEIO_WITH_ARROW", ("parquet",)),

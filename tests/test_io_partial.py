@@ -297,6 +297,7 @@ def test_point_ranges_equal_full_read_slices(tmp_path):
         ("pcd", bytes(_core.write_pcd(xyz))),
         ("las", bytes(_core.write_las(las))),
         ("gaussian_ply", bytes(_core.write_gaussian_ply(gaussians))),
+        ("compressed_ply", bytes(_core.write_compressed_ply(gaussians))),
         ("splat", bytes(_core.write_splat(gaussians))),
     )
     for index, (format_id, encoded) in enumerate(cases):
@@ -608,6 +609,11 @@ def test_partial_paths_reject_truncated_selected_payloads(tmp_path):
         (
             "gaussian_ply",
             bytes(_core.write_gaussian_ply(gaussians))[:-1],
+            {"points": (0, 1)},
+        ),
+        (
+            "compressed_ply",
+            bytes(_core.write_compressed_ply(gaussians))[:-1],
             {"points": (0, 1)},
         ),
         (

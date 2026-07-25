@@ -96,6 +96,28 @@ def _mapped_safetensors(root: Path, values: np.ndarray) -> None:
     path.unlink()
 
 
+def _compressed_ply(root: Path) -> None:
+    count = 5
+    cloud = _core.gaussian_cloud(
+        np.arange(count * 3, dtype=np.float32).reshape(count, 3) / 8,
+        np.zeros((count, 3), np.float32),
+        np.tile(np.array([[1.0, 0.0, 0.0, 0.0]], np.float32), (count, 1)),
+        np.linspace(-1, 1, count, dtype=np.float32),
+        np.zeros((count, 3), np.float32),
+        np.arange(count * 9, dtype=np.float32).reshape(count, 9) / 32,
+    )
+    path = root / "smoke.compressed.ply"
+    sceneio.write(cloud, path)
+    assert sceneio.detect(path) == "compressed_ply"
+    decoded = sceneio.read(path)
+    assert isinstance(decoded, _core.GaussianCloud)
+    assert decoded.num_gaussians == count
+    assert decoded.sh_degree == 1
+    assert sceneio.inspect(path).metadata["num_chunks"] == 1
+    selected = sceneio.read_partial(path, points=(1, 4))
+    assert np.array_equal(selected.means, decoded.means[1:4])
+
+
 def _point_depth_and_flow(root: Path, values: np.ndarray) -> None:
     points = root / "points.pts"
     sceneio.write(_core.point_cloud(values[:, :3]), points)
@@ -388,6 +410,7 @@ def main() -> None:
         values = np.arange(12, dtype=np.float32).reshape(3, 4)
         _pfm_and_typed_depth(root, values)
         _mapped_safetensors(root, values)
+        _compressed_ply(root)
         _point_depth_and_flow(root, values)
         _reconstruction_and_images(root)
         _state_trajectory(root)

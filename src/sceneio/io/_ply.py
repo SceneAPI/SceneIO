@@ -43,6 +43,34 @@ _GAUSSIAN_REQUIRED = frozenset(
         b"rot_3",
     }
 )
+_COMPRESSED_CHUNK_BASE = (
+    b"min_x",
+    b"min_y",
+    b"min_z",
+    b"max_x",
+    b"max_y",
+    b"max_z",
+    b"min_scale_x",
+    b"min_scale_y",
+    b"min_scale_z",
+    b"max_scale_x",
+    b"max_scale_y",
+    b"max_scale_z",
+)
+_COMPRESSED_CHUNK_COLOR = (
+    b"min_r",
+    b"min_g",
+    b"min_b",
+    b"max_r",
+    b"max_g",
+    b"max_b",
+)
+_COMPRESSED_VERTEX = (
+    b"packed_position",
+    b"packed_rotation",
+    b"packed_scale",
+    b"packed_color",
+)
 
 
 @dataclass(frozen=True)
@@ -184,10 +212,125 @@ def parse_ply_header(path: str | Path) -> PlyHeader:
     )
 
 
+def _property_map(element: PlyElement) -> dict[bytes, PlyProperty]:
+    return {prop.name: prop for prop in element.properties}
+
+
+def _require_scalar_properties(
+    element: PlyElement,
+    expected_names: tuple[bytes, ...],
+    expected_types: frozenset[bytes],
+) -> None:
+    properties = _property_map(element)
+    if set(properties) != set(expected_names):
+        raise ValueError(
+            f"compressed PLY: unsupported {element.name.decode()} property set"
+        )
+    if any(
+        prop.scalar_type not in expected_types
+        for prop in properties.values()
+    ):
+        raise ValueError(
+            f"compressed PLY: invalid {element.name.decode()} property type"
+        )
+
+
+def validate_compressed_ply_header(
+    header: PlyHeader, file_size: int
+) -> dict[str, object]:
+    """Validate the current/legacy PlayCanvas compressed-Ply schemas."""
+
+    if header.encoding != "binary_little_endian":
+        raise ValueError("compressed PLY: binary little-endian encoding required")
+    if len(header.elements) not in {2, 3}:
+        raise ValueError(
+            "compressed PLY: requires chunk, vertex, and optional sh elements"
+        )
+    names = tuple(element.name for element in header.elements)
+    if names not in {(b"chunk", b"vertex"), (b"chunk", b"vertex", b"sh")}:
+        raise ValueError(
+            "compressed PLY: elements must be ordered chunk, vertex, optional sh"
+        )
+    chunk, vertex = header.elements[:2]
+    chunk_names = tuple(prop.name for prop in chunk.properties)
+    current = _COMPRESSED_CHUNK_BASE + _COMPRESSED_CHUNK_COLOR
+    if set(chunk_names) == set(current):
+        chunk_colors = True
+        expected_chunk = current
+    elif set(chunk_names) == set(_COMPRESSED_CHUNK_BASE):
+        chunk_colors = False
+        expected_chunk = _COMPRESSED_CHUNK_BASE
+    else:
+        raise ValueError(
+            "compressed PLY: chunk schema must contain 12 or 18 float properties"
+        )
+    _require_scalar_properties(
+        chunk, expected_chunk, frozenset({b"float", b"float32"})
+    )
+    _require_scalar_properties(
+        vertex, _COMPRESSED_VERTEX, frozenset({b"uint", b"uint32"})
+    )
+    expected_chunks = vertex.count // 256 + bool(vertex.count % 256)
+    if chunk.count != expected_chunks:
+        raise ValueError(
+            "compressed PLY: chunk count does not equal ceil(vertex/256)"
+        )
+
+    rest = 0
+    if len(header.elements) == 3:
+        sh = header.elements[2]
+        if sh.count != vertex.count:
+            raise ValueError(
+                "compressed PLY: sh count does not equal vertex count"
+            )
+        rest = len(sh.properties)
+        if rest not in {9, 24, 45}:
+            raise ValueError(
+                "compressed PLY: sh element requires 9, 24, or 45 properties"
+            )
+        _require_scalar_properties(
+            sh,
+            tuple(f"f_rest_{index}".encode() for index in range(rest)),
+            frozenset({b"uchar", b"uint8"}),
+        )
+
+    chunk_stride = sum(
+        _SCALAR_SIZES[prop.scalar_type] for prop in chunk.properties
+    )
+    vertex_stride = sum(
+        _SCALAR_SIZES[prop.scalar_type] for prop in vertex.properties
+    )
+    expected_size = (
+        header.header_size
+        + chunk.count * chunk_stride
+        + vertex.count * vertex_stride
+        + vertex.count * rest
+    )
+    if expected_size != file_size:
+        adjective = "truncated" if expected_size > file_size else "trailing"
+        raise ValueError(f"compressed PLY: {adjective} binary payload")
+    return {
+        "encoding": "binary_little_endian",
+        "byte_order": "little",
+        "chunk_size": 256,
+        "num_chunks": chunk.count,
+        "sh_degree": {0: 0, 9: 1, 24: 2, 45: 3}[rest],
+        "num_rest": rest,
+        "chunk_color_ranges": chunk_colors,
+        "position_bits": (11, 10, 11),
+        "scale_bits": (11, 10, 11),
+        "quaternion_bits": (2, 10, 10, 10),
+        "color_bits": (8, 8, 8, 8),
+    }
+
+
 def classify_ply(path: str | Path) -> str:
-    """Return ``gaussian_ply``, ``ply``, or ``ply_mesh`` from the header schema."""
+    """Classify point, Gaussian, compressed-Gaussian, or mesh PLY."""
 
     header = parse_ply_header(path)
+    if any(element.name == b"chunk" for element in header.elements):
+        validate_compressed_ply_header(header, Path(path).stat().st_size)
+        return "compressed_ply"
     vertex = header.vertex
     names = {prop.name for prop in vertex.properties}
     if any(element.name == b"face" for element in header.elements):

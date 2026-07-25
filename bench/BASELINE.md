@@ -735,6 +735,33 @@ one-image partial read               0.525 ms (13.10x vs full)
 one-pair partial read                0.421 ms (16.31x vs full)
 ```
 
+## SuperSplat compressed-Ply baseline — 2026-07-24
+
+Compressed PLY raises the harness to 39 codecs: 36 mmap-backed single-file
+formats, the path-native SQLite database, and two COLMAP directories. The
+representative degree-0 cloud has 200,000 Gaussians (11.2 MB of canonical
+`GaussianCloud` values) and encodes to 3.3 MB. Five-run local MSVC medians:
+
+```text
+operation                              result
+-------------------------------------------------------------
+deterministic Morton/quantized write   341 MB/s
+in-memory decode                        98 MB/s
+public mmap decode                      97 MB/s
+metadata inspection                  0.094 ms (1,230.84x vs full)
+1/16 point selection                  7.684 ms (15.01x vs full)
+```
+
+The public mmap read removes the 3.3 MB whole-file Python allocation and the
+direct sink removes the same output-sized allocation while measuring 346 MB/s
+versus 332 MB/s for the buffer-plus-file path. The partial result materializes
+only its selected `GaussianCloud` rows; its sampled RSS increase was 0.3 MB
+versus 13.7 MB for the full decode. A generated 103+ MiB sparse-container test
+also keeps traced Python allocation below 4 MiB for an eight-point selection.
+The writer body is byte-identical to the pinned PlayCanvas
+`splat-transform` 3.1.6 reference vector; the producer-specific header comment
+is intentionally different.
+
 The independent reference uses stdlib `sqlite3` prepared statements and an
 explicit transaction; pycolmap separately verifies both directions in the
 parity suite. Native full read, inspection, both selectors, and transactional

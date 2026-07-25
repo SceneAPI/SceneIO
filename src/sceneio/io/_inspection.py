@@ -25,7 +25,11 @@ import numpy as np
 
 from sceneio import _core
 from sceneio.io._pcd import parse_pcd_header, validate_point_pcd_header
-from sceneio.io._ply import parse_ply_header, validate_point_ply_header
+from sceneio.io._ply import (
+    parse_ply_header,
+    validate_compressed_ply_header,
+    validate_point_ply_header,
+)
 
 MetadataValue = (
     str
@@ -87,6 +91,8 @@ def inspect_path(path: str | Path, format_id: str, datatype: str) -> Inspection:
         return _inspect_colmap_binary(p, datatype)
     if format_id == "gaussian_ply":
         return _inspect_gaussian_ply(p, datatype)
+    if format_id == "compressed_ply":
+        return _inspect_compressed_ply(p, datatype)
     if format_id == "ply":
         return _inspect_ply(p, datatype)
     if format_id == "pcd":
@@ -1105,6 +1111,24 @@ def _inspect_gaussian_ply(path: Path, datatype: str) -> Inspection:
             "num_rest": rest,
             "byte_order": byte_order,
         },
+    )
+
+
+def _inspect_compressed_ply(path: Path, datatype: str) -> Inspection:
+    file_size = _size(path)
+    header = parse_ply_header(path)
+    metadata = validate_compressed_ply_header(header, file_size)
+    vertex = next(
+        element for element in header.elements if element.name == b"vertex"
+    )
+    return Inspection(
+        "compressed_ply",
+        datatype,
+        file_size,
+        shape=(vertex.count,),
+        dtype="float32",
+        count=vertex.count,
+        metadata=metadata,
     )
 
 

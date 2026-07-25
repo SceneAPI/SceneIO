@@ -255,8 +255,9 @@ def detect(path) -> str:
         if p.name in c.filenames:
             return c.id
     ext = p.suffix.lower()
-    # A .ply suffix and the bare "ply" magic are shared by three semantically
-    # different schemas. Header dispatch must happen before registry order:
+    # A .ply suffix and the bare "ply" magic are shared by point, Gaussian,
+    # compressed-Gaussian, and mesh schemas. Header dispatch must happen
+    # before registry order:
     # silently sending Gaussian properties to PointCloud would discard them,
     # while sending ordinary points to GaussianCloud would fail misleadingly.
     if ext == ".ply":
@@ -493,6 +494,37 @@ register(
         datatype="splat",
         magic=(b"ply",),
         read_points=_mmap_selector_reader(_core.read_gaussian_ply_points),
+    )
+)
+register(
+    Codec(
+        "compressed_ply",
+        (".compressed.ply",),
+        _mmap_reader(_core.read_compressed_ply),
+        _file_sink_writer(_core.write_compressed_ply),
+        record=_core.GaussianCloud,
+        datatype="splat",
+        magic=(b"ply",),
+        read_points=_mmap_selector_reader(
+            _core.read_compressed_ply_points
+        ),
+        lossy=True,
+        supported_features=(
+            "playcanvas_chunk_256",
+            "legacy_direct_color_read",
+            "position_11_10_11",
+            "scale_11_10_11",
+            "largest_three_quaternion",
+            "rgba8",
+            "sh_degrees_0_3",
+            "morton_ordered_write",
+        ),
+        unsupported_features=(
+            "ascii",
+            "binary_big_endian",
+            "unknown_elements",
+            "unknown_properties",
+        ),
     )
 )
 register(

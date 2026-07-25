@@ -149,7 +149,8 @@ Columns: **Ext/id** · **Record** · **Lib/oracle (license)** · **R/W** ·
 | ✅ Gaussian `.ply` | `GaussianCloud` | gsply (MIT) | R+W | done |
 | ✅ `.spz` v1‑4 | `GaussianCloud` | gsply | R+W | done |
 | ✅ `.splat` | `GaussianCloud` | numpy oracle/test vectors | R+W | 32B/point; lossy 8-bit, SH dropped |
-| ⬜ SuperSplat SOG / `.compressed.ply` | `GaussianCloud` | ref loaders | R+W | clustered/quantized |
+| ✅ SuperSplat `.compressed.ply` | `GaussianCloud` | pinned splat-transform 3.1.6 vector + NumPy oracle | R+W | 256-row chunks; deterministic Morton writer; explicit lossy quantization; point ranges |
+| ⬜ PlayCanvas SOG | `GaussianCloud` | ref loaders | R+W | ZIP + lossless WebP layers; clustered/quantized |
 | ⬜ `.ksplat` | `GaussianCloud` | ref loader | R | mkkellogg viewer format |
 
 ### 3c. Point clouds
