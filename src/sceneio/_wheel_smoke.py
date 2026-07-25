@@ -118,6 +118,33 @@ def _compressed_ply(root: Path) -> None:
     assert np.array_equal(selected.means, decoded.means[1:4])
 
 
+def _sog(root: Path) -> None:
+    count = 7
+    cloud = _core.gaussian_cloud(
+        np.arange(count * 3, dtype=np.float32).reshape(count, 3) / 8,
+        np.arange(count * 3, dtype=np.float32).reshape(count, 3) / 32,
+        np.tile(np.array([[1.0, 0.1, 0.2, 0.3]], np.float32), (count, 1)),
+        np.linspace(-2, 2, count, dtype=np.float32),
+        np.arange(count * 3, dtype=np.float32).reshape(count, 3) / 64,
+        np.arange(count * 24, dtype=np.float32).reshape(count, 24) / 128,
+    )
+    bundle = root / "smoke.sog"
+    sceneio.write(cloud, bundle)
+    assert sceneio.detect(bundle) == "sog"
+    decoded = sceneio.read(bundle)
+    assert decoded.num_gaussians == count
+    assert decoded.sh_degree == 2
+    assert sceneio.inspect(bundle).metadata["packaging"] == "zip"
+    selected = sceneio.read_partial(bundle, points=(2, 6))
+    assert np.array_equal(selected.means, decoded.means[2:6])
+
+    directory = root / "unbundled-sog"
+    sceneio.write(cloud, directory)
+    assert sceneio.detect(directory) == "sog"
+    assert sceneio.inspect(directory).metadata["packaging"] == "directory"
+    assert np.array_equal(sceneio.read(directory).means, decoded.means)
+
+
 def _point_depth_and_flow(root: Path, values: np.ndarray) -> None:
     points = root / "points.pts"
     sceneio.write(_core.point_cloud(values[:, :3]), points)
@@ -411,6 +438,7 @@ def main() -> None:
         _pfm_and_typed_depth(root, values)
         _mapped_safetensors(root, values)
         _compressed_ply(root)
+        _sog(root)
         _point_depth_and_flow(root, values)
         _reconstruction_and_images(root)
         _state_trajectory(root)

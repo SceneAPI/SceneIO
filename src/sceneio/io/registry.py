@@ -65,7 +65,9 @@ class Codec:
             raise ValueError(
                 "container_kind must be 'file', 'directory', or 'multi_file'"
             )
-        if self.is_directory != (kind == "directory"):
+        if self.is_directory and kind not in {"directory", "multi_file"}:
+            raise ValueError("is_directory and container_kind disagree")
+        if not self.is_directory and kind == "directory":
             raise ValueError("is_directory and container_kind disagree")
         object.__setattr__(self, "container_kind", kind)
         for field_name in (
@@ -434,6 +436,40 @@ def _file_sink_writer(
     return write
 
 
+_SOG_ARCHIVE_READER = _mmap_reader(_core.read_sog)
+_SOG_ARCHIVE_POINT_READER = _mmap_selector_reader(_core.read_sog_points)
+_SOG_ARCHIVE_WRITER = _file_sink_writer(_core.write_sog)
+
+
+def _sog_metadata_path(path: str) -> Path:
+    value = Path(path)
+    return value / "meta.json" if value.name != "meta.json" else value
+
+
+def _sog_reader(path: str):
+    value = Path(path)
+    if value.is_dir() or value.name == "meta.json":
+        return _core.read_sog_directory(str(_sog_metadata_path(path)))
+    return _SOG_ARCHIVE_READER(path)
+
+
+def _sog_point_reader(path: str, start: int, stop: int):
+    value = Path(path)
+    if value.is_dir() or value.name == "meta.json":
+        return _core.read_sog_directory_points(
+            str(_sog_metadata_path(path)), start, stop
+        )
+    return _SOG_ARCHIVE_POINT_READER(path, start, stop)
+
+
+def _sog_writer(obj, path: str) -> None:
+    value = Path(path)
+    if value.is_dir() or value.name == "meta.json" or value.suffix == "":
+        _core.write_sog_directory(obj, str(_sog_metadata_path(path)))
+    else:
+        _SOG_ARCHIVE_WRITER(obj, path)
+
+
 # --- npy/npz adapters: the compiled writers require C-contiguous, native-endian
 # input, and .npz accepts either a TensorDict or a plain {name: array} dict.
 def _canon(a):
@@ -524,6 +560,40 @@ register(
             "binary_big_endian",
             "unknown_elements",
             "unknown_properties",
+        ),
+    )
+)
+register(
+    Codec(
+        "sog",
+        (".sog",),
+        _sog_reader,
+        _sog_writer,
+        record=_core.GaussianCloud,
+        datatype="splat",
+        filenames=("meta.json",),
+        is_directory=True,
+        dir_marker="meta.json",
+        read_points=_sog_point_reader,
+        lossy=True,
+        container_kind="multi_file",
+        supported_features=(
+            "playcanvas_v2",
+            "bundled_zip",
+            "unbundled_directory",
+            "lossless_webp_layers",
+            "position_16bit_log",
+            "largest_three_quaternion",
+            "shared_scale_dc_codebooks",
+            "sh_degrees_0_3",
+            "sh_palette",
+            "morton_ordered_write",
+        ),
+        unsupported_features=(
+            "legacy_v1",
+            "lossy_webp_layers",
+            "streamed_lod",
+            "unknown_layers",
         ),
     )
 )

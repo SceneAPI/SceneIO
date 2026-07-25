@@ -5,8 +5,9 @@ Status: complete — O0–O5 landed. Scope: the compiled `sceneio._core` I/O pat
 hardening/perf work concrete).
 
 Post-0.2 format expansion inherits the same gates. The registry currently has
-39 codecs (36 buffer-backed files, one path-native SQLite database, and two
-COLMAP directories). The latest record wave adds the four calibration formats
+40 codecs (37 buffer-backed entries, one path-native SQLite database, and two
+COLMAP directory-only entries; SOG also exposes an unbundled multi-file path).
+The latest record wave adds the four calibration formats
 over `CameraRig`, g2o over `PoseGraph`, and `colmap_db` over
 `ColmapDatabase`/`FeatureSet`/`MatchGraph`; each inherits direct file sinks,
 metadata inspection, partial reads where meaningful, and the all-codec

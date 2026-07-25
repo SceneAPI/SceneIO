@@ -16,6 +16,7 @@ def test_registry_has_builtins():
         "pfm",
         "colmap_sparse",
         "gaussian_ply",
+        "sog",
         "spz",
         "transforms_json",
         "tum",

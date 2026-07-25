@@ -44,6 +44,7 @@ _BUILTINS = {
     "pts",
     "ros_camera_info",
     "safetensors",
+    "sog",
     "splat",
     "spz",
     "transforms_json",
@@ -62,6 +63,7 @@ _PARTIAL = {
     "flo": ("window",),
     "gaussian_ply": ("points",),
     "compressed_ply": ("points",),
+    "sog": ("points",),
     "las": ("points",),
     "netpbm": ("window",),
     "pcd": ("points",),
@@ -81,6 +83,7 @@ _LOSSY = {
     "las",
     "splat",
     "spz",
+    "sog",
     "webp",
 }
 
@@ -119,9 +122,7 @@ def test_capability_hooks_and_metadata_are_consistent():
         )
         assert cap.partial_selectors == _PARTIAL.get(format_id, ())
         assert cap.lossy is (format_id in _LOSSY)
-        assert cap.container_kind == (
-            "directory" if codec.is_directory else "file"
-        )
+        assert cap.container_kind == codec.container_kind
         assert cap.requires_features == ()
         assert not (
             set(cap.supported_features) & set(cap.unsupported_features)

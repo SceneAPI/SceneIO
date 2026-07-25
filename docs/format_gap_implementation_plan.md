@@ -5,11 +5,11 @@
   PFM depth, typed PNG depth, typed scalar EXR depth, generic point PLY, and
   PCD, `StateTrajectory`/EuRoC, `CameraRig` with OpenCV/ROS/Kalibr
   calibration, `PoseGraph`/g2o, and the `FeatureSet`/`MatchGraph`-backed
-  COLMAP database and SuperSplat compressed PLY are complete locally.
-  PlayCanvas SOG and KSplat are next in the default-wheel sequence.
+  COLMAP database, SuperSplat compressed PLY, and PlayCanvas SOG v2 are
+  complete locally. KSplat is next in the default-wheel sequence.
   Cross-platform wheel and instrumented validation remains a user-gated remote
   action.
-- **Current branch:** 39 compiled codecs, all read/write and inspectable, with
+- **Current branch:** 40 compiled codecs, all read/write and inspectable, with
   bounded partial reads where their containers permit them.
 - **Scope:** close every unblocked format gap declared by SceneIO's coverage
   documents without reimplementing the 0.2.0 codec tier.
@@ -127,7 +127,7 @@ exit gate and the validation matrix in section 8 both pass.
 | Family | Remaining work | Complete locally on this branch |
 |---|---|---|
 | Reconstruction and pose | — | BAL, COLMAP database, EuRoC state CSV, g2o |
-| Splat | SuperSplat SOG / compressed PLY, KSplat | — |
+| Splat | KSplat | SuperSplat compressed PLY and PlayCanvas SOG v2 |
 | Point cloud | LAS waveform formats 4/5/9/10, LAZ, E57 | count-prefixed PTS, generic point PLY, and PCD |
 | Mesh | mesh PLY, OBJ/MTL, STL, OFF, glTF/GLB, USD/USDZ; optional Draco is policy-gated | — |
 | Tensor/feature/table | HDF5, hloc layout, Zarr v2/v3, Parquet | safetensors, COLMAP features/matches |
@@ -432,15 +432,15 @@ Land one codec per green commit:
 | Format | Record | Implementation focus | Oracle |
 |---|---|---|---|
 | BAL — complete locally | `Reconstruction` | camera/point/observation text with a pinned canonical writer | UW specification + independent parser |
-| EuRoC state CSV | `StateTrajectory` | timestamps, pose, velocity and biases with no field loss | independent CSV parser |
+| EuRoC state CSV — complete locally | `StateTrajectory` | timestamps, pose, velocity and biases with no field loss | independent CSV parser |
 | DMB — complete locally | `DepthMap` | dimensions/type header, float payload, scale/unit metadata | independent NumPy parser |
 | Typed PFM/PNG/EXR depth — complete locally | `DepthMap` | explicit scale, unit, invalid-value and confidence semantics layered over existing payload codecs | numpy/Pillow/OpenEXR |
 | Typed FLO flow — complete locally | `FlowField` | preserve component, axis, unit, row-order, and unknown-value semantics rather than returning an untagged ndarray | independent numpy parser |
-| OpenCV YAML/XML | `Camera`/`CameraRig` | matrices, distortion models, explicit model mapping | OpenCV test extra |
-| ROS `camera_info` | `Camera` | K/D/R/P and distortion model | independent YAML parser |
-| Kalibr YAML | `CameraRig` | chained extrinsics, camera models, time offsets | independent YAML parser |
-| g2o | `PoseGraph` | vertices, typed edges, information matrices | independent parser plus generated goldens |
-| SuperSplat SOG | `GaussianCloud` | clustered/quantized fields, explicit lossy metadata | reference loader vectors |
+| OpenCV YAML/XML — complete locally | `Camera`/`CameraRig` | matrices, distortion models, explicit model mapping | OpenCV test extra |
+| ROS `camera_info` — complete locally | `Camera` | K/D/R/P and distortion model | independent YAML parser |
+| Kalibr YAML — complete locally | `CameraRig` | chained extrinsics, camera models, time offsets | independent YAML parser |
+| g2o — complete locally | `PoseGraph` | vertices, typed edges, information matrices | independent parser plus generated goldens |
+| PlayCanvas SOG v2 — complete locally | `GaussianCloud` | clustered/quantized fields, explicit lossy metadata | pinned reference loader plus independent oracle |
 | KSplat | `GaussianCloud` | supported versioned reader first; writer only after canonical output is identified | reference loader vectors |
 | BMP/TGA — complete locally | `Image` | bounded existing-stb decode plus deterministic writers | Pillow + format specifications |
 
@@ -1629,17 +1629,17 @@ estimates.
 
 The current local checkpoint is:
 
-- 39 compiled registry codecs with read, write, inspect, mmap or path-native
+- 40 compiled registry codecs with read, write, inspect, mmap or path-native
   input, and direct file sinks;
 - O0-O5 complete for the existing codec tier;
 - `FlowField`, typed FLO, typed PFM depth, typed PNG depth, and typed scalar EXR
   depth complete;
-- 2,287 local tests pass with 4 documented platform/optional skips, Ruff and
+- 2,315 local tests pass with 4 documented platform/optional skips, Ruff and
   `git diff --check` are clean;
-- the complete 39-codec benchmark and packaged NumPy-only wheel smoke pass;
+- the complete 40-codec benchmark and packaged NumPy-only wheel smoke pass;
 - generic point PLY, PCD, StateTrajectory/EuRoC, CameraRig calibration,
   PoseGraph/g2o, the COLMAP feature database, and SuperSplat compressed PLY
-  are complete locally;
+  and PlayCanvas SOG v2 are complete locally;
 - instrumented Linux and Linux/macOS wheels have not yet been run for this
   dependency wave because pushing and dispatching remote workflows are
   user-gated.
@@ -2166,13 +2166,51 @@ Verification and validation evidence (2026-07-24):
   overflow float32 SH storage. Fable remains unavailable locally; Linux
   sanitizer and Linux/macOS cibuildwheel validation remain user-gated.
 
-##### B5.2 PlayCanvas SOG — next
+##### B5.2 PlayCanvas SOG — complete locally
 
-- Implement bundled ZIP and unbundled-directory SOG v2 with explicit
-  quantization and lossy metadata.
-- Decode every required lossless-WebP layer and preserve all representable
-  `GaussianCloud` fields; reject missing, lossy, mismatched, or unsupported
-  layers.
+- The compiled codec reads and deterministically writes current SOG v2 as
+  either a classic bundled ZIP or an unbundled `meta.json` directory. It
+  exposes buffer, mmap/path-native, direct-sink, metadata-inspection, and point
+  range paths through the public registry and records its quantized/lossy
+  contract in capability metadata.
+- Required position, scale, quaternion, opacity/DC, and optional degree-1
+  through degree-3 SH layers are lossless WebP. The codec implements the
+  reference texture dimensions, inverse-log position transform,
+  smallest-three quaternion representation, shared codebooks, SH palette, and
+  Morton ordering. Missing, lossy, mismatched, non-finite, unsupported, or
+  ambiguous inputs are rejected rather than silently converted.
+- ZIP metadata and member names, methods, flags, dimensions, codebook sizes,
+  label ranges, classic-ZIP limits, and aggregate extents are bounded and
+  reconciled. Unbundled writes encode before mutation, use same-directory
+  temporary files, and roll back existing regular-file targets on failure.
+  Point ranges allocate only selected record rows, although WebP necessarily
+  decodes complete layers because it provides no sub-image random access.
+- The independent Pillow/NumPy/standard-library ZIP oracle covers SH degrees
+  0–3. Both SceneIO- and PlayCanvas-produced SH2 archives were decoded and
+  re-exported by pinned `splat-transform` 3.1.6 commit
+  `6b07ba05d731eac1163ad4ff1b14e47e5e3f162c`; means, scales, quaternions,
+  opacities, DC, and residual SH were bit-identical in both directions.
+- Twenty-eight dedicated tests cover oracle parity, deterministic encoding,
+  bundled/unbundled parity, mmap and read-only buffers, mutation isolation,
+  path preservation, lifetime-sensitive inputs, partial allocation, and
+  malformed metadata/ZIP/WebP cases. The complete local MSVC suite passes
+  2,315 tests with four documented skips; Ruff and `git diff --check` are
+  clean.
+- A generated 1,900,000-point, 106.4 MB logical fixture keeps traced Python
+  allocation below 4 MiB for an eight-row point selection. On the 200,000-point
+  benchmark, five-run medians are 35 MB/s write, 454 MB/s in-memory decode,
+  and 430 MB/s public mmap decode. Inspection is 73.65× faster than full
+  decode; mmap and the direct sink each remove the 2.9 MB Python whole-file
+  allocation.
+- A clean ABI3 wheel contains 36 expected members, leaks no build headers or
+  libraries, declares only `numpy>=1.26` unconditionally, links only standard
+  Python/Windows runtimes, and passes the isolated NumPy-only wheel smoke.
+- Manual memory-safety, format-correctness, and test-soundness review found and
+  fixed JSON-number narrowing that caused a one-ULP position mismatch against
+  PlayCanvas, attempted replacement of a non-file layer target, and aggregate
+  ZIP-size accounting that omitted container overhead. Fable is unavailable
+  locally; Linux sanitizer and Linux/macOS cibuildwheel validation remain
+  user-gated.
 
 ##### B5.3 KSplat — queued after SOG
 

@@ -768,3 +768,34 @@ parity suite. Native full read, inspection, both selectors, and transactional
 write each stayed below 0.05 MB traced Python allocation. Full-read sampled RSS
 was 8.9 MB for the owned decoded arrays; inspection and either selector stayed
 near zero above the SQLite page cache and selected output.
+
+## PlayCanvas SOG v2 baseline — 2026-07-24
+
+SOG raises the harness to 40 codecs and the buffer-backed differential/sink
+sweep to 37. The representative degree-0 cloud has 200,000 Gaussians (11.2 MB
+of canonical values) and encodes to a 2.9 MB stored ZIP whose payload members
+are lossless WebP. Five-run local MSVC medians:
+
+```text
+operation                              result
+-------------------------------------------------------------
+deterministic Morton/codebook write     35 MB/s
+in-memory decode                       454 MB/s
+public mmap decode                     430 MB/s
+metadata inspection                  0.353 ms (73.65x vs full)
+1/16 point selection                 18.273 ms (1.42x vs full)
+```
+
+The public mmap path removes the 2.9 MB whole-file Python allocation, and the
+direct sink removes the same output-sized allocation while retaining 34 MB/s
+throughput. Full decode sampled 22.4 MB RSS growth; the point-selection path
+sampled 11.1 MB because WebP has no sub-image random access but only selected
+`GaussianCloud` rows are allocated. A generated 106.4 MB logical fixture keeps
+traced Python allocation below 4 MiB for an eight-row selection.
+
+Both SceneIO- and PlayCanvas-produced SH2 archives were cross-decoded through
+pinned `splat-transform` 3.1.6 commit
+`6b07ba05d731eac1163ad4ff1b14e47e5e3f162c`; all six exposed fields were
+bit-identical after the reference re-exported them as Gaussian PLY. The
+committed independent Pillow/NumPy/ZIP oracle covers every SH degree without
+sharing the SceneIO codec.

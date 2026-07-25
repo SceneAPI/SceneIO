@@ -93,6 +93,8 @@ def inspect_path(path: str | Path, format_id: str, datatype: str) -> Inspection:
         return _inspect_gaussian_ply(p, datatype)
     if format_id == "compressed_ply":
         return _inspect_compressed_ply(p, datatype)
+    if format_id == "sog":
+        return _inspect_sog(p, datatype)
     if format_id == "ply":
         return _inspect_ply(p, datatype)
     if format_id == "pcd":
@@ -241,6 +243,51 @@ def _exact(stream: BinaryIO, length: int, what: str) -> bytes:
     if len(data) != length:
         raise ValueError(f"truncated {what}")
     return data
+
+
+def _validate_classic_zip_extent(path: Path, format_name: str) -> None:
+    size = _size(path)
+    if size < 22:
+        raise ValueError(f"{format_name}: malformed or empty ZIP archive")
+    with path.open("rb") as stream:
+        if _exact(stream, 4, f"{format_name} ZIP signature") != b"PK\x03\x04":
+            raise ValueError(f"{format_name}: malformed or empty ZIP archive")
+        tail_size = min(size, 22 + 65535)
+        stream.seek(size - tail_size)
+        tail = stream.read(tail_size)
+    tail_base = size - tail_size
+    eocd = None
+    for offset in range(len(tail) - 22, -1, -1):
+        if tail[offset : offset + 4] != b"PK\x05\x06":
+            continue
+        comment_size = struct.unpack_from("<H", tail, offset + 20)[0]
+        if tail_base + offset + 22 + comment_size == size:
+            eocd = tail_base + offset
+            values = struct.unpack_from("<HHHHII", tail, offset + 4)
+            break
+    if eocd is None:
+        raise ValueError(
+            f"{format_name}: ZIP end record is missing or has trailing bytes"
+        )
+    disk, central_disk, disk_entries, entries, directory_size, directory_offset = (
+        values
+    )
+    if disk != 0 or central_disk != 0:
+        raise ValueError(f"{format_name}: multi-disk ZIP archives are unsupported")
+    if (
+        disk_entries == 0xFFFF
+        or entries == 0xFFFF
+        or directory_size == 0xFFFFFFFF
+        or directory_offset == 0xFFFFFFFF
+    ):
+        raise ValueError(f"{format_name}: ZIP64 archives are unsupported")
+    if (
+        disk_entries != entries
+        or directory_offset + directory_size != eocd
+    ):
+        raise ValueError(
+            f"{format_name}: inconsistent ZIP central-directory extent"
+        )
 
 
 def _unsigned_decimal(token: bytes, what: str) -> int:
@@ -1129,6 +1176,103 @@ def _inspect_compressed_ply(path: Path, datatype: str) -> Inspection:
         dtype="float32",
         count=vertex.count,
         metadata=metadata,
+    )
+
+
+def _inspect_sog(path: Path, datatype: str) -> Inspection:
+    metadata_path = path / "meta.json" if path.is_dir() else path
+    if metadata_path.name == "meta.json":
+        if metadata_path.stat().st_size > _HEADER_LIMIT:
+            raise ValueError("sog: meta.json exceeds 1 MiB")
+        with metadata_path.open("rb") as stream:
+            metadata_bytes = stream.read(_HEADER_LIMIT + 1)
+        if len(metadata_bytes) > _HEADER_LIMIT:
+            raise ValueError("sog: meta.json exceeds 1 MiB")
+        count, bands, rest, palette_count, declared = (
+            _core._inspect_sog_metadata(metadata_bytes)
+        )
+        declared = set(declared)
+        parent = metadata_path.parent
+        missing = [
+            name
+            for name in declared
+            if not (parent / name).is_file()
+        ]
+        if missing:
+            raise ValueError(
+                f"sog: missing declared layer {min(missing)!r}"
+            )
+        byte_size = sum((parent / name).stat().st_size for name in declared)
+        packaging = "directory"
+    else:
+        _validate_classic_zip_extent(path, "sog")
+        with path.open("rb") as raw, zipfile.ZipFile(path) as archive:
+            members = {}
+            for member in archive.infolist():
+                raw.seek(member.header_offset)
+                local = _exact(raw, 30, "SOG local member header")
+                if local[:4] != b"PK\x03\x04":
+                    raise ValueError("sog: malformed local ZIP member header")
+                flags, method = struct.unpack_from("<HH", local, 6)
+                name_size = struct.unpack_from("<H", local, 26)[0]
+                raw_name = _exact(raw, name_size, "SOG member filename")
+                encoding = "utf-8" if member.flag_bits & 0x800 else "cp437"
+                if raw_name != member.filename.encode(encoding):
+                    raise ValueError(
+                        "sog: local and central ZIP filenames disagree"
+                    )
+                if flags != member.flag_bits or method != member.compress_type:
+                    raise ValueError(
+                        "sog: local and central ZIP metadata disagree"
+                    )
+                if member.is_dir():
+                    raise ValueError("sog: directory ZIP entries are unsupported")
+                if flags & 1:
+                    raise ValueError("sog: encrypted ZIP members are unsupported")
+                if method not in {zipfile.ZIP_STORED, zipfile.ZIP_DEFLATED}:
+                    raise ValueError(
+                        "sog: only stored and deflated ZIP members are supported"
+                    )
+                try:
+                    name = raw_name.decode("utf-8")
+                except UnicodeDecodeError:
+                    raise ValueError(
+                        "sog: ZIP member filename is not valid UTF-8"
+                    ) from None
+                if name in members:
+                    raise ValueError(f"sog: duplicate ZIP member {name!r}")
+                members[name] = member
+            try:
+                meta_member = members["meta.json"]
+            except KeyError:
+                raise ValueError("sog: missing ZIP member 'meta.json'") from None
+            if meta_member.file_size > _HEADER_LIMIT:
+                raise ValueError("sog: meta.json exceeds 1 MiB")
+            metadata_bytes = archive.read(meta_member)
+            count, bands, rest, palette_count, declared = (
+                _core._inspect_sog_metadata(metadata_bytes)
+            )
+            if set(members) != set(declared):
+                raise ValueError(
+                    "sog: ZIP members do not exactly match declared layers"
+                )
+        byte_size = _size(path)
+        packaging = "zip"
+    return Inspection(
+        "sog",
+        datatype,
+        byte_size,
+        shape=(count,),
+        dtype="float32",
+        count=count,
+        metadata={
+            "version": 2,
+            "sh_degree": bands,
+            "num_rest": rest,
+            "palette_count": palette_count,
+            "packaging": packaging,
+            "texture_codec": "lossless_webp",
+        },
     )
 
 
