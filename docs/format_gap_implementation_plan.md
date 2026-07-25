@@ -11,18 +11,22 @@
   polygon-preserving OBJ/MTL, strict STL/OFF, the `MeshScene` record, and plain
   glTF/GLB, LAZ point formats 0-3/6-8, the `ImageSequence` record, lazy image
   directories, and raw planar Y4M are complete locally.
-  Cross-platform wheel and instrumented validation remains a user-gated remote
-  action.
+  The remote workflows have now been dispatched. Windows and macOS mmap jobs
+  pass at `ea622ac`, but Linux normal CI and the instrumented reliability lane
+  are red; the current blockers are listed in section 12.1. Cross-platform
+  validation therefore remains incomplete rather than merely user-gated.
 - **Current branch:** 50 compiled codecs, all read/write and inspectable, with
   bounded partial reads where their containers permit them.
 - **Scope:** close every unblocked format gap declared by SceneIO's coverage
   documents without reimplementing the 0.2.0 codec tier.
 
 This plan is subordinate to the current shipped-state inventory in
-`format_coverage.md`. The older per-format checklist in
-`coverage_roadmap.md` predates the compiled tier and still labels several
-shipped codecs and records as pending. Phase G0 below removes that drift before
-new codec work starts.
+`format_coverage.md`. `coverage_roadmap.md` has been reconciled to the live
+registry; Phase G0 below records the mechanism that keeps the three documents
+and public capability manifest aligned. Repository restructuring and backend
+performance qualification are specified in
+[`repository_organization_plan.md`](repository_organization_plan.md) and are
+prerequisites for the next codec wave.
 
 ## 1. Outcome and boundaries
 
@@ -73,6 +77,50 @@ AVIF, JPEG-XL, and optional Draco compression remain policy-gated until their
 fit with the project's patented-codec rule is explicitly resolved. Plain
 glTF/GLB is not blocked by that gate.
 
+### 1.3 Stable-format repository ownership
+
+For this plan, **repo-owned** means the stable/default-wheel implementation is
+reviewable, reproducible, and maintainable from the SceneIO repository. It
+does not mean SceneIO claims copyright ownership of upstream permissive code.
+Every upstream license and attribution remains intact.
+
+Repository ownership applies to the SceneIO integration and release artifact,
+not to authorship of a compression or parser algorithm. A mature optimized
+upstream kernel is preferred to a bespoke reimplementation when it satisfies
+the format contract and project constraints. The candidate must first pass the
+same-path performance qualification in
+[`repository_organization_plan.md`](repository_organization_plan.md); once
+selected, its exact permissive source and notices become part of the
+reproducible repository build.
+
+A format may be called stable only when:
+
+- its public adapter, format grammar, validation, convention handling,
+  inspection, partial-read policy, streaming sink, and errors are implemented
+  and tested in `src/cpp` or `src/sceneio`;
+- it never delegates runtime work to an external executable, subprocess,
+  plugin, or separately installed Python codec;
+- any required compression/parser kernel is permissively licensed, pinned,
+  stored under `src/cpp/third_party/`, statically linked or compiled
+  header-only, and represented in `LICENSES/`;
+- a clean source checkout can build the default wheel without downloading
+  native source archives during CMake configure;
+- independent projects remain test/reference oracles only and are not the
+  production implementation.
+
+All 50 current codecs already have repo-maintained adapters and optimized I/O
+contracts. Repository source closure is not yet complete: `miniz`,
+`nlohmann_json`, `zstd`, `fast_float`, `lazperf`, and `libwebp` are still
+obtained through CMake `FetchContent`. Before the post-0.2 codec tier is called
+stable, vendor those exact audited revisions into `src/cpp/third_party/`, copy
+their upstream notices into `LICENSES/`, retain the current local patches, and
+prove an offline sdist-to-wheel build on MSVC, GCC 10, and AppleClang.
+
+Optional scientific/heavy integrations may remain behind
+`SCENEIO_WITH_*` and use separately provisioned native libraries. They are
+reported as optional, never as default stable formats, until their source and
+wheel policy satisfies the same repository-ownership rule.
+
 ## 2. Shipped baseline and authoritative gap inventory
 
 SceneIO 0.2.0 already ships these 23 registry entries:
@@ -104,15 +152,15 @@ G0 must also reconcile these shipped-surface details:
 
 | Record | Required canonical content | First consumers |
 |---|---|---|
-| `Mesh` | vertex positions; ragged face indices; optional vertex/corner normals, UVs, colors; primitive/material ranges; coordinate metadata | generic PLY, OBJ, STL, OFF, glTF |
-| `MaterialSet` | material names; base/emissive factors; metallic/roughness; alpha mode; texture image references, UV sets, and sampler metadata | OBJ/MTL, glTF, USD |
+| `Mesh` — complete locally | vertex positions; ragged face indices; optional vertex/corner normals, UVs, colors; primitive/material ranges; coordinate metadata | generic PLY, OBJ, STL, OFF, glTF |
+| `MaterialSet` — complete locally | material names; base/emissive factors; metallic/roughness; alpha mode; texture image references, UV sets, and sampler metadata | OBJ/MTL, glTF, USD |
 | `FeatureSet` — complete locally | keypoints, descriptors with dtype/shape metadata, scores, image size, image id/name | COLMAP DB, hloc |
 | `MatchGraph` — complete locally | image-pair ids, ragged raw/verified match pairs, scores, optional F/E/H models and relative pose | COLMAP DB, hloc |
-| `PoseGraph` | pose nodes, typed edges, relative transforms, information matrices | g2o |
-| `StateTrajectory` | timestamps, position/orientation, velocity, gyroscope bias, accelerometer bias, frame/unit metadata | EuRoC state CSV |
-| `CameraRig` | ordered cameras, rig-to-camera extrinsics, names/ids, frame and unit metadata | OpenCV, ROS, Kalibr |
+| `PoseGraph` — complete locally | pose nodes, typed edges, relative transforms, information matrices | g2o |
+| `StateTrajectory` — complete locally | timestamps, position/orientation, velocity, gyroscope bias, accelerometer bias, frame/unit metadata | EuRoC state CSV |
+| `CameraRig` — complete locally | ordered cameras, rig-to-camera extrinsics, names/ids, frame and unit metadata | OpenCV, ROS, Kalibr |
 | `FlowField` — complete locally | HxWx2 f32 vectors plus component order, axes, row order, units, and invalid-value convention | typed FLO adapter |
-| `ImageSequence` | lazy frame references, timestamps/durations, dimensions, packed images or native planar frames with chroma subsampling metadata | image directories, Y4M, animated WebP/APNG |
+| `ImageSequence` — path/planar modes complete locally | lazy frame references, timestamps/durations, dimensions, packed images or native planar frames with chroma subsampling metadata | image directories, Y4M, animated WebP/APNG |
 | `Table` | named typed columns, null validity, UTF-8 offsets/data, row count, metadata | Parquet |
 | `SparseGrid` / `Scene` | sparse grid values/transforms; scene nodes, transforms, mesh/camera references | OpenVDB, USD/USDZ |
 
@@ -132,13 +180,13 @@ exit gate and the validation matrix in section 8 both pass.
 |---|---|---|
 | Reconstruction and pose | — | BAL, COLMAP database, EuRoC state CSV, g2o |
 | Splat | — | SuperSplat compressed PLY, PlayCanvas SOG v2, and KSplat v0.1 |
-| Point cloud | LAS waveform formats 4/5/9/10, LAZ, E57 | count-prefixed PTS, generic point PLY, and PCD |
-| Mesh | OBJ/MTL, STL, OFF, glTF/GLB, USD/USDZ; optional Draco is policy-gated | generic mesh PLY |
+| Point cloud | E57; optional future LAZ waveform/extra-byte/COPC extensions | count-prefixed PTS, generic point PLY, PCD, plain-LAS waveform sidecars for formats 4/5/9/10, and standard LAZ formats 0-3/6-8 |
+| Mesh | USD/USDZ; optional Draco is policy-gated | generic mesh PLY, OBJ/MTL, STL, OFF, and plain glTF/GLB |
 | Tensor/feature/table | HDF5, hloc layout, Zarr v2/v3, Parquet | safetensors, COLMAP features/matches |
 | Image and depth | TIFF | BMP, TGA, typed PFM depth, typed PNG depth, typed scalar EXR depth, scalar DMB |
 | Optical flow | — | compiled `FlowField` plus typed FLO |
 | Calibration | — | OpenCV YAML/XML, ROS `camera_info`, Kalibr YAML |
-| Sequence/dataset | image directory, Y4M, animated WebP, APNG, RTMV layout | — |
+| Sequence/dataset | animated WebP, APNG, RTMV layout | lazy image directories and raw planar Y4M |
 | Volumetric/niche | OpenVDB | — |
 | Policy-gated | AVIF, JPEG-XL, Draco compression | — |
 
@@ -1938,9 +1986,16 @@ The current local checkpoint is:
   are complete locally; plain LAS point formats 4/5/9/10 now retain internal
   waveform data losslessly through an optional `PointCloud` sidecar; lazy
   image directories and raw Y4M are complete over the new `ImageSequence`;
-- instrumented Linux and Linux/macOS wheels have not yet been run for this
-  dependency wave because pushing and dispatching remote workflows are
-  user-gated.
+- all 50 codecs have repo-maintained production adapters and optimized I/O
+  contracts, but the default native source closure is incomplete while six
+  pinned dependencies still use CMake `FetchContent`;
+- the build-only dependency-wave release run at `daf991ab` produced successful
+  Windows, macOS, Linux wheels and an sdist with publication skipped. It
+  predates `ImageSequence`, Y4M, and the centralized license inventory;
+- at the latest tested code checkpoint `ea622ac`, Windows and macOS mmap jobs
+  pass. Linux normal CI fails six portability assertions and the instrumented
+  reliability job stops during test collection/filtering, so that checkpoint
+  is **verified locally, not validated**.
 
 Status terms are strict:
 
@@ -1952,6 +2007,116 @@ Status terms are strict:
 | Validated | required compiler, instrumented, sdist, and wheel lanes pass |
 | Shipped | validated artifacts were published from a matching version tag |
 | Policy-gated | implementation cannot start until the named project decision is recorded |
+
+#### 12.1.1 Immediate closure blockers
+
+Do not begin another format implementation until these existing-coverage gates
+are green:
+
+1. **Linux Y4M inspection:** reproduce and remove the GCC/Linux
+   `std::bad_cast` raised by `_inspect_y4m` for mmap input. Prove bytes,
+   memoryview, mmap, public `inspect`, full read, and frame selection on GCC 10,
+   AppleClang, and MSVC with identical metadata.
+2. **Portable SQLite lock semantics:** replace the Linux-only assumption that
+   `BEGIN EXCLUSIVE` must block a read with a test that establishes the exact
+   lock/journal mode it intends to exercise. Preserve the Windows share-lock
+   test separately.
+3. **Baseline-relative RSS assertions:** replace the two absolute 16 MiB fresh
+   process limits with a payload-relative or measured-baseline bound that still
+   proves malformed COLMAP prefixes do not allocate from file-controlled
+   counts.
+4. **Instrumented test environment:** keep required oracles importable during
+   collection, isolate the SceneIO test subset from unrelated optional native
+   modules, and distinguish CPython/pydantic shutdown allocations from stacks
+   rooted in `sceneio._core`.
+5. **CI labels and documentation:** keep workflow names, codec counts, coverage
+   tables, benchmark counts, and the public capability snapshot synchronized.
+
+Exit gate: current-head Linux normal CI, Windows/macOS mmap jobs, the
+instrumented native reliability job, local MSVC, Ruff, and `git diff --check`
+all pass without weakening format correctness or payload-relative memory
+proofs.
+
+#### 12.1.2 Ordered next implementation queue
+
+The queue below is dependency-ordered. Finish and commit each numbered unit
+with its focused parity suite, full regression suite, benchmark delta,
+three-lens review, documentation, license inventory, and required platform
+lane before starting the next unit.
+
+1. **Repository organization gate (R1-R4).**
+   Freeze the 50-codec contracts, introduce the single codec/performance
+   manifest, split the Python registry and inspectors by format family, split
+   benchmark/test data builders, and organize native dependency and binding
+   registration by family. Preserve the existing public facades and prove the
+   capability, detection, `_core` symbol, and full E2E snapshots after every
+   mechanical unit. Follow
+   [`repository_organization_plan.md`](repository_organization_plan.md);
+   do not combine file moves with codec behavior changes.
+2. **Backend performance qualification (R5).**
+   Create one `bench/PERFORMANCE_STATUS.toml` entry for every live codec and
+   compare each viable permissive upstream backend through SceneIO's production
+   read/write paths. Measure encode/decode, warm/cold path I/O, direct sinks,
+   traced allocation, fresh-process RSS, determinism, artifact size, and
+   startup on representative and generated fixtures. Resolve known gaps
+   beginning with JPEG encode/decode by evaluating libjpeg-turbo; retain or
+   replace a backend only from measured evidence. Existing optimized transport
+   does not by itself qualify every codec kernel.
+3. **Repository source closure for the stable tier (R6).**
+   Vendor the exact selected revisions under `src/cpp/third_party/`. The
+   current closure set is miniz 3.0.2, nlohmann/json 3.11.3, zstd 1.5.6,
+   fast_float 6.1.6, LAZperf 3.4.0 commit, and libwebp 1.5.0; include any R5
+   backend replacement such as libjpeg-turbo and retire an old kernel only
+   when no live codec uses it. Preserve local LAZperf integration changes, add
+   `COMMIT.txt` provenance/hashes, retain all `LICENSES/` notices, and remove
+   default-build network fetches. Verify golden codec output and benchmark
+   results are unchanged. Validate an sdist-to-wheel build with network source
+   fetching disabled on MSVC, manylinux2014 GCC 10, and AppleClang.
+4. **Animation-capable `ImageSequence`.**
+   Add an owned packed-frame mode with exact canvas size, pixel dtype/channels,
+   per-frame duration, loop count, blend operation, disposal operation, and
+   source-frame rectangle. Views remain read-only and owner-safe. Path and YUV
+   modes remain source-compatible.
+5. **Animated WebP.**
+   Use only the qualified, in-tree permissive libwebp source. Implement
+   repository-owned
+   container/metadata validation, composited full reads, dependency-aware
+   selected-frame reads, deterministic writing only if libwebp produces stable
+   output, inspection, and direct sinks. Pillow/libwebp tools are test
+   references only; no external executable or video framework enters runtime.
+6. **APNG.**
+   Implement a bounded repository-owned APNG chunk/state layer over the
+   existing PNG/deflate components. Preserve `acTL`/`fcTL`/`fdAT` order,
+   rectangles, duration rationals, loop count, blend, and disposal. Add
+   independent Pillow/spec goldens, prefix-dependency frame selection, exact
+   inspection, and deterministic writing only after cross-reader proof.
+7. **RTMV directory layout.**
+   Specify accepted metadata versions, camera/pose convention, depth scale,
+   RGB/depth/normal/segmentation pairing, and missing-frame policy. Reuse
+   existing image, depth, transform, and lazy-path codecs; do not duplicate
+   raster decoders. Inspection and selected-frame reads remain metadata/path
+   bounded.
+8. **Common optional-library substrate.**
+   Implement one `SCENEIO_WITH_*` pattern with explicit disabled, enabled, and
+   unavailable states; accurate capability metadata; clean import behavior;
+   license/provenance hooks; minimal/full wheel profiles; and no change to the
+   default NumPy-only runtime.
+9. **Optional scientific formats, one dependency wave at a time.**
+   Land HDF5 plus hloc, TIFF, E57, then Parquet/Arrow. Each wave needs off/on
+   builds, independent oracle parity, streaming/partial tests, artifact-size
+   accounting, and all three compilers before the next library begins.
+10. **Chunked and heavyweight formats.**
+   Implement Zarr v2 then v3, followed only after explicit size/startup
+   acceptance by USD/USDZ and OpenVDB. Define `Table`, general `Scene`, and
+   `SparseGrid` records before their first codec.
+11. **Cross-repository vocabulary closure.**
+   Assign stable wire/DataType ids for the branch-local records in SceneAPI
+   Phase C without changing the already working SceneIO record ABI.
+
+AVIF, JPEG-XL, and Draco-compressed glTF remain outside this queue until an
+explicit policy decision. H.264/H.265/ProRes, HEIF/HEIC, FFmpeg-backed
+containers, proprietary SDK formats, and copyleft/non-commercial dependencies
+remain excluded.
 
 ### 12.2 Wave A — typed-depth slice complete locally
 
@@ -2615,16 +2780,18 @@ silent triangulation, dropped attributes, or material loss.
 4. **Complete locally:** add image-directory and raw Y4M support; these
    establish sequence and frame-selection semantics without an animation
    library.
-5. Extend WebP and PNG to animated WebP/APNG only after blend, disposal,
-   duration, loop count, and partial-frame semantics round-trip.
-6. Add RTMV as a multi-file layout over existing camera, image, depth, and
-   sequence records.
+5. **Planned after the organization/performance/source gates:** extend WebP
+   and PNG to animated WebP/APNG only after blend, disposal, duration, loop
+   count, and partial-frame semantics round-trip.
+6. **Planned after animated sequence semantics:** add RTMV as a multi-file
+   layout over existing camera, image, depth, and sequence records.
 
 Verification includes chunk/frame boundary corruption, long sequences,
 timestamp precision, odd chroma dimensions, disposal/blend goldens, random
 access equal to full-decode slices, deterministic directory manifests, and
-100 MiB/1 GiB-class RSS tests. Wave D requires a new dependency-wave wheel run
-because laz-perf changes the native build.
+100 MiB/1 GiB-class RSS tests. The already successful LAZ dependency-wave wheel
+run predates the sequence additions; the current sequence head and later
+source-closure changes each require a fresh build-only wheel-matrix run.
 
 ### 12.6 Wave E — optional scientific libraries
 
@@ -2766,8 +2933,11 @@ publisher for the GitHub repository, workflow `publish.yml`, and environment
    marking the release shipped.
 
 Branch pushes, workflow dispatches, tags, and PyPI publication remain explicit
-user-gated actions. The next authorized remote action should be a build-only
-`publish.yml` dry run plus the sanitizer workflow, not a release tag.
+user-gated actions. The earlier build-only `publish.yml` run succeeded at
+`daf991ab`, before ImageSequence/Y4M. After the current Linux and instrumented
+blockers are fixed locally, the next remote validation action is to rerun
+normal/instrumented CI and a build-only `publish.yml` matrix at the then-current
+head, not to create a release tag.
 
 ### 12.12 Program completion criteria
 

@@ -4,6 +4,15 @@ How the compiled core is organized, and **how to add a codec** — the two
 things that keep this expansible as the format list from
 `formats_survey.md` grows.
 
+> **Growth checkpoint:** the live registry has reached 50 codec ids. The
+> format-focused native layer remains coherent, but registry, inspection,
+> benchmark, test-matrix, dependency, and binding wiring have outgrown a flat
+> layout. No new codec wave begins until the behavior-preserving R1-R6
+> migration and performance qualification in
+> [`repository_organization_plan.md`](repository_organization_plan.md) pass.
+> The paths below describe current wiring; the linked plan defines the target
+> family boundaries and compatibility tests.
+
 ## Layering
 
 ```
@@ -17,7 +26,7 @@ sceneio (Python)                     public, stable surface
         │  (thin wrappers over)
 sceneio._core (C++ / nanobind)
   records/     SoA in-memory types + zero-copy views + **convention metadata**
-  codecs/      one file per format: read_<fmt>() / write_<fmt>()
+  codecs/      format-focused translation units: read_<fmt>() / write_<fmt>()
   io/          format-agnostic helpers: endian, byte reader/writer, gzip
   module.cpp   registers records first, then codecs
 ```
@@ -33,11 +42,28 @@ sceneio._core (C++ / nanobind)
 - A **codec** is pure I/O for one format: `read_<fmt>(bytes|path) -> Record`
   and `write_<fmt>(Record) -> bytes|path`. It depends on `records/` and
   `io/`, never on another codec.
-- The **Python `io` layer** is the UX + extensibility seam: a registry maps
+- The **Python `io` layer** is the UX + extensibility seam: the registry maps
   a format id to its extensions, magic sniff, reader, writer, optional
-  third-party inspector, partial readers, record type, and DataType;
+  inspector, partial readers, record type, and DataType;
   `read()`/`write()`/`inspect()`/`read_partial()`/`detect()` dispatch through it
-  and map errors. Adding a format touches the registry in exactly one place.
+  and map errors. Today, registration plus inspector, benchmark, test-matrix,
+  CMake, and nanobind wiring are separate touch points. R1-R4 preserve this
+  public facade while deriving those family views from one codec manifest.
+
+## Stable codec ownership and backend selection
+
+SceneIO owns the public adapter, grammar/subset, validation, record mapping,
+convention guards, inspection, partial semantics, direct sink, normalized
+errors, tests, benchmarks, and packaging for every stable codec. It does not
+need to reimplement mature compression algorithms.
+
+Use a popular optimized upstream kernel when production-path benchmarks prove
+it is the best viable choice and it satisfies fidelity, deterministic output,
+permissive licensing, static/offline buildability, cross-platform support,
+maintenance, startup, and artifact-size requirements. Default stable kernels
+are pinned under `src/cpp/third_party/`, built into `_core`, and attributed in
+`LICENSES/`. Separately installed libraries and executables remain verification
+oracles; they are not runtime delegates.
 
 ## Conventions are data, not comments
 
@@ -50,7 +76,11 @@ exposes them:
   `MeshScene` retains the source node hierarchy, local transforms, scenes, and
   mesh-to-primitive ranges instead of baking or flattening transforms.
 
-## Adding a codec — the recipe
+## Adding a codec — current wiring recipe
+
+This recipe remains accurate until R1-R4 complete. During that migration, use
+it only to verify compatibility; do not add a new format by expanding these
+flat coordination points.
 
 1. **Record** — if the format needs a new in-memory type, add
    `records/<name>.hpp` (the SoA struct + conventions) and
@@ -64,9 +94,9 @@ exposes them:
 4. **Register in Python** — one `Codec(...)` entry in `sceneio/io/registry.py`
    (id, extensions, magic bytes, reader, writer, record, datatype).
 5. **Inspect metadata** — add the built-in parser and `inspect_path()` dispatch
-   branch, or provide the optional `Codec.inspect` hook for a third-party
-   codec. Match the reader's supported header grammar and return an
-   `Inspection`.
+   branch, or provide the `Codec.inspect` hook implemented by SceneIO's
+   production adapter. Match the reader's supported header grammar and return
+   an `Inspection`.
 6. **Parity test** — `tests/codecs/test_<fmt>.py` using
    `sceneio.testing.assert_codec_parity(...)` against the reference oracle
    (pycolmap / gsply / Open3D / imageio / …). Cover: cross-impl equality,
@@ -74,6 +104,13 @@ exposes them:
 
 Everything else — dispatch, error mapping, public API wiring, and DataType
 binding — is handled by the layer.
+
+After R1-R4, a codec is declared once in the authoritative manifest and
+implemented within its format family. Architecture tests require that the
+registry, inspector table, benchmark cases, test cases, native feature
+metadata, binding registration, and build source list all resolve to the same
+id set. Backend selection then follows R5 and is recorded in
+`bench/PERFORMANCE_STATUS.toml` before stable qualification.
 
 ## Metadata-only inspection
 

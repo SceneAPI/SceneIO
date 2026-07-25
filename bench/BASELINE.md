@@ -5,6 +5,14 @@ single machine, local **MSVC** build, warm cache); the *conclusions* below are w
 order the O1+ sweep, not the exact MB/s. Regenerate on any machine — the harness is
 the source of truth, this file is a dated reading.
 
+This document is chronological benchmark evidence: later sections expand from
+the original 23-codec O0 scope to the live 50-codec harness. Optimized mmap,
+sink, inspection, and partial-read transport does not by itself prove every
+codec kernel is the fastest viable backend. The per-codec qualification ledger
+and candidate-selection gate are defined in
+[`../docs/repository_organization_plan.md`](../docs/repository_organization_plan.md);
+JPEG encode/decode remains the first known backend gap.
+
 Columns: `payloadMB` raw array size · `fileMB` encoded size · `sioW/sioR` sceneio
 write/read MB/s over the payload · `oraW/oraR` the oracle lib (0 = no oracle) ·
 `rPeakMB` peak Python alloc on `read_bytes()->decode` · `sio/ora` read-throughput ratio.
@@ -36,11 +44,13 @@ gaussian/spz/splat have no in-process oracle wired yet.
    exr 12.5, gaussian_ply 11, npy 8.4** per read. O1 applies uniformly and the
    memory reduction is deterministic, not speculative. Do O1 first.
 
-2. **Encode throughput has three real hotspots** (decode is healthy everywhere —
-   competitive with or faster than the oracles: npy 1.4×, webp 1.5×, las 0.73×):
-   - **jpeg 60 vs libjpeg 900 MB/s (0.28×)** — stb's JPEG *encoder* is the outlier.
-     SIMD/threads (O4) won't fix an algorithmic gap; flag as "accept, or swap to a
-     faster permissive encoder later" rather than an O4 target.
+2. **Codec-kernel throughput has three real hotspots.** Decode is competitive
+   with or faster than the available oracles for NPY and WebP and within the
+   same order for LAS; JPEG is the clear bidirectional exception:
+   - **JPEG write/read 60/154 MB/s vs the Pillow libjpeg-backed reference at
+     924/541 MB/s.** SIMD/threads around stb will not fix an algorithmic backend
+     gap; evaluate a faster permissive implementation such as libjpeg-turbo
+     outside O4.
    - **xyz write 21 MB/s** — text float→string formatting bound, and 4.7× file
      bloat (56 MB for a 12 MB payload). O4 candidate (faster float formatter) —
      but text is inherently the slow/fat path.
@@ -54,7 +64,7 @@ gaussian/spz/splat have no in-process oracle wired yet.
 ## Harness coverage added with O1
 
 The harness now builds non-empty `Reconstruction` and `PosedViewSet` inputs and
-covers all 23 codecs, including both COLMAP directory variants, Bundler, NVM,
+covers all original 23 codecs, including both COLMAP directory variants, Bundler, NVM,
 OpenMVG, transforms.json, TUM, KITTI, and NPZ. ImageIO/OpenEXR-backed oracle
 adapters are wired for Netpbm/HDR/EXR and degrade cleanly when the installed
 ImageIO backend cannot handle Radiance HDR. `--scale` generates large fixtures,
@@ -206,7 +216,7 @@ required to reject. Final verification: 1,165 passed / 3 optional skips on
 Windows and 1,102 passed / 44 optional-platform skips under the instrumented
 Linux ASan/UBSan/LSan build.
 
-CI runs the all-23-codec smoke and uploads its JSON. A second five-run sweep
+CI runs the original all-23-codec smoke and uploads its JSON. A second five-run sweep
 fails when any retained stable high-signal O4 control (WebP balanced config and
 palette workers, XYZ write, LAS read/write) loses its paired in-process gain, or
 when mmap/file-sink traced allocation rises above one quarter of the retained

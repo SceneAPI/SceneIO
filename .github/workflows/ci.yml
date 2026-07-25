@@ -33,7 +33,7 @@ jobs:
         run: .venv/bin/ruff check src tests
       - name: Test
         run: .venv/bin/python -m pytest -q
-      - name: Benchmark harness smoke (all 45 codecs)
+      - name: Benchmark harness smoke (all 50 codecs)
         run: .venv/bin/python bench/bench_io.py --runs 1 --scale 0.001 --json "${{ runner.temp }}/sceneio-benchmark.json"
       - name: I/O throughput and memory regression guard
         run: .venv/bin/python bench/bench_io.py --runs 5 --require-o4-gains --require-o5-inspect-gains --require-o5-partial-gains --json "${{ runner.temp }}/sceneio-benchmark-guard.json"

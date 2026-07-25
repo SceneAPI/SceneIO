@@ -1,8 +1,23 @@
 # I/O Optimization, Testing & Verification Plan
 
-Status: complete — O0–O5 landed. Scope: the compiled `sceneio._core` I/O path on
-`phase0-nanobind-core`. Companion to `coverage_roadmap.md` (this makes its "Phase 7"
-hardening/perf work concrete).
+Status: complete for the original 23-codec O0-O5 scope. Its mmap, direct-sink,
+inspection, differential, memory, and partial-read capability contracts now
+cover the live 50-codec registry; 28 codecs expose bounded selectors. This
+status describes optimized I/O transport and bounded access; it does **not**
+claim that every compression/parser kernel is the fastest viable backend.
+Backend qualification is the next prerequisite in
+[`repository_organization_plan.md`](repository_organization_plan.md), with the
+JPEG backend already recorded as a known encode/decode gap requiring a measured
+libjpeg-turbo comparison.
+
+Scope: the compiled `sceneio._core` I/O path on `phase0-nanobind-core`.
+Companion to `coverage_roadmap.md` (this makes its "Phase 7" hardening/perf work
+concrete). Phase landing notes below are historical evidence from the commit at
+which each phase closed. At the 2026-07-25 `ea622ac` code checkpoint, local
+MSVC passes 2,912 tests with 4 skips and Windows/macOS mmap CI passes; Linux
+normal and instrumented CI still have the portability/environment blockers
+listed in `format_gap_implementation_plan.md`, so the current expanded tier is
+not yet cross-platform validated.
 
 Post-0.2 format expansion inherits the same gates. The registry currently has
 50 codecs: 44 file containers, three multi-file containers, and three directory
@@ -66,16 +81,17 @@ paired JSON/BIN output. Metadata inspection is 220x/201x faster than full read;
 one-of-four primitive selection is 4.29x/3.87x faster and reduces sampled RSS
 from 26.4/29.2 MB to 5.1/5.7 MB.
 
-**Committed scope (decided):** the **full O0–O5 program**, applied **uniformly to
-all 23 codecs**, with **qualitative** success criteria — every step must show a
+**Committed historical scope (decided):** the **full O0-O5 program**, applied
+**uniformly to the original 23 codecs**, with **qualitative** success criteria
+— every step must show a
 *measured* improvement with *no regression* and *bit-exact correctness*; no hard
 numeric SLAs are bound. Measurement orders the work and proves each gain; it does
 **not** gate whether a phase happens (all phases are in scope).
 
 ## 0. Guiding principle — measure to order & verify (not to gate)
 
-The representation layer is already near-optimal (zero-copy SoA records → numpy/
-torch/DLPack; per-format hand-tuned decoders; GIL released). **Before O1**, the
+The representation layer is already near-optimal (zero-copy SoA records →
+numpy/torch/DLPack; native decoders; GIL released). **Before O1**, the
 file-I/O model used the deliberately simple whole-file `_bytes_reader`: read
 materialized the whole file as Python `bytes` before decode, while writes still
 materialize the whole output as `bytes` before disk. O1 replaced the read side,
@@ -97,12 +113,12 @@ Permanent verification tool and the ordering input for the sweep.
 
 | Piece | What | Where |
 |---|---|---|
-| Throughput bench | read+write MB/s, Mpix/s (images), Mpts/s (clouds), **all 23 codecs** | `bench/bench_io.py` |
+| Throughput bench | read+write MB/s, Mpix/s (images), Mpts/s (clouds), **original 23-codec scope** | `bench/bench_io.py` |
 | Peak-memory bench | `tracemalloc` peak + RSS for read & write | same harness |
 | Oracle comparison | same op via Pillow / laspy / OpenEXR / numpy / pycolmap / gsply | reuse `[test]` oracles |
 | Fixtures | small (typical) + large (100 MB–1 GB synthetic) per format | `bench/fixtures.py` (generated) |
 
-**Exit criteria:** baseline table across all 23 codecs, committed and reproducible
+**Exit criteria:** baseline table across the original 23 codecs, committed and reproducible
 (pinned methodology: warm/cold split, median of N). It orders the O1+ sweep
 (worst-ratio codecs first); every codec and phase proceeds regardless.
 
@@ -127,7 +143,8 @@ page lazily.
 - **Uniform application:** all 21 single-file codecs get the mmap path and the
   differential + memory sweep; the two COLMAP directory codecs already consume
   paths directly. The payoff is largest on the big binary formats
-  (LAS/EXR/PLY/SPZ/npy), but all 23 remain in the harness and API E2E coverage.
+  (LAS/EXR/PLY/SPZ/npy), but all original 23 remain in the harness and API E2E
+  coverage.
 
 **Testing (per codec):** `read(mmap) == read(bytes)` **bit-exact**; a peak-memory
 test asserting the mmap path does not allocate a whole-file `bytes`; empty/
@@ -323,7 +340,8 @@ New public surface, applied to every format for which it's meaningful:
 decoded record's shape/dtype. **Verify:** header-only/partial peak-memory and
 latency vs the full read.
 
-**Inspection landed:** `sceneio.inspect(path, format=None)` covers all 23 codecs
+**Inspection landed:** `sceneio.inspect(path, format=None)` covered all original
+23 codecs at O5 closure
 and returns frozen `Inspection` / `ArrayInspection` metadata. Binary codecs read
 only public headers (NPZ decompresses member headers only; legacy SPZ inflates
 its 16-byte prefix), while headerless text is streamed. XYZ, transforms.json,
@@ -394,8 +412,9 @@ test-soundness review lenses signed off with no remaining blockers.
 
 ## Testing strategy (correctness bar never moves)
 
-The 23 per-codec **parity suites + the public-API E2E test remain the ground-truth
-oracle**. Optimizations add exactly these guards, **run across all 23 codecs**:
+The original 23 per-codec **parity suites + the public-API E2E test remain the
+ground-truth oracle**. Optimizations added exactly these guards across the
+**original 23-codec scope**; the registry-driven equivalents now cover all 50:
 
 1. **Differential (path-equivalence) tests** — for every fast path: `fast == slow`
    **bit-exact** (mmap==bytes, zero-copy==copy, sink==buffer, partial==slice). One
@@ -444,9 +463,10 @@ O0 harness+baseline ─┬─► O1 mmap reader (all codecs) ─► O2 raw-forma
 ```
 
 - **O0** ~1 unit. Harness + baseline; orders the sweep.
-- **O1 + ASan CI** ~2–3 units. Structural read win + the safety net, all 23 codecs.
+- **O1 + ASan CI** ~2–3 units. Structural read win + the safety net, all
+  original 23 codecs.
 - **O2** ~1–2 units. Zero-copy for the raw formats.
-- **O3** ~2 units. Sink writers, all 23.
+- **O3** ~2 units. Sink writers, all original 23.
 - **O4** ~1–2 units. Thread flags + SIMD on the flagged loops.
 - **O5** ~2–3 units. New inspect/partial API.
 
@@ -472,3 +492,8 @@ phases are committed.
 improvement in the committed harness with **no regression**, green under
 ASan/UBSan/LSan, and a fable memory-safety sign-off. Correctness is never traded
 for speed.
+
+For the expanded stable tier, this per-item gate is necessary but not
+sufficient: every codec also needs a `bench/PERFORMANCE_STATUS.toml` entry and
+a measured comparison against the best viable permissive upstream backend
+before its kernel can be marked `qualified`.

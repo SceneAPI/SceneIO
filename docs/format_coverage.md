@@ -8,6 +8,9 @@ registry (`src/sceneio/io/registry.py`).
 The detailed execution, verification, and wheel-validation sequence for the
 remaining formats is in
 [`format_gap_implementation_plan.md`](format_gap_implementation_plan.md).
+The prerequisite module-boundary, offline-source, and measured codec-backend
+gate is in
+[`repository_organization_plan.md`](repository_organization_plan.md).
 
 Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 
@@ -19,6 +22,16 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > mesh/scene codecs, LAZ, lazy image directories, and raw Y4M are post-0.2
 > formats on
 > `phase0-nanobind-core` and are not released yet.
+>
+> **Latest tested code checkpoint (2026-07-25, `ea622ac`):** the live registry contains
+> 50 available codecs. Every codec reports read, write, inspect, streaming read,
+> and streaming write support; 28 advertise a bounded partial selector. Local
+> MSVC validation passes 2,912 tests with 4 documented skips, the 50-codec
+> benchmark guard, sdist/wheel rebuild, and a NumPy-only installed-wheel smoke.
+> The latest Windows and macOS mmap jobs pass. The current Linux normal and
+> instrumented jobs are not green; their exact blockers are recorded below and
+> in `format_gap_implementation_plan.md` rather than being described as pending
+> remote work.
 
 ## Data structures (memory Records)
 
@@ -48,7 +61,7 @@ SoA, zero-copy to numpy/torch (DLPack), conventions carried as metadata.
 
 ## Formats (codecs)
 
-### ✅ Implemented — Tier‑1 zero‑dep spine (18 codecs, Phase 1a/1b/1c + 2)
+### ✅ Implemented — original and self-contained codec spine
 
 | Format id | Record | R/W | Oracle | Notes |
 |---|---|---|---|---|
@@ -74,14 +87,14 @@ SoA, zero-copy to numpy/torch (DLPack), conventions carried as metadata.
 | `.pts` | `PointCloud` | R+W | independent parser | mandatory count header; XYZ/XYZI/XYZRGB/XYZIRGB; count validation |
 | `.flo` | ndarray (raw) + `FlowField` (typed) | R+W | independent NumPy parser | raw API retains its pinned mapped view; `read_flow`/`write_flow`/`inspect_flow` attach and guard Middlebury semantics |
 
-### ✅ Complete — image / point tier via **vendored permissive source** (no system libs)
+### ✅ Complete — image / point tier via **permissive native source** (no system libs)
 
 Key reframing (proven out): most "needs a C lib" formats have permissive,
-self‑contained source libraries that drop into the **existing FetchContent/vendored
-pattern** (miniz, zstd, nlohmann/json, fast_float) — so they needed **no vcpkg/conda
-`SCENEIO_WITH_*` gate** and kept runtime numpy‑only.
+self-contained source libraries that drop into the existing pinned-source
+native build pattern (miniz, zstd, nlohmann/json, fast_float) — so they needed **no vcpkg/conda
+`SCENEIO_WITH_*` gate** and kept runtime numpy-only.
 
-| Format | Record | Vendored lib (license) | Status |
+| Format | Record | Native backend (license) | Status |
 |---|---|---|---|
 | PNG (incl. 16‑bit depth) | `Image` (raw) + `DepthMap` (typed) | lodepng (zlib) — self‑contained inflate | ✅ R+W; raw palette/RGB/RGBA API unchanged; typed grayscale uint16 exact widening/guarded write with explicit encoding |
 | JPEG (baseline+progressive) | `Image` | stb (public domain) | ✅ R (gray+RGB) / W (RGB‑only); pillow oracle; lossy |
@@ -132,8 +145,14 @@ statically linked into `_core`.
 | `image_sequence` | `ImageSequence` | R+W | independent manifest/PGM fixtures + existing image-codec parity suites | flat image directories; deterministic natural order or strict versioned manifest; lazy owned paths; exact optional timing; heterogeneous frames reject; transactional bounded-copy writer; frame ranges |
 | `y4m` | `ImageSequence` | R+W | independent Python parser/writer + exact golden bytes | original dependency-free YUV4MPEG2 subset; uint8 mono/4:2:0/4:2:2/4:4:4 planar frames, odd dimensions, exact rational timing, mmap, streaming sink, inspect, and frame ranges; no RGB conversion or video-framework dependency |
 
-### ⬜ Pending — later optional and niche formats
-USD / USDZ · OpenVDB · Zarr · Parquet · AVIF / JPEG‑XL.
+### ⬜ Pending — declared roadmap gaps
+
+- Sequence/dataset: animated WebP, APNG, and RTMV.
+- Optional scientific/container: HDF5, hloc feature/match layouts, TIFF, E57,
+  and Parquet/Arrow.
+- Chunked/heavyweight: Zarr v2/v3, USD/USDZ, and OpenVDB.
+- Policy-gated: AVIF, JPEG-XL, and Draco-compressed glTF. These do not enter
+  implementation without an explicit decision under the patented-codec rule.
 
 Draco-compressed glTF remains policy-gated. Plain glTF/GLB is implemented and
 rejects Draco, meshopt, unknown extensions, and unrepresented scene features
@@ -146,8 +165,10 @@ multi-file path; COLMAP DB and the two COLMAP directory codecs read paths
 directly in native code) · ✅
 zero-copy read-only mapped
 ndarray views for native NPY/FLO payloads (PFM row-flips into owned storage) · ✅ bytes/mmap differential +
-scheduled 100-case backing-store mutation sweep · ✅ ASan/UBSan/LSan workflow
-(local and branch Linux runs green) · ⬜ randomized oracle-triangulated
+scheduled 100-case backing-store mutation sweep · 🟡 instrumented native
+reliability workflow exists, but the current Linux job is blocked by test
+environment collection/leak-filter issues before it can establish a green
+core result · ⬜ randomized oracle-triangulated
 fuzzing · ✅ direct file-sink writes · ✅ bounded measured-path workers
 (XYZ/LAS/LAZ/EXR/PNG16/WebP lossless) · ✅ partial/lazy reads (`inspect` covers all
 50; bounded pixel/point/face/mesh/primitive/state/frame/COLMAP-image/COLMAP-pair/tensor
@@ -160,17 +181,19 @@ expanded 50-codec benchmark/oracles.
 |---|---|---|
 | nanobind + scikit‑build‑core build | ✅ | abi3/cp312, `NB_STATIC` |
 | cibuildwheel release path | ✅ | Linux/macOS/Windows; `publish.yml` |
-| CI parity (oracles in CI) | ✅ | gsply + pycolmap; runs on the branch |
+| CI parity (oracles in CI) | 🟡 | Windows/macOS mmap jobs pass at `ea622ac`; Linux normal CI has six unresolved portability failures: three Y4M inspection `std::bad_cast` failures, one SQLite exclusive-lock expectation, and two environment-sensitive RSS bounds |
 | Codec registry + `read`/`write`/`inspect`/`read_partial`/`detect` | ✅ | inspection covers all 50; bounded partial hooks are capability-specific |
+| Repo-maintained stable codec adapters | ✅ | all 50 production adapters, grammars, convention guards, inspectors, partial capability policies/available paths, and sinks live in `src/cpp` / `src/sceneio`; separately installed implementations and executables are test/reference oracles only |
+| Offline native-source closure | 🟡 | lodepng, stb, tinyexr, SQLite, tinyobjloader, and cgltf are stored in-tree; miniz, nlohmann/json, zstd, fast_float, LAZperf, and libwebp still use pinned CMake `FetchContent` and must move under `src/cpp/third_party/` before the post-0.2 tier is called stable |
 | Zero‑copy numpy + torch (DLPack) | ✅ | validated per codec |
 | Conventions‑as‑metadata + write guards | ✅ | record‑don't‑convert enforced |
 | Parity kit (`sceneio.testing.parity`) | ✅ | cross‑impl + round‑trip + convention pins |
-| Vendored deps (miniz, zstd, nlohmann_json, fast_float, tinyobjloader, cgltf, LAZperf) | ✅ | permissive; statically linked / header‑only |
-| Vendored image libs (lodepng/stb/tinyexr/libwebp) | ✅ | permissive, pinned/local-patched; no system libs, numpy‑only runtime kept |
-| Feature‑flagged optional C libs (`SCENEIO_WITH_*`) | ⬜ | planned for HDF5, TIFF, E57, Arrow, USD, and OpenVDB; LAZ uses vendored LAZperf instead |
+| In-tree native dependencies | 🟡 | permissive and license-indexed; six dependencies remain source-fetched as described by the offline-closure row |
+| Image libraries | 🟡 | lodepng/stb/tinyexr are in-tree; libwebp 1.5.0 is pinned and statically built but still fetched at configure time |
+| Feature‑flagged optional C libs (`SCENEIO_WITH_*`) | ⬜ | planned for HDF5, TIFF, E57, Arrow, USD, and OpenVDB; LAZ instead uses pinned, statically built LAZperf in the default tier |
 | mmap / streaming sources | ✅ | mmap reads + raw NPY/FLO views + direct file-sink writes complete |
 | Bounded intra-file workers | ✅ | measured O4 paths; deterministic one-vs-many lane tests |
-| Sanitizer + mmap differential CI | ✅ | local Linux green; scheduled remote lane activates on default branch |
+| Instrumented + mmap differential CI | 🟡 | workflow is present; the latest instrumented Linux job stops during collection because its helper removes the unconditionally imported pycolmap oracle, and leak filtering also reports 376 bytes from CPython/pydantic rather than SceneIO frames |
 | Capability flags (`reads/writes/inspect/partial/streams/lossy/needs_dep`) | ✅ | frozen metadata through `sceneio.capabilities()`; snapshot below is CI-validated |
 | `splat` / `posed_views` DataTypes in the vocabulary | ⬜ | **Phase‑C** (wire identity; cross‑repo) |
 

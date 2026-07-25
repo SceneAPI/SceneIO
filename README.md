@@ -337,10 +337,27 @@ records, bbox_min, bbox_max = decode_records(blob)
 ## Development
 
 ```powershell
-uv sync --extra dev
-uv run ruff check src tests
-uv run pytest -q
+uv pip install -e ".[dev,test]"
+.venv/Scripts/python.exe -m ruff check
+.venv/Scripts/python.exe -m pytest -q
 ```
+
+Engineering status and extension work are tracked in:
+
+- [`docs/format_coverage.md`](docs/format_coverage.md) — exact live codec
+  capabilities and validation status;
+- [`docs/core_architecture.md`](docs/core_architecture.md) — current public and
+  native boundaries;
+- [`docs/repository_organization_plan.md`](docs/repository_organization_plan.md)
+  — the required family split, offline-source closure, and per-codec backend
+  performance qualification before another format wave;
+- [`docs/format_gap_implementation_plan.md`](docs/format_gap_implementation_plan.md)
+  — the dependency-ordered remaining format plan.
+
+All live codecs have optimized mmap/direct-sink/inspection contracts, with
+bounded partial paths where their format permits them. Codec-kernel performance
+is tracked separately and is not called qualified until measured against the
+best viable permissive upstream backend.
 
 ## License
 
