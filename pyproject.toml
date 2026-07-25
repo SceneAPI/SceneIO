@@ -6,7 +6,8 @@ readme = "README.md"
 license = "Apache-2.0"
 license-files = [
     "LICENSE",
-    "src/cpp/third_party/lazperf/NOTICE.txt",
+    "LICENSES/*.md",
+    "LICENSES/*.txt",
 ]
 requires-python = ">=3.12,<3.13"
 # Leaf package: imports nothing from the SceneAPI family (guard-tested).

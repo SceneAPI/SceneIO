@@ -344,4 +344,6 @@ uv run pytest -q
 
 ## License
 
-Apache-2.0. See `LICENSE`.
+SceneIO is Apache-2.0 licensed; see [`LICENSE`](LICENSE). Licenses and required
+attributions for every third-party component compiled into the native wheel
+are collected in [`LICENSES/`](LICENSES/README.md).

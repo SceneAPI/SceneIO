@@ -1342,10 +1342,11 @@ Local verification:
   natural-order tie, and duplicate-JSON-key defects. The Fable review tool was
   unavailable in this environment, so the manual review and focused tests are
   recorded explicitly rather than claiming an automated Fable sign-off;
-- a 240-entry staged sdist rebuilt a 40-entry cp312-abi3 Windows wheel with
-  exactly one native extension, no video-framework artifacts, NumPy as the
-  sole runtime dependency, and a passing packaged sequence smoke in an
-  environment containing only NumPy and SceneIO.
+- a 255-entry staged sdist rebuilt a 53-entry cp312-abi3 Windows wheel with
+  exactly one native extension, the root Apache-2.0 license and every indexed
+  third-party notice recorded as PEP 639 license files, no video-framework
+  artifacts, NumPy as the sole runtime dependency, and a passing packaged
+  sequence smoke in an environment containing only NumPy and SceneIO.
 
 #### G4.3 Animated WebP and APNG
 
@@ -1926,7 +1927,7 @@ The current local checkpoint is:
 - O0-O5 complete for the existing codec tier;
 - `FlowField`, typed FLO, typed PFM depth, typed PNG depth, and typed scalar EXR
   depth complete;
-- 2,909 local tests pass with 4 documented platform/optional skips, Ruff and
+- 2,912 local tests pass with 4 documented platform/optional skips, Ruff and
   `git diff --check` are clean;
 - the complete 50-codec benchmark, staged source-distribution rebuild, and
   packaged NumPy-only wheel smoke pass;
