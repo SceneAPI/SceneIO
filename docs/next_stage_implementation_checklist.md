@@ -1,7 +1,8 @@
 # Next-stage implementation checklist
 
-Status: reviewed by three independent agents and ready for N0 execution on
-`phase0-nanobind-core`.
+Status: reviewed by three independent agents. N0.1 and N0.2 are implemented
+and committed on `phase0-nanobind-core`; N0.3 is implemented and undergoing
+cross-platform validation. N0.4 remains before R1 begins.
 
 This is the operational checklist for the repository-organization and
 codec-performance stage defined in
@@ -117,74 +118,88 @@ No R1 work starts until N0 is green on the branch.
 
 Implementation:
 
-- [ ] Reproduce `_core._inspect_y4m(mmap)` under the manylinux2014/GCC 10
+- [x] Reproduce `_core._inspect_y4m(mmap)` under the manylinux2014/GCC 10
       toolchain or the closest supported Linux container before editing.
-- [ ] Add a focused regression that calls `_inspect_y4m` with `bytes`,
+- [x] Add a focused regression that calls `_inspect_y4m` with `bytes`,
       read-only `memoryview`, NumPy `uint8`, and read-only `mmap`.
-- [ ] Isolate whether the exception originates in buffer acquisition,
+- [x] Isolate whether the exception originates in buffer acquisition,
       `parse_y4m`, metadata conversion, or nanobind dictionary construction.
-- [ ] Apply the smallest portable C++ fix; do not route Linux through a Python
+- [x] Apply the smallest portable C++ fix; do not route Linux through a Python
       bytes copy or full decode.
-- [ ] Keep the GIL released only around pure C++ parsing and reacquire it
+- [x] Keep the GIL released only around pure C++ parsing and reacquire it
       before creating Python objects.
-- [ ] Preserve the exact Y4M supported subset, metadata, errors, and encoded
+- [x] Preserve the exact Y4M supported subset, metadata, errors, and encoded
       bytes.
 
 Testing and verification:
 
-- [ ] Focused Y4M parity suite passes for every chroma layout, odd dimensions,
+- [x] Focused Y4M parity suite passes for every chroma layout, odd dimensions,
       CRLF, malformed/truncated headers, large frame counts, and selected
       ranges.
-- [ ] `inspect(mmap) == inspect(bytes)` and inspection metadata equals full
+- [x] `inspect(mmap) == inspect(bytes)` and inspection metadata equals full
       decode metadata.
-- [ ] A mapped fixture larger than 8 MiB retains bounded traced allocation and
+- [x] A mapped fixture larger than 8 MiB retains bounded traced allocation and
       does not materialize a full-file `bytes`.
-- [ ] Repeated inspection releases mappings/handles; exception paths do not
+- [x] Repeated inspection releases mappings/handles; exception paths do not
       retain the file.
-- [ ] Local MSVC behavior and golden writer bytes are unchanged.
+- [x] Local MSVC behavior and golden writer bytes are unchanged.
 
 Validation and documentation:
 
 - [ ] Rebuild and run the focused test on MSVC, GCC 10, and AppleClang.
-- [ ] Record the root cause and platform evidence in the commit message and
+- [x] Record the root cause and platform evidence in the commit message and
       the N0 completion section of this document.
 - [ ] Update `format_coverage.md` only after the normal Linux lane passes.
 
 Exit:
 
-- [ ] All three formerly failing Y4M CI cases pass without a fallback copy.
+- [x] All three formerly failing Y4M CI cases pass without a fallback copy.
+
+Local completion evidence (committed as `0534266`):
+
+- `_inspect_y4m` was reproduced under the pinned manylinux2014 GCC 10.2 image.
+  The failure was a missing nanobind `std::string` caster registration when
+  building the Python metadata dictionary, not buffer acquisition or Y4M
+  parsing.
+- The binding now includes `nanobind/stl/string.h`; no bytes fallback or
+  decode path was added.
+- The regression covers bytes, read-only memoryview, read-only NumPy `uint8`,
+  and read-only mmap inputs against independently constructed expected
+  metadata.
+- Focused GCC 10.2 and MSVC tests pass. AppleClang/current hosted-Linux
+  validation remains part of the N0 exit workflow.
 
 ### N0.2 — portable COLMAP SQLite lock contract
 
 Implementation:
 
-- [ ] State the intended contract before changing the test: read-only SceneIO
+- [x] State the intended contract before changing the test: read-only SceneIO
       operations either observe a consistent committed snapshot or raise a
       normalized `FormatError` for an actual conflicting lock.
 - [ ] Characterize rollback-journal and WAL behavior with stdlib `sqlite3` on
       Windows, Linux, and macOS.
-- [ ] Replace the unqualified `BEGIN EXCLUSIVE` expectation with a fixture
+- [x] Replace the unqualified `BEGIN EXCLUSIVE` expectation with a fixture
       that establishes the journal/locking mode and performs the operation
       required to acquire the intended conflict.
-- [ ] Keep the Windows file-share/locked-handle test separate from SQLite
+- [x] Keep the Windows file-share/locked-handle test separate from SQLite
       transaction semantics.
-- [ ] Change production code only if the characterized contract reveals a
+- [x] Change production code only if the characterized contract reveals a
       real SceneIO defect; do not force platform-specific locking merely to
       satisfy the old assertion.
 
 Testing and verification:
 
-- [ ] Test unlocked read, committed snapshot, genuine conflicting lock,
+- [x] Test unlocked read, committed snapshot, genuine conflicting lock,
       timeout/error normalization, rollback, and successful read after release.
-- [ ] Verify failed reads finalize statements and close the native handle.
-- [ ] Confirm read-only operations do not change database bytes or create a
+- [x] Verify failed reads finalize statements and close the native handle.
+- [x] Confirm read-only operations do not change database bytes or create a
       journal.
-- [ ] Retain independent stdlib SQLite and pycolmap parity coverage.
+- [x] Retain independent stdlib SQLite and pycolmap parity coverage.
 
 Validation and documentation:
 
 - [ ] Focused COLMAP DB suite passes on all three operating systems.
-- [ ] Add Y4M inspection, COLMAP DB lock semantics, and paired RSS controls to
+- [x] Add Y4M inspection, COLMAP DB lock semantics, and paired RSS controls to
       a focused Windows/Linux/macOS portability matrix; the current
       Windows/macOS mmap job does not collect the complete codec suites.
 - [ ] Document the portable lock contract beside the test and in the COLMAP DB
@@ -192,50 +207,84 @@ Validation and documentation:
 
 Exit:
 
-- [ ] The test proves a specified behavior rather than one platform's default
+- [x] The test proves a specified behavior rather than one platform's default
       lock implementation.
+
+Local completion evidence (committed as `a09917a`):
+
+- A WAL test proves that full, partial, and inspect reads observe the committed
+  snapshot while another connection has an uncommitted write, then verifies
+  rollback.
+- A separate child process establishes a real rollback-journal exclusive
+  write lock; all three SceneIO read paths raise normalized `FormatError`, and
+  the database fingerprint and decoded values match after release.
+- Optional pycolmap oracle imports are isolated to their two oracle tests, so
+  stdlib/native coverage remains collected in minimal environments.
+- MSVC passes the full suite. The exact pinned manylinux2014 job passes the
+  focused Y4M and COLMAP DB suites; hosted macOS validation remains pending.
 
 ### N0.3 — payload-relative COLMAP RSS assertions
 
 Implementation:
 
-- [ ] Replace the two absolute `<16 MiB` assertions with paired, warmed
+- [x] Replace the two absolute `<16 MiB` assertions with paired, warmed
       fresh-process controls that measure payload-induced growth.
-- [ ] Measure at least two malformed payload sizes and assert the RSS slope is
+- [x] Measure at least two malformed payload sizes and assert the RSS slope is
       bounded and materially sublinear to the file-controlled extent.
-- [ ] Keep the semantic proof: a claimed observation count and an unterminated
+- [x] Keep the semantic proof: a claimed observation count and an unterminated
       image name are rejected before allocating from those extents.
-- [ ] Record platform baselines separately from the payload-relative
+- [x] Record platform baselines separately from the payload-relative
       invariant; do not raise a constant until Linux happens to pass.
 
 Testing and verification:
 
-- [ ] Small and 32/64 MiB malformed controls raise the same normalized error.
-- [ ] Traced Python allocation remains bounded.
-- [ ] Fresh-process RSS variance is measured over repeated samples; the test
+- [x] Tiny semantic/warm fixtures plus 8/32 MiB measured controls raise the
+      same normalized error.
+- [x] Traced Python allocation remains bounded.
+- [x] Fresh-process RSS variance is measured over repeated samples; the test
       reports the baseline, operation delta, and payload size on failure.
-- [ ] The test fails against a deliberate allocate-from-count/name control.
-- [ ] Keep that negative control in test-only Python/subprocess code and assert
+- [x] The test fails against a deliberate allocate-from-count/name control.
+- [x] Keep that negative control in test-only Python/subprocess code and assert
       its expected allocation signature; do not add an allocation hook to the
       production extension.
 
 Validation and documentation:
 
 - [ ] Run the focused RSS tests on Windows, Linux, and macOS runners.
-- [ ] Record the measurement method and accepted relationship in
+- [x] Record the measurement method and accepted relationship in
       `bench/BASELINE.md`; do not publish one machine's absolute RSS as a
       universal bound.
 
 Exit:
 
-- [ ] Both Linux failures pass while retaining a payload-relative regression
+- [x] Both Linux failures pass while retaining a payload-relative regression
       signal.
+
+Implementation evidence in progress:
+
+- Exact malformed-input semantics are tested independently on tiny fixtures,
+  so sanitizer jobs do not need to create large RSS fixtures.
+- RSS qualification uses fresh processes, a fixed tiny warm-up fixture, three
+  repetitions per size, current plus process high-water RSS, and the median
+  delta between approximately 8 MiB and 32 MiB payloads.
+- The invariant is payload-relative: additional resident growth must remain
+  below one quarter of additional file-controlled payload. A test-only
+  transient extent-sized allocation control must fail that same assertion
+  through the process high-water metric.
+- On local MSVC, median SceneIO growth was 164 KiB to 160 KiB for malformed
+  observation extents and 144 KiB to 160 KiB for unterminated names. The
+  transient high-water control grew from approximately 8.1 MiB to 32.2 MiB.
+  These values describe this host only; the slope assertion is the portable
+  contract.
+- The clean pinned manylinux2014 GCC 10.2 source build passes 87 focused tests
+  with two expected absent-pycolmap oracle skips. The hosted three-OS
+  portability matrix remains the final N0.3 validation gate.
 
 ### N0.4 — instrumented native-reliability lane
 
 Test-environment implementation:
 
-- [ ] Remove the unconditional `pycolmap` import from the COLMAP DB core test
+- [x] Remove the unconditional `pycolmap` import from the COLMAP DB core test
       module or move optional pycolmap oracle cases to a separately collected
       module; do not skip the stdlib/native COLMAP DB tests when pycolmap is
       absent.

@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import gc
 import io
+import json
 import os
 import struct
 import subprocess
 import sys
 import tracemalloc
+from statistics import median
 
 import numpy as np
 import pytest
@@ -888,23 +890,77 @@ print(max(0, peak[0] - baseline))
     return int(completed.stdout.strip())
 
 
-def _fresh_process_colmap_error_rss(path, format_id, image_id):
+def _fresh_process_colmap_error_rss(
+    path,
+    format_id,
+    image_id,
+    *,
+    warm_path,
+    mode="sceneio",
+    repeats=3,
+):
     if os.environ.get("ASAN_OPTIONS") or "libasan" in os.environ.get(
         "LD_PRELOAD", ""
     ):
         pytest.skip("RSS measurements include AddressSanitizer shadow memory")
     script = """
 import gc
+import json
 import sys
 import threading
 import time
+from pathlib import Path
 
 import psutil
 import sceneio
 
 process = psutil.Process()
+control_headroom = 0
+
+def high_water_rss():
+    memory = process.memory_info()
+    peak_wset = getattr(memory, "peak_wset", None)
+    if peak_wset is not None:
+        return peak_wset
+    try:
+        import resource
+    except ImportError:
+        return memory.rss
+    value = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+    return value if sys.platform == "darwin" else value * 1024
+
+def sceneio_error(target):
+    try:
+        sceneio.read_partial(
+            target, format=sys.argv[2], image_id=int(sys.argv[3])
+        )
+    except sceneio.FormatError:
+        return
+    raise AssertionError("malformed model unexpectedly decoded")
+
+def operation():
+    if sys.argv[5] == "allocate":
+        payload_size = (Path(sys.argv[1]) / "images.bin").stat().st_size
+        value = bytearray(control_headroom + payload_size)
+        for offset in range(0, len(value), 4096):
+            value[offset] = 1
+        if value:
+            value[-1] = 1
+        del value
+        return
+    sceneio_error(sys.argv[1])
+
+# Warm lazy imports, native dispatch, filesystem metadata, and allocator pools
+# with a fixed tiny malformed fixture. The first size-dependent operation is
+# always inside the measured window.
+sceneio_error(sys.argv[4])
+process.memory_info()
 gc.collect()
 baseline = process.memory_info().rss
+baseline_high_water = high_water_rss()
+# Make the transient control clear any high-water established by imports, then
+# add exactly one file-controlled extent above it.
+control_headroom = max(0, baseline_high_water - baseline)
 peak = [baseline]
 running = [True]
 
@@ -916,34 +972,141 @@ def sample():
 thread = threading.Thread(target=sample, daemon=True)
 thread.start()
 try:
-    try:
-        sceneio.read_partial(
-            sys.argv[1], format=sys.argv[2], image_id=int(sys.argv[3])
-        )
-    except sceneio.FormatError:
-        pass
-    else:
-        raise AssertionError("malformed model unexpectedly decoded")
+    operation()
     peak[0] = max(peak[0], process.memory_info().rss)
 finally:
     running[0] = False
-    thread.join()
-print(max(0, peak[0] - baseline))
+    thread.join(timeout=5)
+    if thread.is_alive():
+        raise RuntimeError("RSS sampler thread did not stop")
+peak_current = peak[0]
+peak_high_water = high_water_rss()
+current_delta = max(0, peak_current - baseline)
+high_water_delta = max(0, peak_high_water - baseline_high_water)
+print(json.dumps({
+    "baseline": baseline,
+    "baseline_high_water": baseline_high_water,
+    "peak_current": peak_current,
+    "peak_high_water": peak_high_water,
+    "current_delta": current_delta,
+    "high_water_delta": high_water_delta,
+    "delta": max(current_delta, high_water_delta),
+}))
 """
-    completed = subprocess.run(
-        [
+    measurements = []
+    for _ in range(repeats):
+        command = [
             sys.executable,
             "-c",
             script,
             str(path),
             format_id,
             str(image_id),
-        ],
-        check=True,
-        capture_output=True,
-        text=True,
+            str(warm_path),
+            mode,
+        ]
+        try:
+            completed = subprocess.run(
+                command,
+                check=True,
+                capture_output=True,
+                text=True,
+                timeout=60,
+            )
+        except subprocess.TimeoutExpired as exc:
+            pytest.fail(
+                "RSS child timed out: "
+                f"mode={mode}, path={path}, warm_path={warm_path}, "
+                f"stdout={exc.stdout!r}, stderr={exc.stderr!r}"
+            )
+        measurements.append(json.loads(completed.stdout))
+    return measurements
+
+
+def _assert_payload_relative_rss(
+    small_size,
+    small_measurements,
+    large_size,
+    large_measurements,
+    *,
+    metric="delta",
+):
+    small_delta = median(item[metric] for item in small_measurements)
+    large_delta = median(item[metric] for item in large_measurements)
+    payload_growth = large_size - small_size
+    measured_growth = max(0, large_delta - small_delta)
+    assert measured_growth < payload_growth // 4, (
+        "payload-relative RSS growth is too steep: "
+        f"metric={metric}, "
+        f"sizes=({small_size}, {large_size}), "
+        f"deltas=({small_delta}, {large_delta}), "
+        f"samples=({small_measurements}, {large_measurements})"
     )
-    return int(completed.stdout.strip())
+
+
+def _assert_colmap_error_rss_is_sublinear(
+    cases,
+    format_id,
+    image_id,
+    *,
+    warm_path,
+):
+    assert len(cases) == 2
+    sceneio_measurements = [
+        (
+            size,
+            _fresh_process_colmap_error_rss(
+                path,
+                format_id,
+                image_id,
+                warm_path=warm_path,
+            ),
+        )
+        for size, path in cases
+    ]
+    _assert_payload_relative_rss(
+        sceneio_measurements[0][0],
+        sceneio_measurements[0][1],
+        sceneio_measurements[1][0],
+        sceneio_measurements[1][1],
+    )
+
+    allocation_controls = [
+        (
+            size,
+            _fresh_process_colmap_error_rss(
+                path,
+                format_id,
+                image_id,
+                warm_path=warm_path,
+                mode="allocate",
+            ),
+        )
+        for size, path in cases
+    ]
+    with pytest.raises(
+        AssertionError,
+        match="payload-relative RSS growth is too steep",
+    ):
+        _assert_payload_relative_rss(
+            allocation_controls[0][0],
+            allocation_controls[0][1],
+            allocation_controls[1][0],
+            allocation_controls[1][1],
+            metric="high_water_delta",
+        )
+
+
+def _traced_format_error_peak(operation, *, match):
+    gc.collect()
+    tracemalloc.start()
+    try:
+        with pytest.raises(FormatError, match=match):
+            operation()
+        _current, peak = tracemalloc.get_traced_memory()
+    finally:
+        tracemalloc.stop()
+    return peak
 
 
 def test_large_partial_reads_do_not_allocate_payload_sized_python_objects(
@@ -1048,63 +1211,166 @@ def test_colmap_text_skips_unselected_large_observation_line_bounded(
     )
 
 
-def test_colmap_binary_checks_selected_observation_bytes_before_allocating(
-    tmp_path,
-):
-    directory = tmp_path / "malformed-binary-model"
-    directory.mkdir()
+def _write_malformed_observation_model(tmp_path, label, payload_size):
     source = _three_view_reconstruction()
-    _core.write_colmap_sparse(source, str(directory))
     image_id = int(np.asarray(source.image_ids)[0])
+    directory = tmp_path / f"malformed-binary-model-{label}"
+    directory.mkdir()
+    _core.write_colmap_sparse(source, str(directory))
     images_path = directory / "images.bin"
     encoded = bytearray(images_path.read_bytes())
     name_start = 8 + 4 + 4 * 8 + 3 * 8 + 4
     name_end = encoded.index(0, name_start)
     count_offset = name_end + 1
-    encoded[count_offset : count_offset + 8] = struct.pack("<Q", 2_000_000)
-    del encoded[count_offset + 8 :]
-    images_path.write_bytes(encoded)
-    with pytest.raises(FormatError, match="truncated image observations"):
-        sceneio.read_partial(
-            directory, format="colmap_sparse", image_id=image_id
-        )
-    assert (
-        _fresh_process_colmap_error_rss(
-            directory, "colmap_sparse", image_id
-        )
-        < 16 * 1024 * 1024
+    observation_count = payload_size // 24 + 1
+    encoded[count_offset : count_offset + 8] = struct.pack(
+        "<Q", observation_count
     )
+    del encoded[count_offset + 8 :]
+    with images_path.open("wb") as stream:
+        stream.write(encoded)
+        stream.truncate(stream.tell() + payload_size)
+    return directory, image_id, images_path.stat().st_size
 
 
-def test_colmap_binary_validates_selected_name_terminator_before_allocating(
-    tmp_path,
-):
-    directory = tmp_path / "unterminated-binary-name"
-    directory.mkdir()
+def _write_unterminated_name_model(tmp_path, label, payload_size):
     source = _three_view_reconstruction()
-    _core.write_colmap_sparse(source, str(directory))
     image_id = int(np.asarray(source.image_ids)[0])
+    directory = tmp_path / f"unterminated-binary-name-{label}"
+    directory.mkdir()
+    _core.write_colmap_sparse(source, str(directory))
     images_path = directory / "images.bin"
     prefix = images_path.read_bytes()[: 8 + 4 + 4 * 8 + 3 * 8 + 4]
     with images_path.open("wb") as stream:
         stream.write(prefix)
         block = b"x" * 65536
-        for _ in range(512):
+        complete_blocks, remainder = divmod(payload_size, len(block))
+        for _ in range(complete_blocks):
             stream.write(block)
+        stream.write(block[:remainder])
+    return directory, image_id, images_path.stat().st_size
+
+
+def test_colmap_binary_checks_selected_observation_bytes_before_allocating(
+    tmp_path,
+):
+    directory, image_id, _size = _write_malformed_observation_model(
+        tmp_path,
+        "semantic",
+        64,
+    )
+    with pytest.raises(
+        FormatError,
+        match="truncated image observations",
+    ):
+        sceneio.read_partial(
+            directory,
+            format="colmap_sparse",
+            image_id=image_id,
+        )
+
+
+def test_colmap_binary_validates_selected_name_terminator_before_allocating(
+    tmp_path,
+):
+    directory, image_id, _size = _write_unterminated_name_model(
+        tmp_path,
+        "semantic",
+        64,
+    )
     with pytest.raises(FormatError, match="truncated image name"):
         sceneio.read_partial(
-            directory, format="colmap_sparse", image_id=image_id
+            directory,
+            format="colmap_sparse",
+            image_id=image_id,
         )
-    assert (
-        _fresh_process_colmap_error_rss(
-            directory, "colmap_sparse", image_id
-        )
-        < 16 * 1024 * 1024
+
+
+def _instrumented_rss_measurement():
+    return bool(
+        os.environ.get("ASAN_OPTIONS")
+        or "libasan" in os.environ.get("LD_PRELOAD", "")
     )
 
 
-def test_colmap_text_selected_malformed_token_is_memory_bounded(tmp_path):
-    directory = tmp_path / "malformed-text-model"
+@pytest.mark.skipif(
+    _instrumented_rss_measurement(),
+    reason="RSS measurements include AddressSanitizer shadow memory",
+)
+def test_colmap_observation_error_rss_growth_is_payload_relative(tmp_path):
+    warm_path, image_id, _size = _write_malformed_observation_model(
+        tmp_path,
+        "warm",
+        64,
+    )
+    cases = []
+    for payload_size in (8 * 1024 * 1024, 32 * 1024 * 1024):
+        directory, case_image_id, size = _write_malformed_observation_model(
+            tmp_path,
+            str(payload_size),
+            payload_size,
+        )
+        assert case_image_id == image_id
+        assert (
+            _traced_format_error_peak(
+                lambda directory=directory: sceneio.read_partial(
+                    directory,
+                    format="colmap_sparse",
+                    image_id=image_id,
+                ),
+                match="truncated image observations",
+            )
+            < 1024 * 1024
+        )
+        cases.append((size, directory))
+    _assert_colmap_error_rss_is_sublinear(
+        cases,
+        "colmap_sparse",
+        image_id,
+        warm_path=warm_path,
+    )
+
+
+@pytest.mark.skipif(
+    _instrumented_rss_measurement(),
+    reason="RSS measurements include AddressSanitizer shadow memory",
+)
+def test_colmap_name_error_rss_growth_is_payload_relative(tmp_path):
+    warm_path, image_id, _size = _write_unterminated_name_model(
+        tmp_path,
+        "warm",
+        64,
+    )
+    cases = []
+    for payload_size in (8 * 1024 * 1024, 32 * 1024 * 1024):
+        directory, case_image_id, size = _write_unterminated_name_model(
+            tmp_path,
+            str(payload_size),
+            payload_size,
+        )
+        assert case_image_id == image_id
+        assert (
+            _traced_format_error_peak(
+                lambda directory=directory: sceneio.read_partial(
+                    directory,
+                    format="colmap_sparse",
+                    image_id=image_id,
+                ),
+                match="truncated image name",
+            )
+            < 1024 * 1024
+        )
+        cases.append((size, directory))
+    _assert_colmap_error_rss_is_sublinear(
+        cases,
+        "colmap_sparse",
+        image_id,
+        warm_path=warm_path,
+    )
+
+
+def _write_malformed_text_token_model(tmp_path, label, payload_size):
+    directory = tmp_path / f"malformed-text-model-{label}"
     directory.mkdir()
     (directory / "cameras.txt").write_text(
         "1 PINHOLE 640 480 500 500 320 240\n",
@@ -1113,17 +1379,31 @@ def test_colmap_text_selected_malformed_token_is_memory_bounded(tmp_path):
     images_path = directory / "images.txt"
     with images_path.open("wb") as stream:
         stream.write(b"1 1 0 0 0 0 0 0 1 image.jpg\n")
-        stream.seek(32 * 1024 * 1024, 1)
+        stream.seek(payload_size, 1)
         stream.write(b"x\n")
     (directory / "points3D.txt").write_bytes(b"")
+    return directory
+
+
+def test_colmap_text_selected_malformed_token_is_memory_bounded(tmp_path):
+    warm_path = _write_malformed_text_token_model(tmp_path, "warm", 64)
+    directory = _write_malformed_text_token_model(
+        tmp_path,
+        "measured",
+        32 * 1024 * 1024,
+    )
     with pytest.raises(FormatError, match="token exceeds 1 MiB"):
         sceneio.read_partial(
             directory, format="colmap_sparse_txt", image_id=1
         )
+    measurements = _fresh_process_colmap_error_rss(
+        directory,
+        "colmap_sparse_txt",
+        1,
+        warm_path=warm_path,
+    )
     assert (
-        _fresh_process_colmap_error_rss(
-            directory, "colmap_sparse_txt", 1
-        )
+        median(item["delta"] for item in measurements)
         # Hosted Linux allocators vary by several MiB. This remains below the
         # malformed 32 MiB token and therefore catches a whole-line mirror.
         < 24 * 1024 * 1024

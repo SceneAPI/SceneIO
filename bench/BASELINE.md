@@ -1046,3 +1046,39 @@ a 1.3 MB traced peak, independent of total output size; full lazy read measured
 faster. Exact encoded bytes, natural ordering, deterministic manifests,
 same-directory replacement, heterogeneous-frame rejection, and failed-stage
 rollback are covered separately from timing.
+
+## COLMAP malformed-input RSS qualification — 2026-07-25
+
+The former absolute 16 MiB checks are replaced by a payload-relative
+fresh-process protocol. Each child first exercises a fixed 64-byte malformed
+fixture to warm imports, native dispatch, filesystem metadata, and allocator
+pools. It then measures one first size-dependent operation using both sampled
+current RSS and the platform process high-water mark. Three independent child
+processes are run for approximately 8 MiB and 32 MiB malformed payloads, and
+the median increase between sizes must stay below one quarter of the added
+file-controlled extent.
+
+The test retains exact `FormatError` checks at both measured sizes for
+oversized observation counts and unterminated image names, plus a 1 MiB
+`tracemalloc` ceiling. A test-only transient resident allocation clears the
+process-startup high-water headroom, adds one file-controlled extent, releases
+it before the final current-RSS sample, and is required to fail the same
+payload-relative assertion using its high-water delta. This independently
+checks the platform high-water conversion rather than relying on sampler
+timing or retained current RSS.
+
+Local MSVC medians were:
+
+```text
+malformed case       SceneIO 8/32 MiB delta    transient high-water control
+------------------------------------------------------------------------------
+observation extent       0.160 / 0.156 MiB           8.15 / 32.15 MiB
+unterminated name        0.141 / 0.156 MiB           8.14 / 32.13 MiB
+```
+
+The absolute values are diagnostic only. The portable regression contract is
+the paired slope, failure diagnostics containing every repeated sample, exact
+error behavior, and a positive allocating control. The clean pinned
+manylinux2014 GCC 10.2 job passes that contract; the pending hosted
+Windows/Linux/macOS portability workflow will validate it by pass/fail rather
+than treating any single machine's RSS as a numeric SLA.

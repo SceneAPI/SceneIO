@@ -81,13 +81,19 @@ jobs:
               test "$(g++ -dumpversion | cut -d. -f1)" = 10
               mkdir -p /work
               tar -C /src --exclude=.git --exclude=.venv --exclude=build \
-                --exclude=dist -cf - . | tar -C /work -xf -
+                --exclude=dist --exclude=.pytest_cache \
+                --exclude='__pycache__' --exclude='*.pyc' \
+                -cf - . | tar -C /work -xf -
               cd /work
               py=/opt/python/cp312-cp312/bin/python
-              "$py" -m pip install -q "numpy>=2.0,<2.5" pytest
+              "$py" -m pip install -q "numpy>=2.0,<2.5" psutil pytest
               "$py" -m pip install -q --no-deps .
               cd /tmp
               "$py" -m pytest -q \
                 /work/tests/codecs/test_y4m.py \
-                /work/tests/codecs/test_colmap_db.py
+                /work/tests/codecs/test_colmap_db.py \
+                /work/tests/test_io_partial.py::test_colmap_binary_checks_selected_observation_bytes_before_allocating \
+                /work/tests/test_io_partial.py::test_colmap_binary_validates_selected_name_terminator_before_allocating \
+                /work/tests/test_io_partial.py::test_colmap_observation_error_rss_growth_is_payload_relative \
+                /work/tests/test_io_partial.py::test_colmap_name_error_rss_growth_is_payload_relative
             '
