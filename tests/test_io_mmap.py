@@ -1146,6 +1146,7 @@ def test_inspect_matches_decoded_metadata_for_buffer_and_directory_codecs(
                 "point_format": 2,
                 "has_color": True,
                 "has_intensity": True,
+                "has_waveform": False,
             }
         elif spec.id == "splat":
             assert info.metadata == {"sh_degree": 0}

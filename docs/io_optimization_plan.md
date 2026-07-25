@@ -347,7 +347,8 @@ proves that a skipped 12.5-million-corner face is not retained.
 The 52-case focused suite compares values, dtypes, and convention metadata
 against full-read slices across binary Netpbm type/channel combinations,
 lossless RGB/RGBA WebP windows, every automatic XYZ layout plus forced normals,
-and LAS point formats 0–3 and 6–8. It also covers non-native-endian payloads,
+and LAS point formats 0–10, including lossless internal waveform sidecars for
+4/5/9/10. It also covers non-native-endian payloads,
 empty/out-of-range/truncated selectors, mapping lifetime and retained-exception
 lock release, COLMAP names over 1 MiB, missing point containers, and bounded
 malformed observation/name handling. COLMAP text applies the same 1 MiB limit

@@ -1422,8 +1422,9 @@ register(
         unsupported_features=("normals", "rgb16", "georef"),
     )
 )
-# ASPRS LAS (hand-parsed binary, no library) -> PointCloud. The "LASF" signature
-# is unambiguous; LAZ (compressed) is deferred (needs laz-perf).
+# ASPRS LAS (hand-parsed binary, no library) -> PointCloud. The "LASF"
+# signature is unambiguous. Waveform formats retain their descriptor VLRs,
+# raw point fields, and internal packet EVLR in a lossless sidecar.
 register(
     Codec(
         "las",
@@ -1435,8 +1436,14 @@ register(
         magic=(b"LASF",),
         read_points=_mmap_selector_reader(_core.read_las_points),
         lossy=True,
-        supported_features=("point_formats_0_3", "point_formats_6_8", "rgb16", "georef"),
-        unsupported_features=("point_formats_4_5", "point_formats_9_10", "laz"),
+        supported_features=(
+            "point_formats_0_5",
+            "point_formats_6_10",
+            "waveform_sidecar",
+            "rgb16",
+            "georef",
+        ),
+        unsupported_features=("external_waveform_packets", "laz"),
     )
 )
 register(

@@ -1033,12 +1033,22 @@ def _inspect_las(path: Path, datatype: str) -> Inspection:
     if len(header) < 227 or header[:4] != b"LASF":
         raise ValueError("las: bad or truncated public header")
     major, minor = header[24], header[25]
+    if major != 1 or minor not in {1, 2, 3, 4}:
+        raise ValueError("las: supported versions are 1.1 through 1.4")
+    required_header = 375 if minor == 4 else 235 if minor == 3 else 227
+    if file_size < required_header or len(header) < min(required_header, 255):
+        raise ValueError("las: truncated public header")
+    header_size = struct.unpack_from("<H", header, 94)[0]
     point_format = header[104]
-    if point_format & 0x80:
+    if point_format & 0xC0:
         raise ValueError("las: compressed LAZ is unsupported")
-    format_id = point_format & 0x7F
-    if format_id not in {0, 1, 2, 3, 6, 7, 8}:
+    format_id = point_format
+    if format_id not in set(range(11)):
         raise ValueError(f"las: unsupported point format {format_id}")
+    if format_id in {4, 5} and minor < 3:
+        raise ValueError("las: point formats 4/5 require LAS 1.3 or newer")
+    if format_id in {6, 7, 8, 9, 10} and minor < 4:
+        raise ValueError("las: point formats 6-10 require LAS 1.4")
     if major == 1 and minor >= 4:
         if len(header) < 255:
             raise ValueError("las: truncated LAS 1.4 header")
@@ -1047,14 +1057,32 @@ def _inspect_las(path: Path, datatype: str) -> Inspection:
         count = struct.unpack_from("<I", header, 107)[0]
     offset_to_points = struct.unpack_from("<I", header, 96)[0]
     record_length = struct.unpack_from("<H", header, 105)[0]
-    rgb_offset = {2: 20, 3: 28, 7: 30, 8: 30}.get(format_id)
-    minimum_length = rgb_offset + 6 if rgb_offset is not None else 14
+    scales = struct.unpack_from("<ddd", header, 131)
+    offsets = struct.unpack_from("<ddd", header, 155)
+    if any(not math.isfinite(value) or value <= 0 for value in scales):
+        raise ValueError("las: coordinate scales must be finite and positive")
+    if any(not math.isfinite(value) for value in offsets):
+        raise ValueError("las: coordinate offsets must be finite")
+    minimum_length = {
+        0: 20,
+        1: 28,
+        2: 26,
+        3: 34,
+        4: 57,
+        5: 63,
+        6: 30,
+        7: 36,
+        8: 38,
+        9: 59,
+        10: 67,
+    }[format_id]
     if record_length < minimum_length:
         raise ValueError("las: point record length is too short")
     if count > 4_000_000_000:
         raise ValueError("las: point count exceeds the supported limit")
     if (
-        offset_to_points < 227
+        header_size < required_header
+        or offset_to_points < required_header
         or offset_to_points + count * record_length > file_size
     ):
         raise ValueError("las: truncated or malformed point data")
@@ -1067,8 +1095,9 @@ def _inspect_las(path: Path, datatype: str) -> Inspection:
         count=count,
         metadata={
             "point_format": format_id,
-            "has_color": format_id in {2, 3, 7, 8},
+            "has_color": format_id in {2, 3, 5, 7, 8, 10},
             "has_intensity": True,
+            "has_waveform": format_id in {4, 5, 9, 10},
         },
     )
 

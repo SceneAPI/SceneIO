@@ -1205,6 +1205,37 @@ Readers and writers must preserve waveform descriptor references and packet
 offset/size/location fields or reject those point formats. They may not decode
 them as a lower point format and drop the waveform data.
 
+Plain-LAS waveform checkpoint — complete locally (2026-07-25):
+
+- `PointCloud` now owns an optional `LasWaveformSidecar` containing the exact
+  raw point records, canonical descriptor VLR stream, and internal waveform
+  packet EVLR. Ordinary point clouds pay only for one absent shared pointer.
+- LAS 1.3 formats 4/5 and LAS 1.4 formats 9/10 read, write, inspect, mmap,
+  direct-sink, and point-range paths are implemented. Writers patch only
+  canonical XYZ/intensity/RGB16 fields and preserve packet references,
+  location/direction values, GPS/classification/return fields, NIR, and other
+  opaque record bytes.
+- External `.wdp` storage, unrelated VLR/EVLR records, noncanonical descriptor
+  encodings, and packet references that cannot be retained exactly reject
+  explicitly.
+- Independent hand-built specification fixtures plus laspy cover all four
+  formats in both directions. Public dispatch, deterministic bytes, partial
+  writes, empty clouds, mutable-sidecar revalidation, mmap/bytes parity,
+  source-copy isolation, and view lifetime after `gc.collect()` are pinned.
+- The full local MSVC suite passes 2,768 tests with four documented skips;
+  Ruff and `git diff --check` are clean. The accepted five-run LAS benchmark
+  remains healthy at 1,095 MB/s write, 3,220 MB/s buffer read, 2,033 MB/s mmap
+  read, zero traced mmap-copy allocation, 153x metadata inspection, and 11.29x
+  middle-range selection.
+- A staged source distribution rebuilds the cp312-abi3 Windows wheel. Its 38
+  entries contain exactly one native extension and no leaked build headers,
+  libraries, or vendor trees; a fresh environment containing only NumPy passes
+  the expanded `_wheel_smoke` waveform read/write/inspect/partial case.
+- Manual lifetime/ownership, format-correctness, and test-soundness review
+  found and fixed non-finite coordinate-transform acceptance and empty colored
+  waveform round-trip failure. Fable is unavailable locally; the Linux
+  instrumented and Linux/macOS wheel lanes remain user-gated.
+
 #### G4.2 ImageSequence and raw Y4M
 
 Implementation:
@@ -1802,7 +1833,7 @@ The current local checkpoint is:
 - O0-O5 complete for the existing codec tier;
 - `FlowField`, typed FLO, typed PFM depth, typed PNG depth, and typed scalar EXR
   depth complete;
-- 2,715 local tests pass with 4 documented platform/optional skips, Ruff and
+- 2,768 local tests pass with 4 documented platform/optional skips, Ruff and
   `git diff --check` are clean;
 - the complete 47-codec benchmark, staged source-distribution rebuild, and
   packaged NumPy-only wheel smoke pass;
@@ -1810,7 +1841,8 @@ The current local checkpoint is:
   PoseGraph/g2o, the COLMAP feature database, SuperSplat compressed PLY,
   PlayCanvas SOG v2, KSplat v0.1, the canonical `Mesh` record, generic mesh PLY,
   canonical `MaterialSet`, OBJ/MTL, STL/OFF, `MeshScene`, and plain glTF/GLB
-  are complete locally;
+  are complete locally; plain LAS point formats 4/5/9/10 now retain internal
+  waveform data losslessly through an optional `PointCloud` sidecar;
 - instrumented Linux and Linux/macOS wheels have not yet been run for this
   dependency wave because pushing and dispatching remote workflows are
   user-gated.
@@ -2477,8 +2509,8 @@ silent triangulation, dropped attributes, or material loss.
 
 ### 12.5 Wave D — compressed points and sequences
 
-1. Extend the point-cloud contract for LAS waveform packet fields and first add
-   lossless plain-LAS formats 4/5/9/10 parity.
+1. **Complete locally:** extend the point-cloud contract with a lossless
+   optional sidecar and add plain-LAS formats 4/5/9/10 parity.
 2. Vendor laz-perf (Apache-2.0) for LAZ, retain the same point semantics, add
    chunk-aware selection, and prove bounded decompression memory.
 3. Land `ImageSequence` with frame timestamps/durations, dimensions, ownership,

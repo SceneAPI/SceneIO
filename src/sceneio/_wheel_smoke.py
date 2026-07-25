@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import gc
 import mmap
+import struct
 import tempfile
 from pathlib import Path
 
@@ -94,6 +95,67 @@ def _mapped_safetensors(root: Path, values: np.ndarray) -> None:
     del record, selected
     gc.collect()
     path.unlink()
+
+
+def _las_waveform(root: Path) -> None:
+    descriptor_payload = struct.pack("<BBIIdd", 8, 0, 4, 1000, 2.0, -1.0)
+    descriptor = struct.pack(
+        "<H16sHH32s",
+        0,
+        b"LASF_Spec\0\0\0\0\0\0\0",
+        100,
+        len(descriptor_payload),
+        b"waveform descriptor".ljust(32, b"\0"),
+    ) + descriptor_payload
+    packet_payload = b"\x01\x02\x03\x04"
+    packet = struct.pack(
+        "<H16sHQ32s",
+        0,
+        b"LASF_Spec\0\0\0\0\0\0\0",
+        65535,
+        len(packet_payload),
+        b"waveform packets".ljust(32, b"\0"),
+    ) + packet_payload
+    records = np.zeros((2, 59), np.uint8)
+    for row in range(2):
+        struct.pack_into(
+            "<BQIffff",
+            records[row],
+            30,
+            1,
+            60,
+            4,
+            0.25 + row,
+            1.0,
+            2.0,
+            3.0,
+        )
+    sidecar = _core.las_waveform_sidecar(
+        9,
+        4,
+        2,
+        records,
+        np.frombuffer(descriptor, np.uint8),
+        np.frombuffer(packet, np.uint8),
+    )
+    cloud = _core.point_cloud(
+        np.array([[0, 0, 0], [0.01, 0.02, 0.03]], np.float32),
+        intensity=np.array([10, 11], np.float32),
+        intensity_range="u16",
+        las_waveform=sidecar,
+    )
+    assert isinstance(sidecar, _core.LasWaveformSidecar)
+    path = root / "waveform.las"
+    sceneio.write(cloud, path)
+    assert sceneio.detect(path) == "las"
+    decoded = sceneio.read(path)
+    assert decoded.has_las_waveform
+    assert decoded.las_waveform.point_format == 9
+    assert decoded.las_waveform.waveform_packet_record.tobytes() == packet
+    assert sceneio.inspect(path).metadata["has_waveform"]
+    selected = sceneio.read_partial(path, points=(1, 2))
+    assert selected.positions.shape == (1, 3)
+    assert selected.las_waveform.point_records.shape == (1, 59)
 
 
 def _compressed_ply(root: Path) -> None:
@@ -647,6 +709,7 @@ def main() -> None:
         values = np.arange(12, dtype=np.float32).reshape(3, 4)
         _pfm_and_typed_depth(root, values)
         _mapped_safetensors(root, values)
+        _las_waveform(root)
         _compressed_ply(root)
         _sog(root)
         _ksplat(root)

@@ -155,6 +155,9 @@ problem = sceneio.read("problem-16-22106-pre.txt", format="bal")
 points = sceneio.read_partial(
     "survey.las", points=(1_000_000, 1_010_000)
 )
+# LAS waveform formats 4/5/9/10 retain their internal descriptor VLRs,
+# packet EVLR, references, and opaque point fields in `points.las_waveform`.
+# External `.wdp` packet files are rejected instead of silently dropped.
 
 # `.ply` detection reads the header schema: ordinary vertices become a
 # PointCloud, 3DGS properties remain a GaussianCloud, and face elements become

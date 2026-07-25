@@ -112,7 +112,7 @@ zero‑copy + convention tags.
 | `Image` | `pixels` HxWxC (u8/u16/f16/f32) + `color_space` + alpha/maxval metadata | PNG/JPEG/HDR/WebP/EXR/Netpbm | ✅ |
 | `DepthMap` | `depth` HxW f32 + `scale`/`unit`/`invalid` meta + `confidence` HxW | typed depth adapters, `.dmb` | ✅ record + scalar DMB + typed PFM/PNG/EXR |
 | `FlowField` | `vectors` HxWx2 f32 + component/axis/row/unit/invalid meta | typed `.flo` adapter | ✅ |
-| `PointCloud` | `xyz` Nx3, `rgb`/`rgb16`, `normals`, `intensity`, optional organized shape + viewpoint | PLY‑point, PCD, LAS/LAZ, E57, `.xyz` | ✅ |
+| `PointCloud` | `xyz` Nx3, `rgb`/`rgb16`, `normals`, `intensity`, optional organized shape + viewpoint, optional lossless LAS waveform sidecar | PLY‑point, PCD, LAS/LAZ, E57, `.xyz` | ✅ |
 | `Mesh` | positions; ragged face offsets/indices; vertex/corner normals, UVs, RGBA; primitive/material ranges; coordinate metadata and transform | PLY‑mesh, OBJ, STL, OFF, glTF, USD | ✅ |
 | `MeshScene` | ordered `Mesh` primitives; mesh ranges/names; shared `MaterialSet`; node hierarchy and local transforms; scene roots/names/default | glTF/GLB, future USD | ✅ |
 | `FeatureSet` | `keypoints` Nx{2,4,6} f32, `descriptors` NxD, `scores` N, image identity/size and absent-state metadata | HDF5/hloc, COLMAP DB | ✅ |
@@ -161,8 +161,8 @@ Columns: **Ext/id** · **Record** · **Lib/oracle (license)** · **R/W** ·
 |---|---|---|---|---|
 | ✅ PLY (point) / ✅ PLY (mesh) | `PointCloud`/`Mesh` | independent parsers + Open3D/trimesh (MIT) | R+W | schema-dispatched ASCII+binary LE/BE; mesh preserves polygons and separate vertex/corner attributes |
 | ✅ PCD | `PointCloud` | independent parser + Open3D (MIT) | R+W | PCD 0.7 ASCII/binary/LZF `binary_compressed`; organization/viewpoint; binary point ranges |
-| ✅ LAS | `PointCloud` | laspy (BSD) | R+W | mmap; point formats 0‑3 and 6‑8 |
-| ⬜ LAZ | `PointCloud` | lazrs (Apache) / laszip | R+W | LAS compression |
+| ✅ LAS | `PointCloud` | laspy (BSD) | R+W | mmap; point formats 0‑10; internal waveform formats 4/5/9/10 retain a validated lossless sidecar |
+| ⬜ LAZ | `PointCloud` | LAZperf 3.4.0 (Apache‑2.0) + laspy/lazrs oracle | R+W | planned formats 0‑3 and 6‑8; chunk-aware point ranges |
 | ⬜ E57 | `PointCloud` | libE57Format (BSD) | R+W | optional C lib |
 | ✅ `.xyz` / ✅ count-prefixed `.pts` | `PointCloud` | independent parser | R+W | `.pts` is a distinct count-validated grammar, not an alias |
 

@@ -159,12 +159,15 @@ def test_capability_details_pin_current_fidelity_boundaries():
     assert {"fortran_order", "object_dtype"} <= set(npy.unsupported_features)
 
     las = sceneio.capabilities("las")
-    assert {"point_formats_0_3", "point_formats_6_8"} <= set(
+    assert {
+        "point_formats_0_5",
+        "point_formats_6_10",
+        "waveform_sidecar",
+    } <= set(
         las.supported_features
     )
     assert {
-        "point_formats_4_5",
-        "point_formats_9_10",
+        "external_waveform_packets",
         "laz",
     } <= set(las.unsupported_features)
 

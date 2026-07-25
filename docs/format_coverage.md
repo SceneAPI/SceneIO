@@ -31,7 +31,7 @@ SoA, zero-copy to numpy/torch (DLPack), conventions carried as metadata.
 | `Camera` | (shared) | ✅ | COLMAP model id + `params[]`; reused by `Reconstruction` and `PosedViewSet` |
 | `Image` | `image_sequence` elem | ✅ | interleaved HxWxC (u8/u16/f32), color_space/alpha_mode/maxval metadata, owner‑safe zero‑copy `pixels` |
 | `TensorDict` | (named arrays) | ✅ | dict‑like, 12 numpy dtypes (dtype‑erased), zero‑copy views; backs NPZ and mapped safetensors |
-| `PointCloud` | `point_cloud` (new) | ✅ | xyz + rgb/rgb16 + normals + intensity, optional organized width/height and acquisition viewpoint; backs `.xyz`, count-prefixed `.pts`, point `.ply`, PCD, and plain `.las` |
+| `PointCloud` | `point_cloud` (new) | ✅ | xyz + rgb/rgb16 + normals + intensity, optional organized width/height and acquisition viewpoint, plus an optional validated lossless LAS waveform sidecar; backs `.xyz`, count-prefixed `.pts`, point `.ply`, PCD, and plain `.las` |
 | `DepthMap` | `depth_map` | ✅ | scalar f32 depth + scale/unit/invalid + confidence; backs scalar DMB and explicit typed PFM/PNG/EXR adapters |
 | `FlowField` | `flow` | ✅ | HxWx2 f32 vectors with component/axis/row/unit/invalid metadata; raw FLO API remains ndarray-compatible |
 | `StateTrajectory` | `state_trajectory` | ✅ record / ⬜ datatype | exact int64 nanosecond timestamps plus float64 position, WXYZ orientation, velocity, gyro bias, and accelerometer bias; explicit frame/unit/sign metadata |
@@ -85,7 +85,7 @@ pattern** (miniz, zstd, nlohmann/json, fast_float) — so they needed **no vcpkg
 | JPEG (baseline+progressive) | `Image` | stb (public domain) | ✅ R (gray+RGB) / W (RGB‑only); pillow oracle; lossy |
 | Radiance `.hdr` | `Image`(f32) | stb (public domain) | ✅ R+W; numpy RGBE oracle; lossy encode |
 | OpenEXR | `Image`(f32) (raw) + `DepthMap` (typed) | tinyexr (BSD) — reuses our miniz | ✅ R+W; OpenEXR‑python oracle; HALF→FLOAT, premult‑alpha, PIZ/ZIP/RLE; explicit single-channel typed depth |
-| plain `.las` | `PointCloud` | **none** — hand‑parsed binary, like colmap `.bin` | ✅ R+W; laspy oracle; formats 0‑3/6‑8, origin+rgb16, georef rebase |
+| plain `.las` | `PointCloud` | **none** — hand‑parsed binary, like colmap `.bin` | ✅ R+W; laspy oracle; formats 0‑10, origin+rgb16, georef rebase; formats 4/5/9/10 preserve internal waveform descriptor VLRs, packet EVLR, references, and opaque point fields in a sidecar |
 | WebP | `Image` | libwebp (BSD) — CMake FetchContent from source | ✅ R+W; pillow oracle; lossless byte‑exact + lossy; built clean on MSVC |
 
 Cross‑cutting: the cibuildwheel dry run and tagged release both built and
@@ -97,8 +97,9 @@ signed-shift UB in JPEG entropy output (see `stb/COMMIT.txt`). CMYK JPEG is
 best‑effort stb→RGB and opaque RGBA collapses to RGB in WebP (both documented).
 
 Genuinely need the system‑lib `SCENEIO_WITH_*` gate (deferred): HDF5 (+hloc), TIFF
-(libtiff). **LAZ is vendorable after all** — laz‑perf (Apache‑2.0), point‑cloud
-tier. COLMAP DB `.db` is covered by a pinned public-domain SQLite amalgamation
+(libtiff). **LAZ is vendorable after all** — LAZperf 3.4.0 (Apache‑2.0), with
+formats 0‑3 and 6‑8 in its supported compression set; integration remains the
+next point-cloud unit. COLMAP DB `.db` is covered by a pinned public-domain SQLite amalgamation
 statically linked into `_core`.
 
 ### ✅ Post-0.2 self-contained expansion

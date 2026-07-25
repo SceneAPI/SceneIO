@@ -9,6 +9,7 @@ large georef offset doesn't crush the f32 xyz precision — a property the tests
 from __future__ import annotations
 
 import io
+import struct
 
 import numpy as np
 import pytest
@@ -140,8 +141,6 @@ def test_reject_waveform_format(fmt):
 
 
 def test_reader_guards():
-    import struct
-
     valid = bytearray(bytes(_core.write_las(_core.point_cloud(_sample(55)[0].astype(np.float32)))))
     v = bytearray(valid)
     v[96:100] = struct.pack("<I", 100)  # offset_to_points < 227
@@ -163,8 +162,32 @@ def test_writer_guards():
         _core.write_las(_core.point_cloud(xyz, intensity=np.ones(4, np.float32) * 0.5, intensity_range="unit"))
     with pytest.raises(ValueError, match="scale"):
         _core.write_las(_core.point_cloud(xyz), 0.0)
+    with pytest.raises(ValueError, match="scale"):
+        _core.write_las(_core.point_cloud(xyz), float("inf"))
     with pytest.raises(ValueError, match=r"32-bit|grid|finite"):
         _core.write_las(_core.point_cloud(np.array([[1e9, 0, 0]], np.float32)), 0.001)
+
+
+@pytest.mark.parametrize(
+    ("offset", "value", "message"),
+    [
+        (131, float("nan"), "scales"),
+        (139, 0.0, "scales"),
+        (155, float("inf"), "offsets"),
+    ],
+)
+def test_reader_rejects_invalid_coordinate_transform(offset, value, message):
+    data = bytearray(
+        bytes(
+            _core.write_las(
+                _core.point_cloud(_sample(56)[0].astype(np.float32))
+            )
+        )
+    )
+    struct.pack_into("<d", data, offset, value)
+
+    with pytest.raises(ValueError, match=message):
+        _core.read_las(bytes(data))
 
 
 def test_intensity_extremes_and_bbox():

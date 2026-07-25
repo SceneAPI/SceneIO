@@ -16,9 +16,27 @@
 // not serialized.
 #pragma once
 
+#include <memory>
 #include <string>
 
 #include "io/common.hpp"
+
+// Opaque, lossless LAS waveform sidecar. Point formats 4/5/9/10 contain many
+// LAS-specific fields that do not belong in the generic PointCloud contract.
+// Keeping the complete raw point records preserves those fields without
+// allocating per-field arrays for ordinary clouds. The LAS writer copies each
+// record, patches only canonical position/intensity/color fields, and retains
+// all waveform packet references and non-generic point metadata bit-for-bit.
+struct LasWaveformSidecar {
+    size_t n = 0;
+    uint8_t point_format = 0;
+    uint8_t version_minor = 0;
+    uint16_t global_encoding = 0;
+    uint16_t point_record_length = 0;
+    std::vector<uint8_t> point_records;  // n * point_record_length
+    std::vector<uint8_t> descriptor_vlrs;
+    std::vector<uint8_t> waveform_packet_record;
+};
 
 struct PointCloud {
     size_t n = 0;                   // point count (explicit, GaussianCloud precedent)
@@ -41,11 +59,15 @@ struct PointCloud {
     size_t organized_width = 0;
     size_t organized_height = 0;
     double viewpoint[7] = {0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0};
+    std::shared_ptr<LasWaveformSidecar> las_waveform;
 
     bool has_rgb() const { return !rgb.empty(); }
     bool has_rgb16() const { return !rgb16.empty(); }
     bool has_normals() const { return !normals.empty(); }
     bool has_intensity() const { return !intensity.empty(); }
+    bool has_las_waveform() const {
+        return static_cast<bool>(las_waveform);
+    }
     size_t num_points() const { return n; }
     size_t width() const {
         return organized_height == 0 ? n : organized_width;
@@ -64,6 +86,10 @@ struct PointCloud {
                viewpoint[6] == 0.0;
     }
 };
+
+void validate_las_waveform_sidecar(
+    const LasWaveformSidecar &sidecar,
+    const char *context = "LAS waveform sidecar");
 
 // Vocabulary helpers (image_valid_color_space precedent): the factory validates
 // against these closed sets so a typo raises instead of silently persisting.
