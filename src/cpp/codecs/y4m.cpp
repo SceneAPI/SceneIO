@@ -7,6 +7,7 @@
 #include <charconv>
 #include <cstring>
 #include <limits>
+#include <nanobind/stl/string.h>
 #include <string>
 #include <string_view>
 #include <vector>

@@ -337,15 +337,40 @@ def test_bytes_memoryview_and_mmap_are_bit_exact_and_mapping_can_close(tmp_path)
     y, u, v = _planes("444")
     data = oracle_write(y, u, v, chroma="444")
     expected = _core.read_y4m(data)
+    parsed = oracle_read(data)
+    expected_info = {
+        "width": parsed["y"].shape[2],
+        "height": parsed["y"].shape[1],
+        "frames": parsed["y"].shape[0],
+        "channels": 3,
+        "chroma_width": parsed["u"].shape[2],
+        "chroma_height": parsed["u"].shape[1],
+        "chroma_subsampling": parsed["subsampling"],
+        "chroma_siting": parsed["siting"],
+        "color_range": parsed["range"],
+        "matrix": parsed["matrix"],
+        "interlace": "progressive",
+        "frame_rate_numerator": parsed["rate"][0],
+        "frame_rate_denominator": parsed["rate"][1],
+        "pixel_aspect_numerator": parsed["aspect"][0],
+        "pixel_aspect_denominator": parsed["aspect"][1],
+        "frame_bytes": y[0].nbytes + u[0].nbytes + v[0].nbytes,
+    }
+    assert dict(_core._inspect_y4m(data)) == expected_info
     viewed = _core.read_y4m(memoryview(data))
     assert viewed.y.tobytes() == expected.y.tobytes()
     assert viewed.u.tobytes() == expected.u.tobytes()
+    assert dict(_core._inspect_y4m(memoryview(data))) == expected_info
+    array = np.frombuffer(data, dtype=np.uint8)
+    assert not array.flags.writeable
+    assert dict(_core._inspect_y4m(array)) == expected_info
 
     path = tmp_path / "mapped.y4m"
     path.write_bytes(data)
     with path.open("rb") as stream:
         mapped = mmap.mmap(stream.fileno(), 0, access=mmap.ACCESS_READ)
         decoded = _core.read_y4m(mapped)
+        assert dict(_core._inspect_y4m(mapped)) == expected_info
         mapped.close()
     gc.collect()
     assert decoded.y.tobytes() == y.tobytes()
