@@ -1,0 +1,33 @@
+LAZperf 3.4.0
+
+Upstream: https://github.com/hobuinc/laz-perf
+Tag: 3.4.0
+Commit: b7bbe26109dc986f42d4fc80b8de3d2b6ca634ce
+Retrieved: 2026-07-25
+License: Apache-2.0 for the LASzip-derived codec, BSD-3-Clause for the
+Hobu-authored stream/support files, and BSD-2-Clause for the arithmetic coder.
+All are permissive. SceneIO's root LICENSE carries Apache-2.0, and NOTICE.txt
+carries the required BSD binary-distribution notices.
+
+Source archive:
+https://github.com/hobuinc/laz-perf/archive/b7bbe26109dc986f42d4fc80b8de3d2b6ca634ce.tar.gz
+SHA-256:
+17df34ca64cc60e107f0c214db4729c54a514df4e32de5bc1b8b7b7c5a805a56
+
+SceneIO fetches that immutable archive at configure time and compiles only:
+- cpp/lazperf/*.cpp
+- cpp/lazperf/detail/*.cpp
+
+Upstream's shared library, tools, examples, tests, benchmarks, install rules,
+and downloaded test data are not configured.
+
+Local correctness patch:
+- cpp/lazperf/streams.hpp MemoryStream::getByte checks idx against buf.size()
+  and throws lazperf::error on exhaustion before indexing. Upstream format-1.4
+  decoders copy bounded layer bytes into this vector, so the check converts a
+  corrupt arithmetic layer's over-read into the same clean codec error as an
+  exhausted outer callback. CMake applies an exact idempotent replacement and
+  fails if the pinned target changes.
+
+The wrapper also validates container extents and supplies bounded callbacks
+before calling the codec.

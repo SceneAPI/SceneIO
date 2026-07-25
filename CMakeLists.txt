@@ -73,6 +73,74 @@ FetchContent_Declare(fast_float
   URL https://github.com/fastfloat/fast_float/archive/refs/tags/v6.1.6.tar.gz)
 FetchContent_MakeAvailable(fast_float)
 
+# LAZperf 3.4.0 (Apache-2.0/BSD-3-Clause/BSD-2-Clause) —
+# LASzip-compatible LAZ
+# compression/decompression. Fetch the immutable audited commit, but
+# deliberately skip upstream's CMake tree: it also builds a shared library,
+# tools, tests, and install rules. SceneIO compiles only the 15 library
+# translation units into one hidden static archive.
+FetchContent_Declare(lazperf
+  URL https://github.com/hobuinc/laz-perf/archive/b7bbe26109dc986f42d4fc80b8de3d2b6ca634ce.tar.gz
+  URL_HASH SHA256=17df34ca64cc60e107f0c214db4729c54a514df4e32de5bc1b8b7b7c5a805a56
+  SOURCE_SUBDIR sceneio-no-upstream-cmake)
+FetchContent_MakeAvailable(lazperf)
+
+# LAZperf's format-1.4 decoders first copy each bounded arithmetic layer into
+# MemoryStream, whose upstream getByte() indexes the vector without checking
+# exhaustion. Apply a narrow, fail-closed patch so malformed layers produce a
+# codec exception instead of an out-of-bounds read. COMMIT.txt documents it.
+set(_sceneio_lazperf_streams "${lazperf_SOURCE_DIR}/cpp/lazperf/streams.hpp")
+file(READ "${_sceneio_lazperf_streams}" _sceneio_lazperf_streams_text)
+set(_sceneio_lazperf_getbyte_old [=[
+    unsigned char getByte()
+    {
+        return buf[idx++];
+    }
+]=])
+set(_sceneio_lazperf_getbyte_new [=[
+    unsigned char getByte()
+    {
+        if (idx >= buf.size())
+            throw error("LAZperf input stream exhausted");
+        return buf[idx++];
+    }
+]=])
+string(FIND "${_sceneio_lazperf_streams_text}"
+  "${_sceneio_lazperf_getbyte_new}" _sceneio_lazperf_patch_applied)
+if(_sceneio_lazperf_patch_applied EQUAL -1)
+  string(FIND "${_sceneio_lazperf_streams_text}"
+    "${_sceneio_lazperf_getbyte_old}" _sceneio_lazperf_patch_target)
+  if(_sceneio_lazperf_patch_target EQUAL -1)
+    message(FATAL_ERROR
+      "Pinned LAZperf MemoryStream::getByte() no longer matches the documented "
+      "SceneIO local patch target")
+  endif()
+  string(REPLACE "${_sceneio_lazperf_getbyte_old}"
+    "${_sceneio_lazperf_getbyte_new}" _sceneio_lazperf_streams_text
+    "${_sceneio_lazperf_streams_text}")
+  file(WRITE "${_sceneio_lazperf_streams}" "${_sceneio_lazperf_streams_text}")
+endif()
+unset(_sceneio_lazperf_streams)
+unset(_sceneio_lazperf_streams_text)
+unset(_sceneio_lazperf_getbyte_old)
+unset(_sceneio_lazperf_getbyte_new)
+unset(_sceneio_lazperf_patch_applied)
+unset(_sceneio_lazperf_patch_target)
+
+file(GLOB LAZPERF_SOURCES CONFIGURE_DEPENDS
+  "${lazperf_SOURCE_DIR}/cpp/lazperf/*.cpp"
+  "${lazperf_SOURCE_DIR}/cpp/lazperf/detail/*.cpp")
+add_library(lazperf_static STATIC ${LAZPERF_SOURCES})
+target_include_directories(lazperf_static PUBLIC "${lazperf_SOURCE_DIR}/cpp")
+target_compile_definitions(lazperf_static PRIVATE
+  $<$<PLATFORM_ID:Windows>:WIN32_LEAN_AND_MEAN>
+  $<$<CXX_COMPILER_ID:MSVC>:_CRT_SECURE_NO_WARNINGS>)
+set_property(TARGET lazperf_static PROPERTY POSITION_INDEPENDENT_CODE ON)
+set_property(TARGET lazperf_static PROPERTY CXX_VISIBILITY_PRESET hidden)
+if(WIN32)
+  target_link_libraries(lazperf_static PUBLIC ws2_32)
+endif()
+
 # lodepng (zlib license) — PNG codec. Vendored in-repo at
 # src/cpp/third_party/lodepng (COMMIT.txt pins the source); it has its own
 # self-contained inflate/deflate (lodepng_*-prefixed, no miniz interaction), so
@@ -163,6 +231,7 @@ nanobind_add_module(_core STABLE_ABI NB_STATIC
   src/cpp/codecs/bmp_tga.cpp
   src/cpp/codecs/exr.cpp
   src/cpp/codecs/las.cpp
+  src/cpp/codecs/laz.cpp
   src/cpp/codecs/webp.cpp
   src/cpp/codecs/safetensors.cpp
   src/cpp/codecs/dmb.cpp
@@ -178,7 +247,7 @@ target_include_directories(_core PRIVATE src/cpp ${zstd_SOURCE_DIR}/lib ${fast_f
   ${libwebp_SOURCE_DIR}
   ${libwebp_SOURCE_DIR}/src)
 target_link_libraries(_core PRIVATE miniz_static nlohmann_json::nlohmann_json
-  libzstd_static lodepng_static sqlite_static webp Threads::Threads)
+  libzstd_static lazperf_static lodepng_static sqlite_static webp Threads::Threads)
 
 # Land the extension inside the importable `sceneio` package as sceneio._core.
 install(TARGETS _core LIBRARY DESTINATION sceneio)

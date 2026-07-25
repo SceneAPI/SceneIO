@@ -31,7 +31,7 @@ SoA, zero-copy to numpy/torch (DLPack), conventions carried as metadata.
 | `Camera` | (shared) | ✅ | COLMAP model id + `params[]`; reused by `Reconstruction` and `PosedViewSet` |
 | `Image` | `image_sequence` elem | ✅ | interleaved HxWxC (u8/u16/f32), color_space/alpha_mode/maxval metadata, owner‑safe zero‑copy `pixels` |
 | `TensorDict` | (named arrays) | ✅ | dict‑like, 12 numpy dtypes (dtype‑erased), zero‑copy views; backs NPZ and mapped safetensors |
-| `PointCloud` | `point_cloud` (new) | ✅ | xyz + rgb/rgb16 + normals + intensity, optional organized width/height and acquisition viewpoint, plus an optional validated lossless LAS waveform sidecar; backs `.xyz`, count-prefixed `.pts`, point `.ply`, PCD, and plain `.las` |
+| `PointCloud` | `point_cloud` (new) | ✅ | xyz + rgb/rgb16 + normals + intensity, optional organized width/height and acquisition viewpoint, plus an optional validated lossless LAS waveform sidecar; backs `.xyz`, count-prefixed `.pts`, point `.ply`, PCD, plain `.las`, and `.laz` |
 | `DepthMap` | `depth_map` | ✅ | scalar f32 depth + scale/unit/invalid + confidence; backs scalar DMB and explicit typed PFM/PNG/EXR adapters |
 | `FlowField` | `flow` | ✅ | HxWx2 f32 vectors with component/axis/row/unit/invalid metadata; raw FLO API remains ndarray-compatible |
 | `StateTrajectory` | `state_trajectory` | ✅ record / ⬜ datatype | exact int64 nanosecond timestamps plus float64 position, WXYZ orientation, velocity, gyro bias, and accelerometer bias; explicit frame/unit/sign metadata |
@@ -86,6 +86,7 @@ pattern** (miniz, zstd, nlohmann/json, fast_float) — so they needed **no vcpkg
 | Radiance `.hdr` | `Image`(f32) | stb (public domain) | ✅ R+W; numpy RGBE oracle; lossy encode |
 | OpenEXR | `Image`(f32) (raw) + `DepthMap` (typed) | tinyexr (BSD) — reuses our miniz | ✅ R+W; OpenEXR‑python oracle; HALF→FLOAT, premult‑alpha, PIZ/ZIP/RLE; explicit single-channel typed depth |
 | plain `.las` | `PointCloud` | **none** — hand‑parsed binary, like colmap `.bin` | ✅ R+W; laspy oracle; formats 0‑10, origin+rgb16, georef rebase; formats 4/5/9/10 preserve internal waveform descriptor VLRs, packet EVLR, references, and opaque point fields in a sidecar |
+| `.laz` | `PointCloud` | LAZperf 3.4.0 (Apache‑2.0/BSD‑3-Clause/BSD‑2-Clause) | ✅ R+W; laspy/lazrs oracle; formats 0‑3 and 6‑8, exact standard records, chunk-parallel decode and chunk-aware ranges, mmap, header inspect, seekable streaming sink; waveform, extra bytes, unrelated VLR/EVLR metadata, and COPC reject |
 | WebP | `Image` | libwebp (BSD) — CMake FetchContent from source | ✅ R+W; pillow oracle; lossless byte‑exact + lossy; built clean on MSVC |
 
 Cross‑cutting: the cibuildwheel dry run and tagged release both built and
@@ -96,10 +97,10 @@ hardening patches** for truncated HDR input, corrupt JPEG marker failure, and a
 signed-shift UB in JPEG entropy output (see `stb/COMMIT.txt`). CMYK JPEG is
 best‑effort stb→RGB and opaque RGBA collapses to RGB in WebP (both documented).
 
-Genuinely need the system‑lib `SCENEIO_WITH_*` gate (deferred): HDF5 (+hloc), TIFF
-(libtiff). **LAZ is vendorable after all** — LAZperf 3.4.0 (Apache‑2.0), with
-formats 0‑3 and 6‑8 in its supported compression set; integration remains the
-next point-cloud unit. COLMAP DB `.db` is covered by a pinned public-domain SQLite amalgamation
+Genuinely need the system‑lib `SCENEIO_WITH_*` gate (deferred): HDF5 (+hloc),
+TIFF (libtiff). **LAZ is vendored** through pinned LAZperf 3.4.0
+(Apache‑2.0/BSD‑3-Clause/BSD‑2-Clause), with formats 0‑3 and 6‑8 in its supported
+compression set. COLMAP DB `.db` is covered by a pinned public-domain SQLite amalgamation
 statically linked into `_core`.
 
 ### ✅ Post-0.2 self-contained expansion
@@ -125,6 +126,7 @@ statically linked into `_core`.
 | `kalibr` | `CameraRig` | R+W | **PyYAML** + Kalibr schema | pinhole/omni intrinsics, distortion, topics, camera-chain or IMU extrinsics, and camera↔IMU time offsets |
 | `g2o` | `PoseGraph` | R+W | independent strict parser + g2o BSD-3 source semantics | `VERTEX_SE3:QUAT`, `EDGE_SE3:QUAT`, `FIX`; XYZW; exact upper-triangle information; unsupported mixed types/parameters reject |
 | `colmap_db` | `ColmapDatabase` (`FeatureSet` + `MatchGraph`) | R+W | stdlib **sqlite3** + **pycolmap 4.1.1** | current six-table cameras/images/features/matches/two-view geometry subset; exact pair ids and absent/empty BLOB state; transactional writes; one-image/one-pair selectors |
+| `laz` | `PointCloud` | R+W | **laspy 2.7 + lazrs 0.8.1** | pinned LAZperf 3.4.0; standard formats 0‑3/6‑8; strict LASzip VLR/chunk extents; chunk-aware ranges; seekable streaming sink |
 
 ### ⬜ Pending — later phases (meshes + niche)
 USD / USDZ · OpenVDB · Zarr · Parquet · AVIF / JPEG‑XL.
@@ -143,10 +145,10 @@ ndarray views for native NPY/FLO payloads (PFM row-flips into owned storage) · 
 scheduled 100-case backing-store mutation sweep · ✅ ASan/UBSan/LSan workflow
 (local and branch Linux runs green) · ⬜ randomized oracle-triangulated
 fuzzing · ✅ direct file-sink writes · ✅ bounded measured-path workers
-(XYZ/LAS/EXR/PNG16/WebP lossless) · ✅ partial/lazy reads (`inspect` covers all
-47; bounded pixel/point/face/mesh/primitive/state/COLMAP-image/COLMAP-pair/tensor
+(XYZ/LAS/LAZ/EXR/PNG16/WebP lossless) · ✅ partial/lazy reads (`inspect` covers all
+48; bounded pixel/point/face/mesh/primitive/state/COLMAP-image/COLMAP-pair/tensor
 subsets cover capable containers) · ⬜ GPU-via-DLPack (torch-cuda/cupy) · ✅
-expanded 47-codec benchmark/oracles.
+expanded 48-codec benchmark/oracles.
 
 ## Infrastructure & capabilities
 
@@ -155,11 +157,11 @@ expanded 47-codec benchmark/oracles.
 | nanobind + scikit‑build‑core build | ✅ | abi3/cp312, `NB_STATIC` |
 | cibuildwheel release path | ✅ | Linux/macOS/Windows; `publish.yml` |
 | CI parity (oracles in CI) | ✅ | gsply + pycolmap; runs on the branch |
-| Codec registry + `read`/`write`/`inspect`/`read_partial`/`detect` | ✅ | inspection covers all 47; bounded partial hooks are capability-specific |
+| Codec registry + `read`/`write`/`inspect`/`read_partial`/`detect` | ✅ | inspection covers all 48; bounded partial hooks are capability-specific |
 | Zero‑copy numpy + torch (DLPack) | ✅ | validated per codec |
 | Conventions‑as‑metadata + write guards | ✅ | record‑don't‑convert enforced |
 | Parity kit (`sceneio.testing.parity`) | ✅ | cross‑impl + round‑trip + convention pins |
-| Vendored deps (miniz, zstd, nlohmann_json, fast_float, tinyobjloader, cgltf) | ✅ | permissive; statically linked / header‑only |
+| Vendored deps (miniz, zstd, nlohmann_json, fast_float, tinyobjloader, cgltf, LAZperf) | ✅ | permissive; statically linked / header‑only |
 | Vendored image libs (lodepng/stb/tinyexr/libwebp) | ✅ | permissive, pinned/local-patched; no system libs, numpy‑only runtime kept |
 | Feature‑flagged optional C libs (`SCENEIO_WITH_*`) | ⬜ | planned for HDF5, TIFF, E57, Arrow, USD, and OpenVDB; LAZ uses vendored LAZperf instead |
 | mmap / streaming sources | ✅ | mmap reads + raw NPY/FLO views + direct file-sink writes complete |
@@ -201,6 +203,7 @@ incremental.
 | `kitti` | file | yes | yes | yes | - | yes | yes | no | - |
 | `ksplat` | file | yes | yes | yes | points | yes | yes | yes | - |
 | `las` | file | yes | yes | yes | points | yes | yes | yes | - |
+| `laz` | file | yes | yes | yes | points | yes | yes | yes | - |
 | `netpbm` | file | yes | yes | yes | window | yes | yes | no | - |
 | `npy` | file | yes | yes | yes | - | yes | yes | no | - |
 | `npz` | file | yes | yes | yes | - | yes | yes | no | - |

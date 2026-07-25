@@ -286,7 +286,10 @@ def detect(path) -> str:
             return c.id
     try:
         with p.open("rb") as stream:
-            head = stream.read(16)
+            # Byte 104 is the LAS point-format field. Its compression bit is
+            # the only way to distinguish extensionless LAS and LAZ files,
+            # which intentionally share the LASF container signature.
+            head = stream.read(105)
     except OSError:
         head = b""
     if head.startswith(b"ply"):
@@ -297,6 +300,11 @@ def detect(path) -> str:
         if kind == "ply_mesh":
             return kind
         return kind
+    if head.startswith(b"LASF") and len(head) >= 105:
+        encoded_format = head[104]
+        if encoded_format & 0x80 and not encoded_format & 0x40:
+            return "laz"
+        return "las"
     for c in REGISTRY.values():
         if any(head.startswith(m) for m in c.magic):
             return c.id
@@ -1444,6 +1452,35 @@ register(
             "georef",
         ),
         unsupported_features=("external_waveform_packets", "laz"),
+    )
+)
+# LASzip-compatible LAZ through pinned LAZperf. The decoded PointCloud model
+# intentionally keeps only coordinates, intensity, and RGB; formats carrying
+# GPS time or NIR therefore advertise a lossy projection.
+register(
+    Codec(
+        "laz",
+        (".laz",),
+        _mmap_reader(_core.read_laz),
+        _file_sink_writer(_core.write_laz),
+        record=_core.PointCloud,
+        datatype="point_cloud",
+        read_points=_mmap_selector_reader(_core.read_laz_points),
+        lossy=True,
+        supported_features=(
+            "point_formats_0_3",
+            "point_formats_6_8",
+            "chunked_point_ranges",
+            "rgb16",
+            "georef",
+        ),
+        unsupported_features=(
+            "point_formats_4_5",
+            "point_formats_9_10",
+            "waveform",
+            "extra_bytes",
+            "vlr_metadata",
+        ),
     )
 )
 register(

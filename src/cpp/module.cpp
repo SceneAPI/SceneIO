@@ -56,6 +56,7 @@ void register_hdr(nb::module_ &);
 void register_bmp_tga(nb::module_ &);
 void register_exr(nb::module_ &);
 void register_las(nb::module_ &);
+void register_laz(nb::module_ &);
 void register_webp(nb::module_ &);
 void register_safetensors(nb::module_ &);
 void register_dmb(nb::module_ &);
@@ -157,6 +158,7 @@ NB_MODULE(_core, m) {
     register_bmp_tga(m);
     register_exr(m);
     register_las(m);
+    register_laz(m);
     register_webp(m);
     register_safetensors(m);
     register_dmb(m);

@@ -961,3 +961,37 @@ accessors, duplicate/empty material names, samplers, and node TRS. Both
 pygltflib and trimesh consume SceneIO output. Lifetime, truncation, malformed
 extent, convention-guard, missing-resource, rollback, sink-identity, and
 large-external-buffer allocation tests cover the optimized paths.
+
+## LAZ compressed-point baseline — 2026-07-25
+
+LAZ raises the registry and benchmark harness to 48 codecs and the
+buffer-backed differential/direct-sink sweep to 43. The representative
+fixture contains one million colored/intensity points (12.0 MB of canonical
+XYZ payload) and encodes to a 14.6 MB format-2 LAZ file with 50,000-point
+chunks. Five-run local MSVC medians were:
+
+```text
+operation                         SceneIO       oracle laspy/lazrs
+-----------------------------------------------------------------
+direct-sink write                  66 MB/s              144 MB/s
+in-memory read                    235 MB/s              393 MB/s
+public mmap read                  184 MB/s                    -
+metadata inspection            0.049 ms (1,335x)               -
+one-sixteenth point range      20.558 ms (3.17x)                -
+```
+
+The mapped read removes the full 14.6 MB Python input allocation, and the
+seekable streaming sink removes the corresponding output allocation while
+improving over the 62 MB/s buffer-plus-file path. The partial decoder validates
+the LAS/LASzip container, reads one anchor point to preserve the full record's
+origin, and decompresses only overlapping chunks. Its sampled RSS was 1.5 MB
+versus 47.2 MB for a full decode. SceneIO and the laspy/lazrs oracle encode the
+same format-2 XYZ, RGB16, and intensity fields from a shared exact-u16 fixture.
+
+Independent laspy/lazrs fixtures cover point formats 0-3 and 6-8 in both LAS
+1.2 and 1.4 containers. The codec rejects waveform formats, extra bytes,
+unrelated VLR/EVLR metadata, COPC, invalid global-encoding semantics, malformed
+item schemas, unbounded chunk metadata, and trailing unindexed bytes. Bytes,
+memoryview, mmap, one/many lanes, direct sink, short writes, empty files,
+multi-chunk ranges, every truncated prefix, and isolated lifetime/memory paths
+are checked separately from the benchmark.

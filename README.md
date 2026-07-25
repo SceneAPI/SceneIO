@@ -159,6 +159,15 @@ points = sceneio.read_partial(
 # packet EVLR, references, and opaque point fields in `points.las_waveform`.
 # External `.wdp` packet files are rejected instead of silently dropped.
 
+# LAZ formats 0-3 and 6-8 use pinned LAZperf. Point subsets decompress only
+# overlapping LASzip chunks; inspect reads only the LAS/LASzip headers.
+compressed_points = sceneio.read_partial(
+    "survey.laz", points=(1_000_000, 1_010_000)
+)
+assert sceneio.inspect("survey.laz").metadata["point_format"] in {
+    0, 1, 2, 3, 6, 7, 8
+}
+
 # `.ply` detection reads the header schema: ordinary vertices become a
 # PointCloud, 3DGS properties remain a GaussianCloud, and face elements become
 # a polygon-preserving Mesh. Binary point and mesh-face ranges are bounded.

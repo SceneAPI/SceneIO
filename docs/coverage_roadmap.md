@@ -162,7 +162,7 @@ Columns: **Ext/id** · **Record** · **Lib/oracle (license)** · **R/W** ·
 | ✅ PLY (point) / ✅ PLY (mesh) | `PointCloud`/`Mesh` | independent parsers + Open3D/trimesh (MIT) | R+W | schema-dispatched ASCII+binary LE/BE; mesh preserves polygons and separate vertex/corner attributes |
 | ✅ PCD | `PointCloud` | independent parser + Open3D (MIT) | R+W | PCD 0.7 ASCII/binary/LZF `binary_compressed`; organization/viewpoint; binary point ranges |
 | ✅ LAS | `PointCloud` | laspy (BSD) | R+W | mmap; point formats 0‑10; internal waveform formats 4/5/9/10 retain a validated lossless sidecar |
-| ⬜ LAZ | `PointCloud` | LAZperf 3.4.0 (Apache‑2.0) + laspy/lazrs oracle | R+W | planned formats 0‑3 and 6‑8; chunk-aware point ranges |
+| ✅ LAZ | `PointCloud` | LAZperf 3.4.0 (Apache‑2.0/BSD‑3-Clause/BSD‑2-Clause) + laspy/lazrs oracle | R+W | formats 0‑3 and 6‑8; mmap, seekable direct sink, inspect, and chunk-aware point ranges; waveform/extra-byte/metadata extensions reject |
 | ⬜ E57 | `PointCloud` | libE57Format (BSD) | R+W | optional C lib |
 | ✅ `.xyz` / ✅ count-prefixed `.pts` | `PointCloud` | independent parser | R+W | `.pts` is a distinct count-validated grammar, not an alias |
 
@@ -241,7 +241,7 @@ maintained in `format_gap_implementation_plan.md`:
 1. machine-readable capabilities and optional-feature state;
 2. COLMAP DB, PCD, calibration, and other self-contained formats (generic
    point PLY is complete);
-3. meshes and vendorable LAZ;
+3. meshes and vendorable LAZ (complete locally);
 4. lazy sequence/dataset containers;
 5. independently gated HDF5/TIFF/E57/Arrow integrations;
 6. heavyweight scene/volume integrations and policy-gated codecs.

@@ -2,7 +2,7 @@
 
 Measures, per codec, encode (write) + decode (read) throughput (MB/s over the raw
 payload) and peak Python allocation (tracemalloc), for sceneio._core vs the oracle
-library where one exists, on representative payloads for all 47 codecs. Read
+library where one exists, on representative payloads for all 48 codecs. Read
 measurements retain the legacy whole-file bytes/copy-decode path beside the
 public registry mmap path, so their peak delta captures the input copy O1
 removes and, for NPY/FLO, the decoded-array copy O2 removes. Write measurements
@@ -207,6 +207,27 @@ def _pc(n, color):
         kw["colors16"] = (rng.random((n, 3)) * 65535).astype(np.uint16)
         kw["intensity"] = (rng.random(n) * 60000).astype(np.float32)
     return _core.point_cloud(xyz, **kw), xyz
+
+
+def _pc_laz(n):
+    rng = np.random.default_rng(29)
+    positions = (rng.random((n, 3), dtype=np.float32) * 100.0).astype(np.float32)
+    colors16 = rng.integers(0, 65_536, (n, 3), dtype=np.uint16)
+    intensity = rng.integers(0, 65_536, n, dtype=np.uint16)
+    payload = {
+        "positions": positions,
+        "colors16": colors16,
+        "intensity": intensity,
+    }
+    return (
+        _core.point_cloud(
+            positions,
+            colors16=colors16,
+            intensity=intensity.astype(np.float32),
+            intensity_range="u16",
+        ),
+        payload,
+    )
 
 
 def _pc_ply(n):
@@ -1135,6 +1156,24 @@ def _laspy_w(payload):
     return b.getvalue()
 
 
+def _laspy_laz_w(payload):
+    hdr = laspy.LasHeader(version="1.2", point_format=2)
+    hdr.scales = [0.001, 0.001, 0.001]
+    las = laspy.LasData(hdr)
+    positions = payload["positions"]
+    colors16 = payload["colors16"]
+    las.x, las.y, las.z = positions[:, 0], positions[:, 1], positions[:, 2]
+    las.red, las.green, las.blue = (
+        colors16[:, 0],
+        colors16[:, 1],
+        colors16[:, 2],
+    )
+    las.intensity = payload["intensity"]
+    b = io.BytesIO()
+    las.write(b, do_compress=True)
+    return b.getvalue()
+
+
 def _laspy_r(data):
     return laspy.read(io.BytesIO(data))
 
@@ -1989,6 +2028,15 @@ def _specs(scale, pose_bundle=None):
             lambda rec, p: p.nbytes,
         ),
         Spec(
+            "laz",
+            lambda: _pc_laz(points),
+            lambda pc: _core.write_laz(pc, 0.001),
+            _core.read_laz,
+            (_laspy_laz_w if laspy else None),
+            (_laspy_r if laspy else None),
+            lambda rec, p: p["positions"].nbytes,
+        ),
+        Spec(
             "gaussian_ply",
             lambda: _gauss(gaussians),
             _core.write_gaussian_ply,
@@ -2272,6 +2320,7 @@ def _partial_request(codec_id, info, full_record=None):
         "ply",
         "pcd",
         "las",
+        "laz",
         "gaussian_ply",
         "compressed_ply",
         "sog",
@@ -4088,7 +4137,7 @@ def _run_benchmark(args, tmp):
             + len(directory_specs)
             + int(include_colmap_db)
             + int(include_gltf)
-            == 47
+            == 48
         )
     print("\nMB/s over raw payload; fileMB = encoded size (= the whole-file copy O1/O3 remove).")
     print("sioR = in-memory copy decode; pathR = public registry mmap read/view.")
@@ -4173,6 +4222,7 @@ def _run_benchmark(args, tmp):
             "exr",
             "gaussian_ply",
             "las",
+            "laz",
             "off",
             "png",
             "spz",
@@ -4271,6 +4321,7 @@ def _run_benchmark(args, tmp):
             "stl",
             "off",
             "las",
+            "laz",
             "gaussian_ply",
             "splat",
             "colmap_sparse",

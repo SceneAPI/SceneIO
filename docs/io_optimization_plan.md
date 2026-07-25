@@ -5,15 +5,23 @@ Status: complete — O0–O5 landed. Scope: the compiled `sceneio._core` I/O pat
 hardening/perf work concrete).
 
 Post-0.2 format expansion inherits the same gates. The registry currently has
-47 codecs: 42 file containers, three multi-file containers, and two COLMAP
+48 codecs: 43 file containers, three multi-file containers, and two COLMAP
 directory containers. COLMAP SQLite remains path-native; SOG, OBJ/MTL, and
 glTF/external buffers have explicit multi-file adapters.
 The latest record waves add the four calibration formats over `CameraRig`, g2o
 over `PoseGraph`, `colmap_db` over
 `ColmapDatabase`/`FeatureSet`/`MatchGraph`, polygonal PLY over `Mesh`, and
-OBJ/MTL over `Mesh` + `MaterialSet`, STL/OFF over `Mesh`, and plain glTF/GLB
-over `MeshScene`; each inherits direct file sinks, metadata inspection, partial
-reads where meaningful, and the all-codec differential/memory harness.
+OBJ/MTL over `Mesh` + `MaterialSet`, STL/OFF over `Mesh`, plain glTF/GLB over
+`MeshScene`, and LAZperf-backed LAZ over `PointCloud`; each inherits direct
+file sinks, metadata inspection, partial reads where meaningful, and the
+all-codec differential/memory harness.
+
+The representative 12.0 MB LAZ point fixture encodes to 14.6 MB. Five-run
+local MSVC medians measure 66 MB/s direct-sink write, 235 MB/s buffer decode,
+and 184 MB/s public mmap decode. The mapped read and seekable direct sink each
+remove the entire 14.6 MB traced Python allocation. Header inspection is
+1,335× faster than full decode and a middle one-sixteenth point selection is
+3.17× faster while materializing only overlapping 50,000-point chunks.
 
 The representative COLMAP database fixture contains 9.65 MB of logical
 features and match data in a 9.92 MB SQLite file. On local MSVC it measured

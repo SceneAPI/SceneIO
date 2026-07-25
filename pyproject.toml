@@ -3,9 +3,10 @@ name = "sceneio"
 version = "0.2.0"
 description = "The contract plane for SceneAPI — numpy-native data contracts, mapping/matching procedure contracts, wire codecs, and format registries."
 readme = "README.md"
-license = { text = "Apache-2.0" }
-classifiers = [
-    "License :: OSI Approved :: Apache Software License",
+license = "Apache-2.0"
+license-files = [
+    "LICENSE",
+    "src/cpp/third_party/lazperf/NOTICE.txt",
 ]
 requires-python = ">=3.12,<3.13"
 # Leaf package: imports nothing from the SceneAPI family (guard-tested).
@@ -37,6 +38,7 @@ test = [
     "pypng>=0.20220715",
     "openexr>=3.2",
     "laspy>=2.5",
+    "lazrs>=0.8.1",
     "imageio>=2.37",
     "psutil>=6.0",
     "safetensors>=0.8",

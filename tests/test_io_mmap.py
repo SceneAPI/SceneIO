@@ -696,6 +696,7 @@ def buffer_codecs():
         spec("glb", _core.read_glb, _core.write_glb, mesh_scene),
         spec("pcd", _core.read_pcd, _core.write_pcd, points_pcd),
         spec("las", _core.read_las, _core.write_las, points_las),
+        spec("laz", _core.read_laz, _core.write_laz, points_las),
         spec("flo", _core.read_flo, _core.write_flo, flow),
         spec("dmb", _core.read_dmb, _core.write_dmb, depth),
         spec("bundler", _core.read_bundler, _core.write_bundler, reconstruction),
@@ -724,8 +725,8 @@ def _outcome(call, argument):
 
 
 def test_all_single_file_codecs_mmap_equal_bytes_bit_exact(tmp_path, buffer_codecs):
-    """All 42 buffer codecs decode mmap and bytes to bit-exact records."""
-    assert len(buffer_codecs) == 42
+    """All 43 buffer codecs decode mmap and bytes to bit-exact records."""
+    assert len(buffer_codecs) == 43
     for spec in buffer_codecs:
         expected = _fingerprint(spec.reader(spec.data))
         path = tmp_path / f"sample-{spec.id}.bin"
@@ -743,8 +744,8 @@ def test_all_single_file_codecs_mmap_equal_bytes_bit_exact(tmp_path, buffer_code
 
 
 def test_all_single_file_sinks_are_byte_identical(tmp_path, buffer_codecs):
-    """All 42 compiled encoders emit the exact bytes their buffer API returns."""
-    assert len(buffer_codecs) == 42
+    """All 43 compiled encoders emit the exact bytes their buffer API returns."""
+    assert len(buffer_codecs) == 43
     for spec in buffer_codecs:
         direct = tmp_path / f"direct-{spec.id}.bin"
         _core._write_to_file(spec.writer, spec.value, direct)
@@ -943,7 +944,7 @@ print(max(0, peak[0] - baseline))
 def test_inspect_matches_decoded_metadata_for_buffer_and_directory_codecs(
     tmp_path, buffer_codecs
 ):
-    assert len(buffer_codecs) == 42
+    assert len(buffer_codecs) == 43
     for spec in buffer_codecs:
         path = tmp_path / f"inspect-{spec.id}.data"
         path.write_bytes(spec.data)
@@ -2280,7 +2281,7 @@ def test_registry_uses_mmap_for_every_nonempty_single_file_codec(
         value = sceneio.codecs()[spec.id].read(str(path))
         gc.collect()
         assert _fingerprint(value) == _fingerprint(spec.reader(spec.data))
-    assert mapped_paths == len(buffer_codecs) == 42
+    assert mapped_paths == len(buffer_codecs) == 43
 
 
 def test_all_buffer_entries_accept_readonly_protocol_exporters(buffer_codecs):
@@ -2544,4 +2545,5 @@ def test_magic_detection_reads_only_prefix(tmp_path, monkeypatch):
 
     monkeypatch.setattr(Path, "open", tracked_open)
     assert sceneio.detect(path) == "npy"
-    assert reads == [16]
+    # LAS and LAZ share LASF; byte 104 carries their compression distinction.
+    assert reads == [105]

@@ -158,6 +158,36 @@ def _las_waveform(root: Path) -> None:
     assert selected.las_waveform.point_records.shape == (1, 59)
 
 
+def _laz(root: Path) -> None:
+    positions = np.array(
+        [[0.0, 0.0, 0.0], [1.25, -2.5, 3.75], [4.0, 5.0, 6.0]],
+        np.float32,
+    )
+    colors = np.array(
+        [[1, 2, 3], [1000, 2000, 3000], [65533, 65534, 65535]],
+        np.uint16,
+    )
+    cloud = _core.point_cloud(
+        positions,
+        colors16=colors,
+        intensity=np.array([0, 1234, 65535], np.float32),
+        intensity_range="u16",
+        origin=np.array([500_000.0, 4_000_000.0, 100.0]),
+    )
+    path = root / "points.laz"
+    sceneio.write(cloud, path)
+    assert sceneio.detect(path) == "laz"
+    decoded = sceneio.read(path)
+    np.testing.assert_allclose(decoded.positions, positions, atol=0.0005)
+    np.testing.assert_array_equal(decoded.colors16, colors)
+    assert sceneio.inspect(path).metadata["point_format"] == 2
+    selected = sceneio.read_partial(path, points=(1, 3))
+    np.testing.assert_array_equal(
+        selected.colors16,
+        colors[1:3],
+    )
+
+
 def _compressed_ply(root: Path) -> None:
     count = 5
     cloud = _core.gaussian_cloud(
@@ -710,6 +740,7 @@ def main() -> None:
         _pfm_and_typed_depth(root, values)
         _mapped_safetensors(root, values)
         _las_waveform(root)
+        _laz(root)
         _compressed_ply(root)
         _sog(root)
         _ksplat(root)

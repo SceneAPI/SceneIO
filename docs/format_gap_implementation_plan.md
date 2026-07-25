@@ -9,10 +9,10 @@
   v0.1 are complete locally. The polygon-preserving `Mesh` record and generic
   mesh PLY are also complete locally; canonical `MaterialSet`, strict
   polygon-preserving OBJ/MTL, strict STL/OFF, the `MeshScene` record, and plain
-  glTF/GLB are complete locally.
+  glTF/GLB and LAZ point formats 0-3/6-8 are complete locally.
   Cross-platform wheel and instrumented validation remains a user-gated remote
   action.
-- **Current branch:** 47 compiled codecs, all read/write and inspectable, with
+- **Current branch:** 48 compiled codecs, all read/write and inspectable, with
   bounded partial reads where their containers permit them.
 - **Scope:** close every unblocked format gap declared by SceneIO's coverage
   documents without reimplementing the 0.2.0 codec tier.
@@ -1170,6 +1170,10 @@ Validation for G3:
 
 #### G4.1 LAZ
 
+Status: implemented locally; local verification is complete. The new
+LAZperf dependency still requires the user-gated Linux/macOS wheel and
+instrumented validation lanes before the unit can be called validated.
+
 Implementation:
 
 - Pin LAZperf (Apache-2.0) and build its static library through CMake.
@@ -1197,6 +1201,60 @@ Benchmark:
 
 - compression/decompression throughput, one versus multiple lanes where
   supported, memory above compressed input, and chunk selection.
+
+Local implementation checkpoint (2026-07-25):
+
+- LAZperf 3.4.0 is pinned to commit
+  `b7bbe26109dc986f42d4fc80b8de3d2b6ca634ce` and archive SHA-256
+  `17df34ca64cc60e107f0c214db4729c54a514df4e32de5bc1b8b7b7c5a805a56`.
+  CMake builds only its 15 library translation units into a hidden static
+  archive; upstream tools, tests, shared library, and install rules are not
+  configured.
+- `_core.read_laz`, `read_laz_points`, and `write_laz` cover exact standard
+  point formats 0-3 and 6-8. Full reads parallelize independent LASzip chunks;
+  partial reads validate the container and decompress only the origin anchor
+  plus overlapping chunks.
+- The wrapper bounds every LAZperf callback, validates the LASzip VLR/item
+  schema, chunk-table counts and extents, format-1.4 stream sizes, and exact
+  arithmetic termination. A documented local patch also bounds LAZperf's
+  internal format-1.4 `MemoryStream::getByte`; deterministic mutations across
+  every nonempty layered stream now either decode or raise a normal codec
+  error without terminating the interpreter. Waveform formats, extra-byte
+  strides, unrelated VLR/EVLR metadata, COPC, deferred chunk tables, and
+  unrepresented global encoding flags reject instead of being discarded.
+- Public `.laz` dispatch uses read-only mmap, a seekable direct file sink,
+  metadata-only inspection, extensionless LASF compression-bit detection, and
+  point-range selection. The sink streams 256 KiB chunks and seeks only to
+  patch the header and chunk-table pointer.
+- laspy/lazrs independently verifies both directions for formats 0-3/6-8,
+  including legacy formats in LAS 1.4 containers, empty files, anisotropic
+  oracle scales, GPS/NIR projection behavior, multi-chunk ranges, bytes versus
+  mmap and one-versus-many lanes, lifetime, forced short writes, every
+  truncated prefix, bounded metadata mutations, and large-file traced-memory
+  checks.
+- The dedicated suite passes 59 tests. The complete local MSVC suite passes
+  2,827 tests with four documented skips; Ruff and `git diff --check` are
+  clean.
+- On the 12.0 MB logical/14.6 MB encoded benchmark fixture, five-run medians
+  are 66 MB/s direct-sink write, 235 MB/s buffer read, and 184 MB/s public mmap
+  read. Mmap and the sink each remove 14.6 MB of traced Python allocation;
+  inspection is 1,335x faster and a one-sixteenth point range is 3.17x faster.
+  The SceneIO and laspy/lazrs writers receive the same format-2 XYZ, RGB16,
+  and exact-u16 intensity payload.
+- A fresh source distribution rebuilds the `cp312-abi3` Windows wheel. Its
+  39-entry payload contains exactly one native extension, the project license
+  and LAZperf notice, no build-only include/lib/share/bin trees, and only NumPy
+  as a runtime dependency. The packaged smoke, including LAZ, passes in an
+  unseeded environment containing only SceneIO and NumPy.
+- The manual three-lens review is complete. The memory/lifetime lens found
+  LAZperf's unchecked internal layered-stream read and led to the pinned local
+  bounds patch plus child-process mutation sweep. The correctness lens replaced
+  silent intensity rounding/clamping with exact-u16 guards and aligned
+  `inspect` with read-time scale/offset/waveform/EVLR rules. The test-soundness
+  lens corrected the benchmark oracle so both writers receive identical
+  format-2 fields. No local findings remain open.
+- Linux instrumented and Linux/macOS wheel results remain explicitly
+  user-gated remote evidence.
 
 The same package resolves plain LAS waveform point formats 4/5/9/10. Add the
 wave-packet fields to `PointCloud` only if they can be represented without
@@ -1828,14 +1886,14 @@ estimates.
 
 The current local checkpoint is:
 
-- 47 compiled registry codecs with read, write, inspect, mmap or path-native
+- 48 compiled registry codecs with read, write, inspect, mmap or path-native
   input, and direct file sinks;
 - O0-O5 complete for the existing codec tier;
 - `FlowField`, typed FLO, typed PFM depth, typed PNG depth, and typed scalar EXR
   depth complete;
 - 2,768 local tests pass with 4 documented platform/optional skips, Ruff and
   `git diff --check` are clean;
-- the complete 47-codec benchmark, staged source-distribution rebuild, and
+- the complete 48-codec benchmark, staged source-distribution rebuild, and
   packaged NumPy-only wheel smoke pass;
 - generic point PLY, PCD, StateTrajectory/EuRoC, CameraRig calibration,
   PoseGraph/g2o, the COLMAP feature database, SuperSplat compressed PLY,
@@ -2511,8 +2569,10 @@ silent triangulation, dropped attributes, or material loss.
 
 1. **Complete locally:** extend the point-cloud contract with a lossless
    optional sidecar and add plain-LAS formats 4/5/9/10 parity.
-2. Vendor laz-perf (Apache-2.0) for LAZ, retain the same point semantics, add
-   chunk-aware selection, and prove bounded decompression memory.
+2. **Complete locally:** vendor LAZperf 3.4.0
+   (Apache-2.0/BSD-3-Clause/BSD-2-Clause) for
+   LAZ, retain the same point semantics, add chunk-aware selection, and prove
+   bounded decompression memory.
 3. Land `ImageSequence` with frame timestamps/durations, dimensions, ownership,
    and native planar/chroma metadata.
 4. Add image-directory and raw Y4M support first; these establish sequence and

@@ -144,17 +144,22 @@ public:
           test_short_write_(test_short_write),
           test_fail_after_(test_fail_after) {}
 
-    void write(const char *data, size_t size) {
-        calls_++;
+    int descriptor() {
         int fd;
         {
             FileSinkSuppression suppress;
             if (!file_.is_valid())
                 file_ = nb::module_::import_("builtins").attr("open")(
-                    path_, "wb", 0);  // C++ buffer is already complete
+                    path_, "wb", 0);
             fd = PyObject_AsFileDescriptor(file_.ptr());
             if (fd < 0) throw nb::python_error();
         }
+        return fd;
+    }
+
+    void write(const char *data, size_t size) {
+        calls_++;
+        const int fd = descriptor();
         {
             nb::gil_scoped_release rel;
             while (size != 0) {
@@ -209,6 +214,22 @@ public:
                 bytes_ += count;
             }
         }
+    }
+
+    int64_t seek(int64_t offset, int origin) {
+        const int fd = descriptor();
+        nb::gil_scoped_release rel;
+#ifdef _WIN32
+        const __int64 position = ::_lseeki64(fd, offset, origin);
+        if (position < 0)
+#else
+        const off_t position = ::lseek(fd, static_cast<off_t>(offset), origin);
+        if (position == static_cast<off_t>(-1))
+#endif
+            throw std::runtime_error(
+                std::string("file sink seek failed: ") +
+                std::strerror(errno));
+        return static_cast<int64_t>(position);
     }
 
     void close() {
@@ -285,6 +306,15 @@ inline bool emit_file_chunk(const char *data, size_t size) {
     if (!active_file_sink) return false;
     active_file_sink->write(data, size);
     return true;
+}
+
+// Seek the active direct file sink. Streaming containers such as LAZ write
+// forward point chunks, then patch their header and chunk-table pointer.
+// Call with the GIL held; FileSink releases it around the native seek.
+inline int64_t seek_file_sink(int64_t offset, int origin) {
+    if (!active_file_sink)
+        throw std::logic_error("no active direct file sink");
+    return active_file_sink->seek(offset, origin);
 }
 
 // Private buffer-exporter type used as numpy.ndarray.base for mmap-backed
