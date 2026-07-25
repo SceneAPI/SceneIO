@@ -43,6 +43,7 @@ StateTrajectory = _core.StateTrajectory
 TensorDict = _core.TensorDict
 Image = _core.Image
 PointCloud = _core.PointCloud
+MaterialSet = _core.MaterialSet
 Mesh = _core.Mesh
 PoseGraph = _core.PoseGraph
 FeatureSet = _core.FeatureSet
@@ -480,6 +481,7 @@ __all__ = [
     "Image",
     "Inspection",
     "MatchGraph",
+    "MaterialSet",
     "Mesh",
     "NativeFeatureCapabilities",
     "PointCloud",

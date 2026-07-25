@@ -35,6 +35,7 @@ _BUILTINS = {
     "npy",
     "npz",
     "nvm",
+    "obj",
     "openmvg",
     "opencv_xml",
     "opencv_yaml",

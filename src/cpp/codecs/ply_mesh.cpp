@@ -1207,6 +1207,13 @@ std::string format_double(double value) {
 
 std::string encode(const Mesh &mesh) {
     validate_mesh(mesh, "PLY mesh writer");
+    if (mesh.has_smoothing_groups() ||
+        mesh.has_object_names() ||
+        mesh.has_group_names() ||
+        mesh.has_material_set)
+        throw std::invalid_argument(
+            "PLY mesh writer: smoothing, object/group names, and "
+            "MaterialSet fields are not representable");
     if (mesh.n > std::numeric_limits<uint32_t>::max() ||
         mesh.f > std::numeric_limits<uint32_t>::max() ||
         mesh.num_primitives() >

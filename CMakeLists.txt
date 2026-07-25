@@ -129,6 +129,7 @@ nanobind_add_module(_core STABLE_ABI NB_STATIC
   src/cpp/records/camera_rig.cpp
   src/cpp/records/pose_graph.cpp
   src/cpp/records/feature_match.cpp
+  src/cpp/records/material_set.cpp
   src/cpp/records/mesh.cpp
   src/cpp/codecs/pfm.cpp
   src/cpp/codecs/colmap.cpp
@@ -138,6 +139,7 @@ nanobind_add_module(_core STABLE_ABI NB_STATIC
   src/cpp/codecs/ksplat.cpp
   src/cpp/codecs/ply_point.cpp
   src/cpp/codecs/ply_mesh.cpp
+  src/cpp/codecs/obj_mtl.cpp
   src/cpp/codecs/pcd.cpp
   src/cpp/codecs/spz.cpp
   src/cpp/codecs/transforms_json.cpp
@@ -168,7 +170,8 @@ nanobind_add_module(_core STABLE_ABI NB_STATIC
   src/cpp/third_party/stb/stb_impl.cpp
   src/cpp/third_party/tinyexr/tinyexr_impl.cpp)
 target_include_directories(_core PRIVATE src/cpp ${zstd_SOURCE_DIR}/lib ${fast_float_SOURCE_DIR}/include
-  src/cpp/third_party/stb src/cpp/third_party/tinyexr ${libwebp_SOURCE_DIR}
+  src/cpp/third_party/stb src/cpp/third_party/tinyexr
+  src/cpp/third_party/tinyobjloader ${libwebp_SOURCE_DIR}
   ${libwebp_SOURCE_DIR}/src)
 target_link_libraries(_core PRIVATE miniz_static nlohmann_json::nlohmann_json
   libzstd_static lodepng_static sqlite_static webp Threads::Threads)

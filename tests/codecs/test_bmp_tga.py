@@ -422,16 +422,16 @@ def test_bmp_rejects_palette_index_out_of_range():
 
 
 @pytest.mark.parametrize(
-    ("format_id", "record", "message"),
+    ("format_id", "record_factory", "message"),
     [
         (
             "bmp",
-            image_record(make_pixels(1)),
+            lambda: image_record(make_pixels(1)),
             "channel count",
         ),
         (
             "bmp",
-            _core.image(
+            lambda: _core.image(
                 make_pixels(3).astype(np.uint16),
                 color_space="srgb",
                 maxval=255,
@@ -440,12 +440,12 @@ def test_bmp_rejects_palette_index_out_of_range():
         ),
         (
             "tga",
-            _core.image(make_pixels(3), color_space="linear"),
+            lambda: _core.image(make_pixels(3), color_space="linear"),
             "srgb",
         ),
         (
             "tga",
-            _core.image(
+            lambda: _core.image(
                 make_pixels(4),
                 color_space="srgb",
                 alpha_mode="premultiplied",
@@ -454,14 +454,18 @@ def test_bmp_rejects_palette_index_out_of_range():
         ),
         (
             "tga",
-            _core.image(make_pixels(1), color_space="gray", maxval=100),
+            lambda: _core.image(
+                make_pixels(1), color_space="gray", maxval=100
+            ),
             "maxval 255",
         ),
     ],
 )
-def test_writers_guard_unrepresentable_records(format_id, record, message):
+def test_writers_guard_unrepresentable_records(
+    format_id, record_factory, message
+):
     with pytest.raises(ValueError, match=message):
-        getattr(_core, f"write_{format_id}")(record)
+        getattr(_core, f"write_{format_id}")(record_factory())
 
 
 @pytest.mark.parametrize("format_id", ["bmp", "tga"])

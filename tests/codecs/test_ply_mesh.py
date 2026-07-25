@@ -776,6 +776,40 @@ def test_writer_revalidates_mutable_views_and_does_not_truncate_target(tmp_path)
     assert path.read_bytes() == b"preserve"
 
 
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"face_smoothing_groups": np.array([1, 1], np.uint32)},
+        {"primitive_object_names": ["first", "second"]},
+        {"primitive_group_names": ["first", "second"]},
+        {"materials": "make_material_set"},
+    ],
+)
+def test_writer_rejects_obj_only_metadata(kwargs):
+    mesh = _full_mesh()
+    if kwargs.get("materials") == "make_material_set":
+        kwargs = {"materials": _core.material_set(["a", "b", "c", "d"])}
+    rebuilt = _core.mesh(
+        np.asarray(mesh.positions),
+        np.asarray(mesh.face_offsets),
+        np.asarray(mesh.face_indices),
+        vertex_normals=np.asarray(mesh.vertex_normals),
+        corner_normals=np.asarray(mesh.corner_normals),
+        vertex_uvs=np.asarray(mesh.vertex_uvs),
+        corner_uvs=np.asarray(mesh.corner_uvs),
+        vertex_colors=np.asarray(mesh.vertex_colors),
+        corner_colors=np.asarray(mesh.corner_colors),
+        primitive_offsets=np.asarray(mesh.primitive_offsets),
+        primitive_materials=np.asarray(mesh.primitive_materials),
+        coordinate_frame=mesh.coordinate_frame,
+        scale_to_meters=mesh.scale_to_meters,
+        local_transform=np.asarray(mesh.local_transform),
+        **kwargs,
+    )
+    with pytest.raises(ValueError, match="not representable"):
+        _core.write_ply_mesh(rebuilt)
+
+
 def test_empty_mesh_roundtrip():
     mesh = _core.mesh(
         np.empty((0, 3), np.float32),

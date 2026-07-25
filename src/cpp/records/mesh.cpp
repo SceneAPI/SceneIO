@@ -1,6 +1,7 @@
 // records/mesh.cpp -- Mesh validation, factory, and nanobind surface.
 #include <nanobind/stl/optional.h>
 #include <nanobind/stl/string.h>
+#include <nanobind/stl/vector.h>
 
 #include <cmath>
 #include <limits>
@@ -19,6 +20,8 @@ using f64_array =
     nb::ndarray<const double, nb::c_contig, nb::device::cpu>;
 using u8_array =
     nb::ndarray<const uint8_t, nb::c_contig, nb::device::cpu>;
+using u32_array =
+    nb::ndarray<const uint32_t, nb::c_contig, nb::device::cpu>;
 using u64_array =
     nb::ndarray<const uint64_t, nb::c_contig, nb::device::cpu>;
 using i32_array =
@@ -36,6 +39,77 @@ nb::ndarray<nb::numpy, T> mesh_view(
                              : const_cast<T *>(values.data());
     return nb::ndarray<nb::numpy, T>(
         data, shape.size(), shape.data());
+}
+
+template <typename T>
+nb::ndarray<nb::numpy, const T> mesh_const_view(
+    const std::vector<T> &values, std::vector<size_t> shape) {
+    static const T sentinel{};
+    const T *data = values.empty() ? &sentinel : values.data();
+    return nb::ndarray<nb::numpy, const T>(
+        data, shape.size(), shape.data());
+}
+
+void validate_mesh_text(
+    const std::string &value, const char *name) {
+    if (value.size() > 1024 * 1024)
+        throw std::invalid_argument(
+            std::string("mesh: ") + name + " exceeds 1 MiB");
+    if (value.find('\0') != std::string::npos)
+        throw std::invalid_argument(
+            std::string("mesh: ") + name +
+            " cannot contain embedded NUL");
+    if (!sio::valid_utf8(value))
+        throw std::invalid_argument(
+            std::string("mesh: ") + name + " must be valid UTF-8");
+}
+
+void encode_primitive_names(
+    const std::vector<std::string> &values, size_t primitives,
+    std::vector<uint64_t> &offsets, std::vector<uint8_t> &utf8,
+    const char *name) {
+    if (values.empty()) return;
+    if (values.size() != primitives)
+        throw std::invalid_argument(
+            std::string("mesh: ") + name +
+            " must have one entry per primitive");
+    offsets.reserve(primitives + 1);
+    offsets.push_back(0);
+    for (const std::string &value : values) {
+        validate_mesh_text(value, name);
+        if (value.size() >
+            std::numeric_limits<size_t>::max() - utf8.size())
+            throw std::length_error(
+                std::string("mesh: ") + name + " table is too large");
+        utf8.insert(utf8.end(), value.begin(), value.end());
+        offsets.push_back(static_cast<uint64_t>(utf8.size()));
+    }
+}
+
+std::vector<std::string> decode_primitive_names(
+    const std::vector<uint64_t> &offsets,
+    const std::vector<uint8_t> &utf8) {
+    std::vector<std::string> result;
+    if (offsets.empty()) return result;
+    if (offsets[0] != 0 || offsets.back() != utf8.size())
+        throw std::invalid_argument("mesh: malformed primitive name table");
+    result.reserve(offsets.size() - 1);
+    for (size_t row = 0; row + 1 < offsets.size(); ++row) {
+        const uint64_t begin_value = offsets[row];
+        const uint64_t end_value = offsets[row + 1];
+        if (end_value < begin_value || end_value > utf8.size())
+            throw std::invalid_argument(
+                "mesh: malformed primitive name offsets");
+        const size_t begin = static_cast<size_t>(begin_value);
+        const size_t end = static_cast<size_t>(end_value);
+        const char *data = utf8.empty()
+                               ? ""
+                               : reinterpret_cast<const char *>(
+                                     utf8.data());
+        result.emplace_back(
+            data + begin, end - begin);
+    }
+    return result;
 }
 
 void require_f32_shape(
@@ -71,6 +145,10 @@ Mesh make_mesh(
     std::optional<u8_array> corner_colors,
     std::optional<u64_array> primitive_offsets,
     std::optional<i32_array> primitive_materials,
+    std::optional<u32_array> face_smoothing_groups,
+    const std::vector<std::string> &primitive_object_names,
+    const std::vector<std::string> &primitive_group_names,
+    std::optional<MaterialSet> materials,
     const std::string &coordinate_frame,
     double scale_to_meters,
     std::optional<f64_array> local_transform) {
@@ -147,6 +225,15 @@ Mesh make_mesh(
             mesh.primitive_materials.push_back(-1);
         }
     }
+    const size_t primitives = mesh.primitive_materials.size();
+    if (face_smoothing_groups) {
+        if (face_smoothing_groups->ndim() != 1 ||
+            face_smoothing_groups->shape(0) != mesh.f)
+            throw std::invalid_argument(
+                "mesh: face_smoothing_groups must be (F,) uint32");
+    }
+    assign_mesh_primitive_names(
+        mesh, primitive_object_names, primitive_group_names);
 
     if (local_transform) {
         if (local_transform->ndim() != 2 ||
@@ -189,12 +276,54 @@ Mesh make_mesh(
             assign_nonempty(
                 mesh.corner_colors, corner_colors->data(),
                 mesh.c * 4);
+        if (face_smoothing_groups)
+            assign_nonempty(
+                mesh.face_smoothing_groups,
+                face_smoothing_groups->data(), mesh.f);
+        if (materials) {
+            mesh.materials = *materials;
+            mesh.has_material_set = true;
+        }
         validate_mesh(mesh);
     }
     return mesh;
 }
 
 }  // namespace
+
+void assign_mesh_primitive_names(
+    Mesh &mesh,
+    const std::vector<std::string> &object_names,
+    const std::vector<std::string> &group_names) {
+    mesh.primitive_object_offsets.clear();
+    mesh.primitive_object_utf8.clear();
+    mesh.primitive_group_offsets.clear();
+    mesh.primitive_group_utf8.clear();
+    encode_primitive_names(
+        object_names, mesh.num_primitives(),
+        mesh.primitive_object_offsets,
+        mesh.primitive_object_utf8,
+        "primitive_object_names");
+    encode_primitive_names(
+        group_names, mesh.num_primitives(),
+        mesh.primitive_group_offsets,
+        mesh.primitive_group_utf8,
+        "primitive_group_names");
+}
+
+std::vector<std::string> mesh_primitive_object_names(
+    const Mesh &mesh) {
+    return decode_primitive_names(
+        mesh.primitive_object_offsets,
+        mesh.primitive_object_utf8);
+}
+
+std::vector<std::string> mesh_primitive_group_names(
+    const Mesh &mesh) {
+    return decode_primitive_names(
+        mesh.primitive_group_offsets,
+        mesh.primitive_group_utf8);
+}
 
 void validate_mesh(const Mesh &mesh, const char *context) {
     const std::string prefix = std::string(context) + ": ";
@@ -222,6 +351,9 @@ void validate_mesh(const Mesh &mesh, const char *context) {
         mesh.vertex_colors.size(), mesh.n * 4, "vertex_colors");
     optional_size(
         mesh.corner_colors.size(), mesh.c * 4, "corner_colors");
+    optional_size(
+        mesh.face_smoothing_groups.size(), mesh.f,
+        "face_smoothing_groups");
 
     if (mesh.face_offsets.empty() || mesh.face_offsets[0] != 0 ||
         mesh.face_offsets.back() != mesh.c)
@@ -259,6 +391,57 @@ void validate_mesh(const Mesh &mesh, const char *context) {
         if (mesh.primitive_materials[primitive] < -1)
             throw std::invalid_argument(
                 prefix + "material indices must be -1 or nonnegative");
+    }
+
+    auto validate_name_table = [&](
+        const std::vector<uint64_t> &offsets,
+        const std::vector<uint8_t> &utf8,
+        const char *name) {
+        if (offsets.empty()) {
+            if (!utf8.empty())
+                throw std::invalid_argument(
+                    prefix + name + " values require offsets");
+            return;
+        }
+        if (offsets.size() != mesh.num_primitives() + 1 ||
+            offsets[0] != 0 || offsets.back() != utf8.size())
+            throw std::invalid_argument(
+                prefix + name +
+                " offsets must span one value per primitive");
+        for (size_t row = 0; row + 1 < offsets.size(); ++row) {
+            const uint64_t begin_value = offsets[row];
+            const uint64_t end_value = offsets[row + 1];
+            if (end_value < begin_value || end_value > utf8.size())
+                throw std::invalid_argument(
+                    prefix + name + " offsets must be monotonic");
+            const size_t begin = static_cast<size_t>(begin_value);
+            const size_t end = static_cast<size_t>(end_value);
+            const char *data = utf8.empty()
+                                   ? ""
+                                   : reinterpret_cast<const char *>(
+                                         utf8.data());
+            validate_mesh_text(
+                std::string(
+                    data + begin, end - begin),
+                name);
+        }
+    };
+    validate_name_table(
+        mesh.primitive_object_offsets,
+        mesh.primitive_object_utf8,
+        "primitive_object_names");
+    validate_name_table(
+        mesh.primitive_group_offsets,
+        mesh.primitive_group_utf8,
+        "primitive_group_names");
+    if (mesh.has_material_set) {
+        validate_material_set(mesh.materials, context);
+        for (int32_t material : mesh.primitive_materials)
+            if (material >= 0 &&
+                static_cast<size_t>(material) >= mesh.materials.n)
+                throw std::invalid_argument(
+                    prefix +
+                    "primitive material index is outside MaterialSet");
     }
 
     if (!mesh_valid_frame(mesh.coordinate_frame))
@@ -370,6 +553,14 @@ void register_mesh(nb::module_ &module) {
             },
             reference_internal)
         .def_prop_ro(
+            "face_smoothing_groups",
+            [](const Mesh &mesh) {
+                return mesh_view(
+                    mesh.face_smoothing_groups,
+                    {mesh.has_smoothing_groups() ? mesh.f : 0});
+            },
+            reference_internal)
+        .def_prop_ro(
             "primitive_offsets",
             [](const Mesh &mesh) {
                 return mesh_view(
@@ -383,6 +574,50 @@ void register_mesh(nb::module_ &module) {
                 return mesh_view(
                     mesh.primitive_materials,
                     {mesh.primitive_materials.size()});
+            },
+            reference_internal)
+        .def_prop_ro(
+            "primitive_object_names",
+            &mesh_primitive_object_names)
+        .def_prop_ro(
+            "primitive_object_offsets",
+            [](const Mesh &mesh) {
+                return mesh_const_view(
+                    mesh.primitive_object_offsets,
+                    {mesh.primitive_object_offsets.size()});
+            },
+            reference_internal)
+        .def_prop_ro(
+            "primitive_object_utf8",
+            [](const Mesh &mesh) {
+                return mesh_const_view(
+                    mesh.primitive_object_utf8,
+                    {mesh.primitive_object_utf8.size()});
+            },
+            reference_internal)
+        .def_prop_ro(
+            "primitive_group_names",
+            &mesh_primitive_group_names)
+        .def_prop_ro(
+            "primitive_group_offsets",
+            [](const Mesh &mesh) {
+                return mesh_const_view(
+                    mesh.primitive_group_offsets,
+                    {mesh.primitive_group_offsets.size()});
+            },
+            reference_internal)
+        .def_prop_ro(
+            "primitive_group_utf8",
+            [](const Mesh &mesh) {
+                return mesh_const_view(
+                    mesh.primitive_group_utf8,
+                    {mesh.primitive_group_utf8.size()});
+            },
+            reference_internal)
+        .def_prop_ro(
+            "materials",
+            [](Mesh &mesh) -> MaterialSet & {
+                return mesh.materials;
             },
             reference_internal)
         .def_prop_ro(
@@ -413,6 +648,26 @@ void register_mesh(nb::module_ &module) {
         .def_prop_ro(
             "has_corner_colors",
             [](const Mesh &mesh) { return mesh.has_corner_colors(); })
+        .def_prop_ro(
+            "has_face_smoothing_groups",
+            [](const Mesh &mesh) {
+                return mesh.has_smoothing_groups();
+            })
+        .def_prop_ro(
+            "has_primitive_object_names",
+            [](const Mesh &mesh) {
+                return mesh.has_object_names();
+            })
+        .def_prop_ro(
+            "has_primitive_group_names",
+            [](const Mesh &mesh) {
+                return mesh.has_group_names();
+            })
+        .def_prop_ro(
+            "has_materials",
+            [](const Mesh &mesh) {
+                return mesh.has_material_set;
+            })
         .def(
             "__repr__",
             [](const Mesh &mesh) {
@@ -434,6 +689,10 @@ void register_mesh(nb::module_ &module) {
         "corner_colors"_a = nb::none(),
         "primitive_offsets"_a = nb::none(),
         "primitive_materials"_a = nb::none(),
+        "face_smoothing_groups"_a = nb::none(),
+        "primitive_object_names"_a = std::vector<std::string>{},
+        "primitive_group_names"_a = std::vector<std::string>{},
+        "materials"_a = nb::none(),
         "coordinate_frame"_a = "unknown",
         "scale_to_meters"_a = 1.0,
         "local_transform"_a = nb::none(),

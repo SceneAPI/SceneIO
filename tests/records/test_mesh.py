@@ -101,6 +101,127 @@ def test_minimal_and_empty_records_have_canonical_primitive_ranges():
     assert empty.primitive_offsets.tolist() == [0]
 
 
+def test_obj_metadata_domains_and_attached_material_set_are_preserved():
+    positions, offsets, indices = _arrays()
+    materials = _core.material_set(
+        ["first", "second"],
+        base_colors=np.array(
+            [[1, 0, 0, 1], [0, 1, 0, 0.5]], np.float32
+        ),
+        alpha_modes=["opaque", "blend"],
+    )
+    mesh = _core.mesh(
+        positions,
+        offsets,
+        indices,
+        primitive_offsets=np.array([0, 1, 3], np.uint64),
+        primitive_materials=np.array([1, -1], np.int32),
+        face_smoothing_groups=np.array([0, 7, 7], np.uint32),
+        primitive_object_names=["object", ""],
+        primitive_group_names=["front", "back"],
+        materials=materials,
+    )
+    assert mesh.has_face_smoothing_groups
+    assert mesh.face_smoothing_groups.tolist() == [0, 7, 7]
+    assert mesh.has_primitive_object_names
+    assert mesh.primitive_object_names == ["object", ""]
+    assert bytes(mesh.primitive_object_utf8) == b"object"
+    assert mesh.primitive_object_offsets.tolist() == [0, 6, 6]
+    assert mesh.has_primitive_group_names
+    assert mesh.primitive_group_names == ["front", "back"]
+    assert mesh.has_materials
+    assert mesh.materials.names == ["first", "second"]
+    np.testing.assert_array_equal(
+        mesh.materials.base_colors,
+        [[1, 0, 0, 1], [0, 1, 0, 0.5]],
+    )
+
+    materials.base_colors[:] = 0
+    np.testing.assert_array_equal(
+        mesh.materials.base_colors,
+        [[1, 0, 0, 1], [0, 1, 0, 0.5]],
+    )
+
+
+def test_obj_metadata_shape_text_and_material_reference_guards():
+    positions, offsets, indices = _arrays()
+    materials = _core.material_set(["only"])
+    cases = [
+        (
+            {"face_smoothing_groups": np.zeros(2, np.uint32)},
+            "face_smoothing_groups",
+        ),
+        (
+            {"primitive_object_names": ["only"]},
+            "one entry per primitive",
+        ),
+        (
+            {"primitive_group_names": ["a", "nul\0"]},
+            "NUL",
+        ),
+        (
+            {
+                "materials": materials,
+                "primitive_materials": np.array([1, -1], np.int32),
+            },
+            "outside MaterialSet",
+        ),
+    ]
+    for kwargs, message in cases:
+        with pytest.raises(ValueError, match=message):
+            _core.mesh(
+                positions,
+                offsets,
+                indices,
+                primitive_offsets=np.array([0, 1, 3], np.uint64),
+                **kwargs,
+            )
+
+
+def test_attached_material_views_keep_mesh_alive():
+    positions, offsets, indices = _arrays()
+    mesh = _core.mesh(
+        positions,
+        offsets,
+        indices,
+        materials=_core.material_set(["material"]),
+    )
+    materials = mesh.materials
+    factors = materials.base_colors
+    del mesh
+    del materials
+    gc.collect()
+    np.testing.assert_array_equal(factors, [[1, 1, 1, 1]])
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "primitive_object_offsets",
+        "primitive_object_utf8",
+        "primitive_group_offsets",
+        "primitive_group_utf8",
+    ],
+)
+def test_primitive_name_tables_are_zero_copy_read_only(name):
+    positions, offsets, indices = _arrays()
+    mesh = _core.mesh(
+        positions,
+        offsets,
+        indices,
+        primitive_offsets=np.array([0, 1, 3], np.uint64),
+        primitive_object_names=["one", ""],
+        primitive_group_names=["a", "b"],
+    )
+    first = getattr(mesh, name)
+    second = getattr(mesh, name)
+    assert first.ctypes.data == second.ctypes.data
+    assert not first.flags.writeable
+    if first.size:
+        with pytest.raises(ValueError):
+            first[0] = 1
+
+
 @pytest.mark.parametrize(
     ("field", "value", "message"),
     [
@@ -301,6 +422,7 @@ def test_constructor_owns_copies_and_accepts_noncontiguous_foreign_dtypes():
         "corner_uvs",
         "vertex_colors",
         "corner_colors",
+        "face_smoothing_groups",
         "primitive_offsets",
         "primitive_materials",
         "local_transform",

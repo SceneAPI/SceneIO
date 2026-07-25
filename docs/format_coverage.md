@@ -109,6 +109,7 @@ statically linked into `_core`.
 | `tga` | `Image` | R+W | **Pillow** + Truevision 2.0 specification | grayscale/RGB/RGBA and zero-origin palettes; raw/RLE; top/bottom orientation; deterministic RLE writer |
 | `ply` | `PointCloud` | R+W | independent NumPy/stdlib parser + **Open3D 0.19** | ASCII and binary LE/BE; all standard scalar input types; exact rgb8/rgb16; schema-aware Gaussian/point/mesh dispatch; binary point ranges |
 | `ply_mesh` | `Mesh` | R+W | independent struct/NumPy oracle | polygon-preserving ASCII and binary LE/BE; vertex/corner normals, UVs, RGBA; primitive/material ranges; coordinate metadata and local transforms |
+| `obj` | `Mesh` + `MaterialSet` | R+W | pinned **TinyObjLoader** + **trimesh 4** | polygon-preserving independent indices; vertex/corner normals and UVs; RGB8, object/group/smoothing domains; strict single-library MTL factors and texture maps; adjacent paired OBJ/MTL output |
 | `pcd` | `PointCloud` | R+W | independent NumPy/stdlib parser + **Open3D 0.19** | PCD 0.7 ASCII, little-endian binary, and LZF `binary_compressed`; organized dimensions and viewpoint; packed RGB/intensity; bounded binary point ranges |
 | `euroc_state` | `StateTrajectory` | R+W | independent stdlib CSV parser + EuRoC schema | exact int64-ns timestamps; p/q(WXYZ)/v/gyro-bias/accel-bias; canonical-header detection; bounded state ranges |
 | `opencv_yaml` / `opencv_xml` | `CameraRig` | R+W | **PyYAML** / stdlib ElementTree | exact K/D plus optional R/P; schema-signature detection; generic YAML/XML extensions intentionally unclaimed |
@@ -118,20 +119,21 @@ statically linked into `_core`.
 | `colmap_db` | `ColmapDatabase` (`FeatureSet` + `MatchGraph`) | R+W | stdlib **sqlite3** + **pycolmap 4.1.1** | current six-table cameras/images/features/matches/two-view geometry subset; exact pair ids and absent/empty BLOB state; transactional writes; one-image/one-pair selectors |
 
 ### ⬜ Pending — later phases (meshes + niche)
-glTF / GLB (+Draco) · OBJ / STL / OFF · USD / USDZ · OpenVDB · Zarr · Parquet · AVIF / JPEG‑XL.
+glTF / GLB (+Draco) · STL / OFF · USD / USDZ · OpenVDB · Zarr · Parquet · AVIF / JPEG‑XL.
 
 ### 🟡 In progress — Phase 7 (hardening)
-✅ mmap-backed reads for all 39 buffer codecs (SOG additionally supports an
-unbundled native multi-file path; COLMAP DB and the two COLMAP directory codecs
-read paths directly in native code) · ✅ zero-copy read-only mapped
+✅ mmap-backed reads for all 39 single-buffer codecs plus paired OBJ/MTL
+mappings (SOG additionally supports an unbundled native multi-file path; COLMAP
+DB and the two COLMAP directory codecs read paths directly in native code) · ✅
+zero-copy read-only mapped
 ndarray views for native NPY/FLO payloads (PFM row-flips into owned storage) · ✅ bytes/mmap differential +
 scheduled 100-case backing-store mutation sweep · ✅ ASan/UBSan/LSan workflow
 (local and branch Linux runs green) · ⬜ randomized oracle-triangulated
 fuzzing · ✅ direct file-sink writes · ✅ bounded measured-path workers
 (XYZ/LAS/EXR/PNG16/WebP lossless) · ✅ partial/lazy reads (`inspect` covers all
-42; bounded pixel/point/face/state/COLMAP-image/COLMAP-pair/tensor subsets cover
+43; bounded pixel/point/face/state/COLMAP-image/COLMAP-pair/tensor subsets cover
 capable containers) · ⬜ GPU-via-DLPack (torch-cuda/cupy) · ✅ expanded
-42-codec benchmark/oracles.
+43-codec benchmark/oracles.
 
 ## Infrastructure & capabilities
 
@@ -140,11 +142,11 @@ capable containers) · ⬜ GPU-via-DLPack (torch-cuda/cupy) · ✅ expanded
 | nanobind + scikit‑build‑core build | ✅ | abi3/cp312, `NB_STATIC` |
 | cibuildwheel release path | ✅ | Linux/macOS/Windows; `publish.yml` |
 | CI parity (oracles in CI) | ✅ | gsply + pycolmap; runs on the branch |
-| Codec registry + `read`/`write`/`inspect`/`read_partial`/`detect` | ✅ | inspection covers all 42; bounded partial hooks are capability-specific |
+| Codec registry + `read`/`write`/`inspect`/`read_partial`/`detect` | ✅ | inspection covers all 43; bounded partial hooks are capability-specific |
 | Zero‑copy numpy + torch (DLPack) | ✅ | validated per codec |
 | Conventions‑as‑metadata + write guards | ✅ | record‑don't‑convert enforced |
 | Parity kit (`sceneio.testing.parity`) | ✅ | cross‑impl + round‑trip + convention pins |
-| Vendored deps (miniz, zstd, nlohmann/json, fast_float) | ✅ | permissive; statically linked / header‑only |
+| Vendored deps (miniz, zstd, nlohmann/json, fast_float, tinyobjloader) | ✅ | permissive; statically linked / header‑only |
 | Vendored image libs (lodepng/stb/tinyexr/libwebp) | ✅ | permissive, pinned/local-patched; no system libs, numpy‑only runtime kept |
 | Feature‑flagged optional C libs (`SCENEIO_WITH_*`) | ⬜ | planned for HDF5, TIFF, E57, Arrow, USD, and OpenVDB; LAZ uses vendored LAZperf instead |
 | mmap / streaming sources | ✅ | mmap reads + raw NPY/FLO views + direct file-sink writes complete |
@@ -188,6 +190,7 @@ incremental.
 | `npy` | file | yes | yes | yes | - | yes | yes | no | - |
 | `npz` | file | yes | yes | yes | - | yes | yes | no | - |
 | `nvm` | file | yes | yes | yes | - | yes | yes | no | - |
+| `obj` | multi_file | yes | yes | yes | - | yes | yes | no | - |
 | `opencv_xml` | file | yes | yes | yes | - | yes | yes | no | - |
 | `opencv_yaml` | file | yes | yes | yes | - | yes | yes | no | - |
 | `openmvg` | file | yes | yes | yes | - | yes | yes | no | - |

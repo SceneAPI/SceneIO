@@ -13,6 +13,7 @@
 #include <vector>
 
 #include "io/common.hpp"
+#include "records/material_set.hpp"
 
 struct Mesh {
     size_t n = 0;
@@ -29,12 +30,25 @@ struct Mesh {
     std::vector<float> corner_uvs;      // c*2 or empty
     std::vector<uint8_t> vertex_colors; // n*4 RGBA or empty
     std::vector<uint8_t> corner_colors; // c*4 RGBA or empty
+    std::vector<uint32_t> face_smoothing_groups; // f or empty; 0 = off
 
     // Primitive ranges partition faces. Empty meshes have {0} and no material
     // rows. Non-empty meshes always have at least one primitive. -1 denotes no
     // material; nonnegative values index a future/attached MaterialSet.
     std::vector<uint64_t> primitive_offsets; // p+1, face-domain offsets
     std::vector<int32_t> primitive_materials; // p
+    // Optional UTF-8 object/group names in the primitive domain. Empty string
+    // entries are meaningful and use repeated offsets.
+    std::vector<uint64_t> primitive_object_offsets; // p+1 or empty
+    std::vector<uint8_t> primitive_object_utf8;
+    std::vector<uint64_t> primitive_group_offsets; // p+1 or empty
+    std::vector<uint8_t> primitive_group_utf8;
+
+    // Material factors and texture references are attached when the source
+    // format can carry them. Detached nonnegative primitive indices remain
+    // valid for formats such as PLY that preserve ids but no material table.
+    bool has_material_set = false;
+    MaterialSet materials;
 
     // Recorded conventions. A codec that cannot represent a non-default value
     // must reject it rather than silently converting or dropping it.
@@ -58,6 +72,15 @@ struct Mesh {
     bool has_corner_uvs() const { return !corner_uvs.empty(); }
     bool has_vertex_colors() const { return !vertex_colors.empty(); }
     bool has_corner_colors() const { return !corner_colors.empty(); }
+    bool has_smoothing_groups() const {
+        return !face_smoothing_groups.empty();
+    }
+    bool has_object_names() const {
+        return !primitive_object_offsets.empty();
+    }
+    bool has_group_names() const {
+        return !primitive_group_offsets.empty();
+    }
 };
 
 inline bool mesh_valid_frame(const std::string &value) {
@@ -66,3 +89,11 @@ inline bool mesh_valid_frame(const std::string &value) {
 }
 
 void validate_mesh(const Mesh &mesh, const char *context = "mesh");
+void assign_mesh_primitive_names(
+    Mesh &mesh,
+    const std::vector<std::string> &object_names,
+    const std::vector<std::string> &group_names);
+std::vector<std::string> mesh_primitive_object_names(
+    const Mesh &mesh);
+std::vector<std::string> mesh_primitive_group_names(
+    const Mesh &mesh);

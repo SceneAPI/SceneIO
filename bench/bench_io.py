@@ -2,7 +2,7 @@
 
 Measures, per codec, encode (write) + decode (read) throughput (MB/s over the raw
 payload) and peak Python allocation (tracemalloc), for sceneio._core vs the oracle
-library where one exists, on representative payloads for all 42 codecs. Read
+library where one exists, on representative payloads for all 43 codecs. Read
 measurements retain the legacy whole-file bytes/copy-decode path beside the
 public registry mmap path, so their peak delta captures the input copy O1
 removes and, for NPY/FLO, the decoded-array copy O2 removes. Write measurements
@@ -267,6 +267,40 @@ def _mesh_ply(n):
             corner_colors=corner_colors,
             primitive_offsets=primitive_offsets,
             primitive_materials=primitive_materials,
+        ),
+        payload,
+    )
+
+
+def _mesh_obj(n):
+    rng = np.random.default_rng(29)
+    vertices = max(3, n)
+    faces = max(1, vertices // 3)
+    corners = faces * 3
+    positions = rng.standard_normal((vertices, 3)).astype(np.float32)
+    indices = (
+        np.arange(corners, dtype=np.uint64) % vertices
+    ).reshape(faces, 3)
+    offsets = np.arange(0, corners + 1, 3, dtype=np.uint64)
+    vertex_normals = rng.standard_normal((vertices, 3)).astype(np.float32)
+    vertex_uvs = rng.random((vertices, 2), dtype=np.float32)
+    vertex_colors = rng.integers(0, 256, (vertices, 4), dtype=np.uint8)
+    vertex_colors[:, 3] = 255
+    payload = {
+        "positions": positions,
+        "faces": indices,
+        "vertex_normals": vertex_normals,
+        "vertex_uvs": vertex_uvs,
+        "vertex_colors": vertex_colors,
+    }
+    return (
+        _core.mesh(
+            positions,
+            offsets,
+            indices.reshape(-1),
+            vertex_normals=vertex_normals,
+            vertex_uvs=vertex_uvs,
+            vertex_colors=vertex_colors,
         ),
         payload,
     )
@@ -822,6 +856,31 @@ def _trimesh_ply_r(data):
     return trimesh.load(
         io.BytesIO(data),
         file_type="ply",
+        process=False,
+        maintain_order=True,
+        force="mesh",
+    )
+
+
+def _trimesh_obj_w(payload):
+    mesh = trimesh.Trimesh(
+        vertices=payload["positions"],
+        faces=payload["faces"],
+        vertex_normals=payload["vertex_normals"],
+        vertex_colors=payload["vertex_colors"],
+        process=False,
+    )
+    return trimesh.exchange.obj.export_obj(
+        mesh,
+        include_normals=True,
+        include_color=True,
+    ).encode()
+
+
+def _trimesh_obj_r(data):
+    return trimesh.load(
+        io.BytesIO(data),
+        file_type="obj",
         process=False,
         maintain_order=True,
         force="mesh",
@@ -1683,6 +1742,15 @@ def _specs(scale, pose_bundle=None):
             _core.read_ply_mesh,
             (_trimesh_ply_w if trimesh else None),
             (_trimesh_ply_r if trimesh else None),
+            lambda rec, p: sum(value.nbytes for value in p.values()),
+        ),
+        Spec(
+            "obj",
+            lambda: _mesh_obj(max(3, points // 3)),
+            _core.write_obj,
+            _core.read_obj,
+            (_trimesh_obj_w if trimesh else None),
+            (_trimesh_obj_r if trimesh else None),
             lambda rec, p: sum(value.nbytes for value in p.values()),
         ),
         Spec(
@@ -3559,7 +3627,7 @@ def _run_benchmark(args, tmp):
             print(f"{spec.id:<14} ERROR: {type(e).__name__}: {e}")
 
     if not args.only:
-        assert len(specs) + len(directory_specs) + int(include_colmap_db) == 42
+        assert len(specs) + len(directory_specs) + int(include_colmap_db) == 43
     print("\nMB/s over raw payload; fileMB = encoded size (= the whole-file copy O1/O3 remove).")
     print("sioR = in-memory copy decode; pathR = public registry mmap read/view.")
     print("bPeakMB/mPeakMB = peak Python allocation for bytes/mmap reads (O1 delta).")

@@ -18,6 +18,7 @@ import numpy as np
 
 from sceneio import _core
 from sceneio.errors import SceneIoError
+from sceneio.io import _obj as _obj_adapter
 from sceneio.io._ply import classify_ply
 
 
@@ -656,6 +657,45 @@ register(
             "implicit_triangulation",
             "texture_file_comments_without_material_set",
             "obj_info_metadata",
+        ),
+    )
+)
+register(
+    Codec(
+        "obj",
+        (".obj",),
+        _obj_adapter.read_obj,
+        _obj_adapter.write_obj,
+        record=_core.Mesh,
+        datatype="mesh",
+        inspect=_obj_adapter.inspect_obj,
+        container_kind="multi_file",
+        supported_features=(
+            "polygon_boundaries",
+            "negative_indices",
+            "vertex_normals",
+            "corner_normals",
+            "vertex_uvs",
+            "corner_uvs",
+            "vertex_rgb8",
+            "object_names",
+            "single_group_names",
+            "smoothing_groups",
+            "single_material_library",
+            "pbr_mtl_factors",
+            "mtl_texture_maps",
+            "texture_clamp",
+        ),
+        unsupported_features=(
+            "line_and_point_primitives",
+            "freeform_geometry",
+            "multiple_simultaneous_groups",
+            "multiple_material_libraries",
+            "unknown_directives",
+            "implicit_triangulation",
+            "corner_colors",
+            "vertex_alpha",
+            "texture_transform_options",
         ),
     )
 )

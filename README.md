@@ -157,8 +157,8 @@ points = sceneio.read_partial(
 )
 
 # `.ply` detection reads the header schema: ordinary vertices become a
-# PointCloud, 3DGS properties remain a GaussianCloud, and mesh faces fail
-# explicitly until the Mesh record lands. Binary point ranges are bounded.
+# PointCloud, 3DGS properties remain a GaussianCloud, and face elements become
+# a polygon-preserving Mesh. Binary point and mesh-face ranges are bounded.
 cloud = sceneio.read("scan.ply")
 cloud_part = sceneio.read_partial("scan.ply", points=(10_000, 20_000))
 assert sceneio.inspect("scan.ply").metadata["encoding"] in {
@@ -166,6 +166,12 @@ assert sceneio.inspect("scan.ply").metadata["encoding"] in {
     "binary_little_endian",
     "binary_big_endian",
 }
+
+# OBJ resolves its single relative MTL reference beside the OBJ. Writing a Mesh
+# with an attached MaterialSet creates deterministic adjacent `.obj` + `.mtl`
+# outputs without output-sized Python bytes.
+mesh = sceneio.read("asset.obj")
+sceneio.write(mesh, "asset-copy.obj")
 
 # PCD 0.7 preserves organized WIDTH/HEIGHT and VIEWPOINT. Public writes use
 # little-endian binary; the core also supports ASCII and LZF binary_compressed.

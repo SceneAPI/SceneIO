@@ -799,7 +799,9 @@ print(max(0, peak[0] - baseline))
     return int(completed.stdout.strip())
 
 
-def test_inspect_matches_decoded_metadata_all_42_codecs(tmp_path, buffer_codecs):
+def test_inspect_matches_decoded_metadata_for_buffer_and_directory_codecs(
+    tmp_path, buffer_codecs
+):
     assert len(buffer_codecs) == 39
     for spec in buffer_codecs:
         path = tmp_path / f"inspect-{spec.id}.data"

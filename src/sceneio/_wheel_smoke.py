@@ -205,6 +205,52 @@ def _mesh_ply(root: Path) -> None:
     assert np.array_equal(selected.primitive_materials, [-1])
 
 
+def _obj_mtl(root: Path) -> None:
+    materials = _core.material_set(
+        ["matte"],
+        base_colors=np.array([[0.25, 0.5, 0.75, 1]], np.float32),
+        texture_materials=np.array([0], np.uint64),
+        texture_semantics=["base_color"],
+        texture_paths=["albedo.png"],
+    )
+    mesh = _core.mesh(
+        np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0]], np.float32),
+        np.array([0, 3], np.uint64),
+        np.array([0, 1, 2], np.uint64),
+        vertex_normals=np.array([[0, 0, 1]] * 3, np.float32),
+        vertex_uvs=np.array([[0, 0], [1, 0], [0, 1]], np.float32),
+        vertex_colors=np.array(
+            [[255, 0, 0, 255], [0, 255, 0, 255], [0, 0, 255, 255]],
+            np.uint8,
+        ),
+        face_smoothing_groups=np.array([3], np.uint32),
+        primitive_offsets=np.array([0, 1], np.uint64),
+        primitive_materials=np.array([0], np.int32),
+        primitive_object_names=["triangle"],
+        primitive_group_names=["front"],
+        materials=materials,
+    )
+    assert sceneio.MaterialSet is _core.MaterialSet
+    path = root / "mesh.obj"
+    sceneio.write(mesh, path)
+    assert (root / "mesh.mtl").is_file()
+    assert sceneio.detect(path) == "obj"
+    decoded = sceneio.read(path)
+    assert np.array_equal(decoded.positions, mesh.positions)
+    assert np.array_equal(decoded.face_indices, mesh.face_indices)
+    assert np.array_equal(decoded.vertex_normals, mesh.vertex_normals)
+    assert np.array_equal(decoded.vertex_uvs, mesh.vertex_uvs)
+    assert np.array_equal(decoded.vertex_colors, mesh.vertex_colors)
+    assert decoded.primitive_object_names == ["triangle"]
+    assert decoded.primitive_group_names == ["front"]
+    assert decoded.materials.names == ["matte"]
+    assert decoded.materials.texture_paths == ["albedo.png"]
+    inspected = sceneio.inspect(path)
+    assert inspected.metadata["num_faces"] == 1
+    assert inspected.metadata["num_materials"] == 1
+    assert inspected.metadata["num_textures"] == 1
+
+
 def _point_depth_and_flow(root: Path, values: np.ndarray) -> None:
     points = root / "points.pts"
     sceneio.write(_core.point_cloud(values[:, :3]), points)
@@ -501,6 +547,7 @@ def main() -> None:
         _sog(root)
         _ksplat(root)
         _mesh_ply(root)
+        _obj_mtl(root)
         _point_depth_and_flow(root, values)
         _reconstruction_and_images(root)
         _state_trajectory(root)

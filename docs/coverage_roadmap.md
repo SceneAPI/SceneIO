@@ -169,7 +169,7 @@ Columns: **Ext/id** · **Record** · **Lib/oracle (license)** · **R/W** ·
 | Format | Record | Lib / oracle | R/W | Notes |
 |---|---|---|---|---|
 | ✅ PLY mesh | `Mesh` | independent struct/NumPy + trimesh (MIT) | R+W | polygon-preserving; vertex/corner attributes and primitive/material ranges |
-| ⬜ OBJ (+MTL) | `Mesh` | tinyobjloader/trimesh (MIT) | R+W | fast_float; ignore/pass materials |
+| ✅ OBJ (+MTL) | `Mesh` + `MaterialSet` | pinned tinyobjloader/trimesh (MIT) | R+W | strict polygon-preserving independent indices; factors/textures and sampler clamp preserved; mmap read, paired direct-sink write, metadata inspect |
 | ⬜ STL | `Mesh` | numpy‑stl/trimesh | R+W | ascii + binary |
 | ⬜ OFF | `Mesh` | trimesh | R+W | trivial |
 | ⬜ glTF / GLB (+Draco) | `Mesh` | pygltflib (MIT); Draco (Apache) | R+W | json+bin; Draco optional |

@@ -863,3 +863,40 @@ unselected face/corner arrays.
 The complete one-run 42-codec harness finishes without failures; its mesh row
 measured 855 MB/s write, 328 MB/s in-memory decode, 289 MB/s public mmap
 decode, 0.142 ms inspection, and a 1.36x face-selection speedup.
+
+## Polygon-preserving OBJ/MTL baseline — 2026-07-25
+
+OBJ/MTL raises the harness to 43 codecs and the buffer-backed benchmark sweep
+to 40. The representative mesh contains 333,333 vertices and 111,111 triangle
+faces with vertex-domain normals, UVs, and RGB8. Its canonical buffers total
+14.7 MB and encode to a 53.8 MB deterministic OBJ. Five-run local MSVC medians
+were:
+
+```text
+operation                                 result
+----------------------------------------------------------------
+deterministic write before formatter fix   7.4 MB/s
+locale-independent deterministic write   20.4 MB/s (2.78x)
+in-memory decode                          18.5 MB/s
+public mmap decode                        12.7 MB/s
+trimesh decode                             9.1 MB/s
+metadata inspection                    544.790 ms (2.12x vs full)
+```
+
+Replacing one locale-classic stream construction per scalar with an explicit
+C numeric locale per encode and bounded canonical float appends produced the
+writer gain while preserving byte-for-byte determinism across process locales
+and float32 round trips. The public mmap path removes the 53.8 MB
+whole-file Python allocation (53.83 MB to 0.013 MB traced), and the direct sink
+removes the same output-sized write allocation (53.83 MB to 0.005 MB traced)
+while matching the buffer writer. Inspection retains only directive counts and
+material/texture metadata; sampled RSS falls from 265.5 MB for a full decode to
+53.8 MB. No face selector is claimed: headerless OBJ requires a complete
+directive/index scan, and its independent attribute pools need an explicit
+subset contract before a partial result can be lossless.
+
+The independent Trimesh writer/reader is measured alongside hand-built
+polygon, negative-index, object/group/smoothing, MTL-factor, and texture-map
+fixtures. Both core and public-path suites preserve vertex- versus corner-domain
+normal/UV indexing, and malformed/lossy constructs reject rather than being
+silently triangulated or discarded.

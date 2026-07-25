@@ -7,10 +7,11 @@
   calibration, `PoseGraph`/g2o, and the `FeatureSet`/`MatchGraph`-backed
   COLMAP database, SuperSplat compressed PLY, PlayCanvas SOG v2, and KSplat
   v0.1 are complete locally. The polygon-preserving `Mesh` record and generic
-  mesh PLY are also complete locally; `MaterialSet` begins with OBJ/MTL.
+  mesh PLY are also complete locally; canonical `MaterialSet` and strict
+  polygon-preserving OBJ/MTL are complete locally.
   Cross-platform wheel and instrumented validation remains a user-gated remote
   action.
-- **Current branch:** 42 compiled codecs, all read/write and inspectable, with
+- **Current branch:** 43 compiled codecs, all read/write and inspectable, with
   bounded partial reads where their containers permit them.
 - **Scope:** close every unblocked format gap declared by SceneIO's coverage
   documents without reimplementing the 0.2.0 codec tier.
@@ -987,7 +988,7 @@ Completion evidence:
   loss. Fable is unavailable locally and remote instrumented/wheel validation
   remains user-gated.
 
-#### G3.2 OBJ/MTL
+#### G3.2 OBJ/MTL — complete locally
 
 Implementation:
 
@@ -1006,6 +1007,50 @@ Implementation:
 Oracle:
 
 - trimesh and TinyObjLoader's fixtures in tests.
+
+Completion evidence:
+
+- `MaterialSet` stores unique UTF-8 material names, linear base/emissive
+  factors, metallic/roughness, alpha mode/cutoff, and a separate texture-binding
+  domain with semantic, relative path, UV-set, wrap, and filter metadata.
+  Numeric fields expose writable zero-copy views while string offset/value
+  tables remain read-only; 51 record tests cover shape/range/enumeration,
+  duplicate binding, lifetime, and mutation/revalidation behavior.
+- TinyObjLoader is pinned at
+  `45636bdcef1a4fec140346b90c0b50bf0bc3e23b`; its MIT, bundled ISC, and embedded
+  fast_float MIT/Apache-2.0/BSL-1.0 notices are recorded. The embedded
+  fast_float is translation-unit namespaced so it cannot collide with
+  SceneIO's separately pinned version.
+- `obj` preserves polygon boundaries, negative and independent indices,
+  vertex- versus corner-domain normals/UVs, exact RGB8, object/group runs,
+  smoothing groups, material assignment, PBR MTL factors, and the supported
+  texture-map subset. Unknown or unrepresentable directives, material fields,
+  mixed domains, free-form/line/point primitives, alpha cutoff/mask, texture
+  options, and implicit triangulation reject explicitly.
+- The public multi-file adapter maps OBJ and its single relative MTL without
+  changing the process working directory. Paired direct-sink writes stage both
+  files and publish the MTL before the OBJ entry point, restoring prior
+  destinations after a failed install. Inspection counts geometry, materials,
+  and textures without constructing a `Mesh` or retaining per-face metadata.
+- Sixty-one codec tests include hand-built polygon/negative-index and MTL
+  fixtures, deterministic core/public round trips, Trimesh cross-consumption,
+  mmap lifetime and mutation isolation, malformed/fidelity guards, randomized
+  vertex/corner meshes, scheduled bytes-versus-mmap mutation fuzzing, large
+  traced-allocation checks, non-truncating paired output, and comma-decimal
+  process-locale independence.
+- On the 14.7 MB canonical fixture, five-run local MSVC medians are 20.4 MB/s
+  write, 18.5 MB/s in-memory decode, 12.7 MB/s public mmap decode, and
+  544.790 ms inspection (2.12× faster than full decode). Mmap and direct-sink
+  traced allocations fall from 53.83 MB to 0.013/0.005 MB. Replacing
+  per-scalar stream construction with bounded canonical float appends under an
+  explicit C numeric locale improved deterministic write throughput 2.78×
+  without changing output semantics.
+- Final native-lifetime, format-correctness, and test-soundness review found
+  and fixed private fast-float namespace collisions, exact RGB8 and
+  alpha-cutoff fidelity gaps, texture-row reordering, paired-output rollback,
+  process-locale-dependent numeric output, and test-collection retention of
+  compiled records. No local review finding remains; Fable is unavailable
+  locally, and the remote instrumented/wheel matrix remains user-gated.
 
 #### G3.3 STL and OFF
 
@@ -1677,18 +1722,18 @@ estimates.
 
 The current local checkpoint is:
 
-- 42 compiled registry codecs with read, write, inspect, mmap or path-native
+- 43 compiled registry codecs with read, write, inspect, mmap or path-native
   input, and direct file sinks;
 - O0-O5 complete for the existing codec tier;
 - `FlowField`, typed FLO, typed PFM depth, typed PNG depth, and typed scalar EXR
   depth complete;
-- 2,458 local tests pass with 4 documented platform/optional skips, Ruff and
+- 2,584 local tests pass with 4 documented platform/optional skips, Ruff and
   `git diff --check` are clean;
-- the complete 42-codec benchmark and packaged NumPy-only wheel smoke pass;
+- the complete 43-codec benchmark and packaged NumPy-only wheel smoke pass;
 - generic point PLY, PCD, StateTrajectory/EuRoC, CameraRig calibration,
   PoseGraph/g2o, the COLMAP feature database, SuperSplat compressed PLY,
-  PlayCanvas SOG v2, KSplat v0.1, the canonical `Mesh` record, and generic
-  mesh PLY are complete locally;
+  PlayCanvas SOG v2, KSplat v0.1, the canonical `Mesh` record, generic mesh PLY,
+  canonical `MaterialSet`, and OBJ/MTL are complete locally;
 - instrumented Linux and Linux/macOS wheels have not yet been run for this
   dependency wave because pushing and dispatching remote workflows are
   user-gated.
@@ -2315,7 +2360,7 @@ Wave B exit:
 The mesh record is the gate; codec work must not invent format-specific
 topology containers.
 
-1. **`Mesh` — complete locally; `MaterialSet` — next with OBJ/MTL**
+1. **`Mesh` and `MaterialSet` — complete locally**
    - represent polygon boundaries with offsets plus indices;
    - distinguish vertex, corner, face, primitive, and material domains;
    - preserve normals, UV sets, colors, material ranges, transforms, texture
@@ -2327,7 +2372,7 @@ topology containers.
      vertex/face properties;
    - dispatch point, mesh, and Gaussian schemas without extension-order
      ambiguity.
-3. **OBJ/MTL**
+3. **OBJ/MTL — complete locally**
    - preserve separate position/UV/normal indices, polygon boundaries,
      smoothing groups, objects/groups, material assignment, negative indices,
      and relative resource resolution;

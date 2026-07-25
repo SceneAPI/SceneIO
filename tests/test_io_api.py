@@ -272,3 +272,15 @@ def test_mesh_ply_roundtrip_via_public_api(tmp_path):
     np.testing.assert_array_equal(decoded.positions, positions)
     np.testing.assert_array_equal(decoded.face_offsets, [0, 4])
     np.testing.assert_array_equal(decoded.face_indices, [0, 1, 2, 3])
+
+
+def test_mesh_obj_roundtrip_via_public_api(tmp_path):
+    mesh, positions = _mesh()
+    path = tmp_path / "mesh.obj"
+    sceneio.write(mesh, path)
+    assert sceneio.detect(path) == "obj"
+    decoded = sceneio.read(path)
+    assert isinstance(decoded, sceneio.Mesh)
+    np.testing.assert_array_equal(decoded.positions, positions)
+    np.testing.assert_array_equal(decoded.face_offsets, [0, 4])
+    np.testing.assert_array_equal(decoded.face_indices, [0, 1, 2, 3])

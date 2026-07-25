@@ -5,12 +5,13 @@ Status: complete — O0–O5 landed. Scope: the compiled `sceneio._core` I/O pat
 hardening/perf work concrete).
 
 Post-0.2 format expansion inherits the same gates. The registry currently has
-42 codecs (39 buffer-backed entries, one path-native SQLite database, and two
+43 codecs (40 buffer-backed entries, one path-native SQLite database, and two
 COLMAP directory-only entries; SOG also exposes an unbundled multi-file path).
-The latest record wave adds the four calibration formats
-over `CameraRig`, g2o over `PoseGraph`, and `colmap_db` over
-`ColmapDatabase`/`FeatureSet`/`MatchGraph`; each inherits direct file sinks,
-metadata inspection, partial reads where meaningful, and the all-codec
+The latest record waves add the four calibration formats over `CameraRig`, g2o
+over `PoseGraph`, `colmap_db` over
+`ColmapDatabase`/`FeatureSet`/`MatchGraph`, polygonal PLY over `Mesh`, and
+OBJ/MTL over `Mesh` + `MaterialSet`; each inherits direct file sinks, metadata
+inspection, partial reads where meaningful, and the all-codec
 differential/memory harness.
 
 The representative COLMAP database fixture contains 9.65 MB of logical
@@ -18,6 +19,15 @@ features and match data in a 9.92 MB SQLite file. On local MSVC it measured
 1.41 GB/s full native read, 0.81 ms metadata inspection (8.50× faster), and
 0.53/0.42 ms one-image/one-pair reads (13.10×/16.31× faster), while traced
 Python allocation stayed below 0.05 MB on every native path.
+
+The representative OBJ fixture contains 14.7 MB of canonical mesh arrays and
+encodes to 53.8 MB. Its mapped public read removes the entire 53.8 MB Python
+input allocation, its direct sink removes the matching output allocation, and
+metadata inspection is 2.12× faster with sampled RSS reduced from 265.5 MB to
+53.8 MB. Replacing per-scalar stream construction with bounded canonical float
+appends under an explicit C numeric locale improved deterministic write
+throughput from 7.4 to 20.4 MB/s without changing round-trip values or output
+when the process uses a comma-decimal locale.
 
 **Committed scope (decided):** the **full O0–O5 program**, applied **uniformly to
 all 23 codecs**, with **qualitative** success criteria — every step must show a
