@@ -2,7 +2,7 @@
 
 Measures, per codec, encode (write) + decode (read) throughput (MB/s over the raw
 payload) and peak Python allocation (tracemalloc), for sceneio._core vs the oracle
-library where one exists, on representative payloads for all 41 codecs. Read
+library where one exists, on representative payloads for all 42 codecs. Read
 measurements retain the legacy whole-file bytes/copy-decode path beside the
 public registry mmap path, so their peak delta captures the input copy O1
 removes and, for NPY/FLO, the decoded-array copy O2 removes. Write measurements
@@ -66,6 +66,10 @@ try:
     import open3d as o3d
 except Exception:
     o3d = None
+try:
+    import trimesh
+except Exception:
+    trimesh = None
 try:
     import psutil
 except Exception:
@@ -212,6 +216,58 @@ def _pc_ply(n):
     payload = {"positions": xyz, "normals": normals, "colors": colors}
     return (
         _core.point_cloud(xyz, colors=colors, normals=normals),
+        payload,
+    )
+
+
+def _mesh_ply(n):
+    rng = np.random.default_rng(23)
+    n = max(3, n)
+    faces = max(1, n // 2)
+    corners = faces * 3
+    positions = rng.standard_normal((n, 3)).astype(np.float32)
+    indices = (np.arange(corners, dtype=np.uint64) % n).reshape(faces, 3)
+    offsets = np.arange(0, corners + 1, 3, dtype=np.uint64)
+    vertex_normals = rng.standard_normal((n, 3)).astype(np.float32)
+    vertex_uvs = rng.random((n, 2), dtype=np.float32)
+    vertex_colors = rng.integers(0, 256, (n, 4), dtype=np.uint8)
+    corner_normals = rng.standard_normal((corners, 3)).astype(np.float32)
+    corner_uvs = rng.random((corners, 2), dtype=np.float32)
+    corner_colors = rng.integers(0, 256, (corners, 4), dtype=np.uint8)
+    primitive_offsets = (
+        np.array([0, faces], np.uint64)
+        if faces == 1
+        else np.array([0, faces // 2, faces], np.uint64)
+    )
+    primitive_materials = np.arange(
+        len(primitive_offsets) - 1, dtype=np.int32
+    )
+    payload = {
+        "positions": positions,
+        "faces": indices,
+        "vertex_normals": vertex_normals,
+        "vertex_uvs": vertex_uvs,
+        "vertex_colors": vertex_colors,
+        "corner_normals": corner_normals,
+        "corner_uvs": corner_uvs,
+        "corner_colors": corner_colors,
+        "primitive_offsets": primitive_offsets,
+        "primitive_materials": primitive_materials,
+    }
+    return (
+        _core.mesh(
+            positions,
+            offsets,
+            indices.reshape(-1),
+            vertex_normals=vertex_normals,
+            corner_normals=corner_normals,
+            vertex_uvs=vertex_uvs,
+            corner_uvs=corner_uvs,
+            vertex_colors=vertex_colors,
+            corner_colors=corner_colors,
+            primitive_offsets=primitive_offsets,
+            primitive_materials=primitive_materials,
+        ),
         payload,
     )
 
@@ -747,6 +803,29 @@ def _openexr_r(data):
             }
     finally:
         os.remove(path)
+
+
+def _trimesh_ply_w(payload):
+    mesh = trimesh.Trimesh(
+        vertices=payload["positions"],
+        faces=payload["faces"],
+        vertex_normals=payload["vertex_normals"],
+        vertex_colors=payload["vertex_colors"],
+        process=False,
+    )
+    return trimesh.exchange.ply.export_ply(
+        mesh, encoding="binary_little_endian"
+    )
+
+
+def _trimesh_ply_r(data):
+    return trimesh.load(
+        io.BytesIO(data),
+        file_type="ply",
+        process=False,
+        maintain_order=True,
+        force="mesh",
+    )
 
 
 def _gsply_ply_w(payload):
@@ -1598,6 +1677,15 @@ def _specs(scale, pose_bundle=None):
             lambda rec, p: sum(value.nbytes for value in p.values()),
         ),
         Spec(
+            "ply_mesh",
+            lambda: _mesh_ply(max(3, points // 3)),
+            _core.write_ply_mesh,
+            _core.read_ply_mesh,
+            (_trimesh_ply_w if trimesh else None),
+            (_trimesh_ply_r if trimesh else None),
+            lambda rec, p: sum(value.nbytes for value in p.values()),
+        ),
+        Spec(
             "pcd",
             lambda: _pc_ply(points),
             _core.write_pcd,
@@ -1870,6 +1958,13 @@ def _directory_size(path):
 
 
 def _partial_request(codec_id, info, full_record=None):
+    if codec_id == "ply_mesh":
+        faces = info.metadata["num_faces"]
+        if faces == 0:
+            return None
+        selected = max(1, faces // 16)
+        start = (faces - selected) // 2
+        return {"faces": (start, start + selected)}
     if codec_id in {"pfm", "netpbm", "webp", "flo", "dmb"}:
         height, width = info.shape[:2]
         out_height = max(1, height // 8)
@@ -3464,7 +3559,7 @@ def _run_benchmark(args, tmp):
             print(f"{spec.id:<14} ERROR: {type(e).__name__}: {e}")
 
     if not args.only:
-        assert len(specs) + len(directory_specs) + int(include_colmap_db) == 41
+        assert len(specs) + len(directory_specs) + int(include_colmap_db) == 42
     print("\nMB/s over raw payload; fileMB = encoded size (= the whole-file copy O1/O3 remove).")
     print("sioR = in-memory copy decode; pathR = public registry mmap read/view.")
     print("bPeakMB/mPeakMB = peak Python allocation for bytes/mmap reads (O1 delta).")
@@ -3540,7 +3635,8 @@ def _run_benchmark(args, tmp):
         )
     print(
         "Partial reads return the normal record type while materializing only "
-        "the selected pixel, point, tensor, COLMAP-image, or match-pair subset."
+        "the selected pixel, point, face, state, tensor, COLMAP-image, or "
+        "match-pair subset."
     )
     if args.require_o5_inspect_gains:
         stable = {"exr", "gaussian_ply", "las", "png", "spz"}
@@ -3633,6 +3729,7 @@ def _run_benchmark(args, tmp):
             "netpbm",
             "webp",
             "xyz",
+            "ply_mesh",
             "las",
             "gaussian_ply",
             "splat",
@@ -3684,7 +3781,7 @@ def _run_benchmark(args, tmp):
             )
         rss_gain_regressions = sorted(
             codec_id
-            for codec_id in stable - {"xyz"}
+            for codec_id in stable - {"xyz", "ply_mesh"}
             if by_codec[codec_id][3] >= 8.0
             and by_codec[codec_id][4]
             >= max(4.0, 0.5 * by_codec[codec_id][3])
@@ -3703,6 +3800,18 @@ def _run_benchmark(args, tmp):
         )
         if by_codec["xyz"][4] > xyz_file_mb + 8.0:
             rss_gain_regressions.append("xyz")
+        # A mesh face selection validates the complete mapped file and retains
+        # the complete vertex domain by contract. The benchmark's vertex-domain
+        # output is about 12 MB, so allow the file mapping plus 20 MB of record
+        # and allocator overhead while still rejecting full corner-domain
+        # materialization.
+        mesh_file_mb = next(
+            result["file_mb"]
+            for result in results
+            if result.get("codec") == "ply_mesh" and "file_mb" in result
+        )
+        if by_codec["ply_mesh"][4] > mesh_file_mb + 20.0:
+            rss_gain_regressions.append("ply_mesh")
         if rss_gain_regressions:
             raise RuntimeError(
                 "O5 partial read failed the directional RSS gain guard: "

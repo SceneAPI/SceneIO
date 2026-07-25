@@ -823,3 +823,43 @@ throughput. Full decode sampled 15.2 MB RSS growth; the selector sampled
 0.1 MB because it validates the complete section layout but allocates only the
 selected `GaussianCloud` rows. A generated 105.6 MB level-0 fixture keeps
 traced Python allocation below 4 MiB for an eight-row selection.
+
+## Polygon-preserving mesh PLY baseline — 2026-07-24
+
+Mesh PLY raises the harness to 42 codecs and the buffer-backed
+differential/sink sweep to 39. The representative full-domain mesh contains
+333,333 vertices, 166,666 triangle faces, independent vertex/corner normals,
+UVs, and RGBA, plus primitive/material ranges. Its canonical buffers total
+28.0 MB and encode to 30.0 MB. Five-run local MSVC medians:
+
+```text
+operation                              result
+-------------------------------------------------------------
+deterministic binary-LE write           886 MB/s
+in-memory decode                        325 MB/s
+public mmap decode                      283 MB/s
+metadata inspection                   0.089 ms (1,110.41x vs full)
+1/16 face selection                  72.240 ms (1.34x vs full)
+```
+
+The public mmap path removes the 30.0 MB whole-file Python allocation. The
+direct sink removes the same output-sized allocation while reaching 673 MB/s
+versus 618 MB/s for the buffer-plus-file path. A separate oracle-enabled run
+measured SceneIO and trimesh decode at 315 and 325 MB/s respectively; the
+triangle output opens in trimesh with exact vertices and indices. The
+independent struct/NumPy oracle additionally verifies all polygon, corner,
+primitive, material, transform, and coordinate fields that trimesh does not
+retain.
+
+A generated 105.6 MB binary mesh fixture keeps traced Python allocation below
+4 MiB on the public mmap path. A separate 50.0 MB, two-face fixture places
+12.5 million corners in an unselected face: the face-range reader validates
+every index without retaining that face, keeps traced Python allocation below
+1 MiB, and uses less than three-fifths of the full decoder's fresh-process RSS.
+On the representative fixture, sampled RSS falls from 63.4 MB to 42.1 MB
+because the contract retains the complete vertex domain while omitting
+unselected face/corner arrays.
+
+The complete one-run 42-codec harness finishes without failures; its mesh row
+measured 855 MB/s write, 328 MB/s in-memory decode, 289 MB/s public mmap
+decode, 0.142 ms inspection, and a 1.36x face-selection speedup.

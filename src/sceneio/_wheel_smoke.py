@@ -166,6 +166,45 @@ def _ksplat(root: Path) -> None:
     assert np.array_equal(selected.means, decoded.means[2:7])
 
 
+def _mesh_ply(root: Path) -> None:
+    mesh = _core.mesh(
+        np.array(
+            [[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0], [0, 0, 1]],
+            np.float32,
+        ),
+        np.array([0, 4, 7], np.uint64),
+        np.array([0, 1, 2, 3, 0, 3, 4], np.uint64),
+        corner_uvs=np.arange(14, dtype=np.float32).reshape(7, 2) / 14,
+        primitive_offsets=np.array([0, 1, 2], np.uint64),
+        primitive_materials=np.array([2, -1], np.int32),
+        coordinate_frame="opengl",
+        scale_to_meters=0.01,
+    )
+    assert sceneio.Mesh is _core.Mesh
+    path = root / "mesh.ply"
+    sceneio.write(mesh, path)
+    assert sceneio.detect(path) == "ply_mesh"
+    decoded = sceneio.read(path)
+    assert np.array_equal(decoded.positions, mesh.positions)
+    assert np.array_equal(decoded.face_offsets, mesh.face_offsets)
+    assert np.array_equal(decoded.face_indices, mesh.face_indices)
+    assert np.array_equal(decoded.corner_uvs, mesh.corner_uvs)
+    assert np.array_equal(decoded.primitive_offsets, mesh.primitive_offsets)
+    assert np.array_equal(
+        decoded.primitive_materials, mesh.primitive_materials
+    )
+    inspected = sceneio.inspect(path)
+    assert inspected.metadata["num_vertices"] == 5
+    assert inspected.metadata["num_faces"] == 2
+    selected = sceneio.read_partial(path, faces=(1, 2))
+    assert np.array_equal(selected.positions, mesh.positions)
+    assert np.array_equal(selected.face_offsets, [0, 3])
+    assert np.array_equal(selected.face_indices, mesh.face_indices[4:7])
+    assert np.array_equal(selected.corner_uvs, mesh.corner_uvs[4:7])
+    assert np.array_equal(selected.primitive_offsets, [0, 1])
+    assert np.array_equal(selected.primitive_materials, [-1])
+
+
 def _point_depth_and_flow(root: Path, values: np.ndarray) -> None:
     points = root / "points.pts"
     sceneio.write(_core.point_cloud(values[:, :3]), points)
@@ -461,6 +500,7 @@ def main() -> None:
         _compressed_ply(root)
         _sog(root)
         _ksplat(root)
+        _mesh_ply(root)
         _point_depth_and_flow(root, values)
         _reconstruction_and_images(root)
         _state_trajectory(root)

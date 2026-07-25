@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -93,6 +94,8 @@ class PlyHeader:
     encoding: str
     header_size: int
     elements: tuple[PlyElement, ...]
+    comments: tuple[bytes, ...] = ()
+    obj_info: tuple[bytes, ...] = ()
 
     @property
     def vertex(self) -> PlyElement:
@@ -133,6 +136,8 @@ def parse_ply_header(path: str | Path) -> PlyHeader:
     """Parse at most 1 MiB and stop immediately after ``end_header``."""
 
     elements: list[tuple[bytes, int, list[PlyProperty]]] = []
+    comments: list[bytes] = []
+    obj_info: list[bytes] = []
     encoding = None
     current = None
     total = 0
@@ -146,7 +151,11 @@ def parse_ply_header(path: str | Path) -> PlyHeader:
             if not tokens:
                 raise ValueError("PLY: blank header directive")
             directive = tokens[0]
-            if directive in {b"comment", b"obj_info"}:
+            if directive == b"comment":
+                comments.append(b" ".join(tokens[1:]))
+                continue
+            if directive == b"obj_info":
+                obj_info.append(b" ".join(tokens[1:]))
                 continue
             if directive == b"format":
                 if (
@@ -209,6 +218,8 @@ def parse_ply_header(path: str | Path) -> PlyHeader:
         encoding,
         total,
         tuple(PlyElement(name, count, tuple(properties)) for name, count, properties in elements),
+        tuple(comments),
+        tuple(obj_info),
     )
 
 
@@ -457,4 +468,248 @@ def validate_point_ply_header(header: PlyHeader, file_size: int) -> dict[str, ob
             else "unknown"
         ),
         "vertex_stride": stride,
+    }
+
+
+def validate_mesh_ply_header(
+    header: PlyHeader, file_size: int
+) -> dict[str, object]:
+    """Validate the polygon-preserving Mesh subset without decoding arrays."""
+
+    if header.obj_info:
+        raise ValueError("PLY mesh: obj_info metadata cannot be preserved")
+    coordinate_frame = "unknown"
+    scale_to_meters = 1.0
+    local_transform = (
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+    )
+    seen_sceneio = set()
+    for comment in header.comments:
+        tokens = comment.split()
+        if not tokens:
+            continue
+        name = tokens[0]
+        if name in {b"TextureFile", b"texture_file"}:
+            raise ValueError(
+                "PLY mesh: texture-file comments require MaterialSet"
+            )
+        if not name.startswith(b"sceneio_"):
+            continue
+        if name in seen_sceneio:
+            raise ValueError(f"PLY mesh: duplicate metadata comment {name!r}")
+        seen_sceneio.add(name)
+        if name == b"sceneio_coordinate_frame" and len(tokens) == 2:
+            coordinate_frame = tokens[1].decode("ascii")
+            if coordinate_frame not in {
+                "unknown",
+                "opencv",
+                "opengl",
+                "enu",
+                "ned",
+            }:
+                raise ValueError("PLY mesh: unsupported coordinate frame")
+        elif name == b"sceneio_scale_to_meters" and len(tokens) == 2:
+            scale_to_meters = float(tokens[1])
+            if not math.isfinite(scale_to_meters) or scale_to_meters <= 0:
+                raise ValueError(
+                    "PLY mesh: scale_to_meters must be finite and positive"
+                )
+        elif name == b"sceneio_local_transform" and len(tokens) == 17:
+            local_transform = tuple(float(value) for value in tokens[1:])
+            if any(not math.isfinite(value) for value in local_transform):
+                raise ValueError("PLY mesh: transform values must be finite")
+        else:
+            raise ValueError(
+                f"PLY mesh: malformed or unsupported metadata comment {name!r}"
+            )
+
+    if tuple(element.name for element in header.elements) != (b"vertex", b"face"):
+        raise ValueError("PLY mesh: elements must be exactly vertex then face")
+    vertex, face = header.elements
+    vertex_properties = _property_map(vertex)
+    vertex_known = {
+        b"x",
+        b"y",
+        b"z",
+        b"nx",
+        b"ny",
+        b"nz",
+        b"texture_u",
+        b"texture_v",
+        b"u",
+        b"v",
+        b"s",
+        b"t",
+        b"red",
+        b"green",
+        b"blue",
+        b"alpha",
+    }
+    missing = {b"x", b"y", b"z"} - vertex_properties.keys()
+    if missing:
+        raise ValueError(f"PLY mesh: missing vertex property {min(missing)!r}")
+    unknown = vertex_properties.keys() - vertex_known
+    if unknown:
+        raise ValueError(
+            f"PLY mesh: unsupported vertex property {min(unknown)!r}"
+        )
+    if any(prop.scalar_type is None for prop in vertex.properties):
+        raise ValueError("PLY mesh: list-valued vertex properties are unsupported")
+
+    normal_names = {b"nx", b"ny", b"nz"} & vertex_properties.keys()
+    if normal_names and normal_names != {b"nx", b"ny", b"nz"}:
+        raise ValueError("PLY mesh: vertex normals require nx, ny, and nz")
+    uv_pairs = (
+        (b"texture_u", b"texture_v"),
+        (b"u", b"v"),
+        (b"s", b"t"),
+    )
+    uv_groups = 0
+    for first, second in uv_pairs:
+        present = (first in vertex_properties, second in vertex_properties)
+        if present[0] != present[1]:
+            raise ValueError("PLY mesh: vertex UVs require a complete pair")
+        uv_groups += present[0]
+    if uv_groups > 1:
+        raise ValueError("PLY mesh: multiple vertex UV conventions are ambiguous")
+    color_names = {b"red", b"green", b"blue"} & vertex_properties.keys()
+    if color_names and color_names != {b"red", b"green", b"blue"}:
+        raise ValueError("PLY mesh: vertex colors require red, green, and blue")
+    if b"alpha" in vertex_properties and not color_names:
+        raise ValueError("PLY mesh: vertex alpha requires RGB")
+    if color_names and any(
+        vertex_properties[name].scalar_type not in {b"uchar", b"uint8"}
+        for name in color_names | ({b"alpha"} & vertex_properties.keys())
+    ):
+        raise ValueError("PLY mesh: vertex RGBA must be uint8")
+
+    face_properties = _property_map(face)
+    face_known = {
+        b"vertex_indices",
+        b"vertex_index",
+        b"texcoord",
+        b"corner_normals",
+        b"corner_colors",
+        b"material_index",
+        b"primitive_index",
+    }
+    unknown = face_properties.keys() - face_known
+    if unknown:
+        raise ValueError(f"PLY mesh: unsupported face property {min(unknown)!r}")
+    index_names = {
+        b"vertex_indices",
+        b"vertex_index",
+    } & face_properties.keys()
+    if len(index_names) != 1:
+        raise ValueError("PLY mesh: requires exactly one vertex-index list")
+    indices = face_properties[index_names.pop()]
+    integer_types = {
+        b"char",
+        b"int8",
+        b"uchar",
+        b"uint8",
+        b"short",
+        b"int16",
+        b"ushort",
+        b"uint16",
+        b"int",
+        b"int32",
+        b"uint",
+        b"uint32",
+    }
+    if (
+        indices.scalar_type is not None
+        or indices.list_count_type not in integer_types
+        or indices.list_item_type not in integer_types
+    ):
+        raise ValueError("PLY mesh: vertex indices must be an integer list")
+    for name in (b"texcoord", b"corner_normals"):
+        if name not in face_properties:
+            continue
+        prop = face_properties[name]
+        if (
+            prop.scalar_type is not None
+            or prop.list_count_type not in integer_types
+            or prop.list_item_type
+            not in {b"float", b"float32", b"double", b"float64"}
+        ):
+            raise ValueError(f"PLY mesh: invalid {name!r} list type")
+    if b"corner_colors" in face_properties:
+        prop = face_properties[b"corner_colors"]
+        if (
+            prop.scalar_type is not None
+            or prop.list_count_type not in integer_types
+            or prop.list_item_type not in {b"uchar", b"uint8"}
+        ):
+            raise ValueError("PLY mesh: invalid corner_colors list type")
+    for name in (b"material_index", b"primitive_index"):
+        if name in face_properties:
+            prop = face_properties[name]
+            if prop.scalar_type not in integer_types:
+                raise ValueError(f"PLY mesh: {name!r} must be an integer scalar")
+
+    vertex_stride = sum(
+        _SCALAR_SIZES[prop.scalar_type] for prop in vertex.properties
+    )
+    if header.encoding == "ascii":
+        body_size = file_size - header.header_size
+        minimum_tokens = vertex.count * len(vertex.properties) + face.count
+        if minimum_tokens and (body_size + 1) // 2 < minimum_tokens:
+            raise ValueError("PLY mesh: declared ASCII counts exceed payload")
+    else:
+        # Face records are variable length. Inspection proves the fixed vertex
+        # extent and at least one list-count token per declared face; the native
+        # decoder performs exact aggregate/trailing validation.
+        count_width = _SCALAR_SIZES[indices.list_count_type]
+        minimum = (
+            header.header_size
+            + vertex.count * vertex_stride
+            + face.count * count_width
+        )
+        if minimum > file_size:
+            raise ValueError("PLY mesh: truncated binary payload")
+    return {
+        "encoding": header.encoding,
+        "byte_order": (
+            "little"
+            if header.encoding == "binary_little_endian"
+            else "big"
+            if header.encoding == "binary_big_endian"
+            else "text"
+        ),
+        "num_vertices": vertex.count,
+        "num_faces": face.count,
+        "vertex_properties": tuple(
+            prop.name.decode("ascii") for prop in vertex.properties
+        ),
+        "face_properties": tuple(
+            prop.name.decode("ascii") for prop in face.properties
+        ),
+        "has_vertex_normals": bool(normal_names),
+        "has_vertex_uvs": bool(uv_groups),
+        "has_vertex_colors": bool(color_names),
+        "has_vertex_alpha": b"alpha" in vertex_properties,
+        "has_corner_normals": b"corner_normals" in face_properties,
+        "has_corner_uvs": b"texcoord" in face_properties,
+        "has_corner_colors": b"corner_colors" in face_properties,
+        "has_material_indices": b"material_index" in face_properties,
+        "has_primitive_indices": b"primitive_index" in face_properties,
+        "coordinate_frame": coordinate_frame,
+        "scale_to_meters": scale_to_meters,
+        "local_transform": local_transform,
     }

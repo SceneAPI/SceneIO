@@ -129,6 +129,7 @@ nanobind_add_module(_core STABLE_ABI NB_STATIC
   src/cpp/records/camera_rig.cpp
   src/cpp/records/pose_graph.cpp
   src/cpp/records/feature_match.cpp
+  src/cpp/records/mesh.cpp
   src/cpp/codecs/pfm.cpp
   src/cpp/codecs/colmap.cpp
   src/cpp/codecs/ply_gaussian.cpp
@@ -136,6 +137,7 @@ nanobind_add_module(_core STABLE_ABI NB_STATIC
   src/cpp/codecs/sog.cpp
   src/cpp/codecs/ksplat.cpp
   src/cpp/codecs/ply_point.cpp
+  src/cpp/codecs/ply_mesh.cpp
   src/cpp/codecs/pcd.cpp
   src/cpp/codecs/spz.cpp
   src/cpp/codecs/transforms_json.cpp

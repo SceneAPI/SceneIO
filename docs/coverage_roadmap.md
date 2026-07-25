@@ -82,9 +82,11 @@ green. Don't land a codec that skips a box — file a follow‑up instead.
       are read directly; headerless text is streamed; no pixel/point/record
       arrays are constructed.
 - [x] **Partial reads where the container permits**: PFM/binary P5-P6
-      Netpbm/lossless VP8L WebP/FLO pixel windows; XYZ/LAS/Gaussian
-      PLY/SPLAT point ranges; single-image COLMAP binary/text without opening
-      the point container. Unsupported subformats and codecs fail explicitly
+      Netpbm/lossless VP8L WebP/FLO/DMB pixel windows; XYZ/PTS/binary
+      PLY/PCD/LAS/Gaussian PLY/compressed PLY/SOG/KSplat/SPLAT point ranges;
+      mesh PLY face ranges; EuRoC state ranges; selected safetensors tensors
+      and slices; single-image COLMAP binary/text; and COLMAP database image
+      and pair selectors. Unsupported subformats and codecs fail explicitly
       instead of falling back to a full decode.
 
 ### 1.4 Verification gates (per‑format Definition of Done)
@@ -111,7 +113,7 @@ zero‑copy + convention tags.
 | `DepthMap` | `depth` HxW f32 + `scale`/`unit`/`invalid` meta + `confidence` HxW | typed depth adapters, `.dmb` | ✅ record + scalar DMB + typed PFM/PNG/EXR |
 | `FlowField` | `vectors` HxWx2 f32 + component/axis/row/unit/invalid meta | typed `.flo` adapter | ✅ |
 | `PointCloud` | `xyz` Nx3, `rgb`/`rgb16`, `normals`, `intensity`, optional organized shape + viewpoint | PLY‑point, PCD, LAS/LAZ, E57, `.xyz` | ✅ |
-| `Mesh` | `vertices` Nx3, `faces` Mx3 u32, `normals`, `uv`, `vertex_color` | OBJ, STL, OFF, PLY‑mesh, glTF, USD | ⬜ |
+| `Mesh` | positions; ragged face offsets/indices; vertex/corner normals, UVs, RGBA; primitive/material ranges; coordinate metadata and transform | PLY‑mesh, OBJ, STL, OFF, glTF, USD | ✅ |
 | `FeatureSet` | `keypoints` Nx{2,4,6} f32, `descriptors` NxD, `scores` N, image identity/size and absent-state metadata | HDF5/hloc, COLMAP DB | ✅ |
 | `MatchGraph` | ragged per-pair raw/verified `matches` Mx2 u32, `scores` M, `F/E/H` 3x3, config and relative pose | HDF5/hloc, COLMAP DB | ✅ |
 | `ColmapDatabase` | cameras, prior-focal flags, ordered features, match graph, schema version | COLMAP DB | ✅ |
@@ -156,7 +158,7 @@ Columns: **Ext/id** · **Record** · **Lib/oracle (license)** · **R/W** ·
 ### 3c. Point clouds
 | Format | Record | Lib / oracle | R/W | Notes |
 |---|---|---|---|---|
-| ✅ PLY (point) / ⬜ PLY (mesh) | `PointCloud`/`Mesh` | independent parser + Open3D (MIT) | R+W | point ASCII+binary LE/BE complete; mesh waits for `Mesh` |
+| ✅ PLY (point) / ✅ PLY (mesh) | `PointCloud`/`Mesh` | independent parsers + Open3D/trimesh (MIT) | R+W | schema-dispatched ASCII+binary LE/BE; mesh preserves polygons and separate vertex/corner attributes |
 | ✅ PCD | `PointCloud` | independent parser + Open3D (MIT) | R+W | PCD 0.7 ASCII/binary/LZF `binary_compressed`; organization/viewpoint; binary point ranges |
 | ✅ LAS | `PointCloud` | laspy (BSD) | R+W | mmap; point formats 0‑3 and 6‑8 |
 | ⬜ LAZ | `PointCloud` | lazrs (Apache) / laszip | R+W | LAS compression |
@@ -166,6 +168,7 @@ Columns: **Ext/id** · **Record** · **Lib/oracle (license)** · **R/W** ·
 ### 3d. Meshes
 | Format | Record | Lib / oracle | R/W | Notes |
 |---|---|---|---|---|
+| ✅ PLY mesh | `Mesh` | independent struct/NumPy + trimesh (MIT) | R+W | polygon-preserving; vertex/corner attributes and primitive/material ranges |
 | ⬜ OBJ (+MTL) | `Mesh` | tinyobjloader/trimesh (MIT) | R+W | fast_float; ignore/pass materials |
 | ⬜ STL | `Mesh` | numpy‑stl/trimesh | R+W | ascii + binary |
 | ⬜ OFF | `Mesh` | trimesh | R+W | trivial |

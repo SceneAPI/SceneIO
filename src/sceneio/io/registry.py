@@ -44,6 +44,7 @@ class Codec:
     inspect: Callable[[str], object] | None = None  # optional metadata-only extension hook
     read_window: Callable[[str, int, int, int, int], object] | None = None
     read_points: Callable[[str, int, int], object] | None = None
+    read_faces: Callable[[str, int, int], object] | None = None
     read_states: Callable[[str, int, int], object] | None = None
     read_image: Callable[[str, int], object] | None = None
     read_pair: Callable[[str, int, int], object] | None = None
@@ -104,6 +105,8 @@ class Codec:
             selectors.append("window")
         if self.read_points is not None:
             selectors.append("points")
+        if self.read_faces is not None:
+            selectors.append("faces")
         if self.read_states is not None:
             selectors.append("states")
         if self.read_image is not None:
@@ -268,9 +271,7 @@ def detect(path) -> str:
         except (OSError, ValueError) as exc:
             raise FormatError(f"cannot classify PLY {str(path)!r}: {exc}") from exc
         if kind == "ply_mesh":
-            raise FormatError(
-                "PLY mesh schema detected, but the Mesh record/codec is not available yet"
-            )
+            return kind
         return kind
     for c in REGISTRY.values():
         if ext in c.extensions:
@@ -286,9 +287,7 @@ def detect(path) -> str:
         except (OSError, ValueError) as exc:
             raise FormatError(f"cannot classify PLY {str(path)!r}: {exc}") from exc
         if kind == "ply_mesh":
-            raise FormatError(
-                "PLY mesh schema detected, but the Mesh record/codec is not available yet"
-            )
+            return kind
         return kind
     for c in REGISTRY.values():
         if any(head.startswith(m) for m in c.magic):
@@ -622,6 +621,41 @@ register(
             "sh_degree_3",
             "unknown_versions",
             "streamed_lod",
+        ),
+    )
+)
+register(
+    Codec(
+        "ply_mesh",
+        (".ply",),
+        _mmap_reader(_core.read_ply_mesh),
+        _file_sink_writer(_core.write_ply_mesh),
+        record=_core.Mesh,
+        datatype="mesh",
+        magic=(b"ply",),
+        read_faces=_mmap_selector_reader(_core.read_ply_mesh_faces),
+        supported_features=(
+            "ascii",
+            "binary_little_endian",
+            "binary_big_endian",
+            "polygon_boundaries",
+            "vertex_normals",
+            "corner_normals",
+            "vertex_uvs",
+            "corner_uvs",
+            "vertex_rgba8",
+            "corner_rgba8",
+            "primitive_ranges",
+            "material_indices",
+            "coordinate_metadata",
+            "local_transform",
+        ),
+        unsupported_features=(
+            "unknown_elements",
+            "unknown_properties",
+            "implicit_triangulation",
+            "texture_file_comments_without_material_set",
+            "obj_info_metadata",
         ),
     )
 )

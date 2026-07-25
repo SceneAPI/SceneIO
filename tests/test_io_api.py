@@ -213,6 +213,21 @@ def _pc():
     return _core.point_cloud(a), a
 
 
+def _mesh():
+    positions = np.array(
+        [[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0]],
+        dtype=np.float32,
+    )
+    return (
+        _core.mesh(
+            positions,
+            np.array([0, 4], np.uint64),
+            np.array([0, 1, 2, 3], np.uint64),
+        ),
+        positions,
+    )
+
+
 @pytest.mark.parametrize(
     ("fmt", "ext", "build", "lossless"),
     [
@@ -245,3 +260,15 @@ def test_image_point_codec_roundtrip_via_public_api(tmp_path, fmt, ext, build, l
         assert px.shape == original.shape and px.dtype == original.dtype
         if lossless:
             np.testing.assert_array_equal(px, original)  # png/exr/webp are byte-exact
+
+
+def test_mesh_ply_roundtrip_via_public_api(tmp_path):
+    mesh, positions = _mesh()
+    path = tmp_path / "mesh.ply"
+    sceneio.write(mesh, path)
+    assert sceneio.detect(path) == "ply_mesh"
+    decoded = sceneio.read(path)
+    assert isinstance(decoded, sceneio.Mesh)
+    np.testing.assert_array_equal(decoded.positions, positions)
+    np.testing.assert_array_equal(decoded.face_offsets, [0, 4])
+    np.testing.assert_array_equal(decoded.face_indices, [0, 1, 2, 3])

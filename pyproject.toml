@@ -22,7 +22,8 @@ dev = [
 # a numpy-only leaf. gsply (3DGS PLY + SPZ, incl. its C++ backend for v4),
 # pycolmap (COLMAP), pillow + pypng (PNG; pypng gives exact 16-bit RGB/RGBA that
 # Pillow's rgb48 handling truncates). Open3D is the MIT-licensed generic PLY/PCD
-# oracle; the current GPLv3 `plyfile` package is intentionally excluded.
+# oracle; trimesh is the permissively licensed cross-consumer mesh oracle. The
+# current GPLv3 `plyfile` package is intentionally excluded.
 # numpy is capped <2.5 because gsply's numba
 # needs NumPy <=2.4, and pinned >=2.0 to keep the NEP-50 float32 semantics the
 # SPZ encode parity relies on. Torch remains outside package extras/runtime;
@@ -40,6 +41,7 @@ test = [
     "psutil>=6.0",
     "safetensors>=0.8",
     "open3d>=0.19",
+    "trimesh>=4.0",
     "pyyaml>=6.0",
 ]
 

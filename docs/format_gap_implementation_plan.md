@@ -6,10 +6,11 @@
   PCD, `StateTrajectory`/EuRoC, `CameraRig` with OpenCV/ROS/Kalibr
   calibration, `PoseGraph`/g2o, and the `FeatureSet`/`MatchGraph`-backed
   COLMAP database, SuperSplat compressed PLY, PlayCanvas SOG v2, and KSplat
-  v0.1 are complete locally.
+  v0.1 are complete locally. The polygon-preserving `Mesh` record and generic
+  mesh PLY are also complete locally; `MaterialSet` begins with OBJ/MTL.
   Cross-platform wheel and instrumented validation remains a user-gated remote
   action.
-- **Current branch:** 41 compiled codecs, all read/write and inspectable, with
+- **Current branch:** 42 compiled codecs, all read/write and inspectable, with
   bounded partial reads where their containers permit them.
 - **Scope:** close every unblocked format gap declared by SceneIO's coverage
   documents without reimplementing the 0.2.0 codec tier.
@@ -129,11 +130,11 @@ exit gate and the validation matrix in section 8 both pass.
 | Reconstruction and pose | — | BAL, COLMAP database, EuRoC state CSV, g2o |
 | Splat | — | SuperSplat compressed PLY, PlayCanvas SOG v2, and KSplat v0.1 |
 | Point cloud | LAS waveform formats 4/5/9/10, LAZ, E57 | count-prefixed PTS, generic point PLY, and PCD |
-| Mesh | mesh PLY, OBJ/MTL, STL, OFF, glTF/GLB, USD/USDZ; optional Draco is policy-gated | — |
+| Mesh | OBJ/MTL, STL, OFF, glTF/GLB, USD/USDZ; optional Draco is policy-gated | generic mesh PLY |
 | Tensor/feature/table | HDF5, hloc layout, Zarr v2/v3, Parquet | safetensors, COLMAP features/matches |
 | Image and depth | TIFF | BMP, TGA, typed PFM depth, typed PNG depth, typed scalar EXR depth, scalar DMB |
 | Optical flow | — | compiled `FlowField` plus typed FLO |
-| Calibration | OpenCV YAML/XML, ROS `camera_info`, Kalibr YAML | — |
+| Calibration | — | OpenCV YAML/XML, ROS `camera_info`, Kalibr YAML |
 | Sequence/dataset | image directory, Y4M, animated WebP, APNG, RTMV layout | — |
 | Volumetric/niche | OpenVDB | — |
 | Policy-gated | AVIF, JPEG-XL, Draco compression | — |
@@ -927,7 +928,7 @@ Exit gate for G2:
 
 ### G3 — Mesh tier
 
-#### G3.1 Mesh record and generic PLY mesh
+#### G3.1 Mesh record and generic PLY mesh — complete locally
 
 Generic PLY is the reference codec for validating every `Mesh` buffer:
 
@@ -938,6 +939,53 @@ Generic PLY is the reference codec for validating every `Mesh` buffer:
 - coordinate frame and units.
 
 No implicit triangulation is permitted in the record constructor or PLY codec.
+
+Completion evidence:
+
+- The compiled `Mesh` owns contiguous canonical buffers for positions,
+  CSR-style polygon offsets/indices, independent vertex/corner normals, UVs,
+  and RGBA, primitive/material ranges, coordinate frame/scale, and a 4×4 local
+  transform. Fifty-one record tests cover empty/singleton/ragged domains,
+  malformed offsets and indices, mismatched attributes, nonfinite values,
+  non-contiguous foreign arrays, zero-copy writable NumPy/DLPack views,
+  parent/view lifetime, and explicit copy/pickle rejection.
+- `ply_mesh` reads ASCII and binary little/big-endian PLY 1.0 without
+  triangulating, merging index domains, or dropping supported attributes. Its
+  deterministic binary writer preserves all record fields through documented
+  face-list and metadata extensions; unknown elements, properties, and
+  SceneIO metadata reject. Schema detection now routes point, Gaussian,
+  compressed-Gaussian, and mesh PLY independently of registry order.
+- Fifty-five codec tests include independent hand-built ASCII/big-endian
+  fixtures, a struct/NumPy writer oracle, twenty randomized meshes, malformed
+  aggregate/list/primitive cases, readonly mmap lifetime and mutation
+  isolation, direct-sink preservation, and a 105.6 MB generated mmap fixture
+  whose traced Python allocation remains below 4 MiB. A deterministic triangle
+  file also opens in trimesh 4.12.2 with exact vertices and faces.
+- Five-run medians on the 28.0 MB logical fixture are 886 MB/s write,
+  325 MB/s in-memory read, and 283 MB/s public mmap read. The direct sink
+  reaches 673 MB/s and removes the 30.0 MB output-sized Python allocation;
+  mmap removes the matching input allocation. Inspection takes 0.089 ms,
+  about 1,110× faster than full decode. The complete 42-codec one-run harness
+  finishes without failures.
+- Native and public `faces=(start, stop)` reads retain the complete vertex
+  domain, slice all face/corner fields, and clip primitive ranges. They are
+  bit-exact against independently constructed slices for binary little-endian,
+  hand-built ASCII, hand-built big-endian, and twenty randomized meshes.
+  A 1/16 selection takes 72.240 ms versus 96.918 ms full decode (1.34×) and
+  reduces sampled RSS from 63.4 MB to 42.1 MB. A generated 50.0 MB fixture with
+  12.5 million corners in an unselected face stays below 1 MiB traced Python
+  allocation and below three-fifths of full-read fresh-process RSS.
+- A clean cp312-abi3 Windows wheel contains 36 expected members, leaks no
+  headers or native build artifacts, declares only `numpy>=1.26`
+  unconditionally, links only standard Python/Windows runtimes, and passes the
+  isolated NumPy-only wheel smoke including mesh PLY.
+- Manual memory-safety, format-correctness, and test-soundness review found and
+  fixed allocation before impossible header-count feasibility checks, an
+  unbounded per-face list allocation, uint32 overflow in corner-list and
+  primitive-run arithmetic, a missing feasibility check in the partial entry,
+  retention of skipped face lists, and silent texture/`obj_info` metadata
+  loss. Fable is unavailable locally and remote instrumented/wheel validation
+  remains user-gated.
 
 #### G3.2 OBJ/MTL
 
@@ -1629,17 +1677,18 @@ estimates.
 
 The current local checkpoint is:
 
-- 41 compiled registry codecs with read, write, inspect, mmap or path-native
+- 42 compiled registry codecs with read, write, inspect, mmap or path-native
   input, and direct file sinks;
 - O0-O5 complete for the existing codec tier;
 - `FlowField`, typed FLO, typed PFM depth, typed PNG depth, and typed scalar EXR
   depth complete;
-- 2,350 local tests pass with 4 documented platform/optional skips, Ruff and
+- 2,458 local tests pass with 4 documented platform/optional skips, Ruff and
   `git diff --check` are clean;
-- the complete 41-codec benchmark and packaged NumPy-only wheel smoke pass;
+- the complete 42-codec benchmark and packaged NumPy-only wheel smoke pass;
 - generic point PLY, PCD, StateTrajectory/EuRoC, CameraRig calibration,
-  PoseGraph/g2o, the COLMAP feature database, and SuperSplat compressed PLY
-  PlayCanvas SOG v2, and KSplat v0.1 are complete locally;
+  PoseGraph/g2o, the COLMAP feature database, SuperSplat compressed PLY,
+  PlayCanvas SOG v2, KSplat v0.1, the canonical `Mesh` record, and generic
+  mesh PLY are complete locally;
 - instrumented Linux and Linux/macOS wheels have not yet been run for this
   dependency wave because pushing and dispatching remote workflows are
   user-gated.
@@ -2266,14 +2315,14 @@ Wave B exit:
 The mesh record is the gate; codec work must not invent format-specific
 topology containers.
 
-1. **`Mesh` and `MaterialSet`**
+1. **`Mesh` — complete locally; `MaterialSet` — next with OBJ/MTL**
    - represent polygon boundaries with offsets plus indices;
    - distinguish vertex, corner, face, primitive, and material domains;
    - preserve normals, UV sets, colors, material ranges, transforms, texture
      references, alpha mode, and coordinate metadata;
    - validate offsets, indices, aliasing, lifetime, empty meshes, and very large
      ragged topology before any codec lands.
-2. **Mesh PLY**
+2. **Mesh PLY — complete locally**
    - reuse the generic PLY parser while preserving face lists and
      vertex/face properties;
    - dispatch point, mesh, and Gaussian schemas without extension-order

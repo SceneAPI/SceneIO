@@ -21,6 +21,7 @@ void register_state_trajectory(nb::module_ &);
 void register_camera_rig(nb::module_ &);
 void register_pose_graph(nb::module_ &);
 void register_feature_match(nb::module_ &);
+void register_mesh(nb::module_ &);
 // codecs/
 void register_pfm(nb::module_ &);
 void register_colmap(nb::module_ &);
@@ -29,6 +30,7 @@ void register_compressed_ply(nb::module_ &);
 void register_sog(nb::module_ &);
 void register_ksplat(nb::module_ &);
 void register_ply_point(nb::module_ &);
+void register_ply_mesh(nb::module_ &);
 void register_pcd(nb::module_ &);
 void register_spz(nb::module_ &);
 void register_transforms_json(nb::module_ &);
@@ -115,6 +117,7 @@ NB_MODULE(_core, m) {
     register_camera_rig(m);
     register_pose_graph(m);
     register_feature_match(m);
+    register_mesh(m);
 
     register_pfm(m);
     register_colmap(m);
@@ -123,6 +126,7 @@ NB_MODULE(_core, m) {
     register_sog(m);
     register_ksplat(m);
     register_ply_point(m);
+    register_ply_mesh(m);
     register_pcd(m);
     register_spz(m);
     register_transforms_json(m);

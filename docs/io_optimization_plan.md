@@ -5,7 +5,7 @@ Status: complete — O0–O5 landed. Scope: the compiled `sceneio._core` I/O pat
 hardening/perf work concrete).
 
 Post-0.2 format expansion inherits the same gates. The registry currently has
-41 codecs (38 buffer-backed entries, one path-native SQLite database, and two
+42 codecs (39 buffer-backed entries, one path-native SQLite database, and two
 COLMAP directory-only entries; SOG also exposes an unbundled multi-file path).
 The latest record wave adds the four calibration formats
 over `CameraRig`, g2o over `PoseGraph`, and `colmap_db` over
@@ -297,7 +297,7 @@ the committed five-run baseline remains the historical control for smaller
 timing movement.
 
 **Partial reads landed:** `sceneio.read_partial()` requires exactly one
-half-open pixel `window`, half-open point/state range, persisted COLMAP
+half-open pixel `window`, half-open point/face/state range, persisted COLMAP
 `image_id`, unordered database `pair`, or safetensors name/slice selector.
 Bounded pixel paths cover PFM, binary P5/P6 Netpbm, lossless VP8L WebP, FLO,
 and scalar DMB; point paths include XYZ, PTS, binary PLY/PCD, LAS, Gaussian
@@ -306,7 +306,15 @@ SQLite returns one `FeatureSet` or one pair `MatchGraph`; safetensors returns
 only requested tensors or leading-axis slices. Unsupported compressed/text
 variants reject rather than disguising a full decode as a partial read.
 
-The 48-case focused suite compares values, dtypes, and convention metadata
+Generic mesh PLY additionally accepts `faces=(start, stop)`. It retains the
+complete vertex domain, slices every face/corner field, clips and renormalizes
+primitive ranges, and validates skipped faces. On the 28.0 MB canonical
+fixture, the five-run MSVC median improves from 96.918 ms full decode to
+72.240 ms for a 1/16 face selection (1.34x); sampled RSS falls from 63.4 MB to
+42.1 MB with no traced Python payload allocation. A generated 50.0 MB fixture
+proves that a skipped 12.5-million-corner face is not retained.
+
+The 52-case focused suite compares values, dtypes, and convention metadata
 against full-read slices across binary Netpbm type/channel combinations,
 lossless RGB/RGBA WebP windows, every automatic XYZ layout plus forced normals,
 and LAS point formats 0–3 and 6–8. It also covers non-native-endian payloads,

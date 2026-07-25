@@ -367,7 +367,7 @@ def test_inspection_reads_only_the_header_for_large_binary_payload(tmp_path):
     assert peak < 256 * 1024
 
 
-def test_detection_keeps_gaussian_authoritative_and_refuses_mesh(tmp_path):
+def test_detection_dispatches_gaussian_and_mesh_schemas_authoritatively(tmp_path):
     rng = np.random.default_rng(11)
     gaussian = _core.gaussian_cloud(
         rng.standard_normal((2, 3)).astype(np.float32),
@@ -390,8 +390,15 @@ def test_detection_keeps_gaussian_authoritative_and_refuses_mesh(tmp_path):
         b"element face 1\nproperty list uchar int vertex_indices\n"
         b"end_header\n0 0 0\n1 0 0\n0 1 0\n3 0 1 2\n"
     )
-    with pytest.raises(sceneio.FormatError, match="Mesh record"):
-        sceneio.detect(mesh)
+    assert sceneio.detect(mesh) == "ply_mesh"
+    decoded_mesh = sceneio.read(mesh)
+    assert isinstance(decoded_mesh, _core.Mesh)
+    np.testing.assert_array_equal(
+        decoded_mesh.positions,
+        [[0, 0, 0], [1, 0, 0], [0, 1, 0]],
+    )
+    np.testing.assert_array_equal(decoded_mesh.face_offsets, [0, 3])
+    np.testing.assert_array_equal(decoded_mesh.face_indices, [0, 1, 2])
 
 
 def test_detection_refuses_hybrid_gaussian_schema_instead_of_dropping_fields(

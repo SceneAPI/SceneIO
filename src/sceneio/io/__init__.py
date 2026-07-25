@@ -43,6 +43,7 @@ StateTrajectory = _core.StateTrajectory
 TensorDict = _core.TensorDict
 Image = _core.Image
 PointCloud = _core.PointCloud
+Mesh = _core.Mesh
 PoseGraph = _core.PoseGraph
 FeatureSet = _core.FeatureSet
 MatchGraph = _core.MatchGraph
@@ -190,6 +191,7 @@ def read_partial(
     *,
     window=None,
     points=None,
+    faces=None,
     states=None,
     image_id=None,
     pair=None,
@@ -200,11 +202,12 @@ def read_partial(
     """Read only one file-backed region while preserving the normal record type.
 
     Exactly one selector is required. ``window`` is the half-open pixel box
-    ``(row_start, row_stop, column_start, column_stop)``. ``points`` and
-    ``states`` are half-open record ranges ``(start, stop)``. ``image_id``
-    selects one COLMAP image by its persisted id. ``pair`` selects one
-    unordered pair of persisted COLMAP image ids. ``tensors`` selects complete
-    named tensors.
+    ``(row_start, row_stop, column_start, column_stop)``. ``points``, ``faces``,
+    and ``states`` are half-open record ranges ``(start, stop)``. A mesh face
+    selection retains the complete vertex domain and slices all face/corner
+    domains. ``image_id`` selects one COLMAP image by its persisted id. ``pair``
+    selects one unordered pair of persisted COLMAP image ids. ``tensors``
+    selects complete named tensors.
     ``slices`` maps tensor names to half-open leading-axis ``(start, stop)``
     ranges. A format that cannot access the selected region without a full
     payload decode raises :class:`FormatError`.
@@ -215,6 +218,7 @@ def read_partial(
         for value in (
             window,
             points,
+            faces,
             states,
             image_id,
             pair,
@@ -238,6 +242,11 @@ def read_partial(
         if codec.read_points is None:
             raise FormatError(f"format {fmt!r} does not support point-subset reads")
         operation = codec.read_points
+    elif faces is not None:
+        values = _selector_ints(faces, 2, "faces")
+        if codec.read_faces is None:
+            raise FormatError(f"format {fmt!r} does not support face-subset reads")
+        operation = codec.read_faces
     elif states is not None:
         values = _selector_ints(states, 2, "states")
         if codec.read_states is None:
@@ -471,6 +480,7 @@ __all__ = [
     "Image",
     "Inspection",
     "MatchGraph",
+    "Mesh",
     "NativeFeatureCapabilities",
     "PointCloud",
     "PoseGraph",

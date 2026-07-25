@@ -108,6 +108,7 @@ statically linked into `_core`.
 | `bmp` | `Image` | R+W | **Pillow** + Microsoft DIB specification | Windows V3/V4/V5 BI_RGB/BI_BITFIELDS; palette and packed-16 reads; top/bottom orientation; deterministic RGB/RGBA writers |
 | `tga` | `Image` | R+W | **Pillow** + Truevision 2.0 specification | grayscale/RGB/RGBA and zero-origin palettes; raw/RLE; top/bottom orientation; deterministic RLE writer |
 | `ply` | `PointCloud` | R+W | independent NumPy/stdlib parser + **Open3D 0.19** | ASCII and binary LE/BE; all standard scalar input types; exact rgb8/rgb16; schema-aware Gaussian/point/mesh dispatch; binary point ranges |
+| `ply_mesh` | `Mesh` | R+W | independent struct/NumPy oracle | polygon-preserving ASCII and binary LE/BE; vertex/corner normals, UVs, RGBA; primitive/material ranges; coordinate metadata and local transforms |
 | `pcd` | `PointCloud` | R+W | independent NumPy/stdlib parser + **Open3D 0.19** | PCD 0.7 ASCII, little-endian binary, and LZF `binary_compressed`; organized dimensions and viewpoint; packed RGB/intensity; bounded binary point ranges |
 | `euroc_state` | `StateTrajectory` | R+W | independent stdlib CSV parser + EuRoC schema | exact int64-ns timestamps; p/q(WXYZ)/v/gyro-bias/accel-bias; canonical-header detection; bounded state ranges |
 | `opencv_yaml` / `opencv_xml` | `CameraRig` | R+W | **PyYAML** / stdlib ElementTree | exact K/D plus optional R/P; schema-signature detection; generic YAML/XML extensions intentionally unclaimed |
@@ -117,10 +118,10 @@ statically linked into `_core`.
 | `colmap_db` | `ColmapDatabase` (`FeatureSet` + `MatchGraph`) | R+W | stdlib **sqlite3** + **pycolmap 4.1.1** | current six-table cameras/images/features/matches/two-view geometry subset; exact pair ids and absent/empty BLOB state; transactional writes; one-image/one-pair selectors |
 
 ### ⬜ Pending — later phases (meshes + niche)
-glTF / GLB (+Draco) · OBJ / STL / OFF / mesh PLY · USD / USDZ · OpenVDB · Zarr · Parquet · AVIF / JPEG‑XL.
+glTF / GLB (+Draco) · OBJ / STL / OFF · USD / USDZ · OpenVDB · Zarr · Parquet · AVIF / JPEG‑XL.
 
 ### 🟡 In progress — Phase 7 (hardening)
-✅ mmap-backed reads for all 38 buffer codecs (SOG additionally supports an
+✅ mmap-backed reads for all 39 buffer codecs (SOG additionally supports an
 unbundled native multi-file path; COLMAP DB and the two COLMAP directory codecs
 read paths directly in native code) · ✅ zero-copy read-only mapped
 ndarray views for native NPY/FLO payloads (PFM row-flips into owned storage) · ✅ bytes/mmap differential +
@@ -128,9 +129,9 @@ scheduled 100-case backing-store mutation sweep · ✅ ASan/UBSan/LSan workflow
 (local and branch Linux runs green) · ⬜ randomized oracle-triangulated
 fuzzing · ✅ direct file-sink writes · ✅ bounded measured-path workers
 (XYZ/LAS/EXR/PNG16/WebP lossless) · ✅ partial/lazy reads (`inspect` covers all
-41; bounded pixel/point/state/COLMAP-image/COLMAP-pair/tensor subsets cover
+42; bounded pixel/point/face/state/COLMAP-image/COLMAP-pair/tensor subsets cover
 capable containers) · ⬜ GPU-via-DLPack (torch-cuda/cupy) · ✅ expanded
-41-codec benchmark/oracles.
+42-codec benchmark/oracles.
 
 ## Infrastructure & capabilities
 
@@ -139,7 +140,7 @@ capable containers) · ⬜ GPU-via-DLPack (torch-cuda/cupy) · ✅ expanded
 | nanobind + scikit‑build‑core build | ✅ | abi3/cp312, `NB_STATIC` |
 | cibuildwheel release path | ✅ | Linux/macOS/Windows; `publish.yml` |
 | CI parity (oracles in CI) | ✅ | gsply + pycolmap; runs on the branch |
-| Codec registry + `read`/`write`/`inspect`/`read_partial`/`detect` | ✅ | inspection covers all 40; bounded partial hooks are capability-specific |
+| Codec registry + `read`/`write`/`inspect`/`read_partial`/`detect` | ✅ | inspection covers all 42; bounded partial hooks are capability-specific |
 | Zero‑copy numpy + torch (DLPack) | ✅ | validated per codec |
 | Conventions‑as‑metadata + write guards | ✅ | record‑don't‑convert enforced |
 | Parity kit (`sceneio.testing.parity`) | ✅ | cross‑impl + round‑trip + convention pins |
@@ -193,6 +194,7 @@ incremental.
 | `pcd` | file | yes | yes | yes | points | yes | yes | no | - |
 | `pfm` | file | yes | yes | yes | window | yes | yes | no | - |
 | `ply` | file | yes | yes | yes | points | yes | yes | no | - |
+| `ply_mesh` | file | yes | yes | yes | faces | yes | yes | no | - |
 | `png` | file | yes | yes | yes | - | yes | yes | no | - |
 | `pts` | file | yes | yes | yes | points | yes | yes | no | - |
 | `ros_camera_info` | file | yes | yes | yes | - | yes | yes | no | - |
@@ -245,14 +247,16 @@ names from `_core.__native_features__`.
 | Selector | Formats | Result |
 |---|---|---|
 | pixel `window=(r0,r1,c0,c1)` | PFM, binary P5/P6 Netpbm, lossless VP8L WebP, FLO, scalar DMB | ndarray, `Image`, or `DepthMap`, matching the full-read slice with metadata preserved |
-| point range `points=(start,stop)` | XYZ, PTS, binary generic PLY, uncompressed binary PCD, LAS, Gaussian PLY, SPLAT | `PointCloud` / `GaussianCloud`, with convention metadata preserved |
+| point range `points=(start,stop)` | XYZ, PTS, binary generic PLY, uncompressed binary PCD, LAS, Gaussian PLY, compressed PLY, SOG, KSplat, SPLAT | `PointCloud` / `GaussianCloud`, with convention metadata preserved |
+| face range `faces=(start,stop)` | generic mesh PLY | `Mesh` with the complete vertex domain and sliced face/corner/primitive domains |
+| state range `states=(start,stop)` | EuRoC state CSV | `StateTrajectory` with convention metadata preserved |
 | `image_id` | COLMAP binary + text | one-image `Reconstruction` + its camera; no point-container read |
 | `image_id` | COLMAP SQLite database | one compiled `FeatureSet`; unrelated keypoint/descriptor BLOBs remain unread |
 | unordered `pair=(image_id1,image_id2)` | COLMAP SQLite database | one compiled `MatchGraph` with raw/verified matches and optional geometry |
 | `tensors=(...)` | safetensors | selected complete tensors as a mapped `TensorDict`; other payload pages remain untouched |
 | `slices={name: (start, stop)}` | safetensors | contiguous leading-axis slices as a mapped `TensorDict` |
 
-PNG, JPEG, HDR, EXR, SPZ, ASCII generic PLY, ASCII/compressed PCD, and other compressed/scene containers intentionally
+PNG, JPEG, HDR, EXR, SPZ, ASCII point-cloud PLY, ASCII/compressed PCD, and other compressed/scene containers intentionally
 do not advertise a partial hook when their current decoder would still
 materialize the complete payload. ASCII P2/P3 Netpbm rejects because it must
 token-decode the complete raster; lossy VP8 rejects because a crop-local decode
