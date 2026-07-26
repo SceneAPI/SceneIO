@@ -21,8 +21,10 @@ R2.0 is complete at `40d5412`. The image-sequence adapter receives its
 image-extension catalog and metadata inspector through a lower-level contract
 instead of importing the registry or public I/O facade at runtime. Its exact
 source archive and Windows abi3 wheel pass content-identity, license-inventory,
-layout, and fresh NumPy-only installed-wheel checks. R2.1 is locally complete
-in this implementation unit; R2.2 family extraction is next.
+layout, and fresh NumPy-only installed-wheel checks. R2.1 is complete at
+`ccfeea4`; the R2.2-R2.4 calibration reference-family implementation and local
+verification are complete in the current worktree. Exact package validation
+remains before its commit; the final three-review findings are resolved.
 
 This is the operational checklist for the repository-organization and
 codec-performance stage defined in
@@ -789,6 +791,83 @@ R2.1 local implementation evidence:
 
 R2 exits after all eight families move and the facade remains source
 compatible.
+
+### R2 calibration reference-family unit
+
+Implementation:
+
+- [x] Add inert `_registry/families` and `_inspectors` packages.
+- [x] Export the four calibration codec definitions (`opencv_yaml`,
+      `opencv_xml`, `ros_camera_info`, and `kalibr`) as one immutable,
+      side-effect-free tuple; no family module imports `REGISTRY`,
+      `registry.py`, `_inspection.py`, or a public facade.
+- [x] Install that tuple at its exact canonical position through a facade-owned
+      helper that validates types, exact family ids/order, uniqueness, and
+      existing collisions before the first registry mutation.
+- [x] Keep the inspection value types and shared buffer inspector in
+      `_inspection.py` for the first family, preserving their exact source/type
+      identities. Inject them into the lower family inspector; extract shared
+      inspector infrastructure only after a second family proves the invariant.
+- [x] Move camera-rig metadata inspection into
+      `_inspectors/calibration.py`; retain the original private signature as a
+      thin calibration dispatch and dependency-injection wrapper within the
+      `_inspection.py` compatibility facade.
+
+Focused verification:
+
+- [x] Prove the family tuple is immutable, side-effect free under reload, and
+      exactly matches `FAMILY_MEMBERS["calibration"]`.
+- [x] Prove invalid type/id/order/duplicate/collision families fail atomically;
+      prove the facade installs the exact tuple objects between `euroc_state`
+      and `g2o` without changing `REGISTRY` identity.
+- [x] Compare registry, public-type, import, capability, and callable
+      snapshots byte-for-byte except for the expected private-module additions.
+- [x] Run calibration parity, public E2E, detect, mmap/sink, inspection/full,
+      malformed-input, bounded-allocation, import-cycle, and reload tests.
+- [x] Run the complete suite, Ruff, one-run 50-codec smoke, five-run retained
+      O4/O5/allocation guard, and fresh-process import timing.
+
+Validation and documentation:
+
+- [x] Update current architecture and organization diagrams with the actual
+      first-family dependency direction and preserved inspection source/type
+      identities.
+- [x] Build the exact staged source archive, build the Windows abi3 wheel from
+      it, compare every new runtime file across workspace/archive/wheel,
+      inspect the license/native/layout inventory, and pass a fresh NumPy-only
+      installed-wheel smoke.
+- [x] Complete three independent architecture/correctness, test/performance,
+      and platform/documentation reviews before committing.
+
+Local verification evidence:
+
+- The calibration family tuple contains the exact canonical ids and object
+  identities between `euroc_state` and `g2o`. Fresh-process reload tests prove
+  that the family module is side-effect free, repeated registry reloads are
+  idempotent, and invalid family inputs leave the live registry unchanged.
+- Public inspection for all four carriers succeeds after replacing the
+  corresponding full decoder with a failing sentinel. A generated
+  1 MiB-class OpenCV YAML fixture keeps traced inspection allocation below 10%
+  of file size and can be renamed and removed while its retained `Inspection`
+  remains valid.
+- The focused architecture, calibration parity, CameraRig, registry,
+  compatibility, capability, public E2E, and mmap set passes 281 tests. The
+  complete local suite collects 2,999 tests and passes 2,995 with four
+  documented skips; Ruff and `git diff --check` pass.
+- The five-run four-codec comparison preserves exact mmap/sink allocation
+  bounds. The one-run 50-codec structural sweep and five-run retained
+  O4/O5/allocation guard pass. Fifteen-sample Windows medians are 5.68 ms for
+  `sceneio`, 74.25 ms for `sceneio.io`, and 7.56 ms for `_core`, all below
+  their unchanged alerts.
+- Three independent final reviews are clear after strengthening malformed
+  inspection parity, lower-layer import enforcement, native inspector-table
+  identity, workflow collection synchronization, and documentation wording.
+- The staged source-to-wheel gate contains 291 source members and produces a
+  64-file Windows cp312-abi3 wheel with all 15 indexed license files, exactly
+  one native module, and no top-level build-layout directories. All four new
+  runtime modules are byte-identical across workspace, source archive, and
+  wheel; a fresh environment containing only NumPy and SceneIO passes the
+  expanded installed-wheel smoke.
 
 ## 7. R3 — split benchmark and cross-codec tests
 

@@ -629,6 +629,7 @@ def _camera_calibration(root: Path) -> None:
     sceneio.write(ros_rig, ros, format="ros_camera_info")
     assert sceneio.detect(ros) == "ros_camera_info"
     assert np.array_equal(sceneio.read(ros).projection_matrices, ros_rig.projection_matrices)
+    assert sceneio.inspect(ros).count == 1
 
     kalibr = root / "kalibr"
     kalibr.write_bytes(
@@ -645,8 +646,10 @@ def _camera_calibration(root: Path) -> None:
         b"  - [0, 0, 1, 0]\n"
         b"  - [0, 0, 0, 1]\n"
     )
+    assert sceneio.detect(kalibr) == "kalibr"
     decoded = sceneio.read(kalibr)
     assert decoded.reference_frame == "imu"
+    assert sceneio.inspect(kalibr).count == 1
     sceneio.write(decoded, root / "kalibr-copy", format="kalibr")
 
 

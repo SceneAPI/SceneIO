@@ -37,12 +37,18 @@ public I/O facade at runtime. The exact source archive and Windows abi3 wheel
 pass content-identity, package-layout, attribution, and fresh NumPy-only smoke
 checks.
 
-R2.1 is implemented locally behind the unchanged `registry.py` facade.
+R2.1 is complete at `ccfeea4` behind the unchanged `registry.py` facade.
 Shared model, mmap/path/sink adapter, ordered detection, and native-feature
-services now live in focused `sceneio.io._registry` modules. The complete
-local suite, retained performance guard, exact source-archive-to-wheel content
-check, and fresh NumPy-only installed-wheel smoke pass. R2.2 family extraction
-is next.
+services now live in focused `sceneio.io._registry` modules. The calibration
+family (`opencv_yaml`, `opencv_xml`, `ros_camera_info`, and `kalibr`) is the
+first locally implemented R2.2-R2.4 reference unit. Its immutable definition
+tuple, validate-before-install facade boundary, injected inspection
+dependencies, and family inspector establish the pattern before the other
+seven families move. Shared inspection infrastructure remains in the facade
+until a second family proves a reusable invariant. The complete local suite
+collects 2,999 tests and passes 2,995 with four documented skips; the all-codec
+structural sweep, retained five-run performance/allocation guard, Ruff, and
+fresh-process import thresholds pass.
 
 The codec-per-file C++ layer remains reasonably isolated, but orchestration and
 verification have accumulated in a few large modules:
@@ -51,8 +57,8 @@ verification have accumulated in a few large modules:
 |---|---|---|
 | C++ codecs | 40 files for 50 format ids | flat source list and manual binding declarations |
 | C++ records | 32 source/header files | still manageable; new table/animation/scene records will add pressure |
-| Python registry | `registry.py`, 1,342 lines, plus focused `_registry/{model,adapters,detection,native_features}.py` modules | the 50 built-in registrations still share the facade until R2.2 family extraction |
-| Inspection | `_inspection.py`, about 1,950 lines | unrelated format-family parsers and result conversion share one module |
+| Python registry | `registry.py`, 1,292 lines, focused `_registry/{model,adapters,detection,native_features}.py` modules, and the first `_registry/families/calibration.py` definition module | seven built-in families still share the facade until their R2.2 units |
+| Inspection | `_inspection.py`, 1,960 lines, plus `_inspectors/calibration.py` | seven unrelated format families still share the facade; common helpers wait for a second-family invariant |
 | Benchmark | `bench_io.py`, about 4,660 lines | CLI, fixtures, oracles, runners, metrics, and reporting are coupled |
 | Cross-codec tests | `test_io_mmap.py`, about 2,400 lines; `test_io_partial.py`, about 1,100 | reusable codec cases and behavior assertions are difficult to extend independently |
 | Execution plan | `format_gap_implementation_plan.md`, about 2,500 lines | historical evidence and the active queue are easy to confuse |

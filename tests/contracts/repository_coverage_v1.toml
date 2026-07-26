@@ -160,7 +160,7 @@ id = "opencv_yaml"
 benchmark_case = "opencv_yaml"
 source_suite = "tests/codecs/test_camera_calibration.py"
 documentation_row = "docs/format_coverage.md"
-inspection_source = "src/sceneio/io/_inspection.py"
+inspection_source = "src/sceneio/io/_inspectors/calibration.py"
 wheel_smoke_case = "_camera_calibration"
 
 [[codec]]
@@ -168,7 +168,7 @@ id = "opencv_xml"
 benchmark_case = "opencv_xml"
 source_suite = "tests/codecs/test_camera_calibration.py"
 documentation_row = "docs/format_coverage.md"
-inspection_source = "src/sceneio/io/_inspection.py"
+inspection_source = "src/sceneio/io/_inspectors/calibration.py"
 wheel_smoke_case = "_camera_calibration"
 
 [[codec]]
@@ -176,7 +176,7 @@ id = "ros_camera_info"
 benchmark_case = "ros_camera_info"
 source_suite = "tests/codecs/test_camera_calibration.py"
 documentation_row = "docs/format_coverage.md"
-inspection_source = "src/sceneio/io/_inspection.py"
+inspection_source = "src/sceneio/io/_inspectors/calibration.py"
 wheel_smoke_case = "_camera_calibration"
 
 [[codec]]
@@ -184,7 +184,7 @@ id = "kalibr"
 benchmark_case = "kalibr"
 source_suite = "tests/codecs/test_camera_calibration.py"
 documentation_row = "docs/format_coverage.md"
-inspection_source = "src/sceneio/io/_inspection.py"
+inspection_source = "src/sceneio/io/_inspectors/calibration.py"
 wheel_smoke_case = "_camera_calibration"
 
 [[codec]]

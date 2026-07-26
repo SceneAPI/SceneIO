@@ -24,6 +24,9 @@ from typing import BinaryIO
 import numpy as np
 
 from sceneio import _core
+from sceneio.io._inspectors.calibration import (
+    inspect_camera_rig as _inspect_calibration_camera_rig,
+)
 from sceneio.io._pcd import parse_pcd_header, validate_point_pcd_header
 from sceneio.io._ply import (
     parse_ply_header,
@@ -1796,25 +1799,12 @@ def _inspect_euroc_state(path: Path, datatype: str) -> Inspection:
 def _inspect_camera_rig(
     path: Path, format_id: str, datatype: str
 ) -> Inspection:
-    function = {
-        "opencv_yaml": _core._inspect_opencv_yaml,
-        "opencv_xml": _core._inspect_opencv_xml,
-        "ros_camera_info": _core._inspect_ros_camera_info,
-        "kalibr": _core._inspect_kalibr,
-    }[format_id]
-    count, flat_resolutions = _compiled_buffer_inspect(path, function)
-    resolutions = tuple(int(value) for value in flat_resolutions)
-    return Inspection(
+    return _inspect_calibration_camera_rig(
+        path,
         format_id,
         datatype,
-        _size(path),
-        shape=(count,),
-        dtype="float64",
-        count=count,
-        metadata={
-            "resolutions": resolutions,
-            "axis_frame": "opencv",
-        },
+        inspection_type=Inspection,
+        inspect_buffer=_compiled_buffer_inspect,
     )
 
 

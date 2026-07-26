@@ -68,6 +68,16 @@ sceneio._core (C++ / nanobind)
   importing a dotted `_registry` module in a fresh process still initializes
   its parent package; R2.1 guarantees an acyclic source dependency direction,
   not a standalone lightweight import boundary.
+  Calibration is the first extracted registry/inspection family:
+  `_registry/families/calibration.py` exports an immutable, side-effect-free
+  four-codec tuple, and the registry facade validates its exact ids, order,
+  types, uniqueness, and collisions before installing any member at the
+  canonical position. `_inspectors/calibration.py` owns the corresponding
+  metadata conversion and native inspector table. The compatibility
+  `_inspection.py` wrapper injects its historical `Inspection` type and shared
+  mmap-buffer helper into that lower module, so public result identity and
+  callable signatures remain unchanged. The family definitions and inspector
+  do not import either compatibility facade.
 
 ## Stable codec ownership and backend selection
 
@@ -117,8 +127,10 @@ flat coordination points.
    `m.def(...)`s them. Map malformed input to a thrown `std::invalid_argument`.
 4. **Wire C++** — add the `register_*` call to `module.cpp` (records before
    codecs) and the source to `CMakeLists.txt`.
-5. **Register adapters** — add one `Codec(...)` entry in
-   `sceneio/io/registry.py` with its extensions, detection signature, reader,
+5. **Register adapters** — add one `Codec(...)` entry in its
+   `sceneio/io/_registry/families/<family>.py` module when that family has
+   migrated; otherwise use the compatibility `sceneio/io/registry.py` location
+   until its R2 unit lands. Declare extensions, detection signature, reader,
    writer, record, datatype, container kind, stream flags, and optional
    inspection/partial hooks. Public reads and writes must exercise the
    production mmap/path/sink adapter rather than only the buffer seam.

@@ -6,6 +6,7 @@ import gc
 import mmap
 import tracemalloc
 import xml.etree.ElementTree as et
+from dataclasses import replace
 
 import numpy as np
 import pytest
@@ -410,6 +411,111 @@ def test_buffer_protocol_mmap_public_dispatch_sink_and_inspection(
     calls = _core._write_to_file(writer, expected, sink, _max_chunk=17)
     assert calls > 1
     assert sink.read_bytes() == data
+
+
+@pytest.mark.parametrize(
+    ("format_id", "data", "count"),
+    [
+        ("opencv_yaml", OPENCV_YAML, 1),
+        ("opencv_xml", OPENCV_XML, 1),
+        ("ros_camera_info", ROS_YAML, 1),
+        ("kalibr", KALIBR_YAML, 2),
+    ],
+)
+def test_public_inspection_does_not_call_full_decoder(
+    tmp_path,
+    monkeypatch,
+    format_id,
+    data,
+    count,
+):
+    path = tmp_path / format_id
+    path.write_bytes(data)
+    codec = sceneio.io.registry.REGISTRY[format_id]
+
+    def forbidden_decode(_path):
+        raise AssertionError("metadata inspection called the full decoder")
+
+    monkeypatch.setitem(
+        sceneio.io.registry.REGISTRY,
+        format_id,
+        replace(codec, read=forbidden_decode),
+    )
+    info = sceneio.inspect(path, format=format_id)
+    assert info.count == count
+    assert info.metadata["resolutions"] == (
+        (640, 480, 800, 600) if format_id == "kalibr" else (640, 480)
+    )
+
+
+def test_public_inspection_is_memory_bounded_and_releases_file(tmp_path):
+    path = tmp_path / "large-opencv-yaml"
+    path.write_bytes(
+        OPENCV_YAML + b"# calibration provenance padding\n" * 50_000
+    )
+    size = path.stat().st_size
+    assert size > 1_000_000
+    sceneio.inspect(path, format="opencv_yaml")
+    gc.collect()
+
+    tracemalloc.start()
+    info = sceneio.inspect(path, format="opencv_yaml")
+    _, peak = tracemalloc.get_traced_memory()
+    tracemalloc.stop()
+
+    assert peak < size * 0.1
+    assert info.count == 1
+    renamed = path.with_name("released-opencv-yaml")
+    path.rename(renamed)
+    renamed.unlink()
+    assert info.metadata["resolutions"] == (640, 480)
+
+
+@pytest.mark.parametrize(
+    ("format_id", "native_inspector", "data"),
+    [
+        (
+            "opencv_yaml",
+            _core._inspect_opencv_yaml,
+            b"image_width: 640\n",
+        ),
+        (
+            "opencv_xml",
+            _core._inspect_opencv_xml,
+            b"<opencv_storage>",
+        ),
+        (
+            "ros_camera_info",
+            _core._inspect_ros_camera_info,
+            ROS_YAML.replace(
+                b"projection_matrix:",
+                b"missing_projection:",
+            ),
+        ),
+        (
+            "kalibr",
+            _core._inspect_kalibr,
+            KALIBR_YAML.replace(b"cam1:", b"cam2:"),
+        ),
+    ],
+)
+def test_public_malformed_inspection_preserves_native_cause(
+    tmp_path,
+    format_id,
+    native_inspector,
+    data,
+):
+    with pytest.raises(ValueError) as native_error:
+        native_inspector(data)
+    path = tmp_path / format_id
+    path.write_bytes(data)
+
+    with pytest.raises(sceneio.FormatError) as public_error:
+        sceneio.inspect(path, format=format_id)
+
+    cause = public_error.value.__cause__
+    assert type(cause) is type(native_error.value)
+    assert str(cause) == str(native_error.value)
 
 
 def test_view_outlives_temporary_mmap_and_record(tmp_path):

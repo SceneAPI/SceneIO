@@ -19,7 +19,7 @@ from sceneio.errors import SceneIoError
 from sceneio.io import _gltf as _gltf_adapter
 from sceneio.io import _image_sequence as _image_sequence_adapter
 from sceneio.io import _obj as _obj_adapter
-from sceneio.io._builtin_manifest import CANONICAL_BUILTIN_IDS
+from sceneio.io._builtin_manifest import CANONICAL_BUILTIN_IDS, FAMILY_MEMBERS
 from sceneio.io._frame_access import ImageFrameAccess
 from sceneio.io._inspection import inspect_codec
 from sceneio.io._ply import classify_ply
@@ -27,6 +27,7 @@ from sceneio.io._registry import adapters as _shared_adapters
 from sceneio.io._registry import model as _shared_model
 from sceneio.io._registry import native_features as _shared_native_features
 from sceneio.io._registry.detection import detect_path as _detect_path
+from sceneio.io._registry.families.calibration import CALIBRATION_CODECS
 
 Codec = _shared_model.Codec
 CodecCapabilities = _shared_model.CodecCapabilities
@@ -67,6 +68,29 @@ def register(codec: Codec) -> Codec:
         raise ValueError(f"codec id already registered: {codec.id!r}")
     REGISTRY[codec.id] = codec
     return codec
+
+
+def _install_builtin_family(
+    codecs: tuple[Codec, ...],
+    expected_ids: tuple[str, ...],
+) -> None:
+    """Validate one complete built-in family before installing any member."""
+
+    definitions = tuple(codecs)
+    if any(type(codec) is not Codec for codec in definitions):
+        raise TypeError("built-in family entries must be Codec instances")
+    actual_ids = tuple(codec.id for codec in definitions)
+    if len(actual_ids) != len(set(actual_ids)):
+        raise ValueError(f"built-in family ids must be unique: {actual_ids!r}")
+    if actual_ids != tuple(expected_ids):
+        raise ValueError(
+            f"built-in family ids {actual_ids!r} do not match {tuple(expected_ids)!r}"
+        )
+    collisions = tuple(format_id for format_id in actual_ids if format_id in REGISTRY)
+    if collisions:
+        raise ValueError(f"built-in codec ids already registered: {collisions!r}")
+    for codec in definitions:
+        REGISTRY[codec.id] = codec
 
 
 def get(format_id: str) -> Codec:
@@ -667,83 +691,9 @@ register(
         ),
     )
 )
-# Calibration carriers deliberately avoid claiming generic .yaml/.yml/.xml
-# extensions. Their canonical writers begin with schema-specific signatures,
-# while noncanonical documents remain available through explicit format=.
-register(
-    Codec(
-        "opencv_yaml",
-        (),
-        _mmap_reader(_core.read_opencv_yaml),
-        _file_sink_writer(_core.write_opencv_yaml),
-        record=_core.CameraRig,
-        datatype="camera_rig",
-        magic=(b"%YAML:1.0",),
-        supported_features=(
-            "camera_matrix",
-            "distortion_coefficients",
-            "rectification_matrix",
-            "projection_matrix",
-        ),
-        unsupported_features=("stereo_extrinsics",),
-    )
-)
-register(
-    Codec(
-        "opencv_xml",
-        (),
-        _mmap_reader(_core.read_opencv_xml),
-        _file_sink_writer(_core.write_opencv_xml),
-        record=_core.CameraRig,
-        datatype="camera_rig",
-        magic=(b"<opencv_storage",),
-        supported_features=(
-            "camera_matrix",
-            "distortion_coefficients",
-            "rectification_matrix",
-            "projection_matrix",
-        ),
-        unsupported_features=("stereo_extrinsics",),
-    )
-)
-register(
-    Codec(
-        "ros_camera_info",
-        (),
-        _mmap_reader(_core.read_ros_camera_info),
-        _file_sink_writer(_core.write_ros_camera_info),
-        record=_core.CameraRig,
-        datatype="camera_rig",
-        magic=(b"image_width:",),
-        supported_features=(
-            "camera_matrix",
-            "distortion_coefficients",
-            "rectification_matrix",
-            "projection_matrix",
-            "binning",
-            "roi",
-        ),
-    )
-)
-register(
-    Codec(
-        "kalibr",
-        (),
-        _mmap_reader(_core.read_kalibr),
-        _file_sink_writer(_core.write_kalibr),
-        record=_core.CameraRig,
-        datatype="camera_rig",
-        magic=(b"cam0:",),
-        supported_features=(
-            "multi_camera",
-            "pinhole",
-            "omni",
-            "chained_extrinsics",
-            "imu_extrinsics",
-            "camera_imu_time_offsets",
-            "topics",
-        ),
-    )
+_install_builtin_family(
+    CALIBRATION_CODECS,
+    FAMILY_MEMBERS["calibration"],
 )
 register(
     Codec(
