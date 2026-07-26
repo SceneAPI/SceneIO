@@ -27,7 +27,9 @@ layout, and fresh NumPy-only installed-wheel checks. R2.1 is complete at
 `29af9de`; and the six-codec mesh extraction is complete and pushed at
 `975533f`. The shared image helpers are complete at `8040bc7`, and the
 eight-codec image extraction is complete and pushed at `68c47d6`. The
-two-codec sequence extraction is the active fourth-family unit.
+two-codec sequence extraction is complete and pushed at `14bf53b`. Its normal
+CI and compiler-instrumented runs pass. The aggregate built-in staging
+boundary is the active R2 unit; arrays are next after that boundary is green.
 
 This is the operational checklist for the repository-organization and
 codec-performance stage defined in
@@ -1362,6 +1364,213 @@ Sequence-family candidate evidence:
 - A final exact-tree package confirmation is run after this documentation is
   frozen and immediately before commit. Its hashes are reported with the
   commit evidence rather than self-referenced here.
+
+The sequence-family unit is committed and pushed as `14bf53b`. Its exact
+commit tree is `fcb64bee4f4fe782e027fe8e1b0505094c57dfdf`; the final source
+archive SHA-256 is
+`a11884789573cec7a69e5ca953e7776fbb416a7aa34b56ba4eb4ee0a7c73ee25`,
+and the derived wheel SHA-256 is
+`0b6fcd42ec7221622bde14f364ae9c5d14f8907a464390307c9f9e37c984e44b`.
+Normal CI run 30200316679 and compiler-instrumented run 30200316665 pass.
+
+### R2 aggregate built-in staging boundary
+
+The four remaining families are interleaved in canonical detection order, so
+they cannot use the contiguous install-at-call-site pattern without splitting
+family ownership or temporarily reordering the registry. This unit changes
+only built-in assembly: it stages definitions outside the public registry,
+validates the complete aggregate, and publishes the same 50 objects in the
+same order once. Parent behavior is frozen at `14bf53b`.
+
+The active candidate now implements that boundary. Parent-derived contracts
+freeze all 50 normalized `Codec` AST values and every non-`None` runtime
+operation binding; both reproduce exactly from the raw parent tree and the
+candidate. Fresh-process profiling observes
+`finalize-return -> dict.update-call -> dict.update-return`, registry sizes
+only zero then 50, no subscription store, and the initial empty
+`ImageFrameAccess` probe followed by the complete live catalog. The exact
+candidate collection is 3,095: all 3,083 parent nodes, 11 assembly contracts,
+and the automatic package-file node, with no removal or rename; the normalized
+sorted-node digest is
+`ead83e74ffc13fa62528e19c1e6c95bfacac767a2ef0bc0753d62cf768d84076`.
+The complete local MSVC suite passes 3,091 tests with four documented skips.
+
+The two parent benchmark captures and the candidate all reproduce structural
+projection hash
+`6a5e2b9306c7bac322f34722ada090d882001a22165731f19d8c10e86ce69864`;
+the checked comparator now runs after the CI benchmark smoke. Fifteen
+interleaved same-host samples show candidate/parent import medians of
+5.632/5.659 ms for `import sceneio`, 75.163/75.218 ms for the I/O facade, and
+7.394/7.464 ms for `_core`. The only facade eager-module delta is
+`_registry.assembly`.
+
+The exact-tree package preflight contains 310 source files and a 73-file
+Windows cp312-abi3 wheel. All 13 staged files match the source archive; both
+changed runtime files match index, archive, and wheel; the sole wheel-member
+delta from `14bf53b` is `_registry/assembly.py`. The wheel retains all 15
+attribution files, exactly one native module, no excluded layout, NumPy as its
+only unconditional dependency, and only Python/Windows runtime native
+dependencies. A fresh outside-repository environment containing exactly
+SceneIO and NumPy passes the complete installed smoke and the explicit
+aggregate, live-extension, NPY, Y4M, and directory-sequence probe. All three
+independent preflight reviews are clear. The same gates are repeated after
+this documentation-only closure edit before the final-artifact review.
+
+Aggregate implementation:
+
+- [x] Add a focused lower `_registry/assembly.py` service that imports only the
+      immutable manifest and lower `Codec` model. It must not import
+      `registry.py`, `sceneio.io`, inspection modules, family modules, or own a
+      public registry.
+- [x] Keep the `BuiltinAssembly` class in the lower module and only its
+      instance/lifecycle facade-owned. Give it separate
+      `add_codec(codec)` and `add_family(family_name, codecs)` methods.
+      `add_family` validates directly against
+      `FAMILY_MEMBERS[family_name]`; both methods reject unknown canonical ids,
+      validate exact `Codec` type, order, uniqueness, and collisions, and use
+      copy-on-success state updates.
+- [x] Make production finalization require the exact
+      `CANONICAL_BUILTIN_IDS` set and return the definitions in canonical order
+      regardless of the order in which interleaved families were staged. A
+      reduced canonical tuple is an explicitly private isolated-test seam; the
+      facade always constructs the manifest default, and publication
+      independently revalidates the exact 50 ids. Seal the builder after
+      successful finalization; repeated `finalize()` calls return the same
+      tuple object, while every subsequent add fails. Failed finalization
+      leaves the builder unsealed and unchanged so missing definitions can
+      still be supplied.
+- [x] Replace built-in `register(Codec(...))` call sites with private staging
+      calls and route the four extracted families through the same builder.
+      Keep every `Codec` field, closure target, object identity within
+      `BUILTIN_DEFINITIONS`, and definition source unchanged.
+- [x] Populate the existing facade-owned `REGISTRY` only after successful
+      finalization and in one validated operation. Preflight that initialization
+      sees an empty registry and no collisions; any pre-seeded entry fails with
+      registry contents and object identity unchanged. Preserve public
+      `register()`, `get()`, detection, third-party extension, duplicate-id,
+      and mutable-registry behavior exactly.
+- [x] Construct `ImageFrameAccess` after image definitions are staged and
+      before the sequence family is staged. Its `__post_init__` probe is
+      expected to observe the still-empty live registry; prove this empty
+      result is not cached. After the single aggregate publication, the same
+      access object and newly created access objects must see all image
+      definitions plus immediate third-party additions/removals. Never publish
+      images early or fall back permanently to staged definitions.
+- [x] Preserve `_install_builtin_family` completely until its existing
+      architecture consumer is migrated: signature, successful mutation and
+      order, `None` return, and every current failure. Built-in module
+      initialization must use only the new aggregate path.
+- [x] Change no codec implementation, inspection parser, C++, CMake, native
+      symbol, backend, dependency, attribution file, public signature, or
+      payload behavior. Add no FFmpeg/libav source, build hook, subprocess
+      path, runtime dependency, package member, metadata entry, native symbol,
+      or native dependency.
+
+Aggregate verification:
+
+- [x] Freeze parent `14bf53b` registry/capability/import/public-symbol
+      snapshots, all 50 normalized `Codec` AST values, canonical object
+      identities, representative detection outcomes, duplicate errors, and
+      live image-sequence extension behavior before implementation.
+- [x] Freeze every non-`None` runtime operation binding for all 50 codecs in a
+      parent-only contract. Recursively describe callable module/qualname,
+      `partial` target/arguments/keywords, closure free-variable targets, and
+      normalized `ImageFrameAccess` callbacks; record parent commit/tree and
+      the exact normalization map. Candidate code may reproduce descriptor
+      hashes but must never generate its expected values.
+- [x] Add isolated builder contracts for wrong types, wrong family order,
+      duplicate ids, staged collisions, missing/extra canonical ids,
+      failed-finalization rollback, same-object finalization idempotence, and
+      add-after-finalize rejection. Every failing case must leave prior builder
+      state unchanged. Prove observable recovery by staging the remaining valid
+      definitions after each rejected add/finalize and reaching the exact same
+      finalized tuple.
+- [x] Prove the facade performs no public-registry mutation before aggregate
+      finalization, publishes exactly once, rejects a pre-seeded target without
+      mutation, retains the `REGISTRY` object, and produces the exact canonical
+      order even when family members are non-contiguous.
+- [x] Make one-publish evidence independent of the new helper. In a fresh
+      process, install a profile/trace hook before importing the facade and
+      record `BuiltinAssembly.finalize()` return, the actual `dict.update`
+      call/return on the facade registry, compressed observed registry sizes,
+      object ids, `register()` calls, and subscription stores. Require
+      finalize-return before exactly one update, sizes only zero then 50, one
+      registry object id, and no built-in `register()` or subscription
+      mutation. Fault the publication seam with a pre-seeded target and prove
+      exact items/object identity survive rejection.
+- [x] Prove public `register()` is independent of the sealed builder, returns
+      the supplied object, preserves immediate append and duplicate behavior,
+      and retains its current acceptance of subclass or duck-typed objects.
+      Exercise the full successful and failing `_install_builtin_family`
+      compatibility surface separately.
+- [x] Prove all 50 built-in `REGISTRY` values are the exact objects in
+      `BUILTIN_DEFINITIONS`; family reload remains inert; registry reload is
+      repeatable; third-party registration/removal remains immediate for old
+      and new `ImageFrameAccess` objects. Extend the existing sequence contract:
+      after adding an image extension, perform read, inspect, selected-frame
+      read, and write through both old and new already-bound sequence codecs;
+      after removal, require every operation through both codecs to fail.
+- [x] Enforce lower import allowlists and prohibit aggregate ownership from
+      leaking into family modules. Reconcile only the intended eager import
+      addition and source-ownership changes. Codec coverage rows remain
+      unchanged; `_registry/assembly.py` is the only intended new eager
+      runtime module and planned wheel-member delta.
+- [x] Run registry, compatibility, capability, detection, public E2E,
+      image-sequence live-access, mmap/lifetime, sink, partial, inspection,
+      zero-copy, family architecture, import, documentation, and attribution
+      suites.
+- [x] Compare one-pass 50-codec structure and strict five-run retained
+      O4/O5/allocation results against `14bf53b`. Before coding, take two
+      parent captures with identical commands and fixture seed, record the
+      deterministic structural projection and predeclare any observed traced
+      allocation tolerances. Candidate comparison requires exact codec order,
+      payload/file sizes, nested schema, and exact-or-toleranced traced fields;
+      timing and RSS remain diagnostic and the strict candidate guard runs
+      separately. Preserve an auditable deterministic projection in a checked
+      contract rather than relying on ignored raw JSON.
+- [x] Freeze the parent 3,083 sorted pytest node ids, parameters, count, and
+      digest. Candidate verification permits no removal or rename; additions
+      must be exactly the predeclared aggregate-contract nodes plus the single
+      assembly package-file guard node. Derive the final count from that set
+      and then update the workflow pin.
+- [x] Run 15-sample interleaved parent/candidate fresh-process imports.
+      Require the exact eager-module delta of only `_registry.assembly`, every
+      existing Windows alert, and no median increase above the greater of
+      2 ms or 15% for any boundary. Then run the complete suite, Ruff,
+      workflow parsing, and `git diff --check`.
+- [x] Update architecture, organization, format-status, import, ownership,
+      workflow-count, and benchmark documentation with measured evidence
+      before freezing the final package tree. Final tree/archive/wheel hashes
+      stay in commit evidence outside this self-referential source tree.
+- [x] Obtain independent architecture/correctness and test/performance
+      reviews of the frozen implementation and evidence; resolve their
+      findings before the final package build.
+- [x] Require zero unstaged files, record `git write-tree`, and materialize
+      that exact tree with `git -c core.autocrlf=false archive <tree>` or an
+      equivalent Git-object procedure. Build the source archive from the
+      extracted object tree, compare every changed index blob byte-for-byte
+      with its archive member, and derive the Windows cp312-abi3 wheel only
+      from that source archive.
+- [x] Measure rather than pre-pin the source-archive count. Require a 73-file
+      wheel if `_registry/assembly.py` is the only new runtime member; assert
+      that module is present while tests/contracts remain source-only. Require
+      all changed runtime files to match index, archive, and wheel; retain all
+      15 attribution files, one native module, no excluded layout directories,
+      NumPy-only unconditional metadata, and no FFmpeg/libav additions.
+- [x] In a fresh environment outside the repository containing only SceneIO
+      and NumPy, run the complete installed-wheel smoke and an explicit
+      aggregate probe: exact canonical registry order; `REGISTRY`/
+      `BUILTIN_DEFINITIONS` identity for all 50 ids; public third-party
+      add/remove and duplicate behavior; representative detection; immediate
+      added/removed image-extension visibility through an already-bound
+      image-sequence codec; and Y4M plus directory
+      write/detect/inspect/read/frame-range behavior.
+- [ ] Obtain the independent platform/package/documentation review against
+      those exact final artifacts. Any finding that requires a source edit
+      invalidates the frozen tree and repeats all affected tests and package
+      gates; otherwise make no source edit before commit.
+- [ ] Commit and push only after every local gate is green. Wait for normal
+      CI and compiler-instrumented validation before moving arrays.
 
 ## 7. R3 — split benchmark and cross-codec tests
 

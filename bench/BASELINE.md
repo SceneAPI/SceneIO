@@ -1178,3 +1178,42 @@ error behavior, and a positive allocating control. The clean pinned
 manylinux2014 GCC 10.2 job passes that contract; the pending hosted
 Windows/Linux/macOS portability workflow will validate it by pass/fail rather
 than treating any single machine's RSS as a numeric SLA.
+
+## R2 aggregate-registry equivalence — 2026-07-26
+
+The aggregate staging boundary changes registry construction only; codec
+payload and metric behavior must remain unchanged. Two parent captures at
+`14bf53b` and one candidate capture used:
+
+```text
+.venv/Scripts/python.exe bench/bench_io.py \
+  --runs 1 --scale 0.001 --skip-oracles --json <output>
+```
+
+All three contain the same 50 rows and reproduce deterministic structural
+projection SHA-256
+`6a5e2b9306c7bac322f34722ada090d882001a22165731f19d8c10e86ce69864`.
+The projection retains codec order, payload/file sizes, nested result schema,
+and traced allocation fields; it excludes timing/throughput and RSS
+diagnostics. The only parent-run traced jitter was 212 bytes in each of the
+image-sequence inspect and partial peaks, so those two paths alone have a
+predeclared 256-byte tolerance. The candidate was 0 and 50 bytes from its
+nearest parent values on those paths. `bench/compare_io_structure.py` makes
+this comparison reproducible and the normal CI benchmark smoke now invokes
+it.
+
+A separate default-scale five-run candidate invocation with
+`--require-o4-gains --require-o5-inspect-gains
+--require-o5-partial-gains` completed successfully and reported that the
+stable O4 directions plus mmap/sink allocation bounds passed. Its JSON is
+intentionally not compared with the small-fixture structural hash because
+payload and encoded sizes scale with the generated fixture.
+
+Fifteen same-host samples were interleaved between an extracted parent source
+tree and the candidate source tree. Candidate/parent median import times were
+5.632/5.659 ms for `import sceneio`, 75.163/75.218 ms for the I/O facade, and
+7.394/7.464 ms for `_core`. The candidate adds exactly one eager facade
+module, `sceneio.io._registry.assembly`; the other two import boundaries have
+no module-set delta. These timings are local diagnostic evidence. The durable
+contracts are the exact module sets, the existing broad alert thresholds, and
+the same-host relative comparison.

@@ -70,6 +70,7 @@
       "sceneio.io._ply",
       "sceneio.io._registry",
       "sceneio.io._registry.adapters",
+      "sceneio.io._registry.assembly",
       "sceneio.io._registry.detection",
       "sceneio.io._registry.families",
       "sceneio.io._registry.families.calibration",

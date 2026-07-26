@@ -15,13 +15,17 @@ import numpy as np
 
 from sceneio import _core
 from sceneio.errors import SceneIoError
-from sceneio.io._builtin_manifest import CANONICAL_BUILTIN_IDS, FAMILY_MEMBERS
+from sceneio.io._builtin_manifest import CANONICAL_BUILTIN_IDS
 from sceneio.io._frame_access import ImageFrameAccess
 from sceneio.io._inspection import inspect_codec
 from sceneio.io._ply import classify_ply
 from sceneio.io._registry import adapters as _shared_adapters
 from sceneio.io._registry import model as _shared_model
 from sceneio.io._registry import native_features as _shared_native_features
+from sceneio.io._registry.assembly import BuiltinAssembly as _BuiltinAssembly
+from sceneio.io._registry.assembly import (
+    publish_builtin_definitions as _publish_builtin_definitions,
+)
 from sceneio.io._registry.detection import detect_path as _detect_path
 from sceneio.io._registry.families.calibration import CALIBRATION_CODECS
 from sceneio.io._registry.families.images import IMAGE_CODECS
@@ -60,6 +64,7 @@ def native_feature_capabilities(
 
 
 REGISTRY: dict[str, Codec] = {}
+_BUILTIN_ASSEMBLY = _BuiltinAssembly()
 
 
 def register(codec: Codec) -> Codec:
@@ -67,6 +72,21 @@ def register(codec: Codec) -> Codec:
         raise ValueError(f"codec id already registered: {codec.id!r}")
     REGISTRY[codec.id] = codec
     return codec
+
+
+def _define_builtin(codec: Codec) -> Codec:
+    """Stage one built-in while the public registry remains unpublished."""
+
+    return _BUILTIN_ASSEMBLY.add_codec(codec)
+
+
+def _define_builtin_family(
+    family_name: str,
+    codecs: tuple[Codec, ...],
+) -> tuple[Codec, ...]:
+    """Stage one complete built-in family without mutating ``REGISTRY``."""
+
+    return _BUILTIN_ASSEMBLY.add_family(family_name, codecs)
 
 
 def _install_builtin_family(
@@ -182,7 +202,7 @@ def _prepare_tensor_dict(obj):
 
 
 # --- built-in codecs (the compiled `_core` functions, uniformly wrapped) ---
-register(
+_define_builtin(
     Codec(
         "pfm",
         (".pfm",),
@@ -203,7 +223,7 @@ register(
         unsupported_features=("native_positive_stride_mmap_view",),
     )
 )
-register(
+_define_builtin(
     Codec(
         "colmap_sparse",
         (),
@@ -216,7 +236,7 @@ register(
         supported_features=("cameras", "images", "points3D", "tracks"),
     )
 )
-register(
+_define_builtin(
     Codec(
         "gaussian_ply",
         (".ply",),
@@ -228,7 +248,7 @@ register(
         read_points=_mmap_selector_reader(_core.read_gaussian_ply_points),
     )
 )
-register(
+_define_builtin(
     Codec(
         "compressed_ply",
         (".compressed.ply",),
@@ -259,7 +279,7 @@ register(
         ),
     )
 )
-register(
+_define_builtin(
     Codec(
         "sog",
         (".sog",),
@@ -293,7 +313,7 @@ register(
         ),
     )
 )
-register(
+_define_builtin(
     Codec(
         "ksplat",
         (".ksplat",),
@@ -321,11 +341,8 @@ register(
         ),
     )
 )
-_install_builtin_family(
-    MESH_CODECS,
-    FAMILY_MEMBERS["meshes"],
-)
-register(
+_define_builtin_family("meshes", MESH_CODECS)
+_define_builtin(
     Codec(
         "ply",
         (".ply",),
@@ -352,7 +369,7 @@ register(
         ),
     )
 )
-register(
+_define_builtin(
     Codec(
         "pcd",
         (".pcd",),
@@ -383,7 +400,7 @@ register(
         ),
     )
 )
-register(
+_define_builtin(
     Codec(
         "spz",
         (".spz",),
@@ -399,7 +416,7 @@ register(
 # Camera-pose formats -> PosedViewSet. `datatype` here is informational; a
 # vocabulary id is pending, like `splat` (see formats/datatypes.py). TUM/KITTI
 # claim no extension (`.txt` is ambiguous) so they are explicit-`format=` only.
-register(
+_define_builtin(
     Codec(
         "transforms_json",
         (),
@@ -410,7 +427,7 @@ register(
         filenames=("transforms.json",),
     )
 )
-register(
+_define_builtin(
     Codec(
         "tum",
         (),
@@ -420,7 +437,7 @@ register(
         datatype="posed_views",
     )
 )
-register(
+_define_builtin(
     Codec(
         "kitti",
         (),
@@ -430,7 +447,7 @@ register(
         datatype="posed_views",
     )
 )
-register(
+_define_builtin(
     Codec(
         "euroc_state",
         (),
@@ -453,11 +470,8 @@ register(
         ),
     )
 )
-_install_builtin_family(
-    CALIBRATION_CODECS,
-    FAMILY_MEMBERS["calibration"],
-)
-register(
+_define_builtin_family("calibration", CALIBRATION_CODECS)
+_define_builtin(
     Codec(
         "g2o",
         (".g2o",),
@@ -484,7 +498,7 @@ register(
         ),
     )
 )
-register(
+_define_builtin(
     Codec(
         "colmap_db",
         (".db",),
@@ -522,7 +536,7 @@ register(
 )
 # Array / tensor + raster-image formats (Tier-1, zero-dep). datatype ids are
 # informational (vocabulary registration is Phase-C, like posed_views).
-register(
+_define_builtin(
     Codec(
         "npy",
         (".npy",),
@@ -535,7 +549,7 @@ register(
         unsupported_features=("fortran_order", "object_dtype"),
     )
 )
-register(
+_define_builtin(
     Codec(
         "npz",
         (".npz",),
@@ -547,7 +561,7 @@ register(
         unsupported_features=("object_dtype",),
     )
 )
-register(
+_define_builtin(
     Codec(
         "safetensors",
         (".safetensors",),
@@ -589,21 +603,18 @@ register(
         ),
     )
 )
-_install_builtin_family(
-    IMAGE_CODECS,
-    FAMILY_MEMBERS["images"],
-)
+_define_builtin_family("images", IMAGE_CODECS)
 _IMAGE_FRAME_ACCESS = ImageFrameAccess(
     extensions=_registered_image_extensions,
     inspect=_inspect_registered_path,
 )
-_install_builtin_family(
+_define_builtin_family(
+    "sequences",
     build_sequence_codecs(_IMAGE_FRAME_ACCESS),
-    FAMILY_MEMBERS["sequences"],
 )
 # COLMAP text sparse (cameras.txt/images.txt/points3D.txt) — the text twin of
 # colmap_sparse; a directory format distinguished by its cameras.txt marker.
-register(
+_define_builtin(
     Codec(
         "colmap_sparse_txt",
         (),
@@ -617,7 +628,7 @@ register(
         supported_features=("cameras", "images", "points3D", "tracks"),
     )
 )
-register(
+_define_builtin(
     Codec(
         "xyz",
         (".xyz",),
@@ -628,7 +639,7 @@ register(
         read_points=_mmap_selector_reader(_core.read_xyz_points),
     )
 )
-register(
+_define_builtin(
     Codec(
         "pts",
         (".pts",),
@@ -649,7 +660,7 @@ register(
 # ASPRS LAS (hand-parsed binary, no library) -> PointCloud. The "LASF"
 # signature is unambiguous. Waveform formats retain their descriptor VLRs,
 # raw point fields, and internal packet EVLR in a lossless sidecar.
-register(
+_define_builtin(
     Codec(
         "las",
         (".las",),
@@ -673,7 +684,7 @@ register(
 # LASzip-compatible LAZ through pinned LAZperf. The decoded PointCloud model
 # intentionally keeps only coordinates, intensity, and RGB; formats carrying
 # GPS time or NIR therefore advertise a lossy projection.
-register(
+_define_builtin(
     Codec(
         "laz",
         (".laz",),
@@ -699,7 +710,7 @@ register(
         ),
     )
 )
-register(
+_define_builtin(
     Codec(
         "flo",
         (".flo",),
@@ -718,7 +729,7 @@ register(
         ),
     )
 )
-register(
+_define_builtin(
     Codec(
         "dmb",
         (".dmb",),
@@ -741,7 +752,7 @@ register(
     )
 )
 # SfM pose formats -> Reconstruction (convention-converted to WXYZ/world_to_camera).
-register(
+_define_builtin(
     Codec(
         "bundler",
         (".out",),
@@ -752,7 +763,7 @@ register(
         magic=(b"# Bundle file",),
     )
 )
-register(
+_define_builtin(
     Codec(
         "bal",
         (".bal",),
@@ -777,7 +788,7 @@ register(
         ),
     )
 )
-register(
+_define_builtin(
     Codec(
         "nvm",
         (".nvm",),
@@ -788,7 +799,7 @@ register(
         magic=(b"NVM_V3",),
     )
 )
-register(
+_define_builtin(
     Codec(
         "openmvg",
         (),
@@ -801,7 +812,7 @@ register(
 )
 # antimatter15 .splat -> GaussianCloud. Headerless (no magic), so ext-only; a
 # down-converted, web-viewer sibling of spz (both carry the `splat` datatype).
-register(
+_define_builtin(
     Codec(
         "splat",
         (".splat",),
@@ -816,11 +827,10 @@ register(
     )
 )
 
-# This immutable tuple is the repository-owned completeness boundary.  The
-# mutable REGISTRY remains the public extension point and may contain
-# third-party codecs registered later.
+# This immutable tuple is the repository-owned completeness boundary. Built-ins
+# become visible only after the complete canonical set validates successfully.
+# The same mutable REGISTRY then remains the public extension point.
+BUILTIN_DEFINITIONS: tuple[Codec, ...] = _BUILTIN_ASSEMBLY.finalize()
+_publish_builtin_definitions(REGISTRY, BUILTIN_DEFINITIONS)
 if tuple(REGISTRY) != CANONICAL_BUILTIN_IDS:
-    raise RuntimeError("built-in codec registration order differs from its manifest")
-BUILTIN_DEFINITIONS: tuple[Codec, ...] = tuple(
-    REGISTRY[format_id] for format_id in CANONICAL_BUILTIN_IDS
-)
+    raise RuntimeError("built-in codec publication order differs from its manifest")

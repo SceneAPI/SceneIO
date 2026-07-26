@@ -112,6 +112,16 @@ sceneio._core (C++ / nanobind)
   grammar and inspection remain in `_image_sequence.py`. Repeated factory
   calls bind fresh directory codecs to their supplied live access objects
   without storing registry state in the family module.
+  Built-in startup uses `_registry/assembly.py` as a lower staging boundary.
+  Individual facade definitions and complete extracted family tuples are
+  collected without touching the public registry. After all 50 canonical ids
+  validate, the facade publishes the same ordered `Codec` objects to its
+  existing `REGISTRY` dictionary in one update. `ImageFrameAccess` is created
+  while that dictionary is empty, but its callbacks read the live dictionary
+  on every use; the initial empty probe is not cached. Once publication
+  completes, built-in detection and sequence access see the complete set, and
+  later public `register()` additions/removals remain immediately visible.
+  The collector owns no registry, codec implementation, or dispatch policy.
 
 ## Stable codec ownership and backend selection
 

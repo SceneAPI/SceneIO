@@ -76,14 +76,35 @@ with four documented skips. The exact 302-member source-to-70-file-wheel gate,
 retained all-codec guard, fresh import thresholds, installed all-image probe,
 and three independent reviews pass.
 
-Sequences are implemented as the active fourth-family candidate. Y4M and the
-image-sequence directory remain the last contiguous canonical family. The
-lower family module accepts the facade-created `ImageFrameAccess` explicitly,
-keeps the static Y4M codec, and returns an immutable two-codec tuple containing
-a freshly bound directory codec. It owns no registry state and never freezes
-the live image-extension catalog. Only the Y4M metadata converter moved to a
-family inspector. The directory manifest parser and inspector remain in
-`_image_sequence.py`, where R2.0 already removed upward dependencies.
+Sequences are complete and pushed at `14bf53b`. Y4M and the image-sequence
+directory are the fourth extracted family and the last contiguous canonical
+family. The lower family module accepts the facade-created
+`ImageFrameAccess` explicitly, keeps the static Y4M codec, and returns an
+immutable two-codec tuple containing a freshly bound directory codec. It owns
+no registry state and never freezes the live image-extension catalog. Only
+the Y4M metadata converter moved to a family inspector. The directory manifest
+parser and inspector remain in `_image_sequence.py`, where R2.0 removed upward
+dependencies. The complete local suite collects 3,083 tests and passes 3,079
+with four documented skips; exact source-to-wheel validation, retained
+all-codec guards, three independent reviews, normal CI run 30200316679, and
+compiler-instrumented run 30200316665 pass.
+
+The active R2 candidate implements the aggregate staging boundary needed by
+the four remaining interleaved families. The lower
+`_registry/assembly.py` collector validates single definitions and complete
+family tuples without importing the facade or mutating the public registry.
+The facade stages every built-in, finalizes the exact 50-id canonical tuple,
+then publishes it to the existing `REGISTRY` object in one update. Public
+third-party `register()` behavior, the compatibility family installer, and
+the live `ImageFrameAccess` callbacks remain unchanged. Parent/candidate AST
+and callable-descriptor contracts are exact, all 50 benchmark rows retain
+their deterministic structure, and the complete local suite passes 3,091
+tests with four documented skips. The exact-tree package preflight contains
+310 source files and a 73-file wheel whose sole runtime-member delta is the
+assembly module; the installed NumPy-only smoke and explicit aggregate/live
+sequence probe pass, and all three reviews are clear. Arrays are the first
+family to move after the post-documentation package repeat and hosted gates
+close this boundary; points, reconstruction, and splats follow.
 
 The codec-per-file C++ layer remains reasonably isolated, but orchestration and
 verification have accumulated in a few large modules:
@@ -92,7 +113,7 @@ verification have accumulated in a few large modules:
 |---|---|---|
 | C++ codecs | 40 files for 50 format ids | flat source list and manual binding declarations |
 | C++ records | 32 source/header files | still manageable; new table/animation/scene records will add pressure |
-| Python registry | `registry.py`, 826 lines, focused `_registry/{model,adapters,detection,native_features}.py` modules, and `_registry/families/{calibration,images,meshes,sequences}.py` definition modules | four built-in families still share the facade until their R2.2 units |
+| Python registry | `registry.py`, 836 lines; `_registry/assembly.py`, 148 lines; focused `_registry/{model,adapters,detection,native_features}.py` modules; and `_registry/families/{calibration,images,meshes,sequences}.py` definition modules | four built-in families still share the facade until their R2.2 units |
 | Inspection | `_inspection.py`, 1,341 lines, plus `_inspectors/{model,common,calibration,images,meshes,sequences}.py`; `common.py` is 75 lines | four unrelated format families still share the facade; the proven shared model, mmap bridge, metadata bounds, exact-read/integer grammar, and image-result constructor are lower services |
 | Benchmark | `bench_io.py`, about 4,660 lines | CLI, fixtures, oracles, runners, metrics, and reporting are coupled |
 | Cross-codec tests | `test_io_mmap.py`, about 2,400 lines; `test_io_partial.py`, about 1,100 | reusable codec cases and behavior assertions are difficult to extend independently |
@@ -164,6 +185,7 @@ src/cpp/
 src/sceneio/io/
   registry.py                 # compatibility facade
   _registry/
+    assembly.py               # validated one-update built-in publication
     model.py                  # Codec and capability value types
     adapters.py               # shared mmap/path/sink adapters
     detection.py

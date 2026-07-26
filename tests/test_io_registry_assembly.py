@@ -1,0 +1,770 @@
+"""Contracts for atomic built-in codec assembly and publication."""
+
+from __future__ import annotations
+
+import ast
+import copy
+import functools
+import hashlib
+import inspect
+import json
+import subprocess
+import sys
+import textwrap
+from pathlib import Path
+
+import pytest
+
+from sceneio.io import registry
+from sceneio.io._builtin_manifest import (
+    CANONICAL_BUILTIN_IDS,
+    FAMILY_MEMBERS,
+)
+from sceneio.io._frame_access import ImageFrameAccess
+from sceneio.io._registry import assembly
+from sceneio.io._registry.families.calibration import CALIBRATION_CODECS
+from sceneio.io._registry.model import Codec
+
+ROOT = Path(__file__).resolve().parents[1]
+CONTRACT = json.loads(
+    (ROOT / "tests/contracts/io_registry_assembly_v1.json").read_text(
+        encoding="utf-8"
+    )
+)
+CODEC_SOURCE_PATHS = (
+    "src/sceneio/io/registry.py",
+    "src/sceneio/io/_registry/families/calibration.py",
+    "src/sceneio/io/_registry/families/images.py",
+    "src/sceneio/io/_registry/families/meshes.py",
+    "src/sceneio/io/_registry/families/sequences.py",
+)
+
+
+def _identity(value):
+    return value
+
+
+def _codec(format_id: str) -> Codec:
+    return Codec(format_id, (), _identity, None, None, "probe")
+
+
+class _NormalizeFrameAccess(ast.NodeTransformer):
+    def visit_Name(self, node: ast.Name) -> ast.Name:
+        replacements = CONTRACT["codec_ast"]["normalized_names"]
+        if node.id in replacements:
+            node.id = replacements[node.id]
+        return node
+
+
+def _codec_ast_hashes() -> dict[str, str]:
+    hashes = {}
+    for relative in CODEC_SOURCE_PATHS:
+        tree = ast.parse((ROOT / relative).read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            if (
+                isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Name)
+                and node.func.id == "Codec"
+            ):
+                assert node.args
+                assert isinstance(node.args[0], ast.Constant)
+                assert isinstance(node.args[0].value, str)
+                assert node.args[0].value not in hashes
+                normalized = _NormalizeFrameAccess().visit(copy.deepcopy(node))
+                payload = ast.dump(
+                    normalized,
+                    annotate_fields=True,
+                    include_attributes=False,
+                )
+                hashes[node.args[0].value] = hashlib.sha256(
+                    payload.encode()
+                ).hexdigest()
+    return hashes
+
+
+def _callable_name(value) -> dict[str, str]:
+    return {
+        "module": getattr(value, "__module__", type(value).__module__),
+        "qualname": getattr(value, "__qualname__", type(value).__qualname__),
+    }
+
+
+def _describe_operation(value):
+    if value is None or isinstance(value, (bool, int, float, str)):
+        return value
+    if isinstance(value, bytes):
+        return {"kind": "bytes", "hex": value.hex()}
+    if isinstance(value, tuple):
+        return {
+            "kind": "tuple",
+            "items": [_describe_operation(item) for item in value],
+        }
+    if isinstance(value, list):
+        return {
+            "kind": "list",
+            "items": [_describe_operation(item) for item in value],
+        }
+    if isinstance(value, dict):
+        items = [
+            (_describe_operation(key), _describe_operation(item))
+            for key, item in value.items()
+        ]
+        items.sort(
+            key=lambda pair: json.dumps(
+                pair[0],
+                sort_keys=True,
+                separators=(",", ":"),
+            )
+        )
+        return {"kind": "dict", "items": items}
+    if isinstance(value, functools.partial):
+        return {
+            "kind": "partial",
+            "func": _describe_operation(value.func),
+            "args": _describe_operation(value.args),
+            "keywords": _describe_operation(value.keywords or {}),
+        }
+    if isinstance(value, ImageFrameAccess):
+        return {
+            "kind": "ImageFrameAccess",
+            "extensions": _describe_operation(value.extensions),
+            "inspect": _describe_operation(value.inspect),
+        }
+    if inspect.ismethod(value):
+        return {
+            "kind": "bound_method",
+            "func": _describe_operation(value.__func__),
+            "owner": _describe_operation(type(value.__self__)),
+        }
+    if isinstance(value, type):
+        return {"kind": "type", **_callable_name(value)}
+    if inspect.isfunction(value):
+        cells = []
+        if value.__closure__:
+            for name, cell in zip(
+                value.__code__.co_freevars,
+                value.__closure__,
+                strict=True,
+            ):
+                try:
+                    cell_value = cell.cell_contents
+                except ValueError:
+                    cell_value = {"kind": "empty_cell"}
+                cells.append([name, _describe_operation(cell_value)])
+        return {
+            "kind": "function",
+            **_callable_name(value),
+            "closure": cells,
+        }
+    if callable(value):
+        return {"kind": "callable", **_callable_name(value)}
+    raise TypeError(f"unsupported operation descriptor value: {type(value)!r}")
+
+
+def _operation_hashes() -> dict[str, dict[str, str]]:
+    fields = CONTRACT["operation_descriptors"]["fields"]
+    hashes = {}
+    for codec in registry.BUILTIN_DEFINITIONS:
+        operations = {}
+        for field in fields:
+            value = getattr(codec, field)
+            if value is not None:
+                payload = json.dumps(
+                    _describe_operation(value),
+                    sort_keys=True,
+                    separators=(",", ":"),
+                )
+                operations[field] = hashlib.sha256(payload.encode()).hexdigest()
+        hashes[codec.id] = operations
+    return hashes
+
+
+def test_parent_codec_definitions_remain_structurally_identical():
+    assert CONTRACT["schema_version"] == 1
+    assert CONTRACT["parent"] == {
+        "commit": "14bf53b45d66c427277948b16c4aca3765e7142a",
+        "tree": "fcb64bee4f4fe782e027fe8e1b0505094c57dfdf",
+    }
+    expected = CONTRACT["codec_ast"]["hashes"]
+    assert tuple(expected) == CANONICAL_BUILTIN_IDS
+    assert _codec_ast_hashes() == expected
+
+
+def test_parent_operation_bindings_remain_identical():
+    assert CONTRACT["operation_descriptors"]["algorithm_version"] == 1
+    expected = CONTRACT["operation_descriptors"]["hashes"]
+    assert tuple(expected) == CANONICAL_BUILTIN_IDS
+    assert _operation_hashes() == expected
+
+
+def test_builder_failure_is_recoverable_and_success_is_idempotent():
+    builder = assembly.BuiltinAssembly(("first", "second"))
+    first = _codec("first")
+    second = _codec("second")
+
+    assert builder.add_codec(first) is first
+    with pytest.raises(ValueError, match=r"missing=\('second',\)"):
+        builder.finalize()
+    with pytest.raises(ValueError, match=r"already staged: 'first'"):
+        builder.add_codec(first)
+    assert builder.add_codec(second) is second
+
+    definitions = builder.finalize()
+    assert definitions == (first, second)
+    assert builder.finalize() is definitions
+    with pytest.raises(RuntimeError, match="assembly is finalized"):
+        builder.add_codec(_codec("first"))
+    with pytest.raises(RuntimeError, match="assembly is finalized"):
+        builder.add_family("calibration", CALIBRATION_CODECS)
+
+
+def test_builder_rejects_unknown_and_non_exact_codec_types_without_progress():
+    class Duck:
+        id = "first"
+
+    class CodecSubclass(Codec):
+        pass
+
+    for value, error in (
+        (Duck(), TypeError),
+        (
+            CodecSubclass("first", (), _identity, None, None, "probe"),
+            TypeError,
+        ),
+        (_codec("unknown"), ValueError),
+    ):
+        builder = assembly.BuiltinAssembly(("first",))
+        with pytest.raises(error):
+            builder.add_codec(value)
+        with pytest.raises(ValueError, match=r"missing=\('first',\)"):
+            builder.finalize()
+        expected = _codec("first")
+        builder.add_codec(expected)
+        assert builder.finalize() == (expected,)
+
+
+def test_family_staging_is_exact_atomic_and_recoverable():
+    expected_ids = FAMILY_MEMBERS["calibration"]
+
+    builder = assembly.BuiltinAssembly(expected_ids)
+    with pytest.raises(ValueError, match="do not match"):
+        builder.add_family("calibration", tuple(reversed(CALIBRATION_CODECS)))
+    assert builder.add_family("calibration", CALIBRATION_CODECS) == (
+        CALIBRATION_CODECS
+    )
+    assert builder.finalize() == CALIBRATION_CODECS
+
+    builder = assembly.BuiltinAssembly(expected_ids)
+    invalid = (*CALIBRATION_CODECS[:-1], object())
+    with pytest.raises(TypeError, match="family entries"):
+        builder.add_family("calibration", invalid)
+    assert builder.add_family("calibration", CALIBRATION_CODECS)
+    assert builder.finalize() == CALIBRATION_CODECS
+
+    builder = assembly.BuiltinAssembly(expected_ids)
+    duplicate = (
+        CALIBRATION_CODECS[0],
+        CALIBRATION_CODECS[0],
+        *CALIBRATION_CODECS[2:],
+    )
+    with pytest.raises(ValueError, match="family ids must be unique"):
+        builder.add_family("calibration", duplicate)
+    assert builder.add_family("calibration", CALIBRATION_CODECS)
+    assert builder.finalize() == CALIBRATION_CODECS
+
+    builder = assembly.BuiltinAssembly(expected_ids)
+    assert builder.add_codec(CALIBRATION_CODECS[1]) is CALIBRATION_CODECS[1]
+    with pytest.raises(ValueError, match="already staged"):
+        builder.add_family("calibration", CALIBRATION_CODECS)
+    assert builder.add_codec(CALIBRATION_CODECS[0]) is CALIBRATION_CODECS[0]
+    for codec in CALIBRATION_CODECS[2:]:
+        assert builder.add_codec(codec) is codec
+    assert builder.finalize() == CALIBRATION_CODECS
+
+    builder = assembly.BuiltinAssembly(expected_ids)
+    with pytest.raises(ValueError, match="unknown built-in codec family"):
+        builder.add_family("missing", CALIBRATION_CODECS)
+    assert builder.add_family("calibration", CALIBRATION_CODECS)
+    assert builder.finalize() == CALIBRATION_CODECS
+
+
+def test_publication_is_one_update_and_rejections_leave_target_unchanged():
+    class FailingUpdateDict(dict):
+        calls = 0
+
+        def update(self, *args, **kwargs):
+            self.calls += 1
+            self["partial"] = _codec("partial")
+            raise RuntimeError("injected update failure")
+
+    target = {}
+    target_id = id(target)
+    assert (
+        assembly.publish_builtin_definitions(
+            target,
+            registry.BUILTIN_DEFINITIONS,
+        )
+        is None
+    )
+    assert id(target) == target_id
+    assert tuple(target.items()) == tuple(registry.REGISTRY.items())
+
+    seeded = {"preexisting": _codec("preexisting")}
+    before = tuple(seeded.items())
+    seeded_id = id(seeded)
+    with pytest.raises(ValueError, match="must be empty"):
+        assembly.publish_builtin_definitions(
+            seeded,
+            registry.BUILTIN_DEFINITIONS,
+        )
+    assert id(seeded) == seeded_id
+    assert tuple(seeded.items()) == before
+
+    invalid = {}
+    with pytest.raises(ValueError, match="do not match"):
+        assembly.publish_builtin_definitions(
+            invalid,
+            tuple(reversed(registry.BUILTIN_DEFINITIONS)),
+        )
+    assert not invalid
+
+    failing = FailingUpdateDict()
+    with pytest.raises(TypeError, match="must be an exact dict"):
+        assembly.publish_builtin_definitions(
+            failing,
+            registry.BUILTIN_DEFINITIONS,
+        )
+    assert not failing
+    assert failing.calls == 0
+
+
+def test_public_registration_and_family_installer_keep_legacy_behavior():
+    class Duck:
+        id = "assembly_duck_probe"
+
+    class CodecSubclass(Codec):
+        pass
+
+    duck = Duck()
+    subclass = CodecSubclass(
+        "assembly_subclass_probe",
+        (),
+        _identity,
+        None,
+        None,
+        "probe",
+    )
+    registry_id = id(registry.REGISTRY)
+    before = tuple(registry.REGISTRY.items())
+    try:
+        assert registry.register(duck) is duck
+        assert registry.register(subclass) is subclass
+        assert registry.REGISTRY[duck.id] is duck
+        assert registry.REGISTRY[subclass.id] is subclass
+        with pytest.raises(ValueError, match="already registered"):
+            registry.register(duck)
+    finally:
+        registry.REGISTRY.pop(duck.id, None)
+        registry.REGISTRY.pop(subclass.id, None)
+    assert id(registry.REGISTRY) == registry_id
+    assert tuple(registry.REGISTRY.items()) == before
+
+    family = (_codec("legacy-family-a"), _codec("legacy-family-b"))
+    assert registry._install_builtin_family(
+        family,
+        ("legacy-family-a", "legacy-family-b"),
+    ) is None
+    try:
+        assert registry.REGISTRY["legacy-family-a"] is family[0]
+        assert registry.REGISTRY["legacy-family-b"] is family[1]
+    finally:
+        registry.REGISTRY.pop("legacy-family-a")
+        registry.REGISTRY.pop("legacy-family-b")
+    assert tuple(registry.REGISTRY.items()) == before
+
+    failures = (
+        ((object(),), ("bad-type",), TypeError),
+        (
+            (_codec("duplicate"), _codec("duplicate")),
+            ("duplicate", "duplicate"),
+            ValueError,
+        ),
+        ((_codec("wrong-id"),), ("expected-id",), ValueError),
+        ((_codec("npy"),), ("npy",), ValueError),
+    )
+    for codecs, expected_ids, error in failures:
+        with pytest.raises(error):
+            registry._install_builtin_family(codecs, expected_ids)
+        assert id(registry.REGISTRY) == registry_id
+        assert tuple(registry.REGISTRY.items()) == before
+
+
+def test_facade_has_one_top_level_builtin_publication():
+    source = (ROOT / "src/sceneio/io/registry.py").read_text(encoding="utf-8")
+    tree = ast.parse(source)
+    top_level_calls = []
+    top_level_registry_writes = []
+    for statement in tree.body:
+        if isinstance(statement, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            continue
+        for node in ast.walk(statement):
+            if isinstance(node, ast.Call):
+                top_level_calls.append(node)
+            if (
+                isinstance(node, ast.Subscript)
+                and isinstance(node.ctx, ast.Store)
+                and isinstance(node.value, ast.Name)
+                and node.value.id == "REGISTRY"
+            ):
+                top_level_registry_writes.append(node)
+
+    called_names = [
+        node.func.id
+        for node in top_level_calls
+        if isinstance(node.func, ast.Name)
+    ]
+    assert "register" not in called_names
+    assert "_install_builtin_family" not in called_names
+    assert called_names.count("_publish_builtin_definitions") == 1
+    assert not top_level_registry_writes
+    assert not hasattr(registry, "BuiltinAssembly")
+    assert not hasattr(registry, "publish_builtin_definitions")
+
+    finalize_calls = [
+        node
+        for node in top_level_calls
+        if isinstance(node.func, ast.Attribute)
+        and node.func.attr == "finalize"
+        and isinstance(node.func.value, ast.Name)
+        and node.func.value.id == "_BUILTIN_ASSEMBLY"
+    ]
+    assert len(finalize_calls) == 1
+
+
+def test_fresh_import_observes_empty_then_one_complete_publication():
+    code = textwrap.dedent(
+        """
+        import dis
+        import json
+        import sys
+
+        report = {
+            "finalize_calls": 0,
+            "finalize_returns": [],
+            "publish_calls": 0,
+            "register_calls": 0,
+            "installer_calls": 0,
+            "update_before": [],
+            "update_after": [],
+            "update_target_ids": [],
+            "registry_sizes": [],
+            "extension_bootstrap_returns": [],
+            "publication_events": [],
+            "subscription_stores": 0,
+        }
+        opcode_names = {}
+
+        def normalized(filename):
+            return filename.replace("\\\\", "/")
+
+        def profile(frame, event, arg):
+            filename = normalized(frame.f_code.co_filename)
+            name = frame.f_code.co_name
+            is_assembly = filename.endswith(
+                "/sceneio/io/_registry/assembly.py"
+            )
+            is_registry = filename.endswith("/sceneio/io/registry.py")
+            if event == "call":
+                if is_assembly and name == "finalize":
+                    report["finalize_calls"] += 1
+                elif is_assembly and name == "publish_builtin_definitions":
+                    report["publish_calls"] += 1
+                elif is_registry and name == "register":
+                    report["register_calls"] += 1
+                elif is_registry and name == "_install_builtin_family":
+                    report["installer_calls"] += 1
+            elif event == "return":
+                if is_assembly and name == "finalize":
+                    report["finalize_returns"].append(
+                        [codec.id for codec in arg]
+                    )
+                    report["publication_events"].append("finalize_return")
+                elif is_registry and name == "_registered_image_extensions":
+                    report["extension_bootstrap_returns"].append(sorted(arg))
+            elif (
+                event == "c_call"
+                and is_assembly
+                and name == "publish_builtin_definitions"
+                and getattr(arg, "__name__", "") == "update"
+            ):
+                target = frame.f_locals["registry"]
+                report["update_before"].append(len(target))
+                report["update_target_ids"].append(id(target))
+                report["publication_events"].append("update_call")
+            elif (
+                event == "c_return"
+                and is_assembly
+                and name == "publish_builtin_definitions"
+                and getattr(arg, "__name__", "") == "update"
+            ):
+                report["update_after"].append(len(frame.f_locals["registry"]))
+                report["publication_events"].append("update_return")
+
+        def trace(frame, event, arg):
+            is_registry = normalized(frame.f_code.co_filename).endswith(
+                "/sceneio/io/registry.py"
+            )
+            if event == "call" and is_registry and frame.f_code.co_name == "<module>":
+                frame.f_trace_opcodes = True
+            elif event == "line" and is_registry:
+                target = frame.f_globals.get("REGISTRY")
+                if isinstance(target, dict):
+                    report["registry_sizes"].append(len(target))
+            elif event == "opcode" and is_registry:
+                names = opcode_names.get(frame.f_code)
+                if names is None:
+                    names = {
+                        instruction.offset: instruction.opname
+                        for instruction in dis.get_instructions(frame.f_code)
+                    }
+                    opcode_names[frame.f_code] = names
+                if names.get(frame.f_lasti) == "STORE_SUBSCR":
+                    report["subscription_stores"] += 1
+            return trace
+
+        sys.setprofile(profile)
+        sys.settrace(trace)
+        from sceneio.io import registry
+        sys.settrace(None)
+        sys.setprofile(None)
+
+        report["registry_id"] = id(registry.REGISTRY)
+        report["registry_ids"] = list(registry.REGISTRY)
+        report["definition_ids"] = [
+            codec.id for codec in registry.BUILTIN_DEFINITIONS
+        ]
+        report["all_live_identities"] = all(
+            registry.REGISTRY[codec.id] is codec
+            for codec in registry.BUILTIN_DEFINITIONS
+        )
+        report["final_image_extensions"] = sorted(
+            registry._IMAGE_FRAME_ACCESS.image_extensions()
+        )
+        print(json.dumps(report))
+        """
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", code],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    report = json.loads(result.stdout)
+    canonical = list(CANONICAL_BUILTIN_IDS)
+
+    assert report["finalize_calls"] == 1
+    assert report["finalize_returns"] == [canonical]
+    assert report["publish_calls"] == 1
+    assert report["register_calls"] == 0
+    assert report["installer_calls"] == 0
+    assert report["update_before"] == [0]
+    assert report["update_after"] == [50]
+    assert report["update_target_ids"] == [report["registry_id"]]
+    assert report["publication_events"] == [
+        "finalize_return",
+        "update_call",
+        "update_return",
+    ]
+    assert report["subscription_stores"] == 0
+    assert set(report["registry_sizes"]) == {0, 50}
+    assert report["registry_sizes"][0] == 0
+    assert report["registry_sizes"][-1] == 50
+    assert report["extension_bootstrap_returns"] == [[]]
+    assert report["registry_ids"] == canonical
+    assert report["definition_ids"] == canonical
+    assert report["all_live_identities"]
+    assert report["final_image_extensions"]
+
+
+def test_old_and_reloaded_sequence_codecs_share_live_extension_catalog():
+    code = textwrap.dedent(
+        """
+        import importlib
+        import tempfile
+        from pathlib import Path
+
+        from sceneio import _core
+        from sceneio.io import registry
+        from sceneio.io._inspectors.model import Inspection
+
+        old_codec = registry.REGISTRY["image_sequence"]
+        old_access = registry._IMAGE_FRAME_ACCESS
+        registry = importlib.reload(registry)
+        new_codec = registry.REGISTRY["image_sequence"]
+        new_access = registry._IMAGE_FRAME_ACCESS
+
+        def inspect_frame(path):
+            return Inspection(
+                format="assembly_sequence_probe",
+                datatype="image",
+                byte_size=Path(path).stat().st_size,
+                shape=(2, 3, 1),
+                dtype="uint8",
+                channels=1,
+            )
+
+        probe = registry.Codec(
+            "assembly-sequence-probe",
+            (".assemblyprobe",),
+            lambda path: path,
+            lambda record, path: None,
+            record=_core.Image,
+            datatype="image",
+            inspect=inspect_frame,
+        )
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / "source"
+            source.mkdir()
+            (source / "frame.assemblyprobe").write_bytes(b"frame")
+            (source / "sceneio_sequence.json").write_text(
+                '{"sceneio_image_sequence":1,'
+                '"frames":[{"file":"frame.assemblyprobe"}]}',
+                encoding="utf-8",
+            )
+            registry.register(probe)
+            records = []
+            try:
+                assert ".assemblyprobe" in old_access.image_extensions()
+                assert ".assemblyprobe" in new_access.image_extensions()
+                for index, codec in enumerate((old_codec, new_codec)):
+                    record = codec.read(str(source))
+                    records.append(record)
+                    assert codec.inspect(str(source)).shape == (1, 2, 3, 1)
+                    assert codec.read_frames(str(source), 0, 1).num_frames == 1
+                    destination = root / f"copy-{index}"
+                    codec.write(record, str(destination))
+                    assert (
+                        destination / "frame.assemblyprobe"
+                    ).read_bytes() == b"frame"
+            finally:
+                assert registry.REGISTRY.pop(probe.id) is probe
+
+            assert ".assemblyprobe" not in old_access.image_extensions()
+            assert ".assemblyprobe" not in new_access.image_extensions()
+            for index, codec in enumerate((old_codec, new_codec)):
+                operations = (
+                    lambda: codec.read(str(source)),
+                    lambda: codec.inspect(str(source)),
+                    lambda: codec.read_frames(str(source), 0, 1),
+                    lambda: codec.write(
+                        records[index],
+                        str(root / f"removed-{index}"),
+                    ),
+                )
+                for operation in operations:
+                    try:
+                        operation()
+                    except ValueError as error:
+                        assert "unsupported frame extension" in str(error)
+                    else:
+                        raise AssertionError(
+                            "removed frame extension remained available"
+                        )
+        """
+    )
+    subprocess.run([sys.executable, "-c", code], cwd=ROOT, check=True)
+
+
+def test_assembly_dependency_direction_and_import_delta_are_exact():
+    source = inspect.getsource(assembly)
+    tree = ast.parse(source)
+    imported = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            imported.update(alias.name for alias in node.names)
+        elif isinstance(node, ast.ImportFrom):
+            imported.add(node.module)
+    assert imported == {
+        "__future__",
+        "sceneio.io._builtin_manifest",
+        "sceneio.io._registry.model",
+    }
+    assert "sceneio.io.registry" not in source
+    assert "_core" not in source
+
+    code = (
+        "import json,sys;"
+        "import sceneio;sceneio.codecs();"
+        "print(json.dumps(sorted(name for name in sys.modules "
+        "if name=='sceneio' or name.startswith('sceneio.'))))"
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", code],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    modules = json.loads(result.stdout)
+    assert modules.count("sceneio.io._registry.assembly") == 1
+    parent_modules = [
+        name for name in modules if name != "sceneio.io._registry.assembly"
+    ]
+    parent_payload = json.dumps(parent_modules, separators=(",", ":"))
+    assert len(parent_modules) == CONTRACT["import_parent"]["module_count"]
+    assert hashlib.sha256(parent_payload.encode()).hexdigest() == (
+        CONTRACT["import_parent"]["ordered_modules_sha256"]
+    )
+    assert CONTRACT["import_parent"]["windows_samples"] == 15
+    boundaries = CONTRACT["import_parent"]["boundaries"]
+    assert tuple(boundaries) == ("import_sceneio", "import_io", "import_core")
+    for boundary in boundaries.values():
+        assert boundary["candidate_median_ms"] <= (
+            boundary["parent_median_ms"]
+            + boundary["maximum_median_increase_ms"]
+        )
+    assert (
+        boundaries["import_io"]["candidate_module_count"]
+        - boundaries["import_io"]["parent_module_count"]
+        == 1
+    )
+    for name in ("import_sceneio", "import_core"):
+        assert boundaries[name]["candidate_module_count"] == (
+            boundaries[name]["parent_module_count"]
+        )
+
+    collection = subprocess.run(
+        [sys.executable, "-m", "pytest", "--collect-only", "-q"],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    node_ids = []
+    for line in collection.stdout.splitlines():
+        if "::" not in line or line.startswith("="):
+            continue
+        node_id = line.strip().replace("\\", "/")
+        while "//" in node_id:
+            node_id = node_id.replace("//", "/")
+        node_ids.append(node_id)
+    candidate = CONTRACT["pytest_candidate_collection"]
+    parent = CONTRACT["pytest_parent_collection"]
+    assert len(node_ids) == candidate["count"]
+    assert node_ids[0] == candidate["first"]
+    assert node_ids[-1] == candidate["last"]
+    assert hashlib.sha256("\n".join(sorted(node_ids)).encode()).hexdigest() == (
+        candidate["sorted_normalized_node_ids_sha256"]
+    )
+    assert set(candidate["added_nodes"]) <= set(node_ids)
+    assert candidate["removed_nodes"] == []
+    assert candidate["count"] - parent["count"] == len(candidate["added_nodes"])
+
+    workflow = (
+        ROOT / ".github/workflows/sanitizers.yml"
+    ).read_text(encoding="utf-8")
+    assert f'^{candidate["count"]} tests collected in ' in workflow
+    ci_workflow = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
+    assert "bench/compare_io_structure.py" in ci_workflow

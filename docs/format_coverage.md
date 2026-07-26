@@ -58,7 +58,7 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > smoke-tests all three platform wheel sets, with publication skipped. R1 is
 > closed and R2 is next.
 >
-> **R2 local organization checkpoint (2026-07-26, `68c47d6`):** R2.0
+> **R2 local organization checkpoint (2026-07-26, `14bf53b`):** R2.0
 > (`40d5412`) removes image-sequence upward runtime dependencies; R2.1
 > (`ccfeea4`) extracts shared registry services; and `b2bda1d` moves the four
 > calibration registrations and metadata inspectors behind the first
@@ -69,12 +69,14 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > the proven shared metadata limits, exact-read/integer grammar, and
 > image-result constructor. `68c47d6` then moves the eight contiguous image
 > registrations and their bounded metadata parsers behind lower family
-> modules while keeping image-sequence access live. Codec behavior and the
-> 50-id inventory remain unchanged. Local MSVC collects 3,064 tests and passes
-> 3,060 with four documented skips; the all-codec
+> modules while keeping image-sequence access live. `14bf53b` moves the final
+> contiguous family, Y4M plus the lazy image directory, while retaining live
+> image-extension access and directory-adapter ownership. Codec behavior and
+> the 50-id inventory remain unchanged. Local MSVC collects 3,083 tests and
+> passes 3,079 with four documented skips; the all-codec
 > performance/allocation guard passes, and a Windows abi3 wheel derived from
-> the exact 302-member source archive passes the expanded NumPy-only smoke and
-> installed image-family probe.
+> the exact 306-member source archive passes the expanded NumPy-only smoke and
+> installed sequence-family probe.
 > [Normal CI run
 > 30193628676][r2-calibration-ci] and [compiler-instrumented run
 > 30193628672][r2-calibration-instrumented] pass for the preceding calibration
@@ -86,10 +88,23 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > 30197244102][r2-image-helpers-ci] and [compiler-instrumented run
 > 30197244104][r2-image-helpers-instrumented] pass for `8040bc7`. [Normal CI
 > run 30198507638][r2-images-ci] and [compiler-instrumented run
-> 30198507645][r2-images-instrumented] pass for `68c47d6`. The two-codec
-> sequence-family extraction is the active local candidate: exact collection
-> is 3,083 tests, and the complete local suite passes 3,079 with the same four
-> documented skips.
+> 30198507645][r2-images-instrumented] pass for `68c47d6`. [Normal CI run
+> 30200316679][r2-sequences-ci] and [compiler-instrumented run
+> 30200316665][r2-sequences-instrumented] pass for `14bf53b`. The active R2
+> candidate now stages all built-in definitions outside the public registry,
+> validates the exact canonical aggregate, and publishes the same 50 objects
+> once. Parent/candidate codec-definition and operation-binding contracts are
+> exact, the 50-codec benchmark structure retains hash
+> `6a5e2b9306c7bac322f34722ada090d882001a22165731f19d8c10e86ce69864`,
+> and the complete local MSVC suite collects 3,095 tests and passes 3,091 with
+> four documented skips. The exact-tree package preflight contains 310 source
+> files and a 73-file Windows abi3 wheel whose only runtime-member delta is
+> `_registry/assembly.py`; index/archive/wheel identity, attribution,
+> NumPy-only metadata, native dependency inspection, the complete installed
+> smoke, and an explicit aggregate/sequence probe pass. All three independent
+> reviews are clear. This boundary enables the four remaining interleaved
+> families to move without changing detection order; arrays are next after the
+> post-documentation package repeat and hosted validation close this candidate.
 
 [current-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287022
 [current-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287161
@@ -107,6 +122,8 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 [r2-image-helpers-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30197244104
 [r2-images-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30198507638
 [r2-images-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30198507645
+[r2-sequences-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30200316679
+[r2-sequences-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30200316665
 
 ## Data structures (memory Records)
 
