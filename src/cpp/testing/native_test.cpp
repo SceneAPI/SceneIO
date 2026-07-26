@@ -7,6 +7,8 @@
 namespace nb = nanobind;
 
 bool sceneio_test_lazperf_default_corrector_rejects();
+bool sceneio_test_lazperf_wrapped_coordinate_arithmetic();
+bool sceneio_test_lazperf_compressor_full_range();
 
 #if defined(__GNUC__) || defined(__clang__)
 #define SCENEIO_LSAN_NOINLINE __attribute__((noinline))
@@ -56,4 +58,10 @@ NB_MODULE(_native_test, module) {
     module.def(
         "lazperf_default_corrector_rejects",
         &sceneio_test_lazperf_default_corrector_rejects);
+    module.def(
+        "lazperf_wrapped_coordinate_arithmetic",
+        &sceneio_test_lazperf_wrapped_coordinate_arithmetic);
+    module.def(
+        "lazperf_compressor_full_range",
+        &sceneio_test_lazperf_compressor_full_range);
 }

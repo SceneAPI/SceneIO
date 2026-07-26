@@ -6,8 +6,12 @@ still pending. N0.4 is committed as `0a2db6e` and passes the local MSVC,
 reduced-oracle instrumented GCC 10, and focused allocation-lifetime checks
 described below. Its direct LAZ arithmetic proof passes under the pinned GCC
 10 toolchain and the three-agent memory/lifetime, format/correctness, and
-test/benchmark reviews are clear. N0.5 local closure evidence is prepared in
-this change; creating and validating a resulting candidate commit still
+test/benchmark reviews are clear. The pushed N0.5 snapshot `c759f3c` passed
+normal CI and the three-platform wheel-build dry run. Its compiler-instrumented
+full suite exposed one valid full-range LAZ coordinate transition still
+expressed as signed arithmetic in pinned LAZperf. The reviewed follow-up in
+this change passes complete MSVC, GCC 10, focused instrumented GCC 13, direct
+native arithmetic, and LAZ benchmark checks. Its same-commit hosted reruns
 remain. R1-R6 have not started.
 
 This is the operational checklist for the repository-organization and
@@ -409,8 +413,8 @@ Local implementation evidence (committed as `0a2db6e`):
 - [x] Rebuild an sdist and Windows cp312-abi3 wheel.
 - [x] Install the wheel into a clean NumPy-only environment and run
       `sceneio._wheel_smoke`.
-- [ ] Create a locally green candidate commit; do not amend it after push.
-- [ ] With explicit user authorization, push the candidate commit and require
+- [x] Create a locally green candidate commit; do not amend it after push.
+- [x] With explicit user authorization, push the candidate commit and require
       normal Linux, instrumented Linux, and the focused three-OS portability
       matrix at that exact SHA.
 - [ ] Fix remote failures in follow-up commits and repeat; do not rewrite a
@@ -418,7 +422,7 @@ Local implementation evidence (committed as `0a2db6e`):
 - [ ] Mark N0 complete and update the latest tested checkpoint/workflow links
       only after all required jobs are green at one exact commit.
 
-Local pre-candidate evidence:
+Candidate and follow-up evidence:
 
 - The exact option-off worktree collects 2,923 tests and passes 2,919 with four
   documented skips. Ruff, workflow YAML parsing, installed-source smoke, and
@@ -438,12 +442,12 @@ Local pre-candidate evidence:
   `bench/bench_io.py --only las --runs 5`, then the unchanged complete
   five-run guard again. Each invocation also used `--json` to retain its
   result under `build/`.
-- The sdist-first build from `0a2db6e` produced
-  `sceneio-0.2.0.tar.gz` (3,990,113 bytes,
-  SHA-256 `549f0b9c90abc3ee62dcc0b5c984461304beb43796dd70e5323036551f1707eb`).
+- The sdist-first build from `c759f3c` produced
+  `sceneio-0.2.0.tar.gz` (3,991,461 bytes,
+  SHA-256 `ae88d34145de7e60c4d78bae2734b09a5f197c8db4502a1ffb60eeb53baf688c`).
   Building the Windows wheel from that exact archive produced
-  `sceneio-0.2.0-cp312-abi3-win_amd64.whl` (2,155,041 bytes,
-  SHA-256 `b9dbe7cb73dc43f5f58d4231f00752ce4c03bef76193e295059794da1268e17b`).
+  `sceneio-0.2.0-cp312-abi3-win_amd64.whl` (2,155,051 bytes,
+  SHA-256 `b8bc9019e2de94aa07a77596187b90275cdefb68b51a5267ebe669d5f59849d`).
 - The wheel has 53 entries, exactly one native module (`sceneio._core`), no
   native test target, and no top-level build/include/lib/share/bin content.
   Its packaged `LICENSES/` set exactly equals the repository inventory, and
@@ -452,8 +456,31 @@ Local pre-candidate evidence:
   `sceneio._wheel_smoke` passed. The installed `_core` depends only on
   `python312.dll`, standard Windows system libraries, and the Microsoft C/C++
   runtimes.
-- No candidate SHA exists yet, and the hosted jobs have not run for this
-  change. Their checkboxes and the N0 exit remain open.
+- At `c759f3c`, [normal CI run 30179410121](https://github.com/SceneAPI/SceneIO/actions/runs/30179410121)
+  passed the full suite, retained benchmark guard, pinned GCC-10 job, and
+  Ubuntu/Windows/macOS mmap matrix. The
+  [wheel-build dry run 30179409882](https://github.com/SceneAPI/SceneIO/actions/runs/30179409882)
+  built and smoke-tested all three platform wheels plus the sdist; its publish
+  job was correctly skipped.
+- The focused native job in
+  [compiler-instrumented run 30179410118](https://github.com/SceneAPI/SceneIO/actions/runs/30179410118)
+  passed. The full job exited twice at the first format-0
+  `INT32_MAX`/`INT32_MIN` oracle transition. An isolated Linux reproduction
+  identified signed coordinate reconstruction in LAZperf legacy and layered
+  point paths.
+- The follow-up uses a single documented modulo-2^32 helper for legacy and
+  layered encode/decode coordinates, performs compressor folding in a wider
+  intermediate, and adds direct addition, subtraction, magnitude, high-bit,
+  and compressor boundary checks. It passes 2,919 local MSVC tests with four
+  documented skips, the 62-test LAZ suite under focused GCC 13 instrumentation,
+  and the same 62-test suite in a fresh manylinux2014 GCC-10 build.
+- An uncontended five-run LAZ benchmark after the fix measured 229 MB/s
+  in-memory read and 178 MB/s mmap-path read, versus the earlier 179/168 MB/s
+  ordinary checkpoint. Inspection remained 1,091x faster than full read,
+  partial read remained 3.24x faster, and bytes/sink writes both measured
+  63 MB/s with the expected allocation reduction.
+- The reviewed follow-up in this change has not run remotely. The remote-fix
+  and N0 exit boxes remain open.
 
 ## 5. R1 — freeze contracts and evidence
 

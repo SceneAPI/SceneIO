@@ -1054,6 +1054,30 @@ environment containing only SceneIO plus NumPy all passed. Artifact hashes and
 entry-level evidence are recorded in
 `docs/next_stage_implementation_checklist.md`.
 
+## N0.5 hosted LAZ boundary follow-up — 2026-07-25
+
+Snapshot `c759f3c` passed normal CI, the full retained performance guard, the
+three-OS mmap matrix, pinned GCC-10 portability, and the three-platform
+wheel-build dry run. The full compiler-instrumented suite reproducibly stopped
+at the first valid format-0 `INT32_MAX`/`INT32_MIN` transition. An isolated
+GCC-13 reproduction identified signed coordinate reconstruction in the pinned
+LAZperf legacy path; after that path was corrected, the format-6 case exposed
+the equivalent layered path.
+
+The follow-up centralizes the specified LAS modulo-2^32 conversion and uses it
+for legacy and layered coordinate differences and reconstruction. Direct
+native checks cover wrapped addition/subtraction, the full-range compressor,
+and both corrector configurations. The focused GCC-13 build passes all 62 LAZ
+tests, a fresh manylinux2014 GCC-10 build passes the same 62 tests, and the
+complete local MSVC suite passes 2,919 tests with four documented skips.
+
+The first local five-run timing overlapped a Linux rebuild and is retained only
+as diagnostic evidence. An uncontended repeat measured 229 MB/s in-memory read
+and 178 MB/s mmap-path read, versus 179/168 MB/s at the earlier ordinary
+checkpoint. Bytes and sink writes both measured 63 MB/s, the sink retained its
+whole-output allocation reduction, inspection remained 1,091x faster than
+full decode, and partial read remained 3.24x faster.
+
 ## ImageSequence directory and raw Y4M baseline — 2026-07-25
 
 The sequence wave raises the registry and complete harness to 50 codecs and

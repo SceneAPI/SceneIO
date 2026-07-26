@@ -91,6 +91,59 @@ FetchContent_Declare(lazperf
   SOURCE_SUBDIR sceneio-no-upstream-cmake)
 FetchContent_MakeAvailable(lazperf)
 
+function(_sceneio_lazperf_patch_exactly_one path original replacement label)
+  file(READ "${path}" _sceneio_patch_source)
+  string(LENGTH "${_sceneio_patch_source}" _sceneio_patch_source_length)
+
+  string(LENGTH "${original}" _sceneio_patch_original_length)
+  string(REPLACE "${original}" "" _sceneio_patch_without_original
+    "${_sceneio_patch_source}")
+  string(LENGTH "${_sceneio_patch_without_original}"
+    _sceneio_patch_without_original_length)
+  math(EXPR _sceneio_patch_original_count
+    "(${_sceneio_patch_source_length} - ${_sceneio_patch_without_original_length}) / ${_sceneio_patch_original_length}")
+
+  string(LENGTH "${replacement}" _sceneio_patch_replacement_length)
+  string(REPLACE "${replacement}" "" _sceneio_patch_without_replacement
+    "${_sceneio_patch_source}")
+  string(LENGTH "${_sceneio_patch_without_replacement}"
+    _sceneio_patch_without_replacement_length)
+  math(EXPR _sceneio_patch_replacement_count
+    "(${_sceneio_patch_source_length} - ${_sceneio_patch_without_replacement_length}) / ${_sceneio_patch_replacement_length}")
+
+  if(_sceneio_patch_original_count EQUAL 1 AND
+     _sceneio_patch_replacement_count EQUAL 0)
+    string(REPLACE "${original}" "${replacement}" _sceneio_patch_result
+      "${_sceneio_patch_source}")
+  elseif(_sceneio_patch_original_count EQUAL 0 AND
+         _sceneio_patch_replacement_count EQUAL 1)
+    set(_sceneio_patch_result "${_sceneio_patch_source}")
+  else()
+    message(FATAL_ERROR
+      "Pinned LAZperf ${label} patch expected exactly one original or one "
+      "patched block; found ${_sceneio_patch_original_count} original and "
+      "${_sceneio_patch_replacement_count} patched")
+  endif()
+
+  if(NOT _sceneio_patch_result STREQUAL _sceneio_patch_source)
+    file(WRITE "${path}" "${_sceneio_patch_result}")
+  endif()
+endfunction()
+
+function(_sceneio_lazperf_count_occurrences text pattern output)
+  string(LENGTH "${text}" _sceneio_count_source_length)
+  string(LENGTH "${pattern}" _sceneio_count_pattern_length)
+  if(_sceneio_count_pattern_length EQUAL 0)
+    message(FATAL_ERROR "Cannot count an empty LAZperf patch pattern")
+  endif()
+  string(REPLACE "${pattern}" "" _sceneio_count_without_pattern "${text}")
+  string(LENGTH "${_sceneio_count_without_pattern}"
+    _sceneio_count_without_pattern_length)
+  math(EXPR _sceneio_count
+    "(${_sceneio_count_source_length} - ${_sceneio_count_without_pattern_length}) / ${_sceneio_count_pattern_length}")
+  set("${output}" "${_sceneio_count}" PARENT_SCOPE)
+endfunction()
+
 # LAZperf's format-1.4 decoders first copy each bounded arithmetic layer into
 # MemoryStream, whose upstream getByte() indexes the vector without checking
 # exhaustion. Apply a narrow, fail-closed patch so malformed layers produce a
@@ -133,6 +186,365 @@ unset(_sceneio_lazperf_getbyte_new)
 unset(_sceneio_lazperf_patch_applied)
 unset(_sceneio_lazperf_patch_target)
 
+# LAZ coordinates and integer correctors use modulo-2^32 arithmetic. Upstream
+# expresses several valid full-range transitions as signed int32 addition or
+# subtraction, whose overflow behavior is not defined by C++. Centralize the
+# intended wrapping conversion and use it in both point-codec generations and
+# the integer compressor/decompressor.
+set(_sceneio_lazperf_utils "${lazperf_SOURCE_DIR}/cpp/lazperf/utils.hpp")
+set(_sceneio_lazperf_utils_old [=[
+inline int64_t d2i(double d)
+{
+    int64_t i;
+    memcpy(&i, &d, sizeof(i));
+    return i;
+}
+
+template<typename T>
+]=])
+set(_sceneio_lazperf_utils_new [=[
+inline int64_t d2i(double d)
+{
+    int64_t i;
+    memcpy(&i, &d, sizeof(i));
+    return i;
+}
+
+inline int32_t wrappedInt32(uint32_t value)
+{
+    const uint32_t i32_max =
+        static_cast<uint32_t>((std::numeric_limits<int32_t>::max)());
+    return value <= i32_max ?
+        static_cast<int32_t>(value) :
+        -1 - static_cast<int32_t>(
+            (std::numeric_limits<uint32_t>::max)() - value);
+}
+
+inline int32_t wrapAddInt32(int32_t left, int32_t right)
+{
+    return wrappedInt32(
+        static_cast<uint32_t>(left) + static_cast<uint32_t>(right));
+}
+
+inline int32_t wrapSubtractInt32(int32_t left, int32_t right)
+{
+    return wrappedInt32(
+        static_cast<uint32_t>(left) - static_cast<uint32_t>(right));
+}
+
+template<typename T>
+]=])
+_sceneio_lazperf_patch_exactly_one(
+  "${_sceneio_lazperf_utils}"
+  "${_sceneio_lazperf_utils_old}"
+  "${_sceneio_lazperf_utils_new}"
+  "coordinate utility")
+
+set(_sceneio_lazperf_compressor
+  "${lazperf_SOURCE_DIR}/cpp/lazperf/compressor.hpp")
+set(_sceneio_lazperf_compressor_include_old [=[
+#include "model.hpp"
+
+#include <cstdint>
+]=])
+set(_sceneio_lazperf_compressor_include_new [=[
+#include "model.hpp"
+#include "utils.hpp"
+
+#include <cstdint>
+]=])
+_sceneio_lazperf_patch_exactly_one(
+  "${_sceneio_lazperf_compressor}"
+  "${_sceneio_lazperf_compressor_include_old}"
+  "${_sceneio_lazperf_compressor_include_new}"
+  "integer-compressor include")
+
+set(_sceneio_lazperf_compressor_difference_old [=[
+        int32_t corr = real - pred;
+        // we fold the corrector into the interval [ corr_min  ...  corr_max ]
+        if (corr < corr_min)
+            corr += corr_range;
+        else if (corr > corr_max)
+            corr -= corr_range;
+        writeCorrector(enc, corr, mBits[context]);
+]=])
+set(_sceneio_lazperf_compressor_difference_new [=[
+        int64_t folded = static_cast<int64_t>(
+            utils::wrapSubtractInt32(real, pred));
+        // we fold the corrector into the interval [ corr_min  ...  corr_max ]
+        if (corr_range != 0 && folded < corr_min)
+            folded += corr_range;
+        else if (corr_range != 0 && folded > corr_max)
+            folded -= corr_range;
+        writeCorrector(
+            enc, static_cast<int32_t>(folded), mBits[context]);
+]=])
+_sceneio_lazperf_patch_exactly_one(
+  "${_sceneio_lazperf_compressor}"
+  "${_sceneio_lazperf_compressor_difference_old}"
+  "${_sceneio_lazperf_compressor_difference_new}"
+  "integer-compressor difference")
+
+set(_sceneio_lazperf_compressor_magnitude_old [=[
+        uint32_t c1 = (c <= 0 ? -c : c - 1);
+]=])
+set(_sceneio_lazperf_compressor_magnitude_new [=[
+        uint32_t c1 = c <= 0 ?
+            uint32_t{0} - static_cast<uint32_t>(c) :
+            static_cast<uint32_t>(c - 1);
+]=])
+_sceneio_lazperf_patch_exactly_one(
+  "${_sceneio_lazperf_compressor}"
+  "${_sceneio_lazperf_compressor_magnitude_old}"
+  "${_sceneio_lazperf_compressor_magnitude_new}"
+  "integer-compressor magnitude")
+
+set(_sceneio_lazperf_compressor_shift_old [=[
+                c += ((1<<k) - 1);
+]=])
+set(_sceneio_lazperf_compressor_shift_new [=[
+                c += static_cast<int>((uint32_t{1} << k) - 1);
+]=])
+_sceneio_lazperf_patch_exactly_one(
+  "${_sceneio_lazperf_compressor}"
+  "${_sceneio_lazperf_compressor_shift_old}"
+  "${_sceneio_lazperf_compressor_shift_new}"
+  "integer-compressor high-bit shift")
+
+set(_sceneio_lazperf_point10
+  "${lazperf_SOURCE_DIR}/cpp/lazperf/detail/field_point10.cpp")
+set(_sceneio_lazperf_point10_encode_old [=[
+    // compress x coordinate
+    median = last_x_diff_median5[m].get();
+    diff = this_val.x - last_.x;
+    ic_dx.compress(enc_, median, diff, n == 1);
+    last_x_diff_median5[m].add(diff);
+
+    // compress y coordinate
+    k_bits = ic_dx.getK();
+    median = last_y_diff_median5[m].get();
+    diff = this_val.y - last_.y;
+]=])
+set(_sceneio_lazperf_point10_encode_new [=[
+    // compress x coordinate
+    median = last_x_diff_median5[m].get();
+    diff = utils::wrapSubtractInt32(this_val.x, last_.x);
+    ic_dx.compress(enc_, median, diff, n == 1);
+    last_x_diff_median5[m].add(diff);
+
+    // compress y coordinate
+    k_bits = ic_dx.getK();
+    median = last_y_diff_median5[m].get();
+    diff = utils::wrapSubtractInt32(this_val.y, last_.y);
+]=])
+_sceneio_lazperf_patch_exactly_one(
+  "${_sceneio_lazperf_point10}"
+  "${_sceneio_lazperf_point10_encode_old}"
+  "${_sceneio_lazperf_point10_encode_new}"
+  "legacy-point encoder coordinates")
+
+set(_sceneio_lazperf_point10_decode_old [=[
+    // decompress x coordinate
+    median = last_x_diff_median5[m].get();
+    diff = ic_dx.decompress(dec_, median, n==1);
+    last_.x += diff;
+    last_x_diff_median5[m].add(diff);
+
+    // decompress y coordinate
+    median = last_y_diff_median5[m].get();
+    k_bits = ic_dx.getK();
+    diff = ic_dy.decompress(dec_, median, (n==1) + (k_bits < 20 ? utils::clearBit<0>(k_bits) : 20));
+    last_.y += diff;
+]=])
+set(_sceneio_lazperf_point10_decode_new [=[
+    // decompress x coordinate
+    median = last_x_diff_median5[m].get();
+    diff = ic_dx.decompress(dec_, median, n==1);
+    last_.x = utils::wrapAddInt32(last_.x, diff);
+    last_x_diff_median5[m].add(diff);
+
+    // decompress y coordinate
+    median = last_y_diff_median5[m].get();
+    k_bits = ic_dx.getK();
+    diff = ic_dy.decompress(dec_, median, (n==1) + (k_bits < 20 ? utils::clearBit<0>(k_bits) : 20));
+    last_.y = utils::wrapAddInt32(last_.y, diff);
+]=])
+_sceneio_lazperf_patch_exactly_one(
+  "${_sceneio_lazperf_point10}"
+  "${_sceneio_lazperf_point10_decode_old}"
+  "${_sceneio_lazperf_point10_decode_new}"
+  "legacy-point decoder coordinates")
+
+set(_sceneio_lazperf_point14
+  "${lazperf_SOURCE_DIR}/cpp/lazperf/detail/field_point14.cpp")
+set(_sceneio_lazperf_point14_encode_old [=[
+    // X and Y
+    {
+        uint32_t ctx = (number_return_map_6ctx[n][r] << 1) | (uint32_t) gps_time_change;
+        int32_t median = c.last_x_diff_median5_[ctx].get();
+        int32_t diff = point.x() - c.last_.x();
+        c.dx_compr_.compress(xy_enc_, median, diff, point.numReturns() == 1);
+        c.last_x_diff_median5_[ctx].add(diff);
+
+        // Max of 20, low bit cleared to allow for numReturns change.
+        uint32_t kbits = (std::min)(c.dx_compr_.getK(), 20U) & ~1;
+        median = c.last_y_diff_median5_[ctx].get();
+        diff = point.y() - c.last_.y();
+]=])
+set(_sceneio_lazperf_point14_encode_new [=[
+    // X and Y
+    {
+        uint32_t ctx = (number_return_map_6ctx[n][r] << 1) | (uint32_t) gps_time_change;
+        int32_t median = c.last_x_diff_median5_[ctx].get();
+        int32_t diff = utils::wrapSubtractInt32(point.x(), c.last_.x());
+        c.dx_compr_.compress(xy_enc_, median, diff, point.numReturns() == 1);
+        c.last_x_diff_median5_[ctx].add(diff);
+
+        // Max of 20, low bit cleared to allow for numReturns change.
+        uint32_t kbits = (std::min)(c.dx_compr_.getK(), 20U) & ~1;
+        median = c.last_y_diff_median5_[ctx].get();
+        diff = utils::wrapSubtractInt32(point.y(), c.last_.y());
+]=])
+_sceneio_lazperf_patch_exactly_one(
+  "${_sceneio_lazperf_point14}"
+  "${_sceneio_lazperf_point14_encode_old}"
+  "${_sceneio_lazperf_point14_encode_new}"
+  "layered-point encoder coordinates")
+
+set(_sceneio_lazperf_point14_decode_old [=[
+    // X
+    {
+        int32_t median = c.last_x_diff_median5_[ctx].get();
+        int32_t diff = c.dx_decomp_.decompress(xy_dec_, median, n == 1);
+        c.last_.setX(c.last_.x() + diff);
+        c.last_x_diff_median5_[ctx].add(diff);
+        LAZDEBUG(sumX.add(c.last_.x()));
+    }
+
+    // Y
+    {
+        uint32_t kbits = (std::min)(c.dx_decomp_.getK(), 20U) & ~1;
+        int32_t median = c.last_y_diff_median5_[ctx].get();
+        int32_t diff = c.dy_decomp_.decompress(xy_dec_, median, (n == 1) | kbits);
+        c.last_.setY(c.last_.y() + diff);
+]=])
+set(_sceneio_lazperf_point14_decode_new [=[
+    // X
+    {
+        int32_t median = c.last_x_diff_median5_[ctx].get();
+        int32_t diff = c.dx_decomp_.decompress(xy_dec_, median, n == 1);
+        c.last_.setX(utils::wrapAddInt32(c.last_.x(), diff));
+        c.last_x_diff_median5_[ctx].add(diff);
+        LAZDEBUG(sumX.add(c.last_.x()));
+    }
+
+    // Y
+    {
+        uint32_t kbits = (std::min)(c.dx_decomp_.getK(), 20U) & ~1;
+        int32_t median = c.last_y_diff_median5_[ctx].get();
+        int32_t diff = c.dy_decomp_.decompress(xy_dec_, median, (n == 1) | kbits);
+        c.last_.setY(utils::wrapAddInt32(c.last_.y(), diff));
+]=])
+_sceneio_lazperf_patch_exactly_one(
+  "${_sceneio_lazperf_point14}"
+  "${_sceneio_lazperf_point14_decode_old}"
+  "${_sceneio_lazperf_point14_decode_new}"
+  "layered-point decoder coordinates")
+
+set(_sceneio_lazperf_xyz
+  "${lazperf_SOURCE_DIR}/cpp/lazperf/detail/field_xyz.hpp")
+set(_sceneio_lazperf_xyz_encode_old [=[
+				// compress x coordinate
+				median = common_.last_x_diff_median5.get();
+				diff = this_val.x - common_.last_.x;
+				compressors_.ic_dx.compress(enc, median, diff, 0);
+				common_.last_x_diff_median5.add(diff);
+
+				// compress y coordinate
+				k_bits = compressors_.ic_dx.getK();
+				median = common_.last_y_diff_median5.get();
+				diff = this_val.y - common_.last_.y;
+]=])
+set(_sceneio_lazperf_xyz_encode_new [=[
+				// compress x coordinate
+				median = common_.last_x_diff_median5.get();
+				diff = lazperf::utils::wrapSubtractInt32(this_val.x, common_.last_.x);
+				compressors_.ic_dx.compress(enc, median, diff, 0);
+				common_.last_x_diff_median5.add(diff);
+
+				// compress y coordinate
+				k_bits = compressors_.ic_dx.getK();
+				median = common_.last_y_diff_median5.get();
+				diff = lazperf::utils::wrapSubtractInt32(this_val.y, common_.last_.y);
+]=])
+_sceneio_lazperf_patch_exactly_one(
+  "${_sceneio_lazperf_xyz}"
+  "${_sceneio_lazperf_xyz_encode_old}"
+  "${_sceneio_lazperf_xyz_encode_new}"
+  "layered-point encoder coordinates")
+
+set(_sceneio_lazperf_xyz_decode_old [=[
+				// decompress x coordinate
+				median = common_.last_x_diff_median5.get();
+
+				diff = decompressors_.ic_dx.decompress(dec, median, 0);
+				common_.last_.x += diff;
+				common_.last_x_diff_median5.add(diff);
+
+				// decompress y coordinate
+				median = common_.last_y_diff_median5.get();
+				k_bits = decompressors_.ic_dx.getK();
+				diff = decompressors_.ic_dy.decompress(dec, median, ( k_bits < 20 ? U32_ZERO_BIT_0(k_bits) : 20 ));
+				common_.last_.y += diff;
+]=])
+set(_sceneio_lazperf_xyz_decode_new [=[
+				// decompress x coordinate
+				median = common_.last_x_diff_median5.get();
+
+				diff = decompressors_.ic_dx.decompress(dec, median, 0);
+				common_.last_.x = lazperf::utils::wrapAddInt32(common_.last_.x, diff);
+				common_.last_x_diff_median5.add(diff);
+
+				// decompress y coordinate
+				median = common_.last_y_diff_median5.get();
+				k_bits = decompressors_.ic_dx.getK();
+				diff = decompressors_.ic_dy.decompress(dec, median, ( k_bits < 20 ? U32_ZERO_BIT_0(k_bits) : 20 ));
+				common_.last_.y = lazperf::utils::wrapAddInt32(common_.last_.y, diff);
+]=])
+_sceneio_lazperf_patch_exactly_one(
+  "${_sceneio_lazperf_xyz}"
+  "${_sceneio_lazperf_xyz_decode_old}"
+  "${_sceneio_lazperf_xyz_decode_new}"
+  "layered-point decoder coordinates")
+
+unset(_sceneio_lazperf_utils)
+unset(_sceneio_lazperf_utils_old)
+unset(_sceneio_lazperf_utils_new)
+unset(_sceneio_lazperf_compressor)
+unset(_sceneio_lazperf_compressor_include_old)
+unset(_sceneio_lazperf_compressor_include_new)
+unset(_sceneio_lazperf_compressor_difference_old)
+unset(_sceneio_lazperf_compressor_difference_new)
+unset(_sceneio_lazperf_compressor_magnitude_old)
+unset(_sceneio_lazperf_compressor_magnitude_new)
+unset(_sceneio_lazperf_compressor_shift_old)
+unset(_sceneio_lazperf_compressor_shift_new)
+unset(_sceneio_lazperf_point10)
+unset(_sceneio_lazperf_point10_encode_old)
+unset(_sceneio_lazperf_point10_encode_new)
+unset(_sceneio_lazperf_point10_decode_old)
+unset(_sceneio_lazperf_point10_decode_new)
+unset(_sceneio_lazperf_point14)
+unset(_sceneio_lazperf_point14_encode_old)
+unset(_sceneio_lazperf_point14_encode_new)
+unset(_sceneio_lazperf_point14_decode_old)
+unset(_sceneio_lazperf_point14_decode_new)
+unset(_sceneio_lazperf_xyz)
+unset(_sceneio_lazperf_xyz_encode_old)
+unset(_sceneio_lazperf_xyz_encode_new)
+unset(_sceneio_lazperf_xyz_decode_old)
+unset(_sceneio_lazperf_xyz_decode_new)
+
 # LAZperf's integer decompressor performs predictor addition and k=31
 # corrector translation in signed int32 arithmetic. Valid streams stay within
 # the intended domain, but malformed layered streams can overflow before the
@@ -147,42 +559,75 @@ set(_sceneio_lazperf_decompressor_original
 
 set(_sceneio_lazperf_include_old [=[
 #include "model.hpp"
+
+#include <vector>
 ]=])
 set(_sceneio_lazperf_include_intermediate [=[
 #include "excepts.hpp"
 #include "model.hpp"
 
 #include <cstdint>
+
+#include <vector>
 ]=])
-set(_sceneio_lazperf_include_new [=[
+set(_sceneio_lazperf_include_previous [=[
 #include "excepts.hpp"
 #include "model.hpp"
 
 #include <cstdint>
 #include <limits>
+
+#include <vector>
 ]=])
-string(FIND "${_sceneio_lazperf_decompressor_text}"
-  "${_sceneio_lazperf_include_new}" _sceneio_lazperf_patch_applied)
-if(_sceneio_lazperf_patch_applied EQUAL -1)
-  string(FIND "${_sceneio_lazperf_decompressor_text}"
-    "${_sceneio_lazperf_include_intermediate}"
-    _sceneio_lazperf_patch_target)
-  if(_sceneio_lazperf_patch_target EQUAL -1)
-    string(FIND "${_sceneio_lazperf_decompressor_text}"
-      "${_sceneio_lazperf_include_old}" _sceneio_lazperf_patch_target)
-    if(_sceneio_lazperf_patch_target EQUAL -1)
-      message(FATAL_ERROR
-        "Pinned LAZperf decompressor includes no longer match the documented "
-        "SceneIO local patch target")
-    endif()
-    string(REPLACE "${_sceneio_lazperf_include_old}"
-      "${_sceneio_lazperf_include_new}" _sceneio_lazperf_decompressor_text
-      "${_sceneio_lazperf_decompressor_text}")
-  else()
-    string(REPLACE "${_sceneio_lazperf_include_intermediate}"
-      "${_sceneio_lazperf_include_new}" _sceneio_lazperf_decompressor_text
-      "${_sceneio_lazperf_decompressor_text}")
-  endif()
+set(_sceneio_lazperf_include_new [=[
+#include "excepts.hpp"
+#include "model.hpp"
+#include "utils.hpp"
+
+#include <cstdint>
+#include <limits>
+
+#include <vector>
+]=])
+_sceneio_lazperf_count_occurrences(
+  "${_sceneio_lazperf_decompressor_text}"
+  "${_sceneio_lazperf_include_old}"
+  _sceneio_lazperf_include_old_count)
+_sceneio_lazperf_count_occurrences(
+  "${_sceneio_lazperf_decompressor_text}"
+  "${_sceneio_lazperf_include_intermediate}"
+  _sceneio_lazperf_include_intermediate_count)
+_sceneio_lazperf_count_occurrences(
+  "${_sceneio_lazperf_decompressor_text}"
+  "${_sceneio_lazperf_include_previous}"
+  _sceneio_lazperf_include_previous_count)
+_sceneio_lazperf_count_occurrences(
+  "${_sceneio_lazperf_decompressor_text}"
+  "${_sceneio_lazperf_include_new}"
+  _sceneio_lazperf_include_new_count)
+math(EXPR _sceneio_lazperf_include_state_count
+  "${_sceneio_lazperf_include_old_count} + ${_sceneio_lazperf_include_intermediate_count} + ${_sceneio_lazperf_include_previous_count} + ${_sceneio_lazperf_include_new_count}")
+if(NOT _sceneio_lazperf_include_state_count EQUAL 1)
+  message(FATAL_ERROR
+    "Pinned LAZperf decompressor include patch expected exactly one pristine, "
+    "intermediate, previous, or final block; found "
+    "${_sceneio_lazperf_include_old_count}/"
+    "${_sceneio_lazperf_include_intermediate_count}/"
+    "${_sceneio_lazperf_include_previous_count}/"
+    "${_sceneio_lazperf_include_new_count}")
+endif()
+if(_sceneio_lazperf_include_old_count EQUAL 1)
+  string(REPLACE "${_sceneio_lazperf_include_old}"
+    "${_sceneio_lazperf_include_new}" _sceneio_lazperf_decompressor_text
+    "${_sceneio_lazperf_decompressor_text}")
+elseif(_sceneio_lazperf_include_intermediate_count EQUAL 1)
+  string(REPLACE "${_sceneio_lazperf_include_intermediate}"
+    "${_sceneio_lazperf_include_new}" _sceneio_lazperf_decompressor_text
+    "${_sceneio_lazperf_decompressor_text}")
+elseif(_sceneio_lazperf_include_previous_count EQUAL 1)
+  string(REPLACE "${_sceneio_lazperf_include_previous}"
+    "${_sceneio_lazperf_include_new}" _sceneio_lazperf_decompressor_text
+    "${_sceneio_lazperf_decompressor_text}")
 endif()
 
 set(_sceneio_lazperf_predictor_old [=[
@@ -192,7 +637,7 @@ set(_sceneio_lazperf_predictor_old [=[
 
 				return real;
 ]=])
-set(_sceneio_lazperf_predictor_new [=[
+set(_sceneio_lazperf_predictor_previous [=[
 				const int32_t corrector = readCorrector(dec, mBits[context]);
 				if (corr_range == 0)
 				{
@@ -215,17 +660,46 @@ set(_sceneio_lazperf_predictor_new [=[
 					real -= corr_range;
 				return static_cast<int32_t>(real);
 ]=])
-string(FIND "${_sceneio_lazperf_decompressor_text}"
-  "${_sceneio_lazperf_predictor_new}" _sceneio_lazperf_patch_applied)
-if(_sceneio_lazperf_patch_applied EQUAL -1)
-  string(FIND "${_sceneio_lazperf_decompressor_text}"
-    "${_sceneio_lazperf_predictor_old}" _sceneio_lazperf_patch_target)
-  if(_sceneio_lazperf_patch_target EQUAL -1)
-    message(FATAL_ERROR
-      "Pinned LAZperf predictor arithmetic no longer matches the documented "
-      "SceneIO local patch target")
-  endif()
+set(_sceneio_lazperf_predictor_new [=[
+				const int32_t corrector = readCorrector(dec, mBits[context]);
+				if (corr_range == 0)
+					return utils::wrapAddInt32(pred, corrector);
+
+				int64_t real =
+					static_cast<int64_t>(pred) +
+					static_cast<int64_t>(corrector);
+				if (real < 0) real += corr_range;
+				else if (static_cast<uint64_t>(real) >= corr_range)
+					real -= corr_range;
+				return static_cast<int32_t>(real);
+]=])
+_sceneio_lazperf_count_occurrences(
+  "${_sceneio_lazperf_decompressor_text}"
+  "${_sceneio_lazperf_predictor_old}"
+  _sceneio_lazperf_predictor_old_count)
+_sceneio_lazperf_count_occurrences(
+  "${_sceneio_lazperf_decompressor_text}"
+  "${_sceneio_lazperf_predictor_previous}"
+  _sceneio_lazperf_predictor_previous_count)
+_sceneio_lazperf_count_occurrences(
+  "${_sceneio_lazperf_decompressor_text}"
+  "${_sceneio_lazperf_predictor_new}"
+  _sceneio_lazperf_predictor_new_count)
+math(EXPR _sceneio_lazperf_predictor_state_count
+  "${_sceneio_lazperf_predictor_old_count} + ${_sceneio_lazperf_predictor_previous_count} + ${_sceneio_lazperf_predictor_new_count}")
+if(NOT _sceneio_lazperf_predictor_state_count EQUAL 1)
+  message(FATAL_ERROR
+    "Pinned LAZperf predictor patch expected exactly one pristine, previous, "
+    "or final block; found ${_sceneio_lazperf_predictor_old_count}/"
+    "${_sceneio_lazperf_predictor_previous_count}/"
+    "${_sceneio_lazperf_predictor_new_count}")
+endif()
+if(_sceneio_lazperf_predictor_old_count EQUAL 1)
   string(REPLACE "${_sceneio_lazperf_predictor_old}"
+    "${_sceneio_lazperf_predictor_new}" _sceneio_lazperf_decompressor_text
+    "${_sceneio_lazperf_decompressor_text}")
+elseif(_sceneio_lazperf_predictor_previous_count EQUAL 1)
+  string(REPLACE "${_sceneio_lazperf_predictor_previous}"
     "${_sceneio_lazperf_predictor_new}" _sceneio_lazperf_decompressor_text
     "${_sceneio_lazperf_decompressor_text}")
 endif()
@@ -310,9 +784,20 @@ unset(_sceneio_lazperf_decompressor_text)
 unset(_sceneio_lazperf_decompressor_original)
 unset(_sceneio_lazperf_include_old)
 unset(_sceneio_lazperf_include_intermediate)
+unset(_sceneio_lazperf_include_previous)
 unset(_sceneio_lazperf_include_new)
+unset(_sceneio_lazperf_include_old_count)
+unset(_sceneio_lazperf_include_intermediate_count)
+unset(_sceneio_lazperf_include_previous_count)
+unset(_sceneio_lazperf_include_new_count)
+unset(_sceneio_lazperf_include_state_count)
 unset(_sceneio_lazperf_predictor_old)
+unset(_sceneio_lazperf_predictor_previous)
 unset(_sceneio_lazperf_predictor_new)
+unset(_sceneio_lazperf_predictor_old_count)
+unset(_sceneio_lazperf_predictor_previous_count)
+unset(_sceneio_lazperf_predictor_new_count)
+unset(_sceneio_lazperf_predictor_state_count)
 unset(_sceneio_lazperf_compact_corrector_old)
 unset(_sceneio_lazperf_compact_corrector_new)
 unset(_sceneio_lazperf_corrector_source_length)
