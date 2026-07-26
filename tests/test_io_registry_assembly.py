@@ -38,6 +38,7 @@ CODEC_SOURCE_PATHS = (
     "src/sceneio/io/_registry/families/calibration.py",
     "src/sceneio/io/_registry/families/images.py",
     "src/sceneio/io/_registry/families/meshes.py",
+    "src/sceneio/io/_registry/families/points.py",
     "src/sceneio/io/_registry/families/sequences.py",
 )
 
@@ -712,8 +713,10 @@ def test_assembly_dependency_direction_and_import_delta_are_exact():
     modules = json.loads(result.stdout)
     intentional_additions = {
         "sceneio.io._inspectors.arrays",
+        "sceneio.io._inspectors.points",
         "sceneio.io._registry.assembly",
         "sceneio.io._registry.families.arrays",
+        "sceneio.io._registry.families.points",
     }
     assert intentional_additions <= set(modules)
     parent_modules = [

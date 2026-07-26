@@ -119,6 +119,27 @@ probe, and all three independent reviews pass. Normal CI run 30207617248 and
 compiler-instrumented run 30207617253 are green for the exact commit. Points
 are the active sixth family; reconstruction and splats follow.
 
+The points candidate moves `ply`, `pcd`, `xyz`, `pts`, `las`, and `laz` to
+one immutable lower family tuple while preserving their six non-contiguous
+canonical positions and exact mmap/sink/point-range targets. Their metadata
+parsers now live in `_inspectors/points.py`; the compatibility facade retains
+same-signature wrappers. Parent-derived valid/malformed contracts, exact
+full-versus-partial slices, path-release checks, generated 50,000-point
+inspection bounds, the exact 50-row and six-row benchmark projections, the
+strict five-run guard, a 3,184-node collection, Ruff, and a 687-test focused
+matrix pass. Fifteen same-host samples add only the two intended lower modules
+to the I/O facade, with no `sceneio` or direct `_core` module-set change.
+The complete local suite passes 3,180 tests with four documented skips.
+The exact 317-file staged tree produces a byte-identical 318-file sdist whose
+only generated file is `PKG-INFO`; its 77-member Windows abi3 wheel adds only
+the two lower point modules. Attribution, NumPy-only metadata, native
+dependencies, full installed smoke, and explicit all-six point probes pass in
+a clean external environment. All three independent reviews are clear for
+staged tree `442093b402db2af290c9a19a61747b6691e2af1c`; their largest focused
+matrix passes 729 tests and no review required a source change. Final
+exact-tree artifact, commit/push, and hosted validation gates remain before
+this unit closes.
+
 The codec-per-file C++ layer remains reasonably isolated, but orchestration and
 verification have accumulated in a few large modules:
 
@@ -126,8 +147,8 @@ verification have accumulated in a few large modules:
 |---|---|---|
 | C++ codecs | 40 files for 50 format ids | flat source list and manual binding declarations |
 | C++ records | 32 source/header files | still manageable; new table/animation/scene records will add pressure |
-| Python registry | `registry.py`, 711 lines; `_registry/assembly.py`, 148 lines; focused `_registry/{model,adapters,detection,native_features}.py` modules; and `_registry/families/{arrays,calibration,images,meshes,sequences}.py` definition modules | three built-in families still share the facade until their R2.2 units |
-| Inspection | `_inspection.py`, 1,227 lines, plus `_inspectors/{model,common,arrays,calibration,images,meshes,sequences}.py`; `common.py` is 75 lines | three unrelated format families still share the facade; the proven shared model, mmap bridge, metadata bounds, exact-read/integer grammar, and image-result constructor are lower services |
+| Python registry | `registry.py`, 573 lines; `_registry/assembly.py`, 148 lines; focused `_registry/{model,adapters,detection,native_features}.py` modules; and `_registry/families/{arrays,calibration,images,meshes,points,sequences}.py` definition modules | reconstruction and splats still share the facade until their R2.2 units |
+| Inspection | `_inspection.py`, 978 lines, plus `_inspectors/{model,common,arrays,calibration,images,meshes,points,sequences}.py`; `common.py` is 75 lines | reconstruction and splat metadata still share the facade; the proven shared model, mmap bridge, metadata bounds, exact-read/integer grammar, and image-result constructor are lower services |
 | Benchmark | `bench_io.py`, about 4,660 lines | CLI, fixtures, oracles, runners, metrics, and reporting are coupled |
 | Cross-codec tests | `test_io_mmap.py`, about 2,400 lines; `test_io_partial.py`, about 1,100 | reusable codec cases and behavior assertions are difficult to extend independently |
 | Execution plan | `format_gap_implementation_plan.md`, about 2,500 lines | historical evidence and the active queue are easy to confuse |

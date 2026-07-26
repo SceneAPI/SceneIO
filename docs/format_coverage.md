@@ -131,6 +131,29 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > 30207617248][r2-arrays-ci] and [compiler-instrumented run
 > 30207617253][r2-arrays-instrumented] are green for the exact commit. Arrays
 > are closed; points are active next.
+>
+> **R2 points candidate checkpoint (2026-07-26):** `ply`, `pcd`, `xyz`,
+> `pts`, `las`, and `laz` now come from
+> `_registry/families/points.py`, while their metadata parsers live in
+> `_inspectors/points.py`. Aggregate staging restores canonical positions
+> 12/13/39/40/41/42 and retains the exact mmap, sink, and point-range native
+> targets. Parent-derived valid/malformed fixtures, full-versus-partial
+> slices, path release, generated 50,000-point inspection bounds, the exact
+> all-codec structural hash
+> `2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`,
+> the points-only hash
+> `8282b574166aeb88d0eb51ded126566d7a4f21b0752244ea0c987dcee06437bd`,
+> and the strict five-run guard pass locally. The candidate collects 3,184
+> tests. Fifteen same-host import samples add only
+> `_registry.families.points` and `_inspectors.points` to the I/O facade;
+> `import sceneio` and direct `_core` module sets are unchanged. The complete
+> local suite passes 3,180 tests with four documented skips. Exact-tree
+> source/wheel identity, attribution, NumPy-only metadata, native dependency
+> inspection, complete installed smoke, and an explicit all-six point probe
+> pass. All three independent reviews are clear for staged tree
+> `442093b402db2af290c9a19a61747b6691e2af1c`; the largest independent focused
+> matrix passes 729 tests and no review required a source change. Final
+> artifact, commit/push, and hosted validation gates remain.
 
 [current-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287022
 [current-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287161

@@ -123,6 +123,14 @@ sceneio._core (C++ / nanobind)
   same-signature wrappers, its historical private helper identities, and the
   unchanged dispatch table. The family module owns no registry state, and
   neither lower module calls a full decoder during inspection.
+  Points are the sixth extracted family and the second non-contiguous one:
+  `_registry/families/points.py` exports the exact PLY, PCD, XYZ, PTS, LAS,
+  and LAZ tuple. Aggregate publication restores canonical positions
+  12/13/39/40/41/42 while retaining every mmap, sink, and point-range native
+  target. `_inspectors/points.py` owns their metadata-only PLY/PCD header,
+  streamed text, LAS public-header, and LAZ VLR/chunk-table parsing.
+  `_inspection.py` retains same-signature wrappers and unchanged dispatch;
+  the lower inspector calls no full point decoder.
   Built-in startup uses `_registry/assembly.py` as a lower staging boundary.
   Individual facade definitions and complete extracted family tuples are
   collected without touching the public registry. After all 50 canonical ids

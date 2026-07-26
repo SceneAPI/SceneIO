@@ -1756,21 +1756,21 @@ backend, public API, or supported format convention.
 
 Points implementation:
 
-- [ ] Add immutable `_registry/families/points.py` definitions for the exact
+- [x] Add immutable `_registry/families/points.py` definitions for the exact
       manifest tuple `ply`, `pcd`, `xyz`, `pts`, `las`, `laz`.
-- [ ] Move the six `Codec(...)` expressions without changing adapter
+- [x] Move the six `Codec(...)` expressions without changing adapter
       constructors, native targets, feature declarations, lossy flags, or
       nested point-range closures.
-- [ ] Stage the family once through `_define_builtin_family("points", ...)`
+- [x] Stage the family once through `_define_builtin_family("points", ...)`
       and preserve canonical positions 12, 13, 39, 40, 41, and 42 after
       aggregate finalization.
-- [ ] Add `_inspectors/points.py` for PLY, PCD, XYZ, PTS, LAS, and LAZ
+- [x] Add `_inspectors/points.py` for PLY, PCD, XYZ, PTS, LAS, and LAZ
       metadata-only inspection. Keep parsing helpers below `_inspection.py`
       and keep the facade dispatch and same-signature wrappers compatible.
-- [ ] Preserve PLY ASCII/binary distinctions, PCD ASCII/binary/compressed
+- [x] Preserve PLY ASCII/binary distinctions, PCD ASCII/binary/compressed
       distinctions, XYZ streamed count/columns, count-prefixed PTS, LAS
       waveform-sidecar metadata, and LAZ chunk-table validation.
-- [ ] Change no C++, CMake, dependency, package metadata, codec backend,
+- [x] Change no C++, CMake, dependency, package metadata, codec backend,
       attribution, public signature, record convention, or payload behavior.
       Add no FFmpeg/libav source, runtime path, package member, or linkage.
 
@@ -1784,53 +1784,93 @@ Points contract and correctness verification:
       `2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`
       and points-only hash
       `8282b574166aeb88d0eb51ded126566d7a4f21b0752244ea0c987dcee06437bd`.
-- [ ] Freeze deterministic valid fixtures, normalized inspection values, and
+- [x] Freeze deterministic valid fixtures, normalized inspection values, and
       representative malformed outcomes for all six formats from the parent.
-- [ ] Add a parent-derived points contract and architecture suite covering
+- [x] Add a parent-derived points contract and architecture suite covering
       exact ids/positions/object identity, definition/callable descriptors,
       one family-staging call, reload/idempotence, lower import allowlists,
       and inspector ownership.
-- [ ] Prove lower/public inspection agrees with parent contracts and full
+- [x] Prove lower/public inspection agrees with parent contracts and full
       reads without calling a full decoder.
-- [ ] Exercise PLY ASCII/little-endian/big-endian, PCD
+- [x] Exercise PLY ASCII/little-endian/big-endian, PCD
       ASCII/binary/binary-compressed, XYZ/PTS text layouts, LAS supported
       versions/point formats/waveform metadata, and LAZ supported point
       formats/chunk layouts.
-- [ ] Run exact full-versus-point-range differential tests for every
+- [x] Run exact full-versus-point-range differential tests for every
       advertised partial path, including empty/boundary ranges and formats
       that deliberately refuse non-bounded encodings.
-- [ ] Run mmap/path-release, retained-exception release, readonly input,
+- [x] Run mmap/path-release, retained-exception release, readonly input,
       malformed/truncated extent, and generated large-file allocation checks.
       Keep generated large fixtures outside Git.
-- [ ] Update import, assembly, collection, ownership, workflow, architecture,
+- [x] Update import, assembly, collection, ownership, workflow, architecture,
       coverage, benchmark, and active-checklist contracts with measured
       candidate evidence only.
 
 Points performance, package, and validation:
 
-- [ ] Compare candidate output with both frozen parent captures. Require exact
+- [x] Compare candidate output with both frozen parent captures. Require exact
       50-row and six-row structural projections, payload/file sizes, and
       mmap/sink/inspect/partial memory relationships; claim no speedup for the
       mechanical move.
-- [ ] Run the strict five-run all-codec guard plus point-family large-fixture
+- [x] Run the strict five-run all-codec guard plus point-family large-fixture
       inspection and partial-read allocation checks.
-- [ ] Run all six parity suites, LAS waveform and LAZ chunk suites, mmap,
+- [x] Run all six parity suites, LAS waveform and LAZ chunk suites, mmap,
       sink, inspection, detection, partial, public E2E, architecture,
       documentation, complete pytest, and Ruff checks.
-- [ ] Compare interleaved parent/candidate imports and require only
+- [x] Compare interleaved parent/candidate imports and require only
       `_registry.families.points` and `_inspectors.points` as intentional
       I/O-facade additions.
-- [ ] Build an exact-tree source archive and Windows cp312-abi3 wheel; verify
+- [x] Build an exact-tree source archive and Windows cp312-abi3 wheel; verify
       source/archive/wheel identity, license inventory, NumPy-only
       unconditional dependency, one native extension, and unchanged native
       dependencies.
-- [ ] In a fresh external NumPy-only environment, run complete wheel smoke
+- [x] In a fresh external NumPy-only environment, run complete wheel smoke
       plus all-six write/detect/inspect/read and point-range probes.
-- [ ] Obtain independent architecture/correctness, test/performance, and
+- [x] Obtain independent architecture/correctness, test/performance, and
       platform/package/documentation reviews; resolve every finding.
 - [ ] Commit and push only after local and artifact gates are clear. Wait for
       normal CI and compiler-instrumented validation before moving
       reconstruction.
+
+Current candidate evidence: 48 points-architecture nodes pass; the six parity
+suites plus LAS waveform, mmap, partial, inspection, public E2E, registry, and
+documentation checks pass as a 687-test focused matrix. The complete local
+suite passes 3,180 tests with four documented skips, and Ruff is clean. The
+exact collection is 3,184 nodes with sorted normalized SHA-256
+`76d13c72f8b3b4903bc05112dd3f1446fb64ed17e18a2e9cead2fecb58c44cab`.
+Parent A/B and candidate benchmark structures match both checked hashes, and
+the strict five-run O4/O5 guard passes. Fifteen interleaved Windows samples
+measure candidate/parent medians of 17.565/18.287 ms for `import sceneio`,
+89.031/87.407 ms for the I/O facade, and 19.725/19.734 ms for direct `_core`;
+only the two intended lower point modules are added.
+
+Pre-review package evidence uses staged tree
+`942314b30d5e21a62420a0c1ff1332356046792b`. Its 317 tracked files produce a
+318-file sdist with only generated `PKG-INFO` extra and no missing or differing
+tracked blob; the sdist SHA-256 is
+`2cd51368e13c5f93fb98e53214861c9d0356686f9a727bda5f23157cc14a4405`.
+The Windows cp312-abi3 wheel has 77 members, SHA-256
+`8310dfb7102cb4dd1b6e8390a9b803831ae3bd7877273aa3c5c418f76694aa5c`,
+and adds only `_registry/families/points.py` and `_inspectors/points.py`
+relative to the arrays wheel. All four changed runtime files are identical
+across Git, sdist, and wheel. The wheel contains 15 attribution members, one
+native extension, no excluded build layout, and NumPy as its only
+unconditional dependency; native dependencies are Python and Windows
+runtimes only. A fresh external environment containing exactly SceneIO and
+NumPy passes `_wheel_smoke` plus all-six write/detect/inspect/read,
+point-range, retained-result, and path-release probes. A final exact-tree
+artifact confirmation follows review-driven edits and checklist closure.
+
+All three independent reviews are clear for staged tree
+`442093b402db2af290c9a19a61747b6691e2af1c`. Architecture/correctness
+confirmed exact parent ASTs, canonical order and bindings, metadata behavior,
+partial slices, reload behavior, and path release. Test/performance
+independently reproduced the parent fixtures, 3,184-node collection and
+digest, both benchmark projections, and strict five-run guard; its focused
+matrix passed 729 tests. Platform/package/documentation reproduced the
+pre-review source and wheel inventories, runtime-file identity, attribution
+inventory, NumPy-only dependency closure, native dependency set, installed
+smoke, and six-format public probe. No review required a source change.
 
 ## 7. R3 — split benchmark and cross-codec tests
 

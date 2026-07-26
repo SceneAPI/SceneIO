@@ -1256,3 +1256,46 @@ acceptance evidence.
 Normal CI run 30207617248 and compiler-instrumented run 30207617253 pass the
 exact `d99dcf0` commit, including the retained throughput/allocation guard and
 the full cross-platform and instrumented validation lanes.
+
+## R2 points-family structural equivalence â€” 2026-07-26
+
+The points extraction is an organization-only move for PLY, PCD, XYZ, PTS,
+LAS, and LAZ. Two parent captures at exact commit `efb106e` and the working
+candidate use the same small all-codec command as the aggregate unit. All
+three reproduce portable 50-row projection SHA-256
+`2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`
+and six-point-row projection SHA-256
+`8282b574166aeb88d0eb51ded126566d7a4f21b0752244ea0c987dcee06437bd`.
+This unit claims no codec speedup: encoded sizes, stable schema, traced-memory
+fields, mmap/sink relationships, inspection results, and point-range surfaces
+remain exact.
+
+The default-scale five-run invocation with all retained O4/O5 requirements
+passes and reports stable O4 gains plus mmap/sink memory bounds. Generated
+50,000-point fixtures separately confirm bounded metadata inspection and
+prompt path release for all six formats.
+
+Fifteen interleaved Windows samples compare exact parent and candidate source
+trees with the same compiled module. Candidate/parent medians are
+17.565/18.287 ms for `import sceneio`, 89.031/87.407 ms for the I/O facade,
+and 19.725/19.734 ms for direct `_core`. Only the I/O facade changes its eager
+module set, adding exactly `_registry.families.points` and
+`_inspectors.points`; counts move from 39 to 41. The other two module sets are
+unchanged. Timing is same-host diagnostic evidence; exact module sets,
+parent-derived behavior contracts, and structural hashes are the durable
+acceptance evidence.
+
+The pre-review staged-tree package check uses tree
+`942314b30d5e21a62420a0c1ff1332356046792b`. Its source archive SHA-256 is
+`2cd51368e13c5f93fb98e53214861c9d0356686f9a727bda5f23157cc14a4405`;
+the Windows cp312-abi3 wheel SHA-256 is
+`8310dfb7102cb4dd1b6e8390a9b803831ae3bd7877273aa3c5c418f76694aa5c`.
+The wheel adds only the two intended lower point modules relative to the
+arrays checkpoint and passes a fresh NumPy-only installed smoke plus all-six
+point and point-range probes.
+
+All three independent reviews are clear for staged tree
+`442093b402db2af290c9a19a61747b6691e2af1c`. The test/performance review
+independently reproduced both benchmark projections and the strict guard, and
+its 729-test focused matrix passed. No review required a source change. A final
+exact-tree artifact confirmation follows this documentation closure.
