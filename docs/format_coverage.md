@@ -197,9 +197,10 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > retaining `-0.0` in BAL's canonical 180-degree quaternion and the GCC-10
 > command omitting `/work` from its import path after changing directory. The
 > BAL repair normalizes only exact-zero quaternion components after sign
-> selection; the workflow invocation repair follows separately. Exact-tree
-> packaging, reviews, and hosted validation must be repeated for the repaired
-> native binary before this registry checkpoint is closed.
+> selection. The separate workflow repair retains installed-package isolation
+> at `/tmp` and adds command-scoped `PYTHONPATH=/work` for the architecture
+> fixture import. Exact-tree packaging, reviews, and hosted validation must be
+> repeated for the combined tree before this registry checkpoint is closed.
 > [Compiler-instrumented run
 > 30216568311][r2-reconstruction-registry-instrumented] passes at `be836a0`.
 

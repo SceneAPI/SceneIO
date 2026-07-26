@@ -2113,10 +2113,12 @@ Hosted normal run `30216568265` then exposed two platform-only follow-ups:
 AppleClang retained `-0.0` in BAL's canonical 180-degree quaternion where the
 contract requires `+0.0`, and the GCC-10 command changed to `/tmp` without
 keeping `/work` importable. The BAL repair normalizes only exact-zero
-quaternion components after sign selection; the workflow invocation repair is
-a separate unit. Exact package, reviews, and hosted runs must be repeated for
-the repaired native binary before this checkpoint closes. Compiler-instrumented
-run `30216568311` passes at `be836a0`.
+quaternion components after sign selection. The separate workflow repair keeps
+the installed-package test isolation at `/tmp` while setting command-scoped
+`PYTHONPATH=/work` so the architecture test can import its benchmark fixture
+module. Exact package, reviews, and hosted runs must be repeated for the
+combined tree before this checkpoint closes. Compiler-instrumented run
+`30216568311` passes at `be836a0`.
 
 Final evidence and documentation closure:
 

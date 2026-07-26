@@ -179,9 +179,11 @@ tests, the family matrix passes 506 tests with two documented skips, and the
   extraction committed at `be836a0`. Its first hosted normal run exposed
   AppleClang preserving a negative-zero BAL quaternion component and the
   GCC-10 command dropping the repository root from its import path after
-  changing directory. The BAL exact-zero canonicalization and separate
-  workflow invocation repair must repeat package/review/hosted gates before
-  the registry checkpoint closes.
+  changing directory. The BAL exact-zero canonicalization is isolated from the
+  workflow repair, which keeps installed-package isolation at `/tmp` and adds
+  command-scoped `PYTHONPATH=/work` for the benchmark fixture import. The
+  combined tree must repeat package/review/hosted gates before the registry
+  checkpoint closes.
   Exact-export import sampling retains the seven-module `sceneio` and
   eight-module direct `_core` sets; the I/O facade's only added module is
   `_registry.families.reconstruction`. Splats remain the last R2 family.

@@ -113,7 +113,7 @@ jobs:
               "$py" -m pip install -q "numpy>=2.0,<2.5" psutil pytest
               "$py" -m pip install -q --no-deps .
               cd /tmp
-              "$py" -m pytest -q \
+              PYTHONPATH=/work "$py" -m pytest -q \
                 /work/tests/test_io_reconstruction_family_architecture.py \
                 /work/tests/codecs/test_y4m.py \
                 /work/tests/codecs/test_colmap_db.py \

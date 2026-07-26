@@ -794,6 +794,11 @@ def test_assembly_dependency_direction_and_import_delta_are_exact():
         ci_workflow.count("tests/test_io_reconstruction_family_architecture.py")
         == 3
     )
+    manylinux_job = ci_workflow.split(
+        "  manylinux2014-portability:",
+        maxsplit=1,
+    )[1]
+    assert 'PYTHONPATH=/work "$py" -m pytest -q \\' in manylinux_job
     for suite in (
         "test_colmap.py",
         "test_transforms_json.py",
