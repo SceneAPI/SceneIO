@@ -7,8 +7,10 @@ Ubuntu/Windows/macOS portability matrix. The nonpublishing release dry run
 builds and smoke-tests the source archive and all three platform wheel sets.
 The compiler-instrumented workflow passes twice with its complete 2,923-test
 collection and focused native lifetime checks. Three independent memory/lifetime,
-format/correctness, and test/benchmark reviews are clear. R1-R6 have not
-started.
+format/correctness, and test/benchmark reviews are clear. R1.1-R1.3 are now
+implemented and locally verified in the R1a unit; R1.4, a current-head package
+build, and current-head hosted validation remain open. Commit `a5e7fa4`
+remains the latest immutable cross-platform validated implementation checkpoint.
 
 This is the operational checklist for the repository-organization and
 codec-performance stage defined in
@@ -503,79 +505,87 @@ Candidate and follow-up evidence:
 
 ## 5. R1 — freeze contracts and evidence
 
-R1 makes later moves observable. It must not change runtime behavior.
+R1 makes later moves observable. It may add internal immutable metadata and
+checked fixtures, but it must not change codec adapters, dispatch, detection,
+registration semantics, or public API behavior.
 
 ### R1.1 — codec manifest and family ownership
 
-- [ ] Keep the existing frozen `Codec` value type as the registration schema;
+- [x] Keep the existing frozen `Codec` value type as the registration schema;
       do not create a parallel `CodecDefinition` abstraction.
-- [ ] Define immutable built-in definition tuples with one owning family per
+- [x] Define immutable built-in definition tuples with one owning family per
       built-in codec: arrays, calibration, images, meshes, points,
       reconstruction, sequences, or splats.
-- [ ] Record `implementation_owner = native | python | hybrid` and the expected
+- [x] Record `implementation_owner = native | python | hybrid` and the expected
       native/Python adapter symbols for every built-in definition.
-- [ ] Keep immutable `BUILTIN_DEFINITIONS` separate from the mutable runtime
+- [x] Keep immutable `BUILTIN_DEFINITIONS` separate from the mutable runtime
       `REGISTRY`; repository family, documentation, benchmark, and source
       completeness rules apply to built-ins, not third-party registrations.
-- [ ] Keep `sceneio.io.registry` as the compatibility facade.
-- [ ] Family modules export definition tuples without mutating global state.
-      One aggregate uses an explicit canonical built-in order and populates the
-      existing `REGISTRY` object atomically; do not generate source at import
-      time.
-- [ ] Add uniqueness tests for built-in codec id/family membership, aggregate
-      reload/idempotence, and `REGISTRY` object identity.
-- [ ] Assert the built-in family union is exactly the current 50-id built-in
+- [x] Keep `sceneio.io.registry` as the compatibility facade.
+- [x] Keep R1 ownership metadata side-effect free and preserve the existing
+      explicit canonical registration order. Actual side-effect-free family
+      `Codec` tuples, validate-before-install aggregation, and aggregate
+      reload/idempotence are R2 work because moving definitions in R1 would
+      contradict the behavior-preserving boundary.
+- [x] Add uniqueness tests for built-in codec id/family membership and
+      `REGISTRY` object identity. Aggregate reload/idempotence remains an R2
+      exit condition after shared state is extracted.
+- [x] Assert the built-in family union is exactly the current 50-id built-in
       set in `BUILTIN_DEFINITIONS`; repository completeness checks deliberately
       ignore additional runtime registrations.
-- [ ] Assert every built-in codec has explicit benchmark, source-suite,
+- [x] Assert every built-in codec has explicit benchmark, source-suite,
       installed-wheel smoke, and documentation inclusion or a documented
       exemption.
-- [ ] Prove a third-party codec can register without a SceneIO family, ledger,
+- [x] Prove a third-party codec can register without a SceneIO family, ledger,
       source-suite, or documentation row, while duplicate built-in IDs still
       fail.
 
 ### R1.2 — compatibility snapshots
 
-- [ ] Snapshot codec ids and ordering where order affects detection.
-- [ ] Snapshot capability fields, native features, public imports, and `_core`
+- [x] Snapshot codec ids and ordering where order affects detection.
+- [x] Snapshot capability fields, native features, public imports, and `_core`
       symbol names.
-- [ ] Pin the full canonical built-in order and every extension, magic,
+- [x] Pin the full canonical built-in order and every extension, magic,
       filename, and directory collision—not only known ambiguous formats such
       as point/mesh/Gaussian PLY and generic text.
-- [ ] Pin buffer/path/directory container kinds and selectors.
-- [ ] Pin public exception categories and representative message prefixes;
+- [x] Pin buffer/path/directory container kinds and selectors.
+- [x] Pin public exception categories and representative message prefixes;
       avoid brittle full-message snapshots.
-- [ ] For public value types, pin identity across re-export paths,
-      `__module__`, `__qualname__`, repr shape, and pickle round-trip. Leave a
-      definition in its historical module or deliberately preserve its
-      qualified identity when files move.
-- [ ] Pin benchmark CLI arguments and JSON schema.
-- [ ] Add an architecture test that fails on an unowned built-in codec, missing
+- [x] For registry, discovery, and inspection metadata value types, pin
+      identity across re-export paths,
+      `__module__`, `__qualname__`, normalized repr shape, and the current
+      per-type pickle outcome. `Codec` currently contains local adapter
+      closures and therefore has a pinned `AttributeError`; the other frozen
+      metadata outcomes are recorded. Compiled record re-export identities are
+      pinned separately without imposing a new repr/pickle contract.
+- [x] Pin benchmark CLI arguments, rejection rules, result order, and existing
+      heterogeneous bare-list JSON row shapes.
+- [x] Add an architecture test that fails on an unowned built-in codec, missing
       inspector, missing benchmark row, missing test case, or missing
       documentation capability row.
-- [ ] Add a checked-in built-in-to-native symbol map and compare it with the
+- [x] Add a checked-in built-in-to-native symbol map and compare it with the
       current `_core` symbol snapshot until R4 replaces it with a
       machine-readable native inventory.
 
 ### R1.3 — performance-ledger skeleton
 
-- [ ] Add `bench/PERFORMANCE_STATUS.toml`.
-- [ ] Model `built-in codec × performance-relevant profile × direction`; each
+- [x] Add `bench/PERFORMANCE_STATUS.toml`.
+- [x] Model `built-in codec × performance-relevant profile × direction`; each
       profile records settings, fidelity class, comparator, fixture corpus,
       backend, and one of these states:
       `qualified`, `provisional`, `known_gap`, `native_by_necessity`, or
       `not_applicable`.
-- [ ] Require profiles for materially different paths such as WebP
+- [x] Require profiles for materially different paths such as WebP
       lossless/lossy, PNG 8/16-bit, PLY encodings, PCD storage modes, EXR
       compression/layouts, and LAS/LAZ point-format families.
-- [ ] Mark unproved directions `provisional`; never infer `qualified` from
+- [x] Mark unproved directions `provisional`; never infer `qualified` from
       correctness or optimized transport.
-- [ ] Record current adapter, backend, source location, version/SHA, evidence
+- [x] Record current adapter, backend, source location, version/SHA, evidence
       link, candidate set, and accepted subset.
-- [ ] Add a `tomllib` schema/id coverage test.
-- [ ] Seed only evidence already present in `bench/BASELINE.md`; record JPEG
+- [x] Add a `tomllib` schema/id coverage test.
+- [x] Seed only evidence already present in `bench/BASELINE.md`; record JPEG
       encode/decode as `known_gap`.
-- [ ] A codec is qualified only when every required profile/direction is
+- [x] A codec is qualified only when every required profile/direction is
       qualified, `native_by_necessity`, `not_applicable`, or has an explicitly
       approved exemption.
 
@@ -593,10 +603,20 @@ R1 makes later moves observable. It must not change runtime behavior.
 
 R1 verification and validation:
 
-- [ ] All snapshots match before/after.
-- [ ] Import time and imported-module set remain within the recorded baseline.
-- [ ] Full suite, Ruff, benchmark smoke/guard, and clean wheel smoke pass.
-- [ ] The R1 diff contains tests/docs/schema only—no codec behavior change.
+- [x] Initial R1 snapshots match the unchanged runtime surface; subsequent R1
+      and R2 changes must continue to match them.
+- [x] Import boundaries are checked with three-sample fresh-process medians and
+      an optional-oracle import exclusion. R1 adds only the
+      approved lightweight `_builtin_manifest` module to the eager
+      `sceneio.io` boundary and stays within the recorded Windows alert band.
+- [x] R1a local verification passes 2,945 tests with four documented skips,
+      Ruff, the 50-row all-format structural benchmark smoke, and the editable
+      package smoke.
+- [ ] The retained five-run benchmark guard and a clean current-head wheel
+      smoke pass.
+- [x] The R1 diff contains tests/docs/schema plus internal ownership metadata
+      and the immutable `BUILTIN_DEFINITIONS` projection only—no codec adapter,
+      dispatch, detection, or public behavior change.
 - [ ] Record that the latest successful build-only wheel matrix predates the
       current head; do not call R1 cross-platform validated until a
       user-authorized current-head matrix passes.

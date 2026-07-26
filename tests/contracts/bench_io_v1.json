@@ -1,0 +1,400 @@
+{
+  "schema_version": 1,
+  "existing_json_envelope": "bare_list",
+  "cli_options": [
+    "--cold-cache",
+    "--help",
+    "--json",
+    "--large-safetensors-mib",
+    "--only",
+    "--require-o4-gains",
+    "--require-o5-inspect-gains",
+    "--require-o5-partial-gains",
+    "--runs",
+    "--scale",
+    "--skip-oracles"
+  ],
+  "defaults": {
+    "runs": 7,
+    "scale": 1.0,
+    "cold_cache": false,
+    "only": null,
+    "skip_oracles": false,
+    "large_safetensors_mib": 0,
+    "require_o4_gains": false,
+    "require_o5_inspect_gains": false,
+    "require_o5_partial_gains": false,
+    "json": null
+  },
+  "incompatibilities": [
+    [
+      "only",
+      "require_o4_gains"
+    ],
+    [
+      "only",
+      "require_o5_inspect_gains"
+    ],
+    [
+      "only",
+      "require_o5_partial_gains"
+    ],
+    [
+      "only",
+      "large_safetensors_mib"
+    ]
+  ],
+  "result_order": [
+    "png",
+    "jpeg",
+    "bmp",
+    "tga",
+    "webp",
+    "y4m",
+    "hdr",
+    "exr",
+    "netpbm",
+    "xyz",
+    "pts",
+    "ply",
+    "ply_mesh",
+    "obj",
+    "stl",
+    "off",
+    "glb",
+    "pcd",
+    "las",
+    "laz",
+    "gaussian_ply",
+    "compressed_ply",
+    "sog",
+    "ksplat",
+    "spz",
+    "splat",
+    "npy",
+    "pfm",
+    "flo",
+    "dmb",
+    "npz",
+    "safetensors",
+    "transforms_json",
+    "tum",
+    "kitti",
+    "euroc_state",
+    "opencv_yaml",
+    "opencv_xml",
+    "ros_camera_info",
+    "kalibr",
+    "g2o",
+    "bundler",
+    "bal",
+    "nvm",
+    "openmvg",
+    "gltf",
+    "colmap_db",
+    "colmap_sparse",
+    "colmap_sparse_txt",
+    "image_sequence"
+  ],
+  "row_key_variants": {
+    "common": [
+      "bytes_path_write_mbps",
+      "bytes_peak_mb",
+      "bytes_rss_mb",
+      "bytes_write_peak_mb",
+      "bytes_write_rss_mb",
+      "codec",
+      "file_mb",
+      "inspect_ms",
+      "inspect_peak_mb",
+      "inspect_rss_mb",
+      "mmap_peak_mb",
+      "mmap_rss_mb",
+      "o4",
+      "oracle_read_mbps",
+      "oracle_write_mbps",
+      "partial_ms",
+      "partial_peak_mb",
+      "partial_rss_mb",
+      "path_read_mbps",
+      "path_write_mbps",
+      "payload_mb",
+      "pcd_variants",
+      "ply_variants",
+      "read_mbps",
+      "sink_write_peak_mb",
+      "sink_write_rss_mb",
+      "typed_adapter",
+      "write_mbps"
+    ],
+    "gltf": [
+      "bytes_path_write_mbps",
+      "bytes_peak_mb",
+      "bytes_rss_mb",
+      "bytes_write_peak_mb",
+      "bytes_write_rss_mb",
+      "codec",
+      "file_mb",
+      "inspect_ms",
+      "inspect_peak_mb",
+      "inspect_rss_mb",
+      "mmap_peak_mb",
+      "mmap_rss_mb",
+      "oracle_read_mbps",
+      "oracle_write_mbps",
+      "partial_ms",
+      "partial_peak_mb",
+      "partial_rss_mb",
+      "path_read_mbps",
+      "path_write_mbps",
+      "payload_mb",
+      "read_mbps",
+      "sink_write_peak_mb",
+      "sink_write_rss_mb",
+      "write_mbps"
+    ],
+    "colmap_db": [
+      "codec",
+      "file_mb",
+      "inspect_ms",
+      "inspect_peak_mb",
+      "inspect_rss_mb",
+      "mmap_peak_mb",
+      "mmap_rss_mb",
+      "partial_image_ms",
+      "partial_image_peak_mb",
+      "partial_image_rss_mb",
+      "partial_ms",
+      "partial_pair_ms",
+      "partial_pair_peak_mb",
+      "partial_pair_rss_mb",
+      "partial_peak_mb",
+      "partial_rss_mb",
+      "path_read_mbps",
+      "path_write_mbps",
+      "payload_mb",
+      "read_mbps",
+      "sink_write_peak_mb",
+      "sink_write_rss_mb",
+      "write_mbps"
+    ],
+    "directory": [
+      "codec",
+      "file_mb",
+      "inspect_ms",
+      "inspect_peak_mb",
+      "inspect_rss_mb",
+      "mmap_peak_mb",
+      "mmap_rss_mb",
+      "partial_ms",
+      "partial_peak_mb",
+      "partial_rss_mb",
+      "path_read_mbps",
+      "path_write_mbps",
+      "payload_mb",
+      "read_mbps",
+      "sink_write_peak_mb",
+      "sink_write_rss_mb",
+      "write_mbps"
+    ],
+    "error": [
+      "codec",
+      "error"
+    ],
+    "large_safetensors": [
+      "codec",
+      "file_mb",
+      "fixture_mib",
+      "full_ms",
+      "full_peak_mb",
+      "full_rss_mb",
+      "inspect_ms",
+      "inspect_peak_mb",
+      "inspect_rss_mb",
+      "selected_ms",
+      "selected_peak_mb",
+      "selected_rss_mb",
+      "write_ms",
+      "write_peak_mb",
+      "write_rss_mb"
+    ]
+  },
+  "optional_large_safetensors_keys": [
+    "oracle_full_ms",
+    "oracle_full_peak_mb",
+    "oracle_full_rss_mb",
+    "oracle_inspect_ms",
+    "oracle_inspect_peak_mb",
+    "oracle_inspect_rss_mb",
+    "oracle_selected_ms",
+    "oracle_selected_peak_mb",
+    "oracle_selected_rss_mb",
+    "oracle_write_ms",
+    "oracle_write_peak_mb",
+    "oracle_write_rss_mb"
+  ],
+  "nullable_common_nested_fields": [
+    "o4",
+    "pcd_variants",
+    "ply_variants",
+    "typed_adapter"
+  ],
+  "optional_colmap_db_keys": [
+    "oracle_image_ms",
+    "oracle_image_peak_mb",
+    "oracle_image_rss_mb",
+    "oracle_inspect_ms",
+    "oracle_inspect_peak_mb",
+    "oracle_inspect_rss_mb",
+    "oracle_pair_ms",
+    "oracle_pair_peak_mb",
+    "oracle_pair_rss_mb",
+    "oracle_read_mbps",
+    "oracle_read_peak_mb",
+    "oracle_read_rss_mb",
+    "oracle_write_mbps",
+    "oracle_write_peak_mb",
+    "oracle_write_rss_mb"
+  ],
+  "nested_shapes": {
+    "png": {
+      "o4": {
+        "keys": [
+          "png16_read_one_lane_mbps",
+          "png16_read_optimized_mbps",
+          "png16_write_one_lane_mbps",
+          "png16_write_optimized_mbps"
+        ]
+      },
+      "typed_adapter": {
+        "keys": [
+          "format",
+          "inspect_ms",
+          "inspect_peak_mb",
+          "inspect_rss_mb",
+          "read_mbps",
+          "read_peak_mb",
+          "read_rss_mb",
+          "write_mbps",
+          "write_peak_mb",
+          "write_rss_mb"
+        ]
+      }
+    },
+    "webp": {
+      "o4": {
+        "keys": [
+          "write_old_mbps",
+          "write_optimized_mbps",
+          "write_worker_off_mbps",
+          "write_worker_on_mbps"
+        ]
+      }
+    },
+    "exr": {
+      "o4": {
+        "keys": [
+          "read_one_lane_mbps",
+          "read_optimized_mbps",
+          "write_one_lane_mbps",
+          "write_optimized_mbps"
+        ]
+      },
+      "typed_adapter": {
+        "keys": [
+          "format",
+          "inspect_ms",
+          "inspect_peak_mb",
+          "inspect_rss_mb",
+          "read_mbps",
+          "read_peak_mb",
+          "read_rss_mb",
+          "write_mbps",
+          "write_peak_mb",
+          "write_rss_mb"
+        ]
+      }
+    },
+    "xyz": {
+      "o4": {
+        "keys": [
+          "write_one_lane_mbps",
+          "write_optimized_mbps"
+        ]
+      }
+    },
+    "ply": {
+      "ply_variants": {
+        "keys": [
+          "ascii",
+          "binary_big_endian",
+          "binary_little_endian"
+        ],
+        "value_keys": [
+          "file_mb",
+          "read_mbps",
+          "write_mbps"
+        ]
+      }
+    },
+    "pcd": {
+      "pcd_variants": {
+        "keys": [
+          "ascii",
+          "binary",
+          "binary_compressed"
+        ],
+        "value_keys": [
+          "file_mb",
+          "read_mbps",
+          "write_mbps"
+        ]
+      }
+    },
+    "las": {
+      "o4": {
+        "keys": [
+          "read_one_lane_mbps",
+          "read_optimized_mbps",
+          "write_one_lane_mbps",
+          "write_optimized_mbps"
+        ]
+      }
+    },
+    "pfm": {
+      "typed_adapter": {
+        "keys": [
+          "format",
+          "inspect_ms",
+          "inspect_peak_mb",
+          "inspect_rss_mb",
+          "partial_ms",
+          "partial_peak_mb",
+          "partial_rss_mb",
+          "read_mbps",
+          "read_peak_mb",
+          "read_rss_mb",
+          "write_mbps",
+          "write_peak_mb",
+          "write_rss_mb"
+        ]
+      }
+    },
+    "flo": {
+      "typed_adapter": {
+        "keys": [
+          "format",
+          "inspect_ms",
+          "inspect_peak_mb",
+          "inspect_rss_mb",
+          "read_mbps",
+          "read_peak_mb",
+          "read_rss_mb",
+          "write_mbps",
+          "write_peak_mb",
+          "write_rss_mb"
+        ]
+      }
+    }
+  }
+}

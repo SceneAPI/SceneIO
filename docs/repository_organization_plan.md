@@ -15,9 +15,13 @@ documentation checklist is
 N0 closes at validated implementation commit `a5e7fa4`: local MSVC, normal
 Linux CI, pinned GCC 10, the Linux/Windows/macOS focused matrix, the complete
 and focused compiler-instrumented native jobs, the 50-codec performance guard,
-and the nonpublishing three-platform wheel/source build all pass. R1 contract
-and evidence freeze is the next active unit; no new format starts while R1-R6
-remain open.
+and the nonpublishing three-platform wheel/source build all pass. R1a now
+implements the immutable ownership manifest, compatibility fixtures,
+repository completeness checks, and the 50-codec/130-operation performance
+ledger, with local verification only. R1b documentation separation and a
+current-head package/hosted validation pass remain open. Commit `a5e7fa4`
+remains the latest immutable cross-platform validated checkpoint; no new
+format starts while R1-R6 remain open.
 
 The codec-per-file C++ layer remains reasonably isolated, but orchestration and
 verification have accumulated in a few large modules:
@@ -255,8 +259,9 @@ profile; a declared direction that a codec does not expose uses
 - `qualified`: the viable candidate set and exclusions are recorded, the
   finalists are measured through SceneIO on all supported toolchains, and the
   best conforming candidate is selected;
-- `provisional`: correct and benchmarked, but the candidate comparison is
-  incomplete;
+- `provisional`: the implementation is correctness-tested, but backend
+  qualification is incomplete; profile-specific measurement or candidate
+  comparison may still be missing and must be named in `evidence_gaps`;
 - `known_gap`: a viable conforming candidate is materially faster;
 - `native_by_necessity`: no suitable upstream kernel exists and the
   repo-maintained parser is independently verified;
@@ -278,7 +283,9 @@ entries rather than inheriting a blanket claim.
   public imports, and `_core` symbol set.
 - Add the performance ledger schema and enforce required operation cells for
   every id in `BUILTIN_DEFINITIONS`.
-- Add import-cycle and family-ownership tests.
+- Add family-ownership, extension-boundary, import-surface, and repository
+  completeness tests. Actual family `Codec` extraction and aggregate
+  reload/idempotence begin in R2 after shared state is separated.
 - Give each documentation surface one job: keep current status in
   `format_coverage.md`, active work in `format_gap_implementation_plan.md`, and
   move closed wave evidence to `docs/plans/completed/` with stable links.

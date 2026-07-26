@@ -2026,8 +2026,11 @@ The current validated implementation checkpoint is `a5e7fa4`:
   [30181286675](https://github.com/SceneAPI/SceneIO/actions/runs/30181286675)
   builds and smoke-tests all three platform wheel sets plus the source
   archive. The publish job is skipped;
-- this checkpoint is **validated**. The next active gate is R1 contract and
-  evidence freeze in `next_stage_implementation_checklist.md`.
+- this checkpoint is **validated**. R1a contract/evidence metadata is locally
+  verified without changing codec behavior; the next active unit is R1b
+  active-versus-historical documentation separation in
+  `next_stage_implementation_checklist.md`. Current-head package and hosted
+  validation remain open.
 
 Status terms are strict:
 

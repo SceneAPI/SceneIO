@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "forbidden_optional_roots": [
+    "PIL",
+    "OpenEXR",
+    "cv2",
+    "gsply",
+    "imageio",
+    "laspy",
+    "open3d",
+    "pycolmap",
+    "pygltflib",
+    "safetensors",
+    "trimesh",
+    "yaml"
+  ],
+  "windows_reference": {
+    "import_sceneio": {
+      "median_ms": 6.523299962282181,
+      "mad_ms": 0.6938999285921454,
+      "samples": 15,
+      "alert_ms": 100
+    },
+    "import_io": {
+      "median_ms": 97.52630000002682,
+      "mad_ms": 18.812700058333576,
+      "samples": 15,
+      "alert_ms": 220.05260000005364
+    },
+    "import_core": {
+      "median_ms": 12.228199979290366,
+      "mad_ms": 0.3983000060543418,
+      "samples": 15,
+      "alert_ms": 100
+    }
+  },
+  "sceneio_modules": {
+    "import_sceneio": [
+      "sceneio",
+      "sceneio.blobstore",
+      "sceneio.colmap_db",
+      "sceneio.errors",
+      "sceneio.imagesource",
+      "sceneio.mapping_input",
+      "sceneio.points_binary"
+    ],
+    "import_io": [
+      "sceneio",
+      "sceneio._core",
+      "sceneio.blobstore",
+      "sceneio.colmap_db",
+      "sceneio.errors",
+      "sceneio.imagesource",
+      "sceneio.io",
+      "sceneio.io._builtin_manifest",
+      "sceneio.io._depth",
+      "sceneio.io._gltf",
+      "sceneio.io._image_sequence",
+      "sceneio.io._inspection",
+      "sceneio.io._obj",
+      "sceneio.io._pcd",
+      "sceneio.io._ply",
+      "sceneio.io.registry",
+      "sceneio.mapping_input",
+      "sceneio.points_binary"
+    ],
+    "import_core": [
+      "sceneio",
+      "sceneio._core",
+      "sceneio.blobstore",
+      "sceneio.colmap_db",
+      "sceneio.errors",
+      "sceneio.imagesource",
+      "sceneio.mapping_input",
+      "sceneio.points_binary"
+    ]
+  }
+}

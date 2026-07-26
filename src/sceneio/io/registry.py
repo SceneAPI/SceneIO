@@ -21,6 +21,7 @@ from sceneio.errors import SceneIoError
 from sceneio.io import _gltf as _gltf_adapter
 from sceneio.io import _image_sequence as _image_sequence_adapter
 from sceneio.io import _obj as _obj_adapter
+from sceneio.io._builtin_manifest import CANONICAL_BUILTIN_IDS
 from sceneio.io._ply import classify_ply
 
 
@@ -1660,4 +1661,13 @@ register(
         supported_features=("rgb8", "opacity8", "scale8", "quaternion8"),
         unsupported_features=("spherical_harmonics",),
     )
+)
+
+# This immutable tuple is the repository-owned completeness boundary.  The
+# mutable REGISTRY remains the public extension point and may contain
+# third-party codecs registered later.
+if tuple(REGISTRY) != CANONICAL_BUILTIN_IDS:
+    raise RuntimeError("built-in codec registration order differs from its manifest")
+BUILTIN_DEFINITIONS: tuple[Codec, ...] = tuple(
+    REGISTRY[format_id] for format_id in CANONICAL_BUILTIN_IDS
 )

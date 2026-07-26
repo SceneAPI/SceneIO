@@ -39,6 +39,13 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > sets plus the source archive with publication skipped. N0 is validated at
 > this immutable implementation commit; repository organization and measured
 > backend qualification are next.
+>
+> **Current local organization status:** R1a adds the immutable 50-codec
+> ownership projection, checked compatibility/repository contracts, and a
+> 130-operation performance ledger. It is locally verified and does not change
+> codec behavior. R1b documentation separation plus current-head package and
+> hosted validation remain open, so `a5e7fa4` is still the latest
+> cross-platform validated implementation checkpoint.
 
 [current-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287022
 [current-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287161
