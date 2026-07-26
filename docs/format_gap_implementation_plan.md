@@ -1981,14 +1981,17 @@ estimates.
 
 ### 12.1 Current checkpoint and status vocabulary
 
-The current immutable validated implementation checkpoint is `a5e7fa4`.
-Its exact codec counts, test results, workflow links, and package evidence are
-maintained in [`format_coverage.md`](format_coverage.md). R1a freezes the
-current contracts and performance-evidence schema; R1b separates completed
-Waves A-C evidence into [`plans/completed/`](plans/completed/README.md).
-A clean local Windows abi3 wheel built from the current source archive passes
-the NumPy-only installed-wheel smoke. Current-head hosted validation remains
-open. The active repository-organization queue is tracked in
+The N0 implementation checkpoint remains `a5e7fa4`; the R1 implementation and
+validation checkpoint is exact commit `95061c6`. Its exact codec counts, test results, workflow
+links, and package evidence are maintained in
+[`format_coverage.md`](format_coverage.md). R1 freezes the current contracts
+and performance-evidence schema and separates completed Waves A-C evidence
+into [`plans/completed/`](plans/completed/README.md). A clean Windows abi3
+wheel built from the exact `95061c6` source archive passes the NumPy-only
+installed-wheel smoke, and the exact-head normal and instrumented workflows
+pass. Exact-head build-only release run 30189483142 also builds the source
+archive and builds and smoke-tests all three platform wheel sets with
+publication skipped. R2 is the active repository-organization unit in
 [`next_stage_implementation_checklist.md`](next_stage_implementation_checklist.md).
 
 Status terms are strict:

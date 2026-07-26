@@ -15,16 +15,18 @@ documentation checklist is
 N0 closes at validated implementation commit `a5e7fa4`: local MSVC, normal
 Linux CI, pinned GCC 10, the Linux/Windows/macOS focused matrix, the complete
 and focused compiler-instrumented native jobs, the 50-codec performance guard,
-and the nonpublishing three-platform wheel/source build all pass. R1a now
-implements the immutable ownership manifest, compatibility fixtures,
-repository completeness checks, and the 50-codec/130-operation performance
-ledger. R1b now separates the active dependency queue from completed Waves A-C
-evidence and checks documentation entry points, relative links, anchors, and
-the human capability summary. A clean local Windows abi3 wheel built from the
-current source archive passes the NumPy-only installed-wheel smoke;
-current-head hosted validation remains open. Commit `a5e7fa4` remains the
-latest immutable cross-platform validated checkpoint; no new format starts
-while R1-R6 remain open.
+and the nonpublishing three-platform wheel/source build all pass. The R1
+implementation and validation checkpoint is exact commit `95061c6`. Its
+immutable ownership manifest,
+compatibility fixtures, repository completeness checks, 50-codec/130-operation
+performance ledger, completed-plan archive, and documentation consistency
+checks pass locally and in normal CI run 30187895845 plus instrumented run
+30187895838. Local MSVC collects 2,955 tests and passes 2,951 with four
+documented skips; the Windows abi3 wheel built from the exact `95061c6` source
+archive passes a fresh NumPy-only installed-wheel smoke. Build-only release run
+30189483142 also builds the source archive and builds and smoke-tests the Linux,
+macOS, and Windows wheel sets with publication skipped. R2 is next; no new
+format starts while R2-R6 remain open.
 
 The codec-per-file C++ layer remains reasonably isolated, but orchestration and
 verification have accumulated in a few large modules:

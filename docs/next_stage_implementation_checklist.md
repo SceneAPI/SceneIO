@@ -1,17 +1,21 @@
 # Next-stage implementation checklist
 
-Status: N0.1-N0.5 are implemented and validated at immutable implementation
-commit `a5e7fa4` on `phase0-nanobind-core`. Normal CI passes the complete
-suite, retained 50-codec performance guard, pinned GCC 10 job, and
-Ubuntu/Windows/macOS portability matrix. The nonpublishing release dry run
-builds and smoke-tests the source archive and all three platform wheel sets.
-The compiler-instrumented workflow passes twice with its complete 2,923-test
-collection and focused native lifetime checks. Three independent memory/lifetime,
-format/correctness, and test/benchmark reviews are clear. R1.1-R1.4 are now
-implemented and locally verified in the R1a/R1b units, including a clean wheel
-built from the current source archive. Current-head hosted validation remains
-open. Commit `a5e7fa4` remains the latest immutable cross-platform validated
-implementation checkpoint.
+Status: N0.1-N0.5 remain validated at immutable implementation commit
+`a5e7fa4` on `phase0-nanobind-core`, including the nonpublishing
+three-platform source/wheel build. R1.1-R1.4 are complete at `95061c6`.
+At that exact R1 implementation commit, local MSVC collects 2,955 tests and passes
+2,951 with four documented skips; Ruff, the retained 50-codec performance
+guard, a Windows abi3 wheel built from the exact `95061c6` source archive, and
+its fresh NumPy-only
+smoke pass. [Normal CI run 30187895845][r1-current-ci] passes the full suite,
+retained performance guard, pinned GCC 10 job, and the
+Ubuntu/Windows/macOS portability matrix. [Instrumented run
+30187895838][r1-current-instrumented] passes the complete suite and focused
+native lifetime job. [Build-only release run
+30189483142][r1-current-release] builds the source archive and builds and
+smoke-tests all three platform wheel sets, with its PyPI job skipped. Three independent
+architecture, format/correctness, and test/benchmark reviews are clear. R2 is
+next.
 
 This is the operational checklist for the repository-organization and
 codec-performance stage defined in
@@ -53,6 +57,9 @@ The starting code checkpoint is `d52c1e0` on 2026-07-25:
 [normal-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30167201539
 [instrumented-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30167201579
 [release-020]: https://github.com/SceneAPI/SceneIO/actions/runs/30097907487
+[r1-current-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30187895845
+[r1-current-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30187895838
+[r1-current-release]: https://github.com/SceneAPI/SceneIO/actions/runs/30189483142
 
 ## 2. Scope and non-goals
 
@@ -616,7 +623,7 @@ R1 verification and validation:
       five-run retained performance guard, documentation case/link/anchor and
       archive-digest checks, and the editable package smoke.
 - [x] The retained five-run benchmark guard passes. A clean Windows abi3 wheel
-      built from the exact current source archive installs into a fresh
+      built from the exact `95061c6` source archive installs into a fresh
       NumPy-only environment, `_wheel_smoke` returns 2, and artifact inspection
       finds the compiled extension, all 15 license files, and no excluded
       build/development directories. The source archive includes both
@@ -624,9 +631,29 @@ R1 verification and validation:
 - [x] The R1 diff contains tests/docs/schema plus internal ownership metadata
       and the immutable `BUILTIN_DEFINITIONS` projection only—no codec adapter,
       dispatch, detection, or public behavior change.
-- [x] Record that the latest successful build-only wheel matrix predates the
-      current head; do not call R1 cross-platform validated until a
-      user-authorized current-head matrix passes.
+- [x] Dispatch the user-authorized exact-R1-head build-only wheel matrix and
+      require its source archive plus Linux, macOS, and Windows wheel jobs to
+      pass with publication skipped.
+
+R1 implementation-checkpoint closure evidence:
+
+- [x] Follow-up commit `95061c6` normalizes the two equivalent CPython
+      local-callable pickle messages without changing runtime or codec
+      behavior.
+- [x] Local MSVC collects exactly 2,955 tests and passes 2,951 with four
+      documented skips. Ruff, `git diff --check`, the 50-codec smoke, and the
+      retained five-run performance/memory guard pass.
+- [x] The exact `95061c6` source archive produces a Windows cp312-abi3 wheel
+      containing 54 files, all 15 indexed licenses, exactly one native module,
+      and no excluded build directories. A fresh NumPy-only install passes
+      `_wheel_smoke`.
+- [x] Normal CI run 30187895845 and instrumented run 30187895838 pass at exact
+      commit `95061c6`, including GCC 10 and focused
+      Ubuntu/Windows/macOS portability jobs.
+- [x] Build-only release run 30189483142 builds the source archive and builds
+      and smoke-tests Linux, macOS, and Windows wheels at exact commit
+      `95061c6`; its PyPI job is skipped.
+- [x] Three independent reviewers report no unresolved R1 finding.
 
 ## 6. R2 — split Python orchestration by family
 

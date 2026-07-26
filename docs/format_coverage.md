@@ -26,7 +26,7 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > formats on
 > `phase0-nanobind-core` and are not released yet.
 >
-> **Latest tested code checkpoint (2026-07-25, `a5e7fa4`):** the live registry contains
+> **Validated N0 implementation checkpoint (2026-07-25, `a5e7fa4`):** the live registry contains
 > 50 available codecs. Every codec reports read, write, inspect, streaming read,
 > and streaming write support; 28 advertise a bounded partial selector. Local
 > MSVC validation passes 2,919 tests with 4 documented skips, the 50-codec
@@ -41,19 +41,29 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > this immutable implementation commit; repository organization and measured
 > backend qualification are next.
 >
-> **Current local organization status:** R1a adds the immutable 50-codec
+> **R1 implementation and validation checkpoint (2026-07-26, `95061c6`):**
+> R1a adds the immutable 50-codec
 > ownership projection, checked compatibility/repository contracts, and a
 > 130-operation performance ledger. R1b separates completed Waves A-C evidence
 > from the active dependency queue and adds documentation consistency checks.
-> These organization-only changes do not alter codec behavior. A clean local
-> Windows abi3 wheel built from the current source archive passes the
-> NumPy-only installed-wheel smoke; current-head hosted validation remains
-> open, so `a5e7fa4` is still the latest cross-platform validated
-> implementation checkpoint.
+> These organization-only changes do not alter codec behavior. Local MSVC
+> collects 2,955 tests and passes 2,951 with four documented skips. A clean
+> Windows abi3 wheel built from the exact `95061c6` source archive passes the
+> NumPy-only installed-wheel smoke. [Normal CI run
+> 30187895845][r1-current-ci] passes the complete suite, retained performance
+> guard, pinned GCC 10 job, and Linux/Windows/macOS portability matrix.
+> [Instrumented run 30187895838][r1-current-instrumented] passes its complete
+> and focused jobs. [Build-only release run
+> 30189483142][r1-current-release] builds the source archive and builds and
+> smoke-tests all three platform wheel sets, with publication skipped. R1 is
+> closed and R2 is next.
 
 [current-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287022
 [current-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287161
 [current-release]: https://github.com/SceneAPI/SceneIO/actions/runs/30181286675
+[r1-current-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30187895845
+[r1-current-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30187895838
+[r1-current-release]: https://github.com/SceneAPI/SceneIO/actions/runs/30189483142
 
 ## Data structures (memory Records)
 
