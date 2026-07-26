@@ -70,7 +70,9 @@ def _absolute_imports(source: str) -> tuple[tuple[str, tuple[str, ...]], ...]:
     return tuple(imports)
 
 
-def _array(value) -> dict[str, object]:
+def _array(value) -> dict[str, object] | None:
+    if value is None:
+        return None
     array = np.asarray(value)
     return {
         "dtype": array.dtype.str,

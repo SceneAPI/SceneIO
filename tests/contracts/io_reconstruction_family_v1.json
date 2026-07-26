@@ -1230,11 +1230,7 @@
                 ],
                 "sha256": "117c9035800fb3497693c4c08747397e1c69e3b3b799ed286adb2978df427f49"
               },
-              "scores": {
-                "dtype": "|O",
-                "shape": [],
-                "sha256": "9ced96e16072eab48973d283b90723439760d1cd3c916f8fbe949a92efc92263"
-              }
+              "scores": null
             }
           },
           {
@@ -1266,11 +1262,7 @@
                 ],
                 "sha256": "705e957007eeb0252694f331048b238bb61b52a8efd341cdb926d3d6275a2184"
               },
-              "scores": {
-                "dtype": "|O",
-                "shape": [],
-                "sha256": "9ced96e16072eab48973d283b90723439760d1cd3c916f8fbe949a92efc92263"
-              }
+              "scores": null
             }
           }
         ],
@@ -1371,11 +1363,7 @@
               ],
               "sha256": "9d908ecfb6b256def8b49a7c504e6c889c4b0e41fe6ce3e01863dd7b61a20aa0"
             },
-            "scores": {
-              "dtype": "|O",
-              "shape": [],
-              "sha256": "9ced96e16072eab48973d283b90723439760d1cd3c916f8fbe949a92efc92263"
-            },
+            "scores": null,
             "match_present": {
               "dtype": "|u1",
               "shape": [
