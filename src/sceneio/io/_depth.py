@@ -16,12 +16,11 @@ from pathlib import Path
 
 from sceneio import _core
 from sceneio.io._inspection import Inspection, inspect_path
-from sceneio.io.registry import (
-    FormatError,
+from sceneio.io._registry.adapters import (
     _mmap_reader,
     _mmap_selector_reader,
-    detect,
 )
+from sceneio.io.registry import FormatError, detect
 
 _UNITS = frozenset({"meters", "millimeters", "custom", "unitless", "unknown"})
 _INVALID_POLICIES = frozenset({"none", "zero", "nonfinite", "negative"})

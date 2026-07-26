@@ -550,7 +550,7 @@ def test_mmap_failure_uses_stream_fallback(monkeypatch, tmp_path):
     def unavailable(*args, **kwargs):
         raise OSError("mapping unavailable")
 
-    monkeypatch.setattr("sceneio.io.registry.mmap.mmap", unavailable)
+    monkeypatch.setattr("sceneio.io._registry.adapters.mmap.mmap", unavailable)
     _assert_bits_equal(
         sceneio.read_depth(path, encoding=_encoding()).depth,
         values,

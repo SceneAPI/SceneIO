@@ -21,14 +21,13 @@ from pathlib import Path
 from sceneio import _core
 from sceneio.io._depth import DepthEncoding, inspect_depth, read_depth, write_depth
 from sceneio.io._inspection import ArrayInspection, Inspection, inspect_codec
+from sceneio.io._registry.adapters import _file_sink_writer, _mmap_reader
 from sceneio.io.registry import (
     REGISTRY,
     Codec,
     CodecCapabilities,
     FormatError,
     NativeFeatureCapabilities,
-    _file_sink_writer,
-    _mmap_reader,
     detect,
     get,
     native_feature_capabilities,

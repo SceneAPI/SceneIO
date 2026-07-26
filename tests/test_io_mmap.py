@@ -23,6 +23,7 @@ import pytest
 import sceneio
 from sceneio import _core
 from sceneio.io import registry
+from sceneio.io._registry import adapters
 
 
 @dataclass(frozen=True)
@@ -2348,7 +2349,7 @@ def test_registry_uses_mmap_for_every_nonempty_single_file_codec(
     def forbidden_read_bytes(self):
         raise AssertionError(f"whole-file bytes fallback used for {self}")
 
-    monkeypatch.setattr(registry.mmap, "mmap", tracked_mmap)
+    monkeypatch.setattr(adapters.mmap, "mmap", tracked_mmap)
     monkeypatch.setattr(Path, "read_bytes", forbidden_read_bytes)
     for spec, path in zip(buffer_codecs, paths, strict=True):
         value = sceneio.codecs()[spec.id].read(str(path))
@@ -2515,7 +2516,7 @@ def test_mmap_failure_falls_back_to_same_open_stream(tmp_path, monkeypatch, fail
     def forbidden_read_bytes(self):
         raise AssertionError(f"path was reopened through read_bytes: {self}")
 
-    monkeypatch.setattr(registry.mmap, "mmap", unavailable)
+    monkeypatch.setattr(adapters.mmap, "mmap", unavailable)
     monkeypatch.setattr(Path, "read_bytes", forbidden_read_bytes)
     np.testing.assert_array_equal(sceneio.read(path), array)
     assert attempts == 1

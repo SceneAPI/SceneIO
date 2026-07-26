@@ -57,7 +57,17 @@ sceneio._core (C++ / nanobind)
   live image-extension catalog and frame inspector are injected through
   `ImageFrameAccess`, so it no longer imports the registry or public I/O facade
   during an operation. `inspect_codec` is the shared lower-level dispatcher
-  used by both public and injected inspection.
+  used by both public and injected inspection. R2.1 keeps `registry.py` as the
+  compatibility facade while extracting shared value types, mmap/path/sink
+  adapters, ordered detection, and native-feature metadata into focused
+  `sceneio.io._registry` modules. Family extraction consumes those lower
+  modules and never the public facade. The model classes are defined in
+  `_registry/model.py` but deliberately advertise their historical
+  `sceneio.io.registry` module so repr and existing pickle payloads remain
+  compatible. Because `sceneio.io` remains an eager compatibility facade,
+  importing a dotted `_registry` module in a fresh process still initializes
+  its parent package; R2.1 guarantees an acyclic source dependency direction,
+  not a standalone lightweight import boundary.
 
 ## Stable codec ownership and backend selection
 

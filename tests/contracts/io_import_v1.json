@@ -61,6 +61,11 @@
       "sceneio.io._obj",
       "sceneio.io._pcd",
       "sceneio.io._ply",
+      "sceneio.io._registry",
+      "sceneio.io._registry.adapters",
+      "sceneio.io._registry.detection",
+      "sceneio.io._registry.model",
+      "sceneio.io._registry.native_features",
       "sceneio.io.registry",
       "sceneio.mapping_input",
       "sceneio.points_binary"

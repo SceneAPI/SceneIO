@@ -291,7 +291,9 @@ def test_view_setup_failure_releases_mapping_while_exception_is_retained(
         raise MemoryError("injected view setup failure")
 
     monkeypatch.setattr(
-        "sceneio.io.registry.memoryview", fail_memoryview, raising=False
+        "sceneio.io._registry.adapters.memoryview",
+        fail_memoryview,
+        raising=False,
     )
     caught = None
     try:

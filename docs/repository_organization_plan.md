@@ -25,16 +25,24 @@ checks pass locally and in normal CI run 30187895845 plus instrumented run
 documented skips; the Windows abi3 wheel built from the exact `95061c6` source
 archive passes a fresh NumPy-only installed-wheel smoke. Build-only release run
 30189483142 also builds the source archive and builds and smoke-tests the Linux,
-macOS, and Windows wheel sets with publication skipped. R2 is next; no new
-format starts while R2-R6 remain open.
+macOS, and Windows wheel sets with publication skipped. No new format starts
+while R2-R6 remain open.
 
-R2.0 is locally complete in this implementation unit. Image-sequence frame
+R2.0 is complete at `40d5412`. Image-sequence frame
 extensions and metadata inspection are injected through the lower-level
 `ImageFrameAccess` contract, and both public and injected inspection paths use
 the same `inspect_codec` dispatcher. The catalog remains live for third-party
 image registrations, while the adapter no longer imports the registry or
-public I/O facade at runtime. R2.1, shared model and adapter extraction, is
-next.
+public I/O facade at runtime. The exact source archive and Windows abi3 wheel
+pass content-identity, package-layout, attribution, and fresh NumPy-only smoke
+checks.
+
+R2.1 is implemented locally behind the unchanged `registry.py` facade.
+Shared model, mmap/path/sink adapter, ordered detection, and native-feature
+services now live in focused `sceneio.io._registry` modules. The complete
+local suite, retained performance guard, exact source-archive-to-wheel content
+check, and fresh NumPy-only installed-wheel smoke pass. R2.2 family extraction
+is next.
 
 The codec-per-file C++ layer remains reasonably isolated, but orchestration and
 verification have accumulated in a few large modules:
@@ -43,7 +51,7 @@ verification have accumulated in a few large modules:
 |---|---|---|
 | C++ codecs | 40 files for 50 format ids | flat source list and manual binding declarations |
 | C++ records | 32 source/header files | still manageable; new table/animation/scene records will add pressure |
-| Python registry | `registry.py`, about 1,600 lines | data model, adapters, detection, native features, and 50 registrations share one file |
+| Python registry | `registry.py`, 1,342 lines, plus focused `_registry/{model,adapters,detection,native_features}.py` modules | the 50 built-in registrations still share the facade until R2.2 family extraction |
 | Inspection | `_inspection.py`, about 1,950 lines | unrelated format-family parsers and result conversion share one module |
 | Benchmark | `bench_io.py`, about 4,660 lines | CLI, fixtures, oracles, runners, metrics, and reporting are coupled |
 | Cross-codec tests | `test_io_mmap.py`, about 2,400 lines; `test_io_partial.py`, about 1,100 | reusable codec cases and behavior assertions are difficult to extend independently |

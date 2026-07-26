@@ -17,10 +17,12 @@ smoke-tests all three platform wheel sets, with its PyPI job skipped. Three
 independent architecture, format/correctness, and test/benchmark reviews are
 clear.
 
-R2.0 is implemented and locally verified in this implementation unit. The image
-sequence adapter now receives its image-extension catalog and metadata
-inspector through a lower-level contract instead of importing the registry or
-public I/O facade at runtime. R2.1 is next.
+R2.0 is complete at `40d5412`. The image-sequence adapter receives its
+image-extension catalog and metadata inspector through a lower-level contract
+instead of importing the registry or public I/O facade at runtime. Its exact
+source archive and Windows abi3 wheel pass content-identity, license-inventory,
+layout, and fresh NumPy-only installed-wheel checks. R2.1 is locally complete
+in this implementation unit; R2.2 family extraction is next.
 
 This is the operational checklist for the repository-organization and
 codec-performance stage defined in
@@ -700,15 +702,65 @@ R2.0 local completion evidence:
 
 ### R2.1 — extract shared model and adapters
 
-- [ ] Move codec/capability value types, mmap/path/sink adapters, detection,
+- [x] Move codec/capability value types, mmap/path/sink adapters, detection,
       and native-feature metadata behind the existing facade.
-- [ ] Keep import direction acyclic:
+- [x] Keep import direction acyclic:
       family definitions -> shared model/adapters; facade -> family aggregate.
-- [ ] Do not let family modules import the public `sceneio` package.
-- [ ] Add import-cycle and import-isolation tests.
-- [ ] Preserve public value-type identity, `__module__`, `__qualname__`, repr,
+- [x] Do not let family modules import the public `sceneio` package.
+- [x] Add import-cycle and import-isolation tests.
+- [x] Preserve public value-type identity, `__module__`, `__qualname__`, repr,
       and pickle compatibility; leave definitions in the facade when moving
       them would create an avoidable compatibility break.
+
+R2.1 implementation contract:
+
+- Use the planned `sceneio.io._registry` package with focused `model`,
+  `adapters`, `detection`, and `native_features` modules; do not create a
+  miscellaneous utility module.
+- Re-export the exact shared model objects from `registry.py`. Preserve their
+  historical `sceneio.io.registry` module identity so existing repr and pickle
+  contracts remain unchanged.
+- Keep the live `REGISTRY` object and built-in installation in the facade for
+  this unit. Side-effect-free family tuples and validate-before-install
+  aggregation begin in R2.2, so R2.1 does not mix state-lifecycle changes into
+  the mechanical extraction.
+- Make detection operate on an injected ordered codec collection. The facade
+  supplies its live registry values, preserving directory, filename, PLY,
+  extension, LAS/LAZ, and magic precedence exactly.
+- Let lower-level typed adapters import shared model/adapters directly rather
+  than importing adapter helpers through the registry facade. No family or
+  shared module imports the public `sceneio.io` facade.
+- Freeze the eager-module delta, public symbol/type snapshot, callable
+  signatures, detection/error outcomes, and adapter ownership in focused
+  tests before running the complete suite and performance guard.
+
+R2.1 local implementation evidence:
+
+- `model.py`, `adapters.py`, `detection.py`, and `native_features.py` now live
+  under the inert `sceneio.io._registry` package. The moved model and adapter
+  definitions are AST-identical to `40d5412`; the facade re-exports their exact
+  objects and preserves the original adapter factory names.
+- `Codec`, `CodecCapabilities`, and `NativeFeatureCapabilities` deliberately
+  retain historical `sceneio.io.registry` module identities. Checked protocol
+  4 payloads emitted by pre-move commit `40d5412` load as the current exact
+  types, and current emission remains byte-identical.
+- Ordered detection receives a snapshot of the live registry values per call;
+  native-feature resolution reads `_core.__native_features__` per call. Public
+  registry, capability, type, repr, pickle, signature, error, and import
+  snapshots are unchanged except for the five expected private eager modules.
+- The complete local suite collects 2,974 tests and passes 2,970 with four
+  documented skips; the focused path/mmap/zero-copy/partial/depth/flow/sequence
+  set passes 445 tests. Ruff, workflow parsing, editable NumPy-only smoke, and
+  `git diff --check` pass.
+- The one-run 50-codec structural smoke and five-run retained O4/O5 and
+  allocation guard pass. The 15-sample Windows `sceneio.io` median is
+  71.79 ms, below the unchanged 220.05 ms alert threshold.
+- The exact staged source archive contains all 21 changed files byte-identical
+  to the workspace. Its derived Windows abi3 wheel contains 60 files, all 15
+  indexed licenses, exactly one native module, and no top-level
+  include/lib/share/bin content. All five `_registry` runtime files are
+  byte-identical across workspace/archive/wheel; a fresh NumPy-only install
+  passes `_wheel_smoke` and the shared-model identity/pickle probe.
 
 ### R2.2 — move family registrations
 

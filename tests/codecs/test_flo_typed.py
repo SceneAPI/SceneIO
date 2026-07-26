@@ -12,7 +12,7 @@ import pytest
 
 import sceneio
 from sceneio import _core
-from sceneio.io import registry
+from sceneio.io._registry import adapters
 
 
 def _oracle_write(values: np.ndarray) -> bytes:
@@ -186,7 +186,7 @@ def test_public_reader_uses_temporary_mmap_and_result_owns_values(
         calls += 1
         return original(*args, **kwargs)
 
-    monkeypatch.setattr(registry.mmap, "mmap", tracked)
+    monkeypatch.setattr(adapters.mmap, "mmap", tracked)
     flow = sceneio.read_flow(path)
     assert calls == 1
     path.unlink()
@@ -205,7 +205,7 @@ def test_public_reader_mmap_failure_uses_same_stream_fallback(
     def unavailable(*args, **kwargs):
         raise OSError("mmap unavailable")
 
-    monkeypatch.setattr(registry.mmap, "mmap", unavailable)
+    monkeypatch.setattr(adapters.mmap, "mmap", unavailable)
     _assert_canonical(sceneio.read_flow(path), expected)
 
 
