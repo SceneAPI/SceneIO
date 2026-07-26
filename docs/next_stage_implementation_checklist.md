@@ -82,6 +82,7 @@ The starting code checkpoint is `d52c1e0` on 2026-07-25:
 [r1-current-release]: https://github.com/SceneAPI/SceneIO/actions/runs/30189483142
 [r2-shared-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30195153288
 [r2-shared-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30195153277
+[r2-splat-parent-exposing]: https://github.com/SceneAPI/SceneIO/actions/runs/30220612832
 
 ## 2. Scope and non-goals
 
@@ -2245,9 +2246,13 @@ Documentation and exact-parent freeze:
       mmap, partial, capability, registry, inspection, and public-API suites.
       Do not pre-compute the candidate collection count; derive its exact
       count and digest after the final test set exists.
-- [ ] Commit and push this documentation/parent-freeze checkpoint only after
+- [ ] Commit and push the validated documentation/parent-freeze checkpoint
+      only after
       documentation consistency, link, Ruff, architecture-contract, and diff
-      checks pass.
+      checks pass. Initial commit
+      `93fcf1b39350a3a0080a7b87ead65d0d9343d354` exposed the platform
+      variants; replace this note with the corrected green commit after its
+      hosted rerun passes.
 
 Parent-freeze candidate evidence: the oracle-independent architecture suite
 passes all 31 nodes. The architecture plus registry-assembly contract passes
@@ -2259,12 +2264,27 @@ the assembly contract and compiler-instrumented workflow pin match it. The
 checked six-row benchmark projection artifact reproduces both parent captures
 and SHA-256
 `5c6adc3584ba25050c885b37313d009311e2253b0c841cbc8738b806cb090bfd`.
-Encoded artifact hashes were captured on Windows/MSVC and are intentional
-exact requirements. Their GCC-10 and AppleClang reproduction remains pending;
-do not call them cross-platform-portable until the hosted lanes pass. A
-platform difference must be investigated before extraction: fix the producer
-when behavior is unintended, or record a justified platform-keyed artifact
-fingerprint while retaining universal logical-record and inspection parity.
+Hosted [run 30220612832][r2-splat-parent-exposing] and the pinned
+manylinux2014/GCC-10 reproduction completed the platform investigation.
+Gaussian PLY, compressed PLY, KSplat, SPZ, and SPLAT encoded bytes are exact
+across the observed MSVC, hosted AppleClang, hosted glibc, and GCC-10 builds.
+SOG has two deterministic parent profiles: Windows/MSVC and
+macOS/AppleClang serialize
+`means.mins[2]` as `-0x1.193ea7aad030bp+0`; hosted glibc and the pinned
+GCC-10 image serialize the adjacent double
+`-0x1.193ea7aad030ap+0`. That one JSON digit and its two ZIP CRC copies are
+the complete archive difference; all five lossless-WebP layers, member order,
+sizes, inspections, and decoded records are exact.
+
+The same run exposed three decoded-only parent variants while their encoded
+bytes remained exact: KSplat and SPLAT scales differ by at most one float32
+ULP through platform `logf`, and SPZ v3/v4 quaternions differ by at most one
+float32 ULP on AppleClang/ARM through floating-point contraction. The contract
+therefore keeps unaffected fields bit-exact, applies a maximum-one-ULP check
+only to those named arrays, and retains exact whole-record fingerprints for
+all four build profiles. This is evidence about existing parent behavior, not
+a codec change or a claim that SOG archives are globally byte-canonical.
+The corrected hosted rerun is pending before inspector source moves.
 
 Inspector extraction checkpoint:
 

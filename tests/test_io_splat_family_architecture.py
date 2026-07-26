@@ -8,9 +8,13 @@ import copy
 import gzip
 import hashlib
 import inspect
+import io
 import json
+import os
+import platform
 import shutil
 import struct
+import sys
 import zipfile
 from pathlib import Path
 
@@ -123,12 +127,15 @@ def _record_fingerprint(cloud) -> str:
         "sh_rest",
     ):
         value = np.asarray(getattr(cloud, name))
+        canonical = np.ascontiguousarray(
+            value.astype(value.dtype.newbyteorder("<"), copy=False)
+        )
         fields.append(
             [
                 name,
                 str(value.dtype),
                 list(value.shape),
-                hashlib.sha256(value.tobytes()).hexdigest(),
+                hashlib.sha256(canonical.tobytes()).hexdigest(),
             ]
         )
     payload = json.dumps(
@@ -146,6 +153,191 @@ def _record_fingerprint(cloud) -> str:
         separators=(",", ":"),
     )
     return hashlib.sha256(payload.encode()).hexdigest()
+
+
+def _active_parent_profile() -> str | None:
+    profiles = CONTRACT["platform_evidence"]["profiles"]
+    explicit = os.environ.get("SCENEIO_SPLAT_PARENT_PROFILE")
+    if explicit is not None:
+        assert explicit in profiles, (
+            "unknown SCENEIO_SPLAT_PARENT_PROFILE: " + explicit
+        )
+        return explicit
+    machine = platform.machine().lower()
+    if sys.platform == "win32" and machine in {"amd64", "x86_64"}:
+        return "windows_msvc_x86_64"
+    if sys.platform == "darwin" and machine in {"arm64", "aarch64"}:
+        return "macos_appleclang_arm64"
+    return None
+
+
+def _profile_record_hashes(contract_name: str) -> dict[str, str]:
+    return {
+        profile: evidence["record_sha256"][contract_name]
+        for profile, evidence in CONTRACT["platform_evidence"][
+            "profiles"
+        ].items()
+    }
+
+
+def _field_sha256(value) -> str:
+    array = np.asarray(value)
+    canonical = np.ascontiguousarray(
+        array.astype(array.dtype.newbyteorder("<"), copy=False)
+    )
+    return hashlib.sha256(canonical.tobytes()).hexdigest()
+
+
+def _assert_portable_record(cloud, contract_name: str) -> None:
+    contract = CONTRACT["decoded_record_contracts"][contract_name]
+    actual_record_sha256 = _record_fingerprint(cloud)
+    profile_hashes = _profile_record_hashes(contract_name)
+    profile = _active_parent_profile()
+    if profile is None:
+        assert actual_record_sha256 in set(profile_hashes.values()), {
+            "actual": actual_record_sha256,
+            "known_parent_variants": profile_hashes,
+        }
+    else:
+        assert actual_record_sha256 == profile_hashes[profile], {
+            "profile": profile,
+            "actual": actual_record_sha256,
+            "expected": profile_hashes[profile],
+        }
+
+    assert {
+        "num_gaussians": cloud.num_gaussians,
+        "sh_degree": cloud.sh_degree,
+        "num_rest": cloud.num_rest,
+        "quaternion_order": cloud.quaternion_order,
+        "scale_space": cloud.scale_space,
+        "opacity_space": cloud.opacity_space,
+        "sh_layout": cloud.sh_layout,
+    } == {
+        "num_gaussians": 8,
+        "sh_degree": 0,
+        "num_rest": 0,
+        "quaternion_order": "wxyz",
+        "scale_space": "log",
+        "opacity_space": "logit",
+        "sh_layout": "channel_grouped",
+    }
+    for name, expected_sha256 in contract[
+        "exact_field_sha256"
+    ].items():
+        value = np.asarray(getattr(cloud, name))
+        assert np.isfinite(value).all()
+        assert _field_sha256(value) == expected_sha256, name
+
+    ulp = contract["ulp_field"]
+    actual = np.asarray(getattr(cloud, ulp["name"]))
+    expected_dtype = np.dtype(ulp["dtype"])
+    assert actual.dtype == expected_dtype
+    assert list(actual.shape) == ulp["shape"]
+    assert np.isfinite(actual).all()
+    expected = np.frombuffer(
+        base64.b64decode(ulp["canonical_base64"]),
+        dtype=expected_dtype.newbyteorder("<"),
+    ).reshape(ulp["shape"])
+    np.testing.assert_array_max_ulp(
+        actual,
+        expected,
+        maxulp=ulp["max_ulp"],
+    )
+    zero = actual == 0
+    np.testing.assert_array_equal(
+        np.signbit(actual[zero]),
+        np.signbit(expected[zero]),
+    )
+
+
+def _assert_sog_metadata(metadata: bytes) -> tuple[str, str]:
+    parsed = json.loads(metadata)
+    path = CONTRACT["sog_encoding_contract"]["variant_json_path"]
+    assert path and all(isinstance(value, (str, int)) for value in path)
+    value = parsed
+    for component in path:
+        value = value[component]
+    means_min_z = float(value)
+    means_min_z_hex = means_min_z.hex()
+    normalized = copy.deepcopy(parsed)
+    parent = normalized
+    for component in path[:-1]:
+        parent = parent[component]
+    parent[path[-1]] = "<libm-log1p-2>"
+    payload = json.dumps(
+        normalized,
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    assert hashlib.sha256(payload.encode()).hexdigest() == CONTRACT[
+        "sog_encoding_contract"
+    ]["logical_metadata_sha256"]
+    return hashlib.sha256(metadata).hexdigest(), means_min_z_hex
+
+
+def _assert_sog_profile(
+    *,
+    archive_sha256: str | None,
+    metadata_sha256: str,
+    means_min_z_hex: str,
+) -> None:
+    observed = {
+        "sog_metadata_sha256": metadata_sha256,
+        "sog_means_min_z_hex": means_min_z_hex,
+    }
+    if archive_sha256 is not None:
+        observed["sog_archive_sha256"] = archive_sha256
+    profile = _active_parent_profile()
+    profiles = CONTRACT["platform_evidence"]["profiles"]
+    if profile is None:
+        known = [
+            {
+                key: evidence[key]
+                for key in observed
+            }
+            for evidence in profiles.values()
+        ]
+        assert observed in known, {
+            "actual": observed,
+            "known_parent_variants": known,
+        }
+    else:
+        expected = {
+            key: profiles[profile][key]
+            for key in observed
+        }
+        assert observed == expected, {
+            "profile": profile,
+            "actual": observed,
+            "expected": expected,
+        }
+
+
+def _assert_sog_archive(payload: bytes) -> None:
+    archive_sha256 = hashlib.sha256(payload).hexdigest()
+    with zipfile.ZipFile(io.BytesIO(payload)) as archive:
+        infos = archive.infolist()
+        assert [value.filename for value in infos] == CONTRACT[
+            "sog_encoding_contract"
+        ]["members"]
+        assert all(value.compress_type == zipfile.ZIP_STORED for value in infos)
+        metadata = archive.read("meta.json")
+        for info in infos:
+            if info.filename == "meta.json":
+                continue
+            expected = CONTRACT["valid"]["sog_directory"]["files"][
+                info.filename
+            ]
+            member = archive.read(info)
+            assert len(member) == expected["byte_size"]
+            assert hashlib.sha256(member).hexdigest() == expected["sha256"]
+    metadata_sha256, means_min_z_hex = _assert_sog_metadata(metadata)
+    _assert_sog_profile(
+        archive_sha256=archive_sha256,
+        metadata_sha256=metadata_sha256,
+        means_min_z_hex=means_min_z_hex,
+    )
 
 
 def _callable_descriptor(value):
@@ -320,6 +512,37 @@ def test_splat_parent_contract_metadata_is_exact():
         "spz": 13,
         "splat": 11,
     }
+    assert set(CONTRACT["platform_evidence"]["profiles"]) == {
+        "windows_msvc_x86_64",
+        "macos_appleclang_arm64",
+        "ubuntu_latest_x86_64_glibc",
+        "manylinux2014_gcc10_x86_64",
+    }
+    assert set(CONTRACT["decoded_record_contracts"]) == {
+        "ksplat",
+        "spz_v3_v4",
+        "splat",
+    }
+    evidence = CONTRACT["platform_evidence"]
+    assert evidence["exposing_commit"] == (
+        "93fcf1b39350a3a0080a7b87ead65d0d9343d354"
+    )
+    assert evidence["hosted_run"] == 30220612832
+    windows = evidence["profiles"]["windows_msvc_x86_64"]
+    assert CONTRACT["valid"]["sog"]["sha256"] == windows[
+        "sog_archive_sha256"
+    ]
+    assert CONTRACT["valid"]["sog_directory"]["files"]["meta.json"][
+        "sha256"
+    ] == windows["sog_metadata_sha256"]
+    assert {
+        "ksplat": CONTRACT["valid"]["ksplat"]["record_sha256"],
+        "spz_v3_v4": CONTRACT["valid"]["spz"]["record_sha256"],
+        "splat": CONTRACT["valid"]["splat"]["record_sha256"],
+    } == windows["record_sha256"]
+    assert CONTRACT["valid"]["spz_v4"]["record_sha256"] == windows[
+        "record_sha256"
+    ]["spz_v3_v4"]
 
 
 def test_splat_codec_definitions_match_parent_ast_and_descriptors():
@@ -387,17 +610,31 @@ def test_splat_valid_artifacts_match_exact_parent(
     expected = CONTRACT["valid"][format_id]
     payload = path.read_bytes()
     assert len(payload) == expected["byte_size"]
-    assert hashlib.sha256(payload).hexdigest() == expected["sha256"]
+    if format_id == "sog":
+        _assert_sog_archive(payload)
+    else:
+        assert hashlib.sha256(payload).hexdigest() == expected["sha256"]
     info = sceneio.inspect(path, format=format_id)
     decoded = sceneio.read(path, format=format_id)
     assert _normalized_inspection(info) == expected["inspection"]
-    assert _record_fingerprint(decoded) == expected["record_sha256"]
+    record_contract = {
+        "ksplat": "ksplat",
+        "spz": "spz_v3_v4",
+        "splat": "splat",
+    }.get(format_id)
+    if record_contract is None:
+        assert _record_fingerprint(decoded) == expected["record_sha256"]
+    else:
+        _assert_portable_record(decoded, record_contract)
 
     released = path.with_suffix(path.suffix + ".released")
     path.rename(released)
     released.unlink()
     assert _normalized_inspection(info) == expected["inspection"]
-    assert _record_fingerprint(decoded) == expected["record_sha256"]
+    if record_contract is None:
+        assert _record_fingerprint(decoded) == expected["record_sha256"]
+    else:
+        _assert_portable_record(decoded, record_contract)
 
 
 def test_sog_directory_artifact_matches_exact_parent(tmp_path):
@@ -412,7 +649,23 @@ def test_sog_directory_artifact_matches_exact_parent(tmp_path):
         for value in sorted(path.rglob("*"))
         if value.is_file()
     }
-    assert files == expected["files"]
+    assert set(files) == set(expected["files"])
+    for name, descriptor in files.items():
+        assert descriptor["byte_size"] == expected["files"][name][
+            "byte_size"
+        ]
+        if name != "meta.json":
+            assert descriptor["sha256"] == expected["files"][name][
+                "sha256"
+            ]
+    metadata = (path / "meta.json").read_bytes()
+    metadata_sha256, means_min_z_hex = _assert_sog_metadata(metadata)
+    assert files["meta.json"]["sha256"] == metadata_sha256
+    _assert_sog_profile(
+        archive_sha256=None,
+        metadata_sha256=metadata_sha256,
+        means_min_z_hex=means_min_z_hex,
+    )
     directory_info = sceneio.inspect(path, format="sog")
     metadata_info = sceneio.inspect(path / "meta.json", format="sog")
     directory_record = sceneio.read(path, format="sog")
@@ -464,9 +717,10 @@ def test_spz_v4_artifact_matches_exact_parent(tmp_path):
     assert _normalized_inspection(
         sceneio.inspect(path, format="spz")
     ) == expected["inspection"]
-    assert _record_fingerprint(
-        sceneio.read(path, format="spz")
-    ) == expected["record_sha256"]
+    _assert_portable_record(
+        sceneio.read(path, format="spz"),
+        "spz_v3_v4",
+    )
 
 
 @pytest.mark.parametrize("format_id", SPLAT_IDS)

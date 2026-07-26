@@ -56,6 +56,122 @@
     "spz": "d196053c942168e4787d151841dce81da6ad833f5f7dcdbeab3870a2f2d0d7ea",
     "splat": "d5114f6722609207a8826907f4abad7429d82e51d98edb3c84d525dd8af06eea"
   },
+  "platform_evidence": {
+    "exposing_commit": "93fcf1b39350a3a0080a7b87ead65d0d9343d354",
+    "hosted_run": 30220612832,
+    "profiles": {
+      "windows_msvc_x86_64": {
+        "runner": "windows-latest",
+        "toolchain": "MSVC 19.43 x86_64",
+        "sog_archive_sha256": "037a5837afeabe3a7ff6fc8988cadfbd5fecf3f47dd93e3cdfb8e1e24b0b2a55",
+        "sog_metadata_sha256": "4c3c9560b4355ec1d1cb6c1a4b827ededf9deb7c7a9c8a12ed89768cdbb292a4",
+        "sog_means_min_z_hex": "-0x1.193ea7aad030bp+0",
+        "record_sha256": {
+          "ksplat": "4539ee6ba28328de2652bca1b70b9347a3d6261a7dcd9b4dd8a22bc1a7280e19",
+          "spz_v3_v4": "4e4981eee24d6c1d1e9b85ca309e24459a038d4ad0b28a97cf150c833fe09a13",
+          "splat": "4f10b2b198cbabcf0a601921d34282ab46884dcd2e527a940b76d234f301457e"
+        }
+      },
+      "macos_appleclang_arm64": {
+        "runner": "macos-latest",
+        "toolchain": "AppleClang arm64",
+        "sog_archive_sha256": "037a5837afeabe3a7ff6fc8988cadfbd5fecf3f47dd93e3cdfb8e1e24b0b2a55",
+        "sog_metadata_sha256": "4c3c9560b4355ec1d1cb6c1a4b827ededf9deb7c7a9c8a12ed89768cdbb292a4",
+        "sog_means_min_z_hex": "-0x1.193ea7aad030bp+0",
+        "record_sha256": {
+          "ksplat": "4539ee6ba28328de2652bca1b70b9347a3d6261a7dcd9b4dd8a22bc1a7280e19",
+          "spz_v3_v4": "5cd52d202330f8d3864414d5da1de7884d80bdf8d0d29be6f10640a600486c44",
+          "splat": "4f10b2b198cbabcf0a601921d34282ab46884dcd2e527a940b76d234f301457e"
+        }
+      },
+      "ubuntu_latest_x86_64_glibc": {
+        "runner": "ubuntu-latest",
+        "toolchain": "hosted GCC/glibc x86_64",
+        "sog_archive_sha256": "c2c08d4636c8a560b9fe18c16469b20f49747a0b516da52a07f3dcdf87bd8cc8",
+        "sog_metadata_sha256": "312a1b0a0c1f9d5c9ffca7db770f6673f933b249ea580ead9bad34b1a2177c2d",
+        "sog_means_min_z_hex": "-0x1.193ea7aad030ap+0",
+        "record_sha256": {
+          "ksplat": "d57f9dbb65be4660c79973da24c94bb9bb43b2a43229ce2df0e69b0874dd954a",
+          "spz_v3_v4": "4e4981eee24d6c1d1e9b85ca309e24459a038d4ad0b28a97cf150c833fe09a13",
+          "splat": "ed5c5851edf9e0330181bd97ecd1738fe0c0ebe635040ac3b99c420481f1d0c6"
+        }
+      },
+      "manylinux2014_gcc10_x86_64": {
+        "runner": "quay.io/pypa/manylinux2014_x86_64@sha256:92f4005bb23138b89ed22ba1491ddbedb0564747e7ce44b33c52aa6f1a786d23",
+        "toolchain": "GCC 10.2.1 / glibc x86_64",
+        "sog_archive_sha256": "c2c08d4636c8a560b9fe18c16469b20f49747a0b516da52a07f3dcdf87bd8cc8",
+        "sog_metadata_sha256": "312a1b0a0c1f9d5c9ffca7db770f6673f933b249ea580ead9bad34b1a2177c2d",
+        "sog_means_min_z_hex": "-0x1.193ea7aad030ap+0",
+        "record_sha256": {
+          "ksplat": "ef892bc9476f790f19f61571e973cc7a491023c2d74ca16b9aaae8c9f44d4108",
+          "spz_v3_v4": "4e4981eee24d6c1d1e9b85ca309e24459a038d4ad0b28a97cf150c833fe09a13",
+          "splat": "13bb2b22f0912720fc541a143bf608caeb98129f45c7970ed1f4691528d3568f"
+        }
+      }
+    }
+  },
+  "sog_encoding_contract": {
+    "logical_metadata_sha256": "ce3b3dfee6b655ceef35ffb032310eeb94409abca5143bccffa1c3e746ce6982",
+    "variant_json_path": ["means", "mins", 2],
+    "members": [
+      "means_l.webp",
+      "means_u.webp",
+      "quats.webp",
+      "scales.webp",
+      "sh0.webp",
+      "meta.json"
+    ]
+  },
+  "decoded_record_contracts": {
+    "ksplat": {
+      "exact_field_sha256": {
+        "means": "5f0ff0bc8ee149cfeaad4de13b4971c57987f08fd1b3ff8789063cc8bbd65e23",
+        "quaternions": "4671bd4886543a030fa58fbc33d9484224deae80f5efb05c880707e3695e4712",
+        "opacities": "8c431db0ef4d7ed9e1b7e113f879dede096708beeea1a7653f6909cd6c278450",
+        "sh_dc": "3be9475d4fa7a18d673cde0ab368107f3300245c6067d8328b9ccdeca3e387dd",
+        "sh_rest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "ulp_field": {
+        "name": "scales",
+        "dtype": "float32",
+        "shape": [8, 3],
+        "canonical_base64": "JRKAvzysbL/eHVm/1ZdFv2AyMr8Vpx6/RTMLv3px775Dpci++nyhviUidb6Qeie+H5CyvX8KObynjIU9OVUQPjQUXj4CKZY+s+28Ps3b4z63gQU/Cu8YP25lLD9RyT8/",
+        "max_ulp": 1
+      }
+    },
+    "spz_v3_v4": {
+      "exact_field_sha256": {
+        "means": "08eb32236e2c392502292b7bd01ef25fa3621bca49dc0a1e8c92963e8e1aabac",
+        "scales": "b185e8881bd4f2c3d819ade04b134d368c189a47dea04f73f5fd614825ce2128",
+        "opacities": "1518f5483ca92eb2bcd4ee4c75df5e2091078eba5742db53acbcc870578aba92",
+        "sh_dc": "a91d124ce8014757fd545ede09d8c9f25bf742f0a3eda02b2465166977b0835e",
+        "sh_rest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "ulp_field": {
+        "name": "quaternions",
+        "dtype": "float32",
+        "shape": [8, 4],
+        "canonical_base64": "AACAPwAAAAAAAAAAAAAAANzD/z4MWgA/3MP/PtzD/z7zBDU/8wQ1PwAAAAAAAAAA8wQ1PwAAAADzBDU/AAAAAPMENT8AAAAAAAAAAPMENT//DF4/TXfevk13Xj6ODN09oAo7PqAKuz74Rwy/j+E6P9zD/74MWgA/3MP/vtzD/z4=",
+        "max_ulp": 1
+      }
+    },
+    "splat": {
+      "exact_field_sha256": {
+        "means": "08eb32236e2c392502292b7bd01ef25fa3621bca49dc0a1e8c92963e8e1aabac",
+        "quaternions": "6c7e72ab05043f2bafb97115c46bba25eeb8a2463bef3ce220f374173314df05",
+        "opacities": "1518f5483ca92eb2bcd4ee4c75df5e2091078eba5742db53acbcc870578aba92",
+        "sh_dc": "4190cabaaf104180c75112a8781eba3aa2e2b7982d1c1c88fd1ab13e4a78c4d3",
+        "sh_rest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "ulp_field": {
+        "name": "scales",
+        "dtype": "float32",
+        "shape": [8, 3],
+        "canonical_base64": "AACAv5CFbL8hC1m/spBFv0MWMr/Tmx6/ZCELv+pN774LWci+LWShvpredL7f9Ca+RhayvWEWMryykIU9FbIQPtCbXj7IQpY+pze9Pocs5D6ykAU/IQsZP5GFLD8BAEA/",
+        "max_ulp": 1
+      }
+    }
+  },
   "valid": {
     "gaussian_ply": {
       "byte_size": 805,

@@ -798,6 +798,28 @@ def test_assembly_dependency_direction_and_import_delta_are_exact():
         "  manylinux2014-portability:",
         maxsplit=1,
     )[1]
+    splat_job = ci_workflow.split(
+        "  splat-platform:",
+        maxsplit=1,
+    )[1].split("  manylinux2014-portability:", maxsplit=1)[0]
+    assert 'uv pip install -e ".[dev]"' in splat_job
+    assert (
+        "SCENEIO_SPLAT_PARENT_PROFILE: ${{ matrix.parent-profile }}"
+        in splat_job
+    )
+    for runner, profile in (
+        ("ubuntu-latest", "ubuntu_latest_x86_64_glibc"),
+        ("windows-latest", "windows_msvc_x86_64"),
+        ("macos-latest", "macos_appleclang_arm64"),
+    ):
+        assert (
+            f"          - os: {runner}\n"
+            f"            parent-profile: {profile}"
+        ) in splat_job
+    assert (
+        "SCENEIO_SPLAT_PARENT_PROFILE=manylinux2014_gcc10_x86_64"
+        in manylinux_job
+    )
     assert 'PYTHONPATH=/work "$py" -m pytest -q \\' in manylinux_job
     for suite in (
         "test_colmap.py",
