@@ -2,20 +2,25 @@
 
 Status: N0.1-N0.5 remain validated at immutable implementation commit
 `a5e7fa4` on `phase0-nanobind-core`, including the nonpublishing
-three-platform source/wheel build. R1.1-R1.4 are complete at `95061c6`.
-At that exact R1 implementation commit, local MSVC collects 2,955 tests and passes
+three-platform source/wheel build. R1.1-R1.4 are complete at `95061c6`. At that
+exact R1 implementation commit, local MSVC collects 2,955 tests and passes
 2,951 with four documented skips; Ruff, the retained 50-codec performance
 guard, a Windows abi3 wheel built from the exact `95061c6` source archive, and
-its fresh NumPy-only
-smoke pass. [Normal CI run 30187895845][r1-current-ci] passes the full suite,
+its fresh NumPy-only smoke pass. [Normal CI run
+30187895845][r1-current-ci] passes the full suite,
 retained performance guard, pinned GCC 10 job, and the
 Ubuntu/Windows/macOS portability matrix. [Instrumented run
 30187895838][r1-current-instrumented] passes the complete suite and focused
 native lifetime job. [Build-only release run
 30189483142][r1-current-release] builds the source archive and builds and
-smoke-tests all three platform wheel sets, with its PyPI job skipped. Three independent
-architecture, format/correctness, and test/benchmark reviews are clear. R2 is
-next.
+smoke-tests all three platform wheel sets, with its PyPI job skipped. Three
+independent architecture, format/correctness, and test/benchmark reviews are
+clear.
+
+R2.0 is implemented and locally verified in this implementation unit. The image
+sequence adapter now receives its image-extension catalog and metadata
+inspector through a lower-level contract instead of importing the registry or
+public I/O facade at runtime. R2.1 is next.
 
 This is the operational checklist for the repository-organization and
 codec-performance stage defined in
@@ -661,15 +666,37 @@ Complete R2.0 first, then repeat R2.1-R2.4 for one family per commit.
 
 ### R2.0 — remove sequence-to-registry upward dependencies
 
-- [ ] Move the image-extension catalog and inspector dispatch contract to a
+- [x] Move the image-extension catalog and inspector dispatch contract to a
       lower-level internal module that neither imports `REGISTRY` nor the
       public `sceneio` package.
-- [ ] Inject those dependencies into the image-sequence adapter instead of
+- [x] Inject those dependencies into the image-sequence adapter instead of
       resolving them through deferred upward imports.
-- [ ] Exercise `_image_extensions()` and `_frame_metadata()` at runtime in an
+- [x] Exercise `_image_extensions()` and `_frame_metadata()` at runtime in an
       isolated import-cycle test; a static import graph alone is insufficient.
-- [ ] Preserve sequence detection order, selected-frame semantics, metadata,
+- [x] Preserve sequence detection order, selected-frame semantics, metadata,
       normalized errors, and import/startup measurements.
+
+R2.0 local completion evidence:
+
+- `ImageFrameAccess` lives in a dedicated stdlib-only lower-level module;
+  `inspect_codec` remains the shared lower-level inspection dispatcher. The
+  public inspector and the registry-injected image-frame inspector use the same
+  dispatch and result-type contract.
+- The extension catalog is an injected callable rather than a frozen copy, so
+  third-party image codec registration and removal remain visible to image
+  sequences exactly as before.
+- The image-sequence `Codec` binds the dependency explicitly with positional,
+  pre-bound `partial` adapters whose exposed signatures remain unchanged. A
+  fresh-process runtime test blocks upward imports while
+  exercising `_image_extensions()` and `_frame_metadata()`.
+- The focused architecture, compatibility, image-sequence, capability, and
+  public E2E set passes 80 tests. The complete local suite collects 2,957 tests
+  and passes 2,953 with four documented skips; Ruff and the editable
+  NumPy-only smoke pass.
+- The one-run 50-codec structural smoke and unchanged five-run O4/O5
+  performance/memory guard pass. The representative image-sequence row retains
+  bounded traced allocation, with 1.43x inspection and 1.76x selected-frame
+  speedups in this run.
 
 ### R2.1 — extract shared model and adapters
 

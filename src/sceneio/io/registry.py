@@ -12,6 +12,7 @@ from __future__ import annotations
 import mmap
 from collections.abc import Callable
 from dataclasses import dataclass
+from functools import partial
 from pathlib import Path
 
 import numpy as np
@@ -22,6 +23,8 @@ from sceneio.io import _gltf as _gltf_adapter
 from sceneio.io import _image_sequence as _image_sequence_adapter
 from sceneio.io import _obj as _obj_adapter
 from sceneio.io._builtin_manifest import CANONICAL_BUILTIN_IDS
+from sceneio.io._frame_access import ImageFrameAccess
+from sceneio.io._inspection import inspect_codec
 from sceneio.io._ply import classify_ply
 
 
@@ -314,6 +317,28 @@ def detect(path) -> str:
         if any(head.startswith(m) for m in c.magic):
             return c.id
     raise FormatError(f"cannot detect a format for {str(path)!r} (ext {ext!r})")
+
+
+def _inspect_registered_path(path: str | Path):
+    """Inspect through this registry without importing the public I/O facade."""
+
+    fmt = detect(path)
+    codec = get(fmt)
+    try:
+        return inspect_codec(path, fmt, codec.datatype, codec.inspect)
+    except FormatError:
+        raise
+    except Exception as exc:
+        raise FormatError(f"inspecting {str(path)!r} as {fmt!r}: {exc}") from exc
+
+
+def _registered_image_extensions() -> frozenset[str]:
+    return frozenset(
+        extension
+        for codec in REGISTRY.values()
+        if codec.record is _core.Image
+        for extension in codec.extensions
+    )
 
 
 # --- adapters: give every _core function a uniform (path) signature -------
@@ -1390,6 +1415,10 @@ register(
         unsupported_features=("animation", "lossy_window"),
     )
 )
+_IMAGE_FRAME_ACCESS = ImageFrameAccess(
+    extensions=_registered_image_extensions,
+    inspect=_inspect_registered_path,
+)
 # COLMAP text sparse (cameras.txt/images.txt/points3D.txt) — the text twin of
 # colmap_sparse; a directory format distinguished by its cameras.txt marker.
 # YUV4MPEG2 is a raw planar sequence container. The compiled codec preserves
@@ -1429,14 +1458,26 @@ register(
     Codec(
         "image_sequence",
         (),
-        _image_sequence_adapter.read_image_sequence_directory,
-        _image_sequence_adapter.write_image_sequence_directory,
+        partial(
+            _image_sequence_adapter.read_image_sequence_directory,
+            _IMAGE_FRAME_ACCESS,
+        ),
+        partial(
+            _image_sequence_adapter.write_image_sequence_directory,
+            _IMAGE_FRAME_ACCESS,
+        ),
         record=_core.ImageSequence,
         datatype="image_sequence",
         is_directory=True,
         dir_marker="sceneio_sequence.json",
-        inspect=_image_sequence_adapter.inspect_image_sequence_directory,
-        read_frames=_image_sequence_adapter.read_image_sequence_directory_frames,
+        inspect=partial(
+            _image_sequence_adapter.inspect_image_sequence_directory,
+            _IMAGE_FRAME_ACCESS,
+        ),
+        read_frames=partial(
+            _image_sequence_adapter.read_image_sequence_directory_frames,
+            _IMAGE_FRAME_ACCESS,
+        ),
         supported_features=(
             "lazy_encoded_frames",
             "natural_order",

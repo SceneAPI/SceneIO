@@ -28,6 +28,14 @@ archive passes a fresh NumPy-only installed-wheel smoke. Build-only release run
 macOS, and Windows wheel sets with publication skipped. R2 is next; no new
 format starts while R2-R6 remain open.
 
+R2.0 is locally complete in this implementation unit. Image-sequence frame
+extensions and metadata inspection are injected through the lower-level
+`ImageFrameAccess` contract, and both public and injected inspection paths use
+the same `inspect_codec` dispatcher. The catalog remains live for third-party
+image registrations, while the adapter no longer imports the registry or
+public I/O facade at runtime. R2.1, shared model and adapter extraction, is
+next.
+
 The codec-per-file C++ layer remains reasonably isolated, but orchestration and
 verification have accumulated in a few large modules:
 

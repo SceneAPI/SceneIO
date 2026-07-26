@@ -18,6 +18,8 @@ from pathlib import Path
 import numpy as np
 
 from sceneio import _core
+from sceneio.io._frame_access import ImageFrameAccess
+from sceneio.io._inspection import Inspection
 
 _MARKER = "sceneio_sequence.json"
 _MANIFEST_LIMIT = 1024 * 1024
@@ -38,19 +40,11 @@ def _natural_key(path: Path) -> tuple[tuple[int, int | str], ...]:
     return (*segments, (2, folded), (3, path.name))
 
 
-def _image_extensions() -> frozenset[str]:
-    # Runtime import avoids a registry-import cycle.
-    from sceneio.io.registry import REGISTRY
-
-    return frozenset(
-        extension.lower()
-        for codec in REGISTRY.values()
-        if codec.record is _core.Image
-        for extension in codec.extensions
-    )
+def _image_extensions(frame_access: ImageFrameAccess) -> frozenset[str]:
+    return frame_access.image_extensions()
 
 
-def _validate_name(value: object) -> str:
+def _validate_name(value: object, frame_access: ImageFrameAccess) -> str:
     if not isinstance(value, str) or not value:
         raise ValueError("image sequence: frame file must be a non-empty string")
     if (
@@ -63,7 +57,7 @@ def _validate_name(value: object) -> str:
         raise ValueError("image sequence: frame files must be unique flat names")
     if len(value.encode("utf-8")) > 1024 * 1024:
         raise ValueError("image sequence: frame name exceeds 1 MiB")
-    if Path(value).suffix.lower() not in _image_extensions():
+    if Path(value).suffix.lower() not in _image_extensions(frame_access):
         raise ValueError(f"image sequence: unsupported frame extension in {value!r}")
     return value
 
@@ -77,13 +71,17 @@ def _manifest_object(pairs: list[tuple[str, object]]) -> dict[str, object]:
     return result
 
 
-def _load_manifest(directory: Path) -> tuple[list[str], np.ndarray, np.ndarray]:
+def _load_manifest(
+    directory: Path,
+    frame_access: ImageFrameAccess,
+) -> tuple[list[str], np.ndarray, np.ndarray]:
     marker = directory / _MARKER
     if not marker.exists():
         names = [
             item.name
             for item in directory.iterdir()
-            if item.is_file() and item.suffix.lower() in _image_extensions()
+            if item.is_file()
+            and item.suffix.lower() in _image_extensions(frame_access)
         ]
         names.sort(key=lambda name: _natural_key(Path(name)))
         if not names:
@@ -123,7 +121,7 @@ def _load_manifest(directory: Path) -> tuple[list[str], np.ndarray, np.ndarray]:
             timing_mode = has_timing
         elif timing_mode != has_timing:
             raise ValueError("image sequence: timing must be present for every frame")
-        names.append(_validate_name(frame["file"]))
+        names.append(_validate_name(frame["file"], frame_access))
         if has_timing:
             timestamp = frame["timestamp_ns"]
             duration = frame["duration_ns"]
@@ -145,14 +143,20 @@ def _load_manifest(directory: Path) -> tuple[list[str], np.ndarray, np.ndarray]:
     )
 
 
-def _frame_metadata(paths: list[Path]) -> tuple[int, int, int, str]:
-    from sceneio.io import inspect
-
+def _frame_metadata(
+    paths: list[Path],
+    frame_access: ImageFrameAccess,
+) -> tuple[int, int, int, str]:
     expected: tuple[int, int, int, str] | None = None
     for path in paths:
         if not path.is_file():
             raise ValueError(f"image sequence: missing frame {path.name!r}")
-        info = inspect(path)
+        info = frame_access.inspect(path)
+        if not isinstance(info, Inspection):
+            raise TypeError(
+                "image sequence: frame inspector returned "
+                f"{type(info).__name__}, expected Inspection"
+            )
         if info.shape is None or info.dtype is None or info.channels is None:
             raise ValueError(f"image sequence: {path.name!r} is not an image frame")
         height, width = info.shape[:2]
@@ -167,10 +171,15 @@ def _frame_metadata(paths: list[Path]) -> tuple[int, int, int, str]:
     return expected
 
 
-def _build(directory: Path, start: int | None = None, stop: int | None = None):
-    names, timestamps, durations = _load_manifest(directory)
+def _build(
+    directory: Path,
+    frame_access: ImageFrameAccess,
+    start: int | None = None,
+    stop: int | None = None,
+):
+    names, timestamps, durations = _load_manifest(directory, frame_access)
     paths = [directory / name for name in names]
-    height, width, channels, dtype = _frame_metadata(paths)
+    height, width, channels, dtype = _frame_metadata(paths, frame_access)
     if start is not None:
         if start < 0 or stop is None or start >= stop or stop > len(paths):
             raise ValueError("image sequence: frame range is out of bounds")
@@ -195,27 +204,30 @@ def _build(directory: Path, start: int | None = None, stop: int | None = None):
     )
 
 
-def read_image_sequence_directory(path: str):
+def read_image_sequence_directory(frame_access: ImageFrameAccess, path: str):
     directory = Path(path)
     if not directory.is_dir():
         raise ValueError("image sequence: path is not a directory")
-    return _build(directory)
+    return _build(directory, frame_access)
 
 
-def read_image_sequence_directory_frames(path: str, start: int, stop: int):
+def read_image_sequence_directory_frames(
+    frame_access: ImageFrameAccess,
+    path: str,
+    start: int,
+    stop: int,
+):
     directory = Path(path)
     if not directory.is_dir():
         raise ValueError("image sequence: path is not a directory")
-    return _build(directory, start, stop)
+    return _build(directory, frame_access, start, stop)
 
 
-def inspect_image_sequence_directory(path: str):
-    from sceneio.io._inspection import Inspection
-
+def inspect_image_sequence_directory(frame_access: ImageFrameAccess, path: str):
     directory = Path(path)
-    names, timestamps, _durations = _load_manifest(directory)
+    names, timestamps, _durations = _load_manifest(directory, frame_access)
     paths = [directory / name for name in names]
-    height, width, channels, dtype = _frame_metadata(paths)
+    height, width, channels, dtype = _frame_metadata(paths, frame_access)
     byte_size = sum(
         item.stat().st_size for item in directory.iterdir() if item.is_file()
     )
@@ -242,12 +254,16 @@ def _copy_file(source: Path, destination: Path) -> None:
             writer.write(chunk)
 
 
-def write_image_sequence_directory(sequence, path: str) -> None:
+def write_image_sequence_directory(
+    frame_access: ImageFrameAccess,
+    sequence,
+    path: str,
+) -> None:
     if not isinstance(sequence, _core.ImageSequence):
         raise TypeError("image sequence: writer requires ImageSequence")
     if sequence.storage_mode != "encoded_paths":
         raise ValueError("image sequence: directory writer requires encoded paths")
-    names = [_validate_name(name) for name in sequence.frame_names]
+    names = [_validate_name(name, frame_access) for name in sequence.frame_names]
     sources = [Path(value) for value in sequence.frame_paths]
     if len(names) != sequence.num_frames or len(sources) != sequence.num_frames:
         raise ValueError("image sequence: frame reference count is inconsistent")
@@ -255,7 +271,7 @@ def write_image_sequence_directory(sequence, path: str) -> None:
         raise ValueError("image sequence: directory output requires at least one frame")
     if len(names) != len(set(names)):
         raise ValueError("image sequence: frame names must be unique")
-    actual = _frame_metadata(sources)
+    actual = _frame_metadata(sources, frame_access)
     expected = (
         sequence.height,
         sequence.width,

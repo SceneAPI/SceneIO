@@ -15,7 +15,7 @@ import mmap
 import re
 import struct
 import zipfile
-from collections.abc import Iterator, Mapping
+from collections.abc import Callable, Iterator, Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 from types import MappingProxyType
@@ -176,6 +176,27 @@ def inspect_path(path: str | Path, format_id: str, datatype: str) -> Inspection:
     if format_id == "splat":
         return _inspect_splat(p, datatype)
     raise ValueError(f"format {format_id!r} does not provide metadata inspection")
+
+
+def inspect_codec(
+    path: str | Path,
+    format_id: str,
+    datatype: str,
+    inspector: Callable[[str], object] | None,
+) -> Inspection:
+    """Dispatch one already-resolved codec inspector without registry imports."""
+
+    result = (
+        inspect_path(path, format_id, datatype)
+        if inspector is None
+        else inspector(str(path))
+    )
+    if not isinstance(result, Inspection):
+        raise TypeError(
+            f"format {format_id!r} inspector returned {type(result).__name__}, "
+            "expected Inspection"
+        )
+    return result
 
 
 def _size(path: Path) -> int:

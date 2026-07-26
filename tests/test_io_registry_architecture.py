@@ -5,7 +5,11 @@ from __future__ import annotations
 import importlib
 import inspect
 import json
+import subprocess
+import sys
+import textwrap
 import tomllib
+from functools import partial
 from pathlib import Path
 
 import pytest
@@ -27,6 +31,12 @@ ROOT = Path(__file__).resolve().parents[1]
 def _resolve_python_symbol(dotted: str):
     module_name, _, name = dotted.rpartition(".")
     return getattr(importlib.import_module(module_name), name)
+
+
+def _implementation_callable(value):
+    while isinstance(value, partial):
+        value = value.func
+    return value
 
 
 def test_builtin_manifest_is_exact_and_preserves_runtime_identity():
@@ -81,7 +91,7 @@ def test_ownership_symbols_resolve_to_current_implementations():
         }
         assert all(callable(value) for value in python_callables)
         runtime_callables = {
-            getattr(registry.REGISTRY[ownership.id], field)
+            _implementation_callable(getattr(registry.REGISTRY[ownership.id], field))
             for field in operation_fields
             if getattr(registry.REGISTRY[ownership.id], field) is not None
         }
@@ -90,14 +100,110 @@ def test_ownership_symbols_resolve_to_current_implementations():
             assert python_callables
 
 
-def test_third_party_registration_is_outside_builtin_completeness_boundary():
+def test_image_sequence_frame_dependencies_are_injected_at_runtime():
+    from sceneio.io import _frame_access
+    from sceneio.io import _image_sequence as adapter
+
+    codec = registry.REGISTRY["image_sequence"]
+    access = registry._IMAGE_FRAME_ACCESS
+    assert access.image_extensions() == frozenset(
+        extension
+        for candidate in registry.REGISTRY.values()
+        if candidate.record is _core.Image
+        for extension in candidate.extensions
+    )
+    for field, implementation, parameters in (
+        ("read", adapter.read_image_sequence_directory, ("path",)),
+        (
+            "write",
+            adapter.write_image_sequence_directory,
+            ("sequence", "path"),
+        ),
+        ("inspect", adapter.inspect_image_sequence_directory, ("path",)),
+        (
+            "read_frames",
+            adapter.read_image_sequence_directory_frames,
+            ("path", "start", "stop"),
+        ),
+    ):
+        bound = getattr(codec, field)
+        assert isinstance(bound, partial)
+        assert bound.func is implementation
+        assert bound.args == (access,)
+        assert not bound.keywords
+        assert tuple(inspect.signature(bound).parameters) == parameters
+        with pytest.raises(TypeError, match="multiple values for argument 'frame_access'"):
+            bound(*([None] * len(parameters)), frame_access=access)
+
+    adapter_source = inspect.getsource(adapter)
+    assert "from sceneio.io.registry import" not in adapter_source
+    assert "from sceneio.io import inspect" not in adapter_source
+    frame_access_source = inspect.getsource(_frame_access)
+    assert "from sceneio" not in frame_access_source
+    assert "import sceneio" not in frame_access_source
+    assert "REGISTRY" not in frame_access_source
+
+    code = textwrap.dedent(
+        """
+        import builtins
+        import tempfile
+        from pathlib import Path
+
+        from sceneio.io import _image_sequence as adapter
+        from sceneio.io._frame_access import ImageFrameAccess
+        from sceneio.io._inspection import Inspection
+
+        root = Path(tempfile.mkdtemp())
+        frame = root / "frame.PGM"
+        frame.write_bytes(b"fixture")
+        calls = []
+
+        def inspect_frame(path):
+            calls.append(path)
+            return Inspection(
+                format="netpbm",
+                datatype="image",
+                byte_size=7,
+                shape=(2, 3, 1),
+                dtype="uint8",
+                channels=1,
+            )
+
+        access = ImageFrameAccess(lambda: frozenset({".PGM"}), inspect_frame)
+        original_import = builtins.__import__
+
+        def reject_upward_import(name, *args, **kwargs):
+            if name in {"sceneio.io", "sceneio.io.registry"}:
+                raise AssertionError(f"unexpected upward import: {name}")
+            return original_import(name, *args, **kwargs)
+
+        builtins.__import__ = reject_upward_import
+        try:
+            assert adapter._image_extensions(access) == frozenset({".pgm"})
+            assert adapter._frame_metadata([frame], access) == (
+                2,
+                3,
+                1,
+                "uint8",
+            )
+        finally:
+            builtins.__import__ = original_import
+        assert calls == [frame]
+        """
+    )
+    subprocess.run([sys.executable, "-c", code], check=True)
+
+
+def test_third_party_registration_is_outside_builtin_completeness_boundary(
+    tmp_path,
+):
     extension = registry.Codec(
         "third_party_contract_probe",
-        (".contract-probe",),
+        (".contract-probe", "not-dotted"),
         lambda path: path,
         None,
-        record=None,
-        datatype="test",
+        record=_core.Image,
+        datatype="image",
     )
     before = registry.REGISTRY
     try:
@@ -106,11 +212,20 @@ def test_third_party_registration_is_outside_builtin_completeness_boundary():
         assert registry.REGISTRY[extension.id] is extension
         assert extension.id in sceneio.codecs()
         assert extension.id not in CANONICAL_BUILTIN_IDS
+        assert ".contract-probe" in registry._IMAGE_FRAME_ACCESS.image_extensions()
+        sequence_path = tmp_path / "sequence"
+        sequence_path.mkdir()
+        (sequence_path / "frame.pgm").write_bytes(b"P5\n1 1\n255\n\x07")
+        sequence = sceneio.read(sequence_path, format="image_sequence")
+        assert sequence.num_frames == 1
+        assert sequence.width == sequence.height == sequence.channels == 1
         assert tuple(codec.id for codec in registry.BUILTIN_DEFINITIONS) == (
             CANONICAL_BUILTIN_IDS
         )
     finally:
         assert registry.REGISTRY.pop(extension.id) is extension
+    assert ".contract-probe" not in registry._IMAGE_FRAME_ACCESS.image_extensions()
+    assert "not-dotted" not in registry._IMAGE_FRAME_ACCESS.image_extensions()
 
 
 def test_duplicate_registration_keeps_existing_error_contract():

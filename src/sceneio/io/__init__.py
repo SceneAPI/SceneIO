@@ -20,7 +20,7 @@ from pathlib import Path
 
 from sceneio import _core
 from sceneio.io._depth import DepthEncoding, inspect_depth, read_depth, write_depth
-from sceneio.io._inspection import ArrayInspection, Inspection, inspect_path
+from sceneio.io._inspection import ArrayInspection, Inspection, inspect_codec
 from sceneio.io.registry import (
     REGISTRY,
     Codec,
@@ -172,17 +172,7 @@ def inspect(path, *, format: str | None = None) -> Inspection:
     fmt = format or detect(path)
     codec = get(fmt)
     try:
-        result = (
-            inspect_path(path, fmt, codec.datatype)
-            if codec.inspect is None
-            else codec.inspect(str(path))
-        )
-        if not isinstance(result, Inspection):
-            raise TypeError(
-                f"format {fmt!r} inspector returned {type(result).__name__}, "
-                "expected Inspection"
-            )
-        return result
+        return inspect_codec(path, fmt, codec.datatype, codec.inspect)
     except FormatError:
         raise
     except Exception as exc:

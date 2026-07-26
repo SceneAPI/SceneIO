@@ -53,6 +53,11 @@ sceneio._core (C++ / nanobind)
   and map errors. Today, registration plus inspector, benchmark, test-matrix,
   CMake, and nanobind wiring are separate touch points. R1-R4 preserve this
   public facade while deriving those family views from one codec manifest.
+  The image-sequence directory adapter is the first completed R2 boundary: its
+  live image-extension catalog and frame inspector are injected through
+  `ImageFrameAccess`, so it no longer imports the registry or public I/O facade
+  during an operation. `inspect_codec` is the shared lower-level dispatcher
+  used by both public and injected inspection.
 
 ## Stable codec ownership and backend selection
 

@@ -54,6 +54,7 @@
       "sceneio.io",
       "sceneio.io._builtin_manifest",
       "sceneio.io._depth",
+      "sceneio.io._frame_access",
       "sceneio.io._gltf",
       "sceneio.io._image_sequence",
       "sceneio.io._inspection",
