@@ -143,6 +143,21 @@ exact-tree source/wheel validation passes at tree
 compiler-instrumented run 30210055930 are green for the exact commit.
 Reconstruction is the active seventh family; splats follow.
 
+The reviewed reconstruction plan keeps its 12 non-contiguous codecs as one
+manifest family but uses separate inspector and registry implementation
+commits. A documentation/parent-freeze commit precedes them and an evidence
+closure follows. This split isolates metadata and directory/database handle
+behavior from adapter/order assembly while keeping the family atomic.
+The exact parent is `074d8d9`, tree
+`b329d05eabea9387e51efa1edcf2a29535c5c802`; its 3,184-node collection and
+50-row benchmark hash remain unchanged, and the current ordered 12-row
+projection is
+`92d354dfd4aa415cbd908168d55310902e56fd21541c94d66fc740c1915540d9`.
+Three independent planning reviews agree on the split and the parent-derived,
+lifecycle, partial-read, package, platform, benchmark, and documentation
+gates. The active checklist carries the executable details; no source move
+begins until two exact-parent captures reproduce both structural hashes.
+
 The codec-per-file C++ layer remains reasonably isolated, but orchestration and
 verification have accumulated in a few large modules:
 

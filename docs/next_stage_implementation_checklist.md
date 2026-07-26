@@ -1885,6 +1885,207 @@ has that exact tree and is pushed. Normal CI run 30210055913 and
 compiler-instrumented run 30210055930 pass the exact commit. The points unit
 is closed; reconstruction is next.
 
+### R2 reconstruction seventh-family unit
+
+This organization-only unit keeps the existing 12-member
+`FAMILY_MEMBERS["reconstruction"]` partition intact while delivering it
+through four reviewable commits: documentation and parent freeze, inspector
+extraction, registry extraction, and evidence closure. The two implementation
+commits are independently green. No codec algorithm, encoded payload, decoded
+value, public API, C++, CMake, dependency, backend, or format convention
+changes in this unit.
+
+Parent behavior is frozen before the documentation commit at exact commit
+`074d8d9b33711658423de8e7787a97f43bf09982`, tree
+`b329d05eabea9387e51efa1edcf2a29535c5c802`. The parent collects 3,184 nodes
+with normalized collection SHA-256
+`76d13c72f8b3b4903bc05112dd3f1446fb64ed17e18a2e9cead2fecb58c44cab`.
+The current 50-row benchmark projection is
+`2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`;
+the ordered 12-row reconstruction projection is
+`92d354dfd4aa415cbd908168d55310902e56fd21541c94d66fc740c1915540d9`.
+Two captures from an extracted exact parent tree must reproduce both hashes
+before source movement begins.
+
+| Format | Position | Carrier and unchanged adapter | Partial operation |
+|---|---:|---|---|
+| `colmap_sparse` | 1 | directory, direct native path I/O, `cameras.bin` marker | image |
+| `transforms_json` | 15 | named `transforms.json`, mmap reader/file sink | none |
+| `tum` | 16 | explicit-format file, mmap reader/file sink | none |
+| `kitti` | 17 | explicit-format file, mmap reader/file sink | none |
+| `euroc_state` | 18 | magic-detected file, mmap reader/file sink | state range |
+| `g2o` | 23 | extension/magic file, mmap reader/file sink | none |
+| `colmap_db` | 24 | `.db`/`database.db`, direct native SQLite path I/O | image and pair |
+| `colmap_sparse_txt` | 38 | directory, direct native path I/O, `cameras.txt` marker | image |
+| `bundler` | 45 | extension/magic file, mmap reader/file sink | none |
+| `bal` | 46 | extension file, mmap reader/file sink | none |
+| `nvm` | 47 | extension/magic file, mmap reader/file sink | none |
+| `openmvg` | 48 | named `sfm_data.json`, mmap reader/file sink | none |
+
+Documentation and exact-parent freeze:
+
+- [ ] Extract exact parent source at commit `074d8d9` with
+      `core.autocrlf=false`; run two all-codec
+      `--runs 1 --scale 0.001 --skip-oracles` captures and independently
+      reproduce the 50-row and ordered 12-row hashes above.
+- [ ] Add `tests/contracts/io_reconstruction_family_v1.json` using parent-only
+      evidence: exact ids/positions, record/datatype/container properties,
+      extensions/filenames/magic/markers, feature tuples, adapter and selector
+      targets, valid fixtures, logical full-read fingerprints, normalized
+      inspections, and representative malformed causes.
+- [ ] For both COLMAP directories, store ordered member-name to byte-size and
+      SHA-256 maps. For `colmap_db`, use a canonical logical schema/row/BLOB
+      fingerprint as the primary contract; keep the raw database hash only as
+      secondary same-host evidence.
+- [ ] Fingerprint substantive values, not counts alone: array
+      dtype/shape/byte hashes; camera models/parameters; image ids/names/poses;
+      point and track CSR arrays; trajectory fields; graph endpoints,
+      information matrices, and fixed flags; database optional/empty
+      distinctions; match geometry; ordering; and convention metadata.
+- [ ] Record missing/truncated COLMAP members, invalid database schema, and one
+      representative malformed parent outcome for every family member.
+      Preserve deliberate inspect/full distinctions, including metadata-only
+      COLMAP binary and BAL inputs that a full decode may reject.
+- [x] Obtain three independent planning reviews. All recommend one intact
+      manifest family, inspector-first and registry-second implementation
+      commits, and a separate evidence-closure commit. The focused baseline is
+      631 passed with two documented skips.
+- [ ] Commit and push this documentation/freeze checkpoint only after
+      documentation consistency, link, Ruff, and diff checks pass.
+
+Inspector extraction checkpoint:
+
+- [ ] Add `_inspectors/reconstruction.py` and mechanically move the existing
+      implementations for COLMAP binary/text/database, transforms JSON,
+      TUM/KITTI pose text, EuRoC state, g2o, Bundler, BAL, NVM, and OpenMVG.
+      Move reconstruction-exclusive `_directory_size` and `_iter_data_lines`
+      helpers with them; retain a local `_size` where each remaining owner
+      needs it.
+- [ ] Restrict the lower module to `pathlib`, `struct`, `_core`,
+      `_inspectors.common`, and `_inspectors.model`. It must not import the
+      registry, `_inspection.py`, another family, or an oracle package.
+- [ ] Keep `inspect_path` dispatch in `_inspection.py` and retain
+      same-signature compatibility wrappers for every moved function. Prove
+      exact signatures and direct delegation.
+- [ ] Preserve binary COLMAP count-header reads, text COLMAP native metadata
+      scanning and immediate-directory sizing, database inspection without
+      feature/match BLOB fetches, streamed TUM/KITTI field validation, Bundler
+      registered-camera counting, NVM/native JSON parser behavior, and exact
+      EuRoC/g2o convention metadata.
+- [ ] Update all 12 inspection-ownership rows, the import contract, collection
+      contract and workflow pin. At this checkpoint, the I/O import set may
+      add exactly `_inspectors.reconstruction`; `import sceneio` and direct
+      `_core` sets remain unchanged.
+- [ ] Add the inspection half of
+      `test_io_reconstruction_family_architecture.py`: lower import allowlist,
+      inert reload, facade signatures/delegates, parent valid/malformed parity,
+      inspect/full agreement, metadata-only operation, bounded large
+      inspection, and success/exception path release.
+- [ ] Exercise large valid pose text, g2o, transforms/OpenMVG JSON, COLMAP
+      header/member files, and large database BLOBs without constructing full
+      records. Generated fixtures remain outside Git.
+- [ ] On Windows, prove retained inspection results and retained exceptions do
+      not prevent rename/removal of single files, COLMAP member files and
+      directories, or the database. Database inspection must not create
+      journal or WAL side files.
+- [ ] Run the 11 codec suites, record suites, mmap, partial, public E2E,
+      registry/inspection/capability/snapshot/import/documentation checks,
+      complete pytest, Ruff, benchmark structure comparison, and retained
+      five-run guard.
+- [ ] Build an exact-tree source archive and wheel; run the current packaged
+      smoke in a fresh NumPy-only environment. Obtain independent
+      architecture/correctness, test/performance, and
+      platform/package/documentation reviews before committing and pushing.
+      Require green normal and compiler-instrumented hosted runs before the
+      registry checkpoint.
+
+Registry extraction checkpoint:
+
+- [ ] Add immutable, side-effect-free
+      `_registry/families/reconstruction.py` with the exact 12
+      `RECONSTRUCTION_CODECS` above. Move each `Codec(...)` expression
+      mechanically without changing values.
+- [ ] Stage the complete tuple exactly once through
+      `_define_builtin_family("reconstruction", RECONSTRUCTION_CODECS)`.
+      Preserve canonical positions, registry object identity, aggregate
+      identity, reload/idempotence, and binary-before-text COLMAP directory
+      detection precedence.
+- [ ] Preserve direct native path operations for both COLMAP directories and
+      `colmap_db`. Preserve the nine mmap/file-sink closures, EuRoC's mmap
+      state-range selector, both COLMAP image selectors, and both database
+      image/pair selectors with their exact native targets.
+- [ ] Preserve explicit-format-only TUM/KITTI behavior, named-file detection
+      for `transforms.json`, `database.db`, and `sfm_data.json`, all
+      extension/magic neighbors, and suffixless default `Reconstruction`
+      writer selection.
+- [ ] Add the family source to the authoritative Codec AST scan. Prove exact
+      tuple order, positions, object identities, ASTs, callables/closure
+      targets, record classes, capabilities, flags, and one staging call with
+      no remaining inline family definitions.
+- [ ] Add a uniform all-12 public test covering write, each format's promised
+      detection or explicit-format rule, inspect, read, and logical record
+      equality. Hand-built COLMAP binary fixtures must keep the NumPy-only
+      path independent of optional `pycolmap`.
+- [ ] Differentially test all persisted binary/text COLMAP image ids,
+      first/middle/last and complete EuRoC half-open ranges, and database image
+      and unordered-pair selection. Cover missing/negative ids, invalid ranges,
+      sparse ids, reversed pairs, absent versus present-empty database rows,
+      duplicate endpoints, and unselected malformed content.
+- [ ] Prove nine mmap-decoded records own their results after mapping closure;
+      EuRoC partial success/failure releases its mapping; both COLMAP
+      directory full/image/inspection paths release every member; and database
+      full/image/pair/inspection success and failure release all handles while
+      retained arrays remain valid.
+- [ ] Extend the NumPy-only installed-wheel smoke so every one of the 12
+      members maps to an executed smoke helper, replacing the eight current
+      family exemptions without duplicating already-covered EuRoC, g2o, BAL,
+      and database cases.
+- [ ] Update import/assembly/ownership/collection/workflow contracts. The final
+      I/O import set must add exactly `_inspectors.reconstruction` and
+      `_registry.families.reconstruction` to the 41-module parent set;
+      `import sceneio` and direct `_core` remain at their exact parent sets.
+- [ ] Add a dedicated three-OS reconstruction CI job for the architecture and
+      11 codec suites; include the architecture suite in the manylinux2014
+      GCC-10 lane. Update the compiler-instrumented collection pin only from a
+      final `pytest --collect-only` result.
+- [ ] Repeat focused/full/Ruff, two-parent-versus-candidate benchmark
+      structure, retained five-run, import, exact-tree package, installed
+      wheel, three-review, commit/push, and hosted-run gates.
+
+Final evidence and documentation closure:
+
+- [ ] Require candidate equality with both parent captures for all 50 rows and
+      the ordered 12-row reconstruction projection. Run the strict five-run
+      guard and measured family-only large/cold-cache cases; record unavailable
+      cold-cache behavior honestly on platforms that cannot provide it. Claim
+      no speedup for this mechanical extraction.
+- [ ] Run 15 interleaved parent/candidate import samples. Treat exact module
+      sets as the contract and timings as diagnostic evidence.
+- [ ] Freeze a zero-unstaged staged tree, export it with
+      `core.autocrlf=false`, build the source archive from that tree, and build
+      the wheel only from the exact archive. Compare every staged blob and all
+      changed packaged runtime files byte-for-byte across Git, archive, and
+      wheel.
+- [ ] Measure the final inventory rather than forcing an estimate. If the only
+      additions are the two runtime modules, one contract and one architecture
+      test, the expected shape is 321 tracked files, 322 source-archive files
+      including generated `PKG-INFO`, and 79 wheel members.
+- [ ] Verify 15 license/attribution members, one native extension, no packaged
+      build/include/lib/share/bin layout, NumPy as the sole unconditional
+      dependency, and unchanged native dependencies. Add no FFmpeg/libav code,
+      linkage, subprocess path, runtime member, or attribution.
+- [ ] Install the exact wheel outside the repository with only NumPy and run
+      `_wheel_smoke` plus the all-12 detection/explicit-format, inspect, read,
+      partial, retained-result, and path-release probes.
+- [ ] After both implementation commits are independently reviewed and hosted
+      green, update `core_architecture.md`, `repository_organization_plan.md`,
+      `format_coverage.md`, this checklist, and `bench/BASELINE.md` with exact
+      line counts, collection/import counts, hashes, artifact inventories,
+      review resolutions, commit ids, and workflow ids.
+- [ ] Commit and push the evidence closure. Do not trigger the publish
+      workflow, create a tag, or publish a package. After closure, splats are
+      the only remaining R2 family.
+
 ## 7. R3 — split benchmark and cross-codec tests
 
 ### R3.1a — mechanical benchmark model/runner/reporting split
