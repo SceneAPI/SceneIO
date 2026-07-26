@@ -60,6 +60,8 @@
       "sceneio.io._inspection",
       "sceneio.io._inspectors",
       "sceneio.io._inspectors.calibration",
+      "sceneio.io._inspectors.common",
+      "sceneio.io._inspectors.model",
       "sceneio.io._obj",
       "sceneio.io._pcd",
       "sceneio.io._ply",

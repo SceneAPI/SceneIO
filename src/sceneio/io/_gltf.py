@@ -7,7 +7,7 @@ from pathlib import Path, PurePosixPath, PureWindowsPath
 from urllib.parse import unquote, urlsplit
 
 from sceneio import _core
-from sceneio.io._inspection import Inspection
+from sceneio.io._inspectors.model import Inspection
 from sceneio.io._obj import (
     _install_outputs,
     _mapped_or_bytes,

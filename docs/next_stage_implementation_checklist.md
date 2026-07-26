@@ -22,9 +22,9 @@ image-extension catalog and metadata inspector through a lower-level contract
 instead of importing the registry or public I/O facade at runtime. Its exact
 source archive and Windows abi3 wheel pass content-identity, license-inventory,
 layout, and fresh NumPy-only installed-wheel checks. R2.1 is complete at
-`ccfeea4`; the R2.2-R2.4 calibration reference-family implementation and local
-verification are complete in the current worktree. Exact package validation
-remains before its commit; the final three-review findings are resolved.
+`ccfeea4`. The calibration reference family is complete and pushed at
+`b2bda1d`; the second-family mesh unit is next, beginning with a separately
+green shared-inspection substrate commit.
 
 This is the operational checklist for the repository-organization and
 codec-performance stage defined in
@@ -868,6 +868,153 @@ Local verification evidence:
   runtime modules are byte-identical across workspace, source archive, and
   wheel; a fresh environment containing only NumPy and SceneIO passes the
   expanded installed-wheel smoke.
+
+Completion checkpoint:
+
+- The calibration reference-family unit is committed and pushed as
+  `b2bda1d`. Its exact source archive SHA-256 is
+  `171a0d87acdbd5208cdf92416f85a0eac5fe31031214233f235d98dbb2590a56`;
+  the derived Windows cp312-abi3 wheel SHA-256 is
+  `1df68651617a88ab4d9309fcf290e65ab3a8d2b8e9dd7a8a76c58aa6b7a4184f`.
+
+### R2 shared inspection substrate and mesh second-family unit
+
+Decision:
+
+- [x] Select meshes as the second family: `ply_mesh`, `obj`, `stl`, `off`,
+      `gltf`, and `glb` are one contiguous canonical block between `ksplat`
+      and point `ply`.
+- [x] Keep the unit in two independently green commits. First lower the shared
+      inspection model and the one proven common mmap helper; then move the
+      mesh definitions and three facade-owned mesh inspectors.
+- [x] Defer the larger image-parser move until this static-family pattern is
+      proven. Defer sequences until the live `ImageFrameAccess` family-factory
+      contract is explicit; do not freeze the image-extension catalog.
+
+Shared inspection substrate:
+
+- [x] Add `_inspectors/model.py` for `MetadataValue`, `ArrayInspection`, and
+      `Inspection`.
+- [x] Re-export the exact model objects from `_inspection.py`; preserve their
+      historical `sceneio.io._inspection` module, qualnames, signatures, repr,
+      equality, and pickle behavior.
+- [x] Add `_inspectors/common.py` containing only
+      `_compiled_buffer_inspect`. Preserve `ACCESS_READ`, same-open-stream
+      fallback, caught exception types, and prompt mapping closure.
+- [x] Make calibration consume the lower model/helper directly while
+      retaining `_inspection._inspect_camera_rig(path, format_id, datatype)`
+      as the same-signature compatibility wrapper.
+- [x] Lower the `Inspection` imports in `_obj.py`, `_gltf.py`, and
+      `_image_sequence.py`. Keep `_depth.py` on the facade dispatcher while
+      importing the model type directly where practical.
+- [x] Pin a protocol-4 `ArrayInspection` payload emitted by `b2bda1d`; require
+      byte-identical current emission and successful legacy loading.
+- [x] Preserve `Inspection`'s existing
+      `TypeError: cannot pickle 'mappingproxy' object` outcome.
+- [x] Prove facade/lower object identity, helper identity, import direction,
+      fresh-process reload behavior, public snapshots, and unchanged
+      lightweight import boundaries.
+
+Mesh family implementation:
+
+- [ ] Add side-effect-free `_registry/families/meshes.py` exporting one
+      immutable six-codec tuple in exact `FAMILY_MEMBERS["meshes"]` order.
+- [ ] Keep PLY-mesh, OBJ, STL, OFF, glTF, and GLB codec field values and
+      callable identities unchanged, including multi-file OBJ/glTF adapters
+      and face/mesh/primitive selectors.
+- [ ] Install the complete tuple atomically at its canonical position through
+      the validated facade helper. Family-only reload must not mutate the live
+      registry; repeated registry reload must adopt the current exact tuple
+      objects without duplicates.
+- [ ] Add `_inspectors/meshes.py` for PLY-mesh, STL, and OFF metadata
+      conversion. Keep OBJ, glTF, and GLB inspectors in their bespoke path
+      adapter modules.
+- [ ] Retain same-signature `_inspection.py` wrappers for PLY-mesh, STL, and
+      OFF. Do not move point-PLY classification, point-PLY inspection, or
+      shared PLY header ownership.
+
+Focused verification:
+
+- [ ] Freeze exact family ids, canonical neighbors, registry and
+      `BUILTIN_DEFINITIONS` object identity, capabilities, detection
+      precedence, selector identities, and OBJ/glTF/GLB inspector identities.
+- [ ] Strictly reject upward, relative, public-package, registry, facade, and
+      sibling-family imports from lower modules; validate imported symbol
+      names, not only module names.
+- [ ] Prove public inspection never calls a full decoder and that the lower
+      mesh inspector table contains only metadata entry points.
+- [ ] Prove representative malformed inspection preserves native/public cause
+      type and text, inspect/full metadata agrees, allocation stays bounded,
+      and retained inspections own no file handle.
+- [ ] Run mesh parity, mesh record, public E2E, PLY ambiguity, mmap/sink,
+      face/mesh/primitive partial reads, capability, compatibility, import,
+      reload, image-sequence, and documentation-consistency suites.
+- [ ] Run the complete suite and Ruff; update the compiler-instrumented exact
+      collection pin only from the final `pytest --collect-only` result.
+
+Shared-substrate local evidence:
+
+- The exact collection gate is 3,006 tests; the complete local MSVC suite
+  passes 3,002 with four documented skips. The focused shared/calibration
+  contract set passes 91 tests, and the broad inspection, registry, public
+  API, mmap, partial, capability, calibration, OBJ, glTF, image-sequence,
+  typed-depth, and record consumer set passes 530 tests.
+- The six-row five-run mesh comparison preserves row order, payload/file
+  sizes, and every traced mmap/sink allocation bound. Because no timed mesh
+  path changed, the observed per-row timing movement is treated as sampling
+  variance and no speedup is claimed.
+- The one-run 50-codec structural sweep and five-run retained O4/O5/allocation
+  guard pass. Fifteen-sample Windows medians are 7.81 ms for `sceneio`,
+  76.47 ms for `sceneio.io`, and 9.53 ms for `_core`, below the unchanged
+  100/220.05/100 ms alerts.
+- `ArrayInspection` loads and re-emits the protocol-4 `b2bda1d` fixture
+  byte-identically. `Inspection` retains its historical mapping-proxy pickle
+  rejection. Empty-file mmap fallback, prompt mapping closure, facade/lower
+  object identity, helper identity, and fresh-process facade reload are
+  covered by the checked shared-inspection contract.
+- Review found and closed two compatibility-test gaps: the facade again
+  exposes `Mapping` so historical annotation resolution succeeds, and the
+  lower-import guard now examines imported names as well as modules while
+  allowing only the required `from sceneio import _core` form. The exact
+  3,006-node workflow pin is reconciled as the hosted 2,999-node baseline plus
+  five new contract tests and two repository-wide package-file cases for the
+  two new runtime modules.
+- The isolated shared-substrate package gate produces a 295-member source
+  archive and a 66-file Windows cp312-abi3 wheel. All nine changed runtime
+  files are byte-identical across workspace, archive, and wheel; the wheel
+  contains all 15 indexed attribution files, exactly one native module, no
+  excluded top-level build-layout directories, and only NumPy as an
+  unconditional dependency. A fresh NumPy-only environment passes
+  `sceneio._wheel_smoke` and the installed type, annotation, pickle, helper,
+  and 50-codec identity probe.
+- The architecture/correctness, test/performance, and
+  platform/package/documentation reviews are clear after those fixes. The
+  exact staged-tree and artifact hashes are retained with the local build
+  evidence and will be cited at the next immutable checkpoint, avoiding a
+  self-referential archive hash in this commit.
+
+Performance, package, and review:
+
+- [x] Capture the five-run pre-move mesh rows in
+      `build/r2-meshes-before.json`.
+- [ ] Run the identical six-row five-run command after each commit; require
+      identical row order/file sizes/allocation bounds and investigate any
+      sustained public-path, inspection, or partial-read regression.
+- [ ] Run the one-pass 50-codec structural sweep, five-run retained
+      O4/O5/allocation guard, and 15-sample fresh-process import timings.
+- [ ] Update the six repository-coverage inspection owners accurately:
+      PLY-mesh/STL/OFF move to `_inspectors/meshes.py`; OBJ/glTF/GLB remain in
+      `_obj.py`/`_gltf.py`.
+- [ ] Build an exact staged source archive and derive the Windows abi3 wheel
+      only from it. Compare every new runtime file across workspace/archive/
+      wheel; require all 15 licenses, one native module, no layout leakage,
+      and a fresh NumPy-only installed-wheel smoke.
+  - [x] Shared-inspection substrate commit.
+  - [ ] Mesh-family commit.
+- [ ] Complete three independent architecture/correctness, test/performance,
+      and platform/documentation reviews for each of the two commits.
+  - [x] Shared-inspection substrate commit.
+  - [ ] Mesh-family commit.
 
 ## 7. R3 — split benchmark and cross-codec tests
 

@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
 from pathlib import Path
 
 from sceneio import _core
+from sceneio.io._inspectors.common import _compiled_buffer_inspect
+from sceneio.io._inspectors.model import Inspection
 
 _INSPECTORS = {
     "opencv_yaml": _core._inspect_opencv_yaml,
@@ -19,15 +20,15 @@ def inspect_camera_rig(
     path: Path,
     format_id: str,
     datatype: str,
-    *,
-    inspection_type: Callable[..., object],
-    inspect_buffer: Callable[[Path, Callable[..., object]], object],
-) -> object:
-    """Inspect one calibration file using facade-owned shared primitives."""
+) -> Inspection:
+    """Inspect one calibration file using lower shared primitives."""
 
-    count, flat_resolutions = inspect_buffer(path, _INSPECTORS[format_id])
+    count, flat_resolutions = _compiled_buffer_inspect(
+        path,
+        _INSPECTORS[format_id],
+    )
     resolutions = tuple(int(value) for value in flat_resolutions)
-    return inspection_type(
+    return Inspection(
         format_id,
         datatype,
         path.stat().st_size,

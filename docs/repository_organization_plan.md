@@ -40,15 +40,26 @@ checks.
 R2.1 is complete at `ccfeea4` behind the unchanged `registry.py` facade.
 Shared model, mmap/path/sink adapter, ordered detection, and native-feature
 services now live in focused `sceneio.io._registry` modules. The calibration
-family (`opencv_yaml`, `opencv_xml`, `ros_camera_info`, and `kalibr`) is the
-first locally implemented R2.2-R2.4 reference unit. Its immutable definition
-tuple, validate-before-install facade boundary, injected inspection
-dependencies, and family inspector establish the pattern before the other
-seven families move. Shared inspection infrastructure remains in the facade
-until a second family proves a reusable invariant. The complete local suite
-collects 2,999 tests and passes 2,995 with four documented skips; the all-codec
-structural sweep, retained five-run performance/allocation guard, Ruff, and
-fresh-process import thresholds pass.
+family (`opencv_yaml`, `opencv_xml`, `ros_camera_info`, and `kalibr`) is
+complete and pushed at `b2bda1d`. Its immutable definition tuple,
+validate-before-install facade boundary, family inspector, and exact
+source-to-wheel checks establish the reference pattern. The complete local
+suite collects 2,999 tests and passes 2,995 with four documented skips; the
+all-codec structural sweep, retained five-run performance/allocation guard,
+Ruff, fresh-process import thresholds, and three independent reviews pass.
+Normal CI run 30193628676 and compiler-instrumented run 30193628672 are green.
+
+Meshes are the active second family. The six ids form one contiguous canonical
+block, support a static immutable tuple, and exercise generic codecs,
+multi-file OBJ/glTF adapters, and face/mesh/primitive selectors without the
+special live-dependency factory required by image sequences or the larger
+eight-parser image move. The first half of the unit lowers the historical
+inspection model and only the proven common mmap helper. The compatibility
+facade re-exports the exact historical types, while calibration and the
+existing bespoke inspector modules consume the lower model directly. The
+second green commit moves mesh definitions and the PLY-mesh/STL/OFF inspectors.
+Images follow after that static-family pattern; sequences wait for an explicit
+injected `ImageFrameAccess` factory.
 
 The codec-per-file C++ layer remains reasonably isolated, but orchestration and
 verification have accumulated in a few large modules:
@@ -58,7 +69,7 @@ verification have accumulated in a few large modules:
 | C++ codecs | 40 files for 50 format ids | flat source list and manual binding declarations |
 | C++ records | 32 source/header files | still manageable; new table/animation/scene records will add pressure |
 | Python registry | `registry.py`, 1,292 lines, focused `_registry/{model,adapters,detection,native_features}.py` modules, and the first `_registry/families/calibration.py` definition module | seven built-in families still share the facade until their R2.2 units |
-| Inspection | `_inspection.py`, 1,960 lines, plus `_inspectors/calibration.py` | seven unrelated format families still share the facade; common helpers wait for a second-family invariant |
+| Inspection | `_inspection.py`, 1,905 lines, plus `_inspectors/{model,common,calibration}.py` | seven unrelated format families still share the facade; the proven shared model and mmap bridge are now lower services |
 | Benchmark | `bench_io.py`, about 4,660 lines | CLI, fixtures, oracles, runners, metrics, and reporting are coupled |
 | Cross-codec tests | `test_io_mmap.py`, about 2,400 lines; `test_io_partial.py`, about 1,100 | reusable codec cases and behavior assertions are difficult to extend independently |
 | Execution plan | `format_gap_implementation_plan.md`, about 2,500 lines | historical evidence and the active queue are easy to confuse |

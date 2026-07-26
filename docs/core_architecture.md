@@ -73,11 +73,15 @@ sceneio._core (C++ / nanobind)
   four-codec tuple, and the registry facade validates its exact ids, order,
   types, uniqueness, and collisions before installing any member at the
   canonical position. `_inspectors/calibration.py` owns the corresponding
-  metadata conversion and native inspector table. The compatibility
-  `_inspection.py` wrapper injects its historical `Inspection` type and shared
-  mmap-buffer helper into that lower module, so public result identity and
-  callable signatures remain unchanged. The family definitions and inspector
-  do not import either compatibility facade.
+  metadata conversion and native inspector table. The shared inspection value
+  types now live in `_inspectors/model.py` and the common mmap-buffer bridge
+  lives in `_inspectors/common.py`; both are lower-layer dependencies rather
+  than facade injections. `ArrayInspection` and `Inspection` deliberately
+  advertise their historical `sceneio.io._inspection` module so repr, type
+  identity, and existing pickle payloads remain compatible. The compatibility
+  `_inspection.py` facade re-exports those exact objects and retains the
+  historical calibration wrapper signature. Family definitions and lower
+  inspectors do not import either compatibility facade.
 
 ## Stable codec ownership and backend selection
 

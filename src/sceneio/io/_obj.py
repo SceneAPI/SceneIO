@@ -10,7 +10,7 @@ from functools import partial
 from pathlib import Path, PurePosixPath, PureWindowsPath
 
 from sceneio import _core
-from sceneio.io._inspection import Inspection
+from sceneio.io._inspectors.model import Inspection
 
 
 def _mapped_or_bytes(stack: ExitStack, path: Path):

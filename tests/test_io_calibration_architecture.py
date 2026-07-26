@@ -96,7 +96,13 @@ def test_calibration_family_modules_are_lower_layer_only():
     _assert_core_only_sceneio_import(inspector_imports)
     assert {
         module for module, _ in inspector_imports
-    } <= {"__future__", "collections.abc", "pathlib", "sceneio"}
+    } <= {
+        "__future__",
+        "pathlib",
+        "sceneio",
+        "sceneio.io._inspectors.common",
+        "sceneio.io._inspectors.model",
+    }
     for module in (calibration_family, calibration_inspector):
         source = inspect.getsource(module)
         assert "sceneio.io.registry" not in source
@@ -184,15 +190,15 @@ def test_builtin_family_validation_is_atomic():
 
 
 @pytest.mark.parametrize("format_id", FAMILY_MEMBERS["calibration"])
-def test_calibration_inspector_facade_injects_historical_dependencies(
+def test_calibration_inspector_facade_preserves_historical_wrapper_signature(
     format_id,
     monkeypatch,
 ):
     marker = object()
     calls = []
 
-    def inspect_family(path, selected, datatype, **dependencies):
-        calls.append((path, selected, datatype, dependencies))
+    def inspect_family(path, selected, datatype):
+        calls.append((path, selected, datatype))
         return marker
 
     monkeypatch.setattr(
@@ -202,14 +208,4 @@ def test_calibration_inspector_facade_injects_historical_dependencies(
     )
     path = Path("calibration.fixture")
     assert _inspection._inspect_camera_rig(path, format_id, "camera_rig") is marker
-    assert calls == [
-        (
-            path,
-            format_id,
-            "camera_rig",
-            {
-                "inspection_type": _inspection.Inspection,
-                "inspect_buffer": _inspection._compiled_buffer_inspect,
-            },
-        )
-    ]
+    assert calls == [(path, format_id, "camera_rig")]

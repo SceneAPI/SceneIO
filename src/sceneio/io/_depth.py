@@ -15,7 +15,8 @@ from numbers import Real
 from pathlib import Path
 
 from sceneio import _core
-from sceneio.io._inspection import Inspection, inspect_path
+from sceneio.io._inspection import inspect_path
+from sceneio.io._inspectors.model import Inspection
 from sceneio.io._registry.adapters import (
     _mmap_reader,
     _mmap_selector_reader,

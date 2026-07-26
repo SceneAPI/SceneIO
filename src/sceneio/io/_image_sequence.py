@@ -19,7 +19,7 @@ import numpy as np
 
 from sceneio import _core
 from sceneio.io._frame_access import ImageFrameAccess
-from sceneio.io._inspection import Inspection
+from sceneio.io._inspectors.model import Inspection
 
 _MARKER = "sceneio_sequence.json"
 _MANIFEST_LIMIT = 1024 * 1024

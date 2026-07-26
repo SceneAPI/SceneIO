@@ -11,14 +11,12 @@ from __future__ import annotations
 import binascii
 import gzip
 import math
-import mmap
 import re
 import struct
 import zipfile
-from collections.abc import Callable, Iterator, Mapping
-from dataclasses import dataclass, field
+from collections.abc import Callable, Iterator
+from collections.abc import Mapping as Mapping
 from pathlib import Path
-from types import MappingProxyType
 from typing import BinaryIO
 
 import numpy as np
@@ -26,6 +24,12 @@ import numpy as np
 from sceneio import _core
 from sceneio.io._inspectors.calibration import (
     inspect_camera_rig as _inspect_calibration_camera_rig,
+)
+from sceneio.io._inspectors.common import _compiled_buffer_inspect
+from sceneio.io._inspectors.model import (
+    ArrayInspection,
+    Inspection,
+    MetadataValue,
 )
 from sceneio.io._pcd import parse_pcd_header, validate_point_pcd_header
 from sceneio.io._ply import (
@@ -35,54 +39,8 @@ from sceneio.io._ply import (
     validate_point_ply_header,
 )
 
-MetadataValue = (
-    str
-    | int
-    | float
-    | bool
-    | tuple[int, ...]
-    | tuple[float, ...]
-    | tuple[str, ...]
-)
 _HEADER_LIMIT = 1024 * 1024
 _IMAGE_PIXEL_CAP = 250_000_000
-
-
-@dataclass(frozen=True)
-class ArrayInspection:
-    """The name, shape, and dtype of one array in a multi-array container."""
-
-    name: str
-    shape: tuple[int, ...]
-    dtype: str
-
-
-@dataclass(frozen=True)
-class Inspection:
-    """Metadata available without decoding a format's bulk payload.
-
-    ``shape`` describes the primary decoded array when a format has one.
-    ``count`` is the primary repeated-record count for point, Gaussian, pose,
-    reconstruction, and tensor-container formats. Image formats use ``shape``
-    and ``channels`` instead. Format-specific scalar metadata is exposed through
-    the read-only ``metadata`` mapping.
-    """
-
-    format: str
-    datatype: str
-    byte_size: int
-    shape: tuple[int, ...] | None = None
-    dtype: str | None = None
-    count: int | None = None
-    channels: int | None = None
-    arrays: tuple[ArrayInspection, ...] = ()
-    metadata: Mapping[str, MetadataValue] = field(default_factory=dict)
-
-    def __post_init__(self) -> None:
-        if self.shape is not None:
-            object.__setattr__(self, "shape", tuple(self.shape))
-        object.__setattr__(self, "arrays", tuple(self.arrays))
-        object.__setattr__(self, "metadata", MappingProxyType(dict(self.metadata)))
 
 
 def inspect_path(path: str | Path, format_id: str, datatype: str) -> Inspection:
@@ -262,17 +220,6 @@ def _inspect_colmap_db(path: Path, datatype: str) -> Inspection:
 
 def _directory_size(path: Path) -> int:
     return sum(item.stat().st_size for item in path.iterdir() if item.is_file())
-
-
-def _compiled_buffer_inspect(path: Path, function):
-    with path.open("rb") as stream:
-        try:
-            mapped = mmap.mmap(stream.fileno(), 0, access=mmap.ACCESS_READ)
-        except (OSError, ValueError):
-            stream.seek(0)
-            return function(stream.read())
-        with mapped:
-            return function(mapped)
 
 
 def _exact(stream: BinaryIO, length: int, what: str) -> bytes:
@@ -1803,8 +1750,6 @@ def _inspect_camera_rig(
         path,
         format_id,
         datatype,
-        inspection_type=Inspection,
-        inspect_buffer=_compiled_buffer_inspect,
     )
 
 
