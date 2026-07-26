@@ -1708,9 +1708,9 @@ Arrays performance, documentation, package, and validation:
       wheel smoke plus explicit all-six write/detect/inspect/read probes,
       PFM/DMB/FLO windows, NPY/safetensors mapped lifetime, safetensors
       tensor/slice selectors, and NPZ name/dtype ordering.
-- [ ] Commit and push only after every local gate and final artifact review is
-      clear. Wait for normal CI and compiler-instrumented validation before
-      moving points.
+- [x] Commit and push only after every local gate and final artifact review is
+      clear. Exact commit `d99dcf0` is pushed; normal CI run 30207617248 and
+      compiler-instrumented run 30207617253 pass before moving points.
 
 The three independent reviews are clear after two test-soundness findings and
 one package-evidence wording finding were resolved. Candidate benchmark,
@@ -1737,6 +1737,13 @@ containing only SceneIO and NumPy passes `_wheel_smoke` and the explicit
 all-six codec, window, mapped-lifetime, tensor/slice, and name/order probe.
 The documentation-only checkbox closure is followed by one final exact-tree
 artifact confirmation immediately before commit.
+
+The final committed tree is
+`750f1fce1fdc95974ec54b4ce7e0e01298fcca8c` at exact commit `d99dcf0`.
+Normal CI run 30207617248 and compiler-instrumented run 30207617253 pass that
+commit, including Windows/macOS/Linux mmap coverage, pinned GCC 10, the full
+suite, the retained benchmark guard, and the instrumented lifetime/full-suite
+jobs. The arrays unit is closed and the points family is active next.
 
 ## 7. R3 — split benchmark and cross-codec tests
 

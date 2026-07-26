@@ -105,19 +105,19 @@ tests with four documented skips. The exact-tree package preflight contains
 assembly module; the installed NumPy-only smoke and explicit aggregate/live
 sequence probe pass, and all three reviews are clear. Normal CI run
 30204352767 and compiler-instrumented run 30204352744 pass at `6086315`.
-Arrays are now the active first interleaved family; points, reconstruction,
-and splats follow.
 
-The arrays candidate now moves `pfm`, `npy`, `npz`, `safetensors`, `flo`, and
-`dmb` behind a side-effect-free family factory while keeping their six
-non-contiguous canonical positions and exact adapter/native callable
-descriptors. Their metadata parsers live in `_inspectors/arrays.py` behind
-same-signature facade wrappers. The parent-derived valid/malformed contracts,
-bounded large-fixture inspections, exact 50-row benchmark projection, arrays
-projection, five-run retained guard, 3,134-node collection, Ruff, and
-15-sample same-host import comparison pass locally. Packaging, the three
-independent reviews, commit/push, and hosted validation remain the exit gates
-for this active unit.
+Arrays are complete and pushed at `d99dcf0`. The non-contiguous `pfm`, `npy`,
+`npz`, `safetensors`, `flo`, and `dmb` definitions now come from a
+side-effect-free family factory while retaining their six canonical positions
+and exact adapter/native callable descriptors. Their metadata parsers live in
+`_inspectors/arrays.py` behind same-signature facade wrappers. The complete
+local suite collects 3,134 tests and passes 3,130 with four documented skips.
+Parent-derived valid/malformed contracts, bounded large-fixture inspections,
+the exact 50-row and six-row benchmark projections, the five-run retained
+guard, Ruff, exact-tree source/wheel validation, a fresh NumPy-only installed
+probe, and all three independent reviews pass. Normal CI run 30207617248 and
+compiler-instrumented run 30207617253 are green for the exact commit. Points
+are the active sixth family; reconstruction and splats follow.
 
 The codec-per-file C++ layer remains reasonably isolated, but orchestration and
 verification have accumulated in a few large modules:

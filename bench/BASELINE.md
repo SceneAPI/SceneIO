@@ -1229,8 +1229,8 @@ the same-host relative comparison.
 
 The arrays extraction is an organization-only move for PFM, NPY, NPZ,
 safetensors, FLO, and DMB. Two parent captures at exact commit `6086315` and
-the working candidate use the same small all-codec command as the aggregate
-unit. The candidate reproduces both the portable 50-row projection SHA-256
+the committed result at `d99dcf0` use the same small all-codec command as the
+aggregate unit. The result reproduces both the portable 50-row projection SHA-256
 `2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`
 and the six-array-row projection SHA-256
 `5c0104dc8a0372ede12a86f48c8c57a7426718b030c95ec9d7088a9b26364aac`.
@@ -1252,3 +1252,7 @@ its eager module set, adding exactly `_registry.families.arrays` and
 unchanged. Timing remains same-host diagnostic evidence; exact module sets,
 parent-derived behavior contracts, and the structural hashes are the durable
 acceptance evidence.
+
+Normal CI run 30207617248 and compiler-instrumented run 30207617253 pass the
+exact `d99dcf0` commit, including the retained throughput/allocation guard and
+the full cross-platform and instrumented validation lanes.

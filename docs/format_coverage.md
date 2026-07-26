@@ -110,8 +110,9 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > The boundary is closed. It enables the four remaining interleaved families
 > to move without changing detection order.
 >
-> **R2 arrays candidate checkpoint (2026-07-26):** the non-contiguous `pfm`,
-> `npy`, `npz`, `safetensors`, `flo`, and `dmb` definitions now come from
+> **R2 arrays checkpoint (2026-07-26):** exact commit `d99dcf0` moves the
+> non-contiguous `pfm`, `npy`, `npz`, `safetensors`, `flo`, and `dmb`
+> definitions to
 > `_registry/families/arrays.py`, and their metadata parsers now live in
 > `_inspectors/arrays.py`. The registry facade retains its canonicalization
 > callbacks and restores the exact six positions through aggregate staging;
@@ -125,8 +126,11 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > tests. Fifteen interleaved same-host import samples add only
 > `_registry.families.arrays` and `_inspectors.arrays` to the I/O facade;
 > `import sceneio` and direct `_core` module sets are unchanged. Exact-tree
-> packaging, three independent reviews, commit/push, and hosted validation
-> remain before this unit closes; points are next.
+> packaging, a fresh NumPy-only installed-wheel probe, and all three
+> independent reviews pass. [Normal CI run
+> 30207617248][r2-arrays-ci] and [compiler-instrumented run
+> 30207617253][r2-arrays-instrumented] are green for the exact commit. Arrays
+> are closed; points are active next.
 
 [current-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287022
 [current-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287161
@@ -148,6 +152,8 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 [r2-sequences-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30200316665
 [r2-aggregate-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30204352767
 [r2-aggregate-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30204352744
+[r2-arrays-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30207617248
+[r2-arrays-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30207617253
 
 ## Data structures (memory Records)
 
