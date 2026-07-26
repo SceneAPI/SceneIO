@@ -1924,25 +1924,28 @@ before source movement begins.
 
 Documentation and exact-parent freeze:
 
-- [ ] Extract exact parent source at commit `074d8d9` with
+- [x] Extract exact parent source at commit `074d8d9` with
       `core.autocrlf=false`; run two all-codec
       `--runs 1 --scale 0.001 --skip-oracles` captures and independently
       reproduce the 50-row and ordered 12-row hashes above.
-- [ ] Add `tests/contracts/io_reconstruction_family_v1.json` using parent-only
+- [x] Add `tests/contracts/io_reconstruction_family_v1.json` using parent-only
       evidence: exact ids/positions, record/datatype/container properties,
       extensions/filenames/magic/markers, feature tuples, adapter and selector
       targets, valid fixtures, logical full-read fingerprints, normalized
       inspections, and representative malformed causes.
-- [ ] For both COLMAP directories, store ordered member-name to byte-size and
+- [x] For both COLMAP directories, store ordered member-name to byte-size and
       SHA-256 maps. For `colmap_db`, use a canonical logical schema/row/BLOB
       fingerprint as the primary contract; keep the raw database hash only as
       secondary same-host evidence.
-- [ ] Fingerprint substantive values, not counts alone: array
+- [x] Fingerprint substantive values, not counts alone: array
       dtype/shape/byte hashes; camera models/parameters; image ids/names/poses;
-      point and track CSR arrays; trajectory fields; graph endpoints,
-      information matrices, and fixed flags; database optional/empty
-      distinctions; match geometry; ordering; and convention metadata.
-- [ ] Record missing/truncated COLMAP members, invalid database schema, and one
+      point arrays; trajectory fields; graph endpoints, information matrices,
+      and fixed flags; database optional/empty distinctions; match geometry;
+      ordering; and convention metadata. Track CSR is internal to the native
+      Reconstruction carrier, so its fidelity remains pinned by the dedicated
+      COLMAP parity and roundtrip suites rather than this public-record
+      fingerprint.
+- [x] Record missing/truncated COLMAP members, invalid database schema, and one
       representative malformed parent outcome for every family member.
       Preserve deliberate inspect/full distinctions, including metadata-only
       COLMAP binary and BAL inputs that a full decode may reject.
@@ -1950,45 +1953,45 @@ Documentation and exact-parent freeze:
       manifest family, inspector-first and registry-second implementation
       commits, and a separate evidence-closure commit. The focused baseline is
       631 passed with two documented skips.
-- [ ] Commit and push this documentation/freeze checkpoint only after
+- [x] Commit and push this documentation/freeze checkpoint only after
       documentation consistency, link, Ruff, and diff checks pass.
 
 Inspector extraction checkpoint:
 
-- [ ] Add `_inspectors/reconstruction.py` and mechanically move the existing
+- [x] Add `_inspectors/reconstruction.py` and mechanically move the existing
       implementations for COLMAP binary/text/database, transforms JSON,
       TUM/KITTI pose text, EuRoC state, g2o, Bundler, BAL, NVM, and OpenMVG.
       Move reconstruction-exclusive `_directory_size` and `_iter_data_lines`
       helpers with them; retain a local `_size` where each remaining owner
       needs it.
-- [ ] Restrict the lower module to `pathlib`, `struct`, `_core`,
+- [x] Restrict the lower module to `pathlib`, `struct`, `_core`,
       `_inspectors.common`, and `_inspectors.model`. It must not import the
       registry, `_inspection.py`, another family, or an oracle package.
-- [ ] Keep `inspect_path` dispatch in `_inspection.py` and retain
+- [x] Keep `inspect_path` dispatch in `_inspection.py` and retain
       same-signature compatibility wrappers for every moved function. Prove
       exact signatures and direct delegation.
-- [ ] Preserve binary COLMAP count-header reads, text COLMAP native metadata
+- [x] Preserve binary COLMAP count-header reads, text COLMAP native metadata
       scanning and immediate-directory sizing, database inspection without
       feature/match BLOB fetches, streamed TUM/KITTI field validation, Bundler
       registered-camera counting, NVM/native JSON parser behavior, and exact
       EuRoC/g2o convention metadata.
-- [ ] Update all 12 inspection-ownership rows, the import contract, collection
+- [x] Update all 12 inspection-ownership rows, the import contract, collection
       contract and workflow pin. At this checkpoint, the I/O import set may
       add exactly `_inspectors.reconstruction`; `import sceneio` and direct
       `_core` sets remain unchanged.
-- [ ] Add the inspection half of
+- [x] Add the inspection half of
       `test_io_reconstruction_family_architecture.py`: lower import allowlist,
       inert reload, facade signatures/delegates, parent valid/malformed parity,
       inspect/full agreement, metadata-only operation, bounded large
       inspection, and success/exception path release.
-- [ ] Exercise large valid pose text, g2o, transforms/OpenMVG JSON, COLMAP
+- [x] Exercise large valid pose text, g2o, transforms/OpenMVG JSON, COLMAP
       header/member files, and large database BLOBs without constructing full
       records. Generated fixtures remain outside Git.
-- [ ] On Windows, prove retained inspection results and retained exceptions do
+- [x] On Windows, prove retained inspection results and retained exceptions do
       not prevent rename/removal of single files, COLMAP member files and
       directories, or the database. Database inspection must not create
       journal or WAL side files.
-- [ ] Run the 11 codec suites, record suites, mmap, partial, public E2E,
+- [x] Run the 11 codec suites, record suites, mmap, partial, public E2E,
       registry/inspection/capability/snapshot/import/documentation checks,
       complete pytest, Ruff, benchmark structure comparison, and retained
       five-run guard.
@@ -1998,6 +2001,24 @@ Inspector extraction checkpoint:
       platform/package/documentation reviews before committing and pushing.
       Require green normal and compiler-instrumented hosted runs before the
       registry checkpoint.
+
+Inspector candidate evidence: all 53 reconstruction architecture nodes pass;
+the 11 codec suites pass 436 tests with the two documented Windows/oracle
+skips. The complete suite passes 3,234 tests with four documented skips, Ruff
+and diff checks are clean, and the exact 3,238-node collection has normalized
+SHA-256
+`8c23d3f28a347583ddec643e1f6431c14766f046cb406acf4af775f2c839f4e4`.
+Two candidate benchmark captures reproduce the all-50 hash
+`2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`
+and ordered 12-row hash
+`92d354dfd4aa415cbd908168d55310902e56fd21541c94d66fc740c1915540d9`;
+the strict default-scale five-run O4/O5 guard passes. Fifteen interleaved
+Windows samples measure candidate/parent medians of 5.577/5.793 ms for
+`import sceneio`, 74.896/75.579 ms for the I/O facade, and 7.398/7.410 ms for
+direct `_core`. Only `_inspectors.reconstruction` is added to the I/O module
+set; the other module sets are exact. Large-fixture memory values in this
+checkpoint are traced Python allocations; native parser working memory is
+diagnostic and is not described by the 2 MiB `tracemalloc` bound.
 
 Registry extraction checkpoint:
 

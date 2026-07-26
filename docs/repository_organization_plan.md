@@ -143,7 +143,8 @@ exact-tree source/wheel validation passes at tree
 compiler-instrumented run 30210055930 are green for the exact commit.
 Reconstruction is the active seventh family; splats follow.
 
-The reviewed reconstruction plan keeps its 12 non-contiguous codecs as one
+The reconstruction inspector checkpoint now keeps its 12 non-contiguous
+codecs as one
 manifest family but uses separate inspector and registry implementation
 commits. A documentation/parent-freeze commit precedes them and an evidence
 closure follows. This split isolates metadata and directory/database handle
@@ -155,8 +156,14 @@ projection is
 `92d354dfd4aa415cbd908168d55310902e56fd21541c94d66fc740c1915540d9`.
 Three independent planning reviews agree on the split and the parent-derived,
 lifecycle, partial-read, package, platform, benchmark, and documentation
-gates. The active checklist carries the executable details; no source move
-begins until two exact-parent captures reproduce both structural hashes.
+gates. Both exact-parent captures reproduce the hashes. The metadata
+implementations now live in `_inspectors/reconstruction.py`; the compatibility
+facade retains same-signature delegates and its historical shared-value/helper
+exports. Parent valid/malformed artifacts and full logical records match for
+all 12 formats, and generated files above 4 MiB confirm bounded traced Python
+allocation and prompt file, directory, and database path release. Native
+parser working memory remains diagnostic. The registry extraction is the next
+checkpoint.
 
 The codec-per-file C++ layer remains reasonably isolated, but orchestration and
 verification have accumulated in a few large modules:
@@ -166,7 +173,7 @@ verification have accumulated in a few large modules:
 | C++ codecs | 40 files for 50 format ids | flat source list and manual binding declarations |
 | C++ records | 32 source/header files | still manageable; new table/animation/scene records will add pressure |
 | Python registry | `registry.py`, 573 lines; `_registry/assembly.py`, 148 lines; focused `_registry/{model,adapters,detection,native_features}.py` modules; and `_registry/families/{arrays,calibration,images,meshes,points,sequences}.py` definition modules | reconstruction and splats still share the facade until their R2.2 units |
-| Inspection | `_inspection.py`, 978 lines, plus `_inspectors/{model,common,arrays,calibration,images,meshes,points,sequences}.py`; `common.py` is 75 lines | reconstruction and splat metadata still share the facade; the proven shared model, mmap bridge, metadata bounds, exact-read/integer grammar, and image-result constructor are lower services |
+| Inspection | `_inspection.py`, 786 lines, plus `_inspectors/{model,common,arrays,calibration,images,meshes,points,reconstruction,sequences}.py`; the reconstruction owner is 295 lines | splat metadata still shares the facade; the proven shared model, mmap bridge, metadata bounds, exact-read/integer grammar, and image-result constructor are lower services |
 | Benchmark | `bench_io.py`, about 4,660 lines | CLI, fixtures, oracles, runners, metrics, and reporting are coupled |
 | Cross-codec tests | `test_io_mmap.py`, about 2,400 lines; `test_io_partial.py`, about 1,100 | reusable codec cases and behavior assertions are difficult to extend independently |
 | Execution plan | `format_gap_implementation_plan.md`, about 2,500 lines | historical evidence and the active queue are easy to confuse |

@@ -46,7 +46,9 @@ from sceneio.io._inspectors.calibration import (
 from sceneio.io._inspectors.common import _HEADER_LIMIT as _HEADER_LIMIT
 from sceneio.io._inspectors.common import _IMAGE_PIXEL_CAP as _IMAGE_PIXEL_CAP
 from sceneio.io._inspectors.common import (
-    _compiled_buffer_inspect,
+    _compiled_buffer_inspect as _compiled_buffer_inspect,
+)
+from sceneio.io._inspectors.common import (
     _exact,
     _unsigned_decimal,
 )
@@ -84,11 +86,9 @@ from sceneio.io._inspectors.meshes import (
 from sceneio.io._inspectors.meshes import (
     inspect_stl as _inspect_mesh_stl,
 )
-from sceneio.io._inspectors.model import (
-    ArrayInspection,
-    Inspection,
-    MetadataValue,
-)
+from sceneio.io._inspectors.model import ArrayInspection as ArrayInspection
+from sceneio.io._inspectors.model import Inspection
+from sceneio.io._inspectors.model import MetadataValue as MetadataValue
 from sceneio.io._inspectors.points import (
     inspect_las as _inspect_point_las,
 )
@@ -106,6 +106,39 @@ from sceneio.io._inspectors.points import (
 )
 from sceneio.io._inspectors.points import (
     inspect_xyz as _inspect_point_xyz,
+)
+from sceneio.io._inspectors.reconstruction import (
+    inspect_bal as _inspect_reconstruction_bal,
+)
+from sceneio.io._inspectors.reconstruction import (
+    inspect_bundler as _inspect_reconstruction_bundler,
+)
+from sceneio.io._inspectors.reconstruction import (
+    inspect_colmap_binary as _inspect_reconstruction_colmap_binary,
+)
+from sceneio.io._inspectors.reconstruction import (
+    inspect_colmap_db as _inspect_reconstruction_colmap_db,
+)
+from sceneio.io._inspectors.reconstruction import (
+    inspect_colmap_text as _inspect_reconstruction_colmap_text,
+)
+from sceneio.io._inspectors.reconstruction import (
+    inspect_euroc_state as _inspect_reconstruction_euroc_state,
+)
+from sceneio.io._inspectors.reconstruction import (
+    inspect_g2o as _inspect_reconstruction_g2o,
+)
+from sceneio.io._inspectors.reconstruction import (
+    inspect_nvm as _inspect_reconstruction_nvm,
+)
+from sceneio.io._inspectors.reconstruction import (
+    inspect_openmvg as _inspect_reconstruction_openmvg,
+)
+from sceneio.io._inspectors.reconstruction import (
+    inspect_pose_text as _inspect_reconstruction_pose_text,
+)
+from sceneio.io._inspectors.reconstruction import (
+    inspect_transforms as _inspect_reconstruction_transforms,
 )
 from sceneio.io._inspectors.sequences import (
     inspect_y4m as _inspect_sequence_y4m,
@@ -238,61 +271,7 @@ def _size(path: Path) -> int:
 
 
 def _inspect_colmap_db(path: Path, datatype: str) -> Inspection:
-    """Inspect SQL metadata without fetching any feature/match BLOB."""
-
-    values = _core.inspect_colmap_db(str(path))
-    arrays = []
-    for image_id, keypoint_count, keypoint_dim, descriptor_count, descriptor_dim in zip(
-        values["image_ids"],
-        values["keypoint_counts"],
-        values["keypoint_dimensions"],
-        values["descriptor_counts"],
-        values["image_descriptor_dimensions"],
-        strict=True,
-    ):
-        if keypoint_count >= 0:
-            arrays.append(
-                ArrayInspection(
-                    f"{image_id}/keypoints",
-                    (keypoint_count, keypoint_dim),
-                    "float32",
-                )
-            )
-        if descriptor_count >= 0:
-            arrays.append(
-                ArrayInspection(
-                    f"{image_id}/descriptors",
-                    (descriptor_count, descriptor_dim),
-                    "uint8",
-                )
-            )
-    return Inspection(
-        format="colmap_db",
-        datatype=datatype,
-        byte_size=_size(path),
-        shape=(values["num_images"],),
-        count=values["num_images"],
-        arrays=tuple(arrays),
-        metadata={
-            "user_version": values["user_version"],
-            "sqlite_version": values["sqlite_version"],
-            "num_cameras": values["num_cameras"],
-            "num_images": values["num_images"],
-            "num_keypoint_rows": values["num_keypoint_rows"],
-            "num_descriptor_rows": values["num_descriptor_rows"],
-            "num_match_pairs": values["num_match_pairs"],
-            "num_verified_pairs": values["num_verified_pairs"],
-            "num_matches": values["num_matches"],
-            "num_verified_matches": values["num_verified_matches"],
-            "descriptor_dimensions": tuple(values["descriptor_dimensions"]),
-            "image_ids": tuple(values["image_ids"]),
-            "image_names": tuple(values["image_names"]),
-        },
-    )
-
-
-def _directory_size(path: Path) -> int:
-    return sum(item.stat().st_size for item in path.iterdir() if item.is_file())
+    return _inspect_reconstruction_colmap_db(path, datatype)
 
 
 def _validate_classic_zip_extent(path: Path, format_name: str) -> None:
@@ -338,17 +317,6 @@ def _validate_classic_zip_extent(path: Path, format_name: str) -> None:
         raise ValueError(
             f"{format_name}: inconsistent ZIP central-directory extent"
         )
-
-
-def _iter_data_lines(path: Path):
-    with path.open("rb") as stream:
-        while line := stream.readline(_HEADER_LIMIT + 2):
-            content_size = len(line) - int(line.endswith(b"\n"))
-            if content_size > _HEADER_LIMIT:
-                raise ValueError("metadata line exceeds 1 MiB")
-            stripped = line.strip()
-            if stripped and not stripped.startswith(b"#"):
-                yield stripped
 
 
 def _inspect_pfm(path: Path, datatype: str) -> Inspection:
@@ -769,51 +737,11 @@ def _inspect_pts(path: Path, datatype: str) -> Inspection:
 
 
 def _inspect_pose_text(path: Path, format_id: str, datatype: str) -> Inspection:
-    expected = 8 if format_id == "tum" else 12
-    count = 0
-    for line in _iter_data_lines(path):
-        if len(line.split(maxsplit=expected)) < expected:
-            raise ValueError(f"{format_id}: expected at least {expected} fields per data line")
-        count += 1
-    return Inspection(
-        format_id,
-        datatype,
-        _size(path),
-        shape=(count,),
-        dtype="float64",
-        count=count,
-    )
+    return _inspect_reconstruction_pose_text(path, format_id, datatype)
 
 
 def _inspect_euroc_state(path: Path, datatype: str) -> Inspection:
-    count, first_timestamp, last_timestamp = _compiled_buffer_inspect(
-        path, _core._inspect_euroc_state
-    )
-    metadata: dict[str, MetadataValue] = {
-        "timestamp_unit": "nanoseconds",
-        "quaternion_order": "wxyz",
-        "quaternion_sign": "preserved",
-        "pose_convention": "sensor_to_reference",
-        "position_frame": "reference",
-        "velocity_frame": "reference",
-        "bias_frame": "sensor",
-        "position_unit": "meters",
-        "velocity_unit": "meters_per_second",
-        "gyro_bias_unit": "radians_per_second",
-        "accel_bias_unit": "meters_per_second_squared",
-    }
-    if count:
-        metadata["first_timestamp_ns"] = first_timestamp
-        metadata["last_timestamp_ns"] = last_timestamp
-    return Inspection(
-        "euroc_state",
-        datatype,
-        _size(path),
-        shape=(count,),
-        dtype="float64",
-        count=count,
-        metadata=metadata,
-    )
+    return _inspect_reconstruction_euroc_state(path, datatype)
 
 
 def _inspect_camera_rig(
@@ -827,152 +755,32 @@ def _inspect_camera_rig(
 
 
 def _inspect_g2o(path: Path, datatype: str) -> Inspection:
-    nodes, edges, fixed = _compiled_buffer_inspect(path, _core._inspect_g2o)
-    return Inspection(
-        "g2o",
-        datatype,
-        _size(path),
-        shape=(nodes,),
-        dtype="float64",
-        count=nodes,
-        metadata={
-            "num_nodes": nodes,
-            "num_edges": edges,
-            "num_fixed_nodes": fixed,
-            "quaternion_order": "xyzw",
-            "quaternion_sign": "preserved",
-            "node_transform_convention": "node_to_reference",
-            "edge_transform_convention": "source_inverse_times_target",
-            "translation_unit": "unspecified",
-            "information_variable_order": "tx_ty_tz_qx_qy_qz",
-        },
-    )
+    return _inspect_reconstruction_g2o(path, datatype)
 
 
 def _inspect_bundler(path: Path, datatype: str) -> Inspection:
-    file_size = _size(path)
-    cameras, points = _compiled_buffer_inspect(
-        path, _core._inspect_bundler
-    )
-    return Inspection(
-        "bundler",
-        datatype,
-        file_size,
-        shape=(cameras,),
-        dtype="float64",
-        count=cameras,
-        metadata={
-            "num_cameras": cameras,
-            "num_images": cameras,
-            "num_points3D": points,
-        },
-    )
+    return _inspect_reconstruction_bundler(path, datatype)
 
 
 def _inspect_bal(path: Path, datatype: str) -> Inspection:
-    cameras, points, observations = _compiled_buffer_inspect(
-        path, _core._inspect_bal
-    )
-    return Inspection(
-        "bal",
-        datatype,
-        _size(path),
-        shape=(cameras,),
-        dtype="float64",
-        count=cameras,
-        metadata={
-            "num_cameras": cameras,
-            "num_images": cameras,
-            "num_points3D": points,
-            "num_observations": observations,
-        },
-    )
+    return _inspect_reconstruction_bal(path, datatype)
 
 
 def _inspect_nvm(path: Path, datatype: str) -> Inspection:
-    cameras, points = _compiled_buffer_inspect(path, _core._inspect_nvm)
-    return Inspection(
-        "nvm",
-        datatype,
-        _size(path),
-        shape=(cameras,),
-        dtype="float64",
-        count=cameras,
-        metadata={
-            "num_cameras": cameras,
-            "num_images": cameras,
-            "num_points3D": points,
-        },
-    )
+    return _inspect_reconstruction_nvm(path, datatype)
 
 
 def _inspect_transforms(path: Path, datatype: str) -> Inspection:
-    views, cameras = _compiled_buffer_inspect(
-        path, _core._inspect_transforms_json
-    )
-    return Inspection(
-        "transforms_json",
-        datatype,
-        _size(path),
-        shape=(views,),
-        dtype="float64",
-        count=views,
-        metadata={"num_views": views, "num_cameras": cameras},
-    )
+    return _inspect_reconstruction_transforms(path, datatype)
 
 
 def _inspect_openmvg(path: Path, datatype: str) -> Inspection:
-    cameras, images, points = _compiled_buffer_inspect(
-        path, _core._inspect_openmvg
-    )
-    return Inspection(
-        "openmvg",
-        datatype,
-        _size(path),
-        shape=(images,),
-        dtype="float64",
-        count=images,
-        metadata={
-            "num_cameras": cameras,
-            "num_images": images,
-            "num_points3D": points,
-        },
-    )
+    return _inspect_reconstruction_openmvg(path, datatype)
 
 
 def _inspect_colmap_binary(path: Path, datatype: str) -> Inspection:
-    counts = {}
-    for filename, key in (
-        ("cameras.bin", "num_cameras"),
-        ("images.bin", "num_images"),
-        ("points3D.bin", "num_points3D"),
-    ):
-        with (path / filename).open("rb") as stream:
-            counts[key] = struct.unpack("<Q", _exact(stream, 8, filename))[0]
-    return Inspection(
-        "colmap_sparse",
-        datatype,
-        _directory_size(path),
-        shape=(counts["num_images"],),
-        dtype="float64",
-        count=counts["num_images"],
-        metadata=counts,
-    )
+    return _inspect_reconstruction_colmap_binary(path, datatype)
 
 
 def _inspect_colmap_text(path: Path, datatype: str) -> Inspection:
-    cameras, images, points = _core._inspect_colmap_txt(str(path))
-    counts = {
-        "num_cameras": cameras,
-        "num_images": images,
-        "num_points3D": points,
-    }
-    return Inspection(
-        "colmap_sparse_txt",
-        datatype,
-        _directory_size(path),
-        shape=(counts["num_images"],),
-        dtype="float64",
-        count=counts["num_images"],
-        metadata=counts,
-    )
+    return _inspect_reconstruction_colmap_text(path, datatype)

@@ -16,7 +16,7 @@ id = "colmap_sparse"
 benchmark_case = "colmap_sparse"
 source_suite = "tests/codecs/test_colmap.py"
 documentation_row = "docs/format_coverage.md"
-inspection_source = "src/sceneio/io/_inspection.py"
+inspection_source = "src/sceneio/io/_inspectors/reconstruction.py"
 wheel_smoke_exemption = "not yet included in the packaged representative smoke; covered by the source parity suite"
 
 [[codec]]
@@ -128,7 +128,7 @@ id = "transforms_json"
 benchmark_case = "transforms_json"
 source_suite = "tests/codecs/test_transforms_json.py"
 documentation_row = "docs/format_coverage.md"
-inspection_source = "src/sceneio/io/_inspection.py"
+inspection_source = "src/sceneio/io/_inspectors/reconstruction.py"
 wheel_smoke_exemption = "not yet included in the packaged representative smoke; covered by the source parity suite"
 
 [[codec]]
@@ -136,7 +136,7 @@ id = "tum"
 benchmark_case = "tum"
 source_suite = "tests/codecs/test_pose_text.py"
 documentation_row = "docs/format_coverage.md"
-inspection_source = "src/sceneio/io/_inspection.py"
+inspection_source = "src/sceneio/io/_inspectors/reconstruction.py"
 wheel_smoke_exemption = "not yet included in the packaged representative smoke; covered by the source parity suite"
 
 [[codec]]
@@ -144,7 +144,7 @@ id = "kitti"
 benchmark_case = "kitti"
 source_suite = "tests/codecs/test_pose_text.py"
 documentation_row = "docs/format_coverage.md"
-inspection_source = "src/sceneio/io/_inspection.py"
+inspection_source = "src/sceneio/io/_inspectors/reconstruction.py"
 wheel_smoke_exemption = "not yet included in the packaged representative smoke; covered by the source parity suite"
 
 [[codec]]
@@ -152,7 +152,7 @@ id = "euroc_state"
 benchmark_case = "euroc_state"
 source_suite = "tests/codecs/test_euroc_state.py"
 documentation_row = "docs/format_coverage.md"
-inspection_source = "src/sceneio/io/_inspection.py"
+inspection_source = "src/sceneio/io/_inspectors/reconstruction.py"
 wheel_smoke_case = "_state_trajectory"
 
 [[codec]]
@@ -192,7 +192,7 @@ id = "g2o"
 benchmark_case = "g2o"
 source_suite = "tests/codecs/test_g2o.py"
 documentation_row = "docs/format_coverage.md"
-inspection_source = "src/sceneio/io/_inspection.py"
+inspection_source = "src/sceneio/io/_inspectors/reconstruction.py"
 wheel_smoke_case = "_pose_graph"
 
 [[codec]]
@@ -200,7 +200,7 @@ id = "colmap_db"
 benchmark_case = "colmap_db"
 source_suite = "tests/codecs/test_colmap_db.py"
 documentation_row = "docs/format_coverage.md"
-inspection_source = "src/sceneio/io/_inspection.py"
+inspection_source = "src/sceneio/io/_inspectors/reconstruction.py"
 wheel_smoke_case = "_colmap_database"
 
 [[codec]]
@@ -313,7 +313,7 @@ benchmark_case = "colmap_sparse_txt"
 source_suite = "tests/codecs/test_colmap_txt.py"
 source_case_token = "colmap_txt"
 documentation_row = "docs/format_coverage.md"
-inspection_source = "src/sceneio/io/_inspection.py"
+inspection_source = "src/sceneio/io/_inspectors/reconstruction.py"
 wheel_smoke_exemption = "not yet included in the packaged representative smoke; covered by the source parity suite"
 
 [[codec]]
@@ -370,7 +370,7 @@ id = "bundler"
 benchmark_case = "bundler"
 source_suite = "tests/codecs/test_bundler.py"
 documentation_row = "docs/format_coverage.md"
-inspection_source = "src/sceneio/io/_inspection.py"
+inspection_source = "src/sceneio/io/_inspectors/reconstruction.py"
 wheel_smoke_exemption = "not yet included in the packaged representative smoke; covered by the source parity suite"
 
 [[codec]]
@@ -378,7 +378,7 @@ id = "bal"
 benchmark_case = "bal"
 source_suite = "tests/codecs/test_bal.py"
 documentation_row = "docs/format_coverage.md"
-inspection_source = "src/sceneio/io/_inspection.py"
+inspection_source = "src/sceneio/io/_inspectors/reconstruction.py"
 wheel_smoke_case = "_reconstruction_and_images"
 
 [[codec]]
@@ -386,7 +386,7 @@ id = "nvm"
 benchmark_case = "nvm"
 source_suite = "tests/codecs/test_nvm.py"
 documentation_row = "docs/format_coverage.md"
-inspection_source = "src/sceneio/io/_inspection.py"
+inspection_source = "src/sceneio/io/_inspectors/reconstruction.py"
 wheel_smoke_exemption = "not yet included in the packaged representative smoke; covered by the source parity suite"
 
 [[codec]]
@@ -394,7 +394,7 @@ id = "openmvg"
 benchmark_case = "openmvg"
 source_suite = "tests/codecs/test_openmvg.py"
 documentation_row = "docs/format_coverage.md"
-inspection_source = "src/sceneio/io/_inspection.py"
+inspection_source = "src/sceneio/io/_inspectors/reconstruction.py"
 wheel_smoke_exemption = "not yet included in the packaged representative smoke; covered by the source parity suite"
 
 [[codec]]

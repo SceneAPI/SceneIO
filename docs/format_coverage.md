@@ -158,6 +158,19 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > 30210055913][r2-points-ci] and [compiler-instrumented run
 > 30210055930][r2-points-instrumented] are green for the exact commit. Points
 > are closed; reconstruction is active next.
+>
+> **R2 reconstruction inspector checkpoint (2026-07-26):** The 12
+> reconstruction, pose, graph, and database metadata implementations now live
+> in `_inspectors/reconstruction.py`; the compatibility facade keeps
+> same-signature delegates and its historical shared-value/helper exports.
+> A parent-derived contract fixes deterministic artifacts, normalized
+> inspections, full logical record fingerprints, and malformed causes for all
+> 12 formats. Generated pose, graph, transforms/OpenMVG JSON, COLMAP-directory,
+> and database fixtures above 4 MiB stay below the 2 MiB traced-allocation
+> bound and release their paths promptly. Both candidate benchmark captures
+> reproduce the exact all-50 and ordered reconstruction-only structural
+> hashes, and the retained five-run guard passes. Registry definitions remain
+> in the facade until the independently green second checkpoint.
 
 [current-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287022
 [current-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287161
