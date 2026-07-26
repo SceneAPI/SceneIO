@@ -1395,10 +1395,14 @@ sorted-node digest is
 `ead83e74ffc13fa62528e19c1e6c95bfacac767a2ef0bc0753d62cf768d84076`.
 The complete local MSVC suite passes 3,091 tests with four documented skips.
 
-The two parent benchmark captures and the candidate all reproduce structural
-projection hash
-`6a5e2b9306c7bac322f34722ada090d882001a22165731f19d8c10e86ce69864`;
-the checked comparator now runs after the CI benchmark smoke. Fifteen
+The two parent benchmark captures and the candidate all reproduce portable
+structural projection hash
+`2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`;
+the checked comparator keeps all allocation keys but normalizes their
+runtime-dependent values, and now runs after a matching `--skip-oracles` CI
+benchmark smoke. The separate strict guard retains the top-level O1/O3/O5
+allocation acceptance checks, while typed-adapter allocation paths retain
+focused memory tests. Fifteen
 interleaved same-host samples show candidate/parent import medians of
 5.632/5.659 ms for `import sceneio`, 75.163/75.218 ms for the I/O facade, and
 7.394/7.464 ms for `_core`. The only facade eager-module delta is

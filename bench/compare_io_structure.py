@@ -30,8 +30,21 @@ def _project_value(
             if _is_diagnostic_key(key, benchmark_contract):
                 continue
             item_path = f"{path}.{key}" if path else f"{codec}.{key}"
-            if item_path in benchmark_contract["tolerated_traced_paths"]:
-                projected[key] = benchmark_contract["tolerance_sentinel"]
+            if key.endswith(
+                tuple(benchmark_contract["normalized_value_suffixes"])
+            ):
+                if item is None:
+                    projected[key] = None
+                elif isinstance(item, (int, float)) and not isinstance(
+                    item, bool
+                ):
+                    projected[key] = benchmark_contract[
+                        "normalized_value_sentinel"
+                    ]
+                else:
+                    raise TypeError(
+                        f"{item_path} must be a numeric scalar or null"
+                    )
             else:
                 projected[key] = _project_value(
                     item,
@@ -54,7 +67,7 @@ def _project_value(
 
 
 def structural_projection(rows: list[dict], benchmark_contract: dict) -> list[dict]:
-    """Remove diagnostic metrics and normalize predeclared traced jitter."""
+    """Retain stable structure while normalizing runtime-dependent metrics."""
 
     return [
         _project_value(
@@ -76,14 +89,6 @@ def projection_sha256(rows: list[dict], benchmark_contract: dict) -> str:
     return hashlib.sha256(payload.encode()).hexdigest()
 
 
-def _value_at_path(rows: list[dict], dotted_path: str):
-    codec, *keys = dotted_path.split(".")
-    value = next(row for row in rows if row["codec"] == codec)
-    for key in keys:
-        value = value[key]
-    return value
-
-
 def validate(rows: list[dict], contract: dict) -> None:
     benchmark_contract = contract["benchmark_parent"]
     if len(rows) != benchmark_contract["rows"]:
@@ -91,20 +96,6 @@ def validate(rows: list[dict], contract: dict) -> None:
             f"benchmark row count {len(rows)} differs from "
             f"{benchmark_contract['rows']}"
         )
-
-    for path, tolerance in benchmark_contract[
-        "tolerated_traced_paths"
-    ].items():
-        candidate = _value_at_path(rows, path)
-        nearest_delta_bytes = min(
-            abs(candidate - parent) * 1_000_000
-            for parent in tolerance["parent_values"]
-        )
-        if nearest_delta_bytes > tolerance["maximum_delta_bytes"]:
-            raise ValueError(
-                f"{path} differs from its nearest parent capture by "
-                f"{nearest_delta_bytes:.0f} bytes"
-            )
 
     actual_hash = projection_sha256(rows, benchmark_contract)
     expected_hash = benchmark_contract["structural_projection_sha256"]

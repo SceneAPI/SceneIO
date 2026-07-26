@@ -15,6 +15,7 @@ from pathlib import Path
 
 import pytest
 
+from bench import compare_io_structure
 from sceneio.io import registry
 from sceneio.io._builtin_manifest import (
     CANONICAL_BUILTIN_IDS,
@@ -768,3 +769,89 @@ def test_assembly_dependency_direction_and_import_delta_are_exact():
     assert f'^{candidate["count"]} tests collected in ' in workflow
     ci_workflow = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
     assert "bench/compare_io_structure.py" in ci_workflow
+    assert (
+        "bench/bench_io.py --runs 1 --scale 0.001 --skip-oracles --json"
+        in ci_workflow
+    )
+
+    benchmark_contract = CONTRACT["benchmark_parent"]
+    rows = [
+        {
+            "codec": "probe",
+            "payload_mb": 1.25,
+            "read_peak_mb": 0.125,
+            "read_mbps": 100.0,
+            "read_rss_mb": 2.0,
+            "partial_peak_mb": None,
+            "nested": {
+                "inspect_peak_mb": 0.25,
+                "file_mb": 0.75,
+            },
+        }
+    ]
+    projected = compare_io_structure.structural_projection(
+        rows, benchmark_contract
+    )
+    assert projected == [
+        {
+            "codec": "probe",
+            "payload_mb": 1.25,
+            "read_peak_mb": "<runtime-dependent>",
+            "partial_peak_mb": None,
+            "nested": {
+                "inspect_peak_mb": "<runtime-dependent>",
+                "file_mb": 0.75,
+            },
+        }
+    ]
+    synthetic_contract = {
+        "benchmark_parent": {
+            **benchmark_contract,
+            "rows": 1,
+            "structural_projection_sha256": (
+                "1af7aad7247bb81755ab377b81dccdc964287e77ab46bbcb81d39b1442700caf"
+            ),
+        }
+    }
+    compare_io_structure.validate(rows, synthetic_contract)
+
+    peak_changed = copy.deepcopy(rows)
+    peak_changed[0]["read_peak_mb"] = 999.0
+    peak_changed[0]["nested"]["inspect_peak_mb"] = 777.0
+    assert compare_io_structure.structural_projection(
+        peak_changed, benchmark_contract
+    ) == projected
+    compare_io_structure.validate(peak_changed, synthetic_contract)
+
+    peak_missing = copy.deepcopy(rows)
+    del peak_missing[0]["nested"]["inspect_peak_mb"]
+    assert compare_io_structure.structural_projection(
+        peak_missing, benchmark_contract
+    ) != projected
+    with pytest.raises(ValueError, match="benchmark structure hash"):
+        compare_io_structure.validate(peak_missing, synthetic_contract)
+
+    peak_renamed = copy.deepcopy(rows)
+    peak_renamed[0]["renamed_peak_mb"] = peak_renamed[0].pop(
+        "read_peak_mb"
+    )
+    with pytest.raises(ValueError, match="benchmark structure hash"):
+        compare_io_structure.validate(peak_renamed, synthetic_contract)
+
+    invalid_peak = copy.deepcopy(rows)
+    invalid_peak[0]["read_peak_mb"] = {"unexpected": ["shape"]}
+    with pytest.raises(
+        TypeError,
+        match=r"probe\.read_peak_mb must be a numeric scalar or null",
+    ):
+        compare_io_structure.structural_projection(
+            invalid_peak, benchmark_contract
+        )
+
+    stable_changed = copy.deepcopy(rows)
+    stable_changed[0]["nested"]["file_mb"] = 0.5
+    assert compare_io_structure.structural_projection(
+        stable_changed, benchmark_contract
+    ) != projected
+    with pytest.raises(ValueError, match="benchmark structure hash"):
+        compare_io_structure.validate(stable_changed, synthetic_contract)

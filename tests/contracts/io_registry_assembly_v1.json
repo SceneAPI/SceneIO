@@ -355,7 +355,7 @@
       "build/r2-aggregate-parent-b.json"
     ],
     "rows": 50,
-    "structural_projection_sha256": "6a5e2b9306c7bac322f34722ada090d882001a22165731f19d8c10e86ce69864",
+    "structural_projection_sha256": "2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376",
     "excluded_key_suffixes": [
       "_mbps",
       "_ms"
@@ -363,23 +363,10 @@
     "excluded_key_substrings": [
       "rss"
     ],
-    "tolerance_sentinel": "<tolerated-256-bytes>",
-    "tolerated_traced_paths": {
-      "image_sequence.inspect_peak_mb": {
-        "parent_values": [
-          0.107198,
-          0.10741
-        ],
-        "maximum_delta_bytes": 256
-      },
-      "image_sequence.partial_peak_mb": {
-        "parent_values": [
-          0.107936,
-          0.107724
-        ],
-        "maximum_delta_bytes": 256
-      }
-    }
+    "normalized_value_suffixes": [
+      "_peak_mb"
+    ],
+    "normalized_value_sentinel": "<runtime-dependent>"
   },
   "import_parent": {
     "module_count": 36,

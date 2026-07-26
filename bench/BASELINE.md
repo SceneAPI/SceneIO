@@ -1190,17 +1190,24 @@ payload and metric behavior must remain unchanged. Two parent captures at
   --runs 1 --scale 0.001 --skip-oracles --json <output>
 ```
 
-All three contain the same 50 rows and reproduce deterministic structural
+All three contain the same 50 rows and reproduce portable structural
 projection SHA-256
-`6a5e2b9306c7bac322f34722ada090d882001a22165731f19d8c10e86ce69864`.
+`2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`.
 The projection retains codec order, payload/file sizes, nested result schema,
-and traced allocation fields; it excludes timing/throughput and RSS
-diagnostics. The only parent-run traced jitter was 212 bytes in each of the
-image-sequence inspect and partial peaks, so those two paths alone have a
-predeclared 256-byte tolerance. The candidate was 0 and 50 bytes from its
-nearest parent values on those paths. `bench/compare_io_structure.py` makes
-this comparison reproducible and the normal CI benchmark smoke now invokes
-it.
+and every traced-allocation key. It normalizes `*_peak_mb` values because
+`tracemalloc` baselines vary with the Python runtime and platform, and it
+excludes timing/throughput and RSS diagnostics. The first hosted Linux run
+made that distinction observable: its image-sequence inspect and partial
+peaks were about 7.5 KiB below the Windows captures despite identical
+behavior. The comparator still fails when a peak field disappears or is
+renamed, or when a stable structural value changes. Top-level O1/O3/O5
+benchmark acceptance remains in the separate strict guard described below;
+the typed-adapter allocation paths retain their focused memory tests.
+
+`bench/compare_io_structure.py` makes the portable comparison reproducible.
+The normal CI smoke uses the contract's matching `--skip-oracles` fixture
+surface before invoking it; oracle correctness remains covered by the full
+test suite.
 
 A separate default-scale five-run candidate invocation with
 `--require-o4-gains --require-o5-inspect-gains
