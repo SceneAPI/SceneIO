@@ -1745,6 +1745,93 @@ commit, including Windows/macOS/Linux mmap coverage, pinned GCC 10, the full
 suite, the retained benchmark guard, and the instrumented lifetime/full-suite
 jobs. The arrays unit is closed and the points family is active next.
 
+### R2 points sixth-family unit
+
+Parent behavior is frozen at commit
+`efb106e9f1264c5666b37578972a4e902bc642a0`, tree
+`fdaa2ced61b9aae9da9e32872bff16d20a80de9f`. This organization-only unit
+moves `ply`, `pcd`, `xyz`, `pts`, `las`, and `laz` plus their metadata
+inspectors. It changes no encoded bytes, decoded values, point-range behavior,
+backend, public API, or supported format convention.
+
+Points implementation:
+
+- [ ] Add immutable `_registry/families/points.py` definitions for the exact
+      manifest tuple `ply`, `pcd`, `xyz`, `pts`, `las`, `laz`.
+- [ ] Move the six `Codec(...)` expressions without changing adapter
+      constructors, native targets, feature declarations, lossy flags, or
+      nested point-range closures.
+- [ ] Stage the family once through `_define_builtin_family("points", ...)`
+      and preserve canonical positions 12, 13, 39, 40, 41, and 42 after
+      aggregate finalization.
+- [ ] Add `_inspectors/points.py` for PLY, PCD, XYZ, PTS, LAS, and LAZ
+      metadata-only inspection. Keep parsing helpers below `_inspection.py`
+      and keep the facade dispatch and same-signature wrappers compatible.
+- [ ] Preserve PLY ASCII/binary distinctions, PCD ASCII/binary/compressed
+      distinctions, XYZ streamed count/columns, count-prefixed PTS, LAS
+      waveform-sidecar metadata, and LAZ chunk-table validation.
+- [ ] Change no C++, CMake, dependency, package metadata, codec backend,
+      attribution, public signature, record convention, or payload behavior.
+      Add no FFmpeg/libav source, runtime path, package member, or linkage.
+
+Points contract and correctness verification:
+
+- [x] Freeze the exact parent commit/tree, 3,134-node collection, manifest
+      members, six non-contiguous positions, feature declarations, and
+      partial-reader availability before implementation.
+- [x] Capture two parent all-codec benchmark runs with
+      `--runs 1 --scale 0.001 --skip-oracles`; both reproduce all-codec hash
+      `2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`
+      and points-only hash
+      `8282b574166aeb88d0eb51ded126566d7a4f21b0752244ea0c987dcee06437bd`.
+- [ ] Freeze deterministic valid fixtures, normalized inspection values, and
+      representative malformed outcomes for all six formats from the parent.
+- [ ] Add a parent-derived points contract and architecture suite covering
+      exact ids/positions/object identity, definition/callable descriptors,
+      one family-staging call, reload/idempotence, lower import allowlists,
+      and inspector ownership.
+- [ ] Prove lower/public inspection agrees with parent contracts and full
+      reads without calling a full decoder.
+- [ ] Exercise PLY ASCII/little-endian/big-endian, PCD
+      ASCII/binary/binary-compressed, XYZ/PTS text layouts, LAS supported
+      versions/point formats/waveform metadata, and LAZ supported point
+      formats/chunk layouts.
+- [ ] Run exact full-versus-point-range differential tests for every
+      advertised partial path, including empty/boundary ranges and formats
+      that deliberately refuse non-bounded encodings.
+- [ ] Run mmap/path-release, retained-exception release, readonly input,
+      malformed/truncated extent, and generated large-file allocation checks.
+      Keep generated large fixtures outside Git.
+- [ ] Update import, assembly, collection, ownership, workflow, architecture,
+      coverage, benchmark, and active-checklist contracts with measured
+      candidate evidence only.
+
+Points performance, package, and validation:
+
+- [ ] Compare candidate output with both frozen parent captures. Require exact
+      50-row and six-row structural projections, payload/file sizes, and
+      mmap/sink/inspect/partial memory relationships; claim no speedup for the
+      mechanical move.
+- [ ] Run the strict five-run all-codec guard plus point-family large-fixture
+      inspection and partial-read allocation checks.
+- [ ] Run all six parity suites, LAS waveform and LAZ chunk suites, mmap,
+      sink, inspection, detection, partial, public E2E, architecture,
+      documentation, complete pytest, and Ruff checks.
+- [ ] Compare interleaved parent/candidate imports and require only
+      `_registry.families.points` and `_inspectors.points` as intentional
+      I/O-facade additions.
+- [ ] Build an exact-tree source archive and Windows cp312-abi3 wheel; verify
+      source/archive/wheel identity, license inventory, NumPy-only
+      unconditional dependency, one native extension, and unchanged native
+      dependencies.
+- [ ] In a fresh external NumPy-only environment, run complete wheel smoke
+      plus all-six write/detect/inspect/read and point-range probes.
+- [ ] Obtain independent architecture/correctness, test/performance, and
+      platform/package/documentation reviews; resolve every finding.
+- [ ] Commit and push only after local and artifact gates are clear. Wait for
+      normal CI and compiler-instrumented validation before moving
+      reconstruction.
+
 ## 7. R3 — split benchmark and cross-codec tests
 
 ### R3.1a — mechanical benchmark model/runner/reporting split
