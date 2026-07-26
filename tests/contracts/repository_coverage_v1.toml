@@ -56,7 +56,7 @@ id = "ply_mesh"
 benchmark_case = "ply_mesh"
 source_suite = "tests/codecs/test_ply_mesh.py"
 documentation_row = "docs/format_coverage.md"
-inspection_source = "src/sceneio/io/_inspection.py"
+inspection_source = "src/sceneio/io/_inspectors/meshes.py"
 wheel_smoke_case = "_mesh_ply"
 
 [[codec]]
@@ -72,7 +72,7 @@ id = "stl"
 benchmark_case = "stl"
 source_suite = "tests/codecs/test_stl.py"
 documentation_row = "docs/format_coverage.md"
-inspection_source = "src/sceneio/io/_inspection.py"
+inspection_source = "src/sceneio/io/_inspectors/meshes.py"
 wheel_smoke_case = "_stl_off"
 
 [[codec]]
@@ -80,7 +80,7 @@ id = "off"
 benchmark_case = "off"
 source_suite = "tests/codecs/test_off.py"
 documentation_row = "docs/format_coverage.md"
-inspection_source = "src/sceneio/io/_inspection.py"
+inspection_source = "src/sceneio/io/_inspectors/meshes.py"
 wheel_smoke_case = "_stl_off"
 
 [[codec]]

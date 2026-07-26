@@ -26,6 +26,15 @@ from sceneio.io._inspectors.calibration import (
     inspect_camera_rig as _inspect_calibration_camera_rig,
 )
 from sceneio.io._inspectors.common import _compiled_buffer_inspect
+from sceneio.io._inspectors.meshes import (
+    inspect_off as _inspect_mesh_off,
+)
+from sceneio.io._inspectors.meshes import (
+    inspect_ply_mesh as _inspect_mesh_ply,
+)
+from sceneio.io._inspectors.meshes import (
+    inspect_stl as _inspect_mesh_stl,
+)
 from sceneio.io._inspectors.model import (
     ArrayInspection,
     Inspection,
@@ -35,7 +44,6 @@ from sceneio.io._pcd import parse_pcd_header, validate_point_pcd_header
 from sceneio.io._ply import (
     parse_ply_header,
     validate_compressed_ply_header,
-    validate_mesh_ply_header,
     validate_point_ply_header,
 )
 
@@ -1554,45 +1562,15 @@ def _inspect_ply(path: Path, datatype: str) -> Inspection:
 
 
 def _inspect_ply_mesh(path: Path, datatype: str) -> Inspection:
-    file_size = _size(path)
-    header = parse_ply_header(path)
-    metadata = validate_mesh_ply_header(header, file_size)
-    count = header.vertex.count
-    return Inspection(
-        "ply_mesh",
-        datatype,
-        file_size,
-        shape=(count, 3),
-        dtype="float32",
-        count=count,
-        metadata=metadata,
-    )
+    return _inspect_mesh_ply(path, datatype)
 
 
 def _inspect_stl(path: Path, datatype: str) -> Inspection:
-    metadata = dict(_compiled_buffer_inspect(path, _core._inspect_stl))
-    return Inspection(
-        "stl",
-        datatype,
-        _size(path),
-        shape=(metadata["num_vertices"], 3),
-        dtype="float32",
-        count=metadata["num_vertices"],
-        metadata=metadata,
-    )
+    return _inspect_mesh_stl(path, datatype)
 
 
 def _inspect_off(path: Path, datatype: str) -> Inspection:
-    metadata = dict(_compiled_buffer_inspect(path, _core._inspect_off))
-    return Inspection(
-        "off",
-        datatype,
-        _size(path),
-        shape=(metadata["num_vertices"], 3),
-        dtype="float32",
-        count=metadata["num_vertices"],
-        metadata=metadata,
-    )
+    return _inspect_mesh_off(path, datatype)
 
 
 def _inspect_pcd(path: Path, datatype: str) -> Inspection:

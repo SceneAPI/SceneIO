@@ -58,20 +58,23 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > smoke-tests all three platform wheel sets, with publication skipped. R1 is
 > closed and R2 is next.
 >
-> **R2 local organization checkpoint (2026-07-26, `b2bda1d`):** R2.0
+> **R2 local organization checkpoint (2026-07-26, `29af9de`):** R2.0
 > (`40d5412`) removes image-sequence upward runtime dependencies; R2.1
 > (`ccfeea4`) extracts shared registry services; and `b2bda1d` moves the four
 > calibration registrations and metadata inspectors behind the first
-> lower-layer family boundary. Codec behavior and the 50-id inventory remain
-> unchanged. Local MSVC collects 2,999 tests and passes 2,995 with four
-> documented skips, the all-codec performance/allocation guard passes, and a
-> Windows abi3 wheel derived from the exact 291-member source archive passes
-> the expanded NumPy-only smoke. [Normal CI run
+> lower-layer family boundary. `29af9de` lowers the shared inspection types and
+> mmap bridge while retaining compatibility. Codec behavior and the 50-id
+> inventory remain unchanged. Local MSVC collects 3,006 tests and passes 3,002
+> with four documented skips; the all-codec performance/allocation guard
+> passes, and a Windows abi3 wheel derived from the exact 295-member source
+> archive passes the expanded NumPy-only smoke. [Normal CI run
 > 30193628676][r2-calibration-ci] and [compiler-instrumented run
-> 30193628672][r2-calibration-instrumented] pass. The current local
-> shared-inspection substrate collects 3,006 tests and passes 3,002 with four
-> documented skips while preserving the 50-codec inventory; mesh family
-> extraction is the next local R2 commit.
+> 30193628672][r2-calibration-instrumented] pass for the preceding calibration
+> checkpoint. The current local mesh-family commit moves the six contiguous
+> mesh registrations plus only the PLY-mesh/STL/OFF facade-owned inspectors;
+> OBJ/glTF/GLB bespoke adapters remain in place. [Normal CI run
+> 30195153288][r2-shared-ci] and [compiler-instrumented run
+> 30195153277][r2-shared-instrumented] pass for `29af9de`.
 
 [current-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287022
 [current-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287161
@@ -81,6 +84,8 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 [r1-current-release]: https://github.com/SceneAPI/SceneIO/actions/runs/30189483142
 [r2-calibration-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30193628676
 [r2-calibration-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30193628672
+[r2-shared-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30195153288
+[r2-shared-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30195153277
 
 ## Data structures (memory Records)
 

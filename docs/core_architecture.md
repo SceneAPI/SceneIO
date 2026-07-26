@@ -82,6 +82,13 @@ sceneio._core (C++ / nanobind)
   `_inspection.py` facade re-exports those exact objects and retains the
   historical calibration wrapper signature. Family definitions and lower
   inspectors do not import either compatibility facade.
+  Meshes are the second extracted family:
+  `_registry/families/meshes.py` exports the exact contiguous PLY-mesh, OBJ,
+  STL, OFF, glTF, and GLB tuple, installed atomically at its canonical
+  position. `_inspectors/meshes.py` owns only PLY-mesh/STL/OFF metadata
+  conversion; the compatibility facade retains same-signature wrappers and
+  point-PLY ownership. OBJ and glTF/GLB keep their repository-owned bespoke
+  path adapters and callable identities.
 
 ## Stable codec ownership and backend selection
 
