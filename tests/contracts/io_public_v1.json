@@ -236,7 +236,7 @@
       "pickle": {
         "outcome": "raises",
         "exception": "AttributeError",
-        "message_prefix": "Can't get local object '_mmap_view_reader.<locals>.read'"
+        "message_prefix": "Can't pickle local object '_mmap_view_reader.<locals>.read'"
       }
     },
     "CodecCapabilities": {

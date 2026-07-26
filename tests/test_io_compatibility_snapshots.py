@@ -130,6 +130,15 @@ def _type_contract(value_type: type):
     }
 
 
+def _normalize_pickle_message(message: str) -> str:
+    message = message.split(" at ")[0]
+    return re.sub(
+        r"^Can't (?:get|pickle) local object ",
+        "Can't pickle local object ",
+        message,
+    )
+
+
 def _pickle_outcome(value):
     try:
         restored = pickle.loads(pickle.dumps(value))
@@ -137,7 +146,7 @@ def _pickle_outcome(value):
         return {
             "outcome": "raises",
             "exception": type(exc).__name__,
-            "message_prefix": str(exc).split(" at ")[0],
+            "message_prefix": _normalize_pickle_message(str(exc)),
         }
     return {
         "outcome": "roundtrip",
@@ -270,6 +279,13 @@ def test_registry_contract_matches_checked_snapshot():
 
 
 def test_public_contract_matches_checked_snapshot():
+    assert {
+        _normalize_pickle_message(message)
+        for message in (
+            "Can't get local object '_mmap_view_reader.<locals>.read'",
+            "Can't pickle local object '_mmap_view_reader.<locals>.read'",
+        )
+    } == {"Can't pickle local object '_mmap_view_reader.<locals>.read'"}
     assert _public_snapshot() == _read_json("io_public_v1.json")
 
 
