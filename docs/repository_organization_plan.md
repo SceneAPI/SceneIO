@@ -191,6 +191,24 @@ tests, the family matrix passes 506 tests with two documented skips, and the
   eight-module direct `_core` sets; the I/O facade's only added module is
   `_registry.families.reconstruction`. Splats remain the last R2 family.
 
+Splats are now the active eighth and final R2 family. Their exact parent is
+`0696533e515b5f8e65cbb676df28d852f9d0a049`, tree
+`62a844b198dfd05d5d6d435a8e2aa22bf6bb898e`. Two parent benchmark captures
+reproduce the all-50 structural hash
+`2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`
+and ordered six-row hash
+`5c6adc3584ba25050c885b37313d009311e2253b0c841cbc8738b806cb090bfd`.
+The planned split keeps all six ids as one non-contiguous manifest family,
+moves their metadata readers to `_inspectors/splats.py` first, and moves their
+Codec definitions to `_registry/families/splats.py` second. SOG's archive,
+directory, and direct-`meta.json` adapters remain facade-injected so their
+callable and path behavior stay exact; shared PLY classification remains in
+`_ply.py`. The final gate adds self-contained Gaussian PLY/SPZ fixtures,
+installed-wheel coverage for all six, retained-result/path-release checks,
+the dedicated three-OS family lane, GCC-10 coverage, exact package inspection,
+and three independent reviews. This extraction changes no codec algorithm or
+public API and makes no performance-gain claim.
+
 The codec-per-file C++ layer remains reasonably isolated, but orchestration and
 verification have accumulated in a few large modules:
 

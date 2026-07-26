@@ -2169,6 +2169,234 @@ Final evidence and documentation closure:
       trigger the publish workflow, create a tag, or publish a package. After
       closure, splats are the only remaining R2 family.
 
+### R2 splats eighth-family unit
+
+Splats are the eighth and final R2 family. The unit keeps the existing
+six-member `FAMILY_MEMBERS["splats"]` partition intact:
+`gaussian_ply`, `compressed_ply`, `sog`, `ksplat`, `spz`, and `splat`.
+This is an ownership-only extraction. It changes no codec algorithm, encoded
+payload, decoded value, public API, C++, CMake, dependency, backend, or format
+convention, and it claims no speedup.
+
+The exact parent is commit
+`0696533e515b5f8e65cbb676df28d852f9d0a049`, tree
+`62a844b198dfd05d5d6d435a8e2aa22bf6bb898e`. It collects 3,256 tests with
+sorted normalized node-id SHA-256
+`156a06a5fb3b801073253892d9d584f8a9dcb230ccd42babf056b2a020c71347`.
+Two independent parent captures using
+`--runs 1 --scale 0.001 --skip-oracles` reproduce the all-50 structural
+projection SHA-256
+`2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`
+and ordered six-row splat projection SHA-256
+`5c6adc3584ba25050c885b37313d009311e2253b0c841cbc8738b806cb090bfd`.
+
+| Format | Position | Carrier and unchanged adapter | Detection and partial operation |
+|---|---:|---|---|
+| `gaussian_ply` | 2 | file, mmap reader/file sink | PLY schema; point range |
+| `compressed_ply` | 3 | file, mmap reader/file sink | `.compressed.ply` plus PLY schema; point range |
+| `sog` | 4 | ZIP file or directory/`meta.json`, hybrid path adapter | `.sog`, `meta.json`, or directory marker; point range |
+| `ksplat` | 5 | file, mmap reader/file sink | `.ksplat`; point range |
+| `spz` | 14 | file, mmap reader/file sink | legacy gzip or `NGSP`; no partial selector |
+| `splat` | 49 | headerless file, mmap reader/file sink | `.splat` only; point range |
+
+Three independent planning reviews are complete. Their common priorities are
+the parent contract, inspector-first and registry-second commits, exact PLY
+and SOG routing, retained-result/path-release coverage, self-contained
+Gaussian PLY and SPZ fixtures, all-six installed-wheel smoke, and focused
+cross-platform validation. The review-specific findings are incorporated
+below.
+
+Documentation and exact-parent freeze:
+
+- [ ] Add `tests/contracts/io_splat_family_v1.json` from exact-parent evidence.
+      Freeze all six Codec ASTs, canonical positions and neighbors, object and
+      operation identities, callable/closure descriptors, extensions,
+      filenames, magic values, directory markers, flags, feature tuples,
+      valid fixtures, normalized inspections, logical full-record
+      fingerprints, partial-result fingerprints where supported, and one
+      representative invalid-input outcome per codec.
+- [ ] Freeze both SOG representations and all accepted entry paths: `.sog`
+      archive, directory, direct `meta.json`, and explicit-format reads from
+      suffixless or alternate-suffix archive paths. Preserve archive versus
+      directory inspection metadata and byte-size behavior.
+- [ ] Freeze PLY classification independently of registry order:
+      compressed-chunk schema, mesh/list schema, exact Gaussian SH schema, and
+      generic point PLY. Include `.compressed.ply`, ordinary `.ply`, and
+      extensionless PLY-magic cases.
+- [ ] Freeze SPZ legacy versions 1-3 and v4 separately. Preserve the current
+      gzip-header and `NGSP` routing, inspection metadata, and normalized
+      invalid/truncated outcomes without changing the two implementations.
+- [ ] Add an oracle-independent architecture fixture for Gaussian PLY and SPZ.
+      Their dedicated parity modules currently collect five and 13 tests but
+      skip as modules when `gsply` is unavailable. The new fixture must keep
+      the GCC-10 and NumPy-only installed-wheel paths self-contained while the
+      existing oracle tests remain the parity authority.
+- [ ] Make the oracle-independent invalid-input matrix substantive:
+      Gaussian PLY truncated headers, malformed format/property schemas, and
+      invalid declared extents; SPZ raw and gzip header truncation,
+      unsupported version/degree/fractional-bits values, and invalid declared
+      count extents; and SPLAT sizes not divisible by 32.
+- [ ] Add `tests/test_io_splat_family_architecture.py`, initially against the
+      exact parent. Prove the six-member manifest partition, parent
+      definitions, inspections, full records, partial slices, invalid-input
+      behavior, SOG representations, and detection rules before source moves.
+- [ ] Record the focused parent surface: five Gaussian PLY, 21 compressed PLY,
+      28 SOG, 35 KSplat, 13 SPZ, and 11 splat codec nodes, plus the common
+      mmap, partial, capability, registry, inspection, and public-API suites.
+      Do not pre-compute the candidate collection count; derive its exact
+      count and digest after the final test set exists.
+- [ ] Commit and push this documentation/parent-freeze checkpoint only after
+      documentation consistency, link, Ruff, architecture-contract, and diff
+      checks pass.
+
+Inspector extraction checkpoint:
+
+- [ ] Add `_inspectors/splats.py` and mechanically move
+      `_inspect_gaussian_ply`, `_inspect_compressed_ply`, `_inspect_sog`,
+      `_inspect_ksplat`, `_inspect_spz`, and `_inspect_splat`. Move the
+      SOG-only classic-ZIP extent helper with them. Keep shared PLY parsing and
+      classification in `_ply.py`.
+- [ ] Keep `inspect_path` dispatch in `_inspection.py` and retain
+      same-signature compatibility wrappers for all six private inspector
+      names. Prove exact signatures and direct delegation.
+- [ ] Keep the lower inspector independent of the registry, compatibility
+      facade, other family inspectors, and optional oracle packages. Prove an
+      explicit lower import allowlist and inert reload.
+- [ ] Preserve Gaussian little- and big-endian binary PLY inspection,
+      compressed PLY extent checks, SOG bounded `meta.json` and exact member
+      validation, KSplat bounded header/section metadata reads, SPZ
+      16-byte legacy and 32-byte v4 header inspection, and the headerless
+      SPLAT 32-byte record count.
+- [ ] Prove inspector extraction parity for valid and invalid inputs and prove
+      that metadata inspection does not invoke a full decoder.
+- [ ] Add generated large-file inspection cases for all six formats. Assert
+      bounded traced Python allocation and immediate path release; treat
+      native working memory and timing as diagnostics, not acceptance claims.
+- [ ] On Windows, prove retained `Inspection` results and retained exceptions
+      do not prevent rename/removal. Cover all six files plus the SOG archive,
+      directory, direct `meta.json`, declared layers, and whole-directory
+      replacement/removal.
+- [ ] Update all six `repository_coverage_v1.toml` inspection owners and the
+      import contract. The I/O facade may add exactly `_inspectors.splats` to
+      the 43-module parent set; `import sceneio` and direct `_core` remain at
+      seven and eight modules.
+- [ ] Run the new architecture suite, six codec suites, mmap/partial,
+      inspection/capability/public/registry/repository contracts, complete
+      pytest, Ruff, two structural captures, and the retained five-run guard.
+      Build and smoke the exact-tree package before committing and pushing the
+      inspector checkpoint.
+
+Registry extraction checkpoint:
+
+- [ ] Add side-effect-free `_registry/families/splats.py` with one immutable
+      six-codec tuple or a `build_splat_codecs(...)` factory. Inject the
+      facade-owned SOG reader, writer, and point-reader callbacks so the
+      existing archive/directory behavior and callable identities remain
+      exact.
+- [ ] Move each `Codec(...)` definition mechanically and stage the complete
+      tuple exactly once through
+      `_define_builtin_family("splats", SPLAT_CODECS)`. Preserve canonical
+      positions 2/3/4/5/14/49; aggregate finalization, not source order,
+      restores the public 50-codec order.
+- [ ] Preserve the four direct mmap point-selector closures, SOG's exact
+      facade-owned hybrid point-reader callable, and SPZ's deliberate lack of
+      a selector. Preserve all mmap readers, file sinks, record/datatype
+      identities, loss flags, container kind, and supported/unsupported
+      feature tuples.
+- [ ] Preserve SOG path decisions exactly: an existing directory, direct
+      `meta.json`, or suffixless output uses the directory adapter. Every
+      other read path uses the archive adapter regardless of suffix, and every
+      other output with a nonempty suffix uses the archive adapter.
+- [ ] Preserve PLY detection precedence and ownership in `_ply.py`; do not
+      make Gaussian/compressed/mesh/point classification depend on the new
+      family module's import or registration order.
+- [ ] Add the family source to the authoritative Codec AST scan. Prove exact
+      tuple order, positions, Codec identities, ASTs, operation
+      callables/closures, atomic staging, reload/idempotence, unchanged
+      registry/capability/public snapshots, and no inline splat definitions in
+      the facade.
+- [ ] Add one uniform all-six public path covering write, promised detection
+      or explicit-format behavior, inspect, read, logical equality, and point
+      selection where supported.
+- [ ] Add explicit retained-result/path-release cases after full reads for all
+      six, after partial reads for the five selectors, and after inspection
+      success/failure for all six. Exercise SOG archive, directory, and direct
+      metadata entry paths.
+- [ ] Extend `_wheel_smoke.py` to execute all six formats. Retain the existing
+      compressed PLY, SOG, and KSplat coverage; add Gaussian PLY, SPZ, and
+      SPLAT write/detect/inspect/read probes, Gaussian/SPLAT partial probes,
+      and an assertion that SPZ exposes no partial capability. Replace the
+      three current repository-coverage exemptions with one all-six smoke
+      helper.
+- [ ] Update import/assembly/ownership/collection/workflow contracts. The
+      final I/O set may add exactly `_inspectors.splats` and
+      `_registry.families.splats`, reaching 45 modules; the other two import
+      boundaries remain exact.
+- [ ] Add the oracle-independent architecture suite as the mandatory all-six
+      three-OS splat gate. Run the six codec parity suites in that job with
+      the test-only oracles installed, and report their skips separately so an
+      unavailable oracle is not described as codec coverage. Include the
+      architecture suite in the manylinux2014/GCC-10 lane. Update the
+      compiler-instrumented collection pin only from the final
+      `pytest --collect-only` output.
+
+Verification, validation, and evidence closure:
+
+- [ ] Run the six codec suites plus `test_io_mmap.py`, `test_io_partial.py`,
+      capabilities, public E2E, registry/assembly/snapshot/import,
+      repository-coverage, package, license, and documentation suites.
+      Then run complete pytest and Ruff with `.venv/Scripts/python.exe`.
+- [ ] Differentially compare bytes and mmap decoding for all six; sink and
+      buffer bytes for all six; complete and partial logical records for the
+      five selectors; SOG archive and directory records; and valid/invalid
+      inspector outcomes before and after extraction.
+- [ ] Repeat two
+      `--runs 1 --scale 0.001 --skip-oracles` candidate captures. Require the
+      exact all-50 and ordered six-row hashes above, then run the strict
+      default-scale five-run guard.
+- [ ] Add an interleaved parent/candidate all-six comparator for read, write,
+      inspect, and each supported point-range operation. Use 15 samples per
+      operation and reject a candidate median increase larger than the maximum
+      of 10 percent of the parent median, three times the combined median
+      absolute deviation, or 0.05 ms. Keep every traced-allocation result
+      within its parent bound. Investigate and review any rejection rather
+      than averaging it away. Report accepted deltas as diagnostic evidence
+      and claim no gain for this mechanical move.
+- [ ] Run generated large/cold-cache family diagnostics without committing
+      their fixtures. Record the Windows cold-cache hint as unavailable when
+      applicable rather than describing a warm-cache measurement as cold.
+- [ ] Run 15 interleaved exact-export parent/candidate samples for
+      `import sceneio`, the I/O facade, and direct `_core`. Exact module sets
+      are the contract; timings are diagnostic.
+- [ ] Freeze a zero-unstaged tree, export it with `core.autocrlf=false`, build
+      the source archive from that tree, and build the wheel only from the
+      exact archive. Compare every Git blob and all changed packaged runtime
+      files byte-for-byte across Git, archive, and wheel.
+- [ ] Measure the final artifact inventory rather than forcing an estimate.
+      Verify the complete existing license/attribution set, one native
+      extension, no packaged build/include/lib/share/bin tree, NumPy as the
+      sole unconditional dependency, unchanged shared-library dependencies,
+      and no FFmpeg/libav code, linkage, process invocation, runtime member,
+      or attribution.
+- [ ] Install the exact wheel outside the repository with only NumPy and run
+      the complete installed smoke, including all six splat formats,
+      detection, inspection, reads, supported partial reads, retained-result
+      lifetime, and path release.
+- [ ] Obtain separate architecture/correctness, test/performance, and
+      platform/package/documentation reviews for each implementation
+      checkpoint. Resolve every finding before its commit.
+- [ ] Commit and push only green, Ruff-clean units with the required co-author
+      trailer. Require green normal and compiler-instrumented hosted runs for
+      the exact final implementation tree.
+- [ ] Update `core_architecture.md`, `repository_organization_plan.md`,
+      `format_coverage.md`, this checklist, and `bench/BASELINE.md` with exact
+      final line counts, collection/import counts, benchmark hashes, artifact
+      inventories, commit ids, and workflow ids. Update the roadmap only if
+      its active status changes.
+- [ ] Do not trigger `publish.yml`, create a tag, or publish a package. The
+      cross-platform wheel dry run remains user-triggered. After this evidence
+      closure, mark R2 complete and begin R3.1a.
+
 ## 7. R3 — split benchmark and cross-codec tests
 
 ### R3.1a — mechanical benchmark model/runner/reporting split
