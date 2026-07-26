@@ -1308,3 +1308,68 @@ and its Windows cp312-abi3 wheel SHA-256 is
 The exact tree is commit `686f42e`; normal CI run 30210055913 and
 compiler-instrumented run 30210055930 pass, including the retained
 throughput/allocation guard and the full cross-platform lanes.
+
+## R2 reconstruction-family registry equivalence — 2026-07-26
+
+The reconstruction registry extraction is an organization-only move for the
+12 non-contiguous reconstruction, pose, state, graph, and database codecs.
+Two candidate captures use:
+
+```text
+.venv/Scripts/python.exe bench/bench_io.py \
+  --runs 1 --scale 0.001 --skip-oracles --json <output>
+```
+
+Both reproduce the portable all-50 projection SHA-256
+`2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`
+and ordered 12-row projection SHA-256
+`92d354dfd4aa415cbd908168d55310902e56fd21541c94d66fc740c1915540d9`,
+matching both frozen parent captures. The strict default-scale five-run
+invocation with all retained O4/O5 requirements also passes. This extraction
+claims no codec speedup; identical output structure, mmap/sink allocation
+relationships, inspection, and partial-read behavior are the acceptance
+criteria.
+
+A separate three-run family-only diagnostic uses `--scale 1 --cold-cache` and
+all 12 `--only` selectors. Encoded sizes range through 35.2 MiB for EuRoC and
+9.9 MiB for COLMAP DB. Traced Python allocation remains approximately zero
+above the mmap/direct-path readers and direct sinks, while the corresponding
+bytes writers allocate approximately the encoded size. Metadata-only reads
+remain faster than full decode for every scaled family member in this sample;
+COLMAP image/pair selectors remain materially faster, while the EuRoC
+half-open state range selected by this fixture is intentionally large and is
+treated as a behavior/memory diagnostic rather than a timing target.
+
+Windows has no `POSIX_FADV_DONTNEED`, and the harness reports:
+
+```text
+WARNING: this platform has no POSIX_FADV_DONTNEED; cold-cache hint was unavailable.
+```
+
+Therefore these family measurements are warm-cache diagnostics. They are not
+presented as confirmed cold-cache results.
+
+Fifteen interleaved parent/candidate imports were also run from exact exported
+source trees with `python -S` and an explicit `PYTHONPATH`, so the editable
+install could not redirect either sample to the working tree. Median timings
+are diagnostic rather than acceptance thresholds:
+
+| Import | Parent | Candidate | SceneIO modules |
+|---|---:|---:|---|
+| `import sceneio` | 18.687 ms | 18.771 ms | 7 / 7, exact same set |
+| I/O facade | 96.710 ms | 96.938 ms | 42 / 43 |
+| direct `_core` | 21.696 ms | 21.711 ms | 8 / 8, exact same set |
+
+The sole I/O-facade module addition is
+`sceneio.io._registry.families.reconstruction`, as required by the extraction.
+The measured deltas are within ordinary import-timing variation and no speed
+claim is made.
+
+The reviewed exact-tree package inventory is 321 tracked files, 322
+source-archive files (only generated `PKG-INFO` is extra), and 79 wheel
+members. All tracked archive files and all changed packaged runtime files
+match their Git blobs. The wheel retains 15 license/attribution members, one
+native extension, NumPy as its sole unconditional dependency, and the same
+native dependency list as the parent. An external NumPy-only installed-wheel
+run exercises every reconstruction family member and completes the packaged
+smoke.

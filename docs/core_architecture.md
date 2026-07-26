@@ -131,6 +131,14 @@ sceneio._core (C++ / nanobind)
   streamed text, LAS public-header, and LAZ VLR/chunk-table parsing.
   `_inspection.py` retains same-signature wrappers and unchanged dispatch;
   the lower inspector calls no full point decoder.
+  Reconstruction is the seventh extracted family and the third
+  non-contiguous one: `_registry/families/reconstruction.py` exports the exact
+  12-codec tuple spanning COLMAP binary/text/database, transforms JSON,
+  TUM/KITTI, EuRoC, g2o, Bundler, BAL, NVM, and OpenMVG. Aggregate publication
+  restores positions 1/15/16/17/18/23/24/38/45/46/47/48 while retaining
+  direct native directory/database calls, mmap/sink closures, and every
+  selector target. `_inspectors/reconstruction.py` owns metadata-only parsing;
+  `_inspection.py` keeps same-signature wrappers and dispatch.
   Built-in startup uses `_registry/assembly.py` as a lower staging boundary.
   Individual facade definitions and complete extracted family tuples are
   collected without touching the public registry. After all 50 canonical ids

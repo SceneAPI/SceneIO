@@ -39,6 +39,7 @@ CODEC_SOURCE_PATHS = (
     "src/sceneio/io/_registry/families/images.py",
     "src/sceneio/io/_registry/families/meshes.py",
     "src/sceneio/io/_registry/families/points.py",
+    "src/sceneio/io/_registry/families/reconstruction.py",
     "src/sceneio/io/_registry/families/sequences.py",
 )
 
@@ -718,6 +719,7 @@ def test_assembly_dependency_direction_and_import_delta_are_exact():
         "sceneio.io._registry.assembly",
         "sceneio.io._registry.families.arrays",
         "sceneio.io._registry.families.points",
+        "sceneio.io._registry.families.reconstruction",
     }
     assert intentional_additions <= set(modules)
     parent_modules = [
@@ -783,6 +785,29 @@ def test_assembly_dependency_direction_and_import_delta_are_exact():
         "bench/bench_io.py --runs 1 --scale 0.001 --skip-oracles --json"
         in ci_workflow
     )
+    assert "reconstruction-platform:" in ci_workflow
+    reconstruction_job = ci_workflow.split(
+        "  reconstruction-platform:",
+        maxsplit=1,
+    )[1].split("  manylinux2014-portability:", maxsplit=1)[0]
+    assert (
+        ci_workflow.count("tests/test_io_reconstruction_family_architecture.py")
+        == 3
+    )
+    for suite in (
+        "test_colmap.py",
+        "test_transforms_json.py",
+        "test_pose_text.py",
+        "test_euroc_state.py",
+        "test_g2o.py",
+        "test_colmap_db.py",
+        "test_colmap_txt.py",
+        "test_bundler.py",
+        "test_bal.py",
+        "test_nvm.py",
+        "test_openmvg.py",
+    ):
+        assert reconstruction_job.count(f"tests/codecs/{suite}") == 2
 
     benchmark_contract = CONTRACT["benchmark_parent"]
     rows = [

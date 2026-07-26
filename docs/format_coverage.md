@@ -169,8 +169,31 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > and database fixtures above 4 MiB stay below the 2 MiB traced-allocation
 > bound and release their paths promptly. Both candidate benchmark captures
 > reproduce the exact all-50 and ordered reconstruction-only structural
-> hashes, and the retained five-run guard passes. Registry definitions remain
-> in the facade until the independently green second checkpoint.
+> hashes, and the retained five-run guard passes. The inspector checkpoint and
+> its portable absent-value fingerprint correction are pushed at `49fd976`
+> and `6e94614`; [normal CI run 30214058828][r2-reconstruction-inspector-ci]
+> and [compiler-instrumented run
+> 30214058885][r2-reconstruction-inspector-instrumented] pass the corrected
+> checkpoint.
+>
+> **R2 reconstruction registry candidate (2026-07-26):** all 12 exact Codec
+> definitions now come from the immutable, side-effect-free
+> `_registry/families/reconstruction.py` tuple and are staged once into their
+> original non-contiguous canonical positions. Native directory/database
+> operations, nine mmap/sink adapter pairs, EuRoC state ranges, COLMAP image
+> selectors, database image/pair selectors, detection precedence, and
+> explicit-only TUM/KITTI behavior retain their frozen targets. The complete
+> local suite passes 3,252 tests with four documented skips; the 3,256-node
+> collection, both structural benchmark hashes, and strict five-run guard
+> pass. A scaled family-only diagnostic uses files up to 35.2 MiB; Windows
+> cannot provide the requested POSIX cache-eviction hint, so it is recorded as
+> warm-cache evidence. Fifteen interleaved exact-export import samples retain
+> the seven-module `sceneio` and eight-module direct `_core` sets; the I/O
+> facade adds only `_registry.families.reconstruction` (42 to 43 modules).
+> The exact-tree source archive, derived wheel, and external NumPy-only smoke
+> pass with all 12 family members exercised, and all three independent reviews
+> are clear. Commit/push and hosted validation remain before this registry
+> checkpoint is closed.
 
 [current-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287022
 [current-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287161
@@ -196,6 +219,8 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 [r2-arrays-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30207617253
 [r2-points-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30210055913
 [r2-points-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30210055930
+[r2-reconstruction-inspector-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30214058828
+[r2-reconstruction-inspector-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30214058885
 
 ## Data structures (memory Records)
 

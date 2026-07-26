@@ -541,6 +541,73 @@ def _reconstruction_and_images(root: Path) -> None:
         assert sceneio.inspect(path).shape == (3, 4, 3)
 
 
+def _remove_smoke_artifact(path: Path) -> None:
+    if path.is_dir():
+        for member in path.iterdir():
+            member.unlink()
+        path.rmdir()
+    else:
+        path.unlink()
+
+
+def _reconstruction_formats(root: Path) -> None:
+    reconstruction = _core.read_nvm(
+        b"NVM_V3\n1\n"
+        b"a.jpg 800 1 0 0 0 1 2 3 0 0\n"
+        b"1\n"
+        b"1.5 -2.5 3.5 10 20 30 1 0 0 4.5 -5.5\n"
+        b"0\n"
+    )
+    transforms_json = _core.read_transforms_json(
+        b'{"camera_model":"PINHOLE","fl_x":500,"fl_y":510,'
+        b'"cx":320,"cy":240,"w":640,"h":480,"frames":['
+        b'{"file_path":"a.png","transform_matrix":'
+        b"[[1,0,0,1],[0,1,0,2],[0,0,1,3],[0,0,0,1]]}]}"
+    )
+    tum = _core.read_tum(b"0 1 2 3 0 0 0 1\n")
+    kitti = _core.read_kitti(b"1 0 0 1 0 1 0 2 0 0 1 3\n")
+    cases = (
+        ("colmap_sparse", root / "colmap-binary", reconstruction),
+        ("transforms_json", root / "transforms.json", transforms_json),
+        ("tum", root / "poses.tum", tum),
+        ("kitti", root / "poses.kitti", kitti),
+        ("colmap_sparse_txt", root / "colmap-text", reconstruction),
+        ("bundler", root / "bundle.out", reconstruction),
+        ("nvm", root / "model.nvm", reconstruction),
+        ("openmvg", root / "sfm_data.json", reconstruction),
+    )
+    explicit_only = {"tum", "kitti"}
+    directory_formats = {"colmap_sparse", "colmap_sparse_txt"}
+    for format_id, path, source in cases:
+        if format_id in directory_formats:
+            path.mkdir()
+        sceneio.write(source, path, format=format_id)
+        if format_id in explicit_only:
+            try:
+                sceneio.detect(path)
+            except sceneio.FormatError:
+                pass
+            else:
+                raise AssertionError(f"{format_id} must remain explicit-only")
+        else:
+            assert sceneio.detect(path) == format_id
+        inspected = sceneio.inspect(path, format=format_id)
+        decoded = sceneio.read(path, format=format_id)
+        assert inspected.format == format_id
+        if format_id in directory_formats:
+            selected = sceneio.read_partial(
+                path,
+                format=format_id,
+                image_id=int(decoded.image_ids[0]),
+            )
+            assert selected.num_images == 1
+        _remove_smoke_artifact(path)
+        if isinstance(decoded, _core.PosedViewSet):
+            assert decoded.num_views == 1
+        else:
+            assert decoded.num_images == 1
+
+
 def _state_trajectory(root: Path) -> None:
     timestamps = np.array(
         [1_403_636_580_000_000_000, 1_403_636_580_005_000_000],
@@ -803,6 +870,7 @@ def main() -> None:
         _gltf_glb(root)
         _point_depth_and_flow(root, values)
         _reconstruction_and_images(root)
+        _reconstruction_formats(root)
         _state_trajectory(root)
         _camera_calibration(root)
         _pose_graph(root)

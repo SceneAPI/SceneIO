@@ -162,8 +162,24 @@ facade retains same-signature delegates and its historical shared-value/helper
 exports. Parent valid/malformed artifacts and full logical records match for
 all 12 formats, and generated files above 4 MiB confirm bounded traced Python
 allocation and prompt file, directory, and database path release. Native
-parser working memory remains diagnostic. The registry extraction is the next
-checkpoint.
+parser working memory remains diagnostic. The inspector and portable
+absent-value fingerprint commits are pushed at `49fd976` and `6e94614`;
+normal run 30214058828 and compiler-instrumented run 30214058885 are green.
+
+The registry extraction is now the active candidate. Its immutable
+`RECONSTRUCTION_CODECS` tuple owns all 12 definitions, and the aggregate
+stages that tuple once while restoring canonical positions
+1/15/16/17/18/23/24/38/45/46/47/48. Codec ASTs, direct native directory and
+database calls, mmap/sink closures, selectors, detection behavior, and public
+record contracts remain exact. The expanded architecture suite passes 70
+tests, the family matrix passes 506 tests with two documented skips, and the
+  complete local suite passes 3,252 with four documented skips. Both benchmark
+  projections and the strict five-run guard pass. Exact-tree packaging,
+  external NumPy-only smoke, and three independent reviews pass; commit/push
+  and hosted validation remain before the registry checkpoint closes.
+  Exact-export import sampling retains the seven-module `sceneio` and
+  eight-module direct `_core` sets; the I/O facade's only added module is
+  `_registry.families.reconstruction`. Splats remain the last R2 family.
 
 The codec-per-file C++ layer remains reasonably isolated, but orchestration and
 verification have accumulated in a few large modules:
@@ -172,7 +188,7 @@ verification have accumulated in a few large modules:
 |---|---|---|
 | C++ codecs | 40 files for 50 format ids | flat source list and manual binding declarations |
 | C++ records | 32 source/header files | still manageable; new table/animation/scene records will add pressure |
-| Python registry | `registry.py`, 573 lines; `_registry/assembly.py`, 148 lines; focused `_registry/{model,adapters,detection,native_features}.py` modules; and `_registry/families/{arrays,calibration,images,meshes,points,sequences}.py` definition modules | reconstruction and splats still share the facade until their R2.2 units |
+| Python registry | `registry.py`, 367 lines; `_registry/assembly.py`, 148 lines; focused `_registry/{model,adapters,detection,native_features}.py` modules; and `_registry/families/{arrays,calibration,images,meshes,points,reconstruction,sequences}.py` definition modules | splats are the only built-in family still defined in the facade |
 | Inspection | `_inspection.py`, 786 lines, plus `_inspectors/{model,common,arrays,calibration,images,meshes,points,reconstruction,sequences}.py`; the reconstruction owner is 295 lines | splat metadata still shares the facade; the proven shared model, mmap bridge, metadata bounds, exact-read/integer grammar, and image-result constructor are lower services |
 | Benchmark | `bench_io.py`, about 4,660 lines | CLI, fixtures, oracles, runners, metrics, and reporting are coupled |
 | Cross-codec tests | `test_io_mmap.py`, about 2,400 lines; `test_io_partial.py`, about 1,100 | reusable codec cases and behavior assertions are difficult to extend independently |

@@ -27,9 +27,13 @@ layout, and fresh NumPy-only installed-wheel checks. R2.1 is complete at
 `29af9de`; and the six-codec mesh extraction is complete and pushed at
 `975533f`. The shared image helpers are complete at `8040bc7`, and the
 eight-codec image extraction is complete and pushed at `68c47d6`. The
-two-codec sequence extraction is complete and pushed at `14bf53b`. Its normal
-CI and compiler-instrumented runs pass. The aggregate built-in staging
-boundary is the active R2 unit; arrays are next after that boundary is green.
+two-codec sequence extraction is complete and pushed at `14bf53b`; arrays
+close at `d99dcf0`, and points close at `686f42e`. The reconstruction
+inspector checkpoint is pushed at `49fd976`, with its cross-platform
+fingerprint correction at `6e94614`. Normal CI run 30214058828 and
+compiler-instrumented run 30214058885 pass that exact corrected checkpoint.
+The reconstruction registry extraction is the active R2 unit; splats follow
+after its implementation and evidence commits are independently green.
 
 This is the operational checklist for the repository-organization and
 codec-performance stage defined in
@@ -1995,7 +1999,7 @@ Inspector extraction checkpoint:
       registry/inspection/capability/snapshot/import/documentation checks,
       complete pytest, Ruff, benchmark structure comparison, and retained
       five-run guard.
-- [ ] Build an exact-tree source archive and wheel; run the current packaged
+- [x] Build an exact-tree source archive and wheel; run the current packaged
       smoke in a fresh NumPy-only environment. Obtain independent
       architecture/correctness, test/performance, and
       platform/package/documentation reviews before committing and pushing.
@@ -2022,50 +2026,50 @@ diagnostic and is not described by the 2 MiB `tracemalloc` bound.
 
 Registry extraction checkpoint:
 
-- [ ] Add immutable, side-effect-free
+- [x] Add immutable, side-effect-free
       `_registry/families/reconstruction.py` with the exact 12
       `RECONSTRUCTION_CODECS` above. Move each `Codec(...)` expression
       mechanically without changing values.
-- [ ] Stage the complete tuple exactly once through
+- [x] Stage the complete tuple exactly once through
       `_define_builtin_family("reconstruction", RECONSTRUCTION_CODECS)`.
       Preserve canonical positions, registry object identity, aggregate
       identity, reload/idempotence, and binary-before-text COLMAP directory
       detection precedence.
-- [ ] Preserve direct native path operations for both COLMAP directories and
+- [x] Preserve direct native path operations for both COLMAP directories and
       `colmap_db`. Preserve the nine mmap/file-sink closures, EuRoC's mmap
       state-range selector, both COLMAP image selectors, and both database
       image/pair selectors with their exact native targets.
-- [ ] Preserve explicit-format-only TUM/KITTI behavior, named-file detection
+- [x] Preserve explicit-format-only TUM/KITTI behavior, named-file detection
       for `transforms.json`, `database.db`, and `sfm_data.json`, all
       extension/magic neighbors, and suffixless default `Reconstruction`
       writer selection.
-- [ ] Add the family source to the authoritative Codec AST scan. Prove exact
+- [x] Add the family source to the authoritative Codec AST scan. Prove exact
       tuple order, positions, object identities, ASTs, callables/closure
       targets, record classes, capabilities, flags, and one staging call with
       no remaining inline family definitions.
-- [ ] Add a uniform all-12 public test covering write, each format's promised
+- [x] Add a uniform all-12 public test covering write, each format's promised
       detection or explicit-format rule, inspect, read, and logical record
       equality. Hand-built COLMAP binary fixtures must keep the NumPy-only
       path independent of optional `pycolmap`.
-- [ ] Differentially test all persisted binary/text COLMAP image ids,
+- [x] Differentially test all persisted binary/text COLMAP image ids,
       first/middle/last and complete EuRoC half-open ranges, and database image
       and unordered-pair selection. Cover missing/negative ids, invalid ranges,
       sparse ids, reversed pairs, absent versus present-empty database rows,
       duplicate endpoints, and unselected malformed content.
-- [ ] Prove nine mmap-decoded records own their results after mapping closure;
+- [x] Prove nine mmap-decoded records own their results after mapping closure;
       EuRoC partial success/failure releases its mapping; both COLMAP
       directory full/image/inspection paths release every member; and database
       full/image/pair/inspection success and failure release all handles while
       retained arrays remain valid.
-- [ ] Extend the NumPy-only installed-wheel smoke so every one of the 12
+- [x] Extend the NumPy-only installed-wheel smoke so every one of the 12
       members maps to an executed smoke helper, replacing the eight current
       family exemptions without duplicating already-covered EuRoC, g2o, BAL,
       and database cases.
-- [ ] Update import/assembly/ownership/collection/workflow contracts. The final
+- [x] Update import/assembly/ownership/collection/workflow contracts. The final
       I/O import set must add exactly `_inspectors.reconstruction` and
       `_registry.families.reconstruction` to the 41-module parent set;
       `import sceneio` and direct `_core` remain at their exact parent sets.
-- [ ] Add a dedicated three-OS reconstruction CI job for the architecture and
+- [x] Add a dedicated three-OS reconstruction CI job for the architecture and
       11 codec suites; include the architecture suite in the manylinux2014
       GCC-10 lane. Update the compiler-instrumented collection pin only from a
       final `pytest --collect-only` result.
@@ -2073,29 +2077,63 @@ Registry extraction checkpoint:
       structure, retained five-run, import, exact-tree package, installed
       wheel, three-review, commit/push, and hosted-run gates.
 
+Registry candidate evidence in progress: the 12 definitions now come from the
+immutable, inert `_registry/families/reconstruction.py` tuple and are staged
+once. Their Codec AST hashes and native/wrapper callable descriptors remain
+identical to the frozen parent. The expanded architecture suite passes 70
+tests; the architecture plus 11 codec suites pass 506 tests with two
+documented platform/oracle skips. The complete local suite passes 3,252 tests
+with four documented skips, and the exact collection is 3,256 nodes with
+sorted normalized SHA-256
+`156a06a5fb3b801073253892d9d584f8a9dcb230ccd42babf056b2a020c71347`.
+Ruff and diff checks pass. Both one-run candidate captures reproduce all-50
+SHA-256
+`2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`
+and ordered 12-row SHA-256
+`92d354dfd4aa415cbd908168d55310902e56fd21541c94d66fc740c1915540d9`;
+the strict default-scale five-run guard passes. A three-run scale-1
+family-only capture exercises encoded files up to 35.2 MiB and confirms
+bounded Python mmap/sink allocation plus retained inspection/partial
+directions. Windows reports the requested cold-cache hint as unavailable
+because it has no `POSIX_FADV_DONTNEED`; those measurements are warm-cache
+diagnostics, not cold-cache claims. The I/O facade now imports exactly 43
+SceneIO modules, adding only `_registry.families.reconstruction` to the
+inspector checkpoint; `import sceneio` and direct `_core` remain at seven and
+eight modules. Fifteen interleaved exact-export samples, isolated from the
+editable finder with `python -S` and an explicit `PYTHONPATH`, measure
+18.687/18.771 ms for `import sceneio`, 96.710/96.938 ms for the I/O facade,
+and 21.696/21.711 ms for direct `_core` (parent/candidate medians). Module-set
+equality, not these diagnostic timings, is the acceptance contract.
+The reviewed exact tree has 321 tracked files, a 322-file source archive with
+only generated `PKG-INFO`, and a 79-member wheel. Changed runtime files match
+byte-for-byte, the NumPy-only installed-wheel smoke exercises all 12 members,
+and all three independent reviews are clear after resolving one stale
+checklist-status finding. Commit/push and hosted runs remain before this
+checkpoint closes.
+
 Final evidence and documentation closure:
 
-- [ ] Require candidate equality with both parent captures for all 50 rows and
+- [x] Require candidate equality with both parent captures for all 50 rows and
       the ordered 12-row reconstruction projection. Run the strict five-run
       guard and measured family-only large/cold-cache cases; record unavailable
       cold-cache behavior honestly on platforms that cannot provide it. Claim
       no speedup for this mechanical extraction.
-- [ ] Run 15 interleaved parent/candidate import samples. Treat exact module
+- [x] Run 15 interleaved parent/candidate import samples. Treat exact module
       sets as the contract and timings as diagnostic evidence.
-- [ ] Freeze a zero-unstaged staged tree, export it with
+- [x] Freeze a zero-unstaged staged tree, export it with
       `core.autocrlf=false`, build the source archive from that tree, and build
       the wheel only from the exact archive. Compare every staged blob and all
       changed packaged runtime files byte-for-byte across Git, archive, and
       wheel.
-- [ ] Measure the final inventory rather than forcing an estimate. If the only
+- [x] Measure the final inventory rather than forcing an estimate. If the only
       additions are the two runtime modules, one contract and one architecture
       test, the expected shape is 321 tracked files, 322 source-archive files
       including generated `PKG-INFO`, and 79 wheel members.
-- [ ] Verify 15 license/attribution members, one native extension, no packaged
+- [x] Verify 15 license/attribution members, one native extension, no packaged
       build/include/lib/share/bin layout, NumPy as the sole unconditional
       dependency, and unchanged native dependencies. Add no FFmpeg/libav code,
       linkage, subprocess path, runtime member, or attribution.
-- [ ] Install the exact wheel outside the repository with only NumPy and run
+- [x] Install the exact wheel outside the repository with only NumPy and run
       `_wheel_smoke` plus the all-12 detection/explicit-format, inspect, read,
       partial, retained-result, and path-release probes.
 - [ ] After both implementation commits are independently reviewed and hosted

@@ -10,7 +10,9 @@ import importlib
 import inspect
 import json
 import sqlite3
+import subprocess
 import sys
+import textwrap
 import tomllib
 import tracemalloc
 from pathlib import Path
@@ -22,8 +24,14 @@ import sceneio
 from bench import bench_io
 from sceneio import _core
 from sceneio.io import _inspection, registry
-from sceneio.io._builtin_manifest import FAMILY_MEMBERS
+from sceneio.io._builtin_manifest import (
+    CANONICAL_BUILTIN_IDS,
+    FAMILY_MEMBERS,
+)
 from sceneio.io._inspectors import reconstruction as reconstruction_inspector
+from sceneio.io._registry.families import (
+    reconstruction as reconstruction_family,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 CONTRACT_PATH = ROOT / "tests" / "contracts" / "io_reconstruction_family_v1.json"
@@ -438,6 +446,167 @@ def _remove_path(path: Path) -> None:
         path.unlink()
 
 
+def _operation_descriptor(value) -> dict[str, object] | None:
+    if value is None:
+        return None
+    descriptor: dict[str, object] = {
+        "module": value.__module__,
+        "name": value.__name__,
+    }
+    closure = inspect.getclosurevars(value).nonlocals if inspect.isfunction(value) else {}
+    if closure:
+        descriptor["closure"] = {
+            name: (
+                None
+                if target is None
+                else f"{target.__module__}.{target.__name__}"
+            )
+            for name, target in closure.items()
+        }
+    return descriptor
+
+
+def test_reconstruction_definitions_preserve_order_contract_and_identity():
+    definitions = registry.RECONSTRUCTION_CODECS
+    assert isinstance(definitions, tuple)
+    assert definitions is reconstruction_family.RECONSTRUCTION_CODECS
+    assert tuple(codec.id for codec in definitions) == RECONSTRUCTION_IDS
+    assert tuple(CONTRACT["family_ids"]) == RECONSTRUCTION_IDS
+    assert tuple(registry.REGISTRY) == CANONICAL_BUILTIN_IDS
+    assert CONTRACT["canonical_positions"] == {
+        format_id: CANONICAL_BUILTIN_IDS.index(format_id)
+        for format_id in RECONSTRUCTION_IDS
+    }
+
+    operation_fields = ("read", "write", "read_image", "read_pair", "read_states")
+    for codec in definitions:
+        expected = CONTRACT["registry"][codec.id]
+        position = CONTRACT["canonical_positions"][codec.id]
+        assert registry.REGISTRY[codec.id] is codec
+        assert registry.BUILTIN_DEFINITIONS[position] is codec
+        assert codec.record.__name__ == expected["record"]
+        assert codec.datatype == expected["datatype"]
+        assert list(codec.extensions) == expected["extensions"]
+        assert [value.hex() for value in codec.magic] == expected["magic_hex"]
+        assert list(codec.filenames) == expected["filenames"]
+        assert codec.is_directory is expected["is_directory"]
+        assert codec.dir_marker == expected["dir_marker"]
+        assert codec.lossy is expected["lossy"]
+        assert codec.container_kind == expected["container_kind"]
+        assert list(codec.supported_features) == expected["supported_features"]
+        assert list(codec.unsupported_features) == expected["unsupported_features"]
+        assert codec.inspect is None
+        assert {
+            field: _operation_descriptor(getattr(codec, field))
+            for field in operation_fields
+        } == expected["operations"]
+
+
+def test_reconstruction_family_is_staged_once_and_not_defined_inline():
+    source = inspect.getsource(registry)
+    tree = ast.parse(source)
+    staging = [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Name)
+        and node.func.id == "_define_builtin_family"
+        and node.args
+        and isinstance(node.args[0], ast.Constant)
+        and node.args[0].value == "reconstruction"
+    ]
+    assert len(staging) == 1
+    assert (
+        source.count(
+            '_define_builtin_family("reconstruction", RECONSTRUCTION_CODECS)'
+        )
+        == 1
+    )
+    for node in ast.walk(tree):
+        if (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Name)
+            and node.func.id == "Codec"
+            and node.args
+            and isinstance(node.args[0], ast.Constant)
+        ):
+            assert node.args[0].value not in RECONSTRUCTION_IDS
+
+
+def test_reconstruction_family_module_is_lower_layer_only():
+    source = inspect.getsource(reconstruction_family)
+    imports = _absolute_imports(source)
+    assert {module for module, _ in imports} <= {
+        "__future__",
+        "sceneio",
+        "sceneio.io._registry.adapters",
+        "sceneio.io._registry.model",
+    }
+    for forbidden in (
+        "sceneio.io.registry",
+        "sceneio.io._inspection",
+        "sceneio.io._registry.assembly",
+        "REGISTRY",
+        "register(",
+    ):
+        assert forbidden not in source
+
+
+def test_reconstruction_family_reload_is_inert_and_registry_reload_is_exact():
+    code = textwrap.dedent(
+        """
+        import importlib
+
+        from sceneio.io import registry
+        from sceneio.io._builtin_manifest import (
+            CANONICAL_BUILTIN_IDS,
+            FAMILY_MEMBERS,
+        )
+        from sceneio.io._registry.families import reconstruction
+
+        before_registry = registry.REGISTRY
+        before_items = tuple(registry.REGISTRY.items())
+        before_codecs = registry.RECONSTRUCTION_CODECS
+        reloaded_family = importlib.reload(reconstruction)
+        assert registry.REGISTRY is before_registry
+        assert tuple(registry.REGISTRY.items()) == before_items
+        assert registry.RECONSTRUCTION_CODECS is before_codecs
+        assert tuple(codec.id for codec in reloaded_family.RECONSTRUCTION_CODECS) == (
+            FAMILY_MEMBERS["reconstruction"]
+        )
+        assert all(
+            registry.REGISTRY[codec.id] is not codec
+            for codec in reloaded_family.RECONSTRUCTION_CODECS
+        )
+
+        for _ in range(2):
+            reloaded_registry = importlib.reload(registry)
+            assert tuple(reloaded_registry.REGISTRY) == CANONICAL_BUILTIN_IDS
+            assert tuple(
+                codec.id for codec in reloaded_registry.RECONSTRUCTION_CODECS
+            ) == FAMILY_MEMBERS["reconstruction"]
+            for codec in reloaded_registry.RECONSTRUCTION_CODECS:
+                assert reloaded_registry.REGISTRY[codec.id] is codec
+        """
+    )
+    subprocess.run([sys.executable, "-c", code], cwd=ROOT, check=True)
+
+
+def test_reconstruction_detection_precedence_and_default_writer(tmp_path):
+    mixed = tmp_path / "mixed-colmap"
+    mixed.mkdir()
+    (mixed / "cameras.bin").write_bytes(b"")
+    (mixed / "cameras.txt").write_bytes(b"")
+    assert sceneio.detect(mixed) == "colmap_sparse"
+
+    default_path = tmp_path / "default-reconstruction"
+    default_path.mkdir()
+    sceneio.write(_records()["colmap_sparse"], default_path)
+    assert sceneio.detect(default_path) == "colmap_sparse"
+    assert (default_path / "cameras.bin").is_file()
+    assert not (default_path / "cameras.txt").exists()
+
+
 def test_reconstruction_inspector_module_is_lower_layer_only():
     source = inspect.getsource(reconstruction_inspector)
     imports = _absolute_imports(source)
@@ -583,6 +752,22 @@ def test_reconstruction_inspection_and_reads_match_parent_contract(tmp_path):
         else:
             assert artifact == expected["artifact"]
         assert _record(sceneio.read(path, format=format_id)) == expected["record"]
+
+
+@pytest.mark.parametrize("format_id", RECONSTRUCTION_IDS)
+def test_retained_reconstruction_read_releases_path_and_keeps_values(
+    tmp_path,
+    format_id,
+):
+    path = _write_valid(
+        tmp_path / f"retained-{format_id}",
+        (format_id,),
+    )[format_id]
+    value = sceneio.read(path, format=format_id)
+    expected = _record(value)
+    gc.collect()
+    _remove_path(path)
+    assert _record(value) == expected
 
 
 @pytest.mark.parametrize("format_id", RECONSTRUCTION_IDS)
