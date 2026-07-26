@@ -14,11 +14,19 @@ libjpeg-turbo comparison. The reviewed, commit-sized verification checklist is
 Scope: the compiled `sceneio._core` I/O path on `phase0-nanobind-core`.
 Companion to `coverage_roadmap.md` (this makes its "Phase 7" hardening/perf work
 concrete). Phase landing notes below are historical evidence from the commit at
-which each phase closed. At the 2026-07-25 `d52c1e0` code checkpoint, local
-MSVC passes 2,912 tests with 4 skips and Windows/macOS mmap CI passes; Linux
-normal and instrumented CI still have the portability/environment blockers
-listed in `format_gap_implementation_plan.md`, so the current expanded tier is
-not yet cross-platform validated.
+which each phase closed. At the 2026-07-25 `a5e7fa4` implementation
+checkpoint, local MSVC passes 2,919 tests with 4 skips. Normal CI
+[30181287022](https://github.com/SceneAPI/SceneIO/actions/runs/30181287022)
+passes the Linux suite, retained 50-codec performance guard, pinned GCC 10
+job, and Linux/Windows/macOS portability matrix. Compiler-instrumented run
+[30181287161](https://github.com/SceneAPI/SceneIO/actions/runs/30181287161)
+collects all 2,923 tests and passes its complete and focused native jobs.
+Nonpublishing release run
+[30181286675](https://github.com/SceneAPI/SceneIO/actions/runs/30181286675)
+builds and smoke-tests all three platform wheel sets plus the source archive.
+The expanded transport/access tier is therefore cross-platform validated;
+per-codec backend qualification and default native-source closure remain
+separate next-stage gates.
 
 Post-0.2 format expansion inherits the same gates. The registry currently has
 50 codecs: 44 file containers, three multi-file containers, and three directory

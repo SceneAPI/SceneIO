@@ -1078,6 +1078,30 @@ checkpoint. Bytes and sink writes both measured 63 MB/s, the sink retained its
 whole-output allocation reduction, inspection remained 1,091x faster than
 full decode, and partial read remained 3.24x faster.
 
+## N0.5 hosted closure at `a5e7fa4` — 2026-07-25
+
+Normal CI run
+[30181287022](https://github.com/SceneAPI/SceneIO/actions/runs/30181287022)
+passes the complete Linux suite, all 50 benchmark builders, the retained
+directional and mmap/sink allocation guard, pinned GCC 10, and the
+Linux/Windows/macOS focused matrix. The hosted LAZ row measured 56 MB/s on
+both in-memory and mmap reads, with 14.6 MB versus 0.0 MB traced input
+allocation. Buffer and sink writes both measured 42 MB/s, with 14.6 MB versus
+0.0 MB traced output allocation. Inspection was 4,991.79x faster than full
+decode and the bounded point range was 6.53x faster. These hosted values are a
+separate runner checkpoint, not a replacement for the local MSVC baseline.
+
+Compiler-instrumented run
+[30181287161](https://github.com/SceneAPI/SceneIO/actions/runs/30181287161)
+collects exactly 2,923 tests and completes 2,894 passes with 29 documented
+platform/oracle skips; its focused native lifetime job also passes. Explicit
+attempt 2 repeats those exact collection/pass/skip counts and the focused
+native lifetime pass at the same `a5e7fa4` commit. The
+nonpublishing release run
+[30181286675](https://github.com/SceneAPI/SceneIO/actions/runs/30181286675)
+builds and smoke-tests Linux, macOS, and Windows wheel sets plus the source
+archive, with the PyPI job skipped.
+
 ## ImageSequence directory and raw Y4M baseline — 2026-07-25
 
 The sequence wave raises the registry and complete harness to 50 codecs and

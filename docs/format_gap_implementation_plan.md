@@ -11,11 +11,12 @@
   polygon-preserving OBJ/MTL, strict STL/OFF, the `MeshScene` record, and plain
   glTF/GLB, LAZ point formats 0-3/6-8, the `ImageSequence` record, lazy image
   directories, and raw planar Y4M are complete locally.
-  The remote workflows have now been dispatched. At `d52c1e0`, Windows and
-  macOS mmap jobs pass, but Linux normal CI and the instrumented reliability
-  lane are red; the current blockers are listed in section 12.1.
-  Cross-platform validation therefore remains incomplete rather than merely
-  user-gated.
+  At `a5e7fa4`, normal CI, the compiler-instrumented native jobs, the focused
+  Linux/Windows/macOS portability matrix, pinned GCC 10, and the nonpublishing
+  three-platform wheel/source build all pass. This 50-codec dependency wave is
+  cross-platform validated; repository organization, backend qualification,
+  and default native-source closure remain prerequisites for the next codec
+  wave.
 - **Current branch:** 50 compiled codecs, all read/write and inspectable, with
   bounded partial reads where their containers permit them.
 - **Scope:** close every unblocked format gap declared by SceneIO's coverage
@@ -358,8 +359,8 @@ Completion evidence (2026-07-24):
 - generated 128 MiB and 1 GiB runs show constant-size SceneIO traced
   allocation/RSS for full and selected mapped reads, with comparable streaming
   write throughput to `safetensors.numpy`;
-- Linux instrumentation and Linux/macOS wheel validation remain pending until
-  the user authorizes the branch push and remote workflows.
+- The dependency-wave compiler-instrumented jobs and three-platform wheel
+  build now pass at `a5e7fa4`.
 
 #### G2.2 COLMAP database — complete locally
 
@@ -418,8 +419,8 @@ Completion evidence (2026-07-24):
   ownerless optional-array views, partial-statement cleanup, new-file rollback
   cleanup, literal-path/URI ambiguity, partial duplicate-row acceptance,
   endpoint/index validation, and UTF-8 filesystem handling. Fable remains
-  unavailable locally; Linux instrumentation and Linux/macOS wheel validation
-  remain user-gated remote actions.
+  unavailable locally; the dependency-wave compiler-instrumented jobs and
+  three-platform wheel build now pass at `a5e7fa4`.
 
 #### G2.3 PTS, generic point PLY, and PCD complete locally
 
@@ -442,8 +443,8 @@ PTS completion evidence (2026-07-24):
 - the generated 100,000-point benchmark shows zero encoded-size traced
   allocation on mmap/sink paths, header inspection about 282x faster than full
   parsing, and the bounded middle range about 1.85x faster;
-- Linux instrumentation and Linux/macOS wheel validation remain pending until
-  the user authorizes the branch push and remote workflows.
+- The dependency-wave compiler-instrumented jobs and three-platform wheel
+  build now pass at `a5e7fa4`.
 
 PCD completion:
 
@@ -639,9 +640,9 @@ Three-lens FlowField record review:
   mutation proves ownership isolation, and the unchanged raw FLO suite guards
   source compatibility.
 
-No unresolved finding remains in the local FlowField record review.
-Instrumented Linux and Linux/macOS wheel validation remain pending until the
-next dependency-wave remote validation authorized by the user.
+No unresolved finding remains in the local FlowField record review. The
+dependency-wave compiler-instrumented jobs and three-platform wheel build now
+pass at `a5e7fa4`.
 
 Typed FLO adapter completion evidence (2026-07-24):
 
@@ -685,8 +686,8 @@ Three-lens typed FLO review:
   mmap/sparse/sink tests measure the public optimized adapters.
 
 No unresolved finding remains in the local typed FLO review. The local
-cp312-abi3 Windows wheel is validated; instrumented Linux and Linux/macOS wheel
-validation remain pending until the user-authorized remote dependency-wave run.
+cp312-abi3 Windows wheel and the dependency-wave compiler-instrumented jobs
+plus three-platform wheel build pass at `a5e7fa4`.
 
 Typed PFM depth completion evidence (2026-07-24):
 
@@ -736,9 +737,8 @@ Three-lens typed PFM review:
   exercise the optimized paths.
 
 No unresolved finding remains in the local typed PFM review. The local
-cp312-abi3 Windows wheel is validated; instrumented Linux and Linux/macOS wheel
-validation remain pending until the next user-authorized remote dependency-wave
-run.
+cp312-abi3 Windows wheel and the dependency-wave compiler-instrumented jobs
+plus three-platform wheel build pass at `a5e7fa4`.
 
 Typed PNG depth completion evidence (2026-07-24):
 
@@ -784,9 +784,8 @@ Three-lens typed PNG review:
   exercised directly.
 
 No unresolved finding remains in the local typed PNG review. The local
-cp312-abi3 Windows wheel is validated; instrumented Linux and Linux/macOS wheel
-validation remain pending until the next user-authorized remote dependency-wave
-run.
+cp312-abi3 Windows wheel and the dependency-wave compiler-instrumented jobs
+plus three-platform wheel build pass at `a5e7fa4`.
 
 Typed scalar EXR depth completion evidence (2026-07-24):
 
@@ -838,9 +837,8 @@ Three-lens typed EXR review:
   mmap/sink/inspect/lifetime/memory paths are exercised directly.
 
 No unresolved finding remains in the local typed EXR review. The local
-cp312-abi3 Windows wheel is validated; instrumented Linux and Linux/macOS wheel
-validation remain pending until the next user-authorized remote dependency-wave
-run.
+cp312-abi3 Windows wheel and the dependency-wave compiler-instrumented jobs
+plus three-platform wheel build pass at `a5e7fa4`.
 
 DMB completion evidence (2026-07-24):
 
@@ -855,8 +853,8 @@ DMB completion evidence (2026-07-24):
 - generated 64 MiB sparse-file inspection and 8x8 window reads stay below
   1 MiB traced allocation;
 - the all-codec suite, benchmark evidence, and local MSVC result are recorded
-  with the codec commit; Linux instrumentation and Linux/macOS wheel validation
-  remain pending until the user authorizes the remote workflows.
+  with the codec commit; the dependency-wave compiler-instrumented jobs and
+  three-platform wheel build now pass at `a5e7fa4`.
 
 Three-lens DMB review:
 
@@ -918,9 +916,9 @@ Three-lens BAL review:
   independent of point order, malformed cases exercise every bounded scanner
   edge, and mmap/sparse-file/short-sink tests measure the optimized public paths.
 
-No unresolved finding remains in the local BAL review. Linux instrumentation
-and Linux/macOS wheel validation remain pending until the user authorizes the
-remote workflows.
+No unresolved finding remains in the local BAL review. The dependency-wave
+compiler-instrumented jobs and three-platform wheel build now pass at
+`a5e7fa4`.
 
 BMP/TGA completion evidence (2026-07-24):
 
@@ -964,9 +962,9 @@ Three-lens BMP/TGA review:
   preflight rather than the oracle, and public mmap/sink/inspection paths are
   measured directly.
 
-No unresolved finding remains in the local BMP/TGA review. Linux
-instrumentation and Linux/macOS wheel validation remain pending until the user
-authorizes the remote workflows.
+No unresolved finding remains in the local BMP/TGA review. The dependency-wave
+compiler-instrumented jobs and three-platform wheel build now pass at
+`a5e7fa4`.
 
 YAML support must use a permissive native parser or a deliberately bounded
 format-specific parser; it may not add a runtime Python dependency.
@@ -1038,8 +1036,9 @@ Completion evidence:
   unbounded per-face list allocation, uint32 overflow in corner-list and
   primitive-run arithmetic, a missing feasibility check in the partial entry,
   retention of skipped face lists, and silent texture/`obj_info` metadata
-  loss. Fable is unavailable locally and remote instrumented/wheel validation
-  remains user-gated.
+  loss. Fable is unavailable locally; the dependency-wave
+  compiler-instrumented jobs and three-platform wheel build pass at
+  `a5e7fa4`.
 
 #### G3.2 OBJ/MTL — complete locally
 
@@ -1103,7 +1102,8 @@ Completion evidence:
   alpha-cutoff fidelity gaps, texture-row reordering, paired-output rollback,
   process-locale-dependent numeric output, and test-collection retention of
   compiled records. No local review finding remains; Fable is unavailable
-  locally, and the remote instrumented/wheel matrix remains user-gated.
+  locally, and the dependency-wave compiler-instrumented jobs plus
+  three-platform wheel build pass at `a5e7fa4`.
 
 #### G3.3 STL and OFF — complete locally
 
@@ -1150,8 +1150,8 @@ Completion evidence:
   impossible-count extent checks before OFF allocation and checked STL count
   arithmetic, then caught and closed an OFF writer/reader mismatch for
   polygons whose emitted record would exceed the parser's 1 MiB line cap.
-  Fable is unavailable locally; the remote instrumented/wheel matrix remains
-  user-gated.
+  Fable is unavailable locally; the dependency-wave compiler-instrumented jobs
+  and three-platform wheel build pass at `a5e7fa4`.
 
 #### G3.4 glTF/GLB core — complete locally
 
@@ -1197,8 +1197,8 @@ Local verification:
   traced Python input allocation; native sinks remove the same output-sized
   allocation. Inspection is 220x/201x faster, and one-of-four primitive reads
   are 4.29x/3.87x faster with about one-fifth the full-read RSS growth.
-- Cross-platform wheel and instrumented validation remain part of the
-  user-gated remote matrix; Draco remains separately policy-gated.
+- The compiler-instrumented jobs and cross-platform wheel build pass at
+  `a5e7fa4`; Draco remains separately policy-gated.
 - A staged source distribution contains the codec, record, Python adapter,
   and byte-exact cgltf headers/license/provenance. Building that archive from
   a short Windows path produces the ABI3 wheel; an isolated environment with
@@ -1209,8 +1209,9 @@ Local verification:
   output-size arithmetic, divergent inspect/read accessor validation,
   unordered sparse destinations, duplicate writer work in the paired sink,
   and locale-dependent JSON float arrays. No local review finding remains;
-  Fable is unavailable locally, and the remote instrumented/wheel matrix
-  remains user-gated.
+  Fable is unavailable locally, and the dependency-wave
+  compiler-instrumented jobs plus three-platform wheel build pass at
+  `a5e7fa4`.
 
 Validation for G3:
 
@@ -1222,9 +1223,9 @@ Validation for G3:
 
 #### G4.1 LAZ
 
-Status: implemented locally; local verification is complete. The new
-LAZperf dependency still requires the user-gated Linux/macOS wheel and
-instrumented validation lanes before the unit can be called validated.
+Status: validated at `a5e7fa4`. Local verification, pinned GCC 10, the
+compiler-instrumented native jobs, and the Linux/macOS/Windows wheel build all
+pass.
 
 Implementation:
 
@@ -1363,8 +1364,9 @@ Plain-LAS waveform checkpoint — complete locally (2026-07-25):
   the expanded `_wheel_smoke` waveform read/write/inspect/partial case.
 - Manual lifetime/ownership, format-correctness, and test-soundness review
   found and fixed non-finite coordinate-transform acceptance and empty colored
-  waveform round-trip failure. Fable is unavailable locally; the Linux
-  instrumented and Linux/macOS wheel lanes remain user-gated.
+  waveform round-trip failure. Fable is unavailable locally; the
+  dependency-wave compiler-instrumented jobs and three-platform wheel build
+  pass at `a5e7fa4`.
 
 #### G4.2 ImageSequence and raw Y4M — complete locally
 
@@ -1990,14 +1992,14 @@ estimates.
 
 ### 12.1 Current checkpoint and status vocabulary
 
-The current local checkpoint is:
+The current validated implementation checkpoint is `a5e7fa4`:
 
 - 50 compiled registry codecs with read, write, inspect, mmap or path-native
   input, and direct file sinks;
 - O0-O5 complete for the existing codec tier;
 - `FlowField`, typed FLO, typed PFM depth, typed PNG depth, and typed scalar EXR
   depth complete;
-- 2,912 local tests pass with 4 documented platform/optional skips, Ruff and
+- 2,919 local tests pass with 4 documented platform/optional skips, Ruff and
   `git diff --check` are clean;
 - the complete 50-codec benchmark, staged source-distribution rebuild, and
   packaged NumPy-only wheel smoke pass;
@@ -2011,13 +2013,21 @@ The current local checkpoint is:
 - all 50 codecs have repo-maintained production adapters and optimized I/O
   contracts, but the default native source closure is incomplete while six
   pinned dependencies still use CMake `FetchContent`;
-- the build-only dependency-wave release run at `daf991ab` produced successful
-  Windows, macOS, Linux wheels and an sdist with publication skipped. It
-  predates `ImageSequence`, Y4M, and the centralized license inventory;
-- at the latest tested code checkpoint `d52c1e0`, Windows and macOS mmap jobs
-  pass. Linux normal CI fails six portability assertions and the instrumented
-  reliability job stops during test collection/filtering, so that checkpoint
-  is **verified locally, not validated**.
+- normal CI run
+  [30181287022](https://github.com/SceneAPI/SceneIO/actions/runs/30181287022)
+  passes 2,914 tests with nine documented platform/oracle skips, the retained
+  50-codec performance guard, pinned GCC 10, and the Linux/Windows/macOS
+  focused matrix;
+- compiler-instrumented run
+  [30181287161](https://github.com/SceneAPI/SceneIO/actions/runs/30181287161)
+  collects exactly 2,923 tests and passes its complete and focused native
+  jobs;
+- nonpublishing release run
+  [30181286675](https://github.com/SceneAPI/SceneIO/actions/runs/30181286675)
+  builds and smoke-tests all three platform wheel sets plus the source
+  archive. The publish job is skipped;
+- this checkpoint is **validated**. The next active gate is R1 contract and
+  evidence freeze in `next_stage_implementation_checklist.md`.
 
 Status terms are strict:
 
@@ -2030,10 +2040,10 @@ Status terms are strict:
 | Shipped | validated artifacts were published from a matching version tag |
 | Policy-gated | implementation cannot start until the named project decision is recorded |
 
-#### 12.1.1 Immediate closure blockers
+#### 12.1.1 Immediate closure gates — complete at `a5e7fa4`
 
-Do not begin another format implementation until these existing-coverage gates
-are green:
+All five existing-coverage gates below are closed. They remain listed as the
+historical contract that enabled the repository-organization stage:
 
 1. **Linux Y4M inspection:** reproduce and remove the GCC/Linux
    `std::bad_cast` raised by `_inspect_y4m` for mmap input. Prove bytes,
@@ -2054,10 +2064,10 @@ are green:
 5. **CI labels and documentation:** keep workflow names, codec counts, coverage
    tables, benchmark counts, and the public capability snapshot synchronized.
 
-Exit gate: current-head Linux normal CI, Windows/macOS mmap jobs, the
-instrumented native reliability job, local MSVC, Ruff, and `git diff --check`
-all pass without weakening format correctness or payload-relative memory
-proofs.
+Exit evidence: Linux normal CI, the Linux/Windows/macOS focused matrix, the
+compiler-instrumented native jobs, pinned GCC 10, local MSVC, Ruff, and
+`git diff --check` all pass at `a5e7fa4` without weakening format correctness
+or payload-relative memory proofs.
 
 #### 12.1.2 Ordered next implementation queue
 
@@ -2266,8 +2276,8 @@ Verification and validation evidence (2026-07-24):
   directional and mmap/sink memory guard green.
 - Manual memory-safety, format-correctness, and test-soundness review found and
   fixed pre-allocation count validation and hybrid-schema dispatch gaps.
-  Linux sanitizer and Linux/macOS wheel validation remain user-gated remote
-  actions.
+  The dependency-wave compiler-instrumented jobs and three-platform wheel
+  build pass at `a5e7fa4`.
 
 #### B2. PCD — complete locally
 
@@ -2328,8 +2338,8 @@ Verification and validation evidence (2026-07-24):
   fixed overflow-prone worst-case LZF sizing, noncanonical empty organization,
   missing valid overlap-match coverage, and inspection-parser failure gaps.
   The Fable executable was unavailable locally, so the same three lenses were
-  applied manually. Linux sanitizer and Linux/macOS wheel validation remain
-  user-gated remote actions.
+  applied manually. The dependency-wave compiler-instrumented jobs and
+  three-platform wheel build pass at `a5e7fa4`.
 
 #### B3. Small record-backed pose and calibration formats
 
@@ -2401,8 +2411,8 @@ Verification and validation evidence (2026-07-24):
   fixed empty-range null-pointer arithmetic, unchecked claimed quaternion sign
   metadata, and missing hand-derived/malformed differential coverage. The
   Fable executable was unavailable locally, so the same three lenses were
-  applied manually. Linux sanitizer and Linux/macOS wheel validation remain
-  user-gated remote actions.
+  applied manually. The dependency-wave compiler-instrumented jobs and
+  three-platform wheel build pass at `a5e7fa4`.
 
 ##### B3.2 CameraRig + OpenCV/ROS/Kalibr calibration — complete locally
 
@@ -2476,8 +2486,8 @@ Verification and validation evidence (2026-07-24):
   shape disagreement, XYZW absent-transform identity, writer-generated
   overlong lines, shadowable YAML duplicates, silently ignored malformed
   optional matrices, and an XML root/trailing-content gap. Fable remains
-  unavailable locally; Linux sanitizer and Linux/macOS cibuildwheel validation
-  remain user-gated remote actions.
+  unavailable locally; the dependency-wave compiler-instrumented jobs and
+  three-platform wheel build pass at `a5e7fa4`.
 
 ##### B3.3 PoseGraph + g2o — complete locally
 
@@ -2542,8 +2552,8 @@ Verification and validation evidence (2026-07-24):
   fixed a possible empty-buffer null-pointer arithmetic path and a signed-zero
   fidelity hole where numerically symmetric but bitwise-different matrix
   triangles could pass the writer guard. Fable remains unavailable locally;
-  Linux sanitizer and Linux/macOS cibuildwheel validation remain user-gated
-  remote actions.
+  the dependency-wave compiler-instrumented jobs and three-platform wheel
+  build pass at `a5e7fa4`.
 
 #### B4. COLMAP database — complete locally
 
@@ -2603,8 +2613,9 @@ Verification and validation evidence (2026-07-24):
 - Manual three-lens review found and fixed ownerless score arrays, statement
   cleanup on prepare failure, newly-created-file cleanup after rollback,
   literal filename semantics, partial duplicate-row/index/endpoint validation,
-  and UTF-8 filesystem handling. Fable remains unavailable locally; Linux
-  sanitizer and Linux/macOS cibuildwheel validation remain user-gated.
+  and UTF-8 filesystem handling. Fable remains unavailable locally; the
+  dependency-wave compiler-instrumented jobs and three-platform wheel build
+  pass at `a5e7fa4`.
 
 #### B5. Self-contained splat formats
 
@@ -2656,8 +2667,9 @@ Verification and validation evidence (2026-07-24):
 - Manual memory-safety, format-correctness, and test-soundness review found and
   fixed a possible null pointer passed to a zero-length SH append, rejection of
   valid decoded alpha endpoints on rewrite, and finite chunk colors that would
-  overflow float32 SH storage. Fable remains unavailable locally; Linux
-  sanitizer and Linux/macOS cibuildwheel validation remain user-gated.
+  overflow float32 SH storage. Fable remains unavailable locally; the
+  dependency-wave compiler-instrumented jobs and three-platform wheel build
+  pass at `a5e7fa4`.
 
 ##### B5.2 PlayCanvas SOG — complete locally
 
@@ -2702,8 +2714,8 @@ Verification and validation evidence (2026-07-24):
   fixed JSON-number narrowing that caused a one-ULP position mismatch against
   PlayCanvas, attempted replacement of a non-file layer target, and aggregate
   ZIP-size accounting that omitted container overhead. Fable is unavailable
-  locally; Linux sanitizer and Linux/macOS cibuildwheel validation remain
-  user-gated.
+  locally; the dependency-wave compiler-instrumented jobs and three-platform
+  wheel build pass at `a5e7fa4`.
 
 ##### B5.3 KSplat v0.1 — complete locally
 
@@ -2741,8 +2753,9 @@ Verification and validation evidence (2026-07-24):
   and fixed a half-subnormal exponent error, a multi-section partial-range
   underflow with out-of-bounds-read potential, bucket-ID aliasing at exact
   block boundaries and planar extents, and an unsafe float-to-uint64 boundary
-  check. Fable is unavailable locally; Linux sanitizer and Linux/macOS
-  cibuildwheel validation remain user-gated.
+  check. Fable is unavailable locally; the dependency-wave
+  compiler-instrumented jobs and three-platform wheel build pass at
+  `a5e7fa4`.
 
 Wave B exit:
 
@@ -2929,10 +2942,11 @@ After all local commits in a dependency wave are green:
    gh workflow run publish.yml --ref phase0-nanobind-core
    ```
 
-   The manual `publish.yml` run is build-only: its sdist job creates the source
-   artifact first, then the manylinux2014 x86-64, macOS arm64, and Windows
-   amd64 abi3 jobs must build and smoke-test wheels from that exact sdist; it
-   cannot publish.
+   The manual `publish.yml` run is build-only and cannot publish. At the N0
+   checkpoint, its sdist and manylinux2014 x86-64, macOS arm64, and Windows
+   amd64 abi3 wheel jobs build independently from the same commit. Before R6
+   closure, update the workflow so the sdist job creates the source artifact
+   first and every wheel job builds and smoke-tests from that exact sdist.
 5. Require green normal CI, instrumented Linux, minimal-feature, full-feature,
    and cibuildwheel lanes as applicable. Download artifacts and verify wheel
    tags, imports, capabilities, smoke results, and `auditwheel`/`otool`/Windows
@@ -2970,11 +2984,10 @@ user-controlled actions. Then:
    marking the release shipped.
 
 Branch pushes, workflow dispatches, tags, and PyPI publication remain explicit
-user-gated actions. The earlier build-only `publish.yml` run succeeded at
-`daf991ab`, before ImageSequence/Y4M. After the current Linux and instrumented
-blockers are fixed locally, the next remote validation action is to rerun
-normal/instrumented CI and a build-only `publish.yml` matrix at the then-current
-head, not to create a release tag.
+user-gated actions. The build-only `publish.yml` run succeeded at `a5e7fa4`
+after ImageSequence/Y4M and the centralized license inventory, with publication
+skipped. No release tag or PyPI action is part of the repository-organization
+stage.
 
 ### 12.12 Program completion criteria
 

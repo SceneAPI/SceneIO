@@ -25,21 +25,24 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > formats on
 > `phase0-nanobind-core` and are not released yet.
 >
-> **Latest tested code checkpoint (2026-07-25, `d52c1e0`):** the live registry contains
+> **Latest tested code checkpoint (2026-07-25, `a5e7fa4`):** the live registry contains
 > 50 available codecs. Every codec reports read, write, inspect, streaming read,
 > and streaming write support; 28 advertise a bounded partial selector. Local
-> MSVC validation passes 2,912 tests with 4 documented skips, the 50-codec
-> benchmark guard, sdist/wheel rebuild, and a NumPy-only installed-wheel smoke.
-> The Windows and macOS mmap jobs in [CI run 30167201539][current-ci] pass.
-> Linux normal CI fails six cases: three Y4M inspection `std::bad_cast`
-> failures, one SQLite lock expectation, and two absolute RSS bounds. The
-> [instrumented run 30167201579][current-instrumented] fails because its
-> dependency filtering removes an unconditionally imported oracle; its
-> focused leak check reports only process-lifetime CPython/pydantic-core
-> allocations. These are active N0 blockers, not pending remote work.
+> MSVC validation passes 2,919 tests with 4 documented skips, the 50-codec
+> benchmark guard, source/wheel rebuild, and a NumPy-only installed-wheel
+> smoke. [Normal CI run 30181287022][current-ci] passes the full Linux suite,
+> retained performance guard, pinned GCC 10 job, and Linux/Windows/macOS
+> portability matrix. [Compiler-instrumented run
+> 30181287161][current-instrumented] collects all 2,923 tests and passes its
+> complete and focused native jobs. [Release dry run
+> 30181286675][current-release] builds and smoke-tests all three platform wheel
+> sets plus the source archive with publication skipped. N0 is validated at
+> this immutable implementation commit; repository organization and measured
+> backend qualification are next.
 
-[current-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30167201539
-[current-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30167201579
+[current-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287022
+[current-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287161
+[current-release]: https://github.com/SceneAPI/SceneIO/actions/runs/30181286675
 
 ## Data structures (memory Records)
 
@@ -149,7 +152,7 @@ statically linked into `_core`.
 | `ros_camera_info` | `CameraRig` | R+W | **PyYAML** + ROS CameraInfo schema | exact K/D/R/P, distortion model, binning, ROI, and rectify flag |
 | `kalibr` | `CameraRig` | R+W | **PyYAML** + Kalibr schema | pinhole/omni intrinsics, distortion, topics, camera-chain or IMU extrinsics, and camera↔IMU time offsets |
 | `g2o` | `PoseGraph` | R+W | independent strict parser + g2o BSD-3 source semantics | `VERTEX_SE3:QUAT`, `EDGE_SE3:QUAT`, `FIX`; XYZW; exact upper-triangle information; unsupported mixed types/parameters reject |
-| `colmap_db` | `ColmapDatabase` (`FeatureSet` + `MatchGraph`) | R+W | stdlib **sqlite3** + **pycolmap 4.1.1** | current six-table cameras/images/features/matches/two-view geometry subset; exact pair ids and absent/empty BLOB state; transactional writes; one-image/one-pair selectors |
+| `colmap_db` | `ColmapDatabase` (`FeatureSet` + `MatchGraph`) | R+W | stdlib **sqlite3** + **pycolmap 4.1.1** | current six-table cameras/images/features/matches/two-view geometry subset; exact pair ids and absent/empty BLOB state; transactional writes; WAL reads observe the committed snapshot; a genuine rollback-journal exclusive writer raises normalized `FormatError`; one-image/one-pair selectors |
 | `laz` | `PointCloud` | R+W | **laspy 2.7 + lazrs 0.8.1** | pinned LAZperf 3.4.0; standard formats 0–3/6–8; strict LASzip VLR/chunk extents; chunk-aware ranges; seekable streaming sink |
 | `image_sequence` | `ImageSequence` | R+W | independent manifest/PGM fixtures + existing image-codec parity suites | flat image directories; deterministic natural order or strict versioned manifest; lazy owned paths; exact optional timing; heterogeneous frames reject; transactional bounded-copy writer; frame ranges |
 | `y4m` | `ImageSequence` | R+W | independent Python parser/writer + exact golden bytes | original dependency-free YUV4MPEG2 subset; uint8 mono/4:2:0/4:2:2/4:4:4 planar frames, odd dimensions, exact rational timing, mmap, streaming sink, inspect, and frame ranges; no RGB conversion or video-framework dependency |
@@ -167,17 +170,16 @@ Draco-compressed glTF remains policy-gated. Plain glTF/GLB is implemented and
 rejects Draco, meshopt, unknown extensions, and unrepresented scene features
 rather than silently flattening or dropping them.
 
-### 🟡 In progress — Phase 7 (hardening)
+### 🟡 In progress — Phase 7 (reliability and performance)
 ✅ mmap-backed reads for all buffer-backed file codecs plus paired OBJ/MTL and
 glTF/external-buffer mappings (SOG additionally supports an unbundled native
 multi-file path; COLMAP DB and the two COLMAP directory codecs read paths
 directly in native code) · ✅
 zero-copy read-only mapped
 ndarray views for native NPY/FLO payloads (PFM row-flips into owned storage) · ✅ bytes/mmap differential +
-scheduled 100-case backing-store mutation sweep · 🟡 instrumented native
-reliability workflow exists, but the current Linux job is blocked by test
-environment collection/leak-filter issues before it can establish a green
-core result · ⬜ randomized oracle-triangulated
+three-case push backing-store mutation sweep, with a 100-case default-branch
+schedule retained · ✅ compiler-instrumented native reliability workflow passes
+its complete and focused jobs at `a5e7fa4` · ⬜ randomized oracle-triangulated
 fuzzing · ✅ direct file-sink writes · ✅ bounded measured-path workers
 (XYZ/LAS/LAZ/EXR/PNG16/WebP lossless) · ✅ partial/lazy reads (`inspect` covers all
 50; bounded pixel/point/face/mesh/primitive/state/frame/COLMAP-image/COLMAP-pair/tensor
@@ -190,7 +192,7 @@ expanded 50-codec benchmark/oracles.
 |---|---|---|
 | nanobind + scikit‑build‑core build | ✅ | abi3/cp312, `NB_STATIC` |
 | cibuildwheel release path | ✅ | Linux/macOS/Windows; `publish.yml` |
-| CI parity (oracles in CI) | 🟡 | At `d52c1e0`, Windows/macOS mmap jobs pass; Linux normal CI has six unresolved portability failures and the instrumented lane fails during oracle-dependent collection before useful full-suite native coverage |
+| CI parity (oracles in CI) | ✅ | At `a5e7fa4`, normal Linux CI passes 2,914 tests with nine documented platform/oracle skips, the 50-codec performance guard, pinned GCC 10 portability, and the three-OS focused matrix |
 | Codec registry + `read`/`write`/`inspect`/`read_partial`/`detect` | ✅ | inspection covers all 50; bounded partial hooks are capability-specific |
 | Repo-maintained stable codec adapters | ✅ | all 50 production adapters, grammars, convention guards, inspectors, partial capability policies/available paths, and sinks live in `src/cpp` / `src/sceneio`; separately installed implementations and executables are test/reference oracles only |
 | Offline native-source closure | 🟡 | lodepng, stb, tinyexr, SQLite, tinyobjloader, and cgltf are stored in-tree; miniz, nlohmann/json, zstd, fast_float, LAZperf, and libwebp still use pinned CMake `FetchContent` and must move under `src/cpp/third_party/` before the post-0.2 tier is called stable |
@@ -202,7 +204,7 @@ expanded 50-codec benchmark/oracles.
 | Feature‑flagged optional C libs (`SCENEIO_WITH_*`) | ⬜ | planned for HDF5, TIFF, E57, Arrow, USD, and OpenVDB; LAZ instead uses pinned, statically built LAZperf in the default tier |
 | mmap / streaming sources | ✅ | mmap reads + raw NPY/FLO views + direct file-sink writes complete |
 | Bounded intra-file workers | ✅ | measured O4 paths; deterministic one-vs-many lane tests |
-| Instrumented + mmap differential CI | 🟡 | workflow is present; the latest instrumented Linux job stops during collection because its helper removes the unconditionally imported pycolmap oracle, and leak filtering also reports 376 bytes from CPython/pydantic rather than SceneIO frames |
+| Instrumented + mmap differential CI | ✅ | at `a5e7fa4`, exact 2,923-test collection, complete compiler-instrumented suite, focused native lifetime controls, and the three-case push backing-store sweep pass; the retained default-branch schedule raises that sweep to 100 cases |
 | Capability flags (`reads/writes/inspect/partial/streams/lossy/needs_dep`) | ✅ | frozen metadata through `sceneio.capabilities()`; snapshot below is CI-validated |
 | `splat` / `posed_views` DataTypes in the vocabulary | ⬜ | **Phase‑C** (wire identity; cross‑repo) |
 

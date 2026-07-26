@@ -12,6 +12,13 @@ documentation checklist is
 
 ## Current checkpoint
 
+N0 closes at validated implementation commit `a5e7fa4`: local MSVC, normal
+Linux CI, pinned GCC 10, the Linux/Windows/macOS focused matrix, the complete
+and focused compiler-instrumented native jobs, the 50-codec performance guard,
+and the nonpublishing three-platform wheel/source build all pass. R1 contract
+and evidence freeze is the next active unit; no new format starts while R1-R6
+remain open.
+
 The codec-per-file C++ layer remains reasonably isolated, but orchestration and
 verification have accumulated in a few large modules:
 

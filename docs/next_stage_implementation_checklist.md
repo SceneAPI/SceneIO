@@ -1,18 +1,14 @@
 # Next-stage implementation checklist
 
-Status: reviewed by three independent agents. N0.1-N0.3 are implemented and
-committed on `phase0-nanobind-core`; their same-commit hosted validation is
-still pending. N0.4 is committed as `0a2db6e` and passes the local MSVC,
-reduced-oracle instrumented GCC 10, and focused allocation-lifetime checks
-described below. Its direct LAZ arithmetic proof passes under the pinned GCC
-10 toolchain and the three-agent memory/lifetime, format/correctness, and
-test/benchmark reviews are clear. The pushed N0.5 snapshot `c759f3c` passed
-normal CI and the three-platform wheel-build dry run. Its compiler-instrumented
-full suite exposed one valid full-range LAZ coordinate transition still
-expressed as signed arithmetic in pinned LAZperf. The reviewed follow-up in
-this change passes complete MSVC, GCC 10, focused instrumented GCC 13, direct
-native arithmetic, and LAZ benchmark checks. Its same-commit hosted reruns
-remain. R1-R6 have not started.
+Status: N0.1-N0.5 are implemented and validated at immutable implementation
+commit `a5e7fa4` on `phase0-nanobind-core`. Normal CI passes the complete
+suite, retained 50-codec performance guard, pinned GCC 10 job, and
+Ubuntu/Windows/macOS portability matrix. The nonpublishing release dry run
+builds and smoke-tests the source archive and all three platform wheel sets.
+The compiler-instrumented workflow passes twice with its complete 2,923-test
+collection and focused native lifetime checks. Three independent memory/lifetime,
+format/correctness, and test/benchmark reviews are clear. R1-R6 have not
+started.
 
 This is the operational checklist for the repository-organization and
 codec-performance stage defined in
@@ -156,10 +152,10 @@ Testing and verification:
 
 Validation and documentation:
 
-- [ ] Rebuild and run the focused test on MSVC, GCC 10, and AppleClang.
+- [x] Rebuild and run the focused test on MSVC, GCC 10, and AppleClang.
 - [x] Record the root cause and platform evidence in the commit message and
       the N0 completion section of this document.
-- [ ] Update `format_coverage.md` only after the normal Linux lane passes.
+- [x] Update `format_coverage.md` only after the normal Linux lane passes.
 
 Exit:
 
@@ -176,8 +172,8 @@ Local completion evidence (committed as `0534266`):
 - The regression covers bytes, read-only memoryview, read-only NumPy `uint8`,
   and read-only mmap inputs against independently constructed expected
   metadata.
-- Focused GCC 10.2 and MSVC tests pass. AppleClang/current hosted-Linux
-  validation remains part of the N0 exit workflow.
+- Focused GCC 10.2 and MSVC tests pass. The hosted Linux and AppleClang
+  portability jobs pass at `a5e7fa4`.
 
 ### N0.2 — portable COLMAP SQLite lock contract
 
@@ -186,7 +182,7 @@ Implementation:
 - [x] State the intended contract before changing the test: read-only SceneIO
       operations either observe a consistent committed snapshot or raise a
       normalized `FormatError` for an actual conflicting lock.
-- [ ] Characterize rollback-journal and WAL behavior with stdlib `sqlite3` on
+- [x] Characterize rollback-journal and WAL behavior with stdlib `sqlite3` on
       Windows, Linux, and macOS.
 - [x] Replace the unqualified `BEGIN EXCLUSIVE` expectation with a fixture
       that establishes the journal/locking mode and performs the operation
@@ -208,11 +204,11 @@ Testing and verification:
 
 Validation and documentation:
 
-- [ ] Focused COLMAP DB suite passes on all three operating systems.
+- [x] Focused COLMAP DB suite passes on all three operating systems.
 - [x] Add Y4M inspection, COLMAP DB lock semantics, and paired RSS controls to
       a focused Windows/Linux/macOS portability matrix; the current
       Windows/macOS mmap job does not collect the complete codec suites.
-- [ ] Document the portable lock contract beside the test and in the COLMAP DB
+- [x] Document the portable lock contract beside the test and in the COLMAP DB
       format notes.
 
 Exit:
@@ -230,8 +226,9 @@ Local completion evidence (committed as `a09917a`):
   the database fingerprint and decoded values match after release.
 - Optional pycolmap oracle imports are isolated to their two oracle tests, so
   stdlib/native coverage remains collected in minimal environments.
-- MSVC passes the full suite. The exact pinned manylinux2014 job passes the
-  focused Y4M and COLMAP DB suites; hosted macOS validation remains pending.
+- MSVC passes the full suite. The exact pinned manylinux2014 job and hosted
+  Linux, Windows, and macOS portability jobs pass the focused Y4M and COLMAP
+  DB suites at `a5e7fa4`.
 
 ### N0.3 — payload-relative COLMAP RSS assertions
 
@@ -260,7 +257,7 @@ Testing and verification:
 
 Validation and documentation:
 
-- [ ] Run the focused RSS tests on Windows, Linux, and macOS runners.
+- [x] Run the focused RSS tests on Windows, Linux, and macOS runners.
 - [x] Record the measurement method and accepted relationship in
       `bench/BASELINE.md`; do not publish one machine's absolute RSS as a
       universal bound.
@@ -288,7 +285,7 @@ Implementation evidence in progress:
   contract.
 - The clean pinned manylinux2014 GCC 10.2 source build passes 87 focused tests
   with two expected absent-pycolmap oracle skips. The hosted three-OS
-  portability matrix remains the final N0.3 validation gate.
+  portability matrix passes at `a5e7fa4`.
 
 ### N0.4 — instrumented native-reliability lane
 
@@ -333,16 +330,16 @@ Testing and verification:
 
 Validation and documentation:
 
-- [ ] The instrumented workflow passes twice: one push run and one explicit
+- [x] The instrumented workflow passes twice: one push run and one explicit
       rerun or scheduled-equivalent run.
 - [x] Record collected/passed/skipped counts and the exact minimal dependency
       set.
-- [ ] Update the CI status rows in `format_coverage.md`,
+- [x] Update the CI status rows in `format_coverage.md`,
       `coverage_roadmap.md`, and `io_optimization_plan.md`.
 
 Exit:
 
-- [ ] Normal Linux, instrumented Linux, Windows mmap, and macOS mmap jobs are
+- [x] Normal Linux, instrumented Linux, Windows mmap, and macOS mmap jobs are
       all green at the same commit.
 
 Local implementation evidence (committed as `0a2db6e`):
@@ -402,8 +399,8 @@ Local implementation evidence (committed as `0a2db6e`):
 - The exact option-off MSVC worktree collects 2,923 tests and passes 2,919
   with four documented skips. Ruff, workflow YAML parsing, installed-source
   wheel smoke, and `git diff --check` pass.
-- No remote workflow has run at `0a2db6e`. Coverage status documents and N0
-  exit boxes therefore remain unchanged.
+- The first complete hosted workflow execution at follow-up commit `a5e7fa4`
+  passes. The exact run and repeat evidence is recorded under N0.5.
 
 ### N0.5 — closure regression and evidence commit
 
@@ -417,9 +414,9 @@ Local implementation evidence (committed as `0a2db6e`):
 - [x] With explicit user authorization, push the candidate commit and require
       normal Linux, instrumented Linux, and the focused three-OS portability
       matrix at that exact SHA.
-- [ ] Fix remote failures in follow-up commits and repeat; do not rewrite a
+- [x] Fix remote failures in follow-up commits and repeat; do not rewrite a
       pushed validation SHA.
-- [ ] Mark N0 complete and update the latest tested checkpoint/workflow links
+- [x] Mark N0 complete and update the latest tested checkpoint/workflow links
       only after all required jobs are green at one exact commit.
 
 Candidate and follow-up evidence:
@@ -479,8 +476,30 @@ Candidate and follow-up evidence:
   ordinary checkpoint. Inspection remained 1,091x faster than full read,
   partial read remained 3.24x faster, and bytes/sink writes both measured
   63 MB/s with the expected allocation reduction.
-- The reviewed follow-up in this change has not run remotely. The remote-fix
-  and N0 exit boxes remain open.
+- The exact follow-up source archive is 3,997,331 bytes with SHA-256
+  `c4e0491aee633944adc15130fbf53d1ad4f674a559d00de0c30120bb00d9406e`.
+  Its Windows cp312-abi3 wheel is 2,155,107 bytes with SHA-256
+  `372ff25738d89e3d1599c4a81895578540bdcf321b3538d9e5d8b08aa12eec3b`.
+  A fresh Python 3.12 environment resolved only SceneIO 0.2.0 and NumPy 2.5.1,
+  and `sceneio._wheel_smoke` returned 2.
+- At immutable implementation commit `a5e7fa4`,
+  [normal CI run 30181287022](https://github.com/SceneAPI/SceneIO/actions/runs/30181287022)
+  passes 2,914 tests with nine documented platform/oracle skips, the retained
+  50-codec performance guard, the pinned GCC 10 job, and the Linux, Windows,
+  and macOS portability matrix. The hosted LAZ row retains zero traced
+  whole-input/whole-output allocation on the mmap and sink paths; its
+  inspection and partial selectors remain faster than full decode.
+- The
+  [nonpublishing release dry run 30181286675](https://github.com/SceneAPI/SceneIO/actions/runs/30181286675)
+  builds and smoke-tests Linux, macOS, and Windows wheel sets plus the source
+  archive. Its PyPI job is skipped, as required.
+- The first execution of
+  [compiler-instrumented run 30181287161](https://github.com/SceneAPI/SceneIO/actions/runs/30181287161)
+  collects exactly 2,923 tests and passes 2,894 with 29 documented skips.
+  Its focused native lifetime job also passes. Explicit attempt 2 at the same
+  immutable commit repeats the exact 2,923-test collection, 2,894 passes and
+  29 documented skips, and the focused native lifetime pass. N0 is closed;
+  R1 contract and evidence freeze is next.
 
 ## 5. R1 — freeze contracts and evidence
 
@@ -1012,7 +1031,7 @@ Local exit:
 
 Remote validation checkpoints, only after explicit user authorization:
 
-- [ ] At N0, push the reviewed candidate and require green normal,
+- [x] At N0, push the reviewed candidate and require green normal,
       instrumented, and focused three-OS portability workflows at the exact
       SHA.
 - [ ] At each backend selection in R5, dispatch a nonpublishing old/new A/B
