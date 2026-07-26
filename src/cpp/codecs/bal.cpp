@@ -228,6 +228,11 @@ void canonicalize_quaternion(double quaternion[4]) {
     if (negate)
         for (size_t index = 0; index < 4; ++index)
             quaternion[index] = -quaternion[index];
+    // A zero component has no quaternion sign information. Normalize signed
+    // zero so equivalent matrix conversions produce the same record bytes
+    // across libm/compiler implementations.
+    for (size_t index = 0; index < 4; ++index)
+        if (quaternion[index] == 0.0) quaternion[index] = 0.0;
 }
 
 void matrix_to_quat(const double matrix[9], double quaternion[4]) {

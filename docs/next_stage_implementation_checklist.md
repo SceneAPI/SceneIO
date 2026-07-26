@@ -2108,8 +2108,15 @@ The reviewed exact tree has 321 tracked files, a 322-file source archive with
 only generated `PKG-INFO`, and a 79-member wheel. Changed runtime files match
 byte-for-byte, the NumPy-only installed-wheel smoke exercises all 12 members,
 and all three independent reviews are clear after resolving one stale
-checklist-status finding. Commit/push and hosted runs remain before this
-checkpoint closes.
+checklist-status finding. The registry extraction is pushed at `be836a0`.
+Hosted normal run `30216568265` then exposed two platform-only follow-ups:
+AppleClang retained `-0.0` in BAL's canonical 180-degree quaternion where the
+contract requires `+0.0`, and the GCC-10 command changed to `/tmp` without
+keeping `/work` importable. The BAL repair normalizes only exact-zero
+quaternion components after sign selection; the workflow invocation repair is
+a separate unit. Exact package, reviews, and hosted runs must be repeated for
+the repaired native binary before this checkpoint closes. Compiler-instrumented
+run `30216568311` passes at `be836a0`.
 
 Final evidence and documentation closure:
 
@@ -2120,20 +2127,20 @@ Final evidence and documentation closure:
       no speedup for this mechanical extraction.
 - [x] Run 15 interleaved parent/candidate import samples. Treat exact module
       sets as the contract and timings as diagnostic evidence.
-- [x] Freeze a zero-unstaged staged tree, export it with
+- [ ] Freeze a zero-unstaged staged tree, export it with
       `core.autocrlf=false`, build the source archive from that tree, and build
       the wheel only from the exact archive. Compare every staged blob and all
       changed packaged runtime files byte-for-byte across Git, archive, and
       wheel.
-- [x] Measure the final inventory rather than forcing an estimate. If the only
+- [ ] Measure the final inventory rather than forcing an estimate. If the only
       additions are the two runtime modules, one contract and one architecture
       test, the expected shape is 321 tracked files, 322 source-archive files
       including generated `PKG-INFO`, and 79 wheel members.
-- [x] Verify 15 license/attribution members, one native extension, no packaged
+- [ ] Verify 15 license/attribution members, one native extension, no packaged
       build/include/lib/share/bin layout, NumPy as the sole unconditional
       dependency, and unchanged native dependencies. Add no FFmpeg/libav code,
       linkage, subprocess path, runtime member, or attribution.
-- [x] Install the exact wheel outside the repository with only NumPy and run
+- [ ] Install the exact wheel outside the repository with only NumPy and run
       `_wheel_smoke` plus the all-12 detection/explicit-format, inspect, read,
       partial, retained-result, and path-release probes.
 - [ ] After both implementation commits are independently reviewed and hosted

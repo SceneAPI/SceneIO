@@ -190,10 +190,18 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > warm-cache evidence. Fifteen interleaved exact-export import samples retain
 > the seven-module `sceneio` and eight-module direct `_core` sets; the I/O
 > facade adds only `_registry.families.reconstruction` (42 to 43 modules).
-> The exact-tree source archive, derived wheel, and external NumPy-only smoke
-> pass with all 12 family members exercised, and all three independent reviews
-> are clear. Commit/push and hosted validation remain before this registry
-> checkpoint is closed.
+> The original exact-tree source archive, derived wheel, and external
+> NumPy-only smoke pass with all 12 family members exercised, and all three
+> independent reviews are clear. The extraction is pushed at `be836a0`, but
+> [normal run 30216568265][r2-reconstruction-registry-ci] exposed AppleClang
+> retaining `-0.0` in BAL's canonical 180-degree quaternion and the GCC-10
+> command omitting `/work` from its import path after changing directory. The
+> BAL repair normalizes only exact-zero quaternion components after sign
+> selection; the workflow invocation repair follows separately. Exact-tree
+> packaging, reviews, and hosted validation must be repeated for the repaired
+> native binary before this registry checkpoint is closed.
+> [Compiler-instrumented run
+> 30216568311][r2-reconstruction-registry-instrumented] passes at `be836a0`.
 
 [current-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287022
 [current-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287161
@@ -221,6 +229,8 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 [r2-points-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30210055930
 [r2-reconstruction-inspector-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30214058828
 [r2-reconstruction-inspector-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30214058885
+[r2-reconstruction-registry-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30216568265
+[r2-reconstruction-registry-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30216568311
 
 ## Data structures (memory Records)
 

@@ -175,8 +175,13 @@ record contracts remain exact. The expanded architecture suite passes 70
 tests, the family matrix passes 506 tests with two documented skips, and the
   complete local suite passes 3,252 with four documented skips. Both benchmark
   projections and the strict five-run guard pass. Exact-tree packaging,
-  external NumPy-only smoke, and three independent reviews pass; commit/push
-  and hosted validation remain before the registry checkpoint closes.
+  external NumPy-only smoke, and three independent reviews pass for the
+  extraction committed at `be836a0`. Its first hosted normal run exposed
+  AppleClang preserving a negative-zero BAL quaternion component and the
+  GCC-10 command dropping the repository root from its import path after
+  changing directory. The BAL exact-zero canonicalization and separate
+  workflow invocation repair must repeat package/review/hosted gates before
+  the registry checkpoint closes.
   Exact-export import sampling retains the seven-module `sceneio` and
   eight-module direct `_core` sets; the I/O facade's only added module is
   `_registry.families.reconstruction`. Splats remain the last R2 family.

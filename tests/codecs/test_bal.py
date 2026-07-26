@@ -304,6 +304,8 @@ def test_zero_and_pi_angle_axis_branches():
     cameras[1, :3] = [np.pi, 0, 0]
     encoded = oracle_write(cameras, POINTS, OBSERVATIONS)
     record = _core.read_bal(encoded)
+    zero_components = np.asarray(record.quaternions) == 0.0
+    assert not np.signbit(np.asarray(record.quaternions)[zero_components]).any()
     for index in range(2):
         np.testing.assert_allclose(
             quaternion_to_matrix(record.quaternions[index]),

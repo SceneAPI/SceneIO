@@ -1373,3 +1373,17 @@ native extension, NumPy as its sole unconditional dependency, and the same
 native dependency list as the parent. An external NumPy-only installed-wheel
 run exercises every reconstruction family member and completes the packaged
 smoke.
+
+The first hosted normal run at extraction commit `be836a0` found an
+AppleClang-only byte spelling in BAL's canonical 180-degree quaternion:
+`[-0.0, 1.0, 0.0, 0.0]` instead of `[0.0, 1.0, 0.0, 0.0]`. The nonzero
+components and represented rotation are identical. The repair normalizes only
+exact-zero quaternion components after canonical sign selection. Benchmark
+structure, the retained guard, and exact-tree package evidence are rerun
+before closing the checkpoint; no speed claim is attached to this
+deterministic-output correction.
+
+The repaired candidate reproduces the portable all-50 structural SHA-256
+`2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`,
+and the default-scale five-run throughput/allocation guard passes. The
+zero-component store has no measurable BAL regression.
