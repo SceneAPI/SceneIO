@@ -8,7 +8,7 @@ id = "pfm"
 benchmark_case = "pfm"
 source_suite = "tests/codecs/test_pfm.py"
 documentation_row = "docs/format_coverage.md"
-inspection_source = "src/sceneio/io/_inspection.py"
+inspection_source = "src/sceneio/io/_inspectors/arrays.py"
 wheel_smoke_case = "_pfm_and_typed_depth"
 
 [[codec]]
@@ -208,7 +208,7 @@ id = "npy"
 benchmark_case = "npy"
 source_suite = "tests/codecs/test_npy_npz.py"
 documentation_row = "docs/format_coverage.md"
-inspection_source = "src/sceneio/io/_inspection.py"
+inspection_source = "src/sceneio/io/_inspectors/arrays.py"
 wheel_smoke_exemption = "not yet included in the packaged representative smoke; covered by the source parity suite"
 
 [[codec]]
@@ -216,7 +216,7 @@ id = "npz"
 benchmark_case = "npz"
 source_suite = "tests/codecs/test_npy_npz.py"
 documentation_row = "docs/format_coverage.md"
-inspection_source = "src/sceneio/io/_inspection.py"
+inspection_source = "src/sceneio/io/_inspectors/arrays.py"
 wheel_smoke_exemption = "not yet included in the packaged representative smoke; covered by the source parity suite"
 
 [[codec]]
@@ -224,7 +224,7 @@ id = "safetensors"
 benchmark_case = "safetensors"
 source_suite = "tests/codecs/test_safetensors.py"
 documentation_row = "docs/format_coverage.md"
-inspection_source = "src/sceneio/io/_inspection.py"
+inspection_source = "src/sceneio/io/_inspectors/arrays.py"
 wheel_smoke_case = "_mapped_safetensors"
 
 [[codec]]
@@ -354,7 +354,7 @@ id = "flo"
 benchmark_case = "flo"
 source_suite = "tests/codecs/test_flo.py"
 documentation_row = "docs/format_coverage.md"
-inspection_source = "src/sceneio/io/_inspection.py"
+inspection_source = "src/sceneio/io/_inspectors/arrays.py"
 wheel_smoke_case = "_point_depth_and_flow"
 
 [[codec]]
@@ -362,7 +362,7 @@ id = "dmb"
 benchmark_case = "dmb"
 source_suite = "tests/codecs/test_dmb.py"
 documentation_row = "docs/format_coverage.md"
-inspection_source = "src/sceneio/io/_inspection.py"
+inspection_source = "src/sceneio/io/_inspectors/arrays.py"
 wheel_smoke_case = "_point_depth_and_flow"
 
 [[codec]]

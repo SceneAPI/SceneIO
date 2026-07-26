@@ -466,6 +466,85 @@ def test_selected_tensors_and_leading_axis_slices(tmp_path):
 
 
 @pytest.mark.parametrize(
+    ("kwargs", "expected"),
+    [
+        (
+            {"tensors": ("x",)},
+            np.arange(60, dtype=np.float32).reshape(10, 6),
+        ),
+        (
+            {"slices": {"x": (2, 8)}},
+            np.arange(60, dtype=np.float32).reshape(10, 6)[2:8],
+        ),
+    ],
+    ids=("tensors", "slices"),
+)
+def test_selected_view_outlives_record_and_releases_path(
+    tmp_path,
+    kwargs,
+    expected,
+):
+    path = tmp_path / "selected-lifetime.safetensors"
+    path.write_bytes(
+        oracle_save(
+            {
+                "x": np.arange(60, dtype=np.float32).reshape(10, 6),
+                "other": np.arange(7, dtype=np.int16),
+            }
+        )
+    )
+
+    record = sceneio.read_partial(path, **kwargs)
+    array = record["x"]
+    derived = array[1:-1]
+    assert type(array).__name__ == "_MappedArray"
+    assert type(array.base).__name__ == "_PinnedBuffer"
+    assert not array.flags.writeable
+    with pytest.raises(ValueError):
+        derived.flat[0] = 99
+    with pytest.raises(ValueError):
+        derived.setflags(write=True)
+
+    del record, array
+    gc.collect()
+    np.testing.assert_array_equal(derived, expected[1:-1])
+    if sys.platform == "win32":
+        with pytest.raises(PermissionError):
+            path.unlink()
+
+    del derived
+    gc.collect()
+    path.unlink()
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"tensors": ("missing",)},
+        {"slices": {"x": (0, 99)}},
+    ],
+    ids=("tensors", "slices"),
+)
+def test_invalid_selected_read_releases_mapping_while_exception_is_retained(
+    tmp_path,
+    kwargs,
+):
+    path = tmp_path / "selected-error.safetensors"
+    path.write_bytes(
+        oracle_save({"x": np.arange(12, dtype=np.float32).reshape(3, 4)})
+    )
+    caught = None
+    try:
+        sceneio.read_partial(path, **kwargs)
+    except sceneio.FormatError as exc:
+        caught = exc
+    assert caught is not None
+    assert caught.__cause__ is not None
+    gc.collect()
+    path.unlink()
+
+
+@pytest.mark.parametrize(
     ("kwargs", "error", "message"),
     [
         ({"tensors": ()}, ValueError, "at least one"),

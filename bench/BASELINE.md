@@ -1224,3 +1224,31 @@ module, `sceneio.io._registry.assembly`; the other two import boundaries have
 no module-set delta. These timings are local diagnostic evidence. The durable
 contracts are the exact module sets, the existing broad alert thresholds, and
 the same-host relative comparison.
+
+## R2 arrays-family structural equivalence — 2026-07-26
+
+The arrays extraction is an organization-only move for PFM, NPY, NPZ,
+safetensors, FLO, and DMB. Two parent captures at exact commit `6086315` and
+the working candidate use the same small all-codec command as the aggregate
+unit. The candidate reproduces both the portable 50-row projection SHA-256
+`2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`
+and the six-array-row projection SHA-256
+`5c0104dc8a0372ede12a86f48c8c57a7426718b030c95ec9d7088a9b26364aac`.
+This unit claims no codec speedup: encoded sizes, stable schema, traced-memory
+fields, mmap/sink relationships, inspection results, and partial-read
+surfaces remain exact.
+
+The default-scale five-run invocation with all retained O4/O5 requirements
+completed successfully and reported stable O4 gains plus mmap/sink memory
+bounds. Its JSON remains separate from the small-fixture structural
+projection because generated payload sizes intentionally differ.
+
+Fifteen interleaved Windows samples compared extracted parent and candidate
+source trees while using the same compiled module. Candidate/parent medians
+were 19.797/19.889 ms for `import sceneio`, 97.138/96.928 ms for the I/O
+facade, and 22.042/22.218 ms for direct `_core`. Only the I/O facade changes
+its eager module set, adding exactly `_registry.families.arrays` and
+`_inspectors.arrays`; counts move from 37 to 39. The other two module sets are
+unchanged. Timing remains same-host diagnostic evidence; exact module sets,
+parent-derived behavior contracts, and the structural hashes are the durable
+acceptance evidence.

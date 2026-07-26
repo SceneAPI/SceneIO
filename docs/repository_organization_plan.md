@@ -89,8 +89,9 @@ with four documented skips; exact source-to-wheel validation, retained
 all-codec guards, three independent reviews, normal CI run 30200316679, and
 compiler-instrumented run 30200316665 pass.
 
-The active R2 candidate implements the aggregate staging boundary needed by
-the four remaining interleaved families. The lower
+The aggregate staging boundary is complete at `1ec0550`, with its portable
+benchmark-structure follow-up at `6086315`. It supports the four remaining
+interleaved families. The lower
 `_registry/assembly.py` collector validates single definitions and complete
 family tuples without importing the facade or mutating the public registry.
 The facade stages every built-in, finalizes the exact 50-id canonical tuple,
@@ -102,9 +103,21 @@ their deterministic structure, and the complete local suite passes 3,091
 tests with four documented skips. The exact-tree package preflight contains
 310 source files and a 73-file wheel whose sole runtime-member delta is the
 assembly module; the installed NumPy-only smoke and explicit aggregate/live
-sequence probe pass, and all three reviews are clear. Arrays are the first
-family to move after the post-documentation package repeat and hosted gates
-close this boundary; points, reconstruction, and splats follow.
+sequence probe pass, and all three reviews are clear. Normal CI run
+30204352767 and compiler-instrumented run 30204352744 pass at `6086315`.
+Arrays are now the active first interleaved family; points, reconstruction,
+and splats follow.
+
+The arrays candidate now moves `pfm`, `npy`, `npz`, `safetensors`, `flo`, and
+`dmb` behind a side-effect-free family factory while keeping their six
+non-contiguous canonical positions and exact adapter/native callable
+descriptors. Their metadata parsers live in `_inspectors/arrays.py` behind
+same-signature facade wrappers. The parent-derived valid/malformed contracts,
+bounded large-fixture inspections, exact 50-row benchmark projection, arrays
+projection, five-run retained guard, 3,134-node collection, Ruff, and
+15-sample same-host import comparison pass locally. Packaging, the three
+independent reviews, commit/push, and hosted validation remain the exit gates
+for this active unit.
 
 The codec-per-file C++ layer remains reasonably isolated, but orchestration and
 verification have accumulated in a few large modules:
@@ -113,8 +126,8 @@ verification have accumulated in a few large modules:
 |---|---|---|
 | C++ codecs | 40 files for 50 format ids | flat source list and manual binding declarations |
 | C++ records | 32 source/header files | still manageable; new table/animation/scene records will add pressure |
-| Python registry | `registry.py`, 836 lines; `_registry/assembly.py`, 148 lines; focused `_registry/{model,adapters,detection,native_features}.py` modules; and `_registry/families/{calibration,images,meshes,sequences}.py` definition modules | four built-in families still share the facade until their R2.2 units |
-| Inspection | `_inspection.py`, 1,341 lines, plus `_inspectors/{model,common,calibration,images,meshes,sequences}.py`; `common.py` is 75 lines | four unrelated format families still share the facade; the proven shared model, mmap bridge, metadata bounds, exact-read/integer grammar, and image-result constructor are lower services |
+| Python registry | `registry.py`, 711 lines; `_registry/assembly.py`, 148 lines; focused `_registry/{model,adapters,detection,native_features}.py` modules; and `_registry/families/{arrays,calibration,images,meshes,sequences}.py` definition modules | three built-in families still share the facade until their R2.2 units |
+| Inspection | `_inspection.py`, 1,227 lines, plus `_inspectors/{model,common,arrays,calibration,images,meshes,sequences}.py`; `common.py` is 75 lines | three unrelated format families still share the facade; the proven shared model, mmap bridge, metadata bounds, exact-read/integer grammar, and image-result constructor are lower services |
 | Benchmark | `bench_io.py`, about 4,660 lines | CLI, fixtures, oracles, runners, metrics, and reporting are coupled |
 | Cross-codec tests | `test_io_mmap.py`, about 2,400 lines; `test_io_partial.py`, about 1,100 | reusable codec cases and behavior assertions are difficult to extend independently |
 | Execution plan | `format_gap_implementation_plan.md`, about 2,500 lines | historical evidence and the active queue are easy to confuse |

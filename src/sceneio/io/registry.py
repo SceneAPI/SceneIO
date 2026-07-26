@@ -27,6 +27,7 @@ from sceneio.io._registry.assembly import (
     publish_builtin_definitions as _publish_builtin_definitions,
 )
 from sceneio.io._registry.detection import detect_path as _detect_path
+from sceneio.io._registry.families.arrays import build_array_codecs
 from sceneio.io._registry.families.calibration import CALIBRATION_CODECS
 from sceneio.io._registry.families.images import IMAGE_CODECS
 from sceneio.io._registry.families.meshes import MESH_CODECS
@@ -202,26 +203,10 @@ def _prepare_tensor_dict(obj):
 
 
 # --- built-in codecs (the compiled `_core` functions, uniformly wrapped) ---
-_define_builtin(
-    Codec(
-        "pfm",
-        (".pfm",),
-        _mmap_reader(_core.read_pfm),
-        _file_sink_writer(_core.write_pfm, prepare=_canon),
-        record=None,
-        datatype="depth_map",
-        magic=(b"PF", b"Pf"),
-        read_window=_mmap_selector_reader(_core.read_pfm_window),
-        supported_features=(
-            "grayscale",
-            "rgb",
-            "float32",
-            "little_endian",
-            "big_endian",
-            "typed_depth_adapter",
-        ),
-        unsupported_features=("native_positive_stride_mmap_view",),
-    )
+_ARRAY_CODECS = build_array_codecs(_canon, _prepare_tensor_dict)
+_define_builtin_family(
+    "arrays",
+    _ARRAY_CODECS,
 )
 _define_builtin(
     Codec(
@@ -534,75 +519,6 @@ _define_builtin(
         ),
     )
 )
-# Array / tensor + raster-image formats (Tier-1, zero-dep). datatype ids are
-# informational (vocabulary registration is Phase-C, like posed_views).
-_define_builtin(
-    Codec(
-        "npy",
-        (".npy",),
-        _mmap_view_reader(_core.read_npy_view, _core.read_npy),
-        _file_sink_writer(_core.write_npy, prepare=_canon),
-        record=None,
-        datatype="tensor",
-        magic=(b"\x93NUMPY",),
-        supported_features=("v1", "c_order", "native_endian_mmap_view"),
-        unsupported_features=("fortran_order", "object_dtype"),
-    )
-)
-_define_builtin(
-    Codec(
-        "npz",
-        (".npz",),
-        _mmap_reader(_core.read_npz),
-        _file_sink_writer(_core.write_npz, prepare=_prepare_tensor_dict),
-        record=_core.TensorDict,
-        datatype="tensor_dict",
-        supported_features=("stored", "deflate", "numeric_dtypes"),
-        unsupported_features=("object_dtype",),
-    )
-)
-_define_builtin(
-    Codec(
-        "safetensors",
-        (".safetensors",),
-        _mmap_view_reader(
-            _core.read_safetensors_view,
-            _core.read_safetensors,
-        ),
-        _file_sink_writer(
-            _core.write_safetensors,
-            prepare=_prepare_tensor_dict,
-        ),
-        record=_core.TensorDict,
-        datatype="tensor_dict",
-        read_tensors=_mmap_view_reader(
-            _core.read_safetensors_tensors_view,
-            _core.read_safetensors_tensors,
-        ),
-        read_slices=_mmap_view_reader(
-            _core.read_safetensors_slices_view,
-            _core.read_safetensors_slices,
-        ),
-        supported_features=(
-            "metadata",
-            "bool",
-            "signed_integers",
-            "unsigned_integers",
-            "float16",
-            "float32",
-            "float64",
-            "mmap_views",
-            "leading_axis_slices",
-        ),
-        unsupported_features=(
-            "bfloat16",
-            "float8",
-            "complex64",
-            "sub_byte_dtypes",
-            "strided_tensors",
-        ),
-    )
-)
 _define_builtin_family("images", IMAGE_CODECS)
 _IMAGE_FRAME_ACCESS = ImageFrameAccess(
     extensions=_registered_image_extensions,
@@ -707,47 +623,6 @@ _define_builtin(
             "waveform",
             "extra_bytes",
             "vlr_metadata",
-        ),
-    )
-)
-_define_builtin(
-    Codec(
-        "flo",
-        (".flo",),
-        _mmap_view_reader(_core.read_flo_view, _core.read_flo),
-        _file_sink_writer(_core.write_flo, prepare=_canon),
-        record=None,
-        datatype="flow",
-        magic=(b"PIEH",),
-        read_window=_array_window_reader(
-            _mmap_view_reader(_core.read_flo_view, _core.read_flo)
-        ),
-        supported_features=(
-            "float32",
-            "native_endian_mmap_view",
-            "typed_flow_adapter",
-        ),
-    )
-)
-_define_builtin(
-    Codec(
-        "dmb",
-        (".dmb",),
-        _mmap_reader(_core.read_dmb),
-        _file_sink_writer(_core.write_dmb),
-        record=_core.DepthMap,
-        datatype="depth_map",
-        read_window=_mmap_selector_reader(_core.read_dmb_window),
-        supported_features=(
-            "scalar_float32",
-            "little_endian",
-            "zero_invalid",
-            "pixel_windows",
-        ),
-        unsupported_features=(
-            "normal_maps",
-            "confidence",
-            "embedded_scale",
         ),
     )
 )

@@ -112,6 +112,17 @@ sceneio._core (C++ / nanobind)
   grammar and inspection remain in `_image_sequence.py`. Repeated factory
   calls bind fresh directory codecs to their supplied live access objects
   without storing registry state in the family module.
+  Arrays are the fifth extracted family and the first non-contiguous one:
+  `_registry/families/arrays.py` returns the exact PFM, NPY, NPZ,
+  safetensors, FLO, and DMB tuple after receiving the facade-owned `_canon`
+  and `_prepare_tensor_dict` callbacks. Keeping those callbacks in
+  `registry.py` preserves writer callable identity while the aggregate
+  collector restores canonical positions 0/25/26/27/43/44.
+  `_inspectors/arrays.py` owns their metadata-only parsing, including the
+  shared NPY-header parser used by NPZ. `_inspection.py` retains
+  same-signature wrappers, its historical private helper identities, and the
+  unchanged dispatch table. The family module owns no registry state, and
+  neither lower module calls a full decoder during inspection.
   Built-in startup uses `_registry/assembly.py` as a lower staging boundary.
   Individual facade definitions and complete extracted family tuples are
   collected without touching the public registry. After all 50 canonical ids

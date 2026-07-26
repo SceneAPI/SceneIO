@@ -1569,12 +1569,174 @@ Aggregate verification:
       added/removed image-extension visibility through an already-bound
       image-sequence codec; and Y4M plus directory
       write/detect/inspect/read/frame-range behavior.
-- [ ] Obtain the independent platform/package/documentation review against
+- [x] Obtain the independent platform/package/documentation review against
       those exact final artifacts. Any finding that requires a source edit
       invalidates the frozen tree and repeats all affected tests and package
       gates; otherwise make no source edit before commit.
-- [ ] Commit and push only after every local gate is green. Wait for normal
+- [x] Commit and push only after every local gate is green. Wait for normal
       CI and compiler-instrumented validation before moving arrays.
+
+The aggregate boundary is committed as `1ec0550`, with exact commit tree
+`24becc0d8b954a8d21511ae480092cad5818657e`. The final reviewed source
+archive contains 310 files and has SHA-256
+`bac56c42262379b2479c5e26d533366561cd61c5a0e35750aa150798dac87ffb`;
+its 73-file Windows cp312-abi3 wheel has SHA-256
+`3beb3560f7c1a2dc89a9830baabf3cdf512d3bacc2e47d4cbef344e40a069daa`.
+The portable benchmark-structure correction is committed separately as
+`6086315`; it changes no runtime or wheel member. Normal CI run 30204352767
+and compiler-instrumented run 30204352744 pass the exact corrected commit.
+
+### R2 arrays fifth-family unit
+
+Parent behavior is frozen at commit
+`6086315ea877c5e85136e05d47da3fe41f524d5a`, tree
+`01c7425ac2ae1a9e4f36d98f9a15100f0f93a406`. This organization-only unit
+moves the non-contiguous `pfm`, `npy`, `npz`, `safetensors`, `flo`, and `dmb`
+definitions and their metadata inspectors. It changes no encoded bytes,
+decoded values, mapped-view lifetime, selector semantics, or public API.
+
+Arrays implementation:
+
+- [x] Add a side-effect-free `_registry/families/arrays.py` factory whose only
+      inputs are the existing facade-owned `_canon` and
+      `_prepare_tensor_dict` callbacks. Keep those callback definitions and
+      their module/qualified names in `registry.py` so the frozen writer
+      operation descriptors remain byte-for-byte exact.
+- [x] Move the six `Codec(...)` expressions without changing their AST,
+      closure topology, adapter constructor, native target, field value, or
+      relative family order. Build one immutable tuple in manifest order
+      `pfm`, `npy`, `npz`, `safetensors`, `flo`, `dmb`.
+- [x] Stage that complete tuple once through
+      `_define_builtin_family("arrays", ...)`. Remove the six scattered
+      `_define_builtin` blocks and preserve final canonical positions
+      0/25/26/27/43/44 through aggregate finalization; do not install the
+      family as one contiguous public-registry slice.
+- [x] Preserve PFM copy decode/native window; NPY mapped-view/fallback;
+      NPZ copy decode; safetensors full/tensor/slice mapped-view pairs; FLO
+      full mapped view plus its separately constructed nested window reader;
+      DMB copy decode/native window; and all existing sink preparation.
+- [x] Add `_inspectors/arrays.py` for PFM, NPY/NPZ, safetensors, FLO, and DMB.
+      Move `_npy_header` with the NPZ parser, keep SOG ZIP-extent ownership in
+      the facade, use only lower common/model services, and call no full
+      reader or writer.
+- [x] Keep `_inspection.py` dispatch branches and historical wrapper
+      signatures, including a compatible private `_npy_header` delegate.
+      Keep every array-family `Codec.inspect` field `None`.
+- [x] Change no C++, CMake, native symbol, backend, dependency, attribution,
+      public signature, record convention, codec grammar, or payload behavior.
+      Add no FFmpeg/libav source, runtime path, package member, or linkage.
+
+Arrays parent contracts and focused verification:
+
+- [x] Freeze the exact parent commit/tree, 3,095-node collection, six
+      non-contiguous canonical positions, existing global Codec AST hashes,
+      operation descriptors, helper identities, and eager-module sets before
+      implementation.
+- [x] Capture two parent all-codec benchmark runs with
+      `--runs 1 --scale 0.001 --skip-oracles`; both reproduce portable
+      all-codec hash
+      `2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`
+      and arrays-only projection hash
+      `5c0104dc8a0372ede12a86f48c8c57a7426718b030c95ec9d7088a9b26364aac`.
+- [x] Freeze deterministic valid fixture bytes and normalized inspection
+      values plus representative malformed cause type/text for all six
+      formats from the parent, before candidate code exists.
+- [x] Add one checked parent-derived arrays contract and an architecture suite
+      covering exact ids, non-contiguous object identity, definition ASTs,
+      nested callable targets, helper behavior/identity, one family-staging
+      call, family/registry reload, and lower import allowlists.
+- [x] Prove `_canon` preserves native contiguous input, canonicalizes
+      non-contiguous/opposite-endian input, and that tensor preparation keeps
+      exact `TensorDict` identity, mapping order, dtypes, and failure timing.
+- [x] Compare lower and public inspection against the parent contract and full
+      reads. Patch both already-captured registry readers and dynamic native
+      reader attributes so the test cannot pass by intercepting only one
+      decoder reference.
+- [x] Preserve malformed outcomes and deliberate format distinctions:
+      header-only inspection versus full payload validation, FLO trailing-byte
+      acceptance, DMB exact extent, NPZ local/central metadata checks, and
+      safetensors alignment fallback.
+- [x] Exercise PFM gray/RGB and endian metadata; NPY dtype/shape/order cases;
+      NPZ stored/deflate/order cases; safetensors metadata/tensor/slice cases;
+      FLO raw/typed conventions; and DMB typed depth/window behavior.
+- [x] Run mapped-view lifetime, derived-view ownership, readonly/mutation
+      isolation, immediate rename/delete, fallback-copy, retained-exception
+      release, and selector validation-order tests across the applicable
+      NPY/safetensors/FLO paths. Confirm PFM/NPZ/DMB release their mappings
+      after decode.
+- [x] Use byte fingerprints rather than numeric equality for NaN payloads,
+      signed zero, and dtype/order-sensitive cases.
+- [x] Prove bounded metadata inspection on generated large/sparse fixtures,
+      prompt path release, and retained-result validity; keep large fixtures
+      outside Git.
+- [x] Update the six repository inspection-owner rows, exact import contract,
+      aggregate source paths, and measured pytest collection/digest without
+      regenerating any parent expected value from candidate code.
+
+Arrays performance, documentation, package, and validation:
+
+- [x] Compare candidate A/B against both frozen parent captures. Require the
+      exact all-codec and six-row portable structures, exact payload/file
+      sizes, retained mmap/sink/inspect/partial memory relationships, and no
+      claimed speedup for this mechanical move.
+- [x] Run the strict five-run all-codec guard and a large safetensors
+      full/inspect/tensor/slice allocation check. Keep timing and same-host RSS
+      diagnostic.
+- [x] Run the six codec parity suites, typed PFM/FLO suites, depth/flow/tensor
+      record suites, mmap, zero-copy, sink, partial, inspection, detection,
+      capability, compatibility, public E2E, aggregate, import, documentation,
+      complete pytest, and Ruff checks.
+- [x] Measure 15 interleaved same-host parent/candidate imports. Require the
+      only I/O-facade eager-module additions to be
+      `_registry.families.arrays` and `_inspectors.arrays`; `import sceneio`
+      and direct `_core` module sets remain exact.
+- [x] Update current architecture, organization, coverage, benchmark, import,
+      ownership, workflow-count, and active-checklist documentation. Leave
+      historical plans, public API docs, CMake, dependency metadata, and
+      attribution unchanged unless verification finds a factual mismatch.
+- [x] Obtain independent architecture/correctness, test/performance, and
+      platform/package/documentation reviews and resolve every finding.
+- [x] Freeze an exact Git-object tree, build the source archive from it, and
+      build the Windows cp312-abi3 wheel only from that archive. Require the
+      final inventory to distinguish 313 tracked Git files from 314 regular
+      sdist files (the build backend adds `PKG-INFO`), and require the two new
+      runtime modules as the only wheel-member additions (73 to 75), all
+      changed runtime blobs identical across index/archive/wheel, 15
+      attribution files, one native extension, NumPy as the only
+      unconditional dependency, and unchanged native dependencies.
+- [x] In a fresh outside-repository NumPy-only environment, run the complete
+      wheel smoke plus explicit all-six write/detect/inspect/read probes,
+      PFM/DMB/FLO windows, NPY/safetensors mapped lifetime, safetensors
+      tensor/slice selectors, and NPZ name/dtype ordering.
+- [ ] Commit and push only after every local gate and final artifact review is
+      clear. Wait for normal CI and compiler-instrumented validation before
+      moving points.
+
+The three independent reviews are clear after two test-soundness findings and
+one package-evidence wording finding were resolved. Candidate benchmark,
+import, and collection outcomes are no longer re-asserted from
+candidate-authored contract values; the checked arrays contract contains only
+parent-derived expectations, while the CI comparator and strict benchmark
+guard remain the mechanical candidate gates. Safetensors tensor and slice
+selectors now prove readonly mapped-view identity, derived views outliving
+their returned records, Windows path locking through the last live view,
+post-release deletion, and mapping cleanup while invalid-selector exceptions
+remain retained. Package evidence now distinguishes the 313 tracked Git files
+from the generated 314-file sdist.
+
+The post-review package confirmation used staged tree
+`4a5c0a4dab9937138e6fecb36429c3fe3b69d474`: 313 tracked files produce a
+314-file sdist whose only generated member is `PKG-INFO`; every tracked file
+is present byte-identically. The 75-file Windows cp312-abi3 wheel adds only
+`_registry/families/arrays.py` and `_inspectors/arrays.py` relative to the
+aggregate wheel. All four changed runtime files match Git, sdist, and wheel;
+the wheel contains 15 attribution members, one native module, no excluded
+layout, and NumPy as its only unconditional dependency. Its native dependency
+list contains only Python and Windows runtimes. A fresh external environment
+containing only SceneIO and NumPy passes `_wheel_smoke` and the explicit
+all-six codec, window, mapped-lifetime, tensor/slice, and name/order probe.
+The documentation-only checkbox closure is followed by one final exact-tree
+artifact confirmation immediately before commit.
 
 ## 7. R3 — split benchmark and cross-codec tests
 

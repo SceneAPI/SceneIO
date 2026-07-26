@@ -34,6 +34,7 @@ CONTRACT = json.loads(
 )
 CODEC_SOURCE_PATHS = (
     "src/sceneio/io/registry.py",
+    "src/sceneio/io/_registry/families/arrays.py",
     "src/sceneio/io/_registry/families/calibration.py",
     "src/sceneio/io/_registry/families/images.py",
     "src/sceneio/io/_registry/families/meshes.py",
@@ -709,9 +710,14 @@ def test_assembly_dependency_direction_and_import_delta_are_exact():
         text=True,
     )
     modules = json.loads(result.stdout)
-    assert modules.count("sceneio.io._registry.assembly") == 1
+    intentional_additions = {
+        "sceneio.io._inspectors.arrays",
+        "sceneio.io._registry.assembly",
+        "sceneio.io._registry.families.arrays",
+    }
+    assert intentional_additions <= set(modules)
     parent_modules = [
-        name for name in modules if name != "sceneio.io._registry.assembly"
+        name for name in modules if name not in intentional_additions
     ]
     parent_payload = json.dumps(parent_modules, separators=(",", ":"))
     assert len(parent_modules) == CONTRACT["import_parent"]["module_count"]

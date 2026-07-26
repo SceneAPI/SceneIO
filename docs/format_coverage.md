@@ -90,21 +90,43 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > run 30198507638][r2-images-ci] and [compiler-instrumented run
 > 30198507645][r2-images-instrumented] pass for `68c47d6`. [Normal CI run
 > 30200316679][r2-sequences-ci] and [compiler-instrumented run
-> 30200316665][r2-sequences-instrumented] pass for `14bf53b`. The active R2
-> candidate now stages all built-in definitions outside the public registry,
+> 30200316665][r2-sequences-instrumented] pass for `14bf53b`. `1ec0550`
+> stages all built-in definitions outside the public registry,
 > validates the exact canonical aggregate, and publishes the same 50 objects
 > once. Parent/candidate codec-definition and operation-binding contracts are
-> exact, the 50-codec benchmark structure retains hash
-> `6a5e2b9306c7bac322f34722ada090d882001a22165731f19d8c10e86ce69864`,
+> exact, and the portable 50-codec benchmark structure retains hash
+> `2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`,
 > and the complete local MSVC suite collects 3,095 tests and passes 3,091 with
 > four documented skips. The exact-tree package preflight contains 310 source
 > files and a 73-file Windows abi3 wheel whose only runtime-member delta is
 > `_registry/assembly.py`; index/archive/wheel identity, attribution,
 > NumPy-only metadata, native dependency inspection, the complete installed
 > smoke, and an explicit aggregate/sequence probe pass. All three independent
-> reviews are clear. This boundary enables the four remaining interleaved
-> families to move without changing detection order; arrays are next after the
-> post-documentation package repeat and hosted validation close this candidate.
+> reviews are clear. `6086315` corrects the portable structure guard without
+> changing runtime or wheel contents. [Normal CI run
+> 30204352767][r2-aggregate-ci] and [compiler-instrumented run
+> 30204352744][r2-aggregate-instrumented] pass the exact corrected commit,
+> including the strict performance/allocation guard and all portability lanes.
+> The boundary is closed. It enables the four remaining interleaved families
+> to move without changing detection order.
+>
+> **R2 arrays candidate checkpoint (2026-07-26):** the non-contiguous `pfm`,
+> `npy`, `npz`, `safetensors`, `flo`, and `dmb` definitions now come from
+> `_registry/families/arrays.py`, and their metadata parsers now live in
+> `_inspectors/arrays.py`. The registry facade retains its canonicalization
+> callbacks and restores the exact six positions through aggregate staging;
+> codec behavior and the 50-id inventory are unchanged. Parent-derived
+> valid/malformed fixtures, bounded large-file inspection, mapped-view and
+> selector suites, the exact all-codec structural hash
+> `2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`,
+> the arrays-only hash
+> `5c0104dc8a0372ede12a86f48c8c57a7426718b030c95ec9d7088a9b26364aac`,
+> and the retained five-run guard pass locally. The candidate collects 3,134
+> tests. Fifteen interleaved same-host import samples add only
+> `_registry.families.arrays` and `_inspectors.arrays` to the I/O facade;
+> `import sceneio` and direct `_core` module sets are unchanged. Exact-tree
+> packaging, three independent reviews, commit/push, and hosted validation
+> remain before this unit closes; points are next.
 
 [current-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287022
 [current-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287161
@@ -124,6 +146,8 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 [r2-images-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30198507645
 [r2-sequences-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30200316679
 [r2-sequences-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30200316665
+[r2-aggregate-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30204352767
+[r2-aggregate-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30204352744
 
 ## Data structures (memory Records)
 
