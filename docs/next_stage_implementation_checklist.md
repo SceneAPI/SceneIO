@@ -1124,64 +1124,117 @@ Shared-helper local evidence:
   documentation statements—the current facade line count and the historical
   initial contents of `common.py`; both are corrected in the final staged
   tree.
+- The helper unit is committed and pushed as `8040bc7`. Its exact staged tree
+  is `e5b51f1b389a872a29d289bc915e256c61c742fb`; the source archive SHA-256 is
+  `b0a59bea1036198d1001e30244d4368eb031f9f993526d2afb3211a86c510773`,
+  and the derived wheel SHA-256 is
+  `e032a08583085cc7afc819999ede6b6b4a5b21ba1efb0de23a06974df33ee002`.
 
 Image-family implementation:
 
-- [ ] Add side-effect-free `_registry/families/images.py` exporting immutable
+- [x] Add side-effect-free `_registry/families/images.py` exporting immutable
       `IMAGE_CODECS` in exact `netpbm`, `png`, `jpeg`, `bmp`, `tga`, `hdr`,
       `exr`, `webp` order.
-- [ ] Preserve every `Codec` field and callable identity, including
+- [x] Preserve every `Codec` field and callable identity, including
       Netpbm/WebP window selectors, JPEG/HDR/WebP lossy flags, TGA/WebP
       extension-only detection, and all magic/capability tuples.
-- [ ] Install the complete tuple atomically between `safetensors` and `y4m`.
+- [x] Install the complete tuple atomically between `safetensors` and `y4m`.
       Construct `_IMAGE_FRAME_ACCESS` afterward in `registry.py` with its
       existing live registry callbacks; do not freeze the image extension set
       or move sequence state into the family module.
-- [ ] Add `_inspectors/images.py` containing the eight existing bounded
+- [x] Add `_inspectors/images.py` containing the eight existing bounded
       header/container parsers. Keep Netpbm token scanning, JPEG marker sets,
       HDR resolution parsing, and EXR C-string parsing local to that module.
-- [ ] Retain eight same-signature `_inspection.py` wrappers and the existing
+- [x] Retain eight same-signature `_inspection.py` wrappers and the existing
       `inspect_path` branches. Only BMP/TGA may call compiled metadata
       entry points; no lower image inspector may call a full decoder or
       writer.
 
 Image-family verification:
 
-- [ ] Freeze exact valid inspection metadata and representative malformed
+- [x] Freeze exact valid inspection metadata and representative malformed
       cause type/text for all eight codecs before the move; compare the final
       lower and public paths against that evidence.
-- [ ] Prove canonical neighbors, registry/definition object identity, exact
+- [x] Prove canonical neighbors, registry/definition object identity, exact
       adapter closure targets, immutable side-effect-free family reload, and
       duplicate-free registry reload.
-- [ ] Enforce lower import allowlists and reject public, facade, registry,
+- [x] Enforce lower import allowlists and reject public, facade, registry,
       image-sequence, frame-access, relative, and sibling-family imports.
-- [ ] Prove inspect/full agreement, unchanged public errors, no full decode,
+- [x] Prove inspect/full agreement, unchanged public errors, no full decode,
       bounded traced allocation on generated large padded headers, and prompt
       Windows rename/delete while retaining every `Inspection`.
-- [ ] Re-run the live image-extension registration/removal and
+- [x] Re-run the live image-extension registration/removal and
       image-sequence reload/dispatch tests so third-party image extensions
       remain visible immediately.
-- [ ] Run all raw image parity suites, typed PNG/EXR depth, Image and
+- [x] Run all raw image parity suites, typed PNG/EXR depth, Image and
       ImageSequence records, public E2E, detection, mmap/lifetime, sink,
       partial-window, capability, compatibility, import, and documentation
       suites.
-- [ ] Compare the eight five-run rows against
+- [x] Compare the eight five-run rows against
       `build/r2-images-before.json`; require exact row order, payload/file
       sizes, and traced bytes/mmap/sink/inspection/partial fields. Treat timing
       movement as sampling variance and claim no speedup.
-- [ ] Run the one-pass 50-codec structural sweep, strict five-run retained
+- [x] Run the one-pass 50-codec structural sweep, strict five-run retained
       O4/O5/allocation guard, 15-sample imports, exact collection, full suite,
       and Ruff.
-- [ ] Update only the two intended eager import entries, all eight inspection
+- [x] Update only the two intended eager import entries, all eight inspection
       ownership rows, final exact workflow collection pin, measured facade
       line counts, and current architecture/status documentation.
-- [ ] Build the source archive from the exact staged tree and derive the
+- [x] Build the source archive from the exact staged tree and derive the
       Windows abi3 wheel only from it. Require staged/archive/runtime identity,
       all 15 attribution files, one native module, no excluded layout
       directories, NumPy-only metadata, and an installed all-eight-codec probe
       including Netpbm/WebP windows and PNG/EXR typed depth.
-- [ ] Obtain independent architecture/correctness, test/performance, and
+- [x] Obtain independent architecture/correctness, test/performance, and
       platform/package/documentation reviews; resolve findings before commit.
+
+Image-family candidate evidence:
+
+- The 34-node focused architecture and parent-contract suite passes. The
+  broader image, typed-depth, record, sequence, mmap, partial, parallel,
+  public-API, capability, compatibility, registry, inspection, documentation,
+  and import set passes 644 tests.
+- The exact local collection is 3,064 tests, reconciled as the immutable
+  3,028-node helper checkpoint plus 34 focused nodes and two package-file
+  guard nodes. The complete local MSVC suite passes 3,060 with the same four
+  documented skips, and repository-wide Ruff is clean.
+- The eight-row five-run result is structurally exact against both
+  `build/r2-images-before.json` and
+  `build/r2-images-shared-after.json`: codec order, payload/file sizes, every
+  traced bytes/mmap/sink/inspection/partial field, and typed-adapter schema
+  plus traced-allocation fields match. Timing and RSS are retained as
+  diagnostics and treated only as sampling variability.
+- The one-pass 50-codec structural sweep and strict five-run retained
+  O4/O5/allocation guard pass. Fifteen-sample Windows medians are 7.66 ms for
+  `sceneio`, 77.48 ms for `sceneio.io`, and 9.53 ms for `_core`, below the
+  unchanged 100/220.05/100 ms alerts.
+- No codec payload implementation, public signature, C++/CMake source,
+  backend, dependency, ABI, license, or performance-ledger row changes in this
+  organization-only candidate.
+- The package candidate from staged tree
+  `07e5e361999012836100cf10f9726e429f52ab70` contains 302 source files and
+  derives a 70-file Windows cp312-abi3 wheel. All 13 staged files match the
+  archive, and all four changed runtime files are byte-identical across the
+  workspace, archive, and wheel. The wheel includes all 15 attribution files,
+  exactly one native module, no excluded layout directories, and only NumPy
+  as an unconditional dependency. A fresh NumPy-only install passes
+  `_wheel_smoke` plus an explicit eight-codec write/detect/inspect/read probe,
+  Netpbm/WebP windows, and PNG/EXR typed depth. The candidate source SHA-256 is
+  `89c0671aed72e8010b4d9d2a0f68325b9d93ef3d7b2900bdc83ff536fa917d28`;
+  the wheel SHA-256 is
+  `e250fafdb0d0ec12d6a2d28c445ed868145da47961d72fee870bd1adbc4e349e`.
+- Three independent reviews are clear. Architecture/correctness confirmed
+  exact move fidelity, dependency direction, facade compatibility, and live
+  sequence access. Test/performance independently reconciled collection,
+  focused/integration coverage, allocation bounds, and benchmark structure.
+  Platform/package/documentation reconciled imports, ownership, line counts,
+  workflow collection, package layout, and candidate artifact contents. The
+  test/performance review found one overbroad statement that called all typed
+  adapter fields exact; it is corrected above to distinguish exact
+  schema/traced-allocation fields from diagnostic timing/RSS values.
+- The final post-review exact-tree package confirmation is intentionally run
+  only after this documentation is frozen. Its tree and artifact hashes are
+  reported with the commit evidence rather than self-referenced here.
 
 ## 7. R3 — split benchmark and cross-codec tests
 

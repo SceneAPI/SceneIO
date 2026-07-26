@@ -95,6 +95,14 @@ sceneio._core (C++ / nanobind)
   conversion; the compatibility facade retains same-signature wrappers and
   point-PLY ownership. OBJ and glTF/GLB keep their repository-owned bespoke
   path adapters and callable identities.
+  Images are the third extracted family:
+  `_registry/families/images.py` exports the exact contiguous Netpbm, PNG,
+  JPEG, BMP, TGA, HDR, EXR, and WebP tuple, installed atomically between
+  safetensors and Y4M. `_inspectors/images.py` owns their bounded metadata
+  parsers while `_inspection.py` retains same-signature wrappers and unchanged
+  dispatch branches. The image-sequence `ImageFrameAccess` object remains
+  facade-owned and is constructed after image registration, preserving its
+  live extension catalog and third-party registration behavior.
 
 ## Stable codec ownership and backend selection
 

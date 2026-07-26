@@ -232,7 +232,7 @@ id = "netpbm"
 benchmark_case = "netpbm"
 source_suite = "tests/codecs/test_netpbm.py"
 documentation_row = "docs/format_coverage.md"
-inspection_source = "src/sceneio/io/_inspection.py"
+inspection_source = "src/sceneio/io/_inspectors/images.py"
 wheel_smoke_exemption = "not yet included in the packaged representative smoke; covered by the source parity suite"
 
 [[codec]]
@@ -240,7 +240,7 @@ id = "png"
 benchmark_case = "png"
 source_suite = "tests/codecs/test_png.py"
 documentation_row = "docs/format_coverage.md"
-inspection_source = "src/sceneio/io/_inspection.py"
+inspection_source = "src/sceneio/io/_inspectors/images.py"
 wheel_smoke_case = "_pfm_and_typed_depth"
 
 [[codec]]
@@ -248,7 +248,7 @@ id = "jpeg"
 benchmark_case = "jpeg"
 source_suite = "tests/codecs/test_jpeg.py"
 documentation_row = "docs/format_coverage.md"
-inspection_source = "src/sceneio/io/_inspection.py"
+inspection_source = "src/sceneio/io/_inspectors/images.py"
 wheel_smoke_exemption = "not yet included in the packaged representative smoke; covered by the source parity suite"
 
 [[codec]]
@@ -256,7 +256,7 @@ id = "bmp"
 benchmark_case = "bmp"
 source_suite = "tests/codecs/test_bmp_tga.py"
 documentation_row = "docs/format_coverage.md"
-inspection_source = "src/sceneio/io/_inspection.py"
+inspection_source = "src/sceneio/io/_inspectors/images.py"
 wheel_smoke_case = "_reconstruction_and_images"
 
 [[codec]]
@@ -264,7 +264,7 @@ id = "tga"
 benchmark_case = "tga"
 source_suite = "tests/codecs/test_bmp_tga.py"
 documentation_row = "docs/format_coverage.md"
-inspection_source = "src/sceneio/io/_inspection.py"
+inspection_source = "src/sceneio/io/_inspectors/images.py"
 wheel_smoke_case = "_reconstruction_and_images"
 
 [[codec]]
@@ -272,7 +272,7 @@ id = "hdr"
 benchmark_case = "hdr"
 source_suite = "tests/codecs/test_hdr.py"
 documentation_row = "docs/format_coverage.md"
-inspection_source = "src/sceneio/io/_inspection.py"
+inspection_source = "src/sceneio/io/_inspectors/images.py"
 wheel_smoke_exemption = "not yet included in the packaged representative smoke; covered by the source parity suite"
 
 [[codec]]
@@ -280,7 +280,7 @@ id = "exr"
 benchmark_case = "exr"
 source_suite = "tests/codecs/test_exr.py"
 documentation_row = "docs/format_coverage.md"
-inspection_source = "src/sceneio/io/_inspection.py"
+inspection_source = "src/sceneio/io/_inspectors/images.py"
 wheel_smoke_case = "_pfm_and_typed_depth"
 
 [[codec]]
@@ -288,7 +288,7 @@ id = "webp"
 benchmark_case = "webp"
 source_suite = "tests/codecs/test_webp.py"
 documentation_row = "docs/format_coverage.md"
-inspection_source = "src/sceneio/io/_inspection.py"
+inspection_source = "src/sceneio/io/_inspectors/images.py"
 wheel_smoke_exemption = "not yet included in the packaged representative smoke; covered by the source parity suite"
 
 [[codec]]

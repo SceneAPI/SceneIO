@@ -58,16 +58,18 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > smoke-tests all three platform wheel sets, with publication skipped. R1 is
 > closed and R2 is next.
 >
-> **R2 local organization checkpoint (2026-07-26, `975533f`):** R2.0
+> **R2 local organization checkpoint (2026-07-26, `8040bc7`):** R2.0
 > (`40d5412`) removes image-sequence upward runtime dependencies; R2.1
 > (`ccfeea4`) extracts shared registry services; and `b2bda1d` moves the four
 > calibration registrations and metadata inspectors behind the first
 > lower-layer family boundary. `29af9de` lowers the shared inspection types and
 > mmap bridge while retaining compatibility. `975533f` moves the six
 > contiguous mesh registrations plus only the PLY-mesh/STL/OFF facade-owned
-> inspectors; OBJ/glTF/GLB bespoke adapters remain in place. Codec behavior and
-> the 50-id inventory remain unchanged. Local MSVC collects 3,024 tests and
-> passes 3,020 with four documented skips; the all-codec
+> inspectors; OBJ/glTF/GLB bespoke adapters remain in place. `8040bc7` lowers
+> the proven shared metadata limits, exact-read/integer grammar, and
+> image-result constructor before the eight-codec image-family move. Codec
+> behavior and the 50-id inventory remain unchanged. Local MSVC collects 3,028
+> tests and passes 3,024 with four documented skips; the all-codec
 > performance/allocation guard passes, and a Windows abi3 wheel derived from
 > the exact 298-member source archive passes the expanded NumPy-only smoke.
 > [Normal CI run
@@ -75,7 +77,14 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > 30193628672][r2-calibration-instrumented] pass for the preceding calibration
 > checkpoint. [Normal CI run
 > 30195153288][r2-shared-ci] and [compiler-instrumented run
-> 30195153277][r2-shared-instrumented] pass for `29af9de`.
+> 30195153277][r2-shared-instrumented] pass for `29af9de`. [Normal CI run
+> 30196192081][r2-mesh-ci] and [compiler-instrumented run
+> 30196192103][r2-mesh-instrumented] pass for `975533f`. [Normal CI run
+> 30197244102][r2-image-helpers-ci] and [compiler-instrumented run
+> 30197244104][r2-image-helpers-instrumented] pass for `8040bc7`. The
+> eight-codec image-family extraction is the active local candidate: exact
+> collection is 3,064 tests and the complete local MSVC suite passes 3,060
+> with the same four documented skips.
 
 [current-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287022
 [current-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287161
@@ -87,6 +96,10 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 [r2-calibration-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30193628672
 [r2-shared-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30195153288
 [r2-shared-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30195153277
+[r2-mesh-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30196192081
+[r2-mesh-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30196192103
+[r2-image-helpers-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30197244102
+[r2-image-helpers-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30197244104
 
 ## Data structures (memory Records)
 
