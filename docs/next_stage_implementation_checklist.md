@@ -83,6 +83,8 @@ The starting code checkpoint is `d52c1e0` on 2026-07-25:
 [r2-shared-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30195153288
 [r2-shared-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30195153277
 [r2-splat-parent-exposing]: https://github.com/SceneAPI/SceneIO/actions/runs/30220612832
+[r2-splat-parent-corrected]: https://github.com/SceneAPI/SceneIO/actions/runs/30221945705
+[r2-splat-parent-corrected-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30221945731
 
 ## 2. Scope and non-goals
 
@@ -2246,15 +2248,20 @@ Documentation and exact-parent freeze:
       mmap, partial, capability, registry, inspection, and public-API suites.
       Do not pre-compute the candidate collection count; derive its exact
       count and digest after the final test set exists.
-- [ ] Commit and push the validated documentation/parent-freeze checkpoint
+- [x] Commit and push the validated documentation/parent-freeze checkpoint
       only after
       documentation consistency, link, Ruff, architecture-contract, and diff
       checks pass. Initial commit
       `93fcf1b39350a3a0080a7b87ead65d0d9343d354` exposed the platform
-      variants; replace this note with the corrected green commit after its
-      hosted rerun passes.
+      variants. Corrected commit
+      `18643595ef538f5c9d5803ef20218a3327de04ef` is pushed; normal
+      [run 30221945705][r2-splat-parent-corrected] passes every lane,
+      including all three splat OS jobs and pinned manylinux2014/GCC-10, and
+      compiler-instrumented
+      [run 30221945731][r2-splat-parent-corrected-instrumented] passes both
+      native lifetime jobs.
 
-Parent-freeze candidate evidence: the oracle-independent architecture suite
+Parent-freeze evidence: the oracle-independent architecture suite
 passes all 31 nodes. The architecture plus registry-assembly contract passes
 42 tests, and the focused family/common matrix passes 385 tests with one
 documented `gsply` v2-writer skip. The exact candidate collection is 3,287
@@ -2284,44 +2291,106 @@ therefore keeps unaffected fields bit-exact, applies a maximum-one-ULP check
 only to those named arrays, and retains exact whole-record fingerprints for
 all four build profiles. This is evidence about existing parent behavior, not
 a codec change or a claim that SOG archives are globally byte-canonical.
-The corrected hosted rerun is pending before inspector source moves.
+Corrected normal [run 30221945705][r2-splat-parent-corrected] passes all
+three splat OS profiles and the pinned manylinux2014/GCC-10 profile.
+Compiler-instrumented
+[run 30221945731][r2-splat-parent-corrected-instrumented] passes both jobs.
 
 Inspector extraction checkpoint:
 
-- [ ] Add `_inspectors/splats.py` and mechanically move
+- [x] Add `_inspectors/splats.py` and mechanically move
       `_inspect_gaussian_ply`, `_inspect_compressed_ply`, `_inspect_sog`,
       `_inspect_ksplat`, `_inspect_spz`, and `_inspect_splat`. Move the
       SOG-only classic-ZIP extent helper with them. Keep shared PLY parsing and
       classification in `_ply.py`.
-- [ ] Keep `inspect_path` dispatch in `_inspection.py` and retain
+- [x] Keep `inspect_path` dispatch in `_inspection.py` and retain
       same-signature compatibility wrappers for all six private inspector
       names. Prove exact signatures and direct delegation.
-- [ ] Keep the lower inspector independent of the registry, compatibility
+- [x] Keep the lower inspector independent of the registry, compatibility
       facade, other family inspectors, and optional oracle packages. Prove an
       explicit lower import allowlist and inert reload.
-- [ ] Preserve Gaussian little- and big-endian binary PLY inspection,
+- [x] Preserve Gaussian little- and big-endian binary PLY inspection,
       compressed PLY extent checks, SOG bounded `meta.json` and exact member
       validation, KSplat bounded header/section metadata reads, SPZ
       16-byte legacy and 32-byte v4 header inspection, and the headerless
       SPLAT 32-byte record count.
-- [ ] Prove inspector extraction parity for valid and invalid inputs and prove
+- [x] Prove inspector extraction parity for valid and invalid inputs and prove
       that metadata inspection does not invoke a full decoder.
-- [ ] Add generated large-file inspection cases for all six formats. Assert
+- [x] Add generated large-file inspection cases for all six formats. Assert
       bounded traced Python allocation and immediate path release; treat
       native working memory and timing as diagnostics, not acceptance claims.
-- [ ] On Windows, prove retained `Inspection` results and retained exceptions
+- [x] On Windows, prove retained `Inspection` results and retained exceptions
       do not prevent rename/removal. Cover all six files plus the SOG archive,
       directory, direct `meta.json`, declared layers, and whole-directory
       replacement/removal.
-- [ ] Update all six `repository_coverage_v1.toml` inspection owners and the
+- [x] Update all six `repository_coverage_v1.toml` inspection owners and the
       import contract. The I/O facade may add exactly `_inspectors.splats` to
       the 43-module parent set; `import sceneio` and direct `_core` remain at
       seven and eight modules.
-- [ ] Run the new architecture suite, six codec suites, mmap/partial,
+- [x] Run the new architecture suite, six codec suites, mmap/partial,
       inspection/capability/public/registry/repository contracts, complete
       pytest, Ruff, two structural captures, and the retained five-run guard.
       Build and smoke the exact-tree package before committing and pushing the
       inspector checkpoint.
+
+Inspector candidate evidence: `_inspectors/splats.py` now owns the six
+metadata implementations and the SOG-only classic-ZIP extent helper;
+`_inspection.py` retains dispatch, same-signature wrappers, and historical
+shared-helper identities. The architecture suite collects 44 nodes. Its
+Windows lifecycle cases retain successful results and failures while renaming
+or removing all six files, SOG archives, SOG directories, direct
+`meta.json` paths, each declared layer, and whole directories followed by
+same-name replacement. The complete candidate collection is 3,301 nodes with
+sorted normalized SHA-256
+`ab9ab8c698e005032aeea52d69703b5b32ee29998fdd77c24970f6a198b7c176`.
+
+Two candidate captures reproduce the all-50 structural SHA-256
+`2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`
+and ordered six-row SHA-256
+`5c6adc3584ba25050c885b37313d009311e2253b0c841cbc8738b806cb090bfd`;
+the strict default-scale five-run guard passes. An inspector-specific
+comparison loads the exact parent implementation from `0696533`, uses the
+same generated 36 MiB-plus fixtures, and takes 15 randomized interleaved
+timing plus 15 traced-allocation samples per implementation and codec.
+Candidate median increase must not exceed the maximum of 10 percent of the
+parent median, three times the sum of both median absolute deviations, or
+0.05 ms. Parent/candidate medians in milliseconds are 0.0343/0.0355
+(`gaussian_ply`), 0.0852/0.0841 (`compressed_ply`), 0.3667/0.3642 (`sog`),
+0.0292/0.0297 (`ksplat`), 0.0324/0.0324 (`spz`), and 0.0057/0.0059
+(`splat`). Maximum traced bytes match the parent exactly at 11,650, 15,339,
+1,059,105, 14,394, 10,012, and 1,320 in the same order. This closes the
+all-six inspector timing/allocation review finding; the broader
+read/write/partial comparator remains part of registry closure.
+
+Fifteen fresh-process Windows candidate samples retain exact module sets of
+7, 44, and 8 for `import sceneio`, the I/O facade, and direct `_core`.
+Candidate medians are 4.659, 71.611, and 6.579 ms respectively; timing is
+diagnostic and exact module membership is the contract.
+
+The finalized focused family/common matrix passes 401 tests with the one
+documented `gsply` v2-writer skip. The complete local suite passes 3,297 tests
+with four documented skips; Ruff, documentation, license, collection, and
+diff checks pass. Pre-final package tree
+`301fd6693fe758dfd555337708bf7bd0ca73384a` has 325 tracked files. Its
+326-file source archive adds only generated `PKG-INFO`, has no missing or
+differing tracked file, and has SHA-256
+`f04fc37d7b79ecc41d19744dee7195746ab306e78f626a1dc387e48ef3a29606`.
+The derived 80-member Windows cp312-abi3 wheel has SHA-256
+`c6a7248a0eb88a5920c7f11f28e745d66dc42f8b442c0c680162d1481a8d5904`;
+it contains one native extension, all 15 attribution members, no packaged
+build/include/lib/share/bin tree, and NumPy as its sole unconditional
+dependency. The extracted inspector is byte-identical across Git, source
+archive, and wheel. A fresh external NumPy-only environment passes
+`sceneio._wheel_smoke` plus explicit all-six
+write/detect-or-explicit/inspect/lower-inspect/read/partial/path-release
+coverage.
+
+The package record uses two passes: the hashes above make the pre-final
+inventory reproducible, then a no-further-edit rebuild repeats source/archive
+identity, the derived wheel inventory, and the external NumPy-only smoke after
+this documentation is staged. That final artifact evidence stays outside the
+source tree; copying its hashes back into this file would change the exact
+tree just verified.
 
 Registry extraction checkpoint:
 

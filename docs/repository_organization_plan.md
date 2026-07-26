@@ -213,11 +213,17 @@ The initial splat parent-freeze checkpoint is committed and pushed at
 `93fcf1b39350a3a0080a7b87ead65d0d9343d354`; its
 [hosted run 30220612832](https://github.com/SceneAPI/SceneIO/actions/runs/30220612832)
 exposed the platform variants described below. The profile correction is
-staged locally and its hosted rerun is pending. The 31-node,
+committed and pushed at
+`18643595ef538f5c9d5803ef20218a3327de04ef`. Its
+[normal run 30221945705](https://github.com/SceneAPI/SceneIO/actions/runs/30221945705)
+passes every lane, including all three splat OS jobs and pinned
+manylinux2014/GCC-10; its
+[compiler-instrumented run 30221945731](https://github.com/SceneAPI/SceneIO/actions/runs/30221945731)
+passes both native lifetime jobs. The 31-node,
 oracle-independent architecture suite covers all six codecs, SOG archive and
 directory entry paths, four-way PLY classification, SPZ v1-v4, partial
 selectors, retained-result path release, and invalid-input behavior. The
-candidate suite now collects exactly 3,287 nodes with sorted normalized
+parent-freeze candidate collects exactly 3,287 nodes with sorted normalized
 SHA-256
 `190733ef6fbf1dd99cdd721ddc19277fc22dca3643154f11bf9738aa52dbc294`.
 The checked six-row benchmark projection reproduces both Windows/MSVC parent
@@ -230,9 +236,20 @@ differs only in that JSON digit and the corresponding CRC fields.
 KSplat/SPLAT scales and AppleClang/ARM SPZ quaternions have isolated one-ULP
 decoded variants. The parent contract keeps all unaffected fields exact,
 bounds only those named arrays to one ULP, and records exact per-profile
-fingerprints. A corrected hosted run must pass before the ownership-only
-source move begins; universal SOG byte canonicalization would be a separate
-codec-behavior change.
+fingerprints. The ownership-only inspector extraction is locally validated:
+the lower module owns all six metadata readers while the compatibility facade
+retains dispatch and same-signature wrappers. Its 44-node architecture suite
+adds lower-layer import/reload, facade delegation, ownership, parity, and
+generated 36 MiB-plus bounded-inspection coverage for every family member,
+plus retained SOG results/failures during declared-layer release and
+whole-directory replacement. The 3,301-node candidate collection has sorted
+normalized SHA-256
+`ab9ab8c698e005032aeea52d69703b5b32ee29998fdd77c24970f6a198b7c176`.
+Both structural benchmark captures, the retained five-run guard, and a
+15-sample randomized all-six exact-parent inspector comparison pass; traced
+allocation maxima are byte-for-byte equal to the parent.
+Universal SOG byte canonicalization would be a separate codec-behavior
+change.
 
 The codec-per-file C++ layer remains reasonably isolated, but orchestration and
 verification have accumulated in a few large modules:
@@ -242,7 +259,7 @@ verification have accumulated in a few large modules:
 | C++ codecs | 40 files for 50 format ids | flat source list and manual binding declarations |
 | C++ records | 32 source/header files | still manageable; new table/animation/scene records will add pressure |
 | Python registry | `registry.py`, 367 lines; `_registry/assembly.py`, 148 lines; focused `_registry/{model,adapters,detection,native_features}.py` modules; and `_registry/families/{arrays,calibration,images,meshes,points,reconstruction,sequences}.py` definition modules | splats are the only built-in family still defined in the facade |
-| Inspection | `_inspection.py`, 786 lines, plus `_inspectors/{model,common,arrays,calibration,images,meshes,points,reconstruction,sequences}.py`; the reconstruction owner is 295 lines | splat metadata still shares the facade; the proven shared model, mmap bridge, metadata bounds, exact-read/integer grammar, and image-result constructor are lower services |
+| Inspection | `_inspection.py` compatibility facade plus `_inspectors/{model,common,arrays,calibration,images,meshes,points,reconstruction,sequences,splats}.py`; all eight manifest families now have lower inspector ownership | finish the splat inspector evidence checkpoint, then move its registry definitions; the proven shared model, mmap bridge, metadata bounds, exact-read/integer grammar, and image-result constructor remain lower services |
 | Benchmark | `bench_io.py`, about 4,660 lines | CLI, fixtures, oracles, runners, metrics, and reporting are coupled |
 | Cross-codec tests | `test_io_mmap.py`, about 2,400 lines; `test_io_partial.py`, about 1,100 | reusable codec cases and behavior assertions are difficult to extend independently |
 | Execution plan | `format_gap_implementation_plan.md`, about 2,500 lines | historical evidence and the active queue are easy to confuse |

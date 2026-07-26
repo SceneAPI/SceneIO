@@ -68,6 +68,7 @@
       "sceneio.io._inspectors.points",
       "sceneio.io._inspectors.reconstruction",
       "sceneio.io._inspectors.sequences",
+      "sceneio.io._inspectors.splats",
       "sceneio.io._obj",
       "sceneio.io._pcd",
       "sceneio.io._ply",

@@ -141,8 +141,16 @@ sceneio._core (C++ / nanobind)
   `_inspection.py` keeps same-signature wrappers and dispatch.
   The final extraction and platform follow-ups are committed through
   `aa5b624`; normal run `30218232248` and compiler-instrumented run
-  `30218232246` pass the combined tree. Splats are the only built-in family
-  still awaiting this extraction boundary.
+  `30218232246` pass the combined tree.
+  Splats are the eighth and final family. Their six metadata implementations
+  now live in `_inspectors/splats.py`; `_inspection.py` retains unchanged
+  dispatch and same-signature wrappers. The lower module calls only the
+  compiled metadata helpers, shared inspection primitives, and shared PLY
+  parser, never a full decoder or registry. The parent contract is green
+  across MSVC, AppleClang/ARM, hosted glibc, and manylinux2014/GCC-10 at
+  `1864359`. The inspector checkpoint is under final validation; the six
+  `Codec` definitions remain in the facade until the separate registry
+  extraction closes R2.
   Built-in startup uses `_registry/assembly.py` as a lower staging boundary.
   Individual facade definitions and complete extracted family tuples are
   collected without touching the public registry. After all 50 canonical ids

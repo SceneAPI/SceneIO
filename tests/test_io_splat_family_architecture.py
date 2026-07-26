@@ -5,8 +5,10 @@ from __future__ import annotations
 import ast
 import base64
 import copy
+import gc
 import gzip
 import hashlib
+import importlib
 import inspect
 import io
 import json
@@ -15,6 +17,8 @@ import platform
 import shutil
 import struct
 import sys
+import tomllib
+import tracemalloc
 import zipfile
 from pathlib import Path
 
@@ -23,11 +27,12 @@ import pytest
 
 import sceneio
 from sceneio import _core
-from sceneio.io import registry
+from sceneio.io import _inspection, registry
 from sceneio.io._builtin_manifest import (
     CANONICAL_BUILTIN_IDS,
     FAMILY_MEMBERS,
 )
+from sceneio.io._inspectors import splats as splat_inspector
 
 ROOT = Path(__file__).resolve().parents[1]
 CONTRACT = json.loads(
@@ -49,6 +54,14 @@ SUFFIXES = {
     "ksplat": ".ksplat",
     "spz": ".spz",
     "splat": ".splat",
+}
+INSPECTOR_NAMES = {
+    "gaussian_ply": "inspect_gaussian_ply",
+    "compressed_ply": "inspect_compressed_ply",
+    "sog": "inspect_sog",
+    "ksplat": "inspect_ksplat",
+    "spz": "inspect_spz",
+    "splat": "inspect_splat",
 }
 
 
@@ -425,6 +438,22 @@ def _codec_ast_hashes() -> dict[str, str]:
     return hashes
 
 
+def _absolute_imports(source: str) -> tuple[tuple[str, tuple[str, ...]], ...]:
+    imports = []
+    for node in ast.walk(ast.parse(source)):
+        if isinstance(node, ast.Import):
+            imports.extend((alias.name, ()) for alias in node.names)
+        elif isinstance(node, ast.ImportFrom):
+            assert node.level == 0, (node.level, node.module)
+            imports.append(
+                (
+                    node.module or "",
+                    tuple(alias.name for alias in node.names),
+                )
+            )
+    return tuple(imports)
+
+
 def _assert_cloud_slice(selected, full, start: int, stop: int) -> None:
     for name in (
         "means",
@@ -601,6 +630,97 @@ def test_splat_operation_identities_and_native_targets_are_exact():
     assert registry.REGISTRY["spz"].read_points is None
 
 
+def test_splat_inspector_module_is_lower_layer_only():
+    source = inspect.getsource(splat_inspector)
+    imports = _absolute_imports(source)
+    assert {module for module, _ in imports} <= {
+        "__future__",
+        "gzip",
+        "numpy",
+        "pathlib",
+        "sceneio",
+        "sceneio.io._inspectors.common",
+        "sceneio.io._inspectors.model",
+        "sceneio.io._ply",
+        "struct",
+        "zipfile",
+    }
+    assert tuple(
+        names for module, names in imports if module == "sceneio"
+    ) == (("_core",),)
+    for forbidden in (
+        "sceneio.io.registry",
+        "sceneio.io._inspection",
+        "sceneio.io._registry",
+        "REGISTRY",
+        "register(",
+    ):
+        assert forbidden not in source
+    for format_id in SPLAT_IDS:
+        assert f"_core.read_{format_id}" not in source
+        assert f"_core.write_{format_id}" not in source
+
+
+def test_splat_inspector_reload_is_inert():
+    before_registry = registry.REGISTRY
+    before_items = tuple(registry.REGISTRY.items())
+    reloaded = importlib.reload(splat_inspector)
+    assert reloaded is splat_inspector
+    assert registry.REGISTRY is before_registry
+    assert tuple(registry.REGISTRY.items()) == before_items
+
+
+@pytest.mark.parametrize(
+    ("wrapper_name", "delegate_name"),
+    [
+        ("_inspect_gaussian_ply", "_inspect_splat_gaussian_ply"),
+        ("_inspect_compressed_ply", "_inspect_splat_compressed_ply"),
+        ("_inspect_sog", "_inspect_splat_sog"),
+        ("_inspect_ksplat", "_inspect_splat_ksplat"),
+        ("_inspect_spz", "_inspect_splat_spz"),
+        ("_inspect_splat", "_inspect_splat_splat"),
+    ],
+)
+def test_splat_inspector_facade_preserves_wrapper_signatures(
+    wrapper_name,
+    delegate_name,
+    monkeypatch,
+):
+    marker = object()
+    calls = []
+
+    def inspect_family(path, datatype):
+        calls.append((path, datatype))
+        return marker
+
+    monkeypatch.setattr(_inspection, delegate_name, inspect_family)
+    path = Path("splat.fixture")
+    wrapper = getattr(_inspection, wrapper_name)
+    assert tuple(inspect.signature(wrapper).parameters) == (
+        "path",
+        "datatype",
+    )
+    assert wrapper(path, "splat") is marker
+    assert calls == [(path, "splat")]
+
+
+def test_repository_coverage_tracks_all_splat_inspectors():
+    coverage = tomllib.loads(
+        (
+            ROOT / "tests" / "contracts" / "repository_coverage_v1.toml"
+        ).read_text(encoding="utf-8")
+    )
+    owners = {
+        item["id"]: item["inspection_source"]
+        for item in coverage["codec"]
+        if item["id"] in SPLAT_IDS
+    }
+    assert owners == {
+        format_id: "src/sceneio/io/_inspectors/splats.py"
+        for format_id in SPLAT_IDS
+    }
+
+
 @pytest.mark.parametrize("format_id", SPLAT_IDS)
 def test_splat_valid_artifacts_match_exact_parent(
     tmp_path,
@@ -615,8 +735,13 @@ def test_splat_valid_artifacts_match_exact_parent(
     else:
         assert hashlib.sha256(payload).hexdigest() == expected["sha256"]
     info = sceneio.inspect(path, format=format_id)
+    lower_info = getattr(
+        splat_inspector,
+        INSPECTOR_NAMES[format_id],
+    )(path, registry.REGISTRY[format_id].datatype)
     decoded = sceneio.read(path, format=format_id)
     assert _normalized_inspection(info) == expected["inspection"]
+    assert _normalized_inspection(lower_info) == expected["inspection"]
     record_contract = {
         "ksplat": "ksplat",
         "spz": "spz_v3_v4",
@@ -631,6 +756,7 @@ def test_splat_valid_artifacts_match_exact_parent(
     path.rename(released)
     released.unlink()
     assert _normalized_inspection(info) == expected["inspection"]
+    assert _normalized_inspection(lower_info) == expected["inspection"]
     if record_contract is None:
         assert _record_fingerprint(decoded) == expected["record_sha256"]
     else:
@@ -668,18 +794,87 @@ def test_sog_directory_artifact_matches_exact_parent(tmp_path):
     )
     directory_info = sceneio.inspect(path, format="sog")
     metadata_info = sceneio.inspect(path / "meta.json", format="sog")
+    lower_directory_info = splat_inspector.inspect_sog(path, "splat")
+    lower_metadata_info = splat_inspector.inspect_sog(
+        path / "meta.json",
+        "splat",
+    )
     directory_record = sceneio.read(path, format="sog")
     metadata_record = sceneio.read(path / "meta.json", format="sog")
     assert _normalized_inspection(directory_info) == expected["inspection"]
     assert _normalized_inspection(metadata_info) == expected["inspection"]
+    assert _normalized_inspection(lower_directory_info) == expected[
+        "inspection"
+    ]
+    assert _normalized_inspection(lower_metadata_info) == expected[
+        "inspection"
+    ]
     assert _record_fingerprint(directory_record) == expected["record_sha256"]
     assert _record_fingerprint(metadata_record) == expected["record_sha256"]
 
     shutil.rmtree(path)
     assert _normalized_inspection(directory_info) == expected["inspection"]
     assert _normalized_inspection(metadata_info) == expected["inspection"]
+    assert _normalized_inspection(lower_directory_info) == expected[
+        "inspection"
+    ]
+    assert _normalized_inspection(lower_metadata_info) == expected[
+        "inspection"
+    ]
     assert _record_fingerprint(directory_record) == expected["record_sha256"]
     assert _record_fingerprint(metadata_record) == expected["record_sha256"]
+
+
+def test_sog_retained_inspections_release_layers_and_directory(tmp_path):
+    path = tmp_path / "retained_sog"
+    sceneio.write(_cloud(), path, format="sog")
+    metadata_path = path / "meta.json"
+    directory_info = sceneio.inspect(path, format="sog")
+    metadata_info = sceneio.inspect(metadata_path, format="sog")
+    layers = sorted(
+        item for item in path.iterdir() if item.name != "meta.json"
+    )
+    assert layers
+
+    for layer in layers:
+        moved = layer.with_name(layer.name + ".moved")
+        layer.rename(moved)
+        moved.rename(layer)
+
+    retired = path.with_name(path.name + ".retired")
+    path.rename(retired)
+    path.mkdir()
+    shutil.rmtree(path)
+    shutil.rmtree(retired)
+    assert directory_info.metadata["packaging"] == "directory"
+    assert metadata_info.metadata["packaging"] == "directory"
+
+
+@pytest.mark.parametrize("entry_kind", ["directory", "metadata"])
+def test_sog_retained_missing_layer_exception_releases_directory(
+    tmp_path,
+    entry_kind,
+):
+    path = tmp_path / f"missing_layer_{entry_kind}"
+    sceneio.write(_cloud(), path, format="sog")
+    missing = next(
+        item for item in path.iterdir() if item.name != "meta.json"
+    )
+    missing_name = missing.name
+    missing.unlink()
+    entry = path if entry_kind == "directory" else path / "meta.json"
+
+    with pytest.raises(sceneio.FormatError) as captured:
+        sceneio.inspect(entry, format="sog")
+    assert "missing declared layer" in str(captured.value.__cause__)
+    assert missing_name in str(captured.value.__cause__)
+
+    retired = path.with_name(path.name + ".retired")
+    path.rename(retired)
+    path.mkdir()
+    shutil.rmtree(path)
+    shutil.rmtree(retired)
+    assert missing_name in str(captured.value.__cause__)
 
 
 @pytest.mark.parametrize("version", [1, 2])
@@ -874,6 +1069,113 @@ def test_sog_explicit_format_routing_is_suffix_agnostic(tmp_path):
     dotted_directory.mkdir()
     sceneio.write(_cloud(), dotted_directory, format="sog")
     assert (dotted_directory / "meta.json").is_file()
+
+
+def _extend_sparse(path: Path, size: int) -> None:
+    with path.open("r+b") as stream:
+        stream.seek(size - 1)
+        stream.write(b"\0")
+
+
+def _large_splat_inspection_paths(root: Path) -> dict[str, Path]:
+    root.mkdir()
+    paths = _write_valid(root)
+    large_extent = 36 * 1024 * 1024
+
+    _extend_sparse(paths["gaussian_ply"], large_extent)
+
+    compressed = paths["compressed_ply"]
+    payload = compressed.read_bytes()
+    header_end = payload.index(b"end_header\n") + len(b"end_header\n")
+    vertex_count = 2_350_000
+    chunk_count = (vertex_count + 255) // 256
+    header = payload[:header_end].replace(
+        b"element chunk 1\n",
+        f"element chunk {chunk_count}\n".encode(),
+    ).replace(
+        b"element vertex 8\n",
+        f"element vertex {vertex_count}\n".encode(),
+    )
+    compressed.write_bytes(header)
+    _extend_sparse(
+        compressed,
+        len(header) + chunk_count * 72 + vertex_count * 16,
+    )
+
+    sog = root / "large_sog"
+    sceneio.write(_cloud(), sog, format="sog")
+    _extend_sparse(sog / "means_l.webp", large_extent)
+
+    ksplat = paths["ksplat"]
+    point_count = 870_000
+    record_bytes = point_count * 44
+    header = bytearray(4096 + 1024)
+    header[0] = 0
+    header[1] = 1
+    struct.pack_into(
+        "<IIIIH",
+        header,
+        4,
+        1,
+        1,
+        point_count,
+        point_count,
+        0,
+    )
+    struct.pack_into(
+        "<II",
+        header,
+        4096,
+        point_count,
+        point_count,
+    )
+    struct.pack_into("<I", header, 4096 + 28, record_bytes)
+    struct.pack_into("<H", header, 4096 + 40, 0)
+    ksplat.write_bytes(header)
+    _extend_sparse(ksplat, len(header) + record_bytes)
+
+    spz = root / "large.spz"
+    spz.write_bytes(bytes(_core.write_spz(_cloud(), version=4))[:32])
+    _extend_sparse(spz, large_extent)
+
+    _extend_sparse(paths["splat"], large_extent)
+    return {
+        "gaussian_ply": paths["gaussian_ply"],
+        "compressed_ply": compressed,
+        "sog": sog,
+        "ksplat": ksplat,
+        "spz": spz,
+        "splat": paths["splat"],
+    }
+
+
+def test_large_splat_inspection_is_bounded_and_releases_paths(tmp_path):
+    minimum_size = 36 * 1024 * 1024
+    for format_id, path in _large_splat_inspection_paths(
+        tmp_path / "large"
+    ).items():
+        size = (
+            sum(item.stat().st_size for item in path.iterdir())
+            if path.is_dir()
+            else path.stat().st_size
+        )
+        assert size >= minimum_size
+        gc.collect()
+        tracemalloc.start()
+        try:
+            info = sceneio.inspect(path, format=format_id)
+            _, peak = tracemalloc.get_traced_memory()
+        finally:
+            tracemalloc.stop()
+        assert peak < 2 * 1024 * 1024, (format_id, peak)
+
+        released = path.with_name(path.name + ".released")
+        path.rename(released)
+        if released.is_dir():
+            shutil.rmtree(released)
+        else:
+            released.unlink()
+        assert info.format == format_id
 
 
 def test_oracle_independent_gaussian_ply_invalid_matrix(tmp_path):

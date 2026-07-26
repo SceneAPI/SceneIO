@@ -716,6 +716,7 @@ def test_assembly_dependency_direction_and_import_delta_are_exact():
         "sceneio.io._inspectors.arrays",
         "sceneio.io._inspectors.points",
         "sceneio.io._inspectors.reconstruction",
+        "sceneio.io._inspectors.splats",
         "sceneio.io._registry.assembly",
         "sceneio.io._registry.families.arrays",
         "sceneio.io._registry.families.points",

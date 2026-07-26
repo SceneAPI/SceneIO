@@ -1397,3 +1397,52 @@ Normal run `30218232248` passes the complete suite, retained performance
 guard, all three reconstruction operating systems, all mmap lanes, and the
 isolated GCC-10 lane. Compiler-instrumented run `30218232246` passes both
 jobs.
+
+## R2 splat-family inspector equivalence — 2026-07-26
+
+The six splat metadata readers moved without algorithm changes from the
+compatibility facade to `_inspectors/splats.py`. Two candidate runs use:
+
+```text
+.venv/Scripts/python.exe bench/bench_io.py \
+  --runs 1 --scale 0.001 --skip-oracles --json <output>
+```
+
+Both reproduce the portable all-50 structural SHA-256
+`2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`
+and ordered six-row SHA-256
+`5c6adc3584ba25050c885b37313d009311e2253b0c841cbc8738b806cb090bfd`,
+matching both frozen parent captures. The separate default-scale five-run
+invocation with all retained O4/O5 requirements passes.
+
+An exact-parent inspector comparison uses the generated 36 MiB-plus fixtures
+for every family member. It takes 15 randomized interleaved timing samples
+and 15 traced-allocation samples per parent/candidate implementation. A row
+passes when the candidate median increase is no larger than the maximum of
+10 percent of the parent median, three times the sum of both median absolute
+deviations, or 0.05 ms, and its maximum traced allocation does not exceed the
+parent maximum.
+
+| Codec | Parent inspect | Candidate inspect | Parent/candidate peak |
+|---|---:|---:|---:|
+| `gaussian_ply` | 0.0343 ms | 0.0355 ms | 11,650 / 11,650 bytes |
+| `compressed_ply` | 0.0852 ms | 0.0841 ms | 15,339 / 15,339 bytes |
+| `sog` | 0.3667 ms | 0.3642 ms | 1,059,105 / 1,059,105 bytes |
+| `ksplat` | 0.0292 ms | 0.0297 ms | 14,394 / 14,394 bytes |
+| `spz` | 0.0324 ms | 0.0324 ms | 10,012 / 10,012 bytes |
+| `splat` | 0.0057 ms | 0.0059 ms | 1,320 / 1,320 bytes |
+
+Every row passes. This is equivalence evidence for the ownership-only move,
+not a performance-gain claim. The broader read/write/partial family
+comparison remains in the registry-extraction gate.
+
+Pre-final package tree `301fd6693fe758dfd555337708bf7bd0ca73384a`
+produces a 326-file source archive with only generated `PKG-INFO` beyond its
+325 tracked files and no missing or differing blob. Its SHA-256 is
+`f04fc37d7b79ecc41d19744dee7195746ab306e78f626a1dc387e48ef3a29606`.
+The derived 80-member Windows cp312-abi3 wheel SHA-256 is
+`c6a7248a0eb88a5920c7f11f28e745d66dc42f8b442c0c680162d1481a8d5904`.
+The wheel retains one native extension, all 15 attribution entries, NumPy as
+its only unconditional dependency, and no packaged build/include/lib/share/bin
+tree. A fresh NumPy-only environment passes the packaged smoke and explicit
+all-six splat inspection/read/partial/path-release probe.
