@@ -166,7 +166,7 @@ parser working memory remains diagnostic. The inspector and portable
 absent-value fingerprint commits are pushed at `49fd976` and `6e94614`;
 normal run 30214058828 and compiler-instrumented run 30214058885 are green.
 
-The registry extraction is now the active candidate. Its immutable
+The reconstruction registry extraction is complete. Its immutable
 `RECONSTRUCTION_CODECS` tuple owns all 12 definitions, and the aggregate
 stages that tuple once while restoring canonical positions
 1/15/16/17/18/23/24/38/45/46/47/48. Codec ASTs, direct native directory and
@@ -182,8 +182,11 @@ tests, the family matrix passes 506 tests with two documented skips, and the
   changing directory. The BAL exact-zero canonicalization is isolated from the
   workflow repair, which keeps installed-package isolation at `/tmp` and adds
   command-scoped `PYTHONPATH=/work` for the benchmark fixture import. The
-  combined tree must repeat package/review/hosted gates before the registry
-  checkpoint closes.
+  combined implementation tree `06f89e8b685c3536af0e67a462d9cff90a86bc9c`
+  passes repeated package and three-review gates. Normal run `30218232248` and
+  compiler-instrumented run `30218232246` pass every final lane, including
+  macOS reconstruction and the isolated GCC-10 invocation. The registry
+  checkpoint is closed.
   Exact-export import sampling retains the seven-module `sceneio` and
   eight-module direct `_core` sets; the I/O facade's only added module is
   `_registry.families.reconstruction`. Splats remain the last R2 family.

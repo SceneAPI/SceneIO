@@ -1387,3 +1387,13 @@ The repaired candidate reproduces the portable all-50 structural SHA-256
 `2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`,
 and the default-scale five-run throughput/allocation guard passes. The
 zero-component store has no measurable BAL regression.
+
+The closed combined implementation tree is
+`06f89e8b685c3536af0e67a462d9cff90a86bc9c`. Its source archive SHA-256 is
+`89304b849aeef699fadb79c2fed8c211b6bd84150ff4bfe313b9b7547ff7bccb`;
+the derived Windows cp312-abi3 wheel SHA-256 is
+`ffbc561b547423cb6266db2540afdb698f75b5f30785077bd1cead7f8570b87b`.
+Normal run `30218232248` passes the complete suite, retained performance
+guard, all three reconstruction operating systems, all mmap lanes, and the
+isolated GCC-10 lane. Compiler-instrumented run `30218232246` passes both
+jobs.

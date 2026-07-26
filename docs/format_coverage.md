@@ -176,7 +176,7 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > 30214058885][r2-reconstruction-inspector-instrumented] pass the corrected
 > checkpoint.
 >
-> **R2 reconstruction registry candidate (2026-07-26):** all 12 exact Codec
+> **R2 reconstruction registry checkpoint (2026-07-26):** all 12 exact Codec
 > definitions now come from the immutable, side-effect-free
 > `_registry/families/reconstruction.py` tuple and are staged once into their
 > original non-contiguous canonical positions. Native directory/database
@@ -192,17 +192,22 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > facade adds only `_registry.families.reconstruction` (42 to 43 modules).
 > The original exact-tree source archive, derived wheel, and external
 > NumPy-only smoke pass with all 12 family members exercised, and all three
-> independent reviews are clear. The extraction is pushed at `be836a0`, but
+> independent reviews are clear. The extraction is pushed at `be836a0`.
 > [normal run 30216568265][r2-reconstruction-registry-ci] exposed AppleClang
 > retaining `-0.0` in BAL's canonical 180-degree quaternion and the GCC-10
 > command omitting `/work` from its import path after changing directory. The
 > BAL repair normalizes only exact-zero quaternion components after sign
 > selection. The separate workflow repair retains installed-package isolation
 > at `/tmp` and adds command-scoped `PYTHONPATH=/work` for the architecture
-> fixture import. Exact-tree packaging, reviews, and hosted validation must be
-> repeated for the combined tree before this registry checkpoint is closed.
-> [Compiler-instrumented run
-> 30216568311][r2-reconstruction-registry-instrumented] passes at `be836a0`.
+> fixture import. The repairs are committed at `1f32b49` and `aa5b624`.
+> The final exact implementation tree is `06f89e8b685c3536af0e67a462d9cff90a86bc9c`;
+> its 321/322/79 Git/source-archive/wheel inventory is byte-consistent, the
+> external NumPy-only smoke and positive-zero probe pass, and all repair
+> reviews are clear. [Normal run
+> 30218232248][r2-reconstruction-registry-final-ci] and
+> [compiler-instrumented run
+> 30218232246][r2-reconstruction-registry-final-instrumented] pass every final
+> lane. The checkpoint is closed.
 
 [current-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287022
 [current-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287161
@@ -232,6 +237,8 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 [r2-reconstruction-inspector-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30214058885
 [r2-reconstruction-registry-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30216568265
 [r2-reconstruction-registry-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30216568311
+[r2-reconstruction-registry-final-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30218232248
+[r2-reconstruction-registry-final-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30218232246
 
 ## Data structures (memory Records)
 

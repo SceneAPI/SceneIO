@@ -32,8 +32,10 @@ close at `d99dcf0`, and points close at `686f42e`. The reconstruction
 inspector checkpoint is pushed at `49fd976`, with its cross-platform
 fingerprint correction at `6e94614`. Normal CI run 30214058828 and
 compiler-instrumented run 30214058885 pass that exact corrected checkpoint.
-The reconstruction registry extraction is the active R2 unit; splats follow
-after its implementation and evidence commits are independently green.
+The reconstruction registry extraction and both platform follow-ups close
+through `aa5b624`; normal run 30218232248 and compiler-instrumented run
+30218232246 pass that combined implementation. Splats are the active and only
+remaining R2 family.
 
 This is the operational checklist for the repository-organization and
 codec-performance stage defined in
@@ -1891,13 +1893,16 @@ is closed; reconstruction is next.
 
 ### R2 reconstruction seventh-family unit
 
-This organization-only unit keeps the existing 12-member
-`FAMILY_MEMBERS["reconstruction"]` partition intact while delivering it
-through four reviewable commits: documentation and parent freeze, inspector
-extraction, registry extraction, and evidence closure. The two implementation
-commits are independently green. No codec algorithm, encoded payload, decoded
-value, public API, C++, CMake, dependency, backend, or format convention
-changes in this unit.
+The mechanical extraction keeps the existing 12-member
+`FAMILY_MEMBERS["reconstruction"]` partition intact across documentation and
+parent freeze, inspector extraction, registry extraction, and evidence
+closure. Those moves change no codec algorithm, encoded payload, decoded
+value, public API, C++, CMake, dependency, backend, or format convention.
+Hosted validation additionally required a test-fingerprint correction,
+BAL exact-zero quaternion canonicalization, and an isolated GCC-10 invocation
+repair. The BAL follow-up intentionally changes only platform-dependent
+signed-zero component bits; the represented rotation, format conventions,
+and every nonzero coefficient remain unchanged.
 
 Parent behavior is frozen before the documentation commit at exact commit
 `074d8d9b33711658423de8e7787a97f43bf09982`, tree
@@ -2073,11 +2078,11 @@ Registry extraction checkpoint:
       11 codec suites; include the architecture suite in the manylinux2014
       GCC-10 lane. Update the compiler-instrumented collection pin only from a
       final `pytest --collect-only` result.
-- [ ] Repeat focused/full/Ruff, two-parent-versus-candidate benchmark
+- [x] Repeat focused/full/Ruff, two-parent-versus-candidate benchmark
       structure, retained five-run, import, exact-tree package, installed
       wheel, three-review, commit/push, and hosted-run gates.
 
-Registry candidate evidence in progress: the 12 definitions now come from the
+Registry checkpoint evidence: the 12 definitions now come from the
 immutable, inert `_registry/families/reconstruction.py` tuple and are staged
 once. Their Codec AST hashes and native/wrapper callable descriptors remain
 identical to the frozen parent. The expanded architecture suite passes 70
@@ -2116,9 +2121,19 @@ keeping `/work` importable. The BAL repair normalizes only exact-zero
 quaternion components after sign selection. The separate workflow repair keeps
 the installed-package test isolation at `/tmp` while setting command-scoped
 `PYTHONPATH=/work` so the architecture test can import its benchmark fixture
-module. Exact package, reviews, and hosted runs must be repeated for the
-combined tree before this checkpoint closes. Compiler-instrumented run
-`30216568311` passes at `be836a0`.
+module. Those repairs are committed at `1f32b49` and `aa5b624`.
+
+The final combined implementation tree is
+`06f89e8b685c3536af0e67a462d9cff90a86bc9c`. Its source archive SHA-256 is
+`89304b849aeef699fadb79c2fed8c211b6bd84150ff4bfe313b9b7547ff7bccb`
+and its Windows cp312-abi3 wheel SHA-256 is
+`ffbc561b547423cb6266db2540afdb698f75b5f30785077bd1cead7f8570b87b`.
+All three independent repair reviews are clear. Normal run `30218232248` and
+compiler-instrumented run `30218232246` pass the combined tree, including
+macOS BAL bytes, the isolated GCC-10 command, all three reconstruction
+operating systems, the complete suite and retained benchmark guard, all mmap
+lanes, and both compiler-instrumented jobs. The reconstruction registry
+checkpoint is closed; splats are the only remaining R2 family.
 
 Final evidence and documentation closure:
 
@@ -2129,30 +2144,30 @@ Final evidence and documentation closure:
       no speedup for this mechanical extraction.
 - [x] Run 15 interleaved parent/candidate import samples. Treat exact module
       sets as the contract and timings as diagnostic evidence.
-- [ ] Freeze a zero-unstaged staged tree, export it with
+- [x] Freeze a zero-unstaged staged tree, export it with
       `core.autocrlf=false`, build the source archive from that tree, and build
       the wheel only from the exact archive. Compare every staged blob and all
       changed packaged runtime files byte-for-byte across Git, archive, and
       wheel.
-- [ ] Measure the final inventory rather than forcing an estimate. If the only
-      additions are the two runtime modules, one contract and one architecture
-      test, the expected shape is 321 tracked files, 322 source-archive files
-      including generated `PKG-INFO`, and 79 wheel members.
-- [ ] Verify 15 license/attribution members, one native extension, no packaged
+- [x] Measure the final inventory rather than forcing an estimate: 321 tracked
+      files, 322 source-archive files including generated `PKG-INFO`, and 79
+      wheel members.
+- [x] Verify 15 license/attribution members, one native extension, no packaged
       build/include/lib/share/bin layout, NumPy as the sole unconditional
       dependency, and unchanged native dependencies. Add no FFmpeg/libav code,
       linkage, subprocess path, runtime member, or attribution.
-- [ ] Install the exact wheel outside the repository with only NumPy and run
+- [x] Install the exact wheel outside the repository with only NumPy and run
       `_wheel_smoke` plus the all-12 detection/explicit-format, inspect, read,
       partial, retained-result, and path-release probes.
-- [ ] After both implementation commits are independently reviewed and hosted
-      green, update `core_architecture.md`, `repository_organization_plan.md`,
-      `format_coverage.md`, this checklist, and `bench/BASELINE.md` with exact
-      line counts, collection/import counts, hashes, artifact inventories,
-      review resolutions, commit ids, and workflow ids.
-- [ ] Commit and push the evidence closure. Do not trigger the publish
-      workflow, create a tag, or publish a package. After closure, splats are
-      the only remaining R2 family.
+- [x] After the extraction and both repair commits are independently reviewed
+      and hosted green, update `core_architecture.md`,
+      `repository_organization_plan.md`, `format_coverage.md`, this checklist,
+      and `bench/BASELINE.md` with exact line counts, collection/import counts,
+      hashes, artifact inventories, review resolutions, commit ids, and
+      workflow ids.
+- [x] Stage this evidence closure for the next branch commit and push. Do not
+      trigger the publish workflow, create a tag, or publish a package. After
+      closure, splats are the only remaining R2 family.
 
 ## 7. R3 — split benchmark and cross-codec tests
 

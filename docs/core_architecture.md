@@ -139,6 +139,10 @@ sceneio._core (C++ / nanobind)
   direct native directory/database calls, mmap/sink closures, and every
   selector target. `_inspectors/reconstruction.py` owns metadata-only parsing;
   `_inspection.py` keeps same-signature wrappers and dispatch.
+  The final extraction and platform follow-ups are committed through
+  `aa5b624`; normal run `30218232248` and compiler-instrumented run
+  `30218232246` pass the combined tree. Splats are the only built-in family
+  still awaiting this extraction boundary.
   Built-in startup uses `_registry/assembly.py` as a lower staging boundary.
   Individual facade definitions and complete extracted family tuples are
   collected without touching the public registry. After all 50 canonical ids
