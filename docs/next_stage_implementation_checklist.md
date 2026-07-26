@@ -24,7 +24,8 @@ source archive and Windows abi3 wheel pass content-identity, license-inventory,
 layout, and fresh NumPy-only installed-wheel checks. R2.1 is complete at
 `ccfeea4`. The calibration reference family is complete and pushed at
 `b2bda1d`; the shared-inspection substrate is complete and pushed at
-`29af9de`. The six-codec mesh extraction is the active second-family commit.
+`29af9de`; and the six-codec mesh extraction is complete and pushed at
+`975533f`. The eight-codec image extraction is the active third-family unit.
 
 This is the operational checklist for the repository-organization and
 codec-performance stage defined in
@@ -900,8 +901,9 @@ Shared inspection substrate:
 - [x] Re-export the exact model objects from `_inspection.py`; preserve their
       historical `sceneio.io._inspection` module, qualnames, signatures, repr,
       equality, and pickle behavior.
-- [x] Add `_inspectors/common.py` containing only
-      `_compiled_buffer_inspect`. Preserve `ACCESS_READ`, same-open-stream
+- [x] Add the initial `_inspectors/common.py` containing only
+      `_compiled_buffer_inspect`; the later image-helper unit extends it with
+      proven cross-family primitives. Preserve `ACCESS_READ`, same-open-stream
       fallback, caught exception types, and prompt mapping closure.
 - [x] Make calibration consume the lower model/helper directly while
       retaining `_inspection._inspect_camera_rig(path, format_id, datatype)`
@@ -1034,6 +1036,11 @@ Mesh-family local evidence:
   confirmed AST-equivalent codec definitions, exact collection arithmetic,
   structural benchmark identity, unchanged Windows path/mmap behavior,
   accurate ownership/docs, and the package inventory.
+- The mesh family is committed and pushed as `975533f`. Its exact staged tree
+  is `fb9e4a90d04165a95ba63458bbac05251aae07c9`; the source archive SHA-256 is
+  `54f8c4023c3acb83db9a8d1283e5f53688fbf989fd4f09ca183c283ca6290df6`,
+  and the derived wheel SHA-256 is
+  `cc3a8fe6afc0cdb2f6ca12581aa24bfdd39bcd83fb8a478bf0abbcd1168b8a7c`.
 
 Performance, package, and review:
 
@@ -1047,7 +1054,7 @@ Performance, package, and review:
 - [x] Update the six repository-coverage inspection owners accurately:
       PLY-mesh/STL/OFF move to `_inspectors/meshes.py`; OBJ/glTF/GLB remain in
       `_obj.py`/`_gltf.py`.
-- [ ] Build an exact staged source archive and derive the Windows abi3 wheel
+- [x] Build an exact staged source archive and derive the Windows abi3 wheel
       only from it. Compare every new runtime file across workspace/archive/
       wheel; require all 15 licenses, one native module, no layout leakage,
       and a fresh NumPy-only installed-wheel smoke.
@@ -1057,6 +1064,124 @@ Performance, package, and review:
       and platform/documentation reviews for each of the two commits.
   - [x] Shared-inspection substrate commit.
   - [x] Mesh-family commit.
+
+### R2 shared image helpers and image third-family unit
+
+This unit follows the mesh checkpoint in two independently green commits. The
+first lowers only already-shared inspection primitives. The second moves the
+eight static image registrations and their metadata inspectors. Neither commit
+changes a codec field, payload, public signature, selector, detection rule, or
+backend.
+
+Shared-helper commit:
+
+- [x] Promote `_HEADER_LIMIT`, `_IMAGE_PIXEL_CAP`, `_exact`,
+      `_unsigned_decimal`, and `_image` into `_inspectors/common.py`; retain
+      `_compiled_buffer_inspect` unchanged.
+- [x] Re-export the exact helper objects and constants from `_inspection.py`
+      so PFM, FLO, Gaussian PLY, ZIP/NPY, point, splat, and reconstruction
+      inspectors continue through the same implementation.
+- [x] Keep `_size`, Netpbm tokenization, EXR C-string parsing, JPEG/HDR
+      constants, line iterators, ZIP helpers, and NumPy helpers out of the
+      shared module.
+- [x] Prove helper identity, annotations, exact short-read/integer grammar,
+      image shape and limit policy, metadata preservation, and unchanged
+      PFM/FLO inspection behavior.
+- [x] Run the complete inspection/mmap/partial/public suite, exact collection,
+      full suite, Ruff, all-codec guard, and import thresholds.
+- [x] Build the exact staged source archive and its derived Windows abi3
+      wheel; validate package contents and a fresh NumPy-only install.
+- [x] Obtain three independent architecture/correctness, test/performance, and
+      platform/package/documentation reviews before commit.
+
+Shared-helper local evidence:
+
+- Four new focused nodes cover exact helper behavior plus PFM/FLO consumers.
+  The exact collection gate is 3,028 tests, reconciled as the immutable
+  3,024-node mesh checkpoint plus those four nodes; the complete local MSVC
+  suite passes 3,024 with four documented skips.
+- The focused shared/mmap/partial set passes 176 tests. The eight-row five-run
+  image comparison preserves exact codec order, payload/file sizes, all
+  bytes/mmap/sink/inspection/partial traced allocation fields, and typed
+  adapter/O4 identity fields against `build/r2-images-before.json`.
+- The one-pass 50-codec structural sweep and strict five-run retained
+  O4/O5/allocation guard pass. Fifteen-sample Windows medians are 5.80 ms for
+  `sceneio`, 75.03 ms for `sceneio.io`, and 7.77 ms for `_core`, below the
+  unchanged 100/220.05/100 ms alerts.
+- No registry value, codec implementation, eager module set, C++/CMake source,
+  native dependency, ABI, license, or performance-ledger entry changes in
+  this helper-only unit.
+- The candidate package gate retains 298 source members and a 68-file Windows
+  cp312-abi3 wheel. All eight staged-tree files match the source archive; both
+  changed runtime files match the staged tree, archive, and wheel. The wheel
+  has all 15 attribution files, exactly one native module, no excluded layout
+  directories, and only NumPy as an unconditional dependency. A fresh
+  NumPy-only install passes `_wheel_smoke`, facade/common identity and
+  annotation checks, PFM/FLO inspection, and the 50-codec inventory probe.
+- Three independent reviews are clear. They confirmed exact helper ASTs and
+  facade identities, collection arithmetic and benchmark structure, package
+  contents, and Windows mapping behavior. The reviews found two stale
+  documentation statements—the current facade line count and the historical
+  initial contents of `common.py`; both are corrected in the final staged
+  tree.
+
+Image-family implementation:
+
+- [ ] Add side-effect-free `_registry/families/images.py` exporting immutable
+      `IMAGE_CODECS` in exact `netpbm`, `png`, `jpeg`, `bmp`, `tga`, `hdr`,
+      `exr`, `webp` order.
+- [ ] Preserve every `Codec` field and callable identity, including
+      Netpbm/WebP window selectors, JPEG/HDR/WebP lossy flags, TGA/WebP
+      extension-only detection, and all magic/capability tuples.
+- [ ] Install the complete tuple atomically between `safetensors` and `y4m`.
+      Construct `_IMAGE_FRAME_ACCESS` afterward in `registry.py` with its
+      existing live registry callbacks; do not freeze the image extension set
+      or move sequence state into the family module.
+- [ ] Add `_inspectors/images.py` containing the eight existing bounded
+      header/container parsers. Keep Netpbm token scanning, JPEG marker sets,
+      HDR resolution parsing, and EXR C-string parsing local to that module.
+- [ ] Retain eight same-signature `_inspection.py` wrappers and the existing
+      `inspect_path` branches. Only BMP/TGA may call compiled metadata
+      entry points; no lower image inspector may call a full decoder or
+      writer.
+
+Image-family verification:
+
+- [ ] Freeze exact valid inspection metadata and representative malformed
+      cause type/text for all eight codecs before the move; compare the final
+      lower and public paths against that evidence.
+- [ ] Prove canonical neighbors, registry/definition object identity, exact
+      adapter closure targets, immutable side-effect-free family reload, and
+      duplicate-free registry reload.
+- [ ] Enforce lower import allowlists and reject public, facade, registry,
+      image-sequence, frame-access, relative, and sibling-family imports.
+- [ ] Prove inspect/full agreement, unchanged public errors, no full decode,
+      bounded traced allocation on generated large padded headers, and prompt
+      Windows rename/delete while retaining every `Inspection`.
+- [ ] Re-run the live image-extension registration/removal and
+      image-sequence reload/dispatch tests so third-party image extensions
+      remain visible immediately.
+- [ ] Run all raw image parity suites, typed PNG/EXR depth, Image and
+      ImageSequence records, public E2E, detection, mmap/lifetime, sink,
+      partial-window, capability, compatibility, import, and documentation
+      suites.
+- [ ] Compare the eight five-run rows against
+      `build/r2-images-before.json`; require exact row order, payload/file
+      sizes, and traced bytes/mmap/sink/inspection/partial fields. Treat timing
+      movement as sampling variance and claim no speedup.
+- [ ] Run the one-pass 50-codec structural sweep, strict five-run retained
+      O4/O5/allocation guard, 15-sample imports, exact collection, full suite,
+      and Ruff.
+- [ ] Update only the two intended eager import entries, all eight inspection
+      ownership rows, final exact workflow collection pin, measured facade
+      line counts, and current architecture/status documentation.
+- [ ] Build the source archive from the exact staged tree and derive the
+      Windows abi3 wheel only from it. Require staged/archive/runtime identity,
+      all 15 attribution files, one native module, no excluded layout
+      directories, NumPy-only metadata, and an installed all-eight-codec probe
+      including Netpbm/WebP windows and PNG/EXR typed depth.
+- [ ] Obtain independent architecture/correctness, test/performance, and
+      platform/package/documentation reviews; resolve findings before commit.
 
 ## 7. R3 — split benchmark and cross-codec tests
 

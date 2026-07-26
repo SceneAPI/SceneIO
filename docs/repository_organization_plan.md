@@ -57,14 +57,20 @@ and passes 3,002 with four documented skips; the isolated 295-member
 source-to-66-file-wheel gate, retained all-codec guard, fresh import thresholds,
 and three independent reviews pass.
 
-Meshes are the active second-family commit. The six ids form one contiguous canonical
-block, support a static immutable tuple, and exercise generic codecs,
-multi-file OBJ/glTF adapters, and face/mesh/primitive selectors without the
-special live-dependency factory required by image sequences or the larger
-eight-parser image move. Its immutable registry tuple and PLY-mesh/STL/OFF
-inspector module are locally implemented behind unchanged facades; OBJ and
-glTF/GLB retain their bespoke adapters. Images follow after this static-family
-pattern; sequences wait for an explicit injected `ImageFrameAccess` factory.
+Meshes are complete and pushed at `975533f`. The six ids remain one
+contiguous canonical block behind an immutable tuple, while PLY-mesh/STL/OFF
+metadata inspection lives below the compatibility facade and OBJ/glTF/GLB
+retain their bespoke adapters. The complete local suite collects 3,024 tests
+and passes 3,020 with four documented skips. The exact 298-member
+source-to-68-file-wheel gate, retained all-codec guard, fresh import
+thresholds, and three independent reviews pass.
+
+Images are the active third-family unit. The eight ids form one contiguous
+canonical block and use static mmap/sink adapters. Their header-only
+inspectors will move together behind same-signature facade wrappers, with
+shared parsing primitives lowered only where they already serve more than one
+family. Image sequences remain a later unit because their live extension
+catalog requires the injected `ImageFrameAccess` factory.
 
 The codec-per-file C++ layer remains reasonably isolated, but orchestration and
 verification have accumulated in a few large modules:
@@ -74,7 +80,7 @@ verification have accumulated in a few large modules:
 | C++ codecs | 40 files for 50 format ids | flat source list and manual binding declarations |
 | C++ records | 32 source/header files | still manageable; new table/animation/scene records will add pressure |
 | Python registry | `registry.py`, 1,054 lines, focused `_registry/{model,adapters,detection,native_features}.py` modules, and `_registry/families/{calibration,meshes}.py` definition modules | six built-in families still share the facade until their R2.2 units |
-| Inspection | `_inspection.py`, 1,883 lines, plus `_inspectors/{model,common,calibration,meshes}.py` | six unrelated format families still share the facade; the proven shared model and mmap bridge are lower services |
+| Inspection | `_inspection.py`, 1,835 lines, plus `_inspectors/{model,common,calibration,meshes}.py`; `common.py` is 75 lines | six unrelated format families still share the facade; the proven shared model, mmap bridge, metadata bounds, exact-read/integer grammar, and image-result constructor are lower services |
 | Benchmark | `bench_io.py`, about 4,660 lines | CLI, fixtures, oracles, runners, metrics, and reporting are coupled |
 | Cross-codec tests | `test_io_mmap.py`, about 2,400 lines; `test_io_partial.py`, about 1,100 | reusable codec cases and behavior assertions are difficult to extend independently |
 | Execution plan | `format_gap_implementation_plan.md`, about 2,500 lines | historical evidence and the active queue are easy to confuse |

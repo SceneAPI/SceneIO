@@ -58,21 +58,22 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > smoke-tests all three platform wheel sets, with publication skipped. R1 is
 > closed and R2 is next.
 >
-> **R2 local organization checkpoint (2026-07-26, `29af9de`):** R2.0
+> **R2 local organization checkpoint (2026-07-26, `975533f`):** R2.0
 > (`40d5412`) removes image-sequence upward runtime dependencies; R2.1
 > (`ccfeea4`) extracts shared registry services; and `b2bda1d` moves the four
 > calibration registrations and metadata inspectors behind the first
 > lower-layer family boundary. `29af9de` lowers the shared inspection types and
-> mmap bridge while retaining compatibility. Codec behavior and the 50-id
-> inventory remain unchanged. Local MSVC collects 3,006 tests and passes 3,002
-> with four documented skips; the all-codec performance/allocation guard
-> passes, and a Windows abi3 wheel derived from the exact 295-member source
-> archive passes the expanded NumPy-only smoke. [Normal CI run
+> mmap bridge while retaining compatibility. `975533f` moves the six
+> contiguous mesh registrations plus only the PLY-mesh/STL/OFF facade-owned
+> inspectors; OBJ/glTF/GLB bespoke adapters remain in place. Codec behavior and
+> the 50-id inventory remain unchanged. Local MSVC collects 3,024 tests and
+> passes 3,020 with four documented skips; the all-codec
+> performance/allocation guard passes, and a Windows abi3 wheel derived from
+> the exact 298-member source archive passes the expanded NumPy-only smoke.
+> [Normal CI run
 > 30193628676][r2-calibration-ci] and [compiler-instrumented run
 > 30193628672][r2-calibration-instrumented] pass for the preceding calibration
-> checkpoint. The current local mesh-family commit moves the six contiguous
-> mesh registrations plus only the PLY-mesh/STL/OFF facade-owned inspectors;
-> OBJ/glTF/GLB bespoke adapters remain in place. [Normal CI run
+> checkpoint. [Normal CI run
 > 30195153288][r2-shared-ci] and [compiler-instrumented run
 > 30195153277][r2-shared-instrumented] pass for `29af9de`.
 

@@ -82,6 +82,12 @@ sceneio._core (C++ / nanobind)
   `_inspection.py` facade re-exports those exact objects and retains the
   historical calibration wrapper signature. Family definitions and lower
   inspectors do not import either compatibility facade.
+  `_inspectors/common.py` owns only proven cross-family inspection primitives:
+  the bounded mmap bridge, metadata header and image-pixel limits, exact
+  fixed-length reads, unsigned-decimal grammar, and the common image-result
+  constructor used by PFM/FLO and raster image formats. The facade re-exports
+  those exact private objects for compatibility; format-local token,
+  container, and marker grammars remain with their owning family.
   Meshes are the second extracted family:
   `_registry/families/meshes.py` exports the exact contiguous PLY-mesh, OBJ,
   STL, OFF, glTF, and GLB tuple, installed atomically at its canonical
