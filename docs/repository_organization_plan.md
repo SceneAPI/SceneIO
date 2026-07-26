@@ -209,6 +209,18 @@ the dedicated three-OS family lane, GCC-10 coverage, exact package inspection,
 and three independent reviews. This extraction changes no codec algorithm or
 public API and makes no performance-gain claim.
 
+The splat parent-freeze contract is implemented locally. Its 31-node,
+oracle-independent architecture suite covers all six codecs, SOG archive and
+directory entry paths, four-way PLY classification, SPZ v1-v4, partial
+selectors, retained-result path release, and invalid-input behavior. The
+candidate suite now collects exactly 3,287 nodes with sorted normalized
+SHA-256
+`190733ef6fbf1dd99cdd721ddc19277fc22dca3643154f11bf9738aa52dbc294`.
+The checked six-row benchmark projection reproduces both Windows/MSVC parent
+captures. Exact encoded-byte fingerprints remain pending reproduction on
+GCC-10 and AppleClang before they are described as cross-platform-portable;
+logical-record and inspection parity remain universal requirements.
+
 The codec-per-file C++ layer remains reasonably isolated, but orchestration and
 verification have accumulated in a few large modules:
 

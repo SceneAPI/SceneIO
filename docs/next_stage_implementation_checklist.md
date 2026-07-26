@@ -2208,39 +2208,39 @@ below.
 
 Documentation and exact-parent freeze:
 
-- [ ] Add `tests/contracts/io_splat_family_v1.json` from exact-parent evidence.
+- [x] Add `tests/contracts/io_splat_family_v1.json` from exact-parent evidence.
       Freeze all six Codec ASTs, canonical positions and neighbors, object and
       operation identities, callable/closure descriptors, extensions,
       filenames, magic values, directory markers, flags, feature tuples,
       valid fixtures, normalized inspections, logical full-record
-      fingerprints, partial-result fingerprints where supported, and one
-      representative invalid-input outcome per codec.
-- [ ] Freeze both SOG representations and all accepted entry paths: `.sog`
+      fingerprints, partial results against frozen full-record slices where
+      supported, and one representative invalid-input outcome per codec.
+- [x] Freeze both SOG representations and all accepted entry paths: `.sog`
       archive, directory, direct `meta.json`, and explicit-format reads from
       suffixless or alternate-suffix archive paths. Preserve archive versus
       directory inspection metadata and byte-size behavior.
-- [ ] Freeze PLY classification independently of registry order:
+- [x] Freeze PLY classification independently of registry order:
       compressed-chunk schema, mesh/list schema, exact Gaussian SH schema, and
       generic point PLY. Include `.compressed.ply`, ordinary `.ply`, and
       extensionless PLY-magic cases.
-- [ ] Freeze SPZ legacy versions 1-3 and v4 separately. Preserve the current
+- [x] Freeze SPZ legacy versions 1-3 and v4 separately. Preserve the current
       gzip-header and `NGSP` routing, inspection metadata, and normalized
       invalid/truncated outcomes without changing the two implementations.
-- [ ] Add an oracle-independent architecture fixture for Gaussian PLY and SPZ.
+- [x] Add an oracle-independent architecture fixture for Gaussian PLY and SPZ.
       Their dedicated parity modules currently collect five and 13 tests but
       skip as modules when `gsply` is unavailable. The new fixture must keep
       the GCC-10 and NumPy-only installed-wheel paths self-contained while the
       existing oracle tests remain the parity authority.
-- [ ] Make the oracle-independent invalid-input matrix substantive:
+- [x] Make the oracle-independent invalid-input matrix substantive:
       Gaussian PLY truncated headers, malformed format/property schemas, and
       invalid declared extents; SPZ raw and gzip header truncation,
       unsupported version/degree/fractional-bits values, and invalid declared
       count extents; and SPLAT sizes not divisible by 32.
-- [ ] Add `tests/test_io_splat_family_architecture.py`, initially against the
+- [x] Add `tests/test_io_splat_family_architecture.py`, initially against the
       exact parent. Prove the six-member manifest partition, parent
       definitions, inspections, full records, partial slices, invalid-input
       behavior, SOG representations, and detection rules before source moves.
-- [ ] Record the focused parent surface: five Gaussian PLY, 21 compressed PLY,
+- [x] Record the focused parent surface: five Gaussian PLY, 21 compressed PLY,
       28 SOG, 35 KSplat, 13 SPZ, and 11 splat codec nodes, plus the common
       mmap, partial, capability, registry, inspection, and public-API suites.
       Do not pre-compute the candidate collection count; derive its exact
@@ -2248,6 +2248,23 @@ Documentation and exact-parent freeze:
 - [ ] Commit and push this documentation/parent-freeze checkpoint only after
       documentation consistency, link, Ruff, architecture-contract, and diff
       checks pass.
+
+Parent-freeze candidate evidence: the oracle-independent architecture suite
+passes all 31 nodes. The architecture plus registry-assembly contract passes
+42 tests, and the focused family/common matrix passes 385 tests with one
+documented `gsply` v2-writer skip. The exact candidate collection is 3,287
+nodes with sorted normalized SHA-256
+`190733ef6fbf1dd99cdd721ddc19277fc22dca3643154f11bf9738aa52dbc294`;
+the assembly contract and compiler-instrumented workflow pin match it. The
+checked six-row benchmark projection artifact reproduces both parent captures
+and SHA-256
+`5c6adc3584ba25050c885b37313d009311e2253b0c841cbc8738b806cb090bfd`.
+Encoded artifact hashes were captured on Windows/MSVC and are intentional
+exact requirements. Their GCC-10 and AppleClang reproduction remains pending;
+do not call them cross-platform-portable until the hosted lanes pass. A
+platform difference must be investigated before extraction: fix the producer
+when behavior is unintended, or record a justified platform-keyed artifact
+fingerprint while retaining universal logical-record and inspection parity.
 
 Inspector extraction checkpoint:
 
