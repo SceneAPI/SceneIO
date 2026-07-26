@@ -346,6 +346,8 @@ Engineering status and extension work are tracked in:
 
 - [`docs/format_coverage.md`](docs/format_coverage.md) — exact live codec
   capabilities and validation status;
+- [`docs/coverage_roadmap.md`](docs/coverage_roadmap.md) — format policy,
+  declared destinations, and future sequencing rather than current evidence;
 - [`docs/core_architecture.md`](docs/core_architecture.md) — current public and
   native boundaries;
 - [`docs/repository_organization_plan.md`](docs/repository_organization_plan.md)
@@ -355,7 +357,9 @@ Engineering status and extension work are tracked in:
   — the reviewed commit-by-commit implementation, testing, benchmark, and
   cross-platform validation checklist for that gate;
 - [`docs/format_gap_implementation_plan.md`](docs/format_gap_implementation_plan.md)
-  — the dependency-ordered remaining format plan.
+  — the active dependency-ordered format queue and package checkpoints;
+- [`docs/plans/completed/README.md`](docs/plans/completed/README.md) — immutable
+  evidence moved out of active plans after its implementation wave closes.
 
 All live codecs have optimized mmap/direct-sink/inspection contracts, with
 bounded partial paths where their format permits them. Codec-kernel performance

@@ -18,10 +18,13 @@ and focused compiler-instrumented native jobs, the 50-codec performance guard,
 and the nonpublishing three-platform wheel/source build all pass. R1a now
 implements the immutable ownership manifest, compatibility fixtures,
 repository completeness checks, and the 50-codec/130-operation performance
-ledger, with local verification only. R1b documentation separation and a
-current-head package/hosted validation pass remain open. Commit `a5e7fa4`
-remains the latest immutable cross-platform validated checkpoint; no new
-format starts while R1-R6 remain open.
+ledger. R1b now separates the active dependency queue from completed Waves A-C
+evidence and checks documentation entry points, relative links, anchors, and
+the human capability summary. A clean local Windows abi3 wheel built from the
+current source archive passes the NumPy-only installed-wheel smoke;
+current-head hosted validation remains open. Commit `a5e7fa4` remains the
+latest immutable cross-platform validated checkpoint; no new format starts
+while R1-R6 remain open.
 
 The codec-per-file C++ layer remains reasonably isolated, but orchestration and
 verification have accumulated in a few large modules:
@@ -359,7 +362,7 @@ earlier gate.
 | Unit | Implementation boundary | Focused verification | Validation and exit evidence |
 |---|---|---|---|
 | R1a | Add contract snapshots, built-in family ownership, manifest schema, and the performance-ledger skeleton without moving behavior | capability/document snapshot; extension/magic precedence; public imports; `_core` symbols; one ledger row per required profile and direction | focused architecture tests, full local suite, Ruff, benchmark smoke; zero snapshot delta |
-| R1b | Separate active documentation from completed wave evidence while preserving the three authoritative entry points | relative-link/anchor check; live capability table and current checkpoint remain generated/validated; no historical result is rewritten | documentation-consistency tests, full link check, Ruff, `git diff --check`; active plan is concise and every archived wave is reachable |
+| R1b | Separate the active queue from the completed Waves A-C evidence while preserving the three authoritative entry points; retain the format-level G2-G4.2 contract/status ledger until its later archive unit | relative-link/anchor check; live capability table and current checkpoint remain generated/validated; no historical result is rewritten | documentation-consistency tests, full link check, Ruff, `git diff --check`; Wave A-C stubs are concise and every archived wave is reachable |
 | R2a-R2h | Move one Python registry family at a time behind `registry.py`; then move its inspectors behind `_inspection.py` | family ids/capabilities, detect ambiguity, bytes/mmap/path, inspect/full agreement, selector validation order | full public API E2E after each family; import-cycle test; no import/startup regression outside the recorded noise band |
 | R3a-R3h | Move one benchmark/fixture/oracle family at a time; centralize cross-codec cases in staged consumer migrations | old and new CLI JSON schemas match; exact pytest node ids/parameters/skips match; the exact 50 built-ins are included or explicitly exempted; representative fixture bytes/hashes match | one-run all-codec smoke after each family, then five-run retained O4/O5 guards; strict qualification rejects a missing oracle/RSS sampler |
 | R4a | Extract CMake dependency/source manifests without moving native files | configure option/cache equivalence; compiled source list and feature macros match | rebuild editable wheel on MSVC; `_core` symbol snapshot and full suite pass |

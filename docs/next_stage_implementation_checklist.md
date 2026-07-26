@@ -7,10 +7,11 @@ Ubuntu/Windows/macOS portability matrix. The nonpublishing release dry run
 builds and smoke-tests the source archive and all three platform wheel sets.
 The compiler-instrumented workflow passes twice with its complete 2,923-test
 collection and focused native lifetime checks. Three independent memory/lifetime,
-format/correctness, and test/benchmark reviews are clear. R1.1-R1.3 are now
-implemented and locally verified in the R1a unit; R1.4, a current-head package
-build, and current-head hosted validation remain open. Commit `a5e7fa4`
-remains the latest immutable cross-platform validated implementation checkpoint.
+format/correctness, and test/benchmark reviews are clear. R1.1-R1.4 are now
+implemented and locally verified in the R1a/R1b units, including a clean wheel
+built from the current source archive. Current-head hosted validation remains
+open. Commit `a5e7fa4` remains the latest immutable cross-platform validated
+implementation checkpoint.
 
 This is the operational checklist for the repository-organization and
 codec-performance stage defined in
@@ -591,15 +592,16 @@ registration semantics, or public API behavior.
 
 ### R1.4 — active versus historical documentation
 
-- [ ] Keep current capabilities/status in `format_coverage.md`.
-- [ ] Keep the active dependency queue in
+- [x] Keep current capabilities/status in `format_coverage.md`.
+- [x] Keep the active dependency queue in
       `format_gap_implementation_plan.md`.
-- [ ] Move completed wave evidence without rewriting it to
-      `docs/plans/completed/`.
-- [ ] Preserve stable relative links or provide explicit replacement links.
-- [ ] Add a documentation consistency/link test for current-status entry
+- [x] Move the completed Waves A-C evidence without rewriting it to
+      `docs/plans/completed/`; retain the format-level G2-G4.2 contract/status
+      ledger until its later scheduled archive unit.
+- [x] Preserve stable relative links or provide explicit replacement links.
+- [x] Add a documentation consistency/link test for current-status entry
       points.
-- [ ] Update README development links.
+- [x] Update README development links.
 
 R1 verification and validation:
 
@@ -609,15 +611,20 @@ R1 verification and validation:
       an optional-oracle import exclusion. R1 adds only the
       approved lightweight `_builtin_manifest` module to the eager
       `sceneio.io` boundary and stays within the recorded Windows alert band.
-- [x] R1a local verification passes 2,945 tests with four documented skips,
-      Ruff, the 50-row all-format structural benchmark smoke, and the editable
-      package smoke.
-- [ ] The retained five-run benchmark guard and a clean current-head wheel
-      smoke pass.
+- [x] R1a/R1b local verification passes 2,951 tests with four documented
+      skips, Ruff, the 50-row all-format structural benchmark smoke, the
+      five-run retained performance guard, documentation case/link/anchor and
+      archive-digest checks, and the editable package smoke.
+- [x] The retained five-run benchmark guard passes. A clean Windows abi3 wheel
+      built from the exact current source archive installs into a fresh
+      NumPy-only environment, `_wheel_smoke` returns 2, and artifact inspection
+      finds the compiled extension, all 15 license files, and no excluded
+      build/development directories. The source archive includes both
+      completed-plan files and every R1 contract/ledger fixture.
 - [x] The R1 diff contains tests/docs/schema plus internal ownership metadata
       and the immutable `BUILTIN_DEFINITIONS` projection only—no codec adapter,
       dispatch, detection, or public behavior change.
-- [ ] Record that the latest successful build-only wheel matrix predates the
+- [x] Record that the latest successful build-only wheel matrix predates the
       current head; do not call R1 cross-platform validated until a
       user-authorized current-head matrix passes.
 

@@ -1,9 +1,10 @@
 # Format & data-structure coverage
 
-The single source of truth for **what SceneIO's compiled core reads/writes today
-vs. what's planned**. Consolidates the catalog (`formats_survey.md`) and the
-roadmap (`io_implementation_plan.md` §3, §6, §7) against the actual codec
-registry (`src/sceneio/io/registry.py`).
+This is the canonical source for SceneIO's **current codec capabilities and
+validation status**. It reconciles the live registry
+(`src/sceneio/io/registry.py`) with the generated capability snapshot below.
+Future policy and sequencing live in
+[`coverage_roadmap.md`](coverage_roadmap.md), not in current-evidence claims.
 
 The detailed execution, verification, and wheel-validation sequence for the
 remaining formats is in
@@ -42,10 +43,13 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 >
 > **Current local organization status:** R1a adds the immutable 50-codec
 > ownership projection, checked compatibility/repository contracts, and a
-> 130-operation performance ledger. It is locally verified and does not change
-> codec behavior. R1b documentation separation plus current-head package and
-> hosted validation remain open, so `a5e7fa4` is still the latest
-> cross-platform validated implementation checkpoint.
+> 130-operation performance ledger. R1b separates completed Waves A-C evidence
+> from the active dependency queue and adds documentation consistency checks.
+> These organization-only changes do not alter codec behavior. A clean local
+> Windows abi3 wheel built from the current source archive passes the
+> NumPy-only installed-wheel smoke; current-head hosted validation remains
+> open, so `a5e7fa4` is still the latest cross-platform validated
+> implementation checkpoint.
 
 [current-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287022
 [current-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287161
@@ -99,7 +103,7 @@ SoA, zero-copy to numpy/torch (DLPack), conventions carried as metadata.
 | `nvm` | `Reconstruction` | R+W | manual | VisualSFM `.nvm` (NVM_V3) |
 | `openmvg` | `Reconstruction` | R+W | manual | openMVG `sfm_data.json` |
 | `npy` | ndarray | R+W | **numpy** | pinned mapped native/C-order view; byte‑exact v1.0 writer (== np.save) |
-| `npz` | `TensorDict` | R+W | **numpy** | ZIP (stored+deflate) via vendored miniz; 12 dtypes |
+| `npz` | `TensorDict` | R+W | **numpy** | ZIP (stored+deflate) via pinned miniz 3.0.2 through CMake `FetchContent`; 12 dtypes |
 | `netpbm` | `Image` | R+W | pure‑Python | PGM P5/P2 + PPM P6/P3; 16‑bit big‑endian, comment‑tolerant |
 | `.xyz` | `PointCloud` | R+W | pure‑Python | headerless point-cloud text (fast_float parsing) |
 | `.pts` | `PointCloud` | R+W | independent parser | mandatory count header; XYZ/XYZI/XYZRGB/XYZIRGB; count validation |
