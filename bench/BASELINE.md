@@ -1299,3 +1299,12 @@ All three independent reviews are clear for staged tree
 independently reproduced both benchmark projections and the strict guard, and
 its 729-test focused matrix passed. No review required a source change. A final
 exact-tree artifact confirmation follows this documentation closure.
+
+The final exact staged tree is
+`688f0a4caa81edf6e499f7b72e1bc03117a4ddf0`. Its source archive SHA-256 is
+`cad77d9a9b311c686279d150cc2a68c4a4221f21db1b1cdc2473af38d96ce3ab`
+and its Windows cp312-abi3 wheel SHA-256 is
+`171aa3ff0b6e28a59ca45489b72818289a2dbb7f8bf63dd5e666be9b9221676a`.
+The exact tree is commit `686f42e`; normal CI run 30210055913 and
+compiler-instrumented run 30210055930 pass, including the retained
+throughput/allocation guard and the full cross-platform lanes.

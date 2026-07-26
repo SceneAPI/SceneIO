@@ -117,9 +117,10 @@ the exact 50-row and six-row benchmark projections, the five-run retained
 guard, Ruff, exact-tree source/wheel validation, a fresh NumPy-only installed
 probe, and all three independent reviews pass. Normal CI run 30207617248 and
 compiler-instrumented run 30207617253 are green for the exact commit. Points
-are the active sixth family; reconstruction and splats follow.
+are the sixth family; reconstruction and splats follow.
 
-The points candidate moves `ply`, `pcd`, `xyz`, `pts`, `las`, and `laz` to
+Points are complete and pushed at `686f42e`. The unit moves `ply`, `pcd`,
+`xyz`, `pts`, `las`, and `laz` to
 one immutable lower family tuple while preserving their six non-contiguous
 canonical positions and exact mmap/sink/point-range targets. Their metadata
 parsers now live in `_inspectors/points.py`; the compatibility facade retains
@@ -137,8 +138,10 @@ dependencies, full installed smoke, and explicit all-six point probes pass in
 a clean external environment. All three independent reviews are clear for
 staged tree `442093b402db2af290c9a19a61747b6691e2af1c`; their largest focused
 matrix passes 729 tests and no review required a source change. Final
-exact-tree artifact, commit/push, and hosted validation gates remain before
-this unit closes.
+exact-tree source/wheel validation passes at tree
+`688f0a4caa81edf6e499f7b72e1bc03117a4ddf0`. Normal CI run 30210055913 and
+compiler-instrumented run 30210055930 are green for the exact commit.
+Reconstruction is the active seventh family; splats follow.
 
 The codec-per-file C++ layer remains reasonably isolated, but orchestration and
 verification have accumulated in a few large modules:

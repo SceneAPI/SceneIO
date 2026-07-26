@@ -1828,7 +1828,7 @@ Points performance, package, and validation:
       plus all-six write/detect/inspect/read and point-range probes.
 - [x] Obtain independent architecture/correctness, test/performance, and
       platform/package/documentation reviews; resolve every finding.
-- [ ] Commit and push only after local and artifact gates are clear. Wait for
+- [x] Commit and push only after local and artifact gates are clear. Wait for
       normal CI and compiler-instrumented validation before moving
       reconstruction.
 
@@ -1871,6 +1871,19 @@ matrix passed 729 tests. Platform/package/documentation reproduced the
 pre-review source and wheel inventories, runtime-file identity, attribution
 inventory, NumPy-only dependency closure, native dependency set, installed
 smoke, and six-format public probe. No review required a source change.
+
+The final exact-tree confirmation used tree
+`688f0a4caa81edf6e499f7b72e1bc03117a4ddf0`. Its 317 tracked blobs are
+byte-identical in the 318-file source archive, whose only extra is generated
+`PKG-INFO`; the archive SHA-256 is
+`cad77d9a9b311c686279d150cc2a68c4a4221f21db1b1cdc2473af38d96ce3ab`.
+The 77-member Windows cp312-abi3 wheel SHA-256 is
+`171aa3ff0b6e28a59ca45489b72818289a2dbb7f8bf63dd5e666be9b9221676a`;
+its non-native, non-`RECORD` members are byte-identical to the reviewed
+pre-review wheel. Commit `686f42e177e0706ec7a543c6bb2644fa39f97a23`
+has that exact tree and is pushed. Normal CI run 30210055913 and
+compiler-instrumented run 30210055930 pass the exact commit. The points unit
+is closed; reconstruction is next.
 
 ## 7. R3 — split benchmark and cross-codec tests
 

@@ -132,8 +132,8 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > 30207617253][r2-arrays-instrumented] are green for the exact commit. Arrays
 > are closed; points are active next.
 >
-> **R2 points candidate checkpoint (2026-07-26):** `ply`, `pcd`, `xyz`,
-> `pts`, `las`, and `laz` now come from
+> **R2 points checkpoint (2026-07-26):** Exact commit `686f42e` moves `ply`,
+> `pcd`, `xyz`, `pts`, `las`, and `laz` to
 > `_registry/families/points.py`, while their metadata parsers live in
 > `_inspectors/points.py`. Aggregate staging restores canonical positions
 > 12/13/39/40/41/42 and retains the exact mmap, sink, and point-range native
@@ -152,8 +152,12 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > inspection, complete installed smoke, and an explicit all-six point probe
 > pass. All three independent reviews are clear for staged tree
 > `442093b402db2af290c9a19a61747b6691e2af1c`; the largest independent focused
-> matrix passes 729 tests and no review required a source change. Final
-> artifact, commit/push, and hosted validation gates remain.
+> matrix passes 729 tests and no review required a source change. The final
+> exact-tree source archive and wheel pass at tree
+> `688f0a4caa81edf6e499f7b72e1bc03117a4ddf0`. [Normal CI run
+> 30210055913][r2-points-ci] and [compiler-instrumented run
+> 30210055930][r2-points-instrumented] are green for the exact commit. Points
+> are closed; reconstruction is active next.
 
 [current-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287022
 [current-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287161
@@ -177,6 +181,8 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 [r2-aggregate-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30204352744
 [r2-arrays-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30207617248
 [r2-arrays-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30207617253
+[r2-points-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30210055913
+[r2-points-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30210055930
 
 ## Data structures (memory Records)
 
