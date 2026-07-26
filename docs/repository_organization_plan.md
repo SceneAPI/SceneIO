@@ -65,19 +65,25 @@ and passes 3,020 with four documented skips. The exact 298-member
 source-to-68-file-wheel gate, retained all-codec guard, fresh import
 thresholds, and three independent reviews pass.
 
-Images are implemented as the active third-family candidate. The eight ids
-remain one contiguous canonical block behind an immutable tuple and retain
-their exact static mmap/sink/window adapters. Their bounded metadata parsers
-now live in `_inspectors/images.py` behind same-signature facade wrappers. The
-shared metadata limits, exact-read and unsigned-decimal grammar, and common
+Images are complete and pushed at `68c47d6`. The eight ids remain one
+contiguous canonical block behind an immutable tuple and retain their exact
+static mmap/sink/window adapters. Their bounded metadata parsers now live in
+`_inspectors/images.py` behind same-signature facade wrappers. The shared
+metadata limits, exact-read and unsigned-decimal grammar, and common
 image-result constructor were lowered in the independently green `8040bc7`
-helper commit. Image-sequence state remains facade-owned: its injected
-`ImageFrameAccess` is constructed after image registration and retains a live
-third-party extension catalog. The focused and full suites, structural
-benchmark comparisons, retained performance/allocation guard, imports, and
-source-to-wheel candidate gate are green. Three independent reviews are clear;
-an exact package confirmation is intentionally performed after documentation
-freezes and immediately before commit. Hosted validation follows the push.
+helper commit. The complete local suite collects 3,064 tests and passes 3,060
+with four documented skips. The exact 302-member source-to-70-file-wheel gate,
+retained all-codec guard, fresh import thresholds, installed all-image probe,
+and three independent reviews pass.
+
+Sequences are implemented as the active fourth-family candidate. Y4M and the
+image-sequence directory remain the last contiguous canonical family. The
+lower family module accepts the facade-created `ImageFrameAccess` explicitly,
+keeps the static Y4M codec, and returns an immutable two-codec tuple containing
+a freshly bound directory codec. It owns no registry state and never freezes
+the live image-extension catalog. Only the Y4M metadata converter moved to a
+family inspector. The directory manifest parser and inspector remain in
+`_image_sequence.py`, where R2.0 already removed upward dependencies.
 
 The codec-per-file C++ layer remains reasonably isolated, but orchestration and
 verification have accumulated in a few large modules:
@@ -86,8 +92,8 @@ verification have accumulated in a few large modules:
 |---|---|---|
 | C++ codecs | 40 files for 50 format ids | flat source list and manual binding declarations |
 | C++ records | 32 source/header files | still manageable; new table/animation/scene records will add pressure |
-| Python registry | `registry.py`, 893 lines, focused `_registry/{model,adapters,detection,native_features}.py` modules, and `_registry/families/{calibration,images,meshes}.py` definition modules | five built-in families still share the facade until their R2.2 units |
-| Inspection | `_inspection.py`, 1,380 lines, plus `_inspectors/{model,common,calibration,images,meshes}.py`; `common.py` is 75 lines | five unrelated format families still share the facade; the proven shared model, mmap bridge, metadata bounds, exact-read/integer grammar, and image-result constructor are lower services |
+| Python registry | `registry.py`, 826 lines, focused `_registry/{model,adapters,detection,native_features}.py` modules, and `_registry/families/{calibration,images,meshes,sequences}.py` definition modules | four built-in families still share the facade until their R2.2 units |
+| Inspection | `_inspection.py`, 1,341 lines, plus `_inspectors/{model,common,calibration,images,meshes,sequences}.py`; `common.py` is 75 lines | four unrelated format families still share the facade; the proven shared model, mmap bridge, metadata bounds, exact-read/integer grammar, and image-result constructor are lower services |
 | Benchmark | `bench_io.py`, about 4,660 lines | CLI, fixtures, oracles, runners, metrics, and reporting are coupled |
 | Cross-codec tests | `test_io_mmap.py`, about 2,400 lines; `test_io_partial.py`, about 1,100 | reusable codec cases and behavior assertions are difficult to extend independently |
 | Execution plan | `format_gap_implementation_plan.md`, about 2,500 lines | historical evidence and the active queue are easy to confuse |

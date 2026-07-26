@@ -1,0 +1,145 @@
+{
+  "parent_commit": "68c47d6",
+  "codec_ast_name_normalization": {
+    "_IMAGE_FRAME_ACCESS": "__FRAME_ACCESS__",
+    "frame_access": "__FRAME_ACCESS__"
+  },
+  "codec_ast_sha256": {
+    "y4m": "113c80bbbb985911a891769bfb02e9853deacab217c4bbb9a1a1676960ca9c7e",
+    "image_sequence": "5242878a747fae1d464202b7382e0f8986d4c79789fd3b8186b085fbf5194cb0"
+  },
+  "y4m": {
+    "mono": {
+      "byte_size": 46,
+      "shape": [1, 2, 2, 1],
+      "dtype": "uint8",
+      "count": 1,
+      "channels": 1,
+      "arrays": [
+        {"name": "y", "shape": [1, 2, 2], "dtype": "uint8"}
+      ],
+      "metadata": {
+        "storage_mode": "yuv_planar",
+        "chroma_subsampling": "mono",
+        "chroma_siting": "none",
+        "color_range": "unknown",
+        "matrix": "unknown",
+        "interlace": "progressive",
+        "frame_rate_numerator": 25,
+        "frame_rate_denominator": 1,
+        "pixel_aspect_numerator": 1,
+        "pixel_aspect_denominator": 1,
+        "frame_bytes": 4
+      }
+    },
+    "color422": {
+      "byte_size": 130,
+      "shape": [2, 2, 3, 3],
+      "dtype": "uint8",
+      "count": 2,
+      "channels": 3,
+      "arrays": [
+        {"name": "y", "shape": [2, 2, 3], "dtype": "uint8"},
+        {"name": "u", "shape": [2, 2, 2], "dtype": "uint8"},
+        {"name": "v", "shape": [2, 2, 2], "dtype": "uint8"}
+      ],
+      "metadata": {
+        "storage_mode": "yuv_planar",
+        "chroma_subsampling": "422",
+        "chroma_siting": "unspecified",
+        "color_range": "limited",
+        "matrix": "bt601",
+        "interlace": "top_field_first",
+        "frame_rate_numerator": 30000,
+        "frame_rate_denominator": 1001,
+        "pixel_aspect_numerator": 4,
+        "pixel_aspect_denominator": 3,
+        "frame_bytes": 14
+      }
+    }
+  },
+  "malformed_y4m": {
+    "bad_magic": {
+      "cause_type": "ValueError",
+      "cause_message": "y4m: bad magic (expected YUV4MPEG2)"
+    },
+    "missing_aspect": {
+      "cause_type": "ValueError",
+      "cause_message": "y4m: W/H/F/I/A/C stream tokens are required"
+    }
+  },
+  "directories": {
+    "unmanifested": {
+      "inspection": {
+        "byte_size": 51,
+        "shape": [3, 2, 3, 1],
+        "dtype": "uint8",
+        "count": 3,
+        "channels": 1,
+        "arrays": [],
+        "metadata": {
+          "storage_mode": "encoded_paths",
+          "has_timing": false,
+          "manifest": false,
+          "frame_names": ["frame1.pgm", "frame2.pgm", "frame10.pgm"]
+        }
+      },
+      "full": {
+        "frame_names": ["frame1.pgm", "frame2.pgm", "frame10.pgm"],
+        "timestamps_ns": [],
+        "durations_ns": [],
+        "height": 2,
+        "width": 3,
+        "channels": 1,
+        "frame_dtype": "uint8",
+        "storage_mode": "encoded_paths"
+      },
+      "partial": {
+        "frame_names": ["frame2.pgm", "frame10.pgm"],
+        "timestamps_ns": [],
+        "durations_ns": [],
+        "height": 2,
+        "width": 3,
+        "channels": 1,
+        "frame_dtype": "uint8",
+        "storage_mode": "encoded_paths"
+      }
+    },
+    "manifested": {
+      "inspection": {
+        "byte_size": 249,
+        "shape": [3, 2, 3, 1],
+        "dtype": "uint8",
+        "count": 3,
+        "channels": 1,
+        "arrays": [],
+        "metadata": {
+          "storage_mode": "encoded_paths",
+          "has_timing": true,
+          "manifest": true,
+          "frame_names": ["c.pgm", "a.pgm", "b.pgm"]
+        }
+      },
+      "full": {
+        "frame_names": ["c.pgm", "a.pgm", "b.pgm"],
+        "timestamps_ns": [100, 140, 181],
+        "durations_ns": [40, 41, 39],
+        "height": 2,
+        "width": 3,
+        "channels": 1,
+        "frame_dtype": "uint8",
+        "storage_mode": "encoded_paths"
+      },
+      "partial": {
+        "frame_names": ["a.pgm", "b.pgm"],
+        "timestamps_ns": [140, 181],
+        "durations_ns": [41, 39],
+        "height": 2,
+        "width": 3,
+        "channels": 1,
+        "frame_dtype": "uint8",
+        "storage_mode": "encoded_paths"
+      }
+    }
+  }
+}

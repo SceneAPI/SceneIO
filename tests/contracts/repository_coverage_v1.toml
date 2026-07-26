@@ -296,7 +296,7 @@ id = "y4m"
 benchmark_case = "y4m"
 source_suite = "tests/codecs/test_y4m.py"
 documentation_row = "docs/format_coverage.md"
-inspection_source = "src/sceneio/io/_inspection.py"
+inspection_source = "src/sceneio/io/_inspectors/sequences.py"
 wheel_smoke_case = "_image_sequences"
 
 [[codec]]

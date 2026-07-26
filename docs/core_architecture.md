@@ -103,6 +103,15 @@ sceneio._core (C++ / nanobind)
   dispatch branches. The image-sequence `ImageFrameAccess` object remains
   facade-owned and is constructed after image registration, preserving its
   live extension catalog and third-party registration behavior.
+  Sequences are the fourth extracted family:
+  `_registry/families/sequences.py` keeps Y4M static and exposes a
+  side-effect-free factory for the directory codec. The registry facade
+  creates `ImageFrameAccess` after image registration, passes it to the
+  factory, and installs the exact Y4M/image-sequence tuple atomically.
+  `_inspectors/sequences.py` owns only Y4M metadata conversion; directory
+  grammar and inspection remain in `_image_sequence.py`. Repeated factory
+  calls bind fresh directory codecs to their supplied live access objects
+  without storing registry state in the family module.
 
 ## Stable codec ownership and backend selection
 

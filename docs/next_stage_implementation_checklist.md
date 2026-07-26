@@ -25,7 +25,9 @@ layout, and fresh NumPy-only installed-wheel checks. R2.1 is complete at
 `ccfeea4`. The calibration reference family is complete and pushed at
 `b2bda1d`; the shared-inspection substrate is complete and pushed at
 `29af9de`; and the six-codec mesh extraction is complete and pushed at
-`975533f`. The eight-codec image extraction is the active third-family unit.
+`975533f`. The shared image helpers are complete at `8040bc7`, and the
+eight-codec image extraction is complete and pushed at `68c47d6`. The
+two-codec sequence extraction is the active fourth-family unit.
 
 This is the operational checklist for the repository-organization and
 codec-performance stage defined in
@@ -1235,6 +1237,131 @@ Image-family candidate evidence:
 - The final post-review exact-tree package confirmation is intentionally run
   only after this documentation is frozen. Its tree and artifact hashes are
   reported with the commit evidence rather than self-referenced here.
+
+- The image-family unit is committed and pushed as `68c47d6`. Its exact commit
+  tree is `cefb66c41fefcc0e7fb7828ef0a8cc11e863cecf`; the final source archive
+  SHA-256 is
+  `35024bc81c334701fd25b1b3182f22a1b670f093bebfe4fac717fe2583896fc1`,
+  and the derived wheel SHA-256 is
+  `fbded8d96e8002e938c16676788ea3fc3d95f7e00299f25b65f96ce97dc8c4ba`.
+
+### R2 sequence fourth-family unit
+
+This unit moves the last contiguous family: `y4m` and `image_sequence`.
+R2.0 already made the directory adapter accept `ImageFrameAccess` explicitly;
+this unit consumes that boundary without moving or freezing live registry
+state. It is an organization-only change: no YUV conversion, video framework,
+codec option, payload, public signature, or backend change is in scope.
+
+Sequence-family implementation:
+
+- [x] Add side-effect-free `_registry/families/sequences.py` with a typed
+      `build_sequence_codecs(frame_access)` factory returning an immutable
+      `y4m`, `image_sequence` tuple in exact order.
+- [x] Preserve the Y4M mmap/sink/frame-selector adapters, magic, record,
+      datatype, and supported/unsupported feature tuples exactly.
+- [x] Preserve each image-sequence `partial` target, bound
+      `ImageFrameAccess`, directory marker, record, datatype, features, and
+      lazy/transactional directory behavior exactly.
+- [x] Construct `_IMAGE_FRAME_ACCESS` in `registry.py` only after all image
+      codecs are installed, then validate and atomically install the built
+      sequence tuple between `webp` and `colmap_sparse_txt`.
+- [x] Keep the family module free of `REGISTRY`, registration side effects,
+      public-I/O imports, and inspection-facade imports. Repeated factory calls
+      must not mutate the live registry or share an incorrectly bound access
+      object.
+- [x] Add `_inspectors/sequences.py` containing only the existing Y4M metadata
+      conversion. Retain the same-signature `_inspect_y4m` facade wrapper and
+      unchanged `inspect_path` branch.
+- [x] Keep image-sequence manifest parsing, metadata inspection, bounded frame
+      validation, and path/sink behavior in `_image_sequence.py`; do not
+      duplicate them in the family inspector.
+
+Sequence-family verification:
+
+- [x] Freeze parent `68c47d6` registry structure, Y4M valid metadata, and
+      representative malformed cause type/text before the move.
+- [x] Prove exact canonical neighbors, registry/definition identity, Y4M
+      closure targets, image-sequence `partial` targets and bound-access
+      identity, factory re-entrancy, family reload isolation, and registry
+      reload idempotence.
+- [x] Re-run third-party image registration/removal with existing and newly
+      reloaded access objects; every directory callback must observe the live
+      extension catalog immediately.
+- [x] Enforce lower import allowlists and reject public, registry, inspection
+      facade, sibling-family, and relative imports.
+- [x] Prove lower/public Y4M inspection matches the frozen parent and full
+      decode, does not call a full decoder, has bounded traced allocation on a
+      generated large sparse payload, and releases the mapped path promptly
+      while retaining its `Inspection`.
+- [x] Run the complete Y4M and image-sequence parity suites, ImageSequence
+      record tests, public E2E, detection, registry/reload, mmap/lifetime,
+      sink, frame-selection, capability, compatibility, import, and
+      documentation suites.
+- [x] Compare five-run `y4m` and `image_sequence` benchmark rows against a
+      parent capture. Require exact row order, payload/file sizes, traced
+      allocation fields, and nested schema; treat timing and RSS as
+      diagnostics and claim no speedup.
+- [x] Run the one-pass 50-codec structural sweep, strict five-run retained
+      O4/O5/allocation guard, 15-sample imports, exact collection, full suite,
+      and Ruff.
+- [x] Update only the two intended eager import entries, the Y4M inspection
+      ownership row, exact workflow collection pin, measured facade line
+      counts, and current architecture/status documentation.
+- [x] Build the source archive from the exact staged tree and derive the
+      Windows abi3 wheel only from it. Require staged/archive/runtime identity,
+      all 15 attribution files, one native module, no excluded layout
+      directories, NumPy-only metadata, and an installed sequence probe
+      covering Y4M full/selected frames plus lazy directory read/inspect/write.
+- [x] Obtain independent architecture/correctness, test/performance, and
+      platform/package/documentation reviews; resolve findings before commit.
+
+Sequence-family candidate evidence:
+
+- The 17 focused architecture contracts pass. Exact collection is 3,083
+  tests; the complete local MSVC suite passes 3,079 with the same four
+  documented skips, and repository-wide Ruff is clean.
+- The five-run parent/candidate comparison preserves row order, payload and
+  file sizes, every Y4M traced field, the directory sink peak, and the nested
+  schema exactly. Directory read, inspection, and selected-frame traced peaks
+  differ by at most 102 bytes, inside the predeclared 128-byte allocator-noise
+  tolerance. Timing and RSS remain diagnostic; no speedup is claimed.
+- The one-pass 50-codec structural sweep and strict five-run retained
+  O4/O5/allocation guard pass. Cold-cache mode reports the unavailable Windows
+  eviction hint explicitly and remains diagnostic.
+- Fifteen-sample Windows medians are 5.70 ms for `sceneio`, 75.14 ms for
+  `sceneio.io`, and 7.29 ms for `_core`, below the unchanged
+  100/220.05/100 ms alerts.
+- This candidate changes no C++, CMake, native symbol, codec backend, runtime
+  dependency, or attribution inventory.
+- The exact package candidate from staged tree
+  `690f65715dd45ff8f66afb0c848105253826c74c` contains 306 source files and
+  derives a 72-file Windows cp312-abi3 wheel. All 13 staged files match the
+  source archive, and all four changed runtime files are byte-identical across
+  staged tree, archive, and wheel. The wheel contains all 15 attribution
+  files, exactly one native module, no excluded layout directories, and only
+  NumPy as an unconditional dependency. A fresh NumPy-only installation passes
+  `_wheel_smoke` plus explicit imports of both new modules and hand-authored
+  Y4M and image-directory write/detect/inspect/read/selected-frame probes. The
+  candidate source SHA-256 is
+  `9975a4d294b71ca0b6b07738b24fa057fb3effbdac1960548eef8a9bf4740649`;
+  the wheel SHA-256 is
+  `320a55411cdd249b4f84761634cfdea18f2eb07b7eb22d022174b5fdb765ac65`.
+- Three independent reviews are clear after findings were resolved.
+  Architecture/correctness confirmed exact normalized parent fidelity,
+  dependency direction, static/dynamic codec identity, and live frame access.
+  Test/performance caught a self-referential image-sequence AST hash and a
+  malformed-path lifetime gap; the contract now records its single intentional
+  name normalization, regenerates the hash from parent `68c47d6`, and retains
+  both lower and public errors across rename/deletion. It also removed an
+  affected-suite count that lacked a recorded command. Platform/package/docs
+  caught checkout line-ending ambiguity and missing explicit directory
+  inspection in the installed probe; packaging now begins from a Git-object
+  archive with checkout conversion disabled, and the expanded probe covers
+  directory inspection.
+- A final exact-tree package confirmation is run after this documentation is
+  frozen and immediately before commit. Its hashes are reported with the
+  commit evidence rather than self-referenced here.
 
 ## 7. R3 — split benchmark and cross-codec tests
 
