@@ -22,7 +22,7 @@
     ],
     "builder_ast_sources": {
       "_gauss": "bench/bench_io.py",
-      "_img_u8": "bench/bench_io.py",
+      "_img_u8": "bench/io_bench/fixtures/images.py",
       "_mesh_scene": "bench/bench_io.py",
       "_pc_ply": "bench/bench_io.py",
       "_poses_and_reconstruction": "bench/bench_io.py",
@@ -31,7 +31,7 @@
       "_y4m_fixture": "bench/bench_io.py"
     },
     "parent_and_candidate_builder_ast_sha256": "ce8dda677da61550035dcd2062d4cb53aed20f21e37024d87d5f50449ba1fbfd",
-    "current_builder_ast_sha256": "0f36987433487eae4233b0bc509cd5d211c7df9d6c25cefbfaeafdaa9b4c3233",
+    "current_builder_ast_sha256": "e81f0d9d4e5957aef9cd9ee2551587de993e784e8f7585fa23c5122d376d2461",
     "fixtures": {
       "camera_calibration": "5e2b5f1e70aa57bd8d219b06a16ce36dfec48aa4d0905ef45cdf503cca8b511c",
       "gaussian_cloud": "dc358708428493fafd834f6c9626f87dd1e91626d324fea3865320561176b1cf",
@@ -152,6 +152,67 @@
       ],
       "optional_oracle_source": "bench/io_bench/oracles/calibration.py",
       "no_oracle_exemptions": {}
+    },
+    "images": {
+      "family_functions": {
+        "build_image_specs": {
+          "source": "bench/io_bench/families/images.py",
+          "ast_sha256": "47d2c7742a5c16bb2a690137aff74ed3e2313f5154d906e6ffc0ca38817d041d"
+        }
+      },
+      "facade_family_exports": [
+        "build_image_specs"
+      ],
+      "functions": {
+        "_imageio_r": {
+          "source": "bench/io_bench/oracles/images.py",
+          "ast_sha256": "0289864d8b2c77ee70da916542669e267b028dcb7e2961d4e7641aa4ba28c9cf"
+        },
+        "_imageio_w": {
+          "source": "bench/io_bench/oracles/images.py",
+          "ast_sha256": "20fdca7cb32a2afe59ba590661c7e825784544ca693def3b8d82b628fbfe1ee5"
+        },
+        "_img_f32": {
+          "source": "bench/io_bench/fixtures/images.py",
+          "ast_sha256": "c5fc9d140f7180fd2016052146cd3c3cef14b608f9f2d5b495b3bca12d90f6da"
+        },
+        "_img_u8": {
+          "source": "bench/io_bench/fixtures/images.py",
+          "ast_sha256": "0cd247c5b8999e2924e47558ce296cebe12e787b0d778226ce40295f8c672bab"
+        },
+        "_img_webp_palette": {
+          "source": "bench/io_bench/fixtures/images.py",
+          "ast_sha256": "f020074de5ac089c622d5694769724aff32687cf488ecc48148d66f435933a09"
+        },
+        "_openexr_r": {
+          "source": "bench/io_bench/oracles/images.py",
+          "ast_sha256": "ce3013175078c64772a350e779cc33c5e3519020fe4fb4ceff9083ffe394d15f"
+        },
+        "_openexr_w": {
+          "source": "bench/io_bench/oracles/images.py",
+          "ast_sha256": "f9dd3f1f3778a801e39d25d007bae0a65682e295ceee7f32f28105e2b985353a"
+        },
+        "_pil_r": {
+          "source": "bench/io_bench/oracles/images.py",
+          "ast_sha256": "21449e91255aca810fd5978724d685dd702e62c92222d8c06d2ef435ecc2a41d"
+        },
+        "_pil_w": {
+          "source": "bench/io_bench/oracles/images.py",
+          "ast_sha256": "871d099c605ac0bef239420097c871eb0e3718b9675548d8d287cfdad76fa75b"
+        }
+      },
+      "optional_oracle_bindings": [
+        "OpenEXR",
+        "PILImage",
+        "iio"
+      ],
+      "optional_oracle_source": "bench/io_bench/oracles/images.py",
+      "no_oracle_exemptions": {
+        "hdr": {
+          "unverified_property": "portable independent benchmark encode/decode throughput for Radiance HDR",
+          "verification": "format parity remains covered by the independent NumPy RGBE parser and serializer in tests/codecs/test_hdr.py"
+        }
+      }
     }
   },
   "r3_1a_equivalence": {

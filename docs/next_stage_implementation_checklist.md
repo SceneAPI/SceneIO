@@ -2729,7 +2729,7 @@ passes both jobs. No release workflow, tag, or publication was triggered.
 - [ ] Move builders/oracles one family at a time:
   - [x] arrays;
   - [x] calibration;
-  - [ ] images;
+  - [x] images;
   - [ ] meshes;
   - [ ] points;
   - [ ] reconstruction;
@@ -2802,6 +2802,37 @@ all 15 attribution files, and keeps `numpy>=1.26` as its sole unconditional
 dependency; `pyyaml>=6.0` remains test-extra only. A fresh environment with
 that wheel and NumPy, but without PyYAML, passes
 `python -m sceneio._wheel_smoke`.
+
+Exact calibration commit `5dc03f4` passes normal run
+[30237676629](https://github.com/SceneAPI/SceneIO/actions/runs/30237676629)
+and compiler-instrumented run
+[30237676648](https://github.com/SceneAPI/SceneIO/actions/runs/30237676648).
+
+The raster-image checkpoint moves all eight `png`, `jpeg`, `bmp`, `tga`,
+`webp`, `hdr`, `exr`, and `netpbm` specs to
+`io_bench/families/images.py`; unchanged uint8/float32 fixtures move to
+`fixtures/images.py`, and optional Pillow/imageio/OpenEXR comparisons move to
+`oracles/images.py`. The facade keeps exact compatibility identities and
+splices the hook around the unchanged interleaved `y4m` row. All nine moved
+helper ASTs match the parent. Installed, absent, and fallback controls cover
+every optional provider, and real oracle writer-to-reader pairs execute for
+every available non-HDR row. Packed and planar EXR results are normalized to
+RGB and compared exactly for oracle- and core-produced bytes. Portable
+independent Radiance HDR benchmark encode/decode throughput is a reviewed
+exemption in this environment; the NumPy RGBE parser/serializer in
+`tests/codecs/test_hdr.py` continues to provide independent format parity.
+
+Seven of eight live image rows have non-null independent metrics, and the
+complete 50-codec smoke retains structural projection
+`2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`.
+Focused raster/contract validation passes 352 tests; the complete suite passes
+3,316 with the same four documented skips, Ruff is clean, and all three
+independent reviews are clear. The fresh exact-tree source archive has 350
+members and exactly the three new image modules without generated caches. Its
+81-member wheel excludes benchmark/test/Pillow/imageio/OpenEXR modules,
+retains all 15 attribution files, and keeps NumPy as the sole unconditional
+dependency; those comparison libraries remain test-extra only. A fresh
+NumPy-only environment without them passes the installed-wheel smoke.
 
 ### R3.3 — cross-codec test support
 

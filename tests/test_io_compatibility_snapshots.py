@@ -16,6 +16,7 @@ import subprocess
 import sys
 import tempfile
 import textwrap
+import warnings
 from collections import defaultdict
 from pathlib import Path
 
@@ -666,6 +667,18 @@ def _assert_benchmark_components_and_metric_semantics_are_explicit():
     assert not extracted_families["calibration"][
         "no_oracle_exemptions"
     ]
+    image_exemptions = extracted_families["images"][
+        "no_oracle_exemptions"
+    ]
+    assert set(image_exemptions) == {"hdr"}
+    assert image_exemptions["hdr"]["unverified_property"] == (
+        "portable independent benchmark encode/decode throughput "
+        "for Radiance HDR"
+    )
+    assert image_exemptions["hdr"]["verification"] == (
+        "format parity remains covered by the independent NumPy RGBE "
+        "parser and serializer in tests/codecs/test_hdr.py"
+    )
 
     lower_modules = sorted(
         {
@@ -866,6 +879,317 @@ def _assert_benchmark_components_and_metric_semantics_are_explicit():
         text=True,
     )
     assert json.loads(blocked_calibration.stdout) == [True] * 16
+
+    image_family_module = sys.modules[
+        "bench.io_bench.families.images"
+    ]
+    image_fixture_module = sys.modules[
+        "bench.io_bench.fixtures.images"
+    ]
+    image_oracle_module = sys.modules[
+        "bench.io_bench.oracles.images"
+    ]
+    assert (
+        image_family_module._img_u8
+        is image_fixture_module._img_u8
+    )
+    assert (
+        image_family_module._img_f32
+        is image_fixture_module._img_f32
+    )
+    for helper_name in (
+        "_pil_w",
+        "_pil_r",
+        "_imageio_w",
+        "_imageio_r",
+        "_openexr_w",
+        "_openexr_r",
+    ):
+        assert getattr(image_family_module, helper_name) is getattr(
+            image_oracle_module,
+            helper_name,
+        )
+    image_specs = benchmark.build_image_specs(0.001)
+    assert [spec.id for spec in image_specs] == [
+        "png",
+        "jpeg",
+        "bmp",
+        "tga",
+        "webp",
+        "hdr",
+        "exr",
+        "netpbm",
+    ]
+    image_by_id = {spec.id: spec for spec in image_specs}
+    image_core_bindings = {
+        "png": (_core.write_png, _core.read_png),
+        "jpeg": (None, _core.read_jpeg),
+        "bmp": (_core.write_bmp, _core.read_bmp),
+        "tga": (_core.write_tga, _core.read_tga),
+        "webp": (None, _core.read_webp),
+        "hdr": (_core.write_hdr, _core.read_hdr),
+        "exr": (_core.write_exr, _core.read_exr),
+        "netpbm": (None, _core.read_netpbm),
+    }
+    for codec_id, (writer, reader) in image_core_bindings.items():
+        spec = image_by_id[codec_id]
+        if writer is not None:
+            assert spec.w is writer
+        assert spec.r is reader
+
+    image_records = {}
+    image_payloads = {}
+    for codec_id, spec in image_by_id.items():
+        record, payload = spec.make()
+        image_records[codec_id] = record
+        image_payloads[codec_id] = payload
+        assert spec.nbytes(record, payload) == payload.nbytes
+        expected_dtype = (
+            np.float32
+            if codec_id in {"hdr", "exr"}
+            else np.uint8
+        )
+        assert payload.dtype == expected_dtype
+        assert payload.ndim == 3
+        assert payload.shape[2] == 3
+
+    assert bytes(image_by_id["jpeg"].w(image_records["jpeg"])) == bytes(
+        _core.write_jpeg(image_records["jpeg"], 95)
+    )
+    assert bytes(image_by_id["webp"].w(image_records["webp"])) == bytes(
+        _core.write_webp(image_records["webp"], True)
+    )
+    assert bytes(
+        image_by_id["netpbm"].w(image_records["netpbm"])
+    ) == bytes(_core.write_netpbm(image_records["netpbm"], False))
+
+    pil_modes = {
+        "png": "PNG",
+        "jpeg": "JPEG",
+        "bmp": "BMP",
+        "tga": "TGA",
+        "webp": "WEBP",
+    }
+    if image_oracle_module.PILImage is None:
+        for codec_id in pil_modes:
+            spec = image_by_id[codec_id]
+            assert (spec.ow, spec.orr) == (None, None)
+    else:
+        for codec_id, mode in pil_modes.items():
+            spec = image_by_id[codec_id]
+            assert callable(spec.ow)
+            assert spec.orr is image_oracle_module._pil_r
+            assert spec.ow.__closure__[0].cell_contents == mode
+
+    hdr_spec = image_by_id["hdr"]
+    if image_oracle_module.iio is None:
+        assert (hdr_spec.ow, hdr_spec.orr) == (None, None)
+    else:
+        assert callable(hdr_spec.ow)
+        assert callable(hdr_spec.orr)
+        assert hdr_spec.ow.__closure__[0].cell_contents == ".hdr"
+        assert hdr_spec.orr.__closure__[0].cell_contents == ".hdr"
+
+    exr_spec = image_by_id["exr"]
+    if image_oracle_module.OpenEXR is None:
+        assert (exr_spec.ow, exr_spec.orr) == (None, None)
+    else:
+        assert (exr_spec.ow, exr_spec.orr) == (
+            image_oracle_module._openexr_w,
+            image_oracle_module._openexr_r,
+        )
+
+    netpbm_spec = image_by_id["netpbm"]
+    if image_oracle_module.iio is not None:
+        assert callable(netpbm_spec.ow)
+        assert callable(netpbm_spec.orr)
+        assert netpbm_spec.ow.__closure__[0].cell_contents == ".ppm"
+        assert netpbm_spec.orr.__closure__[0].cell_contents == ".ppm"
+    elif image_oracle_module.PILImage is not None:
+        assert callable(netpbm_spec.ow)
+        assert netpbm_spec.orr is image_oracle_module._pil_r
+        assert netpbm_spec.ow.__closure__[0].cell_contents == "PPM"
+    else:
+        assert (netpbm_spec.ow, netpbm_spec.orr) == (None, None)
+
+    def normalized_exr_rgb(decoded):
+        if set(decoded) == {"RGB"}:
+            rgb = np.asarray(decoded["RGB"])
+        else:
+            assert set(decoded) == {"B", "G", "R"}
+            rgb = np.stack(
+                [np.asarray(decoded[channel]) for channel in "RGB"],
+                axis=-1,
+            )
+        return rgb
+
+    def assert_oracle_pixels(codec_id, decoded, payload):
+        if codec_id == "exr":
+            rgb = normalized_exr_rgb(decoded)
+            assert rgb.shape == payload.shape
+            np.testing.assert_array_equal(rgb, payload)
+            return
+        pixels = np.asarray(decoded)
+        assert pixels.shape == payload.shape
+        assert pixels.dtype == payload.dtype
+        if codec_id != "jpeg":
+            np.testing.assert_array_equal(pixels, payload)
+
+    for codec_id, spec in image_by_id.items():
+        payload = image_payloads[codec_id]
+        core_encoded = bytes(spec.w(image_records[codec_id]))
+        if codec_id == "hdr":
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                oracle_encoded = (
+                    benchmark._try(
+                        lambda spec=spec, payload=payload: spec.ow(
+                            payload
+                        )
+                    )
+                    if spec.ow is not None
+                    else None
+                )
+                oracle_decoded = (
+                    benchmark._try(
+                        lambda spec=spec, core_encoded=core_encoded: (
+                            spec.orr(core_encoded)
+                        )
+                    )
+                    if spec.orr is not None
+                    else None
+                )
+            if oracle_encoded is not None:
+                assert isinstance(oracle_encoded, bytes)
+            if oracle_decoded is not None:
+                assert np.asarray(oracle_decoded).shape == payload.shape
+            continue
+        if spec.ow is not None:
+            oracle_encoded = spec.ow(payload)
+            assert isinstance(oracle_encoded, bytes)
+            if spec.orr is not None:
+                assert_oracle_pixels(
+                    codec_id,
+                    spec.orr(oracle_encoded),
+                    payload,
+                )
+        if spec.orr is None:
+            continue
+        assert_oracle_pixels(
+            codec_id,
+            spec.orr(core_encoded),
+            payload,
+        )
+
+    def blocked_image_probe(blocked_roots):
+        roots = tuple(blocked_roots)
+        probe = textwrap.dedent(
+            f"""
+            import builtins
+            import importlib
+            import json
+
+            blocked_roots = {roots!r}
+            original_import = builtins.__import__
+
+            def blocked_import(name, *args, **kwargs):
+                if any(
+                    name == root or name.startswith(root + ".")
+                    for root in blocked_roots
+                ):
+                    raise ImportError("blocked by benchmark contract")
+                return original_import(name, *args, **kwargs)
+
+            builtins.__import__ = blocked_import
+            oracles = importlib.import_module(
+                "bench.io_bench.oracles.images"
+            )
+            family = importlib.import_module(
+                "bench.io_bench.families.images"
+            )
+            facade = importlib.import_module("bench.bench_io")
+            specs = {{
+                spec.id: spec
+                for spec in family.build_image_specs(0.001)
+            }}
+            print(json.dumps({{
+                "bindings": {{
+                    "OpenEXR": oracles.OpenEXR is not None,
+                    "PILImage": oracles.PILImage is not None,
+                    "iio": oracles.iio is not None,
+                }},
+                "facade_identity": [
+                    facade.OpenEXR is oracles.OpenEXR,
+                    facade.PILImage is oracles.PILImage,
+                    facade.iio is oracles.iio,
+                    facade.build_image_specs is family.build_image_specs,
+                ],
+                "oracle_pairs": {{
+                    codec_id: [
+                        spec.ow is not None,
+                        spec.orr is not None,
+                    ]
+                    for codec_id, spec in specs.items()
+                }},
+                "netpbm_reader_is_pillow": (
+                    specs["netpbm"].orr is oracles._pil_r
+                ),
+            }}))
+            """
+        )
+        result = subprocess.run(
+            [sys.executable, "-c", probe],
+            cwd=ROOT,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        return json.loads(result.stdout)
+
+    all_images_blocked = blocked_image_probe(
+        ("OpenEXR", "PIL", "imageio")
+    )
+    assert all_images_blocked["bindings"] == {
+        "OpenEXR": False,
+        "PILImage": False,
+        "iio": False,
+    }
+    assert all(all_images_blocked["facade_identity"])
+    assert all(
+        pair == [False, False]
+        for pair in all_images_blocked["oracle_pairs"].values()
+    )
+
+    imageio_blocked = blocked_image_probe(("imageio",))
+    assert imageio_blocked["bindings"] == {
+        "OpenEXR": True,
+        "PILImage": True,
+        "iio": False,
+    }
+    assert imageio_blocked["oracle_pairs"]["hdr"] == [False, False]
+    assert imageio_blocked["oracle_pairs"]["netpbm"] == [True, True]
+    assert imageio_blocked["netpbm_reader_is_pillow"]
+
+    pillow_blocked = blocked_image_probe(("PIL",))
+    assert pillow_blocked["bindings"] == {
+        "OpenEXR": True,
+        "PILImage": False,
+        "iio": True,
+    }
+    for codec_id in pil_modes:
+        assert pillow_blocked["oracle_pairs"][codec_id] == [
+            False,
+            False,
+        ]
+    assert pillow_blocked["oracle_pairs"]["netpbm"] == [True, True]
+
+    openexr_blocked = blocked_image_probe(("OpenEXR",))
+    assert openexr_blocked["bindings"] == {
+        "OpenEXR": False,
+        "PILImage": True,
+        "iio": True,
+    }
+    assert openexr_blocked["oracle_pairs"]["exr"] == [False, False]
 
     array_oracle_module = sys.modules["bench.io_bench.oracles.arrays"]
     oracle_probe = np.arange(12, dtype=np.float32).reshape(3, 4)

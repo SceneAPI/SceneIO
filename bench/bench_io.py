@@ -41,15 +41,18 @@ from bench.io_bench.families.calibration import (
     build_calibration_specs,
 )
 from bench.io_bench.families.common import _record_nbytes
+from bench.io_bench.families.images import build_image_specs
 from bench.io_bench.fixtures import arrays as array_fixtures
 from bench.io_bench.fixtures import (
     calibration as calibration_fixtures,
 )
+from bench.io_bench.fixtures import images as image_fixtures
 from bench.io_bench.model import DirectorySpec, Spec
 from bench.io_bench.oracles import arrays as array_oracles
 from bench.io_bench.oracles import (
     calibration as calibration_oracles,
 )
+from bench.io_bench.oracles import images as image_oracles
 from bench.io_bench.reporting import (
     print_cold_cache_unavailable,
     print_colmap_db_row,
@@ -86,15 +89,24 @@ _yaml_oracle_read = calibration_oracles._yaml_oracle_read
 _yaml_oracle_write = calibration_oracles._yaml_oracle_write
 yaml = calibration_oracles.yaml
 
+_img_f32 = image_fixtures._img_f32
+_img_u8 = image_fixtures._img_u8
+_img_webp_palette = image_fixtures._img_webp_palette
+_imageio_r = image_oracles._imageio_r
+_imageio_w = image_oracles._imageio_w
+_openexr_r = image_oracles._openexr_r
+_openexr_w = image_oracles._openexr_w
+_pil_r = image_oracles._pil_r
+_pil_w = image_oracles._pil_w
+iio = image_oracles.iio
+OpenEXR = image_oracles.OpenEXR
+PILImage = image_oracles.PILImage
+
 _measure = benchmark_measure.measure
 _measure_in_process_rss = benchmark_measure.measure_in_process_rss
 _try = benchmark_measure.try_measure
 
 # --- optional oracle libs (degrade gracefully) ------------------------------
-try:
-    from PIL import Image as PILImage
-except Exception:
-    PILImage = None
 try:
     import laspy
 except Exception:
@@ -104,14 +116,6 @@ try:
 except Exception:
     gsply = None
 try:
-    import imageio.v3 as iio
-except Exception:
-    iio = None
-try:
-    import OpenEXR
-except Exception:
-    OpenEXR = None
-try:
     import open3d as o3d
 except Exception:
     o3d = None
@@ -120,35 +124,6 @@ try:
 except Exception:
     trimesh = None
 # --- payload builders -------------------------------------------------------
-def _img_u8(h, w):
-    a = np.random.default_rng(0).integers(0, 256, (h, w, 3), dtype=np.uint8)
-    return _core.image(a, color_space="srgb"), a
-
-
-def _img_f32(h, w):
-    a = (np.random.default_rng(0).random((h, w, 3), dtype=np.float32) * 10.0).astype(np.float32)
-    return _core.image(a, color_space="linear"), a
-
-
-def _img_webp_palette(h, w):
-    palette = np.array(
-        [
-            [0, 0, 0],
-            [255, 255, 255],
-            [255, 0, 0],
-            [0, 255, 0],
-            [0, 0, 255],
-            [255, 255, 0],
-            [255, 0, 255],
-            [0, 255, 255],
-        ],
-        dtype=np.uint8,
-    )
-    yy, xx = np.indices((h, w))
-    a = palette[((xx // 7) + (yy // 11)) % len(palette)]
-    return _core.image(a, color_space="srgb"), a
-
-
 def _y4m_fixture(side):
     frames = 4
     rng = np.random.default_rng(31)
@@ -745,59 +720,6 @@ def _g2o_payload_nbytes(payload):
 
 
 # --- codec specs: (id, build, sio_write, sio_read, oracle_write, oracle_read, payload_bytes) ---
-def _pil_w(mode):
-    def enc(a):
-        b = io.BytesIO()
-        PILImage.fromarray(a).save(
-            b, mode, lossless=True
-        ) if mode == "WEBP" else PILImage.fromarray(a).save(b, mode)
-        return b.getvalue()
-
-    return enc
-
-
-def _pil_r(data):
-    return np.asarray(PILImage.open(io.BytesIO(data)))
-
-
-def _imageio_w(extension):
-    return lambda array: iio.imwrite("<bytes>", array, extension=extension)
-
-
-def _imageio_r(extension):
-    return lambda data: iio.imread(data, extension=extension)
-
-
-def _openexr_w(array):
-    fd, path = tempfile.mkstemp(suffix=".exr")
-    os.close(fd)
-    try:
-        channels = {
-            channel: np.ascontiguousarray(array[:, :, index]) for index, channel in enumerate("RGB")
-        }
-        with OpenEXR.File(
-            {"compression": OpenEXR.ZIP_COMPRESSION, "type": OpenEXR.scanlineimage},
-            channels,
-        ) as output:
-            output.write(path)
-        return Path(path).read_bytes()
-    finally:
-        os.remove(path)
-
-
-def _openexr_r(data):
-    fd, path = tempfile.mkstemp(suffix=".exr")
-    os.close(fd)
-    try:
-        Path(path).write_bytes(data)
-        with OpenEXR.File(path) as source:
-            return {
-                key: np.asarray(value.pixels) for key, value in source.parts[0].channels.items()
-            }
-    finally:
-        os.remove(path)
-
-
 def _trimesh_ply_w(payload):
     mesh = trimesh.Trimesh(
         vertices=payload["positions"],
@@ -1651,52 +1573,9 @@ def _specs(scale, pose_bundle=None):
     points = max(1, int(1_000_000 * scale))
     gaussians = max(1, int(200_000 * scale))
     reconstruction, transforms, tum, kitti = pose_bundle or _poses_and_reconstruction(scale)
+    image_specs = build_image_specs(scale)
     return [
-        Spec(
-            "png",
-            lambda: _img_u8(side, side),
-            _core.write_png,
-            _core.read_png,
-            (_pil_w("PNG") if PILImage else None),
-            (_pil_r if PILImage else None),
-            lambda rec, p: p.nbytes,
-        ),
-        Spec(
-            "jpeg",
-            lambda: _img_u8(side, side),
-            lambda im: _core.write_jpeg(im, 95),
-            _core.read_jpeg,
-            (_pil_w("JPEG") if PILImage else None),
-            (_pil_r if PILImage else None),
-            lambda rec, p: p.nbytes,
-        ),
-        Spec(
-            "bmp",
-            lambda: _img_u8(side, side),
-            _core.write_bmp,
-            _core.read_bmp,
-            (_pil_w("BMP") if PILImage else None),
-            (_pil_r if PILImage else None),
-            lambda rec, p: p.nbytes,
-        ),
-        Spec(
-            "tga",
-            lambda: _img_u8(side, side),
-            _core.write_tga,
-            _core.read_tga,
-            (_pil_w("TGA") if PILImage else None),
-            (_pil_r if PILImage else None),
-            lambda rec, p: p.nbytes,
-        ),
-        Spec(
-            "webp",
-            lambda: _img_u8(side, side),
-            lambda im: _core.write_webp(im, True),
-            _core.read_webp,
-            (_pil_w("WEBP") if PILImage else None),
-            (_pil_r if PILImage else None),
-            lambda rec, p: p.nbytes,
-        ),
+        *image_specs[:5],
         Spec(
             "y4m",
             lambda: _y4m_fixture(side),
@@ -1706,33 +1585,7 @@ def _specs(scale, pose_bundle=None):
             _y4m_oracle_read,
             lambda rec, p: sum(value.nbytes for value in p.values()),
         ),
-        Spec(
-            "hdr",
-            lambda: _img_f32(side, side),
-            _core.write_hdr,
-            _core.read_hdr,
-            (_imageio_w(".hdr") if iio else None),
-            (_imageio_r(".hdr") if iio else None),
-            lambda rec, p: p.nbytes,
-        ),
-        Spec(
-            "exr",
-            lambda: _img_f32(side, side),
-            _core.write_exr,
-            _core.read_exr,
-            (_openexr_w if OpenEXR else None),
-            (_openexr_r if OpenEXR else None),
-            lambda rec, p: p.nbytes,
-        ),
-        Spec(
-            "netpbm",
-            lambda: _img_u8(side, side),
-            lambda im: _core.write_netpbm(im, False),
-            _core.read_netpbm,
-            (_imageio_w(".ppm") if iio else (_pil_w("PPM") if PILImage else None)),
-            (_imageio_r(".ppm") if iio else (_pil_r if PILImage else None)),
-            lambda rec, p: p.nbytes,
-        ),
+        *image_specs[5:],
         Spec(
             "xyz",
             lambda: _pc(points, False),

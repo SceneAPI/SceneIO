@@ -288,8 +288,14 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > [30236069971](https://github.com/SceneAPI/SceneIO/actions/runs/30236069971)
 > and compiler-instrumented run
 > [30236069959](https://github.com/SceneAPI/SceneIO/actions/runs/30236069959)
-> pass. The current calibration extraction preserves the same four format
-> capabilities and only moves development benchmark ownership.
+> pass. Calibration closes at `5dc03f4`: normal run
+> [30237676629](https://github.com/SceneAPI/SceneIO/actions/runs/30237676629)
+> and compiler-instrumented run
+> [30237676648](https://github.com/SceneAPI/SceneIO/actions/runs/30237676648)
+> pass. The current raster-image extraction preserves the same eight format
+> capabilities and only moves development benchmark ownership. Seven live
+> rows have independent metrics; portable Radiance HDR benchmark throughput is
+> an explicit exemption while independent NumPy RGBE parity remains covered.
 
 [current-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287022
 [current-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287161

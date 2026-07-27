@@ -16,7 +16,9 @@
 > `30234796010` and compiler-instrumented run `30234796025` pass. R3.2
 > family-by-family benchmark extraction is active: arrays close at `6d9ec34`
 > with normal run `30236069971` and compiler-instrumented run `30236069959`;
-> calibration is complete in the current local tree.
+> calibration closes at `5dc03f4` with normal run `30237676629` and
+> compiler-instrumented run `30237676648`; the eight-codec raster-image family
+> is complete in the current local tree.
 
 The granular, per‑format execution plan for covering **every relevant file type
 that has a permissively‑licensed open‑source option**. Sits below the strategy

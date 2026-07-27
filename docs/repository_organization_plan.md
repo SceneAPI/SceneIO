@@ -211,8 +211,10 @@ and all three independent-review gates pass. Registry implementation
 `30228235491` and compiler-instrumented run `30228235535` pass. R2 is closed.
 R3.1a is complete in the current tree. R3.1b closes at follow-up commit
 `0bdfe0f`; normal run `30234796010` and compiler-instrumented run `30234796025`
-pass. R3.2 family extraction is active. These changes alter no codec algorithm
-or public API and make no codec-performance claim. Exact R3.1a normal run
+pass. Arrays close at `6d9ec34`, and calibration closes at `5dc03f4`; the
+raster-image family is complete in the current local tree. R3.2 family
+extraction remains active. These changes alter no codec algorithm or public
+API and make no codec-performance claim. Exact R3.1a normal run
 [30231629465](https://github.com/SceneAPI/SceneIO/actions/runs/30231629465)
 and compiler-instrumented run
 [30231629496](https://github.com/SceneAPI/SceneIO/actions/runs/30231629496)
@@ -334,7 +336,7 @@ verification have accumulated in a few large modules:
 | C++ records | 32 source/header files | still manageable; new table/animation/scene records will add pressure |
 | Python registry | `registry.py`, 205 lines; `_registry/assembly.py`, 148 lines; focused `_registry/{model,adapters,detection,native_features}.py` modules; and eight `_registry/families/*.py` definition modules | all built-ins are family-owned; R3 now splits the benchmark and cross-codec verification monoliths |
 | Inspection | `_inspection.py` compatibility facade plus `_inspectors/{model,common,arrays,calibration,images,meshes,points,reconstruction,sequences,splats}.py`; all eight manifest families have lower inspector ownership | keep the proven shared model, mmap bridge, metadata bounds, exact-read/integer grammar, and image-result constructor as lower services |
-| Benchmark | compatible `bench_io.py` facade plus `io_bench/{model,measure,reporting}.py`, lower arrays/calibration family modules, and shared `families/common.py` | arrays and calibration have lower family ownership; the six remaining family hooks and sweep orchestration move checkpoint by checkpoint during R3.2 |
+| Benchmark | compatible `bench_io.py` facade plus `io_bench/{model,measure,reporting}.py`, lower arrays/calibration/images family modules, and shared `families/common.py` | arrays, calibration, and images have lower family ownership; the five remaining family hooks and sweep orchestration move checkpoint by checkpoint during R3.2 |
 | Cross-codec tests | `test_io_mmap.py`, about 2,400 lines; `test_io_partial.py`, about 1,100 | reusable codec cases and behavior assertions are difficult to extend independently |
 | Execution plan | `format_gap_implementation_plan.md`, about 2,500 lines | historical evidence and the active queue are easy to confuse |
 | Native dependencies | six source-complete in-tree projects, one LAZperf integration/provenance directory, and six `FetchContent` projects | stable builds are not yet fully offline/repository-contained |
@@ -656,7 +658,24 @@ calibration/common benchmark modules without generated cache files. Its
 attribution files, keeps NumPy as the only unconditional dependency, and
 keeps PyYAML test-extra only. A fresh NumPy-only, PyYAML-absent wheel
 environment passes `python -m sceneio._wheel_smoke`; all three independent
-reviews are clear.
+reviews are clear. Exact calibration commit `5dc03f4` passes normal run
+`30237676629` and compiler-instrumented run `30237676648`.
+
+The raster-image checkpoint adds all eight PNG/JPEG/BMP/TGA/WebP/HDR/EXR/
+Netpbm specs under `families/images.py`, their unchanged deterministic
+uint8/float32 builders under `fixtures/images.py`, and optional Pillow,
+imageio, and OpenEXR comparisons under `oracles/images.py`. The compatible
+facade preserves historical helper identities and slices the hook around the
+unchanged interleaved Y4M row. Exact moved-function AST, binding, logical-size,
+installed/absent/fallback, real oracle-pair, EXR RGB normalization,
+seven-of-eight live oracle, and 50-codec structure controls pass. Portable
+independent Radiance HDR benchmark throughput is explicitly exempted while
+the NumPy RGBE parity suite remains independent. The fresh 350-member
+exact-tree source archive contains the three image modules without generated
+caches. Its 81-member wheel excludes development and comparison-library
+modules, retains all 15 attribution files, keeps NumPy as its only
+unconditional dependency, and passes a fresh NumPy-only installed smoke
+without Pillow, imageio, or OpenEXR. All three independent reviews are clear.
 
 ### R4. Organize native build and bindings
 
