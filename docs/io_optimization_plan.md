@@ -16,10 +16,11 @@ with normal run `30244892746` and compiler-instrumented run `30244892600`.
 Reconstruction closes at `76ed21b` with normal run `30247662591` and
 compiler-instrumented run `30247662622`. Sequences close at `4b8c829` with
 normal run `30250394890` and compiler-instrumented run `30250394906`. Splats
-locally lower-own all six ordinary specs and their fixture/oracle helpers.
-Specialized `gltf`, `colmap_sparse`, `colmap_sparse_txt`, `colmap_db`, and
-image-directory orchestration remains in the compatible facade until the
-shared runner moves. PyCOLMAP and `gsply` remain test-only parity support.
+close at `cd32268` with normal run `30253301819` and compiler-instrumented run
+`30253301871`. The complete sweep and specialized glTF/COLMAP/
+image-directory orchestration are locally lower-owned by
+`io_bench/runner.py`; `bench_io.py` preserves CLI and helper compatibility.
+PyCOLMAP and `gsply` remain test-only parity support.
 
 Scope: the compiled `sceneio._core` I/O path on `phase0-nanobind-core`.
 Companion to `coverage_roadmap.md` (this makes its "Phase 7" hardening/perf work

@@ -46,8 +46,10 @@ compiler-instrumented run `30244892600` pass. The reconstruction-family
 extraction closes at `76ed21b`; normal run `30247662591` and
 compiler-instrumented run `30247662622` pass. The sequence-family extraction
 closes at `4b8c829`; normal run `30250394890` and compiler-instrumented run
-`30250394906` pass. The splat-family extraction is locally complete; only the
-runner remains in R3.2.
+`30250394906` pass. The splat-family extraction closes at `cd32268`; normal
+run `30253301819` and compiler-instrumented run `30253301871` pass. The
+runner extraction is locally complete; repository-built-in completeness and
+strict comparison-provider qualification remain in R3.2.
 
 This is the operational checklist for the repository-organization and
 codec-performance stage defined in
@@ -2742,10 +2744,10 @@ passes both jobs. No release workflow, tag, or publication was triggered.
   - [x] reconstruction;
   - [x] sequences;
   - [x] splats.
-- [ ] After the family hooks have lower ownership, move the remaining complete
+- [x] After the family hooks have lower ownership, move the remaining complete
       sweep orchestration to `bench/io_bench/runner.py`; keep
       `bench/bench_io.py` as a thin compatible CLI and helper-export facade.
-- [ ] Keep oracle dependencies test-only.
+- [x] Keep oracle dependencies test-only.
 - [ ] Fail if a built-in codec is silently absent; prove an extra runtime
       registration does not enter repository fixture/oracle completeness.
 - [ ] Add a strict qualification mode in which every declared oracle must be
@@ -3011,6 +3013,40 @@ archive has 365 members and exactly the three new splat modules. Its
 sdist-derived 81-member Windows wheel excludes benchmark, test, and `gsply`
 payloads, retains all 15 attribution files, and keeps NumPy as its sole
 unconditional dependency. A fresh NumPy-only installation passes
+`sceneio._wheel_smoke`.
+
+Exact splat commit `cd32268` passes normal run
+[30253301819](https://github.com/SceneAPI/SceneIO/actions/runs/30253301819)
+and compiler-instrumented run
+[30253301871](https://github.com/SceneAPI/SceneIO/actions/runs/30253301871).
+
+The runner checkpoint moves the complete sweep, specialized
+glTF/COLMAP/image-directory orchestration, CLI parser, and supporting helpers
+to `io_bench/runner.py`. `bench_io.py` remains the compatible direct entry
+point and re-exports every historical non-dunder helper.
+
+All 20 moved function ASTs match the splat checkpoint. The parent and
+candidate expose the same 166 helper names with checked SHA-256
+`0c26c90b0d3ee10cb216e5baf3b0502a446f55805c89a437ea71790bd39be33a`.
+Every facade attribute is the lower runner object, facade rebinding propagates
+to runner globals, and star imports retain the parent 67-name public surface.
+Importing the runner does not load the facade, importing the facade does not
+replace an already initialized runner's objects, and explicit facade reload
+restores source definitions. Direct execution retains the CLI program name,
+options, defaults, rejection behavior, output order, row schemas, and JSON
+envelope.
+The complete 50-codec smoke retains structural projection
+`2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`.
+This checkpoint changes ownership only. Repository-built-in completeness,
+extra runtime registration isolation, and strict comparison-provider
+qualification intentionally remain a separate final R3.2 behavior unit.
+
+Focused runner/contract validation passes 145 tests; the complete suite
+passes 3,316 with four documented skips, and Ruff is clean. The exact staged
+tree has 365 tracked files and produces a 366-member source archive with only
+generated `PKG-INFO` extra. Its sdist-derived 81-member Windows wheel excludes
+benchmark and test modules, retains all 15 attribution files, keeps NumPy as
+its sole unconditional dependency, and passes a fresh NumPy-only
 `sceneio._wheel_smoke`.
 
 ### R3.3 — cross-codec test support

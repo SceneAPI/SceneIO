@@ -265,9 +265,13 @@ sceneio._core (C++ / nanobind)
   order and callback identities are unchanged. Gaussian PLY and SPZ retain
   live independent comparisons; Compressed PLY, SOG, KSplat, and `.splat`
   carry exact benchmark-throughput exemptions backed by their independent
-  parity suites. No benchmark family remains facade-owned; only specialized
-  directory/database orchestration and the shared runner remain to move in
-  R3.2.
+  parity suites. Exact splat commit `cd32268` passes normal run `30253301819`
+  and compiler-instrumented run `30253301871`. The complete sweep,
+  specialized glTF/COLMAP/image-directory orchestration, CLI, and 20
+  supporting functions now live in `bench/io_bench/runner.py`.
+  `bench/bench_io.py` is a compatible entry point that re-exports the checked
+  166-name helper surface. The final R3.2 checkpoint adds repository-built-in
+  completeness and strict comparison-provider qualification.
   Built-in startup uses `_registry/assembly.py` as a lower staging boundary.
   Eight complete family tuples are collected without touching the public
   registry. After all 50 canonical ids validate, the facade publishes the

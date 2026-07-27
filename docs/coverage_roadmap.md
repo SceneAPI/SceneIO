@@ -25,11 +25,12 @@
 > Reconstruction closes at `76ed21b` with normal run `30247662591` and
 > compiler-instrumented run `30247662622`. Sequences close at `4b8c829` with
 > normal run `30250394890` and compiler-instrumented run `30250394906`.
-> Splats are locally complete: all six ordinary specs and their fixture/oracle
-> helpers have lower ownership. Gaussian PLY and SPZ retain live `gsply`
-> comparisons; the other four rows carry exact benchmark-throughput
-> exemptions backed by independent parity suites. Only specialized
-> directory/database orchestration and the shared runner remain in R3.2.
+> Splats close at `cd32268` with normal run `30253301819` and
+> compiler-instrumented run `30253301871`. The complete sweep and specialized
+> orchestration are locally lower-owned by `bench/io_bench/runner.py`; the
+> compatible `bench_io.py` entry point retains its checked helper surface.
+> Repository-built-in completeness and strict comparison-provider
+> qualification are the final R3.2 behavior checkpoint.
 
 The granular, per‑format execution plan for covering **every relevant file type
 that has a permissively‑licensed open‑source option**. Sits below the strategy

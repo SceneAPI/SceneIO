@@ -338,9 +338,17 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > their Gaussian fixture plus optional `gsply` adapters unchanged. Gaussian
 > PLY and SPZ retain live independent metrics; Compressed PLY, SOG, KSplat,
 > and `.splat` retain exact throughput exemptions backed by their codec parity
-> suites. The 50-codec structure, complete suite, 365/81
-> source/wheel inventory, 15 attributions, fresh NumPy-only smoke, and all
-> three independent reviews pass locally.
+> suites. Splats close at `cd32268`: normal run
+> [30253301819](https://github.com/SceneAPI/SceneIO/actions/runs/30253301819)
+> and compiler-instrumented run
+> [30253301871](https://github.com/SceneAPI/SceneIO/actions/runs/30253301871)
+> pass. The local runner extraction moves the complete sweep and specialized
+> glTF/COLMAP/image-directory orchestration to `io_bench/runner.py`; the thin
+> compatible entry point preserves the exact checked helper surface. The
+> 50-codec structure, complete suite, 366/81 source/wheel inventory, 15
+> attributions, and fresh NumPy-only smoke pass locally. Repository-built-in
+> completeness and strict comparison-provider qualification remain the final
+> R3.2 behavior checkpoint.
 
 [current-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287022
 [current-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287161

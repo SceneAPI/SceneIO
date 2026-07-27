@@ -218,8 +218,10 @@ compiler-instrumented run `30244892600` pass. The reconstruction benchmark
 family closes at `76ed21b`; normal run `30247662591` and
 compiler-instrumented run `30247662622` pass. The sequence benchmark family
 closes at `4b8c829`; normal run `30250394890` and compiler-instrumented run
-`30250394906` pass. The splat benchmark family is complete in the current
-local tree. Only the shared runner remains in R3.2.
+`30250394906` pass. The splat benchmark family closes at `cd32268`; normal run
+`30253301819` and compiler-instrumented run `30253301871` pass. The shared
+runner extraction is complete in the current local tree. Completeness and
+strict comparison-provider controls remain in R3.2.
 These changes alter no codec algorithm or public API and make no
 codec-performance claim. Exact R3.1a normal run
 [30231629465](https://github.com/SceneAPI/SceneIO/actions/runs/30231629465)
@@ -343,7 +345,7 @@ verification have accumulated in a few large modules:
 | C++ records | 32 source/header files | still manageable; new table/animation/scene records will add pressure |
 | Python registry | `registry.py`, 205 lines; `_registry/assembly.py`, 148 lines; focused `_registry/{model,adapters,detection,native_features}.py` modules; and eight `_registry/families/*.py` definition modules | all built-ins are family-owned; R3 now splits the benchmark and cross-codec verification monoliths |
 | Inspection | `_inspection.py` compatibility facade plus `_inspectors/{model,common,arrays,calibration,images,meshes,points,reconstruction,sequences,splats}.py`; all eight manifest families have lower inspector ownership | keep the proven shared model, mmap bridge, metadata bounds, exact-read/integer grammar, and image-result constructor as lower services |
-| Benchmark | compatible `bench_io.py` facade plus `io_bench/{model,measure,reporting}.py`, all eight lower family modules, and shared `families/common.py` | every ordinary family hook has lower ownership; specialized glTF/COLMAP/image-directory orchestration and the sweep runner are the only remaining R3.2 moves |
+| Benchmark | compatible `bench_io.py` entry point plus `io_bench/{model,measure,reporting,runner}.py`, all eight lower family modules, and shared `families/common.py` | all benchmark ownership is lower; the final R3.2 unit adds built-in completeness and strict comparison-provider controls |
 | Cross-codec tests | `test_io_mmap.py`, about 2,400 lines; `test_io_partial.py`, about 1,100 | reusable codec cases and behavior assertions are difficult to extend independently |
 | Execution plan | `format_gap_implementation_plan.md`, about 2,500 lines | historical evidence and the active queue are easy to confuse |
 | Native dependencies | six source-complete in-tree projects, one LAZperf integration/provenance directory, and six `FetchContent` projects | stable builds are not yet fully offline/repository-contained |
@@ -788,6 +790,28 @@ the three new splat modules. Its sdist-derived 81-member wheel excludes
 benchmark/test/`gsply` payloads, retains all 15 attribution files, keeps NumPy
 as its only unconditional dependency, and passes a fresh NumPy-only installed
 smoke. All three independent reviews are clear.
+
+Exact splat commit `cd32268` passes normal run `30253301819` and
+compiler-instrumented run `30253301871`.
+
+The runner checkpoint moves the complete sweep, specialized
+glTF/COLMAP/image-directory orchestration, CLI parser, and all 20 supporting
+functions to `io_bench/runner.py`. `bench_io.py` becomes a small compatible
+direct entry point and re-exports the runner's complete historical non-dunder
+helper surface. Every moved function AST is unchanged; the parent and
+candidate 166-name surfaces share checked SHA-256
+`0c26c90b0d3ee10cb216e5baf3b0502a446f55805c89a437ea71790bd39be33a`.
+Facade rebinding propagates to runner globals, star imports retain the exact
+parent 67-name public surface, and the lower runner imports independently of
+the facade. A first facade import preserves existing runner objects and
+rebindings; explicit facade reload restores source definitions. The 50-row
+structural projection remains unchanged. This is an ownership-only unit.
+Focused runner/contract validation passes 145 tests; the complete suite
+passes 3,316 with four documented skips, and Ruff is clean. The exact staged
+tree has 365 tracked files and produces a 366-member source archive. Its
+sdist-derived 81-member Windows wheel excludes benchmark/test modules, retains
+all 15 attribution files, keeps NumPy as its only unconditional dependency,
+and passes a fresh NumPy-only installed smoke.
 
 ### R4. Organize native build and bindings
 

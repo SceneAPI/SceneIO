@@ -507,7 +507,9 @@ def test_benchmark_contract_matches_checked_snapshot():
     ]
     assert set(contract["result_order"]) == set(CANONICAL_BUILTIN_IDS)
 
-    tree = ast.parse(benchmark_path.read_text(encoding="utf-8"))
+    runner_contract = contract["r3_2_runner_extraction"]
+    runner_path = ROOT / runner_contract["source"]
+    tree = ast.parse(runner_path.read_text(encoding="utf-8"))
     literal_dict_keys = {
         frozenset(
             key.value
@@ -594,6 +596,99 @@ def _assert_benchmark_components_and_metric_semantics_are_explicit():
         and isinstance(node.func, ast.Name)
         and node.func.id == "print"
         for node in ast.walk(benchmark_tree)
+    )
+    runner_contract = contract["r3_2_runner_extraction"]
+    assert runner_contract["facade"] == "bench/bench_io.py"
+    assert runner_contract["facade_attribute_policy"] == (
+        "alias_all_non_dunder_runner_globals"
+    )
+    assert runner_contract["facade_rebinding_policy"] == (
+        "propagate_historical_attribute_mutations_to_runner"
+    )
+    assert runner_contract["facade_first_import_policy"] == (
+        "preserve_initialized_runner_objects_and_rebindings"
+    )
+    assert runner_contract["facade_reload_policy"] == (
+        "reset_runner_source_definitions_and_restore_aliases"
+    )
+    assert runner_contract["star_import_policy"] == (
+        "parent_public_names_without_explicit_all"
+    )
+    runner_module = benchmark._runner
+    assert runner_module is sys.modules["bench.io_bench.runner"]
+    assert not hasattr(benchmark, "__all__")
+    assert tuple(benchmark._COMPAT_EXPORTS) == tuple(
+        name for name in vars(runner_module) if not name.startswith("__")
+    )
+    assert len(benchmark._COMPAT_EXPORTS) == runner_contract[
+        "facade_attribute_count"
+    ]
+    assert hashlib.sha256(
+        "\n".join(sorted(benchmark._COMPAT_EXPORTS)).encode()
+    ).hexdigest() == runner_contract["facade_attributes_sha256"]
+    for name in benchmark._COMPAT_EXPORTS:
+        assert getattr(benchmark, name) is getattr(runner_module, name)
+    star_import_names = sorted(
+        name for name in vars(benchmark) if not name.startswith("_")
+    )
+    assert len(star_import_names) == runner_contract[
+        "star_import_count"
+    ]
+    assert hashlib.sha256(
+        "\n".join(star_import_names).encode()
+    ).hexdigest() == runner_contract["star_import_sha256"]
+    star_namespace = {}
+    exec(
+        f"from {benchmark.__name__} import *",
+        star_namespace,
+    )
+    assert sorted(
+        name for name in star_namespace if name != "__builtins__"
+    ) == star_import_names
+    original_try = benchmark._try
+
+    def replacement_try(operation):
+        return operation()
+
+    try:
+        benchmark._try = replacement_try
+        assert benchmark._try is replacement_try
+        assert runner_module._try is replacement_try
+    finally:
+        benchmark._try = original_try
+    assert benchmark._try is original_try
+    assert runner_module._try is original_try
+    assert not any(
+        isinstance(node, ast.FunctionDef)
+        for node in benchmark_tree.body
+    )
+
+    runner_path = ROOT / runner_contract["source"]
+    runner_tree = ast.parse(runner_path.read_text(encoding="utf-8"))
+    runner_functions = {
+        node.name: node
+        for node in runner_tree.body
+        if isinstance(node, ast.FunctionDef)
+    }
+    assert set(runner_functions) == set(
+        runner_contract["function_ast_sha256"]
+    )
+    for name, expected in runner_contract[
+        "function_ast_sha256"
+    ].items():
+        observed = hashlib.sha256(
+            ast.dump(
+                runner_functions[name],
+                include_attributes=False,
+            ).encode()
+        ).hexdigest()
+        assert observed == expected
+        assert getattr(benchmark, name) is getattr(runner_module, name)
+    assert not any(
+        isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Name)
+        and node.func.id == "print"
+        for node in ast.walk(runner_tree)
     )
 
     extracted_families = contract["r3_2_family_extraction"]
@@ -777,6 +872,134 @@ def _assert_benchmark_components_and_metric_semantics_are_explicit():
     lower_import_observed = json.loads(lower_import_result.stdout)
     assert not lower_import_observed["facade_loaded"]
     assert lower_import_observed["modules"] == lower_modules
+
+    runner_import_probe = textwrap.dedent(
+        """
+        import importlib
+        import json
+        import sys
+
+        runner = importlib.import_module("bench.io_bench.runner")
+        print(json.dumps([
+            "bench.bench_io" not in sys.modules,
+            runner.main.__module__,
+            len(runner._specs(0.001)),
+        ]))
+        """
+    )
+    runner_import_result = subprocess.run(
+        [sys.executable, "-c", runner_import_probe],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert json.loads(runner_import_result.stdout) == [
+        True,
+        "bench.io_bench.runner",
+        45,
+    ]
+
+    runner_first_probe = textwrap.dedent(
+        """
+        import importlib
+        import json
+
+        runner = importlib.import_module("bench.io_bench.runner")
+        original_main = runner.main
+        original_specs = runner._specs
+        original_run_benchmark = runner._run_benchmark
+
+        def replacement(operation):
+            return operation()
+
+        runner._try = replacement
+        facade = importlib.import_module("bench.bench_io")
+        print(json.dumps([
+            runner.main is original_main,
+            runner._specs is original_specs,
+            runner._run_benchmark is original_run_benchmark,
+            runner._try is replacement,
+            facade._try is replacement,
+        ]))
+        """
+    )
+    runner_first_result = subprocess.run(
+        [sys.executable, "-c", runner_first_probe],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert json.loads(runner_first_result.stdout) == [
+        True,
+        True,
+        True,
+        True,
+        True,
+    ]
+
+    facade_reload_probe = textwrap.dedent(
+        """
+        import importlib
+        import json
+
+        facade = importlib.import_module("bench.bench_io")
+        runner = importlib.import_module("bench.io_bench.runner")
+        original_module = facade._try.__module__
+
+        def replacement(operation):
+            return operation()
+
+        facade._try = replacement
+        assignment_propagated = runner._try is replacement
+        rebound_reload = importlib.reload(facade)
+        rebound_reset = (
+            rebound_reload is facade
+            and facade._try is runner._try
+            and facade._try is not replacement
+            and facade._try.__module__ == original_module
+        )
+
+        del facade._try
+        deletion_propagated = (
+            not hasattr(facade, "_try")
+            and not hasattr(runner, "_try")
+        )
+        deleted_reload = importlib.reload(facade)
+        deletion_reset = (
+            deleted_reload is facade
+            and facade._try is runner._try
+            and facade._try.__module__ == original_module
+        )
+        namespace = {}
+        exec("from bench.bench_io import *", namespace)
+        public_names = sorted(
+            name for name in namespace if name != "__builtins__"
+        )
+        print(json.dumps([
+            assignment_propagated,
+            rebound_reset,
+            deletion_propagated,
+            deletion_reset,
+            len(public_names),
+        ]))
+        """
+    )
+    facade_reload_result = subprocess.run(
+        [sys.executable, "-c", facade_reload_probe],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert json.loads(facade_reload_result.stdout) == [
+        True,
+        True,
+        True,
+        True,
+        67,
+    ]
 
     calibration_family_module = sys.modules[
         "bench.io_bench.families.calibration"

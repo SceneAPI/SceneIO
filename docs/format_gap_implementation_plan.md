@@ -2009,13 +2009,13 @@ compiler-instrumented run `30244892600`. The reconstruction family is complete
 at `76ed21b`; normal run `30247662591` and compiler-instrumented run
 `30247662622` pass. The sequence family closes at `4b8c829`; normal run
 `30250394890` and compiler-instrumented run `30250394906` pass. The splat
-family is complete in the current local tree: all six ordinary specs and five
-fixture/oracle helpers have lower ownership. Gaussian PLY and SPZ retain live
-`gsply` comparisons, while Compressed PLY, SOG, KSplat, and `.splat` retain
-exact benchmark-throughput exemptions backed by independent parity. The
-specialized glTF, COLMAP-binary, COLMAP-text, COLMAP-database, and
-image-directory rows remain facade-owned pending runner extraction. Only the
-runner remains in R3.2;
+family closes at `cd32268`; normal run `30253301819` and
+compiler-instrumented run `30253301871` pass. The complete sweep and
+specialized glTF/COLMAP/image-directory orchestration are lower-owned by
+`io_bench/runner.py` in the current local tree, while `bench_io.py` remains a
+thin compatible entry point. Repository-built-in completeness, extra runtime
+registration isolation, and strict comparison-provider qualification remain
+the final R3.2 behavior checkpoint;
 their sequence is maintained in
 [`next_stage_implementation_checklist.md`](next_stage_implementation_checklist.md).
 

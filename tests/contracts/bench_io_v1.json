@@ -27,7 +27,7 @@
       "_pc_ply": "bench/io_bench/fixtures/points.py",
       "_poses_and_reconstruction": "bench/io_bench/fixtures/reconstruction.py",
       "_single_calibration": "bench/io_bench/fixtures/calibration.py",
-      "_specs": "bench/bench_io.py",
+      "_specs": "bench/io_bench/runner.py",
       "_y4m_fixture": "bench/io_bench/fixtures/sequences.py"
     },
     "parent_and_candidate_builder_ast_sha256": "ce8dda677da61550035dcd2062d4cb53aed20f21e37024d87d5f50449ba1fbfd",
@@ -565,6 +565,42 @@
           "verification": "format parity remains covered by tests/codecs/test_splat.py"
         }
       }
+    }
+  },
+  "r3_2_runner_extraction": {
+    "parent_commit": "cd322685d3de86931ec4264261924fb3c309b6c4",
+    "source": "bench/io_bench/runner.py",
+    "facade": "bench/bench_io.py",
+    "facade_attribute_policy": "alias_all_non_dunder_runner_globals",
+    "facade_attribute_count": 166,
+    "facade_attributes_sha256": "0c26c90b0d3ee10cb216e5baf3b0502a446f55805c89a437ea71790bd39be33a",
+    "facade_rebinding_policy": "propagate_historical_attribute_mutations_to_runner",
+    "facade_first_import_policy": "preserve_initialized_runner_objects_and_rebindings",
+    "facade_reload_policy": "reset_runner_source_definitions_and_restore_aliases",
+    "star_import_policy": "parent_public_names_without_explicit_all",
+    "star_import_count": 67,
+    "star_import_sha256": "9507bd17bd66bafef1cae309d96a0ed97b11ef81febf4893fa210d153047eef4",
+    "function_ast_sha256": {
+      "_assert_colmap_db_equal": "eb3f03b33ac9316b86eb7d9ce1117626cf1078f11dcd79023063c9f18a8b6ba1",
+      "_benchmark_colmap_db": "401c290dc1cfff15a85091c19d9d28a184db5c58b4692d6ed5d413ae07fe5312",
+      "_benchmark_gltf": "2a81d2251476841646e345acdbf90752ecd9395f6bf4fdb65f328cc143adc0dc",
+      "_colmap_blob": "1510f9e3f19529d08b1e29d8ff6ab25ff568d1f41b5d93c20e55819b46a75d74",
+      "_colmap_db_fixture": "878c02f627dcd22a9a125bad53309e752f1698dd43b3151f8d919cb7f9cfcce5",
+      "_colmap_db_payload_nbytes": "a68d8e879f360c0595f76f747079ce07c4822774f22b5b4cefee8bd396dffb32",
+      "_directory_size": "94330e4bb104a8da463df5bd1e3c7c039f4767c77db03fbea1bceb1837355837",
+      "_directory_specs": "07b89cea71ab62f20cdb601e81676daa840fad97561b9bb7518db73c6ba10c87",
+      "_evict_file_cache": "551d4db0d86a8eba0911eec7579af093477d3e4e3f6b2b5e371853db6518fe4b",
+      "_partial_request": "58f1ddc9b9ff0a534f9283ed09161d1bd329272885f944ac8ccefc3511dff5a6",
+      "_run_benchmark": "e834f15f76db97b7ab83605f2d2e31b4ea7cf6faa47322ae5a6b1c9d86687197",
+      "_run_large_safetensors": "4c7533d0bc4c406858f7e00ed0704966c9a8133655a2629a63075ad7e3a9f29d",
+      "_specs": "526a26e1ef1d078d085b1a6bbcd573045401b7b572ae932bc0363a388e91834a",
+      "_sqlite_reference_inspect_colmap_db": "1a4f469a1d30e9b035f81039d678e6fb4749923bdecf372315675e8674507982",
+      "_sqlite_reference_query": "81eefe9fd08369ddb528afee8f3fe393faefa895480d270f1c6e25aba5967c1d",
+      "_sqlite_reference_read_colmap_db": "e50153bfd1dbdd129545abc1b1f7b37d691a6da220634d7b219ec013e7e03bc6",
+      "_sqlite_reference_read_colmap_db_image": "1590c76b16a2c935a7f00736180a5b4858f5d86cd852367749385b8d203f367e",
+      "_sqlite_reference_read_colmap_db_pair": "ec87e08a59243c23622d83a9a00112a5a0657a119c948d39d7d357b747714d85",
+      "_sqlite_reference_write_colmap_db": "21d9bf176dcc34b91c663cbb60f09d552433237dde94e982fe35f0c6a33fa408",
+      "main": "2340c9deb537661cf7e9eb8deff499146ab4fd652000f191504fb60e615ca8c9"
     }
   },
   "r3_1a_equivalence": {

@@ -2005,3 +2005,40 @@ files, and keeps NumPy as its sole unconditional dependency. A fresh
 NumPy-only environment passes the installed-wheel smoke. All three independent
 reviews are clear. This checkpoint changes benchmark ownership only; it makes
 no codec-implementation performance claim.
+
+Exact splat commit `cd32268` passes normal run
+[30253301819](https://github.com/SceneAPI/SceneIO/actions/runs/30253301819)
+and compiler-instrumented run
+[30253301871](https://github.com/SceneAPI/SceneIO/actions/runs/30253301871).
+
+## R3.2 benchmark-runner extraction (2026-07-27)
+
+The ninth R3.2 ownership checkpoint moves the complete sweep, specialized
+glTF/COLMAP/image-directory orchestration, CLI parser, and all supporting
+helpers to `bench/io_bench/runner.py`. `bench/bench_io.py` is now a small
+compatible entry point that re-exports the runner's complete historical
+non-dunder helper surface and delegates direct execution.
+
+All 20 moved function ASTs match the splat checkpoint. The exact 166-name
+attribute surface has the same checked SHA-256, and importing the lower runner
+does not import the facade. A first facade import preserves existing runner
+callable identities and rebindings; explicit facade reload restores the runner
+source definitions. Facade attribute rebinding propagates to runner globals as
+it did when functions shared the facade namespace, while star imports retain
+the exact parent 67-name public surface. Direct facade
+execution retains the same program name, options, defaults, rejection
+behavior, row schemas, output order, and bare-list JSON envelope. The complete
+50-codec smoke retains structural
+projection
+`2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`.
+This is an ownership-only move and makes no codec-implementation performance
+claim. Repository-built-in completeness and strict comparison-provider
+qualification remain the final R3.2 behavior checkpoint.
+
+Focused runner/contract validation passes 145 tests; the complete suite
+passes 3,316 with four documented skips, and Ruff is clean. The exact staged
+tree has 365 tracked files and produces a 366-member source archive whose only
+generated member is `PKG-INFO`. Its sdist-derived 81-member Windows wheel
+excludes benchmark and test modules, retains all 15 attribution files, and
+keeps NumPy as its sole unconditional dependency. A fresh NumPy-only
+installation passes `sceneio._wheel_smoke`.
