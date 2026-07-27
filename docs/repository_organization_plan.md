@@ -839,6 +839,26 @@ tracked files and produces a 368-file sdist whose only generated file is
 module and all 15 attribution files, excludes benchmark/test/build payloads,
 and passes a fresh SceneIO-plus-NumPy installed-wheel smoke.
 
+Exact qualification commit `0e54cf5` passes normal run `30263506366` and
+compiler-instrumented run `30263506270`.
+
+R3.3 starts with a non-consuming lower-owned catalog under
+`tests/_support/codec_cases.py`. Its immutable canonical-order definitions
+partition all 50 built-ins into the existing 44 buffer fixtures, three
+path-native fixtures, and three directory fixtures, and pin the live
+28 partial-capable-codec projection with 32 selector declarations. Focused
+controls prove family ownership,
+runtime-extension isolation, and that existing mmap and partial consumers
+remain untouched until their equivalence migrations. The complete local tree
+collects 3,345 tests and passes 3,341 with four documented skips; Ruff and all
+three independent reviews are clear. The independent one-run 50-codec
+benchmark smoke retains structural SHA-256
+`2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`.
+The exact staged tree has 370 tracked files and produces a 371-file sdist
+whose only generated file is `PKG-INFO`; its sdist-derived 81-member Windows
+abi3 wheel contains one native module and all 15 attribution files, and a
+fresh SceneIO-plus-NumPy environment passes `sceneio._wheel_smoke`.
+
 ### R4. Organize native build and bindings
 
 - Split dependency configuration and source manifests out of the root

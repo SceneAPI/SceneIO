@@ -2021,8 +2021,11 @@ exemptions, validates built-in completeness before measurement, and exposes a
 complete-sweep strict mode that propagates every required comparison failure.
 The complete local suite, five-run strict guard, three independent closure
 reviews, exact-tree sdist/wheel gate, and fresh NumPy-only installed-wheel
-smoke pass. Exact-commit hosted validation remains pending until this unit is
-committed and pushed; its evidence sequence is maintained in
+smoke pass. Exact qualification commit `0e54cf5` passes normal run
+`30263506366` and compiler-instrumented run `30263506270`. R3.3 is active with
+the non-consuming exact 44-buffer/3-path/3-directory catalog under
+`tests/_support/codec_cases.py`; its staged consumer migration sequence is
+maintained in
 [`next_stage_implementation_checklist.md`](next_stage_implementation_checklist.md).
 
 Status terms are strict:

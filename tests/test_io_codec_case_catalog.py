@@ -1,0 +1,200 @@
+"""Architecture contracts for staged cross-codec case ownership."""
+
+from __future__ import annotations
+
+import ast
+import dataclasses
+from pathlib import Path
+
+import pytest
+from _support import codec_cases
+
+import sceneio
+from sceneio.io import registry
+from sceneio.io._builtin_manifest import (
+    CANONICAL_BUILTIN_IDS,
+    FAMILY_MEMBERS,
+)
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def test_case_catalog_is_complete_ordered_and_immutable():
+    definitions = codec_cases.CODEC_CASE_DEFINITIONS
+    assert tuple(case.id for case in definitions) == CANONICAL_BUILTIN_IDS
+    assert tuple(codec_cases.CASES_BY_ID) == CANONICAL_BUILTIN_IDS
+    assert len(definitions) == len(codec_cases.CASES_BY_ID) == 50
+    assert all(dataclasses.is_dataclass(case) for case in definitions)
+    with pytest.raises(dataclasses.FrozenInstanceError):
+        definitions[0].id = "changed"
+    with pytest.raises(TypeError):
+        codec_cases.CASES_BY_ID["changed"] = definitions[0]
+
+
+def test_case_catalog_preserves_the_legacy_fixture_partitions():
+    assert tuple(case.id for case in codec_cases.BUFFER_CASES) == (
+        "pfm",
+        "gaussian_ply",
+        "compressed_ply",
+        "sog",
+        "ksplat",
+        "ply_mesh",
+        "stl",
+        "off",
+        "glb",
+        "ply",
+        "pcd",
+        "spz",
+        "transforms_json",
+        "tum",
+        "kitti",
+        "euroc_state",
+        "opencv_yaml",
+        "opencv_xml",
+        "ros_camera_info",
+        "kalibr",
+        "g2o",
+        "npy",
+        "npz",
+        "safetensors",
+        "netpbm",
+        "png",
+        "jpeg",
+        "bmp",
+        "tga",
+        "hdr",
+        "exr",
+        "webp",
+        "y4m",
+        "xyz",
+        "pts",
+        "las",
+        "laz",
+        "flo",
+        "dmb",
+        "bundler",
+        "bal",
+        "nvm",
+        "openmvg",
+        "splat",
+    )
+    assert tuple(case.id for case in codec_cases.PATH_CASES) == (
+        "obj",
+        "gltf",
+        "colmap_db",
+    )
+    assert tuple(case.id for case in codec_cases.DIRECTORY_CASES) == (
+        "colmap_sparse",
+        "image_sequence",
+        "colmap_sparse_txt",
+    )
+    assert {
+        case.id
+        for cases in (
+            codec_cases.BUFFER_CASES,
+            codec_cases.PATH_CASES,
+            codec_cases.DIRECTORY_CASES,
+        )
+        for case in cases
+    } == set(CANONICAL_BUILTIN_IDS)
+
+
+def test_case_catalog_family_ownership_matches_the_builtin_manifest():
+    observed = {
+        family: tuple(
+            case.id
+            for case in codec_cases.CODEC_CASE_DEFINITIONS
+            if case.family == family
+        )
+        for family in FAMILY_MEMBERS
+    }
+    assert observed == dict(FAMILY_MEMBERS)
+
+
+def test_case_catalog_selectors_match_live_builtin_capabilities():
+    capabilities = sceneio.capabilities()
+    assert set(capabilities) == set(CANONICAL_BUILTIN_IDS)
+    for case in codec_cases.CODEC_CASE_DEFINITIONS:
+        capability = capabilities[case.id]
+        assert capability.available
+        assert capability.can_read
+        assert capability.can_write
+        assert capability.can_inspect
+        assert capability.streams_read
+        assert capability.streams_write
+        assert case.partial_selectors == capability.partial_selectors
+    assert tuple(case.id for case in codec_cases.PARTIAL_CASES) == (
+        "pfm",
+        "colmap_sparse",
+        "gaussian_ply",
+        "compressed_ply",
+        "sog",
+        "ksplat",
+        "ply_mesh",
+        "stl",
+        "off",
+        "gltf",
+        "glb",
+        "ply",
+        "pcd",
+        "euroc_state",
+        "colmap_db",
+        "safetensors",
+        "netpbm",
+        "webp",
+        "y4m",
+        "image_sequence",
+        "colmap_sparse_txt",
+        "xyz",
+        "pts",
+        "las",
+        "laz",
+        "flo",
+        "dmb",
+        "splat",
+    )
+    assert sum(
+        len(case.partial_selectors)
+        for case in codec_cases.PARTIAL_CASES
+    ) == 32
+
+
+def test_runtime_extensions_do_not_enter_repository_case_completeness():
+    extension = dataclasses.replace(
+        registry.REGISTRY["npy"],
+        id="runtime-case-extension",
+        extensions=(".runtime-case-extension",),
+    )
+    before = tuple(registry.REGISTRY.items())
+    try:
+        registry.register(extension)
+        assert extension.id in registry.REGISTRY
+        assert extension.id not in codec_cases.CASES_BY_ID
+        assert tuple(codec_cases.CASES_BY_ID) == CANONICAL_BUILTIN_IDS
+    finally:
+        registry.REGISTRY.pop(extension.id, None)
+    assert tuple(registry.REGISTRY.items()) == before
+
+
+def test_case_catalog_has_lower_ownership_and_no_consumer_imports():
+    source_path = ROOT / "tests/_support/codec_cases.py"
+    tree = ast.parse(source_path.read_text(encoding="utf-8"))
+    imported = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            imported.update(alias.name for alias in node.names)
+        elif isinstance(node, ast.ImportFrom):
+            imported.add(node.module)
+    assert imported == {
+        "__future__",
+        "dataclasses",
+        "sceneio.io._builtin_manifest",
+        "types",
+    }
+    for relative in (
+        "tests/test_io_mmap.py",
+        "tests/test_io_partial.py",
+    ):
+        assert "codec_cases" not in (ROOT / relative).read_text(
+            encoding="utf-8"
+        )

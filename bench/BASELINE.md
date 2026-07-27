@@ -2081,3 +2081,32 @@ only generated file is `PKG-INFO`; its sdist-derived 81-member Windows abi3
 wheel contains one native module and all 15 attribution files, excludes
 benchmark/test/build payloads, and installs only SceneIO plus NumPy in a fresh
 environment. `sceneio._wheel_smoke` returns `2`.
+
+Exact qualification commit `0e54cf5` passes normal run
+[30263506366](https://github.com/SceneAPI/SceneIO/actions/runs/30263506366)
+and compiler-instrumented run
+[30263506270](https://github.com/SceneAPI/SceneIO/actions/runs/30263506270).
+
+## R3.3 non-consuming cross-codec case catalog (2026-07-27)
+
+The first R3.3 checkpoint adds a test-only, immutable case catalog in
+`tests/_support/codec_cases.py` without changing any benchmark or codec
+consumer. Its canonical-order definitions cover all 50 repository built-ins:
+44 use the existing buffer-fixture path, three use path-native fixtures, and
+three use directory fixtures. The catalog separately pins the exact 28
+partial-capable codecs and their 32 selector declarations.
+
+The independent one-run all-codec benchmark smoke still returns 50 successful
+rows and retains structural SHA-256
+`2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`.
+Six focused architecture controls pin completeness, ordered partitions,
+family ownership, live capability agreement, runtime-extension isolation,
+and the non-consuming boundary. The complete local suite collects 3,345 tests
+and passes 3,341 with four documented skips; Ruff is clean. All three
+independent reviews are clear. This checkpoint establishes reusable test
+ownership only and makes no codec-implementation performance claim. The exact
+staged tree has 370 tracked files and produces a 371-file sdist whose only
+generated file is `PKG-INFO`; its sdist-derived 81-member Windows abi3 wheel
+contains one native module and all 15 attribution files, excludes benchmark
+and test payloads, and installs only SceneIO plus NumPy in a fresh
+environment. `sceneio._wheel_smoke` returns `2`.

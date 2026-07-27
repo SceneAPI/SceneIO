@@ -277,6 +277,12 @@ sceneio._core (C++ / nanobind)
   records 17 reviewed, property-specific parity exemptions. Complete sweeps
   validate the exact built-in set before measurement; strict qualification
   requires every timed callback and propagates its failures.
+  Cross-codec behavior-case ownership begins under
+  `tests/_support/codec_cases.py`: its immutable canonical-order catalog
+  partitions the 50 built-ins into 44 buffer, three path, and three directory
+  fixture definitions and pins all 28 partial-capable codecs and their 32
+  selector declarations. Existing mmap and partial suites remain the active
+  consumers until staged equivalence is demonstrated.
   Built-in startup uses `_registry/assembly.py` as a lower staging boundary.
   Eight complete family tuples are collected without touching the public
   registry. After all 50 canonical ids validate, the facade publishes the

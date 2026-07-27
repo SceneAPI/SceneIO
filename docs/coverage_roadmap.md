@@ -28,10 +28,13 @@
 > Splats close at `cd32268` with normal run `30253301819` and
 > compiler-instrumented run `30253301871`. The runner closes at `cf8d117`
 > with normal run `30257105454` and compiler-instrumented run `30257105468`.
-> The final R3.2 behavior checkpoint is implemented locally: immutable
+> The final R3.2 behavior checkpoint closes at `0e54cf5`: normal run
+> `30263506366` and compiler-instrumented run `30263506270` pass. Immutable
 > built-in completeness covers exactly 50 ids, runtime extensions remain
 > outside repository qualification, and strict comparison mode requires 33
-> timed providers while retaining 17 exact reviewed exemptions.
+> timed providers while retaining 17 exact reviewed exemptions. R3.3 is now
+> active with a non-consuming immutable 44-buffer/3-path/3-directory case
+> catalog under `tests/_support/codec_cases.py`.
 
 The granular, per‑format execution plan for covering **every relevant file type
 that has a permissively‑licensed open‑source option**. Sits below the strategy

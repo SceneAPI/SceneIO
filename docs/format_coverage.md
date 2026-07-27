@@ -363,6 +363,23 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > staged 367-file tree produces a 368-file sdist and an 81-member Windows abi3
 > wheel with all 15 attribution files; a fresh environment contains only
 > SceneIO and NumPy, and `sceneio._wheel_smoke` returns `2`.
+> Exact qualification commit `0e54cf5` passes [normal run
+> 30263506366](https://github.com/SceneAPI/SceneIO/actions/runs/30263506366)
+> and [compiler-instrumented run
+> 30263506270](https://github.com/SceneAPI/SceneIO/actions/runs/30263506270).
+> R3.3 is active locally: an immutable non-consuming catalog owns the exact 50
+> built-ins as 44 buffer, three path, and three directory fixture definitions,
+> including the live projection of 28 partial-capable codecs and 32 selector
+> declarations. Existing behavior suites have not migrated to it yet. The
+> complete local tree collects 3,345 tests and passes 3,341 with four
+> documented skips; Ruff and all three independent reviews are clear. A
+> one-run 50-codec benchmark smoke retains structural SHA-256
+> `2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`.
+> The exact staged tree has 370 tracked files and produces a 371-file sdist
+> whose only generated file is `PKG-INFO`; its sdist-derived 81-member Windows
+> abi3 wheel contains one native module and all 15 attribution files. A fresh
+> environment contains only SceneIO and NumPy, and `sceneio._wheel_smoke`
+> returns `2`.
 
 [current-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287022
 [current-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287161

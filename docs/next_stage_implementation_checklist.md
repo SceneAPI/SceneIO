@@ -3072,7 +3072,7 @@ environment. `sceneio._wheel_smoke` returns `2`.
 
 ### R3.3 — cross-codec test support
 
-- [ ] Commit a centralized buffer/path/directory catalog in
+- [x] Commit a centralized buffer/path/directory catalog in
       `tests/_support/codec_cases.py` without consuming it.
 - [ ] Migrate mmap consumers while retaining the old matrix until exact
       equivalence is demonstrated.
@@ -3086,6 +3086,23 @@ environment. `sceneio._wheel_smoke` returns `2`.
 - [ ] Compare sorted pytest node ids, parameters, and skip reasons before and
       after. Record an explicit rename mapping; test count alone is
       insufficient.
+
+R3.2 closes at exact commit `0e54cf5`: normal run `30263506366` and
+compiler-instrumented run `30263506270` pass. The first R3.3 unit adds an
+immutable catalog in canonical order with 44 buffer, three path, and three
+directory definitions plus the exact projection of 28 partial-capable codecs
+and 32 selector declarations. Six focused
+architecture controls prove completeness, family ownership, live capability
+agreement, runtime-extension isolation, and that the mmap and partial
+consumers remain unchanged and do not yet import the catalog. The complete
+local tree collects 3,345 tests and passes 3,341 with four documented skips;
+Ruff and all three independent reviews are clear. The one-run 50-codec
+benchmark smoke retains structural SHA-256
+`2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`.
+The exact staged tree has 370 tracked files and produces a 371-file sdist
+whose only generated file is `PKG-INFO`; its sdist-derived 81-member Windows
+abi3 wheel contains one native module and all 15 attribution files, and a
+fresh SceneIO-plus-NumPy environment passes `sceneio._wheel_smoke`.
 
 ### R3.4 — complete installed-wheel smoke
 
