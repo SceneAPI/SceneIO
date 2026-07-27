@@ -6,7 +6,8 @@ the notices that must accompany the third-party code compiled into the
 `sceneio._core` binary.
 
 The table is the distribution inventory. Versions are the exact versions or
-commits selected by `CMakeLists.txt` and the vendored `COMMIT.txt` files.
+commits selected by `cmake/SceneIODependencies.cmake` and the vendored
+`COMMIT.txt` files.
 Where an upstream project offers multiple permissive licenses, the
 redistribution choice used by SceneIO is stated explicitly.
 
@@ -29,7 +30,8 @@ redistribution choice used by SceneIO is stated explicitly.
 The complete Apache-2.0 terms in the root `LICENSE` also cover the
 Apache-licensed portion of LAZperf. Local integration and correctness changes
 to vendored or fetched projects are documented beside their sources in
-`src/cpp/third_party/*/COMMIT.txt` and in `CMakeLists.txt`.
+`src/cpp/third_party/*/COMMIT.txt` and in
+`cmake/SceneIODependencies.cmake`.
 
 NumPy is SceneIO's sole runtime dependency, but it is installed as a separate
 distribution and is not copied or linked into SceneIO wheels. Build tools and

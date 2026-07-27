@@ -222,13 +222,16 @@ def test_performance_backend_versions_match_pinned_sources():
             "bf7c7f30031888f4e796e429ab3978879485813aaca6f641c7b33e4e09459bcc",
             "src/cpp/third_party/sqlite/COMMIT.txt",
         ),
-        "libwebp": ("1.5.0", "CMakeLists.txt"),
+        "libwebp": ("1.5.0", "cmake/SceneIODependencies.cmake"),
         "lazperf": (
             "b7bbe26109dc986f42d4fc80b8de3d2b6ca634ce",
             "src/cpp/third_party/lazperf/COMMIT.txt",
         ),
-        "miniz": ("3.0.2", "CMakeLists.txt"),
-        "miniz+zstd": ("zstd-1.5.6", "CMakeLists.txt"),
+        "miniz": ("3.0.2", "cmake/SceneIODependencies.cmake"),
+        "miniz+zstd": (
+            "zstd-1.5.6",
+            "cmake/SceneIODependencies.cmake",
+        ),
     }
     for backend, (revision, source_path) in pins.items():
         rows = [item for item in operations if item["backend"] == backend]
@@ -267,7 +270,9 @@ def test_performance_backend_versions_match_pinned_sources():
     ).read_text(encoding="utf-8")
     assert "Local correctness patch:" in lazperf_commit
 
-    cmake = (ROOT / "CMakeLists.txt").read_text(encoding="utf-8")
+    cmake = (ROOT / "cmake/SceneIODependencies.cmake").read_text(
+        encoding="utf-8"
+    )
     for dependency in (
         "libwebp 1.5.0",
         "miniz 3.0.2",

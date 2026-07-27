@@ -53,7 +53,13 @@ def test_license_directory_is_complete_and_packaged() -> None:
 
 
 def test_compiled_dependencies_have_attribution_entries() -> None:
-    cmake = (ROOT / "CMakeLists.txt").read_text(encoding="utf-8")
+    cmake = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in (
+            ROOT / "CMakeLists.txt",
+            *sorted((ROOT / "cmake").glob("*.cmake")),
+        )
+    )
     fetched = set(re.findall(r"FetchContent_Declare\(\s*([A-Za-z0-9_]+)", cmake))
     assert fetched == set(FETCHCONTENT_NOTICE)
 

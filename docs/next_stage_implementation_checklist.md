@@ -42,13 +42,18 @@ commit `0bdfe0f`; normal run `30234796010` and
 compiler-instrumented run `30234796025` pass. R3.2 closes at `0e54cf5`;
 normal run `30263506366` and compiler-instrumented run `30263506270` pass.
 R3.3 is complete and pushed at `811cb0d`. Its normal run `30300122309` and
-compiler-instrumented run `30300122324` pass. R3.4 is implemented locally:
-the installed-wheel smoke is driven by the exact 50 built-in definitions and
-exercises public write/read/inspect, pairs successful public path calls with
-both declared stream-capability directions, and exercises every one of the 32
-declared selectors across 28 partial-capable codecs. The candidate has no
-operation exemption. Its complete local gate passes; exact corrected package
-and review evidence are required before commit.
+compiler-instrumented run `30300122324` pass. R3.4 is complete and pushed at
+`9ca6bb8`; normal run `30305201847` and compiler-instrumented run
+`30305201756` pass that exact checkpoint. Its installed-wheel smoke is driven
+by the exact 50 built-in definitions, exercises public write/read/inspect,
+pairs successful public path calls with both declared stream-capability
+directions, and exercises all 32 selectors across 28 partial-capable codecs
+without an operation exemption. R4.1 is implemented locally: the native build
+description is split into four focused modules with exact source ownership and
+parent-equivalent MSVC/GCC 10 command generation. Its 3,352-node local gate
+passes 3,348 tests with four documented skips; Ruff and the strict five-run
+guard pass. Final corrected package and three-review evidence are required
+before commit.
 
 This is the operational checklist for the repository-organization and
 codec-performance stage defined in
@@ -3365,13 +3370,52 @@ R3 verification and validation:
 
 ### R4.1 — split build configuration
 
-- [ ] Extract dependency declarations, SceneIO source lists, instrumented
+- [x] Extract dependency declarations, SceneIO source lists, instrumented
       options, and third-party targets into focused `cmake/` files.
-- [ ] Preserve every option default, compile definition, source, link target,
+- [x] Preserve every option default, compile definition, source, link target,
       visibility setting, and platform conditional.
-- [ ] Add configure-time assertions for missing/duplicate SceneIO sources.
-- [ ] Compare CMake cache variables and verbose compile/link commands before
+- [x] Add configure-time assertions for missing/duplicate SceneIO sources.
+- [x] Compare CMake cache variables and verbose compile/link commands before
       and after on MSVC and GCC 10.
+
+The R3.4 parent is `9ca6bb8`. The root build file now contains only the
+project language/standard setup and ordered includes for
+`SceneIOInstrumentation.cmake`, `SceneIOSources.cmake`,
+`SceneIODependencies.cmake`, and `SceneIOTargets.cmake`. The extracted
+840-line dependency/third-party block is byte-identical to the parent
+(normalized SHA-256
+`1444db21844c5bb43314496f4cd5c2bf9dd4a586a9fb88a3e474b1c1cca9768e`).
+The source module partitions all 40 codec translation units across the eight
+manifest families, lists all 16 record translation units, retains the exact
+historical 59-source `_core` order, and stops configuration for missing or
+duplicate ownership.
+
+Fresh MSVC parent/candidate configurations each expose 321 cache entries with
+no non-path difference. Their 60 normalized `_core` compile/link commands are
+exact, with SHA-256
+`37678e397c075cbfdaffd08b37cecc1be4f62cbcec542e274818163b4741217b`.
+Fresh manylinux2014 GCC 10.2.1 configurations each expose 370 cache entries
+with no non-path difference. Their 59 `_core` compile commands are exact,
+with SHA-256
+`e8b8599fbd2549fb07c0caff08e438a9fd881044fe85a02a8028523366f8b797`,
+and the final link commands are exact. The MSVC editable build and complete
+GCC 10 `_core` target build pass. Four new architecture tests freeze the
+module split, family ownership, record set, target linkage, and option
+defaults; the complete collection is 3,352 nodes with sorted normalized
+SHA-256
+`074944e367045763b8f4b9afa090411010a81348cb5661f08eb75f3d51c2e4d8`.
+The unchanged strict five-run all-50-codec performance/allocation guard passes
+and records `build/r4_1_strict_guard.json`; no timed implementation changed
+and no speedup is claimed.
+
+The staged 386-file source tree produces a 387-file sdist whose only generated
+member is `PKG-INFO`; every repository member is byte-identical to its staged
+Git blob after disabling checkout line-ending conversion for archive
+construction. Its sdist-derived Windows ABI3 wheel retains 81 members, exactly
+one native module, all 15 attribution files, no excluded native development
+payload, and NumPy as the sole unconditional dependency. A fresh
+outside-repository environment contains only SceneIO 0.2.0 and NumPy 2.5.1
+and returns `2` from the complete installed smoke.
 
 ### R4.2 — split binding registration
 

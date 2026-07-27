@@ -25,6 +25,14 @@ things that keep this expansible as the format list from
 > is empty. The
 > complete suite passes 3,344 tests with four documented skips, and the first
 > exact-tree 380/381/81 source/sdist/wheel package gate passes.
+>
+> R4.1 now leaves the root `CMakeLists.txt` as a four-include assembly over
+> `SceneIOInstrumentation.cmake`, `SceneIOSources.cmake`,
+> `SceneIODependencies.cmake`, and `SceneIOTargets.cmake`. The dependency
+> block is byte-identical to the R3.4 parent, the original `_core` source/link
+> order is frozen, and configure-time checks require every native codec and
+> record source to have exactly one owner. Binding registration and physical
+> codec-family moves remain R4.2-R4.3 work.
 
 ## Layering
 
@@ -42,6 +50,12 @@ sceneio._core (C++ / nanobind)
   codecs/      format-focused translation units: read_<fmt>() / write_<fmt>()
   io/          format-agnostic helpers: endian, byte reader/writer, gzip
   module.cpp   registers records first, then codecs
+
+cmake/
+  SceneIOInstrumentation.cmake  opt-in compiler instrumentation
+  SceneIOSources.cmake          records + eight codec-family source owners
+  SceneIODependencies.cmake     Python/nanobind + native dependency targets
+  SceneIOTargets.cmake          _core and native-control targets
 ```
 
 **Separation of concerns**
@@ -374,9 +388,9 @@ exposes them:
 
 ## Adding a codec — current wiring recipe
 
-This recipe remains accurate until R1-R4 complete. During that migration, use
-it only to verify compatibility; do not add a new format by expanding these
-flat coordination points.
+This recipe remains accurate until R4.2-R4.3 complete. During that migration,
+use it only to verify compatibility; do not add a new format by expanding the
+remaining manual binding point.
 
 1. **Declare ownership** — add the built-in id, family,
    `implementation_owner`, native symbols, and Python adapter symbols to
@@ -387,11 +401,16 @@ flat coordination points.
    `records/<name>.hpp` (the SoA struct + conventions) and
    `records/<name>.cpp` (`register_<name>()` binding zero-copy views +
    convention properties). Reuse an existing record otherwise.
-3. **Codec** — add `codecs/<fmt>.cpp` implementing `read_<fmt>()` /
+3. **Codec** — until the R4.3 file moves land, add `codecs/<fmt>.cpp`;
+   afterward use `codecs/<family>/<fmt>.cpp`. Implement `read_<fmt>()` /
    `write_<fmt>()` over `records/` + `io/`, plus a `register_<fmt>()` that
-   `m.def(...)`s them. Map malformed input to a thrown `std::invalid_argument`.
-4. **Wire C++** — add the `register_*` call to `module.cpp` (records before
-   codecs) and the source to `CMakeLists.txt`.
+   `m.def(...)`s them. Map malformed input to a thrown
+   `std::invalid_argument`.
+4. **Wire C++** — until R4.2 lands, add the `register_*` call to
+   `module.cpp` (records before codecs). Add the source to its exact
+   `SCENEIO_<FAMILY>_CODEC_SOURCES` owner and the preserved link-order list in
+   `cmake/SceneIOSources.cmake`; configure rejects missing or duplicate
+   ownership.
 5. **Register adapters** — add one `Codec(...)` entry in its
    `sceneio/io/_registry/families/<family>.py` module. Declare extensions,
    detection signature, reader, writer, record, datatype, container kind,

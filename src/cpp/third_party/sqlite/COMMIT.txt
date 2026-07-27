@@ -15,7 +15,7 @@ Vendored files:
 - sqlite3.h
 
 SQLite is in the public domain. No local source patch is applied. The build
-defines only these compile-time options in CMakeLists.txt:
+defines only these compile-time options in cmake/SceneIODependencies.cmake:
 - SQLITE_DQS=0
 - SQLITE_DEFAULT_MEMSTATUS=0
 - SQLITE_OMIT_DEPRECATED

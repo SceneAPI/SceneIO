@@ -1,0 +1,64 @@
+# SceneIO extension and native-control targets.
+#
+# Dependency targets and source manifests must already exist before this file
+# is included.
+
+nanobind_add_module(_core STABLE_ABI NB_STATIC
+  ${SCENEIO_CORE_SOURCES})
+target_include_directories(
+  _core
+  PRIVATE
+    src/cpp
+    ${zstd_SOURCE_DIR}/lib
+    ${fast_float_SOURCE_DIR}/include
+    src/cpp/third_party/stb
+    src/cpp/third_party/tinyexr
+    src/cpp/third_party/tinyobjloader
+    src/cpp/third_party/cgltf
+    ${libwebp_SOURCE_DIR}
+    ${libwebp_SOURCE_DIR}/src)
+target_link_libraries(
+  _core
+  PRIVATE
+    miniz_static
+    nlohmann_json::nlohmann_json
+    libzstd_static
+    lazperf_static
+    lodepng_static
+    sqlite_static
+    webp
+    Threads::Threads)
+
+# Land the extension inside the importable `sceneio` package as sceneio._core.
+install(TARGETS _core LIBRARY DESTINATION sceneio)
+
+# A separate, off-by-default extension supplies native lifetime controls and
+# controlled LAZperf arithmetic decoders for the focused instrumented
+# workflow. These hooks must never be linked into _core or a normal wheel.
+if(SCENEIO_BUILD_NATIVE_TEST_HOOKS)
+  add_executable(sceneio_native_arithmetic_default_check
+    src/cpp/testing/lazperf_default_main.cpp
+    src/cpp/testing/lazperf_default_test.cpp)
+  target_compile_options(
+    sceneio_native_arithmetic_default_check PRIVATE -g)
+  target_link_libraries(
+    sceneio_native_arithmetic_default_check PRIVATE lazperf_static)
+
+  # Keep the COMPRESS_ONLY_K header instantiation in a separate binary. The
+  # macro changes LAZperf's integer class definition, so linking both variants
+  # into one program would violate the C++ one-definition rule.
+  add_executable(sceneio_native_arithmetic_compact_check
+    src/cpp/testing/lazperf_compact_main.cpp
+    src/cpp/testing/lazperf_compact_test.cpp)
+  target_compile_options(
+    sceneio_native_arithmetic_compact_check PRIVATE -g)
+  target_link_libraries(
+    sceneio_native_arithmetic_compact_check PRIVATE lazperf_static)
+
+  nanobind_add_module(_native_test STABLE_ABI NB_STATIC
+    src/cpp/testing/native_test.cpp
+    src/cpp/testing/lazperf_default_test.cpp)
+  target_compile_options(_native_test PRIVATE -g)
+  target_link_libraries(_native_test PRIVATE lazperf_static)
+  install(TARGETS _native_test LIBRARY DESTINATION sceneio)
+endif()

@@ -28,6 +28,16 @@ archive passes a fresh NumPy-only installed-wheel smoke. Build-only release run
 macOS, and Windows wheel sets with publication skipped. No new format starts
 while R3-R6 remain open.
 
+R4.1 is implemented after the R3.4 checkpoint. The root build file now owns
+only project language/standard setup and the ordered inclusion of four focused
+modules. Explicit manifests partition all 40 native codec sources across the
+eight format families, list all 16 record sources, preserve the historical
+59-translation-unit `_core` link order, and fail configuration on missing or
+duplicate ownership. The 840-line dependency block is byte-identical to the
+R3.4 parent. Fresh MSVC and manylinux2014 GCC 10 configurations have identical
+non-path cache values and generate exact parent `_core` compile/link commands;
+both toolchains build the candidate. R4.2 binding ownership is next.
+
 R2.0 is complete at `40d5412`. Image-sequence frame
 extensions and metadata inspection are injected through the lower-level
 `ImageFrameAccess` contract, and both public and injected inspection paths use
@@ -341,7 +351,7 @@ verification have accumulated in a few large modules:
 
 | Area | Current shape | Growth risk |
 |---|---|---|
-| C++ codecs | 40 files for 50 format ids | flat source list and manual binding declarations |
+| C++ codecs | 40 files for 50 format ids; eight explicit CMake family manifests | physical files remain flat and binding declarations remain manual until R4.2-R4.3 |
 | C++ records | 32 source/header files | still manageable; new table/animation/scene records will add pressure |
 | Python registry | `registry.py`, 205 lines; `_registry/assembly.py`, 148 lines; focused `_registry/{model,adapters,detection,native_features}.py` modules; and eight `_registry/families/*.py` definition modules | all built-ins are family-owned; R3 now splits the benchmark and cross-codec verification monoliths |
 | Inspection | `_inspection.py` compatibility facade plus `_inspectors/{model,common,arrays,calibration,images,meshes,points,reconstruction,sequences,splats}.py`; all eight manifest families have lower inspector ownership | keep the proven shared model, mmap bridge, metadata bounds, exact-read/integer grammar, and image-result constructor as lower services |
@@ -383,11 +393,10 @@ are fixed:
 
 ```text
 cmake/
-  Dependencies.cmake
+  SceneIODependencies.cmake
+  SceneIOInstrumentation.cmake
   SceneIOSources.cmake
-  Sanitizers.cmake
-  third_party/
-    <dependency>.cmake
+  SceneIOTargets.cmake
 
 src/cpp/
   bindings/
@@ -1009,9 +1018,11 @@ installed smoke.
 ### R4. Organize native build and bindings
 
 - Split dependency configuration and source manifests out of the root
-  `CMakeLists.txt`.
+  `CMakeLists.txt`. **R4.1 complete:** the root is now a four-module assembly,
+  family/source ownership is explicit, and parent-equivalent MSVC/GCC 10
+  cache plus compile/link evidence is recorded.
 - Replace manual declarations in `module.cpp` with family registration
-  functions while preserving binding order.
+  functions while preserving binding order. **Next: R4.2.**
 - Expose a private machine-readable native codec inventory from those same
   family tables and compare it with the native/hybrid projection of the
   built-in Python manifest. Built-in definitions declare whether their adapter

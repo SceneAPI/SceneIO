@@ -80,7 +80,11 @@
 > with four documented skips; Ruff and the five-run strict guard pass. Its
 > first exact 380-file tree produces a 381-file sdist and 81-member Windows
 > ABI3 wheel, and a fresh SceneIO-plus-NumPy environment passes the complete
-> installed smoke.
+> installed smoke. R4.1 then splits the native build into four focused CMake
+> modules. All 40 codec sources have one of eight family owners, all 16 record
+> sources are explicit, the historical `_core` source/link order is retained,
+> and fresh MSVC/GCC 10 cache plus compile/link projections match the R3.4
+> parent exactly. R4.2 binding registration is next.
 
 The granular, per‑format execution plan for covering **every relevant file type
 that has a permissively‑licensed open‑source option**. Sits below the strategy

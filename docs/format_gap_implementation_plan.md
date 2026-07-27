@@ -2139,6 +2139,10 @@ lane before starting the next unit.
    every mechanical unit. Follow the commit units in
    [`next_stage_implementation_checklist.md`](next_stage_implementation_checklist.md);
    do not combine file moves with codec behavior changes.
+   R4.1 is complete: the root CMake assembly is split into focused
+   instrumentation, source, dependency, and SceneIO-target modules; exact
+   source ownership and parent-equivalent MSVC/GCC 10 command generation are
+   contract-checked. R4.2 binding ownership is the next open unit.
 2. **Backend performance qualification (R5).**
    Create one `bench/PERFORMANCE_STATUS.toml` operation cell for every required
    built-in codec/profile/direction and compare each viable permissive upstream

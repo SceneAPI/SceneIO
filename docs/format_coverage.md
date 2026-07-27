@@ -517,6 +517,13 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > a 381-file sdist and 81-member Windows ABI3 wheel with one native module, all
 > 15 attribution files, NumPy-only unconditional metadata, and a passing fresh
 > installed smoke.
+>
+> R4.1 reorganizes build ownership without changing a format capability. The
+> root CMake file now assembles four focused modules; all 40 codec sources have
+> one exact family owner, all 16 record sources are explicit, and the previous
+> `_core` source/link order is retained. Fresh MSVC and manylinux2014 GCC 10
+> configure projections match the R3.4 parent and both toolchains build the
+> candidate. Binding registration remains the next R4 unit.
 
 [current-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287022
 [current-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287161

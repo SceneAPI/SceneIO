@@ -59,7 +59,8 @@ build-backend = "scikit_build_core.build"
 minimum-version = "0.10"
 build-dir = "build/{wheel_tag}"
 wheel.packages = ["src/sceneio"]
-# abi3 wheel from CPython 3.12 (matches nanobind STABLE_ABI in CMakeLists).
+# abi3 wheel from CPython 3.12 (matches nanobind STABLE_ABI in
+# cmake/SceneIOTargets.cmake).
 wheel.py-api = "cp312"
 # zstd is statically linked into _core; its FetchContent `install()` rules
 # otherwise leak dev artifacts (headers, the static lib, CMake configs) into the

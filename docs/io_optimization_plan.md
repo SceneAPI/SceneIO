@@ -46,6 +46,12 @@ source tree produces a 381-file sdist and 81-member Windows ABI3 wheel, and a
 fresh outside-repository SceneIO-plus-NumPy environment passes the complete
 installed smoke.
 
+R4.1 subsequently reorganizes only the native build description. Its four
+focused CMake modules preserve the exact dependency block, compiler options,
+source/link order, and generated MSVC/GCC 10 `_core` commands. The complete
+five-run strict O4/O5 and mmap/sink allocation guard passes unchanged; no
+timed implementation changed and no additional performance claim is made.
+
 Scope: the compiled `sceneio._core` I/O path on `phase0-nanobind-core`.
 Companion to `coverage_roadmap.md` (this makes its "Phase 7" hardening/perf work
 concrete). Phase landing notes below are historical evidence from the commit at

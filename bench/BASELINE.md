@@ -2424,3 +2424,28 @@ outside-repository SceneIO-plus-NumPy environment returns `2` from the
 complete installed smoke. The final documentation tree repeats this package
 gate before review; artifact hashes remain in immutable commit evidence rather
 than this self-referential source document.
+
+## R4.1 modular native-build preservation (2026-07-27)
+
+R4.1 changes build ownership only. The root CMake file now assembles focused
+instrumentation, source-manifest, dependency, and SceneIO-target modules. The
+dependency block is byte-identical to parent `9ca6bb8`; the source contract
+retains the original `_core` link order while partitioning all 40 codec files
+across the eight manifest families and listing all 16 record files.
+
+Fresh MSVC and manylinux2014 GCC 10.2.1 parent/candidate configurations have
+no non-path cache difference. The normalized MSVC `_core` command stream is
+exact across 60 commands; GCC 10 is exact across 59 compile commands and its
+final link command. Both toolchains build the candidate. Since no codec,
+adapter, fixture, compiler option, source, or link dependency changed, this
+unit makes no throughput claim. The unchanged complete five-run strict O4/O5
+and mmap/sink allocation guard passes; raw results are retained locally as
+`build/r4_1_strict_guard.json`.
+
+The 386-file staged tree produces a 387-file sdist with only generated
+`PKG-INFO` added. All 386 repository members are byte-identical to their staged
+Git blobs; the Windows qualification archive disables checkout line-ending
+conversion before extraction. Its sdist-derived 81-member Windows ABI3 wheel
+retains one native module, all 15 attribution files, no excluded build payload,
+and NumPy as its sole unconditional dependency. Complete installed smoke
+returns `2` in a fresh SceneIO-plus-NumPy environment.
