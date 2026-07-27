@@ -2012,11 +2012,17 @@ at `76ed21b`; normal run `30247662591` and compiler-instrumented run
 family closes at `cd32268`; normal run `30253301819` and
 compiler-instrumented run `30253301871` pass. The complete sweep and
 specialized glTF/COLMAP/image-directory orchestration are lower-owned by
-`io_bench/runner.py` in the current local tree, while `bench_io.py` remains a
-thin compatible entry point. Repository-built-in completeness, extra runtime
-registration isolation, and strict comparison-provider qualification remain
-the final R3.2 behavior checkpoint;
-their sequence is maintained in
+`io_bench/runner.py`, while `bench_io.py` remains a thin compatible entry
+point. Exact runner commit `cf8d117` passes normal run `30257105454` and
+compiler-instrumented run `30257105468`. The final R3.2 behavior checkpoint is
+implemented locally: an immutable 50-entry ledger is independent of runtime
+extensions, requires 33 timed comparisons, records 17 exact reviewed
+exemptions, validates built-in completeness before measurement, and exposes a
+complete-sweep strict mode that propagates every required comparison failure.
+The complete local suite, five-run strict guard, three independent closure
+reviews, exact-tree sdist/wheel gate, and fresh NumPy-only installed-wheel
+smoke pass. Exact-commit hosted validation remains pending until this unit is
+committed and pushed; its evidence sequence is maintained in
 [`next_stage_implementation_checklist.md`](next_stage_implementation_checklist.md).
 
 Status terms are strict:

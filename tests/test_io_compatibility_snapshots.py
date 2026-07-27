@@ -504,6 +504,9 @@ def test_benchmark_contract_matches_checked_snapshot():
         ["only", "require_o5_inspect_gains"],
         ["only", "require_o5_partial_gains"],
         ["only", "large_safetensors_mib"],
+        ["strict_oracles", "skip_oracles"],
+        ["strict_oracles", "only"],
+        ["strict_oracles", "large_safetensors_mib"],
     ]
     assert set(contract["result_order"]) == set(CANONICAL_BUILTIN_IDS)
 
@@ -791,19 +794,21 @@ def _assert_benchmark_components_and_metric_semantics_are_explicit():
     ]
     assert set(reconstruction_exemptions) == {
         "bundler",
+        "colmap_sparse",
+        "colmap_sparse_txt",
         "kitti",
         "nvm",
         "openmvg",
         "transforms_json",
         "tum",
     }
-    for exemption in reconstruction_exemptions.values():
+    for codec_id, exemption in reconstruction_exemptions.items():
         assert exemption["unverified_property"] == (
-            "independent benchmark encode/decode throughput"
+            "independent benchmark directory encode/decode throughput"
+            if codec_id in {"colmap_sparse", "colmap_sparse_txt"}
+            else "independent benchmark encode/decode throughput"
         )
-        assert exemption["verification"].startswith(
-            "format parity remains covered by the independent "
-        )
+        assert exemption["verification"].startswith("format parity remains covered by ")
     assert extracted_families["reconstruction"][
         "facade_constant_exports"
     ] == ["_EUROC_HEADER"]
@@ -2328,9 +2333,16 @@ def _assert_benchmark_components_and_metric_semantics_are_explicit():
         reconstruction_core_bytes[spec.id] = encoded
         spec.r(encoded)
 
-    for codec_id in extracted_families["reconstruction"][
-        "no_oracle_exemptions"
-    ]:
+    reconstruction_exemption_ids = set(
+        extracted_families["reconstruction"]["no_oracle_exemptions"]
+    )
+    assert reconstruction_exemption_ids - set(reconstruction_by_id) == {
+        "colmap_sparse",
+        "colmap_sparse_txt",
+    }
+    for codec_id in reconstruction_exemption_ids & set(
+        reconstruction_by_id
+    ):
         spec = reconstruction_by_id[codec_id]
         assert (spec.ow, spec.orr) == (None, None)
 

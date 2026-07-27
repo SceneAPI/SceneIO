@@ -794,6 +794,14 @@ def test_assembly_dependency_direction_and_import_delta_are_exact():
         "bench/bench_io.py --runs 1 --scale 0.001 --skip-oracles --json"
         in ci_workflow
     )
+    strict_guard_command = (
+        'run: .venv/bin/python bench/bench_io.py --runs 5 '
+        '--strict-oracles --require-o4-gains '
+        '--require-o5-inspect-gains --require-o5-partial-gains '
+        '--json "${{ runner.temp }}/sceneio-benchmark-guard.json"'
+    )
+    assert ci_workflow.count(strict_guard_command) == 1
+    assert "run: .venv/bin/python -m ruff check" in ci_workflow
     assert "reconstruction-platform:" in ci_workflow
     reconstruction_job = ci_workflow.split(
         "  reconstruction-platform:",

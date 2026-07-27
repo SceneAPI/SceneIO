@@ -14,7 +14,7 @@
 > repair `9928c6d`. R3.1a has split benchmark models, measurements, and
 > reporting behind the compatible CLI. R3.1b closes at `0bdfe0f`; normal run
 > `30234796010` and compiler-instrumented run `30234796025` pass. R3.2
-> family-by-family benchmark extraction is active: arrays close at `6d9ec34`
+> family-by-family benchmark extraction closes through: arrays at `6d9ec34`
 > with normal run `30236069971` and compiler-instrumented run `30236069959`;
 > calibration closes at `5dc03f4` with normal run `30237676629` and
 > compiler-instrumented run `30237676648`; raster images close at `6572a76`
@@ -26,11 +26,12 @@
 > compiler-instrumented run `30247662622`. Sequences close at `4b8c829` with
 > normal run `30250394890` and compiler-instrumented run `30250394906`.
 > Splats close at `cd32268` with normal run `30253301819` and
-> compiler-instrumented run `30253301871`. The complete sweep and specialized
-> orchestration are locally lower-owned by `bench/io_bench/runner.py`; the
-> compatible `bench_io.py` entry point retains its checked helper surface.
-> Repository-built-in completeness and strict comparison-provider
-> qualification are the final R3.2 behavior checkpoint.
+> compiler-instrumented run `30253301871`. The runner closes at `cf8d117`
+> with normal run `30257105454` and compiler-instrumented run `30257105468`.
+> The final R3.2 behavior checkpoint is implemented locally: immutable
+> built-in completeness covers exactly 50 ids, runtime extensions remain
+> outside repository qualification, and strict comparison mode requires 33
+> timed providers while retaining 17 exact reviewed exemptions.
 
 The granular, per‑format execution plan for covering **every relevant file type
 that has a permissively‑licensed open‑source option**. Sits below the strategy

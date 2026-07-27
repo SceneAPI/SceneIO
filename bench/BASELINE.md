@@ -2042,3 +2042,42 @@ generated member is `PKG-INFO`. Its sdist-derived 81-member Windows wheel
 excludes benchmark and test modules, retains all 15 attribution files, and
 keeps NumPy as its sole unconditional dependency. A fresh NumPy-only
 installation passes `sceneio._wheel_smoke`.
+
+Exact runner commit `cf8d117` passes normal run
+[30257105454](https://github.com/SceneAPI/SceneIO/actions/runs/30257105454)
+and compiler-instrumented run
+[30257105468](https://github.com/SceneAPI/SceneIO/actions/runs/30257105468).
+
+## R3.2 repository-complete comparison qualification (2026-07-27)
+
+The final R3.2 behavior checkpoint adds an immutable 50-entry comparison
+ledger in `bench/io_bench/qualification.py`. The ledger is keyed by
+`CANONICAL_BUILTIN_IDS`, not the mutable runtime registry: 33 formats require
+timed independent encode/decode comparisons (with COLMAP DB also covering
+inspect and partial operations), while 17 record a reviewed exemption with
+the exact untimed property and parity-suite path.
+
+Every complete sweep validates the canonical 50-id set before selector
+filtering or measurement. A runtime-added codec remains usable through the
+public registry but cannot enter repository fixture/comparison completeness.
+`--strict-oracles` is a complete-sweep qualification mode and therefore
+rejects `--only`, `--skip-oracles`, and the safetensors-only large-fixture
+mode. It preflights binding availability for every timed callback, propagates
+provider execution failures, and audits every declared metric after the
+complete sweep; the optional `_try(...)` path remains available only to
+ordinary developer runs.
+
+The local one-run strict sweep produces 50 successful rows: all 33 timed
+entries have both comparison metrics and all 17 reviewed exemptions remain
+untimed by declaration. The separate skip-comparison smoke retains structural
+SHA-256
+`2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`.
+The CI performance guard now uses strict qualification without changing the
+existing O4/O5 acceptance rules. The complete five-run strict guard passes;
+the exact local tree collects 3,339 tests and passes 3,335 with four documented
+skips, and Ruff is clean. All three independent closure reviews are clear. The
+exact staged tree has 367 tracked files and produces a 368-file sdist whose
+only generated file is `PKG-INFO`; its sdist-derived 81-member Windows abi3
+wheel contains one native module and all 15 attribution files, excludes
+benchmark/test/build payloads, and installs only SceneIO plus NumPy in a fresh
+environment. `sceneio._wheel_smoke` returns `2`.

@@ -328,8 +328,8 @@
     "last": "tests/test_points_binary.py::test_bad_magic_rejected"
   },
   "pytest_candidate_collection": {
-    "count": 3320,
-    "sorted_normalized_node_ids_sha256": "b055375c118a024858d42b9111649d95587d51ad79c089f2ec492fc84edf4dfb",
+    "count": 3339,
+    "sorted_normalized_node_ids_sha256": "e97d89942a28e0d357a530aff15c11cda3c97e8a997d1102613ac28f90b98b27",
     "added_nodes": [
       "tests/test_benchmark_memory_protocol.py::test_memory_protocol_contract_and_repeated_sceneio_measurement",
       "tests/test_benchmark_memory_protocol.py::test_missing_sampler_is_explicit_and_strict_mode_rejects_it",
@@ -568,6 +568,25 @@
       "tests/test_io_splat_family_architecture.py::test_splat_family_reload_is_inert_and_registry_reload_is_exact",
       "tests/test_io_splat_family_architecture.py::test_splat_family_uniform_public_path_and_path_release",
       "tests/test_io_registry_architecture.py::test_splat_wheel_smoke_invokes_each_family_helper_once",
+      "tests/test_io_benchmark_qualification.py::test_qualification_ledger_is_complete_immutable_and_checked",
+      "tests/test_io_benchmark_qualification.py::test_reviewed_exemptions_match_the_family_contract_exactly",
+      "tests/test_io_benchmark_qualification.py::test_assembled_sweep_is_exactly_the_repository_builtins",
+      "tests/test_io_benchmark_qualification.py::test_coverage_validation_rejects_incomplete_or_noncanonical_sweeps[ids0-missing=pfm]",
+      "tests/test_io_benchmark_qualification.py::test_coverage_validation_rejects_incomplete_or_noncanonical_sweeps[ids1-duplicates=npy]",
+      "tests/test_io_benchmark_qualification.py::test_coverage_validation_rejects_incomplete_or_noncanonical_sweeps[ids2-unexpected=runtime-format]",
+      "tests/test_io_benchmark_qualification.py::test_runtime_registration_does_not_enter_repository_qualification",
+      "tests/test_io_benchmark_qualification.py::test_runner_checks_builtins_before_measurement",
+      "tests/test_io_benchmark_qualification.py::test_strict_preflight_names_every_unavailable_provider",
+      "tests/test_io_benchmark_qualification.py::test_strict_spec_measurement_propagates_and_never_uses_optional_try",
+      "tests/test_io_benchmark_qualification.py::test_strict_spec_measurement_rejects_missing_payload",
+      "tests/test_io_benchmark_qualification.py::test_strict_result_validation_requires_every_declared_metric[npy-oracle_write_mbps]",
+      "tests/test_io_benchmark_qualification.py::test_strict_result_validation_requires_every_declared_metric[npy-oracle_read_mbps]",
+      "tests/test_io_benchmark_qualification.py::test_strict_result_validation_requires_every_declared_metric[colmap_db-oracle_inspect_ms]",
+      "tests/test_io_benchmark_qualification.py::test_strict_result_validation_requires_every_declared_metric[colmap_db-oracle_image_ms]",
+      "tests/test_io_benchmark_qualification.py::test_strict_result_validation_requires_every_declared_metric[colmap_db-oracle_pair_ms]",
+      "tests/test_io_benchmark_qualification.py::test_strict_cli_rejects_partial_or_disabled_comparisons[arguments0]",
+      "tests/test_io_benchmark_qualification.py::test_strict_cli_rejects_partial_or_disabled_comparisons[arguments1]",
+      "tests/test_io_benchmark_qualification.py::test_strict_cli_rejects_partial_or_disabled_comparisons[arguments2]",
       "tests/codecs/test_compressed_ply.py::test_writer_body_matches_pinned_platform_reference"
     ],
     "removed_nodes": [

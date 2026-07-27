@@ -18,9 +18,19 @@ compiler-instrumented run `30247662622`. Sequences close at `4b8c829` with
 normal run `30250394890` and compiler-instrumented run `30250394906`. Splats
 close at `cd32268` with normal run `30253301819` and compiler-instrumented run
 `30253301871`. The complete sweep and specialized glTF/COLMAP/
-image-directory orchestration are locally lower-owned by
-`io_bench/runner.py`; `bench_io.py` preserves CLI and helper compatibility.
-PyCOLMAP and `gsply` remain test-only parity support.
+image-directory orchestration are lower-owned by `io_bench/runner.py`;
+`bench_io.py` preserves CLI and helper compatibility. Runner commit `cf8d117`
+passes normal run `30257105454` and compiler-instrumented run `30257105468`.
+The final R3.2 behavior checkpoint is implemented locally: every sweep checks
+the immutable 50 built-ins, runtime extensions are excluded from repository
+qualification, and the 50-entry comparison ledger contains 33 timed providers
+plus 17 reviewed property-specific exemptions. Strict mode propagates required
+comparison failures and is now part of the retained CI performance guard.
+The complete five-run strict guard passes; the exact local tree collects 3,339
+tests and passes 3,335 with four documented skips, and Ruff is clean. All three
+independent closure reviews and the exact 367-file-tree to 368-file-sdist to
+81-member-wheel gate pass; a fresh installed environment contains only SceneIO
+and NumPy. PyCOLMAP and `gsply` remain test-only parity support.
 
 Scope: the compiled `sceneio._core` I/O path on `phase0-nanobind-core`.
 Companion to `coverage_roadmap.md` (this makes its "Phase 7" hardening/perf work

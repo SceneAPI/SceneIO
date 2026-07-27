@@ -450,6 +450,7 @@ bench/
     measure.py
     reporting.py
     runner.py                 # R3.2, after family hooks move
+    qualification.py          # immutable built-in comparison ledger
     fixtures/
     oracles/
     families/
@@ -812,6 +813,31 @@ tree has 365 tracked files and produces a 366-member source archive. Its
 sdist-derived 81-member Windows wheel excludes benchmark/test modules, retains
 all 15 attribution files, keeps NumPy as its only unconditional dependency,
 and passes a fresh NumPy-only installed smoke.
+
+Exact runner commit `cf8d117` passes normal run `30257105454` and
+compiler-instrumented run `30257105468`.
+
+The final R3.2 behavior checkpoint adds an immutable comparison qualification
+ledger under `io_bench/qualification.py`. It owns exactly the canonical 50
+built-in ids: 33 have timed comparison providers and 17 carry reviewed,
+property-specific exemptions with exact verification paths. Assembly fails
+before measurement for a missing, duplicate, or noncanonical built-in while
+runtime extension registrations remain outside repository-completeness
+checks. Strict qualification mode preflights every required provider binding
+for a complete sweep, propagates provider failures, and audits every declared
+metric instead of treating missing evidence as optional. The retained five-run
+CI performance guard uses this strict mode. A local one-run strict sweep
+returns 50 successful rows and all 33 timed comparison pairs; the independent
+skip-comparison projection retains
+SHA-256
+`2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`.
+The complete five-run strict O4/O5 guard passes; the exact local tree collects
+3,339 tests and passes 3,335 with four documented skips, and Ruff is clean. All
+three independent closure reviews are clear. The exact staged tree has 367
+tracked files and produces a 368-file sdist whose only generated file is
+`PKG-INFO`; its sdist-derived 81-member Windows abi3 wheel contains one native
+module and all 15 attribution files, excludes benchmark/test/build payloads,
+and passes a fresh SceneIO-plus-NumPy installed-wheel smoke.
 
 ### R4. Organize native build and bindings
 

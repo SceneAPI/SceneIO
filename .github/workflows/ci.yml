@@ -30,7 +30,7 @@ jobs:
         # One required Linux lane exercises writable DLPack/from_numpy behavior.
         run: uv pip install torch --index https://download.pytorch.org/whl/cpu
       - name: Ruff
-        run: .venv/bin/ruff check src tests
+        run: .venv/bin/python -m ruff check
       - name: Test
         run: .venv/bin/python -m pytest -q
       - name: Benchmark harness smoke (all 50 codecs)
@@ -38,7 +38,7 @@ jobs:
       - name: Verify deterministic benchmark structure
         run: .venv/bin/python bench/compare_io_structure.py "${{ runner.temp }}/sceneio-benchmark.json"
       - name: I/O throughput and memory regression guard
-        run: .venv/bin/python bench/bench_io.py --runs 5 --require-o4-gains --require-o5-inspect-gains --require-o5-partial-gains --json "${{ runner.temp }}/sceneio-benchmark-guard.json"
+        run: .venv/bin/python bench/bench_io.py --runs 5 --strict-oracles --require-o4-gains --require-o5-inspect-gains --require-o5-partial-gains --json "${{ runner.temp }}/sceneio-benchmark-guard.json"
       - name: Upload benchmark smoke results
         if: always()
         uses: actions/upload-artifact@v4

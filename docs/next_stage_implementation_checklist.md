@@ -2735,7 +2735,7 @@ passes both jobs. No release workflow, tag, or publication was triggered.
 
 ### R3.2 — family fixtures, oracles, and sweep runner
 
-- [ ] Move builders/oracles one family at a time:
+- [x] Move builders/oracles one family at a time:
   - [x] arrays;
   - [x] calibration;
   - [x] images;
@@ -2748,14 +2748,14 @@ passes both jobs. No release workflow, tag, or publication was triggered.
       sweep orchestration to `bench/io_bench/runner.py`; keep
       `bench/bench_io.py` as a thin compatible CLI and helper-export facade.
 - [x] Keep oracle dependencies test-only.
-- [ ] Fail if a built-in codec is silently absent; prove an extra runtime
+- [x] Fail if a built-in codec is silently absent; prove an extra runtime
       registration does not enter repository fixture/oracle completeness.
-- [ ] Add a strict qualification mode in which every declared oracle must be
+- [x] Add a strict qualification mode in which every declared oracle must be
       installed and runnable; optional `_try(...)` behavior is allowed only
       for developer smoke runs.
-- [ ] When no library oracle exists, require an independent spec-level parser
+- [x] When no library oracle exists, require an independent spec-level parser
       or a reviewed exemption with the exact unverified property recorded.
-- [ ] Keep generated 100 MiB-class fixtures out of Git.
+- [x] Keep generated 100 MiB-class fixtures out of Git.
 
 The arrays checkpoint moves all six array `Spec` builders and their
 deterministic fixtures behind `io_bench/families/arrays.py`, with the DMB
@@ -3039,7 +3039,7 @@ The complete 50-codec smoke retains structural projection
 `2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`.
 This checkpoint changes ownership only. Repository-built-in completeness,
 extra runtime registration isolation, and strict comparison-provider
-qualification intentionally remain a separate final R3.2 behavior unit.
+qualification are implemented in the separate behavior unit below.
 
 Focused runner/contract validation passes 145 tests; the complete suite
 passes 3,316 with four documented skips, and Ruff is clean. The exact staged
@@ -3048,6 +3048,27 @@ generated `PKG-INFO` extra. Its sdist-derived 81-member Windows wheel excludes
 benchmark and test modules, retains all 15 attribution files, keeps NumPy as
 its sole unconditional dependency, and passes a fresh NumPy-only
 `sceneio._wheel_smoke`.
+
+Runner commit `cf8d117` passes normal run `30257105454` and
+compiler-instrumented run `30257105468`. The final R3.2 behavior implementation
+adds `io_bench/qualification.py`: its immutable ledger covers all 50 canonical
+built-ins with 33 timed comparisons and 17 reviewed exemptions. Coverage
+validation runs before filtering or measurement, and a registered runtime
+extension is proven absent from repository qualification. `--strict-oracles`
+rejects partial/disabled sweeps, preflights every timed callback binding,
+bypasses the optional failure-masking path, and audits every declared metric
+after the complete sweep. A one-run strict sweep returns 50 successful rows
+and all 33 timed comparison pairs; the independent skip-comparison smoke
+retains structural SHA-256
+`2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`.
+The complete five-run strict O4/O5 guard passes; the exact local tree collects
+3,339 tests and passes 3,335 with four documented skips, and Ruff is clean. No
+tracked file reaches 100 MiB. All three independent closure reviews are clear.
+The exact staged tree has 367 tracked files and produces a 368-file sdist whose
+only generated file is `PKG-INFO`; its sdist-derived 81-member Windows abi3
+wheel contains one native module and all 15 attribution files, excludes
+benchmark/test/build payloads, and installs only SceneIO plus NumPy in a fresh
+environment. `sceneio._wheel_smoke` returns `2`.
 
 ### R3.3 — cross-codec test support
 
@@ -3087,9 +3108,9 @@ R3 verification and validation:
 - [x] R3.1b protocol coverage is wired into the existing Linux, Windows, and
       macOS mmap/partial lane; exact-commit normal run `30234796010` and
       compiler-instrumented run `30234796025` pass.
-- [ ] Strict qualification mode fails on an absent required oracle or RSS
+- [x] Strict qualification mode fails on an absent required oracle or RSS
       sampler instead of silently dropping evidence.
-- [ ] Full suite and Ruff pass after each family.
+- [x] Full suite and Ruff pass after each family.
 - [x] `bench/bench_io.py` remains the compatible CLI entry point through
       R3.1a; repeat this gate after every remaining R3 unit.
 
@@ -3368,7 +3389,7 @@ For every unit:
 .venv/Scripts/python.exe -m pytest -q
 .venv/Scripts/python.exe -m ruff check
 git diff --check
-.venv/Scripts/python.exe bench/bench_io.py --runs 5 --require-o4-gains --require-o5-inspect-gains --require-o5-partial-gains
+.venv/Scripts/python.exe bench/bench_io.py --runs 5 --strict-oracles --require-o4-gains --require-o5-inspect-gains --require-o5-partial-gains
 .venv/Scripts/python.exe -m sceneio._wheel_smoke
 ```
 

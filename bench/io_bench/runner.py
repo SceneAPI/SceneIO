@@ -7,8 +7,9 @@ measurements retain the legacy whole-file bytes/copy-decode path beside the
 public registry mmap path, so their peak delta captures the input copy O1
 removes and, for NPY/FLO, the decoded-array copy O2 removes. Write measurements
 retain the in-memory bytes encoder beside the public file sink, so their peak
-delta captures the output-sized Python allocation O3 removes. Oracle failures
-degrade to "-" so the SceneIO measurements always print.
+delta captures the output-sized Python allocation O3 removes. Ordinary runs
+render unavailable comparisons as "-"; strict qualification requires every
+declared comparison and propagates provider failures.
 
 Run: python bench/bench_io.py [--runs N] [--scale S] [--cold-cache]
 Synthetic fixtures are generated in a temporary directory and never committed.
@@ -810,6 +811,14 @@ def main():
         help="skip independent-library timing while retaining SceneIO verification",
     )
     ap.add_argument(
+        "--strict-oracles",
+        action="store_true",
+        help=(
+            "require the complete built-in sweep and every declared timed "
+            "comparison provider; propagate comparison failures"
+        ),
+    )
+    ap.add_argument(
         "--large-safetensors-mib",
         type=int,
         default=0,
@@ -850,6 +859,14 @@ def main():
         ap.error("--only cannot be combined with complete-sweep regression guards")
     if args.only and args.large_safetensors_mib:
         ap.error("--only cannot be combined with --large-safetensors-mib")
+    if args.strict_oracles and args.skip_oracles:
+        ap.error("--strict-oracles cannot be combined with --skip-oracles")
+    if args.strict_oracles and args.only:
+        ap.error("--strict-oracles cannot be combined with --only")
+    if args.strict_oracles and args.large_safetensors_mib:
+        ap.error(
+            "--strict-oracles cannot be combined with --large-safetensors-mib"
+        )
     with tempfile.TemporaryDirectory(prefix="sceneio_bench_") as tmp:
         if args.large_safetensors_mib:
             failures, results = _run_large_safetensors(args, tmp)
@@ -1344,21 +1361,32 @@ def _benchmark_gltf(args, tmp):
     oracle_write_time = None
     oracle_read_time = None
     if trimesh is not None and not args.skip_oracles:
-        oracle_files = _try(
-            lambda: _trimesh_gltf_w(payload))
-        if oracle_files is not None:
-            measured = _try(
-                lambda: _measure(
-                    lambda: _trimesh_gltf_w(payload),
-                    args.runs,
-                ))
-            oracle_write_time = measured[0] if measured else None
-            measured = _try(
-                lambda: _measure(
-                    lambda: _trimesh_gltf_r(oracle_files),
-                    args.runs,
-                ))
-            oracle_read_time = measured[0] if measured else None
+        if getattr(args, "strict_oracles", False):
+            oracle_files = _trimesh_gltf_w(payload)
+            oracle_write_time = _measure(
+                lambda: _trimesh_gltf_w(payload),
+                args.runs,
+            )[0]
+            oracle_read_time = _measure(
+                lambda: _trimesh_gltf_r(oracle_files),
+                args.runs,
+            )[0]
+        else:
+            oracle_files = _try(
+                lambda: _trimesh_gltf_w(payload))
+            if oracle_files is not None:
+                measured = _try(
+                    lambda: _measure(
+                        lambda: _trimesh_gltf_w(payload),
+                        args.runs,
+                    ))
+                oracle_write_time = measured[0] if measured else None
+                measured = _try(
+                    lambda: _measure(
+                        lambda: _trimesh_gltf_r(oracle_files),
+                        args.runs,
+                    ))
+                oracle_read_time = measured[0] if measured else None
 
     result = {
         "codec": "gltf",
@@ -1437,6 +1465,8 @@ def _benchmark_gltf(args, tmp):
 
 
 def _run_benchmark(args, tmp):
+    from bench.io_bench import qualification
+
     pose_bundle = _poses_and_reconstruction(args.scale)
     reconstruction = pose_bundle[0]
     specs = _specs(args.scale, pose_bundle)
@@ -1445,6 +1475,22 @@ def _run_benchmark(args, tmp):
     )
     include_colmap_db = True
     include_gltf = True
+    qualification.validate_benchmark_coverage(
+        [
+            *(spec.id for spec in specs),
+            "gltf",
+            "colmap_db",
+            *(spec.id for spec in directory_specs),
+        ]
+    )
+    if getattr(args, "strict_oracles", False):
+        qualification.validate_strict_providers(
+            specs,
+            special_available={
+                "gltf": trimesh is not None,
+                "colmap_db": True,
+            },
+        )
     if args.only:
         requested = set(args.only)
         known = {spec.id for spec in specs} | {
@@ -2257,13 +2303,16 @@ def _run_benchmark(args, tmp):
                 )
 
             oraW = oraR = None
-            if s.ow and payload is not None and not args.skip_oracles:
-                ob = _try(lambda: bytes(s.ow(payload)))
-                if ob is not None:
-                    m = _try(lambda: _measure(lambda: s.ow(payload), args.runs))
-                    oraW = pmb / m[0] if m else None
-                    mr = _try(lambda: _measure(lambda: s.orr(ob), args.runs))
-                    oraR = pmb / mr[0] if mr else None
+            if not args.skip_oracles:
+                oraW, oraR = qualification.measure_spec_comparison(
+                    s,
+                    payload,
+                    pmb,
+                    args.runs,
+                    strict=getattr(args, "strict_oracles", False),
+                    measure=_measure,
+                    optional_try=_try,
+                )
 
             ratio = (sioR / oraR) if oraR else None
             results.append(
@@ -2553,6 +2602,8 @@ def _run_benchmark(args, tmp):
             + int(include_gltf)
             == 50
         )
+    if getattr(args, "strict_oracles", False):
+        qualification.validate_strict_results(results)
     print_summary(write_rows, o4_rows, inspect_rows, partial_rows)
     if args.require_o5_inspect_gains:
         stable = {

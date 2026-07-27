@@ -342,13 +342,27 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > [30253301819](https://github.com/SceneAPI/SceneIO/actions/runs/30253301819)
 > and compiler-instrumented run
 > [30253301871](https://github.com/SceneAPI/SceneIO/actions/runs/30253301871)
-> pass. The local runner extraction moves the complete sweep and specialized
+> pass. The runner extraction moves the complete sweep and specialized
 > glTF/COLMAP/image-directory orchestration to `io_bench/runner.py`; the thin
 > compatible entry point preserves the exact checked helper surface. The
 > 50-codec structure, complete suite, 366/81 source/wheel inventory, 15
-> attributions, and fresh NumPy-only smoke pass locally. Repository-built-in
-> completeness and strict comparison-provider qualification remain the final
-> R3.2 behavior checkpoint.
+> attributions, and fresh NumPy-only smoke pass. Exact runner commit
+> `cf8d117` passes [normal run
+> 30257105454](https://github.com/SceneAPI/SceneIO/actions/runs/30257105454)
+> and [compiler-instrumented run
+> 30257105468](https://github.com/SceneAPI/SceneIO/actions/runs/30257105468).
+> The final R3.2 behavior checkpoint is implemented locally: the immutable
+> 50-entry ledger has 33 timed comparisons and 17 exact reviewed exemptions,
+> complete sweeps reject missing/duplicate/noncanonical built-ins, runtime
+> extensions stay outside repository qualification, and strict mode propagates
+> every required comparison failure. Its one-run strict sweep has 50
+> successful rows and all 33 timed pairs; the skip-comparison structural hash
+> remains unchanged. The complete five-run strict O4/O5 guard passes; local
+> MSVC collects 3,339 tests and passes 3,335 with four documented skips, and
+> Ruff is clean. All three independent closure reviews are clear. The exact
+> staged 367-file tree produces a 368-file sdist and an 81-member Windows abi3
+> wheel with all 15 attribution files; a fresh environment contains only
+> SceneIO and NumPy, and `sceneio._wheel_smoke` returns `2`.
 
 [current-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287022
 [current-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287161

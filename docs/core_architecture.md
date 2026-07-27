@@ -270,8 +270,13 @@ sceneio._core (C++ / nanobind)
   specialized glTF/COLMAP/image-directory orchestration, CLI, and 20
   supporting functions now live in `bench/io_bench/runner.py`.
   `bench/bench_io.py` is a compatible entry point that re-exports the checked
-  166-name helper surface. The final R3.2 checkpoint adds repository-built-in
-  completeness and strict comparison-provider qualification.
+  166-name helper surface. Repository completeness is now defined by the
+  immutable `CANONICAL_BUILTIN_IDS` through
+  `bench/io_bench/qualification.py`, independently of mutable runtime
+  registrations. Its 50-entry ledger requires 33 timed comparisons and
+  records 17 reviewed, property-specific parity exemptions. Complete sweeps
+  validate the exact built-in set before measurement; strict qualification
+  requires every timed callback and propagates its failures.
   Built-in startup uses `_registry/assembly.py` as a lower staging boundary.
   Eight complete family tuples are collected without touching the public
   registry. After all 50 canonical ids validate, the facade publishes the
