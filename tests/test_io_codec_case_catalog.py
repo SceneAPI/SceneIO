@@ -4,12 +4,16 @@ from __future__ import annotations
 
 import ast
 import dataclasses
+import hashlib
+import json
 from pathlib import Path
 
 import pytest
 from _support import codec_cases
+from _support.buffer_codec_cases import build_buffer_codec_cases
 
 import sceneio
+from sceneio import _core
 from sceneio.io import registry
 from sceneio.io._builtin_manifest import (
     CANONICAL_BUILTIN_IDS,
@@ -97,6 +101,74 @@ def test_case_catalog_preserves_the_legacy_fixture_partitions():
         )
         for case in cases
     } == set(CANONICAL_BUILTIN_IDS)
+    built_cases = build_buffer_codec_cases()
+    assert tuple(case.id for case in built_cases) == (
+        "pfm",
+        "gaussian_ply",
+        "compressed_ply",
+        "sog",
+        "ksplat",
+        "spz",
+        "transforms_json",
+        "tum",
+        "kitti",
+        "euroc_state",
+        "opencv_yaml",
+        "opencv_xml",
+        "ros_camera_info",
+        "kalibr",
+        "g2o",
+        "npy",
+        "npz",
+        "safetensors",
+        "netpbm",
+        "png",
+        "jpeg",
+        "bmp",
+        "tga",
+        "hdr",
+        "exr",
+        "webp",
+        "y4m",
+        "xyz",
+        "pts",
+        "ply",
+        "ply_mesh",
+        "stl",
+        "off",
+        "glb",
+        "pcd",
+        "las",
+        "laz",
+        "flo",
+        "dmb",
+        "bundler",
+        "bal",
+        "nvm",
+        "openmvg",
+        "splat",
+    )
+    for case in built_cases:
+        assert case.reader is getattr(_core, f"read_{case.id}")
+        assert case.writer is getattr(_core, f"write_{case.id}")
+    portable_fixture_projection = [
+        (case.id, len(case.data), hashlib.sha256(case.data).hexdigest())
+        for case in built_cases
+        if case.id != "compressed_ply"
+    ]
+    assert len(portable_fixture_projection) == 43
+    fixture_payload = json.dumps(
+        portable_fixture_projection,
+        separators=(",", ":"),
+    )
+    assert hashlib.sha256(fixture_payload.encode()).hexdigest() == (
+        "b21a55c6cbde2a46d89bf2bc013b6e81ffe3d58565922dcd690c2605f31143ab"
+    )
+    cases_by_id = {case.id: case for case in built_cases}
+    assert (
+        cases_by_id["compressed_ply"].value
+        is cases_by_id["gaussian_ply"].value
+    )
 
 
 def test_case_catalog_family_ownership_matches_the_builtin_manifest():

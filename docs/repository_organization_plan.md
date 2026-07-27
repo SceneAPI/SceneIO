@@ -852,13 +852,16 @@ commit `81f143b` passes normal run `30266501529` and compiler-instrumented run
 `30266501618`.
 
 The mmap suite now consumes the reusable deterministic builder in
-`tests/_support/buffer_codec_cases.py`. Its retained local builder proves the
-exact original 44-case traversal order, reader/writer identity, encoded bytes,
-and full record fingerprints. Partial consumers remain unchanged until their
-family-by-family migrations. The complete local tree collects 3,346 tests and
-passes 3,342 with four documented skips; Ruff and all three independent
-reviews are clear. The independent one-run 50-codec benchmark smoke retains
-structural SHA-256
+`tests/_support/buffer_codec_cases.py`. Exact migration commit `9a73892` passes
+normal run `30268797350` and compiler-instrumented run `30268797374`. The
+duplicated local builder is removed only after that hosted equivalence; its
+exact original 44-case traversal order, live callable identities, 43-codec
+portable encoded-fixture projection, and platform-profiled compressed-PLY
+semantic fixture remain contract-pinned. Partial consumers remain unchanged
+until their family-by-family migrations. The complete local tree
+collects 3,345 tests and passes 3,341 with four documented skips; Ruff and all
+three independent reviews are clear. The independent one-run 50-codec
+benchmark smoke retains structural SHA-256
 `2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`.
 The exact staged tree has 371 tracked files and produces a 372-file sdist
 whose only generated file is `PKG-INFO`; its sdist-derived 81-member Windows

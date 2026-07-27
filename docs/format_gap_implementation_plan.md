@@ -2027,8 +2027,12 @@ the exact 44-buffer/3-path/3-directory catalog under
 `tests/_support/codec_cases.py`. Exact catalog commit `81f143b` passes normal
 run `30266501529` and compiler-instrumented run `30266501618`; the mmap suite
 now consumes the lower-owned deterministic buffer builder with exact
-retained-legacy equivalence. The remaining staged consumer sequence is
-maintained in
+retained-legacy equivalence. Exact migration commit `9a73892` passes normal
+run `30268797350` and compiler-instrumented run `30268797374`; the duplicated
+local matrix is removed while its order, live bindings, 43-codec portable
+encoded-fixture projection, and platform-profiled compressed-PLY semantic
+fixture remain checked. The remaining staged consumer sequence is maintained
+in
 [`next_stage_implementation_checklist.md`](next_stage_implementation_checklist.md).
 
 Status terms are strict:

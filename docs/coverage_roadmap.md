@@ -35,7 +35,11 @@
 > timed providers while retaining 17 exact reviewed exemptions. R3.3 is now
 > active with an immutable 44-buffer/3-path/3-directory case catalog under
 > `tests/_support/codec_cases.py`; the mmap suite consumes its lower-owned
-> deterministic buffer builder with exact retained-legacy equivalence.
+> deterministic buffer builder. Exact migration commit `9a73892` passes normal
+> run `30268797350` and compiler-instrumented run `30268797374`; the duplicated
+> local matrix is removed and its exact order, bindings, 43-codec portable
+> byte projection, and platform-profiled compressed-PLY semantic fixture
+> remain contract-pinned.
 
 The granular, per‑format execution plan for covering **every relevant file type
 that has a permissively‑licensed open‑source option**. Sits below the strategy

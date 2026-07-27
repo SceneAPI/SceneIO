@@ -328,8 +328,8 @@
     "last": "tests/test_points_binary.py::test_bad_magic_rejected"
   },
   "pytest_candidate_collection": {
-    "count": 3346,
-    "sorted_normalized_node_ids_sha256": "0a6aac46af717c4245e595e6889db0e4dc02040ef3c6c7f59509abdab16020b0",
+    "count": 3345,
+    "sorted_normalized_node_ids_sha256": "fc4934cb3fcf4a1a37fb5a087dcf0b13821df1f926f12412931b8ce040b93a05",
     "added_nodes": [
       "tests/test_benchmark_memory_protocol.py::test_memory_protocol_contract_and_repeated_sceneio_measurement",
       "tests/test_benchmark_memory_protocol.py::test_missing_sampler_is_explicit_and_strict_mode_rejects_it",
@@ -593,7 +593,6 @@
       "tests/test_io_codec_case_catalog.py::test_case_catalog_selectors_match_live_builtin_capabilities",
       "tests/test_io_codec_case_catalog.py::test_runtime_extensions_do_not_enter_repository_case_completeness",
       "tests/test_io_codec_case_catalog.py::test_case_catalog_has_lower_ownership_and_no_consumer_imports",
-      "tests/test_io_mmap.py::test_shared_buffer_codec_cases_match_legacy_fixture",
       "tests/codecs/test_compressed_ply.py::test_writer_body_matches_pinned_platform_reference"
     ],
     "removed_nodes": [

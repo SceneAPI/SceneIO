@@ -3079,7 +3079,8 @@ environment. `sceneio._wheel_smoke` returns `2`.
 - [ ] Migrate streaming consumers in a separate commit under the same rule.
 - [ ] Migrate inspection consumers in a separate commit under the same rule.
 - [ ] Migrate partial consumers one family at a time under the same rule.
-- [ ] Remove an old matrix only after its replacement is proven equivalent.
+- [ ] Remove each old matrix only after its replacement is proven equivalent.
+  - [x] Remove the mmap matrix after exact local and hosted equivalence.
 - [ ] Preserve parameter ids so CI failures remain attributable.
 - [ ] Avoid snapshot-only assertions for numeric values, conventions, or
       malformed inputs.
@@ -3112,6 +3113,24 @@ The exact staged tree has 371 tracked files and produces a 372-file sdist
 whose only generated file is `PKG-INFO`; its sdist-derived 81-member Windows
 abi3 wheel contains one native module and all 15 attribution files, and a
 fresh SceneIO-plus-NumPy environment passes `sceneio._wheel_smoke`.
+
+Exact mmap migration commit `9a73892` passes normal run `30268797350` and
+compiler-instrumented run `30268797374`, including all three mmap platforms,
+GCC 10, the full suite, and the five-run guard. The duplicated
+`_legacy_buffer_codecs` matrix is therefore removed. The architecture contract
+retains its exact 44-case order, live reader/writer identities, and
+43-codec portable encoded-fixture projection SHA-256
+`b21a55c6cbde2a46d89bf2bc013b6e81ffe3d58565922dcd690c2605f31143ab`.
+Compressed PLY is excluded from that universal byte hash because its
+quantization has an established AppleClang profile; its shared semantic
+Gaussian input and platform-profiled parity test remain checked. The unchanged
+mmap behavior suite retains semantic, lifetime, protocol, truncation, and
+mutation coverage. The original candidate node set is restored exactly: 3,345
+nodes with sorted normalized SHA-256
+`fc4934cb3fcf4a1a37fb5a087dcf0b13821df1f926f12412931b8ce040b93a05`.
+The complete local suite passes 3,341 tests with four documented skips, and
+the one-run 50-codec benchmark smoke retains structural SHA-256
+`2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`.
 
 ### R3.4 — complete installed-wheel smoke
 

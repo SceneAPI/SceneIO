@@ -375,9 +375,19 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > 44 buffer, three path, and three directory fixture definitions, including
 > the live projection of 28 partial-capable codecs and 32 selector
 > declarations. The mmap suite now consumes
-> `tests/_support/buffer_codec_cases.py`; its retained local builder proves
-> exact order, callable identity, encoded bytes, and full record fingerprints.
-> The complete local tree collects 3,346 tests and passes 3,342 with four
+> `tests/_support/buffer_codec_cases.py`. Exact migration commit `9a73892`
+> passes [normal run
+> 30268797350](https://github.com/SceneAPI/SceneIO/actions/runs/30268797350)
+> and [compiler-instrumented run
+> 30268797374](https://github.com/SceneAPI/SceneIO/actions/runs/30268797374).
+> The duplicated local matrix is now removed; its 44-case order, live callable
+> identities, and 43-codec portable encoded-fixture projection SHA-256
+> `b21a55c6cbde2a46d89bf2bc013b6e81ffe3d58565922dcd690c2605f31143ab`
+> remain checked alongside the semantic mmap suite. Compressed PLY is excluded
+> from that universal byte hash because its quantization has an established
+> AppleClang profile; its shared semantic Gaussian input and platform-profiled
+> parity test remain checked. The complete local tree
+> collects 3,345 tests and passes 3,341 with four
 > documented skips; Ruff and all three independent reviews are clear. A
 > one-run 50-codec benchmark smoke retains structural SHA-256
 > `2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`.

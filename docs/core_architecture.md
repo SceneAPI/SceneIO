@@ -282,10 +282,14 @@ sceneio._core (C++ / nanobind)
   partitions the 50 built-ins into 44 buffer, three path, and three directory
   fixture definitions and pins all 28 partial-capable codecs and their 32
   selector declarations. The mmap suite now consumes the lower-owned
-  `buffer_codec_cases.py` builder; a retained local builder proves exact
-  traversal order, callable identity, encoded bytes, and record fingerprints
-  during the staged migration. Partial cases remain locally owned until their
-  family-by-family equivalence migration.
+  `buffer_codec_cases.py` builder. After exact hosted equivalence passed, the
+  duplicated local builder was removed; the architecture contract retains its
+  exact traversal order, live callable identities, and 43-codec portable
+  encoded-fixture projection. Compressed PLY retains the same semantic
+  Gaussian input as its paired fixture and its established platform-profiled
+  parity test. The mmap suite retains semantic and malformed-input coverage.
+  Partial cases remain locally owned until their family-by-family equivalence
+  migration.
   Built-in startup uses `_registry/assembly.py` as a lower staging boundary.
   Eight complete family tuples are collected without touching the public
   registry. After all 50 canonical ids validate, the facade publishes the

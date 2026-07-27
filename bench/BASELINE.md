@@ -2136,3 +2136,34 @@ performance claim. The exact staged tree has 371 tracked files and produces a
 81-member Windows abi3 wheel contains one native module and all 15 attribution
 files, excludes benchmark and test payloads, and installs only SceneIO plus
 NumPy in a fresh environment. `sceneio._wheel_smoke` returns `2`.
+
+Exact mmap migration commit `9a73892` passes normal run
+[30268797350](https://github.com/SceneAPI/SceneIO/actions/runs/30268797350)
+and compiler-instrumented run
+[30268797374](https://github.com/SceneAPI/SceneIO/actions/runs/30268797374).
+
+## R3.3 mmap legacy-matrix removal (2026-07-27)
+
+After exact local equivalence and both hosted workflows passed, the duplicated
+`_legacy_buffer_codecs` matrix and its temporary comparison node were removed.
+The lower-owned builder remains the only source for these 44 deterministic
+cases. Its architecture contract pins the exact original traversal order,
+live reader/writer identities, and 43-codec portable encoded-fixture projection
+SHA-256
+`b21a55c6cbde2a46d89bf2bc013b6e81ffe3d58565922dcd690c2605f31143ab`.
+Compressed PLY is excluded from that universal byte hash because native
+exp/log quantization has an established AppleClang profile; its shared
+semantic Gaussian input and platform-profiled parity test remain checked. The
+existing mmap suite continues to validate semantic records, lifetimes, buffer
+protocol behavior, truncation, and deterministic mutations.
+
+The candidate collection returns exactly to 3,345 nodes with sorted normalized
+SHA-256
+`fc4934cb3fcf4a1a37fb5a087dcf0b13821df1f926f12412931b8ce040b93a05`;
+no original node id, parameter id, or skip reason changes. The complete local
+suite passes 3,341 tests with four documented skips, and Ruff is clean. The
+one-run all-codec benchmark smoke returns 50 successful rows and retains
+structural SHA-256
+`2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`.
+This cleanup changes test ownership only and makes no codec-implementation
+performance claim.
