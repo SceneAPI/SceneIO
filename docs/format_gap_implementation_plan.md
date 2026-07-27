@@ -2056,7 +2056,10 @@ shared assertions gain lower ownership under `tests/_support/partial_read.py`.
 Exact image commit `d198560` passes normal run `30285128366` and
 compiler-instrumented run `30285128448`. The next mesh unit moves the
 unchanged face-range semantic and mapping-close test into
-`tests/test_io_partial_meshes.py`.
+`tests/test_io_partial_meshes.py`. Exact mesh commit `4294dbe` passes normal
+run `30287854716` and compiler-instrumented run `30287854692`. The point unit
+moves 13 unchanged XYZ/LAS nodes into `tests/test_io_partial_points.py` and
+lowers their shared range assertion.
 
 Status terms are strict:
 

@@ -456,6 +456,18 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > only generated member is `PKG-INFO`, and an unchanged 81-member Windows abi3
 > wheel. A fresh SceneIO-plus-NumPy installation passes
 > `sceneio._wheel_smoke`.
+> Exact mesh commit `4294dbe` passes [normal run
+> 30287854716](https://github.com/SceneAPI/SceneIO/actions/runs/30287854716)
+> and [compiler-instrumented run
+> 30287854692](https://github.com/SceneAPI/SceneIO/actions/runs/30287854692).
+> The point partial unit moves 13 unchanged XYZ/LAS nodes into
+> `tests/test_io_partial_points.py` and lowers their shared point-range
+> assertion. Collection remains 3,345 with normalized SHA-256
+> `2451c9bb2606ac1587011eafeb2345fc9f34f7e08df7ea17b239b5a1e78a624f`.
+> Exact package verification records 379 source files, a 380-file sdist whose
+> only generated member is `PKG-INFO`, and an unchanged 81-member Windows abi3
+> wheel. A fresh SceneIO-plus-NumPy installation passes
+> `sceneio._wheel_smoke`.
 
 [current-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287022
 [current-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287161

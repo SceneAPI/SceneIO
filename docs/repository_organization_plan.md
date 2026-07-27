@@ -925,6 +925,22 @@ only generated member is `PKG-INFO`, and the unchanged 81-member Windows abi3
 wheel. It contains one native module and all 15 attribution members, excludes
 repository test/benchmark/build payloads, and passes `sceneio._wheel_smoke` in
 a fresh SceneIO-plus-NumPy environment.
+Exact mesh commit `4294dbe` passes normal run `30287854716` and
+compiler-instrumented run `30287854692`.
+
+The point partial unit moves three unchanged XYZ/LAS functions producing 13
+parameterized nodes into `tests/test_io_partial_points.py`. Their unchanged
+point-range assertion moves once into `tests/_support/partial_read.py`, where
+the cross-family point/splat differential continues to use it. Exact node,
+function, and helper projections plus Windows/non-Windows command inclusion
+are contract-pinned. The complete collection remains 3,345 with normalized
+SHA-256
+`2451c9bb2606ac1587011eafeb2345fc9f34f7e08df7ea17b239b5a1e78a624f`.
+Exact package verification records 379 source files, a 380-file sdist whose
+only generated member is `PKG-INFO`, and the unchanged 81-member Windows abi3
+wheel. It contains one native module and all 15 attribution members, excludes
+repository test/benchmark/build payloads, and passes `sceneio._wheel_smoke` in
+a fresh SceneIO-plus-NumPy environment.
 
 ### R4. Organize native build and bindings
 

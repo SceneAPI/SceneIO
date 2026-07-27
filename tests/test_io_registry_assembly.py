@@ -806,6 +806,11 @@ def test_assembly_dependency_direction_and_import_delta_are_exact():
             "tests/test_io_partial_meshes.py::",
             1,
         ),
+        "partial_points": (
+            "tests/test_io_partial.py::",
+            "tests/test_io_partial_points.py::",
+            13,
+        ),
     }
     assert [item["name"] for item in rename_groups] == list(expected_groups)
     renamed_from = set()
@@ -845,12 +850,27 @@ def test_assembly_dependency_direction_and_import_delta_are_exact():
     assert feature_added_nodes.isdisjoint(renamed_to)
     assert feature_removed_nodes.isdisjoint(renamed_from)
     support_groups = candidate["moved_support_groups"]
-    assert [item["name"] for item in support_groups] == [
-        "partial_image_window"
-    ]
+    expected_support_groups = {
+        "partial_image_window": (
+            "tests/test_io_partial.py",
+            "tests/_support/partial_read.py",
+            ["_pixels", "_assert_image_window"],
+        ),
+        "partial_point_range": (
+            "tests/test_io_partial.py",
+            "tests/_support/partial_read.py",
+            ["_assert_point_range"],
+        ),
+    }
+    assert [item["name"] for item in support_groups] == list(
+        expected_support_groups
+    )
     for group in support_groups:
-        assert group["from_path"] == "tests/test_io_partial.py"
-        assert group["to_path"] == "tests/_support/partial_read.py"
+        expected_from, expected_to, expected_functions = (
+            expected_support_groups[group["name"]]
+        )
+        assert group["from_path"] == expected_from
+        assert group["to_path"] == expected_to
         source_tree = ast.parse(
             (ROOT / group["from_path"]).read_text(encoding="utf-8")
         )
@@ -858,7 +878,7 @@ def test_assembly_dependency_direction_and_import_delta_are_exact():
             (ROOT / group["to_path"]).read_text(encoding="utf-8")
         )
         function_names = group["function_names"]
-        assert function_names == ["_pixels", "_assert_image_window"]
+        assert function_names == expected_functions
         assert not {
             node.name
             for node in source_tree.body
@@ -910,6 +930,8 @@ def test_assembly_dependency_direction_and_import_delta_are_exact():
     assert non_windows_mmap_command.count("tests/test_io_partial_images.py") == 1
     assert windows_mmap_command.count("tests/test_io_partial_meshes.py") == 1
     assert non_windows_mmap_command.count("tests/test_io_partial_meshes.py") == 1
+    assert windows_mmap_command.count("tests/test_io_partial_points.py") == 1
+    assert non_windows_mmap_command.count("tests/test_io_partial_points.py") == 1
     assert (
         "bench/bench_io.py --runs 1 --scale 0.001 --skip-oracles --json"
         in ci_workflow

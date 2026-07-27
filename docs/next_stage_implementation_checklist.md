@@ -3087,8 +3087,10 @@ environment. `sceneio._wheel_smoke` returns `2`.
         assertions under `tests/_support/partial_read.py`.
   - [x] Move the mesh face-range behavior unchanged into
         `tests/test_io_partial_meshes.py`.
-  - [ ] Migrate point, reconstruction, sequence, and splat family-specific
-        consumers.
+  - [x] Move the 13 XYZ/LAS point-specific nodes unchanged into
+        `tests/test_io_partial_points.py` and lower their shared range
+        assertion under `tests/_support/partial_read.py`.
+  - [ ] Migrate reconstruction, sequence, and splat family-specific consumers.
 - [ ] Remove each old matrix only after its replacement is proven equivalent.
   - [x] Remove the mmap matrix after exact local and hosted equivalence.
 - [ ] Preserve parameter ids so CI failures remain attributable.
@@ -3105,6 +3107,8 @@ environment. `sceneio._wheel_smoke` returns `2`.
         parameterized paths; pin their destination function AST projections.
   - [x] Record the mesh partial path and pin its destination function AST
         projection.
+  - [x] Record all 13 point partial paths and pin their destination function
+        AST projection.
   - [x] Record the lower move of the two shared image-window assertions so
         family modules never import sibling test modules.
 
@@ -3224,6 +3228,22 @@ commands name the focused module. The complete collection remains 3,345 with
 normalized SHA-256
 `c658cb0d7353ad5c6cf4f6e38b01a02418f693b121e6d8f4bba887945821cc9d`.
 Exact package verification records 378 source files, a 379-file sdist whose
+only generated member is `PKG-INFO`, and the unchanged 81-member Windows abi3
+wheel. It contains one native module and all 15 attribution members, excludes
+repository test/benchmark/build payloads, and passes `sceneio._wheel_smoke` in
+a fresh SceneIO-plus-NumPy environment.
+Exact mesh partial migration commit `4294dbe` passes normal run `30287854716`
+and compiler-instrumented run `30287854692`.
+
+The point-family unit moves three unchanged XYZ/LAS functions producing 13
+parameterized nodes into `tests/test_io_partial_points.py`. The unchanged
+`_assert_point_range` helper moves once into
+`tests/_support/partial_read.py`, where the shared point/splat differential
+continues to consume it. Function, node, and helper projections plus both
+platform commands are contract-pinned. The complete collection remains 3,345
+with normalized SHA-256
+`2451c9bb2606ac1587011eafeb2345fc9f34f7e08df7ea17b239b5a1e78a624f`.
+Exact package verification records 379 source files, a 380-file sdist whose
 only generated member is `PKG-INFO`, and the unchanged 81-member Windows abi3
 wheel. It contains one native module and all 15 attribution members, excludes
 repository test/benchmark/build payloads, and passes `sceneio._wheel_smoke` in

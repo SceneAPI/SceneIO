@@ -329,7 +329,7 @@
   },
   "pytest_candidate_collection": {
     "count": 3345,
-    "sorted_normalized_node_ids_sha256": "c658cb0d7353ad5c6cf4f6e38b01a02418f693b121e6d8f4bba887945821cc9d",
+    "sorted_normalized_node_ids_sha256": "2451c9bb2606ac1587011eafeb2345fc9f34f7e08df7ea17b239b5a1e78a624f",
     "added_nodes": [
       "tests/test_benchmark_memory_protocol.py::test_memory_protocol_contract_and_repeated_sceneio_measurement",
       "tests/test_benchmark_memory_protocol.py::test_missing_sampler_is_explicit_and_strict_mode_rejects_it",
@@ -758,6 +758,29 @@
         "node_suffixes": [
           "test_mesh_face_range_equals_full_domain_slice_and_closes_mapping"
         ]
+      },
+      {
+        "name": "partial_points",
+        "from_prefix": "tests/test_io_partial.py::",
+        "to_prefix": "tests/test_io_partial_points.py::",
+        "excluded_function_names": [],
+        "function_count": 3,
+        "function_ast_sha256": "4cfa5aea51601322a2d7d83cad7cfd1f00eb3eb3395c7fda351347352b5c12d3",
+        "node_suffixes": [
+          "test_xyz_automatic_layout_partial_parity[1 2 3]",
+          "test_xyz_automatic_layout_partial_parity[1 2 3 0.25]",
+          "test_xyz_automatic_layout_partial_parity[1 2 3 10 20 30]",
+          "test_xyz_automatic_layout_partial_parity[1 2 3 0.25 10 20 30]",
+          "test_xyz_automatic_layout_partial_parity[1 2 3 10 20 30 0.1 0.2 0.3]",
+          "test_xyz_forced_normals_layout_partial_parity",
+          "test_las_point_format_partial_parity[0]",
+          "test_las_point_format_partial_parity[1]",
+          "test_las_point_format_partial_parity[2]",
+          "test_las_point_format_partial_parity[3]",
+          "test_las_point_format_partial_parity[6]",
+          "test_las_point_format_partial_parity[7]",
+          "test_las_point_format_partial_parity[8]"
+        ]
       }
     ],
     "moved_support_groups": [
@@ -770,6 +793,15 @@
           "_assert_image_window"
         ],
         "function_ast_sha256": "5299b065b8e4a6dbc78ea41bff275a26be1eeeaba2a4e200634f8cc9ce0415b1"
+      },
+      {
+        "name": "partial_point_range",
+        "from_path": "tests/test_io_partial.py",
+        "to_path": "tests/_support/partial_read.py",
+        "function_names": [
+          "_assert_point_range"
+        ],
+        "function_ast_sha256": "f0c527f421207171019327332821e81c1a47561b5b935fa65a1e4a3dea52c24c"
       }
     ],
     "first": "tests/codecs/test_bal.py::test_oracle_write_sceneio_read_parity_and_conventions",

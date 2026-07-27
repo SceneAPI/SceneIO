@@ -38,4 +38,66 @@ def _assert_image_window(partial, full, window):
         )
 
 
-__all__ = ["_assert_image_window", "_pixels"]
+def _assert_point_range(partial, full, start, stop):
+    if isinstance(full, _core.PointCloud):
+        assert isinstance(partial, _core.PointCloud)
+        assert partial.num_points == stop - start
+        assert (
+            partial.coordinate_frame,
+            partial.scale_to_meters,
+            partial.intensity_range,
+            partial.origin,
+            partial.viewpoint,
+        ) == (
+            full.coordinate_frame,
+            full.scale_to_meters,
+            full.intensity_range,
+            full.origin,
+            full.viewpoint,
+        )
+        for name in (
+            "positions",
+            "colors",
+            "colors16",
+            "normals",
+            "intensities",
+        ):
+            expected = np.asarray(getattr(full, name))
+            actual = np.asarray(getattr(partial, name))
+            if expected.shape[0] == 0:
+                assert actual.shape == expected.shape
+            else:
+                np.testing.assert_array_equal(actual, expected[start:stop])
+    else:
+        assert isinstance(partial, _core.GaussianCloud)
+        assert partial.num_gaussians == stop - start
+        assert (partial.sh_degree, partial.num_rest) == (
+            full.sh_degree,
+            full.num_rest,
+        )
+        assert (
+            partial.quaternion_order,
+            partial.scale_space,
+            partial.opacity_space,
+            partial.sh_layout,
+        ) == (
+            full.quaternion_order,
+            full.scale_space,
+            full.opacity_space,
+            full.sh_layout,
+        )
+        for name in (
+            "means",
+            "scales",
+            "quaternions",
+            "opacities",
+            "sh_dc",
+            "sh_rest",
+        ):
+            np.testing.assert_array_equal(
+                np.asarray(getattr(partial, name)),
+                np.asarray(getattr(full, name))[start:stop],
+            )
+
+
+__all__ = ["_assert_image_window", "_assert_point_range", "_pixels"]

@@ -2300,3 +2300,28 @@ only generated member is `PKG-INFO`, and the unchanged 81-member Windows abi3
 wheel. It contains one native module and all 15 attribution members, excludes
 repository test/benchmark/build payloads, and passes `sceneio._wheel_smoke` in
 a fresh SceneIO-plus-NumPy environment.
+
+Exact mesh partial migration commit `4294dbe` passes normal run
+[30287854716](https://github.com/SceneAPI/SceneIO/actions/runs/30287854716)
+and compiler-instrumented run
+[30287854692](https://github.com/SceneAPI/SceneIO/actions/runs/30287854692).
+
+## R3.3 point partial-consumer migration (2026-07-27)
+
+Three unchanged XYZ/LAS functions now live in
+`tests/test_io_partial_points.py` and produce the same 13 parameterized nodes.
+The unchanged `_assert_point_range` helper moves once into
+`tests/_support/partial_read.py`, where the shared point/splat differential
+continues to consume it. Function projection SHA-256 is
+`4cfa5aea51601322a2d7d83cad7cfd1f00eb3eb3395c7fda351347352b5c12d3`;
+helper projection SHA-256 is
+`f0c527f421207171019327332821e81c1a47561b5b935fa65a1e4a3dea52c24c`.
+Exact node/helper moves and both platform commands are contract-pinned. The
+complete collection remains 3,345 with normalized SHA-256
+`2451c9bb2606ac1587011eafeb2345fc9f34f7e08df7ea17b239b5a1e78a624f`.
+This unit changes test ownership only and makes no codec performance claim.
+Exact package verification records 379 source files, a 380-file sdist whose
+only generated member is `PKG-INFO`, and the unchanged 81-member Windows abi3
+wheel. It contains one native module and all 15 attribution members, excludes
+repository test/benchmark/build payloads, and passes `sceneio._wheel_smoke` in
+a fresh SceneIO-plus-NumPy environment.

@@ -57,7 +57,10 @@
 > window assertions. Exact image commit `d198560` passes normal run
 > `30285128366` and compiler-instrumented run `30285128448`. The mesh unit
 > moves its unchanged face-range behavior into
-> `tests/test_io_partial_meshes.py`.
+> `tests/test_io_partial_meshes.py`. Exact mesh commit `4294dbe` passes normal
+> run `30287854716` and compiler-instrumented run `30287854692`. The point
+> unit moves 13 unchanged XYZ/LAS nodes into
+> `tests/test_io_partial_points.py` and lowers their shared range assertion.
 
 The granular, per‑format execution plan for covering **every relevant file type
 that has a permissively‑licensed open‑source option**. Sits below the strategy
