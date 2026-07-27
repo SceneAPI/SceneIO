@@ -31,6 +31,20 @@ tests and passes 3,335 with four documented skips, and Ruff is clean. All three
 independent closure reviews and the exact 367-file-tree to 368-file-sdist to
 81-member-wheel gate pass; a fresh installed environment contains only SceneIO
 and NumPy. PyCOLMAP and `gsply` remain test-only parity support.
+R3.3 closes at `811cb0d`; normal run `30300122309` and
+compiler-instrumented run `30300122324` pass. The R3.4 candidate makes the
+NumPy-only installed-wheel gate complete rather than representative: all 50
+built-ins perform public write/read/inspect, every declared stream-capability
+direction is paired with a successful corresponding public path call, and all
+32 declared selectors across 28 partial-capable codecs run with zero
+property-specific exemptions. Dedicated mmap and sink suites independently
+prove the allocation semantics. The runner and expected operation set are
+both derived from the installed built-in definitions and live capabilities.
+The complete local suite passes 3,344 tests with four documented skips; Ruff
+and the retained five-run strict O4/O5 guard pass. The first frozen 380-file
+source tree produces a 381-file sdist and 81-member Windows ABI3 wheel, and a
+fresh outside-repository SceneIO-plus-NumPy environment passes the complete
+installed smoke.
 
 Scope: the compiled `sceneio._core` I/O path on `phase0-nanobind-core`.
 Companion to `coverage_roadmap.md` (this makes its "Phase 7" hardening/perf work

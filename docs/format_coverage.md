@@ -499,6 +499,24 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > produces a 381-file sdist and 81-member Windows ABI3 wheel with one native
 > module, all 15 attribution files, and NumPy as the sole unconditional
 > dependency; fresh installed smoke passes.
+> Exact R3.3 closure commit `811cb0d` passes [normal run
+> 30300122309](https://github.com/SceneAPI/SceneIO/actions/runs/30300122309)
+> and [compiler-instrumented run
+> 30300122324](https://github.com/SceneAPI/SceneIO/actions/runs/30300122324).
+>
+> R3.4 is implemented locally. Its installed-wheel smoke derives the exact
+> 50-codec order from `BUILTIN_DEFINITIONS`, requires agreement with the
+> installed registry and public listing, and observes successful public
+> write/read/inspect. Every declared stream-capability direction is paired
+> with a successful corresponding public path call; dedicated mmap and sink
+> suites retain independent allocation proof. All 32 selectors declared by
+> 28 partial-capable codecs are exercised. The reviewed property-specific
+> exemption mechanism exists, but the current exemption set is empty. The
+> complete local suite passes 3,344 tests with four documented skips; Ruff and
+> the five-run strict guard pass. Its first exact 380-file source tree produces
+> a 381-file sdist and 81-member Windows ABI3 wheel with one native module, all
+> 15 attribution files, NumPy-only unconditional metadata, and a passing fresh
+> installed smoke.
 
 [current-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287022
 [current-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287161

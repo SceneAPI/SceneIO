@@ -75,8 +75,8 @@ wheel.exclude = ["include/**", "lib/**", "share/**", "bin/**"]
 build = "cp312-*"
 skip = "*-musllinux* *_i686 *-win32"
 test-requires = ["numpy"]
-# Packaged cross-platform smoke for representative records, raw codecs, typed
-# adapters, mmap lifetime, inspection, partial reads, and sinks (numpy-only).
+# Manifest-driven NumPy-only smoke for all 50 installed built-ins: public
+# write/read/inspect, streaming paths, and every declared partial selector.
 test-command = "python -m sceneio._wheel_smoke"
 
 [tool.cibuildwheel.linux]

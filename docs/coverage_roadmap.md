@@ -68,8 +68,19 @@
 > Follow-up selector commit `b5e5c55` passes normal run `30296172958` and
 > compiler-instrumented run `30296174522`. The final sequence/splat audit
 > confirms their dedicated partial behavior was already family-owned and pins
-> the seven intentionally cross-family tests that remain shared. R3.3 is
-> locally complete without a format or public API change.
+> the seven intentionally cross-family tests that remain shared. Exact R3.3
+> closure commit `811cb0d` passes normal run `30300122309` and
+> compiler-instrumented run `30300122324`, without a format or public API
+> change. R3.4 is implemented locally: a definition-driven installed-wheel
+> smoke covers all 50 built-ins, public write/read/inspect, a successful
+> public path call for each declared stream-capability direction, and all 32
+> selectors declared by 28 codecs, with zero property-specific exemptions.
+> Dedicated mmap/sink suites retain independent allocation evidence. The
+> complete local suite passes 3,344 tests
+> with four documented skips; Ruff and the five-run strict guard pass. Its
+> first exact 380-file tree produces a 381-file sdist and 81-member Windows
+> ABI3 wheel, and a fresh SceneIO-plus-NumPy environment passes the complete
+> installed smoke.
 
 The granular, per‑format execution plan for covering **every relevant file type
 that has a permissively‑licensed open‑source option**. Sits below the strategy

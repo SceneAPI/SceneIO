@@ -24,8 +24,9 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
       - uses: actions/checkout@v4
-      # Builds cp312 abi3 wheels per [tool.cibuildwheel] and runs the smoke
-      # test-command against each. Bump the pin as cibuildwheel releases.
+      # Builds cp312 abi3 wheels per [tool.cibuildwheel] and runs the complete
+      # manifest-driven 50-built-in NumPy-only smoke against each wheel. Bump
+      # the pin as cibuildwheel releases.
       - name: Build + smoke-test wheels
         uses: pypa/cibuildwheel@v2.21.3
       - uses: actions/upload-artifact@v4

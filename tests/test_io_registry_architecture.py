@@ -10,6 +10,7 @@ import subprocess
 import sys
 import textwrap
 import tomllib
+from dataclasses import replace
 from functools import partial
 from pathlib import Path
 
@@ -242,7 +243,6 @@ def test_repository_coverage_manifest_is_complete_and_resolvable():
     assert len({item["id"] for item in codecs}) == 50
 
     wheel_smoke = importlib.import_module("sceneio._wheel_smoke")
-    wheel_main_source = inspect.getsource(wheel_smoke.main)
     benchmark_contract = json.loads(
         (ROOT / "tests" / "contracts" / "bench_io_v1.json").read_text(
             encoding="utf-8"
@@ -280,15 +280,105 @@ def test_repository_coverage_manifest_is_complete_and_resolvable():
                     raise AssertionError(
                         f"{item['id']} is absent from inspection dispatch"
                     ) from exc
-        if "wheel_smoke_case" in item:
-            helper = getattr(wheel_smoke, item["wheel_smoke_case"])
-            assert callable(helper)
-            assert f"{item['wheel_smoke_case']}(" in wheel_main_source
-            assert item["id"] in inspect.getsource(helper).lower()
-        else:
-            assert item["wheel_smoke_exemption"]
+        assert "wheel_smoke_exemption" not in item
+        helper = getattr(wheel_smoke, item["wheel_smoke_case"])
+        assert callable(helper)
+        assert wheel_smoke._SMOKE_RUNNERS[item["id"]] is helper
         assert item["documentation_row"] == "docs/format_coverage.md"
         assert f"| `{item['id']}` |" in capability_rows
+    assert tuple(wheel_smoke._SMOKE_RUNNERS) == CANONICAL_BUILTIN_IDS
+    assert wheel_smoke._SMOKE_EXEMPTIONS == {}
+
+
+def test_complete_installed_wheel_smoke_is_manifest_driven(tmp_path):
+    wheel_smoke = importlib.import_module("sceneio._wheel_smoke")
+    definitions = tuple(registry.BUILTIN_DEFINITIONS)
+    expected_ids = tuple(codec.id for codec in definitions)
+    expected_plan = []
+    for codec in definitions:
+        runner = wheel_smoke._SMOKE_RUNNERS[codec.id]
+        if runner not in expected_plan:
+            expected_plan.append(runner)
+    assert wheel_smoke._smoke_runner_plan() == tuple(expected_plan)
+
+    public_operations = (
+        sceneio.write,
+        sceneio.read,
+        sceneio.inspect,
+        sceneio.read_partial,
+    )
+    observed = wheel_smoke._run_manifest_smoke(tmp_path)
+    assert tuple(observed) == expected_ids
+    for codec in definitions:
+        assert observed[codec.id] == frozenset(
+            wheel_smoke._expected_smoke_properties(codec)
+        )
+    assert (
+        sceneio.write,
+        sceneio.read,
+        sceneio.inspect,
+        sceneio.read_partial,
+    ) == public_operations
+
+
+def test_installed_wheel_smoke_rejects_missing_property_and_manifest_drift(
+    monkeypatch,
+):
+    wheel_smoke = importlib.import_module("sceneio._wheel_smoke")
+    observations = {
+        codec.id: wheel_smoke._expected_smoke_properties(codec)
+        for codec in registry.BUILTIN_DEFINITIONS
+    }
+    observations["webp"].remove("selector:window")
+    with pytest.raises(
+        AssertionError,
+        match=r"webp:selector:window",
+    ):
+        wheel_smoke._validate_smoke_observations(observations)
+
+    definitions = registry.BUILTIN_DEFINITIONS
+    monkeypatch.setattr(registry, "BUILTIN_DEFINITIONS", definitions[:-1])
+    with pytest.raises(
+        AssertionError,
+        match="runners differ from installed built-in definitions",
+    ):
+        wheel_smoke._smoke_runner_plan()
+
+
+def test_installed_wheel_smoke_stream_properties_follow_capabilities():
+    wheel_smoke = importlib.import_module("sceneio._wheel_smoke")
+    npy = registry.REGISTRY["npy"]
+
+    non_streaming = replace(
+        npy,
+        streams_read=False,
+        streams_write=False,
+    )
+    assert wheel_smoke._expected_smoke_properties(non_streaming) == {
+        "read",
+        "write",
+        "inspect",
+    }
+
+    read_streaming = replace(
+        npy,
+        write=None,
+        streams_read=True,
+        streams_write=False,
+    )
+    assert wheel_smoke._expected_smoke_properties(read_streaming) == {
+        "read",
+        "inspect",
+        "stream_read",
+    }
+
+    assert wheel_smoke._expected_smoke_properties(npy) == {
+        "read",
+        "write",
+        "inspect",
+        "stream_read",
+        "stream_write",
+    }
 
 
 def test_splat_wheel_smoke_invokes_each_family_helper_once():

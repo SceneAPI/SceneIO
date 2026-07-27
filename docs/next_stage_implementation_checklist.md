@@ -41,11 +41,14 @@ R2 is closed. R3.1a is complete in the current tree. R3.1b closes at follow-up
 commit `0bdfe0f`; normal run `30234796010` and
 compiler-instrumented run `30234796025` pass. R3.2 closes at `0e54cf5`;
 normal run `30263506366` and compiler-instrumented run `30263506270` pass.
-R3.3 is locally complete in the current tree. Its latest hosted checkpoint is
-the reconstruction selector follow-up `b5e5c55`, whose normal run
-`30296172958` and compiler-instrumented run `30296174522` pass. The final
-sequence/splat ownership audit changes no test node or codec behavior and is
-awaiting the current closure candidate's hosted gate. R3.4 is next.
+R3.3 is complete and pushed at `811cb0d`. Its normal run `30300122309` and
+compiler-instrumented run `30300122324` pass. R3.4 is implemented locally:
+the installed-wheel smoke is driven by the exact 50 built-in definitions and
+exercises public write/read/inspect, pairs successful public path calls with
+both declared stream-capability directions, and exercises every one of the 32
+declared selectors across 28 partial-capable codecs. The candidate has no
+operation exemption. Its complete local gate passes; exact corrected package
+and review evidence are required before commit.
 
 This is the operational checklist for the repository-organization and
 codec-performance stage defined in
@@ -2586,7 +2589,7 @@ Compiler-instrumented run `30228235535` passes both jobs. `publish.yml` was
 not triggered; no tag or package was published. R3.1a is complete in the
 current tree. R3.1b closes at `0bdfe0f`; normal run `30234796010` and
 compiler-instrumented run `30234796025` pass. R3.2 later closes at
-`0e54cf5`; R3.3 is locally complete and R3.4 is next.
+`0e54cf5`; R3.3 closes at `811cb0d`, and R3.4 is implemented locally.
 
 ## 7. R3 — split benchmark and cross-codec tests
 
@@ -3303,15 +3306,43 @@ unconditional dependency. A fresh SceneIO-plus-NumPy installation returns
 
 ### R3.4 — complete installed-wheel smoke
 
-- [ ] Drive wheel smoke from `BUILTIN_DEFINITIONS`, not a hand-maintained
+- [x] Drive wheel smoke from `BUILTIN_DEFINITIONS`, not a hand-maintained
       helper list.
-- [ ] Assert the smoke-case id union equals the exact installed built-in
+- [x] Assert the smoke-case id union equals the exact installed built-in
       registry id set.
-- [ ] Perform a NumPy-only write/read/inspect operation for each of the 50
+- [x] Perform a NumPy-only write/read/inspect operation for each of the 50
       built-ins, plus streaming and selectors where the manifest declares
       them.
-- [ ] Require a reviewed, property-specific exemption for any operation a
+- [x] Require a reviewed, property-specific exemption for any operation a
       minimal generated fixture cannot exercise.
+
+The manifest-driven runner derives canonical order from
+`BUILTIN_DEFINITIONS`, requires exact equality with `_SMOKE_RUNNERS`,
+`REGISTRY`, and `sceneio.codecs()`, and observes successful public operations
+rather than inferring coverage from helper names. Expected properties are
+derived from each live capability record. Missing, unexpected, malformed, or
+stale exemptions fail with a codec/property diagnostic. The current immutable
+exemption mapping is empty: all 50 built-ins exercise public
+write/read/inspect, every codec declaring a streaming direction completes its
+corresponding public path operation, and all 32 selector declarations are
+exercised. Dedicated mmap and sink suites independently prove the allocation
+semantics behind the stream-capability flags. The exact collection is 3,348
+nodes with sorted normalized
+SHA-256
+`d9d54514509003ae3b9c4d1d1a6aac470ab16068641dcd452953483744d4741f`;
+the complete suite passes 3,344 tests with four documented skips. Ruff,
+`git diff --check`, the source-tree smoke, and the complete five-run strict
+O4/O5 guard pass.
+
+The first exact-tree package qualification has 380 source files and a
+381-file sdist whose only generated member is `PKG-INFO`. Every source member
+matches its staged Git blob. The sdist-derived 81-member Windows ABI3 wheel
+contains one native module and all 15 attribution files, excludes repository
+test/benchmark/build and native development payloads, and keeps NumPy as its
+sole unconditional dependency. A fresh outside-repository environment
+contains only SceneIO 0.2.0 and NumPy 2.5.1 and returns `2` from the complete
+installed smoke. The final documented tree repeats this package gate before
+review.
 
 R3 verification and validation:
 
@@ -3327,6 +3358,8 @@ R3 verification and validation:
 - [x] Full suite and Ruff pass after each family.
 - [x] `bench/bench_io.py` remains the compatible CLI entry point through
       R3.1a; repeat this gate after every remaining R3 unit.
+- [x] R3.4 exact 50-codec wheel-smoke coverage, complete local suite, Ruff,
+      five-run strict guard, and source-derived package qualification pass.
 
 ## 8. R4 — organize CMake, bindings, and native files
 

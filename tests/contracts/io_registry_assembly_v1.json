@@ -328,8 +328,8 @@
     "last": "tests/test_points_binary.py::test_bad_magic_rejected"
   },
   "pytest_candidate_collection": {
-    "count": 3345,
-    "sorted_normalized_node_ids_sha256": "217c227e566a6767fc59b031b1217202ced5ba0dc6a14b3b7fa2d27c0f9314f4",
+    "count": 3348,
+    "sorted_normalized_node_ids_sha256": "d9d54514509003ae3b9c4d1d1a6aac470ab16068641dcd452953483744d4741f",
     "added_nodes": [
       "tests/test_benchmark_memory_protocol.py::test_memory_protocol_contract_and_repeated_sceneio_measurement",
       "tests/test_benchmark_memory_protocol.py::test_missing_sampler_is_explicit_and_strict_mode_rejects_it",
@@ -567,6 +567,9 @@
       "tests/test_io_splat_family_architecture.py::test_splat_family_staging_is_atomic_and_recoverable",
       "tests/test_io_splat_family_architecture.py::test_splat_family_reload_is_inert_and_registry_reload_is_exact",
       "tests/test_io_splat_family_architecture.py::test_splat_family_uniform_public_path_and_path_release",
+      "tests/test_io_registry_architecture.py::test_complete_installed_wheel_smoke_is_manifest_driven",
+      "tests/test_io_registry_architecture.py::test_installed_wheel_smoke_rejects_missing_property_and_manifest_drift",
+      "tests/test_io_registry_architecture.py::test_installed_wheel_smoke_stream_properties_follow_capabilities",
       "tests/test_io_registry_architecture.py::test_splat_wheel_smoke_invokes_each_family_helper_once",
       "tests/test_io_benchmark_qualification.py::test_qualification_ledger_is_complete_immutable_and_checked",
       "tests/test_io_benchmark_qualification.py::test_reviewed_exemptions_match_the_family_contract_exactly",

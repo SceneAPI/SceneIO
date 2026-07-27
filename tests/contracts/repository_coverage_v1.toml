@@ -9,7 +9,7 @@ benchmark_case = "pfm"
 source_suite = "tests/codecs/test_pfm.py"
 documentation_row = "docs/format_coverage.md"
 inspection_source = "src/sceneio/io/_inspectors/arrays.py"
-wheel_smoke_case = "_pfm_and_typed_depth"
+wheel_smoke_case = "_array_formats"
 
 [[codec]]
 id = "colmap_sparse"
@@ -105,7 +105,7 @@ benchmark_case = "ply"
 source_suite = "tests/codecs/test_ply_point.py"
 documentation_row = "docs/format_coverage.md"
 inspection_source = "src/sceneio/io/_inspectors/points.py"
-wheel_smoke_case = "_point_depth_and_flow"
+wheel_smoke_case = "_point_formats"
 
 [[codec]]
 id = "pcd"
@@ -113,7 +113,7 @@ benchmark_case = "pcd"
 source_suite = "tests/codecs/test_pcd.py"
 documentation_row = "docs/format_coverage.md"
 inspection_source = "src/sceneio/io/_inspectors/points.py"
-wheel_smoke_case = "_point_depth_and_flow"
+wheel_smoke_case = "_point_formats"
 
 [[codec]]
 id = "spz"
@@ -209,7 +209,7 @@ benchmark_case = "npy"
 source_suite = "tests/codecs/test_npy_npz.py"
 documentation_row = "docs/format_coverage.md"
 inspection_source = "src/sceneio/io/_inspectors/arrays.py"
-wheel_smoke_exemption = "not yet included in the packaged representative smoke; covered by the source parity suite"
+wheel_smoke_case = "_array_formats"
 
 [[codec]]
 id = "npz"
@@ -217,7 +217,7 @@ benchmark_case = "npz"
 source_suite = "tests/codecs/test_npy_npz.py"
 documentation_row = "docs/format_coverage.md"
 inspection_source = "src/sceneio/io/_inspectors/arrays.py"
-wheel_smoke_exemption = "not yet included in the packaged representative smoke; covered by the source parity suite"
+wheel_smoke_case = "_array_formats"
 
 [[codec]]
 id = "safetensors"
@@ -225,7 +225,7 @@ benchmark_case = "safetensors"
 source_suite = "tests/codecs/test_safetensors.py"
 documentation_row = "docs/format_coverage.md"
 inspection_source = "src/sceneio/io/_inspectors/arrays.py"
-wheel_smoke_case = "_mapped_safetensors"
+wheel_smoke_case = "_array_formats"
 
 [[codec]]
 id = "netpbm"
@@ -233,7 +233,7 @@ benchmark_case = "netpbm"
 source_suite = "tests/codecs/test_netpbm.py"
 documentation_row = "docs/format_coverage.md"
 inspection_source = "src/sceneio/io/_inspectors/images.py"
-wheel_smoke_exemption = "not yet included in the packaged representative smoke; covered by the source parity suite"
+wheel_smoke_case = "_raster_images"
 
 [[codec]]
 id = "png"
@@ -241,7 +241,7 @@ benchmark_case = "png"
 source_suite = "tests/codecs/test_png.py"
 documentation_row = "docs/format_coverage.md"
 inspection_source = "src/sceneio/io/_inspectors/images.py"
-wheel_smoke_case = "_pfm_and_typed_depth"
+wheel_smoke_case = "_raster_images"
 
 [[codec]]
 id = "jpeg"
@@ -249,7 +249,7 @@ benchmark_case = "jpeg"
 source_suite = "tests/codecs/test_jpeg.py"
 documentation_row = "docs/format_coverage.md"
 inspection_source = "src/sceneio/io/_inspectors/images.py"
-wheel_smoke_exemption = "not yet included in the packaged representative smoke; covered by the source parity suite"
+wheel_smoke_case = "_raster_images"
 
 [[codec]]
 id = "bmp"
@@ -257,7 +257,7 @@ benchmark_case = "bmp"
 source_suite = "tests/codecs/test_bmp_tga.py"
 documentation_row = "docs/format_coverage.md"
 inspection_source = "src/sceneio/io/_inspectors/images.py"
-wheel_smoke_case = "_reconstruction_and_images"
+wheel_smoke_case = "_raster_images"
 
 [[codec]]
 id = "tga"
@@ -265,7 +265,7 @@ benchmark_case = "tga"
 source_suite = "tests/codecs/test_bmp_tga.py"
 documentation_row = "docs/format_coverage.md"
 inspection_source = "src/sceneio/io/_inspectors/images.py"
-wheel_smoke_case = "_reconstruction_and_images"
+wheel_smoke_case = "_raster_images"
 
 [[codec]]
 id = "hdr"
@@ -273,7 +273,7 @@ benchmark_case = "hdr"
 source_suite = "tests/codecs/test_hdr.py"
 documentation_row = "docs/format_coverage.md"
 inspection_source = "src/sceneio/io/_inspectors/images.py"
-wheel_smoke_exemption = "not yet included in the packaged representative smoke; covered by the source parity suite"
+wheel_smoke_case = "_raster_images"
 
 [[codec]]
 id = "exr"
@@ -281,7 +281,7 @@ benchmark_case = "exr"
 source_suite = "tests/codecs/test_exr.py"
 documentation_row = "docs/format_coverage.md"
 inspection_source = "src/sceneio/io/_inspectors/images.py"
-wheel_smoke_case = "_pfm_and_typed_depth"
+wheel_smoke_case = "_raster_images"
 
 [[codec]]
 id = "webp"
@@ -289,7 +289,7 @@ benchmark_case = "webp"
 source_suite = "tests/codecs/test_webp.py"
 documentation_row = "docs/format_coverage.md"
 inspection_source = "src/sceneio/io/_inspectors/images.py"
-wheel_smoke_exemption = "not yet included in the packaged representative smoke; covered by the source parity suite"
+wheel_smoke_case = "_raster_images"
 
 [[codec]]
 id = "y4m"
@@ -322,7 +322,7 @@ benchmark_case = "xyz"
 source_suite = "tests/codecs/test_xyz.py"
 documentation_row = "docs/format_coverage.md"
 inspection_source = "src/sceneio/io/_inspectors/points.py"
-wheel_smoke_exemption = "not yet included in the packaged representative smoke; covered by the source parity suite"
+wheel_smoke_case = "_point_formats"
 
 [[codec]]
 id = "pts"
@@ -330,7 +330,7 @@ benchmark_case = "pts"
 source_suite = "tests/codecs/test_pts.py"
 documentation_row = "docs/format_coverage.md"
 inspection_source = "src/sceneio/io/_inspectors/points.py"
-wheel_smoke_case = "_point_depth_and_flow"
+wheel_smoke_case = "_point_formats"
 
 [[codec]]
 id = "las"
@@ -355,7 +355,7 @@ benchmark_case = "flo"
 source_suite = "tests/codecs/test_flo.py"
 documentation_row = "docs/format_coverage.md"
 inspection_source = "src/sceneio/io/_inspectors/arrays.py"
-wheel_smoke_case = "_point_depth_and_flow"
+wheel_smoke_case = "_point_formats"
 
 [[codec]]
 id = "dmb"
@@ -363,7 +363,7 @@ benchmark_case = "dmb"
 source_suite = "tests/codecs/test_dmb.py"
 documentation_row = "docs/format_coverage.md"
 inspection_source = "src/sceneio/io/_inspectors/arrays.py"
-wheel_smoke_case = "_point_depth_and_flow"
+wheel_smoke_case = "_point_formats"
 
 [[codec]]
 id = "bundler"
@@ -379,7 +379,7 @@ benchmark_case = "bal"
 source_suite = "tests/codecs/test_bal.py"
 documentation_row = "docs/format_coverage.md"
 inspection_source = "src/sceneio/io/_inspectors/reconstruction.py"
-wheel_smoke_case = "_reconstruction_and_images"
+wheel_smoke_case = "_bal"
 
 [[codec]]
 id = "nvm"

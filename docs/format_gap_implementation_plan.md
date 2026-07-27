@@ -2067,8 +2067,20 @@ RSS helper shared with the broad suite gains lower ownership. Follow-up
 selector commit `b5e5c55` passes normal run `30296172958` and
 compiler-instrumented run `30296174522`. The final sequence/splat audit proves
 their dedicated partial tests were already family-owned and contract-pins the
-seven intentionally cross-family tests that remain shared. R3.3 is locally
-complete without changing a format or public API.
+seven intentionally cross-family tests that remain shared. R3.3 is complete
+at `811cb0d`; normal run `30300122309` and compiler-instrumented run
+`30300122324` pass without a format or public API change. R3.4 is implemented
+locally. The installed-wheel smoke derives its exact 50 ids and order from
+`BUILTIN_DEFINITIONS`, observes successful public write/read/inspect, pairs
+each declared stream-capability direction with its successful public path
+operation, and exercises all 32 selectors declared by the 28 partial-capable
+codecs. Dedicated mmap and sink tests retain independent allocation evidence.
+Its property-specific exemption contract is empty.
+The complete local suite passes 3,344 tests with four documented skips; Ruff
+and the five-run strict guard pass. The first exact 380-file tree produces a
+381-file sdist and 81-member Windows ABI3 wheel with one native module, all 15
+attribution files, NumPy-only unconditional metadata, and a passing fresh
+installed smoke.
 
 Status terms are strict:
 

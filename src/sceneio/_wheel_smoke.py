@@ -12,19 +12,186 @@ import mmap
 import shutil
 import struct
 import tempfile
+from collections.abc import Callable, Iterator, Mapping
+from contextlib import contextmanager
 from pathlib import Path
+from types import MappingProxyType
 
 import numpy as np
 
 import sceneio
 from sceneio import _core
+from sceneio.io import registry
+
+_PARTIAL_SELECTORS = (
+    "window",
+    "points",
+    "faces",
+    "mesh_id",
+    "primitive_id",
+    "states",
+    "frames",
+    "image_id",
+    "pair",
+    "tensors",
+    "slices",
+)
+
+# Every supported operation is exercised by the installed smoke today. This
+# typed empty mapping is the only place a future, reviewed property-specific
+# exemption may be added; the validator rejects stale or incomplete entries.
+_SMOKE_EXEMPTIONS: Mapping[tuple[str, str], Mapping[str, str]] = (
+    MappingProxyType({})
+)
+
+
+def _record_observation(
+    observations: dict[str, set[str]],
+    format_id: str,
+    property_name: str,
+) -> None:
+    if format_id not in observations:
+        raise AssertionError(
+            f"wheel smoke observed non-built-in codec {format_id!r}"
+        )
+    observations[format_id].add(property_name)
+
+
+@contextmanager
+def _observe_public_io() -> Iterator[dict[str, set[str]]]:
+    definitions = tuple(registry.BUILTIN_DEFINITIONS)
+    observations = {codec.id: set() for codec in definitions}
+    capabilities = {codec.id: codec.capabilities() for codec in definitions}
+    original_write = sceneio.write
+    original_read = sceneio.read
+    original_inspect = sceneio.inspect
+    original_partial = sceneio.read_partial
+    original_detect = sceneio.detect
+
+    def resolve(path, explicit_format) -> str:
+        return explicit_format or original_detect(path)
+
+    def observed_write(obj, path, **kwargs):
+        result = original_write(obj, path, **kwargs)
+        format_id = resolve(path, kwargs.get("format"))
+        _record_observation(observations, format_id, "write")
+        if capabilities[format_id].streams_write:
+            _record_observation(observations, format_id, "stream_write")
+        return result
+
+    def observed_read(path, **kwargs):
+        result = original_read(path, **kwargs)
+        format_id = resolve(path, kwargs.get("format"))
+        _record_observation(observations, format_id, "read")
+        if capabilities[format_id].streams_read:
+            _record_observation(observations, format_id, "stream_read")
+        return result
+
+    def observed_inspect(path, **kwargs):
+        result = original_inspect(path, **kwargs)
+        format_id = resolve(path, kwargs.get("format"))
+        _record_observation(observations, format_id, "inspect")
+        return result
+
+    def observed_partial(path, **kwargs):
+        result = original_partial(path, **kwargs)
+        format_id = resolve(path, kwargs.get("format"))
+        selectors = tuple(
+            selector
+            for selector in _PARTIAL_SELECTORS
+            if kwargs.get(selector) is not None
+        )
+        if len(selectors) != 1:
+            raise AssertionError(
+                f"wheel smoke partial call for {format_id!r} has selectors "
+                f"{selectors!r}"
+            )
+        _record_observation(
+            observations,
+            format_id,
+            f"selector:{selectors[0]}",
+        )
+        return result
+
+    sceneio.write = observed_write
+    sceneio.read = observed_read
+    sceneio.inspect = observed_inspect
+    sceneio.read_partial = observed_partial
+    try:
+        yield observations
+    finally:
+        sceneio.write = original_write
+        sceneio.read = original_read
+        sceneio.inspect = original_inspect
+        sceneio.read_partial = original_partial
+
+
+def _expected_smoke_properties(codec) -> set[str]:
+    capabilities = codec.capabilities()
+    expected = {"read", "inspect"}
+    if capabilities.streams_read:
+        expected.add("stream_read")
+    if capabilities.can_write:
+        expected.add("write")
+    if capabilities.streams_write:
+        expected.add("stream_write")
+    expected.update(
+        f"selector:{selector}" for selector in capabilities.partial_selectors
+    )
+    return expected
+
+
+def _validate_smoke_observations(
+    observations: Mapping[str, set[str]],
+) -> None:
+    definitions = tuple(registry.BUILTIN_DEFINITIONS)
+    built_in_ids = tuple(codec.id for codec in definitions)
+    if built_in_ids != tuple(registry.REGISTRY):
+        raise AssertionError(
+            "installed built-in definitions and registry order differ"
+        )
+    if built_in_ids != tuple(sceneio.codecs()):
+        raise AssertionError(
+            "installed public codec ids differ from built-in definitions"
+        )
+    if built_in_ids != tuple(observations):
+        raise AssertionError("wheel-smoke observation ids are incomplete")
+
+    expected_exemptions = set()
+    failures = []
+    for codec in definitions:
+        expected = _expected_smoke_properties(codec)
+        observed = observations[codec.id]
+        for property_name in sorted(expected - observed):
+            exemption_key = (codec.id, property_name)
+            if exemption_key in _SMOKE_EXEMPTIONS:
+                expected_exemptions.add(exemption_key)
+            else:
+                failures.append(f"{codec.id}:{property_name}")
+        unexpected = sorted(observed - expected)
+        failures.extend(f"{codec.id}:unexpected:{item}" for item in unexpected)
+
+    if set(_SMOKE_EXEMPTIONS) != expected_exemptions:
+        failures.append("stale wheel-smoke exemption")
+    for key, exemption in _SMOKE_EXEMPTIONS.items():
+        if set(exemption) != {"reason", "verification"} or not all(
+            isinstance(value, str) and value.strip()
+            for value in exemption.values()
+        ):
+            failures.append(f"invalid wheel-smoke exemption {key!r}")
+    if failures:
+        raise AssertionError(
+            "installed-wheel smoke coverage is incomplete: "
+            + ", ".join(failures)
+        )
 
 
 def _pfm_and_typed_depth(root: Path, values: np.ndarray) -> None:
     encoded = _core.write_pfm(values)
     assert np.array_equal(_core.read_pfm(memoryview(encoded)), values)
     path = root / "values.pfm"
-    path.write_bytes(encoded)
+    sceneio.write(values, path, format="pfm")
+    assert path.read_bytes() == bytes(encoded)
     assert np.array_equal(sceneio.read(path), values)
     info = sceneio.inspect(path)
     assert info.shape == values.shape
@@ -92,11 +259,38 @@ def _mapped_safetensors(root: Path, values: np.ndarray) -> None:
     assert np.array_equal(record["x"], values)
     assert not record["x"].flags.writeable
     assert sceneio.inspect(path).arrays[0].shape == values.shape
+    named = sceneio.read_partial(path, tensors=("x",))
+    assert np.array_equal(named["x"], values)
     selected = sceneio.read_partial(path, slices={"x": (1, 3)})
     assert np.array_equal(selected["x"], values[1:3])
-    del record, selected
+    del record, named, selected
     gc.collect()
     path.unlink()
+
+
+def _numpy_archives(root: Path, values: np.ndarray) -> None:
+    npy = root / "values.npy"
+    sceneio.write(values, npy, format="npy")
+    assert np.array_equal(sceneio.read(npy), values)
+    npy_info = sceneio.inspect(npy)
+    assert npy_info.shape == values.shape
+    assert npy_info.dtype == "float32"
+
+    arrays = {"x": values, "indices": np.arange(5, dtype=np.int64)}
+    npz = root / "values.npz"
+    sceneio.write(arrays, npz, format="npz")
+    decoded = sceneio.read(npz)
+    assert np.array_equal(decoded["x"], values)
+    assert np.array_equal(decoded["indices"], arrays["indices"])
+    npz_info = sceneio.inspect(npz)
+    assert tuple(item.name for item in npz_info.arrays) == ("x", "indices")
+
+
+def _array_formats(root: Path) -> None:
+    values = np.arange(12, dtype=np.float32).reshape(3, 4)
+    _pfm_and_typed_depth(root, values)
+    _numpy_archives(root, values)
+    _mapped_safetensors(root, values)
 
 
 def _las_waveform(root: Path) -> None:
@@ -546,13 +740,27 @@ def _gltf_glb(root: Path) -> None:
             selected.primitive_at(0).face_indices,
             primitive.face_indices,
         )
+        selected_mesh = sceneio.read_partial(path, mesh_id=0)
+        assert selected_mesh.num_primitives == 1
+        assert np.array_equal(
+            selected_mesh.primitive_at(0).positions,
+            primitive.positions,
+        )
 
 
 def _point_depth_and_flow(root: Path, values: np.ndarray) -> None:
     points = root / "points.pts"
     sceneio.write(_core.point_cloud(values[:, :3]), points)
+    assert np.array_equal(sceneio.read(points).positions, values[:, :3])
     assert sceneio.inspect(points).count == 3
     selected = sceneio.read_partial(points, points=(1, 3))
+    assert np.array_equal(selected.positions, values[1:3, :3])
+
+    xyz = root / "points.xyz"
+    sceneio.write(_core.point_cloud(values[:, :3]), xyz, format="xyz")
+    assert np.array_equal(sceneio.read(xyz).positions, values[:, :3])
+    assert sceneio.inspect(xyz).count == 3
+    selected = sceneio.read_partial(xyz, points=(1, 3))
     assert np.array_equal(selected.positions, values[1:3, :3])
 
     ply = root / "points.ply"
@@ -560,6 +768,14 @@ def _point_depth_and_flow(root: Path, values: np.ndarray) -> None:
         values[:, :3],
         colors=np.arange(9, dtype=np.uint8).reshape(3, 3),
     )
+    sceneio.write(ply_record, ply, format="ply")
+    assert sceneio.detect(ply) == "ply"
+    assert np.array_equal(sceneio.read(ply).positions, values[:, :3])
+    assert np.array_equal(
+        sceneio.read_partial(ply, points=(1, 3)).colors,
+        ply_record.colors[1:3],
+    )
+    assert sceneio.inspect(ply).count == 3
     ply.write_bytes(_core.write_ply(ply_record, "binary_big_endian"))
     assert sceneio.detect(ply) == "ply"
     assert np.array_equal(sceneio.read(ply).positions, values[:, :3])
@@ -580,6 +796,15 @@ def _point_depth_and_flow(root: Path, values: np.ndarray) -> None:
             dtype=np.float64,
         ),
     )
+    sceneio.write(pcd_record, pcd, format="pcd")
+    assert sceneio.detect(pcd) == "pcd"
+    pcd_decoded = sceneio.read(pcd)
+    assert np.array_equal(pcd_decoded.positions, values[:, :3])
+    assert np.array_equal(pcd_decoded.colors, pcd_record.colors)
+    assert (pcd_decoded.width, pcd_decoded.height) == (1, 3)
+    assert pcd_decoded.viewpoint == pcd_record.viewpoint
+    assert sceneio.inspect(pcd).count == 3
+
     pcd.write_bytes(_core.write_pcd(pcd_record, "binary_compressed"))
     assert sceneio.detect(pcd) == "pcd"
     pcd_decoded = sceneio.read(pcd)
@@ -613,13 +838,26 @@ def _point_depth_and_flow(root: Path, values: np.ndarray) -> None:
     assert flow.vectors.shape == (2, 3, 2)
     assert flow.component_order == "uv"
     flo = root / "flow.flo"
-    sceneio.write_flow(flow, flo)
+    sceneio.write(flow.vectors, flo, format="flo")
+    generic_flow = sceneio.read(flo)
+    assert np.array_equal(generic_flow, flow.vectors)
+    assert sceneio.inspect(flo).shape == (2, 3, 2)
+    selected_flow = sceneio.read_partial(
+        flo,
+        window=(0, 2, 1, 3),
+    )
+    assert np.array_equal(selected_flow, flow.vectors[:, 1:3])
     decoded = sceneio.read_flow(flo)
     assert np.array_equal(decoded.vectors, flow.vectors)
     assert sceneio.inspect_flow(flo).metadata["unit"] == "pixels"
 
 
-def _reconstruction_and_images(root: Path) -> None:
+def _point_formats(root: Path) -> None:
+    values = np.arange(12, dtype=np.float32).reshape(3, 4)
+    _point_depth_and_flow(root, values)
+
+
+def _bal(root: Path) -> None:
     bal_bytes = (
         b"1 1 1\n"
         b"0 0 10.5 20.25\n"
@@ -632,13 +870,43 @@ def _reconstruction_and_images(root: Path) -> None:
     assert sceneio.inspect(bal).metadata["num_observations"] == 1
     assert sceneio.read(bal).num_points3D == 1
 
+
+def _raster_images(root: Path) -> None:
     pixels = np.arange(36, dtype=np.uint8).reshape(3, 4, 3)
     image = _core.image(pixels, color_space="srgb")
-    for suffix in (".bmp", ".tga"):
+    for format_id, suffix in (
+        ("netpbm", ".ppm"),
+        ("png", ".png"),
+        ("jpeg", ".jpg"),
+        ("bmp", ".bmp"),
+        ("tga", ".tga"),
+        ("webp", ".webp"),
+    ):
         path = root / f"image{suffix}"
-        sceneio.write(image, path)
-        assert np.array_equal(sceneio.read(path).pixels, pixels)
+        sceneio.write(image, path, format=format_id)
+        decoded = sceneio.read(path, format=format_id)
+        assert decoded.pixels.shape == pixels.shape
+        if format_id in {"bmp", "tga"}:
+            assert np.array_equal(decoded.pixels, pixels)
         assert sceneio.inspect(path).shape == (3, 4, 3)
+        if format_id in {"netpbm", "webp"}:
+            selected = sceneio.read_partial(
+                path,
+                format=format_id,
+                window=(1, 3, 1, 4),
+            )
+            assert selected.pixels.shape == (2, 3, 3)
+
+    linear_pixels = np.arange(36, dtype=np.float32).reshape(3, 4, 3) / 35
+    linear_image = _core.image(linear_pixels, color_space="linear")
+    for format_id, suffix in (("hdr", ".hdr"), ("exr", ".exr")):
+        path = root / f"image{suffix}"
+        sceneio.write(linear_image, path, format=format_id)
+        decoded = sceneio.read(path, format=format_id)
+        assert decoded.pixels.shape == linear_pixels.shape
+        info = sceneio.inspect(path, format=format_id)
+        assert info.shape == (3, 4, 3)
+        assert info.dtype == "float32"
 
 
 def _remove_smoke_artifact(path: Path) -> None:
@@ -919,6 +1187,7 @@ def _image_sequences(root: Path) -> None:
     sceneio.write(lazy, copied)
     assert sceneio.detect(copied) == "image_sequence"
     assert (copied / "frame2.pgm").read_bytes() == first
+    assert sceneio.inspect(copied).count == 2
     assert sceneio.read_partial(copied, frames=(1, 2)).num_frames == 1
 
     empty = np.empty(0, np.int64)
@@ -951,29 +1220,99 @@ def _image_sequences(root: Path) -> None:
     assert sceneio.read_partial(path, frames=(1, 2)).y.tobytes() == y[1:].tobytes()
 
 
+_SMOKE_RUNNERS: Mapping[str, Callable[[Path], None]] = MappingProxyType(
+    {
+        "pfm": _array_formats,
+        "colmap_sparse": _reconstruction_formats,
+        "gaussian_ply": _splats,
+        "compressed_ply": _splats,
+        "sog": _splats,
+        "ksplat": _splats,
+        "ply_mesh": _mesh_ply,
+        "obj": _obj_mtl,
+        "stl": _stl_off,
+        "off": _stl_off,
+        "gltf": _gltf_glb,
+        "glb": _gltf_glb,
+        "ply": _point_formats,
+        "pcd": _point_formats,
+        "spz": _splats,
+        "transforms_json": _reconstruction_formats,
+        "tum": _reconstruction_formats,
+        "kitti": _reconstruction_formats,
+        "euroc_state": _state_trajectory,
+        "opencv_yaml": _camera_calibration,
+        "opencv_xml": _camera_calibration,
+        "ros_camera_info": _camera_calibration,
+        "kalibr": _camera_calibration,
+        "g2o": _pose_graph,
+        "colmap_db": _colmap_database,
+        "npy": _array_formats,
+        "npz": _array_formats,
+        "safetensors": _array_formats,
+        "netpbm": _raster_images,
+        "png": _raster_images,
+        "jpeg": _raster_images,
+        "bmp": _raster_images,
+        "tga": _raster_images,
+        "hdr": _raster_images,
+        "exr": _raster_images,
+        "webp": _raster_images,
+        "y4m": _image_sequences,
+        "image_sequence": _image_sequences,
+        "colmap_sparse_txt": _reconstruction_formats,
+        "xyz": _point_formats,
+        "pts": _point_formats,
+        "las": _las_waveform,
+        "laz": _laz,
+        "flo": _point_formats,
+        "dmb": _point_formats,
+        "bundler": _reconstruction_formats,
+        "bal": _bal,
+        "nvm": _reconstruction_formats,
+        "openmvg": _reconstruction_formats,
+        "splat": _splats,
+    }
+)
+
+
+def _smoke_runner_plan() -> tuple[Callable[[Path], None], ...]:
+    definitions = tuple(registry.BUILTIN_DEFINITIONS)
+    built_in_ids = tuple(codec.id for codec in definitions)
+    if tuple(_SMOKE_RUNNERS) != built_in_ids:
+        raise AssertionError(
+            "wheel-smoke runners differ from installed built-in definitions"
+        )
+    plan = []
+    seen = set()
+    for codec in definitions:
+        runner = _SMOKE_RUNNERS[codec.id]
+        if runner not in seen:
+            seen.add(runner)
+            plan.append(runner)
+    return tuple(plan)
+
+
+def _run_manifest_smoke(root: Path) -> Mapping[str, frozenset[str]]:
+    with _observe_public_io() as observations:
+        for index, runner in enumerate(_smoke_runner_plan()):
+            runner_root = root / f"{index:02d}-{runner.__name__.removeprefix('_')}"
+            runner_root.mkdir()
+            runner(runner_root)
+    _validate_smoke_observations(observations)
+    return MappingProxyType(
+        {
+            format_id: frozenset(properties)
+            for format_id, properties in observations.items()
+        }
+    )
+
+
 def main() -> None:
     assert importlib.util.find_spec("sceneio._native_test") is None
     assert not any("test" in name.lower() for name in dir(_core))
     with tempfile.TemporaryDirectory(prefix="sceneio-wheel-smoke-") as directory:
-        root = Path(directory)
-        values = np.arange(12, dtype=np.float32).reshape(3, 4)
-        _pfm_and_typed_depth(root, values)
-        _mapped_safetensors(root, values)
-        _las_waveform(root)
-        _laz(root)
-        _splats(root)
-        _mesh_ply(root)
-        _obj_mtl(root)
-        _stl_off(root)
-        _gltf_glb(root)
-        _point_depth_and_flow(root, values)
-        _reconstruction_and_images(root)
-        _reconstruction_formats(root)
-        _state_trajectory(root)
-        _camera_calibration(root)
-        _pose_graph(root)
-        _colmap_database(root)
-        _image_sequences(root)
+        _run_manifest_smoke(Path(directory))
     print(_core.__phase__)
 
 

@@ -977,13 +977,34 @@ That mapping proves the shared suite contains both splat and non-splat formats
 but no sequence format. No empty family module or artificial node split is
 introduced.
 
-The closure candidate collects 3,345 tests and passes 3,341 with four
+The closure tree collects 3,345 tests and passes 3,341 with four
 documented skips. Ruff and the complete five-run strict O4/O5 guard pass. Its
 exact staged tree contains 380 source files and produces a 381-file sdist and
 81-member Windows ABI3 wheel. The wheel contains one native module and all 15
 attribution files, excludes repository test/benchmark/build payloads, keeps
 NumPy as its sole unconditional dependency, and passes a fresh
 SceneIO-plus-NumPy installed smoke.
+Exact R3.3 closure commit `811cb0d` passes normal run `30300122309` and
+compiler-instrumented run `30300122324`.
+
+R3.4 replaces the hand-called installed-smoke helper list with an immutable
+format-to-runner map whose ids and order must equal `BUILTIN_DEFINITIONS`,
+`REGISTRY`, and the public codec listing. Successful public calls are observed
+per format, and expected properties come from live capability records. The
+current candidate covers write/read/inspect for all 50 built-ins, pairs each
+declared stream-capability direction with a successful corresponding public
+path call, and exercises all 32 selectors declared by 28 partial-capable
+codecs. Dedicated mmap and sink suites separately prove the allocation
+semantics behind those flags. The property-specific exemption contract is
+present but empty; missing, unexpected, incomplete, or stale entries fail the
+architecture check.
+The candidate collects 3,348 tests and passes 3,344 with four documented
+skips; Ruff and the complete five-run strict guard pass. Its first frozen
+380-file tree produces a byte-identical 381-file sdist and an 81-member
+Windows ABI3 wheel with one native module, all 15 attribution files, no
+excluded layout payload, and NumPy as its sole unconditional dependency. A
+fresh outside-repository SceneIO-plus-NumPy environment passes the complete
+installed smoke.
 
 ### R4. Organize native build and bindings
 

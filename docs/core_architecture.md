@@ -13,6 +13,18 @@ things that keep this expansible as the format list from
 > [`repository_organization_plan.md`](repository_organization_plan.md) pass.
 > The paths below describe current wiring; the linked plan defines the target
 > family boundaries and compatibility tests.
+>
+> R3.3 closes at `811cb0d` with normal run `30300122309` and
+> compiler-instrumented run `30300122324` passing. The R3.4 installed-wheel
+> smoke is now manifest-driven: it requires exact agreement among all 50
+> built-in definitions, the installed registry, and the public codec list,
+> then observes public write/read/inspect and every declared selector, while
+> pairing each declared stream-capability direction with a successful
+> corresponding public path call. Dedicated mmap and sink tests retain the
+> independent allocation proof. The current property-specific exemption set
+> is empty. The
+> complete suite passes 3,344 tests with four documented skips, and the first
+> exact-tree 380/381/81 source/sdist/wheel package gate passes.
 
 ## Layering
 

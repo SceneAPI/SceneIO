@@ -2388,3 +2388,39 @@ wheel with one native module and all 15 attribution files. The wheel excludes
 repository test/benchmark/build payloads, keeps NumPy as its sole
 unconditional dependency, and passes a fresh SceneIO-plus-NumPy installed
 smoke.
+
+Exact R3.3 closure commit `811cb0d` passes normal run
+[30300122309](https://github.com/SceneAPI/SceneIO/actions/runs/30300122309)
+and compiler-instrumented run
+[30300122324](https://github.com/SceneAPI/SceneIO/actions/runs/30300122324).
+
+## R3.4 complete installed-wheel smoke qualification (2026-07-27)
+
+The package smoke no longer relies on a manually called representative helper
+list. An immutable format-to-runner map must equal the exact
+`BUILTIN_DEFINITIONS` ids and order, and the runner rejects disagreement with
+the installed registry or public codec listing. Successful public operations
+are observed per format; expected write/read/inspect, stream, and partial
+properties are derived from each live capability record.
+
+The candidate covers all 50 built-ins, pairs each declared streaming direction
+with a successful corresponding public path call, and exercises all 32
+selector declarations across the 28 partial-capable codecs. Dedicated mmap
+and sink suites independently prove the allocation behavior represented by
+those capability flags. The reviewable property-specific exemption mapping is
+empty. This changes package verification breadth only: no codec, timed path,
+fixture payload, or performance threshold changes, so no speedup is claimed.
+Focused
+architecture/documentation tests and the source-tree NumPy-only smoke pass.
+The complete tree collects 3,348 tests and passes 3,344 with four documented
+skips; Ruff and the complete five-run strict O4/O5 guard pass.
+
+The first frozen package tree contains 380 files and produces a 381-file sdist
+whose only generated member is `PKG-INFO`; all source members are byte-identical
+to their staged Git blobs. Its sdist-derived 81-member Windows ABI3 wheel has
+one native module, all 15 attribution files, no excluded repository or native
+development payload, and NumPy as its sole unconditional dependency. A fresh
+outside-repository SceneIO-plus-NumPy environment returns `2` from the
+complete installed smoke. The final documentation tree repeats this package
+gate before review; artifact hashes remain in immutable commit evidence rather
+than this self-referential source document.
