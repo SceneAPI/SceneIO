@@ -242,19 +242,42 @@ def _execute_operation(
     raise ValueError(f"unknown memory operation kind {kind!r}")
 
 
-def _high_water_rss(process: Any) -> tuple[int, str]:
+def _high_water_rss(
+    process: Any,
+    *,
+    observed_current_rss: int = 0,
+) -> tuple[int, str]:
+    """Return a coherent lifetime RSS peak and its native backend.
+
+    ``psutil`` current RSS and the platform lifetime counter do not
+    necessarily use an identical kernel accounting boundary.  In particular,
+    Linux ``/proc`` RSS can briefly exceed ``ru_maxrss`` even though a
+    lifetime maximum cannot logically be below an observed current value.
+    Preserve the native counter as the named backend while taking the
+    monotonic envelope of it and every current-RSS observation.
+    """
+
     memory = process.memory_info()
     peak_wset = getattr(memory, "peak_wset", None)
     if peak_wset is not None:
-        return int(peak_wset), "psutil_peak_wset"
+        return (
+            max(int(peak_wset), int(memory.rss), observed_current_rss),
+            "psutil_peak_wset",
+        )
     try:
         import resource
     except ImportError:
-        return int(memory.rss), "psutil_current_only"
+        return (
+            max(int(memory.rss), observed_current_rss),
+            "psutil_current_only",
+        )
     value = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
     if sys.platform != "darwin":
         value *= 1024
-    return int(value), "resource_ru_maxrss"
+    return (
+        max(int(value), int(memory.rss), observed_current_rss),
+        "resource_ru_maxrss",
+    )
 
 
 def _calibrate_high_water(
@@ -267,7 +290,10 @@ def _calibrate_high_water(
     backend = ""
     for _ in range(attempts):
         current = int(process.memory_info().rss)
-        high_water, backend = _high_water_rss(process)
+        high_water, backend = _high_water_rss(
+            process,
+            observed_current_rss=current,
+        )
         headroom = max(0, high_water - current)
         if headroom == 0:
             return retained, calibration_bytes, current, high_water, backend
@@ -279,7 +305,10 @@ def _calibrate_high_water(
         retained.append(padding)
         calibration_bytes += extent
     current = int(process.memory_info().rss)
-    high_water, backend = _high_water_rss(process)
+    high_water, backend = _high_water_rss(
+        process,
+        observed_current_rss=current,
+    )
     return retained, calibration_bytes, current, high_water, backend
 
 
@@ -349,7 +378,6 @@ def _run_available(
             )
             measured_count = 1
             peak[0] = max(peak[0], int(process.memory_info().rss))
-            peak_high_water, _ = _high_water_rss(process)
         finally:
             running.clear()
             thread.join(timeout=5)
@@ -359,6 +387,11 @@ def _run_available(
             raise RuntimeError(
                 f"RSS sampler failed: {sampler_errors[0]}"
             ) from sampler_errors[0]
+        peak[0] = max(peak[0], int(process.memory_info().rss))
+        peak_high_water, _ = _high_water_rss(
+            process,
+            observed_current_rss=peak[0],
+        )
         del measured_value
         del calibration_values
     except Exception as exc:

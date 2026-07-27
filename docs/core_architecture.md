@@ -175,9 +175,12 @@ sceneio._core (C++ / nanobind)
   `memory_child.py`: one warm-up precedes the RSS baseline, each child performs
   exactly one measured operation, and unavailable sampling remains explicit
   rather than becoming a zero. A retained calibration closes any
-  pre-measurement high-water gap; strict evidence rejects residual headroom,
-  fewer than three samples, request/response mismatch, differing semantic
-  operation signatures, and a spike at any intermediate payload size.
+  pre-measurement high-water gap. The reported lifetime peak is the monotonic
+  envelope of the platform counter and every observed current-RSS value, and
+  the sampler stops before the final envelope while the measured result stays
+  alive. Strict evidence rejects residual headroom, fewer than three samples,
+  request/response mismatch, differing semantic operation signatures, and a
+  spike at any intermediate payload size.
   Repeated 8/48 MiB controls distinguish a bounded 64 KiB read from a
   whole-payload allocation, and the protocol test is wired into the
   three-platform mmap lane. R3.2 moves family fixtures/oracles before moving

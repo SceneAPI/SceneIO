@@ -2,13 +2,16 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 from dataclasses import fields, replace
 from pathlib import Path
+from types import SimpleNamespace
 
 import numpy as np
 import pytest
 
-from bench.io_bench.memory_child import _execute_operation
+from bench.io_bench import memory_child
+from bench.io_bench.memory_child import _execute_operation, _high_water_rss
 from bench.io_bench.memory_protocol import (
     DEFAULT_SAMPLES,
     DEFAULT_SAMPLING_INTERVAL_SECONDS,
@@ -138,6 +141,9 @@ def test_memory_protocol_contract_and_repeated_sceneio_measurement(
         "response_keys"
     ]
     assert CONTRACT["schema_version"] == SCHEMA_VERSION
+    assert CONTRACT["available_invariants"][
+        "high_water_envelopes_observed_current_rss"
+    ] is True
     assert CONTRACT["defaults"]["samples"] == DEFAULT_SAMPLES
     assert (
         CONTRACT["defaults"]["sampling_interval_seconds"]
@@ -445,7 +451,10 @@ def test_payload_controls_distinguish_bounded_and_full_allocation(tmp_path):
         assess_payload_growth(mixed_warmups)
 
 
-def test_bounded_read_control_returns_the_requested_bytes(tmp_path):
+def test_bounded_read_control_returns_the_requested_bytes(
+    tmp_path,
+    monkeypatch,
+):
     expected = bytes(range(256)) * 256
     path = tmp_path / "bounded.bin"
     path.write_bytes(expected)
@@ -470,6 +479,84 @@ def test_bounded_read_control_returns_the_requested_bytes(tmp_path):
             payload_bytes=len(expected),
             allocation_headroom_bytes=0,
         )
+
+    class LowNativeHighWater:
+        rss = 96 * 1024
+
+    class Process:
+        def memory_info(self):
+            return LowNativeHighWater()
+
+    resource = SimpleNamespace(
+        RUSAGE_SELF=0,
+        getrusage=lambda unused: SimpleNamespace(ru_maxrss=64),
+    )
+    monkeypatch.setitem(sys.modules, "resource", resource)
+    monkeypatch.setattr(sys, "platform", "linux")
+    high_water, backend = _high_water_rss(
+        Process(),
+        observed_current_rss=128 * 1024,
+    )
+    assert high_water == 128 * 1024
+    assert backend == "resource_ru_maxrss"
+
+    class FinalSampleThread:
+        def __init__(self, *, target, **unused):
+            captured = dict(
+                zip(
+                    target.__code__.co_freevars,
+                    (
+                        cell.cell_contents
+                        for cell in target.__closure__
+                    ),
+                    strict=True,
+                )
+            )
+            self.peak = captured["peak"]
+            self.ready = captured["ready"]
+
+        def start(self):
+            self.ready.set()
+
+        def join(self, timeout):
+            self.peak[0] = 256 * 1024
+
+        def is_alive(self):
+            return False
+
+    class Psutil:
+        @staticmethod
+        def Process():
+            return Process()
+
+    class Sceneio:
+        @staticmethod
+        def codecs():
+            return ()
+
+    monkeypatch.setattr(
+        memory_child.threading,
+        "Thread",
+        FinalSampleThread,
+    )
+    case = MemoryCase(
+        "final-sampler-peak",
+        0,
+        MemoryOperation("sceneio_registry"),
+    )
+    response = memory_child._run_available(
+        _child_request(
+            case,
+            MemoryOperation("sceneio_registry"),
+            0,
+            DEFAULT_SAMPLING_INTERVAL_SECONDS,
+        ),
+        sceneio=Sceneio(),
+        psutil=Psutil(),
+    )
+    assert response["peak_rss_bytes"] == 256 * 1024
+    assert response["peak_high_water_rss_bytes"] >= 256 * 1024
+    MemorySample.from_response(response)
 
 
 @pytest.mark.parametrize(

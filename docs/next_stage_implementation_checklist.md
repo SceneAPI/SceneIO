@@ -2662,9 +2662,12 @@ at least three samples per size, requires zero residual high-water headroom,
 binds every echoed field to the request, and compares every larger size with
 the smallest. The checked `memory_protocol_v1.json` contract rejects a
 numeric RSS value for an unavailable sampler, accepts only the three declared
-platform high-water backends, and derives residual headroom from the reported
-baseline counters. Instrumented runtimes are explicitly unavailable for this
-RSS protocol and continue to exercise the ordinary codec suite separately.
+platform high-water backends, derives residual headroom from the reported
+baseline counters, and requires the lifetime value to envelope every observed
+current-RSS sample. The sampler stops before the final envelope is captured
+while measured and calibration values remain alive. Instrumented runtimes are
+explicitly unavailable for this RSS protocol and continue to exercise the
+ordinary codec suite separately.
 
 The generated control corpus uses 8 MiB and 48 MiB sparse files with three
 fresh children per size. A 64 KiB bounded read reports median deltas of
@@ -2702,6 +2705,18 @@ R3.1b local exit evidence:
   `python -m sceneio._wheel_smoke`;
 - Ruff, documentation consistency, JSON/YAML parsing, and `git diff --check`
   pass. No release workflow, tag, or publication action was triggered.
+
+The first exact hosted attempt, `aafd283`, exposed a Linux accounting boundary:
+`/proc` current RSS can briefly exceed `ru_maxrss`, and the sampler could
+record one final current value after the native lifetime counter was captured.
+Normal run `30234117571` therefore rejected two incoherent child responses;
+compiler-instrumented run `30234117580` passes. The follow-up takes a monotonic
+envelope of the native counter and observed current values only after sampler
+shutdown. Deterministic controls reproduce both the low-native-counter case
+and a higher sample arriving during `join()`. The full 3,316-test local suite,
+Ruff, all three reviews, and the 11-test protocol suite in the pinned
+manylinux2014 GCC-10 image pass. Exact follow-up hosted validation remains
+pending.
 
 ### R3.2 — family fixtures, oracles, and sweep runner
 

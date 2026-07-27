@@ -53,6 +53,7 @@
       "psutil_thread+psutil_peak_wset",
       "psutil_thread+resource_ru_maxrss"
     ],
+    "high_water_envelopes_observed_current_rss": true,
     "headroom_equals_baseline_difference": true,
     "response_matches_request": true
   },

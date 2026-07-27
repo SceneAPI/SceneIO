@@ -1642,6 +1642,12 @@ match the request. Growth assessment compares every larger payload with the
 smallest, not only the endpoints. The validator accepts only Windows
 `peak_wset`, Linux/macOS `ru_maxrss`, or the explicitly non-qualifying
 current-only fallback, and recomputes headroom from the baseline counters.
+The lifetime value is the monotonic envelope of the named native counter and
+all observed current-RSS samples. This preserves a coherent high-water value
+when Linux `/proc` RSS briefly exceeds `ru_maxrss`, without dropping either a
+native or sampled allocation peak. The sampler is stopped before the final
+envelope is captured while the measured result and calibration pages remain
+alive.
 Instrumented runtimes report the protocol unavailable because their resident
 memory is not comparable. Throughput timing remains in the separate timing
 path and is not performed under this sampler.
@@ -1684,5 +1690,11 @@ Representative retained comparisons are:
 All three independent reviews are clear. Exact-source packaging contains 336
 byte-identical repository files plus generated `PKG-INFO`; the derived
 81-member Windows abi3 wheel excludes development/build content and passes the
-isolated NumPy-only installed smoke. Exact-commit hosted confirmation remains
-pending until the R3.1b commit is pushed.
+isolated NumPy-only installed smoke. The first exact hosted attempt,
+`aafd283`, exposed the Linux `/proc` versus `ru_maxrss` boundary and a final
+sampler-read ordering window in CI run `30234117571`; its
+compiler-instrumented run `30234117580` passes. The follow-up preserves the
+response validator's high-water invariant, adds deterministic
+counter-mismatch and join-time peak controls, passes all 3,316 local tests,
+and passes the 11-test protocol suite under the pinned manylinux2014 GCC-10
+image. Hosted confirmation of the follow-up commit remains pending.
