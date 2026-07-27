@@ -191,10 +191,29 @@ def test_case_catalog_has_lower_ownership_and_no_consumer_imports():
         "sceneio.io._builtin_manifest",
         "types",
     }
-    for relative in (
-        "tests/test_io_mmap.py",
-        "tests/test_io_partial.py",
-    ):
-        assert "codec_cases" not in (ROOT / relative).read_text(
-            encoding="utf-8"
-        )
+    builder_path = ROOT / "tests/_support/buffer_codec_cases.py"
+    builder_tree = ast.parse(builder_path.read_text(encoding="utf-8"))
+    builder_imports = set()
+    for node in ast.walk(builder_tree):
+        if isinstance(node, ast.Import):
+            builder_imports.update(alias.name for alias in node.names)
+        elif isinstance(node, ast.ImportFrom):
+            builder_imports.add(node.module)
+    assert builder_imports == {
+        "__future__",
+        "_support.codec_cases",
+        "dataclasses",
+        "numpy",
+        "sceneio",
+    }
+    mmap_source = (ROOT / "tests/test_io_mmap.py").read_text(
+        encoding="utf-8"
+    )
+    assert (
+        "from _support.buffer_codec_cases import build_buffer_codec_cases"
+        in mmap_source
+    )
+    assert "from _support.codec_cases import" not in mmap_source
+    assert "codec_cases" not in (
+        ROOT / "tests/test_io_partial.py"
+    ).read_text(encoding="utf-8")

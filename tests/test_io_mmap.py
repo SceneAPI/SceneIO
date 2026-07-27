@@ -19,6 +19,7 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+from _support.buffer_codec_cases import build_buffer_codec_cases
 
 import sceneio
 from sceneio import _core
@@ -379,8 +380,7 @@ def _fingerprint(value):
     return result_type, fields
 
 
-@pytest.fixture(scope="module")
-def buffer_codecs():
+def _legacy_buffer_codecs():
     rng = np.random.default_rng(91)
     rgb = rng.integers(0, 256, (7, 9, 3), dtype=np.uint8)
     rgba = rng.integers(0, 256, (7, 9, 4), dtype=np.uint8)
@@ -756,6 +756,25 @@ def buffer_codecs():
         spec("openmvg", _core.read_openmvg, _core.write_openmvg, reconstruction),
         spec("splat", _core.read_splat, _core.write_splat, gaussians),
     ]
+
+
+@pytest.fixture(scope="module")
+def buffer_codecs():
+    return build_buffer_codec_cases()
+
+
+def test_shared_buffer_codec_cases_match_legacy_fixture(buffer_codecs):
+    legacy_cases = _legacy_buffer_codecs()
+    assert tuple(case.id for case in buffer_codecs) == tuple(
+        case.id for case in legacy_cases
+    )
+    for shared, legacy in zip(buffer_codecs, legacy_cases, strict=True):
+        assert shared.reader is legacy.reader, shared.id
+        assert shared.writer is legacy.writer, shared.id
+        assert shared.data == legacy.data, shared.id
+        assert _fingerprint(shared.value) == _fingerprint(legacy.value), (
+            shared.id
+        )
 
 
 def _decode_outcome(call, argument):

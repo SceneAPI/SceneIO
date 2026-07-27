@@ -2023,8 +2023,11 @@ The complete local suite, five-run strict guard, three independent closure
 reviews, exact-tree sdist/wheel gate, and fresh NumPy-only installed-wheel
 smoke pass. Exact qualification commit `0e54cf5` passes normal run
 `30263506366` and compiler-instrumented run `30263506270`. R3.3 is active with
-the non-consuming exact 44-buffer/3-path/3-directory catalog under
-`tests/_support/codec_cases.py`; its staged consumer migration sequence is
+the exact 44-buffer/3-path/3-directory catalog under
+`tests/_support/codec_cases.py`. Exact catalog commit `81f143b` passes normal
+run `30266501529` and compiler-instrumented run `30266501618`; the mmap suite
+now consumes the lower-owned deterministic buffer builder with exact
+retained-legacy equivalence. The remaining staged consumer sequence is
 maintained in
 [`next_stage_implementation_checklist.md`](next_stage_implementation_checklist.md).
 

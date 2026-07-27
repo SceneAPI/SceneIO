@@ -2110,3 +2110,29 @@ generated file is `PKG-INFO`; its sdist-derived 81-member Windows abi3 wheel
 contains one native module and all 15 attribution files, excludes benchmark
 and test payloads, and installs only SceneIO plus NumPy in a fresh
 environment. `sceneio._wheel_smoke` returns `2`.
+
+Exact catalog commit `81f143b` passes normal run
+[30266501529](https://github.com/SceneAPI/SceneIO/actions/runs/30266501529)
+and compiler-instrumented run
+[30266501618](https://github.com/SceneAPI/SceneIO/actions/runs/30266501618).
+
+## R3.3 mmap consumer migration (2026-07-27)
+
+The mmap behavior suite now consumes the reusable deterministic 44-case
+builder in `tests/_support/buffer_codec_cases.py`. The original local builder
+remains as an independent migration comparator: the focused control proves
+the exact traversal order, reader/writer identity, every encoded byte string,
+and every full record fingerprint before the mutation-sensitive mmap tests
+run. No codec implementation or benchmark path changes.
+
+The mmap suite passes 114 tests. The complete local suite collects 3,346 tests
+and passes 3,342 with four documented skips; Ruff is clean. All three
+independent reviews are clear. The independent one-run all-codec benchmark
+smoke returns 50 successful rows and retains structural SHA-256
+`2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`.
+This is a test-ownership migration and makes no codec-implementation
+performance claim. The exact staged tree has 371 tracked files and produces a
+372-file sdist whose only generated file is `PKG-INFO`; its sdist-derived
+81-member Windows abi3 wheel contains one native module and all 15 attribution
+files, excludes benchmark and test payloads, and installs only SceneIO plus
+NumPy in a fresh environment. `sceneio._wheel_smoke` returns `2`.

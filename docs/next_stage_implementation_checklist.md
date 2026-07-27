@@ -3074,7 +3074,7 @@ environment. `sceneio._wheel_smoke` returns `2`.
 
 - [x] Commit a centralized buffer/path/directory catalog in
       `tests/_support/codec_cases.py` without consuming it.
-- [ ] Migrate mmap consumers while retaining the old matrix until exact
+- [x] Migrate mmap consumers while retaining the old matrix until exact
       equivalence is demonstrated.
 - [ ] Migrate streaming consumers in a separate commit under the same rule.
 - [ ] Migrate inspection consumers in a separate commit under the same rule.
@@ -3093,13 +3093,22 @@ immutable catalog in canonical order with 44 buffer, three path, and three
 directory definitions plus the exact projection of 28 partial-capable codecs
 and 32 selector declarations. Six focused
 architecture controls prove completeness, family ownership, live capability
-agreement, runtime-extension isolation, and that the mmap and partial
-consumers remain unchanged and do not yet import the catalog. The complete
-local tree collects 3,345 tests and passes 3,341 with four documented skips;
-Ruff and all three independent reviews are clear. The one-run 50-codec
+agreement, runtime-extension isolation, and the initial non-consuming
+boundary. Its complete local tree collects 3,345 tests and passes 3,341 with
+four documented skips; Ruff and all three independent reviews are clear.
+Exact catalog commit `81f143b` passes normal run `30266501529` and
+compiler-instrumented run `30266501618`.
+
+The mmap suite now consumes the deterministic
+`tests/_support/buffer_codec_cases.py` builder. The retained
+`_legacy_buffer_codecs` builder proves exact 44-case order, reader/writer
+identity, encoded bytes, and full record fingerprints before the existing
+mutation-sensitive consumers run. The mmap suite passes 114 tests; the
+complete local tree collects 3,346 tests and passes 3,342 with four documented
+skips. Ruff and all three independent reviews are clear. The one-run 50-codec
 benchmark smoke retains structural SHA-256
 `2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`.
-The exact staged tree has 370 tracked files and produces a 371-file sdist
+The exact staged tree has 371 tracked files and produces a 372-file sdist
 whose only generated file is `PKG-INFO`; its sdist-derived 81-member Windows
 abi3 wheel contains one native module and all 15 attribution files, and a
 fresh SceneIO-plus-NumPy environment passes `sceneio._wheel_smoke`.
