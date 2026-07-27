@@ -303,7 +303,17 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > pass. The current mesh extraction moves five buffer-backed specs plus shared
 > glTF fixture/oracle helpers without changing any format capability;
 > specialized glTF orchestration remains in the compatible facade until
-> runner extraction.
+> runner extraction. Meshes close at `613fd26`: normal run
+> [30241711640](https://github.com/SceneAPI/SceneIO/actions/runs/30241711640)
+> and compiler-instrumented run
+> [30241711620](https://github.com/SceneAPI/SceneIO/actions/runs/30241711620)
+> pass. The current point extraction moves the non-contiguous XYZ/PTS/
+> point-PLY/PCD/LAS/LAZ benchmark hook and its fixtures/comparisons without
+> changing a format capability. Five live rows have independent metrics; XYZ
+> explicitly exempts benchmark throughput while independent NumPy text parity
+> remains covered. The 50-codec structure, complete suite, exact-tree
+> source/wheel inventory, fresh NumPy-only smoke, and all three independent
+> reviews pass locally.
 
 [current-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287022
 [current-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287161

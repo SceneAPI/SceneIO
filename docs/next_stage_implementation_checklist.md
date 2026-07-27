@@ -40,7 +40,9 @@ implementation `3e46d82` plus platform-contract repair `9928c6d`; normal run
 R2 is closed. R3.1a is complete in the current tree. R3.1b closes at follow-up
 commit `0bdfe0f`; normal run `30234796010` and
 compiler-instrumented run `30234796025` pass. R3.2 family extraction is
-active.
+active. Arrays, calibration, raster images, and meshes are committed and
+hosted-green; the point-family extraction is locally complete and awaiting
+its exact-commit hosted runs.
 
 This is the operational checklist for the repository-organization and
 codec-performance stage defined in
@@ -2731,7 +2733,7 @@ passes both jobs. No release workflow, tag, or publication was triggered.
   - [x] calibration;
   - [x] images;
   - [x] meshes;
-  - [ ] points;
+  - [x] points;
   - [ ] reconstruction;
   - [ ] sequences;
   - [ ] splats.
@@ -2864,6 +2866,44 @@ benchmark/test/trimesh/pygltflib modules, retains all 15 attribution files,
 and keeps NumPy as the sole unconditional dependency; trimesh and pygltflib
 remain test-extra only. A fresh NumPy-only environment without them passes the
 installed-wheel smoke.
+
+Exact mesh commit `613fd26` passes normal run
+[30241711640](https://github.com/SceneAPI/SceneIO/actions/runs/30241711640)
+and compiler-instrumented run
+[30241711620](https://github.com/SceneAPI/SceneIO/actions/runs/30241711620).
+
+The point checkpoint moves the non-contiguous `xyz`, `pts`, point `ply`,
+`pcd`, `las`, and `laz` specs to `io_bench/families/points.py`. Three
+unchanged deterministic fixtures move to `fixtures/points.py`, and nine PTS,
+Open3D, and LASpy comparison helpers move to `oracles/points.py`. The facade
+retains exact compatibility identities and slices the hook around the five
+mesh specs. The 11 unaffected moved helper ASTs and five unaffected standard
+`Spec` ASTs match the mesh checkpoint. Review found and repaired the historical
+LAS comparison's unequal payloads: LASpy previously encoded XYZ-only point
+format 0 while SceneIO encoded point format 2 with RGB and intensity. LAS and
+LAZ now use the same point-format-2 payload on both sides and retain one
+positions-equivalent throughput denominator.
+
+Contract controls pin callbacks, scale arguments, logical sizes, lower/facade
+identities, installed providers, each provider absent independently, and
+real oracle writer-to-reader plus core-to-reader execution. PTS arrays compare
+exactly; PLY/PCD geometry and attributes compare within `1e-6`; LAS/LAZ
+positions compare within half the declared `0.001` scale while RGB and
+intensity remain exact. Five of six live rows have non-null independent
+metrics. XYZ explicitly exempts only independent benchmark encode/decode
+throughput; the independent NumPy parser and serializer in
+`tests/codecs/test_xyz.py` retain format parity.
+
+The complete 50-codec smoke retains structural projection
+`2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`.
+Focused point/contract validation passes 449 tests; the complete suite passes
+3,316 with the same four documented skips, Ruff is clean, and all three
+independent reviews are clear. The fresh exact-tree source archive has 356
+members and exactly the three new point modules without generated caches. Its
+81-member wheel excludes benchmark/test/Open3D/LASpy/LAZ-backend modules,
+retains all 15 attribution files, and keeps NumPy as the sole unconditional
+dependency; those comparison packages remain test-extra only. A fresh
+NumPy-only environment without them passes the installed-wheel smoke.
 
 ### R3.3 — cross-codec test support
 

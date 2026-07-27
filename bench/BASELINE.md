@@ -1844,3 +1844,49 @@ and pygltflib remain test-extra only. A fresh environment with that wheel and
 NumPy, but without either comparison library, passes
 `python -m sceneio._wheel_smoke`. This is a mechanical ownership change and
 makes no codec-performance claim.
+
+Exact mesh commit `613fd26` passes normal run
+[30241711640](https://github.com/SceneAPI/SceneIO/actions/runs/30241711640)
+and compiler-instrumented run
+[30241711620](https://github.com/SceneAPI/SceneIO/actions/runs/30241711620).
+
+## R3.2 point benchmark-family extraction (2026-07-27)
+
+The fifth R3.2 checkpoint moves the non-contiguous `xyz`, `pts`, point `ply`,
+`pcd`, `las`, and `laz` specs to
+`bench/io_bench/families/points.py`. Their three deterministic fixtures now
+live in `fixtures/points.py`; nine comparison helpers—the portable PTS pair
+and optional Open3D/LASpy pairs—live in `oracles/points.py`. The compatible
+facade re-exports the same helpers and optional bindings, then slices the
+point hook around the already extracted five-row mesh block so all 50 result
+positions remain unchanged.
+
+The 11 unaffected moved helper ASTs and five unaffected standard `Spec` ASTs
+match the mesh checkpoint. Review found that the historical LAS comparison
+encoded XYZ-only point format 0 through LASpy while SceneIO encoded point
+format 2 with RGB and intensity. The repaired LAS/LAZ specs use one
+point-format-2 payload on both sides and retain the same positions-equivalent
+throughput denominator. Contract controls pin lower/facade identities, core
+callbacks, scale arguments, logical payload sizes, installed and independently
+absent Open3D/LASpy states, and real writer-to-reader plus core-to-reader
+comparisons. PTS arrays compare exactly; PLY/PCD positions, normals, and colors
+compare within `1e-6`; LAS/LAZ compare positions within half the declared
+`0.001` scale and keep RGB/intensity exact. Five of six live rows produce
+independent write/read metrics. XYZ records the exact unverified property,
+independent benchmark encode/decode throughput, while its NumPy text parser
+and serializer continue to provide independent parity in
+`tests/codecs/test_xyz.py`.
+
+The complete 50-codec smoke retains structural projection
+`2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`.
+Focused point/contract validation passes 449 tests; the complete suite passes
+3,316 with the same four documented skips, and Ruff is clean. A fresh
+356-member exact-tree source archive contains exactly the three new point
+benchmark modules and no generated cache files. Its 81-member derived wheel
+contains no benchmark, test, Open3D, LASpy, or LAZ-backend module, retains all
+15 attribution files, and keeps `numpy>=1.26` as its sole unconditional
+dependency; comparison packages remain test-extra only. A fresh environment
+with that wheel and NumPy, but without those packages, passes
+`python -m sceneio._wheel_smoke`. This combines an ownership move with a
+benchmark-fixture correction and makes no codec-implementation performance
+claim.

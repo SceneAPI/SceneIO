@@ -680,6 +680,17 @@ def _assert_benchmark_components_and_metric_semantics_are_explicit():
         "parser and serializer in tests/codecs/test_hdr.py"
     )
     assert not extracted_families["meshes"]["no_oracle_exemptions"]
+    point_exemptions = extracted_families["points"][
+        "no_oracle_exemptions"
+    ]
+    assert set(point_exemptions) == {"xyz"}
+    assert point_exemptions["xyz"]["unverified_property"] == (
+        "independent benchmark encode/decode throughput"
+    )
+    assert point_exemptions["xyz"]["verification"] == (
+        "format parity remains covered by the independent NumPy text parser "
+        "and serializer in tests/codecs/test_xyz.py"
+    )
 
     lower_modules = sorted(
         {
@@ -1427,6 +1438,340 @@ def _assert_benchmark_components_and_metric_semantics_are_explicit():
         text=True,
     )
     assert json.loads(blocked_mesh.stdout) == [True] * 7
+
+    point_family_module = sys.modules[
+        "bench.io_bench.families.points"
+    ]
+    point_fixture_module = sys.modules[
+        "bench.io_bench.fixtures.points"
+    ]
+    point_oracle_module = sys.modules[
+        "bench.io_bench.oracles.points"
+    ]
+    point_fixture_names = ("_pc", "_pc_laz", "_pc_ply")
+    point_oracle_names = (
+        "_laspy_laz_w",
+        "_laspy_r",
+        "_laspy_w",
+        "_open3d_pcd_r",
+        "_open3d_pcd_w",
+        "_open3d_ply_r",
+        "_open3d_ply_w",
+        "_pts_oracle_read",
+        "_pts_oracle_write",
+    )
+    for helper_name in point_fixture_names:
+        assert getattr(point_family_module, helper_name) is getattr(
+            point_fixture_module,
+            helper_name,
+        )
+        assert getattr(benchmark, helper_name) is getattr(
+            point_fixture_module,
+            helper_name,
+        )
+    for helper_name in point_oracle_names:
+        assert getattr(point_family_module, helper_name) is getattr(
+            point_oracle_module,
+            helper_name,
+        )
+        assert getattr(benchmark, helper_name) is getattr(
+            point_oracle_module,
+            helper_name,
+        )
+    assert benchmark.laspy is point_oracle_module.laspy
+    assert benchmark.o3d is point_oracle_module.o3d
+
+    point_specs = benchmark.build_point_specs(0.001)
+    assert [spec.id for spec in point_specs] == [
+        "xyz",
+        "pts",
+        "ply",
+        "pcd",
+        "las",
+        "laz",
+    ]
+    point_by_id = {spec.id: spec for spec in point_specs}
+    assert extracted_families["points"]["benchmark_equivalence_repairs"] == {
+        "las_laz": {
+            "issue": (
+                "LASpy previously encoded XYZ-only LAS point format 0 "
+                "while SceneIO encoded point format 2 with XYZ, RGB, "
+                "and intensity"
+            ),
+            "verification": (
+                "LAS and LAZ now use one XYZ, RGB, and intensity payload "
+                "on both sides and retain one positions-equivalent "
+                "throughput denominator"
+            ),
+        }
+    }
+    point_core_bindings = {
+        "xyz": (_core.write_xyz, _core.read_xyz),
+        "pts": (_core.write_pts, _core.read_pts),
+        "ply": (_core.write_ply, _core.read_ply),
+        "pcd": (_core.write_pcd, _core.read_pcd),
+        "las": (None, _core.read_las),
+        "laz": (None, _core.read_laz),
+    }
+    point_records = {}
+    point_payloads = {}
+    point_core_bytes = {}
+    for spec in point_specs:
+        writer, reader = point_core_bindings[spec.id]
+        if writer is not None:
+            assert spec.w is writer
+        assert spec.r is reader
+        record, payload = spec.make()
+        point_records[spec.id] = record
+        point_payloads[spec.id] = payload
+        expected_nbytes = (
+            payload["positions"].nbytes
+            if spec.id in {"las", "laz"}
+            else (
+                sum(value.nbytes for value in payload.values())
+                if isinstance(payload, dict)
+                else payload.nbytes
+            )
+        )
+        assert spec.nbytes(record, payload) == expected_nbytes
+        encoded = bytes(spec.w(record))
+        assert encoded
+        point_core_bytes[spec.id] = encoded
+        spec.r(encoded)
+
+    assert bytes(point_by_id["las"].w(point_records["las"])) == bytes(
+        _core.write_las(point_records["las"], 0.001)
+    )
+    assert bytes(point_by_id["laz"].w(point_records["laz"])) == bytes(
+        _core.write_laz(point_records["laz"], 0.001)
+    )
+    assert (
+        point_by_id["xyz"].ow,
+        point_by_id["xyz"].orr,
+    ) == (None, None)
+
+    pts_spec = point_by_id["pts"]
+    assert (pts_spec.ow, pts_spec.orr) == (
+        point_oracle_module._pts_oracle_write,
+        point_oracle_module._pts_oracle_read,
+    )
+    pts_oracle_bytes = pts_spec.ow(point_payloads["pts"])
+    assert isinstance(pts_oracle_bytes, bytes)
+    np.testing.assert_array_equal(
+        pts_spec.orr(pts_oracle_bytes),
+        point_payloads["pts"],
+    )
+    np.testing.assert_array_equal(
+        pts_spec.orr(point_core_bytes["pts"]),
+        point_payloads["pts"],
+    )
+
+    open3d_bindings = {
+        "ply": (
+            point_oracle_module._open3d_ply_w,
+            point_oracle_module._open3d_ply_r,
+        ),
+        "pcd": (
+            point_oracle_module._open3d_pcd_w,
+            point_oracle_module._open3d_pcd_r,
+        ),
+    }
+
+    def assert_open3d_cloud(decoded, payload):
+        np.testing.assert_allclose(
+            np.asarray(decoded.points),
+            payload["positions"],
+            rtol=0.0,
+            atol=1e-6,
+        )
+        np.testing.assert_allclose(
+            np.asarray(decoded.normals),
+            payload["normals"],
+            rtol=0.0,
+            atol=1e-6,
+        )
+        np.testing.assert_allclose(
+            np.asarray(decoded.colors) * 255.0,
+            payload["colors"],
+            rtol=0.0,
+            atol=1e-6,
+        )
+
+    for codec_id, expected_pair in open3d_bindings.items():
+        spec = point_by_id[codec_id]
+        if point_oracle_module.o3d is None:
+            assert (spec.ow, spec.orr) == (None, None)
+            continue
+        assert (spec.ow, spec.orr) == expected_pair
+        oracle_encoded = spec.ow(point_payloads[codec_id])
+        assert isinstance(oracle_encoded, bytes)
+        assert_open3d_cloud(
+            spec.orr(oracle_encoded),
+            point_payloads[codec_id],
+        )
+        assert_open3d_cloud(
+            spec.orr(point_core_bytes[codec_id]),
+            point_payloads[codec_id],
+        )
+
+    laspy_bindings = {
+        "las": (
+            point_oracle_module._laspy_w,
+            point_oracle_module._laspy_r,
+        ),
+        "laz": (
+            point_oracle_module._laspy_laz_w,
+            point_oracle_module._laspy_r,
+        ),
+    }
+
+    def assert_laspy_cloud(codec_id, decoded):
+        payload = point_payloads[codec_id]
+        assert decoded.header.point_format.id == 2
+        np.testing.assert_allclose(
+            np.asarray(decoded.xyz),
+            payload["positions"],
+            rtol=0.0,
+            atol=0.00051,
+        )
+        np.testing.assert_array_equal(
+            np.column_stack(
+                (decoded.red, decoded.green, decoded.blue)
+            ),
+            payload["colors16"],
+        )
+        np.testing.assert_array_equal(
+            np.asarray(decoded.intensity),
+            payload["intensity"],
+        )
+
+    for codec_id, expected_pair in laspy_bindings.items():
+        spec = point_by_id[codec_id]
+        if point_oracle_module.laspy is None:
+            assert (spec.ow, spec.orr) == (None, None)
+            continue
+        assert (spec.ow, spec.orr) == expected_pair
+        oracle_encoded = spec.ow(point_payloads[codec_id])
+        assert isinstance(oracle_encoded, bytes)
+        if codec_id == "las":
+            assert len(oracle_encoded) == len(point_core_bytes[codec_id])
+        assert_laspy_cloud(codec_id, spec.orr(oracle_encoded))
+        assert_laspy_cloud(
+            codec_id,
+            spec.orr(point_core_bytes[codec_id]),
+        )
+
+    def blocked_point_probe(blocked_roots):
+        roots = tuple(blocked_roots)
+        probe = textwrap.dedent(
+            f"""
+            import builtins
+            import importlib
+            import json
+
+            blocked_roots = {roots!r}
+            original_import = builtins.__import__
+
+            def blocked_import(name, *args, **kwargs):
+                if any(
+                    name == root or name.startswith(root + ".")
+                    for root in blocked_roots
+                ):
+                    raise ImportError("blocked by benchmark contract")
+                return original_import(name, *args, **kwargs)
+
+            builtins.__import__ = blocked_import
+            oracles = importlib.import_module(
+                "bench.io_bench.oracles.points"
+            )
+            fixtures = importlib.import_module(
+                "bench.io_bench.fixtures.points"
+            )
+            family = importlib.import_module(
+                "bench.io_bench.families.points"
+            )
+            facade = importlib.import_module("bench.bench_io")
+            specs = {{
+                spec.id: spec
+                for spec in family.build_point_specs(0.001)
+            }}
+            fixture_names = {point_fixture_names!r}
+            oracle_names = {point_oracle_names!r}
+            print(json.dumps({{
+                "bindings": {{
+                    "laspy": oracles.laspy is not None,
+                    "o3d": oracles.o3d is not None,
+                }},
+                "identities": [
+                    facade.laspy is oracles.laspy,
+                    facade.o3d is oracles.o3d,
+                    facade.build_point_specs is family.build_point_specs,
+                    all(
+                        getattr(family, name) is getattr(fixtures, name)
+                        and getattr(facade, name) is getattr(fixtures, name)
+                        for name in fixture_names
+                    ),
+                    all(
+                        getattr(family, name) is getattr(oracles, name)
+                        and getattr(facade, name) is getattr(oracles, name)
+                        for name in oracle_names
+                    ),
+                ],
+                "oracle_pairs": {{
+                    codec_id: [
+                        spec.ow is not None,
+                        spec.orr is not None,
+                    ]
+                    for codec_id, spec in specs.items()
+                }},
+            }}))
+            """
+        )
+        result = subprocess.run(
+            [sys.executable, "-c", probe],
+            cwd=ROOT,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        return json.loads(result.stdout)
+
+    all_point_libraries_blocked = blocked_point_probe(
+        ("laspy", "open3d")
+    )
+    assert all_point_libraries_blocked["bindings"] == {
+        "laspy": False,
+        "o3d": False,
+    }
+    assert all(all_point_libraries_blocked["identities"])
+    assert all_point_libraries_blocked["oracle_pairs"] == {
+        "xyz": [False, False],
+        "pts": [True, True],
+        "ply": [False, False],
+        "pcd": [False, False],
+        "las": [False, False],
+        "laz": [False, False],
+    }
+
+    open3d_blocked = blocked_point_probe(("open3d",))
+    assert open3d_blocked["bindings"] == {
+        "laspy": True,
+        "o3d": False,
+    }
+    assert open3d_blocked["oracle_pairs"]["ply"] == [False, False]
+    assert open3d_blocked["oracle_pairs"]["pcd"] == [False, False]
+    assert open3d_blocked["oracle_pairs"]["las"] == [True, True]
+    assert open3d_blocked["oracle_pairs"]["laz"] == [True, True]
+
+    laspy_blocked = blocked_point_probe(("laspy",))
+    assert laspy_blocked["bindings"] == {
+        "laspy": False,
+        "o3d": True,
+    }
+    assert laspy_blocked["oracle_pairs"]["ply"] == [True, True]
+    assert laspy_blocked["oracle_pairs"]["pcd"] == [True, True]
+    assert laspy_blocked["oracle_pairs"]["las"] == [False, False]
+    assert laspy_blocked["oracle_pairs"]["laz"] == [False, False]
 
     array_oracle_module = sys.modules["bench.io_bench.oracles.arrays"]
     oracle_probe = np.arange(12, dtype=np.float32).reshape(3, 4)

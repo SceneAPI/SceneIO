@@ -42,12 +42,14 @@ from bench.io_bench.families.calibration import (
 from bench.io_bench.families.common import _record_nbytes
 from bench.io_bench.families.images import build_image_specs
 from bench.io_bench.families.meshes import build_mesh_specs
+from bench.io_bench.families.points import build_point_specs
 from bench.io_bench.fixtures import arrays as array_fixtures
 from bench.io_bench.fixtures import (
     calibration as calibration_fixtures,
 )
 from bench.io_bench.fixtures import images as image_fixtures
 from bench.io_bench.fixtures import meshes as mesh_fixtures
+from bench.io_bench.fixtures import points as point_fixtures
 from bench.io_bench.model import DirectorySpec, Spec
 from bench.io_bench.oracles import arrays as array_oracles
 from bench.io_bench.oracles import (
@@ -55,6 +57,7 @@ from bench.io_bench.oracles import (
 )
 from bench.io_bench.oracles import images as image_oracles
 from bench.io_bench.oracles import meshes as mesh_oracles
+from bench.io_bench.oracles import points as point_oracles
 from bench.io_bench.reporting import (
     print_cold_cache_unavailable,
     print_colmap_db_row,
@@ -123,23 +126,30 @@ _trimesh_stl_r = mesh_oracles._trimesh_stl_r
 _trimesh_stl_w = mesh_oracles._trimesh_stl_w
 trimesh = mesh_oracles.trimesh
 
+_pc = point_fixtures._pc
+_pc_laz = point_fixtures._pc_laz
+_pc_ply = point_fixtures._pc_ply
+_laspy_laz_w = point_oracles._laspy_laz_w
+_laspy_r = point_oracles._laspy_r
+_laspy_w = point_oracles._laspy_w
+_open3d_pcd_r = point_oracles._open3d_pcd_r
+_open3d_pcd_w = point_oracles._open3d_pcd_w
+_open3d_ply_r = point_oracles._open3d_ply_r
+_open3d_ply_w = point_oracles._open3d_ply_w
+_pts_oracle_read = point_oracles._pts_oracle_read
+_pts_oracle_write = point_oracles._pts_oracle_write
+laspy = point_oracles.laspy
+o3d = point_oracles.o3d
+
 _measure = benchmark_measure.measure
 _measure_in_process_rss = benchmark_measure.measure_in_process_rss
 _try = benchmark_measure.try_measure
 
 # --- optional oracle libs (degrade gracefully) ------------------------------
 try:
-    import laspy
-except Exception:
-    laspy = None
-try:
     import gsply
 except Exception:
     gsply = None
-try:
-    import open3d as o3d
-except Exception:
-    o3d = None
 # --- payload builders -------------------------------------------------------
 def _y4m_fixture(side):
     frames = 4
@@ -253,49 +263,6 @@ def _y4m_oracle_read(data):
         "u": np.asarray(u_planes),
         "v": np.asarray(v_planes),
     }
-
-
-def _pc(n, color):
-    rng = np.random.default_rng(0)
-    xyz = (rng.random((n, 3), dtype=np.float32) * 100.0).astype(np.float32)
-    kw = {}
-    if color:
-        kw["colors16"] = (rng.random((n, 3)) * 65535).astype(np.uint16)
-        kw["intensity"] = (rng.random(n) * 60000).astype(np.float32)
-    return _core.point_cloud(xyz, **kw), xyz
-
-
-def _pc_laz(n):
-    rng = np.random.default_rng(29)
-    positions = (rng.random((n, 3), dtype=np.float32) * 100.0).astype(np.float32)
-    colors16 = rng.integers(0, 65_536, (n, 3), dtype=np.uint16)
-    intensity = rng.integers(0, 65_536, n, dtype=np.uint16)
-    payload = {
-        "positions": positions,
-        "colors16": colors16,
-        "intensity": intensity,
-    }
-    return (
-        _core.point_cloud(
-            positions,
-            colors16=colors16,
-            intensity=intensity.astype(np.float32),
-            intensity_range="u16",
-        ),
-        payload,
-    )
-
-
-def _pc_ply(n):
-    rng = np.random.default_rng(17)
-    xyz = (rng.random((n, 3), dtype=np.float32) * 100.0).astype(np.float32)
-    normals = rng.standard_normal((n, 3)).astype(np.float32)
-    colors = rng.integers(0, 256, (n, 3), dtype=np.uint8)
-    payload = {"positions": xyz, "normals": normals, "colors": colors}
-    return (
-        _core.point_cloud(xyz, colors=colors, normals=normals),
-        payload,
-    )
 
 
 def _gauss(n):
@@ -597,114 +564,6 @@ def _gsply_spz_r(data):
         return gsply.read_spz(path)
     finally:
         os.remove(path)
-
-
-def _laspy_w(payload):
-    hdr = laspy.LasHeader(version="1.2", point_format=0)
-    hdr.scales = [0.001, 0.001, 0.001]
-    las = laspy.LasData(hdr)
-    las.x, las.y, las.z = payload[:, 0], payload[:, 1], payload[:, 2]
-    b = io.BytesIO()
-    las.write(b)
-    return b.getvalue()
-
-
-def _laspy_laz_w(payload):
-    hdr = laspy.LasHeader(version="1.2", point_format=2)
-    hdr.scales = [0.001, 0.001, 0.001]
-    las = laspy.LasData(hdr)
-    positions = payload["positions"]
-    colors16 = payload["colors16"]
-    las.x, las.y, las.z = positions[:, 0], positions[:, 1], positions[:, 2]
-    las.red, las.green, las.blue = (
-        colors16[:, 0],
-        colors16[:, 1],
-        colors16[:, 2],
-    )
-    las.intensity = payload["intensity"]
-    b = io.BytesIO()
-    las.write(b, do_compress=True)
-    return b.getvalue()
-
-
-def _laspy_r(data):
-    return laspy.read(io.BytesIO(data))
-
-
-def _open3d_ply_w(payload):
-    cloud = o3d.geometry.PointCloud()
-    cloud.points = o3d.utility.Vector3dVector(payload["positions"])
-    cloud.normals = o3d.utility.Vector3dVector(payload["normals"])
-    cloud.colors = o3d.utility.Vector3dVector(
-        payload["colors"].astype(np.float64) / 255.0
-    )
-    fd, path = tempfile.mkstemp(suffix=".ply")
-    os.close(fd)
-    try:
-        if not o3d.io.write_point_cloud(
-            path, cloud, write_ascii=False, compressed=False
-        ):
-            raise RuntimeError("Open3D rejected PLY write")
-        return Path(path).read_bytes()
-    finally:
-        os.remove(path)
-
-
-def _open3d_ply_r(data):
-    fd, path = tempfile.mkstemp(suffix=".ply")
-    os.close(fd)
-    try:
-        Path(path).write_bytes(data)
-        return o3d.io.read_point_cloud(path)
-    finally:
-        os.remove(path)
-
-
-def _open3d_pcd_w(payload):
-    cloud = o3d.geometry.PointCloud()
-    cloud.points = o3d.utility.Vector3dVector(payload["positions"])
-    cloud.normals = o3d.utility.Vector3dVector(payload["normals"])
-    cloud.colors = o3d.utility.Vector3dVector(
-        payload["colors"].astype(np.float64) / 255.0
-    )
-    fd, path = tempfile.mkstemp(suffix=".pcd")
-    os.close(fd)
-    try:
-        if not o3d.io.write_point_cloud(
-            path, cloud, write_ascii=False, compressed=False
-        ):
-            raise RuntimeError("Open3D rejected PCD write")
-        return Path(path).read_bytes()
-    finally:
-        os.remove(path)
-
-
-def _open3d_pcd_r(data):
-    fd, path = tempfile.mkstemp(suffix=".pcd")
-    os.close(fd)
-    try:
-        Path(path).write_bytes(data)
-        return o3d.io.read_point_cloud(path)
-    finally:
-        os.remove(path)
-
-
-def _pts_oracle_write(points):
-    text = io.StringIO()
-    text.write(f"{len(points)}\n")
-    np.savetxt(text, points, fmt="%.9g")
-    return text.getvalue().encode()
-
-
-def _pts_oracle_read(data):
-    first, _, body = data.partition(b"\n")
-    declared = int(first)
-    points = np.loadtxt(
-        io.BytesIO(body), dtype=np.float32, ndmin=2
-    ).reshape(-1, 3)
-    if len(points) != declared:
-        raise ValueError("PTS count mismatch")
-    return points
 
 
 def _bal_oracle_write(payload):
@@ -1264,11 +1123,11 @@ def _evict_file_cache(path):
 
 def _specs(scale, pose_bundle=None):
     side = max(1, int(1024 * scale**0.5))
-    points = max(1, int(1_000_000 * scale))
     gaussians = max(1, int(200_000 * scale))
     reconstruction, transforms, tum, kitti = pose_bundle or _poses_and_reconstruction(scale)
     image_specs = build_image_specs(scale)
     mesh_specs = build_mesh_specs(scale)
+    point_specs = build_point_specs(scale)
     return [
         *image_specs[:5],
         Spec(
@@ -1281,61 +1140,9 @@ def _specs(scale, pose_bundle=None):
             lambda rec, p: sum(value.nbytes for value in p.values()),
         ),
         *image_specs[5:],
-        Spec(
-            "xyz",
-            lambda: _pc(points, False),
-            _core.write_xyz,
-            _core.read_xyz,
-            None,
-            None,
-            lambda rec, p: p.nbytes,
-        ),
-        Spec(
-            "pts",
-            lambda: _pc(points, False),
-            _core.write_pts,
-            _core.read_pts,
-            _pts_oracle_write,
-            _pts_oracle_read,
-            lambda rec, p: p.nbytes,
-        ),
-        Spec(
-            "ply",
-            lambda: _pc_ply(points),
-            _core.write_ply,
-            _core.read_ply,
-            (_open3d_ply_w if o3d else None),
-            (_open3d_ply_r if o3d else None),
-            lambda rec, p: sum(value.nbytes for value in p.values()),
-        ),
+        *point_specs[:3],
         *mesh_specs,
-        Spec(
-            "pcd",
-            lambda: _pc_ply(points),
-            _core.write_pcd,
-            _core.read_pcd,
-            (_open3d_pcd_w if o3d else None),
-            (_open3d_pcd_r if o3d else None),
-            lambda rec, p: sum(value.nbytes for value in p.values()),
-        ),
-        Spec(
-            "las",
-            lambda: _pc(points, True),
-            lambda pc: _core.write_las(pc, 0.001),
-            _core.read_las,
-            (_laspy_w if laspy else None),
-            (_laspy_r if laspy else None),
-            lambda rec, p: p.nbytes,
-        ),
-        Spec(
-            "laz",
-            lambda: _pc_laz(points),
-            lambda pc: _core.write_laz(pc, 0.001),
-            _core.read_laz,
-            (_laspy_laz_w if laspy else None),
-            (_laspy_r if laspy else None),
-            lambda rec, p: p["positions"].nbytes,
-        ),
+        *point_specs[3:],
         Spec(
             "gaussian_ply",
             lambda: _gauss(gaussians),

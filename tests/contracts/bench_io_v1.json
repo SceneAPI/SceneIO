@@ -24,14 +24,14 @@
       "_gauss": "bench/bench_io.py",
       "_img_u8": "bench/io_bench/fixtures/images.py",
       "_mesh_scene": "bench/io_bench/fixtures/meshes.py",
-      "_pc_ply": "bench/bench_io.py",
+      "_pc_ply": "bench/io_bench/fixtures/points.py",
       "_poses_and_reconstruction": "bench/bench_io.py",
       "_single_calibration": "bench/io_bench/fixtures/calibration.py",
       "_specs": "bench/bench_io.py",
       "_y4m_fixture": "bench/bench_io.py"
     },
     "parent_and_candidate_builder_ast_sha256": "ce8dda677da61550035dcd2062d4cb53aed20f21e37024d87d5f50449ba1fbfd",
-    "current_builder_ast_sha256": "6b2c80e740bf52b3a2d506d860ab01198e836340370c3902efab631604e11641",
+    "current_builder_ast_sha256": "72984d6968265230ed18fbe270e45d65bd1a0b7336fc80601d57fe3ec8448a5c",
     "fixtures": {
       "camera_calibration": "5e2b5f1e70aa57bd8d219b06a16ce36dfec48aa4d0905ef45cdf503cca8b511c",
       "gaussian_cloud": "dc358708428493fafd834f6c9626f87dd1e91626d324fea3865320561176b1cf",
@@ -299,6 +299,84 @@
       ],
       "optional_oracle_source": "bench/io_bench/oracles/meshes.py",
       "no_oracle_exemptions": {}
+    },
+    "points": {
+      "family_functions": {
+        "build_point_specs": {
+          "source": "bench/io_bench/families/points.py",
+          "ast_sha256": "17f6efe0f6fb73a46c35caae277206ca1f162841892d08dea99dae63d54e3185"
+        }
+      },
+      "facade_family_exports": [
+        "build_point_specs"
+      ],
+      "functions": {
+        "_laspy_laz_w": {
+          "source": "bench/io_bench/oracles/points.py",
+          "ast_sha256": "b23825d0d890a3eb59e89c1e51ce35798e72af01aacff0065a1813edd1642b52"
+        },
+        "_laspy_r": {
+          "source": "bench/io_bench/oracles/points.py",
+          "ast_sha256": "f95e216c595778aa1fec21c4a0ae22020a7b47317e87c78c7d08a6dcf0fdc63b"
+        },
+        "_laspy_w": {
+          "source": "bench/io_bench/oracles/points.py",
+          "ast_sha256": "eba3f5323c4d57abd794485b5641fda2e17e85711f7b04b92e69b723aafbe835"
+        },
+        "_open3d_pcd_r": {
+          "source": "bench/io_bench/oracles/points.py",
+          "ast_sha256": "765482744df96adc674d5681ed9fc96948fbfc094236958bbf784c06f97c1b11"
+        },
+        "_open3d_pcd_w": {
+          "source": "bench/io_bench/oracles/points.py",
+          "ast_sha256": "d7bac2b2b34df7bf17ffa6744c8441dd20af1f861a285f6540ce4637792a8cf6"
+        },
+        "_open3d_ply_r": {
+          "source": "bench/io_bench/oracles/points.py",
+          "ast_sha256": "593ee36d2e90f75e24f79951c7582cb36ead063f36eb1495ccb86be2fc3f08ea"
+        },
+        "_open3d_ply_w": {
+          "source": "bench/io_bench/oracles/points.py",
+          "ast_sha256": "dabdcf43d0cf555544b35237b3e6e046665fc1047d60edc421249acd7d39ce6d"
+        },
+        "_pc": {
+          "source": "bench/io_bench/fixtures/points.py",
+          "ast_sha256": "f1d59bc3aaa051933bf7c51697180e94592327d1309c56e3e6f8730572e66674"
+        },
+        "_pc_laz": {
+          "source": "bench/io_bench/fixtures/points.py",
+          "ast_sha256": "b1ea17f72b97770d3ef5a2dfb38c798b21a976050e445cfa31aa101281cdc135"
+        },
+        "_pc_ply": {
+          "source": "bench/io_bench/fixtures/points.py",
+          "ast_sha256": "e3c4a25347020a852494dd7dfa8430be2d05a950a38d1269166c1517dfc78c2a"
+        },
+        "_pts_oracle_read": {
+          "source": "bench/io_bench/oracles/points.py",
+          "ast_sha256": "b8dd601344d68e1df7b7f5e6e37383bcf5992d452f560b630a006dc39bf18103"
+        },
+        "_pts_oracle_write": {
+          "source": "bench/io_bench/oracles/points.py",
+          "ast_sha256": "2bcf52ed9cd1c81c1ddc50457be7202f7933cefe487e94cea7941c62f928090f"
+        }
+      },
+      "optional_oracle_bindings": [
+        "laspy",
+        "o3d"
+      ],
+      "optional_oracle_source": "bench/io_bench/oracles/points.py",
+      "benchmark_equivalence_repairs": {
+        "las_laz": {
+          "issue": "LASpy previously encoded XYZ-only LAS point format 0 while SceneIO encoded point format 2 with XYZ, RGB, and intensity",
+          "verification": "LAS and LAZ now use one XYZ, RGB, and intensity payload on both sides and retain one positions-equivalent throughput denominator"
+        }
+      },
+      "no_oracle_exemptions": {
+        "xyz": {
+          "unverified_property": "independent benchmark encode/decode throughput",
+          "verification": "format parity remains covered by the independent NumPy text parser and serializer in tests/codecs/test_xyz.py"
+        }
+      }
     }
   },
   "r3_1a_equivalence": {

@@ -218,7 +218,19 @@ sceneio._core (C++ / nanobind)
   `bench_io.py::_benchmark_gltf` until runner extraction but consumes the
   lower fixture/oracle pair through compatibility aliases. Checked cyclic
   triangle normalization preserves winding while comparing positions and
-  connectivity for real oracle and core files.
+  connectivity for real oracle and core files. Exact mesh commit `613fd26`
+  passes normal run `30241711640` and compiler-instrumented run `30241711620`.
+  The point checkpoint lower-owns the non-contiguous XYZ/PTS/point-PLY/PCD/
+  LAS/LAZ hook under `families/points.py`, its three deterministic fixtures,
+  and nine PTS/Open3D/LASpy comparison helpers. The facade retains exact
+  compatibility identities and slices the hook around the mesh block.
+  Installed and independently absent provider controls, real comparison
+  round trips, and scale-aware LAS/LAZ checks preserve the prior behavior.
+  Review also aligned LAS and LAZ to one point-format-2 XYZ/RGB/intensity
+  payload and one positions-equivalent throughput denominator for both
+  SceneIO and LASpy. Five live oracle rows and the explicit XYZ
+  benchmark-throughput exemption are recorded; independent NumPy XYZ text
+  parity remains in the codec suite.
   Built-in startup uses `_registry/assembly.py` as a lower staging boundary.
   Eight complete family tuples are collected without touching the public
   registry. After all 50 canonical ids validate, the facade publishes the

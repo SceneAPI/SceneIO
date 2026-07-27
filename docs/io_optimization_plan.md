@@ -51,9 +51,11 @@ The lazy directory adapter retained encoded paths, used bounded 1 MiB copying,
 and measured 1.45x inspection / 1.61x selected-range gains without decoding
 pixels.
 
-The representative 12.0 MB LAZ point fixture encodes to 14.6 MB. Five-run
-local MSVC medians measure 66 MB/s direct-sink write, 235 MB/s buffer decode,
-and 184 MB/s public mmap decode. The mapped read and seekable direct sink each
+The representative LAZ point fixture uses a 12.0 MB positions-equivalent
+throughput denominator while both compared records also carry matching RGB
+and intensity arrays; it encodes to 14.6 MB. Five-run local MSVC medians
+measure 66 MB/s direct-sink write, 235 MB/s buffer decode, and 184 MB/s public
+mmap decode on that denominator. The mapped read and seekable direct sink each
 remove the entire 14.6 MB traced Python allocation. Header inspection is
 1,335× faster than full decode and a middle one-sixteenth point selection is
 3.17× faster while materializing only overlapping 50,000-point chunks.

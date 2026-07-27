@@ -19,8 +19,10 @@
 > calibration closes at `5dc03f4` with normal run `30237676629` and
 > compiler-instrumented run `30237676648`; raster images close at `6572a76`
 > with normal run `30239455960` and compiler-instrumented run `30239455952`;
-> the mesh benchmark family is complete in the current local tree, with the
-> specialized glTF row awaiting the shared runner extraction.
+> meshes close at `613fd26` with normal run `30241711640` and
+> compiler-instrumented run `30241711620`; the point benchmark family is
+> locally complete. Reconstruction, sequences, splats, and the shared runner
+> remain in R3.2.
 
 The granular, per‑format execution plan for covering **every relevant file type
 that has a permissively‑licensed open‑source option**. Sits below the strategy

@@ -2002,10 +2002,11 @@ close at `6d9ec34` with normal run `30236069971` and
 compiler-instrumented run `30236069959`; calibration closes at `5dc03f4` with
 normal run `30237676629` and compiler-instrumented run `30237676648`; raster
 images close at `6572a76` with normal run `30239455960` and
-compiler-instrumented run `30239455952`; and the mesh benchmark family is
-complete in the current local tree. The specialized glTF row remains
-facade-owned pending runner extraction. The remaining family sequence is
-maintained in
+compiler-instrumented run `30239455952`; meshes close at `613fd26` with normal
+run `30241711640` and compiler-instrumented run `30241711620`; and the point
+benchmark family is complete in the current local tree. The specialized glTF
+row remains facade-owned pending runner extraction. Reconstruction, sequences,
+splats, and the runner remain in R3.2; their sequence is maintained in
 [`next_stage_implementation_checklist.md`](next_stage_implementation_checklist.md).
 
 Status terms are strict:
