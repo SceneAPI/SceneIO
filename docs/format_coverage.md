@@ -283,7 +283,13 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > [30234796010](https://github.com/SceneAPI/SceneIO/actions/runs/30234796010)
 > passes the complete suite and all platform lanes; compiler-instrumented run
 > [30234796025](https://github.com/SceneAPI/SceneIO/actions/runs/30234796025)
-> passes both jobs. R3.2 family extraction is active.
+> passes both jobs. R3.2 family extraction is active. Arrays close at
+> `6d9ec34`: normal run
+> [30236069971](https://github.com/SceneAPI/SceneIO/actions/runs/30236069971)
+> and compiler-instrumented run
+> [30236069959](https://github.com/SceneAPI/SceneIO/actions/runs/30236069959)
+> pass. The current calibration extraction preserves the same four format
+> capabilities and only moves development benchmark ownership.
 
 [current-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287022
 [current-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287161

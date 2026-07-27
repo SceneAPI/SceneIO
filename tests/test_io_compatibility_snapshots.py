@@ -595,7 +595,8 @@ def _assert_benchmark_components_and_metric_semantics_are_explicit():
         for node in ast.walk(benchmark_tree)
     )
 
-    for family in contract["r3_2_family_extraction"].values():
+    extracted_families = contract["r3_2_family_extraction"]
+    for family in extracted_families.values():
         for name, declaration in family["family_functions"].items():
             source_path = ROOT / declaration["source"]
             source_tree = ast.parse(source_path.read_text(encoding="utf-8"))
@@ -646,12 +647,225 @@ def _assert_benchmark_components_and_metric_semantics_are_explicit():
         oracle_module = sys.modules[oracle_module_name]
         for name in family["optional_oracle_bindings"]:
             assert getattr(benchmark, name) is getattr(oracle_module, name)
-        assert set(family["no_oracle_exemptions"]) == {"flo", "pfm"}
         for exemption in family["no_oracle_exemptions"].values():
-            assert exemption["unverified_property"] == (
-                "independent benchmark encode/decode throughput"
-            )
+            assert set(exemption) == {
+                "unverified_property",
+                "verification",
+            }
+            assert exemption["unverified_property"]
             assert exemption["verification"]
+
+    array_exemptions = extracted_families["arrays"][
+        "no_oracle_exemptions"
+    ]
+    assert set(array_exemptions) == {"flo", "pfm"}
+    for exemption in array_exemptions.values():
+        assert exemption["unverified_property"] == (
+            "independent benchmark encode/decode throughput"
+        )
+    assert not extracted_families["calibration"][
+        "no_oracle_exemptions"
+    ]
+
+    lower_modules = sorted(
+        {
+            declaration["source"][:-3].replace("/", ".")
+            for family in extracted_families.values()
+            for group in ("family_functions", "functions")
+            for declaration in family[group].values()
+        }
+        | {
+            family["optional_oracle_source"][:-3].replace("/", ".")
+            for family in extracted_families.values()
+        }
+    )
+    lower_import_probe = textwrap.dedent(
+        f"""
+        import importlib
+        import json
+        import sys
+
+        modules = {lower_modules!r}
+        for module in modules:
+            importlib.import_module(module)
+        print(json.dumps({{
+            "facade_loaded": "bench.bench_io" in sys.modules,
+            "modules": modules,
+        }}))
+        """
+    )
+    lower_import_result = subprocess.run(
+        [sys.executable, "-c", lower_import_probe],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    lower_import_observed = json.loads(lower_import_result.stdout)
+    assert not lower_import_observed["facade_loaded"]
+    assert lower_import_observed["modules"] == lower_modules
+
+    calibration_family_module = sys.modules[
+        "bench.io_bench.families.calibration"
+    ]
+    calibration_fixture_module = sys.modules[
+        "bench.io_bench.fixtures.calibration"
+    ]
+    calibration_oracle_module = sys.modules[
+        "bench.io_bench.oracles.calibration"
+    ]
+    assert (
+        calibration_family_module._record_nbytes
+        is benchmark._record_nbytes
+    )
+    calibration_specs = benchmark.build_calibration_specs(0.001)
+    assert [spec.id for spec in calibration_specs] == [
+        "opencv_yaml",
+        "opencv_xml",
+        "ros_camera_info",
+        "kalibr",
+    ]
+    calibration_by_id = {
+        spec.id: spec
+        for spec in calibration_specs
+    }
+    calibration_core_bindings = {
+        "opencv_yaml": (
+            _core.write_opencv_yaml,
+            _core.read_opencv_yaml,
+        ),
+        "opencv_xml": (
+            _core.write_opencv_xml,
+            _core.read_opencv_xml,
+        ),
+        "ros_camera_info": (
+            _core.write_ros_camera_info,
+            _core.read_ros_camera_info,
+        ),
+        "kalibr": (
+            _core.write_kalibr,
+            _core.read_kalibr,
+        ),
+    }
+    for codec_id, bindings in calibration_core_bindings.items():
+        spec = calibration_by_id[codec_id]
+        assert (spec.w, spec.r) == bindings
+
+    assert (
+        calibration_by_id["opencv_yaml"].make
+        is calibration_fixture_module._single_calibration
+    )
+    assert (
+        calibration_by_id["opencv_xml"].make
+        is calibration_fixture_module._single_calibration
+    )
+    assert (
+        calibration_by_id["ros_camera_info"].make.func
+        is calibration_fixture_module._single_calibration
+    )
+    assert calibration_by_id[
+        "ros_camera_info"
+    ].make.keywords == {"ros": True}
+    assert (
+        calibration_by_id["kalibr"].make.func
+        is calibration_fixture_module._kalibr_calibration
+    )
+    assert calibration_by_id["kalibr"].make.args == (0.001,)
+    assert (
+        calibration_by_id["opencv_xml"].ow,
+        calibration_by_id["opencv_xml"].orr,
+    ) == (
+        calibration_oracle_module._xml_oracle_write,
+        calibration_oracle_module._xml_oracle_read,
+    )
+
+    yaml_spec_ids = (
+        "opencv_yaml",
+        "ros_camera_info",
+        "kalibr",
+    )
+    if calibration_oracle_module.yaml is None:
+        for codec_id in yaml_spec_ids:
+            spec = calibration_by_id[codec_id]
+            assert (spec.ow, spec.orr) == (None, None)
+    else:
+        for codec_id in yaml_spec_ids:
+            spec = calibration_by_id[codec_id]
+            assert (
+                spec.ow,
+                spec.orr,
+            ) == (
+                calibration_oracle_module._yaml_oracle_write,
+                calibration_oracle_module._yaml_oracle_read,
+            )
+
+    for codec_id, spec in calibration_by_id.items():
+        record, payload = spec.make()
+        assert spec.nbytes(record, payload) == benchmark._record_nbytes(
+            record
+        )
+        if spec.ow is None or spec.orr is None:
+            continue
+        decoded = spec.orr(spec.ow(payload))
+        if codec_id == "opencv_xml":
+            assert decoded.tag == "opencv_storage"
+            assert [child.tag for child in decoded] == list(payload)
+        else:
+            assert decoded == payload
+
+    blocked_calibration_probe = textwrap.dedent(
+        """
+        import builtins
+        import importlib
+        import json
+
+        original_import = builtins.__import__
+
+        def blocked_import(name, *args, **kwargs):
+            if name == "yaml" or name.startswith("yaml."):
+                raise ImportError("blocked by benchmark contract")
+            return original_import(name, *args, **kwargs)
+
+        builtins.__import__ = blocked_import
+        oracles = importlib.import_module(
+            "bench.io_bench.oracles.calibration"
+        )
+        family = importlib.import_module(
+            "bench.io_bench.families.calibration"
+        )
+        facade = importlib.import_module("bench.bench_io")
+        specs = {
+            spec.id: spec
+            for spec in family.build_calibration_specs(0.001)
+        }
+        print(json.dumps([
+            oracles.yaml is None,
+            family.yaml is None,
+            facade.yaml is None,
+            facade.build_calibration_specs is family.build_calibration_specs,
+            facade._yaml_oracle_write is oracles._yaml_oracle_write,
+            facade._yaml_oracle_read is oracles._yaml_oracle_read,
+            family._yaml_oracle_write is oracles._yaml_oracle_write,
+            family._yaml_oracle_read is oracles._yaml_oracle_read,
+            specs["opencv_yaml"].ow is None,
+            specs["opencv_yaml"].orr is None,
+            specs["ros_camera_info"].ow is None,
+            specs["ros_camera_info"].orr is None,
+            specs["kalibr"].ow is None,
+            specs["kalibr"].orr is None,
+            specs["opencv_xml"].ow is oracles._xml_oracle_write,
+            specs["opencv_xml"].orr is oracles._xml_oracle_read,
+        ]))
+        """
+    )
+    blocked_calibration = subprocess.run(
+        [sys.executable, "-c", blocked_calibration_probe],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert json.loads(blocked_calibration.stdout) == [True] * 16
 
     array_oracle_module = sys.modules["bench.io_bench.oracles.arrays"]
     oracle_probe = np.arange(12, dtype=np.float32).reshape(3, 4)

@@ -334,7 +334,7 @@ verification have accumulated in a few large modules:
 | C++ records | 32 source/header files | still manageable; new table/animation/scene records will add pressure |
 | Python registry | `registry.py`, 205 lines; `_registry/assembly.py`, 148 lines; focused `_registry/{model,adapters,detection,native_features}.py` modules; and eight `_registry/families/*.py` definition modules | all built-ins are family-owned; R3 now splits the benchmark and cross-codec verification monoliths |
 | Inspection | `_inspection.py` compatibility facade plus `_inspectors/{model,common,arrays,calibration,images,meshes,points,reconstruction,sequences,splats}.py`; all eight manifest families have lower inspector ownership | keep the proven shared model, mmap bridge, metadata bounds, exact-read/integer grammar, and image-result constructor as lower services |
-| Benchmark | compatible `bench_io.py` facade plus `io_bench/{model,measure,reporting}.py` and the first `families/fixtures/oracles/arrays.py` modules | arrays have lower family ownership; the seven remaining family hooks and sweep orchestration move checkpoint by checkpoint during R3.2 |
+| Benchmark | compatible `bench_io.py` facade plus `io_bench/{model,measure,reporting}.py`, lower arrays/calibration family modules, and shared `families/common.py` | arrays and calibration have lower family ownership; the six remaining family hooks and sweep orchestration move checkpoint by checkpoint during R3.2 |
 | Cross-codec tests | `test_io_mmap.py`, about 2,400 lines; `test_io_partial.py`, about 1,100 | reusable codec cases and behavior assertions are difficult to extend independently |
 | Execution plan | `format_gap_implementation_plan.md`, about 2,500 lines | historical evidence and the active queue are easy to confuse |
 | Native dependencies | six source-complete in-tree projects, one LAZperf integration/provenance directory, and six `FetchContent` projects | stable builds are not yet fully offline/repository-contained |
@@ -639,7 +639,24 @@ constructed `Spec` bindings, and facade aliases. A fresh exact-tree source
 archive has 343 members and contains all six new benchmark modules without
 generated cache files. Its 81-member derived wheel excludes development
 benchmark/test modules, retains all 15 attribution files, and keeps NumPy as
-its sole unconditional dependency.
+its sole unconditional dependency. Exact arrays commit `6d9ec34` passes normal
+run `30236069971` and compiler-instrumented run `30236069959`.
+
+The calibration checkpoint adds the complete four-codec hook under
+`families/calibration.py`, its deterministic rig builders under
+`fixtures/calibration.py`, and its optional PyYAML plus standard-library XML
+comparisons under `oracles/calibration.py`. The unchanged
+`families/common.py::_record_nbytes` helper is now lower-owned once for
+calibration and later pose/reconstruction hooks. Checked AST, facade identity,
+Spec binding/argument/size, installed/absent PyYAML, XML execution, fresh lower
+import, four-codec oracle, and 50-codec structure controls pass. The fresh
+347-member exact-tree source archive contains the four new
+calibration/common benchmark modules without generated cache files. Its
+81-member wheel excludes benchmark/test/YAML modules, retains all 15
+attribution files, keeps NumPy as the only unconditional dependency, and
+keeps PyYAML test-extra only. A fresh NumPy-only, PyYAML-absent wheel
+environment passes `python -m sceneio._wheel_smoke`; all three independent
+reviews are clear.
 
 ### R4. Organize native build and bindings
 

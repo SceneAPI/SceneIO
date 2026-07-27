@@ -191,7 +191,16 @@ sceneio._core (C++ / nanobind)
   facade re-exports those helpers, and a checked source/AST map plus direct
   installed/absent-mode oracle execution controls prove their identity and
   availability. R3.1b closes at `0bdfe0f`; normal run `30234796010` and
-  compiler-instrumented run `30234796025` pass.
+  compiler-instrumented run `30234796025` pass. The arrays extraction at
+  `6d9ec34` passes normal run `30236069971` and compiler-instrumented run
+  `30236069959`. Calibration is the second R3.2 benchmark family:
+  `families/calibration.py` owns its complete four-`Spec` hook,
+  `fixtures/calibration.py` owns both deterministic rig builders,
+  `oracles/calibration.py` owns optional PyYAML and standard-library XML
+  comparisons, and `families/common.py` owns the unchanged record-size helper
+  shared with later pose/reconstruction families. Lower modules do not load
+  the facade; checked installed/absent-mode controls preserve every callback
+  and compatibility alias.
   Built-in startup uses `_registry/assembly.py` as a lower staging boundary.
   Eight complete family tuples are collected without touching the public
   registry. After all 50 canonical ids validate, the facade publishes the

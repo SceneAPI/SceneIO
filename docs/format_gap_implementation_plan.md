@@ -1997,7 +1997,10 @@ compatible CLI and 50-codec contract. R3.1b now provides the versioned
 fresh-child memory protocol, strict unavailable-sampler behavior, and
 positive/negative payload controls. Follow-up commit `0bdfe0f` passes normal
 run `30234796010` and compiler-instrumented run `30234796025`, closing R3.1b.
-R3.2 family extraction is the active repository-organization unit in
+R3.2 family extraction is the active repository-organization unit: arrays
+close at `6d9ec34` with normal run `30236069971` and
+compiler-instrumented run `30236069959`, and calibration is complete in the
+current local tree. The remaining family sequence is maintained in
 [`next_stage_implementation_checklist.md`](next_stage_implementation_checklist.md).
 
 Status terms are strict:

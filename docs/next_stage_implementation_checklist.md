@@ -2728,7 +2728,7 @@ passes both jobs. No release workflow, tag, or publication was triggered.
 
 - [ ] Move builders/oracles one family at a time:
   - [x] arrays;
-  - [ ] calibration;
+  - [x] calibration;
   - [ ] images;
   - [ ] meshes;
   - [ ] points;
@@ -2771,6 +2771,37 @@ family/fixture/oracle modules without generated cache files. Its derived
 81-member wheel contains no benchmark, test, or safetensors module, retains
 all 15 attribution files, and keeps `numpy>=1.26` as its sole unconditional
 dependency.
+
+Exact arrays commit `6d9ec34` passes normal run
+[30236069971](https://github.com/SceneAPI/SceneIO/actions/runs/30236069971)
+and compiler-instrumented run
+[30236069959](https://github.com/SceneAPI/SceneIO/actions/runs/30236069959).
+
+The calibration checkpoint moves the complete `opencv_yaml`, `opencv_xml`,
+`ros_camera_info`, and `kalibr` hook to
+`io_bench/families/calibration.py`; both rig fixtures move to
+`fixtures/calibration.py`, and the PyYAML/XML comparisons move to
+`oracles/calibration.py`. The unchanged `_record_nbytes` helper moves once to
+`families/common.py` for calibration and the later pose/reconstruction hooks.
+The facade keeps exact compatibility aliases and splices the four specs at
+their original position. All seven moved helper ASTs match the parent.
+Contract controls pin exact `make`, `w`, `r`, `ow`, `orr`, and logical-size
+behavior, execute the installed PyYAML/XML pairs through the actual specs,
+and prove in a fresh process that absent PyYAML removes only the three YAML
+pairs. Lower modules do not load the facade. The four-codec live benchmark
+produces non-null oracle metrics for every row, and the complete 50-codec
+smoke retains structural projection
+`2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`.
+Focused calibration/contract validation passes 117 tests; the complete suite
+passes 3,316 with the same four documented skips, Ruff is clean, and the
+three independent reviews are clear. A fresh
+347-member exact-tree source archive contains exactly the four new
+calibration/common benchmark modules and no generated cache files. Its
+81-member derived wheel contains no benchmark, test, or YAML module, retains
+all 15 attribution files, and keeps `numpy>=1.26` as its sole unconditional
+dependency; `pyyaml>=6.0` remains test-extra only. A fresh environment with
+that wheel and NumPy, but without PyYAML, passes
+`python -m sceneio._wheel_smoke`.
 
 ### R3.3 — cross-codec test support
 

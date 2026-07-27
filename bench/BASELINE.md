@@ -1731,4 +1731,38 @@ family/fixture/oracle modules without generated cache files. Its derived
 81-member wheel contains no benchmark, test, or safetensors module, retains
 all 15 attribution files, and keeps `numpy>=1.26` as its sole unconditional
 dependency. This is a mechanical ownership change and makes no
-codec-performance claim.
+codec-performance claim. Exact commit `6d9ec34` passes normal run
+[30236069971](https://github.com/SceneAPI/SceneIO/actions/runs/30236069971)
+and compiler-instrumented run
+[30236069959](https://github.com/SceneAPI/SceneIO/actions/runs/30236069959).
+
+## R3.2 calibration benchmark-family extraction (2026-07-27)
+
+The second R3.2 checkpoint moves the complete `opencv_yaml`, `opencv_xml`,
+`ros_camera_info`, and `kalibr` `Spec` hook to
+`bench/io_bench/families/calibration.py`. Deterministic rig builders now live
+in `fixtures/calibration.py`; PyYAML and standard-library XML oracles live in
+`oracles/calibration.py`. The unchanged record-size helper moves once to
+`families/common.py` because pose, reconstruction, and calibration specs share
+it. The facade retains exact historical helper identities and inserts the
+four-codec hook at the same position.
+
+All seven moved helper ASTs match the parent exactly. Contract controls pin the
+four core bindings, fixture/partial arguments, logical-size results, and
+oracle identities. They execute all installed PyYAML and XML pairs through
+the actual `Spec` objects; a fresh process with PyYAML blocked proves all
+three YAML-backed pairs become unavailable together while XML remains active.
+Lower-module imports do not load the facade. The four-codec live benchmark
+produces independent write/read metrics for every row, and the complete
+50-codec smoke retains structural projection
+`2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`.
+Focused calibration/contract validation passes 117 tests; the complete suite
+passes 3,316 with the same four documented skips, and Ruff is clean. A fresh
+347-member exact-tree source archive contains exactly the four new
+calibration/common benchmark modules and no generated cache files. Its
+81-member derived wheel contains no benchmark, test, or YAML module, retains
+all 15 attribution files, and keeps `numpy>=1.26` as its sole unconditional
+dependency; `pyyaml>=6.0` remains test-extra only. A fresh environment with
+that wheel and NumPy, but without PyYAML, passes
+`python -m sceneio._wheel_smoke`. All three independent reviews are clear.
+This is a mechanical ownership change and makes no codec-performance claim.
