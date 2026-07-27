@@ -328,8 +328,8 @@
     "last": "tests/test_points_binary.py::test_bad_magic_rejected"
   },
   "pytest_candidate_collection": {
-    "count": 3301,
-    "sorted_normalized_node_ids_sha256": "ab9ab8c698e005032aeea52d69703b5b32ee29998fdd77c24970f6a198b7c176",
+    "count": 3309,
+    "sorted_normalized_node_ids_sha256": "acc43482c63eacd788005ae200d4fe7a1c7fee635bfbc14cda3abac90ace333f",
     "added_nodes": [
       "tests/test_import_guards.py::test_no_family_imports[io/_registry/assembly.py]",
       "tests/test_import_guards.py::test_no_family_imports[io/_inspectors/arrays.py]",
@@ -548,7 +548,15 @@
       "tests/test_io_splat_family_architecture.py::test_sog_retained_inspections_release_layers_and_directory",
       "tests/test_io_splat_family_architecture.py::test_sog_retained_missing_layer_exception_releases_directory[directory]",
       "tests/test_io_splat_family_architecture.py::test_sog_retained_missing_layer_exception_releases_directory[metadata]",
-      "tests/test_import_guards.py::test_no_family_imports[io/_inspectors/splats.py]"
+      "tests/test_import_guards.py::test_no_family_imports[io/_inspectors/splats.py]",
+      "tests/test_import_guards.py::test_no_family_imports[io/_registry/families/splats.py]",
+      "tests/test_io_splat_family_architecture.py::test_splat_definitions_preserve_order_positions_and_identity",
+      "tests/test_io_splat_family_architecture.py::test_splat_family_is_staged_once_and_not_defined_inline",
+      "tests/test_io_splat_family_architecture.py::test_splat_family_module_is_lower_layer_only",
+      "tests/test_io_splat_family_architecture.py::test_splat_family_staging_is_atomic_and_recoverable",
+      "tests/test_io_splat_family_architecture.py::test_splat_family_reload_is_inert_and_registry_reload_is_exact",
+      "tests/test_io_splat_family_architecture.py::test_splat_family_uniform_public_path_and_path_release",
+      "tests/test_io_registry_architecture.py::test_splat_wheel_smoke_invokes_each_family_helper_once"
     ],
     "removed_nodes": [],
     "first": "tests/codecs/test_bal.py::test_oracle_write_sceneio_read_parity_and_conventions",

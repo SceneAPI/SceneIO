@@ -146,21 +146,34 @@ sceneio._core (C++ / nanobind)
   now live in `_inspectors/splats.py`; `_inspection.py` retains unchanged
   dispatch and same-signature wrappers. The lower module calls only the
   compiled metadata helpers, shared inspection primitives, and shared PLY
-  parser, never a full decoder or registry. The parent contract is green
-  across MSVC, AppleClang/ARM, hosted glibc, and manylinux2014/GCC-10 at
-  `1864359`. The inspector checkpoint is under final validation; the six
-  `Codec` definitions remain in the facade until the separate registry
-  extraction closes R2.
+  parser, never a full decoder or registry.
+  `_registry/families/splats.py` now builds the exact Gaussian PLY, compressed
+  PLY, SOG, KSplat, SPZ, and SPLAT tuple after receiving the facade-owned SOG
+  archive/directory callbacks. Aggregate publication restores canonical
+  positions 2/3/4/5/14/49 while preserving every mmap reader, direct sink,
+  point selector, detection rule, and SOG path decision. All eight built-in
+  families therefore have lower registry and inspection ownership; the
+  compatibility facade contains no individual built-in definition. The
+  parent contract is green across MSVC, AppleClang/ARM, hosted glibc, and
+  manylinux2014/GCC-10 at `1864359`, and inspector commit `a4c968b` passes
+  normal run `30224059298` and compiler-instrumented run `30224059282`. The
+  registry candidate is locally green; exact-tree source/wheel packaging and
+  all three independent reviews pass. Commit and hosted validation remain its
+  closure gates.
   Built-in startup uses `_registry/assembly.py` as a lower staging boundary.
-  Individual facade definitions and complete extracted family tuples are
-  collected without touching the public registry. After all 50 canonical ids
-  validate, the facade publishes the same ordered `Codec` objects to its
-  existing `REGISTRY` dictionary in one update. `ImageFrameAccess` is created
-  while that dictionary is empty, but its callbacks read the live dictionary
-  on every use; the initial empty probe is not cached. Once publication
-  completes, built-in detection and sequence access see the complete set, and
-  later public `register()` additions/removals remain immediately visible.
-  The collector owns no registry, codec implementation, or dispatch policy.
+  Eight complete family tuples are collected without touching the public
+  registry. After all 50 canonical ids validate, the facade publishes the
+  same ordered `Codec` objects to its existing `REGISTRY` dictionary in one
+  update on first import. Reloads assemble and validate a private candidate
+  mapping before replacing the contents of the same live dictionary, so a
+  failed reload cannot expose a partial registry and registered extensions
+  survive successful reloads. `ImageFrameAccess` is created while that
+  dictionary is empty, but
+  its callbacks read the live dictionary on every use; the initial empty
+  probe is not cached. Once publication completes, built-in detection and
+  sequence access see the complete set, and later public `register()`
+  additions/removals remain immediately visible. The collector owns no
+  registry, codec implementation, or dispatch policy.
 
 ## Stable codec ownership and backend selection
 
@@ -211,12 +224,11 @@ flat coordination points.
 4. **Wire C++** — add the `register_*` call to `module.cpp` (records before
    codecs) and the source to `CMakeLists.txt`.
 5. **Register adapters** — add one `Codec(...)` entry in its
-   `sceneio/io/_registry/families/<family>.py` module when that family has
-   migrated; otherwise use the compatibility `sceneio/io/registry.py` location
-   until its R2 unit lands. Declare extensions, detection signature, reader,
-   writer, record, datatype, container kind, stream flags, and optional
-   inspection/partial hooks. Public reads and writes must exercise the
-   production mmap/path/sink adapter rather than only the buffer seam.
+   `sceneio/io/_registry/families/<family>.py` module. Declare extensions,
+   detection signature, reader, writer, record, datatype, container kind,
+   stream flags, and optional inspection/partial hooks. Public reads and
+   writes must exercise the production mmap/path/sink adapter rather than only
+   the buffer seam.
 6. **Inspect and select** — add the built-in parser and `inspect_path()`
    dispatch branch, or provide `Codec.inspect`; add each supported
    `read_partial` selector and capability declaration. Match the full reader's

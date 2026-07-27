@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 import importlib
 import inspect
 import json
@@ -288,3 +289,23 @@ def test_repository_coverage_manifest_is_complete_and_resolvable():
             assert item["wheel_smoke_exemption"]
         assert item["documentation_row"] == "docs/format_coverage.md"
         assert f"| `{item['id']}` |" in capability_rows
+
+
+def test_splat_wheel_smoke_invokes_each_family_helper_once():
+    wheel_smoke = importlib.import_module("sceneio._wheel_smoke")
+    source = textwrap.dedent(inspect.getsource(wheel_smoke._splats))
+    calls = [
+        node.func.id
+        for node in ast.walk(ast.parse(source))
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Name)
+        and node.func.id.startswith("_")
+    ]
+    assert calls == [
+        "_gaussian_ply",
+        "_compressed_ply",
+        "_sog",
+        "_ksplat",
+        "_spz",
+        "_splat",
+    ]

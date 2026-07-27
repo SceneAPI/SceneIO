@@ -1446,3 +1446,92 @@ The wheel retains one native extension, all 15 attribution entries, NumPy as
 its only unconditional dependency, and no packaged build/include/lib/share/bin
 tree. A fresh NumPy-only environment passes the packaged smoke and explicit
 all-six splat inspection/read/partial/path-release probe.
+
+## R2 splat-family registry equivalence — 2026-07-26
+
+The final family extraction moves the same six `Codec(...)` expressions into
+`_registry/families/splats.py` and injects the facade-owned SOG callbacks. It
+changes registry ownership only. Two candidate captures use the command above
+and reproduce both the portable all-50 structural SHA-256
+`2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`
+and ordered six-row SHA-256
+`5c6adc3584ba25050c885b37313d009311e2253b0c841cbc8738b806cb090bfd`.
+The default-scale five-run throughput/allocation guard passes.
+
+A separate exact-parent comparison uses one identical 256-Gaussian corpus for
+commit `0696533e515b5f8e65cbb676df28d852f9d0a049` and the candidate. It takes
+15 randomized interleaved fresh-process samples per source. Each process warms
+the operation, measures one call, and separately records traced allocation.
+The acceptance limit is parent median plus the maximum of 10 percent of that
+median, three times the sum of parent/candidate median absolute deviations, or
+0.05 ms. Candidate maximum traced allocation must not exceed the parent.
+
+| Operation | Parent | Candidate | Acceptance limit | Parent/candidate peak |
+|---|---:|---:|---:|---:|
+| compressed PLY inspect | 0.1841 ms | 0.1836 ms | 0.2341 ms | 16,307 / 16,307 B |
+| compressed PLY partial | 0.1561 ms | 0.1552 ms | 0.2061 ms | 11,402 / 11,402 B |
+| compressed PLY read | 0.2498 ms | 0.2635 ms | 0.2998 ms | 11,218 / 11,218 B |
+| compressed PLY write | 0.4896 ms | 0.5126 ms | 0.6501 ms | 3,189 / 3,189 B |
+| Gaussian PLY inspect | 0.1182 ms | 0.1208 ms | 0.1682 ms | 12,797 / 12,797 B |
+| Gaussian PLY partial | 0.1180 ms | 0.1265 ms | 0.1738 ms | 11,358 / 11,358 B |
+| Gaussian PLY read | 0.1801 ms | 0.1778 ms | 0.3466 ms | 11,174 / 11,174 B |
+| Gaussian PLY write | 0.4929 ms | 0.4838 ms | 0.5826 ms | 3,134 / 3,134 B |
+| KSplat inspect | 0.0879 ms | 0.0946 ms | 0.1379 ms | 15,650 / 15,650 B |
+| KSplat partial | 0.1037 ms | 0.0999 ms | 0.1537 ms | 11,370 / 11,370 B |
+| KSplat read | 0.1009 ms | 0.1044 ms | 0.1509 ms | 11,186 / 11,186 B |
+| KSplat write | 0.4969 ms | 0.4910 ms | 0.6574 ms | 3,149 / 3,149 B |
+| SOG inspect | 0.4278 ms | 0.4409 ms | 0.5505 ms | 33,748 / 33,748 B |
+| SOG partial | 0.3558 ms | 0.3630 ms | 0.4359 ms | 12,009 / 12,009 B |
+| SOG read | 0.3644 ms | 0.3666 ms | 0.4169 ms | 11,825 / 11,825 B |
+| SOG write | 2.1216 ms | 2.1311 ms | 2.3652 ms | 3,764 / 3,764 B |
+| SPLAT inspect | 0.0328 ms | 0.0340 ms | 0.0828 ms | 3,091 / 3,091 B |
+| SPLAT partial | 0.0999 ms | 0.0983 ms | 0.1499 ms | 11,366 / 11,366 B |
+| SPLAT read | 0.0970 ms | 0.0955 ms | 0.1470 ms | 11,182 / 11,182 B |
+| SPLAT write | 0.4350 ms | 0.4390 ms | 0.5634 ms | 3,144 / 3,144 B |
+| SPZ inspect | 0.1821 ms | 0.1840 ms | 0.2321 ms | 160,322 / 160,322 B |
+| SPZ read | 0.1029 ms | 0.0985 ms | 0.1529 ms | 11,174 / 11,174 B |
+| SPZ write | 0.5224 ms | 0.5314 ms | 0.7417 ms | 3,134 / 3,134 B |
+
+All 23 rows pass. Every candidate allocation maximum is byte-for-byte equal
+to its parent maximum. This is non-regression evidence, not a speed claim.
+
+A scale-1 family diagnostic uses 11.2 MiB logical clouds. Encoded files are
+11.2 MiB Gaussian PLY, 3.3 MiB compressed PLY, 2.9 MiB SOG, 4.8 MiB KSplat,
+3.4 MiB SPZ, and 6.4 MiB SPLAT. Public path-read traced allocation remains
+0.0 MiB at the displayed precision, and sink-write traced allocation remains
+0.0 MiB while the legacy byte writers peak near encoded size. Windows reports
+that the requested `POSIX_FADV_DONTNEED` hint is unavailable, so these are
+warm-cache diagnostics rather than cold-cache measurements.
+
+Fifteen randomized interleaved fresh-process import samples produce:
+
+| Import | Parent | Candidate | SceneIO modules |
+|---|---:|---:|---:|
+| `import sceneio` | 5.230 ms | 4.452 ms | 7 / 7, exact same set |
+| I/O facade | 75.253 ms | 69.788 ms | 43 / 45 |
+| direct `_core` | 7.013 ms | 6.271 ms | 8 / 8, exact same set |
+
+The I/O facade adds only `_inspectors.splats` and
+`_registry.families.splats`, as planned. Import timings are diagnostic; exact
+module sets are the acceptance contract.
+
+Pre-final package tree `7ab4f960dcb43ac95c4cf7269fed7d733bad71cc`
+contains 326 tracked files. Its 327-file source archive adds only generated
+`PKG-INFO`; every tracked blob is present and byte-identical. The archive
+SHA-256 is
+`47211c9a22d05e673265daaa99a813ac74ac1607116d3b5c9331d9accaf1e04c`.
+The 81-member Windows cp312-abi3 wheel derived only from that source archive
+has SHA-256
+`b3cd1f1046297339c7fc88c0f89c66deb4e6a4cc78cc96bce9ce99565c06fb2a`.
+It contains one native extension, all 15 attribution members, no packaged
+build/include/lib/share/bin tree, and NumPy as its only unconditional
+dependency. The three changed runtime files match across Git, source archive,
+and wheel; the native module depends only on Python and standard Windows
+runtimes. A fresh external NumPy-only environment passes the complete wheel
+smoke, including all six splat read/inspect/partial/lifetime/path-release
+probes.
+
+As with the prior inspector checkpoint, the final package confirmation is a
+no-further-edit rebuild after this evidence is staged. Its hashes remain
+outside the source tree so recording them cannot invalidate the tree they
+describe.

@@ -25,7 +25,7 @@ benchmark_case = "gaussian_ply"
 source_suite = "tests/codecs/test_ply.py"
 documentation_row = "docs/format_coverage.md"
 inspection_source = "src/sceneio/io/_inspectors/splats.py"
-wheel_smoke_exemption = "not yet included in the packaged representative smoke; covered by the source parity suite"
+wheel_smoke_case = "_splats"
 
 [[codec]]
 id = "compressed_ply"
@@ -33,7 +33,7 @@ benchmark_case = "compressed_ply"
 source_suite = "tests/codecs/test_compressed_ply.py"
 documentation_row = "docs/format_coverage.md"
 inspection_source = "src/sceneio/io/_inspectors/splats.py"
-wheel_smoke_case = "_compressed_ply"
+wheel_smoke_case = "_splats"
 
 [[codec]]
 id = "sog"
@@ -41,7 +41,7 @@ benchmark_case = "sog"
 source_suite = "tests/codecs/test_sog.py"
 documentation_row = "docs/format_coverage.md"
 inspection_source = "src/sceneio/io/_inspectors/splats.py"
-wheel_smoke_case = "_sog"
+wheel_smoke_case = "_splats"
 
 [[codec]]
 id = "ksplat"
@@ -49,7 +49,7 @@ benchmark_case = "ksplat"
 source_suite = "tests/codecs/test_ksplat.py"
 documentation_row = "docs/format_coverage.md"
 inspection_source = "src/sceneio/io/_inspectors/splats.py"
-wheel_smoke_case = "_ksplat"
+wheel_smoke_case = "_splats"
 
 [[codec]]
 id = "ply_mesh"
@@ -121,7 +121,7 @@ benchmark_case = "spz"
 source_suite = "tests/codecs/test_spz.py"
 documentation_row = "docs/format_coverage.md"
 inspection_source = "src/sceneio/io/_inspectors/splats.py"
-wheel_smoke_exemption = "not yet included in the packaged representative smoke; covered by the source parity suite"
+wheel_smoke_case = "_splats"
 
 [[codec]]
 id = "transforms_json"
@@ -403,4 +403,4 @@ benchmark_case = "splat"
 source_suite = "tests/codecs/test_splat.py"
 documentation_row = "docs/format_coverage.md"
 inspection_source = "src/sceneio/io/_inspectors/splats.py"
-wheel_smoke_exemption = "not yet included in the packaged representative smoke; covered by the source parity suite"
+wheel_smoke_case = "_splats"

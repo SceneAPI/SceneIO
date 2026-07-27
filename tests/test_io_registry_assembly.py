@@ -41,6 +41,7 @@ CODEC_SOURCE_PATHS = (
     "src/sceneio/io/_registry/families/points.py",
     "src/sceneio/io/_registry/families/reconstruction.py",
     "src/sceneio/io/_registry/families/sequences.py",
+    "src/sceneio/io/_registry/families/splats.py",
 )
 
 
@@ -721,6 +722,7 @@ def test_assembly_dependency_direction_and_import_delta_are_exact():
         "sceneio.io._registry.families.arrays",
         "sceneio.io._registry.families.points",
         "sceneio.io._registry.families.reconstruction",
+        "sceneio.io._registry.families.splats",
     }
     assert intentional_additions <= set(modules)
     parent_modules = [
@@ -803,7 +805,21 @@ def test_assembly_dependency_direction_and_import_delta_are_exact():
         "  splat-platform:",
         maxsplit=1,
     )[1].split("  manylinux2014-portability:", maxsplit=1)[0]
-    assert 'uv pip install -e ".[dev]"' in splat_job
+    assert (
+        'uv pip install -e ".[dev]" "numpy>=2.0,<2.5" '
+        '"gsply>=0.4" "pillow>=10.0"'
+    ) in splat_job
+    assert splat_job.count("tests/test_io_splat_family_architecture.py") == 2
+    assert splat_job.count("-m pytest -q -rs") == 2
+    for suite in (
+        "test_ply.py",
+        "test_compressed_ply.py",
+        "test_sog.py",
+        "test_ksplat.py",
+        "test_spz.py",
+        "test_splat.py",
+    ):
+        assert splat_job.count(f"tests/codecs/{suite}") == 2
     assert (
         "SCENEIO_SPLAT_PARENT_PROFILE: ${{ matrix.parent-profile }}"
         in splat_job

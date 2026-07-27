@@ -2394,51 +2394,51 @@ tree just verified.
 
 Registry extraction checkpoint:
 
-- [ ] Add side-effect-free `_registry/families/splats.py` with one immutable
+- [x] Add side-effect-free `_registry/families/splats.py` with one immutable
       six-codec tuple or a `build_splat_codecs(...)` factory. Inject the
       facade-owned SOG reader, writer, and point-reader callbacks so the
       existing archive/directory behavior and callable identities remain
       exact.
-- [ ] Move each `Codec(...)` definition mechanically and stage the complete
+- [x] Move each `Codec(...)` definition mechanically and stage the complete
       tuple exactly once through
       `_define_builtin_family("splats", SPLAT_CODECS)`. Preserve canonical
       positions 2/3/4/5/14/49; aggregate finalization, not source order,
       restores the public 50-codec order.
-- [ ] Preserve the four direct mmap point-selector closures, SOG's exact
+- [x] Preserve the four direct mmap point-selector closures, SOG's exact
       facade-owned hybrid point-reader callable, and SPZ's deliberate lack of
       a selector. Preserve all mmap readers, file sinks, record/datatype
       identities, loss flags, container kind, and supported/unsupported
       feature tuples.
-- [ ] Preserve SOG path decisions exactly: an existing directory, direct
+- [x] Preserve SOG path decisions exactly: an existing directory, direct
       `meta.json`, or suffixless output uses the directory adapter. Every
       other read path uses the archive adapter regardless of suffix, and every
       other output with a nonempty suffix uses the archive adapter.
-- [ ] Preserve PLY detection precedence and ownership in `_ply.py`; do not
+- [x] Preserve PLY detection precedence and ownership in `_ply.py`; do not
       make Gaussian/compressed/mesh/point classification depend on the new
       family module's import or registration order.
-- [ ] Add the family source to the authoritative Codec AST scan. Prove exact
+- [x] Add the family source to the authoritative Codec AST scan. Prove exact
       tuple order, positions, Codec identities, ASTs, operation
       callables/closures, atomic staging, reload/idempotence, unchanged
       registry/capability/public snapshots, and no inline splat definitions in
       the facade.
-- [ ] Add one uniform all-six public path covering write, promised detection
+- [x] Add one uniform all-six public path covering write, promised detection
       or explicit-format behavior, inspect, read, logical equality, and point
       selection where supported.
-- [ ] Add explicit retained-result/path-release cases after full reads for all
+- [x] Add explicit retained-result/path-release cases after full reads for all
       six, after partial reads for the five selectors, and after inspection
       success/failure for all six. Exercise SOG archive, directory, and direct
       metadata entry paths.
-- [ ] Extend `_wheel_smoke.py` to execute all six formats. Retain the existing
+- [x] Extend `_wheel_smoke.py` to execute all six formats. Retain the existing
       compressed PLY, SOG, and KSplat coverage; add Gaussian PLY, SPZ, and
       SPLAT write/detect/inspect/read probes, Gaussian/SPLAT partial probes,
       and an assertion that SPZ exposes no partial capability. Replace the
       three current repository-coverage exemptions with one all-six smoke
       helper.
-- [ ] Update import/assembly/ownership/collection/workflow contracts. The
+- [x] Update import/assembly/ownership/collection/workflow contracts. The
       final I/O set may add exactly `_inspectors.splats` and
       `_registry.families.splats`, reaching 45 modules; the other two import
       boundaries remain exact.
-- [ ] Add the oracle-independent architecture suite as the mandatory all-six
+- [x] Add the oracle-independent architecture suite as the mandatory all-six
       three-OS splat gate. Run the six codec parity suites in that job with
       the test-only oracles installed, and report their skips separately so an
       unavailable oracle is not described as codec coverage. Include the
@@ -2448,19 +2448,19 @@ Registry extraction checkpoint:
 
 Verification, validation, and evidence closure:
 
-- [ ] Run the six codec suites plus `test_io_mmap.py`, `test_io_partial.py`,
+- [x] Run the six codec suites plus `test_io_mmap.py`, `test_io_partial.py`,
       capabilities, public E2E, registry/assembly/snapshot/import,
       repository-coverage, package, license, and documentation suites.
       Then run complete pytest and Ruff with `.venv/Scripts/python.exe`.
-- [ ] Differentially compare bytes and mmap decoding for all six; sink and
+- [x] Differentially compare bytes and mmap decoding for all six; sink and
       buffer bytes for all six; complete and partial logical records for the
       five selectors; SOG archive and directory records; and valid/invalid
       inspector outcomes before and after extraction.
-- [ ] Repeat two
+- [x] Repeat two
       `--runs 1 --scale 0.001 --skip-oracles` candidate captures. Require the
       exact all-50 and ordered six-row hashes above, then run the strict
       default-scale five-run guard.
-- [ ] Add an interleaved parent/candidate all-six comparator for read, write,
+- [x] Add an interleaved parent/candidate all-six comparator for read, write,
       inspect, and each supported point-range operation. Use 15 samples per
       operation and reject a candidate median increase larger than the maximum
       of 10 percent of the parent median, three times the combined median
@@ -2468,27 +2468,80 @@ Verification, validation, and evidence closure:
       within its parent bound. Investigate and review any rejection rather
       than averaging it away. Report accepted deltas as diagnostic evidence
       and claim no gain for this mechanical move.
-- [ ] Run generated large/cold-cache family diagnostics without committing
+- [x] Run generated large/cold-cache family diagnostics without committing
       their fixtures. Record the Windows cold-cache hint as unavailable when
       applicable rather than describing a warm-cache measurement as cold.
-- [ ] Run 15 interleaved exact-export parent/candidate samples for
+- [x] Run 15 interleaved exact-export parent/candidate samples for
       `import sceneio`, the I/O facade, and direct `_core`. Exact module sets
       are the contract; timings are diagnostic.
-- [ ] Freeze a zero-unstaged tree, export it with `core.autocrlf=false`, build
+
+Registry candidate evidence: all six definitions now come from the
+side-effect-free `build_splat_codecs(...)` factory and are staged once as one
+family. The facade keeps the exact SOG callbacks; the parent Codec AST and
+operation descriptors remain unchanged. The family/common matrix passes 444
+tests with one documented SPZ-oracle skip, and the complete 3,309-node
+collection passes 3,305 tests with four documented skips. Its sorted
+normalized node-id SHA-256 is
+`acc43482c63eacd788005ae200d4fe7a1c7fee635bfbc14cda3abac90ace333f`.
+Ruff is clean.
+
+Both small captures reproduce all-50 SHA-256
+`2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`
+and ordered-splat SHA-256
+`5c6adc3584ba25050c885b37313d009311e2253b0c841cbc8738b806cb090bfd`;
+the strict five-run guard passes. Fifteen randomized interleaved
+parent/candidate samples cover read, write, inspect, and each supported point
+range. All 23 operation medians satisfy the planned bound, and candidate
+maximum traced allocations equal the parent maxima for every operation.
+The scale-1 six-format diagnostic uses 11.2 MiB logical clouds and files from
+2.9 to 11.2 MiB; Windows reports the requested POSIX cache-eviction hint as
+unavailable, so the readings are warm-cache diagnostics.
+
+Fifteen randomized interleaved fresh-process import samples retain exact
+seven-module `sceneio` and eight-module direct `_core` sets. The I/O facade
+moves from 43 to 45 modules by adding only `_inspectors.splats` and
+`_registry.families.splats`; parent/candidate medians are 5.230/4.452 ms,
+75.253/69.788 ms, and 7.013/6.271 ms for the three boundaries. Timing is
+diagnostic; exact module sets are the contract.
+
+Pre-final package tree `7ab4f960dcb43ac95c4cf7269fed7d733bad71cc`
+contains 326 tracked files. Its 327-file source archive adds only generated
+`PKG-INFO`, has no missing or differing tracked blob, and has SHA-256
+`47211c9a22d05e673265daaa99a813ac74ac1607116d3b5c9331d9accaf1e04c`.
+The wheel derived only from that archive has 81 members and SHA-256
+`b3cd1f1046297339c7fc88c0f89c66deb4e6a4cc78cc96bce9ce99565c06fb2a`.
+It retains all 15 attribution members, one native extension, NumPy as its
+sole unconditional dependency, no packaged build/include/lib/share/bin tree,
+and only Python/standard Windows runtime native dependencies. The three
+changed runtime files match across Git, archive, and wheel. A fresh external
+environment containing only pip, NumPy, and this exact wheel passes the
+complete installed smoke, including all six splat helpers and their declared
+partial/lifetime/path-release behavior.
+
+The architecture/correctness review verified inert family reload, failure
+atomicity, live public-dictionary identity, canonical rebuild order, and
+runtime-extension preservation. The test/performance review led to explicit
+three-OS six-suite parity steps and an AST contract proving every splat smoke
+helper is invoked once. The platform/package/documentation review is clear;
+its inferred focused-matrix count change was withdrawn because it was not
+measured. The final 69-test architecture/assembly matrix and complete
+3,309-node suite pass after all findings.
+
+- [x] Freeze a zero-unstaged tree, export it with `core.autocrlf=false`, build
       the source archive from that tree, and build the wheel only from the
       exact archive. Compare every Git blob and all changed packaged runtime
       files byte-for-byte across Git, archive, and wheel.
-- [ ] Measure the final artifact inventory rather than forcing an estimate.
+- [x] Measure the final artifact inventory rather than forcing an estimate.
       Verify the complete existing license/attribution set, one native
       extension, no packaged build/include/lib/share/bin tree, NumPy as the
       sole unconditional dependency, unchanged shared-library dependencies,
       and no FFmpeg/libav code, linkage, process invocation, runtime member,
       or attribution.
-- [ ] Install the exact wheel outside the repository with only NumPy and run
+- [x] Install the exact wheel outside the repository with only NumPy and run
       the complete installed smoke, including all six splat formats,
       detection, inspection, reads, supported partial reads, retained-result
       lifetime, and path release.
-- [ ] Obtain separate architecture/correctness, test/performance, and
+- [x] Obtain separate architecture/correctness, test/performance, and
       platform/package/documentation reviews for each implementation
       checkpoint. Resolve every finding before its commit.
 - [ ] Commit and push only green, Ruff-clean units with the required co-author

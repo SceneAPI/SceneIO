@@ -34,6 +34,7 @@ from sceneio.io._registry.families.meshes import MESH_CODECS
 from sceneio.io._registry.families.points import POINT_CODECS
 from sceneio.io._registry.families.reconstruction import RECONSTRUCTION_CODECS
 from sceneio.io._registry.families.sequences import build_sequence_codecs
+from sceneio.io._registry.families.splats import build_splat_codecs
 
 Codec = _shared_model.Codec
 CodecCapabilities = _shared_model.CodecCapabilities
@@ -66,7 +67,15 @@ def native_feature_capabilities(
     )
 
 
-REGISTRY: dict[str, Codec] = {}
+REGISTRY: dict[str, Codec]
+_IS_REGISTRY_RELOAD = "REGISTRY" in globals()
+if not _IS_REGISTRY_RELOAD:
+    REGISTRY = {}
+_RUNTIME_EXTENSIONS = tuple(
+    (format_id, codec)
+    for format_id, codec in REGISTRY.items()
+    if format_id not in CANONICAL_BUILTIN_IDS
+)
 _BUILTIN_ASSEMBLY = _BuiltinAssembly()
 
 
@@ -75,12 +84,6 @@ def register(codec: Codec) -> Codec:
         raise ValueError(f"codec id already registered: {codec.id!r}")
     REGISTRY[codec.id] = codec
     return codec
-
-
-def _define_builtin(codec: Codec) -> Codec:
-    """Stage one built-in while the public registry remains unpublished."""
-
-    return _BUILTIN_ASSEMBLY.add_codec(codec)
 
 
 def _define_builtin_family(
@@ -211,126 +214,14 @@ _define_builtin_family(
     _ARRAY_CODECS,
 )
 _define_builtin_family("reconstruction", RECONSTRUCTION_CODECS)
-_define_builtin(
-    Codec(
-        "gaussian_ply",
-        (".ply",),
-        _mmap_reader(_core.read_gaussian_ply),
-        _file_sink_writer(_core.write_gaussian_ply),
-        record=_core.GaussianCloud,
-        datatype="splat",
-        magic=(b"ply",),
-        read_points=_mmap_selector_reader(_core.read_gaussian_ply_points),
-    )
+_SPLAT_CODECS = build_splat_codecs(
+    _sog_reader,
+    _sog_writer,
+    _sog_point_reader,
 )
-_define_builtin(
-    Codec(
-        "compressed_ply",
-        (".compressed.ply",),
-        _mmap_reader(_core.read_compressed_ply),
-        _file_sink_writer(_core.write_compressed_ply),
-        record=_core.GaussianCloud,
-        datatype="splat",
-        magic=(b"ply",),
-        read_points=_mmap_selector_reader(
-            _core.read_compressed_ply_points
-        ),
-        lossy=True,
-        supported_features=(
-            "playcanvas_chunk_256",
-            "legacy_direct_color_read",
-            "position_11_10_11",
-            "scale_11_10_11",
-            "largest_three_quaternion",
-            "rgba8",
-            "sh_degrees_0_3",
-            "morton_ordered_write",
-        ),
-        unsupported_features=(
-            "ascii",
-            "binary_big_endian",
-            "unknown_elements",
-            "unknown_properties",
-        ),
-    )
-)
-_define_builtin(
-    Codec(
-        "sog",
-        (".sog",),
-        _sog_reader,
-        _sog_writer,
-        record=_core.GaussianCloud,
-        datatype="splat",
-        filenames=("meta.json",),
-        is_directory=True,
-        dir_marker="meta.json",
-        read_points=_sog_point_reader,
-        lossy=True,
-        container_kind="multi_file",
-        supported_features=(
-            "playcanvas_v2",
-            "bundled_zip",
-            "unbundled_directory",
-            "lossless_webp_layers",
-            "position_16bit_log",
-            "largest_three_quaternion",
-            "shared_scale_dc_codebooks",
-            "sh_degrees_0_3",
-            "sh_palette",
-            "morton_ordered_write",
-        ),
-        unsupported_features=(
-            "legacy_v1",
-            "lossy_webp_layers",
-            "streamed_lod",
-            "unknown_layers",
-        ),
-    )
-)
-_define_builtin(
-    Codec(
-        "ksplat",
-        (".ksplat",),
-        _mmap_reader(_core.read_ksplat),
-        _file_sink_writer(_core.write_ksplat),
-        record=_core.GaussianCloud,
-        datatype="splat",
-        read_points=_mmap_selector_reader(_core.read_ksplat_points),
-        lossy=True,
-        supported_features=(
-            "mkkellogg_v0_1",
-            "compression_levels_0_2",
-            "float16_scale_rotation",
-            "bucketed_position_uint16",
-            "rgba8",
-            "sh_degrees_0_2",
-            "sh_uint8_level_2",
-            "multi_section_read",
-            "deterministic_single_section_write",
-        ),
-        unsupported_features=(
-            "sh_degree_3",
-            "unknown_versions",
-            "streamed_lod",
-        ),
-    )
-)
+_define_builtin_family("splats", _SPLAT_CODECS)
 _define_builtin_family("meshes", MESH_CODECS)
 _define_builtin_family("points", POINT_CODECS)
-_define_builtin(
-    Codec(
-        "spz",
-        (".spz",),
-        _mmap_reader(_core.read_spz),
-        _file_sink_writer(_core.write_spz),
-        record=_core.GaussianCloud,
-        datatype="splat",
-        magic=(b"\x1f\x8b", b"NGSP"),
-        lossy=True,
-        supported_features=("v1_read", "v2_read", "v3_read_write", "v4_read_write"),
-    )
-)
 _define_builtin_family("calibration", CALIBRATION_CODECS)
 _define_builtin_family("images", IMAGE_CODECS)
 _IMAGE_FRAME_ACCESS = ImageFrameAccess(
@@ -341,27 +232,21 @@ _define_builtin_family(
     "sequences",
     build_sequence_codecs(_IMAGE_FRAME_ACCESS),
 )
-# antimatter15 .splat -> GaussianCloud. Headerless (no magic), so ext-only; a
-# down-converted, web-viewer sibling of spz (both carry the `splat` datatype).
-_define_builtin(
-    Codec(
-        "splat",
-        (".splat",),
-        _mmap_reader(_core.read_splat),
-        _file_sink_writer(_core.write_splat),
-        record=_core.GaussianCloud,
-        datatype="splat",
-        read_points=_mmap_selector_reader(_core.read_splat_points),
-        lossy=True,
-        supported_features=("rgb8", "opacity8", "scale8", "quaternion8"),
-        unsupported_features=("spherical_harmonics",),
-    )
-)
 
 # This immutable tuple is the repository-owned completeness boundary. Built-ins
 # become visible only after the complete canonical set validates successfully.
 # The same mutable REGISTRY then remains the public extension point.
 BUILTIN_DEFINITIONS: tuple[Codec, ...] = _BUILTIN_ASSEMBLY.finalize()
-_publish_builtin_definitions(REGISTRY, BUILTIN_DEFINITIONS)
-if tuple(REGISTRY) != CANONICAL_BUILTIN_IDS:
+_PUBLICATION_TARGET: dict[str, Codec] = {} if _IS_REGISTRY_RELOAD else REGISTRY
+_publish_builtin_definitions(_PUBLICATION_TARGET, BUILTIN_DEFINITIONS)
+if _IS_REGISTRY_RELOAD:
+    _PENDING_REGISTRY = _PUBLICATION_TARGET
+    _PENDING_REGISTRY.update(_RUNTIME_EXTENSIONS)
+    _PUBLISHED_IDS = tuple(_PENDING_REGISTRY)
+else:
+    _PUBLISHED_IDS = tuple(REGISTRY)
+if _PUBLISHED_IDS[: len(CANONICAL_BUILTIN_IDS)] != CANONICAL_BUILTIN_IDS:
     raise RuntimeError("built-in codec publication order differs from its manifest")
+if _IS_REGISTRY_RELOAD:
+    REGISTRY.clear()
+    REGISTRY.update(_PENDING_REGISTRY)

@@ -112,12 +112,18 @@ jobs:
       - name: Install
         run: |
           uv venv --seed
-          uv pip install -e ".[dev]"
+          uv pip install -e ".[dev]" "numpy>=2.0,<2.5" "gsply>=0.4" "pillow>=10.0"
       - name: Oracle-independent splat parent contract
         run: .venv/Scripts/python.exe -m pytest -q tests/test_io_splat_family_architecture.py
         if: runner.os == 'Windows'
       - name: Oracle-independent splat parent contract
         run: .venv/bin/python -m pytest -q tests/test_io_splat_family_architecture.py
+        if: runner.os != 'Windows'
+      - name: Splat codec parity with installed oracles
+        run: .venv/Scripts/python.exe -m pytest -q -rs tests/codecs/test_ply.py tests/codecs/test_compressed_ply.py tests/codecs/test_sog.py tests/codecs/test_ksplat.py tests/codecs/test_spz.py tests/codecs/test_splat.py
+        if: runner.os == 'Windows'
+      - name: Splat codec parity with installed oracles
+        run: .venv/bin/python -m pytest -q -rs tests/codecs/test_ply.py tests/codecs/test_compressed_ply.py tests/codecs/test_sog.py tests/codecs/test_ksplat.py tests/codecs/test_spz.py tests/codecs/test_splat.py
         if: runner.os != 'Windows'
 
   manylinux2014-portability:

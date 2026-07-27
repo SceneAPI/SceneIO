@@ -16,7 +16,9 @@ import os
 import platform
 import shutil
 import struct
+import subprocess
 import sys
+import textwrap
 import tomllib
 import tracemalloc
 import zipfile
@@ -33,6 +35,8 @@ from sceneio.io._builtin_manifest import (
     FAMILY_MEMBERS,
 )
 from sceneio.io._inspectors import splats as splat_inspector
+from sceneio.io._registry import assembly
+from sceneio.io._registry.families import splats as splat_family
 
 ROOT = Path(__file__).resolve().parents[1]
 CONTRACT = json.loads(
@@ -591,6 +595,201 @@ def test_splat_codec_definitions_match_parent_ast_and_descriptors():
         ][format_id]
 
 
+def test_splat_definitions_preserve_order_positions_and_identity():
+    definitions = registry._SPLAT_CODECS
+    assert isinstance(definitions, tuple)
+    assert tuple(codec.id for codec in definitions) == SPLAT_IDS
+    assert tuple(registry.REGISTRY) == CANONICAL_BUILTIN_IDS
+    assert CONTRACT["canonical_positions"] == {
+        format_id: CANONICAL_BUILTIN_IDS.index(format_id)
+        for format_id in SPLAT_IDS
+    }
+    for codec in definitions:
+        position = CONTRACT["canonical_positions"][codec.id]
+        assert registry.REGISTRY[codec.id] is codec
+        assert registry.BUILTIN_DEFINITIONS[position] is codec
+
+
+def test_splat_family_is_staged_once_and_not_defined_inline():
+    source = inspect.getsource(registry)
+    tree = ast.parse(source)
+    staging = [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Name)
+        and node.func.id == "_define_builtin_family"
+        and node.args
+        and isinstance(node.args[0], ast.Constant)
+        and node.args[0].value == "splats"
+    ]
+    assert len(staging) == 1
+    assert (
+        source.count(
+            "_SPLAT_CODECS = build_splat_codecs(\n"
+            "    _sog_reader,\n"
+            "    _sog_writer,\n"
+            "    _sog_point_reader,\n"
+            ")"
+        )
+        == 1
+    )
+    assert (
+        source.count('_define_builtin_family("splats", _SPLAT_CODECS)') == 1
+    )
+    for node in ast.walk(tree):
+        if (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Name)
+            and node.func.id == "Codec"
+            and node.args
+            and isinstance(node.args[0], ast.Constant)
+        ):
+            assert node.args[0].value not in SPLAT_IDS
+
+
+def test_splat_family_module_is_lower_layer_only():
+    source = inspect.getsource(splat_family)
+    imports = _absolute_imports(source)
+    assert {module for module, _ in imports} <= {
+        "__future__",
+        "sceneio",
+        "sceneio.io._registry.adapters",
+        "sceneio.io._registry.model",
+    }
+    assert tuple(
+        names for module, names in imports if module == "sceneio"
+    ) == (("_core",),)
+    for forbidden in (
+        "sceneio.io.registry",
+        "sceneio.io._inspection",
+        "sceneio.io._registry.assembly",
+        "REGISTRY",
+        "register(",
+    ):
+        assert forbidden not in source
+
+
+def test_splat_family_staging_is_atomic_and_recoverable():
+    definitions = registry._SPLAT_CODECS
+    builder = assembly.BuiltinAssembly(SPLAT_IDS)
+    with pytest.raises(ValueError, match="do not match"):
+        builder.add_family("splats", tuple(reversed(definitions)))
+    assert builder.add_family("splats", definitions) is definitions
+    finalized = builder.finalize()
+    assert finalized == definitions
+    assert builder.finalize() is finalized
+
+    builder = assembly.BuiltinAssembly(SPLAT_IDS)
+    invalid = (*definitions[:-1], object())
+    with pytest.raises(TypeError, match="family entries"):
+        builder.add_family("splats", invalid)
+    assert builder.add_family("splats", definitions) is definitions
+    assert builder.finalize() == definitions
+
+
+def test_splat_family_reload_is_inert_and_registry_reload_is_exact():
+    code = textwrap.dedent(
+        """
+        import importlib
+        import tempfile
+        from pathlib import Path
+
+        import sceneio.io as public_io
+        from sceneio.io import registry
+        from sceneio.io._builtin_manifest import (
+            CANONICAL_BUILTIN_IDS,
+            FAMILY_MEMBERS,
+        )
+        from sceneio.io._registry.families import splats
+
+        before_registry = registry.REGISTRY
+        assert public_io.REGISTRY is before_registry
+        before_items = tuple(registry.REGISTRY.items())
+        before_codecs = registry._SPLAT_CODECS
+        reloaded_family = importlib.reload(splats)
+        assert registry.REGISTRY is before_registry
+        assert tuple(registry.REGISTRY.items()) == before_items
+        assert registry._SPLAT_CODECS is before_codecs
+
+        fresh = reloaded_family.build_splat_codecs(
+            registry._sog_reader,
+            registry._sog_writer,
+            registry._sog_point_reader,
+        )
+        assert tuple(codec.id for codec in fresh) == FAMILY_MEMBERS["splats"]
+        assert all(registry.REGISTRY[codec.id] is not codec for codec in fresh)
+
+        original_builder = splats.build_splat_codecs
+
+        def fail_build(*args):
+            raise RuntimeError("injected splat family failure")
+
+        splats.build_splat_codecs = fail_build
+        try:
+            try:
+                importlib.reload(registry)
+            except RuntimeError as exc:
+                assert str(exc) == "injected splat family failure"
+            else:
+                raise AssertionError("injected registry reload unexpectedly passed")
+        finally:
+            splats.build_splat_codecs = original_builder
+        assert registry.REGISTRY is before_registry
+        assert public_io.REGISTRY is before_registry
+        assert tuple(registry.REGISTRY.items()) == before_items
+        assert public_io.get("sog") is dict(before_items)["sog"]
+        assert public_io.codecs()["sog"] is dict(before_items)["sog"]
+
+        for _ in range(2):
+            reloaded_registry = importlib.reload(registry)
+            assert reloaded_registry.REGISTRY is before_registry
+            assert public_io.REGISTRY is reloaded_registry.REGISTRY
+            assert tuple(reloaded_registry.REGISTRY) == CANONICAL_BUILTIN_IDS
+            assert tuple(
+                codec.id for codec in reloaded_registry._SPLAT_CODECS
+            ) == FAMILY_MEMBERS["splats"]
+            for codec in reloaded_registry._SPLAT_CODECS:
+                assert reloaded_registry.REGISTRY[codec.id] is codec
+            assert public_io.get("sog") is public_io.codecs()["sog"]
+            assert (
+                public_io.capabilities("sog")
+                == public_io.get("sog").capabilities()
+            )
+
+        extension = reloaded_registry.Codec(
+            "reload_probe",
+            (".reload-probe",),
+            lambda path: path,
+            None,
+            None,
+            "probe",
+        )
+        assert public_io.register(extension) is extension
+        assert public_io.REGISTRY["reload_probe"] is extension
+        assert public_io.get("reload_probe") is extension
+        assert public_io.codecs()["reload_probe"] is extension
+        assert public_io.capabilities("reload_probe").format == "reload_probe"
+
+        reloaded_registry = importlib.reload(registry)
+        assert reloaded_registry.REGISTRY is before_registry
+        assert public_io.REGISTRY is reloaded_registry.REGISTRY
+        assert tuple(reloaded_registry.REGISTRY)[
+            : len(CANONICAL_BUILTIN_IDS)
+        ] == CANONICAL_BUILTIN_IDS
+        assert reloaded_registry.REGISTRY["reload_probe"] is extension
+        assert public_io.get("reload_probe") is extension
+        assert public_io.codecs()["reload_probe"] is extension
+        assert public_io.capabilities("reload_probe").format == "reload_probe"
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "fixture.reload-probe"
+            path.write_bytes(b"probe")
+            assert public_io.detect(path) == "reload_probe"
+        """
+    )
+    subprocess.run([sys.executable, "-c", code], cwd=ROOT, check=True)
+
+
 def test_splat_operation_identities_and_native_targets_are_exact():
     for format_id in SPLAT_IDS:
         assert registry.REGISTRY[format_id].record is _core.GaussianCloud
@@ -761,6 +960,47 @@ def test_splat_valid_artifacts_match_exact_parent(
         assert _record_fingerprint(decoded) == expected["record_sha256"]
     else:
         _assert_portable_record(decoded, record_contract)
+
+
+def test_splat_family_uniform_public_path_and_path_release(tmp_path):
+    cloud = _cloud()
+    retained = []
+    for format_id in SPLAT_IDS:
+        path = tmp_path / f"registry{SUFFIXES[format_id]}"
+        sceneio.write(cloud, path, format=format_id)
+        assert sceneio.detect(path) == format_id
+
+        info = sceneio.inspect(path, format=format_id)
+        decoded = sceneio.read(path, format=format_id)
+        explicit = sceneio.read(path, format=format_id)
+        assert info.format == format_id
+        assert info.datatype == "splat"
+        assert info.count == cloud.num_gaussians
+        assert _record_fingerprint(decoded) == _record_fingerprint(explicit)
+
+        selected = None
+        if format_id in PARTIAL_IDS:
+            selected = sceneio.read_partial(
+                path,
+                format=format_id,
+                points=(2, 6),
+            )
+            _assert_cloud_slice(selected, decoded, 2, 6)
+        else:
+            assert sceneio.capabilities(format_id).partial_selectors == ()
+
+        released = path.with_suffix(path.suffix + ".released")
+        path.rename(released)
+        released.unlink()
+        retained.append((format_id, info, decoded, explicit, selected))
+
+    assert len(retained) == len(SPLAT_IDS)
+    for format_id, info, decoded, explicit, selected in retained:
+        assert info.format == format_id
+        assert decoded.num_gaussians == cloud.num_gaussians
+        assert _record_fingerprint(decoded) == _record_fingerprint(explicit)
+        if selected is not None:
+            _assert_cloud_slice(selected, decoded, 2, 6)
 
 
 def test_sog_directory_artifact_matches_exact_parent(tmp_path):

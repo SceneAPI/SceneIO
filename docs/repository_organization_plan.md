@@ -191,23 +191,24 @@ tests, the family matrix passes 506 tests with two documented skips, and the
   eight-module direct `_core` sets; the I/O facade's only added module is
   `_registry.families.reconstruction`. Splats remain the last R2 family.
 
-Splats are now the active eighth and final R2 family. Their exact parent is
+Splats are the eighth and final R2 family. Their exact parent is
 `0696533e515b5f8e65cbb676df28d852f9d0a049`, tree
 `62a844b198dfd05d5d6d435a8e2aa22bf6bb898e`. Two parent benchmark captures
 reproduce the all-50 structural hash
 `2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`
 and ordered six-row hash
 `5c6adc3584ba25050c885b37313d009311e2253b0c841cbc8738b806cb090bfd`.
-The planned split keeps all six ids as one non-contiguous manifest family,
-moves their metadata readers to `_inspectors/splats.py` first, and moves their
-Codec definitions to `_registry/families/splats.py` second. SOG's archive,
-directory, and direct-`meta.json` adapters remain facade-injected so their
-callable and path behavior stay exact; shared PLY classification remains in
-`_ply.py`. The final gate adds self-contained Gaussian PLY/SPZ fixtures,
-installed-wheel coverage for all six, retained-result/path-release checks,
-the dedicated three-OS family lane, GCC-10 coverage, exact package inspection,
-and three independent reviews. This extraction changes no codec algorithm or
-public API and makes no performance-gain claim.
+The split keeps all six ids as one non-contiguous manifest family. Their
+metadata readers live in `_inspectors/splats.py`, and their Codec definitions
+now come from the side-effect-free `build_splat_codecs(...)` factory in
+`_registry/families/splats.py`. SOG's archive, directory, and
+direct-`meta.json` adapters remain facade-injected, preserving their callable
+and path behavior; shared PLY classification remains in `_ply.py`. Aggregate
+publication restores canonical positions 2/3/4/5/14/49, and the facade no
+longer contains any individual built-in definition. The exact-tree package
+and all three independent-review gates pass; commit and hosted validation
+remain. This extraction changes no codec algorithm or public API and makes no
+performance-gain claim.
 
 The initial splat parent-freeze checkpoint is committed and pushed at
 `93fcf1b39350a3a0080a7b87ead65d0d9343d354`; its
@@ -251,6 +252,33 @@ allocation maxima are byte-for-byte equal to the parent.
 Universal SOG byte canonicalization would be a separate codec-behavior
 change.
 
+Inspector commit `a4c968b` is pushed and passes
+[normal run 30224059298](https://github.com/SceneAPI/SceneIO/actions/runs/30224059298)
+and
+[compiler-instrumented run 30224059282](https://github.com/SceneAPI/SceneIO/actions/runs/30224059282).
+The registry candidate locally passes its 444-test family/common matrix and
+the complete 3,309-node collection (3,305 passed, four documented skips);
+the collection's sorted normalized SHA-256 is
+`acc43482c63eacd788005ae200d4fe7a1c7fee635bfbc14cda3abac90ace333f`.
+Both structural captures reproduce the frozen hashes and the strict five-run
+guard passes. A 15-sample randomized interleaved comparison covers all 23
+read, write, inspect, and supported point-range operations: every timing
+median is within the planned variation bound, and every candidate maximum
+traced allocation equals its parent maximum. The scale-1 family diagnostic
+uses 11.2 MiB logical clouds; Windows reports the requested cache-eviction
+hint as unavailable, so these are warm-cache readings. Exact import sets
+remain 7/7 for `sceneio`, 8/8 for direct `_core`, and 43/45 for the I/O
+facade, whose only additions are the two splat lower modules.
+Pre-final tree `7ab4f960dcb43ac95c4cf7269fed7d733bad71cc` has 326
+tracked files and produces a 327-file source archive whose only addition is
+generated `PKG-INFO`. Its sdist-derived 81-member Windows abi3 wheel has one
+native extension, all 15 attribution members, NumPy as its only unconditional
+dependency, and no packaged build/include/lib/share/bin tree. Git/archive/
+wheel runtime identity, native dependency inspection, and the external
+NumPy-only all-six installed smoke pass. All three independent reviews are
+clear after resolving the three-OS oracle-parity, wheel-smoke ownership, and
+reload-atomicity findings.
+
 The codec-per-file C++ layer remains reasonably isolated, but orchestration and
 verification have accumulated in a few large modules:
 
@@ -258,8 +286,8 @@ verification have accumulated in a few large modules:
 |---|---|---|
 | C++ codecs | 40 files for 50 format ids | flat source list and manual binding declarations |
 | C++ records | 32 source/header files | still manageable; new table/animation/scene records will add pressure |
-| Python registry | `registry.py`, 367 lines; `_registry/assembly.py`, 148 lines; focused `_registry/{model,adapters,detection,native_features}.py` modules; and `_registry/families/{arrays,calibration,images,meshes,points,reconstruction,sequences}.py` definition modules | splats are the only built-in family still defined in the facade |
-| Inspection | `_inspection.py` compatibility facade plus `_inspectors/{model,common,arrays,calibration,images,meshes,points,reconstruction,sequences,splats}.py`; all eight manifest families now have lower inspector ownership | finish the splat inspector evidence checkpoint, then move its registry definitions; the proven shared model, mmap bridge, metadata bounds, exact-read/integer grammar, and image-result constructor remain lower services |
+| Python registry | `registry.py`, 205 lines; `_registry/assembly.py`, 148 lines; focused `_registry/{model,adapters,detection,native_features}.py` modules; and eight `_registry/families/*.py` definition modules | all built-ins are family-owned; R3 now splits the benchmark and cross-codec verification monoliths |
+| Inspection | `_inspection.py` compatibility facade plus `_inspectors/{model,common,arrays,calibration,images,meshes,points,reconstruction,sequences,splats}.py`; all eight manifest families have lower inspector ownership | keep the proven shared model, mmap bridge, metadata bounds, exact-read/integer grammar, and image-result constructor as lower services |
 | Benchmark | `bench_io.py`, about 4,660 lines | CLI, fixtures, oracles, runners, metrics, and reporting are coupled |
 | Cross-codec tests | `test_io_mmap.py`, about 2,400 lines; `test_io_partial.py`, about 1,100 | reusable codec cases and behavior assertions are difficult to extend independently |
 | Execution plan | `format_gap_implementation_plan.md`, about 2,500 lines | historical evidence and the active queue are easy to confuse |

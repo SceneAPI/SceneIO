@@ -209,23 +209,44 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > 30218232246][r2-reconstruction-registry-final-instrumented] pass every final
 > lane. The checkpoint is closed.
 >
-> **R2 splat inspector checkpoint (2026-07-26):** metadata ownership for
+> **R2 splat-family candidate (2026-07-26):** metadata ownership for
 > `gaussian_ply`, `compressed_ply`, `sog`, `ksplat`, `spz`, and `splat` now
 > lives in `_inspectors/splats.py`. The compatibility facade retains exact
 > `(path, datatype)` wrappers and unchanged dispatch; the lower module uses no
-> full decoder or registry. The 44-node architecture suite covers exact-parent
+> full decoder or registry. Inspector commit `a4c968b` passes
+> [normal run 30224059298](https://github.com/SceneAPI/SceneIO/actions/runs/30224059298)
+> and
+> [compiler-instrumented run 30224059282](https://github.com/SceneAPI/SceneIO/actions/runs/30224059282).
+> The architecture suite covers exact-parent
 > valid/malformed outcomes, all four accepted SOG entry forms, facade
 > delegation, dependency direction, inert reload, generated 36 MiB-plus
 > bounded inspections, retained results/exceptions, individual declared-layer
-> release, and whole-directory replacement. The candidate collection is
-> 3,301 nodes with sorted normalized SHA-256
-> `ab9ab8c698e005032aeea52d69703b5b32ee29998fdd77c24970f6a198b7c176`.
+> release, and whole-directory replacement.
+>
+> All six exact Codec definitions now come from
+> `_registry/families/splats.py`, with the facade-owned SOG path callbacks
+> injected into its side-effect-free factory. Aggregate staging restores
+> positions 2/3/4/5/14/49 and preserves exact ASTs, operation descriptors,
+> detection, path routing, and partial selectors. The candidate collection is
+> 3,309 nodes with sorted normalized SHA-256
+> `acc43482c63eacd788005ae200d4fe7a1c7fee635bfbc14cda3abac90ace333f`;
+> 3,305 pass locally with four documented skips. The all-six installed smoke
+> surface now includes Gaussian PLY, SPZ, and SPLAT as well as compressed PLY,
+> SOG, and KSplat.
+>
 > Two structural captures and the retained five-run guard pass. A 15-sample
 > randomized exact-parent comparison on every large fixture keeps all six
 > inspector medians within the planned variation bound and reproduces the
-> parent's maximum traced allocation exactly. Cross-platform parent behavior
-> is frozen and green at `1864359`; the separate splat registry extraction is
-> still pending and will close R2.
+> parent's maximum traced allocation exactly. A second 15-sample randomized
+> comparison covers all 23 read, write, inspect, and supported point-range
+> operations; every median passes its variation bound and every candidate
+> peak equals its parent peak. Fresh-process import sets are exact at 7/7,
+> 43/45, and 8/8 modules, with only `_inspectors.splats` and
+> `_registry.families.splats` added to the I/O facade. Cross-platform parent
+> behavior is frozen and green at `1864359`. Exact-tree source/wheel
+> packaging, the external NumPy-only installed smoke, and all three
+> independent reviews pass; commit and hosted validation remain before R2
+> closes.
 
 [current-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287022
 [current-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287161

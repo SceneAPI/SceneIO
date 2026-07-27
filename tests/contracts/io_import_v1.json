@@ -84,6 +84,7 @@
       "sceneio.io._registry.families.points",
       "sceneio.io._registry.families.reconstruction",
       "sceneio.io._registry.families.sequences",
+      "sceneio.io._registry.families.splats",
       "sceneio.io._registry.model",
       "sceneio.io._registry.native_features",
       "sceneio.io.registry",

@@ -9,6 +9,7 @@ from __future__ import annotations
 import gc
 import importlib.util
 import mmap
+import shutil
 import struct
 import tempfile
 from pathlib import Path
@@ -209,6 +210,11 @@ def _compressed_ply(root: Path) -> None:
     assert sceneio.inspect(path).metadata["num_chunks"] == 1
     selected = sceneio.read_partial(path, points=(1, 4))
     assert np.array_equal(selected.means, decoded.means[1:4])
+    retired = path.with_suffix(".retired")
+    path.rename(retired)
+    retired.unlink()
+    assert decoded.num_gaussians == count
+    assert selected.num_gaussians == 3
 
 
 def _sog(root: Path) -> None:
@@ -230,12 +236,22 @@ def _sog(root: Path) -> None:
     assert sceneio.inspect(bundle).metadata["packaging"] == "zip"
     selected = sceneio.read_partial(bundle, points=(2, 6))
     assert np.array_equal(selected.means, decoded.means[2:6])
+    retired_bundle = bundle.with_suffix(".retired")
+    bundle.rename(retired_bundle)
+    retired_bundle.unlink()
+    assert decoded.num_gaussians == count
+    assert selected.num_gaussians == 4
 
     directory = root / "unbundled-sog"
     sceneio.write(cloud, directory)
     assert sceneio.detect(directory) == "sog"
     assert sceneio.inspect(directory).metadata["packaging"] == "directory"
-    assert np.array_equal(sceneio.read(directory).means, decoded.means)
+    directory_decoded = sceneio.read(directory)
+    assert np.array_equal(directory_decoded.means, decoded.means)
+    retired_directory = root / "retired-sog"
+    directory.rename(retired_directory)
+    shutil.rmtree(retired_directory)
+    assert directory_decoded.num_gaussians == count
 
 
 def _ksplat(root: Path) -> None:
@@ -257,6 +273,90 @@ def _ksplat(root: Path) -> None:
     assert sceneio.inspect(path).metadata["compression_level"] == 1
     selected = sceneio.read_partial(path, points=(2, 7))
     assert np.array_equal(selected.means, decoded.means[2:7])
+    retired = path.with_suffix(".retired")
+    path.rename(retired)
+    retired.unlink()
+    assert decoded.num_gaussians == count
+    assert selected.num_gaussians == 5
+
+
+def _gaussian_ply(root: Path) -> None:
+    count = 6
+    cloud = _core.gaussian_cloud(
+        np.arange(count * 3, dtype=np.float32).reshape(count, 3) / 8,
+        np.zeros((count, 3), np.float32),
+        np.tile(np.array([[1.0, 0.0, 0.0, 0.0]], np.float32), (count, 1)),
+        np.linspace(-1, 1, count, dtype=np.float32),
+        np.zeros((count, 3), np.float32),
+    )
+    path = root / "smoke-gaussian.ply"
+    sceneio.write(cloud, path, format="gaussian_ply")
+    assert sceneio.detect(path) == "gaussian_ply"
+    assert sceneio.inspect(path).count == count
+    decoded = sceneio.read(path)
+    assert decoded.num_gaussians == count
+    selected = sceneio.read_partial(path, points=(1, 5))
+    assert np.array_equal(selected.means, decoded.means[1:5])
+    retired = path.with_suffix(".retired")
+    path.rename(retired)
+    retired.unlink()
+    assert decoded.num_gaussians == count
+    assert selected.num_gaussians == 4
+
+
+def _spz(root: Path) -> None:
+    count = 6
+    cloud = _core.gaussian_cloud(
+        np.arange(count * 3, dtype=np.float32).reshape(count, 3) / 8,
+        np.zeros((count, 3), np.float32),
+        np.tile(np.array([[1.0, 0.0, 0.0, 0.0]], np.float32), (count, 1)),
+        np.linspace(-1, 1, count, dtype=np.float32),
+        np.zeros((count, 3), np.float32),
+    )
+    path = root / "smoke.spz"
+    sceneio.write(cloud, path)
+    assert sceneio.detect(path) == "spz"
+    assert sceneio.inspect(path).count == count
+    decoded = sceneio.read(path)
+    assert decoded.num_gaussians == count
+    assert sceneio.capabilities("spz").partial_selectors == ()
+    retired = path.with_suffix(".retired")
+    path.rename(retired)
+    retired.unlink()
+    assert decoded.num_gaussians == count
+
+
+def _splat(root: Path) -> None:
+    count = 6
+    cloud = _core.gaussian_cloud(
+        np.arange(count * 3, dtype=np.float32).reshape(count, 3) / 8,
+        np.zeros((count, 3), np.float32),
+        np.tile(np.array([[1.0, 0.0, 0.0, 0.0]], np.float32), (count, 1)),
+        np.linspace(-1, 1, count, dtype=np.float32),
+        np.zeros((count, 3), np.float32),
+    )
+    path = root / "smoke.splat"
+    sceneio.write(cloud, path)
+    assert sceneio.detect(path) == "splat"
+    assert sceneio.inspect(path).count == count
+    decoded = sceneio.read(path)
+    assert decoded.num_gaussians == count
+    selected = sceneio.read_partial(path, points=(1, 5))
+    assert np.array_equal(selected.means, decoded.means[1:5])
+    retired = path.with_suffix(".retired")
+    path.rename(retired)
+    retired.unlink()
+    assert decoded.num_gaussians == count
+    assert selected.num_gaussians == 4
+
+
+def _splats(root: Path) -> None:
+    _gaussian_ply(root)
+    _compressed_ply(root)
+    _sog(root)
+    _ksplat(root)
+    _spz(root)
+    _splat(root)
 
 
 def _mesh_ply(root: Path) -> None:
@@ -861,9 +961,7 @@ def main() -> None:
         _mapped_safetensors(root, values)
         _las_waveform(root)
         _laz(root)
-        _compressed_ply(root)
-        _sog(root)
-        _ksplat(root)
+        _splats(root)
         _mesh_ply(root)
         _obj_mtl(root)
         _stl_off(root)
