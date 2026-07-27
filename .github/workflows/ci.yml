@@ -155,8 +155,8 @@ jobs:
                 /work/tests/test_io_splat_family_architecture.py \
                 /work/tests/codecs/test_y4m.py \
                 /work/tests/codecs/test_colmap_db.py \
-                /work/tests/test_io_partial.py::test_colmap_binary_checks_selected_observation_bytes_before_allocating \
-                /work/tests/test_io_partial.py::test_colmap_binary_validates_selected_name_terminator_before_allocating \
-                /work/tests/test_io_partial.py::test_colmap_observation_error_rss_growth_is_payload_relative \
-                /work/tests/test_io_partial.py::test_colmap_name_error_rss_growth_is_payload_relative
+                /work/tests/test_io_partial_reconstruction.py::test_colmap_binary_checks_selected_observation_bytes_before_allocating \
+                /work/tests/test_io_partial_reconstruction.py::test_colmap_binary_validates_selected_name_terminator_before_allocating \
+                /work/tests/test_io_partial_reconstruction.py::test_colmap_observation_error_rss_growth_is_payload_relative \
+                /work/tests/test_io_partial_reconstruction.py::test_colmap_name_error_rss_growth_is_payload_relative
             '

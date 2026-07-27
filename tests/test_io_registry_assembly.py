@@ -1031,6 +1031,18 @@ def test_assembly_dependency_direction_and_import_delta_are_exact():
         in manylinux_job
     )
     assert 'PYTHONPATH=/work "$py" -m pytest -q \\' in manylinux_job
+    for test_name in (
+        "test_colmap_binary_checks_selected_observation_bytes_before_allocating",
+        "test_colmap_binary_validates_selected_name_terminator_before_allocating",
+        "test_colmap_observation_error_rss_growth_is_payload_relative",
+        "test_colmap_name_error_rss_growth_is_payload_relative",
+    ):
+        expected_path = (
+            "/work/tests/test_io_partial_reconstruction.py::" + test_name
+        )
+        stale_path = "/work/tests/test_io_partial.py::" + test_name
+        assert manylinux_job.count(expected_path) == 1
+        assert stale_path not in manylinux_job
     for suite in (
         "test_colmap.py",
         "test_transforms_json.py",

@@ -958,6 +958,10 @@ only generated member is `PKG-INFO`, and the unchanged 81-member Windows abi3
 wheel. It contains one native module and all 15 attribution members, excludes
 repository test/benchmark/build payloads, and passes `sceneio._wheel_smoke` in
 a fresh SceneIO-plus-NumPy environment.
+The first hosted normal run `30294120621` exposed four explicit manylinux
+selectors that still named the pre-move shared module. The selectors now use
+the focused reconstruction module, and the assembly suite rejects stale paths.
+Compiler-instrumented run `30294120444` passed the reconstruction commit.
 
 ### R4. Organize native build and bindings
 

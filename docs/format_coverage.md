@@ -481,6 +481,10 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > only generated member is `PKG-INFO`, and an unchanged 81-member Windows abi3
 > wheel. A fresh SceneIO-plus-NumPy installation passes
 > `sceneio._wheel_smoke`.
+> The first hosted normal run `30294120621` exposed four explicit manylinux
+> selectors that retained the old shared-module path. They now name the
+> focused reconstruction module, and the assembly suite rejects stale paths.
+> Compiler-instrumented run `30294120444` passed the reconstruction commit.
 
 [current-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287022
 [current-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287161
