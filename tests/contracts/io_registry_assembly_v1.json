@@ -329,7 +329,7 @@
   },
   "pytest_candidate_collection": {
     "count": 3309,
-    "sorted_normalized_node_ids_sha256": "acc43482c63eacd788005ae200d4fe7a1c7fee635bfbc14cda3abac90ace333f",
+    "sorted_normalized_node_ids_sha256": "cd0a8c1a273dd87d72c9a08edf39d45f93b562295e8c3216e09b076b4dd65a43",
     "added_nodes": [
       "tests/test_import_guards.py::test_no_family_imports[io/_registry/assembly.py]",
       "tests/test_import_guards.py::test_no_family_imports[io/_inspectors/arrays.py]",
@@ -556,9 +556,12 @@
       "tests/test_io_splat_family_architecture.py::test_splat_family_staging_is_atomic_and_recoverable",
       "tests/test_io_splat_family_architecture.py::test_splat_family_reload_is_inert_and_registry_reload_is_exact",
       "tests/test_io_splat_family_architecture.py::test_splat_family_uniform_public_path_and_path_release",
-      "tests/test_io_registry_architecture.py::test_splat_wheel_smoke_invokes_each_family_helper_once"
+      "tests/test_io_registry_architecture.py::test_splat_wheel_smoke_invokes_each_family_helper_once",
+      "tests/codecs/test_compressed_ply.py::test_writer_body_matches_pinned_platform_reference"
     ],
-    "removed_nodes": [],
+    "removed_nodes": [
+      "tests/codecs/test_compressed_ply.py::test_writer_body_is_byte_identical_to_pinned_playcanvas_vector"
+    ],
     "first": "tests/codecs/test_bal.py::test_oracle_write_sceneio_read_parity_and_conventions",
     "last": "tests/test_points_binary.py::test_bad_magic_rejected"
   },

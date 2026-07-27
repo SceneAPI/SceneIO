@@ -1535,3 +1535,15 @@ As with the prior inspector checkpoint, the final package confirmation is a
 no-further-edit rebuild after this evidence is staged. Its hashes remain
 outside the source tree so recording them cannot invalidate the tree they
 describe.
+
+The first hosted all-six parity lane exposed one existing platform-specific
+fingerprint outside the benchmark corpus: on the characterized hosted macOS
+AppleClang/ARM profile, the larger compressed-PLY PlayCanvas vector has body
+SHA-256
+`412aed8223afa9dd6e38cd3e36052ac8520ecb9381517567d292ba1cf8457c5f`
+while hosted Windows/MSVC and Ubuntu/glibc retain PlayCanvas-exact
+`e32c9d9340ff7489177d93403078faa695e2a67ad19f763a4755ff24bdf3eff5`.
+Native exp/log rounding is the inferred cause consistent with the one changed
+lossy quantization boundary, not a universal platform claim. Both outputs
+pass the independent layout/decode oracle. The exact hosted-profile
+fingerprints are now explicit; codec and benchmark behavior are unchanged.

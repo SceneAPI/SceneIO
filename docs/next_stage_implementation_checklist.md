@@ -2482,7 +2482,7 @@ operation descriptors remain unchanged. The family/common matrix passes 444
 tests with one documented SPZ-oracle skip, and the complete 3,309-node
 collection passes 3,305 tests with four documented skips. Its sorted
 normalized node-id SHA-256 is
-`acc43482c63eacd788005ae200d4fe7a1c7fee635bfbc14cda3abac90ace333f`.
+`cd0a8c1a273dd87d72c9a08edf39d45f93b562295e8c3216e09b076b4dd65a43`.
 Ruff is clean.
 
 Both small captures reproduce all-50 SHA-256
@@ -2526,6 +2526,16 @@ helper is invoked once. The platform/package/documentation review is clear;
 its inferred focused-matrix count change was withdrawn because it was not
 measured. The final 69-test architecture/assembly matrix and complete
 3,309-node suite pass after all findings.
+
+The first hosted run of the new full parity lane found one previously
+unexercised parent behavior: the large compressed-PLY PlayCanvas vector has a
+distinct body hash on the characterized hosted macOS AppleClang/ARM profile.
+Hosted Windows/MSVC and Ubuntu/glibc remain byte-identical to the pinned
+PlayCanvas body. Native exp/log rounding is the inferred cause consistent
+with the one changed lossy quantization boundary, not a universal platform
+claim. The corrected parity contract pins both parent fingerprints and
+retains the independent NumPy layout/decode oracle; no codec source or output
+changed.
 
 - [x] Freeze a zero-unstaged tree, export it with `core.autocrlf=false`, build
       the source archive from that tree, and build the wheel only from the

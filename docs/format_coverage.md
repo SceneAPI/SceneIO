@@ -229,7 +229,7 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > positions 2/3/4/5/14/49 and preserves exact ASTs, operation descriptors,
 > detection, path routing, and partial selectors. The candidate collection is
 > 3,309 nodes with sorted normalized SHA-256
-> `acc43482c63eacd788005ae200d4fe7a1c7fee635bfbc14cda3abac90ace333f`;
+> `cd0a8c1a273dd87d72c9a08edf39d45f93b562295e8c3216e09b076b4dd65a43`;
 > 3,305 pass locally with four documented skips. The all-six installed smoke
 > surface now includes Gaussian PLY, SPZ, and SPLAT as well as compressed PLY,
 > SOG, and KSplat.
@@ -315,7 +315,7 @@ SoA, zero-copy to numpy/torch (DLPack), conventions carried as metadata.
 | `colmap_sparse` | `Reconstruction` | R+W | **pycolmap** | `.bin`; byte‑identical to pycolmap 4.1.1 |
 | `colmap_sparse_txt` | `Reconstruction` | R+W | **pycolmap** | text twin of `.bin` |
 | `gaussian_ply` | `GaussianCloud` | R+W | **gsply** | 3DGS Gaussian PLY, channel‑grouped f_rest |
-| `compressed_ply` | `GaussianCloud` | R+W | pinned **PlayCanvas splat-transform 3.1.6** vector + NumPy oracle | SuperSplat chunked PLY; deterministic Morton writer; lossy position/scale/quaternion/RGBA/SH quantization; degree 0–3; bounded point reads |
+| `compressed_ply` | `GaussianCloud` | R+W | pinned **PlayCanvas splat-transform 3.1.6** vector + pinned hosted macOS AppleClang/ARM parent fingerprint + NumPy oracle | SuperSplat chunked PLY; hosted Windows/MSVC and Ubuntu/glibc match PlayCanvas, while the characterized macOS profile differs at one lossy quantization boundary; exp/log rounding is the inferred cause; degree 0–3; bounded point reads |
 | `sog` | `GaussianCloud` | R+W | pinned **PlayCanvas splat-transform 3.1.6** source + independent Pillow/NumPy/ZIP oracle | SOG v2 bundled ZIP and unbundled directory; strict lossless-WebP layers; deterministic Morton/codebook/palette writer; degree 0–3; bounded point allocation |
 | `ksplat` | `GaussianCloud` | R+W | pinned **GaussianSplats3D 0.4.7** vectors + independent struct/NumPy oracle | mkkellogg v0.1; compression levels 0–2; SH degrees 0–2; multi-section read; deterministic single-section bucketed writer; bounded point allocation |
 | `spz` | `GaussianCloud` | R+W | **gsply** | v1/2/3 read, **v3+v4 write**, v4 read; bit‑exact v3 encode |

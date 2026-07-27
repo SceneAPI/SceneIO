@@ -774,9 +774,15 @@ def test_assembly_dependency_direction_and_import_delta_are_exact():
     assert hashlib.sha256("\n".join(sorted(node_ids)).encode()).hexdigest() == (
         candidate["sorted_normalized_node_ids_sha256"]
     )
-    assert set(candidate["added_nodes"]) <= set(node_ids)
-    assert candidate["removed_nodes"] == []
-    assert candidate["count"] - parent["count"] == len(candidate["added_nodes"])
+    added_nodes = set(candidate["added_nodes"])
+    removed_nodes = set(candidate["removed_nodes"])
+    actual_nodes = set(node_ids)
+    assert added_nodes <= actual_nodes
+    assert removed_nodes.isdisjoint(actual_nodes)
+    assert added_nodes.isdisjoint(removed_nodes)
+    assert candidate["count"] - parent["count"] == (
+        len(added_nodes) - len(removed_nodes)
+    )
 
     workflow = (
         ROOT / ".github/workflows/sanitizers.yml"

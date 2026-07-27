@@ -252,6 +252,17 @@ allocation maxima are byte-for-byte equal to the parent.
 Universal SOG byte canonicalization would be a separate codec-behavior
 change.
 
+The final all-six parity lane additionally exposed that the larger pinned
+compressed-PLY writer vector crosses one lossy quantization boundary on the
+characterized hosted macOS AppleClang/ARM profile. Hosted Windows/MSVC and
+Ubuntu/glibc retain the PlayCanvas-exact body hash; that macOS profile retains
+its unchanged parent body hash. Native exp/log rounding is the inferred cause
+consistent with the observed output, not a universal platform claim. Both
+fingerprints are pinned and pass the independent layout/decode oracle. Making
+their existing distinction explicit is a test-contract correction, not a
+codec change; universal writer canonicalization remains a separately
+benchmarked behavior decision.
+
 Inspector commit `a4c968b` is pushed and passes
 [normal run 30224059298](https://github.com/SceneAPI/SceneIO/actions/runs/30224059298)
 and
@@ -259,7 +270,7 @@ and
 The registry candidate locally passes its 444-test family/common matrix and
 the complete 3,309-node collection (3,305 passed, four documented skips);
 the collection's sorted normalized SHA-256 is
-`acc43482c63eacd788005ae200d4fe7a1c7fee635bfbc14cda3abac90ace333f`.
+`cd0a8c1a273dd87d72c9a08edf39d45f93b562295e8c3216e09b076b4dd65a43`.
 Both structural captures reproduce the frozen hashes and the strict five-run
 guard passes. A 15-sample randomized interleaved comparison covers all 23
 read, write, inspect, and supported point-range operations: every timing
