@@ -2,7 +2,12 @@
 
 from __future__ import annotations
 
+import os
+import subprocess
+import sys
+
 import numpy as np
+import pytest
 
 from sceneio import _core
 
@@ -100,4 +105,78 @@ def _assert_point_range(partial, full, start, stop):
             )
 
 
-__all__ = ["_assert_image_window", "_assert_point_range", "_pixels"]
+def _fresh_process_partial_rss(path, format_id, mode):
+    if os.environ.get("ASAN_OPTIONS") or "libasan" in os.environ.get(
+        "LD_PRELOAD", ""
+    ):
+        pytest.skip("RSS measurements include AddressSanitizer shadow memory")
+    script = """
+import gc
+import sys
+import threading
+import time
+
+import numpy as np
+import psutil
+import sceneio
+from sceneio import _core
+
+process = psutil.Process()
+gc.collect()
+baseline = process.memory_info().rss
+peak = [baseline]
+running = [True]
+
+def sample():
+    while running[0]:
+        peak[0] = max(peak[0], process.memory_info().rss)
+        time.sleep(0.0005)
+
+thread = threading.Thread(target=sample, daemon=True)
+thread.start()
+try:
+    if sys.argv[3] == "full":
+        value = sceneio.read(sys.argv[1], format=sys.argv[2])
+    elif sys.argv[2] == "netpbm":
+        value = sceneio.read_partial(
+            sys.argv[1], format=sys.argv[2], window=(5000, 5008, 6000, 6008)
+        )
+    elif sys.argv[2] == "colmap_sparse_txt":
+        value = sceneio.read_partial(
+            sys.argv[1], format=sys.argv[2], image_id=2
+        )
+    elif sys.argv[2] == "ply_mesh":
+        value = sceneio.read_partial(
+            sys.argv[1], format=sys.argv[2], faces=(1, 2)
+        )
+    else:
+        value = sceneio.read_partial(
+            sys.argv[1], format=sys.argv[2], points=(1000000, 1000008)
+        )
+    if isinstance(value, _core.Image):
+        np.asarray(value.pixels).sum()
+    elif isinstance(value, _core.GaussianCloud):
+        np.asarray(value.means).sum()
+    elif isinstance(value, _core.Mesh):
+        np.asarray(value.face_indices).sum()
+    peak[0] = max(peak[0], process.memory_info().rss)
+finally:
+    running[0] = False
+    thread.join()
+print(max(0, peak[0] - baseline))
+"""
+    completed = subprocess.run(
+        [sys.executable, "-c", script, str(path), format_id, mode],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return int(completed.stdout.strip())
+
+
+__all__ = [
+    "_assert_image_window",
+    "_assert_point_range",
+    "_fresh_process_partial_rss",
+    "_pixels",
+]

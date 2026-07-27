@@ -329,7 +329,7 @@
   },
   "pytest_candidate_collection": {
     "count": 3345,
-    "sorted_normalized_node_ids_sha256": "2451c9bb2606ac1587011eafeb2345fc9f34f7e08df7ea17b239b5a1e78a624f",
+    "sorted_normalized_node_ids_sha256": "217c227e566a6767fc59b031b1217202ced5ba0dc6a14b3b7fa2d27c0f9314f4",
     "added_nodes": [
       "tests/test_benchmark_memory_protocol.py::test_memory_protocol_contract_and_repeated_sceneio_measurement",
       "tests/test_benchmark_memory_protocol.py::test_missing_sampler_is_explicit_and_strict_mode_rejects_it",
@@ -781,6 +781,41 @@
           "test_las_point_format_partial_parity[7]",
           "test_las_point_format_partial_parity[8]"
         ]
+      },
+      {
+        "name": "partial_reconstruction",
+        "from_prefix": "tests/test_io_partial.py::",
+        "to_prefix": "tests/test_io_partial_reconstruction.py::",
+        "excluded_function_names": [
+          "_three_view_reconstruction",
+          "_fresh_process_colmap_error_rss",
+          "_assert_payload_relative_rss",
+          "_assert_colmap_error_rss_is_sublinear",
+          "_traced_format_error_peak",
+          "_write_malformed_observation_model",
+          "_write_unterminated_name_model",
+          "_instrumented_rss_measurement",
+          "_write_malformed_text_token_model"
+        ],
+        "function_count": 12,
+        "function_ast_sha256": "49ef051e49cd4beb6b9c26f7cfe314d67cd3bd59fa91c78ffb16971903b2acdb",
+        "node_suffixes": [
+          "test_single_colmap_image_equals_full_image_slice[colmap_sparse]",
+          "test_single_colmap_image_equals_full_image_slice[colmap_sparse_txt]",
+          "test_single_colmap_image_rejects_unknown_id",
+          "test_single_colmap_image_does_not_open_the_point_container[colmap_sparse]",
+          "test_single_colmap_image_does_not_open_the_point_container[colmap_sparse_txt]",
+          "test_single_colmap_image_skips_unselected_names_over_one_mib[colmap_sparse]",
+          "test_single_colmap_image_skips_unselected_names_over_one_mib[colmap_sparse_txt]",
+          "test_colmap_text_skips_unselected_large_observation_line_bounded",
+          "test_colmap_binary_checks_selected_observation_bytes_before_allocating",
+          "test_colmap_binary_validates_selected_name_terminator_before_allocating",
+          "test_colmap_observation_error_rss_growth_is_payload_relative",
+          "test_colmap_name_error_rss_growth_is_payload_relative",
+          "test_colmap_text_selected_malformed_token_is_memory_bounded",
+          "test_colmap_text_oversized_numeric_token_policy_matches_full_read",
+          "test_colmap_text_stream_skips_oversized_comment_line"
+        ]
       }
     ],
     "moved_support_groups": [
@@ -802,6 +837,32 @@
           "_assert_point_range"
         ],
         "function_ast_sha256": "f0c527f421207171019327332821e81c1a47561b5b935fa65a1e4a3dea52c24c"
+      },
+      {
+        "name": "partial_process_rss",
+        "from_path": "tests/test_io_partial.py",
+        "to_path": "tests/_support/partial_read.py",
+        "function_names": [
+          "_fresh_process_partial_rss"
+        ],
+        "function_ast_sha256": "b22d3960f81b894d7b666067cb584e530858349a6ca53fefb6c58705e6892a13"
+      },
+      {
+        "name": "partial_reconstruction_helpers",
+        "from_path": "tests/test_io_partial.py",
+        "to_path": "tests/test_io_partial_reconstruction.py",
+        "function_names": [
+          "_three_view_reconstruction",
+          "_fresh_process_colmap_error_rss",
+          "_assert_payload_relative_rss",
+          "_assert_colmap_error_rss_is_sublinear",
+          "_traced_format_error_peak",
+          "_write_malformed_observation_model",
+          "_write_unterminated_name_model",
+          "_instrumented_rss_measurement",
+          "_write_malformed_text_token_model"
+        ],
+        "function_ast_sha256": "a45d371755429aa070f514854d35bd83ca6afe032fad3d6a242835fdf5aa4e92"
       }
     ],
     "first": "tests/codecs/test_bal.py::test_oracle_write_sceneio_read_parity_and_conventions",

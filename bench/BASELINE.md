@@ -2325,3 +2325,31 @@ only generated member is `PKG-INFO`, and the unchanged 81-member Windows abi3
 wheel. It contains one native module and all 15 attribution members, excludes
 repository test/benchmark/build payloads, and passes `sceneio._wheel_smoke` in
 a fresh SceneIO-plus-NumPy environment.
+
+Exact point partial migration commit `ac1a4d1` passes normal run
+[30290617469](https://github.com/SceneAPI/SceneIO/actions/runs/30290617469)
+and compiler-instrumented run
+[30290617607](https://github.com/SceneAPI/SceneIO/actions/runs/30290617607).
+
+## R3.3 reconstruction partial-consumer migration (2026-07-27)
+
+Twelve unchanged COLMAP functions now live in
+`tests/test_io_partial_reconstruction.py` and produce the same 15 nodes. Nine
+private reconstruction helpers move with them. The unchanged
+`_fresh_process_partial_rss` helper moves once into
+`tests/_support/partial_read.py`, where the retained cross-family large-read
+test and reconstruction suite both consume it. Test projection SHA-256 is
+`49ef051e49cd4beb6b9c26f7cfe314d67cd3bd59fa91c78ffb16971903b2acdb`;
+private-helper projection SHA-256 is
+`a45d371755429aa070f514854d35bd83ca6afe032fad3d6a242835fdf5aa4e92`;
+the lower helper projection is
+`b22d3960f81b894d7b666067cb584e530858349a6ca53fefb6c58705e6892a13`.
+Exact node/helper moves and both platform commands are contract-pinned. The
+complete collection remains 3,345 with normalized SHA-256
+`217c227e566a6767fc59b031b1217202ced5ba0dc6a14b3b7fa2d27c0f9314f4`.
+This unit changes test ownership only and makes no codec performance claim.
+Exact package verification records 380 source files, a 381-file sdist whose
+only generated member is `PKG-INFO`, and the unchanged 81-member Windows abi3
+wheel. It contains one native module and all 15 attribution members, excludes
+repository test/benchmark/build payloads, and passes `sceneio._wheel_smoke` in
+a fresh SceneIO-plus-NumPy environment.

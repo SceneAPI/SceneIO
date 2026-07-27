@@ -811,6 +811,11 @@ def test_assembly_dependency_direction_and_import_delta_are_exact():
             "tests/test_io_partial_points.py::",
             13,
         ),
+        "partial_reconstruction": (
+            "tests/test_io_partial.py::",
+            "tests/test_io_partial_reconstruction.py::",
+            15,
+        ),
     }
     assert [item["name"] for item in rename_groups] == list(expected_groups)
     renamed_from = set()
@@ -860,6 +865,26 @@ def test_assembly_dependency_direction_and_import_delta_are_exact():
             "tests/test_io_partial.py",
             "tests/_support/partial_read.py",
             ["_assert_point_range"],
+        ),
+        "partial_process_rss": (
+            "tests/test_io_partial.py",
+            "tests/_support/partial_read.py",
+            ["_fresh_process_partial_rss"],
+        ),
+        "partial_reconstruction_helpers": (
+            "tests/test_io_partial.py",
+            "tests/test_io_partial_reconstruction.py",
+            [
+                "_three_view_reconstruction",
+                "_fresh_process_colmap_error_rss",
+                "_assert_payload_relative_rss",
+                "_assert_colmap_error_rss_is_sublinear",
+                "_traced_format_error_peak",
+                "_write_malformed_observation_model",
+                "_write_unterminated_name_model",
+                "_instrumented_rss_measurement",
+                "_write_malformed_text_token_model",
+            ],
         ),
     }
     assert [item["name"] for item in support_groups] == list(
@@ -932,6 +957,18 @@ def test_assembly_dependency_direction_and_import_delta_are_exact():
     assert non_windows_mmap_command.count("tests/test_io_partial_meshes.py") == 1
     assert windows_mmap_command.count("tests/test_io_partial_points.py") == 1
     assert non_windows_mmap_command.count("tests/test_io_partial_points.py") == 1
+    assert (
+        windows_mmap_command.count(
+            "tests/test_io_partial_reconstruction.py"
+        )
+        == 1
+    )
+    assert (
+        non_windows_mmap_command.count(
+            "tests/test_io_partial_reconstruction.py"
+        )
+        == 1
+    )
     assert (
         "bench/bench_io.py --runs 1 --scale 0.001 --skip-oracles --json"
         in ci_workflow

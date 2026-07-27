@@ -307,6 +307,10 @@ sceneio._core (C++ / nanobind)
   Point-specific XYZ/LAS behavior now lives in
   `tests/test_io_partial_points.py`; its shared point/splat range assertion
   has lower ownership in `tests/_support/partial_read.py`.
+  Reconstruction-specific COLMAP behavior and private measurement helpers now
+  live in `tests/test_io_partial_reconstruction.py`; their one shared
+  fresh-process RSS helper has lower ownership in
+  `tests/_support/partial_read.py`.
   Cross-family partial invariants remain in `tests/test_io_partial.py` while
   the other families move in later units.
   Built-in startup uses `_registry/assembly.py` as a lower staging boundary.

@@ -61,6 +61,10 @@
 > run `30287854716` and compiler-instrumented run `30287854692`. The point
 > unit moves 13 unchanged XYZ/LAS nodes into
 > `tests/test_io_partial_points.py` and lowers their shared range assertion.
+> Exact point commit `ac1a4d1` passes normal run `30290617469` and
+> compiler-instrumented run `30290617607`. The reconstruction unit moves 15
+> unchanged COLMAP nodes into `tests/test_io_partial_reconstruction.py` and
+> lowers the one fresh-process RSS helper shared with the broad suite.
 
 The granular, per‑format execution plan for covering **every relevant file type
 that has a permissively‑licensed open‑source option**. Sits below the strategy

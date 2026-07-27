@@ -382,7 +382,11 @@ face-range semantic and mapping-close behavior into
 `tests/test_io_partial_meshes.py`. Exact mesh commit `4294dbe` passes normal
 run `30287854716` and compiler-instrumented run `30287854692`. The point unit
 moves 13 unchanged XYZ/LAS nodes into `tests/test_io_partial_points.py` and
-lowers their shared range assertion. The optimized I/O paths remain unchanged.
+lowers their shared range assertion. Exact point commit `ac1a4d1` passes
+normal run `30290617469` and compiler-instrumented run `30290617607`. The
+reconstruction unit moves 15 unchanged COLMAP nodes into
+`tests/test_io_partial_reconstruction.py` and lowers the one fresh-process RSS
+helper shared with the broad suite. The optimized I/O paths remain unchanged.
 
 New public surface, applied to every format for which it's meaningful:
 - header-only `inspect(path)` → dims/count/dtype/channels without a full decode

@@ -468,6 +468,19 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > only generated member is `PKG-INFO`, and an unchanged 81-member Windows abi3
 > wheel. A fresh SceneIO-plus-NumPy installation passes
 > `sceneio._wheel_smoke`.
+> Exact point commit `ac1a4d1` passes [normal run
+> 30290617469](https://github.com/SceneAPI/SceneIO/actions/runs/30290617469)
+> and [compiler-instrumented run
+> 30290617607](https://github.com/SceneAPI/SceneIO/actions/runs/30290617607).
+> The reconstruction partial unit moves 15 unchanged COLMAP nodes and their
+> private helpers into `tests/test_io_partial_reconstruction.py`, while the
+> shared fresh-process RSS helper gains lower ownership. Collection remains
+> 3,345 with normalized SHA-256
+> `217c227e566a6767fc59b031b1217202ced5ba0dc6a14b3b7fa2d27c0f9314f4`.
+> Exact package verification records 380 source files, a 381-file sdist whose
+> only generated member is `PKG-INFO`, and an unchanged 81-member Windows abi3
+> wheel. A fresh SceneIO-plus-NumPy installation passes
+> `sceneio._wheel_smoke`.
 
 [current-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287022
 [current-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287161
