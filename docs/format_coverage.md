@@ -283,7 +283,7 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > [30234796010](https://github.com/SceneAPI/SceneIO/actions/runs/30234796010)
 > passes the complete suite and all platform lanes; compiler-instrumented run
 > [30234796025](https://github.com/SceneAPI/SceneIO/actions/runs/30234796025)
-> passes both jobs. R3.2 family extraction is active. Arrays close at
+> passes both jobs. R3.2 family extraction is complete. Arrays close at
 > `6d9ec34`: normal run
 > [30236069971](https://github.com/SceneAPI/SceneIO/actions/runs/30236069971)
 > and compiler-instrumented run
@@ -371,7 +371,7 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > 30266501529](https://github.com/SceneAPI/SceneIO/actions/runs/30266501529)
 > and [compiler-instrumented run
 > 30266501618](https://github.com/SceneAPI/SceneIO/actions/runs/30266501618).
-> R3.3 is active locally: an immutable catalog owns the exact 50 built-ins as
+> R3.3 is locally complete: an immutable catalog owns the exact 50 built-ins as
 > 44 buffer, three path, and three directory fixture definitions, including
 > the live projection of 28 partial-capable codecs and 32 selector
 > declarations. The mmap suite now consumes
@@ -485,6 +485,20 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > selectors that retained the old shared-module path. They now name the
 > focused reconstruction module, and the assembly suite rejects stale paths.
 > Compiler-instrumented run `30294120444` passed the reconstruction commit.
+> Follow-up commit `b5e5c55` passes normal run `30296172958` and
+> compiler-instrumented run `30296174522`.
+>
+> The final R3.3 ownership audit confirms that sequence and splat dedicated
+> partial behavior is already owned by their family architecture/codec suites.
+> The seven tests left in `tests/test_io_partial.py` intentionally span
+> families; their sequence/splat/shared ownership, unchanged AST projections,
+> 21 exact family-owned node/parameter ids, and per-function shared format
+> maps are now contract-pinned. No codec capability changes.
+> The closure candidate passes 3,341 tests with four documented skips, Ruff,
+> and the complete five-run strict O4/O5 guard. Its exact 380-file staged tree
+> produces a 381-file sdist and 81-member Windows ABI3 wheel with one native
+> module, all 15 attribution files, and NumPy as the sole unconditional
+> dependency; fresh installed smoke passes.
 
 [current-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287022
 [current-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287161

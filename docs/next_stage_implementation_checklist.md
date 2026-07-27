@@ -39,17 +39,13 @@ implementation `3e46d82` plus platform-contract repair `9928c6d`; normal run
 30228235491 and compiler-instrumented run 30228235535 pass the final R2 tree.
 R2 is closed. R3.1a is complete in the current tree. R3.1b closes at follow-up
 commit `0bdfe0f`; normal run `30234796010` and
-compiler-instrumented run `30234796025` pass. R3.2 family extraction is
-active. Arrays, calibration, raster images, and meshes are committed and
-hosted-green. Points close at `45e2757`; normal run `30244892746` and
-compiler-instrumented run `30244892600` pass. The reconstruction-family
-extraction closes at `76ed21b`; normal run `30247662591` and
-compiler-instrumented run `30247662622` pass. The sequence-family extraction
-closes at `4b8c829`; normal run `30250394890` and compiler-instrumented run
-`30250394906` pass. The splat-family extraction closes at `cd32268`; normal
-run `30253301819` and compiler-instrumented run `30253301871` pass. The
-runner extraction is locally complete; repository-built-in completeness and
-strict comparison-provider qualification remain in R3.2.
+compiler-instrumented run `30234796025` pass. R3.2 closes at `0e54cf5`;
+normal run `30263506366` and compiler-instrumented run `30263506270` pass.
+R3.3 is locally complete in the current tree. Its latest hosted checkpoint is
+the reconstruction selector follow-up `b5e5c55`, whose normal run
+`30296172958` and compiler-instrumented run `30296174522` pass. The final
+sequence/splat ownership audit changes no test node or codec behavior and is
+awaiting the current closure candidate's hosted gate. R3.4 is next.
 
 This is the operational checklist for the repository-organization and
 codec-performance stage defined in
@@ -2589,7 +2585,8 @@ splat jobs, mmap/reconstruction matrices, and GCC-10 lane.
 Compiler-instrumented run `30228235535` passes both jobs. `publish.yml` was
 not triggered; no tag or package was published. R3.1a is complete in the
 current tree. R3.1b closes at `0bdfe0f`; normal run `30234796010` and
-compiler-instrumented run `30234796025` pass. R3.2 is active.
+compiler-instrumented run `30234796025` pass. R3.2 later closes at
+`0e54cf5`; R3.3 is locally complete and R3.4 is next.
 
 ## 7. R3 — split benchmark and cross-codec tests
 
@@ -3078,7 +3075,7 @@ environment. `sceneio._wheel_smoke` returns `2`.
       equivalence is demonstrated.
 - [x] Migrate streaming consumers in a separate commit under the same rule.
 - [x] Migrate inspection consumers in a separate commit under the same rule.
-- [ ] Migrate partial consumers one family at a time under the same rule.
+- [x] Migrate partial consumers one family at a time under the same rule.
   - [x] Move the three array-specific DMB/FLO behavior tests unchanged into
         `tests/test_io_partial_arrays.py`; retain cross-family window tests in
         the shared suite.
@@ -3093,13 +3090,19 @@ environment. `sceneio._wheel_smoke` returns `2`.
   - [x] Move the 15 COLMAP reconstruction-specific nodes unchanged into
         `tests/test_io_partial_reconstruction.py` and lower the shared
         cross-family RSS helper under `tests/_support/partial_read.py`.
-  - [ ] Migrate sequence and splat family-specific consumers.
-- [ ] Remove each old matrix only after its replacement is proven equivalent.
+  - [x] Audit sequence and splat consumers. Their dedicated partial behavior
+        was already family-owned by the sequence/splat architecture and codec
+        suites before R3.3, so no node-path move is warranted; retain the
+        deliberately cross-family point/splat invariants in
+        `tests/test_io_partial.py`.
+- [x] Remove each superseded local matrix only after its replacement is proven
+      equivalent; retain the shared partial suite because its seven behavior
+      tests are cross-family contracts rather than a duplicate family matrix.
   - [x] Remove the mmap matrix after exact local and hosted equivalence.
-- [ ] Preserve parameter ids so CI failures remain attributable.
-- [ ] Avoid snapshot-only assertions for numeric values, conventions, or
+- [x] Preserve parameter ids so CI failures remain attributable.
+- [x] Avoid snapshot-only assertions for numeric values, conventions, or
       malformed inputs.
-- [ ] Compare sorted pytest node ids, parameters, and skip reasons before and
+- [x] Compare sorted pytest node ids, parameters, and skip reasons before and
       after. Record an explicit rename mapping; test count alone is
       insufficient.
   - [x] Record and enforce the exact 16-node streaming path rename while
@@ -3274,7 +3277,29 @@ The first hosted normal run `30294120621` exposed four explicit manylinux
 selectors that still named the pre-move shared module. The focused module
 paths are corrected and the assembly suite now rejects both a missing new
 selector and any retained stale selector. Compiler-instrumented run
-`30294120444` passed the exact reconstruction commit.
+`30294120444` passed the exact reconstruction commit. Follow-up commit
+`b5e5c55` passes normal run `30296172958` and compiler-instrumented run
+`30296174522`.
+
+The sequence/splat disposition audit closes the last R3.3 ownership question
+without creating empty or misleading suites. The assembly contract pins eight
+sequence partial-behavior functions across the existing sequence architecture
+and codec suites, three splat-family partial/unsupported-selector functions,
+their exact 21 collected node ids and parameter ids, and all seven retained
+shared partial functions by AST projection. An AST-derived per-function
+format mapping proves the shared tests contain no sequence format and retain
+both splat and non-splat formats, so their point/splat, endian, truncation,
+validation, and large-read checks remain genuine cross-family invariants. This
+closure adds no pytest node and changes no codec path.
+
+The closure candidate collects 3,345 tests and passes 3,341 with four
+documented skips. Ruff and the complete five-run strict O4/O5 guard pass. Its
+exact staged tree contains 380 source files and produces a 381-file sdist whose
+only generated member is `PKG-INFO`; the sdist-derived 81-member Windows ABI3
+wheel contains one native module and all 15 attribution files, excludes
+repository test/benchmark/build payloads, and keeps NumPy as its sole
+unconditional dependency. A fresh SceneIO-plus-NumPy installation returns
+`2` from `sceneio._wheel_smoke`.
 
 ### R3.4 — complete installed-wheel smoke
 

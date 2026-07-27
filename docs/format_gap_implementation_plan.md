@@ -1997,7 +1997,7 @@ compatible CLI and 50-codec contract. R3.1b now provides the versioned
 fresh-child memory protocol, strict unavailable-sampler behavior, and
 positive/negative payload controls. Follow-up commit `0bdfe0f` passes normal
 run `30234796010` and compiler-instrumented run `30234796025`, closing R3.1b.
-R3.2 family extraction is the active repository-organization unit: arrays
+R3.2 family extraction then proceeded family by family: arrays
 close at `6d9ec34` with normal run `30236069971` and
 compiler-instrumented run `30236069959`; calibration closes at `5dc03f4` with
 normal run `30237676629` and compiler-instrumented run `30237676648`; raster
@@ -2022,8 +2022,8 @@ complete-sweep strict mode that propagates every required comparison failure.
 The complete local suite, five-run strict guard, three independent closure
 reviews, exact-tree sdist/wheel gate, and fresh NumPy-only installed-wheel
 smoke pass. Exact qualification commit `0e54cf5` passes normal run
-`30263506366` and compiler-instrumented run `30263506270`. R3.3 is active with
-the exact 44-buffer/3-path/3-directory catalog under
+`30263506366` and compiler-instrumented run `30263506270`. R3.3 is locally
+complete with the exact 44-buffer/3-path/3-directory catalog under
 `tests/_support/codec_cases.py`. Exact catalog commit `81f143b` passes normal
 run `30266501529` and compiler-instrumented run `30266501618`; the mmap suite
 now consumes the lower-owned deterministic buffer builder with exact
@@ -2063,7 +2063,12 @@ lowers their shared range assertion. Exact point commit `ac1a4d1` passes
 normal run `30290617469` and compiler-instrumented run `30290617607`. The
 reconstruction unit moves 15 unchanged COLMAP nodes and their private helpers
 into `tests/test_io_partial_reconstruction.py`, while the one fresh-process
-RSS helper shared with the broad suite gains lower ownership.
+RSS helper shared with the broad suite gains lower ownership. Follow-up
+selector commit `b5e5c55` passes normal run `30296172958` and
+compiler-instrumented run `30296174522`. The final sequence/splat audit proves
+their dedicated partial tests were already family-owned and contract-pins the
+seven intentionally cross-family tests that remain shared. R3.3 is locally
+complete without changing a format or public API.
 
 Status terms are strict:
 

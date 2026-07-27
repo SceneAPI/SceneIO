@@ -962,6 +962,28 @@ The first hosted normal run `30294120621` exposed four explicit manylinux
 selectors that still named the pre-move shared module. The selectors now use
 the focused reconstruction module, and the assembly suite rejects stale paths.
 Compiler-instrumented run `30294120444` passed the reconstruction commit.
+Follow-up commit `b5e5c55` passes normal run `30296172958` and
+compiler-instrumented run `30296174522`.
+
+The final R3.3 ownership audit finds no sequence-only consumer in the shared
+partial suite: Y4M and directory-sequence partial behavior is already owned by
+the sequence architecture and codec suites. Splat-family range behavior and
+the deliberate no-selector SPZ contract are likewise already family-owned.
+The remaining seven tests in `tests/test_io_partial.py` combine two or more
+families and therefore remain shared. The assembly contract pins the relevant
+sequence, splat, and shared function projections, all 21 exact family-owned
+node/parameter ids, and an AST-derived per-function shared format mapping.
+That mapping proves the shared suite contains both splat and non-splat formats
+but no sequence format. No empty family module or artificial node split is
+introduced.
+
+The closure candidate collects 3,345 tests and passes 3,341 with four
+documented skips. Ruff and the complete five-run strict O4/O5 guard pass. Its
+exact staged tree contains 380 source files and produces a 381-file sdist and
+81-member Windows ABI3 wheel. The wheel contains one native module and all 15
+attribution files, excludes repository test/benchmark/build payloads, keeps
+NumPy as its sole unconditional dependency, and passes a fresh
+SceneIO-plus-NumPy installed smoke.
 
 ### R4. Organize native build and bindings
 

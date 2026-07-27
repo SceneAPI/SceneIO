@@ -312,7 +312,11 @@ sceneio._core (C++ / nanobind)
   fresh-process RSS helper has lower ownership in
   `tests/_support/partial_read.py`.
   Cross-family partial invariants remain in `tests/test_io_partial.py` while
-  the other families move in later units.
+  sequence and splat dedicated partial behavior remains in the existing
+  family architecture/codec suites. The assembly contract pins that
+  disposition and all seven shared test projections, preventing an empty
+  family suite or an artificial split of point/splat and large-read
+  invariants.
   Built-in startup uses `_registry/assembly.py` as a lower staging boundary.
   Eight complete family tuples are collected without touching the public
   registry. After all 50 canonical ids validate, the facade publishes the

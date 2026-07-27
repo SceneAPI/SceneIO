@@ -865,6 +865,148 @@
         "function_ast_sha256": "a45d371755429aa070f514854d35bd83ca6afe032fad3d6a242835fdf5aa4e92"
       }
     ],
+    "partial_family_disposition": {
+      "sequence": {
+        "status": "already_family_owned",
+        "anchors": [
+          {
+            "path": "tests/test_io_sequence_family_architecture.py",
+            "function_names": [
+              "test_y4m_inspection_matches_parent_contract_and_full_read",
+              "test_directory_behavior_matches_hand_authored_parent_contract"
+            ],
+            "function_ast_sha256": "19600f254659e7cb0c7049f22f254ef1d9b7dfcd68fbbddf7c80810ccb8d81ef",
+            "node_ids": [
+              "tests/test_io_sequence_family_architecture.py::test_y4m_inspection_matches_parent_contract_and_full_read[mono]",
+              "tests/test_io_sequence_family_architecture.py::test_y4m_inspection_matches_parent_contract_and_full_read[color422]",
+              "tests/test_io_sequence_family_architecture.py::test_directory_behavior_matches_hand_authored_parent_contract[unmanifested]",
+              "tests/test_io_sequence_family_architecture.py::test_directory_behavior_matches_hand_authored_parent_contract[manifested]"
+            ]
+          },
+          {
+            "path": "tests/codecs/test_y4m.py",
+            "function_names": [
+              "test_rational_timing_recurrence_is_exact_and_partial_keeps_global_time",
+              "test_public_detect_read_write_inspect_and_partial",
+              "test_partial_bounds_reject",
+              "test_large_inspect_and_one_frame_partial_have_bounded_python_memory"
+            ],
+            "function_ast_sha256": "399158a382461bfb55da3339625cd6477ec9c194c9f5318b67fb17b792116dbd",
+            "node_ids": [
+              "tests/codecs/test_y4m.py::test_rational_timing_recurrence_is_exact_and_partial_keeps_global_time",
+              "tests/codecs/test_y4m.py::test_public_detect_read_write_inspect_and_partial",
+              "tests/codecs/test_y4m.py::test_partial_bounds_reject[bounds0]",
+              "tests/codecs/test_y4m.py::test_partial_bounds_reject[bounds1]",
+              "tests/codecs/test_y4m.py::test_partial_bounds_reject[bounds2]",
+              "tests/codecs/test_y4m.py::test_partial_bounds_reject[bounds3]",
+              "tests/codecs/test_y4m.py::test_partial_bounds_reject[bounds4]",
+              "tests/codecs/test_y4m.py::test_large_inspect_and_one_frame_partial_have_bounded_python_memory"
+            ]
+          },
+          {
+            "path": "tests/codecs/test_image_sequence.py",
+            "function_names": [
+              "test_manifest_order_exact_timing_inspect_and_partial",
+              "test_partial_bounds_and_unsupported_directory_detection"
+            ],
+            "function_ast_sha256": "5364d79d5b96dcc28497dfbc756ec40889f64f13b68d9387add4f4ee3e27a2d0",
+            "node_ids": [
+              "tests/codecs/test_image_sequence.py::test_manifest_order_exact_timing_inspect_and_partial",
+              "tests/codecs/test_image_sequence.py::test_partial_bounds_and_unsupported_directory_detection"
+            ]
+          }
+        ]
+      },
+      "splats": {
+        "status": "already_family_owned_with_cross_family_invariants_retained",
+        "anchors": [
+          {
+            "path": "tests/test_io_splat_family_architecture.py",
+            "function_names": [
+              "test_splat_point_ranges_match_full_records",
+              "test_sog_directory_and_metadata_point_ranges_match",
+              "test_spz_deliberately_has_no_point_selector"
+            ],
+            "function_ast_sha256": "a504deeef1ea23d2e53d0398fbc010464c5e692faf23eb37f0cea9acb3a485f7",
+            "node_ids": [
+              "tests/test_io_splat_family_architecture.py::test_splat_point_ranges_match_full_records[gaussian_ply]",
+              "tests/test_io_splat_family_architecture.py::test_splat_point_ranges_match_full_records[compressed_ply]",
+              "tests/test_io_splat_family_architecture.py::test_splat_point_ranges_match_full_records[sog]",
+              "tests/test_io_splat_family_architecture.py::test_splat_point_ranges_match_full_records[ksplat]",
+              "tests/test_io_splat_family_architecture.py::test_splat_point_ranges_match_full_records[splat]",
+              "tests/test_io_splat_family_architecture.py::test_sog_directory_and_metadata_point_ranges_match",
+              "tests/test_io_splat_family_architecture.py::test_spz_deliberately_has_no_point_selector"
+            ]
+          }
+        ]
+      },
+      "retained_cross_family": {
+        "path": "tests/test_io_partial.py",
+        "function_names": [
+          "test_pixel_windows_equal_full_read_slices",
+          "test_point_ranges_equal_full_read_slices",
+          "test_partial_reads_handle_non_native_endian_payloads",
+          "test_partial_selector_validation_and_unsupported_formats",
+          "test_partial_ranges_reject_empty_or_out_of_bounds",
+          "test_partial_paths_reject_truncated_selected_payloads",
+          "test_large_partial_reads_do_not_allocate_payload_sized_python_objects"
+        ],
+        "function_ast_sha256": "171b853303af63ada53183f4ca76d9bdc0c54e55b9218f56ab70207e88535bf0",
+        "function_format_ids": {
+          "test_pixel_windows_equal_full_read_slices": [
+            "flo",
+            "netpbm",
+            "pfm",
+            "webp"
+          ],
+          "test_point_ranges_equal_full_read_slices": [
+            "compressed_ply",
+            "gaussian_ply",
+            "ksplat",
+            "las",
+            "pcd",
+            "ply",
+            "pts",
+            "sog",
+            "splat",
+            "xyz"
+          ],
+          "test_partial_reads_handle_non_native_endian_payloads": [
+            "gaussian_ply",
+            "pfm",
+            "ply"
+          ],
+          "test_partial_selector_validation_and_unsupported_formats": [
+            "png"
+          ],
+          "test_partial_ranges_reject_empty_or_out_of_bounds": [
+            "netpbm",
+            "pts",
+            "xyz"
+          ],
+          "test_partial_paths_reject_truncated_selected_payloads": [
+            "compressed_ply",
+            "flo",
+            "gaussian_ply",
+            "ksplat",
+            "las",
+            "netpbm",
+            "pcd",
+            "pfm",
+            "ply",
+            "sog",
+            "splat",
+            "webp",
+            "xyz"
+          ],
+          "test_large_partial_reads_do_not_allocate_payload_sized_python_objects": [
+            "netpbm",
+            "ply_mesh",
+            "splat"
+          ]
+        }
+      }
+    },
     "first": "tests/codecs/test_bal.py::test_oracle_write_sceneio_read_parity_and_conventions",
     "last": "tests/test_points_binary.py::test_bad_magic_rejected"
   },

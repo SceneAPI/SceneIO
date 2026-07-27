@@ -2357,4 +2357,34 @@ The first hosted normal run `30294120621` exposed four explicit manylinux
 selectors that still named the pre-move shared module. The focused module
 paths are corrected and the assembly suite now rejects both a missing new
 selector and any retained stale selector. Compiler-instrumented run
-`30294120444` passed the exact reconstruction commit.
+`30294120444` passed the exact reconstruction commit. Follow-up commit
+`b5e5c55` passes normal run `30296172958` and compiler-instrumented run
+`30296174522`.
+
+## R3.3 sequence/splat ownership disposition (2026-07-27)
+
+The remaining audit makes no benchmark or codec change. Eight sequence
+partial-behavior functions already live in the sequence architecture/Y4M/
+directory-sequence suites, and three splat range/selector functions already
+live in the splat-family architecture suite. The seven tests retained in
+`tests/test_io_partial.py` deliberately span multiple families. Their AST
+projection SHA-256 is
+`171b853303af63ada53183f4ca76d9bdc0c54e55b9218f56ab70207e88535bf0`;
+the sequence anchor projections are
+`19600f254659e7cb0c7049f22f254ef1d9b7dfcd68fbbddf7c80810ccb8d81ef`,
+`399158a382461bfb55da3339625cd6477ec9c194c9f5318b67fb17b792116dbd`,
+and `5364d79d5b96dcc28497dfbc756ec40889f64f13b68d9387add4f4ee3e27a2d0`;
+the splat anchor projection is
+`a504deeef1ea23d2e53d0398fbc010464c5e692faf23eb37f0cea9acb3a485f7`.
+The assembly contract verifies those projections, all 21 exact
+family-owned collected node/parameter ids, and the AST-derived format-id map
+for each shared function without adding or renaming a pytest node.
+
+The complete five-run strict O4/O5 guard passes unchanged. The closure
+candidate collects 3,345 tests and passes 3,341 with four documented skips;
+Ruff is clean. Exact staged packaging records 380 source files, a 381-file
+sdist whose only generated member is `PKG-INFO`, and an 81-member Windows ABI3
+wheel with one native module and all 15 attribution files. The wheel excludes
+repository test/benchmark/build payloads, keeps NumPy as its sole
+unconditional dependency, and passes a fresh SceneIO-plus-NumPy installed
+smoke.

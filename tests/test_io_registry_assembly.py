@@ -922,6 +922,93 @@ def test_assembly_dependency_direction_and_import_delta_are_exact():
         assert hashlib.sha256(function_payload.encode()).hexdigest() == (
             group["function_ast_sha256"]
         )
+    partial_disposition = candidate["partial_family_disposition"]
+    assert {
+        family: details["status"]
+        for family, details in partial_disposition.items()
+        if family != "retained_cross_family"
+    } == {
+        "sequence": "already_family_owned",
+        "splats": "already_family_owned_with_cross_family_invariants_retained",
+    }
+    for family in ("sequence", "splats"):
+        for anchor in partial_disposition[family]["anchors"]:
+            anchor_tree = ast.parse(
+                (ROOT / anchor["path"]).read_text(encoding="utf-8")
+            )
+            anchor_functions = {
+                node.name: node
+                for node in anchor_tree.body
+                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+            }
+            function_nodes = [
+                anchor_functions[name] for name in anchor["function_names"]
+            ]
+            function_payload = "\n".join(
+                ast.dump(node, include_attributes=False)
+                for node in function_nodes
+            )
+            assert hashlib.sha256(function_payload.encode()).hexdigest() == (
+                anchor["function_ast_sha256"]
+            )
+            anchor_prefix = anchor["path"] + "::"
+            anchor_function_names = set(anchor["function_names"])
+            collected_anchor_nodes = {
+                node_id
+                for node_id in actual_nodes
+                if node_id.startswith(anchor_prefix)
+                and node_id.rsplit("::", maxsplit=1)[-1].split("[", maxsplit=1)[
+                    0
+                ]
+                in anchor_function_names
+            }
+            assert len(anchor["node_ids"]) == len(set(anchor["node_ids"]))
+            assert collected_anchor_nodes == set(anchor["node_ids"])
+    retained = partial_disposition["retained_cross_family"]
+    retained_path = ROOT / retained["path"]
+    retained_tree = ast.parse(retained_path.read_text(encoding="utf-8"))
+    retained_functions = {
+        node.name: node
+        for node in retained_tree.body
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+    }
+    retained_nodes = [
+        retained_functions[name] for name in retained["function_names"]
+    ]
+    retained_payload = "\n".join(
+        ast.dump(node, include_attributes=False) for node in retained_nodes
+    )
+    assert hashlib.sha256(retained_payload.encode()).hexdigest() == (
+        retained["function_ast_sha256"]
+    )
+    function_format_ids = retained["function_format_ids"]
+    assert list(function_format_ids) == retained["function_names"]
+    observed_shared_ids = set()
+    for function_name, function_node in zip(
+        retained["function_names"],
+        retained_nodes,
+        strict=True,
+    ):
+        observed_format_ids = sorted(
+            {
+                node.value
+                for node in ast.walk(function_node)
+                if isinstance(node, ast.Constant)
+                and isinstance(node.value, str)
+                and node.value in CANONICAL_BUILTIN_IDS
+            }
+        )
+        assert observed_format_ids == function_format_ids[function_name]
+        observed_shared_ids.update(observed_format_ids)
+    assert observed_shared_ids.isdisjoint(FAMILY_MEMBERS["sequences"])
+    assert observed_shared_ids & set(FAMILY_MEMBERS["splats"]) == {
+        "gaussian_ply",
+        "compressed_ply",
+        "sog",
+        "ksplat",
+        "splat",
+    }
+    assert observed_shared_ids - set(FAMILY_MEMBERS["splats"])
     assert candidate["count"] - parent["count"] == (
         len(feature_added_nodes) - len(feature_removed_nodes)
     )

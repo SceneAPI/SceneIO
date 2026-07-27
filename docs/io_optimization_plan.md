@@ -386,7 +386,11 @@ lowers their shared range assertion. Exact point commit `ac1a4d1` passes
 normal run `30290617469` and compiler-instrumented run `30290617607`. The
 reconstruction unit moves 15 unchanged COLMAP nodes into
 `tests/test_io_partial_reconstruction.py` and lowers the one fresh-process RSS
-helper shared with the broad suite. The optimized I/O paths remain unchanged.
+helper shared with the broad suite. Follow-up selector commit `b5e5c55` passes
+normal run `30296172958` and compiler-instrumented run `30296174522`. The final
+sequence/splat ownership audit contract-pins their already family-owned
+partial behavior and the seven deliberately cross-family tests that remain
+shared. The optimized I/O paths remain unchanged.
 
 New public surface, applied to every format for which it's meaningful:
 - header-only `inspect(path)` → dims/count/dtype/channels without a full decode
