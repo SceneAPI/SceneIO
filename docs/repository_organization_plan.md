@@ -215,8 +215,9 @@ pass. Arrays close at `6d9ec34`, and calibration closes at `5dc03f4`; the
 raster-image family closes at `6572a76`, and the mesh benchmark family closes
 at `613fd26`. Points close at `45e2757`; normal run `30244892746` and
 compiler-instrumented run `30244892600` pass. The reconstruction benchmark
-family is complete in the current local tree. R3.2 family extraction remains
-active.
+family closes at `76ed21b`; normal run `30247662591` and
+compiler-instrumented run `30247662622` pass. The sequence benchmark family is
+complete in the current local tree. R3.2 family extraction remains active.
 These changes alter no codec algorithm or public API and make no
 codec-performance claim. Exact R3.1a normal run
 [30231629465](https://github.com/SceneAPI/SceneIO/actions/runs/30231629465)
@@ -340,7 +341,7 @@ verification have accumulated in a few large modules:
 | C++ records | 32 source/header files | still manageable; new table/animation/scene records will add pressure |
 | Python registry | `registry.py`, 205 lines; `_registry/assembly.py`, 148 lines; focused `_registry/{model,adapters,detection,native_features}.py` modules; and eight `_registry/families/*.py` definition modules | all built-ins are family-owned; R3 now splits the benchmark and cross-codec verification monoliths |
 | Inspection | `_inspection.py` compatibility facade plus `_inspectors/{model,common,arrays,calibration,images,meshes,points,reconstruction,sequences,splats}.py`; all eight manifest families have lower inspector ownership | keep the proven shared model, mmap bridge, metadata bounds, exact-read/integer grammar, and image-result constructor as lower services |
-| Benchmark | compatible `bench_io.py` facade plus `io_bench/{model,measure,reporting}.py`, lower arrays/calibration/images/meshes/points/reconstruction family modules, and shared `families/common.py` | arrays, calibration, images, meshes, points, and nine buffer-backed reconstruction specs have lower family ownership; two remaining family hooks, specialized glTF/COLMAP orchestration, and sweep orchestration move checkpoint by checkpoint during R3.2 |
+| Benchmark | compatible `bench_io.py` facade plus `io_bench/{model,measure,reporting}.py`, lower arrays/calibration/images/meshes/points/reconstruction/sequences family modules, and shared `families/common.py` | arrays, calibration, images, meshes, points, reconstruction, and buffer-backed Y4M have lower family ownership; one remaining family hook, specialized glTF/COLMAP/image-directory orchestration, and sweep orchestration move checkpoint by checkpoint during R3.2 |
 | Cross-codec tests | `test_io_mmap.py`, about 2,400 lines; `test_io_partial.py`, about 1,100 | reusable codec cases and behavior assertions are difficult to extend independently |
 | Execution plan | `format_gap_implementation_plan.md`, about 2,500 lines | historical evidence and the active queue are easy to confuse |
 | Native dependencies | six source-complete in-tree projects, one LAZperf integration/provenance directory, and six `FetchContent` projects | stable builds are not yet fully offline/repository-contained |
@@ -742,6 +743,29 @@ excludes benchmark/test/PyCOLMAP modules, retains all 15 attribution files,
 keeps NumPy as its only unconditional dependency, and passes a fresh
 NumPy-only installed smoke without PyCOLMAP. All three independent reviews
 are clear.
+
+Exact reconstruction commit `76ed21b` passes normal run `30247662591` and
+compiler-instrumented run `30247662622`.
+
+The sequence checkpoint adds the buffer-backed Y4M spec under
+`families/sequences.py`, the Y4M and image-directory fixtures under
+`fixtures/sequences.py`, and the portable Y4M pair under
+`oracles/sequences.py`. The Y4M `Spec` remains between WebP and HDR. The
+image-directory `DirectorySpec` remains facade-owned until runner extraction
+and consumes the lower fixture through an exact alias. The Y4M `Spec`,
+directory orchestration, and three of four moved helper ASTs are unchanged.
+The sole reviewed difference strengthens the Y4M reader to complete plane and
+metadata semantics. Y4M has live portable comparison metrics; independent
+image-directory throughput carries an exact exemption backed by
+manifest/PGM parity.
+
+Focused sequence/contract validation passes 225 tests; the complete suite
+passes 3,316 with four documented skips, and Ruff is clean. The fresh
+362-member exact-tree source archive contains exactly the three new sequence
+modules. Its 81-member wheel excludes benchmark/test modules, retains all 15
+attribution files, keeps NumPy as its only unconditional dependency, and
+passes a fresh NumPy-only installed smoke. All three independent reviews are
+clear.
 
 ### R4. Organize native build and bindings
 

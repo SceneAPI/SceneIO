@@ -1929,3 +1929,42 @@ PyCOLMAP remains test-extra only. A fresh NumPy-only environment without
 PyCOLMAP passes the installed-wheel smoke. All three independent reviews are
 clear. This checkpoint changes benchmark ownership and strengthens one
 comparison workload; it makes no codec-implementation performance claim.
+
+Exact reconstruction commit `76ed21b` passes normal run
+[30247662591](https://github.com/SceneAPI/SceneIO/actions/runs/30247662591)
+and compiler-instrumented run
+[30247662622](https://github.com/SceneAPI/SceneIO/actions/runs/30247662622).
+
+## R3.2 sequence benchmark-family extraction (2026-07-27)
+
+The seventh R3.2 checkpoint moves the buffer-backed `y4m` spec to
+`bench/io_bench/families/sequences.py`, its deterministic planar-YUV fixture
+and the image-directory fixture to `fixtures/sequences.py`, and the portable
+Y4M parser/writer to `oracles/sequences.py`. The facade preserves the Y4M
+position between WebP and HDR. The `image_sequence` `DirectorySpec` remains
+facade-owned until the shared runner moves, but consumes the lower fixture
+through an exact compatibility alias.
+
+The Y4M `Spec` AST, directory orchestration AST, and three of four moved helper
+ASTs match the reconstruction checkpoint. Review strengthened
+`_y4m_oracle_read`, the sole intentional helper difference, so the timed
+comparison validates and returns all Y/U/V planes plus dimensions, frame rate,
+pixel aspect, chroma configuration, range, matrix, and interlace. The live Y4M
+row has portable independent write/read metrics. `image_sequence` records the
+exact exemption, independent benchmark directory encode/decode throughput;
+manifest and PGM payload parity remain independently covered in
+`tests/codecs/test_image_sequence.py`. Its SceneIO directory round trip pins
+dimensions, channels, frame dtype, resolved paths, timing, and byte-identical
+copied frames.
+
+The complete 50-codec smoke retains structural projection
+`2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`.
+Focused sequence/contract validation passes 225 tests, the complete suite
+passes 3,316 with four documented skips, and Ruff is clean. The exact-tree
+source archive has 362 members and exactly the three new sequence benchmark
+modules. Its 81-member wheel excludes benchmark and test modules, retains all
+15 attribution files, and keeps NumPy as its sole unconditional dependency. A
+fresh NumPy-only environment passes the installed-wheel smoke. All three
+independent reviews are clear. This checkpoint changes benchmark ownership
+and strengthens one comparison workload; it makes no codec-implementation
+performance claim.

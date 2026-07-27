@@ -712,6 +712,17 @@ def _assert_benchmark_components_and_metric_semantics_are_explicit():
     assert extracted_families["reconstruction"][
         "facade_constant_exports"
     ] == ["_EUROC_HEADER"]
+    sequence_exemptions = extracted_families["sequences"][
+        "no_oracle_exemptions"
+    ]
+    assert set(sequence_exemptions) == {"image_sequence"}
+    assert sequence_exemptions["image_sequence"]["unverified_property"] == (
+        "independent benchmark directory encode/decode throughput"
+    )
+    assert sequence_exemptions["image_sequence"]["verification"] == (
+        "format parity remains covered by the independent manifest and "
+        "PGM payload fixtures in tests/codecs/test_image_sequence.py"
+    )
 
     lower_modules = sorted(
         {
@@ -2215,6 +2226,193 @@ def _assert_benchmark_components_and_metric_semantics_are_explicit():
             "nvm",
             "openmvg",
         ],
+    ]
+
+    sequence_family_module = sys.modules[
+        "bench.io_bench.families.sequences"
+    ]
+    sequence_fixture_module = sys.modules[
+        "bench.io_bench.fixtures.sequences"
+    ]
+    sequence_oracle_module = sys.modules[
+        "bench.io_bench.oracles.sequences"
+    ]
+    assert benchmark.build_sequence_specs is (
+        sequence_family_module.build_sequence_specs
+    )
+    assert benchmark._y4m_fixture is (
+        sequence_fixture_module._y4m_fixture
+    )
+    assert benchmark._image_sequence_directory_fixture is (
+        sequence_fixture_module._image_sequence_directory_fixture
+    )
+    assert benchmark._y4m_oracle_write is (
+        sequence_oracle_module._y4m_oracle_write
+    )
+    assert benchmark._y4m_oracle_read is (
+        sequence_oracle_module._y4m_oracle_read
+    )
+
+    sequence_specs = benchmark.build_sequence_specs(0.001)
+    assert [spec.id for spec in sequence_specs] == ["y4m"]
+    y4m_spec = sequence_specs[0]
+    assert (y4m_spec.w, y4m_spec.r) == (
+        _core.write_y4m,
+        _core.read_y4m,
+    )
+    assert (y4m_spec.ow, y4m_spec.orr) == (
+        sequence_oracle_module._y4m_oracle_write,
+        sequence_oracle_module._y4m_oracle_read,
+    )
+    y4m_record, y4m_payload = y4m_spec.make()
+    assert y4m_spec.nbytes(y4m_record, y4m_payload) == sum(
+        value.nbytes for value in y4m_payload.values()
+    )
+    y4m_core_bytes = bytes(y4m_spec.w(y4m_record))
+    y4m_oracle_bytes = y4m_spec.ow(y4m_payload)
+    y4m_metadata = {
+        "width": y4m_record.width,
+        "height": y4m_record.height,
+        "frame_rate": (
+            y4m_record.frame_rate_numerator,
+            y4m_record.frame_rate_denominator,
+        ),
+        "pixel_aspect": (
+            y4m_record.pixel_aspect_numerator,
+            y4m_record.pixel_aspect_denominator,
+        ),
+        "chroma_subsampling": y4m_record.chroma_subsampling,
+        "chroma_siting": y4m_record.chroma_siting,
+        "color_range": y4m_record.color_range,
+        "matrix": y4m_record.matrix,
+        "interlace": y4m_record.interlace,
+    }
+    for encoded in (y4m_core_bytes, y4m_oracle_bytes):
+        decoded = y4m_spec.orr(encoded)
+        for name, expected in y4m_payload.items():
+            np.testing.assert_array_equal(decoded[name], expected)
+        assert {
+            name: decoded[name] for name in y4m_metadata
+        } == y4m_metadata
+    y4m_core_record = y4m_spec.r(y4m_oracle_bytes)
+    for name, expected in y4m_payload.items():
+        np.testing.assert_array_equal(
+            np.asarray(getattr(y4m_core_record, name)),
+            expected,
+        )
+    assert {
+        "width": y4m_core_record.width,
+        "height": y4m_core_record.height,
+        "frame_rate": (
+            y4m_core_record.frame_rate_numerator,
+            y4m_core_record.frame_rate_denominator,
+        ),
+        "pixel_aspect": (
+            y4m_core_record.pixel_aspect_numerator,
+            y4m_core_record.pixel_aspect_denominator,
+        ),
+        "chroma_subsampling": y4m_core_record.chroma_subsampling,
+        "chroma_siting": y4m_core_record.chroma_siting,
+        "color_range": y4m_core_record.color_range,
+        "matrix": y4m_core_record.matrix,
+        "interlace": y4m_core_record.interlace,
+    } == y4m_metadata
+
+    with tempfile.TemporaryDirectory(
+        prefix="sceneio_bench_sequence_"
+    ) as directory:
+        root = Path(directory)
+        directory_specs = benchmark._directory_specs(None, 0.001, root)
+        image_sequence_spec = next(
+            spec for spec in directory_specs if spec.id == "image_sequence"
+        )
+        assert image_sequence_spec.make.func is (
+            sequence_fixture_module._image_sequence_directory_fixture
+        )
+        image_sequence_record, logical_size = image_sequence_spec.make()
+        assert logical_size == image_sequence_spec.nbytes(
+            image_sequence_record,
+            logical_size,
+        )
+        assert image_sequence_record.num_frames == 32
+        assert (
+            image_sequence_record.height,
+            image_sequence_record.width,
+            image_sequence_record.channels,
+            image_sequence_record.frame_dtype,
+        ) == (8, 8, 3, "uint8")
+        assert all(
+            Path(path).is_absolute()
+            for path in image_sequence_record.frame_paths
+        )
+        destination = root / "output"
+        image_sequence_spec.w(image_sequence_record, destination)
+        decoded_sequence = image_sequence_spec.r(destination)
+        assert decoded_sequence.frame_names == (
+            image_sequence_record.frame_names
+        )
+        np.testing.assert_array_equal(
+            decoded_sequence.timestamps_ns,
+            image_sequence_record.timestamps_ns,
+        )
+        np.testing.assert_array_equal(
+            decoded_sequence.durations_ns,
+            image_sequence_record.durations_ns,
+        )
+        assert (
+            decoded_sequence.height,
+            decoded_sequence.width,
+            decoded_sequence.channels,
+            decoded_sequence.frame_dtype,
+        ) == (8, 8, 3, "uint8")
+        assert decoded_sequence.frame_paths == [
+            str((destination / name).resolve())
+            for name in decoded_sequence.frame_names
+        ]
+        for source, name in zip(
+            image_sequence_record.frame_paths,
+            image_sequence_record.frame_names,
+            strict=True,
+        ):
+            assert (destination / name).read_bytes() == Path(
+                source
+            ).read_bytes()
+
+    lower_sequence_probe = textwrap.dedent(
+        """
+        import importlib
+        import json
+        import sys
+
+        oracles = importlib.import_module(
+            "bench.io_bench.oracles.sequences"
+        )
+        fixtures = importlib.import_module(
+            "bench.io_bench.fixtures.sequences"
+        )
+        family = importlib.import_module(
+            "bench.io_bench.families.sequences"
+        )
+        print(json.dumps([
+            "bench.bench_io" not in sys.modules,
+            family._y4m_fixture is fixtures._y4m_fixture,
+            family._y4m_oracle_write is oracles._y4m_oracle_write,
+            [spec.id for spec in family.build_sequence_specs(0.001)],
+        ]))
+        """
+    )
+    lower_sequence = subprocess.run(
+        [sys.executable, "-c", lower_sequence_probe],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert json.loads(lower_sequence.stdout) == [
+        True,
+        True,
+        True,
+        ["y4m"],
     ]
 
     calls = []

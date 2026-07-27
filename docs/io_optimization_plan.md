@@ -13,10 +13,12 @@ libjpeg-turbo comparison. The reviewed, commit-sized verification checklist is
 Current benchmark ownership work does not reopen O0-O5 or change codec
 capabilities or implementation-performance claims. Points close at `45e2757`
 with normal run `30244892746` and compiler-instrumented run `30244892600`.
-Reconstruction locally lower-owns nine ordinary buffer-backed specs and their
-fixtures/comparisons; specialized `colmap_sparse`, `colmap_sparse_txt`, and
-`colmap_db` orchestration remains in the compatible facade until the shared
-runner moves. PyCOLMAP remains test-only parity support.
+Reconstruction closes at `76ed21b` with normal run `30247662591` and
+compiler-instrumented run `30247662622`. Sequences locally lower-own Y4M and
+both sequence fixtures; specialized `colmap_sparse`, `colmap_sparse_txt`,
+`colmap_db`, and image-directory orchestration remains in the compatible
+facade until the shared runner moves. PyCOLMAP remains test-only parity
+support.
 
 Scope: the compiled `sceneio._core` I/O path on `phase0-nanobind-core`.
 Companion to `coverage_roadmap.md` (this makes its "Phase 7" hardening/perf work

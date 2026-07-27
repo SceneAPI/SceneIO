@@ -43,7 +43,9 @@ compiler-instrumented run `30234796025` pass. R3.2 family extraction is
 active. Arrays, calibration, raster images, and meshes are committed and
 hosted-green. Points close at `45e2757`; normal run `30244892746` and
 compiler-instrumented run `30244892600` pass. The reconstruction-family
-extraction is locally complete; sequences, splats, and the runner remain.
+extraction closes at `76ed21b`; normal run `30247662591` and
+compiler-instrumented run `30247662622` pass. The sequence-family extraction
+is locally complete; splats and the runner remain.
 
 This is the operational checklist for the repository-organization and
 codec-performance stage defined in
@@ -2736,7 +2738,7 @@ passes both jobs. No release workflow, tag, or publication was triggered.
   - [x] meshes;
   - [x] points;
   - [x] reconstruction;
-  - [ ] sequences;
+  - [x] sequences;
   - [ ] splats.
 - [ ] After the family hooks have lower ownership, move the remaining complete
       sweep orchestration to `bench/io_bench/runner.py`; keep
@@ -2941,6 +2943,40 @@ reconstruction modules. Its 81-member wheel excludes benchmark, test, and
 PyCOLMAP modules, retains all 15 attribution files, and keeps NumPy as the
 sole unconditional dependency; PyCOLMAP remains test-extra only. A fresh
 NumPy-only environment without PyCOLMAP passes the installed-wheel smoke.
+
+Exact reconstruction commit `76ed21b` passes normal run
+[30247662591](https://github.com/SceneAPI/SceneIO/actions/runs/30247662591)
+and compiler-instrumented run
+[30247662622](https://github.com/SceneAPI/SceneIO/actions/runs/30247662622).
+
+The sequence checkpoint moves the buffer-backed `y4m` spec to
+`io_bench/families/sequences.py`, the Y4M and image-directory fixtures to
+`fixtures/sequences.py`, and the portable Y4M parser/writer to
+`oracles/sequences.py`. The facade retains exact compatibility aliases and
+keeps Y4M between WebP and HDR. The `image_sequence` `DirectorySpec` remains
+facade-owned until runner extraction, consuming the lower fixture through its
+alias.
+
+The Y4M `Spec`, directory orchestration, and three of four moved helper ASTs
+match the reconstruction checkpoint. Review intentionally strengthens
+`_y4m_oracle_read`, the sole helper difference, to validate and return all
+planes, dimensions, frame rate, pixel aspect, chroma configuration, range,
+matrix, and interlace. Y4M has live portable comparison metrics.
+`image_sequence` records only the missing independent benchmark directory
+encode/decode throughput; independent manifest and PGM payload parity remain
+in `tests/codecs/test_image_sequence.py`. The direct directory round trip pins
+dimensions, channels, frame dtype, resolved paths, timing, and byte-identical
+frame copies.
+
+The complete 50-codec smoke retains structural projection
+`2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`.
+Focused sequence/contract validation passes 225 tests; the complete suite
+passes 3,316 with four documented skips, Ruff is clean, and all three
+independent reviews are clear. The exact-tree source archive has 362 members
+and exactly the three new sequence modules. Its 81-member wheel excludes
+benchmark and test modules, retains all 15 attribution files, and keeps NumPy
+as its sole unconditional dependency. A fresh NumPy-only environment passes
+the installed-wheel smoke.
 
 ### R3.3 — cross-codec test support
 

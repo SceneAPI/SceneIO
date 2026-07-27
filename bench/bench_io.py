@@ -36,6 +36,7 @@ from bench.io_bench import measure as benchmark_measure
 from bench.io_bench.families import (
     reconstruction as reconstruction_family,
 )
+from bench.io_bench.families import sequences as sequence_family
 from bench.io_bench.families.arrays import build_array_specs
 from bench.io_bench.families.calibration import (
     build_calibration_specs,
@@ -54,6 +55,7 @@ from bench.io_bench.fixtures import points as point_fixtures
 from bench.io_bench.fixtures import (
     reconstruction as reconstruction_fixtures,
 )
+from bench.io_bench.fixtures import sequences as sequence_fixtures
 from bench.io_bench.model import DirectorySpec, Spec
 from bench.io_bench.oracles import arrays as array_oracles
 from bench.io_bench.oracles import (
@@ -65,6 +67,7 @@ from bench.io_bench.oracles import points as point_oracles
 from bench.io_bench.oracles import (
     reconstruction as reconstruction_oracles,
 )
+from bench.io_bench.oracles import sequences as sequence_oracles
 from bench.io_bench.reporting import (
     print_cold_cache_unavailable,
     print_colmap_db_row,
@@ -168,6 +171,14 @@ _euroc_oracle_write = reconstruction_oracles._euroc_oracle_write
 _g2o_oracle_read = reconstruction_oracles._g2o_oracle_read
 _g2o_oracle_write = reconstruction_oracles._g2o_oracle_write
 
+build_sequence_specs = sequence_family.build_sequence_specs
+_image_sequence_directory_fixture = (
+    sequence_fixtures._image_sequence_directory_fixture
+)
+_y4m_fixture = sequence_fixtures._y4m_fixture
+_y4m_oracle_read = sequence_oracles._y4m_oracle_read
+_y4m_oracle_write = sequence_oracles._y4m_oracle_write
+
 _measure = benchmark_measure.measure
 _measure_in_process_rss = benchmark_measure.measure_in_process_rss
 _try = benchmark_measure.try_measure
@@ -177,121 +188,6 @@ try:
     import gsply
 except Exception:
     gsply = None
-# --- payload builders -------------------------------------------------------
-def _y4m_fixture(side):
-    frames = 4
-    rng = np.random.default_rng(31)
-    y = rng.integers(
-        0, 256, (frames, side, side), dtype=np.uint8
-    )
-    chroma_side = (side + 1) // 2
-    u = rng.integers(
-        0, 256, (frames, chroma_side, chroma_side), dtype=np.uint8
-    )
-    v = rng.integers(
-        0, 256, (frames, chroma_side, chroma_side), dtype=np.uint8
-    )
-    empty = np.empty(0, np.int64)
-    record = _core.image_sequence_yuv(
-        y,
-        u,
-        v,
-        empty,
-        empty,
-        "420",
-        "jpeg",
-        "limited",
-        "bt709",
-        "progressive",
-        25,
-        1,
-        1,
-        1,
-    )
-    return record, {"y": y, "u": u, "v": v}
-
-
-def _y4m_oracle_write(payload):
-    """Independent serializer for the benchmark's fixed raw 4:2:0 fixture."""
-
-    y = np.asarray(payload["y"], np.uint8)
-    u = np.asarray(payload["u"], np.uint8)
-    v = np.asarray(payload["v"], np.uint8)
-    frames, height, width = y.shape
-    expected_chroma = (frames, (height + 1) // 2, (width + 1) // 2)
-    if u.shape != expected_chroma or v.shape != expected_chroma:
-        raise ValueError("benchmark Y4M oracle: chroma shape mismatch")
-    output = bytearray(
-        (
-            f"YUV4MPEG2 W{width} H{height} F25:1 Ip A1:1 "
-            "C420jpeg XYSCSS=420JPEG XCOLORRANGE=LIMITED "
-            "XCOLORSPACE=BT709\n"
-        ).encode("ascii")
-    )
-    for index in range(frames):
-        output += b"FRAME\n"
-        output += y[index].tobytes()
-        output += u[index].tobytes()
-        output += v[index].tobytes()
-    return bytes(output)
-
-
-def _y4m_oracle_read(data):
-    """Independent parser for the benchmark's fixed raw 4:2:0 fixture."""
-
-    header, payload = bytes(data).split(b"\n", 1)
-    fields = header.decode("ascii").split()
-    if not fields or fields[0] != "YUV4MPEG2":
-        raise ValueError("benchmark Y4M oracle: bad magic")
-    tokens = {
-        field[0]: field[1:]
-        for field in fields[1:]
-        if not field.startswith("X")
-    }
-    width = int(tokens["W"])
-    height = int(tokens["H"])
-    if (
-        tokens["F"] != "25:1"
-        or tokens["I"] != "p"
-        or tokens["A"] != "1:1"
-        or tokens["C"] != "420jpeg"
-    ):
-        raise ValueError("benchmark Y4M oracle: unexpected metadata")
-    y_bytes = height * width
-    chroma_height = (height + 1) // 2
-    chroma_width = (width + 1) // 2
-    chroma_bytes = chroma_height * chroma_width
-    frame_bytes = y_bytes + 2 * chroma_bytes
-    y_planes = []
-    u_planes = []
-    v_planes = []
-    while payload:
-        if not payload.startswith(b"FRAME\n"):
-            raise ValueError("benchmark Y4M oracle: bad frame marker")
-        frame = payload[6 : 6 + frame_bytes]
-        if len(frame) != frame_bytes:
-            raise ValueError("benchmark Y4M oracle: truncated frame")
-        payload = payload[6 + frame_bytes :]
-        y_planes.append(
-            np.frombuffer(frame[:y_bytes], np.uint8).reshape(height, width)
-        )
-        u_planes.append(
-            np.frombuffer(
-                frame[y_bytes : y_bytes + chroma_bytes], np.uint8
-            ).reshape(chroma_height, chroma_width)
-        )
-        v_planes.append(
-            np.frombuffer(frame[y_bytes + chroma_bytes :], np.uint8).reshape(
-                chroma_height, chroma_width
-            )
-        )
-    return {
-        "y": np.asarray(y_planes),
-        "u": np.asarray(u_planes),
-        "v": np.asarray(v_planes),
-    }
-
-
 def _gauss(n):
     rng = np.random.default_rng(0)
     f = lambda *s: rng.standard_normal(s).astype(np.float32)  # noqa: E731
@@ -832,9 +728,9 @@ def _evict_file_cache(path):
 
 
 def _specs(scale, pose_bundle=None):
-    side = max(1, int(1024 * scale**0.5))
     gaussians = max(1, int(200_000 * scale))
     image_specs = build_image_specs(scale)
+    sequence_specs = build_sequence_specs(scale)
     mesh_specs = build_mesh_specs(scale)
     point_specs = build_point_specs(scale)
     reconstruction_specs = build_reconstruction_specs(
@@ -842,15 +738,7 @@ def _specs(scale, pose_bundle=None):
     )
     return [
         *image_specs[:5],
-        Spec(
-            "y4m",
-            lambda: _y4m_fixture(side),
-            _core.write_y4m,
-            _core.read_y4m,
-            _y4m_oracle_write,
-            _y4m_oracle_read,
-            lambda rec, p: sum(value.nbytes for value in p.values()),
-        ),
+        *sequence_specs,
         *image_specs[5:],
         *point_specs[:3],
         *mesh_specs,
@@ -914,46 +802,6 @@ def _specs(scale, pose_bundle=None):
         *build_calibration_specs(scale),
         *reconstruction_specs[4:],
     ]
-
-
-def _image_sequence_directory_fixture(root, scale):
-    source = Path(root) / "_image_sequence_input"
-    source.mkdir()
-    frame_count = 32
-    side = max(8, int(256 * scale**0.5))
-    rng = np.random.default_rng(37)
-    paths = []
-    names = []
-    for index in range(frame_count):
-        name = f"frame{index:04d}.ppm"
-        path = source / name
-        pixels = rng.integers(
-            0, 256, (side, side, 3), dtype=np.uint8
-        )
-        path.write_bytes(
-            f"P6\n{side} {side}\n255\n".encode("ascii")
-            + pixels.tobytes()
-        )
-        paths.append(str(path))
-        names.append(name)
-    duration = 40_000_000
-    timestamps = (
-        np.arange(frame_count, dtype=np.int64) * duration
-    )
-    durations = np.full(frame_count, duration, np.int64)
-    record = _core.image_sequence_paths(
-        paths,
-        names,
-        timestamps,
-        durations,
-        side,
-        side,
-        3,
-        "uint8",
-        "unknown",
-        "none",
-    )
-    return record, frame_count * side * side * 3
 
 
 def _directory_specs(reconstruction, scale, root):

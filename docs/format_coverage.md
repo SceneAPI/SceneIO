@@ -321,7 +321,16 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > orchestration remains facade-owned. Three reconstruction rows have live
 > comparison metrics; six record exact benchmark-throughput exemptions backed
 > by independent parity. The g2o comparison now materializes every graph value
-> rather than counts only. The 50-codec structure, complete suite, 359/81
+> rather than counts only. Reconstruction closes at `76ed21b`: normal run
+> [30247662591](https://github.com/SceneAPI/SceneIO/actions/runs/30247662591)
+> and compiler-instrumented run
+> [30247662622](https://github.com/SceneAPI/SceneIO/actions/runs/30247662622)
+> pass. The local sequence extraction moves Y4M plus the Y4M and
+> image-directory fixtures without changing a format capability. The
+> image-directory `DirectorySpec` remains facade-owned until runner
+> extraction. Y4M has live portable metrics and validates complete planes and
+> metadata; image-directory throughput records one exact exemption backed by
+> manifest/PGM parity. The 50-codec structure, complete suite, 362/81
 > source/wheel inventory, 15 attributions, fresh NumPy-only smoke, and all
 > three independent reviews pass locally.
 

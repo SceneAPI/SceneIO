@@ -245,6 +245,18 @@ sceneio._core (C++ / nanobind)
   metrics; six carry an exact benchmark-throughput exemption backed by
   independent parity suites. The lower reconstruction modules do not import
   the facade, and the complete result-order projection remains unchanged.
+  Exact reconstruction commit `76ed21b` passes normal run `30247662591` and
+  compiler-instrumented run `30247662622`. The sequence checkpoint lower-owns
+  the buffer-backed Y4M spec, Y4M and image-directory fixtures, and portable
+  Y4M comparison under `bench/io_bench/{families,fixtures,oracles}/sequences.py`.
+  Y4M remains
+  between WebP and HDR; the image-directory `DirectorySpec` remains
+  facade-owned until runner extraction and consumes the lower fixture through
+  an exact alias. The Y4M `Spec`, directory orchestration, and three of four
+  moved helpers are unchanged. The reviewed Y4M reader difference validates
+  complete planes and metadata. The Y4M row has live portable comparison
+  metrics; image-directory throughput has an exact exemption backed by
+  independent manifest/PGM parity.
   Built-in startup uses `_registry/assembly.py` as a lower staging boundary.
   Eight complete family tuples are collected without touching the public
   registry. After all 50 canonical ids validate, the facade publishes the
