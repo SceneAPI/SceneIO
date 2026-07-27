@@ -370,7 +370,10 @@ The current repository-organization checkpoint moves retained inspection
 verification into `tests/test_io_inspection.py`. Its 47 tests and three local
 helpers are unchanged, preserve all 76 collected suffixes, consume the shared
 44-codec case builder, and remain explicit in the Windows/Linux/macOS
-platform job.
+platform job. Exact commit `0e21e27` passes normal run `30278777267` and
+compiler-instrumented run `30278777173`. Partial-family organization begins
+with unchanged DMB/FLO behavior in `tests/test_io_partial_arrays.py`; the
+cross-family differential remains shared.
 
 New public surface, applied to every format for which it's meaningful:
 - header-only `inspect(path)` → dims/count/dtype/channels without a full decode

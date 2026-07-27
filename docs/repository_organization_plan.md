@@ -346,7 +346,7 @@ verification have accumulated in a few large modules:
 | Python registry | `registry.py`, 205 lines; `_registry/assembly.py`, 148 lines; focused `_registry/{model,adapters,detection,native_features}.py` modules; and eight `_registry/families/*.py` definition modules | all built-ins are family-owned; R3 now splits the benchmark and cross-codec verification monoliths |
 | Inspection | `_inspection.py` compatibility facade plus `_inspectors/{model,common,arrays,calibration,images,meshes,points,reconstruction,sequences,splats}.py`; all eight manifest families have lower inspector ownership | keep the proven shared model, mmap bridge, metadata bounds, exact-read/integer grammar, and image-result constructor as lower services |
 | Benchmark | compatible `bench_io.py` entry point plus `io_bench/{model,measure,reporting,runner}.py`, all eight lower family modules, and shared `families/common.py` | all benchmark ownership is lower; the final R3.2 unit adds built-in completeness and strict comparison-provider controls |
-| Cross-codec tests | shared 50-codec catalog and 44-case buffer builder; focused `test_io_streaming.py` and `test_io_inspection.py`; `test_io_mmap.py`, about 680 lines; `test_io_partial.py`, about 1,500 | mmap, streaming, and inspection ownership is split; partial behavior remains the next staged consumer |
+| Cross-codec tests | shared 50-codec catalog and 44-case buffer builder; focused streaming, inspection, and array-partial modules; `test_io_mmap.py`, about 680 lines; shared `test_io_partial.py`, about 1,400 lines | mmap, streaming, and inspection ownership is split; partial behavior is migrating one family at a time |
 | Execution plan | `format_gap_implementation_plan.md`, about 2,500 lines | historical evidence and the active queue are easy to confuse |
 | Native dependencies | six source-complete in-tree projects, one LAZperf integration/provenance directory, and six `FetchContent` projects | stable builds are not yet fully offline/repository-contained |
 
@@ -887,8 +887,16 @@ unchanged to `tests/test_io_inspection.py`, preserving 76 node suffixes.
 Reusable rename groups expand the exact streaming and inspection old/new
 paths without mixing path-only moves into feature additions. The complete
 collection remains 3,345, each platform command names inspection explicitly,
-and the expected package inventory is 374/375/81. Partial consumers remain
-staged for family-by-family migration.
+and the exact package inventory is 374/375/81. Exact commit `0e21e27` passes
+normal run `30278777267` and compiler-instrumented run `30278777173`.
+
+Partial-family migration starts with three unchanged array-specific DMB/FLO
+tests in `tests/test_io_partial_arrays.py`. The broad array/image differential
+and other cross-family invariants remain in the shared partial suite. The
+assembly contract pins the three exact path-only renames and the destination
+function AST projection, and each platform command names the new module.
+The exact package inventory is 375 source files, 376 sdist members with only
+generated `PKG-INFO`, and 81 wheel members; fresh NumPy-only smoke passes.
 
 ### R4. Organize native build and bindings
 

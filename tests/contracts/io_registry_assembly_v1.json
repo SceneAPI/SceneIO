@@ -329,7 +329,7 @@
   },
   "pytest_candidate_collection": {
     "count": 3345,
-    "sorted_normalized_node_ids_sha256": "f90c2f368fa8d5f976291cc8af3c7038c740893ac1abc78ec9b1bcf4ca5af959",
+    "sorted_normalized_node_ids_sha256": "ae4ab66a375c9c130ddf10682eb37e2ba21a0433ba2fb454ecce4358ef616414",
     "added_nodes": [
       "tests/test_benchmark_memory_protocol.py::test_memory_protocol_contract_and_repeated_sceneio_measurement",
       "tests/test_benchmark_memory_protocol.py::test_missing_sampler_is_explicit_and_strict_mode_rejects_it",
@@ -713,6 +713,19 @@
           "test_inspect_rejects_invalid_las_record_header[96-/x01/x00/x00/x00]",
           "test_inspect_rejects_invalid_las_record_header[105-/x01/x00]",
           "test_inspect_gaussian_ply_has_no_arbitrary_header_line_cap"
+        ]
+      },
+      {
+        "name": "partial_arrays",
+        "from_prefix": "tests/test_io_partial.py::",
+        "to_prefix": "tests/test_io_partial_arrays.py::",
+        "excluded_function_names": [],
+        "function_count": 3,
+        "function_ast_sha256": "a1733b7513c8633d4eff9c228d68ff2beadee5b9191083086671fc7925544051",
+        "node_suffixes": [
+          "test_dmb_pixel_windows_equal_full_depth_slices",
+          "test_partial_flo_window_retains_mapping_and_is_read_only",
+          "test_invalid_flo_window_releases_mapping_with_retained_exception"
         ]
       }
     ],

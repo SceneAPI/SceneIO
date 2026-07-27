@@ -420,6 +420,17 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > include the module explicitly. The complete collection remains 3,345 with
 > normalized SHA-256
 > `f90c2f368fa8d5f976291cc8af3c7038c740893ac1abc78ec9b1bcf4ca5af959`.
+> Exact inspection commit `0e21e27` passes [normal run
+> 30278777267](https://github.com/SceneAPI/SceneIO/actions/runs/30278777267)
+> and [compiler-instrumented run
+> 30278777173](https://github.com/SceneAPI/SceneIO/actions/runs/30278777173).
+> Partial-family migration starts with three unchanged array-specific DMB/FLO
+> tests in `tests/test_io_partial_arrays.py`; the complete collection remains
+> 3,345 with normalized SHA-256
+> `ae4ab66a375c9c130ddf10682eb37e2ba21a0433ba2fb454ecce4358ef616414`.
+> Its exact 375-file source tree produces a 376-file sdist with only generated
+> `PKG-INFO` and an unchanged 81-member Windows abi3 wheel. A fresh
+> SceneIO-plus-NumPy installation passes `sceneio._wheel_smoke`.
 
 [current-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287022
 [current-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287161

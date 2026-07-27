@@ -3079,6 +3079,11 @@ environment. `sceneio._wheel_smoke` returns `2`.
 - [x] Migrate streaming consumers in a separate commit under the same rule.
 - [x] Migrate inspection consumers in a separate commit under the same rule.
 - [ ] Migrate partial consumers one family at a time under the same rule.
+  - [x] Move the three array-specific DMB/FLO behavior tests unchanged into
+        `tests/test_io_partial_arrays.py`; retain cross-family window tests in
+        the shared suite.
+  - [ ] Migrate image, mesh, point, reconstruction, sequence, and splat
+        family-specific consumers.
 - [ ] Remove each old matrix only after its replacement is proven equivalent.
   - [x] Remove the mmap matrix after exact local and hosted equivalence.
 - [ ] Preserve parameter ids so CI failures remain attributable.
@@ -3168,6 +3173,19 @@ Both platform commands name the inspection module explicitly. Exact package
 verification records 374 staged files, a 375-file sdist, and the unchanged
 81-member wheel; its fresh SceneIO-plus-NumPy environment passes
 `sceneio._wheel_smoke`.
+
+Exact inspection migration commit `0e21e27` passes normal run `30278777267`
+and compiler-instrumented run `30278777173`. The first partial-family unit
+moves the DMB window test plus both FLO mapped-window lifetime/error-release
+tests unchanged into `tests/test_io_partial_arrays.py`. Its three exact
+path-only renames and function AST projection are contract-pinned, while the
+cross-family window differential remains in `tests/test_io_partial.py`.
+Windows and non-Windows platform commands include both partial modules
+explicitly. The complete collection remains 3,345 with normalized SHA-256
+`ae4ab66a375c9c130ddf10682eb37e2ba21a0433ba2fb454ecce4358ef616414`.
+Exact package verification records 375 source files, a 376-file sdist with
+only generated `PKG-INFO`, and the unchanged 81-member Windows abi3 wheel.
+Its fresh SceneIO-plus-NumPy environment passes `sceneio._wheel_smoke`.
 
 ### R3.4 — complete installed-wheel smoke
 

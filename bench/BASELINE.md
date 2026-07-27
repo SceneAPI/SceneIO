@@ -2229,3 +2229,27 @@ performance claim. Its exact package verification records 374 staged files,
 a 375-file sdist whose only generated member is `PKG-INFO`, and the unchanged
 81-member wheel with one native module and 15 attribution files. The wheel
 installs with only SceneIO and NumPy and passes `sceneio._wheel_smoke`.
+
+Exact inspection migration commit `0e21e27` passes normal run
+[30278777267](https://github.com/SceneAPI/SceneIO/actions/runs/30278777267)
+and compiler-instrumented run
+[30278777173](https://github.com/SceneAPI/SceneIO/actions/runs/30278777173).
+
+## R3.3 array partial-consumer migration (2026-07-27)
+
+The DMB window test and both FLO mapped-window lifetime/error-release tests
+move unchanged into `tests/test_io_partial_arrays.py`. Their three destination
+function ASTs match `0e21e27` exactly with projection SHA-256
+`a1733b7513c8633d4eff9c228d68ff2beadee5b9191083086671fc7925544051`.
+The assembly contract pins all three path-only node renames. Broad
+cross-family window, endian, validation, truncation, and memory relationships
+remain in `tests/test_io_partial.py`. Both platform commands run the shared
+and array-focused modules explicitly. The complete collection remains 3,345
+with normalized SHA-256
+`ae4ab66a375c9c130ddf10682eb37e2ba21a0433ba2fb454ecce4358ef616414`.
+This unit changes test ownership only and makes no codec performance claim.
+Its exact package verification records 375 source files, a 376-file sdist
+whose only generated member is `PKG-INFO`, and an 81-member Windows abi3
+wheel with one native module and all 15 license/inventory files. The wheel
+installs with only SceneIO and NumPy and returns `2` from
+`sceneio._wheel_smoke`.

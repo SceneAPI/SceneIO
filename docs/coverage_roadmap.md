@@ -48,7 +48,10 @@
 > run `30274413815` and compiler-instrumented run `30274413693`. Inspection
 > now has focused ownership in `tests/test_io_inspection.py`; its 47 tests and
 > three helpers preserve all 76 node suffixes under an exact path-only rename
-> group.
+> group. Exact inspection commit `0e21e27` passes normal run `30278777267`
+> and compiler-instrumented run `30278777173`. Partial-family migration starts
+> with three unchanged array-specific DMB/FLO tests under
+> `tests/test_io_partial_arrays.py`.
 
 The granular, per‑format execution plan for covering **every relevant file type
 that has a permissively‑licensed open‑source option**. Sits below the strategy

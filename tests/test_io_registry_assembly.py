@@ -791,6 +791,11 @@ def test_assembly_dependency_direction_and_import_delta_are_exact():
             "tests/test_io_inspection.py::",
             76,
         ),
+        "partial_arrays": (
+            "tests/test_io_partial.py::",
+            "tests/test_io_partial_arrays.py::",
+            3,
+        ),
     }
     assert [item["name"] for item in rename_groups] == list(expected_groups)
     renamed_from = set()
@@ -821,8 +826,9 @@ def test_assembly_dependency_direction_and_import_delta_are_exact():
         for suffix in suffixes:
             renamed_from.add(group["from_prefix"] + suffix)
             renamed_to.add(group["to_prefix"] + suffix)
-    assert len(renamed_from) == 92
-    assert len(renamed_to) == 92
+    expected_rename_count = sum(group[2] for group in expected_groups.values())
+    assert len(renamed_from) == expected_rename_count
+    assert len(renamed_to) == expected_rename_count
     assert renamed_from.isdisjoint(actual_nodes)
     assert renamed_to <= actual_nodes
     assert feature_added_nodes.isdisjoint(feature_removed_nodes)
@@ -855,6 +861,8 @@ def test_assembly_dependency_direction_and_import_delta_are_exact():
     assert non_windows_mmap_command.count("tests/test_io_streaming.py") == 1
     assert windows_mmap_command.count("tests/test_io_inspection.py") == 1
     assert non_windows_mmap_command.count("tests/test_io_inspection.py") == 1
+    assert windows_mmap_command.count("tests/test_io_partial_arrays.py") == 1
+    assert non_windows_mmap_command.count("tests/test_io_partial_arrays.py") == 1
     assert (
         "bench/bench_io.py --runs 1 --scale 0.001 --skip-oracles --json"
         in ci_workflow

@@ -2044,6 +2044,11 @@ the next completed consumer: 47 tests and three helpers move unchanged to
 path-only rename group. The remaining partial consumer sequence is maintained
 in
 [`next_stage_implementation_checklist.md`](next_stage_implementation_checklist.md).
+Exact inspection commit `0e21e27` passes normal run `30278777267` and
+compiler-instrumented run `30278777173`. The partial sequence now starts with
+three unchanged array-specific DMB/FLO tests in
+`tests/test_io_partial_arrays.py`; broad cross-family invariants remain in the
+shared suite.
 
 Status terms are strict:
 

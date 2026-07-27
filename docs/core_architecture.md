@@ -296,8 +296,10 @@ sceneio._core (C++ / nanobind)
   focused ownership in `tests/test_io_inspection.py`; its 47 tests and three
   helpers consume the same buffer builder, and its exact 76-node path-only
   move is contract-pinned alongside streaming.
-  Partial cases remain locally owned until their family-by-family equivalence
-  migration.
+  Partial migration starts with three unchanged array-specific DMB/FLO tests
+  in `tests/test_io_partial_arrays.py`; their exact path moves and destination
+  AST projection are contract-pinned. Cross-family partial invariants remain
+  in `tests/test_io_partial.py` while the other families move in later units.
   Built-in startup uses `_registry/assembly.py` as a lower staging boundary.
   Eight complete family tuples are collected without touching the public
   registry. After all 50 canonical ids validate, the facade publishes the
