@@ -346,7 +346,7 @@ verification have accumulated in a few large modules:
 | Python registry | `registry.py`, 205 lines; `_registry/assembly.py`, 148 lines; focused `_registry/{model,adapters,detection,native_features}.py` modules; and eight `_registry/families/*.py` definition modules | all built-ins are family-owned; R3 now splits the benchmark and cross-codec verification monoliths |
 | Inspection | `_inspection.py` compatibility facade plus `_inspectors/{model,common,arrays,calibration,images,meshes,points,reconstruction,sequences,splats}.py`; all eight manifest families have lower inspector ownership | keep the proven shared model, mmap bridge, metadata bounds, exact-read/integer grammar, and image-result constructor as lower services |
 | Benchmark | compatible `bench_io.py` entry point plus `io_bench/{model,measure,reporting,runner}.py`, all eight lower family modules, and shared `families/common.py` | all benchmark ownership is lower; the final R3.2 unit adds built-in completeness and strict comparison-provider controls |
-| Cross-codec tests | `test_io_mmap.py`, about 2,400 lines; `test_io_partial.py`, about 1,100 | reusable codec cases and behavior assertions are difficult to extend independently |
+| Cross-codec tests | shared 50-codec catalog and 44-case buffer builder; focused `test_io_streaming.py`; `test_io_mmap.py`, about 1,950 lines; `test_io_partial.py`, about 1,500 | streaming ownership is split; inspection and partial behavior remain the next staged consumers |
 | Execution plan | `format_gap_implementation_plan.md`, about 2,500 lines | historical evidence and the active queue are easy to confuse |
 | Native dependencies | six source-complete in-tree projects, one LAZperf integration/provenance directory, and six `FetchContent` projects | stable builds are not yet fully offline/repository-contained |
 
@@ -867,6 +867,19 @@ The exact staged tree has 371 tracked files and produces a 372-file sdist
 whose only generated file is `PKG-INFO`; its sdist-derived 81-member Windows
 abi3 wheel contains one native module and all 15 attribution files, and a
 fresh SceneIO-plus-NumPy environment passes `sceneio._wheel_smoke`.
+Exact legacy-matrix removal commit `fc86f44` passes normal run `30271311308`
+and compiler-instrumented run `30271309916`.
+
+The next R3.3 checkpoint moves the 14 streaming behavior functions into
+`tests/test_io_streaming.py` without changing their bodies, test names, or
+three parameter ids. The assembly contract records all 16 old and new node
+paths explicitly, while `tests/_support/memory_measurement.py` supplies the
+one small allocation helper shared with mmap coverage. The complete local
+collection remains 3,345 nodes and the 50-codec benchmark structure remains
+unchanged. The exact 373-file staged tree yields a 374-file sdist and
+81-member Windows abi3 wheel; the fresh installed smoke contains only SceneIO
+and NumPy. The Windows/Linux/macOS mmap job names the focused streaming suite
+explicitly. Inspection and partial consumers remain staged separately.
 
 ### R4. Organize native build and bindings
 

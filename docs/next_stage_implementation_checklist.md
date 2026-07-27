@@ -3076,7 +3076,7 @@ environment. `sceneio._wheel_smoke` returns `2`.
       `tests/_support/codec_cases.py` without consuming it.
 - [x] Migrate mmap consumers while retaining the old matrix until exact
       equivalence is demonstrated.
-- [ ] Migrate streaming consumers in a separate commit under the same rule.
+- [x] Migrate streaming consumers in a separate commit under the same rule.
 - [ ] Migrate inspection consumers in a separate commit under the same rule.
 - [ ] Migrate partial consumers one family at a time under the same rule.
 - [ ] Remove each old matrix only after its replacement is proven equivalent.
@@ -3087,6 +3087,8 @@ environment. `sceneio._wheel_smoke` returns `2`.
 - [ ] Compare sorted pytest node ids, parameters, and skip reasons before and
       after. Record an explicit rename mapping; test count alone is
       insufficient.
+  - [x] Record and enforce the exact 16-node streaming path rename while
+        preserving all test names and the `npy`/`pfm`/`flo` parameter ids.
 
 R3.2 closes at exact commit `0e54cf5`: normal run `30263506366` and
 compiler-instrumented run `30263506270` pass. The first R3.3 unit adds an
@@ -3131,6 +3133,26 @@ nodes with sorted normalized SHA-256
 The complete local suite passes 3,341 tests with four documented skips, and
 the one-run 50-codec benchmark smoke retains structural SHA-256
 `2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`.
+Exact removal commit `fc86f44` passes normal run `30271311308` and
+compiler-instrumented run `30271309916`.
+
+The streaming consumers now live in `tests/test_io_streaming.py`. Fourteen
+function bodies produce the same 16 collected tests as at `fc86f44`; the only
+node-id change is the explicit `test_io_mmap.py` to `test_io_streaming.py`
+path mapping pinned in `io_registry_assembly_v1.json`. The shared
+`tests/_support/memory_measurement.py` helper avoids duplicating the
+allocation probe. The focused streaming, mmap, and assembly suites pass 124
+tests. The complete local suite remains 3,341 passed and four skipped from
+3,345 collected, with normalized collection SHA-256
+`1131f211bb324c4d6800350b71364eb1f95efd13acef5a6dc4e984d708a88d53`;
+Ruff is clean and the 50-codec benchmark structure remains
+`2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`.
+The exact staged tree has 373 files and produces a 374-file sdist whose only
+generated member is `PKG-INFO`. Its sdist-derived 81-member Windows abi3 wheel
+contains one native module and all 15 attribution files, excludes repository
+test/benchmark/build payloads, and passes `sceneio._wheel_smoke` in a fresh
+SceneIO-plus-NumPy environment. The three-platform mmap job includes
+`test_io_streaming.py` explicitly.
 
 ### R3.4 — complete installed-wheel smoke
 

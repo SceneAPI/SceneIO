@@ -2031,8 +2031,14 @@ retained-legacy equivalence. Exact migration commit `9a73892` passes normal
 run `30268797350` and compiler-instrumented run `30268797374`; the duplicated
 local matrix is removed while its order, live bindings, 43-codec portable
 encoded-fixture projection, and platform-profiled compressed-PLY semantic
-fixture remain checked. The remaining staged consumer sequence is maintained
-in
+fixture remain checked. Exact removal commit `fc86f44` passes normal run
+`30271311308` and compiler-instrumented run `30271309916`. Streaming behavior
+is the next completed consumer:
+14 functions now live in `tests/test_io_streaming.py`, retain all 16 test
+names and parameter ids, and have an explicit old/new node-path contract. The
+complete local collection remains 3,345 and the 50-codec benchmark structure
+is unchanged. The remaining inspection and partial consumer sequence is
+maintained in
 [`next_stage_implementation_checklist.md`](next_stage_implementation_checklist.md).
 
 Status terms are strict:

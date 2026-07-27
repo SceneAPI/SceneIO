@@ -329,7 +329,7 @@
   },
   "pytest_candidate_collection": {
     "count": 3345,
-    "sorted_normalized_node_ids_sha256": "fc4934cb3fcf4a1a37fb5a087dcf0b13821df1f926f12412931b8ce040b93a05",
+    "sorted_normalized_node_ids_sha256": "1131f211bb324c4d6800350b71364eb1f95efd13acef5a6dc4e984d708a88d53",
     "added_nodes": [
       "tests/test_benchmark_memory_protocol.py::test_memory_protocol_contract_and_repeated_sceneio_measurement",
       "tests/test_benchmark_memory_protocol.py::test_missing_sampler_is_explicit_and_strict_mode_rejects_it",
@@ -593,10 +593,108 @@
       "tests/test_io_codec_case_catalog.py::test_case_catalog_selectors_match_live_builtin_capabilities",
       "tests/test_io_codec_case_catalog.py::test_runtime_extensions_do_not_enter_repository_case_completeness",
       "tests/test_io_codec_case_catalog.py::test_case_catalog_has_lower_ownership_and_no_consumer_imports",
-      "tests/codecs/test_compressed_ply.py::test_writer_body_matches_pinned_platform_reference"
+      "tests/codecs/test_compressed_ply.py::test_writer_body_matches_pinned_platform_reference",
+      "tests/test_io_streaming.py::test_all_single_file_sinks_are_byte_identical",
+      "tests/test_io_streaming.py::test_directory_codec_writers_remain_byte_identical_file_sinks",
+      "tests/test_io_streaming.py::test_file_sink_guard_failure_does_not_truncate_destination",
+      "tests/test_io_streaming.py::test_file_sink_supports_unicode_paths",
+      "tests/test_io_streaming.py::test_file_sink_completes_multiple_native_write_chunks",
+      "tests/test_io_streaming.py::test_file_sink_accounts_for_partial_native_write_returns",
+      "tests/test_io_streaming.py::test_file_sink_closes_and_restores_after_native_error",
+      "tests/test_io_streaming.py::test_file_sink_closes_after_descriptor_failure",
+      "tests/test_io_streaming.py::test_file_sink_never_exposes_encoder_buffer_to_python",
+      "tests/test_io_streaming.py::test_file_sink_suppresses_reentrant_path_callbacks",
+      "tests/test_io_streaming.py::test_registry_prepares_array_protocols_before_file_sink[npy]",
+      "tests/test_io_streaming.py::test_registry_prepares_array_protocols_before_file_sink[pfm]",
+      "tests/test_io_streaming.py::test_registry_prepares_array_protocols_before_file_sink[flo]",
+      "tests/test_io_streaming.py::test_registry_prepares_npz_protocols_before_file_sink",
+      "tests/test_io_streaming.py::test_registry_prepare_failure_does_not_truncate_destination",
+      "tests/test_io_streaming.py::test_file_sink_does_not_allocate_output_sized_python_bytes"
     ],
     "removed_nodes": [
-      "tests/codecs/test_compressed_ply.py::test_writer_body_is_byte_identical_to_pinned_playcanvas_vector"
+      "tests/codecs/test_compressed_ply.py::test_writer_body_is_byte_identical_to_pinned_playcanvas_vector",
+      "tests/test_io_mmap.py::test_all_single_file_sinks_are_byte_identical",
+      "tests/test_io_mmap.py::test_directory_codec_writers_remain_byte_identical_file_sinks",
+      "tests/test_io_mmap.py::test_file_sink_guard_failure_does_not_truncate_destination",
+      "tests/test_io_mmap.py::test_file_sink_supports_unicode_paths",
+      "tests/test_io_mmap.py::test_file_sink_completes_multiple_native_write_chunks",
+      "tests/test_io_mmap.py::test_file_sink_accounts_for_partial_native_write_returns",
+      "tests/test_io_mmap.py::test_file_sink_closes_and_restores_after_native_error",
+      "tests/test_io_mmap.py::test_file_sink_closes_after_descriptor_failure",
+      "tests/test_io_mmap.py::test_file_sink_never_exposes_encoder_buffer_to_python",
+      "tests/test_io_mmap.py::test_file_sink_suppresses_reentrant_path_callbacks",
+      "tests/test_io_mmap.py::test_registry_prepares_array_protocols_before_file_sink[npy]",
+      "tests/test_io_mmap.py::test_registry_prepares_array_protocols_before_file_sink[pfm]",
+      "tests/test_io_mmap.py::test_registry_prepares_array_protocols_before_file_sink[flo]",
+      "tests/test_io_mmap.py::test_registry_prepares_npz_protocols_before_file_sink",
+      "tests/test_io_mmap.py::test_registry_prepare_failure_does_not_truncate_destination",
+      "tests/test_io_mmap.py::test_file_sink_does_not_allocate_output_sized_python_bytes"
+    ],
+    "renamed_nodes": [
+      {
+        "from": "tests/test_io_mmap.py::test_all_single_file_sinks_are_byte_identical",
+        "to": "tests/test_io_streaming.py::test_all_single_file_sinks_are_byte_identical"
+      },
+      {
+        "from": "tests/test_io_mmap.py::test_directory_codec_writers_remain_byte_identical_file_sinks",
+        "to": "tests/test_io_streaming.py::test_directory_codec_writers_remain_byte_identical_file_sinks"
+      },
+      {
+        "from": "tests/test_io_mmap.py::test_file_sink_guard_failure_does_not_truncate_destination",
+        "to": "tests/test_io_streaming.py::test_file_sink_guard_failure_does_not_truncate_destination"
+      },
+      {
+        "from": "tests/test_io_mmap.py::test_file_sink_supports_unicode_paths",
+        "to": "tests/test_io_streaming.py::test_file_sink_supports_unicode_paths"
+      },
+      {
+        "from": "tests/test_io_mmap.py::test_file_sink_completes_multiple_native_write_chunks",
+        "to": "tests/test_io_streaming.py::test_file_sink_completes_multiple_native_write_chunks"
+      },
+      {
+        "from": "tests/test_io_mmap.py::test_file_sink_accounts_for_partial_native_write_returns",
+        "to": "tests/test_io_streaming.py::test_file_sink_accounts_for_partial_native_write_returns"
+      },
+      {
+        "from": "tests/test_io_mmap.py::test_file_sink_closes_and_restores_after_native_error",
+        "to": "tests/test_io_streaming.py::test_file_sink_closes_and_restores_after_native_error"
+      },
+      {
+        "from": "tests/test_io_mmap.py::test_file_sink_closes_after_descriptor_failure",
+        "to": "tests/test_io_streaming.py::test_file_sink_closes_after_descriptor_failure"
+      },
+      {
+        "from": "tests/test_io_mmap.py::test_file_sink_never_exposes_encoder_buffer_to_python",
+        "to": "tests/test_io_streaming.py::test_file_sink_never_exposes_encoder_buffer_to_python"
+      },
+      {
+        "from": "tests/test_io_mmap.py::test_file_sink_suppresses_reentrant_path_callbacks",
+        "to": "tests/test_io_streaming.py::test_file_sink_suppresses_reentrant_path_callbacks"
+      },
+      {
+        "from": "tests/test_io_mmap.py::test_registry_prepares_array_protocols_before_file_sink[npy]",
+        "to": "tests/test_io_streaming.py::test_registry_prepares_array_protocols_before_file_sink[npy]"
+      },
+      {
+        "from": "tests/test_io_mmap.py::test_registry_prepares_array_protocols_before_file_sink[pfm]",
+        "to": "tests/test_io_streaming.py::test_registry_prepares_array_protocols_before_file_sink[pfm]"
+      },
+      {
+        "from": "tests/test_io_mmap.py::test_registry_prepares_array_protocols_before_file_sink[flo]",
+        "to": "tests/test_io_streaming.py::test_registry_prepares_array_protocols_before_file_sink[flo]"
+      },
+      {
+        "from": "tests/test_io_mmap.py::test_registry_prepares_npz_protocols_before_file_sink",
+        "to": "tests/test_io_streaming.py::test_registry_prepares_npz_protocols_before_file_sink"
+      },
+      {
+        "from": "tests/test_io_mmap.py::test_registry_prepare_failure_does_not_truncate_destination",
+        "to": "tests/test_io_streaming.py::test_registry_prepare_failure_does_not_truncate_destination"
+      },
+      {
+        "from": "tests/test_io_mmap.py::test_file_sink_does_not_allocate_output_sized_python_bytes",
+        "to": "tests/test_io_streaming.py::test_file_sink_does_not_allocate_output_sized_python_bytes"
+      }
     ],
     "first": "tests/codecs/test_bal.py::test_oracle_write_sceneio_read_parity_and_conventions",
     "last": "tests/test_points_binary.py::test_bad_magic_rejected"

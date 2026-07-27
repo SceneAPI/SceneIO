@@ -2167,3 +2167,36 @@ structural SHA-256
 `2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`.
 This cleanup changes test ownership only and makes no codec-implementation
 performance claim.
+
+Exact mmap legacy-matrix removal commit `fc86f44` passes normal run
+[30271311308](https://github.com/SceneAPI/SceneIO/actions/runs/30271311308)
+and compiler-instrumented run
+[30271309916](https://github.com/SceneAPI/SceneIO/actions/runs/30271309916).
+
+## R3.3 streaming consumer migration (2026-07-27)
+
+The 14 O3 file-sink behavior functions now live in the focused
+`tests/test_io_streaming.py` module and continue to consume the reusable
+44-case builder in `tests/_support/buffer_codec_cases.py`. Their 16 collected
+nodes retain the exact test names and three `npy`/`pfm`/`flo` parameter ids;
+the assembly contract records every old `test_io_mmap.py` node and its exact
+new path. An AST comparison against `fc86f44` proves the moved function bodies
+are unchanged apart from renaming the shared allocation helper. That helper
+now lives in `tests/_support/memory_measurement.py` and is reused by the mmap
+allocation control instead of being duplicated.
+
+The focused streaming, mmap, and assembly suites pass 124 tests. The complete
+local suite still collects 3,345 nodes and passes 3,341 with four documented
+skips; sorted normalized collection SHA-256 is
+`1131f211bb324c4d6800350b71364eb1f95efd13acef5a6dc4e984d708a88d53`,
+and Ruff is clean. The independent one-run all-codec benchmark returns 50
+successful rows and retains structural SHA-256
+`2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`.
+This checkpoint changes test ownership only and makes no codec-implementation
+performance claim. Its exact staged tree has 373 files and produces a
+374-file sdist whose only generated member is `PKG-INFO`; the sdist-derived
+81-member Windows abi3 wheel contains one native module and all 15
+attribution files, with no test, benchmark, build, include, library, or
+shared-data payload. A fresh environment installs only SceneIO and NumPy, and
+`sceneio._wheel_smoke` returns `2`. The focused mmap platform job runs the
+new streaming module explicitly on Windows, Linux, and macOS.

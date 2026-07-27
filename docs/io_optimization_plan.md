@@ -291,6 +291,10 @@ proves the sink does not allocate an output-sized Python object. Final local
 gates: 1,150 passed / 3 skipped on MSVC and 1,087 passed / 44 optional-platform
 skips under ASan/UBSan/LSan on Linux. The memory-safety, correctness, and
 test-soundness review lenses all signed off with no remaining blockers.
+The current repository-organization checkpoint gives these O3 behaviors
+focused ownership in `tests/test_io_streaming.py`. Its 14 functions retain
+the same 16 collected tests, including the `npy`/`pfm`/`flo` parameter ids,
+and consume the shared deterministic 44-codec buffer builder.
 
 **Measured:** every single-file `tracemalloc` peak fell by approximately the
 encoded size (largest: XYZ 56.5 MB → 0.0 MB, LAS 26.0 → 0.0, EXR 12.5 → 0.0,

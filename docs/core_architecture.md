@@ -288,6 +288,11 @@ sceneio._core (C++ / nanobind)
   encoded-fixture projection. Compressed PLY retains the same semantic
   Gaussian input as its paired fixture and its established platform-profiled
   parity test. The mmap suite retains semantic and malformed-input coverage.
+  O3 file-sink behavior now has focused ownership in
+  `tests/test_io_streaming.py`; its 14 functions and 16 nodes consume the same
+  buffer builder, and the assembly contract pins the exact path-only rename.
+  The mmap and streaming suites share only the lower allocation-measurement
+  helper rather than importing one another.
   Partial cases remain locally owned until their family-by-family equivalence
   migration.
   Built-in startup uses `_registry/assembly.py` as a lower staging boundary.

@@ -780,6 +780,18 @@ def test_assembly_dependency_direction_and_import_delta_are_exact():
     assert added_nodes <= actual_nodes
     assert removed_nodes.isdisjoint(actual_nodes)
     assert added_nodes.isdisjoint(removed_nodes)
+    renamed_nodes = candidate["renamed_nodes"]
+    assert len(renamed_nodes) == 16
+    assert len({item["from"] for item in renamed_nodes}) == len(renamed_nodes)
+    assert len({item["to"] for item in renamed_nodes}) == len(renamed_nodes)
+    for item in renamed_nodes:
+        assert item["from"] in removed_nodes
+        assert item["to"] in added_nodes
+        assert item["from"].startswith("tests/test_io_mmap.py::")
+        assert item["to"].startswith("tests/test_io_streaming.py::")
+        assert item["from"].split("::", maxsplit=1)[1] == item["to"].split(
+            "::", maxsplit=1
+        )[1]
     assert candidate["count"] - parent["count"] == (
         len(added_nodes) - len(removed_nodes)
     )
@@ -790,6 +802,21 @@ def test_assembly_dependency_direction_and_import_delta_are_exact():
     assert f'^{candidate["count"]} tests collected in ' in workflow
     ci_workflow = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
     assert "bench/compare_io_structure.py" in ci_workflow
+    ci_lines = ci_workflow.splitlines()
+    windows_mmap_command = next(
+        line
+        for line in ci_lines
+        if "run: .venv/Scripts/python.exe -m pytest" in line
+        and "tests/test_io_mmap.py" in line
+    )
+    non_windows_mmap_command = next(
+        line
+        for line in ci_lines
+        if "run: .venv/bin/python -m pytest" in line
+        and "tests/test_io_mmap.py" in line
+    )
+    assert windows_mmap_command.count("tests/test_io_streaming.py") == 1
+    assert non_windows_mmap_command.count("tests/test_io_streaming.py") == 1
     assert (
         "bench/bench_io.py --runs 1 --scale 0.001 --skip-oracles --json"
         in ci_workflow

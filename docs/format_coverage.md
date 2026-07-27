@@ -386,7 +386,12 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > remain checked alongside the semantic mmap suite. Compressed PLY is excluded
 > from that universal byte hash because its quantization has an established
 > AppleClang profile; its shared semantic Gaussian input and platform-profiled
-> parity test remain checked. The complete local tree
+> parity test remain checked. Exact removal commit `fc86f44` passes
+> [normal run
+> 30271311308](https://github.com/SceneAPI/SceneIO/actions/runs/30271311308)
+> and [compiler-instrumented run
+> 30271309916](https://github.com/SceneAPI/SceneIO/actions/runs/30271309916).
+> The complete local tree
 > collects 3,345 tests and passes 3,341 with four
 > documented skips; Ruff and all three independent reviews are clear. A
 > one-run 50-codec benchmark smoke retains structural SHA-256
@@ -396,6 +401,16 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > abi3 wheel contains one native module and all 15 attribution files. A fresh
 > environment contains only SceneIO and NumPy, and `sceneio._wheel_smoke`
 > returns `2`.
+> Streaming behavior now has focused ownership in
+> `tests/test_io_streaming.py`: the same 14 function bodies produce 16 nodes
+> with unchanged test names and parameter ids, and the assembly contract pins
+> every old/new path. The complete local suite remains 3,341 passed and four
+> skipped from 3,345 collected; normalized collection SHA-256 is
+> `1131f211bb324c4d6800350b71364eb1f95efd13acef5a6dc4e984d708a88d53`.
+> The exact staged tree has 373 files, its sdist has only generated
+> `PKG-INFO` beyond those files, and the sdist-derived 81-member Windows abi3
+> wheel retains one native module and all 15 attribution files. A fresh
+> SceneIO-plus-NumPy installation passes `sceneio._wheel_smoke`.
 
 [current-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287022
 [current-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287161

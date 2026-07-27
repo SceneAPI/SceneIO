@@ -278,14 +278,13 @@ def test_case_catalog_has_lower_ownership_and_no_consumer_imports():
         "numpy",
         "sceneio",
     }
-    mmap_source = (ROOT / "tests/test_io_mmap.py").read_text(
-        encoding="utf-8"
-    )
-    assert (
-        "from _support.buffer_codec_cases import build_buffer_codec_cases"
-        in mmap_source
-    )
-    assert "from _support.codec_cases import" not in mmap_source
+    for consumer in ("test_io_mmap.py", "test_io_streaming.py"):
+        consumer_source = (ROOT / "tests" / consumer).read_text(encoding="utf-8")
+        assert (
+            "from _support.buffer_codec_cases import build_buffer_codec_cases"
+            in consumer_source
+        )
+        assert "from _support.codec_cases import" not in consumer_source
     assert "codec_cases" not in (
         ROOT / "tests/test_io_partial.py"
     ).read_text(encoding="utf-8")

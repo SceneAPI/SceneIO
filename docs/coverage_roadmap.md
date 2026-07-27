@@ -39,7 +39,12 @@
 > run `30268797350` and compiler-instrumented run `30268797374`; the duplicated
 > local matrix is removed and its exact order, bindings, 43-codec portable
 > byte projection, and platform-profiled compressed-PLY semantic fixture
-> remain contract-pinned.
+> remain contract-pinned. Exact removal commit `fc86f44` passes normal run
+> `30271311308` and compiler-instrumented run `30271309916`. The 14 streaming
+> behavior functions now have
+> focused ownership in `tests/test_io_streaming.py`; all 16 collected node
+> renames are explicit, parameter ids are unchanged, and the complete local
+> collection remains 3,345.
 
 The granular, per‑format execution plan for covering **every relevant file type
 that has a permissively‑licensed open‑source option**. Sits below the strategy
