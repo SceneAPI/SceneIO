@@ -23,12 +23,13 @@
 > compiler-instrumented run `30241711620`; points close at `45e2757` with
 > normal run `30244892746` and compiler-instrumented run `30244892600`.
 > Reconstruction closes at `76ed21b` with normal run `30247662591` and
-> compiler-instrumented run `30247662622`. Sequences are locally complete:
-> Y4M plus both sequence fixtures have lower ownership, while the
-> image-directory `DirectorySpec` remains facade-owned. Y4M has a live
-> portable comparison; image-directory throughput carries one exact exemption
-> backed by independent manifest/PGM parity. Splats and the shared runner
-> remain in R3.2.
+> compiler-instrumented run `30247662622`. Sequences close at `4b8c829` with
+> normal run `30250394890` and compiler-instrumented run `30250394906`.
+> Splats are locally complete: all six ordinary specs and their fixture/oracle
+> helpers have lower ownership. Gaussian PLY and SPZ retain live `gsply`
+> comparisons; the other four rows carry exact benchmark-throughput
+> exemptions backed by independent parity suites. Only specialized
+> directory/database orchestration and the shared runner remain in R3.2.
 
 The granular, per‑format execution plan for covering **every relevant file type
 that has a permissively‑licensed open‑source option**. Sits below the strategy

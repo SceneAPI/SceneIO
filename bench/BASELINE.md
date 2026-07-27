@@ -1968,3 +1968,40 @@ fresh NumPy-only environment passes the installed-wheel smoke. All three
 independent reviews are clear. This checkpoint changes benchmark ownership
 and strengthens one comparison workload; it makes no codec-implementation
 performance claim.
+
+Exact sequence commit `4b8c829` passes normal run
+[30250394890](https://github.com/SceneAPI/SceneIO/actions/runs/30250394890)
+and compiler-instrumented run
+[30250394906](https://github.com/SceneAPI/SceneIO/actions/runs/30250394906).
+
+## R3.2 splat benchmark-family extraction (2026-07-27)
+
+The eighth R3.2 family checkpoint moves all six ordinary splat specifications
+to `bench/io_bench/families/splats.py`, the deterministic Gaussian fixture to
+`fixtures/splats.py`, and the optional `gsply` PLY/SPZ adapters to
+`oracles/splats.py`. Canonical order remains `gaussian_ply`,
+`compressed_ply`, `sog`, `ksplat`, `spz`, and `splat` between the point and
+array families.
+
+All six `Spec` ASTs and all five moved helper ASTs are unchanged from the
+sequence checkpoint. Gaussian PLY and SPZ retain live independent `gsply`
+encode/decode measurements. The contract records the exact missing
+independent benchmark encode/decode throughput for Compressed PLY, SOG,
+KSplat, and `.splat`; their independent format parity remains covered by the
+corresponding codec suites. Installed-`gsply` tests compare every Gaussian
+field in both producer directions, with SPZ compared after its specified
+quantization. A fresh process without `gsply` retains all six SceneIO rows and
+removes only the two optional comparison pairs.
+
+The six live rows execute successfully, and the complete 50-codec smoke
+retains structural projection
+`2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`.
+Focused splat/contract validation passes 176 tests with one documented SPZ-v2
+writer skip; the complete suite passes 3,316 with four documented skips, and
+Ruff is clean. The exact-tree source archive has 365 members and exactly the
+three new splat benchmark modules. Its sdist-derived 81-member Windows wheel
+contains no benchmark, test, or `gsply` payload, retains all 15 attribution
+files, and keeps NumPy as its sole unconditional dependency. A fresh
+NumPy-only environment passes the installed-wheel smoke. All three independent
+reviews are clear. This checkpoint changes benchmark ownership only; it makes
+no codec-implementation performance claim.

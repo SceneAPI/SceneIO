@@ -37,6 +37,7 @@ from bench.io_bench.families import (
     reconstruction as reconstruction_family,
 )
 from bench.io_bench.families import sequences as sequence_family
+from bench.io_bench.families import splats as splat_family
 from bench.io_bench.families.arrays import build_array_specs
 from bench.io_bench.families.calibration import (
     build_calibration_specs,
@@ -56,7 +57,9 @@ from bench.io_bench.fixtures import (
     reconstruction as reconstruction_fixtures,
 )
 from bench.io_bench.fixtures import sequences as sequence_fixtures
-from bench.io_bench.model import DirectorySpec, Spec
+from bench.io_bench.fixtures import splats as splat_fixtures
+from bench.io_bench.model import DirectorySpec
+from bench.io_bench.model import Spec as Spec
 from bench.io_bench.oracles import arrays as array_oracles
 from bench.io_bench.oracles import (
     calibration as calibration_oracles,
@@ -68,6 +71,7 @@ from bench.io_bench.oracles import (
     reconstruction as reconstruction_oracles,
 )
 from bench.io_bench.oracles import sequences as sequence_oracles
+from bench.io_bench.oracles import splats as splat_oracles
 from bench.io_bench.reporting import (
     print_cold_cache_unavailable,
     print_colmap_db_row,
@@ -179,85 +183,17 @@ _y4m_fixture = sequence_fixtures._y4m_fixture
 _y4m_oracle_read = sequence_oracles._y4m_oracle_read
 _y4m_oracle_write = sequence_oracles._y4m_oracle_write
 
+build_splat_specs = splat_family.build_splat_specs
+_gauss = splat_fixtures._gauss
+_gsply_ply_r = splat_oracles._gsply_ply_r
+_gsply_ply_w = splat_oracles._gsply_ply_w
+_gsply_spz_r = splat_oracles._gsply_spz_r
+_gsply_spz_w = splat_oracles._gsply_spz_w
+gsply = splat_oracles.gsply
+
 _measure = benchmark_measure.measure
 _measure_in_process_rss = benchmark_measure.measure_in_process_rss
 _try = benchmark_measure.try_measure
-
-# --- optional oracle libs (degrade gracefully) ------------------------------
-try:
-    import gsply
-except Exception:
-    gsply = None
-def _gauss(n):
-    rng = np.random.default_rng(0)
-    f = lambda *s: rng.standard_normal(s).astype(np.float32)  # noqa: E731
-    payload = {
-        "means": f(n, 3),
-        "scales": f(n, 3),
-        "quats": f(n, 4),
-        "opacities": f(n),
-        "sh0": f(n, 3),
-    }
-    return (
-        _core.gaussian_cloud(
-            payload["means"],
-            payload["scales"],
-            payload["quats"],
-            payload["opacities"],
-            payload["sh0"],
-        ),
-        payload,
-    )
-
-
-# --- codec specs: (id, build, sio_write, sio_read, oracle_write, oracle_read, payload_bytes) ---
-def _gsply_ply_w(payload):
-    fd, path = tempfile.mkstemp(suffix=".ply")
-    os.close(fd)
-    try:
-        gsply.plywrite(
-            path,
-            payload["means"],
-            scales=payload["scales"],
-            quats=payload["quats"],
-            opacities=payload["opacities"],
-            sh0=payload["sh0"],
-        )
-        return Path(path).read_bytes()
-    finally:
-        os.remove(path)
-
-
-def _gsply_ply_r(data):
-    fd, path = tempfile.mkstemp(suffix=".ply")
-    os.close(fd)
-    try:
-        Path(path).write_bytes(data)
-        return gsply.plyread(path)
-    finally:
-        os.remove(path)
-
-
-def _gsply_spz_w(payload):
-    fd, path = tempfile.mkstemp(suffix=".spz")
-    os.close(fd)
-    try:
-        cloud = gsply.GSData.from_arrays(**payload, format="ply")
-        gsply.write_spz(path, cloud, version=3)
-        return Path(path).read_bytes()
-    finally:
-        os.remove(path)
-
-
-def _gsply_spz_r(data):
-    fd, path = tempfile.mkstemp(suffix=".spz")
-    os.close(fd)
-    try:
-        Path(path).write_bytes(data)
-        return gsply.read_spz(path)
-    finally:
-        os.remove(path)
-
 
 _COLMAP_PAIR_MULTIPLIER = 2_147_483_647
 
@@ -728,11 +664,11 @@ def _evict_file_cache(path):
 
 
 def _specs(scale, pose_bundle=None):
-    gaussians = max(1, int(200_000 * scale))
     image_specs = build_image_specs(scale)
     sequence_specs = build_sequence_specs(scale)
     mesh_specs = build_mesh_specs(scale)
     point_specs = build_point_specs(scale)
+    splat_specs = build_splat_specs(scale)
     reconstruction_specs = build_reconstruction_specs(
         scale, pose_bundle
     )
@@ -743,60 +679,7 @@ def _specs(scale, pose_bundle=None):
         *point_specs[:3],
         *mesh_specs,
         *point_specs[3:],
-        Spec(
-            "gaussian_ply",
-            lambda: _gauss(gaussians),
-            _core.write_gaussian_ply,
-            _core.read_gaussian_ply,
-            (_gsply_ply_w if gsply else None),
-            (_gsply_ply_r if gsply else None),
-            lambda rec, p: rec.num_gaussians * 14 * 4,
-        ),
-        Spec(
-            "compressed_ply",
-            lambda: _gauss(gaussians),
-            _core.write_compressed_ply,
-            _core.read_compressed_ply,
-            None,
-            None,
-            lambda rec, p: rec.num_gaussians * 14 * 4,
-        ),
-        Spec(
-            "sog",
-            lambda: _gauss(gaussians),
-            _core.write_sog,
-            _core.read_sog,
-            None,
-            None,
-            lambda rec, p: rec.num_gaussians * 14 * 4,
-        ),
-        Spec(
-            "ksplat",
-            lambda: _gauss(gaussians),
-            _core.write_ksplat,
-            _core.read_ksplat,
-            None,
-            None,
-            lambda rec, p: rec.num_gaussians * 14 * 4,
-        ),
-        Spec(
-            "spz",
-            lambda: _gauss(gaussians),
-            _core.write_spz,
-            _core.read_spz,
-            (_gsply_spz_w if gsply else None),
-            (_gsply_spz_r if gsply else None),
-            lambda rec, p: rec.num_gaussians * 14 * 4,
-        ),
-        Spec(
-            "splat",
-            lambda: _gauss(gaussians),
-            _core.write_splat,
-            _core.read_splat,
-            None,
-            None,
-            lambda rec, p: rec.num_gaussians * 14 * 4,
-        ),
+        *splat_specs,
         *build_array_specs(scale),
         *reconstruction_specs[:4],
         *build_calibration_specs(scale),

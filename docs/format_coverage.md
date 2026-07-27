@@ -330,7 +330,15 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > image-directory `DirectorySpec` remains facade-owned until runner
 > extraction. Y4M has live portable metrics and validates complete planes and
 > metadata; image-directory throughput records one exact exemption backed by
-> manifest/PGM parity. The 50-codec structure, complete suite, 362/81
+> manifest/PGM parity. Sequences close at `4b8c829`: normal run
+> [30250394890](https://github.com/SceneAPI/SceneIO/actions/runs/30250394890)
+> and compiler-instrumented run
+> [30250394906](https://github.com/SceneAPI/SceneIO/actions/runs/30250394906)
+> pass. The local splat extraction lower-owns all six ordinary rows and moves
+> their Gaussian fixture plus optional `gsply` adapters unchanged. Gaussian
+> PLY and SPZ retain live independent metrics; Compressed PLY, SOG, KSplat,
+> and `.splat` retain exact throughput exemptions backed by their codec parity
+> suites. The 50-codec structure, complete suite, 365/81
 > source/wheel inventory, 15 attributions, fresh NumPy-only smoke, and all
 > three independent reviews pass locally.
 

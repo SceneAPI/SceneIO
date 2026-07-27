@@ -45,7 +45,9 @@ hosted-green. Points close at `45e2757`; normal run `30244892746` and
 compiler-instrumented run `30244892600` pass. The reconstruction-family
 extraction closes at `76ed21b`; normal run `30247662591` and
 compiler-instrumented run `30247662622` pass. The sequence-family extraction
-is locally complete; splats and the runner remain.
+closes at `4b8c829`; normal run `30250394890` and compiler-instrumented run
+`30250394906` pass. The splat-family extraction is locally complete; only the
+runner remains in R3.2.
 
 This is the operational checklist for the repository-organization and
 codec-performance stage defined in
@@ -2739,7 +2741,7 @@ passes both jobs. No release workflow, tag, or publication was triggered.
   - [x] points;
   - [x] reconstruction;
   - [x] sequences;
-  - [ ] splats.
+  - [x] splats.
 - [ ] After the family hooks have lower ownership, move the remaining complete
       sweep orchestration to `bench/io_bench/runner.py`; keep
       `bench/bench_io.py` as a thin compatible CLI and helper-export facade.
@@ -2977,6 +2979,39 @@ and exactly the three new sequence modules. Its 81-member wheel excludes
 benchmark and test modules, retains all 15 attribution files, and keeps NumPy
 as its sole unconditional dependency. A fresh NumPy-only environment passes
 the installed-wheel smoke.
+
+Exact sequence commit `4b8c829` passes normal run
+[30250394890](https://github.com/SceneAPI/SceneIO/actions/runs/30250394890)
+and compiler-instrumented run
+[30250394906](https://github.com/SceneAPI/SceneIO/actions/runs/30250394906).
+
+The splat checkpoint moves the exact six-row family to
+`io_bench/families/splats.py`, the deterministic Gaussian fixture to
+`fixtures/splats.py`, and the optional `gsply` PLY/SPZ adapters to
+`oracles/splats.py`. The facade retains exact compatibility aliases and keeps
+the canonical `gaussian_ply`, `compressed_ply`, `sog`, `ksplat`, `spz`,
+`splat` block between points and arrays.
+
+All six `Spec` ASTs and all five moved helper ASTs match the sequence
+checkpoint. Gaussian PLY and SPZ retain live `gsply` encode/decode metrics.
+Compressed PLY, SOG, KSplat, and `.splat` each record only the missing
+independent benchmark encode/decode throughput; their corresponding codec
+suites retain independent format parity. Installed-oracle tests compare all
+five logical Gaussian fields in both producer directions, with SPZ values
+compared after quantization. A blocked-oracle process proves every SceneIO row
+remains while only the two optional comparison pairs disappear.
+
+The six live rows run successfully, and the complete 50-codec smoke retains
+structural projection
+`2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`.
+Focused splat/contract validation passes 176 tests with one documented SPZ-v2
+writer skip; the complete suite passes 3,316 with four documented skips, Ruff
+is clean, and all three independent reviews are clear. The exact-tree source
+archive has 365 members and exactly the three new splat modules. Its
+sdist-derived 81-member Windows wheel excludes benchmark, test, and `gsply`
+payloads, retains all 15 attribution files, and keeps NumPy as its sole
+unconditional dependency. A fresh NumPy-only installation passes
+`sceneio._wheel_smoke`.
 
 ### R3.3 — cross-codec test support
 

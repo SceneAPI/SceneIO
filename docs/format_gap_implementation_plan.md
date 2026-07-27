@@ -2007,12 +2007,15 @@ run `30241711640` and compiler-instrumented run `30241711620`; and the point
 benchmark family closes at `45e2757` with normal run `30244892746` and
 compiler-instrumented run `30244892600`. The reconstruction family is complete
 at `76ed21b`; normal run `30247662591` and compiler-instrumented run
-`30247662622` pass. The sequence family is complete in the current local tree:
-Y4M and both sequence fixtures have lower ownership, with one live portable
-Y4M comparison and one exact image-directory throughput exemption backed by
-manifest/PGM parity. The specialized glTF, COLMAP-binary, COLMAP-text,
-COLMAP-database, and image-directory rows remain facade-owned pending runner
-extraction. Splats and the runner remain in R3.2;
+`30247662622` pass. The sequence family closes at `4b8c829`; normal run
+`30250394890` and compiler-instrumented run `30250394906` pass. The splat
+family is complete in the current local tree: all six ordinary specs and five
+fixture/oracle helpers have lower ownership. Gaussian PLY and SPZ retain live
+`gsply` comparisons, while Compressed PLY, SOG, KSplat, and `.splat` retain
+exact benchmark-throughput exemptions backed by independent parity. The
+specialized glTF, COLMAP-binary, COLMAP-text, COLMAP-database, and
+image-directory rows remain facade-owned pending runner extraction. Only the
+runner remains in R3.2;
 their sequence is maintained in
 [`next_stage_implementation_checklist.md`](next_stage_implementation_checklist.md).
 

@@ -723,6 +723,22 @@ def _assert_benchmark_components_and_metric_semantics_are_explicit():
         "format parity remains covered by the independent manifest and "
         "PGM payload fixtures in tests/codecs/test_image_sequence.py"
     )
+    splat_exemptions = extracted_families["splats"][
+        "no_oracle_exemptions"
+    ]
+    assert set(splat_exemptions) == {
+        "compressed_ply",
+        "ksplat",
+        "sog",
+        "splat",
+    }
+    for codec_id, exemption in splat_exemptions.items():
+        assert exemption["unverified_property"] == (
+            "independent benchmark encode/decode throughput"
+        )
+        assert exemption["verification"] == (
+            f"format parity remains covered by tests/codecs/test_{codec_id}.py"
+        )
 
     lower_modules = sorted(
         {
@@ -2413,6 +2429,272 @@ def _assert_benchmark_components_and_metric_semantics_are_explicit():
         True,
         True,
         ["y4m"],
+    ]
+
+    splat_family_module = sys.modules[
+        "bench.io_bench.families.splats"
+    ]
+    splat_fixture_module = sys.modules[
+        "bench.io_bench.fixtures.splats"
+    ]
+    splat_oracle_module = sys.modules[
+        "bench.io_bench.oracles.splats"
+    ]
+    assert benchmark.build_splat_specs is (
+        splat_family_module.build_splat_specs
+    )
+    assert benchmark._gauss is splat_fixture_module._gauss
+    for helper_name in (
+        "_gsply_ply_r",
+        "_gsply_ply_w",
+        "_gsply_spz_r",
+        "_gsply_spz_w",
+    ):
+        assert getattr(benchmark, helper_name) is getattr(
+            splat_oracle_module,
+            helper_name,
+        )
+        assert getattr(splat_family_module, helper_name) is getattr(
+            splat_oracle_module,
+            helper_name,
+        )
+    assert benchmark.gsply is splat_oracle_module.gsply
+    assert splat_family_module.gsply is splat_oracle_module.gsply
+
+    splat_spec_ids = [
+        "gaussian_ply",
+        "compressed_ply",
+        "sog",
+        "ksplat",
+        "spz",
+        "splat",
+    ]
+    splat_specs = benchmark.build_splat_specs(0.001)
+    assert [spec.id for spec in splat_specs] == splat_spec_ids
+    splat_core_functions = {
+        codec_id: (
+            getattr(_core, f"write_{codec_id}"),
+            getattr(_core, f"read_{codec_id}"),
+        )
+        for codec_id in splat_spec_ids
+    }
+    encoded_splats = {}
+    for spec in splat_specs:
+        assert (spec.w, spec.r) == splat_core_functions[spec.id]
+        record, payload = spec.make()
+        assert record.num_gaussians == 200
+        assert set(payload) == {
+            "means",
+            "scales",
+            "quats",
+            "opacities",
+            "sh0",
+        }
+        assert spec.nbytes(record, payload) == 200 * 14 * 4
+        encoded = bytes(spec.w(record))
+        assert encoded
+        encoded_splats[spec.id] = encoded
+        assert spec.r(encoded).num_gaussians == record.num_gaussians
+    assert set(encoded_splats) == set(splat_spec_ids)
+
+    splat_by_id = {spec.id: spec for spec in splat_specs}
+    for codec_id in ("compressed_ply", "sog", "ksplat", "splat"):
+        assert (splat_by_id[codec_id].ow, splat_by_id[codec_id].orr) == (
+            None,
+            None,
+        )
+
+    if splat_oracle_module.gsply is None:
+        for codec_id in ("gaussian_ply", "spz"):
+            assert (
+                splat_by_id[codec_id].ow,
+                splat_by_id[codec_id].orr,
+            ) == (None, None)
+    else:
+        gaussian_record, gaussian_payload = splat_by_id[
+            "gaussian_ply"
+        ].make()
+        gaussian_oracle_bytes = splat_by_id["gaussian_ply"].ow(
+            gaussian_payload
+        )
+        gaussian_core_bytes = bytes(
+            splat_by_id["gaussian_ply"].w(gaussian_record)
+        )
+        for encoded in (gaussian_oracle_bytes, gaussian_core_bytes):
+            oracle_cloud = splat_by_id["gaussian_ply"].orr(encoded)
+            for field in (
+                "means",
+                "scales",
+                "quats",
+                "opacities",
+                "sh0",
+            ):
+                np.testing.assert_allclose(
+                    np.asarray(getattr(oracle_cloud, field)).reshape(
+                        gaussian_payload[field].shape
+                    ),
+                    gaussian_payload[field],
+                    rtol=1e-6,
+                    atol=1e-7,
+                )
+            assert np.asarray(oracle_cloud.shN).size == 0
+        gaussian_core_record = splat_by_id["gaussian_ply"].r(
+            gaussian_oracle_bytes
+        )
+        for record_field, payload_field in (
+            ("means", "means"),
+            ("scales", "scales"),
+            ("quaternions", "quats"),
+            ("opacities", "opacities"),
+            ("sh_dc", "sh0"),
+        ):
+            np.testing.assert_allclose(
+                np.asarray(getattr(gaussian_core_record, record_field)),
+                gaussian_payload[payload_field],
+                rtol=1e-6,
+                atol=1e-7,
+            )
+        assert np.asarray(gaussian_core_record.sh_rest).size == 0
+
+        spz_record, spz_payload = splat_by_id["spz"].make()
+        spz_oracle_bytes = splat_by_id["spz"].ow(spz_payload)
+        spz_core_bytes = bytes(splat_by_id["spz"].w(spz_record))
+        spz_oracle_cloud = splat_by_id["spz"].orr(spz_oracle_bytes)
+        spz_core_cloud = splat_by_id["spz"].orr(spz_core_bytes)
+        for field in ("means", "scales", "quats", "opacities", "sh0"):
+            np.testing.assert_allclose(
+                np.asarray(getattr(spz_core_cloud, field)),
+                np.asarray(getattr(spz_oracle_cloud, field)),
+                rtol=1e-5,
+                atol=1e-6,
+            )
+        assert spz_core_cloud.shN is None
+        assert spz_oracle_cloud.shN is None
+        spz_core_record = splat_by_id["spz"].r(spz_oracle_bytes)
+        for record_field, oracle_field in (
+            ("means", "means"),
+            ("scales", "scales"),
+            ("quaternions", "quats"),
+            ("opacities", "opacities"),
+            ("sh_dc", "sh0"),
+        ):
+            np.testing.assert_allclose(
+                np.asarray(getattr(spz_core_record, record_field)),
+                np.asarray(getattr(spz_oracle_cloud, oracle_field)),
+                rtol=1e-5,
+                atol=1e-6,
+            )
+        assert np.asarray(spz_core_record.sh_rest).size == 0
+
+    blocked_splat_probe = textwrap.dedent(
+        """
+        import builtins
+        import importlib
+        import json
+
+        original_import = builtins.__import__
+
+        def blocked_import(name, *args, **kwargs):
+            if name == "gsply" or name.startswith("gsply."):
+                raise ImportError("blocked by benchmark contract")
+            return original_import(name, *args, **kwargs)
+
+        builtins.__import__ = blocked_import
+        oracles = importlib.import_module(
+            "bench.io_bench.oracles.splats"
+        )
+        fixtures = importlib.import_module(
+            "bench.io_bench.fixtures.splats"
+        )
+        family = importlib.import_module(
+            "bench.io_bench.families.splats"
+        )
+        facade = importlib.import_module("bench.bench_io")
+        specs = family.build_splat_specs(0.001)
+        print(json.dumps([
+            oracles.gsply is None,
+            family.gsply is oracles.gsply,
+            facade.gsply is oracles.gsply,
+            facade.build_splat_specs is family.build_splat_specs,
+            family._gauss is fixtures._gauss,
+            facade._gauss is fixtures._gauss,
+            all(
+                getattr(family, name) is getattr(oracles, name)
+                and getattr(facade, name) is getattr(oracles, name)
+                for name in (
+                    "_gsply_ply_r",
+                    "_gsply_ply_w",
+                    "_gsply_spz_r",
+                    "_gsply_spz_w",
+                )
+            ),
+            [spec.id for spec in specs],
+            all(
+                spec.w is not None and spec.r is not None
+                for spec in specs
+            ),
+            all(
+                spec.ow is None and spec.orr is None
+                for spec in specs
+            ),
+        ]))
+        """
+    )
+    blocked_splat = subprocess.run(
+        [sys.executable, "-c", blocked_splat_probe],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert json.loads(blocked_splat.stdout) == [
+        True,
+        True,
+        True,
+        True,
+        True,
+        True,
+        True,
+        splat_spec_ids,
+        True,
+        True,
+    ]
+
+    lower_splat_probe = textwrap.dedent(
+        """
+        import importlib
+        import json
+        import sys
+
+        oracles = importlib.import_module(
+            "bench.io_bench.oracles.splats"
+        )
+        fixtures = importlib.import_module(
+            "bench.io_bench.fixtures.splats"
+        )
+        family = importlib.import_module(
+            "bench.io_bench.families.splats"
+        )
+        print(json.dumps([
+            "bench.bench_io" not in sys.modules,
+            family._gauss is fixtures._gauss,
+            family._gsply_ply_w is oracles._gsply_ply_w,
+            [spec.id for spec in family.build_splat_specs(0.001)],
+        ]))
+        """
+    )
+    lower_splat = subprocess.run(
+        [sys.executable, "-c", lower_splat_probe],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert json.loads(lower_splat.stdout) == [
+        True,
+        True,
+        True,
+        splat_spec_ids,
     ]
 
     calls = []

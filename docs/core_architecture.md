@@ -257,6 +257,17 @@ sceneio._core (C++ / nanobind)
   complete planes and metadata. The Y4M row has live portable comparison
   metrics; image-directory throughput has an exact exemption backed by
   independent manifest/PGM parity.
+  Exact sequence commit `4b8c829` passes normal run `30250394890` and
+  compiler-instrumented run `30250394906`. The splat checkpoint lower-owns
+  all six ordinary splat specs, the Gaussian fixture, and the optional
+  `gsply` PLY/SPZ adapters under
+  `bench/io_bench/{families,fixtures,oracles}/splats.py`. Their canonical
+  order and callback identities are unchanged. Gaussian PLY and SPZ retain
+  live independent comparisons; Compressed PLY, SOG, KSplat, and `.splat`
+  carry exact benchmark-throughput exemptions backed by their independent
+  parity suites. No benchmark family remains facade-owned; only specialized
+  directory/database orchestration and the shared runner remain to move in
+  R3.2.
   Built-in startup uses `_registry/assembly.py` as a lower staging boundary.
   Eight complete family tuples are collected without touching the public
   registry. After all 50 canonical ids validate, the facade publishes the
