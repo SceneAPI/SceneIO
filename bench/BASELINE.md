@@ -1697,4 +1697,38 @@ compiler-instrumented run `30234117580` passes. The follow-up preserves the
 response validator's high-water invariant, adds deterministic
 counter-mismatch and join-time peak controls, passes all 3,316 local tests,
 and passes the 11-test protocol suite under the pinned manylinux2014 GCC-10
-image. Hosted confirmation of the follow-up commit remains pending.
+image. Follow-up commit `0bdfe0f` closes R3.1b: normal run
+[30234796010](https://github.com/SceneAPI/SceneIO/actions/runs/30234796010)
+and compiler-instrumented run
+[30234796025](https://github.com/SceneAPI/SceneIO/actions/runs/30234796025)
+both pass.
+
+## R3.2 arrays benchmark-family extraction (2026-07-26)
+
+The first R3.2 checkpoint moves all six array `Spec` builders and their inline
+fixtures to `bench/io_bench/families/arrays.py`, with the deterministic DMB
+fixture, NumPy/NPZ/DMB independent oracles, and optional safetensors bindings
+under `bench/io_bench/{fixtures,oracles}/arrays.py`. The compatible
+`bench/bench_io.py` facade re-exports every historical compatibility helper
+and splices the family hook into the same result position, so commands and
+developer imports are unchanged. The benchmark contract records each helper's
+owning source and AST hash in addition to the existing representative fixture
+fingerprints.
+
+Direct controls round-trip NumPy, NPZ, and DMB. When safetensors is installed,
+all five buffer/file/open bindings must be callable and execute successfully;
+otherwise all five must be absent together. PFM and FLO retain explicit
+exemptions for independent benchmark encode/decode throughput while their
+format parity remains independently tested. A one-run 50-codec smoke retains
+structural projection
+`2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`.
+Focused compatibility, array-family, and parity validation passes 334 tests
+with one documented optional OpenCV skip. Adding the typed PFM/FLO suites
+expands that run to 445 passes with the same skip. The complete suite passes
+3,316 tests with the same four documented skips, and Ruff is clean. A fresh
+exact-tree source archive has 343 members and contains all six new benchmark
+family/fixture/oracle modules without generated cache files. Its derived
+81-member wheel contains no benchmark, test, or safetensors module, retains
+all 15 attribution files, and keeps `numpy>=1.26` as its sole unconditional
+dependency. This is a mechanical ownership change and makes no
+codec-performance claim.

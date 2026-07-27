@@ -209,10 +209,10 @@ longer contains any individual built-in definition. The exact-tree package
 and all three independent-review gates pass. Registry implementation
 `3e46d82` and platform-contract repair `9928c6d` are pushed; final normal run
 `30228235491` and compiler-instrumented run `30228235535` pass. R2 is closed.
-R3.1a is complete in the current tree. R3.1b implementation and local
-whole-tree validation are complete; exact-commit hosted validation is
-pending. These changes alter no codec algorithm or public API and make no
-codec-performance claim. Exact R3.1a normal run
+R3.1a is complete in the current tree. R3.1b closes at follow-up commit
+`0bdfe0f`; normal run `30234796010` and compiler-instrumented run `30234796025`
+pass. R3.2 family extraction is active. These changes alter no codec algorithm
+or public API and make no codec-performance claim. Exact R3.1a normal run
 [30231629465](https://github.com/SceneAPI/SceneIO/actions/runs/30231629465)
 and compiler-instrumented run
 [30231629496](https://github.com/SceneAPI/SceneIO/actions/runs/30231629496)
@@ -334,7 +334,7 @@ verification have accumulated in a few large modules:
 | C++ records | 32 source/header files | still manageable; new table/animation/scene records will add pressure |
 | Python registry | `registry.py`, 205 lines; `_registry/assembly.py`, 148 lines; focused `_registry/{model,adapters,detection,native_features}.py` modules; and eight `_registry/families/*.py` definition modules | all built-ins are family-owned; R3 now splits the benchmark and cross-codec verification monoliths |
 | Inspection | `_inspection.py` compatibility facade plus `_inspectors/{model,common,arrays,calibration,images,meshes,points,reconstruction,sequences,splats}.py`; all eight manifest families have lower inspector ownership | keep the proven shared model, mmap bridge, metadata bounds, exact-read/integer grammar, and image-result constructor as lower services |
-| Benchmark | compatible `bench_io.py` facade plus `io_bench/{model,measure,reporting}.py` | family fixtures, oracles, and sweep orchestration remain in the facade until R3.2; models, measurements, and presentation are no longer coupled to it |
+| Benchmark | compatible `bench_io.py` facade plus `io_bench/{model,measure,reporting}.py` and the first `families/fixtures/oracles/arrays.py` modules | arrays have lower family ownership; the seven remaining family hooks and sweep orchestration move checkpoint by checkpoint during R3.2 |
 | Cross-codec tests | `test_io_mmap.py`, about 2,400 lines; `test_io_partial.py`, about 1,100 | reusable codec cases and behavior assertions are difficult to extend independently |
 | Execution plan | `format_gap_implementation_plan.md`, about 2,500 lines | historical evidence and the active queue are easy to confuse |
 | Native dependencies | six source-complete in-tree projects, one LAZperf integration/provenance directory, and six `FetchContent` projects | stable builds are not yet fully offline/repository-contained |
@@ -628,6 +628,18 @@ calibration, and every-size payload-growth rule are pinned by
 only during R3.3's staged consumer migration so their current node ids and
 coverage remain unchanged. The new protocol suite is part of the existing
 Linux/Windows/macOS mmap CI lane.
+
+R3.2 begins with the arrays benchmark family. Its complete six-codec `Spec`
+hook now lives under `bench/io_bench/families/arrays.py`; fixture/oracle helpers
+and safetensors oracle bindings have lower ownership under
+`bench/io_bench/{fixtures,oracles}/arrays.py`, while `bench_io.py` retains
+compatible aliases. `bench_io_v1.json` records source ownership and AST hashes,
+and direct installed/absent-mode oracle controls cover the lower modules,
+constructed `Spec` bindings, and facade aliases. A fresh exact-tree source
+archive has 343 members and contains all six new benchmark modules without
+generated cache files. Its 81-member derived wheel excludes development
+benchmark/test modules, retains all 15 attribution files, and keeps NumPy as
+its sole unconditional dependency.
 
 ### R4. Organize native build and bindings
 

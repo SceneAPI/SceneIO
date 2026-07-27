@@ -1995,9 +1995,9 @@ publication skipped. R2 is closed at `3e46d82` plus `9928c6d`. R3.1a has
 separated benchmark models, measurements, and reporting while retaining the
 compatible CLI and 50-codec contract. R3.1b now provides the versioned
 fresh-child memory protocol, strict unavailable-sampler behavior, and
-positive/negative payload controls. Local whole-tree validation is complete;
-exact-commit hosted confirmation is the active repository-organization gate
-in
+positive/negative payload controls. Follow-up commit `0bdfe0f` passes normal
+run `30234796010` and compiler-instrumented run `30234796025`, closing R3.1b.
+R3.2 family extraction is the active repository-organization unit in
 [`next_stage_implementation_checklist.md`](next_stage_implementation_checklist.md).
 
 Status terms are strict:

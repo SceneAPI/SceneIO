@@ -37,9 +37,10 @@ through `aa5b624`; normal run 30218232248 and compiler-instrumented run
 30218232246 pass that combined implementation. Splats close at registry
 implementation `3e46d82` plus platform-contract repair `9928c6d`; normal run
 30228235491 and compiler-instrumented run 30228235535 pass the final R2 tree.
-R2 is closed. R3.1a is complete in the current tree. R3.1b implementation and
-local whole-tree validation are complete; exact-commit hosted validation is
-pending.
+R2 is closed. R3.1a is complete in the current tree. R3.1b closes at follow-up
+commit `0bdfe0f`; normal run `30234796010` and
+compiler-instrumented run `30234796025` pass. R3.2 family extraction is
+active.
 
 This is the operational checklist for the repository-organization and
 codec-performance stage defined in
@@ -2578,8 +2579,8 @@ run `30228235491` passes the full suite, retained performance guard, all three
 splat jobs, mmap/reconstruction matrices, and GCC-10 lane.
 Compiler-instrumented run `30228235535` passes both jobs. `publish.yml` was
 not triggered; no tag or package was published. R3.1a is complete in the
-current tree. R3.1b implementation and local whole-tree validation are
-complete; exact-commit hosted validation is pending.
+current tree. R3.1b closes at `0bdfe0f`; normal run `30234796010` and
+compiler-instrumented run `30234796025` pass. R3.2 is active.
 
 ## 7. R3 — split benchmark and cross-codec tests
 
@@ -2681,7 +2682,7 @@ allocation controls. Existing codec-test-local child snippets remain
 unchanged until their consumer-by-consumer R3.3 migration; the benchmark
 protocol is already independently exercised with real NPY read and inspect
 operations. The protocol test is included in the existing Linux, Windows, and
-macOS mmap/partial CI lane; hosted confirmation is pending the R3.1b commit.
+macOS mmap/partial CI lane.
 
 R3.1b local exit evidence:
 
@@ -2715,12 +2716,25 @@ envelope of the native counter and observed current values only after sampler
 shutdown. Deterministic controls reproduce both the low-native-counter case
 and a higher sample arriving during `join()`. The full 3,316-test local suite,
 Ruff, all three reviews, and the 11-test protocol suite in the pinned
-manylinux2014 GCC-10 image pass. Exact follow-up hosted validation remains
-pending.
+manylinux2014 GCC-10 image pass. Follow-up commit `0bdfe0f` closes R3.1b:
+normal run
+[30234796010](https://github.com/SceneAPI/SceneIO/actions/runs/30234796010)
+passes the complete suite, benchmark smoke/structure/performance guard,
+GCC-10 build, and all platform lanes; compiler-instrumented run
+[30234796025](https://github.com/SceneAPI/SceneIO/actions/runs/30234796025)
+passes both jobs. No release workflow, tag, or publication was triggered.
 
 ### R3.2 — family fixtures, oracles, and sweep runner
 
-- [ ] Move builders/oracles one family at a time.
+- [ ] Move builders/oracles one family at a time:
+  - [x] arrays;
+  - [ ] calibration;
+  - [ ] images;
+  - [ ] meshes;
+  - [ ] points;
+  - [ ] reconstruction;
+  - [ ] sequences;
+  - [ ] splats.
 - [ ] After the family hooks have lower ownership, move the remaining complete
       sweep orchestration to `bench/io_bench/runner.py`; keep
       `bench/bench_io.py` as a thin compatible CLI and helper-export facade.
@@ -2733,6 +2747,30 @@ pending.
 - [ ] When no library oracle exists, require an independent spec-level parser
       or a reviewed exemption with the exact unverified property recorded.
 - [ ] Keep generated 100 MiB-class fixtures out of Git.
+
+The arrays checkpoint moves all six array `Spec` builders and their
+deterministic fixtures behind `io_bench/families/arrays.py`, with the DMB
+fixture and NumPy/NPZ/DMB independent oracles under
+`io_bench/{fixtures,oracles}/arrays.py`. Optional safetensors bindings have the
+same lower owner. `bench_io.py` continues to export the same private helpers
+for compatibility and now splices the complete family hook into the unchanged
+result order. The checked benchmark contract maps representative builders to
+their owning source files, pins AST hashes for every lower function, and pins
+facade identity for every compatibility export. Direct execution controls
+cover NumPy, NPZ, DMB, and all five safetensors buffer/file/open bindings when
+installed; PFM and FLO record the exact independent benchmark comparison they
+do not provide.
+The one-run 50-codec smoke retains the exact structural projection
+`2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`.
+Focused array/parity/compatibility validation passes 334 tests with one
+documented optional OpenCV skip. Adding the typed PFM/FLO suites expands that
+run to 445 passes with the same skip. The complete suite passes 3,316 tests
+with the same four documented skips, and Ruff is clean. A fresh exact-tree
+source archive has 343 members and contains all six new benchmark
+family/fixture/oracle modules without generated cache files. Its derived
+81-member wheel contains no benchmark, test, or safetensors module, retains
+all 15 attribution files, and keeps `numpy>=1.26` as its sole unconditional
+dependency.
 
 ### R3.3 — cross-codec test support
 
@@ -2770,8 +2808,8 @@ R3 verification and validation:
 - [x] R3.1a five-run O4/O5 controls retain direction and memory relationships
       after the required confirming complete run.
 - [x] R3.1b protocol coverage is wired into the existing Linux, Windows, and
-      macOS mmap/partial lane; require a green exact-commit hosted run before
-      closing the unit.
+      macOS mmap/partial lane; exact-commit normal run `30234796010` and
+      compiler-instrumented run `30234796025` pass.
 - [ ] Strict qualification mode fails on an absent required oracle or RSS
       sampler instead of silently dropping evidence.
 - [ ] Full suite and Ruff pass after each family.

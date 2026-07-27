@@ -14,6 +14,7 @@ import re
 import statistics
 import subprocess
 import sys
+import tempfile
 import textwrap
 from collections import defaultdict
 from pathlib import Path
@@ -594,6 +595,237 @@ def _assert_benchmark_components_and_metric_semantics_are_explicit():
         for node in ast.walk(benchmark_tree)
     )
 
+    for family in contract["r3_2_family_extraction"].values():
+        for name, declaration in family["family_functions"].items():
+            source_path = ROOT / declaration["source"]
+            source_tree = ast.parse(source_path.read_text(encoding="utf-8"))
+            matches = [
+                node
+                for node in source_tree.body
+                if isinstance(node, ast.FunctionDef) and node.name == name
+            ]
+            assert len(matches) == 1
+            digest = hashlib.sha256(
+                ast.dump(matches[0], include_attributes=False).encode()
+            ).hexdigest()
+            assert digest == declaration["ast_sha256"]
+            source_module = declaration["source"][:-3].replace("/", ".")
+            assert getattr(sys.modules[source_module], name).__module__ == (
+                source_module
+            )
+        for name in family["facade_family_exports"]:
+            source_module = family["family_functions"][name]["source"][
+                :-3
+            ].replace("/", ".")
+            assert getattr(benchmark, name) is getattr(
+                sys.modules[source_module],
+                name,
+            )
+        for name, declaration in family["functions"].items():
+            source_path = ROOT / declaration["source"]
+            source_tree = ast.parse(source_path.read_text(encoding="utf-8"))
+            matches = [
+                node
+                for node in source_tree.body
+                if isinstance(node, ast.FunctionDef) and node.name == name
+            ]
+            assert len(matches) == 1
+            digest = hashlib.sha256(
+                ast.dump(matches[0], include_attributes=False).encode()
+            ).hexdigest()
+            assert digest == declaration["ast_sha256"]
+            source_module = declaration["source"][:-3].replace("/", ".")
+            assert getattr(benchmark, name).__module__ == source_module
+            assert getattr(sys.modules[source_module], name) is getattr(
+                benchmark,
+                name,
+            )
+        oracle_module_name = family["optional_oracle_source"][
+            :-3
+        ].replace("/", ".")
+        oracle_module = sys.modules[oracle_module_name]
+        for name in family["optional_oracle_bindings"]:
+            assert getattr(benchmark, name) is getattr(oracle_module, name)
+        assert set(family["no_oracle_exemptions"]) == {"flo", "pfm"}
+        for exemption in family["no_oracle_exemptions"].values():
+            assert exemption["unverified_property"] == (
+                "independent benchmark encode/decode throughput"
+            )
+            assert exemption["verification"]
+
+    array_oracle_module = sys.modules["bench.io_bench.oracles.arrays"]
+    oracle_probe = np.arange(12, dtype=np.float32).reshape(3, 4)
+    np.testing.assert_array_equal(
+        benchmark._np_r(benchmark._np_w(oracle_probe)),
+        oracle_probe,
+    )
+    npz_probe = {
+        "a": oracle_probe,
+        "b": np.arange(5, dtype=np.int16),
+    }
+    loaded_npz = benchmark._load_npz_oracle(
+        benchmark._save_npz_oracle(npz_probe)
+    )
+    assert set(loaded_npz) == set(npz_probe)
+    for name, expected in npz_probe.items():
+        np.testing.assert_array_equal(loaded_npz[name], expected)
+    np.testing.assert_array_equal(
+        benchmark._dmb_oracle_read(
+            benchmark._dmb_oracle_write(oracle_probe)
+        ),
+        oracle_probe,
+    )
+
+    safetensors_bindings = [
+        benchmark.safetensors_load,
+        benchmark.safetensors_load_file,
+        benchmark.safetensors_open,
+        benchmark.safetensors_save,
+        benchmark.safetensors_save_file,
+    ]
+    if importlib.util.find_spec("safetensors") is None:
+        assert all(binding is None for binding in safetensors_bindings)
+    else:
+        assert all(callable(binding) for binding in safetensors_bindings)
+        encoded = benchmark.safetensors_save(npz_probe)
+        loaded = benchmark.safetensors_load(encoded)
+        for name, expected in npz_probe.items():
+            np.testing.assert_array_equal(loaded[name], expected)
+        with tempfile.TemporaryDirectory(
+            prefix="sceneio_bench_oracle_"
+        ) as directory:
+            path = Path(directory) / "probe.safetensors"
+            benchmark.safetensors_save_file(npz_probe, path)
+            loaded_file = benchmark.safetensors_load_file(path)
+            for name, expected in npz_probe.items():
+                np.testing.assert_array_equal(loaded_file[name], expected)
+            with benchmark.safetensors_open(path, framework="np") as handle:
+                assert tuple(handle.keys()) == tuple(sorted(npz_probe))
+                for name, expected in npz_probe.items():
+                    np.testing.assert_array_equal(
+                        handle.get_tensor(name),
+                        expected,
+                    )
+
+    array_specs = benchmark.build_array_specs(0.001)
+    assert [spec.id for spec in array_specs] == [
+        "npy",
+        "pfm",
+        "flo",
+        "dmb",
+        "npz",
+        "safetensors",
+    ]
+    by_id = {spec.id: spec for spec in array_specs}
+    expected_core_bindings = {
+        "npy": (_core.write_npy, _core.read_npy),
+        "pfm": (_core.write_pfm, _core.read_pfm),
+        "flo": (_core.write_flo, _core.read_flo),
+        "dmb": (_core.write_dmb, _core.read_dmb),
+        "npz": (_core.write_npz, _core.read_npz),
+        "safetensors": (
+            _core.write_safetensors,
+            _core.read_safetensors,
+        ),
+    }
+    for codec_id, bindings in expected_core_bindings.items():
+        assert (by_id[codec_id].w, by_id[codec_id].r) == bindings
+    assert (by_id["npy"].ow, by_id["npy"].orr) == (
+        array_oracle_module._np_w,
+        array_oracle_module._np_r,
+    )
+    assert (by_id["pfm"].ow, by_id["pfm"].orr) == (None, None)
+    assert (by_id["flo"].ow, by_id["flo"].orr) == (None, None)
+    assert (by_id["dmb"].ow, by_id["dmb"].orr) == (
+        array_oracle_module._dmb_oracle_write,
+        array_oracle_module._dmb_oracle_read,
+    )
+    assert callable(by_id["npz"].ow)
+    assert by_id["npz"].ow.__module__ == (
+        "bench.io_bench.families.arrays"
+    )
+    assert by_id["npz"].orr is array_oracle_module._load_npz_oracle
+
+    for codec_id in ("npy", "dmb", "npz"):
+        spec = by_id[codec_id]
+        assert spec.ow is not None
+        assert spec.orr is not None
+        unused_record, payload = spec.make()
+        decoded = spec.orr(spec.ow(payload))
+        if codec_id == "npz":
+            assert set(decoded) == set(payload)
+            for name, expected in payload.items():
+                np.testing.assert_array_equal(decoded[name], expected)
+        else:
+            np.testing.assert_array_equal(decoded, payload)
+
+    safetensors_spec = by_id["safetensors"]
+    if callable(array_oracle_module.safetensors_save):
+        assert callable(safetensors_spec.ow)
+        assert (
+            safetensors_spec.orr
+            is array_oracle_module.safetensors_load
+        )
+        unused_record, payload = safetensors_spec.make()
+        decoded = safetensors_spec.orr(safetensors_spec.ow(payload))
+        assert set(decoded) == set(payload)
+        for name, expected in payload.items():
+            np.testing.assert_array_equal(decoded[name], expected)
+    else:
+        assert (safetensors_spec.ow, safetensors_spec.orr) == (None, None)
+
+    blocked_probe = textwrap.dedent(
+        """
+        import builtins
+        import importlib
+        import json
+
+        original_import = builtins.__import__
+
+        def blocked_import(name, *args, **kwargs):
+            if name == "safetensors" or name.startswith("safetensors."):
+                raise ImportError("blocked by benchmark contract")
+            return original_import(name, *args, **kwargs)
+
+        builtins.__import__ = blocked_import
+        oracles = importlib.import_module(
+            "bench.io_bench.oracles.arrays"
+        )
+        family = importlib.import_module(
+            "bench.io_bench.families.arrays"
+        )
+        facade = importlib.import_module("bench.bench_io")
+        specs = {
+            spec.id: spec
+            for spec in family.build_array_specs(0.001)
+        }
+        print(json.dumps([
+            oracles.safetensors_load is None,
+            oracles.safetensors_load_file is None,
+            oracles.safetensors_open is None,
+            oracles.safetensors_save is None,
+            oracles.safetensors_save_file is None,
+            family.safetensors_load is None,
+            family.safetensors_save is None,
+            facade.safetensors_load is None,
+            facade.safetensors_load_file is None,
+            facade.safetensors_open is None,
+            facade.safetensors_save is None,
+            facade.safetensors_save_file is None,
+            specs["safetensors"].ow is None,
+            specs["safetensors"].orr is None,
+        ]))
+        """
+    )
+    blocked = subprocess.run(
+        [sys.executable, "-c", blocked_probe],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert json.loads(blocked.stdout) == [True] * 14
+
     calls = []
     duration, peak = benchmark._measure(
         lambda: calls.append(len(calls)),
@@ -700,22 +932,29 @@ def _assert_benchmark_representative_fixtures_match_checked_fingerprints():
     contract = _read_json("bench_io_v1.json")
     fingerprint_contract = contract["representative_fixture_fingerprints"]
     assert fingerprint_contract["algorithm"] == "sha256-canonical-fixture-v1"
-    benchmark_tree = ast.parse(
-        (ROOT / "bench" / "bench_io.py").read_text(encoding="utf-8")
-    )
-    builder_nodes = {
-        node.name: node
-        for node in benchmark_tree.body
-        if isinstance(node, ast.FunctionDef)
-        and node.name in fingerprint_contract["builder_ast_functions"]
-    }
+    builder_sources = fingerprint_contract["builder_ast_sources"]
+    assert sorted(builder_sources) == fingerprint_contract[
+        "builder_ast_functions"
+    ]
+    builder_nodes = {}
+    for name, relative_path in builder_sources.items():
+        source_path = ROOT / relative_path
+        assert source_path.is_relative_to(ROOT / "bench")
+        source_tree = ast.parse(source_path.read_text(encoding="utf-8"))
+        matches = [
+            node
+            for node in source_tree.body
+            if isinstance(node, ast.FunctionDef) and node.name == name
+        ]
+        assert len(matches) == 1
+        builder_nodes[name] = matches[0]
     assert sorted(builder_nodes) == fingerprint_contract["builder_ast_functions"]
     builder_payload = "\n".join(
         ast.dump(builder_nodes[name], include_attributes=False)
         for name in sorted(builder_nodes)
     )
     assert hashlib.sha256(builder_payload.encode()).hexdigest() == (
-        fingerprint_contract["parent_and_candidate_builder_ast_sha256"]
+        fingerprint_contract["current_builder_ast_sha256"]
     )
     benchmark = _load_benchmark_module("sceneio_bench_fixtures")
 

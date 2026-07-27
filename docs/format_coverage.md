@@ -266,8 +266,8 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > [30231629465](https://github.com/SceneAPI/SceneIO/actions/runs/30231629465)
 > and compiler-instrumented run
 > [30231629496](https://github.com/SceneAPI/SceneIO/actions/runs/30231629496)
-> pass the exact R3.1a commit. R3.1b is
-> now implemented and undergoing whole-tree validation. Its versioned
+> pass the exact R3.1a commit. R3.1b closes at follow-up commit `0bdfe0f`.
+> Its versioned
 > development-only protocol uses one warmed fresh child per sample, reports
 > baseline/peak/delta RSS with platform and sampler metadata, and refuses to
 > turn unavailable sampling into a numeric result. Three samples at 8 MiB and
@@ -279,8 +279,11 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > claims are unchanged. Local MSVC collects 3,320 tests and passes 3,316 with
 > four documented skips; the unchanged complete five-run performance guard,
 > all three independent reviews, exact-source packaging, and isolated
-> NumPy-only wheel smoke pass. Exact-commit hosted confirmation remains
-> pending.
+> NumPy-only wheel smoke pass. Normal run
+> [30234796010](https://github.com/SceneAPI/SceneIO/actions/runs/30234796010)
+> passes the complete suite and all platform lanes; compiler-instrumented run
+> [30234796025](https://github.com/SceneAPI/SceneIO/actions/runs/30234796025)
+> passes both jobs. R3.2 family extraction is active.
 
 [current-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287022
 [current-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287161

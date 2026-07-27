@@ -23,7 +23,6 @@ import io
 import json
 import os
 import sqlite3
-import struct
 import sys
 import tempfile
 import xml.etree.ElementTree as ET
@@ -38,7 +37,10 @@ if str(Path(__file__).resolve().parents[1]) not in sys.path:
 
 import sceneio
 from bench.io_bench import measure as benchmark_measure
+from bench.io_bench.families.arrays import build_array_specs
+from bench.io_bench.fixtures import arrays as array_fixtures
 from bench.io_bench.model import DirectorySpec, Spec
+from bench.io_bench.oracles import arrays as array_oracles
 from bench.io_bench.reporting import (
     print_cold_cache_unavailable,
     print_colmap_db_row,
@@ -53,6 +55,19 @@ from bench.io_bench.reporting import (
     print_typed_adapter,
 )
 from sceneio import _core
+
+_depth_map = array_fixtures._depth_map
+_dmb_oracle_read = array_oracles._dmb_oracle_read
+_dmb_oracle_write = array_oracles._dmb_oracle_write
+_load_npz_oracle = array_oracles._load_npz_oracle
+_np_r = array_oracles._np_r
+_np_w = array_oracles._np_w
+_save_npz_oracle = array_oracles._save_npz_oracle
+safetensors_load = array_oracles.safetensors_load
+safetensors_load_file = array_oracles.safetensors_load_file
+safetensors_open = array_oracles.safetensors_open
+safetensors_save = array_oracles.safetensors_save
+safetensors_save_file = array_oracles.safetensors_save_file
 
 _measure = benchmark_measure.measure
 _measure_in_process_rss = benchmark_measure.measure_in_process_rss
@@ -91,19 +106,6 @@ try:
     import yaml
 except Exception:
     yaml = None
-try:
-    from safetensors import safe_open as safetensors_open
-    from safetensors.numpy import load as safetensors_load
-    from safetensors.numpy import load_file as safetensors_load_file
-    from safetensors.numpy import save as safetensors_save
-    from safetensors.numpy import save_file as safetensors_save_file
-except Exception:
-    safetensors_open = None
-    safetensors_load = None
-    safetensors_load_file = None
-    safetensors_save = None
-    safetensors_save_file = None
-
 # --- payload builders -------------------------------------------------------
 def _img_u8(h, w):
     a = np.random.default_rng(0).integers(0, 256, (h, w, 3), dtype=np.uint8)
@@ -132,18 +134,6 @@ def _img_webp_palette(h, w):
     yy, xx = np.indices((h, w))
     a = palette[((xx // 7) + (yy // 11)) % len(palette)]
     return _core.image(a, color_space="srgb"), a
-
-
-def _depth_map(h, w):
-    values = np.random.default_rng(7).standard_normal((h, w)).astype(np.float32)
-    return (
-        _core.depth_map(
-            values,
-            unit="unknown",
-            invalid_policy="zero",
-        ),
-        values,
-    )
 
 
 def _y4m_fixture(side):
@@ -1286,27 +1276,6 @@ def _open3d_pcd_r(data):
         os.remove(path)
 
 
-def _np_w(a):
-    b = io.BytesIO()
-    np.save(b, a)
-    return b.getvalue()
-
-
-def _np_r(d):
-    return np.load(io.BytesIO(d))
-
-
-def _save_npz_oracle(arrays):
-    buffer = io.BytesIO()
-    np.savez(buffer, **arrays)
-    return buffer.getvalue()
-
-
-def _load_npz_oracle(data):
-    with np.load(io.BytesIO(data)) as archive:
-        return {name: np.array(archive[name], copy=True) for name in archive.files}
-
-
 def _pts_oracle_write(points):
     text = io.StringIO()
     text.write(f"{len(points)}\n")
@@ -1323,25 +1292,6 @@ def _pts_oracle_read(data):
     if len(points) != declared:
         raise ValueError("PTS count mismatch")
     return points
-
-
-def _dmb_oracle_write(values):
-    values = np.asarray(values, dtype=np.float32)
-    height, width = values.shape
-    return (
-        struct.pack("<4i", 1, height, width, 1)
-        + values.astype("<f4", copy=False).tobytes()
-    )
-
-
-def _dmb_oracle_read(data):
-    image_type, height, width, channels = struct.unpack_from("<4i", data)
-    if image_type != 1 or channels != 1:
-        raise ValueError("unsupported DMB header")
-    expected = 16 + height * width * 4
-    if height < 1 or width < 1 or len(data) != expected:
-        raise ValueError("invalid DMB payload")
-    return np.frombuffer(data, dtype="<f4", offset=16).reshape(height, width)
 
 
 def _bal_oracle_write(payload):
@@ -1903,17 +1853,7 @@ def _specs(scale, pose_bundle=None):
     side = max(1, int(1024 * scale**0.5))
     points = max(1, int(1_000_000 * scale))
     gaussians = max(1, int(200_000 * scale))
-    tensor_side = max(1, int(512 * scale**0.5))
     reconstruction, transforms, tum, kitti = pose_bundle or _poses_and_reconstruction(scale)
-    flow = np.random.default_rng(4).standard_normal((side, side, 2)).astype(np.float32)
-    pfm = np.random.default_rng(5).standard_normal((side, side)).astype(np.float32)
-    npz_arrays = {
-        "a": np.random.default_rng(6)
-        .standard_normal((tensor_side, tensor_side))
-        .astype(np.float32),
-        "b": np.arange(max(1, tensor_side), dtype=np.int32),
-    }
-    tensors = _core.tensor_dict(npz_arrays)
     return [
         Spec(
             "png",
@@ -2149,68 +2089,7 @@ def _specs(scale, pose_bundle=None):
             None,
             lambda rec, p: rec.num_gaussians * 14 * 4,
         ),
-        Spec(
-            "npy",
-            lambda: (lambda a: (a, a))(
-                np.ascontiguousarray(
-                    np.random.default_rng(0).random((tensor_side, tensor_side, 8), dtype=np.float32)
-                )
-            ),
-            _core.write_npy,
-            _core.read_npy,
-            _np_w,
-            _np_r,
-            lambda rec, p: rec.nbytes,
-        ),
-        Spec(
-            "pfm",
-            lambda: (pfm, pfm),
-            _core.write_pfm,
-            _core.read_pfm,
-            None,
-            None,
-            lambda rec, p: p.nbytes,
-        ),
-        Spec(
-            "flo",
-            lambda: (flow, flow),
-            _core.write_flo,
-            _core.read_flo,
-            None,
-            None,
-            lambda rec, p: p.nbytes,
-        ),
-        Spec(
-            "dmb",
-            lambda: _depth_map(side, side),
-            _core.write_dmb,
-            _core.read_dmb,
-            _dmb_oracle_write,
-            _dmb_oracle_read,
-            lambda rec, p: p.nbytes,
-        ),
-        Spec(
-            "npz",
-            lambda: (tensors, npz_arrays),
-            _core.write_npz,
-            _core.read_npz,
-            lambda arrays: _save_npz_oracle(arrays),
-            _load_npz_oracle,
-            lambda rec, p: sum(array.nbytes for array in p.values()),
-        ),
-        Spec(
-            "safetensors",
-            lambda: (tensors, npz_arrays),
-            _core.write_safetensors,
-            _core.read_safetensors,
-            (
-                (lambda arrays: safetensors_save(arrays))
-                if safetensors_save
-                else None
-            ),
-            safetensors_load,
-            lambda rec, p: sum(array.nbytes for array in p.values()),
-        ),
+        *build_array_specs(scale),
         Spec(
             "transforms_json",
             lambda: (transforms, transforms),

@@ -184,7 +184,14 @@ sceneio._core (C++ / nanobind)
   Repeated 8/48 MiB controls distinguish a bounded 64 KiB read from a
   whole-payload allocation, and the protocol test is wired into the
   three-platform mmap lane. R3.2 moves family fixtures/oracles before moving
-  the remaining sweep runner.
+  the remaining sweep runner. The arrays checkpoint now owns its deterministic
+  six-codec `Spec` construction under `bench/io_bench/families/arrays.py`,
+  plus its DMB fixture, NumPy/NPZ/DMB oracles, and optional safetensors
+  bindings under `bench/io_bench/{fixtures,oracles}/arrays.py`; the compatible
+  facade re-exports those helpers, and a checked source/AST map plus direct
+  installed/absent-mode oracle execution controls prove their identity and
+  availability. R3.1b closes at `0bdfe0f`; normal run `30234796010` and
+  compiler-instrumented run `30234796025` pass.
   Built-in startup uses `_registry/assembly.py` as a lower staging boundary.
   Eight complete family tuples are collected without touching the public
   registry. After all 50 canonical ids validate, the facade publishes the

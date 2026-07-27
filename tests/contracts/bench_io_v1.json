@@ -20,7 +20,18 @@
       "_specs",
       "_y4m_fixture"
     ],
+    "builder_ast_sources": {
+      "_gauss": "bench/bench_io.py",
+      "_img_u8": "bench/bench_io.py",
+      "_mesh_scene": "bench/bench_io.py",
+      "_pc_ply": "bench/bench_io.py",
+      "_poses_and_reconstruction": "bench/bench_io.py",
+      "_single_calibration": "bench/bench_io.py",
+      "_specs": "bench/bench_io.py",
+      "_y4m_fixture": "bench/bench_io.py"
+    },
     "parent_and_candidate_builder_ast_sha256": "ce8dda677da61550035dcd2062d4cb53aed20f21e37024d87d5f50449ba1fbfd",
+    "current_builder_ast_sha256": "2e8ecfd08dd04e2e8744bd65e5f55ae5a832196b064088e215518b890e89905e",
     "fixtures": {
       "camera_calibration": "5e2b5f1e70aa57bd8d219b06a16ce36dfec48aa4d0905ef45cdf503cca8b511c",
       "gaussian_cloud": "dc358708428493fafd834f6c9626f87dd1e91626d324fea3865320561176b1cf",
@@ -30,6 +41,71 @@
       "point_cloud_ply": "718f1d8592ca964d6b8303ca73f77f8739a525d954d50865cc904705fd939da3",
       "reconstruction": "32b1c26e3bb277b76c6ce3506fd34591483a13fb1c9b5cb960f7f84aad1eb39f",
       "tensor_dict": "988ba625ca1f012b60705dea6b395eb741b58cc63660cc7c443dedbeef0fa377"
+    }
+  },
+  "r3_2_family_extraction": {
+    "arrays": {
+      "family_functions": {
+        "_array_fixture_values": {
+          "source": "bench/io_bench/families/arrays.py",
+          "ast_sha256": "f7d68dbd7f31d047fb6bc7f9c5c9630da1fdb21572fa00dc800ee6f3f3ce5033"
+        },
+        "build_array_specs": {
+          "source": "bench/io_bench/families/arrays.py",
+          "ast_sha256": "046468f7f7d8a86f9e67185ba72022d3c9fd38301f0ba7389f77845b3d2d56c2"
+        }
+      },
+      "facade_family_exports": [
+        "build_array_specs"
+      ],
+      "functions": {
+        "_depth_map": {
+          "source": "bench/io_bench/fixtures/arrays.py",
+          "ast_sha256": "d9a10f6a74cb7041980d6c060880112ab31970f47e6713fba4a348b2977b3f6f"
+        },
+        "_dmb_oracle_read": {
+          "source": "bench/io_bench/oracles/arrays.py",
+          "ast_sha256": "b1b95de33f0d7ffa63cccf8c3bb3de646b7f813702fb47af4cd8d27ce36f7fec"
+        },
+        "_dmb_oracle_write": {
+          "source": "bench/io_bench/oracles/arrays.py",
+          "ast_sha256": "f7dda5ee31015e42b86428177417f923d6a53147cd422a95e9356786dc0ba5d2"
+        },
+        "_load_npz_oracle": {
+          "source": "bench/io_bench/oracles/arrays.py",
+          "ast_sha256": "a59204f39a7f6c385cb599f6d6a227c728bd2356d85d380b03fcab42712a38e7"
+        },
+        "_np_r": {
+          "source": "bench/io_bench/oracles/arrays.py",
+          "ast_sha256": "9659189626001bb25eb3c1779fe490f4999863fc6c5d8b7081ee36baa379ccc7"
+        },
+        "_np_w": {
+          "source": "bench/io_bench/oracles/arrays.py",
+          "ast_sha256": "898aa45c2816bd23c78df7505e53f3e633313d85bbcf54c59ffc9aae150b1734"
+        },
+        "_save_npz_oracle": {
+          "source": "bench/io_bench/oracles/arrays.py",
+          "ast_sha256": "b5800d03900f5fe54abc337e293a26a12a9e0af0b4288ed69a776cf6663fc9d8"
+        }
+      },
+      "optional_oracle_bindings": [
+        "safetensors_load",
+        "safetensors_load_file",
+        "safetensors_open",
+        "safetensors_save",
+        "safetensors_save_file"
+      ],
+      "optional_oracle_source": "bench/io_bench/oracles/arrays.py",
+      "no_oracle_exemptions": {
+        "flo": {
+          "unverified_property": "independent benchmark encode/decode throughput",
+          "verification": "format parity remains covered by the independent Python/OpenCV codec suite"
+        },
+        "pfm": {
+          "unverified_property": "independent benchmark encode/decode throughput",
+          "verification": "format parity remains covered by the independent Python codec suite"
+        }
+      }
     }
   },
   "r3_1a_equivalence": {
