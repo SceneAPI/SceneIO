@@ -329,7 +329,7 @@
   },
   "pytest_candidate_collection": {
     "count": 3345,
-    "sorted_normalized_node_ids_sha256": "1131f211bb324c4d6800350b71364eb1f95efd13acef5a6dc4e984d708a88d53",
+    "sorted_normalized_node_ids_sha256": "f90c2f368fa8d5f976291cc8af3c7038c740893ac1abc78ec9b1bcf4ca5af959",
     "added_nodes": [
       "tests/test_benchmark_memory_protocol.py::test_memory_protocol_contract_and_repeated_sceneio_measurement",
       "tests/test_benchmark_memory_protocol.py::test_missing_sampler_is_explicit_and_strict_mode_rejects_it",
@@ -593,107 +593,127 @@
       "tests/test_io_codec_case_catalog.py::test_case_catalog_selectors_match_live_builtin_capabilities",
       "tests/test_io_codec_case_catalog.py::test_runtime_extensions_do_not_enter_repository_case_completeness",
       "tests/test_io_codec_case_catalog.py::test_case_catalog_has_lower_ownership_and_no_consumer_imports",
-      "tests/codecs/test_compressed_ply.py::test_writer_body_matches_pinned_platform_reference",
-      "tests/test_io_streaming.py::test_all_single_file_sinks_are_byte_identical",
-      "tests/test_io_streaming.py::test_directory_codec_writers_remain_byte_identical_file_sinks",
-      "tests/test_io_streaming.py::test_file_sink_guard_failure_does_not_truncate_destination",
-      "tests/test_io_streaming.py::test_file_sink_supports_unicode_paths",
-      "tests/test_io_streaming.py::test_file_sink_completes_multiple_native_write_chunks",
-      "tests/test_io_streaming.py::test_file_sink_accounts_for_partial_native_write_returns",
-      "tests/test_io_streaming.py::test_file_sink_closes_and_restores_after_native_error",
-      "tests/test_io_streaming.py::test_file_sink_closes_after_descriptor_failure",
-      "tests/test_io_streaming.py::test_file_sink_never_exposes_encoder_buffer_to_python",
-      "tests/test_io_streaming.py::test_file_sink_suppresses_reentrant_path_callbacks",
-      "tests/test_io_streaming.py::test_registry_prepares_array_protocols_before_file_sink[npy]",
-      "tests/test_io_streaming.py::test_registry_prepares_array_protocols_before_file_sink[pfm]",
-      "tests/test_io_streaming.py::test_registry_prepares_array_protocols_before_file_sink[flo]",
-      "tests/test_io_streaming.py::test_registry_prepares_npz_protocols_before_file_sink",
-      "tests/test_io_streaming.py::test_registry_prepare_failure_does_not_truncate_destination",
-      "tests/test_io_streaming.py::test_file_sink_does_not_allocate_output_sized_python_bytes"
+      "tests/codecs/test_compressed_ply.py::test_writer_body_matches_pinned_platform_reference"
     ],
     "removed_nodes": [
-      "tests/codecs/test_compressed_ply.py::test_writer_body_is_byte_identical_to_pinned_playcanvas_vector",
-      "tests/test_io_mmap.py::test_all_single_file_sinks_are_byte_identical",
-      "tests/test_io_mmap.py::test_directory_codec_writers_remain_byte_identical_file_sinks",
-      "tests/test_io_mmap.py::test_file_sink_guard_failure_does_not_truncate_destination",
-      "tests/test_io_mmap.py::test_file_sink_supports_unicode_paths",
-      "tests/test_io_mmap.py::test_file_sink_completes_multiple_native_write_chunks",
-      "tests/test_io_mmap.py::test_file_sink_accounts_for_partial_native_write_returns",
-      "tests/test_io_mmap.py::test_file_sink_closes_and_restores_after_native_error",
-      "tests/test_io_mmap.py::test_file_sink_closes_after_descriptor_failure",
-      "tests/test_io_mmap.py::test_file_sink_never_exposes_encoder_buffer_to_python",
-      "tests/test_io_mmap.py::test_file_sink_suppresses_reentrant_path_callbacks",
-      "tests/test_io_mmap.py::test_registry_prepares_array_protocols_before_file_sink[npy]",
-      "tests/test_io_mmap.py::test_registry_prepares_array_protocols_before_file_sink[pfm]",
-      "tests/test_io_mmap.py::test_registry_prepares_array_protocols_before_file_sink[flo]",
-      "tests/test_io_mmap.py::test_registry_prepares_npz_protocols_before_file_sink",
-      "tests/test_io_mmap.py::test_registry_prepare_failure_does_not_truncate_destination",
-      "tests/test_io_mmap.py::test_file_sink_does_not_allocate_output_sized_python_bytes"
+      "tests/codecs/test_compressed_ply.py::test_writer_body_is_byte_identical_to_pinned_playcanvas_vector"
     ],
-    "renamed_nodes": [
+    "renamed_node_groups": [
       {
-        "from": "tests/test_io_mmap.py::test_all_single_file_sinks_are_byte_identical",
-        "to": "tests/test_io_streaming.py::test_all_single_file_sinks_are_byte_identical"
+        "name": "streaming",
+        "from_prefix": "tests/test_io_mmap.py::",
+        "to_prefix": "tests/test_io_streaming.py::",
+        "excluded_function_names": [
+          "buffer_codecs"
+        ],
+        "function_count": 14,
+        "function_ast_sha256": "688682674d66ac34839e1618be1046ed75116038fecdc7543b5a4f35fcf97006",
+        "node_suffixes": [
+          "test_all_single_file_sinks_are_byte_identical",
+          "test_directory_codec_writers_remain_byte_identical_file_sinks",
+          "test_file_sink_guard_failure_does_not_truncate_destination",
+          "test_file_sink_supports_unicode_paths",
+          "test_file_sink_completes_multiple_native_write_chunks",
+          "test_file_sink_accounts_for_partial_native_write_returns",
+          "test_file_sink_closes_and_restores_after_native_error",
+          "test_file_sink_closes_after_descriptor_failure",
+          "test_file_sink_never_exposes_encoder_buffer_to_python",
+          "test_file_sink_suppresses_reentrant_path_callbacks",
+          "test_registry_prepares_array_protocols_before_file_sink[npy]",
+          "test_registry_prepares_array_protocols_before_file_sink[pfm]",
+          "test_registry_prepares_array_protocols_before_file_sink[flo]",
+          "test_registry_prepares_npz_protocols_before_file_sink",
+          "test_registry_prepare_failure_does_not_truncate_destination",
+          "test_file_sink_does_not_allocate_output_sized_python_bytes"
+        ]
       },
       {
-        "from": "tests/test_io_mmap.py::test_directory_codec_writers_remain_byte_identical_file_sinks",
-        "to": "tests/test_io_streaming.py::test_directory_codec_writers_remain_byte_identical_file_sinks"
-      },
-      {
-        "from": "tests/test_io_mmap.py::test_file_sink_guard_failure_does_not_truncate_destination",
-        "to": "tests/test_io_streaming.py::test_file_sink_guard_failure_does_not_truncate_destination"
-      },
-      {
-        "from": "tests/test_io_mmap.py::test_file_sink_supports_unicode_paths",
-        "to": "tests/test_io_streaming.py::test_file_sink_supports_unicode_paths"
-      },
-      {
-        "from": "tests/test_io_mmap.py::test_file_sink_completes_multiple_native_write_chunks",
-        "to": "tests/test_io_streaming.py::test_file_sink_completes_multiple_native_write_chunks"
-      },
-      {
-        "from": "tests/test_io_mmap.py::test_file_sink_accounts_for_partial_native_write_returns",
-        "to": "tests/test_io_streaming.py::test_file_sink_accounts_for_partial_native_write_returns"
-      },
-      {
-        "from": "tests/test_io_mmap.py::test_file_sink_closes_and_restores_after_native_error",
-        "to": "tests/test_io_streaming.py::test_file_sink_closes_and_restores_after_native_error"
-      },
-      {
-        "from": "tests/test_io_mmap.py::test_file_sink_closes_after_descriptor_failure",
-        "to": "tests/test_io_streaming.py::test_file_sink_closes_after_descriptor_failure"
-      },
-      {
-        "from": "tests/test_io_mmap.py::test_file_sink_never_exposes_encoder_buffer_to_python",
-        "to": "tests/test_io_streaming.py::test_file_sink_never_exposes_encoder_buffer_to_python"
-      },
-      {
-        "from": "tests/test_io_mmap.py::test_file_sink_suppresses_reentrant_path_callbacks",
-        "to": "tests/test_io_streaming.py::test_file_sink_suppresses_reentrant_path_callbacks"
-      },
-      {
-        "from": "tests/test_io_mmap.py::test_registry_prepares_array_protocols_before_file_sink[npy]",
-        "to": "tests/test_io_streaming.py::test_registry_prepares_array_protocols_before_file_sink[npy]"
-      },
-      {
-        "from": "tests/test_io_mmap.py::test_registry_prepares_array_protocols_before_file_sink[pfm]",
-        "to": "tests/test_io_streaming.py::test_registry_prepares_array_protocols_before_file_sink[pfm]"
-      },
-      {
-        "from": "tests/test_io_mmap.py::test_registry_prepares_array_protocols_before_file_sink[flo]",
-        "to": "tests/test_io_streaming.py::test_registry_prepares_array_protocols_before_file_sink[flo]"
-      },
-      {
-        "from": "tests/test_io_mmap.py::test_registry_prepares_npz_protocols_before_file_sink",
-        "to": "tests/test_io_streaming.py::test_registry_prepares_npz_protocols_before_file_sink"
-      },
-      {
-        "from": "tests/test_io_mmap.py::test_registry_prepare_failure_does_not_truncate_destination",
-        "to": "tests/test_io_streaming.py::test_registry_prepare_failure_does_not_truncate_destination"
-      },
-      {
-        "from": "tests/test_io_mmap.py::test_file_sink_does_not_allocate_output_sized_python_bytes",
-        "to": "tests/test_io_streaming.py::test_file_sink_does_not_allocate_output_sized_python_bytes"
+        "name": "inspection",
+        "from_prefix": "tests/test_io_mmap.py::",
+        "to_prefix": "tests/test_io_inspection.py::",
+        "excluded_function_names": [
+          "buffer_codecs"
+        ],
+        "function_count": 50,
+        "function_ast_sha256": "2197d69763d3cc42b2e3c4e7e7eafc3b5e5edc8a7ae78b301e4dad505118ee3e",
+        "node_suffixes": [
+          "test_inspect_matches_decoded_metadata_for_buffer_and_directory_codecs",
+          "test_inspect_large_npy_reads_only_header",
+          "test_inspect_large_xyz_streams_with_bounded_python_memory",
+          "test_inspection_is_immutable_and_bundler_counts_registered_cameras",
+          "test_inspect_normalizes_truncated_header_errors[npy-/x93NUMPY/x01]",
+          "test_inspect_normalizes_truncated_header_errors[npy-/x93NUMPY/x02/x00/x01/x00/x10/x00]",
+          "test_inspect_normalizes_truncated_header_errors[png-/x89PNG/r/n/x1a/n]",
+          "test_inspect_normalizes_truncated_header_errors[flo-PIEH]",
+          "test_inspect_normalizes_truncated_header_errors[splat-x]",
+          "test_inspect_all_single_file_codecs_reject_truncated_headers",
+          "test_inspect_colmap_directories_reject_truncated_or_missing_headers",
+          "test_inspect_rejects_unsupported_header_semantics[pfm-Pf/n1 1/nnan/n/x00/x00/x00/x00]",
+          "test_inspect_rejects_unsupported_header_semantics[hdr-#?RADIANCE/nFORMAT=32-bit_rle_rgbe/n/n+Y 1 +X 1/n]",
+          "test_inspect_rejects_unsupported_header_semantics[hdr-#?RADIANCE/nFORMAT=32-bit_rle_rgbe/n-Y 1 +X 1/n]",
+          "test_inspect_rejects_unsupported_header_semantics[png-/x89PNG/r/n/x1a/n/x00/x00/x00/rIHDR/x00/x03/rA/x00/x00/x00/x01/x08/x02/x00/x00/x00/xb2/xc7/xcb/x89/x00/x00/x00/x00IDAT5/xaf/x06/x1e]",
+          "test_inspect_rejects_unsupported_header_semantics[png-/x89PNG/r/n/x1a/n/x00/x00/x00/rIHDR/x00/x00/x00/x01/x00/x00/x00/x01/x10/x03/x00/x00/x00x[/xe8/xf8/x00/x00/x00/x03PLTE/x00/x00/x00/xa7z=/xda/x00/x00/x00/x00IDAT5/xaf/x06/x1e]",
+          "test_inspect_rejects_unsupported_header_semantics[webp-RIFF/x16/x00/x00/x00WEBPVP8X/n/x00/x00/x00/x00/x00/x00/x00/x00/x00/x00/x00/x00/x00]",
+          "test_inspect_rejects_npy_extra_fields_and_excess_dimensions",
+          "test_inspect_npy_reuses_core_header_grammar",
+          "test_inspect_gaussian_ply_matches_big_endian_and_ignores_nonvertex_properties",
+          "test_inspect_gaussian_ply_rejects_invalid_vertex_headers[element vertex -1]",
+          "test_inspect_gaussian_ply_rejects_invalid_vertex_headers[element vertex 11/nproperty double x]",
+          "test_inspect_spz_rejects_invalid_fractional_bits",
+          "test_inspect_json_error_messages_are_bounded[transforms_json]",
+          "test_inspect_json_error_messages_are_bounded[openmvg]",
+          "test_inspect_large_valid_json_streams_without_a_dom[transforms_json-{\"frames\":[],\"padding\":[]",
+          "test_inspect_large_valid_json_streams_without_a_dom[openmvg-{\"views\":[],\"intrinsics\":[],\"extrinsics\":[],\"structure\":[],\"padding\":[]",
+          "test_inspect_bundler_header_allocation_is_bounded",
+          "test_inspect_text_token_or_line_caps_bound_mapped_rss[bal]",
+          "test_inspect_text_token_or_line_caps_bound_mapped_rss[bundler]",
+          "test_inspect_text_token_or_line_caps_bound_mapped_rss[nvm]",
+          "test_inspect_text_token_or_line_caps_bound_mapped_rss[pfm]",
+          "test_inspect_text_token_or_line_caps_bound_mapped_rss[tum]",
+          "test_inspect_text_token_or_line_caps_bound_mapped_rss[kitti]",
+          "test_inspect_exr_duplicate_channel_attributes_are_bounded",
+          "test_inspect_xyz_supports_unicode_paths",
+          "test_inspect_colmap_text_skips_unbounded_observation_lines",
+          "test_inspect_nvm_uses_the_formats_token_stream",
+          "test_inspect_nvm_token_cap_matches_reader",
+          "test_json_scene_duplicate_root_sections_use_last_value[transforms_json]",
+          "test_json_scene_duplicate_root_sections_use_last_value[openmvg]",
+          "test_inspect_openmvg_rejects_duplicate_map_keys_like_reader[views]",
+          "test_inspect_openmvg_rejects_duplicate_map_keys_like_reader[intrinsics]",
+          "test_inspect_openmvg_rejects_duplicate_map_keys_like_reader[extrinsics]",
+          "test_inspect_openmvg_rejects_duplicate_map_keys_like_reader[structure]",
+          "test_inspect_openmvg_rejects_missing_intrinsic_like_reader",
+          "test_inspect_openmvg_rejects_unknown_observation_view_like_reader",
+          "test_inspect_openmvg_requires_map_entry_value_like_reader[intrinsics]",
+          "test_inspect_openmvg_requires_map_entry_value_like_reader[extrinsics]",
+          "test_inspect_openmvg_requires_map_entry_value_like_reader[structure]",
+          "test_inspect_openmvg_nested_duplicate_uses_last_value",
+          "test_inspect_openmvg_nested_duplicate_can_recover_with_last_value[views]",
+          "test_inspect_openmvg_nested_duplicate_can_recover_with_last_value[intrinsics]",
+          "test_inspect_openmvg_duplicate_observations_use_last_value",
+          "test_inspect_npz_rejects_unsupported_compression_like_reader",
+          "test_inspect_npz_skips_unsupported_directory_members_like_reader",
+          "test_inspect_npz_rejects_raw_non_utf8_filename_like_reader",
+          "test_inspect_npz_rejects_local_central_disagreement_like_reader[central_name]",
+          "test_inspect_npz_rejects_local_central_disagreement_like_reader[local_method]",
+          "test_inspect_netpbm_matches_inline_comment_grammar[P5/n1# width/n 1/n255/n/x00]",
+          "test_inspect_netpbm_matches_inline_comment_grammar[P5/n1 1# height/n255/n/x00]",
+          "test_inspect_netpbm_matches_inline_comment_grammar[P5/n1 1 255# maxval/n/x00]",
+          "test_inspect_flo_matches_reader_trailing_byte_tolerance",
+          "test_inspect_rejects_corrupt_png_metadata_crc",
+          "test_inspect_png_rejects_duplicate_critical_chunk_like_reader",
+          "test_inspect_rejects_inconsistent_jpeg_sof_length",
+          "test_inspect_jpeg_rejects_duplicate_sof_like_reader",
+          "test_inspect_jpeg_rejects_unsupported_marker_topology_like_reader[long_sos]",
+          "test_inspect_jpeg_rejects_unsupported_marker_topology_like_reader[unsupported_sof]",
+          "test_inspect_rejects_mismatched_webp_extended_canvas",
+          "test_inspect_webp_uses_first_image_bitstream_like_reader",
+          "test_inspect_webp_uses_first_extended_canvas_like_reader",
+          "test_inspect_webp_ignores_advisory_extended_alpha_flag",
+          "test_inspect_rejects_invalid_las_record_header[96-/x01/x00/x00/x00]",
+          "test_inspect_rejects_invalid_las_record_header[105-/x01/x00]",
+          "test_inspect_gaussian_ply_has_no_arbitrary_header_line_cap"
+        ]
       }
     ],
     "first": "tests/codecs/test_bal.py::test_oracle_write_sceneio_read_parity_and_conventions",

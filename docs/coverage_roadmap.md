@@ -44,7 +44,11 @@
 > behavior functions now have
 > focused ownership in `tests/test_io_streaming.py`; all 16 collected node
 > renames are explicit, parameter ids are unchanged, and the complete local
-> collection remains 3,345.
+> collection remains 3,345. Exact streaming commit `914702d` passes normal
+> run `30274413815` and compiler-instrumented run `30274413693`. Inspection
+> now has focused ownership in `tests/test_io_inspection.py`; its 47 tests and
+> three helpers preserve all 76 node suffixes under an exact path-only rename
+> group.
 
 The granular, per‑format execution plan for covering **every relevant file type
 that has a permissively‑licensed open‑source option**. Sits below the strategy

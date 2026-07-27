@@ -3077,7 +3077,7 @@ environment. `sceneio._wheel_smoke` returns `2`.
 - [x] Migrate mmap consumers while retaining the old matrix until exact
       equivalence is demonstrated.
 - [x] Migrate streaming consumers in a separate commit under the same rule.
-- [ ] Migrate inspection consumers in a separate commit under the same rule.
+- [x] Migrate inspection consumers in a separate commit under the same rule.
 - [ ] Migrate partial consumers one family at a time under the same rule.
 - [ ] Remove each old matrix only after its replacement is proven equivalent.
   - [x] Remove the mmap matrix after exact local and hosted equivalence.
@@ -3089,6 +3089,8 @@ environment. `sceneio._wheel_smoke` returns `2`.
       insufficient.
   - [x] Record and enforce the exact 16-node streaming path rename while
         preserving all test names and the `npy`/`pfm`/`flo` parameter ids.
+  - [x] Record and enforce the exact 76-node inspection path rename while
+        preserving every test name and parameter id.
 
 R3.2 closes at exact commit `0e54cf5`: normal run `30263506366` and
 compiler-instrumented run `30263506270` pass. The first R3.3 unit adds an
@@ -3153,6 +3155,19 @@ contains one native module and all 15 attribution files, excludes repository
 test/benchmark/build payloads, and passes `sceneio._wheel_smoke` in a fresh
 SceneIO-plus-NumPy environment. The three-platform mmap job includes
 `test_io_streaming.py` explicitly.
+
+Exact streaming migration commit `914702d` passes normal run `30274413815`
+and compiler-instrumented run `30274413693`. Inspection behavior now lives in
+`tests/test_io_inspection.py`: 47 tests plus three helpers are AST-identical
+to the `914702d` definitions, and the same 76 collected suffixes are pinned in
+a reusable rename group. The focused mmap, inspection, assembly, and catalog
+suites pass 114 tests; the complete collection remains 3,345 with normalized
+SHA-256
+`f90c2f368fa8d5f976291cc8af3c7038c740893ac1abc78ec9b1bcf4ca5af959`.
+Both platform commands name the inspection module explicitly. Exact package
+verification records 374 staged files, a 375-file sdist, and the unchanged
+81-member wheel; its fresh SceneIO-plus-NumPy environment passes
+`sceneio._wheel_smoke`.
 
 ### R3.4 — complete installed-wheel smoke
 

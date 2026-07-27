@@ -278,7 +278,11 @@ def test_case_catalog_has_lower_ownership_and_no_consumer_imports():
         "numpy",
         "sceneio",
     }
-    for consumer in ("test_io_mmap.py", "test_io_streaming.py"):
+    for consumer in (
+        "test_io_mmap.py",
+        "test_io_streaming.py",
+        "test_io_inspection.py",
+    ):
         consumer_source = (ROOT / "tests" / consumer).read_text(encoding="utf-8")
         assert (
             "from _support.buffer_codec_cases import build_buffer_codec_cases"

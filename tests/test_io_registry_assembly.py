@@ -774,26 +774,62 @@ def test_assembly_dependency_direction_and_import_delta_are_exact():
     assert hashlib.sha256("\n".join(sorted(node_ids)).encode()).hexdigest() == (
         candidate["sorted_normalized_node_ids_sha256"]
     )
-    added_nodes = set(candidate["added_nodes"])
-    removed_nodes = set(candidate["removed_nodes"])
+    feature_added_nodes = set(candidate["added_nodes"])
+    feature_removed_nodes = set(candidate["removed_nodes"])
     actual_nodes = set(node_ids)
-    assert added_nodes <= actual_nodes
-    assert removed_nodes.isdisjoint(actual_nodes)
-    assert added_nodes.isdisjoint(removed_nodes)
-    renamed_nodes = candidate["renamed_nodes"]
-    assert len(renamed_nodes) == 16
-    assert len({item["from"] for item in renamed_nodes}) == len(renamed_nodes)
-    assert len({item["to"] for item in renamed_nodes}) == len(renamed_nodes)
-    for item in renamed_nodes:
-        assert item["from"] in removed_nodes
-        assert item["to"] in added_nodes
-        assert item["from"].startswith("tests/test_io_mmap.py::")
-        assert item["to"].startswith("tests/test_io_streaming.py::")
-        assert item["from"].split("::", maxsplit=1)[1] == item["to"].split(
-            "::", maxsplit=1
-        )[1]
+    assert feature_added_nodes <= actual_nodes
+    assert feature_removed_nodes.isdisjoint(actual_nodes)
+    rename_groups = candidate["renamed_node_groups"]
+    expected_groups = {
+        "streaming": (
+            "tests/test_io_mmap.py::",
+            "tests/test_io_streaming.py::",
+            16,
+        ),
+        "inspection": (
+            "tests/test_io_mmap.py::",
+            "tests/test_io_inspection.py::",
+            76,
+        ),
+    }
+    assert [item["name"] for item in rename_groups] == list(expected_groups)
+    renamed_from = set()
+    renamed_to = set()
+    for group in rename_groups:
+        expected_from, expected_to, expected_count = expected_groups[group["name"]]
+        assert group["from_prefix"] == expected_from
+        assert group["to_prefix"] == expected_to
+        module_path = group["to_prefix"].removesuffix("::")
+        module_tree = ast.parse((ROOT / module_path).read_text(encoding="utf-8"))
+        excluded_functions = set(group["excluded_function_names"])
+        function_nodes = [
+            node
+            for node in module_tree.body
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+            and node.name not in excluded_functions
+        ]
+        assert len(function_nodes) == group["function_count"]
+        function_payload = "\n".join(
+            ast.dump(node, include_attributes=False) for node in function_nodes
+        )
+        assert hashlib.sha256(function_payload.encode()).hexdigest() == (
+            group["function_ast_sha256"]
+        )
+        suffixes = group["node_suffixes"]
+        assert len(suffixes) == expected_count
+        assert len(set(suffixes)) == expected_count
+        for suffix in suffixes:
+            renamed_from.add(group["from_prefix"] + suffix)
+            renamed_to.add(group["to_prefix"] + suffix)
+    assert len(renamed_from) == 92
+    assert len(renamed_to) == 92
+    assert renamed_from.isdisjoint(actual_nodes)
+    assert renamed_to <= actual_nodes
+    assert feature_added_nodes.isdisjoint(feature_removed_nodes)
+    assert feature_added_nodes.isdisjoint(renamed_to)
+    assert feature_removed_nodes.isdisjoint(renamed_from)
     assert candidate["count"] - parent["count"] == (
-        len(added_nodes) - len(removed_nodes)
+        len(feature_added_nodes) - len(feature_removed_nodes)
     )
 
     workflow = (
@@ -817,6 +853,8 @@ def test_assembly_dependency_direction_and_import_delta_are_exact():
     )
     assert windows_mmap_command.count("tests/test_io_streaming.py") == 1
     assert non_windows_mmap_command.count("tests/test_io_streaming.py") == 1
+    assert windows_mmap_command.count("tests/test_io_inspection.py") == 1
+    assert non_windows_mmap_command.count("tests/test_io_inspection.py") == 1
     assert (
         "bench/bench_io.py --runs 1 --scale 0.001 --skip-oracles --json"
         in ci_workflow

@@ -346,7 +346,7 @@ verification have accumulated in a few large modules:
 | Python registry | `registry.py`, 205 lines; `_registry/assembly.py`, 148 lines; focused `_registry/{model,adapters,detection,native_features}.py` modules; and eight `_registry/families/*.py` definition modules | all built-ins are family-owned; R3 now splits the benchmark and cross-codec verification monoliths |
 | Inspection | `_inspection.py` compatibility facade plus `_inspectors/{model,common,arrays,calibration,images,meshes,points,reconstruction,sequences,splats}.py`; all eight manifest families have lower inspector ownership | keep the proven shared model, mmap bridge, metadata bounds, exact-read/integer grammar, and image-result constructor as lower services |
 | Benchmark | compatible `bench_io.py` entry point plus `io_bench/{model,measure,reporting,runner}.py`, all eight lower family modules, and shared `families/common.py` | all benchmark ownership is lower; the final R3.2 unit adds built-in completeness and strict comparison-provider controls |
-| Cross-codec tests | shared 50-codec catalog and 44-case buffer builder; focused `test_io_streaming.py`; `test_io_mmap.py`, about 1,950 lines; `test_io_partial.py`, about 1,500 | streaming ownership is split; inspection and partial behavior remain the next staged consumers |
+| Cross-codec tests | shared 50-codec catalog and 44-case buffer builder; focused `test_io_streaming.py` and `test_io_inspection.py`; `test_io_mmap.py`, about 680 lines; `test_io_partial.py`, about 1,500 | mmap, streaming, and inspection ownership is split; partial behavior remains the next staged consumer |
 | Execution plan | `format_gap_implementation_plan.md`, about 2,500 lines | historical evidence and the active queue are easy to confuse |
 | Native dependencies | six source-complete in-tree projects, one LAZperf integration/provenance directory, and six `FetchContent` projects | stable builds are not yet fully offline/repository-contained |
 
@@ -879,7 +879,16 @@ collection remains 3,345 nodes and the 50-codec benchmark structure remains
 unchanged. The exact 373-file staged tree yields a 374-file sdist and
 81-member Windows abi3 wheel; the fresh installed smoke contains only SceneIO
 and NumPy. The Windows/Linux/macOS mmap job names the focused streaming suite
-explicitly. Inspection and partial consumers remain staged separately.
+explicitly. Exact streaming commit `914702d` passes normal run `30274413815`
+and compiler-instrumented run `30274413693`.
+
+Inspection is the next focused consumer. Its 47 tests and three helpers move
+unchanged to `tests/test_io_inspection.py`, preserving 76 node suffixes.
+Reusable rename groups expand the exact streaming and inspection old/new
+paths without mixing path-only moves into feature additions. The complete
+collection remains 3,345, each platform command names inspection explicitly,
+and the expected package inventory is 374/375/81. Partial consumers remain
+staged for family-by-family migration.
 
 ### R4. Organize native build and bindings
 

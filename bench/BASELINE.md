@@ -2200,3 +2200,32 @@ attribution files, with no test, benchmark, build, include, library, or
 shared-data payload. A fresh environment installs only SceneIO and NumPy, and
 `sceneio._wheel_smoke` returns `2`. The focused mmap platform job runs the
 new streaming module explicitly on Windows, Linux, and macOS.
+
+Exact streaming migration commit `914702d` passes normal run
+[30274413815](https://github.com/SceneAPI/SceneIO/actions/runs/30274413815)
+and compiler-instrumented run
+[30274413693](https://github.com/SceneAPI/SceneIO/actions/runs/30274413693).
+
+## R3.3 inspection consumer migration (2026-07-27)
+
+Inspection behavior now has focused ownership in
+`tests/test_io_inspection.py`. The 47 tests and three local helpers are
+AST-identical to their `914702d` definitions and produce the same 76 test
+names and parameter ids. Both mmap and inspection continue to consume the
+same 44 deterministic buffer cases without importing one another. The
+collection contract now represents path-only moves as reusable rename groups:
+the prior 16 streaming nodes and these 76 inspection nodes expand to exact
+old/new paths independently of feature additions and removals.
+
+The focused mmap, inspection, assembly, and catalog suites pass 114 tests.
+The complete collection remains 3,345 nodes with sorted normalized SHA-256
+`f90c2f368fa8d5f976291cc8af3c7038c740893ac1abc78ec9b1bcf4ca5af959`.
+The Windows, Linux, and macOS mmap-platform commands each include the focused
+inspection module explicitly. The independent one-run all-codec benchmark
+retains 50 successful rows and structural SHA-256
+`2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`.
+This checkpoint changes test ownership only and makes no codec-implementation
+performance claim. Its exact package verification records 374 staged files,
+a 375-file sdist whose only generated member is `PKG-INFO`, and the unchanged
+81-member wheel with one native module and 15 attribution files. The wheel
+installs with only SceneIO and NumPy and passes `sceneio._wheel_smoke`.

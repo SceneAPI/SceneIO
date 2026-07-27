@@ -292,7 +292,10 @@ sceneio._core (C++ / nanobind)
   `tests/test_io_streaming.py`; its 14 functions and 16 nodes consume the same
   buffer builder, and the assembly contract pins the exact path-only rename.
   The mmap and streaming suites share only the lower allocation-measurement
-  helper rather than importing one another.
+  helper rather than importing one another. Inspection behavior now has
+  focused ownership in `tests/test_io_inspection.py`; its 47 tests and three
+  helpers consume the same buffer builder, and its exact 76-node path-only
+  move is contract-pinned alongside streaming.
   Partial cases remain locally owned until their family-by-family equivalence
   migration.
   Built-in startup uses `_registry/assembly.py` as a lower staging boundary.

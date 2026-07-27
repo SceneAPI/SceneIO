@@ -411,6 +411,15 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > `PKG-INFO` beyond those files, and the sdist-derived 81-member Windows abi3
 > wheel retains one native module and all 15 attribution files. A fresh
 > SceneIO-plus-NumPy installation passes `sceneio._wheel_smoke`.
+> Exact streaming commit `914702d` passes [normal run
+> 30274413815](https://github.com/SceneAPI/SceneIO/actions/runs/30274413815)
+> and [compiler-instrumented run
+> 30274413693](https://github.com/SceneAPI/SceneIO/actions/runs/30274413693).
+> Inspection behavior now lives in `tests/test_io_inspection.py`; its 47 tests
+> and three helpers preserve all 76 node suffixes, and both platform commands
+> include the module explicitly. The complete collection remains 3,345 with
+> normalized SHA-256
+> `f90c2f368fa8d5f976291cc8af3c7038c740893ac1abc78ec9b1bcf4ca5af959`.
 
 [current-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287022
 [current-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287161

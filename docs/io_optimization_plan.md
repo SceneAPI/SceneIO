@@ -366,6 +366,12 @@ mmap/file-sink traced-allocation bounds.
 
 ## Phase O5 — Partial / lazy reads (complete)
 
+The current repository-organization checkpoint moves retained inspection
+verification into `tests/test_io_inspection.py`. Its 47 tests and three local
+helpers are unchanged, preserve all 76 collected suffixes, consume the shared
+44-codec case builder, and remain explicit in the Windows/Linux/macOS
+platform job.
+
 New public surface, applied to every format for which it's meaningful:
 - header-only `inspect(path)` → dims/count/dtype/channels without a full decode
   (all formats have a cheap header);

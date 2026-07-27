@@ -2037,8 +2037,12 @@ is the next completed consumer:
 14 functions now live in `tests/test_io_streaming.py`, retain all 16 test
 names and parameter ids, and have an explicit old/new node-path contract. The
 complete local collection remains 3,345 and the 50-codec benchmark structure
-is unchanged. The remaining inspection and partial consumer sequence is
-maintained in
+is unchanged. Exact streaming commit `914702d` passes normal run
+`30274413815` and compiler-instrumented run `30274413693`. Inspection is now
+the next completed consumer: 47 tests and three helpers move unchanged to
+`tests/test_io_inspection.py`, preserving 76 exact node suffixes under a
+path-only rename group. The remaining partial consumer sequence is maintained
+in
 [`next_stage_implementation_checklist.md`](next_stage_implementation_checklist.md).
 
 Status terms are strict:
