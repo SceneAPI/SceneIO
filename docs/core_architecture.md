@@ -7,7 +7,8 @@ things that keep this expansible as the format list from
 > **Growth checkpoint:** the live registry has reached 50 codec ids. The
 > format-focused native layer remains coherent, but registry, inspection,
 > benchmark, test-matrix, dependency, and binding wiring have outgrown a flat
-> layout. No new codec wave begins until the behavior-preserving R1-R6
+> layout. No new codec wave begins until the remaining behavior-preserving
+> R3-R6
 > migration and performance qualification in
 > [`repository_organization_plan.md`](repository_organization_plan.md) pass.
 > The paths below describe current wiring; the linked plan defines the target
@@ -157,9 +158,12 @@ sceneio._core (C++ / nanobind)
   parent contract is green across MSVC, AppleClang/ARM, hosted glibc, and
   manylinux2014/GCC-10 at `1864359`, and inspector commit `a4c968b` passes
   normal run `30224059298` and compiler-instrumented run `30224059282`. The
-  registry candidate is locally green; exact-tree source/wheel packaging and
-  all three independent reviews pass. Commit and hosted validation remain its
-  closure gates.
+  registry implementation commit `3e46d82` and platform-contract repair
+  `9928c6d` are pushed. Normal run `30228235491` and
+  compiler-instrumented run `30228235535` pass the final tree, including the
+  three-OS splat parity matrix and GCC-10 lane. Exact-tree source/wheel
+  packaging and all three independent reviews also pass. R2 is closed; R3
+  now splits benchmark and cross-codec verification ownership.
   Built-in startup uses `_registry/assembly.py` as a lower staging boundary.
   Eight complete family tuples are collected without touching the public
   registry. After all 50 canonical ids validate, the facade publishes the

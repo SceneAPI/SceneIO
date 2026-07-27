@@ -209,7 +209,7 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > 30218232246][r2-reconstruction-registry-final-instrumented] pass every final
 > lane. The checkpoint is closed.
 >
-> **R2 splat-family candidate (2026-07-26):** metadata ownership for
+> **R2 splat-family complete (2026-07-27):** metadata ownership for
 > `gaussian_ply`, `compressed_ply`, `sog`, `ksplat`, `spz`, and `splat` now
 > lives in `_inspectors/splats.py`. The compatibility facade retains exact
 > `(path, datatype)` wrappers and unchanged dispatch; the lower module uses no
@@ -245,8 +245,13 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > `_registry.families.splats` added to the I/O facade. Cross-platform parent
 > behavior is frozen and green at `1864359`. Exact-tree source/wheel
 > packaging, the external NumPy-only installed smoke, and all three
-> independent reviews pass; commit and hosted validation remain before R2
-> closes.
+> independent reviews pass. Registry implementation `3e46d82` and the
+> platform-fingerprint contract repair `9928c6d` are pushed;
+> [normal run 30228235491](https://github.com/SceneAPI/SceneIO/actions/runs/30228235491)
+> and
+> [compiler-instrumented run 30228235535](https://github.com/SceneAPI/SceneIO/actions/runs/30228235535)
+> pass the final tree, including all three splat operating systems and the
+> GCC-10 lane. R2 is closed and R3 is active.
 
 [current-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287022
 [current-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287161

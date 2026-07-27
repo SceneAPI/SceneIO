@@ -26,7 +26,7 @@ documented skips; the Windows abi3 wheel built from the exact `95061c6` source
 archive passes a fresh NumPy-only installed-wheel smoke. Build-only release run
 30189483142 also builds the source archive and builds and smoke-tests the Linux,
 macOS, and Windows wheel sets with publication skipped. No new format starts
-while R2-R6 remain open.
+while R3-R6 remain open.
 
 R2.0 is complete at `40d5412`. Image-sequence frame
 extensions and metadata inspection are injected through the lower-level
@@ -189,7 +189,7 @@ tests, the family matrix passes 506 tests with two documented skips, and the
   checkpoint is closed.
   Exact-export import sampling retains the seven-module `sceneio` and
   eight-module direct `_core` sets; the I/O facade's only added module is
-  `_registry.families.reconstruction`. Splats remain the last R2 family.
+  `_registry.families.reconstruction`. Splats are the final R2 family.
 
 Splats are the eighth and final R2 family. Their exact parent is
 `0696533e515b5f8e65cbb676df28d852f9d0a049`, tree
@@ -206,9 +206,11 @@ direct-`meta.json` adapters remain facade-injected, preserving their callable
 and path behavior; shared PLY classification remains in `_ply.py`. Aggregate
 publication restores canonical positions 2/3/4/5/14/49, and the facade no
 longer contains any individual built-in definition. The exact-tree package
-and all three independent-review gates pass; commit and hosted validation
-remain. This extraction changes no codec algorithm or public API and makes no
-performance-gain claim.
+and all three independent-review gates pass. Registry implementation
+`3e46d82` and platform-contract repair `9928c6d` are pushed; final normal run
+`30228235491` and compiler-instrumented run `30228235535` pass. R2 is closed
+and R3.1a is active. This extraction changes no codec algorithm or public API
+and makes no performance-gain claim.
 
 The initial splat parent-freeze checkpoint is committed and pushed at
 `93fcf1b39350a3a0080a7b87ead65d0d9343d354`; its
@@ -289,6 +291,12 @@ wheel runtime identity, native dependency inspection, and the external
 NumPy-only all-six installed smoke pass. All three independent reviews are
 clear after resolving the three-OS oracle-parity, wheel-smoke ownership, and
 reload-atomicity findings.
+The exact platform-repair tree
+`79819558208fdb8099b23d3c38fd1afee3ee2f7c` repeats the 326/327/81
+Git/source/wheel inventory and external installed smoke. Normal run
+`30228235491` passes the full suite, performance guard, all three splat jobs,
+mmap matrix, reconstruction matrix, and GCC-10 lane; compiler-instrumented
+run `30228235535` passes both jobs. R2 is complete.
 
 The codec-per-file C++ layer remains reasonably isolated, but orchestration and
 verification have accumulated in a few large modules:

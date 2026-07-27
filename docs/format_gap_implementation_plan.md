@@ -1991,7 +1991,7 @@ wheel built from the exact `95061c6` source archive passes the NumPy-only
 installed-wheel smoke, and the exact-head normal and instrumented workflows
 pass. Exact-head build-only release run 30189483142 also builds the source
 archive and builds and smoke-tests all three platform wheel sets with
-publication skipped. R2 is the active repository-organization unit in
+publication skipped. R3 is the active repository-organization unit in
 [`next_stage_implementation_checklist.md`](next_stage_implementation_checklist.md).
 
 Status terms are strict:

@@ -2554,17 +2554,26 @@ changed.
 - [x] Obtain separate architecture/correctness, test/performance, and
       platform/package/documentation reviews for each implementation
       checkpoint. Resolve every finding before its commit.
-- [ ] Commit and push only green, Ruff-clean units with the required co-author
+- [x] Commit and push only green, Ruff-clean units with the required co-author
       trailer. Require green normal and compiler-instrumented hosted runs for
       the exact final implementation tree.
-- [ ] Update `core_architecture.md`, `repository_organization_plan.md`,
+- [x] Update `core_architecture.md`, `repository_organization_plan.md`,
       `format_coverage.md`, this checklist, and `bench/BASELINE.md` with exact
       final line counts, collection/import counts, benchmark hashes, artifact
       inventories, commit ids, and workflow ids. Update the roadmap only if
       its active status changes.
-- [ ] Do not trigger `publish.yml`, create a tag, or publish a package. The
+- [x] Do not trigger `publish.yml`, create a tag, or publish a package. The
       cross-platform wheel dry run remains user-triggered. After this evidence
       closure, mark R2 complete and begin R3.1a.
+
+R2 closes at registry implementation `3e46d82` plus the unchanged-codec
+platform-contract repair `9928c6d`. Exact repair tree
+`79819558208fdb8099b23d3c38fd1afee3ee2f7c` repeats the measured
+326/327/81 Git/source/wheel inventory and external installed smoke. Normal
+run `30228235491` passes the full suite, retained performance guard, all three
+splat jobs, mmap/reconstruction matrices, and GCC-10 lane.
+Compiler-instrumented run `30228235535` passes both jobs. `publish.yml` was
+not triggered; no tag or package was published. R3.1a is now active.
 
 ## 7. R3 — split benchmark and cross-codec tests
 

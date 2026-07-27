@@ -1547,3 +1547,16 @@ Native exp/log rounding is the inferred cause consistent with the one changed
 lossy quantization boundary, not a universal platform claim. Both outputs
 pass the independent layout/decode oracle. The exact hosted-profile
 fingerprints are now explicit; codec and benchmark behavior are unchanged.
+
+Registry implementation `3e46d82` and test-contract repair `9928c6d` are
+pushed. The repair's exact tree
+`79819558208fdb8099b23d3c38fd1afee3ee2f7c` contains 326 tracked files,
+a byte-consistent 327-file source archive, and an 81-member Windows abi3
+wheel. The source archive SHA-256 is
+`33e0bb7f0a85a630f8fbe45117c4e645979848bf11d5edc6bbfa963c7f067134`;
+the derived wheel SHA-256 is
+`1796fffd3a207fa9033f05500986fee36be152884cec2230ca9a68889bb4a112`.
+The external NumPy-only installed smoke passes. Normal run `30228235491`
+passes the all-50 benchmark structure and retained five-run guard plus every
+platform lane; compiler-instrumented run `30228235535` passes both jobs. R2
+is closed.

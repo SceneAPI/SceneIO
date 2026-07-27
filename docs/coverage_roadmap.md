@@ -10,6 +10,8 @@
 > [`repository_organization_plan.md`](repository_organization_plan.md), with
 > its reviewed execution checklist in
 > [`next_stage_implementation_checklist.md`](next_stage_implementation_checklist.md).
+> R2 is closed at registry implementation `3e46d82` plus platform-contract
+> repair `9928c6d`; R3 benchmark/test decomposition is the active gate.
 
 The granular, per‑format execution plan for covering **every relevant file type
 that has a permissively‑licensed open‑source option**. Sits below the strategy
