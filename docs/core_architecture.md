@@ -210,7 +210,15 @@ sceneio._core (C++ / nanobind)
   RGB normalization, and installed/absent/fallback controls preserve the
   historical behavior. Portable independent Radiance HDR benchmark throughput
   is an explicit exemption; independent NumPy RGBE codec parity remains in the
-  HDR parity suite.
+  HDR parity suite. Exact raster commit `6572a76` passes normal run
+  `30239455960` and compiler-instrumented run `30239455952`. The mesh
+  checkpoint lower-owns the five buffer-backed PLY-mesh/OBJ/STL/OFF/GLB specs,
+  five deterministic mesh/scene fixtures, and 12 optional trimesh helpers.
+  Specialized multi-file glTF orchestration remains in
+  `bench_io.py::_benchmark_gltf` until runner extraction but consumes the
+  lower fixture/oracle pair through compatibility aliases. Checked cyclic
+  triangle normalization preserves winding while comparing positions and
+  connectivity for real oracle and core files.
   Built-in startup uses `_registry/assembly.py` as a lower staging boundary.
   Eight complete family tuples are collected without touching the public
   registry. After all 50 canonical ids validate, the facade publishes the

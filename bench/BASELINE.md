@@ -1807,3 +1807,40 @@ dependency; those three comparison libraries remain test-extra only. A fresh
 environment with that wheel and NumPy, but without any of them, passes
 `python -m sceneio._wheel_smoke`. All three independent reviews are clear.
 This is a mechanical ownership change and makes no codec-performance claim.
+Exact commit `6572a76` passes normal run
+[30239455960](https://github.com/SceneAPI/SceneIO/actions/runs/30239455960)
+and compiler-instrumented run
+[30239455952](https://github.com/SceneAPI/SceneIO/actions/runs/30239455952).
+
+## R3.2 mesh benchmark-family extraction (2026-07-27)
+
+The fourth R3.2 checkpoint moves the five buffer-backed `ply_mesh`, `obj`,
+`stl`, `off`, and `glb` specs to `bench/io_bench/families/meshes.py`. The five
+unchanged mesh/scene builders now live in `fixtures/meshes.py`; all 12 optional
+trimesh comparison helpers, including the multi-file glTF pair, live in
+`oracles/meshes.py`. The specialized `gltf` benchmark row remains in
+`bench_io.py::_benchmark_gltf` until the final R3.2 runner extraction, but
+consumes the same lower-owned fixture/oracle helpers through exact facade
+aliases.
+
+All 17 moved helper ASTs and all five standard `Spec` ASTs match the raster
+checkpoint exactly. Contract controls pin lower/facade identities, core
+callbacks, payload-size accounting, installed and absent trimesh states, and
+the unchanged interleaved mesh result positions. Real trimesh writer-to-reader
+and core-to-trimesh paths execute for all five standard rows and specialized
+glTF. Their transformed scene geometry is canonicalized by triangle and
+compared to the fixture's positions and connectivity, so equal face counts
+alone cannot pass. The complete 50-codec smoke retains structural projection
+`2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`.
+
+All six live mesh rows produce independent write/read metrics. Focused
+mesh/contract validation passes 336 tests; the complete suite passes 3,316
+with the same four documented skips, and Ruff is clean. A fresh 353-member
+exact-tree source archive contains exactly the three new mesh benchmark
+modules and no generated cache files. Its 81-member derived wheel contains no
+benchmark, test, trimesh, or pygltflib module, retains all 15 attribution
+files, and keeps `numpy>=1.26` as its sole unconditional dependency; trimesh
+and pygltflib remain test-extra only. A fresh environment with that wheel and
+NumPy, but without either comparison library, passes
+`python -m sceneio._wheel_smoke`. This is a mechanical ownership change and
+makes no codec-performance claim.

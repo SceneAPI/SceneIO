@@ -679,6 +679,7 @@ def _assert_benchmark_components_and_metric_semantics_are_explicit():
         "format parity remains covered by the independent NumPy RGBE "
         "parser and serializer in tests/codecs/test_hdr.py"
     )
+    assert not extracted_families["meshes"]["no_oracle_exemptions"]
 
     lower_modules = sorted(
         {
@@ -1190,6 +1191,242 @@ def _assert_benchmark_components_and_metric_semantics_are_explicit():
         "iio": True,
     }
     assert openexr_blocked["oracle_pairs"]["exr"] == [False, False]
+
+    mesh_family_module = sys.modules[
+        "bench.io_bench.families.meshes"
+    ]
+    mesh_fixture_module = sys.modules[
+        "bench.io_bench.fixtures.meshes"
+    ]
+    mesh_oracle_module = sys.modules[
+        "bench.io_bench.oracles.meshes"
+    ]
+    mesh_fixture_names = (
+        "_mesh_obj",
+        "_mesh_off",
+        "_mesh_ply",
+        "_mesh_scene",
+        "_mesh_stl",
+    )
+    mesh_oracle_names = (
+        "_trimesh_glb_r",
+        "_trimesh_glb_w",
+        "_trimesh_gltf_r",
+        "_trimesh_gltf_w",
+        "_trimesh_obj_r",
+        "_trimesh_obj_w",
+        "_trimesh_off_r",
+        "_trimesh_off_w",
+        "_trimesh_ply_r",
+        "_trimesh_ply_w",
+        "_trimesh_stl_r",
+        "_trimesh_stl_w",
+    )
+    for helper_name in mesh_fixture_names:
+        assert getattr(mesh_family_module, helper_name) is getattr(
+            mesh_fixture_module,
+            helper_name,
+        )
+        assert getattr(benchmark, helper_name) is getattr(
+            mesh_fixture_module,
+            helper_name,
+        )
+    for helper_name in mesh_oracle_names:
+        assert getattr(benchmark, helper_name) is getattr(
+            mesh_oracle_module,
+            helper_name,
+        )
+    assert benchmark.trimesh is mesh_oracle_module.trimesh
+
+    mesh_specs = benchmark.build_mesh_specs(0.001)
+    assert [spec.id for spec in mesh_specs] == [
+        "ply_mesh",
+        "obj",
+        "stl",
+        "off",
+        "glb",
+    ]
+    mesh_core_bindings = {
+        "ply_mesh": (_core.write_ply_mesh, _core.read_ply_mesh),
+        "obj": (_core.write_obj, _core.read_obj),
+        "stl": (_core.write_stl, _core.read_stl),
+        "off": (_core.write_off, _core.read_off),
+        "glb": (_core.write_glb, _core.read_glb),
+    }
+    mesh_oracle_bindings = {
+        "ply_mesh": (
+            mesh_oracle_module._trimesh_ply_w,
+            mesh_oracle_module._trimesh_ply_r,
+        ),
+        "obj": (
+            mesh_oracle_module._trimesh_obj_w,
+            mesh_oracle_module._trimesh_obj_r,
+        ),
+        "stl": (
+            mesh_oracle_module._trimesh_stl_w,
+            mesh_oracle_module._trimesh_stl_r,
+        ),
+        "off": (
+            mesh_oracle_module._trimesh_off_w,
+            mesh_oracle_module._trimesh_off_r,
+        ),
+        "glb": (
+            mesh_oracle_module._trimesh_glb_w,
+            mesh_oracle_module._trimesh_glb_r,
+        ),
+    }
+
+    def trimesh_triangles(decoded):
+        if hasattr(decoded, "geometry"):
+            decoded = decoded.to_geometry()
+        vertices = np.asarray(decoded.vertices)
+        faces = np.asarray(decoded.faces)
+        return vertices[faces]
+
+    def canonical_triangles(triangles):
+        triangles = np.asarray(triangles, dtype=np.float64)
+        canonical = np.empty_like(triangles)
+        for index, triangle in enumerate(triangles):
+            rotations = np.stack(
+                [
+                    triangle,
+                    np.roll(triangle, -1, axis=0),
+                    np.roll(triangle, -2, axis=0),
+                ]
+            )
+            flattened_rotations = rotations.reshape(3, -1)
+            rotation_order = np.lexsort(
+                tuple(
+                    flattened_rotations[:, component]
+                    for component in range(
+                        flattened_rotations.shape[1] - 1,
+                        -1,
+                        -1,
+                    )
+                )
+            )
+            canonical[index] = rotations[rotation_order[0]]
+        flattened = canonical.reshape(len(canonical), -1)
+        face_order = np.lexsort(
+            tuple(
+                flattened[:, index]
+                for index in range(flattened.shape[1] - 1, -1, -1)
+            )
+        )
+        return canonical[face_order]
+
+    def assert_trimesh_geometry(decoded, payload):
+        expected = payload["positions"][payload["faces"]]
+        np.testing.assert_allclose(
+            canonical_triangles(trimesh_triangles(decoded)),
+            canonical_triangles(expected),
+            rtol=0.0,
+            atol=1e-6,
+        )
+
+    for spec in mesh_specs:
+        assert (spec.w, spec.r) == mesh_core_bindings[spec.id]
+        record, payload = spec.make()
+        assert spec.nbytes(record, payload) == sum(
+            value.nbytes for value in payload.values()
+        )
+        core_encoded = bytes(spec.w(record))
+        assert core_encoded
+        spec.r(core_encoded)
+        if mesh_oracle_module.trimesh is None:
+            assert (spec.ow, spec.orr) == (None, None)
+            continue
+        assert (spec.ow, spec.orr) == mesh_oracle_bindings[spec.id]
+        oracle_encoded = spec.ow(payload)
+        assert isinstance(oracle_encoded, bytes)
+        assert oracle_encoded
+        assert_trimesh_geometry(spec.orr(oracle_encoded), payload)
+        assert_trimesh_geometry(spec.orr(core_encoded), payload)
+
+    if mesh_oracle_module.trimesh is not None:
+        gltf_record, gltf_payload = mesh_fixture_module._mesh_scene(9)
+        oracle_files = mesh_oracle_module._trimesh_gltf_w(
+            gltf_payload
+        )
+        assert isinstance(oracle_files, dict)
+        assert oracle_files
+        assert all(
+            isinstance(name, str) and isinstance(data, bytes)
+            for name, data in oracle_files.items()
+        )
+        assert_trimesh_geometry(
+            mesh_oracle_module._trimesh_gltf_r(oracle_files),
+            gltf_payload,
+        )
+        document, binary = _core.write_gltf(
+            gltf_record,
+            "mesh.bin",
+        )
+        core_files = {
+            "scene.gltf": bytes(document),
+            "mesh.bin": bytes(binary),
+        }
+        assert_trimesh_geometry(
+            mesh_oracle_module._trimesh_gltf_r(core_files),
+            gltf_payload,
+        )
+
+    blocked_mesh_probe = textwrap.dedent(
+        f"""
+        import builtins
+        import importlib
+        import json
+
+        original_import = builtins.__import__
+
+        def blocked_import(name, *args, **kwargs):
+            if name == "trimesh" or name.startswith("trimesh."):
+                raise ImportError("blocked by benchmark contract")
+            return original_import(name, *args, **kwargs)
+
+        builtins.__import__ = blocked_import
+        oracles = importlib.import_module(
+            "bench.io_bench.oracles.meshes"
+        )
+        fixtures = importlib.import_module(
+            "bench.io_bench.fixtures.meshes"
+        )
+        family = importlib.import_module(
+            "bench.io_bench.families.meshes"
+        )
+        facade = importlib.import_module("bench.bench_io")
+        specs = family.build_mesh_specs(0.001)
+        fixture_names = {mesh_fixture_names!r}
+        oracle_names = {mesh_oracle_names!r}
+        print(json.dumps([
+            oracles.trimesh is None,
+            family.trimesh is oracles.trimesh,
+            facade.trimesh is oracles.trimesh,
+            facade.build_mesh_specs is family.build_mesh_specs,
+            all(
+                getattr(family, name) is getattr(fixtures, name)
+                and getattr(facade, name) is getattr(fixtures, name)
+                for name in fixture_names
+            ),
+            all(
+                getattr(facade, name) is getattr(oracles, name)
+                for name in oracle_names
+            ),
+            all(
+                spec.ow is None and spec.orr is None
+                for spec in specs
+            ),
+        ]))
+        """
+    )
+    blocked_mesh = subprocess.run(
+        [sys.executable, "-c", blocked_mesh_probe],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert json.loads(blocked_mesh.stdout) == [True] * 7
 
     array_oracle_module = sys.modules["bench.io_bench.oracles.arrays"]
     oracle_probe = np.arange(12, dtype=np.float32).reshape(3, 4)

@@ -296,6 +296,14 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > capabilities and only moves development benchmark ownership. Seven live
 > rows have independent metrics; portable Radiance HDR benchmark throughput is
 > an explicit exemption while independent NumPy RGBE parity remains covered.
+> Raster images close at `6572a76`: normal run
+> [30239455960](https://github.com/SceneAPI/SceneIO/actions/runs/30239455960)
+> and compiler-instrumented run
+> [30239455952](https://github.com/SceneAPI/SceneIO/actions/runs/30239455952)
+> pass. The current mesh extraction moves five buffer-backed specs plus shared
+> glTF fixture/oracle helpers without changing any format capability;
+> specialized glTF orchestration remains in the compatible facade until
+> runner extraction.
 
 [current-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287022
 [current-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287161

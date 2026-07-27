@@ -2730,7 +2730,7 @@ passes both jobs. No release workflow, tag, or publication was triggered.
   - [x] arrays;
   - [x] calibration;
   - [x] images;
-  - [ ] meshes;
+  - [x] meshes;
   - [ ] points;
   - [ ] reconstruction;
   - [ ] sequences;
@@ -2833,6 +2833,37 @@ members and exactly the three new image modules without generated caches. Its
 retains all 15 attribution files, and keeps NumPy as the sole unconditional
 dependency; those comparison libraries remain test-extra only. A fresh
 NumPy-only environment without them passes the installed-wheel smoke.
+
+Exact raster-image commit `6572a76` passes normal run
+[30239455960](https://github.com/SceneAPI/SceneIO/actions/runs/30239455960)
+and compiler-instrumented run
+[30239455952](https://github.com/SceneAPI/SceneIO/actions/runs/30239455952).
+
+The mesh checkpoint moves the five buffer-backed `ply_mesh`, `obj`, `stl`,
+`off`, and `glb` specs to `io_bench/families/meshes.py`. Five unchanged
+mesh/scene fixtures move to `fixtures/meshes.py`; 12 optional trimesh
+comparison helpers, including the multi-file glTF pair, move to
+`oracles/meshes.py`. The specialized `gltf` row remains in
+`bench_io.py::_benchmark_gltf` pending the final runner extraction and consumes
+the lower helpers through exact compatibility aliases. All 17 moved helper
+ASTs and all five standard `Spec` ASTs match the raster checkpoint.
+
+Contract controls pin core callbacks, payload sizes, lower/facade identities,
+installed and absent trimesh behavior, and unchanged result placement. They
+execute real trimesh writer-to-reader and core-to-trimesh paths for the five
+standard rows and specialized glTF, canonicalize transformed scene triangles,
+and compare positions/connectivity within `1e-6`. All six live rows have
+non-null independent metrics. The complete 50-codec smoke retains structural
+projection
+`2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`.
+Focused mesh/contract validation passes 336 tests; the complete suite passes
+3,316 with the same four documented skips, and Ruff is clean. The fresh
+exact-tree source archive has 353 members and exactly the three new mesh
+modules without generated caches. Its 81-member wheel excludes
+benchmark/test/trimesh/pygltflib modules, retains all 15 attribution files,
+and keeps NumPy as the sole unconditional dependency; trimesh and pygltflib
+remain test-extra only. A fresh NumPy-only environment without them passes the
+installed-wheel smoke.
 
 ### R3.3 — cross-codec test support
 

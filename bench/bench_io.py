@@ -26,7 +26,6 @@ import sqlite3
 import sys
 import tempfile
 from functools import partial
-from itertools import pairwise
 from pathlib import Path
 
 import numpy as np
@@ -42,17 +41,20 @@ from bench.io_bench.families.calibration import (
 )
 from bench.io_bench.families.common import _record_nbytes
 from bench.io_bench.families.images import build_image_specs
+from bench.io_bench.families.meshes import build_mesh_specs
 from bench.io_bench.fixtures import arrays as array_fixtures
 from bench.io_bench.fixtures import (
     calibration as calibration_fixtures,
 )
 from bench.io_bench.fixtures import images as image_fixtures
+from bench.io_bench.fixtures import meshes as mesh_fixtures
 from bench.io_bench.model import DirectorySpec, Spec
 from bench.io_bench.oracles import arrays as array_oracles
 from bench.io_bench.oracles import (
     calibration as calibration_oracles,
 )
 from bench.io_bench.oracles import images as image_oracles
+from bench.io_bench.oracles import meshes as mesh_oracles
 from bench.io_bench.reporting import (
     print_cold_cache_unavailable,
     print_colmap_db_row,
@@ -102,6 +104,25 @@ iio = image_oracles.iio
 OpenEXR = image_oracles.OpenEXR
 PILImage = image_oracles.PILImage
 
+_mesh_obj = mesh_fixtures._mesh_obj
+_mesh_off = mesh_fixtures._mesh_off
+_mesh_ply = mesh_fixtures._mesh_ply
+_mesh_scene = mesh_fixtures._mesh_scene
+_mesh_stl = mesh_fixtures._mesh_stl
+_trimesh_glb_r = mesh_oracles._trimesh_glb_r
+_trimesh_glb_w = mesh_oracles._trimesh_glb_w
+_trimesh_gltf_r = mesh_oracles._trimesh_gltf_r
+_trimesh_gltf_w = mesh_oracles._trimesh_gltf_w
+_trimesh_obj_r = mesh_oracles._trimesh_obj_r
+_trimesh_obj_w = mesh_oracles._trimesh_obj_w
+_trimesh_off_r = mesh_oracles._trimesh_off_r
+_trimesh_off_w = mesh_oracles._trimesh_off_w
+_trimesh_ply_r = mesh_oracles._trimesh_ply_r
+_trimesh_ply_w = mesh_oracles._trimesh_ply_w
+_trimesh_stl_r = mesh_oracles._trimesh_stl_r
+_trimesh_stl_w = mesh_oracles._trimesh_stl_w
+trimesh = mesh_oracles.trimesh
+
 _measure = benchmark_measure.measure
 _measure_in_process_rss = benchmark_measure.measure_in_process_rss
 _try = benchmark_measure.try_measure
@@ -119,10 +140,6 @@ try:
     import open3d as o3d
 except Exception:
     o3d = None
-try:
-    import trimesh
-except Exception:
-    trimesh = None
 # --- payload builders -------------------------------------------------------
 def _y4m_fixture(side):
     frames = 4
@@ -279,192 +296,6 @@ def _pc_ply(n):
         _core.point_cloud(xyz, colors=colors, normals=normals),
         payload,
     )
-
-
-def _mesh_ply(n):
-    rng = np.random.default_rng(23)
-    n = max(3, n)
-    faces = max(1, n // 2)
-    corners = faces * 3
-    positions = rng.standard_normal((n, 3)).astype(np.float32)
-    indices = (np.arange(corners, dtype=np.uint64) % n).reshape(faces, 3)
-    offsets = np.arange(0, corners + 1, 3, dtype=np.uint64)
-    vertex_normals = rng.standard_normal((n, 3)).astype(np.float32)
-    vertex_uvs = rng.random((n, 2), dtype=np.float32)
-    vertex_colors = rng.integers(0, 256, (n, 4), dtype=np.uint8)
-    corner_normals = rng.standard_normal((corners, 3)).astype(np.float32)
-    corner_uvs = rng.random((corners, 2), dtype=np.float32)
-    corner_colors = rng.integers(0, 256, (corners, 4), dtype=np.uint8)
-    primitive_offsets = (
-        np.array([0, faces], np.uint64)
-        if faces == 1
-        else np.array([0, faces // 2, faces], np.uint64)
-    )
-    primitive_materials = np.arange(
-        len(primitive_offsets) - 1, dtype=np.int32
-    )
-    payload = {
-        "positions": positions,
-        "faces": indices,
-        "vertex_normals": vertex_normals,
-        "vertex_uvs": vertex_uvs,
-        "vertex_colors": vertex_colors,
-        "corner_normals": corner_normals,
-        "corner_uvs": corner_uvs,
-        "corner_colors": corner_colors,
-        "primitive_offsets": primitive_offsets,
-        "primitive_materials": primitive_materials,
-    }
-    return (
-        _core.mesh(
-            positions,
-            offsets,
-            indices.reshape(-1),
-            vertex_normals=vertex_normals,
-            corner_normals=corner_normals,
-            vertex_uvs=vertex_uvs,
-            corner_uvs=corner_uvs,
-            vertex_colors=vertex_colors,
-            corner_colors=corner_colors,
-            primitive_offsets=primitive_offsets,
-            primitive_materials=primitive_materials,
-        ),
-        payload,
-    )
-
-
-def _mesh_obj(n):
-    rng = np.random.default_rng(29)
-    vertices = max(3, n)
-    faces = max(1, vertices // 3)
-    corners = faces * 3
-    positions = rng.standard_normal((vertices, 3)).astype(np.float32)
-    indices = (
-        np.arange(corners, dtype=np.uint64) % vertices
-    ).reshape(faces, 3)
-    offsets = np.arange(0, corners + 1, 3, dtype=np.uint64)
-    vertex_normals = rng.standard_normal((vertices, 3)).astype(np.float32)
-    vertex_uvs = rng.random((vertices, 2), dtype=np.float32)
-    vertex_colors = rng.integers(0, 256, (vertices, 4), dtype=np.uint8)
-    vertex_colors[:, 3] = 255
-    payload = {
-        "positions": positions,
-        "faces": indices,
-        "vertex_normals": vertex_normals,
-        "vertex_uvs": vertex_uvs,
-        "vertex_colors": vertex_colors,
-    }
-    return (
-        _core.mesh(
-            positions,
-            offsets,
-            indices.reshape(-1),
-            vertex_normals=vertex_normals,
-            vertex_uvs=vertex_uvs,
-            vertex_colors=vertex_colors,
-        ),
-        payload,
-    )
-
-
-def _mesh_stl(n):
-    rng = np.random.default_rng(31)
-    faces = max(1, n // 3)
-    corners = faces * 3
-    positions = rng.standard_normal((corners, 3)).astype(np.float32)
-    indices = np.arange(corners, dtype=np.uint64).reshape(faces, 3)
-    offsets = np.arange(0, corners + 1, 3, dtype=np.uint64)
-    face_normals = rng.standard_normal((faces, 3)).astype(np.float32)
-    corner_normals = np.repeat(face_normals, 3, axis=0)
-    payload = {
-        "positions": positions,
-        "faces": indices,
-        "face_normals": face_normals,
-    }
-    return (
-        _core.mesh(
-            positions,
-            offsets,
-            indices.reshape(-1),
-            corner_normals=corner_normals,
-        ),
-        payload,
-    )
-
-
-def _mesh_off(n):
-    rng = np.random.default_rng(37)
-    # Indexed formats commonly reuse a much smaller vertex domain across many
-    # faces. Keep face records dominant so bounded face selection measures the
-    # work and allocations it is designed to remove.
-    vertices = max(3, n // 10)
-    faces = max(1, n)
-    positions = rng.standard_normal((vertices, 3)).astype(np.float32)
-    indices = (
-        np.arange(faces * 3, dtype=np.uint64) % vertices
-    ).reshape(faces, 3)
-    offsets = np.arange(0, faces * 3 + 1, 3, dtype=np.uint64)
-    payload = {"positions": positions, "faces": indices}
-    return (
-        _core.mesh(positions, offsets, indices.reshape(-1)),
-        payload,
-    )
-
-
-def _mesh_scene(n):
-    rng = np.random.default_rng(41)
-    vertices = max(3, (n // 3) * 3)
-    faces = max(1, vertices // 3)
-    corners = vertices
-    positions = rng.standard_normal((vertices, 3)).astype(np.float32)
-    normals = rng.standard_normal((vertices, 3)).astype(np.float32)
-    uvs = rng.random((vertices, 2), dtype=np.float32)
-    colors = rng.integers(0, 256, (vertices, 4), dtype=np.uint8)
-    indices = np.arange(corners, dtype=np.uint64)
-    primitive_count = min(4, faces)
-    face_bounds = np.linspace(
-        0, faces, primitive_count + 1, dtype=np.int64
-    )
-    primitives = []
-    for start_face, stop_face in pairwise(face_bounds):
-        start = int(start_face) * 3
-        stop = int(stop_face) * 3
-        local_vertices = stop - start
-        primitives.append(
-            _core.mesh(
-                positions[start:stop],
-                np.arange(
-                    0, local_vertices + 1, 3, dtype=np.uint64
-                ),
-                np.arange(local_vertices, dtype=np.uint64),
-                vertex_normals=normals[start:stop],
-                vertex_uvs=uvs[start:stop],
-                vertex_colors=colors[start:stop],
-                coordinate_frame="opengl",
-            )
-        )
-    scene = _core.mesh_scene(
-        primitives,
-        np.array([0, primitive_count], np.uint64),
-        mesh_names=["mesh"],
-        node_meshes=np.array([0], np.int64),
-        node_child_offsets=np.array([0, 0], np.uint64),
-        node_children=np.array([], np.uint64),
-        node_local_transforms=np.eye(4, dtype=np.float64)[None],
-        node_names=["node"],
-        scene_root_offsets=np.array([0, 1], np.uint64),
-        scene_roots=np.array([0], np.uint64),
-        scene_names=["scene"],
-        default_scene=0,
-    )
-    payload = {
-        "positions": positions,
-        "faces": indices.reshape(faces, 3),
-        "normals": normals,
-        "uvs": uvs,
-        "colors": colors,
-    }
-    return scene, payload
 
 
 def _gauss(n):
@@ -720,143 +551,6 @@ def _g2o_payload_nbytes(payload):
 
 
 # --- codec specs: (id, build, sio_write, sio_read, oracle_write, oracle_read, payload_bytes) ---
-def _trimesh_ply_w(payload):
-    mesh = trimesh.Trimesh(
-        vertices=payload["positions"],
-        faces=payload["faces"],
-        vertex_normals=payload["vertex_normals"],
-        vertex_colors=payload["vertex_colors"],
-        process=False,
-    )
-    return trimesh.exchange.ply.export_ply(
-        mesh, encoding="binary_little_endian"
-    )
-
-
-def _trimesh_ply_r(data):
-    return trimesh.load(
-        io.BytesIO(data),
-        file_type="ply",
-        process=False,
-        maintain_order=True,
-        force="mesh",
-    )
-
-
-def _trimesh_obj_w(payload):
-    mesh = trimesh.Trimesh(
-        vertices=payload["positions"],
-        faces=payload["faces"],
-        vertex_normals=payload["vertex_normals"],
-        vertex_colors=payload["vertex_colors"],
-        process=False,
-    )
-    return trimesh.exchange.obj.export_obj(
-        mesh,
-        include_normals=True,
-        include_color=True,
-    ).encode()
-
-
-def _trimesh_obj_r(data):
-    return trimesh.load(
-        io.BytesIO(data),
-        file_type="obj",
-        process=False,
-        maintain_order=True,
-        force="mesh",
-    )
-
-
-def _trimesh_stl_w(payload):
-    mesh = trimesh.Trimesh(
-        vertices=payload["positions"],
-        faces=payload["faces"],
-        process=False,
-    )
-    return trimesh.exchange.stl.export_stl(mesh)
-
-
-def _trimesh_stl_r(data):
-    return trimesh.load(
-        io.BytesIO(data),
-        file_type="stl",
-        process=False,
-        maintain_order=True,
-        force="mesh",
-    )
-
-
-def _trimesh_off_w(payload):
-    mesh = trimesh.Trimesh(
-        vertices=payload["positions"],
-        faces=payload["faces"],
-        process=False,
-    )
-    exported = mesh.export(file_type="off")
-    return exported.encode() if isinstance(exported, str) else exported
-
-
-def _trimesh_off_r(data):
-    return trimesh.load(
-        io.BytesIO(data),
-        file_type="off",
-        process=False,
-        maintain_order=True,
-        force="mesh",
-    )
-
-
-def _trimesh_glb_w(payload):
-    mesh = trimesh.Trimesh(
-        vertices=payload["positions"],
-        faces=payload["faces"],
-        vertex_normals=payload["normals"],
-        vertex_colors=payload["colors"],
-        process=False,
-    )
-    return trimesh.exchange.gltf.export_glb(
-        trimesh.Scene(mesh)
-    )
-
-
-def _trimesh_glb_r(data):
-    return trimesh.load(
-        io.BytesIO(data),
-        file_type="glb",
-        process=False,
-        maintain_order=True,
-        force="scene",
-    )
-
-
-def _trimesh_gltf_w(payload):
-    mesh = trimesh.Trimesh(
-        vertices=payload["positions"],
-        faces=payload["faces"],
-        vertex_normals=payload["normals"],
-        vertex_colors=payload["colors"],
-        process=False,
-    )
-    return trimesh.exchange.gltf.export_gltf(
-        trimesh.Scene(mesh)
-    )
-
-
-def _trimesh_gltf_r(files):
-    document = next(
-        name for name in files if name.endswith(".gltf")
-    )
-    return trimesh.load(
-        io.BytesIO(files[document]),
-        file_type="gltf",
-        resolver=files,
-        process=False,
-        maintain_order=True,
-        force="scene",
-    )
-
-
 def _gsply_ply_w(payload):
     fd, path = tempfile.mkstemp(suffix=".ply")
     os.close(fd)
@@ -1574,6 +1268,7 @@ def _specs(scale, pose_bundle=None):
     gaussians = max(1, int(200_000 * scale))
     reconstruction, transforms, tum, kitti = pose_bundle or _poses_and_reconstruction(scale)
     image_specs = build_image_specs(scale)
+    mesh_specs = build_mesh_specs(scale)
     return [
         *image_specs[:5],
         Spec(
@@ -1613,51 +1308,7 @@ def _specs(scale, pose_bundle=None):
             (_open3d_ply_r if o3d else None),
             lambda rec, p: sum(value.nbytes for value in p.values()),
         ),
-        Spec(
-            "ply_mesh",
-            lambda: _mesh_ply(max(3, points // 3)),
-            _core.write_ply_mesh,
-            _core.read_ply_mesh,
-            (_trimesh_ply_w if trimesh else None),
-            (_trimesh_ply_r if trimesh else None),
-            lambda rec, p: sum(value.nbytes for value in p.values()),
-        ),
-        Spec(
-            "obj",
-            lambda: _mesh_obj(max(3, points // 3)),
-            _core.write_obj,
-            _core.read_obj,
-            (_trimesh_obj_w if trimesh else None),
-            (_trimesh_obj_r if trimesh else None),
-            lambda rec, p: sum(value.nbytes for value in p.values()),
-        ),
-        Spec(
-            "stl",
-            lambda: _mesh_stl(max(3, points // 3)),
-            _core.write_stl,
-            _core.read_stl,
-            (_trimesh_stl_w if trimesh else None),
-            (_trimesh_stl_r if trimesh else None),
-            lambda rec, p: sum(value.nbytes for value in p.values()),
-        ),
-        Spec(
-            "off",
-            lambda: _mesh_off(max(3, points // 3)),
-            _core.write_off,
-            _core.read_off,
-            (_trimesh_off_w if trimesh else None),
-            (_trimesh_off_r if trimesh else None),
-            lambda rec, p: sum(value.nbytes for value in p.values()),
-        ),
-        Spec(
-            "glb",
-            lambda: _mesh_scene(max(3, points // 3)),
-            _core.write_glb,
-            _core.read_glb,
-            (_trimesh_glb_w if trimesh else None),
-            (_trimesh_glb_r if trimesh else None),
-            lambda rec, p: sum(value.nbytes for value in p.values()),
-        ),
+        *mesh_specs,
         Spec(
             "pcd",
             lambda: _pc_ply(points),

@@ -23,7 +23,7 @@
     "builder_ast_sources": {
       "_gauss": "bench/bench_io.py",
       "_img_u8": "bench/io_bench/fixtures/images.py",
-      "_mesh_scene": "bench/bench_io.py",
+      "_mesh_scene": "bench/io_bench/fixtures/meshes.py",
       "_pc_ply": "bench/bench_io.py",
       "_poses_and_reconstruction": "bench/bench_io.py",
       "_single_calibration": "bench/io_bench/fixtures/calibration.py",
@@ -31,7 +31,7 @@
       "_y4m_fixture": "bench/bench_io.py"
     },
     "parent_and_candidate_builder_ast_sha256": "ce8dda677da61550035dcd2062d4cb53aed20f21e37024d87d5f50449ba1fbfd",
-    "current_builder_ast_sha256": "e81f0d9d4e5957aef9cd9ee2551587de993e784e8f7585fa23c5122d376d2461",
+    "current_builder_ast_sha256": "6b2c80e740bf52b3a2d506d860ab01198e836340370c3902efab631604e11641",
     "fixtures": {
       "camera_calibration": "5e2b5f1e70aa57bd8d219b06a16ce36dfec48aa4d0905ef45cdf503cca8b511c",
       "gaussian_cloud": "dc358708428493fafd834f6c9626f87dd1e91626d324fea3865320561176b1cf",
@@ -213,6 +213,92 @@
           "verification": "format parity remains covered by the independent NumPy RGBE parser and serializer in tests/codecs/test_hdr.py"
         }
       }
+    },
+    "meshes": {
+      "family_functions": {
+        "build_mesh_specs": {
+          "source": "bench/io_bench/families/meshes.py",
+          "ast_sha256": "90d898ad80f52032c0591625a75f414b26b6d83276547f53db768c51e4c0726a"
+        }
+      },
+      "facade_family_exports": [
+        "build_mesh_specs"
+      ],
+      "functions": {
+        "_mesh_obj": {
+          "source": "bench/io_bench/fixtures/meshes.py",
+          "ast_sha256": "8d269bcf1c32d3fc0e7ceea5d5e9bbe8da0c01f8b6711b16c451b541b5f00da0"
+        },
+        "_mesh_off": {
+          "source": "bench/io_bench/fixtures/meshes.py",
+          "ast_sha256": "3254c7f6e5afff214a5e44359001a29b05da41d45966ba70badee796552711db"
+        },
+        "_mesh_ply": {
+          "source": "bench/io_bench/fixtures/meshes.py",
+          "ast_sha256": "a42e855a44e0967327c73907808d2cb9e14d8f5162e44fea9732eb5a430aec6e"
+        },
+        "_mesh_scene": {
+          "source": "bench/io_bench/fixtures/meshes.py",
+          "ast_sha256": "c789d470bda4cb21f855291c7e9be81bbbcdf861b95332381b95e30f92053e12"
+        },
+        "_mesh_stl": {
+          "source": "bench/io_bench/fixtures/meshes.py",
+          "ast_sha256": "cc51aa65610e485b3c568720d1f18bea5825eef6cfe17d3741387247d3d0522a"
+        },
+        "_trimesh_glb_r": {
+          "source": "bench/io_bench/oracles/meshes.py",
+          "ast_sha256": "94218529b9653d41cef64fa191349d019f8fcf65d8d32f3c9ac42b4ae1b0e9ac"
+        },
+        "_trimesh_glb_w": {
+          "source": "bench/io_bench/oracles/meshes.py",
+          "ast_sha256": "38e8eae83d5cb803c7374f3e136f5edfbfac3ae023ddb6854d4ff99792d236c0"
+        },
+        "_trimesh_gltf_r": {
+          "source": "bench/io_bench/oracles/meshes.py",
+          "ast_sha256": "25a6c62805c4d3b2a1f7710e46fd8bc96dec1eecd9af3291fe8f6dc8bccf5451"
+        },
+        "_trimesh_gltf_w": {
+          "source": "bench/io_bench/oracles/meshes.py",
+          "ast_sha256": "58be9c9f50def8d0ca4d177306a3704bf69dc12a4f005d1c67dd58e5321718b4"
+        },
+        "_trimesh_obj_r": {
+          "source": "bench/io_bench/oracles/meshes.py",
+          "ast_sha256": "40108c96616fb60bcda0a574dd2a821d8c084cc3eb2111e2fbe5f4a0d413a607"
+        },
+        "_trimesh_obj_w": {
+          "source": "bench/io_bench/oracles/meshes.py",
+          "ast_sha256": "390df861bfe25c05453058e44d09b2fe7a3da61c01803ddb105fe5cea2df0456"
+        },
+        "_trimesh_off_r": {
+          "source": "bench/io_bench/oracles/meshes.py",
+          "ast_sha256": "5d28bde8bc196bca336cdaef4d3d33cead3f0c4dc747c4364d13219644d96644"
+        },
+        "_trimesh_off_w": {
+          "source": "bench/io_bench/oracles/meshes.py",
+          "ast_sha256": "e36fb17ca2260b1bd0c660e1e1c95079cb6de0c9f439563e36904df80d1e720a"
+        },
+        "_trimesh_ply_r": {
+          "source": "bench/io_bench/oracles/meshes.py",
+          "ast_sha256": "b7ff91d72545021f4f52e27f0a101d41fbbb17d3ea0d81033effc1436dbf414b"
+        },
+        "_trimesh_ply_w": {
+          "source": "bench/io_bench/oracles/meshes.py",
+          "ast_sha256": "335d54ea5abfeb7001c003b0eb71eeb7e833424a90f363eeda8620863f69aebf"
+        },
+        "_trimesh_stl_r": {
+          "source": "bench/io_bench/oracles/meshes.py",
+          "ast_sha256": "68f083596f85e2b8d8a163e8272cf233f094b95afe01d41f45ae5244f5756e42"
+        },
+        "_trimesh_stl_w": {
+          "source": "bench/io_bench/oracles/meshes.py",
+          "ast_sha256": "6d80bb3c841e7d8c87ade156a03086ef360b32885602ade2e7c6c9e9d47d478d"
+        }
+      },
+      "optional_oracle_bindings": [
+        "trimesh"
+      ],
+      "optional_oracle_source": "bench/io_bench/oracles/meshes.py",
+      "no_oracle_exemptions": {}
     }
   },
   "r3_1a_equivalence": {
