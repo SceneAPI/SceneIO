@@ -262,8 +262,25 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > console output, outside-checkout entry modes, and the warmed-parent RSS
 > meaning are checked contracts. After one noisy LAS comparator, the unchanged
 > complete five-run confirmation passes with LAS read at 1.32x. This is
-> behavior-equivalence evidence, not a new codec-performance claim. R3.1b is
-> active.
+> behavior-equivalence evidence, not a new codec-performance claim. Normal run
+> [30231629465](https://github.com/SceneAPI/SceneIO/actions/runs/30231629465)
+> and compiler-instrumented run
+> [30231629496](https://github.com/SceneAPI/SceneIO/actions/runs/30231629496)
+> pass the exact R3.1a commit. R3.1b is
+> now implemented and undergoing whole-tree validation. Its versioned
+> development-only protocol uses one warmed fresh child per sample, reports
+> baseline/peak/delta RSS with platform and sampler metadata, and refuses to
+> turn unavailable sampling into a numeric result. Three samples at 8 MiB and
+> 48 MiB keep a bounded 64 KiB operation flat while the full-payload control
+> reproduces and rejects approximately 40 MiB growth. Semantic operation
+> signatures, request binding, high-water calibration, and every-size
+> comparisons close the reviewed false-pass cases, and the protocol test is
+> wired into the Linux/Windows/macOS mmap lane. Existing codec capability
+> claims are unchanged. Local MSVC collects 3,320 tests and passes 3,316 with
+> four documented skips; the unchanged complete five-run performance guard,
+> all three independent reviews, exact-source packaging, and isolated
+> NumPy-only wheel smoke pass. Exact-commit hosted confirmation remains
+> pending.
 
 [current-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287022
 [current-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287161

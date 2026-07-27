@@ -1993,8 +1993,11 @@ pass. Exact-head build-only release run 30189483142 also builds the source
 archive and builds and smoke-tests all three platform wheel sets with
 publication skipped. R2 is closed at `3e46d82` plus `9928c6d`. R3.1a has
 separated benchmark models, measurements, and reporting while retaining the
-compatible CLI and 50-codec contract; R3.1b is the active
-repository-organization unit in
+compatible CLI and 50-codec contract. R3.1b now provides the versioned
+fresh-child memory protocol, strict unavailable-sampler behavior, and
+positive/negative payload controls. Local whole-tree validation is complete;
+exact-commit hosted confirmation is the active repository-organization gate
+in
 [`next_stage_implementation_checklist.md`](next_stage_implementation_checklist.md).
 
 Status terms are strict:

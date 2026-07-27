@@ -209,8 +209,14 @@ longer contains any individual built-in definition. The exact-tree package
 and all three independent-review gates pass. Registry implementation
 `3e46d82` and platform-contract repair `9928c6d` are pushed; final normal run
 `30228235491` and compiler-instrumented run `30228235535` pass. R2 is closed.
-R3.1a is complete in the current tree and R3.1b is active. This extraction
-changes no codec algorithm or public API and makes no performance-gain claim.
+R3.1a is complete in the current tree. R3.1b implementation and local
+whole-tree validation are complete; exact-commit hosted validation is
+pending. These changes alter no codec algorithm or public API and make no
+codec-performance claim. Exact R3.1a normal run
+[30231629465](https://github.com/SceneAPI/SceneIO/actions/runs/30231629465)
+and compiler-instrumented run
+[30231629496](https://github.com/SceneAPI/SceneIO/actions/runs/30231629496)
+are green.
 
 R3.1a is complete in the current tree. `bench/bench_io.py` remains the
 compatible development CLI and fixture/oracle facade, while
@@ -218,10 +224,20 @@ compatible development CLI and fixture/oracle facade, while
 data models, timing/traced-allocation and warmed-parent RSS measurements, and
 all console formatting. The existing `*_rss_mb` JSON fields remain unchanged;
 their contract now explicitly identifies them as exploratory warmed-parent
-deltas rather than fresh-process qualification evidence. R3.1b adds the
-separate child-process protocol. R3.2 moves family fixtures/oracles and only
-then moves the sweep orchestration into `runner.py`, avoiding a lower module
-that imports back through the facade.
+deltas rather than fresh-process qualification evidence. R3.1b adds a
+separate versioned protocol under `bench/io_bench/`: a fresh child imports and
+warms SceneIO, records baseline/current and platform-high-water RSS, performs
+exactly one measured operation, and reports sampler/platform availability.
+Strict mode rejects unavailable sampling; non-strict probes retain null RSS
+fields and never substitute zero. Qualification additionally binds the child
+response to its request, compares one canonical operation/warm-up signature,
+requires three samples and zero residual high-water headroom, and evaluates
+every declared payload size. Headroom is derived from the baseline counters,
+only the declared platform backends qualify, and instrumented runtimes remain
+explicitly unavailable. The repeated generated 8/48 MiB controls pass a
+bounded 64 KiB read and reject an intentional whole-payload allocation. R3.2
+moves family fixtures/oracles and only then moves the sweep orchestration into
+`runner.py`, avoiding a lower module that imports back through the facade.
 
 The initial splat parent-freeze checkpoint is committed and pushed at
 `93fcf1b39350a3a0080a7b87ead65d0d9343d354`; its
@@ -603,6 +619,15 @@ entries rather than inheriting a blanket claim.
 - Preserve the current warmed-process RSS metric during the mechanical split,
   then add a separately tested child-process RSS protocol for qualification.
 - Make required oracles and RSS sampling strict in qualification mode.
+
+The child-process portion is implemented in R3.1b. Its response schema,
+supported controlled operations, three-sample default, null-unavailable
+semantics, request binding, semantic operation identity, high-water
+calibration, and every-size payload-growth rule are pinned by
+`tests/contracts/memory_protocol_v1.json`. Existing test-local samplers move
+only during R3.3's staged consumer migration so their current node ids and
+coverage remain unchanged. The new protocol suite is part of the existing
+Linux/Windows/macOS mmap CI lane.
 
 ### R4. Organize native build and bindings
 

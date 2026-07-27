@@ -170,9 +170,18 @@ sceneio._core (C++ / nanobind)
   warmed-parent `in_process_rss`, and deterministic presentation. Its checked
   contract pins parent provenance, JSON shape, record-aware fixture
   fingerprints, and a console transcript. The production package does not
-  include `bench`; R3.2 moves family fixtures/oracles before moving the
-  remaining sweep runner, and R3.1b supplies separate fresh-child memory
-  evidence.
+  include `bench`. R3.1b now supplies the separate versioned fresh-child
+  memory protocol in `bench/io_bench/memory_protocol.py` and
+  `memory_child.py`: one warm-up precedes the RSS baseline, each child performs
+  exactly one measured operation, and unavailable sampling remains explicit
+  rather than becoming a zero. A retained calibration closes any
+  pre-measurement high-water gap; strict evidence rejects residual headroom,
+  fewer than three samples, request/response mismatch, differing semantic
+  operation signatures, and a spike at any intermediate payload size.
+  Repeated 8/48 MiB controls distinguish a bounded 64 KiB read from a
+  whole-payload allocation, and the protocol test is wired into the
+  three-platform mmap lane. R3.2 moves family fixtures/oracles before moving
+  the remaining sweep runner.
   Built-in startup uses `_registry/assembly.py` as a lower staging boundary.
   Eight complete family tuples are collected without touching the public
   registry. After all 50 canonical ids validate, the facade publishes the

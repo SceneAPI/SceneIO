@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "response_keys": [
+    "baseline_high_water_rss_bytes",
+    "baseline_rss_bytes",
+    "case_label",
+    "delta_rss_bytes",
+    "error_message",
+    "error_type",
+    "high_water_calibration_bytes",
+    "high_water_delta_rss_bytes",
+    "high_water_headroom_bytes",
+    "measured_operation",
+    "measured_operation_count",
+    "measured_operation_signature",
+    "payload_bytes",
+    "peak_high_water_rss_bytes",
+    "peak_rss_bytes",
+    "platform",
+    "sample_index",
+    "sampled_delta_rss_bytes",
+    "sampler",
+    "schema_version",
+    "status",
+    "warmup_operation",
+    "warmup_operation_count",
+    "warmup_operation_signature"
+  ],
+  "platform_keys": [
+    "machine",
+    "python_implementation",
+    "python_version",
+    "release",
+    "system"
+  ],
+  "sampler_keys": [
+    "available",
+    "backend",
+    "interval_seconds"
+  ],
+  "statuses": [
+    "available",
+    "error",
+    "unavailable"
+  ],
+  "available_invariants": {
+    "warmup_operation_count": 1,
+    "measured_operation_count": 1,
+    "rss_values": "non_negative_integer",
+    "sampler_backend": "non_empty_string",
+    "sampler_backend_set": [
+      "psutil_thread+psutil_current_only",
+      "psutil_thread+psutil_peak_wset",
+      "psutil_thread+resource_ru_maxrss"
+    ],
+    "headroom_equals_baseline_difference": true,
+    "response_matches_request": true
+  },
+  "unavailable_invariants": {
+    "sampler_available": false,
+    "rss_values": null,
+    "strict_mode": "raises_MemoryMeasurementUnavailable"
+  },
+  "supported_operations": [
+    "allocate_payload",
+    "bounded_file_read",
+    "sceneio_inspect",
+    "sceneio_read",
+    "sceneio_read_partial",
+    "sceneio_registry"
+  ],
+  "defaults": {
+    "samples": 3,
+    "sampling_interval_seconds": 0.0005,
+    "timeout_seconds": 60.0,
+    "warmup_operation": "sceneio_registry"
+  },
+  "growth_assessment": {
+    "statistic": "median_delta_rss_bytes_per_payload_size",
+    "minimum_samples_per_payload": 3,
+    "compare_every_size_to_smallest": true,
+    "common_operation_signature": true,
+    "common_warmup_signature": true,
+    "high_water_headroom": "must_be_zero",
+    "default_max_growth_fraction": 0.25,
+    "default_fixed_allowance_bytes": 8388608
+  }
+}

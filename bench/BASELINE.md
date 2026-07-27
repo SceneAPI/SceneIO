@@ -1616,4 +1616,73 @@ directional gains. The confirming JSON SHA-256 is
 These values confirm behavior preservation under the retained controls; they
 do not replace the codec-performance baseline or make a new optimization
 claim. The final local MSVC gate collects 3,309 nodes, passes 3,305 with the
-same four documented skips, and passes Ruff.
+same four documented skips, and passes Ruff. Exact-commit normal run
+[30231629465](https://github.com/SceneAPI/SceneIO/actions/runs/30231629465)
+passes the complete suite, 50-codec smoke, retained performance guard, all
+platform lanes, and GCC-10 job. Exact-commit compiler-instrumented run
+[30231629496](https://github.com/SceneAPI/SceneIO/actions/runs/30231629496)
+passes both jobs.
+
+## R3.1b fresh-child memory protocol (2026-07-26)
+
+R3.1b separates qualification evidence from the legacy warmed-parent
+`*_rss_mb` table fields. `bench/io_bench/memory_protocol.py` launches one new
+interpreter per sample. The child imports SceneIO, executes one explicit
+warm-up, collects garbage, records current and platform-high-water baselines,
+retains calibration pages until current RSS reaches the prior high-water mark,
+starts a 0.5 ms `psutil` sampler, confirms its first reading, and executes
+exactly one measured operation. Warm-up receives a fixed zero payload size.
+The version-1 response reports payload bytes, baseline/peak/delta RSS,
+calibration and residual headroom, platform, sampler backend and availability,
+canonical warm/measured operation signatures, and operation counts. Strict
+mode requires three or more samples per size, an available sampler, and zero
+residual headroom; non-strict probes return `unavailable` with all RSS fields
+null rather than numeric zero. Response identity and sampling interval must
+match the request. Growth assessment compares every larger payload with the
+smallest, not only the endpoints. The validator accepts only Windows
+`peak_wset`, Linux/macOS `ru_maxrss`, or the explicitly non-qualifying
+current-only fallback, and recomputes headroom from the baseline counters.
+Instrumented runtimes report the protocol unavailable because their resident
+memory is not comparable. Throughput timing remains in the separate timing
+path and is not performed under this sampler.
+
+The generated control run uses three independent children at 8 MiB and
+48 MiB:
+
+| Control | 8 MiB median delta | 48 MiB median delta | Growth | 10 MiB bound | Result |
+|---|---:|---:|---:|---:|---|
+| 64 KiB bounded file read | 208,896 B | 192,512 B | 0 B | 10,485,760 B | pass |
+| touched whole-payload allocation | 8,523,776 B | 50,462,720 B | 41,938,944 B | 10,485,760 B | fail as intended |
+
+The raw six-sample-per-control JSON has SHA-256
+`cf3764e50ed5aceae576989c0439341070df510b1ec456584fbf08dd6b3b761f`
+and remains generated development output under `build/`, not a committed
+fixture. The checked response contract is
+`tests/contracts/memory_protocol_v1.json`; focused tests also run actual NPY
+read and inspect operations and prove strict versus non-strict missing-sampler
+behavior. A direct bounded-read result check and counterexample matrices cover
+semantic-signature mismatch, insufficient repetitions, intermediate-size
+spikes, request/response mismatch, and obscured high-water windows. The same
+protocol test now runs in the existing three-platform mmap/partial CI lane.
+R3.3, not this unit, owns the staged migration of existing codec-test-local
+subprocess helpers.
+
+The final local R3.1b tree collects 3,320 tests and passes 3,316 with the same
+four documented skips. The unchanged complete five-run guard passes with JSON
+SHA-256
+`a8c5366a999cbe90b7f29ca7f6face5584612cb021708b99644496ceb08951bc`.
+Representative retained comparisons are:
+
+| Comparator | Baseline | Optimized | Gain |
+|---|---:|---:|---:|
+| XYZ write | 20.81 MB/s | 101.41 MB/s | 4.87x |
+| LAS read | 1,407.76 MB/s | 3,139.14 MB/s | 2.23x |
+| LAS write | 526.43 MB/s | 1,092.20 MB/s | 2.07x |
+| WebP balanced configuration | 13.35 MB/s | 35.71 MB/s | 2.68x |
+| WebP worker control | 18.10 MB/s | 19.64 MB/s | 1.09x |
+
+All three independent reviews are clear. Exact-source packaging contains 336
+byte-identical repository files plus generated `PKG-INFO`; the derived
+81-member Windows abi3 wheel excludes development/build content and passes the
+isolated NumPy-only installed smoke. Exact-commit hosted confirmation remains
+pending until the R3.1b commit is pushed.

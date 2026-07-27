@@ -37,8 +37,9 @@ through `aa5b624`; normal run 30218232248 and compiler-instrumented run
 30218232246 pass that combined implementation. Splats close at registry
 implementation `3e46d82` plus platform-contract repair `9928c6d`; normal run
 30228235491 and compiler-instrumented run 30228235535 pass the final R2 tree.
-R2 is closed. R3.1a is complete in the current tree, and R3.1b is the active
-unit.
+R2 is closed. R3.1a is complete in the current tree. R3.1b implementation and
+local whole-tree validation are complete; exact-commit hosted validation is
+pending.
 
 This is the operational checklist for the repository-organization and
 codec-performance stage defined in
@@ -2577,7 +2578,8 @@ run `30228235491` passes the full suite, retained performance guard, all three
 splat jobs, mmap/reconstruction matrices, and GCC-10 lane.
 Compiler-instrumented run `30228235535` passes both jobs. `publish.yml` was
 not triggered; no tag or package was published. R3.1a is complete in the
-current tree; R3.1b is active.
+current tree. R3.1b implementation and local whole-tree validation are
+complete; exact-commit hosted validation is pending.
 
 ## 7. R3 — split benchmark and cross-codec tests
 
@@ -2623,21 +2625,83 @@ R3.1a evidence:
   canonical `bench.bench_io` loading work from outside the checkout; repeated
   loads do not duplicate the repository root in `sys.path`;
 - local MSVC collects 3,309 nodes, passes 3,305 with the same four documented
-  skips, and passes Ruff plus the focused documentation/architecture suites.
+  skips, and passes Ruff plus the focused documentation/architecture suites;
+- exact-commit normal run
+  [30231629465](https://github.com/SceneAPI/SceneIO/actions/runs/30231629465)
+  passes the complete suite, 50-codec smoke, retained performance guard,
+  three-platform splat/mmap/reconstruction jobs, and GCC-10 lane. Exact-commit
+  compiler-instrumented run
+  [30231629496](https://github.com/SceneAPI/SceneIO/actions/runs/30231629496)
+  passes its complete and lifetime jobs.
 
 ### R3.1b — qualification-grade memory protocol
 
-- [ ] Add a child-process protocol that imports and warms SceneIO, records its
+- [x] Add a child-process protocol that imports and warms SceneIO, records its
       baseline, performs exactly one measured operation, and reports peak and
       delta RSS.
-- [ ] Repeat across payload sizes and samples; report baseline, delta, payload
+- [x] Repeat across payload sizes and samples; report baseline, delta, payload
       size, platform, and sampler availability.
-- [ ] Make `psutil` mandatory in strict qualification mode. Missing RSS
+- [x] Make `psutil` mandatory in strict qualification mode. Missing RSS
       support is `unavailable` and fails qualification; it is never numeric
       zero.
-- [ ] Keep throughput timing outside tracemalloc and memory sampling.
-- [ ] Add fixtures proving a bounded operation passes and an intentional
+- [x] Keep throughput timing outside tracemalloc and memory sampling.
+- [x] Add fixtures proving a bounded operation passes and an intentional
       full-payload allocation fails.
+
+`bench/io_bench/memory_protocol.py` now owns the parent API, versioned result
+model, strict/unavailable behavior, repeated size/sample matrix, and
+payload-growth assessment. Each sample launches
+`bench.io_bench.memory_child`, imports SceneIO, performs one explicit warm-up,
+collects a post-warm baseline, aligns retained current RSS with the platform
+high-water mark, starts the 0.5 ms `psutil` sampler, confirms its first sample,
+and performs exactly one measured operation. Warm-up payload size is fixed at
+zero. The result includes current-RSS and platform-high-water
+baselines/peaks/deltas, calibration/headroom, platform and sampler metadata,
+and canonical warm/measured operation signatures. Strict qualification needs
+at least three samples per size, requires zero residual high-water headroom,
+binds every echoed field to the request, and compares every larger size with
+the smallest. The checked `memory_protocol_v1.json` contract rejects a
+numeric RSS value for an unavailable sampler, accepts only the three declared
+platform high-water backends, and derives residual headroom from the reported
+baseline counters. Instrumented runtimes are explicitly unavailable for this
+RSS protocol and continue to exercise the ordinary codec suite separately.
+
+The generated control corpus uses 8 MiB and 48 MiB sparse files with three
+fresh children per size. A 64 KiB bounded read reports median deltas of
+208,896 and 192,512 bytes and passes with zero measured growth. The
+full-payload control reports 8,523,776 and 50,462,720 bytes, measures
+41,938,944 bytes of growth, and fails the 10 MiB bound. Raw control evidence
+is development output, not committed fixture data. A mutation-sensitive unit
+test proves that the bounded operation returns the requested 64 KiB; semantic
+operation signatures reject mismatched formats, selectors, read extents, or
+allocation controls. Existing codec-test-local child snippets remain
+unchanged until their consumer-by-consumer R3.3 migration; the benchmark
+protocol is already independently exercised with real NPY read and inspect
+operations. The protocol test is included in the existing Linux, Windows, and
+macOS mmap/partial CI lane; hosted confirmation is pending the R3.1b commit.
+
+R3.1b local exit evidence:
+
+- exact collection is 3,320 nodes with sorted normalized SHA-256
+  `b055375c118a024858d42b9111649d95587d51ad79c089f2ec492fc84edf4dfb`;
+  the complete MSVC run passes 3,316 with the same four documented skips;
+- the unchanged complete five-run O4/O5 and mmap/sink guard passes. Its JSON
+  SHA-256 is
+  `a8c5366a999cbe90b7f29ca7f6face5584612cb021708b99644496ceb08951bc`;
+  XYZ write is 4.87x, LAS read/write are 2.23x/2.07x, and both WebP
+  comparators remain positive;
+- all three independent reviews are clear after replaying mismatched
+  operations, request echoes, fabricated sampler backends, hidden high-water
+  headroom, insufficient samples, intermediate-size spikes, and a no-op
+  bounded read;
+- the exact working-tree source archive has 337 file members: 336 are
+  byte-identical repository files and one is generated `PKG-INFO`. Its derived
+  Windows abi3 wheel has 81 members, one native module, 15 attribution files,
+  no benchmark/test/build content, and NumPy as its sole unconditional
+  dependency. A fresh environment containing only the wheel and NumPy passes
+  `python -m sceneio._wheel_smoke`;
+- Ruff, documentation consistency, JSON/YAML parsing, and `git diff --check`
+  pass. No release workflow, tag, or publication action was triggered.
 
 ### R3.2 — family fixtures, oracles, and sweep runner
 
@@ -2690,6 +2754,9 @@ R3 verification and validation:
       fields.
 - [x] R3.1a five-run O4/O5 controls retain direction and memory relationships
       after the required confirming complete run.
+- [x] R3.1b protocol coverage is wired into the existing Linux, Windows, and
+      macOS mmap/partial lane; require a green exact-commit hosted run before
+      closing the unit.
 - [ ] Strict qualification mode fails on an absent required oracle or RSS
       sampler instead of silently dropping evidence.
 - [ ] Full suite and Ruff pass after each family.

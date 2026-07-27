@@ -328,9 +328,20 @@
     "last": "tests/test_points_binary.py::test_bad_magic_rejected"
   },
   "pytest_candidate_collection": {
-    "count": 3309,
-    "sorted_normalized_node_ids_sha256": "cd0a8c1a273dd87d72c9a08edf39d45f93b562295e8c3216e09b076b4dd65a43",
+    "count": 3320,
+    "sorted_normalized_node_ids_sha256": "b055375c118a024858d42b9111649d95587d51ad79c089f2ec492fc84edf4dfb",
     "added_nodes": [
+      "tests/test_benchmark_memory_protocol.py::test_memory_protocol_contract_and_repeated_sceneio_measurement",
+      "tests/test_benchmark_memory_protocol.py::test_missing_sampler_is_explicit_and_strict_mode_rejects_it",
+      "tests/test_benchmark_memory_protocol.py::test_payload_controls_distinguish_bounded_and_full_allocation",
+      "tests/test_benchmark_memory_protocol.py::test_bounded_read_control_returns_the_requested_bytes",
+      "tests/test_benchmark_memory_protocol.py::test_memory_protocol_inputs_are_checked[<lambda>-non-empty string0]",
+      "tests/test_benchmark_memory_protocol.py::test_memory_protocol_inputs_are_checked[<lambda>-non-empty string1]",
+      "tests/test_benchmark_memory_protocol.py::test_memory_protocol_inputs_are_checked[<lambda>-must be a mapping]",
+      "tests/test_benchmark_memory_protocol.py::test_memory_protocol_inputs_are_checked[<lambda>-JSON-compatible]",
+      "tests/test_benchmark_memory_protocol.py::test_memory_protocol_inputs_are_checked[<lambda>-non-empty string2]",
+      "tests/test_benchmark_memory_protocol.py::test_memory_protocol_inputs_are_checked[<lambda>-payload_bytes0]",
+      "tests/test_benchmark_memory_protocol.py::test_memory_protocol_inputs_are_checked[<lambda>-payload_bytes1]",
       "tests/test_import_guards.py::test_no_family_imports[io/_registry/assembly.py]",
       "tests/test_import_guards.py::test_no_family_imports[io/_inspectors/arrays.py]",
       "tests/test_import_guards.py::test_no_family_imports[io/_registry/families/arrays.py]",
