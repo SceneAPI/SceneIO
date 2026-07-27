@@ -230,7 +230,21 @@ sceneio._core (C++ / nanobind)
   payload and one positions-equivalent throughput denominator for both
   SceneIO and LASpy. Five live oracle rows and the explicit XYZ
   benchmark-throughput exemption are recorded; independent NumPy XYZ text
-  parity remains in the codec suite.
+  parity remains in the codec suite. Exact point commit `45e2757` passes
+  normal run `30244892746` and compiler-instrumented run `30244892600`.
+  The reconstruction checkpoint lower-owns the nine buffer-backed
+  transforms/TUM/KITTI/EuRoC/g2o/Bundler/BAL/NVM/OpenMVG specs under
+  `families/reconstruction.py`, their deterministic builders under
+  `fixtures/reconstruction.py`, and portable EuRoC/g2o/BAL comparisons under
+  `oracles/reconstruction.py`. The facade slices those specs around
+  calibration; specialized COLMAP binary, text, and database orchestration
+  remains facade-owned until runner extraction. All nine `Spec` ASTs and 12
+  of 13 moved helper ASTs are unchanged. The one reviewed difference expands
+  the g2o comparison reader from counts to complete semantic arrays and
+  symmetric information matrices. Three rows have live portable comparison
+  metrics; six carry an exact benchmark-throughput exemption backed by
+  independent parity suites. The lower reconstruction modules do not import
+  the facade, and the complete result-order projection remains unchanged.
   Built-in startup uses `_registry/assembly.py` as a lower staging boundary.
   Eight complete family tuples are collected without touching the public
   registry. After all 50 canonical ids validate, the facade publishes the

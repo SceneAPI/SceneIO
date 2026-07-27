@@ -213,8 +213,10 @@ R3.1a is complete in the current tree. R3.1b closes at follow-up commit
 `0bdfe0f`; normal run `30234796010` and compiler-instrumented run `30234796025`
 pass. Arrays close at `6d9ec34`, and calibration closes at `5dc03f4`; the
 raster-image family closes at `6572a76`, and the mesh benchmark family closes
-at `613fd26`. The point benchmark family is complete in the current local
-tree. R3.2 family extraction remains active.
+at `613fd26`. Points close at `45e2757`; normal run `30244892746` and
+compiler-instrumented run `30244892600` pass. The reconstruction benchmark
+family is complete in the current local tree. R3.2 family extraction remains
+active.
 These changes alter no codec algorithm or public API and make no
 codec-performance claim. Exact R3.1a normal run
 [30231629465](https://github.com/SceneAPI/SceneIO/actions/runs/30231629465)
@@ -338,7 +340,7 @@ verification have accumulated in a few large modules:
 | C++ records | 32 source/header files | still manageable; new table/animation/scene records will add pressure |
 | Python registry | `registry.py`, 205 lines; `_registry/assembly.py`, 148 lines; focused `_registry/{model,adapters,detection,native_features}.py` modules; and eight `_registry/families/*.py` definition modules | all built-ins are family-owned; R3 now splits the benchmark and cross-codec verification monoliths |
 | Inspection | `_inspection.py` compatibility facade plus `_inspectors/{model,common,arrays,calibration,images,meshes,points,reconstruction,sequences,splats}.py`; all eight manifest families have lower inspector ownership | keep the proven shared model, mmap bridge, metadata bounds, exact-read/integer grammar, and image-result constructor as lower services |
-| Benchmark | compatible `bench_io.py` facade plus `io_bench/{model,measure,reporting}.py`, lower arrays/calibration/images/meshes/points family modules, and shared `families/common.py` | arrays, calibration, images, meshes, and the six non-contiguous point specs have lower family ownership; three remaining family hooks, specialized glTF orchestration, and sweep orchestration move checkpoint by checkpoint during R3.2 |
+| Benchmark | compatible `bench_io.py` facade plus `io_bench/{model,measure,reporting}.py`, lower arrays/calibration/images/meshes/points/reconstruction family modules, and shared `families/common.py` | arrays, calibration, images, meshes, points, and nine buffer-backed reconstruction specs have lower family ownership; two remaining family hooks, specialized glTF/COLMAP orchestration, and sweep orchestration move checkpoint by checkpoint during R3.2 |
 | Cross-codec tests | `test_io_mmap.py`, about 2,400 lines; `test_io_partial.py`, about 1,100 | reusable codec cases and behavior assertions are difficult to extend independently |
 | Execution plan | `format_gap_implementation_plan.md`, about 2,500 lines | historical evidence and the active queue are easy to confuse |
 | Native dependencies | six source-complete in-tree projects, one LAZperf integration/provenance directory, and six `FetchContent` projects | stable builds are not yet fully offline/repository-contained |
@@ -715,6 +717,31 @@ source archive contains the three point modules without generated caches. Its
 retains all 15 attribution files, keeps NumPy as its only unconditional
 dependency, and passes a fresh NumPy-only installed smoke without those
 comparison packages. All three independent reviews are clear.
+
+Exact point commit `45e2757` passes normal run `30244892746` and
+compiler-instrumented run `30244892600`.
+
+The reconstruction checkpoint adds the nine buffer-backed transforms/TUM/
+KITTI/EuRoC/g2o/Bundler/BAL/NVM/OpenMVG specs under
+`families/reconstruction.py`, their deterministic builders under
+`fixtures/reconstruction.py`, and portable EuRoC/g2o/BAL pairs under
+`oracles/reconstruction.py`. The facade slices the family around calibration.
+Specialized `colmap_sparse`, `colmap_sparse_txt`, and `colmap_db`
+orchestration remains facade-owned until runner extraction. All nine `Spec`
+ASTs and 12 of 13 moved helper ASTs are unchanged. The sole reviewed
+difference strengthens the g2o reader from counts to complete semantic arrays
+and reconstructed symmetric information matrices. Three live rows produce
+portable comparison metrics; six exact benchmark-throughput exemptions point
+to independent parity suites. The 50-row structure is unchanged.
+
+Focused reconstruction/contract validation passes 505 tests with one existing
+optional PyCOLMAP skip; the complete suite passes 3,316 with four documented
+skips, and Ruff is clean. The fresh 359-member exact-tree source archive
+contains exactly the three new reconstruction modules. Its 81-member wheel
+excludes benchmark/test/PyCOLMAP modules, retains all 15 attribution files,
+keeps NumPy as its only unconditional dependency, and passes a fresh
+NumPy-only installed smoke without PyCOLMAP. All three independent reviews
+are clear.
 
 ### R4. Organize native build and bindings
 

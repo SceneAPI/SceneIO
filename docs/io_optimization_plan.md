@@ -10,6 +10,13 @@ Backend qualification is the next prerequisite in
 JPEG backend already recorded as a known encode/decode gap requiring a measured
 libjpeg-turbo comparison. The reviewed, commit-sized verification checklist is
 [`next_stage_implementation_checklist.md`](next_stage_implementation_checklist.md).
+Current benchmark ownership work does not reopen O0-O5 or change codec
+capabilities or implementation-performance claims. Points close at `45e2757`
+with normal run `30244892746` and compiler-instrumented run `30244892600`.
+Reconstruction locally lower-owns nine ordinary buffer-backed specs and their
+fixtures/comparisons; specialized `colmap_sparse`, `colmap_sparse_txt`, and
+`colmap_db` orchestration remains in the compatible facade until the shared
+runner moves. PyCOLMAP remains test-only parity support.
 
 Scope: the compiled `sceneio._core` I/O path on `phase0-nanobind-core`.
 Companion to `coverage_roadmap.md` (this makes its "Phase 7" hardening/perf work
@@ -127,7 +134,7 @@ Permanent verification tool and the ordering input for the sweep.
 | Throughput bench | read+write MB/s, Mpix/s (images), Mpts/s (clouds), **original 23-codec scope** | `bench/bench_io.py` |
 | Peak-memory bench | `tracemalloc` peak + RSS for read & write | same harness |
 | Oracle comparison | same op via Pillow / laspy / OpenEXR / numpy / pycolmap / gsply | reuse `[test]` oracles |
-| Fixtures | small (typical) + large (100 MB–1 GB synthetic) per format | `bench/fixtures.py` (generated) |
+| Fixtures | small (typical) + large (100 MB–1 GB synthetic) per format | generated builders under `bench/io_bench/{fixtures,oracles}/`, with specialized cases temporarily facade-owned |
 
 **Exit criteria:** baseline table across the original 23 codecs, committed and reproducible
 (pinned methodology: warm/cold split, median of N). It orders the O1+ sweep

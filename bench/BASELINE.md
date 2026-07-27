@@ -1890,3 +1890,42 @@ with that wheel and NumPy, but without those packages, passes
 `python -m sceneio._wheel_smoke`. This combines an ownership move with a
 benchmark-fixture correction and makes no codec-implementation performance
 claim.
+
+Exact point commit `45e2757` passes normal run
+[30244892746](https://github.com/SceneAPI/SceneIO/actions/runs/30244892746)
+and compiler-instrumented run
+[30244892600](https://github.com/SceneAPI/SceneIO/actions/runs/30244892600).
+
+## R3.2 reconstruction benchmark-family extraction (2026-07-27)
+
+The sixth R3.2 checkpoint moves the nine buffer-backed `transforms_json`,
+`tum`, `kitti`, `euroc_state`, `g2o`, `bundler`, `bal`, `nvm`, and `openmvg`
+specs to `bench/io_bench/families/reconstruction.py`. Their deterministic
+pose, state, graph, and reconstruction fixtures now live in
+`fixtures/reconstruction.py`; the portable EuRoC, g2o, and BAL comparisons
+live in `oracles/reconstruction.py`. The facade slices the hook around the
+four calibration rows, preserving the 50-row order. Specialized
+`colmap_sparse`, `colmap_sparse_txt`, and `colmap_db` orchestration remains
+facade-owned until the shared runner moves.
+
+All nine `Spec` ASTs and 12 of the 13 moved helper ASTs match the point
+checkpoint. Review strengthened `_g2o_oracle_read`, the sole intentional
+helper difference, from a count-only result to complete node, edge, fixed-id,
+quaternion, translation, and symmetric information-matrix materialization.
+The regenerated live capture therefore times a full semantic decode. EuRoC,
+g2o, and BAL produce independent write/read metrics. The other six rows carry
+the exact exemption, independent benchmark encode/decode throughput, backed
+by their independent codec parity suites.
+
+The complete 50-codec smoke retains structural projection
+`2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`.
+Focused reconstruction/contract validation passes 505 tests with one existing
+optional PyCOLMAP skip; the complete suite passes 3,316 with the same four
+documented skips, and Ruff is clean. The exact-tree source archive has 359
+members and exactly the three new reconstruction benchmark modules. Its
+81-member wheel excludes benchmark, test, and PyCOLMAP modules, retains all 15
+attribution files, and keeps NumPy as its sole unconditional dependency;
+PyCOLMAP remains test-extra only. A fresh NumPy-only environment without
+PyCOLMAP passes the installed-wheel smoke. All three independent reviews are
+clear. This checkpoint changes benchmark ownership and strengthens one
+comparison workload; it makes no codec-implementation performance claim.

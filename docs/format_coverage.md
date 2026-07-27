@@ -311,9 +311,19 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > point-PLY/PCD/LAS/LAZ benchmark hook and its fixtures/comparisons without
 > changing a format capability. Five live rows have independent metrics; XYZ
 > explicitly exempts benchmark throughput while independent NumPy text parity
-> remains covered. The 50-codec structure, complete suite, exact-tree
-> source/wheel inventory, fresh NumPy-only smoke, and all three independent
-> reviews pass locally.
+> remains covered. Points close at `45e2757`: normal run
+> [30244892746](https://github.com/SceneAPI/SceneIO/actions/runs/30244892746)
+> and compiler-instrumented run
+> [30244892600](https://github.com/SceneAPI/SceneIO/actions/runs/30244892600)
+> pass. The local reconstruction extraction moves nine buffer-backed specs
+> plus their fixtures and portable EuRoC/g2o/BAL comparisons without changing
+> a format capability. Specialized COLMAP binary, text, and database
+> orchestration remains facade-owned. Three reconstruction rows have live
+> comparison metrics; six record exact benchmark-throughput exemptions backed
+> by independent parity. The g2o comparison now materializes every graph value
+> rather than counts only. The 50-codec structure, complete suite, 359/81
+> source/wheel inventory, 15 attributions, fresh NumPy-only smoke, and all
+> three independent reviews pass locally.
 
 [current-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287022
 [current-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287161

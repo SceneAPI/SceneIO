@@ -17,9 +17,7 @@ Synthetic fixtures are generated in a temporary directory and never committed.
 from __future__ import annotations
 
 import argparse
-import csv
 import gc
-import io
 import json
 import os
 import sqlite3
@@ -35,6 +33,9 @@ if str(Path(__file__).resolve().parents[1]) not in sys.path:
 
 import sceneio
 from bench.io_bench import measure as benchmark_measure
+from bench.io_bench.families import (
+    reconstruction as reconstruction_family,
+)
 from bench.io_bench.families.arrays import build_array_specs
 from bench.io_bench.families.calibration import (
     build_calibration_specs,
@@ -50,6 +51,9 @@ from bench.io_bench.fixtures import (
 from bench.io_bench.fixtures import images as image_fixtures
 from bench.io_bench.fixtures import meshes as mesh_fixtures
 from bench.io_bench.fixtures import points as point_fixtures
+from bench.io_bench.fixtures import (
+    reconstruction as reconstruction_fixtures,
+)
 from bench.io_bench.model import DirectorySpec, Spec
 from bench.io_bench.oracles import arrays as array_oracles
 from bench.io_bench.oracles import (
@@ -58,6 +62,9 @@ from bench.io_bench.oracles import (
 from bench.io_bench.oracles import images as image_oracles
 from bench.io_bench.oracles import meshes as mesh_oracles
 from bench.io_bench.oracles import points as point_oracles
+from bench.io_bench.oracles import (
+    reconstruction as reconstruction_oracles,
+)
 from bench.io_bench.reporting import (
     print_cold_cache_unavailable,
     print_colmap_db_row,
@@ -140,6 +147,26 @@ _pts_oracle_read = point_oracles._pts_oracle_read
 _pts_oracle_write = point_oracles._pts_oracle_write
 laspy = point_oracles.laspy
 o3d = point_oracles.o3d
+
+_bal_payload_nbytes = reconstruction_family._bal_payload_nbytes
+_euroc_payload_nbytes = reconstruction_family._euroc_payload_nbytes
+_g2o_payload_nbytes = reconstruction_family._g2o_payload_nbytes
+build_reconstruction_specs = (
+    reconstruction_family.build_reconstruction_specs
+)
+_bal_fixture = reconstruction_fixtures._bal_fixture
+_euroc_fixture = reconstruction_fixtures._euroc_fixture
+_g2o_fixture = reconstruction_fixtures._g2o_fixture
+_poses_and_reconstruction = (
+    reconstruction_fixtures._poses_and_reconstruction
+)
+_EUROC_HEADER = reconstruction_oracles._EUROC_HEADER
+_bal_oracle_read = reconstruction_oracles._bal_oracle_read
+_bal_oracle_write = reconstruction_oracles._bal_oracle_write
+_euroc_oracle_read = reconstruction_oracles._euroc_oracle_read
+_euroc_oracle_write = reconstruction_oracles._euroc_oracle_write
+_g2o_oracle_read = reconstruction_oracles._g2o_oracle_read
+_g2o_oracle_write = reconstruction_oracles._g2o_oracle_write
 
 _measure = benchmark_measure.measure
 _measure_in_process_rss = benchmark_measure.measure_in_process_rss
@@ -287,236 +314,6 @@ def _gauss(n):
     )
 
 
-def _poses_and_reconstruction(scale=1.0):
-    points = max(1, int(10_000 * scale))
-    views = max(1, int(10_000 * scale))
-    reconstruction = _core.read_nvm(
-        b"NVM_V3\n1\na.jpg 800 0.5 0.5 0.5 0.5 1 2 3 0 0\n"
-        + str(points).encode()
-        + b"\n"
-        + b"1.5 -2.5 3.5 10 20 30 0\n" * points
-        + b"0\n"
-    )
-    frame = b'{"file_path":"a.png","transform_matrix":[[1,0,0,1],[0,1,0,2],[0,0,1,3],[0,0,0,1]]}'
-    transforms = _core.read_transforms_json(
-        b'{"camera_model":"PINHOLE","fl_x":500,"fl_y":510,"cx":320,"cy":240,'
-        b'"w":640,"h":480,"frames":[' + b",".join([frame] * views) + b"]}"
-    )
-    tum = _core.read_tum(b"0 1 2 3 0 0 0 1\n" * views)
-    kitti = _core.read_kitti(b"1 0 0 1 0 1 0 2 0 0 1 3\n" * views)
-    return reconstruction, transforms, tum, kitti
-
-
-_EUROC_HEADER = (
-    "#timestamp [ns]",
-    "p_RS_R_x [m]",
-    "p_RS_R_y [m]",
-    "p_RS_R_z [m]",
-    "q_RS_w []",
-    "q_RS_x []",
-    "q_RS_y []",
-    "q_RS_z []",
-    "v_RS_R_x [m s^-1]",
-    "v_RS_R_y [m s^-1]",
-    "v_RS_R_z [m s^-1]",
-    "b_w_RS_S_x [rad s^-1]",
-    "b_w_RS_S_y [rad s^-1]",
-    "b_w_RS_S_z [rad s^-1]",
-    "b_a_RS_S_x [m s^-2]",
-    "b_a_RS_S_y [m s^-2]",
-    "b_a_RS_S_z [m s^-2]",
-)
-
-
-def _euroc_fixture(scale):
-    count = max(1, int(100_000 * scale))
-    rng = np.random.default_rng(20260724)
-    timestamps = (
-        1_403_636_580_000_000_000
-        + np.arange(count, dtype=np.int64) * 5_000_000
-    )
-    arrays = {
-        "timestamps": timestamps,
-        "positions": rng.standard_normal((count, 3)),
-        "quaternions": rng.standard_normal((count, 4)),
-        "velocities": rng.standard_normal((count, 3)),
-        "gyro_biases": rng.standard_normal((count, 3)) * 0.01,
-        "accel_biases": rng.standard_normal((count, 3)) * 0.1,
-    }
-    record = _core.state_trajectory(
-        arrays["timestamps"],
-        arrays["positions"],
-        arrays["quaternions"],
-        arrays["velocities"],
-        arrays["gyro_biases"],
-        arrays["accel_biases"],
-    )
-    return record, arrays
-
-
-def _euroc_oracle_write(payload):
-    output = io.StringIO(newline="")
-    writer = csv.writer(output, lineterminator="\n")
-    writer.writerow(_EUROC_HEADER)
-    combined = np.concatenate(
-        (
-            payload["positions"],
-            payload["quaternions"],
-            payload["velocities"],
-            payload["gyro_biases"],
-            payload["accel_biases"],
-        ),
-        axis=1,
-    )
-    for timestamp, values in zip(
-        payload["timestamps"], combined, strict=True
-    ):
-        writer.writerow((int(timestamp), *map(float, values)))
-    return output.getvalue().encode()
-
-
-def _euroc_oracle_read(data):
-    reader = csv.reader(io.StringIO(data.decode()))
-    header = tuple(next(reader))
-    if header != _EUROC_HEADER:
-        raise ValueError("unexpected EuRoC header")
-    rows = list(reader)
-    return {
-        "timestamps": np.asarray([int(row[0]) for row in rows], np.int64),
-        "states": np.asarray(
-            [[float(value) for value in row[1:]] for row in rows],
-            np.float64,
-        ),
-    }
-
-
-def _euroc_payload_nbytes(payload):
-    return sum(value.nbytes for value in payload.values())
-
-
-def _g2o_fixture(scale):
-    count = max(2, int(25_000 * scale))
-    ids = np.arange(count, dtype=np.int64) * 2 + 1
-    node_translations = np.column_stack(
-        (
-            np.arange(count, dtype=np.float64) * 0.05,
-            np.sin(np.arange(count, dtype=np.float64) * 0.01),
-            np.zeros(count),
-        )
-    )
-    node_quaternions = np.zeros((count, 4), np.float64)
-    node_quaternions[:, 3] = 1
-    edge_endpoints = np.column_stack((ids[:-1], ids[1:]))
-    edges = len(edge_endpoints)
-    edge_translations = np.column_stack(
-        (
-            np.full(edges, 0.05),
-            np.diff(node_translations[:, 1]),
-            np.zeros(edges),
-        )
-    )
-    edge_quaternions = np.zeros((edges, 4), np.float64)
-    edge_quaternions[:, 3] = 1
-    information = np.tile(np.eye(6), (edges, 1, 1))
-    fixed = np.zeros(count, np.uint8)
-    fixed[0] = 1
-    payload = {
-        "node_ids": ids,
-        "node_translations": node_translations,
-        "node_quaternions": node_quaternions,
-        "fixed": fixed,
-        "edge_endpoints": edge_endpoints,
-        "edge_translations": edge_translations,
-        "edge_quaternions": edge_quaternions,
-        "information_matrices": information,
-    }
-    return (
-        _core.pose_graph(
-            ids,
-            node_translations,
-            node_quaternions,
-            edge_endpoints,
-            edge_translations,
-            edge_quaternions,
-            information,
-            fixed=fixed,
-        ),
-        payload,
-    )
-
-
-def _g2o_oracle_write(payload):
-    lines = ["# independent g2o oracle"]
-    for node_id, translation, quaternion in zip(
-        payload["node_ids"],
-        payload["node_translations"],
-        payload["node_quaternions"],
-        strict=True,
-    ):
-        values = (*translation, *quaternion)
-        lines.append(
-            "VERTEX_SE3:QUAT "
-            + str(int(node_id))
-            + " "
-            + " ".join(f"{float(value):.17g}" for value in values)
-        )
-    lines.extend(
-        f"FIX {int(node_id)}"
-        for node_id, fixed in zip(
-            payload["node_ids"], payload["fixed"], strict=True
-        )
-        if fixed
-    )
-    for endpoints, translation, quaternion, information in zip(
-        payload["edge_endpoints"],
-        payload["edge_translations"],
-        payload["edge_quaternions"],
-        payload["information_matrices"],
-        strict=True,
-    ):
-        upper = (
-            information[row, column]
-            for row in range(6)
-            for column in range(row, 6)
-        )
-        values = (*translation, *quaternion, *upper)
-        lines.append(
-            "EDGE_SE3:QUAT "
-            + f"{int(endpoints[0])} {int(endpoints[1])} "
-            + " ".join(f"{float(value):.17g}" for value in values)
-        )
-    return ("\n".join(lines) + "\n").encode()
-
-
-def _g2o_oracle_read(data):
-    nodes = 0
-    edges = 0
-    fixed = 0
-    for raw in data.splitlines():
-        fields = raw.partition(b"#")[0].split()
-        if not fields:
-            continue
-        if fields[0] == b"VERTEX_SE3:QUAT" and len(fields) == 9:
-            int(fields[1])
-            np.asarray([float(value) for value in fields[2:]])
-            nodes += 1
-        elif fields[0] == b"EDGE_SE3:QUAT" and len(fields) == 31:
-            int(fields[1])
-            int(fields[2])
-            np.asarray([float(value) for value in fields[3:]])
-            edges += 1
-        elif fields[0] == b"FIX" and len(fields) == 2:
-            int(fields[1])
-            fixed += 1
-        else:
-            raise ValueError("unsupported g2o record")
-    return {"nodes": nodes, "edges": edges, "fixed": fixed}
-
-
-def _g2o_payload_nbytes(payload):
-    return sum(value.nbytes for value in payload.values())
-
-
 # --- codec specs: (id, build, sio_write, sio_read, oracle_write, oracle_read, payload_bytes) ---
 def _gsply_ply_w(payload):
     fd, path = tempfile.mkstemp(suffix=".ply")
@@ -564,93 +361,6 @@ def _gsply_spz_r(data):
         return gsply.read_spz(path)
     finally:
         os.remove(path)
-
-
-def _bal_oracle_write(payload):
-    cameras = payload["cameras"]
-    points = payload["points"]
-    camera_indices = payload["camera_indices"]
-    point_indices = payload["point_indices"]
-    observations = payload["observations"]
-    lines = [
-        f"{len(cameras)} {len(points)} {len(observations)}",
-    ]
-    lines.extend(
-        f"{int(camera)} {int(point)} {xy[0]:.17g} {xy[1]:.17g}"
-        for camera, point, xy in zip(
-            camera_indices,
-            point_indices,
-            observations,
-            strict=True,
-        )
-    )
-    lines.extend(f"{value:.17g}" for value in cameras.flat)
-    lines.extend(f"{value:.17g}" for value in points.flat)
-    return ("\n".join(lines) + "\n").encode()
-
-
-def _bal_oracle_read(data):
-    values = np.fromstring(data.decode("ascii"), sep=" ")
-    if len(values) < 3:
-        raise ValueError("truncated BAL header")
-    cameras, points, observations = (
-        int(values[0]),
-        int(values[1]),
-        int(values[2]),
-    )
-    expected = 3 + observations * 4 + cameras * 9 + points * 3
-    if min(cameras, points, observations) < 0 or len(values) != expected:
-        raise ValueError("invalid BAL token count")
-    cursor = 3
-    observed = values[cursor : cursor + observations * 4].reshape(
-        observations, 4
-    )
-    cursor += observations * 4
-    camera_values = values[cursor : cursor + cameras * 9].reshape(
-        cameras, 9
-    )
-    cursor += cameras * 9
-    point_values = values[cursor:].reshape(points, 3)
-    return {
-        "observations": observed,
-        "cameras": camera_values,
-        "points": point_values,
-    }
-
-
-def _bal_fixture(scale):
-    camera_count = max(1, int(1000 * scale))
-    point_count = max(1, int(10_000 * scale))
-    views_per_point = min(camera_count, 2)
-    point_indices = np.repeat(
-        np.arange(point_count, dtype=np.int32), views_per_point
-    )
-    camera_indices = np.tile(
-        np.arange(views_per_point, dtype=np.int32), point_count
-    )
-    rng = np.random.default_rng(8)
-    observations = rng.normal(
-        0, 500, (len(point_indices), 2)
-    ).astype(np.float64)
-    cameras = np.zeros((camera_count, 9), dtype=np.float64)
-    cameras[:, 2] = np.arange(camera_count) * 1e-5
-    cameras[:, 3] = np.arange(camera_count) * 0.01
-    cameras[:, 6] = 800 + np.arange(camera_count) % 200
-    cameras[:, 7] = 0.01
-    cameras[:, 8] = 0.001
-    points = rng.normal(0, 100, (point_count, 3)).astype(np.float64)
-    payload = {
-        "camera_indices": camera_indices,
-        "point_indices": point_indices,
-        "observations": observations,
-        "cameras": cameras,
-        "points": points,
-    }
-    return _core.read_bal(_bal_oracle_write(payload)), payload
-
-
-def _bal_payload_nbytes(payload):
-    return sum(value.nbytes for value in payload.values())
 
 
 _COLMAP_PAIR_MULTIPLIER = 2_147_483_647
@@ -1124,10 +834,12 @@ def _evict_file_cache(path):
 def _specs(scale, pose_bundle=None):
     side = max(1, int(1024 * scale**0.5))
     gaussians = max(1, int(200_000 * scale))
-    reconstruction, transforms, tum, kitti = pose_bundle or _poses_and_reconstruction(scale)
     image_specs = build_image_specs(scale)
     mesh_specs = build_mesh_specs(scale)
     point_specs = build_point_specs(scale)
+    reconstruction_specs = build_reconstruction_specs(
+        scale, pose_bundle
+    )
     return [
         *image_specs[:5],
         Spec(
@@ -1198,88 +910,9 @@ def _specs(scale, pose_bundle=None):
             lambda rec, p: rec.num_gaussians * 14 * 4,
         ),
         *build_array_specs(scale),
-        Spec(
-            "transforms_json",
-            lambda: (transforms, transforms),
-            _core.write_transforms_json,
-            _core.read_transforms_json,
-            None,
-            None,
-            lambda rec, p: _record_nbytes(rec),
-        ),
-        Spec(
-            "tum",
-            lambda: (tum, tum),
-            _core.write_tum,
-            _core.read_tum,
-            None,
-            None,
-            lambda rec, p: _record_nbytes(rec),
-        ),
-        Spec(
-            "kitti",
-            lambda: (kitti, kitti),
-            _core.write_kitti,
-            _core.read_kitti,
-            None,
-            None,
-            lambda rec, p: _record_nbytes(rec),
-        ),
-        Spec(
-            "euroc_state",
-            lambda: _euroc_fixture(scale),
-            _core.write_euroc_state,
-            _core.read_euroc_state,
-            _euroc_oracle_write,
-            _euroc_oracle_read,
-            lambda rec, payload: _euroc_payload_nbytes(payload),
-        ),
+        *reconstruction_specs[:4],
         *build_calibration_specs(scale),
-        Spec(
-            "g2o",
-            partial(_g2o_fixture, scale),
-            _core.write_g2o,
-            _core.read_g2o,
-            _g2o_oracle_write,
-            _g2o_oracle_read,
-            lambda rec, payload: _g2o_payload_nbytes(payload),
-        ),
-        Spec(
-            "bundler",
-            lambda: (reconstruction, reconstruction),
-            _core.write_bundler,
-            _core.read_bundler,
-            None,
-            None,
-            lambda rec, p: _record_nbytes(rec),
-        ),
-        Spec(
-            "bal",
-            lambda: _bal_fixture(scale),
-            _core.write_bal,
-            _core.read_bal,
-            _bal_oracle_write,
-            _bal_oracle_read,
-            lambda rec, p: _bal_payload_nbytes(p),
-        ),
-        Spec(
-            "nvm",
-            lambda: (reconstruction, reconstruction),
-            _core.write_nvm,
-            _core.read_nvm,
-            None,
-            None,
-            lambda rec, p: _record_nbytes(rec),
-        ),
-        Spec(
-            "openmvg",
-            lambda: (reconstruction, reconstruction),
-            _core.write_openmvg,
-            _core.read_openmvg,
-            None,
-            None,
-            lambda rec, p: _record_nbytes(rec),
-        ),
+        *reconstruction_specs[4:],
     ]
 
 

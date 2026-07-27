@@ -20,9 +20,13 @@
 > compiler-instrumented run `30237676648`; raster images close at `6572a76`
 > with normal run `30239455960` and compiler-instrumented run `30239455952`;
 > meshes close at `613fd26` with normal run `30241711640` and
-> compiler-instrumented run `30241711620`; the point benchmark family is
-> locally complete. Reconstruction, sequences, splats, and the shared runner
-> remain in R3.2.
+> compiler-instrumented run `30241711620`; points close at `45e2757` with
+> normal run `30244892746` and compiler-instrumented run `30244892600`.
+> Reconstruction is locally complete: nine buffer-backed specs have lower
+> ownership, three portable comparison rows are live, and six exact
+> benchmark-throughput exemptions remain backed by independent parity suites.
+> Specialized COLMAP rows remain facade-owned. Sequences, splats, and the
+> shared runner remain in R3.2.
 
 The granular, per‑format execution plan for covering **every relevant file type
 that has a permissively‑licensed open‑source option**. Sits below the strategy

@@ -41,8 +41,9 @@ R2 is closed. R3.1a is complete in the current tree. R3.1b closes at follow-up
 commit `0bdfe0f`; normal run `30234796010` and
 compiler-instrumented run `30234796025` pass. R3.2 family extraction is
 active. Arrays, calibration, raster images, and meshes are committed and
-hosted-green; the point-family extraction is locally complete and awaiting
-its exact-commit hosted runs.
+hosted-green. Points close at `45e2757`; normal run `30244892746` and
+compiler-instrumented run `30244892600` pass. The reconstruction-family
+extraction is locally complete; sequences, splats, and the runner remain.
 
 This is the operational checklist for the repository-organization and
 codec-performance stage defined in
@@ -2734,7 +2735,7 @@ passes both jobs. No release workflow, tag, or publication was triggered.
   - [x] images;
   - [x] meshes;
   - [x] points;
-  - [ ] reconstruction;
+  - [x] reconstruction;
   - [ ] sequences;
   - [ ] splats.
 - [ ] After the family hooks have lower ownership, move the remaining complete
@@ -2904,6 +2905,42 @@ members and exactly the three new point modules without generated caches. Its
 retains all 15 attribution files, and keeps NumPy as the sole unconditional
 dependency; those comparison packages remain test-extra only. A fresh
 NumPy-only environment without them passes the installed-wheel smoke.
+
+Exact point commit `45e2757` passes normal run
+[30244892746](https://github.com/SceneAPI/SceneIO/actions/runs/30244892746)
+and compiler-instrumented run
+[30244892600](https://github.com/SceneAPI/SceneIO/actions/runs/30244892600).
+
+The reconstruction checkpoint moves the nine buffer-backed
+`transforms_json`, `tum`, `kitti`, `euroc_state`, `g2o`, `bundler`, `bal`,
+`nvm`, and `openmvg` specs to `io_bench/families/reconstruction.py`.
+Deterministic pose, state, graph, and reconstruction fixtures move to
+`fixtures/reconstruction.py`; portable EuRoC, g2o, and BAL pairs move to
+`oracles/reconstruction.py`. The facade retains exact compatibility aliases
+and slices the reconstruction hook around the four calibration specs.
+Specialized `colmap_sparse`, `colmap_sparse_txt`, and `colmap_db`
+orchestration remains facade-owned until the runner extraction.
+
+All nine `Spec` ASTs and 12 of 13 moved helper ASTs match the point
+checkpoint. Review intentionally strengthens `_g2o_oracle_read`, the sole
+helper difference, to return node ids/translations/quaternions, fixed-node
+ids, edge endpoints/translations/quaternions, and reconstructed symmetric
+information matrices. Compatibility controls compare every field from
+oracle- and core-produced bytes. EuRoC, g2o, and BAL have live portable
+comparison metrics. The other six rows record the exact unverified property,
+independent benchmark encode/decode throughput, and point to independent
+codec parity suites.
+
+The complete 50-codec smoke retains structural projection
+`2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`.
+Focused reconstruction/contract validation passes 505 tests with one existing
+optional PyCOLMAP skip; the complete suite passes 3,316 with the same four
+documented skips, Ruff is clean, and all three independent reviews are clear.
+The exact-tree source archive has 359 members and exactly the three new
+reconstruction modules. Its 81-member wheel excludes benchmark, test, and
+PyCOLMAP modules, retains all 15 attribution files, and keeps NumPy as the
+sole unconditional dependency; PyCOLMAP remains test-extra only. A fresh
+NumPy-only environment without PyCOLMAP passes the installed-wheel smoke.
 
 ### R3.3 — cross-codec test support
 

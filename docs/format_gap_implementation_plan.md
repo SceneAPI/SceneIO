@@ -2004,9 +2004,14 @@ normal run `30237676629` and compiler-instrumented run `30237676648`; raster
 images close at `6572a76` with normal run `30239455960` and
 compiler-instrumented run `30239455952`; meshes close at `613fd26` with normal
 run `30241711640` and compiler-instrumented run `30241711620`; and the point
-benchmark family is complete in the current local tree. The specialized glTF
-row remains facade-owned pending runner extraction. Reconstruction, sequences,
-splats, and the runner remain in R3.2; their sequence is maintained in
+benchmark family closes at `45e2757` with normal run `30244892746` and
+compiler-instrumented run `30244892600`. The reconstruction family is complete
+in the current local tree: nine ordinary specs have lower ownership, three
+portable comparison rows are live, and six exact benchmark-throughput
+exemptions retain independent parity coverage. The specialized glTF,
+COLMAP-binary, COLMAP-text, and COLMAP-database rows remain facade-owned
+pending runner extraction. Sequences, splats, and the runner remain in R3.2;
+their sequence is maintained in
 [`next_stage_implementation_checklist.md`](next_stage_implementation_checklist.md).
 
 Status terms are strict:

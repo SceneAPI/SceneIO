@@ -691,6 +691,27 @@ def _assert_benchmark_components_and_metric_semantics_are_explicit():
         "format parity remains covered by the independent NumPy text parser "
         "and serializer in tests/codecs/test_xyz.py"
     )
+    reconstruction_exemptions = extracted_families["reconstruction"][
+        "no_oracle_exemptions"
+    ]
+    assert set(reconstruction_exemptions) == {
+        "bundler",
+        "kitti",
+        "nvm",
+        "openmvg",
+        "transforms_json",
+        "tum",
+    }
+    for exemption in reconstruction_exemptions.values():
+        assert exemption["unverified_property"] == (
+            "independent benchmark encode/decode throughput"
+        )
+        assert exemption["verification"].startswith(
+            "format parity remains covered by the independent "
+        )
+    assert extracted_families["reconstruction"][
+        "facade_constant_exports"
+    ] == ["_EUROC_HEADER"]
 
     lower_modules = sorted(
         {
@@ -1945,6 +1966,256 @@ def _assert_benchmark_components_and_metric_semantics_are_explicit():
         text=True,
     )
     assert json.loads(blocked.stdout) == [True] * 14
+
+    reconstruction_family_module = sys.modules[
+        "bench.io_bench.families.reconstruction"
+    ]
+    reconstruction_fixture_module = sys.modules[
+        "bench.io_bench.fixtures.reconstruction"
+    ]
+    reconstruction_oracle_module = sys.modules[
+        "bench.io_bench.oracles.reconstruction"
+    ]
+    reconstruction_fixture_names = (
+        "_bal_fixture",
+        "_euroc_fixture",
+        "_g2o_fixture",
+        "_poses_and_reconstruction",
+    )
+    reconstruction_oracle_names = (
+        "_bal_oracle_read",
+        "_bal_oracle_write",
+        "_euroc_oracle_read",
+        "_euroc_oracle_write",
+        "_g2o_oracle_read",
+        "_g2o_oracle_write",
+    )
+    reconstruction_size_names = (
+        "_bal_payload_nbytes",
+        "_euroc_payload_nbytes",
+        "_g2o_payload_nbytes",
+    )
+    for helper_name in reconstruction_fixture_names:
+        assert getattr(reconstruction_family_module, helper_name) is getattr(
+            reconstruction_fixture_module,
+            helper_name,
+        )
+        assert getattr(benchmark, helper_name) is getattr(
+            reconstruction_fixture_module,
+            helper_name,
+        )
+    for helper_name in reconstruction_oracle_names:
+        assert getattr(
+            reconstruction_family_module, helper_name
+        ) is getattr(reconstruction_oracle_module, helper_name)
+        assert getattr(benchmark, helper_name) is getattr(
+            reconstruction_oracle_module,
+            helper_name,
+        )
+    for helper_name in reconstruction_size_names:
+        assert getattr(benchmark, helper_name) is getattr(
+            reconstruction_family_module,
+            helper_name,
+        )
+    assert benchmark._EUROC_HEADER is (
+        reconstruction_oracle_module._EUROC_HEADER
+    )
+    assert benchmark.build_reconstruction_specs is (
+        reconstruction_family_module.build_reconstruction_specs
+    )
+
+    pose_bundle = benchmark._poses_and_reconstruction(0.001)
+    reconstruction_specs = benchmark.build_reconstruction_specs(
+        0.001, pose_bundle
+    )
+    assert [spec.id for spec in reconstruction_specs] == [
+        "transforms_json",
+        "tum",
+        "kitti",
+        "euroc_state",
+        "g2o",
+        "bundler",
+        "bal",
+        "nvm",
+        "openmvg",
+    ]
+    reconstruction_by_id = {
+        spec.id: spec for spec in reconstruction_specs
+    }
+    reconstruction_core_bindings = {
+        "transforms_json": (
+            _core.write_transforms_json,
+            _core.read_transforms_json,
+        ),
+        "tum": (_core.write_tum, _core.read_tum),
+        "kitti": (_core.write_kitti, _core.read_kitti),
+        "euroc_state": (
+            _core.write_euroc_state,
+            _core.read_euroc_state,
+        ),
+        "g2o": (_core.write_g2o, _core.read_g2o),
+        "bundler": (_core.write_bundler, _core.read_bundler),
+        "bal": (_core.write_bal, _core.read_bal),
+        "nvm": (_core.write_nvm, _core.read_nvm),
+        "openmvg": (_core.write_openmvg, _core.read_openmvg),
+    }
+    reconstruction_payloads = {}
+    reconstruction_core_bytes = {}
+    for spec in reconstruction_specs:
+        writer, reader = reconstruction_core_bindings[spec.id]
+        assert spec.w is writer
+        assert spec.r is reader
+        record, payload = spec.make()
+        reconstruction_payloads[spec.id] = payload
+        expected_nbytes = (
+            sum(value.nbytes for value in payload.values())
+            if isinstance(payload, dict)
+            else benchmark._record_nbytes(record)
+        )
+        assert spec.nbytes(record, payload) == expected_nbytes
+        encoded = bytes(spec.w(record))
+        assert encoded
+        reconstruction_core_bytes[spec.id] = encoded
+        spec.r(encoded)
+
+    for codec_id in extracted_families["reconstruction"][
+        "no_oracle_exemptions"
+    ]:
+        spec = reconstruction_by_id[codec_id]
+        assert (spec.ow, spec.orr) == (None, None)
+
+    euroc_spec = reconstruction_by_id["euroc_state"]
+    euroc_payload = reconstruction_payloads["euroc_state"]
+    euroc_expected_states = np.concatenate(
+        (
+            euroc_payload["positions"],
+            euroc_payload["quaternions"],
+            euroc_payload["velocities"],
+            euroc_payload["gyro_biases"],
+            euroc_payload["accel_biases"],
+        ),
+        axis=1,
+    )
+    for encoded in (
+        euroc_spec.ow(euroc_payload),
+        reconstruction_core_bytes["euroc_state"],
+    ):
+        decoded = euroc_spec.orr(encoded)
+        np.testing.assert_array_equal(
+            decoded["timestamps"], euroc_payload["timestamps"]
+        )
+        np.testing.assert_allclose(
+            decoded["states"], euroc_expected_states, rtol=0.0, atol=0.0
+        )
+
+    g2o_spec = reconstruction_by_id["g2o"]
+    g2o_payload = reconstruction_payloads["g2o"]
+    for encoded in (
+        g2o_spec.ow(g2o_payload),
+        reconstruction_core_bytes["g2o"],
+    ):
+        decoded = g2o_spec.orr(encoded)
+        for name in (
+            "node_ids",
+            "node_translations",
+            "node_quaternions",
+            "edge_endpoints",
+            "edge_translations",
+            "edge_quaternions",
+            "information_matrices",
+        ):
+            np.testing.assert_allclose(
+                decoded[name], g2o_payload[name], rtol=0.0, atol=0.0
+            )
+        np.testing.assert_array_equal(
+            decoded["fixed_node_ids"],
+            g2o_payload["node_ids"][g2o_payload["fixed"] != 0],
+        )
+
+    bal_spec = reconstruction_by_id["bal"]
+    bal_payload = reconstruction_payloads["bal"]
+    for encoded in (
+        bal_spec.ow(bal_payload),
+        reconstruction_core_bytes["bal"],
+    ):
+        decoded = bal_spec.orr(encoded)
+        np.testing.assert_allclose(
+            decoded["observations"][:, :2],
+            np.column_stack(
+                (
+                    bal_payload["camera_indices"],
+                    bal_payload["point_indices"],
+                )
+            ),
+            rtol=0.0,
+            atol=0.0,
+        )
+        np.testing.assert_allclose(
+            decoded["observations"][:, 2:],
+            bal_payload["observations"],
+            rtol=0.0,
+            atol=0.0,
+        )
+        np.testing.assert_allclose(
+            decoded["cameras"],
+            bal_payload["cameras"],
+            rtol=0.0,
+            atol=0.0,
+        )
+        np.testing.assert_allclose(
+            decoded["points"],
+            bal_payload["points"],
+            rtol=0.0,
+            atol=0.0,
+        )
+
+    lower_reconstruction_probe = textwrap.dedent(
+        """
+        import importlib
+        import json
+        import sys
+
+        oracles = importlib.import_module(
+            "bench.io_bench.oracles.reconstruction"
+        )
+        fixtures = importlib.import_module(
+            "bench.io_bench.fixtures.reconstruction"
+        )
+        family = importlib.import_module(
+            "bench.io_bench.families.reconstruction"
+        )
+        print(json.dumps([
+            "bench.bench_io" not in sys.modules,
+            family._poses_and_reconstruction
+                is fixtures._poses_and_reconstruction,
+            family._euroc_oracle_write is oracles._euroc_oracle_write,
+            [spec.id for spec in family.build_reconstruction_specs(0.001)],
+        ]))
+        """
+    )
+    lower_reconstruction = subprocess.run(
+        [sys.executable, "-c", lower_reconstruction_probe],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert json.loads(lower_reconstruction.stdout) == [
+        True,
+        True,
+        True,
+        [
+            "transforms_json",
+            "tum",
+            "kitti",
+            "euroc_state",
+            "g2o",
+            "bundler",
+            "bal",
+            "nvm",
+            "openmvg",
+        ],
+    ]
 
     calls = []
     duration, peak = benchmark._measure(

@@ -25,13 +25,13 @@
       "_img_u8": "bench/io_bench/fixtures/images.py",
       "_mesh_scene": "bench/io_bench/fixtures/meshes.py",
       "_pc_ply": "bench/io_bench/fixtures/points.py",
-      "_poses_and_reconstruction": "bench/bench_io.py",
+      "_poses_and_reconstruction": "bench/io_bench/fixtures/reconstruction.py",
       "_single_calibration": "bench/io_bench/fixtures/calibration.py",
       "_specs": "bench/bench_io.py",
       "_y4m_fixture": "bench/bench_io.py"
     },
     "parent_and_candidate_builder_ast_sha256": "ce8dda677da61550035dcd2062d4cb53aed20f21e37024d87d5f50449ba1fbfd",
-    "current_builder_ast_sha256": "72984d6968265230ed18fbe270e45d65bd1a0b7336fc80601d57fe3ec8448a5c",
+    "current_builder_ast_sha256": "0da65a6f38c37fe7f2f330d1c6495fe61a2cc87876ae71052f74c1350925acfd",
     "fixtures": {
       "camera_calibration": "5e2b5f1e70aa57bd8d219b06a16ce36dfec48aa4d0905ef45cdf503cca8b511c",
       "gaussian_cloud": "dc358708428493fafd834f6c9626f87dd1e91626d324fea3865320561176b1cf",
@@ -375,6 +375,102 @@
         "xyz": {
           "unverified_property": "independent benchmark encode/decode throughput",
           "verification": "format parity remains covered by the independent NumPy text parser and serializer in tests/codecs/test_xyz.py"
+        }
+      }
+    },
+    "reconstruction": {
+      "family_functions": {
+        "build_reconstruction_specs": {
+          "source": "bench/io_bench/families/reconstruction.py",
+          "ast_sha256": "835e6ff5be2dcb54bf8cfd95c3dacaf3a3f6ff37217e6e9f9ac735f7dce3c061"
+        }
+      },
+      "facade_family_exports": [
+        "build_reconstruction_specs"
+      ],
+      "functions": {
+        "_bal_fixture": {
+          "source": "bench/io_bench/fixtures/reconstruction.py",
+          "ast_sha256": "aa8b97893e5d321049d9a0a5436461da470bf8ed45cafafb58d8362fdc6c7dad"
+        },
+        "_bal_oracle_read": {
+          "source": "bench/io_bench/oracles/reconstruction.py",
+          "ast_sha256": "b3870bfd1971718cf0196fa77bacd345d7c05a3f4e3f250330817feb8aee30dd"
+        },
+        "_bal_oracle_write": {
+          "source": "bench/io_bench/oracles/reconstruction.py",
+          "ast_sha256": "aedae2539d20205328bf57f9015222415e6575a79a1f64c30d06b41af0377286"
+        },
+        "_bal_payload_nbytes": {
+          "source": "bench/io_bench/families/reconstruction.py",
+          "ast_sha256": "001ffcddb528c47c212da2b0872608acc899186c163d825000c035cb3ad4309c"
+        },
+        "_euroc_fixture": {
+          "source": "bench/io_bench/fixtures/reconstruction.py",
+          "ast_sha256": "40c07a8f891ec9de11157f06a1125ff3129007a1bb4c4508f3ba2caf0dbb63e5"
+        },
+        "_euroc_oracle_read": {
+          "source": "bench/io_bench/oracles/reconstruction.py",
+          "ast_sha256": "5f01ac3007baecdb20c2307ca85324acf94f2ba8313fe54543f4e2f9b5f5a6f9"
+        },
+        "_euroc_oracle_write": {
+          "source": "bench/io_bench/oracles/reconstruction.py",
+          "ast_sha256": "479771c362c4e1fa8a8145330a5879b03830743ef9587401775741db4cfc8e8d"
+        },
+        "_euroc_payload_nbytes": {
+          "source": "bench/io_bench/families/reconstruction.py",
+          "ast_sha256": "2c5ff9f359b1b0266309899c7b16c9395c33dfb37579da6eed5541742dd07332"
+        },
+        "_g2o_fixture": {
+          "source": "bench/io_bench/fixtures/reconstruction.py",
+          "ast_sha256": "ec0539ffe7733c01bda3bdbda5668e855e01f6c4c3dc50680367069ef1a1f9cf"
+        },
+        "_g2o_oracle_read": {
+          "source": "bench/io_bench/oracles/reconstruction.py",
+          "ast_sha256": "0f78961cc11cb40ebcbbae9269dee0c8b956c466f18f26c97dcaa9af7b61d46f"
+        },
+        "_g2o_oracle_write": {
+          "source": "bench/io_bench/oracles/reconstruction.py",
+          "ast_sha256": "3d8e546e551dfad837997cd5698e35a362bfc82d41f4159b0e848d7b9e1c0207"
+        },
+        "_g2o_payload_nbytes": {
+          "source": "bench/io_bench/families/reconstruction.py",
+          "ast_sha256": "f80cf74b989b0c6ec4619cae93432fa36bcf9a405608cdeb05da2b2c5a4c13db"
+        },
+        "_poses_and_reconstruction": {
+          "source": "bench/io_bench/fixtures/reconstruction.py",
+          "ast_sha256": "2ff5e65be2129f43a7ba4c76e1ff7a1478923ebf3f7531f0d4c0020d6b22b2f4"
+        }
+      },
+      "facade_constant_exports": [
+        "_EUROC_HEADER"
+      ],
+      "optional_oracle_bindings": [],
+      "optional_oracle_source": "bench/io_bench/oracles/reconstruction.py",
+      "no_oracle_exemptions": {
+        "bundler": {
+          "unverified_property": "independent benchmark encode/decode throughput",
+          "verification": "format parity remains covered by the independent token-stream parser in tests/codecs/test_bundler.py"
+        },
+        "kitti": {
+          "unverified_property": "independent benchmark encode/decode throughput",
+          "verification": "format parity remains covered by the independent NumPy text parser and serializer in tests/codecs/test_pose_text.py"
+        },
+        "nvm": {
+          "unverified_property": "independent benchmark encode/decode throughput",
+          "verification": "format parity remains covered by the independent NVM parser and emitter in tests/codecs/test_nvm.py"
+        },
+        "openmvg": {
+          "unverified_property": "independent benchmark encode/decode throughput",
+          "verification": "format parity remains covered by the independent JSON parser and pose conversion in tests/codecs/test_openmvg.py"
+        },
+        "transforms_json": {
+          "unverified_property": "independent benchmark encode/decode throughput",
+          "verification": "format parity remains covered by the independent JSON parser, serializer, and matrix math in tests/codecs/test_transforms_json.py"
+        },
+        "tum": {
+          "unverified_property": "independent benchmark encode/decode throughput",
+          "verification": "format parity remains covered by the independent NumPy text parser and serializer in tests/codecs/test_pose_text.py"
         }
       }
     }
