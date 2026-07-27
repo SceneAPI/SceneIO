@@ -2053,6 +2053,10 @@ Exact array commit `5009ea0` passes normal run `30282057346` and
 compiler-instrumented run `30282056576`. Image-specific Netpbm/WebP behavior
 now moves unchanged into `tests/test_io_partial_images.py`, while its two
 shared assertions gain lower ownership under `tests/_support/partial_read.py`.
+Exact image commit `d198560` passes normal run `30285128366` and
+compiler-instrumented run `30285128448`. The next mesh unit moves the
+unchanged face-range semantic and mapping-close test into
+`tests/test_io_partial_meshes.py`.
 
 Status terms are strict:
 

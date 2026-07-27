@@ -301,6 +301,9 @@ sceneio._core (C++ / nanobind)
   AST projection are contract-pinned. Image-specific Netpbm/WebP behavior now
   lives in `tests/test_io_partial_images.py`; two shared image-window
   assertions have lower ownership in `tests/_support/partial_read.py`.
+  Mesh face-range behavior now has focused ownership in
+  `tests/test_io_partial_meshes.py`; its exact path move and destination AST
+  projection are contract-pinned.
   Cross-family partial invariants remain in `tests/test_io_partial.py` while
   the other families move in later units.
   Built-in startup uses `_registry/assembly.py` as a lower staging boundary.

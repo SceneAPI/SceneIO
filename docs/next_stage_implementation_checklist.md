@@ -3085,8 +3085,10 @@ environment. `sceneio._wheel_smoke` returns `2`.
   - [x] Move the 10 parameterized Netpbm/WebP image nodes unchanged into
         `tests/test_io_partial_images.py` and lower their two shared window
         assertions under `tests/_support/partial_read.py`.
-  - [ ] Migrate mesh, point, reconstruction, sequence, and splat
-        family-specific consumers.
+  - [x] Move the mesh face-range behavior unchanged into
+        `tests/test_io_partial_meshes.py`.
+  - [ ] Migrate point, reconstruction, sequence, and splat family-specific
+        consumers.
 - [ ] Remove each old matrix only after its replacement is proven equivalent.
   - [x] Remove the mmap matrix after exact local and hosted equivalence.
 - [ ] Preserve parameter ids so CI failures remain attributable.
@@ -3101,6 +3103,8 @@ environment. `sceneio._wheel_smoke` returns `2`.
         preserving every test name and parameter id.
   - [x] Record the three array partial paths and all 10 image partial
         parameterized paths; pin their destination function AST projections.
+  - [x] Record the mesh partial path and pin its destination function AST
+        projection.
   - [x] Record the lower move of the two shared image-window assertions so
         family modules never import sibling test modules.
 
@@ -3206,6 +3210,20 @@ are contract-pinned. The complete collection remains 3,345 with normalized
 SHA-256
 `c9db2c71c11f6af8d4fcd5a08a5bf75a2428ea915805e3671c5cadb2ef581cc4`.
 Exact package verification records 377 source files, a 378-file sdist whose
+only generated member is `PKG-INFO`, and the unchanged 81-member Windows abi3
+wheel. It contains one native module and all 15 attribution members, excludes
+repository test/benchmark/build payloads, and passes `sceneio._wheel_smoke` in
+a fresh SceneIO-plus-NumPy environment.
+Exact image partial migration commit `d198560` passes normal run
+`30285128366` and compiler-instrumented run `30285128448`.
+
+The mesh-family unit moves the unchanged face-range semantic and mapping-close
+test into `tests/test_io_partial_meshes.py`. Its single exact path-only rename
+and destination function AST projection are contract-pinned, and both platform
+commands name the focused module. The complete collection remains 3,345 with
+normalized SHA-256
+`c658cb0d7353ad5c6cf4f6e38b01a02418f693b121e6d8f4bba887945821cc9d`.
+Exact package verification records 378 source files, a 379-file sdist whose
 only generated member is `PKG-INFO`, and the unchanged 81-member Windows abi3
 wheel. It contains one native module and all 15 attribution members, excludes
 repository test/benchmark/build payloads, and passes `sceneio._wheel_smoke` in

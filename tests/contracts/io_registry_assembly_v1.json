@@ -329,7 +329,7 @@
   },
   "pytest_candidate_collection": {
     "count": 3345,
-    "sorted_normalized_node_ids_sha256": "c9db2c71c11f6af8d4fcd5a08a5bf75a2428ea915805e3671c5cadb2ef581cc4",
+    "sorted_normalized_node_ids_sha256": "c658cb0d7353ad5c6cf4f6e38b01a02418f693b121e6d8f4bba887945821cc9d",
     "added_nodes": [
       "tests/test_benchmark_memory_protocol.py::test_memory_protocol_contract_and_repeated_sceneio_measurement",
       "tests/test_benchmark_memory_protocol.py::test_missing_sampler_is_explicit_and_strict_mode_rejects_it",
@@ -746,6 +746,17 @@
           "test_ascii_netpbm_windows_reject_complete_payload_decode[uint16-3]",
           "test_lossy_webp_windows_reject_non_slice_exact_decode[3]",
           "test_lossy_webp_windows_reject_non_slice_exact_decode[4]"
+        ]
+      },
+      {
+        "name": "partial_meshes",
+        "from_prefix": "tests/test_io_partial.py::",
+        "to_prefix": "tests/test_io_partial_meshes.py::",
+        "excluded_function_names": [],
+        "function_count": 1,
+        "function_ast_sha256": "68eb089e1f7c5fe457354b435c1d3dcd8160f45c18360ee002a48c4cb9396ae9",
+        "node_suffixes": [
+          "test_mesh_face_range_equals_full_domain_slice_and_closes_mapping"
         ]
       }
     ],

@@ -2279,3 +2279,24 @@ only generated member is `PKG-INFO`, and the unchanged 81-member Windows abi3
 wheel. It contains one native module and all 15 attribution members, excludes
 repository test/benchmark/build payloads, and passes `sceneio._wheel_smoke` in
 a fresh SceneIO-plus-NumPy environment.
+
+Exact image partial migration commit `d198560` passes normal run
+[30285128366](https://github.com/SceneAPI/SceneIO/actions/runs/30285128366)
+and compiler-instrumented run
+[30285128448](https://github.com/SceneAPI/SceneIO/actions/runs/30285128448).
+
+## R3.3 mesh partial-consumer migration (2026-07-27)
+
+The unchanged mesh face-range semantic and mapping-close test now lives in
+`tests/test_io_partial_meshes.py`. Its single exact path-only rename and
+destination function AST projection SHA-256
+`68eb089e1f7c5fe457354b435c1d3dcd8160f45c18360ee002a48c4cb9396ae9`
+are contract-pinned. Both platform commands name the focused module. The
+complete collection remains 3,345 with normalized SHA-256
+`c658cb0d7353ad5c6cf4f6e38b01a02418f693b121e6d8f4bba887945821cc9d`.
+This unit changes test ownership only and makes no codec performance claim.
+Exact package verification records 378 source files, a 379-file sdist whose
+only generated member is `PKG-INFO`, and the unchanged 81-member Windows abi3
+wheel. It contains one native module and all 15 attribution members, excludes
+repository test/benchmark/build payloads, and passes `sceneio._wheel_smoke` in
+a fresh SceneIO-plus-NumPy environment.

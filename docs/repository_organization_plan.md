@@ -911,6 +911,20 @@ only generated member is `PKG-INFO`, and the unchanged 81-member Windows abi3
 wheel. It contains one native module and all 15 attribution members, excludes
 repository test/benchmark/build payloads, and passes `sceneio._wheel_smoke` in
 a fresh SceneIO-plus-NumPy environment.
+Exact image commit `d198560` passes normal run `30285128366` and
+compiler-instrumented run `30285128448`.
+
+The mesh partial unit moves the unchanged face-range semantic and mapping-close
+test into `tests/test_io_partial_meshes.py`. Its exact path-only rename and
+function AST projection are contract-pinned, and both platform commands name
+the focused module. The complete collection remains 3,345 with normalized
+SHA-256
+`c658cb0d7353ad5c6cf4f6e38b01a02418f693b121e6d8f4bba887945821cc9d`.
+Exact package verification records 378 source files, a 379-file sdist whose
+only generated member is `PKG-INFO`, and the unchanged 81-member Windows abi3
+wheel. It contains one native module and all 15 attribution members, excludes
+repository test/benchmark/build payloads, and passes `sceneio._wheel_smoke` in
+a fresh SceneIO-plus-NumPy environment.
 
 ### R4. Organize native build and bindings
 

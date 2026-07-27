@@ -443,6 +443,19 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > only generated member is `PKG-INFO`, and an unchanged 81-member Windows abi3
 > wheel. A fresh SceneIO-plus-NumPy installation passes
 > `sceneio._wheel_smoke`.
+> Exact image commit `d198560` passes [normal run
+> 30285128366](https://github.com/SceneAPI/SceneIO/actions/runs/30285128366)
+> and [compiler-instrumented run
+> 30285128448](https://github.com/SceneAPI/SceneIO/actions/runs/30285128448).
+> The mesh partial unit moves the unchanged face-range semantic and
+> mapping-close test into `tests/test_io_partial_meshes.py`. Its exact
+> path-only rename and function projection are pinned. Collection remains
+> 3,345 with normalized SHA-256
+> `c658cb0d7353ad5c6cf4f6e38b01a02418f693b121e6d8f4bba887945821cc9d`.
+> Exact package verification records 378 source files, a 379-file sdist whose
+> only generated member is `PKG-INFO`, and an unchanged 81-member Windows abi3
+> wheel. A fresh SceneIO-plus-NumPy installation passes
+> `sceneio._wheel_smoke`.
 
 [current-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287022
 [current-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287161

@@ -801,6 +801,11 @@ def test_assembly_dependency_direction_and_import_delta_are_exact():
             "tests/test_io_partial_images.py::",
             10,
         ),
+        "partial_meshes": (
+            "tests/test_io_partial.py::",
+            "tests/test_io_partial_meshes.py::",
+            1,
+        ),
     }
     assert [item["name"] for item in rename_groups] == list(expected_groups)
     renamed_from = set()
@@ -903,6 +908,8 @@ def test_assembly_dependency_direction_and_import_delta_are_exact():
     assert non_windows_mmap_command.count("tests/test_io_partial_arrays.py") == 1
     assert windows_mmap_command.count("tests/test_io_partial_images.py") == 1
     assert non_windows_mmap_command.count("tests/test_io_partial_images.py") == 1
+    assert windows_mmap_command.count("tests/test_io_partial_meshes.py") == 1
+    assert non_windows_mmap_command.count("tests/test_io_partial_meshes.py") == 1
     assert (
         "bench/bench_io.py --runs 1 --scale 0.001 --skip-oracles --json"
         in ci_workflow
