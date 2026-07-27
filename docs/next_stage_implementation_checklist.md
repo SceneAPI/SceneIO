@@ -3082,7 +3082,10 @@ environment. `sceneio._wheel_smoke` returns `2`.
   - [x] Move the three array-specific DMB/FLO behavior tests unchanged into
         `tests/test_io_partial_arrays.py`; retain cross-family window tests in
         the shared suite.
-  - [ ] Migrate image, mesh, point, reconstruction, sequence, and splat
+  - [x] Move the 10 parameterized Netpbm/WebP image nodes unchanged into
+        `tests/test_io_partial_images.py` and lower their two shared window
+        assertions under `tests/_support/partial_read.py`.
+  - [ ] Migrate mesh, point, reconstruction, sequence, and splat
         family-specific consumers.
 - [ ] Remove each old matrix only after its replacement is proven equivalent.
   - [x] Remove the mmap matrix after exact local and hosted equivalence.
@@ -3096,6 +3099,10 @@ environment. `sceneio._wheel_smoke` returns `2`.
         preserving all test names and the `npy`/`pfm`/`flo` parameter ids.
   - [x] Record and enforce the exact 76-node inspection path rename while
         preserving every test name and parameter id.
+  - [x] Record the three array partial paths and all 10 image partial
+        parameterized paths; pin their destination function AST projections.
+  - [x] Record the lower move of the two shared image-window assertions so
+        family modules never import sibling test modules.
 
 R3.2 closes at exact commit `0e54cf5`: normal run `30263506366` and
 compiler-instrumented run `30263506270` pass. The first R3.3 unit adds an
@@ -3186,6 +3193,23 @@ explicitly. The complete collection remains 3,345 with normalized SHA-256
 Exact package verification records 375 source files, a 376-file sdist with
 only generated `PKG-INFO`, and the unchanged 81-member Windows abi3 wheel.
 Its fresh SceneIO-plus-NumPy environment passes `sceneio._wheel_smoke`.
+
+Exact array partial migration commit `5009ea0` passes normal run `30282057346`
+and compiler-instrumented run `30282056576`. The image-family unit moves the
+binary Netpbm branch matrix, ASCII Netpbm rejection matrix, and lossy-WebP
+rejection matrix unchanged into `tests/test_io_partial_images.py`. Their
+three function bodies produce the same 10 parameterized suffixes. The
+unchanged `_pixels` and `_assert_image_window` helpers move once into
+`tests/_support/partial_read.py` and remain shared with the cross-family
+window differential. Function/node projections and both platform commands
+are contract-pinned. The complete collection remains 3,345 with normalized
+SHA-256
+`c9db2c71c11f6af8d4fcd5a08a5bf75a2428ea915805e3671c5cadb2ef581cc4`.
+Exact package verification records 377 source files, a 378-file sdist whose
+only generated member is `PKG-INFO`, and the unchanged 81-member Windows abi3
+wheel. It contains one native module and all 15 attribution members, excludes
+repository test/benchmark/build payloads, and passes `sceneio._wheel_smoke` in
+a fresh SceneIO-plus-NumPy environment.
 
 ### R3.4 — complete installed-wheel smoke
 

@@ -329,7 +329,7 @@
   },
   "pytest_candidate_collection": {
     "count": 3345,
-    "sorted_normalized_node_ids_sha256": "ae4ab66a375c9c130ddf10682eb37e2ba21a0433ba2fb454ecce4358ef616414",
+    "sorted_normalized_node_ids_sha256": "c9db2c71c11f6af8d4fcd5a08a5bf75a2428ea915805e3671c5cadb2ef581cc4",
     "added_nodes": [
       "tests/test_benchmark_memory_protocol.py::test_memory_protocol_contract_and_repeated_sceneio_measurement",
       "tests/test_benchmark_memory_protocol.py::test_missing_sampler_is_explicit_and_strict_mode_rejects_it",
@@ -727,6 +727,38 @@
           "test_partial_flo_window_retains_mapping_and_is_read_only",
           "test_invalid_flo_window_releases_mapping_with_retained_exception"
         ]
+      },
+      {
+        "name": "partial_images",
+        "from_prefix": "tests/test_io_partial.py::",
+        "to_prefix": "tests/test_io_partial_images.py::",
+        "excluded_function_names": [],
+        "function_count": 3,
+        "function_ast_sha256": "c501630b2918a9faae74f88672a5c9bbdf7206fc5452d202592f1a57afbf90ad",
+        "node_suffixes": [
+          "test_binary_netpbm_window_branch_matrix[uint8-1]",
+          "test_binary_netpbm_window_branch_matrix[uint8-3]",
+          "test_binary_netpbm_window_branch_matrix[uint16-1]",
+          "test_binary_netpbm_window_branch_matrix[uint16-3]",
+          "test_ascii_netpbm_windows_reject_complete_payload_decode[uint8-1]",
+          "test_ascii_netpbm_windows_reject_complete_payload_decode[uint8-3]",
+          "test_ascii_netpbm_windows_reject_complete_payload_decode[uint16-1]",
+          "test_ascii_netpbm_windows_reject_complete_payload_decode[uint16-3]",
+          "test_lossy_webp_windows_reject_non_slice_exact_decode[3]",
+          "test_lossy_webp_windows_reject_non_slice_exact_decode[4]"
+        ]
+      }
+    ],
+    "moved_support_groups": [
+      {
+        "name": "partial_image_window",
+        "from_path": "tests/test_io_partial.py",
+        "to_path": "tests/_support/partial_read.py",
+        "function_names": [
+          "_pixels",
+          "_assert_image_window"
+        ],
+        "function_ast_sha256": "5299b065b8e4a6dbc78ea41bff275a26be1eeeaba2a4e200634f8cc9ce0415b1"
       }
     ],
     "first": "tests/codecs/test_bal.py::test_oracle_write_sceneio_read_parity_and_conventions",

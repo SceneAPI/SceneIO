@@ -298,8 +298,11 @@ sceneio._core (C++ / nanobind)
   move is contract-pinned alongside streaming.
   Partial migration starts with three unchanged array-specific DMB/FLO tests
   in `tests/test_io_partial_arrays.py`; their exact path moves and destination
-  AST projection are contract-pinned. Cross-family partial invariants remain
-  in `tests/test_io_partial.py` while the other families move in later units.
+  AST projection are contract-pinned. Image-specific Netpbm/WebP behavior now
+  lives in `tests/test_io_partial_images.py`; two shared image-window
+  assertions have lower ownership in `tests/_support/partial_read.py`.
+  Cross-family partial invariants remain in `tests/test_io_partial.py` while
+  the other families move in later units.
   Built-in startup uses `_registry/assembly.py` as a lower staging boundary.
   Eight complete family tuples are collected without touching the public
   registry. After all 50 canonical ids validate, the facade publishes the

@@ -431,6 +431,18 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > Its exact 375-file source tree produces a 376-file sdist with only generated
 > `PKG-INFO` and an unchanged 81-member Windows abi3 wheel. A fresh
 > SceneIO-plus-NumPy installation passes `sceneio._wheel_smoke`.
+> Exact array commit `5009ea0` passes [normal run
+> 30282057346](https://github.com/SceneAPI/SceneIO/actions/runs/30282057346)
+> and [compiler-instrumented run
+> 30282056576](https://github.com/SceneAPI/SceneIO/actions/runs/30282056576).
+> The image partial unit moves 10 unchanged parameterized Netpbm/WebP nodes
+> into `tests/test_io_partial_images.py` and lowers their two shared
+> image-window assertions. Collection remains 3,345 with normalized SHA-256
+> `c9db2c71c11f6af8d4fcd5a08a5bf75a2428ea915805e3671c5cadb2ef581cc4`.
+> Exact package verification records 377 source files, a 378-file sdist whose
+> only generated member is `PKG-INFO`, and an unchanged 81-member Windows abi3
+> wheel. A fresh SceneIO-plus-NumPy installation passes
+> `sceneio._wheel_smoke`.
 
 [current-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287022
 [current-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287161

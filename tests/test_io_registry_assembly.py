@@ -796,6 +796,11 @@ def test_assembly_dependency_direction_and_import_delta_are_exact():
             "tests/test_io_partial_arrays.py::",
             3,
         ),
+        "partial_images": (
+            "tests/test_io_partial.py::",
+            "tests/test_io_partial_images.py::",
+            10,
+        ),
     }
     assert [item["name"] for item in rename_groups] == list(expected_groups)
     renamed_from = set()
@@ -834,6 +839,39 @@ def test_assembly_dependency_direction_and_import_delta_are_exact():
     assert feature_added_nodes.isdisjoint(feature_removed_nodes)
     assert feature_added_nodes.isdisjoint(renamed_to)
     assert feature_removed_nodes.isdisjoint(renamed_from)
+    support_groups = candidate["moved_support_groups"]
+    assert [item["name"] for item in support_groups] == [
+        "partial_image_window"
+    ]
+    for group in support_groups:
+        assert group["from_path"] == "tests/test_io_partial.py"
+        assert group["to_path"] == "tests/_support/partial_read.py"
+        source_tree = ast.parse(
+            (ROOT / group["from_path"]).read_text(encoding="utf-8")
+        )
+        destination_tree = ast.parse(
+            (ROOT / group["to_path"]).read_text(encoding="utf-8")
+        )
+        function_names = group["function_names"]
+        assert function_names == ["_pixels", "_assert_image_window"]
+        assert not {
+            node.name
+            for node in source_tree.body
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        } & set(function_names)
+        function_nodes = [
+            node
+            for node in destination_tree.body
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+            and node.name in function_names
+        ]
+        assert [node.name for node in function_nodes] == function_names
+        function_payload = "\n".join(
+            ast.dump(node, include_attributes=False) for node in function_nodes
+        )
+        assert hashlib.sha256(function_payload.encode()).hexdigest() == (
+            group["function_ast_sha256"]
+        )
     assert candidate["count"] - parent["count"] == (
         len(feature_added_nodes) - len(feature_removed_nodes)
     )
@@ -863,6 +901,8 @@ def test_assembly_dependency_direction_and_import_delta_are_exact():
     assert non_windows_mmap_command.count("tests/test_io_inspection.py") == 1
     assert windows_mmap_command.count("tests/test_io_partial_arrays.py") == 1
     assert non_windows_mmap_command.count("tests/test_io_partial_arrays.py") == 1
+    assert windows_mmap_command.count("tests/test_io_partial_images.py") == 1
+    assert non_windows_mmap_command.count("tests/test_io_partial_images.py") == 1
     assert (
         "bench/bench_io.py --runs 1 --scale 0.001 --skip-oracles --json"
         in ci_workflow

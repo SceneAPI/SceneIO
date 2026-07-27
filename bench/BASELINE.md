@@ -2253,3 +2253,29 @@ whose only generated member is `PKG-INFO`, and an 81-member Windows abi3
 wheel with one native module and all 15 license/inventory files. The wheel
 installs with only SceneIO and NumPy and returns `2` from
 `sceneio._wheel_smoke`.
+
+Exact array partial migration commit `5009ea0` passes normal run
+[30282057346](https://github.com/SceneAPI/SceneIO/actions/runs/30282057346)
+and compiler-instrumented run
+[30282056576](https://github.com/SceneAPI/SceneIO/actions/runs/30282056576).
+
+## R3.3 image partial-consumer migration (2026-07-27)
+
+Three unchanged Netpbm/WebP test functions now live in
+`tests/test_io_partial_images.py` and produce the same 10 parameterized nodes.
+Their function projection SHA-256 is
+`c501630b2918a9faae74f88672a5c9bbdf7206fc5452d202592f1a57afbf90ad`.
+The unchanged `_pixels` and `_assert_image_window` helpers move once into
+`tests/_support/partial_read.py`, with projection SHA-256
+`5299b065b8e4a6dbc78ea41bff275a26be1eeeaba2a4e200634f8cc9ce0415b1`.
+The shared cross-family window differential imports those lower assertions;
+test modules do not import one another. Exact node and helper moves plus both
+platform commands are contract-pinned. The complete collection remains 3,345
+with normalized SHA-256
+`c9db2c71c11f6af8d4fcd5a08a5bf75a2428ea915805e3671c5cadb2ef581cc4`.
+This unit changes test ownership only and makes no codec performance claim.
+Exact package verification records 377 source files, a 378-file sdist whose
+only generated member is `PKG-INFO`, and the unchanged 81-member Windows abi3
+wheel. It contains one native module and all 15 attribution members, excludes
+repository test/benchmark/build payloads, and passes `sceneio._wheel_smoke` in
+a fresh SceneIO-plus-NumPy environment.

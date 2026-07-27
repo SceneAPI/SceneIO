@@ -346,7 +346,7 @@ verification have accumulated in a few large modules:
 | Python registry | `registry.py`, 205 lines; `_registry/assembly.py`, 148 lines; focused `_registry/{model,adapters,detection,native_features}.py` modules; and eight `_registry/families/*.py` definition modules | all built-ins are family-owned; R3 now splits the benchmark and cross-codec verification monoliths |
 | Inspection | `_inspection.py` compatibility facade plus `_inspectors/{model,common,arrays,calibration,images,meshes,points,reconstruction,sequences,splats}.py`; all eight manifest families have lower inspector ownership | keep the proven shared model, mmap bridge, metadata bounds, exact-read/integer grammar, and image-result constructor as lower services |
 | Benchmark | compatible `bench_io.py` entry point plus `io_bench/{model,measure,reporting,runner}.py`, all eight lower family modules, and shared `families/common.py` | all benchmark ownership is lower; the final R3.2 unit adds built-in completeness and strict comparison-provider controls |
-| Cross-codec tests | shared 50-codec catalog and 44-case buffer builder; focused streaming, inspection, and array-partial modules; `test_io_mmap.py`, about 680 lines; shared `test_io_partial.py`, about 1,400 lines | mmap, streaming, and inspection ownership is split; partial behavior is migrating one family at a time |
+| Cross-codec tests | shared 50-codec catalog and 44-case buffer builder; focused streaming, inspection, array-partial, and image-partial modules; lower partial assertions; `test_io_mmap.py`, about 680 lines; shared partial invariants | mmap, streaming, and inspection ownership is split; partial behavior is migrating one family at a time |
 | Execution plan | `format_gap_implementation_plan.md`, about 2,500 lines | historical evidence and the active queue are easy to confuse |
 | Native dependencies | six source-complete in-tree projects, one LAZperf integration/provenance directory, and six `FetchContent` projects | stable builds are not yet fully offline/repository-contained |
 
@@ -897,6 +897,20 @@ assembly contract pins the three exact path-only renames and the destination
 function AST projection, and each platform command names the new module.
 The exact package inventory is 375 source files, 376 sdist members with only
 generated `PKG-INFO`, and 81 wheel members; fresh NumPy-only smoke passes.
+Exact array commit `5009ea0` passes normal run `30282057346` and
+compiler-instrumented run `30282056576`.
+
+The image partial unit moves three unchanged Netpbm/WebP functions producing
+10 parameterized nodes into `tests/test_io_partial_images.py`. Their two
+unchanged image-window assertion helpers move once into
+`tests/_support/partial_read.py` so the cross-family differential does not
+import a sibling test module. Exact node and function projections plus
+Windows/non-Windows command inclusion are contract-pinned.
+Exact package verification records 377 source files, a 378-file sdist whose
+only generated member is `PKG-INFO`, and the unchanged 81-member Windows abi3
+wheel. It contains one native module and all 15 attribution members, excludes
+repository test/benchmark/build payloads, and passes `sceneio._wheel_smoke` in
+a fresh SceneIO-plus-NumPy environment.
 
 ### R4. Organize native build and bindings
 

@@ -373,7 +373,9 @@ helpers are unchanged, preserve all 76 collected suffixes, consume the shared
 platform job. Exact commit `0e21e27` passes normal run `30278777267` and
 compiler-instrumented run `30278777173`. Partial-family organization begins
 with unchanged DMB/FLO behavior in `tests/test_io_partial_arrays.py`; the
-cross-family differential remains shared.
+cross-family differential remains shared. The following image unit moves 10
+Netpbm/WebP nodes unchanged into `tests/test_io_partial_images.py` and lowers
+two shared window assertions without changing the optimized I/O paths.
 
 New public surface, applied to every format for which it's meaningful:
 - header-only `inspect(path)` → dims/count/dtype/channels without a full decode

@@ -2049,6 +2049,10 @@ compiler-instrumented run `30278777173`. The partial sequence now starts with
 three unchanged array-specific DMB/FLO tests in
 `tests/test_io_partial_arrays.py`; broad cross-family invariants remain in the
 shared suite.
+Exact array commit `5009ea0` passes normal run `30282057346` and
+compiler-instrumented run `30282056576`. Image-specific Netpbm/WebP behavior
+now moves unchanged into `tests/test_io_partial_images.py`, while its two
+shared assertions gain lower ownership under `tests/_support/partial_read.py`.
 
 Status terms are strict:
 

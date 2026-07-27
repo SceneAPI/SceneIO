@@ -51,7 +51,10 @@
 > group. Exact inspection commit `0e21e27` passes normal run `30278777267`
 > and compiler-instrumented run `30278777173`. Partial-family migration starts
 > with three unchanged array-specific DMB/FLO tests under
-> `tests/test_io_partial_arrays.py`.
+> `tests/test_io_partial_arrays.py`. Exact array commit `5009ea0` passes normal
+> run `30282057346` and compiler-instrumented run `30282056576`. The next
+> image unit gives 10 Netpbm/WebP nodes focused ownership and lowers their two
+> shared window assertions.
 
 The granular, per‑format execution plan for covering **every relevant file type
 that has a permissively‑licensed open‑source option**. Sits below the strategy
