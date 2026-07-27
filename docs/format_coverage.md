@@ -252,6 +252,18 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > [compiler-instrumented run 30228235535](https://github.com/SceneAPI/SceneIO/actions/runs/30228235535)
 > pass the final tree, including all three splat operating systems and the
 > GCC-10 lane. R2 is closed and R3 is active.
+>
+> **R3.1a benchmark boundary (2026-07-26, current tree):** the development
+> harness retains its `bench/bench_io.py` CLI while shared models,
+> measurements, and reporting live under `bench/io_bench/`. Parent and two
+> candidate one-run captures reproduce the exact 50-codec structural SHA-256
+> `2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`
+> and identical deterministic projections. Record-aware fixture fingerprints,
+> console output, outside-checkout entry modes, and the warmed-parent RSS
+> meaning are checked contracts. After one noisy LAS comparator, the unchanged
+> complete five-run confirmation passes with LAS read at 1.32x. This is
+> behavior-equivalence evidence, not a new codec-performance claim. R3.1b is
+> active.
 
 [current-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287022
 [current-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287161

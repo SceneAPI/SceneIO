@@ -164,6 +164,15 @@ sceneio._core (C++ / nanobind)
   three-OS splat parity matrix and GCC-10 lane. Exact-tree source/wheel
   packaging and all three independent reviews also pass. R2 is closed; R3
   now splits benchmark and cross-codec verification ownership.
+  R3.1a keeps `bench/bench_io.py` as the compatible development-only facade
+  while `bench/io_bench/model.py`, `measure.py`, and `reporting.py` own shared
+  benchmark records, timing/traced allocation plus explicitly named
+  warmed-parent `in_process_rss`, and deterministic presentation. Its checked
+  contract pins parent provenance, JSON shape, record-aware fixture
+  fingerprints, and a console transcript. The production package does not
+  include `bench`; R3.2 moves family fixtures/oracles before moving the
+  remaining sweep runner, and R3.1b supplies separate fresh-child memory
+  evidence.
   Built-in startup uses `_registry/assembly.py` as a lower staging boundary.
   Eight complete family tuples are collected without touching the public
   registry. After all 50 canonical ids validate, the facade publishes the

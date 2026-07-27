@@ -23,24 +23,40 @@ import io
 import json
 import os
 import sqlite3
-import statistics
 import struct
+import sys
 import tempfile
-import threading
-import time
-import tracemalloc
-import warnings
 import xml.etree.ElementTree as ET
-from collections.abc import Callable
-from dataclasses import dataclass
 from functools import partial
 from itertools import pairwise
 from pathlib import Path
 
 import numpy as np
 
+if str(Path(__file__).resolve().parents[1]) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
 import sceneio
+from bench.io_bench import measure as benchmark_measure
+from bench.io_bench.model import DirectorySpec, Spec
+from bench.io_bench.reporting import (
+    print_cold_cache_unavailable,
+    print_colmap_db_row,
+    print_directory_row,
+    print_encoding_variants,
+    print_json_result,
+    print_primary_error,
+    print_primary_header,
+    print_primary_row,
+    print_regression_guard_passed,
+    print_summary,
+    print_typed_adapter,
+)
 from sceneio import _core
+
+_measure = benchmark_measure.measure
+_measure_in_process_rss = benchmark_measure.measure_in_process_rss
+_try = benchmark_measure.try_measure
 
 # --- optional oracle libs (degrade gracefully) ------------------------------
 try:
@@ -72,10 +88,6 @@ try:
 except Exception:
     trimesh = None
 try:
-    import psutil
-except Exception:
-    psutil = None
-try:
     import yaml
 except Exception:
     yaml = None
@@ -91,71 +103,6 @@ except Exception:
     safetensors_load_file = None
     safetensors_save = None
     safetensors_save_file = None
-
-
-def _measure(fn: Callable[[], object], runs: int) -> tuple[float, int]:
-    """Median wall time and a separate peak traced-allocation pass.
-
-    Keeping tracemalloc out of the timing loop matters for Python metadata
-    scanners: tracing each small token allocation can otherwise dominate the
-    operation and invert the measured O5 latency relationship.
-    """
-    fn()  # warm
-    times = []
-    for _ in range(runs):
-        t0 = time.perf_counter()
-        r = fn()
-        dt = time.perf_counter() - t0
-        times.append(dt)
-        del r
-    gc.collect()
-    tracemalloc.start()
-    try:
-        r = fn()
-        _, peak = tracemalloc.get_traced_memory()
-        del r
-    finally:
-        tracemalloc.stop()
-    return statistics.median(times), peak
-
-
-def _try(fn):
-    """Run an oracle closure; return (median_time, None) sentinel on any failure."""
-    try:
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            return fn()
-    except Exception:
-        return None
-
-
-def _measure_rss(fn):
-    """Peak resident-set growth sampled during one call (0 when psutil is absent)."""
-    if psutil is None:
-        return 0
-    gc.collect()
-    process = psutil.Process()
-    baseline = process.memory_info().rss
-    peak = baseline
-    running = True
-
-    def sample():
-        nonlocal peak
-        while running:
-            peak = max(peak, process.memory_info().rss)
-            time.sleep(0.0005)
-
-    sampler = threading.Thread(target=sample, daemon=True)
-    sampler.start()
-    try:
-        value = fn()
-        peak = max(peak, process.memory_info().rss)
-        del value
-    finally:
-        running = False
-        sampler.join()
-    return max(0, peak - baseline)
-
 
 # --- payload builders -------------------------------------------------------
 def _img_u8(h, w):
@@ -1011,17 +958,6 @@ def _g2o_payload_nbytes(payload):
 
 
 # --- codec specs: (id, build, sio_write, sio_read, oracle_write, oracle_read, payload_bytes) ---
-@dataclass
-class Spec:
-    id: str
-    make: Callable
-    w: Callable  # record -> bytes
-    r: Callable  # bytes -> record
-    ow: Callable | None  # oracle: payload -> bytes
-    orr: Callable | None  # oracle: bytes -> obj
-    nbytes: Callable  # (record, payload) -> logical payload bytes
-
-
 def _pil_w(mode):
     def enc(a):
         b = io.BytesIO()
@@ -2395,15 +2331,6 @@ def _specs(scale, pose_bundle=None):
     ]
 
 
-@dataclass
-class DirectorySpec:
-    id: str
-    make: Callable
-    w: Callable
-    r: Callable
-    nbytes: Callable
-
-
 def _image_sequence_directory_fixture(root, scale):
     source = Path(root) / "_image_sequence_input"
     source.mkdir()
@@ -2633,7 +2560,7 @@ def _run_large_safetensors(args, tmp):
         sceneio.write(record, path, format="safetensors")
 
     write_time, write_peak = _measure(write_sceneio, args.runs)
-    write_rss = _measure_rss(write_sceneio)
+    write_rss = _measure_in_process_rss(write_sceneio)
 
     def full_read():
         if args.cold_cache:
@@ -2653,11 +2580,11 @@ def _run_large_safetensors(args, tmp):
         )
 
     full_time, full_peak = _measure(full_read, args.runs)
-    full_rss = _measure_rss(full_read)
+    full_rss = _measure_in_process_rss(full_read)
     inspect_time, inspect_peak = _measure(inspect_read, args.runs)
-    inspect_rss = _measure_rss(inspect_read)
+    inspect_rss = _measure_in_process_rss(inspect_read)
     selected_time, selected_peak = _measure(selected_read, args.runs)
-    selected_rss = _measure_rss(selected_read)
+    selected_rss = _measure_in_process_rss(selected_read)
 
     oracle_metrics = {}
     if (
@@ -2674,13 +2601,13 @@ def _run_large_safetensors(args, tmp):
         oracle_write_time, oracle_write_peak = _measure(
             lambda: safetensors_save_file(arrays, oracle_path), args.runs
         )
-        oracle_write_rss = _measure_rss(
+        oracle_write_rss = _measure_in_process_rss(
             lambda: safetensors_save_file(arrays, oracle_path)
         )
         oracle_full_time, oracle_full_peak = _measure(
             oracle_full, args.runs
         )
-        oracle_full_rss = _measure_rss(oracle_full)
+        oracle_full_rss = _measure_in_process_rss(oracle_full)
 
         def oracle_inspect():
             if args.cold_cache:
@@ -2704,11 +2631,11 @@ def _run_large_safetensors(args, tmp):
         oracle_inspect_time, oracle_inspect_peak = _measure(
             oracle_inspect, args.runs
         )
-        oracle_inspect_rss = _measure_rss(oracle_inspect)
+        oracle_inspect_rss = _measure_in_process_rss(oracle_inspect)
         oracle_selected_time, oracle_selected_peak = _measure(
             oracle_selected, args.runs
         )
-        oracle_selected_rss = _measure_rss(oracle_selected)
+        oracle_selected_rss = _measure_in_process_rss(oracle_selected)
         oracle_metrics = {
             "oracle_write_ms": oracle_write_time * 1000,
             "oracle_write_peak_mb": oracle_write_peak / 1e6,
@@ -2751,7 +2678,7 @@ def _run_large_safetensors(args, tmp):
         "selected_rss_mb": selected_rss / 1e6,
         **oracle_metrics,
     }
-    print(json.dumps(result, indent=2))
+    print_json_result(result)
     return [], [result]
 
 
@@ -2778,13 +2705,13 @@ def _benchmark_colmap_db(args, tmp):
     native_write_time, native_write_peak = _measure(
         native_write, args.runs
     )
-    native_write_rss = _measure_rss(native_write)
+    native_write_rss = _measure_in_process_rss(native_write)
     oracle_write_time = oracle_write_peak = oracle_write_rss = None
     if not args.skip_oracles:
         oracle_write_time, oracle_write_peak = _measure(
             oracle_write, args.runs
         )
-        oracle_write_rss = _measure_rss(oracle_write)
+        oracle_write_rss = _measure_in_process_rss(oracle_write)
 
     def native_full_read():
         if args.cold_cache:
@@ -2841,13 +2768,13 @@ def _benchmark_colmap_db(args, tmp):
     native_full_time, native_full_peak = _measure(
         native_full_read, args.runs
     )
-    native_full_rss = _measure_rss(native_full_read)
+    native_full_rss = _measure_in_process_rss(native_full_read)
     inspect_time, inspect_peak = _measure(native_inspect, args.runs)
-    inspect_rss = _measure_rss(native_inspect)
+    inspect_rss = _measure_in_process_rss(native_inspect)
     image_time, image_peak = _measure(native_image_read, args.runs)
-    image_rss = _measure_rss(native_image_read)
+    image_rss = _measure_in_process_rss(native_image_read)
     pair_time, pair_peak = _measure(native_pair_read, args.runs)
-    pair_rss = _measure_rss(native_pair_read)
+    pair_rss = _measure_in_process_rss(native_pair_read)
 
     oracle_metrics = {}
     oracle_full_time = None
@@ -2855,19 +2782,19 @@ def _benchmark_colmap_db(args, tmp):
         oracle_full_time, oracle_full_peak = _measure(
             oracle_full_read, args.runs
         )
-        oracle_full_rss = _measure_rss(oracle_full_read)
+        oracle_full_rss = _measure_in_process_rss(oracle_full_read)
         oracle_inspect_time, oracle_inspect_peak = _measure(
             oracle_inspect, args.runs
         )
-        oracle_inspect_rss = _measure_rss(oracle_inspect)
+        oracle_inspect_rss = _measure_in_process_rss(oracle_inspect)
         oracle_image_time, oracle_image_peak = _measure(
             oracle_image_read, args.runs
         )
-        oracle_image_rss = _measure_rss(oracle_image_read)
+        oracle_image_rss = _measure_in_process_rss(oracle_image_read)
         oracle_pair_time, oracle_pair_peak = _measure(
             oracle_pair_read, args.runs
         )
-        oracle_pair_rss = _measure_rss(oracle_pair_read)
+        oracle_pair_rss = _measure_in_process_rss(oracle_pair_read)
         oracle_metrics = {
             "oracle_write_mbps": payload_mb / oracle_write_time,
             "oracle_write_peak_mb": oracle_write_peak / 1e6,
@@ -3029,7 +2956,7 @@ def _benchmark_gltf(args, tmp):
     core_write_time, bytes_write_peak = _measure(
         _encode, args.runs
     )
-    bytes_write_rss = _measure_rss(_encode)
+    bytes_write_rss = _measure_in_process_rss(_encode)
 
     def _buffer_write():
         document, binary = _encode()
@@ -3045,7 +2972,7 @@ def _benchmark_gltf(args, tmp):
     sink_write_time, sink_write_peak = _measure(
         _sink_write, args.runs
     )
-    sink_write_rss = _measure_rss(_sink_write)
+    sink_write_rss = _measure_in_process_rss(_sink_write)
     if (
         path.read_bytes() != json_bytes
         or peer.read_bytes() != binary_bytes
@@ -3073,8 +3000,8 @@ def _benchmark_gltf(args, tmp):
     path_read_time, mmap_peak = _measure(
         _path_read, args.runs
     )
-    bytes_rss = _measure_rss(_bytes_read)
-    mmap_rss = _measure_rss(_path_read)
+    bytes_rss = _measure_in_process_rss(_bytes_read)
+    mmap_rss = _measure_in_process_rss(_path_read)
 
     def _inspect():
         if args.cold_cache:
@@ -3084,7 +3011,7 @@ def _benchmark_gltf(args, tmp):
     inspect_time, inspect_peak = _measure(
         _inspect, args.runs
     )
-    inspect_rss = _measure_rss(_inspect)
+    inspect_rss = _measure_in_process_rss(_inspect)
 
     def _partial():
         if args.cold_cache:
@@ -3096,7 +3023,7 @@ def _benchmark_gltf(args, tmp):
     partial_time, partial_peak = _measure(
         _partial, args.runs
     )
-    partial_rss = _measure_rss(_partial)
+    partial_rss = _measure_in_process_rss(_partial)
 
     oracle_write_time = None
     oracle_read_time = None
@@ -3225,13 +3152,7 @@ def _run_benchmark(args, tmp):
     inspect_rows = []
     partial_rows = []
 
-    hdr = (
-        f"{'codec':<14}{'payloadMB':>10}{'fileMB':>9}{'sioW':>9}{'sioR':>9}"
-        f"{'pathR':>9}{'oraW':>9}{'oraR':>9}{'bPeakMB':>9}{'mPeakMB':>9}"
-        f"{'bRSSMB':>9}{'mRSSMB':>9}{'sio/ora':>9}"
-    )
-    print(hdr)
-    print("-" * len(hdr))
+    print_primary_header()
     for s in specs:
         try:
             rec, payload = s.make()
@@ -3572,9 +3493,9 @@ def _run_benchmark(args, tmp):
             bytes_write_time, bytes_write_peak = _measure(
                 _bytes_write, args.runs
             )
-            bytes_write_rss = _measure_rss(_bytes_write)
+            bytes_write_rss = _measure_in_process_rss(_bytes_write)
             sink_time, sink_write_peak = _measure(_sink_write, args.runs)
-            sink_write_rss = _measure_rss(_sink_write)
+            sink_write_rss = _measure_in_process_rss(_sink_write)
             with open(fp, "rb") as fh:
                 if fh.read() != enc:
                     raise AssertionError("file sink output differs from buffer encoder")
@@ -3605,8 +3526,8 @@ def _run_benchmark(args, tmp):
 
             _, bytes_peak = _measure(_bytes_read, args.runs)
             path_time, mmap_peak = _measure(_mmap_read, args.runs)
-            bytes_rss = _measure_rss(_bytes_read)
-            mmap_rss = _measure_rss(_mmap_read)
+            bytes_rss = _measure_in_process_rss(_bytes_read)
+            mmap_rss = _measure_in_process_rss(_mmap_read)
             path_read = pmb / path_time
 
             def _inspect(fp=fp, codec_id=s.id):
@@ -3615,7 +3536,7 @@ def _run_benchmark(args, tmp):
                 return sceneio.inspect(fp, format=codec_id)
 
             inspect_time, inspect_peak = _measure(_inspect, args.runs)
-            inspect_rss = _measure_rss(_inspect)
+            inspect_rss = _measure_in_process_rss(_inspect)
             inspect_rows.append(
                 (
                     s.id,
@@ -3652,15 +3573,15 @@ def _run_benchmark(args, tmp):
                 typed_read_time, typed_read_peak = _measure(
                     _typed_read, args.runs
                 )
-                typed_read_rss = _measure_rss(_typed_read)
+                typed_read_rss = _measure_in_process_rss(_typed_read)
                 typed_write_time, typed_write_peak = _measure(
                     _typed_write, args.runs
                 )
-                typed_write_rss = _measure_rss(_typed_write)
+                typed_write_rss = _measure_in_process_rss(_typed_write)
                 typed_inspect_time, typed_inspect_peak = _measure(
                     _typed_inspect, args.runs
                 )
-                typed_inspect_rss = _measure_rss(_typed_inspect)
+                typed_inspect_rss = _measure_in_process_rss(_typed_inspect)
                 typed_decoded = _typed_read()
                 if not np.array_equal(
                     np.asarray(typed_decoded.vectors), rec, equal_nan=True
@@ -3742,19 +3663,19 @@ def _run_benchmark(args, tmp):
                 typed_read_time, typed_read_peak = _measure(
                     _typed_read, args.runs
                 )
-                typed_read_rss = _measure_rss(_typed_read)
+                typed_read_rss = _measure_in_process_rss(_typed_read)
                 typed_write_time, typed_write_peak = _measure(
                     _typed_write, args.runs
                 )
-                typed_write_rss = _measure_rss(_typed_write)
+                typed_write_rss = _measure_in_process_rss(_typed_write)
                 typed_inspect_time, typed_inspect_peak = _measure(
                     _typed_inspect, args.runs
                 )
-                typed_inspect_rss = _measure_rss(_typed_inspect)
+                typed_inspect_rss = _measure_in_process_rss(_typed_inspect)
                 typed_partial_time, typed_partial_peak = _measure(
                     _typed_partial, args.runs
                 )
-                typed_partial_rss = _measure_rss(_typed_partial)
+                typed_partial_rss = _measure_in_process_rss(_typed_partial)
                 typed_decoded = _typed_read()
                 if not np.array_equal(
                     np.asarray(typed_decoded.depth), rec, equal_nan=True
@@ -3849,15 +3770,15 @@ def _run_benchmark(args, tmp):
                 typed_read_time, typed_read_peak = _measure(
                     _typed_read, args.runs
                 )
-                typed_read_rss = _measure_rss(_typed_read)
+                typed_read_rss = _measure_in_process_rss(_typed_read)
                 typed_write_time, typed_write_peak = _measure(
                     _typed_write, args.runs
                 )
-                typed_write_rss = _measure_rss(_typed_write)
+                typed_write_rss = _measure_in_process_rss(_typed_write)
                 typed_inspect_time, typed_inspect_peak = _measure(
                     _typed_inspect, args.runs
                 )
-                typed_inspect_rss = _measure_rss(_typed_inspect)
+                typed_inspect_rss = _measure_in_process_rss(_typed_inspect)
                 if not np.array_equal(
                     np.asarray(_typed_read().depth).view(np.uint32),
                     depth_values.view(np.uint32),
@@ -3948,15 +3869,15 @@ def _run_benchmark(args, tmp):
                 typed_read_time, typed_read_peak = _measure(
                     _typed_read, args.runs
                 )
-                typed_read_rss = _measure_rss(_typed_read)
+                typed_read_rss = _measure_in_process_rss(_typed_read)
                 typed_write_time, typed_write_peak = _measure(
                     _typed_write, args.runs
                 )
-                typed_write_rss = _measure_rss(_typed_write)
+                typed_write_rss = _measure_in_process_rss(_typed_write)
                 typed_inspect_time, typed_inspect_peak = _measure(
                     _typed_inspect, args.runs
                 )
-                typed_inspect_rss = _measure_rss(_typed_inspect)
+                typed_inspect_rss = _measure_in_process_rss(_typed_inspect)
                 if not np.array_equal(
                     np.asarray(_typed_read().depth),
                     depth_values,
@@ -4001,7 +3922,7 @@ def _run_benchmark(args, tmp):
                 partial_time, partial_peak = _measure(
                     _partial_read, args.runs
                 )
-                partial_rss = _measure_rss(_partial_read)
+                partial_rss = _measure_in_process_rss(_partial_read)
                 partial_metrics = (
                     partial_time,
                     partial_peak / 1e6,
@@ -4073,42 +3994,31 @@ def _run_benchmark(args, tmp):
                     "pcd_variants": pcd_variant_metrics,
                 }
             )
-            print(
-                f"{s.id:<14}{pmb:>10.1f}{fmb:>9.1f}{sioW:>9.0f}{sioR:>9.0f}"
-                f"{path_read:>9.0f}{(oraW if oraW else 0):>9.0f}"
-                f"{(oraR if oraR else 0):>9.0f}"
-                f"{bytes_peak / 1e6:>9.1f}{mmap_peak / 1e6:>9.1f}"
-                f"{bytes_rss / 1e6:>9.1f}{mmap_rss / 1e6:>9.1f}"
-                f"{(ratio if ratio else 0):>9.2f}"
+            print_primary_row(
+                s.id,
+                pmb,
+                fmb,
+                sioW,
+                sioR,
+                path_read,
+                oraW,
+                oraR,
+                bytes_peak / 1e6,
+                mmap_peak / 1e6,
+                bytes_rss / 1e6,
+                mmap_rss / 1e6,
+                ratio,
             )
             if typed_adapter_metrics is not None:
-                print(
-                    f"  {typed_adapter_metrics['format']} typed adapter:"
-                    f" read={typed_adapter_metrics['read_mbps']:.0f} MB/s"
-                    f" write={typed_adapter_metrics['write_mbps']:.0f} MB/s"
-                    f" inspect={typed_adapter_metrics['inspect_ms']:.3f} ms"
-                    f" traced read/write="
-                    f"{typed_adapter_metrics['read_peak_mb']:.3f}/"
-                    f"{typed_adapter_metrics['write_peak_mb']:.3f} MB"
-                )
+                print_typed_adapter(typed_adapter_metrics)
             if ply_variant_metrics is not None:
-                summary = ", ".join(
-                    f"{encoding}: W={metrics['write_mbps']:.0f}/"
-                    f"R={metrics['read_mbps']:.0f} MB/s"
-                    for encoding, metrics in ply_variant_metrics.items()
-                )
-                print(f"  PLY encodings: {summary}")
+                print_encoding_variants("PLY", ply_variant_metrics)
             if pcd_variant_metrics is not None:
-                summary = ", ".join(
-                    f"{encoding}: W={metrics['write_mbps']:.0f}/"
-                    f"R={metrics['read_mbps']:.0f} MB/s"
-                    for encoding, metrics in pcd_variant_metrics.items()
-                )
-                print(f"  PCD encodings: {summary}")
+                print_encoding_variants("PCD", pcd_variant_metrics)
         except Exception as e:
             failures.append(s.id)
             results.append({"codec": s.id, "error": f"{type(e).__name__}: {e}"})
-            print(f"{s.id:<14} ERROR: {type(e).__name__}: {e}")
+            print_primary_error(s.id, e)
 
     if include_gltf:
         try:
@@ -4139,15 +4049,20 @@ def _run_benchmark(args, tmp):
             ratio = (
                 read_mbps / oracle_read_mbps
                 if oracle_read_mbps else 0)
-            print(
-                f"{'gltf':<14}{payload_mb:>10.1f}{file_mb:>9.1f}"
-                f"{write_mbps:>9.0f}{read_mbps:>9.0f}"
-                f"{path_read_mbps:>9.0f}"
-                f"{(oracle_write_mbps or 0):>9.0f}"
-                f"{(oracle_read_mbps or 0):>9.0f}"
-                f"{bytes_peak_mb:>9.1f}{mmap_peak_mb:>9.1f}"
-                f"{bytes_rss_mb:>9.1f}{mmap_rss_mb:>9.1f}"
-                f"{ratio:>9.2f}"
+            print_primary_row(
+                "gltf",
+                payload_mb,
+                file_mb,
+                write_mbps,
+                read_mbps,
+                path_read_mbps,
+                oracle_write_mbps,
+                oracle_read_mbps,
+                bytes_peak_mb,
+                mmap_peak_mb,
+                bytes_rss_mb,
+                mmap_rss_mb,
+                ratio,
             )
         except Exception as e:
             failures.append("gltf")
@@ -4157,9 +4072,7 @@ def _run_benchmark(args, tmp):
                     "error": f"{type(e).__name__}: {e}",
                 }
             )
-            print(
-                f"{'gltf':<14} ERROR: "
-                f"{type(e).__name__}: {e}")
+            print_primary_error("gltf", e)
 
     if include_colmap_db:
         try:
@@ -4174,25 +4087,7 @@ def _run_benchmark(args, tmp):
             write_rows.append(database_write_row)
             inspect_rows.append(database_inspect_row)
             partial_rows.extend(database_partial_rows)
-            (
-                payload_mb,
-                file_mb,
-                write_mbps,
-                read_mbps,
-                oracle_write_mbps,
-                oracle_read_mbps,
-                read_peak_mb,
-                read_rss_mb,
-            ) = database_display
-            print(
-                f"{'colmap_db':<14}{payload_mb:>10.1f}{file_mb:>9.1f}"
-                f"{write_mbps:>9.0f}{read_mbps:>9.0f}"
-                f"{read_mbps:>9.0f}"
-                f"{(oracle_write_mbps or 0):>9.0f}"
-                f"{(oracle_read_mbps or 0):>9.0f}"
-                f"{'-':>9}{read_peak_mb:>9.1f}"
-                f"{'-':>9}{read_rss_mb:>9.1f}{'-':>9}"
-            )
+            print_colmap_db_row(database_display)
         except Exception as e:
             failures.append("colmap_db")
             results.append(
@@ -4201,7 +4096,7 @@ def _run_benchmark(args, tmp):
                     "error": f"{type(e).__name__}: {e}",
                 }
             )
-            print(f"{'colmap_db':<14} ERROR: {type(e).__name__}: {e}")
+            print_primary_error("colmap_db", e)
 
     for spec in directory_specs:
         try:
@@ -4216,7 +4111,7 @@ def _run_benchmark(args, tmp):
             write_time, write_peak = _measure(
                 lambda: spec.w(value, str(path)), args.runs
             )
-            write_rss = _measure_rss(
+            write_rss = _measure_in_process_rss(
                 lambda: spec.w(value, str(path))
             )
             write_rows.append(
@@ -4242,7 +4137,7 @@ def _run_benchmark(args, tmp):
 
             core_read_time, _ = _measure(lambda: spec.r(str(path)), args.runs)
             path_read_time, read_peak = _measure(_directory_read, args.runs)
-            read_rss = _measure_rss(_directory_read)
+            read_rss = _measure_in_process_rss(_directory_read)
 
             def _directory_inspect(path=path, codec_id=spec.id):
                 if args.cold_cache:
@@ -4254,7 +4149,7 @@ def _run_benchmark(args, tmp):
             inspect_time, inspect_peak = _measure(
                 _directory_inspect, args.runs
             )
-            inspect_rss = _measure_rss(_directory_inspect)
+            inspect_rss = _measure_in_process_rss(_directory_inspect)
             inspect_rows.append(
                 (
                     spec.id,
@@ -4286,7 +4181,7 @@ def _run_benchmark(args, tmp):
             partial_time, partial_peak = _measure(
                 _directory_partial, args.runs
             )
-            partial_rss = _measure_rss(_directory_partial)
+            partial_rss = _measure_in_process_rss(_directory_partial)
             partial_rows.append(
                 (
                     spec.id,
@@ -4319,16 +4214,20 @@ def _run_benchmark(args, tmp):
                     "sink_write_rss_mb": write_rss / 1e6,
                 }
             )
-            print(
-                f"{spec.id:<14}{pmb:>10.1f}{fmb:>9.1f}{pmb / write_time:>9.0f}"
-                f"{pmb / core_read_time:>9.0f}{pmb / path_read_time:>9.0f}"
-                f"{'-':>9}{'-':>9}{'-':>9}{read_peak / 1e6:>9.1f}"
-                f"{'-':>9}{read_rss / 1e6:>9.1f}{'-':>9}"
+            print_directory_row(
+                spec.id,
+                pmb,
+                fmb,
+                pmb / write_time,
+                pmb / core_read_time,
+                pmb / path_read_time,
+                read_peak / 1e6,
+                read_rss / 1e6,
             )
         except Exception as e:
             failures.append(spec.id)
             results.append({"codec": spec.id, "error": f"{type(e).__name__}: {e}"})
-            print(f"{spec.id:<14} ERROR: {type(e).__name__}: {e}")
+            print_primary_error(spec.id, e)
 
     if not args.only:
         assert (
@@ -4338,84 +4237,7 @@ def _run_benchmark(args, tmp):
             + int(include_gltf)
             == 50
         )
-    print("\nMB/s over raw payload; fileMB = encoded size (= the whole-file copy O1/O3 remove).")
-    print("sioR = in-memory copy decode; pathR = public registry mmap read/view.")
-    print("bPeakMB/mPeakMB = peak Python allocation for bytes/mmap reads (O1 delta).")
-    print("bRSSMB/mRSSMB = sampled resident-set growth for bytes/mmap reads.")
-    print("\nO3 write-path delta:")
-    write_header = (
-        f"{'codec':<18}{'payloadMB':>10}{'fileMB':>9}{'bytesW':>9}{'sinkW':>9}"
-        f"{'bPeakMB':>9}{'sPeakMB':>9}{'bRSSMB':>9}{'sRSSMB':>9}"
-    )
-    print(write_header)
-    print("-" * len(write_header))
-    for row in write_rows:
-        codec_id, pmb, fmb, bufw, sinkw, bpeak, speak, brss, srss = row
-        print(
-            f"{codec_id:<18}{pmb:>10.1f}{fmb:>9.1f}"
-            f"{(f'{bufw:.0f}' if bufw is not None else '-'):>9}"
-            f"{sinkw:>9.0f}"
-            f"{(f'{bpeak:.1f}' if bpeak is not None else '-'):>9}"
-            f"{speak:>9.1f}"
-            f"{(f'{brss:.1f}' if brss is not None else '-'):>9}"
-            f"{srss:>9.1f}"
-        )
-    print("bytesW/sinkW = legacy bytes+file/public file-sink write MB/s.")
-    print("bPeakMB/sPeakMB = peak Python allocation for bytes/file-sink writes (O3 delta).")
-    print("bRSSMB/sRSSMB = sampled resident-set growth for bytes/file-sink writes.")
-    print("\nO4 one-lane/old-setting delta:")
-    o4_header = (
-        f"{'codec':<12}{'operation':<18}{'base MB/s':>12}"
-        f"{'opt MB/s':>12}{'gain':>9}{'identity':>11}"
-    )
-    print(o4_header)
-    print("-" * len(o4_header))
-    for codec_id, operation, base, optimized, identity in o4_rows:
-        print(
-            f"{codec_id:<12}{operation:<18}{base:>12.0f}"
-            f"{optimized:>12.0f}{optimized / base:>8.2f}x"
-            f"{identity:>11}"
-        )
-    print(
-        "Identity is encoded bytes where compression settings are unchanged; "
-        "otherwise decoded values/pixels."
-    )
-    print("\nO5 metadata-only inspection delta:")
-    inspect_header = (
-        f"{'codec':<18}{'full ms':>11}{'inspect ms':>12}{'speedup':>10}"
-        f"{'fullPeak':>11}{'inspPeak':>10}{'fullRSS':>10}{'inspRSS':>9}"
-    )
-    print(inspect_header)
-    print("-" * len(inspect_header))
-    for codec_id, full, inspected, full_peak, inspected_peak, full_rss, inspected_rss in (
-        inspect_rows
-    ):
-        print(
-            f"{codec_id:<18}{full * 1000:>11.3f}{inspected * 1000:>12.3f}"
-            f"{full / inspected:>9.2f}x{full_peak:>11.1f}{inspected_peak:>10.1f}"
-            f"{full_rss:>10.1f}{inspected_rss:>9.1f}"
-        )
-    print("Inspection reads headers/streamed metadata and constructs no compiled record arrays.")
-    print("\nO5 partial-read delta:")
-    partial_header = (
-        f"{'codec':<18}{'full ms':>11}{'partial ms':>12}{'speedup':>10}"
-        f"{'fullPeak':>11}{'partPeak':>10}{'fullRSS':>10}{'partRSS':>9}"
-    )
-    print(partial_header)
-    print("-" * len(partial_header))
-    for codec_id, full, partial_time, full_peak, part_peak, full_rss, part_rss in (
-        partial_rows
-    ):
-        print(
-            f"{codec_id:<18}{full * 1000:>11.3f}{partial_time * 1000:>12.3f}"
-            f"{full / partial_time:>9.2f}x{full_peak:>11.1f}{part_peak:>10.1f}"
-            f"{full_rss:>10.1f}{part_rss:>9.1f}"
-        )
-    print(
-        "Partial reads return the normal record type while materializing only "
-        "the selected pixel, point, face, state, frame, tensor, COLMAP-image, or "
-        "match-pair subset."
-    )
+    print_summary(write_rows, o4_rows, inspect_rows, partial_rows)
     if args.require_o5_inspect_gains:
         stable = {
             "exr",
@@ -4645,14 +4467,11 @@ def _run_benchmark(args, tmp):
                     f"sink-memory-regression:{result['codec']}"
                 )
         if not failures:
-            print(
-                "CI regression guard: stable O4 gains and mmap/sink memory "
-                "bounds passed."
-            )
+            print_regression_guard_passed()
     if args.cold_cache and not (
         hasattr(os, "posix_fadvise") and hasattr(os, "POSIX_FADV_DONTNEED")
     ):
-        print("WARNING: this platform has no POSIX_FADV_DONTNEED; cold-cache hint was unavailable.")
+        print_cold_cache_unavailable()
     return failures, results
 
 

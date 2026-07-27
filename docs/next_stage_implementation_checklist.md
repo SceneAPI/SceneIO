@@ -34,8 +34,11 @@ fingerprint correction at `6e94614`. Normal CI run 30214058828 and
 compiler-instrumented run 30214058885 pass that exact corrected checkpoint.
 The reconstruction registry extraction and both platform follow-ups close
 through `aa5b624`; normal run 30218232248 and compiler-instrumented run
-30218232246 pass that combined implementation. Splats are the active and only
-remaining R2 family.
+30218232246 pass that combined implementation. Splats close at registry
+implementation `3e46d82` plus platform-contract repair `9928c6d`; normal run
+30228235491 and compiler-instrumented run 30228235535 pass the final R2 tree.
+R2 is closed. R3.1a is complete in the current tree, and R3.1b is the active
+unit.
 
 This is the operational checklist for the repository-organization and
 codec-performance stage defined in
@@ -2573,18 +2576,54 @@ platform-contract repair `9928c6d`. Exact repair tree
 run `30228235491` passes the full suite, retained performance guard, all three
 splat jobs, mmap/reconstruction matrices, and GCC-10 lane.
 Compiler-instrumented run `30228235535` passes both jobs. `publish.yml` was
-not triggered; no tag or package was published. R3.1a is now active.
+not triggered; no tag or package was published. R3.1a is complete in the
+current tree; R3.1b is active.
 
 ## 7. R3 — split benchmark and cross-codec tests
 
-### R3.1a — mechanical benchmark model/runner/reporting split
+### R3.1a — mechanical benchmark model/measurement/reporting split
 
-- [ ] Extract data models, timing, traced allocation, the existing warmed
+- [x] Extract data models, timing, traced allocation, the existing warmed
       parent-process RSS sampler, and reporting without changing behavior.
-- [ ] Pin JSON output schema and representative fixture hashes.
-- [ ] Compare old/new output from the same commit and fixture seed.
-- [ ] Preserve the existing metric under an explicit `in_process_rss` name;
+- [x] Pin JSON output schema and representative fixture hashes.
+- [x] Compare old/new output from the same commit and fixture seed.
+- [x] Preserve the existing metric under an explicit `in_process_rss` name;
       do not relabel it as fresh-process evidence.
+
+R3.1a leaves the family sweep orchestration in the compatible facade. Moving
+that function before its family builders and oracles have lower ownership
+would introduce a reverse dependency back into the facade. R3.2 moves those
+dependencies first and then moves the remaining sweep into
+`io_bench/runner.py`. This staging keeps each commit mechanical while still
+ending R3 with a thin CLI facade.
+
+R3.1a evidence:
+
+- parent commit/tree/blob are
+  `683ae483a3a2407dc192fb32cdcf964eb3b1fe9a` /
+  `5dfe9bbd36940bfa4b03a322a2b452b38d3f463e` /
+  `bcb502936cc8ccce4a52b843a1220f27cdddba1f`;
+- the checked benchmark contract records the exact capture command, parent
+  JSON SHA-256, both candidate JSON SHA-256 values, and common structural
+  projection
+  `2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`;
+- the parent and candidate fixture-builder AST projection is identical, and
+  eight record-aware fixture fingerprints cover arrays plus semantic metadata,
+  mesh topology, camera conventions, and reconstruction structure;
+- a checked deterministic reporting transcript covers ordinary, typed,
+  encoding-variant, COLMAP database, directory, error, O3/O4/O5, notice, and
+  JSON output;
+- the first exact five-run complete guard rejected only a noisy LAS read
+  comparator. A seven-run LAS diagnostic measured 1.41x, the complete
+  no-oracle repeat passed, and an unchanged complete confirming command passed
+  with LAS read at 2,882 versus 2,178 MB/s (1.32x). The confirming JSON
+  SHA-256 is
+  `b426086aaf02483d4a36bb4e4297fba4c7ac85b8786d849cd4de3ff07726dc3b`;
+- direct execution, module execution, synthetic importlib loading, and
+  canonical `bench.bench_io` loading work from outside the checkout; repeated
+  loads do not duplicate the repository root in `sys.path`;
+- local MSVC collects 3,309 nodes, passes 3,305 with the same four documented
+  skips, and passes Ruff plus the focused documentation/architecture suites.
 
 ### R3.1b — qualification-grade memory protocol
 
@@ -2600,9 +2639,12 @@ not triggered; no tag or package was published. R3.1a is now active.
 - [ ] Add fixtures proving a bounded operation passes and an intentional
       full-payload allocation fails.
 
-### R3.2 — family fixtures and oracles
+### R3.2 — family fixtures, oracles, and sweep runner
 
 - [ ] Move builders/oracles one family at a time.
+- [ ] After the family hooks have lower ownership, move the remaining complete
+      sweep orchestration to `bench/io_bench/runner.py`; keep
+      `bench/bench_io.py` as a thin compatible CLI and helper-export facade.
 - [ ] Keep oracle dependencies test-only.
 - [ ] Fail if a built-in codec is silently absent; prove an extra runtime
       registration does not enter repository fixture/oracle completeness.
@@ -2644,12 +2686,15 @@ not triggered; no tag or package was published. R3.1a is now active.
 
 R3 verification and validation:
 
-- [ ] One-run all-codec smoke produces the same codec set and JSON fields.
-- [ ] Five-run O4/O5 controls retain direction and memory relationships.
+- [x] R3.1a one-run all-codec smoke produces the same codec set and JSON
+      fields.
+- [x] R3.1a five-run O4/O5 controls retain direction and memory relationships
+      after the required confirming complete run.
 - [ ] Strict qualification mode fails on an absent required oracle or RSS
       sampler instead of silently dropping evidence.
 - [ ] Full suite and Ruff pass after each family.
-- [ ] `bench/bench_io.py` remains the compatible CLI entry point.
+- [x] `bench/bench_io.py` remains the compatible CLI entry point through
+      R3.1a; repeat this gate after every remaining R3 unit.
 
 ## 8. R4 — organize CMake, bindings, and native files
 

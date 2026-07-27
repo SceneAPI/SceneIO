@@ -3,7 +3,11 @@
 from __future__ import annotations
 
 import ast
+import contextlib
 import dataclasses
+import hashlib
+import importlib.util
+import io
 import json
 import pickle
 import re
@@ -14,6 +18,7 @@ import textwrap
 from collections import defaultdict
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 import sceneio
@@ -44,6 +49,68 @@ _SELECTORS = (
 
 def _read_json(name: str):
     return json.loads((CONTRACTS / name).read_text(encoding="utf-8"))
+
+
+def _load_benchmark_module(name: str):
+    benchmark_path = ROOT / "bench" / "bench_io.py"
+    spec = importlib.util.spec_from_file_location(name, benchmark_path)
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def _fixture_fingerprint(value) -> str:
+    digest = hashlib.sha256()
+
+    def token(data: str | bytes) -> None:
+        encoded = data.encode("utf-8") if isinstance(data, str) else data
+        digest.update(len(encoded).to_bytes(8, "little"))
+        digest.update(encoded)
+
+    def visit(item) -> None:
+        if isinstance(item, np.ndarray):
+            canonical_dtype = item.dtype.newbyteorder("<")
+            canonical = np.ascontiguousarray(
+                item.astype(canonical_dtype, copy=False)
+            )
+            digest.update(b"A")
+            token(canonical_dtype.str)
+            token(json.dumps(list(item.shape), separators=(",", ":")))
+            token(canonical.tobytes(order="C"))
+        elif isinstance(item, dict):
+            digest.update(b"M")
+            for key in sorted(item):
+                token(str(key))
+                visit(item[key])
+        elif isinstance(item, list | tuple):
+            digest.update(b"L")
+            token(str(len(item)))
+            for child in item:
+                visit(child)
+        elif isinstance(item, np.generic):
+            visit(item.item())
+        elif item is None or isinstance(item, bool | int | float | str):
+            digest.update(b"J")
+            token(
+                json.dumps(
+                    item,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                    allow_nan=False,
+                )
+            )
+        else:
+            raise TypeError(f"unsupported fixture fingerprint value: {type(item)!r}")
+
+    visit(value)
+    return digest.hexdigest()
+
+
+def _record_projection(record, fields):
+    return {field: getattr(record, field) for field in fields}
 
 
 def _jsonable(value):
@@ -404,6 +471,32 @@ def test_benchmark_contract_matches_checked_snapshot():
     assert observed["defaults"] == contract["defaults"]
     assert observed["order"] == contract["result_order"]
     assert contract["existing_json_envelope"] == "bare_list"
+    equivalence = contract["r3_1a_equivalence"]
+    assert equivalence["parent_commit"] == (
+        "683ae483a3a2407dc192fb32cdcf964eb3b1fe9a"
+    )
+    assert equivalence["parent_tree"] == (
+        "5dfe9bbd36940bfa4b03a322a2b452b38d3f463e"
+    )
+    assert equivalence["parent_benchmark_blob"] == (
+        "bcb502936cc8ccce4a52b843a1220f27cdddba1f"
+    )
+    assert equivalence["candidate_benchmark_blob"] == (
+        "9714e081322b925eddc560f1a724b4dd2a68dc78"
+    )
+    assert equivalence["structural_projection_sha256"] == _read_json(
+        "io_registry_assembly_v1.json"
+    )["benchmark_parent"]["structural_projection_sha256"]
+    assert equivalence["deterministic_projection"] == "identical"
+    assert len(equivalence["candidate_capture_sha256"]) == 2
+    assert all(
+        re.fullmatch(r"[0-9a-f]{64}", value)
+        for value in (
+            equivalence["parent_capture_sha256"],
+            *equivalence["candidate_capture_sha256"],
+            equivalence["confirming_strict_capture_sha256"],
+        )
+    )
     assert contract["incompatibilities"] == [
         ["only", "require_o4_gains"],
         ["only", "require_o5_inspect_gains"],
@@ -462,6 +555,382 @@ def test_benchmark_contract_matches_checked_snapshot():
     assert assigned_dict_keys(
         "_benchmark_colmap_db", "oracle_metrics"
     ) == contract["optional_colmap_db_keys"]
+    _assert_benchmark_components_and_metric_semantics_are_explicit()
+    _assert_benchmark_representative_fixtures_match_checked_fingerprints()
+
+
+def _assert_benchmark_components_and_metric_semantics_are_explicit():
+    contract = _read_json("bench_io_v1.json")
+    root_count = sys.path.count(str(ROOT))
+    benchmark = _load_benchmark_module("sceneio_bench_components")
+    assert sys.path.count(str(ROOT)) == root_count
+    benchmark_tree = ast.parse(
+        (ROOT / "bench" / "bench_io.py").read_text(encoding="utf-8")
+    )
+
+    assert benchmark.Spec.__module__ == "bench.io_bench.model"
+    assert benchmark.DirectorySpec.__module__ == "bench.io_bench.model"
+    assert benchmark._measure.__module__ == "bench.io_bench.measure"
+    assert benchmark._try.__module__ == "bench.io_bench.measure"
+    assert benchmark._measure_in_process_rss.__module__ == "bench.io_bench.measure"
+    assert benchmark.print_summary.__module__ == "bench.io_bench.reporting"
+    assert not hasattr(benchmark, "_measure_rss")
+    assert not any(
+        isinstance(node, (ast.ClassDef, ast.FunctionDef))
+        and node.name
+        in {
+            "Spec",
+            "DirectorySpec",
+            "_measure",
+            "_try",
+            "_measure_rss",
+        }
+        for node in benchmark_tree.body
+    )
+    assert not any(
+        isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Name)
+        and node.func.id == "print"
+        for node in ast.walk(benchmark_tree)
+    )
+
+    calls = []
+    duration, peak = benchmark._measure(
+        lambda: calls.append(len(calls)),
+        runs=2,
+    )
+    assert len(calls) == 4  # warm, two timing calls, one traced call
+    assert duration >= 0
+    assert peak >= 0
+    assert benchmark._try(lambda: "ok") == "ok"
+
+    def fail():
+        raise RuntimeError("expected")
+
+    assert benchmark._try(fail) is None
+    measurement_module = sys.modules["bench.io_bench.measure"]
+    original_psutil = measurement_module.psutil
+    unavailable_call_count = 0
+
+    def unavailable_operation():
+        nonlocal unavailable_call_count
+        unavailable_call_count += 1
+
+    try:
+        measurement_module.psutil = None
+        assert benchmark._measure_in_process_rss(unavailable_operation) == 0
+    finally:
+        measurement_module.psutil = original_psutil
+    assert unavailable_call_count == 0
+
+    reporting_output = io.StringIO()
+    with contextlib.redirect_stdout(reporting_output):
+        benchmark.print_primary_header()
+        benchmark.print_primary_row(
+            "codec_x",
+            1.25,
+            0.5,
+            10,
+            20,
+            30,
+            None,
+            40,
+            1.1,
+            0.2,
+            3.3,
+            0.4,
+            0.5,
+        )
+        benchmark.print_typed_adapter(
+            {
+                "format": "png",
+                "read_mbps": 12.4,
+                "write_mbps": 5.6,
+                "inspect_ms": 0.1234,
+                "read_peak_mb": 0.0012,
+                "write_peak_mb": 0.0034,
+            }
+        )
+        benchmark.print_encoding_variants(
+            "PLY",
+            {
+                "ascii": {"write_mbps": 1.2, "read_mbps": 3.4},
+                "binary": {"write_mbps": 5.6, "read_mbps": 7.8},
+            },
+        )
+        benchmark.print_colmap_db_row(
+            (1.0, 2.0, 3.0, 4.0, None, 6.0, 0.7, 0.8)
+        )
+        benchmark.print_directory_row(
+            "directory",
+            1.0,
+            2.0,
+            3.0,
+            4.0,
+            5.0,
+            0.6,
+            0.7,
+        )
+        try:
+            raise ValueError("broken")
+        except ValueError as error:
+            benchmark.print_primary_error("failed", error)
+        benchmark.print_summary(
+            [("fmt", 1.0, 2.0, None, 3.0, None, 0.4, None, 0.5)],
+            [("fmt", "operation", 2.0, 3.0, "bytes")],
+            [("fmt", 0.010, 0.002, 1.0, 0.2, 3.0, 0.4)],
+            [("fmt", 0.010, 0.004, 1.0, 0.3, 3.0, 0.5)],
+        )
+        benchmark.print_regression_guard_passed()
+        benchmark.print_cold_cache_unavailable()
+        benchmark.print_json_result({"codec": "large", "value": 1})
+    assert reporting_output.getvalue() == (
+        CONTRACTS / "bench_io_reporting_v1.txt"
+    ).read_text(encoding="utf-8")
+    assert contract["metric_semantics"] == {
+        "json_fields": "*_rss_mb",
+        "implementation_name": "in_process_rss",
+        "scope": "warmed_parent_process_peak_rss_delta",
+        "qualification_role": "exploratory_not_fresh_process_evidence",
+        "unavailable_json_value_mb": 0,
+    }
+
+
+def _assert_benchmark_representative_fixtures_match_checked_fingerprints():
+    contract = _read_json("bench_io_v1.json")
+    fingerprint_contract = contract["representative_fixture_fingerprints"]
+    assert fingerprint_contract["algorithm"] == "sha256-canonical-fixture-v1"
+    benchmark_tree = ast.parse(
+        (ROOT / "bench" / "bench_io.py").read_text(encoding="utf-8")
+    )
+    builder_nodes = {
+        node.name: node
+        for node in benchmark_tree.body
+        if isinstance(node, ast.FunctionDef)
+        and node.name in fingerprint_contract["builder_ast_functions"]
+    }
+    assert sorted(builder_nodes) == fingerprint_contract["builder_ast_functions"]
+    builder_payload = "\n".join(
+        ast.dump(builder_nodes[name], include_attributes=False)
+        for name in sorted(builder_nodes)
+    )
+    assert hashlib.sha256(builder_payload.encode()).hexdigest() == (
+        fingerprint_contract["parent_and_candidate_builder_ast_sha256"]
+    )
+    benchmark = _load_benchmark_module("sceneio_bench_fixtures")
+
+    image, _ = benchmark._img_u8(8, 8)
+    sequence, _ = benchmark._y4m_fixture(8)
+    point_cloud, _ = benchmark._pc_ply(16)
+    mesh_scene, _ = benchmark._mesh_scene(9)
+    gaussian_cloud, _ = benchmark._gauss(16)
+    calibration, _ = benchmark._single_calibration()
+    specs = benchmark._specs(0.001)
+    tensors, _ = next(spec for spec in specs if spec.id == "npz").make()
+    reconstruction = benchmark._poses_and_reconstruction(0.001)[0]
+    reconstruction_payload = {
+        "cameras": [
+            _record_projection(
+                camera,
+                ("id", "model", "width", "height", "params"),
+            )
+            for camera in reconstruction.cameras
+        ],
+        **_record_projection(
+            reconstruction,
+            (
+                "image_ids",
+                "image_camera_ids",
+                "image_names",
+                "point3D_ids",
+                "xyz",
+                "rgb",
+                "errors",
+                "quaternions",
+                "translations",
+                "pose_convention",
+                "quaternion_order",
+            ),
+        ),
+    }
+    fixtures = {
+        "image_rgb8": _record_projection(
+            image,
+            (
+                "pixels",
+                "width",
+                "height",
+                "channels",
+                "dtype",
+                "color_space",
+                "channel_order",
+                "row_order",
+                "alpha_mode",
+                "maxval",
+            ),
+        ),
+        "image_sequence_yuv420": _record_projection(
+            sequence,
+            (
+                "y",
+                "u",
+                "v",
+                "timestamps_ns",
+                "durations_ns",
+                "frame_names",
+                "frame_paths",
+                "width",
+                "height",
+                "channels",
+                "num_frames",
+                "storage_mode",
+                "frame_dtype",
+                "color_space",
+                "alpha_mode",
+                "has_chroma",
+                "chroma_subsampling",
+                "chroma_siting",
+                "color_range",
+                "matrix",
+                "interlace",
+                "frame_rate_numerator",
+                "frame_rate_denominator",
+                "pixel_aspect_numerator",
+                "pixel_aspect_denominator",
+            ),
+        ),
+        "point_cloud_ply": _record_projection(
+            point_cloud,
+            (
+                "positions",
+                "normals",
+                "colors",
+                "colors16",
+                "intensities",
+                "num_points",
+                "coordinate_frame",
+                "scale_to_meters",
+                "origin",
+                "viewpoint",
+                "width",
+                "height",
+                "is_organized",
+                "intensity_range",
+                "has_normals",
+                "has_rgb",
+                "has_rgb16",
+                "has_intensity",
+            ),
+        ),
+        "mesh_scene": {
+            **_record_projection(
+                mesh_scene,
+                (
+                    "mesh_primitive_offsets",
+                    "mesh_names",
+                    "node_meshes",
+                    "node_child_offsets",
+                    "node_children",
+                    "node_local_transforms",
+                    "node_names",
+                    "scene_root_offsets",
+                    "scene_roots",
+                    "scene_names",
+                    "default_scene",
+                    "num_meshes",
+                    "num_primitives",
+                    "num_nodes",
+                    "num_scenes",
+                    "has_materials",
+                ),
+            ),
+            "primitives": [
+                _record_projection(
+                    mesh_scene.primitive_at(index),
+                    (
+                        "positions",
+                        "face_offsets",
+                        "face_indices",
+                        "vertex_normals",
+                        "vertex_uvs",
+                        "vertex_colors",
+                        "primitive_offsets",
+                        "primitive_materials",
+                        "coordinate_frame",
+                        "scale_to_meters",
+                        "local_transform",
+                    ),
+                )
+                for index in range(mesh_scene.num_primitives)
+            ],
+        },
+        "gaussian_cloud": _record_projection(
+            gaussian_cloud,
+            (
+                "means",
+                "scales",
+                "quaternions",
+                "opacities",
+                "sh_dc",
+                "sh_rest",
+                "num_gaussians",
+                "num_rest",
+                "sh_degree",
+                "scale_space",
+                "opacity_space",
+                "quaternion_order",
+                "sh_layout",
+            ),
+        ),
+        "camera_calibration": _record_projection(
+            calibration,
+            (
+                "camera_ids",
+                "resolutions",
+                "projection_models",
+                "intrinsic_offsets",
+                "intrinsics",
+                "distortion_models",
+                "distortion_offsets",
+                "distortion_coefficients",
+                "quaternions",
+                "translations",
+                "has_extrinsics",
+                "names",
+                "camera_matrices",
+                "has_camera_matrix",
+                "rectification_matrices",
+                "has_rectification",
+                "projection_matrices",
+                "has_projection_matrix",
+                "binning",
+                "roi",
+                "roi_do_rectify",
+                "has_operational",
+                "time_offsets",
+                "has_time_offset",
+                "topics",
+                "axis_frame",
+                "reference_frame",
+                "scale_to_meters",
+                "quaternion_order",
+                "quaternion_sign",
+                "transform_convention",
+                "time_offset_convention",
+            ),
+        ),
+        "tensor_dict": {
+            "arrays": dict(tensors.items()),
+            "attrs": tensors.attrs,
+            "byte_order": tensors.byte_order,
+            "order": tensors.order,
+        },
+        "reconstruction": reconstruction_payload,
+    }
+    assert {
+        name: _fixture_fingerprint(value)
+        for name, value in fixtures.items()
+    } == fingerprint_contract["fixtures"]
 
 
 def test_benchmark_json_envelope_common_rows_and_nested_shapes(tmp_path):
@@ -518,6 +987,38 @@ def test_benchmark_json_envelope_common_rows_and_nested_shapes(tmp_path):
                     sorted(value) == shape["value_keys"]
                     for value in nested.values()
                 )
+
+    benchmark_path = ROOT / "bench" / "bench_io.py"
+    direct = subprocess.run(
+        [sys.executable, str(benchmark_path), "--help"],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert direct.stdout.startswith("usage: bench_io.py")
+    canonical_probe = textwrap.dedent(
+        f"""
+        import importlib.util
+        import pathlib
+        import sys
+
+        path = pathlib.Path({str(benchmark_path)!r})
+        spec = importlib.util.spec_from_file_location("bench.bench_io", path)
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[spec.name] = module
+        spec.loader.exec_module(module)
+        print(module.Spec.__module__)
+        """
+    )
+    canonical = subprocess.run(
+        [sys.executable, "-c", canonical_probe],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert canonical.stdout.strip() == "bench.io_bench.model"
 
 
 @pytest.mark.parametrize(

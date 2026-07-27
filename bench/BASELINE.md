@@ -1560,3 +1560,60 @@ The external NumPy-only installed smoke passes. Normal run `30228235491`
 passes the all-50 benchmark structure and retained five-run guard plus every
 platform lane; compiler-instrumented run `30228235535` passes both jobs. R2
 is closed.
+
+## R3.1a benchmark-boundary equivalence (2026-07-26)
+
+R3.1a is a development-harness organization change, not a codec optimization.
+The compatible `bench/bench_io.py` entry point now delegates shared models,
+timing/traced allocation and warmed-parent RSS measurement, and console
+formatting to `bench/io_bench/{model,measure,reporting}.py`. The JSON envelope,
+row ordering, nested shapes, fixture builders, codec operations, and guard
+logic remain unchanged. The existing `*_rss_mb` values are explicitly named
+`in_process_rss` internally and remain exploratory warmed-parent deltas; they
+are not fresh-process qualification evidence.
+
+The frozen parent is commit
+`683ae483a3a2407dc192fb32cdcf964eb3b1fe9a`, tree
+`5dfe9bbd36940bfa4b03a322a2b452b38d3f463e`, benchmark blob
+`bcb502936cc8ccce4a52b843a1220f27cdddba1f`. All three captures used:
+
+```text
+.venv/Scripts/python.exe bench/bench_io.py --runs 1 --scale 0.001 --skip-oracles --json <output>
+```
+
+The parent JSON SHA-256 is
+`d30840742c571dd4a8ad86076ef0af8dd1fc884ecf59e1af2f3330adffaffd57`.
+The two candidate JSON SHA-256 values are
+`c0ec1a358ae5e7e51d650d3b1fd1069f76c97bf9f8573d917cd2e74ef976521e`
+and
+`5ae19649975f4ced69d9f0817a15c000c7a82e4c93cb5d3f873763273e43c7b8`.
+Timing and sampled-memory values naturally differ, but all three reproduce the
+50-row structural projection
+`2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`
+and identical deterministic values. The parent/candidate combined AST hash for
+the eight representative fixture builders is
+`ce8dda677da61550035dcd2062d4cb53aed20f21e37024d87d5f50449ba1fbfd`.
+Record-aware fingerprints additionally cover image color/channel metadata,
+Y4M timing/chroma conventions, point-cloud conventions, mesh topology and
+scene graph, Gaussian parameter spaces, camera conventions, tensor metadata,
+and reconstruction structure. A checked synthetic transcript pins every
+reporting variant.
+
+The first unchanged complete five-run command rejected only the LAS
+`points-read` comparator during a noisy sample. A seven-run isolated
+diagnostic then measured 1.41x, and a complete no-oracle repeat passed. Per the
+benchmark repeat policy, the unchanged complete command was run again:
+
+```text
+.venv/Scripts/python.exe bench/bench_io.py --runs 5 --require-o4-gains --require-o5-inspect-gains --require-o5-partial-gains
+```
+
+The confirming run passes all retained O4/O5 and mmap/sink allocation guards.
+Its LAS read pair is 2,178 versus 2,882 MB/s (1.32x); LAS write is 487 versus
+1,015 MB/s (2.08x), XYZ write retains 6.33x, and both WebP comparisons retain
+directional gains. The confirming JSON SHA-256 is
+`b426086aaf02483d4a36bb4e4297fba4c7ac85b8786d849cd4de3ff07726dc3b`.
+These values confirm behavior preservation under the retained controls; they
+do not replace the codec-performance baseline or make a new optimization
+claim. The final local MSVC gate collects 3,309 nodes, passes 3,305 with the
+same four documented skips, and passes Ruff.

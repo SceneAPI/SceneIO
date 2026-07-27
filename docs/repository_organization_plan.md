@@ -208,9 +208,20 @@ publication restores canonical positions 2/3/4/5/14/49, and the facade no
 longer contains any individual built-in definition. The exact-tree package
 and all three independent-review gates pass. Registry implementation
 `3e46d82` and platform-contract repair `9928c6d` are pushed; final normal run
-`30228235491` and compiler-instrumented run `30228235535` pass. R2 is closed
-and R3.1a is active. This extraction changes no codec algorithm or public API
-and makes no performance-gain claim.
+`30228235491` and compiler-instrumented run `30228235535` pass. R2 is closed.
+R3.1a is complete in the current tree and R3.1b is active. This extraction
+changes no codec algorithm or public API and makes no performance-gain claim.
+
+R3.1a is complete in the current tree. `bench/bench_io.py` remains the
+compatible development CLI and fixture/oracle facade, while
+`bench/io_bench/model.py`, `measure.py`, and `reporting.py` now own the shared
+data models, timing/traced-allocation and warmed-parent RSS measurements, and
+all console formatting. The existing `*_rss_mb` JSON fields remain unchanged;
+their contract now explicitly identifies them as exploratory warmed-parent
+deltas rather than fresh-process qualification evidence. R3.1b adds the
+separate child-process protocol. R3.2 moves family fixtures/oracles and only
+then moves the sweep orchestration into `runner.py`, avoiding a lower module
+that imports back through the facade.
 
 The initial splat parent-freeze checkpoint is committed and pushed at
 `93fcf1b39350a3a0080a7b87ead65d0d9343d354`; its
@@ -307,7 +318,7 @@ verification have accumulated in a few large modules:
 | C++ records | 32 source/header files | still manageable; new table/animation/scene records will add pressure |
 | Python registry | `registry.py`, 205 lines; `_registry/assembly.py`, 148 lines; focused `_registry/{model,adapters,detection,native_features}.py` modules; and eight `_registry/families/*.py` definition modules | all built-ins are family-owned; R3 now splits the benchmark and cross-codec verification monoliths |
 | Inspection | `_inspection.py` compatibility facade plus `_inspectors/{model,common,arrays,calibration,images,meshes,points,reconstruction,sequences,splats}.py`; all eight manifest families have lower inspector ownership | keep the proven shared model, mmap bridge, metadata bounds, exact-read/integer grammar, and image-result constructor as lower services |
-| Benchmark | `bench_io.py`, about 4,660 lines | CLI, fixtures, oracles, runners, metrics, and reporting are coupled |
+| Benchmark | compatible `bench_io.py` facade plus `io_bench/{model,measure,reporting}.py` | family fixtures, oracles, and sweep orchestration remain in the facade until R3.2; models, measurements, and presentation are no longer coupled to it |
 | Cross-codec tests | `test_io_mmap.py`, about 2,400 lines; `test_io_partial.py`, about 1,100 | reusable codec cases and behavior assertions are difficult to extend independently |
 | Execution plan | `format_gap_implementation_plan.md`, about 2,500 lines | historical evidence and the active queue are easy to confuse |
 | Native dependencies | six source-complete in-tree projects, one LAZperf integration/provenance directory, and six `FetchContent` projects | stable builds are not yet fully offline/repository-contained |
@@ -404,12 +415,14 @@ src/sceneio/io/
     splats.py
 
 bench/
-  bench_io.py                 # thin CLI
-  _io/
+  __init__.py                 # development-only package marker
+  bench_io.py                 # compatible CLI/helper facade; thin after R3.2
+  io_bench/
+    __init__.py
     model.py
-    runner.py
-    metrics.py
+    measure.py
     reporting.py
+    runner.py                 # R3.2, after family hooks move
     fixtures/
     oracles/
     families/
@@ -578,8 +591,12 @@ entries rather than inheriting a blanket claim.
 
 ### R3. Split benchmark and cross-codec fixtures
 
+- Extract shared models, measurement primitives, and reporting first, while
+  keeping JSON/CLI behavior and the warmed-parent RSS meaning unchanged.
 - Move fixture builders and oracles by family.
 - Keep `bench/bench_io.py` as a compatible CLI entry.
+- Move the sweep runner only after its family dependencies have lower
+  ownership, leaving the facade thin without creating a reverse import.
 - Centralize buffer/path/directory codec cases in `tests/_support/codec_cases.py`.
 - Split large behavior tests one behavior/family at a time without duplicating
   parameter matrices, and compare exact pytest node ids and skip reasons.

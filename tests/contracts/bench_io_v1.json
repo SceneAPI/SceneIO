@@ -1,6 +1,52 @@
 {
   "schema_version": 1,
   "existing_json_envelope": "bare_list",
+  "metric_semantics": {
+    "json_fields": "*_rss_mb",
+    "implementation_name": "in_process_rss",
+    "scope": "warmed_parent_process_peak_rss_delta",
+    "qualification_role": "exploratory_not_fresh_process_evidence",
+    "unavailable_json_value_mb": 0
+  },
+  "representative_fixture_fingerprints": {
+    "algorithm": "sha256-canonical-fixture-v1",
+    "builder_ast_functions": [
+      "_gauss",
+      "_img_u8",
+      "_mesh_scene",
+      "_pc_ply",
+      "_poses_and_reconstruction",
+      "_single_calibration",
+      "_specs",
+      "_y4m_fixture"
+    ],
+    "parent_and_candidate_builder_ast_sha256": "ce8dda677da61550035dcd2062d4cb53aed20f21e37024d87d5f50449ba1fbfd",
+    "fixtures": {
+      "camera_calibration": "5e2b5f1e70aa57bd8d219b06a16ce36dfec48aa4d0905ef45cdf503cca8b511c",
+      "gaussian_cloud": "dc358708428493fafd834f6c9626f87dd1e91626d324fea3865320561176b1cf",
+      "image_rgb8": "a47c7a9af619b88f4a861d0d0233ce89cf8497d5d934bf43bf9ccf2b7c4778f6",
+      "image_sequence_yuv420": "f4bd49409011672e13a22eaf899edb621715440e9c3103c6bec692463fafd398",
+      "mesh_scene": "69f8355dbb149640abafa5221ab7a6a09f56562d588a044796591ce5016b8b6d",
+      "point_cloud_ply": "718f1d8592ca964d6b8303ca73f77f8739a525d954d50865cc904705fd939da3",
+      "reconstruction": "32b1c26e3bb277b76c6ce3506fd34591483a13fb1c9b5cb960f7f84aad1eb39f",
+      "tensor_dict": "988ba625ca1f012b60705dea6b395eb741b58cc63660cc7c443dedbeef0fa377"
+    }
+  },
+  "r3_1a_equivalence": {
+    "parent_commit": "683ae483a3a2407dc192fb32cdcf964eb3b1fe9a",
+    "parent_tree": "5dfe9bbd36940bfa4b03a322a2b452b38d3f463e",
+    "parent_benchmark_blob": "bcb502936cc8ccce4a52b843a1220f27cdddba1f",
+    "candidate_benchmark_blob": "9714e081322b925eddc560f1a724b4dd2a68dc78",
+    "capture_command": ".venv/Scripts/python.exe bench/bench_io.py --runs 1 --scale 0.001 --skip-oracles --json <output>",
+    "parent_capture_sha256": "d30840742c571dd4a8ad86076ef0af8dd1fc884ecf59e1af2f3330adffaffd57",
+    "candidate_capture_sha256": [
+      "c0ec1a358ae5e7e51d650d3b1fd1069f76c97bf9f8573d917cd2e74ef976521e",
+      "5ae19649975f4ced69d9f0817a15c000c7a82e4c93cb5d3f873763273e43c7b8"
+    ],
+    "structural_projection_sha256": "2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376",
+    "confirming_strict_capture_sha256": "b426086aaf02483d4a36bb4e4297fba4c7ac85b8786d849cd4de3ff07726dc3b",
+    "deterministic_projection": "identical"
+  },
   "cli_options": [
     "--cold-cache",
     "--help",
