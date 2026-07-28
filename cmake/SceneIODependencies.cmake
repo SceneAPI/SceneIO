@@ -1,6 +1,17 @@
-# Python (scikit-build-core provides the hints for the target interpreter).
-# CMake 3.18 supplies Development.Module for the stable native build.
-find_package(Python 3.12 REQUIRED COMPONENTS Interpreter Development.Module)
+# Python (scikit-build-core provides the hints for the target interpreter and
+# backports FindPython when CMake predates Development.SABIModule). Requiring
+# both module targets makes the cp312 stable-ABI contract explicit: nanobind
+# otherwise falls back to a CPython-version-specific extension without failing.
+find_package(
+  Python 3.12
+  REQUIRED COMPONENTS
+    Interpreter
+    Development.Module
+    Development.SABIModule)
+if(NOT TARGET Python::SABIModule)
+  message(FATAL_ERROR
+    "SceneIO's cp312 stable-ABI build requires Python::SABIModule")
+endif()
 find_package(Threads REQUIRED)
 
 # Locate the pip-installed nanobind and load its CMake package.

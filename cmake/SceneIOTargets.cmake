@@ -5,6 +5,24 @@
 
 nanobind_add_module(_core STABLE_ABI NB_STATIC
   ${SCENEIO_CORE_SOURCES})
+
+# nanobind intentionally treats STABLE_ABI as a request and can fall back to a
+# CPython-version-specific build. Turn SceneIO's wheel contract into a checked
+# invariant before compiling: the module must use nanobind's abi3 support
+# library and its platform-specific stable-extension suffix.
+get_target_property(_sceneio_core_links _core LINK_LIBRARIES)
+if(NOT "${_sceneio_core_links}" MATCHES
+       "(^|;)nanobind-static-abi3(;|$)")
+  message(FATAL_ERROR
+    "SceneIO _core did not select nanobind-static-abi3")
+endif()
+get_target_property(_sceneio_core_suffix _core SUFFIX)
+if(NOT "${_sceneio_core_suffix}" STREQUAL "${NB_SUFFIX_S}")
+  message(FATAL_ERROR
+    "SceneIO _core suffix '${_sceneio_core_suffix}' does not match "
+    "the stable-ABI suffix '${NB_SUFFIX_S}'")
+endif()
+
 if(SCENEIO_SELECTED_BACKEND_SOURCES)
   target_sources(_core PRIVATE ${SCENEIO_SELECTED_BACKEND_SOURCES})
 endif()

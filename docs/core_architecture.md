@@ -8,8 +8,9 @@ things that keep this expansible as the format list from
 > format-focused native layer remains coherent, but registry, inspection,
 > benchmark, test-matrix, dependency, and binding wiring have outgrown a flat
 > layout. No new codec wave begins until the remaining behavior-preserving
-> R3-R6
-> migration and performance qualification in
+> R3-R5 migration and performance qualification are complete. No new codec
+> wave begins until the remaining user-gated R6 cross-platform package
+> validation in
 > [`repository_organization_plan.md`](repository_organization_plan.md) pass.
 > The paths below describe current wiring; the linked plan defines the target
 > family boundaries and compatibility tests.
@@ -417,8 +418,16 @@ must ultimately be pinned under `src/cpp/third_party/`, built into `_core`, and
   attributed in `LICENSES/`. Miniz 3.0.2, nlohmann/json 3.11.3, zstd 1.5.6,
   fast_float 6.1.6, LAZperf 3.4.0, and libwebp 1.5.0 are now
   repository-contained. The production CMake build has no native-source
-  download step; disconnected packaging and three-toolchain confirmation
-  remain the final R6 validation gates. The R5 JPEG
+  download step. The native build requires `Python::SABIModule` and fails
+  configuration unless nanobind selects its stable-ABI target and suffix.
+  Corrected local MSVC and Ubuntu builds produce `_core.pyd` and
+  `_core.abi3.so`, respectively; the Windows binary imports `python3.dll` and
+  the Unix binary has no libpython dependency. The exact-tree disconnected
+  MSVC sdist-to-wheel build, package inventory, license gate, and all-50
+  installed smoke form the final local package gate. The release workflow
+  makes every platform wheel consume that one verified sdist with hash-locked
+  build inputs; its user-gated GCC 10 and AppleClang execution remains the
+  final R6 validation gate. The R5 JPEG
 candidate is
 additionally built by a default-off external project from the official
 libjpeg-turbo 3.2.0 archive. The clean MSVC qualification rejected that exact

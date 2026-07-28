@@ -12,6 +12,13 @@ documentation checklist is
 
 ## Current checkpoint
 
+Historical `abi3 wheel` entries below prove their recorded wheel tag,
+inventory, and Python 3.12 behavior; they do not independently prove the
+embedded extension’s ABI. R6 review found and corrected the missing
+`Python::SABIModule` requirement. The current build now fails configuration
+unless nanobind selects its stable target and suffix; corrected Windows and
+Ubuntu binaries use `_core.pyd` and `_core.abi3.so`, respectively.
+
 N0 closes at validated implementation commit `a5e7fa4`: local MSVC, normal
 Linux CI, pinned GCC 10, the Linux/Windows/macOS focused matrix, the complete
 and focused compiler-instrumented native jobs, the 50-codec performance guard,
@@ -393,7 +400,7 @@ verification have accumulated in a few large modules:
 | Benchmark | compatible `bench_io.py` entry point plus `io_bench/{model,measure,reporting,runner}.py`, all eight lower family modules, and shared `families/common.py` | all benchmark ownership is lower; the final R3.2 unit adds built-in completeness and strict comparison-provider controls |
 | Cross-codec tests | shared 50-codec catalog and 44-case buffer builder; focused streaming, inspection, array-partial, and image-partial modules; lower partial assertions; `test_io_mmap.py`, about 680 lines; shared partial invariants | mmap, streaming, and inspection ownership is split; partial behavior is migrating one family at a time |
 | Execution plan | `format_gap_implementation_plan.md`, about 2,500 lines | historical evidence and the active queue are easy to confuse |
-| Native dependencies | twelve source-complete in-tree projects and no production `FetchContent` project | miniz, nlohmann/json, zstd, fast_float, LAZperf, and libwebp complete the R6 repository-source rows; disconnected package and three-toolchain confirmation remain |
+| Native dependencies | twelve source-complete in-tree projects and no production `FetchContent` project | miniz, nlohmann/json, zstd, fast_float, LAZperf, and libwebp complete the R6 repository-source rows; the corrected build requires and checks the Python stable ABI, and user-gated GCC 10/AppleClang package confirmation remains |
 
 The public API and native ABI remain stable throughout the reorganization.
 
@@ -1117,12 +1124,18 @@ installed smoke.
 
 - The selected exact revisions for miniz, nlohmann/json, zstd, fast_float,
   LAZperf, and libwebp are repository-contained. These six dependency-specific
-  rows complete source intake; the shared R6 closure now validates
-  disconnected sdist-to-wheel construction and the three target toolchains.
+  rows complete source intake. Package review found and corrected a silent
+  CPython-specific fallback: `Python::SABIModule`, nanobind’s stable target,
+  and the stable suffix are now mandatory. Local MSVC and Ubuntu builds
+  exercise the corrected Windows/Unix paths, while the final exact-tree
+  disconnected sdist-to-wheel gate records the local package proof. The
+  prepared workflow makes every target consume that one verified sdist with
+  locked build inputs. The shared R6 closure then awaits its user-gated GCC 10
+  and AppleClang execution.
 - Apply local changes as documented patch files or narrowly marked source
   changes.
-- Prove `FETCHCONTENT_FULLY_DISCONNECTED=ON` and network-disabled
-  sdist-to-wheel builds.
+- Retain `FETCHCONTENT_FULLY_DISCONNECTED=ON`, package-index-disabled native
+  builds, and exact-sdist wheel construction on every toolchain.
 
 ## Execution, verification, and validation matrix
 

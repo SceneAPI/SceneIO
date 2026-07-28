@@ -117,9 +117,12 @@
 > encode/decode by median geomean but misses the q95 comparative-quality floor
 > (`-0.058242 dB` versus `-0.05 dB`). libjpeg-turbo is therefore rejected as
 > the combined default and stb remains unchanged. No candidate advanced to
-> the user-gated remote comparison. R6 source intake is now complete; final
-> disconnected sdist-to-wheel and user-gated GCC 10/AppleClang validation
-> remain.
+> the user-gated remote comparison. R6 source intake is complete. The corrected
+> package graph now requires and verifies Python’s stable ABI, and the local
+> Windows/Ubuntu native builds use the expected platform suffixes. The release
+> workflow builds every platform wheel from one verified sdist; its final
+> exact-tree MSVC package gate and user-gated GCC 10/AppleClang validation
+> close R6.
 
 The granular, per‑format execution plan for covering **every relevant file type
 that has a permissively‑licensed open‑source option**. Sits below the strategy
@@ -131,8 +134,8 @@ Current test counts, workflow evidence, and the immutable validated checkpoint
 are maintained only in
 [`format_coverage.md`](format_coverage.md#format--data-structure-coverage);
   this policy roadmap intentionally does not duplicate them. The next execution
-  order is: complete R6 disconnected package and toolchain validation, then
-  finish animated WebP/APNG and RTMV.
+  order is: complete the user-gated R6 GCC 10/AppleClang package validation,
+  then finish animated WebP/APNG and RTMV.
 The common optional-library feature pattern follows before HDF5/hloc, TIFF,
 E57, and Parquet.
 
@@ -392,9 +395,13 @@ identity) regardless of codec progress — codecs work today via informal labels
 - In-tree/header-only dependencies keep the default build independent of
   system libraries. The production adapters and all selected native sources
   are repository-maintained: miniz, nlohmann/json, zstd, fast_float, LAZperf,
-  and libwebp complete the R6 repository-source set. Disconnected package
-  construction and the user-gated three-toolchain confirmation remain before
-  the post-0.2 stable tier closes R6.
+  and libwebp complete the R6 repository-source set. The build now requires
+  `Python::SABIModule` and verifies nanobind’s stable target/suffix rather than
+  accepting a CPython-specific fallback. `publish.yml` builds all platform
+  wheels from one verified sdist with locked build inputs. The exact-tree
+  package check is the final pre-commit gate and is recorded with the closure
+  commit; user-gated GCC 10/AppleClang execution remains the R6 validation
+  gate.
 - Optional system libs compile in per `SCENEIO_WITH_*`; absent → the codec
   reports `needs_dep` and raises a clean "format not built" error, never an
   import crash. The cibuildwheel images gain them via vcpkg/conda as each phase

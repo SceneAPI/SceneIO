@@ -690,7 +690,7 @@ def _write_test_wheel(
     with zipfile.ZipFile(path, "w") as archive:
         archive.writestr("sceneio/__init__.py", "from . import registry\n")
         archive.writestr("sceneio/registry.py", "FORMATS = ()\n")
-        archive.writestr("sceneio/_core.cp312-win_amd64.pyd", native)
+        archive.writestr("sceneio/_core.pyd", native)
         archive.writestr(
             "sceneio-0.2.0.dist-info/METADATA",
             "Metadata-Version: 2.4\n"
@@ -743,7 +743,7 @@ def test_wheel_inspection_requires_one_native_numpy_only_and_no_dev_payload(
 def test_installed_python_package_is_bound_to_the_supplied_wheel(tmp_path):
     package = tmp_path / "sceneio"
     package.mkdir()
-    core = package / "_core.cp312-win_amd64.pyd"
+    core = package / "_core.pyd"
     core.write_bytes(b"native")
     (package / "__init__.py").write_bytes(b"VALUE = 1\n")
     pycache = package / "__pycache__"

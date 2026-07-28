@@ -105,9 +105,12 @@ collects all 2,923 tests and passes its complete and focused native jobs.
 Nonpublishing release run
 [30181286675](https://github.com/SceneAPI/SceneIO/actions/runs/30181286675)
 builds and smoke-tests all three platform wheel sets plus the source archive.
-The expanded transport/access tier is therefore cross-platform validated;
-per-codec backend qualification and default native-source closure remain
-separate next-stage gates.
+The expanded transport/access tier is therefore cross-platform validated.
+Per-codec backend qualification is tracked separately from O0-O5. The selected
+default native-source intake is complete. R6 package review corrected and
+configure-checked the stable-ABI build path; local Windows and Ubuntu builds
+now use the expected stable extension names. The final exact-tree MSVC package
+gate precedes the user-gated GCC 10/AppleClang R6 package run.
 
 Post-0.2 format expansion inherits the same gates. The registry currently has
 50 codecs: 44 file containers, three multi-file containers, and three directory

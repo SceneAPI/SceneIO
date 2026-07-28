@@ -6,6 +6,7 @@ import hashlib
 import importlib
 import json
 import re
+import sys
 from collections import Counter
 from pathlib import Path
 from types import MappingProxyType
@@ -277,6 +278,21 @@ def test_live_native_inventory_matches_builtin_ownership_and_capabilities() -> N
 
 
 def test_target_and_instrumentation_contracts_remain_explicit() -> None:
+    dependencies = (
+        ROOT / "cmake/SceneIODependencies.cmake"
+    ).read_text(encoding="utf-8")
+    assert re.search(
+        r"find_package\(\s*Python 3\.12\s+REQUIRED COMPONENTS\s+"
+        r"Interpreter\s+Development\.Module\s+"
+        r"Development\.SABIModule\s*\)",
+        dependencies,
+    )
+    assert "if(NOT TARGET Python::SABIModule)" in dependencies
+    assert (
+        "SceneIO's cp312 stable-ABI build requires Python::SABIModule"
+        in dependencies
+    )
+
     targets = (ROOT / "cmake/SceneIOTargets.cmake").read_text(encoding="utf-8")
     link_block = re.search(
         r"target_link_libraries\(\s*_core\s+PRIVATE\s+(.*?)\)",
@@ -286,6 +302,11 @@ def test_target_and_instrumentation_contracts_remain_explicit() -> None:
     assert link_block is not None
     assert tuple(link_block.group(1).split()) == tuple(CONTRACT["core_link_targets"])
     assert "nanobind_add_module(_core STABLE_ABI NB_STATIC" in targets
+    assert '"(^|;)nanobind-static-abi3(;|$)"' in targets
+    assert (
+        'if(NOT "${_sceneio_core_suffix}" STREQUAL "${NB_SUFFIX_S}")'
+        in targets
+    )
     assert "install(TARGETS _core LIBRARY DESTINATION sceneio)" in targets
 
     instrumentation = (
@@ -301,3 +322,8 @@ def test_target_and_instrumentation_contracts_remain_explicit() -> None:
         r'"[^"]+"\s+OFF\s*\)',
         instrumentation,
     )
+
+
+def test_live_core_uses_the_platform_stable_abi_suffix() -> None:
+    expected_name = "_core.pyd" if sys.platform == "win32" else "_core.abi3.so"
+    assert Path(_core.__file__).name == expected_name

@@ -1,5 +1,16 @@
 # Next-stage implementation checklist
 
+> **Stable-ABI evidence correction (2026-07-28):** references below to local
+> Windows “abi3 wheels” before the R6 closure record the wheel filename/tag,
+> package inventory, and Python 3.12 smoke result. They do not prove that the
+> embedded extension used Python’s stable ABI. The R6 review found that CMake
+> requested only `Development.Module`, allowing nanobind to fall back to a
+> CPython-specific binary. Those older artifacts remain valid for their source,
+> codec, inventory, and Python 3.12 results but are superseded as ABI evidence.
+> The corrected build requires `Python::SABIModule`, checks the selected
+> nanobind target and suffix during configuration, and separately verifies the
+> resulting Windows `_core.pyd` and Unix `_core.abi3.so`.
+
 Status: N0.1-N0.5 remain validated at immutable implementation commit
 `a5e7fa4` on `phase0-nanobind-core`, including the nonpublishing
 three-platform source/wheel build. R1.1-R1.4 are complete at `95061c6`. At that
@@ -93,8 +104,16 @@ The exact `7a88e7c` clean-wheel, remote-inclusive MSVC report is complete:
 The candidate is therefore rejected as the combined stable JPEG default,
 stb remains unchanged, and the user-gated GCC 10/AppleClang comparison was not
   dispatched for a candidate that had already failed a frozen local gate. R5 has
-  a negative selection result. R6 source intake is complete; final disconnected
-  sdist-to-wheel and user-gated GCC 10/AppleClang validation remain.
+  a negative selection result. All six R6 source-intake units are complete and
+  pushed. The clean `8ef2537` run proves disconnected source construction,
+  package inventory, 22-license inclusion, and all-50 Python 3.12 smoke, but
+  its wheel is withdrawn as stable-ABI evidence by the correction above. The
+  corrected CMake build now selects and verifies nanobind’s stable-ABI target
+  on Windows and Ubuntu. `publish.yml` is prepared so its three wheel jobs
+  verify and unpack one sdist, use a hash-locked build wheelhouse, and run the
+  same inventory/smoke gates. The corrected exact-tree package is rebuilt only
+  after final review and its hashes are retained in the commit record; the
+  user-gated GCC 10/AppleClang build-only run remains.
 
 This is the operational checklist for the repository-organization and
 codec-performance stage defined in
@@ -842,28 +861,28 @@ R2.1 local implementation evidence:
 
 ### R2.2 — move family registrations
 
-- [ ] Move one family's built-in `Codec` definitions without changing values
+- [x] Move one family's built-in `Codec` definitions without changing values
       or canonical ordering.
-- [ ] Keep family exports immutable and side-effect free; only the aggregate
+- [x] Keep family exports immutable and side-effect free; only the aggregate
       populates the existing `REGISTRY` object.
-- [ ] Compare serialized capability snapshots byte-for-byte.
-- [ ] Run family parity, public E2E, detection, mmap/sink, inspection, partial,
+- [x] Compare serialized capability snapshots byte-for-byte.
+- [x] Run family parity, public E2E, detection, mmap/sink, inspection, partial,
       and capability tests.
 
 ### R2.3 — move family inspectors
 
-- [ ] Keep `_inspection.py` as a compatibility facade.
-- [ ] Move common parsing helpers only after two families use the same
+- [x] Keep `_inspection.py` as a compatibility facade.
+- [x] Move common parsing helpers only after two families use the same
       invariant; avoid a new miscellaneous helper module.
-- [ ] Prove inspect/full agreement, malformed errors, bounded allocation, and
+- [x] Prove inspect/full agreement, malformed errors, bounded allocation, and
       no full decode.
 
 ### R2.4 — per-family exit
 
-- [ ] Full suite and Ruff pass.
-- [ ] Benchmark smoke and retained guards pass.
-- [ ] Import/startup and public symbols show no regression.
-- [ ] Diff is a behavior-preserving move plus focused architecture tests.
+- [x] Full suite and Ruff pass.
+- [x] Benchmark smoke and retained guards pass.
+- [x] Import/startup and public symbols show no regression.
+- [x] Diff is a behavior-preserving move plus focused architecture tests.
 
 R2 exits after all eight families move and the facade remains source
 compatible.
@@ -3914,16 +3933,17 @@ Perform one dependency per commit.
 
 | Dependency | Selected revision | Repository source | Local build | Local verification | Commit |
 |---|---|---:|---:|---:|---|
-| miniz | 3.0.2 / `293d4db1b7d0ffee9756d035b9ac6f7431ef8492` | ✅ exact archive files and hashes recorded | ✅ direct hidden static target; no miniz fetch | ✅ local rebuild, parity, strict benchmark, sdist-derived wheel, installed smoke, and three reviews | this commit |
-| nlohmann/json | 3.11.3 / `9cca280a4d0ccf0c08f47a99aa71d1b0e52f8d03` | ✅ exact 45-header tree and license hashes recorded | ✅ local interface target; no nlohmann/json fetch | ✅ rebuild, parity, strict benchmark, sdist-derived wheel, installed smoke, and three reviews | this commit |
-| zstd | 1.5.6 / `794ea1b0afca0f020f4e57b6732332231fb23c70` | ✅ exact selected library/build files and hashes recorded | ✅ local upstream static target; no zstd fetch | ✅ rebuild, dual-profile SPZ benchmark, strict sweep, exact package, isolated smoke, and three reviews | this commit |
-| fast_float | 6.1.6 / `00c8c7b0d5c722d2212568d915a39ea73b08b973` | ✅ exact nine-header tree and MIT license hashes recorded | ✅ local interface target; no fast_float fetch | ✅ rebuild, parity, strict benchmark, exact package, isolated smoke, and three reviews | this commit |
-| LAZperf | 3.4.0 / `b7bbe26109dc986f42d4fc80b8de3d2b6ca634ce` | ✅ exact 47-file tree, pristine/final manifests, and seven-file patch recorded | ✅ explicit hidden static target; no LAZperf fetch | ✅ rebuild, parity, strict benchmark, exact package, isolated smoke, and three reviews | this commit |
-| libwebp | 1.5.0 / `a4d7a715337ded4451fec90ff8ce79728e04126c` | ✅ exact 203-file core/build closure and notices recorded | ✅ local unmodified upstream CMake/SIMD static target; no libwebp fetch | ✅ rebuild, parity, strict benchmark, exact package, isolated smoke, and three reviews | this commit |
+| miniz | 3.0.2 / `293d4db1b7d0ffee9756d035b9ac6f7431ef8492` | ✅ exact archive files and hashes recorded | ✅ direct hidden static target; no miniz fetch | ✅ local rebuild, parity, strict benchmark, sdist-derived wheel, installed smoke, and three reviews | `dd87233` |
+| nlohmann/json | 3.11.3 / `9cca280a4d0ccf0c08f47a99aa71d1b0e52f8d03` | ✅ exact 45-header tree and license hashes recorded | ✅ local interface target; no nlohmann/json fetch | ✅ rebuild, parity, strict benchmark, sdist-derived wheel, installed smoke, and three reviews | `e5f705f` |
+| zstd | 1.5.6 / `794ea1b0afca0f020f4e57b6732332231fb23c70` | ✅ exact selected library/build files and hashes recorded | ✅ local upstream static target; no zstd fetch | ✅ rebuild, dual-profile SPZ benchmark, strict sweep, exact package, isolated smoke, and three reviews | `ae2122d` |
+| fast_float | 6.1.6 / `00c8c7b0d5c722d2212568d915a39ea73b08b973` | ✅ exact nine-header tree and MIT license hashes recorded | ✅ local interface target; no fast_float fetch | ✅ rebuild, parity, strict benchmark, exact package, isolated smoke, and three reviews | `7f24094` |
+| LAZperf | 3.4.0 / `b7bbe26109dc986f42d4fc80b8de3d2b6ca634ce` | ✅ exact 47-file tree, pristine/final manifests, and seven-file patch recorded | ✅ explicit hidden static target; no LAZperf fetch | ✅ rebuild, parity, strict benchmark, exact package, isolated smoke, and three reviews | `801190e` |
+| libwebp | 1.5.0 / `a4d7a715337ded4451fec90ff8ce79728e04126c` | ✅ exact 203-file core/build closure and notices recorded | ✅ local unmodified upstream CMake/SIMD static target; no libwebp fetch | ✅ rebuild, parity, strict benchmark, exact package, isolated smoke, and three reviews | `8ef2537` |
 
-The shared R6.1–R6.3 boxes remain open until all six rows satisfy them. Each
-row receives its own green commit; the final disconnected sdist-to-wheel and
-three-toolchain evidence close the shared exit boxes.
+All six rows satisfy R6.1 and R6.2 in separate green commits. The local MSVC
+portion of R6.3 is complete; the final three-toolchain exit remains open until
+the user-authorized build-only workflow supplies GCC 10 and AppleClang
+artifacts.
 
 Miniz local evidence at the reviewed tree:
 
@@ -4198,58 +4218,131 @@ The artifact hashes above bind the exact pre-documentation review tree. The
 post-review staged-index package is rebuilt and reported outside its own
 packaged checklist so the artifact is not required to contain its own hash.
 
+Shared disconnected-source/package diagnostic evidence at exact commit
+`8ef25375cc9b47a8e7b67f11d4714ab88f4e4d82`:
+
+- a clean 827-file commit export with fresh source, build, distribution, and
+  installation directories built with `PIP_NO_INDEX=1`, `UV_OFFLINE=1`,
+  `UV_NO_INDEX=1`, disabled PEP 517 isolation, preinstalled pinned build
+  tools, and `FETCHCONTENT_FULLY_DISCONNECTED=ON`;
+- the sdist was built first, then the Windows cp312-abi3 wheel was built only
+  from its unpacked source. The 5,818,092-byte, 828-member sdist has SHA-256
+  `674423c13196e1a2aee7c67c6c85877684bf4c6f0573b387679fe24058aad466`;
+  all 827 commit blobs match and generated `PKG-INFO` is the sole additional
+  member;
+- the superseded 2,187,867-byte, 88-member wheel has SHA-256
+  `f045b52e334298ad7cbdf336c70356140df5b1a05ceace42954b3f313ccf9595`.
+  It contains one `_core` extension, all 22 distribution license assets, no
+  source/build payload or additional native library, and NumPy is its sole
+  unconditional runtime requirement. Although its filename was tagged
+  `cp312-abi3`, its `_core.cp312-win_amd64.pyd` member linked `python312.dll`;
+  it is not stable-ABI package evidence;
+- isolated installed smoke returns phase `2` for all 50 built-ins. Windows
+  inspection reports only Python and standard Windows runtime libraries, and
+  the extension exports 21 names—`PyInit__core` plus 20 nanobind exception
+  runtime names—with no libwebp, SharpYUV, or LAZperf exports. This remains a
+  valid Python 3.12 functional result, not an ABI result;
+- implementation/build/package scanning finds no FFmpeg or libav component.
+  Those projects remain reference-only and are not part of SceneIO source,
+  build logic, metadata, or artifacts;
+- the final local five-run strict sweep passes every retained O4/O5,
+  mapped-read, and file-sink gate. Its 52,092-byte JSON has SHA-256
+  `0b06954e0d31dea6e34a9ae796a20fe9cd4ffb52bffea4ab1e288cd397a8eb43`
+  and structural projection
+  `8f218ff77bcf2ea1e918d4ed164f7184fa2662eb252508c387b5f131a053a8e7`;
+- `tools/verify_distribution.py` turns the license/runtime/native-payload
+  assertions into a reusable stdlib-only gate. It compares every Git-tracked
+  source byte from the checkout with the sdist, permits only generated
+  `PKG-INFO`, compares every indexed license and Python runtime byte, and
+  applies an explicit wheel-member inventory around the one `_core` extension.
+  It also requires the project name/version plus `cp312-abi3` filename tags,
+  exact Windows/manylinux2014/macOS platform tags, matching internal `WHEEL`
+  tags, singleton project identity and `Root-Is-Purelib: false` fields, and
+  either one platform artifact or the exact three-platform matrix.
+  `tools/r6-wheelhouse.lock` pins and hashes the four build tools plus the three
+  CPython 3.12 platform NumPy wheels. The sdist producer pins `uv` 0.8.6. The
+  prepared `publish.yml` verifies the repository-to-sdist closure, publishes
+  its inventory separately, verifies one sdist hash, unpacks that artifact for
+  each wheel job, builds with package-index access disabled, runs all-50 smoke,
+  and performs per-wheel plus combined inventory checks. Each platform job
+  accepts its one expected wheel, while the combined job invokes the strict
+  matrix mode and requires exactly one Windows, manylinux, and macOS wheel;
+- the corrected CMake graph requires `Development.SABIModule`, fails configure
+  unless `Python::SABIModule` exists, and checks that `_core` selected
+  `nanobind-static-abi3` plus `NB_SUFFIX_S`. A clean MSVC rebuild emits
+  `_core.pyd`, compiles with `Py_LIMITED_API=0x030C0000`, links `python3.lib`,
+  imports against `python3.dll`, and exports `PyInit__core`. A separate Ubuntu
+  22.04/CMake 3.22/GCC 11 rebuild exercises scikit-build-core’s FindPython
+  backport, emits `_core.abi3.so`, has no libpython dependency, exports
+  `PyInit__core`, imports, and passes the native-build architecture suite.
+  This Linux check confirms the corrected Unix build path but does not replace
+  the user-gated manylinux2014 GCC 10 or AppleClang jobs;
+- a fresh five-run all-50 benchmark against the corrected build passes every
+  retained O4/O5, mapped-read, and file-sink gate. The 52,064-byte result has
+  SHA-256
+  `19a379668f6180dc8570d5dbc83b0ca7267e93058f5c0749fb658819c14ed307`
+  and retains structural projection
+  `8f218ff77bcf2ea1e918d4ed164f7184fa2662eb252508c387b5f131a053a8e7`;
+- the complete local suite is `3446 passed, 4 skipped`; exact collection is
+  3,450 nodes with normalized node-id SHA-256
+  `1bf1ff9b85ef0ac8f1ad62d26e872666deff8594434feb045f8a03feff11583e`.
+  Ruff and both diff checks pass. The final corrected staged tree is rebuilt
+  from an exact export after review, with its non-self-referential artifact
+  hashes and installed-smoke result retained in the commit record.
+
 ### R6.1 — provenance and source intake
 
-- [ ] Store the exact selected source under
+- [x] Store the exact selected source under
       `src/cpp/third_party/<project>/`.
-- [ ] Add `COMMIT.txt` with upstream URL, tag/SHA, archive/source hashes,
+- [x] Add `COMMIT.txt` with upstream URL, tag/SHA, archive/source hashes,
       source files built, disabled components, build options, and local
       patches.
-- [ ] Copy the exact upstream license/notice into `LICENSES/` and update its
+- [x] Copy the exact upstream license/notice into `LICENSES/` and update its
       index.
-- [ ] Preserve local changes as reviewable patch files or narrowly marked
+- [x] Preserve local changes as reviewable patch files or narrowly marked
       source edits.
-- [ ] Disable tools, examples, tests, shared libraries, install rules, and
+- [x] Disable tools, examples, tests, shared libraries, install rules, and
       unused codecs.
 
 ### R6.2 — local-source build switch
 
-- [ ] Switch only that dependency from `FetchContent` to the in-tree source.
-- [ ] Verify compile definitions, hidden visibility, static linkage, and
+- [x] Switch only that dependency from `FetchContent` to the in-tree source.
+- [x] Verify compile definitions, hidden visibility, static linkage, and
       enabled source files match the selected benchmark build.
-- [ ] Prove focused codec goldens/parity and benchmark results remain within
+- [x] Prove focused codec goldens/parity and benchmark results remain within
       the recorded variance.
-- [ ] Run the complete rebuild/test/lint/wheel smoke gate.
+- [x] Run the complete rebuild/test/lint/wheel smoke gate.
 
 ### R6.3 — offline and package closure
 
-- [ ] Start from a clean checkout and empty CMake/download caches. Either
+- [x] Start from a clean checkout and empty CMake/download caches. Either
       disable PEP 517 build isolation and use pinned preinstalled build tools,
       or provide a locked, pre-populated `PIP_FIND_LINKS` wheelhouse inside
       every build container.
-- [ ] Set `PIP_NO_INDEX=1`, configure with
+- [x] Set `PIP_NO_INDEX=1`, configure with
       `FETCHCONTENT_FULLY_DISCONNECTED=ON`, and deny network access during the
       native-source build.
-- [ ] Build the sdist first. Make every wheel job depend on that sdist,
+- [x] Build the sdist first. Make every wheel job depend on that sdist,
       download and unpack the exact artifact, and build its wheel from the
       unpacked sdist rather than a fresh repository checkout.
-- [ ] Inspect the wheel for unexpected headers, static archives, build trees,
+- [x] Inspect the wheel for unexpected headers, static archives, build trees,
       undeclared DLLs/shared objects, or duplicate native libraries.
-- [ ] Verify NumPy remains the only unconditional runtime dependency.
-- [ ] Assert the root license and every file indexed by `LICENSES/README.md`
+- [x] Verify NumPy remains the only unconditional runtime dependency.
+- [x] Assert the root license and every file indexed by `LICENSES/README.md`
       are present in both the sdist and every wheel.
-- [ ] Verify no FFmpeg/libav source, symbol, library, executable, build hook,
+- [x] Verify no FFmpeg/libav source, symbol, library, executable, build hook,
       or package metadata entered the repository or wheel.
 
 R6 exits when:
 
-- [ ] all selected default sources are repository-contained;
-- [ ] no default CMake configure path downloads native source;
-- [ ] every dependency has current provenance/license/patch metadata;
+- [x] all selected default sources are repository-contained;
+- [x] no default CMake configure path downloads native source;
+- [x] every dependency has current provenance/license/patch metadata;
 - [ ] native-source-offline MSVC, manylinux2014 GCC 10, and AppleClang
       sdist-to-wheel builds pass (NumPy is separately pre-provisioned for
       installed-wheel smoke, not required to compile the package);
-- [ ] all 50 codecs pass the installed-wheel smoke.
+- [x] all 50 codecs pass the installed-wheel smoke locally; the exact same
+      manifest-driven command is mandatory in each hosted wheel job.
 
 ## 11. Documentation checklist for every unit
 
@@ -4257,22 +4350,22 @@ Review every surface below for each unit, update only the surfaces affected by
 the change, and always update this checklist. Unrelated documents do not
 receive churn solely to touch every file.
 
-- [ ] `docs/format_coverage.md`: current capability and validation status.
-- [ ] `docs/coverage_roadmap.md`: declared destination/policy only.
-- [ ] `docs/format_gap_implementation_plan.md`: active queue and package
+- [x] `docs/format_coverage.md`: current capability and validation status.
+- [x] `docs/coverage_roadmap.md`: declared destination/policy only.
+- [x] `docs/format_gap_implementation_plan.md`: active queue and package
       status.
-- [ ] `docs/repository_organization_plan.md`: architecture/performance gate
+- [x] `docs/repository_organization_plan.md`: architecture/performance gate
       status.
-- [ ] This checklist: completed boxes, commit SHA, test counts, benchmark
+- [x] This checklist: completed boxes, commit SHA, test counts, benchmark
       evidence, workflow links, and remaining blockers.
-- [ ] `docs/core_architecture.md`: actual current layout, not the future layout.
-- [ ] `docs/io_optimization_plan.md`: historical O0-O5 facts plus current
+- [x] `docs/core_architecture.md`: actual current layout, not the future layout.
+- [x] `docs/io_optimization_plan.md`: historical O0-O5 facts plus current
       qualification distinction.
-- [ ] `bench/BASELINE.md` and `bench/PERFORMANCE_STATUS.toml`: measurements and
+- [x] `bench/BASELINE.md` and `bench/PERFORMANCE_STATUS.toml`: measurements and
       backend state.
-- [ ] `README.md`: only public commands/APIs and stable engineering entry
-      points.
-- [ ] `src/cpp/third_party/*/COMMIT.txt` and `LICENSES/`: provenance,
+- [x] `README.md`: reviewed; no public command or API changed in this closure,
+      so no edit is required.
+- [x] `src/cpp/third_party/*/COMMIT.txt` and `LICENSES/`: provenance,
       attribution, and patches when dependencies change.
 
 Documentation claims use these terms:
@@ -4317,12 +4410,14 @@ Local exit:
 
 - [ ] N0 and R1-R6 are complete in green commits.
 - [ ] Worktree is clean and all authoritative documents agree.
-- [ ] Full local MSVC suite, Ruff, 50-codec benchmark guard, sdist/wheel, and
+- [x] Full local MSVC suite, Ruff, 50-codec benchmark guard, sdist/wheel, and
       NumPy-only smoke pass.
 - [ ] Every required codec/profile/direction is `qualified`,
       `native_by_necessity`, or an explicitly approved `provisional`
-      exception; no unexplained `known_gap` remains.
-- [ ] Default native builds are offline from repository-contained source.
+      exception; no unexplained `known_gap` remains. The ledger still has 124
+      provisional rows without a recorded approval reference. The two JPEG
+      `known_gap` rows are explained by the rejected libjpeg-turbo comparison.
+- [x] Default native builds are offline from repository-contained source.
 
 Remote validation checkpoints, only after explicit user authorization:
 

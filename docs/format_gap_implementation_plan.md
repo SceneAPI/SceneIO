@@ -21,6 +21,12 @@ prerequisites for the next codec wave. The reviewed, commit-sized checklist
 for executing those gates is
 [`next_stage_implementation_checklist.md`](next_stage_implementation_checklist.md).
 
+The R6 stable-ABI correction supersedes earlier local wheel-tag evidence:
+those artifacts remain valid for Python 3.12 functionality and package
+inventory, while the current build additionally requires
+`Python::SABIModule` and verifies the selected nanobind target and extension
+suffix.
+
 ## 1. Outcome and boundaries
 
 The program is complete when every declared format is in one of three explicit
@@ -2193,10 +2199,14 @@ lane before starting the next unit.
    live codec uses it. Local LAZperf changes, `COMMIT.txt` provenance/hashes,
    and all `LICENSES/` notices are retained, and the default production build
    has no native-source fetch. Local golden codec output and benchmark gates
-   pass. Complete the disconnected sdist-to-wheel proof on MSVC and the
-   user-gated manylinux2014 GCC 10 and AppleClang validation, using either
-   disabled PEP 517 isolation with pinned tools or a locked offline
-   wheelhouse.
+   pass. Package review corrected the prior CPython-specific fallback:
+   `Development.SABIModule` is mandatory, and CMake verifies nanobind’s stable
+   target and suffix. Local Windows and Ubuntu builds now emit `_core.pyd` and
+   `_core.abi3.so`; the final exact-tree disconnected MSVC package is rebuilt
+   with disabled PEP 517 isolation and pinned tools. `publish.yml` prepares a
+   hash-locked wheelhouse, verifies and unpacks the one sdist, and builds every
+   platform wheel from that directory. Complete the user-gated manylinux2014
+   GCC 10 and AppleClang execution.
 4. **Animation-capable `ImageSequence`.**
    Add an owned packed-frame mode with exact canvas size, pixel dtype/channels,
    per-frame duration, loop count, blend operation, disposal operation, and
@@ -2385,8 +2395,10 @@ After all local commits in a dependency wave are green:
    built-in registry, and exercise public write/read/inspect plus declared
    streaming/partial capabilities for every built-in codec. Run external
    oracles separately from installed-wheel smoke.
-3. Inspect the Windows wheel contents and native dependencies; ensure no build
-   tree, headers, static libraries, or undeclared DLLs leaked into it.
+3. Inspect the Windows wheel contents and native dependencies; require the
+   stable-ABI member `_core.pyd`, `python3.dll` rather than `python312.dll`,
+   and no build tree, headers, static libraries, or undeclared DLLs. Require
+   `_core.abi3.so` for Linux/macOS wheels.
 4. With explicit user authorization, push the branch and dispatch:
 
    ```powershell
@@ -2396,9 +2408,9 @@ After all local commits in a dependency wave are green:
 
    The manual `publish.yml` run is build-only and cannot publish. At the N0
    checkpoint, its sdist and manylinux2014 x86-64, macOS arm64, and Windows
-   amd64 abi3 wheel jobs build independently from the same commit. Before R6
-   closure, update the workflow so the sdist job creates the source artifact
-   first and every wheel job builds and smoke-tests from that exact sdist.
+   amd64 abi3 wheel jobs built independently from the same commit. The R6
+   workflow now creates and hashes the sdist first; every wheel job verifies,
+   unpacks, builds, and smoke-tests from that exact artifact.
 5. Require green normal CI, instrumented Linux, minimal-feature, full-feature,
    and cibuildwheel lanes as applicable. Download artifacts and verify wheel
    tags, imports, capabilities, smoke results, and `auditwheel`/`otool`/Windows

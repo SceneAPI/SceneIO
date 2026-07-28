@@ -2974,3 +2974,44 @@ producing identical bytes. The mapped path reduces traced allocation from
 overhead. These results preserve the established optimized WebP paths and show
 no source-ownership regression. This is local MSVC evidence; the final
 user-gated build-only multi-platform R6 validation remains outstanding.
+
+## R6 disconnected package and stable-ABI correction (2026-07-28)
+
+The first shared local package run started from clean exact commit
+`8ef25375cc9b47a8e7b67f11d4714ab88f4e4d82` in fresh source, build,
+distribution, and installation directories. It disables package indexes and
+PEP 517 isolation, uses preinstalled pinned build tools, sets
+`FETCHCONTENT_FULLY_DISCONNECTED=ON`, builds the sdist first, and builds the
+Windows wheel only from the unpacked sdist. That run remains valid source,
+inventory, license, Python 3.12 smoke, and benchmark evidence. It is withdrawn
+as stable-ABI evidence: the `cp312-abi3`-tagged wheel contained
+`_core.cp312-win_amd64.pyd` linked to `python312.dll`.
+
+| Artifact/check | Result |
+|---|---|
+| Exact source export | 827 files |
+| Source distribution | 5,818,092 bytes; 828 members; SHA-256 `674423c13196e1a2aee7c67c6c85877684bf4c6f0573b387679fe24058aad466` |
+| Superseded Windows wheel | 2,187,867 bytes; 88 members; SHA-256 `f045b52e334298ad7cbdf336c70356140df5b1a05ceace42954b3f313ccf9595`; functional on Python 3.12 but not stable-ABI evidence |
+| Distribution license assets | all 22 present in both artifacts |
+| Wheel native payload | one `_core` extension; no additional native library or source/build payload |
+| Runtime requirement | `numpy>=1.26` only |
+| Installed smoke | phase `2`; all 50 built-ins |
+| Extension exports | 21 total: `PyInit__core` plus 20 nanobind exception-runtime names; no libwebp, SharpYUV, or LAZperf exports |
+| Corrected Windows native build | `_core.pyd`; `nanobind-static-abi3`; `Py_LIMITED_API=0x030C0000`; `python3.dll`; imports with all 49 native/hybrid entries |
+| Corrected Ubuntu native build | `_core.abi3.so`; `nanobind-static-abi3`; no libpython dependency; imports and passes the native-build architecture suite |
+
+The optimized I/O benchmark is unchanged by this package-only closure. A fresh
+all-50 five-run sweep against the corrected stable-ABI build passes every
+retained O4/O5, mapped-read, and file-sink gate. Its 52,064-byte JSON has
+SHA-256
+`19a379668f6180dc8570d5dbc83b0ca7267e93058f5c0749fb658819c14ed307`
+and structural projection
+`8f218ff77bcf2ea1e918d4ed164f7184fa2662eb252508c387b5f131a053a8e7`.
+`tools/verify_distribution.py` now makes the package inventory repeatable,
+requires matching `cp312-abi3` filename/internal tags and the exact platform
+matrix, while `tools/r6-wheelhouse.lock` pins the build and smoke inputs. The
+prepared build-only release graph hashes one sdist and makes its manylinux2014
+GCC 10, Windows MSVC, and macOS AppleClang wheel jobs consume that exact artifact.
+The corrected exact staged tree is packaged after final review and its
+non-self-referential hashes are retained in the commit record. Executing the
+hosted GCC 10/AppleClang confirmation remains user-gated.

@@ -26,6 +26,13 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > formats on
 > `phase0-nanobind-core` and are not released yet.
 >
+> **Stable-ABI evidence correction (2026-07-28):** earlier package records
+> verified `cp312-abi3` wheel tags, contents, and Python 3.12 smoke but did not
+> verify the embedded extension’s ABI. R6 review found a CPython-specific
+> fallback. The current branch requires `Python::SABIModule`, checks the
+> nanobind stable target/suffix, and produces `_core.pyd` on Windows plus
+> `_core.abi3.so` on Unix. No corrected release has been published.
+>
 > **Validated N0 implementation checkpoint (2026-07-25, `a5e7fa4`):** the live registry contains
 > 50 available codecs. Every codec reports read, write, inspect, streaming read,
 > and streaming write support; 28 advertise a bounded partial selector. Local
@@ -552,7 +559,10 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > q95 4:4:4 comparative-quality floor (`-0.058242 dB` versus `-0.05 dB`).
 > It is rejected as the combined stable default; stb remains repository-owned
 > and unchanged. The user-gated remote comparison was not dispatched because
-> no conforming candidate advanced beyond MSVC. R6 source closure is active.
+> no conforming candidate advanced beyond MSVC. R6 source intake is complete.
+> The stable-ABI fallback found during package review is corrected and checked
+> by local Windows/Ubuntu native builds; the final exact-tree MSVC package gate
+> precedes the prepared, user-gated exact-sdist GCC 10/AppleClang build.
 
 [current-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287022
 [current-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287161
@@ -730,12 +740,12 @@ expanded 50-codec benchmark/oracles.
 
 | Piece | Status | Notes |
 |---|---|---|
-| nanobind + scikit‑build‑core build | ✅ | abi3/cp312, `NB_STATIC` |
-| cibuildwheel release path | ✅ | Linux/macOS/Windows; `publish.yml` |
+| nanobind + scikit‑build‑core build | ✅ | abi3/cp312, `NB_STATIC`; `Python::SABIModule`, `nanobind-static-abi3`, and the platform suffix are configure-checked; local Windows emits `_core.pyd` against `python3.dll`, Ubuntu emits `_core.abi3.so` without libpython |
+| cibuildwheel release path | ✅ prepared | one verified sdist feeds Linux/macOS/Windows wheels; locked build inputs, all-50 installed smoke, per-wheel inventory, and tag-only publication in `publish.yml`; current-head dispatch remains user-gated |
 | CI parity (oracles in CI) | ✅ | At `a5e7fa4`, normal Linux CI passes 2,914 tests with nine documented platform/oracle skips, the 50-codec performance guard, pinned GCC 10 portability, and the three-OS focused matrix |
 | Codec registry + `read`/`write`/`inspect`/`read_partial`/`detect` | ✅ | inspection covers all 50; bounded partial hooks are capability-specific |
 | Repo-maintained stable codec adapters | ✅ | all 50 production adapters, grammars, convention guards, inspectors, partial capability policies/available paths, and sinks live in `src/cpp` / `src/sceneio`; separately installed implementations and executables are test/reference oracles only |
-| Offline native-source closure | 🟡 | all selected native sources—including libwebp 1.5.0—are stored in-tree and the production CMake graph has no native-source fetch; final disconnected package construction and the user-gated three-toolchain confirmation remain |
+| Offline native-source closure | 🟡 | all selected native sources—including libwebp 1.5.0—are stored in-tree and the production CMake graph has no native-source fetch; the corrected exact-tree MSVC sdist-derived wheel is the final local gate, while user-gated GCC 10/AppleClang execution remains |
 | Zero‑copy numpy + torch (DLPack) | ✅ | validated per codec |
 | Conventions‑as‑metadata + write guards | ✅ | record‑don't‑convert enforced |
 | Parity kit (`sceneio.testing.parity`) | ✅ | cross‑impl + round‑trip + convention pins |
