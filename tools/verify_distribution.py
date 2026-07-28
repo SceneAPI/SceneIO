@@ -42,26 +42,34 @@ EXTRA_MARKER_PATTERN = re.compile(
     re.IGNORECASE,
 )
 EXPECTED_RUNTIME_REQUIREMENTS = ["numpy>=1.26"]
+MANYLINUX_METADATA_TAGS = (
+    "cp312-abi3-manylinux2014_x86_64",
+    "cp312-abi3-manylinux_2_17_x86_64",
+)
+MANYLINUX_WHEEL_CONTRACT = (
+    "manylinux",
+    MANYLINUX_METADATA_TAGS,
+    "sceneio/_core.abi3.so",
+)
 EXPECTED_WHEEL_PLATFORM_TAGS = {
     "win_amd64": (
         "windows",
         ("cp312-abi3-win_amd64",),
         "sceneio/_core.pyd",
     ),
-    "manylinux_2_17_x86_64.manylinux2014_x86_64": (
-        "manylinux",
-        (
-            "cp312-abi3-manylinux2014_x86_64",
-            "cp312-abi3-manylinux_2_17_x86_64",
-        ),
-        "sceneio/_core.abi3.so",
-    ),
+    "manylinux_2_17_x86_64.manylinux2014_x86_64": MANYLINUX_WHEEL_CONTRACT,
+    "manylinux2014_x86_64.manylinux_2_17_x86_64": MANYLINUX_WHEEL_CONTRACT,
     "macosx_11_0_arm64": (
         "macos",
         ("cp312-abi3-macosx_11_0_arm64",),
         "sceneio/_core.abi3.so",
     ),
 }
+WINDOWS_REPAIRED_LIBRARY_PATTERN = re.compile(
+    r"sceneio\.libs/(?:concrt140|msvcp140|vcruntime140|vcruntime140_1)"
+    r"-[0-9a-f]{32}\.dll",
+    re.IGNORECASE,
+)
 
 
 class WheelContract(NamedTuple):
@@ -286,6 +294,13 @@ def _is_native_member(archive: zipfile.ZipFile, name: str) -> bool:
     return any(header.startswith(magic) for magic in NATIVE_MAGICS)
 
 
+def _is_permitted_repaired_library(name: str, platform: str) -> bool:
+    return (
+        platform == "windows"
+        and WINDOWS_REPAIRED_LIBRARY_PATTERN.fullmatch(name) is not None
+    )
+
+
 def _project_identity(source_root: Path) -> tuple[str, str, str]:
     project_file = source_root / "pyproject.toml"
     project = tomllib.loads(project_file.read_text(encoding="utf-8"))["project"]
@@ -385,9 +400,19 @@ def verify_wheel(
             name for name in members if _is_native_member(archive, name)
         )
         expected_core_member = contract.core_member
-        if native_members != [expected_core_member]:
+        unexpected_native_members = [
+            name
+            for name in native_members
+            if name != expected_core_member
+            and not _is_permitted_repaired_library(name, contract.platform)
+        ]
+        if (
+            expected_core_member not in native_members
+            or unexpected_native_members
+        ):
             raise ValueError(
-                f"{path.name} must contain exactly {expected_core_member}: "
+                f"{path.name} must contain exactly {expected_core_member} plus "
+                "permitted repaired runtime libraries: "
                 f"{native_members}"
             )
 

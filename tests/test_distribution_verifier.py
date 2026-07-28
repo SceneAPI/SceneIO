@@ -176,6 +176,12 @@ def test_distribution_verifier_accepts_expected_inventory(tmp_path: Path) -> Non
             id="manylinux",
         ),
         pytest.param(
+            "sceneio-0.2.0-cp312-abi3-"
+            "manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+            "sceneio/_core.abi3.so",
+            id="manylinux-repaired-order",
+        ),
+        pytest.param(
             "sceneio-0.2.0-cp312-abi3-macosx_11_0_arm64.whl",
             "sceneio/_core.abi3.so",
             id="macos",
@@ -201,6 +207,121 @@ def test_distribution_verifier_accepts_platform_stable_abi_member(
         ],
     )
     assert report["wheels"][0]["native_members"] == [core_member]
+
+
+@pytest.mark.parametrize(
+    "runtime_basename",
+    ["concrt140", "msvcp140", "vcruntime140", "vcruntime140_1"],
+)
+def test_distribution_verifier_accepts_repaired_msvc_runtime(
+    tmp_path: Path,
+    runtime_basename: str,
+) -> None:
+    source = _source_root(tmp_path)
+    runtime = (
+        f"sceneio.libs/{runtime_basename}-"
+        "a4c2229bdc2a2a630acdc095b4d86008.dll"
+    )
+    report = VERIFIER.verify_distributions(
+        source,
+        _sdist(tmp_path, source),
+        [
+            _wheel(
+                tmp_path,
+                source,
+                extra_member=runtime,
+                extra_payload=b"MZruntime",
+            )
+        ],
+    )
+    assert report["wheels"][0]["native_members"] == [runtime, WINDOWS_CORE]
+
+
+@pytest.mark.parametrize(
+    "runtime",
+    [
+        "sceneio.libs/other-dependency.dll",
+        "sceneio.libs/msvcp999-a4c2229bdc2a2a630acdc095b4d86008.dll",
+        "sceneio.libs/msvcp140-deadbeef.dll",
+    ],
+)
+def test_distribution_verifier_rejects_unrecognized_repaired_library(
+    tmp_path: Path,
+    runtime: str,
+) -> None:
+    source = _source_root(tmp_path)
+    with pytest.raises(ValueError, match="permitted repaired runtime libraries"):
+        VERIFIER.verify_distributions(
+            source,
+            _sdist(tmp_path, source),
+            [
+                _wheel(
+                    tmp_path,
+                    source,
+                    extra_member=runtime,
+                    extra_payload=b"MZlibrary",
+                )
+            ],
+        )
+
+
+def test_distribution_verifier_rejects_repaired_runtime_on_manylinux(
+    tmp_path: Path,
+) -> None:
+    source = _source_root(tmp_path)
+    with pytest.raises(ValueError, match="permitted repaired runtime libraries"):
+        VERIFIER.verify_distributions(
+            source,
+            _sdist(tmp_path, source),
+            [
+                _wheel(
+                    tmp_path,
+                    source,
+                    wheel_name=(
+                        "sceneio-0.2.0-cp312-abi3-"
+                        "manylinux2014_x86_64.manylinux_2_17_x86_64.whl"
+                    ),
+                    core_member="sceneio/_core.abi3.so",
+                    extra_member=(
+                        "sceneio.libs/msvcp140-"
+                        "a4c2229bdc2a2a630acdc095b4d86008.dll"
+                    ),
+                    extra_payload=b"MZruntime",
+                )
+            ],
+        )
+
+
+def test_distribution_verifier_requires_core_with_repaired_runtime(
+    tmp_path: Path,
+) -> None:
+    source = _source_root(tmp_path)
+    runtime = "sceneio.libs/msvcp140-a4c2229bdc2a2a630acdc095b4d86008.dll"
+    with pytest.raises(ValueError, match=r"exactly sceneio/_core\.pyd"):
+        VERIFIER.verify_distributions(
+            source,
+            _sdist(tmp_path, source),
+            [_wheel(tmp_path, source, core_member=runtime)],
+        )
+
+
+def test_distribution_verifier_rejects_duplicate_core_member(
+    tmp_path: Path,
+) -> None:
+    source = _source_root(tmp_path)
+    with pytest.warns(UserWarning, match="Duplicate name"):
+        wheel = _wheel(
+            tmp_path,
+            source,
+            extra_member=WINDOWS_CORE,
+            extra_payload=b"MZduplicate",
+        )
+    with pytest.raises(ValueError, match="contains duplicate members"):
+        VERIFIER.verify_distributions(
+            source,
+            _sdist(tmp_path, source),
+            [wheel],
+        )
 
 
 @pytest.mark.parametrize(
