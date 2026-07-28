@@ -57,10 +57,10 @@ set(SCENEIO_IMAGE_CODEC_SOURCES
   src/cpp/codecs/images/webp.cpp)
 
 set(SCENEIO_MESH_CODEC_SOURCES
-  src/cpp/codecs/ply_mesh.cpp
-  src/cpp/codecs/obj_mtl.cpp
-  src/cpp/codecs/stl_off.cpp
-  src/cpp/codecs/gltf.cpp)
+  src/cpp/codecs/meshes/ply_mesh.cpp
+  src/cpp/codecs/meshes/obj_mtl.cpp
+  src/cpp/codecs/meshes/stl_off.cpp
+  src/cpp/codecs/meshes/gltf.cpp)
 
 set(SCENEIO_POINT_CODEC_SOURCES
   src/cpp/codecs/ply_point.cpp
@@ -142,10 +142,10 @@ set(SCENEIO_CORE_SOURCES
   src/cpp/codecs/sog.cpp
   src/cpp/codecs/ksplat.cpp
   src/cpp/codecs/ply_point.cpp
-  src/cpp/codecs/ply_mesh.cpp
-  src/cpp/codecs/obj_mtl.cpp
-  src/cpp/codecs/stl_off.cpp
-  src/cpp/codecs/gltf.cpp
+  src/cpp/codecs/meshes/ply_mesh.cpp
+  src/cpp/codecs/meshes/obj_mtl.cpp
+  src/cpp/codecs/meshes/stl_off.cpp
+  src/cpp/codecs/meshes/gltf.cpp
   src/cpp/codecs/pcd.cpp
   src/cpp/codecs/spz.cpp
   src/cpp/codecs/transforms_json.cpp

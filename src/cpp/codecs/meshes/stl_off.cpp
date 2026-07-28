@@ -1,4 +1,4 @@
-// codecs/stl_off.cpp -- strict STL triangle-soup and polygonal ASCII OFF.
+// codecs/meshes/stl_off.cpp -- strict STL triangle-soup and polygonal ASCII OFF.
 //
 // STL is decoded without welding: every stored triangle corner becomes one
 // Mesh vertex, preserving the format's lack of connectivity. Facet normals

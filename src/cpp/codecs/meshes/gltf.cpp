@@ -1,4 +1,4 @@
-// codecs/gltf.cpp -- strict glTF 2.0 JSON/GLB mesh-scene core.
+// codecs/meshes/gltf.cpp -- strict glTF 2.0 JSON/GLB mesh-scene core.
 //
 // cgltf owns JSON/GLB parsing, validation, accessor conversion (including
 // sparse float accessors), and deterministic JSON writing. SceneIO supplies
