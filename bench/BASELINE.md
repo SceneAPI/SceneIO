@@ -3018,3 +3018,17 @@ GCC 10, Windows MSVC, and macOS AppleClang wheel jobs consume that exact artifac
 The corrected exact staged tree is packaged after final review and its
 non-self-referential hashes are retained in the commit record. Executing the
 hosted GCC 10/AppleClang confirmation remains user-gated.
+
+The automatic run for exact R6 package commit `3747447` exposed that the
+scale-0.001 smoke contract incorrectly held the full-size strict projection.
+Correction commit `7d51423` binds the smoke/family contracts to independently
+matching Windows and hosted-Linux projection
+`97c98367e8ea602e9b9c1682b8c6ef1ca8fd483a66b233cd64dbc5976d0c7948`
+without changing the retained strict projection above. Exact-commit normal
+run [30390986854](https://github.com/SceneAPI/SceneIO/actions/runs/30390986854)
+passes the complete suite, corrected deterministic structure check, five-run
+performance guard, three-OS codec shards, and pinned GCC 10 portability.
+Compiler-instrumented run
+[30390986672](https://github.com/SceneAPI/SceneIO/actions/runs/30390986672)
+passes both jobs. Neither run is the still-user-gated build-only package
+matrix.

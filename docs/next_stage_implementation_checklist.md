@@ -4298,7 +4298,15 @@ Shared disconnected-source/package diagnostic evidence at exact commit
   full-size strict-run projection
   `8f218ff77bcf2ea1e918d4ed164f7184fa2662eb252508c387b5f131a053a8e7`.
   The smoke/family contracts now bind the scale-0.001 projection; the retained
-  five-run strict evidence and its projection remain unchanged.
+  five-run strict evidence and its projection remain unchanged. Correction
+  commit `7d51423` passes exact-commit normal run
+  [30390986854](https://github.com/SceneAPI/SceneIO/actions/runs/30390986854):
+  the corrected deterministic structure step, complete suite, five-run
+  performance guard, every three-OS codec shard, and pinned GCC 10 portability
+  are green. Compiler-instrumented run
+  [30390986672](https://github.com/SceneAPI/SceneIO/actions/runs/30390986672)
+  passes the full ASan/UBSan suite and LSan lifetime shard. These automatic
+  runs do not replace the user-gated build-only package matrix.
 
 ### R6.1 — provenance and source intake
 
