@@ -2152,9 +2152,9 @@ lane before starting the next unit.
    clean. The exact 398/399/81 source/sdist/wheel package gate and fresh
    NumPy-only installed smoke pass, and all three confirmation reviews are
    clear. Normal run `30316577366` and compiler-instrumented run `30316577369`
-   pass that exact commit. R4.3 arrays through points close at pushed commits
-   through `97b24e2`; the reconstruction-family path-only candidate is green
-   locally. Sequences and splats remain.
+   pass that exact commit. R4.3 arrays through reconstruction close at pushed
+   commits through `25f74bb`; the sequence-family path-only candidate is green
+   locally. Splats remain.
 2. **Backend performance qualification (R5).**
    Create one `bench/PERFORMANCE_STATUS.toml` operation cell for every required
    built-in codec/profile/direction and compare each viable permissive upstream

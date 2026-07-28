@@ -1,4 +1,4 @@
-// codecs/y4m.cpp -- original, dependency-free YUV4MPEG2 planar sequence I/O.
+// codecs/sequences/y4m.cpp -- original, dependency-free YUV4MPEG2 planar sequence I/O.
 //
 // The supported tier is deliberately narrow: uint8 mono, 4:2:0, 4:2:2, and
 // 4:4:4 frames with one global layout and no per-frame tags. Planes remain

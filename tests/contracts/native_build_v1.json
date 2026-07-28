@@ -8,7 +8,7 @@
   "cmake_file_sha256": {
     "CMakeLists.txt": "bd024d3ed181089865df2c9f806ee31c4487fe80d4542116e8f47e46b32178a7",
     "cmake/SceneIOInstrumentation.cmake": "f4a6ecf75085215628b6d603dd47922ad2b8e730e0c05d09f5cd33193ff0e4a3",
-    "cmake/SceneIOSources.cmake": "8a83e90ce6b6f1693e41872d6a3725bdf3c533fc279f0e61b75414eeae3dc92f",
+    "cmake/SceneIOSources.cmake": "c23ad07efccff4b0845e1d8ca8d106dc98e4a4e63dd39999e75d01c1ca7487f7",
     "cmake/SceneIODependencies.cmake": "7ed696f6f81d051511094c43e8cbf3b3afdc8e1fcf66f55ad5d9f8206f4f16c3",
     "cmake/SceneIOTargets.cmake": "4612173fa209ca352017367c3a6330565e7cf8a77ea9a0a0f0607cf82b7552a2"
   },
@@ -59,7 +59,7 @@
       "src/cpp/codecs/reconstruction/openmvg.cpp"
     ],
     "sequences": [
-      "src/cpp/codecs/y4m.cpp"
+      "src/cpp/codecs/sequences/y4m.cpp"
     ],
     "splats": [
       "src/cpp/codecs/ply_gaussian.cpp",
@@ -220,7 +220,7 @@
     "src/cpp/codecs/images/exr.cpp",
     "src/cpp/codecs/points/las.cpp",
     "src/cpp/codecs/points/laz.cpp",
-    "src/cpp/codecs/y4m.cpp",
+    "src/cpp/codecs/sequences/y4m.cpp",
     "src/cpp/codecs/images/webp.cpp",
     "src/cpp/codecs/arrays/safetensors.cpp",
     "src/cpp/codecs/arrays/dmb.cpp",

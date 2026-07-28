@@ -2590,7 +2590,7 @@ so this unit makes no performance claim. The architecture/lifetime,
 test/performance, and platform/package/documentation reviews are clear.
 Commit `97b24e2` is pushed to `phase0-nanobind-core`.
 
-## R4.3 reconstruction-family source move candidate (2026-07-27)
+## R4.3 reconstruction-family source move closure (2026-07-27)
 
 All eleven native sparse-model, pose/state, JSON, and COLMAP database sources
 move to `src/cpp/codecs/reconstruction/`. BAL is byte-identical; every other
@@ -2606,3 +2606,20 @@ five-run strict all-50-codec guard passes in 364.5 seconds and is retained as
 `build/r4_3_reconstruction_strict_guard.json`. No timed codec implementation
 changed, so this unit makes no performance claim. The architecture/lifetime,
 test/performance, and platform/package/documentation reviews are clear.
+Commit `25f74bb` is pushed to `phase0-nanobind-core`.
+
+## R4.3 sequence-family source move candidate (2026-07-27)
+
+Y4M moves to `src/cpp/codecs/sequences/`. Its executable body is
+byte-identical and only the first-line source-location comment uses the new
+path. CMake ownership, frozen link order, the native-build contract, and the
+live performance-ledger path move with it.
+
+The MSVC editable build and 245 focused codec/family/mmap/sink/inspection/
+partial/API tests pass. The complete suite passes 3,350 tests with four
+documented skips; Ruff, the 232-name non-dunder `_core` surface, and the
+49-entry native inventory remain unchanged. The complete five-run strict
+all-50-codec guard passes in 368.1 seconds and is retained as
+`build/r4_3_sequences_strict_guard.json`. No timed codec implementation
+changed, so this unit makes no performance claim. All three independent
+reviews are clear; commit evidence remains open.

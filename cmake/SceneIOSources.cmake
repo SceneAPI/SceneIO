@@ -83,7 +83,7 @@ set(SCENEIO_RECONSTRUCTION_CODEC_SOURCES
   src/cpp/codecs/reconstruction/openmvg.cpp)
 
 set(SCENEIO_SEQUENCE_CODEC_SOURCES
-  src/cpp/codecs/y4m.cpp)
+  src/cpp/codecs/sequences/y4m.cpp)
 
 set(SCENEIO_SPLAT_CODEC_SOURCES
   src/cpp/codecs/ply_gaussian.cpp
@@ -167,7 +167,7 @@ set(SCENEIO_CORE_SOURCES
   src/cpp/codecs/images/exr.cpp
   src/cpp/codecs/points/las.cpp
   src/cpp/codecs/points/laz.cpp
-  src/cpp/codecs/y4m.cpp
+  src/cpp/codecs/sequences/y4m.cpp
   src/cpp/codecs/images/webp.cpp
   src/cpp/codecs/arrays/safetensors.cpp
   src/cpp/codecs/arrays/dmb.cpp

@@ -76,12 +76,11 @@ R4.3 is in progress. The arrays-family unit closes and is pushed at
 232-name/49-entry native surface checks, complete strict guard, and all three
 reviews pass.
 
-The points-family unit closes and is pushed at `97b24e2`. The reconstruction
-candidate moves all eleven native sparse-model, pose/state, JSON, and database
-sources under `src/cpp/codecs/reconstruction/`; executable bodies are
-unchanged and ten embedded location comments use the new paths. CMake,
-contract, and 34 performance-ledger paths move with them. MSVC, 691 focused
-tests (two documented skips), the complete 3,354-node suite (3,350
+The reconstruction-family unit closes and is pushed at `25f74bb`. The
+sequence candidate moves Y4M under `src/cpp/codecs/sequences/`; its executable
+body is byte-identical and only the first-line source-location comment uses
+the new path. CMake, the native-build contract, and the performance-ledger path
+move with it. MSVC, 245 focused tests, the complete 3,354-node suite (3,350
 passed/four skipped), Ruff, the unchanged 232/49 native surface, and the
 complete five-run strict all-50-codec guard pass. All three independent
 reviews are clear; commit evidence remains open.
@@ -3577,7 +3576,28 @@ Reconstruction-family candidate:
 - [x] Pass the complete five-run strict all-50-codec O4/O5 and mmap/sink
       guard.
 - [x] Complete the three independent reviews.
-- [ ] Commit the reconstruction unit.
+- [x] Commit and push the reconstruction unit at `25f74bb`.
+
+Sequence-family candidate:
+
+- [x] Move Y4M under `src/cpp/codecs/sequences/` and update path contracts
+      only.
+- [x] Rebuild on MSVC and pass 245 focused tests, the complete
+      3,350-pass/four-skip suite, Ruff, and the 232-name/49-entry native
+      surface checks.
+- [x] Pass the complete five-run strict all-50-codec O4/O5 and mmap/sink
+      guard.
+- [x] Complete the three independent reviews.
+- [ ] Commit and push the sequence unit.
+
+Splats-family candidate:
+
+- [ ] Move all six native splat sources under `src/cpp/codecs/splats/` and
+      update path contracts only.
+- [ ] Rebuild and run the focused and complete verification gates.
+- [ ] Pass the complete five-run strict all-50-codec guard.
+- [ ] Complete the three independent reviews.
+- [ ] Commit and push the splats unit.
 
 R4 verification and validation:
 
