@@ -1,4 +1,4 @@
-// codecs/euroc_state.cpp -- EuRoC MAV ground-truth state CSV.
+// codecs/reconstruction/euroc_state.cpp -- EuRoC MAV ground-truth state CSV.
 //
 // Canonical schema (17 columns):
 // timestamp ns, position p_RS_R, quaternion q_RS (WXYZ), velocity v_RS_R,

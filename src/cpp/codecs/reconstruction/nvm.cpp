@@ -1,4 +1,4 @@
-// codecs/nvm.cpp — VisualSFM NVM_V3 sparse-model reader/writer into the shared
+// codecs/reconstruction/nvm.cpp -- VisualSFM NVM_V3 sparse-model reader/writer into the shared
 // Reconstruction record (records/reconstruction.hpp), the token-stream sibling
 // of colmap_txt.cpp. NVM is a whitespace-delimited TOKEN stream (not line
 // based): PBA reads it with operator>>, so newlines are not significant and CRLF

@@ -1,4 +1,4 @@
-// codecs/colmap.cpp — COLMAP binary sparse-model reader/writer
+// codecs/reconstruction/colmap.cpp -- COLMAP binary sparse-model reader/writer
 // (formats_survey.md §3). Little-endian; observations + tracks are read and
 // re-written so round-trips are byte-exact. The Reconstruction record and
 // its conventions live in records/reconstruction.hpp.

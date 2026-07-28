@@ -1,4 +1,4 @@
-// codecs/pose_text.cpp — plain-text pose-trajectory formats <-> PosedViewSet:
+// codecs/reconstruction/pose_text.cpp -- plain-text pose-trajectory formats <-> PosedViewSet:
 // TUM (`timestamp tx ty tz qx qy qz qw`) and KITTI (12 numbers = a 3x4
 // row-major pose matrix per line). Both are permissive/spec-only formats.
 //

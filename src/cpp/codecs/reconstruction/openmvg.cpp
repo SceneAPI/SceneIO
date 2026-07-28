@@ -1,4 +1,4 @@
-// codecs/openmvg.cpp — OpenMVG sfm_data.json reader/writer into the shared
+// codecs/reconstruction/openmvg.cpp -- OpenMVG sfm_data.json reader/writer into the shared
 // Reconstruction record (records/reconstruction.hpp), a sibling of colmap_txt.cpp
 // (record population order) + transforms_json.cpp (nlohmann usage) + xyz.cpp
 // (nb::bytes + GIL discipline).

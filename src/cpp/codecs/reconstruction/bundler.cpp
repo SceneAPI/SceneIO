@@ -1,4 +1,4 @@
-// codecs/bundler.cpp — Bundler v0.3 `.out` sparse-model reader/writer into the
+// codecs/reconstruction/bundler.cpp -- Bundler v0.3 `.out` sparse-model reader/writer into the
 // SAME Reconstruction record as colmap.cpp / colmap_txt.cpp (WXYZ quaternions,
 // world->camera pose, model-tagged params[], per-image CSR observations,
 // points3D tracks). The text sibling of colmap_txt.cpp: single pointer pass,

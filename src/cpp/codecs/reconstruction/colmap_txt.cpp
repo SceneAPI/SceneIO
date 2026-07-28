@@ -1,4 +1,4 @@
-// codecs/colmap_txt.cpp — COLMAP *text* sparse-model reader/writer
+// codecs/reconstruction/colmap_txt.cpp -- COLMAP *text* sparse-model reader/writer
 // (cameras.txt / images.txt / points3D.txt). The text twin of colmap.cpp: it
 // reads into and writes from the SAME Reconstruction record with the SAME
 // conventions (WXYZ quaternions, world->camera pose, model-tagged params[]),

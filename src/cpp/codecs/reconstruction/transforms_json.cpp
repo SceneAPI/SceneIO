@@ -1,4 +1,4 @@
-// codecs/transforms_json.cpp — NeRF / Instant-NGP / Nerfstudio transforms.json
+// codecs/reconstruction/transforms_json.cpp -- NeRF / Instant-NGP / Nerfstudio transforms.json
 // camera poses <-> PosedViewSet (io_implementation_plan.md).
 //
 // The file is a JSON object of (usually shared) intrinsics — fl_x/fl_y/cx/cy/w/h

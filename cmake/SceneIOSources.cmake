@@ -70,17 +70,17 @@ set(SCENEIO_POINT_CODEC_SOURCES
   src/cpp/codecs/points/laz.cpp)
 
 set(SCENEIO_RECONSTRUCTION_CODEC_SOURCES
-  src/cpp/codecs/colmap.cpp
-  src/cpp/codecs/transforms_json.cpp
-  src/cpp/codecs/pose_text.cpp
-  src/cpp/codecs/euroc_state.cpp
-  src/cpp/codecs/g2o.cpp
-  src/cpp/codecs/colmap_db.cpp
-  src/cpp/codecs/colmap_txt.cpp
-  src/cpp/codecs/bundler.cpp
-  src/cpp/codecs/bal.cpp
-  src/cpp/codecs/nvm.cpp
-  src/cpp/codecs/openmvg.cpp)
+  src/cpp/codecs/reconstruction/colmap.cpp
+  src/cpp/codecs/reconstruction/transforms_json.cpp
+  src/cpp/codecs/reconstruction/pose_text.cpp
+  src/cpp/codecs/reconstruction/euroc_state.cpp
+  src/cpp/codecs/reconstruction/g2o.cpp
+  src/cpp/codecs/reconstruction/colmap_db.cpp
+  src/cpp/codecs/reconstruction/colmap_txt.cpp
+  src/cpp/codecs/reconstruction/bundler.cpp
+  src/cpp/codecs/reconstruction/bal.cpp
+  src/cpp/codecs/reconstruction/nvm.cpp
+  src/cpp/codecs/reconstruction/openmvg.cpp)
 
 set(SCENEIO_SEQUENCE_CODEC_SOURCES
   src/cpp/codecs/y4m.cpp)
@@ -136,7 +136,7 @@ set(SCENEIO_CORE_SOURCES
   src/cpp/records/mesh.cpp
   src/cpp/records/mesh_scene.cpp
   src/cpp/codecs/arrays/pfm.cpp
-  src/cpp/codecs/colmap.cpp
+  src/cpp/codecs/reconstruction/colmap.cpp
   src/cpp/codecs/ply_gaussian.cpp
   src/cpp/codecs/compressed_ply.cpp
   src/cpp/codecs/sog.cpp
@@ -148,17 +148,17 @@ set(SCENEIO_CORE_SOURCES
   src/cpp/codecs/meshes/gltf.cpp
   src/cpp/codecs/points/pcd.cpp
   src/cpp/codecs/spz.cpp
-  src/cpp/codecs/transforms_json.cpp
-  src/cpp/codecs/pose_text.cpp
+  src/cpp/codecs/reconstruction/transforms_json.cpp
+  src/cpp/codecs/reconstruction/pose_text.cpp
   src/cpp/codecs/arrays/npy_npz.cpp
   src/cpp/codecs/images/netpbm.cpp
-  src/cpp/codecs/colmap_txt.cpp
+  src/cpp/codecs/reconstruction/colmap_txt.cpp
   src/cpp/codecs/points/xyz.cpp
   src/cpp/codecs/arrays/flo.cpp
-  src/cpp/codecs/bundler.cpp
-  src/cpp/codecs/bal.cpp
-  src/cpp/codecs/nvm.cpp
-  src/cpp/codecs/openmvg.cpp
+  src/cpp/codecs/reconstruction/bundler.cpp
+  src/cpp/codecs/reconstruction/bal.cpp
+  src/cpp/codecs/reconstruction/nvm.cpp
+  src/cpp/codecs/reconstruction/openmvg.cpp
   src/cpp/codecs/splat.cpp
   src/cpp/codecs/images/png.cpp
   src/cpp/codecs/images/jpeg.cpp
@@ -171,10 +171,10 @@ set(SCENEIO_CORE_SOURCES
   src/cpp/codecs/images/webp.cpp
   src/cpp/codecs/arrays/safetensors.cpp
   src/cpp/codecs/arrays/dmb.cpp
-  src/cpp/codecs/euroc_state.cpp
+  src/cpp/codecs/reconstruction/euroc_state.cpp
   src/cpp/codecs/calibration/camera_calibration.cpp
-  src/cpp/codecs/g2o.cpp
-  src/cpp/codecs/colmap_db.cpp
+  src/cpp/codecs/reconstruction/g2o.cpp
+  src/cpp/codecs/reconstruction/colmap_db.cpp
   src/cpp/third_party/stb/stb_impl.cpp
   src/cpp/third_party/tinyexr/tinyexr_impl.cpp)
 

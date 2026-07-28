@@ -1,4 +1,4 @@
-// codecs/g2o.cpp -- bounded g2o SE3:QUAT pose-graph text codec.
+// codecs/reconstruction/g2o.cpp -- bounded g2o SE3:QUAT pose-graph text codec.
 //
 // Supported records:
 //   VERTEX_SE3:QUAT id tx ty tz qx qy qz qw

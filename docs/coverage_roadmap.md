@@ -95,9 +95,9 @@
 > tree, 399-file sdist, 81-member Windows ABI3 wheel, and fresh NumPy-only
 > installed smoke pass. All three confirmation reviews are clear; normal run
 > `30316577366` and compiler-instrumented run `30316577369` pass that exact
-> commit. R4.3 arrays through meshes close at pushed commits `f57c677`,
-> `366aac0`, `aff2a37`, and `c5de24b`; the points-family path-only candidate is
-> green locally. Three physical family moves remain open.
+> commit. R4.3 arrays through points close at pushed commits through
+> `97b24e2`; the reconstruction-family path-only candidate is green locally.
+> Sequences and splats remain open.
 
 The granular, per‑format execution plan for covering **every relevant file type
 that has a permissively‑licensed open‑source option**. Sits below the strategy

@@ -1,4 +1,4 @@
-// codecs/colmap_db.cpp -- COLMAP SQLite feature/match database codec.
+// codecs/reconstruction/colmap_db.cpp -- COLMAP SQLite feature/match database codec.
 //
 // Reads open SQLITE_OPEN_READONLY and copy only typed BLOB payloads into the
 // compiled records. Writes validate the complete aggregate before opening the
