@@ -39,18 +39,27 @@ non-path cache values and generate exact parent `_core` compile/link commands;
 both toolchains build the candidate. Normal run `30310780347` and
 compiler-instrumented run `30310780355` pass that exact commit.
 
-R4.2 binding ownership is implemented locally and remains uncommitted. A
-records table and eight codec-family tables own all 16 record and 40 codec
-registration functions behind one validated assembler. The same codec-family
-tables expose a private canonical 49-entry native/hybrid inventory; the
-Python-owned `image_sequence` adapter remains outside that projection. MSVC and
+R4.2 binding ownership is complete and pushed at `81e0e1c`. A records table
+and eight codec-family tables own all 16 record and 40 codec registration
+functions behind one validated assembler. The same codec-family tables expose
+a private canonical 49-entry native/hybrid inventory; the Python-owned
+`image_sequence` adapter remains outside that projection. MSVC and
 manylinux2014 GCC 10.2.1 builds, a focused 416-test I/O/architecture sweep,
-exact 3,354-node collection, and the unchanged strict five-run guard pass.
-The complete suite passes 3,350 tests with four documented skips, and Ruff is
-clean. The exact 398-file tree produces a byte-identical 399-file sdist and an
-81-member Windows ABI3 wheel; a fresh SceneIO-plus-NumPy environment passes the
-complete installed smoke. All three confirmation reviews are clear; commit,
-push, and hosted checks remain. Physical codec files remain flat until R4.3.
+exact 3,354-node collection, the unchanged strict five-run guard, the complete
+3,350-pass/four-skip suite, Ruff, the exact 398/399/81 package gate, and fresh
+NumPy-only installed smoke pass. All three confirmation reviews are clear.
+Normal run `30316577366` and compiler-instrumented run `30316577369` pass that
+exact commit.
+
+R4.3 is in progress. The arrays-family candidate moves PFM, NPY/NPZ,
+Safetensors, FLO, and DMB into `src/cpp/codecs/arrays/`, updates only their
+build/contract/ledger paths plus one embedded location comment, and preserves
+the frozen link and registration order. MSVC rebuilds the candidate; a
+561-node family/cross-I/O sweep passes 560 tests with one documented skip;
+Ruff and the 232-name/49-entry native surface checks pass. The remaining seven
+family directories are still open. The confirming complete five-run strict
+all-50-codec O4/O5 and mmap/sink guard passes; no timed codec loop changed and
+no speedup is claimed. All three independent reviews are clear.
 
 The first independent review pass found no native lifetime defect and required
 stronger inventory/source contracts. The candidate now compares every ordered
@@ -373,7 +382,7 @@ verification have accumulated in a few large modules:
 
 | Area | Current shape | Growth risk |
 |---|---|---|
-| C++ codecs | 40 files for 50 format ids; eight explicit CMake family manifests; eight family-owned binding tables plus one validated assembler | physical files remain flat until R4.3 |
+| C++ codecs | 40 files for 50 format ids; eight explicit CMake family manifests; eight family-owned binding tables plus one validated assembler | R4.3 arrays move in progress; seven physical family moves remain |
 | C++ records | 32 source/header files | still manageable; new table/animation/scene records will add pressure |
 | Python registry | `registry.py`, 205 lines; `_registry/assembly.py`, 148 lines; focused `_registry/{model,adapters,detection,native_features}.py` modules; and eight `_registry/families/*.py` definition modules | all built-ins are family-owned; R3 now splits the benchmark and cross-codec verification monoliths |
 | Inspection | `_inspection.py` compatibility facade plus `_inspectors/{model,common,arrays,calibration,images,meshes,points,reconstruction,sequences,splats}.py`; all eight manifest families have lower inspector ownership | keep the proven shared model, mmap bridge, metadata bounds, exact-read/integer grammar, and image-result constructor as lower services |
@@ -1044,17 +1053,17 @@ installed smoke.
   family/source ownership is explicit, and parent-equivalent MSVC/GCC 10
   cache plus compile/link evidence is recorded.
 - Replace manual declarations in `module.cpp` with family registration
-  functions while preserving binding order. **R4.2 implemented locally:** one
+  functions while preserving binding order. **R4.2 complete at `81e0e1c`:** one
   record table plus eight codec-family tables preserve the 16/40 historical
   order behind a validated assembler.
 - Expose a private machine-readable native codec inventory from those same
   family tables and compare it with the native/hybrid projection of the
   built-in Python manifest. Built-in definitions declare whether their adapter
-  owner is native, Python, or hybrid. **R4.2 implemented locally:** the
+  owner is native, Python, or hybrid. **R4.2 complete at `81e0e1c`:** the
   canonical 49-entry projection resolves all declared operation symbols and
   excludes only Python-owned `image_sequence`.
 - Move codecs by family in mechanical commits; do not mix semantic edits with
-  moves. **Next: R4.3 after R4.2 qualification and commit.**
+  moves. **R4.3 in progress:** arrays are the first candidate unit.
 
 ### R5. Qualify performance
 

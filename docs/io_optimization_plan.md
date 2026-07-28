@@ -54,7 +54,7 @@ timed implementation changed and no additional performance claim is made.
 R4.1 is pushed at `b2cf5d4`; normal run `30310780347` and
 compiler-instrumented run `30310780355` pass.
 
-The local R4.2 candidate changes binding ownership only. One record table and
+R4.2 closes at pushed commit `81e0e1c` and changes binding ownership only. One record table and
 eight codec-family tables retain the exact registration order and expose a
 validated private inventory for the 49 native/hybrid built-ins. MSVC,
 manylinux2014 GCC 10.2.1, a focused 416-test I/O/architecture sweep, exact
@@ -63,7 +63,9 @@ transport adapter, fixture, or benchmark implementation changed, so R4.2 makes
 no throughput claim. The complete suite passes 3,350 tests with four documented
 skips, and Ruff is clean. The exact 398/399/81 source/sdist/wheel package gate
 and fresh NumPy-only installed smoke pass. All three confirmation reviews are
-clear; commit, push, and hosted checks remain.
+clear. Normal run `30316577366` and compiler-instrumented run `30316577369`
+pass that exact commit. R4.3 is in progress with the arrays-family path-only
+move; no codec loop has changed and no throughput claim is made.
 
 Scope: the compiled `sceneio._core` I/O path on `phase0-nanobind-core`.
 Companion to `coverage_roadmap.md` (this makes its "Phase 7" hardening/perf work

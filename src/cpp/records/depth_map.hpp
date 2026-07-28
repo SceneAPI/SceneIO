@@ -9,7 +9,8 @@
 // divides. Gipuma/COLMAP DMB is the first in-tree consumer.
 //
 // Optical flow (.flo) is deliberately NOT this record -- it ships separately as
-// a bare (H,W,2) float32 ndarray codec (in-tree at src/cpp/codecs/flo.cpp; the
+// a bare (H,W,2) float32 ndarray codec (in-tree at
+// src/cpp/codecs/arrays/flo.cpp; the
 // read_pfm precedent), because .flo fixes every convention in its spec and a
 // (H,W,2) field would break this record's scalar contract. The design-sanctioned
 // escape for typed flow is a separate FlowField record, never widening DepthMap.

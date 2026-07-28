@@ -54,9 +54,9 @@ strict five-run guard, exact-tree package qualification, fresh NumPy-only
 installed smoke, and three independent reviews pass. Normal run `30310780347`
 and compiler-instrumented run `30310780355` pass that exact commit.
 
-R4.2 is implemented in the local working tree and remains uncommitted. Ten
-family/assembly translation units plus one descriptor header now own the 16
-record and 40 codec registration functions. The private
+R4.2 is complete and pushed at `81e0e1c`. Ten family/assembly translation
+units plus one descriptor header own the 16 record and 40 codec registration
+functions. The private
 `_core.__codec_inventory__` projects all 49 native/hybrid built-ins from those
 family tables; the Python-owned `image_sequence` adapter remains separately
 validated. MSVC and manylinux2014 GCC 10.2.1 builds, a 416-test I/O and
@@ -67,7 +67,20 @@ only `PKG-INFO` generated and an 81-member Windows ABI3 wheel with one native
 module, all 15 notices, no excluded build payload, and NumPy as the sole
 unconditional dependency. The complete smoke returns `2` in a fresh
 SceneIO-plus-NumPy environment. All three independent reviews are clear after
-their findings were resolved.
+their findings were resolved. Normal run `30316577366` and
+compiler-instrumented run `30316577369` pass that exact commit.
+
+R4.3 is in progress with the arrays-family candidate. PFM, NPY/NPZ,
+Safetensors, FLO, and DMB now live under `src/cpp/codecs/arrays/`; their
+implementation blobs are unchanged apart from one source-location comment.
+The CMake ownership/link manifests and live performance ledger use the new
+paths. The MSVC editable rebuild and a 561-node family/cross-I/O sweep pass
+560 tests with one documented absent-oracle skip; Ruff and the
+232-name/49-entry native surface checks remain unchanged. All three
+independent reviews are clear; commit evidence remains open. A confirming
+complete five-run strict all-50-codec guard passes after one independently
+confirmed timing outlier in an unrelated JSON control; the passing artifact
+is `build/r4_3_arrays_strict_guard.json`.
 
 This is the operational checklist for the repository-organization and
 codec-performance stage defined in
@@ -3449,7 +3462,7 @@ compiler-instrumented run `30310780355` pass that exact commit.
 - [x] Fail on an orphaned, multiply owned, or owner-mismatched codec.
 - [x] Rebuild the aggregate candidate and run an explicit import/symbol smoke.
 
-The local candidate preserves the historical record-before-codec order through
+The committed implementation preserves the historical record-before-codec order through
 explicit ordinals, validates unique names, function pointers, manifest
 positions, family ownership, and symbol resolution, and leaves the 232-name
 non-dunder `_core` snapshot unchanged. Its inventory is a canonical-order
@@ -3463,9 +3476,10 @@ Python-only `image_sequence` id is intentionally absent. MSVC and
 manylinux2014 GCC 10.2.1 build the 69-translation-unit `_core`; the focused
 416-test sweep and unchanged strict five-run performance/allocation guard pass.
 The complete 3,354-node suite passes 3,350 tests with four documented skips,
-and Ruff is clean. All three confirmation reviews are clear. Commit, push, and
-hosted-check evidence remains open. The 398/399/81 exact-tree
+and Ruff is clean. All three confirmation reviews are clear. The 398/399/81 exact-tree
 source/sdist/wheel package gate and fresh NumPy-only smoke pass.
+Commit `81e0e1c`, normal run `30316577366`, and compiler-instrumented run
+`30316577369` close the hosted gate.
 
 The first three-lens review found no native lifetime defect. Its two shared
 test-soundness findings and one maintainability finding are implemented:
@@ -3484,6 +3498,22 @@ platform/package/documentation confirmation reviews are clear.
 - [ ] Run family parity, bytes/mmap, sink, inspect, partial, lifetime, and
       malformed-input tests after each move.
 - [ ] Confirm no exported native symbol or wheel content change.
+
+Arrays-family candidate:
+
+- [x] Move PFM, NPY/NPZ, Safetensors, FLO, and DMB under
+      `src/cpp/codecs/arrays/`.
+- [x] Preserve implementation blobs, update the one embedded source-location
+      comment, and update CMake, native-build contracts, and performance-ledger
+      paths.
+- [x] Rebuild on MSVC and pass the 561-node (560-pass/one-skip)
+      array-family/cross-I/O sweep,
+      Ruff, the 232-name `_core` symbol check, and the 49-entry native
+      inventory check.
+- [x] Pass the complete five-run strict all-50-codec O4/O5 and mmap/sink
+      regression guard.
+- [x] Complete the three independent reviews.
+- [ ] Commit the arrays unit.
 
 R4 verification and validation:
 

@@ -2453,7 +2453,7 @@ returns `2` in a fresh SceneIO-plus-NumPy environment.
 R4.1 is pushed at `b2cf5d4`. Normal run `30310780347` and
 compiler-instrumented run `30310780355` pass that exact commit.
 
-## R4.2 family-owned native binding candidate (2026-07-27)
+## R4.2 family-owned native binding closure (2026-07-27)
 
 R4.2 changes binding ownership only. A dedicated record table and eight
 codec-family tables own the historical 16 record and 40 codec registration
@@ -2462,7 +2462,7 @@ canonical private inventory for all 49 native/hybrid built-ins; the
 Python-owned `image_sequence` adapter remains outside that projection and is
 separately checked through its declared Python operations.
 
-The local candidate builds with MSVC and manylinux2014 GCC 10.2.1. Its
+The committed implementation builds with MSVC and manylinux2014 GCC 10.2.1. Its
 non-dunder `_core` surface remains 232 names, a focused 416-test I/O and
 architecture sweep passes, and collection is exactly 3,354 nodes. The
 unchanged complete five-run strict O4/O5 and mmap/sink allocation guard passes
@@ -2478,7 +2478,8 @@ module, all 15 notices, no excluded build payload, and NumPy as its sole
 unconditional dependency. It contains no FFmpeg/libav payload. A fresh
 outside-repository environment contains only SceneIO 0.2.0 and NumPy 2.5.1,
 and the complete installed smoke returns `2`. All three confirmation reviews
-are clear; commit, push, and hosted checks remain.
+are clear. Commit `81e0e1c`, normal run `30316577366`, and
+compiler-instrumented run `30316577369` close the checkpoint.
 
 The first independent review pass found no native pointer, reference-count, or
 descriptor-lifetime defect. It identified an operation-category test gap,
@@ -2488,3 +2489,29 @@ an independent 49-row contract, requires every referenced symbol to be
 callable, publishes mapping-proxy rows, and validates codec ownership
 recursively by full path. These changes affect registration metadata and tests
 only; no timed codec path changed.
+
+## R4.3 arrays-family source move candidate (2026-07-27)
+
+PFM, NPY/NPZ, Safetensors, FLO, and DMB move from the flat native codec
+directory to `src/cpp/codecs/arrays/`. Their implementation blobs are
+unchanged apart from the Safetensors source-location comment. CMake family
+ownership, the frozen core link order, the native-build contract, and all
+performance-ledger provenance paths use the new locations.
+
+The MSVC editable build passes. A 561-node array-family and cross-I/O sweep
+covers codec parity, bytes/mmap reads, direct sinks, inspection, partial
+reads, the public API, and native build/inventory contracts; 560 pass with one
+documented absent-OpenCV oracle skip. Ruff, the 232-name non-dunder
+`_core` surface, and the 49-entry native inventory remain unchanged. No timed
+codec implementation changed, so this unit makes no performance claim.
+
+The first complete strict run encountered a single noisy
+`transforms_json` full-read/inspection control ratio. A focused five-run
+confirmation measured 26.543 ms versus 10.437 ms (2.54x, inside the 3x
+control) and is retained as
+`build/r4_3_arrays_transforms_confirm.json`. A second complete five-run strict
+all-50-codec sweep passed in 363 seconds and is retained as
+`build/r4_3_arrays_strict_guard.json`; its final verdict confirms the stable
+O4 controls, O5 inspection/partial controls, and mmap/sink allocation bounds.
+The architecture/lifetime, test/performance, and
+platform/package/documentation reviews are clear.

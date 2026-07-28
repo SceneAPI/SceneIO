@@ -38,11 +38,11 @@ set(SCENEIO_RECORD_SOURCES
   src/cpp/records/mesh_scene.cpp)
 
 set(SCENEIO_ARRAY_CODEC_SOURCES
-  src/cpp/codecs/pfm.cpp
-  src/cpp/codecs/npy_npz.cpp
-  src/cpp/codecs/safetensors.cpp
-  src/cpp/codecs/flo.cpp
-  src/cpp/codecs/dmb.cpp)
+  src/cpp/codecs/arrays/pfm.cpp
+  src/cpp/codecs/arrays/npy_npz.cpp
+  src/cpp/codecs/arrays/safetensors.cpp
+  src/cpp/codecs/arrays/flo.cpp
+  src/cpp/codecs/arrays/dmb.cpp)
 
 set(SCENEIO_CALIBRATION_CODEC_SOURCES
   src/cpp/codecs/camera_calibration.cpp)
@@ -135,7 +135,7 @@ set(SCENEIO_CORE_SOURCES
   src/cpp/records/material_set.cpp
   src/cpp/records/mesh.cpp
   src/cpp/records/mesh_scene.cpp
-  src/cpp/codecs/pfm.cpp
+  src/cpp/codecs/arrays/pfm.cpp
   src/cpp/codecs/colmap.cpp
   src/cpp/codecs/ply_gaussian.cpp
   src/cpp/codecs/compressed_ply.cpp
@@ -150,11 +150,11 @@ set(SCENEIO_CORE_SOURCES
   src/cpp/codecs/spz.cpp
   src/cpp/codecs/transforms_json.cpp
   src/cpp/codecs/pose_text.cpp
-  src/cpp/codecs/npy_npz.cpp
+  src/cpp/codecs/arrays/npy_npz.cpp
   src/cpp/codecs/netpbm.cpp
   src/cpp/codecs/colmap_txt.cpp
   src/cpp/codecs/xyz.cpp
-  src/cpp/codecs/flo.cpp
+  src/cpp/codecs/arrays/flo.cpp
   src/cpp/codecs/bundler.cpp
   src/cpp/codecs/bal.cpp
   src/cpp/codecs/nvm.cpp
@@ -169,8 +169,8 @@ set(SCENEIO_CORE_SOURCES
   src/cpp/codecs/laz.cpp
   src/cpp/codecs/y4m.cpp
   src/cpp/codecs/webp.cpp
-  src/cpp/codecs/safetensors.cpp
-  src/cpp/codecs/dmb.cpp
+  src/cpp/codecs/arrays/safetensors.cpp
+  src/cpp/codecs/arrays/dmb.cpp
   src/cpp/codecs/euroc_state.cpp
   src/cpp/codecs/camera_calibration.cpp
   src/cpp/codecs/g2o.cpp

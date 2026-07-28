@@ -1,4 +1,4 @@
-// codecs/safetensors.cpp — deterministic safetensors reader/writer over the
+// codecs/arrays/safetensors.cpp -- deterministic reader/writer over the
 // existing TensorDict record. The public path maps the file and returns
 // read-only tensor views whose TensorDict retains an uncloseable Py_buffer
 // owner. Unsupported dtypes are rejected rather than converted.

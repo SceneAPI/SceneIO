@@ -32,14 +32,18 @@ things that keep this expansible as the format list from
 > `SceneIODependencies.cmake`, and `SceneIOTargets.cmake`. The dependency
 > block is byte-identical to the R3.4 parent, the original `_core` source/link
 > order is frozen, and configure-time checks require every native codec and
-> record source to have exactly one owner. R4.2 is implemented locally: a
+> record source to have exactly one owner. R4.2 closes at pushed commit
+> `81e0e1c`: a
 > record table and eight codec-family tables preserve the exact 16-record and
 > 40-codec registration order, and the same family descriptors expose a
 > validated 49-entry native/hybrid inventory of read-only rows. An independent
 > contract freezes each ordered operation tuple and requires callable symbols;
 > source ownership checks are recursive and full-path exact for R4.3. The
 > Python-owned `image_sequence` adapter remains outside that native projection.
-> Physical codec-family moves remain R4.3 work.
+> Normal run `30316577366` and compiler-instrumented run `30316577369` pass
+> that exact commit. R4.3 is in progress: the arrays-family candidate now uses
+> `codecs/arrays/`, while the other seven codec families remain physically
+> flat.
 
 ## Layering
 
@@ -396,9 +400,9 @@ exposes them:
 
 ## Adding a codec — current wiring recipe
 
-This recipe describes the local R4.2 binding boundary. Codec sources remain
-flat until R4.3; during this behavior-preserving migration, use the recipe to
-verify compatibility and do not start a new format.
+This recipe describes the committed R4.2 binding boundary and the in-progress
+R4.3 family layout. During this behavior-preserving migration, use the recipe
+to verify compatibility and do not start a new format.
 
 1. **Declare ownership** — add the built-in id, family,
    `implementation_owner`, native symbols, and Python adapter symbols to
@@ -409,8 +413,8 @@ verify compatibility and do not start a new format.
    `records/<name>.hpp` (the SoA struct + conventions) and
    `records/<name>.cpp` (`register_<name>()` binding zero-copy views +
    convention properties). Reuse an existing record otherwise.
-3. **Codec** — until the R4.3 file moves land, use `codecs/<fmt>.cpp`;
-   afterward use `codecs/<family>/<fmt>.cpp`. Implement `read_<fmt>()` /
+3. **Codec** — use `codecs/<family>/<fmt>.cpp`; existing flat sources move
+   one family at a time during R4.3. Implement `read_<fmt>()` /
    `write_<fmt>()` over `records/` + `io/`, plus a `register_<fmt>()` that
    `m.def(...)`s them. Map malformed input to a thrown
    `std::invalid_argument`.
