@@ -1,6 +1,5 @@
 # Python (scikit-build-core provides the hints for the target interpreter).
-# CMake 3.18 supplies Development.Module and FetchContent SOURCE_SUBDIR, both
-# used by the stable native build.
+# CMake 3.18 supplies Development.Module for the stable native build.
 find_package(Python 3.12 REQUIRED COMPONENTS Interpreter Development.Module)
 find_package(Threads REQUIRED)
 
@@ -30,10 +29,6 @@ set_target_properties(
   PROPERTIES
     POSITION_INDEPENDENT_CODE ON
     C_VISIBILITY_PRESET hidden)
-
-# libwebp remains the final R6 source-closure unit using FetchContent until its
-# exact selected sources move under src/cpp/third_party/.
-include(FetchContent)
 
 # nlohmann/json 3.11.3 (MIT), header-only — repository-contained multi-header
 # source for the JSON codecs. Recreate the selected upstream interface target
@@ -172,18 +167,39 @@ target_compile_definitions(sqlite_static PRIVATE
 set_property(TARGET sqlite_static PROPERTY POSITION_INDEPENDENT_CODE ON)
 set_property(TARGET sqlite_static PROPERTY C_VISIBILITY_PRESET hidden)
 
-# libwebp (BSD) — WebP codec, built from source (all its command-line tools OFF so
-# only the core encode/decode static libs compile). Link the in-tree `webp` target
-# (NOT `WebP::webp`, which only exists via find_package — the fast_float alias
-# lesson); it pulls in `sharpyuv` itself.
+# libwebp 1.5.0 (BSD-3-Clause) — repository-contained upstream core source and
+# CMake configuration. Keep upstream SIMD dispatch enabled, disable every tool
+# and optional utility, and exclude the subdirectory from the parent ALL/install
+# sets. The private static `webp` target pulls in `sharpyuv`.
+set(libwebp_SOURCE_DIR "${PROJECT_SOURCE_DIR}/src/cpp/third_party/libwebp")
+if(NOT EXISTS "${libwebp_SOURCE_DIR}/CMakeLists.txt" OR
+   NOT EXISTS "${libwebp_SOURCE_DIR}/src/webp/decode.h" OR
+   NOT EXISTS "${libwebp_SOURCE_DIR}/src/webp/encode.h" OR
+   NOT EXISTS "${libwebp_SOURCE_DIR}/sharpyuv/sharpyuv.h" OR
+   NOT EXISTS "${libwebp_SOURCE_DIR}/COPYING" OR
+   NOT EXISTS "${libwebp_SOURCE_DIR}/PATENTS")
+  message(FATAL_ERROR
+    "Repository-contained libwebp 1.5.0 sources are incomplete")
+endif()
 foreach(_wopt WEBP_BUILD_ANIM_UTILS WEBP_BUILD_CWEBP WEBP_BUILD_DWEBP WEBP_BUILD_GIF2WEBP
         WEBP_BUILD_IMG2WEBP WEBP_BUILD_VWEBP WEBP_BUILD_WEBPINFO WEBP_BUILD_WEBPMUX
-        WEBP_BUILD_LIBWEBPMUX WEBP_BUILD_EXTRAS WEBP_BUILD_FUZZTEST)
+        WEBP_BUILD_LIBWEBPMUX WEBP_BUILD_EXTRAS WEBP_BUILD_WEBP_JS
+        WEBP_BUILD_FUZZTEST)
   set(${_wopt} OFF CACHE BOOL "" FORCE)
 endforeach()
-set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)  # static webp linked into _core
-FetchContent_Declare(libwebp
-  URL https://github.com/webmproject/libwebp/archive/refs/tags/v1.5.0.tar.gz)
-FetchContent_MakeAvailable(libwebp)
-set_property(TARGET webp PROPERTY POSITION_INDEPENDENT_CODE ON)
-set_property(TARGET sharpyuv PROPERTY POSITION_INDEPENDENT_CODE ON)
+set(WEBP_ENABLE_SIMD ON CACHE BOOL "" FORCE)
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+add_subdirectory(
+  "${libwebp_SOURCE_DIR}"
+  "${CMAKE_CURRENT_BINARY_DIR}/libwebp"
+  EXCLUDE_FROM_ALL)
+foreach(_webp_target
+        sharpyuv
+        webpdecode webpdspdecode webputilsdecode webpdecoder
+        webpencode webpdsp webputils webp webpdemux)
+  set_target_properties(
+    ${_webp_target}
+    PROPERTIES
+      POSITION_INDEPENDENT_CODE ON
+      C_VISIBILITY_PRESET hidden)
+endforeach()

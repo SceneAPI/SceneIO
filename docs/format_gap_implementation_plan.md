@@ -102,13 +102,12 @@ A format may be called stable only when:
   production implementation.
 
 All 50 current codecs already have repo-maintained adapters and optimized I/O
-contracts. Repository source closure is not yet complete: `miniz` 3.0.2,
-`nlohmann_json` 3.11.3, `zstd` 1.5.6, `fast_float` 6.1.6, and `lazperf`
-3.4.0 are repository-contained, while `libwebp` is still obtained through
-CMake `FetchContent`. Before the post-0.2 codec tier is called stable, vendor
-that exact audited revision into `src/cpp/third_party/`, copy its upstream
-notices into `LICENSES/`, retain the current local patches, and prove an
-offline sdist-to-wheel build on MSVC, GCC 10, and AppleClang.
+contracts. The selected production source set is now repository-contained:
+`miniz` 3.0.2, `nlohmann_json` 3.11.3, `zstd` 1.5.6, `fast_float` 6.1.6,
+`lazperf` 3.4.0, and `libwebp` 1.5.0 are pinned under
+`src/cpp/third_party/` with their upstream notices in `LICENSES/`. Before the
+post-0.2 codec tier is called stable, complete the disconnected
+sdist-to-wheel proof and the user-gated GCC 10 and AppleClang confirmation.
 
 Optional scientific/heavy integrations may remain behind
 `SCENEIO_WITH_*` and use separately provisioned native libraries. They are
@@ -2187,18 +2186,17 @@ lane before starting the next unit.
    default. stb remains unchanged. No candidate advanced to the user-gated
    remote comparison.
 3. **Repository source closure for the stable tier (R6).**
-   Vendor the exact selected revisions under `src/cpp/third_party/`. Miniz
-   3.0.2, nlohmann/json 3.11.3, zstd 1.5.6, fast_float 6.1.6, and LAZperf
-   3.4.0 are repository-contained; the remaining closure set is libwebp
-   1.5.0. Include a future backend replacement only after it passes its
-   selection gate, and retire an old kernel only when no live codec uses it.
-   Preserve local LAZperf integration changes, add `COMMIT.txt`
-   provenance/hashes, retain all `LICENSES/` notices, and remove default-build
-   network fetches. Verify golden codec output and benchmark results are
-   unchanged. Validate an
-   sdist-to-wheel build with network source fetching disabled on MSVC,
-   manylinux2014 GCC 10, and AppleClang, using either disabled PEP 517
-   isolation with pinned tools or a locked offline wheelhouse.
+   The exact selected revisions for miniz 3.0.2, nlohmann/json 3.11.3, zstd
+   1.5.6, fast_float 6.1.6, LAZperf 3.4.0, and libwebp 1.5.0 are now stored
+   under `src/cpp/third_party/`. Include a future backend replacement only
+   after it passes its selection gate, and retire an old kernel only when no
+   live codec uses it. Local LAZperf changes, `COMMIT.txt` provenance/hashes,
+   and all `LICENSES/` notices are retained, and the default production build
+   has no native-source fetch. Local golden codec output and benchmark gates
+   pass. Complete the disconnected sdist-to-wheel proof on MSVC and the
+   user-gated manylinux2014 GCC 10 and AppleClang validation, using either
+   disabled PEP 517 isolation with pinned tools or a locked offline
+   wheelhouse.
 4. **Animation-capable `ImageSequence`.**
    Add an owned packed-frame mode with exact canvas size, pixel dtype/channels,
    per-frame duration, loop count, blend operation, disposal operation, and

@@ -17,3 +17,6 @@ LICENSES/fast-float.txt -text -whitespace
 src/cpp/third_party/lazperf/** -text -whitespace
 LICENSES/lazperf.txt -text -whitespace
 LICENSES/lazperf-source.txt -text -whitespace
+src/cpp/third_party/libwebp/** -text -whitespace
+LICENSES/libwebp.txt -text -whitespace
+LICENSES/libwebp-patents.txt -text -whitespace

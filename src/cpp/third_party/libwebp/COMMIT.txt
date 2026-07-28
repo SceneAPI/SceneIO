@@ -1,0 +1,45 @@
+libwebp 1.5.0
+
+Upstream: https://github.com/webmproject/libwebp
+Tag: v1.5.0
+Commit: a4d7a715337ded4451fec90ff8ce79728e04126c
+Retrieved: 2026-07-28
+License: BSD-3-Clause. COPYING contains the upstream license. PATENTS contains
+Google's additional no-charge, royalty-free patent grant for these
+implementations. Exact distribution copies are stored in LICENSES/.
+
+Source archive:
+https://github.com/webmproject/libwebp/archive/refs/tags/v1.5.0.tar.gz
+Size: 3821241 bytes
+SHA-256:
+668c9aba45565e24c27e17f7aaf7060a399f7f31dba6c97a044e1feacb930f37
+
+Selected repository-contained source:
+- CMakeLists.txt
+- configure.ac
+- cmake/**
+- src/**
+- sharpyuv/**
+- AUTHORS
+- COPYING
+- NEWS
+- PATENTS
+- README.md
+
+This is the complete public core-library, mux/demux, SIMD, and upstream CMake
+source closure: 203 files totaling 2940103 bytes. Tools, examples, tests,
+documentation, language bindings, unrelated build systems, and test media are
+not stored.
+
+Every selected upstream file and its SHA-256 is recorded in the case-insensitive
+path-sorted SOURCE_MANIFEST.sha256. The 17959-byte manifest has SHA-256:
+17e0a0e557d3b80e464da8ad5832836d992a7882ec365ff58b33d1fda16f4ba8
+
+SceneIO configures the unmodified upstream CMake project from this directory
+with shared libraries, command-line tools, animation utilities, examples,
+extras, JavaScript, fuzz targets, and libwebpmux disabled. SIMD remains enabled.
+The upstream directory is added EXCLUDE_FROM_ALL so only targets required by
+SceneIO's private static webp link are built and no libwebp development files
+are installed into the wheel.
+
+There are no local source changes.

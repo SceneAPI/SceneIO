@@ -62,17 +62,16 @@ wheel.packages = ["src/sceneio"]
 # abi3 wheel from CPython 3.12 (matches nanobind STABLE_ABI in
 # cmake/SceneIOTargets.cmake).
 wheel.py-api = "cp312"
-# zstd is statically linked into _core; its upstream `install()` rules otherwise
-# leak dev artifacts (headers, the static lib, CMake configs) into the wheel
-# root. The runtime wheel is just the `sceneio` package + `_core`.
+# Repository-contained upstream projects may define development-only
+# `install()` rules. Exclude those headers, static libraries, and CMake metadata;
+# the runtime wheel is just the `sceneio` package + `_core`.
 wheel.exclude = ["include/**", "lib/**", "share/**", "bin/**"]
 
 # Cross-platform wheel builds for the compiled core (Thread 2A). One abi3 wheel
 # per platform; `requires-python` currently caps at <3.13, so only cp312 is
 # built — relaxing that cap ships the same abi3 wheel to 3.13+ with no rebuild.
-# Miniz, nlohmann/json, zstd, fast_float, and LAZperf are
-# repository-contained. Libwebp is the final native dependency using CMake
-# FetchContent, so wheel jobs need source-network access until R6 closes.
+# All selected production native sources, including libwebp, are
+# repository-contained; wheel jobs do not download native source archives.
 [tool.cibuildwheel]
 build = "cp312-*"
 skip = "*-musllinux* *_i686 *-win32"

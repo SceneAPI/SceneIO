@@ -414,10 +414,11 @@ it is the best viable choice and it satisfies fidelity, deterministic output,
 permissive licensing, static/offline buildability, cross-platform support,
 maintenance, startup, and artifact-size requirements. Default stable kernels
 must ultimately be pinned under `src/cpp/third_party/`, built into `_core`, and
-attributed in `LICENSES/`. Miniz 3.0.2, nlohmann/json 3.11.3, zstd 1.5.6,
-fast_float 6.1.6, and LAZperf 3.4.0 are now repository-contained; libwebp is
-the final source-pinned dependency arriving through CMake `FetchContent`.
-Complete repository source closure remains the R6 target. The R5 JPEG
+  attributed in `LICENSES/`. Miniz 3.0.2, nlohmann/json 3.11.3, zstd 1.5.6,
+  fast_float 6.1.6, LAZperf 3.4.0, and libwebp 1.5.0 are now
+  repository-contained. The production CMake build has no native-source
+  download step; disconnected packaging and three-toolchain confirmation
+  remain the final R6 validation gates. The R5 JPEG
 candidate is
 additionally built by a default-off external project from the official
 libjpeg-turbo 3.2.0 archive. The clean MSVC qualification rejected that exact

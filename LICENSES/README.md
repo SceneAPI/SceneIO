@@ -21,7 +21,7 @@ redistribution choice used by SceneIO is stated explicitly.
 | LAZperf | 3.4.0, commit `b7bbe26109dc986f42d4fc80b8de3d2b6ca634ce` | vendored and statically linked | Apache-2.0, BSD-3-Clause, BSD-2-Clause; portable endian header is public domain with BSD/MIT/Apache fallback | [top-level license](lazperf.txt), [selected-source attribution](lazperf-source.txt) |
 | LodePNG | version 20260119, commit `ed6fe5825c6a4fbb7f58ab35a4231c7543cd452a` | vendored and statically linked | zlib | [lodepng.txt](lodepng.txt) |
 | SQLite | 3.53.4 amalgamation | vendored and statically linked | public domain | [sqlite.txt](sqlite.txt) |
-| libwebp | 1.5.0 | statically linked core libraries | BSD-3-Clause | [libwebp.txt](libwebp.txt) |
+| libwebp | 1.5.0, commit `a4d7a715337ded4451fec90ff8ce79728e04126c` | vendored and statically linked core libraries | BSD-3-Clause with upstream additional patent grant | [license](libwebp.txt), [patent grant](libwebp-patents.txt) |
 | libjpeg-turbo | 3.2.0, commit `c85e6b905bf237038faa936dab160ebfc5da0344` | statically linked only in explicit JPEG qualification builds until selected | IJG, BSD-3-Clause, zlib | [libjpeg-turbo.txt](libjpeg-turbo.txt), [upstream `README.ijg` copy](libjpeg-turbo-IJG.txt) |
 | stb_image / stb_image_write | commit `31c1ad37456438565541f4919958214b6e762fb4` | vendored compiled headers | MIT option | [stb.txt](stb.txt) |
 | TinyEXR | commit `1b106618644dbf8a0935c2348ba51a2d863dd7c2` | vendored compiled headers | BSD-3-Clause | [tinyexr.txt](tinyexr.txt) |

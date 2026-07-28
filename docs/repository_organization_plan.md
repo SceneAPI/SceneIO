@@ -393,7 +393,7 @@ verification have accumulated in a few large modules:
 | Benchmark | compatible `bench_io.py` entry point plus `io_bench/{model,measure,reporting,runner}.py`, all eight lower family modules, and shared `families/common.py` | all benchmark ownership is lower; the final R3.2 unit adds built-in completeness and strict comparison-provider controls |
 | Cross-codec tests | shared 50-codec catalog and 44-case buffer builder; focused streaming, inspection, array-partial, and image-partial modules; lower partial assertions; `test_io_mmap.py`, about 680 lines; shared partial invariants | mmap, streaming, and inspection ownership is split; partial behavior is migrating one family at a time |
 | Execution plan | `format_gap_implementation_plan.md`, about 2,500 lines | historical evidence and the active queue are easy to confuse |
-| Native dependencies | eleven source-complete in-tree projects and one `FetchContent` project | miniz, nlohmann/json, zstd, fast_float, and LAZperf are the completed R6 source-closure rows; libwebp is the final source fetch keeping stable builds from being fully offline |
+| Native dependencies | twelve source-complete in-tree projects and no production `FetchContent` project | miniz, nlohmann/json, zstd, fast_float, LAZperf, and libwebp complete the R6 repository-source rows; disconnected package and three-toolchain confirmation remain |
 
 The public API and native ABI remain stable throughout the reorganization.
 
@@ -1115,10 +1115,10 @@ installed smoke.
 
 ### R6. Close stable native sources
 
-- Vendor the selected exact revision for the dependency still fetched;
-  miniz, nlohmann/json, zstd, fast_float, and LAZperf are the first five
-  completed rows of the six-dependency closure set. A
-  performance result may change a backend before its source is embedded.
+- The selected exact revisions for miniz, nlohmann/json, zstd, fast_float,
+  LAZperf, and libwebp are repository-contained. These six dependency-specific
+  rows complete source intake; the shared R6 closure now validates
+  disconnected sdist-to-wheel construction and the three target toolchains.
 - Apply local changes as documented patch files or narrowly marked source
   changes.
 - Prove `FETCHCONTENT_FULLY_DISCONNECTED=ON` and network-disabled

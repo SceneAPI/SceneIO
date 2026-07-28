@@ -15,6 +15,7 @@ EXPECTED_NOTICES = {
     "lazperf.txt",
     "libjpeg-turbo-IJG.txt",
     "libjpeg-turbo.txt",
+    "libwebp-patents.txt",
     "libwebp.txt",
     "lodepng.txt",
     "miniz-zip.txt",
@@ -30,14 +31,13 @@ EXPECTED_NOTICES = {
     "zstd.txt",
 }
 
-FETCHCONTENT_NOTICE = {
-    "libwebp": "libwebp.txt",
-}
+FETCHCONTENT_NOTICE = {}
 
 VENDORED_NOTICE = {
     "cgltf": "cgltf.txt",
     "fast_float": "fast-float.txt",
     "lazperf": "lazperf.txt",
+    "libwebp": "libwebp.txt",
     "lodepng": "lodepng.txt",
     "miniz": "miniz.txt",
     "nlohmann_json": "nlohmann-json.txt",
@@ -168,6 +168,51 @@ SOURCE_CLOSURE = {
                 r"POSITION_INDEPENDENT_CODE ON\s*"
                 r"CXX_VISIBILITY_PRESET hidden\s*"
                 r"VISIBILITY_INLINES_HIDDEN ON\)"
+            ),
+        ),
+    },
+    "libwebp": {
+        "version": "1.5.0",
+        "commit": "a4d7a715337ded4451fec90ff8ce79728e04126c",
+        "archive_sha256": (
+            "668c9aba45565e24c27e17f7aaf7060a"
+            "399f7f31dba6c97a044e1feacb930f37"
+        ),
+        "notice": "libwebp.txt",
+        "source_notice": "libwebp-patents.txt",
+        "source_notice_file": "PATENTS",
+        "packaged_notice_markers": (
+            "Additional IP Rights Grant (Patents)",
+            "perpetual, worldwide, non-exclusive, no-charge,",
+            "royalty-free, irrevocable",
+        ),
+        "license": "COPYING",
+        "manifest": "SOURCE_MANIFEST.sha256",
+        "path_sorted_manifest": True,
+        "manifest_sha256": (
+            "17e0a0e557d3b80e464da8ad5832836d"
+            "992a7882ec365ff58b33d1fda16f4ba8"
+        ),
+        "cmake_patterns": (
+            (
+                r'^set\(libwebp_SOURCE_DIR '
+                r'"\$\{PROJECT_SOURCE_DIR\}/src/cpp/third_party/libwebp"\)$'
+            ),
+            r"^set\(WEBP_ENABLE_SIMD ON CACHE BOOL \"\" FORCE\)$",
+            (
+                r"add_subdirectory\(\s*\"\$\{libwebp_SOURCE_DIR\}\"\s*"
+                r"\"\$\{CMAKE_CURRENT_BINARY_DIR\}/libwebp\"\s*"
+                r"EXCLUDE_FROM_ALL\)"
+            ),
+            (
+                r"foreach\(_webp_target\s*sharpyuv\s*"
+                r"webpdecode webpdspdecode webputilsdecode webpdecoder\s*"
+                r"webpencode webpdsp webputils webp webpdemux\)"
+            ),
+            (
+                r"set_target_properties\(\s*\$\{_webp_target\}\s*"
+                r"PROPERTIES\s*POSITION_INDEPENDENT_CODE ON\s*"
+                r"C_VISIBILITY_PRESET hidden\)"
             ),
         ),
     },
@@ -426,7 +471,12 @@ def test_notice_files_are_nonempty_utf8_text() -> None:
         text = (LICENSES / name).read_text(encoding="utf-8")
         assert len(text) >= 250
         assert text.endswith("\n")
-        assert "Copyright" in text or "copyright" in text or "public domain" in text
+        assert (
+            "Copyright" in text
+            or "copyright" in text
+            or "public domain" in text
+            or "patent license" in text
+        )
 
 
 def test_repository_contained_native_sources_match_recorded_hashes() -> None:

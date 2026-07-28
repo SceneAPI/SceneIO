@@ -117,7 +117,9 @@
 > encode/decode by median geomean but misses the q95 comparative-quality floor
 > (`-0.058242 dB` versus `-0.05 dB`). libjpeg-turbo is therefore rejected as
 > the combined default and stb remains unchanged. No candidate advanced to
-> the user-gated remote comparison; R6 source closure is next.
+> the user-gated remote comparison. R6 source intake is now complete; final
+> disconnected sdist-to-wheel and user-gated GCC 10/AppleClang validation
+> remain.
 
 The granular, per‑format execution plan for covering **every relevant file type
 that has a permissively‑licensed open‑source option**. Sits below the strategy
@@ -128,10 +130,9 @@ for each remaining item.
 Current test counts, workflow evidence, and the immutable validated checkpoint
 are maintained only in
 [`format_coverage.md`](format_coverage.md#format--data-structure-coverage);
-this policy roadmap intentionally does not duplicate them. The next execution
-order is: complete the repository-organization and codec-backend performance
-gates, close default native sources for offline builds, then finish animated
-WebP/APNG and RTMV.
+  this policy roadmap intentionally does not duplicate them. The next execution
+  order is: complete R6 disconnected package and toolchain validation, then
+  finish animated WebP/APNG and RTMV.
 The common optional-library feature pattern follows before HDF5/hloc, TIFF,
 E57, and Parquet.
 
@@ -389,11 +390,11 @@ identity) regardless of codec progress — codecs work today via informal labels
 ## 5. Build/CI implications as C libs enter
 
 - In-tree/header-only dependencies keep the default build independent of
-  system libraries. The production adapters are already repo-maintained, but
-  miniz, nlohmann/json, zstd, fast_float, and LAZperf are now
-  repository-contained; libwebp still arrives through pinned `FetchContent`.
-  Moving that exact revision under `src/cpp/third_party/` is the remaining
-  offline/source-ownership gate for the post-0.2 stable tier.
+  system libraries. The production adapters and all selected native sources
+  are repository-maintained: miniz, nlohmann/json, zstd, fast_float, LAZperf,
+  and libwebp complete the R6 repository-source set. Disconnected package
+  construction and the user-gated three-toolchain confirmation remain before
+  the post-0.2 stable tier closes R6.
 - Optional system libs compile in per `SCENEIO_WITH_*`; absent → the codec
   reports `needs_dep` and raises a clean "format not built" error, never an
   import crash. The cibuildwheel images gain them via vcpkg/conda as each phase

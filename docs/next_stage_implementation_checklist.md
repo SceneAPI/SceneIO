@@ -92,8 +92,9 @@ The exact `7a88e7c` clean-wheel, remote-inclusive MSVC report is complete:
 `f32b7c60f19956438023c51cc9c0b07f44ace79c66dff4a43c30fc7cfdcd80b1`.
 The candidate is therefore rejected as the combined stable JPEG default,
 stb remains unchanged, and the user-gated GCC 10/AppleClang comparison was not
-dispatched for a candidate that had already failed a frozen local gate. R5 has
-a negative selection result; R6 source closure is next.
+  dispatched for a candidate that had already failed a frozen local gate. R5 has
+  a negative selection result. R6 source intake is complete; final disconnected
+  sdist-to-wheel and user-gated GCC 10/AppleClang validation remain.
 
 This is the operational checklist for the repository-organization and
 codec-performance stage defined in
@@ -3918,7 +3919,7 @@ Perform one dependency per commit.
 | zstd | 1.5.6 / `794ea1b0afca0f020f4e57b6732332231fb23c70` | ✅ exact selected library/build files and hashes recorded | ✅ local upstream static target; no zstd fetch | ✅ rebuild, dual-profile SPZ benchmark, strict sweep, exact package, isolated smoke, and three reviews | this commit |
 | fast_float | 6.1.6 / `00c8c7b0d5c722d2212568d915a39ea73b08b973` | ✅ exact nine-header tree and MIT license hashes recorded | ✅ local interface target; no fast_float fetch | ✅ rebuild, parity, strict benchmark, exact package, isolated smoke, and three reviews | this commit |
 | LAZperf | 3.4.0 / `b7bbe26109dc986f42d4fc80b8de3d2b6ca634ce` | ✅ exact 47-file tree, pristine/final manifests, and seven-file patch recorded | ✅ explicit hidden static target; no LAZperf fetch | ✅ rebuild, parity, strict benchmark, exact package, isolated smoke, and three reviews | this commit |
-| libwebp | 1.5.0 | ⬜ | ⬜ | ⬜ | pending |
+| libwebp | 1.5.0 / `a4d7a715337ded4451fec90ff8ce79728e04126c` | ✅ exact 203-file core/build closure and notices recorded | ✅ local unmodified upstream CMake/SIMD static target; no libwebp fetch | ✅ rebuild, parity, strict benchmark, exact package, isolated smoke, and three reviews | this commit |
 
 The shared R6.1–R6.3 boxes remain open until all six rows satisfy them. Each
 row receives its own green commit; the final disconnected sdist-to-wheel and
@@ -4139,6 +4140,57 @@ LAZperf local evidence at the corrected review snapshot:
   libraries. The extension export table is reduced from the prior 239 entries
   to 21: `PyInit__core` plus 20 nanobind exception-runtime symbols, with zero
   LAZperf exports;
+- the architecture/correctness, test/performance, and
+  platform/package/documentation reviews are clear.
+
+The artifact hashes above bind the exact pre-documentation review tree. The
+post-review staged-index package is rebuilt and reported outside its own
+packaged checklist so the artifact is not required to contain its own hash.
+
+libwebp local evidence at the reviewed candidate:
+
+- the 3,821,241-byte official v1.5.0 archive for commit
+  `a4d7a715337ded4451fec90ff8ce79728e04126c` has SHA-256
+  `668c9aba45565e24c27e17f7aaf7060a399f7f31dba6c97a044e1feacb930f37`;
+- the repository stores the exact 203-file, 2,940,103-byte core-library,
+  mux/demux, SIMD, CMake, license, patent-grant, attribution, and release-note
+  closure. Its 17,959-byte case-insensitive path-sorted manifest has SHA-256
+  `17e0a0e557d3b80e464da8ad5832836d992a7882ec365ff58b33d1fda16f4ba8`.
+  No upstream source file is modified;
+- CMake configures the repository directory through `EXCLUDE_FROM_ALL`, keeps
+  `WEBP_ENABLE_SIMD=ON`, disables tools and optional utilities, and gives every
+  linked core target PIC and hidden C visibility. The active `_core` project
+  references the local `libwebp/webp` target and contains no
+  `_deps/libwebp-src` input;
+- editable MSVC rebuild and native-symbol import pass. Focused WebP,
+  parallel-worker, image-window, source/build, and performance coverage is
+  `59 passed`;
+- the strict all-50 five-run benchmark passes every retained O4/O5,
+  mapped-read, and file-sink gate. Its 52,081-byte JSON has SHA-256
+  `b719008899536b47900ed20f658200f1311f4426ced03899e605aa5898414829`
+  and retains structural projection
+  `8f218ff77bcf2ea1e918d4ed164f7184fa2662eb252508c387b5f131a053a8e7`.
+  WebP measures 35 MB/s write, 285 MB/s buffer decode, 258 MB/s mapped-path
+  read, a 2.70x balanced-config gain over the retained effort-100 control, a
+  measured worker-on gain, and a 2.01x lossless-window speedup;
+- the complete suite is `3401 passed, 4 skipped`; Ruff and both diff checks
+  pass;
+- exact staged-index tree `d2fc4417cd9951c948983f7b37abad036b4c22ca`
+  contains 827 files and produces a 5,817,872-byte source archive with SHA-256
+  `ee9f54a73f636aabeea2ec4b6acb7a127973c01a9aee5881007508548fd5c93d`.
+  Every staged Git blob matches its archive member byte-for-byte, and generated
+  `PKG-INFO` is the sole extra file;
+- the sdist-derived 2,187,869-byte Windows abi3 wheel has SHA-256
+  `6ae7f9a614b81360d1e61429c1b09186bc1bfd0aeb9b4ef329fa298e5c8c9f7c`.
+  It contains 88 files, one extension, all 22 license assets, no
+  source/build/development payload, NumPy as its only unconditional runtime
+  dependency, and no FFmpeg/libav package entry. Isolated installed smoke
+  imports both modules from the target directory and completes all 50 built-in
+  cases at phase `2`;
+- the sdist-generated WebP project contains only repository source paths.
+  Native inspection reports only Python and standard Windows runtime
+  libraries; `_core` has 21 exports—`PyInit__core` plus 20 nanobind
+  exception-runtime symbols—with zero libwebp, SharpYUV, or LAZperf exports;
 - the architecture/correctness, test/performance, and
   platform/package/documentation reviews are clear.
 

@@ -2940,3 +2940,37 @@ no longer exports LAZperf API symbols. These results show no source-ownership
 regression and preserve the established optimized LAZ paths. This is local
 MSVC evidence; the final user-gated build-only multi-platform R6 validation
 remains outstanding.
+
+## R6 libwebp source-ownership confirmation (2026-07-28)
+
+The production WebP codec remains upstream libwebp 1.5.0 with its qualified
+SIMD dispatch and unchanged codec configuration. The exact 203-file
+core-library/build closure is now stored under
+`src/cpp/third_party/libwebp`, and CMake configures that unmodified upstream
+tree locally rather than downloading the tag. Tools, examples, tests, shared
+libraries, and optional utilities remain disabled.
+
+The confirming five-run strict sweep passed every retained O4/O5, mapped-read,
+and file-sink gate. Its 52,081-byte JSON has SHA-256
+`b719008899536b47900ed20f658200f1311f4426ced03899e605aa5898414829`
+and matches structural projection
+`8f218ff77bcf2ea1e918d4ed164f7184fa2662eb252508c387b5f131a053a8e7`.
+The WebP row measured:
+
+| Direction/path | Result |
+|---|---:|
+| Balanced lossless encode | 35 MB/s |
+| Retained effort-100 control | 13 MB/s |
+| Buffer decode | 285 MB/s |
+| Public mapped path read | 258 MB/s |
+| Direct file sink | 36 MB/s |
+| Metadata inspection | 0.054 ms / 226x full-read speedup |
+| Lossless pixel window | 6.06 ms / 2.01x full-read speedup |
+
+The balanced configuration retains a 2.70x gain over the old control, and the
+palette worker-on path remains faster than its worker-off control while
+producing identical bytes. The mapped path reduces traced allocation from
+3.16 MB to 0.01 MB, and the direct sink retains approximately 0.0006 MB traced
+overhead. These results preserve the established optimized WebP paths and show
+no source-ownership regression. This is local MSVC evidence; the final
+user-gated build-only multi-platform R6 validation remains outstanding.

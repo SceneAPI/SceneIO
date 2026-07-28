@@ -241,7 +241,7 @@ def test_performance_backend_versions_match_pinned_sources():
             "bf7c7f30031888f4e796e429ab3978879485813aaca6f641c7b33e4e09459bcc",
             "src/cpp/third_party/sqlite/COMMIT.txt",
         ),
-        "libwebp": ("1.5.0", "cmake/SceneIODependencies.cmake"),
+        "libwebp": ("1.5.0", "src/cpp/third_party/libwebp/COMMIT.txt"),
         "lazperf": (
             "b7bbe26109dc986f42d4fc80b8de3d2b6ca634ce",
             "src/cpp/third_party/lazperf/COMMIT.txt",
