@@ -70,17 +70,18 @@ SceneIO-plus-NumPy environment. All three independent reviews are clear after
 their findings were resolved. Normal run `30316577366` and
 compiler-instrumented run `30316577369` pass that exact commit.
 
-R4.3 is in progress with the arrays-family candidate. PFM, NPY/NPZ,
-Safetensors, FLO, and DMB now live under `src/cpp/codecs/arrays/`; their
-implementation blobs are unchanged apart from one source-location comment.
-The CMake ownership/link manifests and live performance ledger use the new
-paths. The MSVC editable rebuild and a 561-node family/cross-I/O sweep pass
-560 tests with one documented absent-oracle skip; Ruff and the
-232-name/49-entry native surface checks remain unchanged. All three
-independent reviews are clear; commit evidence remains open. A confirming
-complete five-run strict all-50-codec guard passes after one independently
-confirmed timing outlier in an unrelated JSON control; the passing artifact
-is `build/r4_3_arrays_strict_guard.json`.
+R4.3 is in progress. The arrays-family unit closes and is pushed at
+`f57c677`: PFM, NPY/NPZ, Safetensors, FLO, and DMB now live under
+`src/cpp/codecs/arrays/`. Its MSVC build, 561-node focused sweep, Ruff,
+232-name/49-entry native surface checks, complete strict guard, and all three
+reviews pass.
+
+The calibration-family candidate moves the shared OpenCV/ROS/Kalibr source to
+`src/cpp/codecs/calibration/` and updates only its location comment plus
+CMake, contract, and performance-ledger paths. MSVC, 223 focused tests, the
+complete 3,354-node suite (3,350 passed/four skipped), Ruff, the unchanged
+232/49 native surface, and the complete five-run strict all-50-codec guard
+pass. All three independent reviews are clear; commit evidence remains open.
 
 This is the operational checklist for the repository-organization and
 codec-performance stage defined in
@@ -3513,7 +3514,19 @@ Arrays-family candidate:
 - [x] Pass the complete five-run strict all-50-codec O4/O5 and mmap/sink
       regression guard.
 - [x] Complete the three independent reviews.
-- [ ] Commit the arrays unit.
+- [x] Commit and push the arrays unit at `f57c677`.
+
+Calibration-family candidate:
+
+- [x] Move the shared OpenCV/ROS/Kalibr source under
+      `src/cpp/codecs/calibration/` and update path contracts only.
+- [x] Rebuild on MSVC and pass 223 focused tests, the complete
+      3,350-pass/four-skip suite, Ruff, and the 232-name/49-entry native
+      surface checks.
+- [x] Pass the complete five-run strict all-50-codec O4/O5 and mmap/sink
+      guard.
+- [x] Complete the three independent reviews.
+- [ ] Commit the calibration unit.
 
 R4 verification and validation:
 

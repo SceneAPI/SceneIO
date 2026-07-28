@@ -1,4 +1,4 @@
-// codecs/camera_calibration.cpp -- OpenCV, ROS CameraInfo, and Kalibr.
+// codecs/calibration/camera_calibration.cpp -- OpenCV, ROS CameraInfo, and Kalibr.
 //
 // These formats share YAML-shaped data but not a common schema.  The parser
 // below intentionally implements only the bounded mapping/list subset used by

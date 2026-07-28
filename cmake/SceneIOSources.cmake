@@ -45,7 +45,7 @@ set(SCENEIO_ARRAY_CODEC_SOURCES
   src/cpp/codecs/arrays/dmb.cpp)
 
 set(SCENEIO_CALIBRATION_CODEC_SOURCES
-  src/cpp/codecs/camera_calibration.cpp)
+  src/cpp/codecs/calibration/camera_calibration.cpp)
 
 set(SCENEIO_IMAGE_CODEC_SOURCES
   src/cpp/codecs/netpbm.cpp
@@ -172,7 +172,7 @@ set(SCENEIO_CORE_SOURCES
   src/cpp/codecs/arrays/safetensors.cpp
   src/cpp/codecs/arrays/dmb.cpp
   src/cpp/codecs/euroc_state.cpp
-  src/cpp/codecs/camera_calibration.cpp
+  src/cpp/codecs/calibration/camera_calibration.cpp
   src/cpp/codecs/g2o.cpp
   src/cpp/codecs/colmap_db.cpp
   src/cpp/third_party/stb/stb_impl.cpp

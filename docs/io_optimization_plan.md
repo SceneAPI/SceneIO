@@ -64,8 +64,9 @@ no throughput claim. The complete suite passes 3,350 tests with four documented
 skips, and Ruff is clean. The exact 398/399/81 source/sdist/wheel package gate
 and fresh NumPy-only installed smoke pass. All three confirmation reviews are
 clear. Normal run `30316577366` and compiler-instrumented run `30316577369`
-pass that exact commit. R4.3 is in progress with the arrays-family path-only
-move; no codec loop has changed and no throughput claim is made.
+pass that exact commit. R4.3 arrays close and are pushed at `f57c677`; the
+calibration-family path-only candidate is green locally. No codec loop has
+changed and no throughput claim is made.
 
 Scope: the compiled `sceneio._core` I/O path on `phase0-nanobind-core`.
 Companion to `coverage_roadmap.md` (this makes its "Phase 7" hardening/perf work

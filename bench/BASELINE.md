@@ -2490,7 +2490,7 @@ callable, publishes mapping-proxy rows, and validates codec ownership
 recursively by full path. These changes affect registration metadata and tests
 only; no timed codec path changed.
 
-## R4.3 arrays-family source move candidate (2026-07-27)
+## R4.3 arrays-family source move closure (2026-07-27)
 
 PFM, NPY/NPZ, Safetensors, FLO, and DMB move from the flat native codec
 directory to `src/cpp/codecs/arrays/`. Their implementation blobs are
@@ -2515,3 +2515,21 @@ all-50-codec sweep passed in 363 seconds and is retained as
 O4 controls, O5 inspection/partial controls, and mmap/sink allocation bounds.
 The architecture/lifetime, test/performance, and
 platform/package/documentation reviews are clear.
+Commit `f57c677` is pushed to `phase0-nanobind-core`.
+
+## R4.3 calibration-family source move candidate (2026-07-27)
+
+The shared OpenCV/ROS/Kalibr implementation moves to
+`src/cpp/codecs/calibration/camera_calibration.cpp`. Its executable source is
+unchanged; the embedded source-location comment and the CMake,
+native-build-contract, and performance-ledger paths use the new location.
+The frozen core link and registration order remain unchanged.
+
+The MSVC editable build and 223 focused codec/family/mmap/sink/inspection/API
+tests pass. The complete suite passes 3,350 tests with four documented skips;
+Ruff, the 232-name non-dunder `_core` surface, and the 49-entry native
+inventory remain unchanged. The complete five-run strict all-50-codec guard
+passes in 363.5 seconds and is retained as
+`build/r4_3_calibration_strict_guard.json`. No timed codec implementation
+changed, so this unit makes no performance claim. The architecture/lifetime,
+test/performance, and platform/package/documentation reviews are clear.
