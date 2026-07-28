@@ -663,6 +663,12 @@ def test_publish_workflow_builds_every_wheel_from_the_exact_sdist() -> None:
     )[0]
 
     assert 'version: "0.8.6"' in sdist_job
+    assert '--dest "$RUNNER_TEMP/r6-build-wheelhouse"' in sdist_job
+    assert 'uv venv "$RUNNER_TEMP/r6-build-env"' in sdist_job
+    assert '--python "$RUNNER_TEMP/r6-build-env/bin/python"' in sdist_job
+    assert '--find-links "$RUNNER_TEMP/r6-build-wheelhouse"' in sdist_job
+    assert "--dest build-wheelhouse" not in sdist_job
+    assert "--python .venv/bin/python" not in sdist_job
     assert "--source-root ." in sdist_job
     assert "--require-git-source-closure" in sdist_job
     assert "--output source-inventory.json" in sdist_job

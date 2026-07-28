@@ -32,17 +32,17 @@ jobs:
       - name: Prepare locked build tools
         run: |
           python -m pip download \
-            --dest build-wheelhouse \
+            --dest "$RUNNER_TEMP/r6-build-wheelhouse" \
             --only-binary=:all: \
             --no-deps \
             --require-hashes \
             --requirement tools/r6-wheelhouse.lock
-          uv venv
+          uv venv "$RUNNER_TEMP/r6-build-env"
           uv pip install \
-            --python .venv/bin/python \
+            --python "$RUNNER_TEMP/r6-build-env/bin/python" \
             --no-index \
             --no-deps \
-            --find-links build-wheelhouse \
+            --find-links "$RUNNER_TEMP/r6-build-wheelhouse" \
             scikit-build-core==1.0.3 \
             nanobind==2.13.0 \
             packaging==26.2 \
@@ -57,7 +57,7 @@ jobs:
           --offline
           --no-index
           --no-build-isolation
-          --python .venv/bin/python
+          --python "$RUNNER_TEMP/r6-build-env/bin/python"
       - id: sdist
         name: Record source distribution
         shell: bash
@@ -72,7 +72,7 @@ jobs:
           echo "sha256=$sha256" >> "$GITHUB_OUTPUT"
       - name: Verify exact repository-to-sdist closure
         run: >-
-          .venv/bin/python tools/verify_distribution.py
+          "$RUNNER_TEMP/r6-build-env/bin/python" tools/verify_distribution.py
           --source-root .
           --sdist dist/*.tar.gz
           --require-git-source-closure
