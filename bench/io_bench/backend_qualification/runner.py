@@ -369,6 +369,147 @@ def _readline_with_timeout(
         executor.shutdown(wait=False, cancel_futures=True)
 
 
+def _memory_worker_process(
+    psutil_module: Any,
+    *,
+    launcher_pid: int,
+    worker_pid: Any,
+) -> Any:
+    if not _is_positive_int(worker_pid):
+        raise RuntimeError("memory worker reported an invalid process ID")
+    sampled = psutil_module.Process(worker_pid)
+    if worker_pid != launcher_pid:
+        try:
+            ancestor_pids = {parent.pid for parent in sampled.parents()}
+        except (
+            psutil_module.NoSuchProcess,
+            psutil_module.ZombieProcess,
+        ) as exc:
+            raise RuntimeError(
+                "memory worker exited before process identity was verified"
+            ) from exc
+        if launcher_pid not in ancestor_pids:
+            raise RuntimeError(
+                "memory worker is not a child of the launched interpreter"
+            )
+    return sampled
+
+
+def _terminate_memory_process_tree(
+    psutil_module: Any,
+    process: subprocess.Popen[str],
+    *,
+    sampled: Any | None,
+) -> None:
+    """Stop the launcher, its descendants, and the verified worker tree."""
+    targets: dict[int, Any] = {}
+    cleanup_errors: list[str] = []
+
+    def add_tree(root: Any) -> None:
+        try:
+            descendants = root.children(recursive=True)
+        except (
+            psutil_module.NoSuchProcess,
+            psutil_module.ZombieProcess,
+        ):
+            descendants = []
+        except Exception as exc:
+            cleanup_errors.append(
+                f"could not inspect process {root.pid}: {exc}"
+            )
+            descendants = []
+        for descendant in reversed(descendants):
+            targets.setdefault(descendant.pid, descendant)
+        targets.setdefault(root.pid, root)
+
+    try:
+        try:
+            add_tree(psutil_module.Process(process.pid))
+        except (
+            psutil_module.NoSuchProcess,
+            psutil_module.ZombieProcess,
+        ):
+            pass
+        except Exception as exc:
+            cleanup_errors.append(
+                f"could not open launcher process {process.pid}: {exc}"
+            )
+        if sampled is not None:
+            add_tree(sampled)
+
+        candidates = list(targets.values())
+        for candidate in candidates:
+            try:
+                candidate.terminate()
+            except (
+                psutil_module.NoSuchProcess,
+                psutil_module.ZombieProcess,
+            ):
+                pass
+            except Exception as exc:
+                cleanup_errors.append(
+                    f"could not terminate process {candidate.pid}: {exc}"
+                )
+        alive = []
+        if candidates:
+            try:
+                _, alive = psutil_module.wait_procs(
+                    candidates, timeout=5
+                )
+            except Exception as exc:
+                cleanup_errors.append(
+                    f"could not wait for terminated processes: {exc}"
+                )
+                alive = candidates
+        for candidate in alive:
+            try:
+                candidate.kill()
+            except (
+                psutil_module.NoSuchProcess,
+                psutil_module.ZombieProcess,
+            ):
+                pass
+            except Exception as exc:
+                cleanup_errors.append(
+                    f"could not kill process {candidate.pid}: {exc}"
+                )
+        survivors = []
+        if alive:
+            try:
+                _, survivors = psutil_module.wait_procs(alive, timeout=5)
+            except Exception as exc:
+                cleanup_errors.append(
+                    f"could not wait for killed processes: {exc}"
+                )
+                survivors = alive
+        if survivors:
+            cleanup_errors.append(
+                "processes remained after kill: "
+                + ", ".join(str(item.pid) for item in survivors)
+            )
+    finally:
+        try:
+            if process.poll() is None:
+                process.kill()
+        except Exception as exc:
+            cleanup_errors.append(
+                f"could not kill launcher process {process.pid}: {exc}"
+            )
+        try:
+            process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            cleanup_errors.append(
+                f"launcher process {process.pid} did not exit after kill"
+            )
+        except Exception as exc:
+            cleanup_errors.append(
+                f"could not wait for launcher process {process.pid}: {exc}"
+            )
+
+    if cleanup_errors:
+        raise RuntimeError("; ".join(cleanup_errors))
+
+
 def _run_memory_worker(
     backend: BackendSpec,
     worker: Path,
@@ -399,6 +540,7 @@ def _run_memory_worker(
     assert process.stdin is not None
     assert process.stdout is not None
     assert process.stderr is not None
+    sampled = None
     try:
         process.stdin.write(
             canonical_json_bytes(request).decode("utf-8")
@@ -410,12 +552,18 @@ def _run_memory_worker(
         ready = json.loads(ready_line)
         if (
             ready.get("status") != "ready"
-            or ready.get("pid") != process.pid
+            or ready.get("action") != "memory"
+            or ready.get("schema_version") != SCHEMA_VERSION
         ):
             raise RuntimeError(
                 f"{backend.id} memory worker did not become ready: {ready!r}"
             )
-        sampled = psutil.Process(process.pid)
+        worker_pid = ready.get("pid")
+        sampled = _memory_worker_process(
+            psutil,
+            launcher_pid=process.pid,
+            worker_pid=worker_pid,
+        )
         baseline = max(
             int(sampled.memory_info().rss),
             int(ready["baseline_rss_bytes"]),
@@ -465,6 +613,7 @@ def _run_memory_worker(
             returncode != 0
             or final.get("status") != "ok"
             or final.get("action") != "memory"
+            or final.get("pid") != worker_pid
         ):
             raise RuntimeError(
                 f"{backend.id} memory worker failed: "
@@ -480,10 +629,17 @@ def _run_memory_worker(
         final.update(rss)
         final["sampling_interval_seconds"] = sampling_interval_seconds
         return final
-    except Exception:
-        if process.poll() is None:
-            process.kill()
-        process.wait(timeout=5)
+    except Exception as worker_error:
+        try:
+            _terminate_memory_process_tree(
+                psutil,
+                process,
+                sampled=sampled,
+            )
+        except Exception as cleanup_error:
+            worker_error.add_note(
+                f"memory worker cleanup also failed: {cleanup_error}"
+            )
         raise
     finally:
         process.stdin.close()

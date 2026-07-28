@@ -838,6 +838,227 @@ def test_effective_rss_uses_the_larger_sampled_or_exact_delta():
     assert exact["effective_delta_rss_bytes"] == 80
 
 
+def test_memory_sampler_accepts_direct_or_verified_child_interpreter_pid():
+    direct = SimpleNamespace(parents=lambda: [])
+    child_process = SimpleNamespace(
+        parents=lambda: [SimpleNamespace(pid=100)]
+    )
+    unrelated = SimpleNamespace(
+        parents=lambda: [SimpleNamespace(pid=999)]
+    )
+
+    class FakePsutil:
+        NoSuchProcess = RuntimeError
+        ZombieProcess = RuntimeError
+
+        def __init__(self, processes):
+            self.processes = processes
+
+        def Process(self, pid):
+            return self.processes[pid]
+
+    psutil = FakePsutil(
+        {100: direct, 101: child_process, 102: unrelated}
+    )
+    assert (
+        qualification_runner._memory_worker_process(
+            psutil, launcher_pid=100, worker_pid=100
+        )
+        is direct
+    )
+    assert (
+        qualification_runner._memory_worker_process(
+            psutil, launcher_pid=100, worker_pid=101
+        )
+        is child_process
+    )
+    with pytest.raises(RuntimeError, match="invalid process ID"):
+        qualification_runner._memory_worker_process(
+            psutil, launcher_pid=100, worker_pid="101"
+        )
+    with pytest.raises(RuntimeError, match="not a child"):
+        qualification_runner._memory_worker_process(
+            psutil, launcher_pid=100, worker_pid=102
+        )
+
+
+def test_memory_process_tree_cleanup_stops_launcher_worker_and_descendant():
+    events = []
+
+    class MissingProcess(Exception):
+        pass
+
+    class FakeZombieProcess(Exception):
+        pass
+
+    class CleanupFailure(Exception):
+        pass
+
+    class FakeProcess:
+        def __init__(self, pid, children=()):
+            self.pid = pid
+            self._children = list(children)
+
+        def children(self, *, recursive):
+            assert recursive is True
+            result = list(self._children)
+            for descendant_process in self._children:
+                result.extend(
+                    descendant_process.children(recursive=True)
+                )
+            return result
+
+        def terminate(self):
+            events.append(("terminate", self.pid))
+
+        def kill(self):
+            events.append(("kill", self.pid))
+
+    descendant = FakeProcess(102)
+    worker = FakeProcess(101, [descendant])
+    launcher = FakeProcess(100, [worker])
+
+    class FakePsutil:
+        NoSuchProcess = MissingProcess
+        ZombieProcess = FakeZombieProcess
+        fail_wait = False
+
+        @staticmethod
+        def Process(pid):
+            assert pid == launcher.pid
+            return launcher
+
+        @staticmethod
+        def wait_procs(processes, *, timeout):
+            assert timeout == 5
+            events.append(("wait", tuple(item.pid for item in processes)))
+            if FakePsutil.fail_wait:
+                raise CleanupFailure("wait failed")
+            if descendant in processes and ("kill", descendant.pid) not in events:
+                return [], [descendant]
+            return list(processes), []
+
+    class FakePopen:
+        pid = launcher.pid
+
+        @staticmethod
+        def poll():
+            return None
+
+        @staticmethod
+        def kill():
+            events.append(("popen-kill", launcher.pid))
+
+        @staticmethod
+        def wait(*, timeout):
+            assert timeout == 5
+            events.append(("popen-wait", launcher.pid))
+            return 1
+
+    qualification_runner._terminate_memory_process_tree(
+        FakePsutil(),
+        FakePopen(),
+        sampled=worker,
+    )
+
+    terminated = {
+        pid for action, pid in events if action == "terminate"
+    }
+    assert terminated == {launcher.pid, worker.pid, descendant.pid}
+    assert ("kill", descendant.pid) in events
+    assert ("popen-kill", launcher.pid) in events
+    assert ("popen-wait", launcher.pid) in events
+
+    events.clear()
+    FakePsutil.fail_wait = True
+    with pytest.raises(RuntimeError, match="wait failed"):
+        qualification_runner._terminate_memory_process_tree(
+            FakePsutil(),
+            FakePopen(),
+            sampled=worker,
+        )
+    assert ("popen-kill", launcher.pid) in events
+    assert ("popen-wait", launcher.pid) in events
+
+
+def test_memory_worker_failure_invokes_process_tree_cleanup(
+    tmp_path, monkeypatch
+):
+    backend = qualification_runner.BackendSpec(
+        "stb",
+        "stb",
+        tmp_path / "python.exe",
+        tmp_path / "retained.whl",
+        tmp_path / "manifest.json",
+        None,
+    )
+
+    class FakePopen:
+        pid = 100
+
+        def __init__(self):
+            self.stdin = io.StringIO()
+            self.stdout = io.StringIO()
+            self.stderr = io.StringIO()
+
+    processes = []
+
+    def fake_popen(*args, **kwargs):
+        process = FakePopen()
+        processes.append(process)
+        return process
+
+    cleanup = []
+    monkeypatch.setattr(
+        qualification_runner.subprocess,
+        "Popen",
+        fake_popen,
+    )
+    monkeypatch.setattr(
+        qualification_runner,
+        "_readline_with_timeout",
+        lambda *args, **kwargs: (_ for _ in ()).throw(
+            TimeoutError("worker response timed out")
+        ),
+    )
+    monkeypatch.setattr(
+        qualification_runner,
+        "_terminate_memory_process_tree",
+        lambda psutil_module, launched, *, sampled: cleanup.append(
+            (launched, sampled)
+        ),
+    )
+
+    with pytest.raises(TimeoutError, match="worker response timed out"):
+        qualification_runner._run_memory_worker(
+            backend,
+            tmp_path / "worker.py",
+            {"action": "memory"},
+            timeout_seconds=0.1,
+        )
+
+    assert cleanup == [(processes[0], None)]
+
+    def fail_cleanup(psutil_module, launched, *, sampled):
+        raise RuntimeError("cleanup failed")
+
+    monkeypatch.setattr(
+        qualification_runner,
+        "_terminate_memory_process_tree",
+        fail_cleanup,
+    )
+    with pytest.raises(TimeoutError) as error:
+        qualification_runner._run_memory_worker(
+            backend,
+            tmp_path / "worker.py",
+            {"action": "memory"},
+            timeout_seconds=0.1,
+        )
+    assert error.value.__notes__ == [
+        "memory worker cleanup also failed: cleanup failed"
+    ]
+
+
 def test_memory_worker_warms_small_then_measures_first_large_operation(
     tmp_path, monkeypatch
 ):

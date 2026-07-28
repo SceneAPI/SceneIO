@@ -328,8 +328,8 @@
     "last": "tests/test_points_binary.py::test_bad_magic_rejected"
   },
   "pytest_candidate_collection": {
-    "count": 3399,
-    "sorted_normalized_node_ids_sha256": "9e9fe30b8b9b8da548ef60e1f8b25eddb1b7809b12f328119acf16f9545bd4f4",
+    "count": 3402,
+    "sorted_normalized_node_ids_sha256": "4fb56be9b956fc05efb9d7efe678ce203996827629d4391358b9e259ac57a181",
     "added_nodes": [
       "tests/codecs/test_jpeg.py::test_retained_stb_encoder_bytes_match_the_locked_vectors",
       "tests/test_backend_qualification.py::test_backend_candidate_ledger_has_complete_jpeg_intake",
@@ -361,6 +361,9 @@
       "tests/test_backend_qualification_harness.py::test_installed_python_package_is_bound_to_the_supplied_wheel",
       "tests/test_backend_qualification_harness.py::test_simd_evidence_is_derived_from_and_bound_to_the_generated_header",
       "tests/test_backend_qualification_harness.py::test_effective_rss_uses_the_larger_sampled_or_exact_delta",
+      "tests/test_backend_qualification_harness.py::test_memory_sampler_accepts_direct_or_verified_child_interpreter_pid",
+      "tests/test_backend_qualification_harness.py::test_memory_process_tree_cleanup_stops_launcher_worker_and_descendant",
+      "tests/test_backend_qualification_harness.py::test_memory_worker_failure_invokes_process_tree_cleanup",
       "tests/test_backend_qualification_harness.py::test_memory_worker_warms_small_then_measures_first_large_operation",
       "tests/test_backend_qualification_harness.py::test_timing_variability_gate_rejects_an_unstable_cell",
       "tests/test_backend_qualification_harness.py::test_public_encode_and_decode_surfaces_have_independent_gates",
