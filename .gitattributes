@@ -6,3 +6,6 @@ src/cpp/third_party/tinyobjloader/LICENSE -whitespace
 src/cpp/third_party/miniz/** -text -whitespace
 LICENSES/miniz.txt -text -whitespace
 LICENSES/miniz-zip.txt -text -whitespace
+src/cpp/third_party/nlohmann_json/** -text -whitespace
+LICENSES/nlohmann-json.txt -text -whitespace
+LICENSES/nlohmann-json-source.txt -text -whitespace

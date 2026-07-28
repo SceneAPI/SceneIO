@@ -15,7 +15,7 @@ redistribution choice used by SceneIO is stated explicitly.
 |---|---|---|---|---|
 | nanobind | build requirement `>=2.4` (2.13.0 locally validated) | statically linked binding runtime | BSD-3-Clause | [nanobind.txt](nanobind.txt) |
 | miniz | 3.0.2, commit `293d4db1b7d0ffee9756d035b9ac6f7431ef8492` | vendored and statically linked | MIT | [top-level license](miniz.txt), [ZIP implementation notice](miniz-zip.txt) |
-| nlohmann/json | 3.11.3 | compiled header-only code | MIT | [nlohmann-json.txt](nlohmann-json.txt) |
+| nlohmann/json | 3.11.3, commit `9cca280a4d0ccf0c08f47a99aa71d1b0e52f8d03` | vendored compiled header-only code | MIT; C++11-only Abseil fallback is Apache-2.0 | [top-level license](nlohmann-json.txt), [selected-source attribution](nlohmann-json-source.txt) |
 | Zstandard | 1.5.6 | statically linked | BSD-3-Clause | [zstd.txt](zstd.txt) |
 | fast_float | 6.1.6 | compiled header-only code | MIT option | [fast-float.txt](fast-float.txt) |
 | LAZperf | 3.4.0, commit `b7bbe26109dc986f42d4fc80b8de3d2b6ca634ce` | statically linked selected library sources | Apache-2.0, BSD-3-Clause, BSD-2-Clause | [lazperf.txt](lazperf.txt) |

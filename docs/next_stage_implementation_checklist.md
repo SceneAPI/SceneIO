@@ -3913,7 +3913,7 @@ Perform one dependency per commit.
 | Dependency | Selected revision | Repository source | Local build | Local verification | Commit |
 |---|---|---:|---:|---:|---|
 | miniz | 3.0.2 / `293d4db1b7d0ffee9756d035b9ac6f7431ef8492` | ✅ exact archive files and hashes recorded | ✅ direct hidden static target; no miniz fetch | ✅ local rebuild, parity, strict benchmark, sdist-derived wheel, installed smoke, and three reviews | this commit |
-| nlohmann/json | 3.11.3 | ⬜ | ⬜ | ⬜ | pending |
+| nlohmann/json | 3.11.3 / `9cca280a4d0ccf0c08f47a99aa71d1b0e52f8d03` | ✅ exact 45-header tree and license hashes recorded | ✅ local interface target; no nlohmann/json fetch | ✅ rebuild, parity, strict benchmark, sdist-derived wheel, installed smoke, and three reviews | this commit |
 | zstd | 1.5.6 | ⬜ | ⬜ | ⬜ | pending |
 | fast_float | 6.1.6 | ⬜ | ⬜ | ⬜ | pending |
 | LAZperf | 3.4.0 / `b7bbe26109dc986f42d4fc80b8de3d2b6ca634ce` | ⬜ | ⬜ | ⬜ | pending |
@@ -3951,6 +3951,37 @@ Miniz local evidence at the reviewed tree:
   reviews are clear after adding the source-derived ZIP notice, correcting
   stale R6 wording, pinning notice bytes, and strengthening the all-CMake
   local-source contract.
+
+Nlohmann/json local evidence at the reviewed candidate:
+
+- the 110,988-byte official 3.11.3 release archive has SHA-256
+  `d6c65aca6b1ed68e7a182f4757257b107ae403032760ed6ef121c9d55e81757d`;
+  all 46 selected upstream files—45 multi-header files plus `LICENSE.MIT`—match
+  the 5,041-byte `SOURCE_MANIFEST.sha256`, whose SHA-256 is
+  `7c67147cb0569a82381f7452ef87085c0fd0195bda96f7db7eeb3bb81df4a88b`;
+- the editable MSVC rebuild and native-symbol import pass. The four JSON-backed
+  codec suites plus public mmap, streaming, inspection, and partial paths are
+  `486 passed`; source/build contracts are `17 passed`;
+- the complete suite is unchanged at `3401 passed, 4 skipped`; Ruff and both
+  diff checks pass;
+- the strict all-50 five-run benchmark passes every retained O4/O5 and
+  mmap/sink allocation gate. Its 50,264-byte JSON has SHA-256
+  `f486ee74e89290a1f12e84ccb3311fa76b7329616987e6cee17fc9e829e36c68`;
+- the 4,622,734-byte sdist contains 477 files, all 48 nlohmann/json source and
+  metadata members, byte-validates every selected upstream file against its
+  manifest, and includes all 17 indexed notices (SHA-256
+  `554efddd55aea7359ad5de9308a1026403ec5ed5142ffdf949a47544de6f11f4`);
+  its sdist-derived 2,197,183-byte Windows abi3 wheel contains 85 files, one
+  extension, no native-source or build-layout payload, NumPy as its only
+  unconditional dependency, all 17 indexed notices, and no FFmpeg/libav
+  package entries (SHA-256
+  `1716e1a43a06966d10399cee7d500166a7c7489dadf2a872e7cdfba131fb63e7`);
+- the isolated installed-wheel smoke imports both Python and native modules
+  from the target directory and returns phase `2`. Native inspection reports
+  only Python and standard Windows runtime libraries.
+- the architecture/correctness, test/performance, and
+  platform/package/documentation reviews are clear after correcting the
+  selected-file wording to distinguish the 45 headers from `LICENSE.MIT`.
 
 ### R6.1 — provenance and source intake
 

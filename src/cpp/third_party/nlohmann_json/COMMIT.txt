@@ -1,0 +1,35 @@
+nlohmann/json 3.11.3
+
+Upstream: https://github.com/nlohmann/json
+Tag: v3.11.3
+Commit: 9cca280a4d0ccf0c08f47a99aa71d1b0e52f8d03
+Retrieved: 2026-07-28
+License: MIT (see LICENSE.MIT). Selected headers retain their exact embedded
+SPDX notices; their additional author/source attributions are distributed in
+LICENSES/nlohmann-json-source.txt.
+
+Source archive:
+https://github.com/nlohmann/json/releases/download/v3.11.3/json.tar.xz
+Size: 110988 bytes
+SHA-256:
+d6c65aca6b1ed68e7a182f4757257b107ae403032760ed6ef121c9d55e81757d
+
+Selected repository-contained source:
+- LICENSE.MIT
+- include/nlohmann/** (45 multi-header files)
+
+Every selected upstream file and its SHA-256 is recorded in
+SOURCE_MANIFEST.sha256. The manifest is 5041 bytes with SHA-256:
+7c67147cb0569a82381f7452ef87085c0fd0195bda96f7db7eeb3bb81df4a88b
+
+SceneIO exposes the selected multi-header tree through the same
+nlohmann_json::nlohmann_json interface target used by the prior upstream
+CMake build. The local target retains the upstream cxx_std_11 interface
+feature and default compile behavior; SceneIO itself compiles as C++17.
+
+The alternate single-header amalgamation, upstream CMake/config templates,
+MSVC debugger visualization file, install rules, examples, benchmarks, and
+tests are not stored, configured, or built.
+
+Local patches: none. Every selected source file is byte-exact with the release
+archive.

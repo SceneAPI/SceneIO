@@ -102,10 +102,11 @@ A format may be called stable only when:
   production implementation.
 
 All 50 current codecs already have repo-maintained adapters and optimized I/O
-contracts. Repository source closure is not yet complete: `miniz` 3.0.2 is
-repository-contained, while `nlohmann_json`, `zstd`, `fast_float`, `lazperf`,
-and `libwebp` are still obtained through CMake `FetchContent`. Before the
-post-0.2 codec tier is called stable, vendor those five exact audited revisions
+contracts. Repository source closure is not yet complete: `miniz` 3.0.2 and
+`nlohmann_json` 3.11.3 are repository-contained, while `zstd`, `fast_float`,
+`lazperf`, and `libwebp` are still obtained through CMake `FetchContent`.
+Before the post-0.2 codec tier is called stable, vendor those four exact audited
+revisions
 into `src/cpp/third_party/`, copy their upstream notices into `LICENSES/`,
 retain the current local patches, and prove an offline sdist-to-wheel build on
 MSVC, GCC 10, and AppleClang.
@@ -2188,9 +2189,9 @@ lane before starting the next unit.
    remote comparison.
 3. **Repository source closure for the stable tier (R6).**
    Vendor the exact selected revisions under `src/cpp/third_party/`. Miniz
-   3.0.2 is repository-contained; the remaining closure set is nlohmann/json
-   3.11.3, zstd 1.5.6, fast_float 6.1.6, LAZperf 3.4.0 commit, and libwebp
-   1.5.0. Include a future backend replacement only after it passes its
+   3.0.2 and nlohmann/json 3.11.3 are repository-contained; the remaining
+   closure set is zstd 1.5.6, fast_float 6.1.6, LAZperf 3.4.0 commit, and
+   libwebp 1.5.0. Include a future backend replacement only after it passes its
    selection gate, and retire an old kernel only when no live codec uses it.
    Preserve local LAZperf integration changes, add `COMMIT.txt`
    provenance/hashes, retain all `LICENSES/` notices, and remove default-build

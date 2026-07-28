@@ -19,6 +19,7 @@ EXPECTED_NOTICES = {
     "miniz-zip.txt",
     "miniz.txt",
     "nanobind.txt",
+    "nlohmann-json-source.txt",
     "nlohmann-json.txt",
     "sqlite.txt",
     "stb.txt",
@@ -31,7 +32,6 @@ FETCHCONTENT_NOTICE = {
     "fast_float": "fast-float.txt",
     "lazperf": "lazperf.txt",
     "libwebp": "libwebp.txt",
-    "nlohmann_json": "nlohmann-json.txt",
     "zstd": "zstd.txt",
 }
 
@@ -39,6 +39,7 @@ VENDORED_NOTICE = {
     "cgltf": "cgltf.txt",
     "lodepng": "lodepng.txt",
     "miniz": "miniz.txt",
+    "nlohmann_json": "nlohmann-json.txt",
     "sqlite": "sqlite.txt",
     "stb": "stb.txt",
     "tinyexr": "tinyexr.txt",
@@ -92,6 +93,55 @@ SOURCE_CLOSURE = {
                 "c659a67936d248be68b7a7c03b8d359b"
             ),
         },
+    },
+    "nlohmann_json": {
+        "version": "3.11.3",
+        "commit": "9cca280a4d0ccf0c08f47a99aa71d1b0e52f8d03",
+        "archive_sha256": (
+            "d6c65aca6b1ed68e7a182f4757257b10"
+            "7ae403032760ed6ef121c9d55e81757d"
+        ),
+        "notice": "nlohmann-json.txt",
+        "source_notice": "nlohmann-json-source.txt",
+        "source_notice_markers": (
+            "2013-2023 Niels Lohmann",
+            "2016-2021 Evan Nemerson",
+            "2009 Florian Loitsch",
+            "2008-2009 Björn Hoehrmann",
+            "2018 The Abseil Authors",
+            "10cb35e459f5ecca5b2ff107635da0bfa41011b4",
+        ),
+        "source_notice_sources": (
+            "include/nlohmann/thirdparty/hedley/hedley.hpp",
+            "include/nlohmann/detail/conversions/to_chars.hpp",
+            "include/nlohmann/detail/output/serializer.hpp",
+            "include/nlohmann/detail/meta/cpp_future.hpp",
+        ),
+        "license": "LICENSE.MIT",
+        "manifest": "SOURCE_MANIFEST.sha256",
+        "manifest_sha256": (
+            "7c67147cb0569a82381f7452ef87085c"
+            "0fd0195bda96f7db7eeb3bb81df4a88b"
+        ),
+        "cmake_patterns": (
+            (
+                r"set\(nlohmann_json_SOURCE_DIR\s*"
+                r'"\$\{PROJECT_SOURCE_DIR\}/src/cpp/third_party/nlohmann_json"\)'
+            ),
+            r"^add_library\(nlohmann_json INTERFACE\)$",
+            (
+                r"^add_library\(nlohmann_json::nlohmann_json "
+                r"ALIAS nlohmann_json\)$"
+            ),
+            (
+                r"^target_compile_features\(nlohmann_json "
+                r"INTERFACE cxx_std_11\)$"
+            ),
+            (
+                r"target_include_directories\(\s*nlohmann_json INTERFACE "
+                r'"\$\{nlohmann_json_SOURCE_DIR\}/include"\)'
+            ),
+        ),
     },
 }
 
@@ -152,11 +202,34 @@ def test_repository_contained_native_sources_match_recorded_hashes() -> None:
         assert entry["version"] in provenance
         assert entry["commit"] in provenance
         assert entry["archive_sha256"] in provenance
-        for relative_path, expected_hash in entry["files"].items():
+        if "manifest" in entry:
+            manifest = source_root / entry["manifest"]
+            manifest_bytes = manifest.read_bytes()
+            assert hashlib.sha256(manifest_bytes).hexdigest() == entry["manifest_sha256"]
+            assert entry["manifest_sha256"] in provenance
+            expected_files = {}
+            for line in manifest_bytes.decode("utf-8").splitlines():
+                expected_hash, relative_path = line.split("  ", 1)
+                path = Path(relative_path)
+                assert not path.is_absolute()
+                assert ".." not in path.parts
+                expected_files[relative_path] = expected_hash
+            actual_files = {
+                path.relative_to(source_root).as_posix()
+                for path in source_root.rglob("*")
+                if path.is_file()
+                and path.name not in {"COMMIT.txt", entry["manifest"]}
+            }
+            assert actual_files == set(expected_files)
+        else:
+            expected_files = entry["files"]
+
+        for relative_path, expected_hash in expected_files.items():
             source = source_root / relative_path
             actual_hash = hashlib.sha256(source.read_bytes()).hexdigest()
             assert actual_hash == expected_hash, source
-            assert expected_hash in provenance
+            if "manifest" not in entry:
+                assert expected_hash in provenance
 
 
 def test_repository_contained_native_licenses_are_exact_distribution_copies() -> None:
@@ -167,19 +240,34 @@ def test_repository_contained_native_licenses_are_exact_distribution_copies() ->
         distribution_notice = (LICENSES / entry["notice"]).read_bytes()
         assert distribution_notice == source_license
 
-        source_text = (
-            ROOT / "src/cpp/third_party" / project / "miniz.c"
-        ).read_bytes().decode("utf-8")
-        blocks = re.findall(r"/\*{10,}\n(.*?)\*{10,}/", source_text, re.DOTALL)
-        source_block = next(block for block in blocks if "Martin Raiber" in block)
-        source_notice = "\n".join(
-            line[3:] if line.startswith(" * ") else ""
-            for line in source_block.splitlines()
-        ).strip()
         packaged_notice = (LICENSES / entry["source_notice"]).read_bytes().decode(
             "utf-8"
         )
-        assert packaged_notice == f"{source_notice}\n"
+        if project == "miniz":
+            source_text = (
+                ROOT / "src/cpp/third_party" / project / "miniz.c"
+            ).read_bytes().decode("utf-8")
+            blocks = re.findall(
+                r"/\*{10,}\n(.*?)\*{10,}/", source_text, re.DOTALL
+            )
+            source_block = next(
+                block for block in blocks if "Martin Raiber" in block
+            )
+            source_notice = "\n".join(
+                line[3:] if line.startswith(" * ") else ""
+                for line in source_block.splitlines()
+            ).strip()
+            assert packaged_notice == f"{source_notice}\n"
+
+        selected_sources = "\n".join(
+            (
+                ROOT / "src/cpp/third_party" / project / relative_path
+            ).read_bytes().decode("utf-8")
+            for relative_path in entry.get("source_notice_sources", ())
+        )
+        for marker in entry.get("source_notice_markers", ()):
+            assert marker in selected_sources
+            assert marker in packaged_notice
 
 
 def test_repository_contained_native_sources_replace_their_fetches() -> None:

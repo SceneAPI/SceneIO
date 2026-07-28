@@ -35,12 +35,21 @@ set_target_properties(
 # exact selected sources move under src/cpp/third_party/.
 include(FetchContent)
 
-# nlohmann/json (MIT), header-only — for the transforms.json codec.
-FetchContent_Declare(nlohmann_json
-  URL https://github.com/nlohmann/json/releases/download/v3.11.3/json.tar.xz)
-set(JSON_BuildTests OFF CACHE INTERNAL "")
-set(JSON_Install OFF CACHE INTERNAL "")
-FetchContent_MakeAvailable(nlohmann_json)
+# nlohmann/json 3.11.3 (MIT), header-only — repository-contained multi-header
+# source for the JSON codecs. Recreate the selected upstream interface target
+# without configuring its install rules, tests, or alternate amalgamation.
+set(nlohmann_json_SOURCE_DIR
+  "${PROJECT_SOURCE_DIR}/src/cpp/third_party/nlohmann_json")
+if(NOT EXISTS "${nlohmann_json_SOURCE_DIR}/include/nlohmann/json.hpp" OR
+   NOT EXISTS "${nlohmann_json_SOURCE_DIR}/LICENSE.MIT")
+  message(FATAL_ERROR
+    "Repository-contained nlohmann/json 3.11.3 sources are incomplete")
+endif()
+add_library(nlohmann_json INTERFACE)
+add_library(nlohmann_json::nlohmann_json ALIAS nlohmann_json)
+target_compile_features(nlohmann_json INTERFACE cxx_std_11)
+target_include_directories(
+  nlohmann_json INTERFACE "${nlohmann_json_SOURCE_DIR}/include")
 
 # zstd (BSD) — for the SPZ v4 (NGSP) container. Build only the static lib.
 set(ZSTD_BUILD_SHARED OFF CACHE BOOL "" FORCE)
