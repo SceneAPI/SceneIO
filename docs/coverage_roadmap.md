@@ -10,6 +10,12 @@
 > [`repository_organization_plan.md`](repository_organization_plan.md), with
 > its reviewed execution checklist in
 > [`next_stage_implementation_checklist.md`](next_stage_implementation_checklist.md).
+> R6 is closed at packaged source commit `105b301`: exact-head CI
+> `30405666674`, native-runtime validation `30405666673`, and build-only
+> three-platform package run `30406706115` pass, with publication skipped.
+> The downloaded sdist and all three cp312-abi3 wheels pass independent
+> inventory inspection. No roadmap item is automatically activated by this
+> closure; later pending-R6 wording is historical and superseded by this note.
 > R2 is closed at registry implementation `3e46d82` plus platform-contract
 > repair `9928c6d`. R3.1a has split benchmark models, measurements, and
 > reporting behind the compatible CLI. R3.1b closes at `0bdfe0f`; normal run
@@ -133,13 +139,11 @@ for each remaining item.
 Current test counts, workflow evidence, and the immutable validated checkpoint
 are maintained only in
 [`format_coverage.md`](format_coverage.md#format--data-structure-coverage);
-  this policy roadmap intentionally does not duplicate them. The next execution
-  order is deliberately bounded: complete one user-gated exact-head R6 package
-  matrix, inspect its artifacts, record one final review, then finish animated
-  WebP/APNG and RTMV. The provisional performance ledger remains a
-  trigger-based post-R6 optimization backlog rather than delaying this queue.
-The common optional-library feature pattern follows before HDF5/hloc, TIFF,
-E57, and Parquet.
+  this policy roadmap intentionally does not duplicate them. R6 package closure
+  is complete. No next execution order is active; animation formats, RTMV, and
+  the common optional-library feature pattern remain future choices that start
+  only on explicit user direction. The provisional performance ledger remains
+  a trigger-based post-R6 optimization backlog rather than an active gate.
 
 **License gate (hard):** MIT / BSD / Apache‑2.0 / zlib / libpng / HPND / public
 domain only. No copyleft (GPL/AGPL/MPL data libs), no proprietary SDKs, no
@@ -400,10 +404,9 @@ identity) regardless of codec progress — codecs work today via informal labels
   and libwebp complete the R6 repository-source set. The build now requires
   `Python::SABIModule` and verifies nanobind’s stable target/suffix rather than
   accepting a CPython-specific fallback. `publish.yml` builds all platform
-  wheels from one verified sdist with locked build inputs. The exact-tree
-  package check is the final pre-commit gate and is recorded with the closure
-  commit; user-gated GCC 10/AppleClang execution remains the R6 validation
-  gate.
+  wheels from one verified sdist with locked build inputs. Final build-only run
+  `30406706115` passes its exact-tree MSVC, GCC 10, and AppleClang package jobs
+  plus downloaded-artifact inspection, closing the R6 validation gate.
 - Optional system libs compile in per `SCENEIO_WITH_*`; absent → the codec
   reports `needs_dep` and raises a clean "format not built" error, never an
   import crash. The cibuildwheel images gain them via vcpkg/conda as each phase

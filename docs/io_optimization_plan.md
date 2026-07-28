@@ -36,6 +36,16 @@ tests and passes 3,335 with four documented skips, and Ruff is clean. All three
 independent closure reviews and the exact 367-file-tree to 368-file-sdist to
 81-member-wheel gate pass; a fresh installed environment contains only SceneIO
 and NumPy. PyCOLMAP and `gsply` remain test-only parity support.
+
+R6 package closure is complete at packaged source commit `105b301`. Exact-head
+CI `30405666674`, native-runtime validation `30405666673`, and build-only
+MSVC/manylinux2014 GCC 10/AppleClang package run `30406706115` pass; the PyPI
+job is skipped. Independent inspection confirms one exact sdist and three
+cp312-abi3 wheels, the NumPy-only Python runtime contract, all notices, and the
+expected native payloads. The artifact hashes are recorded in
+[`next_stage_implementation_checklist.md`](next_stage_implementation_checklist.md#r6-closure-evidence).
+O0-O5 and the repository-organization gate are therefore closed; provisional
+backend comparisons remain optional trigger-based work.
 R3.3 closes at `811cb0d`; normal run `30300122309` and
 compiler-instrumented run `30300122324` pass. The R3.4 candidate makes the
 NumPy-only installed-wheel gate complete rather than representative: all 50
@@ -112,11 +122,10 @@ The expanded transport/access tier is therefore cross-platform validated.
 Per-codec backend qualification is tracked separately from O0-O5. The selected
 default native-source intake is complete. Unmeasured candidate comparisons
 remain an optional post-R6 backlog rather than a stage-exit gate. R6 package
-review corrected and
-configure-checked the stable-ABI build path; local Windows and Ubuntu builds
-now use the expected stable extension names. The final exact-tree MSVC package
-gate precedes one user-gated GCC 10/AppleClang R6 package run and artifact
-inspection.
+review corrected and configure-checked the stable-ABI build path; local Windows
+and Ubuntu builds use the expected stable extension names. Final build-only run
+`30406706115` passes the exact-tree MSVC, GCC 10, and AppleClang package jobs
+and downloaded-artifact inspection.
 
 Post-0.2 format expansion inherits the same gates. The registry currently has
 50 codecs: 44 file containers, three multi-file containers, and three directory

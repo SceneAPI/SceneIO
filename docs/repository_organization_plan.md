@@ -1,8 +1,9 @@
 # Repository organization and codec-performance gate
 
-Status: R1-R5 and local R6 are complete; one exact-head build-only package
-matrix, artifact inspection, and final review remain before the next format
-implementation.
+Status: complete. R1-R6 close at packaged source commit
+`105b3017dae37345a6974f289e661d9173186a2a`; the exact-head automatic runs,
+three-platform build-only matrix, artifact inspection, and final review pass.
+No next format implementation is implied by closure.
 
 This plan keeps SceneIO manageable as the registry grows beyond 50 codecs. It
 is a behavior-preserving architecture and evidence pass: no format is added,
@@ -21,6 +22,13 @@ embedded extension’s ABI. R6 review found and corrected the missing
 unless nanobind selects its stable target and suffix; corrected Windows and
 Ubuntu binaries use `_core.pyd` and `_core.abi3.so`, respectively.
 
+Final CI run `30405666674`, native-runtime run `30405666673`, and build-only
+package run `30406706115` pass at packaged source commit `105b301`. The release
+run verifies one exact source distribution and its Windows MSVC,
+manylinux2014 GCC 10, and macOS AppleClang cp312-abi3 wheels; publication is
+skipped. Exact hashes and native payloads are recorded in
+[`next_stage_implementation_checklist.md`](next_stage_implementation_checklist.md#r6-closure-evidence).
+
 N0 closes at validated implementation commit `a5e7fa4`: local MSVC, normal
 Linux CI, pinned GCC 10, the Linux/Windows/macOS focused matrix, the complete
 and focused compiler-instrumented native jobs, the 50-codec performance guard,
@@ -35,8 +43,8 @@ documented skips; the Windows abi3 wheel built from the exact `95061c6` source
 archive passes a fresh NumPy-only installed-wheel smoke. Build-only release run
 30189483142 also builds the source archive and builds and smoke-tests the Linux,
 macOS, and Windows wheel sets with publication skipped. The later R3-R5 work
-and local R6 source/package proof are complete; no new format starts before the
-bounded final R6 package matrix and closure review.
+and R6 source/package proof, final package matrix, artifact inspection, and
+closure review are complete. No new format starts without explicit direction.
 
 R4.1 is complete and pushed at `b2cf5d4` after the R3.4 checkpoint. The root build file now owns
 only project language/standard setup and the ordered inclusion of four focused
@@ -403,7 +411,7 @@ verification have accumulated in a few large modules:
 | Benchmark | compatible `bench_io.py` entry point plus `io_bench/{model,measure,reporting,runner}.py`, all eight lower family modules, and shared `families/common.py` | all benchmark ownership is lower; the final R3.2 unit adds built-in completeness and strict comparison-provider controls |
 | Cross-codec tests | shared 50-codec catalog and 44-case buffer builder; focused streaming, inspection, array-partial, and image-partial modules; lower partial assertions; `test_io_mmap.py`, about 680 lines; shared partial invariants | mmap, streaming, and inspection ownership is split; partial behavior is migrating one family at a time |
 | Execution plan | `format_gap_implementation_plan.md`, about 2,500 lines | historical evidence and the active queue are easy to confuse |
-| Native dependencies | twelve source-complete in-tree projects and no production `FetchContent` project | miniz, nlohmann/json, zstd, fast_float, LAZperf, and libwebp complete the R6 repository-source rows; the corrected build requires and checks the Python stable ABI, and user-gated GCC 10/AppleClang package confirmation remains |
+| Native dependencies | twelve source-complete in-tree projects and no production `FetchContent` project | miniz, nlohmann/json, zstd, fast_float, LAZperf, and libwebp complete the R6 repository-source rows; the corrected build requires and checks the Python stable ABI, and final MSVC/GCC 10/AppleClang package confirmation passes in run `30406706115` |
 
 The public API and native ABI remain stable throughout the reorganization.
 
@@ -1148,9 +1156,9 @@ installed smoke.
   and the stable suffix are now mandatory. Local MSVC and Ubuntu builds
   exercise the corrected Windows/Unix paths, while the final exact-tree
   disconnected sdist-to-wheel gate records the local package proof. The
-  prepared workflow makes every target consume that one verified sdist with
-  locked build inputs. The shared R6 closure then awaits its user-gated GCC 10
-  and AppleClang execution.
+  workflow makes every target consume that one verified sdist with locked
+  build inputs. Final run `30406706115` passes its user-authorized MSVC,
+  GCC 10, and AppleClang execution and downloaded-artifact inspection.
 - Apply local changes as documented patch files or narrowly marked source
   changes.
 - Retain `FETCHCONTENT_FULLY_DISCONNECTED=ON`, package-index-disabled native
@@ -1176,13 +1184,12 @@ earlier gate.
 | R6a+ | Store each selected fetched dependency in-tree with provenance, license, hashes, options, and patches; switch only that dependency to local source | golden output, focused codec parity, dependency revision/options, benchmark within recorded variance | editable rebuild/full suite/Ruff per dependency; `FETCHCONTENT_FULLY_DISCONNECTED=ON` configure and sdist build |
 | R6-final | Remove all default native-source network fetches and validate the packaged result | clean source checkout, empty native caches, `PIP_NO_INDEX=1`, offline sdist, wheels built from that exact sdist, wheel contents/native dependencies, exact 50-id NumPy-only smoke, positive license inventory | local MSVC plus user-authorized manylinux2014 and macOS build-only wheel matrix; docs and license inventory synchronized |
 
-R6-final is the only active stage gate. Run the exact-head build-only package
-matrix once, inspect the sdist and three wheels, record the evidence, and obtain
-one final review. Do not expand the benchmark matrix or start another candidate
-survey before closure. A hosted-run interruption may be retried once; a
-reproducible product failure receives a focused fix and a fresh exact-head run.
-The documentation-only closure record names the packaged source SHA and does
-not recursively require another package matrix.
+R6-final is closed. Exact-head automatic runs `30405666674` and `30405666673`
+and build-only package run `30406706115` pass packaged source `105b301`; its
+sdist and three wheels pass independent inventory inspection, and publication
+is skipped. The documentation-only closure record names that packaged source
+SHA and does not recursively require another package matrix. Further candidate
+surveys are trigger-based post-R6 work.
 
 Candidate comparisons use randomized/interleaved repeated samples for hot-path
 throughput and child-process samples for RSS/startup. Record raw JSON,

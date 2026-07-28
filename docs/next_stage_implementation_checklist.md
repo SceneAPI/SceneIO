@@ -34,19 +34,19 @@ The bounded path to full R6 closure is:
 - [x] Finish N0-R4 organization, the bounded R5 candidate decision, R6 source
       intake, local stable-ABI package proof, complete local suite, strict
       50-codec guard, NumPy-only smoke, and three independent reviews.
-- [ ] Finish the single Windows packaging correction exposed by the build-only
+- [x] Finish the single Windows packaging correction exposed by the build-only
       matrix: repair from the Visual Studio redistributable directory, retain
       the original runtime filename and bytes, include the required notices,
       and prove the repaired wheel installs and passes the existing smoke test.
-- [ ] Run the focused and complete local gates plus the required three-lens
+- [x] Run the focused and complete local gates plus the required three-lens
       review, then commit and push one implementation checkpoint. Require green
       automatic CI and native-runtime validation at that exact commit.
-- [ ] Dispatch `publish.yml` once more at that reviewed branch head. The manual
+- [x] Dispatch `publish.yml` once more at that reviewed branch head. The manual
       run is build-only and cannot publish.
-- [ ] Download and inspect its one sdist and three abi3 wheels. Require the
+- [x] Download and inspect its one sdist and three abi3 wheels. Require the
       existing inventory, license, stable-ABI, NumPy-only, native-dependency,
       and all-50 installed-smoke checks to pass.
-- [ ] Record the workflow URL and artifact hashes, run the focused
+- [x] Record the workflow URL and artifact hashes, run the focused
       documentation/ledger contracts, obtain one final three-lens review, and
       commit the documentation-only closure record. Record both the packaged
       source SHA and the closure-record SHA.
@@ -68,10 +68,45 @@ Closure is deliberately bounded:
 - PyPI configuration, tagging, and publication are release-time actions, not
   R6 validation gates.
 
-When the five unchecked items above pass, R6 and this
-repository-organization stage are complete. The remaining provisional ledger
-rows continue as an optional, prioritized optimization backlog. This is a hard
-stop: no post-R6 backlog item is pulled into the closure path.
+The five items above pass. R6 and this repository-organization stage are
+complete. The remaining provisional ledger rows continue as an optional,
+prioritized optimization backlog. This is a hard stop: no post-R6 backlog item
+is pulled into the closure path.
+
+### R6 closure evidence
+
+The packaged source is exact commit
+`105b3017dae37345a6974f289e661d9173186a2a`. Automatic
+[CI run 30405666674](https://github.com/SceneAPI/SceneIO/actions/runs/30405666674)
+and
+[native-runtime run 30405666673](https://github.com/SceneAPI/SceneIO/actions/runs/30405666673)
+pass at that commit. Build-only
+[release run 30406706115](https://github.com/SceneAPI/SceneIO/actions/runs/30406706115)
+then builds one exact source distribution and three wheels from it; its combined
+inventory passes and its PyPI job is skipped.
+
+| Artifact | Verified result |
+|---|---|
+| Source distribution | 834 exact source files plus generated `PKG-INFO`; 835 members; 24 license assets; source-tree SHA-256 `3e353c2b6cd14d044bc71a0280091ab0f6396e2c649262061e26c015049ffcf4`; archive SHA-256 `cf8673ec3db22a8fa5d6bd13e23b5ce132680204c8d1f2e3c2e22874f61d410d` |
+| macOS AppleClang arm64 | `sceneio-0.2.0-cp312-abi3-macosx_11_0_arm64.whl`; 90 members; SHA-256 `30bcb3799fe45f60c055d11e95ef2c41c9d188c779391f629a508dc709da1e8c` |
+| manylinux2014 GCC 10 x86-64 | `sceneio-0.2.0-cp312-abi3-manylinux2014_x86_64.manylinux_2_17_x86_64.whl`; 90 members; SHA-256 `b13edb065fa3260656cadeac0a792ee7dc7d86fd4293373c57d7ec889fa69266` |
+| Windows MSVC amd64 | `sceneio-0.2.0-cp312-abi3-win_amd64.whl`; 92 members; SHA-256 `0107fe62e4e3b7f7732b234eb0b8923c396d2f924b8acefeec4e05047c37d17d` |
+
+Every wheel has all 24 notices, 62 Python runtime files, and
+`numpy>=1.26` as its sole Python runtime requirement. Each hosted wheel job
+passes strict stable-ABI inspection and the installed all-50-codec smoke.
+macOS and manylinux contain only `_core.abi3.so` as native payload. Windows
+contains `_core.pyd` plus unmodified `sceneio.libs/msvcp140.dll`; the hosted
+repair selects Visual Studio 2022 Enterprise VC143
+`14.44.35112/x64/Microsoft.VC143.CRT`, and both the hosted log and an
+independent downloaded-artifact check record the DLL SHA-256 as
+`0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9`.
+The source and build configuration contain no FFmpeg/libav implementation or
+dependency.
+
+The documentation-only commit containing this section is the closure-record
+commit; its SHA is reported by Git after creation rather than embedded
+recursively. No tag, release, or package publication is part of this closure.
 
 Status: N0.1-N0.5 remain validated at immutable implementation commit
 `a5e7fa4` on `phase0-nanobind-core`, including the nonpublishing
@@ -171,11 +206,11 @@ stb remains unchanged, and the user-gated GCC 10/AppleClang comparison was not
   package inventory, 22-license inclusion, and all-50 Python 3.12 smoke, but
   its wheel is withdrawn as stable-ABI evidence by the correction above. The
   corrected CMake build now selects and verifies nanobind’s stable-ABI target
-  on Windows and Ubuntu. `publish.yml` is prepared so its three wheel jobs
+  on Windows and Ubuntu. `publish.yml` makes its three wheel jobs
   verify and unpack one sdist, use a hash-locked build wheelhouse, and run the
-  same inventory/smoke gates. The corrected exact-tree package is rebuilt only
-  after final review and its hashes are retained in the commit record; the
-  user-gated GCC 10/AppleClang build-only run remains.
+  same inventory/smoke gates. Final build-only run `30406706115` rebuilds the
+  corrected exact-tree package on MSVC, GCC 10, and AppleClang; its inspected
+  artifact hashes are retained in the closure record.
 
 This is the operational checklist for the repository-organization and
 codec-performance stage defined in
@@ -4005,10 +4040,9 @@ Perform one dependency per commit.
 | LAZperf | 3.4.0 / `b7bbe26109dc986f42d4fc80b8de3d2b6ca634ce` | ✅ exact 47-file tree, pristine/final manifests, and seven-file patch recorded | ✅ explicit hidden static target; no LAZperf fetch | ✅ rebuild, parity, strict benchmark, exact package, isolated smoke, and three reviews | `801190e` |
 | libwebp | 1.5.0 / `a4d7a715337ded4451fec90ff8ce79728e04126c` | ✅ exact 203-file core/build closure and notices recorded | ✅ local unmodified upstream CMake/SIMD static target; no libwebp fetch | ✅ rebuild, parity, strict benchmark, exact package, isolated smoke, and three reviews | `8ef2537` |
 
-All six rows satisfy R6.1 and R6.2 in separate green commits. The local MSVC
-portion of R6.3 is complete; the final three-toolchain exit remains open until
-the user-authorized build-only workflow supplies GCC 10 and AppleClang
-artifacts.
+All six rows satisfy R6.1 and R6.2 in separate green commits. Final build-only
+run `30406706115` completes R6.3 across MSVC, GCC 10, and AppleClang; its
+downloaded artifacts pass the closure inspection recorded above.
 
 Miniz local evidence at the reviewed tree:
 
@@ -4421,7 +4455,7 @@ R6 exits when:
 - [x] all selected default sources are repository-contained;
 - [x] no default CMake configure path downloads native source;
 - [x] every dependency has current provenance/license/patch metadata;
-- [ ] native-source-offline MSVC, manylinux2014 GCC 10, and AppleClang
+- [x] native-source-offline MSVC, manylinux2014 GCC 10, and AppleClang
       sdist-to-wheel builds pass (NumPy is separately pre-provisioned for
       installed-wheel smoke, not required to compile the package);
 - [x] all 50 codecs pass the installed-wheel smoke locally; the exact same
@@ -4491,8 +4525,8 @@ more samples; it is not rounded into a claimed win.
 
 Local exit:
 
-- [ ] N0 and R1-R6 are complete in green commits.
-- [ ] Worktree is clean and all authoritative documents agree.
+- [x] N0 and R1-R6 are complete in green commits.
+- [x] Worktree is clean and all authoritative documents agree.
 - [x] Full local MSVC suite, Ruff, 50-codec benchmark guard, sdist/wheel, and
       NumPy-only smoke pass.
 - [x] The user-directed lean closure policy accepts the verified current
@@ -4510,18 +4544,18 @@ Remote validation checkpoints, only after explicit user authorization:
 - N/A for the current R5 result — no backend was selected. A future selection
   must dispatch the nonpublishing old/new A/B matrix on MSVC, manylinux2014
   GCC 10, and AppleClang.
-- [ ] At final R6 exit, push the reviewed branch and dispatch the build-only
+- [x] At final R6 exit, push the reviewed branch and dispatch the build-only
       `publish.yml` workflow. Its wheel jobs consume the exact sdist produced
       by its sdist job.
-- [ ] Download and inspect manylinux2014 x86-64, macOS arm64, Windows amd64
+- [x] Download and inspect manylinux2014 x86-64, macOS arm64, Windows amd64
       abi3 wheels, plus the sdist.
-- [ ] Record workflow URLs, artifact hashes, wheel tags, dependency closure,
+- [x] Record workflow URLs, artifact hashes, wheel tags, dependency closure,
       installed capabilities, and smoke results.
 - [x] Do not create or push a release tag during validation.
 - [x] Keep PyPI trusted-publisher/environment re-verification, tagging, and
       publication outside R6. They remain explicit user-controlled release
       actions.
-- [ ] Obtain one final three-lens review and commit the closure record; do not
+- [x] Obtain one final three-lens review and commit the closure record; do not
       start another candidate sweep or format wave first.
 
 Only after this stage is validated may the format queue resume with

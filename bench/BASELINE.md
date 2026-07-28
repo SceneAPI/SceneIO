@@ -3013,11 +3013,10 @@ and structural projection
 `tools/verify_distribution.py` now makes the package inventory repeatable,
 requires matching `cp312-abi3` filename/internal tags and the exact platform
 matrix, while `tools/r6-wheelhouse.lock` pins the build and smoke inputs. The
-prepared build-only release graph hashes one sdist and makes its manylinux2014
-GCC 10, Windows MSVC, and macOS AppleClang wheel jobs consume that exact artifact.
-The corrected exact staged tree is packaged after final review and its
-non-self-referential hashes are retained in the commit record. Executing the
-hosted GCC 10/AppleClang confirmation remains user-gated.
+build-only release graph hashes one sdist and makes its manylinux2014 GCC 10,
+Windows MSVC, and macOS AppleClang wheel jobs consume that exact artifact. Final
+run `30406706115` passes this hosted confirmation; its non-self-referential
+hashes are retained in the closure record.
 
 The automatic run for exact R6 package commit `3747447` exposed that the
 scale-0.001 smoke contract incorrectly held the full-size strict projection.
@@ -3053,9 +3052,26 @@ only for a measured regression, material hotspot, or concrete replacement
 proposal and continues to use the existing production-path qualification
 protocol.
 
-The active closure work is therefore bounded to one user-authorized exact-head
-build-only `publish.yml` run, inspection of its sdist and three abi3 wheels,
-and one final evidence/review commit. The documentation-only closure record
-names the packaged source SHA and does not recursively repeat the package
-matrix. PyPI configuration, tags, and publication are release-time work and
-are not R6 gates.
+That bounded closure is complete at packaged source commit
+`105b3017dae37345a6974f289e661d9173186a2a`. Exact-head CI
+`30405666674` and native-runtime run `30405666673` pass. Build-only
+`publish.yml` run `30406706115` passes one exact sdist, all three cp312-abi3
+wheel jobs, combined inventory, and installed all-50-codec smoke; its PyPI job
+is skipped.
+
+The sdist has 835 members (834 exact source files plus `PKG-INFO`), 24 license
+assets, source-tree SHA-256
+`3e353c2b6cd14d044bc71a0280091ab0f6396e2c649262061e26c015049ffcf4`,
+and archive SHA-256
+`cf8673ec3db22a8fa5d6bd13e23b5ce132680204c8d1f2e3c2e22874f61d410d`.
+Wheel SHA-256 values are
+`30bcb3799fe45f60c055d11e95ef2c41c9d188c779391f629a508dc709da1e8c`
+for macOS arm64,
+`b13edb065fa3260656cadeac0a792ee7dc7d86fd4293373c57d7ec889fa69266`
+for manylinux2014 x86-64, and
+`0107fe62e4e3b7f7732b234eb0b8923c396d2f924b8acefeec4e05047c37d17d`
+for Windows amd64. All retain `numpy>=1.26` as the sole Python runtime
+requirement. This package-only closure does not change any benchmark result or
+promote a provisional backend row. The documentation-only closure record does
+not recursively repeat the package matrix; PyPI configuration, tags, and
+publication remain separate release-time work.

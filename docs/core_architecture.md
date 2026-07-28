@@ -7,12 +7,14 @@ things that keep this expansible as the format list from
 > **Growth checkpoint:** the live registry has reached 50 codec ids. The
 > format-focused native layer remains coherent, but registry, inspection,
 > benchmark, test-matrix, dependency, and binding wiring have outgrown a flat
-> layout. The behavior-preserving R3-R5 organization work and local R6 source
-> closure are complete. No new codec wave begins until the one remaining
-> user-gated exact-head R6 package matrix and closure review in
-> [`repository_organization_plan.md`](repository_organization_plan.md) pass.
-> The paths below describe current wiring; the linked plan defines the target
-> family boundaries and compatibility tests.
+> layout. The behavior-preserving R3-R5 organization work and R6 source/package
+> closure are complete at packaged source commit `105b301`. Exact-head CI,
+> native-runtime validation, the MSVC/GCC 10/AppleClang build-only matrix,
+> artifact inspection, and closure review pass; publication is skipped. A new
+> codec wave starts only on explicit user direction. The paths below describe
+> the current family boundaries and compatibility contracts; full closure
+> evidence is in
+> [`next_stage_implementation_checklist.md`](next_stage_implementation_checklist.md#r6-closure-evidence).
 >
 > R3.3 closes at `811cb0d` with normal run `30300122309` and
 > compiler-instrumented run `30300122324` passing. The R3.4 installed-wheel
@@ -425,8 +427,8 @@ must ultimately be pinned under `src/cpp/third_party/`, built into `_core`, and
   MSVC sdist-to-wheel build, package inventory, license gate, and all-50
   installed smoke form the final local package gate. The release workflow
   makes every platform wheel consume that one verified sdist with hash-locked
-  build inputs; its user-gated GCC 10 and AppleClang execution remains the
-  final R6 validation gate. The R5 JPEG
+  build inputs. Final run `30406706115` passes its MSVC, GCC 10, and AppleClang
+  execution and downloaded-artifact inspection, closing R6. The R5 JPEG
 candidate is
 additionally built by a default-off external project from the official
 libjpeg-turbo 3.2.0 archive. The clean MSVC qualification rejected that exact

@@ -1,12 +1,12 @@
 # Format-gap implementation, verification, and validation plan
 
-- **Status:** active dependency queue after the validated existing-format
-  checkpoint. Exact current capabilities, test counts, workflow evidence, and
-  release state are maintained in
+- **Status:** the existing-format R6 gate is closed at packaged source commit
+  `105b3017dae37345a6974f289e661d9173186a2a`. Exact current capabilities,
+  test counts, workflow evidence, and release state are maintained in
   [`format_coverage.md`](format_coverage.md).
-- **Current program gate:** finish the one exact-head R6 package matrix and
-  closure review before the next codec wave. Exhaustive backend comparison is
-  a trigger-based post-R6 optimization activity, not a release prerequisite.
+- **Current program gate:** none. A future codec wave starts only on explicit
+  user direction. Exhaustive backend comparison remains a trigger-based
+  post-R6 optimization activity, not a release prerequisite.
 - **Scope:** close every unblocked format gap declared by SceneIO's coverage
   documents without reimplementing the 0.2.0 codec tier.
 
@@ -19,7 +19,7 @@ these documents and the public capability manifest aligned. Repository
 restructuring and the optional backend performance qualification mechanism are
 specified in
 [`repository_organization_plan.md`](repository_organization_plan.md). The
-reviewed, commit-sized checklist for the active R6 gate is
+reviewed, commit-sized R6 closure record is
 [`next_stage_implementation_checklist.md`](next_stage_implementation_checklist.md).
 
 The R6 stable-ABI correction supersedes earlier local wheel-tag evidence:
@@ -27,6 +27,15 @@ those artifacts remain valid for Python 3.12 functionality and package
 inventory, while the current build additionally requires
 `Python::SABIModule` and verifies the selected nanobind target and extension
 suffix.
+
+The final exact-head automatic runs `30405666674` and `30405666673` pass.
+Build-only package run `30406706115` passes the source archive, MSVC,
+manylinux2014 GCC 10, AppleClang, combined-inventory, stable-ABI, and installed
+all-50-codec smoke gates; publication is skipped. The authoritative artifact
+hashes and native-payload details are recorded in
+[`next_stage_implementation_checklist.md`](next_stage_implementation_checklist.md#r6-closure-evidence).
+Historical pending-R6 wording later in this plan is superseded by this closure
+record.
 
 ## 1. Outcome and boundaries
 
@@ -2204,9 +2213,8 @@ lane before starting the next unit.
    `_core.abi3.so`; the final exact-tree disconnected MSVC package is rebuilt
    with disabled PEP 517 isolation and pinned tools. `publish.yml` prepares a
    hash-locked wheelhouse, verifies and unpacks the one sdist, and builds every
-   platform wheel from that directory. The only active R6 work is one
-   user-authorized exact-head build-only run, inspection of its sdist and three
-   wheels, and one final review/evidence commit. That documentation-only
+   platform wheel from that directory. Final run `30406706115`, artifact
+   inspection, and the closure review complete R6. This documentation-only
    closure record names the packaged source SHA and does not recursively
    require another package run.
 4. **Animation-capable `ImageSequence`.**

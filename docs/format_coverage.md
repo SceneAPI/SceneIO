@@ -33,13 +33,20 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > nanobind stable target/suffix, and produces `_core.pyd` on Windows plus
 > `_core.abi3.so` on Unix. No corrected release has been published.
 >
-> **Lean R6 closure decision (2026-07-28):** the correctness-tested current
-> backends are accepted as this stage's release baseline. The 124 provisional
-> performance rows remain transparent post-R6 optimization work and are not
-> relabeled qualified. Exhaustive alternative-backend comparison is no longer
-> an R6 gate. The only substantive remaining gate is one user-authorized
-> exact-head build-only package matrix, artifact inspection, and a final
-> review/evidence commit.
+> **R6 closure (2026-07-28):** the correctness-tested current backends are
+> accepted as this stage's release baseline at packaged source commit
+> `105b3017dae37345a6974f289e661d9173186a2a`. Exact-head CI
+> [30405666674](https://github.com/SceneAPI/SceneIO/actions/runs/30405666674),
+> native-runtime validation
+> [30405666673](https://github.com/SceneAPI/SceneIO/actions/runs/30405666673),
+> and build-only package run
+> [30406706115](https://github.com/SceneAPI/SceneIO/actions/runs/30406706115)
+> pass; publication is skipped. The exact sdist and MSVC, manylinux2014 GCC 10,
+> and AppleClang cp312-abi3 wheels pass independent artifact inspection and
+> all-50 installed smoke. Exact hashes are in the
+> [closure evidence](next_stage_implementation_checklist.md#r6-closure-evidence).
+> The 124 provisional performance rows remain transparent optional post-R6
+> work and are not relabeled qualified. No new format wave is activated.
 >
 > **Validated N0 implementation checkpoint (2026-07-25, `a5e7fa4`):** the live registry contains
 > 50 available codecs. Every codec reports read, write, inspect, streaming read,
@@ -749,11 +756,11 @@ expanded 50-codec benchmark/oracles.
 | Piece | Status | Notes |
 |---|---|---|
 | nanobind + scikit‑build‑core build | ✅ | abi3/cp312, `NB_STATIC`; `Python::SABIModule`, `nanobind-static-abi3`, and the platform suffix are configure-checked; local Windows emits `_core.pyd` against `python3.dll`, Ubuntu emits `_core.abi3.so` without libpython |
-| cibuildwheel release path | ✅ prepared | one verified sdist feeds Linux/macOS/Windows wheels; locked build inputs, all-50 installed smoke, per-wheel inventory, and tag-only publication in `publish.yml`; one current-head build-only dispatch and artifact inspection remain user-gated |
+| cibuildwheel release path | ✅ | one verified sdist feeds Linux/macOS/Windows wheels; locked build inputs, all-50 installed smoke, per-wheel inventory, and tag-only publication in `publish.yml`; final build-only run `30406706115` and downloaded-artifact inspection pass, while tagging and publication remain user-gated |
 | CI parity (oracles in CI) | ✅ | At `a5e7fa4`, normal Linux CI passes 2,914 tests with nine documented platform/oracle skips, the 50-codec performance guard, pinned GCC 10 portability, and the three-OS focused matrix |
 | Codec registry + `read`/`write`/`inspect`/`read_partial`/`detect` | ✅ | inspection covers all 50; bounded partial hooks are capability-specific |
 | Repo-maintained stable codec adapters | ✅ | all 50 production adapters, grammars, convention guards, inspectors, partial capability policies/available paths, and sinks live in `src/cpp` / `src/sceneio`; separately installed implementations and executables are test/reference oracles only |
-| Offline native-source closure | 🟡 | all selected native sources—including libwebp 1.5.0—are stored in-tree and the production CMake graph has no native-source fetch; local exact-tree package proof is complete, while one user-gated GCC 10/AppleClang build-only execution and artifact inspection remain |
+| Offline native-source closure | ✅ | all selected native sources—including libwebp 1.5.0—are stored in-tree and the production CMake graph has no native-source fetch; local exact-tree proof plus final MSVC, GCC 10, and AppleClang sdist-to-wheel execution and artifact inspection pass |
 | Zero‑copy numpy + torch (DLPack) | ✅ | validated per codec |
 | Conventions‑as‑metadata + write guards | ✅ | record‑don't‑convert enforced |
 | Parity kit (`sceneio.testing.parity`) | ✅ | cross‑impl + round‑trip + convention pins |
