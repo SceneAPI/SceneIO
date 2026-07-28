@@ -48,13 +48,13 @@ set(SCENEIO_CALIBRATION_CODEC_SOURCES
   src/cpp/codecs/calibration/camera_calibration.cpp)
 
 set(SCENEIO_IMAGE_CODEC_SOURCES
-  src/cpp/codecs/netpbm.cpp
-  src/cpp/codecs/png.cpp
-  src/cpp/codecs/jpeg.cpp
-  src/cpp/codecs/bmp_tga.cpp
-  src/cpp/codecs/hdr.cpp
-  src/cpp/codecs/exr.cpp
-  src/cpp/codecs/webp.cpp)
+  src/cpp/codecs/images/netpbm.cpp
+  src/cpp/codecs/images/png.cpp
+  src/cpp/codecs/images/jpeg.cpp
+  src/cpp/codecs/images/bmp_tga.cpp
+  src/cpp/codecs/images/hdr.cpp
+  src/cpp/codecs/images/exr.cpp
+  src/cpp/codecs/images/webp.cpp)
 
 set(SCENEIO_MESH_CODEC_SOURCES
   src/cpp/codecs/ply_mesh.cpp
@@ -151,7 +151,7 @@ set(SCENEIO_CORE_SOURCES
   src/cpp/codecs/transforms_json.cpp
   src/cpp/codecs/pose_text.cpp
   src/cpp/codecs/arrays/npy_npz.cpp
-  src/cpp/codecs/netpbm.cpp
+  src/cpp/codecs/images/netpbm.cpp
   src/cpp/codecs/colmap_txt.cpp
   src/cpp/codecs/xyz.cpp
   src/cpp/codecs/arrays/flo.cpp
@@ -160,15 +160,15 @@ set(SCENEIO_CORE_SOURCES
   src/cpp/codecs/nvm.cpp
   src/cpp/codecs/openmvg.cpp
   src/cpp/codecs/splat.cpp
-  src/cpp/codecs/png.cpp
-  src/cpp/codecs/jpeg.cpp
-  src/cpp/codecs/hdr.cpp
-  src/cpp/codecs/bmp_tga.cpp
-  src/cpp/codecs/exr.cpp
+  src/cpp/codecs/images/png.cpp
+  src/cpp/codecs/images/jpeg.cpp
+  src/cpp/codecs/images/hdr.cpp
+  src/cpp/codecs/images/bmp_tga.cpp
+  src/cpp/codecs/images/exr.cpp
   src/cpp/codecs/las.cpp
   src/cpp/codecs/laz.cpp
   src/cpp/codecs/y4m.cpp
-  src/cpp/codecs/webp.cpp
+  src/cpp/codecs/images/webp.cpp
   src/cpp/codecs/arrays/safetensors.cpp
   src/cpp/codecs/arrays/dmb.cpp
   src/cpp/codecs/euroc_state.cpp

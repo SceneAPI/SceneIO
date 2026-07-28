@@ -57,13 +57,15 @@ R4.3 is in progress. The arrays-family unit closes and is pushed at
 232-name/49-entry native surface checks, complete strict guard, and all three
 reviews pass.
 
-The calibration-family candidate moves the shared OpenCV/ROS/Kalibr source to
-`src/cpp/codecs/calibration/` and updates only its location comment plus
-CMake, contract, and performance-ledger paths. MSVC, 223 focused tests, the
-complete 3,350-pass/four-skip suite, Ruff, the unchanged 232/49 native
-surface, and the complete strict guard pass. All three independent reviews are
-clear. Six physical family moves remain. No timed codec loop changed and no
-speedup is claimed.
+The calibration-family unit closes and is pushed at `366aac0`. The images
+candidate moves Netpbm, PNG, JPEG, BMP/TGA, HDR, EXR, and WebP under
+`src/cpp/codecs/images/`; executable bodies are unchanged and five embedded
+location comments use the new paths. CMake, contract, and performance-ledger
+paths move with them. MSVC, 493 focused tests, the complete
+3,350-pass/four-skip suite, Ruff, the unchanged 232/49 native surface, and the
+complete strict guard pass. All three independent reviews are clear. Five
+physical family moves remain. No timed codec loop changed and no speedup is
+claimed.
 
 The first independent review pass found no native lifetime defect and required
 stronger inventory/source contracts. The candidate now compares every ordered
@@ -386,7 +388,7 @@ verification have accumulated in a few large modules:
 
 | Area | Current shape | Growth risk |
 |---|---|---|
-| C++ codecs | 40 files for 50 format ids; eight explicit CMake family manifests; eight family-owned binding tables plus one validated assembler | arrays moved at `f57c677`; calibration candidate green; six physical family moves remain |
+| C++ codecs | 40 files for 50 format ids; eight explicit CMake family manifests; eight family-owned binding tables plus one validated assembler | arrays/calibration pushed; images candidate green; five physical family moves remain |
 | C++ records | 32 source/header files | still manageable; new table/animation/scene records will add pressure |
 | Python registry | `registry.py`, 205 lines; `_registry/assembly.py`, 148 lines; focused `_registry/{model,adapters,detection,native_features}.py` modules; and eight `_registry/families/*.py` definition modules | all built-ins are family-owned; R3 now splits the benchmark and cross-codec verification monoliths |
 | Inspection | `_inspection.py` compatibility facade plus `_inspectors/{model,common,arrays,calibration,images,meshes,points,reconstruction,sequences,splats}.py`; all eight manifest families have lower inspector ownership | keep the proven shared model, mmap bridge, metadata bounds, exact-read/integer grammar, and image-result constructor as lower services |
@@ -1067,8 +1069,8 @@ installed smoke.
   canonical 49-entry projection resolves all declared operation symbols and
   excludes only Python-owned `image_sequence`.
 - Move codecs by family in mechanical commits; do not mix semantic edits with
-  moves. **R4.3 in progress:** arrays are pushed; calibration is the current
-  candidate unit.
+  moves. **R4.3 in progress:** arrays and calibration are pushed; images are
+  the current candidate unit.
 
 ### R5. Qualify performance
 

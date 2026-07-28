@@ -1,4 +1,4 @@
-// codecs/png.cpp — PNG <-> Image via vendored lodepng (zlib license,
+// codecs/images/png.cpp -- PNG <-> Image via vendored lodepng (zlib license,
 // src/cpp/third_party/lodepng; COMMIT.txt pins the source). lodepng carries its
 // own self-contained inflate/deflate (lodepng_*-prefixed, no interaction with
 // our miniz), so this is the tier's zero-risk "vendored third-party lib builds

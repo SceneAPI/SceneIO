@@ -1,4 +1,4 @@
-// codecs/hdr.cpp — Radiance RGBE (".hdr") <-> Image via vendored stb (public
+// codecs/images/hdr.cpp -- Radiance RGBE (".hdr") <-> Image via vendored stb (public
 // domain / MIT, src/cpp/third_party/stb). HDR is a linear-light HDR raster: on
 // disk each pixel is RGBE (a shared 8-bit exponent + 8-bit RGB mantissas), which
 // stb decodes losslessly to float32 RGB. We map it to Image{F32, C=3,

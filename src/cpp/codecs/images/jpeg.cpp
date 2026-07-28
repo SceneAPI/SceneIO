@@ -1,4 +1,4 @@
-// codecs/jpeg.cpp — baseline/progressive JPEG <-> Image via vendored stb (public
+// codecs/images/jpeg.cpp -- baseline/progressive JPEG <-> Image via vendored stb (public
 // domain / MIT, src/cpp/third_party/stb). stb decodes JPEG (YCbCr -> RGB, or
 // grayscale) to 8-bit; we map it to Image{U8, C in {1,3}}: gray -> "gray",
 // color -> "srgb". JPEG has no alpha and is 8-bit only.

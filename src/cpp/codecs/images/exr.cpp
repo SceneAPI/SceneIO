@@ -1,4 +1,4 @@
-// codecs/exr.cpp — OpenEXR (.exr) <-> Image (float32, linear) via vendored tinyexr
+// codecs/images/exr.cpp -- OpenEXR (.exr) <-> Image (float32, linear) via vendored tinyexr
 // (BSD, src/cpp/third_party/tinyexr; reuses our miniz for ZIP). EXR is the linear
 // HDR raster with named channels; we map the common single-part scanline sets to
 // Image{F32, C in {1,3,4}, color_space="linear"}: {R,G,B,A}->RGBA (premultiplied

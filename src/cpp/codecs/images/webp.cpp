@@ -1,4 +1,4 @@
-// codecs/webp.cpp — WebP <-> Image (uint8 sRGB) via libwebp (BSD), built from
+// codecs/images/webp.cpp -- WebP <-> Image (uint8 sRGB) via libwebp (BSD), built from
 // source into _core. Read decodes VP8 (lossy) / VP8L (lossless) to RGB (C=3) or
 // RGBA (C=4, straight alpha) depending on whether the file carries alpha. Write
 // defaults to LOSSLESS with config.exact=1 (so RGB samples under alpha=0 are kept).

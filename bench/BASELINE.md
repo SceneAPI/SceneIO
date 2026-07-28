@@ -2517,7 +2517,7 @@ The architecture/lifetime, test/performance, and
 platform/package/documentation reviews are clear.
 Commit `f57c677` is pushed to `phase0-nanobind-core`.
 
-## R4.3 calibration-family source move candidate (2026-07-27)
+## R4.3 calibration-family source move closure (2026-07-27)
 
 The shared OpenCV/ROS/Kalibr implementation moves to
 `src/cpp/codecs/calibration/camera_calibration.cpp`. Its executable source is
@@ -2532,4 +2532,23 @@ inventory remain unchanged. The complete five-run strict all-50-codec guard
 passes in 363.5 seconds and is retained as
 `build/r4_3_calibration_strict_guard.json`. No timed codec implementation
 changed, so this unit makes no performance claim. The architecture/lifetime,
+test/performance, and platform/package/documentation reviews are clear.
+Commit `366aac0` is pushed to `phase0-nanobind-core`.
+
+## R4.3 images-family source move candidate (2026-07-27)
+
+Netpbm, PNG, JPEG, BMP/TGA, HDR, EXR, and WebP move to
+`src/cpp/codecs/images/`. Netpbm and BMP/TGA are byte-identical moves; the
+other five executable bodies are unchanged and only their first-line
+source-location comments use the new paths. CMake ownership, frozen link
+order, native-build contracts, and the live performance-ledger paths move
+with them.
+
+The MSVC editable build and 493 focused codec/family/mmap/sink/inspection/
+partial/API tests pass. The complete suite passes 3,350 tests with four
+documented skips; Ruff, the 232-name non-dunder `_core` surface, and the
+49-entry native inventory remain unchanged. The complete five-run strict
+all-50-codec guard passes in 363.4 seconds and is retained as
+`build/r4_3_images_strict_guard.json`. No timed codec implementation changed,
+so this unit makes no performance claim. The architecture/lifetime,
 test/performance, and platform/package/documentation reviews are clear.

@@ -76,12 +76,14 @@ R4.3 is in progress. The arrays-family unit closes and is pushed at
 232-name/49-entry native surface checks, complete strict guard, and all three
 reviews pass.
 
-The calibration-family candidate moves the shared OpenCV/ROS/Kalibr source to
-`src/cpp/codecs/calibration/` and updates only its location comment plus
-CMake, contract, and performance-ledger paths. MSVC, 223 focused tests, the
-complete 3,354-node suite (3,350 passed/four skipped), Ruff, the unchanged
-232/49 native surface, and the complete five-run strict all-50-codec guard
-pass. All three independent reviews are clear; commit evidence remains open.
+The calibration-family unit closes and is pushed at `366aac0`. The image
+candidate moves Netpbm, PNG, JPEG, BMP/TGA, HDR, EXR, and WebP under
+`src/cpp/codecs/images/`; executable bodies are unchanged and five embedded
+location comments use the new paths. CMake, contract, and performance-ledger
+paths move with them. MSVC, 493 focused tests, the complete 3,354-node suite
+(3,350 passed/four skipped), Ruff, the unchanged 232/49 native surface, and
+the complete five-run strict all-50-codec guard pass. All three independent
+reviews are clear; commit evidence remains open.
 
 This is the operational checklist for the repository-organization and
 codec-performance stage defined in
@@ -3526,7 +3528,19 @@ Calibration-family candidate:
 - [x] Pass the complete five-run strict all-50-codec O4/O5 and mmap/sink
       guard.
 - [x] Complete the three independent reviews.
-- [ ] Commit the calibration unit.
+- [x] Commit and push the calibration unit at `366aac0`.
+
+Images-family candidate:
+
+- [x] Move Netpbm, PNG, JPEG, BMP/TGA, HDR, EXR, and WebP under
+      `src/cpp/codecs/images/` and update path contracts only.
+- [x] Rebuild on MSVC and pass 493 focused tests, the complete
+      3,350-pass/four-skip suite, Ruff, and the 232-name/49-entry native
+      surface checks.
+- [x] Pass the complete five-run strict all-50-codec O4/O5 and mmap/sink
+      guard.
+- [x] Complete the three independent reviews.
+- [ ] Commit the images unit.
 
 R4 verification and validation:
 
