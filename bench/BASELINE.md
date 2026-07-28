@@ -2838,3 +2838,39 @@ The manual GCC 10/AppleClang workflow was not dispatched because the sole
 finalist failed the first platform gate and there is no selection commit to
 validate. The JPEG row remains a documented performance gap with
 libjpeg-turbo recorded as evaluated and rejected for the combined default.
+
+## R6 Zstd profile qualification (2026-07-28)
+
+The R6 Zstd intake review found that the original SPZ benchmark row described
+the combined miniz/Zstd implementation while its default writer produced only
+the legacy v3 gzip container. The corrected harness retains that public-default
+measurement and adds an explicit v4 NGSP profile bound to `version=4`.
+`bench/PERFORMANCE_STATUS.toml` now records four operations instead of one
+ambiguous pair:
+
+- `legacy_v3_gzip`: gzip magic `1f8b`, version 3, fractional bits 12,
+  repository-contained miniz 3.0.2;
+- `ngsp_v4_zstd`: NGSP magic `4e475350`, version 4, fractional bits 12,
+  Zstd level 12, repository-contained Zstd 1.5.6.
+
+The benchmark checks those signatures before timing and requires both profiles
+to decode to identical GaussianCloud arrays. Its strict result validator
+rejects a missing profile, changed setting, incorrect backend, invalid magic,
+or non-positive measurement.
+
+On the same 11.2 MB generated cloud, the confirming five-run strict sweep
+measured:
+
+| Profile | File MB | Encode MB/s | Decode MB/s |
+|---|---:|---:|---:|
+| v3 gzip/miniz | 3.394 | 105 | 769 |
+| v4 NGSP/Zstd | 3.355 | 257 | 1,391 |
+
+The all-50-codec run passed every retained O4/O5, mapped-read, and file-sink
+gate. Its 52,067-byte JSON has SHA-256
+`b3d4666ad09aa60419ca980c658519fcbe72691528fecf3a176f40e965e278d0`.
+The intentional additive `spz_profiles` result field has structural projection
+SHA-256
+`8f218ff77bcf2ea1e918d4ed164f7184fa2662eb252508c387b5f131a053a8e7`;
+the benchmark and family contracts lock that shape. This is local MSVC
+evidence; the user-gated build-only multi-platform run remains outstanding.

@@ -1204,16 +1204,16 @@ evidence_gaps = ["candidate comparison on all required toolchains"]
 
 [[operation]]
 codec_id = "spz"
-profile = "default"
+profile = "legacy_v3_gzip"
 direction = "encode"
-settings = {}
+settings = { version = 3, fractional_bits = 12, container_magic = "1f8b" }
 fidelity = "format_quantized"
 comparator = "source-parity-suite"
-fixture = "spz:default"
-backend = "miniz+zstd"
-backend_owner = "fetched"
-backend_source = "cmake/SceneIODependencies.cmake"
-backend_version = "miniz-3.0.2+zstd-1.5.6"
+fixture = "spz:v3_gzip"
+backend = "miniz"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/miniz"
+backend_version = "miniz-3.0.2"
 transport_status = "qualified"
 status = "provisional"
 correctness_evidence = ["tests/codecs/test_spz.py"]
@@ -1223,16 +1223,54 @@ evidence_gaps = ["candidate comparison on all required toolchains"]
 
 [[operation]]
 codec_id = "spz"
-profile = "default"
+profile = "legacy_v3_gzip"
 direction = "decode"
-settings = {}
+settings = { version = 3, fractional_bits = 12, container_magic = "1f8b" }
 fidelity = "format_quantized"
 comparator = "source-parity-suite"
-fixture = "spz:default"
-backend = "miniz+zstd"
-backend_owner = "fetched"
-backend_source = "cmake/SceneIODependencies.cmake"
-backend_version = "miniz-3.0.2+zstd-1.5.6"
+fixture = "spz:v3_gzip"
+backend = "miniz"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/miniz"
+backend_version = "miniz-3.0.2"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_spz.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "spz"
+profile = "ngsp_v4_zstd"
+direction = "encode"
+settings = { version = 4, fractional_bits = 12, zstd_level = 12, container_magic = "4e475350" }
+fidelity = "format_quantized"
+comparator = "source-parity-suite"
+fixture = "spz:v4_ngsp"
+backend = "zstd"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/zstd"
+backend_version = "zstd-1.5.6"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_spz.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "spz"
+profile = "ngsp_v4_zstd"
+direction = "decode"
+settings = { version = 4, fractional_bits = 12, zstd_level = 12, container_magic = "4e475350" }
+fidelity = "format_quantized"
+comparator = "source-parity-suite"
+fixture = "spz:v4_ngsp"
+backend = "zstd"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/zstd"
+backend_version = "zstd-1.5.6"
 transport_status = "qualified"
 status = "provisional"
 correctness_evidence = ["tests/codecs/test_spz.py"]

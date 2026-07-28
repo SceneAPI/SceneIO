@@ -25,6 +25,7 @@ EXPECTED_NOTICES = {
     "stb.txt",
     "tinyexr.txt",
     "tinyobjloader.txt",
+    "zstd-source.txt",
     "zstd.txt",
 }
 
@@ -32,7 +33,6 @@ FETCHCONTENT_NOTICE = {
     "fast_float": "fast-float.txt",
     "lazperf": "lazperf.txt",
     "libwebp": "libwebp.txt",
-    "zstd": "zstd.txt",
 }
 
 VENDORED_NOTICE = {
@@ -44,6 +44,7 @@ VENDORED_NOTICE = {
     "stb": "stb.txt",
     "tinyexr": "tinyexr.txt",
     "tinyobjloader": "tinyobjloader.txt",
+    "zstd": "zstd.txt",
 }
 
 SOURCE_CLOSURE = {
@@ -140,6 +141,58 @@ SOURCE_CLOSURE = {
             (
                 r"target_include_directories\(\s*nlohmann_json INTERFACE "
                 r'"\$\{nlohmann_json_SOURCE_DIR\}/include"\)'
+            ),
+        ),
+    },
+    "zstd": {
+        "version": "1.5.6",
+        "commit": "794ea1b0afca0f020f4e57b6732332231fb23c70",
+        "archive_sha256": (
+            "8c29e06cf42aacc1eafc4077ae2ec6c6"
+            "fcb96a626157e0593d5e82a34fd403c1"
+        ),
+        "notice": "zstd.txt",
+        "source_notice": "zstd-source.txt",
+        "source_notice_markers": (
+            "Copyright (c) 2003-2008 Yuta Mori All Rights Reserved.",
+            "Copyright 2020 Jan Tojnar",
+            "SPDX-License-Identifier: (MIT OR CC0-1.0)",
+        ),
+        "source_notice_sources": (
+            "lib/dictBuilder/divsufsort.c",
+            "cmake/upstream/CMakeModules/JoinPaths.cmake",
+        ),
+        "license": "LICENSE",
+        "manifest": "SOURCE_MANIFEST.sha256",
+        "manifest_sha256": (
+            "f94a91b60a5a9b69beb5978d3b58467c"
+            "60b33eead1d29f12e7e8d9a20ecb5b24"
+        ),
+        "cmake_patterns": (
+            (
+                r'^set\(zstd_SOURCE_DIR '
+                r'"\$\{PROJECT_SOURCE_DIR\}/src/cpp/third_party/zstd"\)$'
+            ),
+            r'^set\(ZSTD_BUILD_SHARED OFF CACHE BOOL "" FORCE\)$',
+            r'^set\(ZSTD_BUILD_STATIC ON CACHE BOOL "" FORCE\)$',
+            r'^set\(ZSTD_BUILD_COMPRESSION ON CACHE BOOL "" FORCE\)$',
+            r'^set\(ZSTD_BUILD_DECOMPRESSION ON CACHE BOOL "" FORCE\)$',
+            r'^set\(ZSTD_BUILD_DICTBUILDER ON CACHE BOOL "" FORCE\)$',
+            r'^set\(ZSTD_BUILD_DEPRECATED OFF CACHE BOOL "" FORCE\)$',
+            r'^set\(ZSTD_BUILD_PROGRAMS OFF CACHE BOOL "" FORCE\)$',
+            r'^set\(ZSTD_BUILD_TESTS OFF CACHE BOOL "" FORCE\)$',
+            r'^set\(ZSTD_BUILD_CONTRIB OFF CACHE BOOL "" FORCE\)$',
+            r'^set\(ZSTD_LEGACY_SUPPORT OFF CACHE BOOL "" FORCE\)$',
+            r'^set\(ZSTD_MULTITHREAD_SUPPORT ON CACHE BOOL "" FORCE\)$',
+            (
+                r'add_subdirectory\(\s*"\$\{zstd_SOURCE_DIR\}/cmake/upstream"\s*'
+                r'"\$\{CMAKE_BINARY_DIR\}/_deps/zstd-build"\s*'
+                r"EXCLUDE_FROM_ALL\)"
+            ),
+            (
+                r"set_target_properties\(\s*libzstd_static\s*PROPERTIES\s*"
+                r"POSITION_INDEPENDENT_CODE ON\s*"
+                r"C_VISIBILITY_PRESET hidden\)"
             ),
         ),
     },

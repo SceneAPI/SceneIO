@@ -51,18 +51,36 @@ target_compile_features(nlohmann_json INTERFACE cxx_std_11)
 target_include_directories(
   nlohmann_json INTERFACE "${nlohmann_json_SOURCE_DIR}/include")
 
-# zstd (BSD) — for the SPZ v4 (NGSP) container. Build only the static lib.
+# zstd 1.5.6 (BSD-3-Clause) — repository-contained compression library for
+# the SPZ v4 (NGSP) container. Configure the exact selected upstream CMake
+# project and build only its static library.
+set(zstd_SOURCE_DIR "${PROJECT_SOURCE_DIR}/src/cpp/third_party/zstd")
+if(NOT EXISTS "${zstd_SOURCE_DIR}/lib/zstd.h" OR
+   NOT EXISTS "${zstd_SOURCE_DIR}/cmake/upstream/CMakeLists.txt" OR
+   NOT EXISTS "${zstd_SOURCE_DIR}/LICENSE")
+  message(FATAL_ERROR
+    "Repository-contained zstd 1.5.6 sources are incomplete")
+endif()
 set(ZSTD_BUILD_SHARED OFF CACHE BOOL "" FORCE)
 set(ZSTD_BUILD_STATIC ON CACHE BOOL "" FORCE)
+set(ZSTD_BUILD_COMPRESSION ON CACHE BOOL "" FORCE)
+set(ZSTD_BUILD_DECOMPRESSION ON CACHE BOOL "" FORCE)
+set(ZSTD_BUILD_DICTBUILDER ON CACHE BOOL "" FORCE)
+set(ZSTD_BUILD_DEPRECATED OFF CACHE BOOL "" FORCE)
 set(ZSTD_BUILD_PROGRAMS OFF CACHE BOOL "" FORCE)
 set(ZSTD_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(ZSTD_BUILD_CONTRIB OFF CACHE BOOL "" FORCE)
 set(ZSTD_LEGACY_SUPPORT OFF CACHE BOOL "" FORCE)
-FetchContent_Declare(zstd
-  URL https://github.com/facebook/zstd/releases/download/v1.5.6/zstd-1.5.6.tar.gz
-  SOURCE_SUBDIR build/cmake)
-FetchContent_MakeAvailable(zstd)
-set_property(TARGET libzstd_static PROPERTY POSITION_INDEPENDENT_CODE ON)
+set(ZSTD_MULTITHREAD_SUPPORT ON CACHE BOOL "" FORCE)
+add_subdirectory(
+  "${zstd_SOURCE_DIR}/cmake/upstream"
+  "${CMAKE_BINARY_DIR}/_deps/zstd-build"
+  EXCLUDE_FROM_ALL)
+set_target_properties(
+  libzstd_static
+  PROPERTIES
+    POSITION_INDEPENDENT_CODE ON
+    C_VISIBILITY_PRESET hidden)
 
 # fast_float (Apache-2.0 / MIT / BSL, header-only) — portable + fast float
 # parsing for the text codecs. std::from_chars<double> is unavailable on

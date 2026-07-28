@@ -1,0 +1,46 @@
+Zstandard 1.5.6
+
+Upstream: https://github.com/facebook/zstd
+Tag: v1.5.6
+Commit: 794ea1b0afca0f020f4e57b6732332231fb23c70
+Retrieved: 2026-07-28
+License choice: BSD-3-Clause (see LICENSE). The selected libdivsufsort
+sources and CMake path helper retain their additional attributions in
+LICENSES/zstd-source.txt.
+
+Source archive:
+https://github.com/facebook/zstd/releases/download/v1.5.6/zstd-1.5.6.tar.gz
+Size: 2406875 bytes
+SHA-256:
+8c29e06cf42aacc1eafc4077ae2ec6c6fcb96a626157e0593d5e82a34fd403c1
+
+Selected repository-contained source:
+- LICENSE
+- lib/zstd.h, lib/zstd_errors.h, lib/zdict.h, and lib/libzstd.pc.in
+- lib/common/**
+- lib/compress/**
+- lib/decompress/**
+- lib/dictBuilder/**
+- the seven upstream build/cmake files required by the selected library
+  project, stored under cmake/upstream to avoid the repository build-output
+  exclusion while preserving their required two-level path from the root
+
+Every selected upstream file and its SHA-256 is recorded in
+SOURCE_MANIFEST.sha256. The manifest is 7310 bytes with SHA-256:
+f94a91b60a5a9b69beb5978d3b58467c60b33eead1d29f12e7e8d9a20ecb5b24
+
+SceneIO configures the selected upstream CMake project with shared libraries,
+programs, tests, contrib, deprecated APIs, and legacy decoders disabled.
+Compression, decompression, dictionary building, and multithreading are
+explicitly enabled. The static target remains position-independent and uses
+hidden C symbol visibility.
+Upstream selects the amd64 decompression assembly on compatible GCC/Clang
+targets and disables that assembly on MSVC or unsupported architectures.
+
+Legacy, deprecated, DLL-only, program, test, contrib, documentation, example,
+wrapper, and unrelated build-system files are not stored, configured, or
+built. The selected CMake files are path-relocated only; their contents remain
+byte-exact.
+
+Local patches: none. Every selected source/build file is byte-exact with the
+release archive.

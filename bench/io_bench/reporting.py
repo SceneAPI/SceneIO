@@ -67,15 +67,17 @@ def print_typed_adapter(metrics: Mapping[str, object]) -> None:
 def print_encoding_variants(
     label: str,
     variants: Mapping[str, Mapping[str, float]],
+    *,
+    noun: str = "encodings",
 ) -> None:
-    """Print one PLY or PCD encoding summary."""
+    """Print one compact codec-variant summary."""
 
     summary = ", ".join(
         f"{encoding}: W={metrics['write_mbps']:.0f}/"
         f"R={metrics['read_mbps']:.0f} MB/s"
         for encoding, metrics in variants.items()
     )
-    print(f"  {label} encodings: {summary}")
+    print(f"  {label} {noun}: {summary}")
 
 
 def print_colmap_db_row(display: Sequence[float | None]) -> None:

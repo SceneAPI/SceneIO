@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from types import MappingProxyType
+
 from bench.io_bench.fixtures.splats import _gauss
 from bench.io_bench.model import Spec
 from bench.io_bench.oracles.splats import (
@@ -12,6 +14,41 @@ from bench.io_bench.oracles.splats import (
     gsply,
 )
 from sceneio import _core
+
+SPZ_PROFILE_SETTINGS = MappingProxyType(
+    {
+        "legacy_v3_gzip": MappingProxyType(
+            {
+                "version": 3,
+                "fractional_bits": 12,
+                "zstd_level": None,
+                "container_magic": "1f8b",
+                "backend": "miniz",
+            }
+        ),
+        "ngsp_v4_zstd": MappingProxyType(
+            {
+                "version": 4,
+                "fractional_bits": 12,
+                "zstd_level": 12,
+                "container_magic": "4e475350",
+                "backend": "zstd",
+            }
+        ),
+    }
+)
+
+
+def write_spz_profile(cloud, profile: str):
+    """Encode one explicitly selected SPZ benchmark profile."""
+
+    settings = SPZ_PROFILE_SETTINGS[profile]
+    return _core.write_spz(
+        cloud,
+        version=settings["version"],
+        fractional_bits=settings["fractional_bits"],
+        zstd_level=settings["zstd_level"] or 12,
+    )
 
 
 def build_splat_specs(scale):
@@ -74,4 +111,8 @@ def build_splat_specs(scale):
     ]
 
 
-__all__ = ["build_splat_specs"]
+__all__ = [
+    "SPZ_PROFILE_SETTINGS",
+    "build_splat_specs",
+    "write_spz_profile",
+]

@@ -46,6 +46,7 @@ _SPECIAL_PROFILES = {
         "preserved_waveform_formats_9_10",
     },
     "laz": {"legacy_formats_0_3", "layered_formats_6_8"},
+    "spz": {"legacy_v3_gzip", "ngsp_v4_zstd"},
 }
 
 
@@ -80,7 +81,7 @@ def test_performance_ledger_has_stable_schema_and_exact_builtin_coverage():
 
 def test_performance_operations_cover_required_profiles_and_directions():
     operations = _ledger()["operation"]
-    assert len(operations) == 130
+    assert len(operations) == 132
     keys = [
         (item["codec_id"], item["profile"], item["direction"])
         for item in operations
@@ -102,7 +103,7 @@ def test_performance_rows_are_honest_about_initial_evidence():
     operations = _ledger()["operation"]
     states = Counter(item["status"] for item in operations)
     assert states == {
-        "provisional": 122,
+        "provisional": 124,
         "known_gap": 2,
         "not_applicable": 6,
     }
@@ -246,9 +247,9 @@ def test_performance_backend_versions_match_pinned_sources():
             "src/cpp/third_party/lazperf/COMMIT.txt",
         ),
         "miniz": ("3.0.2", "src/cpp/third_party/miniz/COMMIT.txt"),
-        "miniz+zstd": (
-            "zstd-1.5.6",
-            "cmake/SceneIODependencies.cmake",
+        "zstd": (
+            "1.5.6",
+            "src/cpp/third_party/zstd/COMMIT.txt",
         ),
     }
     for backend, (revision, source_path) in pins.items():
@@ -257,6 +258,54 @@ def test_performance_backend_versions_match_pinned_sources():
         source = (ROOT / source_path).read_text(encoding="utf-8")
         assert revision in source
         assert all(revision in item["backend_version"] for item in rows)
+
+    zstd_rows = [item for item in operations if item["backend"] == "zstd"]
+    assert all(item["backend_owner"] == "vendored" for item in zstd_rows)
+    assert all(
+        item["backend_source"] == "src/cpp/third_party/zstd"
+        for item in zstd_rows
+    )
+
+    spz_rows = [item for item in operations if item["codec_id"] == "spz"]
+    expected_profiles = {
+        "legacy_v3_gzip": {
+            "settings": {
+                "version": 3,
+                "fractional_bits": 12,
+                "container_magic": "1f8b",
+            },
+            "fixture": "spz:v3_gzip",
+            "backend": "miniz",
+            "backend_source": "src/cpp/third_party/miniz",
+            "backend_version": "miniz-3.0.2",
+        },
+        "ngsp_v4_zstd": {
+            "settings": {
+                "version": 4,
+                "fractional_bits": 12,
+                "zstd_level": 12,
+                "container_magic": "4e475350",
+            },
+            "fixture": "spz:v4_ngsp",
+            "backend": "zstd",
+            "backend_source": "src/cpp/third_party/zstd",
+            "backend_version": "zstd-1.5.6",
+        },
+    }
+    assert len(spz_rows) == 4
+    for row in spz_rows:
+        expected = expected_profiles[row["profile"]]
+        assert {
+            key: row[key]
+            for key in (
+                "settings",
+                "fixture",
+                "backend",
+                "backend_source",
+                "backend_version",
+            )
+        } == expected
+        assert row["backend_owner"] == "vendored"
 
     patch_sets = {
         "stb": "sceneio-stb-3-local-patches-v1",

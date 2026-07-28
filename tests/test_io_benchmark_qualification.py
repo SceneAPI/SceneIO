@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import dataclasses
+import gzip
 import hashlib
 import json
 import subprocess
@@ -11,6 +12,7 @@ import tempfile
 from pathlib import Path
 from types import SimpleNamespace
 
+import numpy as np
 import pytest
 
 from bench.io_bench import qualification, runner
@@ -58,6 +60,31 @@ def _ledger_payload() -> str:
         sort_keys=True,
         separators=(",", ":"),
     )
+
+
+def _valid_spz_profile_metrics():
+    return {
+        "legacy_v3_gzip": {
+            "version": 3,
+            "fractional_bits": 12,
+            "zstd_level": None,
+            "container_magic": "1f8b",
+            "backend": "miniz",
+            "file_mb": 1.0,
+            "write_mbps": 1.0,
+            "read_mbps": 1.0,
+        },
+        "ngsp_v4_zstd": {
+            "version": 4,
+            "fractional_bits": 12,
+            "zstd_level": 12,
+            "container_magic": "4e475350",
+            "backend": "zstd",
+            "file_mb": 1.0,
+            "write_mbps": 1.0,
+            "read_mbps": 1.0,
+        },
+    }
 
 
 def test_qualification_ledger_is_complete_immutable_and_checked():
@@ -115,6 +142,35 @@ def test_assembled_sweep_is_exactly_the_repository_builtins():
     assert qualification.validate_benchmark_coverage(observed) == observed
     assert set(observed) == set(CANONICAL_BUILTIN_IDS)
     assert len(observed) == len(set(observed)) == 50
+
+    spec = next(item for item in specs if item.id == "spz")
+    record, _ = spec.make()
+
+    legacy = bytes(spec.w(record))
+    assert legacy[:2] == b"\x1f\x8b"
+    assert gzip.decompress(legacy)[:8] == b"NGSP\x03\x00\x00\x00"
+
+    ngsp = bytes(
+        runner.splat_family.write_spz_profile(
+            record,
+            "ngsp_v4_zstd",
+        )
+    )
+    assert ngsp[:8] == b"NGSP\x04\x00\x00\x00"
+    legacy_decoded = spec.r(legacy)
+    ngsp_decoded = spec.r(ngsp)
+    for field in (
+        "means",
+        "scales",
+        "quaternions",
+        "opacities",
+        "sh_dc",
+        "sh_rest",
+    ):
+        np.testing.assert_array_equal(
+            np.asarray(getattr(legacy_decoded, field)),
+            np.asarray(getattr(ngsp_decoded, field)),
+        )
 
 
 @pytest.mark.parametrize(
@@ -312,6 +368,8 @@ def test_strict_result_validation_requires_every_declared_metric(
             if "partial" in item.operations:
                 result["oracle_image_ms"] = 1.0
                 result["oracle_pair_ms"] = 1.0
+        if format_id == "spz":
+            result["spz_profiles"] = _valid_spz_profile_metrics()
         results.append(result)
 
     qualification.validate_strict_results(results)
@@ -329,6 +387,20 @@ def test_strict_result_validation_requires_every_declared_metric(
             qualification.validate_strict_results(results)
     result[metric] = original
     qualification.validate_strict_results(results)
+
+    if codec_id == "npy" and metric == "oracle_write_mbps":
+        spz = next(item for item in results if item["codec"] == "spz")
+        profiles = spz["spz_profiles"]
+        ngsp = profiles.pop("ngsp_v4_zstd")
+        with pytest.raises(RuntimeError, match="spz:profile-set"):
+            qualification.validate_strict_results(results)
+        profiles["ngsp_v4_zstd"] = ngsp
+        ngsp["container_magic"] = "1f8b"
+        with pytest.raises(
+            RuntimeError,
+            match="spz:ngsp_v4_zstd:settings",
+        ):
+            qualification.validate_strict_results(results)
 
 
 @pytest.mark.parametrize(

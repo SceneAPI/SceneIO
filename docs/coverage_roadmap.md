@@ -390,9 +390,9 @@ identity) regardless of codec progress — codecs work today via informal labels
 
 - In-tree/header-only dependencies keep the default build independent of
   system libraries. The production adapters are already repo-maintained, but
-  miniz and nlohmann/json are now repository-contained; zstd, fast_float,
+  miniz, nlohmann/json, and zstd are now repository-contained; fast_float,
   LAZperf, and libwebp still arrive through pinned `FetchContent`. Moving
-  those four exact revisions under
+  those three exact revisions under
   `src/cpp/third_party/` is the remaining offline/source-ownership gate for the
   post-0.2 stable tier.
 - Optional system libs compile in per `SCENEIO_WITH_*`; absent → the codec

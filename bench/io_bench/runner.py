@@ -1530,6 +1530,7 @@ def _run_benchmark(args, tmp):
             typed_adapter_metrics = None
             ply_variant_metrics = None
             pcd_variant_metrics = None
+            spz_profile_metrics = None
 
             if s.id == "ply":
                 ply_variant_metrics = {
@@ -1598,6 +1599,69 @@ def _run_benchmark(args, tmp):
                         "write_mbps": pmb / variant_write_time,
                         "read_mbps": pmb / variant_read_time,
                     }
+
+            if s.id == "spz":
+                legacy_settings = splat_family.SPZ_PROFILE_SETTINGS[
+                    "legacy_v3_gzip"
+                ]
+                if (
+                    enc[:2].hex() != legacy_settings["container_magic"]
+                ):
+                    raise AssertionError(
+                        "SPZ legacy profile did not produce a v3 gzip container"
+                    )
+                v4_settings = splat_family.SPZ_PROFILE_SETTINGS[
+                    "ngsp_v4_zstd"
+                ]
+                v4_writer = partial(
+                    splat_family.write_spz_profile,
+                    rec,
+                    "ngsp_v4_zstd",
+                )
+                v4_write_time, _ = _measure(v4_writer, args.runs)
+                v4_blob = bytes(v4_writer())
+                if (
+                    v4_blob[:4].hex() != v4_settings["container_magic"]
+                    or v4_blob[4:8] != b"\x04\x00\x00\x00"
+                ):
+                    raise AssertionError(
+                        "SPZ NGSP profile did not produce a v4 zstd container"
+                    )
+                v4_reader = partial(_core.read_spz, v4_blob)
+                v4_read_time, _ = _measure(v4_reader, args.runs)
+                legacy_decoded = s.r(enc)
+                v4_decoded = v4_reader()
+                if not all(
+                    np.array_equal(
+                        np.asarray(getattr(legacy_decoded, field)),
+                        np.asarray(getattr(v4_decoded, field)),
+                    )
+                    for field in (
+                        "means",
+                        "scales",
+                        "quaternions",
+                        "opacities",
+                        "sh_dc",
+                        "sh_rest",
+                    )
+                ):
+                    raise AssertionError(
+                        "SPZ v3 and v4 profiles changed decoded values"
+                    )
+                spz_profile_metrics = {
+                    "legacy_v3_gzip": {
+                        **dict(legacy_settings),
+                        "file_mb": fmb,
+                        "write_mbps": sioW,
+                        "read_mbps": sioR,
+                    },
+                    "ngsp_v4_zstd": {
+                        **dict(v4_settings),
+                        "file_mb": len(v4_blob) / 1e6,
+                        "write_mbps": pmb / v4_write_time,
+                        "read_mbps": pmb / v4_read_time,
+                    },
+                }
 
             # O4 controls retain a deterministic one-lane/worker-off reference
             # beside the optimized defaults. WebP separately measures the old
@@ -2357,6 +2421,7 @@ def _run_benchmark(args, tmp):
                     "typed_adapter": typed_adapter_metrics,
                     "ply_variants": ply_variant_metrics,
                     "pcd_variants": pcd_variant_metrics,
+                    "spz_profiles": spz_profile_metrics,
                 }
             )
             print_primary_row(
@@ -2380,6 +2445,12 @@ def _run_benchmark(args, tmp):
                 print_encoding_variants("PLY", ply_variant_metrics)
             if pcd_variant_metrics is not None:
                 print_encoding_variants("PCD", pcd_variant_metrics)
+            if spz_profile_metrics is not None:
+                print_encoding_variants(
+                    "SPZ",
+                    spz_profile_metrics,
+                    noun="profiles",
+                )
         except Exception as e:
             failures.append(s.id)
             results.append({"codec": s.id, "error": f"{type(e).__name__}: {e}"})

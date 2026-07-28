@@ -414,9 +414,9 @@ it is the best viable choice and it satisfies fidelity, deterministic output,
 permissive licensing, static/offline buildability, cross-platform support,
 maintenance, startup, and artifact-size requirements. Default stable kernels
 must ultimately be pinned under `src/cpp/third_party/`, built into `_core`, and
-attributed in `LICENSES/`. Miniz 3.0.2 and nlohmann/json 3.11.3 are now
-repository-contained; four source-pinned dependencies still arrive through
-CMake `FetchContent`.
+attributed in `LICENSES/`. Miniz 3.0.2, nlohmann/json 3.11.3, and zstd 1.5.6
+are now repository-contained; three source-pinned dependencies still arrive
+through CMake `FetchContent`.
 Repository-contained source closure is the R6 target, not a completed-state
 claim. The R5 JPEG candidate is
 additionally built by a default-off external project from the official

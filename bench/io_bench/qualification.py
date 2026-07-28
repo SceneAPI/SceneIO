@@ -402,6 +402,44 @@ def validate_strict_results(results) -> None:
                     or value <= 0
                 ):
                     missing.append(f"{format_id}:{key}")
+    spz_profiles = (by_id.get("spz") or {}).get("spz_profiles")
+    expected_spz_profiles = {
+        "legacy_v3_gzip": {
+            "version": 3,
+            "fractional_bits": 12,
+            "zstd_level": None,
+            "container_magic": "1f8b",
+            "backend": "miniz",
+        },
+        "ngsp_v4_zstd": {
+            "version": 4,
+            "fractional_bits": 12,
+            "zstd_level": 12,
+            "container_magic": "4e475350",
+            "backend": "zstd",
+        },
+    }
+    if not isinstance(spz_profiles, dict):
+        missing.append("spz:profiles")
+    else:
+        if set(spz_profiles) != set(expected_spz_profiles):
+            missing.append("spz:profile-set")
+        for profile_id, expected in expected_spz_profiles.items():
+            profile = spz_profiles.get(profile_id)
+            if not isinstance(profile, dict):
+                missing.append(f"spz:{profile_id}")
+                continue
+            if any(profile.get(key) != value for key, value in expected.items()):
+                missing.append(f"spz:{profile_id}:settings")
+            for metric in ("file_mb", "write_mbps", "read_mbps"):
+                value = profile.get(metric)
+                if (
+                    isinstance(value, bool)
+                    or not isinstance(value, (int, float))
+                    or not math.isfinite(value)
+                    or value <= 0
+                ):
+                    missing.append(f"spz:{profile_id}:{metric}")
     if missing:
         raise RuntimeError(
             "strict comparison evidence incomplete: "

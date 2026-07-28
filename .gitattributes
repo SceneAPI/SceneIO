@@ -9,3 +9,6 @@ LICENSES/miniz-zip.txt -text -whitespace
 src/cpp/third_party/nlohmann_json/** -text -whitespace
 LICENSES/nlohmann-json.txt -text -whitespace
 LICENSES/nlohmann-json-source.txt -text -whitespace
+src/cpp/third_party/zstd/** -text -whitespace
+LICENSES/zstd.txt -text -whitespace
+LICENSES/zstd-source.txt -text -whitespace

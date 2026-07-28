@@ -3914,7 +3914,7 @@ Perform one dependency per commit.
 |---|---|---:|---:|---:|---|
 | miniz | 3.0.2 / `293d4db1b7d0ffee9756d035b9ac6f7431ef8492` | ✅ exact archive files and hashes recorded | ✅ direct hidden static target; no miniz fetch | ✅ local rebuild, parity, strict benchmark, sdist-derived wheel, installed smoke, and three reviews | this commit |
 | nlohmann/json | 3.11.3 / `9cca280a4d0ccf0c08f47a99aa71d1b0e52f8d03` | ✅ exact 45-header tree and license hashes recorded | ✅ local interface target; no nlohmann/json fetch | ✅ rebuild, parity, strict benchmark, sdist-derived wheel, installed smoke, and three reviews | this commit |
-| zstd | 1.5.6 | ⬜ | ⬜ | ⬜ | pending |
+| zstd | 1.5.6 / `794ea1b0afca0f020f4e57b6732332231fb23c70` | ✅ exact selected library/build files and hashes recorded | ✅ local upstream static target; no zstd fetch | ✅ rebuild, dual-profile SPZ benchmark, strict sweep, exact package, isolated smoke, and three reviews | this commit |
 | fast_float | 6.1.6 | ⬜ | ⬜ | ⬜ | pending |
 | LAZperf | 3.4.0 / `b7bbe26109dc986f42d4fc80b8de3d2b6ca634ce` | ⬜ | ⬜ | ⬜ | pending |
 | libwebp | 1.5.0 | ⬜ | ⬜ | ⬜ | pending |
@@ -3982,6 +3982,55 @@ Nlohmann/json local evidence at the reviewed candidate:
 - the architecture/correctness, test/performance, and
   platform/package/documentation reviews are clear after correcting the
   selected-file wording to distinguish the 45 headers from `LICENSE.MIT`.
+
+Zstd local evidence at the review candidate:
+
+- the 2,406,875-byte official 1.5.6 release archive has SHA-256
+  `8c29e06cf42aacc1eafc4077ae2ec6c6fcb96a626157e0593d5e82a34fd403c1`;
+  all 78 selected library/build/license files match the 7,310-byte
+  `SOURCE_MANIFEST.sha256`, whose SHA-256 is
+  `f94a91b60a5a9b69beb5978d3b58467c60b33eead1d29f12e7e8d9a20ecb5b24`;
+- the selected upstream CMake files are stored byte-exact under
+  `zstd/cmake/upstream/`, preserving their two-level path from the zstd root
+  while avoiding the repository build-output exclusion. The generated MSVC
+  target names only repository-contained zstd sources. SceneIO explicitly
+  selects compression, decompression, dictionary building, multithreading,
+  disabled deprecated APIs, position-independent code, and hidden C symbol
+  visibility;
+- the editable MSVC rebuild and native-symbol import pass. SPZ parity plus
+  public mmap, streaming, inspection, partial, and architecture coverage is
+  `205 passed, 1 skipped` after the review corrections; source/build contracts
+  are `17 passed`;
+- the complete suite is unchanged at `3401 passed, 4 skipped`. A review found
+  that the first focused benchmark measured only the default v3 gzip path.
+  The corrected harness now defines and validates separate
+  `legacy_v3_gzip`/miniz and `ngsp_v4_zstd`/Zstd profiles on the same cloud;
+- the confirming strict sweep records 105/769 MB/s encode/decode for v3 and
+  257/1,391 MB/s for v4. Both profile signatures and settings are locked, and
+  their decoded arrays are identical. The v3 public-path row preserves the
+  3.4 MB bytes-versus-zero mmap allocation delta;
+- the strict all-50 five-run benchmark passes every retained O4/O5 and
+  mmap/sink allocation gate. Its 52,067-byte JSON has SHA-256
+  `b3d4666ad09aa60419ca980c658519fcbe72691528fecf3a176f40e965e278d0`;
+  the intentional `spz_profiles` result shape has structural SHA-256
+  `8f218ff77bcf2ea1e918d4ed164f7184fa2662eb252508c387b5f131a053a8e7`;
+- review corrections explicitly pin the selected zstd modules, hide its C
+  symbols, and record the v4 SPZ directions as repository-vendored Zstd
+  operations while retaining the v3 miniz operations in
+  `bench/PERFORMANCE_STATUS.toml`; contracts now lock those choices;
+- the exact-index source archive contains 558 files, including all 80 zstd
+  source/metadata members, validates all 78 selected upstream files against
+  the manifest, and includes all 18 indexed notices. Its sdist-derived Windows
+  abi3 wheel contains 86 files, one extension, no native-source or build-layout
+  payload, NumPy as its only unconditional dependency, and all 18 notices;
+- the isolated installed-wheel smoke imports both Python and native modules
+  from the target directory and returns phase `2`. Native inspection reports
+  only Python and standard Windows runtime libraries, and the extension
+  exports no zstd API symbols;
+- the architecture/correctness, test/performance, and
+  platform/package/documentation reviews are clear after correcting explicit
+  build settings, symbol visibility, backend ownership, and the separate
+  v3/miniz versus v4/Zstd benchmark profiles.
 
 ### R6.1 — provenance and source intake
 

@@ -1077,7 +1077,7 @@
       "build/r2-aggregate-parent-b.json"
     ],
     "rows": 50,
-    "structural_projection_sha256": "2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376",
+    "structural_projection_sha256": "8f218ff77bcf2ea1e918d4ed164f7184fa2662eb252508c387b5f131a053a8e7",
     "excluded_key_suffixes": [
       "_mbps",
       "_ms"
