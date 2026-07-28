@@ -245,7 +245,7 @@ def test_performance_backend_versions_match_pinned_sources():
             "b7bbe26109dc986f42d4fc80b8de3d2b6ca634ce",
             "src/cpp/third_party/lazperf/COMMIT.txt",
         ),
-        "miniz": ("3.0.2", "cmake/SceneIODependencies.cmake"),
+        "miniz": ("3.0.2", "src/cpp/third_party/miniz/COMMIT.txt"),
         "miniz+zstd": (
             "zstd-1.5.6",
             "cmake/SceneIODependencies.cmake",

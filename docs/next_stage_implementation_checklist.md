@@ -3908,6 +3908,50 @@ R5 negative-candidate exit:
 
 Perform one dependency per commit.
 
+### R6 progress ledger
+
+| Dependency | Selected revision | Repository source | Local build | Local verification | Commit |
+|---|---|---:|---:|---:|---|
+| miniz | 3.0.2 / `293d4db1b7d0ffee9756d035b9ac6f7431ef8492` | ✅ exact archive files and hashes recorded | ✅ direct hidden static target; no miniz fetch | ✅ local rebuild, parity, strict benchmark, sdist-derived wheel, installed smoke, and three reviews | this commit |
+| nlohmann/json | 3.11.3 | ⬜ | ⬜ | ⬜ | pending |
+| zstd | 1.5.6 | ⬜ | ⬜ | ⬜ | pending |
+| fast_float | 6.1.6 | ⬜ | ⬜ | ⬜ | pending |
+| LAZperf | 3.4.0 / `b7bbe26109dc986f42d4fc80b8de3d2b6ca634ce` | ⬜ | ⬜ | ⬜ | pending |
+| libwebp | 1.5.0 | ⬜ | ⬜ | ⬜ | pending |
+
+The shared R6.1–R6.3 boxes remain open until all six rows satisfy them. Each
+row receives its own green commit; the final disconnected sdist-to-wheel and
+three-toolchain evidence close the shared exit boxes.
+
+Miniz local evidence at the reviewed tree:
+
+- exact staged upstream-file hashes match `COMMIT.txt`, including the
+  99,268-byte release archive SHA-256
+  `ada38db0b703a56d3dd6d57bf84a9c5d664921d870d8fea4db153979fb5332c5`;
+- editable MSVC rebuild and symbol import pass; affected codec/API parity is
+  `160 passed, 1 skipped`, targeted mmap/streaming coverage is `43 passed`,
+  and source/build contracts are `17 passed`;
+- the complete suite is `3401 passed, 4 skipped`, the exact collection is
+  3,405 nodes, Ruff passes, and both diff checks pass;
+- the strict 50-codec five-run benchmark passes every retained O4/O5 and
+  mmap/sink allocation gate. Its uncommitted JSON is 50,259 bytes with
+  SHA-256
+  `652c12619b436723c61ffeba81ae11d91a1de71be55d665e2d2c412aaa6b487b`;
+- the final 4,478,322-byte sdist contains 428 files, including all six miniz
+  intake files and both miniz notices (SHA-256
+  `943e785023e4d80472859b7047cff3126a728a00e2b122069d4ffbb645cb938e`);
+  its sdist-derived 2,196,335-byte Windows abi3 wheel contains 84 files, one
+  extension, no native-source payload, NumPy as its only unconditional
+  dependency, all 16 indexed notices, and no FFmpeg/libav package entries
+  (SHA-256
+  `2788c69ead9a0992bc4b968cdc7ca167de84fc8f52ffafa9ed700e6d39552209`).
+  The wheel passes smoke through an isolated installed-package path rather
+  than the editable import hook.
+- the architecture, test/performance, and platform/package/documentation
+  reviews are clear after adding the source-derived ZIP notice, correcting
+  stale R6 wording, pinning notice bytes, and strengthening the all-CMake
+  local-source contract.
+
 ### R6.1 — provenance and source intake
 
 - [ ] Store the exact selected source under

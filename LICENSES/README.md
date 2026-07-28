@@ -14,7 +14,7 @@ redistribution choice used by SceneIO is stated explicitly.
 | Component | Version or pin | How it is shipped | License used here | Notice |
 |---|---|---|---|---|
 | nanobind | build requirement `>=2.4` (2.13.0 locally validated) | statically linked binding runtime | BSD-3-Clause | [nanobind.txt](nanobind.txt) |
-| miniz | 3.0.2 | statically linked | MIT | [miniz.txt](miniz.txt) |
+| miniz | 3.0.2, commit `293d4db1b7d0ffee9756d035b9ac6f7431ef8492` | vendored and statically linked | MIT | [top-level license](miniz.txt), [ZIP implementation notice](miniz-zip.txt) |
 | nlohmann/json | 3.11.3 | compiled header-only code | MIT | [nlohmann-json.txt](nlohmann-json.txt) |
 | Zstandard | 1.5.6 | statically linked | BSD-3-Clause | [zstd.txt](zstd.txt) |
 | fast_float | 6.1.6 | compiled header-only code | MIT option | [fast-float.txt](fast-float.txt) |

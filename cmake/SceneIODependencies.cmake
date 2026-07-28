@@ -14,15 +14,26 @@ find_package(nanobind CONFIG REQUIRED)
 # STABLE_ABI -> a single abi3 wheel across CPython >= 3.12 (D1/D4 in
 # docs/io_implementation_plan.md); NB_STATIC links nanobind statically so the
 # wheel has no extra runtime .so/.dll to ship.
-# miniz (MIT) — gzip inflate/deflate for the SPZ codec. The amalgamated
-# release is just miniz.c + miniz.h; build it as a small static library.
+# miniz 3.0.2 (MIT) — repository-contained gzip/ZIP inflate/deflate for SPZ,
+# SOG, NPZ, and TinyEXR. Build the pinned amalgamation directly instead of
+# configuring upstream's project.
+set(miniz_SOURCE_DIR "${PROJECT_SOURCE_DIR}/src/cpp/third_party/miniz")
+if(NOT EXISTS "${miniz_SOURCE_DIR}/miniz.c" OR
+   NOT EXISTS "${miniz_SOURCE_DIR}/miniz.h")
+  message(FATAL_ERROR
+    "Repository-contained miniz 3.0.2 sources are incomplete")
+endif()
+add_library(miniz_static STATIC "${miniz_SOURCE_DIR}/miniz.c")
+target_include_directories(miniz_static PUBLIC "${miniz_SOURCE_DIR}")
+set_target_properties(
+  miniz_static
+  PROPERTIES
+    POSITION_INDEPENDENT_CODE ON
+    C_VISIBILITY_PRESET hidden)
+
+# The remaining R6 source-closure units still use FetchContent until their
+# exact selected sources move under src/cpp/third_party/.
 include(FetchContent)
-FetchContent_Declare(miniz
-  URL https://github.com/richgel999/miniz/releases/download/3.0.2/miniz-3.0.2.zip)
-FetchContent_MakeAvailable(miniz)
-add_library(miniz_static STATIC ${miniz_SOURCE_DIR}/miniz.c)
-target_include_directories(miniz_static PUBLIC ${miniz_SOURCE_DIR})
-set_property(TARGET miniz_static PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 # nlohmann/json (MIT), header-only — for the transforms.json codec.
 FetchContent_Declare(nlohmann_json

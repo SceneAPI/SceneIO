@@ -70,8 +70,8 @@ wheel.exclude = ["include/**", "lib/**", "share/**", "bin/**"]
 # Cross-platform wheel builds for the compiled core (Thread 2A). One abi3 wheel
 # per platform; `requires-python` currently caps at <3.13, so only cp312 is
 # built — relaxing that cap ships the same abi3 wheel to 3.13+ with no rebuild.
-# Deps (miniz/nlohmann-json/zstd) are fetched by CMake FetchContent at build
-# time, so each wheel job needs network access (a candidate to vendor later).
+# Miniz is repository-contained. Five remaining native dependencies still use
+# CMake FetchContent, so wheel jobs need source-network access until R6 closes.
 [tool.cibuildwheel]
 build = "cp312-*"
 skip = "*-musllinux* *_i686 *-win32"

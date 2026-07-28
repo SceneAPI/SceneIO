@@ -414,9 +414,10 @@ it is the best viable choice and it satisfies fidelity, deterministic output,
 permissive licensing, static/offline buildability, cross-platform support,
 maintenance, startup, and artifact-size requirements. Default stable kernels
 must ultimately be pinned under `src/cpp/third_party/`, built into `_core`, and
-attributed in `LICENSES/`. At the current head, six source-pinned dependencies
-still arrive through CMake `FetchContent`; repository-contained source closure
-is the R6 target, not a completed-state claim. The R5 JPEG candidate is
+attributed in `LICENSES/`. Miniz 3.0.2 is now repository-contained; five
+source-pinned dependencies still arrive through CMake `FetchContent`.
+Repository-contained source closure is the R6 target, not a completed-state
+claim. The R5 JPEG candidate is
 additionally built by a default-off external project from the official
 libjpeg-turbo 3.2.0 archive. The clean MSVC qualification rejected that exact
 candidate as the combined stable default after it missed the frozen q95

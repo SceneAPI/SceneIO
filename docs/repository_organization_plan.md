@@ -393,7 +393,7 @@ verification have accumulated in a few large modules:
 | Benchmark | compatible `bench_io.py` entry point plus `io_bench/{model,measure,reporting,runner}.py`, all eight lower family modules, and shared `families/common.py` | all benchmark ownership is lower; the final R3.2 unit adds built-in completeness and strict comparison-provider controls |
 | Cross-codec tests | shared 50-codec catalog and 44-case buffer builder; focused streaming, inspection, array-partial, and image-partial modules; lower partial assertions; `test_io_mmap.py`, about 680 lines; shared partial invariants | mmap, streaming, and inspection ownership is split; partial behavior is migrating one family at a time |
 | Execution plan | `format_gap_implementation_plan.md`, about 2,500 lines | historical evidence and the active queue are easy to confuse |
-| Native dependencies | six source-complete in-tree projects, one LAZperf integration/provenance directory, and six `FetchContent` projects | stable builds are not yet fully offline/repository-contained |
+| Native dependencies | seven source-complete in-tree projects, one LAZperf integration/provenance directory, and five `FetchContent` projects | miniz is repository-contained; the five remaining source fetches keep stable builds from being fully offline |
 
 The public API and native ABI remain stable throughout the reorganization.
 
@@ -1115,9 +1115,9 @@ installed smoke.
 
 ### R6. Close stable native sources
 
-- Vendor the selected exact revisions for the six currently fetched
-  dependencies; a performance result may change a backend before its source is
-  embedded.
+- Vendor the selected exact revisions for the five dependencies still fetched;
+  miniz is the first completed row of the six-dependency closure set. A
+  performance result may change a backend before its source is embedded.
 - Apply local changes as documented patch files or narrowly marked source
   changes.
 - Prove `FETCHCONTENT_FULLY_DISCONNECTED=ON` and network-disabled

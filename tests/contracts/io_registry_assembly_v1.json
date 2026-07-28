@@ -328,8 +328,8 @@
     "last": "tests/test_points_binary.py::test_bad_magic_rejected"
   },
   "pytest_candidate_collection": {
-    "count": 3402,
-    "sorted_normalized_node_ids_sha256": "4fb56be9b956fc05efb9d7efe678ce203996827629d4391358b9e259ac57a181",
+    "count": 3405,
+    "sorted_normalized_node_ids_sha256": "252256d06f5d077d71263eb5adda6bb42902a6dfba9524a2f9b8991e183cb473",
     "added_nodes": [
       "tests/codecs/test_jpeg.py::test_retained_stb_encoder_bytes_match_the_locked_vectors",
       "tests/test_backend_qualification.py::test_backend_candidate_ledger_has_complete_jpeg_intake",
@@ -650,7 +650,10 @@
       "tests/test_native_build_architecture.py::test_record_and_link_manifests_match_the_frozen_native_layout",
       "tests/test_native_build_architecture.py::test_registration_tables_preserve_order_and_single_ownership",
       "tests/test_native_build_architecture.py::test_live_native_inventory_matches_builtin_ownership_and_capabilities",
-      "tests/test_native_build_architecture.py::test_target_and_instrumentation_contracts_remain_explicit"
+      "tests/test_native_build_architecture.py::test_target_and_instrumentation_contracts_remain_explicit",
+      "tests/test_license_inventory.py::test_repository_contained_native_sources_match_recorded_hashes",
+      "tests/test_license_inventory.py::test_repository_contained_native_licenses_are_exact_distribution_copies",
+      "tests/test_license_inventory.py::test_repository_contained_native_sources_replace_their_fetches"
     ],
     "removed_nodes": [
       "tests/codecs/test_compressed_ply.py::test_writer_body_is_byte_identical_to_pinned_playcanvas_vector"
