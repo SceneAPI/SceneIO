@@ -86,12 +86,12 @@ set(SCENEIO_SEQUENCE_CODEC_SOURCES
   src/cpp/codecs/sequences/y4m.cpp)
 
 set(SCENEIO_SPLAT_CODEC_SOURCES
-  src/cpp/codecs/ply_gaussian.cpp
-  src/cpp/codecs/compressed_ply.cpp
-  src/cpp/codecs/sog.cpp
-  src/cpp/codecs/ksplat.cpp
-  src/cpp/codecs/spz.cpp
-  src/cpp/codecs/splat.cpp)
+  src/cpp/codecs/splats/ply_gaussian.cpp
+  src/cpp/codecs/splats/compressed_ply.cpp
+  src/cpp/codecs/splats/sog.cpp
+  src/cpp/codecs/splats/ksplat.cpp
+  src/cpp/codecs/splats/spz.cpp
+  src/cpp/codecs/splats/splat.cpp)
 
 set(SCENEIO_CODEC_SOURCES
   ${SCENEIO_ARRAY_CODEC_SOURCES}
@@ -137,17 +137,17 @@ set(SCENEIO_CORE_SOURCES
   src/cpp/records/mesh_scene.cpp
   src/cpp/codecs/arrays/pfm.cpp
   src/cpp/codecs/reconstruction/colmap.cpp
-  src/cpp/codecs/ply_gaussian.cpp
-  src/cpp/codecs/compressed_ply.cpp
-  src/cpp/codecs/sog.cpp
-  src/cpp/codecs/ksplat.cpp
+  src/cpp/codecs/splats/ply_gaussian.cpp
+  src/cpp/codecs/splats/compressed_ply.cpp
+  src/cpp/codecs/splats/sog.cpp
+  src/cpp/codecs/splats/ksplat.cpp
   src/cpp/codecs/points/ply_point.cpp
   src/cpp/codecs/meshes/ply_mesh.cpp
   src/cpp/codecs/meshes/obj_mtl.cpp
   src/cpp/codecs/meshes/stl_off.cpp
   src/cpp/codecs/meshes/gltf.cpp
   src/cpp/codecs/points/pcd.cpp
-  src/cpp/codecs/spz.cpp
+  src/cpp/codecs/splats/spz.cpp
   src/cpp/codecs/reconstruction/transforms_json.cpp
   src/cpp/codecs/reconstruction/pose_text.cpp
   src/cpp/codecs/arrays/npy_npz.cpp
@@ -159,7 +159,7 @@ set(SCENEIO_CORE_SOURCES
   src/cpp/codecs/reconstruction/bal.cpp
   src/cpp/codecs/reconstruction/nvm.cpp
   src/cpp/codecs/reconstruction/openmvg.cpp
-  src/cpp/codecs/splat.cpp
+  src/cpp/codecs/splats/splat.cpp
   src/cpp/codecs/images/png.cpp
   src/cpp/codecs/images/jpeg.cpp
   src/cpp/codecs/images/hdr.cpp

@@ -1,4 +1,4 @@
-// codecs/splat.cpp — antimatter15 ".splat" 3D-Gaussian codec into the shared
+// codecs/splats/splat.cpp — antimatter15 ".splat" 3D-Gaussian codec into the shared
 // GaussianCloud record (records/gaussian_cloud.hpp), a quantized sibling of
 // spz.cpp. The format is a HEADERLESS flat array of 32-byte records, one per
 // Gaussian, little-endian:

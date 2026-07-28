@@ -535,8 +535,8 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > source/sdist/wheel package gate and fresh NumPy-only installed smoke pass;
 > all three confirmation reviews are clear. Normal run `30316577366` and
 > compiler-instrumented run `30316577369` pass that exact commit. R4.3 arrays
-> through reconstruction close at pushed commits through `25f74bb`; the
-> sequence-family path-only candidate is green locally. No format capability
+> through sequences close at pushed commits through `2e30e9f`; the
+> splats-family path-only candidate is green locally. No format capability
 > changes.
 
 [current-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287022

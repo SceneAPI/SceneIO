@@ -1,4 +1,4 @@
-// codecs/sog.cpp -- PlayCanvas SOG v2 reader/writer.
+// codecs/splats/sog.cpp -- PlayCanvas SOG v2 reader/writer.
 //
 // SOG stores Morton-ordered Gaussian attributes in lossless WebP textures,
 // described by meta.json.  The same members may live at the root of a stored

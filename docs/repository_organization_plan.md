@@ -57,15 +57,17 @@ R4.3 is in progress. The arrays-family unit closes and is pushed at
 232-name/49-entry native surface checks, complete strict guard, and all three
 reviews pass.
 
-The reconstruction-family unit closes and is pushed at `25f74bb`. The
-sequence candidate moves Y4M under `src/cpp/codecs/sequences/`; its executable
-body is byte-identical and only the first-line source-location comment uses
-the new path. CMake, the native-build contract, and the performance-ledger path
-move with it. MSVC, 245 focused tests, the complete 3,350-pass/four-skip suite,
-Ruff, the unchanged 232/49 native surface, and the complete five-run strict
-guard pass. One physical family move remains after this candidate. No timed
-codec loop changed and no speedup is claimed. All three independent reviews
-are clear; commit evidence remains open.
+The sequence-family unit closes and is pushed at `2e30e9f`. The splats
+candidate moves all six native Gaussian-splat sources under
+`src/cpp/codecs/splats/`. Four sources are byte-identical; SOG and SPLAT have
+unchanged executable bodies and only their first-line source-location comments
+use the new paths. CMake, the native-build contract, and all 16
+performance-ledger paths move with them. MSVC, 332 focused tests with one
+documented skip, the complete 3,350-pass/four-skip suite, Ruff, the unchanged
+232/49 native surface, and the complete five-run strict guard pass. All 40
+native codec sources are now nested in the candidate tree and no flat codec
+source remains. No timed codec loop changed and no speedup is claimed. All
+three independent reviews are clear; commit evidence remains open.
 
 The first independent review pass found no native lifetime defect and required
 stronger inventory/source contracts. The candidate now compares every ordered
@@ -388,7 +390,7 @@ verification have accumulated in a few large modules:
 
 | Area | Current shape | Growth risk |
 |---|---|---|
-| C++ codecs | 40 files for 50 format ids; eight explicit CMake family manifests; eight family-owned binding tables plus one validated assembler | arrays through reconstruction pushed; sequence candidate green; one physical family move remains |
+| C++ codecs | 40 files for 50 format ids; eight explicit CMake family manifests; eight family-owned binding tables plus one validated assembler | arrays through sequences pushed; all 40 candidate paths are nested; splats review and commit remain |
 | C++ records | 32 source/header files | still manageable; new table/animation/scene records will add pressure |
 | Python registry | `registry.py`, 205 lines; `_registry/assembly.py`, 148 lines; focused `_registry/{model,adapters,detection,native_features}.py` modules; and eight `_registry/families/*.py` definition modules | all built-ins are family-owned; R3 now splits the benchmark and cross-codec verification monoliths |
 | Inspection | `_inspection.py` compatibility facade plus `_inspectors/{model,common,arrays,calibration,images,meshes,points,reconstruction,sequences,splats}.py`; all eight manifest families have lower inspector ownership | keep the proven shared model, mmap bridge, metadata bounds, exact-read/integer grammar, and image-result constructor as lower services |

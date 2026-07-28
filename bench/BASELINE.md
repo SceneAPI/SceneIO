@@ -2608,7 +2608,7 @@ changed, so this unit makes no performance claim. The architecture/lifetime,
 test/performance, and platform/package/documentation reviews are clear.
 Commit `25f74bb` is pushed to `phase0-nanobind-core`.
 
-## R4.3 sequence-family source move candidate (2026-07-27)
+## R4.3 sequence-family source move closure (2026-07-27)
 
 Y4M moves to `src/cpp/codecs/sequences/`. Its executable body is
 byte-identical and only the first-line source-location comment uses the new
@@ -2622,4 +2622,24 @@ documented skips; Ruff, the 232-name non-dunder `_core` surface, and the
 all-50-codec guard passes in 368.1 seconds and is retained as
 `build/r4_3_sequences_strict_guard.json`. No timed codec implementation
 changed, so this unit makes no performance claim. All three independent
-reviews are clear; commit evidence remains open.
+reviews are clear.
+Commit `2e30e9f` is pushed to `phase0-nanobind-core`.
+
+## R4.3 splats-family source move candidate (2026-07-27)
+
+Gaussian PLY, compressed PLY, SOG, KSplat, SPZ, and SPLAT move to
+`src/cpp/codecs/splats/`. Gaussian PLY, compressed PLY, KSplat, and SPZ are
+byte-identical moves; the SOG and SPLAT executable bodies are unchanged and
+only their first-line source-location comments use the new paths. CMake
+ownership, frozen link order, native-build contracts, and all 16 live
+performance-ledger paths move with them. All 40 native codec sources are now
+nested under the eight family directories, with no flat codec source left.
+
+The MSVC editable build and 332 focused codec/family/mmap/sink/inspection/
+partial/API tests pass with one documented skip. The complete suite passes
+3,350 tests with four documented skips; Ruff, the 232-name non-dunder `_core`
+surface, and the 49-entry native inventory remain unchanged. The complete
+five-run strict all-50-codec guard passes in 373.4 seconds and is retained as
+`build/r4_3_splats_strict_guard.json`. No timed codec implementation changed,
+so this unit makes no performance claim. All three independent reviews are
+clear; commit evidence remains open.
