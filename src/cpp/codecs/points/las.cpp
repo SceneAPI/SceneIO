@@ -1,4 +1,4 @@
-// codecs/las.cpp — ASPRS LAS point cloud <-> PointCloud. LAS is a documented
+// codecs/points/las.cpp -- ASPRS LAS point cloud <-> PointCloud. LAS is a documented
 // little-endian binary (a public header block + fixed-size point records), so
 // this is a hand parser like colmap.cpp / bundler.cpp — no third-party library.
 //

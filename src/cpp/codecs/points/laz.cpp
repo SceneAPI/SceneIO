@@ -1,4 +1,4 @@
-// codecs/laz.cpp — LASzip-compatible LAZ <-> PointCloud through LAZperf 3.4.
+// codecs/points/laz.cpp -- LASzip-compatible LAZ <-> PointCloud through LAZperf 3.4.
 //
 // The wrapper parses and bounds the container itself before entering LAZperf:
 // only the exact standard point records 0-3 and 6-8 plus one LASzip VLR are

@@ -2554,7 +2554,7 @@ so this unit makes no performance claim. The architecture/lifetime,
 test/performance, and platform/package/documentation reviews are clear.
 Commit `aff2a37` is pushed to `phase0-nanobind-core`.
 
-## R4.3 meshes-family source move candidate (2026-07-27)
+## R4.3 meshes-family source move closure (2026-07-27)
 
 PLY-mesh, OBJ/MTL, STL/OFF, and glTF move to `src/cpp/codecs/meshes/`.
 PLY-mesh and OBJ/MTL are byte-identical moves; the other two executable bodies
@@ -2568,5 +2568,23 @@ documented skips; Ruff, the 232-name non-dunder `_core` surface, and the
 49-entry native inventory remain unchanged. The complete five-run strict
 all-50-codec guard passes in 372.9 seconds and is retained as
 `build/r4_3_meshes_strict_guard.json`. No timed codec implementation changed,
+so this unit makes no performance claim. The architecture/lifetime,
+test/performance, and platform/package/documentation reviews are clear.
+Commit `c5de24b` is pushed to `phase0-nanobind-core`.
+
+## R4.3 points-family source move candidate (2026-07-27)
+
+PLY-point, PCD, XYZ/PTS, LAS, and LAZ move to `src/cpp/codecs/points/`.
+PLY-point and PCD are byte-identical moves; the other three executable bodies
+are unchanged and only their first-line source-location comments use the new
+paths. CMake ownership, frozen link order, native-build contracts, and all 32
+live performance-ledger paths move with them.
+
+The MSVC editable build and 583 focused codec/family/mmap/sink/inspection/
+partial/API tests pass. The complete suite passes 3,350 tests with four
+documented skips; Ruff, the 232-name non-dunder `_core` surface, and the
+49-entry native inventory remain unchanged. The complete five-run strict
+all-50-codec guard passes in 373.5 seconds and is retained as
+`build/r4_3_points_strict_guard.json`. No timed codec implementation changed,
 so this unit makes no performance claim. The architecture/lifetime,
 test/performance, and platform/package/documentation reviews are clear.

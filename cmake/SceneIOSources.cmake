@@ -63,11 +63,11 @@ set(SCENEIO_MESH_CODEC_SOURCES
   src/cpp/codecs/meshes/gltf.cpp)
 
 set(SCENEIO_POINT_CODEC_SOURCES
-  src/cpp/codecs/ply_point.cpp
-  src/cpp/codecs/pcd.cpp
-  src/cpp/codecs/xyz.cpp
-  src/cpp/codecs/las.cpp
-  src/cpp/codecs/laz.cpp)
+  src/cpp/codecs/points/ply_point.cpp
+  src/cpp/codecs/points/pcd.cpp
+  src/cpp/codecs/points/xyz.cpp
+  src/cpp/codecs/points/las.cpp
+  src/cpp/codecs/points/laz.cpp)
 
 set(SCENEIO_RECONSTRUCTION_CODEC_SOURCES
   src/cpp/codecs/colmap.cpp
@@ -141,19 +141,19 @@ set(SCENEIO_CORE_SOURCES
   src/cpp/codecs/compressed_ply.cpp
   src/cpp/codecs/sog.cpp
   src/cpp/codecs/ksplat.cpp
-  src/cpp/codecs/ply_point.cpp
+  src/cpp/codecs/points/ply_point.cpp
   src/cpp/codecs/meshes/ply_mesh.cpp
   src/cpp/codecs/meshes/obj_mtl.cpp
   src/cpp/codecs/meshes/stl_off.cpp
   src/cpp/codecs/meshes/gltf.cpp
-  src/cpp/codecs/pcd.cpp
+  src/cpp/codecs/points/pcd.cpp
   src/cpp/codecs/spz.cpp
   src/cpp/codecs/transforms_json.cpp
   src/cpp/codecs/pose_text.cpp
   src/cpp/codecs/arrays/npy_npz.cpp
   src/cpp/codecs/images/netpbm.cpp
   src/cpp/codecs/colmap_txt.cpp
-  src/cpp/codecs/xyz.cpp
+  src/cpp/codecs/points/xyz.cpp
   src/cpp/codecs/arrays/flo.cpp
   src/cpp/codecs/bundler.cpp
   src/cpp/codecs/bal.cpp
@@ -165,8 +165,8 @@ set(SCENEIO_CORE_SOURCES
   src/cpp/codecs/images/hdr.cpp
   src/cpp/codecs/images/bmp_tga.cpp
   src/cpp/codecs/images/exr.cpp
-  src/cpp/codecs/las.cpp
-  src/cpp/codecs/laz.cpp
+  src/cpp/codecs/points/las.cpp
+  src/cpp/codecs/points/laz.cpp
   src/cpp/codecs/y4m.cpp
   src/cpp/codecs/images/webp.cpp
   src/cpp/codecs/arrays/safetensors.cpp

@@ -41,9 +41,9 @@ things that keep this expansible as the format list from
 > source ownership checks are recursive and full-path exact for R4.3. The
 > Python-owned `image_sequence` adapter remains outside that native projection.
 > Normal run `30316577366` and compiler-instrumented run `30316577369` pass
-> that exact commit. R4.3 arrays, calibration, and images close at pushed
-> commits `f57c677`, `366aac0`, and `aff2a37`. The meshes-family candidate now
-> uses `codecs/meshes/`; four codec families remain physically flat.
+> that exact commit. R4.3 arrays through meshes close at pushed commits
+> `f57c677`, `366aac0`, `aff2a37`, and `c5de24b`. The points-family candidate
+> now uses `codecs/points/`; three codec families remain physically flat.
 
 ## Layering
 

@@ -1,4 +1,4 @@
-// codecs/xyz.cpp — the .xyz point-cloud TEXT codec into the shared PointCloud
+// codecs/points/xyz.cpp -- the .xyz point-cloud TEXT codec into the shared PointCloud
 // record (records/point_cloud.hpp).
 //
 // Grammar: one point per line, whitespace/comma separated; blank lines and

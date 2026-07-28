@@ -76,14 +76,14 @@ R4.3 is in progress. The arrays-family unit closes and is pushed at
 232-name/49-entry native surface checks, complete strict guard, and all three
 reviews pass.
 
-The images-family unit closes and is pushed at `aff2a37`. The meshes candidate
-moves PLY-mesh, OBJ/MTL, STL/OFF, and glTF under `src/cpp/codecs/meshes/`;
-executable bodies are unchanged and two embedded location comments use the
-new paths. CMake, contract, and performance-ledger paths move with them. MSVC,
-419 focused tests, the complete 3,354-node suite (3,350 passed/four skipped),
-Ruff, the unchanged 232/49 native surface, and the complete five-run strict
-all-50-codec guard pass. All three independent reviews are clear; commit
-evidence remains open.
+The meshes-family unit closes and is pushed at `c5de24b`. The points candidate
+moves PLY-point, PCD, XYZ/PTS, LAS, and LAZ under
+`src/cpp/codecs/points/`; executable bodies are unchanged and three embedded
+location comments use the new paths. CMake, contract, and performance-ledger
+paths move with them. MSVC, 583 focused tests, the complete 3,354-node suite
+(3,350 passed/four skipped), Ruff, the unchanged 232/49 native surface, and
+the complete five-run strict all-50-codec guard pass. All three independent
+reviews are clear; commit evidence remains open.
 
 This is the operational checklist for the repository-organization and
 codec-performance stage defined in
@@ -3552,7 +3552,19 @@ Meshes-family candidate:
 - [x] Pass the complete five-run strict all-50-codec O4/O5 and mmap/sink
       guard.
 - [x] Complete the three independent reviews.
-- [ ] Commit the meshes unit.
+- [x] Commit and push the meshes unit at `c5de24b`.
+
+Points-family candidate:
+
+- [x] Move PLY-point, PCD, XYZ/PTS, LAS, and LAZ under
+      `src/cpp/codecs/points/` and update path contracts only.
+- [x] Rebuild on MSVC and pass 583 focused tests, the complete
+      3,350-pass/four-skip suite, Ruff, and the 232-name/49-entry native
+      surface checks.
+- [x] Pass the complete five-run strict all-50-codec O4/O5 and mmap/sink
+      guard.
+- [x] Complete the three independent reviews.
+- [ ] Commit the points unit.
 
 R4 verification and validation:
 

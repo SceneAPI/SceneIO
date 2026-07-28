@@ -64,8 +64,8 @@ no throughput claim. The complete suite passes 3,350 tests with four documented
 skips, and Ruff is clean. The exact 398/399/81 source/sdist/wheel package gate
 and fresh NumPy-only installed smoke pass. All three confirmation reviews are
 clear. Normal run `30316577366` and compiler-instrumented run `30316577369`
-pass that exact commit. R4.3 arrays, calibration, and images close at pushed
-commits `f57c677`, `366aac0`, and `aff2a37`; the meshes-family path-only
+pass that exact commit. R4.3 arrays through meshes close at pushed commits
+`f57c677`, `366aac0`, `aff2a37`, and `c5de24b`; the points-family path-only
 candidate is green locally. No codec loop has changed and no throughput claim
 is made.
 
