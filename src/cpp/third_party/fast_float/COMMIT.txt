@@ -1,0 +1,32 @@
+fast_float 6.1.6
+
+Upstream: https://github.com/fastfloat/fast_float
+Tag: v6.1.6
+Commit: 00c8c7b0d5c722d2212568d915a39ea73b08b973
+Retrieved: 2026-07-28
+License choice: MIT (see LICENSE-MIT)
+
+Source archive:
+https://github.com/fastfloat/fast_float/archive/refs/tags/v6.1.6.tar.gz
+Size: 101727 bytes
+SHA-256:
+4458aae4b0eb55717968edda42987cabf5f7fc737aee8fede87a70035dba9ab0
+
+Selected repository-contained source:
+- LICENSE-MIT
+- include/fast_float/*.h (all nine public headers required by
+  fast_float/fast_float.h)
+
+Every selected upstream file and its SHA-256 is recorded in
+SOURCE_MANIFEST.sha256. The manifest is 989 bytes with SHA-256:
+dd075e6dfb33eef1eac73af549cda6094b43f6ea64ae3528e1b25034f66767b5
+
+SceneIO recreates the header-only interface target from the repository source,
+including its C++11 feature requirement and conditional MSVC `/permissive-`
+consumer option. No fast_float translation unit, library archive, generated
+header, compile definition, or runtime component exists. Upstream tests,
+examples, fuzzers, benchmarks, scripts, install/export rules, and package
+configuration are not stored or configured.
+
+Local patches: none. Every selected source file is byte-exact with the tag
+archive.

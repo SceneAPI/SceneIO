@@ -10,9 +10,9 @@
     "CMakeLists.txt": "800e00e796d06ef8e10637f191176ba8cb6a54b20da6545c46e6de6c2e6de7a5",
     "cmake/SceneIOInstrumentation.cmake": "f4a6ecf75085215628b6d603dd47922ad2b8e730e0c05d09f5cd33193ff0e4a3",
     "cmake/SceneIOSources.cmake": "a161bfa5d1374bf706b1a45f739a16ddea9740027e6280ab621b2789e5133260",
-    "cmake/SceneIODependencies.cmake": "e6efc3f56683267d7982ce6e38b422eca155ffc6a71ee9cf2d3427cf13c5ee60",
+    "cmake/SceneIODependencies.cmake": "71f54cfe5e190ae39e46fa4ea4a061e84130f19ec3f504f5281134efd9fb3164",
     "cmake/SceneIOBackendQualification.cmake": "bfd4d8921a2ca7935fc7c728004fd1d623f37deb699fc5c7f99c28667aea502d",
-    "cmake/SceneIOTargets.cmake": "3c624a13cbd55b284f9d2bb370ee6bdadb6ac1f81ff9c9f4020fb4d21f307119",
+    "cmake/SceneIOTargets.cmake": "c12315bde17b297f42bad1a62db9cd2ab0e944e7c1646a33c9160b2bdeb6f9a6",
     "cmake/SceneIORecordJpegSimd.cmake": "629d84c45808b14dedf6edcdaedc82778652c34600a41f7f09db91d29b392cde"
   },
   "codec_source_owners": {
@@ -240,6 +240,7 @@
     "miniz_static",
     "nlohmann_json::nlohmann_json",
     "libzstd_static",
+    "FastFloat::fast_float",
     "lazperf_static",
     "lodepng_static",
     "sqlite_static",

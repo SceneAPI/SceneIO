@@ -12,3 +12,5 @@ LICENSES/nlohmann-json-source.txt -text -whitespace
 src/cpp/third_party/zstd/** -text -whitespace
 LICENSES/zstd.txt -text -whitespace
 LICENSES/zstd-source.txt -text -whitespace
+src/cpp/third_party/fast_float/** -text -whitespace
+LICENSES/fast-float.txt -text -whitespace

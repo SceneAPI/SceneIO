@@ -3915,7 +3915,7 @@ Perform one dependency per commit.
 | miniz | 3.0.2 / `293d4db1b7d0ffee9756d035b9ac6f7431ef8492` | ✅ exact archive files and hashes recorded | ✅ direct hidden static target; no miniz fetch | ✅ local rebuild, parity, strict benchmark, sdist-derived wheel, installed smoke, and three reviews | this commit |
 | nlohmann/json | 3.11.3 / `9cca280a4d0ccf0c08f47a99aa71d1b0e52f8d03` | ✅ exact 45-header tree and license hashes recorded | ✅ local interface target; no nlohmann/json fetch | ✅ rebuild, parity, strict benchmark, sdist-derived wheel, installed smoke, and three reviews | this commit |
 | zstd | 1.5.6 / `794ea1b0afca0f020f4e57b6732332231fb23c70` | ✅ exact selected library/build files and hashes recorded | ✅ local upstream static target; no zstd fetch | ✅ rebuild, dual-profile SPZ benchmark, strict sweep, exact package, isolated smoke, and three reviews | this commit |
-| fast_float | 6.1.6 | ⬜ | ⬜ | ⬜ | pending |
+| fast_float | 6.1.6 / `00c8c7b0d5c722d2212568d915a39ea73b08b973` | ✅ exact nine-header tree and MIT license hashes recorded | ✅ local interface target; no fast_float fetch | ✅ rebuild, parity, strict benchmark, exact package, isolated smoke, and three reviews | this commit |
 | LAZperf | 3.4.0 / `b7bbe26109dc986f42d4fc80b8de3d2b6ca634ce` | ⬜ | ⬜ | ⬜ | pending |
 | libwebp | 1.5.0 | ⬜ | ⬜ | ⬜ | pending |
 
@@ -4031,6 +4031,65 @@ Zstd local evidence at the review candidate:
   platform/package/documentation reviews are clear after correcting explicit
   build settings, symbol visibility, backend ownership, and the separate
   v3/miniz versus v4/Zstd benchmark profiles.
+
+fast_float local evidence at the review candidate:
+
+- the 101,727-byte official 6.1.6 tag archive has SHA-256
+  `4458aae4b0eb55717968edda42987cabf5f7fc737aee8fede87a70035dba9ab0`;
+  its tag resolves to commit
+  `00c8c7b0d5c722d2212568d915a39ea73b08b973`;
+- all ten selected upstream files—the nine public headers required by
+  `fast_float/fast_float.h` plus `LICENSE-MIT`—match the 989-byte
+  `SOURCE_MANIFEST.sha256`, whose SHA-256 is
+  `dd075e6dfb33eef1eac73af549cda6094b43f6ea64ae3528e1b25034f66767b5`;
+- the local CMake target is header-only, exposes only the selected include
+  directory, requires C++11 or newer, retains upstream's conditional MSVC
+  `/permissive-` consumer option, and replaces the fast_float `FetchContent`
+  declaration. Tests, examples, fuzzers, benchmarks, scripts, install/export
+  rules, and package configuration are neither stored nor configured;
+- the editable MSVC rebuild and native import pass. The text-backed codec and
+  native/source contract sweep is `682 passed, 1 skipped`; the complete suite
+  remains `3401 passed, 4 skipped`;
+- the strict all-50 five-run benchmark passes every retained O4/O5,
+  mapped-read, and file-sink gate. Its 52,081-byte JSON has SHA-256
+  `e9847667ed9849b2de9832997c59069dd0077e7c6ebfc5bdf293437844d96fca`
+  and retains structural projection SHA-256
+  `8f218ff77bcf2ea1e918d4ed164f7184fa2662eb252508c387b5f131a053a8e7`;
+- representative fast_float-backed decode measurements are 83 MB/s for XYZ,
+  81 MB/s for PTS, 115 MB/s for ASCII PLY, 114 MB/s for ASCII PCD,
+  204 MB/s for EuRoC state, 313 MB/s for g2o, 369 MB/s for Bundler,
+  204 MB/s for BAL, and 362 MB/s for NVM;
+- the pre-review package candidate sdist is 5,152,724 bytes with SHA-256
+  `cf7042d422b365586771ab8610230dcc617f2ed83e24aa59969cd7e783e3679a`.
+  It contains 570 files—including all 12 fast_float source/metadata members
+  and all 18 indexed notices—and differs from its then-current 569-file index
+  only by generated `PKG-INFO`. Its
+  sdist-derived 2,197,947-byte Windows abi3 wheel has SHA-256
+  `dd9a639f9cb37c47e88d98f77605c197783298c9a21b57419f12bd9568fb0efd`,
+  contains 86 files and one extension, includes all 18 notices, carries no
+  native source/build payload, and keeps NumPy as its only unconditional
+  dependency;
+- isolated installed-wheel smoke imports the package and extension from the
+  target directory, exercises a fast_float-backed XYZ read, and completes all
+  50 built-in smoke cases at phase `2`. Native inspection reports only Python
+  and standard Windows runtime libraries. The unfiltered extension export set
+  also contains pre-existing LAZperf/nanobind C++ exports; the following
+  single-dependency LAZperf unit owns their visibility correction and contract.
+- after the review corrections, the 5,154,142-byte exact-index sdist has
+  SHA-256
+  `c6f73ae1a8f5f8977cd629f8dd7d8d128a90949471643734a4dbf268d5f0d71a`
+  and matches all 569 staged files byte-for-byte with only generated
+  `PKG-INFO` added. Its sdist-derived 2,197,511-byte wheel has SHA-256
+  `50cdc17531bbd322a58825a04c487e9cacda17d3fa5b07ac33a7ebb2b66127ed`,
+  86 files, one extension, all 18 notices, no native-source/build payload,
+  NumPy as its only unconditional dependency, and a passing isolated phase-2
+  smoke. These hashes bind the exact review snapshot; the post-review
+  exact-index package proof is necessarily recorded outside the package so
+  that inserting its own hash cannot change the artifact being described.
+- the architecture/correctness, test/performance, and
+  platform/package/documentation reviews are clear after restoring and locking
+  the upstream MSVC conformance option, correcting the extension-export
+  wording, and regenerating the exact staged-index package.
 
 ### R6.1 — provenance and source intake
 

@@ -30,13 +30,13 @@ EXPECTED_NOTICES = {
 }
 
 FETCHCONTENT_NOTICE = {
-    "fast_float": "fast-float.txt",
     "lazperf": "lazperf.txt",
     "libwebp": "libwebp.txt",
 }
 
 VENDORED_NOTICE = {
     "cgltf": "cgltf.txt",
+    "fast_float": "fast-float.txt",
     "lodepng": "lodepng.txt",
     "miniz": "miniz.txt",
     "nlohmann_json": "nlohmann-json.txt",
@@ -48,6 +48,42 @@ VENDORED_NOTICE = {
 }
 
 SOURCE_CLOSURE = {
+    "fast_float": {
+        "version": "6.1.6",
+        "commit": "00c8c7b0d5c722d2212568d915a39ea73b08b973",
+        "archive_sha256": (
+            "4458aae4b0eb55717968edda42987cabf"
+            "5f7fc737aee8fede87a70035dba9ab0"
+        ),
+        "notice": "fast-float.txt",
+        "license": "LICENSE-MIT",
+        "manifest": "SOURCE_MANIFEST.sha256",
+        "manifest_sha256": (
+            "dd075e6dfb33eef1eac73af549cda609"
+            "4b43f6ea64ae3528e1b25034f66767b5"
+        ),
+        "cmake_patterns": (
+            (
+                r"set\(fast_float_SOURCE_DIR\s*"
+                r'"\$\{PROJECT_SOURCE_DIR\}/src/cpp/third_party/fast_float"\)'
+            ),
+            r"^add_library\(fast_float INTERFACE\)$",
+            (
+                r"^add_library\(FastFloat::fast_float "
+                r"ALIAS fast_float\)$"
+            ),
+            (
+                r"target_include_directories\(\s*fast_float INTERFACE "
+                r'"\$\{fast_float_SOURCE_DIR\}/include"\)'
+            ),
+            r"^target_compile_features\(fast_float INTERFACE cxx_std_11\)$",
+            (
+                r"if\(MSVC_VERSION GREATER 1910\)\s*"
+                r"target_compile_options\(fast_float INTERFACE /permissive-\)\s*"
+                r"endif\(\)"
+            ),
+        ),
+    },
     "miniz": {
         "version": "3.0.2",
         "commit": "293d4db1b7d0ffee9756d035b9ac6f7431ef8492",
@@ -293,9 +329,10 @@ def test_repository_contained_native_licenses_are_exact_distribution_copies() ->
         distribution_notice = (LICENSES / entry["notice"]).read_bytes()
         assert distribution_notice == source_license
 
-        packaged_notice = (LICENSES / entry["source_notice"]).read_bytes().decode(
-            "utf-8"
-        )
+        source_notice_name = entry.get("source_notice")
+        if source_notice_name is None:
+            continue
+        packaged_notice = (LICENSES / source_notice_name).read_bytes().decode("utf-8")
         if project == "miniz":
             source_text = (
                 ROOT / "src/cpp/third_party" / project / "miniz.c"

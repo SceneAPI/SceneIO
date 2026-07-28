@@ -82,13 +82,25 @@ set_target_properties(
     POSITION_INDEPENDENT_CODE ON
     C_VISIBILITY_PRESET hidden)
 
-# fast_float (Apache-2.0 / MIT / BSL, header-only) — portable + fast float
-# parsing for the text codecs. std::from_chars<double> is unavailable on
-# manylinux2014 (GCC 10) and older libc++ (macOS), so the wheels would not
-# build with it; fast_float::from_chars is a drop-in that works on all three.
-FetchContent_Declare(fast_float
-  URL https://github.com/fastfloat/fast_float/archive/refs/tags/v6.1.6.tar.gz)
-FetchContent_MakeAvailable(fast_float)
+# fast_float 6.1.6 (MIT option), header-only — repository-contained portable
+# float parsing for the text codecs. std::from_chars<double> is unavailable on
+# manylinux2014 (GCC 10) and older libc++ (macOS), so the wheels use this exact
+# selected multi-header tree on every platform.
+set(fast_float_SOURCE_DIR
+  "${PROJECT_SOURCE_DIR}/src/cpp/third_party/fast_float")
+if(NOT EXISTS "${fast_float_SOURCE_DIR}/include/fast_float/fast_float.h")
+  message(FATAL_ERROR
+    "Repository-contained fast_float source is missing: "
+    "${fast_float_SOURCE_DIR}")
+endif()
+add_library(fast_float INTERFACE)
+add_library(FastFloat::fast_float ALIAS fast_float)
+target_include_directories(
+  fast_float INTERFACE "${fast_float_SOURCE_DIR}/include")
+target_compile_features(fast_float INTERFACE cxx_std_11)
+if(MSVC_VERSION GREATER 1910)
+  target_compile_options(fast_float INTERFACE /permissive-)
+endif()
 
 # LAZperf 3.4.0 (Apache-2.0/BSD-3-Clause/BSD-2-Clause) —
 # LASzip-compatible LAZ

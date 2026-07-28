@@ -13,7 +13,6 @@ target_include_directories(
   PRIVATE
     src/cpp
     ${zstd_SOURCE_DIR}/lib
-    ${fast_float_SOURCE_DIR}/include
     src/cpp/third_party/stb
     src/cpp/third_party/tinyexr
     src/cpp/third_party/tinyobjloader
@@ -27,6 +26,7 @@ target_link_libraries(
     miniz_static
     nlohmann_json::nlohmann_json
     libzstd_static
+    FastFloat::fast_float
     lazperf_static
     lodepng_static
     sqlite_static

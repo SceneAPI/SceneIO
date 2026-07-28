@@ -2874,3 +2874,36 @@ SHA-256
 `8f218ff77bcf2ea1e918d4ed164f7184fa2662eb252508c387b5f131a053a8e7`;
 the benchmark and family contracts lock that shape. This is local MSVC
 evidence; the user-gated build-only multi-platform run remains outstanding.
+
+## R6 fast_float source-ownership confirmation (2026-07-28)
+
+The production parser remains upstream fast_float 6.1.6 with identical
+headers; this R6 unit changes source ownership, not parsing policy or encoded
+output. The nine public headers used by the text codecs now come from
+`src/cpp/third_party/fast_float`, and CMake exposes them through a local
+header-only interface target instead of downloading the tag during configure.
+
+The confirming five-run strict sweep passed every retained O4/O5, mapped-read,
+and file-sink gate. Its 52,081-byte JSON has SHA-256
+`e9847667ed9849b2de9832997c59069dd0077e7c6ebfc5bdf293437844d96fca`
+and matches structural projection
+`8f218ff77bcf2ea1e918d4ed164f7184fa2662eb252508c387b5f131a053a8e7`.
+Representative decode throughput for parser-backed profiles was:
+
+| Codec/profile | Decode MB/s |
+|---|---:|
+| XYZ | 83 |
+| PTS | 81 |
+| PLY ASCII | 115 |
+| PCD ASCII | 114 |
+| EuRoC state | 204 |
+| g2o | 313 |
+| Bundler | 369 |
+| BAL | 204 |
+| NVM | 362 |
+
+The same run retained the optimized XYZ writer at 102 MB/s, or 4.80x its
+one-lane reference. These results confirm that moving the byte-exact headers
+in-tree did not change the benchmark contract or remove the measured text I/O
+gains. This is local MSVC evidence; the final user-gated build-only
+multi-platform R6 validation remains outstanding.

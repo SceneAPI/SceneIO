@@ -736,11 +736,11 @@ expanded 50-codec benchmark/oracles.
 | CI parity (oracles in CI) | ✅ | At `a5e7fa4`, normal Linux CI passes 2,914 tests with nine documented platform/oracle skips, the 50-codec performance guard, pinned GCC 10 portability, and the three-OS focused matrix |
 | Codec registry + `read`/`write`/`inspect`/`read_partial`/`detect` | ✅ | inspection covers all 50; bounded partial hooks are capability-specific |
 | Repo-maintained stable codec adapters | ✅ | all 50 production adapters, grammars, convention guards, inspectors, partial capability policies/available paths, and sinks live in `src/cpp` / `src/sceneio`; separately installed implementations and executables are test/reference oracles only |
-| Offline native-source closure | 🟡 | lodepng, stb, tinyexr, SQLite, tinyobjloader, cgltf, miniz, nlohmann/json, and zstd are stored in-tree; fast_float, LAZperf, and libwebp still use pinned CMake `FetchContent` and must move under `src/cpp/third_party/` before the post-0.2 tier is called stable |
+| Offline native-source closure | 🟡 | lodepng, stb, tinyexr, SQLite, tinyobjloader, cgltf, miniz, nlohmann/json, zstd, and fast_float are stored in-tree; LAZperf and libwebp still use pinned CMake `FetchContent` and must move under `src/cpp/third_party/` before the post-0.2 tier is called stable |
 | Zero‑copy numpy + torch (DLPack) | ✅ | validated per codec |
 | Conventions‑as‑metadata + write guards | ✅ | record‑don't‑convert enforced |
 | Parity kit (`sceneio.testing.parity`) | ✅ | cross‑impl + round‑trip + convention pins |
-| In-tree native dependencies | 🟡 | permissive and license-indexed; three dependencies remain source-fetched as described by the offline-closure row |
+| In-tree native dependencies | 🟡 | permissive and license-indexed; two dependencies remain source-fetched as described by the offline-closure row |
 | Image libraries | 🟡 | lodepng/stb/tinyexr are in-tree; libwebp 1.5.0 is pinned and statically built but still fetched at configure time |
 | Feature‑flagged optional C libs (`SCENEIO_WITH_*`) | ⬜ | planned for HDF5, TIFF, E57, Arrow, USD, and OpenVDB; LAZ instead uses pinned, statically built LAZperf in the default tier |
 | mmap / streaming sources | ✅ | mmap reads + raw NPY/FLO views + direct file-sink writes complete |
