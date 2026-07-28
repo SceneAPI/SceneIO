@@ -5,13 +5,16 @@ inspection, differential, memory, and partial-read capability contracts now
 cover the live 50-codec registry; 28 codecs expose bounded selectors. This
 status describes optimized I/O transport and bounded access; it does **not**
 claim that every compression/parser kernel is the fastest viable backend.
-Backend qualification is the next prerequisite in
+Backend qualification remains available as a trigger-based post-R6 mechanism in
 [`repository_organization_plan.md`](repository_organization_plan.md). The
 measured libjpeg-turbo comparison is complete on MSVC and rejected for the
 combined default after missing the frozen q95 comparative-quality floor; the
 JPEG encode/decode gap therefore remains explicit with stb retained. The
 reviewed, commit-sized verification checklist is
 [`next_stage_implementation_checklist.md`](next_stage_implementation_checklist.md).
+The user-directed lean closure policy accepts the verified current backends as
+the R6 release baseline without promoting 124 provisional rows to
+`qualified`; exhaustive candidate comparison is not an R6 prerequisite.
 Current benchmark ownership work does not reopen O0-O5 or change codec
 capabilities or implementation-performance claims. Points close at `45e2757`
 with normal run `30244892746` and compiler-instrumented run `30244892600`.
@@ -107,10 +110,13 @@ Nonpublishing release run
 builds and smoke-tests all three platform wheel sets plus the source archive.
 The expanded transport/access tier is therefore cross-platform validated.
 Per-codec backend qualification is tracked separately from O0-O5. The selected
-default native-source intake is complete. R6 package review corrected and
+default native-source intake is complete. Unmeasured candidate comparisons
+remain an optional post-R6 backlog rather than a stage-exit gate. R6 package
+review corrected and
 configure-checked the stable-ABI build path; local Windows and Ubuntu builds
 now use the expected stable extension names. The final exact-tree MSVC package
-gate precedes the user-gated GCC 10/AppleClang R6 package run.
+gate precedes one user-gated GCC 10/AppleClang R6 package run and artifact
+inspection.
 
 Post-0.2 format expansion inherits the same gates. The registry currently has
 50 codecs: 44 file containers, three multi-file containers, and three directory

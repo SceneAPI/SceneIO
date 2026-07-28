@@ -3032,3 +3032,30 @@ Compiler-instrumented run
 [30390986672](https://github.com/SceneAPI/SceneIO/actions/runs/30390986672)
 passes both jobs. Neither run is the still-user-gated build-only package
 matrix.
+
+## Lean R6 performance-closure policy (2026-07-28)
+
+The performance ledger contains 132 operation rows: 124 `provisional`, two
+documented JPEG `known_gap` rows, and six `not_applicable` rows. Of the
+provisional rows, 110 retain only a future candidate-comparison gap and 14
+also lack a profile-specific current-backend measurement. None has an active
+replacement candidate. Those 14 specialized profiles are accepted for
+correctness and compatibility only; R6 makes no profile-specific performance
+claim for them, and they are first in the trigger-based backlog.
+
+The user-directed lean closure accepts the correctness-tested current backends
+as the R6 release baseline when the retained all-50 performance guard and final
+package matrix pass. This is a release decision, not a global optimization
+claim: the 124 rows remain `provisional`, their evidence gaps remain intact,
+and no row is promoted to `qualified` by policy. Exhaustive alternative
+discovery moves to a trigger-based post-R6 backlog. A future comparison starts
+only for a measured regression, material hotspot, or concrete replacement
+proposal and continues to use the existing production-path qualification
+protocol.
+
+The active closure work is therefore bounded to one user-authorized exact-head
+build-only `publish.yml` run, inspection of its sdist and three abi3 wheels,
+and one final evidence/review commit. The documentation-only closure record
+names the packaged source SHA and does not recursively repeat the package
+matrix. PyPI configuration, tags, and publication are release-time work and
+are not R6 gates.

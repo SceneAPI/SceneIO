@@ -11,6 +11,64 @@
 > nanobind target and suffix during configuration, and separately verifies the
 > resulting Windows `_core.pyd` and Unix `_core.abi3.so`.
 
+## Lean R6 closure decision (2026-07-28)
+
+This section is the active closure policy and supersedes later historical
+language that makes exhaustive alternative-backend qualification a prerequisite
+for R6. The goal is to close the verified stable tier, not to prove that every
+codec/profile/direction is globally fastest.
+
+The current backends are accepted as the R6 release baseline because their
+format parity, public-path behavior, retained performance guard, package
+inventory, and local installed-wheel smoke pass. The 124 `provisional`
+operation rows remain honest optimization-backlog entries; this batch
+acceptance does not relabel them `qualified`, erase their evidence gaps, or
+claim that every possible replacement was measured. The two JPEG `known_gap`
+rows remain explained by the completed, rejected libjpeg-turbo comparison.
+The 14 specialized rows without a profile-specific current-backend measurement
+are accepted for correctness and compatibility only; R6 makes no performance
+claim for those profiles, and they are first in the trigger-based backlog.
+
+The bounded path to full R6 closure is:
+
+- [x] Finish N0-R4 organization, the bounded R5 candidate decision, R6 source
+      intake, local stable-ABI package proof, complete local suite, strict
+      50-codec guard, NumPy-only smoke, and three independent reviews.
+- [x] Require green automatic CI and native-runtime validation at the exact
+      final implementation commit. Runs
+      [30392771771](https://github.com/SceneAPI/SceneIO/actions/runs/30392771771)
+      and
+      [30392774294](https://github.com/SceneAPI/SceneIO/actions/runs/30392774294)
+      pass `14d9b1189168f9d8adadbf64114b75df2d7337d6`.
+- [ ] With explicit user authorization, dispatch `publish.yml` once at the
+      exact reviewed branch head. The manual run is build-only and cannot
+      publish.
+- [ ] Download and inspect its one sdist and three abi3 wheels. Require the
+      existing inventory, license, stable-ABI, NumPy-only, native-dependency,
+      and all-50 installed-smoke checks to pass.
+- [ ] Record the workflow URL and artifact hashes, run the focused
+      documentation/ledger contracts, obtain one final three-lens review, and
+      commit the documentation-only closure record. Record both the packaged
+      source SHA and the closure-record SHA.
+
+Closure is deliberately bounded:
+
+- do not start another backend search, new codec, benchmark expansion, release
+  tag, or package publication before R6 closes;
+- candidate comparisons resume only after R6 when a measured regression,
+  material hotspot, or concrete replacement proposal justifies one;
+- retry the build-only workflow once only for a documented hosted-run
+  interruption; a reproducible product failure receives one focused fix and a
+  fresh exact-head run instead of opening a broader work program;
+- the documentation-only closure record does not invalidate or recursively
+  repeat the package matrix for the recorded packaged source SHA;
+- PyPI configuration, tagging, and publication are release-time actions, not
+  R6 validation gates.
+
+When the three unchecked items above pass, R6 and this repository-organization
+stage are complete. The remaining provisional ledger rows continue as an
+optional, prioritized optimization backlog.
+
 Status: N0.1-N0.5 remain validated at immutable implementation commit
 `a5e7fa4` on `phase0-nanobind-core`, including the nonpublishing
 three-platform source/wheel build. R1.1-R1.4 are complete at `95061c6`. At that
@@ -176,8 +234,8 @@ This stage must:
   build wiring, and bindings by format family behind compatible facades;
 - create one validated performance-ledger entry for every codec and each
   applicable encode/decode direction;
-- benchmark mature permissive upstream backends before selecting or retaining
-  a stable kernel;
+- benchmark mature permissive upstream backends before selecting a replacement
+  kernel; retain the verified current R6 baseline without an exhaustive search;
 - store every selected default native source in the repository and prove
   offline builds;
 - keep coverage, architecture, benchmark, provenance, and release
@@ -205,9 +263,9 @@ N0 current-head closure
   -> R2 Python family boundaries
   -> R3 benchmark/test family boundaries
   -> R4 CMake/binding/native layout
-  -> R5 per-profile/per-direction backend qualification
+  -> R5 bounded measured candidate decision
   -> R6 selected-source closure
-  -> cross-platform stage exit
+  -> one exact-head package matrix and closure review
 ```
 
 Rules for every checkbox group:
@@ -3659,10 +3717,13 @@ instrumented run
 [30326256137](https://github.com/SceneAPI/SceneIO/actions/runs/30326256137)
 pass exact commit `da1d709`. All three final R4 reviews are clear.
 
-## 9. R5 — qualify codec backends before selection
+## 9. R5 — bounded candidate decision and reusable qualification mechanism
 
 R5 is performed one codec, performance profile, and applicable direction at a
-time. Popularity is candidate-discovery evidence, not performance evidence.
+time only when a measured regression, material hotspot, or concrete replacement
+proposal triggers it. Popularity is candidate-discovery evidence, not
+performance evidence. For the current stage, JPEG was the single bounded
+candidate funnel and its negative result closes active R5 work.
 
 ### R5.1 — candidate intake
 
@@ -4430,11 +4491,11 @@ Local exit:
 - [ ] Worktree is clean and all authoritative documents agree.
 - [x] Full local MSVC suite, Ruff, 50-codec benchmark guard, sdist/wheel, and
       NumPy-only smoke pass.
-- [ ] Every required codec/profile/direction is `qualified`,
-      `native_by_necessity`, or an explicitly approved `provisional`
-      exception; no unexplained `known_gap` remains. The ledger still has 124
-      provisional rows without a recorded approval reference. The two JPEG
-      `known_gap` rows are explained by the rejected libjpeg-turbo comparison.
+- [x] The user-directed lean closure policy accepts the verified current
+      backends as the R6 release baseline. The 124 provisional rows remain an
+      explicit post-R6 optimization backlog rather than 124 release blockers;
+      no `qualified` claim is inferred. The two JPEG `known_gap` rows are
+      explained by the rejected libjpeg-turbo comparison.
 - [x] Default native builds are offline from repository-contained source.
 
 Remote validation checkpoints, only after explicit user authorization:
@@ -4452,11 +4513,12 @@ Remote validation checkpoints, only after explicit user authorization:
       abi3 wheels, plus the sdist.
 - [ ] Record workflow URLs, artifact hashes, wheel tags, dependency closure,
       installed capabilities, and smoke results.
-- [ ] Do not create or push a release tag during validation.
-- [ ] Re-verify the PyPI trusted-publisher/environment configuration that
-      successfully published SceneIO 0.2.0 in
-      [release run 30097907487][release-020]; future tag pushes,
-      publisher-setting changes, and publication remain explicit user actions.
+- [x] Do not create or push a release tag during validation.
+- [x] Keep PyPI trusted-publisher/environment re-verification, tagging, and
+      publication outside R6. They remain explicit user-controlled release
+      actions.
+- [ ] Obtain one final three-lens review and commit the closure record; do not
+      start another candidate sweep or format wave first.
 
 Only after this stage is validated may the format queue resume with
 animation-capable `ImageSequence`, animated WebP, APNG, and RTMV.

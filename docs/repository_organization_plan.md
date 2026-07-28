@@ -1,6 +1,8 @@
 # Repository organization and codec-performance gate
 
-Status: required before the next format implementation.
+Status: R1-R5 and local R6 are complete; one exact-head build-only package
+matrix, artifact inspection, and final review remain before the next format
+implementation.
 
 This plan keeps SceneIO manageable as the registry grows beyond 50 codecs. It
 is a behavior-preserving architecture and evidence pass: no format is added,
@@ -32,8 +34,9 @@ checks pass locally and in normal CI run 30187895845 plus instrumented run
 documented skips; the Windows abi3 wheel built from the exact `95061c6` source
 archive passes a fresh NumPy-only installed-wheel smoke. Build-only release run
 30189483142 also builds the source archive and builds and smoke-tests the Linux,
-macOS, and Windows wheel sets with publication skipped. No new format starts
-while R3-R6 remain open.
+macOS, and Windows wheel sets with publication skipped. The later R3-R5 work
+and local R6 source/package proof are complete; no new format starts before the
+bounded final R6 package matrix and closure review.
 
 R4.1 is complete and pushed at `b2cf5d4` after the R3.4 checkpoint. The root build file now owns
 only project language/standard setup and the ordered inclusion of four focused
@@ -565,14 +568,19 @@ Required invariants:
 Do not generate Python or C++ source at package import time. A checked-in
 manifest or ordinary family modules remain readable and debuggable.
 
-## Performance qualification before backend selection
+## Trigger-based performance qualification before backend replacement
 
 Optimized transport and an optimized codec kernel are separate claims.
 All current codecs have mmap/path-native input, inspection, and direct sinks;
 28 have bounded partial reads. That proves the I/O layer is optimized, not that
 every encoder/decoder backend is the fastest suitable implementation.
 
-Before selecting or retaining a stable backend:
+A provisional current backend may remain the release baseline when its
+correctness, existing benchmark guard, and package gates pass. Start the
+protocol below only when a measured regression, material hotspot, or concrete
+replacement proposal makes a backend change actionable.
+
+Before selecting a replacement backend:
 
 1. Identify the mature permissive candidates and the format subset each can
    preserve.
@@ -639,6 +647,13 @@ profile; a declared direction that a codec does not expose uses
 - `native_by_necessity`: no suitable upstream kernel exists and the
   repo-maintained parser is independently verified;
 - `not_applicable`: the codec does not expose that operation.
+
+For the lean R6 closure, `provisional` is an honest optimization-backlog state,
+not a release failure by itself. The verified current implementation may be
+accepted as the release baseline while candidate-comparison gaps remain,
+provided no active replacement is being selected and the retained
+correctness/performance/package gates pass. This does not satisfy or rename the
+stricter `qualified` state.
 
 The current known exception is the JPEG backend: the committed baseline
 measured stb write/read at 60/154 MB/s versus Pillow's libjpeg-backed reference
@@ -1105,20 +1120,24 @@ installed smoke.
   manylinux2014 GCC 10 image, and AppleClang arm64, but was not dispatched
   because no conforming candidate advanced beyond MSVC.
 - Future candidate loops repeat the same per-profile/per-direction comparison
-  with one provenance-recorded, accepted-subset corpus from retained and
-  independent producers. The current JPEG loop is complete with a negative
-  result and no active replacement candidate.
+  only after R6, when a measured regression, material hotspot, or concrete
+  replacement proposal supplies a bounded reason to run one. Use one
+  provenance-recorded, accepted-subset corpus from retained and independent
+  producers. The current JPEG loop is complete with a negative result and no
+  active replacement candidate.
 - Keep the JPEG `known_gap` explicit after the rejected comparison; evaluation
   completion is not the same as eliminating the performance gap.
 - Selection-only work remains conditional: integrate a future conforming
   candidate behind the non-default target, switch it in a dedicated revertible
   commit, retain stb until a user-authorized three-platform A/B matrix passes,
   and only then install a persistent same-run guard before removal.
-- Keep a backend only when the evidence supports `qualified`,
-  `native_by_necessity`, an explicit documented provisional exception, or a
-  measured `known_gap` whose evaluated/rejected candidates and remaining
-  research are recorded. Final stage exit still requires every such gap to be
-  explained rather than silently treated as qualified.
+- The user-directed lean R6 closure accepts the correctness-tested current
+  backends as the release baseline when the retained performance guard and
+  package validation pass. The 124 `provisional` rows stay visible as a
+  post-R6 optimization backlog; they do not become `qualified`, and exhaustive
+  candidate discovery is not a release gate. Every measured `known_gap` still
+  records its evaluated/rejected candidates rather than being silently treated
+  as qualified.
 
 ### R6. Close stable native sources
 
@@ -1153,9 +1172,17 @@ earlier gate.
 | R4a | Extract CMake dependency/source manifests without moving native files | configure option/cache equivalence; compiled source list and feature macros match | rebuild editable wheel on MSVC; `_core` symbol snapshot and full suite pass |
 | R4b-R4h | Move native codec files and binding registration by family; preserve record-before-codec order | byte/mmap/sink/inspect/partial differential for the moved family; native inventory, source ownership, symbol visibility, and registration order | rebuild after every family; full local suite and benchmark guard; no semantic diff mixed into move commits |
 | R5a | Populate existing evidence per codec and mark every unproved direction `provisional`, never `qualified` by inference | ledger schema/id coverage; evidence links resolve; current backend and build source match CMake | reviewable 50-codec matrix committed before candidate replacement starts |
-| R5b+ | Research and benchmark viable permissive candidates one profile/direction at a time, starting with JPEG | same production API, provenance-complete hashed decode corpus, predeclared lossy non-inferiority bounds, warm/cold runs, sinks, child-process RSS, determinism, size/startup; oracle parity and malformed-input equivalence | build the shortlist on MSVC, then run a user-authorized nonpublishing A/B matrix on GCC 10 and AppleClang before final selection; switch defaults in revertible commits, add the persistent qualified-commit guard, and update baseline/ledger |
+| R5b+ (post-R6, trigger-based) | Research and benchmark a viable permissive candidate only for a measured regression, material hotspot, or concrete replacement proposal; JPEG is the completed negative example | same production API, provenance-complete hashed decode corpus, predeclared lossy non-inferiority bounds, warm/cold runs, sinks, child-process RSS, determinism, size/startup; oracle parity and malformed-input equivalence | build the shortlist on MSVC, then run a user-authorized nonpublishing A/B matrix on GCC 10 and AppleClang before final selection; switch defaults in revertible commits, add the persistent qualified-commit guard, and update baseline/ledger |
 | R6a+ | Store each selected fetched dependency in-tree with provenance, license, hashes, options, and patches; switch only that dependency to local source | golden output, focused codec parity, dependency revision/options, benchmark within recorded variance | editable rebuild/full suite/Ruff per dependency; `FETCHCONTENT_FULLY_DISCONNECTED=ON` configure and sdist build |
 | R6-final | Remove all default native-source network fetches and validate the packaged result | clean source checkout, empty native caches, `PIP_NO_INDEX=1`, offline sdist, wheels built from that exact sdist, wheel contents/native dependencies, exact 50-id NumPy-only smoke, positive license inventory | local MSVC plus user-authorized manylinux2014 and macOS build-only wheel matrix; docs and license inventory synchronized |
+
+R6-final is the only active stage gate. Run the exact-head build-only package
+matrix once, inspect the sdist and three wheels, record the evidence, and obtain
+one final review. Do not expand the benchmark matrix or start another candidate
+survey before closure. A hosted-run interruption may be retried once; a
+reproducible product failure receives a focused fix and a fresh exact-head run.
+The documentation-only closure record names the packaged source SHA and does
+not recursively require another package matrix.
 
 Candidate comparisons use randomized/interleaved repeated samples for hot-path
 throughput and child-process samples for RSS/startup. Record raw JSON,

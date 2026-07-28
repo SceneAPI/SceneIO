@@ -134,8 +134,10 @@ Current test counts, workflow evidence, and the immutable validated checkpoint
 are maintained only in
 [`format_coverage.md`](format_coverage.md#format--data-structure-coverage);
   this policy roadmap intentionally does not duplicate them. The next execution
-  order is: complete the user-gated R6 GCC 10/AppleClang package validation,
-  then finish animated WebP/APNG and RTMV.
+  order is deliberately bounded: complete one user-gated exact-head R6 package
+  matrix, inspect its artifacts, record one final review, then finish animated
+  WebP/APNG and RTMV. The provisional performance ledger remains a
+  trigger-based post-R6 optimization backlog rather than delaying this queue.
 The common optional-library feature pattern follows before HDF5/hloc, TIFF,
 E57, and Parquet.
 

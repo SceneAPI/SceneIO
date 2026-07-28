@@ -7,10 +7,9 @@ things that keep this expansible as the format list from
 > **Growth checkpoint:** the live registry has reached 50 codec ids. The
 > format-focused native layer remains coherent, but registry, inspection,
 > benchmark, test-matrix, dependency, and binding wiring have outgrown a flat
-> layout. No new codec wave begins until the remaining behavior-preserving
-> R3-R5 migration and performance qualification are complete. No new codec
-> wave begins until the remaining user-gated R6 cross-platform package
-> validation in
+> layout. The behavior-preserving R3-R5 organization work and local R6 source
+> closure are complete. No new codec wave begins until the one remaining
+> user-gated exact-head R6 package matrix and closure review in
 > [`repository_organization_plan.md`](repository_organization_plan.md) pass.
 > The paths below describe current wiring; the linked plan defines the target
 > family boundaries and compatibility tests.
@@ -488,8 +487,9 @@ to verify compatibility and do not start a new format.
    accepted grammar and return the normal public record type.
 7. **Benchmark and evidence** — add the format/profile builders and result
    cases consumed by `bench/bench_io.py`, then add every applicable
-   profile/direction to `bench/PERFORMANCE_STATUS.toml`. Keep new backend state
-   provisional until the R5 comparison qualifies it.
+   profile/direction to `bench/PERFORMANCE_STATUS.toml`. New backend state
+   remains provisional and visible until a trigger-based comparison qualifies
+   it; provisional status alone does not block an otherwise verified release.
 8. **Parity and common-path tests** — add `tests/codecs/test_<fmt>.py` using
    `sceneio.testing.assert_codec_parity(...)` against the reference oracle
    (pycolmap / gsply / Open3D / imageio / …). Cover: cross-impl equality,
@@ -509,8 +509,10 @@ After R1-R4, a codec is declared once in the authoritative manifest and
 implemented within its format family. Architecture tests require that the
 registry, inspector table, benchmark cases, test cases, native feature
 metadata, binding registration, and build source list all resolve to the same
-id set. Backend selection then follows R5 and is recorded in
-`bench/PERFORMANCE_STATUS.toml` before stable qualification.
+id set. Backend replacement follows the R5 comparison mechanism only when a
+measured regression, material hotspot, or concrete candidate triggers it. The
+result is recorded in `bench/PERFORMANCE_STATUS.toml`; exhaustive alternative
+discovery is not part of ordinary codec or R6 closure.
 
 ## Metadata-only inspection
 

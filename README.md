@@ -351,8 +351,8 @@ Engineering status and extension work are tracked in:
 - [`docs/core_architecture.md`](docs/core_architecture.md) — current public and
   native boundaries;
 - [`docs/repository_organization_plan.md`](docs/repository_organization_plan.md)
-  — the required family split, offline-source closure, and per-codec backend
-  performance qualification before another format wave;
+  — the completed family split, offline-source closure, trigger-based backend
+  comparison mechanism, and bounded final R6 package gate;
 - [`docs/next_stage_implementation_checklist.md`](docs/next_stage_implementation_checklist.md)
   — the reviewed commit-by-commit implementation, testing, benchmark, and
   cross-platform validation checklist for that gate;
@@ -364,7 +364,10 @@ Engineering status and extension work are tracked in:
 All live codecs have optimized mmap/direct-sink/inspection contracts, with
 bounded partial paths where their format permits them. Codec-kernel performance
 is tracked separately and is not called qualified until measured against the
-best viable permissive upstream backend.
+best viable permissive upstream backend. An honest provisional ledger row is
+accepted as current release behavior without making that qualification claim;
+candidate comparisons are triggered by a measured regression, material
+hotspot, or concrete replacement proposal.
 
 ## License
 

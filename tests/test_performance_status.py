@@ -59,6 +59,19 @@ def test_performance_ledger_has_stable_schema_and_exact_builtin_coverage():
     assert ledger["schema_version"] == 1
     assert (ROOT / ledger["baseline_document"]).is_file()
     assert set(ledger["status_definitions"]) == _ALLOWED_STATES
+    assert ledger["r6_release_decision"] == (
+        "user-directed lean full-closure plan, 2026-07-28"
+    )
+    assert ledger["r6_release_policy"] == (
+        "verified current backends are accepted as the R6 release baseline; "
+        "provisional candidate-comparison gaps remain an optional post-R6 "
+        "backlog and do not claim qualification"
+    )
+    assert ledger["r6_unmeasured_profile_policy"] == (
+        "14 specialized provisional rows are accepted for correctness and "
+        "compatibility only; R6 makes no profile-specific performance claim "
+        "for them"
+    )
 
     codecs = ledger["codec"]
     assert tuple(item["id"] for item in codecs) == CANONICAL_BUILTIN_IDS
@@ -107,6 +120,19 @@ def test_performance_rows_are_honest_about_initial_evidence():
         "known_gap": 2,
         "not_applicable": 6,
     }
+    provisional = [
+        item for item in operations if item["status"] == "provisional"
+    ]
+    assert Counter(
+        tuple(item["evidence_gaps"]) for item in provisional
+    ) == {
+        ("candidate comparison on all required toolchains",): 110,
+        (
+            "profile-specific current-backend measurement missing",
+            "candidate comparison on all required toolchains",
+        ): 14,
+    }
+    assert all(item["candidate_backends"] == [] for item in provisional)
     for item in operations:
         assert item["direction"] in _DIRECTIONS
         assert item["status"] in _ALLOWED_STATES

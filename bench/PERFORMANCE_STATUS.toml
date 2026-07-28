@@ -2,6 +2,9 @@ schema_version = 1
 baseline_document = "bench/BASELINE.md"
 validated_implementation = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
 provisional_definition = "implemented and correctness-tested, but backend qualification is incomplete; evidence_gaps states what remains"
+r6_release_policy = "verified current backends are accepted as the R6 release baseline; provisional candidate-comparison gaps remain an optional post-R6 backlog and do not claim qualification"
+r6_release_decision = "user-directed lean full-closure plan, 2026-07-28"
+r6_unmeasured_profile_policy = "14 specialized provisional rows are accepted for correctness and compatibility only; R6 makes no profile-specific performance claim for them"
 
 [status_definitions]
 qualified = "candidate comparison, fidelity checks, fixtures, and required toolchain evidence are complete"

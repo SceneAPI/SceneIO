@@ -9,8 +9,8 @@ Future policy and sequencing live in
 The detailed execution, verification, and wheel-validation sequence for the
 remaining formats is in
 [`format_gap_implementation_plan.md`](format_gap_implementation_plan.md).
-The prerequisite module-boundary, offline-source, and measured codec-backend
-gate is in
+The module-boundary, offline-source, bounded package-closure, and trigger-based
+codec-backend mechanism are in
 [`repository_organization_plan.md`](repository_organization_plan.md); its
 commit-sized execution checklist is
 [`next_stage_implementation_checklist.md`](next_stage_implementation_checklist.md).
@@ -33,6 +33,14 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > nanobind stable target/suffix, and produces `_core.pyd` on Windows plus
 > `_core.abi3.so` on Unix. No corrected release has been published.
 >
+> **Lean R6 closure decision (2026-07-28):** the correctness-tested current
+> backends are accepted as this stage's release baseline. The 124 provisional
+> performance rows remain transparent post-R6 optimization work and are not
+> relabeled qualified. Exhaustive alternative-backend comparison is no longer
+> an R6 gate. The only substantive remaining gate is one user-authorized
+> exact-head build-only package matrix, artifact inspection, and a final
+> review/evidence commit.
+>
 > **Validated N0 implementation checkpoint (2026-07-25, `a5e7fa4`):** the live registry contains
 > 50 available codecs. Every codec reports read, write, inspect, streaming read,
 > and streaming write support; 28 advertise a bounded partial selector. Local
@@ -45,8 +53,8 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > complete and focused native jobs. [Release dry run
 > 30181286675][current-release] builds and smoke-tests all three platform wheel
 > sets plus the source archive with publication skipped. N0 is validated at
-> this immutable implementation commit; repository organization and measured
-> backend qualification are next.
+> this immutable implementation commit; the later R1-R6 records below
+> supersede its next-step wording.
 >
 > **R1 implementation and validation checkpoint (2026-07-26, `95061c6`):**
 > R1a adds the immutable 50-codec
@@ -741,11 +749,11 @@ expanded 50-codec benchmark/oracles.
 | Piece | Status | Notes |
 |---|---|---|
 | nanobind + scikit‑build‑core build | ✅ | abi3/cp312, `NB_STATIC`; `Python::SABIModule`, `nanobind-static-abi3`, and the platform suffix are configure-checked; local Windows emits `_core.pyd` against `python3.dll`, Ubuntu emits `_core.abi3.so` without libpython |
-| cibuildwheel release path | ✅ prepared | one verified sdist feeds Linux/macOS/Windows wheels; locked build inputs, all-50 installed smoke, per-wheel inventory, and tag-only publication in `publish.yml`; current-head dispatch remains user-gated |
+| cibuildwheel release path | ✅ prepared | one verified sdist feeds Linux/macOS/Windows wheels; locked build inputs, all-50 installed smoke, per-wheel inventory, and tag-only publication in `publish.yml`; one current-head build-only dispatch and artifact inspection remain user-gated |
 | CI parity (oracles in CI) | ✅ | At `a5e7fa4`, normal Linux CI passes 2,914 tests with nine documented platform/oracle skips, the 50-codec performance guard, pinned GCC 10 portability, and the three-OS focused matrix |
 | Codec registry + `read`/`write`/`inspect`/`read_partial`/`detect` | ✅ | inspection covers all 50; bounded partial hooks are capability-specific |
 | Repo-maintained stable codec adapters | ✅ | all 50 production adapters, grammars, convention guards, inspectors, partial capability policies/available paths, and sinks live in `src/cpp` / `src/sceneio`; separately installed implementations and executables are test/reference oracles only |
-| Offline native-source closure | 🟡 | all selected native sources—including libwebp 1.5.0—are stored in-tree and the production CMake graph has no native-source fetch; the corrected exact-tree MSVC sdist-derived wheel is the final local gate, while user-gated GCC 10/AppleClang execution remains |
+| Offline native-source closure | 🟡 | all selected native sources—including libwebp 1.5.0—are stored in-tree and the production CMake graph has no native-source fetch; local exact-tree package proof is complete, while one user-gated GCC 10/AppleClang build-only execution and artifact inspection remain |
 | Zero‑copy numpy + torch (DLPack) | ✅ | validated per codec |
 | Conventions‑as‑metadata + write guards | ✅ | record‑don't‑convert enforced |
 | Parity kit (`sceneio.testing.parity`) | ✅ | cross‑impl + round‑trip + convention pins |

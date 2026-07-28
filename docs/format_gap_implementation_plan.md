@@ -4,8 +4,9 @@
   checkpoint. Exact current capabilities, test counts, workflow evidence, and
   release state are maintained in
   [`format_coverage.md`](format_coverage.md).
-- **Current program gate:** repository organization, backend qualification,
-  and default native-source closure precede the next codec wave.
+- **Current program gate:** finish the one exact-head R6 package matrix and
+  closure review before the next codec wave. Exhaustive backend comparison is
+  a trigger-based post-R6 optimization activity, not a release prerequisite.
 - **Scope:** close every unblocked format gap declared by SceneIO's coverage
   documents without reimplementing the 0.2.0 codec tier.
 
@@ -15,10 +16,10 @@ implementation. Completed execution evidence is indexed under
 [`plans/completed/`](plans/completed/README.md). `coverage_roadmap.md` owns
 policy and future sequencing; Phase G0 below records the mechanism that keeps
 these documents and the public capability manifest aligned. Repository
-restructuring and backend performance qualification are specified in
-[`repository_organization_plan.md`](repository_organization_plan.md) and are
-prerequisites for the next codec wave. The reviewed, commit-sized checklist
-for executing those gates is
+restructuring and the optional backend performance qualification mechanism are
+specified in
+[`repository_organization_plan.md`](repository_organization_plan.md). The
+reviewed, commit-sized checklist for the active R6 gate is
 [`next_stage_implementation_checklist.md`](next_stage_implementation_checklist.md).
 
 The R6 stable-ABI correction supersedes earlier local wheel-tag evidence:
@@ -2162,20 +2163,17 @@ lane before starting the next unit.
    commit `da1d709`. All 40 native codec sources are family-nested; exact-tree
    MSVC/GCC 10, 398/399/81 package, public-snapshot, normal CI `30326256230`,
    and instrumented `30326256137` gates pass.
-2. **Backend performance qualification (R5).**
-   Create one `bench/PERFORMANCE_STATUS.toml` operation cell for every required
-   built-in codec/profile/direction and compare each viable permissive upstream
-   backend through SceneIO's production read/write paths. Decoder candidates
-   consume the same hashed encoded corpus. Measure encode/decode, warm path I/O,
-   confirmed or explicitly best-effort cold I/O, direct sinks, traced
-   allocation, child-process RSS, determinism, artifact size, and startup on
-   representative and generated fixtures. Resolve known gaps beginning with
-   JPEG encode/decode by evaluating libjpeg-turbo; retain or replace a backend
-   only from measured evidence and a user-authorized three-platform A/B gate.
-   Lossy replacements require predeclared comparative non-inferiority bounds.
-   Before removing a retained backend, install a persistent same-run guard
-   against the ledger's pinned qualified commit.
-   Existing optimized transport does not by itself qualify every codec kernel.
+2. **Bounded backend decision (R5, complete for this stage).**
+   Keep one `bench/PERFORMANCE_STATUS.toml` operation cell for every required
+   built-in codec/profile/direction, but do not turn every provisional row into
+   a mandatory alternative-backend search. The correctness-tested current
+   backends are accepted as the R6 release baseline while their unmeasured
+   candidate gaps stay visible and do not become `qualified`. Run the detailed
+   comparison protocol only after R6 when a measured regression, material
+   hotspot, or concrete replacement proposal justifies it. A proposed
+   replacement still requires the same production paths, hashed corpus,
+   fidelity bounds, and user-authorized three-platform A/B gate before
+   selection.
    R5.1 is complete: `bench/BACKEND_CANDIDATES.toml` records the
    JPEG candidate survey and exact pins, and the default-off qualification
    build produces isolated stb and SIMD-enabled libjpeg-turbo 3.2.0 wheels
@@ -2190,7 +2188,8 @@ lane before starting the next unit.
    geomeans. libjpeg-turbo misses the q95 comparative-quality floor
    (`-0.058242 dB` versus `-0.05 dB`) and is rejected as the combined stable
    default. stb remains unchanged. No candidate advanced to the user-gated
-   remote comparison.
+   remote comparison. This negative decision closes the active R5 work; the
+   124 provisional rows are an optional post-R6 optimization backlog.
 3. **Repository source closure for the stable tier (R6).**
    The exact selected revisions for miniz 3.0.2, nlohmann/json 3.11.3, zstd
    1.5.6, fast_float 6.1.6, LAZperf 3.4.0, and libwebp 1.5.0 are now stored
@@ -2205,8 +2204,11 @@ lane before starting the next unit.
    `_core.abi3.so`; the final exact-tree disconnected MSVC package is rebuilt
    with disabled PEP 517 isolation and pinned tools. `publish.yml` prepares a
    hash-locked wheelhouse, verifies and unpacks the one sdist, and builds every
-   platform wheel from that directory. Complete the user-gated manylinux2014
-   GCC 10 and AppleClang execution.
+   platform wheel from that directory. The only active R6 work is one
+   user-authorized exact-head build-only run, inspection of its sdist and three
+   wheels, and one final review/evidence commit. That documentation-only
+   closure record names the packaged source SHA and does not recursively
+   require another package run.
 4. **Animation-capable `ImageSequence`.**
    Add an owned packed-frame mode with exact canvas size, pixel dtype/channels,
    per-frame duration, loop count, blend operation, disposal operation, and
@@ -2406,6 +2408,11 @@ After all local commits in a dependency wave are green:
    gh workflow run publish.yml --ref phase0-nanobind-core
    ```
 
+   For the current R6 head, the automatic normal and native-runtime workflows
+   already pass; only the build-only `publish.yml` dispatch remains. The first
+   command is retained for future dependency waves and is not repeated solely
+   to close R6.
+
    The manual `publish.yml` run is build-only and cannot publish. At the N0
    checkpoint, its sdist and manylinux2014 x86-64, macOS arm64, and Windows
    amd64 abi3 wheel jobs built independently from the same commit. The R6
@@ -2420,13 +2427,20 @@ After all local commits in a dependency wave are green:
 7. Record workflow links, artifact names/hashes, compiler/platform results,
    skips, and any platform-specific thresholds in the completion evidence.
 
-Remote validation failure reopens the responsible work package. A local pass
-does not override a compiler, instrumented, or clean-wheel failure.
+Remote validation failure reopens only the responsible focused package; it
+does not reopen R5 or the full format queue. A hosted-run interruption may be
+retried once. A reproducible product failure receives a focused fix and one
+fresh exact-head run. A local pass does not override a compiler or clean-wheel
+failure.
 
 ### 12.11 Release and PyPI validation
 
 Publication uses `.github/workflows/publish.yml`; no local `twine upload` or
 manual artifact replacement is part of this plan.
+
+This section is outside R6 closure. PyPI configuration re-verification,
+tagging, publication, and published-artifact smoke begin only when the user
+starts a release.
 
 [Release run 30097907487](https://github.com/SceneAPI/SceneIO/actions/runs/30097907487)
 successfully published SceneIO 0.2.0 through the PyPI trusted publisher,
