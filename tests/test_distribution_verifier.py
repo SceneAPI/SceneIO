@@ -680,8 +680,20 @@ def test_publish_workflow_builds_every_wheel_from_the_exact_sdist() -> None:
     assert "package-dir: ${{ steps.source.outputs.package-dir }}" in wheel_job
     assert "actions/checkout" not in wheel_job
     assert "pypa/cibuildwheel@v4.1.0" in wheel_job
-    assert 'CIBW_BUILD_FRONTEND: "pip; args: --no-build-isolation"' in wheel_job
-    assert "PIP_NO_INDEX=1" in wheel_job
+    assert (
+        'CIBW_BUILD_FRONTEND: "pip; args: --no-build-isolation --no-index"'
+        in wheel_job
+    )
+    before_build = wheel_job.split("CIBW_BEFORE_BUILD:", maxsplit=1)[1].split(
+        "CIBW_BEFORE_TEST:", maxsplit=1
+    )[0]
+    before_test = wheel_job.split("CIBW_BEFORE_TEST:", maxsplit=1)[1].split(
+        "CIBW_TEST_REQUIRES:", maxsplit=1
+    )[0]
+    for install_hook in (before_build, before_test):
+        assert "--no-index" in install_hook
+        assert "--find-links {package}/.build-wheelhouse" in install_hook
+    assert "PIP_NO_INDEX=1" not in wheel_job
     assert "FETCHCONTENT_FULLY_DISCONNECTED=ON" in wheel_job
     assert "--require-hashes" in wheel_job
     for row in (

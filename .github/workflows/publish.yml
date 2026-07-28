@@ -150,7 +150,7 @@ jobs:
         uses: pypa/cibuildwheel@v4.1.0
         env:
           CIBW_ARCHS: ${{ matrix.arch }}
-          CIBW_BUILD_FRONTEND: "pip; args: --no-build-isolation"
+          CIBW_BUILD_FRONTEND: "pip; args: --no-build-isolation --no-index"
           CIBW_BEFORE_BUILD: >-
             python -m pip install
             --no-index
@@ -168,7 +168,6 @@ jobs:
             numpy==2.2.6
           CIBW_TEST_REQUIRES: ""
           CIBW_ENVIRONMENT: >-
-            PIP_NO_INDEX=1
             CMAKE_ARGS="-DFETCHCONTENT_FULLY_DISCONNECTED=ON"
             MACOSX_DEPLOYMENT_TARGET=11.0
           CIBW_MANYLINUX_X86_64_IMAGE: >-
