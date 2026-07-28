@@ -2170,18 +2170,21 @@ lane before starting the next unit.
    Before removing a retained backend, install a persistent same-run guard
    against the ledger's pinned qualified commit.
    Existing optimized transport does not by itself qualify every codec kernel.
-   R5.1 is implemented locally: `bench/BACKEND_CANDIDATES.toml` records the
+   R5.1 is complete: `bench/BACKEND_CANDIDATES.toml` records the
    JPEG candidate survey and exact pins, and the default-off qualification
    build produces isolated stb and SIMD-enabled libjpeg-turbo 3.2.0 wheels
    with the same public/core call path. The ordinary wheel remains stb-only.
-   R5.2's frozen same-corpus installed-wheel harness is implemented locally.
+   R5.2's frozen same-corpus installed-wheel harness is complete.
    It measures actual core/public mmap and sink paths, quality, output size,
    startup, repeatability, allocation/RSS, and package cost from paired raw
    sessions and requires a generated SIMD receipt. Its manual nonpublishing
    workflow covers MSVC, the pinned manylinux2014 GCC 10 image, and AppleClang
-   arm64. The quick protocol completes as `smoke_only`; its nonbinding
-   diagnostic gates are not an official pass. Full clean-tree and
-   three-toolchain reports are still required before selection.
+   arm64. The binding clean-wheel MSVC report at `7a88e7c` passes 1,596 of
+   1,597 frozen gates and measures 4.787x/1.782x encode/decode median
+   geomeans. libjpeg-turbo misses the q95 comparative-quality floor
+   (`-0.058242 dB` versus `-0.05 dB`) and is rejected as the combined stable
+   default. stb remains unchanged. No candidate advanced to the user-gated
+   remote comparison.
 3. **Repository source closure for the stable tier (R6).**
    Vendor the exact selected revisions under `src/cpp/third_party/`. The
    current closure set is miniz 3.0.2, nlohmann/json 3.11.3, zstd 1.5.6,

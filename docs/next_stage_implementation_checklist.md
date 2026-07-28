@@ -83,14 +83,17 @@ SceneIO-plus-NumPy smoke returns `2`. All three independent reviews are clear.
 Normal run `30326256230` and instrumented run `30326256137` pass exact commit
 `da1d709`.
 
-R5.1 is complete and pushed at `cf208d8`. R5.2's frozen JPEG matrix,
-installed-wheel controller/worker, corpus provenance, quality/size/parity
-gates, startup/repeatability/memory measurements, generated SIMD receipt, and
-manual nonpublishing three-platform workflow are implemented locally. The
-quick protocol completes as `smoke_only`; its nonbinding diagnostic gates are
-not an official pass. The full clean-tree MSVC report and the user-gated
-MSVC/GCC 10/AppleClang evidence set remain pending. The stable default is still
-stb, and R5.4 selection has not started.
+R5.1 is complete and pushed at `cf208d8`. The R5.2 harness is pushed at
+`bd68dc2`, and managed-Python worker identity/cleanup closes at `7a88e7c`.
+The exact `7a88e7c` clean-wheel, remote-inclusive MSVC report is complete:
+1,596 of 1,597 frozen gates pass, but libjpeg-turbo 3.2.0 misses the
+`rgb8_q95_444` comparative-quality floor (`-0.058242 dB` observed versus
+`-0.05 dB` required). Its report SHA-256 is
+`f32b7c60f19956438023c51cc9c0b07f44ace79c66dff4a43c30fc7cfdcd80b1`.
+The candidate is therefore rejected as the combined stable JPEG default,
+stb remains unchanged, and the user-gated GCC 10/AppleClang comparison was not
+dispatched for a candidate that had already failed a frozen local gate. R5 has
+a negative selection result; R6 source closure is next.
 
 This is the operational checklist for the repository-organization and
 codec-performance stage defined in
@@ -3758,11 +3761,13 @@ and the variance is retained rather than normalized away.
       Retain raw samples; do not delete inconvenient outliers after inspection.
 - [x] Label cold-cache data valid only when cache eviction is confirmed.
       Advisory cache hints are reported as best-effort, not cold-cache proof.
-- [ ] Execute the clean full local matrix and retain passing results for every
-      implemented throughput, quality, allocation/RSS, startup, repeatability,
-      and package-size gate.
-- [ ] Build the shortlist on MSVC, then compare finalists on manylinux2014
-      GCC 10 and AppleClang before selection.
+- [x] Execute the clean full local matrix and retain the complete result,
+      including a failed frozen gate. The candidate passed throughput,
+      allocation/RSS, startup, repeatability, compatibility, and package-size
+      gates but failed `quality-profile:rgb8_q95_444`.
+- [x] Apply the platform funnel before selection. The only finalist failed on
+      MSVC, leaving no conforming candidate to advance to the user-gated
+      manylinux2014 GCC 10 and AppleClang comparison.
 
 R5.2 harness implementation evidence (2026-07-28):
 
@@ -3801,6 +3806,18 @@ R5.2 harness implementation evidence (2026-07-28):
   NASM 3.02 source build, and AppleClang arm64, then accepts only a passing
   exact-source/configuration set. The workflow has not been dispatched; no
   three-toolchain result or backend selection is claimed.
+- The binding clean-wheel MSVC run uses source commit
+  `7a88e7c726eed5bdd4ff0ad05b381c9795af9dfe`, eight paired sessions over all
+  122 cells, 24 startup observations, six repeatability observations, and 24
+  fresh-process memory observations. libjpeg-turbo records 4.787x encode and
+  1.782x decode median geomeans, while its q95 4:4:4 median comparative PSNR
+  delta is `-0.058242 dB`, below the frozen `-0.05 dB` floor. Exactly one of
+  1,597 gates fails. Both 83-member wheels retain NumPy as their sole runtime
+  requirement; package, native-size, memory, output-size, parity,
+  repeatability, and startup gates pass. The report SHA-256 is
+  `f32b7c60f19956438023c51cc9c0b07f44ace79c66dff4a43c30fc7cfdcd80b1`.
+  Its checked compact receipt is
+  `bench/results/backend_qualification/jpeg-rgb8-v1-windows-msvc-7a88e7c.json`.
 
 ### R5.3 — correctness and compatibility gate implementation
 
@@ -3823,11 +3840,10 @@ R5.2 harness implementation evidence (2026-07-28):
       sink identity where the backend contract permits it.
 - [x] Record multi-lane comparison as not applicable for this decision because
       neither selected JPEG API exposes an intra-file lane control.
-- [ ] Execute the clean full matrix and retain passing compatibility,
+- [x] Execute the clean full matrix and retain passing compatibility,
       determinism, and repeatability evidence.
-- [ ] If a backend migration changes deterministic encoded bytes, isolate it
-      in a dedicated compatibility decision with updated goldens and release
-      notes; never hide it inside a refactor.
+- [x] No backend migration was selected, so retained deterministic bytes and
+      goldens remain unchanged.
 - [x] Existing Python/runtime dependency remains NumPy-only.
 
 For this JPEG decision, neither candidate exposes an intra-file lane control
@@ -3838,42 +3854,55 @@ contribute candidate throughput.
 
 ### R5.4 — selection and ledger update
 
-- [ ] Select the fastest conforming candidate per profile/direction across the
-      supported toolchains.
-- [ ] If platform winners differ, prefer one portable backend unless the
-      measured gain justifies a documented platform dispatch with identical
-      behavior.
-- [ ] Switch the default backend in a dedicated revertible commit and retain
-      the old backend until the user-gated three-platform qualification matrix
-      passes at that exact commit.
-- [ ] Before removing the superseded backend, add a persistent qualification
-      regression workflow for affected codec/backend/build changes and a
-      scheduled run. On the same runner it compares the checkout with the
-      ledger's pinned `qualified_commit`, using the same hashed corpus,
-      interleaved subprocess samples, child-process RSS, and recorded noise
-      envelope; a noisy failure requires a confirming rerun.
-- [ ] Remove the superseded backend, if it has no other consumer, only in a
-      later commit after remote validation and the persistent guard is green.
-- [ ] Record retained, replaced, and rejected candidates in
+- N/A — no conforming candidate exists to select per profile/direction.
+- N/A — no platform winners exist to compare or dispatch.
+- N/A — no default switch or three-platform selection commit exists.
+- N/A — no superseded backend exists, so a replacement regression workflow
+  and scheduled old/new comparison are not installed.
+- N/A — no retained backend is removed.
+- [x] Record retained, replaced, and rejected candidates in
       `PERFORMANCE_STATUS.toml` and `bench/BASELINE.md`.
-- [ ] A profile/direction becomes `qualified` only when candidate discovery,
+- [x] A profile/direction becomes `qualified` only when candidate discovery,
       three-toolchain measurement, correctness, build, and maintenance gates
-      are complete.
-- [ ] `native_by_necessity` requires documented candidate research and an
-      independent oracle; it is not a synonym for “not benchmarked.”
+      are complete. No JPEG row is promoted by this failed result.
+- [x] Do not use `native_by_necessity` for this result; the JPEG row remains a
+      measured `known_gap`.
 
-R5 per-backend exit:
+R5.4 negative-selection outcome (2026-07-28):
 
-- [ ] Focused parity/malformed/lifetime/determinism tests pass.
-- [ ] Same-run benchmark shows the selected gain with no retained-path
-      regression.
-- [ ] Full suite, Ruff, all-codec guard, local sdist/wheel, and clean smoke
-      pass.
-- [ ] Windows, Linux, and macOS build/benchmark evidence is linked.
-- [ ] Three-lens review has no unresolved finding.
-- [ ] With explicit user authorization, the nonpublishing backend
-      qualification workflow passes the old/new A/B pair on MSVC,
-      manylinux2014 GCC 10, and AppleClang at the exact selection commit.
+- [x] Record libjpeg-turbo 3.2.0 as rejected for the combined stable default
+      in `bench/PERFORMANCE_STATUS.toml` and `bench/BASELINE.md`.
+- [x] Retain the repository-owned stb default without a source, ABI, symbol,
+      byte-contract, or packaging change.
+- [x] Preserve the frozen threshold and raw result; do not reinterpret the
+      4.787x/1.782x speed gains as qualification after the q95 quality failure.
+- [x] Do not dispatch the user-gated remote workflow because there is no
+      conforming candidate or selection commit to validate.
+
+The selection/removal gates above are not applicable because the candidate
+failed before selection.
+The JPEG performance row remains `known_gap`, with no active candidate and the
+evaluated rejection recorded explicitly. This negative decision closes the
+current R5 candidate funnel and does not claim that the JPEG gap itself has
+been eliminated.
+
+Selected-backend exit: N/A. It applies only to a conforming candidate and an
+actual default-selection commit.
+
+R5 negative-candidate exit:
+
+- [x] Focused installed-wheel parity, malformed-input, determinism, and
+      backend-isolation tests pass.
+- [x] The complete same-run report is bound by a checked receipt that
+      records the failed frozen gate without deleting raw samples or changing
+      the threshold.
+- [x] Full suite, Ruff, ledger/document contracts, paired wheels, and clean
+      installed-wheel smoke pass.
+- [x] The stable default, public/core surface, ABI, encoded-byte contract, and
+      NumPy-only runtime dependency remain unchanged.
+- [x] Three-lens review has no unresolved finding.
+- [x] The user-gated workflow is not dispatched because there is no
+      conforming candidate or selection commit; no remote pass is claimed.
 
 ## 10. R6 — close selected default sources
 
@@ -4010,8 +4039,9 @@ Remote validation checkpoints, only after explicit user authorization:
 - [x] At N0, push the reviewed candidate and require green normal,
       instrumented, and focused three-OS portability workflows at the exact
       SHA.
-- [ ] At each backend selection in R5, dispatch a nonpublishing old/new A/B
-      qualification matrix on MSVC, manylinux2014 GCC 10, and AppleClang.
+- N/A for the current R5 result — no backend was selected. A future selection
+  must dispatch the nonpublishing old/new A/B matrix on MSVC, manylinux2014
+  GCC 10, and AppleClang.
 - [ ] At final R6 exit, push the reviewed branch and dispatch the build-only
       `publish.yml` workflow. Its wheel jobs consume the exact sdist produced
       by its sdist job.

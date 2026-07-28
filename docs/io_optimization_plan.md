@@ -6,9 +6,11 @@ cover the live 50-codec registry; 28 codecs expose bounded selectors. This
 status describes optimized I/O transport and bounded access; it does **not**
 claim that every compression/parser kernel is the fastest viable backend.
 Backend qualification is the next prerequisite in
-[`repository_organization_plan.md`](repository_organization_plan.md), with the
-JPEG backend already recorded as a known encode/decode gap requiring a measured
-libjpeg-turbo comparison. The reviewed, commit-sized verification checklist is
+[`repository_organization_plan.md`](repository_organization_plan.md). The
+measured libjpeg-turbo comparison is complete on MSVC and rejected for the
+combined default after missing the frozen q95 comparative-quality floor; the
+JPEG encode/decode gap therefore remains explicit with stb retained. The
+reviewed, commit-sized verification checklist is
 [`next_stage_implementation_checklist.md`](next_stage_implementation_checklist.md).
 Current benchmark ownership work does not reopen O0-O5 or change codec
 capabilities or implementation-performance claims. Points close at `45e2757`
@@ -70,27 +72,25 @@ pass that exact commit. R4.3 and final R4 qualification close at pushed commit
 instrumented `30326256137` gates pass. No codec loop changed and no throughput
 claim is made.
 
-R5.1 is implemented locally after that R4 checkpoint. It introduces a
+R5.1 is complete after that R4 checkpoint. It introduces a
 default-off, configure-time JPEG comparison seam and exact candidate ledger.
 The ordinary wheel remains stb-only with its frozen public/core surface.
 Isolated stb and SIMD-required libjpeg-turbo 3.2.0 qualification wheels build
-and pass focused parity plus installed smoke on MSVC. This is intake/build
-evidence only; R5.2 must still compare identical hashed inputs through the
-production mmap/sink paths on MSVC, GCC 10, and AppleClang before any backend
-selection or performance-ledger promotion.
+and pass focused parity plus installed smoke on MSVC.
 
-R5.2's production-path measurement implementation is now local. A frozen
+R5.2's production-path measurement implementation is complete. A frozen
 97-cell local/122-cell remote-inclusive JPEG matrix compares installed stb and
 libjpeg-turbo wheels against the same hashed corpus, retains raw paired
 samples, and measures the direct/public mmap and sink surfaces alongside
 quality, size, startup, repeatability, traced allocation, RSS, and package
 cost. Fresh-process RSS uses a fixed small-fixture warm-up and measures the
 first target-fixture operation. A generated receipt binds the candidate build
-to its configured SIMD header. The quick protocol completes as `smoke_only`;
-its nonbinding
-diagnostic gates are not an official pass. The clean full MSVC report and
-manual three-toolchain workflow are still pending, so no backend selection or
-new stable performance claim is made.
+to its configured SIMD header. The binding clean-wheel MSVC report at
+`7a88e7c` passes 1,596 of 1,597 frozen gates and records 4.787x encode and
+1.782x decode median geomeans. libjpeg-turbo fails the q95 4:4:4 comparative
+quality floor (`-0.058242 dB` versus required `-0.05 dB`) and is rejected as
+the combined stable default. stb remains unchanged. The manual remote workflow
+was not dispatched because no conforming candidate advanced beyond MSVC.
 
 Scope: the compiled `sceneio._core` I/O path on `phase0-nanobind-core`.
 Companion to `coverage_roadmap.md` (this makes its "Phase 7" hardening/perf work

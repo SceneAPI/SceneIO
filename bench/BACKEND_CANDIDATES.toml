@@ -15,9 +15,14 @@ runtime_dependencies = ["numpy"]
 [[decision]]
 id = "jpeg-rgb8-v1"
 codec_id = "jpeg"
-status = "intake"
+status = "rejected"
 retained_backend = "stb"
 candidate_backend = "libjpeg-turbo"
+result_commit = "7a88e7c726eed5bdd4ff0ad05b381c9795af9dfe"
+report_sha256 = "f32b7c60f19956438023c51cc9c0b07f44ace79c66dff4a43c30fc7cfdcd80b1"
+failed_gate = "quality-profile:rgb8_q95_444"
+observed_delta_db = -0.05824218633100031
+required_delta_db = -0.05
 public_read = "sceneio.read and sceneio._core.read_jpeg"
 public_write = "sceneio.write and sceneio._core.write_jpeg"
 profiles = [
@@ -57,7 +62,7 @@ reason = "current stable behavior and compatibility reference"
 
 [[decision.candidate]]
 id = "libjpeg-turbo"
-role = "finalist"
+role = "evaluated_finalist"
 version = "3.2.0"
 commit = "c85e6b905bf237038faa936dab160ebfc5da0344"
 source = "https://github.com/libjpeg-turbo/libjpeg-turbo/releases/download/3.2.0/libjpeg-turbo-3.2.0.tar.gz"
@@ -72,8 +77,8 @@ threading = "one call per image; callers may run independent handles concurrentl
 compilers = "MSVC 2005+, GCC 4.1+, and Clang; SceneIO gate is MSVC, GCC 10, AppleClang"
 static_offline = true
 hidden_in_core = true
-outcome = "qualify"
-reason = "current portable throughput-focused implementation with mature SIMD paths"
+outcome = "rejected_quality_gate"
+reason = "the clean MSVC matrix passed 1596 of 1597 gates but q95 comparative quality measured -0.058242 dB against the frozen -0.05 dB floor"
 
 [[decision.candidate]]
 id = "mozjpeg"
@@ -91,7 +96,7 @@ compilers = "MSVC, GCC, and Clang"
 static_offline = true
 hidden_in_core = true
 outcome = "excluded"
-reason = "its distinguishing modes trade encode throughput and baseline-byte compatibility for density, while the current active libjpeg-turbo line is the throughput finalist"
+reason = "its distinguishing modes trade encode throughput and baseline-byte compatibility for density; libjpeg-turbo was evaluated separately as the throughput finalist"
 
 [[decision.candidate]]
 id = "jpegli"

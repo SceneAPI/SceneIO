@@ -99,7 +99,7 @@
 > All 40 native codec sources are family-nested. Exact-tree MSVC/GCC 10,
 > package, public-snapshot, normal CI `30326256230`, and instrumented
 > `30326256137` gates pass.
-> R5.1 is implemented locally as a backend-intake checkpoint. The stable JPEG
+> R5.1 is complete as a backend-intake checkpoint. The stable JPEG
 > path remains the repository-owned stb implementation, while pinned
 > libjpeg-turbo 3.2.0 is available only through an explicit, default-off
 > qualification build. Ordinary builds do not compile the candidate
@@ -108,13 +108,16 @@
 > all-50-codec smoke and contain one native module with no development
 > payload. The local 50-row strict-comparison sweep retains the established
 > O4/O5 results without a changed threshold. This establishes candidate
-> viability and isolation only. R5.2's frozen same-corpus installed-wheel
-> harness is now implemented locally, including production mmap/sink paths,
+> viability and isolation. R5.2's frozen same-corpus installed-wheel
+> harness is complete, including production mmap/sink paths,
 > output quality and size bounds, startup/repeatability/memory evidence, an
 > actual configured-SIMD receipt, and a manual nonpublishing MSVC/GCC
-> 10/AppleClang workflow. Only its quick `smoke_only` protocol has run. Full
-> clean-tree and three-toolchain results, and therefore any backend-selection
-> decision, remain pending.
+> 10/AppleClang workflow. The clean-wheel MSVC result at `7a88e7c` passes
+> 1,596/1,597 frozen gates: the candidate is 4.787x/1.782x faster for
+> encode/decode by median geomean but misses the q95 comparative-quality floor
+> (`-0.058242 dB` versus `-0.05 dB`). libjpeg-turbo is therefore rejected as
+> the combined default and stb remains unchanged. No candidate advanced to
+> the user-gated remote comparison; R6 source closure is next.
 
 The granular, per‑format execution plan for covering **every relevant file type
 that has a permissively‑licensed open‑source option**. Sits below the strategy

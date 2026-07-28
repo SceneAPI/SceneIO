@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import re
 import tomllib
@@ -11,6 +12,13 @@ from sceneio import _core
 
 ROOT = Path(__file__).resolve().parents[1]
 CANDIDATES = ROOT / "bench" / "BACKEND_CANDIDATES.toml"
+RECEIPT = (
+    ROOT
+    / "bench"
+    / "results"
+    / "backend_qualification"
+    / "jpeg-rgb8-v1-windows-msvc-7a88e7c.json"
+)
 QUALIFICATION_CMAKE = ROOT / "cmake" / "SceneIOBackendQualification.cmake"
 TARGETS_CMAKE = ROOT / "cmake" / "SceneIOTargets.cmake"
 SIMD_CMAKE = ROOT / "cmake" / "SceneIORecordJpegSimd.cmake"
@@ -34,7 +42,40 @@ def test_backend_candidate_ledger_has_complete_jpeg_intake():
     decisions = ledger["decision"]
     assert [item["id"] for item in decisions] == ["jpeg-rgb8-v1"]
     decision = decisions[0]
-    assert decision["status"] == "intake"
+    assert decision["status"] == "rejected"
+    assert decision["result_commit"] == (
+        "7a88e7c726eed5bdd4ff0ad05b381c9795af9dfe"
+    )
+    assert decision["report_sha256"] == (
+        "f32b7c60f19956438023c51cc9c0b07f"
+        "44ace79c66dff4a43c30fc7cfdcd80b1"
+    )
+    assert decision["failed_gate"] == "quality-profile:rgb8_q95_444"
+    assert decision["observed_delta_db"] == -0.05824218633100031
+    assert decision["required_delta_db"] == -0.05
+    receipt = json.loads(RECEIPT.read_text(encoding="utf-8"))
+    assert receipt["source"]["commit"] == decision["result_commit"]
+    assert receipt["full_report"]["sha256"] == decision["report_sha256"]
+    assert receipt["validation"] == {
+        "status": "failed",
+        "passed": False,
+        "gate_count": 1597,
+        "passed_gate_count": 1596,
+        "failed_gate_count": 1,
+        "failed_gates": [
+            {
+                "name": decision["failed_gate"],
+                "median_delta_db": decision["observed_delta_db"],
+                "required_delta_db": decision["required_delta_db"],
+            }
+        ],
+    }
+    assert receipt["decision"] == {
+        "candidate": "libjpeg-turbo 3.2.0",
+        "outcome": "rejected_quality_gate",
+        "stable_backend": "stb",
+        "remote_workflow_dispatched": False,
+    }
     assert len(decision["profiles"]) == 6
     assert {
         "quality_boundary_q90_q91",
@@ -52,7 +93,7 @@ def test_backend_candidate_ledger_has_complete_jpeg_intake():
     ]
     assert [item["outcome"] for item in candidates] == [
         "retained_baseline",
-        "qualify",
+        "rejected_quality_gate",
         "excluded",
         "excluded",
     ]

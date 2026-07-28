@@ -6,7 +6,7 @@ provisional_definition = "implemented and correctness-tested, but backend qualif
 [status_definitions]
 qualified = "candidate comparison, fidelity checks, fixtures, and required toolchain evidence are complete"
 provisional = "correct implementation exists, but one or more qualification inputs remain"
-known_gap = "current backend has a measured performance gap and a viable candidate is named"
+known_gap = "current backend has a measured performance gap; evaluated, rejected, and remaining candidates are explicit"
 native_by_necessity = "no acceptable reusable backend exists after a recorded candidate survey"
 not_applicable = "the direction or profile is intentionally unsupported"
 
@@ -1875,8 +1875,9 @@ transport_status = "qualified"
 status = "known_gap"
 correctness_evidence = ["tests/codecs/test_jpeg.py"]
 benchmark_evidence = ["bench/BASELINE.md", "bench/BACKEND_QUALIFICATION.toml"]
-candidate_backends = ["libjpeg-turbo"]
-evidence_gaps = ["clean full MSVC qualification report", "three-toolchain libjpeg-turbo qualification set"]
+candidate_backends = []
+rejected_backends = [{ id = "libjpeg-turbo", version = "3.2.0", scope = "combined_default", platform = "windows_msvc_x86_64", source_commit = "7a88e7c726eed5bdd4ff0ad05b381c9795af9dfe", report_sha256 = "f32b7c60f19956438023c51cc9c0b07f44ace79c66dff4a43c30fc7cfdcd80b1", gate = "quality-profile:rgb8_q95_444", observed_delta_db = -0.05824218633100031, required_delta_db = -0.05 }]
+evidence_gaps = ["no conforming replacement candidate after libjpeg-turbo 3.2.0 evaluation"]
 
 [[operation]]
 codec_id = "jpeg"
@@ -1895,8 +1896,9 @@ transport_status = "qualified"
 status = "known_gap"
 correctness_evidence = ["tests/codecs/test_jpeg.py"]
 benchmark_evidence = ["bench/BASELINE.md", "bench/BACKEND_QUALIFICATION.toml"]
-candidate_backends = ["libjpeg-turbo"]
-evidence_gaps = ["clean full MSVC qualification report", "three-toolchain libjpeg-turbo qualification set"]
+candidate_backends = []
+rejected_backends = [{ id = "libjpeg-turbo", version = "3.2.0", scope = "combined_default", platform = "windows_msvc_x86_64", source_commit = "7a88e7c726eed5bdd4ff0ad05b381c9795af9dfe", report_sha256 = "f32b7c60f19956438023c51cc9c0b07f44ace79c66dff4a43c30fc7cfdcd80b1", gate = "quality-profile:rgb8_q95_444", observed_delta_db = -0.05824218633100031, required_delta_db = -0.05 }]
+evidence_gaps = ["no conforming replacement candidate after libjpeg-turbo 3.2.0 evaluation"]
 
 [[operation]]
 codec_id = "bmp"

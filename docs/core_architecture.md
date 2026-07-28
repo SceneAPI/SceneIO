@@ -70,8 +70,10 @@ things that keep this expansible as the format list from
 > a receipt derived from libjpeg-turbo's generated SIMD header. The manual
 > `.github/workflows/backend-qualification.yml` repeats the comparison on
 > MSVC, manylinux2014 GCC 10, and AppleClang without publishing. This layer is
-> evidence tooling only; stb remains the stable backend until a complete
-> three-platform report supports a separate selection commit.
+> evidence tooling only. The clean MSVC report rejected libjpeg-turbo 3.2.0
+> as the combined default after its q95 comparative-quality result missed the
+> frozen floor. stb remains stable, and no candidate advanced to a
+> three-platform selection commit.
 
 ## Layering
 
@@ -416,8 +418,10 @@ attributed in `LICENSES/`. At the current head, six source-pinned dependencies
 still arrive through CMake `FetchContent`; repository-contained source closure
 is the R6 target, not a completed-state claim. The R5 JPEG candidate is
 additionally built by a default-off external project from the official
-libjpeg-turbo 3.2.0 archive. It does not enter ordinary builds or wheels unless
-later three-toolchain evidence selects it. Separately installed libraries and
+libjpeg-turbo 3.2.0 archive. The clean MSVC qualification rejected that exact
+candidate as the combined stable default after it missed the frozen q95
+comparative-quality floor, so it does not enter ordinary builds or wheels and
+stb remains the repository-owned default. Separately installed libraries and
 executables remain verification oracles; they are not runtime delegates.
 
 ## Conventions are data, not comments

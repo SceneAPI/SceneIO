@@ -540,15 +540,19 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > public-snapshot, normal CI `30326256230`, and instrumented `30326256137`
 > gates pass. No format capability changes.
 >
-> R5.1 is implemented locally without changing the stable format table:
+> R5.1 is complete without changing the stable format table:
 > ordinary wheels continue to use stb for JPEG. A default-off qualification
 > build can select either the retained backend or SIMD-required
 > libjpeg-turbo 3.2.0 behind the same JPEG API. Candidate intake and default
-> wheel isolation pass locally. R5.2's same-corpus installed-wheel harness,
+> wheel isolation pass. R5.2's same-corpus installed-wheel harness,
 > frozen quality/size/parity bounds, actual configured-SIMD receipt, and
-> manual nonpublishing three-toolchain workflow are implemented; only the
-> quick `smoke_only` protocol has run. Full clean-tree and three-toolchain
-> evidence remain open, so libjpeg-turbo is not yet a selected backend.
+> manual nonpublishing three-toolchain workflow are implemented. The binding
+> clean-wheel MSVC run at `7a88e7c` passes 1,596/1,597 frozen gates and records
+> 4.787x encode / 1.782x decode median geomeans, but libjpeg-turbo fails the
+> q95 4:4:4 comparative-quality floor (`-0.058242 dB` versus `-0.05 dB`).
+> It is rejected as the combined stable default; stb remains repository-owned
+> and unchanged. The user-gated remote comparison was not dispatched because
+> no conforming candidate advanced beyond MSVC. R6 source closure is active.
 
 [current-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287022
 [current-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287161

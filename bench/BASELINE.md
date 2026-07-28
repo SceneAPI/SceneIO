@@ -2796,3 +2796,45 @@ AppleClang arm64, then validates exact source/configuration identity across
 the three reports. That workflow has not been dispatched. These entries
 describe implemented measurement machinery, not a completed comparison:
 stb remains the stable JPEG backend and no R5.4 selection is recorded.
+
+## R5.2 JPEG MSVC qualification result (2026-07-28)
+
+The binding local result uses clean source commit
+`7a88e7c726eed5bdd4ff0ad05b381c9795af9dfe` and fresh isolated
+Windows ABI3 wheels. Its remote-inclusive configuration runs eight paired
+sessions over all 122 frozen cells, 24 independent startup observations, six
+repeatability observations, and 24 fresh-process memory observations. The
+canonical report SHA-256 is
+`f32b7c60f19956438023c51cc9c0b07f44ace79c66dff4a43c30fc7cfdcd80b1`.
+The checked compact receipt is
+`bench/results/backend_qualification/jpeg-rgb8-v1-windows-msvc-7a88e7c.json`;
+it binds the full report, source/configuration/corpus, wheels, gate accounting,
+failed gate, and decision-driving aggregates.
+
+libjpeg-turbo 3.2.0 is materially faster:
+
+- encode median/robust geomeans: 4.787x / 4.637x;
+- decode median/robust geomeans: 1.782x / 1.727x;
+- public sink encode median/robust geomeans: 4.508x / 4.365x;
+- public path decode median/robust geomeans: 1.857x / 1.796x.
+
+It also passes decoded parity, deterministic output, output-size, startup,
+repeatability, traced-allocation, fresh-process RSS, RSS-plateau, wheel-size,
+and native-size gates. Focused installed-wheel parity separately retains the
+malformed/truncated behavior checks. Both wheels contain 83 members
+and require only NumPy at runtime. The retained/candidate wheel SHA-256 values
+are `c166025b9ba6a11bc932a586231f9dc22adc572f2e6e76efde4b1c23ae28e285`
+and `cabc8ce5cb6d6956378e1675e582a27dd6929e690dce84a2e086c2e52b5e2017`.
+
+The candidate nevertheless fails one of 1,597 frozen gates. For
+`rgb8_q95_444`, its median comparative PSNR delta is `-0.058242 dB`, below
+the predeclared `-0.05 dB` non-inferiority floor. The q90 profile passes
+(`+0.000821 dB`), and both profile output-size geomeans pass, but a fast
+candidate that misses any required fidelity profile is not conforming.
+
+The stable backend therefore remains the repository-owned stb implementation.
+No default, ABI, public symbol, encoded-byte contract, or dependency changed.
+The manual GCC 10/AppleClang workflow was not dispatched because the sole
+finalist failed the first platform gate and there is no selection commit to
+validate. The JPEG row remains a documented performance gap with
+libjpeg-turbo recorded as evaluated and rejected for the combined default.

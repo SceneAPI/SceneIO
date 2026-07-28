@@ -613,7 +613,8 @@ backend_source = "src/cpp/third_party/stb"
 transport_status = "qualified"
 status = "known_gap"
 evidence = "bench/BASELINE.md#o0-baseline"
-next_candidate = "libjpeg-turbo"
+candidate_backends = []
+rejected_backends = [{ id = "libjpeg-turbo", version = "3.2.0", gate = "quality-profile:rgb8_q95_444" }]
 ```
 
 Encode and decode are qualified separately for every materially different
@@ -626,16 +627,19 @@ profile; a declared direction that a codec does not expose uses
 - `provisional`: the implementation is correctness-tested, but backend
   qualification is incomplete; profile-specific measurement or candidate
   comparison may still be missing and must be named in `evidence_gaps`;
-- `known_gap`: a viable conforming candidate is materially faster;
+- `known_gap`: the current backend has a measured performance gap, with
+  evaluated, rejected, and remaining candidates stated explicitly;
 - `native_by_necessity`: no suitable upstream kernel exists and the
   repo-maintained parser is independently verified;
 - `not_applicable`: the codec does not expose that operation.
 
 The current known exception is the JPEG backend: the committed baseline
 measured stb write/read at 60/154 MB/s versus Pillow's libjpeg-backed reference
-at 924/541 MB/s on the same fixture. The stable-tier gate must evaluate
-libjpeg-turbo or another approved permissive candidate for both directions;
-micro-optimizing stb is not an adequate closure. XYZ formatting and WebP
+at 924/541 MB/s on the same fixture. The stable-tier gate evaluated
+libjpeg-turbo 3.2.0 for both directions and rejected it as the combined
+default after its q95 comparative-quality result missed the frozen floor.
+The gap remains open with stb retained; micro-optimizing stb is not an
+adequate closure. XYZ formatting and WebP
 lossless were already improved materially, but still receive explicit ledger
 entries rather than inheriting a blanket claim.
 
@@ -1076,31 +1080,38 @@ installed smoke.
 ### R5. Qualify performance
 
 - Populate the 50-codec ledger from existing baseline evidence.
-- **R5.1 implemented locally:** the machine-readable candidate intake records
+- **R5.1 complete:** the machine-readable candidate intake records
   stb, libjpeg-turbo 3.2.0, mozjpeg 4.1.1, and the evaluated jpegli revision.
   A guarded, default-off CMake selector builds isolated stb and
   SIMD-required libjpeg-turbo variants through the same `_core` JPEG API.
-  Default wheel and symbol isolation are proved; no selection or ledger
-  promotion has occurred.
-- **R5.2 harness implemented locally:** the frozen 97-cell local/122-cell
+  Default wheel and symbol isolation are proved.
+- **R5.2 decision complete on MSVC:** the frozen 97-cell local/122-cell
   remote-inclusive matrix compares separate installed wheels through the
   core/public buffer, mmap, path, and sink surfaces against one hashed corpus.
   It retains paired raw timing samples and quality, size, startup,
   repeatability, allocation, RSS, wheel, toolchain, and configured-SIMD
-  evidence. The manual nonpublishing workflow covers MSVC, the pinned
-  manylinux2014 GCC 10 image, and AppleClang arm64. Its quick protocol is
-  `smoke_only`; full clean-tree reports and selection remain pending.
-- Re-run missing candidate comparisons per performance profile and direction,
-  using one provenance-recorded, accepted-subset corpus from retained and
-  independent producers for every decoder candidate.
-- Resolve `known_gap` entries, beginning with JPEG encode/decode.
-- Integrate candidates behind non-default qualification targets, switch a
-  selected default in a dedicated revertible commit, and retain the old
-  backend until a user-authorized three-platform A/B matrix passes.
-- Before removing an old backend, install a persistent same-run regression
-  guard against the ledger's pinned qualified commit.
+  evidence. The exact `7a88e7c` clean-wheel report passes 1,596/1,597 gates
+  and measures 4.787x encode / 1.782x decode median geomeans, but
+  libjpeg-turbo misses the q95 quality floor (`-0.058242 dB` versus
+  `-0.05 dB`). It is rejected as the combined default and stb remains
+  unchanged. The manual nonpublishing workflow still covers MSVC, the pinned
+  manylinux2014 GCC 10 image, and AppleClang arm64, but was not dispatched
+  because no conforming candidate advanced beyond MSVC.
+- Future candidate loops repeat the same per-profile/per-direction comparison
+  with one provenance-recorded, accepted-subset corpus from retained and
+  independent producers. The current JPEG loop is complete with a negative
+  result and no active replacement candidate.
+- Keep the JPEG `known_gap` explicit after the rejected comparison; evaluation
+  completion is not the same as eliminating the performance gap.
+- Selection-only work remains conditional: integrate a future conforming
+  candidate behind the non-default target, switch it in a dedicated revertible
+  commit, retain stb until a user-authorized three-platform A/B matrix passes,
+  and only then install a persistent same-run guard before removal.
 - Keep a backend only when the evidence supports `qualified`,
-  `native_by_necessity`, or an explicit documented provisional exception.
+  `native_by_necessity`, an explicit documented provisional exception, or a
+  measured `known_gap` whose evaluated/rejected candidates and remaining
+  research are recorded. Final stage exit still requires every such gap to be
+  explained rather than silently treated as qualified.
 
 ### R6. Close stable native sources
 

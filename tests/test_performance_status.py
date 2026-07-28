@@ -136,7 +136,25 @@ def test_performance_rows_are_honest_about_initial_evidence():
             )
         if item["status"] == "known_gap":
             assert item["codec_id"] == "jpeg"
-            assert item["candidate_backends"] == ["libjpeg-turbo"]
+            assert item["candidate_backends"] == []
+            assert item["rejected_backends"] == [
+                {
+                    "id": "libjpeg-turbo",
+                    "version": "3.2.0",
+                    "scope": "combined_default",
+                    "platform": "windows_msvc_x86_64",
+                    "source_commit": (
+                        "7a88e7c726eed5bdd4ff0ad05b381c9795af9dfe"
+                    ),
+                    "report_sha256": (
+                        "f32b7c60f19956438023c51cc9c0b07f"
+                        "44ace79c66dff4a43c30fc7cfdcd80b1"
+                    ),
+                    "gate": "quality-profile:rgb8_q95_444",
+                    "observed_delta_db": -0.05824218633100031,
+                    "required_delta_db": -0.05,
+                }
+            ]
         elif item["status"] in {"native_by_necessity", "not_applicable"}:
             assert item["candidate_backends"] == []
 
