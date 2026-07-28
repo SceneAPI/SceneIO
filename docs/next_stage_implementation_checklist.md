@@ -70,22 +70,18 @@ SceneIO-plus-NumPy environment. All three independent reviews are clear after
 their findings were resolved. Normal run `30316577366` and
 compiler-instrumented run `30316577369` pass that exact commit.
 
-R4.3 is in progress. The arrays-family unit closes and is pushed at
-`f57c677`: PFM, NPY/NPZ, Safetensors, FLO, and DMB now live under
-`src/cpp/codecs/arrays/`. Its MSVC build, 561-node focused sweep, Ruff,
-232-name/49-entry native surface checks, complete strict guard, and all three
-reviews pass.
-
-The sequence-family unit closes and is pushed at `2e30e9f`. The splats
-candidate moves all six native Gaussian-splat sources under
-`src/cpp/codecs/splats/`. Four sources are byte-identical; SOG and SPLAT have
-unchanged executable bodies and only their first-line source-location comments
-use the new paths. CMake, the native-build contract, and all 16
-performance-ledger paths move with them. MSVC, 332 focused tests with one
-documented skip, the complete 3,354-node suite (3,350 passed/four skipped),
-Ruff, the unchanged 232/49 native surface, and the complete five-run strict
-all-50-codec guard pass. All three independent reviews are clear; commit
-evidence remains open.
+R4.3 and final R4 qualification close at pushed commit `da1d709`. All 40
+native codec sources now live under the eight family directories, with no flat
+codec source left. Every executable body is unchanged by the moves; only
+pre-existing source-location comments follow their new paths. MSVC and
+manylinux2014 GCC 10.2.1 builds, the complete 3,354-node suite (3,350
+passed/four skipped), Ruff, the 232-name/49-entry native surface, the complete
+five-run strict all-50-codec guard, and 319 public/API/architecture/license
+checks pass. The exact 398-file Git tree produces a blob-identical 399-file
+sdist and an unchanged-layout 81-member Windows ABI3 wheel; fresh
+SceneIO-plus-NumPy smoke returns `2`. All three independent reviews are clear.
+Normal run `30326256230` and instrumented run `30326256137` pass exact commit
+`da1d709`.
 
 This is the operational checklist for the repository-organization and
 codec-performance stage defined in
@@ -3495,14 +3491,14 @@ platform/package/documentation confirmation reviews are clear.
 
 ### R4.3 — move native codecs by family
 
-- [ ] Move files mechanically; do not split cohesive parsers solely because
+- [x] Move files mechanically; do not split cohesive parsers solely because
       they are large.
-- [ ] Fix include paths/build lists only.
-- [ ] Maintain explicit per-family CMake source manifests and assert that
+- [x] Fix include paths/build lists only.
+- [x] Maintain explicit per-family CMake source manifests and assert that
       every SceneIO native codec source has exactly one owner.
-- [ ] Run family parity, bytes/mmap, sink, inspect, partial, lifetime, and
+- [x] Run family parity, bytes/mmap, sink, inspect, partial, lifetime, and
       malformed-input tests after each move.
-- [ ] Confirm no exported native symbol or wheel content change.
+- [x] Confirm no exported native symbol or wheel member-set change.
 
 Arrays-family candidate:
 
@@ -3603,16 +3599,32 @@ Splats-family candidate:
       directories and no flat codec source remains.
 - [x] Pass the complete five-run strict all-50-codec guard.
 - [x] Complete the three independent reviews.
-- [ ] Commit and push the splats unit.
+- [x] Commit and push the splats unit at `da1d709`.
 
 R4 verification and validation:
 
-- [ ] Editable builds pass on MSVC and GCC 10.
-- [ ] Full local suite, Ruff, all-codec benchmark guard, sdist, wheel, and
+- [x] Editable builds pass on MSVC and GCC 10.
+- [x] Full local suite, Ruff, all-codec benchmark guard, sdist, wheel, and
       NumPy-only smoke pass.
-- [ ] Windows/macOS mmap and Linux normal/instrumented jobs pass at the final
+- [x] Windows/macOS mmap and Linux normal/instrumented jobs pass at the final
       R4 commit.
-- [ ] The public/API snapshots remain unchanged.
+- [x] The public/API snapshots remain unchanged.
+
+Final R4 evidence: the exact 398-file `da1d709` Git archive and every one of
+its blobs reappear unchanged in the 399-file sdist; generated `PKG-INFO` is the
+only addition. The sdist SHA-256 is
+`2b6d46e71fc4cf28b9d5b9ca2886e7b66a41a93d352bba6a16ab65384fe35afb`.
+Its 81-member Windows ABI3 wheel has SHA-256
+`51d658366be1a0f7f06bb9a8082a97d137470250649904d39ce75d62c2f8390b`,
+the same member set as R4.2, one native module, all 15 attribution files, and
+no excluded native-development payload. The exact source and package artifacts
+contain no FFmpeg/libav source, linkage, executable, or payload. A fresh
+environment contains only SceneIO 0.2.0 and NumPy 2.5.1 and returns `2` from
+the installed smoke. Normal run
+[30326256230](https://github.com/SceneAPI/SceneIO/actions/runs/30326256230) and
+instrumented run
+[30326256137](https://github.com/SceneAPI/SceneIO/actions/runs/30326256137)
+pass exact commit `da1d709`. All three final R4 reviews are clear.
 
 ## 9. R5 — qualify codec backends before selection
 

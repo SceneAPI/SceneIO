@@ -2625,7 +2625,7 @@ changed, so this unit makes no performance claim. All three independent
 reviews are clear.
 Commit `2e30e9f` is pushed to `phase0-nanobind-core`.
 
-## R4.3 splats-family source move candidate (2026-07-27)
+## R4.3 splats-family source move closure (2026-07-27)
 
 Gaussian PLY, compressed PLY, SOG, KSplat, SPZ, and SPLAT move to
 `src/cpp/codecs/splats/`. Gaussian PLY, compressed PLY, KSplat, and SPZ are
@@ -2642,4 +2642,34 @@ surface, and the 49-entry native inventory remain unchanged. The complete
 five-run strict all-50-codec guard passes in 373.4 seconds and is retained as
 `build/r4_3_splats_strict_guard.json`. No timed codec implementation changed,
 so this unit makes no performance claim. All three independent reviews are
-clear; commit evidence remains open.
+clear. Commit `da1d709` is pushed to `phase0-nanobind-core`.
+
+## Final R4 qualification (2026-07-27)
+
+Exact pushed commit `da1d709` builds on local MSVC and manylinux2014 GCC
+10.2.1. The complete suite passes 3,350 tests with four documented skips,
+Ruff is clean, the retained five-run all-50-codec guard passes, and 319
+public/API/architecture/license checks preserve the 232-name `_core` surface
+and 49-entry native inventory.
+
+The exact Git archive contains 398 files. Its sdist contains those same 398
+byte-identical blobs plus only generated `PKG-INFO`; its SHA-256 is
+`2b6d46e71fc4cf28b9d5b9ca2886e7b66a41a93d352bba6a16ab65384fe35afb`.
+The sdist-derived Windows CPython-3.12 ABI3 wheel has SHA-256
+`51d658366be1a0f7f06bb9a8082a97d137470250649904d39ce75d62c2f8390b`.
+Its 81-member layout matches R4.2 exactly, includes one native module and all
+15 attribution files, and includes no header, static-library, build-tree, or
+tool payload. The exact source and package artifacts contain no FFmpeg/libav
+source, linkage, executable, or payload. Its native module depends only on
+CPython and standard Windows/MSVC runtimes. A fresh environment contains only
+SceneIO 0.2.0 and NumPy 2.5.1 and returns `2` from `sceneio._wheel_smoke`.
+
+Normal run
+[30326256230](https://github.com/SceneAPI/SceneIO/actions/runs/30326256230)
+passes the complete Linux suite, retained benchmark guard, all three mmap,
+splat, and reconstruction lanes, and the pinned manylinux2014 GCC 10 job.
+Instrumented run
+[30326256137](https://github.com/SceneAPI/SceneIO/actions/runs/30326256137)
+passes its complete and focused native-lifetime jobs. All three final R4
+reviews are clear. R4 changes organization only and makes no performance
+claim.

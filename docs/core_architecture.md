@@ -41,9 +41,11 @@ things that keep this expansible as the format list from
 > source ownership checks are recursive and full-path exact for R4.3. The
 > Python-owned `image_sequence` adapter remains outside that native projection.
 > Normal run `30316577366` and compiler-instrumented run `30316577369` pass
-> that exact commit. R4.3 arrays through sequences close at pushed commits
-> through `2e30e9f`. The splats-family candidate now uses `codecs/splats/`;
-> all 40 native codec sources are nested and no flat codec source remains.
+> that exact commit. R4.3 and final R4 qualification close at pushed commit
+> `da1d709`. All 40 native codec sources live under the eight family
+> directories, and no flat codec source remains. Exact-tree MSVC/GCC 10,
+> package, public-snapshot, normal CI `30326256230`, and instrumented
+> `30326256137` gates pass.
 
 ## Layering
 

@@ -534,10 +534,11 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > four documented skips, and Ruff is clean. The exact 398/399/81
 > source/sdist/wheel package gate and fresh NumPy-only installed smoke pass;
 > all three confirmation reviews are clear. Normal run `30316577366` and
-> compiler-instrumented run `30316577369` pass that exact commit. R4.3 arrays
-> through sequences close at pushed commits through `2e30e9f`; the
-> splats-family path-only candidate is green locally. No format capability
-> changes.
+> compiler-instrumented run `30316577369` pass that exact commit. R4.3 and
+> final R4 qualification close at pushed commit `da1d709`. All 40 native codec
+> sources are family-nested; exact-tree MSVC/GCC 10, 398/399/81 package,
+> public-snapshot, normal CI `30326256230`, and instrumented `30326256137`
+> gates pass. No format capability changes.
 
 [current-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287022
 [current-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287161

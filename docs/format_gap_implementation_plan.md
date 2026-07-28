@@ -2152,9 +2152,10 @@ lane before starting the next unit.
    clean. The exact 398/399/81 source/sdist/wheel package gate and fresh
    NumPy-only installed smoke pass, and all three confirmation reviews are
    clear. Normal run `30316577366` and compiler-instrumented run `30316577369`
-   pass that exact commit. R4.3 arrays through sequences close at pushed
-   commits through `2e30e9f`; the splats-family path-only candidate is green
-   locally. Its review and commit remain open.
+   pass that exact commit. R4.3 and final R4 qualification close at pushed
+   commit `da1d709`. All 40 native codec sources are family-nested; exact-tree
+   MSVC/GCC 10, 398/399/81 package, public-snapshot, normal CI `30326256230`,
+   and instrumented `30326256137` gates pass.
 2. **Backend performance qualification (R5).**
    Create one `bench/PERFORMANCE_STATUS.toml` operation cell for every required
    built-in codec/profile/direction and compare each viable permissive upstream

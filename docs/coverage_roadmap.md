@@ -95,9 +95,10 @@
 > tree, 399-file sdist, 81-member Windows ABI3 wheel, and fresh NumPy-only
 > installed smoke pass. All three confirmation reviews are clear; normal run
 > `30316577366` and compiler-instrumented run `30316577369` pass that exact
-> commit. R4.3 arrays through sequences close at pushed commits through
-> `2e30e9f`; the splats-family path-only candidate is green locally. Its review
-> and commit remain open.
+> commit. R4.3 and final R4 qualification close at pushed commit `da1d709`.
+> All 40 native codec sources are family-nested. Exact-tree MSVC/GCC 10,
+> package, public-snapshot, normal CI `30326256230`, and instrumented
+> `30326256137` gates pass.
 
 The granular, per‑format execution plan for covering **every relevant file type
 that has a permissively‑licensed open‑source option**. Sits below the strategy

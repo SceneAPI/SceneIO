@@ -64,9 +64,11 @@ no throughput claim. The complete suite passes 3,350 tests with four documented
 skips, and Ruff is clean. The exact 398/399/81 source/sdist/wheel package gate
 and fresh NumPy-only installed smoke pass. All three confirmation reviews are
 clear. Normal run `30316577366` and compiler-instrumented run `30316577369`
-pass that exact commit. R4.3 arrays through sequences close at pushed commits
-through `2e30e9f`; the splats-family path-only candidate is green locally. No
-codec loop has changed and no throughput claim is made.
+pass that exact commit. R4.3 and final R4 qualification close at pushed commit
+`da1d709`. All 40 native codec sources are family-nested; exact-tree MSVC/GCC
+10, 398/399/81 package, public-snapshot, normal CI `30326256230`, and
+instrumented `30326256137` gates pass. No codec loop changed and no throughput
+claim is made.
 
 Scope: the compiled `sceneio._core` I/O path on `phase0-nanobind-core`.
 Companion to `coverage_roadmap.md` (this makes its "Phase 7" hardening/perf work
