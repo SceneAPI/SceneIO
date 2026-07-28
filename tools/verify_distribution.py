@@ -7,6 +7,7 @@ before SceneIO or any optional test package is installed.
 from __future__ import annotations
 
 import argparse
+import ast
 import email
 import hashlib
 import json
@@ -66,10 +67,14 @@ EXPECTED_WHEEL_PLATFORM_TAGS = {
     ),
 }
 WINDOWS_REPAIRED_LIBRARY_PATTERN = re.compile(
-    r"sceneio\.libs/(?:concrt140|msvcp140|vcruntime140|vcruntime140_1)"
-    r"-[0-9a-f]{32}\.dll",
+    r"sceneio\.libs/"
+    r"(?:concrt140|msvcp140|vcruntime140|vcruntime140_1)\.dll",
     re.IGNORECASE,
 )
+DELVEWHEEL_1_13_0_PATCH_SHA256 = (
+    "440f1b34ba0f7c77aff4752249937d9da601d1a1bf596ecec40021a153afc74f"
+)
+DELVEWHEEL_VERSION = "1.13.0"
 
 
 class WheelContract(NamedTuple):
@@ -301,6 +306,72 @@ def _is_permitted_repaired_library(name: str, platform: str) -> bool:
     )
 
 
+def _is_expected_delvewheel_metadata(payload: bytes) -> bool:
+    try:
+        lines = payload.decode("utf-8").rstrip("\r\n").splitlines()
+        if (
+            len(lines) != 2
+            or lines[0] != f"Version: {DELVEWHEEL_VERSION}"
+            or not lines[1].startswith("Arguments: ")
+        ):
+            return False
+        arguments = ast.literal_eval(lines[1].removeprefix("Arguments: "))
+    except (SyntaxError, UnicodeDecodeError, ValueError):
+        return False
+    return (
+        isinstance(arguments, list)
+        and all(isinstance(argument, str) for argument in arguments)
+        and len(arguments) >= 3
+        and arguments[1] == "repair"
+        and "--add-path" in arguments
+        and "-w" in arguments
+    )
+
+
+def _is_exact_delvewheel_patched_init(source: bytes, actual: bytes) -> bool:
+    future_import = b"from __future__ import annotations"
+    lines = source.splitlines(keepends=True)
+    matches = [
+        index
+        for index, line in enumerate(lines)
+        if line.rstrip(b"\r\n") == future_import
+    ]
+    if len(matches) != 1:
+        return False
+    newline = b"\r\n"
+    for index, byte in enumerate(source):
+        if byte == 10:
+            newline = b"\n"
+            break
+        if byte == 13:
+            newline = (
+                b"\r\n"
+                if index + 1 < len(source) and source[index + 1] == 10
+                else b"\r"
+            )
+            break
+    start_marker = b"# start delvewheel patch"
+    end_marker = b"# end delvewheel patch" + newline
+    if actual.count(start_marker) != 1 or actual.count(end_marker) != 1:
+        return False
+    patch_start = actual.index(start_marker)
+    patch_end = actual.index(end_marker, patch_start) + len(end_marker)
+    patch = actual[patch_start:patch_end]
+    normalized_patch = patch.replace(newline, b"\n")
+    if (
+        hashlib.sha256(normalized_patch).hexdigest()
+        != DELVEWHEEL_1_13_0_PATCH_SHA256
+    ):
+        return False
+    future_index = matches[0]
+    prefix = b"".join(lines[: future_index + 1]).rstrip()
+    remainder = b"".join(lines[future_index + 1 :]).lstrip()
+    expected = prefix + newline * 3 + patch
+    if remainder:
+        expected += newline + remainder
+    return actual == expected
+
+
 def _project_identity(source_root: Path) -> tuple[str, str, str]:
     project_file = source_root / "pyproject.toml"
     project = tomllib.loads(project_file.read_text(encoding="utf-8"))["project"]
@@ -418,14 +489,54 @@ def verify_wheel(
 
         runtime_assets = _runtime_source_assets(source_root)
         _missing(set(runtime_assets), members, path.name)
+        delvewheel_patched_init = False
         for member, expected_bytes in runtime_assets.items():
-            if archive.read(member) != expected_bytes:
+            actual_bytes = archive.read(member)
+            permitted_patch = (
+                contract.platform == "windows"
+                and member == "sceneio/__init__.py"
+                and _is_exact_delvewheel_patched_init(
+                    expected_bytes, actual_bytes
+                )
+            )
+            delvewheel_patched_init = delvewheel_patched_init or permitted_patch
+            if actual_bytes != expected_bytes and not permitted_patch:
                 raise ValueError(f"{path.name} runtime file differs: {member}")
+
+        delvewheel_member = f"{dist_info}/DELVEWHEEL"
+        delvewheel_members: set[str] = set()
+        if delvewheel_member in members:
+            if (
+                contract.platform != "windows"
+                or not _is_expected_delvewheel_metadata(
+                    archive.read(delvewheel_member)
+                )
+            ):
+                raise ValueError(
+                    f"{path.name} contains invalid delvewheel metadata"
+                )
+            delvewheel_members.add(delvewheel_member)
+
+        repaired_runtime_members = {
+            member
+            for member in native_members
+            if _is_permitted_repaired_library(member, contract.platform)
+        }
+        repair_components = (
+            bool(repaired_runtime_members),
+            delvewheel_patched_init,
+            bool(delvewheel_members),
+        )
+        if any(repair_components) and not all(repair_components):
+            raise ValueError(
+                f"{path.name} contains an incomplete delvewheel repair payload"
+            )
 
         allowed_members = (
             set(runtime_assets)
             | set(native_members)
             | {f"{dist_info}/{name}" for name in WHEEL_METADATA_FILES}
+            | delvewheel_members
             | expected
         )
         _missing(

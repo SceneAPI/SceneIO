@@ -18,6 +18,60 @@ assert SPEC is not None and SPEC.loader is not None
 VERIFIER = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(VERIFIER)
 WINDOWS_CORE = "sceneio/_core.pyd"
+# Exact bootstrap emitted by MIT-licensed delvewheel 1.13.0 for this wheel;
+# see LICENSES/delvewheel.txt.
+DELVEWHEEL_PATCH = b"""# start delvewheel patch
+def _delvewheel_patch_1_13_0():
+    import os
+    if os.path.isdir(libs_dir := os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, 'sceneio.libs'))):
+        os.add_dll_directory(libs_dir)
+
+
+_delvewheel_patch_1_13_0()
+del _delvewheel_patch_1_13_0
+# end delvewheel patch
+"""
+DELVEWHEEL_METADATA = (
+    b"Version: 1.13.0\n"
+    b"Arguments: ['delvewheel/__main__.py', 'repair', '--add-path', "
+    b"'Microsoft.VC143.CRT', '-w', 'wheelhouse', 'sceneio.whl']\n\n"
+)
+
+
+def _delvewheel_fixture(newline: bytes = b"\n") -> tuple[bytes, bytes]:
+    original = (
+        b'"""sceneio package."""'
+        + newline * 2
+        + b"from __future__ import annotations"
+        + newline * 2
+        + b"VALUE = 1"
+        + newline
+    )
+    patched = (
+        b'"""sceneio package."""'
+        + newline * 2
+        + b"from __future__ import annotations"
+        + newline * 3
+        + DELVEWHEEL_PATCH.replace(b"\n", newline)
+        + newline
+        + b"VALUE = 1"
+        + newline
+    )
+    return original, patched
+
+
+def _complete_delvewheel_payload(
+    package_payload: bytes,
+    *,
+    runtime: str = "sceneio.libs/msvcp140.dll",
+    metadata: bytes = DELVEWHEEL_METADATA,
+) -> dict[str, object]:
+    return {
+        "package_payload": package_payload,
+        "extra_member": runtime,
+        "extra_payload": b"MZruntime",
+        "delvewheel_metadata": metadata,
+    }
 
 
 def _source_root(tmp_path: Path) -> Path:
@@ -83,8 +137,10 @@ def _wheel(
     metadata_version: str = "0.2.0",
     wheel_tags: tuple[str, ...] | None = None,
     root_is_purelib: str = "false",
+    package_payload: bytes | None = None,
     extra_member: str | None = None,
     extra_payload: bytes = b"\0",
+    delvewheel_metadata: bytes | None = None,
 ) -> Path:
     path = tmp_path / wheel_name
     dist_info = "sceneio-0.2.0.dist-info"
@@ -97,7 +153,9 @@ def _wheel(
     with zipfile.ZipFile(path, "w") as archive:
         archive.writestr(
             "sceneio/__init__.py",
-            (source / "src" / "sceneio" / "__init__.py").read_bytes(),
+            package_payload
+            if package_payload is not None
+            else (source / "src" / "sceneio" / "__init__.py").read_bytes(),
         )
         archive.writestr(core_member, b"extension")
         requirements = "".join(
@@ -126,6 +184,11 @@ def _wheel(
             )
         if extra_member is not None:
             archive.writestr(extra_member, extra_payload)
+        if delvewheel_metadata is not None:
+            archive.writestr(
+                f"{dist_info}/DELVEWHEEL",
+                delvewheel_metadata,
+            )
     return path
 
 
@@ -218,10 +281,10 @@ def test_distribution_verifier_accepts_repaired_msvc_runtime(
     runtime_basename: str,
 ) -> None:
     source = _source_root(tmp_path)
-    runtime = (
-        f"sceneio.libs/{runtime_basename}-"
-        "a4c2229bdc2a2a630acdc095b4d86008.dll"
-    )
+    package = source / "src" / "sceneio" / "__init__.py"
+    original, patched = _delvewheel_fixture()
+    package.write_bytes(original)
+    runtime = f"sceneio.libs/{runtime_basename}.dll"
     report = VERIFIER.verify_distributions(
         source,
         _sdist(tmp_path, source),
@@ -229,19 +292,117 @@ def test_distribution_verifier_accepts_repaired_msvc_runtime(
             _wheel(
                 tmp_path,
                 source,
-                extra_member=runtime,
-                extra_payload=b"MZruntime",
+                **_complete_delvewheel_payload(
+                    patched,
+                    runtime=runtime,
+                ),
             )
         ],
     )
     assert report["wheels"][0]["native_members"] == [runtime, WINDOWS_CORE]
 
 
+def test_distribution_verifier_accepts_delvewheel_metadata(
+    tmp_path: Path,
+) -> None:
+    source = _source_root(tmp_path)
+    package = source / "src" / "sceneio" / "__init__.py"
+    original, patched = _delvewheel_fixture()
+    package.write_bytes(original)
+    report = VERIFIER.verify_distributions(
+        source,
+        _sdist(tmp_path, source),
+        [
+            _wheel(
+                tmp_path,
+                source,
+                **_complete_delvewheel_payload(patched),
+            )
+        ],
+    )
+    assert report["wheels"][0]["platform"] == "windows"
+
+
+@pytest.mark.parametrize(
+    ("wheel_name", "core_member", "payload"),
+    [
+        pytest.param(
+            "sceneio-0.2.0-cp312-abi3-win_amd64.whl",
+            WINDOWS_CORE,
+            b"Version: 1.12.0\nArguments: []\n",
+            id="wrong-version",
+        ),
+        pytest.param(
+            "sceneio-0.2.0-cp312-abi3-win_amd64.whl",
+            WINDOWS_CORE,
+            b"Version: 1.13.0\nArguments: ['tool', 'show']\n",
+            id="wrong-command",
+        ),
+        pytest.param(
+            "sceneio-0.2.0-cp312-abi3-"
+            "manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+            "sceneio/_core.abi3.so",
+            DELVEWHEEL_METADATA,
+            id="non-windows",
+        ),
+    ],
+)
+def test_distribution_verifier_rejects_invalid_delvewheel_metadata(
+    tmp_path: Path,
+    wheel_name: str,
+    core_member: str,
+    payload: bytes,
+) -> None:
+    source = _source_root(tmp_path)
+    with pytest.raises(ValueError, match="invalid delvewheel metadata"):
+        VERIFIER.verify_distributions(
+            source,
+            _sdist(tmp_path, source),
+            [
+                _wheel(
+                    tmp_path,
+                    source,
+                    wheel_name=wheel_name,
+                    core_member=core_member,
+                    delvewheel_metadata=payload,
+                )
+            ],
+        )
+
+
+@pytest.mark.parametrize("component", ["runtime", "bootstrap", "metadata"])
+def test_distribution_verifier_rejects_incomplete_delvewheel_repair(
+    tmp_path: Path,
+    component: str,
+) -> None:
+    source = _source_root(tmp_path)
+    package = source / "src" / "sceneio" / "__init__.py"
+    original, patched = _delvewheel_fixture()
+    package.write_bytes(original)
+    kwargs: dict[str, object] = {}
+    if component == "runtime":
+        kwargs.update(
+            extra_member="sceneio.libs/msvcp140.dll",
+            extra_payload=b"MZruntime",
+        )
+    elif component == "bootstrap":
+        kwargs["package_payload"] = patched
+    else:
+        kwargs["delvewheel_metadata"] = DELVEWHEEL_METADATA
+
+    with pytest.raises(ValueError, match="incomplete delvewheel repair payload"):
+        VERIFIER.verify_distributions(
+            source,
+            _sdist(tmp_path, source),
+            [_wheel(tmp_path, source, **kwargs)],
+        )
+
+
 @pytest.mark.parametrize(
     "runtime",
     [
         "sceneio.libs/other-dependency.dll",
-        "sceneio.libs/msvcp999-a4c2229bdc2a2a630acdc095b4d86008.dll",
+        "sceneio.libs/msvcp999.dll",
         "sceneio.libs/msvcp140-deadbeef.dll",
     ],
 )
@@ -282,10 +443,7 @@ def test_distribution_verifier_rejects_repaired_runtime_on_manylinux(
                         "manylinux2014_x86_64.manylinux_2_17_x86_64.whl"
                     ),
                     core_member="sceneio/_core.abi3.so",
-                    extra_member=(
-                        "sceneio.libs/msvcp140-"
-                        "a4c2229bdc2a2a630acdc095b4d86008.dll"
-                    ),
+                    extra_member="sceneio.libs/msvcp140.dll",
                     extra_payload=b"MZruntime",
                 )
             ],
@@ -296,7 +454,7 @@ def test_distribution_verifier_requires_core_with_repaired_runtime(
     tmp_path: Path,
 ) -> None:
     source = _source_root(tmp_path)
-    runtime = "sceneio.libs/msvcp140-a4c2229bdc2a2a630acdc095b4d86008.dll"
+    runtime = "sceneio.libs/msvcp140.dll"
     with pytest.raises(ValueError, match=r"exactly sceneio/_core\.pyd"):
         VERIFIER.verify_distributions(
             source,
@@ -321,6 +479,177 @@ def test_distribution_verifier_rejects_duplicate_core_member(
             source,
             _sdist(tmp_path, source),
             [wheel],
+        )
+
+
+def test_distribution_verifier_accepts_exact_delvewheel_runtime_patch(
+    tmp_path: Path,
+) -> None:
+    source = _source_root(tmp_path)
+    package = source / "src" / "sceneio" / "__init__.py"
+    original, patched = _delvewheel_fixture()
+    package.write_bytes(original)
+    report = VERIFIER.verify_distributions(
+        source,
+        _sdist(tmp_path, source),
+        [
+            _wheel(
+                tmp_path,
+                source,
+                **_complete_delvewheel_payload(patched),
+            )
+        ],
+    )
+    assert report["wheels"][0]["runtime_files"] == 1
+
+
+@pytest.mark.parametrize(
+    "newline",
+    [b"\r\n", b"\r"],
+    ids=["crlf", "cr"],
+)
+def test_distribution_verifier_accepts_delvewheel_patch_line_endings(
+    tmp_path: Path,
+    newline: bytes,
+) -> None:
+    source = _source_root(tmp_path)
+    package = source / "src" / "sceneio" / "__init__.py"
+    original, patched = _delvewheel_fixture(newline)
+    package.write_bytes(original)
+    VERIFIER.verify_distributions(
+        source,
+        _sdist(tmp_path, source),
+        [
+            _wheel(
+                tmp_path,
+                source,
+                **_complete_delvewheel_payload(patched),
+            )
+        ],
+    )
+
+
+def test_distribution_verifier_uses_first_source_line_ending_for_patch(
+    tmp_path: Path,
+) -> None:
+    source = _source_root(tmp_path)
+    package = source / "src" / "sceneio" / "__init__.py"
+    original = (
+        b'"""sceneio package."""\n\n'
+        b"from __future__ import annotations\n\r\n"
+        b"VALUE = 1\r\n"
+    )
+    patched = (
+        b'"""sceneio package."""\n\n'
+        b"from __future__ import annotations\n\n\n"
+        + DELVEWHEEL_PATCH
+        + b"\nVALUE = 1\r\n"
+    )
+    package.write_bytes(original)
+    VERIFIER.verify_distributions(
+        source,
+        _sdist(tmp_path, source),
+        [
+            _wheel(
+                tmp_path,
+                source,
+                **_complete_delvewheel_payload(patched),
+            )
+        ],
+    )
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        "patch-version",
+        "repository-prefix",
+        "repository-suffix",
+        "duplicate-marker",
+        "wrong-placement",
+    ],
+)
+def test_distribution_verifier_rejects_modified_delvewheel_runtime_patch(
+    tmp_path: Path,
+    mutation: str,
+) -> None:
+    source = _source_root(tmp_path)
+    package = source / "src" / "sceneio" / "__init__.py"
+    original, patched = _delvewheel_fixture()
+    package.write_bytes(original)
+    if mutation == "patch-version":
+        patched = patched.replace(b"_1_13_0", b"_1_13_1")
+    elif mutation == "repository-prefix":
+        patched = patched.replace(b"sceneio package", b"changed package")
+    elif mutation == "repository-suffix":
+        patched = patched.replace(b"VALUE = 1", b"VALUE = 2")
+    elif mutation == "duplicate-marker":
+        patched = patched.replace(
+            b"# start delvewheel patch",
+            b"# start delvewheel patch\n# start delvewheel patch",
+            1,
+        )
+    else:
+        patched = DELVEWHEEL_PATCH + b"\n" + original
+    with pytest.raises(ValueError, match="runtime file differs"):
+        VERIFIER.verify_distributions(
+            source,
+            _sdist(tmp_path, source),
+            [
+                _wheel(
+                    tmp_path,
+                    source,
+                    **_complete_delvewheel_payload(patched),
+                )
+            ],
+        )
+
+
+def test_distribution_verifier_rejects_delvewheel_patch_off_windows(
+    tmp_path: Path,
+) -> None:
+    source = _source_root(tmp_path)
+    package = source / "src" / "sceneio" / "__init__.py"
+    original, patched = _delvewheel_fixture()
+    package.write_bytes(original)
+    with pytest.raises(ValueError, match="runtime file differs"):
+        VERIFIER.verify_distributions(
+            source,
+            _sdist(tmp_path, source),
+            [
+                _wheel(
+                    tmp_path,
+                    source,
+                    wheel_name=(
+                        "sceneio-0.2.0-cp312-abi3-"
+                        "manylinux2014_x86_64.manylinux_2_17_x86_64.whl"
+                    ),
+                    core_member="sceneio/_core.abi3.so",
+                    package_payload=patched,
+                )
+            ],
+        )
+
+
+def test_distribution_verifier_rejects_delvewheel_patch_in_other_module(
+    tmp_path: Path,
+) -> None:
+    source = _source_root(tmp_path)
+    original, patched = _delvewheel_fixture()
+    helper = source / "src" / "sceneio" / "helper.py"
+    helper.write_bytes(original)
+    with pytest.raises(ValueError, match="runtime file differs"):
+        VERIFIER.verify_distributions(
+            source,
+            _sdist(tmp_path, source),
+            [
+                _wheel(
+                    tmp_path,
+                    source,
+                    extra_member="sceneio/helper.py",
+                    extra_payload=patched,
+                )
+            ],
         )
 
 
@@ -815,6 +1144,15 @@ def test_publish_workflow_builds_every_wheel_from_the_exact_sdist() -> None:
         assert "--no-index" in install_hook
         assert "--find-links {package}/.build-wheelhouse" in install_hook
     assert "PIP_NO_INDEX=1" not in wheel_job
+    repair_command = wheel_job.split(
+        "CIBW_REPAIR_WHEEL_COMMAND_WINDOWS:", maxsplit=1
+    )[1].split("CIBW_ENVIRONMENT:", maxsplit=1)[0]
+    assert [line.strip() for line in repair_command.strip().splitlines()] == [
+        ">-",
+        'python "{package}/tools/repair_windows_wheel.py"',
+        '--wheel "{wheel}"',
+        '--dest-dir "{dest_dir}"',
+    ]
     assert "FETCHCONTENT_FULLY_DISCONNECTED=ON" in wheel_job
     assert "--require-hashes" in wheel_job
     for row in (

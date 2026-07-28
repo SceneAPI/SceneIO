@@ -34,15 +34,15 @@ The bounded path to full R6 closure is:
 - [x] Finish N0-R4 organization, the bounded R5 candidate decision, R6 source
       intake, local stable-ABI package proof, complete local suite, strict
       50-codec guard, NumPy-only smoke, and three independent reviews.
-- [x] Require green automatic CI and native-runtime validation at the exact
-      final implementation commit. Runs
-      [30392771771](https://github.com/SceneAPI/SceneIO/actions/runs/30392771771)
-      and
-      [30392774294](https://github.com/SceneAPI/SceneIO/actions/runs/30392774294)
-      pass `14d9b1189168f9d8adadbf64114b75df2d7337d6`.
-- [ ] With explicit user authorization, dispatch `publish.yml` once at the
-      exact reviewed branch head. The manual run is build-only and cannot
-      publish.
+- [ ] Finish the single Windows packaging correction exposed by the build-only
+      matrix: repair from the Visual Studio redistributable directory, retain
+      the original runtime filename and bytes, include the required notices,
+      and prove the repaired wheel installs and passes the existing smoke test.
+- [ ] Run the focused and complete local gates plus the required three-lens
+      review, then commit and push one implementation checkpoint. Require green
+      automatic CI and native-runtime validation at that exact commit.
+- [ ] Dispatch `publish.yml` once more at that reviewed branch head. The manual
+      run is build-only and cannot publish.
 - [ ] Download and inspect its one sdist and three abi3 wheels. Require the
       existing inventory, license, stable-ABI, NumPy-only, native-dependency,
       and all-50 installed-smoke checks to pass.
@@ -57,17 +57,21 @@ Closure is deliberately bounded:
   tag, or package publication before R6 closes;
 - candidate comparisons resume only after R6 when a measured regression,
   material hotspot, or concrete replacement proposal justifies one;
-- retry the build-only workflow once only for a documented hosted-run
-  interruption; a reproducible product failure receives one focused fix and a
-  fresh exact-head run instead of opening a broader work program;
+- from this checkpoint, permit one final build-only matrix plus at most one
+  retry for a documented hosted-run interruption;
+- if that matrix exposes another reproducible product defect, make at most one
+  narrowly scoped packaging fix and one confirming exact-head run; if it still
+  fails, record the concrete blocker and stop rather than opening another
+  workstream;
 - the documentation-only closure record does not invalidate or recursively
   repeat the package matrix for the recorded packaged source SHA;
 - PyPI configuration, tagging, and publication are release-time actions, not
   R6 validation gates.
 
-When the three unchecked items above pass, R6 and this repository-organization
-stage are complete. The remaining provisional ledger rows continue as an
-optional, prioritized optimization backlog.
+When the five unchecked items above pass, R6 and this
+repository-organization stage are complete. The remaining provisional ledger
+rows continue as an optional, prioritized optimization backlog. This is a hard
+stop: no post-R6 backlog item is pulled into the closure path.
 
 Status: N0.1-N0.5 remain validated at immutable implementation commit
 `a5e7fa4` on `phase0-nanobind-core`, including the nonpublishing

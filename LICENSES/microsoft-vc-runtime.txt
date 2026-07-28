@@ -1,0 +1,27 @@
+Microsoft Visual C++ Runtime 2015-2022 redistribution notice
+
+Copyright (c) Microsoft Corporation. All rights reserved.
+
+The SceneIO Windows wheel may contain an unmodified msvcp140.dll from the
+Microsoft Visual C++ v143 x64 redistributable directory installed with the
+Visual Studio 2022 toolchain. This platform runtime is not an open-source
+SceneIO codec dependency.
+
+Microsoft's Visual Studio 2022 distributable-code list states that a user with
+a validly licensed applicable Visual Studio edition may copy and distribute
+unmodified files under [VisualStudioFolder]\VC\Redist with a program, subject
+to the license terms for that Visual Studio software:
+
+https://learn.microsoft.com/visualstudio/releases/2022/redistribution
+
+The applicable Visual Studio license terms are available from Microsoft's
+license directory:
+
+https://visualstudio.microsoft.com/license-terms/
+
+The SceneIO release workflow selects the x64 Microsoft.VC143.CRT directory,
+prevents DLL-name modification, and verifies that the packaged bytes exactly
+match that selected redistributable file. This notice does not grant
+redistribution rights or replace or modify Microsoft's terms. The release
+operator is responsible for confirming that the applicable Visual Studio
+license terms permit publication before publishing a Windows wheel.

@@ -10,6 +10,7 @@ LICENSES = ROOT / "LICENSES"
 
 EXPECTED_NOTICES = {
     "cgltf.txt",
+    "delvewheel.txt",
     "fast-float.txt",
     "lazperf-source.txt",
     "lazperf.txt",
@@ -20,6 +21,7 @@ EXPECTED_NOTICES = {
     "lodepng.txt",
     "miniz-zip.txt",
     "miniz.txt",
+    "microsoft-vc-runtime.txt",
     "nanobind.txt",
     "nlohmann-json-source.txt",
     "nlohmann-json.txt",

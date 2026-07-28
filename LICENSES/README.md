@@ -2,18 +2,20 @@
 
 SceneIO itself is licensed under Apache-2.0; the complete project license is
 in the repository-root [`LICENSE`](../LICENSE) file. This directory contains
-the notices that must accompany the third-party code compiled into the
-`sceneio._core` binary.
+the notices that must accompany third-party code compiled into
+`sceneio._core`, copied beside it, or generated into a distribution artifact.
 
 The table is the distribution inventory. Versions are the exact versions or
-commits selected by the CMake dependency and qualification modules and the
-vendored `COMMIT.txt` files.
+commits selected by the CMake dependency and qualification modules, vendored
+`COMMIT.txt` files, and pinned release tooling.
 Where an upstream project offers multiple permissive licenses, the
 redistribution choice used by SceneIO is stated explicitly.
 
 | Component | Version or pin | How it is shipped | License used here | Notice |
 |---|---|---|---|---|
 | nanobind | build requirement `>=2.4` (2.13.0 locally validated) | statically linked binding runtime | BSD-3-Clause | [nanobind.txt](nanobind.txt) |
+| delvewheel | 1.13.0 | generates the DLL-loading bootstrap in the repaired Windows wheel; the exact-output verifier fixture is included in the sdist | MIT | [delvewheel.txt](delvewheel.txt) |
+| Microsoft Visual C++ runtime | Visual Studio 2022 v143 x64 redistributable selected by `repair_windows_wheel.py` | unmodified `msvcp140.dll` sidecar in the Windows wheel when required by `_core.pyd` | applicable Visual Studio 2022 Distributable Code terms and REDIST list; platform-toolchain exception to the open-source codec policy | [redistribution notice and official terms](microsoft-vc-runtime.txt) |
 | miniz | 3.0.2, commit `293d4db1b7d0ffee9756d035b9ac6f7431ef8492` | vendored and statically linked | MIT | [top-level license](miniz.txt), [ZIP implementation notice](miniz-zip.txt) |
 | nlohmann/json | 3.11.3, commit `9cca280a4d0ccf0c08f47a99aa71d1b0e52f8d03` | vendored compiled header-only code | MIT; C++11-only Abseil fallback is Apache-2.0 | [top-level license](nlohmann-json.txt), [selected-source attribution](nlohmann-json-source.txt) |
 | Zstandard | 1.5.6, commit `794ea1b0afca0f020f4e57b6732332231fb23c70` | vendored and statically linked | BSD-3-Clause; selected libdivsufsort and build-helper code use MIT-compatible terms | [top-level license](zstd.txt), [selected-source attribution](zstd-source.txt) |
@@ -33,10 +35,14 @@ Apache-licensed portion of LAZperf. Local integration and correctness changes
 to vendored or fetched projects are documented beside their sources in
 `src/cpp/third_party/*/COMMIT.txt`.
 
-NumPy is SceneIO's sole runtime dependency, but it is installed as a separate
-distribution and is not copied or linked into SceneIO wheels. Build tools and
-test-only oracle packages are likewise not bundled, so their licenses are not
-third-party notices for the SceneIO distribution.
+NumPy is SceneIO's sole Python runtime dependency, but it is installed as a
+separate distribution and is not copied or linked into SceneIO wheels. Build
+tools and test-only oracle packages are otherwise not bundled. Delvewheel
+itself is not bundled, but its generated Windows bootstrap and the verifier's
+exact-output fixture are distribution content, so its notice is included.
+The MSVC runtime sidecar is the platform-toolchain exception required by the
+Windows/MSVC wheel target; all codec libraries remain under the permissive
+open-source policy.
 
 No entry in this directory changes any upstream license terms.
 

@@ -328,8 +328,8 @@
     "last": "tests/test_points_binary.py::test_bad_magic_rejected"
   },
   "pytest_candidate_collection": {
-    "count": 3450,
-    "sorted_normalized_node_ids_sha256": "1bf1ff9b85ef0ac8f1ad62d26e872666deff8594434feb045f8a03feff11583e",
+    "count": 3484,
+    "sorted_normalized_node_ids_sha256": "ebcaf29247ce109f9dec1f6f6c0adda7c21d2bc3f3badb83be2fc1feede64c76",
     "added_nodes": [
       "tests/codecs/test_jpeg.py::test_retained_stb_encoder_bytes_match_the_locked_vectors",
       "tests/test_backend_qualification.py::test_backend_candidate_ledger_has_complete_jpeg_intake",
@@ -698,7 +698,41 @@
       "tests/test_distribution_verifier.py::test_distribution_verifier_rejects_unexpected_wheel_payload[core-dll]",
       "tests/test_distribution_verifier.py::test_distribution_verifier_rejects_repository_to_sdist_drift",
       "tests/test_distribution_verifier.py::test_r6_wheelhouse_lock_is_exact_and_cross_platform",
-      "tests/test_distribution_verifier.py::test_publish_workflow_builds_every_wheel_from_the_exact_sdist"
+      "tests/test_distribution_verifier.py::test_publish_workflow_builds_every_wheel_from_the_exact_sdist",
+      "tests/test_distribution_verifier.py::test_distribution_verifier_accepts_platform_stable_abi_member[manylinux-repaired-order]",
+      "tests/test_distribution_verifier.py::test_distribution_verifier_accepts_repaired_msvc_runtime[concrt140]",
+      "tests/test_distribution_verifier.py::test_distribution_verifier_accepts_repaired_msvc_runtime[msvcp140]",
+      "tests/test_distribution_verifier.py::test_distribution_verifier_accepts_repaired_msvc_runtime[vcruntime140]",
+      "tests/test_distribution_verifier.py::test_distribution_verifier_accepts_repaired_msvc_runtime[vcruntime140_1]",
+      "tests/test_distribution_verifier.py::test_distribution_verifier_accepts_delvewheel_metadata",
+      "tests/test_distribution_verifier.py::test_distribution_verifier_rejects_invalid_delvewheel_metadata[wrong-version]",
+      "tests/test_distribution_verifier.py::test_distribution_verifier_rejects_invalid_delvewheel_metadata[wrong-command]",
+      "tests/test_distribution_verifier.py::test_distribution_verifier_rejects_invalid_delvewheel_metadata[non-windows]",
+      "tests/test_distribution_verifier.py::test_distribution_verifier_rejects_incomplete_delvewheel_repair[runtime]",
+      "tests/test_distribution_verifier.py::test_distribution_verifier_rejects_incomplete_delvewheel_repair[bootstrap]",
+      "tests/test_distribution_verifier.py::test_distribution_verifier_rejects_incomplete_delvewheel_repair[metadata]",
+      "tests/test_distribution_verifier.py::test_distribution_verifier_rejects_unrecognized_repaired_library[sceneio.libs/other-dependency.dll]",
+      "tests/test_distribution_verifier.py::test_distribution_verifier_rejects_unrecognized_repaired_library[sceneio.libs/msvcp999.dll]",
+      "tests/test_distribution_verifier.py::test_distribution_verifier_rejects_unrecognized_repaired_library[sceneio.libs/msvcp140-deadbeef.dll]",
+      "tests/test_distribution_verifier.py::test_distribution_verifier_rejects_repaired_runtime_on_manylinux",
+      "tests/test_distribution_verifier.py::test_distribution_verifier_requires_core_with_repaired_runtime",
+      "tests/test_distribution_verifier.py::test_distribution_verifier_rejects_duplicate_core_member",
+      "tests/test_distribution_verifier.py::test_distribution_verifier_accepts_exact_delvewheel_runtime_patch",
+      "tests/test_distribution_verifier.py::test_distribution_verifier_accepts_delvewheel_patch_line_endings[crlf]",
+      "tests/test_distribution_verifier.py::test_distribution_verifier_accepts_delvewheel_patch_line_endings[cr]",
+      "tests/test_distribution_verifier.py::test_distribution_verifier_uses_first_source_line_ending_for_patch",
+      "tests/test_distribution_verifier.py::test_distribution_verifier_rejects_modified_delvewheel_runtime_patch[patch-version]",
+      "tests/test_distribution_verifier.py::test_distribution_verifier_rejects_modified_delvewheel_runtime_patch[repository-prefix]",
+      "tests/test_distribution_verifier.py::test_distribution_verifier_rejects_modified_delvewheel_runtime_patch[repository-suffix]",
+      "tests/test_distribution_verifier.py::test_distribution_verifier_rejects_modified_delvewheel_runtime_patch[duplicate-marker]",
+      "tests/test_distribution_verifier.py::test_distribution_verifier_rejects_modified_delvewheel_runtime_patch[wrong-placement]",
+      "tests/test_distribution_verifier.py::test_distribution_verifier_rejects_delvewheel_patch_off_windows",
+      "tests/test_distribution_verifier.py::test_distribution_verifier_rejects_delvewheel_patch_in_other_module",
+      "tests/test_windows_wheel_repair.py::test_find_vc143_redist_selects_latest_version",
+      "tests/test_windows_wheel_repair.py::test_find_vc143_redist_accepts_configured_toolchain",
+      "tests/test_windows_wheel_repair.py::test_verify_repaired_wheel_requires_exact_redist_bytes",
+      "tests/test_windows_wheel_repair.py::test_verify_repaired_wheel_rejects_name_mangling",
+      "tests/test_windows_wheel_repair.py::test_repair_wheel_prioritizes_redist_and_disables_mangling"
     ],
     "removed_nodes": [
       "tests/codecs/test_compressed_ply.py::test_writer_body_is_byte_identical_to_pinned_playcanvas_vector"
@@ -1113,7 +1147,7 @@
       }
     },
     "first": "tests/codecs/test_bal.py::test_oracle_write_sceneio_read_parity_and_conventions",
-    "last": "tests/test_points_binary.py::test_bad_magic_rejected"
+    "last": "tests/test_windows_wheel_repair.py::test_repair_wheel_prioritizes_redist_and_disables_mangling"
   },
   "benchmark_parent": {
     "command": ".venv/Scripts/python.exe bench/bench_io.py --runs 1 --scale 0.001 --skip-oracles --json <output>",

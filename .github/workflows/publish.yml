@@ -167,6 +167,10 @@ jobs:
             --find-links {package}/.build-wheelhouse
             numpy==2.2.6
           CIBW_TEST_REQUIRES: ""
+          CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: >-
+            python "{package}/tools/repair_windows_wheel.py"
+            --wheel "{wheel}"
+            --dest-dir "{dest_dir}"
           CIBW_ENVIRONMENT: >-
             CMAKE_ARGS="-DFETCHCONTENT_FULLY_DISCONNECTED=ON"
             MACOSX_DEPLOYMENT_TARGET=11.0
