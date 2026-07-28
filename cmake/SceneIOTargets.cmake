@@ -5,6 +5,9 @@
 
 nanobind_add_module(_core STABLE_ABI NB_STATIC
   ${SCENEIO_CORE_SOURCES})
+if(SCENEIO_SELECTED_BACKEND_SOURCES)
+  target_sources(_core PRIVATE ${SCENEIO_SELECTED_BACKEND_SOURCES})
+endif()
 target_include_directories(
   _core
   PRIVATE
@@ -16,7 +19,8 @@ target_include_directories(
     src/cpp/third_party/tinyobjloader
     src/cpp/third_party/cgltf
     ${libwebp_SOURCE_DIR}
-    ${libwebp_SOURCE_DIR}/src)
+    ${libwebp_SOURCE_DIR}/src
+    ${SCENEIO_SELECTED_BACKEND_INCLUDE_DIRS})
 target_link_libraries(
   _core
   PRIVATE
@@ -28,6 +32,23 @@ target_link_libraries(
     sqlite_static
     webp
     Threads::Threads)
+
+if(SCENEIO_SELECTED_BACKEND_LINK_TARGETS)
+  target_link_libraries(
+    _core PRIVATE ${SCENEIO_SELECTED_BACKEND_LINK_TARGETS})
+endif()
+if(SCENEIO_SELECTED_BACKEND_LINK_OPTIONS)
+  target_link_options(
+    _core PRIVATE ${SCENEIO_SELECTED_BACKEND_LINK_OPTIONS})
+endif()
+if(SCENEIO_SELECTED_BACKEND_DEFINITIONS)
+  target_compile_definitions(
+    _core PRIVATE ${SCENEIO_SELECTED_BACKEND_DEFINITIONS})
+endif()
+if(SCENEIO_SELECTED_BACKEND_BUILD_TARGETS)
+  add_dependencies(
+    _core ${SCENEIO_SELECTED_BACKEND_BUILD_TARGETS})
+endif()
 
 # Land the extension inside the importable `sceneio` package as sceneio._core.
 install(TARGETS _core LIBRARY DESTINATION sceneio)

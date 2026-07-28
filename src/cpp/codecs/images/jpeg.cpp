@@ -1,142 +1,114 @@
-// codecs/images/jpeg.cpp -- baseline/progressive JPEG <-> Image via vendored stb (public
-// domain / MIT, src/cpp/third_party/stb). stb decodes JPEG (YCbCr -> RGB, or
-// grayscale) to 8-bit; we map it to Image{U8, C in {1,3}}: gray -> "gray",
-// color -> "srgb". JPEG has no alpha and is 8-bit only.
+// codecs/images/jpeg.cpp -- common JPEG contract and nanobind entry points.
 //
-// Reader: stbi_info first (header-only) to bound dimensions before allocation,
-// then stbi_load; supports grayscale (C=1) and color (C=3). Writer is LOSSY (DCT
-// quantization at the chosen quality), baseline sequential, and RGB-ONLY: stb's
-// encoder always emits 3 components, so grayscale (C=1) is refused rather than
-// silently expanded to RGB; it also refuses uint16/float32 and RGBA (no alpha).
-// stb's malloc'd buffer is freed via RAII; decode/encode run with the GIL released.
+// The retained stb backend and qualification-only libjpeg-turbo candidate use
+// these same guards, records, GIL boundaries, and public function signatures.
 #include <climits>
-#include <cstdlib>
 
-#include "records/image.hpp"
-#include "stb_config.h"
-#include "stb_image.h"
-#include "stb_image_write.h"
+#include "codecs/images/jpeg_backend.hpp"
 
 using namespace nb::literals;
 using namespace sio;
 
-namespace {
-constexpr uint64_t kStbPixelCap = 250000000ull;  // 250 MP
+namespace sio::jpeg_backend {
 
-void guard_dims(size_t w, size_t h) {
-    if (w == 0 || h == 0) throw std::invalid_argument("jpeg: zero-dimension image");
-    if (w > static_cast<size_t>(INT_MAX) || h > static_cast<size_t>(INT_MAX) ||
-        static_cast<uint64_t>(w) * h > kStbPixelCap)
-        throw std::invalid_argument("jpeg: image dimensions exceed the supported limit");
+void guard_dimensions(size_t width, size_t height) {
+    if (width == 0 || height == 0)
+        throw std::invalid_argument("jpeg: zero-dimension image");
+    if (width > static_cast<size_t>(INT_MAX) ||
+        height > static_cast<size_t>(INT_MAX) ||
+        static_cast<uint64_t>(width) * height > kPixelCap)
+        throw std::invalid_argument(
+            "jpeg: image dimensions exceed the supported limit");
 }
 
-Image read_jpeg(nb::handle source) {
-    sio::ByteView data(source);
-    const stbi_uc *in = data.data();
-    if (data.size() > static_cast<size_t>(INT_MAX))
+}  // namespace sio::jpeg_backend
+
+namespace {
+
+void validate_stream(const uint8_t *data, size_t size) {
+    if (size > static_cast<size_t>(INT_MAX))
         throw std::invalid_argument("jpeg: input larger than 2 GiB is not supported");
-    const int len = static_cast<int>(data.size());
-    // stb compiles the JPEG *and* HDR decoders into one library and sniffs both,
-    // so require the SOI before applying JPEG-specific integrity checks.
-    if (len < 2 || in[0] != 0xFF || in[1] != 0xD8)
+    if (size < 2 || data[0] != 0xFF || data[1] != 0xD8)
         throw std::invalid_argument("jpeg: not a JPEG stream (missing FF D8 SOI marker)");
     bool has_eoi = false;
-    for (int i = 2; i < len; i++) {
-        if (in[i - 1] == 0xFF && in[i] == 0xD9) {
+    for (size_t i = 2; i < size; ++i) {
+        if (data[i - 1] == 0xFF && data[i] == 0xD9) {
             has_eoi = true;
             break;
         }
     }
     if (!has_eoi)
         throw std::invalid_argument("jpeg: truncated stream (missing FF D9 EOI marker)");
-    Image im;
-    {
-        nb::gil_scoped_release rel;
-        int w = 0, h = 0, comp = 0;
-        if (!stbi_info_from_memory(in, len, &w, &h, &comp))
-            throw std::invalid_argument(std::string("jpeg: ") + stbi_failure_reason());
-        guard_dims(static_cast<size_t>(w), static_cast<size_t>(h));
-
-        int n = 0;
-        stbi_uc *px = stbi_load_from_memory(in, len, &w, &h, &n, 0);  // native channel count
-        struct Guard {
-            stbi_uc **p;
-            ~Guard() { stbi_image_free(*p); }
-        } g{&px};
-        if (!px) throw std::invalid_argument(std::string("jpeg: ") + stbi_failure_reason());
-        if (n != 1 && n != 3)
-            throw std::invalid_argument("jpeg: only grayscale or RGB JPEG is supported (got " +
-                                        std::to_string(n) + " channels)");
-
-        im.height = static_cast<size_t>(h);
-        im.width = static_cast<size_t>(w);
-        im.channels = static_cast<size_t>(n);
-        im.dtype = PixelType::U8;
-        im.color_space = (n == 1) ? "gray" : "srgb";
-        im.alpha_mode = "none";
-        im.maxval = 255;
-        const size_t cnt = static_cast<size_t>(w) * h * n;
-        im.u8.assign(px, px + cnt);
-    }
-    return im;
 }
 
-nb::bytes write_jpeg(const Image &img, int quality) {
-    // --- guards: refuse what baseline JPEG cannot represent (never convert) ---
-    if (img.dtype != PixelType::U8)
+Image read_jpeg(nb::handle source) {
+    sio::ByteView data(source);
+    validate_stream(data.data(), data.size());
+    Image image;
+    {
+        nb::gil_scoped_release release;
+        image = sio::jpeg_backend::decode(data.data(), data.size());
+    }
+    return image;
+}
+
+void validate_write(const Image &image, int quality) {
+    if (image.dtype != PixelType::U8)
         throw std::invalid_argument("jpeg: JPEG stores 8-bit samples (got " +
-                                    std::string(image_dtype_name(img.dtype)) +
+                                    std::string(image_dtype_name(image.dtype)) +
                                     "; use png for 16-bit / exr for float)");
-    if (img.maxval != 255)
-        throw std::invalid_argument("jpeg: requires maxval 255 (partial-range record — convert first)");
-    // stb's JPEG encoder ALWAYS emits 3 components (for comp==1 it just feeds the
-    // single channel into Y/Cb/Cr), so a 1-channel write would silently become a
-    // 3-channel JPEG that reads back as RGB. Refuse it rather than convert. (The
-    // reader still decodes true grayscale JPEGs to a 1-channel Image.)
-    if (img.channels == 3) {
-        if (img.color_space != "srgb")
-            throw std::invalid_argument(
-                "jpeg: 3-channel image requires color_space 'srgb' (got '" + img.color_space +
-                "'; convert linear->srgb first)");
-    } else if (img.channels == 1) {
+    if (image.maxval != 255)
         throw std::invalid_argument(
-            "jpeg: cannot write a grayscale JPEG — the stb encoder always emits 3 components, so a "
-            "1-channel image would silently become RGB. Convert to 3-channel RGB, or use PNG.");
+            "jpeg: requires maxval 255 (partial-range record -- convert first)");
+    if (image.channels == 3) {
+        if (image.color_space != "srgb")
+            throw std::invalid_argument(
+                "jpeg: 3-channel image requires color_space 'srgb' (got '" +
+                image.color_space + "'; convert linear->srgb first)");
+    } else if (image.channels == 1) {
+        throw std::invalid_argument(
+            "jpeg: cannot write a grayscale JPEG -- the encoder contract is "
+            "RGB-only. Convert to 3-channel RGB, or use PNG.");
     } else {
         throw std::invalid_argument(
-            "jpeg: only 3-channel RGB is writable (JPEG has no alpha; grayscale unsupported by the encoder)");
+            "jpeg: only 3-channel RGB is writable "
+            "(JPEG has no alpha; grayscale unsupported by the encoder)");
     }
     if (quality < 1 || quality > 100)
         throw std::invalid_argument("jpeg: quality must be in 1..100");
-    // JPEG's SOF header stores dimensions as 16-bit; stb would silently truncate a
-    // larger axis and emit a corrupt file, so refuse it (panorama strips hit this).
-    if (img.width > 65535 || img.height > 65535)
-        throw std::invalid_argument("jpeg: JPEG stores 16-bit dimensions (max 65535 per axis)");
-    guard_dims(img.width, img.height);
+    if (image.width > 65535 || image.height > 65535)
+        throw std::invalid_argument(
+            "jpeg: JPEG stores 16-bit dimensions (max 65535 per axis)");
+    sio::jpeg_backend::guard_dimensions(image.width, image.height);
+}
 
-    std::string out;
+nb::bytes write_jpeg(const Image &image, int quality) {
+    validate_write(image, quality);
+    std::string output;
     {
-        nb::gil_scoped_release rel;
-        auto cb = [](void *ctx, void *d, int size) {
-            static_cast<std::string *>(ctx)->append(static_cast<char *>(d), static_cast<size_t>(size));
-        };
-        if (!stbi_write_jpg_to_func(cb, &out, static_cast<int>(img.width),
-                                    static_cast<int>(img.height), static_cast<int>(img.channels),
-                                    img.u8.data(), quality))
-            throw std::invalid_argument("jpeg: encode failed");
+        nb::gil_scoped_release release;
+        output = sio::jpeg_backend::encode(image, quality);
     }
-    return emit_bytes(out.data(), out.size());
+    return emit_bytes(output.data(), output.size());
 }
 
 }  // namespace
 
 void register_jpeg(nb::module_ &m) {
     m.def("read_jpeg", &read_jpeg, "data"_a,
-          "Decode JPEG bytes into an Image (uint8; grayscale -> 1-channel 'gray', color -> "
-          "3-channel 'srgb'). Baseline and progressive JPEG are supported. NOTE: CMYK/YCCK "
-          "JPEGs are converted to approximate 3-channel RGB by the stb decoder (not color-managed).");
+          "Decode JPEG bytes into an Image (uint8; grayscale -> 1-channel "
+          "'gray', color -> 3-channel 'srgb'). Baseline and progressive JPEG "
+          "are supported. NOTE: CMYK/YCCK JPEGs are converted to approximate "
+          "3-channel RGB (not color-managed).");
     m.def("write_jpeg", &write_jpeg, "img"_a, "quality"_a = 95,
-          "Encode a uint8 3-channel sRGB Image to baseline JPEG bytes at the given quality "
-          "(1..100, default 95). LOSSY (DCT quantization). RGB-only: refuses grayscale (the stb "
-          "encoder can't write true 1-channel JPEG), uint16/float32, and RGBA.");
+          "Encode a uint8 3-channel sRGB Image to baseline JPEG bytes at the "
+          "given quality (1..100, default 95). LOSSY (DCT quantization). "
+          "RGB-only: refuses grayscale, uint16/float32, and RGBA.");
+#ifdef SCENEIO_BUILD_BACKEND_QUALIFICATION
+#ifdef SCENEIO_USE_LIBJPEG_TURBO
+    m.def("_jpeg_backend_id", []() { return "libjpeg-turbo-3.2.0"; });
+#else
+    m.def("_jpeg_backend_id", []() { return "stb"; });
+#endif
+#endif
 }

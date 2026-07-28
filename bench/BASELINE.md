@@ -2673,3 +2673,77 @@ Instrumented run
 passes its complete and focused native-lifetime jobs. All three final R4
 reviews are clear. R4 changes organization only and makes no performance
 claim.
+
+## R5.1 JPEG backend intake and isolation (2026-07-28)
+
+The stable JPEG backend remains stb. `bench/BACKEND_CANDIDATES.toml` records
+the exact candidate survey and selects libjpeg-turbo 3.2.0 only as the
+throughput finalist to measure. Its official archive is pinned to commit
+`c85e6b905bf237038faa936dab160ebfc5da0344` and SHA-256
+`6f30092cef9fb839779646608f4ee14ae3cbac989c47fa05e841b0841f09878e`.
+The default-off qualification build requires SIMD and used NASM 3.02 on local
+MSVC; scalar fallback is not accepted as optimized evidence.
+
+Both the stb and libjpeg-turbo qualification wheels traverse the same
+`read_jpeg`/`write_jpeg`, mmap/path, and direct-sink layers. The ordinary
+83-member wheel remains at 232 non-dunder core names and contains no candidate
+source, symbol, or payload. The explicit stb and libjpeg-turbo builds expose
+one private marker for 233 names. Every wheel includes the two exact upstream
+libjpeg-turbo/IJG notices, for 17 attribution members total, and no native
+development payload.
+
+Fresh wheel SHA-256 values are:
+
+- ordinary stb:
+  `533ae7e3dba3de866324efc411a0bdf932c4a6f03c29a424fcf30964befee798`;
+- explicit stb:
+  `a2385d468804dd139b082d639c9eb185b7e790d98d87d97b3794b7935dfa0855`;
+- libjpeg-turbo:
+  `63f33e635ff0b20547cc93fb7f48642b722ec1c612e1be0e72bf9f6e76ca20a9`.
+
+All three fresh SceneIO-plus-NumPy environments return `2` from the installed
+all-50-codec smoke. With pytest and Pillow then added, focused installed
+JPEG/intake tests pass 21 with one environment-only absent-torch skip for the
+ordinary and explicit stb wheels, and 20 with the absent-torch plus
+retained-byte skips for the turbo wheel. The candidate wheel costs 659,456
+uncompressed native bytes and 195,056 compressed wheel bytes. Its
+native module depends only on CPython and standard Windows/MSVC runtimes,
+preserves the retained module's Windows export set, and adds no JPEG or
+libjpeg-turbo export.
+
+Visual Studio and MSVC/Ninja builds cover both archive layouts. CMake 3.18.6,
+the truthful project floor, configures and builds the full optimized candidate
+core with Ninja Multi-Config and concrete per-configuration byproducts. The
+exact wheel also verifies the shortened external-project prefix used to stay
+within Windows path limits.
+Generated evidence records the exact compiler, CMake version, generator,
+runtime, external cache, option fingerprint, target processor, SIMD-required
+policy, NASM version/hash, and export policy; the generated candidate header
+records `SIMD_ARCHITECTURE X86_64`. These results establish build viability
+and isolation, not candidate throughput or backend selection. The historical
+JPEG numbers above remain gap detection only because their encoders used
+different settings and their decoders consumed different bytes. R5.2 will
+replace that comparison with predeclared quality/subsampling profiles, one
+hashed decode corpus, paired raw samples, memory/startup/package evidence, and
+three-toolchain results.
+
+The seam itself is a measured retained-path non-regression. After restoring
+the original `std::string::append` callback and reserving the known raw input
+size, four interleaved processes per backend with 15 timed runs each measured
+R4 versus current core writes at 60.420 versus 60.538 MB/s (+0.19%). The two
+filesystem-inclusive paths differed by -1.00% and -1.03% inside their noisier
+envelopes, while their Python code and the six locked encoded-byte vectors are
+unchanged.
+
+The default-backend all-50-codec five-run sweep used strict comparison
+providers plus the retained O4 and O5 partial-read guards and wrote 50 unique
+rows to `build/r5_1_default_guard_no_json_control.json` (SHA-256
+`faf64165be690e221fd01cb233bd9c4079f0da6248d5c15ab9d819cc93198d68`).
+The exact O5 inspection predicates applied to that same JSON also pass;
+`transforms_json` measured 46.133 ms full versus 18.944 ms inspection
+(2.435x). An immediately preceding fully gated run measured that historically
+marginal control above 3x. Focused repetitions of the untouched R4 wheel on
+the same host also measured 3.136x--3.265x, while the R5.1 diff contains no
+JSON codec, registry, or benchmark-path change. The repository's 3x control
+therefore remains unchanged; this intake checkpoint records the paired host
+variance rather than weakening the guard or claiming a JSON-path change.

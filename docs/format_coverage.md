@@ -539,6 +539,13 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > sources are family-nested; exact-tree MSVC/GCC 10, 398/399/81 package,
 > public-snapshot, normal CI `30326256230`, and instrumented `30326256137`
 > gates pass. No format capability changes.
+>
+> R5.1 is implemented locally without changing the stable format table:
+> ordinary wheels continue to use stb for JPEG. A default-off qualification
+> build can select either the retained backend or SIMD-required
+> libjpeg-turbo 3.2.0 behind the same JPEG API. Candidate intake and default
+> wheel isolation pass locally; same-corpus measurement and three-toolchain
+> evidence remain open, so libjpeg-turbo is not yet a selected backend.
 
 [current-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287022
 [current-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287161

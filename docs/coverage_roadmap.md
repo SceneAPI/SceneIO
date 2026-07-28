@@ -99,6 +99,18 @@
 > All 40 native codec sources are family-nested. Exact-tree MSVC/GCC 10,
 > package, public-snapshot, normal CI `30326256230`, and instrumented
 > `30326256137` gates pass.
+> R5.1 is implemented locally as a backend-intake checkpoint. The stable JPEG
+> path remains the repository-owned stb implementation, while pinned
+> libjpeg-turbo 3.2.0 is available only through an explicit, default-off
+> qualification build. Ordinary builds do not compile the candidate
+> translation unit or expose its private build marker. Fresh ordinary-stb,
+> explicit-stb, and libjpeg-turbo Windows ABI3 wheels pass the installed
+> all-50-codec smoke and contain one native module with no development
+> payload. The local 50-row strict-comparison sweep retains the established
+> O4/O5 results without a changed threshold. This establishes candidate
+> viability and isolation only; R5.2
+> retains responsibility for same-corpus performance, output quality,
+> portability, and any backend-selection decision.
 
 The granular, per‑format execution plan for covering **every relevant file type
 that has a permissively‑licensed open‑source option**. Sits below the strategy

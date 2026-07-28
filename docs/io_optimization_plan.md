@@ -70,6 +70,15 @@ pass that exact commit. R4.3 and final R4 qualification close at pushed commit
 instrumented `30326256137` gates pass. No codec loop changed and no throughput
 claim is made.
 
+R5.1 is implemented locally after that R4 checkpoint. It introduces a
+default-off, configure-time JPEG comparison seam and exact candidate ledger.
+The ordinary wheel remains stb-only with its frozen public/core surface.
+Isolated stb and SIMD-required libjpeg-turbo 3.2.0 qualification wheels build
+and pass focused parity plus installed smoke on MSVC. This is intake/build
+evidence only; R5.2 must still compare identical hashed inputs through the
+production mmap/sink paths on MSVC, GCC 10, and AppleClang before any backend
+selection or performance-ledger promotion.
+
 Scope: the compiled `sceneio._core` I/O path on `phase0-nanobind-core`.
 Companion to `coverage_roadmap.md` (this makes its "Phase 7" hardening/perf work
 concrete). Phase landing notes below are historical evidence from the commit at

@@ -328,9 +328,16 @@
     "last": "tests/test_points_binary.py::test_bad_magic_rejected"
   },
   "pytest_candidate_collection": {
-    "count": 3354,
-    "sorted_normalized_node_ids_sha256": "14d17a95fa3b16ce0d50834ab29364f441c4a8fff8ce7796e57a8e90b8cd59ee",
+    "count": 3361,
+    "sorted_normalized_node_ids_sha256": "423b53ef4f79e3f8325a92ffcb7babd5820b47073ab7cf9494eb9068ab1d669f",
     "added_nodes": [
+      "tests/codecs/test_jpeg.py::test_retained_stb_encoder_bytes_match_the_locked_vectors",
+      "tests/test_backend_qualification.py::test_backend_candidate_ledger_has_complete_jpeg_intake",
+      "tests/test_backend_qualification.py::test_libjpeg_turbo_intake_matches_the_build_pin",
+      "tests/test_backend_qualification.py::test_qualification_selector_is_default_off_and_rejects_implicit_switch",
+      "tests/test_backend_qualification.py::test_runtime_backend_marker_exists_only_in_explicit_qualification_build",
+      "tests/test_backend_qualification.py::test_jpeg_backend_sources_are_private_and_split_from_bindings",
+      "tests/test_backend_qualification.py::test_qualification_manifest_records_reproducible_toolchain_inputs",
       "tests/test_benchmark_memory_protocol.py::test_memory_protocol_contract_and_repeated_sceneio_measurement",
       "tests/test_benchmark_memory_protocol.py::test_missing_sampler_is_explicit_and_strict_mode_rejects_it",
       "tests/test_benchmark_memory_protocol.py::test_payload_controls_distinguish_bounded_and_full_allocation",

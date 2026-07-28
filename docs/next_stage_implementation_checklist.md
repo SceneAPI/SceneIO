@@ -3633,19 +3633,84 @@ time. Popularity is candidate-discovery evidence, not performance evidence.
 
 ### R5.1 — candidate intake
 
-- [ ] List every viable mature permissive candidate and its exact version/SHA,
+- [x] List every viable mature permissive candidate and its exact version/SHA,
       license, maintenance status, supported subset, build system, SIMD/thread
       support, and supported compilers.
-- [ ] Record why a candidate is excluded.
-- [ ] Confirm the candidate can be pinned, built statically/offline, hidden
+- [x] Record why a candidate is excluded.
+- [x] Confirm the candidate can be pinned, built statically/offline, hidden
       inside `_core`, and attributed.
-- [ ] Integrate candidate source only in a non-default qualification target
+- [x] Integrate candidate source only in a non-default qualification target
       with a test-only selector; default wheels and the public API must not
       expose the candidate before selection.
-- [ ] Assert qualification-only options, symbols, and sources are absent from
+- [x] Assert qualification-only options, symbols, and sources are absent from
       default wheels.
-- [ ] Start with the JPEG encode/decode comparison against libjpeg-turbo and
+- [x] Start with the JPEG encode/decode comparison against libjpeg-turbo and
       any other viable permissive finalist.
+
+R5.1 local evidence (2026-07-28): `bench/BACKEND_CANDIDATES.toml`
+records the retained stb revision, libjpeg-turbo 3.2.0 finalist, and the
+objective exclusions for mozjpeg 4.1.1 and the evaluated untagged jpegli
+revision. `SCENEIO_BUILD_BACKEND_QUALIFICATION` defaults off and a non-stb
+override is rejected unless it is explicitly enabled. A separate
+source-controlled internal default remains `stb`; the effective-backend graph
+adds `src/cpp/qualification/jpeg_turbo.cpp` only for libjpeg-turbo. The two
+qualification builds exercise the same `read_jpeg`/`write_jpeg` implementation
+seam and add only a private build-identification hook; the ordinary build
+retains the frozen 232-name core surface.
+
+The accelerated MSVC build used the official libjpeg-turbo 3.2.0 archive
+(`c85e6b905bf237038faa936dab160ebfc5da0344`, SHA-256
+`6f30092cef9fb839779646608f4ee14ae3cbac989c47fa05e841b0841f09878e`)
+with required x86-64 SIMD through NASM 3.02 and the dynamic MSVC runtime.
+Visual Studio and MSVC-Ninja builds both pass, covering multi-configuration
+and flat archive layouts. The generated evidence manifest records the
+generator, compilers, runtime choice, external cache path, option fingerprint,
+SIMD architecture, and NASM version/executable hash. Exact upstream
+libjpeg-turbo and IJG notices plus the required IJG acknowledgement are
+packaged for every candidate artifact. Fresh wheel hashes and member counts
+are: ordinary stb
+`533ae7e3dba3de866324efc411a0bdf932c4a6f03c29a424fcf30964befee798`,
+explicit stb
+`a2385d468804dd139b082d639c9eb185b7e790d98d87d97b3794b7935dfa0855`,
+and libjpeg-turbo
+`63f33e635ff0b20547cc93fb7f48642b722ec1c612e1be0e72bf9f6e76ca20a9`.
+Each wheel has 83 members, 17 attribution members, one native module, and no
+header, static-library, CMake, or package-config payload. Their minimal
+SceneIO-plus-NumPy environments all return `2` from `_wheel_smoke`; after
+pytest and Pillow are added, focused installed tests pass 21 with one
+environment-only absent-torch skip for ordinary and explicit stb and 20 with
+the absent-torch plus retained-byte skips for turbo. The turbo native module
+adds 659,456 uncompressed bytes and 195,056 wheel bytes, depends only
+on CPython and standard Windows/MSVC runtimes, preserves the retained
+module's Windows export set, and adds no JPEG or libjpeg-turbo export.
+
+CMake 3.18.6, the now-accurate project floor, configures and builds the full
+optimized candidate core with MSVC and Ninja Multi-Config. Concrete
+per-configuration byproducts keep the multi-config path valid at that floor,
+and the exact wheel verifies the shortened external-project prefix needed to
+stay within Windows path limits.
+The manifest records the configuring CMake version and target processor; the
+generated candidate header records `SIMD_ARCHITECTURE X86_64`. This proves
+intake and isolation only: no backend has been selected, and no candidate
+performance row has been promoted.
+
+The retained seam has a paired non-regression result. After restoring the
+original string callback and reserving the known raw input size, four
+interleaved processes per backend with 15 timed runs each measured R4 versus
+current core writes at 60.420 versus 60.538 MB/s (+0.19%). The two
+filesystem-inclusive paths differed by -1.00% and -1.03% within their noisier
+envelopes, while their Python paths and all six locked encoded-byte vectors
+remain unchanged.
+
+The default-backend five-run all-50-codec sweep retains strict comparison
+providers and the O4/O5 partial guards. Its 50-row JSON has SHA-256
+`faf64165be690e221fd01cb233bd9c4079f0da6248d5c15ab9d819cc93198d68`;
+the exact O5 inspection predicates applied to those same rows pass, including
+the historically marginal `transforms_json` control at 2.435x. A preceding
+fully gated run and paired focused repetitions of the untouched R4 wheel show
+that control can cross 3x on this host (R4: 3.136x--3.265x). No JSON codec,
+registry, or benchmark path changed in R5.1, so the threshold remains intact
+and the variance is retained rather than normalized away.
 
 ### R5.2 — fair production-path benchmark
 

@@ -46,6 +46,19 @@ things that keep this expansible as the format list from
 > directories, and no flat codec source remains. Exact-tree MSVC/GCC 10,
 > package, public-snapshot, normal CI `30326256230`, and instrumented
 > `30326256137` gates pass.
+>
+> R5.1 adds a fifth, default-off
+> `SceneIOBackendQualification.cmake` include after the stable dependency
+> module. Ordinary builds still compile and link only the retained JPEG
+> backend and preserve the 232-name core surface. A source-controlled internal
+> default is separate from the explicit qualification override, so a later
+> selection changes one default rather than redesigning the build. Explicit
+> qualification builds select either stb or libjpeg-turbo 3.2.0 while
+> traversing the same JPEG guards, records, bindings, mmap reader, and direct
+> sink. `jpeg.cpp` now owns that common contract; `jpeg_stb.cpp` and
+> qualification-only `src/cpp/qualification/jpeg_turbo.cpp` isolate backend
+> mechanics. The candidate source is absent from ordinary target manifests.
+> This is a comparison seam, not a selected-default change.
 
 ## Layering
 
@@ -69,6 +82,8 @@ cmake/
   SceneIOInstrumentation.cmake  opt-in compiler instrumentation
   SceneIOSources.cmake          bindings, records + eight codec-family owners
   SceneIODependencies.cmake     Python/nanobind + native dependency targets
+  SceneIOBackendQualification.cmake
+                                internal defaults + default-off comparison
   SceneIOTargets.cmake          _core and native-control targets
 ```
 
@@ -386,8 +401,11 @@ maintenance, startup, and artifact-size requirements. Default stable kernels
 must ultimately be pinned under `src/cpp/third_party/`, built into `_core`, and
 attributed in `LICENSES/`. At the current head, six source-pinned dependencies
 still arrive through CMake `FetchContent`; repository-contained source closure
-is the R6 target, not a completed-state claim. Separately installed libraries
-and executables remain verification oracles; they are not runtime delegates.
+is the R6 target, not a completed-state claim. The R5 JPEG candidate is
+additionally built by a default-off external project from the official
+libjpeg-turbo 3.2.0 archive. It does not enter ordinary builds or wheels unless
+later three-toolchain evidence selects it. Separately installed libraries and
+executables remain verification oracles; they are not runtime delegates.
 
 ## Conventions are data, not comments
 

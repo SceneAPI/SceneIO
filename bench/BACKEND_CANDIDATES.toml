@@ -1,0 +1,112 @@
+schema_version = 1
+reviewed_on = "2026-07-28"
+
+[policy]
+selection_basis = "measured production-path performance after correctness and compatibility gates"
+default_build = "retained backend only"
+qualification_build = "explicit configure-time selector; no runtime backend switch"
+required_toolchains = [
+  "Windows MSVC x64",
+  "manylinux2014 GCC 10 x86_64",
+  "macOS AppleClang arm64",
+]
+runtime_dependencies = ["numpy"]
+
+[[decision]]
+id = "jpeg-rgb8-v1"
+codec_id = "jpeg"
+status = "intake"
+retained_backend = "stb"
+candidate_backend = "libjpeg-turbo"
+public_read = "sceneio.read and sceneio._core.read_jpeg"
+public_write = "sceneio.write and sceneio._core.write_jpeg"
+profiles = [
+  "encode/rgb8_q90_420",
+  "encode/rgb8_q95_444",
+  "decode/baseline_rgb_420",
+  "decode/baseline_rgb_444",
+  "decode/progressive_rgb",
+  "decode/grayscale",
+]
+compatibility_profiles = [
+  "quality_boundary_q90_q91",
+  "odd_and_tiny_dimensions",
+  "restart_markers",
+  "cmyk",
+  "ycck",
+  "malformed_and_truncated",
+]
+
+[[decision.candidate]]
+id = "stb"
+role = "retained"
+version = "commit 31c1ad37456438565541f4919958214b6e762fb4"
+commit = "31c1ad37456438565541f4919958214b6e762fb4"
+source = "https://github.com/nothings/stb"
+license = "MIT OR Unlicense"
+maintenance = "vendored retained implementation with three documented local patches"
+supported_subset = "8-bit grayscale/RGB decode; baseline/progressive decode; baseline RGB encode"
+build_system = "SceneIO-owned translation unit"
+simd = "none in the JPEG codec"
+threading = "one call per image; callers may run independent calls concurrently"
+compilers = "C++17 on MSVC, GCC 10, and AppleClang"
+static_offline = true
+hidden_in_core = true
+outcome = "retained_baseline"
+reason = "current stable behavior and compatibility reference"
+
+[[decision.candidate]]
+id = "libjpeg-turbo"
+role = "finalist"
+version = "3.2.0"
+commit = "c85e6b905bf237038faa936dab160ebfc5da0344"
+source = "https://github.com/libjpeg-turbo/libjpeg-turbo/releases/download/3.2.0/libjpeg-turbo-3.2.0.tar.gz"
+archive_sha256 = "6f30092cef9fb839779646608f4ee14ae3cbac989c47fa05e841b0841f09878e"
+archive_size = 2537858
+license = "IJG AND BSD-3-Clause AND Zlib"
+maintenance = "stable active upstream release dated 2026-06-30"
+supported_subset = "TurboJPEG handles 8-bit grayscale/RGB baseline and progressive decode plus baseline RGB encode; retained stb handles the existing approximate CMYK/YCCK fallback"
+build_system = "CMake ExternalProject for qualification; CMake >=3.18"
+simd = "runtime-dispatched x86/x86-64, Arm, PowerPC, and RISC-V implementations; required for qualification"
+threading = "one call per image; callers may run independent handles concurrently"
+compilers = "MSVC 2005+, GCC 4.1+, and Clang; SceneIO gate is MSVC, GCC 10, AppleClang"
+static_offline = true
+hidden_in_core = true
+outcome = "qualify"
+reason = "current portable throughput-focused implementation with mature SIMD paths"
+
+[[decision.candidate]]
+id = "mozjpeg"
+role = "surveyed"
+version = "4.1.1"
+commit = "a2d2907ff023227e80c1e4efa809812410275a12"
+source = "https://github.com/mozilla/mozjpeg/tree/v4.1.1"
+license = "IJG AND BSD-3-Clause AND Zlib"
+maintenance = "latest upstream release dated 2022-08-15"
+supported_subset = "libjpeg-compatible JPEG decode and encode with trellis and progressive optimization"
+build_system = "CMake; derived from an older libjpeg-turbo line"
+simd = "x86/x86-64 and Arm implementations inherited from its libjpeg-turbo base"
+threading = "one call per image"
+compilers = "MSVC, GCC, and Clang"
+static_offline = true
+hidden_in_core = true
+outcome = "excluded"
+reason = "its distinguishing modes trade encode throughput and baseline-byte compatibility for density, while the current active libjpeg-turbo line is the throughput finalist"
+
+[[decision.candidate]]
+id = "jpegli"
+role = "surveyed"
+version = "unreleased evaluation at 2026-07-28"
+commit = "031a0077f5799a6041004267fc12b956c1f52a20"
+source = "https://github.com/google/jpegli"
+license = "BSD-3-Clause"
+maintenance = "active upstream without a tagged stable release at the evaluation date"
+supported_subset = "libjpeg-compatible JPEG encode/decode with perceptual quantization and progressive defaults"
+build_system = "CMake/Bazel with additional C++ support libraries"
+simd = "portable vector dispatch through Highway"
+threading = "one call per image"
+compilers = "modern MSVC, GCC, and Clang; not compatible with the GCC 10 floor as a frozen standalone release"
+static_offline = true
+hidden_in_core = true
+outcome = "excluded"
+reason = "no tagged stable source release and materially different quality/progressive defaults prevent a bounded compatibility comparison in this decision"

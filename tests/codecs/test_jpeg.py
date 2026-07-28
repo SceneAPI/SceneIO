@@ -9,6 +9,7 @@ higher quality means larger files + higher PSNR. The reader supports grayscale
 
 from __future__ import annotations
 
+import hashlib
 import io
 
 import numpy as np
@@ -76,6 +77,43 @@ def test_quality_tradeoff():
     lo, hi = bytes(_core.write_jpeg(img, 20)), bytes(_core.write_jpeg(img, 95))
     assert len(hi) > len(lo)
     assert psnr(pil_decode(hi), gradient_rgb()) > psnr(pil_decode(lo), gradient_rgb())
+
+
+def test_retained_stb_encoder_bytes_match_the_locked_vectors():
+    marker = getattr(_core, "_jpeg_backend_id", None)
+    if marker is not None and marker() != "stb":
+        pytest.skip("retained-backend byte contract")
+
+    cases = [
+        ((1, 1, 1, 0), 614, "963bc82ec790b2024b6baa2bd3e2cc1502523ea39dd1000776cdc9bf16b23f00"),
+        ((2, 3, 50, 1), 637, "b9a2097cc0dcac2b1732429978cfffc6e01764d44de5cbc42f6ed49e5993de24"),
+        ((5, 7, 90, 2), 739, "0197d0dfd1087e534a9fede5f8b51c5e32d9799e30e722bb30701f89f3d64f37"),
+        ((5, 7, 91, 2), 710, "97436523e5cf3ceeaec13a233bc3a7bb132d21917269e0ab3e51c17e386571b8"),
+        ((9, 17, 95, 3), 1043, "7ddea83c48332d052680286734e93f1c53429c77b8fb72c6b2307a64bc6a8545"),
+        (
+            (13, 11, 100, 4),
+            1525,
+            "9646ca4f35562ec998b90eae0c0bda326dfabcebdd88e0f6e5316d786ebe9e3a",
+        ),
+    ]
+    for (height, width, quality, seed), expected_size, expected_sha256 in cases:
+        y, x = np.mgrid[0:height, 0:width]
+        pixels = np.stack(
+            (
+                (x * 31 + y * 17 + seed * 13) % 256,
+                (x * 7 + y * 47 + seed * 29) % 256,
+                (x * 59 + y * 3 + seed * 11) % 256,
+            ),
+            axis=-1,
+        ).astype(np.uint8)
+        encoded = bytes(
+            _core.write_jpeg(
+                _core.image(pixels, color_space="srgb"),
+                quality,
+            )
+        )
+        assert len(encoded) == expected_size
+        assert hashlib.sha256(encoded).hexdigest() == expected_sha256
 
 
 def test_read_grayscale_jpeg():

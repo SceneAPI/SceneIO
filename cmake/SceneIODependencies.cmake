@@ -1,4 +1,6 @@
 # Python (scikit-build-core provides the hints for the target interpreter).
+# CMake 3.18 supplies Development.Module and FetchContent SOURCE_SUBDIR, both
+# used by the stable native build.
 find_package(Python 3.12 REQUIRED COMPONENTS Interpreter Development.Module)
 find_package(Threads REQUIRED)
 

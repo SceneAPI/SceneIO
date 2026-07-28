@@ -6,8 +6,8 @@ the notices that must accompany the third-party code compiled into the
 `sceneio._core` binary.
 
 The table is the distribution inventory. Versions are the exact versions or
-commits selected by `cmake/SceneIODependencies.cmake` and the vendored
-`COMMIT.txt` files.
+commits selected by the CMake dependency and qualification modules and the
+vendored `COMMIT.txt` files.
 Where an upstream project offers multiple permissive licenses, the
 redistribution choice used by SceneIO is stated explicitly.
 
@@ -22,6 +22,7 @@ redistribution choice used by SceneIO is stated explicitly.
 | LodePNG | version 20260119, commit `ed6fe5825c6a4fbb7f58ab35a4231c7543cd452a` | vendored and statically linked | zlib | [lodepng.txt](lodepng.txt) |
 | SQLite | 3.53.4 amalgamation | vendored and statically linked | public domain | [sqlite.txt](sqlite.txt) |
 | libwebp | 1.5.0 | statically linked core libraries | BSD-3-Clause | [libwebp.txt](libwebp.txt) |
+| libjpeg-turbo | 3.2.0, commit `c85e6b905bf237038faa936dab160ebfc5da0344` | statically linked only in explicit JPEG qualification builds until selected | IJG, BSD-3-Clause, zlib | [libjpeg-turbo.txt](libjpeg-turbo.txt), [upstream `README.ijg` copy](libjpeg-turbo-IJG.txt) |
 | stb_image / stb_image_write | commit `31c1ad37456438565541f4919958214b6e762fb4` | vendored compiled headers | MIT option | [stb.txt](stb.txt) |
 | TinyEXR | commit `1b106618644dbf8a0935c2348ba51a2d863dd7c2` | vendored compiled headers | BSD-3-Clause | [tinyexr.txt](tinyexr.txt) |
 | tinyobjloader | commit `45636bdcef1a4fec140346b90c0b50bf0bc3e23b` | vendored compiled header | MIT; bundled earcut ISC; bundled fast_float under MIT | [tinyobjloader.txt](tinyobjloader.txt), [fast-float.txt](fast-float.txt) |
@@ -39,3 +40,5 @@ test-only oracle packages are likewise not bundled, so their licenses are not
 third-party notices for the SceneIO distribution.
 
 No entry in this directory changes any upstream license terms.
+
+This software is based in part on the work of the Independent JPEG Group.

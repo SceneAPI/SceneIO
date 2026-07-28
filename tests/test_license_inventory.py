@@ -11,6 +11,8 @@ EXPECTED_NOTICES = {
     "cgltf.txt",
     "fast-float.txt",
     "lazperf.txt",
+    "libjpeg-turbo-IJG.txt",
+    "libjpeg-turbo.txt",
     "libwebp.txt",
     "lodepng.txt",
     "miniz.txt",
@@ -41,6 +43,13 @@ VENDORED_NOTICE = {
     "tinyobjloader": "tinyobjloader.txt",
 }
 
+EXTERNAL_PROJECT_NOTICE = {
+    "sceneio_libjpeg_turbo": {
+        "libjpeg-turbo-IJG.txt",
+        "libjpeg-turbo.txt",
+    },
+}
+
 
 def test_license_directory_is_complete_and_packaged() -> None:
     actual = {path.name for path in LICENSES.glob("*.txt")}
@@ -63,9 +72,10 @@ def test_compiled_dependencies_have_attribution_entries() -> None:
     fetched = set(re.findall(r"FetchContent_Declare\(\s*([A-Za-z0-9_]+)", cmake))
     assert fetched == set(FETCHCONTENT_NOTICE)
 
-    third_party_references = set(
-        re.findall(r"src/cpp/third_party/([A-Za-z0-9_]+)", cmake)
-    )
+    external = set(re.findall(r"ExternalProject_Add\(\s*([A-Za-z0-9_]+)", cmake))
+    assert external == set(EXTERNAL_PROJECT_NOTICE)
+
+    third_party_references = set(re.findall(r"src/cpp/third_party/([A-Za-z0-9_]+)", cmake))
     assert third_party_references == set(VENDORED_NOTICE)
 
     index = (LICENSES / "README.md").read_text(encoding="utf-8")
@@ -73,8 +83,11 @@ def test_compiled_dependencies_have_attribution_entries() -> None:
         "nanobind.txt",
         *FETCHCONTENT_NOTICE.values(),
         *VENDORED_NOTICE.values(),
+        *{notice for notices in EXTERNAL_PROJECT_NOTICE.values() for notice in notices},
     }:
         assert f"]({notice})" in index
+
+    assert ("This software is based in part on the work of the Independent JPEG Group.") in index
 
 
 def test_notice_files_are_nonempty_utf8_text() -> None:

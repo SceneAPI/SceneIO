@@ -51,6 +51,7 @@ set(SCENEIO_IMAGE_CODEC_SOURCES
   src/cpp/codecs/images/netpbm.cpp
   src/cpp/codecs/images/png.cpp
   src/cpp/codecs/images/jpeg.cpp
+  src/cpp/codecs/images/jpeg_stb.cpp
   src/cpp/codecs/images/bmp_tga.cpp
   src/cpp/codecs/images/hdr.cpp
   src/cpp/codecs/images/exr.cpp
@@ -162,6 +163,7 @@ set(SCENEIO_CORE_SOURCES
   src/cpp/codecs/splats/splat.cpp
   src/cpp/codecs/images/png.cpp
   src/cpp/codecs/images/jpeg.cpp
+  src/cpp/codecs/images/jpeg_stb.cpp
   src/cpp/codecs/images/hdr.cpp
   src/cpp/codecs/images/bmp_tga.cpp
   src/cpp/codecs/images/exr.cpp

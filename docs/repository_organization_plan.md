@@ -386,7 +386,7 @@ verification have accumulated in a few large modules:
 
 | Area | Current shape | Growth risk |
 |---|---|---|
-| C++ codecs | 40 files for 50 format ids; eight explicit CMake family manifests; eight family-owned binding tables plus one validated assembler | all 40 sources are nested under their owning family; R4 is closed at `da1d709` |
+| C++ codecs | 41 stable files for 50 format ids; eight explicit CMake family manifests; eight family-owned binding tables; one default-excluded candidate source under `src/cpp/qualification/`; one validated assembler | all stable sources are nested under their owning family; the R4 40-source organization checkpoint is closed at `da1d709`; R5 split the JPEG common and retained mechanics without changing the public API |
 | C++ records | 32 source/header files | still manageable; new table/animation/scene records will add pressure |
 | Python registry | `registry.py`, 205 lines; `_registry/assembly.py`, 148 lines; focused `_registry/{model,adapters,detection,native_features}.py` modules; and eight `_registry/families/*.py` definition modules | all built-ins are family-owned; R3 now splits the benchmark and cross-codec verification monoliths |
 | Inspection | `_inspection.py` compatibility facade plus `_inspectors/{model,common,arrays,calibration,images,meshes,points,reconstruction,sequences,splats}.py`; all eight manifest families have lower inspector ownership | keep the proven shared model, mmap bridge, metadata bounds, exact-read/integer grammar, and image-result constructor as lower services |
@@ -428,6 +428,7 @@ are fixed:
 
 ```text
 cmake/
+  SceneIOBackendQualification.cmake
   SceneIODependencies.cmake
   SceneIOInstrumentation.cmake
   SceneIOSources.cmake
@@ -449,6 +450,8 @@ src/cpp/
     sequences/
     splats/
   io/
+  qualification/
+    jpeg_turbo.cpp
   records/
   third_party/
     <project>/
@@ -1073,6 +1076,12 @@ installed smoke.
 ### R5. Qualify performance
 
 - Populate the 50-codec ledger from existing baseline evidence.
+- **R5.1 implemented locally:** the machine-readable candidate intake records
+  stb, libjpeg-turbo 3.2.0, mozjpeg 4.1.1, and the evaluated jpegli revision.
+  A guarded, default-off CMake selector builds isolated stb and
+  SIMD-required libjpeg-turbo variants through the same `_core` JPEG API.
+  Default wheel and symbol isolation are proved; no selection or ledger
+  promotion has occurred.
 - Re-run missing candidate comparisons per performance profile and direction,
   using one provenance-recorded, accepted-subset corpus from retained and
   independent producers for every decoder candidate.

@@ -2170,6 +2170,12 @@ lane before starting the next unit.
    Before removing a retained backend, install a persistent same-run guard
    against the ledger's pinned qualified commit.
    Existing optimized transport does not by itself qualify every codec kernel.
+   R5.1 is implemented locally: `bench/BACKEND_CANDIDATES.toml` records the
+   JPEG candidate survey and exact pins, and the default-off qualification
+   build produces isolated stb and SIMD-enabled libjpeg-turbo 3.2.0 wheels
+   with the same public/core call path. The ordinary wheel remains stb-only.
+   R5.2 same-corpus measurement and all three toolchain results are still
+   required before selection.
 3. **Repository source closure for the stable tier (R6).**
    Vendor the exact selected revisions under `src/cpp/third_party/`. The
    current closure set is miniz 3.0.2, nlohmann/json 3.11.3, zstd 1.5.6,
