@@ -12,6 +12,8 @@ from sceneio import _core
 ROOT = Path(__file__).resolve().parents[1]
 CANDIDATES = ROOT / "bench" / "BACKEND_CANDIDATES.toml"
 QUALIFICATION_CMAKE = ROOT / "cmake" / "SceneIOBackendQualification.cmake"
+TARGETS_CMAKE = ROOT / "cmake" / "SceneIOTargets.cmake"
+SIMD_CMAKE = ROOT / "cmake" / "SceneIORecordJpegSimd.cmake"
 
 
 def _candidate_ledger():
@@ -203,3 +205,18 @@ def test_qualification_manifest_records_reproducible_toolchain_inputs():
     assert "if(WIN32)" not in cmake
     assert "LINKER:--exclude-libs,ALL" in cmake
     assert "LINKER:-exported_symbol,_PyInit__core" in cmake
+
+
+def test_candidate_build_records_generated_simd_configuration():
+    qualification = QUALIFICATION_CMAKE.read_text(encoding="utf-8")
+    targets = TARGETS_CMAKE.read_text(encoding="utf-8")
+    recorder = SIMD_CMAKE.read_text(encoding="utf-8")
+
+    assert "SCENEIO_SELECTED_BACKEND_SIMD_HEADER" in qualification
+    assert "SCENEIO_SELECTED_BACKEND_SIMD_EVIDENCE" in qualification
+    assert "jconfigint.h" in qualification
+    assert "SceneIORecordJpegSimd.cmake" in targets
+    assert "POST_BUILD" in targets
+    assert "SIMD_ARCHITECTURE" in recorder
+    assert "generated_header_sha256" in recorder
+    assert "file(SHA256" in recorder

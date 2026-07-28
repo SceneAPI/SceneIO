@@ -1874,9 +1874,9 @@ backend_patch_set = "sceneio-stb-3-local-patches-v1"
 transport_status = "qualified"
 status = "known_gap"
 correctness_evidence = ["tests/codecs/test_jpeg.py"]
-benchmark_evidence = ["bench/BASELINE.md"]
+benchmark_evidence = ["bench/BASELINE.md", "bench/BACKEND_QUALIFICATION.toml"]
 candidate_backends = ["libjpeg-turbo"]
-evidence_gaps = ["candidate comparison must use identical quality settings and decoded-quality bounds", "three-toolchain libjpeg-turbo comparison"]
+evidence_gaps = ["clean full MSVC qualification report", "three-toolchain libjpeg-turbo qualification set"]
 
 [[operation]]
 codec_id = "jpeg"
@@ -1894,9 +1894,9 @@ backend_patch_set = "sceneio-stb-3-local-patches-v1"
 transport_status = "qualified"
 status = "known_gap"
 correctness_evidence = ["tests/codecs/test_jpeg.py"]
-benchmark_evidence = ["bench/BASELINE.md"]
+benchmark_evidence = ["bench/BASELINE.md", "bench/BACKEND_QUALIFICATION.toml"]
 candidate_backends = ["libjpeg-turbo"]
-evidence_gaps = ["candidate comparison must use identical quality settings and decoded-quality bounds", "three-toolchain libjpeg-turbo comparison"]
+evidence_gaps = ["clean full MSVC qualification report", "three-toolchain libjpeg-turbo qualification set"]
 
 [[operation]]
 codec_id = "bmp"

@@ -544,7 +544,10 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > ordinary wheels continue to use stb for JPEG. A default-off qualification
 > build can select either the retained backend or SIMD-required
 > libjpeg-turbo 3.2.0 behind the same JPEG API. Candidate intake and default
-> wheel isolation pass locally; same-corpus measurement and three-toolchain
+> wheel isolation pass locally. R5.2's same-corpus installed-wheel harness,
+> frozen quality/size/parity bounds, actual configured-SIMD receipt, and
+> manual nonpublishing three-toolchain workflow are implemented; only the
+> quick `smoke_only` protocol has run. Full clean-tree and three-toolchain
 > evidence remain open, so libjpeg-turbo is not yet a selected backend.
 
 [current-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287022

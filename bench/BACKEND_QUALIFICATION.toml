@@ -1,0 +1,243 @@
+schema_version = 1
+decision_id = "jpeg-rgb8-v1"
+codec_id = "jpeg"
+retained_backend = "stb"
+candidate_backend = "libjpeg-turbo"
+retained_marker = "stb"
+candidate_marker = "libjpeg-turbo-3.2.0"
+
+[methodology]
+local_sessions = 6
+remote_sessions = 8
+memory_samples = 3
+startup_processes = 6
+order_seed = 20260728
+clock = "time.perf_counter_ns"
+sample_policy = "retain every finite sample; no post-measurement deletion"
+summary = "paired-session median ratio and 1.4826-scaled MAD of log ratios"
+cache_mode = "warm; cold-cache performance is not claimed"
+lane_policy = "one intra-file lane; neither backend exposes an intra-file lane control"
+
+[thresholds]
+rgb_decode_max_abs = 4
+grayscale_decode_max_abs = 2
+retained_fallback_max_abs = 0
+rgb_decode_psnr_min_db = 48.0
+grayscale_decode_psnr_min_db = 50.0
+encode_psnr_per_fixture_delta_min_db = -0.15
+encode_psnr_profile_median_delta_min_db = -0.05
+encoded_size_per_fixture_ratio_max = 1.05
+encoded_size_profile_geomean_ratio_max = 1.02
+representative_cell_robust_ratio_min = 0.95
+small_cell_robust_ratio_min = 0.90
+encode_geomean_ratio_min = 1.20
+encode_geomean_robust_ratio_min = 1.10
+decode_geomean_ratio_min = 1.15
+decode_geomean_robust_ratio_min = 1.05
+public_surface_ratio_min = 1.10
+public_surface_robust_ratio_min = 1.00
+normalized_mad_small_max = 0.08
+normalized_mad_other_max = 0.05
+traced_sink_min_allowance_bytes = 1048576
+traced_sink_output_fraction_max = 0.125
+traced_mmap_min_allowance_bytes = 1048576
+traced_mmap_file_fraction_max = 0.125
+traced_candidate_extra_bytes_max = 1048576
+memory_representative_ratio_max = 1.20
+memory_representative_allowance_bytes = 16777216
+memory_large_ratio_max = 1.15
+memory_large_allowance_bytes = 33554432
+memory_plateau_allowance_bytes = 8388608
+import_ratio_max = 1.15
+import_allowance_ns = 10000000
+first_call_ratio_max = 1.10
+first_call_allowance_ns = 2000000
+wheel_ratio_max = 1.15
+wheel_extra_bytes_max = 1048576
+native_ratio_max = 1.25
+native_extra_bytes_max = 2097152
+determinism_repeats = 20
+determinism_processes = 3
+
+[[fixture]]
+id = "small_odd"
+class = "small"
+height = 255
+width = 257
+seed = 11
+warmups = 3
+samples = 15
+iterations_per_sample = 32
+remote_only = false
+
+[[fixture]]
+id = "photo_fhd"
+class = "representative"
+height = 1080
+width = 1920
+seed = 23
+warmups = 3
+samples = 15
+iterations_per_sample = 1
+remote_only = false
+
+[[fixture]]
+id = "chroma_odd"
+class = "representative"
+height = 1081
+width = 1921
+seed = 37
+warmups = 3
+samples = 15
+iterations_per_sample = 1
+remote_only = false
+
+[[fixture]]
+id = "texture_4k"
+class = "generated_large"
+height = 2160
+width = 3840
+seed = 47
+warmups = 2
+samples = 7
+iterations_per_sample = 1
+remote_only = false
+
+[[fixture]]
+id = "photo_8k"
+class = "generated_large"
+height = 4320
+width = 7680
+seed = 59
+warmups = 1
+samples = 3
+iterations_per_sample = 1
+remote_only = true
+
+[[encode_profile]]
+id = "rgb8_q90_420"
+quality = 90
+subsampling = "420"
+fixtures = ["small_odd", "photo_fhd", "chroma_odd", "texture_4k", "photo_8k"]
+paths = ["core_buffer"]
+
+[[encode_profile]]
+id = "rgb8_q95_444"
+quality = 95
+subsampling = "444"
+fixtures = ["small_odd", "photo_fhd", "chroma_odd", "texture_4k", "photo_8k"]
+paths = ["core_buffer", "core_sink", "public_sink"]
+
+[[decode_profile]]
+id = "baseline_rgb_420"
+kind = "rgb"
+quality = 90
+subsampling = "420"
+progressive = false
+restart_marker_blocks = 0
+producers = ["retained", "pillow"]
+fixtures = ["small_odd", "photo_fhd", "chroma_odd", "texture_4k", "photo_8k"]
+paths = ["core_bytes", "core_mmap", "public_path"]
+reference = "pillow_rgb"
+
+[[decode_profile]]
+id = "baseline_rgb_444"
+kind = "rgb"
+quality = 95
+subsampling = "444"
+progressive = false
+restart_marker_blocks = 0
+producers = ["retained", "pillow"]
+fixtures = ["small_odd", "photo_fhd", "chroma_odd", "texture_4k", "photo_8k"]
+paths = ["core_bytes", "core_mmap", "public_path"]
+reference = "pillow_rgb"
+
+[[decode_profile]]
+id = "progressive_rgb"
+kind = "rgb"
+quality = 90
+subsampling = "420"
+progressive = true
+restart_marker_blocks = 0
+producers = ["pillow"]
+fixtures = ["small_odd", "photo_fhd", "texture_4k", "photo_8k"]
+paths = ["core_bytes", "core_mmap", "public_path"]
+reference = "pillow_rgb"
+
+[[decode_profile]]
+id = "restart_markers"
+kind = "rgb"
+quality = 90
+subsampling = "420"
+progressive = false
+restart_marker_blocks = 4
+producers = ["pillow"]
+fixtures = ["small_odd", "photo_fhd", "texture_4k", "photo_8k"]
+paths = ["core_bytes", "core_mmap", "public_path"]
+reference = "pillow_rgb"
+
+[[decode_profile]]
+id = "grayscale"
+kind = "grayscale"
+quality = 95
+subsampling = "gray"
+progressive = false
+restart_marker_blocks = 0
+producers = ["pillow"]
+fixtures = ["small_odd", "photo_fhd", "texture_4k", "photo_8k"]
+paths = ["core_bytes", "core_mmap", "public_path"]
+reference = "pillow_native"
+
+[[decode_profile]]
+id = "cmyk"
+kind = "cmyk"
+quality = 90
+subsampling = "444"
+progressive = false
+restart_marker_blocks = 0
+producers = ["pillow"]
+fixtures = ["small_odd"]
+paths = ["core_bytes", "core_mmap", "public_path"]
+reference = "retained_decode"
+
+[[decode_profile]]
+id = "ycck"
+kind = "ycck"
+quality = 90
+subsampling = "420"
+progressive = false
+restart_marker_blocks = 0
+producers = ["sceneio_generated_libjpeg_turbo_3_2_0"]
+fixtures = ["ycck_16x16"]
+paths = ["core_bytes", "core_mmap", "public_path"]
+reference = "retained_decode"
+
+[[memory_case]]
+id = "encode_large_q95_core_buffer"
+operation = "encode"
+path = "core_buffer"
+profile = "rgb8_q95_444"
+fixture = "texture_4k"
+
+[[memory_case]]
+id = "encode_large_q95_public_sink"
+operation = "encode"
+path = "public_sink"
+profile = "rgb8_q95_444"
+fixture = "texture_4k"
+
+[[memory_case]]
+id = "decode_large_420_core_mmap"
+operation = "decode"
+path = "core_mmap"
+profile = "baseline_rgb_420"
+producer = "pillow"
+fixture = "texture_4k"
+
+[[memory_case]]
+id = "decode_large_420_public_path"
+operation = "decode"
+path = "public_path"
+profile = "baseline_rgb_420"
+producer = "pillow"
+fixture = "texture_4k"

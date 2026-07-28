@@ -2747,3 +2747,52 @@ the same host also measured 3.136x--3.265x, while the R5.1 diff contains no
 JSON codec, registry, or benchmark-path change. The repository's 3x control
 therefore remains unchanged; this intake checkpoint records the paired host
 variance rather than weakening the guard or claiming a JSON-path change.
+
+## R5.2 JPEG qualification methodology (2026-07-28)
+
+`bench/BACKEND_QUALIFICATION.toml` freezes the comparison before the full
+measurement. The local matrix has 97 cells; including the generated 8K
+fixture produces 122. It covers q90 4:2:0 and q95 4:4:4 encoding through the
+available core/public buffer and sink surfaces, and baseline 4:2:0/4:4:4,
+progressive, restart-marker, grayscale, CMYK, and YCCK decoding through core
+bytes, core mmap, and public paths. Decoder timing uses the same hashed
+retained/Pillow/spec fixture corpus for both wheels.
+
+The controller launches copied self-contained workers with each isolated
+environment's absolute Python executable and `-I`. Six local or eight
+remote-inclusive sessions use a seeded balanced order. Every raw integer
+sample is retained; the primary summary is the paired retained/candidate
+median ratio and 1.4826-scaled MAD of log ratios, with a two-MAD robust lower
+bound. Predeclared gates cover per-cell variability and non-regression,
+encode/decode aggregate gains, public surfaces, decoded parity, comparative
+PSNR and output size, deterministic output where applicable, traced
+allocation, fresh-process RSS, RSS plateau, import/first-call cost, and
+wheel/native size. CMYK and YCCK exercise the retained fallback for
+compatibility and are excluded from candidate throughput claims. Neither
+backend exposes a selected intra-file lane control, so the frozen policy
+records and measures one lane only. Cache state is warm; no cold-cache result
+is claimed.
+
+The harness rejects dirty source for an official report. A dirty-tree quick
+run exists only to verify the protocol and is labeled `smoke_only`. The
+current quick run covers 19 cells, four installed-wheel sessions, eight
+independent encode-first/decode-first startup workers, and two repeatability
+workers; its report SHA-256 is
+`159f1fe98df290d3952bba9cab95b102eb7a16127193001d242ec1ee7b7e5166`.
+The installed Python package members and native module are both bound to the
+supplied wheel, every declared session/cell/raw sample is required, SceneIO
+import timing excludes Pillow setup, and a prior result is released before
+the next timed sample. Fresh-process RSS warms only `small_odd`, then measures
+the first target-fixture operation so retained large-case memory remains
+visible.
+The candidate CMake build separately emits a receipt derived from the
+generated libjpeg-turbo header; the local probe records
+`SIMD_ARCHITECTURE X86_64` and the header hash.
+
+`.github/workflows/backend-qualification.yml` is manual and nonpublishing.
+It builds paired wheels and runs the full remote-inclusive matrix on Windows
+MSVC x86-64, the pinned manylinux2014 GCC 10 x86-64 image, and macOS
+AppleClang arm64, then validates exact source/configuration identity across
+the three reports. That workflow has not been dispatched. These entries
+describe implemented measurement machinery, not a completed comparison:
+stb remains the stable JPEG backend and no R5.4 selection is recorded.

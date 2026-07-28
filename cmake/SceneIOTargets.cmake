@@ -49,6 +49,17 @@ if(SCENEIO_SELECTED_BACKEND_BUILD_TARGETS)
   add_dependencies(
     _core ${SCENEIO_SELECTED_BACKEND_BUILD_TARGETS})
 endif()
+if(SCENEIO_SELECTED_BACKEND_SIMD_HEADER)
+  add_custom_command(
+    TARGET _core
+    POST_BUILD
+    COMMAND
+      "${CMAKE_COMMAND}"
+      "-DINPUT=${SCENEIO_SELECTED_BACKEND_SIMD_HEADER}"
+      "-DOUTPUT=${SCENEIO_SELECTED_BACKEND_SIMD_EVIDENCE}"
+      -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/SceneIORecordJpegSimd.cmake"
+    VERBATIM)
+endif()
 
 # Land the extension inside the importable `sceneio` package as sceneio._core.
 install(TARGETS _core LIBRARY DESTINATION sceneio)

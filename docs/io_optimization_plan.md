@@ -79,6 +79,19 @@ evidence only; R5.2 must still compare identical hashed inputs through the
 production mmap/sink paths on MSVC, GCC 10, and AppleClang before any backend
 selection or performance-ledger promotion.
 
+R5.2's production-path measurement implementation is now local. A frozen
+97-cell local/122-cell remote-inclusive JPEG matrix compares installed stb and
+libjpeg-turbo wheels against the same hashed corpus, retains raw paired
+samples, and measures the direct/public mmap and sink surfaces alongside
+quality, size, startup, repeatability, traced allocation, RSS, and package
+cost. Fresh-process RSS uses a fixed small-fixture warm-up and measures the
+first target-fixture operation. A generated receipt binds the candidate build
+to its configured SIMD header. The quick protocol completes as `smoke_only`;
+its nonbinding
+diagnostic gates are not an official pass. The clean full MSVC report and
+manual three-toolchain workflow are still pending, so no backend selection or
+new stable performance claim is made.
+
 Scope: the compiled `sceneio._core` I/O path on `phase0-nanobind-core`.
 Companion to `coverage_roadmap.md` (this makes its "Phase 7" hardening/perf work
 concrete). Phase landing notes below are historical evidence from the commit at

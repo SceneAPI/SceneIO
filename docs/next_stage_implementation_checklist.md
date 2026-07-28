@@ -83,6 +83,15 @@ SceneIO-plus-NumPy smoke returns `2`. All three independent reviews are clear.
 Normal run `30326256230` and instrumented run `30326256137` pass exact commit
 `da1d709`.
 
+R5.1 is complete and pushed at `cf208d8`. R5.2's frozen JPEG matrix,
+installed-wheel controller/worker, corpus provenance, quality/size/parity
+gates, startup/repeatability/memory measurements, generated SIMD receipt, and
+manual nonpublishing three-platform workflow are implemented locally. The
+quick protocol completes as `smoke_only`; its nonbinding diagnostic gates are
+not an official pass. The full clean-tree MSVC report and the user-gated
+MSVC/GCC 10/AppleClang evidence set remain pending. The stable default is still
+stb, and R5.4 selection has not started.
+
 This is the operational checklist for the repository-organization and
 codec-performance stage defined in
 [`repository_organization_plan.md`](repository_organization_plan.md). It turns
@@ -3714,62 +3723,118 @@ and the variance is retained rather than normalized away.
 
 ### R5.2 — fair production-path benchmark
 
-- [ ] Benchmark through SceneIO's actual public/core adapter, not an isolated
+- [x] Benchmark through SceneIO's actual public/core adapter, not an isolated
       library microbenchmark.
-- [ ] Define the full codec × profile × direction matrix before running. Do
+- [x] Define the full codec × profile × direction matrix before running. Do
       not let one easy encoding mode qualify materially different paths.
-- [ ] Use identical canonical records, output subset, quality/subsampling,
+- [x] Use identical canonical records, output subset, quality/subsampling,
       thread/lane policy, compiler mode, and warm/cold methodology.
-- [ ] For decoder comparisons, feed every candidate the same hashed encoded
+- [x] For decoder comparisons, feed every candidate the same hashed encoded
       corpus. Never compare decoder throughput when each encoder produced
       different bytes.
-- [ ] Record each decoder fixture's producer, version, settings, provenance,
+- [x] Record each decoder fixture's producer, version, settings, provenance,
       hash, and accepted-subset coverage. Include streams from the retained
       writer and an independent reference/spec fixture where possible; a
       candidate's own output is never its sole decode corpus.
-- [ ] Measure encode and decode separately:
-  - [ ] throughput/latency for small, representative, and generated large
+- [x] Implement separate encode/decode collection for:
+  - [x] throughput/latency for small, representative, and generated large
         fixtures;
-  - [ ] public mmap/path read and direct-sink write;
-  - [ ] traced allocation and fresh-process RSS;
-  - [ ] one lane and bounded automatic lanes where supported;
-  - [ ] output size and, for lossy codecs, decoded quality under the existing
+  - [x] public mmap/path read and direct-sink write;
+  - [x] traced allocation and fresh-process RSS after a fixed small-fixture
+        warm-up, measuring the first target-fixture operation;
+  - [x] a fixed one-lane policy, with bounded automatic lanes recorded as
+        not applicable because neither selected JPEG API exposes a lane
+        control;
+  - [x] output size and, for lossy codecs, decoded quality under the existing
         parity metric;
-  - [ ] deterministic bytes where the format/backend contract permits them;
-  - [ ] wheel size, import time, and first-call startup.
-- [ ] Record raw JSON, fixture hashes, CPU/toolchain, compiler flags, library
+  - [x] deterministic bytes where the format/backend contract permits them;
+  - [x] wheel size, SceneIO-only import time, and independent fresh-process
+        encode-first/decode-first startup.
+- [x] Record raw JSON, fixture hashes, CPU/toolchain, compiler flags, library
       revisions, settings, sample order, sample count, median, MAD, and paired
       candidate/baseline ratios.
-- [ ] Randomize or interleave candidate order after fixed warmups, repeat
+- [x] Randomize or interleave candidate order after fixed warmups, repeat
       sessions on the same machine, and predeclare the noise/outlier policy.
       Retain raw samples; do not delete inconvenient outliers after inspection.
-- [ ] Label cold-cache data valid only when cache eviction is confirmed.
+- [x] Label cold-cache data valid only when cache eviction is confirmed.
       Advisory cache hints are reported as best-effort, not cold-cache proof.
+- [ ] Execute the clean full local matrix and retain passing results for every
+      implemented throughput, quality, allocation/RSS, startup, repeatability,
+      and package-size gate.
 - [ ] Build the shortlist on MSVC, then compare finalists on manylinux2014
       GCC 10 and AppleClang before selection.
 
-### R5.3 — correctness and compatibility gate
+R5.2 harness implementation evidence (2026-07-28):
 
-- [ ] Decoder parity uses the same encoded corpus and requires exact canonical
+- `bench/BACKEND_QUALIFICATION.toml` freezes 97 local and 122
+  remote-inclusive JPEG production-path cells before the official run. It
+  covers q90 4:2:0 and q95 4:4:4 writes, core buffer/core sink/public sink,
+  same-corpus core bytes/core mmap/public path reads, baseline 4:2:0 and
+  4:4:4, progressive, restart-marker, grayscale, CMYK, and YCCK streams.
+- The deterministic generated corpus includes retained and Pillow producers
+  plus a pinned true-YCCK fixture whose encoded SHA-256 is
+  `2a3223d511c8750927237bd7b3b0d1d6e2aeb7bfe14e96197f00632907ef01c0`.
+  Independent marker parsing verifies sampling, progressive mode, restart
+  markers, component count, and the Adobe transform before timing.
+- Isolated installed-wheel workers preserve every integer sample. Six local
+  or eight remote paired sessions use a balanced seeded order; reports retain
+  per-cell medians, MAD, paired ratios, a robust lower bound, output size,
+  PSNR, decoded parity, traced allocation, fresh-process RSS, process startup,
+  first calls, repeatability, and package size.
+- The CMake candidate build now emits a separate receipt derived from
+  libjpeg-turbo's generated `jconfigint.h`; the local MSVC probe records
+  `SIMD_ARCHITECTURE X86_64` and binds the receipt to the header hash.
+- A current complete quick protocol run exercises 19 cells, four
+  installed-wheel sessions, eight independent startup processes, and two
+  repeatability workers. Its report
+  SHA-256 is
+  `159f1fe98df290d3952bba9cab95b102eb7a16127193001d242ec1ee7b7e5166`
+  and is explicitly labeled `smoke_only`; dirty-source allowance cannot
+  produce an official report. The installed Python package members and native
+  module are both bound to the supplied wheel, every declared session/cell/raw
+  sample is required, and prior decoded results are released between timed
+  samples. Fresh-process RSS warms only `small_odd`, then measures the first
+  target-fixture operation so retained large-case memory remains visible.
+- `.github/workflows/backend-qualification.yml` is manual and
+  nonpublishing. It prepares paired wheels and full remote-inclusive evidence
+  on MSVC x86-64, the pinned manylinux2014 GCC 10 image with a hash-pinned
+  NASM 3.02 source build, and AppleClang arm64, then accepts only a passing
+  exact-source/configuration set. The workflow has not been dispatched; no
+  three-toolchain result or backend selection is claimed.
+
+### R5.3 — correctness and compatibility gate implementation
+
+- [x] Decoder parity uses the same encoded corpus and requires exact canonical
       output for lossless/raw paths or the pinned tolerance for lossy decode.
-- [ ] A lossless writer is accepted when an independent decoder recovers the
+- [x] A lossless writer is accepted when an independent decoder recovers the
       exact canonical record. Encoded-byte identity is required only where
       frozen deterministic bytes are already part of the contract.
-- [ ] A lossy writer uses a pinned corpus covering quality, output size,
+- [x] A lossy writer uses a pinned corpus covering quality, output size,
       metadata, alpha handling, and subsampling, and must be non-inferior under
       the documented parity metric. A smaller or lower-quality output is not a
       valid speed win.
-- [ ] Predeclare per-profile comparative quality metrics, non-inferiority
+- [x] Predeclare per-profile comparative quality metrics, non-inferiority
       margins versus the retained backend, corpus aggregation/confidence
       rules, and file-size matching bounds before measurement. Both candidates
       passing an older absolute tolerance is not sufficient.
-- [ ] Malformed/truncated inputs, convention guards, and unsupported features
+- [x] Malformed/truncated inputs, convention guards, and unsupported features
       retain the same normalized behavior.
-- [ ] Determinism is proved one versus many lanes and across repeated runs.
+- [x] Require the exact declared repeat count across fresh processes and exact
+      sink identity where the backend contract permits it.
+- [x] Record multi-lane comparison as not applicable for this decision because
+      neither selected JPEG API exposes an intra-file lane control.
+- [ ] Execute the clean full matrix and retain passing compatibility,
+      determinism, and repeatability evidence.
 - [ ] If a backend migration changes deterministic encoded bytes, isolate it
       in a dedicated compatibility decision with updated goldens and release
       notes; never hide it inside a refactor.
-- [ ] Existing Python/runtime dependency remains NumPy-only.
+- [x] Existing Python/runtime dependency remains NumPy-only.
+
+For this JPEG decision, neither candidate exposes an intra-file lane control
+through the selected API. The frozen policy therefore measures one lane and
+records that no many-lane variant exists; it does not infer a threaded result.
+CMYK and YCCK remain compatibility-only retained-fallback cells and do not
+contribute candidate throughput.
 
 ### R5.4 — selection and ledger update
 

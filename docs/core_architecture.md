@@ -59,6 +59,19 @@ things that keep this expansible as the format list from
 > qualification-only `src/cpp/qualification/jpeg_turbo.cpp` isolate backend
 > mechanics. The candidate source is absent from ordinary target manifests.
 > This is a comparison seam, not a selected-default change.
+>
+> R5.2 adds a repository-owned installed-wheel qualification layer under
+> `bench/io_bench/backend_qualification/`. Its copied `-I` worker imports each
+> wheel from a separate environment, prepares one hashed retained/independent
+> corpus, exercises core buffer/mmap/sink and public path/sink surfaces, and
+> emits raw paired samples plus correctness, output-size, startup,
+> repeatability, allocation, RSS, and package evidence. The frozen matrix and
+> thresholds live in `bench/BACKEND_QUALIFICATION.toml`. Candidate builds emit
+> a receipt derived from libjpeg-turbo's generated SIMD header. The manual
+> `.github/workflows/backend-qualification.yml` repeats the comparison on
+> MSVC, manylinux2014 GCC 10, and AppleClang without publishing. This layer is
+> evidence tooling only; stb remains the stable backend until a complete
+> three-platform report supports a separate selection commit.
 
 ## Layering
 

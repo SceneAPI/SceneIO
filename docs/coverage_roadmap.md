@@ -108,9 +108,13 @@
 > all-50-codec smoke and contain one native module with no development
 > payload. The local 50-row strict-comparison sweep retains the established
 > O4/O5 results without a changed threshold. This establishes candidate
-> viability and isolation only; R5.2
-> retains responsibility for same-corpus performance, output quality,
-> portability, and any backend-selection decision.
+> viability and isolation only. R5.2's frozen same-corpus installed-wheel
+> harness is now implemented locally, including production mmap/sink paths,
+> output quality and size bounds, startup/repeatability/memory evidence, an
+> actual configured-SIMD receipt, and a manual nonpublishing MSVC/GCC
+> 10/AppleClang workflow. Only its quick `smoke_only` protocol has run. Full
+> clean-tree and three-toolchain results, and therefore any backend-selection
+> decision, remain pending.
 
 The granular, per‑format execution plan for covering **every relevant file type
 that has a permissively‑licensed open‑source option**. Sits below the strategy

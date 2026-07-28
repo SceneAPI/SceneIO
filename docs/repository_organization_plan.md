@@ -1082,6 +1082,14 @@ installed smoke.
   SIMD-required libjpeg-turbo variants through the same `_core` JPEG API.
   Default wheel and symbol isolation are proved; no selection or ledger
   promotion has occurred.
+- **R5.2 harness implemented locally:** the frozen 97-cell local/122-cell
+  remote-inclusive matrix compares separate installed wheels through the
+  core/public buffer, mmap, path, and sink surfaces against one hashed corpus.
+  It retains paired raw timing samples and quality, size, startup,
+  repeatability, allocation, RSS, wheel, toolchain, and configured-SIMD
+  evidence. The manual nonpublishing workflow covers MSVC, the pinned
+  manylinux2014 GCC 10 image, and AppleClang arm64. Its quick protocol is
+  `smoke_only`; full clean-tree reports and selection remain pending.
 - Re-run missing candidate comparisons per performance profile and direction,
   using one provenance-recorded, accepted-subset corpus from retained and
   independent producers for every decoder candidate.
