@@ -25,7 +25,7 @@
     "platform": "windows-msvc",
     "captures": 2,
     "projection_artifact": "tests/contracts/io_splat_benchmark_parent_v1.json",
-    "all_codec_projection_sha256": "8f218ff77bcf2ea1e918d4ed164f7184fa2662eb252508c387b5f131a053a8e7",
+    "all_codec_projection_sha256": "97c98367e8ea602e9b9c1682b8c6ef1ca8fd483a66b233cd64dbc5976d0c7948",
     "splat_rows_projection_sha256": "5c6adc3584ba25050c885b37313d009311e2253b0c841cbc8738b806cb090bfd"
   },
   "pytest_parent_collection": {

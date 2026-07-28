@@ -4288,7 +4288,17 @@ Shared disconnected-source/package diagnostic evidence at exact commit
   `1bf1ff9b85ef0ac8f1ad62d26e872666deff8594434feb045f8a03feff11583e`.
   Ruff and both diff checks pass. The final corrected staged tree is rebuilt
   from an exact export after review, with its non-self-referential artifact
-  hashes and installed-smoke result retained in the commit record.
+  hashes and installed-smoke result retained in the commit record;
+- exact commit `3747447` passed every automatic portability/codec job,
+  including manylinux2014 GCC 10, but its main job exposed a stale benchmark
+  contract: the exact CI command
+  `--runs 1 --scale 0.001 --skip-oracles` produces structural projection
+  `97c98367e8ea602e9b9c1682b8c6ef1ca8fd483a66b233cd64dbc5976d0c7948`
+  on both Windows and hosted Linux, while the contract incorrectly held the
+  full-size strict-run projection
+  `8f218ff77bcf2ea1e918d4ed164f7184fa2662eb252508c387b5f131a053a8e7`.
+  The smoke/family contracts now bind the scale-0.001 projection; the retained
+  five-run strict evidence and its projection remain unchanged.
 
 ### R6.1 — provenance and source intake
 

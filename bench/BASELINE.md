@@ -2869,11 +2869,14 @@ measured:
 The all-50-codec run passed every retained O4/O5, mapped-read, and file-sink
 gate. Its 52,067-byte JSON has SHA-256
 `b3d4666ad09aa60419ca980c658519fcbe72691528fecf3a176f40e965e278d0`.
-The intentional additive `spz_profiles` result field has structural projection
-SHA-256
+The intentional additive `spz_profiles` result field has full-size strict-run
+structural projection SHA-256
 `8f218ff77bcf2ea1e918d4ed164f7184fa2662eb252508c387b5f131a053a8e7`;
-the benchmark and family contracts lock that shape. This is local MSVC
-evidence; the user-gated build-only multi-platform run remains outstanding.
+the separate `--runs 1 --scale 0.001 --skip-oracles` CI smoke and family
+contracts lock projection
+`97c98367e8ea602e9b9c1682b8c6ef1ca8fd483a66b233cd64dbc5976d0c7948`.
+This is local MSVC evidence; the user-gated build-only multi-platform run
+remains outstanding.
 
 ## R6 fast_float source-ownership confirmation (2026-07-28)
 

@@ -629,7 +629,7 @@
       "c0ec1a358ae5e7e51d650d3b1fd1069f76c97bf9f8573d917cd2e74ef976521e",
       "5ae19649975f4ced69d9f0817a15c000c7a82e4c93cb5d3f873763273e43c7b8"
     ],
-    "structural_projection_sha256": "8f218ff77bcf2ea1e918d4ed164f7184fa2662eb252508c387b5f131a053a8e7",
+    "structural_projection_sha256": "97c98367e8ea602e9b9c1682b8c6ef1ca8fd483a66b233cd64dbc5976d0c7948",
     "confirming_strict_capture_sha256": "b426086aaf02483d4a36bb4e4297fba4c7ac85b8786d849cd4de3ff07726dc3b",
     "deterministic_projection": "identical"
   },
