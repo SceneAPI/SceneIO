@@ -3,69 +3,11 @@
 // docs/core_architecture.md for how to add a codec.
 #include <nanobind/nanobind.h>
 
+#include "bindings/registry.hpp"
 #include "io/common.hpp"
 
 namespace nb = nanobind;
 using namespace nb::literals;
-
-// records/
-void register_reconstruction(nb::module_ &);
-void register_gaussian_cloud(nb::module_ &);
-void register_posed_view_set(nb::module_ &);
-void register_tensor_dict(nb::module_ &);
-void register_image(nb::module_ &);
-void register_image_sequence(nb::module_ &);
-void register_point_cloud(nb::module_ &);
-void register_depth_map(nb::module_ &);
-void register_flow_field(nb::module_ &);
-void register_state_trajectory(nb::module_ &);
-void register_camera_rig(nb::module_ &);
-void register_pose_graph(nb::module_ &);
-void register_feature_match(nb::module_ &);
-void register_material_set(nb::module_ &);
-void register_mesh(nb::module_ &);
-void register_mesh_scene(nb::module_ &);
-// codecs/
-void register_pfm(nb::module_ &);
-void register_colmap(nb::module_ &);
-void register_ply_gaussian(nb::module_ &);
-void register_compressed_ply(nb::module_ &);
-void register_sog(nb::module_ &);
-void register_ksplat(nb::module_ &);
-void register_ply_point(nb::module_ &);
-void register_ply_mesh(nb::module_ &);
-void register_obj_mtl(nb::module_ &);
-void register_stl_off(nb::module_ &);
-void register_gltf(nb::module_ &);
-void register_pcd(nb::module_ &);
-void register_spz(nb::module_ &);
-void register_transforms_json(nb::module_ &);
-void register_pose_text(nb::module_ &);
-void register_npy_npz(nb::module_ &);
-void register_netpbm(nb::module_ &);
-void register_colmap_txt(nb::module_ &);
-void register_xyz(nb::module_ &);
-void register_flo(nb::module_ &);
-void register_bundler(nb::module_ &);
-void register_bal(nb::module_ &);
-void register_nvm(nb::module_ &);
-void register_openmvg(nb::module_ &);
-void register_splat(nb::module_ &);
-void register_png(nb::module_ &);
-void register_jpeg(nb::module_ &);
-void register_hdr(nb::module_ &);
-void register_bmp_tga(nb::module_ &);
-void register_exr(nb::module_ &);
-void register_las(nb::module_ &);
-void register_laz(nb::module_ &);
-void register_y4m(nb::module_ &);
-void register_webp(nb::module_ &);
-void register_safetensors(nb::module_ &);
-void register_dmb(nb::module_ &);
-void register_euroc_state(nb::module_ &);
-void register_camera_calibration(nb::module_ &);
-void register_g2o(nb::module_ &);
-void register_colmap_db(nb::module_ &);
 
 NB_MODULE(_core, m) {
     m.doc() = "sceneio compiled core (nanobind): codecs + SoA memory representations";
@@ -113,61 +55,7 @@ NB_MODULE(_core, m) {
           "encoder"_a, "value"_a, "path"_a, "_max_chunk"_a = 0,
           "_test_short_write"_a = 0, "_test_fail_after"_a = 0);
 
-    register_reconstruction(m);
-    register_gaussian_cloud(m);
-    register_posed_view_set(m);
-    register_tensor_dict(m);
-    register_image(m);
-    register_image_sequence(m);
-    register_point_cloud(m);
-    register_depth_map(m);
-    register_flow_field(m);
-    register_state_trajectory(m);
-    register_camera_rig(m);
-    register_pose_graph(m);
-    register_feature_match(m);
-    register_material_set(m);
-    register_mesh(m);
-    register_mesh_scene(m);
-
-    register_pfm(m);
-    register_colmap(m);
-    register_ply_gaussian(m);
-    register_compressed_ply(m);
-    register_sog(m);
-    register_ksplat(m);
-    register_ply_point(m);
-    register_ply_mesh(m);
-    register_obj_mtl(m);
-    register_stl_off(m);
-    register_gltf(m);
-    register_pcd(m);
-    register_spz(m);
-    register_transforms_json(m);
-    register_pose_text(m);
-    register_npy_npz(m);
-    register_netpbm(m);
-    register_colmap_txt(m);
-    register_xyz(m);
-    register_flo(m);
-    register_bundler(m);
-    register_bal(m);
-    register_nvm(m);
-    register_openmvg(m);
-    register_splat(m);
-    register_png(m);
-    register_jpeg(m);
-    register_hdr(m);
-    register_bmp_tga(m);
-    register_exr(m);
-    register_las(m);
-    register_laz(m);
-    register_y4m(m);
-    register_webp(m);
-    register_safetensors(m);
-    register_dmb(m);
-    register_euroc_state(m);
-    register_camera_calibration(m);
-    register_g2o(m);
-    register_colmap_db(m);
+    sio::bindings::register_records(m);
+    sio::bindings::register_codecs(m);
+    m.attr("__codec_inventory__") = sio::bindings::codec_inventory(m);
 }

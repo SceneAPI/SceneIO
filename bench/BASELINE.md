@@ -2449,3 +2449,42 @@ conversion before extraction. Its sdist-derived 81-member Windows ABI3 wheel
 retains one native module, all 15 attribution files, no excluded build payload,
 and NumPy as its sole unconditional dependency. Complete installed smoke
 returns `2` in a fresh SceneIO-plus-NumPy environment.
+
+R4.1 is pushed at `b2cf5d4`. Normal run `30310780347` and
+compiler-instrumented run `30310780355` pass that exact commit.
+
+## R4.2 family-owned native binding candidate (2026-07-27)
+
+R4.2 changes binding ownership only. A dedicated record table and eight
+codec-family tables own the historical 16 record and 40 codec registration
+functions behind one validated assembler. The same family descriptors expose a
+canonical private inventory for all 49 native/hybrid built-ins; the
+Python-owned `image_sequence` adapter remains outside that projection and is
+separately checked through its declared Python operations.
+
+The local candidate builds with MSVC and manylinux2014 GCC 10.2.1. Its
+non-dunder `_core` surface remains 232 names, a focused 416-test I/O and
+architecture sweep passes, and collection is exactly 3,354 nodes. The
+unchanged complete five-run strict O4/O5 and mmap/sink allocation guard passes
+and is retained locally as `build/r4_2_strict_guard_final.json`. No codec timed loop,
+transport adapter, fixture, compiler option, or native dependency changed, so
+this mechanical unit makes no throughput claim. The complete 3,354-node suite
+passes 3,350 tests with four documented skips, and Ruff is clean.
+
+The 398-file staged tree produces a 399-file sdist whose only generated member
+is `PKG-INFO`; every repository member is byte-identical to its staged Git
+blob. The sdist-derived 81-member Windows ABI3 wheel contains one native
+module, all 15 notices, no excluded build payload, and NumPy as its sole
+unconditional dependency. It contains no FFmpeg/libav payload. A fresh
+outside-repository environment contains only SceneIO 0.2.0 and NumPy 2.5.1,
+and the complete installed smoke returns `2`. All three confirmation reviews
+are clear; commit, push, and hosted checks remain.
+
+The first independent review pass found no native pointer, reference-count, or
+descriptor-lifetime defect. It identified an operation-category test gap,
+mutable inventory rows, and basename/nonrecursive source checks that would
+weaken after R4.3. The candidate now freezes every ordered operation tuple in
+an independent 49-row contract, requires every referenced symbol to be
+callable, publishes mapping-proxy rows, and validates codec ownership
+recursively by full path. These changes affect registration metadata and tests
+only; no timed codec path changed.

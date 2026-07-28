@@ -84,7 +84,16 @@
 > modules. All 40 codec sources have one of eight family owners, all 16 record
 > sources are explicit, the historical `_core` source/link order is retained,
 > and fresh MSVC/GCC 10 cache plus compile/link projections match the R3.4
-> parent exactly. R4.2 binding registration is next.
+> parent exactly. R4.1 is pushed at `b2cf5d4`; normal run `30310780347` and
+> compiler-instrumented run `30310780355` pass. R4.2 is implemented locally:
+> one record table and eight codec-family tables own the 16/40 registration
+> functions and generate a validated 49-entry native/hybrid inventory. MSVC,
+> GCC 10, a focused 416-test sweep, exact 3,354-node collection, and the
+> unchanged strict five-run guard pass. The complete suite passes 3,350 tests
+> with four documented skips, and Ruff is clean. The exact 398-file source
+> tree, 399-file sdist, 81-member Windows ABI3 wheel, and fresh NumPy-only
+> installed smoke pass. All three confirmation reviews are clear; commit,
+> push, and hosted checks remain before R4.3 physical codec moves.
 
 The granular, per‑format execution plan for covering **every relevant file type
 that has a permissively‑licensed open‑source option**. Sits below the strategy

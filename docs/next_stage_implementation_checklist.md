@@ -48,12 +48,26 @@ compiler-instrumented run `30300122324` pass. R3.4 is complete and pushed at
 by the exact 50 built-in definitions, exercises public write/read/inspect,
 pairs successful public path calls with both declared stream-capability
 directions, and exercises all 32 selectors across 28 partial-capable codecs
-without an operation exemption. R4.1 is implemented locally: the native build
-description is split into four focused modules with exact source ownership and
-parent-equivalent MSVC/GCC 10 command generation. Its 3,352-node local gate
-passes 3,348 tests with four documented skips; Ruff and the strict five-run
-guard pass. Final corrected package and three-review evidence are required
-before commit.
+without an operation exemption. R4.1 is complete and pushed at `b2cf5d4`. Its
+3,352-node local gate passes 3,348 tests with four documented skips; Ruff, the
+strict five-run guard, exact-tree package qualification, fresh NumPy-only
+installed smoke, and three independent reviews pass. Normal run `30310780347`
+and compiler-instrumented run `30310780355` pass that exact commit.
+
+R4.2 is implemented in the local working tree and remains uncommitted. Ten
+family/assembly translation units plus one descriptor header now own the 16
+record and 40 codec registration functions. The private
+`_core.__codec_inventory__` projects all 49 native/hybrid built-ins from those
+family tables; the Python-owned `image_sequence` adapter remains separately
+validated. MSVC and manylinux2014 GCC 10.2.1 builds, a 416-test I/O and
+architecture sweep, exact 3,354-node collection, and the unchanged strict
+five-run guard pass. The complete suite passes 3,350 tests with four documented
+skips, and Ruff is clean. A 398-file staged tree produces a 399-file sdist with
+only `PKG-INFO` generated and an 81-member Windows ABI3 wheel with one native
+module, all 15 notices, no excluded build payload, and NumPy as the sole
+unconditional dependency. The complete smoke returns `2` in a fresh
+SceneIO-plus-NumPy environment. All three independent reviews are clear after
+their findings were resolved.
 
 This is the operational checklist for the repository-organization and
 codec-performance stage defined in
@@ -3417,20 +3431,48 @@ payload, and NumPy as the sole unconditional dependency. A fresh
 outside-repository environment contains only SceneIO 0.2.0 and NumPy 2.5.1
 and returns `2` from the complete installed smoke.
 
+R4.1 is pushed at `b2cf5d4`. Normal run `30310780347` and
+compiler-instrumented run `30310780355` pass that exact commit.
+
 ### R4.2 — split binding registration
 
-- [ ] Add family registration functions under `src/cpp/bindings/`.
-- [ ] Preserve record-before-codec construction and the `_core` symbol
+- [x] Add family registration functions under `src/cpp/bindings/`.
+- [x] Preserve record-before-codec construction and the `_core` symbol
       snapshot.
-- [ ] Keep one declaration/definition owner for every registration function.
-- [ ] Generate a private machine-readable `_core.__codec_inventory__` from the
+- [x] Keep one declaration/definition owner for every registration function.
+- [x] Generate a private machine-readable `_core.__codec_inventory__` from the
       same native family tables. Include built-in id, family, and available
       read/write/inspect/stream/partial symbols.
-- [ ] Compare the native inventory exactly with the `native`/`hybrid`
+- [x] Compare the native inventory exactly with the `native`/`hybrid`
       projection of `BUILTIN_DEFINITIONS`; separately resolve and validate the
       declared symbols for `python`/`hybrid` adapters.
-- [ ] Fail on an orphaned, multiply owned, or owner-mismatched codec.
-- [ ] Rebuild after every family move and run an explicit import/symbol smoke.
+- [x] Fail on an orphaned, multiply owned, or owner-mismatched codec.
+- [x] Rebuild the aggregate candidate and run an explicit import/symbol smoke.
+
+The local candidate preserves the historical record-before-codec order through
+explicit ordinals, validates unique names, function pointers, manifest
+positions, family ownership, and symbol resolution, and leaves the 232-name
+non-dunder `_core` snapshot unchanged. Its inventory is a canonical-order
+49-entry tuple of read-only mapping rows: every native/hybrid built-in has
+required read, write, and stream symbols; optional inspect and partial symbols
+agree exactly with the Python ownership manifest and live capability
+selectors. A separate `native_inventory_v1.json` contract freezes every
+ordered operation tuple and requires each symbol to resolve to a callable.
+Full-path recursive source contracts remain valid after the R4.3 moves. The
+Python-only `image_sequence` id is intentionally absent. MSVC and
+manylinux2014 GCC 10.2.1 build the 69-translation-unit `_core`; the focused
+416-test sweep and unchanged strict five-run performance/allocation guard pass.
+The complete 3,354-node suite passes 3,350 tests with four documented skips,
+and Ruff is clean. All three confirmation reviews are clear. Commit, push, and
+hosted-check evidence remains open. The 398/399/81 exact-tree
+source/sdist/wheel package gate and fresh NumPy-only smoke pass.
+
+The first three-lens review found no native lifetime defect. Its two shared
+test-soundness findings and one maintainability finding are implemented:
+operation categories now have an independent exact contract, runtime and tests
+require callable symbols, inventory rows are read-only, and source ownership is
+recursive and path-exact. The architecture/lifetime, test/performance, and
+platform/package/documentation confirmation reviews are clear.
 
 ### R4.3 — move native codecs by family
 

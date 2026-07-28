@@ -7,6 +7,18 @@
 set(SCENEIO_MODULE_SOURCES
   src/cpp/module.cpp)
 
+set(SCENEIO_BINDING_SOURCES
+  src/cpp/bindings/registry.cpp
+  src/cpp/bindings/records.cpp
+  src/cpp/bindings/arrays.cpp
+  src/cpp/bindings/calibration.cpp
+  src/cpp/bindings/images.cpp
+  src/cpp/bindings/meshes.cpp
+  src/cpp/bindings/points.cpp
+  src/cpp/bindings/reconstruction.cpp
+  src/cpp/bindings/sequences.cpp
+  src/cpp/bindings/splats.cpp)
+
 set(SCENEIO_RECORD_SOURCES
   src/cpp/records/reconstruction.cpp
   src/cpp/records/gaussian_cloud.cpp
@@ -97,6 +109,16 @@ set(SCENEIO_SUPPORT_SOURCES
 
 set(SCENEIO_CORE_SOURCES
   src/cpp/module.cpp
+  src/cpp/bindings/registry.cpp
+  src/cpp/bindings/records.cpp
+  src/cpp/bindings/arrays.cpp
+  src/cpp/bindings/calibration.cpp
+  src/cpp/bindings/images.cpp
+  src/cpp/bindings/meshes.cpp
+  src/cpp/bindings/points.cpp
+  src/cpp/bindings/reconstruction.cpp
+  src/cpp/bindings/sequences.cpp
+  src/cpp/bindings/splats.cpp
   src/cpp/records/reconstruction.cpp
   src/cpp/records/gaussian_cloud.cpp
   src/cpp/records/posed_view_set.cpp
@@ -184,6 +206,7 @@ _sceneio_assert_sources_exist(
 
 set(_sceneio_owned_core_sources
   ${SCENEIO_MODULE_SOURCES}
+  ${SCENEIO_BINDING_SOURCES}
   ${SCENEIO_RECORD_SOURCES}
   ${SCENEIO_CODEC_SOURCES}
   ${SCENEIO_SUPPORT_SOURCES})
@@ -226,9 +249,26 @@ if(NOT _sceneio_discovered_record_sources STREQUAL
     "Manifest: ${_sceneio_manifest_record_sources}")
 endif()
 
+file(GLOB_RECURSE _sceneio_discovered_binding_sources
+  RELATIVE "${PROJECT_SOURCE_DIR}"
+  CONFIGURE_DEPENDS
+  "${PROJECT_SOURCE_DIR}/src/cpp/bindings/*.cpp")
+list(SORT _sceneio_discovered_binding_sources)
+set(_sceneio_manifest_binding_sources ${SCENEIO_BINDING_SOURCES})
+list(SORT _sceneio_manifest_binding_sources)
+if(NOT _sceneio_discovered_binding_sources STREQUAL
+   _sceneio_manifest_binding_sources)
+  message(FATAL_ERROR
+    "SCENEIO_BINDING_SOURCES must own every binding source exactly once.\n"
+    "Discovered: ${_sceneio_discovered_binding_sources}\n"
+    "Manifest: ${_sceneio_manifest_binding_sources}")
+endif()
+
 unset(_sceneio_discovered_codec_sources)
 unset(_sceneio_manifest_codec_sources)
 unset(_sceneio_discovered_record_sources)
 unset(_sceneio_manifest_record_sources)
+unset(_sceneio_discovered_binding_sources)
+unset(_sceneio_manifest_binding_sources)
 unset(_sceneio_owned_core_sources)
 unset(_sceneio_linked_core_sources)

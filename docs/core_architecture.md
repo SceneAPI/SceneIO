@@ -26,13 +26,20 @@ things that keep this expansible as the format list from
 > complete suite passes 3,344 tests with four documented skips, and the first
 > exact-tree 380/381/81 source/sdist/wheel package gate passes.
 >
-> R4.1 now leaves the root `CMakeLists.txt` as a four-include assembly over
+> R4.1 closes at pushed commit `b2cf5d4` and leaves the root `CMakeLists.txt`
+> as a four-include assembly over
 > `SceneIOInstrumentation.cmake`, `SceneIOSources.cmake`,
 > `SceneIODependencies.cmake`, and `SceneIOTargets.cmake`. The dependency
 > block is byte-identical to the R3.4 parent, the original `_core` source/link
 > order is frozen, and configure-time checks require every native codec and
-> record source to have exactly one owner. Binding registration and physical
-> codec-family moves remain R4.2-R4.3 work.
+> record source to have exactly one owner. R4.2 is implemented locally: a
+> record table and eight codec-family tables preserve the exact 16-record and
+> 40-codec registration order, and the same family descriptors expose a
+> validated 49-entry native/hybrid inventory of read-only rows. An independent
+> contract freezes each ordered operation tuple and requires callable symbols;
+> source ownership checks are recursive and full-path exact for R4.3. The
+> Python-owned `image_sequence` adapter remains outside that native projection.
+> Physical codec-family moves remain R4.3 work.
 
 ## Layering
 
@@ -48,12 +55,13 @@ sceneio (Python)                     public, stable surface
 sceneio._core (C++ / nanobind)
   records/     SoA in-memory types + zero-copy views + **convention metadata**
   codecs/      format-focused translation units: read_<fmt>() / write_<fmt>()
+  bindings/    record + eight codec-family descriptor tables and assembler
   io/          format-agnostic helpers: endian, byte reader/writer, gzip
-  module.cpp   registers records first, then codecs
+  module.cpp   invokes the record pass, codec pass, then publishes inventory
 
 cmake/
   SceneIOInstrumentation.cmake  opt-in compiler instrumentation
-  SceneIOSources.cmake          records + eight codec-family source owners
+  SceneIOSources.cmake          bindings, records + eight codec-family owners
   SceneIODependencies.cmake     Python/nanobind + native dependency targets
   SceneIOTargets.cmake          _core and native-control targets
 ```
@@ -388,9 +396,9 @@ exposes them:
 
 ## Adding a codec — current wiring recipe
 
-This recipe remains accurate until R4.2-R4.3 complete. During that migration,
-use it only to verify compatibility; do not add a new format by expanding the
-remaining manual binding point.
+This recipe describes the local R4.2 binding boundary. Codec sources remain
+flat until R4.3; during this behavior-preserving migration, use the recipe to
+verify compatibility and do not start a new format.
 
 1. **Declare ownership** — add the built-in id, family,
    `implementation_owner`, native symbols, and Python adapter symbols to
@@ -401,16 +409,20 @@ remaining manual binding point.
    `records/<name>.hpp` (the SoA struct + conventions) and
    `records/<name>.cpp` (`register_<name>()` binding zero-copy views +
    convention properties). Reuse an existing record otherwise.
-3. **Codec** — until the R4.3 file moves land, add `codecs/<fmt>.cpp`;
+3. **Codec** — until the R4.3 file moves land, use `codecs/<fmt>.cpp`;
    afterward use `codecs/<family>/<fmt>.cpp`. Implement `read_<fmt>()` /
    `write_<fmt>()` over `records/` + `io/`, plus a `register_<fmt>()` that
    `m.def(...)`s them. Map malformed input to a thrown
    `std::invalid_argument`.
-4. **Wire C++** — until R4.2 lands, add the `register_*` call to
-   `module.cpp` (records before codecs). Add the source to its exact
-   `SCENEIO_<FAMILY>_CODEC_SOURCES` owner and the preserved link-order list in
-   `cmake/SceneIOSources.cmake`; configure rejects missing or duplicate
-   ownership.
+4. **Wire C++** — add the codec registration descriptor and native operation
+   descriptor to `bindings/<family>.cpp`; do not edit `module.cpp`. Explicit
+   ordinals preserve record-before-codec construction and canonical manifest
+   order. Add the codec source to its exact
+   `SCENEIO_<FAMILY>_CODEC_SOURCES` owner and preserved link-order list in
+   `cmake/SceneIOSources.cmake`; configure and architecture tests reject
+   missing, duplicate, or mismatched ownership. The private
+   `_core.__codec_inventory__` must resolve the native/hybrid manifest
+   projection exactly.
 5. **Register adapters** — add one `Codec(...)` entry in its
    `sceneio/io/_registry/families/<family>.py` module. Declare extensions,
    detection signature, reader, writer, record, datatype, container kind,

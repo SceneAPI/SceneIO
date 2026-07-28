@@ -2142,7 +2142,17 @@ lane before starting the next unit.
    R4.1 is complete: the root CMake assembly is split into focused
    instrumentation, source, dependency, and SceneIO-target modules; exact
    source ownership and parent-equivalent MSVC/GCC 10 command generation are
-   contract-checked. R4.2 binding ownership is the next open unit.
+   contract-checked. It is pushed at `b2cf5d4`, with normal run `30310780347`
+   and compiler-instrumented run `30310780355` passing. R4.2 binding ownership
+   is implemented locally: one record table plus eight codec-family tables own
+   the exact 16/40 registration order and project the 49 native/hybrid
+   built-ins into a validated private inventory. Preliminary MSVC/GCC 10,
+   focused 416-test, exact-collection, and strict-guard evidence passes. The
+   complete suite passes 3,350 tests with four documented skips, and Ruff is
+   clean. The exact 398/399/81 source/sdist/wheel package gate and fresh
+   NumPy-only installed smoke pass, and all three confirmation reviews are
+   clear. Commit, push, and hosted checks remain before R4.3 physical codec
+   moves.
 2. **Backend performance qualification (R5).**
    Create one `bench/PERFORMANCE_STATUS.toml` operation cell for every required
    built-in codec/profile/direction and compare each viable permissive upstream

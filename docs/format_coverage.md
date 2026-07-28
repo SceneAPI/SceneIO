@@ -523,7 +523,17 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > one exact family owner, all 16 record sources are explicit, and the previous
 > `_core` source/link order is retained. Fresh MSVC and manylinux2014 GCC 10
 > configure projections match the R3.4 parent and both toolchains build the
-> candidate. Binding registration remains the next R4 unit.
+> candidate. R4.1 is pushed at `b2cf5d4`; normal run `30310780347` and
+> compiler-instrumented run `30310780355` pass. The local R4.2 candidate moves
+> all 16 record and 40 codec registration functions into validated
+> family-owned tables and exposes a private canonical inventory for all 49
+> native/hybrid built-ins. The Python-owned `image_sequence` adapter remains
+> separately checked. Preliminary MSVC/GCC 10, focused 416-test, collection,
+> and strict-guard evidence passes. The complete suite passes 3,350 tests with
+> four documented skips, and Ruff is clean. The exact 398/399/81
+> source/sdist/wheel package gate and fresh NumPy-only installed smoke pass;
+> all three confirmation reviews are clear. Commit, push, and hosted checks
+> remain. No format capability changes.
 
 [current-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287022
 [current-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30181287161

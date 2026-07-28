@@ -328,8 +328,8 @@
     "last": "tests/test_points_binary.py::test_bad_magic_rejected"
   },
   "pytest_candidate_collection": {
-    "count": 3352,
-    "sorted_normalized_node_ids_sha256": "074944e367045763b8f4b9afa090411010a81348cb5661f08eb75f3d51c2e4d8",
+    "count": 3354,
+    "sorted_normalized_node_ids_sha256": "14d17a95fa3b16ce0d50834ab29364f441c4a8fff8ce7796e57a8e90b8cd59ee",
     "added_nodes": [
       "tests/test_benchmark_memory_protocol.py::test_memory_protocol_contract_and_repeated_sceneio_measurement",
       "tests/test_benchmark_memory_protocol.py::test_missing_sampler_is_explicit_and_strict_mode_rejects_it",
@@ -600,6 +600,8 @@
       "tests/test_native_build_architecture.py::test_root_cmake_is_only_the_ordered_build_assembly",
       "tests/test_native_build_architecture.py::test_codec_family_manifests_partition_native_sources",
       "tests/test_native_build_architecture.py::test_record_and_link_manifests_match_the_frozen_native_layout",
+      "tests/test_native_build_architecture.py::test_registration_tables_preserve_order_and_single_ownership",
+      "tests/test_native_build_architecture.py::test_live_native_inventory_matches_builtin_ownership_and_capabilities",
       "tests/test_native_build_architecture.py::test_target_and_instrumentation_contracts_remain_explicit"
     ],
     "removed_nodes": [
