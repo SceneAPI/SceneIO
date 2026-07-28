@@ -103,13 +103,12 @@ A format may be called stable only when:
 
 All 50 current codecs already have repo-maintained adapters and optimized I/O
 contracts. Repository source closure is not yet complete: `miniz` 3.0.2,
-`nlohmann_json` 3.11.3, `zstd` 1.5.6, and `fast_float` 6.1.6 are
-repository-contained, while `lazperf` and `libwebp` are still obtained through
+`nlohmann_json` 3.11.3, `zstd` 1.5.6, `fast_float` 6.1.6, and `lazperf`
+3.4.0 are repository-contained, while `libwebp` is still obtained through
 CMake `FetchContent`. Before the post-0.2 codec tier is called stable, vendor
-those two exact audited revisions
-into `src/cpp/third_party/`, copy their upstream notices into `LICENSES/`,
-retain the current local patches, and prove an offline sdist-to-wheel build on
-MSVC, GCC 10, and AppleClang.
+that exact audited revision into `src/cpp/third_party/`, copy its upstream
+notices into `LICENSES/`, retain the current local patches, and prove an
+offline sdist-to-wheel build on MSVC, GCC 10, and AppleClang.
 
 Optional scientific/heavy integrations may remain behind
 `SCENEIO_WITH_*` and use separately provisioned native libraries. They are
@@ -2189,9 +2188,9 @@ lane before starting the next unit.
    remote comparison.
 3. **Repository source closure for the stable tier (R6).**
    Vendor the exact selected revisions under `src/cpp/third_party/`. Miniz
-   3.0.2, nlohmann/json 3.11.3, zstd 1.5.6, and fast_float 6.1.6 are
-   repository-contained; the remaining closure set is LAZperf 3.4.0 commit
-   and libwebp 1.5.0. Include a future backend replacement only after it passes its
+   3.0.2, nlohmann/json 3.11.3, zstd 1.5.6, fast_float 6.1.6, and LAZperf
+   3.4.0 are repository-contained; the remaining closure set is libwebp
+   1.5.0. Include a future backend replacement only after it passes its
    selection gate, and retire an old kernel only when no live codec uses it.
    Preserve local LAZperf integration changes, add `COMMIT.txt`
    provenance/hashes, retain all `LICENSES/` notices, and remove default-build
@@ -2268,12 +2267,11 @@ This stable heading remains as the active-plan navigation target.
 
 1. **Complete locally:** extend the point-cloud contract with a lossless
    optional sidecar and add plain-LAS formats 4/5/9/10 parity.
-2. **Complete locally:** integrate pinned LAZperf 3.4.0 source through CMake
-   `FetchContent`
-   (Apache-2.0/BSD-3-Clause/BSD-2-Clause) for
+2. **Complete locally:** integrate pinned, repository-contained LAZperf 3.4.0
+   source (Apache-2.0/BSD-3-Clause/BSD-2-Clause) for
    LAZ, retain the same point semantics, add chunk-aware selection, and prove
-   bounded decompression memory. Moving the selected source in-tree remains
-   part of R6.
+   bounded decompression memory. The selected source is now stored in-tree
+   with exact upstream/final manifests and a reviewable seven-file patch.
 3. **Complete locally:** land `ImageSequence` with frame timestamps/durations,
    dimensions, ownership, and native planar/chroma metadata.
 4. **Complete locally:** add image-directory and raw Y4M support; these

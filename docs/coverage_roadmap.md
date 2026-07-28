@@ -390,11 +390,10 @@ identity) regardless of codec progress — codecs work today via informal labels
 
 - In-tree/header-only dependencies keep the default build independent of
   system libraries. The production adapters are already repo-maintained, but
-  miniz, nlohmann/json, zstd, and fast_float are now repository-contained;
-  LAZperf and libwebp still arrive through pinned `FetchContent`. Moving
-  those two exact revisions under
-  `src/cpp/third_party/` is the remaining offline/source-ownership gate for the
-  post-0.2 stable tier.
+  miniz, nlohmann/json, zstd, fast_float, and LAZperf are now
+  repository-contained; libwebp still arrives through pinned `FetchContent`.
+  Moving that exact revision under `src/cpp/third_party/` is the remaining
+  offline/source-ownership gate for the post-0.2 stable tier.
 - Optional system libs compile in per `SCENEIO_WITH_*`; absent → the codec
   reports `needs_dep` and raises a clean "format not built" error, never an
   import crash. The cibuildwheel images gain them via vcpkg/conda as each phase

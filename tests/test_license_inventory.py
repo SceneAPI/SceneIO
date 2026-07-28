@@ -11,6 +11,7 @@ LICENSES = ROOT / "LICENSES"
 EXPECTED_NOTICES = {
     "cgltf.txt",
     "fast-float.txt",
+    "lazperf-source.txt",
     "lazperf.txt",
     "libjpeg-turbo-IJG.txt",
     "libjpeg-turbo.txt",
@@ -30,13 +31,13 @@ EXPECTED_NOTICES = {
 }
 
 FETCHCONTENT_NOTICE = {
-    "lazperf": "lazperf.txt",
     "libwebp": "libwebp.txt",
 }
 
 VENDORED_NOTICE = {
     "cgltf": "cgltf.txt",
     "fast_float": "fast-float.txt",
+    "lazperf": "lazperf.txt",
     "lodepng": "lodepng.txt",
     "miniz": "miniz.txt",
     "nlohmann_json": "nlohmann-json.txt",
@@ -81,6 +82,92 @@ SOURCE_CLOSURE = {
                 r"if\(MSVC_VERSION GREATER 1910\)\s*"
                 r"target_compile_options\(fast_float INTERFACE /permissive-\)\s*"
                 r"endif\(\)"
+            ),
+        ),
+    },
+    "lazperf": {
+        "version": "3.4.0",
+        "commit": "b7bbe26109dc986f42d4fc80b8de3d2b6ca634ce",
+        "archive_sha256": (
+            "17df34ca64cc60e107f0c214db4729c5"
+            "4a514df4e32de5bc1b8b7b7c5a805a56"
+        ),
+        "notice": "lazperf.txt",
+        "source_notice": "lazperf-source.txt",
+        "source_notice_file": "NOTICE.txt",
+        "source_notice_markers": (
+            "Mathias Panzenböck",
+            "http://github.com/panzi/mathfun/blob/master/examples/portable_endian.h",
+        ),
+        "source_notice_sources": ("cpp/lazperf/portable_endian.hpp",),
+        "packaged_notice_markers": (
+            '"License": Public Domain',
+            "place this file hereby into the public domain",
+            '"dual licensed" under the BSD,',
+        ),
+        "license": "COPYING",
+        "manifest": "SOURCE_MANIFEST.sha256",
+        "path_sorted_manifest": True,
+        "manifest_sha256": (
+            "f7811663db8e3af8a8e02f264855da57"
+            "c1ed34bca7be56f8024a6d272e002ab2"
+        ),
+        "upstream_manifest": "UPSTREAM_MANIFEST.sha256",
+        "upstream_manifest_sha256": (
+            "25dec34174ea9ec01899bc7299724819e"
+            "b94659de264ae1dbce046ff9c7be737"
+        ),
+        "patch": "LOCAL_CHANGES.patch",
+        "patch_sha256": (
+            "d35a90f323511ddb371547c4c420bac6"
+            "390ef90b498d9ccec244f496a9cceb04"
+        ),
+        "patched_files": (
+            "cpp/lazperf/compressor.hpp",
+            "cpp/lazperf/decompressor.hpp",
+            "cpp/lazperf/detail/field_point10.cpp",
+            "cpp/lazperf/detail/field_point14.cpp",
+            "cpp/lazperf/detail/field_xyz.hpp",
+            "cpp/lazperf/streams.hpp",
+            "cpp/lazperf/utils.hpp",
+        ),
+        "auxiliary_files": (
+            "LOCAL_CHANGES.patch",
+            "NOTICE.txt",
+            "UPSTREAM_MANIFEST.sha256",
+        ),
+        "cmake_sources": (
+            "cpp/lazperf/charbuf.cpp",
+            "cpp/lazperf/detail/field_byte10.cpp",
+            "cpp/lazperf/detail/field_byte14.cpp",
+            "cpp/lazperf/detail/field_gpstime10.cpp",
+            "cpp/lazperf/detail/field_nir14.cpp",
+            "cpp/lazperf/detail/field_point10.cpp",
+            "cpp/lazperf/detail/field_point14.cpp",
+            "cpp/lazperf/detail/field_rgb10.cpp",
+            "cpp/lazperf/detail/field_rgb14.cpp",
+            "cpp/lazperf/filestream.cpp",
+            "cpp/lazperf/header.cpp",
+            "cpp/lazperf/lazperf.cpp",
+            "cpp/lazperf/readers.cpp",
+            "cpp/lazperf/vlr.cpp",
+            "cpp/lazperf/writers.cpp",
+        ),
+        "cmake_patterns": (
+            (
+                r"set\(lazperf_SOURCE_DIR\s*"
+                r'"\$\{PROJECT_SOURCE_DIR\}/src/cpp/third_party/lazperf"\)'
+            ),
+            r"^add_library\(lazperf_static STATIC \$\{LAZPERF_SOURCES\}\)$",
+            (
+                r"target_compile_definitions\(\s*lazperf_static\s*"
+                r"PUBLIC LAZPERF_VENDORED"
+            ),
+            (
+                r"set_target_properties\(\s*lazperf_static\s*PROPERTIES\s*"
+                r"POSITION_INDEPENDENT_CODE ON\s*"
+                r"CXX_VISIBILITY_PRESET hidden\s*"
+                r"VISIBILITY_INLINES_HIDDEN ON\)"
             ),
         ),
     },
@@ -242,6 +329,64 @@ EXTERNAL_PROJECT_NOTICE = {
 }
 
 
+def _reverse_unified_file_patch(final_bytes: bytes, patch_section: str) -> bytes:
+    final_lines = final_bytes.decode("utf-8").splitlines(keepends=True)
+    patch_lines = patch_section.splitlines(keepends=True)
+    original_lines: list[str] = []
+    cursor = 0
+    index = 0
+    hunk_count = 0
+    hunk_pattern = re.compile(
+        r"^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@"
+    )
+
+    while index < len(patch_lines):
+        match = hunk_pattern.match(patch_lines[index])
+        if match is None:
+            index += 1
+            continue
+        hunk_count += 1
+        old_count = int(match.group(2) or 1)
+        new_start = int(match.group(3))
+        new_count = int(match.group(4) or 1)
+        new_index = new_start - 1
+        assert new_index >= cursor
+        original_lines.extend(final_lines[cursor:new_index])
+        cursor = new_index
+        old_seen = 0
+        new_seen = 0
+        index += 1
+
+        while index < len(patch_lines) and not patch_lines[index].startswith("@@"):
+            line = patch_lines[index]
+            if line.startswith(" "):
+                assert cursor < len(final_lines)
+                assert final_lines[cursor] == line[1:]
+                original_lines.append(line[1:])
+                cursor += 1
+                old_seen += 1
+                new_seen += 1
+            elif line.startswith("+"):
+                assert cursor < len(final_lines)
+                assert final_lines[cursor] == line[1:]
+                cursor += 1
+                new_seen += 1
+            elif line.startswith("-"):
+                original_lines.append(line[1:])
+                old_seen += 1
+            elif line.startswith("\\"):
+                raise AssertionError("LAZperf patch must preserve final newlines")
+            else:
+                break
+            index += 1
+        assert old_seen == old_count
+        assert new_seen == new_count
+
+    assert hunk_count
+    original_lines.extend(final_lines[cursor:])
+    return "".join(original_lines).encode("utf-8")
+
+
 def test_license_directory_is_complete_and_packaged() -> None:
     actual = {path.name for path in LICENSES.glob("*.txt")}
     assert actual == EXPECTED_NOTICES
@@ -303,13 +448,81 @@ def test_repository_contained_native_sources_match_recorded_hashes() -> None:
                 assert not path.is_absolute()
                 assert ".." not in path.parts
                 expected_files[relative_path] = expected_hash
+            if entry.get("path_sorted_manifest"):
+                assert list(expected_files) == sorted(expected_files, key=str.casefold)
             actual_files = {
                 path.relative_to(source_root).as_posix()
                 for path in source_root.rglob("*")
                 if path.is_file()
-                and path.name not in {"COMMIT.txt", entry["manifest"]}
+                and path.name
+                not in {
+                    "COMMIT.txt",
+                    entry["manifest"],
+                    *entry.get("auxiliary_files", ()),
+                }
             }
             assert actual_files == set(expected_files)
+
+            upstream_manifest_name = entry.get("upstream_manifest")
+            if upstream_manifest_name is not None:
+                upstream_manifest = source_root / upstream_manifest_name
+                upstream_bytes = upstream_manifest.read_bytes()
+                assert (
+                    hashlib.sha256(upstream_bytes).hexdigest()
+                    == entry["upstream_manifest_sha256"]
+                )
+                assert entry["upstream_manifest_sha256"] in provenance
+                upstream_files = {}
+                for line in upstream_bytes.decode("utf-8").splitlines():
+                    expected_hash, relative_path = line.split("  ", 1)
+                    upstream_files[relative_path] = expected_hash
+                if entry.get("path_sorted_manifest"):
+                    assert list(upstream_files) == sorted(
+                        upstream_files, key=str.casefold
+                    )
+                assert set(upstream_files) == set(expected_files)
+                assert {
+                    path
+                    for path in expected_files
+                    if expected_files[path] != upstream_files[path]
+                } == set(entry["patched_files"])
+
+                patch = source_root / entry["patch"]
+                patch_bytes = patch.read_bytes()
+                assert (
+                    hashlib.sha256(patch_bytes).hexdigest()
+                    == entry["patch_sha256"]
+                )
+                assert entry["patch_sha256"] in provenance
+                patch_text = patch_bytes.decode("utf-8")
+                headers = tuple(
+                    re.finditer(
+                        r"^diff --git a/(.+?) b/\1$",
+                        patch_text,
+                        re.MULTILINE,
+                    )
+                )
+                assert tuple(match.group(1) for match in headers) == entry[
+                    "patched_files"
+                ]
+                for index, match in enumerate(headers):
+                    relative_path = match.group(1)
+                    end = (
+                        headers[index + 1].start()
+                        if index + 1 < len(headers)
+                        else len(patch_text)
+                    )
+                    reconstructed = _reverse_unified_file_patch(
+                        (source_root / relative_path).read_bytes(),
+                        patch_text[match.start() : end],
+                    )
+                    assert (
+                        hashlib.sha256(reconstructed).hexdigest()
+                        == upstream_files[relative_path]
+                    )
+                    assert "MODIFIED BY SCENEIO (2026)" in (
+                        source_root / relative_path
+                    ).read_text(encoding="utf-8")
         else:
             expected_files = entry["files"]
 
@@ -333,6 +546,11 @@ def test_repository_contained_native_licenses_are_exact_distribution_copies() ->
         if source_notice_name is None:
             continue
         packaged_notice = (LICENSES / source_notice_name).read_bytes().decode("utf-8")
+        source_notice_file = entry.get("source_notice_file")
+        if source_notice_file is not None:
+            assert packaged_notice == (
+                ROOT / "src/cpp/third_party" / project / source_notice_file
+            ).read_bytes().decode("utf-8")
         if project == "miniz":
             source_text = (
                 ROOT / "src/cpp/third_party" / project / "miniz.c"
@@ -358,6 +576,8 @@ def test_repository_contained_native_licenses_are_exact_distribution_copies() ->
         for marker in entry.get("source_notice_markers", ()):
             assert marker in selected_sources
             assert marker in packaged_notice
+        for marker in entry.get("packaged_notice_markers", ()):
+            assert marker in packaged_notice
 
 
 def test_repository_contained_native_sources_replace_their_fetches() -> None:
@@ -375,3 +595,18 @@ def test_repository_contained_native_sources_replace_their_fetches() -> None:
         )
         for pattern in entry["cmake_patterns"]:
             assert re.search(pattern, dependencies, re.MULTILINE | re.DOTALL)
+
+        expected_sources = entry.get("cmake_sources")
+        if expected_sources is not None:
+            source_block = re.search(
+                rf"set\({project.upper()}_SOURCES\s+(.*?)\)",
+                dependencies,
+                re.DOTALL,
+            )
+            assert source_block is not None
+            assert tuple(
+                re.findall(
+                    rf'"\$\{{{project}_SOURCE_DIR\}}/(.+?)"',
+                    source_block.group(1),
+                )
+            ) == expected_sources

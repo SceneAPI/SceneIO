@@ -123,8 +123,9 @@ The starting code checkpoint is `d52c1e0` on 2026-07-25:
   `tests/codecs/test_colmap_db.py` imports it unconditionally; its explicit
   allocation-accounting check also reports 376 bytes rooted in CPython and
   pydantic-core rather than `sceneio._core`;
-- six default native dependencies still arrive through CMake
-  `FetchContent`;
+- at this checklist's initial snapshot, six default native dependencies still
+  arrived through CMake `FetchContent`; the live R6 ledger below supersedes
+  that historical count;
 - the last successful build-only release matrix, run 30163127394 at
   `daf991ab`, predates ImageSequence/Y4M and the centralized license inventory;
   current-head sdist/wheel-matrix validation is pending and user-gated;
@@ -3916,7 +3917,7 @@ Perform one dependency per commit.
 | nlohmann/json | 3.11.3 / `9cca280a4d0ccf0c08f47a99aa71d1b0e52f8d03` | ✅ exact 45-header tree and license hashes recorded | ✅ local interface target; no nlohmann/json fetch | ✅ rebuild, parity, strict benchmark, sdist-derived wheel, installed smoke, and three reviews | this commit |
 | zstd | 1.5.6 / `794ea1b0afca0f020f4e57b6732332231fb23c70` | ✅ exact selected library/build files and hashes recorded | ✅ local upstream static target; no zstd fetch | ✅ rebuild, dual-profile SPZ benchmark, strict sweep, exact package, isolated smoke, and three reviews | this commit |
 | fast_float | 6.1.6 / `00c8c7b0d5c722d2212568d915a39ea73b08b973` | ✅ exact nine-header tree and MIT license hashes recorded | ✅ local interface target; no fast_float fetch | ✅ rebuild, parity, strict benchmark, exact package, isolated smoke, and three reviews | this commit |
-| LAZperf | 3.4.0 / `b7bbe26109dc986f42d4fc80b8de3d2b6ca634ce` | ⬜ | ⬜ | ⬜ | pending |
+| LAZperf | 3.4.0 / `b7bbe26109dc986f42d4fc80b8de3d2b6ca634ce` | ✅ exact 47-file tree, pristine/final manifests, and seven-file patch recorded | ✅ explicit hidden static target; no LAZperf fetch | ✅ rebuild, parity, strict benchmark, exact package, isolated smoke, and three reviews | this commit |
 | libwebp | 1.5.0 | ⬜ | ⬜ | ⬜ | pending |
 
 The shared R6.1–R6.3 boxes remain open until all six rows satisfy them. Each
@@ -4090,6 +4091,60 @@ fast_float local evidence at the review candidate:
   platform/package/documentation reviews are clear after restoring and locking
   the upstream MSVC conformance option, correcting the extension-export
   wording, and regenerating the exact staged-index package.
+
+LAZperf local evidence at the corrected review snapshot:
+
+- the 4,993,241-byte archive for tag 3.4.0/commit
+  `b7bbe26109dc986f42d4fc80b8de3d2b6ca634ce` has SHA-256
+  `17df34ca64cc60e107f0c214db4729c54a514df4e32de5bc1b8b7b7c5a805a56`;
+- the selected closure is the exact upstream `COPYING` plus the complete
+  47-file `cpp/lazperf/**` library/header tree. The 4,546-byte pristine and
+  final path-sorted manifests have SHA-256
+  `25dec34174ea9ec01899bc7299724819eb94659de264ae1dbce046ff9c7be737`
+  and
+  `f7811663db8e3af8a8e02f264855da57c1ed34bca7be56f8024a6d272e002ab2`.
+  Exactly seven files differ, each carries a prominent SceneIO modification
+  notice, and the 13,917-byte reviewable patch has SHA-256
+  `d35a90f323511ddb371547c4c420bac6390ef90b498d9ccec244f496a9cceb04`.
+  The selected-source notice also restores the Mathias Panzenböck
+  `portable_endian` public-domain statement and BSD/MIT/Apache fallback;
+- CMake names exactly 15 translation units from the repository source and
+  configures a position-independent hidden static target.
+  `LAZPERF_VENDORED` propagates to `_core`; the generated project contains no
+  `_deps/lazperf-src` path;
+- editable rebuild and native-symbol import pass. Focused LAZ/source/build
+  coverage is `79 passed`; the complete suite remains
+  `3401 passed, 4 skipped`, and Ruff and diff checks pass;
+- the strict all-50 five-run benchmark passes every retained O4/O5,
+  mapped-read, and file-sink gate. Its 52,069-byte JSON has SHA-256
+  `f80ca7015254975f0066df2b157b34b0a3f4c529edc1e25f21d972542c707683`
+  and retains structural projection
+  `8f218ff77bcf2ea1e918d4ed164f7184fa2662eb252508c387b5f131a053a8e7`.
+  LAZ records 64 MB/s encode, 232 MB/s buffer decode, 231 MB/s mapped path
+  read, a 14.6 MB versus 0.01 MB traced read-allocation delta, a 0.0006 MB
+  file-sink allocation, and a 3.15x partial-read speedup;
+- exact staged-index tree `08665e3777dbb218b33183d0e85d05382654d138`
+  produces a 5,219,332-byte source archive with SHA-256
+  `1b520ffd178aa3eb2509dad20a2e07605b59042a308a7f8a4a308884c36e1900`.
+  All 621 staged Git blobs match their archive members byte-for-byte; the
+  archive adds only generated `PKG-INFO` and includes all 53 LAZperf
+  source/provenance members. Its sdist-derived 2,186,905-byte Windows abi3
+  wheel has SHA-256
+  `2f231a79bb2490431aea337ce8db93d08291a7b489281d1249287ea4fe045649`,
+  contains 87 files, one extension, all 21 license assets, no source/build
+  payload, and NumPy as its only unconditional runtime dependency;
+- isolated installed-wheel smoke imports both Python and native modules from
+  the target directory and completes all 50 built-in cases at phase `2`.
+  Native inspection reports only Python and standard Windows runtime
+  libraries. The extension export table is reduced from the prior 239 entries
+  to 21: `PyInit__core` plus 20 nanobind exception-runtime symbols, with zero
+  LAZperf exports;
+- the architecture/correctness, test/performance, and
+  platform/package/documentation reviews are clear.
+
+The artifact hashes above bind the exact pre-documentation review tree. The
+post-review staged-index package is rebuilt and reported outside its own
+packaged checklist so the artifact is not required to contain its own hash.
 
 ### R6.1 — provenance and source intake
 

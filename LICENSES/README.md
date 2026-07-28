@@ -18,7 +18,7 @@ redistribution choice used by SceneIO is stated explicitly.
 | nlohmann/json | 3.11.3, commit `9cca280a4d0ccf0c08f47a99aa71d1b0e52f8d03` | vendored compiled header-only code | MIT; C++11-only Abseil fallback is Apache-2.0 | [top-level license](nlohmann-json.txt), [selected-source attribution](nlohmann-json-source.txt) |
 | Zstandard | 1.5.6, commit `794ea1b0afca0f020f4e57b6732332231fb23c70` | vendored and statically linked | BSD-3-Clause; selected libdivsufsort and build-helper code use MIT-compatible terms | [top-level license](zstd.txt), [selected-source attribution](zstd-source.txt) |
 | fast_float | 6.1.6, commit `00c8c7b0d5c722d2212568d915a39ea73b08b973` | vendored compiled header-only code | MIT option | [fast-float.txt](fast-float.txt) |
-| LAZperf | 3.4.0, commit `b7bbe26109dc986f42d4fc80b8de3d2b6ca634ce` | statically linked selected library sources | Apache-2.0, BSD-3-Clause, BSD-2-Clause | [lazperf.txt](lazperf.txt) |
+| LAZperf | 3.4.0, commit `b7bbe26109dc986f42d4fc80b8de3d2b6ca634ce` | vendored and statically linked | Apache-2.0, BSD-3-Clause, BSD-2-Clause; portable endian header is public domain with BSD/MIT/Apache fallback | [top-level license](lazperf.txt), [selected-source attribution](lazperf-source.txt) |
 | LodePNG | version 20260119, commit `ed6fe5825c6a4fbb7f58ab35a4231c7543cd452a` | vendored and statically linked | zlib | [lodepng.txt](lodepng.txt) |
 | SQLite | 3.53.4 amalgamation | vendored and statically linked | public domain | [sqlite.txt](sqlite.txt) |
 | libwebp | 1.5.0 | statically linked core libraries | BSD-3-Clause | [libwebp.txt](libwebp.txt) |
@@ -31,8 +31,7 @@ redistribution choice used by SceneIO is stated explicitly.
 The complete Apache-2.0 terms in the root `LICENSE` also cover the
 Apache-licensed portion of LAZperf. Local integration and correctness changes
 to vendored or fetched projects are documented beside their sources in
-`src/cpp/third_party/*/COMMIT.txt` and in
-`cmake/SceneIODependencies.cmake`.
+`src/cpp/third_party/*/COMMIT.txt`.
 
 NumPy is SceneIO's sole runtime dependency, but it is installed as a separate
 distribution and is not copied or linked into SceneIO wheels. Build tools and

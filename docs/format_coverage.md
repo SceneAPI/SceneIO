@@ -654,7 +654,7 @@ native build pattern (miniz, zstd, nlohmann/json, fast_float) — so they needed
 | OpenEXR | `Image`(f32) (raw) + `DepthMap` (typed) | tinyexr (BSD) — reuses our miniz | ✅ R+W; OpenEXR‑python oracle; HALF→FLOAT, premult‑alpha, PIZ/ZIP/RLE; explicit single-channel typed depth |
 | plain `.las` | `PointCloud` | **none** — hand‑parsed binary, like colmap `.bin` | ✅ R+W; laspy oracle; formats 0‑10, origin+rgb16, georef rebase; formats 4/5/9/10 preserve internal waveform descriptor VLRs, packet EVLR, references, and opaque point fields in a sidecar |
 | `.laz` | `PointCloud` | LAZperf 3.4.0 (Apache‑2.0/BSD‑3-Clause/BSD‑2-Clause) | ✅ R+W; laspy/lazrs oracle; formats 0‑3 and 6‑8, exact standard records, chunk-parallel decode and chunk-aware ranges, mmap, header inspect, seekable streaming sink; waveform, extra bytes, unrelated VLR/EVLR metadata, and COPC reject |
-| WebP | `Image` | libwebp (BSD) — CMake FetchContent from source | ✅ R+W; pillow oracle; lossless byte‑exact + lossy; built clean on MSVC |
+| WebP | `Image` | libwebp (BSD) — pinned CMake FetchContent source, pending R6 repository intake | ✅ R+W; pillow oracle; lossless byte‑exact + lossy; built clean on MSVC |
 
 Cross‑cutting: the cibuildwheel dry run and tagged release both built and
 smoke‑tested the abi3 wheels on Linux, macOS, and Windows. SceneIO 0.2.0 is
@@ -665,11 +665,10 @@ signed-shift UB in JPEG entropy output (see `stb/COMMIT.txt`). CMYK JPEG is
 best‑effort stb→RGB and opaque RGBA collapses to RGB in WebP (both documented).
 
 Genuinely need the system‑lib `SCENEIO_WITH_*` gate (deferred): HDF5 (+hloc),
-TIFF (libtiff). **LAZ is statically built from pinned LAZperf 3.4.0 source
-fetched at configure time** (Apache‑2.0/BSD‑3-Clause/BSD‑2-Clause), with
-formats 0‑3 and 6‑8 in its supported compression set; R6 will make that source
-repository-contained. COLMAP DB `.db` is covered by a pinned public-domain SQLite amalgamation
-statically linked into `_core`.
+TIFF (libtiff). **LAZ is statically built from repository-contained LAZperf
+3.4.0 source** (Apache‑2.0/BSD‑3-Clause/BSD‑2-Clause), with formats 0‑3 and
+6‑8 in its supported compression set. COLMAP DB `.db` is covered by a pinned
+public-domain SQLite amalgamation statically linked into `_core`.
 
 ### ✅ Post-0.2 self-contained expansion
 
@@ -736,11 +735,11 @@ expanded 50-codec benchmark/oracles.
 | CI parity (oracles in CI) | ✅ | At `a5e7fa4`, normal Linux CI passes 2,914 tests with nine documented platform/oracle skips, the 50-codec performance guard, pinned GCC 10 portability, and the three-OS focused matrix |
 | Codec registry + `read`/`write`/`inspect`/`read_partial`/`detect` | ✅ | inspection covers all 50; bounded partial hooks are capability-specific |
 | Repo-maintained stable codec adapters | ✅ | all 50 production adapters, grammars, convention guards, inspectors, partial capability policies/available paths, and sinks live in `src/cpp` / `src/sceneio`; separately installed implementations and executables are test/reference oracles only |
-| Offline native-source closure | 🟡 | lodepng, stb, tinyexr, SQLite, tinyobjloader, cgltf, miniz, nlohmann/json, zstd, and fast_float are stored in-tree; LAZperf and libwebp still use pinned CMake `FetchContent` and must move under `src/cpp/third_party/` before the post-0.2 tier is called stable |
+| Offline native-source closure | 🟡 | lodepng, stb, tinyexr, SQLite, tinyobjloader, cgltf, miniz, nlohmann/json, zstd, fast_float, and LAZperf are stored in-tree; libwebp is the final pinned CMake `FetchContent` dependency and must move under `src/cpp/third_party/` before the post-0.2 tier is called stable |
 | Zero‑copy numpy + torch (DLPack) | ✅ | validated per codec |
 | Conventions‑as‑metadata + write guards | ✅ | record‑don't‑convert enforced |
 | Parity kit (`sceneio.testing.parity`) | ✅ | cross‑impl + round‑trip + convention pins |
-| In-tree native dependencies | 🟡 | permissive and license-indexed; two dependencies remain source-fetched as described by the offline-closure row |
+| In-tree native dependencies | 🟡 | permissive and license-indexed; libwebp remains source-fetched as described by the offline-closure row |
 | Image libraries | 🟡 | lodepng/stb/tinyexr are in-tree; libwebp 1.5.0 is pinned and statically built but still fetched at configure time |
 | Feature‑flagged optional C libs (`SCENEIO_WITH_*`) | ⬜ | planned for HDF5, TIFF, E57, Arrow, USD, and OpenVDB; LAZ instead uses pinned, statically built LAZperf in the default tier |
 | mmap / streaming sources | ✅ | mmap reads + raw NPY/FLO views + direct file-sink writes complete |

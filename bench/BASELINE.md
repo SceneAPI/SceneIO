@@ -2907,3 +2907,36 @@ one-lane reference. These results confirm that moving the byte-exact headers
 in-tree did not change the benchmark contract or remove the measured text I/O
 gains. This is local MSVC evidence; the final user-gated build-only
 multi-platform R6 validation remains outstanding.
+
+## R6 LAZperf source-ownership confirmation (2026-07-28)
+
+The production LAZ codec remains the pinned LAZperf 3.4.0 implementation with
+the same seven-file local correctness patch. This R6 unit changes source and
+build ownership: the complete 47-file public-header/library tree is now stored
+under `src/cpp/third_party/lazperf`, and CMake builds an explicit 15-file
+static target rather than downloading and mutating the archive at configure
+time.
+
+The confirming five-run strict sweep passed every retained O4/O5, mapped-read,
+and file-sink gate. Its 52,069-byte JSON has SHA-256
+`f80ca7015254975f0066df2b157b34b0a3f4c529edc1e25f21d972542c707683`
+and matches structural projection
+`8f218ff77bcf2ea1e918d4ed164f7184fa2662eb252508c387b5f131a053a8e7`.
+The LAZ row measured:
+
+| Direction/path | Result |
+|---|---:|
+| Encode | 64 MB/s |
+| Buffer decode | 232 MB/s |
+| Public mapped path read | 231 MB/s |
+| Direct file sink | 64 MB/s |
+| Metadata inspection | 0.045 ms / 1,149x full-read speedup |
+| Chunk-aware point subset | 16.49 ms / 3.15x full-read speedup |
+
+The mapped path retained the 14.6 MB whole-file allocation reduction
+(14.59 MB for a Python `bytes` input versus 0.01 MB traced overhead), and the
+direct sink retained approximately 0.0006 MB traced overhead. The extension
+no longer exports LAZperf API symbols. These results show no source-ownership
+regression and preserve the established optimized LAZ paths. This is local
+MSVC evidence; the final user-gated build-only multi-platform R6 validation
+remains outstanding.

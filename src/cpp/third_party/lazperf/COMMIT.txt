@@ -5,50 +5,52 @@ Tag: 3.4.0
 Commit: b7bbe26109dc986f42d4fc80b8de3d2b6ca634ce
 Retrieved: 2026-07-25
 License: Apache-2.0 for the LASzip-derived codec, BSD-3-Clause for the
-Hobu-authored stream/support files, and BSD-2-Clause for the arithmetic coder.
-All are permissive. SceneIO's root LICENSE carries Apache-2.0, and NOTICE.txt
-carries the required BSD binary-distribution notices.
+Hobu-authored stream/support files, BSD-2-Clause for the arithmetic coder, and
+public domain with BSD/MIT/Apache fallback for portable_endian.hpp. All are
+permissive. COPYING contains the upstream Apache-2.0 distribution license, and
+NOTICE.txt carries the selected-source notices.
 
 Source archive:
 https://github.com/hobuinc/laz-perf/archive/b7bbe26109dc986f42d4fc80b8de3d2b6ca634ce.tar.gz
+Size: 4993241 bytes
 SHA-256:
 17df34ca64cc60e107f0c214db4729c54a514df4e32de5bc1b8b7b7c5a805a56
 
-SceneIO fetches that immutable archive at configure time and compiles only:
-- cpp/lazperf/*.cpp
-- cpp/lazperf/detail/*.cpp
+Selected repository-contained source:
+- COPYING
+- cpp/lazperf/** (the complete 47-file public-header and library-source tree)
 
-Upstream's shared library, tools, examples, tests, benchmarks, install rules,
-and downloaded test data are not configured.
+Every selected pristine upstream file and its SHA-256 is recorded in
+UPSTREAM_MANIFEST.sha256. The path-sorted manifest is 4546 bytes with SHA-256:
+25dec34174ea9ec01899bc7299724819eb94659de264ae1dbce046ff9c7be737
+
+Every selected final repository file and its SHA-256 is recorded in
+SOURCE_MANIFEST.sha256. The path-sorted manifest is 4546 bytes with SHA-256:
+f7811663db8e3af8a8e02f264855da57c1ed34bca7be56f8024a6d272e002ab2
+
+SceneIO builds an explicit list of the 15 library translation units into one
+position-independent static archive. LAZPERF_VENDORED disables upstream's
+shared-library export annotations for this private static integration.
+Upstream CMake, shared-library targets, tools, examples, tests, benchmarks,
+install rules, and downloaded test data are not stored or configured.
 
 Local correctness patch:
 - cpp/lazperf/streams.hpp MemoryStream::getByte checks idx against buf.size()
-  and throws lazperf::error on exhaustion before indexing. Upstream format-1.4
-  decoders copy bounded layer bytes into this vector, so the check converts a
-  corrupt arithmetic layer's over-read into the same clean codec error as an
-  exhausted outer callback. CMake applies an exact idempotent replacement and
-  fails if the pinned target changes.
-- cpp/lazperf/decompressor.hpp routes full-range predictor addition through the
-  shared modulo-2^32 helper, computes bounded predictor/corrector arithmetic in
-  int64 in both the normal and optional COMPRESS_ONLY_K decoder branches, and
-  rejects a malformed k=31 corrector that cannot fit int32. This preserves
-  valid LASzip arithmetic while making corrupted layered streams raise
-  lazperf::error instead of executing signed-overflow behavior. CMake migrates
-  the earlier inline form, accepts exactly one known include/predictor state,
-  requires exactly two original or two patched corrector blocks, writes the
-  fetched header only when its content changes, and fails if the pinned targets
-  change. Off-by-default native correctness targets compile the normal and
-  COMPRESS_ONLY_K branches in separate executables and drive controlled k=31
-  symbols to the exact range rejection.
-- cpp/lazperf/utils.hpp defines the LAS modulo-2^32 conversion once;
+  and throws lazperf::error on exhaustion before indexing.
+- cpp/lazperf/decompressor.hpp routes full-range predictor addition through a
+  modulo-2^32 helper, computes bounded predictor/corrector arithmetic in int64
+  in both decoder branches, and rejects an out-of-range k=31 corrector.
+- cpp/lazperf/utils.hpp defines the modulo-2^32 conversion once;
   compressor.hpp, decompressor.hpp, detail/field_point10.cpp,
   detail/field_point14.cpp, and detail/field_xyz.hpp use it for full-range
   coordinate differences and reconstruction. The compressor also derives an
   INT32_MIN magnitude without signed negation, performs its bounded corrector
-  fold in int64, and uses an unsigned high-bit shift. These changes preserve
-  the LASzip wrap convention for valid INT32_MIN/INT32_MAX transitions on both
-  legacy and layered point formats. CMake applies each replacement exactly
-  once and the native arithmetic target checks the wrap boundaries directly.
+  fold in int64, and uses an unsigned high-bit shift.
 
-The wrapper also validates container extents and supplies bounded callbacks
-before calling the codec.
+LOCAL_CHANGES.patch records exactly those seven upstream-to-repository file
+differences, including the prominent SceneIO modification notice carried by
+each changed file. The patch is 13917 bytes with SHA-256:
+d35a90f323511ddb371547c4c420bac6390ef90b498d9ccec244f496a9cceb04
+
+The SceneIO wrapper additionally validates container extents and supplies
+bounded callbacks before calling the codec.
