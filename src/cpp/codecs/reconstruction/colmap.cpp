@@ -21,15 +21,19 @@ using namespace sio;
 
 namespace {
 
+std::filesystem::path native_path(const std::string &path) {
+    return std::filesystem::u8path(path);
+}
+
 std::string read_file(const std::string &path) {
-    std::ifstream f(path, std::ios::binary);
+    std::ifstream f(native_path(path), std::ios::binary);
     if (!f) throw std::invalid_argument("COLMAP: cannot open " + path);
     return std::string(std::istreambuf_iterator<char>(f), {});
 }
 
 bool path_exists(const std::string &path) {
     std::error_code error;
-    const bool exists = std::filesystem::exists(path, error);
+    const bool exists = std::filesystem::exists(native_path(path), error);
     if (error)
         throw std::invalid_argument(
             "COLMAP: cannot inspect " + path + ": " + error.message());
@@ -64,7 +68,8 @@ void require_no_extension_sidecars(const std::string &dir) {
 class BufferedFileWriter {
 public:
     explicit BufferedFileWriter(const std::string &path)
-        : path_(path), file_(path, std::ios::binary | std::ios::trunc) {
+        : path_(path),
+          file_(native_path(path), std::ios::binary | std::ios::trunc) {
         if (!file_)
             throw std::invalid_argument("COLMAP: cannot write " + path);
         buffer_.reserve(1 << 16);
@@ -457,9 +462,10 @@ void read_points(const std::string &b, Reconstruction &r) {
             "COLMAP: trailing bytes in points3D.bin");
 }
 
-Reconstruction read_sparse(const std::string &dir) {
+Reconstruction read_sparse(const std::string &dir,
+                           bool allow_extension_sidecars) {
     nb::gil_scoped_release rel;
-    require_no_extension_sidecars(dir);
+    if (!allow_extension_sidecars) require_no_extension_sidecars(dir);
     Reconstruction r;
     const bool has_rigs = path_exists(dir + "/rigs.bin");
     const bool has_frames = path_exists(dir + "/frames.bin");
@@ -497,7 +503,7 @@ Reconstruction read_sparse_image(const std::string &dir, uint32_t image_id) {
     r.obs_off.push_back(0);
     r.track_off.push_back(0);
 
-    std::ifstream images(dir + "/images.bin", std::ios::binary);
+    std::ifstream images(native_path(dir + "/images.bin"), std::ios::binary);
     if (!images)
         throw std::invalid_argument("COLMAP: cannot open " + dir +
                                     "/images.bin");
@@ -593,7 +599,7 @@ Reconstruction read_sparse_image(const std::string &dir, uint32_t image_id) {
                 required_camera_ids.insert(r.rig_sensor_ids[sensor]);
     }
 
-    std::ifstream cameras(dir + "/cameras.bin", std::ios::binary);
+    std::ifstream cameras(native_path(dir + "/cameras.bin"), std::ios::binary);
     if (!cameras)
         throw std::invalid_argument("COLMAP: cannot open " + dir +
                                     "/cameras.bin");
@@ -738,10 +744,11 @@ void write_points(const Reconstruction &r, const std::string &path) {
     writer.finish();
 }
 
-void write_sparse(const Reconstruction &r, const std::string &dir) {
+void write_sparse(const Reconstruction &r, const std::string &dir,
+                  bool allow_extension_sidecars) {
     nb::gil_scoped_release rel;
     validate_colmap_reconstruction(r, "COLMAP");
-    require_no_extension_sidecars(dir);
+    if (!allow_extension_sidecars) require_no_extension_sidecars(dir);
     if (!r.has_rig_frame_model &&
         (path_exists(dir + "/rigs.bin") ||
          path_exists(dir + "/frames.bin")))
@@ -758,14 +765,25 @@ void write_sparse(const Reconstruction &r, const std::string &dir) {
 }  // namespace
 
 void register_colmap(nb::module_ &m) {
-    m.def("read_colmap_sparse", &read_sparse, "path"_a,
+    m.def("read_colmap_sparse",
+          [](const std::string &path) { return read_sparse(path, false); },
+          "path"_a,
           "Read a legacy three-file or modern five-file COLMAP binary "
           "sparse model directory, preserving rigs and frames.");
+    m.def("_read_colmap_sparse_with_sidecars",
+          [](const std::string &path) { return read_sparse(path, true); },
+          "path"_a,
+          "Internal extended-adapter sparse reader.");
     m.def("read_colmap_sparse_image", &read_sparse_image, "path"_a,
           "image_id"_a,
           "Read one COLMAP binary image and its camera without opening "
           "points3D.bin or materializing unrelated images.");
-    m.def("write_colmap_sparse", &write_sparse, "recon"_a, "path"_a,
+    m.def("write_colmap_sparse",
+          [](const Reconstruction &reconstruction,
+             const std::string &path) {
+              write_sparse(reconstruction, path, false);
+          },
+          "recon"_a, "path"_a,
           "Write a Reconstruction as a legacy three-file or modern "
           "five-file COLMAP binary sparse model directory using bounded "
           "direct-file streaming.");

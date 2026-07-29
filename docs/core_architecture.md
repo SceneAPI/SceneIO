@@ -256,6 +256,13 @@ cmake/
   PMVS, and CMP-MVS path topology, configs, optional raw-PMVS projections,
   Bundler-profile workspaces, raw visibility, and existing image-codec paths
   without opening encoded image payloads.
+  The public `sceneio.colmap` package follows the same adapter boundary for
+  portable fork workflow data: extended sparse sidecars, semantic
+  MappingInput v1/v2, MegaLoc artifacts, rig JSON, SIFT, pair/cap and match
+  text, and Sim3. It owns strict records and mapped/streamed transport without
+  adding registry codec IDs or runtime dependencies. The low-level sparse
+  bindings retain their default sidecar refusal; only the explicit extended
+  adapter opts into base-model parsing while it validates every companion.
   R3.1a keeps `bench/bench_io.py` as the compatible development-only facade
   while `bench/io_bench/model.py`, `measure.py`, and `reporting.py` own shared
   benchmark records, timing/traced allocation plus explicitly named

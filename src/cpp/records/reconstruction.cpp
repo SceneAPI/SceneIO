@@ -515,6 +515,12 @@ void register_reconstruction(nb::module_ &m) {
         .def_prop_ro("translations", [](const Reconstruction &r) { return vw(r.trans, {r.num_images(), 3}); }, ri)
         .def_prop_ro("image_camera_ids", [](const Reconstruction &r) { return vw(r.img_cam_ids, {r.num_images()}); }, ri)
         .def_prop_ro("image_names", [](const Reconstruction &r) { return r.img_names; })
+        .def_prop_ro("_observation_offsets", [](const Reconstruction &r) {
+            return vw(r.obs_off, {r.obs_off.size()});
+        }, ri)
+        .def_prop_ro("_observation_point3D_ids", [](const Reconstruction &r) {
+            return vw(r.obs_pt3d, {r.obs_pt3d.size()});
+        }, ri)
         .def_prop_ro("point3D_ids", [](const Reconstruction &r) { return vw(r.pt_ids, {r.num_points()}); }, ri)
         .def_prop_ro("xyz", [](const Reconstruction &r) { return vw(r.xyz, {r.num_points(), 3}); }, ri)
         .def_prop_ro("rgb", [](const Reconstruction &r) { return vw(r.rgb, {r.num_points(), 3}); }, ri)

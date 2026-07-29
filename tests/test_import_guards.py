@@ -101,6 +101,7 @@ def test_mapping_and_matching_may_import_data() -> None:
     "namespace",
     [
         "sceneio",
+        "sceneio.colmap",
         "sceneio.data",
         "sceneio.formats",
         "sceneio.mapping",

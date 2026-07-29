@@ -8,7 +8,10 @@ codec registry.
 Reference snapshot:
 
 - repository: `C:\Users\opsiclear\Desktop\projects\colmap_mod`
-- commit: `de15b08a2dba98b55d6ddfb7cedac147838afbb4`
+- compact-adapter reference commit:
+  `a3cfdd784d16a493878877f445fd1e27333fd8fc`
+- database/dense fixtures retain their earlier exact pin:
+  `de15b08a2dba98b55d6ddfb7cedac147838afbb4`
 - upstream COLMAP formats: BSD-3-Clause
 - OpsiClear additions: used with the repository owner's explicit
   authorization and reimplemented in SceneIO under Apache-2.0
@@ -54,9 +57,9 @@ Status terms:
 | Legacy COLMAP sparse binary: cameras/images/points3D | complete | Retain byte identity |
 | Modern sparse binary: rigs/cameras/frames/images/points3D | complete | Retain five-file byte identity, models 0-17, multi-sensor rigs, bounded writes, and the exact-commit three-toolchain validation |
 | Legacy and modern sparse text twins | complete | Retain value parity, binary-text-binary identity, and the exact-commit three-toolchain validation |
-| Markers and marker projections, binary/text | planned | Extend `Reconstruction` with lossless typed arrays; optional sidecars remain absent when no values exist |
-| Image-time, point-frame, and time-frame sidecars | planned | Preserve exact IDs, timestamps, sync groups, labels, version, and file-presence state |
-| ChArUco board and calibration sidecars | planned | Add typed board/calibration records with exact per-image poses and errors |
+| Markers and marker projections, binary/text | implemented locally adapter | `sceneio.colmap` preserves the exact binary/text fields, quoted Unicode labels, NaN absence, sentinels, and optional-file state |
+| Image-time, point-frame, and time-frame sidecars | implemented locally adapter | Mapped binary input, bounded text input, exact IDs/timestamps/text, and explicit presence |
+| ChArUco board and calibration sidecars | implemented locally adapter | Typed boards/sessions with guarded camera model cardinality and per-image WXYZ poses/errors |
 | Stock COLMAP 3.13 database | complete | Exact schema, typed rows, selected-profile writer, conversion report, and transactional validation |
 | Stock COLMAP 4.1.1 database | complete | Exact schema, typed rows, selected-profile writer, conversion report, and transactional validation |
 | Current upstream database | complete | Exact schema, recovered cameras, selected-profile writer, conversion report, and transactional validation |
@@ -71,19 +74,22 @@ Status terms:
 | NVM model | complete | No new codec |
 | Bundler bundle | complete with adapter companion | Core bundle values plus repository-owned one-name-per-line PMVS/Bundler list I/O |
 | Point/mesh PLY | complete | Keep SceneIO implementation; use current upstream only as a validation reference |
-| CAM export | planned | Small guarded write adapter |
-| Recon3D export | planned adapter | Directory writer for `Recon/` payload and image maps |
-| VRML camera/point export | planned | Guarded write-only adapter |
-| Rig config JSON | partial overlap only | Add a dedicated `CameraRig` adapter; generic calibration YAML/XML is not equivalent |
-| Project INI and joint-BA/alias JSON | planned adapter | Preserve unknown keys and exact numeric text; do not add Boost |
-| SIFT text import and pair/match text | planned | Small dependency-free feature/pair codecs |
-| Sim3 and alignment text | planned | Small typed geometry adapters |
-| MappingInput `PCMAPIN` v1/v2 | opaque partial | Replace opaque-only helper with a semantic versioned codec |
-| MegaLoc descriptor/pair artifact directory | planned adapter | Map numeric payloads to typed records and preserve manifest/name tables |
-| IncrementalVLAD NPZ | partial | Numeric arrays work; Unicode metadata needs an explicit metadata adapter |
-| Raster pixels shared with SceneIO codecs | partial by extension | Keep deterministic in-tree codecs; add TIFF separately if selected |
-| EXIF/XMP metadata | planned adapter | Add bounded metadata records and sidecar parsing without Exiv2 |
+| CAM export | optional write helper | Lossy camera-subset exporter; not a lossless closure gate |
+| Recon3D export | optional write helper | Lossy coordinated visualization/export files; not a lossless closure gate |
+| VRML camera/point export | outside closure | Derived visualization output |
+| Rig config JSON | implemented locally adapter | Strict multi-rig topology, exactly one reference sensor, paired WXYZ/XYZ transform and camera-model fields |
+| Project INI and joint-BA/alias JSON | outside closure | Application option documents, not scene interchange |
+| SIFT text import and pair/match text | implemented locally adapter | Exact SIFT shape, explicit reference truncation, stock/dense pair grammars, dense cap rows, and match blocks |
+| Sim3 and alignment text | implemented locally / outside closure | Sim3 is typed R+W; command-specific alignment name lists are selectors outside the lean closure |
+| Standalone undistorter image/model line | outside closure | One-command selector/configuration input, not a persisted scene model; camera models remain losslessly represented by the sparse adapters |
+| MappingInput `PCMAPIN` v1/v2 | implemented locally adapter | Semantic little-endian v1/v2, mapped read-only arrays, exact exhaustion, reference checks, and streaming atomic writes |
+| MegaLoc descriptor/pair artifact directory | implemented locally adapter | Mapped raw float32 descriptors, strict v1 manifest/name/pair cross-validation, metadata preservation, and streaming writes |
+| IncrementalVLAD NPZ | outside closure | Reproducible retrieval-index cache; existing NPZ remains available without enabling pickle |
+| Raster pixels shared with SceneIO codecs | complete by listed extension | Image paths remain opaque; TIFF is a separate optional generic format if selected |
+| EXIF/XMP metadata, embedded or `.xmp` sidecar | optional future adapter | Not required to preserve COLMAP image references; no Exiv2 dependency |
+| Video synchronization manifests | outside closure | Metadata-only application scheduling state; no encoded-media reader, writer, or dependency |
 | Encoded video and container readers/writers | reference only | No FFmpeg/libav or fork video implementation; use only for external verification |
+| FAISS vocabulary and inverted-index binaries | reference only | Retrieval-engine state tied to an optional external implementation, not portable scene interchange |
 | Hardware engines, ONNX/TensorRT state, RoMaXX runtime artifacts | reference only | Treat as application runtime state, not scene interchange |
 | Solver logs, profiling, reports, and decoded/staged caches | outside closure | No core codec |
 
@@ -415,21 +421,55 @@ C2 local implementation evidence:
 
 ### C3 - sparse extensions and compact interchange
 
-- [ ] Add marker/projection, time/frame, and ChArUco sidecars.
-- [ ] Add Bundler `list.txt`, CAM, Recon3D, VRML, rig JSON, SIFT text,
-  pair/match text, and Sim3 adapters.
-- [ ] Add semantic MappingInput v1/v2 and MegaLoc artifact adapters.
-- [ ] Preserve optional-file presence and reject unsupported conversions.
+- [x] Add marker/projection, time/frame, and ChArUco binary/text sidecars.
+- [x] Add rig JSON, SIFT text, stock/dense pair text, positional dense-cap,
+  match-block, and Sim3 adapters. Bundler `list.txt` was already complete in
+  C2.
+- [x] Add semantic MappingInput v1/v2 and MegaLoc artifact adapters.
+- [x] Preserve optional-file presence and reject unsupported conversions.
+- [x] Keep the core registry at 54 codecs and expose workflow bundles through
+  the lazy `sceneio.colmap` namespace.
+
+C3 local implementation evidence:
+
+- Independent `struct`, literal JSON, and literal text fixtures pin every
+  MappingInput version, all 14 sparse companion filenames, MegaLoc v1,
+  rig JSON, SIFT, pair/cap, match-block, and Sim3 wire fields.
+- The user-owned fork binding at `a3cfdd7` independently loaded
+  SceneIO-written MappingInput v2, MegaLoc descriptors/pairs, and rig JSON,
+  plus a binary sparse directory containing every marker, time/frame, and
+  ChArUco companion family.
+- MappingInput keypoints/matches and MegaLoc descriptors are read-only mapped
+  arrays with lifetime tests. Large MappingInput, descriptor, and sparse-tag
+  fixtures prove that reads do not allocate a whole-file Python copy.
+- Sparse fixed sidecars parse from read-only mappings; ID/tag output owns only
+  its two arrays. MegaLoc pair files, SIFT, pair/cap, match, MappingInput, and
+  sparse writers stream through atomic replacement.
+- The committed million-row benchmark records 3,158/1,339 MB/s MappingInput
+  mapped-read/stream-write and 3,211/494 MB/s MegaLoc
+  mapped-read/stream-write, with 0.104 MB or less traced read allocation and
+  0.021 MB or less traced write allocation.
+- The standard 54-codec COLMAP routes continue to refuse extension sidecars.
+  The explicit extended adapter opts into the base model only after it owns
+  and cross-validates every companion.
+- CAM and Recon3D are lossy write-only exports, while VRML is visualization;
+  they are classified rather than treated as lossless closure blockers.
+- The final C3/C4 local gate collects 3,878 nodes and passes 3,873 tests with
+  five documented optional/platform skips. The adapter suite passes 38 tests,
+  the focused closure gate passes 131 tests, installed-wheel smoke reports
+  phase 2, and Ruff, diff checks, and all three independent reviews are clear.
 
 ### C4 - metadata and final closure
 
-- [ ] Add the selected TIFF route and bounded EXIF/XMP metadata adapter if
-  dependency qualification succeeds.
-- [ ] Update the registry, public API, license inventory, wheel smoke, format
-  coverage, and benchmark catalog.
-- [ ] Run full local gates and the three-toolchain nonpublishing validation.
-- [ ] Record reference-only encoded-video coverage without adding its code.
-- [ ] Close the matrix with every row marked complete, adapter, reference only,
+- [x] Classify TIFF and EXIF/XMP as optional generic metadata/image work, not a
+  COLMAP closure dependency.
+- [x] Update the public adapter API, license inventory, format coverage, and
+  benchmark catalog without changing the 54-codec registry.
+- [x] Run full local gates and complete the three-review sign-off.
+- [ ] Run the exact pushed tree through the nonpublishing MSVC, GCC 10, and
+  AppleClang package validation.
+- [x] Record reference-only encoded-video coverage without adding its code.
+- [x] Close the matrix with every row marked complete, adapter, reference only,
   or outside closure; no ambiguous partial row remains.
 
 ## Verification required for every unit

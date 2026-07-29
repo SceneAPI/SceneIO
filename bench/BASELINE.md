@@ -3208,3 +3208,29 @@ Consistency and fused-visibility decoding use a validating count pass before
 exact record allocation; this prevents malformed or link-heavy payloads from
 driving speculative payload-maximum reserves while retaining multi-GB/s local
 decode throughput.
+
+## COLMAP compact-adapter C3 transport baseline (2026-07-29)
+
+The repository-owned adapters were measured with one million two-component
+MappingInput rows and an equal-sized MegaLoc float32 payload, using three
+repetitions:
+
+```powershell
+.venv/Scripts/python.exe bench/bench_colmap_adapters.py `
+  --rows 1000000 --repeats 3
+```
+
+| adapter path | throughput | median | traced Python peak |
+|---|---:|---:|---:|
+| MappingInput mapped read | 3,158 MB/s | 2.533 ms | 0.104 MB |
+| MappingInput streaming write | 1,339 MB/s | 5.976 ms | 0.014 MB |
+| MegaLoc descriptor mapped read | 3,211 MB/s | 2.491 ms | 0.027 MB |
+| MegaLoc descriptor streaming write | 494 MB/s | 16.186 ms | 0.021 MB |
+
+The benchmark includes record validation and atomic replacement. Its read
+peaks are far below the 8 MB numeric payloads, proving that neither mapped
+path creates a whole-file Python copy. Separate generated-fixture tests cover
+the same property for MappingInput, MegaLoc, and the large fixed sparse tag
+sidecars. Compact text and JSON companions are correctness-tested with
+independent fixtures; they are not assigned throughput claims because they
+are control metadata rather than measured hot paths.

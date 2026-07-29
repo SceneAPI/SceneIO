@@ -95,6 +95,7 @@ from sceneio.points_binary import (
 
 if TYPE_CHECKING:
     from sceneio import (
+        colmap,
         colmap_mvs,
         data,
         formats,
@@ -110,7 +111,16 @@ __version__ = "0.2.0"
 # first attribute access so that `import sceneio` alone stays cheap
 # and no namespace ever depends on a sibling being imported.
 _NAMESPACES = frozenset(
-    {"colmap_mvs", "data", "formats", "io", "mapping", "matching", "testing"}
+    {
+        "colmap",
+        "colmap_mvs",
+        "data",
+        "formats",
+        "io",
+        "mapping",
+        "matching",
+        "testing",
+    }
 )
 
 # Names forwarded flat off `sceneio` from `sceneio.io`, kept lazy so the
@@ -251,6 +261,7 @@ __all__ = [
     "capabilities",
     "checkpoint_root",
     "codecs",
+    "colmap",
     "colmap_database_conversion_report",
     "colmap_mvs",
     "contract_dict",

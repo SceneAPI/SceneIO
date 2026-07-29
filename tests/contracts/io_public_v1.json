@@ -73,6 +73,7 @@
     "capabilities",
     "checkpoint_root",
     "codecs",
+    "colmap",
     "colmap_database_conversion_report",
     "colmap_mvs",
     "contract_dict",
@@ -169,6 +170,7 @@
     "write_flow"
   ],
   "namespaces": [
+    "colmap",
     "colmap_mvs",
     "data",
     "formats",

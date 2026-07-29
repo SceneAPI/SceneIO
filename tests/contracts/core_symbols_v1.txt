@@ -64,6 +64,8 @@ _inspect_y4m
 _install_webp_worker_counter
 _parallel_hardware_lane_cap
 _parallel_lane_count
+_read_colmap_sparse_with_sidecars
+_read_colmap_txt_with_sidecars
 _webp_worker_launch_count
 _write_exr_depth_request
 _write_gltf_bin

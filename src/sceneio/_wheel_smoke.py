@@ -1391,6 +1391,177 @@ def _dense_mvs(root: Path) -> None:
     ).count == 2
 
 
+def _colmap_adapters(root: Path) -> None:
+    from sceneio.colmap import (
+        MappingCamera,
+        MappingImage,
+        MappingInput,
+        MegaLocArtifacts,
+        MegaLocImage,
+        NamedMatches,
+        RigConfigCamera,
+        RigConfiguration,
+        SiftFeatures,
+        SimilarityTransform,
+        inspect_mapping_input,
+        inspect_megaloc_artifacts,
+        read_extended_sparse_model,
+        read_feature_matches,
+        read_image_pairs,
+        read_mapping_input,
+        read_megaloc_artifacts,
+        read_rig_config,
+        read_sift_features,
+        read_similarity_transform,
+        read_sparse_extensions,
+        read_stock_image_pairs,
+        write_extended_sparse_model,
+        write_feature_matches,
+        write_image_pairs,
+        write_mapping_input,
+        write_megaloc_artifacts,
+        write_rig_config,
+        write_sift_features,
+        write_similarity_transform,
+    )
+
+    mapping = MappingInput(
+        2,
+        (
+            MappingCamera(
+                1,
+                1,
+                640,
+                480,
+                np.array([500, 500, 320, 240], dtype=np.float64),
+            ),
+        ),
+        (
+            MappingImage(
+                1,
+                1,
+                2,
+                "frame.png",
+                np.array([[1, 2]], dtype=np.float32),
+            ),
+        ),
+        (),
+    )
+    mapping_path = root / "mapping.pcmapin"
+    write_mapping_input(mapping, mapping_path)
+    assert read_mapping_input(mapping_path).images[0].time_id == 2
+    assert inspect_mapping_input(mapping_path)["num_images"] == 1
+
+    megaloc = MegaLocArtifacts(
+        root,
+        (MegaLocImage(1, "frame.png", "images/frame.png"),),
+        (),
+        np.array([[1, 2]], dtype=np.float32),
+        False,
+        {"smoke": True},
+    )
+    megaloc_root = root / "megaloc"
+    write_megaloc_artifacts(megaloc, megaloc_root)
+    assert read_megaloc_artifacts(
+        megaloc_root
+    ).descriptors.shape == (1, 2)
+    assert inspect_megaloc_artifacts(
+        megaloc_root
+    )["descriptor_columns"] == 2
+
+    rigs = (
+        RigConfiguration(
+            (
+                RigConfigCamera("left/", True),
+                RigConfigCamera(
+                    "right/",
+                    cam_from_rig=np.array(
+                        [1, 0, 0, 0, 1, 0, 0],
+                        dtype=np.float64,
+                    ),
+                ),
+            )
+        ),
+    )
+    rig_path = root / "rig.json"
+    write_rig_config(rigs, rig_path)
+    assert read_rig_config(rig_path)[0].cameras[0].ref_sensor
+
+    sift_path = root / "sift.txt"
+    write_sift_features(
+        SiftFeatures(
+            np.array([[1, 2, 3, 4]], dtype=np.float32),
+            np.arange(128, dtype=np.uint8).reshape(1, 128),
+        ),
+        sift_path,
+    )
+    assert read_sift_features(sift_path).descriptors[0, 127] == 127
+
+    pair_path = root / "pairs.txt"
+    cap_path = root / "caps.txt"
+    write_image_pairs(
+        (("left.png", "right.png"),),
+        pair_path,
+        caps=np.array([100], dtype=np.uint32),
+        cap_path=cap_path,
+    )
+    assert read_image_pairs(pair_path, cap_path=cap_path)[1][0] == 100
+    assert read_stock_image_pairs(pair_path) == (
+        ("left.png", "right.png"),
+    )
+
+    match_path = root / "matches.txt"
+    write_feature_matches(
+        (
+            NamedMatches(
+                "left.png",
+                "right.png",
+                np.array([[0, 1]], dtype=np.uint32),
+            ),
+        ),
+        match_path,
+    )
+    assert read_feature_matches(match_path)[0].matches[0, 1] == 1
+
+    sim3_path = root / "sim3.txt"
+    write_similarity_transform(
+        SimilarityTransform(
+            2.0,
+            np.array([1, 0, 0, 0], dtype=np.float64),
+            np.array([1, 2, 3], dtype=np.float64),
+        ),
+        sim3_path,
+    )
+    assert read_similarity_transform(sim3_path).scale == 2.0
+
+    sparse = root / "sparse"
+    sparse.mkdir()
+    (sparse / "cameras.txt").write_text(
+        "1 PINHOLE 640 480 500 500 320 240\n",
+        encoding="utf-8",
+    )
+    (sparse / "images.txt").write_text(
+        "1 1 0 0 0 0 0 0 1 frame.png\n\n",
+        encoding="utf-8",
+    )
+    (sparse / "points3D.txt").write_text("", encoding="utf-8")
+    (sparse / "markers.txt").write_text(
+        f'1 0 1 "marker" nan nan nan nan nan nan nan nan '
+        f'nan nan nan nan {(1 << 64) - 1}\n',
+        encoding="utf-8",
+    )
+    extended = read_extended_sparse_model(sparse)
+    assert read_sparse_extensions(
+        sparse,
+        encoding="text",
+    ).markers[0].label == "marker"
+    extended_out = root / "sparse-out"
+    write_extended_sparse_model(extended, extended_out)
+    assert read_extended_sparse_model(
+        extended_out
+    ).extensions.markers[0].label == "marker"
+
+
 _SMOKE_RUNNERS: Mapping[str, Callable[[Path], None]] = MappingProxyType(
     {
         "pfm": _array_formats,
@@ -1487,7 +1658,11 @@ def main() -> None:
     assert importlib.util.find_spec("sceneio._native_test") is None
     assert not any("test" in name.lower() for name in dir(_core))
     with tempfile.TemporaryDirectory(prefix="sceneio-wheel-smoke-") as directory:
-        _run_manifest_smoke(Path(directory))
+        root = Path(directory)
+        _run_manifest_smoke(root)
+        adapter_root = root / "colmap-adapters"
+        adapter_root.mkdir()
+        _colmap_adapters(adapter_root)
     print(_core.__phase__)
 
 

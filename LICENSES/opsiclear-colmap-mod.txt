@@ -5,7 +5,11 @@ SceneIO's COLMAP ecosystem compatibility work is informed by the persisted
 format behavior in the repository:
 
     C:\Users\opsiclear\Desktop\projects\colmap_mod
-    commit de15b08a2dba98b55d6ddfb7cedac147838afbb4
+    database/dense reference commit
+    de15b08a2dba98b55d6ddfb7cedac147838afbb4
+
+    compact-adapter reference commit
+    a3cfdd784d16a493878877f445fd1e27333fd8fc
 
 The repository owner explicitly authorized SceneIO to use its data-I/O support
 for this ecosystem integration. SceneIO's new implementation and tests remain
@@ -36,6 +40,29 @@ They define persisted matrix, graph, fused-visibility, workspace/config, and
 legacy export behavior used as a compatibility reference. SceneIO neither
 redistributes nor links those sources and adds no runtime dependency on the
 reference repository.
+
+The compact-adapter pass used these committed reference surfaces from
+`a3cfdd784d16a493878877f445fd1e27333fd8fc`:
+
+    src/colmap/scene/reconstruction.cc
+    src/colmap/scene/reconstruction_io_binary.cc
+    src/colmap/scene/reconstruction_io_text.cc
+    src/colmap/scene/marker.h
+    src/pycolmap/pipeline/mapper_types.h
+    src/colmap/retrieval/megaloc_artifacts.h
+    src/colmap/retrieval/megaloc_artifacts.cc
+    src/colmap/scene/rig.h
+    src/colmap/scene/rig.cc
+    src/colmap/feature/sift.cc
+    src/colmap/feature/pairing.cc
+    src/colmap/controllers/feature_matching.cc
+    src/colmap/geometry/sim3.cc
+    src/colmap/exe/romaxx_dense_cloud.cc
+
+They define portable sparse companion, MappingInput, MegaLoc, rig, SIFT,
+pair/cap, match-block, and Sim3 persistence. Runtime engines, retrieval-index
+binaries, reports, caches, and encoded-media implementations are not copied
+or linked.
 
 Files derived from standard COLMAP formats also retain the upstream COLMAP
 BSD-3-Clause attribution in LICENSES/colmap.txt. Fork-specific behavior is

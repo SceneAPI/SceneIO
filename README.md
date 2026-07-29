@@ -64,6 +64,9 @@ keeps pytest-free consumers clean.
   `MaterializedImage` (`sceneio.imagesource`).
 - The extended COLMAP scene-database schema (`sceneio.colmap_db`) and the
   `PCMAPIN` resume-checkpoint helpers (`sceneio.mapping_input`).
+- Portable COLMAP workflow data (`sceneio.colmap`): extended sparse
+  companions, semantic MappingInput v1/v2, MegaLoc artifacts, rig JSON, SIFT,
+  pair/cap and match text, and Sim3. Encoded image/model paths remain opaque.
 
 ### Format registry — `sceneio.formats`
 
@@ -380,6 +383,9 @@ Engineering status and extension work are tracked in:
 - [`docs/colmap_ecosystem_coverage.md`](docs/colmap_ecosystem_coverage.md) —
   the audited `colmap_mod` persisted-I/O matrix, lean closure boundary, and
   staged verification plan;
+- [`docs/colmap_adapters.md`](docs/colmap_adapters.md) — the public typed
+  sparse-sidecar, MappingInput, MegaLoc, rig, SIFT, pair/match, and Sim3
+  workflow adapters;
 - [`docs/coverage_roadmap.md`](docs/coverage_roadmap.md) — format policy,
   declared destinations, and future sequencing rather than current evidence;
 - [`docs/core_architecture.md`](docs/core_architecture.md) — current public and

@@ -145,8 +145,11 @@ Current test counts, workflow evidence, and the immutable validated checkpoint
 are maintained only in
 [`format_coverage.md`](format_coverage.md#format--data-structure-coverage);
   this policy roadmap intentionally does not duplicate them. R6 package closure
-  is complete. The explicitly requested COLMAP ecosystem closure is the only
-  active post-R6 sequence; animation formats, RTMV, and the common
+  is complete. The explicitly requested COLMAP ecosystem portable-data
+  adapters are implemented and locally validated under `sceneio.colmap`.
+  Their final exact-pushed-tree nonpublishing MSVC/GCC 10/AppleClang package
+  validation is the only active post-R6 sequence.
+  Animation formats, RTMV, and the common
   optional-library feature pattern remain future choices that start only on
   explicit user direction. The provisional performance ledger remains a
   trigger-based optimization backlog rather than an active gate.

@@ -42,6 +42,7 @@ def test_key_contract_modules_import_clean() -> None:
         "sceneio.mapping_input",
         "sceneio.blobstore",
         "sceneio.imagesource",
+        "sceneio.colmap",
         "sceneio.colmap_db",
     ):
         assert importlib.import_module(mod) is not None

@@ -50,14 +50,18 @@ using namespace sio;
 
 namespace {
 
+std::filesystem::path native_path(const std::string &path) {
+    return std::filesystem::u8path(path);
+}
+
 // ---- whole-file I/O (binary both ways: raw bytes in, LF-only bytes out) ----
 std::string read_file(const std::string &path) {
-    std::ifstream f(path, std::ios::binary);
+    std::ifstream f(native_path(path), std::ios::binary);
     if (!f) throw std::invalid_argument("COLMAP text: cannot open " + path);
     return std::string(std::istreambuf_iterator<char>(f), {});
 }
 void write_file(const std::string &path, const std::string &data) {
-    std::ofstream f(path, std::ios::binary);
+    std::ofstream f(native_path(path), std::ios::binary);
     if (!f) throw std::invalid_argument("COLMAP text: cannot write " + path);
     const char *cursor = data.data();
     size_t remaining = data.size();
@@ -80,7 +84,7 @@ void write_file(const std::string &path, const std::string &data) {
 
 bool path_exists(const std::string &path) {
     std::error_code error;
-    const bool exists = std::filesystem::exists(path, error);
+    const bool exists = std::filesystem::exists(native_path(path), error);
     if (error)
         throw std::invalid_argument(
             "COLMAP text: cannot inspect " + path + ": " +
@@ -554,9 +558,10 @@ void read_points_text(const std::string &text, Reconstruction &r) {
     }
 }
 
-Reconstruction read_colmap_txt(const std::string &dir) {
+Reconstruction read_colmap_txt(const std::string &dir,
+                               bool allow_extension_sidecars) {
     nb::gil_scoped_release rel;  // pure-C++ body: file I/O + parse, no Python objects
-    require_no_extension_sidecars(dir);
+    if (!allow_extension_sidecars) require_no_extension_sidecars(dir);
     Reconstruction r;
     const bool has_rigs = path_exists(dir + "/rigs.txt");
     const bool has_frames = path_exists(dir + "/frames.txt");
@@ -596,7 +601,7 @@ Reconstruction read_colmap_txt_image(const std::string &dir,
     r.obs_off.push_back(0);
     r.track_off.push_back(0);
 
-    std::ifstream images(dir + "/images.txt", std::ios::binary);
+    std::ifstream images(native_path(dir + "/images.txt"), std::ios::binary);
     if (!images)
         throw std::invalid_argument("COLMAP text: cannot open " + dir +
                                     "/images.txt");
@@ -696,7 +701,7 @@ Reconstruction read_colmap_txt_image(const std::string &dir,
                 required_camera_ids.insert(r.rig_sensor_ids[sensor]);
     }
 
-    std::ifstream cameras(dir + "/cameras.txt", std::ios::binary);
+    std::ifstream cameras(native_path(dir + "/cameras.txt"), std::ios::binary);
     if (!cameras)
         throw std::invalid_argument("COLMAP text: cannot open " + dir +
                                     "/cameras.txt");
@@ -760,7 +765,7 @@ Reconstruction read_colmap_txt_image(const std::string &dir,
 
 size_t count_metadata_records(const std::string &path,
                               bool image_records) {
-    std::ifstream file(path, std::ios::binary);
+    std::ifstream file(native_path(path), std::ios::binary);
     if (!file) throw std::invalid_argument("COLMAP text: cannot open " + path);
     size_t count = 0;
     char block[65536];
@@ -1085,7 +1090,8 @@ std::string write_points_text(const Reconstruction &r) {
     return out;
 }
 
-void write_colmap_txt(const Reconstruction &r, const std::string &dir) {
+void write_colmap_txt(const Reconstruction &r, const std::string &dir,
+                      bool allow_extension_sidecars) {
     nb::gil_scoped_release rel;  // pure-C++ body: formatting + file I/O, no Python objects
     validate_colmap_reconstruction(r, "COLMAP text");
     for (const std::string &name : r.img_names)
@@ -1093,7 +1099,7 @@ void write_colmap_txt(const Reconstruction &r, const std::string &dir) {
             name.find('\n') != std::string::npos)
             throw std::invalid_argument(
                 "COLMAP text: image names cannot contain line breaks");
-    require_no_extension_sidecars(dir);
+    if (!allow_extension_sidecars) require_no_extension_sidecars(dir);
     if (!r.has_rig_frame_model &&
         (path_exists(dir + "/rigs.txt") ||
          path_exists(dir + "/frames.txt")))
@@ -1115,15 +1121,30 @@ void register_colmap_txt(nb::module_ &m) {
     m.def("_inspect_colmap_txt", &inspect_colmap_txt, "path"_a,
           "Return (camera_count, image_count, point_count) without constructing "
           "reconstruction arrays.");
-    m.def("read_colmap_txt", &read_colmap_txt, "path"_a,
+    m.def("read_colmap_txt",
+          [](const std::string &path) {
+              return read_colmap_txt(path, false);
+          },
+          "path"_a,
           "Read a legacy three-file or modern five-file COLMAP text sparse "
           "model directory into a Reconstruction, preserving rigs and "
           "frames (WXYZ, world_to_camera).");
+    m.def("_read_colmap_txt_with_sidecars",
+          [](const std::string &path) {
+              return read_colmap_txt(path, true);
+          },
+          "path"_a,
+          "Internal extended-adapter sparse text reader.");
     m.def("read_colmap_txt_image", &read_colmap_txt_image, "path"_a,
           "image_id"_a,
           "Read one COLMAP text image and its camera without opening "
           "points3D.txt or materializing unrelated images.");
-    m.def("write_colmap_txt", &write_colmap_txt, "recon"_a, "path"_a,
+    m.def("write_colmap_txt",
+          [](const Reconstruction &reconstruction,
+             const std::string &path) {
+              write_colmap_txt(reconstruction, path, false);
+          },
+          "recon"_a, "path"_a,
           "Write a Reconstruction as a legacy three-file or modern "
           "five-file COLMAP text sparse model directory (%.17g doubles, "
           "LF endings).");

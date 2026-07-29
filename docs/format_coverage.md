@@ -745,6 +745,29 @@ public-domain SQLite amalgamation statically linked into `_core`.
 | `image_sequence` | `ImageSequence` | R+W | independent manifest/PGM fixtures + existing image-codec parity suites | flat image directories; deterministic natural order or strict versioned manifest; lazy owned paths; exact optional timing; heterogeneous frames reject; transactional bounded-copy writer; frame ranges |
 | `y4m` | `ImageSequence` | R+W | independent Python parser/writer + exact golden bytes | original dependency-free YUV4MPEG2 subset; uint8 mono/4:2:0/4:2:2/4:4:4 planar frames, odd dimensions, exact rational timing, mmap, streaming sink, inspect, and frame ranges; no RGB conversion or video-framework dependency |
 
+### Repository-owned COLMAP workflow adapters
+
+The 54-codec registry is unchanged. The lazy `sceneio.colmap` namespace adds
+repository-owned read/write adapters for fork sparse companions, MappingInput
+v1/v2, MegaLoc artifact directories, rig JSON, SIFT text, stock and dense
+image-pair text (including positional cap rows), feature-match blocks, and
+Sim3 text. MappingInput and MegaLoc numeric payloads use read-only mappings;
+large companion reads avoid whole-file Python copies, and writers stream
+through atomic replacement. See
+[`colmap_adapters.md`](colmap_adapters.md) for the public API and
+[`colmap_ecosystem_coverage.md`](colmap_ecosystem_coverage.md) for the exact
+closure matrix.
+
+The final local closure gate collects 3,878 tests and passes 3,873 with five
+documented optional/platform skips. The 38-test adapter suite, 131-test
+focused gate, installed-wheel smoke, Ruff, diff checks, and three independent
+reviews are clear. Exact-pushed-tree nonpublishing MSVC/GCC 10/AppleClang
+package validation remains the sole active closure check.
+
+Encoded image paths and model paths remain opaque values. TIFF plus embedded
+or standalone `.xmp` metadata are optional generic format/metadata work, not
+requirements for COLMAP ecosystem closure.
+
 ### ⬜ Pending — declared roadmap gaps
 
 - Sequence/dataset: animated WebP, APNG, and RTMV.

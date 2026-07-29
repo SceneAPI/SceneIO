@@ -4586,8 +4586,10 @@ artifact-license assertions.
 
 ## 15. COLMAP ecosystem closure
 
-The user-owned `colmap_mod` repository was audited at
-`de15b08a2dba98b55d6ddfb7cedac147838afbb4` by three independent agents. The
+The user-owned `colmap_mod` repository was audited at the original
+database/dense pin `de15b08a2dba98b55d6ddfb7cedac147838afbb4` and the compact
+adapter pin `a3cfdd784d16a493878877f445fd1e27333fd8fc` by three independent
+agents. The
 complete matrix and lean boundary are in
 [`colmap_ecosystem_coverage.md`](colmap_ecosystem_coverage.md). Encoded video is
 reference-only: no FFmpeg/libav implementation or runtime/build dependency is
@@ -4665,14 +4667,49 @@ Remote C0 evidence:
         three-review sign-off at the C2 commit.
   - [ ] Run automatic CI and the user-triggered nonpublishing three-platform
         package validation at the exact pushed C2 commit.
-- [ ] C3: marker/time/point-frame/ChArUco sidecars plus Bundler list, compact
-      exporters, rig/pair/feature/Sim3 text, MappingInput, and MegaLoc adapters.
-- [ ] C4: selected metadata/TIFF route, final public API/docs/benchmark/wheel
-      closure, and a row-by-row decision for every audited surface.
+- [x] C3 implementation: marker/time/point-frame/ChArUco sidecars,
+      rig/pair/cap/feature/match/Sim3 text, MappingInput v1/v2, and MegaLoc
+      adapters. Bundler list support was already complete in C2.
+  - [x] Keep the standard sparse registry route guarded; require the explicit
+        `sceneio.colmap` extended adapter to own every companion.
+  - [x] Map MappingInput and MegaLoc numeric payloads and retain array
+        lifetime without whole-file Python copies.
+  - [x] Stream atomic writes and pin exact independent binary/text/JSON
+        fixtures, malformed extents, references, dtypes, and conventions.
+  - [x] Add the focused million-row performance/memory baseline.
+  - [x] Run the complete local gate and final three-review pass.
+- [x] C4 classification: public API/docs/benchmark/license coverage and a
+      row-by-row decision for every audited surface.
+  - [x] Keep TIFF and EXIF/XMP as optional generic image/metadata work rather
+        than COLMAP closure dependencies.
+  - [x] Classify lossy CAM/Recon3D as optional write helpers and VRML as
+        visualization outside closure.
+  - [x] Keep project documents, runtime engines, retrieval indices, reports,
+        caches, and encoded containers outside closure.
+  - [ ] Run the exact-tree nonpublishing package validation after the pushed
+        commit; release/tag/publication remain user-triggered.
 
 Runtime engines, solver logs, reports, decoded/staged caches, and encoded-video
 implementations do not become core codecs. This is the explicit stop condition
 that keeps full ecosystem closure finite.
+
+### C3/C4 final local evidence (2026-07-29)
+
+- The exact collection contract contains 3,878 normalized nodes with SHA-256
+  `169ffe42ea1d9f1920231a2170b32593825c0189818c9e09e2c7f468abe10572`.
+- The complete suite passes 3,873 tests with five documented
+  optional/platform skips; the COLMAP adapter suite passes 38 tests and the
+  focused closure gate passes 131 tests.
+- The editable native build, installed-wheel smoke (`__phase__ == 2`), Ruff,
+  and `git diff --check` pass.
+- The committed benchmark baseline proves mapped reads without a whole-file
+  Python allocation and atomic streaming writes for the two large compact
+  transports.
+- Ampere, Epicurus, and Lagrange report no remaining architecture,
+  correctness/test, or platform/documentation blocker.
+- The only remaining validation item is the exact pushed tree's nonpublishing
+  MSVC/GCC 10/AppleClang package run. Release, tag, and publication stay
+  user-triggered.
 
 ### C2 implementation checkpoint (2026-07-29)
 
