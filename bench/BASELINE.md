@@ -3268,3 +3268,12 @@ decoded entry representation and fixed allocator headroom. A separately
 scoped architecture assertion pins `image_indices.reserve(stats.links)` in
 both the consistency and visibility readers, so the looser process-level RSS
 ceiling cannot conceal an entry-count-sized link allocation.
+
+The first corrected hosted run, `30467712842`, completed all platform-specific
+codec lanes but exposed that the active benchmark-structure guard still named
+the historical 50-row registry. Its uploaded Ubuntu capture and a fresh local
+MSVC capture each contain the current 54 rows, in the same order, with
+normalized structural SHA-256
+`fd3cf4a663e737971526afe5884f229237630a0f126b21a1c8ffcde9a6015e4e`.
+The active assembly contract now pins that pair and the exact exposing commit;
+the immutable 50-row R2/R3 family evidence retains its original hash.

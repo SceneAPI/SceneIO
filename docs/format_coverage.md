@@ -45,10 +45,16 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > bounds resident growth by the mapped input plus exact decoded vectors. It
 > also replaces SOG's host-math-library metadata variation with a pinned,
 > attributed repository-contained transform; Windows and Ubuntu now produce
-> the same exact archive. The automatic failures at runs
-> `30458601255`/`30458601174` are therefore addressed locally; a new pushed
-> CI and build-only package run are still required before this checkpoint is
-> called hosted-green.
+> the same exact archive. Commit `952bb8d` closes those failures across every
+> platform-specific codec lane and pinned GCC 10 in run `30467712842`. That
+> run then exposed one evidence-only mismatch: its current 54-row benchmark
+> capture was checked against the immutable historical 50-row fingerprint.
+> The uploaded Ubuntu capture and a fresh local MSVC capture agree on exact
+> normalized hash
+> `fd3cf4a663e737971526afe5884f229237630a0f126b21a1c8ffcde9a6015e4e`;
+> the active contract is corrected without rewriting the historical family
+> evidence. A follow-up CI and build-only package run are still required
+> before this checkpoint is called hosted-green.
 >
 > **Stable-ABI evidence correction (2026-07-28):** earlier package records
 > verified `cp312-abi3` wheel tags, contents, and Python 3.12 smoke but did not
@@ -778,7 +784,9 @@ SOG/MVS/catalog/architecture correction sweep, final 143-test architecture
 review sweep, installed-wheel smoke, Ruff, and diff checks also pass. Three
 independent architecture, correctness/test, and platform/documentation
 reviews signed off. Exact-pushed-tree automatic and nonpublishing MSVC/GCC
-10/AppleClang package validation remain active.
+10/AppleClang package validation remain active. The first pushed correction
+run passed every platform-specific codec lane and identified only the stale
+50-versus-54 benchmark-structure guard described above.
 
 Encoded image paths and model paths remain opaque values. TIFF plus embedded
 or standalone `.xmp` metadata are optional generic format/metadata work, not

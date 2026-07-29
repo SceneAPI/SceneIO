@@ -494,9 +494,9 @@ def test_benchmark_contract_matches_checked_snapshot():
     assert equivalence["candidate_benchmark_blob"] == (
         "9714e081322b925eddc560f1a724b4dd2a68dc78"
     )
-    assert equivalence["structural_projection_sha256"] == _read_json(
-        "io_registry_assembly_v1.json"
-    )["benchmark_parent"]["structural_projection_sha256"]
+    assert equivalence["structural_projection_sha256"] == (
+        "f1e71435c9cf5660851636707ab897e1b65e9ca71b82174bf47238676a3034e7"
+    )
     assert equivalence["deterministic_projection"] == "identical"
     assert len(equivalence["candidate_capture_sha256"]) == 2
     assert all(

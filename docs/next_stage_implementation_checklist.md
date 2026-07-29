@@ -4718,9 +4718,19 @@ that keeps full ecosystem closure finite.
 - Ampere, Epicurus, and Lagrange signed off the final architecture,
   correctness/test, and platform/documentation correction. The exact SOG
   composite source identity and historical platform tuples are pinned, and
-  the measured 24-byte-per-point cache tradeoff is explicit. Automatic CI
-  and the exact pushed tree's nonpublishing MSVC/GCC 10/AppleClang package
-  run remain. Release, tag, and publication stay user-triggered.
+  the measured 24-byte-per-point cache tradeoff is explicit.
+- Pushed commit `952bb8d` passes the pinned GCC 10 job plus all Windows,
+  Ubuntu, and macOS codec-family lanes in run `30467712842`. Its comprehensive
+  job exposed only a stale evidence contract: the current benchmark produced
+  54 rows while the comparator still required the historical 50. The
+  uploaded Ubuntu capture and a new local MSVC capture have identical
+  normalized structural SHA-256
+  `fd3cf4a663e737971526afe5884f229237630a0f126b21a1c8ffcde9a6015e4e`.
+  The active contract now pins those 54 rows while historical R2/R3 contracts
+  remain unchanged.
+- Follow-up automatic CI and the exact pushed tree's nonpublishing
+  MSVC/GCC 10/AppleClang package run remain. Release, tag, and publication
+  stay user-triggered.
 
 ### C2 implementation checkpoint (2026-07-29)
 

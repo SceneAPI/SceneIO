@@ -1149,6 +1149,18 @@ def test_assembly_dependency_direction_and_import_delta_are_exact():
         assert reconstruction_job.count(f"tests/codecs/{suite}") == 2
 
     benchmark_contract = CONTRACT["benchmark_parent"]
+    assert benchmark_contract["captures"] == [
+        "build/c3-c4-local-benchmark-952bb8d.json",
+        "build/ci-30467712842-benchmark/sceneio-benchmark.json",
+    ]
+    assert benchmark_contract["source_commit"] == (
+        "952bb8d6d875753ec50cc9516e19ca659bc78d33"
+    )
+    assert benchmark_contract["hosted_run"] == 30467712842
+    assert benchmark_contract["rows"] == len(CANONICAL_BUILTIN_IDS) == 54
+    assert benchmark_contract["structural_projection_sha256"] == (
+        "fd3cf4a663e737971526afe5884f229237630a0f126b21a1c8ffcde9a6015e4e"
+    )
     rows = [
         {
             "codec": "probe",

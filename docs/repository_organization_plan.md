@@ -15,6 +15,12 @@ documentation checklist is
 
 ## Current checkpoint
 
+The live 54-codec benchmark-structure contract is distinct from immutable
+50-codec R2/R3 family evidence. Commit `952bb8d` produced matching hosted
+Ubuntu and local MSVC 54-row captures with normalized SHA-256
+`fd3cf4a663e737971526afe5884f229237630a0f126b21a1c8ffcde9a6015e4e`;
+the active assembly guard now pins that structure and its provenance.
+
 Historical `abi3 wheel` entries below prove their recorded wheel tag,
 inventory, and Python 3.12 behavior; they do not independently prove the
 embedded extension’s ABI. R6 review found and corrected the missing

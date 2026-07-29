@@ -1575,11 +1575,13 @@
   "benchmark_parent": {
     "command": ".venv/Scripts/python.exe bench/bench_io.py --runs 1 --scale 0.001 --skip-oracles --json <output>",
     "captures": [
-      "build/r2-aggregate-parent-a.json",
-      "build/r2-aggregate-parent-b.json"
+      "build/c3-c4-local-benchmark-952bb8d.json",
+      "build/ci-30467712842-benchmark/sceneio-benchmark.json"
     ],
-    "rows": 50,
-    "structural_projection_sha256": "f1e71435c9cf5660851636707ab897e1b65e9ca71b82174bf47238676a3034e7",
+    "source_commit": "952bb8d6d875753ec50cc9516e19ca659bc78d33",
+    "hosted_run": 30467712842,
+    "rows": 54,
+    "structural_projection_sha256": "fd3cf4a663e737971526afe5884f229237630a0f126b21a1c8ffcde9a6015e4e",
     "excluded_key_suffixes": [
       "_mbps",
       "_ms"

@@ -28,7 +28,10 @@ sink RSS by 4.8 MB on the 200,000-point fixture while traced Python allocation
 remained 0.0 MB; this is the measured working-memory cost of retaining
 throughput and deterministic bytes. The COLMAP consistency reader retains
 mapped input plus exact owned vectors without an entry-count-sized link
-reservation.
+reservation. The active deterministic benchmark-structure guard now covers
+all 54 live rows with normalized SHA-256
+`fd3cf4a663e737971526afe5884f229237630a0f126b21a1c8ffcde9a6015e4e`;
+the earlier 50-row family-extraction fingerprints remain historical evidence.
 Current benchmark ownership work does not reopen O0-O5 or change codec
 capabilities or implementation-performance claims. Points close at `45e2757`
 with normal run `30244892746` and compiler-instrumented run `30244892600`.

@@ -494,14 +494,9 @@ def test_splat_parent_contract_metadata_is_exact():
     assert hashlib.sha256(payload.encode()).hexdigest() == benchmark[
         "splat_rows_projection_sha256"
     ]
-    assembly_contract = json.loads(
-        (
-            ROOT / "tests/contracts/io_registry_assembly_v1.json"
-        ).read_text(encoding="utf-8")
+    assert benchmark["all_codec_projection_sha256"] == (
+        "f1e71435c9cf5660851636707ab897e1b65e9ca71b82174bf47238676a3034e7"
     )
-    assert benchmark["all_codec_projection_sha256"] == assembly_contract[
-        "benchmark_parent"
-    ]["structural_projection_sha256"]
     assert CONTRACT["pytest_parent_collection"] == {
         "count": 3256,
         "sorted_normalized_node_ids_sha256": (

@@ -458,8 +458,12 @@ C3 local implementation evidence:
   with five documented optional/platform skips. The adapter suite passes 38
   tests, the focused closure gate passes 131 tests, the 132-test CI-correction
   sweep passes, installed-wheel smoke reports phase 2, and Ruff and diff
-  checks are clear. The final three-review pass is pending the correction
-  diff.
+  checks are clear. The final three-review pass signed off. Pushed run
+  `30467712842` passed every platform-specific codec lane and exposed only the
+  stale historical 50-row benchmark guard; hosted Ubuntu and local MSVC
+  current 54-row captures agree on normalized SHA-256
+  `fd3cf4a663e737971526afe5884f229237630a0f126b21a1c8ffcde9a6015e4e`,
+  now pinned by the active contract.
 
 ### C4 - metadata and final closure
 
