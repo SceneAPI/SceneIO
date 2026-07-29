@@ -113,8 +113,16 @@ def _feature(value) -> dict[str, object]:
         "extractor_type": int(value.extractor_type),
         "time_id": None if value.time_id is None else int(value.time_id),
         "descriptor_dtype": value.descriptor_dtype,
+        "descriptor_dim": value.descriptor_dim,
+        "descriptor_dtype_present": bool(value.descriptor_dtype_present),
+        "descriptor_dim_present": bool(value.descriptor_dim_present),
+        "extractor_type_name": value.extractor_type_name,
         "keypoints_present": bool(value.keypoints_present),
-        "arrays": _arrays(value, ("keypoints", "descriptors", "scores")),
+        "quality": value.quality,
+        "arrays": _arrays(
+            value,
+            ("keypoints", "descriptors", "keypoint_colors", "scores"),
+        ),
     }
 
 
@@ -227,6 +235,8 @@ def _record(value) -> dict[str, object]:
         match_graph = value.match_graph
         return {
             "type": name,
+            "profile": value.profile,
+            "application_id": int(value.application_id),
             "user_version": int(value.user_version),
             "cameras": [_camera(camera) for camera in value.cameras],
             "image_ids": image_ids,
@@ -242,6 +252,8 @@ def _record(value) -> dict[str, object]:
                         "pair_ids",
                         "match_offsets",
                         "matches",
+                        "scores",
+                        "match_score_present",
                         "verified_offsets",
                         "verified_matches",
                         "configs",
@@ -250,18 +262,134 @@ def _record(value) -> dict[str, object]:
                         "homographies",
                         "qvecs",
                         "tvecs",
-                        "scores",
                         "match_present",
                         "geometry_present",
                         "F_present",
                         "E_present",
                         "H_present",
                         "pose_present",
+                        "provenance_present",
+                        "source_flags",
+                        "retrieval_score_present",
+                        "retrieval_scores",
                     ),
                 ),
                 "quaternion_order": match_graph.quaternion_order,
                 "relative_pose_convention": match_graph.relative_pose_convention,
             },
+            "pose_priors": {
+                "generalized": bool(value.pose_priors.generalized),
+                "arrays": _arrays(
+                    value.pose_priors,
+                    (
+                        "prior_ids",
+                        "correlated_data_ids",
+                        "correlated_sensor_ids",
+                        "correlated_sensor_types",
+                        "coordinate_systems",
+                        "position_present",
+                        "positions",
+                        "position_covariance_present",
+                        "position_covariances",
+                        "gravity_present",
+                        "gravities",
+                        "rotation_present",
+                        "rotations",
+                        "rotation_covariance_present",
+                        "rotation_covariances",
+                        "pose_covariance_present",
+                        "pose_covariances",
+                    ),
+                ),
+                "rotation_order": value.pose_priors.rotation_order,
+                "rotation_convention": value.pose_priors.rotation_convention,
+                "covariance_storage": value.pose_priors.covariance_storage,
+                "rotation_covariance_variable_order": (
+                    value.pose_priors.rotation_covariance_variable_order
+                ),
+                "pose_covariance_variable_order": (
+                    value.pose_priors.pose_covariance_variable_order
+                ),
+                "rotation_covariance_unit": (
+                    value.pose_priors.rotation_covariance_unit
+                ),
+                "position_covariance_unit": (
+                    value.pose_priors.position_covariance_unit
+                ),
+                "pose_covariance_cross_unit": (
+                    value.pose_priors.pose_covariance_cross_unit
+                ),
+            },
+            "markers": {
+                "arrays": _arrays(
+                    value.markers,
+                    (
+                        "marker_ids",
+                        "marker_types",
+                        "world_position_present",
+                        "world_positions",
+                        "world_position_covariance_present",
+                        "world_position_covariances",
+                        "point3D_ids",
+                        "enabled",
+                        "projection_marker_ids",
+                        "projection_image_ids",
+                        "projection_xy",
+                        "projection_sizes",
+                        "projection_pinned",
+                        "projection_point2D_indices",
+                    ),
+                ),
+                "labels": list(value.markers.labels),
+                "projection_coordinate_origin": (
+                    value.markers.projection_coordinate_origin
+                ),
+                "projection_coordinate_unit": (
+                    value.markers.projection_coordinate_unit
+                ),
+                "projection_size_unit": value.markers.projection_size_unit,
+            },
+            "video_metadata": {
+                "arrays": _arrays(
+                    value.video_metadata,
+                    (
+                        "video_ids",
+                        "source_path_present",
+                        "content_hash_present",
+                        "widths",
+                        "heights",
+                        "num_frames",
+                        "fps",
+                        "duration_seconds",
+                        "codec_name_present",
+                        "sync_group_present",
+                        "frame_video_ids",
+                        "frame_image_ids",
+                        "video_frame_indices",
+                        "pts_present",
+                        "pts_seconds",
+                        "time_id_present",
+                        "time_ids",
+                    ),
+                ),
+                "names": list(value.video_metadata.names),
+                "source_paths": list(value.video_metadata.source_paths),
+                "content_hashes": list(value.video_metadata.content_hashes),
+                "codec_names": list(value.video_metadata.codec_names),
+                "sync_groups": list(value.video_metadata.sync_groups),
+            },
+            "maxx_schema_info": (
+                None
+                if value.maxx_schema_info is None
+                else {
+                    "schema_version": value.maxx_schema_info.schema_version,
+                    "minimum_reader_version": (
+                        value.maxx_schema_info.minimum_reader_version
+                    ),
+                    "producer_version": value.maxx_schema_info.producer_version,
+                    "producer_commit": value.maxx_schema_info.producer_commit,
+                }
+            ),
         }
     raise TypeError(name)
 

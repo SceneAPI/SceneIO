@@ -204,6 +204,32 @@ def test_known_matcher_types_seed() -> None:
     )
 
 
+def test_known_maxx_wire_values() -> None:
+    assert db.COLMAP_KNOWN_DESCRIPTOR_DTYPES == {
+        "uint8": 0,
+        "int8": 1,
+        "float16": 2,
+        "float32": 3,
+        "float64": 4,
+    }
+    assert db.COLMAP_KNOWN_MATCH_SOURCE_FLAGS == {
+        "UNKNOWN": 0,
+        "SEQUENTIAL": 1,
+        "RETRIEVAL": 2,
+        "SPATIAL": 4,
+        "EXHAUSTIVE": 8,
+        "VOCAB_TREE": 16,
+        "TRANSITIVE": 32,
+        "IMPORTED": 64,
+    }
+    assert db.COLMAP_KNOWN_MARKER_TYPES == {
+        "REGULAR": 0,
+        "VERTEX": 1,
+        "FIDUCIAL": 2,
+        "CODED_TARGET": 3,
+    }
+
+
 def test_contract_dict_is_json_serializable_and_self_describing() -> None:
     import json
 
@@ -214,6 +240,15 @@ def test_contract_dict_is_json_serializable_and_self_describing() -> None:
     assert payload["contract_schema_version"] == db.CONTRACT_SCHEMA_VERSION
     assert payload["database_version"]["number"] == db.DATABASE_VERSION_NUMBER
     assert payload["pair_id"]["max_num_images"] == db.MAX_NUM_IMAGES
+    assert payload["descriptor_dtypes"]["known"] == (
+        db.COLMAP_KNOWN_DESCRIPTOR_DTYPES
+    )
+    assert payload["match_source_flags"]["known"] == (
+        db.COLMAP_KNOWN_MATCH_SOURCE_FLAGS
+    )
+    assert payload["match_source_flags"]["preserve_unknown_bits"]
+    assert payload["marker_types"]["known"] == db.COLMAP_KNOWN_MARKER_TYPES
+    assert payload["marker_types"]["closed_values"]
 
 
 def test_contract_dict_tables_match_the_table_model() -> None:

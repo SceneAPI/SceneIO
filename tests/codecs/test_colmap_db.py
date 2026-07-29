@@ -12,6 +12,7 @@ import subprocess
 import sys
 import time
 import tracemalloc
+from contextlib import closing
 from pathlib import Path
 
 import numpy as np
@@ -29,6 +30,198 @@ _PROFILE_SCHEMA_SNAPSHOTS = json.loads(
         / "schema_snapshots_v1.json"
     ).read_text(encoding="utf-8")
 )["profiles"]
+
+
+# Frozen from colmap_mod
+# de15b08a2dba98b55d6ddfb7cedac147838afbb4
+# src/colmap/scene/database_sqlite.cc Create*Table/InitializeOwnership.
+# Keep this literal independent of SceneIO's schema generator: these fixtures
+# are the decoder-side wire oracle, not a round-trip through the implementation
+# under test.
+_MAXX_DE15_DDL = """
+CREATE TABLE maxx_schema_info(
+    schema_version INTEGER PRIMARY KEY NOT NULL,
+    minimum_reader_version INTEGER NOT NULL,
+    producer_version TEXT NOT NULL,
+    producer_commit TEXT NOT NULL);
+CREATE TABLE rigs(
+    rig_id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+    ref_sensor_id INTEGER NOT NULL,
+    ref_sensor_type INTEGER NOT NULL);
+CREATE UNIQUE INDEX rig_ref_sensor_assignment
+    ON rigs(ref_sensor_id, ref_sensor_type);
+CREATE TABLE rig_sensors(
+    rig_id INTEGER NOT NULL,
+    sensor_id INTEGER NOT NULL,
+    sensor_type INTEGER NOT NULL,
+    sensor_from_rig BLOB,
+    FOREIGN KEY(rig_id) REFERENCES rigs(rig_id) ON DELETE CASCADE);
+CREATE UNIQUE INDEX rig_sensor_assignment
+    ON rig_sensors(sensor_id, sensor_type);
+CREATE TABLE cameras(
+    camera_id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+    model INTEGER NOT NULL,
+    width INTEGER NOT NULL,
+    height INTEGER NOT NULL,
+    params BLOB,
+    prior_focal_length INTEGER NOT NULL);
+CREATE TABLE frames(
+    frame_id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+    rig_id INTEGER NOT NULL,
+    FOREIGN KEY(rig_id) REFERENCES rigs(rig_id) ON DELETE CASCADE);
+CREATE TABLE frame_data(
+    frame_id INTEGER NOT NULL,
+    data_id INTEGER NOT NULL,
+    sensor_id INTEGER NOT NULL,
+    sensor_type INTEGER NOT NULL,
+    FOREIGN KEY(frame_id) REFERENCES frames(frame_id) ON DELETE CASCADE);
+CREATE UNIQUE INDEX frame_sensor_assignment
+    ON frame_data(data_id, sensor_type);
+CREATE TABLE images(
+    image_id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+    name TEXT NOT NULL UNIQUE,
+    camera_id INTEGER NOT NULL,
+    time_id INTEGER NULL,
+    CONSTRAINT image_id_check
+        CHECK(image_id >= 0 AND image_id < 2147483647),
+    FOREIGN KEY(camera_id) REFERENCES cameras(camera_id));
+CREATE UNIQUE INDEX index_name ON images(name);
+CREATE TABLE videos(
+    video_id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+    name TEXT NOT NULL UNIQUE,
+    source_path TEXT,
+    content_hash TEXT,
+    width INTEGER NOT NULL,
+    height INTEGER NOT NULL,
+    num_frames INTEGER NOT NULL,
+    fps REAL NOT NULL,
+    duration_seconds REAL NOT NULL,
+    codec_name TEXT,
+    sync_group TEXT);
+CREATE UNIQUE INDEX index_video_name ON videos(name);
+CREATE TABLE video_frames(
+    video_id INTEGER NOT NULL,
+    image_id INTEGER NOT NULL UNIQUE,
+    frame_id INTEGER NOT NULL,
+    pts_seconds REAL,
+    time_id INTEGER,
+    PRIMARY KEY(video_id, frame_id),
+    FOREIGN KEY(video_id) REFERENCES videos(video_id) ON DELETE CASCADE,
+    FOREIGN KEY(image_id) REFERENCES images(image_id) ON DELETE CASCADE);
+CREATE INDEX index_video_frame_image ON video_frames(image_id);
+CREATE TABLE pose_priors(
+    pose_prior_id INTEGER PRIMARY KEY NOT NULL,
+    corr_data_id INTEGER NOT NULL,
+    corr_sensor_id INTEGER NOT NULL,
+    corr_sensor_type INTEGER NOT NULL,
+    position BLOB,
+    position_covariance BLOB,
+    gravity BLOB,
+    coordinate_system INTEGER NOT NULL,
+    rotation BLOB,
+    rotation_covariance BLOB,
+    pose_covariance BLOB);
+CREATE UNIQUE INDEX pose_prior_data_assignment
+    ON pose_priors(corr_data_id, corr_sensor_id, corr_sensor_type);
+CREATE TABLE image_qualities(
+    image_id INTEGER PRIMARY KEY NOT NULL,
+    quality REAL NOT NULL,
+    FOREIGN KEY(image_id) REFERENCES images(image_id) ON DELETE CASCADE);
+CREATE TABLE pair_provenance(
+    pair_id INTEGER PRIMARY KEY NOT NULL,
+    source_flags INTEGER NOT NULL,
+    retrieval_score REAL);
+CREATE TABLE markers(
+    marker_id INTEGER PRIMARY KEY NOT NULL,
+    label TEXT NOT NULL,
+    type INTEGER NOT NULL,
+    world_position BLOB,
+    world_position_cov BLOB,
+    point3D_id INTEGER NOT NULL,
+    enabled INTEGER NOT NULL);
+CREATE UNIQUE INDEX index_marker_label ON markers(label);
+CREATE TABLE marker_projections(
+    marker_id INTEGER NOT NULL,
+    image_id INTEGER NOT NULL,
+    x REAL NOT NULL,
+    y REAL NOT NULL,
+    size REAL NOT NULL,
+    pinned INTEGER NOT NULL,
+    point2D_idx INTEGER NOT NULL DEFAULT 4294967295,
+    PRIMARY KEY(marker_id, image_id),
+    FOREIGN KEY(marker_id) REFERENCES markers(marker_id) ON DELETE CASCADE,
+    FOREIGN KEY(image_id) REFERENCES images(image_id) ON DELETE CASCADE);
+CREATE INDEX index_marker_projection_image
+    ON marker_projections(image_id);
+CREATE TABLE keypoints(
+    image_id INTEGER PRIMARY KEY NOT NULL,
+    rows INTEGER NOT NULL,
+    cols INTEGER NOT NULL,
+    data BLOB,
+    FOREIGN KEY(image_id) REFERENCES images(image_id) ON DELETE CASCADE);
+CREATE TABLE keypoint_colors(
+    image_id INTEGER PRIMARY KEY NOT NULL,
+    rows INTEGER NOT NULL,
+    cols INTEGER NOT NULL,
+    data BLOB,
+    FOREIGN KEY(image_id) REFERENCES keypoints(image_id) ON DELETE CASCADE);
+CREATE TABLE descriptors(
+    image_id INTEGER PRIMARY KEY NOT NULL,
+    type INTEGER NOT NULL,
+    type_name TEXT,
+    dtype INTEGER,
+    dim INTEGER,
+    rows INTEGER NOT NULL,
+    cols INTEGER NOT NULL,
+    data BLOB,
+    FOREIGN KEY(image_id) REFERENCES images(image_id) ON DELETE CASCADE);
+CREATE TABLE matches(
+    pair_id INTEGER PRIMARY KEY NOT NULL,
+    rows INTEGER NOT NULL,
+    cols INTEGER NOT NULL,
+    data BLOB);
+CREATE TABLE match_scores(
+    pair_id INTEGER PRIMARY KEY NOT NULL,
+    rows INTEGER NOT NULL,
+    cols INTEGER NOT NULL,
+    data BLOB,
+    FOREIGN KEY(pair_id) REFERENCES matches(pair_id) ON DELETE CASCADE);
+CREATE TABLE two_view_geometries(
+    pair_id INTEGER PRIMARY KEY NOT NULL,
+    rows INTEGER NOT NULL,
+    cols INTEGER NOT NULL,
+    data BLOB,
+    config INTEGER NOT NULL,
+    F BLOB,
+    E BLOB,
+    H BLOB,
+    qvec BLOB,
+    tvec BLOB,
+    camera1 BLOB,
+    camera2 BLOB);
+"""
+
+
+def _empty_maxx_de15_database(path: Path, *, ownership: bool = True) -> None:
+    connection = sqlite3.connect(path)
+    try:
+        connection.executescript(_MAXX_DE15_DDL)
+        connection.execute("PRAGMA application_id=1296128088")
+        connection.execute("PRAGMA user_version=3140003")
+        if ownership:
+            connection.execute(
+                "INSERT INTO maxx_schema_info VALUES(1,1,?,?)",
+                (
+                    "3.14.0",
+                    "de15b08a2dba98b55d6ddfb7cedac147838afbb4",
+                ),
+            )
+        else:
+            connection.execute("DROP TABLE maxx_schema_info")
+            connection.execute("PRAGMA application_id=0")
+        connection.commit()
+    finally:
+        connection.close()
 
 
 def _empty_profile_database(path: Path, profile_name: str) -> None:
@@ -235,6 +428,229 @@ def _stock_companion_database(path: Path, profile_name: str) -> None:
         connection.commit()
     finally:
         connection.close()
+
+
+def _maxx_extension_database(path: Path) -> dict[str, object]:
+    """Build MAXX extension rows independently with sqlite3 and wire bytes."""
+    _empty_maxx_de15_database(path)
+    descriptors = (
+        np.array([[0, 255], [17, 33]], np.uint8),
+        np.array([[-128, 127], [-3, 4]], np.int8),
+        np.array([[0x7E42, 0x8000], [0x3C00, 0xFC00]], np.uint16).view(
+            np.float16
+        ),
+        np.array([[np.nan, -0.0], [np.inf, -np.inf]], np.float32),
+        np.array([[np.nan, -0.0], [np.inf, -np.inf]], np.float64),
+    )
+    pair_id = 1 * 2_147_483_647 + 2
+    provenance_only_pair_id = 100 * 2_147_483_647 + 101
+    rotation = np.array([0.1, -0.2, 0.3, 0.9], np.float64)
+    rotation_covariance = np.arange(1, 10, dtype=np.float64).reshape(3, 3)
+    pose_covariance = np.arange(1, 37, dtype=np.float64).reshape(6, 6)
+    marker_position = np.array(
+        [0x7FF8000000000042, 0x8000000000000000, 0x3FF0000000000000],
+        np.uint64,
+    ).view(np.float64)
+    marker_covariance = np.arange(10, 19, dtype=np.float64).reshape(3, 3)
+    match_scores = np.array(
+        [0x7FC00042, 0xFF800000], np.uint32
+    ).view(np.float32)
+    with sqlite3.connect(path) as connection:
+        connection.execute(
+            "INSERT INTO cameras"
+            "(camera_id,model,width,height,params,prior_focal_length) "
+            "VALUES(7,0,640,480,?,1)",
+            (struct.pack("<3d", 500.0, 320.0, 240.0),),
+        )
+        connection.executemany(
+            "INSERT INTO images(image_id,name,camera_id,time_id) "
+            "VALUES(?,?,7,?)",
+            [
+                (image_id, f"{image_id}.jpg", 17 if image_id == 1 else None)
+                for image_id in range(1, 6)
+            ],
+        )
+        keypoints = np.array([[1.5, 2.5], [3.5, 4.5]], np.float32)
+        connection.executemany(
+            "INSERT INTO keypoints(image_id,rows,cols,data) "
+            "VALUES(?,2,2,?)",
+            [(image_id, keypoints.tobytes()) for image_id in range(1, 6)],
+        )
+        connection.executemany(
+            "INSERT INTO descriptors"
+            "(image_id,type,type_name,dtype,dim,rows,cols,data) "
+            "VALUES(?,?,?,?,?,2,?,?)",
+            [
+                (
+                    image_id,
+                    (0, -1, -1, 1, -1)[image_id - 1],
+                    "" if image_id == 1 else None,
+                    image_id - 1,
+                    2,
+                    value.shape[1] * value.dtype.itemsize,
+                    value.tobytes(),
+                )
+                for image_id, value in enumerate(descriptors, 1)
+            ],
+        )
+        colors = np.array([[1, 2, 3], [250, 251, 252]], np.uint8)
+        connection.execute(
+            "INSERT INTO keypoint_colors(image_id,rows,cols,data) "
+            "VALUES(1,2,3,?)",
+            (colors.tobytes(),),
+        )
+        connection.execute(
+            "INSERT INTO image_qualities(image_id,quality) VALUES(1,?)",
+            (-0.0,),
+        )
+        matches = np.array([[0, 1], [1, 0]], np.uint32)
+        connection.execute(
+            "INSERT INTO matches(pair_id,rows,cols,data) VALUES(?,2,2,?)",
+            (pair_id, matches.tobytes()),
+        )
+        connection.execute(
+            "INSERT INTO match_scores(pair_id,rows,cols,data) "
+            "VALUES(?,2,1,?)",
+            (pair_id, match_scores.tobytes()),
+        )
+        connection.executemany(
+            "INSERT INTO pair_provenance"
+            "(pair_id,source_flags,retrieval_score) VALUES(?,?,?)",
+            [
+                (pair_id, 0x80000001, float("inf")),
+                (provenance_only_pair_id, 0, None),
+            ],
+        )
+        connection.execute(
+            "INSERT INTO pose_priors"
+            "(pose_prior_id,corr_data_id,corr_sensor_id,corr_sensor_type,"
+            "position,position_covariance,gravity,coordinate_system,"
+            "rotation,rotation_covariance,pose_covariance) "
+            "VALUES(71,1,7,0,NULL,NULL,NULL,-1,?,?,?)",
+            (
+                rotation.tobytes(),
+                rotation_covariance.T.copy().tobytes(),
+                pose_covariance.T.copy().tobytes(),
+            ),
+        )
+        connection.executemany(
+            "INSERT INTO markers"
+            "(marker_id,label,type,world_position,world_position_cov,"
+            "point3D_id,enabled) VALUES(?,?,?,?,?,?,?)",
+            [
+                (
+                    9,
+                    "origin",
+                    2,
+                    marker_position.tobytes(),
+                    marker_covariance.T.copy().tobytes(),
+                    -1,
+                    1,
+                ),
+                (10, "unset", 0, None, None, 123, 0),
+            ],
+        )
+        connection.execute(
+            "INSERT INTO marker_projections"
+            "(marker_id,image_id,x,y,size,pinned,point2D_idx) "
+            "VALUES(9,1,?,20.25,-3.5,1,4294967295)",
+            (float("inf"),),
+        )
+        connection.executemany(
+            "INSERT INTO videos"
+            "(video_id,name,source_path,content_hash,width,height,"
+            "num_frames,fps,duration_seconds,codec_name,sync_group) "
+            "VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+            [
+                (3, "capture", "", None, 640, 480, 99, 30.0, 3.3, "raw", ""),
+                (4, "other", None, "", -1, 0, -5, float("inf"), -0.0, None, None),
+            ],
+        )
+        connection.execute(
+            "INSERT INTO video_frames"
+            "(video_id,image_id,frame_id,pts_seconds,time_id) "
+            "VALUES(3,1,8,?,19)",
+            (float("inf"),),
+        )
+    connection.close()
+    return {
+        "descriptors": descriptors,
+        "colors": colors,
+        "pair_id": pair_id,
+        "provenance_only_pair_id": provenance_only_pair_id,
+        "rotation": rotation,
+        "rotation_covariance": rotation_covariance,
+        "pose_covariance": pose_covariance,
+        "marker_position": marker_position,
+        "marker_covariance": marker_covariance,
+        "match_scores": match_scores,
+    }
+
+
+def _maxx_single_surface_database(path: Path, surface: str) -> None:
+    _empty_maxx_de15_database(
+        path, ownership=surface == "ownership"
+    )
+    pair_id = 1 * 2_147_483_647 + 2
+    with sqlite3.connect(path) as connection:
+        if surface != "ownership":
+            connection.execute(
+                "INSERT INTO cameras VALUES(7,0,640,480,?,1)",
+                (struct.pack("<3d", 500.0, 320.0, 240.0),),
+            )
+            connection.executemany(
+                "INSERT INTO images VALUES(?,?,7,NULL)",
+                ((1, "1.jpg"), (2, "2.jpg")),
+            )
+        if surface in {"descriptor", "keypoint_colors"}:
+            connection.execute(
+                "INSERT INTO keypoints VALUES(1,0,2,?)", (b"",)
+            )
+        if surface == "descriptor":
+            connection.execute(
+                "INSERT INTO descriptors VALUES"
+                "(1,0,'SIFT',0,2,0,2,?)",
+                (b"",),
+            )
+        elif surface == "keypoint_colors":
+            connection.execute(
+                "INSERT INTO keypoint_colors VALUES(1,0,3,?)",
+                (b"",),
+            )
+        elif surface == "image_quality":
+            connection.execute(
+                "INSERT INTO image_qualities VALUES(1,?)", (-0.0,)
+            )
+        elif surface == "match_scores":
+            connection.execute(
+                "INSERT INTO matches VALUES(?,0,2,?)",
+                (pair_id, b""),
+            )
+            connection.execute(
+                "INSERT INTO match_scores VALUES(?,0,1,?)",
+                (pair_id, b""),
+            )
+        elif surface == "pair_provenance":
+            connection.execute(
+                "INSERT INTO pair_provenance VALUES(?,0,NULL)",
+                (pair_id,),
+            )
+        elif surface == "extended_pose":
+            connection.execute(
+                "INSERT INTO pose_priors VALUES"
+                "(71,1,7,0,NULL,NULL,NULL,-1,?,NULL,NULL)",
+                (struct.pack("<4d", 0.0, 0.0, 0.0, 1.0),),
+            )
+        elif surface == "markers":
+            connection.execute(
+                "INSERT INTO markers VALUES"
+                "(9,'marker',0,NULL,NULL,-1,1)"
+            )
+        elif surface == "videos":
+            connection.execute(
+                "INSERT INTO videos VALUES"
+                "(3,'video',NULL,NULL,640,480,0,30.0,0.0,NULL,NULL)"
+            )
 
 
 def test_profile_catalog_matches_python_contract() -> None:
@@ -578,6 +994,81 @@ def test_pycolmap_411_producer_rig_frame_and_prior_oracle(tmp_path):
     )
     assert np.isnan(database.pose_priors.position_covariances[0]).all()
     assert np.isnan(database.pose_priors.gravities[0]).all()
+
+
+def test_exact_de15_pycolmap_database_producer_oracle_when_available(
+    tmp_path,
+):
+    script = (
+        "import sys\n"
+        "if sys.argv[1]:\n"
+        "    sys.path.insert(0, sys.argv[1])\n"
+        "import pycolmap\n"
+        "database = pycolmap.Database.open(sys.argv[2])\n"
+        "database.close()\n"
+    )
+    compile(script, "<de15-producer-oracle>", "exec")
+    producer_python = os.environ.get("SCENEIO_DE15_PYTHON")
+    binding_root = os.environ.get("SCENEIO_DE15_PYCOLMAP_PATH")
+    if not producer_python and not binding_root:
+        pytest.skip(
+            "requires SCENEIO_DE15_PYTHON or "
+            "SCENEIO_DE15_PYCOLMAP_PATH for a pycolmap build from "
+            "de15b08a2dba98b55d6ddfb7cedac147838afbb4"
+        )
+    interpreter = (
+        Path(producer_python) if producer_python else Path(sys.executable)
+    )
+    if not interpreter.is_file():
+        pytest.skip("the configured de15 Python interpreter is unavailable")
+    binding_path = Path(binding_root) if binding_root else None
+    if binding_path is not None and not binding_path.is_dir():
+        pytest.skip(
+            "SCENEIO_DE15_PYCOLMAP_PATH is not an available directory"
+        )
+    path = tmp_path / "de15-producer.db"
+    environment = os.environ.copy()
+    environment.pop("PYTHONPATH", None)
+    result = subprocess.run(
+        [
+            str(interpreter),
+            "-c",
+            script,
+            "" if binding_path is None else str(binding_path),
+            str(path),
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+        env=environment,
+    )
+    assert result.returncode == 0, result.stderr
+
+    with sqlite3.connect(path) as connection:
+        application_id = connection.execute(
+            "PRAGMA application_id"
+        ).fetchone()[0]
+        user_version = connection.execute(
+            "PRAGMA user_version"
+        ).fetchone()[0]
+        ownership = connection.execute(
+            "SELECT schema_version,minimum_reader_version,"
+            "producer_version,producer_commit FROM maxx_schema_info"
+        ).fetchall()
+    assert application_id == 0x4D415858
+    assert user_version == 3_140_003
+    assert len(ownership) == 1
+    assert ownership[0][0:2] == (1, 1)
+    assert len(ownership[0][3]) >= 7
+    assert (
+        "de15b08a2dba98b55d6ddfb7cedac147838afbb4".startswith(
+            ownership[0][3]
+        )
+    )
+
+    database = _core.read_colmap_db(str(path))
+    assert database.profile == "maxx-v1"
+    assert database.maxx_schema_info.producer_commit == ownership[0][3]
 
 
 def test_stock_companion_views_outlive_database_and_file(tmp_path):
@@ -983,29 +1474,894 @@ def test_partial_selectors_do_not_decode_unselected_companion_rows(tmp_path):
     assert _core.read_colmap_db_pair(str(path), 11, 2).num_pairs == 1
 
 
-def test_maxx_pose_prior_rows_remain_guarded_until_extended_fields_land(tmp_path):
-    path = tmp_path / "maxx-prior.db"
-    _empty_profile_database(path, "colmap-4.1.1")
+def test_read_maxx_extension_rows_losslessly(tmp_path):
+    path = tmp_path / "maxx-extensions.db"
+    expected = _maxx_extension_database(path)
+
+    database = _core.read_colmap_db(str(path))
+    features = [database.feature(image_id) for image_id in range(1, 6)]
+    graph = database.match_graph
+    priors = database.pose_priors
+    markers = database.markers
+    videos = database.video_metadata
+    ownership = database.maxx_schema_info
+
+    assert database.profile == "maxx-v1"
+    assert ownership is not None
+    assert (
+        ownership.schema_version,
+        ownership.minimum_reader_version,
+        ownership.producer_version,
+        ownership.producer_commit,
+    ) == (
+        1,
+        1,
+        "3.14.0",
+        "de15b08a2dba98b55d6ddfb7cedac147838afbb4",
+    )
+    assert features[0].time_id == 17
+    assert [value.time_id for value in features[1:]] == [None] * 4
+    for index, (feature, descriptor) in enumerate(
+        zip(features, expected["descriptors"], strict=True)
+    ):
+        actual = np.asarray(feature.descriptors)
+        assert actual.dtype == descriptor.dtype
+        assert actual.shape == descriptor.shape
+        assert actual.tobytes() == descriptor.tobytes()
+        assert feature.descriptor_dtype == descriptor.dtype.name
+        assert feature.descriptor_dim == 2
+        assert feature.descriptor_dtype_present
+        assert feature.descriptor_dim_present
+        assert feature.extractor_type == (0, -1, -1, 1, -1)[index]
+    assert features[0].extractor_type_name == ""
+    assert features[1].extractor_type_name is None
+    assert np.asarray(features[0].keypoint_colors).tobytes() == expected[
+        "colors"
+    ].tobytes()
+    assert features[1].keypoint_colors is None
+    assert features[0].quality == 0.0
+    assert features[1].quality is None
+
+    assert graph.pair_ids.tolist() == [
+        expected["pair_id"],
+        expected["provenance_only_pair_id"],
+    ]
+    assert graph.match_present.tolist() == [1, 0]
+    assert graph.match_score_present.tolist() == [1, 0]
+    assert np.asarray(graph.scores).tobytes() == expected[
+        "match_scores"
+    ].tobytes()
+    assert graph.provenance_present.tolist() == [1, 1]
+    assert graph.source_flags.tolist() == [0x80000001, 0]
+    assert graph.retrieval_score_present.tolist() == [1, 0]
+    assert np.isposinf(graph.retrieval_scores[0])
+    assert graph.retrieval_scores[1] == 0.0
+
+    assert priors.rotation_order == "xyzw"
+    assert priors.rotation_convention == "cam_from_world"
+    assert priors.covariance_storage == "row_major"
+    assert (
+        priors.rotation_covariance_variable_order == "rotation_tangent_xyz"
+    )
+    assert (
+        priors.pose_covariance_variable_order
+        == "rotation_tangent_xyz_translation_xyz"
+    )
+    assert priors.rotation_covariance_unit == "radians_squared"
+    assert priors.position_covariance_unit == "meters_squared"
+    assert priors.pose_covariance_cross_unit == "radian_meters"
+    assert priors.rotation_present.tolist() == [1]
+    assert priors.rotations.tobytes() == expected["rotation"].tobytes()
+    assert priors.rotation_covariances.tobytes() == expected[
+        "rotation_covariance"
+    ].tobytes()
+    assert priors.pose_covariances.tobytes() == expected[
+        "pose_covariance"
+    ].tobytes()
+
+    assert markers.marker_ids.tolist() == [9, 10]
+    assert markers.marker_types.tolist() == [2, 0]
+    assert markers.world_position_present.tolist() == [1, 0]
+    assert markers.world_positions[0].tobytes() == expected[
+        "marker_position"
+    ].tobytes()
+    assert markers.world_position_covariance_present.tolist() == [1, 0]
+    assert markers.world_position_covariances[0].tobytes() == expected[
+        "marker_covariance"
+    ].tobytes()
+    assert markers.point3D_ids.tolist() == [2**64 - 1, 123]
+    assert markers.projection_point2D_indices.tolist() == [2**32 - 1]
+    assert np.isposinf(markers.projection_xy[0, 0])
+    assert markers.projection_xy[0, 1] == 20.25
+    assert markers.projection_sizes.tolist() == [-3.5]
+    assert markers.projection_pinned.tolist() == [1]
+    assert markers.projection_coordinate_origin == "top_left"
+    assert markers.projection_coordinate_unit == "pixels"
+    assert markers.projection_size_unit == "pixels"
+
+    assert videos.video_ids.tolist() == [3, 4]
+    assert videos.source_path_present.tolist() == [1, 0]
+    assert videos.source_paths == ["", ""]
+    assert videos.content_hash_present.tolist() == [0, 1]
+    assert videos.content_hashes == ["", ""]
+    assert videos.codec_name_present.tolist() == [1, 0]
+    assert videos.sync_group_present.tolist() == [1, 0]
+    assert videos.video_frame_indices.tolist() == [8]
+    assert videos.frame_image_ids.tolist() == [1]
+    assert videos.pts_present.tolist() == [1]
+    assert np.isposinf(videos.pts_seconds[0])
+    assert videos.time_ids.tolist() == [19]
+
+
+def test_maxx_present_empty_rows_and_deterministic_order(tmp_path):
+    path = tmp_path / "maxx-empty-present.db"
+    _empty_maxx_de15_database(path)
+    pair_id = 1 * 2_147_483_647 + 2
+    with closing(sqlite3.connect(path)) as connection:
+        connection.execute(
+            "INSERT INTO cameras VALUES(7,0,640,480,?,1)",
+            (struct.pack("<3d", 500.0, 320.0, 240.0),),
+        )
+        connection.executemany(
+            "INSERT INTO images VALUES(?,?,7,NULL)",
+            ((2, "2.jpg"), (1, "1.jpg")),
+        )
+        connection.execute(
+            "INSERT INTO keypoints VALUES(2,0,2,NULL)"
+        )
+        connection.execute(
+            "INSERT INTO descriptors VALUES"
+            "(2,0,'SIFT',0,128,0,128,NULL)"
+        )
+        connection.execute(
+            "INSERT INTO keypoint_colors VALUES(2,0,3,NULL)"
+        )
+        connection.execute(
+            "INSERT INTO matches VALUES(?,0,2,NULL)", (pair_id,)
+        )
+        connection.execute(
+            "INSERT INTO match_scores VALUES(?,0,1,NULL)",
+            (pair_id,),
+        )
+        connection.commit()
+
+    database = _core.read_colmap_db(str(path))
+    assert database.image_ids == [1, 2]
+    empty = database.feature(2)
+    assert empty.keypoints_present
+    assert empty.keypoints.shape == (0, 2)
+    assert empty.descriptors.shape == (0, 128)
+    assert empty.keypoint_colors.shape == (0, 3)
+    assert database.match_graph.match_present.tolist() == [1]
+    assert database.match_graph.match_score_present.tolist() == [1]
+    assert database.match_graph.matches.shape == (0, 2)
+    assert database.match_graph.scores.shape == (0,)
+
+
+def test_maxx_extended_pose_null_and_all_nan_blob_presence(tmp_path):
+    path = tmp_path / "maxx-pose-ieee.db"
+    _maxx_extension_database(path)
+    rotation_bits = np.array(
+        [
+            0x7FF8000000000042,
+            0xFFF8000000000011,
+            0x7FF0000000000001,
+            0xFFF0000000000001,
+        ],
+        np.uint64,
+    )
+    logical_pose_bits = np.resize(rotation_bits, 36).reshape(6, 6)
     with sqlite3.connect(path) as connection:
         connection.execute(
-            "ALTER TABLE pose_priors ADD COLUMN rotation BLOB"
-        )
-        connection.execute(
-            "ALTER TABLE pose_priors ADD COLUMN rotation_covariance BLOB"
-        )
-        connection.execute(
-            "ALTER TABLE pose_priors ADD COLUMN pose_covariance BLOB"
-        )
-        connection.execute(
-            "INSERT INTO pose_priors"
-            "(pose_prior_id,corr_data_id,corr_sensor_id,corr_sensor_type,"
-            "position,position_covariance,gravity,coordinate_system,"
-            "rotation,rotation_covariance,pose_covariance) "
-            "VALUES(1,1,1,0,NULL,NULL,NULL,-1,NULL,NULL,NULL)"
+            "UPDATE pose_priors SET rotation=?,"
+            "rotation_covariance=NULL,pose_covariance=?",
+            (
+                rotation_bits.tobytes(),
+                logical_pose_bits.T.copy().tobytes(),
+            ),
         )
 
-    with pytest.raises(ValueError, match="MAXX pose-prior extensions"):
-        _core.read_colmap_db(str(path))
+    priors = _core.read_colmap_db(str(path)).pose_priors
+    assert priors.rotation_present.tolist() == [1]
+    assert priors.rotation_covariance_present.tolist() == [0]
+    assert priors.pose_covariance_present.tolist() == [1]
+    np.testing.assert_array_equal(
+        priors.rotations.view(np.uint64)[0], rotation_bits
+    )
+    assert priors.rotation_covariances[0].tobytes() == b"\0" * 72
+    np.testing.assert_array_equal(
+        priors.pose_covariances.view(np.uint64)[0],
+        logical_pose_bits,
+    )
+
+
+def test_maxx_successful_scalar_boundaries(tmp_path):
+    path = tmp_path / "maxx-scalar-boundaries.db"
+    _maxx_extension_database(path)
+    with sqlite3.connect(path) as connection:
+        connection.execute(
+            "UPDATE images SET time_id=4294967294 WHERE image_id=1"
+        )
+        connection.execute(
+            "UPDATE markers SET point3D_id=9223372036854775807 "
+            "WHERE marker_id=9"
+        )
+        connection.execute(
+            "UPDATE marker_projections SET point2D_idx=4294967294"
+        )
+        connection.execute(
+            "UPDATE videos SET width=-2147483648,height=2147483647,"
+            "num_frames=9223372036854775807 WHERE video_id=3"
+        )
+        connection.execute(
+            "UPDATE video_frames SET frame_id=9223372036854775807,"
+            "time_id=4294967294"
+        )
+
+    database = _core.read_colmap_db(str(path))
+    assert database.feature(1).time_id == 2**32 - 2
+    assert database.markers.point3D_ids.tolist()[0] == 2**63 - 1
+    assert database.markers.projection_point2D_indices.tolist() == [
+        2**32 - 2
+    ]
+    videos = database.video_metadata
+    assert videos.widths.tolist()[0] == -(2**31)
+    assert videos.heights.tolist()[0] == 2**31 - 1
+    assert videos.num_frames.tolist()[0] == 2**63 - 1
+    assert videos.video_frame_indices.tolist() == [2**63 - 1]
+    assert videos.time_ids.tolist() == [2**32 - 2]
+
+
+def test_maxx_partial_reads_and_array_lifetimes(tmp_path):
+    path = tmp_path / "maxx-partial.db"
+    expected = _maxx_extension_database(path)
+
+    image = _core.read_colmap_db_image(str(path), 1)
+    pair = _core.read_colmap_db_pair(str(path), 2, 1)
+    provenance_only = _core.read_colmap_db_pair(str(path), 101, 100)
+    database = _core.read_colmap_db(str(path))
+    ownership = database.maxx_schema_info
+    arrays = [
+        np.asarray(database.feature(image_id).descriptors)
+        for image_id in range(1, 6)
+    ]
+    arrays.extend(
+        (
+            np.asarray(database.feature(1).keypoint_colors),
+            np.asarray(pair.match_score_present),
+            np.asarray(pair.scores),
+            np.asarray(pair.provenance_present),
+            np.asarray(pair.source_flags),
+            np.asarray(pair.retrieval_score_present),
+            np.asarray(pair.retrieval_scores),
+        )
+    )
+    arrays.extend(
+        np.asarray(getattr(database.pose_priors, name))
+        for name in (
+            "rotation_present",
+            "rotations",
+            "rotation_covariance_present",
+            "rotation_covariances",
+            "pose_covariance_present",
+            "pose_covariances",
+        )
+    )
+    arrays.extend(
+        np.asarray(getattr(database.markers, name))
+        for name in (
+            "marker_ids",
+            "marker_types",
+            "world_position_present",
+            "world_positions",
+            "world_position_covariance_present",
+            "world_position_covariances",
+            "point3D_ids",
+            "enabled",
+            "projection_marker_ids",
+            "projection_image_ids",
+            "projection_xy",
+            "projection_sizes",
+            "projection_pinned",
+            "projection_point2D_indices",
+        )
+    )
+    arrays.extend(
+        np.asarray(getattr(database.video_metadata, name))
+        for name in (
+            "video_ids",
+            "source_path_present",
+            "content_hash_present",
+            "widths",
+            "heights",
+            "num_frames",
+            "fps",
+            "duration_seconds",
+            "codec_name_present",
+            "sync_group_present",
+            "frame_video_ids",
+            "frame_image_ids",
+            "video_frame_indices",
+            "pts_present",
+            "pts_seconds",
+            "time_id_present",
+            "time_ids",
+        )
+    )
+    arrays.extend(
+        (
+            np.asarray(image.descriptors),
+            np.asarray(image.keypoint_colors),
+        )
+    )
+    retained = tuple(
+        (array, array.dtype.str, array.shape, array.tobytes())
+        for array in arrays
+    )
+    path.unlink()
+    del database, image, pair
+    gc.collect()
+
+    for array, dtype, shape, payload in retained:
+        assert array.dtype.str == dtype
+        assert array.shape == shape
+        assert array.tobytes() == payload
+    assert retained[0][0].tobytes() == expected["descriptors"][0].tobytes()
+    assert retained[5][0].tobytes() == expected["colors"].tobytes()
+    assert retained[7][0].tobytes() == expected["match_scores"].tobytes()
+    assert ownership is not None
+    assert (
+        ownership.producer_commit
+        == "de15b08a2dba98b55d6ddfb7cedac147838afbb4"
+    )
+    assert provenance_only.num_pairs == 1
+    assert provenance_only.match_present.tolist() == [0]
+    assert provenance_only.provenance_present.tolist() == [1]
+    assert provenance_only.scores is None
+
+
+def _assert_failed_read_releases(
+    path: Path, operation, message: str
+) -> None:
+    with pytest.raises(ValueError, match=message):
+        operation()
+    released = path.with_suffix(path.suffix + ".released")
+    path.rename(released)
+    released.unlink()
+
+
+@pytest.mark.parametrize(
+    ("statement", "message"),
+    [
+        (
+            "UPDATE descriptors SET data=x'00' WHERE image_id=1",
+            "descriptor data byte count",
+        ),
+        (
+            "UPDATE keypoint_colors SET data=x'00' WHERE image_id=1",
+            "keypoint color data byte count",
+        ),
+        (
+            "UPDATE image_qualities SET quality='bad' WHERE image_id=1",
+            "image quality must be REAL",
+        ),
+    ],
+)
+def test_maxx_partial_image_selected_invalid_and_full_read_release_handle(
+    tmp_path, statement, message
+):
+    path = tmp_path / "selected-image-invalid.db"
+    _maxx_extension_database(path)
+    with closing(sqlite3.connect(path)) as connection:
+        connection.execute(statement)
+        connection.commit()
+
+    with pytest.raises(ValueError, match=message):
+        _core.read_colmap_db_image(str(path), 1)
+    _assert_failed_read_releases(
+        path, lambda: _core.read_colmap_db(str(path)), message
+    )
+
+
+@pytest.mark.parametrize(
+    ("statement", "parameters", "message"),
+    [
+        (
+            "UPDATE descriptors SET data=x'00' WHERE image_id=5",
+            (),
+            "descriptor data byte count",
+        ),
+        (
+            "INSERT INTO keypoint_colors VALUES(5,2,3,?)",
+            (b"\0",),
+            "keypoint color data byte count",
+        ),
+        (
+            "INSERT INTO image_qualities VALUES(5,'bad')",
+            (),
+            "image quality must be REAL",
+        ),
+    ],
+)
+def test_maxx_partial_image_ignores_unselected_invalid_full_read_releases(
+    tmp_path, statement, parameters, message
+):
+    path = tmp_path / "unselected-image-invalid.db"
+    _maxx_extension_database(path)
+    expected = _feature_fingerprint(
+        _core.read_colmap_db_image(str(path), 1)
+    )
+    with closing(sqlite3.connect(path)) as connection:
+        connection.execute(statement, parameters)
+        connection.commit()
+
+    selected = _core.read_colmap_db_image(str(path), 1)
+    assert _feature_fingerprint(selected) == expected
+    _assert_failed_read_releases(
+        path, lambda: _core.read_colmap_db(str(path)), message
+    )
+
+
+@pytest.mark.parametrize(
+    ("statement", "message"),
+    [
+        (
+            "UPDATE match_scores SET data=x'00'",
+            "match score data byte count",
+        ),
+        (
+            "UPDATE pair_provenance SET source_flags='bad' "
+            "WHERE retrieval_score IS NOT NULL",
+            "pair source_flags must be INTEGER",
+        ),
+    ],
+)
+def test_maxx_partial_pair_selected_invalid_and_full_read_release_handle(
+    tmp_path, statement, message
+):
+    path = tmp_path / "selected-pair-invalid.db"
+    _maxx_extension_database(path)
+    with closing(sqlite3.connect(path)) as connection:
+        connection.execute(statement)
+        connection.commit()
+
+    with pytest.raises(ValueError, match=message):
+        _core.read_colmap_db_pair(str(path), 1, 2)
+    _assert_failed_read_releases(
+        path, lambda: _core.read_colmap_db(str(path)), message
+    )
+
+
+@pytest.mark.parametrize("surface", ["match_scores", "pair_provenance"])
+def test_maxx_partial_pair_ignores_unselected_invalid_full_read_releases(
+    tmp_path, surface
+):
+    path = tmp_path / f"unselected-{surface}.db"
+    expected_values = _maxx_extension_database(path)
+    expected = _graph_fingerprint(
+        _core.read_colmap_db_pair(str(path), 1, 2)
+    )
+    unrelated_pair = 3 * 2_147_483_647 + 4
+    with closing(sqlite3.connect(path)) as connection:
+        if surface == "match_scores":
+            connection.execute(
+                "INSERT INTO matches VALUES(?,1,2,?)",
+                (unrelated_pair, struct.pack("<2I", 0, 0)),
+            )
+            connection.execute(
+                "INSERT INTO match_scores VALUES(?,1,1,x'00')",
+                (unrelated_pair,),
+            )
+            message = "match score data byte count"
+        else:
+            connection.execute(
+                "INSERT INTO pair_provenance VALUES(?,'bad',NULL)",
+                (unrelated_pair,),
+            )
+            message = "pair source_flags must be INTEGER"
+        connection.commit()
+
+    selected = _core.read_colmap_db_pair(str(path), 2, 1)
+    assert _graph_fingerprint(selected) == expected
+    assert selected.pair_ids.tolist() == [expected_values["pair_id"]]
+    _assert_failed_read_releases(
+        path, lambda: _core.read_colmap_db(str(path)), message
+    )
+
+
+def test_maxx_descriptor_metadata_presence_is_independent(tmp_path):
+    path = tmp_path / "maxx-descriptor-presence.db"
+    _maxx_extension_database(path)
+    aliked = np.array(
+        [[0.25, -0.5], [1.5, -2.0]], dtype=np.float32
+    )
+    with sqlite3.connect(path) as connection:
+        connection.execute(
+            "UPDATE descriptors SET type=1,type_name='ALIKED',"
+            "dtype=NULL,dim=NULL,cols=8,data=? WHERE image_id=2",
+            (aliked.tobytes(),),
+        )
+        connection.execute(
+            "UPDATE descriptors SET dim=NULL WHERE image_id=3"
+        )
+        connection.execute(
+            "UPDATE descriptors SET dtype=NULL,dim=NULL WHERE image_id=5"
+        )
+
+    database = _core.read_colmap_db(str(path))
+    dtype_absent = database.feature(2)
+    dim_absent = database.feature(3)
+    both_absent = database.feature(5)
+
+    assert not dtype_absent.descriptor_dtype_present
+    assert not dtype_absent.descriptor_dim_present
+    assert dtype_absent.descriptors.dtype == np.float32
+    assert dtype_absent.descriptors.shape == (2, 2)
+    assert dtype_absent.descriptors.tobytes() == aliked.tobytes()
+    assert dim_absent.descriptor_dtype_present
+    assert not dim_absent.descriptor_dim_present
+    assert dim_absent.descriptors.dtype == np.float16
+    assert dim_absent.descriptors.shape == (2, 2)
+    assert not both_absent.descriptor_dtype_present
+    assert not both_absent.descriptor_dim_present
+    assert both_absent.descriptors.dtype == np.uint8
+    assert both_absent.descriptors.shape == (2, 16)
+    inspection = _core.inspect_colmap_db(str(path))
+    assert inspection["image_descriptor_dtypes"][1] == "float32"
+    assert inspection["image_descriptor_dimensions"][1] == 2
+
+
+@pytest.mark.parametrize(
+    ("surface", "message"),
+    [
+        ("descriptor", "extended image metadata"),
+        ("keypoint_colors", "extended image metadata"),
+        ("image_quality", "extended image metadata"),
+        ("match_scores", "match scores and provenance"),
+        ("pair_provenance", "match scores and provenance"),
+        ("extended_pose", "rigs, frames, and pose priors"),
+        ("markers", "marker, video metadata, and ownership"),
+        ("videos", "marker, video metadata, and ownership"),
+        ("ownership", "marker, video metadata, and ownership"),
+    ],
+)
+def test_maxx_writer_guards_each_surface_without_mutating_source_or_destination(
+    tmp_path, surface, message
+):
+    source = tmp_path / f"maxx-{surface}-source.db"
+    _maxx_single_surface_database(source, surface)
+    database = _core.read_colmap_db(str(source))
+    before = _database_fingerprint(database)
+    absent = tmp_path / f"{surface}-absent.db"
+    existing = tmp_path / f"{surface}-existing.db"
+    existing.write_bytes(b"keep-existing")
+
+    for destination in (absent, existing):
+        with pytest.raises(ValueError, match=message):
+            _core.write_colmap_db(database, str(destination))
+        assert _database_fingerprint(database) == before
+
+    assert not absent.exists()
+    assert existing.read_bytes() == b"keep-existing"
+
+
+def test_inspect_maxx_extension_metadata_without_blob_decode(tmp_path):
+    path = tmp_path / "maxx-inspect.db"
+    _maxx_extension_database(path)
+
+    with sqlite3.connect(path) as connection:
+        connection.execute("UPDATE descriptors SET data=x'00'")
+        connection.execute("UPDATE keypoint_colors SET data=x'00'")
+        connection.execute("UPDATE match_scores SET data=x'00'")
+        connection.execute(
+            "UPDATE pose_priors SET rotation=x'00',"
+            "rotation_covariance='not-a-blob',pose_covariance=x'0001'"
+        )
+        connection.execute(
+            "UPDATE markers SET world_position=x'00',"
+            "world_position_cov='not-a-blob'"
+        )
+    values = _core.inspect_colmap_db(str(path))
+    public = sceneio.inspect(path)
+
+    assert values["num_keypoint_color_rows"] == 1
+    assert values["num_match_score_pairs"] == 1
+    assert values["num_image_qualities"] == 1
+    assert values["num_pair_provenance"] == 2
+    assert values["num_markers"] == 2
+    assert values["num_marker_projections"] == 1
+    assert values["num_videos"] == 2
+    assert values["num_video_frames"] == 1
+    assert values["maxx_schema_info_present"]
+    assert values["maxx_schema_version"] == 1
+    assert values["maxx_minimum_reader_version"] == 1
+    assert values["image_descriptor_dtypes"] == [
+        "uint8",
+        "int8",
+        "float16",
+        "float32",
+        "float64",
+    ]
+    assert values["image_descriptor_dimensions"] == [2] * 5
+    assert [array.dtype for array in public.arrays if "descriptors" in array.name] == [
+        "uint8",
+        "int8",
+        "float16",
+        "float32",
+        "float64",
+    ]
+    assert public.metadata["maxx_schema_version"] == 1
+    assert public.metadata["maxx_producer_version"] == "3.14.0"
+    assert public.metadata["num_markers"] == 2
+
+
+def test_inspect_rejects_contradictory_builtin_descriptor_metadata(tmp_path):
+    path = tmp_path / "maxx-inspect-contradiction.db"
+    _maxx_extension_database(path)
+    with sqlite3.connect(path) as connection:
+        connection.execute(
+            "UPDATE descriptors SET type=0,dtype=3 WHERE image_id=2"
+        )
+
+    with pytest.raises(ValueError, match="descriptor dtype contradicts"):
+        _core.inspect_colmap_db(str(path))
+
+
+@pytest.mark.parametrize(
+    ("statement", "parameters", "message"),
+    [
+        (
+            "UPDATE descriptors SET cols=3 WHERE image_id=2",
+            (),
+            "descriptor cols disagree",
+        ),
+        (
+            "UPDATE descriptors SET type=0,dtype=3 WHERE image_id=2",
+            (),
+            "descriptor dtype contradicts",
+        ),
+        (
+            "UPDATE descriptors SET dtype='bad' WHERE image_id=2",
+            (),
+            "descriptor dtype must be INTEGER",
+        ),
+        (
+            "UPDATE descriptors SET dtype=99 WHERE image_id=2",
+            (),
+            "descriptor dtype is unknown",
+        ),
+        (
+            "UPDATE descriptors SET data=NULL WHERE image_id=2",
+            (),
+            "missing descriptor data",
+        ),
+        (
+            "UPDATE descriptors SET type_name=x'00' WHERE image_id=2",
+            (),
+            "descriptor type_name must be TEXT",
+        ),
+        (
+            "UPDATE descriptors SET dim=-1 WHERE image_id=2",
+            (),
+            "descriptor dim is outside",
+        ),
+        (
+            "UPDATE keypoint_colors SET cols=2",
+            (),
+            "keypoint colors must be Nx3",
+        ),
+        (
+            "UPDATE keypoint_colors SET data='bad'",
+            (),
+            "keypoint color data must be BLOB",
+        ),
+        (
+            "UPDATE keypoint_colors SET image_id=999",
+            (),
+            "keypoint_colors reference a missing image",
+        ),
+        (
+            "UPDATE match_scores SET rows=1",
+            (),
+            "match score data byte count",
+        ),
+        (
+            "UPDATE match_scores SET data=NULL",
+            (),
+            "missing match score data",
+        ),
+        (
+            "UPDATE match_scores SET pair_id=999",
+            (),
+            "match scores must be parallel",
+        ),
+        (
+            "UPDATE image_qualities SET quality='bad'",
+            (),
+            "image quality must be REAL",
+        ),
+        (
+            "UPDATE image_qualities SET image_id=999",
+            (),
+            "image_qualities reference a missing image",
+        ),
+        (
+            "UPDATE pair_provenance SET source_flags=-1 "
+            "WHERE retrieval_score IS NOT NULL",
+            (),
+            "pair source_flags is outside uint32",
+        ),
+        (
+            "UPDATE pair_provenance SET retrieval_score='bad' "
+            "WHERE retrieval_score IS NOT NULL",
+            (),
+            "pair retrieval_score must be REAL",
+        ),
+        (
+            "UPDATE pose_priors SET rotation=?",
+            (b"\0" * 8,),
+            "rotation byte count",
+        ),
+        (
+            "UPDATE pose_priors SET rotation_covariance=?",
+            (b"\0" * 80,),
+            "rotation covariance byte count",
+        ),
+        (
+            "UPDATE pose_priors SET pose_covariance='bad'",
+            (),
+            "pose covariance must be BLOB",
+        ),
+        (
+            "UPDATE markers SET world_position_cov=? WHERE marker_id=9",
+            (b"\0" * 8,),
+            "marker world_position_cov byte count",
+        ),
+        (
+            "UPDATE markers SET marker_id=4294967295 WHERE marker_id=9",
+            (),
+            "marker id or type is invalid",
+        ),
+        (
+            "UPDATE markers SET type=4 WHERE marker_id=9",
+            (),
+            "marker id or type is invalid",
+        ),
+        (
+            "UPDATE markers SET label='' WHERE marker_id=9",
+            (),
+            "must be non-empty",
+        ),
+        (
+            "UPDATE markers SET enabled=2 WHERE marker_id=9",
+            (),
+            "marker enabled must be 0 or 1",
+        ),
+        (
+            "UPDATE markers SET point3D_id=-2 WHERE marker_id=9",
+            (),
+            "point3D_id must be -1 or non-negative",
+        ),
+        (
+            "UPDATE markers SET world_position='bad' WHERE marker_id=9",
+            (),
+            "marker world_position must be BLOB",
+        ),
+        (
+            "UPDATE marker_projections SET marker_id=999",
+            (),
+            "marker projection metadata is invalid",
+        ),
+        (
+            "UPDATE marker_projections SET image_id=999",
+            (),
+            "marker projection references a missing image",
+        ),
+        (
+            "UPDATE marker_projections SET pinned=2",
+            (),
+            "pinned must be 0 or 1",
+        ),
+        (
+            "UPDATE marker_projections SET point2D_idx=4294967296",
+            (),
+            "point2D_idx is outside uint32",
+        ),
+        (
+            "UPDATE marker_projections SET x='bad'",
+            (),
+            "projection x must be REAL",
+        ),
+        (
+            "UPDATE images SET time_id=4294967295 WHERE image_id=1",
+            (),
+            "time_id must be a valid uint32",
+        ),
+        (
+            "UPDATE images SET time_id=-1 WHERE image_id=1",
+            (),
+            "time_id must be a valid uint32",
+        ),
+        (
+            "UPDATE video_frames SET time_id=4294967295",
+            (),
+            "video-frame metadata is invalid",
+        ),
+        (
+            "UPDATE videos SET video_id=4294967295 WHERE video_id=3",
+            (),
+            "video metadata is invalid",
+        ),
+        (
+            "UPDATE videos SET width=2147483648 WHERE video_id=3",
+            (),
+            "video width is outside int32",
+        ),
+        (
+            "UPDATE video_frames SET frame_id=-1",
+            (),
+            "video-frame metadata is invalid",
+        ),
+        (
+            "UPDATE video_frames SET video_id=999",
+            (),
+            "video-frame metadata is invalid",
+        ),
+        (
+            "UPDATE video_frames SET image_id=999",
+            (),
+            "video frame references a missing image",
+        ),
+        (
+            "UPDATE video_frames SET pts_seconds='bad'",
+            (),
+            "pts_seconds must be REAL",
+        ),
+    ],
+)
+def test_maxx_extension_malformed_rows_are_rejected(
+    tmp_path, statement, parameters, message
+):
+    path = tmp_path / "maxx-malformed.db"
+    _maxx_extension_database(path)
+    with closing(sqlite3.connect(path)) as connection:
+        connection.execute(statement, parameters)
+        connection.commit()
+
+    _assert_failed_read_releases(
+        path, lambda: _core.read_colmap_db(str(path)), message
+    )
+
+
+@pytest.mark.parametrize(
+    ("statement", "message"),
+    [
+        (
+            "ALTER TABLE descriptors DROP COLUMN dtype",
+            "descriptors has an unsupported or incomplete column layout",
+        ),
+        (
+            "DROP TABLE marker_projections",
+            "markers and marker_projections must be present together",
+        ),
+        (
+            "DROP TABLE video_frames",
+            "videos and video_frames must be present together",
+        ),
+    ],
+)
+def test_maxx_extension_incomplete_table_layouts_are_rejected(
+    tmp_path, statement, message
+):
+    path = tmp_path / "maxx-incomplete.db"
+    _maxx_extension_database(path)
+    with closing(sqlite3.connect(path)) as connection:
+        connection.execute(statement)
+        connection.commit()
+
+    _assert_failed_read_releases(
+        path, lambda: _core.read_colmap_db(str(path)), message
+    )
 
 
 def test_stock_companion_writer_guard_does_not_touch_destination(tmp_path):
@@ -1405,6 +2761,9 @@ def _feature_fingerprint(value):
         value.keypoint_columns,
         value.descriptor_dtype,
         value.descriptor_dim,
+        value.extractor_type_name,
+        value.descriptor_dtype_present,
+        value.descriptor_dim_present,
         np.asarray(value.keypoints).tobytes(),
         (
             None
@@ -1417,7 +2776,13 @@ def _feature_fingerprint(value):
             if value.descriptors is None
             else np.asarray(value.descriptors).tobytes(),
         ),
+        (
+            None
+            if value.keypoint_colors is None
+            else np.asarray(value.keypoint_colors).tobytes()
+        ),
         None if value.scores is None else np.asarray(value.scores).tobytes(),
+        value.quality,
     )
 
 
@@ -1426,6 +2791,7 @@ def _graph_fingerprint(value):
         "pair_ids",
         "image_pairs",
         "match_present",
+        "match_score_present",
         "geometry_present",
         "match_offsets",
         "matches",
@@ -1445,6 +2811,10 @@ def _graph_fingerprint(value):
         "camera2_present",
         "camera1_prior_focal_length",
         "camera2_prior_focal_length",
+        "provenance_present",
+        "source_flags",
+        "retrieval_score_present",
+        "retrieval_scores",
     )
     arrays = tuple(
         (np.asarray(getattr(value, name)).dtype.str, np.asarray(getattr(value, name)).shape,
@@ -1458,7 +2828,16 @@ def _graph_fingerprint(value):
         )
         for index in range(value.num_pairs)
     )
-    return arrays, cameras
+    scores = (
+        None
+        if value.scores is None
+        else (
+            np.asarray(value.scores).dtype.str,
+            np.asarray(value.scores).shape,
+            np.asarray(value.scores).tobytes(),
+        )
+    )
+    return arrays, scores, cameras
 
 
 def _camera_fingerprint(value):
@@ -1485,6 +2864,7 @@ def _array_fields_fingerprint(value, names):
 
 
 def _database_fingerprint(value):
+    ownership = value.maxx_schema_info
     return (
         value.profile,
         value.application_id,
@@ -1538,8 +2918,75 @@ def _database_fingerprint(value):
                     "position_covariances",
                     "gravity_present",
                     "gravities",
+                    "rotation_present",
+                    "rotations",
+                    "rotation_covariance_present",
+                    "rotation_covariances",
+                    "pose_covariance_present",
+                    "pose_covariances",
                 ),
             ),
+        ),
+        (
+            tuple(value.markers.labels),
+            _array_fields_fingerprint(
+                value.markers,
+                (
+                    "marker_ids",
+                    "marker_types",
+                    "world_position_present",
+                    "world_positions",
+                    "world_position_covariance_present",
+                    "world_position_covariances",
+                    "point3D_ids",
+                    "enabled",
+                    "projection_marker_ids",
+                    "projection_image_ids",
+                    "projection_xy",
+                    "projection_sizes",
+                    "projection_pinned",
+                    "projection_point2D_indices",
+                ),
+            ),
+        ),
+        (
+            tuple(value.video_metadata.names),
+            tuple(value.video_metadata.source_paths),
+            tuple(value.video_metadata.content_hashes),
+            tuple(value.video_metadata.codec_names),
+            tuple(value.video_metadata.sync_groups),
+            _array_fields_fingerprint(
+                value.video_metadata,
+                (
+                    "video_ids",
+                    "source_path_present",
+                    "content_hash_present",
+                    "widths",
+                    "heights",
+                    "num_frames",
+                    "fps",
+                    "duration_seconds",
+                    "codec_name_present",
+                    "sync_group_present",
+                    "frame_video_ids",
+                    "frame_image_ids",
+                    "video_frame_indices",
+                    "pts_present",
+                    "pts_seconds",
+                    "time_id_present",
+                    "time_ids",
+                ),
+            ),
+        ),
+        (
+            None
+            if ownership is None
+            else (
+                ownership.schema_version,
+                ownership.minimum_reader_version,
+                ownership.producer_version,
+                ownership.producer_commit,
+            )
         ),
     )
 
@@ -1556,7 +3003,7 @@ def test_feature_set_record_dtype_layout_copy_and_lifetime():
         image_name="frame/0007.png",
         camera_id=5,
         image_size=(640, 480),
-        extractor_type=2,
+        extractor_type=0,
         time_id=99,
     )
     keypoints[:] = -1
@@ -2060,6 +3507,60 @@ def test_transaction_rolls_back_injected_failures(tmp_path):
         assert _database_fingerprint(_core.read_colmap_db(str(path))) == before
 
 
+def test_hybrid_writer_replaces_preexisting_maxx_identity_and_tables(
+    tmp_path,
+):
+    path = tmp_path / "replace-maxx.db"
+    _maxx_extension_database(path)
+    expected = _database()
+    source_before = _database_fingerprint(expected)
+
+    sceneio.write(expected, path)
+
+    assert _database_fingerprint(expected) == source_before
+    with sqlite3.connect(path) as connection:
+        application_id = connection.execute(
+            "PRAGMA application_id"
+        ).fetchone()[0]
+        tables = {
+            row[0]
+            for row in connection.execute(
+                "SELECT name FROM sqlite_master WHERE type='table'"
+            )
+        }
+    assert application_id == 0
+    assert {
+        "keypoint_colors",
+        "match_scores",
+        "pair_provenance",
+        "maxx_schema_info",
+    }.isdisjoint(tables)
+    assert {
+        "image_qualities",
+        "markers",
+        "marker_projections",
+        "videos",
+        "video_frames",
+    } <= tables
+    with sqlite3.connect(path) as connection:
+        assert all(
+            connection.execute(
+                f'SELECT count(*) FROM "{table}"'
+            ).fetchone()[0]
+            == 0
+            for table in (
+                "image_qualities",
+                "markers",
+                "marker_projections",
+                "videos",
+                "video_frames",
+            )
+        )
+    assert _database_fingerprint(
+        _core.read_colmap_db(str(path))
+    ) == source_before
+
+
 def test_failed_new_transaction_removes_created_database(tmp_path):
     path = tmp_path / "never-partial.db"
     with pytest.raises(RuntimeError, match="injected failure"):
@@ -2103,7 +3604,7 @@ def test_writer_rejects_float_descriptors(tmp_path):
         image_name="a",
         camera_id=5,
         image_size=(640, 480),
-        extractor_type=0,
+        extractor_type=-1,
     )
     empty_graph = _core.match_graph(
         np.empty((0, 2), np.uint32),
@@ -2485,7 +3986,7 @@ def test_randomized_sparse_ids_ragged_matches_and_optional_geometry(tmp_path):
                     image_name=f"{seed}/{index}.jpg",
                     camera_id=19,
                     image_size=(64, 48),
-                    extractor_type=int(rng.integers(-1, 4)),
+                    extractor_type=int(rng.choice([-1, 0])),
                 )
             )
 

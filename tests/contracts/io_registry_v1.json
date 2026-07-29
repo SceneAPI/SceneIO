@@ -1738,15 +1738,23 @@
         "current_recovered_camera_reads",
         "stock_rig_frame_reads",
         "stock_pose_prior_reads",
+        "maxx_image_time_reads",
+        "maxx_descriptor_metadata_reads",
+        "maxx_keypoint_color_reads",
+        "maxx_match_score_reads",
+        "maxx_pair_provenance_reads",
+        "maxx_image_quality_reads",
+        "maxx_extended_pose_prior_reads",
+        "maxx_marker_reads",
+        "maxx_video_metadata_reads",
+        "maxx_ownership_reads",
         "read_only_reads",
         "transactional_writes"
       ],
       "unsupported_features": [
         "rig_frame_writes",
         "pose_prior_writes",
-        "scores",
-        "float_descriptors",
-        "maxx_extension_fields"
+        "maxx_extension_writes"
       ],
       "capabilities": {
         "format": "colmap_db",
@@ -1785,15 +1793,23 @@
           "current_recovered_camera_reads",
           "stock_rig_frame_reads",
           "stock_pose_prior_reads",
+          "maxx_image_time_reads",
+          "maxx_descriptor_metadata_reads",
+          "maxx_keypoint_color_reads",
+          "maxx_match_score_reads",
+          "maxx_pair_provenance_reads",
+          "maxx_image_quality_reads",
+          "maxx_extended_pose_prior_reads",
+          "maxx_marker_reads",
+          "maxx_video_metadata_reads",
+          "maxx_ownership_reads",
           "read_only_reads",
           "transactional_writes"
         ],
         "unsupported_features": [
           "rig_frame_writes",
           "pose_prior_writes",
-          "scores",
-          "float_descriptors",
-          "maxx_extension_fields"
+          "maxx_extension_writes"
         ]
       }
     },

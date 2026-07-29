@@ -4,11 +4,13 @@
 #include <nanobind/stl/string.h>
 #include <nanobind/stl/vector.h>
 
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstring>
 #include <limits>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -79,15 +81,25 @@ nb::object descriptor_view(
 void validate_text(const std::string &value, const char *context) {
     if (value.empty())
         throw std::invalid_argument(
-            std::string(context) + ": image_name must be non-empty");
+            std::string(context) + " must be non-empty");
+    if (value.find('\0') != std::string::npos)
+        throw std::invalid_argument(
+            std::string(context) + " cannot contain embedded NUL");
+    if (!sio::valid_utf8(value))
+        throw std::invalid_argument(
+            std::string(context) + " must be valid UTF-8");
+}
+
+void validate_nullable_text(
+    const std::string &value, const char *context) {
     if (value.find('\0') != std::string::npos)
         throw std::invalid_argument(
             std::string(context) +
-            ": image_name cannot contain embedded NUL");
+            ": text cannot contain embedded NUL");
     if (!sio::valid_utf8(value))
         throw std::invalid_argument(
             std::string(context) +
-            ": image_name must be valid UTF-8");
+            ": text must be valid UTF-8");
 }
 
 void require_binary_flags(
@@ -350,7 +362,7 @@ MatchGraph make_match_graph(
         throw std::invalid_argument(
             "match_graph: verified matches require offsets (P+1,) "
             "uint64 and values (K,2) uint32");
-    if (count > std::numeric_limits<size_t>::max() / 9)
+    if (count > std::numeric_limits<size_t>::max() / 36)
         throw std::invalid_argument(
             "match_graph: pair count overflows field extents");
 
@@ -383,6 +395,12 @@ MatchGraph make_match_graph(
     MatchGraph result;
     result.pair_count = count;
     result.has_scores = has_scores;
+    result.match_score_present.assign(
+        count, static_cast<uint8_t>(has_scores));
+    result.provenance_present.assign(count, 0);
+    result.source_flags.assign(count, 0);
+    result.retrieval_score_present.assign(count, 0);
+    result.retrieval_scores.assign(count, 0.0f);
     result.match_present = optional_flags(
         std::move(match_present), count, true,
         "match_present");
@@ -602,12 +620,24 @@ int64_t colmap_pair_id(
 
 void validate_feature_set(
     const FeatureSet &features, const char *context) {
+    if (features.has_time_id &&
+        (features.time_id < 0 ||
+         features.time_id >=
+             static_cast<int64_t>(
+                 std::numeric_limits<uint32_t>::max())))
+        throw std::invalid_argument(
+            std::string(context) +
+            ": time_id must be a valid uint32 frame id");
+    if (!features.has_time_id && features.time_id != 0)
+        throw std::invalid_argument(
+            std::string(context) +
+            ": absent time_id carries a value");
     if (features.image_id >= kColmapMaxNumImages ||
         features.camera_id >= kColmapMaxNumImages)
         throw std::invalid_argument(
             std::string(context) +
             ": image_id and camera_id must be below 2147483647");
-    validate_text(features.image_name, context);
+    validate_text(features.image_name, "image_name");
     if (features.image_width == 0 ||
         features.image_height == 0)
         throw std::invalid_argument(
@@ -658,16 +688,40 @@ void validate_feature_set(
     if (!features.has_descriptors) {
         if (!features.descriptors.empty() ||
             features.descriptor_columns != 0 ||
-            features.extractor_type != -1)
+            features.extractor_type != -1 ||
+            features.descriptor_dtype_present ||
+            features.descriptor_dim_present ||
+            features.extractor_type_name_present ||
+            !features.extractor_type_name.empty())
             throw std::invalid_argument(
                 std::string(context) +
                 ": absent descriptors carry descriptor metadata");
     } else {
         if (features.descriptor_dtype != sio::DType::U8 &&
-            features.descriptor_dtype != sio::DType::F32)
+            features.descriptor_dtype != sio::DType::I8 &&
+            features.descriptor_dtype != sio::DType::F16 &&
+            features.descriptor_dtype != sio::DType::F32 &&
+            features.descriptor_dtype != sio::DType::F64)
             throw std::invalid_argument(
                 std::string(context) +
-                ": descriptor dtype must be uint8 or float32");
+                ": descriptor dtype is not a MAXX wire dtype");
+        if ((features.extractor_type == 0 &&
+             features.descriptor_dtype != sio::DType::U8) ||
+            ((features.extractor_type == 1 ||
+              features.extractor_type == 2) &&
+             features.descriptor_dtype != sio::DType::F32))
+            throw std::invalid_argument(
+                std::string(context) +
+                ": descriptor dtype contradicts its built-in "
+                "extractor type");
+        if (features.extractor_type_name_present)
+            validate_nullable_text(
+                features.extractor_type_name,
+                "extractor type_name");
+        else if (!features.extractor_type_name.empty())
+            throw std::invalid_argument(
+                std::string(context) +
+                ": absent extractor type_name carries text");
         const size_t expected = TensorDict::checked_size(
             "descriptors", features.descriptor_dtype,
             {features.rows, features.descriptor_columns});
@@ -675,21 +729,21 @@ void validate_feature_set(
             throw std::invalid_argument(
                 std::string(context) +
                 ": descriptor bytes disagree with shape and dtype");
-        if (features.descriptor_dtype == sio::DType::F32) {
-            for (size_t offset = 0;
-                 offset < features.descriptors.size();
-                 offset += sizeof(float)) {
-                float value;
-                std::memcpy(
-                    &value,
-                    features.descriptors.data() + offset,
-                    sizeof(float));
-                if (!std::isfinite(value))
-                    throw std::invalid_argument(
-                        std::string(context) +
-                        ": float descriptors must be finite");
-            }
-        }
+    }
+
+    if (features.keypoint_colors_present) {
+        if (!features.keypoints_present ||
+            features.rows >
+                std::numeric_limits<size_t>::max() / 3 ||
+            features.keypoint_colors.size() != features.rows * 3)
+            throw std::invalid_argument(
+                std::string(context) +
+                ": keypoint colors must be Nx3 and parallel "
+                "to keypoints");
+    } else if (!features.keypoint_colors.empty()) {
+        throw std::invalid_argument(
+            std::string(context) +
+            ": absent keypoint colors carry values");
     }
 
     if (features.has_scores) {
@@ -707,6 +761,16 @@ void validate_feature_set(
             std::string(context) +
             ": absent scores carry values");
     }
+    if (features.quality_present) {
+        if (!std::isfinite(features.quality))
+            throw std::invalid_argument(
+                std::string(context) +
+                ": image quality must be finite");
+    } else if (features.quality != 0.0) {
+        throw std::invalid_argument(
+            std::string(context) +
+            ": absent image quality carries a value");
+    }
 }
 
 void validate_match_graph(
@@ -716,6 +780,7 @@ void validate_match_graph(
         graph.pair_ids.size() != count ||
         graph.image_pairs.size() != count * 2 ||
         graph.match_present.size() != count ||
+        graph.match_score_present.size() != count ||
         graph.geometry_present.size() != count ||
         graph.configs.size() != count ||
         graph.F_present.size() != count ||
@@ -732,7 +797,11 @@ void validate_match_graph(
         graph.recovered_camera1.size() != count ||
         graph.recovered_camera2.size() != count ||
         graph.camera1_prior_focal_length.size() != count ||
-        graph.camera2_prior_focal_length.size() != count)
+        graph.camera2_prior_focal_length.size() != count ||
+        graph.provenance_present.size() != count ||
+        graph.source_flags.size() != count ||
+        graph.retrieval_score_present.size() != count ||
+        graph.retrieval_scores.size() != count)
         throw std::invalid_argument(
             std::string(context) +
             ": inconsistent MatchGraph field lengths");
@@ -768,21 +837,63 @@ void validate_match_graph(
             throw std::invalid_argument(
                 std::string(context) +
                 ": scores length must equal raw match count");
-        for (float value : graph.scores)
-            if (!std::isfinite(value))
-                throw std::invalid_argument(
-                    std::string(context) +
-                    ": scores must be finite");
     } else if (!graph.scores.empty()) {
         throw std::invalid_argument(
             std::string(context) +
             ": absent scores carry values");
     }
+    const bool any_match_score = std::any_of(
+        graph.match_score_present.begin(),
+        graph.match_score_present.end(),
+        [](uint8_t present) { return present != 0; });
+    if (graph.has_scores != any_match_score)
+        throw std::invalid_argument(
+            std::string(context) +
+            ": has_scores must match score-row presence");
 
     require_binary_flags(
         graph.match_present, context, "match_present");
     require_binary_flags(
+        graph.match_score_present, context,
+        "match_score_present");
+    require_binary_flags(
         graph.geometry_present, context, "geometry_present");
+    require_binary_flags(
+        graph.provenance_present, context,
+        "provenance_present");
+    require_binary_flags(
+        graph.retrieval_score_present, context,
+        "retrieval_score_present");
+    for (size_t index = 0; index < count; ++index) {
+        const size_t begin =
+            static_cast<size_t>(graph.match_offsets[index]);
+        const size_t end =
+            static_cast<size_t>(graph.match_offsets[index + 1]);
+        if (graph.match_score_present[index] &&
+            !graph.match_present[index])
+            throw std::invalid_argument(
+                std::string(context) +
+                ": match scores require a raw match row");
+        if (graph.has_scores &&
+            !graph.match_score_present[index])
+            for (size_t score = begin; score < end; ++score)
+                if (graph.scores[score] != 0.0f)
+                    throw std::invalid_argument(
+                        std::string(context) +
+                        ": absent match scores carry values");
+        if (!graph.provenance_present[index] &&
+            (graph.source_flags[index] != 0 ||
+             graph.retrieval_score_present[index]))
+            throw std::invalid_argument(
+                std::string(context) +
+                ": absent provenance carries metadata");
+        if (!graph.retrieval_score_present[index] &&
+            graph.retrieval_scores[index] != 0.0f) {
+            throw std::invalid_argument(
+                std::string(context) +
+                ": absent retrieval score carries a value");
+        }
+    }
     require_binary_flags(
         graph.F_present, context, "F_present");
     require_binary_flags(
@@ -822,11 +933,12 @@ void validate_match_graph(
                 std::string(context) +
                 ": image pairs must be unique");
         if (!graph.match_present[index] &&
-            !graph.geometry_present[index])
+            !graph.geometry_present[index] &&
+            !graph.provenance_present[index])
             throw std::invalid_argument(
                 std::string(context) +
-                ": every pair must exist in matches or "
-                "two_view_geometries");
+                ": every pair must exist in matches, "
+                "two_view_geometries, or pair_provenance");
         if (!graph.match_present[index] &&
             graph.match_offsets[index] !=
                 graph.match_offsets[index + 1])
@@ -1098,7 +1210,15 @@ void validate_colmap_pose_priors(
         value.position_covariance_present.size() != count ||
         value.position_covariances.size() != count * 9 ||
         value.gravity_present.size() != count ||
-        value.gravities.size() != count * 3)
+        value.gravities.size() != count * 3 ||
+        value.rotation_present.size() != count ||
+        value.rotations.size() != count * 4 ||
+        value.rotation_covariance_present.size() != count ||
+        value.rotation_covariances.size() != count * 9 ||
+        value.pose_covariance_present.size() != count ||
+        (count != 0 &&
+         value.pose_covariances.size() / count != 36) ||
+        value.pose_covariances.size() != count * 36)
         throw std::invalid_argument(
             std::string(context) +
             ": inconsistent pose-prior field lengths");
@@ -1109,6 +1229,14 @@ void validate_colmap_pose_priors(
         "position_covariance_present");
     require_binary_flags(
         value.gravity_present, context, "gravity_present");
+    require_binary_flags(
+        value.rotation_present, context, "rotation_present");
+    require_binary_flags(
+        value.rotation_covariance_present, context,
+        "rotation_covariance_present");
+    require_binary_flags(
+        value.pose_covariance_present, context,
+        "pose_covariance_present");
     std::unordered_set<uint32_t> ids;
     std::unordered_set<std::string> data;
     ids.reserve(count);
@@ -1158,13 +1286,221 @@ void validate_colmap_pose_priors(
         validate_values(
             value.gravities, index * 3, 3,
             value.gravity_present[index], "gravity");
+        validate_values(
+            value.rotations, index * 4, 4,
+            value.rotation_present[index], "rotation");
+        validate_values(
+            value.rotation_covariances, index * 9, 9,
+            value.rotation_covariance_present[index],
+            "rotation covariance");
+        validate_values(
+            value.pose_covariances, index * 36, 36,
+            value.pose_covariance_present[index],
+            "pose covariance");
         if (!value.generalized &&
             (sensor_type != 0 || id != data_id ||
-             value.gravity_present[index]))
+             value.gravity_present[index] ||
+             value.rotation_present[index] ||
+             value.rotation_covariance_present[index] ||
+             value.pose_covariance_present[index]))
             throw std::invalid_argument(
                 std::string(context) +
                 ": image-linked pose priors cannot carry generalized "
                 "associations or gravity");
+    }
+}
+
+void validate_colmap_markers(
+    const ColmapMarkerSet &value, const char *context) {
+    const size_t markers = value.num_markers();
+    const size_t projections = value.num_projections();
+    if (markers > std::numeric_limits<size_t>::max() / 9 ||
+        projections >
+            std::numeric_limits<size_t>::max() / 2 ||
+        value.labels.size() != markers ||
+        value.types.size() != markers ||
+        value.world_position_present.size() != markers ||
+        value.world_positions.size() != markers * 3 ||
+        value.world_covariance_present.size() != markers ||
+        value.world_covariances.size() != markers * 9 ||
+        value.point3d_ids.size() != markers ||
+        value.enabled.size() != markers ||
+        value.projection_image_ids.size() != projections ||
+        value.projection_xy.size() != projections * 2 ||
+        value.projection_sizes.size() != projections ||
+        value.projection_pinned.size() != projections ||
+        value.projection_point2d_indices.size() != projections)
+        throw std::invalid_argument(
+            std::string(context) +
+            ": inconsistent marker field lengths");
+    require_binary_flags(
+        value.world_position_present, context,
+        "world_position_present");
+    require_binary_flags(
+        value.world_covariance_present, context,
+        "world_covariance_present");
+    require_binary_flags(value.enabled, context, "marker enabled");
+    require_binary_flags(
+        value.projection_pinned, context,
+        "projection pinned");
+    std::unordered_set<uint32_t> marker_ids;
+    std::unordered_set<std::string> labels;
+    marker_ids.reserve(markers);
+    labels.reserve(markers);
+    for (size_t index = 0; index < markers; ++index) {
+        if (value.marker_ids[index] ==
+                std::numeric_limits<uint32_t>::max() ||
+            !marker_ids.insert(value.marker_ids[index]).second ||
+            value.types[index] < 0 || value.types[index] > 3)
+            throw std::invalid_argument(
+                std::string(context) +
+                ": marker id or type is invalid");
+        validate_text(value.labels[index], "marker label");
+        if (!labels.insert(value.labels[index]).second)
+            throw std::invalid_argument(
+                std::string(context) +
+                ": marker labels must be unique");
+        for (size_t component = 0; component < 3; ++component)
+            if (!value.world_position_present[index] &&
+                value.world_positions[index * 3 + component] != 0.0)
+                throw std::invalid_argument(
+                    std::string(context) +
+                    ": absent marker position carries values");
+        for (size_t component = 0; component < 9; ++component)
+            if (!value.world_covariance_present[index] &&
+                value.world_covariances[
+                    index * 9 + component] != 0.0)
+                throw std::invalid_argument(
+                    std::string(context) +
+                    ": absent marker covariance carries values");
+    }
+    std::unordered_set<std::string> projection_keys;
+    projection_keys.reserve(projections);
+    for (size_t index = 0; index < projections; ++index) {
+        if (!marker_ids.count(
+                value.projection_marker_ids[index]))
+            throw std::invalid_argument(
+                std::string(context) +
+                ": marker projection metadata is invalid");
+        const std::string key =
+            std::to_string(value.projection_marker_ids[index]) +
+            ":" +
+            std::to_string(value.projection_image_ids[index]);
+        if (!projection_keys.insert(key).second)
+            throw std::invalid_argument(
+                std::string(context) +
+                ": marker projections must be unique");
+    }
+}
+
+void validate_colmap_videos(
+    const ColmapVideoMetadataSet &value, const char *context) {
+    const size_t videos = value.num_videos();
+    const size_t frames = value.num_video_frames();
+    if (value.names.size() != videos ||
+        value.source_path_present.size() != videos ||
+        value.source_paths.size() != videos ||
+        value.content_hash_present.size() != videos ||
+        value.content_hashes.size() != videos ||
+        value.widths.size() != videos ||
+        value.heights.size() != videos ||
+        value.num_frames.size() != videos ||
+        value.fps.size() != videos ||
+        value.duration_seconds.size() != videos ||
+        value.codec_name_present.size() != videos ||
+        value.codec_names.size() != videos ||
+        value.sync_group_present.size() != videos ||
+        value.sync_groups.size() != videos ||
+        value.frame_image_ids.size() != frames ||
+        value.frame_ids.size() != frames ||
+        value.pts_present.size() != frames ||
+        value.pts_seconds.size() != frames ||
+        value.time_id_present.size() != frames ||
+        value.time_ids.size() != frames)
+        throw std::invalid_argument(
+            std::string(context) +
+            ": inconsistent video field lengths");
+    require_binary_flags(
+        value.source_path_present, context,
+        "source_path_present");
+    require_binary_flags(
+        value.content_hash_present, context,
+        "content_hash_present");
+    require_binary_flags(
+        value.codec_name_present, context,
+        "codec_name_present");
+    require_binary_flags(
+        value.sync_group_present, context,
+        "sync_group_present");
+    require_binary_flags(
+        value.pts_present, context, "pts_present");
+    require_binary_flags(
+        value.time_id_present, context, "time_id_present");
+    std::unordered_set<uint32_t> video_ids;
+    std::unordered_set<std::string> names;
+    video_ids.reserve(videos);
+    names.reserve(videos);
+    for (size_t index = 0; index < videos; ++index) {
+        if (value.video_ids[index] ==
+                std::numeric_limits<uint32_t>::max() ||
+            !video_ids.insert(value.video_ids[index]).second)
+            throw std::invalid_argument(
+                std::string(context) +
+                ": video metadata is invalid");
+        validate_text(value.names[index], "video name");
+        if (!names.insert(value.names[index]).second)
+            throw std::invalid_argument(
+                std::string(context) +
+                ": video names must be unique");
+        const auto check_optional_text =
+            [&](uint8_t present, const std::string &item,
+                const char *field) {
+                if (present)
+                    validate_nullable_text(item, field);
+                else if (!item.empty())
+                    throw std::invalid_argument(
+                        std::string(context) + ": absent " +
+                        field + " carries text");
+            };
+        check_optional_text(
+            value.source_path_present[index],
+            value.source_paths[index], "video source_path");
+        check_optional_text(
+            value.content_hash_present[index],
+            value.content_hashes[index], "video content_hash");
+        check_optional_text(
+            value.codec_name_present[index],
+            value.codec_names[index], "video codec_name");
+        check_optional_text(
+            value.sync_group_present[index],
+            value.sync_groups[index], "video sync_group");
+    }
+    std::unordered_set<std::string> frame_keys;
+    std::unordered_set<uint32_t> frame_images;
+    frame_keys.reserve(frames);
+    frame_images.reserve(frames);
+    for (size_t index = 0; index < frames; ++index) {
+        if (!video_ids.count(value.frame_video_ids[index]) ||
+            value.frame_ids[index] < 0 ||
+            (!value.pts_present[index] &&
+             value.pts_seconds[index] != 0.0) ||
+            (!value.time_id_present[index] &&
+             value.time_ids[index] != 0) ||
+            (value.time_id_present[index] &&
+             value.time_ids[index] ==
+                 std::numeric_limits<uint32_t>::max()))
+            throw std::invalid_argument(
+                std::string(context) +
+                ": video-frame metadata is invalid");
+        const std::string key =
+            std::to_string(value.frame_video_ids[index]) +
+            ":" + std::to_string(value.frame_ids[index]);
+        if (!frame_keys.insert(key).second ||
+            !frame_images.insert(
+                value.frame_image_ids[index]).second)
+            throw std::invalid_argument(
+                std::string(context) +
+                ": video-frame assignments must be unique");
     }
 }
 
@@ -1227,6 +1563,28 @@ void validate_colmap_database(
     validate_match_graph(database.match_graph, context);
     validate_colmap_rig_frames(database.rig_frames, context);
     validate_colmap_pose_priors(database.pose_priors, context);
+    validate_colmap_markers(database.markers, context);
+    validate_colmap_videos(database.video_metadata, context);
+    if (database.maxx_schema_info.present) {
+        if (database.maxx_schema_info.schema_version == 0 ||
+            database.maxx_schema_info.minimum_reader_version == 0)
+            throw std::invalid_argument(
+                std::string(context) +
+                ": MAXX ownership versions must be positive");
+        validate_text(
+            database.maxx_schema_info.producer_version,
+            "MAXX producer_version");
+        validate_text(
+            database.maxx_schema_info.producer_commit,
+            "MAXX producer_commit");
+    } else if (database.maxx_schema_info.schema_version != 0 ||
+               database.maxx_schema_info.minimum_reader_version != 0 ||
+               !database.maxx_schema_info.producer_version.empty() ||
+               !database.maxx_schema_info.producer_commit.empty()) {
+        throw std::invalid_argument(
+            std::string(context) +
+            ": absent MAXX ownership carries metadata");
+    }
     const ColmapRigFrameSet &rig_frames =
         database.rig_frames;
     for (size_t frame = 0;
@@ -1277,6 +1635,27 @@ void validate_colmap_database(
                     "camera");
         }
     }
+    const ColmapMarkerSet &markers = database.markers;
+    for (size_t index = 0;
+         index < markers.num_projections(); ++index) {
+        const auto feature = feature_rows.find(
+            markers.projection_image_ids[index]);
+        if (feature == feature_rows.end())
+            throw std::invalid_argument(
+                std::string(context) +
+                ": marker projection references a missing image");
+    }
+    const ColmapVideoMetadataSet &videos =
+        database.video_metadata;
+    for (size_t index = 0;
+         index < videos.num_video_frames(); ++index) {
+        const auto feature = feature_rows.find(
+            videos.frame_image_ids[index]);
+        if (feature == feature_rows.end())
+            throw std::invalid_argument(
+                std::string(context) +
+                ": video frame references a missing image");
+    }
     const MatchGraph &graph = database.match_graph;
     for (size_t pair = 0; pair < graph.pair_count; ++pair) {
         const uint32_t image_a = graph.image_pairs[pair * 2];
@@ -1284,10 +1663,15 @@ void validate_colmap_database(
         const auto rows_a = feature_rows.find(image_a);
         const auto rows_b = feature_rows.find(image_b);
         if (rows_a == feature_rows.end() ||
-            rows_b == feature_rows.end())
-            throw std::invalid_argument(
-                std::string(context) +
-                ": every match endpoint must reference an image");
+            rows_b == feature_rows.end()) {
+            if (graph.match_present[pair] ||
+                graph.geometry_present[pair])
+                throw std::invalid_argument(
+                    std::string(context) +
+                    ": every data-bearing match endpoint "
+                    "must reference an image");
+            continue;
+        }
         const auto check_range = [&](const std::vector<uint32_t> &values,
                                      uint64_t begin, uint64_t end,
                                      const char *kind) {
@@ -1382,6 +1766,34 @@ void register_feature_match(nb::module_ &module) {
                            : nb::none();
             })
         .def_prop_ro(
+            "extractor_type_name",
+            [](const FeatureSet &value) -> nb::object {
+                return value.extractor_type_name_present
+                           ? nb::cast(value.extractor_type_name)
+                           : nb::none();
+            })
+        .def_prop_ro(
+            "descriptor_dtype_present",
+            [](const FeatureSet &value) {
+                return value.descriptor_dtype_present;
+            })
+        .def_prop_ro(
+            "descriptor_dim_present",
+            [](const FeatureSet &value) {
+                return value.descriptor_dim_present;
+            })
+        .def_prop_ro(
+            "keypoint_colors",
+            [](nb::handle_t<FeatureSet> self) -> nb::object {
+                const FeatureSet &value =
+                    nb::cast<const FeatureSet &>(self);
+                return value.keypoint_colors_present
+                           ? owner_typed_view(
+                                 self, value.keypoint_colors,
+                                 {value.rows, 3})
+                           : nb::none();
+            })
+        .def_prop_ro(
             "scores",
             [](nb::handle_t<FeatureSet> self) -> nb::object {
                 const FeatureSet &value =
@@ -1389,6 +1801,13 @@ void register_feature_match(nb::module_ &module) {
                 return value.has_scores
                            ? owner_typed_view(
                                  self, value.scores, {value.rows})
+                           : nb::none();
+            })
+        .def_prop_ro(
+            "quality",
+            [](const FeatureSet &value) -> nb::object {
+                return value.quality_present
+                           ? nb::cast(value.quality)
                            : nb::none();
             })
         .def(
@@ -1479,6 +1898,46 @@ void register_feature_match(nb::module_ &module) {
                                  {value.num_matches()})
                            : nb::none();
             })
+        .def_prop_ro(
+            "match_score_present",
+            [](const MatchGraph &value) {
+                return typed_view(
+                    value.match_score_present,
+                    {value.pair_count});
+            },
+            reference_internal)
+        .def_prop_ro(
+            "provenance_present",
+            [](const MatchGraph &value) {
+                return typed_view(
+                    value.provenance_present,
+                    {value.pair_count});
+            },
+            reference_internal)
+        .def_prop_ro(
+            "source_flags",
+            [](const MatchGraph &value) {
+                return typed_view(
+                    value.source_flags,
+                    {value.pair_count});
+            },
+            reference_internal)
+        .def_prop_ro(
+            "retrieval_score_present",
+            [](const MatchGraph &value) {
+                return typed_view(
+                    value.retrieval_score_present,
+                    {value.pair_count});
+            },
+            reference_internal)
+        .def_prop_ro(
+            "retrieval_scores",
+            [](const MatchGraph &value) {
+                return typed_view(
+                    value.retrieval_scores,
+                    {value.pair_count});
+            },
+            reference_internal)
         .def_prop_ro(
             "verified_offsets",
             [](const MatchGraph &value) {
@@ -1887,6 +2346,92 @@ void register_feature_match(nb::module_ &module) {
                     value.gravities, {value.size(), 3});
             },
             reference_internal)
+        .def_prop_ro(
+            "rotation_present",
+            [](const ColmapPosePriorSet &value) {
+                return typed_view(
+                    value.rotation_present, {value.size()});
+            },
+            reference_internal)
+        .def_prop_ro(
+            "rotations",
+            [](const ColmapPosePriorSet &value) {
+                return typed_view(
+                    value.rotations, {value.size(), 4});
+            },
+            reference_internal)
+        .def_prop_ro(
+            "rotation_covariance_present",
+            [](const ColmapPosePriorSet &value) {
+                return typed_view(
+                    value.rotation_covariance_present,
+                    {value.size()});
+            },
+            reference_internal)
+        .def_prop_ro(
+            "rotation_covariances",
+            [](const ColmapPosePriorSet &value) {
+                return typed_view(
+                    value.rotation_covariances,
+                    {value.size(), 3, 3});
+            },
+            reference_internal)
+        .def_prop_ro(
+            "pose_covariance_present",
+            [](const ColmapPosePriorSet &value) {
+                return typed_view(
+                    value.pose_covariance_present,
+                    {value.size()});
+            },
+            reference_internal)
+        .def_prop_ro(
+            "pose_covariances",
+            [](const ColmapPosePriorSet &value) {
+                return typed_view(
+                    value.pose_covariances,
+                    {value.size(), 6, 6});
+            },
+            reference_internal)
+        .def_prop_ro(
+            "rotation_order",
+            [](const ColmapPosePriorSet &) {
+                return "xyzw";
+            })
+        .def_prop_ro(
+            "rotation_convention",
+            [](const ColmapPosePriorSet &) {
+                return "cam_from_world";
+            })
+        .def_prop_ro(
+            "covariance_storage",
+            [](const ColmapPosePriorSet &) {
+                return "row_major";
+            })
+        .def_prop_ro(
+            "rotation_covariance_variable_order",
+            [](const ColmapPosePriorSet &) {
+                return "rotation_tangent_xyz";
+            })
+        .def_prop_ro(
+            "pose_covariance_variable_order",
+            [](const ColmapPosePriorSet &) {
+                return "rotation_tangent_xyz_translation_xyz";
+            })
+        .def_prop_ro(
+            "rotation_covariance_unit",
+            [](const ColmapPosePriorSet &) {
+                return "radians_squared";
+            })
+        .def_prop_ro(
+            "position_covariance_unit",
+            [](const ColmapPosePriorSet &) {
+                return "meters_squared";
+            })
+        .def_prop_ro(
+            "pose_covariance_cross_unit",
+            [](const ColmapPosePriorSet &) {
+                return "radian_meters";
+            })
         .def(
             "__len__",
             [](const ColmapPosePriorSet &value) {
@@ -1900,6 +2445,332 @@ void register_feature_match(nb::module_ &module) {
                        " generalized=" +
                        (value.generalized ? "True>" : "False>");
             });
+
+    nb::class_<ColmapMarkerSet>(module, "ColmapMarkerSet")
+        .def_prop_ro(
+            "num_markers",
+            [](const ColmapMarkerSet &value) {
+                return value.num_markers();
+            })
+        .def_prop_ro(
+            "num_projections",
+            [](const ColmapMarkerSet &value) {
+                return value.num_projections();
+            })
+        .def_prop_ro(
+            "marker_ids",
+            [](const ColmapMarkerSet &value) {
+                return typed_view(
+                    value.marker_ids, {value.num_markers()});
+            },
+            reference_internal)
+        .def_ro("labels", &ColmapMarkerSet::labels)
+        .def_prop_ro(
+            "marker_types",
+            [](const ColmapMarkerSet &value) {
+                return typed_view(
+                    value.types, {value.num_markers()});
+            },
+            reference_internal)
+        .def_prop_ro(
+            "world_position_present",
+            [](const ColmapMarkerSet &value) {
+                return typed_view(
+                    value.world_position_present,
+                    {value.num_markers()});
+            },
+            reference_internal)
+        .def_prop_ro(
+            "world_positions",
+            [](const ColmapMarkerSet &value) {
+                return typed_view(
+                    value.world_positions,
+                    {value.num_markers(), 3});
+            },
+            reference_internal)
+        .def_prop_ro(
+            "world_position_covariance_present",
+            [](const ColmapMarkerSet &value) {
+                return typed_view(
+                    value.world_covariance_present,
+                    {value.num_markers()});
+            },
+            reference_internal)
+        .def_prop_ro(
+            "world_position_covariances",
+            [](const ColmapMarkerSet &value) {
+                return typed_view(
+                    value.world_covariances,
+                    {value.num_markers(), 3, 3});
+            },
+            reference_internal)
+        .def_prop_ro(
+            "point3D_ids",
+            [](const ColmapMarkerSet &value) {
+                return typed_view(
+                    value.point3d_ids, {value.num_markers()});
+            },
+            reference_internal)
+        .def_prop_ro(
+            "enabled",
+            [](const ColmapMarkerSet &value) {
+                return typed_view(
+                    value.enabled, {value.num_markers()});
+            },
+            reference_internal)
+        .def_prop_ro(
+            "projection_marker_ids",
+            [](const ColmapMarkerSet &value) {
+                return typed_view(
+                    value.projection_marker_ids,
+                    {value.num_projections()});
+            },
+            reference_internal)
+        .def_prop_ro(
+            "projection_image_ids",
+            [](const ColmapMarkerSet &value) {
+                return typed_view(
+                    value.projection_image_ids,
+                    {value.num_projections()});
+            },
+            reference_internal)
+        .def_prop_ro(
+            "projection_xy",
+            [](const ColmapMarkerSet &value) {
+                return typed_view(
+                    value.projection_xy,
+                    {value.num_projections(), 2});
+            },
+            reference_internal)
+        .def_prop_ro(
+            "projection_sizes",
+            [](const ColmapMarkerSet &value) {
+                return typed_view(
+                    value.projection_sizes,
+                    {value.num_projections()});
+            },
+            reference_internal)
+        .def_prop_ro(
+            "projection_pinned",
+            [](const ColmapMarkerSet &value) {
+                return typed_view(
+                    value.projection_pinned,
+                    {value.num_projections()});
+            },
+            reference_internal)
+        .def_prop_ro(
+            "projection_point2D_indices",
+            [](const ColmapMarkerSet &value) {
+                return typed_view(
+                    value.projection_point2d_indices,
+                    {value.num_projections()});
+            },
+            reference_internal)
+        .def_prop_ro(
+            "projection_coordinate_origin",
+            [](const ColmapMarkerSet &) {
+                return "top_left";
+            })
+        .def_prop_ro(
+            "projection_coordinate_unit",
+            [](const ColmapMarkerSet &) {
+                return "pixels";
+            })
+        .def_prop_ro(
+            "projection_size_unit",
+            [](const ColmapMarkerSet &) {
+                return "pixels";
+            })
+        .def(
+            "__repr__",
+            [](const ColmapMarkerSet &value) {
+                return "<ColmapMarkerSet markers=" +
+                       std::to_string(value.num_markers()) +
+                       " projections=" +
+                       std::to_string(value.num_projections()) +
+                       ">";
+            });
+
+    nb::class_<ColmapVideoMetadataSet>(
+        module, "ColmapVideoMetadataSet")
+        .def_prop_ro(
+            "num_videos",
+            [](const ColmapVideoMetadataSet &value) {
+                return value.num_videos();
+            })
+        .def_prop_ro(
+            "num_video_frames",
+            [](const ColmapVideoMetadataSet &value) {
+                return value.num_video_frames();
+            })
+        .def_prop_ro(
+            "video_ids",
+            [](const ColmapVideoMetadataSet &value) {
+                return typed_view(
+                    value.video_ids, {value.num_videos()});
+            },
+            reference_internal)
+        .def_ro("names", &ColmapVideoMetadataSet::names)
+        .def_prop_ro(
+            "source_path_present",
+            [](const ColmapVideoMetadataSet &value) {
+                return typed_view(
+                    value.source_path_present,
+                    {value.num_videos()});
+            },
+            reference_internal)
+        .def_ro(
+            "source_paths",
+            &ColmapVideoMetadataSet::source_paths)
+        .def_prop_ro(
+            "content_hash_present",
+            [](const ColmapVideoMetadataSet &value) {
+                return typed_view(
+                    value.content_hash_present,
+                    {value.num_videos()});
+            },
+            reference_internal)
+        .def_ro(
+            "content_hashes",
+            &ColmapVideoMetadataSet::content_hashes)
+        .def_prop_ro(
+            "widths",
+            [](const ColmapVideoMetadataSet &value) {
+                return typed_view(
+                    value.widths, {value.num_videos()});
+            },
+            reference_internal)
+        .def_prop_ro(
+            "heights",
+            [](const ColmapVideoMetadataSet &value) {
+                return typed_view(
+                    value.heights, {value.num_videos()});
+            },
+            reference_internal)
+        .def_prop_ro(
+            "num_frames",
+            [](const ColmapVideoMetadataSet &value) {
+                return typed_view(
+                    value.num_frames, {value.num_videos()});
+            },
+            reference_internal)
+        .def_prop_ro(
+            "fps",
+            [](const ColmapVideoMetadataSet &value) {
+                return typed_view(
+                    value.fps, {value.num_videos()});
+            },
+            reference_internal)
+        .def_prop_ro(
+            "duration_seconds",
+            [](const ColmapVideoMetadataSet &value) {
+                return typed_view(
+                    value.duration_seconds,
+                    {value.num_videos()});
+            },
+            reference_internal)
+        .def_prop_ro(
+            "codec_name_present",
+            [](const ColmapVideoMetadataSet &value) {
+                return typed_view(
+                    value.codec_name_present,
+                    {value.num_videos()});
+            },
+            reference_internal)
+        .def_ro(
+            "codec_names",
+            &ColmapVideoMetadataSet::codec_names)
+        .def_prop_ro(
+            "sync_group_present",
+            [](const ColmapVideoMetadataSet &value) {
+                return typed_view(
+                    value.sync_group_present,
+                    {value.num_videos()});
+            },
+            reference_internal)
+        .def_ro(
+            "sync_groups",
+            &ColmapVideoMetadataSet::sync_groups)
+        .def_prop_ro(
+            "frame_video_ids",
+            [](const ColmapVideoMetadataSet &value) {
+                return typed_view(
+                    value.frame_video_ids,
+                    {value.num_video_frames()});
+            },
+            reference_internal)
+        .def_prop_ro(
+            "frame_image_ids",
+            [](const ColmapVideoMetadataSet &value) {
+                return typed_view(
+                    value.frame_image_ids,
+                    {value.num_video_frames()});
+            },
+            reference_internal)
+        .def_prop_ro(
+            "video_frame_indices",
+            [](const ColmapVideoMetadataSet &value) {
+                return typed_view(
+                    value.frame_ids,
+                    {value.num_video_frames()});
+            },
+            reference_internal)
+        .def_prop_ro(
+            "pts_present",
+            [](const ColmapVideoMetadataSet &value) {
+                return typed_view(
+                    value.pts_present,
+                    {value.num_video_frames()});
+            },
+            reference_internal)
+        .def_prop_ro(
+            "pts_seconds",
+            [](const ColmapVideoMetadataSet &value) {
+                return typed_view(
+                    value.pts_seconds,
+                    {value.num_video_frames()});
+            },
+            reference_internal)
+        .def_prop_ro(
+            "time_id_present",
+            [](const ColmapVideoMetadataSet &value) {
+                return typed_view(
+                    value.time_id_present,
+                    {value.num_video_frames()});
+            },
+            reference_internal)
+        .def_prop_ro(
+            "time_ids",
+            [](const ColmapVideoMetadataSet &value) {
+                return typed_view(
+                    value.time_ids,
+                    {value.num_video_frames()});
+            },
+            reference_internal)
+        .def(
+            "__repr__",
+            [](const ColmapVideoMetadataSet &value) {
+                return "<ColmapVideoMetadataSet videos=" +
+                       std::to_string(value.num_videos()) +
+                       " frames=" +
+                       std::to_string(value.num_video_frames()) +
+                       ">";
+            });
+
+    nb::class_<ColmapMaxxSchemaInfo>(
+        module, "ColmapMaxxSchemaInfo")
+        .def_ro(
+            "schema_version",
+            &ColmapMaxxSchemaInfo::schema_version)
+        .def_ro(
+            "minimum_reader_version",
+            &ColmapMaxxSchemaInfo::minimum_reader_version)
+        .def_ro(
+            "producer_version",
+            &ColmapMaxxSchemaInfo::producer_version)
+        .def_ro(
+            "producer_commit",
+            &ColmapMaxxSchemaInfo::producer_commit);
 
     nb::class_<ColmapDatabase>(module, "ColmapDatabase")
         .def_prop_ro(
@@ -1973,6 +2844,28 @@ void register_feature_match(nb::module_ &module) {
             [](const ColmapDatabase &value)
                 -> const ColmapPosePriorSet & {
                 return value.pose_priors;
+            },
+            reference_internal)
+        .def_prop_ro(
+            "markers",
+            [](const ColmapDatabase &value)
+                -> const ColmapMarkerSet & {
+                return value.markers;
+            },
+            reference_internal)
+        .def_prop_ro(
+            "video_metadata",
+            [](const ColmapDatabase &value)
+                -> const ColmapVideoMetadataSet & {
+                return value.video_metadata;
+            },
+            reference_internal)
+        .def_prop_ro(
+            "maxx_schema_info",
+            [](const ColmapDatabase &value) -> nb::object {
+                if (!value.maxx_schema_info.present)
+                    return nb::none();
+                return nb::cast(value.maxx_schema_info);
             },
             reference_internal)
         .def_ro("user_version", &ColmapDatabase::user_version)

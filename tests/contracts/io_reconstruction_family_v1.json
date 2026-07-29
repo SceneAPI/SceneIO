@@ -303,15 +303,23 @@
         "current_recovered_camera_reads",
         "stock_rig_frame_reads",
         "stock_pose_prior_reads",
+        "maxx_image_time_reads",
+        "maxx_descriptor_metadata_reads",
+        "maxx_keypoint_color_reads",
+        "maxx_match_score_reads",
+        "maxx_pair_provenance_reads",
+        "maxx_image_quality_reads",
+        "maxx_extended_pose_prior_reads",
+        "maxx_marker_reads",
+        "maxx_video_metadata_reads",
+        "maxx_ownership_reads",
         "read_only_reads",
         "transactional_writes"
       ],
       "unsupported_features": [
         "rig_frame_writes",
         "pose_prior_writes",
-        "scores",
-        "float_descriptors",
-        "maxx_extension_fields"
+        "maxx_extension_writes"
       ],
       "operations": {
         "read": {
@@ -1093,16 +1101,16 @@
         }
       }
     },
-  "colmap_db": {
-    "artifact": {
-      "kind": "file",
-      "same_host": {
-        "platform": "win32",
-        "sqlite_version": "3.53.4",
-        "byte_size": 77824,
-        "sha256": "91cc83aac19d518b97c977e43ee58ad24c652d086e5b89594179b094b5f6af29"
-      }
-    },
+    "colmap_db": {
+      "artifact": {
+        "kind": "file",
+        "same_host": {
+          "platform": "win32",
+          "sqlite_version": "3.53.4",
+          "byte_size": 77824,
+          "sha256": "91cc83aac19d518b97c977e43ee58ad24c652d086e5b89594179b094b5f6af29"
+        }
+      },
       "detected": "colmap_db",
       "inspection": {
         "format": "colmap_db",
@@ -1157,6 +1165,14 @@
           "num_frame_data": 0,
           "num_pose_priors": 0,
           "pose_prior_layout": "correlated-extended",
+          "num_keypoint_color_rows": 0,
+          "num_match_score_pairs": 0,
+          "num_image_qualities": 0,
+          "num_pair_provenance": 0,
+          "num_markers": 0,
+          "num_marker_projections": 0,
+          "num_videos": 0,
+          "num_video_frames": 0,
           "num_cameras": 1,
           "num_images": 2,
           "num_keypoint_rows": 2,
@@ -1180,6 +1196,8 @@
       },
       "record": {
         "type": "ColmapDatabase",
+        "profile": "sceneio-hybrid-v1",
+        "application_id": 0,
         "user_version": 3140002,
         "cameras": [
           {
@@ -1220,7 +1238,12 @@
             "extractor_type": 0,
             "time_id": null,
             "descriptor_dtype": "uint8",
+            "descriptor_dim": 4,
+            "descriptor_dtype_present": false,
+            "descriptor_dim_present": false,
+            "extractor_type_name": null,
             "keypoints_present": true,
+            "quality": null,
             "arrays": {
               "keypoints": {
                 "dtype": "<f4",
@@ -1238,6 +1261,7 @@
                 ],
                 "sha256": "117c9035800fb3497693c4c08747397e1c69e3b3b799ed286adb2978df427f49"
               },
+              "keypoint_colors": null,
               "scores": null
             }
           },
@@ -1252,7 +1276,12 @@
             "extractor_type": 0,
             "time_id": null,
             "descriptor_dtype": "uint8",
+            "descriptor_dim": 4,
+            "descriptor_dtype_present": false,
+            "descriptor_dim_present": false,
+            "extractor_type_name": null,
             "keypoints_present": true,
+            "quality": null,
             "arrays": {
               "keypoints": {
                 "dtype": "<f4",
@@ -1270,6 +1299,7 @@
                 ],
                 "sha256": "705e957007eeb0252694f331048b238bb61b52a8efd341cdb926d3d6275a2184"
               },
+              "keypoint_colors": null,
               "scores": null
             }
           }
@@ -1305,6 +1335,14 @@
                 2
               ],
               "sha256": "01acecb507abfe1a354aa8064f4af5d3f1acd019e37db3c11c97523b71c76e9d"
+            },
+            "scores": null,
+            "match_score_present": {
+              "dtype": "|u1",
+              "shape": [
+                1
+              ],
+              "sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d"
             },
             "verified_offsets": {
               "dtype": "<u8",
@@ -1371,7 +1409,6 @@
               ],
               "sha256": "9d908ecfb6b256def8b49a7c504e6c889c4b0e41fe6ce3e01863dd7b61a20aa0"
             },
-            "scores": null,
             "match_present": {
               "dtype": "|u1",
               "shape": [
@@ -1413,11 +1450,419 @@
                 1
               ],
               "sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d"
+            },
+            "provenance_present": {
+              "dtype": "|u1",
+              "shape": [
+                1
+              ],
+              "sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d"
+            },
+            "source_flags": {
+              "dtype": "<u4",
+              "shape": [
+                1
+              ],
+              "sha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119"
+            },
+            "retrieval_score_present": {
+              "dtype": "|u1",
+              "shape": [
+                1
+              ],
+              "sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d"
+            },
+            "retrieval_scores": {
+              "dtype": "<f4",
+              "shape": [
+                1
+              ],
+              "sha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119"
             }
           },
           "quaternion_order": "wxyz",
           "relative_pose_convention": "second_from_first"
-        }
+        },
+        "pose_priors": {
+          "generalized": true,
+          "arrays": {
+            "prior_ids": {
+              "dtype": "<u4",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "correlated_data_ids": {
+              "dtype": "<u8",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "correlated_sensor_ids": {
+              "dtype": "<u4",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "correlated_sensor_types": {
+              "dtype": "<i4",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "coordinate_systems": {
+              "dtype": "<i4",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "position_present": {
+              "dtype": "|u1",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "positions": {
+              "dtype": "<f8",
+              "shape": [
+                0,
+                3
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "position_covariance_present": {
+              "dtype": "|u1",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "position_covariances": {
+              "dtype": "<f8",
+              "shape": [
+                0,
+                3,
+                3
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "gravity_present": {
+              "dtype": "|u1",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "gravities": {
+              "dtype": "<f8",
+              "shape": [
+                0,
+                3
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "rotation_present": {
+              "dtype": "|u1",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "rotations": {
+              "dtype": "<f8",
+              "shape": [
+                0,
+                4
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "rotation_covariance_present": {
+              "dtype": "|u1",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "rotation_covariances": {
+              "dtype": "<f8",
+              "shape": [
+                0,
+                3,
+                3
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "pose_covariance_present": {
+              "dtype": "|u1",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "pose_covariances": {
+              "dtype": "<f8",
+              "shape": [
+                0,
+                6,
+                6
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+          },
+          "rotation_order": "xyzw",
+          "rotation_convention": "cam_from_world",
+          "covariance_storage": "row_major",
+          "rotation_covariance_variable_order": "rotation_tangent_xyz",
+          "pose_covariance_variable_order": "rotation_tangent_xyz_translation_xyz",
+          "rotation_covariance_unit": "radians_squared",
+          "position_covariance_unit": "meters_squared",
+          "pose_covariance_cross_unit": "radian_meters"
+        },
+        "markers": {
+          "arrays": {
+            "marker_ids": {
+              "dtype": "<u4",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "marker_types": {
+              "dtype": "<i4",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "world_position_present": {
+              "dtype": "|u1",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "world_positions": {
+              "dtype": "<f8",
+              "shape": [
+                0,
+                3
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "world_position_covariance_present": {
+              "dtype": "|u1",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "world_position_covariances": {
+              "dtype": "<f8",
+              "shape": [
+                0,
+                3,
+                3
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "point3D_ids": {
+              "dtype": "<u8",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "enabled": {
+              "dtype": "|u1",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "projection_marker_ids": {
+              "dtype": "<u4",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "projection_image_ids": {
+              "dtype": "<u4",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "projection_xy": {
+              "dtype": "<f8",
+              "shape": [
+                0,
+                2
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "projection_sizes": {
+              "dtype": "<f8",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "projection_pinned": {
+              "dtype": "|u1",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "projection_point2D_indices": {
+              "dtype": "<u4",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+          },
+          "labels": [],
+          "projection_coordinate_origin": "top_left",
+          "projection_coordinate_unit": "pixels",
+          "projection_size_unit": "pixels"
+        },
+        "video_metadata": {
+          "arrays": {
+            "video_ids": {
+              "dtype": "<u4",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "source_path_present": {
+              "dtype": "|u1",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "content_hash_present": {
+              "dtype": "|u1",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "widths": {
+              "dtype": "<i4",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "heights": {
+              "dtype": "<i4",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "num_frames": {
+              "dtype": "<i8",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "fps": {
+              "dtype": "<f8",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "duration_seconds": {
+              "dtype": "<f8",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "codec_name_present": {
+              "dtype": "|u1",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "sync_group_present": {
+              "dtype": "|u1",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "frame_video_ids": {
+              "dtype": "<u4",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "frame_image_ids": {
+              "dtype": "<u4",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "video_frame_indices": {
+              "dtype": "<i8",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "pts_present": {
+              "dtype": "|u1",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "pts_seconds": {
+              "dtype": "<f8",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "time_id_present": {
+              "dtype": "|u1",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "time_ids": {
+              "dtype": "<u4",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+          },
+          "names": [],
+          "source_paths": [],
+          "content_hashes": [],
+          "codec_names": [],
+          "sync_groups": []
+        },
+        "maxx_schema_info": null
       }
     },
     "colmap_sparse_txt": {

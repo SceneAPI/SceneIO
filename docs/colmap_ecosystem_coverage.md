@@ -12,6 +12,13 @@ Reference snapshot:
 - upstream COLMAP formats: BSD-3-Clause
 - OpsiClear additions: used with the repository owner's explicit
   authorization and reimplemented in SceneIO under Apache-2.0
+- C1d source inventory: pinned `src/colmap/scene/database_sqlite.cc`,
+  `src/colmap/scene/database.h`, `src/colmap/geometry/pose_prior.h`,
+  `src/colmap/scene/marker.h`, `src/colmap/scene/pair_provenance.h`,
+  `src/colmap/feature/types.h`, `src/colmap/util/types.h`,
+  `src/colmap/scene/database_ownership.h`, and
+  `src/colmap/scene/database_ownership.cc`, with the pinned database and Python
+  tests used as behavioral references.
 
 No FFmpeg/libav implementation, build dependency, runtime dependency, or
 encoded-video implementation is included. Encoded containers may be used only
@@ -53,7 +60,7 @@ Status terms:
 | Stock COLMAP 3.13 database | partial | Exact profile identity and populated rig/frame/image-linked-prior reads are implemented; add the exact writer |
 | Stock COLMAP 4.1.1 database | partial | Exact profile identity and populated rig/frame/generalized-prior reads are implemented; add the exact writer |
 | Current upstream database | partial | Exact profile identity, populated rig/frame/generalized-prior reads, and lossless recovered `camera1`/`camera2` reads are implemented; add the exact writer |
-| Current OpsiClear/MAXX database | partial | Exact ownership/profile identity is implemented; represent timing, quality, provenance, markers, colors, descriptor metadata, scores, and extended priors |
+| Current OpsiClear/MAXX database | implemented locally (read) | Exact ownership/profile identity plus lossless timing, quality, provenance, markers, colors, all five descriptor dtypes, scores, metadata-only video rows, and extended priors are represented; add the exact writer |
 | Database profile import/export reports | planned adapter | Emit structured compatibility results and explicit field-loss decisions |
 | COLMAP MVS depth maps | planned | New contiguous `width&height&1&` float32 codec; do not alias Gipuma DMB |
 | COLMAP MVS normal maps | planned | New HxWx3 float32 record/codec |
@@ -145,7 +152,7 @@ Remote C0 evidence for correction and validation commit `7046761`:
   and prior-focal flags in `MatchGraph`.
 - [x] Represent stock rigs, rig sensors, frames, frame data, and both stock
   pose-prior layouts.
-- [ ] Represent extended MAXX pose priors, descriptor
+- [x] Represent extended MAXX pose priors, descriptor
   dtype/type/name/dimension, keypoint colors,
   match scores, pair provenance, timing/video metadata, quality, markers, and
   ownership metadata.
@@ -176,7 +183,8 @@ C1a profile evidence:
   application id, version, and ownership fields one at a time;
 - at the C1a checkpoint, current-upstream recovered cameras and populated
   companion tables remained guarded. C1b later landed recovered-camera reads,
-  C1c landed stock rig/frame/prior reads, and MAXX extensions remain C1d.
+  C1c landed stock rig/frame/prior reads, and C1d then landed represented MAXX
+  extension reads.
 
 Local C1a verification:
 
@@ -194,8 +202,7 @@ C1b recovered-camera contract:
 - current-upstream `two_view_geometries.camera1/camera2` BLOBs use the exact
   repository-owned little-endian wire order: camera id, model id, width,
   height, prior-focal byte, parameter count, and float64 parameters. MAXX uses
-  the same wire layout, but its complete payload reader remains guarded until
-  C1d represents its additional columns and tables;
+  the same wire layout; C1d now represents its additional columns and tables;
 - `MatchGraph.camera1_present` / `camera2_present` preserve each SQL NULL,
   prior-focal arrays preserve the serialized flag, and
   `recovered_camera1(index)` / `recovered_camera2(index)` return typed
@@ -247,14 +254,57 @@ C1c stock companion-row contract:
 - inspection reports rig, sensor, frame, frame-data, and pose-prior counts
   plus the legacy/modern layout without decoding BLOBs;
 - the legacy writer refuses every populated companion record before opening
-  the destination. MAXX extended priors remain guarded until C1d, and exact
-  stock writers remain C1e work;
+  the destination. Exact stock and MAXX writers remain C1e work;
 - final local validation collects 3,659 nodes at
   `d98dd314db7a05ab87d392864988de8a7fab52cde37605216b121af6e9ca2d6d`
   and passes 3,655 tests with four documented skips. The focused codec gate
   passes 127 tests with one expected Windows filename skip; wheel smoke,
   Ruff, diff checks, and all three independent review lenses pass. Remote
   sanitizer and Linux/macOS wheel validation remain release gates.
+
+C1d MAXX extension read contract:
+
+- `FeatureSet` preserves independent SQL presence for descriptor dtype,
+  logical dimension, and open extractor name; uint8, int8, float16, float32,
+  and float64 descriptor matrices retain their raw row-major bytes. Optional
+  RGB keypoint colors, image quality, and uint32 image time IDs are exposed by
+  full and indexed image reads.
+- `MatchGraph` exposes per-pair score-row presence, float32 scores parallel to
+  raw matches, raw provenance flags, and retrieval-score presence.
+  Provenance-only pairs are retained even when neither endpoint image nor a
+  match/geometry row exists. Unknown provenance bits and IEEE score payloads
+  are not rewritten.
+- Extended pose priors preserve nullable XYZW `cam_from_world` rotations,
+  3x3 rotation covariance, and 6x6 pose covariance. SQLite Eigen matrices are
+  transposed to public row-major arrays. The pose variable order is rotation
+  tangent xyz then translation xyz, with explicit radian/metre covariance
+  unit tags.
+- `ColmapMarkerSet` preserves marker/projection rows, independently nullable
+  world positions/covariances, point sentinels, and projection indices.
+  Projection coordinates are top-left-origin pixels; numeric SQLite values
+  are carried as stored.
+- `ColmapVideoMetadataSet` is metadata-only. Source paths are inert strings;
+  no file is opened and no encoded-media implementation is present. Presence
+  arrays distinguish SQL NULL from empty text, and frame PTS/time metadata is
+  independent from `images.time_id`.
+- `ColmapMaxxSchemaInfo | None` exposes the exact ownership row. Inspection
+  reports all extension row counts, typed descriptor shape/dtype, and all four
+  ownership values without fetching BLOBs.
+- Independent stdlib `sqlite3`/`struct`/NumPy fixtures cover every field,
+  NULL-versus-empty state, column-major matrices, IEEE payloads, malformed
+  extents/types/layouts, partial-read isolation, handle release, nested-view
+  lifetime, and pre-mutation legacy-writer refusal. Exact-profile emission is
+  deliberately still C1e.
+- Final local validation collects 3,732 nodes and passes 3,727 tests with five
+  documented skips. The focused C1d gate passes 286 tests with two expected
+  skips; Ruff, diff checks, a source-archive-derived NumPy-only wheel smoke,
+  distribution inventory verification, and all three independent review
+  lenses pass.
+- The three-run 9.9 MB database benchmark records 1,067 MB/s full/path read,
+  158 MB/s direct write, 2.192 ms inspection, 0.999 ms image selection, and
+  0.949 ms pair selection, with bounded traced Python allocation. Exact-commit
+  remote instrumentation and GCC 10/AppleClang package validation remain
+  release gates.
 
 ### C2 - dense MVS
 

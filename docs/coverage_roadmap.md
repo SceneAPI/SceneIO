@@ -256,9 +256,9 @@ zero‑copy + convention tags.
 | `PointCloud` | `xyz` Nx3, `rgb`/`rgb16`, `normals`, `intensity`, optional organized shape + viewpoint, optional lossless LAS waveform sidecar | PLY‑point, PCD, LAS/LAZ, E57, `.xyz` | ✅ |
 | `Mesh` | positions; ragged face offsets/indices; vertex/corner normals, UVs, RGBA; primitive/material ranges; coordinate metadata and transform | PLY‑mesh, OBJ, STL, OFF, glTF, USD | ✅ |
 | `MeshScene` | ordered `Mesh` primitives; mesh ranges/names; shared `MaterialSet`; node hierarchy and local transforms; scene roots/names/default | glTF/GLB, future USD | ✅ |
-| `FeatureSet` | `keypoints` Nx{2,4,6} f32, `descriptors` NxD, `scores` N, image identity/size and absent-state metadata | HDF5/hloc, COLMAP DB | ✅ |
-| `MatchGraph` | ragged per-pair raw/verified `matches` Mx2 u32, `scores` M, `F/E/H` 3x3, config, relative pose, and optional recovered endpoint cameras | HDF5/hloc, COLMAP DB | ✅ |
-| `ColmapDatabase` | cameras, prior-focal flags, ordered features, match graph, nested `ColmapRigFrameSet` and `ColmapPosePriorSet`, exact profile/application/schema version | COLMAP DB | ◐ stock payload reads complete; C1d adds MAXX fields and C1e exact writers |
+| `FeatureSet` | `keypoints` Nx{2,4,6} f32, polymorphic `descriptors` NxD with extractor dtype/dim/name presence, keypoint colors, scores, quality, image time/id/size, and absent-state metadata | HDF5/hloc, COLMAP DB | ✅ |
+| `MatchGraph` | ragged per-pair raw/verified `matches` Mx2 u32, optional score rows, source/retrieval provenance, `F/E/H` 3x3, config, relative pose, and optional recovered endpoint cameras | HDF5/hloc, COLMAP DB | ✅ |
+| `ColmapDatabase` | cameras, prior-focal flags, ordered features, match graph, nested rig/frame, pose-prior, marker, metadata-only video, and ownership records; exact profile/application/schema version | COLMAP DB | ◐ stock and MAXX payload reads complete; C1e adds exact writers |
 | `TensorDict` | named ndarrays + attrs | npz, HDF5, safetensors, zarr, parquet | ✅ |
 | `CameraRig` | lossless ragged intrinsics/distortion, exact K/R/P, extrinsics, operational/time/topic metadata + convention tags | OpenCV/ROS/Kalibr calib | ✅ |
 | `StateTrajectory` | int64-ns timestamps + p/q/v/gyro-bias/accel-bias with frame/unit/sign tags | EuRoC state CSV | ✅ |
@@ -278,7 +278,7 @@ Columns: **Ext/id** · **Record** · **Lib/oracle (license)** · **R/W** ·
 |---|---|---|---|---|
 | ✅ COLMAP `.bin` | `Reconstruction` | pycolmap (BSD) | R+W | legacy three-file + modern five-file byte identity; rigs/frames; camera models 0-17; bounded direct writer |
 | ✅ COLMAP `.txt` | `Reconstruction` | pycolmap | R+W | legacy/modern text twin; rigs/frames; fast_float parse |
-| ◐ COLMAP `.db` | `ColmapDatabase` (`FeatureSet`/`MatchGraph`/nested companions) | pycolmap + sqlite3 (PD) | inspect all exact profiles; R+W core subset | exact 3.13/4.1.1/current/MAXX profile identity; stock rig/frame/prior and current recovered-camera reads; C1d adds MAXX payload fields and C1e exact writers |
+| ◐ COLMAP `.db` | `ColmapDatabase` (`FeatureSet`/`MatchGraph`/nested companions) | pycolmap + sqlite3 (PD) | inspect all exact profiles; R all represented stock/MAXX fields; W core subset | exact 3.13/4.1.1/current/MAXX profile identity; stock rig/frame/prior, current recovered-camera, and MAXX extension reads; C1e adds exact writers |
 | ✅ Bundler `.out` | `Reconstruction` | pycolmap/manual | R+W | y‑down camera convention pinned |
 | ✅ VisualSFM `.nvm` | `Reconstruction` | manual | R+W | quat WXYZ, focal in px |
 | ✅ OpenMVG `sfm_data.json` | `Reconstruction` | manual json (nlohmann) | R+W | pose = center+rotation |

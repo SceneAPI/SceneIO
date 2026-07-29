@@ -53,6 +53,9 @@ MatchGraph = _core.MatchGraph
 ColmapDatabase = _core.ColmapDatabase
 ColmapRigFrameSet = _core.ColmapRigFrameSet
 ColmapPosePriorSet = _core.ColmapPosePriorSet
+ColmapMarkerSet = _core.ColmapMarkerSet
+ColmapVideoMetadataSet = _core.ColmapVideoMetadataSet
+ColmapMaxxSchemaInfo = _core.ColmapMaxxSchemaInfo
 DepthMap = _core.DepthMap
 FlowField = _core.FlowField
 Camera = _core.Camera
@@ -503,8 +506,11 @@ __all__ = [
     "Codec",
     "CodecCapabilities",
     "ColmapDatabase",
+    "ColmapMarkerSet",
+    "ColmapMaxxSchemaInfo",
     "ColmapPosePriorSet",
     "ColmapRigFrameSet",
+    "ColmapVideoMetadataSet",
     "DepthEncoding",
     "DepthMap",
     "FeatureSet",

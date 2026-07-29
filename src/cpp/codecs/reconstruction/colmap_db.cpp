@@ -10,6 +10,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstdint>
 #include <cstring>
 #include <filesystem>
@@ -180,6 +181,29 @@ int64_t integer(
             std::string("COLMAP database: ") + name +
             " must be INTEGER");
     return sqlite3_column_int64(statement, column);
+}
+
+double number_value(
+    sqlite3_stmt *statement, int column,
+    const char *name) {
+    const int type = sqlite3_column_type(statement, column);
+    if (type != SQLITE_FLOAT && type != SQLITE_INTEGER)
+        throw std::invalid_argument(
+            std::string("COLMAP database: ") + name +
+            " must be REAL");
+    return sqlite3_column_double(statement, column);
+}
+
+double real_value(
+    sqlite3_stmt *statement, int column,
+    const char *name) {
+    const double value =
+        number_value(statement, column, name);
+    if (!std::isfinite(value))
+        throw std::invalid_argument(
+            std::string("COLMAP database: ") + name +
+            " must be finite");
+    return value;
 }
 
 size_t extent(
@@ -828,15 +852,37 @@ void validate_schema(sqlite3 *database) {
         {"frame_data",
          {"frame_id", "data_id", "sensor_id", "sensor_type"}},
         {"images", {"image_id", "name", "camera_id", "time_id"}},
+        {"maxx_schema_info",
+         {"schema_version", "minimum_reader_version",
+          "producer_version", "producer_commit"}},
         {"pose_priors",
          {"image_id", "pose_prior_id", "corr_data_id",
           "corr_sensor_id", "corr_sensor_type", "position",
           "position_covariance", "gravity", "coordinate_system",
           "rotation", "rotation_covariance", "pose_covariance"}},
         {"keypoints", {"image_id", "rows", "cols", "data"}},
+        {"keypoint_colors", {"image_id", "rows", "cols", "data"}},
         {"descriptors",
-         {"image_id", "type", "rows", "cols", "data"}},
+         {"image_id", "type", "type_name", "dtype", "dim",
+          "rows", "cols", "data"}},
         {"matches", {"pair_id", "rows", "cols", "data"}},
+        {"match_scores", {"pair_id", "rows", "cols", "data"}},
+        {"pair_provenance",
+         {"pair_id", "source_flags", "retrieval_score"}},
+        {"image_qualities", {"image_id", "quality"}},
+        {"markers",
+         {"marker_id", "label", "type", "world_position",
+          "world_position_cov", "point3D_id", "enabled"}},
+        {"marker_projections",
+         {"marker_id", "image_id", "x", "y", "size", "pinned",
+          "point2D_idx"}},
+        {"videos",
+         {"video_id", "name", "source_path", "content_hash",
+          "width", "height", "num_frames", "fps",
+          "duration_seconds", "codec_name", "sync_group"}},
+        {"video_frames",
+         {"video_id", "image_id", "frame_id", "pts_seconds",
+          "time_id"}},
         {"two_view_geometries",
          {"pair_id", "rows", "cols", "data", "config", "F", "E",
           "H", "qvec", "tvec", "camera1", "camera2"}},
@@ -877,6 +923,36 @@ void validate_schema(sqlite3 *database) {
                 "COLMAP database: pose_priors has an unsupported "
                 "or incomplete column layout");
     }
+    if (table_exists(database, "descriptors")) {
+        const std::vector<std::string> columns =
+            table_columns(database, "descriptors");
+        static const std::vector<std::vector<std::string>>
+            exact_layouts = {
+                {"image_id", "rows", "cols", "data"},
+                {"image_id", "type", "rows", "cols", "data"},
+                {"image_id", "type", "type_name", "dtype", "dim",
+                 "rows", "cols", "data"},
+            };
+        if (std::none_of(
+                exact_layouts.begin(), exact_layouts.end(),
+                [&columns](const auto &layout) {
+                    return columns == layout;
+                }))
+            throw std::invalid_argument(
+                "COLMAP database: descriptors has an unsupported "
+                "or incomplete column layout");
+    }
+    const auto require_table_pair =
+        [database](const char *first, const char *second) {
+            if (table_exists(database, first) !=
+                table_exists(database, second))
+                throw std::invalid_argument(
+                    std::string("COLMAP database: ") + first +
+                    " and " + second +
+                    " must be present together");
+        };
+    require_table_pair("markers", "marker_projections");
+    require_table_pair("videos", "video_frames");
 }
 
 void reject_unknown_tables(sqlite3 *database) {
@@ -896,8 +972,12 @@ void reject_unknown_tables(sqlite3 *database) {
         "videos",
         "video_frames",
         "image_qualities",
+        "pair_provenance",
         "markers",
         "marker_projections",
+        "keypoint_colors",
+        "match_scores",
+        "maxx_schema_info",
     };
     Statement statement(
         database,
@@ -911,23 +991,6 @@ void reject_unknown_tables(sqlite3 *database) {
                 "COLMAP database: unsupported table '" +
                 name + "'");
     }
-}
-
-void reject_unrepresented_rows(sqlite3 *database) {
-    static constexpr const char *unsupported[] = {
-        "videos",
-        "video_frames",
-        "image_qualities",
-        "markers",
-        "marker_projections",
-    };
-    for (const char *name : unsupported)
-        if (table_exists(database, name) &&
-            scalar_count(database, name) != 0)
-            throw std::invalid_argument(
-                std::string("COLMAP database: non-empty '") +
-                name +
-                "' is not representable by ColmapDatabase");
 }
 
 int32_t user_version(sqlite3 *database) {
@@ -1133,11 +1196,8 @@ ColmapPosePriorSet read_pose_priors(
     const bool generalized =
         column_exists(database, "pose_priors", "pose_prior_id");
     result.generalized = generalized;
-    if (column_exists(database, "pose_priors", "rotation") &&
-        scalar_count(database, "pose_priors") != 0)
-        throw std::invalid_argument(
-            "COLMAP database: MAXX pose-prior extensions require "
-            "the MAXX field reader");
+    const bool extended =
+        column_exists(database, "pose_priors", "rotation");
 
     std::unordered_map<uint32_t, uint32_t> image_cameras;
     image_cameras.reserve(features.size());
@@ -1156,19 +1216,22 @@ ColmapPosePriorSet read_pose_priors(
             values.insert(values.end(), item.begin(), item.end());
         };
     auto append_optional_matrix =
-        [](sqlite3_stmt *statement, int column,
+        [](sqlite3_stmt *statement, int column, size_t dimension,
            std::vector<uint8_t> &presence,
            std::vector<double> &values,
            const char *name) {
-            std::array<double, 9> column_major{};
+            std::vector<double> column_major(
+                dimension * dimension, 0.0);
             const bool present = optional_strict_fixed_blob(
                 statement, column, column_major.data(),
                 column_major.size(), name);
             presence.push_back(static_cast<uint8_t>(present));
-            for (size_t row = 0; row < 3; ++row)
-                for (size_t column = 0; column < 3; ++column)
+            for (size_t row = 0; row < dimension; ++row)
+                for (size_t column = 0;
+                     column < dimension; ++column)
                     values.push_back(
-                        column_major[column * 3 + row]);
+                        column_major[
+                            column * dimension + row]);
         };
 
     if (generalized) {
@@ -1176,7 +1239,12 @@ ColmapPosePriorSet read_pose_priors(
             database,
             "SELECT pose_prior_id, corr_data_id, corr_sensor_id, "
             "corr_sensor_type, position, position_covariance, "
-            "gravity, coordinate_system "
+            "gravity, coordinate_system, " +
+                std::string(
+                    extended
+                        ? "rotation, rotation_covariance, "
+                          "pose_covariance "
+                        : "NULL, NULL, NULL ") +
             "FROM pose_priors ORDER BY pose_prior_id");
         while (priors.row()) {
             result.prior_ids.push_back(
@@ -1198,7 +1266,7 @@ ColmapPosePriorSet read_pose_priors(
                 priors.get(), 4, result.position_present,
                 result.positions, "pose prior position");
             append_optional_matrix(
-                priors.get(), 5,
+                priors.get(), 5, 3,
                 result.position_covariance_present,
                 result.position_covariances,
                 "pose prior position covariance");
@@ -1209,6 +1277,26 @@ ColmapPosePriorSet read_pose_priors(
                 int32_value(
                     priors.get(), 7,
                     "pose prior coordinate_system"));
+            std::array<double, 4> rotation{};
+            const bool rotation_present =
+                optional_strict_fixed_blob(
+                    priors.get(), 8, rotation.data(),
+                    rotation.size(), "pose prior rotation");
+            result.rotation_present.push_back(
+                static_cast<uint8_t>(rotation_present));
+            result.rotations.insert(
+                result.rotations.end(),
+                rotation.begin(), rotation.end());
+            append_optional_matrix(
+                priors.get(), 9, 3,
+                result.rotation_covariance_present,
+                result.rotation_covariances,
+                "pose prior rotation covariance");
+            append_optional_matrix(
+                priors.get(), 10, 6,
+                result.pose_covariance_present,
+                result.pose_covariances,
+                "pose prior pose covariance");
         }
     } else {
         Statement priors(
@@ -1237,13 +1325,22 @@ ColmapPosePriorSet read_pose_priors(
                     priors.get(), 2,
                     "pose prior coordinate_system"));
             append_optional_matrix(
-                priors.get(), 3,
+                priors.get(), 3, 3,
                 result.position_covariance_present,
                 result.position_covariances,
                 "pose prior position covariance");
             result.gravity_present.push_back(0);
             result.gravities.insert(
                 result.gravities.end(), 3, 0.0);
+            result.rotation_present.push_back(0);
+            result.rotations.insert(
+                result.rotations.end(), 4, 0.0);
+            result.rotation_covariance_present.push_back(0);
+            result.rotation_covariances.insert(
+                result.rotation_covariances.end(), 9, 0.0);
+            result.pose_covariance_present.push_back(0);
+            result.pose_covariances.insert(
+                result.pose_covariances.end(), 36, 0.0);
         }
     }
     return result;
@@ -1299,11 +1396,21 @@ std::unordered_map<uint32_t, size_t> feature_index(
 
 void read_keypoints(
     sqlite3 *database, std::vector<FeatureSet> &features,
-    const std::unordered_map<uint32_t, size_t> &index) {
+    const std::unordered_map<uint32_t, size_t> &index,
+    int64_t only_image = -1) {
     Statement statement(
         database,
-        "SELECT image_id, rows, cols, data "
-        "FROM keypoints ORDER BY image_id");
+        only_image < 0
+            ? "SELECT image_id, rows, cols, data "
+              "FROM keypoints ORDER BY image_id"
+            : "SELECT image_id, rows, cols, data "
+              "FROM keypoints WHERE image_id=?1");
+    if (only_image >= 0)
+        check(
+            database,
+            sqlite3_bind_int64(
+                statement.get(), 1, only_image),
+            "binding image_id");
     while (statement.row()) {
         const uint32_t image_id =
             image_id_value(statement.get(), 0, "keypoint image_id");
@@ -1330,18 +1437,70 @@ void read_keypoints(
     }
 }
 
+sio::DType descriptor_dtype_value(int32_t wire_dtype) {
+    switch (wire_dtype) {
+        case 0:
+            return sio::DType::U8;
+        case 1:
+            return sio::DType::I8;
+        case 2:
+            return sio::DType::F16;
+        case 3:
+            return sio::DType::F32;
+        case 4:
+            return sio::DType::F64;
+        default:
+            throw std::invalid_argument(
+                "COLMAP database: descriptor dtype is unknown");
+    }
+}
+
+sio::DType effective_descriptor_dtype(
+    int32_t extractor_type, bool dtype_present,
+    int32_t wire_dtype = 0) {
+    sio::DType dtype =
+        dtype_present
+            ? descriptor_dtype_value(wire_dtype)
+            : (extractor_type == 1 || extractor_type == 2)
+                  ? sio::DType::F32
+                  : sio::DType::U8;
+    if (dtype_present &&
+        ((extractor_type == 0 && dtype != sio::DType::U8) ||
+         ((extractor_type == 1 || extractor_type == 2) &&
+          dtype != sio::DType::F32)))
+        throw std::invalid_argument(
+            "COLMAP database: descriptor dtype contradicts "
+            "its built-in extractor type");
+    return dtype;
+}
+
 void read_descriptors(
     sqlite3 *database, std::vector<FeatureSet> &features,
-    const std::unordered_map<uint32_t, size_t> &index) {
+    const std::unordered_map<uint32_t, size_t> &index,
+    int64_t only_image = -1) {
     const bool has_type =
         column_exists(database, "descriptors", "type");
-    Statement statement(
-        database,
-        has_type
-            ? "SELECT image_id, type, rows, cols, data "
-              "FROM descriptors ORDER BY image_id"
-            : "SELECT image_id, 0, rows, cols, data "
-              "FROM descriptors ORDER BY image_id");
+    const bool has_metadata =
+        column_exists(database, "descriptors", "dtype");
+    std::string query =
+        has_metadata
+            ? "SELECT image_id, type, type_name, dtype, dim, "
+              "rows, cols, data FROM descriptors"
+            : has_type
+                  ? "SELECT image_id, type, NULL, NULL, NULL, "
+                    "rows, cols, data FROM descriptors"
+                  : "SELECT image_id, 0, NULL, NULL, NULL, "
+                    "rows, cols, data FROM descriptors";
+    query += only_image < 0
+                 ? " ORDER BY image_id"
+                 : " WHERE image_id=?1";
+    Statement statement(database, query);
+    if (only_image >= 0)
+        check(
+            database,
+            sqlite3_bind_int64(
+                statement.get(), 1, only_image),
+            "binding image_id");
     while (statement.row()) {
         const uint32_t image_id =
             image_id_value(
@@ -1356,20 +1515,363 @@ void read_descriptors(
                 "COLMAP database: duplicate descriptor row");
         value.extractor_type =
             int32_value(statement.get(), 1, "descriptor type");
+        if (sqlite3_column_type(statement.get(), 2) != SQLITE_NULL) {
+            value.extractor_type_name =
+                text(statement.get(), 2, "descriptor type_name");
+            value.extractor_type_name_present = true;
+        }
         const size_t rows =
-            extent(statement.get(), 2, "descriptor rows");
-        value.descriptor_columns =
-            extent(statement.get(), 3, "descriptor cols");
+            extent(statement.get(), 5, "descriptor rows");
+        const size_t stored_columns =
+            extent(statement.get(), 6, "descriptor cols");
         if (rows != value.rows)
             throw std::invalid_argument(
                 "COLMAP database: descriptor rows disagree "
                 "with keypoint rows");
-        value.descriptor_dtype = sio::DType::U8;
+        const bool dtype_present =
+            sqlite3_column_type(statement.get(), 3) != SQLITE_NULL;
+        const bool dim_present =
+            sqlite3_column_type(statement.get(), 4) != SQLITE_NULL;
+        if (dtype_present) {
+            value.descriptor_dtype_present = true;
+            value.descriptor_dtype = effective_descriptor_dtype(
+                value.extractor_type, true,
+                int32_value(
+                    statement.get(), 3, "descriptor dtype"));
+        } else {
+            value.descriptor_dtype = effective_descriptor_dtype(
+                value.extractor_type, false);
+        }
+        const size_t itemsize =
+            sio::dtype_info(value.descriptor_dtype).itemsize;
+        if (dim_present) {
+            value.descriptor_dim_present = true;
+            value.descriptor_columns =
+                extent(statement.get(), 4, "descriptor dim");
+        } else {
+            if (stored_columns % itemsize != 0)
+                throw std::invalid_argument(
+                    "COLMAP database: descriptor cols are not "
+                    "divisible by dtype itemsize");
+            value.descriptor_columns = stored_columns / itemsize;
+        }
+        if (value.descriptor_columns >
+                std::numeric_limits<size_t>::max() / itemsize ||
+            value.descriptor_columns * itemsize != stored_columns)
+            throw std::invalid_argument(
+                "COLMAP database: descriptor cols disagree "
+                "with dtype and dim");
         value.descriptors = byte_blob(
-            statement.get(), 4, rows,
-            value.descriptor_columns, "descriptor data");
+            statement.get(), 7, rows,
+            stored_columns, "descriptor data");
         value.has_descriptors = true;
     }
+}
+
+void read_keypoint_colors(
+    sqlite3 *database, std::vector<FeatureSet> &features,
+    const std::unordered_map<uint32_t, size_t> &index,
+    int64_t only_image = -1) {
+    if (!table_exists(database, "keypoint_colors"))
+        return;
+    Statement statement(
+        database,
+        only_image < 0
+            ? "SELECT image_id, rows, cols, data "
+              "FROM keypoint_colors ORDER BY image_id"
+            : "SELECT image_id, rows, cols, data "
+              "FROM keypoint_colors WHERE image_id=?1");
+    if (only_image >= 0)
+        check(
+            database,
+            sqlite3_bind_int64(
+                statement.get(), 1, only_image),
+            "binding image_id");
+    while (statement.row()) {
+        const uint32_t image_id =
+            image_id_value(
+                statement.get(), 0, "keypoint color image_id");
+        const auto found = index.find(image_id);
+        if (found == index.end())
+            throw std::invalid_argument(
+                "COLMAP database: keypoint_colors reference "
+                "a missing image");
+        FeatureSet &value = features[found->second];
+        if (value.keypoint_colors_present)
+            throw std::invalid_argument(
+                "COLMAP database: duplicate keypoint color row");
+        const size_t rows =
+            extent(statement.get(), 1, "keypoint color rows");
+        const size_t columns =
+            extent(statement.get(), 2, "keypoint color cols");
+        if (!value.keypoints_present || rows != value.rows ||
+            columns != 3)
+            throw std::invalid_argument(
+                "COLMAP database: keypoint colors must be "
+                "Nx3 and parallel to keypoints");
+        value.keypoint_colors = byte_blob(
+            statement.get(), 3, rows, columns,
+            "keypoint color data");
+        value.keypoint_colors_present = true;
+    }
+}
+
+void read_image_qualities(
+    sqlite3 *database, std::vector<FeatureSet> &features,
+    const std::unordered_map<uint32_t, size_t> &index,
+    int64_t only_image = -1) {
+    if (!table_exists(database, "image_qualities"))
+        return;
+    Statement statement(
+        database,
+        only_image < 0
+            ? "SELECT image_id, quality FROM image_qualities "
+              "ORDER BY image_id"
+            : "SELECT image_id, quality FROM image_qualities "
+              "WHERE image_id=?1");
+    if (only_image >= 0)
+        check(
+            database,
+            sqlite3_bind_int64(
+                statement.get(), 1, only_image),
+            "binding image_id");
+    while (statement.row()) {
+        const uint32_t image_id =
+            image_id_value(
+                statement.get(), 0, "image quality image_id");
+        const auto found = index.find(image_id);
+        if (found == index.end())
+            throw std::invalid_argument(
+                "COLMAP database: image_qualities reference "
+                "a missing image");
+        FeatureSet &value = features[found->second];
+        if (value.quality_present)
+            throw std::invalid_argument(
+                "COLMAP database: duplicate image quality row");
+        value.quality =
+            real_value(statement.get(), 1, "image quality");
+        value.quality_present = true;
+    }
+}
+
+ColmapMarkerSet read_markers(sqlite3 *database) {
+    ColmapMarkerSet result;
+    if (!table_exists(database, "markers") ||
+        !table_exists(database, "marker_projections"))
+        return result;
+    Statement markers(
+        database,
+        "SELECT marker_id, label, type, world_position, "
+        "world_position_cov, point3D_id, enabled "
+        "FROM markers ORDER BY marker_id");
+    while (markers.row()) {
+        result.marker_ids.push_back(
+            uint32_value(markers.get(), 0, "marker_id"));
+        result.labels.push_back(
+            text(markers.get(), 1, "marker label"));
+        result.types.push_back(
+            int32_value(markers.get(), 2, "marker type"));
+        std::array<double, 3> position{};
+        const bool position_present =
+            optional_strict_fixed_blob(
+                markers.get(), 3, position.data(),
+                position.size(), "marker world_position");
+        result.world_position_present.push_back(
+            static_cast<uint8_t>(position_present));
+        result.world_positions.insert(
+            result.world_positions.end(),
+            position.begin(), position.end());
+        std::array<double, 9> covariance_column_major{};
+        const bool covariance_present =
+            optional_strict_fixed_blob(
+                markers.get(), 4,
+                covariance_column_major.data(),
+                covariance_column_major.size(),
+                "marker world_position_cov");
+        result.world_covariance_present.push_back(
+            static_cast<uint8_t>(covariance_present));
+        for (size_t row = 0; row < 3; ++row)
+            for (size_t column = 0; column < 3; ++column)
+                result.world_covariances.push_back(
+                    covariance_column_major[column * 3 + row]);
+        const int64_t point3d =
+            integer(markers.get(), 5, "marker point3D_id");
+        if (point3d < -1)
+            throw std::invalid_argument(
+                "COLMAP database: marker point3D_id must be "
+                "-1 or non-negative");
+        result.point3d_ids.push_back(
+            point3d == -1
+                ? std::numeric_limits<uint64_t>::max()
+                : static_cast<uint64_t>(point3d));
+        const int64_t enabled =
+            integer(markers.get(), 6, "marker enabled");
+        if (enabled != 0 && enabled != 1)
+            throw std::invalid_argument(
+                "COLMAP database: marker enabled must be 0 or 1");
+        result.enabled.push_back(static_cast<uint8_t>(enabled));
+    }
+
+    Statement projections(
+        database,
+        "SELECT marker_id, image_id, x, y, size, pinned, "
+        "point2D_idx FROM marker_projections "
+        "ORDER BY marker_id, image_id");
+    while (projections.row()) {
+        result.projection_marker_ids.push_back(
+            uint32_value(
+                projections.get(), 0,
+                "marker projection marker_id"));
+        result.projection_image_ids.push_back(
+            image_id_value(
+                projections.get(), 1,
+                "marker projection image_id"));
+        result.projection_xy.push_back(
+            number_value(
+                projections.get(), 2,
+                "marker projection x"));
+        result.projection_xy.push_back(
+            number_value(
+                projections.get(), 3,
+                "marker projection y"));
+        result.projection_sizes.push_back(
+            number_value(
+                projections.get(), 4,
+                "marker projection size"));
+        const int64_t pinned =
+            integer(
+                projections.get(), 5,
+                "marker projection pinned");
+        if (pinned != 0 && pinned != 1)
+            throw std::invalid_argument(
+                "COLMAP database: marker projection pinned "
+                "must be 0 or 1");
+        result.projection_pinned.push_back(
+            static_cast<uint8_t>(pinned));
+        result.projection_point2d_indices.push_back(
+            uint32_value(
+                projections.get(), 6,
+                "marker projection point2D_idx"));
+    }
+    return result;
+}
+
+ColmapVideoMetadataSet read_videos(sqlite3 *database) {
+    ColmapVideoMetadataSet result;
+    if (!table_exists(database, "videos") ||
+        !table_exists(database, "video_frames"))
+        return result;
+    auto append_optional_text =
+        [](sqlite3_stmt *statement, int column,
+           std::vector<uint8_t> &presence,
+           std::vector<std::string> &values,
+           const char *name) {
+            const bool present =
+                sqlite3_column_type(statement, column) != SQLITE_NULL;
+            presence.push_back(static_cast<uint8_t>(present));
+            values.push_back(
+                present ? text(statement, column, name) : std::string{});
+        };
+    Statement videos(
+        database,
+        "SELECT video_id, name, source_path, content_hash, "
+        "width, height, num_frames, fps, duration_seconds, "
+        "codec_name, sync_group FROM videos ORDER BY video_id");
+    while (videos.row()) {
+        result.video_ids.push_back(
+            uint32_value(videos.get(), 0, "video_id"));
+        result.names.push_back(text(videos.get(), 1, "video name"));
+        append_optional_text(
+            videos.get(), 2, result.source_path_present,
+            result.source_paths, "video source_path");
+        append_optional_text(
+            videos.get(), 3, result.content_hash_present,
+            result.content_hashes, "video content_hash");
+        result.widths.push_back(
+            int32_value(videos.get(), 4, "video width"));
+        result.heights.push_back(
+            int32_value(videos.get(), 5, "video height"));
+        result.num_frames.push_back(
+            integer(videos.get(), 6, "video num_frames"));
+        result.fps.push_back(
+            number_value(videos.get(), 7, "video fps"));
+        result.duration_seconds.push_back(
+            number_value(
+                videos.get(), 8, "video duration_seconds"));
+        append_optional_text(
+            videos.get(), 9, result.codec_name_present,
+            result.codec_names, "video codec_name");
+        append_optional_text(
+            videos.get(), 10, result.sync_group_present,
+            result.sync_groups, "video sync_group");
+    }
+
+    Statement frames(
+        database,
+        "SELECT video_id, image_id, frame_id, pts_seconds, "
+        "time_id FROM video_frames "
+        "ORDER BY video_id, frame_id");
+    while (frames.row()) {
+        result.frame_video_ids.push_back(
+            uint32_value(
+                frames.get(), 0, "video frame video_id"));
+        result.frame_image_ids.push_back(
+            image_id_value(
+                frames.get(), 1, "video frame image_id"));
+        result.frame_ids.push_back(
+            integer(frames.get(), 2, "video frame_id"));
+        const bool pts_present =
+            sqlite3_column_type(frames.get(), 3) != SQLITE_NULL;
+        result.pts_present.push_back(
+            static_cast<uint8_t>(pts_present));
+        result.pts_seconds.push_back(
+            pts_present
+                ? number_value(
+                      frames.get(), 3,
+                      "video frame pts_seconds")
+                : 0.0);
+        const bool time_present =
+            sqlite3_column_type(frames.get(), 4) != SQLITE_NULL;
+        result.time_id_present.push_back(
+            static_cast<uint8_t>(time_present));
+        result.time_ids.push_back(
+            time_present
+                ? uint32_value(
+                      frames.get(), 4,
+                      "video frame time_id")
+                : 0);
+    }
+    return result;
+}
+
+void read_maxx_ownership(
+    sqlite3 *database, ColmapDatabase &result) {
+    if (!table_exists(database, "maxx_schema_info"))
+        return;
+    Statement ownership(
+        database,
+        "SELECT schema_version, minimum_reader_version, "
+        "producer_version, producer_commit "
+        "FROM maxx_schema_info ORDER BY schema_version");
+    if (!ownership.row())
+        throw std::invalid_argument(
+            "COLMAP database: maxx_schema_info is empty");
+    result.maxx_schema_info.schema_version =
+        uint32_value(
+            ownership.get(), 0, "MAXX schema_version");
+    result.maxx_schema_info.minimum_reader_version =
+        uint32_value(
+            ownership.get(), 1,
+            "MAXX minimum_reader_version");
+    result.maxx_schema_info.producer_version =
+        text(ownership.get(), 2, "MAXX producer_version");
+    result.maxx_schema_info.producer_commit =
+        text(ownership.get(), 3, "MAXX producer_commit");
+    result.maxx_schema_info.present = true;
+    if (ownership.row())
+        throw std::invalid_argument(
+            "COLMAP database: maxx_schema_info must contain "
+            "exactly one row");
 }
 
 struct PairRow {
@@ -1395,6 +1897,12 @@ struct PairRow {
     Camera recovered_camera2;
     uint8_t camera1_prior_focal_length = 0;
     uint8_t camera2_prior_focal_length = 0;
+    bool scores_present = false;
+    std::vector<float> scores;
+    bool provenance_present = false;
+    uint32_t source_flags = 0;
+    bool retrieval_score_present = false;
+    float retrieval_score = 0.0f;
 };
 
 std::pair<uint32_t, uint32_t> decode_pair_id(int64_t pair_id) {
@@ -1461,6 +1969,83 @@ void read_matches(
         row.matches = numeric_blob<uint32_t>(
             statement.get(), 3, count, 2, "match data");
         row.match_present = true;
+    }
+}
+
+void read_match_scores(
+    sqlite3 *database, std::map<int64_t, PairRow> &rows,
+    int64_t only_pair = -1) {
+    if (!table_exists(database, "match_scores"))
+        return;
+    Statement statement(
+        database,
+        only_pair < 0
+            ? "SELECT pair_id, rows, cols, data "
+              "FROM match_scores ORDER BY pair_id"
+            : "SELECT pair_id, rows, cols, data "
+              "FROM match_scores WHERE pair_id=?1");
+    if (only_pair >= 0)
+        check(
+            database,
+            sqlite3_bind_int64(
+                statement.get(), 1, only_pair),
+            "binding pair_id");
+    while (statement.row()) {
+        const int64_t pair_id =
+            integer(statement.get(), 0, "match score pair_id");
+        PairRow &row = pair_row(rows, pair_id);
+        if (row.scores_present)
+            throw std::invalid_argument(
+                "COLMAP database: duplicate match score row");
+        const size_t count =
+            extent(statement.get(), 1, "match score rows");
+        const size_t columns =
+            extent(statement.get(), 2, "match score cols");
+        if (columns != 1)
+            throw std::invalid_argument(
+                "COLMAP database: match score cols must be 1");
+        row.scores = numeric_blob<float>(
+            statement.get(), 3, count, 1, "match score data");
+        row.scores_present = true;
+    }
+}
+
+void read_pair_provenance(
+    sqlite3 *database, std::map<int64_t, PairRow> &rows,
+    int64_t only_pair = -1) {
+    if (!table_exists(database, "pair_provenance"))
+        return;
+    Statement statement(
+        database,
+        only_pair < 0
+            ? "SELECT pair_id, source_flags, retrieval_score "
+              "FROM pair_provenance ORDER BY pair_id"
+            : "SELECT pair_id, source_flags, retrieval_score "
+              "FROM pair_provenance WHERE pair_id=?1");
+    if (only_pair >= 0)
+        check(
+            database,
+            sqlite3_bind_int64(
+                statement.get(), 1, only_pair),
+            "binding pair_id");
+    while (statement.row()) {
+        const int64_t pair_id =
+            integer(statement.get(), 0, "provenance pair_id");
+        PairRow &row = pair_row(rows, pair_id);
+        if (row.provenance_present)
+            throw std::invalid_argument(
+                "COLMAP database: duplicate pair provenance row");
+        row.source_flags =
+            uint32_value(
+                statement.get(), 1, "pair source_flags");
+        if (sqlite3_column_type(statement.get(), 2) != SQLITE_NULL) {
+            const double score = number_value(
+                statement.get(), 2, "pair retrieval_score");
+            const float converted = static_cast<float>(score);
+            row.retrieval_score = converted;
+            row.retrieval_score_present = true;
+        }
+        row.provenance_present = true;
     }
 }
 
@@ -1544,6 +2129,7 @@ MatchGraph make_graph(
     graph.pair_ids.reserve(rows.size());
     graph.image_pairs.reserve(rows.size() * 2);
     graph.match_present.reserve(rows.size());
+    graph.match_score_present.reserve(rows.size());
     graph.geometry_present.reserve(rows.size());
     graph.match_offsets.push_back(0);
     graph.verified_offsets.push_back(0);
@@ -1563,11 +2149,18 @@ MatchGraph make_graph(
     graph.recovered_camera2.reserve(rows.size());
     graph.camera1_prior_focal_length.reserve(rows.size());
     graph.camera2_prior_focal_length.reserve(rows.size());
+    graph.provenance_present.reserve(rows.size());
+    graph.source_flags.reserve(rows.size());
+    graph.retrieval_score_present.reserve(rows.size());
+    graph.retrieval_scores.reserve(rows.size());
+    bool any_scores = false;
     for (const auto &[pair_id, row] : rows) {
         graph.pair_ids.push_back(pair_id);
         graph.image_pairs.push_back(row.low);
         graph.image_pairs.push_back(row.high);
         graph.match_present.push_back(row.match_present);
+        graph.match_score_present.push_back(
+            static_cast<uint8_t>(row.scores_present));
         graph.geometry_present.push_back(
             row.geometry_present);
         graph.matches.insert(
@@ -1609,7 +2202,31 @@ MatchGraph make_graph(
             row.camera1_prior_focal_length);
         graph.camera2_prior_focal_length.push_back(
             row.camera2_prior_focal_length);
+        if (row.scores_present) {
+            if (!row.match_present ||
+                row.scores.size() != row.matches.size() / 2)
+                throw std::invalid_argument(
+                    "COLMAP database: match scores must be "
+                    "parallel to a raw match row");
+            any_scores = true;
+            graph.scores.insert(
+                graph.scores.end(),
+                row.scores.begin(), row.scores.end());
+        } else {
+            graph.scores.insert(
+                graph.scores.end(),
+                row.matches.size() / 2, 0.0f);
+        }
+        graph.provenance_present.push_back(
+            static_cast<uint8_t>(row.provenance_present));
+        graph.source_flags.push_back(row.source_flags);
+        graph.retrieval_score_present.push_back(
+            static_cast<uint8_t>(row.retrieval_score_present));
+        graph.retrieval_scores.push_back(row.retrieval_score);
     }
+    graph.has_scores = any_scores;
+    if (!any_scores)
+        graph.scores.clear();
     validate_match_graph(graph, "COLMAP database");
     return graph;
 }
@@ -1623,12 +2240,11 @@ ColmapDatabase read_database(const std::string &path) {
     validate_schema(database);
     const ProfileIdentity identity = identify_profile(database);
     reject_unknown_tables(database);
-    reject_unrepresented_rows(database);
-
     ColmapDatabase result;
     result.user_version = identity.user_version;
     result.application_id = identity.application_id;
     result.profile = identity.name;
+    read_maxx_ownership(database, result);
     result.cameras =
         read_cameras(database, result.prior_focal_length);
     std::unordered_map<uint32_t, const Camera *> cameras;
@@ -1641,11 +2257,17 @@ ColmapDatabase read_database(const std::string &path) {
         read_pose_priors(database, result.features);
     const auto index = feature_index(result.features);
     read_keypoints(database, result.features, index);
+    read_keypoint_colors(database, result.features, index);
     read_descriptors(database, result.features, index);
+    read_image_qualities(database, result.features, index);
     std::map<int64_t, PairRow> rows;
     read_matches(database, rows);
+    read_match_scores(database, rows);
     read_geometries(database, rows);
+    read_pair_provenance(database, rows);
     result.match_graph = make_graph(rows);
+    result.markers = read_markers(database);
+    result.video_metadata = read_videos(database);
     validate_colmap_database(result, "COLMAP database");
     return result;
 }
@@ -1706,71 +2328,14 @@ FeatureSet read_feature(
     std::vector<FeatureSet> one;
     one.push_back(std::move(result));
     const auto index = feature_index(one);
-    {
-        Statement keypoints(
-            database,
-            "SELECT image_id, rows, cols, data "
-            "FROM keypoints WHERE image_id=?1");
-        check(
-            database,
-            sqlite3_bind_int64(
-                keypoints.get(), 1, selected_image_id),
-            "binding image_id");
-        if (keypoints.row()) {
-            FeatureSet &value = one.front();
-            value.rows =
-                extent(keypoints.get(), 1, "keypoint rows");
-            value.keypoint_columns =
-                extent(keypoints.get(), 2, "keypoint cols");
-            if (value.keypoint_columns != 2 &&
-                value.keypoint_columns != 4 &&
-                value.keypoint_columns != 6)
-                throw std::invalid_argument(
-                    "COLMAP database: keypoint cols must be 2, 4, or 6");
-            value.keypoints = numeric_blob<float>(
-                keypoints.get(), 3, value.rows,
-                value.keypoint_columns, "keypoint data");
-            value.keypoints_present = true;
-            if (keypoints.row())
-                throw std::invalid_argument(
-                    "COLMAP database: duplicate keypoint row");
-        }
-    }
-    const bool has_type =
-        column_exists(database, "descriptors", "type");
-    Statement descriptors(
-        database,
-        has_type
-            ? "SELECT type, rows, cols, data "
-              "FROM descriptors WHERE image_id=?1"
-            : "SELECT 0, rows, cols, data "
-              "FROM descriptors WHERE image_id=?1");
-    check(
-        database,
-        sqlite3_bind_int64(
-            descriptors.get(), 1, selected_image_id),
-        "binding image_id");
-    if (descriptors.row()) {
-        FeatureSet &value = one.front();
-        value.extractor_type =
-            int32_value(descriptors.get(), 0, "descriptor type");
-        const size_t rows =
-            extent(descriptors.get(), 1, "descriptor rows");
-        value.descriptor_columns =
-            extent(descriptors.get(), 2, "descriptor cols");
-        if (rows != value.rows)
-            throw std::invalid_argument(
-                "COLMAP database: descriptor rows disagree "
-                "with keypoint rows");
-        value.descriptor_dtype = sio::DType::U8;
-        value.descriptors = byte_blob(
-            descriptors.get(), 3, rows,
-            value.descriptor_columns, "descriptor data");
-        value.has_descriptors = true;
-        if (descriptors.row())
-            throw std::invalid_argument(
-                "COLMAP database: duplicate descriptor row");
-    }
+    read_keypoints(
+        database, one, index, selected_image_id);
+    read_keypoint_colors(
+        database, one, index, selected_image_id);
+    read_descriptors(
+        database, one, index, selected_image_id);
+    read_image_qualities(
+        database, one, index, selected_image_id);
     validate_feature_set(one.front(), "COLMAP database");
     return std::move(one.front());
 }
@@ -1824,11 +2389,16 @@ MatchGraph read_pair(
     reject_unknown_tables(database);
     std::map<int64_t, PairRow> rows;
     read_matches(database, rows, selected_pair);
+    read_match_scores(database, rows, selected_pair);
     read_geometries(database, rows, selected_pair);
+    read_pair_provenance(database, rows, selected_pair);
     if (rows.empty())
         throw std::out_of_range(
             "COLMAP database: image pair was not found");
     MatchGraph graph = make_graph(rows);
+    if (!graph.match_present[0] &&
+        !graph.geometry_present[0])
+        return graph;
     const size_t rows_a =
         image_feature_rows(database, graph.image_pairs[0]);
     const size_t rows_b =
@@ -1910,6 +2480,10 @@ void create_schema(sqlite3 *database) {
         R"SQL(
 DROP TABLE IF EXISTS marker_projections;
 DROP TABLE IF EXISTS markers;
+DROP TABLE IF EXISTS match_scores;
+DROP TABLE IF EXISTS keypoint_colors;
+DROP TABLE IF EXISTS pair_provenance;
+DROP TABLE IF EXISTS maxx_schema_info;
 DROP TABLE IF EXISTS image_qualities;
 DROP TABLE IF EXISTS video_frames;
 DROP TABLE IF EXISTS videos;
@@ -2233,20 +2807,29 @@ void write_rows(
 
 void validate_colmap_encodable(const ColmapDatabase &value) {
     for (const FeatureSet &features : value.features) {
-        if (features.has_scores)
+        if (features.has_scores ||
+            features.keypoint_colors_present ||
+            features.quality_present ||
+            features.descriptor_dtype_present ||
+            features.descriptor_dim_present ||
+            features.extractor_type_name_present)
             throw std::invalid_argument(
-                "COLMAP database writer: feature scores "
-                "are not representable");
+                "COLMAP database writer: feature scores or extended "
+                "image metadata require an exact-profile writer");
         if (features.has_descriptors &&
             features.descriptor_dtype != sio::DType::U8)
             throw std::invalid_argument(
                 "COLMAP database writer: descriptors "
                 "must be uint8");
     }
-    if (value.match_graph.has_scores)
+    if (value.match_graph.has_scores ||
+        std::any_of(
+            value.match_graph.provenance_present.begin(),
+            value.match_graph.provenance_present.end(),
+            [](uint8_t present) { return present != 0; }))
         throw std::invalid_argument(
-            "COLMAP database writer: match scores "
-            "are not representable");
+            "COLMAP database writer: match scores and provenance "
+            "require an exact-profile writer");
     if (value.rig_frames.num_rigs() != 0 ||
         value.rig_frames.num_frames() != 0 ||
         value.rig_frames.num_rig_sensors() != 0 ||
@@ -2255,6 +2838,14 @@ void validate_colmap_encodable(const ColmapDatabase &value) {
         throw std::invalid_argument(
             "COLMAP database writer: rigs, frames, and pose priors "
             "require an exact-profile writer");
+    if (value.markers.num_markers() != 0 ||
+        value.markers.num_projections() != 0 ||
+        value.video_metadata.num_videos() != 0 ||
+        value.video_metadata.num_video_frames() != 0 ||
+        value.maxx_schema_info.present)
+        throw std::invalid_argument(
+            "COLMAP database writer: MAXX marker, video metadata, "
+            "and ownership rows require an exact-profile writer");
     if (std::any_of(
             value.match_graph.camera1_present.begin(),
             value.match_graph.camera1_present.end(),
@@ -2312,6 +2903,7 @@ void write_database(
             database,
             "PRAGMA user_version=" +
                 std::to_string(value.user_version));
+        execute(database, "PRAGMA application_id=0");
         transaction.commit();
     } catch (...) {
         if (created) {
@@ -2335,6 +2927,19 @@ struct DatabaseInspection {
     int64_t frame_data = 0;
     int64_t pose_priors = 0;
     std::string pose_prior_layout = "none";
+    int64_t keypoint_color_rows = 0;
+    int64_t match_score_pairs = 0;
+    int64_t image_qualities = 0;
+    int64_t pair_provenance = 0;
+    int64_t markers = 0;
+    int64_t marker_projections = 0;
+    int64_t videos = 0;
+    int64_t video_frames = 0;
+    bool maxx_schema_info_present = false;
+    uint32_t maxx_schema_version = 0;
+    uint32_t maxx_minimum_reader_version = 0;
+    std::string maxx_producer_version;
+    std::string maxx_producer_commit;
     int64_t cameras = 0;
     int64_t images = 0;
     int64_t keypoint_rows = 0;
@@ -2350,6 +2955,7 @@ struct DatabaseInspection {
     std::vector<int64_t> keypoint_dimensions;
     std::vector<int64_t> descriptor_counts;
     std::vector<int64_t> image_descriptor_dimensions;
+    std::vector<std::string> image_descriptor_dtypes;
 };
 
 int64_t sum_column(
@@ -2402,6 +3008,48 @@ DatabaseInspection inspect_database(const std::string &path) {
         else
             result.pose_prior_layout = "image-linked-3.13";
     }
+    const auto table_count =
+        [database](const char *name) {
+            return table_exists(database, name)
+                       ? scalar_count(database, name)
+                       : int64_t{0};
+        };
+    result.keypoint_color_rows =
+        table_count("keypoint_colors");
+    result.match_score_pairs = table_count("match_scores");
+    result.image_qualities = table_count("image_qualities");
+    result.pair_provenance = table_count("pair_provenance");
+    result.markers = table_count("markers");
+    result.marker_projections =
+        table_count("marker_projections");
+    result.videos = table_count("videos");
+    result.video_frames = table_count("video_frames");
+    if (table_exists(database, "maxx_schema_info")) {
+        Statement ownership(
+            database,
+            "SELECT schema_version, minimum_reader_version, "
+            "producer_version, producer_commit "
+            "FROM maxx_schema_info");
+        if (ownership.row()) {
+            result.maxx_schema_info_present = true;
+            result.maxx_schema_version =
+                uint32_value(
+                    ownership.get(), 0,
+                    "MAXX schema_version");
+            result.maxx_minimum_reader_version =
+                uint32_value(
+                    ownership.get(), 1,
+                    "MAXX minimum_reader_version");
+            result.maxx_producer_version =
+                text(
+                    ownership.get(), 2,
+                    "MAXX producer_version");
+            result.maxx_producer_commit =
+                text(
+                    ownership.get(), 3,
+                    "MAXX producer_commit");
+        }
+    }
     result.cameras = scalar_count(database, "cameras");
     result.images = scalar_count(database, "images");
     result.keypoint_rows = scalar_count(database, "keypoints");
@@ -2415,22 +3063,21 @@ DatabaseInspection inspect_database(const std::string &path) {
     result.verified_matches = sum_column(
         database, "two_view_geometries", "rows");
     {
-        Statement dimensions(
-            database,
-            "SELECT DISTINCT cols FROM descriptors "
-            "ORDER BY cols");
-        while (dimensions.row())
-            result.descriptor_dimensions.push_back(
-                integer(
-                    dimensions.get(), 0,
-                    "descriptor dimension"));
-    }
-    {
+        const bool descriptor_type =
+            column_exists(database, "descriptors", "type");
+        const bool descriptor_metadata =
+            column_exists(database, "descriptors", "dtype");
         Statement images(
             database,
             "SELECT i.image_id,i.name,"
             "coalesce(k.rows,-1),coalesce(k.cols,-1),"
-            "coalesce(d.rows,-1),coalesce(d.cols,-1) "
+            "coalesce(d.rows,-1),coalesce(d.cols,-1)," +
+                std::string(
+                    descriptor_type ? "d.type," : "NULL,") +
+                std::string(
+                    descriptor_metadata
+                        ? "d.dtype,d.dim "
+                        : "NULL,NULL ") +
             "FROM images i "
             "LEFT JOIN keypoints k ON k.image_id=i.image_id "
             "LEFT JOIN descriptors d ON d.image_id=i.image_id "
@@ -2447,9 +3094,74 @@ DatabaseInspection inspect_database(const std::string &path) {
                 integer(images.get(), 3, "keypoint dimension"));
             result.descriptor_counts.push_back(
                 integer(images.get(), 4, "descriptor count"));
+            const int64_t stored_columns =
+                integer(
+                    images.get(), 5,
+                    "descriptor stored columns");
+            if (stored_columns < 0) {
+                result.image_descriptor_dimensions.push_back(-1);
+                result.image_descriptor_dtypes.emplace_back();
+                continue;
+            }
+            const int32_t extractor_type =
+                sqlite3_column_type(images.get(), 6) == SQLITE_NULL
+                    ? 0
+                    : int32_value(
+                          images.get(), 6,
+                          "descriptor type");
+            const bool dtype_present =
+                sqlite3_column_type(images.get(), 7) != SQLITE_NULL;
+            const sio::DType dtype =
+                effective_descriptor_dtype(
+                    extractor_type, dtype_present,
+                    dtype_present
+                        ? int32_value(
+                              images.get(), 7,
+                              "descriptor dtype")
+                        : 0);
+            const size_t itemsize =
+                sio::dtype_info(dtype).itemsize;
+            int64_t logical_dimension = 0;
+            if (sqlite3_column_type(images.get(), 8) != SQLITE_NULL) {
+                logical_dimension =
+                    integer(
+                        images.get(), 8,
+                        "descriptor dimension");
+            } else {
+                if (stored_columns %
+                        static_cast<int64_t>(itemsize) != 0)
+                    throw std::invalid_argument(
+                        "COLMAP database: descriptor cols are "
+                        "not divisible by dtype itemsize");
+                logical_dimension =
+                    stored_columns /
+                    static_cast<int64_t>(itemsize);
+            }
+            if (logical_dimension < 0 ||
+                logical_dimension >
+                    std::numeric_limits<int64_t>::max() /
+                        static_cast<int64_t>(itemsize) ||
+                logical_dimension *
+                        static_cast<int64_t>(itemsize) !=
+                    stored_columns)
+                throw std::invalid_argument(
+                    "COLMAP database: descriptor cols disagree "
+                    "with dtype and dim");
             result.image_descriptor_dimensions.push_back(
-                integer(images.get(), 5, "descriptor dimension"));
+                logical_dimension);
+            result.image_descriptor_dtypes.emplace_back(
+                sio::dtype_info(dtype).name);
+            result.descriptor_dimensions.push_back(
+                logical_dimension);
         }
+        std::sort(
+            result.descriptor_dimensions.begin(),
+            result.descriptor_dimensions.end());
+        result.descriptor_dimensions.erase(
+            std::unique(
+                result.descriptor_dimensions.begin(),
+                result.descriptor_dimensions.end()),
+            result.descriptor_dimensions.end());
     }
     return result;
 }
@@ -2474,6 +3186,29 @@ nb::dict inspection_dict(const std::string &path) {
     result["num_pose_priors"] = value.pose_priors;
     result["pose_prior_layout"] =
         value.pose_prior_layout;
+    result["num_keypoint_color_rows"] =
+        value.keypoint_color_rows;
+    result["num_match_score_pairs"] =
+        value.match_score_pairs;
+    result["num_image_qualities"] =
+        value.image_qualities;
+    result["num_pair_provenance"] =
+        value.pair_provenance;
+    result["num_markers"] = value.markers;
+    result["num_marker_projections"] =
+        value.marker_projections;
+    result["num_videos"] = value.videos;
+    result["num_video_frames"] = value.video_frames;
+    result["maxx_schema_info_present"] =
+        value.maxx_schema_info_present;
+    result["maxx_schema_version"] =
+        value.maxx_schema_version;
+    result["maxx_minimum_reader_version"] =
+        value.maxx_minimum_reader_version;
+    result["maxx_producer_version"] =
+        value.maxx_producer_version;
+    result["maxx_producer_commit"] =
+        value.maxx_producer_commit;
     result["num_cameras"] = value.cameras;
     result["num_images"] = value.images;
     result["num_keypoint_rows"] = value.keypoint_rows;
@@ -2494,6 +3229,8 @@ nb::dict inspection_dict(const std::string &path) {
         nb::cast(value.descriptor_counts);
     result["image_descriptor_dimensions"] =
         nb::cast(value.image_descriptor_dimensions);
+    result["image_descriptor_dtypes"] =
+        nb::cast(value.image_descriptor_dtypes);
     result["sqlite_version"] =
         std::string(sqlite3_libversion());
     return result;

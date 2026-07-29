@@ -2,6 +2,7 @@
 // matches, and the lossless core payload of a COLMAP feature database.
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -27,12 +28,22 @@ struct FeatureSet {
     std::vector<float> keypoints;  // rows * keypoint_columns
 
     bool has_descriptors = false;
+    bool descriptor_dtype_present = false;
+    bool descriptor_dim_present = false;
     sio::DType descriptor_dtype = sio::DType::U8;
     size_t descriptor_columns = 0;
+    bool extractor_type_name_present = false;
+    std::string extractor_type_name;
     std::vector<uint8_t> descriptors;
+
+    bool keypoint_colors_present = false;
+    std::vector<uint8_t> keypoint_colors;  // rows * 3 RGB
 
     bool has_scores = false;
     std::vector<float> scores;  // rows
+
+    bool quality_present = false;
+    double quality = 0.0;
 };
 
 struct MatchGraph {
@@ -45,6 +56,7 @@ struct MatchGraph {
     std::vector<uint64_t> match_offsets;  // pair_count + 1
     std::vector<uint32_t> matches;        // 2 * match_offsets.back()
     bool has_scores = false;
+    std::vector<uint8_t> match_score_present;  // pair_count
     std::vector<float> scores;            // match_offsets.back()
 
     // COLMAP stores geometrically verified correspondences as another ragged
@@ -73,6 +85,11 @@ struct MatchGraph {
     std::vector<Camera> recovered_camera2;
     std::vector<uint8_t> camera1_prior_focal_length;
     std::vector<uint8_t> camera2_prior_focal_length;
+
+    std::vector<uint8_t> provenance_present;
+    std::vector<uint32_t> source_flags;
+    std::vector<uint8_t> retrieval_score_present;
+    std::vector<float> retrieval_scores;
 
     size_t num_pairs() const { return pair_count; }
     size_t num_matches() const {
@@ -133,8 +150,77 @@ struct ColmapPosePriorSet {
     std::vector<double> position_covariances;  // row-major N*3*3
     std::vector<uint8_t> gravity_present;
     std::vector<double> gravities;
+    std::vector<uint8_t> rotation_present;
+    std::vector<double> rotations;  // XYZW cam_from_world
+    std::vector<uint8_t> rotation_covariance_present;
+    std::vector<double> rotation_covariances;  // row-major N*3*3
+    std::vector<uint8_t> pose_covariance_present;
+    std::vector<double> pose_covariances;  // row-major N*6*6
 
     size_t size() const { return prior_ids.size(); }
+};
+
+struct ColmapMarkerSet {
+    std::vector<uint32_t> marker_ids;
+    std::vector<std::string> labels;
+    std::vector<int32_t> types;
+    std::vector<uint8_t> world_position_present;
+    std::vector<double> world_positions;
+    std::vector<uint8_t> world_covariance_present;
+    std::vector<double> world_covariances;  // row-major N*3*3
+    std::vector<uint64_t> point3d_ids;
+    std::vector<uint8_t> enabled;
+
+    std::vector<uint32_t> projection_marker_ids;
+    std::vector<uint32_t> projection_image_ids;
+    std::vector<double> projection_xy;
+    std::vector<double> projection_sizes;
+    std::vector<uint8_t> projection_pinned;
+    std::vector<uint32_t> projection_point2d_indices;
+
+    size_t num_markers() const { return marker_ids.size(); }
+    size_t num_projections() const {
+        return projection_marker_ids.size();
+    }
+};
+
+struct ColmapVideoMetadataSet {
+    std::vector<uint32_t> video_ids;
+    std::vector<std::string> names;
+    std::vector<uint8_t> source_path_present;
+    std::vector<std::string> source_paths;
+    std::vector<uint8_t> content_hash_present;
+    std::vector<std::string> content_hashes;
+    std::vector<int32_t> widths;
+    std::vector<int32_t> heights;
+    std::vector<int64_t> num_frames;
+    std::vector<double> fps;
+    std::vector<double> duration_seconds;
+    std::vector<uint8_t> codec_name_present;
+    std::vector<std::string> codec_names;
+    std::vector<uint8_t> sync_group_present;
+    std::vector<std::string> sync_groups;
+
+    std::vector<uint32_t> frame_video_ids;
+    std::vector<uint32_t> frame_image_ids;
+    std::vector<int64_t> frame_ids;
+    std::vector<uint8_t> pts_present;
+    std::vector<double> pts_seconds;
+    std::vector<uint8_t> time_id_present;
+    std::vector<uint32_t> time_ids;
+
+    size_t num_videos() const { return video_ids.size(); }
+    size_t num_video_frames() const {
+        return frame_video_ids.size();
+    }
+};
+
+struct ColmapMaxxSchemaInfo {
+    bool present = false;
+    uint32_t schema_version = 0;
+    uint32_t minimum_reader_version = 0;
+    std::string producer_version;
+    std::string producer_commit;
 };
 
 struct ColmapDatabase {
@@ -144,6 +230,9 @@ struct ColmapDatabase {
     MatchGraph match_graph;
     ColmapRigFrameSet rig_frames;
     ColmapPosePriorSet pose_priors;
+    ColmapMarkerSet markers;
+    ColmapVideoMetadataSet video_metadata;
+    ColmapMaxxSchemaInfo maxx_schema_info;
     // Exact on-disk schema identity. Records built through colmap_database()
     // use SceneIO's legacy hybrid profile until the caller selects one of the
     // exact profile writers. Readers populate both values from SQLite.
@@ -166,6 +255,12 @@ void validate_colmap_rig_frames(
 void validate_colmap_pose_priors(
     const ColmapPosePriorSet &value,
     const char *context = "colmap_pose_priors");
+void validate_colmap_markers(
+    const ColmapMarkerSet &value,
+    const char *context = "colmap_markers");
+void validate_colmap_videos(
+    const ColmapVideoMetadataSet &value,
+    const char *context = "colmap_video_metadata");
 void validate_colmap_database(
     const ColmapDatabase &database,
     const char *context = "colmap_database");

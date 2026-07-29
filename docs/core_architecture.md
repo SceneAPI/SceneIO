@@ -451,6 +451,19 @@ exposes them:
   preserves image-linked or generalized associations, coordinate-system
   codes, and SQL BLOB presence. Logical covariance views are row-major even
   though the SQLite Eigen buffer is column-major.
+- MAXX pose-prior rotations are XYZW `cam_from_world`. Rotation covariance is
+  SO(3) tangent xyz in radians squared; 6x6 pose covariance orders rotation
+  tangent xyz before translation xyz, with metre-squared translation and
+  radian-metre cross terms.
+- `FeatureSet` uses explicit presence for descriptor dtype/dimension/name,
+  keypoint colors, and quality. `MatchGraph.scores` is absent when no score
+  row exists anywhere; otherwise it is parallel to all raw matches and
+  zero-filled for pairs whose `match_score_present` is zero. Pair provenance
+  follows the same presence-first rule and retains unknown source-mask bits.
+- `ColmapDatabase.markers` exposes optional position/covariance BLOB presence
+  and top-left-origin pixel projections. `video_metadata` carries only SQLite
+  metadata; nullable strings have presence arrays and source paths are never
+  opened. `maxx_schema_info` is `None` outside an owned MAXX profile.
 - `GaussianCloud.quaternion_order == "wxyz"`, `.scale_space == "log"`,
   `.opacity_space == "logit"`, `.sh_layout == "channel_grouped"`
 - `Mesh.coordinate_frame == "opengl"` for canonical glTF geometry;
@@ -572,8 +585,10 @@ official datasets using the generic `.txt` suffix require `format="bal"`.
 
 `sceneio.read_partial(path, ...)` requires exactly one selector and normally
 returns the same public record kind as `read()`. The deliberate exception is
-`colmap_db`: a selected image returns `FeatureSet`, and a selected pair returns
-`MatchGraph`, while a full read returns `ColmapDatabase`.
+`colmap_db`: a selected image returns `FeatureSet` including time,
+descriptor dtype/dimension/name, colors, and quality. A selected pair returns
+`MatchGraph` including score-row and provenance state, while a full read
+returns `ColmapDatabase`.
 
 <!-- sceneio-partial-summary:start -->
 | Selector | Built-in codecs |

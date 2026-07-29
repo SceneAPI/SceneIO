@@ -140,6 +140,14 @@ OBJ/MTL over `Mesh` + `MaterialSet`, STL/OFF over `Mesh`, plain glTF/GLB over
 file sinks, metadata inspection, partial reads where meaningful, and the
 all-codec differential/memory harness.
 
+The C1d MAXX database read expansion retains the same optimized path-native
+transport. On the representative 9.9 MB database, three-run local MSVC medians
+measure 1,067 MB/s full/path read and 158 MB/s direct write with no
+payload-sized traced Python allocation. Metadata inspection is 4.12x faster
+than full decode, while indexed image and pair reads are 9.05x and 9.53x
+faster. The MAXX field expansion therefore adds no measured I/O-path
+regression; exact-profile emission remains the separate C1e unit.
+
 The latest sequence wave adds owned `ImageSequence` storage, lazy image
 directories, and an original dependency-free raw Y4M codec. On representative
 6.3 MB fixtures, Y4M measured 2,574 MB/s public mmap read while removing the

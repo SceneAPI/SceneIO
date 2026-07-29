@@ -42,12 +42,20 @@ def inspect_colmap_db(path: Path, datatype: str) -> Inspection:
 
     values = _core.inspect_colmap_db(str(path))
     arrays = []
-    for image_id, keypoint_count, keypoint_dim, descriptor_count, descriptor_dim in zip(
+    for (
+        image_id,
+        keypoint_count,
+        keypoint_dim,
+        descriptor_count,
+        descriptor_dim,
+        descriptor_dtype,
+    ) in zip(
         values["image_ids"],
         values["keypoint_counts"],
         values["keypoint_dimensions"],
         values["descriptor_counts"],
         values["image_descriptor_dimensions"],
+        values["image_descriptor_dtypes"],
         strict=True,
     ):
         if keypoint_count >= 0:
@@ -63,9 +71,49 @@ def inspect_colmap_db(path: Path, datatype: str) -> Inspection:
                 ArrayInspection(
                     f"{image_id}/descriptors",
                     (descriptor_count, descriptor_dim),
-                    "uint8",
+                    descriptor_dtype,
                 )
             )
+    metadata: dict[str, MetadataValue] = {
+        "user_version": values["user_version"],
+        "sqlite_version": values["sqlite_version"],
+        "num_rigs": values["num_rigs"],
+        "num_rig_sensors": values["num_rig_sensors"],
+        "num_frames": values["num_frames"],
+        "num_frame_data": values["num_frame_data"],
+        "num_pose_priors": values["num_pose_priors"],
+        "pose_prior_layout": values["pose_prior_layout"],
+        "num_keypoint_color_rows": values["num_keypoint_color_rows"],
+        "num_match_score_pairs": values["num_match_score_pairs"],
+        "num_image_qualities": values["num_image_qualities"],
+        "num_pair_provenance": values["num_pair_provenance"],
+        "num_markers": values["num_markers"],
+        "num_marker_projections": values["num_marker_projections"],
+        "num_videos": values["num_videos"],
+        "num_video_frames": values["num_video_frames"],
+        "num_cameras": values["num_cameras"],
+        "num_images": values["num_images"],
+        "num_keypoint_rows": values["num_keypoint_rows"],
+        "num_descriptor_rows": values["num_descriptor_rows"],
+        "num_match_pairs": values["num_match_pairs"],
+        "num_verified_pairs": values["num_verified_pairs"],
+        "num_matches": values["num_matches"],
+        "num_verified_matches": values["num_verified_matches"],
+        "descriptor_dimensions": tuple(values["descriptor_dimensions"]),
+        "image_ids": tuple(values["image_ids"]),
+        "image_names": tuple(values["image_names"]),
+    }
+    if values["maxx_schema_info_present"]:
+        metadata.update(
+            {
+                "maxx_schema_version": values["maxx_schema_version"],
+                "maxx_minimum_reader_version": values[
+                    "maxx_minimum_reader_version"
+                ],
+                "maxx_producer_version": values["maxx_producer_version"],
+                "maxx_producer_commit": values["maxx_producer_commit"],
+            }
+        )
     return Inspection(
         format="colmap_db",
         datatype=datatype,
@@ -73,27 +121,7 @@ def inspect_colmap_db(path: Path, datatype: str) -> Inspection:
         shape=(values["num_images"],),
         count=values["num_images"],
         arrays=tuple(arrays),
-        metadata={
-            "user_version": values["user_version"],
-            "sqlite_version": values["sqlite_version"],
-            "num_rigs": values["num_rigs"],
-            "num_rig_sensors": values["num_rig_sensors"],
-            "num_frames": values["num_frames"],
-            "num_frame_data": values["num_frame_data"],
-            "num_pose_priors": values["num_pose_priors"],
-            "pose_prior_layout": values["pose_prior_layout"],
-            "num_cameras": values["num_cameras"],
-            "num_images": values["num_images"],
-            "num_keypoint_rows": values["num_keypoint_rows"],
-            "num_descriptor_rows": values["num_descriptor_rows"],
-            "num_match_pairs": values["num_match_pairs"],
-            "num_verified_pairs": values["num_verified_pairs"],
-            "num_matches": values["num_matches"],
-            "num_verified_matches": values["num_verified_matches"],
-            "descriptor_dimensions": tuple(values["descriptor_dimensions"]),
-            "image_ids": tuple(values["image_ids"]),
-            "image_names": tuple(values["image_names"]),
-        },
+        metadata=metadata,
     )
 
 

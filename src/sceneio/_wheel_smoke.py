@@ -10,6 +10,7 @@ import gc
 import importlib.util
 import mmap
 import shutil
+import sqlite3
 import struct
 import tempfile
 from collections.abc import Callable, Iterator, Mapping
@@ -1157,8 +1158,11 @@ def _colmap_database(root: Path) -> None:
     assert sceneio.FeatureSet is _core.FeatureSet
     assert sceneio.MatchGraph is _core.MatchGraph
     assert sceneio.ColmapDatabase is _core.ColmapDatabase
+    assert sceneio.ColmapMarkerSet is _core.ColmapMarkerSet
+    assert sceneio.ColmapMaxxSchemaInfo is _core.ColmapMaxxSchemaInfo
     assert sceneio.ColmapRigFrameSet is _core.ColmapRigFrameSet
     assert sceneio.ColmapPosePriorSet is _core.ColmapPosePriorSet
+    assert sceneio.ColmapVideoMetadataSet is _core.ColmapVideoMetadataSet
     path = root / "database.db"
     sceneio.write(database, path)
     assert sceneio.detect(path) == "colmap_db"
@@ -1172,6 +1176,78 @@ def _colmap_database(root: Path) -> None:
     inspected = sceneio.inspect(path)
     assert inspected.metadata["num_cameras"] == 1
     assert inspected.metadata["num_matches"] == 1
+
+    maxx_path = root / "maxx.db"
+    connection = sqlite3.connect(maxx_path)
+    try:
+        connection.executescript(_core._colmap_db_profile_schema("maxx-v1"))
+        connection.execute("PRAGMA application_id=1296128088")
+        connection.execute("PRAGMA user_version=3140003")
+        connection.execute(
+            "INSERT INTO maxx_schema_info VALUES(1,1,'3.14.0',?)",
+            ("de15b08a2dba98b55d6ddfb7cedac147838afbb4",),
+        )
+        connection.execute(
+            "INSERT INTO cameras VALUES(5,0,640,480,?,1)",
+            (struct.pack("<3d", 500.0, 320.0, 240.0),),
+        )
+        connection.execute(
+            "INSERT INTO images VALUES(2,'2.jpg',5,17)"
+        )
+        connection.execute(
+            "INSERT INTO keypoints VALUES(2,1,2,?)",
+            (struct.pack("<2f", 10.0, 20.0),),
+        )
+        connection.execute(
+            "INSERT INTO descriptors VALUES(2,-1,'plugin',3,2,1,8,?)",
+            (struct.pack("<2f", 0.25, -0.5),),
+        )
+        connection.execute(
+            "INSERT INTO keypoint_colors VALUES(2,1,3,?)",
+            (bytes((1, 2, 3)),),
+        )
+        connection.execute(
+            "INSERT INTO image_qualities VALUES(2,0.75)"
+        )
+        connection.execute(
+            "INSERT INTO pose_priors VALUES"
+            "(1,2,5,0,NULL,NULL,NULL,-1,?,NULL,NULL)",
+            (struct.pack("<4d", 0.0, 0.0, 0.0, 1.0),),
+        )
+        connection.execute(
+            "INSERT INTO markers VALUES"
+            "(7,'target',3,NULL,NULL,-1,1)"
+        )
+        connection.execute(
+            "INSERT INTO marker_projections VALUES"
+            "(7,2,10.0,20.0,2.0,1,4294967295)"
+        )
+        connection.execute(
+            "INSERT INTO videos VALUES"
+            "(3,'source',NULL,NULL,640,480,1,30.0,0.033,NULL,NULL)"
+        )
+        connection.execute(
+            "INSERT INTO video_frames VALUES(3,2,0,0.0,19)"
+        )
+        pair_id = 2 * 2_147_483_647 + 3
+        connection.execute(
+            "INSERT INTO pair_provenance VALUES(?,65,NULL)",
+            (pair_id,),
+        )
+        connection.commit()
+    finally:
+        connection.close()
+
+    maxx = sceneio.read(maxx_path)
+    assert maxx.maxx_schema_info.producer_version == "3.14.0"
+    assert maxx.feature(2).descriptors.dtype == np.float32
+    assert maxx.feature(2).keypoint_colors.tolist() == [[1, 2, 3]]
+    assert maxx.markers.marker_types.tolist() == [3]
+    assert maxx.video_metadata.video_frame_indices.tolist() == [0]
+    assert maxx.match_graph.source_flags.tolist() == [65]
+    assert sceneio.read_partial(maxx_path, image_id=2).quality == 0.75
+    assert sceneio.read_partial(maxx_path, pair=(3, 2)).source_flags.tolist() == [65]
+    assert sceneio.inspect(maxx_path).metadata["num_markers"] == 1
 
 
 def _image_sequences(root: Path) -> None:

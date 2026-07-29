@@ -4650,7 +4650,7 @@ Remote C0 evidence:
         until C1e emits the exact current profile.
   - [x] C1c: populated stock rigs, frames, frame data, and both stock
         pose-prior layouts.
-  - [ ] C1d: extended MAXX pose priors plus
+  - [x] C1d: extended MAXX pose priors plus
         descriptor/color/score/provenance/marker/quality/source fields.
   - [ ] C1e: exact selected-profile writers and explicit conversion reports.
 - [ ] C2: COLMAP MVS depth/normal matrices, consistency graphs, visibility,
@@ -4731,3 +4731,54 @@ C1c final local evidence on 2026-07-29:
 - the green C1c commit includes the required co-author trailer. Remote
   sanitizer and three-toolchain validation remain exact-commit release gates,
   not claims made by this local evidence.
+
+C1d implementation checklist:
+
+- [x] Add owned nested marker, metadata-only video, and MAXX ownership records
+      with zero-copy views and explicit presence arrays.
+- [x] Decode all five descriptor wire dtypes with independent dtype, logical
+      dimension, and extractor-name SQL presence.
+- [x] Decode keypoint colors, image quality, match scores, raw pair provenance
+      flags, and provenance-only pairs without inventing endpoints.
+- [x] Decode extended pose rotations and 3x3/6x6 covariance matrices with
+      explicit XYZW/cam-from-world, variable-order, storage, and unit tags.
+- [x] Preserve marker optional BLOB bits, SQL sentinels, projection metadata,
+      video NULL-versus-empty strings, PTS values, and independent frame/image
+      time IDs. Keep source paths inert and metadata-only.
+- [x] Extend full/indexed reads and metadata-only inspection; prove selected
+      reads ignore unrelated malformed BLOBs.
+- [x] Add exact layout checks, aggregate relationships, handle-release and
+      nested-array lifetime tests, public exports/constants, wheel smoke, and
+      compatibility fingerprints.
+- [x] Refuse every C1d field from the legacy writer before destination creation
+      or mutation; leave exact profile emission explicitly to C1e.
+- [x] Record final benchmark, full-suite, Ruff, diff, wheel, collection, and
+      three-review evidence after the implementation stabilizes.
+- [ ] Run remote instrumentation and three-toolchain/package validation on the
+      exact green commit; do not infer those results from local MSVC.
+
+C1d final local evidence on 2026-07-29:
+
+- the exact collection is 3,732 nodes with sorted normalized SHA-256
+  `8bff7ec31351760721181e4f1314ade1ba8438c26b08bb4090b8aebf93101368`;
+  the complete suite passes 3,727 tests with five documented skips;
+- the final focused codec/contract/architecture gate passes 286 tests with two
+  expected skips. The expanded matrix includes frozen de15 DDL, 41 malformed
+  row cases, selected-versus-unselected partial failures, 49 retained ndarray
+  paths, nine independent writer guards, and stale MAXX destination cleanup;
+- the three-run 9.9 MB database benchmark measures 1,067 MB/s full/path read,
+  158 MB/s direct write, 2.192 ms metadata inspection, 0.999 ms image
+  selection, and 0.949 ms pair selection. Mapped reads and direct writes add
+  no payload-sized traced Python allocation; inspection is 4.12x faster and
+  partial reads are 9.05x/9.53x faster than full decode;
+- Ruff and diff checks pass. A wheel rebuilt from the generated source
+  archive installs in a clean NumPy-only CPython 3.12 environment, completes
+  the 50-codec installed-wheel smoke with result `2`, and passes distribution
+  inventory verification;
+- Ampere, Epicurus, and Lagrange signed off the format/architecture,
+  lifetime/test, and platform/public/documentation reviews after their
+  findings were corrected;
+- the locally installed `colmap_mod` binding identifies itself as
+  `a3cfdd784`, not the pinned de15 producer. Therefore no live exact-de15
+  producer result is claimed; frozen pinned DDL and independently constructed
+  row bytes remain the local oracle until an exact producer build is supplied.

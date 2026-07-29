@@ -1,12 +1,12 @@
 """Repository-owned COLMAP SQLite profile and schema contracts.
 
-sfmapi treats the COLMAP SQLite scene database as a first-class core
+SceneIO treats the COLMAP SQLite scene database as a first-class core
 *contract*: the canonical on-disk representation that COLMAP-family
 backends produce and that portable tooling (the C++ port, importers,
 exporters, the bridge) reads. This module is the single source of truth
 for that schema in the framework.
 
-Ownership: this contract is **owned here**. sfmapi defines the standard;
+Ownership: this contract is **owned here**. SceneIO defines the standard;
 implementations conform to it, not the reverse. The reference COLMAP
 fork (``Opsiclear-internal/colmap_mod``) is one such implementation and
 is expected to match this schema — if the two ever diverge, this module
@@ -14,10 +14,8 @@ is authoritative and the divergence is a bug to reconcile, not a signal
 to re-sync from the fork. Changes here are deliberate contract decisions.
 
 This is also a *data standard*, not a dependency. Core declares the
-schema as plain data; it never imports the ``sfmapi_colmap`` plugin or
-links the COLMAP C++ library. (The
-``test_core_does_not_import_plugin_distributions`` guard enforces the
-direction.)
+schema as plain data; it never imports a COLMAP plugin or links the COLMAP
+C++ library.
 
 The contract defines exact historical/current stock profiles plus the MAXX
 extension profile. Tables/columns absent from current upstream are marked
@@ -25,7 +23,7 @@ extension profile. Tables/columns absent from current upstream are marked
 extended surface. The extended surface:
 
 * ``images.time_id`` — per-image 4D / multi-time-frame capture tag
-* ``videos`` + ``video_frames`` — video ingestion + frame mapping
+* ``videos`` + ``video_frames`` — metadata-only source/frame mapping
 * ``image_qualities`` — per-image blur/sharpness
 * ``markers`` + ``marker_projections`` — GCPs / named 3D points
 * self-describing descriptor metadata, keypoint colors, match scores and
@@ -145,7 +143,7 @@ COLMAP_DATABASE_PROFILES_BY_NAME: dict[str, DatabaseProfile] = {
 # ``descriptors.type`` records WHICH extractor produced a descriptor set so
 # the matcher can refuse to join incompatible descriptor types. colmap_mod
 # backs this with a *closed* C++ enum (``FeatureExtractorType``), but the
-# sfmapi contract treats extractor identity as an **open registry**:
+# SceneIO contract treats extractor identity as an **open registry**:
 #
 #   * The invariant is the GUARD, not a fixed enum -- "a match may only
 #     join two descriptor sets of the same extractor type." Arbitrary
@@ -185,6 +183,36 @@ COLMAP_KNOWN_MATCHER_TYPES: tuple[str, ...] = (
     "ALIKED_BRUTEFORCE",
     "ALIKED_LIGHTGLUE",
 )
+
+#: Descriptor scalar dtype names and their append-only MAXX wire values.
+COLMAP_KNOWN_DESCRIPTOR_DTYPES: dict[str, int] = {
+    "uint8": 0,
+    "int8": 1,
+    "float16": 2,
+    "float32": 3,
+    "float64": 4,
+}
+
+#: Known bits in the append-only ``pair_provenance.source_flags`` mask.
+#: Readers preserve bits outside this mapping.
+COLMAP_KNOWN_MATCH_SOURCE_FLAGS: dict[str, int] = {
+    "UNKNOWN": 0,
+    "SEQUENTIAL": 1 << 0,
+    "RETRIEVAL": 1 << 1,
+    "SPATIAL": 1 << 2,
+    "EXHAUSTIVE": 1 << 3,
+    "VOCAB_TREE": 1 << 4,
+    "TRANSITIVE": 1 << 5,
+    "IMPORTED": 1 << 6,
+}
+
+#: Marker type names and their MAXX wire values.
+COLMAP_KNOWN_MARKER_TYPES: dict[str, int] = {
+    "REGULAR": 0,
+    "VERTEX": 1,
+    "FIDUCIAL": 2,
+    "CODED_TARGET": 3,
+}
 
 
 def is_colmap_native_extractor_type(name: str) -> bool:
@@ -434,7 +462,7 @@ COLMAP_DB_TABLES: tuple[TableDef, ...] = (
             _col("sync_group", "TEXT"),
         ),
         extension=True,
-        note="Video ingestion source metadata.",
+        note="Metadata-only video source description; paths are inert strings.",
     ),
     TableDef(
         "video_frames",
@@ -446,7 +474,7 @@ COLMAP_DB_TABLES: tuple[TableDef, ...] = (
             _col("time_id", "INTEGER"),
         ),
         extension=True,
-        note="Maps decoded video frames to image ids.",
+        note="Metadata-only mapping from source-frame indices to image ids.",
     ),
     TableDef(
         "image_qualities",
@@ -546,21 +574,17 @@ def is_extension_column(table: str, column: str) -> bool:
 #
 # contract_dict() renders the whole contract as a deterministic, language-
 # neutral dict. It is the single thing the cross-tier parity machinery
-# diffs: the Python source of truth is serialized here, the same bytes are
-# embedded into the C++ port via codegen, and a check_sync gate fails if
-# the two ever diverge. Ordering is the declaration order of
+# diffs. Ordering is the declaration order of
 # COLMAP_DB_TABLES / columns, so the JSON is stable across runs.
 
 CONTRACT_NAME = "colmap_db"
-CONTRACT_SCHEMA_VERSION = 2  # version of THIS serialization shape, not the DB
+CONTRACT_SCHEMA_VERSION = 3  # version of THIS serialization shape, not the DB
 
 
 def contract_dict() -> dict:
     """The COLMAP scene-database contract as a deterministic dict.
 
-    This is the authoritative, repo-owned definition; ``tools/gen_contracts.py``
-    serializes it to JSON + a C++ ``.inc``, and check_sync's ``contract-parity``
-    gate enforces that the embedded C++ copy stays byte-identical.
+    This is the authoritative, repo-owned machine-readable definition.
     """
     return {
         "contract": CONTRACT_NAME,
@@ -596,6 +620,19 @@ def contract_dict() -> dict:
             "known": list(COLMAP_KNOWN_MATCHER_TYPES),
             "open_registry": True,
         },
+        "descriptor_dtypes": {
+            "known": dict(COLMAP_KNOWN_DESCRIPTOR_DTYPES),
+            "append_only": True,
+        },
+        "match_source_flags": {
+            "known": dict(COLMAP_KNOWN_MATCH_SOURCE_FLAGS),
+            "append_only": True,
+            "preserve_unknown_bits": True,
+        },
+        "marker_types": {
+            "known": dict(COLMAP_KNOWN_MARKER_TYPES),
+            "closed_values": True,
+        },
         "tables": [
             {
                 "name": t.name,
@@ -624,8 +661,11 @@ __all__ = [
     "COLMAP_DATABASE_PROFILES_BY_NAME",
     "COLMAP_DB_TABLES",
     "COLMAP_DB_TABLES_BY_NAME",
+    "COLMAP_KNOWN_DESCRIPTOR_DTYPES",
     "COLMAP_KNOWN_EXTRACTOR_TYPES",
+    "COLMAP_KNOWN_MARKER_TYPES",
     "COLMAP_KNOWN_MATCHER_TYPES",
+    "COLMAP_KNOWN_MATCH_SOURCE_FLAGS",
     "CONTRACT_NAME",
     "CONTRACT_SCHEMA_VERSION",
     "DATABASE_SCHEMA_REVISION",

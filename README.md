@@ -263,6 +263,8 @@ assert not sceneio.native_features("hdf5").available
 
 `sceneio.FeatureSet`, `sceneio.MatchGraph`, `sceneio.ColmapDatabase`,
 `sceneio.ColmapRigFrameSet`, `sceneio.ColmapPosePriorSet`,
+`sceneio.ColmapMarkerSet`, `sceneio.ColmapVideoMetadataSet`,
+`sceneio.ColmapMaxxSchemaInfo`,
 `sceneio.Mesh`, `sceneio.MaterialSet`, `sceneio.MeshScene`, and
 `sceneio.ImageSequence` are compiled,
 storage-faithful I/O records. The procedure-contract `sceneio.data.FeatureSet`
@@ -279,14 +281,19 @@ ranges copy only the selected planar frames.
 Count-prefixed PTS supports bounded point ranges while validating the declared
 point count and preserving supported intensity/RGB columns. Generic PLY reads
 ASCII and binary little/big endian point schemas; only fixed-record binary PLY
-supports bounded point ranges. COLMAP SQLite supports one-image features and
-one-pair raw/verified matches through native indexed SQL queries. Current
+supports bounded point ranges. COLMAP SQLite indexed image reads include
+time ID, descriptor dtype/dimension/name, colors, and quality; indexed pair
+reads include raw/verified matches, score-row state, and provenance. Current
 upstream COLMAP database reads also expose optional recovered endpoint cameras
 on `MatchGraph`, including independent SQL-NULL presence and prior-focal flags.
 Full stock 3.13/4.1.1/current database reads additionally expose owned
 rig/frame assignments and image-linked or generalized pose priors. SQL NULL
 state, WXYZ rig transforms, and covariance wire order are preserved; exact
-profile writes remain guarded until the profile writers land.
+exact-profile writes remain unavailable until C1e. Owned MAXX
+database reads also preserve all five descriptor scalar dtypes, keypoint
+colors, match scores and provenance, image quality/time, extended pose priors,
+markers/projections, metadata-only video/frame rows, and the ownership record.
+Source-path text is inert metadata; SceneIO does not decode encoded media.
 Plain
 glTF/GLB supports source mesh and flattened primitive selection while rejecting
 unrepresented scene features instead of silently dropping them.
