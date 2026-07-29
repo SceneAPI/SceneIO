@@ -163,6 +163,60 @@ std::vector<double> optional_matrices(
     return result;
 }
 
+bool is_default_camera(const Camera &camera) {
+    return camera.id == 0 && camera.model_id == 0 &&
+           camera.width == 0 && camera.height == 0 &&
+           camera.params.empty();
+}
+
+void validate_camera_value(
+    const Camera &camera, const char *context,
+    const char *kind) {
+    if (camera.id >= kColmapMaxNumImages ||
+        camera.width == 0 || camera.height == 0 ||
+        camera.width >
+            static_cast<uint64_t>(
+                std::numeric_limits<int64_t>::max()) ||
+        camera.height >
+            static_cast<uint64_t>(
+                std::numeric_limits<int64_t>::max()))
+        throw std::invalid_argument(
+            std::string(context) + ": " + kind +
+            " ids must be below 2147483647 and dimensions positive");
+    const auto info = colmap_model_info(camera.model_id);
+    if (camera.params.size() !=
+        static_cast<size_t>(info.nparams))
+        throw std::invalid_argument(
+            std::string(context) + ": " + kind +
+            " parameter count disagrees with model");
+    for (double value : camera.params)
+        if (!std::isfinite(value))
+            throw std::invalid_argument(
+                std::string(context) + ": " + kind +
+                " parameters must be finite");
+}
+
+void validate_recovered_camera_value(
+    const Camera &camera, const char *context,
+    const char *kind) {
+    if (camera.id == std::numeric_limits<uint32_t>::max() ||
+        camera.width == 0 || camera.height == 0)
+        throw std::invalid_argument(
+            std::string(context) + ": " + kind +
+            " id must not be UINT32_MAX and dimensions must be positive");
+    const auto info = colmap_model_info(camera.model_id);
+    if (camera.params.size() !=
+        static_cast<size_t>(info.nparams))
+        throw std::invalid_argument(
+            std::string(context) + ": " + kind +
+            " parameter count disagrees with model");
+    for (double value : camera.params)
+        if (!std::isfinite(value))
+            throw std::invalid_argument(
+                std::string(context) + ": " + kind +
+                " parameters must be finite");
+}
+
 FeatureSet make_feature_set(
     f32_array keypoints, nb::object descriptors,
     nb::object scores, uint32_t image_id,
@@ -270,7 +324,15 @@ MatchGraph make_match_graph(
     std::optional<f64_array> tvecs,
     std::optional<u8_array> pose_present,
     std::optional<u8_array> match_present,
-    std::optional<u8_array> geometry_present) {
+    std::optional<u8_array> geometry_present,
+    std::optional<std::vector<std::optional<Camera>>>
+        recovered_camera1,
+    std::optional<u8_array> camera1_present,
+    std::optional<u8_array> camera1_prior_focal_length,
+    std::optional<std::vector<std::optional<Camera>>>
+        recovered_camera2,
+    std::optional<u8_array> camera2_present,
+    std::optional<u8_array> camera2_prior_focal_length) {
     if (image_pairs.ndim() != 2 || image_pairs.shape(1) != 2)
         throw std::invalid_argument(
             "match_graph: image_pairs must be (P,2) uint32");
@@ -340,6 +402,58 @@ MatchGraph make_match_graph(
     result.pose_present = optional_flags(
         std::move(pose_present), count,
         static_cast<bool>(qvecs), "pose_present");
+    result.camera1_prior_focal_length = optional_flags(
+        std::move(camera1_prior_focal_length), count, false,
+        "camera1_prior_focal_length");
+    result.camera2_prior_focal_length = optional_flags(
+        std::move(camera2_prior_focal_length), count, false,
+        "camera2_prior_focal_length");
+    result.recovered_camera1.assign(count, Camera{});
+    result.recovered_camera2.assign(count, Camera{});
+    const auto assign_recovered =
+        [&](std::optional<
+                std::vector<std::optional<Camera>>> &source,
+            std::optional<u8_array> &explicit_present,
+            std::vector<Camera> &cameras,
+            std::vector<uint8_t> &present,
+            const char *camera_name,
+            const char *presence_name) {
+            std::vector<uint8_t> inferred(
+                count, uint8_t{0});
+            if (source) {
+                if (source->size() != count)
+                    throw std::invalid_argument(
+                        std::string("match_graph: ") +
+                        camera_name +
+                        " must have P camera-or-None values");
+                for (size_t index = 0; index < count; ++index) {
+                    if (!(*source)[index]) continue;
+                    cameras[index] =
+                        std::move(*(*source)[index]);
+                    inferred[index] = 1;
+                }
+            }
+            if (!explicit_present) {
+                present = std::move(inferred);
+                return;
+            }
+            present = optional_flags(
+                std::move(explicit_present), count, false,
+                presence_name);
+            if (present != inferred)
+                throw std::invalid_argument(
+                    std::string("match_graph: ") +
+                    presence_name +
+                    " must agree with camera-or-None values");
+        };
+    assign_recovered(
+        recovered_camera1, camera1_present,
+        result.recovered_camera1, result.camera1_present,
+        "recovered_camera1", "camera1_present");
+    assign_recovered(
+        recovered_camera2, camera2_present,
+        result.recovered_camera2, result.camera2_present,
+        "recovered_camera2", "camera2_present");
     result.F = optional_matrices(
         std::move(fundamental_matrices), count,
         "fundamental_matrices");
@@ -444,9 +558,9 @@ Camera make_camera(
     uint32_t id, int32_t model_id, uint64_t width,
     uint64_t height, f64_array params) {
     const auto model = colmap_model_info(model_id);
-    if (id >= kColmapMaxNumImages)
+    if (id == std::numeric_limits<uint32_t>::max())
         throw std::invalid_argument(
-            "camera: id must be below 2147483647");
+            "camera: id must not be UINT32_MAX");
     if (params.ndim() != 1 ||
         params.shape(0) != static_cast<size_t>(model.nparams))
         throw std::invalid_argument(
@@ -611,7 +725,13 @@ void validate_match_graph(
         graph.H.size() != count * 9 ||
         graph.pose_present.size() != count ||
         graph.qvecs.size() != count * 4 ||
-        graph.tvecs.size() != count * 3)
+        graph.tvecs.size() != count * 3 ||
+        graph.camera1_present.size() != count ||
+        graph.camera2_present.size() != count ||
+        graph.recovered_camera1.size() != count ||
+        graph.recovered_camera2.size() != count ||
+        graph.camera1_prior_focal_length.size() != count ||
+        graph.camera2_prior_focal_length.size() != count)
         throw std::invalid_argument(
             std::string(context) +
             ": inconsistent MatchGraph field lengths");
@@ -670,6 +790,16 @@ void validate_match_graph(
         graph.H_present, context, "H_present");
     require_binary_flags(
         graph.pose_present, context, "pose_present");
+    require_binary_flags(
+        graph.camera1_present, context, "camera1_present");
+    require_binary_flags(
+        graph.camera2_present, context, "camera2_present");
+    require_binary_flags(
+        graph.camera1_prior_focal_length, context,
+        "camera1_prior_focal_length");
+    require_binary_flags(
+        graph.camera2_prior_focal_length, context,
+        "camera2_prior_focal_length");
 
     std::unordered_set<int64_t> seen;
     seen.reserve(count);
@@ -709,10 +839,38 @@ void validate_match_graph(
              graph.F_present[index] ||
              graph.E_present[index] ||
              graph.H_present[index] ||
-             graph.pose_present[index]))
+             graph.pose_present[index] ||
+             graph.camera1_present[index] ||
+             graph.camera2_present[index]))
             throw std::invalid_argument(
                 std::string(context) +
                 ": absent geometry rows cannot carry geometry");
+        const auto validate_recovered =
+            [&](const Camera &camera, uint8_t present,
+                uint8_t prior_focal_length,
+                const char *name) {
+                if (!present) {
+                    if (prior_focal_length ||
+                        !is_default_camera(camera))
+                        throw std::invalid_argument(
+                            std::string(context) + ": absent " +
+                            name +
+                            " cannot carry camera data or flags");
+                    return;
+                }
+                validate_recovered_camera_value(
+                    camera, context, name);
+            };
+        validate_recovered(
+            graph.recovered_camera1[index],
+            graph.camera1_present[index],
+            graph.camera1_prior_focal_length[index],
+            "recovered_camera1");
+        validate_recovered(
+            graph.recovered_camera2[index],
+            graph.camera2_present[index],
+            graph.camera2_prior_focal_length[index],
+            "recovered_camera2");
 
         const std::array<std::pair<const std::vector<uint8_t> *,
                                    const std::vector<double> *>, 3>
@@ -778,29 +936,7 @@ void validate_colmap_database(
     std::unordered_map<uint32_t, const Camera *> cameras;
     cameras.reserve(database.cameras.size());
     for (const Camera &camera : database.cameras) {
-        if (camera.id >= kColmapMaxNumImages ||
-            camera.width == 0 || camera.height == 0 ||
-            camera.width >
-                static_cast<uint64_t>(
-                    std::numeric_limits<int64_t>::max()) ||
-            camera.height >
-                static_cast<uint64_t>(
-                    std::numeric_limits<int64_t>::max()))
-            throw std::invalid_argument(
-                std::string(context) +
-                ": camera ids must be below 2147483647 and "
-                "dimensions positive");
-        const auto info = colmap_model_info(camera.model_id);
-        if (camera.params.size() !=
-            static_cast<size_t>(info.nparams))
-            throw std::invalid_argument(
-                std::string(context) +
-                ": camera parameter count disagrees with model");
-        for (double value : camera.params)
-            if (!std::isfinite(value))
-                throw std::invalid_argument(
-                    std::string(context) +
-                    ": camera parameters must be finite");
+        validate_camera_value(camera, context, "camera");
         if (!cameras.emplace(camera.id, &camera).second)
             throw std::invalid_argument(
                 std::string(context) +
@@ -1124,6 +1260,62 @@ void register_feature_match(nb::module_ &module) {
             },
             reference_internal)
         .def_prop_ro(
+            "camera1_present",
+            [](const MatchGraph &value) {
+                return typed_view(
+                    value.camera1_present,
+                    {value.pair_count});
+            },
+            reference_internal)
+        .def_prop_ro(
+            "camera2_present",
+            [](const MatchGraph &value) {
+                return typed_view(
+                    value.camera2_present,
+                    {value.pair_count});
+            },
+            reference_internal)
+        .def_prop_ro(
+            "camera1_prior_focal_length",
+            [](const MatchGraph &value) {
+                return typed_view(
+                    value.camera1_prior_focal_length,
+                    {value.pair_count});
+            },
+            reference_internal)
+        .def_prop_ro(
+            "camera2_prior_focal_length",
+            [](const MatchGraph &value) {
+                return typed_view(
+                    value.camera2_prior_focal_length,
+                    {value.pair_count});
+            },
+            reference_internal)
+        .def(
+            "recovered_camera1",
+            [](const MatchGraph &value,
+               size_t index) -> nb::object {
+                if (index >= value.pair_count)
+                    throw nb::index_error();
+                if (!value.camera1_present[index])
+                    return nb::none();
+                return nb::cast(Camera(
+                    value.recovered_camera1[index]));
+            },
+            "index"_a)
+        .def(
+            "recovered_camera2",
+            [](const MatchGraph &value,
+               size_t index) -> nb::object {
+                if (index >= value.pair_count)
+                    throw nb::index_error();
+                if (!value.camera2_present[index])
+                    return nb::none();
+                return nb::cast(Camera(
+                    value.recovered_camera2[index]));
+            },
+            "index"_a)
+        .def_prop_ro(
             "quaternion_order",
             [](const MatchGraph &) { return "wxyz"; })
         .def_prop_ro(
@@ -1250,6 +1442,12 @@ void register_feature_match(nb::module_ &module) {
         "pose_present"_a = nb::none(),
         "match_present"_a = nb::none(),
         "geometry_present"_a = nb::none(),
+        "recovered_camera1"_a = nb::none(),
+        "camera1_present"_a = nb::none(),
+        "camera1_prior_focal_length"_a = nb::none(),
+        "recovered_camera2"_a = nb::none(),
+        "camera2_present"_a = nb::none(),
+        "camera2_prior_focal_length"_a = nb::none(),
         "Build a typed ragged image-pair MatchGraph.");
     module.def(
         "colmap_database", &make_colmap_database,

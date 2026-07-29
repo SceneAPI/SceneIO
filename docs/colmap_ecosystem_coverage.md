@@ -52,7 +52,7 @@ Status terms:
 | ChArUco board and calibration sidecars | planned | Add typed board/calibration records with exact per-image poses and errors |
 | Stock COLMAP 3.13 database | partial | Exact profile identity is implemented; add image-linked pose-prior and populated rig/frame representation |
 | Stock COLMAP 4.1.1 database | partial | Exact profile identity is implemented; add populated rigs/frames/generalized pose priors |
-| Current upstream database | partial | Exact profile identity is implemented; add `camera1`/`camera2` payloads and the exact writer |
+| Current upstream database | partial | Exact profile identity and lossless recovered `camera1`/`camera2` reads are implemented; add populated rig/frame/prior rows and the exact writer |
 | Current OpsiClear/MAXX database | partial | Exact ownership/profile identity is implemented; represent timing, quality, provenance, markers, colors, descriptor metadata, scores, and extended priors |
 | Database profile import/export reports | planned adapter | Emit structured compatibility results and explicit field-loss decisions |
 | COLMAP MVS depth maps | planned | New contiguous `width&height&1&` float32 codec; do not alias Gipuma DMB |
@@ -141,10 +141,12 @@ Remote C0 evidence for correction and validation commit `7046761`:
 - [x] Add a versioned profile catalog and exact structural inspection layer;
   keep the six-table payload reader guarded until each additional field is
   represented.
+- [x] Represent recovered `camera1`/`camera2` values, endpoint-local SQL NULL,
+  and prior-focal flags in `MatchGraph`.
 - [ ] Represent rigs, rig sensors, frames, frame data, generalized and
   extended pose priors, descriptor dtype/type/name/dimension, keypoint colors,
-  match scores, pair provenance, recovered cameras, timing/video metadata,
-  quality, markers, and ownership metadata.
+  match scores, pair provenance, timing/video metadata, quality, markers, and
+  ownership metadata.
 - [ ] Make the writer emit an exact selected profile; stop emitting the current
   hybrid schema.
 - [ ] Refuse in-place writes whenever a selected profile cannot preserve an
@@ -184,6 +186,41 @@ Local C1a verification:
 - the three-run `colmap_db` harness reports 1,070 MB/s full read, 179 MB/s
   direct write, 1.80 ms exact-profile inspection, and 5.00x inspection
   speedup over full decode, with no Python-sized staging allocation.
+
+C1b recovered-camera contract:
+
+- current-upstream `two_view_geometries.camera1/camera2` BLOBs use the exact
+  repository-owned little-endian wire order: camera id, model id, width,
+  height, prior-focal byte, parameter count, and float64 parameters. MAXX uses
+  the same wire layout, but its complete payload reader remains guarded until
+  C1d represents its additional columns and tables;
+- `MatchGraph.camera1_present` / `camera2_present` preserve each SQL NULL,
+  prior-focal arrays preserve the serialized flag, and
+  `recovered_camera1(index)` / `recovered_camera2(index)` return typed
+  `Camera` values only when present;
+- full reads and indexed pair reads use the same parser. Bounds, exact
+  exhaustion, known model/parameter cardinality, dimensions, canonical flags,
+  and finite numeric values are checked before the record is returned;
+- recovered cameras retain the producer's full domain: every camera id except
+  the `UINT32_MAX` sentinel and all positive uint64 dimensions. These values
+  are validated separately from SQLite camera-table/image-pair limits;
+- Python construction accepts one `Camera | None` value per pair and endpoint,
+  so mixed present/NULL state can be copied without an inaccessible placeholder;
+- the legacy hybrid writer refuses recovered cameras. Exact current/MAXX
+  emission remains C1e work, so this unit cannot silently discard the new
+  fields;
+- the unchanged legacy fixture regression benchmark reports 1,137 MB/s full
+  read, 154 MB/s direct write, 1.81 ms inspection, and 0.59-0.60 ms indexed
+  image/pair reads with no Python-sized staging allocation. Recovered-camera
+  correctness and allocation behavior are covered by the dedicated current
+  profile full/partial/lifetime tests rather than claimed by that legacy row;
+- the complete local suite passes `3,616` tests with four documented skips;
+  the focused recovered-camera gate passes 24 tests, Ruff and wheel smoke pass,
+  and the collection contract is 3,620 nodes at
+  `a22141fcd211da2437e14a4ba062ab0356e7e1285cf6f7e80846bf2a05703fba`;
+- Ampere, Epicurus, and Lagrange completed the native-lifetime,
+  correctness/test, and platform/documentation reviews. Findings from the
+  first round were corrected before final sign-off.
 
 ### C2 - dense MVS
 

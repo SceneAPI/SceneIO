@@ -4644,7 +4644,10 @@ Remote C0 evidence:
         profile/application identity on inspection and decoded records, and
         correct the Python schema contract. Treat migration-derived MAXX
         pre-ownership databases as legacy until C1e's import classifier.
-  - [ ] C1b: recovered `camera1`/`camera2` payloads.
+  - [x] C1b: recovered `camera1`/`camera2` payloads. Preserve SQL NULL
+        independently for each endpoint, expose typed `Camera` values and
+        prior-focal flags on `MatchGraph`, and keep the legacy writer guarded
+        until C1e emits the exact current profile.
   - [ ] C1c: populated rigs, frames, frame data, and both pose-prior layouts.
   - [ ] C1d: MAXX descriptor/color/score/provenance/marker/quality/source fields.
   - [ ] C1e: exact selected-profile writers and explicit conversion reports.
@@ -4658,3 +4661,25 @@ Remote C0 evidence:
 Runtime engines, solver logs, reports, decoded/staged caches, and encoded-video
 implementations do not become core codecs. This is the explicit stop condition
 that keeps full ecosystem closure finite.
+
+C1b local evidence on 2026-07-29:
+
+- the current-upstream `camera1`/`camera2` layout is decoded explicitly as
+  little-endian `u32 id`, `i32 model`, `u64 width`, `u64 height`, `u8 prior`,
+  `u64 parameter_count`, then `float64 parameters`;
+- full and indexed pair reads agree exactly, SQL NULL remains distinct from a
+  present camera, and returned camera parameter views retain their owner;
+- the record/factory accepts endpoint-local `Camera | None` values and the
+  producer's full non-sentinel uint32-id/positive-uint64-dimension domain;
+- independent `struct` fixtures cover valid endpoint cameras plus truncated,
+  trailing, wrong-type, invalid-flag, model/count, dimension, and non-finite
+  cases; the input database handle is released on every rejected case;
+- legacy/core database profiles continue to refuse field-dropping writes until
+  exact-profile writers land in C1e;
+- the unchanged legacy-fixture regression benchmark records 1,137 MB/s full
+  read, 154 MB/s direct write, 1.81 ms inspection, and 0.59-0.60 ms indexed
+  selectors with no Python-sized staging allocation; the dedicated current
+  profile tests, not that legacy row, prove recovered-camera behavior;
+- complete local validation passes `3,616` tests with four skips, the focused
+  gate passes 24 tests, Ruff and wheel smoke pass, and all three independent
+  review lenses report no remaining blocker after their findings were fixed.

@@ -11,9 +11,9 @@
 #include "io/common.hpp"
 
 struct Camera {
-    uint32_t id;
-    int32_t model_id;
-    uint64_t width, height;
+    uint32_t id = 0;
+    int32_t model_id = 0;
+    uint64_t width = 0, height = 0;
     std::vector<double> params;
 };
 

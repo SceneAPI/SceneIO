@@ -334,6 +334,104 @@ bool optional_fixed_blob(
     return present;
 }
 
+uint32_t read_u32_le(const uint8_t *data) {
+    return static_cast<uint32_t>(data[0]) |
+           (static_cast<uint32_t>(data[1]) << 8) |
+           (static_cast<uint32_t>(data[2]) << 16) |
+           (static_cast<uint32_t>(data[3]) << 24);
+}
+
+uint64_t read_u64_le(const uint8_t *data) {
+    uint64_t value = 0;
+    for (size_t index = 0; index < 8; ++index)
+        value |=
+            static_cast<uint64_t>(data[index]) << (index * 8);
+    return value;
+}
+
+bool optional_recovered_camera(
+    sqlite3_stmt *statement, int column, Camera &camera,
+    uint8_t &prior_focal_length, const char *name) {
+    const int type = sqlite3_column_type(statement, column);
+    if (type == SQLITE_NULL) return false;
+    if (type != SQLITE_BLOB)
+        throw std::invalid_argument(
+            std::string("COLMAP database: ") + name +
+            " must be BLOB or NULL");
+    const int sqlite_bytes =
+        sqlite3_column_bytes(statement, column);
+    if (sqlite_bytes < 0)
+        throw std::invalid_argument(
+            std::string("COLMAP database: invalid ") + name +
+            " byte count");
+    const size_t bytes =
+        static_cast<size_t>(sqlite_bytes);
+    constexpr size_t header_bytes = 33;
+    if (bytes < header_bytes)
+        throw std::invalid_argument(
+            std::string("COLMAP database: truncated ") + name +
+            " blob");
+    const auto *data = static_cast<const uint8_t *>(
+        sqlite3_column_blob(statement, column));
+    if (!data)
+        throw std::invalid_argument(
+            std::string("COLMAP database: invalid ") + name);
+
+    camera.id = read_u32_le(data);
+    const uint32_t raw_model = read_u32_le(data + 4);
+    if (raw_model >
+        static_cast<uint32_t>(
+            std::numeric_limits<int32_t>::max()))
+        throw std::invalid_argument(
+            std::string("COLMAP database: ") + name +
+            " camera model is outside int32");
+    camera.model_id = static_cast<int32_t>(raw_model);
+    camera.width = read_u64_le(data + 8);
+    camera.height = read_u64_le(data + 16);
+    prior_focal_length = data[24];
+    if (prior_focal_length > 1)
+        throw std::invalid_argument(
+            std::string("COLMAP database: ") + name +
+            " prior_focal_length must be 0 or 1");
+    const uint64_t count64 = read_u64_le(data + 25);
+    if (count64 >
+        (static_cast<uint64_t>(
+             std::numeric_limits<size_t>::max()) -
+         header_bytes) /
+            sizeof(double))
+        throw std::invalid_argument(
+            std::string("COLMAP database: ") + name +
+            " parameter count overflows size_t");
+    const size_t count = static_cast<size_t>(count64);
+    const size_t expected =
+        header_bytes + count * sizeof(double);
+    if (expected > static_cast<size_t>(kMaxBlobBytes))
+        throw std::invalid_argument(
+            std::string("COLMAP database: ") + name +
+            " exceeds the 1,000,000,000-byte bound");
+    if (bytes < expected)
+        throw std::invalid_argument(
+            std::string("COLMAP database: truncated ") + name +
+            " parameter payload");
+    if (bytes > expected)
+        throw std::invalid_argument(
+            std::string("COLMAP database: ") + name +
+            " blob has trailing bytes");
+    const auto model = colmap_model_info(camera.model_id);
+    if (count != static_cast<size_t>(model.nparams))
+        throw std::invalid_argument(
+            std::string("COLMAP database: ") + name +
+            " parameter count disagrees with model");
+    camera.params.resize(count);
+    for (size_t index = 0; index < count; ++index) {
+        const uint64_t bits =
+            read_u64_le(data + header_bytes + index * 8);
+        std::memcpy(
+            &camera.params[index], &bits, sizeof(double));
+    }
+    return true;
+}
+
 bool table_exists(sqlite3 *database, const std::string &name) {
     Statement statement(
         database,
@@ -679,7 +777,7 @@ void validate_schema(sqlite3 *database) {
         {"matches", {"pair_id", "rows", "cols", "data"}},
         {"two_view_geometries",
          {"pair_id", "rows", "cols", "data", "config", "F", "E",
-          "H", "qvec", "tvec"}},
+          "H", "qvec", "tvec", "camera1", "camera2"}},
     };
     for (const auto &[table, allowed_values] : represented) {
         const std::unordered_set<std::string> allowed(
@@ -932,6 +1030,12 @@ struct PairRow {
     bool pose_present = false;
     std::array<double, 4> qvec{};
     std::array<double, 3> tvec{};
+    bool camera1_present = false;
+    bool camera2_present = false;
+    Camera recovered_camera1;
+    Camera recovered_camera2;
+    uint8_t camera1_prior_focal_length = 0;
+    uint8_t camera2_prior_focal_length = 0;
 };
 
 std::pair<uint32_t, uint32_t> decode_pair_id(int64_t pair_id) {
@@ -1004,15 +1108,28 @@ void read_matches(
 void read_geometries(
     sqlite3 *database, std::map<int64_t, PairRow> &rows,
     int64_t only_pair = -1) {
+    const bool has_camera1 = column_exists(
+        database, "two_view_geometries", "camera1");
+    const bool has_camera2 = column_exists(
+        database, "two_view_geometries", "camera2");
+    if (has_camera1 != has_camera2)
+        throw std::invalid_argument(
+            "COLMAP database: two_view_geometries camera1 and "
+            "camera2 columns must be present together");
+    const std::string camera_columns =
+        has_camera1 ? "camera1, camera2 "
+                    : "NULL, NULL ";
     Statement statement(
         database,
         only_pair < 0
             ? "SELECT pair_id, rows, cols, data, config, "
-              "F, E, H, qvec, tvec "
-              "FROM two_view_geometries ORDER BY pair_id"
+              "F, E, H, qvec, tvec, " +
+                  camera_columns +
+                  "FROM two_view_geometries ORDER BY pair_id"
             : "SELECT pair_id, rows, cols, data, config, "
-              "F, E, H, qvec, tvec "
-              "FROM two_view_geometries WHERE pair_id=?1");
+              "F, E, H, qvec, tvec, " +
+                  camera_columns +
+                  "FROM two_view_geometries WHERE pair_id=?1");
     if (only_pair >= 0)
         check(
             database,
@@ -1051,6 +1168,12 @@ void read_geometries(
             throw std::invalid_argument(
                 "COLMAP database: qvec/tvec presence disagrees");
         row.pose_present = q_present;
+        row.camera1_present = optional_recovered_camera(
+            statement.get(), 10, row.recovered_camera1,
+            row.camera1_prior_focal_length, "camera1");
+        row.camera2_present = optional_recovered_camera(
+            statement.get(), 11, row.recovered_camera2,
+            row.camera2_prior_focal_length, "camera2");
         row.geometry_present = true;
     }
 }
@@ -1075,6 +1198,12 @@ MatchGraph make_graph(
     graph.pose_present.reserve(rows.size());
     graph.qvecs.reserve(rows.size() * 4);
     graph.tvecs.reserve(rows.size() * 3);
+    graph.camera1_present.reserve(rows.size());
+    graph.camera2_present.reserve(rows.size());
+    graph.recovered_camera1.reserve(rows.size());
+    graph.recovered_camera2.reserve(rows.size());
+    graph.camera1_prior_focal_length.reserve(rows.size());
+    graph.camera2_prior_focal_length.reserve(rows.size());
     for (const auto &[pair_id, row] : rows) {
         graph.pair_ids.push_back(pair_id);
         graph.image_pairs.push_back(row.low);
@@ -1109,6 +1238,18 @@ MatchGraph make_graph(
         graph.tvecs.insert(
             graph.tvecs.end(), row.tvec.begin(),
             row.tvec.end());
+        graph.camera1_present.push_back(
+            row.camera1_present);
+        graph.camera2_present.push_back(
+            row.camera2_present);
+        graph.recovered_camera1.push_back(
+            row.recovered_camera1);
+        graph.recovered_camera2.push_back(
+            row.recovered_camera2);
+        graph.camera1_prior_focal_length.push_back(
+            row.camera1_prior_focal_length);
+        graph.camera2_prior_focal_length.push_back(
+            row.camera2_prior_focal_length);
     }
     validate_match_graph(graph, "COLMAP database");
     return graph;
@@ -1744,6 +1885,17 @@ void validate_colmap_encodable(const ColmapDatabase &value) {
         throw std::invalid_argument(
             "COLMAP database writer: match scores "
             "are not representable");
+    if (std::any_of(
+            value.match_graph.camera1_present.begin(),
+            value.match_graph.camera1_present.end(),
+            [](uint8_t present) { return present != 0; }) ||
+        std::any_of(
+            value.match_graph.camera2_present.begin(),
+            value.match_graph.camera2_present.end(),
+            [](uint8_t present) { return present != 0; }))
+        throw std::invalid_argument(
+            "COLMAP database writer: recovered two-view cameras "
+            "require an exact current-profile writer");
 }
 
 void write_database(

@@ -64,6 +64,16 @@ struct MatchGraph {
     std::vector<double> qvecs;          // pair_count * 4, WXYZ
     std::vector<double> tvecs;          // pair_count * 3
 
+    // Current COLMAP stores optional recovered camera models beside each
+    // verified pair. Vectors retain one slot per pair; presence and
+    // prior-focal flags preserve SQL NULL independently from zero values.
+    std::vector<uint8_t> camera1_present;
+    std::vector<uint8_t> camera2_present;
+    std::vector<Camera> recovered_camera1;
+    std::vector<Camera> recovered_camera2;
+    std::vector<uint8_t> camera1_prior_focal_length;
+    std::vector<uint8_t> camera2_prior_focal_length;
+
     size_t num_pairs() const { return pair_count; }
     size_t num_matches() const {
         return match_offsets.empty()

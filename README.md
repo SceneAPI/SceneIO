@@ -279,7 +279,10 @@ Count-prefixed PTS supports bounded point ranges while validating the declared
 point count and preserving supported intensity/RGB columns. Generic PLY reads
 ASCII and binary little/big endian point schemas; only fixed-record binary PLY
 supports bounded point ranges. COLMAP SQLite supports one-image features and
-one-pair raw/verified matches through native indexed SQL queries. Plain
+one-pair raw/verified matches through native indexed SQL queries. Current
+upstream COLMAP database reads also expose optional recovered endpoint cameras
+on `MatchGraph`, including independent SQL-NULL presence and prior-focal flags.
+Plain
 glTF/GLB supports source mesh and flattened primitive selection while rejecting
 unrepresented scene features instead of silently dropping them.
 
