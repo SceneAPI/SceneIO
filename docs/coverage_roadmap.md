@@ -251,7 +251,7 @@ zero‑copy + convention tags.
 | Record | Fields (canonical dtype/shape) | Needed by | Status |
 |---|---|---|---|
 | `Image` | `pixels` HxWxC (u8/u16/f16/f32) + `color_space` + alpha/maxval metadata | PNG/JPEG/HDR/WebP/EXR/Netpbm | ✅ |
-| `DepthMap` | `depth` HxW f32 + `scale`/`unit`/`invalid` meta + `confidence` HxW | typed depth adapters, `.dmb` | ✅ record + scalar DMB + typed PFM/PNG/EXR |
+| `DepthMap` | `depth` HxW f32 + `scale`/`unit`/`invalid` meta + `confidence` HxW | typed depth adapters, Gipuma `.dmb`, future COLMAP MVS map | ✅ record + scalar Gipuma DMB + typed PFM/PNG/EXR |
 | `FlowField` | `vectors` HxWx2 f32 + component/axis/row/unit/invalid meta | typed `.flo` adapter | ✅ |
 | `PointCloud` | `xyz` Nx3, `rgb`/`rgb16`, `normals`, `intensity`, optional organized shape + viewpoint, optional lossless LAS waveform sidecar | PLY‑point, PCD, LAS/LAZ, E57, `.xyz` | ✅ |
 | `Mesh` | positions; ragged face offsets/indices; vertex/corner normals, UVs, RGBA; primitive/material ranges; coordinate metadata and transform | PLY‑mesh, OBJ, STL, OFF, glTF, USD | ✅ |
@@ -276,9 +276,9 @@ Columns: **Ext/id** · **Record** · **Lib/oracle (license)** · **R/W** ·
 ### 3a. SfM / reconstruction / poses
 | Format | Record | Lib / oracle | R/W | Notes |
 |---|---|---|---|---|
-| ✅ COLMAP `.bin` | `Reconstruction` | pycolmap (BSD) | R+W | byte‑identical; rigs/frames in 4.1.1 |
-| ✅ COLMAP `.txt` | `Reconstruction` | pycolmap | R+W | text twin; fast_float parse |
-| ✅ COLMAP `.db` | `ColmapDatabase` (`FeatureSet`/`MatchGraph`) | pycolmap + sqlite3 (PD) | R+W | pinned SQLite 3.53.4; transaction-safe write, metadata inspect, one-image/one-pair selectors |
+| ✅ COLMAP `.bin` | `Reconstruction` | pycolmap (BSD) | R+W | legacy three-file + modern five-file byte identity; rigs/frames; camera models 0-17; bounded direct writer |
+| ✅ COLMAP `.txt` | `Reconstruction` | pycolmap | R+W | legacy/modern text twin; rigs/frames; fast_float parse |
+| ◐ COLMAP `.db` | `ColmapDatabase` (`FeatureSet`/`MatchGraph`) | pycolmap + sqlite3 (PD) | R+W subset | legacy/core six-table profile only; current upstream and OpsiClear/MAXX profile closure is C1 |
 | ✅ Bundler `.out` | `Reconstruction` | pycolmap/manual | R+W | y‑down camera convention pinned |
 | ✅ VisualSFM `.nvm` | `Reconstruction` | manual | R+W | quat WXYZ, focal in px |
 | ✅ OpenMVG `sfm_data.json` | `Reconstruction` | manual json (nlohmann) | R+W | pose = center+rotation |
@@ -349,7 +349,7 @@ Columns: **Ext/id** · **Record** · **Lib/oracle (license)** · **R/W** ·
 | ✅ 16‑bit depth PNG | `DepthMap` | pypng oracle + lodepng | R+W | mandatory external encoding; TUM 1/5000 and ScanNet mm profiles tested; no implicit scale |
 | ✅ scalar depth EXR | `DepthMap` | OpenEXR / tinyexr | R+W | mandatory external encoding and exact UTF-8 channel name; HALF/FLOAT values preserved; no implicit scale |
 | ✅ `.flo` (Middlebury) | ndarray (raw) + `FlowField` (typed) | manual | R+W | magic 202021.25; mapped raw view; typed semantic adapters with strict writer guards |
-| ✅ `.dmb` (Gipuma/COLMAP) | `DepthMap` | independent NumPy parser | R+W | scalar float32 dense MVS depth; unknown scale, zero-invalid; bounded windows |
+| ✅ `.dmb` (Gipuma) | `DepthMap` | independent NumPy parser | R+W | scalar float32 Gipuma depth; unknown scale, zero-invalid; bounded windows; COLMAP MVS matrices are a separate planned codec |
 | ✅ transforms.json | `PosedViewSet` | pure‑Python | R+W | done (OpenGL c2w) |
 | ⬜ RTMV / synthetic sets | `PosedViewSet`+`Image` | manual | R | dataset layout |
 

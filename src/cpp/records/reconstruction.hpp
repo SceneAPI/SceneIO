@@ -36,9 +36,59 @@ struct Reconstruction {
     std::vector<uint32_t> track;      // 2*sumT (image_id, point2D_idx)
     std::vector<uint64_t> track_off;  // M+1
 
+    // COLMAP 3.12+ rig/frame model. Legacy sparse models omit rigs/frames
+    // entirely; has_rig_frame_model preserves that distinction even when a
+    // modern model contains zero rigs and zero frames.
+    bool has_rig_frame_model = false;
+
+    // rigs (SoA) + CSR non-reference sensors. Sensor types use COLMAP's
+    // stable enum values: INVALID=-1, CAMERA=0, IMU=1. A zero-sensor rig uses
+    // INVALID/UINT32_MAX for its absent reference sensor.
+    std::vector<uint32_t> rig_ids;
+    std::vector<int32_t> rig_ref_sensor_types;
+    std::vector<uint32_t> rig_ref_sensor_ids;
+    std::vector<uint64_t> rig_sensor_off;  // R+1, non-reference sensors
+    std::vector<int32_t> rig_sensor_types;
+    std::vector<uint32_t> rig_sensor_ids;
+    std::vector<uint8_t> rig_sensor_has_pose;
+    std::vector<double> rig_sensor_quats;  // S*4, WXYZ sensor_from_rig
+    std::vector<double> rig_sensor_trans;  // S*3
+
+    // registered frames (SoA) + CSR data identifiers.
+    std::vector<uint32_t> frame_ids;
+    std::vector<uint32_t> frame_rig_ids;
+    std::vector<double> frame_quats;  // F*4, WXYZ rig_from_world
+    std::vector<double> frame_trans;  // F*3
+    std::vector<uint64_t> frame_data_off;  // F+1
+    std::vector<int32_t> frame_sensor_types;
+    std::vector<uint32_t> frame_sensor_ids;
+    std::vector<uint64_t> frame_data_ids;
+
     size_t num_images() const { return img_ids.size(); }
     size_t num_points() const { return pt_ids.size(); }
+    size_t num_rigs() const { return rig_ids.size(); }
+    size_t num_frames() const { return frame_ids.size(); }
 };
+
+inline bool valid_colmap_sensor_type(int32_t value) {
+    return value >= -1 && value <= 1;
+}
+
+void validate_colmap_rig_frame_model(
+    const Reconstruction &reconstruction, const char *context);
+void validate_colmap_reconstruction(
+    const Reconstruction &reconstruction, const char *context);
+void select_colmap_rig_frame_for_image(
+    const Reconstruction &source, uint32_t image_id,
+    Reconstruction &destination, const char *context);
+
+inline void require_no_colmap_rig_frame_model(
+    const Reconstruction &reconstruction, const char *format) {
+    if (reconstruction.has_rig_frame_model)
+        throw std::invalid_argument(
+            std::string(format) +
+            ": cannot represent COLMAP rig/frame metadata");
+}
 
 struct ModelInfo {
     const char *name;
@@ -57,6 +107,13 @@ inline ModelInfo colmap_model_info(int id) {
         case 8: return {"SIMPLE_RADIAL_FISHEYE", 4};
         case 9: return {"RADIAL_FISHEYE", 5};
         case 10: return {"THIN_PRISM_FISHEYE", 12};
+        case 11: return {"RAD_TAN_THIN_PRISM_FISHEYE", 16};
+        case 12: return {"SIMPLE_DIVISION", 4};
+        case 13: return {"DIVISION", 5};
+        case 14: return {"SIMPLE_FISHEYE", 3};
+        case 15: return {"FISHEYE", 4};
+        case 16: return {"EUCM", 6};
+        case 17: return {"EQUIRECTANGULAR", 2};
         default: throw std::invalid_argument("COLMAP: unknown camera model id " + std::to_string(id));
     }
 }

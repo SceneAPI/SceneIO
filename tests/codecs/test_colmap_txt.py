@@ -21,6 +21,9 @@ single-byte-mutation fuzz, and numpy/torch interop.
 
 from __future__ import annotations
 
+import gc
+import locale
+import struct
 from pathlib import Path
 
 import numpy as np
@@ -94,6 +97,27 @@ GOLD_POINTS_OUT = (
     b"5 1.5 -2.5 3.5 10 20 30 0.75 1 0\n"
 )
 
+CAMERA_MODELS = (
+    ("SIMPLE_PINHOLE", 3),
+    ("PINHOLE", 4),
+    ("SIMPLE_RADIAL", 4),
+    ("RADIAL", 5),
+    ("OPENCV", 8),
+    ("OPENCV_FISHEYE", 8),
+    ("FULL_OPENCV", 12),
+    ("FOV", 5),
+    ("SIMPLE_RADIAL_FISHEYE", 4),
+    ("RADIAL_FISHEYE", 5),
+    ("THIN_PRISM_FISHEYE", 12),
+    ("RAD_TAN_THIN_PRISM_FISHEYE", 16),
+    ("SIMPLE_DIVISION", 4),
+    ("DIVISION", 5),
+    ("SIMPLE_FISHEYE", 3),
+    ("FISHEYE", 4),
+    ("EUCM", 6),
+    ("EQUIRECTANGULAR", 2),
+)
+
 
 # ==========================================================================
 # pycolmap oracle (value parity, four ways) + the bin<->txt byte-identity gate
@@ -119,6 +143,22 @@ def ref(tmp_path_factory):
     return rec, str(tdir), str(bdir)
 
 
+@pytest.fixture(scope="module")
+def multi_camera_ref(tmp_path_factory):
+    pycolmap = pytest.importorskip("pycolmap")
+    opts = pycolmap.SyntheticDatasetOptions()
+    opts.num_rigs = 1
+    opts.num_cameras_per_rig = 2
+    opts.num_frames_per_rig = 3
+    opts.num_points3D = 20
+    rec = pycolmap.synthesize_dataset(opts)
+    base = tmp_path_factory.mktemp("colmap_txt_multi_camera")
+    text = base / "text"
+    text.mkdir()
+    rec.write_text(str(text))
+    return rec, text
+
+
 def test_counts_match(ref):
     rec, tdir, _ = ref
     R = _core.read_colmap_txt(tdir)
@@ -127,6 +167,61 @@ def test_counts_match(ref):
         rec.num_images(),
         rec.num_points3D(),
     )
+
+
+def test_modern_rig_frame_parity(ref):
+    rec, tdir, _ = ref
+    R = _core.read_colmap_txt(tdir)
+    assert R.has_rig_frame_model
+    assert R.num_rigs == rec.num_rigs()
+    assert R.num_frames == rec.num_reg_frames()
+    np.testing.assert_array_equal(R.rig_ids, sorted(rec.rigs))
+    np.testing.assert_array_equal(R.frame_ids, sorted(rec.reg_frame_ids()))
+    np.testing.assert_array_equal(
+        R.rig_reference_sensor_types,
+        np.zeros(R.num_rigs, dtype=np.int32),
+    )
+    np.testing.assert_array_equal(
+        R.rig_sensor_offsets,
+        np.zeros(R.num_rigs + 1, dtype=np.uint64),
+    )
+    np.testing.assert_array_equal(
+        np.diff(R.frame_data_offsets),
+        np.ones(R.num_frames, dtype=np.uint64),
+    )
+
+
+def test_modern_partial_image_keeps_its_frame_and_rig(ref):
+    _, directory, _ = ref
+    full = _core.read_colmap_txt(directory)
+    full_frame_ids = np.asarray(full.frame_ids)
+    full_rig_ids = np.asarray(full.rig_ids)
+    for image_id in np.asarray(full.image_ids):
+        partial = _core.read_colmap_txt_image(directory, int(image_id))
+        assert partial.has_rig_frame_model
+        assert partial.num_rigs == partial.num_frames == 1
+        assert int(image_id) in np.asarray(partial.frame_data_ids)
+
+        frame_id = int(np.asarray(partial.frame_ids)[0])
+        frame_row = int(np.flatnonzero(full_frame_ids == frame_id)[0])
+        rig_id = int(np.asarray(partial.frame_rig_ids)[0])
+        rig_row = int(np.flatnonzero(full_rig_ids == rig_id)[0])
+        np.testing.assert_array_equal(
+            partial.frame_quaternions,
+            np.asarray(full.frame_quaternions)[frame_row : frame_row + 1],
+        )
+        np.testing.assert_array_equal(
+            partial.frame_translations,
+            np.asarray(full.frame_translations)[frame_row : frame_row + 1],
+        )
+        np.testing.assert_array_equal(
+            partial.rig_reference_sensor_types,
+            np.asarray(full.rig_reference_sensor_types)[rig_row : rig_row + 1],
+        )
+        np.testing.assert_array_equal(
+            partial.rig_reference_sensor_ids,
+            np.asarray(full.rig_reference_sensor_ids)[rig_row : rig_row + 1],
+        )
 
 
 def test_camera_parity(ref):
@@ -179,6 +274,15 @@ def test_pycolmap_reads_our_text(ref, tmp_path):
     out.mkdir()
     _core.write_colmap_txt(R, str(out))
     rec2 = pycolmap.Reconstruction(str(out))
+    assert sorted(path.name for path in out.iterdir()) == [
+        "cameras.txt",
+        "frames.txt",
+        "images.txt",
+        "points3D.txt",
+        "rigs.txt",
+    ]
+    assert rec2.num_rigs() == rec.num_rigs()
+    assert rec2.num_reg_frames() == rec.num_reg_frames()
     assert rec2.num_cameras() == rec.num_cameras()
     assert rec2.num_images() == rec.num_images()
     assert rec2.num_points3D() == rec.num_points3D()
@@ -199,7 +303,13 @@ def test_bin_txt_bin_byte_identity(ref, tmp_path):
     b2 = tmp_path / "b2"
     b2.mkdir()
     _core.write_colmap_sparse(R2, str(b2))
-    for f in ("cameras.bin", "images.bin", "points3D.bin"):
+    for f in (
+        "rigs.bin",
+        "cameras.bin",
+        "frames.bin",
+        "images.bin",
+        "points3D.bin",
+    ):
         a = (Path(bdir) / f).read_bytes()
         b = (b2 / f).read_bytes()
         assert a == b, f"{f} is not byte-identical after bin->txt->bin"
@@ -218,7 +328,13 @@ def test_text_reader_matches_binary_ground_truth(ref, tmp_path):
     out = tmp_path / "txt2bin"
     out.mkdir()
     _core.write_colmap_sparse(R, str(out))
-    for f in ("cameras.bin", "images.bin", "points3D.bin"):
+    for f in (
+        "rigs.bin",
+        "cameras.bin",
+        "frames.bin",
+        "images.bin",
+        "points3D.bin",
+    ):
         a = (Path(bdir) / f).read_bytes()
         b = (out / f).read_bytes()
         assert a == b, f"{f}: text reader disagrees with binary ground truth"
@@ -248,11 +364,342 @@ def test_images_header_matches_pycolmap(ref, tmp_path):
 # ==========================================================================
 # pycolmap-free coverage (runs in any built tree)
 # ==========================================================================
+@pytest.mark.parametrize(
+    ("model_id", "model_name", "parameter_count"),
+    [
+        (model_id, model_name, parameter_count)
+        for model_id, (model_name, parameter_count) in enumerate(CAMERA_MODELS)
+    ],
+)
+def test_all_camera_models_text_binary_and_oracle(
+    tmp_path, model_id, model_name, parameter_count
+):
+    params = " ".join(str(index + 1) for index in range(parameter_count))
+    source = tmp_path / f"model-{model_id}"
+    _write_model(
+        source,
+        f"1 {model_name} 640 480 {params}\n".encode(),
+        b"",
+        b"",
+    )
+    reconstruction = _core.read_colmap_txt(str(source))
+    camera = reconstruction.cameras[0]
+    assert camera.model_id == model_id
+    assert camera.model == model_name
+    np.testing.assert_array_equal(
+        camera.params, np.arange(1, parameter_count + 1)
+    )
+
+    binary = tmp_path / f"model-{model_id}-binary"
+    binary.mkdir()
+    _core.write_colmap_sparse(reconstruction, str(binary))
+    reread = _core.read_colmap_sparse(str(binary))
+    assert reread.cameras[0].model == model_name
+    np.testing.assert_array_equal(reread.cameras[0].params, camera.params)
+
+    pycolmap = pytest.importorskip("pycolmap")
+    oracle = pycolmap.Reconstruction(str(binary))
+    oracle_camera = oracle.cameras[1]
+    assert oracle_camera.model_name == model_name
+    assert (oracle_camera.width, oracle_camera.height) == (640, 480)
+    np.testing.assert_array_equal(
+        oracle_camera.params, np.arange(1, parameter_count + 1)
+    )
+
+    text = tmp_path / f"model-{model_id}-text"
+    text.mkdir()
+    _core.write_colmap_txt(reconstruction, str(text))
+    text_oracle = pycolmap.Reconstruction(str(text))
+    text_camera = text_oracle.cameras[1]
+    assert text_camera.model_name == model_name
+    assert (text_camera.width, text_camera.height) == (640, 480)
+    np.testing.assert_array_equal(
+        text_camera.params, np.arange(1, parameter_count + 1)
+    )
+
+
+def test_multi_sensor_rig_and_frame_text_roundtrip(tmp_path):
+    source = Path(
+        _write_model(
+            tmp_path / "modern-text",
+            (
+                b"1 SIMPLE_PINHOLE 640 480 500 320 240\n"
+                b"2 SIMPLE_PINHOLE 640 480 500 320 240\n"
+            ),
+            b"100 1 0 0 0 0 0 0 1 frame.png\n\n",
+            b"",
+        )
+    )
+    (source / "rigs.txt").write_text(
+        "7 3 CAMERA 1 CAMERA 2 1 "
+        "0.5 -0.5 0.5 -0.5 1.25 -2.5 3.75 IMU 9 0\n",
+        encoding="ascii",
+    )
+    (source / "frames.txt").write_text(
+        "11 7 1 0 0 0 4 5 6 2 CAMERA 1 100 IMU 9 200\n",
+        encoding="ascii",
+    )
+    reconstruction = _core.read_colmap_txt(str(source))
+    assert reconstruction.has_rig_frame_model
+    np.testing.assert_array_equal(reconstruction.rig_ids, [7])
+    np.testing.assert_array_equal(reconstruction.rig_sensor_types, [0, 1])
+    np.testing.assert_array_equal(reconstruction.rig_sensor_has_pose, [1, 0])
+    np.testing.assert_array_equal(reconstruction.frame_ids, [11])
+    np.testing.assert_array_equal(reconstruction.frame_sensor_types, [0, 1])
+    np.testing.assert_array_equal(reconstruction.frame_data_ids, [100, 200])
+
+    output = tmp_path / "modern-text-out"
+    output.mkdir()
+    _core.write_colmap_txt(reconstruction, str(output))
+    reread = _core.read_colmap_txt(str(output))
+    for field in (
+        "rig_ids",
+        "rig_reference_sensor_types",
+        "rig_reference_sensor_ids",
+        "rig_sensor_offsets",
+        "rig_sensor_types",
+        "rig_sensor_ids",
+        "rig_sensor_has_pose",
+        "rig_sensor_quaternions",
+        "rig_sensor_translations",
+        "frame_ids",
+        "frame_rig_ids",
+        "frame_quaternions",
+        "frame_translations",
+        "frame_data_offsets",
+        "frame_sensor_types",
+        "frame_sensor_ids",
+        "frame_data_ids",
+    ):
+        np.testing.assert_array_equal(
+            getattr(reread, field), getattr(reconstruction, field)
+        )
+    pycolmap = pytest.importorskip("pycolmap")
+    oracle = pycolmap.Reconstruction(str(output))
+    assert oracle.num_rigs() == oracle.num_reg_frames() == 1
+    assert oracle.num_cameras() == 2
+    assert oracle.num_images() == 1
+
+
+def test_multi_camera_partial_is_a_writable_oracle_model(
+    multi_camera_ref, tmp_path
+):
+    _, text = multi_camera_ref
+    full = _core.read_colmap_txt(str(text))
+    image_id = int(np.asarray(full.image_ids)[0])
+    partial = _core.read_colmap_txt_image(str(text), image_id)
+    assert partial.num_images == 1
+    assert partial.num_frames == partial.num_rigs == 1
+    assert partial.num_cameras == 2
+    np.testing.assert_array_equal(
+        np.diff(partial.frame_data_offsets), [1]
+    )
+    output = tmp_path / "multi-camera-partial-text"
+    output.mkdir()
+    _core.write_colmap_txt(partial, str(output))
+    pycolmap = pytest.importorskip("pycolmap")
+    oracle = pycolmap.Reconstruction(str(output))
+    assert oracle.num_images() == 1
+    assert oracle.num_cameras() == 2
+    assert oracle.num_reg_frames() == 1
+
+
+def test_modern_zero_count_text_inventory_roundtrip(tmp_path):
+    source = Path(_write_model(tmp_path / "modern-empty", b"", b"", b""))
+    (source / "rigs.txt").write_bytes(b"")
+    (source / "frames.txt").write_bytes(b"")
+    reconstruction = _core.read_colmap_txt(str(source))
+    assert reconstruction.has_rig_frame_model
+    assert reconstruction.num_rigs == reconstruction.num_frames == 0
+    output = tmp_path / "modern-empty-output"
+    output.mkdir()
+    _core.write_colmap_txt(reconstruction, str(output))
+    assert sorted(path.name for path in output.iterdir()) == [
+        "cameras.txt",
+        "frames.txt",
+        "images.txt",
+        "points3D.txt",
+        "rigs.txt",
+    ]
+    reread = _core.read_colmap_txt(str(output))
+    assert reread.has_rig_frame_model
+    assert reread.num_rigs == reread.num_frames == 0
+
+
+def test_legacy_text_writer_refuses_stale_modern_pair(tmp_path):
+    source = Path(
+        _write_model(
+            tmp_path / "legacy-stale",
+            GOLD_CAMERAS_IN,
+            GOLD_IMAGES_IN,
+            GOLD_POINTS_IN,
+        )
+    )
+    reconstruction = _core.read_colmap_txt(str(source))
+    (source / "rigs.txt").write_bytes(b"")
+    (source / "frames.txt").write_bytes(b"")
+    with pytest.raises(ValueError, match="stale"):
+        _core.write_colmap_txt(reconstruction, str(source))
+
+
+@pytest.mark.parametrize("missing", ["rigs.txt", "frames.txt"])
+def test_modern_text_layout_requires_both_rig_frame_files(tmp_path, missing):
+    source = Path(
+        _write_model(
+            tmp_path / missing,
+            b"",
+            b"",
+            b"",
+        )
+    )
+    present = "frames.txt" if missing == "rigs.txt" else "rigs.txt"
+    (source / present).write_bytes(b"")
+    with pytest.raises(ValueError, match="requires both"):
+        _core.read_colmap_txt(str(source))
+
+
+@pytest.mark.parametrize(
+    ("rigs", "frames", "match"),
+    [
+        (
+            "7 2 CAMERA 1 CAMERA 2 2\n",
+            "",
+            "HAS_POSE",
+        ),
+        (
+            "7 2 CAMERA 1 GPS 2 0\n",
+            "",
+            "unknown sensor type",
+        ),
+        (
+            "7 2 CAMERA 1 CAMERA 2 1 1 0\n",
+            "",
+            "sensor quaternion",
+        ),
+        (
+            "7 0 trailing\n",
+            "",
+            "extra field",
+        ),
+        (
+            "",
+            "11 7 1 0 0 0 0 0 0 1 GPS 1 100\n",
+            "unknown sensor type",
+        ),
+        (
+            "",
+            "11 7 1 0 0 0 0 0 0 0 trailing\n",
+            "extra field",
+        ),
+    ],
+)
+def test_malformed_modern_text_metadata_is_rejected(
+    tmp_path, rigs, frames, match
+):
+    source = Path(_write_model(tmp_path / "bad-modern", b"", b"", b""))
+    (source / "rigs.txt").write_text(rigs, encoding="ascii")
+    (source / "frames.txt").write_text(frames, encoding="ascii")
+    with pytest.raises(ValueError, match=match):
+        _core.read_colmap_txt(str(source))
+
+    if match == "HAS_POSE":
+        invalid_models = (
+            (
+                b"4294967295 SIMPLE_PINHOLE 640 480 500 320 240\n",
+                b"1 1 0 0 0 0 0 0 4294967295 frame.png\n\n",
+                "7 1 CAMERA 4294967295\n",
+                "11 7 1 0 0 0 0 0 0 1 CAMERA 4294967295 1\n",
+            ),
+            (
+                b"1 SIMPLE_PINHOLE 640 480 500 320 240\n",
+                b"4294967295 1 0 0 0 0 0 0 1 frame.png\n\n",
+                "7 1 CAMERA 1\n",
+                "11 7 1 0 0 0 0 0 0 1 CAMERA 1 4294967295\n",
+            ),
+            (
+                b"1 SIMPLE_PINHOLE 640 480 500 320 240\n",
+                b"1 1 0 0 0 0 0 0 1 frame.png\n\n",
+                "4294967295 1 CAMERA 1\n",
+                "11 4294967295 1 0 0 0 0 0 0 1 CAMERA 1 1\n",
+            ),
+            (
+                b"1 SIMPLE_PINHOLE 640 480 500 320 240\n",
+                b"1 1 0 0 0 0 0 0 1 frame.png\n\n",
+                "7 1 CAMERA 1\n",
+                "4294967295 7 1 0 0 0 0 0 0 1 CAMERA 1 1\n",
+            ),
+        )
+        for index, (
+            cameras,
+            images,
+            invalid_rigs,
+            invalid_frames,
+        ) in enumerate(invalid_models):
+            invalid = Path(
+                _write_model(
+                    tmp_path / f"invalid-sentinel-{index}",
+                    cameras,
+                    images,
+                    b"",
+                )
+            )
+            (invalid / "rigs.txt").write_text(
+                invalid_rigs, encoding="ascii"
+            )
+            (invalid / "frames.txt").write_text(
+                invalid_frames, encoding="ascii"
+            )
+            with pytest.raises(ValueError, match="invalid sentinel"):
+                _core.read_colmap_txt(str(invalid))
+
+
+@pytest.mark.parametrize(
+    "sidecar",
+    [
+        "markers.txt",
+        "marker_projections.txt",
+        "charuco_boards.txt",
+        "charuco_calibrations.txt",
+        "time_frames.txt",
+        "image_times.txt",
+        "points3D_frames.txt",
+        "markers.bin",
+        "marker_projections.bin",
+        "charuco_boards.bin",
+        "charuco_calibrations.bin",
+        "time_frames.bin",
+        "image_times.bin",
+        "points3D_frames.bin",
+    ],
+)
+def test_unrepresented_text_sidecars_are_not_silently_ignored(
+    ref, tmp_path, sidecar
+):
+    _, directory, _ = ref
+    reconstruction = _core.read_colmap_txt(directory)
+    target = tmp_path / sidecar
+    target.mkdir()
+    (target / sidecar).write_text("extension sentinel\n", encoding="ascii")
+    with pytest.raises(ValueError, match=sidecar):
+        _core.write_colmap_txt(reconstruction, str(target))
+
+    for name in (
+        "rigs.txt",
+        "cameras.txt",
+        "frames.txt",
+        "images.txt",
+        "points3D.txt",
+    ):
+        (target / name).write_bytes((Path(directory) / name).read_bytes())
+    with pytest.raises(ValueError, match=sidecar):
+        _core.read_colmap_txt(str(target))
+
+
 def test_hand_authored_pin(tmp_path):
     # Comments, CRLF endings, tab/multi-space separators, a -1 observation
     # sentinel, an empty observations line (image 20) followed by another image,
     # and EOF right after a pose line (image 30) — the subtle line-2 grammar.
-    cameras = b"# hdr\r\n1\tSIMPLE_PINHOLE  640   480\t100 320 240\r\n"
+    cameras = b"# hdr\r\n2\tSIMPLE_PINHOLE  640   480\t100 320 240\r\n"
     images = (
         b"# Image list\r\n"
         b"#   IMAGE_ID, QW, QX, QY, QZ, TX, TY, TZ, CAMERA_ID, NAME\r\n"
@@ -262,7 +709,7 @@ def test_hand_authored_pin(tmp_path):
         b"\r\n"  # image 20: empty observations line
         b"30 1 0 0 0 7 8 9 2 frame_c.png\r\n"  # image 30: EOF after the pose line
     )
-    points = b"# pts\r\n5 1 2 3 100 150 200 0.5 10 0\r\n"
+    points = b"# pts\r\n5 1 2 3 100 150 200 0.5\r\n"
     d = _write_model(tmp_path / "hand", cameras, images, points)
     R = _core.read_colmap_txt(d)
 
@@ -446,6 +893,92 @@ def test_special_and_full_precision_doubles(tmp_path):
         assert np.asarray(getattr(R2, attr)).tobytes() == np.asarray(getattr(R, attr)).tobytes()
 
 
+def test_text_writer_uses_dot_decimal_under_comma_locale(tmp_path):
+    source = _write_model(
+        tmp_path / "locale-source",
+        b"1 SIMPLE_PINHOLE 640 480 500.5 320.25 240.75\n",
+        b"",
+        b"",
+    )
+    reconstruction = _core.read_colmap_txt(source)
+    original = locale.setlocale(locale.LC_NUMERIC)
+    selected = None
+    try:
+        for candidate in (
+            "German_Germany.1252",
+            "de-DE",
+            "de_DE.UTF-8",
+            "fr_FR.UTF-8",
+        ):
+            try:
+                locale.setlocale(locale.LC_NUMERIC, candidate)
+            except locale.Error:
+                continue
+            if locale.localeconv()["decimal_point"] == ",":
+                selected = candidate
+                break
+        if selected is None:
+            pytest.skip("no comma-decimal locale is installed")
+        output = tmp_path / "locale-output"
+        output.mkdir()
+        _core.write_colmap_txt(reconstruction, str(output))
+        camera_text = (output / "cameras.txt").read_text(encoding="ascii")
+        assert "500.5 320.25 240.75" in camera_text
+        assert "500,5" not in camera_text
+        reread = _core.read_colmap_txt(str(output))
+        np.testing.assert_array_equal(
+            reread.cameras[0].params, [500.5, 320.25, 240.75]
+        )
+    finally:
+        locale.setlocale(locale.LC_NUMERIC, original)
+
+
+def test_text_writer_rejects_line_breaking_image_name_before_writes(
+    tmp_path,
+):
+    source = tmp_path / "line-break-name"
+    source.mkdir()
+    (source / "cameras.bin").write_bytes(
+        struct.pack(
+            "<QIiQQ3d", 1, 1, 0, 640, 480, 500.0, 320.0, 240.0
+        )
+    )
+    images = bytearray(struct.pack("<Q", 1))
+    images += struct.pack(
+        "<I7dI", 1, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1
+    )
+    images += b"bad\nname.png\0" + struct.pack("<Q", 0)
+    (source / "images.bin").write_bytes(images)
+    (source / "points3D.bin").write_bytes(struct.pack("<Q", 0))
+    reconstruction = _core.read_colmap_sparse(str(source))
+    output = tmp_path / "line-break-output"
+    output.mkdir()
+    sentinels = {}
+    for name in ("cameras.txt", "images.txt", "points3D.txt"):
+        payload = f"sentinel-{name}".encode()
+        (output / name).write_bytes(payload)
+        sentinels[name] = payload
+    with pytest.raises(ValueError, match="line breaks"):
+        _core.write_colmap_txt(reconstruction, str(output))
+    for name, payload in sentinels.items():
+        assert (output / name).read_bytes() == payload
+
+
+def test_text_writer_reports_output_path_conflict(tmp_path):
+    source = _write_model(
+        tmp_path / "sink-source",
+        GOLD_CAMERAS_IN,
+        GOLD_IMAGES_IN,
+        GOLD_POINTS_IN,
+    )
+    reconstruction = _core.read_colmap_txt(source)
+    output = tmp_path / "sink-output"
+    output.mkdir()
+    (output / "cameras.txt").mkdir()
+    with pytest.raises(ValueError, match="cannot write"):
+        _core.write_colmap_txt(reconstruction, str(output))
+
+
 # COLMAP's camera-model table hand-copied from the COLMAP docs (external ground
 # truth): every MODEL name and its parameter count. The .txt codec is the first
 # consumer of the table's name STRINGS (the .bin codec only round-trips numeric
@@ -546,3 +1079,22 @@ def test_zero_copy_views_and_torch(tmp_path):
     torch = pytest.importorskip("torch")
     t = torch.from_dlpack(R.xyz)
     assert np.array_equal(t.numpy(), np.asarray(R.xyz))
+
+
+def test_text_rig_frame_views_outlive_the_reconstruction(ref):
+    _, directory, _ = ref
+    reconstruction = _core.read_colmap_txt(directory)
+    rig_ids = reconstruction.rig_ids
+    frame_ids = reconstruction.frame_ids
+    sensor_poses = reconstruction.rig_sensor_quaternions
+    expected = (
+        np.asarray(rig_ids).copy(),
+        np.asarray(frame_ids).copy(),
+        np.asarray(sensor_poses).copy(),
+    )
+    del reconstruction
+    gc.collect()
+    _ = [bytearray(4096) for _ in range(256)]
+    np.testing.assert_array_equal(rig_ids, expected[0])
+    np.testing.assert_array_equal(frame_ids, expected[1])
+    np.testing.assert_array_equal(sensor_poses, expected[2])

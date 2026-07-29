@@ -689,6 +689,15 @@ def _specs(scale, pose_bundle=None):
 
 
 def _directory_specs(reconstruction, scale, root):
+    if (
+        reconstruction is not None
+        and not reconstruction.has_rig_frame_model
+    ):
+        reconstruction = (
+            reconstruction_fixtures._modern_colmap_reconstruction(
+                reconstruction
+            )
+        )
     return [
         DirectorySpec(
             "colmap_sparse",

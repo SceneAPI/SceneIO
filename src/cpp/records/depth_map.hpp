@@ -4,9 +4,10 @@
 // unit / scale_to_meters / invalid_policy conventions are metadata the codec
 // RECORDED (reader records, writer guards); nothing here is ever baked into the
 // pixel values. Backs the depth codecs later (16-bit depth PNG, ScanNet/Azure
-// mm PNG, Gipuma/COLMAP .dmb, EXR/PFM metric depth) without ABI breaks -- a
+// mm PNG, Gipuma .dmb, COLMAP MVS matrices, EXR/PFM metric depth) without ABI breaks -- a
 // 16-bit-PNG codec widens u16->f32 losslessly and records the scale, it never
-// divides. Gipuma/COLMAP DMB is the first in-tree consumer.
+// divides. Gipuma DMB is the first in-tree consumer; COLMAP's unrelated
+// width&height&depth& matrix format requires its own codec.
 //
 // Optical flow (.flo) is deliberately NOT this record -- it ships separately as
 // a bare (H,W,2) float32 ndarray codec (in-tree at

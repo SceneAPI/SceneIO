@@ -1330,6 +1330,7 @@ nb::bytes write_openmvg(const Reconstruction &r) {
     std::string out;
     {
         nb::gil_scoped_release rel;  // pure-C++ encode
+        require_no_colmap_rig_frame_model(r, "OpenMVG");
         out = write_impl(r);
     }
     return emit_bytes(out.data(), out.size());  // constructed with the GIL re-held

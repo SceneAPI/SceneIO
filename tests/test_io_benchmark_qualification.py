@@ -37,6 +37,11 @@ def _assembled_specs():
             0.001,
             tmp,
         )
+        for spec in directory_specs:
+            if spec.id.startswith("colmap_sparse"):
+                record, _ = spec.make()
+                assert record.has_rig_frame_model
+                assert record.num_rigs == record.num_frames == 1
     return specs, directory_specs
 
 

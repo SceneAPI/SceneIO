@@ -1,5 +1,6 @@
 // codecs/reconstruction/colmap_txt.cpp -- COLMAP *text* sparse-model reader/writer
-// (cameras.txt / images.txt / points3D.txt). The text twin of colmap.cpp: it
+// (legacy cameras/images/points3D and modern rigs/frames). The text twin of
+// colmap.cpp: it
 // reads into and writes from the SAME Reconstruction record with the SAME
 // conventions (WXYZ quaternions, world->camera pose, model-tagged params[]),
 // populating the identical SoA / CSR fields in the identical order so a
@@ -27,14 +28,19 @@
 #include <nanobind/stl/string.h>
 #include <nanobind/stl/tuple.h>
 
+#include <algorithm>
+#include <array>
 #include <charconv>
+#include <locale.h>
 #include <cstdint>
 #include <cstdio>
+#include <filesystem>
 #include <fstream>
 #include <iterator>
 #include <limits>
 #include <string_view>
 #include <system_error>  // std::errc (from_chars_result::ec)
+#include <unordered_set>
 
 #include "fast_float/fast_float.h"
 #include "records/reconstruction.hpp"
@@ -53,7 +59,58 @@ std::string read_file(const std::string &path) {
 void write_file(const std::string &path, const std::string &data) {
     std::ofstream f(path, std::ios::binary);
     if (!f) throw std::invalid_argument("COLMAP text: cannot write " + path);
-    f.write(data.data(), static_cast<std::streamsize>(data.size()));
+    const char *cursor = data.data();
+    size_t remaining = data.size();
+    const size_t max_chunk = static_cast<size_t>(
+        std::numeric_limits<std::streamsize>::max());
+    while (remaining != 0) {
+        const size_t chunk = std::min(remaining, max_chunk);
+        f.write(cursor, static_cast<std::streamsize>(chunk));
+        if (!f)
+            throw std::invalid_argument(
+                "COLMAP text: cannot write " + path);
+        cursor += chunk;
+        remaining -= chunk;
+    }
+    f.flush();
+    if (!f)
+        throw std::invalid_argument(
+            "COLMAP text: cannot write " + path);
+}
+
+bool path_exists(const std::string &path) {
+    std::error_code error;
+    const bool exists = std::filesystem::exists(path, error);
+    if (error)
+        throw std::invalid_argument(
+            "COLMAP text: cannot inspect " + path + ": " +
+            error.message());
+    return exists;
+}
+
+void require_no_extension_sidecars(const std::string &dir) {
+    constexpr std::array<const char *, 14> names = {
+        "markers.txt",
+        "marker_projections.txt",
+        "charuco_boards.txt",
+        "charuco_calibrations.txt",
+        "time_frames.txt",
+        "image_times.txt",
+        "points3D_frames.txt",
+        "markers.bin",
+        "marker_projections.bin",
+        "charuco_boards.bin",
+        "charuco_calibrations.bin",
+        "time_frames.bin",
+        "image_times.bin",
+        "points3D_frames.bin",
+    };
+    for (const char *name : names)
+        if (path_exists(dir + "/" + name))
+            throw std::invalid_argument(
+                "COLMAP text: " + std::string(name) +
+                " is present but this sparse-model record does not yet "
+                "represent that sidecar");
 }
 
 // ---- physical-line iterator: split on '\n', strip one trailing '\r' --------
@@ -252,12 +309,153 @@ std::string read_name_remainder(std::ifstream &file) {
 
 // MODEL name -> id via the EXISTING colmap_model_info table (no new symbol).
 int model_id_from_name(std::string_view name) {
-    for (int id = 0; id <= 10; ++id)
+    for (int id = 0; id <= 17; ++id)
         if (name == colmap_model_info(id).name) return id;
     throw std::invalid_argument("COLMAP text: unknown camera model '" + std::string(name) + "'");
 }
 
+int32_t sensor_type_from_name(std::string_view name) {
+    if (name == "INVALID") return -1;
+    if (name == "CAMERA") return 0;
+    if (name == "IMU") return 1;
+    throw std::invalid_argument(
+        "COLMAP text: unknown sensor type '" + std::string(name) + "'");
+}
+
+const char *sensor_type_name(int32_t type) {
+    switch (type) {
+        case -1: return "INVALID";
+        case 0: return "CAMERA";
+        case 1: return "IMU";
+        default:
+            throw std::invalid_argument(
+                "COLMAP text: invalid sensor type " +
+                std::to_string(type));
+    }
+}
+
 // ---- readers (populate the SAME fields, in the SAME order, as colmap.cpp) ---
+void read_rigs_text(const std::string &text, Reconstruction &r) {
+    Lines lines{text.data(), text.data() + text.size()};
+    r.rig_sensor_off.push_back(0);
+    std::string_view line;
+    while (lines.next(line)) {
+        if (blank_or_comment(line)) continue;
+        size_t position = 0;
+        r.rig_ids.push_back(parse_uint<uint32_t>(
+            require_token(line, position, "RIG_ID"), "RIG_ID"));
+        const uint32_t sensor_count = parse_uint<uint32_t>(
+            require_token(line, position, "NUM_SENSORS"),
+            "NUM_SENSORS");
+        if (sensor_count == 0) {
+            r.rig_ref_sensor_types.push_back(-1);
+            r.rig_ref_sensor_ids.push_back(UINT32_MAX);
+        } else {
+            const int32_t reference_type = sensor_type_from_name(
+                require_token(
+                    line, position, "REF_SENSOR_TYPE"));
+            if (reference_type == -1)
+                throw std::invalid_argument(
+                    "COLMAP text: rig reference sensor cannot be "
+                    "INVALID");
+            r.rig_ref_sensor_types.push_back(reference_type);
+            r.rig_ref_sensor_ids.push_back(parse_uint<uint32_t>(
+                require_token(
+                    line, position, "REF_SENSOR_ID"),
+                "REF_SENSOR_ID"));
+        }
+        for (uint32_t index = sensor_count == 0 ? 0 : 1;
+             index < sensor_count; ++index) {
+            const int32_t type = sensor_type_from_name(
+                require_token(line, position, "SENSOR_TYPE"));
+            if (type == -1)
+                throw std::invalid_argument(
+                    "COLMAP text: non-reference rig sensor cannot "
+                    "be INVALID");
+            r.rig_sensor_types.push_back(type);
+            r.rig_sensor_ids.push_back(parse_uint<uint32_t>(
+                require_token(line, position, "SENSOR_ID"),
+                "SENSOR_ID"));
+            const uint32_t has_pose = parse_uint<uint32_t>(
+                require_token(line, position, "HAS_POSE"),
+                "HAS_POSE");
+            if (has_pose > 1)
+                throw std::invalid_argument(
+                    "COLMAP text: HAS_POSE must be zero or one");
+            r.rig_sensor_has_pose.push_back(
+                static_cast<uint8_t>(has_pose));
+            for (int component = 0; component < 4; ++component)
+                r.rig_sensor_quats.push_back(
+                    has_pose
+                        ? parse_f64(
+                              require_token(
+                                  line, position,
+                                  "sensor quaternion"),
+                              "sensor quaternion")
+                        : (component == 0 ? 1.0 : 0.0));
+            for (int component = 0; component < 3; ++component)
+                r.rig_sensor_trans.push_back(
+                    has_pose
+                        ? parse_f64(
+                              require_token(
+                                  line, position,
+                                  "sensor translation"),
+                              "sensor translation")
+                        : 0.0);
+        }
+        std::string_view extra;
+        if (next_token(line, position, extra))
+            throw std::invalid_argument(
+                "COLMAP text: extra field in rigs.txt");
+        r.rig_sensor_off.push_back(r.rig_sensor_types.size());
+    }
+}
+
+void read_frames_text(const std::string &text, Reconstruction &r) {
+    Lines lines{text.data(), text.data() + text.size()};
+    r.frame_data_off.push_back(0);
+    std::string_view line;
+    while (lines.next(line)) {
+        if (blank_or_comment(line)) continue;
+        size_t position = 0;
+        r.frame_ids.push_back(parse_uint<uint32_t>(
+            require_token(line, position, "FRAME_ID"), "FRAME_ID"));
+        r.frame_rig_ids.push_back(parse_uint<uint32_t>(
+            require_token(line, position, "RIG_ID"), "RIG_ID"));
+        for (int component = 0; component < 4; ++component)
+            r.frame_quats.push_back(parse_f64(
+                require_token(line, position, "frame quaternion"),
+                "frame quaternion"));
+        for (int component = 0; component < 3; ++component)
+            r.frame_trans.push_back(parse_f64(
+                require_token(line, position, "frame translation"),
+                "frame translation"));
+        const uint32_t data_count = parse_uint<uint32_t>(
+            require_token(line, position, "NUM_DATA_IDS"),
+            "NUM_DATA_IDS");
+        for (uint32_t index = 0; index < data_count; ++index) {
+            const int32_t type = sensor_type_from_name(
+                require_token(line, position, "SENSOR_TYPE"));
+            if (type == -1)
+                throw std::invalid_argument(
+                    "COLMAP text: frame data sensor cannot be "
+                    "INVALID");
+            r.frame_sensor_types.push_back(type);
+            r.frame_sensor_ids.push_back(parse_uint<uint32_t>(
+                require_token(line, position, "SENSOR_ID"),
+                "SENSOR_ID"));
+            r.frame_data_ids.push_back(parse_uint<uint64_t>(
+                require_token(line, position, "DATA_ID"),
+                "DATA_ID"));
+        }
+        std::string_view extra;
+        if (next_token(line, position, extra))
+            throw std::invalid_argument(
+                "COLMAP text: extra field in frames.txt");
+        r.frame_data_off.push_back(r.frame_sensor_types.size());
+    }
+}
+
 void read_cameras_text(const std::string &text, Reconstruction &r) {
     Lines lr{text.data(), text.data() + text.size()};
     std::string_view line;
@@ -358,16 +556,42 @@ void read_points_text(const std::string &text, Reconstruction &r) {
 
 Reconstruction read_colmap_txt(const std::string &dir) {
     nb::gil_scoped_release rel;  // pure-C++ body: file I/O + parse, no Python objects
+    require_no_extension_sidecars(dir);
     Reconstruction r;
+    const bool has_rigs = path_exists(dir + "/rigs.txt");
+    const bool has_frames = path_exists(dir + "/frames.txt");
+    if (has_rigs != has_frames)
+        throw std::invalid_argument(
+            "COLMAP text: modern sparse model requires both rigs.txt "
+            "and frames.txt");
+    r.has_rig_frame_model = has_rigs;
+    if (has_rigs) read_rigs_text(read_file(dir + "/rigs.txt"), r);
     read_cameras_text(read_file(dir + "/cameras.txt"), r);
+    if (has_frames)
+        read_frames_text(read_file(dir + "/frames.txt"), r);
     read_images_text(read_file(dir + "/images.txt"), r);
     read_points_text(read_file(dir + "/points3D.txt"), r);
+    validate_colmap_reconstruction(r, "COLMAP text");
     return r;
 }
 
 Reconstruction read_colmap_txt_image(const std::string &dir,
                                      uint32_t image_id) {
     nb::gil_scoped_release rel;
+    require_no_extension_sidecars(dir);
+    const bool has_rigs = path_exists(dir + "/rigs.txt");
+    const bool has_frames = path_exists(dir + "/frames.txt");
+    if (has_rigs != has_frames)
+        throw std::invalid_argument(
+            "COLMAP text: modern sparse model requires both rigs.txt "
+            "and frames.txt");
+    Reconstruction metadata;
+    metadata.has_rig_frame_model = has_rigs;
+    if (has_rigs) {
+        read_rigs_text(read_file(dir + "/rigs.txt"), metadata);
+        read_frames_text(read_file(dir + "/frames.txt"), metadata);
+        validate_colmap_rig_frame_model(metadata, "COLMAP text");
+    }
     Reconstruction r;
     r.obs_off.push_back(0);
     r.track_off.push_back(0);
@@ -436,8 +660,11 @@ Reconstruction read_colmap_txt_image(const std::string &dir,
                 else {
                     r.obs_xy.push_back(x);
                     r.obs_xy.push_back(y);
-                    r.obs_pt3d.push_back(
-                        parse_pt3d_id(observation.value));
+                    // The partial result excludes points3D.txt. Parse the
+                    // source token for validation, then clear the reference
+                    // so this remains a valid standalone reconstruction.
+                    (void)parse_pt3d_id(observation.value);
+                    r.obs_pt3d.push_back(-1);
                 }
                 ++token_index;
             }
@@ -457,6 +684,17 @@ Reconstruction read_colmap_txt_image(const std::string &dir,
     if (!found)
         throw std::invalid_argument("COLMAP text: image id " +
                                     std::to_string(image_id) + " not found");
+    select_colmap_rig_frame_for_image(
+        metadata, image_id, r, "COLMAP text");
+    std::unordered_set<uint32_t> required_camera_ids = {camera_id};
+    if (r.has_rig_frame_model) {
+        if (r.rig_ref_sensor_types[0] == 0)
+            required_camera_ids.insert(r.rig_ref_sensor_ids[0]);
+        for (size_t sensor = 0;
+             sensor < r.rig_sensor_types.size(); ++sensor)
+            if (r.rig_sensor_types[sensor] == 0)
+                required_camera_ids.insert(r.rig_sensor_ids[sensor]);
+    }
 
     std::ifstream cameras(dir + "/cameras.txt", std::ios::binary);
     if (!cameras)
@@ -504,16 +742,20 @@ Reconstruction read_colmap_txt_image(const std::string &dir,
                 " params, expected " + std::to_string(expected) +
                 " for model " +
                 colmap_model_info(camera.model_id).name);
-        if (camera.id == camera_id) {
+        if (required_camera_ids.erase(camera.id) != 0)
             r.cameras.push_back(std::move(camera));
-            return r;
-        }
     }
     if (cameras.bad())
         throw std::invalid_argument("COLMAP text: cameras.txt read failed");
-    throw std::invalid_argument("COLMAP text: camera id " +
-                                std::to_string(camera_id) +
-                                " referenced by image was not found");
+    if (required_camera_ids.empty()) {
+        validate_colmap_reconstruction(r, "COLMAP text");
+        return r;
+    }
+    throw std::invalid_argument(
+        "COLMAP text: camera id " +
+        std::to_string(*std::min_element(
+            required_camera_ids.begin(), required_camera_ids.end())) +
+        " referenced by the selected image rig was not found");
 }
 
 size_t count_metadata_records(const std::string &path,
@@ -578,10 +820,114 @@ std::tuple<size_t, size_t, size_t> inspect_colmap_txt(
 
 // ---- writers (COLMAP WriteCamerasText/WriteImagesText/WritePoints3DText) ----
 // "%.17g" == COLMAP's ostream precision(17): round-trips every double exactly.
+class CNumericLocale {
+public:
+    CNumericLocale() {
+#ifdef _WIN32
+        locale_ = _create_locale(LC_NUMERIC, "C");
+#else
+        locale_ = newlocale(LC_NUMERIC_MASK, "C", nullptr);
+#endif
+        if (locale_ == nullptr)
+            throw std::runtime_error(
+                "COLMAP text: cannot create C numeric locale");
+    }
+    CNumericLocale(const CNumericLocale &) = delete;
+    CNumericLocale &operator=(const CNumericLocale &) = delete;
+    ~CNumericLocale() {
+#ifdef _WIN32
+        _free_locale(locale_);
+#else
+        freelocale(locale_);
+#endif
+    }
+
+    int format(char *buffer, size_t size, double value) const {
+#ifdef _WIN32
+        return _snprintf_l(
+            buffer, size, "%.17g", locale_, value);
+#else
+        const locale_t previous = uselocale(locale_);
+        if (previous == static_cast<locale_t>(0))
+            throw std::runtime_error(
+                "COLMAP text: cannot select C numeric locale");
+        const int result =
+            std::snprintf(buffer, size, "%.17g", value);
+        if (uselocale(previous) == static_cast<locale_t>(0))
+            throw std::runtime_error(
+                "COLMAP text: cannot restore numeric locale");
+        return result;
+#endif
+    }
+
+private:
+#ifdef _WIN32
+    _locale_t locale_ = nullptr;
+#else
+    locale_t locale_ = static_cast<locale_t>(0);
+#endif
+};
+
 void fmt17(std::string &out, double v) {
+    static const CNumericLocale locale;
     char buf[64];
-    const int len = std::snprintf(buf, sizeof(buf), "%.17g", v);
+    const int len = locale.format(buf, sizeof(buf), v);
+    if (len < 0 || static_cast<size_t>(len) >= sizeof(buf))
+        throw std::runtime_error(
+            "COLMAP text: cannot format floating-point value");
     out.append(buf, static_cast<size_t>(len));
+}
+
+std::string write_rigs_text(const Reconstruction &r) {
+    std::string out;
+    out.reserve(256 + r.num_rigs() * 96 +
+                r.rig_sensor_types.size() * 96);
+    out += "# Rig calib list with one line of data per calib:\n";
+    out += "#   RIG_ID, NUM_SENSORS, REF_SENSOR_TYPE, REF_SENSOR_ID, "
+           "SENSORS[] as (SENSOR_TYPE, SENSOR_ID, HAS_POSE, [QW, QX, "
+           "QY, QZ, TX, TY, TZ])\n";
+    out += "# Number of rigs: " + std::to_string(r.num_rigs()) + "\n";
+    for (size_t index = 0; index < r.num_rigs(); ++index) {
+        const uint64_t begin = r.rig_sensor_off[index];
+        const uint64_t end = r.rig_sensor_off[index + 1];
+        const bool has_reference =
+            r.rig_ref_sensor_types[index] != -1;
+        const uint64_t count =
+            (has_reference ? uint64_t{1} : uint64_t{0}) + end - begin;
+        out += std::to_string(r.rig_ids[index]);
+        out += ' ';
+        out += std::to_string(count);
+        if (has_reference) {
+            out += ' ';
+            out += sensor_type_name(r.rig_ref_sensor_types[index]);
+            out += ' ';
+            out += std::to_string(r.rig_ref_sensor_ids[index]);
+        }
+        for (uint64_t sensor = begin; sensor < end; ++sensor) {
+            out += ' ';
+            out += sensor_type_name(r.rig_sensor_types[sensor]);
+            out += ' ';
+            out += std::to_string(r.rig_sensor_ids[sensor]);
+            out += ' ';
+            out += std::to_string(r.rig_sensor_has_pose[sensor]);
+            if (r.rig_sensor_has_pose[sensor]) {
+                for (int component = 0; component < 4; ++component) {
+                    out += ' ';
+                    fmt17(
+                        out,
+                        r.rig_sensor_quats[sensor * 4 + component]);
+                }
+                for (int component = 0; component < 3; ++component) {
+                    out += ' ';
+                    fmt17(
+                        out,
+                        r.rig_sensor_trans[sensor * 3 + component]);
+                }
+            }
+        }
+        out += '\n';
+    }
+    return out;
 }
 
 std::string write_cameras_text(const Reconstruction &r) {
@@ -607,6 +953,47 @@ std::string write_cameras_text(const Reconstruction &r) {
         for (double p : c.params) {
             out += ' ';
             fmt17(out, p);
+        }
+        out += '\n';
+    }
+    return out;
+}
+
+std::string write_frames_text(const Reconstruction &r) {
+    std::string out;
+    out.reserve(256 + r.num_frames() * 128 +
+                r.frame_sensor_types.size() * 32);
+    out += "# Frame list with one line of data per frame:\n";
+    out += "#   FRAME_ID, RIG_ID, RIG_FROM_WORLD[QW, QX, QY, QZ, TX, "
+           "TY, TZ], NUM_DATA_IDS, DATA_IDS[] as (SENSOR_TYPE, "
+           "SENSOR_ID, DATA_ID)\n";
+    out +=
+        "# Number of frames: " + std::to_string(r.num_frames()) + "\n";
+    for (size_t index = 0; index < r.num_frames(); ++index) {
+        out += std::to_string(r.frame_ids[index]);
+        out += ' ';
+        out += std::to_string(r.frame_rig_ids[index]);
+        for (int component = 0; component < 4; ++component) {
+            out += ' ';
+            fmt17(
+                out, r.frame_quats[index * 4 + component]);
+        }
+        for (int component = 0; component < 3; ++component) {
+            out += ' ';
+            fmt17(
+                out, r.frame_trans[index * 3 + component]);
+        }
+        const uint64_t begin = r.frame_data_off[index];
+        const uint64_t end = r.frame_data_off[index + 1];
+        out += ' ';
+        out += std::to_string(end - begin);
+        for (uint64_t data = begin; data < end; ++data) {
+            out += ' ';
+            out += sensor_type_name(r.frame_sensor_types[data]);
+            out += ' ';
+            out += std::to_string(r.frame_sensor_ids[data]);
+            out += ' ';
+            out += std::to_string(r.frame_data_ids[data]);
         }
         out += '\n';
     }
@@ -700,7 +1087,24 @@ std::string write_points_text(const Reconstruction &r) {
 
 void write_colmap_txt(const Reconstruction &r, const std::string &dir) {
     nb::gil_scoped_release rel;  // pure-C++ body: formatting + file I/O, no Python objects
+    validate_colmap_reconstruction(r, "COLMAP text");
+    for (const std::string &name : r.img_names)
+        if (name.find('\r') != std::string::npos ||
+            name.find('\n') != std::string::npos)
+            throw std::invalid_argument(
+                "COLMAP text: image names cannot contain line breaks");
+    require_no_extension_sidecars(dir);
+    if (!r.has_rig_frame_model &&
+        (path_exists(dir + "/rigs.txt") ||
+         path_exists(dir + "/frames.txt")))
+        throw std::invalid_argument(
+            "COLMAP text: refusing to leave stale rigs.txt/frames.txt "
+            "while writing a legacy sparse model");
+    if (r.has_rig_frame_model)
+        write_file(dir + "/rigs.txt", write_rigs_text(r));
     write_file(dir + "/cameras.txt", write_cameras_text(r));
+    if (r.has_rig_frame_model)
+        write_file(dir + "/frames.txt", write_frames_text(r));
     write_file(dir + "/images.txt", write_images_text(r));
     write_file(dir + "/points3D.txt", write_points_text(r));
 }
@@ -712,13 +1116,15 @@ void register_colmap_txt(nb::module_ &m) {
           "Return (camera_count, image_count, point_count) without constructing "
           "reconstruction arrays.");
     m.def("read_colmap_txt", &read_colmap_txt, "path"_a,
-          "Read a COLMAP text sparse model directory (cameras.txt/images.txt/points3D.txt) into "
-          "a Reconstruction (WXYZ quaternions, world_to_camera; the text twin of read_colmap_sparse).");
+          "Read a legacy three-file or modern five-file COLMAP text sparse "
+          "model directory into a Reconstruction, preserving rigs and "
+          "frames (WXYZ, world_to_camera).");
     m.def("read_colmap_txt_image", &read_colmap_txt_image, "path"_a,
           "image_id"_a,
           "Read one COLMAP text image and its camera without opening "
           "points3D.txt or materializing unrelated images.");
     m.def("write_colmap_txt", &write_colmap_txt, "recon"_a, "path"_a,
-          "Write a Reconstruction as a COLMAP text sparse model directory (%.17g doubles, LF line "
-          "endings; guards unknown camera models and wrong per-model param counts).");
+          "Write a Reconstruction as a legacy three-file or modern "
+          "five-file COLMAP text sparse model directory (%.17g doubles, "
+          "LF endings).");
 }

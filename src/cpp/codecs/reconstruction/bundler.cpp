@@ -536,6 +536,7 @@ nb::bytes write_bundler(const Reconstruction &r) {
     std::string out;
     {
         nb::gil_scoped_release rel;  // pure-C++ encode; the record's C++ fields only
+        require_no_colmap_rig_frame_model(r, "Bundler");
         encode(r, out);
     }
     return emit_bytes(out.data(), out.size());  // built with the GIL re-held

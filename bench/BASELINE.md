@@ -3075,3 +3075,43 @@ requirement. This package-only closure does not change any benchmark result or
 promote a provisional backend row. The documentation-only closure record does
 not recursively repeat the package matrix; PyPI configuration, tags, and
 publication remain separate release-time work.
+
+## COLMAP ecosystem C0 bounded binary writer (2026-07-28)
+
+The modern sparse-model compatibility unit replaces the binary directory
+writer's output-sized `std::string` construction with a 64 KiB buffered,
+bulk-array direct-file writer. The isolated old/new writer comparison used the
+same legacy three-file record on both builds:
+
+```powershell
+.venv/Scripts/python.exe bench/bench_io.py --runs 7 --scale 32 `
+  --only colmap_sparse --skip-oracles
+```
+
+| build | raw payload | encoded directory | write throughput | traced peak | sampled sink RSS |
+|---|---:|---:|---:|---:|---:|
+| `7e5d284` output-sized writer | 13.8 MB | 16.3 MB | 480 MB/s | 0.0 MB | 0.1 MB |
+| C0 bounded direct writer | 13.8 MB | 16.3 MB | 1,058 MB/s | 0.0 MB | 0.0 MB |
+
+The final validated source measured a 2.20x write gain with identical files.
+After the default fixture was promoted to modern form, the final legacy
+measurement was repeated three times through the same seven-run `measure`
+helper; the median values were 1,031, 1,058, and 1,081 MB/s. This A/B row
+deliberately isolates the writer replacement; it does not include the modern
+rig/frame association pass.
+
+The committed harness now wraps that record in a deterministic one-rig,
+one-frame five-file model. Three final-source runs of the displayed command
+measured 251, 286, and 330 MB/s (286 MB/s median), with 0.0 MB traced Python
+allocation and 20.0-20.2 MB sampled sink RSS. That row exercises the modern
+association checks; its temporary native lookup workspace scales with the
+represented reconstruction, not with a staged copy of the encoded directory.
+
+A separate fresh-child regression writes 100,000 and 600,000-point legacy
+records after establishing the resident baseline. Encoded size grows from
+5,100,150 to 30,600,150 bytes while sampled writer RSS changes from 335,872 to
+86,016 bytes. The test requires the large output to exceed 5x the small output,
+remain below half its encoded size, and stay within 8 MiB of the small-write
+delta. This independently guards the absence of an output-sized native staging
+buffer. Read throughput is not used for the old/new writer comparison because
+C0 also adds rig/frame parsing and Windows cache state varied between runs.

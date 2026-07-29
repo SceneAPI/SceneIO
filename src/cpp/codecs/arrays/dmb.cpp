@@ -1,4 +1,5 @@
-// Gipuma/COLMAP .dmb scalar depth-map codec.
+// Gipuma .dmb scalar depth-map codec. This is not COLMAP's unrelated
+// width&height&depth& dense-MVS matrix format.
 //
 // On-disk layout is little-endian:
 //   int32 type (=1), int32 height, int32 width, int32 channels (=1),
@@ -225,11 +226,11 @@ void register_dmb(nb::module_ &m) {
     m.def("_inspect_dmb", &inspect_dmb, "data"_a,
           "Return (height, width, channels, type) from a scalar DMB header.");
     m.def("read_dmb", &read_dmb, "data"_a,
-          "Decode a little-endian scalar Gipuma/COLMAP .dmb depth map.");
+          "Decode a little-endian scalar Gipuma .dmb depth map.");
     m.def("read_dmb_window", &read_dmb_window, "data"_a, "row_start"_a,
           "row_stop"_a, "col_start"_a, "col_stop"_a,
           "Decode one non-empty half-open pixel window from scalar DMB.");
     m.def("write_dmb", &write_dmb, "depth"_a,
           "Encode an unknown-unit, zero-invalid scalar DepthMap as "
-          "little-endian Gipuma/COLMAP .dmb bytes or stream it to a file.");
+          "little-endian Gipuma .dmb bytes or stream it to a file.");
 }

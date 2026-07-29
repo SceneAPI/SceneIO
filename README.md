@@ -346,6 +346,9 @@ Engineering status and extension work are tracked in:
 
 - [`docs/format_coverage.md`](docs/format_coverage.md) — exact live codec
   capabilities and validation status;
+- [`docs/colmap_ecosystem_coverage.md`](docs/colmap_ecosystem_coverage.md) —
+  the audited `colmap_mod` persisted-I/O matrix, lean closure boundary, and
+  staged verification plan;
 - [`docs/coverage_roadmap.md`](docs/coverage_roadmap.md) — format policy,
   declared destinations, and future sequencing rather than current evidence;
 - [`docs/core_architecture.md`](docs/core_architecture.md) — current public and

@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+import struct
+import tempfile
+from pathlib import Path
+
 import numpy as np
 
 from bench.io_bench.oracles.reconstruction import _bal_oracle_write
@@ -26,6 +30,51 @@ def _poses_and_reconstruction(scale=1.0):
     tum = _core.read_tum(b"0 1 2 3 0 0 0 1\n" * views)
     kitti = _core.read_kitti(b"1 0 0 1 0 1 0 2 0 0 1 3\n" * views)
     return reconstruction, transforms, tum, kitti
+
+
+def _modern_colmap_reconstruction(reconstruction):
+    """Add a deterministic one-camera rig/frame envelope to a legacy model."""
+    image_ids = np.asarray(reconstruction.image_ids)
+    camera_ids = np.asarray(reconstruction.image_camera_ids)
+    if image_ids.size != 1 or camera_ids.size != 1:
+        raise ValueError(
+            "modern COLMAP benchmark fixture requires one image"
+        )
+    image_id = int(image_ids[0])
+    camera_id = int(camera_ids[0])
+    quaternion = np.asarray(reconstruction.quaternions)[0]
+    translation = np.asarray(reconstruction.translations)[0]
+    rig_id = 1
+    frame_id = 1
+    rigs = struct.pack(
+        "<QIIiI",
+        1,
+        rig_id,
+        1,
+        0,
+        camera_id,
+    )
+    frames = struct.pack(
+        "<QII7dIiIQ",
+        1,
+        frame_id,
+        rig_id,
+        *quaternion,
+        *translation,
+        1,
+        0,
+        camera_id,
+        image_id,
+    )
+    with tempfile.TemporaryDirectory() as directory:
+        _core.write_colmap_sparse(reconstruction, directory)
+        root = Path(directory)
+        (root / "rigs.bin").write_bytes(rigs)
+        (root / "frames.bin").write_bytes(frames)
+        modern = _core.read_colmap_sparse(directory)
+    if not modern.has_rig_frame_model:
+        raise AssertionError("modern COLMAP fixture lost its rig/frame model")
+    return modern
 
 
 def _euroc_fixture(scale):
@@ -140,5 +189,6 @@ __all__ = [
     "_bal_fixture",
     "_euroc_fixture",
     "_g2o_fixture",
+    "_modern_colmap_reconstruction",
     "_poses_and_reconstruction",
 ]

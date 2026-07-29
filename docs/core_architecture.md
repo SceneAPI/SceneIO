@@ -441,7 +441,10 @@ executables remain verification oracles; they are not runtime delegates.
 
 The survey's #1 bug class is silent convention mismatch. Every record
 exposes them:
-- `Reconstruction.quaternion_order == "wxyz"`, `.pose_convention == "world_to_camera"`
+- `Reconstruction.quaternion_order == "wxyz"`,
+  `.pose_convention == "world_to_camera"`; optional modern COLMAP rig/frame
+  arrays preserve WXYZ `sensor_from_rig` and `rig_from_world` transforms,
+  sensor/data assignments, and legacy-vs-modern file presence.
 - `GaussianCloud.quaternion_order == "wxyz"`, `.scale_space == "log"`,
   `.opacity_space == "logit"`, `.sh_layout == "channel_grouped"`
 - `Mesh.coordinate_frame == "opengl"` for canonical glTF geometry;
@@ -598,9 +601,10 @@ Selector semantics are:
   materializing unrelated payload tensors;
 - `slices={"name": (start, stop), ...}` selects half-open leading-axis ranges
   from named safetensors tensors;
-- `image_id=<persisted COLMAP id>` returns a one-image `Reconstruction` with its
-  referenced camera from binary or text COLMAP. It deliberately leaves the
-  point arrays empty and does not open `points3D.bin` / `points3D.txt`.
+- `image_id=<persisted COLMAP id>` returns a one-image `Reconstruction` plus
+  every camera required by its retained modern rig/frame, or its one referenced
+  camera for a legacy model. It deliberately leaves the point arrays empty and
+  does not open `points3D.bin` / `points3D.txt`.
 - `image_id=<persisted COLMAP id>` on `colmap_db` returns that image's compiled
   `FeatureSet`; `pair=(image_id1, image_id2)` returns the unordered pair's
   compiled `MatchGraph`. Both use indexed SQL queries and do not fetch

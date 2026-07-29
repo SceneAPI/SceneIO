@@ -29,6 +29,7 @@ redistribution choice used by SceneIO is stated explicitly.
 | TinyEXR | commit `1b106618644dbf8a0935c2348ba51a2d863dd7c2` | vendored compiled headers | BSD-3-Clause | [tinyexr.txt](tinyexr.txt) |
 | tinyobjloader | commit `45636bdcef1a4fec140346b90c0b50bf0bc3e23b` | vendored compiled header | MIT; bundled earcut ISC; bundled fast_float under MIT | [tinyobjloader.txt](tinyobjloader.txt), [fast-float.txt](fast-float.txt) |
 | cgltf | 1.15, commit `360db1a95480fe102ae9c69b27c5d101167ff5ba` | vendored compiled headers | MIT; bundled jsmn MIT | [cgltf.txt](cgltf.txt) |
+| COLMAP persisted formats | upstream BSD formats, compatibility reference pinned at OpsiClear `colmap_mod` commit `de15b08a2dba98b55d6ddfb7cedac147838afbb4` | independently implemented codecs and oracle-derived tests; no COLMAP library is linked or bundled | BSD-3-Clause for upstream COLMAP formats; SceneIO implementation Apache-2.0 | [COLMAP notice](colmap.txt), [OpsiClear compatibility authorization record](opsiclear-colmap-mod.txt) |
 
 The complete Apache-2.0 terms in the root `LICENSE` also cover the
 Apache-licensed portion of LAZperf. Local integration and correctness changes

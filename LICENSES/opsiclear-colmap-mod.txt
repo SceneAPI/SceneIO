@@ -1,0 +1,19 @@
+OpsiClear colmap_mod compatibility reference
+============================================
+
+SceneIO's COLMAP ecosystem compatibility work is informed by the persisted
+format behavior in the repository:
+
+    C:\Users\opsiclear\Desktop\projects\colmap_mod
+    commit de15b08a2dba98b55d6ddfb7cedac147838afbb4
+
+The repository owner explicitly authorized SceneIO to use its data-I/O support
+for this ecosystem integration. SceneIO's new implementation and tests remain
+licensed under the repository-root Apache-2.0 license. No FFmpeg/libav
+implementation or proprietary encoded-video implementation is included.
+Copyright in the new SceneIO implementation remains with its contributors.
+
+Files derived from standard COLMAP formats also retain the upstream COLMAP
+BSD-3-Clause attribution in LICENSES/colmap.txt. Fork-specific behavior is
+reimplemented in SceneIO from its persisted byte/schema contracts; the
+colmap_mod source tree is not redistributed with SceneIO.

@@ -549,6 +549,7 @@ nb::bytes write_nvm(const Reconstruction &r) {
     std::string out;
     {
         nb::gil_scoped_release rel;  // pure-C++ encode; no Python objects touched
+        require_no_colmap_rig_frame_model(r, "NVM");
         encode_nvm(r, out);
     }
     return emit_bytes(out.data(), out.size());

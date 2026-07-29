@@ -733,6 +733,7 @@ nb::bytes write_bal(const Reconstruction &reconstruction) {
     BalWritePlan plan;
     {
         nb::gil_scoped_release release;
+        require_no_colmap_rig_frame_model(reconstruction, "BAL");
         plan = prepare_write(reconstruction);
     }
 

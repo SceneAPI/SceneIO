@@ -4583,3 +4583,57 @@ non-inferiority rules, reproducible benchmark sampling, reversible backend
 selection with persistent regression guards, focused three-OS gates, wheels
 built from the exact sdist, offline-build isolation mechanics, and positive
 artifact-license assertions.
+
+## 15. COLMAP ecosystem closure
+
+The user-owned `colmap_mod` repository was audited at
+`de15b08a2dba98b55d6ddfb7cedac147838afbb4` by three independent agents. The
+complete matrix and lean boundary are in
+[`colmap_ecosystem_coverage.md`](colmap_ecosystem_coverage.md). Encoded video is
+reference-only: no FFmpeg/libav implementation or runtime/build dependency is
+permitted.
+
+### C0 - modern sparse models
+
+- [x] Preserve paired binary `rigs.bin`/`frames.bin` and legacy absence.
+- [x] Preserve paired text `rigs.txt`/`frames.txt` and legacy absence.
+- [x] Expose lossless rig/frame SoA and CSR views from `Reconstruction`.
+- [x] Support camera models 0-17.
+- [x] Replace output-sized binary strings with a bounded direct-file writer.
+- [x] Prove modern five-file byte identity against pycolmap 4.1.1.
+- [x] Add multi-sensor, pose-present/absent, paired-file, legacy-inventory,
+      all-camera-model, conversion-loss, and fork-sidecar refusal tests.
+- [x] Add COLMAP and OpsiClear attribution records.
+- [x] Run full pytest, Ruff, diff check, benchmark, and wheel smoke.
+- [x] Complete the three-agent final review and resolve every finding.
+- [ ] Commit and push the green C0 unit.
+- [ ] Run the nonpublishing MSVC/GCC10/AppleClang validation at the exact
+      commit.
+
+Local C0 evidence on 2026-07-28:
+
+- complete suite: `3573 passed, 4 skipped`; focused closure gate:
+  `197 passed`;
+- Ruff, `git diff --check`, editable wheel smoke (`2`), collection contract,
+  and license inventory pass;
+- legacy direct writer: 1,058 MB/s median, 2.20x the pre-C0 writer; modern
+  five-file writer: 286 MB/s median; the fresh-child RSS scaling guard passes;
+- final independent reviews are clear: Ampere
+  (`lean_r6_arch_review`), Epicurus (`lean_r6_test_review`), and Lagrange
+  (`lean_r6_platform_docs_review`).
+
+### Remaining lean closure
+
+- [ ] C1: exact stock 3.13, stock 4.1.1, current-upstream, and current-MAXX
+      database profiles with complete typed field preservation and safe
+      in-place behavior.
+- [ ] C2: COLMAP MVS depth/normal matrices, consistency graphs, visibility,
+      and workspace companions; keep Gipuma DMB distinct.
+- [ ] C3: marker/time/point-frame/ChArUco sidecars plus Bundler list, compact
+      exporters, rig/pair/feature/Sim3 text, MappingInput, and MegaLoc adapters.
+- [ ] C4: selected metadata/TIFF route, final public API/docs/benchmark/wheel
+      closure, and a row-by-row decision for every audited surface.
+
+Runtime engines, solver logs, reports, decoded/staged caches, and encoded-video
+implementations do not become core codecs. This is the explicit stop condition
+that keeps full ecosystem closure finite.
