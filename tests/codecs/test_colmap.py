@@ -552,6 +552,10 @@ def test_rig_frame_views_outlive_the_reconstruction(ref):
 
 
 def test_binary_writer_rss_does_not_scale_with_encoded_size():
+    if os.environ.get("ASAN_OPTIONS") or "libasan" in os.environ.get(
+        "LD_PRELOAD", ""
+    ):
+        pytest.skip("RSS measurements include AddressSanitizer shadow memory")
     script = textwrap.dedent(
         """
         import gc
