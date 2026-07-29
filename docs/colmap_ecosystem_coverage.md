@@ -267,8 +267,9 @@ C1c stock companion-row contract:
   `d98dd314db7a05ab87d392864988de8a7fab52cde37605216b121af6e9ca2d6d`
   and passes 3,655 tests with four documented skips. The focused codec gate
   passes 127 tests with one expected Windows filename skip; wheel smoke,
-  Ruff, diff checks, and all three independent review lenses pass. Remote
-  sanitizer and Linux/macOS wheel validation remain release gates.
+  Ruff, diff checks, and all three independent review lenses pass. This is
+  local C1c evidence; final-tree instrumentation and Linux/macOS wheel
+  validation later pass in runs `30469271293` and `30470889876`.
 
 C1d MAXX extension read contract:
 
@@ -310,9 +311,10 @@ C1d MAXX extension read contract:
   lenses pass.
 - The three-run 9.9 MB database benchmark records 1,067 MB/s full/path read,
   158 MB/s direct write, 2.192 ms inspection, 0.999 ms image selection, and
-  0.949 ms pair selection, with bounded traced Python allocation. Exact-commit
-  remote instrumentation and GCC 10/AppleClang package validation remain
-  release gates.
+  0.949 ms pair selection, with bounded traced Python allocation. This
+  paragraph remains local evidence for the C1d checkpoint; accumulated C1d
+  behavior passes exact-commit instrumentation and GCC 10/AppleClang package
+  validation in final-tree runs `30469271293` and `30470889876`.
 
 ### C1e - exact profile writes and conversion reports
 
@@ -472,8 +474,10 @@ C3 local implementation evidence:
 - [x] Update the public adapter API, license inventory, format coverage, and
   benchmark catalog without changing the 54-codec registry.
 - [x] Run full local gates and complete the three-review sign-off.
-- [ ] Run the exact pushed tree through the nonpublishing MSVC, GCC 10, and
-  AppleClang package validation.
+- [x] Run the exact pushed tree through the nonpublishing MSVC, GCC 10, and
+  AppleClang package validation. Source `2253e0f` passes normal run
+  `30469273173`, instrumented run `30469271293`, and build-only package run
+  `30470889876`; publication is skipped.
 - [x] Record reference-only encoded-video coverage without adding its code.
 - [x] Close the matrix with every row marked complete, adapter, reference only,
   or outside closure; no ambiguous partial row remains.

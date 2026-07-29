@@ -20,6 +20,10 @@ The live 54-codec benchmark-structure contract is distinct from immutable
 Ubuntu and local MSVC 54-row captures with normalized SHA-256
 `fd3cf4a663e737971526afe5884f229237630a0f126b21a1c8ffcde9a6015e4e`;
 the active assembly guard now pins that structure and its provenance.
+Final packaged source `2253e0f` passes normal run `30469273173`, instrumented
+run `30469271293`, and nonpublishing MSVC/GCC 10/AppleClang package run
+`30470889876`. Downloaded artifact inspection confirms the exact wheel matrix,
+27 attribution assets, stable-ABI tags, and NumPy-only runtime requirement.
 
 Historical `abi3 wheel` entries below prove their recorded wheel tag,
 inventory, and Python 3.12 behavior; they do not independently prove the
@@ -349,8 +353,8 @@ metadata, with its notice and local adaptation recorded under
 result for a deterministic five-million-float32 sample, including the former
 counterexample, and the complete SOG archive contract is identical in the
 local Windows and Ubuntu reproductions. The four-profile hosted contract now
-requires that one canonical archive; its final AppleClang/GCC-10 confirmation
-is part of the pending exact-head run.
+requires that one canonical archive; final AppleClang and GCC 10 confirmation
+passes in exact-head normal run `30469273173` and package run `30470889876`.
 KSplat/SPLAT scales and AppleClang/ARM SPZ quaternions have isolated one-ULP
 decoded variants. The parent contract keeps all unaffected fields exact,
 bounds only those named arrays to one ULP, and records exact per-profile

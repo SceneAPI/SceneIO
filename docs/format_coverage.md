@@ -35,9 +35,9 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > windows. The lazy `sceneio.colmap_mvs` adapter covers canonical dense,
 > PMVS, and CMP-MVS topology without decoding encoded image payloads. Historical
 > 50-codec validation records below remain evidence for their named commits;
-> the 54-codec tree is pending its final pushed CI/package run.
+> the 54-codec tree closes at packaged source `2253e0f`.
 >
-> **C3/C4 CI correction candidate (2026-07-29):** the exact collection is
+> **C3/C4 hosted closure (2026-07-29):** the exact collection is
 > 3,879 nodes with normalized SHA-256
 > `39fe1dc507ed2faea06a75dcc823515ff550dfa742813b89cdcd24a7584ad4f6`.
 > Local MSVC passes 3,874 tests with five documented skips. The correction
@@ -53,8 +53,14 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > normalized hash
 > `fd3cf4a663e737971526afe5884f229237630a0f126b21a1c8ffcde9a6015e4e`;
 > the active contract is corrected without rewriting the historical family
-> evidence. A follow-up CI and build-only package run are still required
-> before this checkpoint is called hosted-green.
+> evidence. Exact-head normal run
+> [30469273173](https://github.com/SceneAPI/SceneIO/actions/runs/30469273173)
+> and instrumented run
+> [30469271293](https://github.com/SceneAPI/SceneIO/actions/runs/30469271293)
+> pass. Build-only package run
+> [30470889876](https://github.com/SceneAPI/SceneIO/actions/runs/30470889876)
+> builds and smoke-tests the exact sdist plus MSVC, GCC 10, and AppleClang
+> cp312-abi3 wheels; combined inventory passes and publication is skipped.
 >
 > **Stable-ABI evidence correction (2026-07-28):** earlier package records
 > verified `cp312-abi3` wheel tags, contents, and Python 3.12 smoke but did not
@@ -784,9 +790,9 @@ SOG/MVS/catalog/architecture correction sweep, final 143-test architecture
 review sweep, installed-wheel smoke, Ruff, and diff checks also pass. Three
 independent architecture, correctness/test, and platform/documentation
 reviews signed off. Exact-pushed-tree automatic and nonpublishing MSVC/GCC
-10/AppleClang package validation remain active. The first pushed correction
-run passed every platform-specific codec lane and identified only the stale
-50-versus-54 benchmark-structure guard described above.
+10/AppleClang package validation pass at source `2253e0f` in runs
+`30469273173`, `30469271293`, and `30470889876`. The downloaded artifacts
+also pass independent exact-matrix inventory verification.
 
 Encoded image paths and model paths remain opaque values. TIFF plus embedded
 or standalone `.xmp` metadata are optional generic format/metadata work, not

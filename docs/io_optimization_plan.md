@@ -32,6 +32,9 @@ reservation. The active deterministic benchmark-structure guard now covers
 all 54 live rows with normalized SHA-256
 `fd3cf4a663e737971526afe5884f229237630a0f126b21a1c8ffcde9a6015e4e`;
 the earlier 50-row family-extraction fingerprints remain historical evidence.
+Exact-head normal run `30469273173`, instrumented run `30469271293`, and
+nonpublishing three-platform package run `30470889876` pass at packaged source
+`2253e0f`; this closes the current 54-codec transport verification.
 Current benchmark ownership work does not reopen O0-O5 or change codec
 capabilities or implementation-performance claims. Points close at `45e2757`
 with normal run `30244892746` and compiler-instrumented run `30244892600`.

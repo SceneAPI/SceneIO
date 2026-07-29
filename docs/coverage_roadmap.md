@@ -15,6 +15,11 @@
 > workspace adapters. It contains no encoded-media decoder; image paths remain
 > opaque and reuse SceneIO's existing still-image codecs when callers choose
 > to open them.
+> This branch-local checkpoint closes at packaged source `2253e0f`: normal run
+> `30469273173`, instrumented run `30469271293`, and nonpublishing
+> three-platform package run `30470889876` pass. The exact 54-row benchmark
+> structure, sdist, MSVC/GCC 10/AppleClang wheels, installed smokes, and
+> combined inventory are verified; publication is skipped.
 > R6 is closed at packaged source commit `105b301`: exact-head CI
 > `30405666674`, native-runtime validation `30405666673`, and build-only
 > three-platform package run `30406706115` pass, with publication skipped.
@@ -146,9 +151,10 @@ are maintained only in
 [`format_coverage.md`](format_coverage.md#format--data-structure-coverage);
   this policy roadmap intentionally does not duplicate them. R6 package closure
   is complete. The explicitly requested COLMAP ecosystem portable-data
-  adapters are implemented and locally validated under `sceneio.colmap`.
-  Their final exact-pushed-tree nonpublishing MSVC/GCC 10/AppleClang package
-  validation is the only active post-R6 sequence.
+  adapters are implemented and validated under `sceneio.colmap`; their final
+  exact-pushed-tree MSVC/GCC 10/AppleClang package validation passes in run
+  `30470889876`.
+  There is no active post-R6 implementation sequence.
   Animation formats, RTMV, and the common
   optional-library feature pattern remain future choices that start only on
   explicit user direction. The provisional performance ledger remains a

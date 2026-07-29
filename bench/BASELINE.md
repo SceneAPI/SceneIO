@@ -2909,7 +2909,8 @@ The same run retained the optimized XYZ writer at 102 MB/s, or 4.80x its
 one-lane reference. These results confirm that moving the byte-exact headers
 in-tree did not change the benchmark contract or remove the measured text I/O
 gains. This is local MSVC evidence; the final user-gated build-only
-multi-platform R6 validation remains outstanding.
+multi-platform R6 validation was outstanding at this checkpoint and later
+passes in final-tree release run `30470889876`.
 
 ## R6 LAZperf source-ownership confirmation (2026-07-28)
 
@@ -2976,7 +2977,8 @@ producing identical bytes. The mapped path reduces traced allocation from
 3.16 MB to 0.01 MB, and the direct sink retains approximately 0.0006 MB traced
 overhead. These results preserve the established optimized WebP paths and show
 no source-ownership regression. This is local MSVC evidence; the final
-user-gated build-only multi-platform R6 validation remains outstanding.
+user-gated build-only multi-platform R6 validation was outstanding at this
+checkpoint and later passes in final-tree release run `30470889876`.
 
 ## R6 disconnected package and stable-ABI correction (2026-07-28)
 
@@ -3277,3 +3279,21 @@ normalized structural SHA-256
 `fd3cf4a663e737971526afe5884f229237630a0f126b21a1c8ffcde9a6015e4e`.
 The active assembly contract now pins that pair and the exact exposing commit;
 the immutable 50-row R2/R3 family evidence retains its original hash.
+
+Exact-head normal run
+[30469273173](https://github.com/SceneAPI/SceneIO/actions/runs/30469273173)
+passes the complete suite, all platform lanes, the corrected 54-row structure,
+and retained O4/O5 performance guard. Instrumented run
+[30469271293](https://github.com/SceneAPI/SceneIO/actions/runs/30469271293)
+passes its complete and lifetime jobs. Build-only release run
+[30470889876](https://github.com/SceneAPI/SceneIO/actions/runs/30470889876)
+validates packaged source `2253e0f`: the 869-member sdist has SHA-256
+`3bffc64b75ea751617923f19ca6f6935bd433dd23882af0ca4f1bc26a62cf826`;
+the macOS, manylinux2014, and Windows cp312-abi3 wheel hashes are
+`779ff0db0bc516b8b05dfb67a0fe81dc9ba53f556204575b34a7ac4e1b8aaf0a`,
+`ece92774dc88cc5c657bc1215044d34f70958b78e6b7f66892ea21464baa2506`,
+and
+`80f2a75aa7ac2f7a0a3b97291c7019122d2880d0068b89caaeab9bb09f290b6b`.
+All four artifacts contain 27 attribution assets; every wheel retains
+`numpy>=1.26` as its only runtime requirement and passes installed smoke plus
+the combined inventory. Publication is skipped.

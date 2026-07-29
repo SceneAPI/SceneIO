@@ -4,6 +4,10 @@
   `105b3017dae37345a6974f289e661d9173186a2a`. Exact current capabilities,
   test counts, workflow evidence, and release state are maintained in
   [`format_coverage.md`](format_coverage.md).
+- **Post-R6 ecosystem closure:** the 54-codec COLMAP dense and companion-I/O
+  checkpoint closes at packaged source `2253e0f`; exact-head runs
+  `30469273173`, `30469271293`, and build-only package run `30470889876`
+  pass with publication skipped.
 - **Current program gate:** none. A future codec wave starts only on explicit
   user direction. Exhaustive backend comparison remains a trigger-based
   post-R6 optimization activity, not a release prerequisite.

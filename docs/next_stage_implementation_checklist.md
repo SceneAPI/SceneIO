@@ -4668,8 +4668,10 @@ Remote C0 evidence:
   - [x] Cross-file dimension, MVS-index-domain, and fused point-count checks.
   - [x] Record the final complete local gate, benchmark confirmation, and
         three-review sign-off at the C2 commit.
-  - [ ] Run automatic CI and the user-triggered nonpublishing three-platform
-        package validation at the exact pushed C2 commit.
+  - [x] Run automatic CI and the user-triggered nonpublishing three-platform
+        package validation on the exact final tree containing C2; packaged
+        source `2253e0f` passes runs `30469273173`, `30469271293`, and
+        `30470889876`.
 - [x] C3 implementation: marker/time/point-frame/ChArUco sidecars,
       rig/pair/cap/feature/match/Sim3 text, MappingInput v1/v2, and MegaLoc
       adapters. Bundler list support was already complete in C2.
@@ -4689,8 +4691,9 @@ Remote C0 evidence:
         visualization outside closure.
   - [x] Keep project documents, runtime engines, retrieval indices, reports,
         caches, and encoded containers outside closure.
-  - [ ] Run the exact-tree nonpublishing package validation after the pushed
-        commit; release/tag/publication remain user-triggered.
+  - [x] Run the exact-tree nonpublishing package validation after the pushed
+        commit. Release run `30470889876` passes with publication skipped;
+        release/tag/publication remain user-triggered.
 
 Runtime engines, solver logs, reports, decoded/staged caches, and encoded-video
 implementations do not become core codecs. This is the explicit stop condition
@@ -4728,9 +4731,25 @@ that keeps full ecosystem closure finite.
   `fd3cf4a663e737971526afe5884f229237630a0f126b21a1c8ffcde9a6015e4e`.
   The active contract now pins those 54 rows while historical R2/R3 contracts
   remain unchanged.
-- Follow-up automatic CI and the exact pushed tree's nonpublishing
-  MSVC/GCC 10/AppleClang package run remain. Release, tag, and publication
-  stay user-triggered.
+- Final source `2253e0f` passes normal run `30469273173`, including the
+  complete suite, all platform lanes, exact 54-row structure, and retained
+  performance guard. Instrumented run `30469271293` passes both jobs.
+  Nonpublishing release run `30470889876` passes exact-sdist closure, MSVC,
+  manylinux2014 GCC 10, AppleClang/ARM64 wheel builds and installed smokes,
+  and combined inventory; the publication job is skipped.
+- The sdist SHA-256 is
+  `3bffc64b75ea751617923f19ca6f6935bd433dd23882af0ca4f1bc26a62cf826`.
+  macOS, manylinux2014, and Windows wheel SHA-256 values are
+  `779ff0db0bc516b8b05dfb67a0fe81dc9ba53f556204575b34a7ac4e1b8aaf0a`,
+  `ece92774dc88cc5c657bc1215044d34f70958b78e6b7f66892ea21464baa2506`,
+  and
+  `80f2a75aa7ac2f7a0a3b97291c7019122d2880d0068b89caaeab9bb09f290b6b`.
+  All contain 27 attribution assets; wheels retain NumPy as the sole runtime
+  requirement and the downloaded exact matrix passes independent inventory
+  verification.
+- This documentation-only closure record names the already validated
+  packaged source and does not recursively require a second package matrix.
+  Release, tag, and publication stay user-triggered.
 
 ### C2 implementation checkpoint (2026-07-29)
 
@@ -4849,9 +4868,10 @@ C1c final local evidence on 2026-07-29:
 - Ampere, Epicurus, and Lagrange signed off the lifetime/ABI, correctness and
   test-soundness, and platform/public-API/documentation lenses after the
   permanent regression assertions were completed;
-- the green C1c commit includes the required co-author trailer. Remote
-  sanitizer and three-toolchain validation remain exact-commit release gates,
-  not claims made by this local evidence.
+- the green C1c commit includes the required co-author trailer. This paragraph
+  remains local evidence for that commit; the later final-tree runs
+  `30469271293` and `30470889876` validate the accumulated C1c behavior under
+  instrumentation and across all three package toolchains.
 
 C1d implementation checklist:
 
@@ -4875,8 +4895,9 @@ C1d implementation checklist:
       or mutation; leave exact profile emission explicitly to C1e.
 - [x] Record final benchmark, full-suite, Ruff, diff, wheel, collection, and
       three-review evidence after the implementation stabilizes.
-- [ ] Run remote instrumentation and three-toolchain/package validation on the
-      exact green commit; do not infer those results from local MSVC.
+- [x] Run remote instrumentation and three-toolchain/package validation on the
+      exact final tree containing C1d. Runs `30469271293` and `30470889876`
+      pass at packaged source `2253e0f`.
 
 C1d final local evidence on 2026-07-29:
 
@@ -4940,8 +4961,10 @@ C1e exact-writer implementation checklist:
       page/sequence-state promise.
 - [x] Move migration-derived pre-ownership classification explicitly to C4;
       do not label an unknown schema during exact writing.
-- [ ] Run remote instrumentation plus Linux/macOS/Windows package validation
-      on the exact green commit; this remains a user-triggered release gate.
+- [x] Run remote instrumentation plus Linux/macOS/Windows package validation
+      on the exact final tree containing C1e. Runs `30469271293` and
+      `30470889876` pass at packaged source `2253e0f`; publication remains a
+      separate user-triggered action.
 
 C1e local evidence on 2026-07-29:
 
