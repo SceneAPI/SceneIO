@@ -15,10 +15,10 @@
   "canonical_positions": {
     "ply": 12,
     "pcd": 13,
-    "xyz": 40,
-    "pts": 41,
-    "las": 42,
-    "laz": 43
+    "xyz": 41,
+    "pts": 42,
+    "las": 43,
+    "laz": 44
   },
   "benchmark_parent": {
     "command": ".venv/Scripts/python.exe bench/bench_io.py --runs 1 --scale 0.001 --skip-oracles --json <output>",

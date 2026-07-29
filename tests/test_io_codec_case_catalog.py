@@ -27,7 +27,7 @@ def test_case_catalog_is_complete_ordered_and_immutable():
     definitions = codec_cases.CODEC_CASE_DEFINITIONS
     assert tuple(case.id for case in definitions) == CANONICAL_BUILTIN_IDS
     assert tuple(codec_cases.CASES_BY_ID) == CANONICAL_BUILTIN_IDS
-    assert len(definitions) == len(codec_cases.CASES_BY_ID) == 55
+    assert len(definitions) == len(codec_cases.CASES_BY_ID) == 56
     assert all(dataclasses.is_dataclass(case) for case in definitions)
     with pytest.raises(dataclasses.FrozenInstanceError):
         definitions[0].id = "changed"
@@ -71,6 +71,7 @@ def test_case_catalog_preserves_the_legacy_fixture_partitions():
         "webp",
         "y4m",
         "animated_webp",
+        "apng",
         "xyz",
         "pts",
         "las",
@@ -136,6 +137,7 @@ def test_case_catalog_preserves_the_legacy_fixture_partitions():
         "webp",
         "y4m",
         "animated_webp",
+        "apng",
         "xyz",
         "pts",
         "ply",
@@ -166,7 +168,7 @@ def test_case_catalog_preserves_the_legacy_fixture_partitions():
         for case in built_cases
         if case.id != "compressed_ply"
     ]
-    assert len(portable_fixture_projection) == 48
+    assert len(portable_fixture_projection) == 49
     assert next(
         item for item in portable_fixture_projection if item[0] == "sog"
     ) == (
@@ -188,7 +190,7 @@ def test_case_catalog_preserves_the_legacy_fixture_partitions():
         separators=(",", ":"),
     )
     assert hashlib.sha256(fixture_payload.encode()).hexdigest() == (
-        "2f84a2d990f96c6dfa28dc4dada2e31acce4a18adc8e869c28140c2c4b0cb976"
+        "f87a427e02d8ad0ec4eef12411251e0078266c91e41c595790dd17ee05ef2b38"
     )
     cases_by_id = {case.id: case for case in built_cases}
     assert (

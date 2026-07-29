@@ -67,6 +67,39 @@ _ANIMATED_WEBP_CODEC = Codec(
     ),
 )
 
+_APNG_CODEC = Codec(
+    "apng",
+    (".png", ".apng"),
+    _mmap_reader(_core.read_apng),
+    _file_sink_writer(_core.write_apng),
+    record=_core.ImageSequence,
+    datatype="image_sequence",
+    supported_features=(
+        "uint8",
+        "rgb",
+        "rgba",
+        "composited_frames",
+        "exact_frame_timing",
+        "loop_count",
+        "blend_source",
+        "blend_over",
+        "dispose_none",
+        "dispose_background",
+        "dispose_previous",
+    ),
+    unsupported_features=(
+        "separate_default_image",
+        "grayscale",
+        "palette",
+        "high_bit_depth",
+        "nonintegral_nanosecond_timing",
+        "raw_frame_rectangles",
+        "icc",
+        "exif",
+        "xmp",
+    ),
+)
+
 
 def build_sequence_codecs(
     frame_access: ImageFrameAccess,
@@ -76,6 +109,7 @@ def build_sequence_codecs(
     return (
         _Y4M_CODEC,
         _ANIMATED_WEBP_CODEC,
+        _APNG_CODEC,
         Codec(
             "image_sequence",
             (),

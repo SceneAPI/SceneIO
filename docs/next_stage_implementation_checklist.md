@@ -1,5 +1,28 @@
 # Next-stage implementation checklist
 
+## Post-R6 APNG checkpoint (2026-07-29)
+
+- [x] Add a repository-owned APNG chunk/state layer over pinned lodepng with
+      uint8 RGB/RGBA composited frames, exact accepted-profile timing, loop
+      count, source/over blend, and none/background/previous disposal.
+- [x] Add mmap input, direct sinks, metadata-only inspection, `.png`/`.apng`
+      routing, installed-surface smoke, and cross-codec transport coverage.
+- [x] Validate SceneIO writes with Pillow and SceneIO reads with both Pillow
+      output and a separate specification-derived chunk/compositing oracle.
+- [x] Expand the live registry to 56 codecs and the buffer-backed differential,
+      mmap, sink, and inspection sweeps to 50.
+- [x] Record the focused benchmark and the 56-row structural capture:
+      `2295f9ab10dbf141c76ef6f7cbf4561ad656a1dde3cc7c8dcbff8b5bc23d6927`.
+- [x] Record the complete local suite, Ruff, and installed-surface smoke for
+      the final APNG tree: 3,905 passed, five documented skips, Ruff clean,
+      `_wheel_smoke` returned `2`, and the 56-row structure check passed.
+- [ ] Obtain normal and build-only cross-platform results for the reviewed
+      branch head before calling APNG package-validated.
+- [ ] Implement RTMV next, reusing canonical `Mask`, `CameraRig`, track,
+      `PairCorrespondences`, `FeatureSet`, and `MatchGraph` models.
+- [ ] Implement HDF5/hloc after RTMV by mapping hloc feature and match groups
+      directly into `FeatureSet` and `MatchGraph`; do not add duplicate models.
+
 ## Post-R6 animated WebP checkpoint (2026-07-29)
 
 - [x] Add packed uint8/uint16/float32 `ImageSequence` storage with parent-pinned
@@ -17,7 +40,7 @@
       smoke passed, and the 55-row structural capture matched.
 - [ ] Obtain normal and build-only cross-platform results for the reviewed
       branch head before calling animated WebP package-validated.
-- [ ] Implement APNG next, then RTMV. Reuse the canonical `Mask`,
+- [x] Implement APNG next, then RTMV. Reuse the canonical `Mask`,
       `CameraRig`, track, pair, feature, and match models rather than creating
       format-specific duplicates.
 
@@ -4586,7 +4609,7 @@ Remote validation checkpoints, only after explicit user authorization:
       start another candidate sweep or format wave first.
 
 This stage is validated. The format queue resumed with animation-capable
-`ImageSequence` and animated WebP; APNG and RTMV are next.
+`ImageSequence`, animated WebP, and APNG; RTMV is next.
 
 ## 14. Review record
 

@@ -18,7 +18,7 @@
     "sog": 4,
     "ksplat": 5,
     "spz": 14,
-    "splat": 50
+    "splat": 51
   },
   "benchmark_parent": {
     "command": ".venv/Scripts/python.exe bench/bench_io.py --runs 1 --scale 0.001 --skip-oracles --json <output>",

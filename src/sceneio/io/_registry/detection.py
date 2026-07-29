@@ -8,6 +8,33 @@ from pathlib import Path
 from sceneio.io._registry.model import Codec
 
 
+def _is_apng(path: Path) -> bool:
+    """Classify APNG from its acTL chunk without reading compressed pixels."""
+
+    try:
+        file_size = path.stat().st_size
+        with path.open("rb") as stream:
+            if stream.read(8) != b"\x89PNG\r\n\x1a\n":
+                return False
+            while stream.tell() + 12 <= file_size:
+                chunk_header = stream.read(8)
+                if len(chunk_header) != 8:
+                    return False
+                chunk_size = int.from_bytes(chunk_header[:4], "big")
+                chunk_type = chunk_header[4:]
+                chunk_end = stream.tell() + chunk_size + 4
+                if chunk_size > 0x7FFF_FFFF or chunk_end > file_size:
+                    return False
+                if chunk_type == b"acTL":
+                    return chunk_size == 8
+                if chunk_type in {b"IDAT", b"IEND"}:
+                    return False
+                stream.seek(chunk_end)
+    except OSError:
+        return False
+    return False
+
+
 def _is_animated_webp(path: Path) -> bool:
     """Classify WebP animation from RIFF chunks without reading frame payloads."""
 
@@ -87,6 +114,12 @@ def detect_path(
         and _is_animated_webp(p)
     ):
         return "animated_webp"
+    if (
+        ext == ".png"
+        and any(codec.id == "apng" for codec in ordered)
+        and _is_apng(p)
+    ):
+        return "apng"
     for codec in ordered:
         if ext in codec.extensions:
             return codec.id
@@ -118,6 +151,12 @@ def detect_path(
             return "animated_webp"
         if any(codec.id == "webp" for codec in ordered):
             return "webp"
+    if (
+        head.startswith(b"\x89PNG\r\n\x1a\n")
+        and any(codec.id == "apng" for codec in ordered)
+        and _is_apng(p)
+    ):
+        return "apng"
     for codec in ordered:
         if any(head.startswith(magic) for magic in codec.magic):
             return codec.id

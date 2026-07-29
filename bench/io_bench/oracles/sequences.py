@@ -7,6 +7,43 @@ import io
 import numpy as np
 
 
+def _apng_oracle_write(payload):
+    from PIL import Image
+
+    frames = np.asarray(payload["frames"], np.uint8)
+    images = [Image.fromarray(frame, "RGBA") for frame in frames]
+    output = io.BytesIO()
+    images[0].save(
+        output,
+        format="PNG",
+        save_all=True,
+        append_images=images[1:],
+        duration=np.asarray(payload["durations_ms"]).tolist(),
+        loop=int(payload["loop_count"]),
+        disposal=[0] * len(images),
+        blend=[0] * len(images),
+    )
+    return output.getvalue()
+
+
+def _apng_oracle_read(data):
+    from PIL import Image
+
+    image = Image.open(io.BytesIO(bytes(data)))
+    frames = []
+    durations_ms = []
+    loop_count = int(image.info["loop"])
+    for index in range(image.n_frames):
+        image.seek(index)
+        frames.append(np.asarray(image.convert("RGBA")).copy())
+        durations_ms.append(int(image.info["duration"]))
+    return {
+        "frames": np.stack(frames),
+        "durations_ms": np.asarray(durations_ms, np.int64),
+        "loop_count": loop_count,
+    }
+
+
 def _animated_webp_oracle_write(payload):
     from PIL import Image
 
@@ -150,6 +187,8 @@ def _y4m_oracle_read(data):
 __all__ = [
     "_animated_webp_oracle_read",
     "_animated_webp_oracle_write",
+    "_apng_oracle_read",
+    "_apng_oracle_write",
     "_y4m_oracle_read",
     "_y4m_oracle_write",
 ]

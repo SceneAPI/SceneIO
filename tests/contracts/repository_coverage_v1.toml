@@ -1,5 +1,5 @@
 schema_version = 1
-builtins = 54
+builtins = 56
 
 # Test-only repository coverage; runtime extensions are intentionally exempt.
 
@@ -303,6 +303,14 @@ wheel_smoke_case = "_image_sequences"
 id = "animated_webp"
 benchmark_case = "animated_webp"
 source_suite = "tests/codecs/test_animated_webp.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_inspectors/sequences.py"
+wheel_smoke_case = "_image_sequences"
+
+[[codec]]
+id = "apng"
+benchmark_case = "apng"
+source_suite = "tests/codecs/test_apng.py"
 documentation_row = "docs/format_coverage.md"
 inspection_source = "src/sceneio/io/_inspectors/sequences.py"
 wheel_smoke_case = "_image_sequences"

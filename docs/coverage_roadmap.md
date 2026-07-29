@@ -156,11 +156,11 @@ are maintained only in
   adapters are implemented and validated under `sceneio.colmap`; their final
   exact-pushed-tree MSVC/GCC 10/AppleClang package validation passes in run
   `30470889876`.
-  There is no active post-R6 implementation sequence.
-  Animation formats, RTMV, and the common
-  optional-library feature pattern remain future choices that start only on
-  explicit user direction. The provisional performance ledger remains a
-  trigger-based optimization backlog rather than an active gate.
+  The user-directed post-R6 format sequence is active. Animated WebP and APNG
+  are complete locally; RTMV is next. The common optional-library feature
+  pattern follows for HDF5/hloc and the remaining formats. The provisional
+  performance ledger remains a trigger-based optimization backlog rather than
+  an active gate.
 
 **License gate (hard):** MIT / BSD / Apache‑2.0 / zlib / libpng / HPND / public
 domain only. No copyleft (GPL/AGPL/MPL data libs), no proprietary SDKs, no
@@ -394,7 +394,7 @@ Columns: **Ext/id** · **Record** · **Lib/oracle (license)** · **R/W** ·
 | ✅ image sequence (dir) | `ImageSequence` | existing image inspectors + independent manifest/PGM fixtures | R+W | lazy flat frames, natural order or exact-timing manifest, bounded transactional copy |
 | ✅ `.y4m` (raw YUV) | `ImageSequence` | original native codec + independent Python oracle | R+W | uint8 mono/420/422/444 planar frames; uncompressed and unpatented |
 | ✅ animated WebP | `ImageSequence` | pinned libwebp + Pillow oracle | R+W | fully composited packed RGB/RGBA frames; exact millisecond timing, loop/background metadata, mmap, direct sink, inspect |
-| ⬜ APNG | `ImageSequence` | existing lodepng/miniz substrate + Pillow/spec oracle | R+W | bounded repository-owned animation chunk/state layer |
+| ✅ APNG | `ImageSequence` | existing lodepng/miniz substrate + Pillow/spec oracle | R+W | bounded repository-owned animation chunk/state layer; composited RGBA, exact accepted-profile timing, blend/disposal, mmap, sink, inspect |
 
 **Excluded (out of scope):** FBX (proprietary SDK), H.264/H.265/ProRes and any
 patented video codec (per directive), HEIF/HEIC (HEVC patents), Draco‑only
@@ -412,8 +412,8 @@ maintained in `format_gap_implementation_plan.md`:
 2. COLMAP DB, PCD, calibration, and other self-contained formats (generic
    point PLY is complete);
 3. meshes and vendorable LAZ (complete locally);
-4. lazy image directories, raw Y4M, and animated WebP (complete locally),
-   followed by APNG and RTMV;
+4. lazy image directories, raw Y4M, animated WebP, and APNG (complete locally),
+   followed by RTMV;
 5. independently gated HDF5/TIFF/E57/Arrow integrations;
 6. heavyweight scene/volume integrations and policy-gated codecs.
 

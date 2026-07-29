@@ -53,6 +53,7 @@ BUFFER_CODEC_CASE_IDS = (
     "webp",
     "y4m",
     "animated_webp",
+    "apng",
     "xyz",
     "pts",
     "ply",
@@ -78,7 +79,7 @@ BUFFER_CODEC_CASE_IDS = (
 
 
 def build_buffer_codec_cases() -> tuple[BufferCodecCase, ...]:
-    """Build the 49 deterministic cases used by buffer behavior sweeps."""
+    """Build the 50 deterministic cases used by buffer behavior sweeps."""
     rng = np.random.default_rng(91)
     rgb = rng.integers(0, 256, (7, 9, 3), dtype=np.uint8)
     rgba = rng.integers(0, 256, (7, 9, 4), dtype=np.uint8)
@@ -301,6 +302,15 @@ def build_buffer_codec_cases() -> tuple[BufferCodecCase, ...]:
         None,
         2,
         np.array([1, 2, 3, 4], np.uint8),
+    )
+    packed_sequence_apng = _core.image_sequence_packed(
+        packed_frames,
+        packed_timestamps,
+        packed_durations,
+        "srgb",
+        "straight",
+        None,
+        2,
     )
     tensor = rng.standard_normal((4, 5, 3)).astype(np.float32)
     tensors = _core.tensor_dict(
@@ -529,6 +539,12 @@ def build_buffer_codec_cases() -> tuple[BufferCodecCase, ...]:
             _core.read_animated_webp,
             _core.write_animated_webp,
             packed_sequence,
+        ),
+        case(
+            "apng",
+            _core.read_apng,
+            _core.write_apng,
+            packed_sequence_apng,
         ),
         case("xyz", _core.read_xyz, _core.write_xyz, points_xyz),
         case("pts", _core.read_pts, _core.write_pts, points_pts),

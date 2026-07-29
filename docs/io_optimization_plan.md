@@ -153,7 +153,7 @@ and Ubuntu builds use the expected stable extension names. Final build-only run
 and downloaded-artifact inspection.
 
 Post-0.2 format expansion inherits the same gates. The registry currently has
-55 codecs: 49 buffer-backed file containers, three path-native multi-file
+56 codecs: 50 buffer-backed file containers, three path-native multi-file
 containers, and three directory containers (two COLMAP layouts plus lazy image
 sequences). COLMAP SQLite
 remains path-native; SOG, OBJ/MTL, and glTF/external buffers have explicit
@@ -200,6 +200,11 @@ animation APIs. Its mapped public read and direct sink remove the encoded-size
 Python copies, while metadata-only inspection avoids frame decode. Exact
 timing, loop/background metadata, and independent Pillow cross-read/write
 parity are part of the codec gate.
+APNG uses a repository-owned animation container/state layer over the pinned
+lodepng/deflate substrate. It has the same mmap and direct-sink transport,
+metadata-only inspection, exact accepted-profile timing, and independently
+checked compositing semantics. The benchmark keeps its measured Pillow
+comparison visible instead of treating backend throughput as equivalent.
 
 The representative LAZ point fixture uses a 12.0 MB positions-equivalent
 throughput denominator while both compared records also carry matching RGB

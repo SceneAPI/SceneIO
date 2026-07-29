@@ -31,6 +31,7 @@ _colmap_db_conversion_report
 _colmap_db_profile_schema
 _colmap_db_profiles
 _inspect_animated_webp
+_inspect_apng
 _inspect_bal
 _inspect_bmp
 _inspect_bundler
@@ -64,6 +65,7 @@ _inspect_xyz_file
 _inspect_y4m
 _install_webp_worker_counter
 _is_animated_webp
+_is_apng
 _parallel_hardware_lane_cap
 _parallel_lane_count
 _read_colmap_sparse_with_sidecars
@@ -107,6 +109,7 @@ point_visibility
 pose_graph
 posed_view_set
 read_animated_webp
+read_apng
 read_bal
 read_bmp
 read_bundler
@@ -207,6 +210,7 @@ read_y4m_frames
 state_trajectory
 tensor_dict
 write_animated_webp
+write_apng
 write_bal
 write_bmp
 write_bundler

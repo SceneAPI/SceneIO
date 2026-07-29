@@ -1334,6 +1334,23 @@ def _image_sequences(root: Path) -> None:
     assert decoded_animation.durations_ns.tolist() == [40_000_000, 60_000_000]
     assert sceneio.inspect(animation_path).shape == (2, 3, 5, 4)
 
+    apng_animation = _core.image_sequence_packed(
+        pixels,
+        np.array([0, 40_000_000], dtype=np.int64),
+        np.array([40_000_000, 60_000_000], dtype=np.int64),
+        "srgb",
+        "straight",
+        None,
+        2,
+    )
+    apng_path = root / "animation.png"
+    sceneio.write(apng_animation, apng_path)
+    assert sceneio.detect(apng_path) == "apng"
+    decoded_apng = sceneio.read(apng_path)
+    assert decoded_apng.pixels.tobytes() == pixels.tobytes()
+    assert decoded_apng.durations_ns.tolist() == [40_000_000, 60_000_000]
+    assert sceneio.inspect(apng_path).shape == (2, 3, 5, 4)
+
 
 def _dense_mvs(root: Path) -> None:
     depth = _core.depth_map(
@@ -1623,6 +1640,7 @@ _SMOKE_RUNNERS: Mapping[str, Callable[[Path], None]] = MappingProxyType(
         "webp": _raster_images,
         "y4m": _image_sequences,
         "animated_webp": _image_sequences,
+        "apng": _image_sequences,
         "image_sequence": _image_sequences,
         "colmap_sparse_txt": _reconstruction_formats,
         "xyz": _point_formats,

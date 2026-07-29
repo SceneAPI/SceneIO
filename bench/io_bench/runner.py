@@ -2,7 +2,7 @@
 
 Measures, per codec, encode (write) + decode (read) throughput (MB/s over the raw
 payload) and peak Python allocation (tracemalloc), for sceneio._core vs the oracle
-library where one exists, on representative payloads for all 55 codecs. Read
+library where one exists, on representative payloads for all 56 codecs. Read
 measurements retain the legacy whole-file bytes/copy-decode path beside the
 public registry mmap path, so their peak delta captures the input copy O1
 removes and, for NPY/FLO, the decoded-array copy O2 removes. Write measurements
@@ -181,8 +181,11 @@ build_sequence_specs = sequence_family.build_sequence_specs
 _image_sequence_directory_fixture = (
     sequence_fixtures._image_sequence_directory_fixture
 )
+_apng_fixture = sequence_fixtures._apng_fixture
 _animated_webp_fixture = sequence_fixtures._animated_webp_fixture
 _y4m_fixture = sequence_fixtures._y4m_fixture
+_apng_oracle_read = sequence_oracles._apng_oracle_read
+_apng_oracle_write = sequence_oracles._apng_oracle_write
 _animated_webp_oracle_read = sequence_oracles._animated_webp_oracle_read
 _animated_webp_oracle_write = sequence_oracles._animated_webp_oracle_write
 _y4m_oracle_read = sequence_oracles._y4m_oracle_read
@@ -2740,7 +2743,7 @@ def _run_benchmark(args, tmp):
             + len(directory_specs)
             + int(include_colmap_db)
             + int(include_gltf)
-            == 55
+            == 56
         )
     if getattr(args, "strict_oracles", False):
         qualification.validate_strict_results(results)

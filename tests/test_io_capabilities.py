@@ -12,6 +12,7 @@ import sceneio
 from sceneio.io import registry
 
 _BUILTINS = {
+    "apng",
     "animated_webp",
     "bal",
     "bmp",

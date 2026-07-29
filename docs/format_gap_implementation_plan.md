@@ -8,11 +8,15 @@
   checkpoint closes at packaged source `2253e0f`; exact-head runs
   `30469273173`, `30469271293`, and build-only package run `30470889876`
   pass with publication skipped.
-- **Current local checkpoint:** animated WebP is implemented as the 55th codec
-  with pinned libwebp, packed `ImageSequence` frames, Pillow parity, mmap,
-  direct-sink, inspection, and benchmark coverage. The exact local tree passes
-  3,895 tests with five documented skips plus Ruff, installed-surface smoke,
-  and the 55-row structural check. Hosted package evidence remains pending.
+- **Current local checkpoint:** APNG is implemented as the 56th codec with a
+  repository-owned animation layer over pinned lodepng, packed
+  `ImageSequence` frames, Pillow plus specification-derived parity, mmap,
+  direct-sink, inspection, and benchmark coverage. The exact tree collects
+  3,910 tests, passes 3,905 with five documented skips, and the 56-row
+  structural capture hashes to
+  `2295f9ab10dbf141c76ef6f7cbf4561ad656a1dde3cc7c8dcbff8b5bc23d6927`.
+  Ruff and installed-surface smoke pass. Hosted package evidence remains
+  pending for this addition.
 - **Current program gate:** the user-directed lean format wave is active.
   Exhaustive backend comparison remains trigger-based, not a prerequisite for
   closing a verified codec unit.
@@ -1433,14 +1437,14 @@ Local verification:
   artifacts, NumPy as the sole runtime dependency, and a passing packaged
   sequence smoke in an environment containing only NumPy and SceneIO.
 
-#### G4.3 Animated WebP — complete locally; APNG next
+#### G4.3 Animated WebP and APNG — complete locally
 
 - Animated WebP extends the pinned libwebp path with animation metadata,
   composited frame decode, deterministic full-frame write, inspection, mmap,
   and direct-sink support. Pillow provides independent cross-read/write parity.
-- Add APNG through a permissive library or a small container layer over the
-  existing PNG implementation.
-- Preserve duration, loop count, blend, and disposal semantics.
+- APNG uses a repository-owned chunk/state layer over the existing pinned
+  lodepng/deflate implementation. It preserves exact accepted-profile
+  duration rationals, loop count, blend, and disposal semantics.
 - `read_partial(..., frames=...)` decodes only selected frames when the
   underlying container supports it.
 - Inter-frame blend/disposal dependencies may require decoding a prefix to
@@ -2244,7 +2248,7 @@ lane before starting the next unit.
    selected-frame reads, deterministic writing only if libwebp produces stable
    output, inspection, and direct sinks. Pillow/libwebp tools are test
    references only; no external executable or video framework enters runtime.
-6. **APNG.**
+6. **APNG — complete locally.**
    Implement a bounded repository-owned APNG chunk/state layer over the
    existing PNG/deflate components. Preserve `acTL`/`fcTL`/`fdAT` order,
    rectangles, duration rationals, loop count, blend, and disposal. Add
@@ -2313,9 +2317,9 @@ This stable heading remains as the active-plan navigation target.
 5. **Complete locally:** extend WebP to animated WebP with composited frames,
    exact timing/loop metadata, mmap, direct sinks, inspection, and independent
    Pillow cross-read/write parity.
-6. **Next:** extend PNG to APNG only after blend, disposal, duration, loop
-   count, and dependency-aware frame semantics round-trip.
-7. **Planned after animated sequence semantics:** add RTMV as a multi-file
+6. **Complete locally:** extend PNG to APNG with blend, disposal, duration,
+   loop count, and composited frame semantics independently verified.
+7. **Next:** add RTMV as a multi-file
    layout over existing camera, image, depth, and sequence records.
 
 Verification includes chunk/frame boundary corruption, long sequences,

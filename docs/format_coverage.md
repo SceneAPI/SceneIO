@@ -49,6 +49,19 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > pending for this addition; the dated 54-codec hosted evidence below remains
 > unchanged.
 >
+> **APNG checkpoint (2026-07-29):** the live local registry now has 56
+> codecs: 50 buffer-backed files, three path-native multi-file containers,
+> and three directories. `apng` adds a repository-owned APNG chunk and frame
+> state layer over the pinned lodepng/deflate substrate. It supports
+> composited uint8 RGB/RGBA sequences, exact rational durations that map to
+> integer nanoseconds, loop count, source/over blend, and
+> none/background/previous disposal. Pillow cross-read/write tests and a
+> separate specification-derived chunk/compositing oracle cover the accepted
+> profile. mmap reads, direct sinks, and metadata-only inspection are included.
+> The exact tree collects 3,910 tests and passes 3,905 with five documented
+> skips. Ruff, installed-surface smoke, and the 56-row structural benchmark
+> check pass. Cross-platform results remain pending for this checkpoint.
+>
 > **C3/C4 hosted closure (2026-07-29):** the exact collection is
 > 3,879 nodes with normalized SHA-256
 > `39fe1dc507ed2faea06a75dcc823515ff550dfa742813b89cdcd24a7584ad4f6`.
@@ -785,10 +798,11 @@ public-domain SQLite amalgamation statically linked into `_core`.
 | `image_sequence` | `ImageSequence` | R+W | independent manifest/PGM fixtures + existing image-codec parity suites | flat image directories; deterministic natural order or strict versioned manifest; lazy owned paths; exact optional timing; heterogeneous frames reject; transactional bounded-copy writer; frame ranges |
 | `y4m` | `ImageSequence` | R+W | independent Python parser/writer + exact golden bytes | original dependency-free YUV4MPEG2 subset; uint8 mono/4:2:0/4:2:2/4:4:4 planar frames, odd dimensions, exact rational timing, mmap, streaming sink, inspect, and frame ranges; no RGB conversion or video-framework dependency |
 | `animated_webp` | `ImageSequence` | R+W | Pillow/libwebp animation-container oracle in `tests/codecs/test_animated_webp.py` | repository-pinned libwebp mux/demux/animation APIs; fully composited packed uint8 RGB/RGBA frames, exact millisecond timing, loop/background metadata, mmap, streaming sink, and metadata-only inspection |
+| `apng` | `ImageSequence` | R+W | Pillow plus specification-derived chunk/compositing oracle in `tests/codecs/test_apng.py` | repository-owned APNG container logic over pinned lodepng; fully composited packed uint8 RGBA frames, exact rational timing representable as integer nanoseconds, loop count, source/over blend, none/background/previous disposal, mmap, streaming sink, and metadata-only inspection |
 
 ### Repository-owned COLMAP workflow adapters
 
-The COLMAP adapter surface is unchanged by the 55th codec. The lazy
+The COLMAP adapter surface is unchanged by the 56th codec. The lazy
 `sceneio.colmap` namespace adds
 repository-owned read/write adapters for fork sparse companions, MappingInput
 v1/v2, MegaLoc artifact directories, rig JSON, SIFT text, stock and dense
@@ -817,7 +831,7 @@ requirements for COLMAP ecosystem closure.
 
 ### ⬜ Pending — declared roadmap gaps
 
-- Sequence/dataset: APNG and RTMV. Animated WebP is complete.
+- Sequence/dataset: RTMV. Animated WebP and APNG are complete.
 - Optional scientific/container: HDF5, hloc feature/match layouts, TIFF, E57,
   and Parquet/Arrow.
 - Chunked/heavyweight: Zarr v2/v3, USD/USDZ, and OpenVDB.
@@ -879,6 +893,7 @@ incremental.
 |---|---|---|---|---|---|---|---|---|---|
 <!-- sceneio-capability-rows:start -->
 | `animated_webp` | file | yes | yes | yes | - | yes | yes | yes | - |
+| `apng` | file | yes | yes | yes | - | yes | yes | no | - |
 | `bal` | file | yes | yes | yes | - | yes | yes | no | - |
 | `bmp` | file | yes | yes | yes | - | yes | yes | no | - |
 | `bundler` | file | yes | yes | yes | - | yes | yes | no | - |
@@ -976,7 +991,7 @@ names from `_core.__native_features__`.
 | point range `points=(start,stop)` | XYZ, PTS, binary generic PLY, uncompressed binary PCD, LAS, Gaussian PLY, compressed PLY, SOG, KSplat, SPLAT | `PointCloud` / `GaussianCloud`, with convention metadata preserved |
 | face range `faces=(start,stop)` | generic mesh PLY, STL, OFF | `Mesh`; PLY/OFF retain the complete vertex domain, while STL returns local canonical triangle soup |
 | state range `states=(start,stop)` | EuRoC state CSV | `StateTrajectory` with convention metadata preserved |
-| frame range `frames=(start,stop)` | image directories, raw Y4M | `ImageSequence`; directory frames remain lazy encoded paths and Y4M copies only selected planar frames; animated WebP currently exposes full composited reads and does not claim a bounded frame selector |
+| frame range `frames=(start,stop)` | image directories, raw Y4M | `ImageSequence`; directory frames remain lazy encoded paths and Y4M copies only selected planar frames; animated WebP and APNG currently expose full composited reads and do not claim a bounded frame selector |
 | `image_id` | COLMAP binary + text | one-image `Reconstruction` plus every camera required by its retained modern rig/frame (or its one legacy camera); no point-container read |
 | `image_id` | COLMAP SQLite database | one compiled `FeatureSet`; unrelated keypoint/descriptor BLOBs remain unread |
 | unordered `pair=(image_id1,image_id2)` | COLMAP SQLite database | one compiled `MatchGraph` with raw/verified matches and optional geometry |

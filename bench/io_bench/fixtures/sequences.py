@@ -74,6 +74,36 @@ def _animated_webp_fixture(side):
     }
 
 
+def _apng_fixture(side):
+    frame_count = 4
+    rng = np.random.default_rng(43)
+    frames = rng.integers(
+        0, 256, (frame_count, side, side, 4), dtype=np.uint8
+    )
+    frames[..., 3] = rng.integers(
+        1, 256, (frame_count, side, side), dtype=np.uint8
+    )
+    durations_ms = np.array([20, 35, 50, 65], np.int64)
+    durations_ns = durations_ms * 1_000_000
+    timestamps_ns = np.concatenate(
+        [np.zeros(1, np.int64), np.cumsum(durations_ns[:-1])]
+    )
+    record = _core.image_sequence_packed(
+        frames,
+        timestamps_ns,
+        durations_ns,
+        "srgb",
+        "straight",
+        None,
+        3,
+    )
+    return record, {
+        "frames": frames,
+        "durations_ms": durations_ms,
+        "loop_count": 3,
+    }
+
+
 def _image_sequence_directory_fixture(root, scale):
     source = Path(root) / "_image_sequence_input"
     source.mkdir()
@@ -116,6 +146,7 @@ def _image_sequence_directory_fixture(root, scale):
 
 __all__ = [
     "_animated_webp_fixture",
+    "_apng_fixture",
     "_image_sequence_directory_fixture",
     "_y4m_fixture",
 ]

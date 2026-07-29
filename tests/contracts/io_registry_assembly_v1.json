@@ -49,6 +49,7 @@
       "webp": "244bb6c15a8cb8e2dfc1ab0cb02e3290723a18607aaa45b14e189f90831d6ceb",
       "y4m": "113c80bbbb985911a891769bfb02e9853deacab217c4bbb9a1a1676960ca9c7e",
       "animated_webp": "08a79ab1e8c48046a8c92f8a524b9e4990a87102ccfaf950a2b714e60409ed2c",
+      "apng": "870cec8f3e75ecc3841e4a08871afc69b6badd96741b64adfd2419dad74c5dd2",
       "image_sequence": "5242878a747fae1d464202b7382e0f8986d4c79789fd3b8186b085fbf5194cb0",
       "colmap_sparse_txt": "cbbf77486c5f12613958e3d17ef88dc6c9cef7166a102918d6f0ee8c70afd6bf",
       "xyz": "d2d71f2c768c7b8ed521eae881d8fa7d81a2df09072588827f8f12301c31cc88",
@@ -265,6 +266,10 @@
         "read": "43a383aa328930fb73ddb473a4bda169b76bdba9fdf7ae95ed8d5a369ed7f366",
         "write": "4d985e4716dc3d4279a74051060dda2c4f30fd88a25f620da39d91f1f1a334ba"
       },
+      "apng": {
+        "read": "3b24b61c0be276da474580ddd39a5d7095b9ba43e7dd2812e20531f88144c0dc",
+        "write": "640da5dc55a3ec64d5fae9957fab06c5a55e1bd0f1ad0e7aee67705d7e9b828d"
+      },
       "image_sequence": {
         "read": "737e28ccb24ee0dc4554841f357cccb324d3b74effdcff43716768d958036bcb",
         "write": "a8447934d937a57dcc6d9672990ce3d2543f8a3a4d651bba4246510bb52ec413",
@@ -359,8 +364,8 @@
     "last": "tests/test_points_binary.py::test_bad_magic_rejected"
   },
   "pytest_candidate_collection": {
-    "count": 3900,
-    "sorted_normalized_node_ids_sha256": "ecb1435de42300b52b07d0e4c73f67ab52afd3cc31a6eff98ba7af2279b6740d",
+    "count": 3910,
+    "sorted_normalized_node_ids_sha256": "97fffb5fe9508b90560584d4b3f6e687310c1f39b5b8c03e55061047709975cc",
     "added_nodes": [
       "tests/codecs/test_animated_webp.py::test_sceneio_writer_is_lossless_and_oracle_readable",
       "tests/codecs/test_animated_webp.py::test_pillow_writer_is_sceneio_readable_bit_exact",
@@ -372,6 +377,16 @@
       "tests/codecs/test_animated_webp.py::test_writer_refuses_unrepresentable_timing[timestamps1-durations1-contiguous]",
       "tests/codecs/test_animated_webp.py::test_writer_refuses_unrepresentable_timing[timestamps2-durations2-milliseconds]",
       "tests/codecs/test_animated_webp.py::test_still_truncated_and_corrupt_inputs_are_rejected",
+      "tests/codecs/test_apng.py::test_sceneio_writer_is_lossless_deterministic_and_oracle_readable",
+      "tests/codecs/test_apng.py::test_pillow_writer_is_sceneio_readable_bit_exact",
+      "tests/codecs/test_apng.py::test_independent_subrect_blend_and_disposal_match_pillow",
+      "tests/codecs/test_apng.py::test_exact_submillisecond_rational_timing",
+      "tests/codecs/test_apng.py::test_metadata_inspection_does_not_decode_pixels",
+      "tests/codecs/test_apng.py::test_public_path_detect_read_write_and_inspect",
+      "tests/codecs/test_apng.py::test_direct_sink_streams_container_chunks_byte_identically",
+      "tests/codecs/test_apng.py::test_rgb_and_identical_frames_preserve_sequence",
+      "tests/codecs/test_apng.py::test_writer_refuses_unrepresented_metadata_and_timing",
+      "tests/codecs/test_apng.py::test_separate_default_image_and_malformed_inputs_are_rejected",
       "tests/records/test_image_sequence_record.py::test_packed_frames_own_dtype_exact_samples_and_metadata[uint8-255]",
       "tests/records/test_image_sequence_record.py::test_packed_frames_own_dtype_exact_samples_and_metadata[uint16-65535]",
       "tests/records/test_image_sequence_record.py::test_packed_frames_own_dtype_exact_samples_and_metadata[float32-0]",
@@ -1195,7 +1210,7 @@
           "buffer_codecs"
         ],
         "function_count": 14,
-        "function_ast_sha256": "0c2648530d77888fd8dd753a31c79af575bce90dc18694e9e503065032d8a63c",
+        "function_ast_sha256": "d9c3eb04103a44311d46da85a6d314e1db0e77b8c8e51d781bde7475623ee3ec",
         "node_suffixes": [
           "test_all_single_file_sinks_are_byte_identical",
           "test_directory_codec_writers_remain_byte_identical_file_sinks",
@@ -1223,7 +1238,7 @@
           "buffer_codecs"
         ],
         "function_count": 50,
-        "function_ast_sha256": "42f75c8dfba5e27d9d3aa748e3ee1021ba1f23f51f99376c888ed1553df44d6b",
+        "function_ast_sha256": "6b64fe68542f700981c0aebab21d1f91ec3e94610dafc6b23b5fa7b947eaed40",
         "node_suffixes": [
           "test_inspect_matches_decoded_metadata_for_buffer_and_directory_codecs",
           "test_inspect_large_npy_reads_only_header",
@@ -1606,10 +1621,10 @@
     ],
     "source_commit": "952bb8d6d875753ec50cc9516e19ca659bc78d33",
     "hosted_run": 30467712842,
-    "extension_capture": "build/animated-webp-55-row-benchmark.json",
-    "extension_base_commit": "380cacff5353c35da6088b9d8a6514e8072d9e84",
-    "rows": 55,
-    "structural_projection_sha256": "91fff73b8f1e8e599a4400a7de1f22c053704e89c0fef1ecee55a07703c44e80",
+    "extension_capture": "build/apng-56-row-benchmark.json",
+    "extension_base_commit": "3c07bcefabbd0d9be935ffd22c5ef1e7f4642321",
+    "rows": 56,
+    "structural_projection_sha256": "2295f9ab10dbf141c76ef6f7cbf4561ad656a1dde3cc7c8dcbff8b5bc23d6927",
     "excluded_key_suffixes": [
       "_mbps",
       "_ms"

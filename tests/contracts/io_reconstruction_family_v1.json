@@ -33,11 +33,11 @@
     "euroc_state": 18,
     "g2o": 23,
     "colmap_db": 24,
-    "colmap_sparse_txt": 39,
-    "bundler": 46,
-    "bal": 47,
-    "nvm": 48,
-    "openmvg": 49
+    "colmap_sparse_txt": 40,
+    "bundler": 47,
+    "bal": 48,
+    "nvm": 49,
+    "openmvg": 50
   },
   "registry": {
     "colmap_sparse": {

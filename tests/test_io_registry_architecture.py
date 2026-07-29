@@ -42,7 +42,7 @@ def _implementation_callable(value):
 
 
 def test_builtin_manifest_is_exact_and_preserves_runtime_identity():
-    assert len(CANONICAL_BUILTIN_IDS) == 55
+    assert len(CANONICAL_BUILTIN_IDS) == 56
     assert tuple(registry.REGISTRY) == CANONICAL_BUILTIN_IDS
     assert tuple(codec.id for codec in registry.BUILTIN_DEFINITIONS) == (
         CANONICAL_BUILTIN_IDS
@@ -58,7 +58,7 @@ def test_families_partition_builtins_without_changing_dispatch_order():
     family_ids = [
         format_id for members in FAMILY_MEMBERS.values() for format_id in members
     ]
-    assert len(family_ids) == len(set(family_ids)) == 55
+    assert len(family_ids) == len(set(family_ids)) == 56
     assert set(family_ids) == set(CANONICAL_BUILTIN_IDS)
     assert set(BUILTIN_OWNERSHIP) == set(CANONICAL_BUILTIN_IDS)
     for family, members in FAMILY_MEMBERS.items():
@@ -240,7 +240,7 @@ def test_repository_coverage_manifest_is_complete_and_resolvable():
     contract = tomllib.loads(contract_path.read_text(encoding="utf-8"))
     codecs = contract["codec"]
     assert tuple(item["id"] for item in codecs) == CANONICAL_BUILTIN_IDS
-    assert len({item["id"] for item in codecs}) == 55
+    assert len({item["id"] for item in codecs}) == 56
 
     wheel_smoke = importlib.import_module("sceneio._wheel_smoke")
     benchmark_contract = json.loads(

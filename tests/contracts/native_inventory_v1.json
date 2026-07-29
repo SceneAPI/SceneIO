@@ -43,6 +43,7 @@
     ["webp", ["read_webp"], ["write_webp"], [], ["read_webp_window"]],
     ["y4m", ["read_y4m"], ["write_y4m"], ["_inspect_y4m"], ["read_y4m_frames"]],
     ["animated_webp", ["read_animated_webp"], ["write_animated_webp"], ["_inspect_animated_webp"], []],
+    ["apng", ["read_apng"], ["write_apng"], ["_inspect_apng"], []],
     ["colmap_sparse_txt", ["read_colmap_txt"], ["write_colmap_txt"], ["_inspect_colmap_txt"], ["read_colmap_txt_image"]],
     ["xyz", ["read_xyz"], ["write_xyz"], ["_inspect_xyz", "_inspect_xyz_file"], ["read_xyz_points"]],
     ["pts", ["read_pts"], ["write_pts"], ["_inspect_pts"], ["read_pts_points"]],

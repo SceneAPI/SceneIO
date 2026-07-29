@@ -9,7 +9,7 @@
   "cmake_file_sha256": {
     "CMakeLists.txt": "800e00e796d06ef8e10637f191176ba8cb6a54b20da6545c46e6de6c2e6de7a5",
     "cmake/SceneIOInstrumentation.cmake": "f4a6ecf75085215628b6d603dd47922ad2b8e730e0c05d09f5cd33193ff0e4a3",
-    "cmake/SceneIOSources.cmake": "cb207dd33231cd12fca687fcf4bfb687d8483b5a0761ab1c00842da6177e447c",
+    "cmake/SceneIOSources.cmake": "b417af74ed636e856d71ab77d22c374d9bd664df21d0b0ecce1cdbbcaa51f4aa",
     "cmake/SceneIODependencies.cmake": "2cf413267c09bdf23fa3d69b255a3b000f3324808c8fdf26ac9ac0db363afb54",
     "cmake/SceneIOBackendQualification.cmake": "bfd4d8921a2ca7935fc7c728004fd1d623f37deb699fc5c7f99c28667aea502d",
     "cmake/SceneIOTargets.cmake": "42949ade76829fc8d3a3b86afcb8e2b0701dff2abaf649ae0e967420af5a94fa",
@@ -66,6 +66,7 @@
       "src/cpp/codecs/reconstruction/openmvg.cpp"
     ],
     "sequences": [
+      "src/cpp/codecs/sequences/apng.cpp",
       "src/cpp/codecs/sequences/animated_webp.cpp",
       "src/cpp/codecs/sequences/y4m.cpp"
     ],
@@ -171,7 +172,8 @@
     "register_g2o",
     "register_colmap_db",
     "register_colmap_dense_mvs",
-    "register_animated_webp"
+    "register_animated_webp",
+    "register_apng"
   ],
   "core_link_order": [
     "src/cpp/module.cpp",
@@ -236,6 +238,7 @@
     "src/cpp/codecs/images/exr.cpp",
     "src/cpp/codecs/points/las.cpp",
     "src/cpp/codecs/points/laz.cpp",
+    "src/cpp/codecs/sequences/apng.cpp",
     "src/cpp/codecs/sequences/animated_webp.cpp",
     "src/cpp/codecs/sequences/y4m.cpp",
     "src/cpp/codecs/images/webp.cpp",

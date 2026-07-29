@@ -214,6 +214,10 @@ COMPARISON_QUALIFICATIONS = MappingProxyType(
             "Pillow",
             "bench/io_bench/oracles/sequences.py",
         ),
+        "apng": _timed(
+            "Pillow + specification-derived chunk oracle",
+            "bench/io_bench/oracles/sequences.py",
+        ),
         "image_sequence": _exemption(
             "independent benchmark directory encode/decode throughput",
             "tests/codecs/test_image_sequence.py",

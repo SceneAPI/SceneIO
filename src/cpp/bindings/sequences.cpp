@@ -2,6 +2,7 @@
 
 void register_y4m(nanobind::module_ &);
 void register_animated_webp(nanobind::module_ &);
+void register_apng(nanobind::module_ &);
 
 namespace sio::bindings {
 namespace {
@@ -9,6 +10,7 @@ namespace {
 constexpr RegistrationDescriptor REGISTRATIONS[] = {
     {32, "y4m", &::register_y4m},
     {41, "animated_webp", &::register_animated_webp},
+    {42, "apng", &::register_apng},
 };
 
 constexpr CodecDescriptor CODECS[] = {
@@ -29,6 +31,15 @@ constexpr CodecDescriptor CODECS[] = {
      symbols("_inspect_animated_webp"),
      symbols("read_animated_webp"),
      symbols("write_animated_webp"),
+     symbols()},
+    {38,
+     "apng",
+     "sequences",
+     symbols("read_apng"),
+     symbols("write_apng"),
+     symbols("_inspect_apng"),
+     symbols("read_apng"),
+     symbols("write_apng"),
      symbols()},
 };
 

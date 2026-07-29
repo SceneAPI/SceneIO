@@ -3336,3 +3336,44 @@ Its normalized deterministic structural SHA-256 is
 `91fff73b8f1e8e599a4400a7de1f22c053704e89c0fef1ecee55a07703c44e80`.
 These figures are local MSVC evidence. Cross-platform package validation for
 the 55-codec tree is recorded separately after its user-authorized workflow.
+
+## APNG sequence checkpoint (2026-07-29)
+
+APNG uses a repository-owned animation container/state layer over the pinned
+lodepng/deflate substrate. Pillow provides independent full-frame
+cross-read/write evidence, while a separate specification-derived chunk and
+compositing oracle covers subrectangles, blend, disposal, and rational timing.
+The focused local MSVC measurement was:
+
+```powershell
+.venv/Scripts/python.exe bench/bench_io.py --runs 3 --scale 0.01 `
+  --only apng --json build/apng-56-benchmark.json
+```
+
+| metric | SceneIO | Pillow oracle |
+|---|---:|---:|
+| logical payload / encoded file | 0.2 MB / 0.2 MB | same corpus |
+| buffer write | 45 MB/s | 46 MB/s |
+| buffer read | 224 MB/s | 629 MB/s |
+| public mapped-path read | 203 MB/s | — |
+| traced read peak, bytes / mapped path | 0.2 MB / 0.0 MB | — |
+| traced write peak, bytes / direct sink | 0.2 MB / 0.0 MB | — |
+| full read / metadata inspection | 0.820 ms / 0.134 ms | — |
+| inspection gain | 6.11x | — |
+
+SceneIO and Pillow encode at similar throughput on this fixture. Pillow's
+decode backend is faster; the 0.36 SceneIO/oracle ratio is retained as an
+explicit future backend-comparison item. The landed I/O gains are the removal
+of encoded-size Python allocations for mapped reads and direct sinks, plus the
+metadata-only inspection path. The direct sink also emits container chunks
+incrementally instead of retaining the complete encoded APNG in a C++ vector.
+
+A complete one-run, small-scale local capture covers all 56 registry rows:
+
+```powershell
+.venv/Scripts/python.exe bench/bench_io.py --runs 1 --scale 0.001 `
+  --skip-oracles --json build/apng-56-row-benchmark.json
+```
+
+Its normalized deterministic structural SHA-256 is
+`2295f9ab10dbf141c76ef6f7cbf4561ad656a1dde3cc7c8dcbff8b5bc23d6927`.

@@ -394,6 +394,16 @@ documentation = "docs/format_coverage.md"
 accepted_subset = ["lossless", "lossy", "rgb", "rgba", "composited_frames", "exact_millisecond_timing", "loop_count", "background_rgba"]
 
 [[codec]]
+id = "apng"
+family = "sequences"
+adapter = "repo"
+implementation_owner = "native"
+sources = ["src/cpp/codecs/sequences/apng.cpp"]
+source_suite = "tests/codecs/test_apng.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["uint8", "rgb", "rgba", "composited_frames", "exact_rational_timing", "loop_count", "blend_source", "blend_over", "dispose_none", "dispose_background", "dispose_previous"]
+
+[[codec]]
 id = "image_sequence"
 family = "sequences"
 adapter = "repo"
@@ -2466,6 +2476,44 @@ backend_version = "1.5.0"
 transport_status = "qualified"
 status = "provisional"
 correctness_evidence = ["tests/codecs/test_animated_webp.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "apng"
+profile = "default"
+direction = "encode"
+settings = { mode = "full_canvas", channels = 4, dtype = "uint8", blend = "source", dispose = "none" }
+fidelity = "lossless"
+comparator = "Pillow + specification-derived chunk oracle"
+fixture = "apng:default"
+backend = "lodepng + SceneIO APNG"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/lodepng"
+backend_version = "ed6fe5825c6a4fbb7f58ab35a4231c7543cd452a"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_apng.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "apng"
+profile = "default"
+direction = "decode"
+settings = { mode = "composited_rgba", channels = 4, dtype = "uint8" }
+fidelity = "lossless"
+comparator = "Pillow + specification-derived chunk oracle"
+fixture = "apng:default"
+backend = "lodepng + SceneIO APNG"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/lodepng"
+backend_version = "ed6fe5825c6a4fbb7f58ab35a4231c7543cd452a"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_apng.py"]
 benchmark_evidence = ["bench/BASELINE.md"]
 candidate_backends = []
 evidence_gaps = ["candidate comparison on all required toolchains"]

@@ -4,12 +4,15 @@ from __future__ import annotations
 
 from bench.io_bench.fixtures.sequences import (
     _animated_webp_fixture,
+    _apng_fixture,
     _y4m_fixture,
 )
 from bench.io_bench.model import Spec
 from bench.io_bench.oracles.sequences import (
     _animated_webp_oracle_read,
     _animated_webp_oracle_write,
+    _apng_oracle_read,
+    _apng_oracle_write,
     _y4m_oracle_read,
     _y4m_oracle_write,
 )
@@ -35,6 +38,15 @@ def build_sequence_specs(scale):
             _core.read_animated_webp,
             _animated_webp_oracle_write,
             _animated_webp_oracle_read,
+            lambda rec, p: p["frames"].nbytes,
+        ),
+        Spec(
+            "apng",
+            lambda: _apng_fixture(side),
+            _core.write_apng,
+            _core.read_apng,
+            _apng_oracle_write,
+            _apng_oracle_read,
             lambda rec, p: p["frames"].nbytes,
         ),
     ]
