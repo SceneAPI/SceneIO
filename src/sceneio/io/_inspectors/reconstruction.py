@@ -76,6 +76,12 @@ def inspect_colmap_db(path: Path, datatype: str) -> Inspection:
         metadata={
             "user_version": values["user_version"],
             "sqlite_version": values["sqlite_version"],
+            "num_rigs": values["num_rigs"],
+            "num_rig_sensors": values["num_rig_sensors"],
+            "num_frames": values["num_frames"],
+            "num_frame_data": values["num_frame_data"],
+            "num_pose_priors": values["num_pose_priors"],
+            "pose_prior_layout": values["pose_prior_layout"],
             "num_cameras": values["num_cameras"],
             "num_images": values["num_images"],
             "num_keypoint_rows": values["num_keypoint_rows"],

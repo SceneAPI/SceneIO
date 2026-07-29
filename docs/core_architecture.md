@@ -445,6 +445,12 @@ exposes them:
   `.pose_convention == "world_to_camera"`; optional modern COLMAP rig/frame
   arrays preserve WXYZ `sensor_from_rig` and `rig_from_world` transforms,
   sensor/data assignments, and legacy-vs-modern file presence.
+- `ColmapDatabase.rig_frames` owns database-only rig topology and frame data
+  assignments. Its frames have no world pose. Nullable non-reference
+  transforms use WXYZ `sensor_from_rig`; `ColmapDatabase.pose_priors`
+  preserves image-linked or generalized associations, coordinate-system
+  codes, and SQL BLOB presence. Logical covariance views are row-major even
+  though the SQLite Eigen buffer is column-major.
 - `GaussianCloud.quaternion_order == "wxyz"`, `.scale_space == "log"`,
   `.opacity_space == "logit"`, `.sh_layout == "channel_grouped"`
 - `Mesh.coordinate_frame == "opengl"` for canonical glTF geometry;

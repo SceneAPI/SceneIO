@@ -3115,3 +3115,28 @@ remain below half its encoded size, and stay within 8 MiB of the small-write
 delta. This independently guards the absence of an output-sized native staging
 buffer. Read throughput is not used for the old/new writer comparison because
 C0 also adds rig/frame parsing and Windows cache state varied between runs.
+
+## COLMAP database C1c stock companion regression (2026-07-29)
+
+C1c adds exact stock rig/frame and pose-prior parsing without changing the
+default legacy benchmark fixture or SQLite backend. A fresh three-run focused
+measurement used:
+
+```powershell
+.venv/Scripts/python.exe bench/bench_io.py --runs 3 `
+  --only colmap_db --skip-oracles
+```
+
+The default 9.6 MB logical / 9.9 MB encoded fixture measured 1,092 MB/s full
+read, 166 MB/s direct write, 1.823 ms metadata inspection, 0.784 ms indexed
+image read, and 0.735 ms indexed pair read. Inspection was 4.85x faster than
+full materialization; the selectors were 11.27x and 12.03x faster. Traced
+Python allocation remained 0.0 MB for path reads, inspection, selectors, and
+the direct sink. The sampled full-read RSS delta was 10.4 MB, while inspection
+and partial reads remained at 0.1 MB or less.
+
+This is regression evidence for the unchanged legacy fixture, not a claim
+that it times populated stock companion rows. Populated 3.13, 4.1.1, and
+current companion payloads are covered by independent wire fixtures,
+bit-level comparisons, lifetime tests, and malformed-row tests in
+`tests/codecs/test_colmap_db.py`.

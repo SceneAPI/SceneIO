@@ -1157,6 +1157,8 @@ def _colmap_database(root: Path) -> None:
     assert sceneio.FeatureSet is _core.FeatureSet
     assert sceneio.MatchGraph is _core.MatchGraph
     assert sceneio.ColmapDatabase is _core.ColmapDatabase
+    assert sceneio.ColmapRigFrameSet is _core.ColmapRigFrameSet
+    assert sceneio.ColmapPosePriorSet is _core.ColmapPosePriorSet
     path = root / "database.db"
     sceneio.write(database, path)
     assert sceneio.detect(path) == "colmap_db"

@@ -51,6 +51,8 @@ PoseGraph = _core.PoseGraph
 FeatureSet = _core.FeatureSet
 MatchGraph = _core.MatchGraph
 ColmapDatabase = _core.ColmapDatabase
+ColmapRigFrameSet = _core.ColmapRigFrameSet
+ColmapPosePriorSet = _core.ColmapPosePriorSet
 DepthMap = _core.DepthMap
 FlowField = _core.FlowField
 Camera = _core.Camera
@@ -501,6 +503,8 @@ __all__ = [
     "Codec",
     "CodecCapabilities",
     "ColmapDatabase",
+    "ColmapPosePriorSet",
+    "ColmapRigFrameSet",
     "DepthEncoding",
     "DepthMap",
     "FeatureSet",

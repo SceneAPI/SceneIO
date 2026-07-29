@@ -526,6 +526,7 @@ ColmapDatabase make_colmap_database(
     result.user_version = user_version;
     result.profile = profile;
     result.application_id = application_id;
+    result.pose_priors.generalized = true;
     if (profile != "sceneio-hybrid-v1")
         throw std::invalid_argument(
             "colmap_database: constructed records currently require "
@@ -918,6 +919,255 @@ void validate_match_graph(
     }
 }
 
+void validate_colmap_rig_frames(
+    const ColmapRigFrameSet &value, const char *context) {
+    const size_t rigs = value.num_rigs();
+    const size_t sensors = value.num_rig_sensors();
+    const size_t frames = value.num_frames();
+    const size_t data = value.num_frame_data();
+    if (sensors > std::numeric_limits<size_t>::max() / 4)
+        throw std::invalid_argument(
+            std::string(context) +
+            ": rig sensor count overflows field lengths");
+    if (value.rig_ref_sensor_types.size() != rigs ||
+        value.rig_ref_sensor_ids.size() != rigs ||
+        value.rig_sensor_types.size() != sensors ||
+        value.rig_sensor_pose_present.size() != sensors ||
+        value.rig_sensor_qvecs.size() != sensors * 4 ||
+        value.rig_sensor_tvecs.size() != sensors * 3 ||
+        value.frame_rig_ids.size() != frames ||
+        value.frame_sensor_types.size() != data ||
+        value.frame_sensor_ids.size() != data)
+        throw std::invalid_argument(
+            std::string(context) +
+            ": inconsistent rig/frame field lengths");
+    validate_offsets(
+        value.rig_sensor_offsets, rigs, sensors,
+        context, "rig_sensor_offsets");
+    validate_offsets(
+        value.frame_data_offsets, frames, data,
+        context, "frame_data_offsets");
+    require_binary_flags(
+        value.rig_sensor_pose_present, context,
+        "rig_sensor_pose_present");
+
+    const auto sensor_key =
+        [&](int32_t type, uint32_t id,
+            const char *field) -> uint64_t {
+            if ((type != 0 && type != 1) ||
+                id == std::numeric_limits<uint32_t>::max())
+                throw std::invalid_argument(
+                    std::string(context) + ": " + field +
+                    " must use CAMERA/IMU and a non-sentinel id");
+            return (static_cast<uint64_t>(type) << 32) | id;
+        };
+    std::unordered_map<uint32_t, size_t> rig_index;
+    std::unordered_set<uint64_t> assigned_sensors;
+    rig_index.reserve(rigs);
+    assigned_sensors.reserve(rigs + sensors);
+    for (size_t rig = 0; rig < rigs; ++rig) {
+        const uint32_t rig_id = value.rig_ids[rig];
+        if (rig_id == std::numeric_limits<uint32_t>::max() ||
+            !rig_index.emplace(rig_id, rig).second)
+            throw std::invalid_argument(
+                std::string(context) +
+                ": rig ids must be non-sentinel and unique");
+        if (!assigned_sensors.insert(sensor_key(
+                value.rig_ref_sensor_types[rig],
+                value.rig_ref_sensor_ids[rig],
+                "reference sensor")).second)
+            throw std::invalid_argument(
+                std::string(context) +
+                ": a sensor cannot belong to multiple rigs");
+        for (uint64_t row = value.rig_sensor_offsets[rig];
+             row < value.rig_sensor_offsets[rig + 1]; ++row) {
+            const size_t index = static_cast<size_t>(row);
+            if (!assigned_sensors.insert(sensor_key(
+                    value.rig_sensor_types[index],
+                    value.rig_sensor_ids[index],
+                    "rig sensor")).second)
+                throw std::invalid_argument(
+                    std::string(context) +
+                    ": a sensor cannot belong to multiple rigs");
+            double norm_squared = 0.0;
+            for (size_t component = 0; component < 4; ++component) {
+                const double item =
+                    value.rig_sensor_qvecs[index * 4 + component];
+                if (value.rig_sensor_pose_present[index] &&
+                    !std::isfinite(item))
+                    throw std::invalid_argument(
+                        std::string(context) +
+                        ": sensor pose quaternion must be finite");
+                norm_squared += item * item;
+            }
+            for (size_t component = 0; component < 3; ++component) {
+                const double item =
+                    value.rig_sensor_tvecs[index * 3 + component];
+                if (value.rig_sensor_pose_present[index] &&
+                    !std::isfinite(item))
+                    throw std::invalid_argument(
+                        std::string(context) +
+                        ": sensor pose translation must be finite");
+            }
+            if (value.rig_sensor_pose_present[index]) {
+                const double norm = std::sqrt(norm_squared);
+                if (!std::isfinite(norm) ||
+                    std::abs(norm - 1.0) > 1e-6)
+                    throw std::invalid_argument(
+                        std::string(context) +
+                        ": sensor pose quaternion must be unit length");
+            } else {
+                for (size_t component = 0; component < 4; ++component)
+                    if (value.rig_sensor_qvecs[
+                            index * 4 + component] != 0.0)
+                        throw std::invalid_argument(
+                            std::string(context) +
+                            ": absent sensor pose carries a quaternion");
+                for (size_t component = 0; component < 3; ++component)
+                    if (value.rig_sensor_tvecs[
+                            index * 3 + component] != 0.0)
+                        throw std::invalid_argument(
+                            std::string(context) +
+                            ": absent sensor pose carries a translation");
+            }
+        }
+    }
+
+    std::unordered_set<uint32_t> frame_ids;
+    std::unordered_set<std::string> assigned_data;
+    frame_ids.reserve(frames);
+    assigned_data.reserve(data);
+    for (size_t frame = 0; frame < frames; ++frame) {
+        const uint32_t frame_id = value.frame_ids[frame];
+        const auto rig = rig_index.find(value.frame_rig_ids[frame]);
+        if (frame_id == std::numeric_limits<uint32_t>::max() ||
+            !frame_ids.insert(frame_id).second ||
+            rig == rig_index.end())
+            throw std::invalid_argument(
+                std::string(context) +
+                ": frames contain an invalid id or rig reference");
+        std::unordered_set<uint64_t> rig_sensors;
+        const size_t rig_row = rig->second;
+        rig_sensors.insert(sensor_key(
+            value.rig_ref_sensor_types[rig_row],
+            value.rig_ref_sensor_ids[rig_row],
+            "reference sensor"));
+        for (uint64_t row =
+                 value.rig_sensor_offsets[rig_row];
+             row < value.rig_sensor_offsets[rig_row + 1]; ++row) {
+            const size_t index = static_cast<size_t>(row);
+            rig_sensors.insert(sensor_key(
+                value.rig_sensor_types[index],
+                value.rig_sensor_ids[index], "rig sensor"));
+        }
+        for (uint64_t row = value.frame_data_offsets[frame];
+             row < value.frame_data_offsets[frame + 1]; ++row) {
+            const size_t index = static_cast<size_t>(row);
+            const uint64_t data_id = value.frame_data_ids[index];
+            const uint64_t sensor = sensor_key(
+                value.frame_sensor_types[index],
+                value.frame_sensor_ids[index], "frame sensor");
+            if (!rig_sensors.count(sensor))
+                throw std::invalid_argument(
+                    std::string(context) +
+                    ": frame data references an invalid datum or sensor");
+            const std::string key =
+                std::to_string(value.frame_sensor_types[index]) + ":" +
+                std::to_string(data_id);
+            if (!assigned_data.insert(key).second)
+                throw std::invalid_argument(
+                    std::string(context) +
+                    ": one datum cannot belong to multiple frames");
+        }
+    }
+}
+
+void validate_colmap_pose_priors(
+    const ColmapPosePriorSet &value, const char *context) {
+    const size_t count = value.size();
+    if (count > std::numeric_limits<size_t>::max() / 9)
+        throw std::invalid_argument(
+            std::string(context) +
+            ": pose-prior count overflows field lengths");
+    if (value.corr_data_ids.size() != count ||
+        value.corr_sensor_ids.size() != count ||
+        value.corr_sensor_types.size() != count ||
+        value.coordinate_systems.size() != count ||
+        value.position_present.size() != count ||
+        value.positions.size() != count * 3 ||
+        value.position_covariance_present.size() != count ||
+        value.position_covariances.size() != count * 9 ||
+        value.gravity_present.size() != count ||
+        value.gravities.size() != count * 3)
+        throw std::invalid_argument(
+            std::string(context) +
+            ": inconsistent pose-prior field lengths");
+    require_binary_flags(
+        value.position_present, context, "position_present");
+    require_binary_flags(
+        value.position_covariance_present, context,
+        "position_covariance_present");
+    require_binary_flags(
+        value.gravity_present, context, "gravity_present");
+    std::unordered_set<uint32_t> ids;
+    std::unordered_set<std::string> data;
+    ids.reserve(count);
+    data.reserve(count);
+    for (size_t index = 0; index < count; ++index) {
+        const uint32_t id = value.prior_ids[index];
+        const uint64_t data_id = value.corr_data_ids[index];
+        const uint32_t sensor_id = value.corr_sensor_ids[index];
+        const int32_t sensor_type = value.corr_sensor_types[index];
+        if (id == std::numeric_limits<uint32_t>::max() ||
+            sensor_id == std::numeric_limits<uint32_t>::max() ||
+            (sensor_type != 0 && sensor_type != 1) ||
+            value.coordinate_systems[index] < -1 ||
+            value.coordinate_systems[index] > 1 ||
+            !ids.insert(id).second)
+            throw std::invalid_argument(
+                std::string(context) +
+                ": pose prior metadata is invalid");
+        const std::string data_key =
+            std::to_string(sensor_type) + ":" +
+            std::to_string(sensor_id) + ":" +
+            std::to_string(data_id);
+        if (!data.insert(data_key).second)
+            throw std::invalid_argument(
+                std::string(context) +
+                ": correlated data ids must be unique");
+        const auto validate_values =
+            [&](const std::vector<double> &items, size_t begin,
+                size_t length, uint8_t present,
+                const char *field) {
+                for (size_t component = 0; component < length;
+                     ++component) {
+                    const double item = items[begin + component];
+                    if (!present && item != 0.0)
+                        throw std::invalid_argument(
+                            std::string(context) + ": " + field +
+                            " is absent but carries values");
+                }
+            };
+        validate_values(
+            value.positions, index * 3, 3,
+            value.position_present[index], "position");
+        validate_values(
+            value.position_covariances, index * 9, 9,
+            value.position_covariance_present[index],
+            "position covariance");
+        validate_values(
+            value.gravities, index * 3, 3,
+            value.gravity_present[index], "gravity");
+        if (!value.generalized &&
+            (sensor_type != 0 || id != data_id ||
+             value.gravity_present[index]))
+            throw std::invalid_argument(
+                std::string(context) +
+                ": image-linked pose priors cannot carry generalized "
+                "associations or gravity");
+    }
+}
+
 void validate_colmap_database(
     const ColmapDatabase &database, const char *context) {
     if (database.user_version < 0)
@@ -944,8 +1194,10 @@ void validate_colmap_database(
     }
 
     std::unordered_map<uint32_t, size_t> feature_rows;
+    std::unordered_map<uint32_t, uint32_t> feature_cameras;
     std::unordered_set<std::string> names;
     feature_rows.reserve(database.features.size());
+    feature_cameras.reserve(database.features.size());
     names.reserve(database.features.size());
     for (const FeatureSet &features : database.features) {
         validate_feature_set(features, context);
@@ -964,6 +1216,8 @@ void validate_colmap_database(
             throw std::invalid_argument(
                 std::string(context) +
                 ": image ids must be unique");
+        feature_cameras.emplace(
+            features.image_id, features.camera_id);
         if (!names.insert(features.image_name).second)
             throw std::invalid_argument(
                 std::string(context) +
@@ -971,6 +1225,58 @@ void validate_colmap_database(
     }
 
     validate_match_graph(database.match_graph, context);
+    validate_colmap_rig_frames(database.rig_frames, context);
+    validate_colmap_pose_priors(database.pose_priors, context);
+    const ColmapRigFrameSet &rig_frames =
+        database.rig_frames;
+    for (size_t frame = 0;
+         frame < rig_frames.num_frames(); ++frame) {
+        for (uint64_t row =
+                 rig_frames.frame_data_offsets[frame];
+             row < rig_frames.frame_data_offsets[frame + 1];
+             ++row) {
+            const size_t index = static_cast<size_t>(row);
+            if (rig_frames.frame_sensor_types[index] != 0)
+                continue;
+            const uint64_t data_id =
+                rig_frames.frame_data_ids[index];
+            if (data_id >
+                std::numeric_limits<uint32_t>::max())
+                continue;
+            const auto image = feature_cameras.find(
+                static_cast<uint32_t>(data_id));
+            // Stock permits staged/orphan frame data. When its image is
+            // present, however, the camera identity cannot contradict it.
+            if (image != feature_cameras.end() &&
+                image->second !=
+                    rig_frames.frame_sensor_ids[index])
+                throw std::invalid_argument(
+                    std::string(context) +
+                    ": CAMERA frame datum disagrees with its image "
+                    "camera");
+        }
+    }
+    if (!database.pose_priors.generalized) {
+        for (size_t index = 0;
+             index < database.pose_priors.size(); ++index) {
+            const uint64_t data_id =
+                database.pose_priors.corr_data_ids[index];
+            if (data_id >
+                std::numeric_limits<uint32_t>::max())
+                throw std::invalid_argument(
+                    std::string(context) +
+                    ": image-linked pose prior has an invalid image id");
+            const auto feature = feature_cameras.find(
+                static_cast<uint32_t>(data_id));
+            if (feature == feature_cameras.end() ||
+                feature->second !=
+                    database.pose_priors.corr_sensor_ids[index])
+                throw std::invalid_argument(
+                    std::string(context) +
+                    ": image-linked pose prior does not match its image "
+                    "camera");
+        }
+    }
     const MatchGraph &graph = database.match_graph;
     for (size_t pair = 0; pair < graph.pair_count; ++pair) {
         const uint32_t image_a = graph.image_pairs[pair * 2];
@@ -1336,6 +1642,265 @@ void register_feature_match(nb::module_ &module) {
                        ">";
             });
 
+    nb::class_<ColmapRigFrameSet>(module, "ColmapRigFrameSet")
+        .def_prop_ro(
+            "num_rigs",
+            [](const ColmapRigFrameSet &value) {
+                return value.num_rigs();
+            })
+        .def_prop_ro(
+            "num_rig_sensors",
+            [](const ColmapRigFrameSet &value) {
+                return value.num_rig_sensors();
+            })
+        .def_prop_ro(
+            "num_frames",
+            [](const ColmapRigFrameSet &value) {
+                return value.num_frames();
+            })
+        .def_prop_ro(
+            "num_frame_data",
+            [](const ColmapRigFrameSet &value) {
+                return value.num_frame_data();
+            })
+        .def_prop_ro(
+            "rig_ids",
+            [](const ColmapRigFrameSet &value) {
+                return typed_view(
+                    value.rig_ids, {value.num_rigs()});
+            },
+            reference_internal)
+        .def_prop_ro(
+            "rig_reference_sensor_types",
+            [](const ColmapRigFrameSet &value) {
+                return typed_view(
+                    value.rig_ref_sensor_types,
+                    {value.num_rigs()});
+            },
+            reference_internal)
+        .def_prop_ro(
+            "rig_reference_sensor_ids",
+            [](const ColmapRigFrameSet &value) {
+                return typed_view(
+                    value.rig_ref_sensor_ids,
+                    {value.num_rigs()});
+            },
+            reference_internal)
+        .def_prop_ro(
+            "rig_sensor_offsets",
+            [](const ColmapRigFrameSet &value) {
+                return typed_view(
+                    value.rig_sensor_offsets,
+                    {value.num_rigs() + 1});
+            },
+            reference_internal)
+        .def_prop_ro(
+            "rig_sensor_types",
+            [](const ColmapRigFrameSet &value) {
+                return typed_view(
+                    value.rig_sensor_types,
+                    {value.num_rig_sensors()});
+            },
+            reference_internal)
+        .def_prop_ro(
+            "rig_sensor_ids",
+            [](const ColmapRigFrameSet &value) {
+                return typed_view(
+                    value.rig_sensor_ids,
+                    {value.num_rig_sensors()});
+            },
+            reference_internal)
+        .def_prop_ro(
+            "rig_sensor_pose_present",
+            [](const ColmapRigFrameSet &value) {
+                return typed_view(
+                    value.rig_sensor_pose_present,
+                    {value.num_rig_sensors()});
+            },
+            reference_internal)
+        .def_prop_ro(
+            "rig_sensor_quaternions",
+            [](const ColmapRigFrameSet &value) {
+                return typed_view(
+                    value.rig_sensor_qvecs,
+                    {value.num_rig_sensors(), 4});
+            },
+            reference_internal)
+        .def_prop_ro(
+            "rig_sensor_translations",
+            [](const ColmapRigFrameSet &value) {
+                return typed_view(
+                    value.rig_sensor_tvecs,
+                    {value.num_rig_sensors(), 3});
+            },
+            reference_internal)
+        .def_prop_ro(
+            "frame_ids",
+            [](const ColmapRigFrameSet &value) {
+                return typed_view(
+                    value.frame_ids, {value.num_frames()});
+            },
+            reference_internal)
+        .def_prop_ro(
+            "frame_rig_ids",
+            [](const ColmapRigFrameSet &value) {
+                return typed_view(
+                    value.frame_rig_ids, {value.num_frames()});
+            },
+            reference_internal)
+        .def_prop_ro(
+            "frame_data_offsets",
+            [](const ColmapRigFrameSet &value) {
+                return typed_view(
+                    value.frame_data_offsets,
+                    {value.num_frames() + 1});
+            },
+            reference_internal)
+        .def_prop_ro(
+            "frame_data_ids",
+            [](const ColmapRigFrameSet &value) {
+                return typed_view(
+                    value.frame_data_ids,
+                    {value.num_frame_data()});
+            },
+            reference_internal)
+        .def_prop_ro(
+            "frame_sensor_types",
+            [](const ColmapRigFrameSet &value) {
+                return typed_view(
+                    value.frame_sensor_types,
+                    {value.num_frame_data()});
+            },
+            reference_internal)
+        .def_prop_ro(
+            "frame_sensor_ids",
+            [](const ColmapRigFrameSet &value) {
+                return typed_view(
+                    value.frame_sensor_ids,
+                    {value.num_frame_data()});
+            },
+            reference_internal)
+        .def_prop_ro(
+            "quaternion_order",
+            [](const ColmapRigFrameSet &) {
+                return "wxyz";
+            })
+        .def_prop_ro(
+            "sensor_pose_convention",
+            [](const ColmapRigFrameSet &) {
+                return "sensor_from_rig";
+            })
+        .def(
+            "__repr__",
+            [](const ColmapRigFrameSet &value) {
+                return "<ColmapRigFrameSet rigs=" +
+                       std::to_string(value.num_rigs()) +
+                       " frames=" +
+                       std::to_string(value.num_frames()) +
+                       ">";
+            });
+
+    nb::class_<ColmapPosePriorSet>(
+        module, "ColmapPosePriorSet")
+        .def_ro("generalized", &ColmapPosePriorSet::generalized)
+        .def_prop_ro(
+            "num_pose_priors",
+            [](const ColmapPosePriorSet &value) {
+                return value.size();
+            })
+        .def_prop_ro(
+            "prior_ids",
+            [](const ColmapPosePriorSet &value) {
+                return typed_view(
+                    value.prior_ids, {value.size()});
+            },
+            reference_internal)
+        .def_prop_ro(
+            "correlated_data_ids",
+            [](const ColmapPosePriorSet &value) {
+                return typed_view(
+                    value.corr_data_ids, {value.size()});
+            },
+            reference_internal)
+        .def_prop_ro(
+            "correlated_sensor_ids",
+            [](const ColmapPosePriorSet &value) {
+                return typed_view(
+                    value.corr_sensor_ids, {value.size()});
+            },
+            reference_internal)
+        .def_prop_ro(
+            "correlated_sensor_types",
+            [](const ColmapPosePriorSet &value) {
+                return typed_view(
+                    value.corr_sensor_types, {value.size()});
+            },
+            reference_internal)
+        .def_prop_ro(
+            "coordinate_systems",
+            [](const ColmapPosePriorSet &value) {
+                return typed_view(
+                    value.coordinate_systems, {value.size()});
+            },
+            reference_internal)
+        .def_prop_ro(
+            "position_present",
+            [](const ColmapPosePriorSet &value) {
+                return typed_view(
+                    value.position_present, {value.size()});
+            },
+            reference_internal)
+        .def_prop_ro(
+            "positions",
+            [](const ColmapPosePriorSet &value) {
+                return typed_view(
+                    value.positions, {value.size(), 3});
+            },
+            reference_internal)
+        .def_prop_ro(
+            "position_covariance_present",
+            [](const ColmapPosePriorSet &value) {
+                return typed_view(
+                    value.position_covariance_present,
+                    {value.size()});
+            },
+            reference_internal)
+        .def_prop_ro(
+            "position_covariances",
+            [](const ColmapPosePriorSet &value) {
+                return typed_view(
+                    value.position_covariances,
+                    {value.size(), 3, 3});
+            },
+            reference_internal)
+        .def_prop_ro(
+            "gravity_present",
+            [](const ColmapPosePriorSet &value) {
+                return typed_view(
+                    value.gravity_present, {value.size()});
+            },
+            reference_internal)
+        .def_prop_ro(
+            "gravities",
+            [](const ColmapPosePriorSet &value) {
+                return typed_view(
+                    value.gravities, {value.size(), 3});
+            },
+            reference_internal)
+        .def(
+            "__len__",
+            [](const ColmapPosePriorSet &value) {
+                return value.size();
+            })
+        .def(
+            "__repr__",
+            [](const ColmapPosePriorSet &value) {
+                return "<ColmapPosePriorSet priors=" +
+                       std::to_string(value.size()) +
+                       " generalized=" +
+                       (value.generalized ? "True>" : "False>");
+            });
+
     nb::class_<ColmapDatabase>(module, "ColmapDatabase")
         .def_prop_ro(
             "num_cameras",
@@ -1394,6 +1959,20 @@ void register_feature_match(nb::module_ &module) {
             [](const ColmapDatabase &value)
                 -> const MatchGraph & {
                 return value.match_graph;
+            },
+            reference_internal)
+        .def_prop_ro(
+            "rig_frames",
+            [](const ColmapDatabase &value)
+                -> const ColmapRigFrameSet & {
+                return value.rig_frames;
+            },
+            reference_internal)
+        .def_prop_ro(
+            "pose_priors",
+            [](const ColmapDatabase &value)
+                -> const ColmapPosePriorSet & {
+                return value.pose_priors;
             },
             reference_internal)
         .def_ro("user_version", &ColmapDatabase::user_version)

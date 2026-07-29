@@ -218,6 +218,30 @@ int32_t int32_value(
     return static_cast<int32_t>(value);
 }
 
+uint32_t uint32_value(
+    sqlite3_stmt *statement, int column,
+    const char *name) {
+    const int64_t value = integer(statement, column, name);
+    if (value < 0 ||
+        static_cast<uint64_t>(value) >
+            std::numeric_limits<uint32_t>::max())
+        throw std::invalid_argument(
+            std::string("COLMAP database: ") + name +
+            " is outside uint32");
+    return static_cast<uint32_t>(value);
+}
+
+uint64_t nonnegative_int64_value(
+    sqlite3_stmt *statement, int column,
+    const char *name) {
+    const int64_t value = integer(statement, column, name);
+    if (value < 0)
+        throw std::invalid_argument(
+            std::string("COLMAP database: ") + name +
+            " must be non-negative");
+    return static_cast<uint64_t>(value);
+}
+
 std::string text(
     sqlite3_stmt *statement, int column,
     const char *name) {
@@ -332,6 +356,20 @@ bool optional_fixed_blob(
         /*empty_is_absent=*/true, &present);
     if (present) std::memcpy(target, data, bytes);
     return present;
+}
+
+template <typename T>
+bool optional_strict_fixed_blob(
+    sqlite3_stmt *statement, int column, T *target,
+    size_t count, const char *name) {
+    if (sqlite3_column_type(statement, column) == SQLITE_NULL)
+        return false;
+    const size_t bytes =
+        checked_blob_extent(1, count, sizeof(T), name);
+    const uint8_t *data =
+        checked_blob(statement, column, bytes, name);
+    if (bytes != 0) std::memcpy(target, data, bytes);
+    return true;
 }
 
 uint32_t read_u32_le(const uint8_t *data) {
@@ -766,11 +804,35 @@ void require_core_tables(sqlite3 *database) {
 
 void validate_schema(sqlite3 *database) {
     require_core_tables(database);
+    const std::array<const char *, 4> rig_frame_tables = {
+        "rigs", "rig_sensors", "frames", "frame_data"};
+    const size_t rig_frame_table_count =
+        static_cast<size_t>(std::count_if(
+            rig_frame_tables.begin(), rig_frame_tables.end(),
+            [database](const char *name) {
+                return table_exists(database, name);
+            }));
+    if (rig_frame_table_count != 0 &&
+        rig_frame_table_count != rig_frame_tables.size())
+        throw std::invalid_argument(
+            "COLMAP database: rigs, rig_sensors, frames, and "
+            "frame_data must be present together");
     const std::map<std::string, std::vector<std::string>> represented = {
+        {"rigs", {"rig_id", "ref_sensor_id", "ref_sensor_type"}},
+        {"rig_sensors",
+         {"rig_id", "sensor_id", "sensor_type", "sensor_from_rig"}},
         {"cameras",
          {"camera_id", "model", "width", "height", "params",
           "prior_focal_length"}},
+        {"frames", {"frame_id", "rig_id"}},
+        {"frame_data",
+         {"frame_id", "data_id", "sensor_id", "sensor_type"}},
         {"images", {"image_id", "name", "camera_id", "time_id"}},
+        {"pose_priors",
+         {"image_id", "pose_prior_id", "corr_data_id",
+          "corr_sensor_id", "corr_sensor_type", "position",
+          "position_covariance", "gravity", "coordinate_system",
+          "rotation", "rotation_covariance", "pose_covariance"}},
         {"keypoints", {"image_id", "rows", "cols", "data"}},
         {"descriptors",
          {"image_id", "type", "rows", "cols", "data"}},
@@ -788,6 +850,32 @@ void validate_schema(sqlite3 *database) {
                 throw std::invalid_argument(
                     "COLMAP database: unsupported column '" +
                     table + "." + column + "'");
+    }
+    if (table_exists(database, "pose_priors")) {
+        const std::vector<std::string> columns =
+            table_columns(database, "pose_priors");
+        static const std::vector<std::vector<std::string>>
+            exact_layouts = {
+                {"image_id", "position", "coordinate_system",
+                 "position_covariance"},
+                {"pose_prior_id", "corr_data_id", "corr_sensor_id",
+                 "corr_sensor_type", "position",
+                 "position_covariance", "gravity",
+                 "coordinate_system"},
+                {"pose_prior_id", "corr_data_id", "corr_sensor_id",
+                 "corr_sensor_type", "position",
+                 "position_covariance", "gravity",
+                 "coordinate_system", "rotation",
+                 "rotation_covariance", "pose_covariance"},
+            };
+        if (std::none_of(
+                exact_layouts.begin(), exact_layouts.end(),
+                [&columns](const auto &layout) {
+                    return columns == layout;
+                }))
+            throw std::invalid_argument(
+                "COLMAP database: pose_priors has an unsupported "
+                "or incomplete column layout");
     }
 }
 
@@ -827,11 +915,6 @@ void reject_unknown_tables(sqlite3 *database) {
 
 void reject_unrepresented_rows(sqlite3 *database) {
     static constexpr const char *unsupported[] = {
-        "rigs",
-        "rig_sensors",
-        "frames",
-        "frame_data",
-        "pose_priors",
         "videos",
         "video_frames",
         "image_qualities",
@@ -888,6 +971,282 @@ std::vector<Camera> read_cameras(
         prior.push_back(static_cast<uint8_t>(flag));
     }
     return cameras;
+}
+
+ColmapRigFrameSet read_rig_frames(sqlite3 *database) {
+    ColmapRigFrameSet result;
+    if (!table_exists(database, "rigs") ||
+        !table_exists(database, "rig_sensors") ||
+        !table_exists(database, "frames") ||
+        !table_exists(database, "frame_data"))
+        return result;
+
+    struct RigSensorRow {
+        int32_t type = 0;
+        uint32_t id = 0;
+        uint8_t pose_present = 0;
+        std::array<double, 4> qvec{};
+        std::array<double, 3> tvec{};
+    };
+    std::unordered_map<uint32_t, size_t> rig_indices;
+    {
+        Statement rigs(
+            database,
+            "SELECT rig_id, ref_sensor_id, ref_sensor_type "
+            "FROM rigs ORDER BY rig_id");
+        while (rigs.row()) {
+            const uint32_t rig_id =
+                uint32_value(rigs.get(), 0, "rig_id");
+            if (!rig_indices.emplace(
+                    rig_id, result.rig_ids.size()).second)
+                throw std::invalid_argument(
+                    "COLMAP database: duplicate rig_id");
+            result.rig_ids.push_back(rig_id);
+            result.rig_ref_sensor_ids.push_back(
+                uint32_value(
+                    rigs.get(), 1, "reference sensor_id"));
+            result.rig_ref_sensor_types.push_back(
+                int32_value(
+                    rigs.get(), 2, "reference sensor_type"));
+        }
+    }
+    std::vector<std::vector<RigSensorRow>> rig_sensors(
+        result.num_rigs());
+    {
+        Statement sensors(
+            database,
+            "SELECT rig_id, sensor_id, sensor_type, sensor_from_rig "
+            "FROM rig_sensors "
+            "ORDER BY rig_id, sensor_type, sensor_id");
+        while (sensors.row()) {
+            const uint32_t rig_id =
+                uint32_value(sensors.get(), 0, "rig sensor rig_id");
+            const auto rig = rig_indices.find(rig_id);
+            if (rig == rig_indices.end())
+                throw std::invalid_argument(
+                    "COLMAP database: rig_sensors references a "
+                    "missing rig");
+            RigSensorRow row;
+            row.id = uint32_value(
+                sensors.get(), 1, "rig sensor_id");
+            row.type = int32_value(
+                sensors.get(), 2, "rig sensor_type");
+            std::array<double, 7> pose{};
+            row.pose_present = static_cast<uint8_t>(
+                optional_strict_fixed_blob(
+                    sensors.get(), 3, pose.data(), pose.size(),
+                    "sensor_from_rig"));
+            if (row.pose_present) {
+                std::copy_n(
+                    pose.begin(), row.qvec.size(), row.qvec.begin());
+                std::copy_n(
+                    pose.begin() + row.qvec.size(),
+                    row.tvec.size(), row.tvec.begin());
+            }
+            rig_sensors[rig->second].push_back(std::move(row));
+        }
+    }
+    result.rig_sensor_offsets.clear();
+    result.rig_sensor_offsets.push_back(0);
+    for (const auto &rows : rig_sensors) {
+        for (const RigSensorRow &row : rows) {
+            result.rig_sensor_types.push_back(row.type);
+            result.rig_sensor_ids.push_back(row.id);
+            result.rig_sensor_pose_present.push_back(
+                row.pose_present);
+            result.rig_sensor_qvecs.insert(
+                result.rig_sensor_qvecs.end(),
+                row.qvec.begin(), row.qvec.end());
+            result.rig_sensor_tvecs.insert(
+                result.rig_sensor_tvecs.end(),
+                row.tvec.begin(), row.tvec.end());
+        }
+        result.rig_sensor_offsets.push_back(
+            result.num_rig_sensors());
+    }
+
+    struct FrameDataRow {
+        uint64_t data_id = 0;
+        int32_t sensor_type = 0;
+        uint32_t sensor_id = 0;
+    };
+    std::unordered_map<uint32_t, size_t> frame_indices;
+    {
+        Statement frames(
+            database,
+            "SELECT frame_id, rig_id FROM frames ORDER BY frame_id");
+        while (frames.row()) {
+            const uint32_t frame_id =
+                uint32_value(frames.get(), 0, "frame_id");
+            if (!frame_indices.emplace(
+                    frame_id, result.frame_ids.size()).second)
+                throw std::invalid_argument(
+                    "COLMAP database: duplicate frame_id");
+            result.frame_ids.push_back(frame_id);
+            result.frame_rig_ids.push_back(
+                uint32_value(frames.get(), 1, "frame rig_id"));
+        }
+    }
+    std::vector<std::vector<FrameDataRow>> frame_data(
+        result.num_frames());
+    {
+        Statement rows(
+            database,
+            "SELECT frame_id, data_id, sensor_id, sensor_type "
+            "FROM frame_data "
+            "ORDER BY frame_id, sensor_type, sensor_id, data_id");
+        while (rows.row()) {
+            const uint32_t frame_id =
+                uint32_value(rows.get(), 0, "frame data frame_id");
+            const auto frame = frame_indices.find(frame_id);
+            if (frame == frame_indices.end())
+                throw std::invalid_argument(
+                    "COLMAP database: frame_data references a "
+                    "missing frame");
+            frame_data[frame->second].push_back(FrameDataRow{
+                nonnegative_int64_value(
+                    rows.get(), 1, "frame data_id"),
+                int32_value(rows.get(), 3, "frame sensor_type"),
+                uint32_value(rows.get(), 2, "frame sensor_id")});
+        }
+    }
+    result.frame_data_offsets.clear();
+    result.frame_data_offsets.push_back(0);
+    for (const auto &rows : frame_data) {
+        for (const FrameDataRow &row : rows) {
+            result.frame_data_ids.push_back(row.data_id);
+            result.frame_sensor_types.push_back(row.sensor_type);
+            result.frame_sensor_ids.push_back(row.sensor_id);
+        }
+        result.frame_data_offsets.push_back(
+            result.num_frame_data());
+    }
+    return result;
+}
+
+ColmapPosePriorSet read_pose_priors(
+    sqlite3 *database,
+    const std::vector<FeatureSet> &features) {
+    ColmapPosePriorSet result;
+    if (!table_exists(database, "pose_priors"))
+        return result;
+    const bool generalized =
+        column_exists(database, "pose_priors", "pose_prior_id");
+    result.generalized = generalized;
+    if (column_exists(database, "pose_priors", "rotation") &&
+        scalar_count(database, "pose_priors") != 0)
+        throw std::invalid_argument(
+            "COLMAP database: MAXX pose-prior extensions require "
+            "the MAXX field reader");
+
+    std::unordered_map<uint32_t, uint32_t> image_cameras;
+    image_cameras.reserve(features.size());
+    for (const FeatureSet &feature : features)
+        image_cameras.emplace(feature.image_id, feature.camera_id);
+
+    auto append_optional_vector =
+        [](sqlite3_stmt *statement, int column,
+           std::vector<uint8_t> &presence,
+           std::vector<double> &values,
+           const char *name) {
+            std::array<double, 3> item{};
+            const bool present = optional_strict_fixed_blob(
+                statement, column, item.data(), item.size(), name);
+            presence.push_back(static_cast<uint8_t>(present));
+            values.insert(values.end(), item.begin(), item.end());
+        };
+    auto append_optional_matrix =
+        [](sqlite3_stmt *statement, int column,
+           std::vector<uint8_t> &presence,
+           std::vector<double> &values,
+           const char *name) {
+            std::array<double, 9> column_major{};
+            const bool present = optional_strict_fixed_blob(
+                statement, column, column_major.data(),
+                column_major.size(), name);
+            presence.push_back(static_cast<uint8_t>(present));
+            for (size_t row = 0; row < 3; ++row)
+                for (size_t column = 0; column < 3; ++column)
+                    values.push_back(
+                        column_major[column * 3 + row]);
+        };
+
+    if (generalized) {
+        Statement priors(
+            database,
+            "SELECT pose_prior_id, corr_data_id, corr_sensor_id, "
+            "corr_sensor_type, position, position_covariance, "
+            "gravity, coordinate_system "
+            "FROM pose_priors ORDER BY pose_prior_id");
+        while (priors.row()) {
+            result.prior_ids.push_back(
+                uint32_value(
+                    priors.get(), 0, "pose prior_id"));
+            result.corr_data_ids.push_back(
+                nonnegative_int64_value(
+                    priors.get(), 1,
+                    "pose prior correlated data_id"));
+            result.corr_sensor_ids.push_back(
+                uint32_value(
+                    priors.get(), 2,
+                    "pose prior correlated sensor_id"));
+            result.corr_sensor_types.push_back(
+                int32_value(
+                    priors.get(), 3,
+                    "pose prior correlated sensor_type"));
+            append_optional_vector(
+                priors.get(), 4, result.position_present,
+                result.positions, "pose prior position");
+            append_optional_matrix(
+                priors.get(), 5,
+                result.position_covariance_present,
+                result.position_covariances,
+                "pose prior position covariance");
+            append_optional_vector(
+                priors.get(), 6, result.gravity_present,
+                result.gravities, "pose prior gravity");
+            result.coordinate_systems.push_back(
+                int32_value(
+                    priors.get(), 7,
+                    "pose prior coordinate_system"));
+        }
+    } else {
+        Statement priors(
+            database,
+            "SELECT image_id, position, coordinate_system, "
+            "position_covariance "
+            "FROM pose_priors ORDER BY image_id");
+        while (priors.row()) {
+            const uint32_t image_id =
+                uint32_value(
+                    priors.get(), 0, "pose prior image_id");
+            const auto camera = image_cameras.find(image_id);
+            if (camera == image_cameras.end())
+                throw std::invalid_argument(
+                    "COLMAP database: pose_priors references a "
+                    "missing image");
+            result.prior_ids.push_back(image_id);
+            result.corr_data_ids.push_back(image_id);
+            result.corr_sensor_ids.push_back(camera->second);
+            result.corr_sensor_types.push_back(0);
+            append_optional_vector(
+                priors.get(), 1, result.position_present,
+                result.positions, "pose prior position");
+            result.coordinate_systems.push_back(
+                int32_value(
+                    priors.get(), 2,
+                    "pose prior coordinate_system"));
+            append_optional_matrix(
+                priors.get(), 3,
+                result.position_covariance_present,
+                result.position_covariances,
+                "pose prior position covariance");
+            result.gravity_present.push_back(0);
+            result.gravities.insert(
+                result.gravities.end(), 3, 0.0);
+        }
+    }
+    return result;
 }
 
 std::vector<FeatureSet> read_images(
@@ -1277,6 +1636,9 @@ ColmapDatabase read_database(const std::string &path) {
     for (const Camera &camera : result.cameras)
         cameras.emplace(camera.id, &camera);
     result.features = read_images(database, cameras);
+    result.rig_frames = read_rig_frames(database);
+    result.pose_priors =
+        read_pose_priors(database, result.features);
     const auto index = feature_index(result.features);
     read_keypoints(database, result.features, index);
     read_descriptors(database, result.features, index);
@@ -1885,6 +2247,14 @@ void validate_colmap_encodable(const ColmapDatabase &value) {
         throw std::invalid_argument(
             "COLMAP database writer: match scores "
             "are not representable");
+    if (value.rig_frames.num_rigs() != 0 ||
+        value.rig_frames.num_frames() != 0 ||
+        value.rig_frames.num_rig_sensors() != 0 ||
+        value.rig_frames.num_frame_data() != 0 ||
+        value.pose_priors.size() != 0)
+        throw std::invalid_argument(
+            "COLMAP database writer: rigs, frames, and pose priors "
+            "require an exact-profile writer");
     if (std::any_of(
             value.match_graph.camera1_present.begin(),
             value.match_graph.camera1_present.end(),
@@ -1959,6 +2329,12 @@ struct DatabaseInspection {
     std::string schema_signature;
     int32_t application_id = 0;
     int32_t user_version = 0;
+    int64_t rigs = 0;
+    int64_t rig_sensors = 0;
+    int64_t frames = 0;
+    int64_t frame_data = 0;
+    int64_t pose_priors = 0;
+    std::string pose_prior_layout = "none";
     int64_t cameras = 0;
     int64_t images = 0;
     int64_t keypoint_rows = 0;
@@ -2003,6 +2379,29 @@ DatabaseInspection inspect_database(const std::string &path) {
         schema_signature(identity.schema);
     result.application_id = identity.application_id;
     result.user_version = identity.user_version;
+    if (table_exists(database, "rigs"))
+        result.rigs = scalar_count(database, "rigs");
+    if (table_exists(database, "rig_sensors"))
+        result.rig_sensors =
+            scalar_count(database, "rig_sensors");
+    if (table_exists(database, "frames"))
+        result.frames = scalar_count(database, "frames");
+    if (table_exists(database, "frame_data"))
+        result.frame_data =
+            scalar_count(database, "frame_data");
+    if (table_exists(database, "pose_priors")) {
+        result.pose_priors =
+            scalar_count(database, "pose_priors");
+        if (column_exists(
+                database, "pose_priors", "rotation"))
+            result.pose_prior_layout = "correlated-extended";
+        else if (column_exists(
+                     database, "pose_priors",
+                     "pose_prior_id"))
+            result.pose_prior_layout = "correlated-modern";
+        else
+            result.pose_prior_layout = "image-linked-3.13";
+    }
     result.cameras = scalar_count(database, "cameras");
     result.images = scalar_count(database, "images");
     result.keypoint_rows = scalar_count(database, "keypoints");
@@ -2068,6 +2467,13 @@ nb::dict inspection_dict(const std::string &path) {
     result["schema_signature"] = value.schema_signature;
     result["application_id"] = value.application_id;
     result["user_version"] = value.user_version;
+    result["num_rigs"] = value.rigs;
+    result["num_rig_sensors"] = value.rig_sensors;
+    result["num_frames"] = value.frames;
+    result["num_frame_data"] = value.frame_data;
+    result["num_pose_priors"] = value.pose_priors;
+    result["pose_prior_layout"] =
+        value.pose_prior_layout;
     result["num_cameras"] = value.cameras;
     result["num_images"] = value.images;
     result["num_keypoint_rows"] = value.keypoint_rows;

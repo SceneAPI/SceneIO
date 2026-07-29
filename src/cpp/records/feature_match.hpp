@@ -87,11 +87,63 @@ struct MatchGraph {
     }
 };
 
+struct ColmapRigFrameSet {
+    std::vector<uint32_t> rig_ids;
+    std::vector<int32_t> rig_ref_sensor_types;
+    std::vector<uint32_t> rig_ref_sensor_ids;
+    std::vector<uint64_t> rig_sensor_offsets{0};
+    std::vector<int32_t> rig_sensor_types;
+    std::vector<uint32_t> rig_sensor_ids;
+    std::vector<uint8_t> rig_sensor_pose_present;
+    std::vector<double> rig_sensor_qvecs;  // WXYZ sensor_from_rig
+    std::vector<double> rig_sensor_tvecs;
+
+    std::vector<uint32_t> frame_ids;
+    std::vector<uint32_t> frame_rig_ids;
+    std::vector<uint64_t> frame_data_offsets{0};
+    std::vector<uint64_t> frame_data_ids;
+    std::vector<int32_t> frame_sensor_types;
+    std::vector<uint32_t> frame_sensor_ids;
+
+    size_t num_rigs() const { return rig_ids.size(); }
+    size_t num_frames() const { return frame_ids.size(); }
+    size_t num_rig_sensors() const {
+        return rig_sensor_ids.size();
+    }
+    size_t num_frame_data() const {
+        return frame_data_ids.size();
+    }
+};
+
+struct ColmapPosePriorSet {
+    // False identifies the stock 3.13 image-linked table. Readers normalize
+    // those rows into the same data/sensor identity arrays while retaining
+    // the source layout for an exact-profile writer.
+    bool generalized = false;
+    std::vector<uint32_t> prior_ids;
+    std::vector<uint64_t> corr_data_ids;
+    std::vector<uint32_t> corr_sensor_ids;
+    std::vector<int32_t> corr_sensor_types;
+    std::vector<int32_t> coordinate_systems;
+    // Presence is SQL BLOB presence, not semantic all-finite validity.
+    // Exact-size upstream BLOBs can contain all-NaN optional defaults.
+    std::vector<uint8_t> position_present;
+    std::vector<double> positions;
+    std::vector<uint8_t> position_covariance_present;
+    std::vector<double> position_covariances;  // row-major N*3*3
+    std::vector<uint8_t> gravity_present;
+    std::vector<double> gravities;
+
+    size_t size() const { return prior_ids.size(); }
+};
+
 struct ColmapDatabase {
     std::vector<Camera> cameras;
     std::vector<uint8_t> prior_focal_length;  // cameras.size(), 0/1
     std::vector<FeatureSet> features;
     MatchGraph match_graph;
+    ColmapRigFrameSet rig_frames;
+    ColmapPosePriorSet pose_priors;
     // Exact on-disk schema identity. Records built through colmap_database()
     // use SceneIO's legacy hybrid profile until the caller selects one of the
     // exact profile writers. Readers populate both values from SQLite.
@@ -108,6 +160,12 @@ void validate_feature_set(
     const FeatureSet &features, const char *context = "feature_set");
 void validate_match_graph(
     const MatchGraph &graph, const char *context = "match_graph");
+void validate_colmap_rig_frames(
+    const ColmapRigFrameSet &value,
+    const char *context = "colmap_rig_frames");
+void validate_colmap_pose_priors(
+    const ColmapPosePriorSet &value,
+    const char *context = "colmap_pose_priors");
 void validate_colmap_database(
     const ColmapDatabase &database,
     const char *context = "colmap_database");

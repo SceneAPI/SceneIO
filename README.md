@@ -262,6 +262,7 @@ assert not sceneio.native_features("hdf5").available
 ```
 
 `sceneio.FeatureSet`, `sceneio.MatchGraph`, `sceneio.ColmapDatabase`,
+`sceneio.ColmapRigFrameSet`, `sceneio.ColmapPosePriorSet`,
 `sceneio.Mesh`, `sceneio.MaterialSet`, `sceneio.MeshScene`, and
 `sceneio.ImageSequence` are compiled,
 storage-faithful I/O records. The procedure-contract `sceneio.data.FeatureSet`
@@ -282,6 +283,10 @@ supports bounded point ranges. COLMAP SQLite supports one-image features and
 one-pair raw/verified matches through native indexed SQL queries. Current
 upstream COLMAP database reads also expose optional recovered endpoint cameras
 on `MatchGraph`, including independent SQL-NULL presence and prior-focal flags.
+Full stock 3.13/4.1.1/current database reads additionally expose owned
+rig/frame assignments and image-linked or generalized pose priors. SQL NULL
+state, WXYZ rig transforms, and covariance wire order are preserved; exact
+profile writes remain guarded until the profile writers land.
 Plain
 glTF/GLB supports source mesh and flattened primitive selection while rejecting
 unrepresented scene features instead of silently dropping them.

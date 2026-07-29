@@ -246,6 +246,8 @@ def _public_snapshot():
         "Camera",
         "CameraRig",
         "ColmapDatabase",
+        "ColmapPosePriorSet",
+        "ColmapRigFrameSet",
         "DepthMap",
         "FeatureSet",
         "FlowField",

@@ -300,16 +300,18 @@
         "F_E_H",
         "relative_pose",
         "sparse_ids",
+        "current_recovered_camera_reads",
+        "stock_rig_frame_reads",
+        "stock_pose_prior_reads",
         "read_only_reads",
         "transactional_writes"
       ],
       "unsupported_features": [
-        "rigs",
-        "frames",
-        "pose_priors",
+        "rig_frame_writes",
+        "pose_prior_writes",
         "scores",
         "float_descriptors",
-        "fork_extension_tables"
+        "maxx_extension_fields"
       ],
       "operations": {
         "read": {
@@ -1149,6 +1151,12 @@
         "metadata": {
           "user_version": 3140002,
           "sqlite_version": "3.53.4",
+          "num_rigs": 0,
+          "num_rig_sensors": 0,
+          "num_frames": 0,
+          "num_frame_data": 0,
+          "num_pose_priors": 0,
+          "pose_prior_layout": "correlated-extended",
           "num_cameras": 1,
           "num_images": 2,
           "num_keypoint_rows": 2,

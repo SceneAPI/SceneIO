@@ -82,7 +82,7 @@ DATABASE_VERSION_NUMBER = make_database_version_number(
 
 @dataclass(frozen=True)
 class DatabaseProfile:
-    """Exact SQLite profile identity used by inspection and profile writers."""
+    """Exact SQLite identity used by inspection and planned profile writers."""
 
     name: str
     source_revision: str

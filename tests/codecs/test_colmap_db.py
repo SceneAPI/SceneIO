@@ -132,6 +132,111 @@ def _current_recovered_camera_pairs_database(
         connection.close()
 
 
+_PRIOR_POSITION = np.array([1.25, -0.0, 3.5], np.float64)
+_PRIOR_COVARIANCE = np.array(
+    [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 10.0]],
+    np.float64,
+)
+_RIG_SENSOR_POSE = (1.0, -0.0, 0.0, 0.0, 1.0, -2.0, 3.0)
+_NAN_PAYLOAD_BITS = np.array(
+    [0x7FF8000000000042, 0xFFF8000000000011, 0x7FF0000000000001],
+    np.uint64,
+)
+
+
+def _stock_companion_database(path: Path, profile_name: str) -> None:
+    """Build exact stock rig/frame/prior rows with stdlib wire payloads."""
+    assert profile_name in {
+        "colmap-3.13.0",
+        "colmap-4.1.1",
+        "colmap-main-64805cb870b5",
+    }
+    _empty_profile_database(path, profile_name)
+    camera_params = struct.pack("<3d", 500.0, 320.0, 240.0)
+    covariance_column_major = _PRIOR_COVARIANCE.T.copy().tobytes()
+    connection = sqlite3.connect(path)
+    try:
+        connection.executemany(
+            "INSERT INTO cameras"
+            "(camera_id,model,width,height,params,prior_focal_length) "
+            "VALUES(?,0,640,480,?,?)",
+            [(5, camera_params, 1), (6, camera_params, 0)],
+        )
+        connection.executemany(
+            "INSERT INTO images(image_id,name,camera_id) VALUES(?,?,?)",
+            [(2, "2.jpg", 5), (11, "11.jpg", 6)],
+        )
+        connection.executemany(
+            "INSERT INTO rigs(rig_id,ref_sensor_id,ref_sensor_type) "
+            "VALUES(?,?,?)",
+            [(3, 5, 0), (40, 9, 1)],
+        )
+        connection.executemany(
+            "INSERT INTO rig_sensors"
+            "(rig_id,sensor_id,sensor_type,sensor_from_rig) VALUES(?,?,?,?)",
+            [
+                (3, 8, 1, struct.pack("<7d", *_RIG_SENSOR_POSE)),
+                (40, 6, 0, None),
+            ],
+        )
+        connection.executemany(
+            "INSERT INTO frames(frame_id,rig_id) VALUES(?,?)",
+            [(7, 3), (21, 40), (99, 3)],
+        )
+        connection.executemany(
+            "INSERT INTO frame_data"
+            "(frame_id,data_id,sensor_id,sensor_type) VALUES(?,?,?,?)",
+            [(7, 2, 5, 0), (7, 100, 8, 1), (21, 11, 6, 0)],
+        )
+        if profile_name == "colmap-3.13.0":
+            connection.executemany(
+                "INSERT INTO pose_priors"
+                "(image_id,position,coordinate_system,position_covariance) "
+                "VALUES(?,?,?,?)",
+                [
+                    (
+                        2,
+                        _PRIOR_POSITION.tobytes(),
+                        0,
+                        covariance_column_major,
+                    ),
+                    (11, None, -1, None),
+                ],
+            )
+        else:
+            connection.executemany(
+                "INSERT INTO pose_priors"
+                "(pose_prior_id,corr_data_id,corr_sensor_id,corr_sensor_type,"
+                "position,position_covariance,gravity,coordinate_system) "
+                "VALUES(?,?,?,?,?,?,?,?)",
+                [
+                    (
+                        71,
+                        2,
+                        5,
+                        0,
+                        _PRIOR_POSITION.tobytes(),
+                        covariance_column_major,
+                        None,
+                        1,
+                    ),
+                    (
+                        99,
+                        777,
+                        123,
+                        1,
+                        _NAN_PAYLOAD_BITS.tobytes(),
+                        None,
+                        np.array([0.0, -0.0, 1.0], np.float64).tobytes(),
+                        -1,
+                    ),
+                ],
+            )
+        connection.commit()
+    finally:
+        connection.close()
+
+
 def test_profile_catalog_matches_python_contract() -> None:
     assert tuple(
         (
@@ -285,6 +390,641 @@ def test_read_records_exact_stock_profile_identity(tmp_path, profile_name):
         database.user_version
         == db_contract.COLMAP_DATABASE_PROFILES_BY_NAME[profile_name].user_version
     )
+
+
+@pytest.mark.parametrize(
+    "profile_name",
+    [
+        "colmap-3.13.0",
+        "colmap-4.1.1",
+        "colmap-main-64805cb870b5",
+    ],
+)
+def test_read_stock_rigs_frames_and_pose_priors_exactly(tmp_path, profile_name):
+    path = tmp_path / f"{profile_name}-companions.db"
+    _stock_companion_database(path, profile_name)
+
+    database = _core.read_colmap_db(str(path))
+    inspection = _core.inspect_colmap_db(str(path))
+    public_inspection = sceneio.inspect(path)
+    rigs = database.rig_frames
+    priors = database.pose_priors
+
+    assert rigs.num_rigs == 2
+    assert rigs.num_rig_sensors == 2
+    assert rigs.num_frames == 3
+    assert rigs.num_frame_data == 3
+    assert rigs.rig_ids.dtype == np.uint32
+    assert rigs.rig_reference_sensor_types.dtype == np.int32
+    assert rigs.rig_sensor_offsets.dtype == np.uint64
+    assert rigs.rig_sensor_pose_present.dtype == np.uint8
+    assert rigs.rig_sensor_quaternions.dtype == np.float64
+    assert rigs.frame_data_ids.dtype == np.uint64
+    assert inspection["num_rigs"] == 2
+    assert inspection["num_rig_sensors"] == 2
+    assert inspection["num_frames"] == 3
+    assert inspection["num_frame_data"] == 3
+    assert inspection["num_pose_priors"] == 2
+    assert inspection["pose_prior_layout"] == (
+        "image-linked-3.13"
+        if profile_name == "colmap-3.13.0"
+        else "correlated-modern"
+    )
+    assert public_inspection.metadata["num_rigs"] == 2
+    assert public_inspection.metadata["num_rig_sensors"] == 2
+    assert public_inspection.metadata["num_frames"] == 3
+    assert public_inspection.metadata["num_frame_data"] == 3
+    assert public_inspection.metadata["num_pose_priors"] == 2
+    assert (
+        public_inspection.metadata["pose_prior_layout"]
+        == inspection["pose_prior_layout"]
+    )
+    assert rigs.rig_ids.tolist() == [3, 40]
+    assert rigs.rig_reference_sensor_types.tolist() == [0, 1]
+    assert rigs.rig_reference_sensor_ids.tolist() == [5, 9]
+    assert rigs.rig_sensor_offsets.tolist() == [0, 1, 2]
+    assert rigs.rig_sensor_types.tolist() == [1, 0]
+    assert rigs.rig_sensor_ids.tolist() == [8, 6]
+    assert rigs.rig_sensor_pose_present.tolist() == [1, 0]
+    assert rigs.quaternion_order == "wxyz"
+    assert rigs.sensor_pose_convention == "sensor_from_rig"
+    np.testing.assert_array_equal(
+        rigs.rig_sensor_quaternions[0].view(np.uint64),
+        np.array(_RIG_SENSOR_POSE[:4], np.float64).view(np.uint64),
+    )
+    np.testing.assert_array_equal(
+        rigs.rig_sensor_translations[0].view(np.uint64),
+        np.array(_RIG_SENSOR_POSE[4:], np.float64).view(np.uint64),
+    )
+    np.testing.assert_array_equal(rigs.rig_sensor_quaternions[1], 0.0)
+    np.testing.assert_array_equal(rigs.rig_sensor_translations[1], 0.0)
+    assert rigs.frame_ids.tolist() == [7, 21, 99]
+    assert rigs.frame_rig_ids.tolist() == [3, 40, 3]
+    assert rigs.frame_data_offsets.tolist() == [0, 2, 3, 3]
+    assert rigs.frame_data_ids.tolist() == [2, 100, 11]
+    assert rigs.frame_sensor_types.tolist() == [0, 1, 0]
+    assert rigs.frame_sensor_ids.tolist() == [5, 8, 6]
+
+    assert priors.num_pose_priors == 2
+    assert priors.prior_ids.dtype == np.uint32
+    assert priors.correlated_data_ids.dtype == np.uint64
+    assert priors.correlated_sensor_types.dtype == np.int32
+    assert priors.position_present.dtype == np.uint8
+    assert priors.positions.dtype == np.float64
+    if profile_name == "colmap-3.13.0":
+        assert not priors.generalized
+        assert priors.prior_ids.tolist() == [2, 11]
+        assert priors.correlated_data_ids.tolist() == [2, 11]
+        assert priors.correlated_sensor_ids.tolist() == [5, 6]
+        assert priors.correlated_sensor_types.tolist() == [0, 0]
+        assert priors.coordinate_systems.tolist() == [0, -1]
+        assert priors.position_present.tolist() == [1, 0]
+        assert priors.position_covariance_present.tolist() == [1, 0]
+        assert priors.gravity_present.tolist() == [0, 0]
+        np.testing.assert_array_equal(priors.positions[1], 0.0)
+        np.testing.assert_array_equal(priors.position_covariances[1], 0.0)
+        np.testing.assert_array_equal(priors.gravities, 0.0)
+    else:
+        assert priors.generalized
+        assert priors.prior_ids.tolist() == [71, 99]
+        assert priors.correlated_data_ids.tolist() == [2, 777]
+        assert priors.correlated_sensor_ids.tolist() == [5, 123]
+        assert priors.correlated_sensor_types.tolist() == [0, 1]
+        assert priors.coordinate_systems.tolist() == [1, -1]
+        assert priors.position_present.tolist() == [1, 1]
+        assert priors.position_covariance_present.tolist() == [1, 0]
+        assert priors.gravity_present.tolist() == [0, 1]
+        assert np.isnan(priors.positions[1]).all()
+        np.testing.assert_array_equal(
+            priors.positions[1].view(np.uint64), _NAN_PAYLOAD_BITS
+        )
+        np.testing.assert_array_equal(
+            priors.gravities[1].view(np.uint64),
+            np.array([0.0, -0.0, 1.0], np.float64).view(np.uint64),
+        )
+        np.testing.assert_array_equal(priors.position_covariances[1], 0.0)
+        np.testing.assert_array_equal(priors.gravities[0], 0.0)
+    np.testing.assert_array_equal(
+        priors.positions[0].view(np.uint64),
+        _PRIOR_POSITION.view(np.uint64),
+    )
+    np.testing.assert_array_equal(
+        priors.position_covariances[0], _PRIOR_COVARIANCE
+    )
+
+
+def test_pycolmap_411_producer_rig_frame_and_prior_oracle(tmp_path):
+    pycolmap = pytest.importorskip("pycolmap")
+    if tuple(int(item) for item in pycolmap.__version__.split(".")[:2]) != (
+        4,
+        1,
+    ):
+        pytest.skip("the producer oracle is pinned to pycolmap 4.1.x")
+    path = tmp_path / "pycolmap-4.1.1.db"
+    producer = pycolmap.Database.open(path)
+    rig = pycolmap.Rig()
+    rig.rig_id = 3
+    rig.add_ref_sensor(
+        pycolmap.sensor_t(pycolmap.SensorType.CAMERA, 5)
+    )
+    rig.add_sensor(
+        pycolmap.sensor_t(pycolmap.SensorType.IMU, 8),
+        pycolmap.Rigid3d(),
+    )
+    assert producer.write_rig(rig, True) == 3
+    frame = pycolmap.Frame()
+    frame.frame_id = 7
+    frame.rig_id = 3
+    frame.add_data_id(
+        pycolmap.data_t(
+            pycolmap.sensor_t(pycolmap.SensorType.CAMERA, 5), 2
+        )
+    )
+    assert producer.write_frame(frame, True) == 7
+    prior = pycolmap.PosePrior()
+    prior.pose_prior_id = 71
+    prior.corr_data_id = pycolmap.data_t(
+        pycolmap.sensor_t(pycolmap.SensorType.CAMERA, 5), 2
+    )
+    prior.position = _PRIOR_POSITION.copy()
+    prior.coordinate_system = (
+        pycolmap.PosePriorCoordinateSystem.CARTESIAN
+    )
+    assert producer.write_pose_prior(prior, True) == 71
+    producer.close()
+
+    connection = sqlite3.connect(path)
+    try:
+        raw = connection.execute(
+            "SELECT typeof(position),length(position),"
+            "typeof(position_covariance),length(position_covariance),"
+            "typeof(gravity),length(gravity) FROM pose_priors"
+        ).fetchone()
+    finally:
+        connection.close()
+    assert raw == ("blob", 24, "blob", 72, "blob", 24)
+
+    database = _core.read_colmap_db(str(path))
+    assert database.profile == "colmap-4.1.1"
+    assert database.rig_frames.rig_ids.tolist() == [3]
+    assert database.rig_frames.frame_ids.tolist() == [7]
+    assert database.rig_frames.frame_data_ids.tolist() == [2]
+    assert database.pose_priors.position_present.tolist() == [1]
+    assert database.pose_priors.position_covariance_present.tolist() == [1]
+    assert database.pose_priors.gravity_present.tolist() == [1]
+    np.testing.assert_array_equal(
+        database.pose_priors.positions[0].view(np.uint64),
+        _PRIOR_POSITION.view(np.uint64),
+    )
+    assert np.isnan(database.pose_priors.position_covariances[0]).all()
+    assert np.isnan(database.pose_priors.gravities[0]).all()
+
+
+def test_stock_companion_views_outlive_database_and_file(tmp_path):
+    path = tmp_path / "lifetime.db"
+    _stock_companion_database(path, "colmap-4.1.1")
+    database = _core.read_colmap_db(str(path))
+    arrays = (
+        database.rig_frames.rig_sensor_quaternions,
+        database.rig_frames.frame_data_ids,
+        database.pose_priors.positions,
+        database.pose_priors.position_covariances,
+    )
+    expected = tuple(array.copy() for array in arrays)
+    del database
+    gc.collect()
+    path.unlink()
+
+    for actual, wanted in zip(arrays, expected, strict=True):
+        np.testing.assert_array_equal(actual, wanted)
+
+
+def test_prior_covariance_preserves_ieee_bits_across_wire_transpose(tmp_path):
+    path = tmp_path / "covariance-bits.db"
+    _stock_companion_database(path, "colmap-4.1.1")
+    logical_bits = np.array(
+        [
+            0x7FF8000000000042,
+            0x8000000000000000,
+            0x3FF0000000000000,
+            0xFFF8000000000011,
+            0x0000000000000000,
+            0x4000000000000000,
+            0x7FF0000000000001,
+            0xC008000000000000,
+            0x4010000000000000,
+        ],
+        np.uint64,
+    ).reshape(3, 3)
+    wire = logical_bits.T.copy().tobytes()
+    connection = sqlite3.connect(path)
+    try:
+        connection.execute(
+            "UPDATE pose_priors SET position_covariance=? "
+            "WHERE pose_prior_id=71",
+            (wire,),
+        )
+        connection.commit()
+    finally:
+        connection.close()
+
+    covariance = _core.read_colmap_db(
+        str(path)
+    ).pose_priors.position_covariances[0]
+    np.testing.assert_array_equal(covariance.view(np.uint64), logical_bits)
+
+
+@pytest.mark.parametrize(
+    ("sql", "parameters", "message"),
+    [
+        (
+            "UPDATE rig_sensors SET sensor_from_rig=? WHERE rig_id=3",
+            (b"",),
+            "sensor_from_rig byte count",
+        ),
+        (
+            "UPDATE rig_sensors SET sensor_from_rig=? WHERE rig_id=3",
+            (b"\0" * 55,),
+            "sensor_from_rig byte count",
+        ),
+        (
+            "UPDATE rig_sensors SET sensor_from_rig=? WHERE rig_id=3",
+            (b"\0" * 57,),
+            "sensor_from_rig byte count",
+        ),
+        (
+            "UPDATE rig_sensors SET sensor_from_rig=? WHERE rig_id=3",
+            (struct.pack("<7d", 2.0, 0.0, 0.0, 0.0, 1.0, 2.0, 3.0),),
+            "unit length",
+        ),
+        (
+            "UPDATE rig_sensors SET sensor_from_rig=? WHERE rig_id=3",
+            (struct.pack("<7d", np.nan, 0.0, 0.0, 0.0, 1.0, 2.0, 3.0),),
+            "quaternion must be finite",
+        ),
+        (
+            "UPDATE rig_sensors SET sensor_from_rig=? WHERE rig_id=3",
+            (struct.pack("<7d", 1.0, 0.0, 0.0, 0.0, np.nan, 2.0, 3.0),),
+            "translation must be finite",
+        ),
+        (
+            "UPDATE frame_data SET sensor_id=6 WHERE frame_id=7 AND data_id=2",
+            (),
+            "invalid datum or sensor",
+        ),
+        (
+            "UPDATE rig_sensors SET sensor_id=5,sensor_type=0 "
+            "WHERE rig_id=3",
+            (),
+            "sensor cannot belong to multiple rigs",
+        ),
+        (
+            "UPDATE rig_sensors SET rig_id=777 WHERE rig_id=3",
+            (),
+            "references a missing rig",
+        ),
+        (
+            "UPDATE frame_data SET frame_id=777 WHERE frame_id=7",
+            (),
+            "references a missing frame",
+        ),
+        (
+            "UPDATE frames SET rig_id=777 WHERE frame_id=7",
+            (),
+            "invalid id or rig reference",
+        ),
+        (
+            "UPDATE pose_priors SET position=? WHERE pose_prior_id=71",
+            (b"",),
+            "position byte count",
+        ),
+        (
+            "UPDATE pose_priors SET position=? WHERE pose_prior_id=71",
+            (b"\0" * 23,),
+            "position byte count",
+        ),
+        (
+            "UPDATE pose_priors SET position=? WHERE pose_prior_id=71",
+            (b"\0" * 25,),
+            "position byte count",
+        ),
+        (
+            "UPDATE pose_priors SET position=? WHERE pose_prior_id=71",
+            ("not-a-blob",),
+            "must be BLOB or NULL",
+        ),
+        (
+            "UPDATE pose_priors SET coordinate_system=2 WHERE pose_prior_id=71",
+            (),
+            "pose prior metadata is invalid",
+        ),
+    ],
+)
+def test_stock_companion_malformed_rows_release_handle(
+    tmp_path, sql, parameters, message
+):
+    path = tmp_path / "malformed-companion.db"
+    _stock_companion_database(path, "colmap-4.1.1")
+    connection = sqlite3.connect(path)
+    try:
+        connection.execute(sql, parameters)
+        connection.commit()
+    finally:
+        connection.close()
+
+    inspection = _core.inspect_colmap_db(str(path))
+    assert inspection["num_rigs"] == 2
+    assert inspection["num_pose_priors"] == 2
+    with pytest.raises(ValueError, match=message):
+        _core.read_colmap_db(str(path))
+    path.rename(path.with_suffix(".released"))
+
+
+@pytest.mark.parametrize(
+    ("quaternion_w", "accepted"),
+    [
+        (1.0 - 0.5e-6, True),
+        (1.0 + 0.5e-6, True),
+        (1.0 - 1.1e-6, False),
+        (1.0 + 1.1e-6, False),
+    ],
+)
+def test_rig_quaternion_uses_de15_norm_tolerance(
+    tmp_path, quaternion_w, accepted
+):
+    path = tmp_path / "quaternion-tolerance.db"
+    _stock_companion_database(path, "colmap-4.1.1")
+    connection = sqlite3.connect(path)
+    try:
+        connection.execute(
+            "UPDATE rig_sensors SET sensor_from_rig=? WHERE rig_id=3",
+            (
+                struct.pack(
+                    "<7d", quaternion_w, 0.0, 0.0, 0.0, 1.0, 2.0, 3.0
+                ),
+            ),
+        )
+        connection.commit()
+    finally:
+        connection.close()
+
+    if accepted:
+        assert _core.read_colmap_db(
+            str(path)
+        ).rig_frames.rig_sensor_pose_present.tolist() == [1, 0]
+    else:
+        with pytest.raises(ValueError, match="unit length"):
+            _core.read_colmap_db(str(path))
+
+
+@pytest.mark.parametrize(
+    ("value", "message"),
+    [
+        (2**32 - 1, "pose prior metadata is invalid"),
+        (2**32, "outside uint32"),
+    ],
+)
+def test_stock_companion_rejects_reserved_or_wide_prior_ids(
+    tmp_path, value, message
+):
+    path = tmp_path / "prior-id-boundary.db"
+    _stock_companion_database(path, "colmap-4.1.1")
+    connection = sqlite3.connect(path)
+    try:
+        connection.execute(
+            "UPDATE pose_priors SET pose_prior_id=71+? "
+            "WHERE pose_prior_id=71",
+            (value - 71,),
+        )
+        connection.commit()
+    finally:
+        connection.close()
+
+    with pytest.raises(ValueError, match=message):
+        _core.read_colmap_db(str(path))
+
+
+def test_stock_companion_accepts_zero_ids_and_signed_int64_data_ids(tmp_path):
+    path = tmp_path / "stock-id-domain.db"
+    _empty_profile_database(path, "colmap-4.1.1")
+    connection = sqlite3.connect(path)
+    try:
+        connection.execute(
+            "INSERT INTO rigs(rig_id,ref_sensor_id,ref_sensor_type) "
+            "VALUES(0,0,0)"
+        )
+        connection.execute(
+            "INSERT INTO frames(frame_id,rig_id) VALUES(0,0)"
+        )
+        connection.execute(
+            "INSERT INTO frame_data"
+            "(frame_id,data_id,sensor_id,sensor_type) VALUES(0,?,0,0)",
+            (2**63 - 1,),
+        )
+        connection.execute(
+            "INSERT INTO pose_priors"
+            "(pose_prior_id,corr_data_id,corr_sensor_id,corr_sensor_type,"
+            "position,position_covariance,gravity,coordinate_system) "
+            "VALUES(0,?,0,0,NULL,NULL,NULL,-1)",
+            (2**63 - 1,),
+        )
+        connection.commit()
+    finally:
+        connection.close()
+
+    database = _core.read_colmap_db(str(path))
+    assert database.rig_frames.rig_ids.tolist() == [0]
+    assert database.rig_frames.frame_ids.tolist() == [0]
+    assert database.rig_frames.rig_reference_sensor_ids.tolist() == [0]
+    assert database.rig_frames.frame_data_ids.dtype == np.uint64
+    assert database.rig_frames.frame_data_ids.tolist() == [2**63 - 1]
+    assert database.pose_priors.prior_ids.tolist() == [0]
+    assert database.pose_priors.correlated_sensor_ids.tolist() == [0]
+    assert database.pose_priors.correlated_data_ids.dtype == np.uint64
+    assert database.pose_priors.correlated_data_ids.tolist() == [2**63 - 1]
+
+
+@pytest.mark.parametrize(
+    ("table", "column", "where", "message"),
+    [
+        ("frame_data", "data_id", "frame_id=7 AND data_id=2", "frame data_id"),
+        (
+            "pose_priors",
+            "corr_data_id",
+            "pose_prior_id=71",
+            "pose prior correlated data_id",
+        ),
+    ],
+)
+def test_stock_companion_rejects_negative_data_ids(
+    tmp_path, table, column, where, message
+):
+    path = tmp_path / f"negative-{table}-data-id.db"
+    _stock_companion_database(path, "colmap-4.1.1")
+    connection = sqlite3.connect(path)
+    try:
+        connection.execute(
+            f"UPDATE {table} SET {column}=-1 WHERE {where}"
+        )
+        connection.commit()
+    finally:
+        connection.close()
+
+    with pytest.raises(ValueError, match=rf"{message} must be non-negative"):
+        _core.read_colmap_db(str(path))
+
+
+def test_stock_companion_rejects_partial_table_quartet(tmp_path):
+    path = tmp_path / "partial-rig-schema.db"
+    _empty_profile_database(path, "colmap-4.1.1")
+    connection = sqlite3.connect(path)
+    try:
+        connection.execute("DROP TABLE frame_data")
+        connection.commit()
+    finally:
+        connection.close()
+
+    with pytest.raises(ValueError, match="must be present together"):
+        _core.read_colmap_db(str(path))
+
+
+def test_stock_companion_rejects_incomplete_pose_prior_layout(tmp_path):
+    path = tmp_path / "partial-prior-schema.db"
+    _empty_profile_database(path, "colmap-4.1.1")
+    connection = sqlite3.connect(path)
+    try:
+        connection.execute("ALTER TABLE pose_priors DROP COLUMN gravity")
+        connection.commit()
+    finally:
+        connection.close()
+
+    with pytest.raises(ValueError, match="incomplete column layout"):
+        _core.read_colmap_db(str(path))
+
+
+def test_generalized_prior_uniqueness_includes_sensor_id(tmp_path):
+    path = tmp_path / "prior-correlation-key.db"
+    _stock_companion_database(path, "colmap-4.1.1")
+    connection = sqlite3.connect(path)
+    try:
+        connection.execute(
+            "INSERT INTO pose_priors"
+            "(pose_prior_id,corr_data_id,corr_sensor_id,corr_sensor_type,"
+            "position,position_covariance,gravity,coordinate_system) "
+            "VALUES(100,777,124,1,NULL,NULL,NULL,-1)"
+        )
+        connection.commit()
+    finally:
+        connection.close()
+
+    priors = _core.read_colmap_db(str(path)).pose_priors
+    assert priors.prior_ids.tolist() == [71, 99, 100]
+    assert priors.correlated_data_ids.tolist() == [2, 777, 777]
+    assert priors.correlated_sensor_ids.tolist() == [5, 123, 124]
+
+
+def test_frame_data_allows_same_numeric_id_across_sensor_types(tmp_path):
+    path = tmp_path / "frame-data-type-key.db"
+    _stock_companion_database(path, "colmap-4.1.1")
+    connection = sqlite3.connect(path)
+    try:
+        connection.execute(
+            "INSERT INTO frame_data"
+            "(frame_id,data_id,sensor_id,sensor_type) VALUES(7,2,8,1)"
+        )
+        connection.commit()
+    finally:
+        connection.close()
+
+    rig_frames = _core.read_colmap_db(str(path)).rig_frames
+    assert rig_frames.frame_data_ids.tolist()[:3] == [2, 2, 100]
+    assert rig_frames.frame_sensor_types.tolist()[:3] == [0, 1, 1]
+
+
+def test_camera_frame_datum_cannot_contradict_existing_image_camera(tmp_path):
+    path = tmp_path / "frame-image-camera.db"
+    _stock_companion_database(path, "colmap-4.1.1")
+    connection = sqlite3.connect(path)
+    try:
+        connection.execute(
+            "INSERT INTO rig_sensors"
+            "(rig_id,sensor_id,sensor_type,sensor_from_rig) "
+            "VALUES(3,7,0,NULL)"
+        )
+        connection.execute(
+            "UPDATE frame_data SET sensor_id=7 "
+            "WHERE frame_id=7 AND data_id=2 AND sensor_type=0"
+        )
+        connection.commit()
+    finally:
+        connection.close()
+
+    with pytest.raises(ValueError, match="disagrees with its image camera"):
+        _core.read_colmap_db(str(path))
+
+
+def test_partial_selectors_do_not_decode_unselected_companion_rows(tmp_path):
+    path = tmp_path / "partial-companions.db"
+    _stock_companion_database(path, "colmap-main-64805cb870b5")
+    pair_id = 2 * 2_147_483_647 + 11
+    with sqlite3.connect(path) as connection:
+        connection.execute(
+            "INSERT INTO matches(pair_id,rows,cols,data) VALUES(?,0,2,?)",
+            (pair_id, b""),
+        )
+        connection.execute(
+            "UPDATE rig_sensors SET sensor_from_rig=? WHERE rig_id=3",
+            (b"",),
+        )
+
+    with pytest.raises(ValueError, match="sensor_from_rig byte count"):
+        _core.read_colmap_db(str(path))
+    assert _core.read_colmap_db_image(str(path), 2).image_id == 2
+    assert _core.read_colmap_db_pair(str(path), 11, 2).num_pairs == 1
+
+
+def test_maxx_pose_prior_rows_remain_guarded_until_extended_fields_land(tmp_path):
+    path = tmp_path / "maxx-prior.db"
+    _empty_profile_database(path, "colmap-4.1.1")
+    with sqlite3.connect(path) as connection:
+        connection.execute(
+            "ALTER TABLE pose_priors ADD COLUMN rotation BLOB"
+        )
+        connection.execute(
+            "ALTER TABLE pose_priors ADD COLUMN rotation_covariance BLOB"
+        )
+        connection.execute(
+            "ALTER TABLE pose_priors ADD COLUMN pose_covariance BLOB"
+        )
+        connection.execute(
+            "INSERT INTO pose_priors"
+            "(pose_prior_id,corr_data_id,corr_sensor_id,corr_sensor_type,"
+            "position,position_covariance,gravity,coordinate_system,"
+            "rotation,rotation_covariance,pose_covariance) "
+            "VALUES(1,1,1,0,NULL,NULL,NULL,-1,NULL,NULL,NULL)"
+        )
+
+    with pytest.raises(ValueError, match="MAXX pose-prior extensions"):
+        _core.read_colmap_db(str(path))
+
+
+def test_stock_companion_writer_guard_does_not_touch_destination(tmp_path):
+    source = tmp_path / "stock-companions.db"
+    _stock_companion_database(source, "colmap-4.1.1")
+    database = _core.read_colmap_db(str(source))
+    absent = tmp_path / "absent.db"
+    existing = tmp_path / "existing.db"
+    existing.write_bytes(b"preserve-this-destination")
+    before = existing.read_bytes()
+
+    for destination in (absent, existing):
+        with pytest.raises(
+            ValueError, match="rigs, frames, and pose priors"
+        ):
+            _core.write_colmap_db(database, str(destination))
+
+    assert not absent.exists()
+    assert existing.read_bytes() == before
 
 
 def test_read_current_profile_recovered_cameras_and_partial_pair(tmp_path):
@@ -733,6 +1473,17 @@ def _camera_fingerprint(value):
     )
 
 
+def _array_fields_fingerprint(value, names):
+    return tuple(
+        (
+            np.asarray(getattr(value, name)).dtype.str,
+            np.asarray(getattr(value, name)).shape,
+            np.asarray(getattr(value, name)).tobytes(),
+        )
+        for name in names
+    )
+
+
 def _database_fingerprint(value):
     return (
         value.profile,
@@ -751,6 +1502,45 @@ def _database_fingerprint(value):
         np.asarray(value.prior_focal_length).tobytes(),
         tuple(_feature_fingerprint(value.feature_at(i)) for i in range(value.num_images)),
         _graph_fingerprint(value.match_graph),
+        _array_fields_fingerprint(
+            value.rig_frames,
+            (
+                "rig_ids",
+                "rig_reference_sensor_types",
+                "rig_reference_sensor_ids",
+                "rig_sensor_offsets",
+                "rig_sensor_types",
+                "rig_sensor_ids",
+                "rig_sensor_pose_present",
+                "rig_sensor_quaternions",
+                "rig_sensor_translations",
+                "frame_ids",
+                "frame_rig_ids",
+                "frame_data_offsets",
+                "frame_data_ids",
+                "frame_sensor_types",
+                "frame_sensor_ids",
+            ),
+        ),
+        (
+            value.pose_priors.generalized,
+            _array_fields_fingerprint(
+                value.pose_priors,
+                (
+                    "prior_ids",
+                    "correlated_data_ids",
+                    "correlated_sensor_ids",
+                    "correlated_sensor_types",
+                    "coordinate_systems",
+                    "position_present",
+                    "positions",
+                    "position_covariance_present",
+                    "position_covariances",
+                    "gravity_present",
+                    "gravities",
+                ),
+            ),
+        ),
     )
 
 
@@ -1200,7 +1990,12 @@ def test_partial_image_and_pair_equal_slices_of_full_read(tmp_path):
     selected_pair = sceneio.read_partial(path, pair=(11, 2))
     assert _feature_fingerprint(selected_image) == _feature_fingerprint(full.feature(11))
     assert _graph_fingerprint(selected_pair) == _graph_fingerprint(full.match_graph)
-    assert sceneio.capabilities("colmap_db").partial_selectors == ("image_id", "pair")
+    capabilities = sceneio.capabilities("colmap_db")
+    assert capabilities.partial_selectors == ("image_id", "pair")
+    assert "stock_rig_frame_reads" in capabilities.supported_features
+    assert "stock_pose_prior_reads" in capabilities.supported_features
+    assert "rig_frame_writes" in capabilities.unsupported_features
+    assert "pose_prior_writes" in capabilities.unsupported_features
 
 
 def test_inspect_matches_decoded_metadata_without_blob_arrays(tmp_path):
@@ -1513,7 +2308,7 @@ finally:
     )
 
 
-def test_nonempty_unrepresented_table_is_rejected_and_handle_released(tmp_path):
+def test_nonempty_rig_table_is_represented_and_handle_released(tmp_path):
     path = tmp_path / "rig.db"
     sceneio.write(_database(), path)
     connection = sqlite3.connect(path)
@@ -1524,8 +2319,11 @@ def test_nonempty_unrepresented_table_is_rejected_and_handle_released(tmp_path):
         connection.commit()
     finally:
         connection.close()
-    with pytest.raises(sceneio.FormatError, match="non-empty 'rigs'"):
-        sceneio.read(path)
+    database = sceneio.read(path)
+    assert database.rig_frames.rig_ids.tolist() == [1]
+    assert database.rig_frames.num_frames == 0
+    del database
+    gc.collect()
     os.replace(path, tmp_path / "moved.db")
 
 

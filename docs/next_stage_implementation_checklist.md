@@ -4648,8 +4648,10 @@ Remote C0 evidence:
         independently for each endpoint, expose typed `Camera` values and
         prior-focal flags on `MatchGraph`, and keep the legacy writer guarded
         until C1e emits the exact current profile.
-  - [ ] C1c: populated rigs, frames, frame data, and both pose-prior layouts.
-  - [ ] C1d: MAXX descriptor/color/score/provenance/marker/quality/source fields.
+  - [x] C1c: populated stock rigs, frames, frame data, and both stock
+        pose-prior layouts.
+  - [ ] C1d: extended MAXX pose priors plus
+        descriptor/color/score/provenance/marker/quality/source fields.
   - [ ] C1e: exact selected-profile writers and explicit conversion reports.
 - [ ] C2: COLMAP MVS depth/normal matrices, consistency graphs, visibility,
       and workspace companions; keep Gipuma DMB distinct.
@@ -4680,6 +4682,52 @@ C1b local evidence on 2026-07-29:
   read, 154 MB/s direct write, 1.81 ms inspection, and 0.59-0.60 ms indexed
   selectors with no Python-sized staging allocation; the dedicated current
   profile tests, not that legacy row, prove recovered-camera behavior;
-- complete local validation passes `3,616` tests with four skips, the focused
+- complete local validation covers 3,620 tests: 3,616 passed and four skips;
+  the focused
   gate passes 24 tests, Ruff and wheel smoke pass, and all three independent
   review lenses report no remaining blocker after their findings were fixed.
+
+C1c implementation and release checklist:
+
+- [x] Add public nested `ColmapRigFrameSet` and `ColmapPosePriorSet` records
+      without conflating database frames with posed sparse-reconstruction
+      frames.
+- [x] Decode populated stock 3.13, 4.1.1, and current rig/frame tables and
+      their image-linked/generalized pose-prior layouts.
+- [x] Preserve SQL NULL separately from exact-size float64 BLOBs, including
+      signed zero and producer NaN payload bits; expose covariance in logical
+      row-major order after an explicit Eigen column-major wire transpose.
+- [x] Validate non-sentinel uint32 rig/frame/sensor/prior IDs, non-negative
+      signed-SQLite-range uint64 data IDs, enum codes, CSR structure, rig
+      ownership, frame membership, quaternion
+      normalization, exact BLOB sizes/types, and legacy image/camera links.
+- [x] Keep modern orphan prior correlations representable because the stock
+      schema has no foreign key; retain exact triple uniqueness.
+- [x] Keep image/pair selectors local while full reads validate all companion
+      rows; cover rejected-row handle release and nested-array lifetime.
+- [x] Extend low-level and public inspection with companion counts and the
+      prior layout without decoding BLOBs.
+- [x] Re-export both records, update public symbol/snapshot/wheel contracts,
+      and guard the legacy writer before destination creation or mutation.
+- [x] Keep every populated MAXX pose-prior row guarded until C1d and every
+      exact-profile write guarded until C1e.
+- [x] Record final full-suite, collection, benchmark, wheel, Ruff, diff,
+      three-review, and commit evidence below.
+
+C1c final local evidence on 2026-07-29:
+
+- the exact collection is 3,659 nodes with sorted normalized SHA-256
+  `d98dd314db7a05ab87d392864988de8a7fab52cde37605216b121af6e9ca2d6d`;
+- the complete suite passes 3,655 tests with four documented skips; the final
+  focused codec suite passes 127 tests with the one expected Windows filename
+  skip, and the assembly/compatibility/reconstruction gate passes 95 tests;
+- the unchanged 9.9 MB legacy benchmark fixture measures 1,092 MB/s full
+  read, 166 MB/s direct write, 1.823 ms inspection, 0.784 ms image selection,
+  and 0.735 ms pair selection, with no Python-sized staging allocation;
+- wheel smoke, Ruff, diff checks, and the public compatibility snapshots pass;
+- Ampere, Epicurus, and Lagrange signed off the lifetime/ABI, correctness and
+  test-soundness, and platform/public-API/documentation lenses after the
+  permanent regression assertions were completed;
+- the green C1c commit includes the required co-author trailer. Remote
+  sanitizer and three-toolchain validation remain exact-commit release gates,
+  not claims made by this local evidence.

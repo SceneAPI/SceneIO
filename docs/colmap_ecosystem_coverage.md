@@ -50,9 +50,9 @@ Status terms:
 | Markers and marker projections, binary/text | planned | Extend `Reconstruction` with lossless typed arrays; optional sidecars remain absent when no values exist |
 | Image-time, point-frame, and time-frame sidecars | planned | Preserve exact IDs, timestamps, sync groups, labels, version, and file-presence state |
 | ChArUco board and calibration sidecars | planned | Add typed board/calibration records with exact per-image poses and errors |
-| Stock COLMAP 3.13 database | partial | Exact profile identity is implemented; add image-linked pose-prior and populated rig/frame representation |
-| Stock COLMAP 4.1.1 database | partial | Exact profile identity is implemented; add populated rigs/frames/generalized pose priors |
-| Current upstream database | partial | Exact profile identity and lossless recovered `camera1`/`camera2` reads are implemented; add populated rig/frame/prior rows and the exact writer |
+| Stock COLMAP 3.13 database | partial | Exact profile identity and populated rig/frame/image-linked-prior reads are implemented; add the exact writer |
+| Stock COLMAP 4.1.1 database | partial | Exact profile identity and populated rig/frame/generalized-prior reads are implemented; add the exact writer |
+| Current upstream database | partial | Exact profile identity, populated rig/frame/generalized-prior reads, and lossless recovered `camera1`/`camera2` reads are implemented; add the exact writer |
 | Current OpsiClear/MAXX database | partial | Exact ownership/profile identity is implemented; represent timing, quality, provenance, markers, colors, descriptor metadata, scores, and extended priors |
 | Database profile import/export reports | planned adapter | Emit structured compatibility results and explicit field-loss decisions |
 | COLMAP MVS depth maps | planned | New contiguous `width&height&1&` float32 codec; do not alias Gipuma DMB |
@@ -143,8 +143,10 @@ Remote C0 evidence for correction and validation commit `7046761`:
   represented.
 - [x] Represent recovered `camera1`/`camera2` values, endpoint-local SQL NULL,
   and prior-focal flags in `MatchGraph`.
-- [ ] Represent rigs, rig sensors, frames, frame data, generalized and
-  extended pose priors, descriptor dtype/type/name/dimension, keypoint colors,
+- [x] Represent stock rigs, rig sensors, frames, frame data, and both stock
+  pose-prior layouts.
+- [ ] Represent extended MAXX pose priors, descriptor
+  dtype/type/name/dimension, keypoint colors,
   match scores, pair provenance, timing/video metadata, quality, markers, and
   ownership metadata.
 - [ ] Make the writer emit an exact selected profile; stop emitting the current
@@ -172,9 +174,9 @@ C1a profile evidence:
   the authorized `colmap_mod` database exporter/creator; the current-upstream
   signature was frozen from official `64805cb` DDL. Tests also mutate schema,
   application id, version, and ownership fields one at a time;
-- this unit deliberately does not loosen the payload reader. Current-upstream
-  recovered cameras and populated stock/MAXX companion tables remain guarded
-  until C1b-C1d provide lossless records.
+- at the C1a checkpoint, current-upstream recovered cameras and populated
+  companion tables remained guarded. C1b later landed recovered-camera reads,
+  C1c landed stock rig/frame/prior reads, and MAXX extensions remain C1d.
 
 Local C1a verification:
 
@@ -214,13 +216,45 @@ C1b recovered-camera contract:
   image/pair reads with no Python-sized staging allocation. Recovered-camera
   correctness and allocation behavior are covered by the dedicated current
   profile full/partial/lifetime tests rather than claimed by that legacy row;
-- the complete local suite passes `3,616` tests with four documented skips;
+- complete local validation covers 3,620 tests: 3,616 passed and four
+  documented skips;
   the focused recovered-camera gate passes 24 tests, Ruff and wheel smoke pass,
   and the collection contract is 3,620 nodes at
   `a22141fcd211da2437e14a4ba062ab0356e7e1285cf6f7e80846bf2a05703fba`;
 - Ampere, Epicurus, and Lagrange completed the native-lifetime,
   correctness/test, and platform/documentation reviews. Findings from the
   first round were corrected before final sign-off.
+
+C1c stock companion-row contract:
+
+- `ColmapDatabase.rig_frames` exposes a nested owned `ColmapRigFrameSet`
+  containing non-sentinel uint32 rig/frame/sensor IDs, uint64 data IDs and
+  CSR offsets,
+  reference sensors, non-reference sensors, nullable `sensor_from_rig`
+  transforms in WXYZ order, and frame-to-datum assignments;
+- `ColmapDatabase.pose_priors` exposes `ColmapPosePriorSet`. Stock 3.13 rows
+  normalize their image-linked association while retaining
+  `generalized=False`; 4.1.1 and current rows retain independent prior IDs,
+  correlation triples, coordinate-system codes, position, covariance, and
+  gravity;
+- presence flags preserve SQL NULL independently from the numeric payload.
+  Exact-size producer BLOBs retain signed zero and NaN payload bits. Public
+  covariance views are row-major while the codec explicitly transposes the
+  Eigen column-major wire buffer;
+- full reads validate the complete rig/frame/prior aggregate. Existing
+  image/pair selectors remain index-local and do not decode unrelated
+  companion BLOBs;
+- inspection reports rig, sensor, frame, frame-data, and pose-prior counts
+  plus the legacy/modern layout without decoding BLOBs;
+- the legacy writer refuses every populated companion record before opening
+  the destination. MAXX extended priors remain guarded until C1d, and exact
+  stock writers remain C1e work;
+- final local validation collects 3,659 nodes at
+  `d98dd314db7a05ab87d392864988de8a7fab52cde37605216b121af6e9ca2d6d`
+  and passes 3,655 tests with four documented skips. The focused codec gate
+  passes 127 tests with one expected Windows filename skip; wheel smoke,
+  Ruff, diff checks, and all three independent review lenses pass. Remote
+  sanitizer and Linux/macOS wheel validation remain release gates.
 
 ### C2 - dense MVS
 
