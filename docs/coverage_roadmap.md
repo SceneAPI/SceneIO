@@ -1,7 +1,7 @@
 # SceneIO — comprehensive coverage roadmap & execution checklist
 
 > Current shipped and branch-local status is tracked in `format_coverage.md`.
-> The status markers below have been reconciled to the live 54-codec registry;
+> The status markers below have been reconciled to the live 55-codec registry;
 > broader checklist boxes remain open where a codec has not completed an
 > aspirational per-format or cross-platform gate. The authoritative
 > implementation sequence for the remaining formats is
@@ -10,6 +10,8 @@
 > [`repository_organization_plan.md`](repository_organization_plan.md), with
 > its reviewed execution checklist in
 > [`next_stage_implementation_checklist.md`](next_stage_implementation_checklist.md).
+> Animated WebP is the 55th local codec; the preceding 54-codec hosted package
+> evidence remains a dated checkpoint rather than evidence for this addition.
 > The current branch-local COLMAP dense checkpoint adds exact depth/normal
 > matrices, consistency graphs, fused visibility, and lazy canonical/PMVS/CMP
 > workspace adapters. It contains no encoded-media decoder; image paths remain
@@ -276,6 +278,9 @@ zero‑copy + convention tags.
 | `MeshScene` | ordered `Mesh` primitives; mesh ranges/names; shared `MaterialSet`; node hierarchy and local transforms; scene roots/names/default | glTF/GLB, future USD | ✅ |
 | `FeatureSet` | `keypoints` Nx{2,4,6} f32, polymorphic `descriptors` NxD with extractor dtype/dim/name presence, keypoint colors, scores, quality, image time/id/size, and absent-state metadata | HDF5/hloc, COLMAP DB | ✅ |
 | `MatchGraph` | ragged per-pair raw/verified `matches` Mx2 u32, optional score rows, source/retrieval provenance, `F/E/H` 3x3, config, relative pose, and optional recovered endpoint cameras | HDF5/hloc, COLMAP DB | ✅ |
+| `PairCorrespondences` / `CorrespondenceGraph` | indexed or coordinate matches, scores, two-view geometry, ordered pair validation, and per-image feature references | hloc and detector-free matching adapters | ✅ Python-neutral models |
+| `TrackObservation` / `TrackedPointCloud` | sparse XYZ plus aligned per-point image/keypoint observations | reconstruction and dataset adapters | ✅ Python-neutral models; compiled reconstruction uses CSR tracks |
+| `Mask` | HxW bool, `True` means the pixel participates | segmentation, filtering, and dataset adapters | ✅ Python-neutral model |
 | `ColmapDatabase` | cameras, prior-focal flags, ordered features, match graph, nested rig/frame, pose-prior, marker, metadata-only video, and ownership records; exact profile/application/schema version | COLMAP DB | ✅ stock/current/MAXX reads and exact selected-profile writers |
 | `TensorDict` | named ndarrays + attrs | npz, HDF5, safetensors, zarr, parquet | ✅ |
 | `CameraRig` | lossless ragged intrinsics/distortion, exact K/R/P, extrinsics, operational/time/topic metadata + convention tags | OpenCV/ROS/Kalibr calib | ✅ |
@@ -388,7 +393,8 @@ Columns: **Ext/id** · **Record** · **Lib/oracle (license)** · **R/W** ·
 |---|---|---|---|---|
 | ✅ image sequence (dir) | `ImageSequence` | existing image inspectors + independent manifest/PGM fixtures | R+W | lazy flat frames, natural order or exact-timing manifest, bounded transactional copy |
 | ✅ `.y4m` (raw YUV) | `ImageSequence` | original native codec + independent Python oracle | R+W | uint8 mono/420/422/444 planar frames; uncompressed and unpatented |
-| ⬜ animated WebP / APNG | `ImageSequence` | libwebp / libpng | R | royalty‑free frame stacks |
+| ✅ animated WebP | `ImageSequence` | pinned libwebp + Pillow oracle | R+W | fully composited packed RGB/RGBA frames; exact millisecond timing, loop/background metadata, mmap, direct sink, inspect |
+| ⬜ APNG | `ImageSequence` | existing lodepng/miniz substrate + Pillow/spec oracle | R+W | bounded repository-owned animation chunk/state layer |
 
 **Excluded (out of scope):** FBX (proprietary SDK), H.264/H.265/ProRes and any
 patented video codec (per directive), HEIF/HEIC (HEVC patents), Draco‑only
@@ -406,8 +412,8 @@ maintained in `format_gap_implementation_plan.md`:
 2. COLMAP DB, PCD, calibration, and other self-contained formats (generic
    point PLY is complete);
 3. meshes and vendorable LAZ (complete locally);
-4. lazy image directories and raw Y4M (complete locally), followed by animated
-   WebP/APNG and RTMV;
+4. lazy image directories, raw Y4M, and animated WebP (complete locally),
+   followed by APNG and RTMV;
 5. independently gated HDF5/TIFF/E57/Arrow integrations;
 6. heavyweight scene/volume integrations and policy-gated codecs.
 

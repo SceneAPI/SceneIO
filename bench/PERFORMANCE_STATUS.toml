@@ -384,6 +384,16 @@ documentation = "docs/format_coverage.md"
 accepted_subset = ["uint8", "mono", "yuv420", "yuv422", "yuv444", "frame_ranges", "exact_frame_timing"]
 
 [[codec]]
+id = "animated_webp"
+family = "sequences"
+adapter = "repo"
+implementation_owner = "native"
+sources = ["src/cpp/codecs/sequences/animated_webp.cpp"]
+source_suite = "tests/codecs/test_animated_webp.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["lossless", "lossy", "rgb", "rgba", "composited_frames", "exact_millisecond_timing", "loop_count", "background_rgba"]
+
+[[codec]]
 id = "image_sequence"
 family = "sequences"
 adapter = "repo"
@@ -2317,8 +2327,8 @@ fidelity = "lossless"
 comparator = "source-parity-suite"
 fixture = "webp:lossless_rgb8_default"
 backend = "libwebp"
-backend_owner = "fetched"
-backend_source = "cmake/SceneIODependencies.cmake"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/libwebp"
 backend_version = "1.5.0"
 transport_status = "qualified"
 status = "provisional"
@@ -2336,8 +2346,8 @@ fidelity = "lossless"
 comparator = "source-parity-suite"
 fixture = "webp:lossless_rgb8_default"
 backend = "libwebp"
-backend_owner = "fetched"
-backend_source = "cmake/SceneIODependencies.cmake"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/libwebp"
 backend_version = "1.5.0"
 transport_status = "qualified"
 status = "provisional"
@@ -2355,8 +2365,8 @@ fidelity = "lossy"
 comparator = "source-parity-suite"
 fixture = "webp:lossy_rgb8_q90"
 backend = "libwebp"
-backend_owner = "fetched"
-backend_source = "cmake/SceneIODependencies.cmake"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/libwebp"
 backend_version = "1.5.0"
 transport_status = "qualified"
 status = "provisional"
@@ -2374,8 +2384,8 @@ fidelity = "lossy"
 comparator = "source-parity-suite"
 fixture = "webp:lossy_rgb8_q90"
 backend = "libwebp"
-backend_owner = "fetched"
-backend_source = "cmake/SceneIODependencies.cmake"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/libwebp"
 backend_version = "1.5.0"
 transport_status = "qualified"
 status = "provisional"
@@ -2418,6 +2428,44 @@ backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
 transport_status = "qualified"
 status = "provisional"
 correctness_evidence = ["tests/codecs/test_y4m.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "animated_webp"
+profile = "default"
+direction = "encode"
+settings = { mode = "lossless", channels = 4, dtype = "uint8", threads = true, effort = 75, method = 5 }
+fidelity = "lossless"
+comparator = "Pillow"
+fixture = "animated_webp:default"
+backend = "libwebp"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/libwebp"
+backend_version = "1.5.0"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_animated_webp.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "animated_webp"
+profile = "default"
+direction = "decode"
+settings = { mode = "composited_rgba", channels = 4, dtype = "uint8", threads = true }
+fidelity = "lossless"
+comparator = "Pillow"
+fixture = "animated_webp:default"
+backend = "libwebp"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/libwebp"
+backend_version = "1.5.0"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_animated_webp.py"]
 benchmark_evidence = ["bench/BASELINE.md"]
 candidate_backends = []
 evidence_gaps = ["candidate comparison on all required toolchains"]

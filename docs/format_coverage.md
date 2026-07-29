@@ -37,6 +37,18 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > 50-codec validation records below remain evidence for their named commits;
 > the 54-codec tree closes at packaged source `2253e0f`.
 >
+> **Animated WebP checkpoint (2026-07-29):** the live local registry now has
+> 55 codecs: 49 buffer-backed files, three path-native multi-file containers,
+> and three directories. `animated_webp` adds repository-pinned libwebp
+> animation read/write, mmap input, direct sinks, metadata-only inspection,
+> exact millisecond timing, loop/background metadata, and packed owner-safe
+> `ImageSequence` frames. Pillow independently reads SceneIO output and writes
+> SceneIO inputs. The exact local tree collects 3,900 tests and passes 3,895
+> with five documented skips; Ruff, installed-surface smoke, and the 55-row
+> structural benchmark check pass. Cross-platform package evidence remains
+> pending for this addition; the dated 54-codec hosted evidence below remains
+> unchanged.
+>
 > **C3/C4 hosted closure (2026-07-29):** the exact collection is
 > 3,879 nodes with normalized SHA-256
 > `39fe1dc507ed2faea06a75dcc823515ff550dfa742813b89cdcd24a7584ad4f6`.
@@ -657,7 +669,7 @@ SoA, zero-copy to numpy/torch (DLPack), conventions carried as metadata.
 | `PosedViewSet` | `camera` + poses | ✅ record / ⬜ datatype | SE3/view + optional `Camera` intrinsics; per‑source convention tags (order/direction/axis/scale). `"posed_views"` label is informal, Phase‑C |
 | `Camera` | (shared) | ✅ | COLMAP model ids 0-17 + exact `params[]`; reused by `Reconstruction` and `PosedViewSet` |
 | `Image` | `image_sequence` elem | ✅ | interleaved HxWxC (u8/u16/f32), color_space/alpha_mode/maxval metadata, owner-safe zero-copy `pixels` |
-| `ImageSequence` | `image_sequence` | ✅ | owned lazy encoded-frame paths or owned uint8 planar Y/U/V frames; exact optional int64-ns timing, dimensions, chroma sampling/siting, range, matrix, interlace, rate, and aspect metadata |
+| `ImageSequence` | `image_sequence` | ✅ | owned lazy encoded-frame paths, owned uint8 planar Y/U/V frames, or owned packed uint8/uint16/float32 frames; exact optional int64-ns timing, dimensions, color/alpha/maxval, loop, background, chroma sampling/siting, range, matrix, interlace, rate, and aspect metadata |
 | `TensorDict` | (named arrays) | ✅ | dict‑like, 12 numpy dtypes (dtype‑erased), zero‑copy views; backs NPZ and mapped safetensors |
 | `PointCloud` | `point_cloud` (new) | ✅ | xyz + rgb/rgb16 + normals + intensity, optional organized width/height and acquisition viewpoint, plus an optional validated lossless LAS waveform sidecar; backs `.xyz`, count-prefixed `.pts`, point `.ply`, PCD, plain `.las`, and `.laz` |
 | `DepthMap` | `depth_map` | ✅ | scalar f32 depth + scale/unit/invalid + confidence; backs scalar DMB, explicit typed PFM/PNG/EXR adapters, and COLMAP MVS camera-Z/nonpositive depth |
@@ -670,6 +682,9 @@ SoA, zero-copy to numpy/torch (DLPack), conventions carried as metadata.
 | `PoseGraph` | `pose_graph` | ✅ record / ⬜ datatype | ordered typed SE(3) nodes/edges, fixed-node flags, exact ids, XYZW transforms, and symmetric 6×6 information matrices with explicit direction/order metadata |
 | `FeatureSet` | `feature_set` | ✅ record / ⬜ datatype | per-image id/name/camera/size/time; Nx{2,4,6} f32 keypoints; descriptors in u8/i8/f16/f32/f64 with dtype/dimension/name presence; optional RGB colors, quality, and scores |
 | `MatchGraph` | `match_graph` | ✅ record / ⬜ datatype | canonical COLMAP image pairs and pair ids; ragged raw/verified u32 matches; optional parallel scores, provenance flags/retrieval score, F/E/H, config, relative pose, and recovered endpoint cameras |
+| `PairCorrespondences` / `CorrespondenceGraph` | neutral correspondence models | ✅ Python records | indexed or detector-free coordinate matches with optional scores and two-view geometry; the graph validates ordered image pairs and references to per-image feature sets |
+| `TrackObservation` / `TrackedPointCloud` | neutral sparse-track models | ✅ Python records | per-point lists of `(image_id, keypoint_idx)` observations aligned with sparse XYZ; compiled `Reconstruction` carries the corresponding compact CSR track representation |
+| `Mask` | neutral dense mask | ✅ Python record | bool HxW with `True` meaning that a pixel participates; reusable by feature, depth, segmentation, and dataset adapters without format-specific duplication |
 | `ColmapDatabase` | `match_graph` | ✅ record / ⬜ datatype | cameras, prior-focal flags, ordered features, match graph, nested rig/frame, pose-prior, marker, metadata-only video, and ownership records; exact profile/application/schema identity |
 | `ColmapRigFrameSet` | COLMAP DB companion | ✅ nested record | non-sentinel uint32 rig/frame/sensor IDs, uint64 data IDs/CSR offsets, WXYZ `sensor_from_rig`, SQL-NULL pose presence, and frame assignments; database frames intentionally carry no world pose |
 | `ColmapPosePriorSet` | COLMAP DB companion | ✅ nested record | stock plus extended MAXX priors; nullable position/gravity and XYZW `cam_from_world` rotation; logical row-major 3x3/6x6 covariance with explicit variable-order and unit tags |
@@ -769,10 +784,12 @@ public-domain SQLite amalgamation statically linked into `_core`.
 | `laz` | `PointCloud` | R+W | **laspy 2.7 + lazrs 0.8.1** | pinned LAZperf 3.4.0; standard formats 0–3/6–8; strict LASzip VLR/chunk extents; chunk-aware ranges; seekable streaming sink |
 | `image_sequence` | `ImageSequence` | R+W | independent manifest/PGM fixtures + existing image-codec parity suites | flat image directories; deterministic natural order or strict versioned manifest; lazy owned paths; exact optional timing; heterogeneous frames reject; transactional bounded-copy writer; frame ranges |
 | `y4m` | `ImageSequence` | R+W | independent Python parser/writer + exact golden bytes | original dependency-free YUV4MPEG2 subset; uint8 mono/4:2:0/4:2:2/4:4:4 planar frames, odd dimensions, exact rational timing, mmap, streaming sink, inspect, and frame ranges; no RGB conversion or video-framework dependency |
+| `animated_webp` | `ImageSequence` | R+W | Pillow/libwebp animation-container oracle in `tests/codecs/test_animated_webp.py` | repository-pinned libwebp mux/demux/animation APIs; fully composited packed uint8 RGB/RGBA frames, exact millisecond timing, loop/background metadata, mmap, streaming sink, and metadata-only inspection |
 
 ### Repository-owned COLMAP workflow adapters
 
-The 54-codec registry is unchanged. The lazy `sceneio.colmap` namespace adds
+The COLMAP adapter surface is unchanged by the 55th codec. The lazy
+`sceneio.colmap` namespace adds
 repository-owned read/write adapters for fork sparse companions, MappingInput
 v1/v2, MegaLoc artifact directories, rig JSON, SIFT text, stock and dense
 image-pair text (including positional cap rows), feature-match blocks, and
@@ -800,7 +817,7 @@ requirements for COLMAP ecosystem closure.
 
 ### ⬜ Pending — declared roadmap gaps
 
-- Sequence/dataset: animated WebP, APNG, and RTMV.
+- Sequence/dataset: APNG and RTMV. Animated WebP is complete.
 - Optional scientific/container: HDF5, hloc feature/match layouts, TIFF, E57,
   and Parquet/Arrow.
 - Chunked/heavyweight: Zarr v2/v3, USD/USDZ, and OpenVDB.
@@ -834,8 +851,8 @@ expanded 54-codec benchmark/oracles.
 | nanobind + scikit‑build‑core build | ✅ | abi3/cp312, `NB_STATIC`; `Python::SABIModule`, `nanobind-static-abi3`, and the platform suffix are configure-checked; local Windows emits `_core.pyd` against `python3.dll`, Ubuntu emits `_core.abi3.so` without libpython |
 | cibuildwheel release path | ✅ | one verified sdist feeds Linux/macOS/Windows wheels; locked build inputs, all-50 installed smoke, per-wheel inventory, and tag-only publication in `publish.yml`; final build-only run `30406706115` and downloaded-artifact inspection pass, while tagging and publication remain user-gated |
 | CI parity (oracles in CI) | ✅ | At `a5e7fa4`, normal Linux CI passes 2,914 tests with nine documented platform/oracle skips, the 50-codec performance guard, pinned GCC 10 portability, and the three-OS focused matrix |
-| Codec registry + `read`/`write`/`inspect`/`read_partial`/`detect` | ✅ | inspection covers all 54; bounded partial hooks are capability-specific |
-| Repo-maintained stable codec adapters | ✅ | all 54 production adapters, grammars, convention guards, inspectors, partial capability policies/available paths, and sinks live in `src/cpp` / `src/sceneio`; separately installed implementations and executables are test/reference oracles only |
+| Codec registry + `read`/`write`/`inspect`/`read_partial`/`detect` | ✅ | inspection covers all 55; bounded partial hooks are capability-specific |
+| Repo-maintained stable codec adapters | ✅ | all 55 production adapters, grammars, convention guards, inspectors, partial capability policies/available paths, and sinks live in `src/cpp` / `src/sceneio`; separately installed implementations and executables are test/reference oracles only |
 | Offline native-source closure | ✅ | all selected native sources—including libwebp 1.5.0—are stored in-tree and the production CMake graph has no native-source fetch; local exact-tree proof plus final MSVC, GCC 10, and AppleClang sdist-to-wheel execution and artifact inspection pass |
 | Zero‑copy numpy + torch (DLPack) | ✅ | validated per codec |
 | Conventions‑as‑metadata + write guards | ✅ | record‑don't‑convert enforced |
@@ -861,6 +878,7 @@ incremental.
 | Format id | Container | Read | Write | Inspect | Partial selectors | Stream read | Stream write | Lossy-capable | Native feature |
 |---|---|---|---|---|---|---|---|---|---|
 <!-- sceneio-capability-rows:start -->
+| `animated_webp` | file | yes | yes | yes | - | yes | yes | yes | - |
 | `bal` | file | yes | yes | yes | - | yes | yes | no | - |
 | `bmp` | file | yes | yes | yes | - | yes | yes | no | - |
 | `bundler` | file | yes | yes | yes | - | yes | yes | no | - |
@@ -958,7 +976,7 @@ names from `_core.__native_features__`.
 | point range `points=(start,stop)` | XYZ, PTS, binary generic PLY, uncompressed binary PCD, LAS, Gaussian PLY, compressed PLY, SOG, KSplat, SPLAT | `PointCloud` / `GaussianCloud`, with convention metadata preserved |
 | face range `faces=(start,stop)` | generic mesh PLY, STL, OFF | `Mesh`; PLY/OFF retain the complete vertex domain, while STL returns local canonical triangle soup |
 | state range `states=(start,stop)` | EuRoC state CSV | `StateTrajectory` with convention metadata preserved |
-| frame range `frames=(start,stop)` | image directories, raw Y4M | `ImageSequence`; directory frames remain lazy encoded paths and Y4M copies only selected planar frames |
+| frame range `frames=(start,stop)` | image directories, raw Y4M | `ImageSequence`; directory frames remain lazy encoded paths and Y4M copies only selected planar frames; animated WebP currently exposes full composited reads and does not claim a bounded frame selector |
 | `image_id` | COLMAP binary + text | one-image `Reconstruction` plus every camera required by its retained modern rig/frame (or its one legacy camera); no point-container read |
 | `image_id` | COLMAP SQLite database | one compiled `FeatureSet`; unrelated keypoint/descriptor BLOBs remain unread |
 | unordered `pair=(image_id1,image_id2)` | COLMAP SQLite database | one compiled `MatchGraph` with raw/verified matches and optional geometry |

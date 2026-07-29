@@ -11,6 +11,7 @@
   "representative_fixture_fingerprints": {
     "algorithm": "sha256-canonical-fixture-v1",
     "builder_ast_functions": [
+      "_animated_webp_fixture",
       "_gauss",
       "_img_u8",
       "_mesh_scene",
@@ -21,6 +22,7 @@
       "_y4m_fixture"
     ],
     "builder_ast_sources": {
+      "_animated_webp_fixture": "bench/io_bench/fixtures/sequences.py",
       "_gauss": "bench/io_bench/fixtures/splats.py",
       "_img_u8": "bench/io_bench/fixtures/images.py",
       "_mesh_scene": "bench/io_bench/fixtures/meshes.py",
@@ -31,11 +33,12 @@
       "_y4m_fixture": "bench/io_bench/fixtures/sequences.py"
     },
     "parent_and_candidate_builder_ast_sha256": "ce8dda677da61550035dcd2062d4cb53aed20f21e37024d87d5f50449ba1fbfd",
-    "current_builder_ast_sha256": "19615edbed6be740f52418054ef1d72a413308da4ee5ed905cfbb04fe4c4cf86",
+    "current_builder_ast_sha256": "3362273ded090c177fb6e869920475102784ab307d7511a65f6088a41f4eb1c5",
     "fixtures": {
       "camera_calibration": "5e2b5f1e70aa57bd8d219b06a16ce36dfec48aa4d0905ef45cdf503cca8b511c",
       "gaussian_cloud": "dc358708428493fafd834f6c9626f87dd1e91626d324fea3865320561176b1cf",
       "image_rgb8": "a47c7a9af619b88f4a861d0d0233ce89cf8497d5d934bf43bf9ccf2b7c4778f6",
+      "image_sequence_animated_rgba": "3f35235980954ad241d18bb2c04d08359f3765ca499afc9e53c5da7d130624d1",
       "image_sequence_yuv420": "f4bd49409011672e13a22eaf899edb621715440e9c3103c6bec692463fafd398",
       "mesh_scene": "69f8355dbb149640abafa5221ab7a6a09f56562d588a044796591ce5016b8b6d",
       "point_cloud_ply": "718f1d8592ca964d6b8303ca73f77f8739a525d954d50865cc904705fd939da3",
@@ -486,13 +489,25 @@
       "family_functions": {
         "build_sequence_specs": {
           "source": "bench/io_bench/families/sequences.py",
-          "ast_sha256": "43d539bd9c359628ccb1d28f93dc5e0936d25bb54da53ceca491d76969969905"
+          "ast_sha256": "e0f26396f9676b820e30fcd6314e8133d45a02cab0c7b39d8208850f5f6e956f"
         }
       },
       "facade_family_exports": [
         "build_sequence_specs"
       ],
       "functions": {
+        "_animated_webp_fixture": {
+          "source": "bench/io_bench/fixtures/sequences.py",
+          "ast_sha256": "930f439dfbf2d96fa13c29c3cfb2c9706b6f8e99de0f5d720835aadbdf250215"
+        },
+        "_animated_webp_oracle_read": {
+          "source": "bench/io_bench/oracles/sequences.py",
+          "ast_sha256": "9495605c00bb75fee9a845d574419863c47ca61cde7fce21d9da3a1c3459ff22"
+        },
+        "_animated_webp_oracle_write": {
+          "source": "bench/io_bench/oracles/sequences.py",
+          "ast_sha256": "69b43aadf98e23589daa098b9019db0dfe09d006a08a56253dfd534bccaddbf4"
+        },
         "_image_sequence_directory_fixture": {
           "source": "bench/io_bench/fixtures/sequences.py",
           "ast_sha256": "26ed06f11389b0e95e1345ed1bd0709e359dfb669fc90b9071de51511a64a949"
@@ -577,18 +592,18 @@
   },
   "r3_2_qualification": {
     "source": "bench/io_bench/qualification.py",
-    "builtin_count": 54,
-    "timed_count": 37,
+    "builtin_count": 55,
+    "timed_count": 38,
     "reviewed_exemption_count": 17,
-    "ledger_sha256": "bd5a297e58c893539c9f3bfc9e28610e738d247aa9b0bd27674046ca6518ba67"
+    "ledger_sha256": "9b9d75e8e9284769f6339adb80e2b0e1e8547b3f14a30bcae870f9adb8b2ffbd"
   },
   "r3_2_runner_extraction": {
     "parent_commit": "cd322685d3de86931ec4264261924fb3c309b6c4",
     "source": "bench/io_bench/runner.py",
     "facade": "bench/bench_io.py",
     "facade_attribute_policy": "alias_all_non_dunder_runner_globals",
-    "facade_attribute_count": 167,
-    "facade_attributes_sha256": "b635c506314048d2fa77895bfd392b28d2849e08a055561c7a5488de4ab46156",
+    "facade_attribute_count": 170,
+    "facade_attributes_sha256": "8dad6ca3d26c86b6f66603ccb602619b69c5847130a909f2733a7ca4c15891de",
     "facade_rebinding_policy": "propagate_historical_attribute_mutations_to_runner",
     "facade_first_import_policy": "preserve_initialized_runner_objects_and_rebindings",
     "facade_reload_policy": "reset_runner_source_definitions_and_restore_aliases",
@@ -606,7 +621,7 @@
       "_directory_specs": "eef733048de3357e52f43095c77b893b7df35b2623a89dcd435a0002b9744436",
       "_evict_file_cache": "551d4db0d86a8eba0911eec7579af093477d3e4e3f6b2b5e371853db6518fe4b",
       "_partial_request": "3d027e6a560e34a808eabd2441d3a1734bdc0d2a9681a6ab0dd301a80cce4386",
-        "_run_benchmark": "bc9daa4e6ffa321a2c6f61db14477ad40a2c0285d7944e948281d9677afcd64e",
+        "_run_benchmark": "5375f57dca33110737ff7f85f050bd8ae94251185d58aceb3d8a3d477c05732f",
       "_run_large_safetensors": "4c7533d0bc4c406858f7e00ed0704966c9a8133655a2629a63075ad7e3a9f29d",
       "_specs": "153fd71dbbd54191b09297c807042017390edb1588069c3b2ec78b7412f0ea82",
       "_sqlite_reference_inspect_colmap_db": "1a4f469a1d30e9b035f81039d678e6fb4749923bdecf372315675e8674507982",
@@ -699,6 +714,7 @@
     "tga",
     "webp",
     "y4m",
+    "animated_webp",
     "hdr",
     "exr",
     "netpbm",

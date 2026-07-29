@@ -39,14 +39,43 @@ _Y4M_CODEC = Codec(
     ),
 )
 
+_ANIMATED_WEBP_CODEC = Codec(
+    "animated_webp",
+    (".webp",),
+    _mmap_reader(_core.read_animated_webp),
+    _file_sink_writer(_core.write_animated_webp),
+    record=_core.ImageSequence,
+    datatype="image_sequence",
+    lossy=True,
+    supported_features=(
+        "lossless",
+        "lossy",
+        "rgb",
+        "rgba",
+        "composited_frames",
+        "exact_frame_timing",
+        "loop_count",
+        "background_rgba",
+    ),
+    unsupported_features=(
+        "sub_millisecond_timing",
+        "zero_duration_frames",
+        "raw_frame_rectangles",
+        "icc",
+        "exif",
+        "xmp",
+    ),
+)
+
 
 def build_sequence_codecs(
     frame_access: ImageFrameAccess,
-) -> tuple[Codec, Codec]:
+) -> tuple[Codec, ...]:
     """Return sequence codecs bound to one live image-frame access object."""
 
     return (
         _Y4M_CODEC,
+        _ANIMATED_WEBP_CODEC,
         Codec(
             "image_sequence",
             (),

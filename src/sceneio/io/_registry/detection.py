@@ -8,6 +8,41 @@ from pathlib import Path
 from sceneio.io._registry.model import Codec
 
 
+def _is_animated_webp(path: Path) -> bool:
+    """Classify WebP animation from RIFF chunks without reading frame payloads."""
+
+    try:
+        file_size = path.stat().st_size
+        with path.open("rb") as stream:
+            header = stream.read(12)
+            if (
+                len(header) != 12
+                or header[:4] != b"RIFF"
+                or header[8:] != b"WEBP"
+            ):
+                return False
+            riff_end = min(
+                file_size,
+                8 + int.from_bytes(header[4:8], "little"),
+            )
+            while stream.tell() + 8 <= riff_end:
+                chunk_header = stream.read(8)
+                if len(chunk_header) != 8:
+                    return False
+                fourcc = chunk_header[:4]
+                chunk_size = int.from_bytes(chunk_header[4:], "little")
+                payload_start = stream.tell()
+                padded_end = payload_start + chunk_size + (chunk_size & 1)
+                if padded_end > riff_end:
+                    return fourcc in {b"ANIM", b"ANMF"}
+                if fourcc in {b"ANIM", b"ANMF"}:
+                    return True
+                stream.seek(padded_end)
+    except OSError:
+        return False
+    return False
+
+
 def detect_path(
     path,
     codecs: Iterable[Codec],
@@ -46,6 +81,12 @@ def detect_path(
             return classify_ply(p)
         except (OSError, ValueError) as exc:
             raise format_error(f"cannot classify PLY {str(path)!r}: {exc}") from exc
+    if (
+        ext == ".webp"
+        and any(codec.id == "animated_webp" for codec in ordered)
+        and _is_animated_webp(p)
+    ):
+        return "animated_webp"
     for codec in ordered:
         if ext in codec.extensions:
             return codec.id
@@ -65,6 +106,18 @@ def detect_path(
         if encoded_format & 0x80 and not encoded_format & 0x40:
             return "laz"
         return "las"
+    if (
+        head.startswith(b"RIFF")
+        and len(head) >= 12
+        and head[8:12] == b"WEBP"
+    ):
+        if (
+            any(codec.id == "animated_webp" for codec in ordered)
+            and _is_animated_webp(p)
+        ):
+            return "animated_webp"
+        if any(codec.id == "webp" for codec in ordered):
+            return "webp"
     for codec in ordered:
         if any(head.startswith(magic) for magic in codec.magic):
             return codec.id

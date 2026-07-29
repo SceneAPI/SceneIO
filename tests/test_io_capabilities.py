@@ -12,6 +12,7 @@ import sceneio
 from sceneio.io import registry
 
 _BUILTINS = {
+    "animated_webp",
     "bal",
     "bmp",
     "bundler",
@@ -102,6 +103,7 @@ _PARTIAL = {
 }
 
 _LOSSY = {
+    "animated_webp",
     "compressed_ply",
     "hdr",
     "jpeg",

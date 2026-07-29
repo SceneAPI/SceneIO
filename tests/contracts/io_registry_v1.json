@@ -2627,6 +2627,82 @@
       }
     },
     {
+      "id": "animated_webp",
+      "extensions": [
+        ".webp"
+      ],
+      "magic_hex": [],
+      "filenames": [],
+      "is_directory": false,
+      "dir_marker": "cameras.bin",
+      "container_kind": "file",
+      "datatype": "image_sequence",
+      "record": {
+        "module": "sceneio._core",
+        "qualname": "ImageSequence"
+      },
+      "selectors": [],
+      "streams_read": true,
+      "streams_write": true,
+      "lossy": true,
+      "requires_features": [],
+      "supported_features": [
+        "lossless",
+        "lossy",
+        "rgb",
+        "rgba",
+        "composited_frames",
+        "exact_frame_timing",
+        "loop_count",
+        "background_rgba"
+      ],
+      "unsupported_features": [
+        "sub_millisecond_timing",
+        "zero_duration_frames",
+        "raw_frame_rectangles",
+        "icc",
+        "exif",
+        "xmp"
+      ],
+      "capabilities": {
+        "format": "animated_webp",
+        "datatype": "image_sequence",
+        "record_type": "ImageSequence",
+        "extensions": [
+          ".webp"
+        ],
+        "filenames": [],
+        "container_kind": "file",
+        "available": true,
+        "can_read": true,
+        "can_write": true,
+        "can_inspect": true,
+        "partial_selectors": [],
+        "streams_read": true,
+        "streams_write": true,
+        "lossy": true,
+        "requires_features": [],
+        "supported_features": [
+          "lossless",
+          "lossy",
+          "rgb",
+          "rgba",
+          "composited_frames",
+          "exact_frame_timing",
+          "loop_count",
+          "background_rgba"
+        ],
+        "unsupported_features": [
+          "sub_millisecond_timing",
+          "zero_duration_frames",
+          "raw_frame_rectangles",
+          "icc",
+          "exif",
+          "xmp"
+        ]
+      }
+    },
+    {
       "id": "image_sequence",
       "extensions": [],
       "magic_hex": [],
@@ -3608,6 +3684,10 @@
         "gaussian_ply",
         "ply_mesh",
         "ply"
+      ],
+      ".webp": [
+        "webp",
+        "animated_webp"
       ]
     },
     "filenames": {},

@@ -1313,6 +1313,27 @@ def _image_sequences(root: Path) -> None:
     assert sceneio.inspect(path).shape == (2, 3, 5, 3)
     assert sceneio.read_partial(path, frames=(1, 2)).y.tobytes() == y[1:].tobytes()
 
+    pixels = np.zeros((2, 3, 5, 4), dtype=np.uint8)
+    pixels[0, ...] = (255, 0, 0, 255)
+    pixels[1, ...] = (0, 255, 0, 192)
+    animation = _core.image_sequence_packed(
+        pixels,
+        np.array([0, 40_000_000], dtype=np.int64),
+        np.array([40_000_000, 60_000_000], dtype=np.int64),
+        "srgb",
+        "straight",
+        None,
+        2,
+        np.array([1, 2, 3, 4], dtype=np.uint8),
+    )
+    animation_path = root / "animation.webp"
+    sceneio.write(animation, animation_path)
+    assert sceneio.detect(animation_path) == "animated_webp"
+    decoded_animation = sceneio.read(animation_path)
+    assert decoded_animation.pixels.tobytes() == pixels.tobytes()
+    assert decoded_animation.durations_ns.tolist() == [40_000_000, 60_000_000]
+    assert sceneio.inspect(animation_path).shape == (2, 3, 5, 4)
+
 
 def _dense_mvs(root: Path) -> None:
     depth = _core.depth_map(
@@ -1601,6 +1622,7 @@ _SMOKE_RUNNERS: Mapping[str, Callable[[Path], None]] = MappingProxyType(
         "exr": _raster_images,
         "webp": _raster_images,
         "y4m": _image_sequences,
+        "animated_webp": _image_sequences,
         "image_sequence": _image_sequences,
         "colmap_sparse_txt": _reconstruction_formats,
         "xyz": _point_formats,

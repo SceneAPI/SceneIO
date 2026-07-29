@@ -30,6 +30,7 @@ _buffer_address
 _colmap_db_conversion_report
 _colmap_db_profile_schema
 _colmap_db_profiles
+_inspect_animated_webp
 _inspect_bal
 _inspect_bmp
 _inspect_bundler
@@ -62,6 +63,7 @@ _inspect_xyz
 _inspect_xyz_file
 _inspect_y4m
 _install_webp_worker_counter
+_is_animated_webp
 _parallel_hardware_lane_cap
 _parallel_lane_count
 _read_colmap_sparse_with_sidecars
@@ -85,6 +87,7 @@ flow_field
 gaussian_cloud
 gltf_external_buffer_uris
 image
+image_sequence_packed
 image_sequence_paths
 image_sequence_yuv
 inspect_colmap_db
@@ -103,6 +106,7 @@ point_cloud
 point_visibility
 pose_graph
 posed_view_set
+read_animated_webp
 read_bal
 read_bmp
 read_bundler
@@ -202,6 +206,7 @@ read_y4m
 read_y4m_frames
 state_trajectory
 tensor_dict
+write_animated_webp
 write_bal
 write_bmp
 write_bundler

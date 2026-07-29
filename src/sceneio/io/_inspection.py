@@ -133,6 +133,9 @@ from sceneio.io._inspectors.reconstruction import (
     inspect_transforms as _inspect_reconstruction_transforms,
 )
 from sceneio.io._inspectors.sequences import (
+    inspect_animated_webp as _inspect_sequence_animated_webp,
+)
+from sceneio.io._inspectors.sequences import (
     inspect_y4m as _inspect_sequence_y4m,
 )
 from sceneio.io._inspectors.splats import (
@@ -224,6 +227,8 @@ def inspect_path(path: str | Path, format_id: str, datatype: str) -> Inspection:
         return _inspect_webp(p, datatype)
     if format_id == "y4m":
         return _inspect_y4m(p, datatype)
+    if format_id == "animated_webp":
+        return _inspect_animated_webp(p, datatype)
     if format_id == "colmap_sparse_txt":
         return _inspect_colmap_text(p, datatype)
     if format_id == "xyz":
@@ -329,6 +334,10 @@ def _inspect_webp(path: Path, datatype: str) -> Inspection:
 
 def _inspect_y4m(path: Path, datatype: str) -> Inspection:
     return _inspect_sequence_y4m(path, datatype)
+
+
+def _inspect_animated_webp(path: Path, datatype: str) -> Inspection:
+    return _inspect_sequence_animated_webp(path, datatype)
 
 
 def _inspect_flo(path: Path, datatype: str) -> Inspection:

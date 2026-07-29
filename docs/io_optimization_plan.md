@@ -2,7 +2,7 @@
 
 Status: complete for the original 23-codec O0-O5 scope. Its mmap, direct-sink,
 inspection, differential, memory, and partial-read capability contracts now
-cover the live 54-codec registry; 30 codecs expose bounded selectors. This
+cover the live 55-codec registry; 30 codecs expose bounded selectors. This
 status describes optimized I/O transport and bounded access; it does **not**
 claim that every compression/parser kernel is the fastest viable backend.
 Backend qualification remains available as a trigger-based post-R6 mechanism in
@@ -35,6 +35,11 @@ the earlier 50-row family-extraction fingerprints remain historical evidence.
 Exact-head normal run `30469273173`, instrumented run `30469271293`, and
 nonpublishing three-platform package run `30470889876` pass at packaged source
 `2253e0f`; this closes the current 54-codec transport verification.
+Animated WebP subsequently extends the local transport contracts to 55 rows
+and the buffer-backed differential/sink sweeps to 49. Its 55-row deterministic
+structure capture has normalized SHA-256
+`91fff73b8f1e8e599a4400a7de1f22c053704e89c0fef1ecee55a07703c44e80`;
+cross-platform package evidence remains pending for that addition.
 Current benchmark ownership work does not reopen O0-O5 or change codec
 capabilities or implementation-performance claims. Points close at `45e2757`
 with normal run `30244892746` and compiler-instrumented run `30244892600`.
@@ -148,7 +153,7 @@ and Ubuntu builds use the expected stable extension names. Final build-only run
 and downloaded-artifact inspection.
 
 Post-0.2 format expansion inherits the same gates. The registry currently has
-54 codecs: 48 buffer-backed file containers, three path-native multi-file
+55 codecs: 49 buffer-backed file containers, three path-native multi-file
 containers, and three directory containers (two COLMAP layouts plus lazy image
 sequences). COLMAP SQLite
 remains path-native; SOG, OBJ/MTL, and glTF/external buffers have explicit
@@ -190,6 +195,11 @@ one-sixteenth frame range was 4.19x faster with bounded selected-frame RSS.
 The lazy directory adapter retained encoded paths, used bounded 1 MiB copying,
 and measured 1.45x inspection / 1.61x selected-range gains without decoding
 pixels.
+Animated WebP adds packed owner-safe RGB/RGBA frames over the pinned libwebp
+animation APIs. Its mapped public read and direct sink remove the encoded-size
+Python copies, while metadata-only inspection avoids frame decode. Exact
+timing, loop/background metadata, and independent Pillow cross-read/write
+parity are part of the codec gate.
 
 The representative LAZ point fixture uses a 12.0 MB positions-equivalent
 throughput denominator while both compared records also carry matching RGB
@@ -595,7 +605,7 @@ test-soundness review lenses signed off with no remaining blockers.
 
 The original 23 per-codec **parity suites + the public-API E2E test remain the
 ground-truth oracle**. Optimizations added exactly these guards across the
-**original 23-codec scope**; the registry-driven equivalents now cover all 54:
+**original 23-codec scope**; the registry-driven equivalents now cover all 55:
 
 1. **Differential (path-equivalence) tests** — for every fast path: `fast == slow`
    **bit-exact** (mmap==bytes, zero-copy==copy, sink==buffer, partial==slice). One

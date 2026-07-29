@@ -1,5 +1,29 @@
 # Next-stage implementation checklist
 
+## Post-R6 animated WebP checkpoint (2026-07-29)
+
+- [x] Add packed uint8/uint16/float32 `ImageSequence` storage with parent-pinned
+      read-only views and explicit timing, loop, background, and max-value
+      metadata.
+- [x] Add repository-pinned libwebp animated read/write, mmap input, direct
+      sink, metadata-only inspection, still-versus-animated detection, and
+      independent Pillow cross-read/write tests.
+- [x] Expand the live registry to 55 codecs and the buffer-backed differential,
+      mmap, sink, and inspection sweeps to 49.
+- [x] Record the local 55-row structural capture and focused animated-WebP
+      benchmark in `bench/BASELINE.md`.
+- [x] Record the final complete local suite and lint result for this exact
+      tree: 3,895 passed, five documented skips, Ruff clean, installed-surface
+      smoke passed, and the 55-row structural capture matched.
+- [ ] Obtain normal and build-only cross-platform results for the reviewed
+      branch head before calling animated WebP package-validated.
+- [ ] Implement APNG next, then RTMV. Reuse the canonical `Mask`,
+      `CameraRig`, track, pair, feature, and match models rather than creating
+      format-specific duplicates.
+
+This checkpoint resumes the format queue after the completed R6 organization
+stage. It does not alter the historical R6 scope statements and evidence below.
+
 > **Stable-ABI evidence correction (2026-07-28):** references below to local
 > Windows “abi3 wheels” before the R6 closure record the wheel filename/tag,
 > package inventory, and Python 3.12 smoke result. They do not prove that the
@@ -4561,8 +4585,8 @@ Remote validation checkpoints, only after explicit user authorization:
 - [x] Obtain one final three-lens review and commit the closure record; do not
       start another candidate sweep or format wave first.
 
-Only after this stage is validated may the format queue resume with
-animation-capable `ImageSequence`, animated WebP, APNG, and RTMV.
+This stage is validated. The format queue resumed with animation-capable
+`ImageSequence` and animated WebP; APNG and RTMV are next.
 
 ## 14. Review record
 

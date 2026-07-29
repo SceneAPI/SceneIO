@@ -1157,9 +1157,15 @@ def test_assembly_dependency_direction_and_import_delta_are_exact():
         "952bb8d6d875753ec50cc9516e19ca659bc78d33"
     )
     assert benchmark_contract["hosted_run"] == 30467712842
-    assert benchmark_contract["rows"] == len(CANONICAL_BUILTIN_IDS) == 54
+    assert benchmark_contract["extension_capture"] == (
+        "build/animated-webp-55-row-benchmark.json"
+    )
+    assert benchmark_contract["extension_base_commit"] == (
+        "380cacff5353c35da6088b9d8a6514e8072d9e84"
+    )
+    assert benchmark_contract["rows"] == len(CANONICAL_BUILTIN_IDS) == 55
     assert benchmark_contract["structural_projection_sha256"] == (
-        "fd3cf4a663e737971526afe5884f229237630a0f126b21a1c8ffcde9a6015e4e"
+        "91fff73b8f1e8e599a4400a7de1f22c053704e89c0fef1ecee55a07703c44e80"
     )
     rows = [
         {

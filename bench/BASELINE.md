@@ -3297,3 +3297,42 @@ and
 All four artifacts contain 27 attribution assets; every wheel retains
 `numpy>=1.26` as its only runtime requirement and passes installed smoke plus
 the combined inventory. Publication is skipped.
+
+## Animated WebP sequence checkpoint (2026-07-29)
+
+Animated WebP uses the repository-pinned libwebp animation APIs and Pillow as
+an independent cross-read/write oracle. The focused local MSVC measurement was:
+
+```powershell
+.venv/Scripts/python.exe bench/bench_io.py --runs 3 --scale 0.05 `
+  --only animated_webp --json build/animated-webp-performance.json
+```
+
+| metric | SceneIO | Pillow oracle |
+|---|---:|---:|
+| logical payload / encoded file | 0.8 MB / 0.8 MB | same corpus |
+| buffer write | 23 MB/s | 95 MB/s |
+| buffer read | 493 MB/s | 312 MB/s |
+| public mapped-path read | 462 MB/s | — |
+| traced read peak, bytes / mapped path | 0.8 MB / 0.0 MB | — |
+| traced write peak, bytes / direct sink | 0.8 MB / 0.0 MB | — |
+| full read / metadata inspection | 1.799 ms / 0.061 ms | — |
+| inspection gain | 29.68x | — |
+
+The measured SceneIO/oracle read-throughput ratio is 1.58. The current encoder
+is slower than the Pillow reference on this fixture; both use libwebp-family
+code, but the wrappers and effective settings are not assumed equivalent.
+This is recorded as a measured optimization backlog item, not hidden as a
+regression or used to weaken correctness requirements.
+
+A complete one-run, small-scale local capture covers all 55 registry rows:
+
+```powershell
+.venv/Scripts/python.exe bench/bench_io.py --runs 1 --scale 0.001 `
+  --skip-oracles --json build/animated-webp-55-row-benchmark.json
+```
+
+Its normalized deterministic structural SHA-256 is
+`91fff73b8f1e8e599a4400a7de1f22c053704e89c0fef1ecee55a07703c44e80`.
+These figures are local MSVC evidence. Cross-platform package validation for
+the 55-codec tree is recorded separately after its user-authorized workflow.

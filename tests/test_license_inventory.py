@@ -203,6 +203,7 @@ SOURCE_CLOSURE = {
                 r'^set\(libwebp_SOURCE_DIR '
                 r'"\$\{PROJECT_SOURCE_DIR\}/src/cpp/third_party/libwebp"\)$'
             ),
+            r"^set\(WEBP_BUILD_LIBWEBPMUX ON CACHE BOOL \"\" FORCE\)$",
             r"^set\(WEBP_ENABLE_SIMD ON CACHE BOOL \"\" FORCE\)$",
             (
                 r"add_subdirectory\(\s*\"\$\{libwebp_SOURCE_DIR\}\"\s*"
@@ -212,7 +213,7 @@ SOURCE_CLOSURE = {
             (
                 r"foreach\(_webp_target\s*sharpyuv\s*"
                 r"webpdecode webpdspdecode webputilsdecode webpdecoder\s*"
-                r"webpencode webpdsp webputils webp webpdemux\)"
+                r"webpencode webpdsp webputils webp webpdemux libwebpmux\)"
             ),
             (
                 r"set_target_properties\(\s*\$\{_webp_target\}\s*"

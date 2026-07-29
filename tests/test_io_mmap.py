@@ -416,8 +416,8 @@ def _outcome(call, argument):
 
 
 def test_all_single_file_codecs_mmap_equal_bytes_bit_exact(tmp_path, buffer_codecs):
-    """All 48 buffer codecs decode mmap and bytes to bit-exact records."""
-    assert len(buffer_codecs) == 48
+    """All 49 buffer codecs decode mmap and bytes to bit-exact records."""
+    assert len(buffer_codecs) == 49
     for spec in buffer_codecs:
         expected = _fingerprint(spec.reader(spec.data))
         path = tmp_path / f"sample-{spec.id}.bin"
@@ -460,7 +460,7 @@ def test_registry_uses_mmap_for_every_nonempty_single_file_codec(
         value = sceneio.codecs()[spec.id].read(str(path))
         gc.collect()
         assert _fingerprint(value) == _fingerprint(spec.reader(spec.data))
-    assert mapped_paths == len(buffer_codecs) == 48
+    assert mapped_paths == len(buffer_codecs) == 49
 
 
 def test_all_buffer_entries_accept_readonly_protocol_exporters(buffer_codecs):

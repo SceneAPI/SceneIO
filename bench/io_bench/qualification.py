@@ -210,6 +210,10 @@ COMPARISON_QUALIFICATIONS = MappingProxyType(
             "independent NumPy implementation",
             "bench/io_bench/oracles/sequences.py",
         ),
+        "animated_webp": _timed(
+            "Pillow",
+            "bench/io_bench/oracles/sequences.py",
+        ),
         "image_sequence": _exemption(
             "independent benchmark directory encode/decode throughput",
             "tests/codecs/test_image_sequence.py",

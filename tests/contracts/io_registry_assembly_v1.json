@@ -48,6 +48,7 @@
       "exr": "d32e3c9e82ee923dbaa0eadc6a83661609483b9ed7e7fa86b73acf389e6b43c8",
       "webp": "244bb6c15a8cb8e2dfc1ab0cb02e3290723a18607aaa45b14e189f90831d6ceb",
       "y4m": "113c80bbbb985911a891769bfb02e9853deacab217c4bbb9a1a1676960ca9c7e",
+      "animated_webp": "08a79ab1e8c48046a8c92f8a524b9e4990a87102ccfaf950a2b714e60409ed2c",
       "image_sequence": "5242878a747fae1d464202b7382e0f8986d4c79789fd3b8186b085fbf5194cb0",
       "colmap_sparse_txt": "cbbf77486c5f12613958e3d17ef88dc6c9cef7166a102918d6f0ee8c70afd6bf",
       "xyz": "d2d71f2c768c7b8ed521eae881d8fa7d81a2df09072588827f8f12301c31cc88",
@@ -260,6 +261,10 @@
         "write": "0055c577576c5e4b8de99eca4a9db27237d9e46c1cb60936098f795dde4964bb",
         "read_frames": "bb2ab003f9c2432c713a4e1ff15277557181220841af6c8aaef40031207457ab"
       },
+      "animated_webp": {
+        "read": "43a383aa328930fb73ddb473a4bda169b76bdba9fdf7ae95ed8d5a369ed7f366",
+        "write": "4d985e4716dc3d4279a74051060dda2c4f30fd88a25f620da39d91f1f1a334ba"
+      },
       "image_sequence": {
         "read": "737e28ccb24ee0dc4554841f357cccb324d3b74effdcff43716768d958036bcb",
         "write": "a8447934d937a57dcc6d9672990ce3d2543f8a3a4d651bba4246510bb52ec413",
@@ -354,9 +359,30 @@
     "last": "tests/test_points_binary.py::test_bad_magic_rejected"
   },
   "pytest_candidate_collection": {
-    "count": 3879,
-    "sorted_normalized_node_ids_sha256": "39fe1dc507ed2faea06a75dcc823515ff550dfa742813b89cdcd24a7584ad4f6",
+    "count": 3900,
+    "sorted_normalized_node_ids_sha256": "ecb1435de42300b52b07d0e4c73f67ab52afd3cc31a6eff98ba7af2279b6740d",
     "added_nodes": [
+      "tests/codecs/test_animated_webp.py::test_sceneio_writer_is_lossless_and_oracle_readable",
+      "tests/codecs/test_animated_webp.py::test_pillow_writer_is_sceneio_readable_bit_exact",
+      "tests/codecs/test_animated_webp.py::test_metadata_inspection_does_not_decode_pixels",
+      "tests/codecs/test_animated_webp.py::test_public_path_detect_read_write_and_inspect",
+      "tests/codecs/test_animated_webp.py::test_rgb_and_worker_modes_have_identical_decoded_output",
+      "tests/codecs/test_animated_webp.py::test_identical_frames_preserve_animation_length_and_timing",
+      "tests/codecs/test_animated_webp.py::test_writer_refuses_unrepresentable_timing[timestamps0-durations0-start at zero]",
+      "tests/codecs/test_animated_webp.py::test_writer_refuses_unrepresentable_timing[timestamps1-durations1-contiguous]",
+      "tests/codecs/test_animated_webp.py::test_writer_refuses_unrepresentable_timing[timestamps2-durations2-milliseconds]",
+      "tests/codecs/test_animated_webp.py::test_still_truncated_and_corrupt_inputs_are_rejected",
+      "tests/records/test_image_sequence_record.py::test_packed_frames_own_dtype_exact_samples_and_metadata[uint8-255]",
+      "tests/records/test_image_sequence_record.py::test_packed_frames_own_dtype_exact_samples_and_metadata[uint16-65535]",
+      "tests/records/test_image_sequence_record.py::test_packed_frames_own_dtype_exact_samples_and_metadata[float32-0]",
+      "tests/records/test_image_sequence_record.py::test_packed_rgba_and_grayscale_shapes_and_lifetime",
+      "tests/records/test_image_sequence_record.py::test_packed_validation[pixels0-kwargs0-packed pixels]",
+      "tests/records/test_image_sequence_record.py::test_packed_validation[pixels1-kwargs1-1, 3, or 4]",
+      "tests/records/test_image_sequence_record.py::test_packed_validation[pixels2-kwargs2-alpha_mode]",
+      "tests/records/test_image_sequence_record.py::test_packed_validation[pixels3-kwargs3-alpha_mode]",
+      "tests/records/test_image_sequence_record.py::test_packed_validation[pixels4-kwargs4-maxval]",
+      "tests/records/test_image_sequence_record.py::test_packed_validation[pixels5-kwargs5-maxval]",
+      "tests/records/test_image_sequence_record.py::test_packed_validation[pixels6-kwargs6-background_rgba]",
       "tests/codecs/test_sog.py::test_writer_preserves_tiny_relative_mean_ranges",
       "tests/codecs/test_colmap_db.py::test_read_stock_rigs_frames_and_pose_priors_exactly[colmap-3.13.0]",
       "tests/codecs/test_colmap_db.py::test_read_stock_rigs_frames_and_pose_priors_exactly[colmap-4.1.1]",
@@ -1169,7 +1195,7 @@
           "buffer_codecs"
         ],
         "function_count": 14,
-        "function_ast_sha256": "0a328e46ec9b7609a7648ad3bec25b30b69df6019bb9fc16c118abcb3b655a5e",
+        "function_ast_sha256": "0c2648530d77888fd8dd753a31c79af575bce90dc18694e9e503065032d8a63c",
         "node_suffixes": [
           "test_all_single_file_sinks_are_byte_identical",
           "test_directory_codec_writers_remain_byte_identical_file_sinks",
@@ -1197,7 +1223,7 @@
           "buffer_codecs"
         ],
         "function_count": 50,
-        "function_ast_sha256": "725872e493340a23c990326320b494879cbb8add12c11fe85bb59c8f289db822",
+        "function_ast_sha256": "42f75c8dfba5e27d9d3aa748e3ee1021ba1f23f51f99376c888ed1553df44d6b",
         "node_suffixes": [
           "test_inspect_matches_decoded_metadata_for_buffer_and_directory_codecs",
           "test_inspect_large_npy_reads_only_header",
@@ -1569,7 +1595,7 @@
         }
       }
     },
-    "first": "tests/codecs/test_bal.py::test_oracle_write_sceneio_read_parity_and_conventions",
+    "first": "tests/codecs/test_animated_webp.py::test_sceneio_writer_is_lossless_and_oracle_readable",
     "last": "tests/test_windows_wheel_repair.py::test_repair_wheel_prioritizes_redist_and_disables_mangling"
   },
   "benchmark_parent": {
@@ -1580,8 +1606,10 @@
     ],
     "source_commit": "952bb8d6d875753ec50cc9516e19ca659bc78d33",
     "hosted_run": 30467712842,
-    "rows": 54,
-    "structural_projection_sha256": "fd3cf4a663e737971526afe5884f229237630a0f126b21a1c8ffcde9a6015e4e",
+    "extension_capture": "build/animated-webp-55-row-benchmark.json",
+    "extension_base_commit": "380cacff5353c35da6088b9d8a6514e8072d9e84",
+    "rows": 55,
+    "structural_projection_sha256": "91fff73b8f1e8e599a4400a7de1f22c053704e89c0fef1ecee55a07703c44e80",
     "excluded_key_suffixes": [
       "_mbps",
       "_ms"

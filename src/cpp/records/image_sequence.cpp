@@ -3,6 +3,7 @@
 #include <nanobind/stl/string.h>
 #include <nanobind/stl/vector.h>
 
+#include <algorithm>
 #include <limits>
 #include <optional>
 #include <string>
@@ -20,6 +21,8 @@ using i64_array =
     nb::ndarray<const int64_t, nb::c_contig, nb::device::cpu>;
 using u8_array =
     nb::ndarray<const uint8_t, nb::c_contig, nb::device::cpu>;
+using any_array =
+    nb::ndarray<nb::ro, nb::c_contig, nb::device::cpu>;
 
 template <typename T>
 nb::ndarray<nb::numpy, const T> sequence_view(
@@ -59,6 +62,18 @@ size_t checked_plane_size(
         throw std::length_error(
             std::string(context) + " sequence extent overflows size_t");
     return frames * frame_size;
+}
+
+size_t checked_packed_size(
+    size_t frames, size_t height, size_t width, size_t channels,
+    const char *context) {
+    const size_t plane =
+        checked_plane_size(frames, height, width, context);
+    if (plane != 0 &&
+        channels > std::numeric_limits<size_t>::max() / plane)
+        throw std::length_error(
+            std::string(context) + " channel extent overflows size_t");
+    return plane * channels;
 }
 
 void encode_strings(
@@ -245,6 +260,74 @@ ImageSequence make_yuv_sequence(
     return sequence;
 }
 
+ImageSequence make_packed_sequence(
+    any_array pixels,
+    i64_array timestamps_ns,
+    i64_array durations_ns,
+    const std::string &color_space,
+    const std::string &alpha_mode,
+    std::optional<uint32_t> maxval,
+    std::optional<uint32_t> loop_count,
+    std::optional<u8_array> background_rgba) {
+    if (pixels.ndim() != 3 && pixels.ndim() != 4)
+        throw std::invalid_argument(
+            "image sequence: packed pixels must be (N,H,W) or (N,H,W,C)");
+    ImageSequence sequence;
+    sequence.storage_mode = "packed";
+    sequence.n = pixels.shape(0);
+    sequence.height = pixels.shape(1);
+    sequence.width = pixels.shape(2);
+    sequence.channels = pixels.ndim() == 3 ? 1 : pixels.shape(3);
+    sequence.color_space = color_space;
+    sequence.alpha_mode = alpha_mode;
+    const size_t count = checked_packed_size(
+        sequence.n, sequence.height, sequence.width,
+        sequence.channels, "image sequence packed pixels");
+
+    if (pixels.dtype() == nb::dtype<uint8_t>()) {
+        sequence.frame_dtype = "uint8";
+        sequence.maxval = maxval.value_or(255);
+        const auto *data =
+            static_cast<const uint8_t *>(pixels.data());
+        if (count != 0)
+            sequence.pixels_u8.assign(data, data + count);
+    } else if (pixels.dtype() == nb::dtype<uint16_t>()) {
+        sequence.frame_dtype = "uint16";
+        sequence.maxval = maxval.value_or(65535);
+        const auto *data =
+            static_cast<const uint16_t *>(pixels.data());
+        if (count != 0)
+            sequence.pixels_u16.assign(data, data + count);
+    } else if (pixels.dtype() == nb::dtype<float>()) {
+        sequence.frame_dtype = "float32";
+        sequence.maxval = maxval.value_or(0);
+        const auto *data =
+            static_cast<const float *>(pixels.data());
+        if (count != 0)
+            sequence.pixels_f32.assign(data, data + count);
+    } else {
+        throw std::invalid_argument(
+            "image sequence: packed dtype must be uint8, uint16, or float32");
+    }
+    if (loop_count) {
+        sequence.loop_count_present = true;
+        sequence.loop_count = *loop_count;
+    }
+    if (background_rgba) {
+        if (background_rgba->ndim() != 1 ||
+            background_rgba->shape(0) != 4)
+            throw std::invalid_argument(
+                "image sequence: background_rgba must be (4,) uint8");
+        sequence.background_present = true;
+        std::copy_n(
+            background_rgba->data(), 4,
+            sequence.background_rgba.begin());
+    }
+    assign_timing(sequence, timestamps_ns, durations_ns);
+    validate_image_sequence(sequence);
+    return sequence;
+}
+
 }  // namespace
 
 std::vector<std::string> image_sequence_paths(
@@ -350,19 +433,75 @@ void validate_image_sequence(
                 throw std::invalid_argument(
                     prefix + "frame names must be unique");
         }
-        if (!sequence.y.empty() || !sequence.u.empty() ||
+        if (!sequence.pixels_u8.empty() ||
+            !sequence.pixels_u16.empty() ||
+            !sequence.pixels_f32.empty() ||
+            !sequence.y.empty() || !sequence.u.empty() ||
             !sequence.v.empty())
             throw std::invalid_argument(
-                prefix + "encoded-path storage cannot carry YUV planes");
+                prefix + "encoded-path storage cannot carry pixel planes");
         if (sequence.chroma_subsampling != "none" ||
             sequence.chroma_siting != "none")
             throw std::invalid_argument(
                 prefix + "encoded-path storage has no planar chroma layout");
+        if (sequence.loop_count_present ||
+            sequence.background_present)
+            throw std::invalid_argument(
+                prefix + "encoded-path storage cannot carry animation controls");
+        return;
+    }
+    if (sequence.storage_mode == "packed") {
+        if (!sequence.path_offsets.empty() ||
+            !sequence.name_offsets.empty() ||
+            !sequence.path_utf8.empty() ||
+            !sequence.name_utf8.empty() ||
+            !sequence.y.empty() || !sequence.u.empty() ||
+            !sequence.v.empty())
+            throw std::invalid_argument(
+                prefix + "packed storage cannot carry paths or YUV planes");
+        if (sequence.channels != 1 &&
+            sequence.channels != 3 &&
+            sequence.channels != 4)
+            throw std::invalid_argument(
+                prefix + "packed frames require 1, 3, or 4 channels");
+        if (sequence.chroma_width != 0 ||
+            sequence.chroma_height != 0 ||
+            sequence.chroma_subsampling != "none" ||
+            sequence.chroma_siting != "none")
+            throw std::invalid_argument(
+                prefix + "packed storage has no planar chroma layout");
+        const size_t expected = checked_packed_size(
+            sequence.n, sequence.height, sequence.width,
+            sequence.channels, "image sequence packed pixels");
+        const bool u8 =
+            sequence.frame_dtype == "uint8" &&
+            sequence.pixels_u8.size() == expected &&
+            sequence.pixels_u16.empty() &&
+            sequence.pixels_f32.empty();
+        const bool u16 =
+            sequence.frame_dtype == "uint16" &&
+            sequence.pixels_u8.empty() &&
+            sequence.pixels_u16.size() == expected &&
+            sequence.pixels_f32.empty();
+        const bool f32 =
+            sequence.frame_dtype == "float32" &&
+            sequence.pixels_u8.empty() &&
+            sequence.pixels_u16.empty() &&
+            sequence.pixels_f32.size() == expected;
+        if (!u8 && !u16 && !f32)
+            throw std::invalid_argument(
+                prefix + "packed pixel extent disagrees with dtype/shape");
+        if ((u8 && (sequence.maxval < 1 || sequence.maxval > 255)) ||
+            (u16 &&
+             (sequence.maxval < 1 || sequence.maxval > 65535)) ||
+            (f32 && sequence.maxval != 0))
+            throw std::invalid_argument(
+                prefix + "packed maxval disagrees with frame dtype");
         return;
     }
     if (sequence.storage_mode != "yuv_planar")
         throw std::invalid_argument(
-            prefix + "storage_mode must be encoded_paths|yuv_planar");
+            prefix + "storage_mode must be encoded_paths|packed|yuv_planar");
     if (!sequence.path_offsets.empty() ||
         !sequence.name_offsets.empty() ||
         !sequence.path_utf8.empty() ||
@@ -372,6 +511,18 @@ void validate_image_sequence(
     if (sequence.frame_dtype != "uint8")
         throw std::invalid_argument(
             prefix + "the supported planar tier is uint8");
+    if (!sequence.pixels_u8.empty() ||
+        !sequence.pixels_u16.empty() ||
+        !sequence.pixels_f32.empty())
+        throw std::invalid_argument(
+            prefix + "planar storage cannot carry packed pixels");
+    if (sequence.maxval != 255)
+        throw std::invalid_argument(
+            prefix + "uint8 planar storage requires maxval 255");
+    if (sequence.loop_count_present ||
+        sequence.background_present)
+        throw std::invalid_argument(
+            prefix + "planar storage cannot carry animation controls");
     if (sequence.y.size() != checked_plane_size(
             sequence.n, sequence.height, sequence.width,
             "image sequence Y"))
@@ -462,6 +613,7 @@ void register_image_sequence(nb::module_ &module) {
         .def_ro("color_range", &ImageSequence::color_range)
         .def_ro("matrix", &ImageSequence::matrix)
         .def_ro("interlace", &ImageSequence::interlace)
+        .def_ro("maxval", &ImageSequence::maxval)
         .def_ro("frame_rate_numerator", &ImageSequence::frame_rate_numerator)
         .def_ro("frame_rate_denominator", &ImageSequence::frame_rate_denominator)
         .def_ro("pixel_aspect_numerator", &ImageSequence::pixel_aspect_numerator)
@@ -469,9 +621,31 @@ void register_image_sequence(nb::module_ &module) {
         .def_prop_ro("has_timing", [](const ImageSequence &v) {
             return v.has_timing();
         })
+        .def_prop_ro("has_paths", [](const ImageSequence &v) {
+            return v.has_paths();
+        })
+        .def_prop_ro("has_pixels", [](const ImageSequence &v) {
+            return v.has_pixels();
+        })
         .def_prop_ro("has_chroma", [](const ImageSequence &v) {
             return v.has_chroma();
         })
+        .def_prop_ro("has_loop_count", [](const ImageSequence &v) {
+            return v.loop_count_present;
+        })
+        .def_ro("loop_count", &ImageSequence::loop_count)
+        .def_prop_ro("has_background", [](const ImageSequence &v) {
+            return v.background_present;
+        })
+        .def_prop_ro(
+            "background_rgba",
+            [](nb::handle_t<ImageSequence> self) {
+                const ImageSequence &v =
+                    nb::cast<const ImageSequence &>(self);
+                return sio::view<const uint8_t>(
+                    self, v.background_rgba.data(),
+                    std::vector<size_t>{4});
+            })
         .def_prop_ro("frame_paths", &image_sequence_paths)
         .def_prop_ro("frame_names", &image_sequence_names)
         .def_prop_ro(
@@ -486,6 +660,29 @@ void register_image_sequence(nb::module_ &module) {
                 return sequence_view(v.durations_ns, {v.durations_ns.size()});
             },
             internal)
+        .def_prop_ro(
+            "pixels",
+            [](nb::handle_t<ImageSequence> self) -> nb::object {
+                const ImageSequence &v =
+                    nb::cast<const ImageSequence &>(self);
+                if (v.storage_mode != "packed")
+                    return nb::cast(sequence_view<uint8_t>(
+                        v.pixels_u8, {0, 0, 0}));
+                std::vector<size_t> shape =
+                    v.channels == 1
+                        ? std::vector<size_t>{
+                              v.n, v.height, v.width}
+                        : std::vector<size_t>{
+                              v.n, v.height, v.width, v.channels};
+                if (v.frame_dtype == "uint8")
+                    return nb::cast(sio::view<const uint8_t>(
+                        self, v.pixels_u8.data(), shape));
+                if (v.frame_dtype == "uint16")
+                    return nb::cast(sio::view<const uint16_t>(
+                        self, v.pixels_u16.data(), shape));
+                return nb::cast(sio::view<const float>(
+                    self, v.pixels_f32.data(), shape));
+            })
         .def_prop_ro(
             "y",
             [](const ImageSequence &v) {
@@ -537,6 +734,17 @@ void register_image_sequence(nb::module_ &module) {
         "alpha_mode"_a = "none",
         "Build a lazy ImageSequence from owned UTF-8 frame references and "
         "optional exact int64 nanosecond timing.");
+    module.def(
+        "image_sequence_packed", &make_packed_sequence,
+        "pixels"_a, "timestamps_ns"_a, "durations_ns"_a,
+        "color_space"_a = "srgb",
+        "alpha_mode"_a = "none",
+        "maxval"_a = nb::none(),
+        "loop_count"_a = nb::none(),
+        "background_rgba"_a = nb::none(),
+        "Build an owned packed gray/RGB/RGBA ImageSequence from "
+        "(N,H,W)/(N,H,W,C) uint8/uint16/float32 samples, with exact "
+        "timing and optional APNG/WebP loop/background metadata.");
     module.def(
         "image_sequence_yuv", &make_yuv_sequence,
         "y"_a, "u"_a = nb::none(), "v"_a = nb::none(),

@@ -194,10 +194,11 @@ if(NOT EXISTS "${libwebp_SOURCE_DIR}/CMakeLists.txt" OR
 endif()
 foreach(_wopt WEBP_BUILD_ANIM_UTILS WEBP_BUILD_CWEBP WEBP_BUILD_DWEBP WEBP_BUILD_GIF2WEBP
         WEBP_BUILD_IMG2WEBP WEBP_BUILD_VWEBP WEBP_BUILD_WEBPINFO WEBP_BUILD_WEBPMUX
-        WEBP_BUILD_LIBWEBPMUX WEBP_BUILD_EXTRAS WEBP_BUILD_WEBP_JS
+        WEBP_BUILD_EXTRAS WEBP_BUILD_WEBP_JS
         WEBP_BUILD_FUZZTEST)
   set(${_wopt} OFF CACHE BOOL "" FORCE)
 endforeach()
+set(WEBP_BUILD_LIBWEBPMUX ON CACHE BOOL "" FORCE)
 set(WEBP_ENABLE_SIMD ON CACHE BOOL "" FORCE)
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 add_subdirectory(
@@ -207,7 +208,7 @@ add_subdirectory(
 foreach(_webp_target
         sharpyuv
         webpdecode webpdspdecode webputilsdecode webpdecoder
-        webpencode webpdsp webputils webp webpdemux)
+        webpencode webpdsp webputils webp webpdemux libwebpmux)
   set_target_properties(
     ${_webp_target}
     PROPERTIES

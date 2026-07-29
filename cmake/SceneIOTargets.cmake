@@ -49,6 +49,8 @@ target_link_libraries(
     lodepng_static
     sqlite_static
     webp
+    webpdemux
+    libwebpmux
     Threads::Threads)
 
 if(SCENEIO_SELECTED_BACKEND_LINK_TARGETS)

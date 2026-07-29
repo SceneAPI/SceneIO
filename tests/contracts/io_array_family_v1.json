@@ -17,8 +17,8 @@
     "npy": 25,
     "npz": 26,
     "safetensors": 27,
-    "flo": 43,
-    "dmb": 44
+    "flo": 44,
+    "dmb": 45
   },
   "benchmark_parent": {
     "command": ".venv/Scripts/python.exe bench/bench_io.py --runs 1 --scale 0.001 --skip-oracles --json <output>",

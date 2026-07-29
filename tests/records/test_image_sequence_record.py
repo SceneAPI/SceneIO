@@ -1,4 +1,4 @@
-"""Record contract tests for lazy-path and owned planar ImageSequence storage."""
+"""Record tests for lazy-path, packed-raster, and planar ImageSequence storage."""
 
 from __future__ import annotations
 
@@ -80,6 +80,31 @@ def _yuv_sequence(
     )
 
 
+def _packed_sequence(
+    pixels: np.ndarray,
+    *,
+    timestamps: np.ndarray | None = None,
+    durations: np.ndarray | None = None,
+    color_space: str = "srgb",
+    alpha_mode: str = "none",
+    maxval: int | None = None,
+    loop_count: int | None = None,
+    background_rgba: np.ndarray | None = None,
+):
+    timestamps = _empty_timing() if timestamps is None else timestamps
+    durations = _empty_timing() if durations is None else durations
+    return _core.image_sequence_packed(
+        pixels,
+        timestamps,
+        durations,
+        color_space,
+        alpha_mode,
+        maxval,
+        loop_count,
+        background_rgba,
+    )
+
+
 def test_encoded_path_record_owns_references_and_metadata():
     paths = ["relative/frame1.png", "relative/frame2.png"]
     names = ["frame1.png", "frame2.png"]
@@ -96,9 +121,97 @@ def test_encoded_path_record_owns_references_and_metadata():
     assert sequence.color_space == "unknown"
     assert sequence.alpha_mode == "none"
     assert not sequence.has_timing
+    assert sequence.has_paths
+    assert not sequence.has_pixels
     assert not sequence.has_chroma
+    assert sequence.pixels.shape == (0, 0, 0)
     assert sequence.y.shape == sequence.u.shape == sequence.v.shape == (0, 0, 0)
     assert repr(sequence) == "<ImageSequence n=2 shape=(5,7) encoded_paths>"
+
+
+@pytest.mark.parametrize(
+    ("dtype", "maxval"),
+    [
+        (np.uint8, 255),
+        (np.uint16, 65535),
+        (np.float32, 0),
+    ],
+)
+def test_packed_frames_own_dtype_exact_samples_and_metadata(dtype, maxval):
+    pixels = np.arange(2 * 3 * 5 * 3, dtype=dtype).reshape(2, 3, 5, 3)
+    expected = pixels.copy()
+    sequence = _packed_sequence(
+        pixels,
+        timestamps=np.array([0, 17_000_000], np.int64),
+        durations=np.array([17_000_000, 23_000_000], np.int64),
+        loop_count=4,
+        background_rgba=np.array([1, 2, 3, 4], np.uint8),
+    )
+    pixels[...] = 0
+
+    assert sequence.storage_mode == "packed"
+    assert sequence.has_pixels
+    assert not sequence.has_paths
+    assert not sequence.has_chroma
+    assert sequence.frame_dtype == np.dtype(dtype).name
+    assert sequence.maxval == maxval
+    assert sequence.color_space == "srgb"
+    assert sequence.alpha_mode == "none"
+    assert sequence.has_loop_count
+    assert sequence.loop_count == 4
+    assert sequence.has_background
+    assert sequence.background_rgba.tolist() == [1, 2, 3, 4]
+    assert not sequence.background_rgba.flags.writeable
+    np.testing.assert_array_equal(sequence.pixels, expected)
+    assert not sequence.pixels.flags.writeable
+    assert sequence.y.shape == sequence.u.shape == sequence.v.shape == (0, 0, 0)
+
+
+def test_packed_rgba_and_grayscale_shapes_and_lifetime():
+    rgba = np.arange(2 * 3 * 4 * 4, dtype=np.uint8).reshape(2, 3, 4, 4)
+    sequence = _packed_sequence(rgba, alpha_mode="straight")
+    assert sequence.pixels.shape == (2, 3, 4, 4)
+    assert sequence.channels == 4
+
+    gray = np.arange(2 * 3 * 4, dtype=np.uint16).reshape(2, 3, 4)
+    view = _packed_sequence(gray, color_space="gray").pixels
+    gc.collect()
+    gc.collect()
+    assert view.shape == (2, 3, 4)
+    np.testing.assert_array_equal(view, gray)
+
+
+@pytest.mark.parametrize(
+    ("pixels", "kwargs", "message"),
+    [
+        (np.zeros((2, 3), np.uint8), {}, "packed pixels"),
+        (np.zeros((1, 2, 3, 2), np.uint8), {}, "1, 3, or 4"),
+        (np.zeros((1, 2, 3, 4), np.uint8), {}, "alpha_mode"),
+        (
+            np.zeros((1, 2, 3, 3), np.uint8),
+            {"alpha_mode": "straight"},
+            "alpha_mode",
+        ),
+        (
+            np.zeros((1, 2, 3, 3), np.uint8),
+            {"maxval": 256},
+            "maxval",
+        ),
+        (
+            np.zeros((1, 2, 3, 3), np.float32),
+            {"maxval": 1},
+            "maxval",
+        ),
+        (
+            np.zeros((1, 2, 3, 3), np.uint8),
+            {"background_rgba": np.zeros(3, np.uint8)},
+            "background_rgba",
+        ),
+    ],
+)
+def test_packed_validation(pixels, kwargs, message):
+    with pytest.raises(ValueError, match=message):
+        _packed_sequence(pixels, **kwargs)
 
 
 def test_exact_timing_is_owned_read_only_and_lifetime_safe():
@@ -158,6 +271,8 @@ def test_planar_layouts_preserve_odd_dimensions_bit_exact(
     v[:] = 0
 
     assert sequence.storage_mode == "yuv_planar"
+    assert not sequence.has_pixels
+    assert not sequence.has_paths
     assert sequence.color_space == "ycbcr"
     assert sequence.channels == 3
     assert sequence.has_chroma

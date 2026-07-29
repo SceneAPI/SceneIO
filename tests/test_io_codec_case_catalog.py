@@ -27,7 +27,7 @@ def test_case_catalog_is_complete_ordered_and_immutable():
     definitions = codec_cases.CODEC_CASE_DEFINITIONS
     assert tuple(case.id for case in definitions) == CANONICAL_BUILTIN_IDS
     assert tuple(codec_cases.CASES_BY_ID) == CANONICAL_BUILTIN_IDS
-    assert len(definitions) == len(codec_cases.CASES_BY_ID) == 54
+    assert len(definitions) == len(codec_cases.CASES_BY_ID) == 55
     assert all(dataclasses.is_dataclass(case) for case in definitions)
     with pytest.raises(dataclasses.FrozenInstanceError):
         definitions[0].id = "changed"
@@ -70,6 +70,7 @@ def test_case_catalog_preserves_the_legacy_fixture_partitions():
         "exr",
         "webp",
         "y4m",
+        "animated_webp",
         "xyz",
         "pts",
         "las",
@@ -134,6 +135,7 @@ def test_case_catalog_preserves_the_legacy_fixture_partitions():
         "exr",
         "webp",
         "y4m",
+        "animated_webp",
         "xyz",
         "pts",
         "ply",
@@ -164,20 +166,29 @@ def test_case_catalog_preserves_the_legacy_fixture_partitions():
         for case in built_cases
         if case.id != "compressed_ply"
     ]
-    assert len(portable_fixture_projection) == 47
+    assert len(portable_fixture_projection) == 48
     assert next(
         item for item in portable_fixture_projection if item[0] == "sog"
     ) == (
         "sog",
-        16686,
-        "08377ed8cb715fcb79f0f2896a75f2386cf51fbd053cc5c3bf1fcb4caf8b6a83",
+        16916,
+        "ebc297e5675fda6b939ad35aeff6a822c6c71a05c63ebd0b16ee4633aef4f23e",
+    )
+    assert next(
+        item
+        for item in portable_fixture_projection
+        if item[0] == "animated_webp"
+    ) == (
+        "animated_webp",
+        1124,
+        "f0a298ad93b9f6f44f6defc2bc6a7eb27544e934211893a1d1e429894dd1b071",
     )
     fixture_payload = json.dumps(
         portable_fixture_projection,
         separators=(",", ":"),
     )
     assert hashlib.sha256(fixture_payload.encode()).hexdigest() == (
-        "71972e167132fb68d68107df36683a49ef0783a3d38ce26fcd371dcdc7d77b5e"
+        "2f84a2d990f96c6dfa28dc4dada2e31acce4a18adc8e869c28140c2c4b0cb976"
     )
     cases_by_id = {case.id: case for case in built_cases}
     assert (

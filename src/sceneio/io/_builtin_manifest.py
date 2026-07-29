@@ -61,6 +61,7 @@ CANONICAL_BUILTIN_IDS = (
     "exr",
     "webp",
     "y4m",
+    "animated_webp",
     "image_sequence",
     "colmap_sparse_txt",
     "xyz",
@@ -112,7 +113,7 @@ FAMILY_MEMBERS = MappingProxyType(
             "nvm",
             "openmvg",
         ),
-        "sequences": ("y4m", "image_sequence"),
+        "sequences": ("y4m", "animated_webp", "image_sequence"),
         "splats": (
             "gaussian_ply",
             "compressed_ply",
@@ -244,6 +245,11 @@ _NATIVE_SYMBOLS = {
     "exr": ("read_exr", "write_exr"),
     "webp": ("read_webp", "write_webp", "read_webp_window"),
     "y4m": ("_inspect_y4m", "read_y4m", "write_y4m", "read_y4m_frames"),
+    "animated_webp": (
+        "_inspect_animated_webp",
+        "read_animated_webp",
+        "write_animated_webp",
+    ),
     "image_sequence": ("image_sequence_paths",),
     "colmap_sparse_txt": (
         "_inspect_colmap_txt",

@@ -8,9 +8,14 @@
   checkpoint closes at packaged source `2253e0f`; exact-head runs
   `30469273173`, `30469271293`, and build-only package run `30470889876`
   pass with publication skipped.
-- **Current program gate:** none. A future codec wave starts only on explicit
-  user direction. Exhaustive backend comparison remains a trigger-based
-  post-R6 optimization activity, not a release prerequisite.
+- **Current local checkpoint:** animated WebP is implemented as the 55th codec
+  with pinned libwebp, packed `ImageSequence` frames, Pillow parity, mmap,
+  direct-sink, inspection, and benchmark coverage. The exact local tree passes
+  3,895 tests with five documented skips plus Ruff, installed-surface smoke,
+  and the 55-row structural check. Hosted package evidence remains pending.
+- **Current program gate:** the user-directed lean format wave is active.
+  Exhaustive backend comparison remains trigger-based, not a prerequisite for
+  closing a verified codec unit.
 - **Scope:** close every unblocked format gap declared by SceneIO's coverage
   documents without reimplementing the 0.2.0 codec tier.
 
@@ -121,7 +126,7 @@ A format may be called stable only when:
 - independent projects remain test/reference oracles only and are not the
   production implementation.
 
-All 54 current codecs already have repo-maintained adapters and optimized I/O
+All 55 current codecs already have repo-maintained adapters and optimized I/O
 contracts. The selected production source set is now repository-contained:
 `miniz` 3.0.2, `nlohmann_json` 3.11.3, `zstd` 1.5.6, `fast_float` 6.1.6,
 `lazperf` 3.4.0, and `libwebp` 1.5.0 are pinned under
@@ -173,7 +178,10 @@ G0 must also reconcile these shipped-surface details:
 | `StateTrajectory` — complete locally | timestamps, position/orientation, velocity, gyroscope bias, accelerometer bias, frame/unit metadata | EuRoC state CSV |
 | `CameraRig` — complete locally | ordered cameras, rig-to-camera extrinsics, names/ids, frame and unit metadata | OpenCV, ROS, Kalibr |
 | `FlowField` — complete locally | HxWx2 f32 vectors plus component order, axes, row order, units, and invalid-value convention | typed FLO adapter |
-| `ImageSequence` — path/planar modes complete locally | lazy frame references, timestamps/durations, dimensions, packed images or native planar frames with chroma subsampling metadata | image directories, Y4M, animated WebP/APNG |
+| `ImageSequence` — path/planar/packed modes complete locally | lazy frame references, timestamps/durations, dimensions, packed images or native planar frames with chroma subsampling metadata | image directories, Y4M, animated WebP/APNG |
+| `Mask` — complete locally | HxW bool with `True` meaning the pixel participates | segmentation, filtering, and dataset layouts |
+| `TrackObservation` / `TrackedPointCloud` — complete locally | sparse XYZ plus aligned per-point image/keypoint observations | reconstruction and dataset layouts |
+| `PairCorrespondences` / `CorrespondenceGraph` — complete locally | indexed or coordinate matches, scores, geometry, ordered pairs, and feature references | hloc and detector-free matching layouts |
 | `Table` | named typed columns, null validity, UTF-8 offsets/data, row count, metadata | Parquet |
 | `SparseGrid` / `Scene` | sparse grid values/transforms; scene nodes, transforms, mesh/camera references | OpenVDB, USD/USDZ |
 
@@ -199,7 +207,7 @@ exit gate and the validation matrix in section 8 both pass.
 | Image and depth | TIFF | BMP, TGA, typed PFM depth, typed PNG depth, typed scalar EXR depth, scalar DMB |
 | Optical flow | — | compiled `FlowField` plus typed FLO |
 | Calibration | — | OpenCV YAML/XML, ROS `camera_info`, Kalibr YAML |
-| Sequence/dataset | animated WebP, APNG, RTMV layout | lazy image directories and raw planar Y4M |
+| Sequence/dataset | APNG, RTMV layout | lazy image directories, raw planar Y4M, and animated WebP |
 | Volumetric/niche | OpenVDB | — |
 | Policy-gated | AVIF, JPEG-XL, Draco compression | — |
 
@@ -1425,9 +1433,11 @@ Local verification:
   artifacts, NumPy as the sole runtime dependency, and a passing packaged
   sequence smoke in an environment containing only NumPy and SceneIO.
 
-#### G4.3 Animated WebP and APNG
+#### G4.3 Animated WebP — complete locally; APNG next
 
-- Extend the existing libwebp path for animation metadata and frame decode.
+- Animated WebP extends the pinned libwebp path with animation metadata,
+  composited frame decode, deterministic full-frame write, inspection, mmap,
+  and direct-sink support. Pillow provides independent cross-read/write parity.
 - Add APNG through a permissive library or a small container layer over the
   existing PNG implementation.
 - Preserve duration, loop count, blend, and disposal semantics.
@@ -2222,12 +2232,12 @@ lane before starting the next unit.
    inspection, and the closure review complete R6. This documentation-only
    closure record names the packaged source SHA and does not recursively
    require another package run.
-4. **Animation-capable `ImageSequence`.**
+4. **Animation-capable `ImageSequence` — complete locally.**
    Add an owned packed-frame mode with exact canvas size, pixel dtype/channels,
    per-frame duration, loop count, blend operation, disposal operation, and
    source-frame rectangle. Views remain read-only and owner-safe. Path and YUV
    modes remain source-compatible.
-5. **Animated WebP.**
+5. **Animated WebP — complete locally.**
    Use only the qualified, in-tree permissive libwebp source. Implement
    repository-owned
    container/metadata validation, composited full reads, dependency-aware
@@ -2300,10 +2310,12 @@ This stable heading remains as the active-plan navigation target.
 4. **Complete locally:** add image-directory and raw Y4M support; these
    establish sequence and frame-selection semantics without an animation
    library.
-5. **Planned after the organization/performance/source gates:** extend WebP
-   and PNG to animated WebP/APNG only after blend, disposal, duration, loop
-   count, and partial-frame semantics round-trip.
-6. **Planned after animated sequence semantics:** add RTMV as a multi-file
+5. **Complete locally:** extend WebP to animated WebP with composited frames,
+   exact timing/loop metadata, mmap, direct sinks, inspection, and independent
+   Pillow cross-read/write parity.
+6. **Next:** extend PNG to APNG only after blend, disposal, duration, loop
+   count, and dependency-aware frame semantics round-trip.
+7. **Planned after animated sequence semantics:** add RTMV as a multi-file
    layout over existing camera, image, depth, and sequence records.
 
 Verification includes chunk/frame boundary corruption, long sequences,

@@ -9,6 +9,35 @@ from sceneio.io._inspectors.common import _compiled_buffer_inspect
 from sceneio.io._inspectors.model import ArrayInspection, Inspection
 
 
+def inspect_animated_webp(path: Path, datatype: str) -> Inspection:
+    values = dict(
+        _compiled_buffer_inspect(path, _core._inspect_animated_webp)
+    )
+    frames = values["frames"]
+    height = values["height"]
+    width = values["width"]
+    channels = values["channels"]
+    shape = (frames, height, width, channels)
+    return Inspection(
+        format="animated_webp",
+        datatype=datatype,
+        byte_size=path.stat().st_size,
+        shape=shape,
+        dtype="uint8",
+        count=frames,
+        channels=channels,
+        arrays=(ArrayInspection("pixels", shape, "uint8"),),
+        metadata={
+            "storage_mode": "packed",
+            "color_space": values["color_space"],
+            "alpha_mode": values["alpha_mode"],
+            "loop_count": values["loop_count"],
+            "duration_ns": values["duration_ns"],
+            "background_rgba": values["background_rgba"],
+        },
+    )
+
+
 def inspect_y4m(path: Path, datatype: str) -> Inspection:
     values = dict(_compiled_buffer_inspect(path, _core._inspect_y4m))
     frames = values["frames"]

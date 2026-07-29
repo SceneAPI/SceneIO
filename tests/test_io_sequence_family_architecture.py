@@ -28,7 +28,7 @@ from sceneio.io._registry.families import sequences as sequence_family
 
 ROOT = Path(__file__).resolve().parents[1]
 CONTRACT = ROOT / "tests" / "contracts" / "io_sequence_inspection_v1.json"
-SEQUENCE_IDS = ("y4m", "image_sequence")
+SEQUENCE_IDS = ("y4m", "animated_webp", "image_sequence")
 FRAME_ACCESS_AST_NORMALIZATION = {
     "_IMAGE_FRAME_ACCESS": "__FRAME_ACCESS__",
     "frame_access": "__FRAME_ACCESS__",
@@ -212,15 +212,16 @@ def test_sequence_codec_ast_contract_and_canonical_installation_are_exact():
     assert _codec_ast_hashes() == contract["codec_ast_sha256"]
 
     start = CANONICAL_BUILTIN_IDS.index("y4m")
-    assert CANONICAL_BUILTIN_IDS[start - 1 : start + 3] == (
+    assert CANONICAL_BUILTIN_IDS[start - 1 : start + 4] == (
         "webp",
         "y4m",
+        "animated_webp",
         "image_sequence",
         "colmap_sparse_txt",
     )
-    assert tuple(registry.REGISTRY)[start : start + 2] == SEQUENCE_IDS
+    assert tuple(registry.REGISTRY)[start : start + 3] == SEQUENCE_IDS
     assert tuple(
-        codec.id for codec in registry.BUILTIN_DEFINITIONS[start : start + 2]
+        codec.id for codec in registry.BUILTIN_DEFINITIONS[start : start + 3]
     ) == SEQUENCE_IDS
     for offset, format_id in enumerate(SEQUENCE_IDS):
         assert (
@@ -241,6 +242,16 @@ def test_sequence_native_and_directory_callable_targets_are_exact():
     }
     assert inspect.getclosurevars(y4m.read_frames).nonlocals == {
         "fn": _core.read_y4m_frames
+    }
+
+    animated_webp = registry.REGISTRY["animated_webp"]
+    assert animated_webp.record is _core.ImageSequence
+    assert inspect.getclosurevars(animated_webp.read).nonlocals == {
+        "fn": _core.read_animated_webp
+    }
+    assert inspect.getclosurevars(animated_webp.write).nonlocals == {
+        "fn": _core.write_animated_webp,
+        "prepare": None,
     }
 
     directory = registry.REGISTRY["image_sequence"]
@@ -299,9 +310,14 @@ def test_sequence_factory_is_inert_reentrant_and_binds_supplied_access():
     assert tuple(codec.id for codec in first) == SEQUENCE_IDS
     assert tuple(codec.id for codec in second) == SEQUENCE_IDS
     assert first[0] is second[0] is sequence_family._Y4M_CODEC
-    assert first[1] is not second[1]
+    assert (
+        first[1]
+        is second[1]
+        is sequence_family._ANIMATED_WEBP_CODEC
+    )
+    assert first[2] is not second[2]
     assert calls == []
-    for codec, access in ((first[1], first_access), (second[1], second_access)):
+    for codec, access in ((first[2], first_access), (second[2], second_access)):
         for callback in (
             codec.read,
             codec.write,
@@ -349,12 +365,18 @@ def test_sequence_lower_import_guard_rejects_upward_relative_and_siblings():
             _assert_sequence_family_imports(source)
 
 
-def test_y4m_lower_inspector_uses_only_compiled_metadata_entry_point():
+def test_sequence_lower_inspector_uses_only_compiled_metadata_entry_points():
     source = inspect.getsource(sequence_inspector)
     assert "_core._inspect_y4m" in source
+    assert "_core._inspect_animated_webp" in source
     assert "_core.read_y4m" not in source
     assert "_core.write_y4m" not in source
-    assert "_core._inspect_" not in source.replace("_core._inspect_y4m", "")
+    assert "_core.read_animated_webp" not in source
+    assert "_core.write_animated_webp" not in source
+    lower_only = source.replace("_core._inspect_y4m", "").replace(
+        "_core._inspect_animated_webp", ""
+    )
+    assert "_core._inspect_" not in lower_only
 
 
 def test_sequence_family_and_registry_reload_keep_live_access():
@@ -378,13 +400,14 @@ def test_sequence_family_and_registry_reload_keep_live_access():
         assert registry.REGISTRY is before_registry
         assert tuple(registry.REGISTRY.items()) == before_items
         assert registry._IMAGE_FRAME_ACCESS is old_access
-        assert reloaded_family.build_sequence_codecs(old_access)[1] is not old_sequence
+        assert reloaded_family.build_sequence_codecs(old_access)[2] is not old_sequence
 
         for _ in range(2):
             registry = importlib.reload(registry)
-            assert tuple(registry.REGISTRY)[35:39] == (
+            assert tuple(registry.REGISTRY)[35:40] == (
                 "webp",
                 "y4m",
+                "animated_webp",
                 "image_sequence",
                 "colmap_sparse_txt",
             )
@@ -474,7 +497,7 @@ def test_y4m_facade_wrapper_preserves_signature_and_delegation(monkeypatch):
     assert calls == [(path, "image_sequence")]
 
 
-def test_repository_coverage_moves_only_y4m_inspection_ownership():
+def test_repository_coverage_keeps_sequence_inspection_ownership_exact():
     contract = tomllib.loads(
         (
             ROOT / "tests" / "contracts" / "repository_coverage_v1.toml"
@@ -487,6 +510,7 @@ def test_repository_coverage_moves_only_y4m_inspection_ownership():
     }
     assert owners == {
         "y4m": "src/sceneio/io/_inspectors/sequences.py",
+        "animated_webp": "src/sceneio/io/_inspectors/sequences.py",
         "image_sequence": "src/sceneio/io/_image_sequence.py",
     }
 

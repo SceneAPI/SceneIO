@@ -52,6 +52,7 @@ BUFFER_CODEC_CASE_IDS = (
     "exr",
     "webp",
     "y4m",
+    "animated_webp",
     "xyz",
     "pts",
     "ply",
@@ -77,7 +78,7 @@ BUFFER_CODEC_CASE_IDS = (
 
 
 def build_buffer_codec_cases() -> tuple[BufferCodecCase, ...]:
-    """Build the 48 deterministic cases used by buffer behavior sweeps."""
+    """Build the 49 deterministic cases used by buffer behavior sweeps."""
     rng = np.random.default_rng(91)
     rgb = rng.integers(0, 256, (7, 9, 3), dtype=np.uint8)
     rgba = rng.integers(0, 256, (7, 9, 4), dtype=np.uint8)
@@ -275,6 +276,31 @@ def build_buffer_codec_cases() -> tuple[BufferCodecCase, ...]:
         1,
         1,
         1,
+    )
+    packed_frames = rng.integers(
+        0, 256, (4, 5, 7, 4), dtype=np.uint8
+    )
+    packed_frames[..., 3] = rng.integers(
+        1, 256, (4, 5, 7), dtype=np.uint8
+    )
+    packed_durations = (
+        np.arange(1, 5, dtype=np.int64) * 10_000_000
+    )
+    packed_timestamps = np.concatenate(
+        [
+            np.zeros(1, np.int64),
+            np.cumsum(packed_durations[:-1]),
+        ]
+    )
+    packed_sequence = _core.image_sequence_packed(
+        packed_frames,
+        packed_timestamps,
+        packed_durations,
+        "srgb",
+        "straight",
+        None,
+        2,
+        np.array([1, 2, 3, 4], np.uint8),
     )
     tensor = rng.standard_normal((4, 5, 3)).astype(np.float32)
     tensors = _core.tensor_dict(
@@ -498,6 +524,12 @@ def build_buffer_codec_cases() -> tuple[BufferCodecCase, ...]:
         case("exr", _core.read_exr, _core.write_exr, image_f32_rgba),
         case("webp", _core.read_webp, _core.write_webp, image_rgba),
         case("y4m", _core.read_y4m, _core.write_y4m, image_sequence),
+        case(
+            "animated_webp",
+            _core.read_animated_webp,
+            _core.write_animated_webp,
+            packed_sequence,
+        ),
         case("xyz", _core.read_xyz, _core.write_xyz, points_xyz),
         case("pts", _core.read_pts, _core.write_pts, points_pts),
         case("ply", _core.read_ply, _core.write_ply, points_ply),
