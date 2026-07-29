@@ -79,7 +79,23 @@ def test_dense_native_and_python_ownership_sources_are_present():
         "const VisibilityStats stats =\n"
         "            scan_visibility(bytes.data(), bytes.size(), nullptr);"
     ) in codec_source
-    assert "result.image_indices.reserve(stats.links);" in codec_source
+    assert codec_source.count(
+        "result.image_indices.reserve(stats.links);"
+    ) == 2
+    consistency_reader = codec_source[
+        codec_source.index("ConsistencyGraph read_consistency(") :
+        codec_source.index("nb::tuple inspect_consistency(")
+    ]
+    visibility_reader = codec_source[
+        codec_source.index("PointVisibility read_visibility(") :
+        codec_source.index("nb::tuple inspect_visibility(")
+    ]
+    for reader_source in (consistency_reader, visibility_reader):
+        assert reader_source.count("image_indices.reserve(") == 1
+        assert (
+            "result.image_indices.reserve(stats.links);"
+            in reader_source
+        )
     for cap in (
         "kColmapMvsDimensionCap",
         "kColmapMvsEntryCap",

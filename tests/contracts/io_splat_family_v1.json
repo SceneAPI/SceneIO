@@ -111,8 +111,8 @@
     }
   },
   "sog_encoding_contract": {
-    "logical_metadata_sha256": "ce3b3dfee6b655ceef35ffb032310eeb94409abca5143bccffa1c3e746ce6982",
-    "variant_json_path": ["means", "mins", 2],
+    "metadata_sha256": "312a1b0a0c1f9d5c9ffca7db770f6673f933b249ea580ead9bad34b1a2177c2d",
+    "means_min_z_hex": "-0x1.193ea7aad030ap+0",
     "members": [
       "means_l.webp",
       "means_u.webp",
@@ -223,7 +223,7 @@
     },
     "sog": {
       "byte_size": 4698,
-      "sha256": "037a5837afeabe3a7ff6fc8988cadfbd5fecf3f47dd93e3cdfb8e1e24b0b2a55",
+      "sha256": "c2c08d4636c8a560b9fe18c16469b20f49747a0b516da52a07f3dcdf87bd8cc8",
       "record_sha256": "35db6f3b74ecf866b2d5c53d4e94f9bef2cc8b49ccab751ed96439765b61a8b7",
       "inspection": {
         "format": "sog",
@@ -401,7 +401,7 @@
         },
         "meta.json": {
           "byte_size": 3582,
-          "sha256": "4c3c9560b4355ec1d1cb6c1a4b827ededf9deb7c7a9c8a12ed89768cdbb292a4"
+          "sha256": "312a1b0a0c1f9d5c9ffca7db770f6673f933b249ea580ead9bad34b1a2177c2d"
         },
         "quats.webp": {
           "byte_size": 98,

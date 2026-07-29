@@ -37,6 +37,19 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > 50-codec validation records below remain evidence for their named commits;
 > the 54-codec tree is pending its final pushed CI/package run.
 >
+> **C3/C4 CI correction candidate (2026-07-29):** the exact collection is
+> 3,879 nodes with normalized SHA-256
+> `39fe1dc507ed2faea06a75dcc823515ff550dfa742813b89cdcd24a7584ad4f6`.
+> Local MSVC passes 3,874 tests with five documented skips. The correction
+> scopes the COLMAP consistency-graph ownership assertion to its reader and
+> bounds resident growth by the mapped input plus exact decoded vectors. It
+> also replaces SOG's host-math-library metadata variation with a pinned,
+> attributed repository-contained transform; Windows and Ubuntu now produce
+> the same exact archive. The automatic failures at runs
+> `30458601255`/`30458601174` are therefore addressed locally; a new pushed
+> CI and build-only package run are still required before this checkpoint is
+> called hosted-green.
+>
 > **Stable-ABI evidence correction (2026-07-28):** earlier package records
 > verified `cp312-abi3` wheel tags, contents, and Python 3.12 smoke but did not
 > verify the embedded extension’s ABI. R6 review found a CPython-specific
@@ -666,7 +679,7 @@ SoA, zero-copy to numpy/torch (DLPack), conventions carried as metadata.
 | `colmap_sparse_txt` | `Reconstruction` | R+W | **pycolmap** | legacy/modern text twin; rigs/frames; binary↔text value/byte differential |
 | `gaussian_ply` | `GaussianCloud` | R+W | **gsply** | 3DGS Gaussian PLY, channel‑grouped f_rest |
 | `compressed_ply` | `GaussianCloud` | R+W | pinned **PlayCanvas splat-transform 3.1.6** vector + pinned hosted macOS AppleClang/ARM parent fingerprint + NumPy oracle | SuperSplat chunked PLY; hosted Windows/MSVC and Ubuntu/glibc match PlayCanvas, while the characterized macOS profile differs at one lossy quantization boundary; exp/log rounding is the inferred cause; degree 0–3; bounded point reads |
-| `sog` | `GaussianCloud` | R+W | pinned **PlayCanvas splat-transform 3.1.6** source + independent Pillow/NumPy/ZIP oracle | SOG v2 bundled ZIP and unbundled directory; strict lossless-WebP layers; deterministic Morton/codebook/palette writer; degree 0–3; bounded point allocation |
+| `sog` | `GaussianCloud` | R+W | pinned **PlayCanvas splat-transform 3.1.6** source + independent Pillow/NumPy/ZIP oracle + pinned musl/fdlibm `log1p` adaptation | SOG v2 bundled ZIP and unbundled directory; strict lossless-WebP layers; cross-platform deterministic metadata plus Morton/codebook/palette writer; degree 0–3; bounded point allocation |
 | `ksplat` | `GaussianCloud` | R+W | pinned **GaussianSplats3D 0.4.7** vectors + independent struct/NumPy oracle | mkkellogg v0.1; compression levels 0–2; SH degrees 0–2; multi-section read; deterministic single-section bucketed writer; bounded point allocation |
 | `spz` | `GaussianCloud` | R+W | **gsply** | v1/2/3 read, **v3+v4 write**, v4 read; bit‑exact v3 encode |
 | `splat` | `GaussianCloud` | R+W | numpy oracle | antimatter15 blob; WXYZ+SH_C0 verified; lossy 8‑bit, SH‑drop |
@@ -758,11 +771,14 @@ through atomic replacement. See
 [`colmap_ecosystem_coverage.md`](colmap_ecosystem_coverage.md) for the exact
 closure matrix.
 
-The final local closure gate collects 3,878 tests and passes 3,873 with five
-documented optional/platform skips. The 38-test adapter suite, 131-test
-focused gate, installed-wheel smoke, Ruff, diff checks, and three independent
-reviews are clear. Exact-pushed-tree nonpublishing MSVC/GCC 10/AppleClang
-package validation remains the sole active closure check.
+The corrected local closure gate collects 3,879 tests and passes 3,874 with
+five documented optional/platform skips. The prior 38-test adapter suite and
+131-test focused gate remain green; the 132-test
+SOG/MVS/catalog/architecture correction sweep, final 143-test architecture
+review sweep, installed-wheel smoke, Ruff, and diff checks also pass. Three
+independent architecture, correctness/test, and platform/documentation
+reviews signed off. Exact-pushed-tree automatic and nonpublishing MSVC/GCC
+10/AppleClang package validation remain active.
 
 Encoded image paths and model paths remain opaque values. TIFF plus embedded
 or standalone `.xmp` metadata are optional generic format/metadata work, not

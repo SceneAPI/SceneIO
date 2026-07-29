@@ -23,6 +23,7 @@ EXPECTED_NOTICES = {
     "miniz-zip.txt",
     "miniz.txt",
     "microsoft-vc-runtime.txt",
+    "musl-log1p.txt",
     "nanobind.txt",
     "nlohmann-json-source.txt",
     "nlohmann-json.txt",
@@ -632,6 +633,31 @@ def test_repository_contained_native_licenses_are_exact_distribution_copies() ->
             assert marker in packaged_notice
         for marker in entry.get("packaged_notice_markers", ()):
             assert marker in packaged_notice
+
+    musl_root = ROOT / "src/cpp/third_party/musl"
+    provenance = (musl_root / "COMMIT.txt").read_text(encoding="utf-8")
+    assert "v1.2.5" in provenance
+    assert "0784374d561435f7c787a555aeab8ede699ed298" in provenance
+    assert (
+        "a9a118bbe84d8764da0ea0d28b3ab3fa"
+        "e8477fc7e4085d90102b8596fc7c75e4"
+    ) in provenance
+    header = musl_root / "log1p.hpp"
+    header_sha256 = hashlib.sha256(header.read_bytes()).hexdigest()
+    assert header_sha256 == (
+        "bc02df5cacaf9d563e1fc29729d9f7d3"
+        "31e62e709f070f6b19e5c3bc51fd2062"
+    )
+    assert header_sha256 in provenance
+    assert (
+        musl_root / "LICENSE.txt"
+    ).read_bytes() == (LICENSES / "musl-log1p.txt").read_bytes()
+    header_text = header.read_text(encoding="utf-8")
+    assert "Copyright (C) 1993 by Sun Microsystems, Inc." in header_text
+    assert "Permission to use, copy, modify, and distribute" in header_text
+    assert '#include "third_party/musl/log1p.hpp"' in (
+        ROOT / "src/cpp/codecs/splats/sog.cpp"
+    ).read_text(encoding="utf-8")
 
 
 def test_repository_contained_native_sources_replace_their_fetches() -> None:

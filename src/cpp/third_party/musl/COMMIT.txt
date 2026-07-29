@@ -1,0 +1,27 @@
+Upstream project: musl libc
+Upstream source: https://git.musl-libc.org/cgit/musl/
+Upstream tag: v1.2.5
+Upstream commit: 0784374d561435f7c787a555aeab8ede699ed298
+Upstream archive: https://musl.libc.org/releases/musl-1.2.5.tar.gz
+Upstream archive SHA256:
+  a9a118bbe84d8764da0ea0d28b3ab3fae8477fc7e4085d90102b8596fc7c75e4
+Selected source: src/math/log1p.c
+Source URL:
+  https://git.musl-libc.org/cgit/musl/plain/src/math/log1p.c?h=v1.2.5
+Retrieved: 2026-07-29
+Local log1p.hpp SHA256:
+  bc02df5cacaf9d563e1fc29729d9f7d331e62e709f070f6b19e5c3bc51fd2062
+
+SceneIO carries only a C++17 header adaptation of the selected log1p
+implementation. The local adaptation:
+
+- exposes a finite, nonnegative input domain matching the SOG writer's use;
+- replaces union-based bit access with memcpy;
+- places the implementation in a private SceneIO namespace; and
+- materializes every multiplication through volatile storage so later
+  additions cannot contract into fused operations and alter SOG metadata
+  bytes. The supported x86-64 and ARM64 targets evaluate the remaining
+  elementary double operations directly at binary64 precision.
+
+The original Sun Microsystems notice is preserved in log1p.hpp and in
+LICENSE.txt. No musl library is linked or otherwise bundled.

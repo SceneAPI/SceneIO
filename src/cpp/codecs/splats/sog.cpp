@@ -36,6 +36,7 @@
 
 #include "io/json_metadata_guard.hpp"
 #include "records/gaussian_cloud.hpp"
+#include "third_party/musl/log1p.hpp"
 
 using namespace nb::literals;
 using namespace sio;
@@ -921,7 +922,9 @@ uint8_t truncate_u8(double value) {
 }
 
 double log_transform(double value) {
-    const double transformed = std::log1p(std::abs(value));
+    const double transformed =
+        sio::third_party::musl::deterministic_log1p_nonnegative(
+            std::abs(value));
     return std::signbit(value) ? -transformed : transformed;
 }
 
@@ -1053,10 +1056,14 @@ EncodedSog encode_sog_layers(const GaussianCloud &cloud) {
         -std::numeric_limits<double>::infinity(),
         -std::numeric_limits<double>::infinity(),
     };
+    std::vector<double> transformed_means(
+        checked_mul(cloud.n, 3, "transformed means"));
     for (size_t row = 0; row < cloud.n; ++row)
         for (size_t axis = 0; axis < 3; ++axis) {
             const double value =
-                log_transform(cloud.means[row * 3 + axis]);
+                log_transform(
+                    cloud.means[row * 3 + axis]);
+            transformed_means[row * 3 + axis] = value;
             transformed_min[axis] =
                 std::min(transformed_min[axis], value);
             transformed_max[axis] =
@@ -1071,7 +1078,7 @@ EncodedSog encode_sog_layers(const GaussianCloud &cloud) {
             const double range =
                 transformed_max[axis] - transformed_min[axis];
             const double transformed =
-                log_transform(cloud.means[row * 3 + axis]);
+                transformed_means[row * 3 + axis];
             const uint32_t quantized =
                 range == 0.0
                     ? 0

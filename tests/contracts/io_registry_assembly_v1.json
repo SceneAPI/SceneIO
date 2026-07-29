@@ -354,9 +354,10 @@
     "last": "tests/test_points_binary.py::test_bad_magic_rejected"
   },
   "pytest_candidate_collection": {
-    "count": 3878,
-    "sorted_normalized_node_ids_sha256": "169ffe42ea1d9f1920231a2170b32593825c0189818c9e09e2c7f468abe10572",
+    "count": 3879,
+    "sorted_normalized_node_ids_sha256": "39fe1dc507ed2faea06a75dcc823515ff550dfa742813b89cdcd24a7584ad4f6",
     "added_nodes": [
+      "tests/codecs/test_sog.py::test_writer_preserves_tiny_relative_mean_ranges",
       "tests/codecs/test_colmap_db.py::test_read_stock_rigs_frames_and_pose_priors_exactly[colmap-3.13.0]",
       "tests/codecs/test_colmap_db.py::test_read_stock_rigs_frames_and_pose_priors_exactly[colmap-4.1.1]",
       "tests/codecs/test_colmap_db.py::test_read_stock_rigs_frames_and_pose_priors_exactly[colmap-main-64805cb870b5]",

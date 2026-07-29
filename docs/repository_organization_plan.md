@@ -334,9 +334,17 @@ The checked six-row benchmark projection reproduces both Windows/MSVC parent
 captures. Platform reproduction is now characterized. Gaussian PLY,
 compressed PLY, KSplat, SPZ, and SPLAT encoded bytes match exactly on MSVC,
 hosted AppleClang/ARM, hosted glibc, and the pinned
-manylinux2014/GCC-10 image. SOG's five WebP layers also match exactly, while
-one `std::log1p` metadata bound is an adjacent double on glibc; the archive
-differs only in that JSON digit and the corresponding CRC fields.
+manylinux2014/GCC-10 image. The parent SOG writer originally exposed an
+adjacent-`std::log1p` metadata value between the Windows/macOS and Linux
+profiles while its five WebP layers remained exact. The C3/C4 CI correction
+now uses a private, pinned musl/fdlibm-derived `log1p` adaptation for SOG
+metadata, with its notice and local adaptation recorded under
+`src/cpp/third_party/musl` and `LICENSES/`. MSVC and GCC agree on the exact
+result for a deterministic five-million-float32 sample, including the former
+counterexample, and the complete SOG archive contract is identical in the
+local Windows and Ubuntu reproductions. The four-profile hosted contract now
+requires that one canonical archive; its final AppleClang/GCC-10 confirmation
+is part of the pending exact-head run.
 KSplat/SPLAT scales and AppleClang/ARM SPZ quaternions have isolated one-ULP
 decoded variants. The parent contract keeps all unaffected fields exact,
 bounds only those named arrays to one ULP, and records exact per-profile
@@ -352,8 +360,14 @@ normalized SHA-256
 Both structural benchmark captures, the retained five-run guard, and a
 15-sample randomized all-six exact-parent inspector comparison pass; traced
 allocation maxima are byte-for-byte equal to the parent.
-Universal SOG byte canonicalization would be a separate codec-behavior
-change.
+The deterministic SOG transform is deliberately isolated from every other
+codec. Caching transformed coordinates keeps the seven-run 11.2 MB writer
+measurement at 34 MB/s, equal to the exact pre-correction build within the
+interleaved run resolution; encoded size and decoded fields remain pinned.
+The cache is an explicit 24 bytes per point: it raises sampled sink RSS from
+30.7 MB to 35.5 MB on the 200,000-point fixture while traced Python allocation
+remains 0.0 MB and the output continues to stream without whole-file Python
+bytes staging.
 
 The final all-six parity lane additionally exposed that the larger pinned
 compressed-PLY writer vector crosses one lossy quantization boundary on the

@@ -439,7 +439,16 @@ def test_sparse_large_consistency_decode_does_not_reserve_link_payload():
     measured = json.loads(result.stdout)
     assert measured["entries"] == 2_000_000
     assert measured["links"] == 0
-    assert measured["delta"] < measured["encoded"] * 2
+    # Each decoded entry owns two uint32 coordinates and one uint64 CSR
+    # offset; the final offset adds one more uint64. A path read may also
+    # retain resident pages from the 12-byte-per-entry mapping until the
+    # allocator returns them. Bound both exact payloads plus fixed allocator
+    # headroom. The architecture contract separately pins the decisive
+    # `image_indices.reserve(stats.links)` behavior.
+    decoded_owned = measured["entries"] * 16 + 8
+    assert measured["delta"] < (
+        measured["encoded"] + decoded_owned + 8 * 1024 * 1024
+    )
 
 
 def test_pycolmap_depth_producer_and_consumer(tmp_path):

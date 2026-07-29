@@ -270,27 +270,12 @@ def _assert_portable_record(cloud, contract_name: str) -> None:
 
 def _assert_sog_metadata(metadata: bytes) -> tuple[str, str]:
     parsed = json.loads(metadata)
-    path = CONTRACT["sog_encoding_contract"]["variant_json_path"]
-    assert path and all(isinstance(value, (str, int)) for value in path)
-    value = parsed
-    for component in path:
-        value = value[component]
-    means_min_z = float(value)
-    means_min_z_hex = means_min_z.hex()
-    normalized = copy.deepcopy(parsed)
-    parent = normalized
-    for component in path[:-1]:
-        parent = parent[component]
-    parent[path[-1]] = "<libm-log1p-2>"
-    payload = json.dumps(
-        normalized,
-        sort_keys=True,
-        separators=(",", ":"),
-    )
-    assert hashlib.sha256(payload.encode()).hexdigest() == CONTRACT[
-        "sog_encoding_contract"
-    ]["logical_metadata_sha256"]
-    return hashlib.sha256(metadata).hexdigest(), means_min_z_hex
+    metadata_sha256 = hashlib.sha256(metadata).hexdigest()
+    means_min_z_hex = float(parsed["means"]["mins"][2]).hex()
+    encoding = CONTRACT["sog_encoding_contract"]
+    assert metadata_sha256 == encoding["metadata_sha256"]
+    assert means_min_z_hex == encoding["means_min_z_hex"]
+    return metadata_sha256, means_min_z_hex
 
 
 def _assert_sog_profile(
@@ -305,30 +290,16 @@ def _assert_sog_profile(
     }
     if archive_sha256 is not None:
         observed["sog_archive_sha256"] = archive_sha256
-    profile = _active_parent_profile()
-    profiles = CONTRACT["platform_evidence"]["profiles"]
-    if profile is None:
-        known = [
-            {
-                key: evidence[key]
-                for key in observed
-            }
-            for evidence in profiles.values()
+    encoding = CONTRACT["sog_encoding_contract"]
+    expected = {
+        "sog_metadata_sha256": encoding["metadata_sha256"],
+        "sog_means_min_z_hex": encoding["means_min_z_hex"],
+    }
+    if archive_sha256 is not None:
+        expected["sog_archive_sha256"] = CONTRACT["valid"]["sog"][
+            "sha256"
         ]
-        assert observed in known, {
-            "actual": observed,
-            "known_parent_variants": known,
-        }
-    else:
-        expected = {
-            key: profiles[profile][key]
-            for key in observed
-        }
-        assert observed == expected, {
-            "profile": profile,
-            "actual": observed,
-            "expected": expected,
-        }
+    assert observed == expected
 
 
 def _assert_sog_archive(payload: bytes) -> None:
@@ -562,12 +533,43 @@ def test_splat_parent_contract_metadata_is_exact():
     )
     assert evidence["hosted_run"] == 30220612832
     windows = evidence["profiles"]["windows_msvc_x86_64"]
-    assert CONTRACT["valid"]["sog"]["sha256"] == windows[
+    historical_sog = {
+        profile_name: (
+            profile["sog_archive_sha256"],
+            profile["sog_metadata_sha256"],
+            profile["sog_means_min_z_hex"],
+        )
+        for profile_name, profile in evidence["profiles"].items()
+    }
+    windows_sog = (
+        "037a5837afeabe3a7ff6fc8988cadfbd5fecf3f47dd93e3cdfb8e1e24b0b2a55",
+        "4c3c9560b4355ec1d1cb6c1a4b827ededf9deb7c7a9c8a12ed89768cdbb292a4",
+        "-0x1.193ea7aad030bp+0",
+    )
+    linux_sog = (
+        "c2c08d4636c8a560b9fe18c16469b20f49747a0b516da52a07f3dcdf87bd8cc8",
+        "312a1b0a0c1f9d5c9ffca7db770f6673f933b249ea580ead9bad34b1a2177c2d",
+        "-0x1.193ea7aad030ap+0",
+    )
+    assert historical_sog == {
+        "windows_msvc_x86_64": windows_sog,
+        "macos_appleclang_arm64": windows_sog,
+        "ubuntu_latest_x86_64_glibc": linux_sog,
+        "manylinux2014_gcc10_x86_64": linux_sog,
+    }
+    ubuntu = evidence["profiles"]["ubuntu_latest_x86_64_glibc"]
+    assert CONTRACT["valid"]["sog"]["sha256"] == ubuntu[
         "sog_archive_sha256"
+    ]
+    assert CONTRACT["sog_encoding_contract"]["metadata_sha256"] == ubuntu[
+        "sog_metadata_sha256"
+    ]
+    assert CONTRACT["sog_encoding_contract"]["means_min_z_hex"] == ubuntu[
+        "sog_means_min_z_hex"
     ]
     assert CONTRACT["valid"]["sog_directory"]["files"]["meta.json"][
         "sha256"
-    ] == windows["sog_metadata_sha256"]
+    ] == ubuntu["sog_metadata_sha256"]
     assert {
         "ksplat": CONTRACT["valid"]["ksplat"]["record_sha256"],
         "spz_v3_v4": CONTRACT["valid"]["spz"]["record_sha256"],

@@ -24,6 +24,7 @@ redistribution choice used by SceneIO is stated explicitly.
 | LodePNG | version 20260119, commit `ed6fe5825c6a4fbb7f58ab35a4231c7543cd452a` | vendored and statically linked | zlib | [lodepng.txt](lodepng.txt) |
 | SQLite | 3.53.4 amalgamation | vendored and statically linked | public domain | [sqlite.txt](sqlite.txt) |
 | libwebp | 1.5.0, commit `a4d7a715337ded4451fec90ff8ce79728e04126c` | vendored and statically linked core libraries | BSD-3-Clause with upstream additional patent grant | [license](libwebp.txt), [patent grant](libwebp-patents.txt) |
+| musl fdlibm-derived `log1p` | musl 1.2.5, commit `0784374d561435f7c787a555aeab8ede699ed298` | private header adaptation used for deterministic SOG metadata; no musl library is linked | original Sun permission notice; musl project MIT | [musl-log1p.txt](musl-log1p.txt) |
 | libjpeg-turbo | 3.2.0, commit `c85e6b905bf237038faa936dab160ebfc5da0344` | statically linked only in explicit JPEG qualification builds until selected | IJG, BSD-3-Clause, zlib | [libjpeg-turbo.txt](libjpeg-turbo.txt), [upstream `README.ijg` copy](libjpeg-turbo-IJG.txt) |
 | stb_image / stb_image_write | commit `31c1ad37456438565541f4919958214b6e762fb4` | vendored compiled headers | MIT option | [stb.txt](stb.txt) |
 | TinyEXR | commit `1b106618644dbf8a0935c2348ba51a2d863dd7c2` | vendored compiled headers | BSD-3-Clause | [tinyexr.txt](tinyexr.txt) |

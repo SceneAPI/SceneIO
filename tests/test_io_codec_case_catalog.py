@@ -165,12 +165,19 @@ def test_case_catalog_preserves_the_legacy_fixture_partitions():
         if case.id != "compressed_ply"
     ]
     assert len(portable_fixture_projection) == 47
+    assert next(
+        item for item in portable_fixture_projection if item[0] == "sog"
+    ) == (
+        "sog",
+        16686,
+        "08377ed8cb715fcb79f0f2896a75f2386cf51fbd053cc5c3bf1fcb4caf8b6a83",
+    )
     fixture_payload = json.dumps(
         portable_fixture_projection,
         separators=(",", ":"),
     )
     assert hashlib.sha256(fixture_payload.encode()).hexdigest() == (
-        "909d7dcc4cdccfc16bef59e6930a0e465142e29973f427817720114d99030b45"
+        "71972e167132fb68d68107df36683a49ef0783a3d38ce26fcd371dcdc7d77b5e"
     )
     cases_by_id = {case.id: case for case in built_cases}
     assert (

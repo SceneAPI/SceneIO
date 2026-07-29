@@ -3234,3 +3234,37 @@ the same property for MappingInput, MegaLoc, and the large fixed sparse tag
 sidecars. Compact text and JSON companions are correctness-tested with
 independent fixtures; they are not assigned throughput claims because they
 are control metadata rather than measured hot paths.
+
+## C3/C4 CI correction measurements (2026-07-29)
+
+The SOG metadata correction was measured against an isolated editable build
+of exact parent `97be60d5620d2afe95107ffd4deaf04626bd02ca`. Both builds used
+the same 11.2 MB logical fixture and seven-run harness:
+
+```powershell
+.venv/Scripts/python.exe bench/bench_io.py --only sog --runs 7
+```
+
+| build | buffer write | direct sink | encoded size | traced sink peak | sampled sink RSS |
+|---|---:|---:|---:|---:|---:|
+| exact parent | 34 MB/s | 33 MB/s | 2.9 MB | 0.0 MB | 30.7 MB |
+| deterministic candidate | 34 MB/s | 34 MB/s | 2.9 MB | 0.0 MB | 35.5 MB |
+
+The candidate computes each deterministic transformed coordinate once and
+reuses it for range discovery and quantization. This offsets the portable
+polynomial cost while preserving the traced Python allocation target and
+streaming the encoded output without a whole-file Python bytes object. The
+cache is exactly `3 * point_count * sizeof(double)`, or 24 bytes per point.
+It accounts for the 4.8 MB sampled-RSS increase on this 200,000-point fixture
+and is a deliberate bounded working-memory tradeoff for deterministic output
+at unchanged throughput. MSVC and GCC produce the same hash over five million
+deterministic finite float32 inputs, including the former cross-platform
+counterexample, and the complete Windows/Ubuntu SOG archive and catalog
+contracts match exactly.
+
+The COLMAP consistency-graph correction does not change the native reader.
+Its RSS test now budgets the 12-byte mapped entry plus the exact 16-byte
+decoded entry representation and fixed allocator headroom. A separately
+scoped architecture assertion pins `image_indices.reserve(stats.links)` in
+both the consistency and visibility readers, so the looser process-level RSS
+ceiling cannot conceal an entry-count-sized link allocation.

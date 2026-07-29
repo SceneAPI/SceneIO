@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import tomllib
 from collections import Counter, defaultdict
 from pathlib import Path
@@ -217,6 +218,8 @@ def test_performance_ledger_pins_material_backend_dependencies():
                     "nlohmann_json 3.11.3",
                 }
             )
+            if item["direction"] == "encode":
+                expected.add("musl/fdlibm log1p 1.2.5")
         if item["codec_id"] == "exr":
             expected.add("miniz 3.0.2")
         if item["codec_id"] in json_codecs:
@@ -292,6 +295,38 @@ def test_performance_backend_versions_match_pinned_sources():
         for item in zstd_rows
     )
 
+    sog_rows = [item for item in operations if item["codec_id"] == "sog"]
+    assert len(sog_rows) == 2
+    sog_encode = next(
+        item for item in sog_rows if item["direction"] == "encode"
+    )
+    sog_decode = next(
+        item for item in sog_rows if item["direction"] == "decode"
+    )
+    assert sog_encode["backend_version"] == "sceneio-sog-canonical-v1"
+    assert "musl/fdlibm log1p 1.2.5" in sog_encode["backend_dependencies"]
+    source_hash = hashlib.sha256()
+    for source_path in (
+        "src/cpp/codecs/splats/sog.cpp",
+        "src/cpp/third_party/musl/log1p.hpp",
+    ):
+        source_hash.update(source_path.encode())
+        source_hash.update(b"\0")
+        source = (ROOT / source_path).read_bytes().replace(b"\r\n", b"\n")
+        source_hash.update(source)
+        source_hash.update(b"\0")
+    assert sog_encode["backend_source_sha256"] == source_hash.hexdigest()
+    assert sog_decode["backend_version"] == (
+        "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+    )
+    assert "backend_source_sha256" not in sog_decode
+    assert "musl/fdlibm log1p 1.2.5" not in sog_decode["backend_dependencies"]
+    musl_pin = (
+        ROOT / "src/cpp/third_party/musl/COMMIT.txt"
+    ).read_text(encoding="utf-8")
+    assert "Upstream tag: v1.2.5" in musl_pin
+    assert "0784374d561435f7c787a555aeab8ede699ed298" in musl_pin
+
     spz_rows = [item for item in operations if item["codec_id"] == "spz"]
     expected_profiles = {
         "legacy_v3_gzip": {
@@ -362,6 +397,11 @@ def test_performance_backend_versions_match_pinned_sources():
         ROOT / "src/cpp/third_party/lazperf/COMMIT.txt"
     ).read_text(encoding="utf-8")
     assert "Local correctness patch:" in lazperf_commit
+    musl_commit = (
+        ROOT / "src/cpp/third_party/musl/COMMIT.txt"
+    ).read_text(encoding="utf-8")
+    assert "v1.2.5" in musl_commit
+    assert "0784374d561435f7c787a555aeab8ede699ed298" in musl_commit
 
     cmake = (ROOT / "cmake/SceneIODependencies.cmake").read_text(
         encoding="utf-8"

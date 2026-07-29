@@ -454,10 +454,12 @@ C3 local implementation evidence:
   and cross-validates every companion.
 - CAM and Recon3D are lossy write-only exports, while VRML is visualization;
   they are classified rather than treated as lossless closure blockers.
-- The final C3/C4 local gate collects 3,878 nodes and passes 3,873 tests with
-  five documented optional/platform skips. The adapter suite passes 38 tests,
-  the focused closure gate passes 131 tests, installed-wheel smoke reports
-  phase 2, and Ruff, diff checks, and all three independent reviews are clear.
+- The corrected C3/C4 local gate collects 3,879 nodes and passes 3,874 tests
+  with five documented optional/platform skips. The adapter suite passes 38
+  tests, the focused closure gate passes 131 tests, the 132-test CI-correction
+  sweep passes, installed-wheel smoke reports phase 2, and Ruff and diff
+  checks are clear. The final three-review pass is pending the correction
+  diff.
 
 ### C4 - metadata and final closure
 

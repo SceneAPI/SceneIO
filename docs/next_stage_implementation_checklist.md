@@ -2451,13 +2451,16 @@ Hosted [run 30220612832][r2-splat-parent-exposing] and the pinned
 manylinux2014/GCC-10 reproduction completed the platform investigation.
 Gaussian PLY, compressed PLY, KSplat, SPZ, and SPLAT encoded bytes are exact
 across the observed MSVC, hosted AppleClang, hosted glibc, and GCC-10 builds.
-SOG has two deterministic parent profiles: Windows/MSVC and
-macOS/AppleClang serialize
-`means.mins[2]` as `-0x1.193ea7aad030bp+0`; hosted glibc and the pinned
-GCC-10 image serialize the adjacent double
-`-0x1.193ea7aad030ap+0`. That one JSON digit and its two ZIP CRC copies are
-the complete archive difference; all five lossless-WebP layers, member order,
-sizes, inspections, and decoded records are exact.
+The parent SOG writer had two deterministic profiles: Windows/MSVC and
+macOS/AppleClang serialized one adjacent `std::log1p` result differently from
+hosted glibc and pinned GCC 10. That historical evidence remains attached to
+run `30220612832`. The C3/C4 CI correction supersedes that writer behavior
+with a repository-contained, pinned musl/fdlibm-derived transform. The active
+contract now requires one exact archive, metadata hash, and hexadecimal bound
+on all four profiles. MSVC and GCC agree across five million deterministic
+float32 inputs and the complete local Windows/Ubuntu SOG suites; the former
+counterexample and tiny relative ranges have dedicated assertions. Final
+hosted AppleClang and GCC-10 confirmation remains in the exact-head gate.
 
 The same run exposed three decoded-only parent variants while their encoded
 bytes remained exact: KSplat and SPLAT scales differ by at most one float32
@@ -2465,8 +2468,8 @@ ULP through platform `logf`, and SPZ v3/v4 quaternions differ by at most one
 float32 ULP on AppleClang/ARM through floating-point contraction. The contract
 therefore keeps unaffected fields bit-exact, applies a maximum-one-ULP check
 only to those named arrays, and retains exact whole-record fingerprints for
-all four build profiles. This is evidence about existing parent behavior, not
-a codec change or a claim that SOG archives are globally byte-canonical.
+all four build profiles. Those decoded-only tolerances are unchanged; only
+the SOG metadata writer is now canonicalized.
 Corrected normal [run 30221945705][r2-splat-parent-corrected] passes all
 three splat OS profiles and the pinned manylinux2014/GCC-10 profile.
 Compiler-instrumented
@@ -4695,9 +4698,9 @@ that keeps full ecosystem closure finite.
 
 ### C3/C4 final local evidence (2026-07-29)
 
-- The exact collection contract contains 3,878 normalized nodes with SHA-256
-  `169ffe42ea1d9f1920231a2170b32593825c0189818c9e09e2c7f468abe10572`.
-- The complete suite passes 3,873 tests with five documented
+- The exact collection contract contains 3,879 normalized nodes with SHA-256
+  `39fe1dc507ed2faea06a75dcc823515ff550dfa742813b89cdcd24a7584ad4f6`.
+- The complete suite passes 3,874 tests with five documented
   optional/platform skips; the COLMAP adapter suite passes 38 tests and the
   focused closure gate passes 131 tests.
 - The editable native build, installed-wheel smoke (`__phase__ == 2`), Ruff,
@@ -4705,11 +4708,19 @@ that keeps full ecosystem closure finite.
 - The committed benchmark baseline proves mapped reads without a whole-file
   Python allocation and atomic streaming writes for the two large compact
   transports.
-- Ampere, Epicurus, and Lagrange report no remaining architecture,
-  correctness/test, or platform/documentation blocker.
-- The only remaining validation item is the exact pushed tree's nonpublishing
-  MSVC/GCC 10/AppleClang package run. Release, tag, and publication stay
-  user-triggered.
+- The first automatic run exposed a Linux RSS allowance mismatch and
+  platform-dependent SOG/catalog bytes. The correction pins exact
+  consistency-reader ownership, uses a mapped-input-plus-owned-vector RSS
+  bound, and makes SOG metadata deterministic through an attributed
+  repository-contained transform. Windows and Ubuntu local reproductions
+  agree exactly; the 132-test correction sweep and the final 143-test
+  architecture review sweep pass.
+- Ampere, Epicurus, and Lagrange signed off the final architecture,
+  correctness/test, and platform/documentation correction. The exact SOG
+  composite source identity and historical platform tuples are pinned, and
+  the measured 24-byte-per-point cache tradeoff is explicit. Automatic CI
+  and the exact pushed tree's nonpublishing MSVC/GCC 10/AppleClang package
+  run remain. Release, tag, and publication stay user-triggered.
 
 ### C2 implementation checkpoint (2026-07-29)
 

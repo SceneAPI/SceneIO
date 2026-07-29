@@ -18,6 +18,17 @@ that release baseline without promoting its 124 provisional rows to
 The four post-R6 COLMAP dense codecs add eight measured provisional
 encode/decode rows, bringing the current ledger to 132 provisional, two known
 gaps, and six not-applicable operations without changing that policy.
+The C3/C4 CI correction keeps those operation counts unchanged. Its SOG
+writer uses a pinned deterministic transform and caches transformed
+coordinates: repeated seven-run measurements on the 11.2 MB fixture report
+34 MB/s for both the exact pre-correction build and the candidate, while the
+candidate makes archive metadata byte-identical across the local MSVC/GCC
+reproduction. The cache uses exactly 24 bytes per point and raised sampled
+sink RSS by 4.8 MB on the 200,000-point fixture while traced Python allocation
+remained 0.0 MB; this is the measured working-memory cost of retaining
+throughput and deterministic bytes. The COLMAP consistency reader retains
+mapped input plus exact owned vectors without an entry-count-sized link
+reservation.
 Current benchmark ownership work does not reopen O0-O5 or change codec
 capabilities or implementation-performance claims. Points close at `45e2757`
 with normal run `30244892746` and compiler-instrumented run `30244892600`.

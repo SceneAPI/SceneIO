@@ -344,6 +344,63 @@ def test_writer_is_deterministic_and_independently_decodable(degree):
     _assert_oracle(_core.read_sog(encoded), _oracle_decode(encoded))
 
 
+def test_writer_preserves_tiny_relative_mean_ranges():
+    base = _cloud(2, 0)
+    tiny_means = np.array(
+        [
+            [1.0e-30, -2.0e-30, 3.0e-30],
+            [2.0e-30, -1.0e-30, 4.0e-30],
+        ],
+        dtype=np.float32,
+    )
+    cloud = _core.gaussian_cloud(
+        tiny_means,
+        np.array(base.scales),
+        np.array(base.quaternions),
+        np.array(base.opacities),
+        np.array(base.sh_dc),
+    )
+    encoded = bytes(_core.write_sog(cloud))
+    metadata = json.loads(_members(encoded)["meta.json"])
+    assert all(
+        minimum < maximum
+        for minimum, maximum in zip(
+            metadata["means"]["mins"],
+            metadata["means"]["maxs"],
+            strict=True,
+        )
+    )
+    decoded = _core.read_sog(encoded)
+    assert np.all(np.ptp(decoded.means, axis=0) > 0)
+    _assert_oracle(decoded, _oracle_decode(encoded))
+
+    # This valid float32 made the former host-libm result differ between
+    # MSVC and glibc. Pin the deterministic transform itself as well as the
+    # representative archive contract exercised by the architecture suite.
+    counterexample = np.array([0x2ECE2555], np.uint32).view(np.float32)[0]
+    portable_means = np.zeros((2, 3), np.float32)
+    portable_means[1] = counterexample
+    portable_cloud = _core.gaussian_cloud(
+        portable_means,
+        np.array(base.scales),
+        np.array(base.quaternions),
+        np.array(base.opacities),
+        np.array(base.sh_dc),
+    )
+    portable_encoded = bytes(_core.write_sog(portable_cloud))
+    portable_metadata = json.loads(
+        _members(portable_encoded)["meta.json"]
+    )
+    assert {
+        float(value).hex()
+        for value in portable_metadata["means"]["maxs"]
+    } == {"0x1.9c4aa9ffacfffp-34"}
+    _assert_oracle(
+        _core.read_sog(portable_encoded),
+        _oracle_decode(portable_encoded),
+    )
+
+
 def test_public_bundle_and_unbundled_directory_parity(tmp_path):
     cloud = _cloud(79, 3)
     bundle = tmp_path / "scene.sog"
