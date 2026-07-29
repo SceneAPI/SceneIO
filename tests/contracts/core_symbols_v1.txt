@@ -19,6 +19,8 @@ Reconstruction
 StateTrajectory
 TensorDict
 _buffer_address
+_colmap_db_profile_schema
+_colmap_db_profiles
 _inspect_bal
 _inspect_bmp
 _inspect_bundler

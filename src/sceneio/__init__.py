@@ -36,6 +36,8 @@ from typing import TYPE_CHECKING
 
 from sceneio.blobstore import BlobStore, validate_sha
 from sceneio.colmap_db import (
+    COLMAP_DATABASE_PROFILES,
+    COLMAP_DATABASE_PROFILES_BY_NAME,
     COLMAP_DB_TABLES,
     COLMAP_DB_TABLES_BY_NAME,
     COLMAP_KNOWN_EXTRACTOR_TYPES,
@@ -47,9 +49,11 @@ from sceneio.colmap_db import (
     EXTENSION_COLUMNS,
     EXTENSION_TABLES,
     MAX_NUM_IMAGES,
+    MAXX_DATABASE_APPLICATION_ID,
     UNDEFINED_EXTRACTOR_TYPE,
     UPSTREAM_TABLES,
     ColumnDef,
+    DatabaseProfile,
     TableDef,
     contract_dict,
     image_pair_to_pair_id,
@@ -158,6 +162,8 @@ def __getattr__(name: str) -> object:
 
 
 __all__ = [
+    "COLMAP_DATABASE_PROFILES",
+    "COLMAP_DATABASE_PROFILES_BY_NAME",
     "COLMAP_DB_TABLES",
     "COLMAP_DB_TABLES_BY_NAME",
     "COLMAP_KNOWN_EXTRACTOR_TYPES",
@@ -171,6 +177,7 @@ __all__ = [
     "HEADER_FMT",
     "HEADER_SIZE",
     "MAGIC",
+    "MAXX_DATABASE_APPLICATION_ID",
     "MAX_NUM_IMAGES",
     "RECORD_FMT",
     "RECORD_SIZE",
@@ -185,6 +192,7 @@ __all__ = [
     "ColmapDatabase",
     "ColumnDef",
     "ContractViolation",
+    "DatabaseProfile",
     "DepthEncoding",
     "DepthMap",
     "FeatureSet",

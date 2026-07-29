@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import gc
 import hashlib
+import json
 import os
 import sqlite3
 import subprocess
@@ -17,6 +18,205 @@ import pytest
 
 import sceneio
 from sceneio import _core
+from sceneio import colmap_db as db_contract
+
+_PROFILE_SCHEMA_SNAPSHOTS = json.loads(
+    (
+        Path(__file__).parents[1]
+        / "fixtures"
+        / "colmap_db_profiles"
+        / "schema_snapshots_v1.json"
+    ).read_text(encoding="utf-8")
+)["profiles"]
+
+
+def _empty_profile_database(path: Path, profile_name: str) -> None:
+    profile = db_contract.COLMAP_DATABASE_PROFILES_BY_NAME[profile_name]
+    with sqlite3.connect(path) as connection:
+        connection.executescript(_core._colmap_db_profile_schema(profile_name))
+        connection.execute(f"PRAGMA application_id={profile.application_id}")
+        connection.execute(f"PRAGMA user_version={profile.user_version}")
+        if profile.ownership_row:
+            connection.execute(
+                "INSERT INTO maxx_schema_info VALUES(1,1,?,?)",
+                ("3.14.0", profile.source_revision),
+            )
+
+
+def test_profile_catalog_matches_python_contract() -> None:
+    assert tuple(
+        (
+            item["name"],
+            item["source_revision"],
+            item["application_id"],
+            item["user_version"],
+            item["typed_descriptors"],
+            item["generalized_pose_priors"],
+            item["recovered_two_view_cameras"],
+            item["maxx_extensions"],
+            item["has_ownership_row"],
+        )
+        for item in _core._colmap_db_profiles()
+    ) == tuple(
+        (
+            profile.name,
+            profile.source_revision,
+            profile.application_id,
+            profile.user_version,
+            profile.typed_descriptors,
+            profile.generalized_pose_priors,
+            profile.recovered_two_view_cameras,
+            profile.maxx_extensions,
+            profile.ownership_row,
+        )
+        for profile in db_contract.COLMAP_DATABASE_PROFILES
+    )
+
+
+@pytest.mark.parametrize(
+    "profile_name",
+    [profile.name for profile in db_contract.COLMAP_DATABASE_PROFILES],
+)
+def test_inspect_identifies_exact_profile(tmp_path, profile_name):
+    path = tmp_path / f"{profile_name}.db"
+    _empty_profile_database(path, profile_name)
+
+    inspection = _core.inspect_colmap_db(str(path))
+
+    profile = db_contract.COLMAP_DATABASE_PROFILES_BY_NAME[profile_name]
+    snapshot = _PROFILE_SCHEMA_SNAPSHOTS[profile_name]
+    assert inspection["profile"] == profile_name
+    assert inspection["profile_source_revision"] == profile.source_revision
+    assert inspection["application_id"] == profile.application_id
+    assert inspection["user_version"] == profile.user_version
+    assert inspection["schema_signature"] == snapshot["schema_signature"]
+    assert snapshot["source_revision"] == profile.source_revision
+    assert snapshot["application_id"] == profile.application_id
+    assert snapshot["user_version"] == profile.user_version
+    connection = sqlite3.connect(path)
+    try:
+        tables = [
+            row[0]
+            for row in connection.execute(
+                "SELECT name FROM sqlite_master "
+                "WHERE type='table' AND name NOT LIKE 'sqlite_%' "
+                "ORDER BY name"
+            )
+        ]
+        indexes = [
+            row[0]
+            for row in connection.execute(
+                "SELECT name FROM sqlite_master "
+                "WHERE type='index' AND name NOT LIKE 'sqlite_%' "
+                "ORDER BY name"
+            )
+        ]
+    finally:
+        connection.close()
+    assert tables == snapshot["tables"]
+    assert indexes == snapshot["indexes"]
+
+
+@pytest.mark.parametrize(
+    "profile_name",
+    [profile.name for profile in db_contract.COLMAP_DATABASE_PROFILES],
+)
+def test_inspect_rejects_schema_near_miss(tmp_path, profile_name):
+    path = tmp_path / f"{profile_name}-changed.db"
+    _empty_profile_database(path, profile_name)
+    with sqlite3.connect(path) as connection:
+        connection.execute("CREATE TABLE local_extra(value INTEGER)")
+
+    inspection = _core.inspect_colmap_db(str(path))
+
+    assert inspection["profile"] == "unknown"
+
+
+@pytest.mark.parametrize(
+    ("pragma", "value"),
+    [("user_version", 123), ("application_id", 123)],
+)
+def test_inspect_requires_every_identity_component(tmp_path, pragma, value):
+    path = tmp_path / f"wrong-{pragma}.db"
+    _empty_profile_database(path, "colmap-4.1.1")
+    with sqlite3.connect(path) as connection:
+        connection.execute(f"PRAGMA {pragma}={value}")
+
+    inspection = _core.inspect_colmap_db(str(path))
+    database = _core.read_colmap_db(str(path))
+
+    assert inspection["profile"] == "unknown"
+    assert inspection[pragma] == value
+    assert database.profile == "unknown"
+    assert getattr(database, pragma) == value
+
+
+@pytest.mark.parametrize(
+    "ownership",
+    ["missing", "empty_version", "empty_commit", "wrong_schema", "duplicate"],
+)
+def test_inspect_requires_valid_maxx_ownership_row(tmp_path, ownership):
+    path = tmp_path / f"maxx-{ownership}.db"
+    _empty_profile_database(path, "maxx-v1")
+    with sqlite3.connect(path) as connection:
+        if ownership == "missing":
+            connection.execute("DELETE FROM maxx_schema_info")
+        elif ownership == "empty_version":
+            connection.execute(
+                "UPDATE maxx_schema_info SET producer_version=''"
+            )
+        elif ownership == "empty_commit":
+            connection.execute(
+                "UPDATE maxx_schema_info SET producer_commit=''"
+            )
+        elif ownership == "wrong_schema":
+            connection.execute(
+                "UPDATE maxx_schema_info SET schema_version=2"
+            )
+        else:
+            connection.execute(
+                "INSERT INTO maxx_schema_info VALUES(2,1,'3.14.0','b')"
+            )
+
+    inspection = _core.inspect_colmap_db(str(path))
+
+    assert inspection["profile"] == "unknown"
+
+
+@pytest.mark.parametrize("profile_name", ["colmap-3.13.0", "colmap-4.1.1"])
+def test_read_records_exact_stock_profile_identity(tmp_path, profile_name):
+    path = tmp_path / f"{profile_name}.db"
+    _empty_profile_database(path, profile_name)
+
+    database = _core.read_colmap_db(str(path))
+
+    assert database.profile == profile_name
+    assert database.application_id == 0
+    assert (
+        database.user_version
+        == db_contract.COLMAP_DATABASE_PROFILES_BY_NAME[profile_name].user_version
+    )
+
+
+def test_exact_profile_writer_is_guarded_until_profile_writers_land(tmp_path):
+    path = tmp_path / "stock.db"
+    _empty_profile_database(path, "colmap-4.1.1")
+    database = _core.read_colmap_db(str(path))
+
+    with pytest.raises(ValueError, match="exact profile preservation"):
+        _core.write_colmap_db(database, str(tmp_path / "converted.db"))
+
+
+def test_hybrid_constructor_rejects_application_identity():
+    template = _database()
+    with pytest.raises(ValueError, match="application_id=0"):
+        _core.colmap_database(
+            template.cameras,
+            [template.feature_at(i) for i in range(template.num_images)],
+            template.match_graph,
+            prior_focal_length=template.prior_focal_length,
+            application_id=123,
+        )
 
 
 def _feature(
@@ -162,6 +362,8 @@ def _graph_fingerprint(value):
 
 def _database_fingerprint(value):
     return (
+        value.profile,
+        value.application_id,
         value.user_version,
         tuple(
             (

@@ -328,8 +328,8 @@
     "last": "tests/test_points_binary.py::test_bad_magic_rejected"
   },
   "pytest_candidate_collection": {
-    "count": 3577,
-    "sorted_normalized_node_ids_sha256": "99121ddcfc29bc18ef0afd8b27a11c31b954ce5c8022a58d6a7a9430ec33f60f",
+    "count": 3598,
+    "sorted_normalized_node_ids_sha256": "aa484a4c7de75cd7590a95a1075a966165389b07391279d9e4b0ccaecd7e6f83",
     "added_nodes": [
       "tests/codecs/test_colmap.py::test_binary_writer_rss_does_not_scale_with_encoded_size",
       "tests/codecs/test_colmap.py::test_modern_rig_frame_parity",
@@ -825,10 +825,33 @@
       "tests/test_windows_wheel_repair.py::test_find_vc143_redist_accepts_configured_toolchain",
       "tests/test_windows_wheel_repair.py::test_verify_repaired_wheel_requires_exact_redist_bytes",
       "tests/test_windows_wheel_repair.py::test_verify_repaired_wheel_rejects_name_mangling",
-      "tests/test_windows_wheel_repair.py::test_repair_wheel_prioritizes_redist_and_disables_mangling"
+      "tests/test_windows_wheel_repair.py::test_repair_wheel_prioritizes_redist_and_disables_mangling",
+      "tests/codecs/test_colmap_db.py::test_profile_catalog_matches_python_contract",
+      "tests/codecs/test_colmap_db.py::test_inspect_identifies_exact_profile[colmap-3.13.0]",
+      "tests/codecs/test_colmap_db.py::test_inspect_identifies_exact_profile[colmap-4.1.1]",
+      "tests/codecs/test_colmap_db.py::test_inspect_identifies_exact_profile[colmap-main-64805cb870b5]",
+      "tests/codecs/test_colmap_db.py::test_inspect_identifies_exact_profile[maxx-v1]",
+      "tests/codecs/test_colmap_db.py::test_inspect_rejects_schema_near_miss[colmap-3.13.0]",
+      "tests/codecs/test_colmap_db.py::test_inspect_rejects_schema_near_miss[colmap-4.1.1]",
+      "tests/codecs/test_colmap_db.py::test_inspect_rejects_schema_near_miss[colmap-main-64805cb870b5]",
+      "tests/codecs/test_colmap_db.py::test_inspect_rejects_schema_near_miss[maxx-v1]",
+      "tests/codecs/test_colmap_db.py::test_inspect_requires_every_identity_component[user_version-123]",
+      "tests/codecs/test_colmap_db.py::test_inspect_requires_every_identity_component[application_id-123]",
+      "tests/codecs/test_colmap_db.py::test_inspect_requires_valid_maxx_ownership_row[missing]",
+      "tests/codecs/test_colmap_db.py::test_inspect_requires_valid_maxx_ownership_row[empty_version]",
+      "tests/codecs/test_colmap_db.py::test_inspect_requires_valid_maxx_ownership_row[empty_commit]",
+      "tests/codecs/test_colmap_db.py::test_inspect_requires_valid_maxx_ownership_row[wrong_schema]",
+      "tests/codecs/test_colmap_db.py::test_inspect_requires_valid_maxx_ownership_row[duplicate]",
+      "tests/codecs/test_colmap_db.py::test_read_records_exact_stock_profile_identity[colmap-3.13.0]",
+      "tests/codecs/test_colmap_db.py::test_read_records_exact_stock_profile_identity[colmap-4.1.1]",
+      "tests/codecs/test_colmap_db.py::test_exact_profile_writer_is_guarded_until_profile_writers_land",
+      "tests/codecs/test_colmap_db.py::test_hybrid_constructor_rejects_application_identity",
+      "tests/test_colmap_db_contract.py::test_exact_profile_catalog_is_pinned",
+      "tests/test_colmap_db_contract.py::test_extension_columns_are_exactly_the_maxx_additions"
     ],
     "removed_nodes": [
-      "tests/codecs/test_compressed_ply.py::test_writer_body_is_byte_identical_to_pinned_playcanvas_vector"
+      "tests/codecs/test_compressed_ply.py::test_writer_body_is_byte_identical_to_pinned_playcanvas_vector",
+      "tests/test_colmap_db_contract.py::test_extension_columns_are_4d_time_and_descriptor_type"
     ],
     "renamed_node_groups": [
       {

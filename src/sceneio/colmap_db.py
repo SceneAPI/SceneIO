@@ -1,4 +1,4 @@
-"""COLMAP scene-database schema — the sfmapi core data-format contract.
+"""Repository-owned COLMAP SQLite profile and schema contracts.
 
 sfmapi treats the COLMAP SQLite scene database as a first-class core
 *contract*: the canonical on-disk representation that COLMAP-family
@@ -19,8 +19,8 @@ links the COLMAP C++ library. (The
 ``test_core_does_not_import_plugin_distributions`` guard enforces the
 direction.)
 
-The contract defines an **extended** COLMAP schema — a superset of
-vanilla upstream COLMAP. Tables/columns absent from upstream are marked
+The contract defines exact historical/current stock profiles plus the MAXX
+extension profile. Tables/columns absent from current upstream are marked
 ``extension=True`` so consumers can tell the portable core from the
 extended surface. The extended surface:
 
@@ -28,7 +28,9 @@ extended surface. The extended surface:
 * ``videos`` + ``video_frames`` — video ingestion + frame mapping
 * ``image_qualities`` — per-image blur/sharpness
 * ``markers`` + ``marker_projections`` — GCPs / named 3D points
-* ``descriptors.type`` — extractor type, blocks cross-extractor matching
+* self-describing descriptor metadata, keypoint colors, match scores and
+  pair provenance;
+* extended priors, quality, marker, and source/timing metadata.
 
 4D support: ``images.time_id`` is the canonical per-image capture-time
 store (every image read populates ``Image.time_id`` from it);
@@ -37,14 +39,10 @@ value. The column is nullable and ignored by non-4D readers, so the
 ``images`` table stays backward-compatible with vanilla upstream COLMAP
 (NULL ``time_id`` == static SfM).
 
-Provenance: the initial values here were established by reading the
-reference implementation (``colmap_mod`` ``src/colmap/scene/database_sqlite.cc``
-+ ``src/colmap/util/{version,types}.h`` at commit ``8f8e4dd92``,
-COLMAP 3.14.0.dev0, database schema revision 2). That is provenance, not
-a sync source: evolving the contract is a deliberate edit to this module
-(bump ``DATABASE_SCHEMA_REVISION``, update the tables/registry), after
-which the reference implementation is expected to conform. The contract
-test pins the version + extension surface so unintended drift is caught.
+Provenance is pinned in :data:`COLMAP_DATABASE_PROFILES`. The MAXX surface was
+reimplemented from the user-owned ``colmap_mod`` repository at commit
+``de15b08a2dba98b55d6ddfb7cedac147838afbb4``. It is a data-format reference,
+not a runtime dependency.
 """
 
 from __future__ import annotations
@@ -61,7 +59,8 @@ from dataclasses import dataclass
 DATABASE_VERSION_MAJOR = 3
 DATABASE_VERSION_MINOR = 14
 DATABASE_VERSION_PATCH = 0
-DATABASE_SCHEMA_REVISION = 2
+DATABASE_SCHEMA_REVISION = 3
+MAXX_DATABASE_APPLICATION_ID = 0x4D415858
 
 
 def make_database_version_number(major: int, minor: int, patch: int, revision: int) -> int:
@@ -79,6 +78,67 @@ DATABASE_VERSION_NUMBER = make_database_version_number(
     DATABASE_VERSION_PATCH,
     DATABASE_SCHEMA_REVISION,
 )
+
+
+@dataclass(frozen=True)
+class DatabaseProfile:
+    """Exact SQLite profile identity used by inspection and profile writers."""
+
+    name: str
+    source_revision: str
+    application_id: int
+    user_version: int
+    typed_descriptors: bool
+    generalized_pose_priors: bool
+    recovered_two_view_cameras: bool
+    maxx_extensions: bool = False
+    ownership_row: bool = False
+
+
+COLMAP_DATABASE_PROFILES: tuple[DatabaseProfile, ...] = (
+    DatabaseProfile(
+        "colmap-3.13.0",
+        "0b31f98133b470eae62811b557dc2bcff1e4f9a5",
+        0,
+        3900,
+        False,
+        False,
+        False,
+    ),
+    DatabaseProfile(
+        "colmap-4.1.1",
+        "a0d785fba74b2664f31edc4a29026a8b27c00f67",
+        0,
+        4_010_100,
+        True,
+        True,
+        False,
+    ),
+    DatabaseProfile(
+        "colmap-main-64805cb870b5",
+        "64805cb870b574a569dccc34918d95a2db2b2fee",
+        0,
+        4_020_000,
+        True,
+        True,
+        True,
+    ),
+    DatabaseProfile(
+        "maxx-v1",
+        "de15b08a2dba98b55d6ddfb7cedac147838afbb4",
+        MAXX_DATABASE_APPLICATION_ID,
+        DATABASE_VERSION_NUMBER,
+        True,
+        True,
+        True,
+        maxx_extensions=True,
+        ownership_row=True,
+    ),
+)
+
+COLMAP_DATABASE_PROFILES_BY_NAME: dict[str, DatabaseProfile] = {
+    profile.name: profile for profile in COLMAP_DATABASE_PROFILES
+}
 
 # --- feature extractor / matcher type registry ---------------------------
 #
@@ -207,9 +267,21 @@ def _col(name: str, sql_type: str, **kw: object) -> ColumnDef:
 
 # --- the schema -----------------------------------------------------------
 #
-# Ordering matches CreateTables() in colmap_mod database_sqlite.cc.
+# The model is grouped into current-upstream tables followed by MAXX-only
+# tables. Exact per-profile DDL order is carried by the profile writer.
 
 COLMAP_DB_TABLES: tuple[TableDef, ...] = (
+    TableDef(
+        "maxx_schema_info",
+        (
+            _col("schema_version", "INTEGER"),
+            _col("minimum_reader_version", "INTEGER"),
+            _col("producer_version", "TEXT"),
+            _col("producer_commit", "TEXT"),
+        ),
+        extension=True,
+        note="MAXX ownership and reader-compatibility metadata.",
+    ),
     # ---- upstream-standard (COLMAP 3.10+ rig/frame/sensor model) ----
     TableDef(
         "rigs",
@@ -286,9 +358,9 @@ COLMAP_DB_TABLES: tuple[TableDef, ...] = (
             _col("position_covariance", "BLOB"),
             _col("gravity", "BLOB"),
             _col("coordinate_system", "INTEGER"),
-            _col("rotation", "BLOB"),
-            _col("rotation_covariance", "BLOB"),
-            _col("pose_covariance", "BLOB"),
+            _col("rotation", "BLOB", extension=True),
+            _col("rotation_covariance", "BLOB", extension=True),
+            _col("pose_covariance", "BLOB", extension=True),
         ),
     ),
     TableDef(
@@ -307,11 +379,13 @@ COLMAP_DB_TABLES: tuple[TableDef, ...] = (
             _col(
                 "type",
                 "INTEGER",
-                extension=True,
                 note="Extractor type (SIFT/ALIKED/...) so cross-extractor "
-                "matching is rejected. Added at schema revision 1 "
-                "(default SIFT for migrated rows).",
+                "matching is rejected. This is stock in COLMAP 4.1.1+; "
+                "3.13 omits it and implies SIFT.",
             ),
+            _col("type_name", "TEXT", extension=True),
+            _col("dtype", "INTEGER", extension=True),
+            _col("dim", "INTEGER", extension=True),
             _col("rows", "INTEGER"),
             _col("cols", "INTEGER"),
             _col("data", "BLOB"),
@@ -339,6 +413,8 @@ COLMAP_DB_TABLES: tuple[TableDef, ...] = (
             _col("H", "BLOB"),
             _col("qvec", "BLOB"),
             _col("tvec", "BLOB"),
+            _col("camera1", "BLOB"),
+            _col("camera2", "BLOB"),
         ),
     ),
     # ---- fork-specific extension tables (colmap_mod) ----
@@ -383,6 +459,16 @@ COLMAP_DB_TABLES: tuple[TableDef, ...] = (
         "when ImageReaderOptions.estimate_quality is on.",
     ),
     TableDef(
+        "pair_provenance",
+        (
+            _col("pair_id", "INTEGER"),
+            _col("source_flags", "INTEGER"),
+            _col("retrieval_score", "REAL"),
+        ),
+        extension=True,
+        note="Per-pair source flags and optional retrieval score.",
+    ),
+    TableDef(
         "markers",
         (
             _col("marker_id", "INTEGER"),
@@ -409,6 +495,28 @@ COLMAP_DB_TABLES: tuple[TableDef, ...] = (
         ),
         extension=True,
         note="Per-image 2D projections of markers.",
+    ),
+    TableDef(
+        "keypoint_colors",
+        (
+            _col("image_id", "INTEGER"),
+            _col("rows", "INTEGER"),
+            _col("cols", "INTEGER"),
+            _col("data", "BLOB"),
+        ),
+        extension=True,
+        note="RGB uint8 values parallel to the image keypoint rows.",
+    ),
+    TableDef(
+        "match_scores",
+        (
+            _col("pair_id", "INTEGER"),
+            _col("rows", "INTEGER"),
+            _col("cols", "INTEGER"),
+            _col("data", "BLOB"),
+        ),
+        extension=True,
+        note="Float32 values parallel to raw match rows.",
     ),
 )
 
@@ -444,7 +552,7 @@ def is_extension_column(table: str, column: str) -> bool:
 # COLMAP_DB_TABLES / columns, so the JSON is stable across runs.
 
 CONTRACT_NAME = "colmap_db"
-CONTRACT_SCHEMA_VERSION = 1  # version of THIS serialization shape, not the DB
+CONTRACT_SCHEMA_VERSION = 2  # version of THIS serialization shape, not the DB
 
 
 def contract_dict() -> dict:
@@ -464,6 +572,20 @@ def contract_dict() -> dict:
             "patch": DATABASE_VERSION_PATCH,
             "revision": DATABASE_SCHEMA_REVISION,
         },
+        "profiles": [
+            {
+                "name": profile.name,
+                "source_revision": profile.source_revision,
+                "application_id": profile.application_id,
+                "user_version": profile.user_version,
+                "typed_descriptors": profile.typed_descriptors,
+                "generalized_pose_priors": profile.generalized_pose_priors,
+                "recovered_two_view_cameras": profile.recovered_two_view_cameras,
+                "maxx_extensions": profile.maxx_extensions,
+                "ownership_row": profile.ownership_row,
+            }
+            for profile in COLMAP_DATABASE_PROFILES
+        ],
         "pair_id": {"max_num_images": MAX_NUM_IMAGES},
         "extractor_types": {
             "known": dict(COLMAP_KNOWN_EXTRACTOR_TYPES),
@@ -498,6 +620,8 @@ def contract_dict() -> dict:
 
 
 __all__ = [
+    "COLMAP_DATABASE_PROFILES",
+    "COLMAP_DATABASE_PROFILES_BY_NAME",
     "COLMAP_DB_TABLES",
     "COLMAP_DB_TABLES_BY_NAME",
     "COLMAP_KNOWN_EXTRACTOR_TYPES",
@@ -508,10 +632,12 @@ __all__ = [
     "DATABASE_VERSION_NUMBER",
     "EXTENSION_COLUMNS",
     "EXTENSION_TABLES",
+    "MAXX_DATABASE_APPLICATION_ID",
     "MAX_NUM_IMAGES",
     "UNDEFINED_EXTRACTOR_TYPE",
     "UPSTREAM_TABLES",
     "ColumnDef",
+    "DatabaseProfile",
     "TableDef",
     "contract_dict",
     "image_pair_to_pair_id",

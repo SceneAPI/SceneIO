@@ -13,8 +13,10 @@
 #include <cstdint>
 #include <cstring>
 #include <filesystem>
+#include <iomanip>
 #include <limits>
 #include <map>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
@@ -22,6 +24,7 @@
 #include <utility>
 #include <vector>
 
+#include "codecs/reconstruction/colmap_db_profiles.hpp"
 #include "records/feature_match.hpp"
 #include "sqlite3.h"
 
@@ -378,7 +381,281 @@ int64_t scalar_count(
     return integer(statement.get(), 0, "row count");
 }
 
-void validate_schema(sqlite3 *database) {
+int32_t pragma_int(sqlite3 *database, const char *name) {
+    Statement statement(database, std::string("PRAGMA ") + name);
+    if (!statement.row())
+        throw std::runtime_error(
+            std::string("COLMAP database: PRAGMA ") + name +
+            " returned no row");
+    return int32_value(statement.get(), 0, name);
+}
+
+std::string normalize_schema_sql(const unsigned char *source) {
+    if (!source) return {};
+    std::string result;
+    bool quoted = false;
+    char quote = '\0';
+    for (const unsigned char *cursor = source; *cursor; ++cursor) {
+        char value = static_cast<char>(*cursor);
+        if (quoted) {
+            result.push_back(value);
+            if (value == quote) {
+                if (cursor[1] == static_cast<unsigned char>(quote)) {
+                    result.push_back(static_cast<char>(cursor[1]));
+                    ++cursor;
+                } else {
+                    quoted = false;
+                }
+            }
+            continue;
+        }
+        if (value == '\'' || value == '"' || value == '`') {
+            quoted = true;
+            quote = value;
+            result.push_back(value);
+        } else {
+            const bool ascii_space =
+                value == ' ' || value == '\t' || value == '\n' ||
+                value == '\r' || value == '\f' || value == '\v';
+            if (!ascii_space)
+                result.push_back(
+                    value >= 'A' && value <= 'Z'
+                        ? static_cast<char>(value - 'A' + 'a')
+                        : value);
+        }
+    }
+    return result;
+}
+
+void append_schema_value(
+    std::ostringstream &output, sqlite3_stmt *statement, int column) {
+    const int kind = sqlite3_column_type(statement, column);
+    output << kind << ':';
+    switch (kind) {
+        case SQLITE_NULL:
+            output << '-';
+            break;
+        case SQLITE_INTEGER:
+            output << sqlite3_column_int64(statement, column);
+            break;
+        case SQLITE_FLOAT:
+            output << std::setprecision(17)
+                   << sqlite3_column_double(statement, column);
+            break;
+        case SQLITE_TEXT:
+        case SQLITE_BLOB: {
+            const int bytes = sqlite3_column_bytes(statement, column);
+            const auto *data = static_cast<const unsigned char *>(
+                kind == SQLITE_TEXT
+                    ? static_cast<const void *>(
+                          sqlite3_column_text(statement, column))
+                    : sqlite3_column_blob(statement, column));
+            output << bytes << ':';
+            if (bytes > 0 && data)
+                output.write(
+                    reinterpret_cast<const char *>(data), bytes);
+            break;
+        }
+        default:
+            throw std::runtime_error(
+                "COLMAP database: unexpected SQLite value kind");
+    }
+    output << '|';
+}
+
+std::vector<std::string> schema_rows(
+    sqlite3 *database, const std::string &sql,
+    int name_column = -1,
+    std::vector<std::string> *names = nullptr) {
+    Statement statement(database, sql);
+    const int columns = sqlite3_column_count(statement.get());
+    std::vector<std::string> rows;
+    while (statement.row()) {
+        std::ostringstream row;
+        for (int column = 0; column < columns; ++column)
+            append_schema_value(row, statement.get(), column);
+        rows.push_back(row.str());
+        if (names && name_column >= 0)
+            names->push_back(
+                text(statement.get(), name_column, "schema name"));
+    }
+    std::sort(rows.begin(), rows.end());
+    if (names) std::sort(names->begin(), names->end());
+    return rows;
+}
+
+void append_schema_rows(
+    std::ostringstream &output, std::vector<std::string> rows) {
+    for (const std::string &row : rows)
+        output << row << '\n';
+}
+
+std::string canonical_schema(sqlite3 *database) {
+    // sqlite_schema SQL captures CHECK constraints and expression/partial
+    // indexes. The PRAGMA rows additionally freeze column affinity,
+    // nullability, defaults, PK order, foreign keys, and index layout.
+    std::ostringstream output;
+    Statement masters(
+        database,
+        "SELECT type,name,tbl_name,sql FROM sqlite_master "
+        "WHERE name NOT LIKE 'sqlite_%' "
+        "ORDER BY type,name");
+    std::vector<std::string> tables;
+    while (masters.row()) {
+        const std::string type =
+            text(masters.get(), 0, "schema object type");
+        const std::string name =
+            text(masters.get(), 1, "schema object name");
+        output << "object|";
+        append_schema_value(output, masters.get(), 0);
+        append_schema_value(output, masters.get(), 1);
+        append_schema_value(output, masters.get(), 2);
+        output << normalize_schema_sql(
+            sqlite3_column_text(masters.get(), 3)) << '\n';
+        if (type == "table") tables.push_back(name);
+    }
+    for (const std::string &table : tables) {
+        if (table.find('"') != std::string::npos)
+            throw std::invalid_argument(
+                "COLMAP database: table names containing quotes "
+                "are not supported");
+        for (const char *pragma :
+             {"table_xinfo", "foreign_key_list"}) {
+            output << pragma << '|' << table << '\n';
+            append_schema_rows(
+                output,
+                schema_rows(
+                    database, std::string("PRAGMA ") + pragma +
+                                  "(\"" + table + "\")"));
+        }
+        output << "index_list|" << table << '\n';
+        std::vector<std::string> indexes;
+        append_schema_rows(
+            output,
+            schema_rows(
+                database,
+                "PRAGMA index_list(\"" + table + "\")",
+                1, &indexes));
+        for (const std::string &index : indexes) {
+            if (index.find('"') != std::string::npos)
+                throw std::invalid_argument(
+                    "COLMAP database: index names containing quotes "
+                    "are not supported");
+            output << "index_xinfo|" << index << '\n';
+            append_schema_rows(
+                output,
+                schema_rows(
+                    database,
+                    "PRAGMA index_xinfo(\"" + index + "\")"));
+        }
+    }
+    return output.str();
+}
+
+struct ProfileIdentity {
+    std::string name = "unknown";
+    std::string source_revision;
+    int32_t application_id = 0;
+    int32_t user_version = 0;
+    std::string schema;
+};
+
+bool valid_maxx_schema_row(sqlite3 *database) {
+    if (!table_exists(database, "maxx_schema_info"))
+        return false;
+    Statement row(
+        database,
+        "SELECT schema_version,minimum_reader_version,"
+        "producer_version,producer_commit "
+        "FROM maxx_schema_info");
+    if (!row.row()) return false;
+    const int64_t schema_version =
+        integer(row.get(), 0, "MAXX schema_version");
+    const int64_t minimum_reader_version =
+        integer(row.get(), 1, "MAXX minimum_reader_version");
+    const std::string producer_version =
+        text(row.get(), 2, "MAXX producer_version");
+    const std::string producer_commit =
+        text(row.get(), 3, "MAXX producer_commit");
+    if (row.row()) return false;
+    return schema_version == 1 && minimum_reader_version == 1 &&
+           !producer_version.empty() && !producer_commit.empty();
+}
+
+void create_schema(sqlite3 *database);
+
+const std::vector<std::string> &expected_profile_schemas() {
+    static const std::vector<std::string> expected = [] {
+        std::vector<std::string> result;
+        result.reserve(colmap_db_profile_specs().size());
+        for (const ColmapDbProfileSpec &profile :
+             colmap_db_profile_specs()) {
+            Database database(
+                ":memory:",
+                SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE);
+            execute(database.get(), profile.schema_sql);
+            result.push_back(canonical_schema(database.get()));
+        }
+        return result;
+    }();
+    return expected;
+}
+
+const std::string &expected_legacy_hybrid_schema() {
+    static const std::string expected = [] {
+        Database database(
+            ":memory:",
+            SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE);
+        create_schema(database.get());
+        return canonical_schema(database.get());
+    }();
+    return expected;
+}
+
+ProfileIdentity identify_profile(sqlite3 *database) {
+    ProfileIdentity result;
+    result.application_id =
+        pragma_int(database, "application_id");
+    result.user_version = pragma_int(database, "user_version");
+    result.schema = canonical_schema(database);
+    const auto &profiles = colmap_db_profile_specs();
+    const auto &expected = expected_profile_schemas();
+    for (size_t index = 0; index < profiles.size(); ++index) {
+        const ColmapDbProfileSpec &profile = profiles[index];
+        if (result.application_id != profile.application_id ||
+            result.user_version != profile.user_version ||
+            result.schema != expected[index])
+            continue;
+        if (profile.requires_maxx_schema_row &&
+            !valid_maxx_schema_row(database))
+            continue;
+        result.name = profile.name;
+        result.source_revision = profile.source_revision;
+        break;
+    }
+    if (result.name == "unknown" &&
+        result.application_id == 0 &&
+        result.schema == expected_legacy_hybrid_schema()) {
+        result.name = "sceneio-hybrid-v1";
+        result.source_revision = "sceneio-owned";
+    }
+    return result;
+}
+
+std::string schema_signature(const std::string &schema) {
+    // A compact deterministic diagnostic only. Exact profile selection above
+    // always compares the complete canonical schema string.
+    uint64_t value = 1469598103934665603ULL;
+    for (unsigned char byte : schema) {
+        value ^= byte;
+        value *= 1099511628211ULL;
+    }
+    std::ostringstream output;
+    output << std::hex << std::setfill('0') << std::setw(16) << value;
+    return output.str();
+}
+
+void require_core_tables(sqlite3 *database) {
     static constexpr const char *required[] = {
         "cameras", "images", "keypoints", "descriptors",
         "matches", "two_view_geometries"};
@@ -387,7 +664,10 @@ void validate_schema(sqlite3 *database) {
             throw std::invalid_argument(
                 std::string("COLMAP database: missing required table '") +
                 name + "'");
+}
 
+void validate_schema(sqlite3 *database) {
+    require_core_tables(database);
     const std::map<std::string, std::vector<std::string>> represented = {
         {"cameras",
          {"camera_id", "model", "width", "height", "params",
@@ -841,11 +1121,14 @@ ColmapDatabase read_database(const std::string &path) {
     sqlite3 *database = connection.get();
     execute(database, "PRAGMA query_only=ON");
     validate_schema(database);
+    const ProfileIdentity identity = identify_profile(database);
     reject_unknown_tables(database);
     reject_unrepresented_rows(database);
 
     ColmapDatabase result;
-    result.user_version = user_version(database);
+    result.user_version = identity.user_version;
+    result.application_id = identity.application_id;
+    result.profile = identity.name;
     result.cameras =
         read_cameras(database, result.prior_focal_length);
     std::unordered_map<uint32_t, const Camera *> cameras;
@@ -1469,6 +1752,12 @@ void write_database(
     require_little_endian();
     validate_colmap_database(value, "COLMAP database writer");
     validate_colmap_encodable(value);
+    if (value.profile != "sceneio-hybrid-v1" ||
+        value.application_id != 0)
+        throw std::invalid_argument(
+            "COLMAP database writer: exact profile preservation is "
+            "not implemented yet; only profile='sceneio-hybrid-v1' "
+            "with application_id=0 can be written");
     std::error_code filesystem_error;
     const std::filesystem::path filesystem_path =
         std::filesystem::u8path(path);
@@ -1513,6 +1802,10 @@ void write_database(
 }
 
 struct DatabaseInspection {
+    std::string profile;
+    std::string profile_source_revision;
+    std::string schema_signature;
+    int32_t application_id = 0;
     int32_t user_version = 0;
     int64_t cameras = 0;
     int64_t images = 0;
@@ -1549,9 +1842,15 @@ DatabaseInspection inspect_database(const std::string &path) {
         path, SQLITE_OPEN_READONLY);
     sqlite3 *database = connection.get();
     execute(database, "PRAGMA query_only=ON");
-    validate_schema(database);
+    require_core_tables(database);
     DatabaseInspection result;
-    result.user_version = user_version(database);
+    const ProfileIdentity identity = identify_profile(database);
+    result.profile = identity.name;
+    result.profile_source_revision = identity.source_revision;
+    result.schema_signature =
+        schema_signature(identity.schema);
+    result.application_id = identity.application_id;
+    result.user_version = identity.user_version;
     result.cameras = scalar_count(database, "cameras");
     result.images = scalar_count(database, "images");
     result.keypoint_rows = scalar_count(database, "keypoints");
@@ -1611,6 +1910,11 @@ nb::dict inspection_dict(const std::string &path) {
         value = inspect_database(path);
     }
     nb::dict result;
+    result["profile"] = value.profile;
+    result["profile_source_revision"] =
+        value.profile_source_revision;
+    result["schema_signature"] = value.schema_signature;
+    result["application_id"] = value.application_id;
     result["user_version"] = value.user_version;
     result["num_cameras"] = value.cameras;
     result["num_images"] = value.images;
@@ -1635,6 +1939,43 @@ nb::dict inspection_dict(const std::string &path) {
     result["sqlite_version"] =
         std::string(sqlite3_libversion());
     return result;
+}
+
+nb::tuple profile_catalog() {
+    const auto &profiles = colmap_db_profile_specs();
+    nb::tuple result = nb::steal<nb::tuple>(
+        PyTuple_New(static_cast<Py_ssize_t>(profiles.size())));
+    if (!result.is_valid()) throw nb::python_error();
+    for (size_t index = 0; index < profiles.size(); ++index) {
+        const ColmapDbProfileSpec &profile = profiles[index];
+        nb::dict item;
+        item["name"] = profile.name;
+        item["source_revision"] = profile.source_revision;
+        item["application_id"] = profile.application_id;
+        item["user_version"] = profile.user_version;
+        item["typed_descriptors"] =
+            profile.typed_descriptors;
+        item["generalized_pose_priors"] =
+            profile.generalized_pose_priors;
+        item["recovered_two_view_cameras"] =
+            profile.recovered_two_view_cameras;
+        item["maxx_extensions"] = profile.maxx_extensions;
+        item["has_ownership_row"] =
+            profile.requires_maxx_schema_row;
+        PyTuple_SetItem(
+            result.ptr(), static_cast<Py_ssize_t>(index),
+            item.release().ptr());
+    }
+    return result;
+}
+
+std::string profile_schema(const std::string &name) {
+    for (const ColmapDbProfileSpec &profile :
+         colmap_db_profile_specs())
+        if (name == profile.name)
+            return profile.schema_sql;
+    throw std::invalid_argument(
+        "COLMAP database: unknown profile '" + name + "'");
 }
 
 }  // namespace
@@ -1679,4 +2020,13 @@ void register_colmap_db(nb::module_ &module) {
         "path"_a,
         "Inspect COLMAP database row counts and metadata "
         "without reading BLOB payloads.");
+    module.def(
+        "_colmap_db_profiles", &profile_catalog,
+        "Return the exact repository-owned COLMAP database "
+        "profile catalog.");
+    module.def(
+        "_colmap_db_profile_schema", &profile_schema,
+        "name"_a,
+        "Return exact DDL for one repository-owned COLMAP "
+        "database profile.");
 }

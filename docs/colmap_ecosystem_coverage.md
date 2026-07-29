@@ -50,10 +50,10 @@ Status terms:
 | Markers and marker projections, binary/text | planned | Extend `Reconstruction` with lossless typed arrays; optional sidecars remain absent when no values exist |
 | Image-time, point-frame, and time-frame sidecars | planned | Preserve exact IDs, timestamps, sync groups, labels, version, and file-presence state |
 | ChArUco board and calibration sidecars | planned | Add typed board/calibration records with exact per-image poses and errors |
-| Stock COLMAP 3.13 database | partial | Add an exact stock profile and image-linked pose-prior representation |
-| Stock COLMAP 4.1.1 database | partial | Add rigs/frames/generalized pose priors and typed descriptors |
-| Current upstream database | incompatible | Add `camera1`/`camera2`, exact schema fingerprint, and profile-aware writer |
-| Current OpsiClear/MAXX database | incompatible | Represent ownership metadata, videos/timing, quality, provenance, markers, colors, descriptor metadata, scores, and extended priors |
+| Stock COLMAP 3.13 database | partial | Exact profile identity is implemented; add image-linked pose-prior and populated rig/frame representation |
+| Stock COLMAP 4.1.1 database | partial | Exact profile identity is implemented; add populated rigs/frames/generalized pose priors |
+| Current upstream database | partial | Exact profile identity is implemented; add `camera1`/`camera2` payloads and the exact writer |
+| Current OpsiClear/MAXX database | partial | Exact ownership/profile identity is implemented; represent timing, quality, provenance, markers, colors, descriptor metadata, scores, and extended priors |
 | Database profile import/export reports | planned adapter | Emit structured compatibility results and explicit field-loss decisions |
 | COLMAP MVS depth maps | planned | New contiguous `width&height&1&` float32 codec; do not alias Gipuma DMB |
 | COLMAP MVS normal maps | planned | New HxWx3 float32 record/codec |
@@ -136,10 +136,11 @@ Remote C0 evidence for correction and validation commit `7046761`:
 
 ### C1 - database profiles
 
-- [ ] Freeze exact 3.13, 4.1.1, current-upstream, and current-MAXX schema
+- [x] Freeze exact 3.13, 4.1.1, current-upstream, and current-MAXX schema
   fixtures.
-- [ ] Replace the exact six-table whitelist with a versioned profile and
-  capability layer.
+- [x] Add a versioned profile catalog and exact structural inspection layer;
+  keep the six-table payload reader guarded until each additional field is
+  represented.
 - [ ] Represent rigs, rig sensors, frames, frame data, generalized and
   extended pose priors, descriptor dtype/type/name/dimension, keypoint colors,
   match scores, pair provenance, recovered cameras, timing/video metadata,
@@ -150,6 +151,39 @@ Remote C0 evidence for correction and validation commit `7046761`:
   existing represented table or column.
 - [ ] Differentially validate schemas, values, null/empty distinctions, and
   rollback behavior with sqlite3, pycolmap, and `colmap_mod`.
+
+C1a profile evidence:
+
+- stock profiles are pinned to COLMAP 3.13.0
+  `0b31f98133b470eae62811b557dc2bcff1e4f9a5`, COLMAP 4.1.1
+  `a0d785fba74b2664f31edc4a29026a8b27c00f67`, and current upstream
+  `64805cb870b574a569dccc34918d95a2db2b2fee`;
+- the MAXX ownership profile is pinned to the authorized
+  `colmap_mod` snapshot `de15b08a2dba98b55d6ddfb7cedac147838afbb4`;
+- migration-derived pre-ownership databases are deliberately reported as
+  legacy/unknown until C1e provides a field-level import classifier; they are
+  not mislabeled as one synthetic exact schema;
+- inspection compares the full normalized SQLite schema structure together
+  with `application_id`, `user_version`, and the MAXX ownership row. A matching
+  version alone reports `profile="unknown"`;
+- independent schema signatures for 3.13, 4.1.1, and MAXX were captured from
+  the authorized `colmap_mod` database exporter/creator; the current-upstream
+  signature was frozen from official `64805cb` DDL. Tests also mutate schema,
+  application id, version, and ownership fields one at a time;
+- this unit deliberately does not loosen the payload reader. Current-upstream
+  recovered cameras and populated stock/MAXX companion tables remain guarded
+  until C1b-C1d provide lossless records.
+
+Local C1a verification:
+
+- editable MSVC build, Ruff, diff check, and the complete suite pass with
+  3,594 tests and four documented skips;
+- the three review lenses report no remaining blocker after correcting writer
+  identity guards, ownership cardinality, locale-independent normalization,
+  and independent fixture provenance;
+- the three-run `colmap_db` harness reports 1,070 MB/s full read, 179 MB/s
+  direct write, 1.80 ms exact-profile inspection, and 5.00x inspection
+  speedup over full decode, with no Python-sized staging allocation.
 
 ### C2 - dense MVS
 

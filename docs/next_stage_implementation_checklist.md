@@ -4639,6 +4639,15 @@ Remote C0 evidence:
 - [ ] C1: exact stock 3.13, stock 4.1.1, current-upstream, and current-MAXX
       database profiles with complete typed field preservation and safe
       in-place behavior.
+  - [x] C1a: freeze the four exact profile identities, compare complete
+        normalized SQLite structure rather than version alone, expose
+        profile/application identity on inspection and decoded records, and
+        correct the Python schema contract. Treat migration-derived MAXX
+        pre-ownership databases as legacy until C1e's import classifier.
+  - [ ] C1b: recovered `camera1`/`camera2` payloads.
+  - [ ] C1c: populated rigs, frames, frame data, and both pose-prior layouts.
+  - [ ] C1d: MAXX descriptor/color/score/provenance/marker/quality/source fields.
+  - [ ] C1e: exact selected-profile writers and explicit conversion reports.
 - [ ] C2: COLMAP MVS depth/normal matrices, consistency graphs, visibility,
       and workspace companions; keep Gipuma DMB distinct.
 - [ ] C3: marker/time/point-frame/ChArUco sidecars plus Bundler list, compact

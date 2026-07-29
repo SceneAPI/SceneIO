@@ -402,12 +402,25 @@ ColmapDatabase make_colmap_database(
     std::vector<FeatureSet> features,
     const MatchGraph &match_graph,
     std::optional<u8_array> prior_focal_length,
-    int32_t user_version) {
+    int32_t user_version,
+    const std::string &profile,
+    int32_t application_id) {
     ColmapDatabase result;
     result.cameras = std::move(cameras);
     result.features = std::move(features);
     result.match_graph = match_graph;
     result.user_version = user_version;
+    result.profile = profile;
+    result.application_id = application_id;
+    if (profile != "sceneio-hybrid-v1")
+        throw std::invalid_argument(
+            "colmap_database: constructed records currently require "
+            "profile='sceneio-hybrid-v1'; exact profile construction "
+            "requires the profile-aware database factories");
+    if (application_id != 0)
+        throw std::invalid_argument(
+            "colmap_database: profile='sceneio-hybrid-v1' requires "
+            "application_id=0");
     result.prior_focal_length.assign(
         result.cameras.size(), uint8_t{0});
     if (prior_focal_length) {
@@ -1192,6 +1205,8 @@ void register_feature_match(nb::module_ &module) {
             },
             reference_internal)
         .def_ro("user_version", &ColmapDatabase::user_version)
+        .def_ro("application_id", &ColmapDatabase::application_id)
+        .def_ro("profile", &ColmapDatabase::profile)
         .def(
             "__repr__",
             [](const ColmapDatabase &value) {
@@ -1241,6 +1256,8 @@ void register_feature_match(nb::module_ &module) {
         "cameras"_a, "features"_a, "match_graph"_a,
         "prior_focal_length"_a = nb::none(),
         "user_version"_a = 3140002,
+        "profile"_a = "sceneio-hybrid-v1",
+        "application_id"_a = 0,
         "Build the lossless core payload of a COLMAP feature "
         "database.");
 }

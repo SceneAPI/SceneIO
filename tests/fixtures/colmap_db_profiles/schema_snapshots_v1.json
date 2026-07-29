@@ -1,0 +1,125 @@
+{
+  "schema_version": 1,
+  "profiles": {
+    "colmap-3.13.0": {
+      "source_revision": "0b31f98133b470eae62811b557dc2bcff1e4f9a5",
+      "capture": "colmap_mod de15b08a database_exporter --target_profile colmap-3.13.0",
+      "application_id": 0,
+      "user_version": 3900,
+      "schema_signature": "5f5fe4f1be8b726e",
+      "tables": [
+        "cameras",
+        "descriptors",
+        "frame_data",
+        "frames",
+        "images",
+        "keypoints",
+        "matches",
+        "pose_priors",
+        "rig_sensors",
+        "rigs",
+        "two_view_geometries"
+      ],
+      "indexes": [
+        "frame_sensor_assignment",
+        "index_name",
+        "rig_ref_sensor_assignment",
+        "rig_sensor_assignment"
+      ]
+    },
+    "colmap-4.1.1": {
+      "source_revision": "a0d785fba74b2664f31edc4a29026a8b27c00f67",
+      "capture": "colmap_mod de15b08a database_exporter --target_profile colmap-4.1.1",
+      "application_id": 0,
+      "user_version": 4010100,
+      "schema_signature": "dd762dc48c798ff8",
+      "tables": [
+        "cameras",
+        "descriptors",
+        "frame_data",
+        "frames",
+        "images",
+        "keypoints",
+        "matches",
+        "pose_priors",
+        "rig_sensors",
+        "rigs",
+        "two_view_geometries"
+      ],
+      "indexes": [
+        "frame_sensor_assignment",
+        "index_name",
+        "pose_prior_data_assignment",
+        "rig_ref_sensor_assignment",
+        "rig_sensor_assignment"
+      ]
+    },
+    "colmap-main-64805cb870b5": {
+      "source_revision": "64805cb870b574a569dccc34918d95a2db2b2fee",
+      "capture": "official database_sqlite.cc DDL at the pinned source revision",
+      "application_id": 0,
+      "user_version": 4020000,
+      "schema_signature": "78c925b4c3bb5cab",
+      "tables": [
+        "cameras",
+        "descriptors",
+        "frame_data",
+        "frames",
+        "images",
+        "keypoints",
+        "matches",
+        "pose_priors",
+        "rig_sensors",
+        "rigs",
+        "two_view_geometries"
+      ],
+      "indexes": [
+        "frame_sensor_assignment",
+        "index_name",
+        "pose_prior_data_assignment",
+        "rig_ref_sensor_assignment",
+        "rig_sensor_assignment"
+      ]
+    },
+    "maxx-v1": {
+      "source_revision": "de15b08a2dba98b55d6ddfb7cedac147838afbb4",
+      "capture": "colmap_mod de15b08a database_creator",
+      "application_id": 1296128088,
+      "user_version": 3140003,
+      "schema_signature": "82070e7065e25c03",
+      "tables": [
+        "cameras",
+        "descriptors",
+        "frame_data",
+        "frames",
+        "image_qualities",
+        "images",
+        "keypoint_colors",
+        "keypoints",
+        "marker_projections",
+        "markers",
+        "match_scores",
+        "matches",
+        "maxx_schema_info",
+        "pair_provenance",
+        "pose_priors",
+        "rig_sensors",
+        "rigs",
+        "two_view_geometries",
+        "video_frames",
+        "videos"
+      ],
+      "indexes": [
+        "frame_sensor_assignment",
+        "index_marker_label",
+        "index_marker_projection_image",
+        "index_name",
+        "index_video_frame_image",
+        "index_video_name",
+        "pose_prior_data_assignment",
+        "rig_ref_sensor_assignment",
+        "rig_sensor_assignment"
+      ]
+    }
+  }
+}

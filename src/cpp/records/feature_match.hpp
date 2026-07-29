@@ -82,6 +82,11 @@ struct ColmapDatabase {
     std::vector<uint8_t> prior_focal_length;  // cameras.size(), 0/1
     std::vector<FeatureSet> features;
     MatchGraph match_graph;
+    // Exact on-disk schema identity. Records built through colmap_database()
+    // use SceneIO's legacy hybrid profile until the caller selects one of the
+    // exact profile writers. Readers populate both values from SQLite.
+    std::string profile = "sceneio-hybrid-v1";
+    int32_t application_id = 0;
     int32_t user_version = 3140002;
 
     size_t num_cameras() const { return cameras.size(); }

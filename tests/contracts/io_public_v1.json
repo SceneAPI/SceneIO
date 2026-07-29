@@ -1,6 +1,8 @@
 {
   "schema_version": 1,
   "sceneio_all": [
+    "COLMAP_DATABASE_PROFILES",
+    "COLMAP_DATABASE_PROFILES_BY_NAME",
     "COLMAP_DB_TABLES",
     "COLMAP_DB_TABLES_BY_NAME",
     "COLMAP_KNOWN_EXTRACTOR_TYPES",
@@ -14,6 +16,7 @@
     "HEADER_FMT",
     "HEADER_SIZE",
     "MAGIC",
+    "MAXX_DATABASE_APPLICATION_ID",
     "MAX_NUM_IMAGES",
     "RECORD_FMT",
     "RECORD_SIZE",
@@ -28,6 +31,7 @@
     "ColmapDatabase",
     "ColumnDef",
     "ContractViolation",
+    "DatabaseProfile",
     "DepthEncoding",
     "DepthMap",
     "FeatureSet",
