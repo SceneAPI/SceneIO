@@ -2630,6 +2630,350 @@ def test_exact_profile_writer_is_guarded_until_profile_writers_land(tmp_path):
         _core.write_colmap_db(database, str(tmp_path / "converted.db"))
 
 
+@pytest.mark.parametrize(
+    "profile",
+    [
+        "colmap-3.13.0",
+        "colmap-4.1.1",
+        "colmap-main-64805cb870b5",
+    ],
+)
+def test_exact_stock_profile_writer_preserves_populated_companions(
+    tmp_path, profile
+):
+    source = tmp_path / f"{profile}-source.db"
+    destination = tmp_path / f"{profile}-roundtrip.db"
+    _stock_companion_database(source, profile)
+    expected = _core.read_colmap_db(str(source))
+
+    _core.write_colmap_db(expected, str(destination), profile=profile)
+    actual = _core.read_colmap_db(str(destination))
+
+    assert _database_fingerprint(actual) == _database_fingerprint(expected)
+    assert _sqlite_rows(destination) == _sqlite_rows(source)
+    assert _core.inspect_colmap_db(str(destination))["profile"] == profile
+
+
+def test_exact_current_profile_writer_preserves_recovered_cameras(tmp_path):
+    source = tmp_path / "current-source.db"
+    destination = tmp_path / "current-roundtrip.db"
+    _current_recovered_camera_database(
+        source,
+        camera1=_recovered_camera_blob(),
+        camera2=_recovered_camera_blob(
+            camera_id=24,
+            model_id=0,
+            width=800,
+            height=600,
+            prior_focal_length=0,
+            params=(700.0, 400.0, 300.0),
+        ),
+    )
+    expected = _core.read_colmap_db(str(source))
+
+    _core.write_colmap_db(
+        expected,
+        str(destination),
+        profile="colmap-main-64805cb870b5",
+    )
+    actual = _core.read_colmap_db(str(destination))
+
+    assert _database_fingerprint(actual) == _database_fingerprint(expected)
+    assert _sqlite_rows(destination) == _sqlite_rows(source)
+
+
+def test_exact_maxx_profile_writer_preserves_every_owned_surface(tmp_path):
+    source = tmp_path / "maxx-source.db"
+    destination = tmp_path / "maxx-roundtrip.db"
+    _maxx_extension_database(source)
+    expected = _core.read_colmap_db(str(source))
+
+    _core.write_colmap_db(expected, str(destination), profile="maxx-v1")
+    actual = _core.read_colmap_db(str(destination))
+
+    assert _database_fingerprint(actual) == _database_fingerprint(expected)
+    assert _sqlite_rows(destination) == _sqlite_rows(source)
+    assert _core.inspect_colmap_db(str(destination))["profile"] == "maxx-v1"
+
+
+def test_public_exact_profile_writer_and_conversion_report(tmp_path):
+    source = tmp_path / "stock-source.db"
+    destination = tmp_path / "stock-public.db"
+    inferred_destination = tmp_path / "stock-public-preserved.db"
+    _stock_companion_database(source, "colmap-4.1.1")
+    database = sceneio.read(source, format="colmap_db")
+
+    report = sceneio.colmap_database_conversion_report(
+        database, profile="colmap-4.1.1"
+    )
+    assert report == db_contract.ColmapDatabaseConversionReport(
+        source_profile="colmap-4.1.1",
+        target_profile="colmap-4.1.1",
+        writable=True,
+        identity_changes=(),
+        incompatibilities=(),
+    )
+
+    sceneio.write(
+        database,
+        destination,
+        format="colmap_db",
+        profile="colmap-4.1.1",
+    )
+    assert _database_fingerprint(sceneio.read(destination)) == (
+        _database_fingerprint(database)
+    )
+    sceneio.write(database, inferred_destination, format="colmap_db")
+    assert _database_fingerprint(sceneio.read(inferred_destination)) == (
+        _database_fingerprint(database)
+    )
+
+
+def test_conversion_report_lists_all_incompatible_maxx_categories(tmp_path):
+    source = tmp_path / "maxx-rich.db"
+    _maxx_extension_database(source)
+    database = _core.read_colmap_db(str(source))
+
+    report = sceneio.colmap_database_conversion_report(
+        database, profile="colmap-4.1.1"
+    )
+
+    assert not report.writable
+    assert report.identity_changes == (
+        ("profile", "maxx-v1", "colmap-4.1.1"),
+        ("application_id", 0x4D415858, 0),
+        ("user_version", 3_140_003, 4_010_100),
+    )
+    assert report.incompatibilities == (
+        "selected stock profile cannot represent MAXX image or "
+        "descriptor metadata",
+        "selected stock profile cannot preserve a descriptor dtype "
+        "that differs from its extractor-type inference",
+        "selected stock profile cannot represent extended pose-prior fields",
+        "selected stock profile cannot represent match scores or provenance",
+        "selected stock profile cannot represent MAXX companion records",
+    )
+    destination = tmp_path / "refused-stock.db"
+    source_before = _database_fingerprint(database)
+    with pytest.raises(
+        sceneio.FormatError, match="cannot represent MAXX"
+    ):
+        sceneio.write(
+            database,
+            destination,
+            format="colmap_db",
+            profile="colmap-4.1.1",
+        )
+    assert not destination.exists()
+    assert _database_fingerprint(database) == source_before
+
+
+def test_conversion_report_maxx_ownership_and_refusal_matrix(tmp_path):
+    missing_ownership = sceneio.colmap_database_conversion_report(
+        _database(), profile="maxx-v1"
+    )
+    assert (
+        "maxx-v1 requires an explicit ownership row"
+        in missing_ownership.incompatibilities
+    )
+    assert all(
+        "ownership versions" not in issue
+        for issue in missing_ownership.incompatibilities
+    )
+
+    invalid_ownership = _core.colmap_maxx_schema_info(
+        2, 1, "producer", "commit"
+    )
+    invalid_maxx = _core.colmap_database(
+        _database().cameras,
+        [_database().feature_at(0), _database().feature_at(1)],
+        _database().match_graph,
+        prior_focal_length=np.array([1], np.uint8),
+        maxx_schema_info=invalid_ownership,
+    )
+    assert (
+        "maxx-v1 ownership versions must both equal 1"
+        in sceneio.colmap_database_conversion_report(
+            invalid_maxx, profile="maxx-v1"
+        ).incompatibilities
+    )
+
+    scored = _core.feature_set(
+        np.zeros((3, 2), np.float32),
+        np.zeros((3, 8), np.uint8),
+        scores=np.full(3, 0.5, np.float32),
+        image_id=2,
+        image_name="a.jpg",
+        camera_id=5,
+        image_size=(640, 480),
+        extractor_type=0,
+    )
+    score_report = sceneio.colmap_database_conversion_report(
+        _database(features=[scored, _feature(11, "b.jpg")]),
+        profile="colmap-4.1.1",
+    )
+    assert any(
+        "per-keypoint scores" in issue
+        for issue in score_report.incompatibilities
+    )
+
+    non_sift = _core.feature_set(
+        np.zeros((3, 2), np.float32),
+        np.zeros((3, 8), np.float32),
+        image_id=2,
+        image_name="a.jpg",
+        camera_id=5,
+        image_size=(640, 480),
+        extractor_type=1,
+    )
+    descriptor_report = sceneio.colmap_database_conversion_report(
+        _database(features=[non_sift, _feature(11, "b.jpg")]),
+        profile="colmap-3.13.0",
+    )
+    assert "COLMAP 3.13 descriptors must be uint8 SIFT" in (
+        descriptor_report.incompatibilities
+    )
+
+    generalized_path = tmp_path / "generalized.db"
+    _stock_companion_database(generalized_path, "colmap-4.1.1")
+    prior_report = sceneio.colmap_database_conversion_report(
+        sceneio.read(generalized_path), profile="colmap-3.13.0"
+    )
+    assert (
+        "pose-prior layout does not match the selected profile"
+        in prior_report.incompatibilities
+    )
+    too_large_prior = sceneio.read(generalized_path)
+    too_large_prior.pose_priors.correlated_data_ids[0] = (
+        np.iinfo(np.uint64).max
+    )
+    assert "pose-prior data_id exceeds SQLite INTEGER" in (
+        sceneio.colmap_database_conversion_report(
+            too_large_prior, profile="colmap-4.1.1"
+        ).incompatibilities
+    )
+
+    recovered_path = tmp_path / "recovered.db"
+    _current_recovered_camera_database(
+        recovered_path,
+        camera1=_recovered_camera_blob(),
+        camera2=None,
+    )
+    recovered_report = sceneio.colmap_database_conversion_report(
+        sceneio.read(recovered_path), profile="colmap-4.1.1"
+    )
+    assert any(
+        "recovered two-view cameras" in issue
+        for issue in recovered_report.incompatibilities
+    )
+
+    too_large_path = tmp_path / "too-large.db"
+    _stock_companion_database(too_large_path, "colmap-4.1.1")
+    too_large = sceneio.read(too_large_path)
+    too_large.rig_frames.frame_data_ids[0] = np.iinfo(np.uint64).max
+    bound_report = sceneio.colmap_database_conversion_report(
+        too_large, profile="colmap-4.1.1"
+    )
+    assert "frame data_id exceeds SQLite INTEGER" in (
+        bound_report.incompatibilities
+    )
+
+    marker_path = tmp_path / "too-large-marker.db"
+    _maxx_extension_database(marker_path)
+    too_large_marker = sceneio.read(marker_path)
+    too_large_marker.markers.point3D_ids[0] = np.iinfo(np.uint64).max - 1
+    assert "marker point3D_id exceeds SQLite INTEGER" in (
+        sceneio.colmap_database_conversion_report(
+            too_large_marker, profile="maxx-v1"
+        ).incompatibilities
+    )
+
+
+@pytest.mark.parametrize(
+    ("field", "message"),
+    [
+        ("retrieval", "present retrieval score cannot be NaN"),
+        ("pts", "video-frame metadata is invalid"),
+        ("projection", "marker projection REAL values cannot be NaN"),
+        ("fps", "video REAL values cannot be NaN"),
+        ("duration", "video REAL values cannot be NaN"),
+    ],
+)
+def test_exact_writer_rejects_nan_real_without_opening_destination(
+    tmp_path, field, message
+):
+    source = tmp_path / f"nan-{field}-source.db"
+    destination = tmp_path / f"nan-{field}-destination.db"
+    _maxx_extension_database(source)
+    database = sceneio.read(source)
+    if field == "retrieval":
+        database.match_graph.retrieval_scores[0] = np.nan
+    elif field == "pts":
+        database.video_metadata.pts_seconds[0] = np.nan
+    elif field == "projection":
+        database.markers.projection_xy[0, 0] = np.nan
+    elif field == "fps":
+        database.video_metadata.fps[0] = np.nan
+    else:
+        database.video_metadata.duration_seconds[0] = np.nan
+
+    with pytest.raises(ValueError, match=message):
+        sceneio.colmap_database_conversion_report(
+            database, profile="maxx-v1"
+        )
+    with pytest.raises(sceneio.FormatError, match=message):
+        sceneio.write_colmap_db(
+            database, destination, profile="maxx-v1"
+        )
+    assert not destination.exists()
+
+
+def test_unknown_profile_report_and_write_do_not_create_destination(tmp_path):
+    destination = tmp_path / "unknown-profile.db"
+    database = _database()
+
+    with pytest.raises(ValueError, match="unknown target profile"):
+        sceneio.colmap_database_conversion_report(
+            database, profile="not-a-profile"
+        )
+    with pytest.raises(sceneio.FormatError, match="unknown target profile"):
+        sceneio.write_colmap_db(
+            database,
+            destination,
+            profile="not-a-profile",
+        )
+
+    assert not destination.exists()
+
+    with pytest.raises(ValueError, match="unknown target profile"):
+        sceneio.colmap_database_conversion_report(
+            database, profile="sceneio-hybrid-v1"
+        )
+    with pytest.raises(sceneio.FormatError, match="unknown target profile"):
+        sceneio.write_colmap_db(
+            database,
+            destination,
+            profile="sceneio-hybrid-v1",
+        )
+    assert not destination.exists()
+
+
+def test_public_write_rejects_profile_for_other_formats_before_output(tmp_path):
+    destination = tmp_path / "wrong.npy"
+
+    with pytest.raises(
+        sceneio.FormatError, match="only when writing format 'colmap_db'"
+    ):
+        sceneio.write(
+            np.arange(3, dtype=np.float32),
+            destination,
+            format="npy",
+            profile="colmap-4.1.1",
+        )
+
+    assert not destination.exists()
+
+
 def test_legacy_writer_rejects_recovered_two_view_cameras(tmp_path):
     camera = _core.camera(
         23,
@@ -2747,6 +3091,30 @@ def _database(*, graph=None, features=None):
         _graph() if graph is None else graph,
         prior_focal_length=np.array([1], np.uint8),
     )
+
+
+def _sqlite_rows(path: Path) -> dict[str, tuple[tuple[object, ...], ...]]:
+    """Return table rows through stdlib SQLite, independent of the codec."""
+
+    with sqlite3.connect(path) as connection:
+        tables = [
+            row[0]
+            for row in connection.execute(
+                "SELECT name FROM sqlite_master "
+                "WHERE type='table' ORDER BY name"
+            )
+        ]
+        return {
+            table: tuple(
+                sorted(
+                    connection.execute(
+                        f'SELECT * FROM "{table}"'
+                    ).fetchall(),
+                    key=repr,
+                )
+            )
+            for table in tables
+        }
 
 
 def _feature_fingerprint(value):
@@ -3337,6 +3705,30 @@ def test_pycolmap_reads_sceneio_writer(tmp_path):
         database.close()
 
 
+def test_pycolmap_reads_sceneio_exact_411_writer(tmp_path):
+    pycolmap = pytest.importorskip("pycolmap")
+    source = tmp_path / "exact-411-source.db"
+    destination = tmp_path / "exact-411-sceneio.db"
+    _stock_companion_database(source, "colmap-4.1.1")
+    sceneio.write_colmap_db(
+        sceneio.read(source),
+        destination,
+        profile="colmap-4.1.1",
+    )
+
+    database = pycolmap.Database.open(destination)
+    try:
+        assert database.num_cameras() == 2
+        assert database.num_images() == 2
+        images = {
+            image.image_id: image
+            for image in database.read_all_images()
+        }
+        assert images[2].name == "2.jpg"
+    finally:
+        database.close()
+
+
 def test_sceneio_reads_pycolmap_writer(tmp_path):
     pycolmap = pytest.importorskip("pycolmap")
     path = tmp_path / "pycolmap.db"
@@ -3441,8 +3833,9 @@ def test_partial_image_and_pair_equal_slices_of_full_read(tmp_path):
     assert capabilities.partial_selectors == ("image_id", "pair")
     assert "stock_rig_frame_reads" in capabilities.supported_features
     assert "stock_pose_prior_reads" in capabilities.supported_features
-    assert "rig_frame_writes" in capabilities.unsupported_features
-    assert "pose_prior_writes" in capabilities.unsupported_features
+    assert "stock_rig_frame_writes" in capabilities.supported_features
+    assert "stock_pose_prior_writes" in capabilities.supported_features
+    assert capabilities.unsupported_features == ("per_keypoint_score_writes",)
 
 
 def test_inspect_matches_decoded_metadata_without_blob_arrays(tmp_path):
@@ -3501,10 +3894,130 @@ def test_transaction_rolls_back_injected_failures(tmp_path):
     expected = _database()
     _core.write_colmap_db(expected, str(path))
     before = _database_fingerprint(_core.read_colmap_db(str(path)))
-    for stage in (1, 2):
+    for stage in (1, 2, 3):
         with pytest.raises(RuntimeError, match="injected failure"):
             _core.write_colmap_db(expected, str(path), _test_fail_after=stage)
         assert _database_fingerprint(_core.read_colmap_db(str(path))) == before
+
+
+def test_exact_profile_writer_rolls_back_every_stage_and_cleans_new_files(tmp_path):
+    source = tmp_path / "maxx-source.db"
+    existing = tmp_path / "maxx-existing.db"
+    _maxx_extension_database(source)
+    _maxx_extension_database(existing)
+    expected = _core.read_colmap_db(str(source))
+    before = _database_fingerprint(_core.read_colmap_db(str(existing)))
+
+    for stage in (1, 2, 3):
+        with pytest.raises(RuntimeError, match="injected failure"):
+            _core.write_colmap_db(
+                expected,
+                str(existing),
+                profile="maxx-v1",
+                _test_fail_after=stage,
+            )
+        assert _database_fingerprint(_core.read_colmap_db(str(existing))) == before
+        assert not list(tmp_path.glob(f"{existing.name}-*"))
+
+        absent = tmp_path / f"maxx-new-stage-{stage}.db"
+        with pytest.raises(RuntimeError, match="injected failure"):
+            _core.write_colmap_db(
+                expected,
+                str(absent),
+                profile="maxx-v1",
+                _test_fail_after=stage,
+            )
+        assert not absent.exists()
+        assert not list(tmp_path.glob(f"{absent.name}-*"))
+
+
+@pytest.mark.parametrize(
+    ("object_type", "ddl"),
+    [
+        ("view", "CREATE VIEW extra_object AS SELECT * FROM cameras"),
+        (
+            "trigger",
+            "CREATE TRIGGER extra_object AFTER INSERT ON cameras "
+            "BEGIN SELECT 1; END",
+        ),
+        ("index", "CREATE INDEX extra_object ON cameras(model)"),
+    ],
+)
+def test_exact_writer_refuses_unrepresented_schema_objects(
+    tmp_path, object_type, ddl
+):
+    source = tmp_path / "stock-source.db"
+    destination = tmp_path / f"with-extra-{object_type}.db"
+    _stock_companion_database(source, "colmap-4.1.1")
+    _stock_companion_database(destination, "colmap-4.1.1")
+    database = _core.read_colmap_db(str(source))
+    with sqlite3.connect(destination) as connection:
+        connection.execute(ddl)
+        connection.commit()
+
+    with pytest.raises(ValueError, match="unsupported schema object"):
+        _core.write_colmap_db(
+            database,
+            str(destination),
+            profile="colmap-4.1.1",
+        )
+
+    with sqlite3.connect(destination) as connection:
+        assert connection.execute(
+            "SELECT count(*) FROM sqlite_master "
+            "WHERE type=? AND name='extra_object'",
+            (object_type,),
+        ).fetchone() == (1,)
+
+
+def test_exact_writer_refuses_misleading_known_index_without_mutation(
+    tmp_path,
+):
+    source = tmp_path / "stock-source.db"
+    destination = tmp_path / "misleading-index.db"
+    _stock_companion_database(source, "colmap-4.1.1")
+    _stock_companion_database(destination, "colmap-4.1.1")
+    database = _core.read_colmap_db(str(source))
+    with sqlite3.connect(destination) as connection:
+        connection.execute("DROP INDEX rig_ref_sensor_assignment")
+        connection.execute(
+            "CREATE INDEX rig_ref_sensor_assignment ON cameras(model)"
+        )
+        connection.commit()
+    before = destination.read_bytes()
+
+    with pytest.raises(ValueError, match="unsupported schema object"):
+        _core.write_colmap_db(
+            database,
+            str(destination),
+            profile="colmap-4.1.1",
+        )
+
+    assert destination.read_bytes() == before
+    assert not list(tmp_path.glob(f"{destination.name}-*"))
+
+
+def test_exact_writer_refuses_unknown_table_without_mutation(tmp_path):
+    source = tmp_path / "stock-source.db"
+    destination = tmp_path / "unknown-table.db"
+    _stock_companion_database(source, "colmap-4.1.1")
+    _stock_companion_database(destination, "colmap-4.1.1")
+    database = _core.read_colmap_db(str(source))
+    with sqlite3.connect(destination) as connection:
+        connection.execute("CREATE TABLE ecosystem_extra(value BLOB)")
+        connection.execute("INSERT INTO ecosystem_extra VALUES(x'0102')")
+        connection.commit()
+    before = destination.read_bytes()
+
+    with pytest.raises(ValueError, match="unsupported table"):
+        _core.write_colmap_db(
+            database,
+            str(destination),
+            profile="colmap-4.1.1",
+        )
+
+    assert destination.read_bytes() == before
+    assert not list(tmp_path.glob(f"{destination.name}-*"))
 
 
 def test_hybrid_writer_replaces_preexisting_maxx_identity_and_tables(

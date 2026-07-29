@@ -156,12 +156,13 @@ Remote C0 evidence for correction and validation commit `7046761`:
   dtype/type/name/dimension, keypoint colors,
   match scores, pair provenance, timing/video metadata, quality, markers, and
   ownership metadata.
-- [ ] Make the writer emit an exact selected profile; stop emitting the current
-  hybrid schema.
-- [ ] Refuse in-place writes whenever a selected profile cannot preserve an
+- [x] Make the writer emit an exact selected profile while retaining the
+  established hybrid route for constructed core records.
+- [x] Refuse in-place writes whenever a selected profile cannot preserve an
   existing represented table or column.
-- [ ] Differentially validate schemas, values, null/empty distinctions, and
-  rollback behavior with sqlite3, pycolmap, and `colmap_mod`.
+- [x] Differentially validate schemas, values, null/empty distinctions, and
+  rollback behavior with sqlite3, live pycolmap 4.1.1, and pinned source/DDL
+  fixtures for the other profiles.
 
 C1a profile evidence:
 
@@ -172,7 +173,7 @@ C1a profile evidence:
 - the MAXX ownership profile is pinned to the authorized
   `colmap_mod` snapshot `de15b08a2dba98b55d6ddfb7cedac147838afbb4`;
 - migration-derived pre-ownership databases are deliberately reported as
-  legacy/unknown until C1e provides a field-level import classifier; they are
+  legacy/unknown until C4's final row-classification pass; they are
   not mislabeled as one synthetic exact schema;
 - inspection compares the full normalized SQLite schema structure together
   with `application_id`, `user_version`, and the MAXX ownership row. A matching
@@ -293,8 +294,8 @@ C1d MAXX extension read contract:
 - Independent stdlib `sqlite3`/`struct`/NumPy fixtures cover every field,
   NULL-versus-empty state, column-major matrices, IEEE payloads, malformed
   extents/types/layouts, partial-read isolation, handle release, nested-view
-  lifetime, and pre-mutation legacy-writer refusal. Exact-profile emission is
-  deliberately still C1e.
+  lifetime, and pre-mutation legacy-writer refusal. At the C1d checkpoint,
+  exact-profile emission was deliberately deferred to C1e.
 - Final local validation collects 3,732 nodes and passes 3,727 tests with five
   documented skips. The focused C1d gate passes 286 tests with two expected
   skips; Ruff, diff checks, a source-archive-derived NumPy-only wheel smoke,
@@ -305,6 +306,54 @@ C1d MAXX extension read contract:
   0.949 ms pair selection, with bounded traced Python allocation. Exact-commit
   remote instrumentation and GCC 10/AppleClang package validation remain
   release gates.
+
+### C1e - exact profile writes and conversion reports
+
+- `sceneio.write(database, path, profile=...)` and
+  `sceneio.write_colmap_db(...)` select one frozen profile name. A decoded
+  exact database preserves its profile when `profile` is omitted; a
+  constructed `sceneio-hybrid-v1` record keeps the established hybrid route.
+  The low-level two-argument writer also retains its compatibility behavior.
+- `sceneio.colmap_database_conversion_report` returns the source/target
+  profiles, fixed identity changes, a writable flag, and a stable ordered list
+  of represented-data incompatibilities. The report has no path argument
+  and cannot touch a destination.
+- Every selected-profile write completes aggregate and target-profile
+  analysis before filesystem inspection. Stock profiles reject MAXX fields;
+  3.13 additionally requires untyped uint8 SIFT descriptors and the
+  image-linked prior layout; recovered cameras require current or MAXX.
+  Per-keypoint generic scores have no column in any frozen database profile
+  and always reject.
+- MAXX output requires an explicit valid ownership record. SceneIO never
+  invents a `colmap_mod` producer version or commit. Video source paths and
+  codec names remain inert stored strings; writing them does not inspect or
+  decode media.
+- Replacement runs inside one rollback-capable SQLite transaction. Before
+  commit, the writer checks foreign keys, SQLite integrity, exact canonical
+  schema, ownership, application ID, and user version. Unrepresented tables,
+  views, triggers, and indexes refuse before mutation. New-file failures
+  remove the database and SQLite sidecars after handles are released.
+- Exactness means the frozen schema plus every represented value, SQL
+  presence bit, and BLOB byte. Whole-file SQLite bytes, historical
+  `sqlite_sequence` counters, and page layout are not part of the contract.
+  Zero-row dynamic payloads are emitted canonically as present empty BLOBs;
+  this matches the existing record contract, which does not distinguish
+  empty BLOB from SQL NULL for those required data columns. MAXX retrieval
+  scores retain the producer-semantic float32 domain.
+- Same-profile populated round-trips cover all four profiles, including
+  covariance transposes, recovered-camera wire bytes, all MAXX extension
+  rows, full/indexed/inspection agreement, cross-profile refusal, source
+  immutability, schema-object refusal, and three injected rollback stages.
+  Live pycolmap 4.1.1 and independent frozen DDL/row-byte fixtures remain the
+  local oracles. Exact de15 live-producer validation stays optional until the
+  matching binding is supplied.
+- Three-run 9.65 MB local medians measure 153/1,141 MB/s write/read for
+  3.13, 153/1,118 for 4.1.1, 160/1,131 for current, and 150/1,018 for MAXX.
+  Every profile records 0.000 MB traced write allocation and 0.003 MB mapped
+  read allocation at the harness precision.
+- Migration-derived pre-ownership databases continue to report
+  `profile="unknown"`; their import classification is explicitly assigned to
+  C4 rather than guessed during exact emission.
 
 ### C2 - dense MVS
 

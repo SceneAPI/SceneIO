@@ -146,7 +146,14 @@ measure 1,067 MB/s full/path read and 158 MB/s direct write with no
 payload-sized traced Python allocation. Metadata inspection is 4.12x faster
 than full decode, while indexed image and pair reads are 9.05x and 9.53x
 faster. The MAXX field expansion therefore adds no measured I/O-path
-regression; exact-profile emission remains the separate C1e unit.
+regression. C1e now adds exact 3.13/4.1.1/current/MAXX profile sinks on the
+same path-native SQLite route, with bounded traced allocation, explicit
+conversion analysis before destination access, and in-transaction
+schema/integrity verification. The harness exposes
+`--colmap-db-profile` so each exact writer branch is measured independently.
+On the 9.65 MB generated fixture, three-run exact-profile medians range from
+150-160 MB/s write and 1,018-1,141 MB/s read. Traced write allocation rounds
+to 0.000 MB and mapped read allocation to 0.003 MB for every profile.
 
 The latest sequence wave adds owned `ImageSequence` storage, lazy image
 directories, and an original dependency-free raw Y4M codec. On representative

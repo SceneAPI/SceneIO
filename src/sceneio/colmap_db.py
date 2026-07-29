@@ -80,7 +80,7 @@ DATABASE_VERSION_NUMBER = make_database_version_number(
 
 @dataclass(frozen=True)
 class DatabaseProfile:
-    """Exact SQLite identity used by inspection and planned profile writers."""
+    """Exact SQLite identity used by inspection and profile writers."""
 
     name: str
     source_revision: str
@@ -91,6 +91,17 @@ class DatabaseProfile:
     recovered_two_view_cameras: bool
     maxx_extensions: bool = False
     ownership_row: bool = False
+
+
+@dataclass(frozen=True)
+class ColmapDatabaseConversionReport:
+    """Destination-free analysis for one exact database-profile write."""
+
+    source_profile: str
+    target_profile: str
+    writable: bool
+    identity_changes: tuple[tuple[str, object, object], ...]
+    incompatibilities: tuple[str, ...]
 
 
 COLMAP_DATABASE_PROFILES: tuple[DatabaseProfile, ...] = (
@@ -676,6 +687,7 @@ __all__ = [
     "MAX_NUM_IMAGES",
     "UNDEFINED_EXTRACTOR_TYPE",
     "UPSTREAM_TABLES",
+    "ColmapDatabaseConversionReport",
     "ColumnDef",
     "DatabaseProfile",
     "TableDef",

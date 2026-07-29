@@ -3140,3 +3140,40 @@ that it times populated stock companion rows. Populated 3.13, 4.1.1, and
 current companion payloads are covered by independent wire fixtures,
 bit-level comparisons, lifetime tests, and malformed-row tests in
 `tests/codecs/test_colmap_db.py`.
+
+## COLMAP database C1e exact-profile writers (2026-07-29)
+
+C1e adds a profile selector to the existing path-native SQLite benchmark:
+
+```powershell
+.venv/Scripts/python.exe bench/bench_io.py --runs 3 --scale 1 `
+  --only colmap_db --skip-oracles `
+  --colmap-db-profile colmap-4.1.1
+```
+
+The same 9.65 MB logical core fixture was emitted through every exact schema.
+These are local MSVC medians; the oracle lane was omitted because this row
+compares SceneIO's four exact writer branches, while wire/schema correctness is
+covered independently by SQLite fixtures and the live 4.1.1 lane.
+
+| exact profile | encoded | write | full read | inspect | image | pair |
+|---|---:|---:|---:|---:|---:|---:|
+| 3.13.0 | 9.92 MB | 153 MB/s | 1,141 MB/s | 1.928 ms | 1.038 ms | 1.018 ms |
+| 4.1.1 | 9.92 MB | 153 MB/s | 1,118 MB/s | 1.993 ms | 0.981 ms | 1.009 ms |
+| current `64805cb` | 9.92 MB | 160 MB/s | 1,131 MB/s | 1.929 ms | 0.978 ms | 1.086 ms |
+| MAXX v1 | 10.00 MB | 150 MB/s | 1,018 MB/s | 2.895 ms | 1.102 ms | 1.087 ms |
+
+Traced direct-write allocation rounds to 0.000 MB and mapped-read allocation
+to 0.003 MB for all four profiles. The additional pre-commit schema,
+foreign-key, identity, and integrity checks therefore remain within the
+existing direct-sink performance band while adding no payload-sized Python
+staging.
+
+The final post-review tree was sampled again with the same command after
+structural index validation and SQL-REAL presence guards landed. Writes were
+149, 145, 144, and 144 MB/s for 3.13, 4.1.1, current, and MAXX; reads were
+1,008, 1,063, 1,062, and 964 MB/s. Traced read/write allocation still rounded
+to 0.0 MB, inspection remained 3.53x-4.53x faster than full materialization,
+and indexed image/pair reads remained 7.31x-9.15x faster. The unchanged reader
+showed the expected cache-state variation, while the new preflight work stayed
+inside the prior direct-write band and introduced no payload-sized staging.

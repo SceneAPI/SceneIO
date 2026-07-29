@@ -596,11 +596,11 @@
     "star_import_count": 67,
     "star_import_sha256": "9507bd17bd66bafef1cae309d96a0ed97b11ef81febf4893fa210d153047eef4",
     "function_ast_sha256": {
-      "_assert_colmap_db_equal": "eb3f03b33ac9316b86eb7d9ce1117626cf1078f11dcd79023063c9f18a8b6ba1",
-      "_benchmark_colmap_db": "401c290dc1cfff15a85091c19d9d28a184db5c58b4692d6ed5d413ae07fe5312",
+      "_assert_colmap_db_equal": "da1cf206f5c6dbebc8f20ecf10631ad1fea998a6c83adb97354936611f3b7dce",
+      "_benchmark_colmap_db": "0fc2a9533c139fb1a09b94adfb2efee2fc1e8cc423cba6dccc813ab8a92144d3",
       "_benchmark_gltf": "589f18f0c1bac962a14902f113d1bbcf32edc07168015792e9a42d0826506093",
       "_colmap_blob": "1510f9e3f19529d08b1e29d8ff6ab25ff568d1f41b5d93c20e55819b46a75d74",
-      "_colmap_db_fixture": "878c02f627dcd22a9a125bad53309e752f1698dd43b3151f8d919cb7f9cfcce5",
+      "_colmap_db_fixture": "21fca110721a74e5314b837211e72d958a2e8b9ed59bb7c204027f90c26a7ab6",
       "_colmap_db_payload_nbytes": "a68d8e879f360c0595f76f747079ce07c4822774f22b5b4cefee8bd396dffb32",
       "_directory_size": "94330e4bb104a8da463df5bd1e3c7c039f4767c77db03fbea1bceb1837355837",
       "_directory_specs": "eef733048de3357e52f43095c77b893b7df35b2623a89dcd435a0002b9744436",
@@ -615,7 +615,7 @@
       "_sqlite_reference_read_colmap_db_image": "1590c76b16a2c935a7f00736180a5b4858f5d86cd852367749385b8d203f367e",
       "_sqlite_reference_read_colmap_db_pair": "ec87e08a59243c23622d83a9a00112a5a0657a119c948d39d7d357b747714d85",
       "_sqlite_reference_write_colmap_db": "21d9bf176dcc34b91c663cbb60f09d552433237dde94e982fe35f0c6a33fa408",
-      "main": "71e966ea3ef175d76af15ad681a079947b8697e566f57d3a57b30d160db0f704"
+      "main": "c5b809e8ca512be16dd7e496fdfe65e903374265ad8f82f3f291cb9ac6f3c1fc"
     }
   },
   "r3_1a_equivalence": {
@@ -635,6 +635,7 @@
   },
   "cli_options": [
     "--cold-cache",
+    "--colmap-db-profile",
     "--help",
     "--json",
     "--large-safetensors-mib",
@@ -658,7 +659,8 @@
     "require_o4_gains": false,
     "require_o5_inspect_gains": false,
     "require_o5_partial_gains": false,
-    "json": null
+    "json": null,
+    "colmap_db_profile": "sceneio-hybrid-v1"
   },
   "incompatibilities": [
     [
@@ -820,6 +822,7 @@
       "path_read_mbps",
       "path_write_mbps",
       "payload_mb",
+      "profile",
       "read_mbps",
       "sink_write_peak_mb",
       "sink_write_rss_mb",

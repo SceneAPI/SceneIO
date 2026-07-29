@@ -4636,14 +4636,14 @@ Remote C0 evidence:
 
 ### Remaining lean closure
 
-- [ ] C1: exact stock 3.13, stock 4.1.1, current-upstream, and current-MAXX
+- [x] C1: exact stock 3.13, stock 4.1.1, current-upstream, and current-MAXX
       database profiles with complete typed field preservation and safe
       in-place behavior.
   - [x] C1a: freeze the four exact profile identities, compare complete
         normalized SQLite structure rather than version alone, expose
         profile/application identity on inspection and decoded records, and
         correct the Python schema contract. Treat migration-derived MAXX
-        pre-ownership databases as legacy until C1e's import classifier.
+        pre-ownership databases as legacy until C4's import classifier.
   - [x] C1b: recovered `camera1`/`camera2` payloads. Preserve SQL NULL
         independently for each endpoint, expose typed `Camera` values and
         prior-focal flags on `MatchGraph`, and keep the legacy writer guarded
@@ -4652,7 +4652,7 @@ Remote C0 evidence:
         pose-prior layouts.
   - [x] C1d: extended MAXX pose priors plus
         descriptor/color/score/provenance/marker/quality/source fields.
-  - [ ] C1e: exact selected-profile writers and explicit conversion reports.
+  - [x] C1e: exact selected-profile writers and explicit conversion reports.
 - [ ] C2: COLMAP MVS depth/normal matrices, consistency graphs, visibility,
       and workspace companions; keep Gipuma DMB distinct.
 - [ ] C3: marker/time/point-frame/ChArUco sidecars plus Bundler list, compact
@@ -4782,3 +4782,71 @@ C1d final local evidence on 2026-07-29:
   `a3cfdd784`, not the pinned de15 producer. Therefore no live exact-de15
   producer result is claimed; frozen pinned DDL and independently constructed
   row bytes remain the local oracle until an exact producer build is supplied.
+
+C1e exact-writer implementation checklist:
+
+- [x] Execute the frozen 3.13, 4.1.1, current, or MAXX DDL verbatim and set
+      the profile's fixed application/user identity.
+- [x] Write every represented camera, image, feature, match, rig/frame,
+      pose-prior, recovered-camera, MAXX descriptor/score/provenance,
+      marker/projection, metadata-only video/frame, quality, and ownership
+      row with the exact wire layout and SQL presence state.
+- [x] Transpose row-major public 3x3/6x6 covariance arrays back to the
+      producer's column-major SQLite BLOB order; keep F/E/H row-major and
+      recovered-camera fields explicitly little-endian.
+- [x] Analyze profile representability before filesystem inspection,
+      including fixed descriptor rules, pose layout, recovered cameras,
+      MAXX ownership, and every uint64-to-SQLite domain bound.
+- [x] Add immutable public conversion reports and explicit-profile writes;
+      preserve a decoded exact profile through ordinary public writes while
+      retaining the constructed-record hybrid compatibility route.
+- [x] Reject unrepresented tables, views, triggers, and indexes before
+      mutation; validate allowed indexes by table, uniqueness, ordered
+      columns, collation, and shape; re-identify canonical schema, ownership,
+      PRAGMAs, foreign keys, and SQLite integrity before commit.
+- [x] Reject NaN in SQL REAL fields where SQLite would otherwise turn a
+      represented value into NULL; retain representable positive and negative
+      infinity where the source contract permits it.
+- [x] Prove new/existing destination rollback at schema, row, and
+      post-verification stages, with no new-file or SQLite-sidecar residue.
+- [x] Differentially round-trip populated independent fixtures for all four
+      profiles and verify full, indexed, inspection, schema, scalar, SQL
+      presence, BLOB, source-immutability, and conversion-refusal behavior.
+- [x] Extend installed-wheel smoke and the benchmark harness with exact
+      profile selection, including MAXX without any new runtime dependency.
+- [x] Record the exactness boundary: canonical present-empty dynamic BLOBs,
+      producer-semantic float32 retrieval scores, and no historical SQLite
+      page/sequence-state promise.
+- [x] Move migration-derived pre-ownership classification explicitly to C4;
+      do not label an unknown schema during exact writing.
+- [ ] Run remote instrumentation plus Linux/macOS/Windows package validation
+      on the exact green commit; this remains a user-triggered release gate.
+
+C1e local evidence on 2026-07-29:
+
+- populated same-profile round-trips pass for 3.13, 4.1.1, current, and MAXX,
+  including all C1b-C1d companion fields and exact structural inspection;
+- the focused database suite collects 222 nodes and passes with two documented
+  optional producer/platform skips after public API, full refusal-matrix,
+  SQL-presence mutation, structural-index, unknown-table, and three-stage
+  rollback cases were added;
+- the complete local suite passes 3,749 tests with five documented optional
+  skips; all 95 compatibility/public/schema/benchmark checks, Ruff,
+  `git diff --check`, and installed-extension smoke pass;
+- all four exact outputs compare table-for-table and row-for-row through
+  Python's independent SQLite binding, and the exact 4.1.1 output is consumed
+  by the installed pycolmap binding;
+- the benchmark now accepts `--colmap-db-profile` for the hybrid and all four
+  exact profiles. Three-run 9.65 MB local medians are 153/1,141 MB/s
+  write/read for 3.13, 153/1,118 for 4.1.1, 160/1,131 for current, and
+  150/1,018 for MAXX. Traced write allocation rounds to 0.000 MB and mapped
+  read allocation to 0.003 MB for every profile; inspection remains
+  metadata-only and indexed image/pair reads remain bounded;
+- the final post-review sample remains in the same qualitative band at
+  144-149 MB/s write and 964-1,063 MB/s read, with zero rounded Python staging
+  allocation and 3.53x-4.53x inspection / 7.31x-9.15x indexed-read gains;
+- Ampere, Epicurus, and Lagrange reviewed architecture/wire correctness,
+  test/oracle soundness, and platform/public/docs behavior. Ownership
+  invariants, SQLite integer bounds, structural schema-object checks,
+  SQL-presence guards, independent output oracles, pre-commit verification,
+  report behavior, and compatibility routing were incorporated.

@@ -19,6 +19,7 @@ from dataclasses import replace
 from pathlib import Path
 
 from sceneio import _core
+from sceneio.colmap_db import ColmapDatabaseConversionReport
 from sceneio.io._depth import DepthEncoding, inspect_depth, read_depth, write_depth
 from sceneio.io._inspection import inspect_codec
 from sceneio.io._inspectors.model import ArrayInspection, Inspection
@@ -63,6 +64,9 @@ CameraRig = _core.CameraRig
 
 _FLOW_READER = _mmap_reader(_core.read_flo_field)
 _FLOW_WRITER = _file_sink_writer(_core.write_flo_field)
+_EXACT_COLMAP_DB_PROFILES = frozenset(
+    item["name"] for item in _core._colmap_db_profiles()
+)
 
 
 def _resolve_flow_format(path, format: str | None, *, writing: bool) -> str:
@@ -401,21 +405,99 @@ def _tensor_slices(value) -> tuple[tuple[str, int, int], ...]:
     return tuple(result)
 
 
-def write(obj, path, *, format: str | None = None) -> None:
+def colmap_database_conversion_report(
+    database: ColmapDatabase,
+    *,
+    profile: str,
+) -> ColmapDatabaseConversionReport:
+    """Analyze an exact COLMAP database target without opening a path."""
+
+    if profile not in _EXACT_COLMAP_DB_PROFILES:
+        raise ValueError(
+            f"COLMAP database writer: unknown target profile {profile!r}"
+        )
+    raw = _core._colmap_db_conversion_report(database, profile)
+    changes = raw["identity_changes"]
+    order = ("profile", "application_id", "user_version")
+    return ColmapDatabaseConversionReport(
+        source_profile=raw["source_profile"],
+        target_profile=raw["target_profile"],
+        writable=raw["writable"],
+        identity_changes=tuple(
+            (name, changes[name][0], changes[name][1])
+            for name in order
+            if name in changes
+        ),
+        incompatibilities=tuple(raw["incompatibilities"]),
+    )
+
+
+def write_colmap_db(
+    database: ColmapDatabase,
+    path,
+    *,
+    profile: str,
+) -> None:
+    """Write one explicitly selected exact COLMAP SQLite profile."""
+
+    try:
+        if profile not in _EXACT_COLMAP_DB_PROFILES:
+            raise ValueError(
+                f"COLMAP database writer: unknown target profile {profile!r}"
+            )
+        _core.write_colmap_db(database, str(path), profile=profile)
+    except Exception as exc:
+        raise FormatError(
+            f"writing {str(path)!r} as colmap_db profile {profile!r}: {exc}"
+        ) from exc
+
+
+def write(
+    obj,
+    path,
+    *,
+    format: str | None = None,
+    profile: str | None = None,
+) -> None:
     """Write a record to ``path``, dispatching on ``format``, the object
     type, and the extension.
 
     Single-file codecs write their C++ encoder buffer directly to the file
     without materializing a second output-sized Python ``bytes`` object. The
     file opens lazily after validation and encoding, so a rejected record does
-    not truncate an existing destination.
+    not truncate an existing destination. ``profile`` selects an exact
+    COLMAP SQLite schema and is rejected for every other format. Omitting it
+    preserves an exact profile carried by a decoded database; constructed
+    hybrid records retain the established hybrid-writer behavior.
     """
     fmt = format or _detect_write(obj, path)
     codec = get(fmt)
     if codec.write is None:
         raise FormatError(f"format {fmt!r} is read-only (no writer)")
+    if profile is not None and fmt != "colmap_db":
+        raise FormatError(
+            "profile is supported only when writing format 'colmap_db'"
+        )
+    if (
+        profile is not None
+        and fmt == "colmap_db"
+        and profile not in _EXACT_COLMAP_DB_PROFILES
+    ):
+        raise FormatError(
+            f"COLMAP database writer: unknown target profile {profile!r}"
+        )
     try:
-        codec.write(obj, str(path))
+        selected_profile = profile
+        if (
+            selected_profile is None
+            and fmt == "colmap_db"
+            and getattr(obj, "profile", None) in _EXACT_COLMAP_DB_PROFILES
+        ):
+            selected_profile = obj.profile
+        if selected_profile is None:
+            codec.write(obj, str(path))
+        else:
+            codec.write(obj, str(path), profile=selected_profile)
     except FormatError:
         raise
     except Exception as exc:
@@ -506,6 +588,7 @@ __all__ = [
     "Codec",
     "CodecCapabilities",
     "ColmapDatabase",
+    "ColmapDatabaseConversionReport",
     "ColmapMarkerSet",
     "ColmapMaxxSchemaInfo",
     "ColmapPosePriorSet",
@@ -533,6 +616,7 @@ __all__ = [
     "TensorDict",
     "capabilities",
     "codecs",
+    "colmap_database_conversion_report",
     "detect",
     "inspect",
     "inspect_depth",
@@ -544,6 +628,7 @@ __all__ = [
     "read_partial",
     "register",
     "write",
+    "write_colmap_db",
     "write_depth",
     "write_flow",
 ]

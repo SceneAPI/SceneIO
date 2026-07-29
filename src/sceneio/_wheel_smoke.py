@@ -1158,6 +1158,9 @@ def _colmap_database(root: Path) -> None:
     assert sceneio.FeatureSet is _core.FeatureSet
     assert sceneio.MatchGraph is _core.MatchGraph
     assert sceneio.ColmapDatabase is _core.ColmapDatabase
+    assert sceneio.ColmapDatabaseConversionReport.__name__ == (
+        "ColmapDatabaseConversionReport"
+    )
     assert sceneio.ColmapMarkerSet is _core.ColmapMarkerSet
     assert sceneio.ColmapMaxxSchemaInfo is _core.ColmapMaxxSchemaInfo
     assert sceneio.ColmapRigFrameSet is _core.ColmapRigFrameSet
@@ -1248,6 +1251,19 @@ def _colmap_database(root: Path) -> None:
     assert sceneio.read_partial(maxx_path, image_id=2).quality == 0.75
     assert sceneio.read_partial(maxx_path, pair=(3, 2)).source_flags.tolist() == [65]
     assert sceneio.inspect(maxx_path).metadata["num_markers"] == 1
+    report = sceneio.colmap_database_conversion_report(
+        maxx, profile="maxx-v1"
+    )
+    assert report.writable
+    assert not report.incompatibilities
+    maxx_copy = root / "maxx-copy.db"
+    sceneio.write(maxx, maxx_copy)
+    copied_maxx = sceneio.read(maxx_copy)
+    assert copied_maxx.profile == "maxx-v1"
+    assert copied_maxx.feature(2).descriptors.tobytes() == (
+        maxx.feature(2).descriptors.tobytes()
+    )
+    assert copied_maxx.markers.labels == ["target"]
 
 
 def _image_sequences(root: Path) -> None:

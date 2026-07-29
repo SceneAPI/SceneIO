@@ -1736,8 +1736,11 @@
         "relative_pose",
         "sparse_ids",
         "current_recovered_camera_reads",
+        "current_recovered_camera_writes",
         "stock_rig_frame_reads",
+        "stock_rig_frame_writes",
         "stock_pose_prior_reads",
+        "stock_pose_prior_writes",
         "maxx_image_time_reads",
         "maxx_descriptor_metadata_reads",
         "maxx_keypoint_color_reads",
@@ -1748,13 +1751,14 @@
         "maxx_marker_reads",
         "maxx_video_metadata_reads",
         "maxx_ownership_reads",
+        "maxx_extension_writes",
+        "exact_profile_writes",
+        "conversion_reports",
         "read_only_reads",
         "transactional_writes"
       ],
       "unsupported_features": [
-        "rig_frame_writes",
-        "pose_prior_writes",
-        "maxx_extension_writes"
+        "per_keypoint_score_writes"
       ],
       "capabilities": {
         "format": "colmap_db",
@@ -1791,8 +1795,11 @@
           "relative_pose",
           "sparse_ids",
           "current_recovered_camera_reads",
+          "current_recovered_camera_writes",
           "stock_rig_frame_reads",
+          "stock_rig_frame_writes",
           "stock_pose_prior_reads",
+          "stock_pose_prior_writes",
           "maxx_image_time_reads",
           "maxx_descriptor_metadata_reads",
           "maxx_keypoint_color_reads",
@@ -1803,13 +1810,14 @@
           "maxx_marker_reads",
           "maxx_video_metadata_reads",
           "maxx_ownership_reads",
+          "maxx_extension_writes",
+          "exact_profile_writes",
+          "conversion_reports",
           "read_only_reads",
           "transactional_writes"
         ],
         "unsupported_features": [
-          "rig_frame_writes",
-          "pose_prior_writes",
-          "maxx_extension_writes"
+          "per_keypoint_score_writes"
         ]
       }
     },

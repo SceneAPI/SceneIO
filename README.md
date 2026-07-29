@@ -242,6 +242,17 @@ pair_matches = sceneio.read_partial("database.db", pair=(42, 91))
 assert features.image_id == 42
 assert pair_matches.image_pairs.tolist() == [[42, 91]]
 
+# Exact database profiles are repository-owned. Decoded exact records preserve
+# their profile by default; inspect a cross-profile conversion before writing.
+database = sceneio.read("database.db")
+report = sceneio.colmap_database_conversion_report(
+    database, profile="colmap-4.1.1"
+)
+if report.writable:
+    sceneio.write(
+        database, "database-4.1.db", profile="colmap-4.1.1"
+    )
+
 # Safetensors tensors are read-only mmap views. Slices are half-open on the
 # leading axis and do not decode or copy unrelated tensor payloads.
 weights = sceneio.read_partial(
@@ -289,7 +300,12 @@ on `MatchGraph`, including independent SQL-NULL presence and prior-focal flags.
 Full stock 3.13/4.1.1/current database reads additionally expose owned
 rig/frame assignments and image-linked or generalized pose priors. SQL NULL
 state, WXYZ rig transforms, and covariance wire order are preserved; exact
-exact-profile writes remain unavailable until C1e. Owned MAXX
+3.13, 4.1.1, current, and MAXX schemas can now be selected explicitly when
+writing. A decoded exact database keeps its profile through ordinary
+`sceneio.write`; constructed legacy records retain the hybrid default.
+`sceneio.colmap_database_conversion_report` lists identity changes and every
+represented-data incompatibility before a conversion opens its destination.
+Owned MAXX
 database reads also preserve all five descriptor scalar dtypes, keypoint
 colors, match scores and provenance, image quality/time, extended pose priors,
 markers/projections, metadata-only video/frame rows, and the ownership record.

@@ -1622,7 +1622,7 @@ Existing calls remain source-compatible:
 
 ```python
 sceneio.read(path, format=None)
-sceneio.write(record, path, format=None)
+sceneio.write(record, path, format=None, profile=None)
 sceneio.inspect(path, format=None)
 sceneio.read_partial(path, format=None, ...)
 ```
@@ -1631,6 +1631,7 @@ Add keyword-only selectors as their records land:
 
 | Selector | Applies to |
 |---|---|
+| `profile=<exact name>` | COLMAP database writes only |
 | `tensors=(...)`, `slices={...}` | safetensors, HDF5, Zarr |
 | `image_id=<persisted id>` | COLMAP directory image/camera, COLMAP DB `FeatureSet`, future hloc |
 | `pair=(image_id1, image_id2)` | COLMAP DB `MatchGraph`, future hloc |

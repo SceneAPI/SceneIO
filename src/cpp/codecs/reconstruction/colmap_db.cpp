@@ -991,6 +991,92 @@ void reject_unknown_tables(sqlite3 *database) {
                 "COLMAP database: unsupported table '" +
                 name + "'");
     }
+    struct IndexSpec {
+        const char *table;
+        bool unique;
+        std::vector<std::string> columns;
+    };
+    static const std::unordered_map<std::string, IndexSpec> known_indexes = {
+        {"rig_ref_sensor_assignment",
+         {"rigs", true, {"ref_sensor_id", "ref_sensor_type"}}},
+        {"rig_sensor_assignment",
+         {"rig_sensors", true, {"sensor_id", "sensor_type"}}},
+        {"frame_sensor_assignment",
+         {"frame_data", true, {"data_id", "sensor_type"}}},
+        {"index_name", {"images", true, {"name"}}},
+        {"pose_prior_data_assignment",
+         {"pose_priors",
+          true,
+          {"corr_data_id", "corr_sensor_id", "corr_sensor_type"}}},
+        {"index_video_name", {"videos", true, {"name"}}},
+        {"index_video_frame_image",
+         {"video_frames", false, {"image_id"}}},
+        {"index_marker_label", {"markers", true, {"label"}}},
+        {"index_marker_projection_image",
+         {"marker_projections", false, {"image_id"}}},
+    };
+    Statement objects(
+        database,
+        "SELECT type,name,tbl_name FROM sqlite_master "
+        "WHERE type IN ('index','view','trigger') "
+        "AND name NOT LIKE 'sqlite_%' "
+        "ORDER BY type,name");
+    while (objects.row()) {
+        const std::string type =
+            text(objects.get(), 0, "schema object type");
+        const std::string name =
+            text(objects.get(), 1, "schema object name");
+        const std::string table =
+            text(objects.get(), 2, "schema object table");
+        const auto expected = known_indexes.find(name);
+        bool valid =
+            type == "index" && expected != known_indexes.end() &&
+            table == expected->second.table;
+        bool found = false;
+        if (valid) {
+            Statement list(
+                database,
+                "PRAGMA index_list(\"" + table + "\")");
+            while (list.row()) {
+                if (text(list.get(), 1, "index name") != name)
+                    continue;
+                found = true;
+                valid =
+                    (integer(list.get(), 2, "index unique") != 0) ==
+                        expected->second.unique &&
+                    text(list.get(), 3, "index origin") == "c" &&
+                    integer(list.get(), 4, "index partial") == 0;
+            }
+        }
+        std::vector<std::string> columns;
+        if (valid && found) {
+            Statement info(
+                database,
+                "PRAGMA index_xinfo(\"" + name + "\")");
+            while (info.row()) {
+                if (integer(info.get(), 5, "index key") == 0)
+                    continue;
+                const int64_t column_id =
+                    integer(info.get(), 1, "index column id");
+                if (column_id < 0 ||
+                    integer(info.get(), 3, "index descending") != 0 ||
+                    text(info.get(), 4, "index collation") != "BINARY") {
+                    valid = false;
+                    break;
+                }
+                columns.push_back(
+                    text(info.get(), 2, "index column name"));
+            }
+            valid =
+                valid && columns == expected->second.columns;
+        } else {
+            valid = false;
+        }
+        if (!valid)
+            throw std::invalid_argument(
+                "COLMAP database: unsupported schema object '" +
+                type + " " + name + "'");
+    }
 }
 
 int32_t user_version(sqlite3 *database) {
@@ -2474,7 +2560,7 @@ void bind_optional_blob(
         database, statement, parameter, data, bytes);
 }
 
-void create_schema(sqlite3 *database) {
+void drop_known_schema(sqlite3 *database) {
     execute(
         database,
         R"SQL(
@@ -2498,7 +2584,14 @@ DROP TABLE IF EXISTS frames;
 DROP TABLE IF EXISTS rig_sensors;
 DROP TABLE IF EXISTS rigs;
 DROP TABLE IF EXISTS cameras;
+)SQL");
+}
 
+void create_schema(sqlite3 *database) {
+    drop_known_schema(database);
+    execute(
+        database,
+        R"SQL(
 CREATE TABLE rigs(
   rig_id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
   ref_sensor_id INTEGER NOT NULL,
@@ -2805,6 +2898,984 @@ void write_rows(
     }
 }
 
+const ColmapDbProfileSpec &profile_spec(
+    const std::string &name) {
+    for (const ColmapDbProfileSpec &profile :
+         colmap_db_profile_specs())
+        if (name == profile.name) return profile;
+    throw std::invalid_argument(
+        "COLMAP database writer: unknown target profile '" +
+        name + "'");
+}
+
+bool any_present(const std::vector<uint8_t> &values) {
+    return std::any_of(
+        values.begin(), values.end(),
+        [](uint8_t value) { return value != 0; });
+}
+
+int32_t descriptor_dtype_wire(sio::DType dtype) {
+    switch (dtype) {
+        case sio::DType::U8:
+            return 0;
+        case sio::DType::I8:
+            return 1;
+        case sio::DType::F16:
+            return 2;
+        case sio::DType::F32:
+            return 3;
+        case sio::DType::F64:
+            return 4;
+        default:
+            throw std::invalid_argument(
+                "COLMAP database writer: descriptor dtype has "
+                "no MAXX wire value");
+    }
+}
+
+void bind_null(
+    sqlite3 *database, sqlite3_stmt *statement,
+    int parameter) {
+    check(
+        database,
+        sqlite3_bind_null(statement, parameter),
+        "binding NULL");
+}
+
+void bind_optional_text(
+    sqlite3 *database, sqlite3_stmt *statement,
+    int parameter, bool present,
+    const std::string &value) {
+    if (present)
+        bind_text(database, statement, parameter, value);
+    else
+        bind_null(database, statement, parameter);
+}
+
+void bind_optional_number(
+    sqlite3 *database, sqlite3_stmt *statement,
+    int parameter, bool present, double value) {
+    if (present)
+        check(
+            database,
+            sqlite3_bind_double(statement, parameter, value),
+            "binding REAL");
+    else
+        bind_null(database, statement, parameter);
+}
+
+std::vector<double> column_major_matrix(
+    const std::vector<double> &values, size_t offset,
+    size_t dimension) {
+    std::vector<double> result(dimension * dimension);
+    for (size_t row = 0; row < dimension; ++row)
+        for (size_t column = 0; column < dimension; ++column)
+            result[column * dimension + row] =
+                values[offset + row * dimension + column];
+    return result;
+}
+
+void append_u32_le(
+    std::vector<uint8_t> &target, uint32_t value) {
+    for (size_t byte = 0; byte < 4; ++byte)
+        target.push_back(
+            static_cast<uint8_t>(value >> (byte * 8)));
+}
+
+void append_u64_le(
+    std::vector<uint8_t> &target, uint64_t value) {
+    for (size_t byte = 0; byte < 8; ++byte)
+        target.push_back(
+            static_cast<uint8_t>(value >> (byte * 8)));
+}
+
+std::vector<uint8_t> recovered_camera_blob(
+    const Camera &camera, uint8_t prior_focal_length) {
+    std::vector<uint8_t> result;
+    result.reserve(33 + camera.params.size() * sizeof(double));
+    append_u32_le(result, camera.id);
+    append_u32_le(
+        result, static_cast<uint32_t>(camera.model_id));
+    append_u64_le(result, camera.width);
+    append_u64_le(result, camera.height);
+    result.push_back(prior_focal_length);
+    append_u64_le(result, camera.params.size());
+    for (double parameter : camera.params) {
+        uint64_t bits = 0;
+        std::memcpy(&bits, &parameter, sizeof(double));
+        append_u64_le(result, bits);
+    }
+    return result;
+}
+
+std::vector<std::string> profile_incompatibilities(
+    const ColmapDatabase &value,
+    const ColmapDbProfileSpec &profile) {
+    std::vector<std::string> result;
+    const auto add = [&result](const char *message) {
+        if (std::find(
+                result.begin(), result.end(), message) ==
+            result.end())
+            result.emplace_back(message);
+    };
+    const bool maxx = profile.maxx_extensions;
+    for (const FeatureSet &features : value.features) {
+        if (features.has_scores)
+            add("per-keypoint scores are not represented by "
+                "any selected database profile");
+        if (!maxx &&
+            (features.has_time_id ||
+             features.keypoint_colors_present ||
+             features.quality_present ||
+             features.descriptor_dtype_present ||
+             features.descriptor_dim_present ||
+             features.extractor_type_name_present))
+            add("selected stock profile cannot represent MAXX "
+                "image or descriptor metadata");
+        if (!features.has_descriptors) continue;
+        if (!profile.typed_descriptors) {
+            if (features.extractor_type != 0 ||
+                features.descriptor_dtype != sio::DType::U8)
+                add("COLMAP 3.13 descriptors must be uint8 SIFT");
+        } else if (!maxx) {
+            const sio::DType expected =
+                effective_descriptor_dtype(
+                    features.extractor_type, false);
+            if (features.descriptor_dtype != expected)
+                add("selected stock profile cannot preserve a "
+                    "descriptor dtype that differs from its "
+                    "extractor-type inference");
+        }
+        const size_t itemsize =
+            sio::dtype_info(
+                features.descriptor_dtype).itemsize;
+        if (features.descriptor_columns >
+            static_cast<size_t>(
+                std::numeric_limits<int64_t>::max()) /
+                itemsize)
+            add("stored descriptor column count exceeds "
+                "SQLite INTEGER");
+    }
+
+    const ColmapPosePriorSet &priors = value.pose_priors;
+    for (uint64_t data_id : value.rig_frames.frame_data_ids)
+        if (data_id >
+            static_cast<uint64_t>(
+                std::numeric_limits<int64_t>::max()))
+            add("frame data_id exceeds SQLite INTEGER");
+    for (uint64_t data_id : priors.corr_data_ids)
+        if (data_id >
+            static_cast<uint64_t>(
+                std::numeric_limits<int64_t>::max()))
+            add("pose-prior data_id exceeds SQLite INTEGER");
+    if (priors.size() != 0 &&
+        priors.generalized != profile.generalized_pose_priors)
+        add("pose-prior layout does not match the selected profile");
+    if (!maxx &&
+        (any_present(priors.rotation_present) ||
+         any_present(priors.rotation_covariance_present) ||
+         any_present(priors.pose_covariance_present)))
+        add("selected stock profile cannot represent extended "
+            "pose-prior fields");
+
+    const MatchGraph &graph = value.match_graph;
+    if (!profile.recovered_two_view_cameras &&
+        (any_present(graph.camera1_present) ||
+         any_present(graph.camera2_present)))
+        add("selected profile cannot represent recovered "
+            "two-view cameras");
+    if (!maxx &&
+        (graph.has_scores ||
+         any_present(graph.provenance_present)))
+        add("selected stock profile cannot represent match "
+            "scores or provenance");
+    if (!maxx &&
+        (value.markers.num_markers() != 0 ||
+         value.markers.num_projections() != 0 ||
+         value.video_metadata.num_videos() != 0 ||
+         value.video_metadata.num_video_frames() != 0 ||
+         value.maxx_schema_info.present))
+        add("selected stock profile cannot represent MAXX "
+            "companion records");
+    if (maxx && !value.maxx_schema_info.present)
+        add("maxx-v1 requires an explicit ownership row");
+    if (maxx && value.maxx_schema_info.present &&
+        (value.maxx_schema_info.schema_version != 1 ||
+         value.maxx_schema_info.minimum_reader_version != 1))
+        add("maxx-v1 ownership versions must both equal 1");
+    if (maxx)
+        for (uint64_t point3d_id : value.markers.point3d_ids)
+            if (point3d_id !=
+                    std::numeric_limits<uint64_t>::max() &&
+                point3d_id >
+                    static_cast<uint64_t>(
+                        std::numeric_limits<int64_t>::max()))
+                add("marker point3D_id exceeds SQLite INTEGER");
+    return result;
+}
+
+void validate_profile_encodable(
+    const ColmapDatabase &value,
+    const ColmapDbProfileSpec &profile) {
+    const std::vector<std::string> issues =
+        profile_incompatibilities(value, profile);
+    if (!issues.empty())
+        throw std::invalid_argument(
+            "COLMAP database writer: " + issues.front());
+}
+
+void write_rig_frame_rows(
+    sqlite3 *database, const ColmapRigFrameSet &value) {
+    Statement rigs(
+        database,
+        "INSERT INTO rigs("
+        "rig_id,ref_sensor_id,ref_sensor_type"
+        ") VALUES(?1,?2,?3)");
+    Statement sensors(
+        database,
+        "INSERT INTO rig_sensors("
+        "rig_id,sensor_id,sensor_type,sensor_from_rig"
+        ") VALUES(?1,?2,?3,?4)");
+    for (size_t rig = 0; rig < value.num_rigs(); ++rig) {
+        bind_int64(database, rigs.get(), 1, value.rig_ids[rig]);
+        bind_int64(
+            database, rigs.get(), 2,
+            value.rig_ref_sensor_ids[rig]);
+        bind_int64(
+            database, rigs.get(), 3,
+            value.rig_ref_sensor_types[rig]);
+        rigs.done();
+        for (uint64_t row = value.rig_sensor_offsets[rig];
+             row < value.rig_sensor_offsets[rig + 1]; ++row) {
+            const size_t index = static_cast<size_t>(row);
+            bind_int64(
+                database, sensors.get(), 1,
+                value.rig_ids[rig]);
+            bind_int64(
+                database, sensors.get(), 2,
+                value.rig_sensor_ids[index]);
+            bind_int64(
+                database, sensors.get(), 3,
+                value.rig_sensor_types[index]);
+            std::array<double, 7> pose{};
+            std::copy_n(
+                value.rig_sensor_qvecs.data() + index * 4,
+                4, pose.data());
+            std::copy_n(
+                value.rig_sensor_tvecs.data() + index * 3,
+                3, pose.data() + 4);
+            bind_optional_blob(
+                database, sensors.get(), 4,
+                value.rig_sensor_pose_present[index],
+                pose.data(), pose.size() * sizeof(double));
+            sensors.done();
+        }
+    }
+
+    Statement frames(
+        database,
+        "INSERT INTO frames(frame_id,rig_id) VALUES(?1,?2)");
+    Statement data(
+        database,
+        "INSERT INTO frame_data("
+        "frame_id,data_id,sensor_id,sensor_type"
+        ") VALUES(?1,?2,?3,?4)");
+    for (size_t frame = 0;
+         frame < value.num_frames(); ++frame) {
+        bind_int64(
+            database, frames.get(), 1,
+            value.frame_ids[frame]);
+        bind_int64(
+            database, frames.get(), 2,
+            value.frame_rig_ids[frame]);
+        frames.done();
+        for (uint64_t row = value.frame_data_offsets[frame];
+             row < value.frame_data_offsets[frame + 1]; ++row) {
+            const size_t index = static_cast<size_t>(row);
+            bind_int64(
+                database, data.get(), 1,
+                value.frame_ids[frame]);
+            bind_int64(
+                database, data.get(), 2,
+                static_cast<int64_t>(
+                    value.frame_data_ids[index]));
+            bind_int64(
+                database, data.get(), 3,
+                value.frame_sensor_ids[index]);
+            bind_int64(
+                database, data.get(), 4,
+                value.frame_sensor_types[index]);
+            data.done();
+        }
+    }
+}
+
+void write_pose_prior_rows(
+    sqlite3 *database, const ColmapPosePriorSet &value,
+    const ColmapDbProfileSpec &profile) {
+    if (!profile.generalized_pose_priors) {
+        Statement rows(
+            database,
+            "INSERT INTO pose_priors("
+            "image_id,position,coordinate_system,"
+            "position_covariance) VALUES(?1,?2,?3,?4)");
+        for (size_t index = 0; index < value.size(); ++index) {
+            bind_int64(
+                database, rows.get(), 1,
+                value.prior_ids[index]);
+            bind_optional_blob(
+                database, rows.get(), 2,
+                value.position_present[index],
+                value.positions.data() + index * 3,
+                3 * sizeof(double));
+            bind_int64(
+                database, rows.get(), 3,
+                value.coordinate_systems[index]);
+            const std::vector<double> covariance =
+                column_major_matrix(
+                    value.position_covariances,
+                    index * 9, 3);
+            bind_optional_blob(
+                database, rows.get(), 4,
+                value.position_covariance_present[index],
+                covariance.data(),
+                covariance.size() * sizeof(double));
+            rows.done();
+        }
+        return;
+    }
+
+    Statement rows(
+        database,
+        profile.maxx_extensions
+            ? "INSERT INTO pose_priors("
+              "pose_prior_id,corr_data_id,corr_sensor_id,"
+              "corr_sensor_type,position,position_covariance,"
+              "gravity,coordinate_system,rotation,"
+              "rotation_covariance,pose_covariance"
+              ") VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,"
+              "?10,?11)"
+            : "INSERT INTO pose_priors("
+              "pose_prior_id,corr_data_id,corr_sensor_id,"
+              "corr_sensor_type,position,position_covariance,"
+              "gravity,coordinate_system"
+              ") VALUES(?1,?2,?3,?4,?5,?6,?7,?8)");
+    for (size_t index = 0; index < value.size(); ++index) {
+        bind_int64(
+            database, rows.get(), 1,
+            value.prior_ids[index]);
+        bind_int64(
+            database, rows.get(), 2,
+            static_cast<int64_t>(value.corr_data_ids[index]));
+        bind_int64(
+            database, rows.get(), 3,
+            value.corr_sensor_ids[index]);
+        bind_int64(
+            database, rows.get(), 4,
+            value.corr_sensor_types[index]);
+        bind_optional_blob(
+            database, rows.get(), 5,
+            value.position_present[index],
+            value.positions.data() + index * 3,
+            3 * sizeof(double));
+        const std::vector<double> position_covariance =
+            column_major_matrix(
+                value.position_covariances, index * 9, 3);
+        bind_optional_blob(
+            database, rows.get(), 6,
+            value.position_covariance_present[index],
+            position_covariance.data(),
+            position_covariance.size() * sizeof(double));
+        bind_optional_blob(
+            database, rows.get(), 7,
+            value.gravity_present[index],
+            value.gravities.data() + index * 3,
+            3 * sizeof(double));
+        bind_int64(
+            database, rows.get(), 8,
+            value.coordinate_systems[index]);
+        if (profile.maxx_extensions) {
+            bind_optional_blob(
+                database, rows.get(), 9,
+                value.rotation_present[index],
+                value.rotations.data() + index * 4,
+                4 * sizeof(double));
+            const std::vector<double> rotation_covariance =
+                column_major_matrix(
+                    value.rotation_covariances,
+                    index * 9, 3);
+            bind_optional_blob(
+                database, rows.get(), 10,
+                value.rotation_covariance_present[index],
+                rotation_covariance.data(),
+                rotation_covariance.size() * sizeof(double));
+            const std::vector<double> pose_covariance =
+                column_major_matrix(
+                    value.pose_covariances,
+                    index * 36, 6);
+            bind_optional_blob(
+                database, rows.get(), 11,
+                value.pose_covariance_present[index],
+                pose_covariance.data(),
+                pose_covariance.size() * sizeof(double));
+        }
+        rows.done();
+    }
+}
+
+void write_camera_feature_rows(
+    sqlite3 *database, const ColmapDatabase &value,
+    const ColmapDbProfileSpec &profile) {
+    Statement cameras(
+        database,
+        "INSERT INTO cameras("
+        "camera_id,model,width,height,params,prior_focal_length"
+        ") VALUES(?1,?2,?3,?4,?5,?6)");
+    for (size_t index = 0;
+         index < value.cameras.size(); ++index) {
+        const Camera &camera = value.cameras[index];
+        bind_int64(database, cameras.get(), 1, camera.id);
+        bind_int64(
+            database, cameras.get(), 2, camera.model_id);
+        bind_int64(
+            database, cameras.get(), 3,
+            static_cast<int64_t>(camera.width));
+        bind_int64(
+            database, cameras.get(), 4,
+            static_cast<int64_t>(camera.height));
+        bind_blob(
+            database, cameras.get(), 5,
+            camera.params.data(),
+            camera.params.size() * sizeof(double));
+        bind_int64(
+            database, cameras.get(), 6,
+            value.prior_focal_length[index]);
+        cameras.done();
+    }
+
+    Statement images(
+        database,
+        profile.maxx_extensions
+            ? "INSERT INTO images("
+              "image_id,name,camera_id,time_id"
+              ") VALUES(?1,?2,?3,?4)"
+            : "INSERT INTO images("
+              "image_id,name,camera_id"
+              ") VALUES(?1,?2,?3)");
+    Statement keypoints(
+        database,
+        "INSERT INTO keypoints("
+        "image_id,rows,cols,data"
+        ") VALUES(?1,?2,?3,?4)");
+    const std::string descriptor_sql =
+        profile.maxx_extensions
+            ? "INSERT INTO descriptors("
+              "image_id,type,type_name,dtype,dim,rows,cols,data"
+              ") VALUES(?1,?2,?3,?4,?5,?6,?7,?8)"
+            : profile.typed_descriptors
+                  ? "INSERT INTO descriptors("
+                    "image_id,type,rows,cols,data"
+                    ") VALUES(?1,?2,?3,?4,?5)"
+                  : "INSERT INTO descriptors("
+                    "image_id,rows,cols,data"
+                    ") VALUES(?1,?2,?3,?4)";
+    Statement descriptors(database, descriptor_sql);
+
+    for (const FeatureSet &features : value.features) {
+        bind_int64(
+            database, images.get(), 1, features.image_id);
+        bind_text(
+            database, images.get(), 2, features.image_name);
+        bind_int64(
+            database, images.get(), 3, features.camera_id);
+        if (profile.maxx_extensions) {
+            if (features.has_time_id)
+                bind_int64(
+                    database, images.get(), 4,
+                    features.time_id);
+            else
+                bind_null(database, images.get(), 4);
+        }
+        images.done();
+
+        if (features.keypoints_present) {
+            bind_int64(
+                database, keypoints.get(), 1,
+                features.image_id);
+            bind_int64(
+                database, keypoints.get(), 2, features.rows);
+            bind_int64(
+                database, keypoints.get(), 3,
+                features.keypoint_columns);
+            bind_blob(
+                database, keypoints.get(), 4,
+                features.keypoints.data(),
+                features.keypoints.size() * sizeof(float));
+            keypoints.done();
+        }
+        if (!features.has_descriptors) continue;
+
+        const size_t itemsize =
+            sio::dtype_info(
+                features.descriptor_dtype).itemsize;
+        const size_t stored_columns =
+            features.descriptor_columns * itemsize;
+        bind_int64(
+            database, descriptors.get(), 1,
+            features.image_id);
+        if (profile.maxx_extensions) {
+            bind_int64(
+                database, descriptors.get(), 2,
+                features.extractor_type);
+            bind_optional_text(
+                database, descriptors.get(), 3,
+                features.extractor_type_name_present,
+                features.extractor_type_name);
+            if (features.descriptor_dtype_present)
+                bind_int64(
+                    database, descriptors.get(), 4,
+                    descriptor_dtype_wire(
+                        features.descriptor_dtype));
+            else
+                bind_null(database, descriptors.get(), 4);
+            if (features.descriptor_dim_present)
+                bind_int64(
+                    database, descriptors.get(), 5,
+                    features.descriptor_columns);
+            else
+                bind_null(database, descriptors.get(), 5);
+            bind_int64(
+                database, descriptors.get(), 6,
+                features.rows);
+            bind_int64(
+                database, descriptors.get(), 7,
+                stored_columns);
+            bind_blob(
+                database, descriptors.get(), 8,
+                features.descriptors.data(),
+                features.descriptors.size());
+        } else if (profile.typed_descriptors) {
+            bind_int64(
+                database, descriptors.get(), 2,
+                features.extractor_type);
+            bind_int64(
+                database, descriptors.get(), 3,
+                features.rows);
+            bind_int64(
+                database, descriptors.get(), 4,
+                stored_columns);
+            bind_blob(
+                database, descriptors.get(), 5,
+                features.descriptors.data(),
+                features.descriptors.size());
+        } else {
+            bind_int64(
+                database, descriptors.get(), 2,
+                features.rows);
+            bind_int64(
+                database, descriptors.get(), 3,
+                stored_columns);
+            bind_blob(
+                database, descriptors.get(), 4,
+                features.descriptors.data(),
+                features.descriptors.size());
+        }
+        descriptors.done();
+    }
+}
+
+void write_match_rows(
+    sqlite3 *database, const MatchGraph &graph,
+    const ColmapDbProfileSpec &profile) {
+    Statement matches(
+        database,
+        "INSERT INTO matches("
+        "pair_id,rows,cols,data"
+        ") VALUES(?1,?2,2,?3)");
+    Statement geometries(
+        database,
+        profile.recovered_two_view_cameras
+            ? "INSERT INTO two_view_geometries("
+              "pair_id,rows,cols,data,config,F,E,H,qvec,tvec,"
+              "camera1,camera2"
+              ") VALUES(?1,?2,2,?3,?4,?5,?6,?7,?8,?9,"
+              "?10,?11)"
+            : "INSERT INTO two_view_geometries("
+              "pair_id,rows,cols,data,config,F,E,H,qvec,tvec"
+              ") VALUES(?1,?2,2,?3,?4,?5,?6,?7,?8,?9)");
+    for (size_t pair = 0; pair < graph.pair_count; ++pair) {
+        const size_t match_begin =
+            static_cast<size_t>(graph.match_offsets[pair]);
+        const size_t match_end =
+            static_cast<size_t>(graph.match_offsets[pair + 1]);
+        if (graph.match_present[pair]) {
+            bind_int64(
+                database, matches.get(), 1,
+                graph.pair_ids[pair]);
+            bind_int64(
+                database, matches.get(), 2,
+                match_end - match_begin);
+            bind_blob(
+                database, matches.get(), 3,
+                match_begin == match_end
+                    ? nullptr
+                    : graph.matches.data() + match_begin * 2,
+                (match_end - match_begin) * 2 *
+                    sizeof(uint32_t));
+            matches.done();
+        }
+        if (!graph.geometry_present[pair]) continue;
+        const size_t verified_begin =
+            static_cast<size_t>(
+                graph.verified_offsets[pair]);
+        const size_t verified_end =
+            static_cast<size_t>(
+                graph.verified_offsets[pair + 1]);
+        bind_int64(
+            database, geometries.get(), 1,
+            graph.pair_ids[pair]);
+        bind_int64(
+            database, geometries.get(), 2,
+            verified_end - verified_begin);
+        bind_blob(
+            database, geometries.get(), 3,
+            verified_begin == verified_end
+                ? nullptr
+                : graph.verified_matches.data() +
+                      verified_begin * 2,
+            (verified_end - verified_begin) * 2 *
+                sizeof(uint32_t));
+        bind_int64(
+            database, geometries.get(), 4,
+            graph.configs[pair]);
+        bind_optional_blob(
+            database, geometries.get(), 5,
+            graph.F_present[pair],
+            graph.F.data() + pair * 9,
+            9 * sizeof(double));
+        bind_optional_blob(
+            database, geometries.get(), 6,
+            graph.E_present[pair],
+            graph.E.data() + pair * 9,
+            9 * sizeof(double));
+        bind_optional_blob(
+            database, geometries.get(), 7,
+            graph.H_present[pair],
+            graph.H.data() + pair * 9,
+            9 * sizeof(double));
+        bind_optional_blob(
+            database, geometries.get(), 8,
+            graph.pose_present[pair],
+            graph.qvecs.data() + pair * 4,
+            4 * sizeof(double));
+        bind_optional_blob(
+            database, geometries.get(), 9,
+            graph.pose_present[pair],
+            graph.tvecs.data() + pair * 3,
+            3 * sizeof(double));
+        if (profile.recovered_two_view_cameras) {
+            std::vector<uint8_t> camera1;
+            std::vector<uint8_t> camera2;
+            if (graph.camera1_present[pair])
+                camera1 = recovered_camera_blob(
+                    graph.recovered_camera1[pair],
+                    graph.camera1_prior_focal_length[pair]);
+            if (graph.camera2_present[pair])
+                camera2 = recovered_camera_blob(
+                    graph.recovered_camera2[pair],
+                    graph.camera2_prior_focal_length[pair]);
+            bind_optional_blob(
+                database, geometries.get(), 10,
+                graph.camera1_present[pair],
+                camera1.data(), camera1.size());
+            bind_optional_blob(
+                database, geometries.get(), 11,
+                graph.camera2_present[pair],
+                camera2.data(), camera2.size());
+        }
+        geometries.done();
+    }
+
+    if (!profile.maxx_extensions) return;
+    Statement scores(
+        database,
+        "INSERT INTO match_scores("
+        "pair_id,rows,cols,data"
+        ") VALUES(?1,?2,1,?3)");
+    Statement provenance(
+        database,
+        "INSERT INTO pair_provenance("
+        "pair_id,source_flags,retrieval_score"
+        ") VALUES(?1,?2,?3)");
+    for (size_t pair = 0; pair < graph.pair_count; ++pair) {
+        const size_t begin =
+            static_cast<size_t>(graph.match_offsets[pair]);
+        const size_t end =
+            static_cast<size_t>(graph.match_offsets[pair + 1]);
+        if (graph.match_score_present[pair]) {
+            bind_int64(
+                database, scores.get(), 1,
+                graph.pair_ids[pair]);
+            bind_int64(
+                database, scores.get(), 2, end - begin);
+            bind_blob(
+                database, scores.get(), 3,
+                begin == end
+                    ? nullptr
+                    : graph.scores.data() + begin,
+                (end - begin) * sizeof(float));
+            scores.done();
+        }
+        if (graph.provenance_present[pair]) {
+            bind_int64(
+                database, provenance.get(), 1,
+                graph.pair_ids[pair]);
+            bind_int64(
+                database, provenance.get(), 2,
+                graph.source_flags[pair]);
+            bind_optional_number(
+                database, provenance.get(), 3,
+                graph.retrieval_score_present[pair],
+                graph.retrieval_scores[pair]);
+            provenance.done();
+        }
+    }
+}
+
+void write_maxx_rows(
+    sqlite3 *database, const ColmapDatabase &value,
+    const ColmapDbProfileSpec &profile) {
+    if (!profile.maxx_extensions) return;
+
+    Statement colors(
+        database,
+        "INSERT INTO keypoint_colors("
+        "image_id,rows,cols,data"
+        ") VALUES(?1,?2,3,?3)");
+    Statement qualities(
+        database,
+        "INSERT INTO image_qualities(image_id,quality) "
+        "VALUES(?1,?2)");
+    for (const FeatureSet &features : value.features) {
+        if (features.keypoint_colors_present) {
+            bind_int64(
+                database, colors.get(), 1,
+                features.image_id);
+            bind_int64(
+                database, colors.get(), 2,
+                features.rows);
+            bind_blob(
+                database, colors.get(), 3,
+                features.keypoint_colors.data(),
+                features.keypoint_colors.size());
+            colors.done();
+        }
+        if (features.quality_present) {
+            bind_int64(
+                database, qualities.get(), 1,
+                features.image_id);
+            check(
+                database,
+                sqlite3_bind_double(
+                    qualities.get(), 2,
+                    features.quality),
+                "binding image quality");
+            qualities.done();
+        }
+    }
+
+    const ColmapMarkerSet &markers = value.markers;
+    Statement marker_rows(
+        database,
+        "INSERT INTO markers("
+        "marker_id,label,type,world_position,"
+        "world_position_cov,point3D_id,enabled"
+        ") VALUES(?1,?2,?3,?4,?5,?6,?7)");
+    for (size_t index = 0;
+         index < markers.num_markers(); ++index) {
+        bind_int64(
+            database, marker_rows.get(), 1,
+            markers.marker_ids[index]);
+        bind_text(
+            database, marker_rows.get(), 2,
+            markers.labels[index]);
+        bind_int64(
+            database, marker_rows.get(), 3,
+            markers.types[index]);
+        bind_optional_blob(
+            database, marker_rows.get(), 4,
+            markers.world_position_present[index],
+            markers.world_positions.data() + index * 3,
+            3 * sizeof(double));
+        const std::vector<double> covariance =
+            column_major_matrix(
+                markers.world_covariances,
+                index * 9, 3);
+        bind_optional_blob(
+            database, marker_rows.get(), 5,
+            markers.world_covariance_present[index],
+            covariance.data(),
+            covariance.size() * sizeof(double));
+        bind_int64(
+            database, marker_rows.get(), 6,
+            markers.point3d_ids[index] ==
+                    std::numeric_limits<uint64_t>::max()
+                ? -1
+                : static_cast<int64_t>(
+                      markers.point3d_ids[index]));
+        bind_int64(
+            database, marker_rows.get(), 7,
+            markers.enabled[index]);
+        marker_rows.done();
+    }
+    Statement projections(
+        database,
+        "INSERT INTO marker_projections("
+        "marker_id,image_id,x,y,size,pinned,point2D_idx"
+        ") VALUES(?1,?2,?3,?4,?5,?6,?7)");
+    for (size_t index = 0;
+         index < markers.num_projections(); ++index) {
+        bind_int64(
+            database, projections.get(), 1,
+            markers.projection_marker_ids[index]);
+        bind_int64(
+            database, projections.get(), 2,
+            markers.projection_image_ids[index]);
+        for (int parameter = 3; parameter <= 5; ++parameter) {
+            const double item =
+                parameter == 3
+                    ? markers.projection_xy[index * 2]
+                    : parameter == 4
+                          ? markers.projection_xy[index * 2 + 1]
+                          : markers.projection_sizes[index];
+            check(
+                database,
+                sqlite3_bind_double(
+                    projections.get(), parameter, item),
+                "binding marker projection REAL");
+        }
+        bind_int64(
+            database, projections.get(), 6,
+            markers.projection_pinned[index]);
+        bind_int64(
+            database, projections.get(), 7,
+            markers.projection_point2d_indices[index]);
+        projections.done();
+    }
+
+    const ColmapVideoMetadataSet &videos = value.video_metadata;
+    Statement video_rows(
+        database,
+        "INSERT INTO videos("
+        "video_id,name,source_path,content_hash,width,height,"
+        "num_frames,fps,duration_seconds,codec_name,sync_group"
+        ") VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11)");
+    for (size_t index = 0;
+         index < videos.num_videos(); ++index) {
+        bind_int64(
+            database, video_rows.get(), 1,
+            videos.video_ids[index]);
+        bind_text(
+            database, video_rows.get(), 2,
+            videos.names[index]);
+        bind_optional_text(
+            database, video_rows.get(), 3,
+            videos.source_path_present[index],
+            videos.source_paths[index]);
+        bind_optional_text(
+            database, video_rows.get(), 4,
+            videos.content_hash_present[index],
+            videos.content_hashes[index]);
+        bind_int64(
+            database, video_rows.get(), 5,
+            videos.widths[index]);
+        bind_int64(
+            database, video_rows.get(), 6,
+            videos.heights[index]);
+        bind_int64(
+            database, video_rows.get(), 7,
+            videos.num_frames[index]);
+        check(
+            database,
+            sqlite3_bind_double(
+                video_rows.get(), 8, videos.fps[index]),
+            "binding video fps");
+        check(
+            database,
+            sqlite3_bind_double(
+                video_rows.get(), 9,
+                videos.duration_seconds[index]),
+            "binding video duration");
+        bind_optional_text(
+            database, video_rows.get(), 10,
+            videos.codec_name_present[index],
+            videos.codec_names[index]);
+        bind_optional_text(
+            database, video_rows.get(), 11,
+            videos.sync_group_present[index],
+            videos.sync_groups[index]);
+        video_rows.done();
+    }
+    Statement frame_rows(
+        database,
+        "INSERT INTO video_frames("
+        "video_id,image_id,frame_id,pts_seconds,time_id"
+        ") VALUES(?1,?2,?3,?4,?5)");
+    for (size_t index = 0;
+         index < videos.num_video_frames(); ++index) {
+        bind_int64(
+            database, frame_rows.get(), 1,
+            videos.frame_video_ids[index]);
+        bind_int64(
+            database, frame_rows.get(), 2,
+            videos.frame_image_ids[index]);
+        bind_int64(
+            database, frame_rows.get(), 3,
+            videos.frame_ids[index]);
+        bind_optional_number(
+            database, frame_rows.get(), 4,
+            videos.pts_present[index],
+            videos.pts_seconds[index]);
+        if (videos.time_id_present[index])
+            bind_int64(
+                database, frame_rows.get(), 5,
+                videos.time_ids[index]);
+        else
+            bind_null(database, frame_rows.get(), 5);
+        frame_rows.done();
+    }
+
+    Statement ownership(
+        database,
+        "INSERT INTO maxx_schema_info("
+        "schema_version,minimum_reader_version,"
+        "producer_version,producer_commit"
+        ") VALUES(?1,?2,?3,?4)");
+    bind_int64(
+        database, ownership.get(), 1,
+        value.maxx_schema_info.schema_version);
+    bind_int64(
+        database, ownership.get(), 2,
+        value.maxx_schema_info.minimum_reader_version);
+    bind_text(
+        database, ownership.get(), 3,
+        value.maxx_schema_info.producer_version);
+    bind_text(
+        database, ownership.get(), 4,
+        value.maxx_schema_info.producer_commit);
+    ownership.done();
+}
+
+void write_profile_rows(
+    sqlite3 *database, const ColmapDatabase &value,
+    const ColmapDbProfileSpec &profile) {
+    write_rig_frame_rows(database, value.rig_frames);
+    write_camera_feature_rows(database, value, profile);
+    write_pose_prior_rows(database, value.pose_priors, profile);
+    write_match_rows(database, value.match_graph, profile);
+    write_maxx_rows(database, value, profile);
+}
+
 void validate_colmap_encodable(const ColmapDatabase &value) {
     for (const FeatureSet &features : value.features) {
         if (features.has_scores ||
@@ -2859,18 +3930,57 @@ void validate_colmap_encodable(const ColmapDatabase &value) {
             "require an exact current-profile writer");
 }
 
+void verify_written_database(
+    sqlite3 *database, const std::string &profile,
+    int32_t application_id, int32_t expected_user_version) {
+    Statement foreign_keys(database, "PRAGMA foreign_key_check");
+    if (foreign_keys.row())
+        throw std::runtime_error(
+            "COLMAP database writer: foreign-key validation failed");
+
+    Statement integrity(database, "PRAGMA integrity_check");
+    if (!integrity.row() ||
+        text(integrity.get(), 0, "integrity result") != "ok" ||
+        integrity.row())
+        throw std::runtime_error(
+            "COLMAP database writer: SQLite integrity check failed");
+
+    if (pragma_int(database, "application_id") != application_id ||
+        pragma_int(database, "user_version") !=
+            expected_user_version)
+        throw std::runtime_error(
+            "COLMAP database writer: profile identity check failed");
+    const ProfileIdentity identity = identify_profile(database);
+    if (identity.name != profile)
+        throw std::runtime_error(
+            "COLMAP database writer: emitted schema does not "
+            "match target profile");
+}
+
 void write_database(
     const ColmapDatabase &value, const std::string &path,
+    const std::string &requested_profile,
     size_t test_fail_after) {
     require_little_endian();
     validate_colmap_database(value, "COLMAP database writer");
-    validate_colmap_encodable(value);
-    if (value.profile != "sceneio-hybrid-v1" ||
-        value.application_id != 0)
-        throw std::invalid_argument(
-            "COLMAP database writer: exact profile preservation is "
-            "not implemented yet; only profile='sceneio-hybrid-v1' "
-            "with application_id=0 can be written");
+    const std::string target_profile =
+        requested_profile.empty()
+            ? "sceneio-hybrid-v1"
+            : requested_profile;
+    const bool hybrid =
+        target_profile == "sceneio-hybrid-v1";
+    const ColmapDbProfileSpec *profile = nullptr;
+    if (hybrid) {
+        validate_colmap_encodable(value);
+        if (value.profile != "sceneio-hybrid-v1" ||
+            value.application_id != 0)
+            throw std::invalid_argument(
+                "COLMAP database writer: exact profile preservation "
+                "requires an explicit target profile");
+    } else {
+        profile = &profile_spec(target_profile);
+        validate_profile_encodable(value, *profile);
+    }
     std::error_code filesystem_error;
     const std::filesystem::path filesystem_path =
         std::filesystem::u8path(path);
@@ -2891,25 +4001,56 @@ void write_database(
         reject_unknown_tables(database);
         execute(database, "PRAGMA foreign_keys=OFF");
         Transaction transaction(database);
-        create_schema(database);
+        if (hybrid) {
+            create_schema(database);
+        } else {
+            drop_known_schema(database);
+            execute(database, profile->schema_sql);
+        }
         if (test_fail_after == 1)
             throw std::runtime_error(
                 "COLMAP database: injected failure after schema");
-        write_rows(database, value);
+        if (hybrid)
+            write_rows(database, value);
+        else
+            write_profile_rows(database, value, *profile);
         if (test_fail_after == 2)
             throw std::runtime_error(
                 "COLMAP database: injected failure after rows");
         execute(
             database,
             "PRAGMA user_version=" +
-                std::to_string(value.user_version));
-        execute(database, "PRAGMA application_id=0");
+                std::to_string(
+                    hybrid
+                        ? value.user_version
+                        : profile->user_version));
+        execute(
+            database,
+            "PRAGMA application_id=" +
+                std::to_string(
+                    hybrid ? 0 : profile->application_id));
+        verify_written_database(
+            database, target_profile,
+            hybrid ? 0 : profile->application_id,
+            hybrid ? value.user_version
+                   : profile->user_version);
+        if (test_fail_after == 3)
+            throw std::runtime_error(
+                "COLMAP database: injected failure after "
+                "profile verification");
         transaction.commit();
     } catch (...) {
         if (created) {
             std::error_code ignored;
             std::filesystem::remove(
                 filesystem_path, ignored);
+            for (const char *suffix :
+                 {"-journal", "-wal", "-shm"}) {
+                std::filesystem::path sidecar =
+                    filesystem_path;
+                sidecar += suffix;
+                std::filesystem::remove(sidecar, ignored);
+            }
         }
         throw;
     }
@@ -3264,6 +4405,36 @@ nb::tuple profile_catalog() {
     return result;
 }
 
+nb::dict conversion_report(
+    const ColmapDatabase &value,
+    const std::string &target_profile) {
+    validate_colmap_database(
+        value, "COLMAP database conversion report");
+    const ColmapDbProfileSpec &profile =
+        profile_spec(target_profile);
+    const std::vector<std::string> issues =
+        profile_incompatibilities(value, profile);
+    nb::dict identity_changes;
+    if (value.profile != target_profile)
+        identity_changes["profile"] =
+            nb::make_tuple(value.profile, target_profile);
+    if (value.application_id != profile.application_id)
+        identity_changes["application_id"] =
+            nb::make_tuple(
+                value.application_id, profile.application_id);
+    if (value.user_version != profile.user_version)
+        identity_changes["user_version"] =
+            nb::make_tuple(
+                value.user_version, profile.user_version);
+    nb::dict result;
+    result["source_profile"] = value.profile;
+    result["target_profile"] = target_profile;
+    result["writable"] = issues.empty();
+    result["identity_changes"] = identity_changes;
+    result["incompatibilities"] = nb::cast(issues);
+    return result;
+}
+
 std::string profile_schema(const std::string &name) {
     for (const ColmapDbProfileSpec &profile :
          colmap_db_profile_specs())
@@ -3303,13 +4474,18 @@ void register_colmap_db(nb::module_ &module) {
     module.def(
         "write_colmap_db",
         [](const ColmapDatabase &value,
-           const std::string &path, size_t test_fail_after) {
+           const std::string &path,
+           size_t test_fail_after,
+           const std::string &profile) {
             nb::gil_scoped_release release;
-            write_database(value, path, test_fail_after);
+            write_database(
+                value, path, profile, test_fail_after);
         },
         "database"_a, "path"_a,
         "_test_fail_after"_a = 0,
-        "Write a COLMAP SQLite database transactionally.");
+        "profile"_a = "",
+        "Write a COLMAP SQLite database transactionally, "
+        "using the legacy hybrid profile unless explicitly selected.");
     module.def(
         "inspect_colmap_db", &inspection_dict,
         "path"_a,
@@ -3319,6 +4495,11 @@ void register_colmap_db(nb::module_ &module) {
         "_colmap_db_profiles", &profile_catalog,
         "Return the exact repository-owned COLMAP database "
         "profile catalog.");
+    module.def(
+        "_colmap_db_conversion_report", &conversion_report,
+        "database"_a, "profile"_a,
+        "Analyze an exact COLMAP target profile without "
+        "touching a destination.");
     module.def(
         "_colmap_db_profile_schema", &profile_schema,
         "name"_a,

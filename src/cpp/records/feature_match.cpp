@@ -536,7 +536,8 @@ ColmapDatabase make_colmap_database(
     std::optional<u8_array> prior_focal_length,
     int32_t user_version,
     const std::string &profile,
-    int32_t application_id) {
+    int32_t application_id,
+    nb::object maxx_schema_info) {
     ColmapDatabase result;
     result.cameras = std::move(cameras);
     result.features = std::move(features);
@@ -554,6 +555,11 @@ ColmapDatabase make_colmap_database(
         throw std::invalid_argument(
             "colmap_database: profile='sceneio-hybrid-v1' requires "
             "application_id=0");
+    if (!maxx_schema_info.is_none()) {
+        result.maxx_schema_info =
+            nb::cast<ColmapMaxxSchemaInfo>(maxx_schema_info);
+        result.maxx_schema_info.present = true;
+    }
     result.prior_focal_length.assign(
         result.cameras.size(), uint8_t{0});
     if (prior_focal_length) {
@@ -570,6 +576,25 @@ ColmapDatabase make_colmap_database(
         nb::gil_scoped_release release;
         validate_colmap_database(result);
     }
+    return result;
+}
+
+ColmapMaxxSchemaInfo make_colmap_maxx_schema_info(
+    uint32_t schema_version,
+    uint32_t minimum_reader_version,
+    const std::string &producer_version,
+    const std::string &producer_commit) {
+    ColmapMaxxSchemaInfo result;
+    result.present = true;
+    result.schema_version = schema_version;
+    result.minimum_reader_version = minimum_reader_version;
+    result.producer_version = producer_version;
+    result.producer_commit = producer_commit;
+    if (schema_version == 0 || minimum_reader_version == 0)
+        throw std::invalid_argument(
+            "colmap_maxx_schema_info: versions must be positive");
+    validate_text(producer_version, "MAXX producer_version");
+    validate_text(producer_commit, "MAXX producer_commit");
     return result;
 }
 
@@ -893,6 +918,11 @@ void validate_match_graph(
                 std::string(context) +
                 ": absent retrieval score carries a value");
         }
+        if (graph.retrieval_score_present[index] &&
+            std::isnan(graph.retrieval_scores[index]))
+            throw std::invalid_argument(
+                std::string(context) +
+                ": present retrieval score cannot be NaN");
     }
     require_binary_flags(
         graph.F_present, context, "F_present");
@@ -1382,6 +1412,12 @@ void validate_colmap_markers(
             throw std::invalid_argument(
                 std::string(context) +
                 ": marker projection metadata is invalid");
+        if (std::isnan(value.projection_xy[index * 2]) ||
+            std::isnan(value.projection_xy[index * 2 + 1]) ||
+            std::isnan(value.projection_sizes[index]))
+            throw std::invalid_argument(
+                std::string(context) +
+                ": marker projection REAL values cannot be NaN");
         const std::string key =
             std::to_string(value.projection_marker_ids[index]) +
             ":" +
@@ -1452,6 +1488,11 @@ void validate_colmap_videos(
             throw std::invalid_argument(
                 std::string(context) +
                 ": video names must be unique");
+        if (std::isnan(value.fps[index]) ||
+            std::isnan(value.duration_seconds[index]))
+            throw std::invalid_argument(
+                std::string(context) +
+                ": video REAL values cannot be NaN");
         const auto check_optional_text =
             [&](uint8_t present, const std::string &item,
                 const char *field) {
@@ -1484,6 +1525,8 @@ void validate_colmap_videos(
             value.frame_ids[index] < 0 ||
             (!value.pts_present[index] &&
              value.pts_seconds[index] != 0.0) ||
+            (value.pts_present[index] &&
+             std::isnan(value.pts_seconds[index])) ||
             (!value.time_id_present[index] &&
              value.time_ids[index] != 0) ||
             (value.time_id_present[index] &&
@@ -2922,12 +2965,21 @@ void register_feature_match(nb::module_ &module) {
         "camera2_prior_focal_length"_a = nb::none(),
         "Build a typed ragged image-pair MatchGraph.");
     module.def(
+        "colmap_maxx_schema_info",
+        &make_colmap_maxx_schema_info,
+        "schema_version"_a,
+        "minimum_reader_version"_a,
+        "producer_version"_a,
+        "producer_commit"_a,
+        "Build explicit MAXX database ownership metadata.");
+    module.def(
         "colmap_database", &make_colmap_database,
         "cameras"_a, "features"_a, "match_graph"_a,
         "prior_focal_length"_a = nb::none(),
         "user_version"_a = 3140002,
         "profile"_a = "sceneio-hybrid-v1",
         "application_id"_a = 0,
+        "maxx_schema_info"_a = nb::none(),
         "Build the lossless core payload of a COLMAP feature "
         "database.");
 }

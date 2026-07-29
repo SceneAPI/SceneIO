@@ -199,7 +199,7 @@ _try = benchmark_measure.try_measure
 _COLMAP_PAIR_MULTIPLIER = 2_147_483_647
 
 
-def _colmap_db_fixture(scale):
+def _colmap_db_fixture(scale, profile="sceneio-hybrid-v1"):
     image_count = 64
     feature_count = max(1, int(1024 * scale))
     match_count = min(feature_count, max(1, int(256 * scale)))
@@ -285,11 +285,22 @@ def _colmap_db_fixture(scale):
         match_present=present,
         geometry_present=present,
     )
+    ownership = (
+        _core.colmap_maxx_schema_info(
+            1,
+            1,
+            "SceneIO benchmark",
+            "sceneio-owned-benchmark",
+        )
+        if profile == "maxx-v1"
+        else None
+    )
     return _core.colmap_database(
         [camera],
         features,
         graph,
         prior_focal_length=np.array([1], np.uint8),
+        maxx_schema_info=ownership,
     )
 
 
@@ -582,7 +593,8 @@ def _sqlite_reference_read_colmap_db_pair(path, image_id1, image_id2):
 
 
 def _assert_colmap_db_equal(actual, expected):
-    assert actual.user_version == expected.user_version
+    if actual.profile == expected.profile:
+        assert actual.user_version == expected.user_version
     assert len(actual.cameras) == len(expected.cameras)
     for left, right in zip(actual.cameras, expected.cameras, strict=True):
         assert (
@@ -837,6 +849,18 @@ def main():
         ),
     )
     ap.add_argument(
+        "--colmap-db-profile",
+        choices=(
+            "sceneio-hybrid-v1",
+            "colmap-3.13.0",
+            "colmap-4.1.1",
+            "colmap-main-64805cb870b5",
+            "maxx-v1",
+        ),
+        default="sceneio-hybrid-v1",
+        help="COLMAP SQLite schema used by the colmap_db benchmark",
+    )
+    ap.add_argument(
         "--require-o4-gains",
         action="store_true",
         help=(
@@ -1025,7 +1049,9 @@ def _run_large_safetensors(args, tmp):
 
 
 def _benchmark_colmap_db(args, tmp):
-    value = _colmap_db_fixture(args.scale)
+    value = _colmap_db_fixture(
+        args.scale, args.colmap_db_profile
+    )
     native_path = Path(tmp) / "colmap-database.db"
     oracle_path = Path(tmp) / "colmap-database-oracle.db"
     payload_bytes = _colmap_db_payload_nbytes(value)
@@ -1039,7 +1065,17 @@ def _benchmark_colmap_db(args, tmp):
     )
 
     def native_write():
-        return sceneio.write(value, native_path, format="colmap_db")
+        return sceneio.write(
+            value,
+            native_path,
+            format="colmap_db",
+            profile=(
+                None
+                if args.colmap_db_profile ==
+                "sceneio-hybrid-v1"
+                else args.colmap_db_profile
+            ),
+        )
 
     def oracle_write():
         return _sqlite_reference_write_colmap_db(value, oracle_path)
@@ -1156,6 +1192,7 @@ def _benchmark_colmap_db(args, tmp):
         }
 
     decoded = native_full_read()
+    assert decoded.profile == args.colmap_db_profile
     _assert_colmap_db_equal(decoded, value)
     if not args.skip_oracles:
         oracle_decoded = sceneio.read(oracle_path, format="colmap_db")
@@ -1193,6 +1230,7 @@ def _benchmark_colmap_db(args, tmp):
     file_mb = native_path.stat().st_size / 1e6
     result = {
         "codec": "colmap_db",
+        "profile": args.colmap_db_profile,
         "payload_mb": payload_mb,
         "file_mb": file_mb,
         "write_mbps": payload_mb / native_write_time,
