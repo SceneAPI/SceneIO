@@ -181,6 +181,9 @@ void validate_write(const DepthMap &depth) {
     if (depth.invalid_policy != "zero")
         throw std::invalid_argument(
             "dmb: writer requires invalid_policy='zero'");
+    if (depth.depth_convention != "unspecified")
+        throw std::invalid_argument(
+            "dmb: depth convention metadata is not representable");
 }
 
 nb::bytes write_dmb(const DepthMap &depth) {

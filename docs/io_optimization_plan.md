@@ -2,7 +2,7 @@
 
 Status: complete for the original 23-codec O0-O5 scope. Its mmap, direct-sink,
 inspection, differential, memory, and partial-read capability contracts now
-cover the live 50-codec registry; 28 codecs expose bounded selectors. This
+cover the live 54-codec registry; 30 codecs expose bounded selectors. This
 status describes optimized I/O transport and bounded access; it does **not**
 claim that every compression/parser kernel is the fastest viable backend.
 Backend qualification remains available as a trigger-based post-R6 mechanism in
@@ -12,9 +12,12 @@ combined default after missing the frozen q95 comparative-quality floor; the
 JPEG encode/decode gap therefore remains explicit with stb retained. The
 reviewed, commit-sized verification checklist is
 [`next_stage_implementation_checklist.md`](next_stage_implementation_checklist.md).
-The user-directed lean closure policy accepts the verified current backends as
-the R6 release baseline without promoting 124 provisional rows to
+The user-directed lean closure policy accepts the verified R6 backends as
+that release baseline without promoting its 124 provisional rows to
 `qualified`; exhaustive candidate comparison is not an R6 prerequisite.
+The four post-R6 COLMAP dense codecs add eight measured provisional
+encode/decode rows, bringing the current ledger to 132 provisional, two known
+gaps, and six not-applicable operations without changing that policy.
 Current benchmark ownership work does not reopen O0-O5 or change codec
 capabilities or implementation-performance claims. Points close at `45e2757`
 with normal run `30244892746` and compiler-instrumented run `30244892600`.
@@ -128,8 +131,9 @@ and Ubuntu builds use the expected stable extension names. Final build-only run
 and downloaded-artifact inspection.
 
 Post-0.2 format expansion inherits the same gates. The registry currently has
-50 codecs: 44 file containers, three multi-file containers, and three directory
-containers (two COLMAP layouts plus lazy image sequences). COLMAP SQLite
+54 codecs: 48 buffer-backed file containers, three path-native multi-file
+containers, and three directory containers (two COLMAP layouts plus lazy image
+sequences). COLMAP SQLite
 remains path-native; SOG, OBJ/MTL, and glTF/external buffers have explicit
 multi-file adapters.
 The latest record waves add the four calibration formats over `CameraRig`, g2o
@@ -139,6 +143,11 @@ OBJ/MTL over `Mesh` + `MaterialSet`, STL/OFF over `Mesh`, plain glTF/GLB over
 `MeshScene`, and LAZperf-backed LAZ over `PointCloud`; each inherits direct
 file sinks, metadata inspection, partial reads where meaningful, and the
 all-codec differential/memory harness.
+The latest dense family adds COLMAP MVS depth/normal matrices, consistency
+graphs, and fused visibility. All four have mmap buffer reads, direct sinks,
+metadata inspection, and independent binary oracles; depth and normal expose
+bounded windows. Their lazy canonical/PMVS/CMP workspace coordinator remains
+outside the codec registry and never decodes encoded image payloads.
 
 The C1d MAXX database read expansion retains the same optimized path-native
 transport. On the representative 9.9 MB database, three-run local MSVC medians
@@ -569,7 +578,7 @@ test-soundness review lenses signed off with no remaining blockers.
 
 The original 23 per-codec **parity suites + the public-API E2E test remain the
 ground-truth oracle**. Optimizations added exactly these guards across the
-**original 23-codec scope**; the registry-driven equivalents now cover all 50:
+**original 23-codec scope**; the registry-driven equivalents now cover all 54:
 
 1. **Differential (path-equivalence) tests** — for every fast path: `fast == slow`
    **bit-exact** (mmap==bytes, zero-copy==copy, sink==buffer, partial==slice). One

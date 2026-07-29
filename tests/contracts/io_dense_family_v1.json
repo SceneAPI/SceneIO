@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "family": "dense",
+  "ids": [
+    "colmap_mvs_depth",
+    "colmap_mvs_normal",
+    "colmap_mvs_consistency",
+    "colmap_fused_visibility"
+  ],
+  "records": {
+    "colmap_mvs_depth": "DepthMap",
+    "colmap_mvs_normal": "NormalMap",
+    "colmap_mvs_consistency": "ConsistencyGraph",
+    "colmap_fused_visibility": "PointVisibility"
+  },
+  "partial_selectors": {
+    "colmap_mvs_depth": [
+      "window"
+    ],
+    "colmap_mvs_normal": [
+      "window"
+    ],
+    "colmap_mvs_consistency": [],
+    "colmap_fused_visibility": []
+  },
+  "explicit_only_ids": [
+    "colmap_mvs_depth",
+    "colmap_mvs_normal",
+    "colmap_mvs_consistency"
+  ],
+  "exact_filename_detection": {
+    "fused.ply.vis": "colmap_fused_visibility"
+  },
+  "native_sources": [
+    "src/cpp/bindings/dense.cpp",
+    "src/cpp/codecs/dense/colmap_mvs.cpp",
+    "src/cpp/records/dense_mvs.cpp",
+    "src/cpp/records/dense_mvs.hpp"
+  ],
+  "python_sources": [
+    "src/sceneio/colmap_mvs.py",
+    "src/sceneio/io/_inspectors/dense.py",
+    "src/sceneio/io/_registry/families/dense.py"
+  ],
+  "workspace_registry_ids": [],
+  "index_domain": "mvs_sequential_image_index"
+}

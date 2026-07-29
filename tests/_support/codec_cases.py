@@ -97,6 +97,10 @@ CODEC_CASE_DEFINITIONS = (
     _case("nvm", "buffer", ()),
     _case("openmvg", "buffer", ()),
     _case("splat", "buffer", ("points",)),
+    _case("colmap_mvs_depth", "buffer", ("window",)),
+    _case("colmap_mvs_normal", "buffer", ("window",)),
+    _case("colmap_mvs_consistency", "buffer", ()),
+    _case("colmap_fused_visibility", "buffer", ()),
 )
 
 CASES_BY_ID = MappingProxyType(
@@ -137,7 +141,7 @@ def _validate_case_definitions() -> None:
     }:
         raise RuntimeError("cross-codec fixture kinds are incomplete")
     if (len(BUFFER_CASES), len(PATH_CASES), len(DIRECTORY_CASES)) != (
-        44,
+        48,
         3,
         3,
     ):

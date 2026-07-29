@@ -74,6 +74,10 @@ CANONICAL_BUILTIN_IDS = (
     "nvm",
     "openmvg",
     "splat",
+    "colmap_mvs_depth",
+    "colmap_mvs_normal",
+    "colmap_mvs_consistency",
+    "colmap_fused_visibility",
 )
 
 FAMILY_MEMBERS = MappingProxyType(
@@ -84,6 +88,12 @@ FAMILY_MEMBERS = MappingProxyType(
             "opencv_xml",
             "ros_camera_info",
             "kalibr",
+        ),
+        "dense": (
+            "colmap_mvs_depth",
+            "colmap_mvs_normal",
+            "colmap_mvs_consistency",
+            "colmap_fused_visibility",
         ),
         "images": ("netpbm", "png", "jpeg", "bmp", "tga", "hdr", "exr", "webp"),
         "meshes": ("ply_mesh", "obj", "stl", "off", "gltf", "glb"),
@@ -258,6 +268,28 @@ _NATIVE_SYMBOLS = {
     "nvm": ("_inspect_nvm", "read_nvm", "write_nvm"),
     "openmvg": ("_inspect_openmvg", "read_openmvg", "write_openmvg"),
     "splat": ("read_splat", "write_splat", "read_splat_points"),
+    "colmap_mvs_depth": (
+        "_inspect_colmap_mvs_depth",
+        "read_colmap_mvs_depth",
+        "write_colmap_mvs_depth",
+        "read_colmap_mvs_depth_window",
+    ),
+    "colmap_mvs_normal": (
+        "_inspect_colmap_mvs_normal",
+        "read_colmap_mvs_normal",
+        "write_colmap_mvs_normal",
+        "read_colmap_mvs_normal_window",
+    ),
+    "colmap_mvs_consistency": (
+        "_inspect_colmap_mvs_consistency",
+        "read_colmap_mvs_consistency",
+        "write_colmap_mvs_consistency",
+    ),
+    "colmap_fused_visibility": (
+        "_inspect_colmap_fused_visibility",
+        "read_colmap_fused_visibility",
+        "write_colmap_fused_visibility",
+    ),
 }
 
 _PYTHON_SYMBOLS = {
@@ -326,6 +358,7 @@ def _validate_manifest() -> None:
     expected_families = {
         "arrays",
         "calibration",
+        "dense",
         "images",
         "meshes",
         "points",

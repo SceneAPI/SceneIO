@@ -367,6 +367,9 @@ nb::bytes write_pfm_depth(const DepthMap &depth, const std::string &unit,
     if (depth.has_confidence())
         throw std::invalid_argument(
             "PFM depth: confidence cannot be represented");
+    if (depth.depth_convention != "unspecified")
+        throw std::invalid_argument(
+            "PFM depth: depth convention metadata is not representable");
     const size_t count = checked_pfm_count(depth.height, depth.width, 1);
     if (depth.depth.size() != count)
         throw std::invalid_argument(

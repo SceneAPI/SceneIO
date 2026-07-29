@@ -1314,6 +1314,83 @@ def _image_sequences(root: Path) -> None:
     assert sceneio.read_partial(path, frames=(1, 2)).y.tobytes() == y[1:].tobytes()
 
 
+def _dense_mvs(root: Path) -> None:
+    depth = _core.depth_map(
+        np.arange(12, dtype=np.float32).reshape(3, 4),
+        unit="unknown",
+        invalid_policy="nonpositive",
+        depth_convention="camera_z",
+    )
+    depth_path = root / "depth.bin"
+    sceneio.write(depth, depth_path, format="colmap_mvs_depth")
+    decoded_depth = sceneio.read(depth_path, format="colmap_mvs_depth")
+    assert decoded_depth.depth.tobytes() == depth.depth.tobytes()
+    assert sceneio.inspect(
+        depth_path, format="colmap_mvs_depth"
+    ).metadata["depth_convention"] == "camera_z"
+    assert sceneio.read_partial(
+        depth_path,
+        window=(1, 3, 1, 4),
+        format="colmap_mvs_depth",
+    ).depth.shape == (2, 3)
+
+    normal = _core.normal_map(
+        np.arange(36, dtype=np.float32).reshape(3, 4, 3)
+    )
+    normal_path = root / "normal.bin"
+    sceneio.write(normal, normal_path, format="colmap_mvs_normal")
+    decoded_normal = sceneio.read(
+        normal_path, format="colmap_mvs_normal"
+    )
+    assert decoded_normal.normals.tobytes() == normal.normals.tobytes()
+    assert sceneio.inspect(
+        normal_path, format="colmap_mvs_normal"
+    ).shape == (3, 4, 3)
+    assert sceneio.read_partial(
+        normal_path,
+        window=(0, 2, 2, 4),
+        format="colmap_mvs_normal",
+    ).normals.shape == (2, 2, 3)
+
+    graph = _core.consistency_graph(
+        3,
+        4,
+        np.array([0, 2], np.uint32),
+        np.array([1, 3], np.uint32),
+        np.array([0, 2, 3], np.uint64),
+        np.array([2, 0, 1], np.uint32),
+    )
+    graph_path = root / "consistency.bin"
+    sceneio.write(
+        graph, graph_path, format="colmap_mvs_consistency"
+    )
+    decoded_graph = sceneio.read(
+        graph_path, format="colmap_mvs_consistency"
+    )
+    assert decoded_graph.image_indices.tolist() == [2, 0, 1]
+    assert sceneio.inspect(
+        graph_path, format="colmap_mvs_consistency"
+    ).count == 2
+
+    visibility = _core.point_visibility(
+        np.array([0, 2, 2], np.uint64),
+        np.array([3, 1], np.uint32),
+    )
+    visibility_path = root / "visibility.bin"
+    sceneio.write(
+        visibility,
+        visibility_path,
+        format="colmap_fused_visibility",
+    )
+    decoded_visibility = sceneio.read(
+        visibility_path, format="colmap_fused_visibility"
+    )
+    assert decoded_visibility.offsets.tolist() == [0, 2, 2]
+    assert sceneio.inspect(
+        visibility_path, format="colmap_fused_visibility"
+    ).count == 2
+
+
 _SMOKE_RUNNERS: Mapping[str, Callable[[Path], None]] = MappingProxyType(
     {
         "pfm": _array_formats,
@@ -1366,6 +1443,10 @@ _SMOKE_RUNNERS: Mapping[str, Callable[[Path], None]] = MappingProxyType(
         "nvm": _reconstruction_formats,
         "openmvg": _reconstruction_formats,
         "splat": _splats,
+        "colmap_mvs_depth": _dense_mvs,
+        "colmap_mvs_normal": _dense_mvs,
+        "colmap_mvs_consistency": _dense_mvs,
+        "colmap_fused_visibility": _dense_mvs,
     }
 )
 

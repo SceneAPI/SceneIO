@@ -13,6 +13,30 @@ licensed under the repository-root Apache-2.0 license. No FFmpeg/libav
 implementation or proprietary encoded-video implementation is included.
 Copyright in the new SceneIO implementation remains with its contributors.
 
+The COLMAP dense/workspace compatibility pass used these pinned reference
+surfaces from that commit:
+
+    src/colmap/mvs/mat.h
+    src/colmap/mvs/mat.cc
+    src/colmap/mvs/depth_map.h
+    src/colmap/mvs/normal_map.h
+    src/colmap/mvs/consistency_graph.h
+    src/colmap/mvs/consistency_graph.cc
+    src/colmap/mvs/fusion.h
+    src/colmap/mvs/fusion.cc
+    src/colmap/mvs/workspace.h
+    src/colmap/mvs/workspace.cc
+    src/colmap/mvs/model.h
+    src/colmap/mvs/model.cc
+    src/colmap/mvs/patch_match.h
+    src/colmap/mvs/patch_match.cc
+    src/colmap/controllers/undistorters.cc
+
+They define persisted matrix, graph, fused-visibility, workspace/config, and
+legacy export behavior used as a compatibility reference. SceneIO neither
+redistributes nor links those sources and adds no runtime dependency on the
+reference repository.
+
 Files derived from standard COLMAP formats also retain the upstream COLMAP
 BSD-3-Clause attribution in LICENSES/colmap.txt. Fork-specific behavior is
 reimplemented in SceneIO from its persisted byte/schema contracts; the

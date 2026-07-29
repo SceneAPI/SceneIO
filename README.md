@@ -73,7 +73,7 @@ artifacts vocabulary — wire identity unchanged.
 
 ### Compiled format I/O — `read` / `write` / `inspect` / `read_partial`
 
-The lazy-loaded compiled core reads and writes 50 image, image-sequence, depth, tensor,
+The lazy-loaded compiled core reads and writes 54 image, image-sequence, depth, tensor,
 point-cloud, Gaussian, mesh/scene, pose/state, reconstruction, calibration,
 graph, and feature-database formats.
 `sceneio.inspect(path)` returns an immutable `Inspection` with shape, dtype,

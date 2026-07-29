@@ -264,6 +264,22 @@ COMPARISON_QUALIFICATIONS = MappingProxyType(
             "independent benchmark encode/decode throughput",
             "tests/codecs/test_splat.py",
         ),
+        "colmap_mvs_depth": _timed(
+            "independent struct/NumPy implementation",
+            "bench/io_bench/oracles/dense.py",
+        ),
+        "colmap_mvs_normal": _timed(
+            "independent struct/NumPy implementation",
+            "bench/io_bench/oracles/dense.py",
+        ),
+        "colmap_mvs_consistency": _timed(
+            "independent struct/NumPy implementation",
+            "bench/io_bench/oracles/dense.py",
+        ),
+        "colmap_fused_visibility": _timed(
+            "independent struct/NumPy implementation",
+            "bench/io_bench/oracles/dense.py",
+        ),
     }
 )
 
@@ -369,6 +385,21 @@ def measure_spec_comparison(
         payload_mb / measured_write[0] if measured_write else None,
         payload_mb / measured_read[0] if measured_read else None,
     )
+
+
+def validate_dense_oracle_parity(
+    spec,
+    record,
+    payload,
+    native_encoded: bytes,
+) -> None:
+    """Run the dense family's independent cross-differential check."""
+
+    from bench.io_bench.families.dense import (
+        validate_dense_oracle_parity as validate,
+    )
+
+    validate(spec, record, payload, native_encoded)
 
 
 def validate_strict_results(results) -> None:

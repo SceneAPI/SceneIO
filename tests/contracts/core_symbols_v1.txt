@@ -6,6 +6,7 @@ ColmapMaxxSchemaInfo
 ColmapPosePriorSet
 ColmapRigFrameSet
 ColmapVideoMetadataSet
+ConsistencyGraph
 DepthMap
 FeatureSet
 FlowField
@@ -17,7 +18,9 @@ MatchGraph
 MaterialSet
 Mesh
 MeshScene
+NormalMap
 PointCloud
+PointVisibility
 PoseGraph
 PosedViewSet
 Reconstruction
@@ -30,6 +33,10 @@ _colmap_db_profiles
 _inspect_bal
 _inspect_bmp
 _inspect_bundler
+_inspect_colmap_fused_visibility
+_inspect_colmap_mvs_consistency
+_inspect_colmap_mvs_depth
+_inspect_colmap_mvs_normal
 _inspect_colmap_txt
 _inspect_dmb
 _inspect_euroc_state
@@ -69,6 +76,7 @@ camera
 camera_rig
 colmap_database
 colmap_maxx_schema_info
+consistency_graph
 depth_map
 feature_set
 flow_field
@@ -87,8 +95,10 @@ match_graph
 material_set
 mesh
 mesh_scene
+normal_map
 obj_material_library
 point_cloud
+point_visibility
 pose_graph
 posed_view_set
 read_bal
@@ -97,6 +107,12 @@ read_bundler
 read_colmap_db
 read_colmap_db_image
 read_colmap_db_pair
+read_colmap_fused_visibility
+read_colmap_mvs_consistency
+read_colmap_mvs_depth
+read_colmap_mvs_depth_window
+read_colmap_mvs_normal
+read_colmap_mvs_normal_window
 read_colmap_sparse
 read_colmap_sparse_image
 read_colmap_txt
@@ -188,6 +204,10 @@ write_bal
 write_bmp
 write_bundler
 write_colmap_db
+write_colmap_fused_visibility
+write_colmap_mvs_consistency
+write_colmap_mvs_depth
+write_colmap_mvs_normal
 write_colmap_sparse
 write_colmap_txt
 write_compressed_ply

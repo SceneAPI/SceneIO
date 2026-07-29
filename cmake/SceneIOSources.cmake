@@ -12,6 +12,7 @@ set(SCENEIO_BINDING_SOURCES
   src/cpp/bindings/records.cpp
   src/cpp/bindings/arrays.cpp
   src/cpp/bindings/calibration.cpp
+  src/cpp/bindings/dense.cpp
   src/cpp/bindings/images.cpp
   src/cpp/bindings/meshes.cpp
   src/cpp/bindings/points.cpp
@@ -35,7 +36,8 @@ set(SCENEIO_RECORD_SOURCES
   src/cpp/records/feature_match.cpp
   src/cpp/records/material_set.cpp
   src/cpp/records/mesh.cpp
-  src/cpp/records/mesh_scene.cpp)
+  src/cpp/records/mesh_scene.cpp
+  src/cpp/records/dense_mvs.cpp)
 
 set(SCENEIO_ARRAY_CODEC_SOURCES
   src/cpp/codecs/arrays/pfm.cpp
@@ -46,6 +48,9 @@ set(SCENEIO_ARRAY_CODEC_SOURCES
 
 set(SCENEIO_CALIBRATION_CODEC_SOURCES
   src/cpp/codecs/calibration/camera_calibration.cpp)
+
+set(SCENEIO_DENSE_CODEC_SOURCES
+  src/cpp/codecs/dense/colmap_mvs.cpp)
 
 set(SCENEIO_IMAGE_CODEC_SOURCES
   src/cpp/codecs/images/netpbm.cpp
@@ -97,6 +102,7 @@ set(SCENEIO_SPLAT_CODEC_SOURCES
 set(SCENEIO_CODEC_SOURCES
   ${SCENEIO_ARRAY_CODEC_SOURCES}
   ${SCENEIO_CALIBRATION_CODEC_SOURCES}
+  ${SCENEIO_DENSE_CODEC_SOURCES}
   ${SCENEIO_IMAGE_CODEC_SOURCES}
   ${SCENEIO_MESH_CODEC_SOURCES}
   ${SCENEIO_POINT_CODEC_SOURCES}
@@ -114,6 +120,7 @@ set(SCENEIO_CORE_SOURCES
   src/cpp/bindings/records.cpp
   src/cpp/bindings/arrays.cpp
   src/cpp/bindings/calibration.cpp
+  src/cpp/bindings/dense.cpp
   src/cpp/bindings/images.cpp
   src/cpp/bindings/meshes.cpp
   src/cpp/bindings/points.cpp
@@ -136,6 +143,7 @@ set(SCENEIO_CORE_SOURCES
   src/cpp/records/material_set.cpp
   src/cpp/records/mesh.cpp
   src/cpp/records/mesh_scene.cpp
+  src/cpp/records/dense_mvs.cpp
   src/cpp/codecs/arrays/pfm.cpp
   src/cpp/codecs/reconstruction/colmap.cpp
   src/cpp/codecs/splats/ply_gaussian.cpp
@@ -175,6 +183,7 @@ set(SCENEIO_CORE_SOURCES
   src/cpp/codecs/arrays/dmb.cpp
   src/cpp/codecs/reconstruction/euroc_state.cpp
   src/cpp/codecs/calibration/camera_calibration.cpp
+  src/cpp/codecs/dense/colmap_mvs.cpp
   src/cpp/codecs/reconstruction/g2o.cpp
   src/cpp/codecs/reconstruction/colmap_db.cpp
   src/cpp/third_party/stb/stb_impl.cpp

@@ -2,7 +2,7 @@
 
 Measures, per codec, encode (write) + decode (read) throughput (MB/s over the raw
 payload) and peak Python allocation (tracemalloc), for sceneio._core vs the oracle
-library where one exists, on representative payloads for all 50 codecs. Read
+library where one exists, on representative payloads for all 54 codecs. Read
 measurements retain the legacy whole-file bytes/copy-decode path beside the
 public registry mmap path, so their peak delta captures the input copy O1
 removes and, for NPY/FLO, the decoded-array copy O2 removes. Write measurements
@@ -44,6 +44,7 @@ from bench.io_bench.families.calibration import (
     build_calibration_specs,
 )
 from bench.io_bench.families.common import _record_nbytes
+from bench.io_bench.families.dense import build_dense_specs
 from bench.io_bench.families.images import build_image_specs
 from bench.io_bench.families.meshes import build_mesh_specs
 from bench.io_bench.families.points import build_point_specs
@@ -697,6 +698,7 @@ def _specs(scale, pose_bundle=None):
         *reconstruction_specs[:4],
         *build_calibration_specs(scale),
         *reconstruction_specs[4:],
+        *build_dense_specs(scale),
     ]
 
 
@@ -757,7 +759,15 @@ def _partial_request(codec_id, info, full_record=None):
         selected = max(1, faces // 16)
         start = (faces - selected) // 2
         return {"faces": (start, start + selected)}
-    if codec_id in {"pfm", "netpbm", "webp", "flo", "dmb"}:
+    if codec_id in {
+        "pfm",
+        "netpbm",
+        "webp",
+        "flo",
+        "dmb",
+        "colmap_mvs_depth",
+        "colmap_mvs_normal",
+    }:
         height, width = info.shape[:2]
         out_height = max(1, height // 8)
         out_width = max(1, width // 8)
@@ -1566,6 +1576,15 @@ def _run_benchmark(args, tmp):
         try:
             rec, payload = s.make()
             enc = bytes(s.w(rec))
+            if not args.skip_oracles and s.id in {
+                "colmap_fused_visibility",
+                "colmap_mvs_consistency",
+                "colmap_mvs_depth",
+                "colmap_mvs_normal",
+            }:
+                qualification.validate_dense_oracle_parity(
+                    s, rec, payload, enc
+                )
             pbytes = s.nbytes(rec, payload)
             pmb = pbytes / 1e6
             fmb = len(enc) / 1e6
@@ -2718,7 +2737,7 @@ def _run_benchmark(args, tmp):
             + len(directory_specs)
             + int(include_colmap_db)
             + int(include_gltf)
-            == 50
+            == 54
         )
     if getattr(args, "strict_oracles", False):
         qualification.validate_strict_results(results)

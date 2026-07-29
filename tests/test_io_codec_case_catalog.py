@@ -27,7 +27,7 @@ def test_case_catalog_is_complete_ordered_and_immutable():
     definitions = codec_cases.CODEC_CASE_DEFINITIONS
     assert tuple(case.id for case in definitions) == CANONICAL_BUILTIN_IDS
     assert tuple(codec_cases.CASES_BY_ID) == CANONICAL_BUILTIN_IDS
-    assert len(definitions) == len(codec_cases.CASES_BY_ID) == 50
+    assert len(definitions) == len(codec_cases.CASES_BY_ID) == 54
     assert all(dataclasses.is_dataclass(case) for case in definitions)
     with pytest.raises(dataclasses.FrozenInstanceError):
         definitions[0].id = "changed"
@@ -81,6 +81,10 @@ def test_case_catalog_preserves_the_legacy_fixture_partitions():
         "nvm",
         "openmvg",
         "splat",
+        "colmap_mvs_depth",
+        "colmap_mvs_normal",
+        "colmap_mvs_consistency",
+        "colmap_fused_visibility",
     )
     assert tuple(case.id for case in codec_cases.PATH_CASES) == (
         "obj",
@@ -147,6 +151,10 @@ def test_case_catalog_preserves_the_legacy_fixture_partitions():
         "nvm",
         "openmvg",
         "splat",
+        "colmap_mvs_depth",
+        "colmap_mvs_normal",
+        "colmap_mvs_consistency",
+        "colmap_fused_visibility",
     )
     for case in built_cases:
         assert case.reader is getattr(_core, f"read_{case.id}")
@@ -156,13 +164,13 @@ def test_case_catalog_preserves_the_legacy_fixture_partitions():
         for case in built_cases
         if case.id != "compressed_ply"
     ]
-    assert len(portable_fixture_projection) == 43
+    assert len(portable_fixture_projection) == 47
     fixture_payload = json.dumps(
         portable_fixture_projection,
         separators=(",", ":"),
     )
     assert hashlib.sha256(fixture_payload.encode()).hexdigest() == (
-        "b21a55c6cbde2a46d89bf2bc013b6e81ffe3d58565922dcd690c2605f31143ab"
+        "909d7dcc4cdccfc16bef59e6930a0e465142e29973f427817720114d99030b45"
     )
     cases_by_id = {case.id: case for case in built_cases}
     assert (
@@ -224,11 +232,13 @@ def test_case_catalog_selectors_match_live_builtin_capabilities():
         "flo",
         "dmb",
         "splat",
+        "colmap_mvs_depth",
+        "colmap_mvs_normal",
     )
     assert sum(
         len(case.partial_selectors)
         for case in codec_cases.PARTIAL_CASES
-    ) == 32
+    ) == 34
 
 
 def test_runtime_extensions_do_not_enter_repository_case_completeness():

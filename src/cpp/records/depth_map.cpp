@@ -27,7 +27,8 @@ using anyarr = nb::ndarray<nb::ro, nb::c_contig, nb::device::cpu>;
 
 DepthMap make_depth_map(anyarr depth, std::optional<anyarr> confidence,
                         std::optional<std::string> unit, std::optional<double> scale_to_meters,
-                        const std::string &invalid_policy) {
+                        const std::string &invalid_policy,
+                        const std::string &depth_convention) {
     // 1. shape: exactly (H,W), both >= 1 (the H,W >= 1 invariant keeps every
     // view over a non-empty buffer, so the null-data sentinel concern never
     // arises and confidence-absent can safely mean "empty vector").
@@ -107,8 +108,15 @@ DepthMap make_depth_map(anyarr depth, std::optional<anyarr> confidence,
     // scrubbed (reader records, does not judge -- the netpbm "sample may exceed
     // maxval" precedent).
     if (!depth_map_valid_invalid_policy(invalid_policy))
-        throw std::invalid_argument("depth_map: invalid_policy must be none|zero|nonfinite|negative");
+        throw std::invalid_argument(
+            "depth_map: invalid_policy must be "
+            "none|zero|nonfinite|negative|nonpositive");
     d.invalid_policy = invalid_policy;
+    if (!depth_map_valid_depth_convention(depth_convention))
+        throw std::invalid_argument(
+            "depth_map: depth_convention must be "
+            "unspecified|camera_z|ray_distance");
+    d.depth_convention = depth_convention;
 
     return d;
 }
@@ -143,6 +151,10 @@ void register_depth_map(nb::module_ &m) {
         .def_prop_ro("unit", [](const DepthMap &d) { return d.unit; })
         .def_prop_ro("scale_to_meters", [](const DepthMap &d) { return d.scale_to_meters; })
         .def_prop_ro("invalid_policy", [](const DepthMap &d) { return d.invalid_policy; })
+        .def_prop_ro("depth_convention",
+                     [](const DepthMap &d) {
+                         return d.depth_convention;
+                     })
         // fixed canonical tag (derived, like Image.row_order / GaussianCloud.quaternion_order):
         .def_prop_ro("row_order", [](const DepthMap &) { return "top_to_bottom"; })
         .def("__repr__", [](const DepthMap &d) {
@@ -152,12 +164,16 @@ void register_depth_map(nb::module_ &m) {
         });
 
     m.def("depth_map", &make_depth_map, "depth"_a, "confidence"_a = nb::none(),
-          "unit"_a = nb::none(), "scale_to_meters"_a = nb::none(), "invalid_policy"_a = "none",
+          "unit"_a = nb::none(), "scale_to_meters"_a = nb::none(),
+          "invalid_policy"_a = "none",
+          "depth_convention"_a = "unspecified",
           "Build a DepthMap from a (H,W) float32 array (numpy or torch) + optional (H,W) float32 "
           "confidence; unit/scale_to_meters/invalid_policy recorded as metadata (arrays never "
           "rescaled). unit in {meters,millimeters,custom,unitless,unknown}; scale_to_meters is the "
           "machine-usable twin (meters=1.0, millimeters=0.001, custom=finite>0, unitless|unknown=0.0) "
           "and is derived from unit (or vice-versa) when only one is given. The meters/millimeters "
           "pairings compare scale_to_meters by exact IEEE-double equality (literal 1.0 / 0.001); for "
-          "a computed scale of any other provenance pass unit='custom' with an explicit scale.");
+          "a computed scale of any other provenance pass unit='custom' with an explicit scale. "
+          "invalid_policy is one of none|zero|nonfinite|negative|nonpositive; "
+          "depth_convention is unspecified|camera_z|ray_distance.");
 }

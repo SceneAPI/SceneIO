@@ -50,6 +50,7 @@ struct FamilyBindings {
 
 const FamilyBindings &array_bindings();
 const FamilyBindings &calibration_bindings();
+const FamilyBindings &dense_bindings();
 const FamilyBindings &image_bindings();
 const FamilyBindings &mesh_bindings();
 const FamilyBindings &point_bindings();

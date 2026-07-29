@@ -53,6 +53,10 @@
     ["bal", ["read_bal"], ["write_bal"], ["_inspect_bal"], []],
     ["nvm", ["read_nvm"], ["write_nvm"], ["_inspect_nvm"], []],
     ["openmvg", ["read_openmvg"], ["write_openmvg"], ["_inspect_openmvg"], []],
-    ["splat", ["read_splat"], ["write_splat"], [], ["read_splat_points"]]
+    ["splat", ["read_splat"], ["write_splat"], [], ["read_splat_points"]],
+    ["colmap_mvs_depth", ["read_colmap_mvs_depth"], ["write_colmap_mvs_depth"], ["_inspect_colmap_mvs_depth"], ["read_colmap_mvs_depth_window"]],
+    ["colmap_mvs_normal", ["read_colmap_mvs_normal"], ["write_colmap_mvs_normal"], ["_inspect_colmap_mvs_normal"], ["read_colmap_mvs_normal_window"]],
+    ["colmap_mvs_consistency", ["read_colmap_mvs_consistency"], ["write_colmap_mvs_consistency"], ["_inspect_colmap_mvs_consistency"], []],
+    ["colmap_fused_visibility", ["read_colmap_fused_visibility"], ["write_colmap_fused_visibility"], ["_inspect_colmap_fused_visibility"], []]
   ]
 }

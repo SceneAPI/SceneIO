@@ -3177,3 +3177,34 @@ to 0.0 MB, inspection remained 3.53x-4.53x faster than full materialization,
 and indexed image/pair reads remained 7.31x-9.15x faster. The unchanged reader
 showed the expected cache-state variation, while the new preflight work stayed
 inside the prior direct-write band and introduced no payload-sized staging.
+
+## COLMAP dense C2 transport baseline (2026-07-29)
+
+The four native dense formats were sampled on the final local MSVC build with
+three runs at the small deterministic scale:
+
+```powershell
+.venv/Scripts/python.exe bench/bench_io.py --runs 3 --scale 0.1 `
+  --only colmap_mvs_depth --only colmap_mvs_normal `
+  --only colmap_mvs_consistency --only colmap_fused_visibility
+```
+
+| codec | core buffer read | public mapped read | direct sink | inspect speedup | bounded window |
+|---|---:|---:|---:|---:|---:|
+| `colmap_mvs_depth` | 57,960 MB/s | 3,328 MB/s | 1,704 MB/s | 2.61x | 2.70x |
+| `colmap_mvs_normal` | 4,224 MB/s | 2,580 MB/s | 978 MB/s | 10.17x | 7.97x |
+| `colmap_mvs_consistency` | 3,508 MB/s | 2,166 MB/s | 851 MB/s | 1.71x | n/a |
+| `colmap_fused_visibility` | 3,474 MB/s | 2,349 MB/s | 908 MB/s | 1.46x | n/a |
+
+Traced Python allocation rounded to 0.000 MB for every direct sink. The
+benchmark qualification lane uses independent `struct`/NumPy readers and
+writers rather than the production implementation. Before timing, it requires
+native bytes to equal independent bytes, native decodes of independent bytes
+to equal the fixtures, and independent decodes of native bytes to equal the
+same values for all four formats. A separate live-oracle smoke at scale
+`0.001` passed for all four rows. These measurements establish a local
+transport baseline; they do not replace the final three-platform package run.
+Consistency and fused-visibility decoding use a validating count pass before
+exact record allocation; this prevents malformed or link-heavy payloads from
+driving speculative payload-maximum reserves while retaining multi-GB/s local
+decode throughput.

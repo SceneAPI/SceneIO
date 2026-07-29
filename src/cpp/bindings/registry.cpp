@@ -9,15 +9,16 @@
 namespace sio::bindings {
 namespace {
 
-constexpr std::size_t REGISTRATION_COUNT = 40;
-constexpr std::size_t MANIFEST_COUNT = 50;
-constexpr std::size_t NATIVE_CODEC_COUNT = 49;
+constexpr std::size_t REGISTRATION_COUNT = 41;
+constexpr std::size_t MANIFEST_COUNT = 54;
+constexpr std::size_t NATIVE_CODEC_COUNT = 53;
 constexpr std::size_t PYTHON_ONLY_MANIFEST_ORDER = 37;
 
-const std::array<const FamilyBindings *, 8> &families() {
-    static const std::array<const FamilyBindings *, 8> value{{
+const std::array<const FamilyBindings *, 9> &families() {
+    static const std::array<const FamilyBindings *, 9> value{{
         &array_bindings(),
         &calibration_bindings(),
+        &dense_bindings(),
         &image_bindings(),
         &mesh_bindings(),
         &point_bindings(),

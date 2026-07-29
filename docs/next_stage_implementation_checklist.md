@@ -4653,8 +4653,18 @@ Remote C0 evidence:
   - [x] C1d: extended MAXX pose priors plus
         descriptor/color/score/provenance/marker/quality/source fields.
   - [x] C1e: exact selected-profile writers and explicit conversion reports.
-- [ ] C2: COLMAP MVS depth/normal matrices, consistency graphs, visibility,
-      and workspace companions; keep Gipuma DMB distinct.
+- [x] C2 implementation: COLMAP MVS depth/normal matrices, consistency graphs,
+      fused visibility, canonical workspace/config access, PMVS/CMP projection
+      inventories, raw-domain PMVS visibility, and Bundler image-name
+      companions; Gipuma DMB remains distinct.
+  - [x] Four repo-owned native codecs with mmap, direct sinks, inspection,
+        bounded depth/normal windows, independent goldens, and benchmark rows.
+  - [x] Lazy `sceneio.colmap_mvs` adapter with no encoded-media decoding.
+  - [x] Cross-file dimension, MVS-index-domain, and fused point-count checks.
+  - [x] Record the final complete local gate, benchmark confirmation, and
+        three-review sign-off at the C2 commit.
+  - [ ] Run automatic CI and the user-triggered nonpublishing three-platform
+        package validation at the exact pushed C2 commit.
 - [ ] C3: marker/time/point-frame/ChArUco sidecars plus Bundler list, compact
       exporters, rig/pair/feature/Sim3 text, MappingInput, and MegaLoc adapters.
 - [ ] C4: selected metadata/TIFF route, final public API/docs/benchmark/wheel
@@ -4663,6 +4673,59 @@ Remote C0 evidence:
 Runtime engines, solver logs, reports, decoded/staged caches, and encoded-video
 implementations do not become core codecs. This is the explicit stop condition
 that keeps full ecosystem closure finite.
+
+### C2 implementation checkpoint (2026-07-29)
+
+- [x] Registry/build ownership expands from 50/40/16 to 54 built-ins,
+      41 codec-registration functions, and 17 record-registration functions
+      through the new `dense` family.
+- [x] `DepthMap` gains additive `depth_convention="camera_z"` and
+      `invalid_policy="nonpositive"` vocabulary without weakening writers for
+      formats that cannot preserve those conventions.
+- [x] `NormalMap`, `ConsistencyGraph`, and `PointVisibility` expose owned
+      zero-copy NumPy views and explicit coordinate/index conventions.
+- [x] Exact little-endian readers/writers cover COLMAP depth, normal,
+      consistency, and fused visibility payloads. Matrix dimensions, checked
+      products, counts, coordinates, index wire domains, truncation, and
+      trailing bytes are guarded before a record is returned.
+- [x] All four formats participate in the 48-buffer differential, mmap,
+      streaming, inspection, benchmark-qualification, native-inventory,
+      installed-wheel-smoke, and repository-coverage contracts.
+- [x] Canonical COLMAP workspaces retain legacy sparse image order, while
+      modern rig/frame models derive the MVS positional table from registered
+      frame/camera data order exactly as COLMAP does. Config order and nested
+      image names are preserved, and dense payloads decode only on demand.
+- [x] PMVS and CMP-MVS adapters inventory only numbered encoded-media paths
+      and 3x4 `CONTOUR` projection text. PMVS `vis.dat` values are preserved
+      in a declared raw domain because the authorized producer and consumer
+      assign them different meanings.
+- [x] No new native/runtime dependency, system library, or encoded-media
+      implementation is added. NumPy remains the sole Python runtime
+      dependency.
+- [x] Final review corrections centralize identical reader/factory/writer
+      entry and link bounds, perform checked encoded-size arithmetic before
+      addition, replace payload-maximum decoder reservations with a validating
+      exact-count pass, and release the GIL through all four pure native
+      encodes while reacquiring only for sink emission.
+- [x] PMVS raw visibility uses a two-pass fixed-chunk numeric scanner and
+      chunked row writer, rejects COLMAP's invalid uint32 image sentinel, and
+      retains all other raw-domain values. Its permutation check uses a compact
+      chunked NumPy bitmap rather than boxed Python integers. Bundler-profile
+      PMVS workspaces no longer require raw-PMVS projection/visibility
+      companions and require the bundle image count to match `visualize`.
+- [x] Patch-match parsing accepts the upstream comma/semicolon separators and
+      skips empty repeated/trailing fields like upstream, while rejecting
+      zero-source auto limits, duplicates, and reference-as-source problems
+      before writing.
+- [x] Benchmark qualification is cross-differential before timing: native and
+      independent bytes must match, and both cross-decode directions must
+      match the fixture for every dense format.
+- [x] The final 3,832-node local gate passes 3,827 tests with five documented
+      optional/platform skips. Ruff, `git diff --check`, installed-extension
+      smoke, the independent-oracle benchmark, and all three reviews are
+      clear. The final three-run sample records 3.47-57.96 GB/s core reads,
+      2.17-3.33 GB/s mapped reads, 0.85-1.70 GB/s direct sinks, and no
+      output-sized traced allocation on any sink.
 
 C1b local evidence on 2026-07-29:
 

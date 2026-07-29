@@ -16,6 +16,7 @@ import numpy as np
 import pytest
 
 from bench.io_bench import qualification, runner
+from bench.io_bench.families.dense import validate_dense_oracle_parity
 from bench.io_bench.model import Spec
 from sceneio.io import registry
 from sceneio.io._builtin_manifest import CANONICAL_BUILTIN_IDS
@@ -95,8 +96,8 @@ def _valid_spz_profile_metrics():
 def test_qualification_ledger_is_complete_immutable_and_checked():
     ledger = qualification.COMPARISON_QUALIFICATIONS
     assert tuple(ledger) == CANONICAL_BUILTIN_IDS
-    assert len(ledger) == 50
-    assert sum(item.mode == "timed" for item in ledger.values()) == 33
+    assert len(ledger) == 54
+    assert sum(item.mode == "timed" for item in ledger.values()) == 37
     assert (
         sum(
             item.mode == "reviewed_exemption"
@@ -113,7 +114,7 @@ def test_qualification_ledger_is_complete_immutable_and_checked():
     checked = CONTRACT["r3_2_qualification"]
     assert checked["source"] == "bench/io_bench/qualification.py"
     assert checked["builtin_count"] == len(ledger)
-    assert checked["timed_count"] == 33
+    assert checked["timed_count"] == 37
     assert checked["reviewed_exemption_count"] == 17
     assert hashlib.sha256(_ledger_payload().encode()).hexdigest() == (
         checked["ledger_sha256"]
@@ -146,7 +147,7 @@ def test_assembled_sweep_is_exactly_the_repository_builtins():
     observed = _assembled_ids(specs, directory_specs)
     assert qualification.validate_benchmark_coverage(observed) == observed
     assert set(observed) == set(CANONICAL_BUILTIN_IDS)
-    assert len(observed) == len(set(observed)) == 50
+    assert len(observed) == len(set(observed)) == 54
 
     spec = next(item for item in specs if item.id == "spz")
     record, _ = spec.make()
@@ -176,6 +177,33 @@ def test_assembled_sweep_is_exactly_the_repository_builtins():
             np.asarray(getattr(legacy_decoded, field)),
             np.asarray(getattr(ngsp_decoded, field)),
         )
+
+
+def test_dense_benchmark_oracles_are_cross_differential():
+    specs, _ = _assembled_specs()
+    dense_ids = {
+        "colmap_fused_visibility",
+        "colmap_mvs_consistency",
+        "colmap_mvs_depth",
+        "colmap_mvs_normal",
+    }
+    for spec in specs:
+        if spec.id not in dense_ids:
+            continue
+        record, payload = spec.make()
+        encoded = bytes(spec.w(record))
+        validate_dense_oracle_parity(spec, record, payload, encoded)
+        with pytest.raises(AssertionError):
+            validate_dense_oracle_parity(
+                spec,
+                record,
+                payload,
+                encoded + b"\0",
+            )
+    runner_source = (
+        ROOT / "bench/io_bench/runner.py"
+    ).read_text(encoding="utf-8")
+    assert "qualification.validate_dense_oracle_parity(" in runner_source
 
 
 @pytest.mark.parametrize(

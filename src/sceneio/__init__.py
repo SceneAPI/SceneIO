@@ -95,6 +95,7 @@ from sceneio.points_binary import (
 
 if TYPE_CHECKING:
     from sceneio import (
+        colmap_mvs,
         data,
         formats,
         io,
@@ -108,7 +109,9 @@ __version__ = "0.2.0"
 # The contract namespaces are import-isolated: they are loaded lazily on
 # first attribute access so that `import sceneio` alone stays cheap
 # and no namespace ever depends on a sibling being imported.
-_NAMESPACES = frozenset({"data", "formats", "io", "mapping", "matching", "testing"})
+_NAMESPACES = frozenset(
+    {"colmap_mvs", "data", "formats", "io", "mapping", "matching", "testing"}
+)
 
 # Names forwarded flat off `sceneio` from `sceneio.io`, kept lazy so the
 # compiled codecs load on first use rather than at `import sceneio`.
@@ -139,6 +142,7 @@ _IO_FORWARDS = frozenset(
         "ColmapPosePriorSet",
         "ColmapRigFrameSet",
         "ColmapVideoMetadataSet",
+        "ConsistencyGraph",
         "CodecCapabilities",
         "DepthMap",
         "DepthEncoding",
@@ -154,7 +158,9 @@ _IO_FORWARDS = frozenset(
         "Mesh",
         "MeshScene",
         "NativeFeatureCapabilities",
+        "NormalMap",
         "PointCloud",
+        "PointVisibility",
         "PoseGraph",
         "PosedViewSet",
         "Reconstruction",
@@ -211,6 +217,7 @@ __all__ = [
     "ColmapRigFrameSet",
     "ColmapVideoMetadataSet",
     "ColumnDef",
+    "ConsistencyGraph",
     "ContractViolation",
     "DatabaseProfile",
     "DepthEncoding",
@@ -229,8 +236,10 @@ __all__ = [
     "Mesh",
     "MeshScene",
     "NativeFeatureCapabilities",
+    "NormalMap",
     "Point3DRecord",
     "PointCloud",
+    "PointVisibility",
     "PoseGraph",
     "PosedViewSet",
     "Reconstruction",
@@ -243,6 +252,7 @@ __all__ = [
     "checkpoint_root",
     "codecs",
     "colmap_database_conversion_report",
+    "colmap_mvs",
     "contract_dict",
     "data",
     "decode_records",

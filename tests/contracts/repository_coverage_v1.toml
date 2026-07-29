@@ -1,5 +1,5 @@
 schema_version = 1
-builtins = 50
+builtins = 54
 
 # Test-only repository coverage; runtime extensions are intentionally exempt.
 
@@ -404,3 +404,35 @@ source_suite = "tests/codecs/test_splat.py"
 documentation_row = "docs/format_coverage.md"
 inspection_source = "src/sceneio/io/_inspectors/splats.py"
 wheel_smoke_case = "_splats"
+
+[[codec]]
+id = "colmap_mvs_depth"
+benchmark_case = "colmap_mvs_depth"
+source_suite = "tests/codecs/test_colmap_mvs.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_inspectors/dense.py"
+wheel_smoke_case = "_dense_mvs"
+
+[[codec]]
+id = "colmap_mvs_normal"
+benchmark_case = "colmap_mvs_normal"
+source_suite = "tests/codecs/test_colmap_mvs.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_inspectors/dense.py"
+wheel_smoke_case = "_dense_mvs"
+
+[[codec]]
+id = "colmap_mvs_consistency"
+benchmark_case = "colmap_mvs_consistency"
+source_suite = "tests/codecs/test_colmap_mvs.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_inspectors/dense.py"
+wheel_smoke_case = "_dense_mvs"
+
+[[codec]]
+id = "colmap_fused_visibility"
+benchmark_case = "colmap_fused_visibility"
+source_suite = "tests/codecs/test_colmap_mvs.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_inspectors/dense.py"
+wheel_smoke_case = "_dense_mvs"

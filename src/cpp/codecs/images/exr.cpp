@@ -327,6 +327,9 @@ nb::bytes write_exr_depth(const DepthMap &depth, const std::string &unit,
     if (depth.has_confidence())
         throw std::invalid_argument(
             "EXR depth: confidence cannot be represented");
+    if (depth.depth_convention != "unspecified")
+        throw std::invalid_argument(
+            "EXR depth: depth convention metadata is not representable");
     if (depth.width == 0 || depth.height == 0)
         throw std::invalid_argument(
             "EXR depth: cannot write a zero-dimension image");

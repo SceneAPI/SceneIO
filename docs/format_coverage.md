@@ -26,6 +26,17 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > formats on
 > `phase0-nanobind-core` and are not released yet.
 >
+> **COLMAP dense/workspace checkpoint (2026-07-29):** the current local
+> registry has 54 codecs: 48 buffer-backed files, three path-native
+> multi-file containers, and three directories. The four additions are exact
+> COLMAP MVS depth and normal matrices, consistency graphs, and fused-point
+> visibility. All four support mmap reads, direct sinks, metadata inspection,
+> and independent binary oracles; depth and normal also support bounded
+> windows. The lazy `sceneio.colmap_mvs` adapter covers canonical dense,
+> PMVS, and CMP-MVS topology without decoding encoded image payloads. Historical
+> 50-codec validation records below remain evidence for their named commits;
+> the 54-codec tree is pending its final pushed CI/package run.
+>
 > **Stable-ABI evidence correction (2026-07-28):** earlier package records
 > verified `cp312-abi3` wheel tags, contents, and Python 3.12 smoke but did not
 > verify the embedded extension’s ABI. R6 review found a CPython-specific
@@ -624,7 +635,10 @@ SoA, zero-copy to numpy/torch (DLPack), conventions carried as metadata.
 | `ImageSequence` | `image_sequence` | ✅ | owned lazy encoded-frame paths or owned uint8 planar Y/U/V frames; exact optional int64-ns timing, dimensions, chroma sampling/siting, range, matrix, interlace, rate, and aspect metadata |
 | `TensorDict` | (named arrays) | ✅ | dict‑like, 12 numpy dtypes (dtype‑erased), zero‑copy views; backs NPZ and mapped safetensors |
 | `PointCloud` | `point_cloud` (new) | ✅ | xyz + rgb/rgb16 + normals + intensity, optional organized width/height and acquisition viewpoint, plus an optional validated lossless LAS waveform sidecar; backs `.xyz`, count-prefixed `.pts`, point `.ply`, PCD, plain `.las`, and `.laz` |
-| `DepthMap` | `depth_map` | ✅ | scalar f32 depth + scale/unit/invalid + confidence; backs scalar DMB and explicit typed PFM/PNG/EXR adapters |
+| `DepthMap` | `depth_map` | ✅ | scalar f32 depth + scale/unit/invalid + confidence; backs scalar DMB, explicit typed PFM/PNG/EXR adapters, and COLMAP MVS camera-Z/nonpositive depth |
+| `NormalMap` | `normal_map` | ✅ record / ⬜ datatype | HxWx3 f32 camera-frame normals with explicit component/frame conventions; backs COLMAP MVS normal matrices |
+| `ConsistencyGraph` | `consistency_graph` | ✅ record / ⬜ datatype | CSR pixel/image-index adjacency with explicit row/column and positional-index conventions; backs COLMAP MVS consistency graphs |
+| `PointVisibility` | `point_visibility` | ✅ record / ⬜ datatype | CSR fused-point/image-index visibility with an explicit positional-index convention; backs COLMAP fused `.ply.vis` |
 | `FlowField` | `flow` | ✅ | HxWx2 f32 vectors with component/axis/row/unit/invalid metadata; raw FLO API remains ndarray-compatible |
 | `StateTrajectory` | `state_trajectory` | ✅ record / ⬜ datatype | exact int64 nanosecond timestamps plus float64 position, WXYZ orientation, velocity, gyro bias, and accelerometer bias; explicit frame/unit/sign metadata |
 | `CameraRig` | `camera_rig` | ✅ record / ⬜ datatype | ordered cameras; ragged model parameters; exact optional K/R/P; extrinsic, ROI/binning, topic, and time-offset metadata with explicit conventions |
@@ -706,6 +720,10 @@ public-domain SQLite amalgamation statically linked into `_core`.
 |---|---|---|---|---|
 | `safetensors` | `TensorDict` | R+W | **safetensors.numpy 0.8** | deterministic canonical writer; all 12 TensorDict dtypes; string metadata; read-only mmap views; named-tensor and leading-axis slice reads |
 | `dmb` | `DepthMap` | R+W | independent NumPy parser | scalar Gipuma DMB float32 depth; exact little-endian payload; unknown scale; zero-invalid; bounded windows; **not** COLMAP's `width&height&depth&` MVS matrix |
+| `colmap_mvs_depth` | `DepthMap` | R+W | independent `struct`/NumPy parser | COLMAP `width&height&1&` header plus planar little-endian f32 camera-Z depth; nonpositive-invalid; bounded windows |
+| `colmap_mvs_normal` | `NormalMap` | R+W | independent `struct`/NumPy parser | COLMAP `width&height&3&` header plus planar little-endian f32 camera-frame XYZ normals; bounded windows |
+| `colmap_mvs_consistency` | `ConsistencyGraph` | R+W | independent `struct` parser | repeated signed-int32 column, row, count, and positional image-index lists; strict full-payload consumption |
+| `colmap_fused_visibility` | `PointVisibility` | R+W | independent `struct` parser | repeated little-endian uint32 count plus positional image indices; exact companion for `fused.ply.vis` |
 | `bal` | `Reconstruction` | R+W | UW BAL specification + independent parser | zero-based observations; angle-axis cameras with focal and two radial terms; explicit BAL↔SceneIO frame transform; strict canonical writer |
 | `bmp` | `Image` | R+W | **Pillow** + Microsoft DIB specification | Windows V3/V4/V5 BI_RGB/BI_BITFIELDS; palette and packed-16 reads; top/bottom orientation; deterministic RGB/RGBA writers |
 | `tga` | `Image` | R+W | **Pillow** + Truevision 2.0 specification | grayscale/RGB/RGBA and zero-origin palettes; raw/RLE; top/bottom orientation; deterministic RLE writer |
@@ -752,9 +770,9 @@ schedule retained · ✅ compiler-instrumented native reliability workflow passe
 its complete and focused jobs at `a5e7fa4` · ⬜ randomized oracle-triangulated
 fuzzing · ✅ direct file-sink writes · ✅ bounded measured-path workers
 (XYZ/LAS/LAZ/EXR/PNG16/WebP lossless) · ✅ partial/lazy reads (`inspect` covers all
-50; bounded pixel/point/face/mesh/primitive/state/frame/COLMAP-image/COLMAP-pair/tensor
+54; bounded pixel/point/face/mesh/primitive/state/frame/COLMAP-image/COLMAP-pair/tensor
 subsets cover capable containers) · ⬜ GPU-via-DLPack (torch-cuda/cupy) · ✅
-expanded 50-codec benchmark/oracles.
+expanded 54-codec benchmark/oracles.
 
 ## Infrastructure & capabilities
 
@@ -763,8 +781,8 @@ expanded 50-codec benchmark/oracles.
 | nanobind + scikit‑build‑core build | ✅ | abi3/cp312, `NB_STATIC`; `Python::SABIModule`, `nanobind-static-abi3`, and the platform suffix are configure-checked; local Windows emits `_core.pyd` against `python3.dll`, Ubuntu emits `_core.abi3.so` without libpython |
 | cibuildwheel release path | ✅ | one verified sdist feeds Linux/macOS/Windows wheels; locked build inputs, all-50 installed smoke, per-wheel inventory, and tag-only publication in `publish.yml`; final build-only run `30406706115` and downloaded-artifact inspection pass, while tagging and publication remain user-gated |
 | CI parity (oracles in CI) | ✅ | At `a5e7fa4`, normal Linux CI passes 2,914 tests with nine documented platform/oracle skips, the 50-codec performance guard, pinned GCC 10 portability, and the three-OS focused matrix |
-| Codec registry + `read`/`write`/`inspect`/`read_partial`/`detect` | ✅ | inspection covers all 50; bounded partial hooks are capability-specific |
-| Repo-maintained stable codec adapters | ✅ | all 50 production adapters, grammars, convention guards, inspectors, partial capability policies/available paths, and sinks live in `src/cpp` / `src/sceneio`; separately installed implementations and executables are test/reference oracles only |
+| Codec registry + `read`/`write`/`inspect`/`read_partial`/`detect` | ✅ | inspection covers all 54; bounded partial hooks are capability-specific |
+| Repo-maintained stable codec adapters | ✅ | all 54 production adapters, grammars, convention guards, inspectors, partial capability policies/available paths, and sinks live in `src/cpp` / `src/sceneio`; separately installed implementations and executables are test/reference oracles only |
 | Offline native-source closure | ✅ | all selected native sources—including libwebp 1.5.0—are stored in-tree and the production CMake graph has no native-source fetch; local exact-tree proof plus final MSVC, GCC 10, and AppleClang sdist-to-wheel execution and artifact inspection pass |
 | Zero‑copy numpy + torch (DLPack) | ✅ | validated per codec |
 | Conventions‑as‑metadata + write guards | ✅ | record‑don't‑convert enforced |
@@ -794,6 +812,10 @@ incremental.
 | `bmp` | file | yes | yes | yes | - | yes | yes | no | - |
 | `bundler` | file | yes | yes | yes | - | yes | yes | no | - |
 | `colmap_db` | file | yes | yes | yes | image_id, pair | yes | yes | no | - |
+| `colmap_fused_visibility` | file | yes | yes | yes | - | yes | yes | no | - |
+| `colmap_mvs_consistency` | file | yes | yes | yes | - | yes | yes | no | - |
+| `colmap_mvs_depth` | file | yes | yes | yes | window | yes | yes | no | - |
+| `colmap_mvs_normal` | file | yes | yes | yes | window | yes | yes | no | - |
 | `colmap_sparse` | directory | yes | yes | yes | image_id | yes | yes | no | - |
 | `colmap_sparse_txt` | directory | yes | yes | yes | image_id | yes | yes | no | - |
 | `compressed_ply` | file | yes | yes | yes | points | yes | yes | yes | - |
@@ -879,7 +901,7 @@ names from `_core.__native_features__`.
 
 | Selector | Formats | Result |
 |---|---|---|
-| pixel `window=(r0,r1,c0,c1)` | PFM, binary P5/P6 Netpbm, lossless VP8L WebP, FLO, scalar DMB | ndarray, `Image`, or `DepthMap`, matching the full-read slice with metadata preserved |
+| pixel `window=(r0,r1,c0,c1)` | PFM, binary P5/P6 Netpbm, lossless VP8L WebP, FLO, scalar DMB, COLMAP MVS depth/normal | ndarray, `Image`, `DepthMap`, or `NormalMap`, matching the full-read slice with metadata preserved |
 | point range `points=(start,stop)` | XYZ, PTS, binary generic PLY, uncompressed binary PCD, LAS, Gaussian PLY, compressed PLY, SOG, KSplat, SPLAT | `PointCloud` / `GaussianCloud`, with convention metadata preserved |
 | face range `faces=(start,stop)` | generic mesh PLY, STL, OFF | `Mesh`; PLY/OFF retain the complete vertex domain, while STL returns local canonical triangle soup |
 | state range `states=(start,stop)` | EuRoC state CSV | `StateTrajectory` with convention metadata preserved |

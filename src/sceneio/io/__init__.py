@@ -59,6 +59,9 @@ ColmapVideoMetadataSet = _core.ColmapVideoMetadataSet
 ColmapMaxxSchemaInfo = _core.ColmapMaxxSchemaInfo
 DepthMap = _core.DepthMap
 FlowField = _core.FlowField
+NormalMap = _core.NormalMap
+ConsistencyGraph = _core.ConsistencyGraph
+PointVisibility = _core.PointVisibility
 Camera = _core.Camera
 CameraRig = _core.CameraRig
 
@@ -594,6 +597,7 @@ __all__ = [
     "ColmapPosePriorSet",
     "ColmapRigFrameSet",
     "ColmapVideoMetadataSet",
+    "ConsistencyGraph",
     "DepthEncoding",
     "DepthMap",
     "FeatureSet",
@@ -608,7 +612,9 @@ __all__ = [
     "Mesh",
     "MeshScene",
     "NativeFeatureCapabilities",
+    "NormalMap",
     "PointCloud",
+    "PointVisibility",
     "PoseGraph",
     "PosedViewSet",
     "Reconstruction",

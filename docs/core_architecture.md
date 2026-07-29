@@ -4,7 +4,7 @@ How the compiled core is organized, and **how to add a codec** — the two
 things that keep this expansible as the format list from
 `formats_survey.md` grows.
 
-> **Growth checkpoint:** the live registry has reached 50 codec ids. The
+> **Growth checkpoint:** the live registry has reached 54 codec ids. The
 > format-focused native layer remains coherent, but registry, inspection,
 > benchmark, test-matrix, dependency, and binding wiring have outgrown a flat
 > layout. The behavior-preserving R3-R5 organization work and R6 source/package
@@ -15,6 +15,11 @@ things that keep this expansible as the format list from
 > the current family boundaries and compatibility contracts; full closure
 > evidence is in
 > [`next_stage_implementation_checklist.md`](next_stage_implementation_checklist.md#r6-closure-evidence).
+> The post-R6 COLMAP dense unit adds a ninth `dense` family, three records,
+> four buffer codecs, and a lazy workspace adapter. The current native
+> inventory is 41 codec registrations, 53 native/hybrid rows, and 17 records;
+> the older 50-codec and eight-family numbers below remain immutable evidence
+> for their named commits.
 >
 > R3.3 closes at `811cb0d` with normal run `30300122309` and
 > compiler-instrumented run `30300122324` passing. The R3.4 installed-wheel
@@ -91,13 +96,13 @@ sceneio (Python)                     public, stable surface
 sceneio._core (C++ / nanobind)
   records/     SoA in-memory types + zero-copy views + **convention metadata**
   codecs/      format-focused translation units: read_<fmt>() / write_<fmt>()
-  bindings/    record + eight codec-family descriptor tables and assembler
+  bindings/    record + nine codec-family descriptor tables and assembler
   io/          format-agnostic helpers: endian, byte reader/writer, gzip
   module.cpp   invokes the record pass, codec pass, then publishes inventory
 
 cmake/
   SceneIOInstrumentation.cmake  opt-in compiler instrumentation
-  SceneIOSources.cmake          bindings, records + eight codec-family owners
+  SceneIOSources.cmake          bindings, records + nine codec-family owners
   SceneIODependencies.cmake     Python/nanobind + native dependency targets
   SceneIOBackendQualification.cmake
                                 internal defaults + default-off comparison
@@ -236,6 +241,21 @@ cmake/
   three-OS splat parity matrix and GCC-10 lane. Exact-tree source/wheel
   packaging and all three independent reviews also pass. R2 is closed; R3
   now splits benchmark and cross-codec verification ownership.
+  The current ninth family is `dense`. Its four definitions live in
+  `_registry/families/dense.py`, metadata conversion lives in
+  `_inspectors/dense.py`, native bindings live in `bindings/dense.cpp`, and
+  the shared records/codecs live in `records/dense_mvs.*` and
+  `codecs/dense/colmap_mvs.cpp`. The family owns exact COLMAP MVS depth,
+  normal, consistency, and fused-visibility formats; aggregate publication
+  stages the tuple once while preserving the established canonical order.
+  `DepthMap`, `NormalMap`, `ConsistencyGraph`, and `PointVisibility` expose
+  owned, validated arrays; native readers consume contiguous buffer views and
+  do not retain the mmap after decoding. Depth and normal window readers copy
+  only the selected planar samples. The public `sceneio.colmap_mvs` module is
+  deliberately outside the format registry: it lazily coordinates canonical,
+  PMVS, and CMP-MVS path topology, configs, optional raw-PMVS projections,
+  Bundler-profile workspaces, raw visibility, and existing image-codec paths
+  without opening encoded image payloads.
   R3.1a keeps `bench/bench_io.py` as the compatible development-only facade
   while `bench/io_bench/model.py`, `measure.py`, and `reporting.py` own shared
   benchmark records, timing/traced allocation plus explicitly named
@@ -603,13 +623,14 @@ returns `ColmapDatabase`.
 | `slices` | `safetensors` |
 | `states` | `euroc_state` |
 | `tensors` | `safetensors` |
-| `window` | `dmb`, `flo`, `netpbm`, `pfm`, `webp` |
+| `window` | `colmap_mvs_depth`, `colmap_mvs_normal`, `dmb`, `flo`, `netpbm`, `pfm`, `webp` |
 <!-- sceneio-partial-summary:end -->
 
 Selector semantics are:
 
 - `window=(row_start, row_stop, column_start, column_stop)` uses half-open bounds
-  for PFM, binary P5/P6 Netpbm, lossless VP8L WebP, FLO, and scalar DMB;
+  for PFM, binary P5/P6 Netpbm, lossless VP8L WebP, FLO, scalar DMB, and
+  COLMAP MVS depth/normal matrices;
 - `points=(start, stop)` selects a half-open range from XYZ, count-prefixed PTS,
   LAS/LAZ, point PLY/PCD, binary Gaussian PLY, compressed PLY/SOG/KSplat, and
   `.splat`;

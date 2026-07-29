@@ -27,6 +27,18 @@ def detect_path(
     for codec in ordered:
         if p.name in codec.filenames:
             return codec.id
+    # COLMAP dense matrices deliberately share the compound
+    # ``.<photometric|geometric>.bin`` suffix. Their canonical workspace
+    # parent directory is the unambiguous discriminator.
+    if p.name.endswith((".photometric.bin", ".geometric.bin")):
+        dense_parent_formats = {
+            "depth_maps": "colmap_mvs_depth",
+            "normal_maps": "colmap_mvs_normal",
+            "consistency_graphs": "colmap_mvs_consistency",
+        }
+        for parent in p.parents:
+            if parent.name in dense_parent_formats:
+                return dense_parent_formats[parent.name]
     ext = p.suffix.lower()
     # PLY schemas share both suffix and magic; classify before registry order.
     if ext == ".ply":

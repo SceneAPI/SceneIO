@@ -36,6 +36,7 @@ CODEC_SOURCE_PATHS = (
     "src/sceneio/io/registry.py",
     "src/sceneio/io/_registry/families/arrays.py",
     "src/sceneio/io/_registry/families/calibration.py",
+    "src/sceneio/io/_registry/families/dense.py",
     "src/sceneio/io/_registry/families/images.py",
     "src/sceneio/io/_registry/families/meshes.py",
     "src/sceneio/io/_registry/families/points.py",
@@ -574,7 +575,7 @@ def test_fresh_import_observes_empty_then_one_complete_publication():
     assert report["register_calls"] == 0
     assert report["installer_calls"] == 0
     assert report["update_before"] == [0]
-    assert report["update_after"] == [50]
+    assert report["update_after"] == [len(canonical)]
     assert report["update_target_ids"] == [report["registry_id"]]
     assert report["publication_events"] == [
         "finalize_return",
@@ -582,9 +583,9 @@ def test_fresh_import_observes_empty_then_one_complete_publication():
         "update_return",
     ]
     assert report["subscription_stores"] == 0
-    assert set(report["registry_sizes"]) == {0, 50}
+    assert set(report["registry_sizes"]) == {0, len(canonical)}
     assert report["registry_sizes"][0] == 0
-    assert report["registry_sizes"][-1] == 50
+    assert report["registry_sizes"][-1] == len(canonical)
     assert report["extension_bootstrap_returns"] == [[]]
     assert report["registry_ids"] == canonical
     assert report["definition_ids"] == canonical
@@ -715,11 +716,13 @@ def test_assembly_dependency_direction_and_import_delta_are_exact():
     modules = json.loads(result.stdout)
     intentional_additions = {
         "sceneio.io._inspectors.arrays",
+        "sceneio.io._inspectors.dense",
         "sceneio.io._inspectors.points",
         "sceneio.io._inspectors.reconstruction",
         "sceneio.io._inspectors.splats",
         "sceneio.io._registry.assembly",
         "sceneio.io._registry.families.arrays",
+        "sceneio.io._registry.families.dense",
         "sceneio.io._registry.families.points",
         "sceneio.io._registry.families.reconstruction",
         "sceneio.io._registry.families.splats",

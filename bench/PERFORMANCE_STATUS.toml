@@ -514,6 +514,46 @@ source_suite = "tests/codecs/test_splat.py"
 documentation = "docs/format_coverage.md"
 accepted_subset = ["rgb8", "opacity8", "scale8", "quaternion8"]
 
+[[codec]]
+id = "colmap_mvs_depth"
+family = "dense"
+adapter = "repo"
+implementation_owner = "native"
+sources = ["src/cpp/codecs/dense/colmap_mvs.cpp"]
+source_suite = "tests/codecs/test_colmap_mvs.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["little_endian_float32", "single_channel", "planar_wire_layout", "camera_z", "pixel_windows"]
+
+[[codec]]
+id = "colmap_mvs_normal"
+family = "dense"
+adapter = "repo"
+implementation_owner = "native"
+sources = ["src/cpp/codecs/dense/colmap_mvs.cpp"]
+source_suite = "tests/codecs/test_colmap_mvs.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["little_endian_float32", "xyz", "planar_wire_layout", "opencv_camera", "pixel_windows"]
+
+[[codec]]
+id = "colmap_mvs_consistency"
+family = "dense"
+adapter = "repo"
+implementation_owner = "native"
+sources = ["src/cpp/codecs/dense/colmap_mvs.cpp"]
+source_suite = "tests/codecs/test_colmap_mvs.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["little_endian_int32", "ordered_image_indices", "duplicate_pixel_entries", "zero_count_entries"]
+
+[[codec]]
+id = "colmap_fused_visibility"
+family = "dense"
+adapter = "repo"
+implementation_owner = "native"
+sources = ["src/cpp/codecs/dense/colmap_mvs.cpp"]
+source_suite = "tests/codecs/test_colmap_mvs.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["little_endian_uint64_point_count", "little_endian_uint32_lists", "ordered_image_indices", "zero_count_points"]
+
 [[operation]]
 codec_id = "pfm"
 profile = "default"
@@ -3063,6 +3103,158 @@ backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
 transport_status = "qualified"
 status = "provisional"
 correctness_evidence = ["tests/codecs/test_splat.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "colmap_mvs_depth"
+profile = "default"
+direction = "encode"
+settings = {}
+fidelity = "lossless"
+comparator = "independent-struct-numpy"
+fixture = "colmap_mvs_depth:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/dense/colmap_mvs.cpp"
+backend_version = "sceneio-native-c2-2026-07-29"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_colmap_mvs.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "colmap_mvs_depth"
+profile = "default"
+direction = "decode"
+settings = {}
+fidelity = "lossless"
+comparator = "independent-struct-numpy"
+fixture = "colmap_mvs_depth:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/dense/colmap_mvs.cpp"
+backend_version = "sceneio-native-c2-2026-07-29"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_colmap_mvs.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "colmap_mvs_normal"
+profile = "default"
+direction = "encode"
+settings = {}
+fidelity = "lossless"
+comparator = "independent-struct-numpy"
+fixture = "colmap_mvs_normal:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/dense/colmap_mvs.cpp"
+backend_version = "sceneio-native-c2-2026-07-29"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_colmap_mvs.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "colmap_mvs_normal"
+profile = "default"
+direction = "decode"
+settings = {}
+fidelity = "lossless"
+comparator = "independent-struct-numpy"
+fixture = "colmap_mvs_normal:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/dense/colmap_mvs.cpp"
+backend_version = "sceneio-native-c2-2026-07-29"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_colmap_mvs.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "colmap_mvs_consistency"
+profile = "default"
+direction = "encode"
+settings = {}
+fidelity = "lossless"
+comparator = "independent-struct-numpy"
+fixture = "colmap_mvs_consistency:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/dense/colmap_mvs.cpp"
+backend_version = "sceneio-native-c2-2026-07-29"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_colmap_mvs.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "colmap_mvs_consistency"
+profile = "default"
+direction = "decode"
+settings = {}
+fidelity = "lossless"
+comparator = "independent-struct-numpy"
+fixture = "colmap_mvs_consistency:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/dense/colmap_mvs.cpp"
+backend_version = "sceneio-native-c2-2026-07-29"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_colmap_mvs.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "colmap_fused_visibility"
+profile = "default"
+direction = "encode"
+settings = {}
+fidelity = "lossless"
+comparator = "independent-struct-numpy"
+fixture = "colmap_fused_visibility:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/dense/colmap_mvs.cpp"
+backend_version = "sceneio-native-c2-2026-07-29"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_colmap_mvs.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "colmap_fused_visibility"
+profile = "default"
+direction = "decode"
+settings = {}
+fidelity = "lossless"
+comparator = "independent-struct-numpy"
+fixture = "colmap_fused_visibility:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/dense/colmap_mvs.cpp"
+backend_version = "sceneio-native-c2-2026-07-29"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_colmap_mvs.py"]
 benchmark_evidence = ["bench/BASELINE.md"]
 candidate_backends = []
 evidence_gaps = ["candidate comparison on all required toolchains"]

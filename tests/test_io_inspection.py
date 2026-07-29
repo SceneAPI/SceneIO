@@ -63,6 +63,26 @@ def _assert_inspection_matches(info, decoded):
         assert info.dtype == decoded.depth.dtype.name
         assert info.count == decoded.height * decoded.width
         assert info.channels == 1
+    elif isinstance(decoded, _core.NormalMap):
+        assert info.shape == decoded.normals.shape
+        assert info.dtype == decoded.normals.dtype.name
+        assert info.count == decoded.height * decoded.width
+        assert info.channels == 3
+    elif isinstance(decoded, _core.ConsistencyGraph):
+        assert info.shape == (decoded.height, decoded.width)
+        assert info.dtype == "int32"
+        assert info.count == decoded.num_entries
+        assert (
+            info.metadata["image_index_count"]
+            == decoded.num_image_indices
+        )
+    elif isinstance(decoded, _core.PointVisibility):
+        assert info.shape is None
+        assert info.count == decoded.num_points
+        assert (
+            info.metadata["image_index_count"]
+            == decoded.num_image_indices
+        )
     elif isinstance(decoded, _core.GaussianCloud):
         assert info.shape == (decoded.num_gaussians,)
         assert info.dtype == "float32"
@@ -210,7 +230,7 @@ print(max(0, peak[0] - baseline))
 def test_inspect_matches_decoded_metadata_for_buffer_and_directory_codecs(
     tmp_path, buffer_codecs
 ):
-    assert len(buffer_codecs) == 44
+    assert len(buffer_codecs) == 48
     for spec in buffer_codecs:
         path = tmp_path / f"inspect-{spec.id}.data"
         path.write_bytes(spec.data)

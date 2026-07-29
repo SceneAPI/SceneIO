@@ -251,6 +251,7 @@ def _public_snapshot():
         "ColmapPosePriorSet",
         "ColmapRigFrameSet",
         "ColmapVideoMetadataSet",
+        "ConsistencyGraph",
         "DepthMap",
         "FeatureSet",
         "FlowField",
@@ -261,7 +262,9 @@ def _public_snapshot():
         "MaterialSet",
         "Mesh",
         "MeshScene",
+        "NormalMap",
         "PointCloud",
+        "PointVisibility",
         "PoseGraph",
         "PosedViewSet",
         "Reconstruction",
@@ -907,7 +910,7 @@ def _assert_benchmark_components_and_metric_semantics_are_explicit():
     assert json.loads(runner_import_result.stdout) == [
         True,
         "bench.io_bench.runner",
-        45,
+        49,
     ]
 
     runner_first_probe = textwrap.dedent(
@@ -1008,7 +1011,7 @@ def _assert_benchmark_components_and_metric_semantics_are_explicit():
         True,
         True,
         True,
-        67,
+        68,
     ]
 
     calibration_family_module = sys.modules[

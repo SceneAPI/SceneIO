@@ -303,6 +303,9 @@ nb::bytes write_png_depth(const DepthMap &depth, const std::string &unit,
     if (depth.has_confidence())
         throw std::invalid_argument(
             "PNG depth: confidence cannot be represented");
+    if (depth.depth_convention != "unspecified")
+        throw std::invalid_argument(
+            "PNG depth: depth convention metadata is not representable");
     if (depth.height == 0 || depth.width == 0 ||
         depth.width > std::numeric_limits<size_t>::max() / depth.height)
         throw std::invalid_argument(

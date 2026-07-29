@@ -117,7 +117,7 @@ A format may be called stable only when:
 - independent projects remain test/reference oracles only and are not the
   production implementation.
 
-All 50 current codecs already have repo-maintained adapters and optimized I/O
+All 54 current codecs already have repo-maintained adapters and optimized I/O
 contracts. The selected production source set is now repository-contained:
 `miniz` 3.0.2, `nlohmann_json` 3.11.3, `zstd` 1.5.6, `fast_float` 6.1.6,
 `lazperf` 3.4.0, and `libwebp` 1.5.0 are pinned under

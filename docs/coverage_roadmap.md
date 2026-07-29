@@ -1,7 +1,7 @@
 # SceneIO — comprehensive coverage roadmap & execution checklist
 
 > Current shipped and branch-local status is tracked in `format_coverage.md`.
-> The status markers below have been reconciled to the live 50-codec registry;
+> The status markers below have been reconciled to the live 54-codec registry;
 > broader checklist boxes remain open where a codec has not completed an
 > aspirational per-format or cross-platform gate. The authoritative
 > implementation sequence for the remaining formats is
@@ -10,6 +10,11 @@
 > [`repository_organization_plan.md`](repository_organization_plan.md), with
 > its reviewed execution checklist in
 > [`next_stage_implementation_checklist.md`](next_stage_implementation_checklist.md).
+> The current branch-local COLMAP dense checkpoint adds exact depth/normal
+> matrices, consistency graphs, fused visibility, and lazy canonical/PMVS/CMP
+> workspace adapters. It contains no encoded-media decoder; image paths remain
+> opaque and reuse SceneIO's existing still-image codecs when callers choose
+> to open them.
 > R6 is closed at packaged source commit `105b301`: exact-head CI
 > `30405666674`, native-runtime validation `30405666673`, and build-only
 > three-platform package run `30406706115` pass, with publication skipped.
@@ -140,10 +145,11 @@ Current test counts, workflow evidence, and the immutable validated checkpoint
 are maintained only in
 [`format_coverage.md`](format_coverage.md#format--data-structure-coverage);
   this policy roadmap intentionally does not duplicate them. R6 package closure
-  is complete. No next execution order is active; animation formats, RTMV, and
-  the common optional-library feature pattern remain future choices that start
-  only on explicit user direction. The provisional performance ledger remains
-  a trigger-based post-R6 optimization backlog rather than an active gate.
+  is complete. The explicitly requested COLMAP ecosystem closure is the only
+  active post-R6 sequence; animation formats, RTMV, and the common
+  optional-library feature pattern remain future choices that start only on
+  explicit user direction. The provisional performance ledger remains a
+  trigger-based optimization backlog rather than an active gate.
 
 **License gate (hard):** MIT / BSD / Apache‑2.0 / zlib / libpng / HPND / public
 domain only. No copyleft (GPL/AGPL/MPL data libs), no proprietary SDKs, no
@@ -251,7 +257,10 @@ zero‑copy + convention tags.
 | Record | Fields (canonical dtype/shape) | Needed by | Status |
 |---|---|---|---|
 | `Image` | `pixels` HxWxC (u8/u16/f16/f32) + `color_space` + alpha/maxval metadata | PNG/JPEG/HDR/WebP/EXR/Netpbm | ✅ |
-| `DepthMap` | `depth` HxW f32 + `scale`/`unit`/`invalid` meta + `confidence` HxW | typed depth adapters, Gipuma `.dmb`, future COLMAP MVS map | ✅ record + scalar Gipuma DMB + typed PFM/PNG/EXR |
+| `DepthMap` | `depth` HxW f32 + `scale`/`unit`/`invalid` meta + `confidence` HxW | typed depth adapters, Gipuma `.dmb`, COLMAP MVS depth | ✅ including camera-Z/nonpositive COLMAP MVS semantics |
+| `NormalMap` | HxWx3 f32 + component/frame conventions | COLMAP MVS normal maps | ✅ |
+| `ConsistencyGraph` | pixel/image-index CSR + row/column/index conventions | COLMAP MVS consistency graphs | ✅ |
+| `PointVisibility` | fused-point/image-index CSR + index convention | COLMAP fused visibility | ✅ |
 | `FlowField` | `vectors` HxWx2 f32 + component/axis/row/unit/invalid meta | typed `.flo` adapter | ✅ |
 | `PointCloud` | `xyz` Nx3, `rgb`/`rgb16`, `normals`, `intensity`, optional organized shape + viewpoint, optional lossless LAS waveform sidecar | PLY‑point, PCD, LAS/LAZ, E57, `.xyz` | ✅ |
 | `Mesh` | positions; ragged face offsets/indices; vertex/corner normals, UVs, RGBA; primitive/material ranges; coordinate metadata and transform | PLY‑mesh, OBJ, STL, OFF, glTF, USD | ✅ |
@@ -279,6 +288,7 @@ Columns: **Ext/id** · **Record** · **Lib/oracle (license)** · **R/W** ·
 | ✅ COLMAP `.bin` | `Reconstruction` | pycolmap (BSD) | R+W | legacy three-file + modern five-file byte identity; rigs/frames; camera models 0-17; bounded direct writer |
 | ✅ COLMAP `.txt` | `Reconstruction` | pycolmap | R+W | legacy/modern text twin; rigs/frames; fast_float parse |
 | ✅ COLMAP `.db` | `ColmapDatabase` (`FeatureSet`/`MatchGraph`/nested companions) | pycolmap + sqlite3 (PD) | inspect + R/W all exact profiles + partial | exact 3.13/4.1.1/current/MAXX identity and profile-preserving public writes; guarded cross-profile conversion reports; hybrid compatibility writer retained for constructed core records |
+| ✅ COLMAP dense workspace | lazy paths + dense records | independent format parsers + pycolmap comparison | inspect + R/W + partial | canonical, PMVS, and CMP-MVS topology; patch/fusion configs, projections, name lists, and raw visibility; encoded images remain opaque paths |
 | ✅ Bundler `.out` | `Reconstruction` | pycolmap/manual | R+W | y‑down camera convention pinned |
 | ✅ VisualSFM `.nvm` | `Reconstruction` | manual | R+W | quat WXYZ, focal in px |
 | ✅ OpenMVG `sfm_data.json` | `Reconstruction` | manual json (nlohmann) | R+W | pose = center+rotation |
@@ -349,7 +359,11 @@ Columns: **Ext/id** · **Record** · **Lib/oracle (license)** · **R/W** ·
 | ✅ 16‑bit depth PNG | `DepthMap` | pypng oracle + lodepng | R+W | mandatory external encoding; TUM 1/5000 and ScanNet mm profiles tested; no implicit scale |
 | ✅ scalar depth EXR | `DepthMap` | OpenEXR / tinyexr | R+W | mandatory external encoding and exact UTF-8 channel name; HALF/FLOAT values preserved; no implicit scale |
 | ✅ `.flo` (Middlebury) | ndarray (raw) + `FlowField` (typed) | manual | R+W | magic 202021.25; mapped raw view; typed semantic adapters with strict writer guards |
-| ✅ `.dmb` (Gipuma) | `DepthMap` | independent NumPy parser | R+W | scalar float32 Gipuma depth; unknown scale, zero-invalid; bounded windows; COLMAP MVS matrices are a separate planned codec |
+| ✅ `.dmb` (Gipuma) | `DepthMap` | independent NumPy parser | R+W | scalar float32 Gipuma depth; unknown scale, zero-invalid; bounded windows; distinct from COLMAP MVS matrices |
+| ✅ COLMAP MVS depth | `DepthMap` | independent `struct`/NumPy parser | R+W | exact ampersand header, planar little-endian f32 camera-Z values, nonpositive-invalid, bounded windows |
+| ✅ COLMAP MVS normal | `NormalMap` | independent `struct`/NumPy parser | R+W | exact three-channel planar little-endian f32 camera-frame normals; bounded windows |
+| ✅ COLMAP MVS consistency | `ConsistencyGraph` | independent `struct` parser | R+W | strict signed-int32 pixel records and positional image-index lists |
+| ✅ COLMAP fused visibility | `PointVisibility` | independent `struct` parser | R+W | strict count-prefixed uint32 positional image-index lists |
 | ✅ transforms.json | `PosedViewSet` | pure‑Python | R+W | done (OpenGL c2w) |
 | ⬜ RTMV / synthetic sets | `PosedViewSet`+`Image` | manual | R | dataset layout |
 

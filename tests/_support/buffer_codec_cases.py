@@ -69,11 +69,15 @@ BUFFER_CODEC_CASE_IDS = (
     "nvm",
     "openmvg",
     "splat",
+    "colmap_mvs_depth",
+    "colmap_mvs_normal",
+    "colmap_mvs_consistency",
+    "colmap_fused_visibility",
 )
 
 
 def build_buffer_codec_cases() -> tuple[BufferCodecCase, ...]:
-    """Build the 44 deterministic cases used by buffer behavior sweeps."""
+    """Build the 48 deterministic cases used by buffer behavior sweeps."""
     rng = np.random.default_rng(91)
     rgb = rng.integers(0, 256, (7, 9, 3), dtype=np.uint8)
     rgba = rng.integers(0, 256, (7, 9, 4), dtype=np.uint8)
@@ -230,6 +234,27 @@ def build_buffer_codec_cases() -> tuple[BufferCodecCase, ...]:
         rng.standard_normal((5, 6)).astype(np.float32),
         unit="unknown",
         invalid_policy="zero",
+    )
+    colmap_depth = _core.depth_map(
+        rng.standard_normal((5, 6)).astype(np.float32),
+        unit="unknown",
+        invalid_policy="nonpositive",
+        depth_convention="camera_z",
+    )
+    colmap_normal = _core.normal_map(
+        rng.standard_normal((5, 6, 3)).astype(np.float32)
+    )
+    colmap_consistency = _core.consistency_graph(
+        5,
+        6,
+        np.array([0, 2, 4], np.uint32),
+        np.array([1, 3, 5], np.uint32),
+        np.array([0, 2, 2, 5], np.uint64),
+        np.array([4, 1, 7, 2, 0], np.uint32),
+    )
+    colmap_visibility = _core.point_visibility(
+        np.array([0, 2, 2, 3], np.uint64),
+        np.array([3, 1, 7], np.uint32),
     )
     sequence_y = rng.integers(0, 256, (4, 5, 7), dtype=np.uint8)
     sequence_u = rng.integers(0, 256, (4, 3, 4), dtype=np.uint8)
@@ -505,6 +530,30 @@ def build_buffer_codec_cases() -> tuple[BufferCodecCase, ...]:
             reconstruction,
         ),
         case("splat", _core.read_splat, _core.write_splat, gaussians),
+        case(
+            "colmap_mvs_depth",
+            _core.read_colmap_mvs_depth,
+            _core.write_colmap_mvs_depth,
+            colmap_depth,
+        ),
+        case(
+            "colmap_mvs_normal",
+            _core.read_colmap_mvs_normal,
+            _core.write_colmap_mvs_normal,
+            colmap_normal,
+        ),
+        case(
+            "colmap_mvs_consistency",
+            _core.read_colmap_mvs_consistency,
+            _core.write_colmap_mvs_consistency,
+            colmap_consistency,
+        ),
+        case(
+            "colmap_fused_visibility",
+            _core.read_colmap_fused_visibility,
+            _core.write_colmap_fused_visibility,
+            colmap_visibility,
+        ),
     )
     observed = tuple(item.id for item in cases)
     if observed != BUFFER_CODEC_CASE_IDS:

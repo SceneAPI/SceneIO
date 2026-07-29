@@ -39,7 +39,12 @@ struct DepthMap {
     // Conventions the codec RECORDED (metadata, never applied to the arrays):
     std::string unit = "meters";          // meters|millimeters|custom|unitless|unknown
     double scale_to_meters = 1.0;         // depth * scale_to_meters -> meters; 0.0 == non-metric/unknown
-    std::string invalid_policy = "none";  // none|zero|nonfinite|negative
+    std::string invalid_policy =
+        "none";  // none|zero|nonfinite|negative|nonpositive
+    // Geometric meaning of each scalar. File formats that do not encode it
+    // must retain "unspecified"; COLMAP MVS records optical-axis camera Z.
+    std::string depth_convention =
+        "unspecified";  // unspecified|camera_z|ray_distance
 
     size_t count() const { return height * width; }
     bool has_confidence() const { return !confidence.empty(); }
@@ -52,7 +57,12 @@ inline bool depth_map_valid_unit(const std::string &s) {
 }
 // Which stored-value class means "no measurement" (4-token closed vocabulary).
 inline bool depth_map_valid_invalid_policy(const std::string &s) {
-    return s == "none" || s == "zero" || s == "nonfinite" || s == "negative";
+    return s == "none" || s == "zero" || s == "nonfinite" ||
+           s == "negative" || s == "nonpositive";
+}
+inline bool depth_map_valid_depth_convention(const std::string &s) {
+    return s == "unspecified" || s == "camera_z" ||
+           s == "ray_distance";
 }
 // The Image dtype<->maxval pairing guard, transposed to unit<->scale: each unit
 // pins the scale that means it, and 0.0 is the non-metric ("not convertible")

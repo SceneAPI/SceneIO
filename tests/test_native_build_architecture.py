@@ -66,6 +66,7 @@ def test_codec_family_manifests_partition_native_sources() -> None:
     variable_by_family = {
         "arrays": "SCENEIO_ARRAY_CODEC_SOURCES",
         "calibration": "SCENEIO_CALIBRATION_CODEC_SOURCES",
+        "dense": "SCENEIO_DENSE_CODEC_SOURCES",
         "images": "SCENEIO_IMAGE_CODEC_SOURCES",
         "meshes": "SCENEIO_MESH_CODEC_SOURCES",
         "points": "SCENEIO_POINT_CODEC_SOURCES",
@@ -136,11 +137,11 @@ def test_registration_tables_preserve_order_and_single_ownership() -> None:
         (int(order), function)
         for order, function in entry_pattern.findall(family_text)
     ]
-    assert [order for order, _ in sorted(record_entries)] == list(range(16))
+    assert [order for order, _ in sorted(record_entries)] == list(range(17))
     assert tuple(function for _, function in sorted(record_entries)) == tuple(
         CONTRACT["record_registration_order"]
     )
-    assert [order for order, _ in sorted(codec_entries)] == list(range(40))
+    assert [order for order, _ in sorted(codec_entries)] == list(range(41))
     assert tuple(function for _, function in sorted(codec_entries)) == tuple(
         CONTRACT["codec_registration_order"]
     )
@@ -200,7 +201,7 @@ def test_live_native_inventory_matches_builtin_ownership_and_capabilities() -> N
     )
     assert isinstance(inventory, tuple)
     assert tuple(item["id"] for item in inventory) == expected_ids
-    assert len(expected_ids) == 49
+    assert len(expected_ids) == 53
 
     schema = tuple(NATIVE_INVENTORY_CONTRACT["schema"])
     assert schema == ("id", "read", "write", "inspect", "partial")

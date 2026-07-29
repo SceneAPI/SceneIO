@@ -16,6 +16,10 @@ _BUILTINS = {
     "bmp",
     "bundler",
     "colmap_db",
+    "colmap_fused_visibility",
+    "colmap_mvs_consistency",
+    "colmap_mvs_depth",
+    "colmap_mvs_normal",
     "colmap_sparse",
     "colmap_sparse_txt",
     "compressed_ply",
@@ -66,6 +70,8 @@ _BUILTINS = {
 
 _PARTIAL = {
     "colmap_db": ("image_id", "pair"),
+    "colmap_mvs_depth": ("window",),
+    "colmap_mvs_normal": ("window",),
     "colmap_sparse": ("image_id",),
     "colmap_sparse_txt": ("image_id",),
     "dmb": ("window",),

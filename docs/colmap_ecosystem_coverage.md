@@ -43,7 +43,7 @@ Status terms:
 - **partial**: useful fields are supported, but a documented persisted field or
   companion file is not;
 - **planned**: in the lean closure implementation queue;
-- **adapter**: supported outside the 50-codec core registry because it is a
+- **adapter**: supported outside the 54-codec core registry because it is a
   workflow bundle rather than a standalone scene format;
 - **reference only**: inventoried for verification, not implemented.
 
@@ -57,18 +57,19 @@ Status terms:
 | Markers and marker projections, binary/text | planned | Extend `Reconstruction` with lossless typed arrays; optional sidecars remain absent when no values exist |
 | Image-time, point-frame, and time-frame sidecars | planned | Preserve exact IDs, timestamps, sync groups, labels, version, and file-presence state |
 | ChArUco board and calibration sidecars | planned | Add typed board/calibration records with exact per-image poses and errors |
-| Stock COLMAP 3.13 database | partial | Exact profile identity and populated rig/frame/image-linked-prior reads are implemented; add the exact writer |
-| Stock COLMAP 4.1.1 database | partial | Exact profile identity and populated rig/frame/generalized-prior reads are implemented; add the exact writer |
-| Current upstream database | partial | Exact profile identity, populated rig/frame/generalized-prior reads, and lossless recovered `camera1`/`camera2` reads are implemented; add the exact writer |
-| Current OpsiClear/MAXX database | implemented locally (read) | Exact ownership/profile identity plus lossless timing, quality, provenance, markers, colors, all five descriptor dtypes, scores, metadata-only video rows, and extended priors are represented; add the exact writer |
-| Database profile import/export reports | planned adapter | Emit structured compatibility results and explicit field-loss decisions |
-| COLMAP MVS depth maps | planned | New contiguous `width&height&1&` float32 codec; do not alias Gipuma DMB |
-| COLMAP MVS normal maps | planned | New HxWx3 float32 record/codec |
-| Consistency graphs | planned | New bounded CSR record using actual `(column,row,count,images...)` order |
-| Fused point visibility `.vis` | planned | New bounded CSR record |
-| COLMAP/PMVS/CMP-MVS workspace topology and configs | planned adapter | Preserve canonical paths, patch-match/fusion config, projections, and visibility companions |
+| Stock COLMAP 3.13 database | complete | Exact schema, typed rows, selected-profile writer, conversion report, and transactional validation |
+| Stock COLMAP 4.1.1 database | complete | Exact schema, typed rows, selected-profile writer, conversion report, and transactional validation |
+| Current upstream database | complete | Exact schema, recovered cameras, selected-profile writer, conversion report, and transactional validation |
+| Current OpsiClear/MAXX database | complete | Exact ownership plus timing, quality, provenance, markers, typed descriptors, scores, video metadata, extended priors, and exact selected-profile writer |
+| Database profile import/export reports | complete adapter | Structured destination-free compatibility and field-loss report |
+| COLMAP MVS depth maps | implemented locally | Repo-owned `width&height&1&` camera-Z float32 codec; distinct from Gipuma DMB |
+| COLMAP MVS normal maps | implemented locally | Repo-owned planar-wire/HWC-record float32 XYZ codec |
+| Consistency graphs | implemented locally | Bounded ordered CSR over exact `(column,row,count,images...)` tuples |
+| Fused point visibility `.vis` | implemented locally | Bounded ordered point/image CSR with exact `fused.ply.vis` detection |
+| Canonical COLMAP dense workspace and configs | implemented locally adapter | Lazy `sceneio.colmap_mvs` topology, patch-match/fusion configs, nested names, explicit map dispatch, and cross-file validation |
+| PMVS/CMP-MVS export topology | implemented locally adapter | Opaque encoded-image paths plus exact projection text; PMVS Bundler name list and raw-domain `vis.dat` are read/write |
 | NVM model | complete | No new codec |
-| Bundler bundle | partial | Add optional `list.txt` companion so image names round-trip |
+| Bundler bundle | complete with adapter companion | Core bundle values plus repository-owned one-name-per-line PMVS/Bundler list I/O |
 | Point/mesh PLY | complete | Keep SceneIO implementation; use current upstream only as a validation reference |
 | CAM export | planned | Small guarded write adapter |
 | Recon3D export | planned adapter | Directory writer for `Recon/` payload and image maps |
@@ -357,14 +358,60 @@ C1d MAXX extension read contract:
 
 ### C2 - dense MVS
 
-- [ ] Add depth and normal-map records/codecs with inspect, mmap, window reads,
+- [x] Add depth and normal-map records/codecs with inspect, mmap, window reads,
   and direct sinks.
-- [ ] Add consistency-graph and fused-visibility CSR codecs.
-- [ ] Add a workspace adapter for canonical COLMAP and PMVS companion files.
-- [ ] Use hand-built golden payloads plus current-upstream COLMAP as the
+- [x] Add consistency-graph and fused-visibility CSR codecs.
+- [x] Add lazy adapters for canonical COLMAP, PMVS, and CMP-MVS companion
+  topology without decoding encoded media.
+- [x] Use hand-built golden payloads plus current-upstream COLMAP as the
   independent oracle.
 - [x] Correct every DMB document: SceneIO `dmb` is Gipuma DMB, not the COLMAP
   MVS matrix format.
+
+C2 local implementation evidence:
+
+- The registry now has 54 built-ins. The four appended `dense` codecs all
+  read, write, inspect, mmap, and stream; depth and normal additionally expose
+  bounded pixel windows.
+- Depth records declare camera-Z, unknown reconstruction scale, and
+  nonpositive invalid values. Normal records expose HWC float32 while the wire
+  remains planar XYZ in the OpenCV camera frame. Consistency and visibility
+  preserve stored list order and declare the positional
+  `mvs_sequential_image_index` domain.
+- Independent `struct`/NumPy goldens cover hostile IEEE values, planar order,
+  sparse tuples, malformed bounds, exact sink bytes, mapping lifetime, and
+  payload-sized allocation. Consistency and fused visibility validate and
+  count before exact record allocation, including few-entry/many-link and
+  malformed trailing-payload shapes. Installed pycolmap is used only where
+  its binding semantics are reliable.
+- `sceneio.colmap_mvs` parses `__all__`, `__auto__, N`, and explicit
+  patch-match sources, ordered fusion names, nested map paths, PMVS/CMP
+  projection pairs, PMVS Bundler name lists, and raw `vis.dat`. Encoded images
+  remain opaque paths.
+- PMVS visibility values intentionally retain
+  `raw_colmap_image_id_or_mvs_index`: the authorized producer writes persisted
+  image IDs while the matching consumer treats values as positional indices.
+  SceneIO preserves the values except COLMAP's reserved invalid uint32
+  sentinel and makes no false semantic conversion. Parsing and writing use
+  bounded chunks rather than whole-row Python lists/strings, and row
+  permutation validation uses a compact chunked NumPy bitmap.
+- PMVS Bundler-profile workspaces use `bundle.rd.out` plus opaque `visualize`
+  images, require the bundle-declared image count to match that inventory, and
+  do not require the raw-PMVS `txt` or `vis.dat` companions.
+- Patch-match configs accept upstream comma or semicolon separators and
+  upstream-style empty repeated/trailing fields, then enforce nonempty,
+  unique, non-reference sources.
+- Workspace validation compares dense companion dimensions, checks every
+  decoded consistency/visibility index against the MVS positional table, and
+  requires `fused.ply.vis` point count to equal the companion PLY vertex
+  count.
+- Legacy models use their sparse image sequence for that table; modern models
+  use registered frame/camera data order and are regression-tested with an
+  images-file order that deliberately differs.
+- The final local gate collects 3,832 nodes and passes 3,827 tests with five
+  documented optional/platform skips. Ruff, diff checks, wheel smoke, the
+  independent-oracle benchmark, and the three architecture, test, and
+  platform/documentation reviews are clear.
 
 ### C3 - sparse extensions and compact interchange
 
