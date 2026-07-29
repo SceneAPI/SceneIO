@@ -45,8 +45,8 @@ Status terms:
 | Persisted surface | Current SceneIO status | Closure action |
 |---|---|---|
 | Legacy COLMAP sparse binary: cameras/images/points3D | complete | Retain byte identity |
-| Modern sparse binary: rigs/cameras/frames/images/points3D | verified locally | Run the exact verified commit through the nonpublishing MSVC, GCC 10, and AppleClang validation after five-file byte identity, models 0-17, multi-sensor rigs, bounded writes, and the full local gate passed |
-| Legacy and modern sparse text twins | verified locally | Run the exact verified commit through the nonpublishing three-toolchain validation after value parity, binary-text-binary identity, and the full local gate passed |
+| Modern sparse binary: rigs/cameras/frames/images/points3D | complete | Retain five-file byte identity, models 0-17, multi-sensor rigs, bounded writes, and the exact-commit three-toolchain validation |
+| Legacy and modern sparse text twins | complete | Retain value parity, binary-text-binary identity, and the exact-commit three-toolchain validation |
 | Markers and marker projections, binary/text | planned | Extend `Reconstruction` with lossless typed arrays; optional sidecars remain absent when no values exist |
 | Image-time, point-frame, and time-frame sidecars | planned | Preserve exact IDs, timestamps, sync groups, labels, version, and file-presence state |
 | ChArUco board and calibration sidecars | planned | Add typed board/calibration records with exact per-image poses and errors |
@@ -96,7 +96,7 @@ Status terms:
   them stale.
 - [x] Run the full local suite, benchmark delta, wheel smoke, and three-agent
   final review.
-- [ ] Validate the exact commit on MSVC, manylinux2014 GCC 10, and
+- [x] Validate the exact commit on MSVC, manylinux2014 GCC 10, and
   AppleClang.
 
 Local C0 evidence for pushed implementation commit `801bd77` on 2026-07-28:
@@ -113,6 +113,26 @@ Local C0 evidence for pushed implementation commit `801bd77` on 2026-07-28:
 - Ampere (`lean_r6_arch_review`), Epicurus (`lean_r6_test_review`), and
   Lagrange (`lean_r6_platform_docs_review`) completed independent final
   reviews with no remaining blockers.
+
+Remote C0 evidence for correction and validation commit `7046761`:
+
+- [standard CI run 30421438904](https://github.com/SceneAPI/SceneIO/actions/runs/30421438904)
+  passed all 11 jobs, including the full suite, reconstruction parity on three
+  platforms, manylinux2014 GCC 10 portability, the deterministic 50-codec
+  structure check, and the strict five-run performance guard;
+- [instrumented run 30421438926](https://github.com/SceneAPI/SceneIO/actions/runs/30421438926)
+  passed the complete ASan/UBSan suite and dedicated native lifetime job;
+- [nonpublishing distribution run 30422291891](https://github.com/SceneAPI/SceneIO/actions/runs/30422291891)
+  passed the exact source archive, macOS AppleClang arm64, Windows MSVC amd64,
+  manylinux2014 GCC 10 x86-64, and combined inventory jobs; PyPI was skipped;
+- artifact SHA-256 digests: source archive
+  `fe72b54eedd31dad41045baed1a19319c4ae5fdbef7c306c23e355a58bf4b575`,
+  macOS wheel bundle
+  `cc56c53aff03dee174c1b0d8bae046735d4b7da6abddae758404b6d80253686b`,
+  Windows wheel bundle
+  `51e29a9a5e0dd4f1a1a92966ef1be94461b4f518b23dcf0ea870ff5172832ff3`,
+  and manylinux wheel bundle
+  `8366f2065e57bc29f9751a91035ae94b22b78de9a7712054bd67464bb539b313`.
 
 ### C1 - database profiles
 

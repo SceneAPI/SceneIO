@@ -4607,8 +4607,8 @@ permitted.
 - [x] Run full pytest, Ruff, diff check, benchmark, and wheel smoke.
 - [x] Complete the three-agent final review and resolve every finding.
 - [x] Commit and push the green C0 implementation at `801bd77`.
-- [ ] Run the nonpublishing MSVC/GCC10/AppleClang validation at the exact
-      commit.
+- [x] Run the nonpublishing MSVC/GCC10/AppleClang validation at exact
+      correction commit `7046761`.
 
 Local C0 evidence for pushed implementation commit `801bd77` on 2026-07-28:
 
@@ -4621,6 +4621,18 @@ Local C0 evidence for pushed implementation commit `801bd77` on 2026-07-28:
 - final independent reviews are clear: Ampere
   (`lean_r6_arch_review`), Epicurus (`lean_r6_test_review`), and Lagrange
   (`lean_r6_platform_docs_review`).
+
+Remote C0 evidence:
+
+- [standard CI run 30421438904](https://github.com/SceneAPI/SceneIO/actions/runs/30421438904)
+  passed all 11 jobs at `7046761`;
+- [instrumented run 30421438926](https://github.com/SceneAPI/SceneIO/actions/runs/30421438926)
+  passed the full ASan/UBSan suite and lifetime job;
+- [nonpublishing distribution run 30422291891](https://github.com/SceneAPI/SceneIO/actions/runs/30422291891)
+  passed its exact source archive, three platform wheels, and combined
+  inventory; its PyPI job was skipped;
+- source, macOS, Windows, and manylinux artifact SHA-256 digests are recorded
+  in [`colmap_ecosystem_coverage.md`](colmap_ecosystem_coverage.md).
 
 ### Remaining lean closure
 
