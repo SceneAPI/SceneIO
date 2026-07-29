@@ -4606,11 +4606,11 @@ permitted.
 - [x] Add COLMAP and OpsiClear attribution records.
 - [x] Run full pytest, Ruff, diff check, benchmark, and wheel smoke.
 - [x] Complete the three-agent final review and resolve every finding.
-- [ ] Commit and push the green C0 unit.
+- [x] Commit and push the green C0 implementation at `801bd77`.
 - [ ] Run the nonpublishing MSVC/GCC10/AppleClang validation at the exact
       commit.
 
-Local C0 evidence on 2026-07-28:
+Local C0 evidence for pushed implementation commit `801bd77` on 2026-07-28:
 
 - complete suite: `3573 passed, 4 skipped`; focused closure gate:
   `197 passed`;

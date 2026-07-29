@@ -99,7 +99,7 @@ Status terms:
 - [ ] Validate the exact commit on MSVC, manylinux2014 GCC 10, and
   AppleClang.
 
-Local C0 evidence on 2026-07-28:
+Local C0 evidence for pushed implementation commit `801bd77` on 2026-07-28:
 
 - the complete suite passed 3,573 tests with four documented skips; the
   focused COLMAP, partial-read, compatibility, benchmark-qualification,
