@@ -1,0 +1,109 @@
+"""Optional scientific-container and feature-store codec definitions."""
+
+from __future__ import annotations
+
+from sceneio import _core
+from sceneio.io._hdf5 import (
+    HDF5_MAGIC,
+    HlocFeatureStore,
+    HlocMatchStore,
+    inspect_hdf5,
+    inspect_hloc_features,
+    inspect_hloc_matches,
+    read_hdf5,
+    read_hdf5_slices,
+    read_hdf5_tensors,
+    read_hloc_features,
+    read_hloc_matches,
+    write_hdf5,
+    write_hloc_features,
+    write_hloc_matches,
+)
+from sceneio.io._registry.model import Codec
+
+CONTAINER_CODECS: tuple[Codec, ...] = (
+    Codec(
+        "hdf5",
+        (".h5", ".hdf5"),
+        read_hdf5,
+        write_hdf5,
+        record=_core.TensorDict,
+        datatype="tensor_dict",
+        magic=(HDF5_MAGIC,),
+        inspect=inspect_hdf5,
+        read_tensors=read_hdf5_tensors,
+        read_slices=read_hdf5_slices,
+        requires_features=("h5py",),
+        supported_features=(
+            "numeric_datasets",
+            "nested_dataset_paths",
+            "string_root_attributes",
+            "named_tensor_reads",
+            "leading_axis_hyperslabs",
+            "transactional_path_write",
+        ),
+        unsupported_features=(
+            "string_datasets",
+            "compound_dtypes",
+            "variable_length_dtypes",
+            "references",
+            "external_links",
+            "hard_link_aliases",
+            "virtual_datasets",
+            "non_root_attributes",
+        ),
+    ),
+    Codec(
+        "hloc_features",
+        (".h5", ".hdf5"),
+        read_hloc_features,
+        write_hloc_features,
+        record=HlocFeatureStore,
+        datatype="feature_set",
+        magic=(HDF5_MAGIC,),
+        inspect=inspect_hloc_features,
+        requires_features=("h5py",),
+        supported_features=(
+            "per_image_groups",
+            "keypoints",
+            "descriptors_D_by_N",
+            "scores",
+            "image_size",
+            "keypoint_uncertainty",
+            "nested_image_names",
+            "native_feature_set",
+        ),
+        unsupported_features=(
+            "global_descriptor_only",
+            "feature_scales",
+            "feature_orientations",
+            "line_features",
+        ),
+    ),
+    Codec(
+        "hloc_matches",
+        (".h5", ".hdf5"),
+        read_hloc_matches,
+        write_hloc_matches,
+        record=HlocMatchStore,
+        datatype="match_graph",
+        magic=(HDF5_MAGIC,),
+        inspect=inspect_hloc_matches,
+        requires_features=("h5py",),
+        supported_features=(
+            "matches0",
+            "matching_scores0",
+            "current_pair_naming",
+            "exact_endpoint_names",
+            "mixed_score_presence",
+            "native_match_graph",
+        ),
+        unsupported_features=(
+            "verified_geometry",
+            "multiple_matches_per_source",
+            "legacy_underscore_pair_enumeration",
+        ),
+    ),
+)
+
+__all__ = ["CONTAINER_CODECS"]

@@ -101,6 +101,36 @@ def print_colmap_db_row(display: Sequence[float | None]) -> None:
     )
 
 
+def print_path_row(
+    codec_id: str,
+    display: Sequence[float | None],
+) -> None:
+    """Print one path-native row with independent path-provider metrics."""
+
+    (
+        payload_mb,
+        file_mb,
+        write_mbps,
+        read_mbps,
+        oracle_write_mbps,
+        oracle_read_mbps,
+        read_peak_mb,
+        read_rss_mb,
+    ) = display
+    ratio = (
+        read_mbps / oracle_read_mbps
+        if oracle_read_mbps is not None
+        else None
+    )
+    print(
+        f"{codec_id:<14}{payload_mb:>10.1f}{file_mb:>9.1f}"
+        f"{write_mbps:>9.0f}{read_mbps:>9.0f}{read_mbps:>9.0f}"
+        f"{(oracle_write_mbps or 0):>9.0f}{(oracle_read_mbps or 0):>9.0f}"
+        f"{'-':>9}{read_peak_mb:>9.1f}{'-':>9}{read_rss_mb:>9.1f}"
+        f"{(ratio or 0):>9.2f}"
+    )
+
+
 def print_directory_row(
     codec_id: str,
     payload_mb: float,

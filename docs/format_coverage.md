@@ -62,6 +62,28 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > skips. Ruff, installed-surface smoke, and the 56-row structural benchmark
 > check pass. Cross-platform results remain pending for this checkpoint.
 >
+> **HDF5/hloc checkpoint (2026-07-29):** the live local registry now has 59
+> codecs: 50 buffer-backed files, six path-native file/multi-file containers,
+> and three directory containers. The additions are optional `hdf5`,
+> `hloc_features`, and `hloc_matches` adapters. SceneIO owns their schemas,
+> validation, detection, inspection, partial-read policy, atomic replacement,
+> and public models; optimized h5py supplies HDF5 storage only when
+> `sceneio[hdf5]` is selected. Generic HDF5 supports numeric/bool datasets,
+> nested paths, text root attributes, named reads, and leading-axis
+> hyperslabs. The hloc adapters preserve descriptor orientation/dtype,
+> uncertainty, dense source extents, endpoint names, and mixed score presence
+> in native `FeatureSet`/`MatchGraph` records. Independent h5py fixtures and
+> benchmark providers cover all three, and the match layout follows hloc's
+> current
+> [`names_to_pair`](https://github.com/cvg/Hierarchical-Localization/blob/master/hloc/utils/parsers.py)
+> and
+> [`writer_fn`](https://github.com/cvg/Hierarchical-Localization/blob/master/hloc/match_features.py)
+> behavior. The exact collection has 3,933 nodes; local MSVC passes 3,928
+> with five documented optional skips, plus the 123-test focused gate and
+> installed-surface smoke. NumPy remains the sole unconditional dependency;
+> h5py/HDF5 are not bundled. Cross-platform package evidence remains pending
+> for this checkpoint.
+>
 > **C3/C4 hosted closure (2026-07-29):** the exact collection is
 > 3,879 nodes with normalized SHA-256
 > `39fe1dc507ed2faea06a75dcc823515ff550dfa742813b89cdcd24a7584ad4f6`.
@@ -761,8 +783,10 @@ hardening patches** for truncated HDR input, corrupt JPEG marker failure, and a
 signed-shift UB in JPEG entropy output (see `stb/COMMIT.txt`). CMYK JPEG is
 best‑effort stb→RGB and opaque RGBA collapses to RGB in WebP (both documented).
 
-Genuinely need the system‑lib `SCENEIO_WITH_*` gate (deferred): HDF5 (+hloc),
-TIFF (libtiff). **LAZ is statically built from repository-contained LAZperf
+The optional h5py path now covers HDF5 and both hloc layouts without adding an
+unconditional dependency. The planned `SCENEIO_WITH_HDF5` entry is reserved
+for a future C-native comparison; TIFF (libtiff) still needs an optional
+native gate. **LAZ is statically built from repository-contained LAZperf
 3.4.0 source** (Apache‑2.0/BSD‑3-Clause/BSD‑2-Clause), with formats 0‑3 and
 6‑8 in its supported compression set. COLMAP DB `.db` is covered by a pinned
 public-domain SQLite amalgamation statically linked into `_core`.
@@ -799,6 +823,9 @@ public-domain SQLite amalgamation statically linked into `_core`.
 | `y4m` | `ImageSequence` | R+W | independent Python parser/writer + exact golden bytes | original dependency-free YUV4MPEG2 subset; uint8 mono/4:2:0/4:2:2/4:4:4 planar frames, odd dimensions, exact rational timing, mmap, streaming sink, inspect, and frame ranges; no RGB conversion or video-framework dependency |
 | `animated_webp` | `ImageSequence` | R+W | Pillow/libwebp animation-container oracle in `tests/codecs/test_animated_webp.py` | repository-pinned libwebp mux/demux/animation APIs; fully composited packed uint8 RGB/RGBA frames, exact millisecond timing, loop/background metadata, mmap, streaming sink, and metadata-only inspection |
 | `apng` | `ImageSequence` | R+W | Pillow plus specification-derived chunk/compositing oracle in `tests/codecs/test_apng.py` | repository-owned APNG container logic over pinned lodepng; fully composited packed uint8 RGBA frames, exact rational timing representable as integer nanoseconds, loop count, source/over blend, none/background/previous disposal, mmap, streaming sink, and metadata-only inspection |
+| `hdf5` | `TensorDict` | R+W, inspect, partial | independent **h5py** layouts in `tests/codecs/test_hdf5_hloc.py` | optional `sceneio[hdf5]`; numeric/bool datasets, nested paths, text root attrs, named reads, leading-axis hyperslabs, and atomic replacement; indirect/virtual/object/reference/vlen layouts reject |
+| `hloc_features` | `HlocFeatureStore` of native `FeatureSet` | R+W, inspect | independent **h5py** documented layout | preserves keypoints, D×N wire descriptors as native N×D with uint8/int8/f16/f32/f64 dtype, scores, image size, nested names, and keypoint uncertainty |
+| `hloc_matches` | `HlocMatchStore` + native `MatchGraph` | R+W, inspect | independent **h5py** documented layout | preserves dense `matches0`, optional `matching_scores0`, exact endpoint names, source extents/dtypes, pair order, and mixed score presence |
 
 ### Repository-owned COLMAP workflow adapters
 
@@ -832,8 +859,8 @@ requirements for COLMAP ecosystem closure.
 ### ⬜ Pending — declared roadmap gaps
 
 - Sequence/dataset: RTMV. Animated WebP and APNG are complete.
-- Optional scientific/container: HDF5, hloc feature/match layouts, TIFF, E57,
-  and Parquet/Arrow.
+- Optional scientific/container: TIFF, E57, and Parquet/Arrow. HDF5 and both
+  hloc feature/match layouts are complete through the optional h5py provider.
 - Chunked/heavyweight: Zarr v2/v3, USD/USDZ, and OpenVDB.
 - Policy-gated: AVIF, JPEG-XL, and Draco-compressed glTF. These do not enter
   implementation without an explicit decision under the patented-codec rule.
@@ -913,7 +940,10 @@ incremental.
 | `gaussian_ply` | file | yes | yes | yes | points | yes | yes | no | - |
 | `glb` | file | yes | yes | yes | mesh_id, primitive_id | yes | yes | no | - |
 | `gltf` | multi_file | yes | yes | yes | mesh_id, primitive_id | yes | yes | no | - |
+| `hdf5` | file | yes | yes | yes | tensors, slices | yes | yes | no | h5py |
 | `hdr` | file | yes | yes | yes | - | yes | yes | yes | - |
+| `hloc_features` | file | yes | yes | yes | - | yes | yes | no | h5py |
+| `hloc_matches` | file | yes | yes | yes | - | yes | yes | no | h5py |
 | `image_sequence` | directory | yes | yes | yes | frames | yes | yes | no | - |
 | `jpeg` | file | yes | yes | yes | - | yes | yes | yes | - |
 | `kalibr` | file | yes | yes | yes | - | yes | yes | no | - |
@@ -975,6 +1005,10 @@ against that public manifest.
 | `tiff` | `SCENEIO_WITH_TIFF` | no | `tiff` |
 | `usd` | `SCENEIO_WITH_USD` | no | `usd`, `usdz` |
 <!-- sceneio-native-feature-rows:end -->
+
+The `hdf5` row reserves a possible future C-native integration. The current
+repository-owned HDF5 and hloc adapters are independently available through
+the optional optimized `h5py` provider.
 
 An unknown feature name raises the same normalized `FormatError` family used
 by codec discovery. Future feature-enabled builds must export their compiled

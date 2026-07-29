@@ -2,7 +2,7 @@
 
 Status: complete for the original 23-codec O0-O5 scope. Its mmap, direct-sink,
 inspection, differential, memory, and partial-read capability contracts now
-cover the live 55-codec registry; 30 codecs expose bounded selectors. This
+cover the live 59-codec registry; 31 codecs expose bounded selectors. This
 status describes optimized I/O transport and bounded access; it does **not**
 claim that every compression/parser kernel is the fastest viable backend.
 Backend qualification remains available as a trigger-based post-R6 mechanism in
@@ -15,9 +15,10 @@ reviewed, commit-sized verification checklist is
 The user-directed lean closure policy accepts the verified R6 backends as
 that release baseline without promoting its 124 provisional rows to
 `qualified`; exhaustive candidate comparison is not an R6 prerequisite.
-The four post-R6 COLMAP dense codecs add eight measured provisional
-encode/decode rows, bringing the current ledger to 132 provisional, two known
-gaps, and six not-applicable operations without changing that policy.
+The four post-R6 COLMAP dense codecs and three HDF5/hloc codecs add fourteen
+measured provisional encode/decode rows, bringing the current ledger to 142
+provisional, two known gaps, and six not-applicable operations without
+changing that policy.
 The C3/C4 CI correction keeps those operation counts unchanged. Its SOG
 writer uses a pinned deterministic transform and caches transformed
 coordinates: repeated seven-run measurements on the 11.2 MB fixture report
@@ -153,11 +154,21 @@ and Ubuntu builds use the expected stable extension names. Final build-only run
 and downloaded-artifact inspection.
 
 Post-0.2 format expansion inherits the same gates. The registry currently has
-56 codecs: 50 buffer-backed file containers, three path-native multi-file
+59 codecs: 50 buffer-backed file containers, six path-native file/multi-file
 containers, and three directory containers (two COLMAP layouts plus lazy image
 sequences). COLMAP SQLite
 remains path-native; SOG, OBJ/MTL, and glTF/external buffers have explicit
 multi-file adapters.
+Generic HDF5 and the two documented hloc layouts are also path-native. They
+use the optional optimized h5py/HDF5 provider while SceneIO owns schema
+validation, native-record mapping, inspection, partial selection, and atomic
+replacement. On representative 1.1/1.1/2.1 MB logical fixtures, three-run
+local MSVC measurements recorded 515/531/337 MB/s writes and 919/422/871 MB/s
+full reads for HDF5/hloc-features/hloc-matches. Metadata inspection was
+1.93x/2.42x/2.93x faster than full materialization; the generic HDF5 named
+read was 2.44x faster and avoided loading the 1 MiB unselected dataset.
+Direct h5py provider timings remain visible in the committed harness rather
+than being described as equivalent wrapper work.
 The latest record waves add the four calibration formats over `CameraRig`, g2o
 over `PoseGraph`, `colmap_db` over
 `ColmapDatabase`/`FeatureSet`/`MatchGraph`, polygonal PLY over `Mesh`, and

@@ -103,6 +103,9 @@ CODEC_CASE_DEFINITIONS = (
     _case("colmap_mvs_normal", "buffer", ("window",)),
     _case("colmap_mvs_consistency", "buffer", ()),
     _case("colmap_fused_visibility", "buffer", ()),
+    _case("hdf5", "path", ("tensors", "slices")),
+    _case("hloc_features", "path", ()),
+    _case("hloc_matches", "path", ()),
 )
 
 CASES_BY_ID = MappingProxyType(
@@ -144,7 +147,7 @@ def _validate_case_definitions() -> None:
         raise RuntimeError("cross-codec fixture kinds are incomplete")
     if (len(BUFFER_CASES), len(PATH_CASES), len(DIRECTORY_CASES)) != (
         50,
-        3,
+        6,
         3,
     ):
         raise RuntimeError("cross-codec fixture partitions changed")

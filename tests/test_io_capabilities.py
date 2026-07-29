@@ -34,6 +34,9 @@ _BUILTINS = {
     "glb",
     "gltf",
     "hdr",
+    "hdf5",
+    "hloc_features",
+    "hloc_matches",
     "image_sequence",
     "jpeg",
     "kitti",
@@ -81,6 +84,7 @@ _PARTIAL = {
     "image_sequence": ("frames",),
     "flo": ("window",),
     "gaussian_ply": ("points",),
+    "hdf5": ("tensors", "slices"),
     "glb": ("mesh_id", "primitive_id"),
     "gltf": ("mesh_id", "primitive_id"),
     "compressed_ply": ("points",),
@@ -153,7 +157,11 @@ def test_capability_hooks_and_metadata_are_consistent():
         assert cap.partial_selectors == _PARTIAL.get(format_id, ())
         assert cap.lossy is (format_id in _LOSSY)
         assert cap.container_kind == codec.container_kind
-        assert cap.requires_features == ()
+        assert cap.requires_features == (
+            ("h5py",)
+            if format_id in {"hdf5", "hloc_features", "hloc_matches"}
+            else ()
+        )
         assert not (
             set(cap.supported_features) & set(cap.unsupported_features)
         )
@@ -228,7 +236,8 @@ def test_unknown_native_feature_is_normalized():
 
 
 def test_unavailable_optional_codecs_are_normalized():
-    for format_id in ("hdf5", "tiff", "e57", "parquet"):
+    assert sceneio.capabilities("hdf5").available
+    for format_id in ("tiff", "e57", "parquet"):
         with pytest.raises(sceneio.FormatError, match="unknown format id"):
             sceneio.capabilities(format_id)
 

@@ -17,6 +17,7 @@ from sceneio import _core
 from sceneio.errors import SceneIoError
 from sceneio.io._builtin_manifest import CANONICAL_BUILTIN_IDS
 from sceneio.io._frame_access import ImageFrameAccess
+from sceneio.io._hdf5 import classify_hdf5
 from sceneio.io._inspection import inspect_codec
 from sceneio.io._ply import classify_ply
 from sceneio.io._registry import adapters as _shared_adapters
@@ -29,6 +30,7 @@ from sceneio.io._registry.assembly import (
 from sceneio.io._registry.detection import detect_path as _detect_path
 from sceneio.io._registry.families.arrays import build_array_codecs
 from sceneio.io._registry.families.calibration import CALIBRATION_CODECS
+from sceneio.io._registry.families.containers import CONTAINER_CODECS
 from sceneio.io._registry.families.dense import DENSE_CODECS
 from sceneio.io._registry.families.images import IMAGE_CODECS
 from sceneio.io._registry.families.meshes import MESH_CODECS
@@ -133,6 +135,7 @@ def detect(path) -> str:
         path,
         REGISTRY.values(),
         classify_ply=classify_ply,
+        classify_hdf5=classify_hdf5,
         format_error=FormatError,
     )
 
@@ -224,6 +227,7 @@ _define_builtin_family("splats", _SPLAT_CODECS)
 _define_builtin_family("meshes", MESH_CODECS)
 _define_builtin_family("points", POINT_CODECS)
 _define_builtin_family("calibration", CALIBRATION_CODECS)
+_define_builtin_family("containers", CONTAINER_CODECS)
 _define_builtin_family("dense", DENSE_CODECS)
 _define_builtin_family("images", IMAGE_CODECS)
 _IMAGE_FRAME_ACCESS = ImageFrameAccess(

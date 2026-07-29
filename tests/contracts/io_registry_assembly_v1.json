@@ -66,7 +66,10 @@
       "colmap_mvs_depth": "1b01787068a46b3c577adf0f5eb0f3c4909aa94b23008fda0d33e17e80595654",
       "colmap_mvs_normal": "80f2cf4ac3090d89a5041d8660c11b9f15c6ace196e1c3b37fdc26d82c5b7805",
       "colmap_mvs_consistency": "d30a0c7d9d960daa5255e08a0388cb44ad109cb0b9b00f74743382ca39de3449",
-      "colmap_fused_visibility": "b31c43d6cbca68d8025d966a90f40beb650fe3fafddc65989b455a34dd9e8bf1"
+      "colmap_fused_visibility": "b31c43d6cbca68d8025d966a90f40beb650fe3fafddc65989b455a34dd9e8bf1",
+      "hdf5": "33e66344c099145ee6e6cf2e7ea49ab7dfc5318b34ce5ad949b0c5facc802cb5",
+      "hloc_features": "5f3d5916bc1a61b0b736f4ab86d26ee935f61a3b6f47e68d3d17bfed05cb637f",
+      "hloc_matches": "7382dc0f72455e7c5908804a3843ba392c494578edec1454c9655f74d8f24d79"
     }
   },
   "operation_descriptors": {
@@ -353,6 +356,23 @@
         "read": "9d3a6987ac523e4e32af72a8880ba848f7345e0219727ec0d1f7ec0cc88f5ca7",
         "write": "390b91bde2d0152b53f8156faa59de5e79eb8001903184c6715dc123de6bb112",
         "inspect": "3cdd7d8e7d2fc3e1c4a9e8b079a01a7d763595c588af9973ab337215fe859f83"
+      },
+      "hdf5": {
+        "read": "7a924dcb4f4f2ae97fc24b2301b69da82756226a793bda73f8a9a649e306a4d2",
+        "write": "455fb1b29c886cb0684a58af4002071c126dd8997b363318de9a750b5b6bd776",
+        "inspect": "0911f524c47b7a018ded2f884dcd45c3c7eb2410f3a88cf33df7f1bad8cf600b",
+        "read_tensors": "d3a923e33164a2dbbe2b135be20428e02be026ce361ccc492dc28eb75d1149d5",
+        "read_slices": "09a94f3f7889c5cd57bf27eff83f0c6c18db3f37ded3e6302df9ddd77e8025b0"
+      },
+      "hloc_features": {
+        "read": "e018637422dc9e3f6a33c41a2fef3a1221672b06418cff2803a13573e9572314",
+        "write": "8c466851e8246dfbae7d5280559678c0f2b05b4c7af7b4427a62e61a4d61fec3",
+        "inspect": "6cc360aa2a5a667a30ca2dfea1d3a3e36fc38ec14ca898a0563804348aa6e930"
+      },
+      "hloc_matches": {
+        "read": "daa5b4cd3deca835c969738229344a74817a514151339e2470c4e764483ccb08",
+        "write": "86a7eae7521af7a3c748e585fc93c3f333945561fcbf5fce5a6968ebdf234950",
+        "inspect": "56180e1a20477da1ca61a6734356d67ffc3f4a85dacacf59fb5289f0d801f195"
       }
     }
   },
@@ -364,8 +384,8 @@
     "last": "tests/test_points_binary.py::test_bad_magic_rejected"
   },
   "pytest_candidate_collection": {
-    "count": 3910,
-    "sorted_normalized_node_ids_sha256": "97fffb5fe9508b90560584d4b3f6e687310c1f39b5b8c03e55061047709975cc",
+    "count": 3933,
+    "sorted_normalized_node_ids_sha256": "e273b8da3f2f9d1137c8cffb4de3e1918a472976679e9eca4fa232e4bce89e6f",
     "added_nodes": [
       "tests/codecs/test_animated_webp.py::test_sceneio_writer_is_lossless_and_oracle_readable",
       "tests/codecs/test_animated_webp.py::test_pillow_writer_is_sceneio_readable_bit_exact",
@@ -1195,7 +1215,30 @@
       "tests/test_import_guards.py::test_no_family_imports[colmap/rig.py]",
       "tests/test_import_guards.py::test_no_family_imports[colmap/sparse.py]",
       "tests/test_import_guards.py::test_no_family_imports[colmap/text.py]",
-      "tests/test_import_guards.py::test_public_surface_imports[sceneio.colmap]"
+      "tests/test_import_guards.py::test_public_surface_imports[sceneio.colmap]",
+      "tests/codecs/test_hdf5_hloc.py::test_generic_hdf5_reads_independent_h5py_fixture",
+      "tests/codecs/test_hdf5_hloc.py::test_generic_hdf5_write_is_h5py_ground_truth_and_partial",
+      "tests/codecs/test_hdf5_hloc.py::test_hdf5_partial_read_does_not_materialize_unselected_dataset",
+      "tests/codecs/test_hdf5_hloc.py::test_hdf5_refuses_unrepresented_dataset_and_attribute_types",
+      "tests/codecs/test_hdf5_hloc.py::test_hdf5_refuses_linked_and_virtual_datasets_on_every_read_path",
+      "tests/codecs/test_hdf5_hloc.py::test_native_feature_factory_preserves_hloc_descriptor_dtypes[uint8]",
+      "tests/codecs/test_hdf5_hloc.py::test_native_feature_factory_preserves_hloc_descriptor_dtypes[int8]",
+      "tests/codecs/test_hdf5_hloc.py::test_native_feature_factory_preserves_hloc_descriptor_dtypes[float16]",
+      "tests/codecs/test_hdf5_hloc.py::test_native_feature_factory_preserves_hloc_descriptor_dtypes[float32]",
+      "tests/codecs/test_hdf5_hloc.py::test_native_feature_factory_preserves_hloc_descriptor_dtypes[float64]",
+      "tests/codecs/test_hdf5_hloc.py::test_hloc_features_reads_official_layout_from_h5py",
+      "tests/codecs/test_hdf5_hloc.py::test_hloc_feature_write_matches_h5py_layout_and_roundtrips",
+      "tests/codecs/test_hdf5_hloc.py::test_hloc_feature_guards_unrepresented_fields_and_datasets",
+      "tests/codecs/test_hdf5_hloc.py::test_hloc_features_read_and_inspect_refuse_unrepresented_metadata[read]",
+      "tests/codecs/test_hdf5_hloc.py::test_hloc_features_read_and_inspect_refuse_unrepresented_metadata[inspect]",
+      "tests/codecs/test_hdf5_hloc.py::test_hloc_matches_reads_official_layout_and_reverses_to_native_order",
+      "tests/codecs/test_hdf5_hloc.py::test_hloc_match_write_matches_h5py_and_preserves_mixed_scores",
+      "tests/codecs/test_hdf5_hloc.py::test_hloc_matches_guards_malformed_and_unrepresented_values",
+      "tests/codecs/test_hdf5_hloc.py::test_hloc_matches_read_and_inspect_refuse_unrepresented_metadata[read]",
+      "tests/codecs/test_hdf5_hloc.py::test_hloc_matches_read_and_inspect_refuse_unrepresented_metadata[inspect]",
+      "tests/codecs/test_hdf5_hloc.py::test_hdf5_public_capabilities_and_models_are_explicit",
+      "tests/test_io_registry_architecture.py::test_repository_coverage_manifest_is_complete_and_resolvable",
+      "tests/test_performance_status.py::test_performance_ledger_has_stable_schema_and_exact_builtin_coverage"
     ],
     "removed_nodes": [
       "tests/codecs/test_compressed_ply.py::test_writer_body_is_byte_identical_to_pinned_playcanvas_vector",

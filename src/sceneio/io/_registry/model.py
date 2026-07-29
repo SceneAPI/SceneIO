@@ -7,6 +7,7 @@ depend on this lower layer without importing the registry facade.
 
 from __future__ import annotations
 
+import importlib.util
 from collections.abc import Callable
 from dataclasses import dataclass
 
@@ -46,7 +47,6 @@ class Codec:
     supported_features: tuple[str, ...] = ()
     unsupported_features: tuple[str, ...] = ()
     container_kind: str | None = None
-
     def __post_init__(self) -> None:
         kind = self.container_kind or ("directory" if self.is_directory else "file")
         if kind not in {"file", "directory", "multi_file"}:
@@ -87,6 +87,11 @@ class Codec:
     def capabilities(self) -> CodecCapabilities:
         """Return the immutable public capability snapshot for this codec."""
 
+        available = all(
+            requirement != "h5py"
+            or importlib.util.find_spec("h5py") is not None
+            for requirement in self.requires_features
+        )
         selectors = []
         if self.read_window is not None:
             selectors.append("window")
@@ -117,13 +122,17 @@ class Codec:
             extensions=self.extensions,
             filenames=self.filenames,
             container_kind=self.container_kind,
-            available=True,
-            can_read=True,
-            can_write=self.write is not None,
-            can_inspect=True,
+            available=available,
+            can_read=available,
+            can_write=available and self.write is not None,
+            can_inspect=available,
             partial_selectors=tuple(selectors),
-            streams_read=self.streams_read,
-            streams_write=self.write is not None and self.streams_write,
+            streams_read=available and self.streams_read,
+            streams_write=(
+                available
+                and self.write is not None
+                and self.streams_write
+            ),
             lossy=self.lossy,
             requires_features=self.requires_features,
             supported_features=self.supported_features,

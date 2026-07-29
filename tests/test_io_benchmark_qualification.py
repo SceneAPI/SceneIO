@@ -47,11 +47,13 @@ def _assembled_specs():
 
 
 def _assembled_ids(specs, directory_specs):
+    path_specs = runner.build_container_specs(0.001)
     return (
         *(spec.id for spec in specs),
         "gltf",
         "colmap_db",
         *(spec.id for spec in directory_specs),
+        *(spec.id for spec in path_specs),
     )
 
 
@@ -96,8 +98,8 @@ def _valid_spz_profile_metrics():
 def test_qualification_ledger_is_complete_immutable_and_checked():
     ledger = qualification.COMPARISON_QUALIFICATIONS
     assert tuple(ledger) == CANONICAL_BUILTIN_IDS
-    assert len(ledger) == 56
-    assert sum(item.mode == "timed" for item in ledger.values()) == 39
+    assert len(ledger) == 59
+    assert sum(item.mode == "timed" for item in ledger.values()) == 42
     assert (
         sum(
             item.mode == "reviewed_exemption"
@@ -114,7 +116,7 @@ def test_qualification_ledger_is_complete_immutable_and_checked():
     checked = CONTRACT["r3_2_qualification"]
     assert checked["source"] == "bench/io_bench/qualification.py"
     assert checked["builtin_count"] == len(ledger)
-    assert checked["timed_count"] == 39
+    assert checked["timed_count"] == 42
     assert checked["reviewed_exemption_count"] == 17
     assert hashlib.sha256(_ledger_payload().encode()).hexdigest() == (
         checked["ledger_sha256"]
@@ -147,7 +149,7 @@ def test_assembled_sweep_is_exactly_the_repository_builtins():
     observed = _assembled_ids(specs, directory_specs)
     assert qualification.validate_benchmark_coverage(observed) == observed
     assert set(observed) == set(CANONICAL_BUILTIN_IDS)
-    assert len(observed) == len(set(observed)) == 56
+    assert len(observed) == len(set(observed)) == 59
 
     spec = next(item for item in specs if item.id == "spz")
     record, _ = spec.make()
@@ -277,6 +279,7 @@ def test_strict_preflight_names_every_unavailable_provider():
         qualification.validate_strict_providers(
             unavailable_numpy,
             special_available={"gltf": False, "colmap_db": True},
+            path_specs=runner.build_container_specs(0.001),
         )
     message = str(caught.value)
     assert "npy (NumPy)" in message

@@ -8,6 +8,10 @@ from pathlib import Path
 from sceneio.io._registry.model import Codec
 
 
+def _generic_hdf5(_path: Path) -> str:
+    return "hdf5"
+
+
 def _is_apng(path: Path) -> bool:
     """Classify APNG from its acTL chunk without reading compressed pixels."""
 
@@ -75,6 +79,7 @@ def detect_path(
     codecs: Iterable[Codec],
     *,
     classify_ply: Callable[[Path], str],
+    classify_hdf5: Callable[[Path], str] = _generic_hdf5,
     format_error: Callable[[str], Exception],
 ) -> str:
     """Detect ``path`` using the supplied canonical codec order."""
@@ -108,6 +113,18 @@ def detect_path(
             return classify_ply(p)
         except (OSError, ValueError) as exc:
             raise format_error(f"cannot classify PLY {str(path)!r}: {exc}") from exc
+    if ext in {".h5", ".hdf5"} and any(
+        codec.id in {"hdf5", "hloc_features", "hloc_matches"}
+        for codec in ordered
+    ):
+        try:
+            classified = classify_hdf5(p)
+        except (OSError, ValueError) as exc:
+            raise format_error(
+                f"cannot classify HDF5 {str(path)!r}: {exc}"
+            ) from exc
+        if any(codec.id == classified for codec in ordered):
+            return classified
     if (
         ext == ".webp"
         and any(codec.id == "animated_webp" for codec in ordered)

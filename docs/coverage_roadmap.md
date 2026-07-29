@@ -156,9 +156,10 @@ are maintained only in
   adapters are implemented and validated under `sceneio.colmap`; their final
   exact-pushed-tree MSVC/GCC 10/AppleClang package validation passes in run
   `30470889876`.
-  The user-directed post-R6 format sequence is active. Animated WebP and APNG
-  are complete locally; RTMV is next. The common optional-library feature
-  pattern follows for HDF5/hloc and the remaining formats. The provisional
+  The user-directed post-R6 format sequence is active. Animated WebP, APNG,
+  HDF5, and the documented hloc feature/match layouts are complete locally;
+  RTMV is next. The common optional-library feature pattern continues with
+  TIFF, E57, and Parquet/Arrow. The provisional
   performance ledger remains a trigger-based optimization backlog rather than
   an active gate.
 
@@ -346,8 +347,9 @@ Columns: **Ext/id** · **Record** · **Lib/oracle (license)** · **R/W** ·
 | Format | Record | Lib / oracle | R/W | Notes |
 |---|---|---|---|---|
 | ✅ `.npy` / `.npz` | ndarray / `TensorDict` | numpy (BSD) | R+W | NPY native C-order mmap view; NPZ stored/deflate |
-| ⬜ HDF5 `.h5` | `TensorDict` | h5py (BSD) + libhdf5 (BSD) | R+W | optional C lib; streaming |
-| ⬜ hloc feature layout | `FeatureSet`/`MatchGraph` | hloc (Apache) + h5py | R+W | h5 group conventions |
+| ✅ HDF5 `.h5` / `.hdf5` | `TensorDict` | h5py (BSD-3) + HDF5 permissive license | R+W | optional `sceneio[hdf5]`; numeric/bool datasets, nested paths, text attrs, inspect, named reads, hyperslabs, atomic path writes |
+| ✅ hloc feature layout | `HlocFeatureStore` + native `FeatureSet` | documented hloc schema + h5py oracle | R+W | keypoints, D×N descriptors, scores, image size, uncertainty, nested names |
+| ✅ hloc match layout | `HlocMatchStore` + native `MatchGraph` | documented hloc schema + h5py oracle | R+W | dense `matches0`, optional scores, exact endpoints/order/dtypes |
 | ✅ safetensors | `TensorDict` | safetensors (Apache) | R+W | JSON header, mmap tensors, name/slice selectors |
 | ⬜ Zarr | `TensorDict` | zarr (MIT) | R+W | chunked; blosc (BSD) |
 | ⬜ Parquet / Arrow | table | pyarrow (Apache) | R+W | columnar; optional |
@@ -414,7 +416,7 @@ maintained in `format_gap_implementation_plan.md`:
 3. meshes and vendorable LAZ (complete locally);
 4. lazy image directories, raw Y4M, animated WebP, and APNG (complete locally),
    followed by RTMV;
-5. independently gated HDF5/TIFF/E57/Arrow integrations;
+5. independently gated TIFF/E57/Arrow integrations (HDF5/hloc complete);
 6. heavyweight scene/volume integrations and policy-gated codecs.
 
 **Gates:** (a) each optional C-library phase needs a pinned permissive source,

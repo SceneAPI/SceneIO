@@ -20,8 +20,9 @@
       branch head before calling APNG package-validated.
 - [ ] Implement RTMV next, reusing canonical `Mask`, `CameraRig`, track,
       `PairCorrespondences`, `FeatureSet`, and `MatchGraph` models.
-- [ ] Implement HDF5/hloc after RTMV by mapping hloc feature and match groups
-      directly into `FeatureSet` and `MatchGraph`; do not add duplicate models.
+- [x] Implement HDF5/hloc ahead of RTMV by mapping hloc feature and match
+      groups directly into `FeatureSet` and `MatchGraph`; no duplicate models
+      were added.
 
 ## Post-R6 animated WebP checkpoint (2026-07-29)
 
@@ -5041,3 +5042,68 @@ C1e local evidence on 2026-07-29:
   invariants, SQLite integer bounds, structural schema-object checks,
   SQL-presence guards, independent output oracles, pre-commit verification,
   report behavior, and compatibility routing were incorporated.
+
+## H1 — optional HDF5 and hloc stores (2026-07-29)
+
+Implementation:
+
+- [x] Add the `sceneio[hdf5]` extra while retaining NumPy as the only
+      unconditional dependency and avoiding provider import at base import
+      time.
+- [x] Add the lower-owned `containers` registry family with `hdf5`,
+      `hloc_features`, and `hloc_matches`.
+- [x] Keep generic HDF5 numeric/bool schemas, nested names, text root attrs,
+      metadata inspection, named reads, hyperslabs, and atomic replacement in
+      SceneIO.
+- [x] Map documented hloc features and matches into native `FeatureSet` and
+      `MatchGraph` records without losing descriptor dtype/orientation,
+      uncertainty, endpoints, dense extents, row order, or score presence.
+- [x] Refuse unsupported attributes, dataset types, indirect links, virtual
+      datasets, and unrepresentable native fields.
+- [x] Extend native feature-descriptor construction to every dtype already
+      supported by the `FeatureSet` record and expose per-pair score presence.
+
+Verification and documentation:
+
+- [x] Add independent h5py producer/consumer ground truth for all three
+      codecs, malformed and transactional cases, a large unselected-dataset
+      allocation bound, public capability/snapshot checks, and installed
+      wheel smoke.
+- [x] Add three path-native benchmark rows and the 59-codec qualification
+      ledger. Representative local measurements are recorded in
+      `bench/BASELINE.md`.
+- [x] Add exact h5py and HDF5 notices to `LICENSES/` and document that neither
+      provider is bundled.
+- [x] Update format coverage, roadmap, architecture, optimization, gap-plan,
+      performance-ledger, registry, and benchmark contracts.
+- [x] Record the final full-suite/Ruff/diff results and three review lenses.
+- [x] Commit and push the green unit.
+- [ ] User-trigger the nonpublishing Linux/macOS/Windows package workflow to
+      validate the optional extra; this remains a user-gated action.
+
+H1 local closure evidence:
+
+- the exact collection has 3,933 nodes; local MSVC passes 3,928 with five
+  documented optional skips, the 123-test focused gate passes, Ruff and
+  `git diff --check` are clean, and the manifest-driven installed-surface
+  smoke completes;
+- the 59-row structural benchmark capture has normalized SHA-256
+  `ff176c7296bfa45e4c1536346fb542f176c05ce00385fbdc3ae3336dd4044099`;
+  the three-run provider comparison and allocation deltas are recorded in
+  `bench/BASELINE.md`;
+- the resource/lifetime review confirms every h5py handle is lexically closed,
+  returned arrays and native records own their storage, and values remain
+  valid after the source file is deleted and collection is forced;
+- the format-correctness review confirms the current hloc `names_to_pair`
+  layout, D-by-N descriptor wire orientation, exact supported dtypes,
+  endpoint reversal, dense extents, pair order, and mixed score presence.
+  It also added refusal for schema-version mismatch, non-root metadata,
+  indirect datasets, and float narrowing;
+- the test-soundness review confirms independent h5py producer/consumer
+  assertions, official hloc naming semantics, native/file cross-reads,
+  malformed-input refusal, atomic destination preservation, bounded partial
+  reads, optional-provider import isolation, and compatibility snapshots.
+
+Next implementation unit after H1: RTMV directory datasets, followed by TIFF,
+E57, and Parquet/Arrow. Zarr and heavyweight scene/volume formats remain later
+waves; policy-gated image/geometry codecs remain outside the active queue.

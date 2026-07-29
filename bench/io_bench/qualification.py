@@ -288,6 +288,21 @@ COMPARISON_QUALIFICATIONS = MappingProxyType(
             "independent struct/NumPy implementation",
             "bench/io_bench/oracles/dense.py",
         ),
+        "hdf5": _timed(
+            "h5py",
+            "bench/io_bench/oracles/containers.py",
+            runner_kind="path",
+        ),
+        "hloc_features": _timed(
+            "h5py with documented hloc feature layout",
+            "bench/io_bench/oracles/containers.py",
+            runner_kind="path",
+        ),
+        "hloc_matches": _timed(
+            "h5py with documented hloc match layout",
+            "bench/io_bench/oracles/containers.py",
+            runner_kind="path",
+        ),
     }
 )
 
@@ -322,10 +337,12 @@ def validate_strict_providers(
     specs,
     *,
     special_available: dict[str, bool],
+    path_specs=(),
 ) -> None:
     """Fail before measurement when a timed comparison is unavailable."""
 
     by_id = {spec.id: spec for spec in specs}
+    path_by_id = {spec.id: spec for spec in path_specs}
     unavailable = []
     for format_id, qualification in COMPARISON_QUALIFICATIONS.items():
         if qualification.mode != "timed":
@@ -339,6 +356,13 @@ def validate_strict_providers(
             )
         elif qualification.runner_kind == "special":
             available = special_available.get(format_id, False)
+        elif qualification.runner_kind == "path":
+            spec = path_by_id.get(format_id)
+            available = (
+                spec is not None
+                and spec.ow is not None
+                and spec.orr is not None
+            )
         else:
             available = False
         if not available:
@@ -493,7 +517,12 @@ def _validate_qualification_manifest() -> None:
             "comparison qualifications must cover the canonical built-ins"
         )
     for format_id, qualification in COMPARISON_QUALIFICATIONS.items():
-        if qualification.runner_kind not in {"spec", "special", "directory"}:
+        if qualification.runner_kind not in {
+            "spec",
+            "special",
+            "directory",
+            "path",
+        }:
             raise RuntimeError(
                 f"invalid runner kind for {format_id!r}"
             )

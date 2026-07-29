@@ -269,9 +269,13 @@ FeatureSet make_feature_set(
             sio::dtype_from_dlpack(descriptor_array.dtype());
         if (!descriptor_info ||
             (descriptor_info->tag != sio::DType::U8 &&
-             descriptor_info->tag != sio::DType::F32))
+             descriptor_info->tag != sio::DType::I8 &&
+             descriptor_info->tag != sio::DType::F16 &&
+             descriptor_info->tag != sio::DType::F32 &&
+             descriptor_info->tag != sio::DType::F64))
             throw std::invalid_argument(
-                "feature_set: descriptor dtype must be uint8 or float32");
+                "feature_set: descriptor dtype must be uint8, int8, "
+                "float16, float32, or float64");
         result.has_descriptors = true;
         result.descriptor_dtype = descriptor_info->tag;
         result.descriptor_columns = descriptor_array.shape(1);
@@ -344,7 +348,8 @@ MatchGraph make_match_graph(
     std::optional<std::vector<std::optional<Camera>>>
         recovered_camera2,
     std::optional<u8_array> camera2_present,
-    std::optional<u8_array> camera2_prior_focal_length) {
+    std::optional<u8_array> camera2_prior_focal_length,
+    std::optional<u8_array> match_score_present) {
     if (image_pairs.ndim() != 2 || image_pairs.shape(1) != 2)
         throw std::invalid_argument(
             "match_graph: image_pairs must be (P,2) uint32");
@@ -395,8 +400,10 @@ MatchGraph make_match_graph(
     MatchGraph result;
     result.pair_count = count;
     result.has_scores = has_scores;
-    result.match_score_present.assign(
-        count, static_cast<uint8_t>(has_scores));
+    result.match_score_present = optional_flags(
+        std::move(match_score_present), count,
+        static_cast<uint8_t>(has_scores),
+        "match_score_present");
     result.provenance_present.assign(count, 0);
     result.source_flags.assign(count, 0);
     result.retrieval_score_present.assign(count, 0);
@@ -2963,6 +2970,7 @@ void register_feature_match(nb::module_ &module) {
         "recovered_camera2"_a = nb::none(),
         "camera2_present"_a = nb::none(),
         "camera2_prior_focal_length"_a = nb::none(),
+        "match_score_present"_a = nb::none(),
         "Build a typed ragged image-pair MatchGraph.");
     module.def(
         "colmap_maxx_schema_info",

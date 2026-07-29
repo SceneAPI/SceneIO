@@ -8,15 +8,16 @@
   checkpoint closes at packaged source `2253e0f`; exact-head runs
   `30469273173`, `30469271293`, and build-only package run `30470889876`
   pass with publication skipped.
-- **Current local checkpoint:** APNG is implemented as the 56th codec with a
-  repository-owned animation layer over pinned lodepng, packed
-  `ImageSequence` frames, Pillow plus specification-derived parity, mmap,
-  direct-sink, inspection, and benchmark coverage. The exact tree collects
-  3,910 tests, passes 3,905 with five documented skips, and the 56-row
-  structural capture hashes to
-  `2295f9ab10dbf141c76ef6f7cbf4561ad656a1dde3cc7c8dcbff8b5bc23d6927`.
-  Ruff and installed-surface smoke pass. Hosted package evidence remains
-  pending for this addition.
+- **Current local checkpoint:** HDF5 plus the documented hloc feature and
+  match layouts are implemented as codecs 57-59. SceneIO owns the schemas,
+  validation, models, detection, metadata inspection, HDF5 named/hyperslab
+  reads, and atomic replacement; optimized h5py is an optional
+  `sceneio[hdf5]` provider and independent oracle. The prior APNG 56-codec
+  checkpoint remains its historical evidence. The current registry has 59
+  codecs and the exact collection has 3,933 nodes. Local MSVC passes 3,928
+  tests with five documented optional skips; the focused 123-test gate,
+  installed-surface smoke, Ruff, and diff checks also pass. Cross-platform
+  package evidence remains user-gated.
 - **Current program gate:** the user-directed lean format wave is active.
   Exhaustive backend comparison remains trigger-based, not a prerequisite for
   closing a verified codec unit.
@@ -207,7 +208,7 @@ exit gate and the validation matrix in section 8 both pass.
 | Splat | — | SuperSplat compressed PLY, PlayCanvas SOG v2, and KSplat v0.1 |
 | Point cloud | E57; optional future LAZ waveform/extra-byte/COPC extensions | count-prefixed PTS, generic point PLY, PCD, plain-LAS waveform sidecars for formats 4/5/9/10, and standard LAZ formats 0-3/6-8 |
 | Mesh | USD/USDZ; optional Draco is policy-gated | generic mesh PLY, OBJ/MTL, STL, OFF, and plain glTF/GLB |
-| Tensor/feature/table | HDF5, hloc layout, Zarr v2/v3, Parquet | safetensors, COLMAP features/matches |
+| Tensor/feature/table | Zarr v2/v3, Parquet | safetensors, HDF5, hloc features/matches, COLMAP features/matches |
 | Image and depth | TIFF | BMP, TGA, typed PFM depth, typed PNG depth, typed scalar EXR depth, scalar DMB |
 | Optical flow | — | compiled `FlowField` plus typed FLO |
 | Calibration | — | OpenCV YAML/XML, ROS `camera_info`, Kalibr YAML |
@@ -1481,7 +1482,8 @@ notice, and clean unavailable-feature error:
 
 | Feature | Formats |
 |---|---|
-| `SCENEIO_WITH_HDF5` | HDF5 and hloc |
+| `sceneio[hdf5]` | HDF5 and hloc through separately installed h5py |
+| `SCENEIO_WITH_HDF5` | reserved for a future C-native HDF5 comparison |
 | `SCENEIO_WITH_TIFF` | TIFF |
 | `SCENEIO_WITH_E57` | E57 |
 | `SCENEIO_WITH_ARROW` | Parquet |
@@ -1490,31 +1492,36 @@ The base source build must succeed with every flag off. Release wheels may
 enable approved features statically while retaining numpy as the only Python
 runtime dependency.
 
-#### G5.1 HDF5 and hloc
+#### G5.1 HDF5 and hloc — complete locally
 
 Implementation:
 
-- Use the HDF5 C API behind RAII handles.
-- Map numeric datasets and groups to `TensorDict`.
-- Add `FeatureSet`/`MatchGraph` adapters for the documented hloc group layout.
-- Preserve attributes that fit the record metadata contract; reject unsupported
-  object/reference/vlen layouts rather than coercing them.
-- `inspect` traverses names, shapes, dtypes, chunking, and compression without
-  dataset reads.
-- Partial selectors cover dataset names, hyperslabs, images, and image pairs.
-- Writer uses chunked streaming for large arrays.
+- [x] Keep the base installation NumPy-only and expose HDF5 through the named
+  `sceneio[hdf5]` extra backed by optimized upstream h5py/HDF5.
+- [x] Keep the supported schemas, validation, detection, inspection, partial
+  selectors, atomic replacement, and public adapters repository-owned.
+- [x] Map numeric/bool datasets and normalized nested paths to `TensorDict`;
+  preserve string root attributes and reject unsupported dataset/attribute
+  types, indirect links, and virtual datasets rather than discarding them.
+- [x] Add documented hloc feature and `matches0` adapters over native
+  `FeatureSet`/`MatchGraph`, with exact descriptor orientation/dtype,
+  uncertainty, endpoint names, dense extents, pair order, and score presence.
+- [x] Inspect metadata without reading bulk payloads. Generic HDF5 partial
+  reads select complete datasets or leading-axis hyperslabs directly.
+- [x] Use h5py path writes with temporary-file replacement; no full encoded
+  Python byte buffer exists for this path-native format.
 
-Oracles:
+Oracle and verification:
 
-- h5py and hloc in test extras only.
-
-Validation:
-
-- static/shared linkage behavior on all platforms;
-- compressed/chunked/contiguous datasets;
-- release-wheel import with no external-library lookup failure;
-- minimal build reports the optional codec as unavailable without breaking
-  `import sceneio`.
+- [x] Independent h5py-created and h5py-read fixtures cover generic HDF5 and
+  the documented hloc layouts in both directions.
+- [x] Malformed shapes/dtypes/attrs, link/VDS cases, representation guards,
+  destination preservation, partial-allocation bounds, registry detection,
+  wheel smoke, and public capability contracts are tested.
+- [x] The benchmark has three path-native rows with direct h5py comparison,
+  metadata-only inspection, and HDF5 named-read measurements.
+- [ ] Validate the optional extra and unavailable state on all package
+  platforms through the user-triggered nonpublishing wheel workflow.
 
 #### G5.2 TIFF
 
@@ -2260,13 +2267,13 @@ lane before starting the next unit.
    existing image, depth, transform, and lazy-path codecs; do not duplicate
    raster decoders. Inspection and selected-frame reads remain metadata/path
    bounded.
-8. **Common optional-library substrate.**
-   Implement one `SCENEIO_WITH_*` pattern with explicit disabled, enabled, and
-   unavailable states; accurate capability metadata; clean import behavior;
-   license/provenance hooks; minimal/full wheel profiles; and no change to the
-   default NumPy-only runtime.
+8. **Common optional-library substrate — Python-extra path complete.**
+   HDF5/hloc establish explicit unavailable/available capability state,
+   lazy provider import, license hooks, wheel smoke, and a NumPy-only base.
+   Native-library formats still need the equivalent `SCENEIO_WITH_*` pattern.
 9. **Optional scientific formats, one dependency wave at a time.**
-   Land HDF5 plus hloc, TIFF, E57, then Parquet/Arrow. Each wave needs off/on
+   HDF5 plus hloc are complete locally; land TIFF, E57, then Parquet/Arrow.
+   Each remaining wave needs off/on
    builds, independent oracle parity, streaming/partial tests, artifact-size
    accounting, and all three compilers before the next library begins.
 10. **Chunked and heavyweight formats.**
@@ -2331,13 +2338,13 @@ source-closure changes each require a fresh build-only wheel-matrix run.
 
 ### 12.6 Wave E — optional scientific libraries
 
-First add one common `SCENEIO_WITH_*` build/manifest pattern with disabled,
-enabled, and unavailable states. Then land:
+HDF5 and both hloc layouts are complete through the optional h5py provider,
+with the future C-native feature id retained only as a comparison seam. The
+remaining order is:
 
-1. HDF5 and hloc layouts;
-2. TIFF;
-3. E57;
-4. Parquet plus the canonical `Table` record.
+1. TIFF;
+2. E57;
+3. Parquet plus the canonical `Table` record.
 
 Each library is pinned and statically built where the license and platform
 permit. Default wheels must continue importing and passing the original suite

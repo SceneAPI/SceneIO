@@ -449,6 +449,9 @@ def test_benchmark_contract_matches_checked_snapshot():
         order = [item.id for item in module._specs(0.001)]
         order.extend(("gltf", "colmap_db"))
         order.extend(
+            item.id for item in module.build_container_specs(0.001)
+        )
+        order.extend(
             item.id
             for item in module._directory_specs(
                 reconstruction=None,
@@ -585,6 +588,7 @@ def _assert_benchmark_components_and_metric_semantics_are_explicit():
 
     assert benchmark.Spec.__module__ == "bench.io_bench.model"
     assert benchmark.DirectorySpec.__module__ == "bench.io_bench.model"
+    assert benchmark.PathSpec.__module__ == "bench.io_bench.model"
     assert benchmark._measure.__module__ == "bench.io_bench.measure"
     assert benchmark._try.__module__ == "bench.io_bench.measure"
     assert benchmark._measure_in_process_rss.__module__ == "bench.io_bench.measure"
@@ -1011,7 +1015,7 @@ def _assert_benchmark_components_and_metric_semantics_are_explicit():
         True,
         True,
         True,
-        68,
+        runner_contract["star_import_count"],
     ]
 
     calibration_family_module = sys.modules[

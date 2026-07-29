@@ -3766,10 +3766,264 @@
         ],
         "unsupported_features": []
       }
+    },
+    {
+      "id": "hdf5",
+      "extensions": [
+        ".h5",
+        ".hdf5"
+      ],
+      "magic_hex": [
+        "894844460d0a1a0a"
+      ],
+      "filenames": [],
+      "is_directory": false,
+      "dir_marker": "cameras.bin",
+      "container_kind": "file",
+      "datatype": "tensor_dict",
+      "record": {
+        "module": "sceneio._core",
+        "qualname": "TensorDict"
+      },
+      "selectors": [
+        "tensors",
+        "slices"
+      ],
+      "streams_read": true,
+      "streams_write": true,
+      "lossy": false,
+      "requires_features": [
+        "h5py"
+      ],
+      "supported_features": [
+        "numeric_datasets",
+        "nested_dataset_paths",
+        "string_root_attributes",
+        "named_tensor_reads",
+        "leading_axis_hyperslabs",
+        "transactional_path_write"
+      ],
+      "unsupported_features": [
+        "string_datasets",
+        "compound_dtypes",
+        "variable_length_dtypes",
+        "references",
+        "external_links",
+        "hard_link_aliases",
+        "virtual_datasets",
+        "non_root_attributes"
+      ],
+      "capabilities": {
+        "format": "hdf5",
+        "datatype": "tensor_dict",
+        "record_type": "TensorDict",
+        "extensions": [
+          ".h5",
+          ".hdf5"
+        ],
+        "filenames": [],
+        "container_kind": "file",
+        "available": true,
+        "can_read": true,
+        "can_write": true,
+        "can_inspect": true,
+        "partial_selectors": [
+          "tensors",
+          "slices"
+        ],
+        "streams_read": true,
+        "streams_write": true,
+        "lossy": false,
+        "requires_features": [
+          "h5py"
+        ],
+        "supported_features": [
+          "numeric_datasets",
+          "nested_dataset_paths",
+          "string_root_attributes",
+          "named_tensor_reads",
+          "leading_axis_hyperslabs",
+          "transactional_path_write"
+        ],
+        "unsupported_features": [
+          "string_datasets",
+          "compound_dtypes",
+          "variable_length_dtypes",
+          "references",
+          "external_links",
+          "hard_link_aliases",
+          "virtual_datasets",
+          "non_root_attributes"
+        ]
+      }
+    },
+    {
+      "id": "hloc_features",
+      "extensions": [
+        ".h5",
+        ".hdf5"
+      ],
+      "magic_hex": [
+        "894844460d0a1a0a"
+      ],
+      "filenames": [],
+      "is_directory": false,
+      "dir_marker": "cameras.bin",
+      "container_kind": "file",
+      "datatype": "feature_set",
+      "record": {
+        "module": "sceneio.io._hdf5",
+        "qualname": "HlocFeatureStore"
+      },
+      "selectors": [],
+      "streams_read": true,
+      "streams_write": true,
+      "lossy": false,
+      "requires_features": [
+        "h5py"
+      ],
+      "supported_features": [
+        "per_image_groups",
+        "keypoints",
+        "descriptors_D_by_N",
+        "scores",
+        "image_size",
+        "keypoint_uncertainty",
+        "nested_image_names",
+        "native_feature_set"
+      ],
+      "unsupported_features": [
+        "global_descriptor_only",
+        "feature_scales",
+        "feature_orientations",
+        "line_features"
+      ],
+      "capabilities": {
+        "format": "hloc_features",
+        "datatype": "feature_set",
+        "record_type": "HlocFeatureStore",
+        "extensions": [
+          ".h5",
+          ".hdf5"
+        ],
+        "filenames": [],
+        "container_kind": "file",
+        "available": true,
+        "can_read": true,
+        "can_write": true,
+        "can_inspect": true,
+        "partial_selectors": [],
+        "streams_read": true,
+        "streams_write": true,
+        "lossy": false,
+        "requires_features": [
+          "h5py"
+        ],
+        "supported_features": [
+          "per_image_groups",
+          "keypoints",
+          "descriptors_D_by_N",
+          "scores",
+          "image_size",
+          "keypoint_uncertainty",
+          "nested_image_names",
+          "native_feature_set"
+        ],
+        "unsupported_features": [
+          "global_descriptor_only",
+          "feature_scales",
+          "feature_orientations",
+          "line_features"
+        ]
+      }
+    },
+    {
+      "id": "hloc_matches",
+      "extensions": [
+        ".h5",
+        ".hdf5"
+      ],
+      "magic_hex": [
+        "894844460d0a1a0a"
+      ],
+      "filenames": [],
+      "is_directory": false,
+      "dir_marker": "cameras.bin",
+      "container_kind": "file",
+      "datatype": "match_graph",
+      "record": {
+        "module": "sceneio.io._hdf5",
+        "qualname": "HlocMatchStore"
+      },
+      "selectors": [],
+      "streams_read": true,
+      "streams_write": true,
+      "lossy": false,
+      "requires_features": [
+        "h5py"
+      ],
+      "supported_features": [
+        "matches0",
+        "matching_scores0",
+        "current_pair_naming",
+        "exact_endpoint_names",
+        "mixed_score_presence",
+        "native_match_graph"
+      ],
+      "unsupported_features": [
+        "verified_geometry",
+        "multiple_matches_per_source",
+        "legacy_underscore_pair_enumeration"
+      ],
+      "capabilities": {
+        "format": "hloc_matches",
+        "datatype": "match_graph",
+        "record_type": "HlocMatchStore",
+        "extensions": [
+          ".h5",
+          ".hdf5"
+        ],
+        "filenames": [],
+        "container_kind": "file",
+        "available": true,
+        "can_read": true,
+        "can_write": true,
+        "can_inspect": true,
+        "partial_selectors": [],
+        "streams_read": true,
+        "streams_write": true,
+        "lossy": false,
+        "requires_features": [
+          "h5py"
+        ],
+        "supported_features": [
+          "matches0",
+          "matching_scores0",
+          "current_pair_naming",
+          "exact_endpoint_names",
+          "mixed_score_presence",
+          "native_match_graph"
+        ],
+        "unsupported_features": [
+          "verified_geometry",
+          "multiple_matches_per_source",
+          "legacy_underscore_pair_enumeration"
+        ]
+      }
     }
   ],
   "collisions": {
     "extensions": {
+      ".h5": [
+        "hdf5",
+        "hloc_features",
+        "hloc_matches"
+      ],
+      ".hdf5": [
+        "hdf5",
+        "hloc_features",
+        "hloc_matches"
+      ],
       ".ply": [
         "gaussian_ply",
         "ply_mesh",
@@ -3804,6 +4058,24 @@
         "compressed_ply",
         "706c79",
         "ply_mesh"
+      ],
+      [
+        "894844460d0a1a0a",
+        "hdf5",
+        "894844460d0a1a0a",
+        "hloc_features"
+      ],
+      [
+        "894844460d0a1a0a",
+        "hdf5",
+        "894844460d0a1a0a",
+        "hloc_matches"
+      ],
+      [
+        "894844460d0a1a0a",
+        "hloc_features",
+        "894844460d0a1a0a",
+        "hloc_matches"
       ]
     ]
   }

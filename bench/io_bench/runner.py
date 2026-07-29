@@ -2,7 +2,7 @@
 
 Measures, per codec, encode (write) + decode (read) throughput (MB/s over the raw
 payload) and peak Python allocation (tracemalloc), for sceneio._core vs the oracle
-library where one exists, on representative payloads for all 56 codecs. Read
+library where one exists, on representative payloads for all 59 codecs. Read
 measurements retain the legacy whole-file bytes/copy-decode path beside the
 public registry mmap path, so their peak delta captures the input copy O1
 removes and, for NPY/FLO, the decoded-array copy O2 removes. Write measurements
@@ -44,6 +44,7 @@ from bench.io_bench.families.calibration import (
     build_calibration_specs,
 )
 from bench.io_bench.families.common import _record_nbytes
+from bench.io_bench.families.containers import build_container_specs
 from bench.io_bench.families.dense import build_dense_specs
 from bench.io_bench.families.images import build_image_specs
 from bench.io_bench.families.meshes import build_mesh_specs
@@ -61,6 +62,7 @@ from bench.io_bench.fixtures import (
 from bench.io_bench.fixtures import sequences as sequence_fixtures
 from bench.io_bench.fixtures import splats as splat_fixtures
 from bench.io_bench.model import DirectorySpec
+from bench.io_bench.model import PathSpec as PathSpec
 from bench.io_bench.model import Spec as Spec
 from bench.io_bench.oracles import arrays as array_oracles
 from bench.io_bench.oracles import (
@@ -80,6 +82,7 @@ from bench.io_bench.reporting import (
     print_directory_row,
     print_encoding_variants,
     print_json_result,
+    print_path_row,
     print_primary_error,
     print_primary_header,
     print_primary_row,
@@ -1332,6 +1335,172 @@ def _benchmark_colmap_db(args, tmp):
     return result, write_row, inspect_row, partial_rows, display
 
 
+def _benchmark_path_spec(args, tmp, spec):
+    value, payload = spec.make()
+    native_path = Path(tmp) / f"{spec.id}-native{spec.extension}"
+    oracle_path = Path(tmp) / f"{spec.id}-oracle{spec.extension}"
+    payload_bytes = spec.nbytes(value, payload)
+    payload_mb = payload_bytes / 1e6
+
+    def native_write():
+        return spec.w(value, native_path)
+
+    native_write_time, native_write_peak = _measure(
+        native_write,
+        args.runs,
+    )
+    native_write_rss = _measure_in_process_rss(native_write)
+
+    def native_read():
+        if args.cold_cache:
+            _evict_file_cache(native_path)
+        return spec.r(native_path)
+
+    native_read_time, native_read_peak = _measure(
+        native_read,
+        args.runs,
+    )
+    native_read_rss = _measure_in_process_rss(native_read)
+
+    def native_inspect():
+        if args.cold_cache:
+            _evict_file_cache(native_path)
+        return sceneio.inspect(native_path, format=spec.id)
+
+    inspect_time, inspect_peak = _measure(native_inspect, args.runs)
+    inspect_rss = _measure_in_process_rss(native_inspect)
+
+    partial_time = partial_peak = partial_rss = None
+    if spec.partial is not None:
+        def native_partial():
+            if args.cold_cache:
+                _evict_file_cache(native_path)
+            return spec.partial(native_path)
+
+        partial_time, partial_peak = _measure(native_partial, args.runs)
+        partial_rss = _measure_in_process_rss(native_partial)
+        spec.assert_partial(native_partial(), payload)
+
+    oracle_write_time = oracle_read_time = None
+    oracle_write_peak = oracle_write_rss = None
+    oracle_read_peak = oracle_read_rss = None
+    if (
+        not args.skip_oracles
+        and spec.ow is not None
+        and spec.orr is not None
+    ):
+        def oracle_write():
+            return spec.ow(payload, oracle_path)
+
+        oracle_write_time, oracle_write_peak = _measure(
+            oracle_write,
+            args.runs,
+        )
+        oracle_write_rss = _measure_in_process_rss(oracle_write)
+
+        def oracle_read():
+            if args.cold_cache:
+                _evict_file_cache(native_path)
+            return spec.orr(native_path)
+
+        oracle_read_time, oracle_read_peak = _measure(
+            oracle_read,
+            args.runs,
+        )
+        oracle_read_rss = _measure_in_process_rss(oracle_read)
+        spec.assert_oracle(oracle_read(), payload)
+        spec.assert_native(spec.r(oracle_path), payload)
+
+    spec.assert_native(native_read(), payload)
+    inspected = native_inspect()
+    if inspected.byte_size != native_path.stat().st_size:
+        raise AssertionError(f"{spec.id} inspection byte size differs from file")
+
+    file_mb = native_path.stat().st_size / 1e6
+    oracle_metrics = {}
+    if oracle_write_time is not None and oracle_read_time is not None:
+        oracle_metrics = {
+            "oracle_write_mbps": payload_mb / oracle_write_time,
+            "oracle_write_peak_mb": oracle_write_peak / 1e6,
+            "oracle_write_rss_mb": oracle_write_rss / 1e6,
+            "oracle_read_mbps": payload_mb / oracle_read_time,
+            "oracle_read_peak_mb": oracle_read_peak / 1e6,
+            "oracle_read_rss_mb": oracle_read_rss / 1e6,
+        }
+    result = {
+        "codec": spec.id,
+        "payload_mb": payload_mb,
+        "file_mb": file_mb,
+        "write_mbps": payload_mb / native_write_time,
+        "path_write_mbps": payload_mb / native_write_time,
+        "read_mbps": payload_mb / native_read_time,
+        "path_read_mbps": payload_mb / native_read_time,
+        "mmap_peak_mb": native_read_peak / 1e6,
+        "mmap_rss_mb": native_read_rss / 1e6,
+        "inspect_ms": inspect_time * 1000,
+        "inspect_peak_mb": inspect_peak / 1e6,
+        "inspect_rss_mb": inspect_rss / 1e6,
+        "sink_write_peak_mb": native_write_peak / 1e6,
+        "sink_write_rss_mb": native_write_rss / 1e6,
+        **oracle_metrics,
+    }
+    partial_row = None
+    if partial_time is not None:
+        result.update(
+            partial_ms=partial_time * 1000,
+            partial_peak_mb=partial_peak / 1e6,
+            partial_rss_mb=partial_rss / 1e6,
+        )
+        partial_row = (
+            spec.id,
+            native_read_time,
+            partial_time,
+            native_read_peak / 1e6,
+            partial_peak / 1e6,
+            native_read_rss / 1e6,
+            partial_rss / 1e6,
+        )
+    write_row = (
+        spec.id,
+        payload_mb,
+        file_mb,
+        None,
+        payload_mb / native_write_time,
+        None,
+        native_write_peak / 1e6,
+        None,
+        native_write_rss / 1e6,
+    )
+    inspect_row = (
+        spec.id,
+        native_read_time,
+        inspect_time,
+        native_read_peak / 1e6,
+        inspect_peak / 1e6,
+        native_read_rss / 1e6,
+        inspect_rss / 1e6,
+    )
+    display = (
+        payload_mb,
+        file_mb,
+        payload_mb / native_write_time,
+        payload_mb / native_read_time,
+        (
+            payload_mb / oracle_write_time
+            if oracle_write_time is not None
+            else None
+        ),
+        (
+            payload_mb / oracle_read_time
+            if oracle_read_time is not None
+            else None
+        ),
+        native_read_peak / 1e6,
+        native_read_rss / 1e6,
+    )
+    return result, write_row, inspect_row, partial_row, display
+
+
 def _benchmark_gltf(args, tmp):
     points = max(3, int(300_000 * args.scale))
     record, payload = _mesh_scene(points)
@@ -1533,6 +1702,7 @@ def _run_benchmark(args, tmp):
     pose_bundle = _poses_and_reconstruction(args.scale)
     reconstruction = pose_bundle[0]
     specs = _specs(args.scale, pose_bundle)
+    path_specs = build_container_specs(args.scale)
     directory_specs = _directory_specs(
         reconstruction, args.scale, tmp
     )
@@ -1544,6 +1714,7 @@ def _run_benchmark(args, tmp):
             "gltf",
             "colmap_db",
             *(spec.id for spec in directory_specs),
+            *(spec.id for spec in path_specs),
         ]
     )
     if getattr(args, "strict_oracles", False):
@@ -1553,12 +1724,13 @@ def _run_benchmark(args, tmp):
                 "gltf": trimesh is not None,
                 "colmap_db": True,
             },
+            path_specs=path_specs,
         )
     if args.only:
         requested = set(args.only)
         known = {spec.id for spec in specs} | {
             spec.id for spec in directory_specs
-        } | {"colmap_db", "gltf"}
+        } | {spec.id for spec in path_specs} | {"colmap_db", "gltf"}
         unknown = requested - known
         if unknown:
             raise ValueError(
@@ -1567,6 +1739,9 @@ def _run_benchmark(args, tmp):
         specs = [spec for spec in specs if spec.id in requested]
         directory_specs = [
             spec for spec in directory_specs if spec.id in requested
+        ]
+        path_specs = [
+            spec for spec in path_specs if spec.id in requested
         ]
         include_colmap_db = "colmap_db" in requested
         include_gltf = "gltf" in requested
@@ -2606,6 +2781,31 @@ def _run_benchmark(args, tmp):
             )
             print_primary_error("colmap_db", e)
 
+    for spec in path_specs:
+        try:
+            (
+                path_result,
+                path_write_row,
+                path_inspect_row,
+                path_partial_row,
+                path_display,
+            ) = _benchmark_path_spec(args, tmp, spec)
+            results.append(path_result)
+            write_rows.append(path_write_row)
+            inspect_rows.append(path_inspect_row)
+            if path_partial_row is not None:
+                partial_rows.append(path_partial_row)
+            print_path_row(spec.id, path_display)
+        except Exception as e:
+            failures.append(spec.id)
+            results.append(
+                {
+                    "codec": spec.id,
+                    "error": f"{type(e).__name__}: {e}",
+                }
+            )
+            print_primary_error(spec.id, e)
+
     for spec in directory_specs:
         try:
             value, payload = spec.make()
@@ -2741,9 +2941,10 @@ def _run_benchmark(args, tmp):
         assert (
             len(specs)
             + len(directory_specs)
+            + len(path_specs)
             + int(include_colmap_db)
             + int(include_gltf)
-            == 56
+            == 59
         )
     if getattr(args, "strict_oracles", False):
         qualification.validate_strict_results(results)

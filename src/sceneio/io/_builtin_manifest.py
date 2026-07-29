@@ -80,6 +80,9 @@ CANONICAL_BUILTIN_IDS = (
     "colmap_mvs_normal",
     "colmap_mvs_consistency",
     "colmap_fused_visibility",
+    "hdf5",
+    "hloc_features",
+    "hloc_matches",
 )
 
 FAMILY_MEMBERS = MappingProxyType(
@@ -91,6 +94,7 @@ FAMILY_MEMBERS = MappingProxyType(
             "ros_camera_info",
             "kalibr",
         ),
+        "containers": ("hdf5", "hloc_features", "hloc_matches"),
         "dense": (
             "colmap_mvs_depth",
             "colmap_mvs_normal",
@@ -298,6 +302,9 @@ _NATIVE_SYMBOLS = {
         "read_colmap_fused_visibility",
         "write_colmap_fused_visibility",
     ),
+    "hdf5": (),
+    "hloc_features": (),
+    "hloc_matches": (),
 }
 
 _PYTHON_SYMBOLS = {
@@ -331,6 +338,23 @@ _PYTHON_SYMBOLS = {
         "sceneio.io._image_sequence.inspect_image_sequence_directory",
         "sceneio.io._image_sequence.read_image_sequence_directory_frames",
     ),
+    "hdf5": (
+        "sceneio.io._hdf5.read_hdf5",
+        "sceneio.io._hdf5.write_hdf5",
+        "sceneio.io._hdf5.inspect_hdf5",
+        "sceneio.io._hdf5.read_hdf5_tensors",
+        "sceneio.io._hdf5.read_hdf5_slices",
+    ),
+    "hloc_features": (
+        "sceneio.io._hdf5.read_hloc_features",
+        "sceneio.io._hdf5.write_hloc_features",
+        "sceneio.io._hdf5.inspect_hloc_features",
+    ),
+    "hloc_matches": (
+        "sceneio.io._hdf5.read_hloc_matches",
+        "sceneio.io._hdf5.write_hloc_matches",
+        "sceneio.io._hdf5.inspect_hloc_matches",
+    ),
 }
 
 _OWNERS = {
@@ -339,6 +363,9 @@ _OWNERS = {
     "gltf": "hybrid",
     "glb": "hybrid",
     "image_sequence": "python",
+    "hdf5": "python",
+    "hloc_features": "python",
+    "hloc_matches": "python",
 }
 
 _FAMILY_BY_ID = {
@@ -366,6 +393,7 @@ def _validate_manifest() -> None:
     expected_families = {
         "arrays",
         "calibration",
+        "containers",
         "dense",
         "images",
         "meshes",

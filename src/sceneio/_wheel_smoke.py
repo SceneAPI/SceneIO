@@ -129,6 +129,8 @@ def _observe_public_io() -> Iterator[dict[str, set[str]]]:
 
 def _expected_smoke_properties(codec) -> set[str]:
     capabilities = codec.capabilities()
+    if not capabilities.available:
+        return set()
     expected = {"read", "inspect"}
     if capabilities.streams_read:
         expected.add("stream_read")
@@ -1266,6 +1268,79 @@ def _colmap_database(root: Path) -> None:
     assert copied_maxx.markers.labels == ["target"]
 
 
+def _hdf5_formats(root: Path) -> None:
+    if not sceneio.capabilities("hdf5").available:
+        return
+
+    tensors = _core.tensor_dict(
+        {
+            "dense/a": np.arange(24, dtype=np.float32).reshape(4, 6),
+            "ids": np.arange(5, dtype=np.int16),
+        },
+        {"producer": "wheel-smoke"},
+    )
+    hdf5_path = root / "arrays.h5"
+    sceneio.write(tensors, hdf5_path, format="hdf5")
+    assert sceneio.detect(hdf5_path) == "hdf5"
+    decoded_tensors = sceneio.read(hdf5_path)
+    np.testing.assert_array_equal(decoded_tensors["dense/a"], tensors["dense/a"])
+    assert sceneio.inspect(hdf5_path).count == 2
+    selected = sceneio.read_partial(hdf5_path, tensors=("ids",))
+    np.testing.assert_array_equal(selected["ids"], tensors["ids"])
+    sliced = sceneio.read_partial(
+        hdf5_path,
+        slices={"dense/a": (1, 3)},
+    )
+    np.testing.assert_array_equal(sliced["dense/a"], tensors["dense/a"][1:3])
+
+    feature = _core.feature_set(
+        np.array([[1.5, 2.5], [3.5, 4.5]], dtype=np.float32),
+        np.arange(8, dtype=np.float16).reshape(2, 4),
+        np.array([0.25, 0.75], dtype=np.float32),
+        image_name="db/a.jpg",
+        image_size=(640, 480),
+    )
+    feature_store = sceneio.HlocFeatureStore(
+        {"db/a.jpg": feature},
+        {"db/a.jpg": 0.5},
+    )
+    feature_path = root / "features.h5"
+    sceneio.write(feature_store, feature_path)
+    assert sceneio.detect(feature_path) == "hloc_features"
+    decoded_features = sceneio.read(feature_path)
+    np.testing.assert_array_equal(
+        decoded_features["db/a.jpg"].descriptors,
+        feature.descriptors,
+    )
+    assert sceneio.inspect(feature_path).metadata["image_count"] == 1
+
+    graph = _core.match_graph(
+        np.array([[1, 2]], dtype=np.uint32),
+        np.array([0, 2], dtype=np.uint64),
+        np.array([[0, 1], [2, 3]], dtype=np.uint32),
+        np.array([0, 0], dtype=np.uint64),
+        np.empty((0, 2), dtype=np.uint32),
+        scores=np.array([0.5, 0.75], dtype=np.float32),
+        match_score_present=np.array([1], dtype=np.uint8),
+        match_present=np.array([1], dtype=np.uint8),
+        geometry_present=np.array([0], dtype=np.uint8),
+    )
+    match_store = sceneio.HlocMatchStore(
+        ("db/a.jpg", "query/b.jpg"),
+        (("db/a.jpg", "query/b.jpg"),),
+        (4,),
+        ("int16",),
+        ("float16",),
+        graph,
+    )
+    match_path = root / "matches.h5"
+    sceneio.write(match_store, match_path)
+    assert sceneio.detect(match_path) == "hloc_matches"
+    decoded_matches = sceneio.read(match_path)
+    np.testing.assert_array_equal(decoded_matches.graph.matches, graph.matches)
+    assert sceneio.inspect(match_path).metadata["pair_count"] == 1
+
+
 def _image_sequences(root: Path) -> None:
     assert sceneio.ImageSequence is _core.ImageSequence
     frames = root / "frames"
@@ -1658,6 +1733,9 @@ _SMOKE_RUNNERS: Mapping[str, Callable[[Path], None]] = MappingProxyType(
         "colmap_mvs_normal": _dense_mvs,
         "colmap_mvs_consistency": _dense_mvs,
         "colmap_fused_visibility": _dense_mvs,
+        "hdf5": _hdf5_formats,
+        "hloc_features": _hdf5_formats,
+        "hloc_matches": _hdf5_formats,
     }
 )
 

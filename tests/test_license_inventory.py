@@ -13,6 +13,8 @@ EXPECTED_NOTICES = {
     "colmap.txt",
     "delvewheel.txt",
     "fast-float.txt",
+    "h5py.txt",
+    "hdf5.txt",
     "lazperf-source.txt",
     "lazperf.txt",
     "libjpeg-turbo-IJG.txt",

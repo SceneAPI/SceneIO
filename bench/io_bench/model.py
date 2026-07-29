@@ -28,3 +28,21 @@ class DirectorySpec:
     w: Callable
     r: Callable
     nbytes: Callable
+
+
+@dataclass
+class PathSpec:
+    """One path-native codec benchmark with an independent path provider."""
+
+    id: str
+    extension: str
+    make: Callable
+    w: Callable
+    r: Callable
+    ow: Callable | None
+    orr: Callable | None
+    nbytes: Callable
+    assert_native: Callable
+    assert_oracle: Callable
+    partial: Callable | None = None
+    assert_partial: Callable | None = None

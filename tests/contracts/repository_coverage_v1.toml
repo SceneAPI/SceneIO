@@ -452,3 +452,27 @@ source_suite = "tests/codecs/test_colmap_mvs.py"
 documentation_row = "docs/format_coverage.md"
 inspection_source = "src/sceneio/io/_inspectors/dense.py"
 wheel_smoke_case = "_dense_mvs"
+
+[[codec]]
+id = "hdf5"
+benchmark_case = "hdf5"
+source_suite = "tests/codecs/test_hdf5_hloc.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_hdf5.py"
+wheel_smoke_case = "_hdf5_formats"
+
+[[codec]]
+id = "hloc_features"
+benchmark_case = "hloc_features"
+source_suite = "tests/codecs/test_hdf5_hloc.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_hdf5.py"
+wheel_smoke_case = "_hdf5_formats"
+
+[[codec]]
+id = "hloc_matches"
+benchmark_case = "hloc_matches"
+source_suite = "tests/codecs/test_hdf5_hloc.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_hdf5.py"
+wheel_smoke_case = "_hdf5_formats"

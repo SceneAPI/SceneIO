@@ -36,6 +36,7 @@ CODEC_SOURCE_PATHS = (
     "src/sceneio/io/registry.py",
     "src/sceneio/io/_registry/families/arrays.py",
     "src/sceneio/io/_registry/families/calibration.py",
+    "src/sceneio/io/_registry/families/containers.py",
     "src/sceneio/io/_registry/families/dense.py",
     "src/sceneio/io/_registry/families/images.py",
     "src/sceneio/io/_registry/families/meshes.py",
@@ -720,8 +721,10 @@ def test_assembly_dependency_direction_and_import_delta_are_exact():
         "sceneio.io._inspectors.points",
         "sceneio.io._inspectors.reconstruction",
         "sceneio.io._inspectors.splats",
+        "sceneio.io._hdf5",
         "sceneio.io._registry.assembly",
         "sceneio.io._registry.families.arrays",
+        "sceneio.io._registry.families.containers",
         "sceneio.io._registry.families.dense",
         "sceneio.io._registry.families.points",
         "sceneio.io._registry.families.reconstruction",
@@ -1163,7 +1166,8 @@ def test_assembly_dependency_direction_and_import_delta_are_exact():
     assert benchmark_contract["extension_base_commit"] == (
         "3c07bcefabbd0d9be935ffd22c5ef1e7f4642321"
     )
-    assert benchmark_contract["rows"] == len(CANONICAL_BUILTIN_IDS) == 56
+    assert benchmark_contract["rows"] == 56
+    assert len(CANONICAL_BUILTIN_IDS) == 59
     assert benchmark_contract["structural_projection_sha256"] == (
         "2295f9ab10dbf141c76ef6f7cbf4561ad656a1dde3cc7c8dcbff8b5bc23d6927"
     )

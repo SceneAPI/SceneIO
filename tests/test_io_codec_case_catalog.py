@@ -27,7 +27,7 @@ def test_case_catalog_is_complete_ordered_and_immutable():
     definitions = codec_cases.CODEC_CASE_DEFINITIONS
     assert tuple(case.id for case in definitions) == CANONICAL_BUILTIN_IDS
     assert tuple(codec_cases.CASES_BY_ID) == CANONICAL_BUILTIN_IDS
-    assert len(definitions) == len(codec_cases.CASES_BY_ID) == 56
+    assert len(definitions) == len(codec_cases.CASES_BY_ID) == 59
     assert all(dataclasses.is_dataclass(case) for case in definitions)
     with pytest.raises(dataclasses.FrozenInstanceError):
         definitions[0].id = "changed"
@@ -92,6 +92,9 @@ def test_case_catalog_preserves_the_legacy_fixture_partitions():
         "obj",
         "gltf",
         "colmap_db",
+        "hdf5",
+        "hloc_features",
+        "hloc_matches",
     )
     assert tuple(case.id for case in codec_cases.DIRECTORY_CASES) == (
         "colmap_sparse",
@@ -254,11 +257,12 @@ def test_case_catalog_selectors_match_live_builtin_capabilities():
         "splat",
         "colmap_mvs_depth",
         "colmap_mvs_normal",
+        "hdf5",
     )
     assert sum(
         len(case.partial_selectors)
         for case in codec_cases.PARTIAL_CASES
-    ) == 34
+    ) == 36
 
 
 def test_runtime_extensions_do_not_enter_repository_case_completeness():

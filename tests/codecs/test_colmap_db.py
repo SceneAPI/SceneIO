@@ -3415,7 +3415,11 @@ def test_feature_set_accepts_every_colmap_keypoint_layout(columns):
     [
         (np.zeros((2, 3), np.float32), None, "2\\|4\\|6"),
         (np.zeros((2, 2), np.float32), np.zeros((3, 4), np.uint8), "must be \\(N,D\\)"),
-        (np.zeros((2, 2), np.float32), np.zeros((2, 4), np.int8), "uint8 or float32"),
+        (
+            np.zeros((2, 2), np.float32),
+            np.zeros((2, 4), np.int16),
+            "uint8, int8, float16, float32, or float64",
+        ),
     ],
 )
 def test_feature_set_rejects_bad_layouts(keypoints, descriptors, message):

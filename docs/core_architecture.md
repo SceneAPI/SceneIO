@@ -256,6 +256,16 @@ cmake/
   PMVS, and CMP-MVS path topology, configs, optional raw-PMVS projections,
   Bundler-profile workspaces, raw visibility, and existing image-codec paths
   without opening encoded image payloads.
+  The tenth registry family is `containers`. Its lower-owned
+  `_registry/families/containers.py` definitions and `_hdf5.py` adapters add
+  generic HDF5 plus the documented hloc feature and match schemas. Importing
+  SceneIO does not import h5py; capabilities report these codecs unavailable
+  until the named `sceneio[hdf5]` extra is installed. Optimized upstream
+  h5py/HDF5 owns storage calls, while SceneIO owns accepted schemas,
+  validation, detection, native-record mapping, metadata inspection, partial
+  selection, and atomic path replacement. The C-native
+  `SCENEIO_WITH_HDF5` manifest entry remains a future comparison seam rather
+  than the current implementation.
   The public `sceneio.colmap` package follows the same adapter boundary for
   portable fork workflow data: extended sparse sidecars, semantic
   MappingInput v1/v2, MegaLoc artifacts, rig JSON, SIFT, pair/cap and match
@@ -627,9 +637,9 @@ returns `ColmapDatabase`.
 | `pair` | `colmap_db` |
 | `points` | `compressed_ply`, `gaussian_ply`, `ksplat`, `las`, `laz`, `pcd`, `ply`, `pts`, `sog`, `splat`, `xyz` |
 | `primitive_id` | `glb`, `gltf` |
-| `slices` | `safetensors` |
+| `slices` | `hdf5`, `safetensors` |
 | `states` | `euroc_state` |
-| `tensors` | `safetensors` |
+| `tensors` | `hdf5`, `safetensors` |
 | `window` | `colmap_mvs_depth`, `colmap_mvs_normal`, `dmb`, `flo`, `netpbm`, `pfm`, `webp` |
 <!-- sceneio-partial-summary:end -->
 

@@ -20,6 +20,9 @@ dev = [
     "pytest>=8.3",
     "ruff>=0.8",
 ]
+hdf5 = [
+    "h5py>=3.11",
+]
 # Codec parity oracles — kept out of runtime and `dev` so `import sceneio` stays
 # a numpy-only leaf. gsply (3DGS PLY + SPZ, incl. its C++ backend for v4),
 # pycolmap (COLMAP), pillow + pypng (PNG; pypng gives exact 16-bit RGB/RGBA that
@@ -47,6 +50,7 @@ test = [
     "trimesh>=4.0",
     "pygltflib>=1.16",
     "pyyaml>=6.0",
+    "h5py>=3.11",
 ]
 
 [build-system]

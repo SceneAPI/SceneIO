@@ -21,6 +21,7 @@ from pathlib import Path
 from sceneio import _core
 from sceneio.colmap_db import ColmapDatabaseConversionReport
 from sceneio.io._depth import DepthEncoding, inspect_depth, read_depth, write_depth
+from sceneio.io._hdf5 import HlocFeatureStore, HlocMatchStore
 from sceneio.io._inspection import inspect_codec
 from sceneio.io._inspectors.model import ArrayInspection, Inspection
 from sceneio.io._registry.adapters import _file_sink_writer, _mmap_reader
@@ -604,6 +605,8 @@ __all__ = [
     "FlowField",
     "FormatError",
     "GaussianCloud",
+    "HlocFeatureStore",
+    "HlocMatchStore",
     "Image",
     "ImageSequence",
     "Inspection",

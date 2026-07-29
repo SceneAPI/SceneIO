@@ -76,9 +76,17 @@ artifacts vocabulary — wire identity unchanged.
 
 ### Compiled format I/O — `read` / `write` / `inspect` / `read_partial`
 
-The lazy-loaded compiled core reads and writes 54 image, image-sequence, depth, tensor,
+The lazy-loaded compiled core and repository-owned adapters read and write 59
+image, image-sequence, depth, tensor,
 point-cloud, Gaussian, mesh/scene, pose/state, reconstruction, calibration,
-graph, and feature-database formats.
+graph, feature-database, and scientific-container formats. HDF5 and the
+documented hloc feature/match layouts use the optimized upstream `h5py`
+storage engine as an optional dependency:
+
+```console
+uv pip install "sceneio[hdf5]"
+```
+
 `sceneio.inspect(path)` returns an immutable `Inspection` with shape, dtype,
 channels, repeated-record counts, and format-specific scalar metadata without
 decoding bulk pixel/point arrays:
@@ -265,6 +273,29 @@ rows = sceneio.read_partial(
     "model.safetensors", slices={"embedding.weight": (10_000, 20_000)}
 )
 
+# Generic HDF5 maps supported numeric datasets to a TensorDict. Named reads
+# and leading-axis hyperslabs avoid loading unrelated datasets.
+tensors = sceneio.read("arrays.h5", format="hdf5")
+selected = sceneio.read_partial(
+    "arrays.h5",
+    format="hdf5",
+    tensors=("features/descriptors",),
+)
+rows = sceneio.read_partial(
+    "arrays.h5",
+    format="hdf5",
+    slices={"features/descriptors": (1_000, 2_000)},
+)
+sceneio.write(tensors, "arrays-copy.h5", format="hdf5")
+
+# hloc adapters preserve the documented on-disk D-by-N descriptor layout
+# while exposing native N-by-D FeatureSet records and a native MatchGraph.
+feature_store = sceneio.read("features.h5", format="hloc_features")
+match_store = sceneio.read("matches.h5", format="hloc_matches")
+first_features = feature_store[next(iter(feature_store))]
+assert first_features.descriptors.shape[0] == first_features.keypoints.shape[0]
+assert match_store.graph.pair_count == len(match_store.pair_names)
+
 # Frozen discovery metadata: no trial import/read is needed.
 caps = sceneio.capabilities("webp")
 assert caps.can_read and caps.can_write and caps.can_inspect
@@ -280,9 +311,11 @@ assert not sceneio.native_features("hdf5").available
 `sceneio.ColmapMarkerSet`, `sceneio.ColmapVideoMetadataSet`,
 `sceneio.ColmapMaxxSchemaInfo`,
 `sceneio.Mesh`, `sceneio.MaterialSet`, `sceneio.MeshScene`, and
-`sceneio.ImageSequence` are compiled,
-storage-faithful I/O records. The procedure-contract `sceneio.data.FeatureSet`
-remains a separate Python record for matcher APIs.
+`sceneio.ImageSequence` are compiled, storage-faithful I/O records.
+`sceneio.HlocFeatureStore` and `sceneio.HlocMatchStore` are immutable
+repository-owned schema adapters over those native feature and match records.
+The procedure-contract `sceneio.data.FeatureSet` remains a separate Python
+record for matcher APIs.
 
 Partial reads are available only when the container has a genuine bounded
 access path; requesting one from a codec that would have to decode the complete
@@ -313,6 +346,10 @@ database reads also preserve all five descriptor scalar dtypes, keypoint
 colors, match scores and provenance, image quality/time, extended pose priors,
 markers/projections, metadata-only video/frame rows, and the ownership record.
 Source-path text is inert metadata; SceneIO does not decode encoded media.
+Generic HDF5 accepts fixed-size numeric and boolean datasets plus text root
+attributes; named-tensor selection and contiguous leading-axis hyperslabs are
+bounded reads. String datasets, compound or variable-length dtypes, references,
+virtual datasets, and linked datasets are rejected rather than converted.
 Plain
 glTF/GLB supports source mesh and flattened primitive selection while rejecting
 unrepresented scene features instead of silently dropping them.

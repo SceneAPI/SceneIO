@@ -3377,3 +3377,40 @@ A complete one-run, small-scale local capture covers all 56 registry rows:
 
 Its normalized deterministic structural SHA-256 is
 `2295f9ab10dbf141c76ef6f7cbf4561ad656a1dde3cc7c8dcbff8b5bc23d6927`.
+
+## HDF5 and hloc path-native checkpoint (2026-07-29)
+
+The optional `sceneio[hdf5]` provider uses h5py/HDF5 directly; SceneIO adds
+repository-owned schemas, validation, native-record mapping, metadata
+inspection, selection, and atomic replacement. The focused local MSVC command
+was:
+
+```powershell
+.venv/Scripts/python.exe bench/bench_io.py --runs 3 --scale 1 `
+  --only hdf5 --only hloc_features --only hloc_matches `
+  --json build/hdf5-hloc-benchmark-scale1-final.json
+```
+
+| codec | payload/file MB | SceneIO write MB/s | SceneIO read MB/s | direct h5py write/read MB/s | inspect gain |
+|---|---:|---:|---:|---:|---:|
+| `hdf5` | 1.1 / 1.1 | 322 | 757 | 126 / 862 | 2.24x |
+| `hloc_features` | 1.1 / 1.2 | 435 | 277 | 114 / 622 | 2.14x |
+| `hloc_matches` | 2.1 / 2.1 | 179 | 462 | 258 / 1,671 | 5.38x |
+
+The generic HDF5 named-dataset read was 2.47x faster than full
+materialization and its traced peak rounded to 0.0 MB while the full read
+materialized 2.1 MB. The SceneIO read path intentionally performs schema and
+native-record validation beyond direct h5py array loading; the measured
+provider ratios stay visible and are not described as equivalent work.
+Writes are path-native and never build a complete encoded Python byte string.
+
+A complete one-run, small-scale capture covers all 59 registry rows:
+
+```powershell
+.venv/Scripts/python.exe bench/bench_io.py --runs 1 --scale 0.001 `
+  --skip-oracles --json build/hdf5-hloc-59-row-sweep.json
+```
+
+Its normalized deterministic structural SHA-256 is
+`ff176c7296bfa45e4c1536346fb542f176c05ce00385fbdc3ae3336dd4044099`.
+Cross-platform package measurements remain pending for the optional extra.

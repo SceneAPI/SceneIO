@@ -574,6 +574,36 @@ source_suite = "tests/codecs/test_colmap_mvs.py"
 documentation = "docs/format_coverage.md"
 accepted_subset = ["little_endian_uint64_point_count", "little_endian_uint32_lists", "ordered_image_indices", "zero_count_points"]
 
+[[codec]]
+id = "hdf5"
+family = "containers"
+adapter = "repo"
+implementation_owner = "python"
+sources = ["src/sceneio/io/_hdf5.py"]
+source_suite = "tests/codecs/test_hdf5_hloc.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["numeric_datasets", "nested_dataset_paths", "string_root_attributes", "named_tensor_reads", "leading_axis_hyperslabs"]
+
+[[codec]]
+id = "hloc_features"
+family = "containers"
+adapter = "repo"
+implementation_owner = "python"
+sources = ["src/sceneio/io/_hdf5.py"]
+source_suite = "tests/codecs/test_hdf5_hloc.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["keypoints", "descriptors_D_by_N", "scores", "image_size", "keypoint_uncertainty", "nested_image_names"]
+
+[[codec]]
+id = "hloc_matches"
+family = "containers"
+adapter = "repo"
+implementation_owner = "python"
+sources = ["src/sceneio/io/_hdf5.py"]
+source_suite = "tests/codecs/test_hdf5_hloc.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["matches0", "matching_scores0", "current_pair_naming", "exact_endpoint_names", "mixed_score_presence"]
+
 [[operation]]
 codec_id = "pfm"
 profile = "default"
@@ -3333,6 +3363,126 @@ backend_version = "sceneio-native-c2-2026-07-29"
 transport_status = "qualified"
 status = "provisional"
 correctness_evidence = ["tests/codecs/test_colmap_mvs.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "hdf5"
+profile = "default"
+direction = "encode"
+settings = { schema = "numeric-v1" }
+fidelity = "lossless"
+comparator = "independent-h5py-layout"
+fixture = "hdf5:default"
+backend = "h5py"
+backend_owner = "fetched"
+backend_source = "src/sceneio/io/_hdf5.py"
+backend_version = "h5py >=3.11"
+backend_dependencies = ["h5py >=3.11"]
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_hdf5_hloc.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "hdf5"
+profile = "default"
+direction = "decode"
+settings = { schema = "numeric-v1" }
+fidelity = "lossless"
+comparator = "independent-h5py-layout"
+fixture = "hdf5:default"
+backend = "h5py"
+backend_owner = "fetched"
+backend_source = "src/sceneio/io/_hdf5.py"
+backend_version = "h5py >=3.11"
+backend_dependencies = ["h5py >=3.11"]
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_hdf5_hloc.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "hloc_features"
+profile = "default"
+direction = "encode"
+settings = { schema = "documented-hloc-features" }
+fidelity = "lossless"
+comparator = "independent-h5py-layout"
+fixture = "hloc_features:default"
+backend = "h5py"
+backend_owner = "fetched"
+backend_source = "src/sceneio/io/_hdf5.py"
+backend_version = "h5py >=3.11"
+backend_dependencies = ["h5py >=3.11"]
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_hdf5_hloc.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "hloc_features"
+profile = "default"
+direction = "decode"
+settings = { schema = "documented-hloc-features" }
+fidelity = "lossless"
+comparator = "independent-h5py-layout"
+fixture = "hloc_features:default"
+backend = "h5py"
+backend_owner = "fetched"
+backend_source = "src/sceneio/io/_hdf5.py"
+backend_version = "h5py >=3.11"
+backend_dependencies = ["h5py >=3.11"]
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_hdf5_hloc.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "hloc_matches"
+profile = "default"
+direction = "encode"
+settings = { schema = "documented-hloc-matches0" }
+fidelity = "lossless"
+comparator = "independent-h5py-layout"
+fixture = "hloc_matches:default"
+backend = "h5py"
+backend_owner = "fetched"
+backend_source = "src/sceneio/io/_hdf5.py"
+backend_version = "h5py >=3.11"
+backend_dependencies = ["h5py >=3.11"]
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_hdf5_hloc.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "hloc_matches"
+profile = "default"
+direction = "decode"
+settings = { schema = "documented-hloc-matches0" }
+fidelity = "lossless"
+comparator = "independent-h5py-layout"
+fixture = "hloc_matches:default"
+backend = "h5py"
+backend_owner = "fetched"
+backend_source = "src/sceneio/io/_hdf5.py"
+backend_version = "h5py >=3.11"
+backend_dependencies = ["h5py >=3.11"]
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_hdf5_hloc.py"]
 benchmark_evidence = ["bench/BASELINE.md"]
 candidate_backends = []
 evidence_gaps = ["candidate comparison on all required toolchains"]
