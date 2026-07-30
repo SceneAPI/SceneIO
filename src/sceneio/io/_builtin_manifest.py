@@ -36,6 +36,8 @@ CANONICAL_BUILTIN_IDS = (
     "off",
     "gltf",
     "glb",
+    "usd",
+    "usdz",
     "ply",
     "pcd",
     "spz",
@@ -84,6 +86,11 @@ CANONICAL_BUILTIN_IDS = (
     "hloc_features",
     "hloc_matches",
     "zarr",
+    "tiff",
+    "e57",
+    "parquet",
+    "arrow_ipc",
+    "openvdb",
 )
 
 FAMILY_MEMBERS = MappingProxyType(
@@ -95,16 +102,43 @@ FAMILY_MEMBERS = MappingProxyType(
             "ros_camera_info",
             "kalibr",
         ),
-        "containers": ("hdf5", "hloc_features", "hloc_matches", "zarr"),
+        "containers": (
+            "hdf5",
+            "hloc_features",
+            "hloc_matches",
+            "zarr",
+            "parquet",
+            "arrow_ipc",
+            "openvdb",
+        ),
         "dense": (
             "colmap_mvs_depth",
             "colmap_mvs_normal",
             "colmap_mvs_consistency",
             "colmap_fused_visibility",
         ),
-        "images": ("netpbm", "png", "jpeg", "bmp", "tga", "hdr", "exr", "webp"),
-        "meshes": ("ply_mesh", "obj", "stl", "off", "gltf", "glb"),
-        "points": ("ply", "pcd", "xyz", "pts", "las", "laz"),
+        "images": (
+            "netpbm",
+            "png",
+            "jpeg",
+            "bmp",
+            "tga",
+            "hdr",
+            "exr",
+            "webp",
+            "tiff",
+        ),
+        "meshes": (
+            "ply_mesh",
+            "obj",
+            "stl",
+            "off",
+            "gltf",
+            "glb",
+            "usd",
+            "usdz",
+        ),
+        "points": ("ply", "pcd", "xyz", "pts", "las", "laz", "e57"),
         "reconstruction": (
             "colmap_sparse",
             "transforms_json",
@@ -190,6 +224,8 @@ _NATIVE_SYMBOLS = {
         "read_glb_mesh",
         "read_glb_primitive",
     ),
+    "usd": (),
+    "usdz": (),
     "ply": ("read_ply", "write_ply", "read_ply_points"),
     "pcd": ("read_pcd", "write_pcd", "read_pcd_points"),
     "spz": ("read_spz", "write_spz"),
@@ -249,6 +285,11 @@ _NATIVE_SYMBOLS = {
     "tga": ("_inspect_tga", "read_tga", "write_tga"),
     "hdr": ("read_hdr", "write_hdr"),
     "exr": ("read_exr", "write_exr"),
+    "tiff": (),
+    "e57": (),
+    "parquet": (),
+    "arrow_ipc": (),
+    "openvdb": (),
     "webp": ("read_webp", "write_webp", "read_webp_window"),
     "y4m": ("_inspect_y4m", "read_y4m", "write_y4m", "read_y4m_frames"),
     "animated_webp": (
@@ -334,6 +375,16 @@ _PYTHON_SYMBOLS = {
         "sceneio.io._gltf.read_glb_mesh",
         "sceneio.io._gltf.read_glb_primitive",
     ),
+    "usd": (
+        "sceneio.io._usd.read_usd",
+        "sceneio.io._usd.write_usd",
+        "sceneio.io._usd.inspect_usd",
+    ),
+    "usdz": (
+        "sceneio.io._usd.read_usd",
+        "sceneio.io._usd.write_usd",
+        "sceneio.io._usd.inspect_usdz",
+    ),
     "image_sequence": (
         "sceneio.io._image_sequence.read_image_sequence_directory",
         "sceneio.io._image_sequence.write_image_sequence_directory",
@@ -364,6 +415,32 @@ _PYTHON_SYMBOLS = {
         "sceneio.io._zarr.read_zarr_tensors",
         "sceneio.io._zarr.read_zarr_slices",
     ),
+    "tiff": (
+        "sceneio.io._tiff.read_tiff",
+        "sceneio.io._tiff.write_tiff",
+        "sceneio.io._tiff.inspect_tiff",
+    ),
+    "e57": (
+        "sceneio.io._e57.read_e57",
+        "sceneio.io._e57.write_e57",
+        "sceneio.io._e57.inspect_e57",
+    ),
+    "parquet": (
+        "sceneio.io._arrow.read_parquet",
+        "sceneio.io._arrow.write_parquet",
+        "sceneio.io._arrow.inspect_parquet",
+        "sceneio.io._arrow.read_parquet_tensors",
+    ),
+    "arrow_ipc": (
+        "sceneio.io._arrow.read_arrow_ipc",
+        "sceneio.io._arrow.write_arrow_ipc",
+        "sceneio.io._arrow.inspect_arrow_ipc",
+    ),
+    "openvdb": (
+        "sceneio.io._openvdb.read_openvdb",
+        "sceneio.io._openvdb.write_openvdb",
+        "sceneio.io._openvdb.inspect_openvdb",
+    ),
 }
 
 _OWNERS = {
@@ -371,11 +448,18 @@ _OWNERS = {
     "obj": "hybrid",
     "gltf": "hybrid",
     "glb": "hybrid",
+    "usd": "python",
+    "usdz": "python",
     "image_sequence": "python",
     "hdf5": "python",
     "hloc_features": "python",
     "hloc_matches": "python",
     "zarr": "python",
+    "tiff": "python",
+    "e57": "python",
+    "parquet": "python",
+    "arrow_ipc": "python",
+    "openvdb": "python",
 }
 
 _FAMILY_BY_ID = {

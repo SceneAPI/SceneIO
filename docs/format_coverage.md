@@ -6,8 +6,8 @@ validation status**. It reconciles the live registry
 Future policy and sequencing live in
 [`coverage_roadmap.md`](coverage_roadmap.md), not in current-evidence claims.
 
-The detailed execution, verification, and wheel-validation sequence for the
-remaining formats is in
+The detailed execution, verification, and wheel-validation record for format
+expansion is in
 [`format_gap_implementation_plan.md`](format_gap_implementation_plan.md).
 The module-boundary, offline-source, bounded package-closure, and trigger-based
 codec-backend mechanism are in
@@ -18,13 +18,29 @@ commit-sized execution checklist is
 Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 
 > Status note: everything marked ✅ is implemented by the compiled
-> `sceneio._core`. The original 23 codecs ship in SceneIO 0.2.0; safetensors,
+> `sceneio._core` or by a repository-owned adapter around a separately
+> installed, optimized permissive provider. SceneIO owns the schema,
+> convention guards, public mapping, and tests in both cases. The original 23
+> codecs ship in SceneIO 0.2.0; safetensors,
 > PTS, DMB, BAL, BMP, TGA, generic point PLY, PCD, EuRoC state CSV, and the
 > OpenCV/ROS/Kalibr calibration codecs, g2o pose graphs, and the COLMAP
 > feature database, SuperSplat compressed PLY, PlayCanvas SOG, KSplat,
 > mesh/scene codecs, LAZ, lazy image directories, and raw Y4M are post-0.2
 > formats on
 > `phase0-nanobind-core` and are not released yet.
+>
+> **67-format local checkpoint (2026-07-30):** the live registry contains 60
+> single-file formats, four directory formats, and three multi-file formats.
+> The latest wave adds bounded TIFF rasters/masks/stacks, one-scan Cartesian
+> E57 point clouds, numeric Parquet and Arrow IPC tables, one sparse float32
+> OpenVDB grid, and static CV mesh scenes in USD/USDA/USDZ. The optimized
+> optional providers are tifffile, pye57/libE57Format, PyArrow, TinyVDB, and
+> TinyUSDZ; NumPy remains the only unconditional runtime dependency. Direct
+> provider cross-reads, transactional failure tests, lifetime/inspection
+> tests, and path benchmarks cover the accepted profiles. OpenUSD was not
+> selected because its current license is outside this repository's explicit
+> allow-list; Apache-2.0 TinyUSDZ is used instead. Cross-platform
+> optional-extra package execution remains user-triggered.
 >
 > **COLMAP dense/workspace checkpoint (2026-07-29):** the current local
 > registry has 54 codecs: 48 buffer-backed files, three path-native
@@ -800,10 +816,12 @@ hardening patches** for truncated HDR input, corrupt JPEG marker failure, and a
 signed-shift UB in JPEG entropy output (see `stb/COMMIT.txt`). CMYK JPEG is
 best‑effort stb→RGB and opaque RGBA collapses to RGB in WebP (both documented).
 
-The optional h5py path now covers HDF5 and both hloc layouts without adding an
-unconditional dependency. The planned `SCENEIO_WITH_HDF5` entry is reserved
-for a future C-native comparison; TIFF (libtiff) still needs an optional
-native gate. **LAZ is statically built from repository-contained LAZperf
+The optional h5py path covers HDF5 and both hloc layouts without adding an
+unconditional dependency. TIFF, E57, Arrow/Parquet, OpenVDB, and USD/USDZ
+follow the same provider-isolated pattern with repository-owned adapters.
+Future `SCENEIO_WITH_*` entries are reserved for measured native comparisons,
+not required for current format coverage. **LAZ is statically built from
+repository-contained LAZperf
 3.4.0 source** (Apache‑2.0/BSD‑3-Clause/BSD‑2-Clause), with formats 0‑3 and
 6‑8 in its supported compression set. COLMAP DB `.db` is covered by a pinned
 public-domain SQLite amalgamation statically linked into `_core`.
@@ -843,10 +861,16 @@ public-domain SQLite amalgamation statically linked into `_core`.
 | `hdf5` | `TensorDict` | R+W, inspect, partial | independent **h5py** layouts in `tests/codecs/test_hdf5_hloc.py` | optional `sceneio[hdf5]`; numeric/bool datasets, nested paths, text root attrs, selected-path named reads, leading-axis hyperslabs, and atomic replacement; full reads reject indirect/virtual/object/reference/vlen layouts, while partial reads validate the selected paths and ancestors |
 | `hloc_features` | `HlocFeatureStore` of native `FeatureSet` | R+W, inspect | independent **h5py** documented layout | preserves keypoints, D×N wire descriptors as native N×D with uint8/int8/f16/f32/f64 dtype, scores, image size, nested names, and keypoint uncertainty |
 | `hloc_matches` | `HlocMatchStore` + native `MatchGraph` | R+W, inspect | independent **h5py** documented layout | preserves dense `matches0`, optional `matching_scores0`, exact endpoint names, source extents/dtypes, pair order, and mixed score presence |
+| `zarr` | `TensorDict` | R+W, inspect, partial | direct **zarr-python/numcodecs** | optional `sceneio[zarr]`; numeric/bool v2/v3 directory stores, nested names, text attrs, named reads, leading-axis slices, transactional replacement |
+| `tiff` | `Image`, `Mask`, or grayscale-stack `TensorDict` | R+W, inspect | **tifffile** plus independent producer/consumer checks | optional `sceneio[tiff]`; bounded single-series uint8/uint16/float32 profile, boolean masks, grayscale stacks, BigTIFF, alpha semantics, transactional path writes |
+| `e57` | `PointCloud` | R+W, inspect | direct **pye57/libE57Format** | optional `sceneio[e57]`; exactly one Cartesian scan, exact float32 coordinates/intensity and integral RGB8, pose, explicit invalid-point filtering; exact inspection count uses the provider scan path only when invalid-state data are present |
+| `parquet` / `arrow_ipc` | `TensorDict` numeric table | R+W, inspect; Parquet named-column partial | direct **PyArrow** | optional `sceneio[arrow]`; scalar/fixed-width numeric columns, equal row counts, text attrs, mmap/threaded provider paths, transactional writes |
+| `openvdb` | sparse-grid `TensorDict` | R+W, inspect | direct **TinyVDB** | optional `sceneio[openvdb]`; one identity-transform, zero-background float32 scalar grid; ZIP/active-mask output; packaged upstream seed is fully replaced and provenance-pinned; rebuilt active count is verified and provider topology loss refuses |
+| `usd` / `usdz` | `MeshScene` | R+W, inspect | direct **TinyUSDZ** | optional `sceneio[usd]`; repository-owned streaming USDA and aligned uncompressed USDZ writers; static single-scene triangle meshes, hierarchy/transforms, normals, UVs; TinyUSDZ reads USDA/USDC/USDZ |
 
 ### Repository-owned COLMAP workflow adapters
 
-The COLMAP adapter surface is unchanged by the 56th codec. The lazy
+The COLMAP adapter surface is unchanged by the later format additions. The lazy
 `sceneio.colmap` namespace adds
 repository-owned read/write adapters for fork sparse companions, MappingInput
 v1/v2, MegaLoc artifact directories, rig JSON, SIFT text, stock and dense
@@ -869,17 +893,19 @@ reviews signed off. Exact-pushed-tree automatic and nonpublishing MSVC/GCC
 `30469273173`, `30469271293`, and `30470889876`. The downloaded artifacts
 also pass independent exact-matrix inventory verification.
 
-Encoded image paths and model paths remain opaque values. TIFF plus embedded
-or standalone `.xmp` metadata are optional generic format/metadata work, not
-requirements for COLMAP ecosystem closure.
+Encoded image paths and model paths remain opaque values. Embedded or
+standalone `.xmp` metadata remains optional generic metadata work, not a
+requirement for COLMAP ecosystem closure.
 
 ### ⬜ Pending — declared roadmap gaps
 
 - Sequence/dataset: RTMV. Animated WebP and APNG are complete.
-- Optional CV containers: TIFF, E57, and Parquet/Arrow. HDF5 and both
-  hloc feature/match layouts are complete through the optional h5py provider.
-- Chunked/heavyweight: USD/USDZ and OpenVDB. Zarr v2/v3 numeric directory
-  stores are complete through the optional optimized Zarr provider.
+- Optional CV containers are complete for the accepted profiles: HDF5/hloc,
+  Zarr v2/v3, TIFF, E57, Parquet, Arrow IPC, OpenVDB, USD, and USDZ.
+- Broader semantics remain intentionally outside those bounded profiles:
+  TIFF pyramids/multiple series, E57 multiple or organized scans, general
+  Arrow nested/string/null schemas, multi-grid/vector/transformed OpenVDB,
+  and composed/animated/material USD scenes.
 - Policy-gated: AVIF, JPEG-XL, and Draco-compressed glTF. These do not enter
   implementation without an explicit decision under the patented-codec rule.
 
@@ -901,7 +927,7 @@ fuzzing · ✅ direct file-sink writes · ✅ bounded measured-path workers
 (XYZ/LAS/LAZ/EXR/PNG16/WebP lossless) · ✅ partial/lazy reads (`inspect` covers all
 54; bounded pixel/point/face/mesh/primitive/state/frame/COLMAP-image/COLMAP-pair/tensor
 subsets cover capable containers) · ⬜ GPU-via-DLPack (torch-cuda/cupy) · ✅
-expanded 54-codec benchmark/oracles.
+expanded 67-format benchmark/oracles.
 
 ## Infrastructure & capabilities
 
@@ -910,15 +936,15 @@ expanded 54-codec benchmark/oracles.
 | nanobind + scikit‑build‑core build | ✅ | abi3/cp312, `NB_STATIC`; `Python::SABIModule`, `nanobind-static-abi3`, and the platform suffix are configure-checked; local Windows emits `_core.pyd` against `python3.dll`, Ubuntu emits `_core.abi3.so` without libpython |
 | cibuildwheel release path | ✅ | one verified sdist feeds Linux/macOS/Windows wheels; locked build inputs, all-50 installed smoke, per-wheel inventory, and tag-only publication in `publish.yml`; final build-only run `30406706115` and downloaded-artifact inspection pass, while tagging and publication remain user-gated |
 | CI parity (oracles in CI) | ✅ | At `a5e7fa4`, normal Linux CI passes 2,914 tests with nine documented platform/oracle skips, the 50-codec performance guard, pinned GCC 10 portability, and the three-OS focused matrix |
-| Codec registry + `read`/`write`/`inspect`/`read_partial`/`detect` | ✅ | inspection covers all 55; bounded partial hooks are capability-specific |
-| Repo-maintained stable codec adapters | ✅ | all 55 production adapters, grammars, convention guards, inspectors, partial capability policies/available paths, and sinks live in `src/cpp` / `src/sceneio`; separately installed implementations and executables are test/reference oracles only |
+| Codec registry + `read`/`write`/`inspect`/`read_partial`/`detect` | ✅ | inspection covers all 67; bounded partial hooks are capability-specific |
+| Repo-maintained stable codec adapters | ✅ | all 67 adapters, schemas, convention guards, inspectors, partial policies, and sinks live in `src/cpp` / `src/sceneio`; optional optimized storage/parser providers remain separately installed |
 | Offline native-source closure | ✅ | all selected native sources—including libwebp 1.5.0—are stored in-tree and the production CMake graph has no native-source fetch; local exact-tree proof plus final MSVC, GCC 10, and AppleClang sdist-to-wheel execution and artifact inspection pass |
 | Zero‑copy numpy + torch (DLPack) | ✅ | validated per codec |
 | Conventions‑as‑metadata + write guards | ✅ | record‑don't‑convert enforced |
 | Parity kit (`sceneio.testing.parity`) | ✅ | cross‑impl + round‑trip + convention pins |
 | In-tree native dependencies | ✅ | all selected production dependencies are permissive, pinned, source-manifested, and license-indexed |
 | Image libraries | ✅ | lodepng, stb, tinyexr, and libwebp 1.5.0 are repository-contained and statically built |
-| Feature‑flagged optional C libs (`SCENEIO_WITH_*`) | ⬜ | planned for HDF5, TIFF, E57, Arrow, USD, and OpenVDB; LAZ instead uses pinned, statically built LAZperf in the default tier |
+| Optional optimized providers | ✅ | h5py, Zarr/numcodecs, tifffile, pye57/libE57Format, PyArrow, TinyVDB, and TinyUSDZ are isolated extras with repo-owned adapters and direct-provider comparison tests; future `SCENEIO_WITH_*` entries are native-candidate seams, not missing format support |
 | mmap / streaming sources | ✅ | mmap reads + raw NPY/FLO views + direct file-sink writes complete |
 | Bounded intra-file workers | ✅ | measured O4 paths; deterministic one-vs-many lane tests |
 | Instrumented + mmap differential CI | ✅ | at `a5e7fa4`, exact 2,923-test collection, complete compiler-instrumented suite, focused native lifetime controls, and the three-case push backing-store sweep pass; the retained default-branch schedule raises that sweep to 100 cases |
@@ -939,6 +965,7 @@ incremental.
 <!-- sceneio-capability-rows:start -->
 | `animated_webp` | file | yes | yes | yes | - | yes | yes | yes | - |
 | `apng` | file | yes | yes | yes | - | yes | yes | no | - |
+| `arrow_ipc` | file | yes | yes | yes | - | yes | yes | no | pyarrow |
 | `bal` | file | yes | yes | yes | - | yes | yes | no | - |
 | `bmp` | file | yes | yes | yes | - | yes | yes | no | - |
 | `bundler` | file | yes | yes | yes | - | yes | yes | no | - |
@@ -951,6 +978,7 @@ incremental.
 | `colmap_sparse_txt` | directory | yes | yes | yes | image_id | yes | yes | no | - |
 | `compressed_ply` | file | yes | yes | yes | points | yes | yes | yes | - |
 | `dmb` | file | yes | yes | yes | window | yes | yes | no | - |
+| `e57` | file | yes | yes | yes | - | yes | yes | no | pye57 |
 | `euroc_state` | file | yes | yes | yes | states | yes | yes | no | - |
 | `exr` | file | yes | yes | yes | - | yes | yes | no | - |
 | `flo` | file | yes | yes | yes | window | yes | yes | no | - |
@@ -978,6 +1006,8 @@ incremental.
 | `opencv_xml` | file | yes | yes | yes | - | yes | yes | no | - |
 | `opencv_yaml` | file | yes | yes | yes | - | yes | yes | no | - |
 | `openmvg` | file | yes | yes | yes | - | yes | yes | no | - |
+| `openvdb` | file | yes | yes | yes | - | yes | yes | no | tinyvdb |
+| `parquet` | file | yes | yes | yes | tensors | yes | yes | no | pyarrow |
 | `pcd` | file | yes | yes | yes | points | yes | yes | no | - |
 | `pfm` | file | yes | yes | yes | window | yes | yes | no | - |
 | `ply` | file | yes | yes | yes | points | yes | yes | no | - |
@@ -991,8 +1021,11 @@ incremental.
 | `spz` | file | yes | yes | yes | - | yes | yes | yes | - |
 | `stl` | file | yes | yes | yes | faces | yes | yes | no | - |
 | `tga` | file | yes | yes | yes | - | yes | yes | no | - |
+| `tiff` | file | yes | yes | yes | - | yes | yes | no | tifffile |
 | `transforms_json` | file | yes | yes | yes | - | yes | yes | no | - |
 | `tum` | file | yes | yes | yes | - | yes | yes | no | - |
+| `usd` | file | yes | yes | yes | - | yes | yes | no | tinyusdz |
+| `usdz` | file | yes | yes | yes | - | yes | yes | no | tinyusdz |
 | `webp` | file | yes | yes | yes | window | yes | yes | yes | - |
 | `xyz` | file | yes | yes | yes | points | yes | yes | no | - |
 | `y4m` | file | yes | yes | yes | frames | yes | yes | no | - |
@@ -1014,7 +1047,7 @@ against that public manifest.
 | Feature | CMake option | Compiled | Planned format ids |
 |---|---|---|---|
 <!-- sceneio-native-feature-rows:start -->
-| `arrow` | `SCENEIO_WITH_ARROW` | no | `parquet` |
+| `arrow` | `SCENEIO_WITH_ARROW` | no | `parquet`, `arrow_ipc` |
 | `avif` | `SCENEIO_WITH_AVIF` | no | `avif` |
 | `draco` | `SCENEIO_WITH_DRACO` | no | `gltf`, `glb` |
 | `e57` | `SCENEIO_WITH_E57` | no | `e57` |

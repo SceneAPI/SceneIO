@@ -26,6 +26,7 @@ _BUILTINS = {
     "colmap_sparse_txt",
     "compressed_ply",
     "dmb",
+    "e57",
     "euroc_state",
     "exr",
     "flo",
@@ -51,10 +52,13 @@ _BUILTINS = {
     "obj",
     "off",
     "openmvg",
+    "openvdb",
     "opencv_xml",
     "opencv_yaml",
     "pcd",
     "pfm",
+    "parquet",
+    "arrow_ipc",
     "ply",
     "ply_mesh",
     "png",
@@ -68,10 +72,13 @@ _BUILTINS = {
     "transforms_json",
     "tum",
     "tga",
+    "tiff",
     "webp",
     "xyz",
     "y4m",
     "zarr",
+    "usd",
+    "usdz",
 }
 
 _PARTIAL = {
@@ -107,6 +114,7 @@ _PARTIAL = {
     "xyz": ("points",),
     "y4m": ("frames",),
     "zarr": ("tensors", "slices"),
+    "parquet": ("tensors",),
 }
 
 _LOSSY = {
@@ -124,7 +132,7 @@ _LOSSY = {
 }
 
 _NATIVE_FEATURES = {
-    "arrow": ("SCENEIO_WITH_ARROW", ("parquet",)),
+    "arrow": ("SCENEIO_WITH_ARROW", ("parquet", "arrow_ipc")),
     "avif": ("SCENEIO_WITH_AVIF", ("avif",)),
     "draco": ("SCENEIO_WITH_DRACO", ("gltf", "glb")),
     "e57": ("SCENEIO_WITH_E57", ("e57",)),
@@ -164,6 +172,13 @@ def test_capability_hooks_and_metadata_are_consistent():
             "hloc_features": ("h5py",),
             "hloc_matches": ("h5py",),
             "zarr": ("zarr",),
+            "tiff": ("tifffile",),
+            "e57": ("pye57",),
+            "parquet": ("pyarrow",),
+            "arrow_ipc": ("pyarrow",),
+            "openvdb": ("tinyvdb",),
+            "usd": ("tinyusdz",),
+            "usdz": ("tinyusdz",),
         }
         assert cap.requires_features == expected_requirements.get(format_id, ())
         assert not (
@@ -239,11 +254,19 @@ def test_unknown_native_feature_is_normalized():
         sceneio.native_features("not-a-feature")
 
 
-def test_unavailable_optional_codecs_are_normalized():
-    assert sceneio.capabilities("hdf5").available
-    for format_id in ("tiff", "e57", "parquet"):
-        with pytest.raises(sceneio.FormatError, match="unknown format id"):
-            sceneio.capabilities(format_id)
+def test_optional_provider_codecs_are_registered_and_available_in_test_env():
+    for format_id in (
+        "hdf5",
+        "zarr",
+        "tiff",
+        "e57",
+        "parquet",
+        "arrow_ipc",
+        "openvdb",
+        "usd",
+        "usdz",
+    ):
+        assert sceneio.capabilities(format_id).available
 
 
 def test_native_feature_manifest_reads_compiled_extension_state(monkeypatch):

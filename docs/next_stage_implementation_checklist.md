@@ -5117,6 +5117,57 @@ the optional MIT-licensed Zarr/numcodecs provider. SceneIO owns validation,
 directory replacement, capability reporting, wheel smoke, benchmarks, and
 v2/v3 oracle parity. The NumPy-only base install is unchanged.
 
-Next implementation unit: TIFF CV rasters, followed by E57 and
-Parquet/Arrow. USD/USDZ and OpenVDB remain later optional-provider waves;
-policy-gated image/geometry codecs remain outside the active queue.
+## 67-format optional-provider closure
+
+- [x] Keep stable format contracts in repository-owned adapters while using
+      established permissive providers for their optimized storage kernels.
+- [x] Add bounded TIFF CV raster, mask, and grayscale-stack support through
+      tifffile with provider cross-reads and atomic writes.
+- [x] Add bounded single-scan E57 support through pye57/libE57Format with
+      position, intensity, RGB, pose, and invalid-point parity.
+- [x] Add numeric Parquet and Arrow IPC tables through PyArrow, including
+      fixed-width vector columns, inspection, and Parquet column selection.
+- [x] Add bounded scalar float32 OpenVDB through TinyVDB and preserve the
+      exact packaged template source identity.
+- [x] Add bounded static mesh USD and aligned USDZ through TinyUSDZ with
+      deterministic repository-owned writers and hierarchy-preserving reads.
+- [x] Keep the base installation NumPy-only; provider imports remain lazy and
+      capability reporting distinguishes installed from unavailable extras.
+- [x] Add provider license/notice files, dependency inventory checks, public
+      exports, registry contracts, installed-surface smoke, and benchmark rows.
+- [x] Prove USD inspection does not construct a full `MeshScene`.
+- [x] Record the three-run benchmark capture in `bench/BASELINE.md`.
+- [x] Pass the focused integration gate, complete local suite, Ruff,
+      installed-surface smoke, and `git diff --check`.
+- [x] Complete the resource/lifetime, format-correctness, and test-soundness
+      review and commit the green unit.
+- [ ] User-trigger the nonpublishing Linux/macOS/Windows optional-package
+      workflow before treating these providers as cross-platform qualified.
+
+The bounded implementations close the requested format ids. Broader
+multi-series TIFF, multi-scan E57, nested/nullable Arrow, multi-grid or
+transformed OpenVDB, and composed/animated/material USD semantics are explicit
+future profiles, not silent fallbacks.
+
+Local closure evidence:
+
+- the exact collection has 4,049 nodes; local MSVC passes 4,044 with five
+  documented optional skips, all 79 focused TIFF/E57/Arrow/OpenVDB/USD tests
+  pass, Ruff and `git diff --check` are clean, and the manifest-driven
+  installed-surface smoke returns `2`;
+- the three-run scale-1 provider comparison covers all seven new file-format
+  ids and is recorded in `bench/BASELINE.md`; the 67-row qualification ledger
+  has 50 timed paths, 17 reviewed exemptions, and normalized SHA-256
+  `5941120e40ce72d174222c939698b11c318fae3d1e2e5d993e7eb7f0e1e8481f`;
+- the resource/lifetime review confirms provider handles and temporary paths
+  are closed on every exit, Arrow IPC and OpenVDB provider buffers are copied
+  before closure, and retained TIFF, E57, Arrow, OpenVDB, USD, and USDZ
+  records remain valid after source removal and collection;
+- the format-correctness review added exact E57 valid-point inspection counts,
+  refusal of nonintegral RGB values, a USD inspection path that does not build
+  `MeshScene`, and a pre-replacement OpenVDB active-voxel preservation guard;
+- the test-soundness review confirms direct-provider writes are read by
+  SceneIO, SceneIO writes are read directly by the providers, unsupported
+  semantics refuse, existing destinations survive provider failure, optional
+  imports stay lazy, and historical native-family evidence remains a tested
+  subsequence of the expanded registry.

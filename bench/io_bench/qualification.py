@@ -105,6 +105,16 @@ COMPARISON_QUALIFICATIONS = MappingProxyType(
             "trimesh",
             "bench/io_bench/oracles/meshes.py",
         ),
+        "usd": _timed(
+            "TinyUSDZ",
+            "bench/io_bench/oracles/containers.py",
+            runner_kind="path",
+        ),
+        "usdz": _timed(
+            "TinyUSDZ",
+            "bench/io_bench/oracles/containers.py",
+            runner_kind="path",
+        ),
         "ply": _timed(
             "Open3D",
             "bench/io_bench/oracles/points.py",
@@ -305,6 +315,31 @@ COMPARISON_QUALIFICATIONS = MappingProxyType(
         ),
         "zarr": _timed(
             "zarr-python",
+            "bench/io_bench/oracles/containers.py",
+            runner_kind="path",
+        ),
+        "tiff": _timed(
+            "Pillow TIFF",
+            "bench/io_bench/families/containers.py",
+            runner_kind="path",
+        ),
+        "e57": _timed(
+            "pye57/libE57Format",
+            "bench/io_bench/oracles/containers.py",
+            runner_kind="path",
+        ),
+        "parquet": _timed(
+            "Apache Arrow",
+            "bench/io_bench/oracles/containers.py",
+            runner_kind="path",
+        ),
+        "arrow_ipc": _timed(
+            "Apache Arrow",
+            "bench/io_bench/oracles/containers.py",
+            runner_kind="path",
+        ),
+        "openvdb": _timed(
+            "TinyVDB",
             "bench/io_bench/oracles/containers.py",
             runner_kind="path",
         ),

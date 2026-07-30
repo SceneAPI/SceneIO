@@ -76,16 +76,22 @@ artifacts vocabulary — wire identity unchanged.
 
 ### Compiled format I/O — `read` / `write` / `inspect` / `read_partial`
 
-The lazy-loaded compiled core and repository-owned adapters read and write 59
+The lazy-loaded compiled core and repository-owned adapters read and write 67
 image, image-sequence, depth, tensor,
 point-cloud, Gaussian, mesh/scene, pose/state, reconstruction, calibration,
-graph, feature-database, and scientific-container formats. HDF5 and the
-documented hloc feature/match layouts use the optimized upstream `h5py`
-storage engine as an optional dependency:
+graph, feature-database, and scientific-container formats. Stable format
+contracts stay repository-owned; optional permissive providers supply their
+established storage kernels for HDF5/hloc, Zarr v2/v3, TIFF, E57,
+Parquet/Arrow IPC, OpenVDB, and USD/USDZ:
 
 ```console
-uv pip install "sceneio[hdf5]"
+uv pip install "sceneio[hdf5,zarr,tiff,e57,arrow,openvdb,usd]"
 ```
+
+These extras are lazy and independent; the base runtime remains NumPy-only.
+The accepted profiles are intentionally bounded and reject semantics the
+corresponding SceneIO record cannot preserve. See
+[`docs/format_coverage.md`](docs/format_coverage.md) for the exact mapping.
 
 `sceneio.inspect(path)` returns an immutable `Inspection` with shape, dtype,
 channels, repeated-record counts, and format-specific scalar metadata without

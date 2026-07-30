@@ -20,11 +20,15 @@ from pathlib import Path
 
 from sceneio import _core
 from sceneio.colmap_db import ColmapDatabaseConversionReport
+from sceneio.io._arrow import write_arrow_ipc, write_parquet
 from sceneio.io._depth import DepthEncoding, inspect_depth, read_depth, write_depth
 from sceneio.io._hdf5 import HlocFeatureStore, HlocMatchStore
 from sceneio.io._inspection import inspect_codec
 from sceneio.io._inspectors.model import ArrayInspection, Inspection
+from sceneio.io._openvdb import write_openvdb
 from sceneio.io._registry.adapters import _file_sink_writer, _mmap_reader
+from sceneio.io._tiff import write_tiff
+from sceneio.io._usd import write_usd, write_usdz
 from sceneio.io._zarr import write_zarr
 from sceneio.io.registry import (
     REGISTRY,
@@ -638,8 +642,14 @@ __all__ = [
     "read_partial",
     "register",
     "write",
+    "write_arrow_ipc",
     "write_colmap_db",
     "write_depth",
     "write_flow",
+    "write_openvdb",
+    "write_parquet",
+    "write_tiff",
+    "write_usd",
+    "write_usdz",
     "write_zarr",
 ]

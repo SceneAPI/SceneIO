@@ -3528,3 +3528,52 @@ took 2.784 ms (1.83x). Full-read traced allocation was 3.1 MB versus 0.1 MB
 for both bounded paths. This verifies that the SceneIO schema layer remains
 close to the upstream provider while the requested partial and inspection
 paths avoid full-array materialization.
+
+### TIFF, E57, Arrow, OpenVDB, and USD provider wave (2026-07-30)
+
+The final optional-provider wave was measured locally on MSVC with three
+median runs. TIFF, E57, Parquet/Arrow IPC, and USD/USDZ use scale-1 generated
+fixtures. TinyVDB 0.9's sparse builder is measured with 4,096 active voxels,
+the largest regular fixture retained by this provider path without loss:
+
+```powershell
+.venv/Scripts/python.exe bench/bench_io.py --runs 3 --scale 1 `
+  --only tiff --only e57 --only parquet --only arrow_ipc `
+  --only openvdb --only usd --only usdz `
+  --json build/provider-wave-scale1.json
+```
+
+| codec | payload/file MB | SceneIO write/read MB/s | direct provider write/read MB/s | inspection gain |
+|---|---:|---:|---:|---:|
+| `tiff` | 3.1 / 3.1 | 1,832 / 2,354 | 1,399 / 1,534 | 5.20x |
+| `e57` | 5.0 / 5.0 | 129 / 143 | 135 / 160 | 4.28x |
+| `parquet` | 18.5 / 16.8 | 348 / 453 | 382 / 563 | 252.36x |
+| `arrow_ipc` | 18.5 / 18.4 | 2,938 / 1,608 | 3,348 / 3,115 | 13.49x |
+| `openvdb` | 0.066 / 0.041 | 15 / 252 | 30 / 283 | 0.92x |
+| `usd` | 3.2 / 6.2 | 11 / 12 | 5 / 12 | 1.00x |
+| `usdz` | 3.2 / 6.2 | 11 / 12 | 6 / 13 | 1.00x |
+
+Parquet named-column selection took 3.037 ms versus 40.807 ms for the full
+read (13.44x) and materialized 1.6 MB rather than 18.4 MB of traced Python
+storage. TIFF, E57, Parquet, and Arrow inspection reduced traced allocation
+from 3.2/16.0/18.4/18.4 MB to values that round to 0.0 MB. USD inspection must
+still parse and evaluate the provider stage, so it is not a throughput win,
+but it no longer constructs a `MeshScene`: traced storage fell from 3.6 MB to
+0.2 MB for both USD and USDZ.
+
+SceneIO's E57 write peak is approximately 159 MB on this fixture; the direct
+pye57 path has the same provider-level allocation pattern, so this is recorded
+as upstream overhead rather than a repository wrapper regression. Arrow IPC
+decode also pays for owned `TensorDict` arrays while the direct PyArrow
+reference can expose provider-backed buffers; the value comparison remains
+bit exact.
+
+The first run of this capture found that TinyVDB silently retained only part
+of a larger sparse topology. SceneIO now checks the rebuilt active-voxel count
+before replacing the destination and raises a clear error if the provider
+cannot preserve every coordinate. The benchmark uses a provider-preserved
+4,096-voxel topology; the direct-provider writer does not perform this guard,
+which accounts for part of its measured write advantage. The 67-row
+qualification ledger has 50 timed paths and 17 reviewed exemptions, with
+normalized SHA-256
+`5941120e40ce72d174222c939698b11c318fae3d1e2e5d993e7eb7f0e1e8481f`.

@@ -457,10 +457,9 @@ def test_splat_parent_contract_metadata_is_exact():
         "tree": "62a844b198dfd05d5d6d435a8e2aa22bf6bb898e",
     }
     assert tuple(CONTRACT["family_ids"]) == SPLAT_IDS
-    assert CONTRACT["canonical_positions"] == {
-        format_id: CANONICAL_BUILTIN_IDS.index(format_id)
-        for format_id in SPLAT_IDS
-    }
+    assert tuple(
+        sorted(SPLAT_IDS, key=CANONICAL_BUILTIN_IDS.index)
+    ) == SPLAT_IDS
     benchmark = CONTRACT["benchmark_parent"]
     assert benchmark["captures"] == BENCHMARK_EVIDENCE["capture_count"] == 2
     assert benchmark["platform"] == BENCHMARK_EVIDENCE[
@@ -580,7 +579,7 @@ def test_splat_codec_definitions_match_parent_ast_and_descriptors():
     assert _codec_ast_hashes() == CONTRACT["codec_ast_sha256"]
     for format_id in SPLAT_IDS:
         codec = registry.REGISTRY[format_id]
-        position = CONTRACT["canonical_positions"][format_id]
+        position = CANONICAL_BUILTIN_IDS.index(format_id)
         assert registry.BUILTIN_DEFINITIONS[position] is codec
         descriptor = json.dumps(
             _codec_descriptor(codec),
@@ -597,12 +596,11 @@ def test_splat_definitions_preserve_order_positions_and_identity():
     assert isinstance(definitions, tuple)
     assert tuple(codec.id for codec in definitions) == SPLAT_IDS
     assert tuple(registry.REGISTRY) == CANONICAL_BUILTIN_IDS
-    assert CONTRACT["canonical_positions"] == {
-        format_id: CANONICAL_BUILTIN_IDS.index(format_id)
-        for format_id in SPLAT_IDS
-    }
+    assert tuple(
+        sorted(SPLAT_IDS, key=CANONICAL_BUILTIN_IDS.index)
+    ) == SPLAT_IDS
     for codec in definitions:
-        position = CONTRACT["canonical_positions"][codec.id]
+        position = CANONICAL_BUILTIN_IDS.index(codec.id)
         assert registry.REGISTRY[codec.id] is codec
         assert registry.BUILTIN_DEFINITIONS[position] is codec
 

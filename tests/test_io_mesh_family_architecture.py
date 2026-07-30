@@ -63,6 +63,7 @@ def _assert_mesh_family_imports(source: str) -> None:
         "sceneio",
         "sceneio.io._gltf",
         "sceneio.io._obj",
+        "sceneio.io._usd",
         "sceneio.io._registry.adapters",
         "sceneio.io._registry.model",
     }
@@ -89,6 +90,8 @@ def test_mesh_definitions_preserve_canonical_order_and_identity():
     assert definitions[3].record is _core.Mesh
     assert definitions[4].record is _core.MeshScene
     assert definitions[5].record is _core.MeshScene
+    assert definitions[6].record is _core.MeshScene
+    assert definitions[7].record is _core.MeshScene
 
 
 def test_mesh_bespoke_adapter_and_selector_identities_are_exact():
@@ -260,6 +263,8 @@ def test_repository_coverage_tracks_only_moved_mesh_inspectors():
         "off": "src/sceneio/io/_inspectors/meshes.py",
         "gltf": "src/sceneio/io/_gltf.py",
         "glb": "src/sceneio/io/_gltf.py",
+        "usd": "src/sceneio/io/_usd.py",
+        "usdz": "src/sceneio/io/_usd.py",
     }
 
 

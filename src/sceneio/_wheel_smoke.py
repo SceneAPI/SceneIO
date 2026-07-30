@@ -1364,6 +1364,136 @@ def _zarr_formats(root: Path) -> None:
     np.testing.assert_array_equal(sliced["dense/a"], tensors["dense/a"][1:3])
 
 
+def _tiff_formats(root: Path) -> None:
+    if not sceneio.capabilities("tiff").available:
+        return
+
+    pixels = np.arange(4 * 5 * 3, dtype=np.uint8).reshape(4, 5, 3)
+    image = _core.image(pixels, color_space="srgb")
+    path = root / "image.tiff"
+    sceneio.write(image, path)
+    assert sceneio.detect(path) == "tiff"
+    np.testing.assert_array_equal(sceneio.read(path).pixels, pixels)
+    assert sceneio.inspect(path).shape == pixels.shape
+
+
+def _e57_formats(root: Path) -> None:
+    if not sceneio.capabilities("e57").available:
+        return
+
+    positions = np.arange(18, dtype=np.float32).reshape(6, 3) / 8
+    colors = np.arange(18, dtype=np.uint8).reshape(6, 3)
+    intensity = np.linspace(0, 1, 6, dtype=np.float32)
+    cloud = _core.point_cloud(
+        positions,
+        colors=colors,
+        intensity=intensity,
+    )
+    path = root / "points.e57"
+    sceneio.write(cloud, path)
+    assert sceneio.detect(path) == "e57"
+    decoded = sceneio.read(path)
+    np.testing.assert_array_equal(decoded.positions, positions)
+    np.testing.assert_array_equal(decoded.colors, colors)
+    assert sceneio.inspect(path).count == 6
+
+
+def _columnar_formats(root: Path) -> None:
+    if not sceneio.capabilities("parquet").available:
+        return
+
+    arrays = {
+        "image_id": np.arange(5, dtype=np.uint32),
+        "xy": np.arange(10, dtype=np.float32).reshape(5, 2),
+    }
+    tensors = _core.tensor_dict(arrays, {"role": "features"})
+    for format_id, suffix in (
+        ("parquet", ".parquet"),
+        ("arrow_ipc", ".arrow"),
+    ):
+        path = root / f"features{suffix}"
+        sceneio.write(tensors, path, format=format_id)
+        assert sceneio.detect(path) == format_id
+        decoded = sceneio.read(path)
+        np.testing.assert_array_equal(decoded["xy"], arrays["xy"])
+        assert sceneio.inspect(path).count == 5
+        if format_id == "parquet":
+            selected = sceneio.read_partial(
+                path,
+                tensors=("image_id",),
+            )
+            np.testing.assert_array_equal(
+                selected["image_id"],
+                arrays["image_id"],
+            )
+
+
+def _openvdb_formats(root: Path) -> None:
+    if not sceneio.capabilities("openvdb").available:
+        return
+
+    coords = np.array([[0, 0, 0], [3, -2, 7]], dtype=np.int32)
+    values = np.array([0.25, -1.5], dtype=np.float32)
+    grid = _core.tensor_dict(
+        {"coords": coords, "values": values},
+        {"name": "tsdf"},
+    )
+    path = root / "volume.vdb"
+    sceneio.write(grid, path)
+    assert sceneio.detect(path) == "openvdb"
+    decoded = sceneio.read(path)
+    assert {
+        tuple(coord): value.view(np.uint32)
+        for coord, value in zip(
+            np.asarray(decoded["coords"]),
+            np.asarray(decoded["values"]),
+            strict=True,
+        )
+    } == {
+        tuple(coord): value.view(np.uint32)
+        for coord, value in zip(coords, values, strict=True)
+    }
+    assert sceneio.inspect(path).count == 2
+
+
+def _usd_formats(root: Path) -> None:
+    if not sceneio.capabilities("usd").available:
+        return
+
+    positions = np.array(
+        [[0, 0, 0], [1, 0, 0], [0, 1, 0]],
+        dtype=np.float32,
+    )
+    mesh = _core.mesh(
+        positions,
+        np.array([0, 3], dtype=np.uint64),
+        np.array([0, 1, 2], dtype=np.uint64),
+        coordinate_frame="opengl",
+    )
+    source = _core.mesh_scene(
+        [mesh],
+        np.array([0, 1], dtype=np.uint64),
+        node_meshes=np.array([0], dtype=np.int64),
+        node_child_offsets=np.array([0, 0], dtype=np.uint64),
+        node_children=np.empty(0, dtype=np.uint64),
+        node_local_transforms=np.eye(4, dtype=np.float64)[None],
+        node_names=["Triangle"],
+        scene_root_offsets=np.array([0, 1], dtype=np.uint64),
+        scene_roots=np.array([0], dtype=np.uint64),
+        default_scene=0,
+    )
+    for format_id, suffix in (("usd", ".usd"), ("usdz", ".usdz")):
+        path = root / f"scene{suffix}"
+        sceneio.write(source, path, format=format_id)
+        assert sceneio.detect(path) == format_id
+        decoded = sceneio.read(path)
+        np.testing.assert_array_equal(
+            decoded.primitive_at(0).positions,
+            positions,
+        )
+        assert sceneio.inspect(path).count == 1
+
+
 def _image_sequences(root: Path) -> None:
     assert sceneio.ImageSequence is _core.ImageSequence
     frames = root / "frames"
@@ -1712,6 +1842,8 @@ _SMOKE_RUNNERS: Mapping[str, Callable[[Path], None]] = MappingProxyType(
         "off": _stl_off,
         "gltf": _gltf_glb,
         "glb": _gltf_glb,
+        "usd": _usd_formats,
+        "usdz": _usd_formats,
         "ply": _point_formats,
         "pcd": _point_formats,
         "spz": _splats,
@@ -1760,6 +1892,11 @@ _SMOKE_RUNNERS: Mapping[str, Callable[[Path], None]] = MappingProxyType(
         "hloc_features": _hdf5_formats,
         "hloc_matches": _hdf5_formats,
         "zarr": _zarr_formats,
+        "tiff": _tiff_formats,
+        "e57": _e57_formats,
+        "parquet": _columnar_formats,
+        "arrow_ipc": _columnar_formats,
+        "openvdb": _openvdb_formats,
     }
 )
 

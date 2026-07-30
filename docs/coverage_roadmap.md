@@ -1,7 +1,7 @@
 # SceneIO — comprehensive coverage roadmap & execution checklist
 
 > Current shipped and branch-local status is tracked in `format_coverage.md`.
-> The status markers below have been reconciled to the live 60-codec registry;
+> The status markers below have been reconciled to the live 67-format registry;
 > broader checklist boxes remain open where a codec has not completed an
 > aspirational per-format or cross-platform gate. The authoritative
 > implementation sequence for the remaining formats is
@@ -156,10 +156,10 @@ are maintained only in
   adapters are implemented and validated under `sceneio.colmap`; their final
   exact-pushed-tree MSVC/GCC 10/AppleClang package validation passes in run
   `30470889876`.
-  The user-directed post-R6 format sequence is active. Animated WebP, APNG,
-  HDF5, and the documented hloc feature/match layouts are complete locally;
-  RTMV is next. The common optional-library feature pattern continues with
-  TIFF, E57, and Parquet/Arrow. The provisional
+  The user-directed post-R6 3D-CV format sequence is locally complete for
+  Animated WebP, APNG, HDF5/hloc, Zarr, TIFF, E57, Parquet/Arrow IPC,
+  OpenVDB, and USD/USDZ. RTMV remains the next bounded dataset layout if
+  requested. The provisional
   performance ledger remains a trigger-based optimization backlog rather than
   an active gate.
 
@@ -276,7 +276,7 @@ zero‑copy + convention tags.
 | `FlowField` | `vectors` HxWx2 f32 + component/axis/row/unit/invalid meta | typed `.flo` adapter | ✅ |
 | `PointCloud` | `xyz` Nx3, `rgb`/`rgb16`, `normals`, `intensity`, optional organized shape + viewpoint, optional lossless LAS waveform sidecar | PLY‑point, PCD, LAS/LAZ, E57, `.xyz` | ✅ |
 | `Mesh` | positions; ragged face offsets/indices; vertex/corner normals, UVs, RGBA; primitive/material ranges; coordinate metadata and transform | PLY‑mesh, OBJ, STL, OFF, glTF, USD | ✅ |
-| `MeshScene` | ordered `Mesh` primitives; mesh ranges/names; shared `MaterialSet`; node hierarchy and local transforms; scene roots/names/default | glTF/GLB, future USD | ✅ |
+| `MeshScene` | ordered `Mesh` primitives; mesh ranges/names; shared `MaterialSet`; node hierarchy and local transforms; scene roots/names/default | glTF/GLB, bounded USD/USDZ | ✅ |
 | `FeatureSet` | `keypoints` Nx{2,4,6} f32, polymorphic `descriptors` NxD with extractor dtype/dim/name presence, keypoint colors, scores, quality, image time/id/size, and absent-state metadata | HDF5/hloc, COLMAP DB | ✅ |
 | `MatchGraph` | ragged per-pair raw/verified `matches` Mx2 u32, optional score rows, source/retrieval provenance, `F/E/H` 3x3, config, relative pose, and optional recovered endpoint cameras | HDF5/hloc, COLMAP DB | ✅ |
 | `PairCorrespondences` / `CorrespondenceGraph` | indexed or coordinate matches, scores, two-view geometry, ordered pair validation, and per-image feature references | hloc and detector-free matching adapters | ✅ Python-neutral models |
@@ -329,7 +329,7 @@ Columns: **Ext/id** · **Record** · **Lib/oracle (license)** · **R/W** ·
 | ✅ PCD | `PointCloud` | independent parser + Open3D (MIT) | R+W | PCD 0.7 ASCII/binary/LZF `binary_compressed`; organization/viewpoint; binary point ranges |
 | ✅ LAS | `PointCloud` | laspy (BSD) | R+W | mmap; point formats 0‑10; internal waveform formats 4/5/9/10 retain a validated lossless sidecar |
 | ✅ LAZ | `PointCloud` | LAZperf 3.4.0 (Apache‑2.0/BSD‑3-Clause/BSD‑2-Clause) + laspy/lazrs oracle | R+W | formats 0‑3 and 6‑8; mmap, seekable direct sink, inspect, and chunk-aware point ranges; waveform/extra-byte/metadata extensions reject |
-| ⬜ E57 | `PointCloud` | libE57Format (BSD) | R+W | optional C lib |
+| ✅ E57 | `PointCloud` | pye57 (MIT) / libE57Format (BSL-1.0) | R+W | optional `sceneio[e57]`; one Cartesian scan, exact RGB8/intensity/pose, invalid-state filtering; inspection stays metadata-only unless exact valid-point counting requires the provider scan path |
 | ✅ `.xyz` / ✅ count-prefixed `.pts` | `PointCloud` | independent parser | R+W | `.pts` is a distinct count-validated grammar, not an alias |
 
 ### 3d. Meshes
@@ -341,7 +341,7 @@ Columns: **Ext/id** · **Record** · **Lib/oracle (license)** · **R/W** ·
 | ✅ OFF | `Mesh` | independent parser + trimesh (MIT) | R+W | polygon-preserving ASCII vertex variants with normals, UVs, and exact RGBA8; bounded face ranges |
 | ✅ glTF / GLB (plain) | `MeshScene` | cgltf (MIT); pygltflib + trimesh oracles | R+W | 2.0 JSON/external or data buffers and GLB BIN; sparse/strided accessors, nodes/scenes, PBR subset, mesh/primitive selectors; unsupported extensions/Draco reject |
 | policy-gated Draco glTF | `MeshScene` | Draco (Apache) | R+W | requires a separate patented-codec policy decision; never required for plain glTF/GLB |
-| ⬜ USD / USDZ | `Mesh`/scene | usd‑core/pxr (Apache) | R | heavyweight C lib; feature‑flag |
+| ✅ USD / USDZ | `MeshScene` | TinyUSDZ (Apache-2.0) | R+W | optional `sceneio[usd]`; static bounded CV scene; repository-owned streaming USDA and aligned USDZ writers; OpenUSD is not selected under the current license allow-list |
 
 ### 3e. Arrays / tensors / features
 | Format | Record | Lib / oracle | R/W | Notes |
@@ -352,7 +352,8 @@ Columns: **Ext/id** · **Record** · **Lib/oracle (license)** · **R/W** ·
 | ✅ hloc match layout | `HlocMatchStore` + native `MatchGraph` | documented hloc schema + h5py oracle | R+W | dense `matches0`, optional scores, exact endpoints/order/dtypes |
 | ✅ safetensors | `TensorDict` | safetensors (Apache) | R+W | JSON header, mmap tensors, name/slice selectors |
 | ✅ Zarr v2/v3 | `TensorDict` | zarr (MIT) + numcodecs (MIT) | R+W | optional `sceneio[zarr]`; numeric/bool directory stores, nested paths, text root attrs, metadata inspection, named reads, leading-axis slices, transactional replacement |
-| ⬜ Parquet / Arrow | table | pyarrow (Apache) | R+W | columnar; optional |
+| ✅ Parquet / Arrow IPC | `TensorDict` numeric table | PyArrow (Apache-2.0) | R+W | optional `sceneio[arrow]`; fixed-width numeric columns, metadata, mmap reads; Parquet named-column selection |
+| ✅ OpenVDB | sparse-grid `TensorDict` | TinyVDB (Apache-2.0) | R+W | optional `sceneio[openvdb]`; one identity-transform, zero-background float32 scalar grid with sparse coordinates and ZIP/active-mask output; rebuilt active count is verified and unsupported provider topologies refuse |
 
 ### 3f. Images (feature‑flagged C libs)
 | Format | Record | Lib / oracle | R/W | Notes |
@@ -362,7 +363,7 @@ Columns: **Ext/id** · **Record** · **Lib/oracle (license)** · **R/W** ·
 | ✅ PNG | `Image` (raw) + `DepthMap` (typed) | Pillow+pypng / lodepng (zlib) | R+W | 8/16‑bit, palette, interlace; explicit grayscale uint16 typed-depth adapter |
 | ✅ JPEG | `Image` | Pillow / stb (public domain) | R+W | lossy; gray/RGB read, RGB write |
 | ✅ Radiance HDR | `Image` | numpy RGBE / stb (public domain) | R+W | float32 RGB; lossy RGBE encode |
-| ⬜ TIFF | `Image` | libtiff (BSD‑like) | R+W | tiled/striped; multi‑page |
+| ✅ TIFF | `Image` / `Mask` / grayscale-stack `TensorDict` | tifffile (BSD-3-Clause) | R+W | optional `sceneio[tiff]`; bounded single-series uint8/uint16/float32/boolean profile, BigTIFF, alpha metadata |
 | ✅ WebP | `Image` | Pillow / libwebp (BSD) | R+W | lossy+lossless RGB/RGBA |
 | ✅ OpenEXR | `Image` (raw) + `DepthMap` (typed) | OpenEXR (BSD‑3) / tinyexr | R+W | HALF→FLOAT; PIZ/ZIP/RLE; explicit named scalar depth channel |
 | ✅ BMP / TGA | `Image` | stb_image (PD/MIT) + Pillow | R+W | BMP BI_RGB/bitfields/palette and TGA raw/RLE/palette; strict unsupported-variant guards |
@@ -416,8 +417,9 @@ maintained in `format_gap_implementation_plan.md`:
 3. meshes and vendorable LAZ (complete locally);
 4. lazy image directories, raw Y4M, animated WebP, and APNG (complete locally),
    followed by RTMV;
-5. independently gated TIFF/E57/Arrow integrations (HDF5/hloc complete);
-6. heavyweight scene/volume integrations and policy-gated codecs.
+5. optional-provider TIFF/E57/Arrow integrations (complete locally);
+6. bounded USD/USDZ and OpenVDB integrations (complete locally), with
+   broader scene/volume semantics and policy-gated codecs left explicit.
 
 **Gates:** (a) each optional C-library phase needs a pinned permissive source,
 tested disabled/enabled builds, a clean unavailable-feature path, and the full

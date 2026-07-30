@@ -721,7 +721,12 @@ def test_assembly_dependency_direction_and_import_delta_are_exact():
         "sceneio.io._inspectors.points",
         "sceneio.io._inspectors.reconstruction",
         "sceneio.io._inspectors.splats",
+        "sceneio.io._arrow",
+        "sceneio.io._e57",
         "sceneio.io._hdf5",
+        "sceneio.io._openvdb",
+        "sceneio.io._tiff",
+        "sceneio.io._usd",
         "sceneio.io._zarr",
         "sceneio.io._registry.assembly",
         "sceneio.io._registry.families.arrays",
@@ -730,6 +735,15 @@ def test_assembly_dependency_direction_and_import_delta_are_exact():
         "sceneio.io._registry.families.points",
         "sceneio.io._registry.families.reconstruction",
         "sceneio.io._registry.families.splats",
+        "sceneio.data",
+        "sceneio.data._validation",
+        "sceneio.data.calibration",
+        "sceneio.data.dense",
+        "sceneio.data.features",
+        "sceneio.data.pointcloud",
+        "sceneio.data.priors",
+        "sceneio.data.transforms",
+        "sceneio.data.views",
     }
     assert intentional_additions <= set(modules)
     parent_modules = [
@@ -1168,7 +1182,7 @@ def test_assembly_dependency_direction_and_import_delta_are_exact():
         "3c07bcefabbd0d9be935ffd22c5ef1e7f4642321"
     )
     assert benchmark_contract["rows"] == 56
-    assert len(CANONICAL_BUILTIN_IDS) == 60
+    assert len(CANONICAL_BUILTIN_IDS) == 67
     assert benchmark_contract["structural_projection_sha256"] == (
         "2295f9ab10dbf141c76ef6f7cbf4561ad656a1dde3cc7c8dcbff8b5bc23d6927"
     )

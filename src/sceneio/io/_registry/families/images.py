@@ -9,6 +9,7 @@ from sceneio.io._registry.adapters import (
     _mmap_selector_reader,
 )
 from sceneio.io._registry.model import Codec
+from sceneio.io._tiff import inspect_tiff, read_tiff, write_tiff
 
 IMAGE_CODECS: tuple[Codec, ...] = (
     Codec(
@@ -142,5 +143,41 @@ IMAGE_CODECS: tuple[Codec, ...] = (
         lossy=True,
         supported_features=("lossless", "lossy", "rgb", "rgba"),
         unsupported_features=("animation", "lossy_window"),
+    ),
+    Codec(
+        "tiff",
+        (".tif", ".tiff"),
+        read_tiff,
+        write_tiff,
+        record=None,
+        datatype="image_or_mask_or_stack",
+        magic=(b"II*\x00", b"MM\x00*", b"II+\x00", b"MM\x00+"),
+        inspect=inspect_tiff,
+        requires_features=("tifffile",),
+        supported_features=(
+            "classic_tiff",
+            "bigtiff",
+            "grayscale",
+            "rgb",
+            "rgba",
+            "boolean_mask",
+            "grayscale_stack",
+            "uint8",
+            "uint16",
+            "float32",
+            "associated_alpha",
+            "unassociated_alpha",
+            "metadata_only_inspect",
+            "transactional_path_write",
+        ),
+        unsupported_features=(
+            "multiple_series",
+            "pyramids",
+            "planar_separate",
+            "non_top_left_orientation",
+            "palette",
+            "cmyk",
+            "ome_semantics",
+        ),
     ),
 )

@@ -115,7 +115,10 @@
     "write_depth",
     "write_flow",
     "write_header",
+    "write_openvdb",
     "write_record",
+    "write_usd",
+    "write_usdz",
     "write_zarr"
   ],
   "sceneio_io_all": [
@@ -170,9 +173,15 @@
     "read_partial",
     "register",
     "write",
+    "write_arrow_ipc",
     "write_colmap_db",
     "write_depth",
     "write_flow",
+    "write_openvdb",
+    "write_parquet",
+    "write_tiff",
+    "write_usd",
+    "write_usdz",
     "write_zarr"
   ],
   "namespaces": [
@@ -234,9 +243,15 @@
     "read_flow",
     "read_partial",
     "write",
+    "write_arrow_ipc",
     "write_colmap_db",
     "write_depth",
     "write_flow",
+    "write_openvdb",
+    "write_parquet",
+    "write_tiff",
+    "write_usd",
+    "write_usdz",
     "write_zarr"
   ],
   "reexport_identity": {
@@ -288,9 +303,15 @@
     "read_flow": true,
     "read_partial": true,
     "write": true,
+    "write_arrow_ipc": true,
     "write_colmap_db": true,
     "write_depth": true,
     "write_flow": true,
+    "write_openvdb": true,
+    "write_parquet": true,
+    "write_tiff": true,
+    "write_usd": true,
+    "write_usdz": true,
     "write_zarr": true
   },
   "types": {
@@ -420,7 +441,8 @@
       "build_option": "SCENEIO_WITH_ARROW",
       "available": false,
       "formats": [
-        "parquet"
+        "parquet",
+        "arrow_ipc"
       ]
     },
     "avif": {

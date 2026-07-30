@@ -59,6 +59,8 @@ CODEC_CASE_DEFINITIONS = (
     _case("off", "buffer", ("faces",)),
     _case("gltf", "path", ("mesh_id", "primitive_id")),
     _case("glb", "buffer", ("mesh_id", "primitive_id")),
+    _case("usd", "path", ()),
+    _case("usdz", "path", ()),
     _case("ply", "buffer", ("points",)),
     _case("pcd", "buffer", ("points",)),
     _case("spz", "buffer", ()),
@@ -107,6 +109,11 @@ CODEC_CASE_DEFINITIONS = (
     _case("hloc_features", "path", ()),
     _case("hloc_matches", "path", ()),
     _case("zarr", "directory", ("tensors", "slices")),
+    _case("tiff", "path", ()),
+    _case("e57", "path", ()),
+    _case("parquet", "path", ("tensors",)),
+    _case("arrow_ipc", "path", ()),
+    _case("openvdb", "path", ()),
 )
 
 CASES_BY_ID = MappingProxyType(
@@ -148,7 +155,7 @@ def _validate_case_definitions() -> None:
         raise RuntimeError("cross-codec fixture kinds are incomplete")
     if (len(BUFFER_CASES), len(PATH_CASES), len(DIRECTORY_CASES)) != (
         50,
-        6,
+        13,
         4,
     ):
         raise RuntimeError("cross-codec fixture partitions changed")

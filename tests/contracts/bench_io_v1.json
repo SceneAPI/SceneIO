@@ -607,10 +607,10 @@
   },
   "r3_2_qualification": {
     "source": "bench/io_bench/qualification.py",
-    "builtin_count": 60,
-    "timed_count": 43,
+    "builtin_count": 67,
+    "timed_count": 50,
     "reviewed_exemption_count": 17,
-    "ledger_sha256": "e3c3ddfbaa846c0835076d786fc205e09e2f1c41a5aac73bfa2942ea400964f8"
+    "ledger_sha256": "5941120e40ce72d174222c939698b11c318fae3d1e2e5d993e7eb7f0e1e8481f"
   },
   "r3_2_runner_extraction": {
     "parent_commit": "cd322685d3de86931ec4264261924fb3c309b6c4",
@@ -782,6 +782,13 @@
     "hloc_features",
     "hloc_matches",
     "zarr",
+    "tiff",
+    "e57",
+    "parquet",
+    "arrow_ipc",
+    "openvdb",
+    "usd",
+    "usdz",
     "colmap_sparse",
     "colmap_sparse_txt",
     "image_sequence"

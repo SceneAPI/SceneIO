@@ -28,6 +28,9 @@ from sceneio.io._registry.families import images as image_family
 ROOT = Path(__file__).resolve().parents[1]
 CONTRACT = ROOT / "tests" / "contracts" / "io_image_inspection_v1.json"
 IMAGE_IDS = FAMILY_MEMBERS["images"]
+NATIVE_IMAGE_IDS = tuple(
+    json.loads(CONTRACT.read_text(encoding="utf-8"))["valid"]
+)
 
 
 def _absolute_imports_from_source(
@@ -64,6 +67,7 @@ def _assert_image_family_imports(source: str) -> None:
     } <= {
         "__future__",
         "sceneio",
+        "sceneio.io._tiff",
         "sceneio.io._registry.adapters",
         "sceneio.io._registry.model",
     }
@@ -113,22 +117,29 @@ def test_image_definitions_preserve_canonical_order_and_identity():
     definitions = image_family.IMAGE_CODECS
     assert isinstance(definitions, tuple)
     assert tuple(codec.id for codec in definitions) == IMAGE_IDS
-    start = CANONICAL_BUILTIN_IDS.index(IMAGE_IDS[0])
-    stop = start + len(IMAGE_IDS)
-    assert CANONICAL_BUILTIN_IDS[start:stop] == IMAGE_IDS
-    assert CANONICAL_BUILTIN_IDS[start - 1] == "safetensors"
-    assert CANONICAL_BUILTIN_IDS[stop] == "y4m"
-    assert tuple(registry.REGISTRY)[start:stop] == IMAGE_IDS
-    for offset, codec in enumerate(definitions):
+    assert tuple(
+        sorted(IMAGE_IDS, key=CANONICAL_BUILTIN_IDS.index)
+    ) == IMAGE_IDS
+    native_start = CANONICAL_BUILTIN_IDS.index(NATIVE_IMAGE_IDS[0])
+    native_stop = native_start + len(NATIVE_IMAGE_IDS)
+    assert CANONICAL_BUILTIN_IDS[native_start:native_stop] == (
+        NATIVE_IMAGE_IDS
+    )
+    for codec in definitions:
+        position = CANONICAL_BUILTIN_IDS.index(codec.id)
         assert registry.REGISTRY[codec.id] is codec
-        assert registry.BUILTIN_DEFINITIONS[start + offset] is codec
-        assert codec.record is _core.Image
-        assert codec.inspect is None
+        assert registry.BUILTIN_DEFINITIONS[position] is codec
+        if codec.id == "tiff":
+            assert codec.record is None
+            assert codec.inspect is not None
+        else:
+            assert codec.record is _core.Image
+            assert codec.inspect is None
 
 
 def test_image_adapter_closures_preserve_exact_native_targets():
     codecs = {codec.id: codec for codec in image_family.IMAGE_CODECS}
-    for format_id in IMAGE_IDS:
+    for format_id in NATIVE_IMAGE_IDS:
         codec = codecs[format_id]
         assert inspect.getclosurevars(codec.read).nonlocals == {
             "fn": getattr(_core, f"read_{format_id}")
@@ -146,7 +157,7 @@ def test_image_adapter_closures_preserve_exact_native_targets():
     }
     assert all(
         codecs[format_id].read_window is None
-        for format_id in set(IMAGE_IDS) - {"netpbm", "webp"}
+        for format_id in set(NATIVE_IMAGE_IDS) - {"netpbm", "webp"}
     )
 
 
@@ -172,6 +183,11 @@ def test_image_detection_and_lossy_fields_remain_exact():
         "hdr": ((".hdr",), (b"#?RADIANCE", b"#?RGBE"), True),
         "exr": ((".exr",), (b"\x76\x2f\x31\x01",), False),
         "webp": ((".webp",), (), True),
+        "tiff": (
+            (".tif", ".tiff"),
+            (b"II*\x00", b"MM\x00*", b"II+\x00", b"MM\x00+"),
+            False,
+        ),
     }
 
 
@@ -352,11 +368,13 @@ def test_repository_coverage_tracks_all_moved_image_inspectors():
     }
     assert owners == {
         format_id: "src/sceneio/io/_inspectors/images.py"
-        for format_id in IMAGE_IDS
+        for format_id in NATIVE_IMAGE_IDS
+    } | {
+        "tiff": "src/sceneio/io/_tiff.py",
     }
 
 
-@pytest.mark.parametrize("format_id", IMAGE_IDS)
+@pytest.mark.parametrize("format_id", NATIVE_IMAGE_IDS)
 def test_image_inspection_matches_parent_contract_and_full_read(
     tmp_path,
     format_id,
@@ -389,7 +407,7 @@ _MALFORMED = {
 }
 
 
-@pytest.mark.parametrize("format_id", IMAGE_IDS)
+@pytest.mark.parametrize("format_id", NATIVE_IMAGE_IDS)
 def test_malformed_image_inspection_matches_parent_contract(
     tmp_path,
     format_id,
@@ -421,7 +439,7 @@ def test_public_image_inspection_does_not_call_full_decoders(
     def fail(*_args, **_kwargs):
         raise AssertionError("full image decoder called during inspection")
 
-    for format_id in IMAGE_IDS:
+    for format_id in NATIVE_IMAGE_IDS:
         monkeypatch.setattr(_core, f"read_{format_id}", fail)
     for format_id, path in paths.items():
         info = sceneio.inspect(path, format=format_id)
@@ -451,4 +469,4 @@ def test_large_image_inspections_are_bounded_and_release_paths(tmp_path):
         renamed = path.with_suffix(".released")
         path.rename(renamed)
         renamed.unlink()
-    assert tuple(info.format for info in retained) == IMAGE_IDS
+    assert tuple(info.format for info in retained) == NATIVE_IMAGE_IDS

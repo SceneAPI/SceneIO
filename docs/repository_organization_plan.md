@@ -15,6 +15,16 @@ documentation checklist is
 
 ## Current checkpoint
 
+The post-R6 registry now contains 67 canonical formats: 60 file codecs, four
+directory codecs, and three multi-file codecs. The optional HDF5/hloc, Zarr,
+TIFF, E57, Arrow/Parquet, OpenVDB, and USD/USDZ integrations are isolated in
+one focused adapter module per provider. Registry families continue to own
+only immutable definitions; public dispatch, provider imports, and format
+logic do not leak into family assembly. Stable public behavior therefore
+remains repository-owned while established providers supply their optimized
+storage kernels. The live 67-row benchmark qualification and performance
+ledgers, rather than the historical evidence below, govern new work.
+
 The live 54-codec benchmark-structure contract is distinct from immutable
 50-codec R2/R3 family evidence. Commit `952bb8d` produced matching hosted
 Ubuntu and local MSVC 54-row captures with normalized SHA-256

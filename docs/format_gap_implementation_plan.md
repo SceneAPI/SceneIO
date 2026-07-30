@@ -8,24 +8,23 @@
   checkpoint closes at packaged source `2253e0f`; exact-head runs
   `30469273173`, `30469271293`, and build-only package run `30470889876`
   pass with publication skipped.
-- **Current local checkpoint:** HDF5 plus the documented hloc feature and
-  match layouts are implemented as codecs 57-59, and Zarr v2/v3 numeric
-  directory stores are codec 60. SceneIO owns the schemas,
-  validation, models, detection, metadata inspection, HDF5 named/hyperslab
-  reads, and atomic replacement; optimized h5py is an optional
-  `sceneio[hdf5]` provider and independent oracle. The prior APNG 56-codec
-  checkpoint remains its historical evidence. Zarr uses the separately
-  installed MIT-licensed optimized provider while keeping the base install
-  NumPy-only. Full local and cross-platform evidence is recorded as the unit
-  closes; cross-platform package execution remains user-gated.
-- **Current program gate:** the user-directed lean format wave is active.
+- **Current local checkpoint:** the live registry has 67 formats. HDF5/hloc,
+  Zarr v2/v3, TIFF, E57, Parquet/Arrow IPC, OpenVDB, and USD/USDZ are
+  implemented through repository-owned adapters around optimized optional
+  permissive providers. SceneIO owns schemas, validation, models, detection,
+  inspection, partial-read policy, and transactional replacement. Direct
+  provider producer/consumer tests and benchmark comparisons cover every
+  accepted profile; the NumPy-only base install is unchanged. Cross-platform
+  optional-extra package execution remains user-gated.
+- **Current program gate:** the user-directed lean 3D-CV format wave is in its
+  final local verification/documentation stage.
   Exhaustive backend comparison remains trigger-based, not a prerequisite for
   closing a verified codec unit.
 - **Scope:** close every unblocked format gap declared by SceneIO's coverage
   documents without reimplementing the 0.2.0 codec tier.
 
 This plan is subordinate to the current shipped-state inventory in
-`format_coverage.md` and owns the **active dependency queue** for future
+`format_coverage.md` and records the **active dependency queue** used for this
 implementation. Completed execution evidence is indexed under
 [`plans/completed/`](plans/completed/README.md). `coverage_roadmap.md` owns
 policy and future sequencing; Phase G0 below records the mechanism that keeps
@@ -206,14 +205,14 @@ exit gate and the validation matrix in section 8 both pass.
 |---|---|---|
 | Reconstruction and pose | — | BAL, COLMAP database, EuRoC state CSV, g2o |
 | Splat | — | SuperSplat compressed PLY, PlayCanvas SOG v2, and KSplat v0.1 |
-| Point cloud | E57; optional future LAZ waveform/extra-byte/COPC extensions | count-prefixed PTS, generic point PLY, PCD, plain-LAS waveform sidecars for formats 4/5/9/10, and standard LAZ formats 0-3/6-8 |
-| Mesh | USD/USDZ; optional Draco is policy-gated | generic mesh PLY, OBJ/MTL, STL, OFF, and plain glTF/GLB |
-| Tensor/feature/table | Zarr v2/v3, Parquet | safetensors, HDF5, hloc features/matches, COLMAP features/matches |
-| Image and depth | TIFF | BMP, TGA, typed PFM depth, typed PNG depth, typed scalar EXR depth, scalar DMB |
+| Point cloud | optional future LAZ extra-byte/COPC extensions | count-prefixed PTS, generic point PLY, PCD, E57, plain-LAS waveform sidecars for formats 4/5/9/10, and standard LAZ formats 0-3/6-8 |
+| Mesh | broader composed/material/animated USD; optional Draco is policy-gated | generic mesh PLY, OBJ/MTL, STL, OFF, plain glTF/GLB, and bounded static USD/USDZ |
+| Tensor/feature/table | broader Arrow nested/null/string schemas | safetensors, HDF5, hloc features/matches, COLMAP features/matches, Zarr v2/v3, Parquet, and Arrow IPC |
+| Image and depth | TIFF pyramids/multiple series and optional metadata extraction | BMP, TGA, TIFF bounded CV rasters/masks/stacks, typed PFM depth, typed PNG depth, typed scalar EXR depth, scalar DMB |
 | Optical flow | — | compiled `FlowField` plus typed FLO |
 | Calibration | — | OpenCV YAML/XML, ROS `camera_info`, Kalibr YAML |
 | Sequence/dataset | APNG, RTMV layout | lazy image directories, raw planar Y4M, and animated WebP |
-| Volumetric/niche | OpenVDB | — |
+| Volumetric/niche | broader multi-grid/vector/transformed OpenVDB | bounded single sparse float32 OpenVDB grid |
 | Policy-gated | AVIF, JPEG-XL, Draco compression | — |
 
 ## 3. Architecture work that precedes codec growth
@@ -1614,27 +1613,36 @@ bytes and the configuration is fixed.
 
 #### G6.2 USD/USDZ
 
-- Add the minimal `Scene` contract first.
-- Build OpenUSD behind `SCENEIO_WITH_USD`.
-- Start with mesh/camera/node-transform read support.
-- Do not flatten variants, instancing, animation, materials, or composition
-  arcs unless represented explicitly.
-- USDZ packaging must be deterministic if write support is offered.
-- Oracle against usd-core/PXR in test environments.
+**Status: complete for the bounded static mesh-scene profile.**
+
+- Use the existing hierarchy-preserving `MeshScene` rather than add a second
+  overlapping scene record.
+- Read static mesh, scope, and transform hierarchy through optional TinyUSDZ.
+- Write deterministic streaming USDA and 64-byte-aligned, stored USDZ
+  packages through repository-owned code.
+- Reject variants, instancing, animation, materials, composition arcs,
+  subdivision surfaces, and other unrepresented semantics.
+- Cross-read in both directions with TinyUSDZ. Current OpenUSD is not selected
+  because its license falls outside the project's explicit allow-list.
 
 #### G6.3 OpenVDB
 
-- Add `SparseGrid` with background value, active values, transform, dtype, and
-  grid metadata.
-- Build OpenVDB behind `SCENEIO_WITH_OPENVDB`.
-- Start with scalar numeric grids; vector/point grids require explicit record
-  support.
-- Inspect grid names, bounds, transforms, dtypes, and active voxel counts.
-- Partial reads select a grid and optional index-space window.
-- Oracle against OpenVDB Python bindings.
+**Status: complete for the bounded scalar sparse-grid profile.**
 
-G6 does not enter default wheels until build size, startup behavior, and
-platform availability are measured and accepted.
+- Map integer XYZ coordinates and float32 active values to
+  `TensorDict(coords, values)` with explicit schema/name attributes.
+- Accept one zero-background, identity-transform scalar grid; reject
+  vector/point grids, multiple grids, and transformed grids.
+- Inspect name, bounds, class, dtype, and active voxel count without
+  materializing sparse values.
+- Read and write through optional Apache-2.0 TinyVDB, using a provenance-pinned
+  upstream float-grid seed.
+- Check the rebuilt active count before destination replacement. TinyVDB 0.9
+  can decline larger or dispersed topologies; SceneIO raises instead of
+  accepting voxel loss.
+
+G6 stays optional. The user-triggered package matrix must still establish
+artifact size, startup behavior, and platform availability before release.
 
 ### G7 — Policy-gated image/compression formats
 
@@ -1986,8 +1994,8 @@ The work should ship in small releases rather than one long-lived branch:
 4. **0.6 — scientific optional libraries**
    - HDF5/hloc, TIFF, E57, and Parquet with off/on wheel configurations.
 5. **0.7 — chunked and heavyweight ecosystems**
-   - Zarr numeric CV stores are complete; USD/USDZ and OpenVDB follow when
-     their record contracts and optional-provider footprints pass acceptance.
+   - Zarr numeric CV stores and bounded USD/USDZ and OpenVDB profiles are
+     complete locally; the optional-provider package matrix remains.
 6. **Policy release**
    - AVIF/JPEG-XL/Draco only after the explicit G7 decision.
 
@@ -2017,8 +2025,8 @@ The critical path is:
 ```text
 G0 -> Mesh -> PLY/OBJ/STL/OFF -> glTF
 G0 -> FeatureSet/MatchGraph -> COLMAP DB -> HDF5/hloc
-G0 -> optional-feature build matrix -> HDF5/TIFF/E57/Arrow -> full wheels
-G0 -> Scene/SparseGrid scope -> USD/OpenVDB
+G0 -> HDF5/TIFF/E57/Arrow adapters -> user-triggered optional-package matrix
+G0 -> MeshScene/TensorDict profiles -> USD/OpenVDB -> package acceptance
 ```
 
 Safetensors, PCD, DMB, and the small pose/calibration formats can proceed after
@@ -2277,18 +2285,19 @@ lane before starting the next unit.
    existing image, depth, transform, and lazy-path codecs; do not duplicate
    raster decoders. Inspection and selected-frame reads remain metadata/path
    bounded.
-8. **Common optional-library substrate — Python-extra path complete.**
-   HDF5/hloc establish explicit unavailable/available capability state,
-   lazy provider import, license hooks, wheel smoke, and a NumPy-only base.
-   Native-library formats still need the equivalent `SCENEIO_WITH_*` pattern.
-9. **Optional scientific formats, one dependency wave at a time.**
-   HDF5 plus hloc are complete locally; land TIFF, E57, then Parquet/Arrow.
-   Each remaining wave needs off/on
-   builds, independent oracle parity, streaming/partial tests, artifact-size
-   accounting, and all three compilers before the next library begins.
-10. **Chunked and heavyweight formats.**
-   Zarr v2/v3 numeric CV stores are complete. Define `Table`, general `Scene`,
-   and `SparseGrid` records before Parquet/Arrow, USD/USDZ, and OpenVDB.
+8. **Common optional-library substrate — complete locally.**
+   HDF5/hloc, TIFF, E57, Arrow/Parquet, OpenVDB, and USD/USDZ expose explicit
+   unavailable/available capability state, lazy provider imports, attribution
+   hooks, installed-surface smoke, and an unchanged NumPy-only base.
+9. **Optional scientific formats — bounded profiles complete locally.**
+   HDF5 plus hloc, TIFF, E57, and Parquet/Arrow IPC have independent provider
+   cross-reads, atomic writes, inspection, and strict schema/profile guards.
+   The remaining gate is the user-triggered three-platform package workflow.
+10. **Chunked and heavyweight formats — bounded profiles complete locally.**
+   Zarr v2/v3 maps numeric stores to `TensorDict`; a scalar identity-transform
+   OpenVDB profile maps to sparse `TensorDict` coordinates and values; static
+   mesh USD/USDZ maps to `MeshScene`. Broader provider semantics remain
+   explicit future extensions rather than implicit support.
 11. **Cross-repository vocabulary closure.**
    Assign stable wire/DataType ids for the branch-local records in SceneAPI
    Phase C without changing the already working SceneIO record ABI.
@@ -2349,40 +2358,43 @@ source-closure changes each require a fresh build-only wheel-matrix run.
 
 HDF5 and both hloc layouts are complete through the optional h5py provider,
 with the future C-native feature id retained only as a comparison seam. The
-remaining order is:
+bounded TIFF, E57, and Parquet/Arrow IPC profiles are also complete locally:
 
-1. TIFF;
-2. E57;
-3. Parquet plus the canonical `Table` record.
+1. TIFF maps unambiguous numeric CV rasters, masks, and grayscale stacks to
+   existing records through the optimized tifffile provider.
+2. E57 maps one Cartesian scan, optional intensity/RGB, pose, and invalid-point
+   filtering to `PointCloud` through pye57/libE57Format. Inspection reads only
+   metadata for ordinary scans and uses the provider scan path when an
+   invalid-state field must be counted exactly.
+3. Parquet and Arrow IPC map numeric scalar and fixed-width vector columns to
+   `TensorDict`; Parquet supports named-column partial reads.
 
-Each library is pinned and statically built where the license and platform
-permit. Default wheels must continue importing and passing the original suite
-with every optional feature off. Full-feature wheels must expose accurate
-capabilities and pass oracle parity. The validation matrix covers both
-configurations on GCC 10, AppleClang, and MSVC and checks wheel dependencies,
-artifact size, import time, thread behavior, and clean process shutdown.
-
-TIFF starts with unambiguous strips/tiles, numeric sample formats, and explicit
-photometric handling. HDF5 starts with numeric datasets and hloc's documented
-layout. E57 starts with supported point scans. Parquet starts with the canonical
-column types represented by `Table`. Unsupported filters, schemas, null/union
-types, or metadata are rejected rather than coerced.
+The adapters own validation, atomic destination replacement, capability
+reporting, and public API stability. The providers own their established
+storage kernels. Independent provider-written and provider-read fixtures are
+the ground truth. Broader TIFF series/pyramid semantics, multiple E57 scans,
+and general Arrow nullable/nested schemas remain explicit follow-on profiles.
 
 ### 12.7 Wave F — chunked and heavyweight ecosystems
 
 1. Zarr v2/v3 numeric directory stores are complete over `TensorDict`, with
    independent zarr-python reads/writes, array selection, leading-axis slices,
    inspection, replacement, and v2/v3 marker detection.
-2. Define the minimal `Scene` contract before optional OpenUSD; start with
-   meshes, cameras, nodes, and transforms and reject unrepresented composition,
-   variants, instancing, and animation.
-3. Define `SparseGrid` before optional OpenVDB; begin with named scalar numeric
-   grids, transforms, background values, active bounds, and grid/window
-   selection.
+2. Static ASCII USD and aligned USDZ are complete over the existing
+   hierarchy-preserving `MeshScene`. The repository owns deterministic writes;
+   TinyUSDZ supplies the reader and independent cross-read/write oracle.
+   Composition, variants, instancing, animation, materials, and non-mesh prims
+   are rejected because the bounded profile cannot represent them exactly.
+3. A single zero-background, identity-transform scalar float32 OpenVDB grid is
+   complete over `TensorDict(coords, values)`. The repository owns the stable
+   adapter and packaged template provenance; TinyVDB supplies the storage
+   kernel and independent oracle.
 
-No remaining G6 format enters release wheels until correctness passes and
-wheel size, startup cost, platform support, and dependency closure are
-measured and explicitly accepted.
+Current OpenUSD releases use a license outside this project's explicit
+allow-list, so OpenUSD is not a runtime dependency. TinyUSDZ is Apache-2.0.
+The optional providers still require the user-triggered Linux/macOS/Windows
+package workflow before release qualification; in particular, TinyUSDZ's
+Linux runtime floor must be checked against the wheel target.
 
 ### 12.8 Wave G — explicit policy decisions
 

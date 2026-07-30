@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from sceneio import _core
+from sceneio.io._e57 import inspect_e57, read_e57, write_e57
 from sceneio.io._registry.adapters import (
     _file_sink_writer,
     _mmap_reader,
@@ -137,6 +138,37 @@ POINT_CODECS: tuple[Codec, ...] = (
             "waveform",
             "extra_bytes",
             "vlr_metadata",
+        ),
+    ),
+    Codec(
+        "e57",
+        (".e57",),
+        read_e57,
+        write_e57,
+        record=_core.PointCloud,
+        datatype="point_cloud",
+        magic=(b"ASTM-E57",),
+        inspect=inspect_e57,
+        requires_features=("pye57",),
+        supported_features=(
+            "single_scan",
+            "cartesian_float32_exact",
+            "rgb8",
+            "float32_intensity",
+            "invalid_point_filtering",
+            "scan_pose",
+            "metadata_only_inspect",
+            "transactional_path_write",
+        ),
+        unsupported_features=(
+            "multiple_scans",
+            "spherical_coordinates",
+            "organized_row_column",
+            "normals",
+            "rgb16",
+            "images",
+            "point_grouping",
+            "non_float32_exact_coordinates",
         ),
     ),
 )

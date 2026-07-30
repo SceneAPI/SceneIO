@@ -419,8 +419,9 @@ def test_sequence_family_and_registry_reload_keep_live_access():
 
         for _ in range(2):
             registry = importlib.reload(registry)
-            assert tuple(registry.REGISTRY)[35:41] == (
-                "webp",
+            ids = tuple(registry.REGISTRY)
+            start = ids.index("y4m")
+            assert ids[start : start + 5] == (
                 "y4m",
                 "animated_webp",
                 "apng",

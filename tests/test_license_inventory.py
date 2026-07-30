@@ -9,6 +9,8 @@ ROOT = Path(__file__).resolve().parents[1]
 LICENSES = ROOT / "LICENSES"
 
 EXPECTED_NOTICES = {
+    "apache-arrow-license.txt",
+    "apache-arrow-notice.txt",
     "cgltf.txt",
     "colmap.txt",
     "delvewheel.txt",
@@ -19,6 +21,7 @@ EXPECTED_NOTICES = {
     "lazperf.txt",
     "libjpeg-turbo-IJG.txt",
     "libjpeg-turbo.txt",
+    "libe57format.txt",
     "libwebp-patents.txt",
     "libwebp.txt",
     "lodepng.txt",
@@ -31,10 +34,16 @@ EXPECTED_NOTICES = {
     "nlohmann-json.txt",
     "numcodecs.txt",
     "opsiclear-colmap-mod.txt",
+    "pye57.txt",
+    "pyquaternion.txt",
     "sqlite.txt",
     "stb.txt",
     "tinyexr.txt",
     "tinyobjloader.txt",
+    "tifffile.txt",
+    "tinyusdz.txt",
+    "tinyvdb.txt",
+    "xerces-c-notice.txt",
     "zstd-source.txt",
     "zstd.txt",
     "zarr.txt",

@@ -7,7 +7,7 @@ from collections.abc import Callable, Collection
 from sceneio.io._registry.model import NativeFeatureCapabilities
 
 NATIVE_FEATURE_FORMATS = {
-    "arrow": ("parquet",),
+    "arrow": ("parquet", "arrow_ipc"),
     "avif": ("avif",),
     "draco": ("gltf", "glb"),
     "e57": ("e57",),

@@ -601,15 +601,14 @@ def test_reconstruction_definitions_preserve_order_contract_and_identity():
     assert tuple(codec.id for codec in definitions) == RECONSTRUCTION_IDS
     assert tuple(CONTRACT["family_ids"]) == RECONSTRUCTION_IDS
     assert tuple(registry.REGISTRY) == CANONICAL_BUILTIN_IDS
-    assert CONTRACT["canonical_positions"] == {
-        format_id: CANONICAL_BUILTIN_IDS.index(format_id)
-        for format_id in RECONSTRUCTION_IDS
-    }
+    assert tuple(
+        sorted(RECONSTRUCTION_IDS, key=CANONICAL_BUILTIN_IDS.index)
+    ) == RECONSTRUCTION_IDS
 
     operation_fields = ("read", "write", "read_image", "read_pair", "read_states")
     for codec in definitions:
         expected = CONTRACT["registry"][codec.id]
-        position = CONTRACT["canonical_positions"][codec.id]
+        position = CANONICAL_BUILTIN_IDS.index(codec.id)
         assert registry.REGISTRY[codec.id] is codec
         assert registry.BUILTIN_DEFINITIONS[position] is codec
         assert codec.record.__name__ == expected["record"]

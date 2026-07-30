@@ -31,7 +31,8 @@ from sceneio.io._registry.families import points as point_family
 ROOT = Path(__file__).resolve().parents[1]
 CONTRACT_PATH = ROOT / "tests" / "contracts" / "io_point_family_v1.json"
 CONTRACT = json.loads(CONTRACT_PATH.read_text(encoding="utf-8"))
-POINT_IDS = FAMILY_MEMBERS["points"]
+POINT_IDS = tuple(CONTRACT["family_ids"])
+ALL_POINT_IDS = FAMILY_MEMBERS["points"]
 
 
 def _absolute_imports(source: str) -> tuple[tuple[str, tuple[str, ...]], ...]:
@@ -110,18 +111,20 @@ def _normalized_inspection(info) -> dict[str, object]:
 def test_point_definitions_preserve_noncontiguous_order_and_identity():
     definitions = registry.POINT_CODECS
     assert isinstance(definitions, tuple)
-    assert tuple(codec.id for codec in definitions) == POINT_IDS
+    assert tuple(codec.id for codec in definitions) == ALL_POINT_IDS
     assert tuple(CONTRACT["family_ids"]) == POINT_IDS
     assert tuple(registry.REGISTRY) == CANONICAL_BUILTIN_IDS
-    assert CONTRACT["canonical_positions"] == {
-        format_id: CANONICAL_BUILTIN_IDS.index(format_id)
-        for format_id in POINT_IDS
-    }
+    assert tuple(
+        sorted(POINT_IDS, key=CANONICAL_BUILTIN_IDS.index)
+    ) == POINT_IDS
     for codec in definitions:
-        position = CONTRACT["canonical_positions"][codec.id]
+        position = CANONICAL_BUILTIN_IDS.index(codec.id)
         assert registry.REGISTRY[codec.id] is codec
         assert registry.BUILTIN_DEFINITIONS[position] is codec
-        assert codec.inspect is None
+        if codec.id == "e57":
+            assert codec.inspect is not None
+        else:
+            assert codec.inspect is None
 
 
 def test_point_family_is_staged_once_and_not_defined_inline():
@@ -147,7 +150,7 @@ def test_point_family_is_staged_once_and_not_defined_inline():
             and node.args
             and isinstance(node.args[0], ast.Constant)
         ):
-            assert node.args[0].value not in POINT_IDS
+            assert node.args[0].value not in ALL_POINT_IDS
 
 
 @pytest.mark.parametrize("format_id", POINT_IDS)
@@ -172,6 +175,7 @@ def test_point_family_modules_are_lower_layer_only():
     } <= {
         "__future__",
         "sceneio",
+        "sceneio.io._e57",
         "sceneio.io._registry.adapters",
         "sceneio.io._registry.model",
     }
@@ -282,11 +286,13 @@ def test_repository_coverage_tracks_all_point_inspectors():
     owners = {
         item["id"]: item["inspection_source"]
         for item in contract["codec"]
-        if item["id"] in POINT_IDS
+        if item["id"] in ALL_POINT_IDS
     }
     assert owners == {
         format_id: "src/sceneio/io/_inspectors/points.py"
         for format_id in POINT_IDS
+    } | {
+        "e57": "src/sceneio/io/_e57.py",
     }
 
 

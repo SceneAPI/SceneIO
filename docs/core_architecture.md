@@ -4,7 +4,7 @@ How the compiled core is organized, and **how to add a codec** — the two
 things that keep this expansible as the format list from
 `formats_survey.md` grows.
 
-> **Growth checkpoint:** the live registry has reached 60 codec ids. The
+> **Growth checkpoint:** the live registry has reached 67 format ids. The
 > format-focused native layer remains coherent, but registry, inspection,
 > benchmark, test-matrix, dependency, and binding wiring have outgrown a flat
 > layout. The behavior-preserving R3-R5 organization work and R6 source/package
@@ -16,9 +16,14 @@ things that keep this expansible as the format list from
 > evidence is in
 > [`next_stage_implementation_checklist.md`](next_stage_implementation_checklist.md#r6-closure-evidence).
 > The post-R6 COLMAP dense unit adds a ninth `dense` family, three records,
-> four buffer codecs, and a lazy workspace adapter. The current native
-> inventory is 41 codec registrations, 53 native/hybrid rows, and 17 records;
-> the older 50-codec and eight-family numbers below remain immutable evidence
+> four buffer codecs, and a lazy workspace adapter. The current inventory is
+> 55 native/hybrid rows, 12 Python-owned optional-provider rows, ten registry
+> families, and 17 compiled records. The optional-provider adapters are
+> isolated by family (`_hdf5`, `_zarr`, `_tiff`, `_e57`, `_arrow`,
+> `_openvdb`, `_usd`) and preserve the NumPy-only base import. The repository
+> owns their stable schema, validation, inspection, and public mapping while
+> established upstream libraries own optimized storage and parsing. The
+> older 50-codec and eight-family numbers below remain immutable evidence
 > for their named commits.
 >
 > R3.3 closes at `811cb0d` with normal run `30300122309` and
@@ -639,7 +644,7 @@ returns `ColmapDatabase`.
 | `primitive_id` | `glb`, `gltf` |
 | `slices` | `hdf5`, `safetensors`, `zarr` |
 | `states` | `euroc_state` |
-| `tensors` | `hdf5`, `safetensors`, `zarr` |
+| `tensors` | `hdf5`, `parquet`, `safetensors`, `zarr` |
 | `window` | `colmap_mvs_depth`, `colmap_mvs_normal`, `dmb`, `flo`, `netpbm`, `pfm`, `webp` |
 <!-- sceneio-partial-summary:end -->
 

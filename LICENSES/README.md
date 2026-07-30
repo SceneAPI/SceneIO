@@ -35,6 +35,14 @@ redistribution choice used by SceneIO is stated explicitly.
 | HDF5 | provider version selected by the separately installed h5py distribution | used through h5py; not bundled or linked into SceneIO distributions | permissive HDF5 license | [hdf5.txt](hdf5.txt) |
 | Zarr Python | optional dependency `>=3.1,<4` (3.2.1 locally validated) | separately installed optimized Zarr v2/v3 provider; not bundled in SceneIO distributions | MIT | [zarr.txt](zarr.txt) |
 | numcodecs | version selected by the separately installed Zarr distribution (0.16.5 locally validated) | separately installed compiled chunk-codec provider used by Zarr; not bundled in SceneIO distributions | MIT top-level terms; individual bundled codecs retain their upstream permissive terms in the provider distribution | [numcodecs.txt](numcodecs.txt) |
+| tifffile | optional dependency `>=2025.5` (2026.7.14 locally validated) | separately installed optimized TIFF provider; not bundled in SceneIO distributions | BSD-3-Clause | [tifffile.txt](tifffile.txt) |
+| pye57 | optional dependency `>=0.4.18,<0.5` (0.4.19 locally validated) | separately installed E57 provider; not bundled in SceneIO distributions | MIT | [pye57.txt](pye57.txt) |
+| libE57Format | version selected by the separately installed pye57 wheel | compiled into the separately installed pye57 provider; not bundled in SceneIO distributions | Boost Software License 1.0 | [libe57format.txt](libe57format.txt) |
+| pyquaternion | version selected by pye57 (0.9.9 locally validated) | separately installed pye57 runtime dependency; not bundled in SceneIO distributions | MIT | [pyquaternion.txt](pyquaternion.txt) |
+| Apache Xerces-C++ | provider version selected by the separately installed pye57 wheel (3.2 series locally validated) | shared library inside the separately installed pye57 provider; not bundled in SceneIO distributions | Apache-2.0 | [notice](xerces-c-notice.txt), [complete Apache-2.0 terms](apache-arrow-license.txt) |
+| Apache Arrow / PyArrow | optional dependency `>=18,<24` (23.0.1 locally validated) | separately installed optimized Parquet and Arrow IPC provider; not bundled in SceneIO distributions | Apache-2.0 | [license](apache-arrow-license.txt), [notice](apache-arrow-notice.txt) |
+| TinyVDB | optional dependency `>=0.9,<1` (0.9.0 locally validated) | separately installed OpenVDB provider; not bundled in SceneIO distributions; one upstream float-grid seed is packaged and fully replaced during writes | Apache-2.0 | [tinyvdb.txt](tinyvdb.txt), [seed provenance](../src/sceneio/io/_assets/openvdb_float_template.PROVENANCE.txt) |
+| TinyUSDZ | optional dependency `>=0.9.4,<1` (0.9.4 locally validated) | separately installed USD/USDA/USDC/USDZ parser used with SceneIO's repository-owned USDA/USDZ writer; not bundled in SceneIO distributions | Apache-2.0 with permissively licensed bundled components documented upstream | [tinyusdz.txt](tinyusdz.txt) |
 
 The complete Apache-2.0 terms in the root `LICENSE` also cover the
 Apache-licensed portion of LAZperf. Local integration and correctness changes
@@ -43,9 +51,10 @@ to vendored or fetched projects are documented beside their sources in
 
 NumPy is SceneIO's sole base Python runtime dependency, but it is installed as
 a separate distribution and is not copied or linked into SceneIO wheels.
-h5py/HDF5 and Zarr/numcodecs are separately installed only when their
-respective extras are selected; none is copied or linked into SceneIO wheels. Build
-tools and test-only oracle packages are otherwise not bundled. Delvewheel
+h5py/HDF5, Zarr/numcodecs, tifffile, pye57, PyArrow, TinyVDB, and TinyUSDZ
+are separately installed only when their respective extras are selected;
+none is copied or linked into SceneIO wheels. Build tools and test-only oracle
+packages are otherwise not bundled. Delvewheel
 itself is not bundled, but its generated Windows bootstrap and the verifier's
 exact-output fixture are distribution content, so its notice is included.
 The MSVC runtime sidecar is the platform-toolchain exception required by the

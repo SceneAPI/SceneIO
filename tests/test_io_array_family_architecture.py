@@ -117,12 +117,11 @@ def test_array_definitions_preserve_noncontiguous_order_and_identity():
     assert tuple(codec.id for codec in definitions) == ARRAY_IDS
     assert tuple(CONTRACT["family_ids"]) == ARRAY_IDS
     assert tuple(registry.REGISTRY) == CANONICAL_BUILTIN_IDS
-    assert CONTRACT["canonical_positions"] == {
-        format_id: CANONICAL_BUILTIN_IDS.index(format_id)
-        for format_id in ARRAY_IDS
-    }
+    assert tuple(
+        sorted(ARRAY_IDS, key=CANONICAL_BUILTIN_IDS.index)
+    ) == ARRAY_IDS
     for codec in definitions:
-        position = CONTRACT["canonical_positions"][codec.id]
+        position = CANONICAL_BUILTIN_IDS.index(codec.id)
         assert registry.REGISTRY[codec.id] is codec
         assert registry.BUILTIN_DEFINITIONS[position] is codec
         assert codec.inspect is None

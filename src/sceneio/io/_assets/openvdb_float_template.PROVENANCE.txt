@@ -1,0 +1,12 @@
+Source: tinyvdb upstream test data, data/sphere-div1.vdb
+Project: https://github.com/syoyo/tinyvdb
+Pinned commit: f3527f394d09f574fca650ba99648abd1f5b07f7
+Retrieved: 2026-07-30
+SHA-256: 3ed9464dd24336f9b9589b75267b00297b69e522e6c69c3cf6ab074b8db1f3c8
+License: Apache License 2.0 (see LICENSES/tinyvdb.txt)
+
+Purpose:
+TinyVDB 0.9.0 can replace an existing grid but cannot create a new VDB file
+from Python. SceneIO opens this upstream one-grid float fixture, replaces the
+entire grid with caller-provided sparse coordinates and values, and saves the
+result. No fixture voxels are retained in written files.

@@ -100,6 +100,22 @@ inspection_source = "src/sceneio/io/_gltf.py"
 wheel_smoke_case = "_gltf_glb"
 
 [[codec]]
+id = "usd"
+benchmark_case = "usd"
+source_suite = "tests/codecs/test_usd.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_usd.py"
+wheel_smoke_case = "_usd_formats"
+
+[[codec]]
+id = "usdz"
+benchmark_case = "usdz"
+source_suite = "tests/codecs/test_usd.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_usd.py"
+wheel_smoke_case = "_usd_formats"
+
+[[codec]]
 id = "ply"
 benchmark_case = "ply"
 source_suite = "tests/codecs/test_ply_point.py"
@@ -484,3 +500,45 @@ source_suite = "tests/codecs/test_zarr.py"
 documentation_row = "docs/format_coverage.md"
 inspection_source = "src/sceneio/io/_zarr.py"
 wheel_smoke_case = "_zarr_formats"
+
+[[codec]]
+id = "tiff"
+benchmark_case = "tiff"
+source_suite = "tests/codecs/test_tiff.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_tiff.py"
+wheel_smoke_case = "_tiff_formats"
+
+[[codec]]
+id = "e57"
+benchmark_case = "e57"
+source_suite = "tests/codecs/test_e57.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_e57.py"
+wheel_smoke_case = "_e57_formats"
+
+[[codec]]
+id = "parquet"
+benchmark_case = "parquet"
+source_suite = "tests/codecs/test_arrow_parquet.py"
+source_case_token = "parquet"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_arrow.py"
+wheel_smoke_case = "_columnar_formats"
+
+[[codec]]
+id = "arrow_ipc"
+benchmark_case = "arrow_ipc"
+source_suite = "tests/codecs/test_arrow_parquet.py"
+source_case_token = "arrow"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_arrow.py"
+wheel_smoke_case = "_columnar_formats"
+
+[[codec]]
+id = "openvdb"
+benchmark_case = "openvdb"
+source_suite = "tests/codecs/test_openvdb.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_openvdb.py"
+wheel_smoke_case = "_openvdb_formats"

@@ -23,6 +23,8 @@
       "off": "357019de27e2db592a95500b7dd90c3c2f5df6112ab0fad93f49af3c2bf7e95d",
       "gltf": "f72d60db7434ea47dcf43b830260df728fb92daa7044b1fe5a9862ba52365e2f",
       "glb": "9543a203f34f96bb63ad831c3bffc1d6890639293465d12693d8107f671d48cd",
+      "usd": "a3a128c99738093f126669d74e3e21e576aad8230ee9200ff9e816cd46c0822c",
+      "usdz": "0aaf5683fee6d124b0cf9b6a1b8fa82337f425b64edf75ef4e186f90f7277fae",
       "ply": "f51e4ce562dfa14df2034d67d90af2ca06f0edeed5a22eb7f477b2d254e66017",
       "pcd": "9bfa65079f1958945f74b18cf87740557a0b29b4e6202bd1c249b21c74d7f15a",
       "spz": "26eda7c4ef87c8d75e871b4ca25d36c36fa483004842988f05b81ead82a8f8b5",
@@ -70,7 +72,12 @@
       "hdf5": "33e66344c099145ee6e6cf2e7ea49ab7dfc5318b34ce5ad949b0c5facc802cb5",
       "hloc_features": "5f3d5916bc1a61b0b736f4ab86d26ee935f61a3b6f47e68d3d17bfed05cb637f",
       "hloc_matches": "7382dc0f72455e7c5908804a3843ba392c494578edec1454c9655f74d8f24d79",
-      "zarr": "0b87633299a5bc87d8224c6e1abb3bf56372e70a4970b6aaa67deabe94f20bd5"
+      "zarr": "0b87633299a5bc87d8224c6e1abb3bf56372e70a4970b6aaa67deabe94f20bd5",
+      "tiff": "0081bf989dd43ae44961631b2792838f8845a2188fe050147774b408b1cbe3a2",
+      "e57": "86309dcebb17d7c3ca1e8bfea11647bf145b2e7aed9d9e7e392b3593cbdb2ebc",
+      "parquet": "4bbafde29e2816f1a020bf8270c14339ebbe968bbd604e247fc5117355703f8b",
+      "arrow_ipc": "9235a5117ca19e295483feabd6426a13d0906335c514ad32ba7b5514e5848571",
+      "openvdb": "14ec776e14d5625e4df168452ce9304e4e0621cbca6d2508021683ae5cb01980"
     }
   },
   "operation_descriptors": {
@@ -155,6 +162,16 @@
         "inspect": "39635b24f1166351b91ba2cbf2f4587ce6ee1f1997910e0195ea08276bae67a5",
         "read_mesh": "9a7ee565654933905f540ea9821aa221579154fb2956feeea7a92b5d58235e86",
         "read_primitive": "258c28e8e15d3475b80441e00790c3443b4192d82dd3edd7b4b76b05b62e278b"
+      },
+      "usd": {
+        "read": "81b7e1bf6024dfabf3f68d7319a098dbe36e35752c4cf30d321bd8964a6e87a2",
+        "write": "84efc57f8f8701348a08f4319b267e03af9d39eaca538e9223e6a86d7df52f4c",
+        "inspect": "0c9f13a3d7086ee6b05776b607bbb7debb16d8314bdd59e546616c1bfef8dfd2"
+      },
+      "usdz": {
+        "read": "81b7e1bf6024dfabf3f68d7319a098dbe36e35752c4cf30d321bd8964a6e87a2",
+        "write": "84efc57f8f8701348a08f4319b267e03af9d39eaca538e9223e6a86d7df52f4c",
+        "inspect": "1f8be341d4da5d0b8c630ad87c2e8d7feed6b90b7f9ee24afad668ada4f462a8"
       },
       "ply": {
         "read": "94d18950b3761e8349ab5778a84ce4b8cf4daa18a020a41546aa232f899a7bec",
@@ -381,6 +398,32 @@
         "inspect": "fa403d0f9a31de82731972b54e407d7206c30a4937e85a8d8047175c1aa1e907",
         "read_tensors": "512f93ebbc7bf4fb609d7fe76d248aee339edd9774139da7373d827c8a6fbc98",
         "read_slices": "d4d84df43a99538af3b264b845490b08dcf04de4bcad8a637988e869ae3b5b23"
+      },
+      "tiff": {
+        "read": "75474b146aa206846dc2dd431fa84a7738e8ea0c043210af9bbe4b2063f92a49",
+        "write": "6802707c034ee54855bd29989f757e469ad4ef6bc742642d1a0fd55098958dd0",
+        "inspect": "065e620a76f3ad4cd61f125ec0d88c49a2db04d304de3b634cec6bbccdc29c77"
+      },
+      "e57": {
+        "read": "f7d2094ff7f9ce53452437bf92c634e9104d835305c036c034969fd116634bee",
+        "write": "5bb2923f40488d59025f62afa0b4ee7be4905807806ce61638f733a41cf75eff",
+        "inspect": "49e000c15a227f5dc564de40ce5153dfaa9cfb80c85895e00c16d7030f92f6c6"
+      },
+      "parquet": {
+        "read": "14e3b6778ed213786e8d8704ddbb6f6eefdf9edce5ead92e6cff5407c6fe7bc0",
+        "write": "ded4853edffd9393f17e8e2c835d4772061c54f577a023c7279b02baef304b4e",
+        "inspect": "be3875f85087c20db1087742bdef20bb6d16846f1982b38c5160ff39e25a342f",
+        "read_tensors": "6643eca84d4976dc83e7dc5ea6c30b970b2b45e4114e828230cd208734c30697"
+      },
+      "arrow_ipc": {
+        "read": "cbfeae52a16d4c2cda7593ad405fa1181d1d13adeb0bb59df344bde14d0dccaa",
+        "write": "db98fdc0ffb070e4de9358fc1338f9f0838dcae630a2337bee4bab2688fad4d5",
+        "inspect": "f22cd297b4bf9eda643d9d20eb30efe1d0a6e86cf230413664ece0a84acab3cb"
+      },
+      "openvdb": {
+        "read": "7714f4ec6eacf603d0832c21a3c7160341145c8f1761df23b22b8f6c9a304193",
+        "write": "a208451280bc49a941d021c9408e422772625a95bf1f317479c57ea204642a06",
+        "inspect": "d2f5ebb94511ebf09caaa29fcd0e30b66e3815e69bbf7f2e286739928a38c24c"
       }
     }
   },
@@ -392,8 +435,8 @@
     "last": "tests/test_points_binary.py::test_bad_magic_rejected"
   },
   "pytest_candidate_collection": {
-    "count": 3965,
-    "sorted_normalized_node_ids_sha256": "5591b4aec2894085e5d5a15c58ca9acc203468cd67d3a5e19ed85f264ce2bed2",
+    "count": 4049,
+    "sorted_normalized_node_ids_sha256": "f61ccc8e82716ba04f54ae2344f9a854c35690841c77514ee6a87a34989bedd4",
     "added_nodes": [
       "tests/codecs/test_animated_webp.py::test_sceneio_writer_is_lossless_and_oracle_readable",
       "tests/codecs/test_animated_webp.py::test_pillow_writer_is_sceneio_readable_bit_exact",
@@ -1278,7 +1321,91 @@
       "tests/codecs/test_zarr.py::test_zarr_capabilities_and_markers",
       "tests/codecs/test_zarr.py::test_zarr_public_path_is_directory",
       "tests/codecs/test_zarr.py::test_zarr_no_staging_directories_remain_after_failure",
-      "tests/test_import_guards.py::test_no_family_imports[io/_zarr.py]"
+      "tests/test_import_guards.py::test_no_family_imports[io/_zarr.py]",
+      "tests/codecs/test_arrow_parquet.py::test_sceneio_columnar_writes_are_exact_for_direct_arrow_oracle[parquet-.parquet]",
+      "tests/codecs/test_arrow_parquet.py::test_sceneio_columnar_writes_are_exact_for_direct_arrow_oracle[arrow_ipc-.arrow]",
+      "tests/codecs/test_arrow_parquet.py::test_sceneio_reads_direct_arrow_oracle_tables_exactly[parquet-.parquet]",
+      "tests/codecs/test_arrow_parquet.py::test_sceneio_reads_direct_arrow_oracle_tables_exactly[arrow_ipc-.arrow]",
+      "tests/codecs/test_arrow_parquet.py::test_parquet_named_column_read_is_provider_bounded",
+      "tests/codecs/test_arrow_parquet.py::test_columnar_inspection_does_not_decode_table[parquet-.parquet]",
+      "tests/codecs/test_arrow_parquet.py::test_columnar_inspection_does_not_decode_table[arrow_ipc-.arrow]",
+      "tests/codecs/test_arrow_parquet.py::test_arrow_ipc_array_lifetime_survives_reader_and_file_removal",
+      "tests/codecs/test_arrow_parquet.py::test_parquet_rejects_unsupported_oracle_columns[table0-unsupported type]",
+      "tests/codecs/test_arrow_parquet.py::test_parquet_rejects_unsupported_oracle_columns[table1-null values]",
+      "tests/codecs/test_arrow_parquet.py::test_columnar_writer_rejects_unequal_rows_and_unsupported_shapes",
+      "tests/codecs/test_arrow_parquet.py::test_columnar_failed_provider_write_preserves_destination[parquet-.parquet-write_table]",
+      "tests/codecs/test_arrow_parquet.py::test_columnar_failed_provider_write_preserves_destination[arrow_ipc-.arrow-new_file]",
+      "tests/codecs/test_arrow_parquet.py::test_columnar_capabilities_and_open_license_notice",
+      "tests/codecs/test_e57.py::test_sceneio_e57_write_is_exact_for_direct_upstream_reader",
+      "tests/codecs/test_e57.py::test_sceneio_reads_direct_upstream_e57_exactly",
+      "tests/codecs/test_e57.py::test_e57_invalid_cartesian_points_are_explicitly_filtered",
+      "tests/codecs/test_e57.py::test_e57_inspect_does_not_decode_points",
+      "tests/codecs/test_e57.py::test_e57_rejects_multiple_scans",
+      "tests/codecs/test_e57.py::test_e57_rejects_coordinates_that_pointcloud_cannot_preserve",
+      "tests/codecs/test_e57.py::test_e57_rejects_nonintegral_colors",
+      "tests/codecs/test_e57.py::test_e57_record_outlives_closed_and_removed_source",
+      "tests/codecs/test_e57.py::test_e57_writer_refuses_unrepresentable_cloud_conventions[cloud0-coordinate_frame]",
+      "tests/codecs/test_e57.py::test_e57_writer_refuses_unrepresentable_cloud_conventions[cloud1-normals]",
+      "tests/codecs/test_e57.py::test_e57_writer_refuses_unrepresentable_cloud_conventions[cloud2-16-bit colors]",
+      "tests/codecs/test_e57.py::test_e57_writer_refuses_unrepresentable_cloud_conventions[cloud3-intensity_range]",
+      "tests/codecs/test_e57.py::test_e57_failed_provider_write_preserves_destination",
+      "tests/codecs/test_e57.py::test_e57_capability_and_open_license_inventory",
+      "tests/codecs/test_openvdb.py::test_openvdb_sceneio_write_is_exact_for_upstream_reader",
+      "tests/codecs/test_openvdb.py::test_openvdb_sceneio_reads_upstream_fixture_exactly",
+      "tests/codecs/test_openvdb.py::test_openvdb_registry_roundtrip_is_bit_exact",
+      "tests/codecs/test_openvdb.py::test_openvdb_record_outlives_closed_and_removed_source",
+      "tests/codecs/test_openvdb.py::test_openvdb_inspect_does_not_materialize_sparse_voxels",
+      "tests/codecs/test_openvdb.py::test_openvdb_writer_refuses_unrepresentable_records[arrays0-coords must have dtype int32]",
+      "tests/codecs/test_openvdb.py::test_openvdb_writer_refuses_unrepresentable_records[arrays1-values must have dtype float32]",
+      "tests/codecs/test_openvdb.py::test_openvdb_writer_refuses_unrepresentable_records[arrays2-equal length]",
+      "tests/codecs/test_openvdb.py::test_openvdb_writer_refuses_unrepresentable_records[arrays3-duplicate voxel coordinates]",
+      "tests/codecs/test_openvdb.py::test_openvdb_writer_refuses_nonfinite_values",
+      "tests/codecs/test_openvdb.py::test_openvdb_existing_destination_survives_provider_failure",
+      "tests/codecs/test_openvdb.py::test_openvdb_writer_refuses_provider_voxel_loss",
+      "tests/codecs/test_openvdb.py::test_openvdb_license_and_template_provenance_are_distributed",
+      "tests/codecs/test_tiff.py::test_sceneio_tiff_write_is_exact_for_independent_oracle[shape0-uint8]",
+      "tests/codecs/test_tiff.py::test_sceneio_tiff_write_is_exact_for_independent_oracle[shape1-uint16]",
+      "tests/codecs/test_tiff.py::test_sceneio_tiff_write_is_exact_for_independent_oracle[shape2-float32]",
+      "tests/codecs/test_tiff.py::test_sceneio_tiff_write_is_exact_for_independent_oracle[shape3-uint8]",
+      "tests/codecs/test_tiff.py::test_sceneio_tiff_write_is_exact_for_independent_oracle[shape4-uint16]",
+      "tests/codecs/test_tiff.py::test_sceneio_tiff_write_is_exact_for_independent_oracle[shape5-uint8]",
+      "tests/codecs/test_tiff.py::test_sceneio_reads_oracle_tiff_endianness_exactly[<]",
+      "tests/codecs/test_tiff.py::test_sceneio_reads_oracle_tiff_endianness_exactly[>]",
+      "tests/codecs/test_tiff.py::test_tiff_boolean_mask_roundtrip_and_oracle",
+      "tests/codecs/test_tiff.py::test_tiff_grayscale_stack_roundtrip_and_oracle[ZYX]",
+      "tests/codecs/test_tiff.py::test_tiff_grayscale_stack_roundtrip_and_oracle[TYX]",
+      "tests/codecs/test_tiff.py::test_tiff_bigtiff_profile_is_oracle_readable",
+      "tests/codecs/test_tiff.py::test_tiff_alpha_semantics_roundtrip[straight-2]",
+      "tests/codecs/test_tiff.py::test_tiff_alpha_semantics_roundtrip[premultiplied-1]",
+      "tests/codecs/test_tiff.py::test_tiff_record_outlives_closed_and_removed_source",
+      "tests/codecs/test_tiff.py::test_tiff_inspect_does_not_decode_pixels",
+      "tests/codecs/test_tiff.py::test_tiff_rejects_multiple_series_without_decoding",
+      "tests/codecs/test_tiff.py::test_tiff_rejects_ambiguous_channel_and_stack_layouts",
+      "tests/codecs/test_tiff.py::test_tiff_rejects_nondefault_image_conventions",
+      "tests/codecs/test_tiff.py::test_tiff_failed_provider_write_preserves_destination",
+      "tests/codecs/test_tiff.py::test_tiff_capabilities_and_license_contract",
+      "tests/codecs/test_usd.py::test_usd_registry_roundtrip_is_bit_exact[.usd]",
+      "tests/codecs/test_usd.py::test_usd_registry_roundtrip_is_bit_exact[.usda]",
+      "tests/codecs/test_usd.py::test_usd_registry_roundtrip_is_bit_exact[.usdz]",
+      "tests/codecs/test_usd.py::test_sceneio_usd_writer_is_readable_by_upstream_oracle[.usd]",
+      "tests/codecs/test_usd.py::test_sceneio_usd_writer_is_readable_by_upstream_oracle[.usdz]",
+      "tests/codecs/test_usd.py::test_sceneio_reads_upstream_written_binary_usdz",
+      "tests/codecs/test_usd.py::test_usdz_package_is_uncompressed_and_64_byte_aligned",
+      "tests/codecs/test_usd.py::test_usd_record_outlives_removed_source[.usd]",
+      "tests/codecs/test_usd.py::test_usd_record_outlives_removed_source[.usdz]",
+      "tests/codecs/test_usd.py::test_usd_inspection_matches_decoded_scene[.usd]",
+      "tests/codecs/test_usd.py::test_usd_inspection_matches_decoded_scene[.usdz]",
+      "tests/codecs/test_usd.py::test_usd_inspection_does_not_construct_mesh_scene",
+      "tests/codecs/test_usd.py::test_usd_reader_refuses_non_cv_stage_conventions",
+      "tests/codecs/test_usd.py::test_usd_reader_refuses_subdivision_surfaces",
+      "tests/codecs/test_usd.py::test_usd_writer_refuses_transform_on_mesh_node",
+      "tests/codecs/test_usd.py::test_usd_existing_destination_survives_package_failure",
+      "tests/codecs/test_usd.py::test_tinyusdz_license_is_distributed",
+      "tests/test_import_guards.py::test_no_family_imports[io/_arrow.py]",
+      "tests/test_import_guards.py::test_no_family_imports[io/_e57.py]",
+      "tests/test_import_guards.py::test_no_family_imports[io/_openvdb.py]",
+      "tests/test_import_guards.py::test_no_family_imports[io/_tiff.py]",
+      "tests/test_import_guards.py::test_no_family_imports[io/_usd.py]"
     ],
     "removed_nodes": [
       "tests/codecs/test_compressed_ply.py::test_writer_body_is_byte_identical_to_pinned_playcanvas_vector",

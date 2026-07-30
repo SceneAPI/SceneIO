@@ -2,7 +2,7 @@
 
 Status: complete for the original 23-codec O0-O5 scope. Its mmap, direct-sink,
 inspection, differential, memory, and partial-read capability contracts now
-cover the live 59-codec registry; 31 codecs expose bounded selectors. This
+cover the live 67-format registry; 33 formats expose 39 bounded selectors. This
 status describes optimized I/O transport and bounded access; it does **not**
 claim that every compression/parser kernel is the fastest viable backend.
 Backend qualification remains available as a trigger-based post-R6 mechanism in
@@ -15,10 +15,9 @@ reviewed, commit-sized verification checklist is
 The user-directed lean closure policy accepts the verified R6 backends as
 that release baseline without promoting its 124 provisional rows to
 `qualified`; exhaustive candidate comparison is not an R6 prerequisite.
-The four post-R6 COLMAP dense codecs and three HDF5/hloc codecs add fourteen
-measured provisional encode/decode rows, bringing the current ledger to 142
-provisional, two known gaps, and six not-applicable operations without
-changing that policy.
+The post-R6 COLMAP dense, HDF5/hloc, Zarr, TIFF, E57, Parquet/Arrow,
+OpenVDB, and USD/USDZ units bring the current ledger to 158 provisional, two
+known-gap, and six not-applicable operations without changing that policy.
 The C3/C4 CI correction keeps those operation counts unchanged. Its SOG
 writer uses a pinned deterministic transform and caches transformed
 coordinates: repeated seven-run measurements on the 11.2 MB fixture report
@@ -154,9 +153,8 @@ and Ubuntu builds use the expected stable extension names. Final build-only run
 and downloaded-artifact inspection.
 
 Post-0.2 format expansion inherits the same gates. The registry currently has
-59 codecs: 50 buffer-backed file containers, six path-native file/multi-file
-containers, and three directory containers (two COLMAP layouts plus lazy image
-sequences). COLMAP SQLite
+67 formats: 60 single-file containers, four directories, and three multi-file
+formats. COLMAP SQLite
 remains path-native; SOG, OBJ/MTL, and glTF/external buffers have explicit
 multi-file adapters.
 Generic HDF5 and the two documented hloc layouts are also path-native. They
@@ -169,6 +167,15 @@ full reads for HDF5/hloc-features/hloc-matches. Metadata inspection was
 read was 2.44x faster and avoided loading the 1 MiB unselected dataset.
 Direct h5py provider timings remain visible in the committed harness rather
 than being described as equivalent wrapper work.
+Zarr, TIFF, E57, Parquet/Arrow IPC, OpenVDB, and USD/USDZ use the same
+repository-owned path-adapter pattern. Their established permissive providers
+perform optimized storage/parsing; SceneIO retains validation, record mapping,
+inspection, transactional destination replacement, and partial-selection
+policy. Every new path row runs direct provider cross-reads and reports
+write/read throughput, traced allocation, resident growth, and inspection
+latency in `bench/bench_io.py`. Parquet additionally reports named-column
+selection. No new compressed payload is routed through a Python whole-file
+`bytes` copy.
 The 2026-07-30 scale-16 profiling follow-up removed two wrapper hot spots.
 Already-native contiguous HDF5 arrays now pass directly to the native record
 or h5py dataset constructor, reducing traced full-read peak from 33.6 MB to
