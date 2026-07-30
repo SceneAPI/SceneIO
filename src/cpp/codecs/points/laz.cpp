@@ -816,6 +816,7 @@ struct LazWritePlan {
 LazWritePlan make_write_plan(
     const PointCloud &cloud, double scale,
     int requested_format, size_t lanes) {
+    require_no_extended_point_fields(cloud, "laz");
     if (cloud.has_las_waveform())
         throw std::invalid_argument(
             "laz: LAZperf does not support waveform "

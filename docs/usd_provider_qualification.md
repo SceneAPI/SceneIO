@@ -3,6 +3,8 @@
 Status: provisional U0 evidence  
 Date: 2026-07-30  
 Local provider: TinyUSDZ 0.9.4
+Standards pins: AOUSD Core 1.0.1 `2f9e746c4fbd`, supplemental
+1.0.1.post0 `404e2bde49c1`, OpenUSD 26.08 `ee47c679abde`
 
 This report records observed provider behavior used to choose the implementation
 boundary for `sceneio.usd.3dcv/1`. It is evidence, not a broader capability
@@ -53,7 +55,8 @@ unit.
 ## Remaining U0 evidence
 
 - [ ] Explicit TOST policy decision.
-- [ ] AOUSD Core 1.0 compliance sample license and fixture inventory.
+- [ ] AOUSD Core 1.0.1 plus supplemental 1.0.1.post0 license and fixture
+      inventory.
 - [ ] OpenUSD 26.08 current crate read/write comparison.
 - [ ] Generated performance and peak-RSS comparison.
 - [ ] Linux/macOS/Windows optional-provider package run.

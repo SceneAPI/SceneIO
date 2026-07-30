@@ -858,6 +858,7 @@ PointCloud read_pcd_points(
 }
 
 void validate_writer(const PointCloud &cloud) {
+    require_no_extended_point_fields(cloud, "PCD writer");
     if (cloud.n > std::numeric_limits<size_t>::max() / 3 ||
         cloud.xyz.size() != cloud.n * 3 ||
         (cloud.has_normals() &&

@@ -575,6 +575,7 @@ std::string encode_waveform_las(
 }
 
 nb::bytes write_las(const PointCloud &pc, double scale, size_t lanes) {
+    require_no_extended_point_fields(pc, "las");
     // --- guards: refuse what LAS cannot represent (never convert) ---
     if (pc.has_normals())
         throw std::invalid_argument("las: LAS cannot store normals");

@@ -5153,12 +5153,13 @@ future profiles, not silent fallbacks.
 
 The 2026-07-30 standards review is captured in
 [`usd_3d_cv_implementation_plan.md`](usd_3d_cv_implementation_plan.md).
-It freezes a finite `sceneio.usd.3dcv/1` scope and commit-sized U0-U7
-checklist. No item below is a current capability claim:
+It pins AOUSD Core 1.0.1, supplemental 1.0.1.post0, and tagged OpenUSD 26.08,
+and freezes a finite `sceneio.usd.3dcv/1` scope with a commit-sized U0-U7
+checklist. No unchecked item below is a current USD I/O capability claim:
 
 - [ ] U0: explicit TOST decision plus AOUSD/OpenUSD/TinyUSDZ provider
       qualification.
-- [ ] U1: additive `SceneGraph`/`InstanceSet` records and convention-bearing
+- [x] U1: additive `SceneGraph`/`InstanceSet` records and convention-bearing
       mesh, point, and Gaussian payloads.
 - [ ] U2: compatible rich-scene API, `.usdc` routing, stage metadata,
       inspection, and selection.
@@ -5181,6 +5182,12 @@ Progress:
       attribute parsing, XYZW provider quaternion view, crate-0.8 writer probe,
       and currently unevaluated composition arcs. TOST and current OpenUSD
       comparison gates remain open.
+- [x] The current standards review corrects the AOUSD baseline to Core 1.0.1
+      plus Apache-2.0 supplemental 1.0.1.post0, pins OpenUSD 26.08
+      (`ee47c679abde`), AOUSD specifications (`2f9e746c4fbd`), and supplemental
+      materials (`404e2bde49c1`), and records USDA 1.3/USDC 0.15.0 as the
+      current output versions. TOST is Apache-2.0-derived but remains a
+      separate narrow policy decision.
 - [x] U1a makes `GaussianCloud` convention-bearing, adds explicit conversion,
       validates structure before conversion/writes, and keeps all six legacy
       splat writers on their exact prior conventions.
@@ -5189,14 +5196,17 @@ Progress:
       tables are owner-retaining read-only views; hierarchy, payload,
       prototype, convention, semantic, time, and dependency invariants are
       checked at construction.
-- [ ] U1c adds the accepted USD point and mesh payload fields, writer guards,
-      and the complete existing-codec parity rerun before U1 exits.
+- [x] U1c adds the accepted USD point and mesh payload fields and makes every
+      existing point/mesh writer refuse fields it cannot represent. Six
+      focused payload tests, 675 affected codec/API tests, the exact contracts,
+      the complete local suite, Ruff, and the 15-format benchmark control are
+      green.
 
-Active U1b evidence:
+Completed U1 evidence:
 
-- the exact collection is 4,100 nodes; the complete local MSVC run passes
-  4,095 with five documented optional skips in 241.16 seconds, while all 33
-  new record tests and the existing 14-test point-cloud record suite pass;
+- the exact collection is 4,106 nodes; the complete local MSVC run passes
+  4,101 with five documented optional skips, while all 39 new rich-scene and
+  payload record tests and the existing point-cloud record suite pass;
 - nested payloads and numeric views remain valid after the original scene
   variable is deleted and collection runs, factory inputs are copied, numeric
   views are read-only, and unsupported copying/pickling is explicit;
@@ -5212,6 +5222,11 @@ Active U1b evidence:
 - the existing USD/USDZ registry rows remain the bounded static `MeshScene`
   profile. Rich-scene USD mapping begins at U2 and is not yet a capability
   claim.
+- all legacy point and mesh outputs retain their parity fixtures; the new
+  float display fields, widths, ids, motion fields, orientation, and explicit
+  double-sided state are each refused before a path destination is replaced;
+- the U1c control in `bench/BASELINE.md` covers all 15 touched point, mesh,
+  E57, glTF, and static USD/USDZ paths with three medians.
 
 Pre-U1 optional-provider closure evidence:
 

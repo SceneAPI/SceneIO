@@ -1310,6 +1310,7 @@ void build_writer_model(
 
     size_t attribute_count = 0;
     for (const Mesh &mesh : scene.primitives) {
+        require_no_extended_mesh_fields(mesh, "glTF writer");
         if (mesh.has_corner_normals() ||
             mesh.has_corner_uvs() ||
             mesh.has_corner_colors())

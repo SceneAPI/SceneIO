@@ -1207,6 +1207,7 @@ std::string format_double(double value) {
 
 std::string encode(const Mesh &mesh) {
     validate_mesh(mesh, "PLY mesh writer");
+    require_no_extended_mesh_fields(mesh, "PLY mesh writer");
     if (mesh.has_smoothing_groups() ||
         mesh.has_object_names() ||
         mesh.has_group_names() ||

@@ -1038,6 +1038,7 @@ bool identity_transform(const double *values) {
 std::string encode_obj(
     const Mesh &mesh, const std::string &mtl_filename) {
     validate_mesh(mesh, "OBJ writer");
+    require_no_extended_mesh_fields(mesh, "OBJ writer");
     if (mesh.coordinate_frame != "unknown" ||
         mesh.scale_to_meters != 1.0 ||
         !identity_transform(mesh.local_transform))

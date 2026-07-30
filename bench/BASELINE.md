@@ -3628,3 +3628,33 @@ The control was rerun with three medians and no oracle timing:
 
 These match the preceding scale-1 provider-wave range; no codec source or
 encoded output changed in U1b.
+
+### USD U1 point/mesh payload compatibility control (2026-07-30)
+
+U1c adds in-memory scene fields and constant-time presence guards to every
+existing point and mesh writer. The formats do not map those fields yet, so
+this is a compatibility control rather than a throughput claim. Three median
+runs covered every touched family plus the unchanged static USD paths:
+
+```powershell
+.venv/Scripts/python.exe bench/bench_io.py --runs 3 --skip-oracles `
+  --only xyz --only pts --only ply --only pcd --only las --only laz `
+  --only e57 --only ply_mesh --only obj --only stl --only off `
+  --only gltf --only glb --only usd --only usdz
+```
+
+| codec | write/read MB/s | sink MB/s | mmap traced peak |
+|---|---:|---:|---:|
+| `xyz` / `pts` | 136/84; 97/80 | 83; 80 | 0.0 MB |
+| `ply` / `ply_mesh` | 742/875; 879/310 | 589; 649 | 0.0 MB |
+| `pcd` / `las` / `laz` | 1,827/3,258; 1,083/2,911; 62/177 | 1,369; 608; 63 | 0.0 MB |
+| `obj` / `stl` / `off` | 24/22; 774/1,069; 200/488 | 23; 1,071; 206 | 0.0 MB |
+| `gltf` / `glb` | 566/889; 507/894 | 470; 466 | 0.0 MB |
+| `e57` | 127/137 | 127 | 16.0 MB provider path |
+| `usd` / `usdz` | 11/13; 11/13 | 11; 11 | 3.6 MB |
+
+The public mmap paths retain the established zero-Python-allocation result for
+all native point and mesh formats. Static USD/USDZ remain within the previous
+U1b control range. Focused parity verifies that default records retain their
+existing encoded output, while each additive field independently causes every
+legacy writer to refuse before replacing a destination.

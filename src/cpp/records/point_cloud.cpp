@@ -12,6 +12,7 @@
 #include <array>
 #include <cmath>
 #include <optional>
+#include <unordered_set>
 
 #include "records/point_cloud.hpp"
 
@@ -41,6 +42,8 @@ using farr = nb::ndarray<const float, nb::c_contig, nb::device::cpu>;
 using carr = nb::ndarray<const uint8_t, nb::c_contig, nb::device::cpu>;
 using c16arr = nb::ndarray<const uint16_t, nb::c_contig, nb::device::cpu>;
 using darr = nb::ndarray<const double, nb::c_contig, nb::device::cpu>;
+using i64arr =
+    nb::ndarray<const int64_t, nb::c_contig, nb::device::cpu>;
 
 bool fixed_ascii(
     const uint8_t *data, size_t size,
@@ -129,7 +132,14 @@ PointCloud make_pc(farr positions, std::optional<carr> colors, std::optional<far
                    std::optional<c16arr> colors16, std::optional<darr> origin,
                    std::optional<size_t> width, std::optional<size_t> height,
                    std::optional<darr> viewpoint,
-                   std::optional<LasWaveformSidecar> las_waveform) {
+                   std::optional<LasWaveformSidecar> las_waveform,
+                   std::optional<farr> display_colors,
+                   std::optional<farr> display_opacities,
+                   std::optional<farr> widths,
+                   std::optional<i64arr> ids,
+                   std::optional<farr> velocities,
+                   std::optional<farr> accelerations,
+                   const std::string &display_color_space) {
     // 1. positions (N,3): ndim==2 && shape(1)==3; N==0 is legal (an empty .xyz
     //    file must round-trip once the codec lands).
     if (positions.ndim() != 2 || positions.shape(1) != 3)
@@ -160,6 +170,57 @@ PointCloud make_pc(farr positions, std::optional<carr> colors, std::optional<far
             throw std::invalid_argument("point_cloud: colors16 must be (N,3) uint16");
         p.rgb16.assign(colors16->data(), colors16->data() + N * 3);
     }
+    if (display_colors) {
+        if (display_colors->ndim() != 2 ||
+            display_colors->shape(0) != N ||
+            display_colors->shape(1) != 3)
+            throw std::invalid_argument(
+                "point_cloud: display_colors must be (N,3) float32");
+        if (N != 0)
+            p.display_colors.assign(
+                display_colors->data(),
+                display_colors->data() + N * 3);
+    }
+    auto assign_optional_vector = [&](
+        const std::optional<farr> &source,
+        std::vector<float> &target, const char *name) {
+        if (!source) return;
+        if (source->ndim() != 1 || source->shape(0) != N)
+            throw std::invalid_argument(
+                std::string("point_cloud: ") + name +
+                " must be (N,) float32");
+        if (N != 0)
+            target.assign(source->data(), source->data() + N);
+    };
+    assign_optional_vector(
+        display_opacities, p.display_opacities,
+        "display_opacities");
+    assign_optional_vector(widths, p.widths, "widths");
+    if (ids) {
+        if (ids->ndim() != 1 || ids->shape(0) != N)
+            throw std::invalid_argument(
+                "point_cloud: ids must be (N,) int64");
+        if (N != 0)
+            p.ids.assign(ids->data(), ids->data() + N);
+    }
+    auto assign_optional_rows = [&](
+        const std::optional<farr> &source,
+        std::vector<float> &target, const char *name) {
+        if (!source) return;
+        if (source->ndim() != 2 || source->shape(0) != N ||
+            source->shape(1) != 3)
+            throw std::invalid_argument(
+                std::string("point_cloud: ") + name +
+                " must be (N,3) float32");
+        if (N != 0)
+            target.assign(
+                source->data(), source->data() + N * 3);
+    };
+    assign_optional_rows(
+        velocities, p.velocities, "velocities");
+    assign_optional_rows(
+        accelerations, p.accelerations, "accelerations");
+    p.display_color_space = display_color_space;
     if (origin) {
         if (origin->ndim() != 1 || origin->shape(0) != 3)
             throw std::invalid_argument("point_cloud: origin must be (3,) float64");
@@ -369,13 +430,27 @@ void validate_point_cloud(
         (!cloud.normals.empty() &&
          cloud.normals.size() != count * 3) ||
         (!cloud.intensity.empty() &&
-         cloud.intensity.size() != count))
+         cloud.intensity.size() != count) ||
+        (!cloud.display_colors.empty() &&
+         cloud.display_colors.size() != count * 3) ||
+        (!cloud.display_opacities.empty() &&
+         cloud.display_opacities.size() != count) ||
+        (!cloud.widths.empty() && cloud.widths.size() != count) ||
+        (!cloud.ids.empty() && cloud.ids.size() != count) ||
+        (!cloud.velocities.empty() &&
+         cloud.velocities.size() != count * 3) ||
+        (!cloud.accelerations.empty() &&
+         cloud.accelerations.size() != count * 3))
         throw std::invalid_argument(
             prefix + "inconsistent PointCloud field lengths");
     if (!pc_valid_frame(cloud.coordinate_frame) ||
         !pc_valid_intensity_range(cloud.intensity_range))
         throw std::invalid_argument(
             prefix + "invalid convention metadata");
+    if (!pc_valid_display_color_space(cloud.display_color_space))
+        throw std::invalid_argument(
+            prefix +
+            "display_color_space must be unknown|linear|srgb");
     // PointCloud has historically preserved every float bit pattern, including
     // NaN payloads and unknown/non-positive unit tags. Format writers apply
     // their own representability rules; structural validation must not narrow
@@ -388,6 +463,33 @@ void validate_point_cloud(
         if (!std::isfinite(value))
             throw std::invalid_argument(
                 prefix + "viewpoint must be finite");
+    auto finite = [&](const std::vector<float> &values,
+                      const char *name) {
+        for (float value : values)
+            if (!std::isfinite(value))
+                throw std::invalid_argument(
+                    prefix + name + " values must be finite");
+    };
+    finite(cloud.display_colors, "display color");
+    finite(cloud.velocities, "velocity");
+    finite(cloud.accelerations, "acceleration");
+    for (float value : cloud.display_opacities)
+        if (!std::isfinite(value) || value < 0.0F ||
+            value > 1.0F)
+            throw std::invalid_argument(
+                prefix +
+                "display opacity values must be finite and in [0,1]");
+    for (float value : cloud.widths)
+        if (!std::isfinite(value) || value < 0.0F)
+            throw std::invalid_argument(
+                prefix +
+                "width values must be finite and nonnegative");
+    std::unordered_set<int64_t> ids;
+    ids.reserve(cloud.ids.size());
+    for (int64_t id : cloud.ids)
+        if (!ids.insert(id).second)
+            throw std::invalid_argument(
+                prefix + "ids must be unique");
     if (cloud.organized_height != 0) {
         if (cloud.organized_width != 0 &&
             cloud.organized_height >
@@ -488,10 +590,80 @@ void register_point_cloud(nb::module_ &m) {
         .def_prop_ro(
             "intensities", [](const PointCloud &p) { return vw(p.intensity, {p.intensity.size()}); },
             ri)
+        .def_prop_ro(
+            "display_colors",
+            [](const PointCloud &p) {
+                return vw(
+                    p.display_colors,
+                    {p.has_display_colors() ? p.n : 0, 3});
+            },
+            ri)
+        .def_prop_ro(
+            "display_opacities",
+            [](const PointCloud &p) {
+                return vw(
+                    p.display_opacities,
+                    {p.display_opacities.size()});
+            },
+            ri)
+        .def_prop_ro(
+            "widths",
+            [](const PointCloud &p) {
+                return vw(p.widths, {p.widths.size()});
+            },
+            ri)
+        .def_prop_ro(
+            "ids",
+            [](const PointCloud &p) {
+                return vw(p.ids, {p.ids.size()});
+            },
+            ri)
+        .def_prop_ro(
+            "velocities",
+            [](const PointCloud &p) {
+                return vw(
+                    p.velocities,
+                    {p.has_velocities() ? p.n : 0, 3});
+            },
+            ri)
+        .def_prop_ro(
+            "accelerations",
+            [](const PointCloud &p) {
+                return vw(
+                    p.accelerations,
+                    {p.has_accelerations() ? p.n : 0, 3});
+            },
+            ri)
         .def_prop_ro("has_rgb", [](const PointCloud &p) { return p.has_rgb(); })
         .def_prop_ro("has_rgb16", [](const PointCloud &p) { return p.has_rgb16(); })
         .def_prop_ro("has_normals", [](const PointCloud &p) { return p.has_normals(); })
         .def_prop_ro("has_intensity", [](const PointCloud &p) { return p.has_intensity(); })
+        .def_prop_ro(
+            "has_display_colors",
+            [](const PointCloud &p) {
+                return p.has_display_colors();
+            })
+        .def_prop_ro(
+            "has_display_opacities",
+            [](const PointCloud &p) {
+                return p.has_display_opacities();
+            })
+        .def_prop_ro(
+            "has_widths",
+            [](const PointCloud &p) { return p.has_widths(); })
+        .def_prop_ro(
+            "has_ids",
+            [](const PointCloud &p) { return p.has_ids(); })
+        .def_prop_ro(
+            "has_velocities",
+            [](const PointCloud &p) {
+                return p.has_velocities();
+            })
+        .def_prop_ro(
+            "has_accelerations",
+            [](const PointCloud &p) {
+                return p.has_accelerations();
+            })
         .def_prop_ro(
             "has_las_waveform",
             [](const PointCloud &p) {
@@ -510,6 +682,11 @@ void register_point_cloud(nb::module_ &m) {
         .def_prop_ro("coordinate_frame", [](const PointCloud &p) { return p.coordinate_frame; })
         .def_prop_ro("scale_to_meters", [](const PointCloud &p) { return p.scale_to_meters; })
         .def_prop_ro("intensity_range", [](const PointCloud &p) { return p.intensity_range; })
+        .def_prop_ro(
+            "display_color_space",
+            [](const PointCloud &p) {
+                return p.display_color_space;
+            })
         .def_prop_ro("origin",
                      [](const PointCloud &p) {
                          return nb::make_tuple(p.origin[0], p.origin[1], p.origin[2]);
@@ -536,10 +713,17 @@ void register_point_cloud(nb::module_ &m) {
           "width"_a = nb::none(), "height"_a = nb::none(),
           "viewpoint"_a = nb::none(),
           "las_waveform"_a = nb::none(),
+          "display_colors"_a = nb::none(),
+          "display_opacities"_a = nb::none(),
+          "widths"_a = nb::none(), "ids"_a = nb::none(),
+          "velocities"_a = nb::none(),
+          "accelerations"_a = nb::none(),
+          "display_color_space"_a = "unknown",
           "Build a PointCloud from arrays (numpy/torch): positions (N,3) float32, optional "
           "colors (N,3) uint8 / colors16 (N,3) uint16 / normals (N,3) float32 / intensity (N,) "
           "float32 (foreign dtypes are copy-converted), recorded convention tags "
           "(coordinate_frame, scale_to_meters, intensity_range), a georef origin (3,) float64, "
           "optional organized width/height, viewpoint (tx,ty,tz,qw,qx,qy,qz), "
-          "and a validated opaque LAS waveform sidecar.");
+          "a validated opaque LAS waveform sidecar, and optional float display "
+          "colors/opacities, widths, ids, velocities, and accelerations.");
 }

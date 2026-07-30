@@ -430,13 +430,20 @@ def _validate_mesh(mesh, index: int) -> None:
         mesh.has_materials
         or mesh.has_vertex_colors
         or mesh.has_corner_colors
+        or mesh.has_vertex_display_colors
+        or mesh.has_corner_display_colors
+        or mesh.has_vertex_display_opacities
+        or mesh.has_corner_display_opacities
+        or mesh.display_color_space != "unknown"
+        or mesh.orientation != "unknown"
+        or mesh.has_double_sided
         or mesh.has_face_smoothing_groups
         or mesh.has_primitive_object_names
         or mesh.has_primitive_group_names
     ):
         raise ValueError(
-            f"USD: {context} contains unsupported material, color, "
-            "smoothing, or grouping data"
+            f"USD: {context} contains unsupported material, display, "
+            "orientation, double-sided, smoothing, or grouping data"
         )
     if mesh.has_vertex_normals and mesh.has_corner_normals:
         raise ValueError(f"USD: {context} has two normal domains")

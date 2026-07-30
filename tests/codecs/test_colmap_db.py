@@ -3504,7 +3504,7 @@ def test_match_graph_recovered_camera_contract_and_lifetime():
         ),
         pytest.param(
             {
-                "recovered_camera1": [
+                "recovered_camera1": lambda: [
                     _core.camera(
                         23,
                         0,
@@ -3527,7 +3527,7 @@ def test_match_graph_recovered_camera_contract_and_lifetime():
         ),
         pytest.param(
             {
-                "recovered_camera1": [
+                "recovered_camera1": lambda: [
                     _core.camera(
                         23,
                         0,
@@ -3546,6 +3546,9 @@ def test_match_graph_recovered_camera_contract_and_lifetime():
 def test_match_graph_recovered_camera_rejects_inconsistent_presence(
     kwargs, message
 ):
+    kwargs = dict(kwargs)
+    if callable(kwargs.get("recovered_camera1")):
+        kwargs["recovered_camera1"] = kwargs["recovered_camera1"]()
     with pytest.raises(ValueError, match=message):
         _core.match_graph(
             np.array([[2, 11]], np.uint32),

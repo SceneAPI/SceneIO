@@ -1,8 +1,9 @@
 # USD 3D-CV profile implementation plan
 
-Status: reviewed plan, implementation not started  
+Status: U1 implemented and locally verified; U0 provider qualification is next
 Review date: 2026-07-30  
-Standards baseline: AOUSD Core Specification 1.0 and OpenUSD 26.08
+Standards baseline: AOUSD Core Specification 1.0.1, supplemental
+1.0.1.post0, and OpenUSD 26.08 (`v26.08`, `ee47c679abde`)
 
 ## Decision summary
 
@@ -30,8 +31,12 @@ new `SceneGraph` API; a mesh-only projection continues to support current
 
 ## Authoritative references
 
-- [AOUSD Core Specification 1.0](https://aousd.org/usd-core-specification/)
+- [AOUSD Core Specification 1.0.1](https://github.com/aousd/specifications-public/tree/2f9e746c4fbd7f48d6d2c9ac568133fe398bbfc0/core/1.0.1)
+- [AOUSD Core 1.0.1 supplemental/compliance materials](https://github.com/aousd/core-spec-supplemental-public/tree/404e2bde49c19105a7e608db6dc1cb1a7131bfc7/releases/1.0.1)
 - [OpenUSD 26.08 documentation](https://openusd.org/release/)
+- [OpenUSD 26.08 release](https://github.com/PixarAnimationStudios/OpenUSD/releases/tag/v26.08)
+- [OpenUSD TOST 1.0 license text](https://github.com/PixarAnimationStudios/OpenUSD/blob/v26.08/LICENSE.txt)
+- [Apache License 2.0 text](https://www.apache.org/licenses/LICENSE-2.0)
 - [OpenUSD release changelog](https://raw.githubusercontent.com/PixarAnimationStudios/OpenUSD/release/CHANGELOG.md)
 - [USDZ file-format specification](https://openusd.org/release/spec_usdz.html)
 - [UsdGeomPoints](https://openusd.org/release/api/class_usd_geom_points.html)
@@ -39,11 +44,48 @@ new `SceneGraph` API; a mesh-only projection continues to support current
 - [UsdVol ParticleField3DGaussianSplat](https://openusd.org/release/user_guides/schemas/usdVol/ParticleField3DGaussianSplat.html)
 - [UsdVol particle-field overview](https://openusd.org/release/user_guides/schemas/usdVol/overview.html)
 
-The AOUSD compliance samples and an unmodified OpenUSD 26.08 installation are
-the normative core-format and composition references. TinyUSDZ remains the
-independent permissively licensed implementation used by the current optional
-provider. Observed local provider behavior is recorded in
+The AOUSD 1.0.1 specification is the normative core-format and composition
+reference. Its 1.0.1.post0 supplemental package is the executable compliance
+reference and is Apache-2.0; the specification documents themselves are
+CC-BY-ND-4.0 and must be referenced or copied unchanged. An unmodified
+OpenUSD 26.08 installation is the implementation oracle when the narrow TOST
+policy decision permits it. TinyUSDZ remains the independent permissively
+licensed implementation used by the current optional provider. Observed local
+provider behavior is recorded in
 [`usd_provider_qualification.md`](usd_provider_qualification.md).
+
+## 2026-07-30 review findings
+
+The current standards review changes four planning details:
+
+1. The published AOUSD baseline is Core Specification **1.0.1**, not the
+   earlier shorthand “1.0.” The matching supplemental release is
+   `1.0.1.post0`. The reviewed source pins are specification commit
+   `2f9e746c4fbd`, supplemental tag commit `404e2bde49c1`, and OpenUSD tag
+   target `ee47c679abde`.
+2. OpenUSD **26.08** is the current tagged release. It writes USDA version 1.3
+   and USDC crate version 0.15.0. Current-version USDC qualification must use
+   those versions; TinyUSDZ's observed crate 0.8 output is historical output,
+   not a current writer oracle.
+3. `ParticleField3DGaussianSplat` is an official OpenUSD 26.08 schema. Its
+   built-in APIs define float and half positions, orientations, linear scales,
+   linear opacities, and particle-major RGB spherical-harmonic coefficients.
+   Float attributes take precedence when both precisions are present. Accepted
+   sorting hints are `zDepth`, `cameraDistance`, and `rayHitDistance`.
+4. OpenUSD's TOST 1.0 text is Apache-2.0-derived but is a distinct license.
+   The implementation plan may use OpenUSD documentation and fixtures as
+   references now; adding `usd-core` as an installed oracle or provider still
+   requires the explicit narrow project decision described below.
+
+Repository review also found that U1 is already partly implemented:
+
+- U1a (`bf6f374`) added explicit Gaussian storage conventions and conversion.
+- U1b (`cca1479`) added compiled `SceneGraph`, `InstanceSet`, and
+  `VolumeAsset` records with owner-retaining views.
+- U1c adds the accepted point/mesh fields and exact refusal guards to every
+  existing writer that cannot represent them. Its focused record tests,
+  affected-codec parity sweep, exact suite contract, compatibility snapshots,
+  full local suite, Ruff pass, and 15-format benchmark control are green.
 
 ## Current implementation and measured review
 
@@ -86,10 +128,15 @@ emit a file in a probe.
 
 ## License decision: TOST 1.0
 
-TOST 1.0 is operationally closest to Apache-2.0. Its copyright grant, explicit
-patent grant, patent-claim termination, redistribution conditions, NOTICE
-handling, warranty disclaimer, and liability terms are the Apache-2.0 text.
-The material difference is section 6:
+**Short answer:** yes, TOST 1.0 is generally similar to the project's
+permissive-license family, and specifically is much closer to Apache-2.0 than
+to MIT, BSD, or zlib. It is not public domain and it is not literally
+Apache-2.0.
+
+TOST 1.0's copyright grant, explicit patent grant, patent-claim termination,
+redistribution conditions, NOTICE handling, warranty disclaimer, and liability
+terms are the Apache-2.0 text. OpenUSD's own license file says that section 6
+is the difference:
 
 - Apache-2.0 permits reasonable and customary trademark use when describing
   the work's origin.
@@ -97,10 +144,12 @@ The material difference is section 6:
   required notices and reproducing NOTICE content.
 
 TOST is therefore non-copyleft and does not require SceneIO source disclosure.
-It is not, however, literally MIT, BSD, zlib, Apache-2.0, or public domain.
-The equivalent older text is catalogued by SPDX as the `Pixar` license and is
-not marked OSI-approved; current `usd-core` metadata uses
-`LicenseRef-TOST-1.0`.
+Compared with MIT/BSD/zlib it has the extra Apache-style patent grant,
+patent-claim termination, modified-file notice, and NOTICE obligations.
+Compared with Apache-2.0 it grants less trademark permission. The equivalent
+older text is catalogued by SPDX as the `Pixar` license and is not marked
+OSI-approved; as of SPDX License List 3.28.0, TOST does not have a standard
+identifier, and current `usd-core` metadata uses `LicenseRef-TOST-1.0`.
 
 Project consequence:
 
@@ -118,6 +167,13 @@ Project consequence:
 This plan does not change the allow-list. Until that decision is made,
 OpenUSD is a standards reference only and TinyUSDZ remains the executable
 oracle/provider.
+
+Recommended project decision: approve a narrow exception for unmodified
+official OpenUSD packages under TOST 1.0, only as an optional development/test
+oracle at first. Do not bundle or link OpenUSD into the SceneIO wheel. Promote
+it to an optional runtime provider only if the provider inventory, platform
+availability, and performance comparison justify doing so. This keeps the
+NumPy-only base runtime and manylinux2014 wheel contract intact.
 
 ## Target profile contract
 
@@ -198,6 +254,12 @@ conversion utility; a USD writer never activates values implicitly.
 
 USD SH coefficients are particle-major RGB coefficient rows. Reordering to or
 from SceneIO's split DC/channel-grouped storage must preserve every float bit.
+When both half and float attributes are authored, the float attribute wins as
+specified by OpenUSD. The profile accepts projection hints `perspective` and
+`tangential`, and sorting hints `zDepth`, `cameraDistance`, and
+`rayHitDistance`. SceneIO is deliberately stricter than the renderer fallback:
+per-particle arrays must have exact counts instead of being truncated or
+discarded.
 
 ### Cameras
 
@@ -281,12 +343,15 @@ all node-domain numeric arrays are read-only owner-retaining views.
 
 ### Additive payload changes
 
-`PointCloud` needs optional float colors/opacity, widths, signed 64-bit ids,
-velocities, accelerations, and color-space metadata. Existing uint8/uint16
-color members remain compatible.
+`PointCloud` now carries optional float colors/opacity, widths (diameters),
+signed 64-bit ids, velocities, accelerations, and color-space metadata.
+Existing uint8/uint16 color members remain compatible.
 
-`Mesh` needs optional float vertex/corner display colors plus color-space
-metadata. Existing RGBA8 members remain compatible.
+`Mesh` now carries optional float vertex/corner display colors and opacities
+plus color-space metadata, orientation, and tri-state double-sidedness.
+Existing RGBA8 members remain compatible. Internal orientation tokens
+`right_handed|left_handed` map to USD's `rightHanded|leftHanded` tokens in the
+future U3 codec mapping.
 
 `GaussianCloud` needs the convention and source-precision fields described
 above. All current six splat families retain their existing defaults and
@@ -310,11 +375,42 @@ Every unit follows: implement, focused differential tests, allocation/lifetime
 checks, benchmark delta, three-lens review, full tests/Ruff, then commit with
 the required co-author trailer.
 
+### Lean closure sequence
+
+The work is finite and ordered. Do not start a later unit while an earlier unit
+has uncommitted or failing changes.
+
+| Unit | Deliverable | Required evidence | Closure rule |
+|---|---|---|---|
+| 1 | Finish U1c point/mesh fields and writer refusals | focused record tests, every affected codec suite, unchanged default bytes, full suite, Ruff, record benchmark | one green commit; no USD mapping yet |
+| 2 | Finish U0 provider qualification | pinned AOUSD 1.0.1 inputs, OpenUSD 26.08 fixtures, provider matrix, license inventory, read/write/performance comparison | select one provider per operation; unsupported USDC write remains unavailable |
+| 3 | U2 stage API and hierarchy | `read_scene`/`write_scene`, representation routing, metadata, selection, inspection | hierarchy-only stages cross-read and old mesh API remains exact |
+| 4 | U3 mesh/point/material payloads | mixed fixtures, texture packages, selected-prim and large-payload measurements | semantic equality through independent readers |
+| 5 | U4 official Gaussian schema | official 26.08 fixtures, raw-bit convention tests, generated 1k/100k/1M measurements | exact schema mapping; no implicit activations |
+| 6 | U5 camera/volume/semantics/instances | axis/pose optics cases, OpenVDB asset cases, inherited-label and prototype cases | one mixed 3D-CV stage round-trips |
+| 7 | U6 selected-time/container/composition subset | AOUSD compliance cases, current/historical crate reads, USDZ layout checks, selected-time comparison | evaluated snapshot equals the reference; authoring stacks stay out of scope |
+| 8 | U7 release closure | full tests, review lenses, benchmark ledger, docs/contracts, sdist/wheel smoke, hosted matrix with user approval | capability claim is exactly `sceneio.usd.3dcv/1` |
+
+Stop rules prevent the project from becoming open-ended:
+
+- if no qualified cross-platform USDC writer is available, ship USDC read-only;
+- if a composition arc is outside the AOUSD cases implemented in U6, report it
+  through inspection and refuse the rich read;
+- if a schema cannot map exactly to a SceneIO record, keep it outside the
+  profile instead of adding an opaque preservation system;
+- do not add rendering, full layer editing, or unrelated USD schema domains to
+  close this profile.
+
 ### U0 — freeze profile and qualify providers
 
-- [ ] Obtain the explicit TOST policy decision; do not infer it.
-- [ ] Pin AOUSD Core 1.0 compliance inputs and OpenUSD 26.08 schema fixtures,
-      recording the license of every committed fixture.
+- [x] Compare the TOST 1.0 and Apache-2.0 texts and record the exact project
+      consequence.
+- [ ] Obtain the explicit narrow TOST policy decision; do not infer approval
+      from license similarity.
+- [x] Pin AOUSD Core 1.0.1 (`2f9e746c4fbd`), supplemental 1.0.1.post0
+      (`404e2bde49c1`), and OpenUSD 26.08 (`ee47c679abde`) source baselines.
+- [ ] Select the exact compliance/schema fixtures to commit, recording the
+      source path, source commit, and license of every fixture.
 - [ ] Build a generated provider matrix covering USDA, current and historical
       USDC crates, USD forwarding, USDZ, unknown typed prims, time samples,
       sublayers, references, payloads, variants, and asset resolution.
@@ -335,11 +431,11 @@ no public capability is overstated.
 
 - [x] Add `SceneGraph`, `InstanceSet`, and `VolumeAsset` C++ records and
       owner-retaining nanobind views.
-- [ ] Extend `PointCloud` and `Mesh` additively.
+- [x] Extend `PointCloud` and `Mesh` additively.
 - [x] Extend `GaussianCloud` additively with explicit convention and source
       precision fields.
 - [x] Keep old factory calls and property defaults byte-for-byte compatible.
-- [ ] Make every existing point, mesh, and splat writer guard new fields it
+- [x] Make every existing point, mesh, and splat writer guard new fields it
       cannot represent.
 - [x] Add explicit Gaussian convention conversion outside codec writers.
 - [x] Add construction, validation, zero-copy view, owner-lifetime, pickle
@@ -349,6 +445,16 @@ no public capability is overstated.
 
 Exit: the new records are public and stable; all existing codec outputs remain
 unchanged.
+
+Local U1c evidence: 6 focused payload tests pass; all 675 affected
+point/mesh/USD/API tests pass; the exact 4,106-node collection, compatibility,
+and performance-status contracts pass; and the complete local MSVC run passes
+4,101 tests with five documented optional skips. The 15-format benchmark
+control is recorded in `bench/BASELINE.md`. The resource/lifetime review
+removed native records from module-level parametrization, the
+format/convention review made widths-as-diameter and orientation mapping
+explicit, and the test-soundness review exercises every new field
+independently plus destination preservation.
 
 ### U2 — USD family API and stage skeleton
 
@@ -463,10 +569,48 @@ Exit: the docs claim exactly `sceneio.usd.3dcv/1`; no document says “full USD.
 
 ## Verification matrix
 
+### Per-unit local gate
+
+Run from the repository root with the project interpreter:
+
+```powershell
+uv pip install -e ".[dev,test]"
+.venv\Scripts\python.exe -m pytest -q <focused tests>
+.venv\Scripts\python.exe -m pytest -q
+.venv\Scripts\python.exe -m ruff check
+git diff --check
+```
+
+For optional-provider units, install the selected extra in the same editable
+environment and run the provider's direct comparison suite. C++ changes are
+not tested until the editable rebuild completes. The focused set must include
+the changed record tests, every affected codec parity suite, API/registry
+contracts, destination-preservation cases, and lifetime/allocation cases.
+
+The benchmark command is scoped to the changed family first, then the static
+USD/USDZ control is rerun. A unit records the command, fixture scale, run
+count, median wall time, throughput, peak RSS, Python allocation peak, and
+output size in `bench/BASELINE.md`. A noisy result is rerun; a real regression
+must be explained or corrected before commit.
+
+The three required review lenses are:
+
+1. **resource and lifetime:** owners, buffer/view lifetime, provider release,
+   temporary files, package assets, and write completion;
+2. **format and convention correctness:** axes, units, transforms, domains,
+   quaternion/SH layout, precision, stage evaluation, and unsupported-data
+   refusals;
+3. **test soundness:** independent cross-read/cross-write evidence, exact
+   assertions where required, malformed/edge cases, and proof that tests would
+   fail if the optimized or selected path were bypassed.
+
+Only a green unit is committed. Each commit includes the required co-author
+trailer. Pushing and the hosted package matrix remain user-gated.
+
 ### Ground truth
 
-1. AOUSD Core 1.0 compliance samples for file/container behavior and the
-   composition subset.
+1. AOUSD Core 1.0.1 plus supplemental 1.0.1.post0 compliance cases for
+   file/container behavior and the composition subset.
 2. OpenUSD 26.08 `usdchecker`, `usdcat`, and Python schema APIs, if the narrow
    TOST use is approved.
 3. TinyUSDZ as an independent cross-reader/cross-writer.

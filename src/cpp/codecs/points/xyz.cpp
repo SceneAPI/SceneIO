@@ -597,6 +597,7 @@ void encode_xyz(const PointCloud &pc, std::string &out,
 }
 
 nb::bytes write_xyz(const PointCloud &pc, size_t lanes) {
+    require_no_extended_point_fields(pc, "xyz");
     // Guards: the .xyz row is exactly "x y z [r g b]"; refuse a record whose
     // normals/intensity it cannot carry rather than silently dropping them (the
     // netpbm refuse-not-convert rule -- a normalizer converts, on request).
@@ -628,6 +629,7 @@ nb::bytes write_xyz(const PointCloud &pc, size_t lanes) {
 }
 
 nb::bytes write_pts(const PointCloud &pc, size_t lanes) {
+    require_no_extended_point_fields(pc, "pts");
     if (pc.has_normals())
         throw std::invalid_argument(
             "pts: supported rows are XYZ, XYZI, XYZRGB, or XYZIRGB; a record "

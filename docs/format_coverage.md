@@ -45,8 +45,8 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > allow-list; Apache-2.0 TinyUSDZ is used instead. Cross-platform
 > optional-extra package execution remains user-triggered.
 >
-> **USD standards review (2026-07-30):** AOUSD Core Specification 1.0,
-> OpenUSD 26.08, and the official
+> **USD standards review (2026-07-30):** AOUSD Core Specification 1.0.1,
+> supplemental 1.0.1.post0, OpenUSD 26.08, and the official
 > `UsdVolParticleField3DGaussianSplat` schema define a broader target than the
 > current static mesh adapter. The current USD/USDZ capability rows remain
 > accurate and unchanged. The new plan adds a finite `sceneio.usd.3dcv/1`
@@ -60,6 +60,11 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > foundation for the planned profile. They preserve hierarchy, typed payload
 > identity, point-instancer ordering, stage conventions, time metadata,
 > dependencies, and semantic labels with owner-retaining numeric views. This
+> checkpoint also adds exact float display colors/opacities, widths, ids,
+> velocities, and accelerations to `PointCloud`, and float display
+> colors/opacities, orientation, and tri-state double-sidedness to `Mesh`.
+> Every existing point/mesh writer refuses these fields until it has an exact
+> format mapping. This
 > does not change the codec rows below: `sceneio.read()` for the accepted
 > USD/USDZ profile still returns `MeshScene`, and mixed rich-scene I/O remains
 > pending U2-U6.
@@ -761,7 +766,7 @@ SoA, zero-copy to numpy/torch (DLPack), conventions carried as metadata.
 | `Image` | `image_sequence` elem | ✅ | interleaved HxWxC (u8/u16/f32), color_space/alpha_mode/maxval metadata, owner-safe zero-copy `pixels` |
 | `ImageSequence` | `image_sequence` | ✅ | owned lazy encoded-frame paths, owned uint8 planar Y/U/V frames, or owned packed uint8/uint16/float32 frames; exact optional int64-ns timing, dimensions, color/alpha/maxval, loop, background, chroma sampling/siting, range, matrix, interlace, rate, and aspect metadata |
 | `TensorDict` | (named arrays) | ✅ | dict‑like, 12 numpy dtypes (dtype‑erased), zero‑copy views; backs NPZ and mapped safetensors |
-| `PointCloud` | `point_cloud` (new) | ✅ | xyz + rgb/rgb16 + normals + intensity, optional organized width/height and acquisition viewpoint, plus an optional validated lossless LAS waveform sidecar; backs `.xyz`, count-prefixed `.pts`, point `.ply`, PCD, plain `.las`, and `.laz` |
+| `PointCloud` | `point_cloud` (new) | ✅ | xyz + rgb/rgb16 + normals + intensity, optional organized width/height, acquisition viewpoint, and validated lossless LAS waveform sidecar; additive float display RGB/opacity, widths, signed ids, velocity, acceleration, and display color space are reserved for rich scene formats; backs `.xyz`, count-prefixed `.pts`, point `.ply`, PCD, plain `.las`, and `.laz` |
 | `DepthMap` | `depth_map` | ✅ | scalar f32 depth + scale/unit/invalid + confidence; backs scalar DMB, explicit typed PFM/PNG/EXR adapters, and COLMAP MVS camera-Z/nonpositive depth |
 | `NormalMap` | `normal_map` | ✅ record / ⬜ datatype | HxWx3 f32 camera-frame normals with explicit component/frame conventions; backs COLMAP MVS normal matrices |
 | `ConsistencyGraph` | `consistency_graph` | ✅ record / ⬜ datatype | CSR pixel/image-index adjacency with explicit row/column and positional-index conventions; backs COLMAP MVS consistency graphs |
@@ -782,7 +787,7 @@ SoA, zero-copy to numpy/torch (DLPack), conventions carried as metadata.
 | `ColmapVideoMetadataSet` | COLMAP DB companion | ✅ nested record | metadata-only source/frame rows; SQL NULL versus empty text, dimensions/count/rate/duration, PTS, and independent time IDs; paths are inert strings |
 | `ColmapMaxxSchemaInfo` | COLMAP DB companion | ✅ nested record | exact schema/minimum-reader versions and producer version/commit; absent as `None` outside owned MAXX rows |
 | `MaterialSet` | `material_set` | ✅ record / ⬜ datatype | metallic-roughness factors, alpha modes, URI texture references, UV sets, and sampler metadata; material names may be empty or repeated as glTF permits |
-| `Mesh` | `mesh` | ✅ record / ⬜ datatype | polygon-preserving ragged topology; vertex/corner normals, UVs, RGBA; primitive/material domains; coordinate metadata and local transform |
+| `Mesh` | `mesh` | ✅ record / ⬜ datatype | polygon-preserving ragged topology; vertex/corner normals, UVs, RGBA8 and additive float display RGB/opacity; primitive/material domains; coordinate metadata, local transform, orientation, and tri-state double-sidedness |
 | `MeshScene` | `mesh_scene` | ✅ record / ⬜ datatype | ordered mesh primitives, mesh-to-primitive ranges, shared materials, node hierarchy/local transforms, scene roots, names, and default scene |
 
 ## Formats (codecs)

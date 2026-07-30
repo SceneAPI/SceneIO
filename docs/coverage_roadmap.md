@@ -278,8 +278,8 @@ zero‑copy + convention tags.
 | `ConsistencyGraph` | pixel/image-index CSR + row/column/index conventions | COLMAP MVS consistency graphs | ✅ |
 | `PointVisibility` | fused-point/image-index CSR + index convention | COLMAP fused visibility | ✅ |
 | `FlowField` | `vectors` HxWx2 f32 + component/axis/row/unit/invalid meta | typed `.flo` adapter | ✅ |
-| `PointCloud` | `xyz` Nx3, `rgb`/`rgb16`, `normals`, `intensity`, optional organized shape + viewpoint, optional lossless LAS waveform sidecar | PLY‑point, PCD, LAS/LAZ, E57, `.xyz` | ✅ |
-| `Mesh` | positions; ragged face offsets/indices; vertex/corner normals, UVs, RGBA; primitive/material ranges; coordinate metadata and transform | PLY‑mesh, OBJ, STL, OFF, glTF, USD | ✅ |
+| `PointCloud` | `xyz` Nx3, `rgb`/`rgb16`, normals, intensity, optional organized shape/viewpoint/LAS waveform sidecar, plus authored float display RGB/opacity, widths, signed ids, velocity, acceleration, and display color space | PLY‑point, PCD, LAS/LAZ, E57, `.xyz`; rich fields reserved for the planned USD profile | ✅ record; legacy writers refuse unmapped rich fields |
+| `Mesh` | positions; ragged face offsets/indices; vertex/corner normals, UVs, RGBA8 and authored float display RGB/opacity; primitive/material ranges; coordinate metadata, transform, orientation, and tri-state double-sidedness | PLY‑mesh, OBJ, STL, OFF, glTF, USD | ✅ record; legacy writers refuse unmapped rich fields |
 | `MeshScene` | ordered `Mesh` primitives; mesh ranges/names; shared `MaterialSet`; node hierarchy and local transforms; scene roots/names/default | glTF/GLB, bounded USD/USDZ | ✅ |
 | `FeatureSet` | `keypoints` Nx{2,4,6} f32, polymorphic `descriptors` NxD with extractor dtype/dim/name presence, keypoint colors, scores, quality, image time/id/size, and absent-state metadata | HDF5/hloc, COLMAP DB | ✅ |
 | `MatchGraph` | ragged per-pair raw/verified `matches` Mx2 u32, optional score rows, source/retrieval provenance, `F/E/H` 3x3, config, relative pose, and optional recovered endpoint cameras | HDF5/hloc, COLMAP DB | ✅ |

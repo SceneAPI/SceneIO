@@ -134,6 +134,15 @@ cmake/
   read-only ndarray views; nested payload access keeps the parent scene alive.
   These records are currently an in-memory foundation, not a claim that the
   existing USD codec already maps the richer payloads.
+- `PointCloud` keeps authored float display colors and opacities, point
+  widths (diameters), signed 64-bit ids, velocities, accelerations, and
+  display color-space metadata separate from its legacy quantized color
+  fields. `Mesh` likewise keeps vertex/corner float display colors and
+  opacities separate from RGBA8 and records orientation plus tri-state
+  double-sidedness. Existing point and mesh writers refuse these additive
+  fields until a format-specific mapping is implemented, so they cannot be
+  dropped implicitly. Their ndarray accessors retain the owning record and
+  follow the established writable-view behavior of `PointCloud` and `Mesh`.
 - A **codec** is pure I/O for one format. Native buffer entry points accept a
   contiguous buffer-protocol view without first materializing Python
   `bytes`; public single-file reads normally keep a read-only mmap alive for

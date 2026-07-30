@@ -218,42 +218,39 @@ def test_e57_record_outlives_closed_and_removed_source(tmp_path):
 
 
 @pytest.mark.parametrize(
-    ("cloud", "message"),
+    ("kwargs", "message"),
     [
         (
-            _core.point_cloud(
-                np.ones((2, 3), np.float32),
-                coordinate_frame="enu",
-            ),
+            {"coordinate_frame": "enu"},
             "coordinate_frame",
         ),
         (
-            _core.point_cloud(
-                np.ones((2, 3), np.float32),
-                normals=np.ones((2, 3), np.float32),
-            ),
+            {"normals": np.ones((2, 3), np.float32)},
             "normals",
         ),
         (
-            _core.point_cloud(
-                np.ones((2, 3), np.float32),
-                colors16=np.ones((2, 3), np.uint16),
-            ),
+            {"colors16": np.ones((2, 3), np.uint16)},
             "16-bit colors",
         ),
         (
-            _core.point_cloud(
-                np.ones((2, 3), np.float32),
-                intensity=np.ones(2, np.float32),
-                intensity_range="unit",
-            ),
+            {
+                "intensity": np.ones(2, np.float32),
+                "intensity_range": "unit",
+            },
             "intensity_range",
         ),
     ],
+    ids=[
+        "cloud0-coordinate_frame",
+        "cloud1-normals",
+        "cloud2-16-bit colors",
+        "cloud3-intensity_range",
+    ],
 )
 def test_e57_writer_refuses_unrepresentable_cloud_conventions(
-    tmp_path, cloud, message
+    tmp_path, kwargs, message
 ):
+    cloud = _core.point_cloud(np.ones((2, 3), np.float32), **kwargs)
     with pytest.raises(sceneio.FormatError, match=message):
         sceneio.write(cloud, tmp_path / "bad.e57")
 

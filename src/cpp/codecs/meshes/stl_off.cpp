@@ -320,6 +320,7 @@ bool identity_transform(const double *values) {
 void validate_common_mesh_metadata(
     const Mesh &mesh, const char *format) {
     validate_mesh(mesh, format);
+    require_no_extended_mesh_fields(mesh, format);
     const std::string prefix =
         std::string(format) + " writer: ";
     if (mesh.coordinate_frame != "unknown" ||

@@ -630,6 +630,7 @@ PointCloud read_ply_points(nb::handle source, size_t start, size_t stop) {
 }
 
 void validate_writer(const PointCloud &cloud) {
+    require_no_extended_point_fields(cloud, "PLY point writer");
     if (cloud.n > std::numeric_limits<size_t>::max() / 3)
         throw std::invalid_argument(
             "PLY point cloud: point count overflows field extents");

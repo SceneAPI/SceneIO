@@ -30,6 +30,12 @@ struct Mesh {
     std::vector<float> corner_uvs;      // c*2 or empty
     std::vector<uint8_t> vertex_colors; // n*4 RGBA or empty
     std::vector<uint8_t> corner_colors; // c*4 RGBA or empty
+    // Authored float display primvars remain separate from quantized RGBA8.
+    std::vector<float> vertex_display_colors;    // n*3 or empty
+    std::vector<float> corner_display_colors;    // c*3 or empty
+    std::vector<float> vertex_display_opacities; // n or empty
+    std::vector<float> corner_display_opacities; // c or empty
+    std::string display_color_space = "unknown";
     std::vector<uint32_t> face_smoothing_groups; // f or empty; 0 = off
 
     // Primitive ranges partition faces. Empty meshes have {0} and no material
@@ -60,6 +66,9 @@ struct Mesh {
         0.0, 0.0, 1.0, 0.0,
         0.0, 0.0, 0.0, 1.0,
     };
+    std::string orientation = "unknown";  // unknown|right_handed|left_handed
+    bool has_double_sided = false;
+    bool double_sided = false;
 
     size_t num_vertices() const { return n; }
     size_t num_faces() const { return f; }
@@ -72,6 +81,18 @@ struct Mesh {
     bool has_corner_uvs() const { return !corner_uvs.empty(); }
     bool has_vertex_colors() const { return !vertex_colors.empty(); }
     bool has_corner_colors() const { return !corner_colors.empty(); }
+    bool has_vertex_display_colors() const {
+        return !vertex_display_colors.empty();
+    }
+    bool has_corner_display_colors() const {
+        return !corner_display_colors.empty();
+    }
+    bool has_vertex_display_opacities() const {
+        return !vertex_display_opacities.empty();
+    }
+    bool has_corner_display_opacities() const {
+        return !corner_display_opacities.empty();
+    }
     bool has_smoothing_groups() const {
         return !face_smoothing_groups.empty();
     }
@@ -86,6 +107,33 @@ struct Mesh {
 inline bool mesh_valid_frame(const std::string &value) {
     return value == "unknown" || value == "opencv" ||
            value == "opengl" || value == "enu" || value == "ned";
+}
+inline bool mesh_valid_display_color_space(
+    const std::string &value) {
+    return value == "unknown" || value == "linear" ||
+           value == "srgb";
+}
+inline bool mesh_valid_orientation(const std::string &value) {
+    return value == "unknown" || value == "right_handed" ||
+           value == "left_handed";
+}
+inline bool mesh_has_extended_scene_fields(const Mesh &mesh) {
+    return mesh.has_vertex_display_colors() ||
+           mesh.has_corner_display_colors() ||
+           mesh.has_vertex_display_opacities() ||
+           mesh.has_corner_display_opacities() ||
+           mesh.display_color_space != "unknown" ||
+           mesh.orientation != "unknown" ||
+           mesh.has_double_sided;
+}
+inline void require_no_extended_mesh_fields(
+    const Mesh &mesh, const char *context) {
+    if (mesh_has_extended_scene_fields(mesh))
+        throw std::invalid_argument(
+            std::string(context) +
+            ": cannot represent float display colors/opacities, "
+            "display_color_space, orientation, or double_sided; "
+            "remove them explicitly before writing");
 }
 
 void validate_mesh(const Mesh &mesh, const char *context = "mesh");

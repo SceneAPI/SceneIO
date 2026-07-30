@@ -435,8 +435,8 @@
     "last": "tests/test_points_binary.py::test_bad_magic_rejected"
   },
   "pytest_candidate_collection": {
-    "count": 4100,
-    "sorted_normalized_node_ids_sha256": "313b45a0a25a0dd1704c2fd3abe87f642ae9f67a22fb952b73047e438bc4f594",
+    "count": 4106,
+    "sorted_normalized_node_ids_sha256": "32bf2063da97238b624aaed366d1d348ebf965c9082c27bf76fd5c233b99e443",
     "added_nodes": [
       "tests/codecs/test_animated_webp.py::test_sceneio_writer_is_lossless_and_oracle_readable",
       "tests/codecs/test_animated_webp.py::test_pillow_writer_is_sceneio_readable_bit_exact",
@@ -1449,6 +1449,12 @@
       "tests/records/test_scene_graph.py::test_scene_graph_validation[changes9-external asset kind]",
       "tests/records/test_scene_graph.py::test_scene_graph_instance_prototype_indices_are_graph_checked",
       "tests/records/test_scene_graph.py::test_scene_graph_shape_guards_run_before_shape_access",
+      "tests/records/test_scene_payload_fields.py::test_point_scene_fields_are_exact_owned_and_owner_retaining",
+      "tests/records/test_scene_payload_fields.py::test_point_scene_field_validation_is_closed_and_shape_exact",
+      "tests/records/test_scene_payload_fields.py::test_mesh_scene_fields_are_exact_owned_and_owner_retaining",
+      "tests/records/test_scene_payload_fields.py::test_mesh_scene_field_validation_is_closed_and_shape_exact",
+      "tests/records/test_scene_payload_fields.py::test_existing_point_and_mesh_writers_refuse_extended_fields",
+      "tests/records/test_scene_payload_fields.py::test_extended_field_path_writers_preserve_destinations",
       "tests/test_usd_provider_qualification.py::test_tinyusdz_version_and_official_gaussian_schema_probe",
       "tests/test_usd_provider_qualification.py::test_tinyusdz_usdc_writer_probe_is_not_current_writer_qualification",
       "tests/test_usd_provider_qualification.py::test_tinyusdz_load_is_raw_not_evaluated_composition",

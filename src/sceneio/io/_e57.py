@@ -144,6 +144,21 @@ def _cloud_payload(cloud) -> tuple[dict[str, np.ndarray], np.ndarray, np.ndarray
         raise ValueError("E57: 16-bit colors are unsupported")
     if cloud.has_las_waveform:
         raise ValueError("E57: LAS waveform data are unsupported")
+    extended_fields = (
+        "display_colors",
+        "display_opacities",
+        "widths",
+        "ids",
+        "velocities",
+        "accelerations",
+    )
+    if any(getattr(cloud, f"has_{name}") for name in extended_fields) or (
+        cloud.display_color_space != "unknown"
+    ):
+        raise ValueError(
+            "E57: float display colors/opacities, widths, ids, velocities, "
+            "accelerations, and display_color_space are unsupported"
+        )
     if cloud.has_intensity and cloud.intensity_range != "unknown":
         raise ValueError("E57: intensity_range must be 'unknown'")
     if tuple(float(value) for value in cloud.origin) != (0.0, 0.0, 0.0):

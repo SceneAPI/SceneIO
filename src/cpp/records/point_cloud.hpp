@@ -45,6 +45,15 @@ struct PointCloud {
     std::vector<uint16_t> rgb16;    // n*3 or empty (16-bit color, e.g. LAS; NOT narrowed to rgb)
     std::vector<float> normals;     // n*3 or empty (stored raw; unit length not enforced)
     std::vector<float> intensity;   // n or empty (raw values, never rescaled)
+    // USD/scene payload fields. These stay distinct from quantized RGB so no
+    // format writer needs to narrow or activate values implicitly.
+    std::vector<float> display_colors;    // n*3 or empty, authored float RGB
+    std::vector<float> display_opacities; // n or empty, [0,1]
+    std::vector<float> widths;            // n or empty, nonnegative diameters
+    std::vector<int64_t> ids;             // n or empty, unique
+    std::vector<float> velocities;        // n*3 or empty
+    std::vector<float> accelerations;     // n*3 or empty
+    std::string display_color_space = "unknown";
     // conventions the codec recorded (metadata, not fixed like GaussianCloud's):
     std::string coordinate_frame = "unknown";  // "unknown"|"opencv"|"opengl"|"enu"|"ned"
     double scale_to_meters = 1.0;              // multiply xyz by this to get meters
@@ -65,6 +74,18 @@ struct PointCloud {
     bool has_rgb16() const { return !rgb16.empty(); }
     bool has_normals() const { return !normals.empty(); }
     bool has_intensity() const { return !intensity.empty(); }
+    bool has_display_colors() const {
+        return !display_colors.empty();
+    }
+    bool has_display_opacities() const {
+        return !display_opacities.empty();
+    }
+    bool has_widths() const { return !widths.empty(); }
+    bool has_ids() const { return !ids.empty(); }
+    bool has_velocities() const { return !velocities.empty(); }
+    bool has_accelerations() const {
+        return !accelerations.empty();
+    }
     bool has_las_waveform() const {
         return static_cast<bool>(las_waveform);
     }
@@ -101,4 +122,23 @@ inline bool pc_valid_frame(const std::string &s) {
 }
 inline bool pc_valid_intensity_range(const std::string &s) {
     return s == "unknown" || s == "unit" || s == "u8" || s == "u16";
+}
+inline bool pc_valid_display_color_space(const std::string &s) {
+    return s == "unknown" || s == "linear" || s == "srgb";
+}
+inline bool pc_has_extended_scene_fields(const PointCloud &cloud) {
+    return cloud.has_display_colors() ||
+           cloud.has_display_opacities() || cloud.has_widths() ||
+           cloud.has_ids() || cloud.has_velocities() ||
+           cloud.has_accelerations() ||
+           cloud.display_color_space != "unknown";
+}
+inline void require_no_extended_point_fields(
+    const PointCloud &cloud, const char *context) {
+    if (pc_has_extended_scene_fields(cloud))
+        throw std::invalid_argument(
+            std::string(context) +
+            ": cannot represent float display colors/opacities, widths, "
+            "ids, velocities, accelerations, or display_color_space; "
+            "remove them explicitly before writing");
 }

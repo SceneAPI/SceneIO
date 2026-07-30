@@ -151,7 +151,14 @@ Mesh make_mesh(
     std::optional<MaterialSet> materials,
     const std::string &coordinate_frame,
     double scale_to_meters,
-    std::optional<f64_array> local_transform) {
+    std::optional<f64_array> local_transform,
+    std::optional<f32_array> vertex_display_colors,
+    std::optional<f32_array> corner_display_colors,
+    std::optional<f32_array> vertex_display_opacities,
+    std::optional<f32_array> corner_display_opacities,
+    const std::string &display_color_space,
+    const std::string &orientation,
+    std::optional<bool> double_sided) {
     if (positions.ndim() != 2 || positions.shape(1) != 3)
         throw std::invalid_argument(
             "mesh: positions must be (N,3) float32");
@@ -191,6 +198,36 @@ Mesh make_mesh(
     if (corner_colors)
         require_u8_shape(
             *corner_colors, mesh.c, 4, "corner_colors");
+    if (vertex_display_colors)
+        require_f32_shape(
+            *vertex_display_colors, mesh.n, 3,
+            "vertex_display_colors");
+    if (corner_display_colors)
+        require_f32_shape(
+            *corner_display_colors, mesh.c, 3,
+            "corner_display_colors");
+    auto require_f32_vector = [](
+        const f32_array &array, size_t rows,
+        const char *name) {
+        if (array.ndim() != 1 || array.shape(0) != rows)
+            throw std::invalid_argument(
+                std::string("mesh: ") + name + " must be (" +
+                std::to_string(rows) + ",) float32");
+    };
+    if (vertex_display_opacities)
+        require_f32_vector(
+            *vertex_display_opacities, mesh.n,
+            "vertex_display_opacities");
+    if (corner_display_opacities)
+        require_f32_vector(
+            *corner_display_opacities, mesh.c,
+            "corner_display_opacities");
+    mesh.display_color_space = display_color_space;
+    mesh.orientation = orientation;
+    if (double_sided) {
+        mesh.has_double_sided = true;
+        mesh.double_sided = *double_sided;
+    }
 
     if (primitive_offsets) {
         if (primitive_offsets->ndim() != 1 ||
@@ -276,6 +313,22 @@ Mesh make_mesh(
             assign_nonempty(
                 mesh.corner_colors, corner_colors->data(),
                 mesh.c * 4);
+        if (vertex_display_colors)
+            assign_nonempty(
+                mesh.vertex_display_colors,
+                vertex_display_colors->data(), mesh.n * 3);
+        if (corner_display_colors)
+            assign_nonempty(
+                mesh.corner_display_colors,
+                corner_display_colors->data(), mesh.c * 3);
+        if (vertex_display_opacities)
+            assign_nonempty(
+                mesh.vertex_display_opacities,
+                vertex_display_opacities->data(), mesh.n);
+        if (corner_display_opacities)
+            assign_nonempty(
+                mesh.corner_display_opacities,
+                corner_display_opacities->data(), mesh.c);
         if (face_smoothing_groups)
             assign_nonempty(
                 mesh.face_smoothing_groups,
@@ -351,6 +404,18 @@ void validate_mesh(const Mesh &mesh, const char *context) {
         mesh.vertex_colors.size(), mesh.n * 4, "vertex_colors");
     optional_size(
         mesh.corner_colors.size(), mesh.c * 4, "corner_colors");
+    optional_size(
+        mesh.vertex_display_colors.size(), mesh.n * 3,
+        "vertex_display_colors");
+    optional_size(
+        mesh.corner_display_colors.size(), mesh.c * 3,
+        "corner_display_colors");
+    optional_size(
+        mesh.vertex_display_opacities.size(), mesh.n,
+        "vertex_display_opacities");
+    optional_size(
+        mesh.corner_display_opacities.size(), mesh.c,
+        "corner_display_opacities");
     optional_size(
         mesh.face_smoothing_groups.size(), mesh.f,
         "face_smoothing_groups");
@@ -452,6 +517,17 @@ void validate_mesh(const Mesh &mesh, const char *context) {
         mesh.scale_to_meters <= 0.0)
         throw std::invalid_argument(
             prefix + "scale_to_meters must be finite and positive");
+    if (!mesh_valid_display_color_space(
+            mesh.display_color_space))
+        throw std::invalid_argument(
+            prefix + "display_color_space must be unknown|linear|srgb");
+    if (!mesh_valid_orientation(mesh.orientation))
+        throw std::invalid_argument(
+            prefix +
+            "orientation must be unknown|right_handed|left_handed");
+    if (!mesh.has_double_sided && mesh.double_sided)
+        throw std::invalid_argument(
+            prefix + "absent double_sided must use false storage");
 
     auto finite = [&](const std::vector<float> &values,
                       const char *name) {
@@ -465,6 +541,23 @@ void validate_mesh(const Mesh &mesh, const char *context) {
     finite(mesh.corner_normals, "corner normal");
     finite(mesh.vertex_uvs, "vertex UV");
     finite(mesh.corner_uvs, "corner UV");
+    finite(mesh.vertex_display_colors, "vertex display color");
+    finite(mesh.corner_display_colors, "corner display color");
+    auto opacity = [&](const std::vector<float> &values,
+                       const char *name) {
+        for (float value : values)
+            if (!std::isfinite(value) || value < 0.0F ||
+                value > 1.0F)
+                throw std::invalid_argument(
+                    prefix + name +
+                    " values must be finite and in [0,1]");
+    };
+    opacity(
+        mesh.vertex_display_opacities,
+        "vertex display opacity");
+    opacity(
+        mesh.corner_display_opacities,
+        "corner display opacity");
     for (double value : mesh.local_transform)
         if (!std::isfinite(value))
             throw std::invalid_argument(
@@ -553,6 +646,44 @@ void register_mesh(nb::module_ &module) {
             },
             reference_internal)
         .def_prop_ro(
+            "vertex_display_colors",
+            [](const Mesh &mesh) {
+                return mesh_view(
+                    mesh.vertex_display_colors,
+                    {mesh.has_vertex_display_colors()
+                         ? mesh.n
+                         : 0,
+                     3});
+            },
+            reference_internal)
+        .def_prop_ro(
+            "corner_display_colors",
+            [](const Mesh &mesh) {
+                return mesh_view(
+                    mesh.corner_display_colors,
+                    {mesh.has_corner_display_colors()
+                         ? mesh.c
+                         : 0,
+                     3});
+            },
+            reference_internal)
+        .def_prop_ro(
+            "vertex_display_opacities",
+            [](const Mesh &mesh) {
+                return mesh_view(
+                    mesh.vertex_display_opacities,
+                    {mesh.vertex_display_opacities.size()});
+            },
+            reference_internal)
+        .def_prop_ro(
+            "corner_display_opacities",
+            [](const Mesh &mesh) {
+                return mesh_view(
+                    mesh.corner_display_opacities,
+                    {mesh.corner_display_opacities.size()});
+            },
+            reference_internal)
+        .def_prop_ro(
             "face_smoothing_groups",
             [](const Mesh &mesh) {
                 return mesh_view(
@@ -630,6 +761,17 @@ void register_mesh(nb::module_ &module) {
             reference_internal)
         .def_ro("coordinate_frame", &Mesh::coordinate_frame)
         .def_ro("scale_to_meters", &Mesh::scale_to_meters)
+        .def_ro(
+            "display_color_space",
+            &Mesh::display_color_space)
+        .def_ro("orientation", &Mesh::orientation)
+        .def_prop_ro(
+            "double_sided",
+            [](const Mesh &mesh) -> nb::object {
+                if (!mesh.has_double_sided)
+                    return nb::none();
+                return nb::bool_(mesh.double_sided);
+            })
         .def_prop_ro(
             "has_vertex_normals",
             [](const Mesh &mesh) { return mesh.has_vertex_normals(); })
@@ -648,6 +790,31 @@ void register_mesh(nb::module_ &module) {
         .def_prop_ro(
             "has_corner_colors",
             [](const Mesh &mesh) { return mesh.has_corner_colors(); })
+        .def_prop_ro(
+            "has_vertex_display_colors",
+            [](const Mesh &mesh) {
+                return mesh.has_vertex_display_colors();
+            })
+        .def_prop_ro(
+            "has_corner_display_colors",
+            [](const Mesh &mesh) {
+                return mesh.has_corner_display_colors();
+            })
+        .def_prop_ro(
+            "has_vertex_display_opacities",
+            [](const Mesh &mesh) {
+                return mesh.has_vertex_display_opacities();
+            })
+        .def_prop_ro(
+            "has_corner_display_opacities",
+            [](const Mesh &mesh) {
+                return mesh.has_corner_display_opacities();
+            })
+        .def_prop_ro(
+            "has_double_sided",
+            [](const Mesh &mesh) {
+                return mesh.has_double_sided;
+            })
         .def_prop_ro(
             "has_face_smoothing_groups",
             [](const Mesh &mesh) {
@@ -696,5 +863,13 @@ void register_mesh(nb::module_ &module) {
         "coordinate_frame"_a = "unknown",
         "scale_to_meters"_a = 1.0,
         "local_transform"_a = nb::none(),
-        "Build a polygon-preserving Mesh from contiguous canonical arrays.");
+        "vertex_display_colors"_a = nb::none(),
+        "corner_display_colors"_a = nb::none(),
+        "vertex_display_opacities"_a = nb::none(),
+        "corner_display_opacities"_a = nb::none(),
+        "display_color_space"_a = "unknown",
+        "orientation"_a = "unknown",
+        "double_sided"_a = nb::none(),
+        "Build a polygon-preserving Mesh from contiguous canonical arrays "
+        "with optional authored float display primvars and surface metadata.");
 }
