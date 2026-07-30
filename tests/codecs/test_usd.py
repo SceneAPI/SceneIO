@@ -234,6 +234,15 @@ def test_usd_inspection_matches_decoded_scene(tmp_path, suffix):
         "primitive_count": 1,
         "face_count": 2,
         "scene_count": 1,
+        "representation": "usdz" if suffix == ".usdz" else "usda",
+        "up_axis": "y",
+        "meters_per_unit": 1.0,
+        "time_codes_per_second": 24.0,
+        "mesh_projection_available": True,
+        "prim_type_counts": ("Mesh=1", "Xform=1"),
+        "dependencies": (),
+        "variants": (),
+        "unsupported_features": (),
     }
 
 
@@ -244,7 +253,7 @@ def test_usd_inspection_does_not_construct_mesh_scene(tmp_path, monkeypatch):
     def fail_full_decode(_stage):
         raise AssertionError("inspection must not build a MeshScene")
 
-    monkeypatch.setattr(_usd, "_stage_to_scene", fail_full_decode)
+    monkeypatch.setattr(_usd.legacy, "_stage_to_scene", fail_full_decode)
 
     assert sceneio.inspect(path).shape == (4, 3)
 
@@ -348,7 +357,7 @@ def test_usd_existing_destination_survives_package_failure(
         destination.write_bytes(b"partial")
         raise RuntimeError("injected failure")
 
-    monkeypatch.setattr(_usd, "_write_usdz_archive", fail)
+    monkeypatch.setattr(_usd.legacy, "_write_usdz_archive", fail)
     with pytest.raises(RuntimeError, match="injected failure"):
         sceneio.write_usdz(_fixture(), path)
 

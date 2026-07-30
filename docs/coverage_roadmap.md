@@ -12,8 +12,8 @@
 > [`next_stage_implementation_checklist.md`](next_stage_implementation_checklist.md).
 > The bounded standards-based USD expansion is specified separately in
 > [`usd_3d_cv_implementation_plan.md`](usd_3d_cv_implementation_plan.md).
-> It does not change the current static-mesh USD capability status until its
-> individual phases pass.
+> U0-U2 now qualify the bounded provider, records, and stage skeleton. U3-U7
+> remain the finite payload/composition/release closure.
 > Animated WebP is the 55th local codec; the preceding 54-codec hosted package
 > evidence remains a dated checkpoint rather than evidence for this addition.
 > The current branch-local COLMAP dense checkpoint adds exact depth/normal
@@ -345,7 +345,7 @@ Columns: **Ext/id** · **Record** · **Lib/oracle (license)** · **R/W** ·
 | ✅ OFF | `Mesh` | independent parser + trimesh (MIT) | R+W | polygon-preserving ASCII vertex variants with normals, UVs, and exact RGBA8; bounded face ranges |
 | ✅ glTF / GLB (plain) | `MeshScene` | cgltf (MIT); pygltflib + trimesh oracles | R+W | 2.0 JSON/external or data buffers and GLB BIN; sparse/strided accessors, nodes/scenes, PBR subset, mesh/primitive selectors; unsupported extensions/Draco reject |
 | policy-gated Draco glTF | `MeshScene` | Draco (Apache) | R+W | requires a separate patented-codec policy decision; never required for plain glTF/GLB |
-| ✅ USD / USDZ | `MeshScene` | TinyUSDZ (Apache-2.0) | R+W | optional `sceneio[usd]`; current static bounded CV scene; repository-owned streaming USDA and aligned USDZ writers; historical USDC input is qualified only through crate 10 and later crates refuse before provider dispatch; broader `sceneio.usd.3dcv/1` work is planned in `usd_3d_cv_implementation_plan.md`; OpenUSD remains unselected until the TOST policy decision |
+| 🟡 USD / USDZ / historical USDC | `MeshScene` compatibility + `SceneGraph` | TinyUSDZ (Apache-2.0) | mesh R+W; rich R + hierarchy W | optional `sceneio[usd]`; U2 maps bounded stage hierarchy/metadata/static transforms and selected prims, with deterministic USDA/aligned USDZ hierarchy writes; historical USDC input is qualified only through crate 10 and later crates refuse before provider dispatch; U3-U7 close typed payloads, evaluated composition, and release evidence; OpenUSD remains unselected until the TOST policy decision |
 
 ### 3e. Arrays / tensors / features
 | Format | Record | Lib / oracle | R/W | Notes |

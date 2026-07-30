@@ -94,6 +94,7 @@ things that keep this expansible as the format list from
 sceneio (Python)                     public, stable surface
   read() / write() / inspect()       format-dispatched I/O + metadata-only probes
   read_partial()                     bounded format-specific selectors
+  read_scene() / write_scene()       bounded rich USD-family SceneGraph API
   detect()
   io.registry                        one entry per format + optional inspect/partial hooks
   Reconstruction, GaussianCloud, …   re-exported record types
@@ -132,8 +133,9 @@ cmake/
   numeric per-instance `TensorDict` attributes. `VolumeAsset` is a named
   external OpenVDB grid reference. Their numeric tables use owner-retaining,
   read-only ndarray views; nested payload access keeps the parent scene alive.
-  These records are currently an in-memory foundation, not a claim that the
-  existing USD codec already maps the richer payloads.
+  The additive USD stage path now maps the hierarchy/metadata/static-transform
+  skeleton and mesh payload reads. Rich point/material/Gaussian/camera/volume/
+  instance writes remain their explicitly tracked U3-U5 mappings.
 - `PointCloud` keeps authored float display colors and opacities, point
   widths (diameters), signed 64-bit ids, velocities, accelerations, and
   display color-space metadata separate from its legacy quantized color

@@ -1,13 +1,9 @@
-"""Static 3D-CV mesh scenes in ASCII USD and aligned USDZ packages."""
+"""Compatibility MeshScene mapping and deterministic legacy USD writers."""
 
 from __future__ import annotations
 
 import os
 import re
-import shutil
-import struct
-import tempfile
-import zipfile
 from contextlib import suppress
 from pathlib import Path
 
@@ -15,73 +11,39 @@ import numpy as np
 
 from sceneio import _core
 from sceneio.io._inspectors.model import Inspection
+from sceneio.io._usd import geometry as _geometry
+from sceneio.io._usd import package as _package
+from sceneio.io._usd import provider as _provider
+from sceneio.io._usd.stage import (
+    inspect_scene as _inspect_scene,
+)
+from sceneio.io._usd.stage import (
+    read_scene,
+    write_scene,
+)
 
 _IDENTITY = np.eye(4, dtype=np.float64)
 _IDENTIFIER = re.compile(r"[A-Za-z_][A-Za-z0-9_]*\Z")
-_USDC_MAGIC = b"PXR-USDC\x00"
-_TINYUSDZ_MAX_QUALIFIED_CRATE_VERSION = 10
 _XFORM_PROPERTIES = frozenset({"xformOp:transform", "xformOpOrder"})
-_MESH_PROPERTIES = frozenset(
-    {
-        "points",
-        "faceVertexCounts",
-        "faceVertexIndices",
-        "normals",
-        "primvars:st",
-        "subdivisionScheme",
-        "extent",
-    }
-)
+_MESH_PROPERTIES = _geometry.MESH_PROPERTIES
 
 
 def _require_tinyusdz():
-    try:
-        import tinyusdz
-    except ModuleNotFoundError:
-        raise RuntimeError(
-            "USD/USDZ support requires the optional dependency; "
-            "install sceneio[usd]"
-        ) from None
-    return tinyusdz
+    return _provider.require_tinyusdz()
 
 
 def _root_layer_prefix(path: str | os.PathLike[str]) -> bytes:
-    with open(path, "rb") as source:
-        prefix = source.read(10)
-    if not prefix.startswith(b"PK\x03\x04"):
-        return prefix
-    try:
-        with zipfile.ZipFile(path) as archive:
-            entries = archive.infolist()
-            if not entries or entries[0].is_dir():
-                return b""
-            with archive.open(entries[0]) as root_layer:
-                return root_layer.read(10)
-    except (OSError, RuntimeError, zipfile.BadZipFile):
-        return b""
+    return _package.root_layer_prefix(path)
 
 
 def _require_qualified_provider_input(
     path: str | os.PathLike[str],
 ) -> None:
-    prefix = _root_layer_prefix(path)
-    if not prefix.startswith(_USDC_MAGIC) or len(prefix) < 10:
-        return
-    version = prefix[9]
-    if version > _TINYUSDZ_MAX_QUALIFIED_CRATE_VERSION:
-        raise ValueError(
-            f"USD: USDC crate version {version} exceeds TinyUSDZ 0.9.4's "
-            "qualified maximum version 10"
-        )
+    _provider.require_qualified_input(path)
 
 
 def _load_stage(path: str | os.PathLike[str]):
-    _require_qualified_provider_input(path)
-    tinyusdz = _require_tinyusdz()
-    try:
-        return tinyusdz.load(os.fspath(path))
-    except Exception as exc:
-        raise ValueError(f"USD: provider could not load the stage: {exc}") from exc
+    return _provider.load_stage(path)
 
 
 def _value_array(
@@ -118,13 +80,16 @@ def _render_transforms(stage) -> dict[str, np.ndarray]:
             f"USD: provider could not evaluate static transforms: {exc}"
         ) from exc
     result = {}
-    for node in rendered.nodes():
+    pending = list(reversed(rendered.nodes()))
+    while pending:
+        node = pending.pop()
         matrix = np.asarray(node.local_matrix, dtype=np.float64)
         if matrix.shape != (4, 4) or not np.isfinite(matrix).all():
             raise ValueError(
                 f"USD prim {node.abs_path!r}: invalid local transform"
             )
         result[str(node.abs_path)] = np.array(matrix, copy=True, order="C")
+        pending.extend(reversed(node.children()))
     return result
 
 
@@ -382,56 +347,9 @@ def inspect_usd(
     *,
     format_id: str = "usd",
 ) -> Inspection:
-    """Inspect the bounded USD stage using the upstream path parser."""
+    """Inspect stage structure and rich-read compatibility."""
 
-    stage = _load_stage(path)
-    _validate_stage_metadata(stage)
-    render_transforms = _render_transforms(stage)
-    vertices = 0
-    faces = 0
-    primitive_count = 0
-    node_count = 0
-
-    def visit(prim, parent_path: str) -> None:
-        nonlocal faces, node_count, primitive_count, vertices
-        path = _validate_prim_shell(
-            prim, parent_path, render_transforms
-        )
-        node_count += 1
-        if prim.type_name == "Mesh":
-            positions, counts, _, _ = _mesh_arrays_from_prim(
-                prim, copy=False
-            )
-            vertices += len(positions)
-            faces += len(counts)
-            primitive_count += 1
-        children = list(prim.children())
-        if len({child.name for child in children}) != len(children):
-            raise ValueError(
-                f"USD prim {prim.name!r}: child names must be unique"
-            )
-        for child in children:
-            visit(child, path)
-
-    root_prims = list(stage.root_prims())
-    if len({prim.name for prim in root_prims}) != len(root_prims):
-        raise ValueError("USD: root prim names must be unique")
-    for prim in root_prims:
-        visit(prim, "")
-    return Inspection(
-        format=format_id,
-        datatype="mesh_scene",
-        byte_size=Path(path).stat().st_size,
-        shape=(vertices, 3),
-        dtype="float32",
-        count=primitive_count,
-        metadata={
-            "node_count": node_count,
-            "primitive_count": primitive_count,
-            "face_count": faces,
-            "scene_count": 1,
-        },
-    )
+    return _inspect_scene(path, format_id=format_id)
 
 
 def inspect_usdz(path: str | os.PathLike[str]) -> Inspection:
@@ -708,33 +626,11 @@ def _write_usda(scene, stream) -> None:
 
 
 def _temporary_path(destination: Path, suffix: str) -> Path:
-    fd, name = tempfile.mkstemp(
-        prefix=f".{destination.name}.",
-        suffix=suffix,
-        dir=destination.parent,
-    )
-    os.close(fd)
-    return Path(name)
+    return _package.temporary_path(destination, suffix)
 
 
 def _write_usdz_archive(source: Path, destination: Path) -> None:
-    with zipfile.ZipFile(
-        destination,
-        mode="w",
-        compression=zipfile.ZIP_STORED,
-        allowZip64=True,
-    ) as archive:
-        name = "root.usda"
-        info = zipfile.ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
-        info.compress_type = zipfile.ZIP_STORED
-        info.file_size = source.stat().st_size
-        base = archive.fp.tell() + 30 + len(name.encode("utf-8")) + 4
-        padding = (-base) % 64
-        info.extra = struct.pack("<HH", 0xFFFF, padding) + bytes(padding)
-        with source.open("rb") as input_stream, archive.open(
-            info, mode="w", force_zip64=source.stat().st_size >= 0xFFFFFFFF
-        ) as output_stream:
-            shutil.copyfileobj(input_stream, output_stream, length=1024 * 1024)
+    _package.write_usdz_archive(source, destination)
 
 
 def write_usd(scene, path: str | os.PathLike[str]) -> None:
@@ -775,7 +671,9 @@ def write_usdz(scene, path: str | os.PathLike[str]) -> None:
 __all__ = [
     "inspect_usd",
     "inspect_usdz",
+    "read_scene",
     "read_usd",
+    "write_scene",
     "write_usd",
     "write_usdz",
 ]

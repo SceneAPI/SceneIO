@@ -1,6 +1,7 @@
 # USD 3D-CV profile implementation plan
 
-Status: U1 implemented and locally verified; U0 provider qualification is next
+Status: U0 bounded-provider matrix, U1 records, and U2 stage skeleton are
+implemented locally; the narrow TOST/current-crate gate and U3-U7 remain
 Review date: 2026-07-30  
 Standards baseline: AOUSD Core Specification 1.0.1, supplemental
 1.0.1.post0, and OpenUSD 26.08 (`v26.08`, `ee47c679abde`)
@@ -90,19 +91,32 @@ Repository review also found that U1 is already partly implemented:
 
 ## Current implementation and measured review
 
-The current `sceneio[usd]` profile uses TinyUSDZ 0.9.4 for loading and a
-repository-owned deterministic USDA/USDZ writer. It supports:
+The current `sceneio[usd]` profile uses TinyUSDZ 0.9.4 for qualified loading
+and repository-owned deterministic USDA/USDZ writers. The compatibility path
+supports:
 
-- `.usd` and `.usda` ASCII layers plus single-root-layer `.usdz`;
+- `.usd` and `.usda` ASCII layers, historical `.usdc` through crate 10, and
+  single-root-layer `.usdz`;
 - `Xform`, `Scope`, and polygonal `Mesh` prims;
 - positions, face topology, vertex/corner normals and UVs;
 - hierarchy, static matrix transforms, and one scene;
 - metadata-only inspection, transactional path writes, and lifetime-safe
   owned results.
 
-It currently requires Y-up, one meter per unit, and refuses colors, materials,
-cameras, time samples, composition arcs, variants, instancing, and custom
-metadata. `.usdc` is not a registered extension. TinyUSDZ is locally qualified
+The additive `read_scene()` path now returns `SceneGraph`, maps Y/Z up-axis,
+positive units, default prim, hierarchy, evaluated static transforms,
+reset-transform-stack state, visibility, purpose, stage time metadata, and a
+selected static snapshot. Prim selection retains required ancestors and does
+not construct unselected mesh records. `write_scene()` transactionally writes
+empty or hierarchy-only `SceneGraph` values as USDA/USDZ. Rich payload writing
+starts in U3; current-crate and selected animated-value work remains U6.
+Inspection reports representation/crate version, typed prim counts, time
+range, authored dependencies/variants, unsupported features, and whether the
+legacy mesh projection is available.
+
+The compatibility `sceneio.read()` path still requires Y-up and one meter per
+unit and returns `MeshScene`; its deterministic bytes are unchanged. Both
+paths refuse data outside their stated mapping. TinyUSDZ is locally qualified
 only through crate version 10, and the official crate-10 time-sample fixture
 exposes timestamps but not values; SceneIO refuses later crate versions before
 provider dispatch.
@@ -463,23 +477,51 @@ independently plus destination preservation.
 
 ### U2 — USD family API and stage skeleton
 
-- [ ] Split `_usd.py` into bounded modules:
+- [x] Split `_usd.py` into a facade plus bounded modules:
       `_usd/provider.py`, `_usd/stage.py`, `_usd/geometry.py`,
       `_usd/materials.py`, `_usd/gaussians.py`, `_usd/cameras.py`, and
-      `_usd/package.py`.
-- [ ] Add `.usdc` routing under the existing `usd` codec id.
-- [ ] Implement `read_scene()` and `write_scene()` without changing the old
-      mesh-only return contract.
-- [ ] Map `defaultPrim`, Y/Z up-axis, units, ordered/reset transforms,
-      visibility, purpose, extent, and one selected time.
-- [ ] Extend inspection with representation/version, typed prim counts,
+      `_usd/package.py`; compatibility mesh behavior is isolated in
+      `_usd/legacy.py`.
+- [x] Add `.usdc` routing under the existing `usd` codec id, bounded by the
+      qualified crate-10 ceiling.
+- [x] Implement `read_scene()` and hierarchy-only `write_scene()` without
+      changing the old mesh-only return contract; typed payload writes remain
+      their U3-U5 units.
+- [x] Map `defaultPrim`, Y/Z up-axis, units, provider-evaluated ordered static
+      transforms, reset-transform-stack state, visibility, purpose,
+      validated finite mesh extent (with record bounds derived from positions),
+      and one selected static time. Animated value evaluation remains
+      explicitly U6.
+- [x] Extend inspection with representation/version, typed prim counts,
       time range, dependencies, variants, and unsupported features.
-- [ ] Add path/prim selection that avoids constructing unselected payload
+- [x] Add path/prim selection that avoids constructing unselected payload
       records.
-- [ ] Preserve destinations on every validation/provider/write failure.
+- [x] Preserve destinations on every validation/provider/write failure.
 
 Exit: an empty/hierarchy-only stage round-trips and existing static mesh USD
 tests remain byte exact.
+
+Local U2 evidence: TinyUSDZ independently cross-reads both repository-authored
+USDA and aligned USDZ hierarchy fixtures; rich reads and legacy mesh reads are
+tested side by side; a selected branch proves that an unselected mesh decoder
+is never called; owner-retaining transform views survive source removal; and
+injected package, validation, and unavailable-USDC failures preserve existing
+destinations. The exact local collection is 4,132 nodes and the complete MSVC
+run passes 4,127 with five documented optional skips. Two three-run legacy
+controls span 8–13 MB/s, with paired SceneIO/direct-read ratios of
+0.95–1.13; rich inspection retains 0.2 MB traced Python storage for both USDA
+and stored USDZ, and the generated 16 MiB feature scan stays below 512 KiB.
+
+The U2 three-part review is clear. The resource/lifetime pass verifies that
+mapped direct layers and exact stored-USDZ root extents close before the path
+is renamed or removed, compressed package roots use a bounded temporary map,
+and every returned record owns its arrays. The format/correctness pass found
+and fixed a fast-scan ambiguity: composition words and asset delimiters inside
+comments or quoted metadata are now ignored, while arbitrary whitespace
+around real arcs remains accepted. The test-strength pass covers both
+provider cross-read directions, legacy/rich API separation, skipped-payload
+construction, destination preservation, unsupported operation boundaries,
+source removal, and the generated allocation control.
 
 ### U3 — meshes, points, materials, and texture assets
 

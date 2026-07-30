@@ -5161,7 +5161,7 @@ checklist. No unchecked item below is a current USD I/O capability claim:
       qualification.
 - [x] U1: additive `SceneGraph`/`InstanceSet` records and convention-bearing
       mesh, point, and Gaussian payloads.
-- [ ] U2: compatible rich-scene API, `.usdc` routing, stage metadata,
+- [x] U2: compatible rich-scene API, `.usdc` routing, stage metadata,
       inspection, and selection.
 - [ ] U3: mixed meshes, points, bounded materials, and texture assets.
 - [ ] U4: official `ParticleField3DGaussianSplat` mapping.
@@ -5208,6 +5208,11 @@ Progress:
       focused payload tests, 675 affected codec/API tests, the exact contracts,
       the complete local suite, Ruff, and the 15-format benchmark control are
       green.
+- [x] U2 replaces the former `_usd.py` monolith with a facade and bounded
+      provider/stage/geometry/package/payload-vocabulary modules, registers
+      qualified historical `.usdc`, adds `read_scene()` plus hierarchy-only
+      `write_scene()`, maps the bounded stage skeleton, and reports/refuses
+      composition features that are not yet evaluated.
 
 Completed U1 evidence:
 
@@ -5234,6 +5239,23 @@ Completed U1 evidence:
   double-sided state are each refused before a path destination is replaced;
 - the U1c control in `bench/BASELINE.md` covers all 15 touched point, mesh,
   E57, glTF, and static USD/USDZ paths with three medians.
+
+Completed U2 evidence:
+
+- the exact collection is 4,132 nodes and the complete local MSVC run passes
+  4,127 with five documented optional skips;
+- TinyUSDZ cross-reads repository-authored USDA/USDZ hierarchy fixtures,
+  legacy mesh bytes and return types remain exact, and rich mesh reads return
+  `SceneGraph`;
+- selected prims retain ancestors without constructing unselected mesh
+  payloads; retained numeric views survive source removal; all rejected or
+  injected writer failures preserve existing destinations;
+- inspection exposes representation/crate version, typed prim counts,
+  axes/units/time range, dependencies, variants, unsupported features, and
+  mesh-projection availability without constructing a compiled scene;
+- the three-median compatibility control remains within 10–13 MB/s, direct
+  USDA and stored-USDZ inspection retain 0.2 MB traced Python storage, and a
+  generated 16 MiB root-layer scan remains below 512 KiB.
 
 Pre-U1 optional-provider closure evidence:
 

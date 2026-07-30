@@ -65,9 +65,25 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > colors/opacities, orientation, and tri-state double-sidedness to `Mesh`.
 > Every existing point/mesh writer refuses these fields until it has an exact
 > format mapping. This
-> does not change the codec rows below: `sceneio.read()` for the accepted
-> USD/USDZ profile still returns `MeshScene`, and mixed rich-scene I/O remains
-> pending U2-U6.
+> does not change the legacy codec return contract: `sceneio.read()` for the
+> accepted USD/USDZ profile still returns `MeshScene`.
+>
+> **USD U2 stage checkpoint (2026-07-30):** the public additive
+> `sceneio.read_scene()` API returns `SceneGraph` for bounded USD-family
+> stages, including mesh-only stages. It maps stage axes/units/time metadata,
+> default prim, hierarchy, evaluated static transforms, reset-stack state,
+> visibility, purpose, and selected static snapshot metadata. Absolute prim
+> selection retains ancestors and avoids constructing unselected mesh
+> payloads. `sceneio.write_scene()` transactionally writes empty and
+> hierarchy-only graphs as deterministic USDA or aligned USDZ; typed rich
+> payload writes remain U3-U5. `.usdc` now routes under `usd` for qualified
+> historical reads through crate 10; current crates and USDC writes remain
+> unavailable. Rich inspection reports representation/version, prim types,
+> time range, dependencies, variants, unsupported features, and mesh-projection
+> availability. The existing mesh-only read/write behavior and bytes remain
+> unchanged. The exact local tree collects 4,132 tests and passes 4,127 with
+> five documented optional skips; the focused public/registry/distribution
+> contracts and Ruff are green.
 >
 > **COLMAP dense/workspace checkpoint (2026-07-29):** the current local
 > registry has 54 codecs: 48 buffer-backed files, three path-native
@@ -893,7 +909,7 @@ public-domain SQLite amalgamation statically linked into `_core`.
 | `e57` | `PointCloud` | R+W, inspect | direct **pye57/libE57Format** | optional `sceneio[e57]`; exactly one Cartesian scan, exact float32 coordinates/intensity and integral RGB8, pose, explicit invalid-point filtering; exact inspection count uses the provider scan path only when invalid-state data are present |
 | `parquet` / `arrow_ipc` | `TensorDict` numeric table | R+W, inspect; Parquet named-column partial | direct **PyArrow** | optional `sceneio[arrow]`; scalar/fixed-width numeric columns, equal row counts, text attrs, mmap/threaded provider paths, transactional writes |
 | `openvdb` | sparse-grid `TensorDict` | R+W, inspect | direct **TinyVDB** | optional `sceneio[openvdb]`; one identity-transform, zero-background float32 scalar grid; ZIP/active-mask output; packaged upstream seed is fully replaced and provenance-pinned; rebuilt active count is verified and provider topology loss refuses |
-| `usd` / `usdz` | `MeshScene` | R+W, inspect | direct **TinyUSDZ** | optional `sceneio[usd]`; repository-owned streaming USDA and aligned uncompressed USDZ writers; static single-scene triangle meshes, hierarchy/transforms, normals, UVs; TinyUSDZ is qualified for USDA and bounded historical USDC through crate 10, while later crates and time-sample/asset values remain unavailable |
+| `usd` / `usdz` | `MeshScene` compatibility projection; additive `SceneGraph` | R+W, rich read/hierarchy write, inspect | direct **TinyUSDZ** | optional `sceneio[usd]`; `.usd`/`.usda`, historical `.usdc` reads through crate 10, and aligned uncompressed USDZ; legacy static mesh bytes/API unchanged; `read_scene` maps bounded hierarchy/metadata/static transforms and prim selection, while `write_scene` currently closes empty/hierarchy-only stages; current crates, USDC writes, selected animated values, and U3-U5 payload mappings remain unavailable |
 
 ### Repository-owned COLMAP workflow adapters
 

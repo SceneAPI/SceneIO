@@ -28,7 +28,16 @@ from sceneio.io._inspectors.model import ArrayInspection, Inspection
 from sceneio.io._openvdb import write_openvdb
 from sceneio.io._registry.adapters import _file_sink_writer, _mmap_reader
 from sceneio.io._tiff import write_tiff
-from sceneio.io._usd import write_usd, write_usdz
+from sceneio.io._usd import (
+    read_scene as _read_usd_scene,
+)
+from sceneio.io._usd import (
+    write_scene as _write_usd_scene,
+)
+from sceneio.io._usd import (
+    write_usd,
+    write_usdz,
+)
 from sceneio.io._zarr import write_zarr
 from sceneio.io.registry import (
     REGISTRY,
@@ -181,6 +190,39 @@ def read(path, *, format: str | None = None):
         raise
     except Exception as exc:  # normalize codec faults to FormatError
         raise FormatError(f"reading {str(path)!r} as {fmt!r}: {exc}") from exc
+
+
+def read_scene(
+    path,
+    *,
+    time: float | None = None,
+    prims=None,
+    purposes=("default", "render", "proxy"),
+    variants=None,
+    load_payloads: bool = True,
+):
+    """Read a bounded USD-family 3D-CV stage as a :class:`SceneGraph`."""
+
+    fmt = detect(path)
+    if fmt not in {"usd", "usdz"}:
+        raise FormatError(
+            f"read_scene supports USD-family paths, not format {fmt!r}"
+        )
+    try:
+        return _read_usd_scene(
+            path,
+            time=time,
+            prims=prims,
+            purposes=tuple(purposes),
+            variants=variants,
+            load_payloads=load_payloads,
+        )
+    except FormatError:
+        raise
+    except Exception as exc:
+        raise FormatError(
+            f"reading {str(path)!r} as a rich USD scene: {exc}"
+        ) from exc
 
 
 def inspect(path, *, format: str | None = None) -> Inspection:
@@ -517,6 +559,32 @@ def write(
         raise FormatError(f"writing {str(path)!r} as {fmt!r}: {exc}") from exc
 
 
+def write_scene(
+    scene: SceneGraph,
+    path,
+    *,
+    encoding: str | None = None,
+    package_assets: bool = True,
+    profile: str = "usd-3dcv-1",
+) -> None:
+    """Write a bounded rich USD stage while preserving the destination."""
+
+    try:
+        _write_usd_scene(
+            scene,
+            path,
+            encoding=encoding,
+            package_assets=package_assets,
+            profile=profile,
+        )
+    except FormatError:
+        raise
+    except Exception as exc:
+        raise FormatError(
+            f"writing {str(path)!r} as a rich USD scene: {exc}"
+        ) from exc
+
+
 def codecs() -> dict[str, Codec]:
     """The registered codecs, keyed by format id."""
     return dict(REGISTRY)
@@ -648,6 +716,7 @@ __all__ = [
     "read_depth",
     "read_flow",
     "read_partial",
+    "read_scene",
     "register",
     "write",
     "write_arrow_ipc",
@@ -656,6 +725,7 @@ __all__ = [
     "write_flow",
     "write_openvdb",
     "write_parquet",
+    "write_scene",
     "write_tiff",
     "write_usd",
     "write_usdz",

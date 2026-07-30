@@ -263,8 +263,8 @@ def test_repository_coverage_tracks_only_moved_mesh_inspectors():
         "off": "src/sceneio/io/_inspectors/meshes.py",
         "gltf": "src/sceneio/io/_gltf.py",
         "glb": "src/sceneio/io/_gltf.py",
-        "usd": "src/sceneio/io/_usd.py",
-        "usdz": "src/sceneio/io/_usd.py",
+        "usd": "src/sceneio/io/_usd/__init__.py",
+        "usdz": "src/sceneio/io/_usd/__init__.py",
     }
 
 

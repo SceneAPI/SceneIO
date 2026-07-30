@@ -93,6 +93,29 @@ The accepted profiles are intentionally bounded and reject semantics the
 corresponding SceneIO record cannot preserve. See
 [`docs/format_coverage.md`](docs/format_coverage.md) for the exact mapping.
 
+Rich USD-family stages use the additive `SceneGraph` API. The established
+`sceneio.read()` path continues returning `MeshScene` for its accepted
+mesh-only profile:
+
+```python
+stage = sceneio.read_scene(
+    "capture.usdz",
+    time=12.0,
+    prims=("/World/Reconstruction",),
+    purposes=("default", "render", "proxy"),
+)
+assert isinstance(stage, sceneio.SceneGraph)
+
+# U2 writes empty or hierarchy-only stages as USDA or aligned USDZ. Typed
+# rich payload writers land in their documented U3-U5 units.
+hierarchy = sceneio.read_scene("capture.usdz", load_payloads=False)
+sceneio.write_scene(hierarchy, "hierarchy.usdz")
+```
+
+Qualified historical `.usdc` inputs through crate version 10 route under the
+`usd` format id. Current-crate reads, USDC writes, and selected animated-value
+evaluation stay unavailable until their independent qualification gates pass.
+
 `sceneio.inspect(path)` returns an immutable `Inspection` with shape, dtype,
 channels, repeated-record counts, and format-specific scalar metadata without
 decoding bulk pixel/point arrays:

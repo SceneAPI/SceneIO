@@ -104,7 +104,7 @@ id = "usd"
 benchmark_case = "usd"
 source_suite = "tests/codecs/test_usd.py"
 documentation_row = "docs/format_coverage.md"
-inspection_source = "src/sceneio/io/_usd.py"
+inspection_source = "src/sceneio/io/_usd/__init__.py"
 wheel_smoke_case = "_usd_formats"
 
 [[codec]]
@@ -112,7 +112,7 @@ id = "usdz"
 benchmark_case = "usdz"
 source_suite = "tests/codecs/test_usd.py"
 documentation_row = "docs/format_coverage.md"
-inspection_source = "src/sceneio/io/_usd.py"
+inspection_source = "src/sceneio/io/_usd/__init__.py"
 wheel_smoke_case = "_usd_formats"
 
 [[codec]]

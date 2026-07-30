@@ -1004,10 +1004,12 @@
       "id": "usd",
       "extensions": [
         ".usd",
-        ".usda"
+        ".usda",
+        ".usdc"
       ],
       "magic_hex": [
-        "237573646120312e30"
+        "237573646120312e30",
+        "5058522d5553444300"
       ],
       "filenames": [],
       "is_directory": false,
@@ -1027,6 +1029,7 @@
       ],
       "supported_features": [
         "ascii_usd",
+        "historical_usdc_read_through_crate_10",
         "static_meshes",
         "polygon_boundaries",
         "vertex_normals",
@@ -1040,7 +1043,8 @@
         "transactional_path_write"
       ],
       "unsupported_features": [
-        "binary_usdc",
+        "current_usdc",
+        "usdc_write",
         "materials",
         "colors",
         "subdivision_surfaces",
@@ -1061,7 +1065,8 @@
         "record_type": "MeshScene",
         "extensions": [
           ".usd",
-          ".usda"
+          ".usda",
+          ".usdc"
         ],
         "filenames": [],
         "container_kind": "file",
@@ -1078,6 +1083,7 @@
         ],
         "supported_features": [
           "ascii_usd",
+          "historical_usdc_read_through_crate_10",
           "static_meshes",
           "polygon_boundaries",
           "vertex_normals",
@@ -1091,7 +1097,8 @@
           "transactional_path_write"
         ],
         "unsupported_features": [
-          "binary_usdc",
+          "current_usdc",
+          "usdc_write",
           "materials",
           "colors",
           "subdivision_surfaces",

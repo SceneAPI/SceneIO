@@ -40,6 +40,8 @@ struct SceneGraph {
     std::vector<uint64_t> node_child_offsets;   // n+1
     std::vector<uint64_t> node_children;        // E
     std::vector<double> node_local_transforms;  // n*16, row-major
+    std::vector<uint8_t>
+        node_resets_transform_stack;                  // n, boolean
     std::vector<uint8_t> node_visibility;       // 0 inherited, 1 visible, 2 invisible
     std::vector<uint8_t> node_purpose;          // 0 default, 1 render, 2 proxy, 3 guide
     std::vector<uint8_t> node_payload_kinds;    // ScenePayloadKind
@@ -82,4 +84,3 @@ const char *scene_purpose_name(uint8_t value);
 void validate_scene_graph(
     const SceneGraph &scene,
     const char *context = "scene graph");
-

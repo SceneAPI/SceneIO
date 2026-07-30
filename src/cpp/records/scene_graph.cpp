@@ -127,6 +127,7 @@ SceneGraph make_scene_graph(
     std::optional<u64_array> node_child_offsets,
     std::optional<u64_array> node_children,
     std::optional<f64_array> node_local_transforms,
+    std::optional<u8_array> node_resets_transform_stack,
     std::optional<std::vector<std::string>> node_payload_kinds,
     std::optional<u64_array> node_payload_indices,
     std::optional<std::vector<std::string>> node_visibility,
@@ -180,6 +181,12 @@ SceneGraph make_scene_graph(
         throw std::invalid_argument(
             "scene_graph: node_local_transforms must be "
             "(N,4,4) float64");
+    if (node_resets_transform_stack &&
+        (node_resets_transform_stack->ndim() != 1 ||
+         node_resets_transform_stack->shape(0) != count))
+        throw std::invalid_argument(
+            "scene_graph: node_resets_transform_stack must be "
+            "(N,) uint8");
     if (node_payload_indices &&
         (node_payload_indices->ndim() != 1 ||
          node_payload_indices->shape(0) != count))
@@ -247,6 +254,11 @@ SceneGraph make_scene_graph(
                 result.node_local_transforms[
                     node * 16 + axis * 4 + axis] = 1.0;
     }
+    result.node_resets_transform_stack.assign(count, 0);
+    if (node_resets_transform_stack)
+        assign_nonempty(
+            result.node_resets_transform_stack,
+            node_resets_transform_stack->data(), count);
     result.node_payload_kinds = optional_codes(
         node_payload_kinds, count, 0, &payload_kind_code,
         "node_payload_kinds");
@@ -378,6 +390,7 @@ void validate_scene_graph(
         scene.node_parents.size() != count ||
         scene.node_child_offsets.size() != count + 1 ||
         scene.node_local_transforms.size() != count * 16 ||
+        scene.node_resets_transform_stack.size() != count ||
         scene.node_visibility.size() != count ||
         scene.node_purpose.size() != count ||
         scene.node_payload_kinds.size() != count ||
@@ -456,6 +469,10 @@ void validate_scene_graph(
                         node * 16 + element]))
                 throw std::invalid_argument(
                     prefix + "node transforms must be finite");
+        if (scene.node_resets_transform_stack[node] > 1)
+            throw std::invalid_argument(
+                prefix +
+                "node reset-transform-stack values must be 0 or 1");
         scene_visibility_name(scene.node_visibility[node]);
         scene_purpose_name(scene.node_purpose[node]);
         validate_text(
@@ -761,6 +778,16 @@ void register_scene_graph(nb::module_ &module) {
                     {value.n, 4, 4});
             })
         .def_prop_ro(
+            "node_resets_transform_stack",
+            [](nb::handle_t<SceneGraph> self) {
+                const auto &value =
+                    nb::cast<const SceneGraph &>(self);
+                return owned_view(
+                    self,
+                    value.node_resets_transform_stack,
+                    {value.n});
+            })
+        .def_prop_ro(
             "node_payload_kind_codes",
             [](nb::handle_t<SceneGraph> self) {
                 const auto &value =
@@ -948,6 +975,7 @@ void register_scene_graph(nb::module_ &module) {
         "node_child_offsets"_a = nb::none(),
         "node_children"_a = nb::none(),
         "node_local_transforms"_a = nb::none(),
+        "node_resets_transform_stack"_a = nb::none(),
         "node_payload_kinds"_a = nb::none(),
         "node_payload_indices"_a = nb::none(),
         "node_visibility"_a = nb::none(),

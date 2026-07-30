@@ -3680,3 +3680,39 @@ The bounded input check does not regress the prior 11–13 MB/s control range.
 This measurement does not qualify current crate 11–15 input or USDC output;
 those operations remain unavailable pending the explicit provider decision
 and current reference comparison.
+
+### USD U2 rich-stage skeleton control (2026-07-30)
+
+U2 adds the `SceneGraph` stage API, historical-USDC routing, richer inspection,
+and a bounded module layout without changing the compatibility `MeshScene`
+encoder or decoder. The final three-median control used the direct TinyUSDZ
+comparison:
+
+```powershell
+.venv/Scripts/python.exe bench/bench_io.py --runs 3 `
+  --only usd --only usdz
+```
+
+| codec | SceneIO write/read/path-read MB/s | direct write/read MB/s | inspect/full | inspect traced peak |
+|---|---:|---:|---:|---:|
+| `usd` | 12 / 12 / 12 | 5 / 12 | 0.96x | 0.2 MB |
+| `usdz` | 10 / 12 / 12 | 6 / 13 | 0.93x | 0.2 MB |
+
+A second post-review control measured `usd` at 11/8/8 MB/s against direct
+4/9 MB/s and `usdz` at 10/13/13 MB/s against direct 6/11 MB/s. The paired
+SceneIO/direct read ratios remain 0.95–1.13 despite host-level timing
+variation, and decoded values/legacy bytes remain exact. TinyUSDZ must still
+parse the whole stage for inspection, so inspection is an allocation
+improvement rather than a throughput claim: both controls retain only 0.2 MB
+of traced Python storage versus 3.6 MB for full decode. U2's authored-feature
+scanner maps direct layers and stored USDZ roots and keeps a generated 16 MiB
+direct-layer scan below 512 KiB traced Python allocation. The first U2
+measurement copied the stored USDZ root while scanning; mapping the exact
+local-entry extent removed that 3.4 MB traced regression before this result
+was recorded.
+
+The final scanner also distinguishes authored syntax from comments and quoted
+metadata, accepts whitespace-separated arc syntax, and releases its file map
+before the source path is renamed or removed. Compressed nonstandard ZIP roots
+are scanned through a bounded temporary map; standard USDZ output remains
+stored and 64-byte aligned.

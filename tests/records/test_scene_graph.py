@@ -56,6 +56,7 @@ def _scene(**changes):
         "node_local_transforms": np.broadcast_to(
             np.eye(4, dtype=np.float64), (5, 4, 4)
         ).copy(),
+        "node_resets_transform_stack": np.array([0, 1, 0, 0, 0], np.uint8),
         "node_payload_kinds": [
             "mesh",
             "point_cloud",
@@ -128,6 +129,7 @@ def test_scene_graph_public_surface_and_typed_payloads():
         "instances",
     ]
     assert scene.node_visibility[2] == "invisible"
+    assert scene.node_resets_transform_stack.tolist() == [0, 1, 0, 0, 0]
     assert scene.node_purpose[3] == "guide"
     assert scene.node_semantic_labels[2] == "vegetation"
     assert scene.mesh_at(0).num_faces == 1
@@ -185,6 +187,7 @@ def test_scene_graph_numeric_views_and_nested_payload_outlive_parent_name():
     children = scene.node_children
     transforms = scene.node_local_transforms
     transforms_again = scene.node_local_transforms
+    resets = scene.node_resets_transform_stack
     mesh = scene.mesh_at(0)
     instances = scene.instance_set_at(0)
     del scene
@@ -196,6 +199,7 @@ def test_scene_graph_numeric_views_and_nested_payload_outlive_parent_name():
     np.testing.assert_array_equal(instances.prototype_indices, [0, 0])
     assert not children.flags.writeable
     assert not transforms.flags.writeable
+    assert not resets.flags.writeable
     assert np.shares_memory(transforms, transforms_again)
 
 
@@ -217,6 +221,10 @@ def test_empty_and_hierarchy_only_scene_defaults_are_canonical():
     np.testing.assert_array_equal(
         hierarchy.node_local_transforms,
         np.broadcast_to(np.eye(4), (2, 4, 4)),
+    )
+    np.testing.assert_array_equal(
+        hierarchy.node_resets_transform_stack,
+        np.zeros(2, np.uint8),
     )
 
 
@@ -318,6 +326,16 @@ def test_scene_graph_shape_guards_run_before_shape_access():
         )
     with pytest.raises(ValueError, match="visibility"):
         _core.scene_graph(["node"], node_visibility=["hidden"])
+    with pytest.raises(ValueError, match="reset-transform-stack"):
+        _core.scene_graph(
+            ["node"],
+            node_resets_transform_stack=np.array([2], np.uint8),
+        )
+    with pytest.raises(ValueError, match="node_resets_transform_stack"):
+        _core.scene_graph(
+            ["node"],
+            node_resets_transform_stack=np.zeros((1, 1), np.uint8),
+        )
     with pytest.raises(ValueError, match="payload kinds"):
         _core.scene_graph(["node"], node_payload_kinds=["light"])
     with pytest.raises(ValueError, match="uri"):
