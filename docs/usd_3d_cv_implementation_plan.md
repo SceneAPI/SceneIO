@@ -42,7 +42,8 @@ new `SceneGraph` API; a mesh-only projection continues to support current
 The AOUSD compliance samples and an unmodified OpenUSD 26.08 installation are
 the normative core-format and composition references. TinyUSDZ remains the
 independent permissively licensed implementation used by the current optional
-provider.
+provider. Observed local provider behavior is recorded in
+[`usd_provider_qualification.md`](usd_provider_qualification.md).
 
 ## Current implementation and measured review
 
