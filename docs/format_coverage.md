@@ -78,11 +78,21 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > [`names_to_pair`](https://github.com/cvg/Hierarchical-Localization/blob/master/hloc/utils/parsers.py)
 > and
 > [`writer_fn`](https://github.com/cvg/Hierarchical-Localization/blob/master/hloc/match_features.py)
-> behavior. The exact collection has 3,933 nodes; local MSVC passes 3,928
-> with five documented optional skips, plus the 123-test focused gate and
+> behavior. The exact collection has 3,941 nodes; local MSVC passes 3,936
+> with five documented optional skips, plus the HDF5/hloc focused gate and
 > installed-surface smoke. NumPy remains the sole unconditional dependency;
 > h5py/HDF5 are not bundled. Cross-platform package evidence remains pending
 > for this checkpoint.
+>
+> **HDF5/hloc optimization follow-up (2026-07-30):** generic HDF5 now avoids
+> cloning arrays that are already native-endian and C-contiguous, while still
+> converting strided and non-native-endian inputs. The hloc match writer uses
+> an ordered source-index fast path with a sorted fallback for duplicate
+> refusal. On the five-run scale-16 local fixture this changed HDF5
+> read/write from 1,658/1,777 MB/s to 2,266/2,921 MB/s, halved its traced
+> read peak to one payload copy, and changed hloc match write from 95 to
+> 1,417 MB/s. High-group-count traversal and native hloc decode conversion
+> remain explicit optimization follow-ups.
 >
 > **C3/C4 hosted closure (2026-07-29):** the exact collection is
 > 3,879 nodes with normalized SHA-256

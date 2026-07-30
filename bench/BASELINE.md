@@ -3414,3 +3414,36 @@ A complete one-run, small-scale capture covers all 59 registry rows:
 Its normalized deterministic structural SHA-256 is
 `ff176c7296bfa45e4c1536346fb542f176c05ce00385fbdc3ae3336dd4044099`.
 Cross-platform package measurements remain pending for the optional extra.
+
+### HDF5/hloc hot-path follow-up (2026-07-30)
+
+Profiling the scale-16 fixtures found two wrapper costs rather than an HDF5
+provider limitation: generic HDF5 cloned arrays that were already
+native-endian and C-contiguous, and the hloc match writer used `numpy.unique`
+to validate source indices. The canonical-array path now reuses suitable
+storage and copies only when layout or byte order requires it. Match validation
+uses an ordered fast path and, for unordered input, one sorted copy followed by
+an adjacent duplicate check.
+
+The exact command was run before and after the patch, changing only the JSON
+destination from `before` to `after`:
+
+```powershell
+.venv/Scripts/python.exe bench/bench_io.py --runs 5 --scale 16 `
+  --only hdf5 --only hloc_matches `
+  --json build/hdf5-hloc-opt-before.json
+```
+
+| metric | before | after | change |
+|---|---:|---:|---:|
+| HDF5 write | 1,777 MB/s | 2,921 MB/s | 1.64x |
+| HDF5 read | 1,658 MB/s | 2,266 MB/s | 1.37x |
+| HDF5 traced read peak | 33.6 MB | 16.8 MB | -50% |
+| HDF5 traced write peak | 16.8 MB | rounded 0.0 MB | payload clone removed |
+| hloc matches write | 95 MB/s | 1,417 MB/s | 14.92x |
+
+The hloc read implementation did not change in this unit, so its run-to-run
+throughput difference is not attributed to the patch. Focused tests cover
+native, strided, and non-native-endian arrays plus ordered, shuffled, empty,
+and duplicate match-index inputs. High-cardinality metadata traversal and
+native hloc decode conversion remain separate measured follow-up items.

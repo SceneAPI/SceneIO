@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import importlib.util
 import os
-import sys
 import tempfile
 from collections.abc import Iterator, Mapping
 from contextlib import suppress
@@ -78,11 +77,20 @@ def _canonical_array(value: object, context: str) -> np.ndarray:
             f"{context}: dtype {array.dtype.name!r} is unsupported; "
             "expected bool, integer, or real floating point"
         )
-    if array.dtype.byteorder == ">" or (
-        array.dtype.byteorder == "=" and sys.byteorder == "big"
-    ):
+    if not array.dtype.isnative:
         array = array.byteswap().view(array.dtype.newbyteorder("="))
+    if array.flags.c_contiguous:
+        return array
     return np.array(array, copy=True, order="C", subok=False)
+
+
+def _has_duplicate_indices(values: np.ndarray) -> bool:
+    if len(values) < 2:
+        return False
+    if np.all(values[1:] > values[:-1]):
+        return False
+    ordered = np.sort(values)
+    return bool(np.any(ordered[1:] == ordered[:-1]))
 
 
 def _validate_hdf5_links(handle) -> None:
@@ -1126,7 +1134,7 @@ def write_hloc_matches(value: HlocMatchStore, path: str | Path) -> None:
                         f"hloc matches: target index exceeds {dtype.name} "
                         f"for pair {pair!r}"
                     )
-                if len(np.unique(source_indices)) != len(source_indices):
+                if _has_duplicate_indices(source_indices):
                     raise ValueError(
                         f"hloc matches: pair {pair!r} has multiple matches "
                         "for one source keypoint"

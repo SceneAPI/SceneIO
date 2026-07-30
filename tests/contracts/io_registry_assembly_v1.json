@@ -384,8 +384,8 @@
     "last": "tests/test_points_binary.py::test_bad_magic_rejected"
   },
   "pytest_candidate_collection": {
-    "count": 3933,
-    "sorted_normalized_node_ids_sha256": "e273b8da3f2f9d1137c8cffb4de3e1918a472976679e9eca4fa232e4bce89e6f",
+    "count": 3941,
+    "sorted_normalized_node_ids_sha256": "d6dfb7933b8b49dc7c6d1c395ae11e78ef3c4f2f93bea71cd7007d7f943ed474",
     "added_nodes": [
       "tests/codecs/test_animated_webp.py::test_sceneio_writer_is_lossless_and_oracle_readable",
       "tests/codecs/test_animated_webp.py::test_pillow_writer_is_sceneio_readable_bit_exact",
@@ -1221,6 +1221,7 @@
       "tests/codecs/test_hdf5_hloc.py::test_hdf5_partial_read_does_not_materialize_unselected_dataset",
       "tests/codecs/test_hdf5_hloc.py::test_hdf5_refuses_unrepresented_dataset_and_attribute_types",
       "tests/codecs/test_hdf5_hloc.py::test_hdf5_refuses_linked_and_virtual_datasets_on_every_read_path",
+      "tests/codecs/test_hdf5_hloc.py::test_hdf5_canonical_array_reuses_native_contiguous_storage",
       "tests/codecs/test_hdf5_hloc.py::test_native_feature_factory_preserves_hloc_descriptor_dtypes[uint8]",
       "tests/codecs/test_hdf5_hloc.py::test_native_feature_factory_preserves_hloc_descriptor_dtypes[int8]",
       "tests/codecs/test_hdf5_hloc.py::test_native_feature_factory_preserves_hloc_descriptor_dtypes[float16]",
@@ -1233,6 +1234,13 @@
       "tests/codecs/test_hdf5_hloc.py::test_hloc_features_read_and_inspect_refuse_unrepresented_metadata[inspect]",
       "tests/codecs/test_hdf5_hloc.py::test_hloc_matches_reads_official_layout_and_reverses_to_native_order",
       "tests/codecs/test_hdf5_hloc.py::test_hloc_match_write_matches_h5py_and_preserves_mixed_scores",
+      "tests/codecs/test_hdf5_hloc.py::test_hloc_duplicate_index_check_handles_orderings[indices0-False]",
+      "tests/codecs/test_hdf5_hloc.py::test_hloc_duplicate_index_check_handles_orderings[indices1-False]",
+      "tests/codecs/test_hdf5_hloc.py::test_hloc_duplicate_index_check_handles_orderings[indices2-False]",
+      "tests/codecs/test_hdf5_hloc.py::test_hloc_duplicate_index_check_handles_orderings[indices3-False]",
+      "tests/codecs/test_hdf5_hloc.py::test_hloc_duplicate_index_check_handles_orderings[indices4-True]",
+      "tests/codecs/test_hdf5_hloc.py::test_hloc_duplicate_index_check_handles_orderings[indices5-True]",
+      "tests/codecs/test_hdf5_hloc.py::test_hloc_match_write_handles_shuffled_sources_and_refuses_duplicates",
       "tests/codecs/test_hdf5_hloc.py::test_hloc_matches_guards_malformed_and_unrepresented_values",
       "tests/codecs/test_hdf5_hloc.py::test_hloc_matches_read_and_inspect_refuse_unrepresented_metadata[read]",
       "tests/codecs/test_hdf5_hloc.py::test_hloc_matches_read_and_inspect_refuse_unrepresented_metadata[inspect]",

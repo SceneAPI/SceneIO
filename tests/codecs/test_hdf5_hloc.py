@@ -12,6 +12,7 @@ import pytest
 
 import sceneio
 from sceneio import _core
+from sceneio.io import _hdf5 as hdf5_adapter
 
 
 def _official_hloc_pair_name(name0: str, name1: str) -> str:
@@ -85,6 +86,24 @@ def test_generic_hdf5_reads_independent_h5py_fixture(tmp_path: Path) -> None:
     path.unlink()
     gc.collect()
     np.testing.assert_array_equal(decoded["dense/a"], expected_a)
+
+
+def test_hdf5_canonical_array_reuses_native_contiguous_storage() -> None:
+    native = np.arange(24, dtype=np.float32).reshape(4, 6)
+    assert hdf5_adapter._canonical_array(native, "native") is native
+
+    strided = native[:, ::2]
+    contiguous = hdf5_adapter._canonical_array(strided, "strided")
+    assert contiguous.flags.c_contiguous
+    assert not np.shares_memory(contiguous, strided)
+    np.testing.assert_array_equal(contiguous, strided)
+
+    big_endian = np.arange(8, dtype=">i4")
+    converted = hdf5_adapter._canonical_array(big_endian, "big-endian")
+    assert converted.dtype == np.dtype(np.int32)
+    assert converted.flags.c_contiguous
+    assert not np.shares_memory(converted, big_endian)
+    np.testing.assert_array_equal(converted, np.arange(8, dtype=np.int32))
 
 
 def test_generic_hdf5_write_is_h5py_ground_truth_and_partial(tmp_path: Path) -> None:
@@ -471,6 +490,67 @@ def test_hloc_match_write_matches_h5py_and_preserves_mixed_scores(
     inspected = sceneio.inspect(path)
     assert inspected.count == 2
     assert inspected.metadata["scored_pair_count"] == 1
+
+
+@pytest.mark.parametrize(
+    ("indices", "expected"),
+    [
+        ([], False),
+        ([7], False),
+        ([0, 1, 4, 9], False),
+        ([4, 0, 9, 1], False),
+        ([0, 1, 1, 9], True),
+        ([4, 1, 9, 4], True),
+    ],
+)
+def test_hloc_duplicate_index_check_handles_orderings(
+    indices: list[int],
+    expected: bool,
+) -> None:
+    values = np.asarray(indices, dtype=np.uint32)
+    assert hdf5_adapter._has_duplicate_indices(values) is expected
+
+
+def test_hloc_match_write_handles_shuffled_sources_and_refuses_duplicates(
+    tmp_path: Path,
+) -> None:
+    def store(matches: np.ndarray) -> sceneio.HlocMatchStore:
+        graph = _core.match_graph(
+            np.array([[1, 2]], np.uint32),
+            np.array([0, len(matches)], np.uint64),
+            matches,
+            np.zeros(2, np.uint64),
+            np.empty((0, 2), np.uint32),
+            match_present=np.ones(1, np.uint8),
+            geometry_present=np.zeros(1, np.uint8),
+        )
+        return sceneio.HlocMatchStore(
+            ("a.jpg", "b.jpg"),
+            (("a.jpg", "b.jpg"),),
+            (4,),
+            ("int16",),
+            (None,),
+            graph,
+        )
+
+    path = tmp_path / "shuffled.h5"
+    sceneio.write(
+        store(np.array([[2, 3], [0, 1], [3, 2]], np.uint32)),
+        path,
+        format="hloc_matches",
+    )
+    with h5py.File(path, "r") as handle:
+        np.testing.assert_array_equal(
+            handle["a.jpg/b.jpg/matches0"][...],
+            np.array([1, -1, 3, 2], np.int16),
+        )
+
+    with pytest.raises(sceneio.FormatError, match="multiple matches"):
+        sceneio.write(
+            store(np.array([[0, 1], [2, 3], [0, 2]], np.uint32)),
+            tmp_path / "duplicate.h5",
+            format="hloc_matches",
+        )
 
 
 def test_hloc_matches_guards_malformed_and_unrepresented_values(

@@ -5083,7 +5083,7 @@ Verification and documentation:
 
 H1 local closure evidence:
 
-- the exact collection has 3,933 nodes; local MSVC passes 3,928 with five
+- the exact collection has 3,941 nodes; local MSVC passes 3,936 with five
   documented optional skips, the 123-test focused gate passes, Ruff and
   `git diff --check` are clean, and the manifest-driven installed-surface
   smoke completes;

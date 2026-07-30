@@ -169,6 +169,16 @@ full reads for HDF5/hloc-features/hloc-matches. Metadata inspection was
 read was 2.44x faster and avoided loading the 1 MiB unselected dataset.
 Direct h5py provider timings remain visible in the committed harness rather
 than being described as equivalent wrapper work.
+The 2026-07-30 scale-16 profiling follow-up removed two wrapper hot spots.
+Already-native contiguous HDF5 arrays now pass directly to the native record
+or h5py dataset constructor, reducing traced full-read peak from 33.6 MB to
+16.8 MB and improving the measured five-run read/write medians from
+1,658/1,777 MB/s to 2,266/2,921 MB/s. The hloc match writer replaced its
+full-array `numpy.unique` validation with an ordered fast path plus a
+sort-and-adjacent fallback, improving the same fixture from 95 to 1,417 MB/s.
+Output validation remains unchanged. Native hloc decode conversion and
+high-cardinality metadata traversal remain measured follow-up work rather
+than being hidden behind the aggregate payload benchmark.
 The latest record waves add the four calibration formats over `CameraRig`, g2o
 over `PoseGraph`, `colmap_db` over
 `ColmapDatabase`/`FeatureSet`/`MatchGraph`, polygonal PLY over `Mesh`, and

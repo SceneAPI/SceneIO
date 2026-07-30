@@ -14,7 +14,7 @@
   reads, and atomic replacement; optimized h5py is an optional
   `sceneio[hdf5]` provider and independent oracle. The prior APNG 56-codec
   checkpoint remains its historical evidence. The current registry has 59
-  codecs and the exact collection has 3,933 nodes. Local MSVC passes 3,928
+  codecs and the exact collection has 3,941 nodes. Local MSVC passes 3,936
   tests with five documented optional skips; the focused 123-test gate,
   installed-surface smoke, Ruff, and diff checks also pass. Cross-platform
   package evidence remains user-gated.
