@@ -14,6 +14,9 @@ codec-backend mechanism are in
 [`repository_organization_plan.md`](repository_organization_plan.md); its
 commit-sized execution checklist is
 [`next_stage_implementation_checklist.md`](next_stage_implementation_checklist.md).
+The reviewed, bounded expansion from the current static mesh USD adapter to a
+mixed 3D-CV scene profile is in
+[`usd_3d_cv_implementation_plan.md`](usd_3d_cv_implementation_plan.md).
 
 Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 
@@ -41,6 +44,16 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > selected because its current license is outside this repository's explicit
 > allow-list; Apache-2.0 TinyUSDZ is used instead. Cross-platform
 > optional-extra package execution remains user-triggered.
+>
+> **USD standards review (2026-07-30):** AOUSD Core Specification 1.0,
+> OpenUSD 26.08, and the official
+> `UsdVolParticleField3DGaussianSplat` schema define a broader target than the
+> current static mesh adapter. The current USD/USDZ capability rows remain
+> accurate and unchanged. The new plan adds a finite `sceneio.usd.3dcv/1`
+> target covering mixed meshes, points, Gaussians, cameras, bounded materials,
+> semantic labels, and OpenVDB references without claiming full USD. TOST 1.0
+> is Apache-2.0-like but is not literally on the current allow-list; any
+> executable OpenUSD dependency remains an explicit policy decision.
 >
 > **COLMAP dense/workspace checkpoint (2026-07-29):** the current local
 > registry has 54 codecs: 48 buffer-backed files, three path-native

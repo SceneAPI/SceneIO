@@ -5149,6 +5149,32 @@ multi-series TIFF, multi-scan E57, nested/nullable Arrow, multi-grid or
 transformed OpenVDB, and composed/animated/material USD semantics are explicit
 future profiles, not silent fallbacks.
 
+### Planned USD 3D-CV profile expansion
+
+The 2026-07-30 standards review is captured in
+[`usd_3d_cv_implementation_plan.md`](usd_3d_cv_implementation_plan.md).
+It freezes a finite `sceneio.usd.3dcv/1` scope and commit-sized U0-U7
+checklist. No item below is a current capability claim:
+
+- [ ] U0: explicit TOST decision plus AOUSD/OpenUSD/TinyUSDZ provider
+      qualification.
+- [ ] U1: additive `SceneGraph`/`InstanceSet` records and convention-bearing
+      mesh, point, and Gaussian payloads.
+- [ ] U2: compatible rich-scene API, `.usdc` routing, stage metadata,
+      inspection, and selection.
+- [ ] U3: mixed meshes, points, bounded materials, and texture assets.
+- [ ] U4: official `ParticleField3DGaussianSplat` mapping.
+- [ ] U5: cameras/render products, OpenVDB references, semantic labels, and
+      point instancing.
+- [ ] U6: qualified USDC/USDZ, evaluated composition subset, and explicitly
+      selected time.
+- [ ] U7: complete verification, benchmarks, cross-platform package run, and
+      documentation closure.
+
+The existing static `MeshScene` behavior remains supported throughout. Full
+USD, authoring-layer preservation, arbitrary shader/custom schemas, rendering,
+and non-3D-CV media are fixed exclusions.
+
 Local closure evidence:
 
 - the exact collection has 4,049 nodes; local MSVC passes 4,044 with five
