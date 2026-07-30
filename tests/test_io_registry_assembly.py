@@ -733,6 +733,7 @@ def test_assembly_dependency_direction_and_import_delta_are_exact():
         "sceneio.io._usd.legacy",
         "sceneio.io._usd.materials",
         "sceneio.io._usd.package",
+        "sceneio.io._usd.points",
         "sceneio.io._usd.provider",
         "sceneio.io._usd.stage",
         "sceneio.io._zarr",

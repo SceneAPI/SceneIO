@@ -12,7 +12,8 @@
 > [`next_stage_implementation_checklist.md`](next_stage_implementation_checklist.md).
 > The bounded standards-based USD expansion is specified separately in
 > [`usd_3d_cv_implementation_plan.md`](usd_3d_cv_implementation_plan.md).
-> U0-U2 now qualify the bounded provider, records, and stage skeleton. U3-U7
+> U0-U2 qualify the bounded provider, records, and stage skeleton. The first
+> U3 closure unit now maps static meshes and points; materials/assets and U4-U7
 > remain the finite payload/composition/release closure.
 > Animated WebP is the 55th local codec; the preceding 54-codec hosted package
 > evidence remains a dated checkpoint rather than evidence for this addition.
@@ -278,8 +279,8 @@ zero‑copy + convention tags.
 | `ConsistencyGraph` | pixel/image-index CSR + row/column/index conventions | COLMAP MVS consistency graphs | ✅ |
 | `PointVisibility` | fused-point/image-index CSR + index convention | COLMAP fused visibility | ✅ |
 | `FlowField` | `vectors` HxWx2 f32 + component/axis/row/unit/invalid meta | typed `.flo` adapter | ✅ |
-| `PointCloud` | `xyz` Nx3, `rgb`/`rgb16`, normals, intensity, optional organized shape/viewpoint/LAS waveform sidecar, plus authored float display RGB/opacity, widths, signed ids, velocity, acceleration, and display color space | PLY‑point, PCD, LAS/LAZ, E57, `.xyz`; rich fields reserved for the planned USD profile | ✅ record; legacy writers refuse unmapped rich fields |
-| `Mesh` | positions; ragged face offsets/indices; vertex/corner normals, UVs, RGBA8 and authored float display RGB/opacity; primitive/material ranges; coordinate metadata, transform, orientation, and tri-state double-sidedness | PLY‑mesh, OBJ, STL, OFF, glTF, USD | ✅ record; legacy writers refuse unmapped rich fields |
+| `PointCloud` | `xyz` Nx3, `rgb`/`rgb16`, normals, intensity, optional organized shape/viewpoint/LAS waveform sidecar, plus authored float display RGB/opacity, widths, signed ids, velocity, acceleration, and display color space | PLY‑point, PCD, LAS/LAZ, E57, `.xyz`, bounded USD | ✅ record; rich static fields map through `read_scene`/`write_scene` for USD while unrelated legacy writers refuse them |
+| `Mesh` | positions; ragged face offsets/indices; vertex/corner normals, UVs, RGBA8 and authored float display RGB/opacity; primitive/material ranges; coordinate metadata, transform, orientation, and tri-state double-sidedness | PLY‑mesh, OBJ, STL, OFF, glTF, USD | ✅ record; rich static geometry fields map through bounded USD while unrelated legacy writers refuse them |
 | `MeshScene` | ordered `Mesh` primitives; mesh ranges/names; shared `MaterialSet`; node hierarchy and local transforms; scene roots/names/default | glTF/GLB, bounded USD/USDZ | ✅ |
 | `FeatureSet` | `keypoints` Nx{2,4,6} f32, polymorphic `descriptors` NxD with extractor dtype/dim/name presence, keypoint colors, scores, quality, image time/id/size, and absent-state metadata | HDF5/hloc, COLMAP DB | ✅ |
 | `MatchGraph` | ragged per-pair raw/verified `matches` Mx2 u32, optional score rows, source/retrieval provenance, `F/E/H` 3x3, config, relative pose, and optional recovered endpoint cameras | HDF5/hloc, COLMAP DB | ✅ |
@@ -345,7 +346,7 @@ Columns: **Ext/id** · **Record** · **Lib/oracle (license)** · **R/W** ·
 | ✅ OFF | `Mesh` | independent parser + trimesh (MIT) | R+W | polygon-preserving ASCII vertex variants with normals, UVs, and exact RGBA8; bounded face ranges |
 | ✅ glTF / GLB (plain) | `MeshScene` | cgltf (MIT); pygltflib + trimesh oracles | R+W | 2.0 JSON/external or data buffers and GLB BIN; sparse/strided accessors, nodes/scenes, PBR subset, mesh/primitive selectors; unsupported extensions/Draco reject |
 | policy-gated Draco glTF | `MeshScene` | Draco (Apache) | R+W | requires a separate patented-codec policy decision; never required for plain glTF/GLB |
-| 🟡 USD / USDZ / historical USDC | `MeshScene` compatibility + `SceneGraph` | TinyUSDZ (Apache-2.0) | mesh R+W; rich R + hierarchy W | optional `sceneio[usd]`; U2 maps bounded stage hierarchy/metadata/static transforms and selected prims, with deterministic USDA/aligned USDZ hierarchy writes; historical USDC input is qualified only through crate 10 and later crates refuse before provider dispatch; U3-U7 close typed payloads, evaluated composition, and release evidence; OpenUSD remains unselected until the TOST policy decision |
+| 🟡 USD / USDZ / historical USDC | `MeshScene` compatibility + `SceneGraph` | TinyUSDZ (Apache-2.0) | mesh R+W; rich static mesh/points R+W | optional `sceneio[usd]`; U2 maps bounded stage hierarchy/metadata/static transforms and selected prims; C1 adds deterministic USDA/aligned USDZ polygon-mesh and point payload reads/writes with indexed interpolation domains and convention guards; historical USDC input is qualified only through crate 10 and later crates refuse before provider dispatch; materials and U4-U7 close the remaining typed payloads, evaluated composition, and release evidence; OpenUSD remains unselected until the TOST policy decision |
 
 ### 3e. Arrays / tensors / features
 | Format | Record | Lib / oracle | R/W | Notes |

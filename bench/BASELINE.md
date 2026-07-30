@@ -3716,3 +3716,55 @@ metadata, accepts whitespace-separated arc syntax, and releases its file map
 before the source path is renamed or removed. Compressed nonstandard ZIP roots
 are scanned through a bounded temporary map; standard USDZ output remains
 stored and 64-byte aligned.
+
+### USD C1 rich mesh-and-points initial baseline (2026-07-30)
+
+C1 adds a dedicated generated benchmark for the rich `SceneGraph` geometry
+path. The fixture contains 100,000 independent triangle faces and 100,000
+points with mesh normals/UVs/display colors and point
+normals/widths/ids/velocities/display colors. It is generated in a temporary
+directory and is not committed.
+
+```powershell
+.venv/Scripts/python.exe bench/bench_usd_scene.py --runs 1 `
+  --faces 100000 --points 100000 --only usda
+.venv/Scripts/python.exe bench/bench_usd_scene.py --runs 1 `
+  --faces 100000 --points 100000 --only usdz
+```
+
+The two representations were measured separately on the local Windows/MSVC
+host to avoid keeping both large provider stages live at once:
+
+| representation | payload/file | write | full read | inspect | selected `/Samples` |
+|---|---:|---:|---:|---:|---:|
+| USDA | 22.40/42.97 MB | 2,045 ms; 1.04 MB traced; 0.52 MB RSS | 6,113 ms; 43.95 MB traced; 69.19 MB RSS | 5,497 ms; 29.15 MB traced; 67.29 MB RSS | 3,031 ms; 18.54 MB traced; 45.94 MB RSS |
+| USDZ | 22.40/42.97 MB | 2,779 ms; 2.13 MB traced; 3.26 MB RSS | 8,610 ms; 43.95 MB traced; 71.02 MB RSS | 7,397 ms; 29.15 MB traced; 69.05 MB RSS | 3,136 ms; 18.54 MB traced; 45.14 MB RSS |
+
+Repository-owned numeric serialization is bounded: traced write allocation is
+2.4% of the USDA file size and 5.0% of the USDZ file size. Selected-point
+reads avoid mesh record/value construction and reduce traced allocation by
+58% versus full read. Inspection avoids payload-record construction, validates
+point arrays sequentially, and reduces traced allocation by 34%; it does not
+claim that the provider avoids parsing or materializing every numeric value.
+TinyUSDZ still parses the complete stored stage and exports normalized text
+for `UsdGeomPoints`, which limits inspection and selection latency and RSS.
+The benchmark keeps that provider boundary visible rather than presenting it
+as a repository-owned decode cost.
+
+These are single-run observational rows, not a regression threshold or proof
+that every USD path is optimized. The structural evidence is bounded streaming
+write allocation and lower retained Python allocation for inspection and
+selected-prim reads. C1 closure reruns the benchmark after the final worktree
+changes; C7 establishes the repeatable comparison ledger. When
+`--cold-cache` is requested, JSON output records
+`cold_cache_requested`, `cold_cache_supported`, and `cold_cache_applied` so an
+unsupported host is not mislabeled as a cold-cache measurement.
+
+The final C1 run caught two allocation regressions before closure. Retaining
+every normalized Points string until final `SceneGraph` construction increased
+full-read traced peak by about 10 MB. Reusing a helper that called
+`prim.to_string()` for primvar metadata and using `str.strip()` to test a
+3.6 MB normalized numeric array increased selected-read peak from 18.54 MB to
+24.85 MB. Per-included-prim normalization, metadata checks over the existing
+text, and the allocation-free `str.isspace()` test restore the 43.95 MB full
+and 18.54 MB selected peaks while retaining the stricter validation.

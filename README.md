@@ -106,10 +106,12 @@ stage = sceneio.read_scene(
 )
 assert isinstance(stage, sceneio.SceneGraph)
 
-# U2 writes empty or hierarchy-only stages as USDA or aligned USDZ. Typed
-# rich payload writers land in their documented U3-U5 units.
-hierarchy = sceneio.read_scene("capture.usdz", load_payloads=False)
-sceneio.write_scene(hierarchy, "hierarchy.usdz")
+# Static mesh and point-cloud payloads write as deterministic USDA or aligned
+# USDZ. Later profile units add materials, Gaussians, cameras, and volumes.
+sceneio.write_scene(stage, "capture-copy.usdz")
+
+hierarchy_only = sceneio.read_scene("capture.usdz", load_payloads=False)
+sceneio.write_scene(hierarchy_only, "hierarchy.usdz")
 ```
 
 Qualified historical `.usdc` inputs through crate version 10 route under the

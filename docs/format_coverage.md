@@ -85,6 +85,23 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > five documented optional skips; the focused public/registry/distribution
 > contracts and Ruff are green.
 >
+> **USD C1 committed checkpoint (2026-07-30):** rich `SceneGraph` reads and
+> writes map static polygon `UsdGeomMesh` and `UsdGeomPoints` payloads in
+> USDA and aligned USDZ. Mesh coverage includes all five interpolation domains,
+> indexed primvars flattened into SceneIO vertex/corner storage, normals, UVs,
+> float display fields, orientation, double-sided state, explicit
+> `subdivisionScheme = "none"`, and validated extent. Points coverage includes
+> normals, widths-as-diameters, ids, velocities, accelerations, float display
+> fields, indexed primvars, and extent. Y-up/Z-up and `metersPerUnit` remain
+> conventions rather than implicit numeric conversions. Rich point stages
+> remain outside the legacy `sceneio.read()` projection so no payload is
+> dropped. A generated 100k-face/100k-point benchmark records bounded streaming
+> writes plus full, inspection, and selected-prim paths in `bench/BASELINE.md`.
+> The affected 46-test set, Ruff, exact 4,146-node contract, and final
+> generated measurement are green. All three final review lenses sign off,
+> the final suite passes 4,141 tests with 5 expected skips, and full Ruff is
+> clean.
+>
 > **COLMAP dense/workspace checkpoint (2026-07-29):** the current local
 > registry has 54 codecs: 48 buffer-backed files, three path-native
 > multi-file containers, and three directories. The four additions are exact
@@ -909,7 +926,7 @@ public-domain SQLite amalgamation statically linked into `_core`.
 | `e57` | `PointCloud` | R+W, inspect | direct **pye57/libE57Format** | optional `sceneio[e57]`; exactly one Cartesian scan, exact float32 coordinates/intensity and integral RGB8, pose, explicit invalid-point filtering; exact inspection count uses the provider scan path only when invalid-state data are present |
 | `parquet` / `arrow_ipc` | `TensorDict` numeric table | R+W, inspect; Parquet named-column partial | direct **PyArrow** | optional `sceneio[arrow]`; scalar/fixed-width numeric columns, equal row counts, text attrs, mmap/threaded provider paths, transactional writes |
 | `openvdb` | sparse-grid `TensorDict` | R+W, inspect | direct **TinyVDB** | optional `sceneio[openvdb]`; one identity-transform, zero-background float32 scalar grid; ZIP/active-mask output; packaged upstream seed is fully replaced and provenance-pinned; rebuilt active count is verified and provider topology loss refuses |
-| `usd` / `usdz` | `MeshScene` compatibility projection; additive `SceneGraph` | R+W, rich read/hierarchy write, inspect | direct **TinyUSDZ** | optional `sceneio[usd]`; `.usd`/`.usda`, historical `.usdc` reads through crate 10, and aligned uncompressed USDZ; legacy static mesh bytes/API unchanged; `read_scene` maps bounded hierarchy/metadata/static transforms and prim selection, while `write_scene` currently closes empty/hierarchy-only stages; current crates, USDC writes, selected animated values, and U3-U5 payload mappings remain unavailable |
+| `usd` / `usdz` | `MeshScene` compatibility projection; additive `SceneGraph` | R+W, rich mesh/points R+W, inspect | direct **TinyUSDZ** | optional `sceneio[usd]`; `.usd`/`.usda`, historical `.usdc` reads through crate 10, and aligned uncompressed USDZ; legacy static mesh bytes/API unchanged; `read_scene` maps bounded hierarchy/metadata/static transforms, prim selection, static polygon meshes, and points; `write_scene` deterministically streams the same USDA/USDZ subset; materials, Gaussians, cameras, volumes/instances/semantics, current crates, USDC writes, and selected animated values remain later profile units |
 
 ### Repository-owned COLMAP workflow adapters
 
@@ -948,7 +965,8 @@ requirement for COLMAP ecosystem closure.
 - Broader semantics remain intentionally outside those bounded profiles:
   TIFF pyramids/multiple series, E57 multiple or organized scans, general
   Arrow nested/string/null schemas, multi-grid/vector/transformed OpenVDB,
-  and composed/animated/material USD scenes.
+  and composed/animated/material USD scenes plus the remaining bounded
+  Gaussian/camera/volume/instance/semantic profile units.
 - Policy-gated: AVIF, JPEG-XL, and Draco-compressed glTF. These do not enter
   implementation without an explicit decision under the patented-codec rule.
 

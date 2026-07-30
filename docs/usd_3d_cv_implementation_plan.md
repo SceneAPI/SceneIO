@@ -1,7 +1,7 @@
 # USD 3D-CV profile implementation plan
 
-Status: U0 bounded-provider matrix, U1 records, and U2 stage skeleton are
-implemented locally; the narrow TOST/current-crate gate and U3-U7 remain
+Status: U0 bounded-provider matrix, U1 records, U2 stage skeleton, and C1
+mesh/point mappings are committed. C2 materials/textures and C3-C7 remain.
 Review date: 2026-07-30  
 Standards baseline: AOUSD Core Specification 1.0.1, supplemental
 1.0.1.post0, and OpenUSD 26.08 (`v26.08`, `ee47c679abde`)
@@ -9,10 +9,12 @@ Standards baseline: AOUSD Core Specification 1.0.1, supplemental
 ## Decision summary
 
 SceneIO will target a named, bounded **USD 3D-CV profile**, not claim complete
-USD implementation. The profile is complete when SceneIO can exchange static
-or explicitly sampled 3D-CV stages containing meshes, point clouds, Gaussian
-splats, cameras, bounded materials, semantic labels, and OpenVDB references in
-USDA, USDC, USD, and USDZ.
+USD implementation. The required profile is complete when SceneIO can
+exchange directly authored, evaluated static 3D-CV stages containing meshes,
+point clouds, Gaussian splats, cameras, bounded materials, semantic labels,
+instances, and OpenVDB references in USDA, USD, and USDZ. USDC and composed or
+time-sampled inputs are provider capabilities: they are supported only where a
+qualified current OpenUSD provider is available.
 
 The closure boundary is intentionally finite:
 
@@ -25,6 +27,12 @@ The closure boundary is intentionally finite:
 - arbitrary shader graphs, lights, physics, skeletons, curves, NURBS,
   subdivision evaluation, authoring-layer preservation, arbitrary custom
   schemas, and non-3D-CV media are outside the profile.
+
+This boundary keeps closure finite. SceneIO will not implement a second USD
+composition engine or a repository-owned USDC crate codec. Direct USDA
+serialization and USDZ packaging remain repository-owned; a qualified
+upstream implementation supplies current USDC and evaluated composition/time
+when that optional capability is enabled.
 
 The existing static `MeshScene` API remains compatible. Rich USD scenes use a
 new `SceneGraph` API; a mesh-only projection continues to support current
@@ -89,6 +97,57 @@ Repository review also found that U1 is already partly implemented:
   affected-codec parity sweep, exact suite contract, compatibility snapshots,
   full local suite, Ruff pass, and 15-format benchmark control are green.
 
+### Current code-state audit
+
+The implementation review distinguishes committed capability from remaining
+work:
+
+| Area | State on 2026-07-30 | Evidence or remaining gate |
+|---|---|---|
+| U0 provider baseline | committed, bounded | TinyUSDZ 0.9.4 is qualified for USDA/USD/USDZ and historical USDC through crate 10; current USDC and TOST decision remain |
+| U1 records | committed, complete | `SceneGraph`, `InstanceSet`, `VolumeAsset`, and additive mesh/point/Gaussian fields have parity and lifetime coverage |
+| U2 stage skeleton | committed, complete | hierarchy, metadata, static transforms, selection, inspection, deterministic USDA/USDZ writes |
+| U3 mesh | C1 committed, complete | indexed primvars; constant/uniform/vertex/varying/face-varying domains; float display fields; orientation; double-sided state; transforms; extent; USDA/USDZ read/write |
+| U3 points | C1 committed, complete | points, normals, widths-as-diameters, ids, velocities, accelerations, display fields, indexed primvars, extent; USDA/USDZ read/write |
+| U3 materials/assets | vocabulary only | `UsdPreviewSurface`, bindings, subsets, texture resolution/package copying, tests, and benchmarks remain |
+| U4 Gaussian schema | records/vocabulary only | official schema read/write, raw-layout proofs, and scale tests remain |
+| U5 camera/volume/semantics/instances | records or adjacent codecs exist | USD schema adapters and mixed-stage tests remain |
+| U6 current USDC/composition/time | unavailable | must use a qualified optional OpenUSD provider; do not build a second composition engine |
+| U7 release closure | pending | complete suite, package matrix, benchmark ledger, docs/capability snapshots |
+
+Focused review command:
+
+```powershell
+.venv\Scripts\python.exe -m pytest -q `
+  tests\codecs\test_usd_scene.py tests\codecs\test_usd.py
+.venv\Scripts\python.exe -m ruff check `
+  src\sceneio\io\_usd tests\codecs\test_usd_scene.py
+```
+
+Current focused result: **46 tests pass and Ruff is clean** for the rich and
+compatibility USD suites plus the generated benchmark smoke. The post-review
+affected gate passes **57 tests**. The exact contract now matches the current
+4,146-test tree with normalized collection hash
+`f363c9148b0665ecc2e3dc1b52a06bfd1e2c3948d0670a595ef907db942f0b84`;
+the sanitizer collection assertion matches it. All three final C1 review
+lenses sign off with no remaining blocker. The final repository gate passes
+**4,141 tests with 5 expected skips** and full Ruff is clean. Commit
+`feat(usd): close rich mesh and points` closes C1.
+
+### C1 closure audit
+
+| Gate | Current evidence | Required action |
+|---|---|---|
+| implementation | mesh/point readers, writers, inspection, selection, and provider normalization are present | no new scope; fix only review or validation findings |
+| focused correctness | 46 focused tests pass | retain as the fast pre-commit gate |
+| resource/lifetime | final review signs off: provider text and arrays release before descendant traversal; inspection stays bounded; returned views retain owners; excluded payloads are not decoded | retain the focused lifetime/allocation cases through the final suite |
+| format/convention | final review signs off: exact USD role types, indexed primvars, direct metadata parsing, extent, axes/units/transforms, and selected-sibling behavior are correct | retain the exact role/domain/convention cases through the final suite |
+| test soundness | final review signs off: both cross-read directions, malformed inputs, writer guards, exact contracts, and generated benchmark value checks are effective | retain the exact contracts and generated benchmark smoke through the final suite |
+| exact contracts | contract and sanitizer assertion match the 4,146-node tree and exact hash | retain through the final full-suite run |
+| measurement | final one-run 100k-face/100k-point USDA/USDZ rows are recorded; duplicate normalized text and `str.strip()` allocation regressions were found and removed | retain the observational wording; repeatable comparison ledger remains C7 |
+| repository gate | 57 affected tests and 4,141 complete-suite tests pass; 5 expected skips; full Ruff is clean; `git diff --check` reports only cosmetic Windows line-ending warnings | retain this exact checkpoint through commit |
+| delivery | the `feat(usd): close rich mesh and points` commit contains the complete green C1 unit | do not push without a user request |
+
 ## Current implementation and measured review
 
 The current `sceneio[usd]` profile uses TinyUSDZ 0.9.4 for qualified loading
@@ -150,6 +209,16 @@ permissive-license family, and specifically is much closer to Apache-2.0 than
 to MIT, BSD, or zlib. It is not public domain and it is not literally
 Apache-2.0.
 
+| Property | TOST 1.0 | Apache-2.0 | MIT/BSD/zlib | Public domain |
+|---|---|---|---|---|
+| permissive, non-copyleft | yes | yes | yes | no license conditions |
+| source disclosure required | no | no | no | no |
+| explicit patent grant/termination | yes | yes | generally no | no license grant needed |
+| modified-file notice | yes | yes | generally no | no |
+| NOTICE handling | yes, when supplied | yes, when supplied | generally no | no |
+| trademark permission | only what notice compliance requires | limited customary origin description plus notice compliance | varies, usually no grant | not applicable as a license term |
+| same license as TOST | yes | no | no | no |
+
 TOST 1.0's copyright grant, explicit patent grant, patent-claim termination,
 redistribution conditions, NOTICE handling, warranty disclaimer, and liability
 terms are the Apache-2.0 text. OpenUSD's own license file says that section 6
@@ -163,10 +232,11 @@ is the difference:
 TOST is therefore non-copyleft and does not require SceneIO source disclosure.
 Compared with MIT/BSD/zlib it has the extra Apache-style patent grant,
 patent-claim termination, modified-file notice, and NOTICE obligations.
-Compared with Apache-2.0 it grants less trademark permission. The equivalent
-older text is catalogued by SPDX as the `Pixar` license and is not marked
-OSI-approved; as of SPDX License List 3.28.0, TOST does not have a standard
-identifier, and current `usd-core` metadata uses `LicenseRef-TOST-1.0`.
+Compared with Apache-2.0 it grants less trademark permission. SPDX License
+List 3.28.0 catalogs the materially equivalent older text as `Pixar`, notes
+that it is essentially Apache-2.0 with a modified section 6, and does not mark
+it OSI-approved. The TOST name itself has no standard SPDX identifier;
+current `usd-core` metadata uses `LicenseRef-TOST-1.0`.
 
 Project consequence:
 
@@ -192,6 +262,20 @@ it to an optional runtime provider only if the provider inventory, platform
 availability, and performance comparison justify doing so. This keeps the
 NumPy-only base runtime and manylinux2014 wheel contract intact.
 
+This recommendation is a project policy assessment, not legal advice. A
+practical policy entry would approve only:
+
+```text
+LicenseRef-TOST-1.0 (materially equivalent SPDX: Pixar):
+official unmodified OpenUSD packages only; optional oracle/provider only;
+never bundled in SceneIO wheels; complete package notice inventory required.
+```
+
+If that narrow entry is not approved, SceneIO still closes the direct static
+profile with TinyUSDZ and repository-owned USDA/USDZ output. It reports
+current USDC, composition, and selected-time evaluation as unavailable rather
+than extending the project indefinitely.
+
 ## Target profile contract
 
 ### File and container behavior
@@ -199,16 +283,17 @@ NumPy-only base runtime and manylinux2014 wheel contract intact.
 | Surface | Required behavior |
 |---|---|
 | `.usda` | read and deterministic repository-owned write |
-| `.usdc` | read; write only after current-version oracle qualification |
+| `.usdc` | historical crate read through the qualified base provider; current read and any write require the optional current OpenUSD provider |
 | `.usd` | detect forwarded USDA/USDC representation; preserve current ASCII write default for compatibility |
 | `.usdz` | read/write uncompressed, unencrypted, 64-byte-aligned packages with a valid first USD layer |
-| assets | resolve and package relative USD layers, PNG/JPEG/EXR textures, and OpenVDB assets |
+| assets | resolve and package relative PNG/JPEG/EXR textures and OpenVDB assets; composed layer dependencies are optional-provider input only |
 | inspection | report actual representation, version, prim counts/types, time range, dependencies, variants, and unsupported profile features without decoding bulk arrays |
 
 The logical registry ids remain `usd` and `usdz`. `.usdc` joins the `usd`
-extension set, and inspection records `representation="usda"|"usdc"`.
-This avoids breaking code that already treats `.usd` and `.usda` as one USD
-codec family.
+extension set, and inspection records `representation="usda"|"usdc"` plus
+the provider capability that accepted it. This avoids breaking code that
+already treats `.usd` and `.usda` as one USD codec family while keeping
+current-crate claims exact.
 
 ### Stage and node behavior
 
@@ -394,29 +479,66 @@ the required co-author trailer.
 
 ### Lean closure sequence
 
-The work is finite and ordered. Do not start a later unit while an earlier unit
-has uncommitted or failing changes.
+The work is finite and ordered. U0-U2 are already committed. Do not start a
+later unit while an earlier unit has uncommitted or failing changes.
 
-| Unit | Deliverable | Required evidence | Closure rule |
+| Commit unit | Deliverable | Required evidence | Closure rule |
 |---|---|---|---|
-| 1 | Finish U1c point/mesh fields and writer refusals | focused record tests, every affected codec suite, unchanged default bytes, full suite, Ruff, record benchmark | one green commit; no USD mapping yet |
-| 2 | Finish U0 provider qualification | pinned AOUSD 1.0.1 inputs, OpenUSD 26.08 fixtures, provider matrix, license inventory, read/write/performance comparison | select one provider per operation; unsupported USDC write remains unavailable |
-| 3 | U2 stage API and hierarchy | `read_scene`/`write_scene`, representation routing, metadata, selection, inspection | hierarchy-only stages cross-read and old mesh API remains exact |
-| 4 | U3 mesh/point/material payloads | mixed fixtures, texture packages, selected-prim and large-payload measurements | semantic equality through independent readers |
-| 5 | U4 official Gaussian schema | official 26.08 fixtures, raw-bit convention tests, generated 1k/100k/1M measurements | exact schema mapping; no implicit activations |
-| 6 | U5 camera/volume/semantics/instances | axis/pose optics cases, OpenVDB asset cases, inherited-label and prototype cases | one mixed 3D-CV stage round-trips |
-| 7 | U6 selected-time/container/composition subset | AOUSD compliance cases, current/historical crate reads, USDZ layout checks, selected-time comparison | evaluated snapshot equals the reference; authoring stacks stay out of scope |
-| 8 | U7 release closure | full tests, review lenses, benchmark ledger, docs/contracts, sdist/wheel smoke, hosted matrix with user approval | capability claim is exactly `sceneio.usd.3dcv/1` |
+| C1 | close current U3 mesh + point worktree | focused differential/count/interpolation/lifetime tests, existing USD compatibility bytes, selected-prim proof, generated medium mesh/point measurement, full suite, Ruff, contracts | one green commit; material fields still refuse explicitly |
+| C2 | U3 materials + texture assets | PreviewSurface constants and texture graph, direct and subset bindings, transactional USDA/USDZ assets, independent cross-read, missing/collision/path cases, generated packaged-texture measurement | one green commit; arbitrary networks/UDIM remain explicit exclusions |
+| C3 | U4 official Gaussian schema | official 26.08 fixtures, exact quaternion/SH/precision assertions, 1k/100k/1M generated measurements, legacy splat parity | exact schema mapping with no implicit log/logit conversion |
+| C4 | U5 cameras | camera/render-product association, optics and pose convention tests, mixed-resolution and ambiguity refusals, camera-stage measurement | one camera rig maps exactly; distortion remains excluded |
+| C5 | U5 volumes + semantics + instances | OpenVDB dependency packaging, inherited labels, prototype identity/order/masks, mixed-stage round-trip and dependency tests | all remaining required payload kinds coexist in one stage |
+| C6 | U6 provider capability | narrow TOST decision, exact OpenUSD package inventory, current USDC/composition/time differential tests and provider timing, or explicit unavailable capability if not approved | no repository-owned composition/crate implementation; either qualified optional provider or exact static-only closure |
+| C7 | U7 release closure | full tests, compiler checks, benchmark ledger, docs/contracts, sdist/wheel smoke, nonpublishing platform matrix prepared | claim exactly `sceneio.usd.3dcv/1` and list optional provider flags; no “full USD” claim |
+
+Execution is intentionally capped at seven commits. Each unit has one
+deliverable and one exit decision:
+
+1. close C1 without adding materials or new schemas;
+2. close the bounded material/asset vocabulary in C2;
+3. map only the official Gaussian schema in C3;
+4. map the bounded camera/render-product pair in C4;
+5. finish volumes, semantic labels, and point instances in C5;
+6. either qualify the optional OpenUSD capability in C6 or close those flags
+   as unavailable;
+7. perform release qualification once in C7.
+
+No later unit may expand an earlier unit's public profile merely to accept an
+unrepresentable input. The correct result is an explicit unsupported feature.
 
 Stop rules prevent the project from becoming open-ended:
 
-- if no qualified cross-platform USDC writer is available, ship USDC read-only;
-- if a composition arc is outside the AOUSD cases implemented in U6, report it
-  through inspection and refuse the rich read;
+- if the optional OpenUSD provider is not approved or unavailable, close with
+  historical USDC read only and report current USDC/composition/time as
+  unavailable;
+- if a composition arc is outside the qualified optional provider behavior,
+  report it through inspection and refuse the rich read;
 - if a schema cannot map exactly to a SceneIO record, keep it outside the
   profile instead of adding an opaque preservation system;
 - do not add rendering, full layer editing, or unrelated USD schema domains to
   close this profile.
+
+### File ownership for the remaining work
+
+Keep schema logic isolated so the repository remains expandable:
+
+| Concern | Repository owner |
+|---|---|
+| stage traversal, selection, payload dispatch | `src/sceneio/io/_usd/stage.py` |
+| mesh primvars/topology | `src/sceneio/io/_usd/geometry.py` |
+| points arrays/interpolation | `src/sceneio/io/_usd/points.py` |
+| PreviewSurface, bindings, subsets | `src/sceneio/io/_usd/materials.py` |
+| asset resolution and USDZ entries | `src/sceneio/io/_usd/package.py` |
+| Gaussian schema | `src/sceneio/io/_usd/gaussians.py` |
+| camera schema | `src/sceneio/io/_usd/cameras.py` |
+| volume, semantics, instances | add one focused module per schema family; do not grow `stage.py` into a monolith |
+| provider selection/version ceiling | `src/sceneio/io/_usd/provider.py` |
+| compatibility `MeshScene` behavior | `src/sceneio/io/_usd/legacy.py`; do not mix rich payload behavior back into it |
+
+Provider adapters may normalize upstream API quirks, but the in-memory mapping,
+validation, deterministic USDA writer, USDZ packager, capability reporting,
+and public behavior remain SceneIO-owned.
 
 ### U0 — freeze profile and qualify providers
 
@@ -525,20 +647,100 @@ source removal, and the generated allocation control.
 
 ### U3 — meshes, points, materials, and texture assets
 
-- [ ] Move current mesh mapping onto `SceneGraph`.
-- [ ] Add all accepted mesh primvar domains, float display colors, orientation,
-      double-sided state, and material subsets.
-- [ ] Add `UsdGeomPoints` fields with exact count/interpolation guards.
+- [x] Close the worktree mesh mapping on `SceneGraph`.
+- [x] Close indexed mesh primvars and all five interpolation domains, float
+      display colors/opacities, orientation, double-sided state, and extent;
+      material subsets remain in the next commit unit.
+- [x] Close `UsdGeomPoints` positions, normals, widths-as-diameters, ids,
+      velocities, accelerations, display fields, interpolation/count guards,
+      indexed primvars, and derived extent.
 - [ ] Implement the bounded `UsdPreviewSurface` graph and `MaterialSet`
       mapping.
 - [ ] Resolve/package PNG, JPEG, and EXR textures with collision-free relative
       names; reject escaping or missing dependencies.
 - [ ] Cross-read provider-authored and SceneIO-authored fixtures with both
       TinyUSDZ and the approved OpenUSD reference.
-- [ ] Add large mesh and point-cloud path benchmarks and selected-prim reads.
+- [x] Add large mesh and point-cloud path benchmarks and selected-prim reads.
 
 Exit: mixed mesh/point scenes and their accepted materials are semantically
 identical through both directions.
+
+#### C1 implementation checklist — geometry closure
+
+1. Keep the TinyUSDZ `UsdGeomPoints` built-in-array normalization in
+   `points.py`; do not leak provider-specific parsing into `stage.py`.
+2. Preserve indexed primvar meaning by flattening values with indices before
+   validating interpolation-domain counts.
+3. Continue mapping stage Y-up to `opengl`, Z-up to `enu`, and
+   `metersPerUnit` to payload scale without numeric coordinate conversion.
+4. Keep node transforms on the node and require payload-local transforms to be
+   identity on write.
+5. Keep rich `Points` stages out of the legacy `sceneio.read()` projection and
+   direct users to `read_scene()` rather than dropping data.
+6. Update inspection without constructing `Mesh` or `PointCloud` records.
+7. Update exact test-collection/contracts and the relevant public capability
+   snapshot before commit.
+
+Focused verification:
+
+- provider-authored bytes → rich read → exact arrays and metadata;
+- SceneIO write → TinyUSDZ cross-read → exact arrays and authored tokens;
+- rich read → write → rich read semantic equality;
+- indexed and constant/vertex/varying/face-varying cases;
+- empty arrays, mismatched counts, invalid indices, unsupported color space,
+  time samples, non-finite values, and topology range guards;
+- source removal plus garbage collection with returned arrays still valid;
+- selection proving an unselected payload constructor is not called;
+- existing legacy USD bytes and mesh projection unchanged.
+
+Measurement:
+
+- generated 100k-point and 100k-face USDA/USDZ write/read/inspect rows;
+- report wall time, throughput, peak RSS, traced Python allocation, and output
+  size;
+- compare full read with selected-prim and inspect paths;
+- record the result in `bench/BASELINE.md`; improvement is qualitative, but a
+  real regression must be corrected or explained.
+
+#### C2 implementation checklist — materials and assets
+
+1. Traverse `Material`, `Shader`, `NodeGraph`, and `GeomSubset` as resource
+   prims, not SceneGraph hierarchy nodes.
+2. Require exactly one `Material.outputs:surface` connection to a descendant
+   `UsdPreviewSurface` shader.
+3. Map only base color, emissive, metallic, roughness, opacity,
+   opacity-threshold, and normal inputs. Apply documented PreviewSurface
+   defaults only when unauthored; refuse authored unsupported inputs or
+   non-default values that `MaterialSet` cannot preserve.
+4. Map direct `material:binding` and face `GeomSubset` assignments. Validate
+   face indices, non-overlap, complete primitive runs, and material index
+   bounds.
+5. Map only one `UsdUVTexture` hop per accepted material input, one `st`
+   primvar source, represented wrap/filter modes, identity scale/bias, and
+   supported color-space tokens.
+6. Resolve direct-layer assets relative to the root layer. For USDZ, resolve
+   package-relative entries. Accept PNG/JPEG/EXR only.
+7. Copy/package assets in chunks, derive collision-free stable relative names,
+   and complete the entire write transaction before replacing a destination.
+8. Keep texture bytes out of `MaterialSet`; store normalized relative
+   references and the SceneGraph external-asset table.
+9. Refuse missing assets, absolute paths where portability is required,
+   parent-directory escapes, UDIM patterns, procedural nodes, unsupported
+   connection fan-in, and unrepresented scale/bias/color operations.
+
+Ground-truth cases:
+
+- OpenUSD-authored constant, textured, direct-binding, and subset fixtures;
+- SceneIO-authored USDA/USDZ accepted by TinyUSDZ and, if approved, OpenUSD
+  `usdchecker` plus schema APIs;
+- independent PNG/JPEG/EXR decoders confirm packaged asset bytes and image
+  content;
+- self-round-trip is supplementary and never the only evidence.
+
+Write-failure cases must prove the old destination and any pre-existing asset
+directory remain unchanged. Generated texture packages cover duplicate base
+names, shared assets, nested source paths, missing inputs, and a medium
+multi-material mesh.
 
 ### U4 — official Gaussian splats
 
@@ -579,22 +781,38 @@ stage.
 
 ### U6 — containers, evaluated composition, and selected time
 
+- [ ] Make the narrow TOST decision before installing or invoking OpenUSD.
+- [ ] Inventory the exact `usd-core==26.8` wheel contents, license/NOTICE
+      files, platform tags, and transitive components before provider use.
 - [ ] Validate current OpenUSD 26.08 USDC read/write plus the historical crate
-      versions selected in U0.
-- [ ] Package multiple layers and assets under USDZ rules: stored entries,
-      first/default layer, 64-byte data alignment, relative paths, no
-      encryption, and no unsupported media.
-- [ ] Support evaluated reads for the U0-qualified subset of sublayers,
-      references, payloads, variants, inherits, and specializes.
-- [ ] Require explicit variant choices when multiple results are plausible.
-- [ ] Read default or explicitly selected time samples for transforms, mesh
-      points, point clouds, Gaussian attributes, cameras, and asset paths.
+      versions selected in U0 through the optional provider. Do not expose
+      TinyUSDZ's historical crate writer as current USDC.
+- [ ] Keep repository-owned USDZ output to one flattened root layer plus
+      assets: stored entries, first/default layer, 64-byte data alignment,
+      relative paths, no encryption, and no unsupported media.
+- [ ] Use the optional OpenUSD provider for evaluated reads of sublayers,
+      references, payloads, variants, inherits, and specializes. Do not
+      implement a second composition engine.
+- [ ] Require explicit variant choices when the public request otherwise has
+      multiple plausible results.
+- [ ] Use the optional provider to read default or explicitly selected time
+      samples for transforms, mesh points, point clouds, Gaussian attributes,
+      cameras, and asset paths.
 - [ ] Write a flattened, self-contained selected snapshot only.
 - [ ] Report composition dependencies and unresolved arcs in `inspect()`.
 
-Exit: supported composed inputs produce the same evaluated `SceneGraph` as the
-approved OpenUSD reference at the selected time. Layer-stack authoring remains
-out of scope.
+Exit A, when the provider is approved: supported composed inputs produce the
+same evaluated `SceneGraph` as direct OpenUSD schema queries at the selected
+time. Exit B, when it is not approved: direct static profile closure proceeds,
+and capabilities/inspection explicitly report current USDC, composition, and
+selected time as unavailable. Layer-stack authoring remains out of scope in
+both cases.
+
+Provider validation must run in a separately installed environment because
+`usd-core` has CPython/platform-specific wheels and a newer Linux floor than
+SceneIO's abi3/manylinux2014 contract. It must never become an import-time
+dependency of `sceneio`, be bundled into SceneIO wheels, or be required for
+the NumPy-only smoke test.
 
 ### U7 — qualification and documentation closure
 
@@ -612,7 +830,28 @@ out of scope.
 - [ ] Prepare the nonpublishing Windows/Linux/macOS package matrix.
 - [ ] Ask the user before pushing or triggering the hosted cross-platform run.
 
-Exit: the docs claim exactly `sceneio.usd.3dcv/1`; no document says “full USD.”
+Exit: the docs claim exactly `sceneio.usd.3dcv/1`, separately report
+`current_usdc`, `composition`, and `selected_time` provider flags, and no
+document says “full USD.”
+
+### Per-commit documentation checklist
+
+Each C1-C7 commit updates the same small set of sources of truth:
+
+- this implementation plan: checked items, evidence, and next unit;
+- `docs/format_coverage.md`: public read/write level, provider, and limits;
+- `docs/coverage_roadmap.md`: one-line status only;
+- `docs/core_architecture.md`: module/record ownership when architecture
+  changes;
+- `docs/io_optimization_plan.md` and `bench/BASELINE.md`: only when measured
+  behavior changes;
+- `LICENSES/README.md` plus an exact license/notice file for any newly used
+  implementation or fixture;
+- capability and repository-organization snapshots when their exact contents
+  change.
+
+Do not create parallel USD roadmaps. This file is the single detailed
+implementation checklist; the coverage documents summarize it.
 
 ## Verification matrix
 

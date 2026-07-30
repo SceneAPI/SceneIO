@@ -10,7 +10,7 @@ import tinyusdz
 
 import sceneio
 from sceneio import _core
-from sceneio.io._usd import geometry, stage
+from sceneio.io._usd import geometry, points, stage
 
 _HIERARCHY_USDA = """#usda 1.0
 (
@@ -80,6 +80,76 @@ def _hierarchy_scene(**changes):
         "start_time_code": 1.0,
         "end_time_code": 5.0,
         "time_codes_per_second": 30.0,
+    }
+    values.update(changes)
+    return _core.scene_graph(**values)
+
+
+def _rich_geometry_scene(
+    *,
+    up_axis: str = "y",
+    meters_per_unit: float = 1.0,
+    display_color_space: str = "linear",
+    **changes,
+):
+    coordinate_frame = "opengl" if up_axis == "y" else "enu"
+    mesh = _core.mesh(
+        np.array(
+            [[0, 0, 0], [1, 0, 0], [0, 1, 0]],
+            np.float32,
+        ),
+        np.array([0, 3], np.uint64),
+        np.array([0, 1, 2], np.uint64),
+        vertex_normals=np.array(
+            [[0, 0, 1], [0, 0, 1], [0, 0, 1]],
+            np.float32,
+        ),
+        corner_uvs=np.array(
+            [[0, 0], [1, 0], [0, 1]],
+            np.float32,
+        ),
+        vertex_display_colors=np.array(
+            [[1, 0, 0], [0, 1, 0], [0, 0, 1]],
+            np.float32,
+        ),
+        corner_display_opacities=np.array(
+            [1.0, 0.5, 0.25],
+            np.float32,
+        ),
+        display_color_space=display_color_space,
+        coordinate_frame=coordinate_frame,
+        scale_to_meters=meters_per_unit,
+        orientation="left_handed",
+        double_sided=False,
+    )
+    cloud = _core.point_cloud(
+        np.array([[2, 3, 4], [5, 6, 7]], np.float32),
+        normals=np.array([[0, 0, 1], [0, 1, 0]], np.float32),
+        display_colors=np.array([[0.1, 0.2, 0.3], [1, 1, 1]], np.float32),
+        display_opacities=np.array([1.0, 0.4], np.float32),
+        widths=np.array([0.1, 0.2], np.float32),
+        ids=np.array([10, 20], np.int64),
+        velocities=np.array([[1, 0, 0], [0, 1, 0]], np.float32),
+        accelerations=np.array([[0, 0, 1], [1, 1, 1]], np.float32),
+        display_color_space=display_color_space,
+        coordinate_frame=coordinate_frame,
+        scale_to_meters=meters_per_unit,
+    )
+    transforms = np.broadcast_to(np.eye(4), (2, 4, 4)).copy()
+    transforms[0, 0, 3] = 2.0
+    values = {
+        "node_names": ["Surface", "Samples"],
+        "node_child_offsets": np.array([0, 0, 0], np.uint64),
+        "node_children": np.array([], np.uint64),
+        "node_local_transforms": transforms,
+        "node_payload_kinds": ["mesh", "point_cloud"],
+        "node_payload_indices": np.array([0, 0], np.uint64),
+        "meshes": [mesh],
+        "point_clouds": [cloud],
+        "up_axis": up_axis,
+        "meters_per_unit": meters_per_unit,
+        "source_representation": "usda",
+        "default_prim": 0,
     }
     values.update(changes)
     return _core.scene_graph(**values)
@@ -168,6 +238,736 @@ def test_read_scene_mesh_projection_preserves_legacy_read_contract(tmp_path):
     )
     assert isinstance(legacy, sceneio.MeshScene)
     assert legacy.num_primitives == 1
+
+
+def test_read_scene_maps_indexed_mesh_and_complete_points_payload(tmp_path):
+    path = tmp_path / "geometry.usda"
+    path.write_text(
+        """#usda 1.0
+(
+    upAxis = "Y"
+    metersPerUnit = 1
+)
+def Mesh "Surface"
+{
+    matrix4d xformOp:transform = (
+        (1,0,0,2), (0,1,0,0), (0,0,1,0), (0,0,0,1)
+    )
+    uniform token[] xformOpOrder = ["xformOp:transform"]
+    point3f[] points = [(0,0,0), (1,0,0), (0,1,0)]
+    int[] faceVertexCounts = [3]
+    int[] faceVertexIndices = [0,1,2]
+    normal3f[] normals = [(0,0,1), (0,1,0), (0,0,1)] (
+        interpolation = "varying"
+    )
+    color3f[] primvars:displayColor = [(1,0,0), (0,1,0)] (
+        interpolation = "vertex"
+    )
+    int[] primvars:displayColor:indices = [0,1,0]
+    float[] primvars:displayOpacity = [1,0.5,0.25] (
+        interpolation = "faceVarying"
+    )
+    uniform token subdivisionScheme = "none"
+    uniform token orientation = "leftHanded"
+    uniform bool doubleSided = false
+}
+def Points "Samples"
+{
+    point3f[] points = [(2,3,4), (5,6,7)]
+    normal3f[] normals = [(0,0,1), (0,1,0)] (
+        interpolation = "varying"
+    )
+    float[] widths = [0.2] (
+        interpolation = "constant"
+    )
+    int64[] ids = [10,20]
+    vector3f[] velocities = [(1,0,0), (0,1,0)]
+    vector3f[] accelerations = [(0,0,1), (1,1,1)]
+    color3f[] primvars:displayColor = [(0.1,0.2,0.3)]
+    float[] primvars:displayOpacity = [1,0.4] (
+        interpolation = "vertex"
+    )
+}
+""",
+        encoding="utf-8",
+    )
+
+    actual = sceneio.read_scene(path)
+    assert actual.node_payload_kinds == ["mesh", "point_cloud"]
+    np.testing.assert_array_equal(
+        actual.node_local_transforms[0, :3, 3],
+        [2, 0, 0],
+    )
+    mesh = actual.mesh_at(0)
+    np.testing.assert_array_equal(
+        mesh.vertex_display_colors,
+        [[1, 0, 0], [0, 1, 0], [1, 0, 0]],
+    )
+    np.testing.assert_array_equal(
+        mesh.corner_display_opacities,
+        [1, 0.5, 0.25],
+    )
+    assert mesh.display_color_space == "linear"
+    assert mesh.orientation == "left_handed"
+    assert mesh.has_double_sided and mesh.double_sided is False
+    cloud = actual.point_cloud_at(0)
+    np.testing.assert_array_equal(cloud.positions, [[2, 3, 4], [5, 6, 7]])
+    np.testing.assert_array_equal(
+        cloud.widths,
+        np.array([0.2, 0.2], np.float32),
+    )
+    np.testing.assert_array_equal(cloud.ids, [10, 20])
+    np.testing.assert_array_equal(
+        cloud.display_colors,
+        np.array(
+            [[0.1, 0.2, 0.3], [0.1, 0.2, 0.3]],
+            np.float32,
+        ),
+    )
+    np.testing.assert_array_equal(
+        cloud.accelerations,
+        [[0, 0, 1], [1, 1, 1]],
+    )
+    assert cloud.display_color_space == "linear"
+    assert cloud.coordinate_frame == "opengl"
+    assert cloud.scale_to_meters == 1.0
+
+    positions = cloud.positions
+    path.unlink()
+    del actual, cloud
+    gc.collect()
+    np.testing.assert_array_equal(positions, [[2, 3, 4], [5, 6, 7]])
+
+
+@pytest.mark.parametrize("suffix", [".usda", ".usdz"])
+def test_write_scene_geometry_cross_reads_and_roundtrips(tmp_path, suffix):
+    expected = _rich_geometry_scene()
+    path = tmp_path / f"geometry{suffix}"
+    duplicate = tmp_path / f"geometry-copy{suffix}"
+
+    sceneio.write_scene(expected, path)
+    sceneio.write_scene(expected, duplicate)
+
+    assert path.read_bytes() == duplicate.read_bytes()
+    oracle = tinyusdz.load(str(path))
+    roots = oracle.root_prims()
+    assert [prim.type_name for prim in roots] == ["Mesh", "Points"]
+    np.testing.assert_array_equal(
+        np.asarray(roots[0].get_attribute("points").value),
+        expected.mesh_at(0).positions,
+    )
+    np.testing.assert_array_equal(
+        np.asarray(roots[0].get_attribute("faceVertexCounts").value),
+        [3],
+    )
+    np.testing.assert_array_equal(
+        np.asarray(roots[0].get_attribute("faceVertexIndices").value),
+        [0, 1, 2],
+    )
+    assert (
+        roots[0].get_attribute_metadata("normals", "interpolation")
+        == "vertex"
+    )
+    assert (
+        roots[0].get_attribute_metadata("primvars:st", "interpolation")
+        == "faceVarying"
+    )
+    assert "primvars:displayColor" in roots[0].property_names()
+    assert "extent" in roots[0].property_names()
+    assert 'uniform token orientation = "leftHanded"' in roots[0].to_string()
+    assert "uniform bool doubleSided = 0" in roots[0].to_string()
+    point_text = roots[1].to_string()
+    assert "float[] widths = [0.1, 0.2]" in point_text
+    assert "int64[] ids = [10, 20]" in point_text
+    assert "vector3f[] velocities = [(1, 0, 0), (0, 1, 0)]" in point_text
+    assert "vector3f[] accelerations = [(0, 0, 1), (1, 1, 1)]" in point_text
+    assert "float3[] extent = [(1.95, 2.95, 3.95)," in point_text
+    with pytest.raises(
+        sceneio.FormatError,
+        match=r"UsdGeomPoints requires sceneio\.read_scene",
+    ):
+        sceneio.read(path)
+
+    actual = sceneio.read_scene(path)
+    assert actual.node_payload_kinds == expected.node_payload_kinds
+    np.testing.assert_array_equal(
+        actual.node_local_transforms,
+        expected.node_local_transforms,
+    )
+    for name in (
+        "positions",
+        "vertex_normals",
+        "corner_uvs",
+        "vertex_display_colors",
+        "corner_display_opacities",
+    ):
+        np.testing.assert_array_equal(
+            getattr(actual.mesh_at(0), name),
+            getattr(expected.mesh_at(0), name),
+        )
+    assert actual.mesh_at(0).orientation == "left_handed"
+    assert actual.mesh_at(0).double_sided is False
+    for name in (
+        "positions",
+        "normals",
+        "display_colors",
+        "display_opacities",
+        "widths",
+        "ids",
+        "velocities",
+        "accelerations",
+    ):
+        np.testing.assert_array_equal(
+            getattr(actual.point_cloud_at(0), name),
+            getattr(expected.point_cloud_at(0), name),
+        )
+
+
+def test_mesh_domains_defaults_and_indexed_uniform_values(tmp_path):
+    path = tmp_path / "domains.usda"
+    path.write_text(
+        """#usda 1.0
+(
+    upAxis = "Y"
+    metersPerUnit = 1
+)
+def Mesh "Surface"
+{
+    point3f[] points = [(0,0,0), (1,0,0), (1,1,0), (0,1,0)]
+    int[] faceVertexCounts = [3,3]
+    int[] faceVertexIndices = [0,1,2,0,2,3]
+    normal3f[] normals = [(1,0,0), (1,0,0), (1,0,0), (1,0,0)]
+    normal3f[] primvars:normals = [(0,0,1)] (
+        interpolation = "vertex"
+    )
+    int[] primvars:normals:indices = [0,0,0,0]
+    texCoord2f[] primvars:st = [(0.25,0.75)]
+    color3f[] primvars:displayColor = [(1,0,0), (0,1,0)] (
+        interpolation = "uniform"
+    )
+    float[] primvars:displayOpacity = [0.25,1] (
+        interpolation = "uniform"
+    )
+    int[] primvars:displayOpacity:indices = [1,0]
+    float3[] extent = [(-1,-1,-1), (2,2,1)]
+    uniform token subdivisionScheme = "none"
+}
+""",
+        encoding="utf-8",
+    )
+
+    mesh = sceneio.read_scene(path).mesh_at(0)
+
+    np.testing.assert_array_equal(
+        mesh.vertex_normals,
+        np.tile(np.array([[0, 0, 1]], np.float32), (4, 1)),
+    )
+    np.testing.assert_array_equal(
+        mesh.vertex_uvs,
+        np.tile(np.array([[0.25, 0.75]], np.float32), (4, 1)),
+    )
+    np.testing.assert_array_equal(
+        mesh.corner_display_colors,
+        np.array(
+            [[1, 0, 0]] * 3 + [[0, 1, 0]] * 3,
+            np.float32,
+        ),
+    )
+    np.testing.assert_array_equal(
+        mesh.corner_display_opacities,
+        np.array([1, 1, 1, 0.25, 0.25, 0.25], np.float32),
+    )
+
+
+def test_points_primvar_widths_take_precedence_over_builtin_widths(tmp_path):
+    path = tmp_path / "width-precedence.usda"
+    path.write_text(
+        """#usda 1.0
+(
+    upAxis = "Y"
+    metersPerUnit = 1
+)
+def Points "Samples"
+{
+    point3f[] points = [(0,0,0), (1,1,1)]
+    normal3f[] normals = [(1,0,0), (1,0,0)]
+    normal3f[] primvars:normals = [(0,1,0), (0,0,1)] (
+        interpolation = "vertex"
+    )
+    int[] primvars:normals:indices = [1,0]
+    float[] widths = [9,9] (interpolation = "vertex")
+    float[] primvars:widths = [0.4]
+    int[] primvars:widths:indices = [0]
+}
+""",
+        encoding="utf-8",
+    )
+
+    cloud = sceneio.read_scene(path).point_cloud_at(0)
+
+    np.testing.assert_array_equal(
+        cloud.widths,
+        np.array([0.4, 0.4], np.float32),
+    )
+    np.testing.assert_array_equal(
+        cloud.normals,
+        np.array([[0, 0, 1], [0, 1, 0]], np.float32),
+    )
+
+
+def test_srgb_display_fields_author_and_roundtrip_color_space(tmp_path):
+    expected = _rich_geometry_scene(display_color_space="srgb")
+    path = tmp_path / "srgb.usda"
+
+    sceneio.write_scene(expected, path)
+
+    text = path.read_text(encoding="utf-8")
+    assert text.count('colorSpace = "srgb_rec709_scene"') == 2
+    actual = sceneio.read_scene(path)
+    assert actual.mesh_at(0).display_color_space == "srgb"
+    assert actual.point_cloud_at(0).display_color_space == "srgb"
+
+
+def test_empty_mesh_and_points_payloads_roundtrip(tmp_path):
+    mesh = _core.mesh(
+        np.empty((0, 3), np.float32),
+        np.array([0], np.uint64),
+        np.empty(0, np.uint64),
+        coordinate_frame="opengl",
+    )
+    cloud = _core.point_cloud(
+        np.empty((0, 3), np.float32),
+        coordinate_frame="opengl",
+    )
+    scene = _rich_geometry_scene(meshes=[mesh], point_clouds=[cloud])
+    path = tmp_path / "empty-geometry.usda"
+
+    sceneio.write_scene(scene, path)
+    actual = sceneio.read_scene(path)
+
+    assert actual.mesh_at(0).num_vertices == 0
+    assert actual.mesh_at(0).num_faces == 0
+    assert actual.point_cloud_at(0).num_points == 0
+
+
+def test_z_up_geometry_preserves_coordinates_and_payload_conventions(tmp_path):
+    expected = _rich_geometry_scene(up_axis="z", meters_per_unit=0.01)
+    path = tmp_path / "z-up.usda"
+
+    sceneio.write_scene(expected, path)
+    actual = sceneio.read_scene(path)
+
+    assert actual.up_axis == "z"
+    assert actual.meters_per_unit == 0.01
+    assert actual.mesh_at(0).coordinate_frame == "enu"
+    assert actual.point_cloud_at(0).coordinate_frame == "enu"
+    assert actual.mesh_at(0).scale_to_meters == 0.01
+    assert actual.point_cloud_at(0).scale_to_meters == 0.01
+    np.testing.assert_array_equal(
+        actual.mesh_at(0).positions,
+        expected.mesh_at(0).positions,
+    )
+    np.testing.assert_array_equal(
+        actual.point_cloud_at(0).positions,
+        expected.point_cloud_at(0).positions,
+    )
+
+
+def test_points_inspection_and_selection_do_not_construct_records(
+    tmp_path,
+    monkeypatch,
+):
+    path = tmp_path / "geometry.usda"
+    sceneio.write_scene(_rich_geometry_scene(), path)
+
+    def fail_factory(*_args, **_kwargs):
+        raise AssertionError("inspection decoded a point payload")
+
+    monkeypatch.setattr(points._core, "point_cloud", fail_factory)
+    monkeypatch.setattr(points, "point_arrays_from_prim", fail_factory)
+    inspected = sceneio.inspect(path)
+    assert inspected.datatype == "scene_graph"
+    assert inspected.metadata["prim_type_counts"] == (
+        "Mesh=1",
+        "Points=1",
+    )
+    assert inspected.metadata["primitive_count"] == 2
+    assert inspected.shape == (5, 3)
+
+    selected = sceneio.read_scene(path, prims=("/Surface",))
+    assert selected.node_names == ["Surface"]
+    assert selected.node_payload_kinds == ["mesh"]
+
+    skipped = tmp_path / "skip-unselected-points.usda"
+    skipped.write_text(
+        """#usda 1.0
+(
+    upAxis = "Y"
+    metersPerUnit = 1
+)
+def Xform "Keep"
+{
+}
+def Points "Skip"
+{
+    point3f[] points = [(0, 0, 0)]
+    custom float providerOnly = 1
+}
+""",
+        encoding="utf-8",
+    )
+    selected = sceneio.read_scene(skipped, prims=("/Keep",))
+    assert selected.node_names == ["Keep"]
+    with pytest.raises(sceneio.FormatError, match="providerOnly"):
+        sceneio.read_scene(skipped)
+
+
+def test_geometry_guards_preserve_destinations_and_refuse_bad_domains(tmp_path):
+    malformed = (
+        (
+            """def Points "P" {
+    point3f[] points = [(0,0,0), (1,1,1)]
+    int64[] ids = [1]
+}""",
+            "ids.*count",
+        ),
+        (
+            """def Points "P" {
+    point3f[] points = [(0,0,0), (1,1,1)]
+    float[] widths = [1, 2] (interpolation = "uniform")
+}""",
+            "widths.*interpolation/count",
+        ),
+        (
+            """def Mesh "M" {
+    point3f[] points = [(0,0,0), (1,0,0), (0,1,0)]
+    int[] faceVertexCounts = [3]
+    int[] faceVertexIndices = [0,1,2]
+    color3f[] primvars:displayColor = [(1,0,0), (0,1,0)] (
+        interpolation = "uniform"
+    )
+    uniform token subdivisionScheme = "none"
+}""",
+            "displayColor # of items|uniform count",
+        ),
+        (
+            """def Mesh "M" {
+    point3f[] points = [(0,0,0), (1,0,0), (0,1,0)]
+    int[] faceVertexCounts = [3]
+    int[] faceVertexIndices = [0,1,2]
+    int[] primvars:st:indices = [0]
+    uniform token subdivisionScheme = "none"
+}""",
+            "primvars:st:indices.*requires",
+        ),
+        (
+            """def Points "P" {
+    point3f[] points = [(0,0,0)]
+    int[] primvars:displayColor:indices = [0]
+}""",
+            "primvars:displayColor:indices.*requires",
+        ),
+        (
+            """def Mesh "M" {
+    point3f[] points = [(0,0,0), (1,0,0), (0,1,0)]
+    int[] faceVertexCounts = [3]
+    int[] faceVertexIndices = [0,1,2]
+}""",
+            "subdivisionScheme must be authored",
+        ),
+        (
+            """def Mesh "M" {
+    point3f[] points = [(0,0,0), (1,0,0), (0,1,0)]
+    int[] faceVertexCounts = [3]
+    int[] faceVertexIndices = [0,1,2]
+    float3[] extent = [(0,0,0), (0.5,1,0)]
+    uniform token subdivisionScheme = "none"
+}""",
+            "extent does not enclose points",
+        ),
+        (
+            """def Points "P" {
+    point3f[] points = [(0,0,0)]
+    float[] widths = [2]
+    float3[] extent = [(0,0,0), (1,1,1)]
+}""",
+            "extent does not enclose points and widths",
+        ),
+        (
+            """def Points "P" {
+    point3f[] points = [(0,0,0), (1,1,1)]
+    int64[] ids = [7,7]
+}""",
+            "ids must be unique",
+        ),
+        (
+            """def Points "P" {
+    point3f[] points = [(0,0,0)]
+    float[] primvars:displayOpacity = [1.5]
+}""",
+            r"display opacity must be in \[0, 1\]",
+        ),
+        (
+            """def Points "P" {
+    point3f[] points = [(0,0,0)]
+    color3f[] primvars:displayColor = [(1,0,0)] (
+        colorSpace = "acescg"
+    )
+}""",
+            "unsupported colorSpace",
+        ),
+        (
+            """def Points "P" {
+    point3f[] points = [(0,0,0)]
+    float3[] extent = [(1,1,1), (0,0,0)]
+}""",
+            "extent minimum exceeds maximum",
+        ),
+        (
+            """def Mesh "M" {
+    point3f[] points = [(0,0,0), (1,0,0), (0,1,0)]
+    int[] faceVertexCounts = [3]
+    int[] faceVertexIndices = [0,1,3]
+    uniform token subdivisionScheme = "none"
+}""",
+            "vertexIndex2 3 exceeds|face index is outside",
+        ),
+        (
+            """def Mesh "M" {
+    point3f[] points = [(0,0,0), (1,0,0), (0,1,0)]
+    int[] faceVertexCounts = [3]
+    int[] faceVertexIndices = [0,1,2]
+    float[] primvars:displayOpacity = [1,2,1] (
+        interpolation = "vertex"
+    )
+    uniform token subdivisionScheme = "none"
+}""",
+            r"display opacity must be in \[0, 1\]",
+        ),
+        (
+            """def Mesh "M" {
+    point3f[] points = [(0,0,0), (1,0,0), (0,1,0)]
+    int[] faceVertexCounts = [3]
+    int[] faceVertexIndices = [0,1,2]
+    float[] primvars:displayOpacity = [0.5] (
+        unauthoredValuesIndex = 0
+    )
+    uniform token subdivisionScheme = "none"
+}""",
+            "unauthoredValuesIndex must be -1",
+        ),
+        (
+            """def Points "P" {
+    point3f[] points = [(0,0,0)]
+    float[] primvars:widths = [0.1,0.2] (
+        elementSize = 2
+    )
+}""",
+            "elementSize must be 1",
+        ),
+        (
+            """def Mesh "M" {
+    point3f[] points = [(0,0,0), (1,0,0), (0,1,0)]
+    int[] faceVertexCounts = [3]
+    int[] faceVertexIndices = [0,1,2]
+    color3f[] primvars:displayColor = [(1,0,0)] (
+        interpolation = "vertex"
+    )
+    int[] primvars:displayColor:indices = [0,1,0]
+    uniform token subdivisionScheme = "none"
+}""",
+            "Failed to flatten primvar|indices.*out of range",
+        ),
+        (
+            """def Mesh "M" {
+    point3f[] points = [(0,0,0), (1,0,0), (0,1,0)]
+    int[] faceVertexCounts = [3]
+    int[] faceVertexIndices = [0,1,2]
+    uniform token orientation = "sideways"
+    uniform token subdivisionScheme = "none"
+}""",
+            "invalid authored orientation",
+        ),
+        (
+            """def Mesh "M" {
+    point3f[] points = [(0,0,0), (1,0,0), (0,1,0)]
+    int[] faceVertexCounts = [3]
+    int[] faceVertexIndices = [0,1,2]
+    float3[] primvars:normals = [(0,0,1)] (
+        interpolation = "constant"
+    )
+    uniform token subdivisionScheme = "none"
+}""",
+            "primvars:normals.*normal3f",
+        ),
+        (
+            """def Mesh "M" {
+    point3f[] points = [(0,0,0), (1,0,0), (0,1,0)]
+    int[] faceVertexCounts = [3]
+    int[] faceVertexIndices = [0,1,2]
+    float2[] primvars:st = [(0,0)] (
+        interpolation = "constant"
+    )
+    uniform token subdivisionScheme = "none"
+}""",
+            "primvars:st.*texCoord2f",
+        ),
+        (
+            """def Mesh "M" {
+    point3f[] points = [(0,0,0), (1,0,0), (0,1,0)]
+    int[] faceVertexCounts = [3]
+    int[] faceVertexIndices = [0,1,2]
+    vector3f[] primvars:displayColor = [(1,0,0)] (
+        interpolation = "constant"
+    )
+    uniform token subdivisionScheme = "none"
+}""",
+            "primvars:displayColor.*color3f",
+        ),
+        (
+            """def Points "P" {
+    point3f[] points = [(0,0,0)]
+    float3[] primvars:normals = [(0,0,1)] (
+        interpolation = "vertex"
+    )
+}""",
+            "primvars:normals.*normal3f",
+        ),
+        (
+            """def Points "P" {
+    point3f[] points = [(0,0,0)]
+    vector3f[] primvars:displayColor = [(1,0,0)] (
+        interpolation = "vertex"
+    )
+}""",
+            "primvars:displayColor.*color3f",
+        ),
+        (
+            """def Mesh "M" {
+    point3f[] points = [(0,0,0), (1,0,0), (0,1,0)]
+    int[] faceVertexCounts = [3]
+    int[] faceVertexIndices = [0,1,2]
+    float[] primvars:displayOpacity = [0.5,2] (
+        interpolation = "vertex"
+    )
+    int[] primvars:displayOpacity:indices = [0,0,0]
+    uniform token subdivisionScheme = "none"
+}""",
+            r"display opacity must be in \[0, 1\]",
+        ),
+        (
+            """def Points "P" {
+    point3f[] points = [(1e40,0,0)]
+}""",
+            "Failed to parse floating|points.*finite",
+        ),
+        (
+            """def Points "P" {
+    point3f[] points.timeSamples = {
+        1: [(0,0,0)],
+        2: [(1,1,1)]
+    }
+}""",
+            "selected-time value evaluation is not available",
+        ),
+    )
+    for index, (body, message) in enumerate(malformed):
+        path = tmp_path / f"bad-{index}.usda"
+        path.write_text(
+            '#usda 1.0\n( upAxis = "Y" metersPerUnit = 1 )\n' + body,
+            encoding="utf-8",
+        )
+        with pytest.raises(sceneio.FormatError, match=message):
+            sceneio.read_scene(path)
+        try:
+            inspected = sceneio.inspect(path)
+        except sceneio.FormatError:
+            assert "1e40" in body
+        else:
+            assert inspected.metadata["unsupported_features"]
+
+    metadata_decoys = (
+        """def Mesh "M" {
+    point3f[] points = [(0,0,0), (1,0,0), (0,1,0)]
+    int[] faceVertexCounts = [3]
+    int[] faceVertexIndices = [0,1,2]
+    float[] primvars:displayOpacity = [0.5] (
+        interpolation = "constant"
+        customData = {
+            string note = "elementSize = 2"
+        }
+    )
+    uniform token subdivisionScheme = "none"
+}""",
+        """def Points "P" {
+    point3f[] points = [(0,0,0)]
+    float[] primvars:widths = [0.1] (
+        interpolation = "vertex"
+        customData = {
+            string note = "unauthoredValuesIndex = 0"
+        }
+    )
+}""",
+    )
+    for index, body in enumerate(metadata_decoys):
+        path = tmp_path / f"metadata-decoy-{index}.usda"
+        path.write_text(
+            '#usda 1.0\n( upAxis = "Y" metersPerUnit = 1 )\n' + body,
+            encoding="utf-8",
+        )
+        sceneio.read_scene(path)
+        assert sceneio.inspect(path).metadata["unsupported_features"] == ()
+
+    cloud = _core.point_cloud(
+        np.zeros((1, 3), np.float32),
+        colors=np.zeros((1, 3), np.uint8),
+        coordinate_frame="opengl",
+    )
+    invalid = _rich_geometry_scene(point_clouds=[cloud])
+    destination = tmp_path / "preserved.usda"
+    destination.write_bytes(b"sentinel")
+    with pytest.raises(
+        sceneio.FormatError,
+        match="quantized color/intensity",
+    ):
+        sceneio.write_scene(invalid, destination)
+    assert destination.read_bytes() == b"sentinel"
+
+    dual_mesh = _core.mesh(
+        np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0]], np.float32),
+        np.array([0, 3], np.uint64),
+        np.array([0, 1, 2], np.uint64),
+        vertex_normals=np.tile(np.array([[0, 0, 1]], np.float32), (3, 1)),
+        corner_normals=np.tile(np.array([[0, 0, 1]], np.float32), (3, 1)),
+        coordinate_frame="opengl",
+    )
+    dual = _rich_geometry_scene(meshes=[dual_mesh])
+    with pytest.raises(sceneio.FormatError, match="both vertex and corner"):
+        sceneio.write_scene(dual, destination)
+    assert destination.read_bytes() == b"sentinel"
+
+
+@pytest.mark.parametrize("suffix", [".usda", ".usdz"])
+def test_geometry_views_outlive_scene_provider_and_source(tmp_path, suffix):
+    path = tmp_path / f"owned{suffix}"
+    sceneio.write_scene(_rich_geometry_scene(), path)
+    scene = sceneio.read_scene(path)
+    mesh_positions = scene.mesh_at(0).positions
+    mesh_normals = scene.mesh_at(0).vertex_normals
+    point_widths = scene.point_cloud_at(0).widths
+    point_ids = scene.point_cloud_at(0).ids
+
+    path.unlink()
+    del scene
+    gc.collect()
+
+    np.testing.assert_array_equal(mesh_positions[1], [1, 0, 0])
+    np.testing.assert_array_equal(mesh_normals[0], [0, 0, 1])
+    np.testing.assert_array_equal(
+        point_widths,
+        np.array([0.1, 0.2], np.float32),
+    )
+    np.testing.assert_array_equal(point_ids, [10, 20])
 
 
 def test_prim_selection_does_not_construct_unselected_payload(

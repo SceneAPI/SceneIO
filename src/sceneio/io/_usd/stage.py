@@ -18,6 +18,7 @@ from sceneio.io._usd import (
     geometry,
     materials,
     package,
+    points,
     provider,
 )
 
@@ -156,9 +157,14 @@ def _stage_metadata(stage) -> dict[str, object]:
     }
 
 
-def _authored_imageable_tokens(prim) -> tuple[str, str | None]:
+def _authored_imageable_tokens(
+    prim,
+    *,
+    point_text: str | None = None,
+) -> tuple[str, str | None]:
+    text = prim.to_string() if point_text is None else point_text
     values = {
-        name: value for name, value in _TOKEN_ATTRIBUTE.findall(prim.to_string())
+        name: value for name, value in _TOKEN_ATTRIBUTE.findall(text)
     }
     visibility = values.get("visibility", "inherited")
     purpose = values.get("purpose")
@@ -198,15 +204,40 @@ def _render_nodes(stage) -> dict[str, tuple[np.ndarray, bool]]:
     return result
 
 
-def _has_time_samples(prim) -> bool:
+def _has_time_samples(prim, *, point_text: str | None = None) -> bool:
+    if prim.type_name == "Points":
+        return points.has_time_samples(prim, text=point_text)
     return any(
         bool(prim.get_attribute_timesamples(name))
         for name in prim.property_names()
     )
 
 
-def _validate_shell(prim, path: str) -> None:
-    if prim.type_name not in {"Xform", "Scope", "Mesh"}:
+def _property_names(prim, *, point_text: str | None = None) -> set[str]:
+    if prim.type_name == "Points":
+        return points.property_names(prim, text=point_text)
+    return set(prim.property_names())
+
+
+def _payload_shell_properties(
+    prim,
+    *,
+    point_text: str | None = None,
+) -> frozenset[str]:
+    return _IMAGEABLE_PROPERTIES | frozenset(
+        name
+        for name in _property_names(prim, point_text=point_text)
+        if name == "xformOpOrder" or name.startswith("xformOp:")
+    )
+
+
+def _validate_shell(
+    prim,
+    path: str,
+    *,
+    point_text: str | None = None,
+) -> None:
+    if prim.type_name not in {"Xform", "Scope", "Mesh", "Points"}:
         category = _PENDING_PAYLOAD_TYPES.get(prim.type_name)
         if category is not None:
             raise ValueError(
@@ -220,7 +251,7 @@ def _validate_shell(prim, path: str) -> None:
         raise ValueError(
             f"USD: prim name {prim.name!r} is not a portable identifier"
         )
-    properties = set(prim.property_names())
+    properties = _property_names(prim, point_text=point_text)
     xform_properties = {
         name
         for name in properties
@@ -229,6 +260,8 @@ def _validate_shell(prim, path: str) -> None:
     allowed = _IMAGEABLE_PROPERTIES | xform_properties
     if prim.type_name == "Mesh":
         allowed |= geometry.MESH_PROPERTIES
+    if prim.type_name == "Points":
+        allowed |= points.POINT_PROPERTIES
     if prim.type_name == "Scope":
         allowed = _IMAGEABLE_PROPERTIES
     unsupported = sorted(properties - allowed)
@@ -237,7 +270,7 @@ def _validate_shell(prim, path: str) -> None:
             f"USD prim {path!r}: unsupported properties: "
             + ", ".join(unsupported)
         )
-    if prim.type_name != "Xform" and xform_properties:
+    if prim.type_name == "Scope" and xform_properties:
         raise ValueError(
             f"USD prim {path!r}: transforms on {prim.type_name} "
             "are not in the stage-skeleton profile"
@@ -314,7 +347,6 @@ def stage_to_scene_graph(
 
     def collect(prim, parent_path: str) -> None:
         path = f"{parent_path}/{prim.name}"
-        _validate_shell(prim, path)
         if path in all_paths:
             raise ValueError(f"USD: duplicate prim path {path!r}")
         all_paths.add(path)
@@ -339,6 +371,7 @@ def stage_to_scene_graph(
     node_payload_indices: list[int] = []
     child_lists: list[list[int]] = []
     meshes = []
+    point_clouds = []
     path_to_node: dict[str, int] = {}
     no_payload = np.iinfo(np.uint64).max
 
@@ -346,12 +379,17 @@ def stage_to_scene_graph(
         path = f"{parent_path}/{prim.name}"
         if not _include_path(path, selected):
             return None
-        if _has_time_samples(prim):
+        point_text = prim.to_string() if prim.type_name == "Points" else None
+        _validate_shell(prim, path, point_text=point_text)
+        if _has_time_samples(prim, point_text=point_text):
             raise ValueError(
                 f"USD prim {path!r}: selected-time value evaluation "
                 "is not available with the qualified provider"
             )
-        visibility, authored_purpose = _authored_imageable_tokens(prim)
+        visibility, authored_purpose = _authored_imageable_tokens(
+            prim,
+            point_text=point_text,
+        )
         effective_purpose = authored_purpose or inherited_purpose
         index = len(node_names)
         path_to_node[path] = index
@@ -361,7 +399,7 @@ def stage_to_scene_graph(
         node_payload_kinds.append("none")
         node_payload_indices.append(no_payload)
         child_lists.append([])
-        if prim.type_name == "Xform":
+        if prim.type_name != "Scope":
             try:
                 transform, resets = render_nodes[path]
             except KeyError:
@@ -384,9 +422,44 @@ def stage_to_scene_graph(
             meshes.append(
                 geometry.mesh_from_prim(
                     prim,
-                    shell_properties=_IMAGEABLE_PROPERTIES,
+                    shell_properties=_payload_shell_properties(
+                        prim,
+                        point_text=point_text,
+                    ),
+                    coordinate_frame=(
+                        "opengl"
+                        if metadata["up_axis"] == "y"
+                        else "enu"
+                    ),
+                    scale_to_meters=metadata["meters_per_unit"],
                 )
             )
+        if (
+            prim.type_name == "Points"
+            and load_payloads
+            and effective_purpose in selected_purposes
+            and _select_payload(path, selected)
+        ):
+            node_payload_kinds[index] = "point_cloud"
+            node_payload_indices[index] = len(point_clouds)
+            point_positions, point_kwargs = points.point_arrays_from_prim(
+                prim,
+                shell_properties=_payload_shell_properties(
+                    prim,
+                    point_text=point_text,
+                ),
+                coordinate_frame=(
+                    "opengl" if metadata["up_axis"] == "y" else "enu"
+                ),
+                scale_to_meters=metadata["meters_per_unit"],
+                text=point_text,
+            )
+            # The normalized provider text can be many megabytes. Release it
+            # before the owning native record copies the parsed arrays.
+            point_text = None
+            point_clouds.append(_core.point_cloud(point_positions, **point_kwargs))
+            del point_positions, point_kwargs
+        point_text = None
         for child in prim.children():
             child_index = visit(child, path, effective_purpose)
             if child_index is not None:
@@ -424,6 +497,7 @@ def stage_to_scene_graph(
         node_visibility=node_visibility,
         node_purpose=node_purpose,
         meshes=meshes,
+        point_clouds=point_clouds,
         source_representation=source_representation,
         default_prim=default_prim,
         selected_time=time,
@@ -494,7 +568,8 @@ def inspect_scene(
                 f"{path_value}:{set_name}="
                 f"{'' if selection is None else selection}"
             )
-        for property_name in prim.property_names():
+        point_text = prim.to_string() if prim.type_name == "Points" else None
+        for property_name in _property_names(prim, point_text=point_text):
             attribute = prim.get_attribute(property_name)
             if (
                 attribute is not None
@@ -507,18 +582,22 @@ def inspect_scene(
                 ):
                     dependency_set.add(match)
         try:
-            _validate_shell(prim, path_value)
+            _validate_shell(prim, path_value, point_text=point_text)
         except ValueError as exc:
             unsupported.add(f"{path_value}: {exc}")
         else:
-            if _has_time_samples(prim):
+            if _has_time_samples(prim, point_text=point_text):
                 unsupported.add(f"{path_value}: time_samples")
             if prim.type_name == "Mesh":
                 try:
                     positions, counts, _, _ = geometry.mesh_arrays_from_prim(
                         prim,
                         copy=False,
-                        shell_properties=_IMAGEABLE_PROPERTIES,
+                        expand=False,
+                        shell_properties=_payload_shell_properties(
+                            prim,
+                            point_text=point_text,
+                        ),
                     )
                 except ValueError as exc:
                     unsupported.add(f"{path_value}: {exc}")
@@ -526,6 +605,22 @@ def inspect_scene(
                     vertices += len(positions)
                     faces += len(counts)
                     primitive_count += 1
+            elif prim.type_name == "Points":
+                try:
+                    point_count = points.inspect_point_prim(
+                        prim,
+                        shell_properties=_payload_shell_properties(
+                            prim,
+                            point_text=point_text,
+                        ),
+                        text=point_text,
+                    )
+                except ValueError as exc:
+                    unsupported.add(f"{path_value}: {exc}")
+                else:
+                    vertices += point_count
+                    primitive_count += 1
+        point_text = None
         for child in prim.children():
             visit(child, path_value)
 
@@ -588,13 +683,17 @@ def _write_matrix(stream, matrix: np.ndarray) -> None:
     stream.write(")")
 
 
-def _validate_writable_scene(scene) -> tuple[np.ndarray, ...]:
+def _validate_writable_scene(scene) -> tuple[object, ...]:
     if not isinstance(scene, _core.SceneGraph):
         raise TypeError("USD: write_scene expects a SceneGraph")
     payload_kinds = tuple(scene.node_payload_kinds)
-    if any(kind != "none" for kind in payload_kinds):
+    unsupported_payloads = sorted(
+        {kind for kind in payload_kinds if kind not in {"none", "mesh", "point_cloud"}}
+    )
+    if unsupported_payloads:
         raise ValueError(
-            "USD: rich payload writing is not available in the stage-skeleton profile"
+            "USD: rich payload writing is not available for: "
+            + ", ".join(unsupported_payloads)
         )
     if scene.has_materials or scene.external_asset_uris:
         raise ValueError(
@@ -621,13 +720,61 @@ def _validate_writable_scene(scene) -> tuple[np.ndarray, ...]:
     parents = np.asarray(scene.node_parents)
     offsets = np.asarray(scene.node_child_offsets)
     children = np.asarray(scene.node_children)
-    return transforms, resets, parents, offsets, children
+    payload_indices = np.asarray(scene.node_payload_indices)
+    used_meshes: set[int] = set()
+    used_points: set[int] = set()
+    for node, kind in enumerate(payload_kinds):
+        if kind == "none":
+            continue
+        index = int(payload_indices[node])
+        used = used_meshes if kind == "mesh" else used_points
+        if index in used:
+            raise ValueError(
+                f"USD: {kind} payload {index} is referenced by multiple nodes"
+            )
+        used.add(index)
+        context = f"node {node} {kind} payload {index}"
+        if kind == "mesh":
+            geometry.validate_writable_mesh(
+                scene.mesh_at(index),
+                up_axis=scene.up_axis,
+                meters_per_unit=scene.meters_per_unit,
+                context=context,
+            )
+        else:
+            points.validate_writable_point_cloud(
+                scene.point_cloud_at(index),
+                up_axis=scene.up_axis,
+                meters_per_unit=scene.meters_per_unit,
+                context=context,
+            )
+    if used_meshes != set(range(scene.num_meshes)):
+        raise ValueError("USD: every mesh payload must be referenced exactly once")
+    if used_points != set(range(scene.num_point_clouds)):
+        raise ValueError(
+            "USD: every point-cloud payload must be referenced exactly once"
+        )
+    return (
+        transforms,
+        resets,
+        parents,
+        offsets,
+        children,
+        payload_kinds,
+        payload_indices,
+    )
 
 
 def _write_scene_usda(scene, stream) -> None:
-    transforms, resets, parents, offsets, children = _validate_writable_scene(
-        scene
-    )
+    (
+        transforms,
+        resets,
+        parents,
+        offsets,
+        children,
+        payload_kinds,
+        payload_indices,
+    ) = _validate_writable_scene(scene)
     stream.write("#usda 1.0\n(\n")
     if scene.default_prim >= 0:
         stream.write(
@@ -653,8 +800,15 @@ def _write_scene_usda(scene, stream) -> None:
     def write_node(node: int, indent: str) -> None:
         if indent == "":
             stream.write("\n")
+        kind = payload_kinds[node]
+        type_name = {
+            "none": "Xform",
+            "mesh": "Mesh",
+            "point_cloud": "Points",
+        }[kind]
         stream.write(
-            f'{indent}def Xform "{scene.node_names[node]}"\n{indent}{{\n'
+            f'{indent}def {type_name} "{scene.node_names[node]}"\n'
+            f"{indent}{{\n"
         )
         inner = indent + "    "
         matrix = transforms[node]
@@ -679,6 +833,18 @@ def _write_scene_usda(scene, stream) -> None:
         purpose = scene.node_purpose[node]
         if purpose != "default":
             stream.write(f'{inner}uniform token purpose = "{purpose}"\n')
+        if kind == "mesh":
+            geometry.write_mesh_attributes(
+                stream,
+                scene.mesh_at(int(payload_indices[node])),
+                inner=inner,
+            )
+        elif kind == "point_cloud":
+            points.write_point_attributes(
+                stream,
+                scene.point_cloud_at(int(payload_indices[node])),
+                inner=inner,
+            )
         begin, end = int(offsets[node]), int(offsets[node + 1])
         for child in children[begin:end]:
             stream.write("\n")
