@@ -88,6 +88,7 @@ feature_set
 flow_field
 gaussian_cloud
 gltf_external_buffer_uris
+hloc_match_graph
 image
 image_sequence_packed
 image_sequence_paths

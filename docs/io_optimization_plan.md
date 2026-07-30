@@ -184,8 +184,12 @@ link/object validation into one traversal. On a generated 5,000-dataset file,
 one named read changed from 447.016 ms to 0.522 ms and full inspection changed
 from 459.803 ms to 363.624 ms. Partial reads validate root metadata plus each
 selected path and its ancestors; unrelated objects are outside that partial
-result. High-group-count hloc record construction and native hloc decode
-conversion remain measured follow-up work.
+result. Dense hloc match rows now convert directly into final native ragged
+storage without Python masks, stacks, or concatenation. On the scale-16
+fixture, read throughput changed from 843 to 1,194 MB/s, traced peak from
+62.9 to 33.6 MB, and sampled RSS growth from 69.3 to 45.7 MB.
+High-group-count hloc object enumeration and native feature-descriptor
+transposition remain measured follow-up work.
 The latest record waves add the four calibration formats over `CameraRig`, g2o
 over `PoseGraph`, `colmap_db` over
 `ColmapDatabase`/`FeatureSet`/`MatchGraph`, polygonal PLY over `Mesh`, and

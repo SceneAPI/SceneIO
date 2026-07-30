@@ -5060,6 +5060,8 @@ Implementation:
 - [x] Map documented hloc features and matches into native `FeatureSet` and
       `MatchGraph` records without losing descriptor dtype/orientation,
       uncertainty, endpoints, dense extents, row order, or score presence.
+- [x] Replace temporary masks/stacks/concatenations in hloc match reads with
+      direct native dense-to-ragged construction while the GIL is released.
 - [x] Refuse unsupported attributes, dataset types, indirect links, virtual
       datasets, and unrepresentable native fields.
 - [x] Extend native feature-descriptor construction to every dtype already
@@ -5088,7 +5090,7 @@ Verification and documentation:
 
 H1 local closure evidence:
 
-- the exact collection has 3,947 nodes; local MSVC passes 3,942 with five
+- the exact collection has 3,948 nodes; local MSVC passes 3,943 with five
   documented optional skips, the 123-test focused gate passes, Ruff and
   `git diff --check` are clean, and the manifest-driven installed-surface
   smoke completes;

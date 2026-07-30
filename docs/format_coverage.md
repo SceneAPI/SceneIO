@@ -78,7 +78,7 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > [`names_to_pair`](https://github.com/cvg/Hierarchical-Localization/blob/master/hloc/utils/parsers.py)
 > and
 > [`writer_fn`](https://github.com/cvg/Hierarchical-Localization/blob/master/hloc/match_features.py)
-> behavior. The exact collection has 3,947 nodes; local MSVC passes 3,942
+> behavior. The exact collection has 3,948 nodes; local MSVC passes 3,943
 > with five documented optional skips, plus the HDF5/hloc focused gate and
 > installed-surface smoke. NumPy remains the sole unconditional dependency;
 > h5py/HDF5 are not bundled. Cross-platform package evidence remains pending
@@ -95,8 +95,11 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > named and sliced reads validate only selected paths and ancestors. On a
 > generated 5,000-dataset file, a one-dataset read changed from 447.016 ms
 > to 0.522 ms and full inspection from 459.803 ms to 363.624 ms.
-> High-group-count hloc record construction and native hloc decode conversion
-> remain explicit optimization follow-ups.
+> The hloc match reader now converts dense integer rows and optional
+> float16/float32 scores directly into final native `MatchGraph` storage,
+> changing read throughput from 843 to 1,194 MB/s and traced peak from
+> 62.9 to 33.6 MB. High-group-count hloc object enumeration and native
+> descriptor transposition remain explicit optimization follow-ups.
 >
 > **C3/C4 hosted closure (2026-07-29):** the exact collection is
 > 3,879 nodes with normalized SHA-256

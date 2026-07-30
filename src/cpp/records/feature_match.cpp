@@ -536,6 +536,262 @@ MatchGraph make_match_graph(
     return result;
 }
 
+float hloc_half_to_float(uint16_t value) {
+    const uint32_t sign =
+        static_cast<uint32_t>(value & 0x8000u) << 16;
+    uint32_t exponent = (value >> 10) & 0x1fu;
+    uint32_t mantissa = value & 0x03ffu;
+    uint32_t bits = 0;
+    if (exponent == 0) {
+        if (mantissa == 0) {
+            bits = sign;
+        } else {
+            int shift = 0;
+            while ((mantissa & 0x0400u) == 0) {
+                mantissa <<= 1;
+                ++shift;
+            }
+            mantissa &= 0x03ffu;
+            bits =
+                sign |
+                (static_cast<uint32_t>(127 - 14 - shift) << 23) |
+                (mantissa << 13);
+        }
+    } else if (exponent == 31) {
+        bits = sign | 0x7f800000u | (mantissa << 13);
+    } else {
+        exponent += 127 - 15;
+        bits = sign | (exponent << 23) | (mantissa << 13);
+    }
+    float result = 0.0f;
+    std::memcpy(&result, &bits, sizeof(result));
+    return result;
+}
+
+struct HlocDenseInput {
+    any_array matches;
+    std::optional<any_array> scores;
+    sio::DType match_dtype;
+    sio::DType score_dtype;
+    bool reverse;
+};
+
+template <typename Fn>
+void dispatch_hloc_matches(
+    const HlocDenseInput &input, Fn &&callback) {
+    switch (input.match_dtype) {
+        case sio::DType::I16:
+            callback(static_cast<const int16_t *>(
+                input.matches.data()));
+            return;
+        case sio::DType::I32:
+            callback(static_cast<const int32_t *>(
+                input.matches.data()));
+            return;
+        case sio::DType::I64:
+            callback(static_cast<const int64_t *>(
+                input.matches.data()));
+            return;
+        default:
+            throw std::invalid_argument(
+                "hloc_match_graph: matches must be "
+                "int16, int32, or int64");
+    }
+}
+
+float hloc_score_at(
+    const HlocDenseInput &input, size_t index) {
+    if (!input.scores) return 0.0f;
+    if (input.score_dtype == sio::DType::F32)
+        return static_cast<const float *>(
+            input.scores->data())[index];
+    if (input.score_dtype == sio::DType::F16)
+        return hloc_half_to_float(
+            static_cast<const uint16_t *>(
+                input.scores->data())[index]);
+    throw std::invalid_argument(
+        "hloc_match_graph: scores must be float16 or float32");
+}
+
+MatchGraph make_hloc_match_graph(
+    u32_array image_pairs,
+    std::vector<any_array> dense_matches,
+    nb::list dense_scores,
+    u8_array reverse_flags) {
+    if (image_pairs.ndim() != 2 || image_pairs.shape(1) != 2)
+        throw std::invalid_argument(
+            "hloc_match_graph: image_pairs must be (P,2) uint32");
+    const size_t count = image_pairs.shape(0);
+    if (dense_matches.size() != count ||
+        dense_scores.size() != count ||
+        reverse_flags.ndim() != 1 ||
+        reverse_flags.shape(0) != count)
+        throw std::invalid_argument(
+            "hloc_match_graph: dense inputs must have one item per pair");
+    if (count > std::numeric_limits<size_t>::max() / 36)
+        throw std::invalid_argument(
+            "hloc_match_graph: pair count overflows field extents");
+
+    std::vector<HlocDenseInput> inputs;
+    inputs.reserve(count);
+    bool has_any_scores = false;
+    for (size_t index = 0; index < count; ++index) {
+        any_array &matches = dense_matches[index];
+        const sio::DTypeInfo *match_info =
+            sio::dtype_from_dlpack(matches.dtype());
+        if (matches.ndim() != 1 || !match_info ||
+            (match_info->tag != sio::DType::I16 &&
+             match_info->tag != sio::DType::I32 &&
+             match_info->tag != sio::DType::I64))
+            throw std::invalid_argument(
+                "hloc_match_graph: each match array must be "
+                "contiguous int16, int32, or int64 (N,)");
+        std::optional<any_array> scores;
+        sio::DType score_dtype = sio::DType::F32;
+        nb::handle score_handle = dense_scores[index];
+        if (!score_handle.is_none()) {
+            scores.emplace(nb::cast<any_array>(score_handle));
+            const sio::DTypeInfo *score_info =
+                sio::dtype_from_dlpack(scores->dtype());
+            if (scores->ndim() != 1 ||
+                scores->shape(0) != matches.shape(0) ||
+                !score_info ||
+                (score_info->tag != sio::DType::F16 &&
+                 score_info->tag != sio::DType::F32))
+                throw std::invalid_argument(
+                    "hloc_match_graph: each score array must be "
+                    "contiguous float16/float32 with match shape");
+            score_dtype = score_info->tag;
+            has_any_scores = true;
+        }
+        const uint8_t reverse = reverse_flags.data()[index];
+        if (reverse > 1)
+            throw std::invalid_argument(
+                "hloc_match_graph: reverse flags must be 0 or 1");
+        inputs.push_back(HlocDenseInput{
+            std::move(matches), std::move(scores),
+            match_info->tag, score_dtype, reverse != 0});
+    }
+
+    MatchGraph result;
+    result.pair_count = count;
+    result.has_scores = has_any_scores;
+    result.match_present.assign(count, 1);
+    result.geometry_present.assign(count, 0);
+    result.match_score_present.assign(count, 0);
+    result.match_offsets.assign(count + 1, 0);
+    result.verified_offsets.assign(count + 1, 0);
+    result.configs.assign(count, 0);
+    result.F_present.assign(count, 0);
+    result.E_present.assign(count, 0);
+    result.H_present.assign(count, 0);
+    result.F.assign(count * 9, 0.0);
+    result.E.assign(count * 9, 0.0);
+    result.H.assign(count * 9, 0.0);
+    result.pose_present.assign(count, 0);
+    result.qvecs.assign(count * 4, 0.0);
+    result.tvecs.assign(count * 3, 0.0);
+    result.camera1_present.assign(count, 0);
+    result.camera2_present.assign(count, 0);
+    result.recovered_camera1.assign(count, Camera{});
+    result.recovered_camera2.assign(count, Camera{});
+    result.camera1_prior_focal_length.assign(count, 0);
+    result.camera2_prior_focal_length.assign(count, 0);
+    result.provenance_present.assign(count, 0);
+    result.source_flags.assign(count, 0);
+    result.retrieval_score_present.assign(count, 0);
+    result.retrieval_scores.assign(count, 0.0f);
+
+    {
+        nb::gil_scoped_release release;
+        assign_nonempty(
+            result.image_pairs, image_pairs.data(), count * 2);
+        size_t total_matches = 0;
+        for (size_t pair = 0; pair < count; ++pair) {
+            const HlocDenseInput &input = inputs[pair];
+            const size_t source_count = input.matches.shape(0);
+            if (source_count != 0 &&
+                source_count - 1 >
+                    std::numeric_limits<uint32_t>::max())
+                throw std::invalid_argument(
+                    "hloc_match_graph: source index exceeds uint32");
+            size_t valid_count = 0;
+            dispatch_hloc_matches(
+                input, [&](const auto *values) {
+                    for (size_t source = 0;
+                         source < source_count; ++source) {
+                        const int64_t target =
+                            static_cast<int64_t>(values[source]);
+                        const float score =
+                            hloc_score_at(input, source);
+                        if (target < -1 ||
+                            target >
+                                static_cast<int64_t>(
+                                    std::numeric_limits<
+                                        uint32_t>::max()))
+                            throw std::invalid_argument(
+                                "hloc_match_graph: target index "
+                                "is outside uint32");
+                        if (!std::isfinite(score))
+                            throw std::invalid_argument(
+                                "hloc_match_graph: scores must be finite");
+                        if (target < 0 && score != 0.0f)
+                            throw std::invalid_argument(
+                                "hloc_match_graph: unmatched source "
+                                "score must be zero");
+                        valid_count += static_cast<size_t>(target >= 0);
+                    }
+                });
+            if (valid_count >
+                std::numeric_limits<size_t>::max() - total_matches)
+                throw std::invalid_argument(
+                    "hloc_match_graph: match count overflows");
+            total_matches += valid_count;
+            result.match_offsets[pair + 1] =
+                static_cast<uint64_t>(total_matches);
+            result.match_score_present[pair] =
+                static_cast<uint8_t>(input.scores.has_value());
+        }
+        if (total_matches >
+            std::numeric_limits<size_t>::max() / 2)
+            throw std::invalid_argument(
+                "hloc_match_graph: match storage overflows");
+        result.matches.reserve(total_matches * 2);
+        if (has_any_scores) result.scores.reserve(total_matches);
+        for (size_t pair = 0; pair < count; ++pair) {
+            const HlocDenseInput &input = inputs[pair];
+            const size_t source_count = input.matches.shape(0);
+            dispatch_hloc_matches(
+                input, [&](const auto *values) {
+                    for (size_t source = 0;
+                         source < source_count; ++source) {
+                        const int64_t target =
+                            static_cast<int64_t>(values[source]);
+                        if (target < 0) continue;
+                        const uint32_t source32 =
+                            static_cast<uint32_t>(source);
+                        const uint32_t target32 =
+                            static_cast<uint32_t>(target);
+                        result.matches.push_back(
+                            input.reverse ? target32 : source32);
+                        result.matches.push_back(
+                            input.reverse ? source32 : target32);
+                        if (has_any_scores)
+                            result.scores.push_back(
+                                hloc_score_at(input, source));
+                    }
+                });
+        }
+        result.pair_ids.reserve(count);
+        for (size_t index = 0; index < count; ++index)
+            result.pair_ids.push_back(colmap_pair_id(
+                result.image_pairs[index * 2],
+                result.image_pairs[index * 2 + 1]));
+        validate_match_graph(result, "hloc_match_graph");
+    }
+    return result;
+}
+
 ColmapDatabase make_colmap_database(
     std::vector<Camera> cameras,
     std::vector<FeatureSet> features,
@@ -2972,6 +3228,11 @@ void register_feature_match(nb::module_ &module) {
         "camera2_prior_focal_length"_a = nb::none(),
         "match_score_present"_a = nb::none(),
         "Build a typed ragged image-pair MatchGraph.");
+    module.def(
+        "hloc_match_graph", &make_hloc_match_graph,
+        "image_pairs"_a, "dense_matches"_a, "dense_scores"_a,
+        "reverse_flags"_a,
+        "Build a MatchGraph directly from dense hloc match rows.");
     module.def(
         "colmap_maxx_schema_info",
         &make_colmap_maxx_schema_info,

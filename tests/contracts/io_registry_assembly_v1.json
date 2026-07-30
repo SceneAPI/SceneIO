@@ -384,8 +384,8 @@
     "last": "tests/test_points_binary.py::test_bad_magic_rejected"
   },
   "pytest_candidate_collection": {
-    "count": 3947,
-    "sorted_normalized_node_ids_sha256": "72a1a2f20309de7c02e341e9570a3e30db3a1c6e50c62d6a9332d79480336125",
+    "count": 3948,
+    "sorted_normalized_node_ids_sha256": "157b49847c70d63066857c12b44ac19d4590b512fcbcdb1a5055aac21af6b4c9",
     "added_nodes": [
       "tests/codecs/test_animated_webp.py::test_sceneio_writer_is_lossless_and_oracle_readable",
       "tests/codecs/test_animated_webp.py::test_pillow_writer_is_sceneio_readable_bit_exact",
@@ -1234,6 +1234,7 @@
       "tests/codecs/test_hdf5_hloc.py::test_hloc_features_read_and_inspect_refuse_unrepresented_metadata[read]",
       "tests/codecs/test_hdf5_hloc.py::test_hloc_features_read_and_inspect_refuse_unrepresented_metadata[inspect]",
       "tests/codecs/test_hdf5_hloc.py::test_hloc_matches_reads_official_layout_and_reverses_to_native_order",
+      "tests/codecs/test_hdf5_hloc.py::test_native_hloc_match_graph_converts_wire_dtypes_and_owns_results",
       "tests/codecs/test_hdf5_hloc.py::test_hloc_match_write_matches_h5py_and_preserves_mixed_scores",
       "tests/codecs/test_hdf5_hloc.py::test_hloc_duplicate_index_check_handles_orderings[indices0-False]",
       "tests/codecs/test_hdf5_hloc.py::test_hloc_duplicate_index_check_handles_orderings[indices1-False]",

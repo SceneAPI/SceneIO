@@ -496,6 +496,60 @@ def test_hloc_matches_reads_official_layout_and_reverses_to_native_order(
     )
 
 
+def test_native_hloc_match_graph_converts_wire_dtypes_and_owns_results() -> None:
+    dense_rows = [
+        np.array([2, -1, 0], np.int16),
+        np.array([-1, 3], np.int32),
+        np.array([4, -1], np.int64),
+    ]
+    score_rows = [
+        np.array([0.5, 0.0, 0.25], np.float16),
+        None,
+        np.array([0.75, 0.0], np.float32),
+    ]
+    graph = _core.hloc_match_graph(
+        np.array([[1, 2], [1, 3], [2, 3]], np.uint32),
+        dense_rows,
+        score_rows,
+        np.array([0, 1, 0], np.uint8),
+    )
+    del dense_rows, score_rows
+    gc.collect()
+
+    np.testing.assert_array_equal(graph.match_offsets, [0, 2, 3, 4])
+    np.testing.assert_array_equal(
+        graph.matches,
+        np.array([[0, 2], [2, 0], [3, 1], [0, 4]], np.uint32),
+    )
+    np.testing.assert_array_equal(graph.match_score_present, [1, 0, 1])
+    np.testing.assert_array_equal(
+        graph.scores,
+        np.array([0.5, 0.25, 0.0, 0.75], np.float32),
+    )
+
+    with pytest.raises(ValueError, match="outside uint32"):
+        _core.hloc_match_graph(
+            np.array([[1, 2]], np.uint32),
+            [np.array([0x1_0000_0000], np.int64)],
+            [None],
+            np.array([0], np.uint8),
+        )
+    with pytest.raises(ValueError, match="finite"):
+        _core.hloc_match_graph(
+            np.array([[1, 2]], np.uint32),
+            [np.array([0], np.int16)],
+            [np.array([np.nan], np.float32)],
+            np.array([0], np.uint8),
+        )
+    with pytest.raises(ValueError, match="unmatched"):
+        _core.hloc_match_graph(
+            np.array([[1, 2]], np.uint32),
+            [np.array([-1], np.int16)],
+            [np.array([0.5], np.float16)],
+            np.array([0], np.uint8),
+        )
+
+
 def test_hloc_match_write_matches_h5py_and_preserves_mixed_scores(
     tmp_path: Path,
 ) -> None:

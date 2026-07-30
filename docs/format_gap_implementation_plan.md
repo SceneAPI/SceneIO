@@ -14,7 +14,7 @@
   reads, and atomic replacement; optimized h5py is an optional
   `sceneio[hdf5]` provider and independent oracle. The prior APNG 56-codec
   checkpoint remains its historical evidence. The current registry has 59
-  codecs and the exact collection has 3,947 nodes. Local MSVC passes 3,942
+  codecs and the exact collection has 3,948 nodes. Local MSVC passes 3,943
   tests with five documented optional skips; the focused 123-test gate,
   installed-surface smoke, Ruff, and diff checks also pass. Cross-platform
   package evidence remains user-gated.
@@ -1506,6 +1506,9 @@ Implementation:
 - [x] Add documented hloc feature and `matches0` adapters over native
   `FeatureSet`/`MatchGraph`, with exact descriptor orientation/dtype,
   uncertainty, endpoint names, dense extents, pair order, and score presence.
+- [x] Convert dense hloc match rows directly into native ragged storage,
+  including int16/int32/int64 matches, float16/float32 scores, reversed
+  endpoint order, mixed score presence, and record-owned lifetime.
 - [x] Inspect metadata without reading bulk payloads. Generic HDF5 partial
   reads select complete datasets or leading-axis hyperslabs directly, resolve
   only selected paths and ancestors, and retain strict validation on that

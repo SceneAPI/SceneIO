@@ -993,42 +993,25 @@ def read_hloc_matches(path: str | Path) -> HlocMatchStore:
     """Read current hloc ``matches0`` groups into one native ``MatchGraph``."""
 
     h5py = _require_h5py()
-    records: list[tuple[tuple[str, str], np.ndarray, np.ndarray | None, str, str | None]] = []
+    records: list[
+        tuple[
+            tuple[str, str],
+            np.ndarray,
+            np.ndarray | None,
+            str,
+            str | None,
+        ]
+    ] = []
     with h5py.File(path, "r", libver="latest") as handle:
         _validate_hloc_root(handle, "hloc_matches")
         for storage_name, group in _match_groups(handle):
             pair = _validate_match_group_metadata(storage_name, group)
             dense = np.asarray(group["matches0"][...])
-            if dense.ndim != 1 or dense.dtype.name not in {"int16", "int32", "int64"}:
-                raise ValueError(
-                    f"hloc matches: {storage_name!r}/matches0 must be signed integer (N,)"
-                )
-            if np.any(dense < -1) or (
-                len(dense) and int(dense.max(initial=-1)) > 0xFFFF_FFFF
-            ):
-                raise ValueError(
-                    f"hloc matches: {storage_name!r}/matches0 contains "
-                    "an out-of-range index"
-                )
             score_values: np.ndarray | None = None
             score_dtype: str | None = None
             if "matching_scores0" in group:
                 source_scores = np.asarray(group["matching_scores0"][...])
-                if (
-                    source_scores.shape != dense.shape
-                    or source_scores.dtype.name not in {"float16", "float32"}
-                    or not np.isfinite(source_scores).all()
-                ):
-                    raise ValueError(
-                        f"hloc matches: {storage_name!r}/matching_scores0 "
-                        "must be finite float16/float32 with shape (N,)"
-                    )
-                if np.any(source_scores[dense < 0] != 0):
-                    raise ValueError(
-                        f"hloc matches: {storage_name!r} carries nonzero "
-                        "scores for unmatched source keypoints"
-                    )
-                score_values = np.ascontiguousarray(source_scores, dtype=np.float32)
+                score_values = source_scores
                 score_dtype = source_scores.dtype.name
             records.append((pair, dense, score_values, dense.dtype.name, score_dtype))
 
@@ -1039,60 +1022,32 @@ def read_hloc_matches(path: str | Path) -> HlocMatchStore:
     source_counts: list[int] = []
     match_dtypes: list[str] = []
     score_dtypes: list[str | None] = []
-    offsets = [0]
-    sparse_matches: list[np.ndarray] = []
-    sparse_scores: list[np.ndarray] = []
-    score_presence: list[int] = []
+    dense_matches: list[np.ndarray] = []
+    score_rows: list[np.ndarray | None] = []
+    reverse_flags: list[int] = []
     seen: set[frozenset[str]] = set()
-    for pair, dense, dense_scores, match_dtype, score_dtype in records:
+    for pair, dense, pair_scores, match_dtype, score_dtype in records:
         unordered = frozenset(pair)
         if unordered in seen:
             raise ValueError(f"hloc matches: duplicate unordered pair {pair!r}")
         seen.add(unordered)
         name0, name1 = pair
         id0, id1 = ids[name0], ids[name1]
-        valid = np.flatnonzero(dense >= 0).astype(np.uint32)
-        values = np.column_stack(
-            (valid, dense[dense >= 0].astype(np.uint32, copy=False))
-        ).astype(np.uint32, copy=False)
-        if id0 > id1:
-            values = np.ascontiguousarray(values[:, ::-1])
         image_pairs.append((min(id0, id1), max(id0, id1)))
         pair_names.append(pair)
         source_counts.append(len(dense))
         match_dtypes.append(match_dtype)
         score_dtypes.append(score_dtype)
-        sparse_matches.append(values)
-        offsets.append(offsets[-1] + len(values))
-        if dense_scores is not None:
-            sparse_scores.append(np.ascontiguousarray(dense_scores[dense >= 0]))
-            score_presence.append(1)
-        else:
-            sparse_scores.append(np.zeros(len(values), dtype=np.float32))
-            score_presence.append(0)
+        dense_matches.append(dense)
+        score_rows.append(pair_scores)
+        reverse_flags.append(int(id0 > id1))
 
     pair_count = len(records)
-    matches = (
-        np.concatenate(sparse_matches, axis=0)
-        if sparse_matches
-        else np.empty((0, 2), dtype=np.uint32)
-    )
-    has_any_scores = any(score_presence)
-    scores = (
-        np.concatenate(sparse_scores).astype(np.float32, copy=False)
-        if has_any_scores
-        else None
-    )
-    graph = _core.match_graph(
+    graph = _core.hloc_match_graph(
         np.asarray(image_pairs, dtype=np.uint32).reshape(pair_count, 2),
-        np.asarray(offsets, dtype=np.uint64),
-        np.ascontiguousarray(matches, dtype=np.uint32),
-        np.zeros(pair_count + 1, dtype=np.uint64),
-        np.empty((0, 2), dtype=np.uint32),
-        scores=scores,
-        match_score_present=np.asarray(score_presence, dtype=np.uint8),
-        match_present=np.ones(pair_count, dtype=np.uint8),
-        geometry_present=np.zeros(pair_count, dtype=np.uint8),
+        dense_matches,
+        score_rows,
+        np.asarray(reverse_flags, dtype=np.uint8),
     )
     return HlocMatchStore(
         tuple(all_names),

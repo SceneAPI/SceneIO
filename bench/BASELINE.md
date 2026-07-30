@@ -3483,3 +3483,23 @@ The reusable after-state command is:
 Its local MSVC median was 0.329 ms selected, 357.433 ms inspection, and
 0.315 ms for the direct h5py selected reference. Dataset values and the
 inspection count are checked during every timed invocation.
+
+### Native hloc match decode follow-up (2026-07-30)
+
+The hloc reader previously materialized validity masks, sparse indices,
+stacked edges, per-pair score arrays, concatenated arrays, and then copied
+those arrays into `MatchGraph`. A private compiled factory now validates the
+dense int16/int32/int64 rows and optional float16/float32 scores, then writes
+the final ragged vectors directly while the GIL is released.
+
+The same five-run scale-16 fixture measured:
+
+| metric | before | after | change |
+|---|---:|---:|---:|
+| hloc match read | 843 MB/s | 1,194 MB/s | 1.42x |
+| traced read peak | 62.9 MB | 33.6 MB | -46.6% |
+| sampled RSS growth | 69.3 MB | 45.7 MB | -34.1% |
+
+The focused test covers every documented wire dtype, reversed endpoints,
+mixed score presence, malformed values, and input-array lifetime. Existing
+h5py oracle and round-trip tests remain byte/value exact.
