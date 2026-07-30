@@ -293,6 +293,29 @@ def Mesh "Surface"
         sceneio.read(path)
 
 
+@pytest.mark.parametrize(("suffix", "version"), [(".usd", 11), (".usdz", 12)])
+def test_usd_reader_refuses_unqualified_usdc_versions_before_provider(
+    tmp_path, monkeypatch, suffix, version
+):
+    crate = b"PXR-USDC\x00" + bytes([version]) + b"unread"
+    path = tmp_path / f"future{suffix}"
+    if suffix == ".usdz":
+        with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_STORED) as archive:
+            archive.writestr("root.usdc", crate)
+    else:
+        path.write_bytes(crate)
+
+    def fail_load(*_args, **_kwargs):
+        raise AssertionError("unqualified crate reached the provider")
+
+    monkeypatch.setattr(tinyusdz, "load", fail_load)
+    with pytest.raises(
+        sceneio.FormatError,
+        match=rf"crate version {version}.*qualified maximum version 10",
+    ):
+        sceneio.read(path, format="usdz" if suffix == ".usdz" else "usd")
+
+
 def test_usd_writer_refuses_transform_on_mesh_node(tmp_path):
     source = _fixture()
     transforms = np.array(source.node_local_transforms, copy=True)

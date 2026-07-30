@@ -5185,9 +5185,16 @@ Progress:
 - [x] The current standards review corrects the AOUSD baseline to Core 1.0.1
       plus Apache-2.0 supplemental 1.0.1.post0, pins OpenUSD 26.08
       (`ee47c679abde`), AOUSD specifications (`2f9e746c4fbd`), and supplemental
-      materials (`404e2bde49c1`), and records USDA 1.3/USDC 0.15.0 as the
-      current output versions. TOST is Apache-2.0-derived but remains a
-      separate narrow policy decision.
+      materials (`c15ae0cad3ed`, annotated tag object `404e2bde49c1`), and
+      records USDA 1.3/USDC 0.15.0 as the current output versions. TOST is
+      Apache-2.0-derived but remains a separate narrow policy decision.
+- [x] U0b inventories and embeds the unmodified Apache-2.0 AOUSD crate-10
+      time-sample fixture, records exact provenance, and closes the local
+      provider matrix. TinyUSDZ exposes the sample times but not their values;
+      official crate-11/12 feature probes terminate a fresh provider process,
+      so SceneIO refuses crate versions above 10 before dispatch. Current
+      crate-15 and executable OpenUSD comparison remain behind the TOST
+      decision.
 - [x] U1a makes `GaussianCloud` convention-bearing, adds explicit conversion,
       validates structure before conversion/writes, and keeps all six legacy
       splat writers on their exact prior conventions.

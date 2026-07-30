@@ -893,7 +893,7 @@ public-domain SQLite amalgamation statically linked into `_core`.
 | `e57` | `PointCloud` | R+W, inspect | direct **pye57/libE57Format** | optional `sceneio[e57]`; exactly one Cartesian scan, exact float32 coordinates/intensity and integral RGB8, pose, explicit invalid-point filtering; exact inspection count uses the provider scan path only when invalid-state data are present |
 | `parquet` / `arrow_ipc` | `TensorDict` numeric table | R+W, inspect; Parquet named-column partial | direct **PyArrow** | optional `sceneio[arrow]`; scalar/fixed-width numeric columns, equal row counts, text attrs, mmap/threaded provider paths, transactional writes |
 | `openvdb` | sparse-grid `TensorDict` | R+W, inspect | direct **TinyVDB** | optional `sceneio[openvdb]`; one identity-transform, zero-background float32 scalar grid; ZIP/active-mask output; packaged upstream seed is fully replaced and provenance-pinned; rebuilt active count is verified and provider topology loss refuses |
-| `usd` / `usdz` | `MeshScene` | R+W, inspect | direct **TinyUSDZ** | optional `sceneio[usd]`; repository-owned streaming USDA and aligned uncompressed USDZ writers; static single-scene triangle meshes, hierarchy/transforms, normals, UVs; TinyUSDZ reads USDA/USDC/USDZ |
+| `usd` / `usdz` | `MeshScene` | R+W, inspect | direct **TinyUSDZ** | optional `sceneio[usd]`; repository-owned streaming USDA and aligned uncompressed USDZ writers; static single-scene triangle meshes, hierarchy/transforms, normals, UVs; TinyUSDZ is qualified for USDA and bounded historical USDC through crate 10, while later crates and time-sample/asset values remain unavailable |
 
 ### Repository-owned COLMAP workflow adapters
 

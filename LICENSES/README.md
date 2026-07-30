@@ -43,6 +43,7 @@ redistribution choice used by SceneIO is stated explicitly.
 | Apache Arrow / PyArrow | optional dependency `>=18,<24` (23.0.1 locally validated) | separately installed optimized Parquet and Arrow IPC provider; not bundled in SceneIO distributions | Apache-2.0 | [license](apache-arrow-license.txt), [notice](apache-arrow-notice.txt) |
 | TinyVDB | optional dependency `>=0.9,<1` (0.9.0 locally validated) | separately installed OpenVDB provider; not bundled in SceneIO distributions; one upstream float-grid seed is packaged and fully replaced during writes | Apache-2.0 | [tinyvdb.txt](tinyvdb.txt), [seed provenance](../src/sceneio/io/_assets/openvdb_float_template.PROVENANCE.txt) |
 | TinyUSDZ | optional dependency `>=0.9.4,<1` (0.9.4 locally validated) | separately installed USD/USDA/USDC/USDZ parser used with SceneIO's repository-owned USDA/USDZ writer; not bundled in SceneIO distributions | Apache-2.0 with permissively licensed bundled components documented upstream | [tinyusdz.txt](tinyusdz.txt) |
+| AOUSD Core Specification Supplemental | release `1.0.1.post0`, tag object `404e2bde49c1`, peeled commit `c15ae0cad3ed` | one unmodified crate-10 time-sample fixture is base64-embedded in the test source and included in source distributions, not wheels | Apache-2.0 | [fixture attribution](aousd-core-spec-supplemental.txt); complete terms in the root `LICENSE` |
 
 The complete Apache-2.0 terms in the root `LICENSE` also cover the
 Apache-licensed portion of LAZperf. Local integration and correctness changes

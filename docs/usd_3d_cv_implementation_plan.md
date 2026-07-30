@@ -32,7 +32,7 @@ new `SceneGraph` API; a mesh-only projection continues to support current
 ## Authoritative references
 
 - [AOUSD Core Specification 1.0.1](https://github.com/aousd/specifications-public/tree/2f9e746c4fbd7f48d6d2c9ac568133fe398bbfc0/core/1.0.1)
-- [AOUSD Core 1.0.1 supplemental/compliance materials](https://github.com/aousd/core-spec-supplemental-public/tree/404e2bde49c19105a7e608db6dc1cb1a7131bfc7/releases/1.0.1)
+- [AOUSD Core 1.0.1 supplemental/compliance materials](https://github.com/aousd/core-spec-supplemental-public/tree/c15ae0cad3ed9e07a25dffd6699627d2c166cab0/releases/1.0.1)
 - [OpenUSD 26.08 documentation](https://openusd.org/release/)
 - [OpenUSD 26.08 release](https://github.com/PixarAnimationStudios/OpenUSD/releases/tag/v26.08)
 - [OpenUSD TOST 1.0 license text](https://github.com/PixarAnimationStudios/OpenUSD/blob/v26.08/LICENSE.txt)
@@ -61,8 +61,9 @@ The current standards review changes four planning details:
 1. The published AOUSD baseline is Core Specification **1.0.1**, not the
    earlier shorthand “1.0.” The matching supplemental release is
    `1.0.1.post0`. The reviewed source pins are specification commit
-   `2f9e746c4fbd`, supplemental tag commit `404e2bde49c1`, and OpenUSD tag
-   target `ee47c679abde`.
+   `2f9e746c4fbd`, supplemental peeled release commit `c15ae0cad3ed`
+   (annotated tag object `404e2bde49c1`), and OpenUSD tag target
+   `ee47c679abde`.
 2. OpenUSD **26.08** is the current tagged release. It writes USDA version 1.3
    and USDC crate version 0.15.0. Current-version USDC qualification must use
    those versions; TinyUSDZ's observed crate 0.8 output is historical output,
@@ -101,8 +102,10 @@ repository-owned deterministic USDA/USDZ writer. It supports:
 
 It currently requires Y-up, one meter per unit, and refuses colors, materials,
 cameras, time samples, composition arcs, variants, instancing, and custom
-metadata. `.usdc` is not a registered extension even though TinyUSDZ can read
-binary layers.
+metadata. `.usdc` is not a registered extension. TinyUSDZ is locally qualified
+only through crate version 10, and the official crate-10 time-sample fixture
+exposes timestamps but not values; SceneIO refuses later crate versions before
+provider dispatch.
 
 The review command
 
@@ -408,21 +411,23 @@ Stop rules prevent the project from becoming open-ended:
 - [ ] Obtain the explicit narrow TOST policy decision; do not infer approval
       from license similarity.
 - [x] Pin AOUSD Core 1.0.1 (`2f9e746c4fbd`), supplemental 1.0.1.post0
-      (`404e2bde49c1`), and OpenUSD 26.08 (`ee47c679abde`) source baselines.
-- [ ] Select the exact compliance/schema fixtures to commit, recording the
+      (`c15ae0cad3ed`, tag object `404e2bde49c1`), and OpenUSD 26.08
+      (`ee47c679abde`) source baselines.
+- [x] Select the exact compliance/schema fixtures to commit, recording the
       source path, source commit, and license of every fixture.
-- [ ] Build a generated provider matrix covering USDA, current and historical
+- [x] Build a generated local provider matrix covering USDA, historical
       USDC crates, USD forwarding, USDZ, unknown typed prims, time samples,
       sublayers, references, payloads, variants, and asset resolution.
-- [ ] Record TinyUSDZ's actual supported composition subset rather than relying
+- [x] Record TinyUSDZ's actual supported composition subset rather than relying
       on upstream feature labels.
 - [ ] Compare TinyUSDZ and, if approved, `usd-core` for correctness,
       throughput, peak RSS, package availability, and supported platforms.
-- [ ] Decide the USDC writer:
+- [x] Decide the current USDC writer:
       use TinyUSDZ only if OpenUSD 26.08 cross-read and AOUSD format checks pass;
       otherwise use an approved optional OpenUSD provider or leave USDC
-      writing unavailable with a precise capability flag.
-- [ ] Add the selected dependency/fixture licenses and notices to `LICENSES/`.
+      writing unavailable with a precise capability flag. It remains
+      unavailable.
+- [x] Add the selected dependency/fixture licenses and notices to `LICENSES/`.
 
 Exit: a checked-in qualification report selects a provider per operation and
 no public capability is overstated.

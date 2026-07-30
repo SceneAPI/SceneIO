@@ -18,6 +18,8 @@ from sceneio.io._inspectors.model import Inspection
 
 _IDENTITY = np.eye(4, dtype=np.float64)
 _IDENTIFIER = re.compile(r"[A-Za-z_][A-Za-z0-9_]*\Z")
+_USDC_MAGIC = b"PXR-USDC\x00"
+_TINYUSDZ_MAX_QUALIFIED_CRATE_VERSION = 10
 _XFORM_PROPERTIES = frozenset({"xformOp:transform", "xformOpOrder"})
 _MESH_PROPERTIES = frozenset(
     {
@@ -43,7 +45,38 @@ def _require_tinyusdz():
     return tinyusdz
 
 
+def _root_layer_prefix(path: str | os.PathLike[str]) -> bytes:
+    with open(path, "rb") as source:
+        prefix = source.read(10)
+    if not prefix.startswith(b"PK\x03\x04"):
+        return prefix
+    try:
+        with zipfile.ZipFile(path) as archive:
+            entries = archive.infolist()
+            if not entries or entries[0].is_dir():
+                return b""
+            with archive.open(entries[0]) as root_layer:
+                return root_layer.read(10)
+    except (OSError, RuntimeError, zipfile.BadZipFile):
+        return b""
+
+
+def _require_qualified_provider_input(
+    path: str | os.PathLike[str],
+) -> None:
+    prefix = _root_layer_prefix(path)
+    if not prefix.startswith(_USDC_MAGIC) or len(prefix) < 10:
+        return
+    version = prefix[9]
+    if version > _TINYUSDZ_MAX_QUALIFIED_CRATE_VERSION:
+        raise ValueError(
+            f"USD: USDC crate version {version} exceeds TinyUSDZ 0.9.4's "
+            "qualified maximum version 10"
+        )
+
+
 def _load_stage(path: str | os.PathLike[str]):
+    _require_qualified_provider_input(path)
     tinyusdz = _require_tinyusdz()
     try:
         return tinyusdz.load(os.fspath(path))

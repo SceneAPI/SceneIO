@@ -141,7 +141,7 @@ implementation_owner = "python"
 sources = ["src/sceneio/io/_usd.py"]
 source_suite = "tests/codecs/test_usd.py"
 documentation = "docs/format_coverage.md"
-accepted_subset = ["static_single_scene", "triangle_meshes", "vertex_or_corner_normals", "vertex_or_corner_uvs", "node_hierarchy", "xform_matrices", "y_up", "meters", "usda_input", "usdc_input"]
+accepted_subset = ["static_single_scene", "triangle_meshes", "vertex_or_corner_normals", "vertex_or_corner_uvs", "node_hierarchy", "xform_matrices", "y_up", "meters", "usda_input", "historical_usdc_through_crate_10"]
 
 [[codec]]
 id = "usdz"

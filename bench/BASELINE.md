@@ -3658,3 +3658,25 @@ all native point and mesh formats. Static USD/USDZ remain within the previous
 U1b control range. Focused parity verifies that default records retain their
 existing encoded output, while each additive field independently causes every
 legacy writer to refuse before replacing a destination.
+
+### USD U0 provider-boundary control (2026-07-30)
+
+The AOUSD 1.0.1 supplemental matrix qualifies TinyUSDZ 0.9.4 only through
+historical USDC crate version 10 and adds a prefix check before provider
+dispatch. The normal static USDA/USDZ workload was rerun with the direct
+TinyUSDZ comparison enabled:
+
+```powershell
+.venv/Scripts/python.exe bench/bench_io.py --runs 3 `
+  --only usd --only usdz
+```
+
+| codec | SceneIO write/read/path-read MB/s | direct write/read MB/s | mmap traced peak | sink traced peak |
+|---|---:|---:|---:|---:|
+| `usd` | 12 / 13 / 13 | 6 / 12 | 3.6 MB | 0.4 MB |
+| `usdz` | 11 / 12 / 12 | 6 / 13 | 3.6 MB | 2.1 MB |
+
+The bounded input check does not regress the prior 11–13 MB/s control range.
+This measurement does not qualify current crate 11–15 input or USDC output;
+those operations remain unavailable pending the explicit provider decision
+and current reference comparison.

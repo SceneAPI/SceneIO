@@ -345,7 +345,7 @@ Columns: **Ext/id** · **Record** · **Lib/oracle (license)** · **R/W** ·
 | ✅ OFF | `Mesh` | independent parser + trimesh (MIT) | R+W | polygon-preserving ASCII vertex variants with normals, UVs, and exact RGBA8; bounded face ranges |
 | ✅ glTF / GLB (plain) | `MeshScene` | cgltf (MIT); pygltflib + trimesh oracles | R+W | 2.0 JSON/external or data buffers and GLB BIN; sparse/strided accessors, nodes/scenes, PBR subset, mesh/primitive selectors; unsupported extensions/Draco reject |
 | policy-gated Draco glTF | `MeshScene` | Draco (Apache) | R+W | requires a separate patented-codec policy decision; never required for plain glTF/GLB |
-| ✅ USD / USDZ | `MeshScene` | TinyUSDZ (Apache-2.0) | R+W | optional `sceneio[usd]`; current static bounded CV scene; repository-owned streaming USDA and aligned USDZ writers; broader `sceneio.usd.3dcv/1` work is planned in `usd_3d_cv_implementation_plan.md`; OpenUSD remains unselected until the TOST policy decision |
+| ✅ USD / USDZ | `MeshScene` | TinyUSDZ (Apache-2.0) | R+W | optional `sceneio[usd]`; current static bounded CV scene; repository-owned streaming USDA and aligned USDZ writers; historical USDC input is qualified only through crate 10 and later crates refuse before provider dispatch; broader `sceneio.usd.3dcv/1` work is planned in `usd_3d_cv_implementation_plan.md`; OpenUSD remains unselected until the TOST policy decision |
 
 ### 3e. Arrays / tensors / features
 | Format | Record | Lib / oracle | R/W | Notes |

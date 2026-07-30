@@ -9,6 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 LICENSES = ROOT / "LICENSES"
 
 EXPECTED_NOTICES = {
+    "aousd-core-spec-supplemental.txt",
     "apache-arrow-license.txt",
     "apache-arrow-notice.txt",
     "cgltf.txt",

@@ -435,8 +435,8 @@
     "last": "tests/test_points_binary.py::test_bad_magic_rejected"
   },
   "pytest_candidate_collection": {
-    "count": 4106,
-    "sorted_normalized_node_ids_sha256": "32bf2063da97238b624aaed366d1d348ebf965c9082c27bf76fd5c233b99e443",
+    "count": 4110,
+    "sorted_normalized_node_ids_sha256": "74d8cda11d082ce014ac3caf7598dc1239623897d76ae9f742280ea662b91b42",
     "added_nodes": [
       "tests/codecs/test_animated_webp.py::test_sceneio_writer_is_lossless_and_oracle_readable",
       "tests/codecs/test_animated_webp.py::test_pillow_writer_is_sceneio_readable_bit_exact",
@@ -1398,6 +1398,8 @@
       "tests/codecs/test_usd.py::test_usd_inspection_does_not_construct_mesh_scene",
       "tests/codecs/test_usd.py::test_usd_reader_refuses_non_cv_stage_conventions",
       "tests/codecs/test_usd.py::test_usd_reader_refuses_subdivision_surfaces",
+      "tests/codecs/test_usd.py::test_usd_reader_refuses_unqualified_usdc_versions_before_provider[.usd-11]",
+      "tests/codecs/test_usd.py::test_usd_reader_refuses_unqualified_usdc_versions_before_provider[.usdz-12]",
       "tests/codecs/test_usd.py::test_usd_writer_refuses_transform_on_mesh_node",
       "tests/codecs/test_usd.py::test_usd_existing_destination_survives_package_failure",
       "tests/codecs/test_usd.py::test_tinyusdz_license_is_distributed",
@@ -1456,6 +1458,8 @@
       "tests/records/test_scene_payload_fields.py::test_existing_point_and_mesh_writers_refuse_extended_fields",
       "tests/records/test_scene_payload_fields.py::test_extended_field_path_writers_preserve_destinations",
       "tests/test_usd_provider_qualification.py::test_tinyusdz_version_and_official_gaussian_schema_probe",
+      "tests/test_usd_provider_qualification.py::test_aousd_crate_10_timesamples_exposes_provider_boundary",
+      "tests/test_usd_provider_qualification.py::test_tinyusdz_usd_forwarding_and_asset_value_boundary",
       "tests/test_usd_provider_qualification.py::test_tinyusdz_usdc_writer_probe_is_not_current_writer_qualification",
       "tests/test_usd_provider_qualification.py::test_tinyusdz_load_is_raw_not_evaluated_composition",
       "tests/test_import_guards.py::test_no_family_imports[io/_arrow.py]",
