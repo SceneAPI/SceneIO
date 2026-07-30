@@ -88,7 +88,9 @@ def detect_path(
     ordered = tuple(codecs)
     if p.is_dir():
         for codec in ordered:
-            if codec.is_directory and (p / codec.dir_marker).exists():
+            if codec.is_directory and any(
+                (p / marker).exists() for marker in codec.directory_markers
+            ):
                 return codec.id
         raise format_error(f"no directory format matches {str(path)!r}")
     for codec in ordered:

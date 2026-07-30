@@ -604,6 +604,16 @@ source_suite = "tests/codecs/test_hdf5_hloc.py"
 documentation = "docs/format_coverage.md"
 accepted_subset = ["matches0", "matching_scores0", "current_pair_naming", "exact_endpoint_names", "mixed_score_presence"]
 
+[[codec]]
+id = "zarr"
+family = "containers"
+adapter = "repo"
+implementation_owner = "python"
+sources = ["src/sceneio/io/_zarr.py"]
+source_suite = "tests/codecs/test_zarr.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["v2_directory_store", "v3_directory_store", "numeric_arrays", "nested_array_paths", "string_root_attributes", "named_tensor_reads", "leading_axis_slices"]
+
 [[operation]]
 codec_id = "pfm"
 profile = "default"
@@ -3502,6 +3512,46 @@ backend_version = "sceneio-native-c2-2026-07-29"
 transport_status = "qualified"
 status = "provisional"
 correctness_evidence = ["tests/codecs/test_colmap_mvs.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "zarr"
+profile = "default"
+direction = "encode"
+settings = { store = "directory", zarr_format = 3 }
+fidelity = "lossless"
+comparator = "independent-zarr-python"
+fixture = "zarr:default"
+backend = "zarr-python"
+backend_owner = "fetched"
+backend_source = "src/sceneio/io/_zarr.py"
+backend_version = "zarr >=3.1,<4"
+backend_dependencies = ["zarr >=3.1,<4", "numcodecs"]
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_zarr.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "zarr"
+profile = "default"
+direction = "decode"
+settings = { store = "directory", zarr_format = 3 }
+fidelity = "lossless"
+comparator = "independent-zarr-python"
+fixture = "zarr:default"
+backend = "zarr-python"
+backend_owner = "fetched"
+backend_source = "src/sceneio/io/_zarr.py"
+backend_version = "zarr >=3.1,<4"
+backend_dependencies = ["zarr >=3.1,<4", "numcodecs"]
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_zarr.py"]
 benchmark_evidence = ["bench/BASELINE.md"]
 candidate_backends = []
 evidence_gaps = ["candidate comparison on all required toolchains"]

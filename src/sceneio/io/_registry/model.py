@@ -26,6 +26,7 @@ class Codec:
     filenames: tuple[str, ...] = ()
     is_directory: bool = False
     dir_marker: str = "cameras.bin"
+    directory_markers: tuple[str, ...] = ()
     inspect: Callable[[str], object] | None = None
     read_window: Callable[[str, int, int, int, int], object] | None = None
     read_points: Callable[[str, int, int], object] | None = None
@@ -58,6 +59,12 @@ class Codec:
         if not self.is_directory and kind == "directory":
             raise ValueError("is_directory and container_kind disagree")
         object.__setattr__(self, "container_kind", kind)
+        markers = tuple(self.directory_markers)
+        if self.is_directory and not markers:
+            markers = (self.dir_marker,)
+        if any(not isinstance(value, str) or not value for value in markers):
+            raise ValueError("directory_markers entries must be non-empty strings")
+        object.__setattr__(self, "directory_markers", markers)
         for field_name in (
             "extensions",
             "magic",
@@ -88,8 +95,7 @@ class Codec:
         """Return the immutable public capability snapshot for this codec."""
 
         available = all(
-            requirement != "h5py"
-            or importlib.util.find_spec("h5py") is not None
+            importlib.util.find_spec(requirement) is not None
             for requirement in self.requires_features
         )
         selectors = []

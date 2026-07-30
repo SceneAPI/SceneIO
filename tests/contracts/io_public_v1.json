@@ -115,7 +115,8 @@
     "write_depth",
     "write_flow",
     "write_header",
-    "write_record"
+    "write_record",
+    "write_zarr"
   ],
   "sceneio_io_all": [
     "ArrayInspection",
@@ -171,7 +172,8 @@
     "write",
     "write_colmap_db",
     "write_depth",
-    "write_flow"
+    "write_flow",
+    "write_zarr"
   ],
   "namespaces": [
     "colmap",
@@ -234,7 +236,8 @@
     "write",
     "write_colmap_db",
     "write_depth",
-    "write_flow"
+    "write_flow",
+    "write_zarr"
   ],
   "reexport_identity": {
     "ArrayInspection": true,
@@ -287,13 +290,14 @@
     "write": true,
     "write_colmap_db": true,
     "write_depth": true,
-    "write_flow": true
+    "write_flow": true,
+    "write_zarr": true
   },
   "types": {
     "Codec": {
       "module": "sceneio.io.registry",
       "qualname": "Codec",
-      "repr_normalized": "Codec(id='npy', extensions=('.npy',), read=<function _mmap_view_reader.<locals>.read at 0xADDRESS>, write=<function _file_sink_writer.<locals>.write at 0xADDRESS>, record=None, datatype='tensor', magic=(b'\\x93NUMPY',), filenames=(), is_directory=False, dir_marker='cameras.bin', inspect=None, read_window=None, read_points=None, read_faces=None, read_mesh=None, read_primitive=None, read_states=None, read_frames=None, read_image=None, read_pair=None, read_tensors=None, read_slices=None, streams_read=True, streams_write=True, lossy=False, requires_features=(), supported_features=('v1', 'c_order', 'native_endian_mmap_view'), unsupported_features=('fortran_order', 'object_dtype'), container_kind='file')",
+      "repr_normalized": "Codec(id='npy', extensions=('.npy',), read=<function _mmap_view_reader.<locals>.read at 0xADDRESS>, write=<function _file_sink_writer.<locals>.write at 0xADDRESS>, record=None, datatype='tensor', magic=(b'\\x93NUMPY',), filenames=(), is_directory=False, dir_marker='cameras.bin', directory_markers=(), inspect=None, read_window=None, read_points=None, read_faces=None, read_mesh=None, read_primitive=None, read_states=None, read_frames=None, read_image=None, read_pair=None, read_tensors=None, read_slices=None, streams_read=True, streams_write=True, lossy=False, requires_features=(), supported_features=('v1', 'c_order', 'native_endian_mmap_view'), unsupported_features=('fortran_order', 'object_dtype'), container_kind='file')",
       "pickle": {
         "outcome": "raises",
         "exception": "AttributeError",

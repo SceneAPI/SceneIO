@@ -1341,6 +1341,29 @@ def _hdf5_formats(root: Path) -> None:
     assert sceneio.inspect(match_path).metadata["pair_count"] == 1
 
 
+def _zarr_formats(root: Path) -> None:
+    if not sceneio.capabilities("zarr").available:
+        return
+
+    tensors = _core.tensor_dict(
+        {
+            "dense/a": np.arange(24, dtype=np.float32).reshape(4, 6),
+            "ids": np.arange(5, dtype=np.int16),
+        },
+        {"producer": "wheel-smoke"},
+    )
+    path = root / "arrays.zarr"
+    sceneio.write(tensors, path, format="zarr")
+    assert sceneio.detect(path) == "zarr"
+    decoded = sceneio.read(path)
+    np.testing.assert_array_equal(decoded["dense/a"], tensors["dense/a"])
+    assert sceneio.inspect(path).count == 2
+    selected = sceneio.read_partial(path, tensors=("ids",))
+    np.testing.assert_array_equal(selected["ids"], tensors["ids"])
+    sliced = sceneio.read_partial(path, slices={"dense/a": (1, 3)})
+    np.testing.assert_array_equal(sliced["dense/a"], tensors["dense/a"][1:3])
+
+
 def _image_sequences(root: Path) -> None:
     assert sceneio.ImageSequence is _core.ImageSequence
     frames = root / "frames"
@@ -1736,6 +1759,7 @@ _SMOKE_RUNNERS: Mapping[str, Callable[[Path], None]] = MappingProxyType(
         "hdf5": _hdf5_formats,
         "hloc_features": _hdf5_formats,
         "hloc_matches": _hdf5_formats,
+        "zarr": _zarr_formats,
     }
 )
 

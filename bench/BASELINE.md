@@ -3503,3 +3503,28 @@ The same five-run scale-16 fixture measured:
 The focused test covers every documented wire dtype, reversed endpoints,
 mixed score presence, malformed values, and input-array lifetime. Existing
 h5py oracle and round-trip tests remain byte/value exact.
+
+### Zarr v2/v3 CV tensor stores (2026-07-30)
+
+The optional `sceneio[zarr]` path uses the upstream optimized Zarr/numcodecs
+provider while SceneIO owns the bounded numeric schema, `TensorDict` mapping,
+partial reads, inspection, and directory replacement. The independent
+provider comparison was run locally on MSVC with:
+
+```powershell
+.venv/Scripts/python.exe bench/bench_io.py `
+  --runs 3 --scale 1 --only zarr `
+  --json build/zarr-benchmark-scale1.json
+```
+
+| operation | SceneIO | direct zarr-python | ratio |
+|---|---:|---:|---:|
+| write | 53 MB/s | 54 MB/s | 0.98x |
+| read | 207 MB/s | 220 MB/s | 0.94x |
+
+The 1.1 MB logical fixture encoded to 1.0 MB. Metadata inspection took
+2.976 ms versus 5.096 ms for a full read (1.71x), and the selected-array read
+took 2.784 ms (1.83x). Full-read traced allocation was 3.1 MB versus 0.1 MB
+for both bounded paths. This verifies that the SceneIO schema layer remains
+close to the upstream provider while the requested partial and inspection
+paths avoid full-array materialization.

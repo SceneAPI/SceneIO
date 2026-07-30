@@ -8,6 +8,7 @@ from pathlib import Path
 import numpy as np
 
 H5PY_AVAILABLE = importlib.util.find_spec("h5py") is not None
+ZARR_AVAILABLE = importlib.util.find_spec("zarr") is not None
 
 
 def _h5py():
@@ -18,6 +19,16 @@ def _h5py():
     import h5py
 
     return h5py
+
+
+def _zarr():
+    if not ZARR_AVAILABLE:
+        raise RuntimeError(
+            "Zarr benchmark providers require the optional zarr package"
+        )
+    import zarr
+
+    return zarr
 
 
 def _hdf5_oracle_write(payload, path: str | Path) -> None:
@@ -126,12 +137,38 @@ def _hloc_matches_oracle_read(path: str | Path):
     return result
 
 
+def _zarr_oracle_write(payload, path: str | Path) -> None:
+    zarr = _zarr()
+    group = zarr.open_group(
+        path,
+        mode="w",
+        zarr_format=3,
+        attributes=payload["attrs"],
+    )
+    for name, value in payload["arrays"].items():
+        group.create_array(name, data=value)
+
+
+def _zarr_oracle_read(path: str | Path):
+    zarr = _zarr()
+    group = zarr.open_group(path, mode="r", use_consolidated=None)
+    arrays = {
+        name: np.asarray(value[...])
+        for name, value in group.members(max_depth=None)
+        if isinstance(value, zarr.Array)
+    }
+    return {"arrays": arrays, "attrs": dict(group.attrs)}
+
+
 __all__ = [
     "H5PY_AVAILABLE",
+    "ZARR_AVAILABLE",
     "_hdf5_oracle_read",
     "_hdf5_oracle_write",
     "_hloc_features_oracle_read",
     "_hloc_features_oracle_write",
     "_hloc_matches_oracle_read",
     "_hloc_matches_oracle_write",
+    "_zarr_oracle_read",
+    "_zarr_oracle_write",
 ]

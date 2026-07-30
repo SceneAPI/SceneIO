@@ -876,9 +876,10 @@ requirements for COLMAP ecosystem closure.
 ### ⬜ Pending — declared roadmap gaps
 
 - Sequence/dataset: RTMV. Animated WebP and APNG are complete.
-- Optional scientific/container: TIFF, E57, and Parquet/Arrow. HDF5 and both
+- Optional CV containers: TIFF, E57, and Parquet/Arrow. HDF5 and both
   hloc feature/match layouts are complete through the optional h5py provider.
-- Chunked/heavyweight: Zarr v2/v3, USD/USDZ, and OpenVDB.
+- Chunked/heavyweight: USD/USDZ and OpenVDB. Zarr v2/v3 numeric directory
+  stores are complete through the optional optimized Zarr provider.
 - Policy-gated: AVIF, JPEG-XL, and Draco-compressed glTF. These do not enter
   implementation without an explicit decision under the patented-codec rule.
 
@@ -995,6 +996,7 @@ incremental.
 | `webp` | file | yes | yes | yes | window | yes | yes | yes | - |
 | `xyz` | file | yes | yes | yes | points | yes | yes | no | - |
 | `y4m` | file | yes | yes | yes | frames | yes | yes | no | - |
+| `zarr` | directory | yes | yes | yes | tensors, slices | yes | yes | no | zarr |
 <!-- sceneio-capability-rows:end -->
 
 Supported and intentionally unsupported subfeatures, such as LAS point formats
@@ -1026,6 +1028,11 @@ against that public manifest.
 The `hdf5` row reserves a possible future C-native integration. The current
 repository-owned HDF5 and hloc adapters are independently available through
 the optional optimized `h5py` provider.
+
+Zarr is a Python-extra integration rather than a compiled native feature:
+SceneIO owns the numeric CV schema, validation, model mapping, partial reads,
+inspection, and path replacement, while the separately installed MIT-licensed
+Zarr/numcodecs packages provide optimized v2/v3 chunk storage.
 
 An unknown feature name raises the same normalized `FormatError` family used
 by codec discovery. Future feature-enabled builds must export their compiled

@@ -5111,6 +5111,12 @@ H1 local closure evidence:
   malformed-input refusal, atomic destination preservation, bounded partial
   reads, optional-provider import isolation, and compatibility snapshots.
 
-Next implementation unit after H1: RTMV directory datasets, followed by TIFF,
-E57, and Parquet/Arrow. Zarr and heavyweight scene/volume formats remain later
-waves; policy-gated image/geometry codecs remain outside the active queue.
+Zarr v2/v3 numeric CV directory stores are now implemented as codec 60 through
+the optional MIT-licensed Zarr/numcodecs provider. SceneIO owns validation,
+`TensorDict` mapping, metadata inspection, named/leading-axis partial reads,
+directory replacement, capability reporting, wheel smoke, benchmarks, and
+v2/v3 oracle parity. The NumPy-only base install is unchanged.
+
+Next implementation unit: TIFF CV rasters, followed by E57 and
+Parquet/Arrow. USD/USDZ and OpenVDB remain later optional-provider waves;
+policy-gated image/geometry codecs remain outside the active queue.

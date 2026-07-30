@@ -71,6 +71,7 @@ _BUILTINS = {
     "webp",
     "xyz",
     "y4m",
+    "zarr",
 }
 
 _PARTIAL = {
@@ -105,6 +106,7 @@ _PARTIAL = {
     "webp": ("window",),
     "xyz": ("points",),
     "y4m": ("frames",),
+    "zarr": ("tensors", "slices"),
 }
 
 _LOSSY = {
@@ -157,11 +159,13 @@ def test_capability_hooks_and_metadata_are_consistent():
         assert cap.partial_selectors == _PARTIAL.get(format_id, ())
         assert cap.lossy is (format_id in _LOSSY)
         assert cap.container_kind == codec.container_kind
-        assert cap.requires_features == (
-            ("h5py",)
-            if format_id in {"hdf5", "hloc_features", "hloc_matches"}
-            else ()
-        )
+        expected_requirements = {
+            "hdf5": ("h5py",),
+            "hloc_features": ("h5py",),
+            "hloc_matches": ("h5py",),
+            "zarr": ("zarr",),
+        }
+        assert cap.requires_features == expected_requirements.get(format_id, ())
         assert not (
             set(cap.supported_features) & set(cap.unsupported_features)
         )

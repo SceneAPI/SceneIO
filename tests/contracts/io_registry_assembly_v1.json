@@ -69,7 +69,8 @@
       "colmap_fused_visibility": "b31c43d6cbca68d8025d966a90f40beb650fe3fafddc65989b455a34dd9e8bf1",
       "hdf5": "33e66344c099145ee6e6cf2e7ea49ab7dfc5318b34ce5ad949b0c5facc802cb5",
       "hloc_features": "5f3d5916bc1a61b0b736f4ab86d26ee935f61a3b6f47e68d3d17bfed05cb637f",
-      "hloc_matches": "7382dc0f72455e7c5908804a3843ba392c494578edec1454c9655f74d8f24d79"
+      "hloc_matches": "7382dc0f72455e7c5908804a3843ba392c494578edec1454c9655f74d8f24d79",
+      "zarr": "0b87633299a5bc87d8224c6e1abb3bf56372e70a4970b6aaa67deabe94f20bd5"
     }
   },
   "operation_descriptors": {
@@ -373,6 +374,13 @@
         "read": "daa5b4cd3deca835c969738229344a74817a514151339e2470c4e764483ccb08",
         "write": "86a7eae7521af7a3c748e585fc93c3f333945561fcbf5fce5a6968ebdf234950",
         "inspect": "56180e1a20477da1ca61a6734356d67ffc3f4a85dacacf59fb5289f0d801f195"
+      },
+      "zarr": {
+        "read": "e3a079c44a768ac72004c8bf9cb17598ff4b266b0547454644e60cedb1b5c153",
+        "write": "da90b9fca56a93a61ed9acc03bb37edd2f62c600b00d108a2ebd1c5940dfae10",
+        "inspect": "fa403d0f9a31de82731972b54e407d7206c30a4937e85a8d8047175c1aa1e907",
+        "read_tensors": "512f93ebbc7bf4fb609d7fe76d248aee339edd9774139da7373d827c8a6fbc98",
+        "read_slices": "d4d84df43a99538af3b264b845490b08dcf04de4bcad8a637988e869ae3b5b23"
       }
     }
   },
@@ -384,8 +392,8 @@
     "last": "tests/test_points_binary.py::test_bad_magic_rejected"
   },
   "pytest_candidate_collection": {
-    "count": 3948,
-    "sorted_normalized_node_ids_sha256": "157b49847c70d63066857c12b44ac19d4590b512fcbcdb1a5055aac21af6b4c9",
+    "count": 3965,
+    "sorted_normalized_node_ids_sha256": "5591b4aec2894085e5d5a15c58ca9acc203468cd67d3a5e19ed85f264ce2bed2",
     "added_nodes": [
       "tests/codecs/test_animated_webp.py::test_sceneio_writer_is_lossless_and_oracle_readable",
       "tests/codecs/test_animated_webp.py::test_pillow_writer_is_sceneio_readable_bit_exact",
@@ -1253,7 +1261,24 @@
       "tests/test_hdf5_cardinality_benchmark.py::test_hdf5_cardinality_benchmark_rejects_invalid_sizes[kwargs2]",
       "tests/test_hdf5_cardinality_benchmark.py::test_hdf5_cardinality_benchmark_rejects_invalid_sizes[kwargs3]",
       "tests/test_io_registry_architecture.py::test_repository_coverage_manifest_is_complete_and_resolvable",
-      "tests/test_performance_status.py::test_performance_ledger_has_stable_schema_and_exact_builtin_coverage"
+      "tests/test_performance_status.py::test_performance_ledger_has_stable_schema_and_exact_builtin_coverage",
+      "tests/codecs/test_zarr.py::test_zarr_v2_v3_roundtrip_and_independent_oracle[2]",
+      "tests/codecs/test_zarr.py::test_zarr_v2_v3_roundtrip_and_independent_oracle[3]",
+      "tests/codecs/test_zarr.py::test_zarr_reads_oracle_written_store[2]",
+      "tests/codecs/test_zarr.py::test_zarr_reads_oracle_written_store[3]",
+      "tests/codecs/test_zarr.py::test_zarr_partial_reads_touch_selected_arrays_and_chunks",
+      "tests/codecs/test_zarr.py::test_zarr_inspection_reads_metadata_without_array_decode",
+      "tests/codecs/test_zarr.py::test_zarr_registry_write_defaults_to_v3",
+      "tests/codecs/test_zarr.py::test_zarr_replace_existing_store",
+      "tests/codecs/test_zarr.py::test_zarr_rejects_invalid_tensor_paths[../outside-relative '/'-separated path]",
+      "tests/codecs/test_zarr.py::test_zarr_rejects_invalid_tensor_paths[/absolute-relative '/'-separated path]",
+      "tests/codecs/test_zarr.py::test_zarr_rejects_invalid_tensor_paths[a/b-relative '/'-separated path]",
+      "tests/codecs/test_zarr.py::test_zarr_rejects_unsupported_oracle_dtype",
+      "tests/codecs/test_zarr.py::test_zarr_slice_validates_bounds_and_scalars",
+      "tests/codecs/test_zarr.py::test_zarr_capabilities_and_markers",
+      "tests/codecs/test_zarr.py::test_zarr_public_path_is_directory",
+      "tests/codecs/test_zarr.py::test_zarr_no_staging_directories_remain_after_failure",
+      "tests/test_import_guards.py::test_no_family_imports[io/_zarr.py]"
     ],
     "removed_nodes": [
       "tests/codecs/test_compressed_ply.py::test_writer_body_is_byte_identical_to_pinned_playcanvas_vector",

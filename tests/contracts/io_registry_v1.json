@@ -4010,6 +4010,96 @@
           "legacy_underscore_pair_enumeration"
         ]
       }
+    },
+    {
+      "id": "zarr",
+      "extensions": [
+        ".zarr"
+      ],
+      "magic_hex": [],
+      "filenames": [],
+      "is_directory": true,
+      "dir_marker": "zarr.json",
+      "container_kind": "directory",
+      "datatype": "tensor_dict",
+      "record": {
+        "module": "sceneio._core",
+        "qualname": "TensorDict"
+      },
+      "selectors": [
+        "tensors",
+        "slices"
+      ],
+      "streams_read": true,
+      "streams_write": true,
+      "lossy": false,
+      "requires_features": [
+        "zarr"
+      ],
+      "supported_features": [
+        "v2_directory_store",
+        "v3_directory_store",
+        "numeric_arrays",
+        "nested_array_paths",
+        "string_root_attributes",
+        "chunked_reads",
+        "named_tensor_reads",
+        "leading_axis_slices",
+        "transactional_path_write"
+      ],
+      "unsupported_features": [
+        "object_arrays",
+        "string_arrays",
+        "structured_dtypes",
+        "remote_stores",
+        "zip_stores",
+        "sharded_arrays",
+        "non_root_attributes"
+      ],
+      "capabilities": {
+        "format": "zarr",
+        "datatype": "tensor_dict",
+        "record_type": "TensorDict",
+        "extensions": [
+          ".zarr"
+        ],
+        "filenames": [],
+        "container_kind": "directory",
+        "available": true,
+        "can_read": true,
+        "can_write": true,
+        "can_inspect": true,
+        "partial_selectors": [
+          "tensors",
+          "slices"
+        ],
+        "streams_read": true,
+        "streams_write": true,
+        "lossy": false,
+        "requires_features": [
+          "zarr"
+        ],
+        "supported_features": [
+          "v2_directory_store",
+          "v3_directory_store",
+          "numeric_arrays",
+          "nested_array_paths",
+          "string_root_attributes",
+          "chunked_reads",
+          "named_tensor_reads",
+          "leading_axis_slices",
+          "transactional_path_write"
+        ],
+        "unsupported_features": [
+          "object_arrays",
+          "string_arrays",
+          "structured_dtypes",
+          "remote_stores",
+          "zip_stores",
+          "sharded_arrays",
+          "non_root_attributes"
+        ]
+      }
     }
   ],
   "collisions": {

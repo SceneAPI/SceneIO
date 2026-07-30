@@ -9,15 +9,15 @@
   `30469273173`, `30469271293`, and build-only package run `30470889876`
   pass with publication skipped.
 - **Current local checkpoint:** HDF5 plus the documented hloc feature and
-  match layouts are implemented as codecs 57-59. SceneIO owns the schemas,
+  match layouts are implemented as codecs 57-59, and Zarr v2/v3 numeric
+  directory stores are codec 60. SceneIO owns the schemas,
   validation, models, detection, metadata inspection, HDF5 named/hyperslab
   reads, and atomic replacement; optimized h5py is an optional
   `sceneio[hdf5]` provider and independent oracle. The prior APNG 56-codec
-  checkpoint remains its historical evidence. The current registry has 59
-  codecs and the exact collection has 3,948 nodes. Local MSVC passes 3,943
-  tests with five documented optional skips; the focused 123-test gate,
-  installed-surface smoke, Ruff, and diff checks also pass. Cross-platform
-  package evidence remains user-gated.
+  checkpoint remains its historical evidence. Zarr uses the separately
+  installed MIT-licensed optimized provider while keeping the base install
+  NumPy-only. Full local and cross-platform evidence is recorded as the unit
+  closes; cross-platform package execution remains user-gated.
 - **Current program gate:** the user-directed lean format wave is active.
   Exhaustive backend comparison remains trigger-based, not a prerequisite for
   closing a verified codec unit.
@@ -1592,19 +1592,20 @@ Exit gate for G5:
 
 #### G6.1 Zarr v2/v3
 
-Implementation is capability-driven:
+**Status: complete for the bounded CV profile.**
 
-1. Directory store and Zip store.
-2. Zarr v2 metadata and core numeric arrays.
-3. Zarr v3 nodes and core bytes codec.
-4. gzip/zlib and zstd using existing libraries.
-5. transpose and CRC32C.
-6. sharding.
-7. Blosc behind a separately pinned permissive dependency.
+Implemented:
 
-Unknown codecs and extensions must identify themselves in the error. SceneIO
-must not claim generic Zarr compatibility merely because it can parse
-`zarr.json`.
+1. Zarr v2 and v3 directory stores.
+2. Numeric and boolean arrays with nested array paths.
+3. String root attributes mapped to `TensorDict.attrs`.
+4. Upstream-optimized chunk codecs selected by Zarr/numcodecs.
+5. Named-array and leading-axis partial reads.
+6. Metadata-only inspection and transactional directory replacement.
+
+Zip/remote stores, object/string/structured arrays, sharding, and non-root
+attributes remain explicitly unsupported rather than implied by the generic
+Zarr provider.
 
 Partial reads select array names and chunks/slices. `inspect` reads metadata
 only. Write tests compare directory trees and decoded values with zarr-python;
@@ -1985,8 +1986,8 @@ The work should ship in small releases rather than one long-lived branch:
 4. **0.6 — scientific optional libraries**
    - HDF5/hloc, TIFF, E57, and Parquet with off/on wheel configurations.
 5. **0.7 — chunked and heavyweight ecosystems**
-   - Zarr, then USD/USDZ and OpenVDB if their size and record contracts pass
-     acceptance.
+   - Zarr numeric CV stores are complete; USD/USDZ and OpenVDB follow when
+     their record contracts and optional-provider footprints pass acceptance.
 6. **Policy release**
    - AVIF/JPEG-XL/Draco only after the explicit G7 decision.
 
@@ -2286,9 +2287,8 @@ lane before starting the next unit.
    builds, independent oracle parity, streaming/partial tests, artifact-size
    accounting, and all three compilers before the next library begins.
 10. **Chunked and heavyweight formats.**
-   Implement Zarr v2 then v3, followed only after explicit size/startup
-   acceptance by USD/USDZ and OpenVDB. Define `Table`, general `Scene`, and
-   `SparseGrid` records before their first codec.
+   Zarr v2/v3 numeric CV stores are complete. Define `Table`, general `Scene`,
+   and `SparseGrid` records before Parquet/Arrow, USD/USDZ, and OpenVDB.
 11. **Cross-repository vocabulary closure.**
    Assign stable wire/DataType ids for the branch-local records in SceneAPI
    Phase C without changing the already working SceneIO record ABI.
@@ -2370,9 +2370,9 @@ types, or metadata are rejected rather than coerced.
 
 ### 12.7 Wave F — chunked and heavyweight ecosystems
 
-1. Implement Zarr v2, then v3, over a native `TensorDict` store abstraction;
-   validate directory trees, chunk codecs, array selection, and consolidated
-   metadata against zarr-python.
+1. Zarr v2/v3 numeric directory stores are complete over `TensorDict`, with
+   independent zarr-python reads/writes, array selection, leading-axis slices,
+   inspection, replacement, and v2/v3 marker detection.
 2. Define the minimal `Scene` contract before optional OpenUSD; start with
    meshes, cameras, nodes, and transforms and reject unrepresented composition,
    variants, instancing, and animation.
@@ -2380,9 +2380,9 @@ types, or metadata are rejected rather than coerced.
    grids, transforms, background values, active bounds, and grid/window
    selection.
 
-No G6 format enters release wheels until correctness passes and wheel size,
-startup cost, platform support, and dependency closure are measured and
-explicitly accepted.
+No remaining G6 format enters release wheels until correctness passes and
+wheel size, startup cost, platform support, and dependency closure are
+measured and explicitly accepted.
 
 ### 12.8 Wave G — explicit policy decisions
 

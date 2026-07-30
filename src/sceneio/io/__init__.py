@@ -25,6 +25,7 @@ from sceneio.io._hdf5 import HlocFeatureStore, HlocMatchStore
 from sceneio.io._inspection import inspect_codec
 from sceneio.io._inspectors.model import ArrayInspection, Inspection
 from sceneio.io._registry.adapters import _file_sink_writer, _mmap_reader
+from sceneio.io._zarr import write_zarr
 from sceneio.io.registry import (
     REGISTRY,
     Codec,
@@ -640,4 +641,5 @@ __all__ = [
     "write_colmap_db",
     "write_depth",
     "write_flow",
+    "write_zarr",
 ]

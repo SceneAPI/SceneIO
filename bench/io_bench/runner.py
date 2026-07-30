@@ -679,11 +679,28 @@ def _assert_colmap_db_equal(actual, expected):
 
 def _evict_file_cache(path):
     """Best-effort cold-cache hint (effective where POSIX_FADV_DONTNEED exists)."""
+    path = Path(path)
+    if path.is_dir():
+        results = [
+            _evict_file_cache(item)
+            for item in path.rglob("*")
+            if item.is_file()
+        ]
+        return any(results)
     if not hasattr(os, "posix_fadvise") or not hasattr(os, "POSIX_FADV_DONTNEED"):
         return False
     with open(path, "rb") as stream:
         os.posix_fadvise(stream.fileno(), 0, 0, os.POSIX_FADV_DONTNEED)
     return True
+
+
+def _stored_size(path) -> int:
+    """Return encoded bytes for either a file or directory-backed container."""
+
+    path = Path(path)
+    if path.is_file():
+        return path.stat().st_size
+    return sum(item.stat().st_size for item in path.rglob("*") if item.is_file())
 
 
 def _specs(scale, pose_bundle=None):
@@ -1413,10 +1430,11 @@ def _benchmark_path_spec(args, tmp, spec):
 
     spec.assert_native(native_read(), payload)
     inspected = native_inspect()
-    if inspected.byte_size != native_path.stat().st_size:
+    native_size = _stored_size(native_path)
+    if inspected.byte_size != native_size:
         raise AssertionError(f"{spec.id} inspection byte size differs from file")
 
-    file_mb = native_path.stat().st_size / 1e6
+    file_mb = native_size / 1e6
     oracle_metrics = {}
     if oracle_write_time is not None and oracle_read_time is not None:
         oracle_metrics = {

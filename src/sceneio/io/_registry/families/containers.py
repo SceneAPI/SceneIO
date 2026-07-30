@@ -20,6 +20,13 @@ from sceneio.io._hdf5 import (
     write_hloc_matches,
 )
 from sceneio.io._registry.model import Codec
+from sceneio.io._zarr import (
+    inspect_zarr,
+    read_zarr,
+    read_zarr_slices,
+    read_zarr_tensors,
+    write_zarr,
+)
 
 CONTAINER_CODECS: tuple[Codec, ...] = (
     Codec(
@@ -102,6 +109,41 @@ CONTAINER_CODECS: tuple[Codec, ...] = (
             "verified_geometry",
             "multiple_matches_per_source",
             "legacy_underscore_pair_enumeration",
+        ),
+    ),
+    Codec(
+        "zarr",
+        (".zarr",),
+        read_zarr,
+        write_zarr,
+        record=_core.TensorDict,
+        datatype="tensor_dict",
+        is_directory=True,
+        dir_marker="zarr.json",
+        directory_markers=("zarr.json", ".zgroup"),
+        inspect=inspect_zarr,
+        read_tensors=read_zarr_tensors,
+        read_slices=read_zarr_slices,
+        requires_features=("zarr",),
+        supported_features=(
+            "v2_directory_store",
+            "v3_directory_store",
+            "numeric_arrays",
+            "nested_array_paths",
+            "string_root_attributes",
+            "chunked_reads",
+            "named_tensor_reads",
+            "leading_axis_slices",
+            "transactional_path_write",
+        ),
+        unsupported_features=(
+            "object_arrays",
+            "string_arrays",
+            "structured_dtypes",
+            "remote_stores",
+            "zip_stores",
+            "sharded_arrays",
+            "non_root_attributes",
         ),
     ),
 )

@@ -13,12 +13,15 @@ from bench.io_bench.fixtures.containers import (
 from bench.io_bench.model import PathSpec
 from bench.io_bench.oracles.containers import (
     H5PY_AVAILABLE,
+    ZARR_AVAILABLE,
     _hdf5_oracle_read,
     _hdf5_oracle_write,
     _hloc_features_oracle_read,
     _hloc_features_oracle_write,
     _hloc_matches_oracle_read,
     _hloc_matches_oracle_write,
+    _zarr_oracle_read,
+    _zarr_oracle_write,
 )
 
 
@@ -131,6 +134,14 @@ def _partial_hdf5(path):
     )
 
 
+def _partial_zarr(path):
+    return sceneio.read_partial(
+        path,
+        format="zarr",
+        tensors=("ids",),
+    )
+
+
 def _assert_partial_hdf5(actual, payload) -> None:
     assert actual.keys() == ["ids"]
     np.testing.assert_array_equal(actual["ids"], payload["arrays"]["ids"])
@@ -145,6 +156,8 @@ def build_container_specs(scale):
     feature_read = _hloc_features_oracle_read if H5PY_AVAILABLE else None
     match_write = _hloc_matches_oracle_write if H5PY_AVAILABLE else None
     match_read = _hloc_matches_oracle_read if H5PY_AVAILABLE else None
+    zarr_write = _zarr_oracle_write if ZARR_AVAILABLE else None
+    zarr_read = _zarr_oracle_read if ZARR_AVAILABLE else None
     return [
         PathSpec(
             "hdf5",
@@ -183,6 +196,20 @@ def build_container_specs(scale):
             _match_payload_nbytes,
             _assert_match_store,
             _assert_match_payload,
+        ),
+        PathSpec(
+            "zarr",
+            ".zarr",
+            lambda: _hdf5_fixture(scale),
+            lambda value, path: _write(value, path, "zarr"),
+            lambda path: _read(path, "zarr"),
+            zarr_write,
+            zarr_read,
+            _tensor_payload_nbytes,
+            _assert_tensor_dict,
+            _assert_tensor_payload,
+            _partial_zarr,
+            _assert_partial_hdf5,
         ),
     ]
 

@@ -106,6 +106,7 @@ CODEC_CASE_DEFINITIONS = (
     _case("hdf5", "path", ("tensors", "slices")),
     _case("hloc_features", "path", ()),
     _case("hloc_matches", "path", ()),
+    _case("zarr", "directory", ("tensors", "slices")),
 )
 
 CASES_BY_ID = MappingProxyType(
@@ -148,7 +149,7 @@ def _validate_case_definitions() -> None:
     if (len(BUFFER_CASES), len(PATH_CASES), len(DIRECTORY_CASES)) != (
         50,
         6,
-        3,
+        4,
     ):
         raise RuntimeError("cross-codec fixture partitions changed")
 

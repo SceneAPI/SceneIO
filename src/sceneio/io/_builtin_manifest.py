@@ -83,6 +83,7 @@ CANONICAL_BUILTIN_IDS = (
     "hdf5",
     "hloc_features",
     "hloc_matches",
+    "zarr",
 )
 
 FAMILY_MEMBERS = MappingProxyType(
@@ -94,7 +95,7 @@ FAMILY_MEMBERS = MappingProxyType(
             "ros_camera_info",
             "kalibr",
         ),
-        "containers": ("hdf5", "hloc_features", "hloc_matches"),
+        "containers": ("hdf5", "hloc_features", "hloc_matches", "zarr"),
         "dense": (
             "colmap_mvs_depth",
             "colmap_mvs_normal",
@@ -305,6 +306,7 @@ _NATIVE_SYMBOLS = {
     "hdf5": (),
     "hloc_features": (),
     "hloc_matches": (),
+    "zarr": (),
 }
 
 _PYTHON_SYMBOLS = {
@@ -355,6 +357,13 @@ _PYTHON_SYMBOLS = {
         "sceneio.io._hdf5.write_hloc_matches",
         "sceneio.io._hdf5.inspect_hloc_matches",
     ),
+    "zarr": (
+        "sceneio.io._zarr.read_zarr",
+        "sceneio.io._zarr.write_zarr",
+        "sceneio.io._zarr.inspect_zarr",
+        "sceneio.io._zarr.read_zarr_tensors",
+        "sceneio.io._zarr.read_zarr_slices",
+    ),
 }
 
 _OWNERS = {
@@ -366,6 +375,7 @@ _OWNERS = {
     "hdf5": "python",
     "hloc_features": "python",
     "hloc_matches": "python",
+    "zarr": "python",
 }
 
 _FAMILY_BY_ID = {

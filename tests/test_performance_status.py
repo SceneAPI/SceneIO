@@ -76,7 +76,7 @@ def test_performance_ledger_has_stable_schema_and_exact_builtin_coverage():
 
     codecs = ledger["codec"]
     assert tuple(item["id"] for item in codecs) == CANONICAL_BUILTIN_IDS
-    assert len({item["id"] for item in codecs}) == 59
+    assert len({item["id"] for item in codecs}) == 60
     for item in codecs:
         ownership = BUILTIN_OWNERSHIP[item["id"]]
         assert item["family"] == ownership.family
@@ -95,7 +95,7 @@ def test_performance_ledger_has_stable_schema_and_exact_builtin_coverage():
 
 def test_performance_operations_cover_required_profiles_and_directions():
     operations = _ledger()["operation"]
-    assert len(operations) == 150
+    assert len(operations) == 152
     keys = [
         (item["codec_id"], item["profile"], item["direction"])
         for item in operations
@@ -117,7 +117,7 @@ def test_performance_rows_are_honest_about_initial_evidence():
     operations = _ledger()["operation"]
     states = Counter(item["status"] for item in operations)
     assert states == {
-        "provisional": 142,
+        "provisional": 144,
         "known_gap": 2,
         "not_applicable": 6,
     }
@@ -127,7 +127,7 @@ def test_performance_rows_are_honest_about_initial_evidence():
     assert Counter(
         tuple(item["evidence_gaps"]) for item in provisional
     ) == {
-        ("candidate comparison on all required toolchains",): 128,
+        ("candidate comparison on all required toolchains",): 130,
         (
             "profile-specific current-backend measurement missing",
             "candidate comparison on all required toolchains",
@@ -228,6 +228,8 @@ def test_performance_ledger_pins_material_backend_dependencies():
             "hloc_matches",
         }:
             expected.add("h5py >=3.11")
+        if item["codec_id"] == "zarr":
+            expected.update({"zarr >=3.1,<4", "numcodecs"})
         if item["codec_id"] in json_codecs:
             expected.add("nlohmann_json 3.11.3")
         if item["direction"] == "decode" and (

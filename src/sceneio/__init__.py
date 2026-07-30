@@ -136,6 +136,7 @@ _IO_FORWARDS = frozenset(
         "colmap_database_conversion_report",
         "write_depth",
         "write_flow",
+        "write_zarr",
         "detect",
         "inspect",
         "inspect_depth",
@@ -306,4 +307,5 @@ __all__ = [
     "write_flow",
     "write_header",
     "write_record",
+    "write_zarr",
 ]

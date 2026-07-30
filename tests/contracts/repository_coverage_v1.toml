@@ -476,3 +476,11 @@ source_suite = "tests/codecs/test_hdf5_hloc.py"
 documentation_row = "docs/format_coverage.md"
 inspection_source = "src/sceneio/io/_hdf5.py"
 wheel_smoke_case = "_hdf5_formats"
+
+[[codec]]
+id = "zarr"
+benchmark_case = "zarr"
+source_suite = "tests/codecs/test_zarr.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_zarr.py"
+wheel_smoke_case = "_zarr_formats"

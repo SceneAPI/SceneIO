@@ -722,6 +722,7 @@ def test_assembly_dependency_direction_and_import_delta_are_exact():
         "sceneio.io._inspectors.reconstruction",
         "sceneio.io._inspectors.splats",
         "sceneio.io._hdf5",
+        "sceneio.io._zarr",
         "sceneio.io._registry.assembly",
         "sceneio.io._registry.families.arrays",
         "sceneio.io._registry.families.containers",
@@ -1167,7 +1168,7 @@ def test_assembly_dependency_direction_and_import_delta_are_exact():
         "3c07bcefabbd0d9be935ffd22c5ef1e7f4642321"
     )
     assert benchmark_contract["rows"] == 56
-    assert len(CANONICAL_BUILTIN_IDS) == 59
+    assert len(CANONICAL_BUILTIN_IDS) == 60
     assert benchmark_contract["structural_projection_sha256"] == (
         "2295f9ab10dbf141c76ef6f7cbf4561ad656a1dde3cc7c8dcbff8b5bc23d6927"
     )

@@ -33,6 +33,8 @@ redistribution choice used by SceneIO is stated explicitly.
 | COLMAP persisted formats | upstream schema/format references pinned at `0b31f98133b470eae62811b557dc2bcff1e4f9a5` (3.13.0), `a0d785fba74b2664f31edc4a29026a8b27c00f67` (4.1.1), and `64805cb870b574a569dccc34918d95a2db2b2fee` (current-main snapshot); OpsiClear database/dense reference pinned at `de15b08a2dba98b55d6ddfb7cedac147838afbb4` and compact-adapter reference pinned at `a3cfdd784d16a493878877f445fd1e27333fd8fc` | independently implemented sparse/database/dense codecs plus workspace, extended-sidecar, MappingInput, MegaLoc, rig, SIFT, pair/match, and Sim3 adapters; no COLMAP library is linked or bundled | BSD-3-Clause for upstream COLMAP formats; SceneIO implementation Apache-2.0 | [COLMAP notice](colmap.txt), [OpsiClear compatibility authorization record](opsiclear-colmap-mod.txt) |
 | h5py | optional dependency `>=3.11` (3.16.0 locally validated) | separately installed optional HDF5 provider; not bundled in SceneIO distributions | BSD-3-Clause | [h5py.txt](h5py.txt) |
 | HDF5 | provider version selected by the separately installed h5py distribution | used through h5py; not bundled or linked into SceneIO distributions | permissive HDF5 license | [hdf5.txt](hdf5.txt) |
+| Zarr Python | optional dependency `>=3.1,<4` (3.2.1 locally validated) | separately installed optimized Zarr v2/v3 provider; not bundled in SceneIO distributions | MIT | [zarr.txt](zarr.txt) |
+| numcodecs | version selected by the separately installed Zarr distribution (0.16.5 locally validated) | separately installed compiled chunk-codec provider used by Zarr; not bundled in SceneIO distributions | MIT top-level terms; individual bundled codecs retain their upstream permissive terms in the provider distribution | [numcodecs.txt](numcodecs.txt) |
 
 The complete Apache-2.0 terms in the root `LICENSE` also cover the
 Apache-licensed portion of LAZperf. Local integration and correctness changes
@@ -41,8 +43,8 @@ to vendored or fetched projects are documented beside their sources in
 
 NumPy is SceneIO's sole base Python runtime dependency, but it is installed as
 a separate distribution and is not copied or linked into SceneIO wheels.
-h5py and its HDF5 provider are separately installed only when the `hdf5`
-extra is selected; neither is copied or linked into SceneIO wheels. Build
+h5py/HDF5 and Zarr/numcodecs are separately installed only when their
+respective extras are selected; none is copied or linked into SceneIO wheels. Build
 tools and test-only oracle packages are otherwise not bundled. Delvewheel
 itself is not bundled, but its generated Windows bootstrap and the verifier's
 exact-output fixture are distribution content, so its notice is included.

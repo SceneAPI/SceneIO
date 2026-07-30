@@ -303,6 +303,11 @@ COMPARISON_QUALIFICATIONS = MappingProxyType(
             "bench/io_bench/oracles/containers.py",
             runner_kind="path",
         ),
+        "zarr": _timed(
+            "zarr-python",
+            "bench/io_bench/oracles/containers.py",
+            runner_kind="path",
+        ),
     }
 )
 

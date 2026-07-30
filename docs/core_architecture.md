@@ -4,7 +4,7 @@ How the compiled core is organized, and **how to add a codec** — the two
 things that keep this expansible as the format list from
 `formats_survey.md` grows.
 
-> **Growth checkpoint:** the live registry has reached 54 codec ids. The
+> **Growth checkpoint:** the live registry has reached 60 codec ids. The
 > format-focused native layer remains coherent, but registry, inspection,
 > benchmark, test-matrix, dependency, and binding wiring have outgrown a flat
 > layout. The behavior-preserving R3-R5 organization work and R6 source/package
@@ -637,9 +637,9 @@ returns `ColmapDatabase`.
 | `pair` | `colmap_db` |
 | `points` | `compressed_ply`, `gaussian_ply`, `ksplat`, `las`, `laz`, `pcd`, `ply`, `pts`, `sog`, `splat`, `xyz` |
 | `primitive_id` | `glb`, `gltf` |
-| `slices` | `hdf5`, `safetensors` |
+| `slices` | `hdf5`, `safetensors`, `zarr` |
 | `states` | `euroc_state` |
-| `tensors` | `hdf5`, `safetensors` |
+| `tensors` | `hdf5`, `safetensors`, `zarr` |
 | `window` | `colmap_mvs_depth`, `colmap_mvs_normal`, `dmb`, `flo`, `netpbm`, `pfm`, `webp` |
 <!-- sceneio-partial-summary:end -->
 

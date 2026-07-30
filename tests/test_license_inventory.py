@@ -29,6 +29,7 @@ EXPECTED_NOTICES = {
     "nanobind.txt",
     "nlohmann-json-source.txt",
     "nlohmann-json.txt",
+    "numcodecs.txt",
     "opsiclear-colmap-mod.txt",
     "sqlite.txt",
     "stb.txt",
@@ -36,6 +37,7 @@ EXPECTED_NOTICES = {
     "tinyobjloader.txt",
     "zstd-source.txt",
     "zstd.txt",
+    "zarr.txt",
 }
 
 FETCHCONTENT_NOTICE = {}
