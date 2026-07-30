@@ -5055,6 +5055,8 @@ Implementation:
 - [x] Keep generic HDF5 numeric/bool schemas, nested names, text root attrs,
       metadata inspection, named reads, hyperslabs, and atomic replacement in
       SceneIO.
+- [x] Collapse full HDF5 link/object enumeration to one pass and make named
+      and sliced reads validate only their selected paths and ancestors.
 - [x] Map documented hloc features and matches into native `FeatureSet` and
       `MatchGraph` records without losing descriptor dtype/orientation,
       uncertainty, endpoints, dense extents, row order, or score presence.
@@ -5072,6 +5074,9 @@ Verification and documentation:
 - [x] Add three path-native benchmark rows and the 59-codec qualification
       ledger. Representative local measurements are recorded in
       `bench/BASELINE.md`.
+- [x] Add a generated 5,000-dataset cardinality measurement and a structural
+      selected-read guard; record the 447.016-to-0.522 ms named-read delta and
+      retain `bench/bench_hdf5_cardinality.py` as its repeatable entry point.
 - [x] Add exact h5py and HDF5 notices to `LICENSES/` and document that neither
       provider is bundled.
 - [x] Update format coverage, roadmap, architecture, optimization, gap-plan,
@@ -5083,7 +5088,7 @@ Verification and documentation:
 
 H1 local closure evidence:
 
-- the exact collection has 3,941 nodes; local MSVC passes 3,936 with five
+- the exact collection has 3,947 nodes; local MSVC passes 3,942 with five
   documented optional skips, the 123-test focused gate passes, Ruff and
   `git diff --check` are clean, and the manifest-driven installed-surface
   smoke completes;

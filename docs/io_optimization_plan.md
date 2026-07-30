@@ -177,8 +177,15 @@ or h5py dataset constructor, reducing traced full-read peak from 33.6 MB to
 full-array `numpy.unique` validation with an ordered fast path plus a
 sort-and-adjacent fallback, improving the same fixture from 95 to 1,417 MB/s.
 Output validation remains unchanged. Native hloc decode conversion and
-high-cardinality metadata traversal remain measured follow-up work rather
-than being hidden behind the aggregate payload benchmark.
+high-cardinality metadata traversal were measured separately rather than
+being hidden behind the aggregate payload benchmark. The generic HDF5
+follow-up now resolves selected paths without a global walk and combines full
+link/object validation into one traversal. On a generated 5,000-dataset file,
+one named read changed from 447.016 ms to 0.522 ms and full inspection changed
+from 459.803 ms to 363.624 ms. Partial reads validate root metadata plus each
+selected path and its ancestors; unrelated objects are outside that partial
+result. High-group-count hloc record construction and native hloc decode
+conversion remain measured follow-up work.
 The latest record waves add the four calibration formats over `CameraRig`, g2o
 over `PoseGraph`, `colmap_db` over
 `ColmapDatabase`/`FeatureSet`/`MatchGraph`, polygonal PLY over `Mesh`, and

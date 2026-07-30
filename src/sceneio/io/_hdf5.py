@@ -93,29 +93,11 @@ def _has_duplicate_indices(values: np.ndarray) -> bool:
     return bool(np.any(ordered[1:] == ordered[:-1]))
 
 
-def _validate_hdf5_links(handle) -> None:
-    h5py = _require_h5py()
-    unsupported: list[str] = []
-    hard_targets: dict[int, str] = {}
-
-    def visit(name: str, link: object) -> bool | None:
-        if isinstance(link, (h5py.SoftLink, h5py.ExternalLink)):
-            unsupported.append(name)
-            return True
-        if isinstance(link, h5py.HardLink):
-            address = int(h5py.h5o.get_info(handle[name].id).addr)
-            if address in hard_targets:
-                unsupported.append(name)
-                return True
-            hard_targets[address] = name
-        return None
-
-    handle.visititems_links(visit)
-    if unsupported:
-        raise ValueError(
-            f"HDF5 link {unsupported[0]!r}: soft, external, and aliased "
-            "hard links are unsupported"
-        )
+def _unsupported_link(name: str) -> None:
+    raise ValueError(
+        f"HDF5 link {name!r}: soft, external, and aliased "
+        "hard links are unsupported"
+    )
 
 
 def _validate_dataset_storage(dataset, context: str) -> None:
@@ -148,33 +130,47 @@ def _dataset_items(
     too_many = False
     virtual: list[str] = []
     attributed_groups: list[str] = []
-    _validate_hdf5_links(handle)
+    hard_targets: dict[int, str] = {}
+    failure: Exception | None = None
 
-    def visit(name: str, value: object) -> bool | None:
-        nonlocal too_many
-        if (
-            generic
-            and isinstance(value, h5py.Group)
-            and set(value.attrs)
-        ):
-            attributed_groups.append(name)
+    def visit(name: str, link: object) -> bool | None:
+        nonlocal failure, too_many
+        try:
+            if isinstance(link, (h5py.SoftLink, h5py.ExternalLink)):
+                _unsupported_link(name)
+            value = handle[name]
+            address = int(h5py.h5o.get_info(value.id).addr)
+            if address in hard_targets:
+                _unsupported_link(name)
+            hard_targets[address] = name
+            if (
+                generic
+                and isinstance(value, h5py.Group)
+                and set(value.attrs)
+            ):
+                attributed_groups.append(name)
+                return True
+            if isinstance(value, h5py.Dataset):
+                if value.is_virtual:
+                    virtual.append(name)
+                    return True
+                if generic:
+                    _validate_generic_dataset_metadata(
+                        value,
+                        f"HDF5 dataset {name!r}",
+                    )
+                result.append((name, value))
+                if len(result) > _MAX_DATASETS:
+                    too_many = True
+                    return True
+            return None
+        except Exception as exc:
+            failure = exc
             return True
-        if isinstance(value, h5py.Dataset):
-            if value.is_virtual:
-                virtual.append(name)
-                return True
-            if generic:
-                _validate_generic_dataset_metadata(
-                    value,
-                    f"HDF5 dataset {name!r}",
-                )
-            result.append((name, value))
-            if len(result) > _MAX_DATASETS:
-                too_many = True
-                return True
-        return None
 
-    handle.visititems(visit)
+    handle.visititems_links(visit)
+    if failure is not None:
+        raise failure
     if virtual:
         raise ValueError(
             f"HDF5 dataset {virtual[0]!r}: virtual datasets are unsupported"
@@ -291,6 +287,45 @@ def _validate_dataset_name(name: str) -> str:
     return name
 
 
+def _selected_datasets(
+    handle,
+    names: tuple[str, ...],
+) -> tuple[tuple[str, Any], ...]:
+    h5py = _require_h5py()
+    result: list[tuple[str, Any]] = []
+    hard_targets: dict[int, str] = {}
+    for raw_name in names:
+        name = _validate_dataset_name(raw_name)
+        value = handle
+        parts = name.split("/")
+        for index, part in enumerate(parts):
+            link = value.get(part, getlink=True)
+            selected_path = "/".join(parts[: index + 1])
+            if link is None:
+                raise ValueError(f"HDF5: no dataset named {name!r}")
+            if isinstance(link, (h5py.SoftLink, h5py.ExternalLink)):
+                _unsupported_link(selected_path)
+            value = value[part]
+            if index != len(parts) - 1:
+                if not isinstance(value, h5py.Group):
+                    raise ValueError(f"HDF5: no dataset named {name!r}")
+                if set(value.attrs):
+                    raise ValueError(
+                        f"HDF5 group {selected_path!r}: attributes outside "
+                        "the file root are unsupported"
+                    )
+        if not isinstance(value, h5py.Dataset):
+            raise ValueError(f"HDF5: no dataset named {name!r}")
+        _validate_generic_dataset_metadata(value, f"HDF5 dataset {name!r}")
+        address = int(h5py.h5o.get_info(value.id).addr)
+        previous = hard_targets.get(address)
+        if previous is not None and previous != name:
+            _unsupported_link(name)
+        hard_targets[address] = name
+        result.append((name, value))
+    return tuple(result)
+
+
 def read_hdf5(path: str | Path):
     """Read supported numeric HDF5 datasets into a native ``TensorDict``."""
 
@@ -310,13 +345,9 @@ def read_hdf5_tensors(path: str | Path, names: tuple[str, ...]):
     arrays: dict[str, np.ndarray] = {}
     with h5py.File(path, "r") as handle:
         attrs = _root_attrs(handle, expected_format="hdf5")
-        datasets = dict(_dataset_items(handle, generic=True))
-        for raw_name in names:
-            name = _validate_dataset_name(raw_name)
-            if name not in datasets:
-                raise ValueError(f"HDF5: no dataset named {name!r}")
+        for name, dataset in _selected_datasets(handle, names):
             arrays[name] = _canonical_array(
-                datasets[name][...],
+                dataset[...],
                 f"HDF5 dataset {name!r}",
             )
     return _core.tensor_dict(arrays, attrs)
@@ -332,12 +363,13 @@ def read_hdf5_slices(
     arrays: dict[str, np.ndarray] = {}
     with h5py.File(path, "r") as handle:
         attrs = _root_attrs(handle, expected_format="hdf5")
-        datasets = dict(_dataset_items(handle, generic=True))
-        for raw_name, start, stop in selections:
-            name = _validate_dataset_name(raw_name)
-            if name not in datasets:
-                raise ValueError(f"HDF5: no dataset named {name!r}")
-            dataset = datasets[name]
+        names = tuple(raw_name for raw_name, _, _ in selections)
+        datasets = _selected_datasets(handle, names)
+        for (name, dataset), (_, start, stop) in zip(
+            datasets,
+            selections,
+            strict=True,
+        ):
             if dataset.ndim == 0:
                 raise ValueError(f"HDF5: scalar dataset {name!r} cannot be sliced")
             if stop > dataset.shape[0]:

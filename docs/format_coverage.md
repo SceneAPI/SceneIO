@@ -78,7 +78,7 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > [`names_to_pair`](https://github.com/cvg/Hierarchical-Localization/blob/master/hloc/utils/parsers.py)
 > and
 > [`writer_fn`](https://github.com/cvg/Hierarchical-Localization/blob/master/hloc/match_features.py)
-> behavior. The exact collection has 3,941 nodes; local MSVC passes 3,936
+> behavior. The exact collection has 3,947 nodes; local MSVC passes 3,942
 > with five documented optional skips, plus the HDF5/hloc focused gate and
 > installed-surface smoke. NumPy remains the sole unconditional dependency;
 > h5py/HDF5 are not bundled. Cross-platform package evidence remains pending
@@ -91,7 +91,11 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > refusal. On the five-run scale-16 local fixture this changed HDF5
 > read/write from 1,658/1,777 MB/s to 2,266/2,921 MB/s, halved its traced
 > read peak to one payload copy, and changed hloc match write from 95 to
-> 1,417 MB/s. High-group-count traversal and native hloc decode conversion
+> 1,417 MB/s. Full HDF5 metadata enumeration now uses one traversal, while
+> named and sliced reads validate only selected paths and ancestors. On a
+> generated 5,000-dataset file, a one-dataset read changed from 447.016 ms
+> to 0.522 ms and full inspection from 459.803 ms to 363.624 ms.
+> High-group-count hloc record construction and native hloc decode conversion
 > remain explicit optimization follow-ups.
 >
 > **C3/C4 hosted closure (2026-07-29):** the exact collection is
@@ -833,7 +837,7 @@ public-domain SQLite amalgamation statically linked into `_core`.
 | `y4m` | `ImageSequence` | R+W | independent Python parser/writer + exact golden bytes | original dependency-free YUV4MPEG2 subset; uint8 mono/4:2:0/4:2:2/4:4:4 planar frames, odd dimensions, exact rational timing, mmap, streaming sink, inspect, and frame ranges; no RGB conversion or video-framework dependency |
 | `animated_webp` | `ImageSequence` | R+W | Pillow/libwebp animation-container oracle in `tests/codecs/test_animated_webp.py` | repository-pinned libwebp mux/demux/animation APIs; fully composited packed uint8 RGB/RGBA frames, exact millisecond timing, loop/background metadata, mmap, streaming sink, and metadata-only inspection |
 | `apng` | `ImageSequence` | R+W | Pillow plus specification-derived chunk/compositing oracle in `tests/codecs/test_apng.py` | repository-owned APNG container logic over pinned lodepng; fully composited packed uint8 RGBA frames, exact rational timing representable as integer nanoseconds, loop count, source/over blend, none/background/previous disposal, mmap, streaming sink, and metadata-only inspection |
-| `hdf5` | `TensorDict` | R+W, inspect, partial | independent **h5py** layouts in `tests/codecs/test_hdf5_hloc.py` | optional `sceneio[hdf5]`; numeric/bool datasets, nested paths, text root attrs, named reads, leading-axis hyperslabs, and atomic replacement; indirect/virtual/object/reference/vlen layouts reject |
+| `hdf5` | `TensorDict` | R+W, inspect, partial | independent **h5py** layouts in `tests/codecs/test_hdf5_hloc.py` | optional `sceneio[hdf5]`; numeric/bool datasets, nested paths, text root attrs, selected-path named reads, leading-axis hyperslabs, and atomic replacement; full reads reject indirect/virtual/object/reference/vlen layouts, while partial reads validate the selected paths and ancestors |
 | `hloc_features` | `HlocFeatureStore` of native `FeatureSet` | R+W, inspect | independent **h5py** documented layout | preserves keypoints, D×N wire descriptors as native N×D with uint8/int8/f16/f32/f64 dtype, scores, image size, nested names, and keypoint uncertainty |
 | `hloc_matches` | `HlocMatchStore` + native `MatchGraph` | R+W, inspect | independent **h5py** documented layout | preserves dense `matches0`, optional `matching_scores0`, exact endpoint names, source extents/dtypes, pair order, and mixed score presence |
 

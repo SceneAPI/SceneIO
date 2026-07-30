@@ -155,6 +155,31 @@ def test_hdf5_partial_read_does_not_materialize_unselected_dataset(
     assert peak < 2 * 1024 * 1024
 
 
+def test_hdf5_partial_read_does_not_walk_unselected_metadata(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    path = tmp_path / "many-datasets.h5"
+    with h5py.File(path, "w") as handle:
+        for index in range(512):
+            handle.create_dataset(
+                f"group-{index // 64}/value-{index}",
+                data=np.int32(index),
+            )
+
+    def fail_global_walk(*_args, **_kwargs):
+        raise AssertionError("selected HDF5 read performed a global walk")
+
+    monkeypatch.setattr(h5py.Group, "visititems_links", fail_global_walk)
+    selected = sceneio.read_partial(
+        path,
+        format="hdf5",
+        tensors=("group-7/value-511",),
+    )
+    assert selected.keys() == ["group-7/value-511"]
+    assert int(selected["group-7/value-511"]) == 511
+
+
 def test_hdf5_refuses_unrepresented_dataset_and_attribute_types(
     tmp_path: Path,
 ) -> None:
@@ -222,7 +247,7 @@ def test_hdf5_refuses_unrepresented_dataset_and_attribute_types(
         sceneio.read(declared_path, format="hdf5")
 
 
-def test_hdf5_refuses_linked_and_virtual_datasets_on_every_read_path(
+def test_hdf5_full_reads_refuse_links_and_partial_validates_selected_paths(
     tmp_path: Path,
 ) -> None:
     linked = tmp_path / "linked.h5"
@@ -232,14 +257,21 @@ def test_hdf5_refuses_linked_and_virtual_datasets_on_every_read_path(
     for operation in (
         lambda: sceneio.read(linked, format="hdf5"),
         lambda: sceneio.inspect(linked, format="hdf5"),
-        lambda: sceneio.read_partial(
-            linked,
-            format="hdf5",
-            tensors=("values",),
-        ),
     ):
         with pytest.raises(sceneio.FormatError, match="links are unsupported"):
             operation()
+    selected = sceneio.read_partial(
+        linked,
+        format="hdf5",
+        tensors=("values",),
+    )
+    np.testing.assert_array_equal(selected["values"], np.arange(4))
+    with pytest.raises(sceneio.FormatError, match="links are unsupported"):
+        sceneio.read_partial(
+            linked,
+            format="hdf5",
+            tensors=("alias",),
+        )
 
     aliased = tmp_path / "hard-linked.h5"
     with h5py.File(aliased, "w") as handle:
@@ -247,6 +279,18 @@ def test_hdf5_refuses_linked_and_virtual_datasets_on_every_read_path(
         handle["alias"] = values
     with pytest.raises(sceneio.FormatError, match="links are unsupported"):
         sceneio.read(aliased, format="hdf5")
+    selected = sceneio.read_partial(
+        aliased,
+        format="hdf5",
+        tensors=("values",),
+    )
+    np.testing.assert_array_equal(selected["values"], np.arange(4))
+    with pytest.raises(sceneio.FormatError, match="links are unsupported"):
+        sceneio.read_partial(
+            aliased,
+            format="hdf5",
+            tensors=("values", "alias"),
+        )
 
     source = tmp_path / "virtual-source.h5"
     virtual = tmp_path / "virtual.h5"

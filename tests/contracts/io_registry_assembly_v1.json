@@ -384,8 +384,8 @@
     "last": "tests/test_points_binary.py::test_bad_magic_rejected"
   },
   "pytest_candidate_collection": {
-    "count": 3941,
-    "sorted_normalized_node_ids_sha256": "d6dfb7933b8b49dc7c6d1c395ae11e78ef3c4f2f93bea71cd7007d7f943ed474",
+    "count": 3947,
+    "sorted_normalized_node_ids_sha256": "72a1a2f20309de7c02e341e9570a3e30db3a1c6e50c62d6a9332d79480336125",
     "added_nodes": [
       "tests/codecs/test_animated_webp.py::test_sceneio_writer_is_lossless_and_oracle_readable",
       "tests/codecs/test_animated_webp.py::test_pillow_writer_is_sceneio_readable_bit_exact",
@@ -1219,8 +1219,9 @@
       "tests/codecs/test_hdf5_hloc.py::test_generic_hdf5_reads_independent_h5py_fixture",
       "tests/codecs/test_hdf5_hloc.py::test_generic_hdf5_write_is_h5py_ground_truth_and_partial",
       "tests/codecs/test_hdf5_hloc.py::test_hdf5_partial_read_does_not_materialize_unselected_dataset",
+      "tests/codecs/test_hdf5_hloc.py::test_hdf5_partial_read_does_not_walk_unselected_metadata",
       "tests/codecs/test_hdf5_hloc.py::test_hdf5_refuses_unrepresented_dataset_and_attribute_types",
-      "tests/codecs/test_hdf5_hloc.py::test_hdf5_refuses_linked_and_virtual_datasets_on_every_read_path",
+      "tests/codecs/test_hdf5_hloc.py::test_hdf5_full_reads_refuse_links_and_partial_validates_selected_paths",
       "tests/codecs/test_hdf5_hloc.py::test_hdf5_canonical_array_reuses_native_contiguous_storage",
       "tests/codecs/test_hdf5_hloc.py::test_native_feature_factory_preserves_hloc_descriptor_dtypes[uint8]",
       "tests/codecs/test_hdf5_hloc.py::test_native_feature_factory_preserves_hloc_descriptor_dtypes[int8]",
@@ -1245,6 +1246,11 @@
       "tests/codecs/test_hdf5_hloc.py::test_hloc_matches_read_and_inspect_refuse_unrepresented_metadata[read]",
       "tests/codecs/test_hdf5_hloc.py::test_hloc_matches_read_and_inspect_refuse_unrepresented_metadata[inspect]",
       "tests/codecs/test_hdf5_hloc.py::test_hdf5_public_capabilities_and_models_are_explicit",
+      "tests/test_hdf5_cardinality_benchmark.py::test_hdf5_cardinality_benchmark_is_reproducible",
+      "tests/test_hdf5_cardinality_benchmark.py::test_hdf5_cardinality_benchmark_rejects_invalid_sizes[kwargs0]",
+      "tests/test_hdf5_cardinality_benchmark.py::test_hdf5_cardinality_benchmark_rejects_invalid_sizes[kwargs1]",
+      "tests/test_hdf5_cardinality_benchmark.py::test_hdf5_cardinality_benchmark_rejects_invalid_sizes[kwargs2]",
+      "tests/test_hdf5_cardinality_benchmark.py::test_hdf5_cardinality_benchmark_rejects_invalid_sizes[kwargs3]",
       "tests/test_io_registry_architecture.py::test_repository_coverage_manifest_is_complete_and_resolvable",
       "tests/test_performance_status.py::test_performance_ledger_has_stable_schema_and_exact_builtin_coverage"
     ],

@@ -3447,3 +3447,39 @@ throughput difference is not attributed to the patch. Focused tests cover
 native, strided, and non-native-endian arrays plus ordered, shuffled, empty,
 and duplicate match-index inputs. High-cardinality metadata traversal and
 native hloc decode conversion remain separate measured follow-up items.
+
+### HDF5 high-cardinality traversal follow-up (2026-07-30)
+
+Generic HDF5 full reads and inspection previously performed separate global
+link and object walks. Named and sliced reads also paid both walks even though
+they selected one path. Full enumeration now validates links, groups, and
+datasets in one pass. Partial reads resolve only the selected paths and their
+ancestor groups; root metadata and every selected link, attribute set, dtype,
+layout, and virtual-dataset condition remain validated. Unselected objects
+are not interpreted as part of a partial result.
+
+A generated file with 5,000 scalar datasets across 50 groups measured:
+
+| operation | before | after | change |
+|---|---:|---:|---:|
+| selected final dataset | 447.016 ms | 0.522 ms | 856.35x |
+| inspect all datasets | 459.803 ms | 363.624 ms | 1.26x |
+| direct h5py selected read | 0.185 ms | 0.202 ms | reference |
+
+The 1.971 MB fixture is generated during measurement and is not committed.
+The focused regression test replaces the global visitor with a failing stub
+while a selected read succeeds, so future changes cannot silently restore the
+whole-file metadata walk. Full read and inspection intentionally remain
+linear in the number of represented objects.
+
+The reusable after-state command is:
+
+```powershell
+.venv/Scripts/python.exe bench/bench_hdf5_cardinality.py `
+  --datasets 5000 --groups 50 --runs 5 `
+  --json build/hdf5-cardinality-after.json
+```
+
+Its local MSVC median was 0.329 ms selected, 357.433 ms inspection, and
+0.315 ms for the direct h5py selected reference. Dataset values and the
+inspection count are checked during every timed invocation.

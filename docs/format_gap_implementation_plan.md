@@ -14,7 +14,7 @@
   reads, and atomic replacement; optimized h5py is an optional
   `sceneio[hdf5]` provider and independent oracle. The prior APNG 56-codec
   checkpoint remains its historical evidence. The current registry has 59
-  codecs and the exact collection has 3,941 nodes. Local MSVC passes 3,936
+  codecs and the exact collection has 3,947 nodes. Local MSVC passes 3,942
   tests with five documented optional skips; the focused 123-test gate,
   installed-surface smoke, Ruff, and diff checks also pass. Cross-platform
   package evidence remains user-gated.
@@ -1507,7 +1507,9 @@ Implementation:
   `FeatureSet`/`MatchGraph`, with exact descriptor orientation/dtype,
   uncertainty, endpoint names, dense extents, pair order, and score presence.
 - [x] Inspect metadata without reading bulk payloads. Generic HDF5 partial
-  reads select complete datasets or leading-axis hyperslabs directly.
+  reads select complete datasets or leading-axis hyperslabs directly, resolve
+  only selected paths and ancestors, and retain strict validation on that
+  selected surface.
 - [x] Use h5py path writes with temporary-file replacement; no full encoded
   Python byte buffer exists for this path-native format.
 
@@ -1520,6 +1522,10 @@ Oracle and verification:
   wheel smoke, and public capability contracts are tested.
 - [x] The benchmark has three path-native rows with direct h5py comparison,
   metadata-only inspection, and HDF5 named-read measurements.
+- [x] A generated 5,000-dataset cardinality measurement covers full metadata
+  enumeration and selected-path scaling; a structural test prevents selected
+  reads from restoring a global object walk. The reproducible entry point is
+  `bench/bench_hdf5_cardinality.py`.
 - [ ] Validate the optional extra and unavailable state on all package
   platforms through the user-triggered nonpublishing wheel workflow.
 
