@@ -726,6 +726,7 @@ double sigmoid(double value) {
 
 nb::bytes write_ksplat(const GaussianCloud &cloud, int compression_level,
                        float block_size, size_t bucket_size) {
+    require_legacy_gaussian_conventions(cloud, "ksplat writer");
     std::string encoded;
     {
         nb::gil_scoped_release release;

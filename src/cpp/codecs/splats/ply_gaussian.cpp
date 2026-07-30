@@ -194,6 +194,7 @@ GaussianCloud read_gaussian_ply_points(nb::handle source, size_t start,
 }
 
 nb::bytes write_gaussian_ply(const GaussianCloud &g) {
+    require_legacy_gaussian_conventions(g, "gaussian PLY writer");
     std::string h = "ply\nformat binary_little_endian 1.0\nelement vertex " + std::to_string(g.n) + "\n";
     h += "property float x\nproperty float y\nproperty float z\n";
     h += "property float f_dc_0\nproperty float f_dc_1\nproperty float f_dc_2\n";
@@ -222,7 +223,12 @@ nb::bytes write_gaussian_ply(const GaussianCloud &g) {
 
 using arr = nb::ndarray<const float, nb::c_contig, nb::device::cpu>;
 GaussianCloud make_gc(arr means, arr scales, arr quats, arr opacities, arr sh_dc,
-                      std::optional<arr> sh_rest) {
+                      std::optional<arr> sh_rest,
+                      std::string quaternion_order,
+                      std::string scale_space,
+                      std::string opacity_space,
+                      std::string sh_layout,
+                      std::string source_precision) {
     size_t nn = means.shape(0);
     auto chk = [&](const arr &a, size_t d1, const char *nm) {
         if (a.shape(0) != nn || (d1 && (a.ndim() < 2 || a.shape(1) != d1)))
@@ -237,6 +243,12 @@ GaussianCloud make_gc(arr means, arr scales, arr quats, arr opacities, arr sh_dc
     g.quats.assign(quats.data(), quats.data() + nn * 4);
     g.opacity.assign(opacities.data(), opacities.data() + nn);
     g.sh_dc.assign(sh_dc.data(), sh_dc.data() + nn * 3);
+    g.quaternion_order = std::move(quaternion_order);
+    g.scale_space = std::move(scale_space);
+    g.opacity_space = std::move(opacity_space);
+    g.sh_layout = std::move(sh_layout);
+    g.source_precision = std::move(source_precision);
+    validate_gaussian_conventions(g, "gaussian_cloud");
     if (sh_rest) {
         size_t R = sh_rest->ndim() >= 2 ? sh_rest->shape(1) : 0;
         if (sh_rest->shape(0) != nn || gc_deg_from_rest(R) < 0)
@@ -246,6 +258,116 @@ GaussianCloud make_gc(arr means, arr scales, arr quats, arr opacities, arr sh_dc
         g.sh_rest.assign(sh_rest->data(), sh_rest->data() + nn * R);
     }
     return g;
+}
+
+GaussianCloud convert_gc(
+    const GaussianCloud &source,
+    std::optional<std::string> quaternion_order,
+    std::optional<std::string> scale_space,
+    std::optional<std::string> opacity_space,
+    std::optional<std::string> sh_layout) {
+    validate_gaussian_structure(
+        source, "convert_gaussian_conventions input");
+    validate_gaussian_conventions(source, "convert_gaussian_conventions input");
+    GaussianCloud result = source;
+    const std::string target_quaternion_order =
+        quaternion_order.value_or(source.quaternion_order);
+    const std::string target_scale_space =
+        scale_space.value_or(source.scale_space);
+    const std::string target_opacity_space =
+        opacity_space.value_or(source.opacity_space);
+    const std::string target_sh_layout =
+        sh_layout.value_or(source.sh_layout);
+
+    result.quaternion_order = target_quaternion_order;
+    result.scale_space = target_scale_space;
+    result.opacity_space = target_opacity_space;
+    result.sh_layout = target_sh_layout;
+    validate_gaussian_conventions(result, "convert_gaussian_conventions target");
+
+    if (source.quaternion_order != target_quaternion_order) {
+        for (size_t index = 0; index < source.n; ++index) {
+            const float *input = source.quats.data() + index * 4;
+            float *output = result.quats.data() + index * 4;
+            if (source.quaternion_order == "wxyz") {
+                output[0] = input[1];
+                output[1] = input[2];
+                output[2] = input[3];
+                output[3] = input[0];
+            } else {
+                output[0] = input[3];
+                output[1] = input[0];
+                output[2] = input[1];
+                output[3] = input[2];
+            }
+        }
+    }
+
+    if (source.scale_space != target_scale_space) {
+        for (size_t index = 0; index < source.scales.size(); ++index) {
+            const float input = source.scales[index];
+            if (!std::isfinite(input))
+                throw std::invalid_argument(
+                    "convert_gaussian_conventions: scales must be finite");
+            if (source.scale_space == "linear" && !(input > 0.0f))
+                throw std::invalid_argument(
+                    "convert_gaussian_conventions: linear scales must be positive");
+            const float output =
+                source.scale_space == "log" ? std::exp(input) : std::log(input);
+            if (!std::isfinite(output) ||
+                (target_scale_space == "linear" && !(output > 0.0f)))
+                throw std::invalid_argument(
+                    "convert_gaussian_conventions: scale conversion is outside "
+                    "the finite positive domain");
+            result.scales[index] = output;
+        }
+    }
+
+    if (source.opacity_space != target_opacity_space) {
+        for (size_t index = 0; index < source.opacity.size(); ++index) {
+            const float input = source.opacity[index];
+            if (!std::isfinite(input))
+                throw std::invalid_argument(
+                    "convert_gaussian_conventions: opacities must be finite");
+            if (source.opacity_space == "logit") {
+                const double value = static_cast<double>(input);
+                const double output =
+                    value >= 0.0
+                        ? 1.0 / (1.0 + std::exp(-value))
+                        : std::exp(value) / (1.0 + std::exp(value));
+                result.opacity[index] = static_cast<float>(output);
+            } else {
+                if (!(input > 0.0f && input < 1.0f))
+                    throw std::invalid_argument(
+                        "convert_gaussian_conventions: linear opacities must "
+                        "be strictly between zero and one for logit conversion");
+                result.opacity[index] =
+                    std::log(input) - std::log1p(-input);
+            }
+        }
+    }
+
+    if (source.sh_layout != target_sh_layout && source.num_rest != 0) {
+        const size_t coefficients = source.num_rest / 3;
+        for (size_t index = 0; index < source.n; ++index) {
+            const float *input =
+                source.sh_rest.data() + index * source.num_rest;
+            float *output =
+                result.sh_rest.data() + index * source.num_rest;
+            for (size_t coefficient = 0;
+                 coefficient < coefficients; ++coefficient) {
+                for (size_t channel = 0; channel < 3; ++channel) {
+                    if (source.sh_layout == "channel_grouped")
+                        output[coefficient * 3 + channel] =
+                            input[channel * coefficients + coefficient];
+                    else
+                        output[channel * coefficients + coefficient] =
+                            input[coefficient * 3 + channel];
+                }
+            }
+        }
+    }
+    return result;
 }
 
 }  // namespace
@@ -261,6 +383,17 @@ void register_ply_gaussian(nb::module_ &m) {
           "Encode a GaussianCloud to 3DGS Gaussian .ply bytes (binary little-endian).");
     m.def("gaussian_cloud", &make_gc, "means"_a, "scales"_a, "quaternions"_a, "opacities"_a,
           "sh_dc"_a, "sh_rest"_a = nb::none(),
+          "quaternion_order"_a = "wxyz",
+          "scale_space"_a = "log",
+          "opacity_space"_a = "logit",
+          "sh_layout"_a = "channel_grouped",
+          "source_precision"_a = "float32",
           "Build a GaussianCloud from arrays (numpy/torch): means (N,3), scales (N,3), "
           "quaternions (N,4), opacities (N,), sh_dc (N,3), sh_rest (N,{0,9,24,45}).");
+    m.def(
+        "convert_gaussian_conventions", &convert_gc, "cloud"_a,
+        "quaternion_order"_a = nb::none(), "scale_space"_a = nb::none(),
+        "opacity_space"_a = nb::none(), "sh_layout"_a = nb::none(),
+        "Explicitly convert Gaussian activation, quaternion, and SH layout "
+        "conventions without changing the source record.");
 }

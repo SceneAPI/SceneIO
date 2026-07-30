@@ -83,6 +83,7 @@ camera_rig
 colmap_database
 colmap_maxx_schema_info
 consistency_graph
+convert_gaussian_conventions
 depth_map
 feature_set
 flow_field

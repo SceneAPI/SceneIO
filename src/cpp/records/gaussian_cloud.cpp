@@ -27,10 +27,11 @@ void register_gaussian_cloud(nb::module_ &m) {
         .def_prop_ro("sh_dc", [](const GaussianCloud &g) { return vw(g.sh_dc, {g.n, 3}); }, ri)
         .def_prop_ro("sh_rest", [](const GaussianCloud &g) { return vw(g.sh_rest, {g.n, g.num_rest}); }, ri)
         // conventions (metadata, not comments)
-        .def_prop_ro("quaternion_order", [](const GaussianCloud &) { return "wxyz"; })
-        .def_prop_ro("scale_space", [](const GaussianCloud &) { return "log"; })
-        .def_prop_ro("opacity_space", [](const GaussianCloud &) { return "logit"; })
-        .def_prop_ro("sh_layout", [](const GaussianCloud &) { return "channel_grouped"; })
+        .def_ro("quaternion_order", &GaussianCloud::quaternion_order)
+        .def_ro("scale_space", &GaussianCloud::scale_space)
+        .def_ro("opacity_space", &GaussianCloud::opacity_space)
+        .def_ro("sh_layout", &GaussianCloud::sh_layout)
+        .def_ro("source_precision", &GaussianCloud::source_precision)
         .def("__repr__", [](const GaussianCloud &g) {
             return "<GaussianCloud n=" + std::to_string(g.n) +
                    " sh_degree=" + std::to_string(g.sh_degree) + ">";

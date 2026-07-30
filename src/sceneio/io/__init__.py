@@ -45,6 +45,7 @@ from sceneio.io.registry import (
 # Record types produced by the codecs (re-exported for convenience/isinstance).
 Reconstruction = _core.Reconstruction
 GaussianCloud = _core.GaussianCloud
+convert_gaussian_conventions = _core.convert_gaussian_conventions
 PosedViewSet = _core.PosedViewSet
 StateTrajectory = _core.StateTrajectory
 TensorDict = _core.TensorDict
@@ -631,6 +632,7 @@ __all__ = [
     "capabilities",
     "codecs",
     "colmap_database_conversion_report",
+    "convert_gaussian_conventions",
     "detect",
     "inspect",
     "inspect_depth",

@@ -96,6 +96,7 @@ GaussianCloud read_splat_points(nb::handle source, size_t start, size_t stop) {
 }
 
 nb::bytes write_splat(const GaussianCloud &g) {
+    require_legacy_gaussian_conventions(g, "splat writer");
     std::string out;
     {
         nb::gil_scoped_release rel;  // pure-C++ encode; reads only the record's C++ vectors

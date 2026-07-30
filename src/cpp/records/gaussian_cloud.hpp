@@ -2,11 +2,19 @@
 // codecs decode into this same GaussianCloud (registered once), so a splat
 // loaded from either format has an identical in-memory layout.
 //
-// Canonical conventions (raw / pre-activation, matching the 3DGS PLY):
+// Existing codecs default to the raw / pre-activation 3DGS PLY conventions:
 //   means (N,3), scales (N,3, log space), quats (N,4, WXYZ),
 //   opacity (N, logit space), sh_dc (N,3), sh_rest (N,R) channel-grouped
 //   [R.. G.. B..] with R in {0,9,24,45}.
+//
+// USD's ParticleField3DGaussianSplat instead stores linear scales/opacities
+// and coefficient-major RGB SH values. Keep those conventions as record data
+// so a codec can refuse an incompatible record instead of activating values
+// silently. The vectors remain float32; source_precision records whether a
+// losslessly promoted float16 source should be written back as float16.
 #pragma once
+
+#include <limits>
 
 #include "io/common.hpp"
 
@@ -20,6 +28,11 @@ struct GaussianCloud {
     std::vector<float> quats;    // n*4 (WXYZ)
     size_t num_rest = 0;         // R
     int sh_degree = 0;
+    std::string quaternion_order = "wxyz";
+    std::string scale_space = "log";
+    std::string opacity_space = "logit";
+    std::string sh_layout = "channel_grouped";
+    std::string source_precision = "float32";
 };
 
 inline int gc_deg_from_rest(size_t R) {
@@ -31,3 +44,77 @@ inline int gc_deg_from_rest(size_t R) {
 }
 
 inline size_t gc_rest_for_sh_dim(size_t sh_dim) { return sh_dim * 3; }  // {0,3,8,15} -> {0,9,24,45}
+
+inline bool gc_valid_quaternion_order(const std::string &value) {
+    return value == "wxyz" || value == "xyzw";
+}
+
+inline bool gc_valid_scale_space(const std::string &value) {
+    return value == "linear" || value == "log";
+}
+
+inline bool gc_valid_opacity_space(const std::string &value) {
+    return value == "linear" || value == "logit";
+}
+
+inline bool gc_valid_sh_layout(const std::string &value) {
+    return value == "channel_grouped" || value == "coefficient_rgb";
+}
+
+inline bool gc_valid_source_precision(const std::string &value) {
+    return value == "float16" || value == "float32";
+}
+
+inline size_t gc_expected_size(
+    size_t count, size_t width, const char *context) {
+    if (width != 0 &&
+        count > std::numeric_limits<size_t>::max() / width)
+        throw std::invalid_argument(
+            std::string(context) + ": field size overflows size_t");
+    return count * width;
+}
+
+inline void validate_gaussian_structure(
+    const GaussianCloud &cloud, const char *context) {
+    const std::string prefix = std::string(context) + ": ";
+    if (cloud.means.size() != gc_expected_size(cloud.n, 3, context) ||
+        cloud.scales.size() != gc_expected_size(cloud.n, 3, context) ||
+        cloud.quats.size() != gc_expected_size(cloud.n, 4, context) ||
+        cloud.opacity.size() != cloud.n ||
+        cloud.sh_dc.size() != gc_expected_size(cloud.n, 3, context) ||
+        cloud.sh_rest.size() !=
+            gc_expected_size(cloud.n, cloud.num_rest, context) ||
+        gc_deg_from_rest(cloud.num_rest) != cloud.sh_degree)
+        throw std::invalid_argument(prefix + "inconsistent GaussianCloud storage");
+}
+
+inline void validate_gaussian_conventions(
+    const GaussianCloud &cloud, const char *context) {
+    const std::string prefix = std::string(context) + ": ";
+    if (!gc_valid_quaternion_order(cloud.quaternion_order))
+        throw std::invalid_argument(prefix + "unknown quaternion_order");
+    if (!gc_valid_scale_space(cloud.scale_space))
+        throw std::invalid_argument(prefix + "unknown scale_space");
+    if (!gc_valid_opacity_space(cloud.opacity_space))
+        throw std::invalid_argument(prefix + "unknown opacity_space");
+    if (!gc_valid_sh_layout(cloud.sh_layout))
+        throw std::invalid_argument(prefix + "unknown sh_layout");
+    if (!gc_valid_source_precision(cloud.source_precision))
+        throw std::invalid_argument(prefix + "unknown source_precision");
+}
+
+inline void require_legacy_gaussian_conventions(
+    const GaussianCloud &cloud, const char *context) {
+    validate_gaussian_structure(cloud, context);
+    validate_gaussian_conventions(cloud, context);
+    if (cloud.quaternion_order != "wxyz" ||
+        cloud.scale_space != "log" ||
+        cloud.opacity_space != "logit" ||
+        cloud.sh_layout != "channel_grouped" ||
+        cloud.source_precision != "float32")
+        throw std::invalid_argument(
+            std::string(context) +
+            ": requires quaternion_order='wxyz', scale_space='log', "
+            "opacity_space='logit', sh_layout='channel_grouped', and "
+            "source_precision='float32'; convert explicitly before writing");
+}

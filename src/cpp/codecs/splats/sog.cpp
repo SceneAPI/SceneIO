@@ -1608,6 +1608,7 @@ GaussianCloud read_sog_directory_points(const std::string &path,
 }
 
 nb::bytes write_sog(const GaussianCloud &cloud) {
+    require_legacy_gaussian_conventions(cloud, "SOG writer");
     std::string output;
     {
         nb::gil_scoped_release release;
@@ -1618,6 +1619,7 @@ nb::bytes write_sog(const GaussianCloud &cloud) {
 
 void write_sog_directory(const GaussianCloud &cloud,
                          const std::string &path) {
+    require_legacy_gaussian_conventions(cloud, "SOG directory writer");
     nb::gil_scoped_release release;
     const EncodedSog encoded = encode_sog_layers(cloud);
     write_unbundled_transaction(encoded, normalize_metadata_path(path));

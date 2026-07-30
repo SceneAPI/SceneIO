@@ -506,8 +506,11 @@ exposes them:
   and top-left-origin pixel projections. `video_metadata` carries only SQLite
   metadata; nullable strings have presence arrays and source paths are never
   opened. `maxx_schema_info` is `None` outside an owned MAXX profile.
-- `GaussianCloud.quaternion_order == "wxyz"`, `.scale_space == "log"`,
-  `.opacity_space == "logit"`, `.sh_layout == "channel_grouped"`
+- `GaussianCloud` records quaternion order, scale/opacity activation space, SH
+  layout, and float16/float32 source precision. Existing splat codecs default
+  to WXYZ/log/logit/channel-grouped/float32 and refuse other conventions.
+  `convert_gaussian_conventions()` performs an explicit conversion; writers
+  never activate or reorder values implicitly.
 - `Mesh.coordinate_frame == "opengl"` for canonical glTF geometry;
   `MeshScene` retains the source node hierarchy, local transforms, scenes, and
   mesh-to-primitive ranges instead of baking or flattening transforms.

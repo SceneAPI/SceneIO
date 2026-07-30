@@ -5175,6 +5175,16 @@ The existing static `MeshScene` behavior remains supported throughout. Full
 USD, authoring-layer preservation, arbitrary shader/custom schemas, rendering,
 and non-3D-CV media are fixed exclusions.
 
+Progress:
+
+- [x] U0a records TinyUSDZ 0.9.4's raw-stage boundary, official Gaussian
+      attribute parsing, XYZW provider quaternion view, crate-0.8 writer probe,
+      and currently unevaluated composition arcs. TOST and current OpenUSD
+      comparison gates remain open.
+- [x] U1a makes `GaussianCloud` convention-bearing, adds explicit conversion,
+      validates structure before conversion/writes, and keeps all six legacy
+      splat writers on their exact prior conventions.
+
 Local closure evidence:
 
 - the exact collection has 4,049 nodes; local MSVC passes 4,044 with five

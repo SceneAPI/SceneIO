@@ -3577,3 +3577,29 @@ which accounts for part of its measured write advantage. The 67-row
 qualification ledger has 50 timed paths and 17 reviewed exemptions, with
 normalized SHA-256
 `5941120e40ce72d174222c939698b11c318fae3d1e2e5d993e7eb7f0e1e8481f`.
+
+### USD U1 Gaussian convention control (2026-07-30)
+
+The additive convention-bearing `GaussianCloud` unit was checked with three
+median runs over all six existing splat formats:
+
+```powershell
+.venv/Scripts/python.exe bench/bench_io.py --runs 3 --skip-oracles `
+  --only gaussian_ply --only spz --only compressed_ply `
+  --only sog --only ksplat --only splat
+```
+
+| codec | encode/read MB/s | sink MB/s | mmap traced peak | inspect gain |
+|---|---:|---:|---:|---:|
+| `gaussian_ply` | 2,155 / 3,131 | 1,350 | 0.0 MB | 126.10x |
+| `compressed_ply` | 115 / 79 | 103 | 0.0 MB | 620.34x |
+| `sog` | 25 / 414 | 25 | 0.0 MB | 71.05x |
+| `ksplat` | 382 / 579 | 327 | 0.0 MB | 212.02x |
+| `spz` v3 | 91 / 556 | 74 | 0.0 MB | 151.65x |
+| `splat` | 839 / 1,544 | 562 | 0.0 MB | 541.90x |
+
+This is a non-regression control, not an optimization claim. Accepted legacy
+records still produce the existing encoded bytes; the new constant-time
+convention guard precedes each writer. Linear/coefficient-major USD records
+are refused until the caller explicitly converts them. The focused parity
+surface passes 141 tests with one documented SPZ-v2 oracle skip.
