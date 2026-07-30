@@ -5184,8 +5184,36 @@ Progress:
 - [x] U1a makes `GaussianCloud` convention-bearing, adds explicit conversion,
       validates structure before conversion/writes, and keeps all six legacy
       splat writers on their exact prior conventions.
+- [x] U1b adds public compiled `SceneGraph`, `InstanceSet`, and `VolumeAsset`
+      records without changing `MeshScene`. The node and instance numeric
+      tables are owner-retaining read-only views; hierarchy, payload,
+      prototype, convention, semantic, time, and dependency invariants are
+      checked at construction.
+- [ ] U1c adds the accepted USD point and mesh payload fields, writer guards,
+      and the complete existing-codec parity rerun before U1 exits.
 
-Local closure evidence:
+Active U1b evidence:
+
+- the exact collection is 4,100 nodes; the complete local MSVC run passes
+  4,095 with five documented optional skips in 241.16 seconds, while all 33
+  new record tests and the existing 14-test point-cloud record suite pass;
+- nested payloads and numeric views remain valid after the original scene
+  variable is deleted and collection runs, factory inputs are copied, numeric
+  views are read-only, and unsupported copying/pickling is explicit;
+- the native source manifest, record registration order, compiled-symbol
+  snapshot, public re-export snapshot, and exact collection ledger include
+  the additive record surface;
+- the resource/lifetime review confirms owner-retaining array and nested
+  payload access across collection and a sub-256 KiB traced peak for two
+  views over a 100,000-row instance transform buffer; the format/convention
+  review added one shared material table plus complete texture/OpenVDB
+  dependency references; the test-soundness review preserved historical
+  `PointCloud` NaN bit patterns and added nested attribute lifetime coverage;
+- the existing USD/USDZ registry rows remain the bounded static `MeshScene`
+  profile. Rich-scene USD mapping begins at U2 and is not yet a capability
+  claim.
+
+Pre-U1 optional-provider closure evidence:
 
 - the exact collection has 4,049 nodes; local MSVC passes 4,044 with five
   documented optional skips, all 79 focused TIFF/E57/Arrow/OpenVDB/USD tests

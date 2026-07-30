@@ -137,7 +137,9 @@ def test_registration_tables_preserve_order_and_single_ownership() -> None:
         (int(order), function)
         for order, function in entry_pattern.findall(family_text)
     ]
-    assert [order for order, _ in sorted(record_entries)] == list(range(17))
+    assert [order for order, _ in sorted(record_entries)] == list(
+        range(len(CONTRACT["record_registration_order"]))
+    )
     assert tuple(function for _, function in sorted(record_entries)) == tuple(
         CONTRACT["record_registration_order"]
     )

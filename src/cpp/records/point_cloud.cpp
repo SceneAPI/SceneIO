@@ -217,6 +217,7 @@ PointCloud make_pc(farr positions, std::optional<carr> colors, std::optional<far
         p.las_waveform = std::make_shared<LasWaveformSidecar>(
             std::move(*las_waveform));
     }
+    validate_point_cloud(p);
     return p;
 }
 }  // namespace
@@ -354,6 +355,61 @@ void validate_las_waveform_sidecar(
             !std::isfinite(dy) || !std::isfinite(dz))
             throw std::invalid_argument(
                 prefix + "waveform location and direction must be finite");
+    }
+}
+
+void validate_point_cloud(
+    const PointCloud &cloud, const char *context) {
+    const std::string prefix = std::string(context) + ": ";
+    const size_t count = cloud.n;
+    if (count > std::numeric_limits<size_t>::max() / 3 ||
+        cloud.xyz.size() != count * 3 ||
+        (!cloud.rgb.empty() && cloud.rgb.size() != count * 3) ||
+        (!cloud.rgb16.empty() && cloud.rgb16.size() != count * 3) ||
+        (!cloud.normals.empty() &&
+         cloud.normals.size() != count * 3) ||
+        (!cloud.intensity.empty() &&
+         cloud.intensity.size() != count))
+        throw std::invalid_argument(
+            prefix + "inconsistent PointCloud field lengths");
+    if (!pc_valid_frame(cloud.coordinate_frame) ||
+        !pc_valid_intensity_range(cloud.intensity_range))
+        throw std::invalid_argument(
+            prefix + "invalid convention metadata");
+    // PointCloud has historically preserved every float bit pattern, including
+    // NaN payloads and unknown/non-positive unit tags. Format writers apply
+    // their own representability rules; structural validation must not narrow
+    // that established record contract.
+    for (double value : cloud.origin)
+        if (!std::isfinite(value))
+            throw std::invalid_argument(
+                prefix + "origin must be finite");
+    for (double value : cloud.viewpoint)
+        if (!std::isfinite(value))
+            throw std::invalid_argument(
+                prefix + "viewpoint must be finite");
+    if (cloud.organized_height != 0) {
+        if (cloud.organized_width != 0 &&
+            cloud.organized_height >
+                std::numeric_limits<size_t>::max() /
+                    cloud.organized_width)
+            throw std::length_error(
+                prefix + "organized extent overflows size_t");
+        if (cloud.organized_height == 0 ||
+            cloud.organized_width * cloud.organized_height != count)
+            throw std::invalid_argument(
+                prefix + "organized dimensions disagree with point count");
+    } else if (cloud.organized_width != 0) {
+        throw std::invalid_argument(
+            prefix + "organized width requires an explicit height");
+    }
+    if (cloud.las_waveform) {
+        validate_las_waveform_sidecar(
+            *cloud.las_waveform,
+            (prefix + "LAS waveform").c_str());
+        if (cloud.las_waveform->n != count)
+            throw std::invalid_argument(
+                prefix + "LAS waveform count disagrees with points");
     }
 }
 

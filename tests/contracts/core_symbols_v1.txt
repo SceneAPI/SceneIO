@@ -13,6 +13,7 @@ FlowField
 GaussianCloud
 Image
 ImageSequence
+InstanceSet
 LasWaveformSidecar
 MatchGraph
 MaterialSet
@@ -24,8 +25,10 @@ PointVisibility
 PoseGraph
 PosedViewSet
 Reconstruction
+SceneGraph
 StateTrajectory
 TensorDict
+VolumeAsset
 _buffer_address
 _colmap_db_conversion_report
 _colmap_db_profile_schema
@@ -99,6 +102,7 @@ inspect_glb
 inspect_gltf
 inspect_mtl
 inspect_obj
+instance_set
 las_waveform_sidecar
 match_graph
 material_set
@@ -209,8 +213,10 @@ read_xyz
 read_xyz_points
 read_y4m
 read_y4m_frames
+scene_graph
 state_trajectory
 tensor_dict
+volume_asset
 write_animated_webp
 write_apng
 write_bal

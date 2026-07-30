@@ -37,6 +37,8 @@ set(SCENEIO_RECORD_SOURCES
   src/cpp/records/material_set.cpp
   src/cpp/records/mesh.cpp
   src/cpp/records/mesh_scene.cpp
+  src/cpp/records/instance_set.cpp
+  src/cpp/records/scene_graph.cpp
   src/cpp/records/dense_mvs.cpp)
 
 set(SCENEIO_ARRAY_CODEC_SOURCES
@@ -145,6 +147,8 @@ set(SCENEIO_CORE_SOURCES
   src/cpp/records/material_set.cpp
   src/cpp/records/mesh.cpp
   src/cpp/records/mesh_scene.cpp
+  src/cpp/records/instance_set.cpp
+  src/cpp/records/scene_graph.cpp
   src/cpp/records/dense_mvs.cpp
   src/cpp/codecs/arrays/pfm.cpp
   src/cpp/codecs/reconstruction/colmap.cpp

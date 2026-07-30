@@ -55,6 +55,15 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > is Apache-2.0-like but is not literally on the current allow-list; any
 > executable OpenUSD dependency remains an explicit policy decision.
 >
+> **USD U1 record checkpoint (2026-07-30):** public compiled `SceneGraph`,
+> `InstanceSet`, and `VolumeAsset` records now provide the additive in-memory
+> foundation for the planned profile. They preserve hierarchy, typed payload
+> identity, point-instancer ordering, stage conventions, time metadata,
+> dependencies, and semantic labels with owner-retaining numeric views. This
+> does not change the codec rows below: `sceneio.read()` for the accepted
+> USD/USDZ profile still returns `MeshScene`, and mixed rich-scene I/O remains
+> pending U2-U6.
+>
 > **COLMAP dense/workspace checkpoint (2026-07-29):** the current local
 > registry has 54 codecs: 48 buffer-backed files, three path-native
 > multi-file containers, and three directories. The four additions are exact

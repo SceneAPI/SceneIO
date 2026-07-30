@@ -270,6 +270,15 @@ Known values receive closed vocabularies. Unknown authored properties are
 listed by inspection and cause a read refusal when they affect a supported
 payload. SceneIO does not preserve arbitrary USD specs as opaque dictionaries.
 
+The U1b implementation uses stable numeric storage codes while exposing their
+string names: payload kinds from `none` through `instances` map to `0..6`;
+visibility `inherited/visible/invisible` maps to `0..2`; and purpose
+`default/render/proxy/guide` maps to `0..3`. A
+payload-free node stores `UINT64_MAX` as its payload index. Child CSR is the
+source of truth and the validated parent array is stored redundantly for
+constant-time traversal. Payload accessors retain the parent `SceneGraph`;
+all node-domain numeric arrays are read-only owner-retaining views.
+
 ### Additive payload changes
 
 `PointCloud` needs optional float colors/opacity, widths, signed 64-bit ids,
@@ -284,8 +293,16 @@ above. All current six splat families retain their existing defaults and
 bit-exact outputs.
 
 `InstanceSet` is a new compact record for prototype node indices, ids,
-translations, orientations, scales, inactive ids/mask, and supported numeric
+translations, orientations, scales, invisible ids/mask, and supported numeric
 per-instance attributes.
+
+The U1b record stores `prototype_nodes` in the `SceneGraph` node domain and
+`prototype_indices` in that table's row domain. IDs are unique signed
+64-bit values; omitted IDs become `0..N-1`. Invisible IDs are retained in
+authored order and also materialized as a canonical `uint8` mask. Optional
+numeric attributes use a `TensorDict` whose tensors must have `N` leading
+rows. The `wxyz|xyzw` quaternion convention is explicit, and omitted
+orientations/scales receive convention-correct identity/one defaults.
 
 ## Commit-sized implementation checklist
 
@@ -316,15 +333,18 @@ no public capability is overstated.
 
 ### U1 — additive records and compatibility
 
-- [ ] Add `SceneGraph` and `InstanceSet` C++ records and nanobind views.
-- [ ] Extend `PointCloud`, `Mesh`, and `GaussianCloud` additively.
-- [ ] Keep old factory calls and property defaults byte-for-byte compatible.
+- [x] Add `SceneGraph`, `InstanceSet`, and `VolumeAsset` C++ records and
+      owner-retaining nanobind views.
+- [ ] Extend `PointCloud` and `Mesh` additively.
+- [x] Extend `GaussianCloud` additively with explicit convention and source
+      precision fields.
+- [x] Keep old factory calls and property defaults byte-for-byte compatible.
 - [ ] Make every existing point, mesh, and splat writer guard new fields it
       cannot represent.
-- [ ] Add explicit Gaussian convention conversion outside codec writers.
-- [ ] Add construction, validation, zero-copy view, owner-lifetime, pickle
-      policy, and invalid-offset/index tests.
-- [ ] Re-run every existing mesh, point, splat, calibration, and reconstruction
+- [x] Add explicit Gaussian convention conversion outside codec writers.
+- [x] Add construction, validation, zero-copy view, owner-lifetime, pickle
+      policy, and invalid-offset/index tests for the new records.
+- [x] Re-run every existing mesh, point, splat, calibration, and reconstruction
       parity suite.
 
 Exit: the new records are public and stable; all existing codec outputs remain

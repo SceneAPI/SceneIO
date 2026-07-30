@@ -258,6 +258,7 @@ def _public_snapshot():
         "GaussianCloud",
         "Image",
         "ImageSequence",
+        "InstanceSet",
         "MatchGraph",
         "MaterialSet",
         "Mesh",
@@ -268,8 +269,10 @@ def _public_snapshot():
         "PoseGraph",
         "PosedViewSet",
         "Reconstruction",
+        "SceneGraph",
         "StateTrajectory",
         "TensorDict",
+        "VolumeAsset",
     )
     examples = {
         "Codec": registry.REGISTRY["npy"],

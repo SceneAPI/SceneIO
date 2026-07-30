@@ -55,6 +55,9 @@ PointCloud = _core.PointCloud
 MaterialSet = _core.MaterialSet
 Mesh = _core.Mesh
 MeshScene = _core.MeshScene
+InstanceSet = _core.InstanceSet
+SceneGraph = _core.SceneGraph
+VolumeAsset = _core.VolumeAsset
 PoseGraph = _core.PoseGraph
 FeatureSet = _core.FeatureSet
 MatchGraph = _core.MatchGraph
@@ -616,6 +619,7 @@ __all__ = [
     "Image",
     "ImageSequence",
     "Inspection",
+    "InstanceSet",
     "MatchGraph",
     "MaterialSet",
     "Mesh",
@@ -627,8 +631,10 @@ __all__ = [
     "PoseGraph",
     "PosedViewSet",
     "Reconstruction",
+    "SceneGraph",
     "StateTrajectory",
     "TensorDict",
+    "VolumeAsset",
     "capabilities",
     "codecs",
     "colmap_database_conversion_report",

@@ -18,7 +18,8 @@ things that keep this expansible as the format list from
 > The post-R6 COLMAP dense unit adds a ninth `dense` family, three records,
 > four buffer codecs, and a lazy workspace adapter. The current inventory is
 > 55 native/hybrid rows, 12 Python-owned optional-provider rows, ten registry
-> families, and 17 compiled records. The optional-provider adapters are
+> families, and 19 compiled record-registration units. The optional-provider
+> adapters are
 > isolated by family (`_hdf5`, `_zarr`, `_tiff`, `_e57`, `_arrow`,
 > `_openvdb`, `_usd`) and preserve the NumPy-only base import. The repository
 > owns their stable schema, validation, inspection, and public mapping while
@@ -122,6 +123,17 @@ cmake/
   direction, scale/opacity space) — never only in comments. A record is
   registered **once** and reused by every codec that produces it (SPZ and
   PLY both yield `GaussianCloud`).
+- Rich 3D-CV stages use the additive `SceneGraph` record rather than widening
+  the established `MeshScene` contract. `SceneGraph` owns node topology,
+  transforms, typed payload references, visibility/purpose, stage
+  axis/unit/time metadata, external dependencies, and semantic labels.
+  `InstanceSet` retains point-instancer prototype node identity, authored row
+  order, ids, transforms, an explicit invisible mask, quaternion order, and
+  numeric per-instance `TensorDict` attributes. `VolumeAsset` is a named
+  external OpenVDB grid reference. Their numeric tables use owner-retaining,
+  read-only ndarray views; nested payload access keeps the parent scene alive.
+  These records are currently an in-memory foundation, not a claim that the
+  existing USD codec already maps the richer payloads.
 - A **codec** is pure I/O for one format. Native buffer entry points accept a
   contiguous buffer-protocol view without first materializing Python
   `bytes`; public single-file reads normally keep a read-only mmap alive for

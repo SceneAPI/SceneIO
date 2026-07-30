@@ -90,6 +90,9 @@ struct PointCloud {
 void validate_las_waveform_sidecar(
     const LasWaveformSidecar &sidecar,
     const char *context = "LAS waveform sidecar");
+void validate_point_cloud(
+    const PointCloud &cloud,
+    const char *context = "point cloud");
 
 // Vocabulary helpers (image_valid_color_space precedent): the factory validates
 // against these closed sets so a typo raises instead of silently persisting.

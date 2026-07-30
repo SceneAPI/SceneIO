@@ -3603,3 +3603,28 @@ records still produce the existing encoded bytes; the new constant-time
 convention guard precedes each writer. Linear/coefficient-major USD records
 are refused until the caller explicitly converts them. The focused parity
 surface passes 141 tests with one documented SPZ-v2 oracle skip.
+
+### USD U1 rich-scene record foundation (2026-07-30)
+
+`SceneGraph`, `InstanceSet`, and `VolumeAsset` are additive in-memory records.
+They do not yet participate in a codec read/write path, so this unit has no
+throughput improvement claim and does not add a new benchmark row. The
+existing static-mesh USD/USDZ benchmark remains the non-regression control;
+U2 will add rich-scene hierarchy-only paths before payload throughput is
+measured in U3-U5. Focused validation covers 33 new construction, topology,
+payload-index, convention, copy, read-only-view, and owner-lifetime cases.
+
+The control was rerun with three medians and no oracle timing:
+
+```powershell
+.venv/Scripts/python.exe bench/bench_io.py --runs 3 --skip-oracles `
+  --only usd --only usdz
+```
+
+| codec | write/read/path-read MB/s | sink MB/s | mmap traced peak |
+|---|---:|---:|---:|
+| `usd` | 12 / 12 / 12 | 12 | 3.6 MB |
+| `usdz` | 11 / 12 / 12 | 11 | 3.6 MB |
+
+These match the preceding scale-1 provider-wave range; no codec source or
+encoded output changed in U1b.
