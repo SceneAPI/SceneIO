@@ -62,6 +62,10 @@ struct SceneGraph {
 
     std::vector<std::string> external_asset_uris;
     std::vector<std::string> external_asset_kinds;
+    // Source locators are reader/writer provenance, not authored USD paths.
+    // Direct files use absolute filesystem paths; packaged entries use the
+    // bounded SceneIO USDZ locator understood by the Python package adapter.
+    std::vector<std::string> external_asset_sources;
 
     std::string up_axis = "y";
     double meters_per_unit = 1.0;

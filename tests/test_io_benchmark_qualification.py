@@ -16,6 +16,7 @@ import numpy as np
 import pytest
 
 from bench.io_bench import qualification, runner
+from bench.io_bench import usd_materials as usd_material_benchmark
 from bench.io_bench import usd_scene as usd_scene_benchmark
 from bench.io_bench.families.dense import validate_dense_oracle_parity
 from bench.io_bench.model import Spec
@@ -50,6 +51,30 @@ def test_rich_usd_geometry_benchmark_smoke(tmp_path):
     assert result["cold_cache_applied"] is False
     assert isinstance(result["cold_cache_supported"], bool)
     for operation in ("write", "full_read", "inspect", "selected_read"):
+        assert result[operation]["ms"] >= 0
+        assert result[operation]["traced_peak_mb"] >= 0
+        assert result[operation]["rss_peak_mb"] >= 0
+
+
+def test_rich_usd_material_benchmark_smoke(tmp_path):
+    results = usd_material_benchmark.run_benchmark(
+        tmp_path,
+        runs=1,
+        face_count=4,
+        material_count=2,
+        texture_bytes=1024,
+        encodings=("usda",),
+    )
+
+    assert len(results) == 1
+    result = results[0]
+    assert result["encoding"] == "usda"
+    assert result["faces"] == 4
+    assert result["materials"] == 2
+    assert result["texture_mb"] > 0
+    assert result["payload_mb"] > 0
+    assert result["stage_file_mb"] > 0
+    for operation in ("write", "full_read", "inspect"):
         assert result[operation]["ms"] >= 0
         assert result[operation]["traced_peak_mb"] >= 0
         assert result[operation]["rss_peak_mb"] >= 0

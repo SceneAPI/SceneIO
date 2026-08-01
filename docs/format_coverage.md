@@ -102,6 +102,23 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > the final suite passes 4,141 tests with 5 expected skips, and full Ruff is
 > clean.
 >
+> **USD C2 local closure (2026-07-31):** rich `SceneGraph` reads/writes now
+> map the bounded `UsdPreviewSurface` constants and texture graph, direct and
+> `GeomSubset` face bindings, and relative PNG/JPEG/EXR assets. USDA writes use
+> content-addressed sidecars; USDZ writes copy stored, aligned package members.
+> Asset sources stream separately from authored URIs, prim-selected reads open
+> only reachable textures, and inspection/`load_payloads=False` open none.
+> Unsupported graphs, connected fallbacks, explicit filtering, noncanonical
+> texture operations, invalid subsets, ambiguous blend state, missing or
+> relocated sources, and noncanonical/compressed USDZ inputs refuse without
+> replacing a destination. Standards-derived fixtures, TinyUSDZ cross-reads,
+> Pillow/OpenEXR asset checks, lifetime/failure tests, and generated 100k-face
+> plus 100 MiB measurements are green. The exact tree has 4,183 nodes; the
+> complete local MSVC gate passes 4,177 with 6 expected skips, full Ruff is
+> clean, and all three review lenses sign off. The existing three-OS focused
+> workflow now includes all USD suites; its hosted execution remains pending
+> the user-authorized push.
+>
 > **COLMAP dense/workspace checkpoint (2026-07-29):** the current local
 > registry has 54 codecs: 48 buffer-backed files, three path-native
 > multi-file containers, and three directories. The four additions are exact
@@ -926,7 +943,7 @@ public-domain SQLite amalgamation statically linked into `_core`.
 | `e57` | `PointCloud` | R+W, inspect | direct **pye57/libE57Format** | optional `sceneio[e57]`; exactly one Cartesian scan, exact float32 coordinates/intensity and integral RGB8, pose, explicit invalid-point filtering; exact inspection count uses the provider scan path only when invalid-state data are present |
 | `parquet` / `arrow_ipc` | `TensorDict` numeric table | R+W, inspect; Parquet named-column partial | direct **PyArrow** | optional `sceneio[arrow]`; scalar/fixed-width numeric columns, equal row counts, text attrs, mmap/threaded provider paths, transactional writes |
 | `openvdb` | sparse-grid `TensorDict` | R+W, inspect | direct **TinyVDB** | optional `sceneio[openvdb]`; one identity-transform, zero-background float32 scalar grid; ZIP/active-mask output; packaged upstream seed is fully replaced and provenance-pinned; rebuilt active count is verified and provider topology loss refuses |
-| `usd` / `usdz` | `MeshScene` compatibility projection; additive `SceneGraph` | R+W, rich mesh/points R+W, inspect | direct **TinyUSDZ** | optional `sceneio[usd]`; `.usd`/`.usda`, historical `.usdc` reads through crate 10, and aligned uncompressed USDZ; legacy static mesh bytes/API unchanged; `read_scene` maps bounded hierarchy/metadata/static transforms, prim selection, static polygon meshes, and points; `write_scene` deterministically streams the same USDA/USDZ subset; materials, Gaussians, cameras, volumes/instances/semantics, current crates, USDC writes, and selected animated values remain later profile units |
+| `usd` / `usdz` | `MeshScene` compatibility projection; additive `SceneGraph` | R+W, rich mesh/points/materials R+W, inspect | direct **TinyUSDZ** | optional `sceneio[usd]`; `.usd`/`.usda`, historical `.usdc` reads through crate 10, and aligned uncompressed USDZ; legacy static mesh bytes/API unchanged; `read_scene` maps bounded hierarchy/metadata/static transforms, prim selection, static polygon meshes, points, PreviewSurface constants/textures, direct/subset bindings, and portable PNG/JPEG/EXR references; `write_scene` streams deterministic USDA sidecars or self-contained USDZ; Gaussians, cameras, volumes/instances/semantics, current crates, USDC writes, and selected animated values remain later profile units |
 
 ### Repository-owned COLMAP workflow adapters
 

@@ -127,15 +127,19 @@ cmake/
 - Rich 3D-CV stages use the additive `SceneGraph` record rather than widening
   the established `MeshScene` contract. `SceneGraph` owns node topology,
   transforms, typed payload references, visibility/purpose, stage
-  axis/unit/time metadata, external dependencies, and semantic labels.
+  axis/unit/time metadata, authored external dependency URIs, separate source
+  locators used for transactional copying, and semantic labels.
   `InstanceSet` retains point-instancer prototype node identity, authored row
   order, ids, transforms, an explicit invisible mask, quaternion order, and
   numeric per-instance `TensorDict` attributes. `VolumeAsset` is a named
   external OpenVDB grid reference. Their numeric tables use owner-retaining,
   read-only ndarray views; nested payload access keeps the parent scene alive.
-  The additive USD stage path now maps the hierarchy/metadata/static-transform
-  skeleton and mesh payload reads. Rich point/material/Gaussian/camera/volume/
-  instance writes remain their explicitly tracked U3-U5 mappings.
+  The additive USD stage path maps hierarchy/metadata/static transforms,
+  polygon meshes, point clouds, and the bounded PreviewSurface material/asset
+  vocabulary. Repository-owned USDA/USDZ serializers stream numeric arrays and
+  texture sources; direct-layer files and package-member locators remain
+  separate from the authored portable URI. Gaussian/camera/volume/instance
+  writes remain their explicitly tracked U4-U5 mappings.
 - `PointCloud` keeps authored float display colors and opacities, point
   widths (diameters), signed 64-bit ids, velocities, accelerations, and
   display color-space metadata separate from its legacy quantized color

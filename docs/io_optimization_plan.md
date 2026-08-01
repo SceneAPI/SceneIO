@@ -176,6 +176,18 @@ write/read throughput, traced allocation, resident growth, and inspection
 latency in `bench/bench_io.py`. Parquet additionally reports named-column
 selection. No new compressed payload is routed through a Python whole-file
 `bytes` copy.
+
+The bounded USD C2 asset path follows the same rule: texture sources stream in
+1 MiB chunks into content-addressed USDA sidecars or stored USDZ members. A
+generated 100,000-face/eight-material fixture with a 100 MiB asset measured
+118.8/130.0 MB/s USDA/USDZ writes with 12.2 MB traced allocation, and
+71.3/70.2 MB/s full reads on the local MSVC host. Inspection did not open the
+asset. These are observational C2 rows, not cross-host numeric thresholds.
+The same run found and removed a material-free allocation regression: binding
+inspection had normalized the complete mesh even when no binding existed.
+The unbound/direct paths now avoid mesh text entirely, restoring the generated
+C1 full-read control from 47.15 MB to 44.03 MB traced (43.95 MB baseline).
+
 The 2026-07-30 scale-16 profiling follow-up removed two wrapper hot spots.
 Already-native contiguous HDF5 arrays now pass directly to the native record
 or h5py dataset constructor, reducing traced full-read peak from 33.6 MB to

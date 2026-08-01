@@ -106,13 +106,21 @@ stage = sceneio.read_scene(
 )
 assert isinstance(stage, sceneio.SceneGraph)
 
-# Static mesh and point-cloud payloads write as deterministic USDA or aligned
-# USDZ. Later profile units add materials, Gaussians, cameras, and volumes.
+# Static meshes, point clouds, bounded PreviewSurface materials, and relative
+# PNG/JPEG/EXR textures write as deterministic USDA or aligned USDZ.
 sceneio.write_scene(stage, "capture-copy.usdz")
 
 hierarchy_only = sceneio.read_scene("capture.usdz", load_payloads=False)
 sceneio.write_scene(hierarchy_only, "hierarchy.usdz")
 ```
+
+The bounded material profile preserves base color, emissive, metallic,
+roughness, opacity/mask state, normal textures, direct/face-subset bindings,
+UV set `st`, wrap modes, and texture source color space. `package_assets=True`
+copies texture sources into an immutable USDA sidecar or the USDZ package;
+`False` is accepted only when each authored URI already names the exact file
+beside the destination. Arbitrary shader graphs, procedural nodes, UDIM,
+explicit filtering, and unrepresented texture transforms are refused.
 
 Qualified historical `.usdc` inputs through crate version 10 route under the
 `usd` format id. Current-crate reads, USDC writes, and selected animated-value

@@ -243,6 +243,8 @@ def test_usd_inspection_matches_decoded_scene(tmp_path, suffix):
         "dependencies": (),
         "variants": (),
         "unsupported_features": (),
+        "num_materials": 0,
+        "num_textures": 0,
     }
 
 
@@ -309,8 +311,9 @@ def test_usd_reader_refuses_unqualified_usdc_versions_before_provider(
     crate = b"PXR-USDC\x00" + bytes([version]) + b"unread"
     path = tmp_path / f"future{suffix}"
     if suffix == ".usdz":
-        with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_STORED) as archive:
-            archive.writestr("root.usdc", crate)
+        root = tmp_path / "root.usdc"
+        root.write_bytes(crate)
+        _usd.package.write_usdz_archive(root, path)
     else:
         path.write_bytes(crate)
 

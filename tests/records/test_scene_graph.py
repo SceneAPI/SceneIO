@@ -82,6 +82,7 @@ def _scene(**changes):
         "instances": [_instances()],
         "external_asset_uris": ["density.vdb"],
         "external_asset_kinds": ["openvdb"],
+        "external_asset_sources": ["C:/assets/density.vdb"],
         "up_axis": "z",
         "meters_per_unit": 0.01,
         "source_representation": "usdc",
@@ -145,6 +146,8 @@ def test_scene_graph_public_surface_and_typed_payloads():
     assert scene.start_time_code == 1.0
     assert scene.end_time_code == 5.0
     assert scene.time_codes_per_second == 30.0
+    assert scene.external_asset_uris == ["density.vdb"]
+    assert scene.external_asset_sources == ["C:/assets/density.vdb"]
 
     rig = _core.camera_rig(
         np.array([7], np.uint32),
@@ -288,6 +291,10 @@ def test_scene_graph_copy_and_pickle_policy_is_explicit_rejection(operation):
         (
             {"external_asset_kinds": ["video"]},
             "external asset kind",
+        ),
+        (
+            {"external_asset_sources": []},
+            "source and URI counts",
         ),
     ],
 )

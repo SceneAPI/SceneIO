@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 
 import numpy as np
 
@@ -555,6 +556,7 @@ def mesh_from_prim(
     shell_properties: frozenset[str] = frozenset(),
     coordinate_frame: str = "opengl",
     scale_to_meters: float = 1.0,
+    binding_resolver: Callable[[int], dict[str, np.ndarray]] | None = None,
 ):
     """Build an owning SceneIO Mesh from one provider prim."""
 
@@ -567,6 +569,8 @@ def mesh_from_prim(
     face_offsets[0] = 0
     np.cumsum(counts, dtype=np.uint64, out=face_offsets[1:])
     indices = indices_i32.astype(np.uint64)
+    if binding_resolver is not None:
+        kwargs.update(binding_resolver(len(counts)))
     return _core.mesh(
         positions,
         face_offsets,
@@ -652,6 +656,7 @@ def validate_writable_mesh(
     up_axis: str,
     meters_per_unit: float,
     context: str,
+    material_count: int = 0,
 ) -> None:
     """Guard fields that the bounded mesh schema cannot preserve."""
 
@@ -685,14 +690,20 @@ def validate_writable_mesh(
             "use SceneGraph.materials"
         )
     materials = np.asarray(mesh.primitive_materials)
-    if materials.size and np.any(materials != -1):
+    if materials.size and (
+        np.any(materials < -1)
+        or np.any(materials >= material_count)
+    ):
         raise ValueError(
-            f"USD: {context} material subsets require the U3 material mapping"
+            f"USD: {context} material index is outside SceneGraph.materials"
         )
     expected_primitives = 0 if mesh.num_faces == 0 else 1
-    if mesh.num_primitives != expected_primitives:
+    if (
+        not np.any(materials >= 0)
+        and mesh.num_primitives != expected_primitives
+    ):
         raise ValueError(
-            f"USD: {context} primitive partitions require material subsets"
+            f"USD: {context} primitive partitions require material assignments"
         )
     int32_max = np.iinfo(np.int32).max
     if mesh.num_vertices > int32_max or (

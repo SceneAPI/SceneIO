@@ -73,6 +73,12 @@ OpenUSD 26.08 remains a standards reference until the narrow TOST policy
 decision in U0. No OpenUSD package or library was added by this qualification
 unit.
 
+As of 2026-07-31, official `usd-core 26.8` wheels are published for supported
+CPython versions on Windows, Linux, and macOS. Availability removes the old
+version mismatch, but does not approve TOST use or change the provider boundary
+above. If approved, C6 inventories and runs that package in a separate
+oracle/provider environment; it is never bundled into SceneIO's abi3 wheel.
+
 ## Remaining U0 evidence
 
 - [ ] Explicit TOST policy decision.

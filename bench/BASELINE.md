@@ -3768,3 +3768,34 @@ full-read traced peak by about 10 MB. Reusing a helper that called
 24.85 MB. Per-included-prim normalization, metadata checks over the existing
 text, and the allocation-free `str.isspace()` test restore the 43.95 MB full
 and 18.54 MB selected peaks while retaining the stricter validation.
+
+### USD C2 materials and streamed assets closure (2026-07-31)
+
+C2 adds a dedicated generated benchmark with 100,000 independent triangle
+faces, eight alternating material assignments, one bounded PreviewSurface
+texture graph, and a 100 MiB generated asset. The asset is created and copied
+in fixed-size chunks; no large artifact is committed.
+
+```powershell
+.venv/Scripts/python.exe bench/bench_usd_materials.py --runs 1 `
+  --faces 100000 --materials 8 --texture-mb 100 --only usda
+.venv/Scripts/python.exe bench/bench_usd_materials.py --runs 1 `
+  --faces 100000 --materials 8 --texture-mb 100 --only usdz
+```
+
+| representation | payload/stage file | write | full read | inspect |
+|---|---:|---:|---:|---:|
+| USDA | 112.86/15.52 MB plus 104.86 MB sidecar | 949.9 ms; 118.8 MB/s; 12.17 MB traced; 12.22 MB RSS | 1,583.7 ms; 71.3 MB/s; 30.87 MB traced; 32.46 MB RSS | 1,338.6 ms; 22.45 MB traced; 32.75 MB RSS |
+| USDZ | 112.86/120.38 MB | 868.3 ms; 130.0 MB/s; 12.16 MB traced; 12.24 MB RSS | 1,607.3 ms; 70.2 MB/s; 30.87 MB traced; 33.32 MB RSS | 1,340.3 ms; 22.45 MB traced; 28.64 MB RSS |
+
+The write peak is about 11% of logical payload and does not scale with the
+100 MiB asset, demonstrating that both package paths stream instead of
+materializing an asset-sized Python object. The 100k-face alternating subset
+case exercises the linear grouped/chunked serializer. Inspection parses stage
+metadata through TinyUSDZ but does not resolve or open the texture source.
+These one-run local MSVC values are observational; C7 will establish the
+repeatable platform ledger. The first control exposed an accidental full-mesh
+text normalization in the unbound binding path (47.15 MB traced versus the C1
+43.95 MB baseline). The O(1) unbound/direct fast path removes it; a fresh
+100k-face/100k-point read measured 44.03 MB, with the C1 selected and inspect
+peaks unchanged at 18.54 and 29.15 MB.

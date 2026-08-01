@@ -6,7 +6,7 @@ import math
 import os
 import re
 from contextlib import suppress
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 import numpy as np
 
@@ -43,7 +43,7 @@ _USDA_FEATURES = re.compile(
     | "(?:\\[\s\S]|[^"\\])*"
     | @([^@\r\n]{1,65536})@
     | (?<![A-Za-z0-9_:])
-      (subLayers|references|payload|variantSet|variants)
+      (subLayers|references|payload|variantSet|variants|bindMaterialAs)
       (?![A-Za-z0-9_:])
     """,
     re.VERBOSE,
@@ -53,6 +53,7 @@ _BINARY_COMPOSITION_TOKENS = {
     "references": (b"references",),
     "payloads": (b"payload",),
     "variants": (b"variantSet", b"variants"),
+    "material_binding_strength": (b"bindMaterialAs",),
 }
 _FEATURE_NAMES = {
     b"subLayers": "sublayers",
@@ -60,6 +61,7 @@ _FEATURE_NAMES = {
     b"payload": "payloads",
     b"variantSet": "variants",
     b"variants": "variants",
+    b"bindMaterialAs": "material_binding_strength",
 }
 
 
@@ -179,6 +181,22 @@ def _authored_imageable_tokens(
     return visibility, purpose
 
 
+def _authored_purpose(prim) -> str | None:
+    """Read only the authored purpose token for payload reachability."""
+
+    if "purpose" not in set(prim.property_names()):
+        return None
+    attribute = prim.get_attribute("purpose")
+    if attribute is None or attribute.value is None:
+        return None
+    value = attribute.value.as_scalar()
+    if value not in _PURPOSES:
+        raise ValueError(
+            f"USD prim {prim.name!r}: unsupported purpose {value!r}"
+        )
+    return str(value)
+
+
 def _render_nodes(stage) -> dict[str, tuple[np.ndarray, bool]]:
     tinyusdz = provider.require_tinyusdz()
     try:
@@ -259,7 +277,7 @@ def _validate_shell(
     }
     allowed = _IMAGEABLE_PROPERTIES | xform_properties
     if prim.type_name == "Mesh":
-        allowed |= geometry.MESH_PROPERTIES
+        allowed |= geometry.MESH_PROPERTIES | materials.MESH_MATERIAL_PROPERTIES
     if prim.type_name == "Points":
         allowed |= points.POINT_PROPERTIES
     if prim.type_name == "Scope":
@@ -312,9 +330,47 @@ def _select_payload(path: str, selected: frozenset[str] | None) -> bool:
     return any(path == item or path.startswith(item + "/") for item in selected)
 
 
+def _validate_inherited_material_bindings(
+    roots,
+    *,
+    resource_paths: frozenset[str],
+    selected: frozenset[str] | None = None,
+) -> None:
+    """Refuse renderable descendants of a directly bound Mesh prim."""
+
+    def visit(
+        prim,
+        parent_path: str,
+        bound_ancestor: str | None,
+    ) -> None:
+        path = f"{parent_path}/{prim.name}"
+        if path in resource_paths or not _include_path(path, selected):
+            return
+        if (
+            bound_ancestor is not None
+            and prim.type_name in {"Mesh", "Points"}
+            and _select_payload(path, selected)
+        ):
+            raise ValueError(
+                f"USD mesh {bound_ancestor!r}: inherited material bindings "
+                "on descendant renderable prims are outside the bounded "
+                "profile"
+            )
+        direct_binding = prim.get_relationship_targets("material:binding")
+        descendant_binding = bound_ancestor
+        if prim.type_name == "Mesh" and direct_binding is not None:
+            descendant_binding = path
+        for child in prim.children():
+            visit(child, path, descendant_binding)
+
+    for root in roots:
+        visit(root, "", None)
+
+
 def stage_to_scene_graph(
     stage,
     *,
+    source_path: str | os.PathLike[str],
     source_representation: str,
     time: float | None = None,
     prims: object = None,
@@ -338,7 +394,7 @@ def stage_to_scene_graph(
             "USD: purposes must contain only default/render/proxy/guide"
         )
     metadata = _stage_metadata(stage)
-    render_nodes = _render_nodes(stage)
+    resource_paths = materials.stage_resource_paths(stage)
 
     roots = list(stage.root_prims())
     if len({prim.name for prim in roots}) != len(roots):
@@ -347,6 +403,8 @@ def stage_to_scene_graph(
 
     def collect(prim, parent_path: str) -> None:
         path = f"{parent_path}/{prim.name}"
+        if path in resource_paths:
+            return
         if path in all_paths:
             raise ValueError(f"USD: duplicate prim path {path!r}")
         all_paths.add(path)
@@ -361,6 +419,64 @@ def stage_to_scene_graph(
     for root in roots:
         collect(root, "")
     selected = _normalize_prim_selection(prims, frozenset(all_paths))
+
+    selected_mesh_paths: set[str] = set()
+    reachable_material_paths: set[str] = set()
+    _validate_inherited_material_bindings(
+        roots,
+        resource_paths=resource_paths,
+        selected=selected,
+    )
+
+    def collect_payload_bindings(
+        prim,
+        parent_path: str,
+        inherited_purpose: str,
+    ) -> None:
+        path = f"{parent_path}/{prim.name}"
+        if path in resource_paths or not _include_path(path, selected):
+            return
+        children = list(prim.children())
+        effective_purpose = inherited_purpose
+        if prim.type_name == "Mesh" or children:
+            effective_purpose = _authored_purpose(prim) or inherited_purpose
+        if (
+            load_payloads
+            and prim.type_name == "Mesh"
+            and effective_purpose in selected_purposes
+            and _select_payload(path, selected)
+        ):
+            selected_mesh_paths.add(path)
+            reachable_material_paths.update(
+                materials.bound_material_paths(prim)
+            )
+        for child in children:
+            collect_payload_bindings(child, path, effective_purpose)
+
+    for root in roots:
+        collect_payload_bindings(root, "", "default")
+
+    stage_materials = materials.collect_stage_materials(
+        stage,
+        source_path=source_path,
+        build_record=load_payloads,
+        include_material_paths=(
+            None
+            if load_payloads and selected is None
+            else frozenset(reachable_material_paths)
+        ),
+        include_mesh_paths=(
+            None
+            if load_payloads and selected is None
+            else frozenset(selected_mesh_paths)
+        ),
+        resolve_assets=load_payloads,
+    )
+    # Validate the bounded material graph before the provider's render-scene
+    # conversion.  That conversion consumes materials as an implementation
+    # detail and can otherwise replace a precise profile refusal with a vague
+    # provider error even though only transforms are needed from it here.
+    render_nodes = _render_nodes(stage)
 
     node_names: list[str] = []
     node_transforms: list[np.ndarray] = []
@@ -377,6 +493,8 @@ def stage_to_scene_graph(
 
     def visit(prim, parent_path: str, inherited_purpose: str) -> int | None:
         path = f"{parent_path}/{prim.name}"
+        if path in resource_paths:
+            return None
         if not _include_path(path, selected):
             return None
         point_text = prim.to_string() if prim.type_name == "Points" else None
@@ -425,13 +543,21 @@ def stage_to_scene_graph(
                     shell_properties=_payload_shell_properties(
                         prim,
                         point_text=point_text,
-                    ),
+                    )
+                    | materials.mesh_shell_properties(prim),
                     coordinate_frame=(
                         "opengl"
                         if metadata["up_axis"] == "y"
                         else "enu"
                     ),
                     scale_to_meters=metadata["meters_per_unit"],
+                    binding_resolver=lambda face_count: (
+                        materials.binding_ranges_for_mesh(
+                            prim,
+                            face_count=face_count,
+                            material_indices=stage_materials.material_indices,
+                        )
+                    ),
                 )
             )
         if (
@@ -461,13 +587,17 @@ def stage_to_scene_graph(
             del point_positions, point_kwargs
         point_text = None
         for child in prim.children():
+            child_path = f"{path}/{child.name}"
+            if child_path in resource_paths:
+                continue
             child_index = visit(child, path, effective_purpose)
             if child_index is not None:
                 child_lists[index].append(child_index)
         return index
 
     for root in roots:
-        visit(root, "", "default")
+        if f"/{root.name}" not in resource_paths:
+            visit(root, "", "default")
 
     offsets = np.empty(len(child_lists) + 1, dtype=np.uint64)
     offsets[0] = 0
@@ -498,6 +628,18 @@ def stage_to_scene_graph(
         node_purpose=node_purpose,
         meshes=meshes,
         point_clouds=point_clouds,
+        materials=stage_materials.record if load_payloads else None,
+        external_asset_uris=(
+            stage_materials.external_asset_uris if load_payloads else ()
+        ),
+        external_asset_kinds=(
+            ("texture",) * len(stage_materials.external_asset_uris)
+            if load_payloads
+            else ()
+        ),
+        external_asset_sources=(
+            stage_materials.external_asset_sources if load_payloads else ()
+        ),
         source_representation=source_representation,
         default_prim=default_prim,
         selected_time=time,
@@ -517,6 +659,12 @@ def read_scene(
     """Read the bounded directly-authored USD profile as a SceneGraph."""
 
     composition, _ = _scan_authored_features(path)
+    if "material_binding_strength" in composition:
+        raise ValueError(
+            "USD: material binding strength metadata is outside the bounded "
+            "material profile"
+        )
+    composition = composition - {"material_binding_strength"}
     if composition:
         raise ValueError(
             "USD: evaluated composition is not available in the stage "
@@ -526,6 +674,7 @@ def read_scene(
     stage = provider.load_stage(path)
     return stage_to_scene_graph(
         stage,
+        source_path=path,
         source_representation=provider.source_representation(path),
         time=time,
         prims=prims,
@@ -548,6 +697,18 @@ def inspect_scene(
     authored_features, dependencies = _scan_authored_features(path)
     dependency_set = set(dependencies)
     unsupported: set[str] = set(authored_features)
+    try:
+        stage_materials = materials.collect_stage_materials(
+            stage,
+            source_path=path,
+            build_record=False,
+            resolve_assets=False,
+        )
+        resource_paths = stage_materials.resource_paths
+    except ValueError as exc:
+        stage_materials = None
+        resource_paths = materials.stage_resource_paths(stage)
+        unsupported.add(f"materials: {exc}")
 
     type_counts: dict[str, int] = {}
     variants: list[str] = []
@@ -559,9 +720,13 @@ def inspect_scene(
     def visit(prim, parent_path: str) -> None:
         nonlocal faces, node_count, primitive_count, vertices
         path_value = f"{parent_path}/{prim.name}"
-        node_count += 1
         type_name = str(prim.type_name)
         type_counts[type_name] = type_counts.get(type_name, 0) + 1
+        if path_value in resource_paths:
+            for child in prim.children():
+                visit(child, path_value)
+            return
+        node_count += 1
         for set_name in prim.variant_sets():
             selection = prim.variant_selection(set_name)
             variants.append(
@@ -597,7 +762,8 @@ def inspect_scene(
                         shell_properties=_payload_shell_properties(
                             prim,
                             point_text=point_text,
-                        ),
+                        )
+                        | materials.mesh_shell_properties(prim),
                     )
                 except ValueError as exc:
                     unsupported.add(f"{path_value}: {exc}")
@@ -605,6 +771,17 @@ def inspect_scene(
                     vertices += len(positions)
                     faces += len(counts)
                     primitive_count += 1
+                    if stage_materials is not None:
+                        try:
+                            materials.binding_ranges_for_mesh(
+                                prim,
+                                face_count=len(counts),
+                                material_indices=(
+                                    stage_materials.material_indices
+                                ),
+                            )
+                        except ValueError as exc:
+                            unsupported.add(f"{path_value}: {exc}")
             elif prim.type_name == "Points":
                 try:
                     point_count = points.inspect_point_prim(
@@ -624,7 +801,16 @@ def inspect_scene(
         for child in prim.children():
             visit(child, path_value)
 
-    for root in stage.root_prims():
+    roots = list(stage.root_prims())
+    try:
+        _validate_inherited_material_bindings(
+            roots,
+            resource_paths=resource_paths,
+        )
+    except ValueError as exc:
+        unsupported.add(str(exc))
+
+    for root in roots:
         visit(root, "")
 
     mesh_projection_available = not unsupported and all(
@@ -646,6 +832,16 @@ def inspect_scene(
         "dependencies": tuple(sorted(dependency_set)),
         "variants": tuple(sorted(variants)),
         "unsupported_features": tuple(sorted(unsupported)),
+        "num_materials": (
+            0
+            if stage_materials is None
+            else len(stage_materials.material_indices)
+        ),
+        "num_textures": (
+            0
+            if stage_materials is None
+            else len(stage_materials.external_asset_uris)
+        ),
     }
     default_prim = stage.get_metadata("defaultPrim")
     if default_prim is not None:
@@ -695,11 +891,19 @@ def _validate_writable_scene(scene) -> tuple[object, ...]:
             "USD: rich payload writing is not available for: "
             + ", ".join(unsupported_payloads)
         )
-    if scene.has_materials or scene.external_asset_uris:
+    unsupported_assets = sorted(
+        {
+            kind
+            for kind in scene.external_asset_kinds
+            if kind != "texture"
+        }
+    )
+    if unsupported_assets:
         raise ValueError(
-            "USD: materials and external assets are not available "
-            "in the stage-skeleton profile"
+            "USD: external asset writing is not available for: "
+            + ", ".join(unsupported_assets)
         )
+    materials.validate_writable_materials(scene)
     if any(scene.node_semantic_taxonomies) or any(scene.node_semantic_labels):
         raise ValueError(
             "USD: semantic labels are not available in the stage-skeleton profile"
@@ -740,6 +944,11 @@ def _validate_writable_scene(scene) -> tuple[object, ...]:
                 up_axis=scene.up_axis,
                 meters_per_unit=scene.meters_per_unit,
                 context=context,
+                material_count=(
+                    scene.materials.num_materials
+                    if scene.has_materials
+                    else 0
+                ),
             )
         else:
             points.validate_writable_point_cloud(
@@ -765,7 +974,14 @@ def _validate_writable_scene(scene) -> tuple[object, ...]:
     )
 
 
-def _write_scene_usda(scene, stream) -> None:
+def _write_scene_usda(
+    scene,
+    stream,
+    *,
+    texture_paths: dict[str, str],
+    validated: tuple[object, ...] | None = None,
+) -> None:
+    values = _validate_writable_scene(scene) if validated is None else validated
     (
         transforms,
         resets,
@@ -774,7 +990,15 @@ def _write_scene_usda(scene, stream) -> None:
         children,
         payload_kinds,
         payload_indices,
-    ) = _validate_writable_scene(scene)
+    ) = values
+    material_scope = (
+        materials.choose_material_scope(scene) if scene.has_materials else None
+    )
+    material_paths = (
+        materials.material_paths(material_scope, scene.materials)
+        if material_scope is not None
+        else ()
+    )
     stream.write("#usda 1.0\n(\n")
     if scene.default_prim >= 0:
         stream.write(
@@ -806,10 +1030,23 @@ def _write_scene_usda(scene, stream) -> None:
             "mesh": "Mesh",
             "point_cloud": "Points",
         }[kind]
-        stream.write(
-            f'{indent}def {type_name} "{scene.node_names[node]}"\n'
-            f"{indent}{{\n"
+        mesh = (
+            scene.mesh_at(int(payload_indices[node]))
+            if kind == "mesh"
+            else None
         )
+        has_material_binding = (
+            mesh is not None
+            and np.any(np.asarray(mesh.primitive_materials) >= 0)
+        )
+        stream.write(f'{indent}def {type_name} "{scene.node_names[node]}"\n')
+        if has_material_binding:
+            stream.write(
+                f"{indent}(\n"
+                f'{indent}    prepend apiSchemas = ["MaterialBindingAPI"]\n'
+                f"{indent})\n"
+            )
+        stream.write(f"{indent}{{\n")
         inner = indent + "    "
         matrix = transforms[node]
         reset = bool(resets[node])
@@ -836,9 +1073,16 @@ def _write_scene_usda(scene, stream) -> None:
         if kind == "mesh":
             geometry.write_mesh_attributes(
                 stream,
-                scene.mesh_at(int(payload_indices[node])),
+                mesh,
                 inner=inner,
             )
+            if has_material_binding:
+                materials.write_mesh_bindings(
+                    stream,
+                    mesh,
+                    inner=inner,
+                    paths=material_paths,
+                )
         elif kind == "point_cloud":
             points.write_point_attributes(
                 stream,
@@ -853,6 +1097,13 @@ def _write_scene_usda(scene, stream) -> None:
 
     for node in np.flatnonzero(parents == -1):
         write_node(int(node), "")
+    if scene.has_materials:
+        materials.write_material_library(
+            stream,
+            scene.materials,
+            scope_name=material_scope,
+            texture_paths=texture_paths,
+        )
 
 
 def _selected_encoding(destination: Path, encoding: str | None) -> str:
@@ -890,7 +1141,7 @@ def write_scene(
     package_assets: bool = True,
     profile: str = "usd-3dcv-1",
 ) -> None:
-    """Write a hierarchy-only SceneGraph transactionally as USDA or USDZ."""
+    """Write the bounded static SceneGraph transactionally as USDA or USDZ."""
 
     if profile != "usd-3dcv-1":
         raise ValueError("USD: profile must be 'usd-3dcv-1'")
@@ -898,24 +1149,110 @@ def write_scene(
         raise TypeError("USD: package_assets must be bool")
     destination = Path(path)
     selected = _selected_encoding(destination, encoding)
+    validated = _validate_writable_scene(scene)
+    texture_assets = _texture_assets(scene)
+    if selected == "usdz" and texture_assets and not package_assets:
+        raise ValueError(
+            "USDZ: texture assets must be packaged in the self-contained profile"
+        )
+    if selected == "usda" and texture_assets and not package_assets:
+        package.validate_unpacked_asset_sources(destination, texture_assets)
     destination.parent.mkdir(parents=True, exist_ok=True)
     usda = package.temporary_path(destination, ".usda.tmp")
     output = None
     try:
-        with usda.open("w", encoding="utf-8", newline="\n") as stream:
-            _write_scene_usda(scene, stream)
         if selected == "usdz":
+            texture_paths = {
+                uri: (
+                    f"textures/texture_{index:04d}"
+                    f"{PurePosixPath(uri).suffix.lower()}"
+                )
+                for index, (uri, _) in enumerate(texture_assets)
+            }
+            with usda.open("w", encoding="utf-8", newline="\n") as stream:
+                _write_scene_usda(
+                    scene,
+                    stream,
+                    texture_paths=texture_paths,
+                    validated=validated,
+                )
             output = package.temporary_path(destination, ".usdz.tmp")
-            package.write_usdz_archive(usda, output)
+            package.write_usdz_archive(
+                usda,
+                output,
+                assets=(
+                    (texture_paths[uri], source)
+                    for uri, source in texture_assets
+                ),
+            )
+            os.replace(output, destination)
+        elif texture_assets and package_assets:
+            with package.prepared_sidecar_assets(
+                destination,
+                texture_assets,
+            ) as texture_paths:
+                with usda.open(
+                    "w",
+                    encoding="utf-8",
+                    newline="\n",
+                ) as stream:
+                    _write_scene_usda(
+                        scene,
+                        stream,
+                        texture_paths=texture_paths,
+                        validated=validated,
+                    )
+                output = usda
+                os.replace(output, destination)
         else:
+            texture_paths = {
+                uri: uri for uri, _ in texture_assets
+            }
+            with usda.open("w", encoding="utf-8", newline="\n") as stream:
+                _write_scene_usda(
+                    scene,
+                    stream,
+                    texture_paths=texture_paths,
+                    validated=validated,
+                )
             output = usda
-        os.replace(output, destination)
+            os.replace(output, destination)
     finally:
         with suppress(FileNotFoundError):
             usda.unlink()
         if output is not None:
             with suppress(FileNotFoundError):
                 output.unlink()
+
+
+def _texture_assets(scene) -> tuple[tuple[str, str], ...]:
+    if not scene.has_materials:
+        return ()
+    values: list[tuple[str, str]] = []
+    seen: set[str] = set()
+    for uri, kind, source in zip(
+        scene.external_asset_uris,
+        scene.external_asset_kinds,
+        scene.external_asset_sources,
+        strict=True,
+    ):
+        if kind != "texture":
+            continue
+        if uri in seen:
+            raise ValueError(f"USD: duplicate external texture URI {uri!r}")
+        seen.add(uri)
+        values.append((uri, source))
+    expected = set(scene.materials.texture_paths)
+    if seen != expected:
+        raise ValueError(
+            "USD: external texture assets must exactly match material paths"
+        )
+    first_use = tuple(dict.fromkeys(scene.materials.texture_paths))
+    if tuple(uri for uri, _ in values) != first_use:
+        raise ValueError(
+            "USD: external texture assets must follow first material use"
+        )
+    return tuple(values)
 
 
 __all__ = [

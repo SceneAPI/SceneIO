@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 
-from sceneio.io._usd.package import root_layer_prefix
+from sceneio.io._usd.package import root_layer_prefix, validate_usdz_input
 
 USDC_MAGIC = b"PXR-USDC\x00"
 TINYUSDZ_MAX_QUALIFIED_CRATE_VERSION = 10
@@ -26,6 +26,7 @@ def require_tinyusdz():
 def require_qualified_input(path: str | os.PathLike[str]) -> None:
     """Refuse USDC versions outside the locally qualified provider range."""
 
+    validate_usdz_input(path)
     prefix = root_layer_prefix(path)
     if not prefix.startswith(USDC_MAGIC) or len(prefix) < 10:
         return

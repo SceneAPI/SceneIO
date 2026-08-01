@@ -5163,7 +5163,9 @@ checklist. No unchecked item below is a current USD I/O capability claim:
       mesh, point, and Gaussian payloads.
 - [x] U2: compatible rich-scene API, `.usdc` routing, stage metadata,
       inspection, and selection.
-- [ ] U3: mixed meshes, points, bounded materials, and texture assets.
+- [x] U3: mixed meshes, points, bounded materials, and texture assets. C1 is
+      committed; C2 closes in this commit with the hosted three-OS run pending
+      the next user-authorized push.
 - [ ] U4: official `ParticleField3DGaussianSplat` mapping.
 - [ ] U5: cameras/render products, OpenVDB references, semantic labels, and
       point instancing.
@@ -5213,6 +5215,15 @@ Progress:
       qualified historical `.usdc`, adds `read_scene()` plus hierarchy-only
       `write_scene()`, maps the bounded stage skeleton, and reports/refuses
       composition features that are not yet evaluated.
+- [x] C1 maps static polygon meshes and points with exact interpolation,
+      convention, inspection, selection, lifetime, and generated-path gates.
+- [x] C2 maps bounded PreviewSurface constants/textures, direct/subset
+      bindings, and streamed PNG/JPEG/EXR sources into deterministic USDA
+      sidecars or aligned USDZ packages. Its exact 4,183-node local gate passes
+      4,177 tests with 6 expected skips; benchmark, exact contracts, docs,
+      Ruff, and all three review lenses are green. The existing three-OS
+      focused workflow includes all USD suites but has not run at this commit
+      until the user authorizes a push.
 
 Completed U1 evidence:
 

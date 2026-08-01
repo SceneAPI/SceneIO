@@ -1060,7 +1060,13 @@ def test_write_scene_preserves_destination_on_package_failure(
     path = tmp_path / "preserved.usdz"
     path.write_bytes(b"keep")
 
-    def fail_archive(_source: Path, destination: Path) -> None:
+    def fail_archive(
+        _source: Path,
+        destination: Path,
+        *,
+        assets=(),
+    ) -> None:
+        tuple(assets)
         destination.write_bytes(b"partial")
         raise RuntimeError("injected failure")
 

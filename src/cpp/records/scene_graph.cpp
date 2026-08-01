@@ -145,6 +145,8 @@ SceneGraph make_scene_graph(
     std::optional<MaterialSet> materials,
     const std::vector<std::string> &external_asset_uris,
     const std::vector<std::string> &external_asset_kinds,
+    std::optional<std::vector<std::string>>
+        external_asset_sources,
     const std::string &up_axis,
     double meters_per_unit,
     const std::string &source_representation,
@@ -196,6 +198,11 @@ SceneGraph make_scene_graph(
         external_asset_kinds.size())
         throw std::invalid_argument(
             "scene_graph: external asset URI and kind counts differ");
+    if (external_asset_sources &&
+        external_asset_sources->size() !=
+            external_asset_uris.size())
+        throw std::invalid_argument(
+            "scene_graph: external asset source and URI counts differ");
     if (start_time_code.has_value() !=
         end_time_code.has_value())
         throw std::invalid_argument(
@@ -295,6 +302,8 @@ SceneGraph make_scene_graph(
     }
     result.external_asset_uris = external_asset_uris;
     result.external_asset_kinds = external_asset_kinds;
+    result.external_asset_sources =
+        external_asset_sources.value_or(external_asset_uris);
     result.up_axis = up_axis;
     result.meters_per_unit = meters_per_unit;
     result.source_representation = source_representation;
@@ -607,9 +616,11 @@ void validate_scene_graph(
     }
 
     if (scene.external_asset_uris.size() !=
-        scene.external_asset_kinds.size())
+            scene.external_asset_kinds.size() ||
+        scene.external_asset_uris.size() !=
+            scene.external_asset_sources.size())
         throw std::invalid_argument(
-            prefix + "external asset URI and kind counts differ");
+            prefix + "external asset URI, kind, and source counts differ");
     static const std::unordered_set<std::string> asset_kinds{
         "texture", "openvdb", "layer", "reference", "payload"};
     std::unordered_set<std::string> texture_assets;
@@ -619,6 +630,9 @@ void validate_scene_graph(
         validate_text(
             scene.external_asset_uris[index],
             prefix + "external asset URI", false);
+        validate_text(
+            scene.external_asset_sources[index],
+            prefix + "external asset source", false);
         if (!asset_kinds.count(
                 scene.external_asset_kinds[index]))
             throw std::invalid_argument(
@@ -921,6 +935,9 @@ void register_scene_graph(nb::module_ &module) {
         .def_ro(
             "external_asset_kinds",
             &SceneGraph::external_asset_kinds)
+        .def_ro(
+            "external_asset_sources",
+            &SceneGraph::external_asset_sources)
         .def_ro("up_axis", &SceneGraph::up_axis)
         .def_ro(
             "meters_per_unit",
@@ -994,6 +1011,7 @@ void register_scene_graph(nb::module_ &module) {
             std::vector<std::string>{},
         "external_asset_kinds"_a =
             std::vector<std::string>{},
+        "external_asset_sources"_a = nb::none(),
         "up_axis"_a = "y", "meters_per_unit"_a = 1.0,
         "source_representation"_a = "unknown",
         "default_prim"_a = nb::none(),
