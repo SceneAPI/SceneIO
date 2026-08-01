@@ -435,8 +435,8 @@
     "last": "tests/test_points_binary.py::test_bad_magic_rejected"
   },
   "pytest_candidate_collection": {
-    "count": 4310,
-    "sorted_normalized_node_ids_sha256": "4931746c57861cb5667c362fb1e32fab3b731b60957e0248231f4c9d49284a63",
+    "count": 4317,
+    "sorted_normalized_node_ids_sha256": "127e18a396ecfda9e9e08c14eea35015a385ecb098ef26bcb8d8c50d5ba7b8b6",
     "added_nodes": [
       "tests/codecs/test_animated_webp.py::test_sceneio_writer_is_lossless_and_oracle_readable",
       "tests/codecs/test_animated_webp.py::test_pillow_writer_is_sceneio_readable_bit_exact",
@@ -967,6 +967,13 @@
       "tests/test_io_benchmark_qualification.py::test_reviewed_exemptions_match_the_family_contract_exactly",
       "tests/test_io_benchmark_qualification.py::test_assembled_sweep_is_exactly_the_repository_builtins",
       "tests/test_io_benchmark_qualification.py::test_dense_benchmark_oracles_are_cross_differential",
+      "tests/test_io_benchmark_qualification.py::test_o5_directional_allocation_controls_are_narrow_and_accept_gains",
+      "tests/test_io_benchmark_qualification.py::test_o5_inspection_allocation_controls_reject_regressions[peaks0-directional_limits0-inspection exceeded 1 MB traced allocation: png]",
+      "tests/test_io_benchmark_qualification.py::test_o5_inspection_allocation_controls_reject_regressions[peaks1-directional_limits1-inspection failed directional traced-allocation guard: usd]",
+      "tests/test_io_benchmark_qualification.py::test_o5_inspection_allocation_controls_reject_regressions[peaks2-directional_limits2-inspection failed directional traced-allocation guard: usd]",
+      "tests/test_io_benchmark_qualification.py::test_o5_inspection_allocation_controls_reject_regressions[peaks3-directional_limits3-inspection failed directional traced-allocation guard: usd]",
+      "tests/test_io_benchmark_qualification.py::test_o5_inspection_allocation_controls_reject_regressions[peaks4-directional_limits4-missing O5 inspection directional allocation rows: usdz]",
+      "tests/test_io_benchmark_qualification.py::test_o5_inspection_allocation_controls_reject_regressions[peaks5-directional_limits5-invalid O5 inspection traced allocation metrics: png]",
       "tests/test_io_benchmark_qualification.py::test_coverage_validation_rejects_incomplete_or_noncanonical_sweeps[ids0-missing=pfm]",
       "tests/test_io_benchmark_qualification.py::test_coverage_validation_rejects_incomplete_or_noncanonical_sweeps[ids1-duplicates=npy]",
       "tests/test_io_benchmark_qualification.py::test_coverage_validation_rejects_incomplete_or_noncanonical_sweeps[ids2-unexpected=runtime-format]",

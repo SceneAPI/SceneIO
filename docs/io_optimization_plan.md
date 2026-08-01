@@ -209,11 +209,18 @@ rows with normalized SHA-256
 `817b355a8fb752025e51b3afe658524ebfa40cd6caffc8cd9e927a7117e07f65`.
 The exact 4,310-node local suite passes 4,304 tests with six documented skips;
 Ruff, workflow parsing, diff checks, and all three review lenses are clean.
-Exact-head package run `30702681469` and compiler run `30702675024` pass.
-CI run `30702675048` passes the suite, 67-format smoke, deterministic structure,
-and every platform shard, then the full five-run guard reaches the inherited
-20-minute job limit. Its 40-minute rerun retains all qualification flags and
-changes no benchmark workload or threshold.
+Final implementation source `47eb2e1` passes exact package run `30703473199`
+and compiler run `30703469313`. CI run `30703469317` passes the suite,
+67-format smoke, deterministic structure, and every platform shard. The full
+five-run guard completes and reproduces the documented TinyUSDZ boundary:
+USD/USdz full reads retain 8.5 MB traced while inspection retains 5.7 MB; it
+also measures Parquet full/selected at 18.4/1.6 MB. The globalized guard had
+incorrectly applied the legacy 1 MB metadata/selection cap to those logical
+provider/output allocations. The correction retains that absolute cap for
+every other applicable row. USD/USdz inspection must remain below 8 MB and 80%
+of full; Parquet selection must remain below 2 MB and 25% of full. The exact
+4,317-node local suite passes 4,311 tests with six documented skips; final
+hosted CI remains.
 
 The 2026-07-30 scale-16 profiling follow-up removed two wrapper hot spots.
 Already-native contiguous HDF5 arrays now pass directly to the native record

@@ -116,8 +116,8 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > plus 100 MiB measurements are green. The exact tree has 4,183 nodes; the
 > complete local MSVC gate passes 4,177 with 6 expected skips, full Ruff is
 > clean, and all three review lenses sign off. The existing three-OS focused
-> workflow now includes all USD suites; its hosted execution remains pending
-> the user-authorized push.
+> workflow now includes all USD suites; its later C7 hosted execution passes
+> on Linux, Windows, and macOS.
 >
 > **USD C3 local closure (2026-08-01):** the rich `SceneGraph`
 > path reads and writes the official OpenUSD 26.08
@@ -200,12 +200,20 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > suite and every platform shard, then its all-codec benchmark exposed a
 > Zarr 3.3 Linux platform-integer inference mismatch. The current follow-up
 > normalizes those NumPy aliases to fixed-width zero-copy views and adds
-> v2/v3 oracle regressions. Its exact 4,310-node local collection passes 4,304
-> with six documented skips. Exact-head package run `30702681469` and
-> compiler run `30702675024` pass. CI run `30702675048` passed the suite,
-> all 67 benchmark rows, their structure check, and every platform shard, then
-> the expanded five-run guard exhausted the old 20-minute job window. No guard
-> is removed; the exact-head rerun uses a 40-minute envelope.
+> v2/v3 oracle regressions. Final implementation source `47eb2e1` passes
+> build-only package run `30703473199` and compiler run `30703469313`; the
+> source archive, Linux/macOS/Windows wheels, installed-provider smokes, and
+> combined inventory are green with publication skipped. CI run `30703469317`
+> passes the complete suite, all 67 benchmark rows, their structure check, and
+> every platform shard. Its now-complete five-run guard then exposes a contract
+> classification gap: the global 1 MB allocation cap included the already
+> documented TinyUSDZ full-stage inspection cost (5.7 MB versus 8.5 MB full)
+> and the 1.6 MB Parquet selected result (versus 18.4 MB full). The correction
+> retains the 1 MB cap for every other applicable row. USD/USdz inspection must
+> stay below 8 MB and 80% of full; Parquet selection must stay below 2 MB and
+> 25% of full. Its exact 4,317-node local collection passes 4,311 with six
+> documented skips; the final hosted CI rerun
+> remains open.
 >
 > **COLMAP dense/workspace checkpoint (2026-07-29):** the current local
 > registry has 54 codecs: 48 buffer-backed files, three path-native

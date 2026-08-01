@@ -3030,16 +3030,24 @@ def _run_benchmark(args, tmp):
                 "parser control: "
                 + ", ".join(json_read_regressions)
             )
-        allocation_regressions = sorted(
-            codec_id
-            for codec_id, (_, _, inspected_peak, _, _) in by_codec.items()
-            if inspected_peak >= 1.0
+        qualification.validate_o5_allocation_controls(
+            "inspection",
+            {
+                codec_id: (full_peak, inspected_peak)
+                for (
+                    codec_id,
+                    _,
+                    _,
+                    full_peak,
+                    inspected_peak,
+                    _,
+                    _,
+                ) in inspect_rows
+            },
+            directional_limits=(
+                qualification.O5_INSPECTION_DIRECTIONAL_ALLOCATION_LIMITS
+            ),
         )
-        if allocation_regressions:
-            raise RuntimeError(
-                "O5 inspection exceeded 1 MB traced allocation: "
-                + ", ".join(allocation_regressions)
-            )
         rss_regressions = sorted(
             codec_id
             for codec_id, (_, _, _, full_rss, inspected_rss) in by_codec.items()
@@ -3112,16 +3120,24 @@ def _run_benchmark(args, tmp):
                 "O5 partial read failed directional latency guard: "
                 + ", ".join(regressions)
             )
-        allocation_regressions = sorted(
-            codec_id
-            for codec_id, (_, _, part_peak, _, _) in by_codec.items()
-            if part_peak >= 1.0
+        qualification.validate_o5_allocation_controls(
+            "partial read",
+            {
+                codec_id: (full_peak, part_peak)
+                for (
+                    codec_id,
+                    _,
+                    _,
+                    full_peak,
+                    part_peak,
+                    _,
+                    _,
+                ) in partial_rows
+            },
+            directional_limits=(
+                qualification.O5_PARTIAL_DIRECTIONAL_ALLOCATION_LIMITS
+            ),
         )
-        if allocation_regressions:
-            raise RuntimeError(
-                "O5 partial read exceeded 1 MB traced allocation: "
-                + ", ".join(allocation_regressions)
-            )
         rss_gain_regressions = sorted(
             codec_id
             for codec_id in stable - {"xyz", "ply_mesh"}

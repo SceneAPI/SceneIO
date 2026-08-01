@@ -17,10 +17,13 @@
   accepted profile; the NumPy-only base install is unchanged. Authorized
   build-only package run `30701260601` passes all three wheel platforms with
   publication skipped.
-- **Current program gate:** the user-directed lean 3D-CV format wave is in its
-  final exact-head CI rerun. The Zarr 3.3 Linux repair, 67-row smoke, package
-  matrix, compiler checks, and all platform shards pass; only the unchanged
-  five-run guard must complete under the expanded 40-minute job window.
+- **Current program gate:** implementation source `47eb2e1` passes the
+  nonpublishing package matrix, compiler checks, complete suite, 67-row smoke,
+  and every platform shard. The completed five-run guard exposed an overly
+  broad allocation classification for documented TinyUSDZ inspection and the
+  materialized Parquet selected result. A narrow local correction retains the
+  1 MB cap everywhere else and requires those paths to reduce allocation
+  strictly versus full reads; its final hosted CI rerun remains.
   Exhaustive backend comparison remains trigger-based, not a prerequisite for
   closing a verified codec unit.
 - **Scope:** close every unblocked format gap declared by SceneIO's coverage

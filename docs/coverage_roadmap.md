@@ -14,14 +14,16 @@
 > [`usd_3d_cv_implementation_plan.md`](usd_3d_cv_implementation_plan.md).
 > U0-U5 qualify the bounded provider, records, stage skeleton, and all direct
 > static payload kinds. C6 is closed through the explicit static-only Exit B;
-> C7 local source-to-wheel qualification is complete. Authorized build-only
-> package run `30701260601` passes the sdist and Linux/macOS/Windows wheel
-> matrix with publication skipped. Primary CI then isolated a Zarr 3.3 Linux
-> platform-integer inference mismatch in the all-codec benchmark; the
-> zero-copy adapter repair passes exact-head package/compiler validation and
-> the repaired 67-row Linux smoke. The remaining exact-head CI rerun retains
-> the complete five-run guard under a 40-minute job window after that expanded
-> sweep exhausted the old 20-minute limit.
+> C7 local source-to-wheel qualification is complete. At implementation source
+> `47eb2e1`, build-only package run `30703473199` and compiler run
+> `30703469313` pass with publication skipped. CI run `30703469317` passes the
+> full suite, repaired 67-row smoke/structure, and every platform shard before
+> the completed five-run guard identifies one classification gap: USD/USdz
+> inspection has the documented TinyUSDZ full-stage cost, and Parquet's named
+> selection returns 1.6 MB of logical data. The local correction preserves the
+> universal 1 MB cap elsewhere. USD/USdz inspection is capped at 8 MB and 80%
+> of full; Parquet selection is capped at 2 MB and 25% of full. Its final
+> hosted CI rerun remains open.
 > Animated WebP is the 55th local codec; the preceding 54-codec hosted package
 > evidence remains a dated checkpoint rather than evidence for this addition.
 > The current branch-local COLMAP dense checkpoint adds exact depth/normal
@@ -353,7 +355,7 @@ Columns: **Ext/id** · **Record** · **Lib/oracle (license)** · **R/W** ·
 | ✅ OFF | `Mesh` | independent parser + trimesh (MIT) | R+W | polygon-preserving ASCII vertex variants with normals, UVs, and exact RGBA8; bounded face ranges |
 | ✅ glTF / GLB (plain) | `MeshScene` | cgltf (MIT); pygltflib + trimesh oracles | R+W | 2.0 JSON/external or data buffers and GLB BIN; sparse/strided accessors, nodes/scenes, PBR subset, mesh/primitive selectors; unsupported extensions/Draco reject |
 | policy-gated Draco glTF | `MeshScene` | Draco (Apache) | R+W | requires a separate patented-codec policy decision; never required for plain glTF/GLB |
-| 🟡 USD / USDZ / historical USDC | `MeshScene` compatibility + `SceneGraph` | TinyUSDZ (Apache-2.0) | rich direct-static 3D-CV R+W | optional `sceneio[usd]`; C1-C5 cover hierarchy, polygon meshes/points, bounded PreviewSurface materials/textures, official float/half Gaussian particles, static camera/render-product pairs, direct scalar-float OpenVDB references, one inherited semantic pair, and static PointInstancer rows; historical USDC input is qualified through crate 10 and later crates refuse before provider dispatch; C6 Exit B explicitly leaves current USDC, evaluated composition, and animated selected time unavailable; OpenUSD remains reference-only under the current license allow-list; C7 local artifact and installed-provider evidence passes, while hosted three-platform execution remains user-gated |
+| 🟡 USD / USDZ / historical USDC | `MeshScene` compatibility + `SceneGraph` | TinyUSDZ (Apache-2.0) | rich direct-static 3D-CV R+W | optional `sceneio[usd]`; C1-C5 cover hierarchy, polygon meshes/points, bounded PreviewSurface materials/textures, official float/half Gaussian particles, static camera/render-product pairs, direct scalar-float OpenVDB references, one inherited semantic pair, and static PointInstancer rows; historical USDC input is qualified through crate 10 and later crates refuse before provider dispatch; C6 Exit B explicitly leaves current USDC, evaluated composition, and animated selected time unavailable; OpenUSD remains reference-only under the current license allow-list; C7 local and hosted Linux/macOS/Windows package/provider evidence passes, with only the corrected primary CI guard rerun open |
 
 ### 3e. Arrays / tensors / features
 | Format | Record | Lib / oracle | R/W | Notes |

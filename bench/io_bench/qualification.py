@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+from collections.abc import Mapping
 from dataclasses import dataclass
 from types import MappingProxyType
 
@@ -347,6 +348,74 @@ COMPARISON_QUALIFICATIONS = MappingProxyType(
 )
 
 
+# These operations necessarily retain more than the universal 1 MB metadata/
+# selection cap. TinyUSDZ materializes the provider stage before SceneIO can
+# inspect it, while the Parquet selector returns a 1.6 MB logical column. Keep
+# them qualified by a measured ceiling and reduction against the corresponding
+# full read. Values are (maximum operation peak MB, maximum fraction of full).
+O5_INSPECTION_DIRECTIONAL_ALLOCATION_LIMITS = MappingProxyType(
+    {"usd": (8.0, 0.8), "usdz": (8.0, 0.8)}
+)
+O5_PARTIAL_DIRECTIONAL_ALLOCATION_LIMITS = MappingProxyType(
+    {"parquet": (2.0, 0.25)}
+)
+
+
+def validate_o5_allocation_controls(
+    operation: str,
+    peaks_by_codec: Mapping[str, tuple[float, float]],
+    *,
+    directional_limits: Mapping[str, tuple[float, float]],
+    absolute_cap_mb: float = 1.0,
+) -> None:
+    """Apply the absolute cap or a documented full-read reduction control."""
+
+    directional_ids = directional_limits.keys()
+    missing = directional_ids - peaks_by_codec.keys()
+    if missing:
+        raise RuntimeError(
+            f"missing O5 {operation} directional allocation rows: "
+            + ", ".join(sorted(missing))
+        )
+    invalid = sorted(
+        codec_id
+        for codec_id, (full_peak, operation_peak) in peaks_by_codec.items()
+        if not math.isfinite(full_peak)
+        or full_peak < 0.0
+        or not math.isfinite(operation_peak)
+        or operation_peak < 0.0
+    )
+    if invalid:
+        raise RuntimeError(
+            f"invalid O5 {operation} traced allocation metrics: "
+            + ", ".join(invalid)
+        )
+    absolute_regressions = sorted(
+        codec_id
+        for codec_id, (_, operation_peak) in peaks_by_codec.items()
+        if codec_id not in directional_ids
+        and operation_peak >= absolute_cap_mb
+    )
+    if absolute_regressions:
+        raise RuntimeError(
+            f"O5 {operation} exceeded {absolute_cap_mb:g} MB traced allocation: "
+            + ", ".join(absolute_regressions)
+        )
+    directional_regressions = sorted(
+        codec_id
+        for codec_id in directional_ids
+        if peaks_by_codec[codec_id][0] <= 0.0
+        or peaks_by_codec[codec_id][1] >= directional_limits[codec_id][0]
+        or peaks_by_codec[codec_id][1]
+        >= directional_limits[codec_id][1] * peaks_by_codec[codec_id][0]
+    )
+    if directional_regressions:
+        raise RuntimeError(
+            f"O5 {operation} failed directional traced-allocation guard: "
+            + ", ".join(directional_regressions)
+        )
+
+
 def validate_benchmark_coverage(format_ids) -> tuple[str, ...]:
     """Require the assembled sweep to cover every repository built-in once."""
 
@@ -594,9 +663,12 @@ _validate_qualification_manifest()
 
 __all__ = [
     "COMPARISON_QUALIFICATIONS",
+    "O5_INSPECTION_DIRECTIONAL_ALLOCATION_LIMITS",
+    "O5_PARTIAL_DIRECTIONAL_ALLOCATION_LIMITS",
     "ComparisonQualification",
     "measure_spec_comparison",
     "validate_benchmark_coverage",
+    "validate_o5_allocation_controls",
     "validate_strict_providers",
     "validate_strict_results",
 ]

@@ -3974,3 +3974,23 @@ and every platform shard. The unchanged five-run qualification guard then
 reaches the job's old 20-minute limit after running for ten minutes. The
 follow-up raises only that job envelope to 40 minutes; run count, providers,
 gain requirements, memory checks, and thresholds are unchanged.
+
+Final implementation source `47eb2e1` passes build-only package run
+`30703473199` and compiler run `30703469313`. CI run `30703469317` passes the
+complete suite, 67-format smoke and structural projection, plus every GCC 10,
+Linux, Windows, and macOS focused shard. The five-run guard completes and
+reproduces the accepted C6 provider boundary: USD and USDZ full reads retain
+8.5 MB traced while inspection retains 5.7 MB. It also measures Parquet full
+and named-column reads at 18.4 and 1.6 MB. The guard failed because its legacy
+1 MB absolute cap had been globalized to these newly added rows, despite the
+recorded TinyUSDZ full-stage parse and the selected Parquet result itself being
+larger than that cap.
+
+The correction keeps the 1 MB cap for every other applicable inspection and
+partial row. USD/USdz inspection must stay below 8 MB and 80% of full;
+Parquet selection must stay below 2 MB and 25% of full. Missing, non-finite,
+negative, absolute-cap, ceiling, and ratio-regression cases fail independently.
+A local one-run control measured 8.510/5.718 MB for
+USD full/inspect, 8.512/5.718 MB for USDZ, and 18.354/1.577 MB for Parquet
+full/selected. The exact local collection now has 4,317 nodes and passes 4,311
+with six documented skips; the final hosted CI rerun remains open.

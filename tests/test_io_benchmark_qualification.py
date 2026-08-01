@@ -329,6 +329,101 @@ def test_dense_benchmark_oracles_are_cross_differential():
     assert "qualification.validate_dense_oracle_parity(" in runner_source
 
 
+def test_o5_directional_allocation_controls_are_narrow_and_accept_gains():
+    assert {
+        "usd",
+        "usdz",
+    } == set(qualification.O5_INSPECTION_DIRECTIONAL_ALLOCATION_LIMITS)
+    assert {
+        "parquet",
+    } == set(qualification.O5_PARTIAL_DIRECTIONAL_ALLOCATION_LIMITS)
+    assert dict(qualification.O5_INSPECTION_DIRECTIONAL_ALLOCATION_LIMITS) == {
+        "usd": (8.0, 0.8),
+        "usdz": (8.0, 0.8),
+    }
+    assert dict(qualification.O5_PARTIAL_DIRECTIONAL_ALLOCATION_LIMITS) == {
+        "parquet": (2.0, 0.25),
+    }
+    qualification.validate_o5_allocation_controls(
+        "inspection",
+        {
+            "png": (3.2, 0.01),
+            "usd": (8.5, 5.7),
+            "usdz": (8.5, 5.7),
+        },
+        directional_limits=(
+            qualification.O5_INSPECTION_DIRECTIONAL_ALLOCATION_LIMITS
+        ),
+    )
+    qualification.validate_o5_allocation_controls(
+        "partial read",
+        {"png": (3.2, 0.01), "parquet": (18.4, 1.6)},
+        directional_limits=(
+            qualification.O5_PARTIAL_DIRECTIONAL_ALLOCATION_LIMITS
+        ),
+    )
+
+
+@pytest.mark.parametrize(
+    ("peaks", "directional_limits", "message"),
+    [
+        (
+            {"png": (3.2, 1.0), "usd": (8.5, 5.7), "usdz": (8.5, 5.7)},
+            qualification.O5_INSPECTION_DIRECTIONAL_ALLOCATION_LIMITS,
+            "inspection exceeded 1 MB traced allocation: png",
+        ),
+        (
+            {"png": (3.2, 0.01), "usd": (8.5, 7.0), "usdz": (8.5, 5.7)},
+            qualification.O5_INSPECTION_DIRECTIONAL_ALLOCATION_LIMITS,
+            "inspection failed directional traced-allocation guard: usd",
+        ),
+        (
+            {
+                "png": (3.2, 0.01),
+                "usd": (1000.0, 999.0),
+                "usdz": (8.5, 5.7),
+            },
+            qualification.O5_INSPECTION_DIRECTIONAL_ALLOCATION_LIMITS,
+            "inspection failed directional traced-allocation guard: usd",
+        ),
+        (
+            {
+                "png": (3.2, 0.01),
+                "usd": (100.0, 8.0),
+                "usdz": (8.5, 5.7),
+            },
+            qualification.O5_INSPECTION_DIRECTIONAL_ALLOCATION_LIMITS,
+            "inspection failed directional traced-allocation guard: usd",
+        ),
+        (
+            {"png": (3.2, 0.01), "usd": (8.5, 5.7)},
+            qualification.O5_INSPECTION_DIRECTIONAL_ALLOCATION_LIMITS,
+            "missing O5 inspection directional allocation rows: usdz",
+        ),
+        (
+            {
+                "png": (3.2, float("nan")),
+                "usd": (8.5, 5.7),
+                "usdz": (8.5, 5.7),
+            },
+            qualification.O5_INSPECTION_DIRECTIONAL_ALLOCATION_LIMITS,
+            "invalid O5 inspection traced allocation metrics: png",
+        ),
+    ],
+)
+def test_o5_inspection_allocation_controls_reject_regressions(
+    peaks,
+    directional_limits,
+    message,
+):
+    with pytest.raises(RuntimeError, match=message):
+        qualification.validate_o5_allocation_controls(
+            "inspection",
+            peaks,
+            directional_limits=directional_limits,
+        )
+
+
 @pytest.mark.parametrize(
     ("ids", "fragment"),
     [
