@@ -455,6 +455,9 @@ def test_benchmark_contract_matches_checked_snapshot():
             item.id for item in module.build_container_specs(0.001)
         )
         order.extend(
+            item.id for item in module.build_media_path_specs(0.001)
+        )
+        order.extend(
             item.id
             for item in module._directory_specs(
                 reconstruction=None,

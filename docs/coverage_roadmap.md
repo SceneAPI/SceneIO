@@ -1,7 +1,7 @@
 # SceneIO — comprehensive coverage roadmap & execution checklist
 
 > Current shipped and branch-local status is tracked in `format_coverage.md`.
-> The status markers below have been reconciled to the live 67-format registry;
+> The status markers below have been reconciled to the live 69-format registry;
 > broader checklist boxes remain open where a codec has not completed an
 > aspirational per-format or cross-platform gate. The authoritative
 > implementation sequence for the remaining formats is
@@ -382,7 +382,7 @@ Columns: **Ext/id** · **Record** · **Lib/oracle (license)** · **R/W** ·
 | ✅ WebP | `Image` | Pillow / libwebp (BSD) | R+W | lossy+lossless RGB/RGBA |
 | ✅ OpenEXR | `Image` (raw) + `DepthMap` (typed) | OpenEXR (BSD‑3) / tinyexr | R+W | HALF→FLOAT; PIZ/ZIP/RLE; explicit named scalar depth channel |
 | ✅ BMP / TGA | `Image` | stb_image (PD/MIT) + Pillow | R+W | BMP BI_RGB/bitfields/palette and TGA raw/RLE/palette; strict unsupported-variant guards |
-| ⬜ AVIF | `Image` | libavif+aom (BSD, royalty‑free) | R+W | AV1 still |
+| ✅ AVIF | `Image` | optional Pillow/libavif + libaom/dav1d (MIT-CMU/BSD, royalty-free grant) | R+W | repository-owned bounded adapter; 8-bit gray/RGB/straight RGBA, mmap read, inspect; no high-bit-depth/HDR profile yet |
 | ⬜ JPEG‑XL | `Image` | libjxl (BSD, royalty‑free) | R+W | |
 
 ### 3g. Depth / flow / spatial‑AI
@@ -406,16 +406,20 @@ Columns: **Ext/id** · **Record** · **Lib/oracle (license)** · **R/W** ·
 | ✅ ROS `camera_info` yaml | `CameraRig` | native bounded subset + PyYAML oracle | R+W | exact K,D,R,P, binning, ROI, rectify flag |
 | ✅ Kalibr yaml | `CameraRig` | native bounded subset + PyYAML oracle | R+W | multi-camera models/coefficients, chained or IMU extrinsics, topics, signed time offsets |
 
-### 3i. Video — constrained (no ffmpeg / patented codecs)
+### 3i. Video — constrained (no FFmpeg; royalty-free grants only)
 | Format | Record | Lib / oracle | R/W | Notes |
 |---|---|---|---|---|
 | ✅ image sequence (dir) | `ImageSequence` | existing image inspectors + independent manifest/PGM fixtures | R+W | lazy flat frames, natural order or exact-timing manifest, bounded transactional copy |
 | ✅ `.y4m` (raw YUV) | `ImageSequence` | original native codec + independent Python oracle | R+W | uint8 mono/420/422/444 planar frames; uncompressed and unpatented |
 | ✅ animated WebP | `ImageSequence` | pinned libwebp + Pillow oracle | R+W | fully composited packed RGB/RGBA frames; exact millisecond timing, loop/background metadata, mmap, direct sink, inspect |
 | ✅ APNG | `ImageSequence` | existing lodepng/miniz substrate + Pillow/spec oracle | R+W | bounded repository-owned animation chunk/state layer; composited RGBA, exact accepted-profile timing, blend/disposal, mmap, sink, inspect |
+| ✅ animated AVIF | `ImageSequence` | optional Pillow/libavif + libaom/dav1d | R+W | owned 8-bit frames, exact accepted timing, frame ranges, mmap, inspect; writer is provider-buffered and does not claim a direct sink |
+| ⬜ WebM VP8/VP9 | `ImageSequence` | direct libvpx + libwebm | R+W | proposed video-only bounded profile; no audio/subtitles and no general video framework |
+| ⬜ Ogg/Theora | `ImageSequence` | direct libogg + libtheora | R+W | proposed video-only bounded profile; no audio/subtitles and no general video framework |
 
-**Excluded (out of scope):** FBX (proprietary SDK), H.264/H.265/ProRes and any
-patented video codec (per directive), HEIF/HEIC (HEVC patents), Draco‑only
+**Excluded (out of scope):** FBX (proprietary SDK), H.264/H.265/ProRes and
+royalty-bearing video codecs without an accepted open grant, HEIF/HEIC (HEVC
+patents), Draco‑only
 niche, anything GPL/AGPL/NC.
 
 ---
@@ -430,8 +434,8 @@ maintained in `format_gap_implementation_plan.md`:
 2. COLMAP DB, PCD, calibration, and other self-contained formats (generic
    point PLY is complete);
 3. meshes and vendorable LAZ (complete locally);
-4. lazy image directories, raw Y4M, animated WebP, and APNG (complete locally),
-   followed by RTMV;
+4. lazy image directories, raw Y4M, animated WebP, APNG, and animated AVIF
+   (complete locally), followed by RTMV and direct WebM/Ogg-Theora units;
 5. optional-provider TIFF/E57/Arrow integrations (complete locally);
 6. bounded USD/USDZ and OpenVDB integrations (complete locally), with
    broader scene/volume semantics and policy-gated codecs left explicit.

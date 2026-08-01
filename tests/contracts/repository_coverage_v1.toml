@@ -1,5 +1,5 @@
 schema_version = 1
-builtins = 56
+builtins = 69
 
 # Test-only repository coverage; runtime extensions are intentionally exempt.
 
@@ -308,6 +308,14 @@ inspection_source = "src/sceneio/io/_inspectors/images.py"
 wheel_smoke_case = "_raster_images"
 
 [[codec]]
+id = "avif"
+benchmark_case = "avif"
+source_suite = "tests/codecs/test_avif.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_avif.py"
+wheel_smoke_case = "_avif_formats"
+
+[[codec]]
 id = "y4m"
 benchmark_case = "y4m"
 source_suite = "tests/codecs/test_y4m.py"
@@ -330,6 +338,14 @@ source_suite = "tests/codecs/test_apng.py"
 documentation_row = "docs/format_coverage.md"
 inspection_source = "src/sceneio/io/_inspectors/sequences.py"
 wheel_smoke_case = "_image_sequences"
+
+[[codec]]
+id = "animated_avif"
+benchmark_case = "animated_avif"
+source_suite = "tests/codecs/test_avif.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_avif.py"
+wheel_smoke_case = "_avif_formats"
 
 [[codec]]
 id = "image_sequence"

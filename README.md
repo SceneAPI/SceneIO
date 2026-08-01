@@ -76,16 +76,16 @@ artifacts vocabulary — wire identity unchanged.
 
 ### Compiled format I/O — `read` / `write` / `inspect` / `read_partial`
 
-The lazy-loaded compiled core and repository-owned adapters read and write 67
+The lazy-loaded compiled core and repository-owned adapters read and write 69
 image, image-sequence, depth, tensor,
 point-cloud, Gaussian, mesh/scene, pose/state, reconstruction, calibration,
 graph, feature-database, and scientific-container formats. Stable format
 contracts stay repository-owned; optional permissive providers supply their
 established storage kernels for HDF5/hloc, Zarr v2/v3, TIFF, E57,
-Parquet/Arrow IPC, OpenVDB, and USD/USDZ:
+Parquet/Arrow IPC, OpenVDB, USD/USDZ, and AVIF/animated AVIF:
 
 ```console
-uv pip install "sceneio[hdf5,zarr,tiff,e57,arrow,openvdb,usd]"
+uv pip install "sceneio[hdf5,zarr,tiff,e57,arrow,openvdb,usd,avif]"
 ```
 
 SceneIO's Linux wheel retains its manylinux2014 base contract. The separately
@@ -97,6 +97,12 @@ These extras are lazy and independent; the base runtime remains NumPy-only.
 The accepted profiles are intentionally bounded and reject semantics the
 corresponding SceneIO record cannot preserve. See
 [`docs/format_coverage.md`](docs/format_coverage.md) for the exact mapping.
+
+The AVIF profile uses Pillow 12.3's optimized libavif provider with libaom
+encoding and dav1d decoding. SceneIO owns detection, mmap lifetime, record
+mapping, guards, partial-frame access, and transactional paths. It supports
+bounded 8-bit still and animated AVIF; high-bit-depth/HDR profiles remain
+explicitly unavailable. No FFmpeg/libav component is included or invoked.
 
 Rich USD-family stages use the additive `SceneGraph` API. The established
 `sceneio.read()` path continues returning `MeshScene` for its accepted

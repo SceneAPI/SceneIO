@@ -62,9 +62,11 @@ CANONICAL_BUILTIN_IDS = (
     "hdr",
     "exr",
     "webp",
+    "avif",
     "y4m",
     "animated_webp",
     "apng",
+    "animated_avif",
     "image_sequence",
     "colmap_sparse_txt",
     "xyz",
@@ -126,6 +128,7 @@ FAMILY_MEMBERS = MappingProxyType(
             "hdr",
             "exr",
             "webp",
+            "avif",
             "tiff",
         ),
         "meshes": (
@@ -153,7 +156,13 @@ FAMILY_MEMBERS = MappingProxyType(
             "nvm",
             "openmvg",
         ),
-        "sequences": ("y4m", "animated_webp", "apng", "image_sequence"),
+        "sequences": (
+            "y4m",
+            "animated_webp",
+            "apng",
+            "animated_avif",
+            "image_sequence",
+        ),
         "splats": (
             "gaussian_ply",
             "compressed_ply",
@@ -291,6 +300,7 @@ _NATIVE_SYMBOLS = {
     "arrow_ipc": (),
     "openvdb": (),
     "webp": ("read_webp", "write_webp", "read_webp_window"),
+    "avif": (),
     "y4m": ("_inspect_y4m", "read_y4m", "write_y4m", "read_y4m_frames"),
     "animated_webp": (
         "_inspect_animated_webp",
@@ -298,6 +308,7 @@ _NATIVE_SYMBOLS = {
         "write_animated_webp",
     ),
     "apng": ("_inspect_apng", "read_apng", "write_apng"),
+    "animated_avif": (),
     "image_sequence": ("image_sequence_paths",),
     "colmap_sparse_txt": (
         "_inspect_colmap_txt",
@@ -391,6 +402,17 @@ _PYTHON_SYMBOLS = {
         "sceneio.io._image_sequence.inspect_image_sequence_directory",
         "sceneio.io._image_sequence.read_image_sequence_directory_frames",
     ),
+    "avif": (
+        "sceneio.io._avif.read_avif",
+        "sceneio.io._avif.write_avif",
+        "sceneio.io._avif.inspect_avif",
+    ),
+    "animated_avif": (
+        "sceneio.io._avif.read_animated_avif",
+        "sceneio.io._avif.write_animated_avif",
+        "sceneio.io._avif.inspect_animated_avif",
+        "sceneio.io._avif.read_animated_avif_frames",
+    ),
     "hdf5": (
         "sceneio.io._hdf5.read_hdf5",
         "sceneio.io._hdf5.write_hdf5",
@@ -451,6 +473,8 @@ _OWNERS = {
     "usd": "python",
     "usdz": "python",
     "image_sequence": "python",
+    "avif": "python",
+    "animated_avif": "python",
     "hdf5": "python",
     "hloc_features": "python",
     "hloc_matches": "python",

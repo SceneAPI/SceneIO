@@ -1192,15 +1192,16 @@ def test_publish_workflow_builds_every_wheel_from_the_exact_sdist() -> None:
     assert "CIBW_MANYLINUX_X86_64_IMAGE:" in wheel_job
     assert "numpy==2.2.6" in wheel_job
     assert 'CIBW_TEST_REQUIRES: ""' in wheel_job
-    assert "name: Smoke installed TinyUSDZ profile on wheel host" in wheel_job
-    assert "TinyUSDZ 0.9.4's Linux wheel targets manylinux 2.27/2.28" in wheel_job
+    assert "name: Smoke installed USD and AVIF profiles on wheel host" in wheel_job
+    assert "TinyUSDZ 0.9.4 and Pillow 12.3's optimized provider wheels" in wheel_job
     assert "SceneIO's independent manylinux2014 artifact" in wheel_job
     assert 'python -m venv "$smoke_env"' in wheel_job
     assert '"$RUNNER_OS" == "Windows"' in wheel_job
-    assert '"${wheel}[usd]"' in wheel_job
+    assert '"${wheel}[usd,avif]"' in wheel_job
     assert "--only-binary=:all:" in wheel_job
-    assert "numpy==2.2.6 tinyusdz==0.9.4" in wheel_job
+    assert "numpy==2.2.6 tinyusdz==0.9.4 pillow==12.3.0" in wheel_job
     assert 'sceneio.capabilities("usd").available' in wheel_job
+    assert 'sceneio.capabilities("avif").available' in wheel_job
     assert '"$smoke_python" -I -m sceneio._wheel_smoke' in wheel_job
     assert wheel_job.count("tools/verify_distribution.py") == 1
     assert '--sdist "${{ steps.source.outputs.sdist-path }}"' in wheel_job

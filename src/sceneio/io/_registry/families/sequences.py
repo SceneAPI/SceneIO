@@ -6,6 +6,12 @@ from functools import partial
 
 import sceneio.io._image_sequence as _image_sequence_adapter
 from sceneio import _core
+from sceneio.io._avif import (
+    inspect_animated_avif,
+    read_animated_avif,
+    read_animated_avif_frames,
+    write_animated_avif,
+)
 from sceneio.io._frame_access import ImageFrameAccess
 from sceneio.io._registry.adapters import (
     _file_sink_writer,
@@ -100,6 +106,50 @@ _APNG_CODEC = Codec(
     ),
 )
 
+_ANIMATED_AVIF_CODEC = Codec(
+    "animated_avif",
+    (".avif", ".avifs"),
+    read_animated_avif,
+    write_animated_avif,
+    record=_core.ImageSequence,
+    datatype="image_sequence",
+    inspect=inspect_animated_avif,
+    read_frames=read_animated_avif_frames,
+    streams_write=False,
+    requires_features=("PIL",),
+    lossy=True,
+    supported_features=(
+        "avif_1_2",
+        "uint8",
+        "grayscale",
+        "rgb",
+        "rgba",
+        "straight_alpha",
+        "exact_frame_timing",
+        "frame_ranges",
+        "libavif",
+        "libaom_encode",
+        "dav1d_decode",
+        "worker_threads",
+        "metadata_only_inspect",
+    ),
+    unsupported_features=(
+        "sub_millisecond_write_timing",
+        "loop_count",
+        "background_rgba",
+        "audio",
+        "subtitles",
+        "high_bit_depth",
+        "hdr",
+        "gain_maps",
+        "embedded_icc",
+        "embedded_exif",
+        "embedded_xmp",
+        "non_identity_orientation",
+        "direct_streaming_write",
+    ),
+)
+
 
 def build_sequence_codecs(
     frame_access: ImageFrameAccess,
@@ -110,6 +160,7 @@ def build_sequence_codecs(
         _Y4M_CODEC,
         _ANIMATED_WEBP_CODEC,
         _APNG_CODEC,
+        _ANIMATED_AVIF_CODEC,
         Codec(
             "image_sequence",
             (),

@@ -607,24 +607,24 @@
   },
   "r3_2_qualification": {
     "source": "bench/io_bench/qualification.py",
-    "builtin_count": 67,
-    "timed_count": 50,
+    "builtin_count": 69,
+    "timed_count": 52,
     "reviewed_exemption_count": 17,
-    "ledger_sha256": "5941120e40ce72d174222c939698b11c318fae3d1e2e5d993e7eb7f0e1e8481f"
+    "ledger_sha256": "c4357d8522f4e02691fcd88757fe9ba3b631faabb884e072cdfee2616be7a9cc"
   },
   "r3_2_runner_extraction": {
     "parent_commit": "cd322685d3de86931ec4264261924fb3c309b6c4",
     "source": "bench/io_bench/runner.py",
     "facade": "bench/bench_io.py",
     "facade_attribute_policy": "alias_all_non_dunder_runner_globals",
-    "facade_attribute_count": 178,
-    "facade_attributes_sha256": "abc6bd89e939ef4b69c82e873ee0d4942a387e230d80a39ac875973b38d45090",
+    "facade_attribute_count": 179,
+    "facade_attributes_sha256": "a1e184977f5679000ee2750a9d319b5368cb4e35f2f44bbcec2df9634277d7cc",
     "facade_rebinding_policy": "propagate_historical_attribute_mutations_to_runner",
     "facade_first_import_policy": "preserve_initialized_runner_objects_and_rebindings",
     "facade_reload_policy": "reset_runner_source_definitions_and_restore_aliases",
     "star_import_policy": "parent_public_names_without_explicit_all",
-    "star_import_count": 71,
-    "star_import_sha256": "0a814cc72d5c4f87be4dbea9afefadec51876c9e2321bb211da786cffd072d82",
+    "star_import_count": 72,
+    "star_import_sha256": "7b18ab7bb60a1cbf82bc6a68d5ebd3c7416d149cd69c08daa90c468b4c1aa151",
     "function_ast_sha256": {
       "_colmap_db_fixture": "21fca110721a74e5314b837211e72d958a2e8b9ed59bb7c204027f90c26a7ab6",
       "_colmap_db_payload_nbytes": "a68d8e879f360c0595f76f747079ce07c4822774f22b5b4cefee8bd396dffb32",
@@ -647,7 +647,7 @@
       "_benchmark_colmap_db": "0fc2a9533c139fb1a09b94adfb2efee2fc1e8cc423cba6dccc813ab8a92144d3",
       "_benchmark_path_spec": "da0eff153625f532462f6035dd95cc3b3382437e920d68a5e29bf810784773d3",
       "_benchmark_gltf": "589f18f0c1bac962a14902f113d1bbcf32edc07168015792e9a42d0826506093",
-      "_run_benchmark": "88526226cf90210b7daac7e8d2630f609977a842c75347a3d5ad77bd7e05654e"
+      "_run_benchmark": "d0349244455dea52ca3f66f860ec8e3c87090cfa143d691c2dbd749aded74e50"
     }
   },
   "r3_1a_equivalence": {
@@ -789,6 +789,8 @@
     "openvdb",
     "usd",
     "usdz",
+    "avif",
+    "animated_avif",
     "colmap_sparse",
     "colmap_sparse_txt",
     "image_sequence"

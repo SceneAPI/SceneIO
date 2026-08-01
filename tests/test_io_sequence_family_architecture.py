@@ -28,7 +28,13 @@ from sceneio.io._registry.families import sequences as sequence_family
 
 ROOT = Path(__file__).resolve().parents[1]
 CONTRACT = ROOT / "tests" / "contracts" / "io_sequence_inspection_v1.json"
-SEQUENCE_IDS = ("y4m", "animated_webp", "apng", "image_sequence")
+SEQUENCE_IDS = (
+    "y4m",
+    "animated_webp",
+    "apng",
+    "animated_avif",
+    "image_sequence",
+)
 FRAME_ACCESS_AST_NORMALIZATION = {
     "_IMAGE_FRAME_ACCESS": "__FRAME_ACCESS__",
     "frame_access": "__FRAME_ACCESS__",
@@ -156,6 +162,7 @@ def _assert_sequence_family_imports(source: str) -> None:
         "__future__",
         "functools",
         "sceneio",
+        "sceneio.io._avif",
         "sceneio.io._frame_access",
         "sceneio.io._image_sequence",
         "sceneio.io._registry.adapters",
@@ -212,17 +219,18 @@ def test_sequence_codec_ast_contract_and_canonical_installation_are_exact():
     assert _codec_ast_hashes() == contract["codec_ast_sha256"]
 
     start = CANONICAL_BUILTIN_IDS.index("y4m")
-    assert CANONICAL_BUILTIN_IDS[start - 1 : start + 5] == (
-        "webp",
+    assert CANONICAL_BUILTIN_IDS[start - 1 : start + 6] == (
+        "avif",
         "y4m",
         "animated_webp",
         "apng",
+        "animated_avif",
         "image_sequence",
         "colmap_sparse_txt",
     )
-    assert tuple(registry.REGISTRY)[start : start + 4] == SEQUENCE_IDS
+    assert tuple(registry.REGISTRY)[start : start + 5] == SEQUENCE_IDS
     assert tuple(
-        codec.id for codec in registry.BUILTIN_DEFINITIONS[start : start + 4]
+        codec.id for codec in registry.BUILTIN_DEFINITIONS[start : start + 5]
     ) == SEQUENCE_IDS
     for offset, format_id in enumerate(SEQUENCE_IDS):
         assert (
@@ -327,9 +335,10 @@ def test_sequence_factory_is_inert_reentrant_and_binds_supplied_access():
         is sequence_family._ANIMATED_WEBP_CODEC
     )
     assert first[2] is second[2] is sequence_family._APNG_CODEC
-    assert first[3] is not second[3]
+    assert first[3] is second[3] is sequence_family._ANIMATED_AVIF_CODEC
+    assert first[4] is not second[4]
     assert calls == []
-    for codec, access in ((first[3], first_access), (second[3], second_access)):
+    for codec, access in ((first[4], first_access), (second[4], second_access)):
         for callback in (
             codec.read,
             codec.write,
@@ -415,16 +424,17 @@ def test_sequence_family_and_registry_reload_keep_live_access():
         assert registry.REGISTRY is before_registry
         assert tuple(registry.REGISTRY.items()) == before_items
         assert registry._IMAGE_FRAME_ACCESS is old_access
-        assert reloaded_family.build_sequence_codecs(old_access)[3] is not old_sequence
+        assert reloaded_family.build_sequence_codecs(old_access)[4] is not old_sequence
 
         for _ in range(2):
             registry = importlib.reload(registry)
             ids = tuple(registry.REGISTRY)
             start = ids.index("y4m")
-            assert ids[start : start + 5] == (
+            assert ids[start : start + 6] == (
                 "y4m",
                 "animated_webp",
                 "apng",
+                "animated_avif",
                 "image_sequence",
                 "colmap_sparse_txt",
             )
@@ -529,6 +539,7 @@ def test_repository_coverage_keeps_sequence_inspection_ownership_exact():
         "y4m": "src/sceneio/io/_inspectors/sequences.py",
         "animated_webp": "src/sceneio/io/_inspectors/sequences.py",
         "apng": "src/sceneio/io/_inspectors/sequences.py",
+        "animated_avif": "src/sceneio/io/_avif.py",
         "image_sequence": "src/sceneio/io/_image_sequence.py",
     }
 

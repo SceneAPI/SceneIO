@@ -1612,6 +1612,35 @@ def _image_sequences(root: Path) -> None:
     assert sceneio.inspect(apng_path).shape == (2, 3, 5, 4)
 
 
+def _avif_formats(root: Path) -> None:
+    if not sceneio.capabilities("avif").available:
+        assert not sceneio.capabilities("animated_avif").available
+        return
+    pixels = np.zeros((5, 7, 3), dtype=np.uint8)
+    pixels[..., 0] = 64
+    still = _core.image(pixels, color_space="srgb")
+    still_path = root / "still.avif"
+    sceneio.write(still, still_path)
+    assert sceneio.detect(still_path) == "avif"
+    assert sceneio.read(still_path).pixels.shape == pixels.shape
+    assert sceneio.inspect(still_path).shape == pixels.shape
+
+    frames = np.stack((pixels, np.roll(pixels, 1, axis=1)))
+    sequence = _core.image_sequence_packed(
+        frames,
+        np.array([0, 40_000_000], dtype=np.int64),
+        np.array([40_000_000, 60_000_000], dtype=np.int64),
+        "srgb",
+        "none",
+    )
+    sequence_path = root / "sequence.avifs"
+    sceneio.write(sequence, sequence_path)
+    assert sceneio.detect(sequence_path) == "animated_avif"
+    assert sceneio.read(sequence_path).num_frames == 2
+    assert sceneio.read_partial(sequence_path, frames=(1, 2)).num_frames == 1
+    assert sceneio.inspect(sequence_path).shape == (2, 5, 7, 3)
+
+
 def _dense_mvs(root: Path) -> None:
     depth = _core.depth_map(
         np.arange(12, dtype=np.float32).reshape(3, 4),
@@ -1900,9 +1929,11 @@ _SMOKE_RUNNERS: Mapping[str, Callable[[Path], None]] = MappingProxyType(
         "hdr": _raster_images,
         "exr": _raster_images,
         "webp": _raster_images,
+        "avif": _avif_formats,
         "y4m": _image_sequences,
         "animated_webp": _image_sequences,
         "apng": _image_sequences,
+        "animated_avif": _avif_formats,
         "image_sequence": _image_sequences,
         "colmap_sparse_txt": _reconstruction_formats,
         "xyz": _point_formats,

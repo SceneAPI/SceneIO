@@ -27,7 +27,7 @@ def test_case_catalog_is_complete_ordered_and_immutable():
     definitions = codec_cases.CODEC_CASE_DEFINITIONS
     assert tuple(case.id for case in definitions) == CANONICAL_BUILTIN_IDS
     assert tuple(codec_cases.CASES_BY_ID) == CANONICAL_BUILTIN_IDS
-    assert len(definitions) == len(codec_cases.CASES_BY_ID) == 67
+    assert len(definitions) == len(codec_cases.CASES_BY_ID) == 69
     assert all(dataclasses.is_dataclass(case) for case in definitions)
     with pytest.raises(dataclasses.FrozenInstanceError):
         definitions[0].id = "changed"
@@ -94,6 +94,8 @@ def test_case_catalog_preserves_the_legacy_fixture_partitions():
         "usd",
         "usdz",
         "colmap_db",
+        "avif",
+        "animated_avif",
         "hdf5",
         "hloc_features",
         "hloc_matches",
@@ -232,7 +234,7 @@ def test_case_catalog_selectors_match_live_builtin_capabilities():
         assert capability.can_write
         assert capability.can_inspect
         assert capability.streams_read
-        assert capability.streams_write
+        assert capability.streams_write is (case.id not in {"avif", "animated_avif"})
         assert case.partial_selectors == capability.partial_selectors
     assert tuple(case.id for case in codec_cases.PARTIAL_CASES) == (
         "pfm",
@@ -254,6 +256,7 @@ def test_case_catalog_selectors_match_live_builtin_capabilities():
         "netpbm",
         "webp",
         "y4m",
+        "animated_avif",
         "image_sequence",
         "colmap_sparse_txt",
         "xyz",
@@ -272,7 +275,7 @@ def test_case_catalog_selectors_match_live_builtin_capabilities():
     assert sum(
         len(case.partial_selectors)
         for case in codec_cases.PARTIAL_CASES
-    ) == 39
+    ) == 40
 
 
 def test_runtime_extensions_do_not_enter_repository_case_completeness():

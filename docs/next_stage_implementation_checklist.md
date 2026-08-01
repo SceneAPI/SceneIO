@@ -5361,3 +5361,78 @@ Pre-U1 optional-provider closure evidence:
   semantics refuse, existing destinations survive provider failure, optional
   imports stay lazy, and historical native-family evidence remains a tested
   subsequence of the expanded registry.
+
+## Royalty-free moving-image closure (bounded, no FFmpeg)
+
+This is a finite extension, not an open-ended media program. The canonical
+3D-CV input remains an image directory. Every added container maps only video
+frames and exact timing into `ImageSequence`; audio, subtitles, chapters,
+general metadata, and implicit color conversion stay out of the profile.
+
+### M1 — AVIF still and sequence
+
+- [x] Add repository-owned `avif` and `animated_avif` registry adapters using
+      optional Pillow `>=12.3,<12.4`, libavif, libaom encode, and dav1d decode;
+      bound the minor line because mapped reads use its tested private buffer
+      entry.
+- [x] Keep NumPy as the sole base runtime dependency and keep every provider
+      import lazy behind `sceneio[avif]`.
+- [x] Pass a read-only mmap directly to the provider and copy decoded pixels
+      into owned `Image`/`ImageSequence` records before mapping teardown.
+- [x] Add metadata-only inspection, AVIF/AVIS brand detection, `.avifs`, and
+      bounded animated frame ranges.
+- [x] Guard the accepted 8-bit gray/RGB/straight-RGBA profile and refuse ICC,
+      EXIF, XMP, orientation, HDR/high-bit-depth, gain maps, grids, layered
+      images, loop/background, audio, and subtitles when they cannot be
+      represented.
+- [x] Record that Pillow buffers the completed encode and therefore does not
+      satisfy SceneIO's direct-sink capability definition.
+- [x] Add direct-provider cross-read/write tests, specification-derived BMFF
+      checks, timing/partial/lifetime/atomic-failure tests, and a generated
+      padded-file allocation assertion.
+- [x] Walk bounded ISO-BMFF metadata before decode and prove refusal of an
+      upstream libavif 12-bit sequence fixture rather than accepting the
+      provider's projected 8-bit pixels.
+- [x] Index Pillow, libavif, libaom, the Alliance for Open Media patent grant,
+      and dav1d notices in `LICENSES/`.
+- [x] Record the three-run final benchmark, pass 4,324 tests with six documented
+      skips, pass Ruff and the 207-test integration slice, and complete the
+      resource/correctness/test-soundness reviews.
+- [x] Commit the green unit as a separate AVIF change before beginning WebM.
+- [ ] Run the user-triggered nonpublishing Linux/macOS/Windows optional-provider
+      package validation after the commit is pushed.
+
+### M2 — WebM VP8/VP9
+
+- [ ] Select and pin direct libvpx plus libwebm sources and exact notices.
+- [ ] Define a video-only WebM profile: 8-bit frames, exact timestamps and
+      durations, VP8/VP9 only, no audio/subtitles/chapters, no Matroska-general
+      claim, and explicit color/range metadata guards.
+- [ ] Implement direct native read/write/inspect/frame-range paths with mapped
+      input, owned decoded frames, a direct sink, deterministic thread controls,
+      and no general video-framework dependency.
+- [ ] Triangulate against libvpx/libwebm tools and independent container parsing;
+      add malformed, truncation, lifetime, allocation, transaction, and 1-vs-N
+      lane tests plus benchmark qualification on all wheel platforms.
+
+### M3 — Ogg/Theora
+
+- [ ] Select and pin direct libogg plus libtheora 1.2.x sources and notices.
+- [ ] Define a video-only Theora profile with exact granule/timestamp mapping,
+      bounded 8-bit output, explicit chroma/color semantics, and no audio or
+      arbitrary Ogg-stream claim.
+- [ ] Implement native read/write/inspect/frame-range paths with mapped input,
+      owned decoded frames, a direct sink, and deterministic output.
+- [ ] Triangulate against libtheora reference tools and an independent Ogg-page
+      parser; add timing, malformed, lifetime, allocation, transaction, and
+      cross-platform benchmark validation.
+
+### Exit
+
+- [ ] Registry, capability snapshot, wheel smoke, benchmark ledger, coverage
+      docs, roadmap, and license inventory agree exactly.
+- [ ] The base wheel and source/build/package scans contain no FFmpeg/libav
+      component or process path.
+- [ ] AVIF, WebM, and Theora each land as a separately reviewable green commit;
+      do not hold the already complete image-sequence/Y4M/WebP/APNG formats open
+      while a later native container is in progress.

@@ -47,6 +47,7 @@ from bench.io_bench.families.common import _record_nbytes
 from bench.io_bench.families.containers import build_container_specs
 from bench.io_bench.families.dense import build_dense_specs
 from bench.io_bench.families.images import build_image_specs
+from bench.io_bench.families.media import build_media_path_specs
 from bench.io_bench.families.meshes import build_mesh_specs
 from bench.io_bench.families.points import build_point_specs
 from bench.io_bench.fixtures import arrays as array_fixtures
@@ -1720,7 +1721,10 @@ def _run_benchmark(args, tmp):
     pose_bundle = _poses_and_reconstruction(args.scale)
     reconstruction = pose_bundle[0]
     specs = _specs(args.scale, pose_bundle)
-    path_specs = build_container_specs(args.scale)
+    path_specs = [
+        *build_container_specs(args.scale),
+        *build_media_path_specs(args.scale),
+    ]
     directory_specs = _directory_specs(
         reconstruction, args.scale, tmp
     )

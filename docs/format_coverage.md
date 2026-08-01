@@ -45,6 +45,28 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > allow-list; Apache-2.0 TinyUSDZ is used instead. Cross-platform
 > optional-extra package execution remains user-triggered.
 >
+> **69-format AVIF checkpoint (2026-08-01):** `avif` and `animated_avif`
+> add repository-owned still and sequence adapters around the optional
+> Pillow 12.3/libavif 1.4.2 provider. The accepted profile is 8-bit gray,
+> RGB, or straight-alpha RGBA. Reads pass a read-only mmap directly to
+> `PIL._avif`, copy decoded pixels into owned records before closing it, and
+> provide metadata-only inspection; animated AVIF additionally provides a
+> bounded frame-range selector with exact integer-nanosecond timing. Writes
+> use libaom with full range and 4:4:4 color, require whole-millisecond
+> contiguous sequence timing, and replace paths atomically. ICC profiles,
+> nonidentity orientation, high bit depth, HDR, gain maps, grids, layered
+> images, embedded EXIF/XMP, loop/background metadata, audio, and subtitles
+> refuse. A bounded ISO-BMFF metadata walk proves this profile before provider
+> decode; an upstream libavif 12-bit fixture verifies that high-bit-depth input
+> is rejected instead of down-converted. The provider
+> assembles encoded output before the path write, so these two rows truthfully
+> report mapped reads but not streaming writes. Pillow, libavif, libaom,
+> libaom's royalty-free patent license, and dav1d are indexed in `LICENSES/`;
+> none is bundled in the NumPy-only base wheel. No FFmpeg/libav code or process
+> path is present. Local validation passes 4,324 tests with six documented
+> skips, the 207-test integration slice, Ruff, and the final three-run AVIF
+> benchmark. Hosted optional-provider package evidence remains user-triggered.
+>
 > **USD standards review (2026-07-30):** AOUSD Core Specification 1.0.1,
 > supplemental 1.0.1.post0, OpenUSD 26.08, and the official
 > `UsdVolParticleField3DGaussianSplat` schema define a broader target than the
@@ -1035,6 +1057,8 @@ public-domain SQLite amalgamation statically linked into `_core`.
 | `y4m` | `ImageSequence` | R+W | independent Python parser/writer + exact golden bytes | original dependency-free YUV4MPEG2 subset; uint8 mono/4:2:0/4:2:2/4:4:4 planar frames, odd dimensions, exact rational timing, mmap, streaming sink, inspect, and frame ranges; no RGB conversion or video-framework dependency |
 | `animated_webp` | `ImageSequence` | R+W | Pillow/libwebp animation-container oracle in `tests/codecs/test_animated_webp.py` | repository-pinned libwebp mux/demux/animation APIs; fully composited packed uint8 RGB/RGBA frames, exact millisecond timing, loop/background metadata, mmap, streaming sink, and metadata-only inspection |
 | `apng` | `ImageSequence` | R+W | Pillow plus specification-derived chunk/compositing oracle in `tests/codecs/test_apng.py` | repository-owned APNG container logic over pinned lodepng; fully composited packed uint8 RGBA frames, exact rational timing representable as integer nanoseconds, loop count, source/over blend, none/background/previous disposal, mmap, streaming sink, and metadata-only inspection |
+| `avif` | `Image` | R+W | direct Pillow/libavif comparison plus specification-derived BMFF checks in `tests/codecs/test_avif.py` | optional `sceneio[avif]`; mmap-backed 8-bit gray/RGB/straight-RGBA reads, owned decoded pixels, metadata-only inspection, full-range 4:4:4 color writes through libaom; encoded output is provider-buffered rather than a direct sink |
+| `animated_avif` | `ImageSequence` | R+W | direct Pillow/libavif comparison plus specification-derived BMFF/timing checks in `tests/codecs/test_avif.py` | optional `sceneio[avif]`; owned packed 8-bit frames, exact accepted timing and bounded frame ranges; whole-millisecond contiguous timing is required for write; no loop/background/audio/subtitles; encoded output is provider-buffered |
 | `hdf5` | `TensorDict` | R+W, inspect, partial | independent **h5py** layouts in `tests/codecs/test_hdf5_hloc.py` | optional `sceneio[hdf5]`; numeric/bool datasets, nested paths, text root attrs, selected-path named reads, leading-axis hyperslabs, and atomic replacement; full reads reject indirect/virtual/object/reference/vlen layouts, while partial reads validate the selected paths and ancestors |
 | `hloc_features` | `HlocFeatureStore` of native `FeatureSet` | R+W, inspect | independent **h5py** documented layout | preserves keypoints, D×N wire descriptors as native N×D with uint8/int8/f16/f32/f64 dtype, scores, image size, nested names, and keypoint uncertainty |
 | `hloc_matches` | `HlocMatchStore` + native `MatchGraph` | R+W, inspect | independent **h5py** documented layout | preserves dense `matches0`, optional `matching_scores0`, exact endpoint names, source extents/dtypes, pair order, and mixed score presence |
@@ -1076,7 +1100,9 @@ requirement for COLMAP ecosystem closure.
 
 ### ⬜ Pending — declared roadmap gaps
 
-- Sequence/dataset: RTMV. Animated WebP and APNG are complete.
+- Sequence/dataset: RTMV. Animated WebP, APNG, and animated AVIF are complete
+  for their bounded profiles. Direct WebM VP8/VP9 and Ogg/Theora remain
+  separate native-container units; no general video framework is permitted.
 - Optional CV containers are complete for the accepted profiles: HDF5/hloc,
   Zarr v2/v3, TIFF, E57, Parquet, Arrow IPC, OpenVDB, USD, and USDZ.
 - Broader semantics remain intentionally outside those bounded profiles:
@@ -1084,8 +1110,9 @@ requirement for COLMAP ecosystem closure.
   Arrow nested/string/null schemas, multi-grid/vector/transformed OpenVDB,
   and composed/animated USD scenes, general shader graphs, multiple semantic
   values, and broader volume/instance schemas.
-- Policy-gated: AVIF, JPEG-XL, and Draco-compressed glTF. These do not enter
-  implementation without an explicit decision under the patented-codec rule.
+- Policy-gated: JPEG-XL and Draco-compressed glTF. AVIF is now accepted under
+  the Alliance for Open Media no-charge, royalty-free grant and the
+  permissive Pillow/libavif/libaom/dav1d stack.
 
 Draco-compressed glTF remains policy-gated. Plain glTF/GLB is implemented and
 rejects Draco, meshopt, unknown extensions, and unrepresented scene features
@@ -1105,7 +1132,7 @@ fuzzing · ✅ direct file-sink writes · ✅ bounded measured-path workers
 (XYZ/LAS/LAZ/EXR/PNG16/WebP lossless) · ✅ partial/lazy reads (`inspect` covers all
 54; bounded pixel/point/face/mesh/primitive/state/frame/COLMAP-image/COLMAP-pair/tensor
 subsets cover capable containers) · ⬜ GPU-via-DLPack (torch-cuda/cupy) · ✅
-expanded 67-format benchmark/oracles.
+expanded 69-format benchmark/oracles.
 
 ## Infrastructure & capabilities
 
@@ -1114,15 +1141,15 @@ expanded 67-format benchmark/oracles.
 | nanobind + scikit‑build‑core build | ✅ | abi3/cp312, `NB_STATIC`; `Python::SABIModule`, `nanobind-static-abi3`, and the platform suffix are configure-checked; local Windows emits `_core.pyd` against `python3.dll`, Ubuntu emits `_core.abi3.so` without libpython |
 | cibuildwheel release path | ✅ | one verified sdist feeds Linux/macOS/Windows wheels; locked build inputs, all-50 installed smoke, per-wheel inventory, and tag-only publication in `publish.yml`; final build-only run `30406706115` and downloaded-artifact inspection pass, while tagging and publication remain user-gated |
 | CI parity (oracles in CI) | ✅ | At `a5e7fa4`, normal Linux CI passes 2,914 tests with nine documented platform/oracle skips, the 50-codec performance guard, pinned GCC 10 portability, and the three-OS focused matrix |
-| Codec registry + `read`/`write`/`inspect`/`read_partial`/`detect` | ✅ | inspection covers all 67; bounded partial hooks are capability-specific |
-| Repo-maintained stable codec adapters | ✅ | all 67 adapters, schemas, convention guards, inspectors, partial policies, and sinks live in `src/cpp` / `src/sceneio`; optional optimized storage/parser providers remain separately installed |
+| Codec registry + `read`/`write`/`inspect`/`read_partial`/`detect` | ✅ | inspection covers all 69; bounded partial hooks are capability-specific |
+| Repo-maintained stable codec adapters | ✅ | all 69 adapters, schemas, convention guards, inspectors, and partial policies live in `src/cpp` / `src/sceneio`; 67 have direct sinks, while AVIF writes currently use the provider's completed output buffer; optional optimized storage/parser providers remain separately installed |
 | Offline native-source closure | ✅ | all selected native sources—including libwebp 1.5.0—are stored in-tree and the production CMake graph has no native-source fetch; local exact-tree proof plus final MSVC, GCC 10, and AppleClang sdist-to-wheel execution and artifact inspection pass |
 | Zero‑copy numpy + torch (DLPack) | ✅ | validated per codec |
 | Conventions‑as‑metadata + write guards | ✅ | record‑don't‑convert enforced |
 | Parity kit (`sceneio.testing.parity`) | ✅ | cross‑impl + round‑trip + convention pins |
 | In-tree native dependencies | ✅ | all selected production dependencies are permissive, pinned, source-manifested, and license-indexed |
 | Image libraries | ✅ | lodepng, stb, tinyexr, and libwebp 1.5.0 are repository-contained and statically built |
-| Optional optimized providers | ✅ | h5py, Zarr/numcodecs, tifffile, pye57/libE57Format, PyArrow, TinyVDB, and TinyUSDZ are isolated extras with repo-owned adapters and direct-provider comparison tests; future `SCENEIO_WITH_*` entries are native-candidate seams, not missing format support |
+| Optional optimized providers | ✅ | h5py, Zarr/numcodecs, tifffile, pye57/libE57Format, PyArrow, TinyVDB, TinyUSDZ, and Pillow/libavif are isolated extras with repo-owned adapters and direct-provider comparison tests; future `SCENEIO_WITH_*` entries are native-candidate seams, not missing format support |
 | mmap / streaming sources | ✅ | mmap reads + raw NPY/FLO views + direct file-sink writes complete |
 | Bounded intra-file workers | ✅ | measured O4 paths; deterministic one-vs-many lane tests |
 | Instrumented + mmap differential CI | ✅ | at `a5e7fa4`, exact 2,923-test collection, complete compiler-instrumented suite, focused native lifetime controls, and the three-case push backing-store sweep pass; the retained default-branch schedule raises that sweep to 100 cases |
@@ -1141,9 +1168,11 @@ incremental.
 | Format id | Container | Read | Write | Inspect | Partial selectors | Stream read | Stream write | Lossy-capable | Native feature |
 |---|---|---|---|---|---|---|---|---|---|
 <!-- sceneio-capability-rows:start -->
+| `animated_avif` | file | yes | yes | yes | frames | yes | no | yes | PIL |
 | `animated_webp` | file | yes | yes | yes | - | yes | yes | yes | - |
 | `apng` | file | yes | yes | yes | - | yes | yes | no | - |
 | `arrow_ipc` | file | yes | yes | yes | - | yes | yes | no | pyarrow |
+| `avif` | file | yes | yes | yes | - | yes | no | yes | PIL |
 | `bal` | file | yes | yes | yes | - | yes | yes | no | - |
 | `bmp` | file | yes | yes | yes | - | yes | yes | no | - |
 | `bundler` | file | yes | yes | yes | - | yes | yes | no | - |
@@ -1260,7 +1289,7 @@ names from `_core.__native_features__`.
 | point range `points=(start,stop)` | XYZ, PTS, binary generic PLY, uncompressed binary PCD, LAS, Gaussian PLY, compressed PLY, SOG, KSplat, SPLAT | `PointCloud` / `GaussianCloud`, with convention metadata preserved |
 | face range `faces=(start,stop)` | generic mesh PLY, STL, OFF | `Mesh`; PLY/OFF retain the complete vertex domain, while STL returns local canonical triangle soup |
 | state range `states=(start,stop)` | EuRoC state CSV | `StateTrajectory` with convention metadata preserved |
-| frame range `frames=(start,stop)` | image directories, raw Y4M | `ImageSequence`; directory frames remain lazy encoded paths and Y4M copies only selected planar frames; animated WebP and APNG currently expose full composited reads and do not claim a bounded frame selector |
+| frame range `frames=(start,stop)` | image directories, raw Y4M, animated AVIF | `ImageSequence`; directory frames remain lazy encoded paths, Y4M copies only selected planar frames, and animated AVIF returns only selected decoded output frames; animated WebP and APNG currently expose full composited reads and do not claim a bounded frame selector |
 | `image_id` | COLMAP binary + text | one-image `Reconstruction` plus every camera required by its retained modern rig/frame (or its one legacy camera); no point-container read |
 | `image_id` | COLMAP SQLite database | one compiled `FeatureSet`; unrelated keypoint/descriptor BLOBs remain unread |
 | unordered `pair=(image_id1,image_id2)` | COLMAP SQLite database | one compiled `MatchGraph` with raw/verified matches and optional geometry |

@@ -13,7 +13,9 @@ from sceneio.io import registry
 
 _BUILTINS = {
     "apng",
+    "animated_avif",
     "animated_webp",
+    "avif",
     "bal",
     "bmp",
     "bundler",
@@ -82,6 +84,7 @@ _BUILTINS = {
 }
 
 _PARTIAL = {
+    "animated_avif": ("frames",),
     "colmap_db": ("image_id", "pair"),
     "colmap_mvs_depth": ("window",),
     "colmap_mvs_normal": ("window",),
@@ -118,7 +121,9 @@ _PARTIAL = {
 }
 
 _LOSSY = {
+    "animated_avif",
     "animated_webp",
+    "avif",
     "compressed_ply",
     "hdr",
     "jpeg",
@@ -179,6 +184,8 @@ def test_capability_hooks_and_metadata_are_consistent():
             "openvdb": ("tinyvdb",),
             "usd": ("tinyusdz",),
             "usdz": ("tinyusdz",),
+            "avif": ("PIL",),
+            "animated_avif": ("PIL",),
         }
         assert cap.requires_features == expected_requirements.get(format_id, ())
         assert not (

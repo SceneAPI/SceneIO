@@ -3962,6 +3962,45 @@ Zarr-3.3.0 rerun passes the v2/v3 oracle suite and the complete 67-format smoke
 without errors. The refreshed 67-row deterministic structural projection has
 SHA-256
 `817b355a8fb752025e51b3afe658524ebfa40cd6caffc8cd9e927a7117e07f65`.
+
+### AVIF/animated AVIF optional-provider checkpoint (2026-08-01)
+
+A three-median local MSVC run used Pillow 12.3.0, libavif 1.4.2, libaom
+3.14.1, and dav1d 1.5.3:
+
+```powershell
+.venv/Scripts/python.exe bench/bench_io.py --runs 3 --scale 1 `
+  --only avif --only animated_avif --json build/avif-benchmark-final.json
+```
+
+| codec | payload/file | SceneIO write/read | direct provider write/read | mapped read peak | inspect time/peak | partial time/peak |
+|---|---:|---:|---:|---:|---:|---:|
+| `avif` | 3.146 / 1.802 MB | 16.45 / 98.28 MB/s | 12.30 / 79.52 MB/s | 3.158 MB | 0.100 ms / 0.014 MB | - |
+| `animated_avif` | 16.777 / 14.362 MB | 10.06 / 80.70 MB/s | 9.93 / 76.08 MB/s | 25.179 MB | 0.148 ms / 0.018 MB | 157.748 ms / 16.791 MB |
+
+Still and sequence reads are 1.24x and 1.06x the direct-provider read rates on
+the same fixture. The wrapper's write rate is equivalent to or slightly above
+the direct comparison because both paths use the same optimized provider and
+settings. Inspection is 321x/1406x faster than full decode and does not request
+a frame. Selecting two of four animated frames is 1.32x faster and reduces
+traced output allocation from 25.179 to 16.791 MB.
+
+Mapped-read peaks include decoded output, not an encoded-input copy. The
+separate 12 MiB padded-container test requires peak traced allocation below
+one quarter of file size and confirms that the mmap is held only through the
+provider call; returned pixels survive file removal. Pillow's writer creates a
+completed encoded payload before the path write, so the 6.313/14.380 MB traced
+write peaks are recorded and AVIF does not claim a direct sink. The JSON
+capture SHA-256 is
+`6e3565b544f8c9cb4bbd73377122ad5c257135212a98629a602789adf945cc9f`.
+This final run includes the bounded ISO-BMFF profile walk that refuses
+high-bit-depth, HDR, derived, layered, audio, and subtitle structures before
+provider decode. The exact 4,330-node local collection passes 4,324 tests with
+six documented skips; the 207-test integration slice, Ruff, and diff checks
+also pass.
+
+### Prior hosted optional-provider closure evidence
+
 Throughput values from the scale-0.001 smoke are diagnostic only; the
 compatibility fix preserves the synchronous upstream write path and adds no
 payload copy. The repaired exact local collection has 4,310 nodes and passes

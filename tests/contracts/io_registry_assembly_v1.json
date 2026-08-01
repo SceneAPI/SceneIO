@@ -49,9 +49,11 @@
       "hdr": "8a783882379729a1d4ff0d4f90db79b43311b59ea149cec71541b3cb83f9f149",
       "exr": "d32e3c9e82ee923dbaa0eadc6a83661609483b9ed7e7fa86b73acf389e6b43c8",
       "webp": "244bb6c15a8cb8e2dfc1ab0cb02e3290723a18607aaa45b14e189f90831d6ceb",
+      "avif": "bc6cbac25c03de12d813483a11b63e24ae8f8334ce3e09103e0a3c1219e86278",
       "y4m": "113c80bbbb985911a891769bfb02e9853deacab217c4bbb9a1a1676960ca9c7e",
       "animated_webp": "08a79ab1e8c48046a8c92f8a524b9e4990a87102ccfaf950a2b714e60409ed2c",
       "apng": "870cec8f3e75ecc3841e4a08871afc69b6badd96741b64adfd2419dad74c5dd2",
+      "animated_avif": "9cd0cf59e7338ee2804248f89b817e01cb28e1a2c7f35d28e53f25b201b688ff",
       "image_sequence": "5242878a747fae1d464202b7382e0f8986d4c79789fd3b8186b085fbf5194cb0",
       "colmap_sparse_txt": "cbbf77486c5f12613958e3d17ef88dc6c9cef7166a102918d6f0ee8c70afd6bf",
       "xyz": "d2d71f2c768c7b8ed521eae881d8fa7d81a2df09072588827f8f12301c31cc88",
@@ -278,6 +280,11 @@
         "write": "d156543f88ad0a2fff5c3bc249ab7189786d6dfa0f8b9acd615d90a98e3857a8",
         "read_window": "cfba7d555e9e4759a2a932f58d977beb82338ab10daef38f2edea6901442292e"
       },
+      "avif": {
+        "read": "1e2ae2b626373bffd8c6a830075b67f9d20b7425ff04719749704e9899865064",
+        "write": "c2b87316fb7a4868778c71931329e858dbc797e0aa5577d30dfc4b8645074390",
+        "inspect": "040119eaa497918deddc6209d8e7107931af22085385770e0e7a63f06d967c3b"
+      },
       "y4m": {
         "read": "6affeaba70f35857182e56ef4eb77b3730de5dbe55b49a50b591c6a3443a03a8",
         "write": "0055c577576c5e4b8de99eca4a9db27237d9e46c1cb60936098f795dde4964bb",
@@ -290,6 +297,12 @@
       "apng": {
         "read": "3b24b61c0be276da474580ddd39a5d7095b9ba43e7dd2812e20531f88144c0dc",
         "write": "640da5dc55a3ec64d5fae9957fab06c5a55e1bd0f1ad0e7aee67705d7e9b828d"
+      },
+      "animated_avif": {
+        "read": "8b414532dd2e9c864a2193adca8e95b849f9ab56ddfd88eff3f8b087b13ef967",
+        "write": "4a550b3e8121e68c1f639ae1c2004d2136fb0a15579c7d07a10771e7958e9de8",
+        "inspect": "07720f5828e7a61ba8e17acb214fd08d7c970e1b642c8c4faff2fca311948cfd",
+        "read_frames": "ebc689d2a048b1b1c3fe00b7cd99c45ae63ac342f495cc7e0c2a422b8ba9807f"
       },
       "image_sequence": {
         "read": "737e28ccb24ee0dc4554841f357cccb324d3b74effdcff43716768d958036bcb",
@@ -435,8 +448,8 @@
     "last": "tests/test_points_binary.py::test_bad_magic_rejected"
   },
   "pytest_candidate_collection": {
-    "count": 4317,
-    "sorted_normalized_node_ids_sha256": "127e18a396ecfda9e9e08c14eea35015a385ecb098ef26bcb8d8c50d5ba7b8b6",
+    "count": 4330,
+    "sorted_normalized_node_ids_sha256": "a64fcf0d6fea2a141fab1110e7007b22df34451ddf64a43e08b04f525e4464f0",
     "added_nodes": [
       "tests/codecs/test_animated_webp.py::test_sceneio_writer_is_lossless_and_oracle_readable",
       "tests/codecs/test_animated_webp.py::test_pillow_writer_is_sceneio_readable_bit_exact",
@@ -1673,7 +1686,20 @@
       "tests/test_io_benchmark_qualification.py::test_rich_usd_remaining_payload_benchmark_smoke",
       "tests/test_import_guards.py::test_no_family_imports[io/_usd/instances.py]",
       "tests/test_import_guards.py::test_no_family_imports[io/_usd/semantics.py]",
-      "tests/test_import_guards.py::test_no_family_imports[io/_usd/volumes.py]"
+      "tests/test_import_guards.py::test_no_family_imports[io/_usd/volumes.py]",
+      "tests/codecs/test_avif.py::test_still_cross_read_write_and_public_dispatch",
+      "tests/codecs/test_avif.py::test_pillow_still_is_sceneio_readable",
+      "tests/codecs/test_avif.py::test_animated_cross_read_write_timing_and_partial",
+      "tests/codecs/test_avif.py::test_avifs_extension_and_extensionless_detection",
+      "tests/codecs/test_avif.py::test_mmap_input_does_not_allocate_a_whole_file_bytes",
+      "tests/codecs/test_avif.py::test_decoded_pixels_do_not_depend_on_open_file",
+      "tests/codecs/test_avif.py::test_inspection_does_not_request_a_decoded_frame",
+      "tests/codecs/test_avif.py::test_provider_versions_and_attributions_are_pinned",
+      "tests/codecs/test_avif.py::test_official_libavif_12_bit_fixture_is_refused_before_projection",
+      "tests/codecs/test_avif.py::test_profile_guards_and_malformed_inputs",
+      "tests/codecs/test_avif.py::test_spec_brand_parser_rejects_invalid_box_extents",
+      "tests/codecs/test_avif.py::test_pillow_buffer_oracle_accepts_sceneio_output",
+      "tests/test_import_guards.py::test_no_family_imports[io/_avif.py]"
     ],
     "removed_nodes": [
       "tests/codecs/test_compressed_ply.py::test_writer_body_is_byte_identical_to_pinned_playcanvas_vector",

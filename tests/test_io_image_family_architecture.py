@@ -67,6 +67,7 @@ def _assert_image_family_imports(source: str) -> None:
     } <= {
         "__future__",
         "sceneio",
+        "sceneio.io._avif",
         "sceneio.io._tiff",
         "sceneio.io._registry.adapters",
         "sceneio.io._registry.model",
@@ -134,7 +135,7 @@ def test_image_definitions_preserve_canonical_order_and_identity():
             assert codec.inspect is not None
         else:
             assert codec.record is _core.Image
-            assert codec.inspect is None
+            assert (codec.inspect is not None) == (codec.id == "avif")
 
 
 def test_image_adapter_closures_preserve_exact_native_targets():
@@ -183,6 +184,7 @@ def test_image_detection_and_lossy_fields_remain_exact():
         "hdr": ((".hdr",), (b"#?RADIANCE", b"#?RGBE"), True),
         "exr": ((".exr",), (b"\x76\x2f\x31\x01",), False),
         "webp": ((".webp",), (), True),
+        "avif": ((".avif",), (), True),
         "tiff": (
             (".tif", ".tiff"),
             (b"II*\x00", b"MM\x00*", b"II+\x00", b"MM\x00+"),
@@ -370,6 +372,7 @@ def test_repository_coverage_tracks_all_moved_image_inspectors():
         format_id: "src/sceneio/io/_inspectors/images.py"
         for format_id in NATIVE_IMAGE_IDS
     } | {
+        "avif": "src/sceneio/io/_avif.py",
         "tiff": "src/sceneio/io/_tiff.py",
     }
 

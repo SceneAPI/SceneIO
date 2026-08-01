@@ -44,6 +44,10 @@ redistribution choice used by SceneIO is stated explicitly.
 | TinyVDB | optional dependency `>=0.9,<1` (0.9.0 locally validated) | separately installed OpenVDB provider; not bundled in SceneIO distributions; one upstream float-grid seed is packaged and fully replaced during writes | Apache-2.0 | [tinyvdb.txt](tinyvdb.txt), [seed provenance](../src/sceneio/io/_assets/openvdb_float_template.PROVENANCE.txt) |
 | TinyUSDZ | optional dependency `>=0.9.4,<1` (0.9.4 locally validated) | separately installed USD/USDA/USDC/USDZ parser used with SceneIO's repository-owned USDA/USDZ writer; not bundled in SceneIO distributions; its published Linux x86-64 binary has a manylinux 2.27/2.28 floor independent of SceneIO's manylinux2014 base wheel | Apache-2.0 with permissively licensed bundled components documented upstream | [tinyusdz.txt](tinyusdz.txt) |
 | AOUSD Core Specification Supplemental | release `1.0.1.post0`, tag object `404e2bde49c1`, peeled commit `c15ae0cad3ed` | one unmodified crate-10 time-sample fixture is base64-embedded in the test source and included in source distributions, not wheels | Apache-2.0 | [fixture attribution](aousd-core-spec-supplemental.txt); complete terms in the root `LICENSE` |
+| Pillow | optional dependency `>=12.3,<12.4` (12.3.0 locally validated) | separately installed AVIF provider; not bundled in SceneIO distributions; the minor line is bounded because mapped reads use its tested private buffer entry | MIT-CMU | [pillow.txt](pillow.txt) |
+| libavif | 1.4.2 in the locally validated Pillow 12.3.0 wheel | used through Pillow's separately installed `PIL._avif` provider; not bundled or linked into SceneIO distributions; one unmodified upstream 12-bit rejection fixture is stored as base64 in the source test fixtures and is not packaged in wheels | BSD-2-Clause | [libavif.txt](libavif.txt) |
+| libaom | 3.14.1 encoder in the locally validated Pillow 12.3.0 wheel | used through Pillow/libavif; not bundled or linked into SceneIO distributions | BSD-2-Clause with the Alliance for Open Media royalty-free patent license | [license](libaom.txt), [patent license](libaom-patents.txt) |
+| dav1d | 1.5.3 decoder in the locally validated Pillow 12.3.0 wheel | used through Pillow/libavif; not bundled or linked into SceneIO distributions | BSD-2-Clause | [dav1d.txt](dav1d.txt) |
 
 The complete Apache-2.0 terms in the root `LICENSE` also cover the
 Apache-licensed portion of LAZperf. Local integration and correctness changes
@@ -52,7 +56,8 @@ to vendored or fetched projects are documented beside their sources in
 
 NumPy is SceneIO's sole base Python runtime dependency, but it is installed as
 a separate distribution and is not copied or linked into SceneIO wheels.
-h5py/HDF5, Zarr/numcodecs, tifffile, pye57, PyArrow, TinyVDB, and TinyUSDZ
+h5py/HDF5, Zarr/numcodecs, tifffile, pye57, PyArrow, TinyVDB, TinyUSDZ, and
+Pillow's libavif provider
 are separately installed only when their respective extras are selected;
 none is copied or linked into SceneIO wheels. Build tools and test-only oracle
 packages are otherwise not bundled. Delvewheel

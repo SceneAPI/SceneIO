@@ -8,7 +8,7 @@
   checkpoint closes at packaged source `2253e0f`; exact-head runs
   `30469273173`, `30469271293`, and build-only package run `30470889876`
   pass with publication skipped.
-- **Current local checkpoint:** the live registry has 67 formats. HDF5/hloc,
+- **Current local checkpoint:** the live registry has 69 formats. HDF5/hloc,
   Zarr v2/v3, TIFF, E57, Parquet/Arrow IPC, OpenVDB, and USD/USDZ are
   implemented through repository-owned adapters around optimized optional
   permissive providers. SceneIO owns schemas, validation, models, detection,
@@ -27,6 +27,12 @@
   the 67-row five-run guard, and compiler run `30705438179` passes both jobs.
   Exhaustive backend comparison remains trigger-based, not a prerequisite for
   closing a verified codec unit.
+- **Post-plan media decision (2026-08-01):** the previously gated AVIF choice
+  is approved and implemented as bounded still and sequence adapters using the
+  permissive Pillow/libavif/libaom/dav1d stack and the accepted AOM no-charge
+  patent grant. Exact live claims are in `format_coverage.md`; older unchecked
+  AVIF items below are retained as historical planning context. Direct WebM
+  VP8/VP9 and Ogg/Theora are the remaining bounded moving-image units.
 - **Scope:** close every unblocked format gap declared by SceneIO's coverage
   documents without reimplementing the 0.2.0 codec tier.
 
@@ -102,9 +108,10 @@ The following remain excluded unless the project constraints change:
 - GPL/AGPL/non-commercial libraries.
 - Arbitrary Python object serialization.
 
-AVIF, JPEG-XL, and optional Draco compression remain policy-gated until their
-fit with the project's patented-codec rule is explicitly resolved. Plain
-glTF/GLB is not blocked by that gate.
+JPEG-XL and optional Draco compression remain policy-gated until their fit
+with the project's patented-codec rule is explicitly resolved. AVIF was
+approved on 2026-08-01 for its recorded permissive implementation stack and
+AOM patent grant. Plain glTF/GLB is not blocked by that gate.
 
 ### 1.3 Stable-format repository ownership
 

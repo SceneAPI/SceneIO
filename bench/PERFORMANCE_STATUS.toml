@@ -396,6 +396,16 @@ documentation = "docs/format_coverage.md"
 accepted_subset = ["lossless", "lossy", "rgb", "rgba"]
 
 [[codec]]
+id = "avif"
+family = "images"
+adapter = "repo"
+implementation_owner = "python"
+sources = ["src/sceneio/io/_avif.py"]
+source_suite = "tests/codecs/test_avif.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["avif_1_2", "uint8", "grayscale", "rgb", "rgba", "straight_alpha", "full_range", "metadata_only_inspect"]
+
+[[codec]]
 id = "y4m"
 family = "sequences"
 adapter = "repo"
@@ -424,6 +434,16 @@ sources = ["src/cpp/codecs/sequences/apng.cpp"]
 source_suite = "tests/codecs/test_apng.py"
 documentation = "docs/format_coverage.md"
 accepted_subset = ["uint8", "rgb", "rgba", "composited_frames", "exact_rational_timing", "loop_count", "blend_source", "blend_over", "dispose_none", "dispose_background", "dispose_previous"]
+
+[[codec]]
+id = "animated_avif"
+family = "sequences"
+adapter = "repo"
+implementation_owner = "python"
+sources = ["src/sceneio/io/_avif.py"]
+source_suite = "tests/codecs/test_avif.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["avif_1_2", "uint8", "grayscale", "rgb", "rgba", "straight_alpha", "exact_frame_timing", "frame_ranges", "metadata_only_inspect"]
 
 [[codec]]
 id = "image_sequence"
@@ -2776,6 +2796,44 @@ candidate_backends = []
 evidence_gaps = ["profile-specific current-backend measurement missing", "candidate comparison on all required toolchains"]
 
 [[operation]]
+codec_id = "avif"
+profile = "default"
+direction = "encode"
+settings = { quality = 90, speed = 6, subsampling = "444", range = "full", autotiling = true }
+fidelity = "lossy"
+comparator = "direct Pillow/libavif provider"
+fixture = "avif:default"
+backend = "Pillow/libavif with libaom"
+backend_owner = "fetched"
+backend_source = "src/sceneio/io/_avif.py"
+backend_version = "Pillow 12.3.0 / libavif 1.4.2 / libaom 3.14.1"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_avif.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "avif"
+profile = "default"
+direction = "decode"
+settings = { output = "uint8_rgb_or_rgba", threads = "provider_default", input = "mmap" }
+fidelity = "decoded-pixel parity"
+comparator = "direct Pillow/libavif provider"
+fixture = "avif:default"
+backend = "Pillow/libavif with dav1d"
+backend_owner = "fetched"
+backend_source = "src/sceneio/io/_avif.py"
+backend_version = "Pillow 12.3.0 / libavif 1.4.2 / dav1d 1.5.3"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_avif.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
 codec_id = "webp"
 profile = "lossy_rgb8_q90"
 direction = "decode"
@@ -2885,6 +2943,44 @@ backend_version = "ed6fe5825c6a4fbb7f58ab35a4231c7543cd452a"
 transport_status = "qualified"
 status = "provisional"
 correctness_evidence = ["tests/codecs/test_apng.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "animated_avif"
+profile = "default"
+direction = "encode"
+settings = { quality = 90, speed = 6, subsampling = "444", range = "full", autotiling = true, timing = "integer_ms" }
+fidelity = "lossy pixels; exact timing"
+comparator = "direct Pillow/libavif provider"
+fixture = "animated_avif:default"
+backend = "Pillow/libavif with libaom"
+backend_owner = "fetched"
+backend_source = "src/sceneio/io/_avif.py"
+backend_version = "Pillow 12.3.0 / libavif 1.4.2 / libaom 3.14.1"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_avif.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "animated_avif"
+profile = "default"
+direction = "decode"
+settings = { output = "composited_uint8", threads = "provider_default", input = "mmap", timing = "exact_ns" }
+fidelity = "decoded-pixel and exact-timing parity"
+comparator = "direct Pillow/libavif provider"
+fixture = "animated_avif:default"
+backend = "Pillow/libavif with dav1d"
+backend_owner = "fetched"
+backend_source = "src/sceneio/io/_avif.py"
+backend_version = "Pillow 12.3.0 / libavif 1.4.2 / dav1d 1.5.3"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_avif.py"]
 benchmark_evidence = ["bench/BASELINE.md"]
 candidate_backends = []
 evidence_gaps = ["candidate comparison on all required toolchains"]

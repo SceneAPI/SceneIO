@@ -38,6 +38,9 @@ arrow = [
 openvdb = [
     "tinyvdb>=0.9,<1",
 ]
+avif = [
+    "pillow>=12.3,<12.4",
+]
 usd = [
     "tinyusdz>=0.9.4,<1",
 ]
@@ -56,7 +59,7 @@ test = [
     "numpy>=2.0,<2.5",
     "gsply>=0.4",
     "pycolmap>=4.1",
-    "pillow>=10.0",
+    "pillow>=12.3,<12.4",
     "pypng>=0.20220715",
     "openexr>=3.2",
     "laspy>=2.5",
@@ -104,7 +107,7 @@ wheel.exclude = ["include/**", "lib/**", "share/**", "bin/**"]
 build = "cp312-*"
 skip = "*-musllinux* *_i686 *-win32"
 test-requires = ["numpy"]
-# Manifest-driven NumPy-only smoke for all 67 installed built-ins: public
+# Manifest-driven NumPy-only smoke for all 69 installed built-ins: public
 # write/read/inspect, streaming paths, and every declared partial selector.
 test-command = "python -m sceneio._wheel_smoke"
 

@@ -70,6 +70,7 @@
       "sceneio.imagesource",
       "sceneio.io",
       "sceneio.io._arrow",
+      "sceneio.io._avif",
       "sceneio.io._builtin_manifest",
       "sceneio.io._depth",
       "sceneio.io._e57",

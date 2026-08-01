@@ -217,6 +217,11 @@ COMPARISON_QUALIFICATIONS = MappingProxyType(
             "Pillow",
             "bench/io_bench/oracles/images.py",
         ),
+        "avif": _timed(
+            "direct Pillow/libavif provider",
+            "bench/io_bench/oracles/media.py",
+            runner_kind="path",
+        ),
         "y4m": _timed(
             "independent NumPy implementation",
             "bench/io_bench/oracles/sequences.py",
@@ -228,6 +233,12 @@ COMPARISON_QUALIFICATIONS = MappingProxyType(
         "apng": _timed(
             "Pillow + specification-derived chunk oracle",
             "bench/io_bench/oracles/sequences.py",
+        ),
+        "animated_avif": _timed(
+            "direct Pillow/libavif provider",
+            "bench/io_bench/oracles/media.py",
+            operations=("encode", "decode", "inspect", "partial"),
+            runner_kind="path",
         ),
         "image_sequence": _exemption(
             "independent benchmark directory encode/decode throughput",

@@ -673,7 +673,7 @@ returns `ColmapDatabase`.
 | Selector | Built-in codecs |
 |---|---|
 | `faces` | `off`, `ply_mesh`, `stl` |
-| `frames` | `image_sequence`, `y4m` |
+| `frames` | `animated_avif`, `image_sequence`, `y4m` |
 | `image_id` | `colmap_db`, `colmap_sparse`, `colmap_sparse_txt` |
 | `mesh_id` | `glb`, `gltf` |
 | `pair` | `colmap_db` |

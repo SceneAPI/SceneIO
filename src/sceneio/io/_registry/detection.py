@@ -74,6 +74,71 @@ def _is_animated_webp(path: Path) -> bool:
     return False
 
 
+def _avif_brand(path: Path) -> str | None:
+    """Return ``avif`` or ``avis`` from a bounded ISO-BMFF file-type box."""
+
+    try:
+        file_size = path.stat().st_size
+        with path.open("rb") as stream:
+            prefix = stream.read(min(file_size, 65_536 + 4096 + 16))
+            offset = 0
+            while offset + 8 <= file_size and offset < 65_536:
+                if offset + 8 > len(prefix):
+                    return None
+                box_size = int.from_bytes(prefix[offset : offset + 4], "big")
+                box_type = prefix[offset + 4 : offset + 8]
+                header_size = 8
+                if box_size == 1:
+                    if offset + 16 > len(prefix):
+                        return None
+                    box_size = int.from_bytes(prefix[offset + 8 : offset + 16], "big")
+                    header_size = 16
+                elif box_size == 0:
+                    box_size = file_size - offset
+                if box_size < header_size or box_size > file_size - offset:
+                    return None
+                if box_type == b"ftyp":
+                    payload_size = box_size - header_size
+                    if payload_size < 8 or payload_size > 4096:
+                        return None
+                    payload_start = offset + header_size
+                    payload_end = payload_start + payload_size
+                    if payload_end > len(prefix):
+                        return None
+                    payload = prefix[payload_start:payload_end]
+                    brands = (
+                        payload[:4],
+                        *(
+                            payload[index : index + 4]
+                            for index in range(8, len(payload), 4)
+                            if index + 4 <= len(payload)
+                        ),
+                    )
+                    if b"avis" in brands:
+                        return "avis"
+                    if b"avif" in brands:
+                        return "avif"
+                    return None
+                offset += box_size
+    except OSError:
+        return None
+    return None
+
+
+def _could_be_isobmff(head: bytes) -> bool:
+    """Recognize bounded top-level boxes worth probing for extensionless AVIF."""
+
+    if len(head) < 8:
+        return False
+    box_size = int.from_bytes(head[:4], "big")
+    box_type = head[4:8]
+    if box_type not in {b"free", b"ftyp", b"skip", b"uuid", b"wide"}:
+        return False
+    if box_size == 1:
+        return len(head) >= 16 and int.from_bytes(head[8:16], "big") >= 16
+    return box_size == 0 or box_size >= 8
+
+
 def detect_path(
     path,
     codecs: Iterable[Codec],
@@ -133,6 +198,16 @@ def detect_path(
         and _is_animated_webp(p)
     ):
         return "animated_webp"
+    if ext in {".avif", ".avifs"} and any(
+        codec.id in {"avif", "animated_avif"} for codec in ordered
+    ):
+        brand = _avif_brand(p)
+        if brand == "avis" and any(
+            codec.id == "animated_avif" for codec in ordered
+        ):
+            return "animated_avif"
+        if brand == "avif" and any(codec.id == "avif" for codec in ordered):
+            return "avif"
     if (
         ext == ".png"
         and any(codec.id == "apng" for codec in ordered)
@@ -170,6 +245,16 @@ def detect_path(
             return "animated_webp"
         if any(codec.id == "webp" for codec in ordered):
             return "webp"
+    if _could_be_isobmff(head) and any(
+        codec.id in {"avif", "animated_avif"} for codec in ordered
+    ):
+        brand = _avif_brand(p)
+        if brand == "avis" and any(
+            codec.id == "animated_avif" for codec in ordered
+        ):
+            return "animated_avif"
+        if brand == "avif" and any(codec.id == "avif" for codec in ordered):
+            return "avif"
     if (
         head.startswith(b"\x89PNG\r\n\x1a\n")
         and any(codec.id == "apng" for codec in ordered)

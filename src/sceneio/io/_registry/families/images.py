@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from sceneio import _core
+from sceneio.io._avif import inspect_avif, read_avif, write_avif
 from sceneio.io._registry.adapters import (
     _file_sink_writer,
     _mmap_reader,
@@ -143,6 +144,45 @@ IMAGE_CODECS: tuple[Codec, ...] = (
         lossy=True,
         supported_features=("lossless", "lossy", "rgb", "rgba"),
         unsupported_features=("animation", "lossy_window"),
+    ),
+    Codec(
+        "avif",
+        (".avif",),
+        read_avif,
+        write_avif,
+        record=_core.Image,
+        datatype="image",
+        inspect=inspect_avif,
+        streams_write=False,
+        requires_features=("PIL",),
+        lossy=True,
+        supported_features=(
+            "avif_1_2",
+            "uint8",
+            "grayscale",
+            "rgb",
+            "rgba",
+            "straight_alpha",
+            "full_range",
+            "libavif",
+            "libaom_encode",
+            "dav1d_decode",
+            "worker_threads",
+            "metadata_only_inspect",
+        ),
+        unsupported_features=(
+            "high_bit_depth",
+            "hdr",
+            "gain_maps",
+            "grids",
+            "layered_images",
+            "embedded_icc",
+            "embedded_exif",
+            "embedded_xmp",
+            "non_identity_orientation",
+            "premultiplied_alpha_input",
+            "direct_streaming_write",
+        ),
     ),
     Codec(
         "tiff",
