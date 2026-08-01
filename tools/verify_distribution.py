@@ -23,6 +23,12 @@ GENERATED_SDIST_FILES = frozenset({"PKG-INFO"})
 WHEEL_METADATA_FILES = frozenset({"METADATA", "RECORD", "WHEEL"})
 RUNTIME_SOURCE_SUFFIXES = frozenset({".py", ".pyi"})
 RUNTIME_SOURCE_NAMES = frozenset({"py.typed"})
+RUNTIME_SOURCE_PATHS = frozenset(
+    {
+        "sceneio/io/_assets/openvdb_float_template.PROVENANCE.txt",
+        "sceneio/io/_assets/openvdb_float_template.vdb",
+    }
+)
 NATIVE_NAME_PATTERN = re.compile(
     r"(?:\.(?:dll|exe|pyd)|\.so(?:\.\d+)*|(?:\.\d+)*\.dylib)$",
     re.IGNORECASE,
@@ -281,12 +287,13 @@ def _runtime_source_assets(source_root: Path) -> dict[str, bytes]:
         raise ValueError(f"source package directory is missing: {package_root}")
     assets: dict[str, bytes] = {}
     for path in sorted(item for item in package_root.rglob("*") if item.is_file()):
+        wheel_path = path.relative_to(source_root / "src").as_posix()
         if (
             path.suffix.casefold() not in RUNTIME_SOURCE_SUFFIXES
             and path.name not in RUNTIME_SOURCE_NAMES
+            and wheel_path not in RUNTIME_SOURCE_PATHS
         ):
             raise ValueError(f"undeclared source-package asset: {path}")
-        wheel_path = path.relative_to(source_root / "src").as_posix()
         assets[wheel_path] = path.read_bytes()
     return assets
 

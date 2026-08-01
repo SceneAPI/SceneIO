@@ -181,6 +181,18 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > focused gate, Ruff, contracts/docs, allocation checks, paired exact-parent
 > benchmark, and three review lenses are green.
 >
+> **USD C7 local release closure (2026-08-01):** the exact local tree collects
+> 4,307 tests and passes 4,301 with six documented skips. A verified source
+> archive is the sole input to the repaired Windows `cp312-abi3` wheel; strict
+> inventory checks retain NumPy as the only base requirement and include the
+> complete license set plus the two declared OpenVDB runtime seed assets.
+> Fresh isolated NumPy-only and pinned TinyUSDZ 0.9.4 environments pass the
+> installed-wheel smoke, including public rich-scene reads, profile/provider
+> inspection, and composition refusal. The nonpublishing three-platform
+> workflow repeats that optional-provider smoke with binary-only pinned
+> packages. Hosted compiler and Linux/macOS/Windows execution remains pending
+> a user-authorized push; this local result is not cross-platform evidence.
+>
 > **COLMAP dense/workspace checkpoint (2026-07-29):** the current local
 > registry has 54 codecs: 48 buffer-backed files, three path-native
 > multi-file containers, and three directories. The four additions are exact

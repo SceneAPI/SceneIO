@@ -188,6 +188,14 @@ inspection had normalized the complete mesh even when no binding existed.
 The unbound/direct paths now avoid mesh text entirely, restoring the generated
 C1 full-read control from 47.15 MB to 44.03 MB traced (43.95 MB baseline).
 
+The USD C7 release unit changes no codec kernel or data path. It retains the
+paired C6 USD/USDZ measurement in `bench/BASELINE.md` as its no-regression
+control and adds artifact-only checks: one verified source archive feeds the
+wheel build, exact runtime assets are inventoried, and fresh NumPy-only plus
+pinned TinyUSDZ environments run the installed public smoke. The prepared
+hosted wheel matrix repeats the optional-provider smoke on Windows, Linux, and
+macOS; execution remains user-gated.
+
 The 2026-07-30 scale-16 profiling follow-up removed two wrapper hot spots.
 Already-native contiguous HDF5 arrays now pass directly to the native record
 or h5py dataset constructor, reducing traced full-read peak from 33.6 MB to

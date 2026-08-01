@@ -3939,3 +3939,15 @@ enabled measured both SceneIO reads at 7 MB/s and direct provider reads at
 13 MB/s, confirming that C6 did not conceal the established provider cost.
 Current USDC, evaluated composition, and selected-time evaluation remain
 unavailable instead of adding an unqualified implementation.
+
+### USD C7 release-artifact control (2026-08-01)
+
+C7 changes no codec kernel, payload mapping, or benchmark fixture. The paired
+C6 USD/USDZ row above is therefore the retained no-regression measurement.
+Local release qualification builds the Windows `cp312-abi3` wheel only from a
+verified source archive, verifies its exact runtime and license inventory, and
+runs fresh installed smokes with NumPy alone and with NumPy 2.2.6 plus
+TinyUSDZ 0.9.4. The latter exercises the public profile id, provider flags,
+rich static read/inspection, and composition refusal. The prepared hosted
+matrix repeats that pinned binary-provider smoke on Linux, macOS, and Windows;
+no hosted result is claimed until the user authorizes the push and run.

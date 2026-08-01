@@ -104,6 +104,27 @@ def _source_files(source: Path) -> tuple[str, ...]:
     )
 
 
+def test_runtime_source_assets_allow_only_exact_openvdb_seed_paths(tmp_path):
+    source = _source_root(tmp_path)
+    assets = source / "src" / "sceneio" / "io" / "_assets"
+    assets.mkdir(parents=True)
+    provenance = assets / "openvdb_float_template.PROVENANCE.txt"
+    seed = assets / "openvdb_float_template.vdb"
+    provenance.write_bytes(b"pinned provenance")
+    seed.write_bytes(b"VDB seed")
+
+    result = VERIFIER._runtime_source_assets(source)
+
+    assert result[
+        "sceneio/io/_assets/openvdb_float_template.PROVENANCE.txt"
+    ] == b"pinned provenance"
+    assert result["sceneio/io/_assets/openvdb_float_template.vdb"] == b"VDB seed"
+
+    (assets / "unlisted.txt").write_text("not declared", encoding="utf-8")
+    with pytest.raises(ValueError, match="undeclared source-package asset"):
+        VERIFIER._runtime_source_assets(source)
+
+
 def _sdist(
     tmp_path: Path,
     source: Path,
@@ -1171,6 +1192,14 @@ def test_publish_workflow_builds_every_wheel_from_the_exact_sdist() -> None:
     assert "CIBW_MANYLINUX_X86_64_IMAGE:" in wheel_job
     assert "numpy==2.2.6" in wheel_job
     assert 'CIBW_TEST_REQUIRES: ""' in wheel_job
+    assert "name: Smoke installed TinyUSDZ profile" in wheel_job
+    assert 'python -m venv "$smoke_env"' in wheel_job
+    assert '"$RUNNER_OS" == "Windows"' in wheel_job
+    assert '"${wheel}[usd]"' in wheel_job
+    assert "--only-binary=:all:" in wheel_job
+    assert "numpy==2.2.6 tinyusdz==0.9.4" in wheel_job
+    assert 'sceneio.capabilities("usd").available' in wheel_job
+    assert '"$smoke_python" -I -m sceneio._wheel_smoke' in wheel_job
     assert wheel_job.count("tools/verify_distribution.py") == 1
     assert '--sdist "${{ steps.source.outputs.sdist-path }}"' in wheel_job
     assert "--wheel-dir wheelhouse" in wheel_job

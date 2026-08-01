@@ -190,6 +190,25 @@ jobs:
             --sdist "${{ steps.source.outputs.sdist-path }}" \
             --wheel-dir wheelhouse \
             --output "inventory-${{ matrix.label }}.json"
+      - name: Smoke installed TinyUSDZ profile
+        shell: bash
+        run: |
+          set -euo pipefail
+          smoke_env="$RUNNER_TEMP/sceneio-usd-smoke"
+          python -m venv "$smoke_env"
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            smoke_python="$smoke_env/Scripts/python.exe"
+          else
+            smoke_python="$smoke_env/bin/python"
+          fi
+          count=$(find wheelhouse -maxdepth 1 -type f -name '*.whl' | wc -l)
+          test "$count" -eq 1
+          wheel=$(find wheelhouse -maxdepth 1 -type f -name '*.whl')
+          "$smoke_python" -m pip install --only-binary=:all: \
+            "${wheel}[usd]" numpy==2.2.6 tinyusdz==0.9.4
+          "$smoke_python" -I -c \
+            'import sceneio; assert sceneio.capabilities("usd").available'
+          "$smoke_python" -I -m sceneio._wheel_smoke
       - uses: actions/upload-artifact@v4
         with:
           name: wheels-${{ matrix.label }}

@@ -6,10 +6,12 @@ invoked, copied, or bundled; current USDC, evaluated composition, and animated
 selected-time evaluation are explicit unavailable provider flags. The direct
 static profile detects and refuses sublayers, references, payloads, variants,
 inherits, and specializes before projecting a raw stage. C7 local release
-qualification is next. The exact 4,306-node local gate passes 4,300 with six
-documented skips; Ruff, focused docs/contracts, paired parent benchmarks, and
-all three review lenses are green. Hosted execution and pushing remain
-user-gated.
+qualification is complete: the exact 4,307-node local gate passes 4,301 with
+six documented skips; Ruff, focused docs/contracts, the C6 paired-parent
+benchmark, source-archive closure, and installed NumPy-only/TinyUSDZ wheel
+smokes are green. The prepared three-platform workflow repeats the TinyUSDZ
+profile smoke with pinned binary packages. Compiler-instrumented and hosted
+Linux/macOS/Windows execution, pushing, and publication remain user-gated.
 Review date: 2026-08-01
 Standards baseline: AOUSD Core Specification 1.0.1, supplemental
 1.0.1.post0, and OpenUSD 26.08 (`v26.08`, `ee47c679abde`)
@@ -125,7 +127,7 @@ work:
 | U4 Gaussian schema | C3 committed (`a633477`) | official float/half read/write, raw-layout mapping, inspection, selection, extent, refusal coverage, generated benchmark, contracts, legacy controls, and full local qualification are green |
 | U5 camera/volume/semantics/instances | complete through C5 | camera/render-product pairs, direct scalar-float OpenVDB dependencies, one effective taxonomy/label pair, static PointInstancer data, mixed-stage coexistence, generated large-case evidence, and the complete local gate are green |
 | U6 current USDC/composition/time | Exit B complete | explicit false provider flags; all six composition arc families and authored time samples report/refuse; no OpenUSD executable dependency |
-| U7 release closure | pending | complete suite, package matrix, benchmark ledger, docs/capability snapshots |
+| U7 release closure | local closure complete; hosted pending | exact local suite, benchmark ledger, docs/contracts, verified source archive, Windows cp312-abi3 wheel, base and `sceneio[usd]` installed smokes; hosted compiler/package matrix remains user-gated |
 
 ### 2026-07-31 C2 closure evidence
 
@@ -569,18 +571,15 @@ later unit while an earlier unit has uncommitted or failing changes.
 | C2 (done, `917d48e`) | U3 materials + texture assets | PreviewSurface constants and texture graph, direct and subset bindings, transactional USDA/USDZ assets, independent cross-read, missing/collision/path cases, generated packaged-texture measurement | one green commit; arbitrary networks/UDIM remain explicit exclusions; hosted three-OS run is deferred to the next authorized push |
 | C3 (done, `a633477`) | U4 official Gaussian schema | locally authored, standards-derived 26.08 schema fixtures; exact quaternion/SH/precision assertions; 1k/100k/1M generated measurements; legacy splat parity | one green commit; exact schema mapping with no implicit log/logit conversion |
 | C4 (done, `d1ee8ea`) | U5 cameras | camera/render-product association, projection-equivalent intrinsics and pose convention tests, default-only unrepresented fields, mixed-resolution and ambiguity refusals, camera-stage measurement | one green closure unit; hosted three-OS execution remains deferred to the next authorized push |
-| C5 (done in this closure unit) | U5 volumes + semantics + instances | direct OpenVDB dependency resolution, one taxonomy/label pair, prototype identity/order/masks, mixed-stage round-trip and dependency tests; refuse volume-bearing USDZ writes | focused/complete gates, docs, and large-case measurement are green |
-| C6 | U6 provider capability | Exit B: TOST remains outside the literal allow-list; current USDC, evaluated composition, and selected time are explicit unavailable flags | no OpenUSD install/invocation and no repository-owned composition/crate implementation |
-| C7 | U7 release closure | full tests, compiler checks, benchmark ledger, docs/contracts, sdist/wheel smoke, nonpublishing platform matrix prepared | claim exactly `sceneio.usd.3dcv/1` and list optional provider flags; no "full USD" claim |
+| C5 (done, `6eeae8e`) | U5 volumes + semantics + instances | direct OpenVDB dependency resolution, one taxonomy/label pair, prototype identity/order/masks, mixed-stage round-trip and dependency tests; refuse volume-bearing USDZ writes | focused/complete gates, docs, and large-case measurement are green |
+| C6 (done, `fa321c1`) | U6 provider capability | Exit B: TOST remains outside the literal allow-list; current USDC, evaluated composition, and selected time are explicit unavailable flags | no OpenUSD install/invocation and no repository-owned composition/crate implementation |
+| C7 (local closure complete) | U7 release closure | full local tests, benchmark ledger, docs/contracts, exact source archive, repaired Windows wheel, NumPy-only and pinned TinyUSDZ installed smokes; nonpublishing platform matrix prepared | claim exactly `sceneio.usd.3dcv/1`; hosted compiler/package evidence still requires a user-authorized push/run |
 
-Execution is intentionally capped at seven commits. C1-C4 are committed and
-C5 is complete in this closure unit. The remaining path is two bounded
-actions:
-
-1. make one explicit C6 decision: qualify a separately installed OpenUSD
-   oracle/provider only after its exact license inventory passes, or mark
-   current USDC/composition/time unavailable and stop provider work;
-2. perform the C7 release qualification once.
+Execution is intentionally capped at seven commits. C1-C6 are committed and
+the local portion of C7 is complete. One bounded action remains: after the
+user authorizes a push, run the prepared nonpublishing compiler and package
+matrix once against that exact tree and record the hosted result. Publication
+is a separate tag-driven workflow action.
 
 No later unit may expand an earlier unit's public profile merely to accept an
 unrepresentable input. The correct result is an explicit unsupported feature.
@@ -676,7 +675,7 @@ schema modules and keeps traversal, selection, and payload dispatch in
 | C4 Camera | done in this closure unit | keep `UsdGeomCamera`/`UsdRenderProduct` mapping isolated in `cameras.py`; preserve camera-to-parent/OpenGL conventions and float-precision projection equivalence | 43 camera tests; 196 affected USD/CameraRig passes; 259 calibration/COLMAP controls; 40 docs/contracts; exact 4,275-node full suite | hosted three-OS execution remains deferred to the next authorized push |
 | C5 Remaining payloads | locally complete in focused `volumes.py`, `semantics.py`, and `instances.py` modules | preserve the direct scalar-float VDB reference, one effective semantic pair, and static PointInstancer boundary; keep prototype geometry shared and volume-bearing USDZ unavailable | 20 family nodes plus benchmark smoke, existing USD regression family, literal relationships/attributes, missing/shared VDB, inheritance, ids/masks/order, cycle, lifetime, selection, and destination preservation are green | generated 1 GiB VDB and 1M-instance evidence recorded; exact 4,299-node gate passes 4,293 with 6 documented skips; full Ruff and docs/contracts are clean |
 | C6 Static-provider closure | complete through Exit B | preserve direct USDA/USDZ and historical crate reads; expose profile id plus false `current_usdc`, `composition`, and `selected_time` flags; scan/refuse sublayer/reference/payload/variant/inherit/specialize inputs and authored samples | capability, inspection, direct arc, selected-time, crate ceiling, provider-boundary, import-isolation, registry, and static TinyUSDZ controls | no OpenUSD package installed or invoked; capabilities/provider report/docs exact; C7 supplies artifact and hosted platform evidence |
-| C7 Release closure | implementation units complete; hosted exact-tree run still user-gated | no new format scope; reconcile capability manifests, public docs, installed-package surfaces, benchmark ledger, and release metadata | complete test suite/Ruff; compiler-instrumented checks; generated malformed/differential cases; sdist and installed-wheel smoke with NumPy-only, TinyUSDZ, and any approved provider environment | prepare the nonpublishing Windows/Linux/macOS matrix; ask before push/run; close only after exact-tree hosted results; publish separately through the approved workflow |
+| C7 Release closure | local closure complete; hosted exact-tree run still user-gated | no new format scope; capability manifests, public docs, installed-package surfaces, benchmark ledger, and release metadata are reconciled | 4,307-node local collection; 4,301 pass/6 skip; Ruff; generated malformed/differential cases; verified sdist-to-Windows-wheel chain; NumPy-only and TinyUSDZ installed smokes | nonpublishing Windows/Linux/macOS matrix is prepared with a pinned `sceneio[usd]` smoke; ask before push/run; publish separately through the approved tag workflow |
 
 Each unit has a stop rule: if an authored property cannot be represented
 exactly by the named SceneIO record, refuse it with a specific diagnostic. Do
@@ -1017,19 +1016,40 @@ the NumPy-only smoke test.
 
 ### U7 — qualification and documentation closure
 
-- [ ] Run the complete suite and Ruff with the required interpreter.
+- [x] Run the complete suite and Ruff with the required interpreter.
 - [ ] Run compiler-instrumented memory/undefined-behavior checks.
-- [ ] Run generated malformed/truncated/provider-differential cases.
-- [ ] Run the three review lenses:
+- [x] Run generated malformed/truncated/provider-differential cases.
+- [x] Run the three review lenses:
       resource/lifetime, format/convention correctness, and test soundness.
-- [ ] Record benchmark deltas in `bench/BASELINE.md`.
-- [ ] Update `format_coverage.md`, `coverage_roadmap.md`,
+- [x] Record benchmark deltas in `bench/BASELINE.md`.
+- [x] Update `format_coverage.md`, `coverage_roadmap.md`,
       `io_optimization_plan.md`, public API docs, capability snapshots, wheel
       smoke, and `LICENSES/README.md`.
-- [ ] Build the sdist and installed-wheel smoke with NumPy only, TinyUSDZ, and
+- [x] Build the sdist and installed-wheel smoke with NumPy only, TinyUSDZ, and
       each approved optional provider configuration.
-- [ ] Prepare the nonpublishing Windows/Linux/macOS package matrix.
-- [ ] Ask the user before pushing or triggering the hosted cross-platform run.
+- [x] Prepare the nonpublishing Windows/Linux/macOS package matrix, including
+      a pinned binary TinyUSDZ profile smoke on each wheel host.
+- [x] Keep pushing and the hosted cross-platform run user-gated.
+- [ ] Run the prepared hosted compiler/package matrix after user authorization
+      and record the exact-tree run ids.
+
+Local C7 evidence uses one verified source archive as the wheel source. The
+Windows `cp312-abi3` wheel passes the exact distribution inventory, a fresh
+NumPy-only isolated smoke, and a fresh `sceneio[usd]` smoke with NumPy 2.2.6
+and TinyUSDZ 0.9.4. The optional smoke checks the public profile id, all three
+false provider flags, rich static reads, inspection, and composition refusal.
+The wheel inventory retains NumPy as the only unconditional requirement and
+the complete license directory. No codec implementation or measured path
+changed in C7, so the C6 paired-parent row remains the applicable performance
+control.
+
+The C7 three-lens review is green after one test-soundness correction: the
+generic smoke deliberately skips unavailable optional providers, so the hosted
+`sceneio[usd]` job now first requires `capabilities("usd").available` rather
+than allowing a failed provider import to pass as a skip. The resource/lifetime
+lens additionally removes each installed USD/USDZ source and collects garbage
+before re-reading the retained rich-scene positions. The format/convention
+lens retains exact profile/provider metadata and requires composition refusal.
 
 Exit: the docs claim exactly `sceneio.usd.3dcv/1`, separately report
 `current_usdc`, `composition`, and `selected_time` provider flags, and no

@@ -1460,6 +1460,12 @@ def _usd_formats(root: Path) -> None:
     if not sceneio.capabilities("usd").available:
         return
 
+    usd_capabilities = sceneio.capabilities("usd")
+    assert "profile_sceneio_usd_3dcv_1" in usd_capabilities.supported_features
+    assert {"current_usdc", "composition", "selected_time"} <= set(
+        usd_capabilities.unsupported_features
+    )
+
     positions = np.array(
         [[0, 0, 0], [1, 0, 0], [0, 1, 0]],
         dtype=np.float32,
@@ -1491,7 +1497,33 @@ def _usd_formats(root: Path) -> None:
             decoded.primitive_at(0).positions,
             positions,
         )
-        assert sceneio.inspect(path).count == 1
+        info = sceneio.inspect(path)
+        assert info.count == 1
+        assert info.metadata["profile"] == "sceneio.usd.3dcv/1"
+        assert info.metadata["provider_current_usdc"] is False
+        assert info.metadata["provider_composition"] is False
+        assert info.metadata["provider_selected_time"] is False
+        rich = sceneio.read_scene(path)
+        assert rich.node_names == ["Triangle"]
+        retained_positions = rich.mesh_at(0).positions
+        np.testing.assert_array_equal(retained_positions, positions)
+        path.unlink()
+        gc.collect()
+        np.testing.assert_array_equal(retained_positions, positions)
+
+    arc = root / "unsupported-arc.usda"
+    arc.write_text(
+        '#usda 1.0\ndef Xform "Arc" ( inherits = </Base> ) {}\n',
+        encoding="utf-8",
+    )
+    assert "inherits" in sceneio.inspect(arc).metadata["unsupported_features"]
+    try:
+        sceneio.read_scene(arc)
+    except sceneio.FormatError as exc:
+        error = str(exc)
+    else:
+        raise AssertionError("installed USD profile accepted composition")
+    assert "evaluated composition" in error
 
 
 def _image_sequences(root: Path) -> None:

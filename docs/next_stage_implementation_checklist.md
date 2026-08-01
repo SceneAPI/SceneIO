@@ -5178,8 +5178,9 @@ checklist. No unchecked item below is a current USD I/O capability claim:
 - [x] U6: static-profile Exit B. Current USDC, evaluated composition, and
       selected time are explicit unavailable flags; all six planned arc
       families and authored samples report/refuse without OpenUSD execution.
-- [ ] U7: complete verification, benchmarks, cross-platform package run, and
-      documentation closure.
+- [ ] U7: local verification, benchmarks, artifact smokes, and documentation
+      are complete; the prepared cross-platform compiler/package run remains
+      user-gated.
 
 The existing static `MeshScene` behavior remains supported throughout. Full
 USD, authoring-layer preservation, arbitrary shader/custom schemas, rendering,
@@ -5272,6 +5273,14 @@ Progress:
       controls, paired exact-parent benchmark, and three review lenses are
       green without installing or invoking OpenUSD. C7 artifact and hosted
       evidence remains.
+- [x] C7 local closure verifies one source archive as the sole input to a
+      repaired Windows `cp312-abi3` wheel, exact runtime/license inventory,
+      NumPy-only installed operation, and the pinned TinyUSDZ 0.9.4 rich USD
+      profile smoke. The exact local tree collects 4,307 tests and passes 4,301
+      with six documented skips; Ruff and focused contracts are green. The
+      nonpublishing workflow repeats the optional-provider smoke on every wheel
+      platform. Hosted compiler and three-platform execution is the only open
+      U7 check and requires user authorization before push/run.
 
 Completed U1 evidence:
 
