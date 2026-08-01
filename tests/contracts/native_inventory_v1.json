@@ -43,6 +43,7 @@
     ["webp", ["read_webp"], ["write_webp"], [], ["read_webp_window"]],
     ["y4m", ["read_y4m"], ["write_y4m"], ["_inspect_y4m"], ["read_y4m_frames"]],
     ["webm", ["read_webm"], ["write_webm"], ["_inspect_webm"], ["read_webm_frames"]],
+    ["theora", ["read_theora"], ["write_theora"], ["_inspect_theora"], ["read_theora_frames"]],
     ["animated_webp", ["read_animated_webp"], ["write_animated_webp"], ["_inspect_animated_webp"], []],
     ["apng", ["read_apng"], ["write_apng"], ["_inspect_apng"], []],
     ["colmap_sparse_txt", ["read_colmap_txt"], ["write_colmap_txt"], ["_inspect_colmap_txt"], ["read_colmap_txt_image"]],

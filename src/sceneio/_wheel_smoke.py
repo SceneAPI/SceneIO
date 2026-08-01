@@ -1593,6 +1593,31 @@ def _image_sequences(root: Path) -> None:
     assert sceneio.inspect(webm_path).shape == (2, 3, 5, 3)
     assert sceneio.read_partial(webm_path, frames=(1, 2)).num_frames == 1
 
+    theora_sequence = _core.image_sequence_yuv(
+        y,
+        u,
+        v,
+        empty,
+        empty,
+        "420",
+        "unspecified",
+        "unknown",
+        "unknown",
+        "progressive",
+        25,
+        1,
+        1,
+        1,
+    )
+    theora_path = root / "sequence.ogv"
+    sceneio.write(theora_sequence, theora_path)
+    assert sceneio.detect(theora_path) == "theora"
+    decoded_theora = sceneio.read(theora_path)
+    assert decoded_theora.y.shape == y.shape
+    assert decoded_theora.durations_ns.tolist() == [40_000_000, 40_000_000]
+    assert sceneio.inspect(theora_path).shape == (2, 3, 5, 3)
+    assert sceneio.read_partial(theora_path, frames=(1, 2)).num_frames == 1
+
     pixels = np.zeros((2, 3, 5, 4), dtype=np.uint8)
     pixels[0, ...] = (255, 0, 0, 255)
     pixels[1, ...] = (0, 255, 0, 192)
@@ -2008,6 +2033,7 @@ _SMOKE_RUNNERS: Mapping[str, Callable[[Path], None]] = MappingProxyType(
         "avif": _avif_formats,
         "y4m": _image_sequences,
         "webm": _image_sequences,
+        "theora": _image_sequences,
         "animated_webp": _image_sequences,
         "apng": _image_sequences,
         "animated_avif": _avif_formats,

@@ -32,6 +32,7 @@ CONTRACT = ROOT / "tests" / "contracts" / "io_sequence_inspection_v1.json"
 SEQUENCE_IDS = (
     "y4m",
     "webm",
+    "theora",
     "animated_webp",
     "apng",
     "animated_avif",
@@ -223,10 +224,11 @@ def test_sequence_codec_ast_contract_and_canonical_installation_are_exact():
     assert _codec_ast_hashes() == contract["codec_ast_sha256"]
 
     start = CANONICAL_BUILTIN_IDS.index("y4m")
-    assert CANONICAL_BUILTIN_IDS[start - 1 : start + 8] == (
+    assert CANONICAL_BUILTIN_IDS[start - 1 : start + 9] == (
         "avif",
         "y4m",
         "webm",
+        "theora",
         "animated_webp",
         "apng",
         "animated_avif",
@@ -234,9 +236,9 @@ def test_sequence_codec_ast_contract_and_canonical_installation_are_exact():
         "image_sequence",
         "colmap_sparse_txt",
     )
-    assert tuple(registry.REGISTRY)[start : start + 7] == SEQUENCE_IDS
+    assert tuple(registry.REGISTRY)[start : start + 8] == SEQUENCE_IDS
     assert tuple(
-        codec.id for codec in registry.BUILTIN_DEFINITIONS[start : start + 7]
+        codec.id for codec in registry.BUILTIN_DEFINITIONS[start : start + 8]
     ) == SEQUENCE_IDS
     for offset, format_id in enumerate(SEQUENCE_IDS):
         assert (
@@ -270,6 +272,19 @@ def test_sequence_native_and_directory_callable_targets_are_exact():
     }
     assert inspect.getclosurevars(webm.read_frames).nonlocals == {
         "fn": _core.read_webm_frames
+    }
+
+    theora = registry.REGISTRY["theora"]
+    assert theora.record is _core.ImageSequence
+    assert inspect.getclosurevars(theora.read).nonlocals == {
+        "fn": _core.read_theora
+    }
+    assert inspect.getclosurevars(theora.write).nonlocals == {
+        "fn": _core.write_theora,
+        "prepare": None,
+    }
+    assert inspect.getclosurevars(theora.read_frames).nonlocals == {
+        "fn": _core.read_theora_frames
     }
 
     animated_webp = registry.REGISTRY["animated_webp"]
@@ -374,18 +389,23 @@ def test_sequence_factory_is_inert_reentrant_and_binds_supplied_access():
     assert (
         first[2]
         is second[2]
+        is sequence_family._THEORA_CODEC
+    )
+    assert (
+        first[3]
+        is second[3]
         is sequence_family._ANIMATED_WEBP_CODEC
     )
-    assert first[3] is second[3] is sequence_family._APNG_CODEC
-    assert first[4] is second[4] is sequence_family._ANIMATED_AVIF_CODEC
-    assert first[5] is not second[5]
+    assert first[4] is second[4] is sequence_family._APNG_CODEC
+    assert first[5] is second[5] is sequence_family._ANIMATED_AVIF_CODEC
     assert first[6] is not second[6]
+    assert first[7] is not second[7]
     assert calls == []
-    for codec, access in ((first[5], first_access), (second[5], second_access)):
+    for codec, access in ((first[6], first_access), (second[6], second_access)):
         for callback in (codec.read, codec.inspect, codec.read_frames):
             assert callback.args == (access,)
         assert codec.write is None
-    for codec, access in ((first[6], first_access), (second[6], second_access)):
+    for codec, access in ((first[7], first_access), (second[7], second_access)):
         for callback in (
             codec.read,
             codec.write,
@@ -437,6 +457,7 @@ def test_sequence_lower_inspector_uses_only_compiled_metadata_entry_points():
     source = inspect.getsource(sequence_inspector)
     assert "_core._inspect_y4m" in source
     assert "_core._inspect_webm" in source
+    assert "_core._inspect_theora" in source
     assert "_core._inspect_animated_webp" in source
     assert "_core._inspect_apng" in source
     assert "_core.read_y4m" not in source
@@ -447,6 +468,8 @@ def test_sequence_lower_inspector_uses_only_compiled_metadata_entry_points():
     assert "_core.write_apng" not in source
     lower_only = source.replace("_core._inspect_y4m", "").replace(
         "_core._inspect_webm", ""
+    ).replace(
+        "_core._inspect_theora", ""
     ).replace(
         "_core._inspect_animated_webp", ""
     ).replace("_core._inspect_apng", "")
@@ -474,15 +497,16 @@ def test_sequence_family_and_registry_reload_keep_live_access():
         assert registry.REGISTRY is before_registry
         assert tuple(registry.REGISTRY.items()) == before_items
         assert registry._IMAGE_FRAME_ACCESS is old_access
-        assert reloaded_family.build_sequence_codecs(old_access)[6] is not old_sequence
+        assert reloaded_family.build_sequence_codecs(old_access)[7] is not old_sequence
 
         for _ in range(2):
             registry = importlib.reload(registry)
             ids = tuple(registry.REGISTRY)
             start = ids.index("y4m")
-            assert ids[start : start + 8] == (
+            assert ids[start : start + 9] == (
                 "y4m",
                 "webm",
+                "theora",
                 "animated_webp",
                 "apng",
                 "animated_avif",
@@ -590,6 +614,7 @@ def test_repository_coverage_keeps_sequence_inspection_ownership_exact():
     assert owners == {
         "y4m": "src/sceneio/io/_inspectors/sequences.py",
         "webm": "src/sceneio/io/_inspectors/sequences.py",
+        "theora": "src/sceneio/io/_inspectors/sequences.py",
         "animated_webp": "src/sceneio/io/_inspectors/sequences.py",
         "apng": "src/sceneio/io/_inspectors/sequences.py",
         "animated_avif": "src/sceneio/io/_avif.py",

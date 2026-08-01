@@ -85,6 +85,44 @@ _WEBM_CODEC = Codec(
     ),
 )
 
+_THEORA_CODEC = Codec(
+    "theora",
+    (".ogv", ".ogg"),
+    _mmap_reader(_core.read_theora),
+    _file_sink_writer(_core.write_theora),
+    record=_core.ImageSequence,
+    datatype="image_sequence",
+    magic=(b"OggS",),
+    read_frames=_mmap_selector_reader(_core.read_theora_frames),
+    lossy=True,
+    supported_features=(
+        "ogg",
+        "theora_1_2",
+        "uint8",
+        "yuv420",
+        "progressive",
+        "fixed_rational_timing",
+        "pixel_aspect",
+        "frame_ranges",
+        "direct_streaming_write",
+        "metadata_only_inspect",
+    ),
+    unsupported_features=(
+        "rgb_conversion",
+        "monochrome",
+        "yuv422",
+        "yuv444",
+        "high_bit_depth",
+        "tagged_color_space",
+        "user_comments",
+        "multiple_logical_streams",
+        "audio",
+        "subtitles",
+        "chapters",
+        "interlaced_video",
+    ),
+)
+
 _ANIMATED_WEBP_CODEC = Codec(
     "animated_webp",
     (".webp",),
@@ -199,6 +237,7 @@ def build_sequence_codecs(
     return (
         _Y4M_CODEC,
         _WEBM_CODEC,
+        _THEORA_CODEC,
         _ANIMATED_WEBP_CODEC,
         _APNG_CODEC,
         _ANIMATED_AVIF_CODEC,

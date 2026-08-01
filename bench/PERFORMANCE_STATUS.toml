@@ -426,6 +426,16 @@ documentation = "docs/format_coverage.md"
 accepted_subset = ["vp8", "uint8_rgb", "progressive", "all_keyframe", "whole_millisecond_timing", "frame_ranges", "metadata_only_inspect", "direct_streaming_write"]
 
 [[codec]]
+id = "theora"
+family = "sequences"
+adapter = "repo"
+implementation_owner = "native"
+sources = ["src/cpp/codecs/sequences/theora.cpp", "src/cpp/third_party/ogg", "src/cpp/third_party/theora"]
+source_suite = "tests/codecs/test_theora.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["ogg", "theora_1_2", "uint8_yuv420", "progressive", "fixed_rational_timing", "pixel_aspect", "frame_ranges", "metadata_only_inspect", "direct_streaming_write"]
+
+[[codec]]
 id = "animated_webp"
 family = "sequences"
 adapter = "repo"
@@ -2944,6 +2954,46 @@ backend_version = "1.5.0"
 transport_status = "qualified"
 status = "provisional"
 correctness_evidence = ["tests/codecs/test_webm.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "theora"
+profile = "default"
+direction = "encode"
+settings = { codec = "theora", pixel_format = "420", dtype = "uint8", quality = 48, keyframe_interval = 64 }
+fidelity = "lossy"
+comparator = "independent Ogg framing oracle + pinned libtheora reference API"
+fixture = "theora:default"
+backend = "libtheora"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/theora"
+backend_version = "8e4808736e9c181b971306cc3f05df9e61354004"
+backend_dependencies = ["libogg 1.3.6"]
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_theora.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "theora"
+profile = "default"
+direction = "decode"
+settings = { codec = "theora", pixel_format = "420", dtype = "uint8" }
+fidelity = "lossy"
+comparator = "independent Ogg framing oracle + pinned libtheora reference API"
+fixture = "theora:default"
+backend = "libtheora"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/theora"
+backend_version = "8e4808736e9c181b971306cc3f05df9e61354004"
+backend_dependencies = ["libogg 1.3.6"]
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_theora.py"]
 benchmark_evidence = ["bench/BASELINE.md"]
 candidate_backends = []
 evidence_gaps = ["candidate comparison on all required toolchains"]

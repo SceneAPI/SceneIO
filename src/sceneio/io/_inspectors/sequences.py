@@ -135,3 +135,48 @@ def inspect_webm(path: Path, datatype: str) -> Inspection:
             "duration_ns": values["duration_ns"],
         },
     )
+
+
+def inspect_theora(path: Path, datatype: str) -> Inspection:
+    values = dict(_compiled_buffer_inspect(path, _core._inspect_theora))
+    frames = values["frames"]
+    height = values["height"]
+    width = values["width"]
+    chroma_shape = (
+        frames,
+        values["chroma_height"],
+        values["chroma_width"],
+    )
+    return Inspection(
+        format="theora",
+        datatype=datatype,
+        byte_size=path.stat().st_size,
+        shape=(frames, height, width, 3),
+        dtype="uint8",
+        count=frames,
+        channels=3,
+        arrays=(
+            ArrayInspection("y", (frames, height, width), "uint8"),
+            ArrayInspection("u", chroma_shape, "uint8"),
+            ArrayInspection("v", chroma_shape, "uint8"),
+        ),
+        metadata={
+            "storage_mode": "yuv_planar",
+            "codec": "theora",
+            "version": values["version"],
+            "chroma_subsampling": values["chroma_subsampling"],
+            "chroma_siting": values["chroma_siting"],
+            "color_range": values["color_range"],
+            "matrix": values["matrix"],
+            "interlace": values["interlace"],
+            "frame_rate_numerator": values["frame_rate_numerator"],
+            "frame_rate_denominator": values["frame_rate_denominator"],
+            "pixel_aspect_numerator": values["pixel_aspect_numerator"],
+            "pixel_aspect_denominator": values["pixel_aspect_denominator"],
+            "frame_width": values["frame_width"],
+            "frame_height": values["frame_height"],
+            "picture_x": values["picture_x"],
+            "picture_y": values["picture_y"],
+            "keyframe_granule_shift": values["keyframe_granule_shift"],
+        },
+    )

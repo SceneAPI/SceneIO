@@ -100,6 +100,43 @@ def _webm_fixture(side):
     }
 
 
+def _theora_fixture(side):
+    frame_count = 4
+    rng = np.random.default_rng(59)
+    y = rng.integers(16, 236, (frame_count, side, side), dtype=np.uint8)
+    chroma_side = (side + 1) // 2
+    u = rng.integers(
+        16,
+        241,
+        (frame_count, chroma_side, chroma_side),
+        dtype=np.uint8,
+    )
+    v = rng.integers(
+        16,
+        241,
+        (frame_count, chroma_side, chroma_side),
+        dtype=np.uint8,
+    )
+    empty = np.empty(0, np.int64)
+    record = _core.image_sequence_yuv(
+        y,
+        u,
+        v,
+        empty,
+        empty,
+        "420",
+        "unspecified",
+        "unknown",
+        "unknown",
+        "progressive",
+        30_000,
+        1_001,
+        1,
+        1,
+    )
+    return record, {"y": y, "u": u, "v": v}
+
+
 def _apng_fixture(side):
     frame_count = 4
     rng = np.random.default_rng(43)
@@ -234,6 +271,7 @@ __all__ = [
     "_apng_fixture",
     "_image_sequence_directory_fixture",
     "_rtmv_directory_fixture",
+    "_theora_fixture",
     "_webm_fixture",
     "_y4m_fixture",
 ]

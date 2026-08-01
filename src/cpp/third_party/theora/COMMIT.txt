@@ -1,0 +1,28 @@
+libtheora 1.2.0
+
+Upstream: https://github.com/xiph/theora
+Tag: v1.2.0
+Commit: 8e4808736e9c181b971306cc3f05df9e61354004
+Retrieved: 2026-08-01
+License: BSD-3-Clause. COPYING contains the upstream license and an exact
+distribution copy is stored in LICENSES/theora.txt.
+
+Source snapshot archive: git archive of tag v1.2.0
+Size: 1597440 bytes
+SHA-256: c3e5af504d1393f4e93a9fc371b553cfe953644568fecb76dd9a8ae2df62cd1c
+
+Selected repository-contained source: public headers, core encoder/decoder C
+sources (including upstream architecture directories for source closure), and
+top-level provenance files. Tools, tests, examples, documentation, and sample
+media are not stored. SceneIO's CMake target compiles the portable upstream C
+implementation on MSVC and non-x86 targets, enables the upstream x86-64
+MMX/SSE2 dispatch sources on GCC/AppleClang x86-64, and installs no separate
+library or development surface. The upstream MSVC assembly is 32-bit-only and
+is therefore not enabled for the required 64-bit Windows wheel.
+
+The selected closure contains 116 upstream files totaling 1496763 bytes.
+Every selected file is recorded in case-insensitive path order in the
+9632-byte SOURCE_MANIFEST.sha256, whose SHA-256 is:
+5f7543a769e8128a656c509a7a02cf15503d4a6b60bd0c043a663ef019ad8094
+
+There are no local source changes.

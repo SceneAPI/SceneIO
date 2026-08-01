@@ -9,10 +9,9 @@
 namespace sio::bindings {
 namespace {
 
-constexpr std::size_t REGISTRATION_COUNT = 44;
+constexpr std::size_t REGISTRATION_COUNT = 45;
 constexpr std::size_t MANIFEST_COUNT = 57;
-constexpr std::size_t NATIVE_CODEC_COUNT = 56;
-constexpr std::size_t PYTHON_ONLY_MANIFEST_ORDER = 40;
+constexpr std::size_t NATIVE_CODEC_COUNT = 57;
 
 const std::array<const FamilyBindings *, 9> &families() {
     static const std::array<const FamilyBindings *, 9> value{{
@@ -120,7 +119,6 @@ nb::tuple codec_inventory(nb::module_ &module) {
         for (std::size_t index = 0; index < family->codec_count; ++index) {
             const auto &codec = family->codecs[index];
             if (codec.manifest_order >= ordered.size() ||
-                codec.manifest_order == PYTHON_ONLY_MANIFEST_ORDER ||
                 codec.id == nullptr || codec.id[0] == '\0' ||
                 codec.family == nullptr ||
                 std::strcmp(codec.family, family->family) != 0 ||
@@ -133,8 +131,7 @@ nb::tuple codec_inventory(nb::module_ &module) {
             ++count;
         }
     }
-    if (count != NATIVE_CODEC_COUNT ||
-        ordered[PYTHON_ONLY_MANIFEST_ORDER] != nullptr) {
+    if (count != NATIVE_CODEC_COUNT) {
         throw std::runtime_error(
             "native codec inventory has an orphaned or extra codec");
     }

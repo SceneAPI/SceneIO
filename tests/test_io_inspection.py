@@ -230,7 +230,7 @@ print(max(0, peak[0] - baseline))
 def test_inspect_matches_decoded_metadata_for_buffer_and_directory_codecs(
     tmp_path, buffer_codecs
 ):
-    assert len(buffer_codecs) == 51
+    assert len(buffer_codecs) == 52
     for spec in buffer_codecs:
         path = tmp_path / f"inspect-{spec.id}.data"
         path.write_bytes(spec.data)

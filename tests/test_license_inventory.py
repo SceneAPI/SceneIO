@@ -27,6 +27,8 @@ EXPECTED_NOTICES = {
     "libaom-patents.txt",
     "libaom.txt",
     "libavif.txt",
+    "ogg.txt",
+    "theora.txt",
     "libwebp-patents.txt",
     "libwebp.txt",
     "lodepng.txt",
@@ -62,6 +64,8 @@ VENDORED_NOTICE = {
     "fast_float": "fast-float.txt",
     "lazperf": "lazperf.txt",
     "libwebp": "libwebp.txt",
+    "ogg": "ogg.txt",
+    "theora": "theora.txt",
     "lodepng": "lodepng.txt",
     "miniz": "miniz.txt",
     "nlohmann_json": "nlohmann-json.txt",
@@ -73,6 +77,67 @@ VENDORED_NOTICE = {
 }
 
 SOURCE_CLOSURE = {
+    "ogg": {
+        "version": "1.3.6",
+        "commit": "be05b13e98b048f0b5a0f5fa8ce514d56db5f822",
+        "archive_sha256": (
+            "4463e305bd1d733db08ecd02404384951"
+            "57e4501d41efedf4b8e38ce1522718a"
+        ),
+        "notice": "ogg.txt",
+        "license": "COPYING",
+        "manifest": "SOURCE_MANIFEST.sha256",
+        "path_sorted_manifest": True,
+        "manifest_sha256": (
+            "99330ff80c3af3bbe5c2c9b723105fec"
+            "28b3d5b91a9a1511979d3ab780e2412d"
+        ),
+        "cmake_patterns": (
+            (
+                r'^set\(libogg_SOURCE_DIR '
+                r'"\$\{PROJECT_SOURCE_DIR\}/src/cpp/third_party/ogg"\)$'
+            ),
+            (
+                r"add_subdirectory\(\s*"
+                r'"\$\{libogg_SOURCE_DIR\}"\s*'
+                r'"\$\{CMAKE_CURRENT_BINARY_DIR\}/libogg"\s*'
+                r"EXCLUDE_FROM_ALL\)"
+            ),
+            r"set_property\(TARGET ogg PROPERTY POSITION_INDEPENDENT_CODE ON\)",
+        ),
+    },
+    "theora": {
+        "version": "1.2.0",
+        "commit": "8e4808736e9c181b971306cc3f05df9e61354004",
+        "archive_sha256": (
+            "c3e5af504d1393f4e93a9fc371b553cf"
+            "e953644568fecb76dd9a8ae2df62cd1c"
+        ),
+        "notice": "theora.txt",
+        "license": "COPYING",
+        "manifest": "SOURCE_MANIFEST.sha256",
+        "path_sorted_manifest": True,
+        "manifest_sha256": (
+            "5f7543a769e8128a656c509a7a02cf15"
+            "503d4a6b60bd0c043a663ef019ad8094"
+        ),
+        "cmake_patterns": (
+            (
+                r'^set\(libtheora_SOURCE_DIR '
+                r'"\$\{PROJECT_SOURCE_DIR\}/src/cpp/third_party/theora"\)$'
+            ),
+            r"^add_library\(theora_static STATIC \$\{_sceneio_theora_sources\}\)$",
+            r"^target_link_libraries\(theora_static PUBLIC ogg\)$",
+            (
+                r"target_compile_definitions\(\s*theora_static PRIVATE "
+                r"OC_X86_ASM OC_X86_64_ASM\)"
+            ),
+            (
+                r"set_property\(TARGET theora_static PROPERTY "
+                r"POSITION_INDEPENDENT_CODE ON\)"
+            ),
+        ),
+    },
     "fast_float": {
         "version": "6.1.6",
         "commit": "00c8c7b0d5c722d2212568d915a39ea73b08b973",

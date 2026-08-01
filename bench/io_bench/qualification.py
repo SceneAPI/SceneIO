@@ -230,6 +230,10 @@ COMPARISON_QUALIFICATIONS = MappingProxyType(
             "independent EBML + Pillow/libwebp implementation",
             "bench/io_bench/oracles/sequences.py",
         ),
+        "theora": _exemption(
+            "direct pinned libtheora with independent Ogg framing oracle",
+            "tests/codecs/test_theora.py",
+        ),
         "animated_webp": _timed(
             "Pillow",
             "bench/io_bench/oracles/sequences.py",

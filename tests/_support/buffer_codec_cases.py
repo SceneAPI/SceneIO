@@ -53,6 +53,7 @@ BUFFER_CODEC_CASE_IDS = (
     "webp",
     "y4m",
     "webm",
+    "theora",
     "animated_webp",
     "apng",
     "xyz",
@@ -80,7 +81,7 @@ BUFFER_CODEC_CASE_IDS = (
 
 
 def build_buffer_codec_cases() -> tuple[BufferCodecCase, ...]:
-    """Build the 50 deterministic cases used by buffer behavior sweeps."""
+    """Build the 52 deterministic cases used by buffer behavior sweeps."""
     rng = np.random.default_rng(91)
     rgb = rng.integers(0, 256, (7, 9, 3), dtype=np.uint8)
     rgba = rng.integers(0, 256, (7, 9, 4), dtype=np.uint8)
@@ -273,6 +274,22 @@ def build_buffer_codec_cases() -> tuple[BufferCodecCase, ...]:
         "jpeg",
         "limited",
         "bt709",
+        "progressive",
+        25,
+        1,
+        1,
+        1,
+    )
+    image_sequence_theora = _core.image_sequence_yuv(
+        sequence_y,
+        sequence_u,
+        sequence_v,
+        empty_timing,
+        empty_timing,
+        "420",
+        "unspecified",
+        "unknown",
+        "unknown",
         "progressive",
         25,
         1,
@@ -546,6 +563,12 @@ def build_buffer_codec_cases() -> tuple[BufferCodecCase, ...]:
         case("webp", _core.read_webp, _core.write_webp, image_rgba),
         case("y4m", _core.read_y4m, _core.write_y4m, image_sequence),
         case("webm", _core.read_webm, _core.write_webm, packed_sequence_webm),
+        case(
+            "theora",
+            _core.read_theora,
+            _core.write_theora,
+            image_sequence_theora,
+        ),
         case(
             "animated_webp",
             _core.read_animated_webp,

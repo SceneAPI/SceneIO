@@ -833,7 +833,7 @@ def _assert_benchmark_components_and_metric_semantics_are_explicit():
     sequence_exemptions = extracted_families["sequences"][
         "no_oracle_exemptions"
     ]
-    assert set(sequence_exemptions) == {"image_sequence", "rtmv"}
+    assert set(sequence_exemptions) == {"image_sequence", "rtmv", "theora"}
     assert sequence_exemptions["image_sequence"]["unverified_property"] == (
         "independent benchmark directory encode/decode throughput"
     )
@@ -928,7 +928,7 @@ def _assert_benchmark_components_and_metric_semantics_are_explicit():
     assert json.loads(runner_import_result.stdout) == [
         True,
         "bench.io_bench.runner",
-        52,
+        53,
     ]
 
     runner_first_probe = textwrap.dedent(
@@ -2523,6 +2523,9 @@ def _assert_benchmark_components_and_metric_semantics_are_explicit():
     assert benchmark._webm_fixture is (
         sequence_fixture_module._webm_fixture
     )
+    assert benchmark._theora_fixture is (
+        sequence_fixture_module._theora_fixture
+    )
     assert benchmark._animated_webp_fixture is (
         sequence_fixture_module._animated_webp_fixture
     )
@@ -2561,6 +2564,7 @@ def _assert_benchmark_components_and_metric_semantics_are_explicit():
     assert [spec.id for spec in sequence_specs] == [
         "y4m",
         "webm",
+        "theora",
         "animated_webp",
         "apng",
     ]
@@ -2659,7 +2663,19 @@ def _assert_benchmark_components_and_metric_semantics_are_explicit():
             oracle_decoded["durations_ms"] * 1_000_000,
         )
 
-    animated_spec = sequence_specs[2]
+    theora_spec = sequence_specs[2]
+    assert (theora_spec.w, theora_spec.r) == (
+        _core.write_theora,
+        _core.read_theora,
+    )
+    assert (theora_spec.ow, theora_spec.orr) == (None, None)
+    theora_record, theora_payload = theora_spec.make()
+    assert theora_spec.nbytes(theora_record, theora_payload) == sum(
+        value.nbytes for value in theora_payload.values()
+    )
+    assert theora_spec.r(theora_spec.w(theora_record)).num_frames == 4
+
+    animated_spec = sequence_specs[3]
     assert (animated_spec.w, animated_spec.r) == (
         _core.write_animated_webp,
         _core.read_animated_webp,
@@ -2693,7 +2709,7 @@ def _assert_benchmark_components_and_metric_semantics_are_explicit():
     )
     assert animated_core_record.loop_count == animated_payload["loop_count"]
 
-    apng_spec = sequence_specs[3]
+    apng_spec = sequence_specs[4]
     assert (apng_spec.w, apng_spec.r) == (
         _core.write_apng,
         _core.read_apng,
@@ -2851,7 +2867,7 @@ def _assert_benchmark_components_and_metric_semantics_are_explicit():
         True,
         True,
         True,
-        ["y4m", "webm", "animated_webp", "apng"],
+        ["y4m", "webm", "theora", "animated_webp", "apng"],
     ]
 
     splat_family_module = sys.modules[

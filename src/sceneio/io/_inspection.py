@@ -139,6 +139,9 @@ from sceneio.io._inspectors.sequences import (
     inspect_apng as _inspect_sequence_apng,
 )
 from sceneio.io._inspectors.sequences import (
+    inspect_theora as _inspect_sequence_theora,
+)
+from sceneio.io._inspectors.sequences import (
     inspect_webm as _inspect_sequence_webm,
 )
 from sceneio.io._inspectors.sequences import (
@@ -235,6 +238,8 @@ def inspect_path(path: str | Path, format_id: str, datatype: str) -> Inspection:
         return _inspect_y4m(p, datatype)
     if format_id == "webm":
         return _inspect_webm(p, datatype)
+    if format_id == "theora":
+        return _inspect_theora(p, datatype)
     if format_id == "animated_webp":
         return _inspect_animated_webp(p, datatype)
     if format_id == "apng":
@@ -348,6 +353,10 @@ def _inspect_y4m(path: Path, datatype: str) -> Inspection:
 
 def _inspect_webm(path: Path, datatype: str) -> Inspection:
     return _inspect_sequence_webm(path, datatype)
+
+
+def _inspect_theora(path: Path, datatype: str) -> Inspection:
+    return _inspect_sequence_theora(path, datatype)
 
 
 def _inspect_animated_webp(path: Path, datatype: str) -> Inspection:

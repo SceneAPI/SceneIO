@@ -4,6 +4,7 @@ void register_y4m(nanobind::module_ &);
 void register_webm(nanobind::module_ &);
 void register_animated_webp(nanobind::module_ &);
 void register_apng(nanobind::module_ &);
+void register_theora(nanobind::module_ &);
 
 namespace sio::bindings {
 namespace {
@@ -13,6 +14,7 @@ constexpr RegistrationDescriptor REGISTRATIONS[] = {
     {41, "animated_webp", &::register_animated_webp},
     {42, "apng", &::register_apng},
     {43, "webm", &::register_webm},
+    {44, "theora", &::register_theora},
 };
 
 constexpr CodecDescriptor CODECS[] = {
@@ -34,7 +36,7 @@ constexpr CodecDescriptor CODECS[] = {
      symbols("read_webm"),
      symbols("write_webm"),
      symbols("read_webm_frames")},
-    {38,
+    {39,
      "animated_webp",
      "sequences",
      symbols("read_animated_webp"),
@@ -43,7 +45,7 @@ constexpr CodecDescriptor CODECS[] = {
      symbols("read_animated_webp"),
      symbols("write_animated_webp"),
      symbols()},
-    {39,
+    {40,
      "apng",
      "sequences",
      symbols("read_apng"),
@@ -52,6 +54,15 @@ constexpr CodecDescriptor CODECS[] = {
      symbols("read_apng"),
      symbols("write_apng"),
      symbols()},
+    {38,
+     "theora",
+     "sequences",
+     symbols("read_theora"),
+     symbols("write_theora"),
+     symbols("_inspect_theora"),
+     symbols("read_theora"),
+     symbols("write_theora"),
+     symbols("read_theora_frames")},
 };
 
 constexpr FamilyBindings FAMILY{

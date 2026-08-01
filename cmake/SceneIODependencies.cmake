@@ -215,3 +215,88 @@ foreach(_webp_target
       POSITION_INDEPENDENT_CODE ON
       C_VISIBILITY_PRESET hidden)
 endforeach()
+
+# libogg 1.3.6 and libtheora 1.2.0 (BSD-3-Clause) -- repository-contained
+# upstream sources. libogg retains its upstream CMake configuration; Theora is
+# built from the upstream portable C implementation so the same source set is
+# valid on MSVC, GCC 10, and AppleClang/arm64. The codec remains private to
+# `_core`; no development files or tools are installed.
+set(libogg_SOURCE_DIR "${PROJECT_SOURCE_DIR}/src/cpp/third_party/ogg")
+set(libtheora_SOURCE_DIR "${PROJECT_SOURCE_DIR}/src/cpp/third_party/theora")
+if(NOT EXISTS "${libogg_SOURCE_DIR}/CMakeLists.txt" OR
+   NOT EXISTS "${libogg_SOURCE_DIR}/include/ogg/ogg.h" OR
+   NOT EXISTS "${libogg_SOURCE_DIR}/COPYING" OR
+   NOT EXISTS "${libtheora_SOURCE_DIR}/include/theora/theoradec.h" OR
+   NOT EXISTS "${libtheora_SOURCE_DIR}/include/theora/theoraenc.h" OR
+   NOT EXISTS "${libtheora_SOURCE_DIR}/COPYING")
+  message(FATAL_ERROR
+    "Repository-contained libogg/libtheora sources are incomplete")
+endif()
+set(INSTALL_DOCS OFF CACHE BOOL "" FORCE)
+set(INSTALL_PKG_CONFIG_MODULE OFF CACHE BOOL "" FORCE)
+set(INSTALL_CMAKE_PACKAGE_MODULE OFF CACHE BOOL "" FORCE)
+add_subdirectory(
+  "${libogg_SOURCE_DIR}"
+  "${CMAKE_CURRENT_BINARY_DIR}/libogg"
+  EXCLUDE_FROM_ALL)
+set_property(TARGET ogg PROPERTY POSITION_INDEPENDENT_CODE ON)
+set_property(TARGET ogg PROPERTY C_VISIBILITY_PRESET hidden)
+
+set(_sceneio_theora_sources
+  ${libtheora_SOURCE_DIR}/lib/analyze.c
+  ${libtheora_SOURCE_DIR}/lib/apiwrapper.c
+  ${libtheora_SOURCE_DIR}/lib/bitpack.c
+  ${libtheora_SOURCE_DIR}/lib/decapiwrapper.c
+  ${libtheora_SOURCE_DIR}/lib/decinfo.c
+  ${libtheora_SOURCE_DIR}/lib/decode.c
+  ${libtheora_SOURCE_DIR}/lib/dequant.c
+  ${libtheora_SOURCE_DIR}/lib/encapiwrapper.c
+  ${libtheora_SOURCE_DIR}/lib/encfrag.c
+  ${libtheora_SOURCE_DIR}/lib/encinfo.c
+  ${libtheora_SOURCE_DIR}/lib/encode.c
+  ${libtheora_SOURCE_DIR}/lib/enquant.c
+  ${libtheora_SOURCE_DIR}/lib/fdct.c
+  ${libtheora_SOURCE_DIR}/lib/fragment.c
+  ${libtheora_SOURCE_DIR}/lib/huffdec.c
+  ${libtheora_SOURCE_DIR}/lib/huffenc.c
+  ${libtheora_SOURCE_DIR}/lib/idct.c
+  ${libtheora_SOURCE_DIR}/lib/info.c
+  ${libtheora_SOURCE_DIR}/lib/internal.c
+  ${libtheora_SOURCE_DIR}/lib/mathops.c
+  ${libtheora_SOURCE_DIR}/lib/mcenc.c
+  ${libtheora_SOURCE_DIR}/lib/quant.c
+  ${libtheora_SOURCE_DIR}/lib/rate.c
+  ${libtheora_SOURCE_DIR}/lib/state.c
+  ${libtheora_SOURCE_DIR}/lib/tokenize.c)
+if(NOT MSVC AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64|amd64)$")
+  list(APPEND _sceneio_theora_sources
+    ${libtheora_SOURCE_DIR}/lib/x86/mmxencfrag.c
+    ${libtheora_SOURCE_DIR}/lib/x86/mmxfdct.c
+    ${libtheora_SOURCE_DIR}/lib/x86/mmxfrag.c
+    ${libtheora_SOURCE_DIR}/lib/x86/mmxidct.c
+    ${libtheora_SOURCE_DIR}/lib/x86/mmxstate.c
+    ${libtheora_SOURCE_DIR}/lib/x86/sse2encfrag.c
+    ${libtheora_SOURCE_DIR}/lib/x86/sse2fdct.c
+    ${libtheora_SOURCE_DIR}/lib/x86/sse2idct.c
+    ${libtheora_SOURCE_DIR}/lib/x86/x86cpu.c
+    ${libtheora_SOURCE_DIR}/lib/x86/x86enc.c
+    ${libtheora_SOURCE_DIR}/lib/x86/x86enquant.c
+    ${libtheora_SOURCE_DIR}/lib/x86/x86state.c)
+endif()
+add_library(theora_static STATIC ${_sceneio_theora_sources})
+if(NOT MSVC AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64|amd64)$")
+  target_compile_definitions(
+    theora_static PRIVATE OC_X86_ASM OC_X86_64_ASM)
+endif()
+target_include_directories(
+  theora_static
+  PUBLIC
+    ${libtheora_SOURCE_DIR}/include
+    ${libogg_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_BINARY_DIR}/libogg/include)
+target_link_libraries(theora_static PUBLIC ogg)
+if(NOT WIN32)
+  target_link_libraries(theora_static PRIVATE m)
+endif()
+set_property(TARGET theora_static PROPERTY POSITION_INDEPENDENT_CODE ON)
+set_property(TARGET theora_static PROPERTY C_VISIBILITY_PRESET hidden)

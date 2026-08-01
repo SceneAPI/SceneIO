@@ -101,6 +101,27 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > construction. Local parity, memory, public-surface, registry, and wheel-smoke
 > checks pass; hosted package-matrix validation remains user-triggered.
 >
+> **72-format Ogg/Theora checkpoint (2026-08-01):** `theora` adds a
+> video-only Ogg profile backed directly by repository-pinned libogg 1.3.6
+> and libtheora 1.2.0. It accepts progressive uint8 planar Y'CbCr 4:2:0,
+> fixed rational timing, and pixel aspect; reads, writes, metadata-only
+> inspection, bounded frame selection, mmap input, and direct streaming sinks
+> are present. The independent oracle validates Ogg pages, lacing, CRCs, and
+> packet reconstruction, then remuxes the same Theora packets into a distinct
+> valid layout for exact differential decoding. Multiple/chained streams,
+> audio, subtitles, comments, tagged color spaces, other chroma layouts,
+> high bit depth, and interlacing refuse. The BSD-3-Clause sources, exact
+> notices, pins, and file manifests are indexed in `LICENSES/` and
+> `src/cpp/third_party/`. Upstream x86-64 MMX/SSE2 dispatch is enabled on
+> GCC/AppleClang; the portable upstream kernel is used on MSVC x64 and other
+> architectures. On a 6.3 MB fixture, local MSVC measured 16 MB/s encode,
+> 78 MB/s decode, effectively zero traced mmap/sink allocation, 16.5x faster
+> inspect, and 1.76x faster selected-frame read. The ownership/lifetime,
+> format-correctness, and test-soundness reviews are clear after adding crop,
+> page-length, granule-order, keyframe-shift, and duplicate-frame checks. The
+> exact local gate passes 4,357 tests with six documented skips; Ruff and diff
+> checks are clean. Hosted package-matrix validation remains user-triggered.
+>
 > **USD standards review (2026-07-30):** AOUSD Core Specification 1.0.1,
 > supplemental 1.0.1.post0, OpenUSD 26.08, and the official
 > `UsdVolParticleField3DGaussianSplat` schema define a broader target than the
@@ -1090,6 +1111,7 @@ public-domain SQLite amalgamation statically linked into `_core`.
 | `image_sequence` | `ImageSequence` | R+W | independent manifest/PGM fixtures + existing image-codec parity suites | flat image directories; deterministic natural order or strict versioned manifest; lazy owned paths; exact optional timing; heterogeneous frames reject; transactional bounded-copy writer; frame ranges |
 | `y4m` | `ImageSequence` | R+W | independent Python parser/writer + exact golden bytes | original dependency-free YUV4MPEG2 subset; uint8 mono/4:2:0/4:2:2/4:4:4 planar frames, odd dimensions, exact rational timing, mmap, streaming sink, inspect, and frame ranges; no RGB conversion or video-framework dependency |
 | `webm` | `ImageSequence` | R+W | independent EBML mux/demux + Pillow/libwebp raw-VP8 oracle in `tests/codecs/test_webm.py` | repository-owned WebM container; video-only progressive packed uint8 RGB, `V_VP8` all-keyframe profile, exact whole-millisecond timing, mmap, direct sink, inspect, frame ranges, and deterministic worker control; VP8 interframes, VP9, alpha, audio, subtitles, chapters, lacing, HDR, and embedded metadata refuse |
+| `theora` | `ImageSequence` | R+W | pinned libtheora payload API + independent Ogg page/CRC/lacing/remux oracle in `tests/codecs/test_theora.py` | direct libogg/libtheora video-only profile; progressive uint8 planar 4:2:0, fixed rational timing, pixel aspect, mmap, direct sink, inspect, and frame ranges; comments, multiple streams, audio/subtitles, tagged color spaces, other chroma layouts, high bit depth, and interlacing refuse |
 | `animated_webp` | `ImageSequence` | R+W | Pillow/libwebp animation-container oracle in `tests/codecs/test_animated_webp.py` | repository-pinned libwebp mux/demux/animation APIs; fully composited packed uint8 RGB/RGBA frames, exact millisecond timing, loop/background metadata, mmap, streaming sink, and metadata-only inspection |
 | `apng` | `ImageSequence` | R+W | Pillow plus specification-derived chunk/compositing oracle in `tests/codecs/test_apng.py` | repository-owned APNG container logic over pinned lodepng; fully composited packed uint8 RGBA frames, exact rational timing representable as integer nanoseconds, loop count, source/over blend, none/background/previous disposal, mmap, streaming sink, and metadata-only inspection |
 | `avif` | `Image` | R+W | direct Pillow/libavif comparison plus specification-derived BMFF checks in `tests/codecs/test_avif.py` | optional `sceneio[avif]`; mmap-backed 8-bit gray/RGB/straight-RGBA reads, owned decoded pixels, metadata-only inspection, full-range 4:4:4 color writes through libaom; encoded output is provider-buffered rather than a direct sink |
@@ -1136,9 +1158,9 @@ requirement for COLMAP ecosystem closure.
 
 ### ⬜ Pending — declared roadmap gaps
 
-- Sequence/dataset: RTMV, animated WebP, APNG, animated AVIF, and WebM VP8
-  all-keyframe are complete for their bounded profiles. General inter-frame
-  VP8/VP9 and Ogg/Theora remain separate implementation units.
+- Sequence/dataset: RTMV, animated WebP, APNG, animated AVIF, WebM VP8
+  all-keyframe, and Ogg/Theora are complete for their bounded profiles.
+  General inter-frame VP8/VP9 remains a separate implementation unit.
 - Optional CV containers are complete for the accepted profiles: HDF5/hloc,
   Zarr v2/v3, TIFF, E57, Parquet, Arrow IPC, OpenVDB, USD, and USDZ.
 - Broader semantics remain intentionally outside those bounded profiles:
@@ -1168,7 +1190,7 @@ fuzzing · ✅ direct file-sink writes · ✅ bounded measured-path workers
 (XYZ/LAS/LAZ/EXR/PNG16/WebP lossless) · ✅ partial/lazy reads (`inspect` covers all
 54; bounded pixel/point/face/mesh/primitive/state/frame/COLMAP-image/COLMAP-pair/tensor
 subsets cover capable containers) · ⬜ GPU-via-DLPack (torch-cuda/cupy) · ✅
-expanded 71-format benchmark/oracles.
+expanded 72-format benchmark/oracles.
 
 ## Infrastructure & capabilities
 
@@ -1177,8 +1199,8 @@ expanded 71-format benchmark/oracles.
 | nanobind + scikit‑build‑core build | ✅ | abi3/cp312, `NB_STATIC`; `Python::SABIModule`, `nanobind-static-abi3`, and the platform suffix are configure-checked; local Windows emits `_core.pyd` against `python3.dll`, Ubuntu emits `_core.abi3.so` without libpython |
 | cibuildwheel release path | ✅ | one verified sdist feeds Linux/macOS/Windows wheels; locked build inputs, all-50 installed smoke, per-wheel inventory, and tag-only publication in `publish.yml`; final build-only run `30406706115` and downloaded-artifact inspection pass, while tagging and publication remain user-gated |
 | CI parity (oracles in CI) | ✅ | At `a5e7fa4`, normal Linux CI passes 2,914 tests with nine documented platform/oracle skips, the 50-codec performance guard, pinned GCC 10 portability, and the three-OS focused matrix |
-| Codec registry + `read`/`write`/`inspect`/`read_partial`/`detect` | ✅ | inspection covers all 70; bounded partial hooks are capability-specific |
-| Repo-maintained stable codec adapters | ✅ | all 70 adapters, schemas, convention guards, inspectors, and partial policies live in `src/cpp` / `src/sceneio`; 68 have direct sinks, while AVIF writes currently use the provider's completed output buffer; optional optimized storage/parser providers remain separately installed |
+| Codec registry + `read`/`write`/`inspect`/`read_partial`/`detect` | ✅ | inspection covers all 72; bounded partial hooks are capability-specific |
+| Repo-maintained stable codec adapters | ✅ | all 72 adapters, schemas, convention guards, inspectors, and partial policies live in `src/cpp` / `src/sceneio`; 69 writable adapters have direct sinks, while AVIF writes currently use the provider's completed output buffer and RTMV is read-only; optional optimized storage/parser providers remain separately installed |
 | Offline native-source closure | ✅ | all selected native sources—including libwebp 1.5.0—are stored in-tree and the production CMake graph has no native-source fetch; local exact-tree proof plus final MSVC, GCC 10, and AppleClang sdist-to-wheel execution and artifact inspection pass |
 | Zero‑copy numpy + torch (DLPack) | ✅ | validated per codec |
 | Conventions‑as‑metadata + write guards | ✅ | record‑don't‑convert enforced |
@@ -1265,6 +1287,7 @@ incremental.
 | `spz` | file | yes | yes | yes | - | yes | yes | yes | - |
 | `stl` | file | yes | yes | yes | faces | yes | yes | no | - |
 | `tga` | file | yes | yes | yes | - | yes | yes | no | - |
+| `theora` | file | yes | yes | yes | frames | yes | yes | yes | - |
 | `tiff` | file | yes | yes | yes | - | yes | yes | no | tifffile |
 | `transforms_json` | file | yes | yes | yes | - | yes | yes | no | - |
 | `tum` | file | yes | yes | yes | - | yes | yes | no | - |

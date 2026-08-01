@@ -65,6 +65,7 @@ CANONICAL_BUILTIN_IDS = (
     "avif",
     "y4m",
     "webm",
+    "theora",
     "animated_webp",
     "apng",
     "animated_avif",
@@ -161,6 +162,7 @@ FAMILY_MEMBERS = MappingProxyType(
         "sequences": (
             "y4m",
             "webm",
+            "theora",
             "animated_webp",
             "apng",
             "animated_avif",
@@ -311,6 +313,12 @@ _NATIVE_SYMBOLS = {
         "read_webm",
         "write_webm",
         "read_webm_frames",
+    ),
+    "theora": (
+        "_inspect_theora",
+        "read_theora",
+        "write_theora",
+        "read_theora_frames",
     ),
     "animated_webp": (
         "_inspect_animated_webp",

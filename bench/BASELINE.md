@@ -3963,6 +3963,29 @@ without errors. The refreshed 67-row deterministic structural projection has
 SHA-256
 `817b355a8fb752025e51b3afe658524ebfa40cd6caffc8cd9e927a7117e07f65`.
 
+## 2026-08-01 bounded Ogg/Theora checkpoint
+
+The five-run local MSVC command
+
+```console
+.venv/Scripts/python.exe bench/bench_io.py --only theora --runs 5 --skip-oracles --json build/theora-72-row-benchmark.json
+```
+
+measures a 6.3 MB planar 4:2:0 payload and a 4.9 MB Ogg file. The pinned
+libtheora path writes at 16 MB/s, decodes in memory at 78 MB/s, and decodes
+through the public mmap path at 76 MB/s. Mapped reads remove the 4.9 MB
+whole-file Python allocation. Direct-sink output is byte-identical to buffered
+output, retains 16 MB/s throughput, reduces traced output allocation from
+4.9 MB to effectively zero, and lowers sampled output RSS from 19.5 to 15.3 MB.
+
+Metadata-only inspection takes 4.979 ms versus 82.324 ms for full decode, a
+16.54x speedup. The selected-frame path takes 46.661 ms, a 1.76x speedup, and
+materializes only the selected planar output. The independent benchmark
+exemption is narrow: `tests/codecs/test_theora.py` validates Ogg page headers,
+lacing, CRCs, packet reconstruction, and independent remuxing while the pinned
+libtheora API is the payload reference. The capture SHA-256 is
+`8894ab1b3bb99307289f89d2ae158bad9d16c124c0f06bad8a161d257c5d8f3c`.
+
 ## 2026-08-01 bounded WebM/VP8 all-keyframe checkpoint
 
 The five-run local MSVC command

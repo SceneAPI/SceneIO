@@ -76,6 +76,7 @@ _BUILTINS = {
     "tum",
     "tga",
     "tiff",
+    "theora",
     "webp",
     "webm",
     "xyz",
@@ -118,6 +119,7 @@ _PARTIAL = {
     "stl": ("faces",),
     "webp": ("window",),
     "webm": ("frames",),
+    "theora": ("frames",),
     "xyz": ("points",),
     "y4m": ("frames",),
     "zarr": ("tensors", "slices"),
@@ -139,6 +141,7 @@ _LOSSY = {
     "sog",
     "webp",
     "webm",
+    "theora",
 }
 
 _NATIVE_FEATURES = {

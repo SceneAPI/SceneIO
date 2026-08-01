@@ -20,6 +20,7 @@
       "_poses_and_reconstruction",
       "_single_calibration",
       "_specs",
+      "_theora_fixture",
       "_webm_fixture",
       "_y4m_fixture"
     ],
@@ -27,6 +28,7 @@
       "_animated_webp_fixture": "bench/io_bench/fixtures/sequences.py",
       "_apng_fixture": "bench/io_bench/fixtures/sequences.py",
       "_webm_fixture": "bench/io_bench/fixtures/sequences.py",
+      "_theora_fixture": "bench/io_bench/fixtures/sequences.py",
       "_gauss": "bench/io_bench/fixtures/splats.py",
       "_img_u8": "bench/io_bench/fixtures/images.py",
       "_mesh_scene": "bench/io_bench/fixtures/meshes.py",
@@ -37,7 +39,7 @@
       "_y4m_fixture": "bench/io_bench/fixtures/sequences.py"
     },
     "parent_and_candidate_builder_ast_sha256": "ce8dda677da61550035dcd2062d4cb53aed20f21e37024d87d5f50449ba1fbfd",
-    "current_builder_ast_sha256": "a0b0a28a6d3b7871fecefdb9c5a037bca48cc443440c9b32ed3c31f00e875fd5",
+    "current_builder_ast_sha256": "cef56f6af4454372216c8e4f415a1740fbd091fc29392fbfaadfe020fa53beaf",
     "fixtures": {
       "camera_calibration": "5e2b5f1e70aa57bd8d219b06a16ce36dfec48aa4d0905ef45cdf503cca8b511c",
       "gaussian_cloud": "dc358708428493fafd834f6c9626f87dd1e91626d324fea3865320561176b1cf",
@@ -495,7 +497,7 @@
       "family_functions": {
         "build_sequence_specs": {
           "source": "bench/io_bench/families/sequences.py",
-          "ast_sha256": "4b205bc254c543fe4c68892a1c47393fdedf3335e92737d655644a3873e64d45"
+          "ast_sha256": "c717f406d21d2a6f032d42c1b773fece477bcda7d74070a457b3e8d9ebf931da"
         }
       },
       "facade_family_exports": [
@@ -542,6 +544,10 @@
           "source": "bench/io_bench/oracles/sequences.py",
           "ast_sha256": "1c9cbeee5aadf3d326fce32187b5034c243bab367a1095653553845c1f3ad668"
         },
+        "_theora_fixture": {
+          "source": "bench/io_bench/fixtures/sequences.py",
+          "ast_sha256": "773f1941fef118f679c2791752a011c77a181e3bf77b74bafff8ba2c7eef827e"
+        },
         "_y4m_fixture": {
           "source": "bench/io_bench/fixtures/sequences.py",
           "ast_sha256": "b69997cf85861ea91b94c80ca64a27eb27273008f81fc3b0d65e5d8631d08324"
@@ -558,6 +564,10 @@
       "optional_oracle_bindings": [],
       "optional_oracle_source": "bench/io_bench/oracles/sequences.py",
       "no_oracle_exemptions": {
+        "theora": {
+          "unverified_property": "direct pinned libtheora with independent Ogg framing oracle",
+          "verification": "container framing and payload parity remain covered by tests/codecs/test_theora.py"
+        },
         "rtmv": {
           "unverified_property": "independent RTMV directory read/inspect throughput",
           "verification": "format parity remains covered by tests/codecs/test_rtmv.py"
@@ -626,18 +636,18 @@
   },
   "r3_2_qualification": {
     "source": "bench/io_bench/qualification.py",
-    "builtin_count": 71,
+    "builtin_count": 72,
     "timed_count": 53,
-    "reviewed_exemption_count": 18,
-    "ledger_sha256": "14b91d6d614d058cdca9ffaf01d875905c4af0321b062222213520a07cfbf1b1"
+    "reviewed_exemption_count": 19,
+    "ledger_sha256": "1566c99931e83b9bd11f9435cbfe277911401964057675f6b20e347260adf99d"
   },
   "r3_2_runner_extraction": {
     "parent_commit": "cd322685d3de86931ec4264261924fb3c309b6c4",
     "source": "bench/io_bench/runner.py",
     "facade": "bench/bench_io.py",
     "facade_attribute_policy": "alias_all_non_dunder_runner_globals",
-    "facade_attribute_count": 182,
-    "facade_attributes_sha256": "29d864eb8b27e5d1b9bd647ef1dc1942561e8b5b03e0555dc10c3d46de35aedd",
+    "facade_attribute_count": 183,
+    "facade_attributes_sha256": "e3ff2307aa6f0cf7a86e21593002ccfa0230bc4bacfe34ac4a326a34a9ee4f0b",
     "facade_rebinding_policy": "propagate_historical_attribute_mutations_to_runner",
     "facade_first_import_policy": "preserve_initialized_runner_objects_and_rebindings",
     "facade_reload_policy": "reset_runner_source_definitions_and_restore_aliases",
@@ -660,7 +670,7 @@
       "_specs": "153fd71dbbd54191b09297c807042017390edb1588069c3b2ec78b7412f0ea82",
       "_directory_specs": "fe1279e7d7b4700bd31097288bff6ef7749482f830c9e5fa9eaac329a62fc484",
       "_directory_size": "94330e4bb104a8da463df5bd1e3c7c039f4767c77db03fbea1bceb1837355837",
-      "_partial_request": "b353bb7460592f6d573339d07919d1439d73ded7b2f2546aac036120865e8ec2",
+      "_partial_request": "570f508726b04dc83f2b079cf481559348e1df3f578fad2c2ebafae8e9674b0e",
       "main": "c5b809e8ca512be16dd7e496fdfe65e903374265ad8f82f3f291cb9ac6f3c1fc",
       "_run_large_safetensors": "4c7533d0bc4c406858f7e00ed0704966c9a8133655a2629a63075ad7e3a9f29d",
       "_benchmark_colmap_db": "0fc2a9533c139fb1a09b94adfb2efee2fc1e8cc423cba6dccc813ab8a92144d3",
@@ -751,6 +761,7 @@
     "webp",
     "y4m",
     "webm",
+    "theora",
     "animated_webp",
     "apng",
     "hdr",

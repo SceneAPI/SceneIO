@@ -76,7 +76,7 @@ def test_performance_ledger_has_stable_schema_and_exact_builtin_coverage():
 
     codecs = ledger["codec"]
     assert tuple(item["id"] for item in codecs) == CANONICAL_BUILTIN_IDS
-    assert len({item["id"] for item in codecs}) == 71
+    assert len({item["id"] for item in codecs}) == 72
     for item in codecs:
         ownership = BUILTIN_OWNERSHIP[item["id"]]
         assert item["family"] == ownership.family
@@ -95,7 +95,7 @@ def test_performance_ledger_has_stable_schema_and_exact_builtin_coverage():
 
 def test_performance_operations_cover_required_profiles_and_directions():
     operations = _ledger()["operation"]
-    assert len(operations) == 174
+    assert len(operations) == 176
     keys = [
         (item["codec_id"], item["profile"], item["direction"])
         for item in operations
@@ -117,7 +117,7 @@ def test_performance_rows_are_honest_about_initial_evidence():
     operations = _ledger()["operation"]
     states = Counter(item["status"] for item in operations)
     assert states == {
-        "provisional": 165,
+        "provisional": 167,
         "known_gap": 2,
         "not_applicable": 7,
     }
@@ -127,7 +127,7 @@ def test_performance_rows_are_honest_about_initial_evidence():
     assert Counter(
         tuple(item["evidence_gaps"]) for item in provisional
     ) == {
-        ("candidate comparison on all required toolchains",): 151,
+        ("candidate comparison on all required toolchains",): 153,
         (
             "profile-specific current-backend measurement missing",
             "candidate comparison on all required toolchains",
@@ -245,6 +245,8 @@ def test_performance_ledger_pins_material_backend_dependencies():
             expected.add("pyarrow >=18,<24")
         if item["codec_id"] == "openvdb":
             expected.add("tinyvdb >=0.9,<1")
+        if item["codec_id"] == "theora":
+            expected.add("libogg 1.3.6")
         if (
             item["codec_id"] in {"usd", "usdz"}
             and item["direction"] == "decode"
@@ -299,6 +301,10 @@ def test_performance_backend_versions_match_pinned_sources():
             "src/cpp/third_party/sqlite/COMMIT.txt",
         ),
         "libwebp": ("1.5.0", "src/cpp/third_party/libwebp/COMMIT.txt"),
+        "libtheora": (
+            "8e4808736e9c181b971306cc3f05df9e61354004",
+            "src/cpp/third_party/theora/COMMIT.txt",
+        ),
         "lazperf": (
             "b7bbe26109dc986f42d4fc80b8de3d2b6ca634ce",
             "src/cpp/third_party/lazperf/COMMIT.txt",

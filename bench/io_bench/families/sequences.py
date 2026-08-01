@@ -5,6 +5,7 @@ from __future__ import annotations
 from bench.io_bench.fixtures.sequences import (
     _animated_webp_fixture,
     _apng_fixture,
+    _theora_fixture,
     _webm_fixture,
     _y4m_fixture,
 )
@@ -42,6 +43,15 @@ def build_sequence_specs(scale):
             _webm_oracle_write,
             _webm_oracle_read,
             lambda rec, p: p["frames"].nbytes,
+        ),
+        Spec(
+            "theora",
+            lambda: _theora_fixture(side),
+            _core.write_theora,
+            _core.read_theora,
+            None,
+            None,
+            lambda rec, p: sum(value.nbytes for value in p.values()),
         ),
         Spec(
             "animated_webp",

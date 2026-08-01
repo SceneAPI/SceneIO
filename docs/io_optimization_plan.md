@@ -2,7 +2,7 @@
 
 Status: complete for the original 23-codec O0-O5 scope. Its mmap, direct-sink,
 inspection, differential, memory, and partial-read capability contracts now
-cover the live 71-format registry; 36 formats expose 42 bounded selectors. This
+cover the live 72-format registry; 37 formats expose 43 bounded selectors. This
 status describes optimized I/O transport and bounded access; it does **not**
 claim that every compression/parser kernel is the fastest viable backend.
 Backend qualification remains available as a trigger-based post-R6 mechanism in
@@ -16,7 +16,7 @@ The user-directed lean closure policy accepts the verified R6 backends as
 that release baseline without promoting its 124 provisional rows to
 `qualified`; exhaustive candidate comparison is not an R6 prerequisite.
 The post-R6 COLMAP dense, HDF5/hloc, Zarr, TIFF, E57, Parquet/Arrow,
-OpenVDB, USD/USDZ, AVIF, WebM, and RTMV units bring the current ledger to 165
+OpenVDB, USD/USDZ, AVIF, WebM, RTMV, and Ogg/Theora units bring the current ledger to 167
 provisional, two known-gap, and seven not-applicable operations without changing
 that policy.
 The C3/C4 CI correction keeps those operation counts unchanged. Its SOG
@@ -154,7 +154,7 @@ and Ubuntu builds use the expected stable extension names. Final build-only run
 and downloaded-artifact inspection.
 
 Post-0.2 format expansion inherits the same gates. The registry currently has
-71 formats: 63 single-file containers, five directories, and three multi-file
+72 formats: 64 single-file containers, five directories, and three multi-file
 formats. COLMAP SQLite
 remains path-native; SOG, OBJ/MTL, and glTF/external buffers have explicit
 multi-file adapters.
@@ -186,6 +186,15 @@ fixture measured 3.79 GB/s path reads with effectively zero traced allocation,
 while inspection and two-frame selection were 1.52x and 4.84x faster than full
 metadata construction. RTMV is intentionally read-only because no canonical
 SceneIO record preserves every source object and encoded layer byte-for-byte.
+
+The Ogg/Theora extension applies the same O1/O3/O5 transport to pinned native
+libogg/libtheora: mapped input is fed to libogg in bounded chunks, decoded
+planes are owned, Ogg pages stream directly to file sinks, metadata inspection
+allocates no frame arrays, and frame selection allocates only requested output.
+The five-run 6.3 MB fixture measured 16 MB/s encode, 78 MB/s decode, effectively
+zero traced mmap/sink allocation, 16.5x faster inspection, and 1.76x faster
+selected-frame reads. Upstream x86-64 MMX/SSE2 dispatch is enabled on
+GCC/AppleClang; MSVC x64 and non-x86 targets use the upstream portable kernel.
 
 The AVIF extension inherits the O1/O5 read rules through a repository-owned
 path adapter over the optional Pillow 12.3/libavif 1.4.2 provider. A read-only

@@ -62,6 +62,7 @@ _inspect_safetensors
 _inspect_sog_metadata
 _inspect_stl
 _inspect_tga
+_inspect_theora
 _inspect_transforms_json
 _inspect_webm
 _inspect_xyz
@@ -206,6 +207,8 @@ read_spz
 read_stl
 read_stl_faces
 read_tga
+read_theora
+read_theora_frames
 read_transforms_json
 read_tum
 read_webm
@@ -276,6 +279,7 @@ write_splat
 write_spz
 write_stl
 write_tga
+write_theora
 write_transforms_json
 write_tum
 write_webm

@@ -1,0 +1,25 @@
+libogg 1.3.6
+
+Upstream: https://github.com/xiph/ogg
+Tag: v1.3.6
+Tag object: db03f952b25717fd5c4938817c9290837a4ae1b2
+Commit: be05b13e98b048f0b5a0f5fa8ce514d56db5f822
+Retrieved: 2026-08-01
+License: BSD-3-Clause. COPYING contains the upstream license and an exact
+distribution copy is stored in LICENSES/ogg.txt.
+
+Source snapshot archive: git archive of peeled tag v1.3.6
+Size: 184320 bytes
+SHA-256: 4463e305bd1d733db08ecd0240438495157e4501d41efedf4b8e38ce1522718a
+
+Selected repository-contained source: upstream CMake configuration, public
+headers, core bit-packing/framing sources, and top-level provenance files.
+Tools, tests, examples, and documentation are not stored. SceneIO disables
+all upstream install surfaces and links only the private static library.
+
+The selected closure contains 18 upstream files totaling 166244 bytes.
+Every selected file is recorded in case-insensitive path order in the
+1482-byte SOURCE_MANIFEST.sha256, whose SHA-256 is:
+99330ff80c3af3bbe5c2c9b723105fec28b3d5b91a9a1511979d3ab780e2412d
+
+There are no local source changes.

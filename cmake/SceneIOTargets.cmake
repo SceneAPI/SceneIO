@@ -37,6 +37,9 @@ target_include_directories(
     src/cpp/third_party/cgltf
     ${libwebp_SOURCE_DIR}
     ${libwebp_SOURCE_DIR}/src
+    ${libogg_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_BINARY_DIR}/libogg/include
+    ${libtheora_SOURCE_DIR}/include
     ${SCENEIO_SELECTED_BACKEND_INCLUDE_DIRS})
 target_link_libraries(
   _core
@@ -51,6 +54,8 @@ target_link_libraries(
     webp
     webpdemux
     libwebpmux
+    ogg
+    theora_static
     Threads::Threads)
 
 if(SCENEIO_SELECTED_BACKEND_LINK_TARGETS)

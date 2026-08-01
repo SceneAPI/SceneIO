@@ -189,6 +189,7 @@ _apng_fixture = sequence_fixtures._apng_fixture
 _animated_webp_fixture = sequence_fixtures._animated_webp_fixture
 _y4m_fixture = sequence_fixtures._y4m_fixture
 _webm_fixture = sequence_fixtures._webm_fixture
+_theora_fixture = sequence_fixtures._theora_fixture
 _apng_oracle_read = sequence_oracles._apng_oracle_read
 _apng_oracle_write = sequence_oracles._apng_oracle_write
 _animated_webp_oracle_read = sequence_oracles._animated_webp_oracle_read
@@ -841,7 +842,7 @@ def _partial_request(codec_id, info, full_record=None):
     if codec_id in {"colmap_sparse", "colmap_sparse_txt"}:
         image_ids = np.asarray(full_record.image_ids)
         return {"image_id": int(image_ids[len(image_ids) // 2])}
-    if codec_id in {"image_sequence", "rtmv", "y4m", "webm"}:
+    if codec_id in {"image_sequence", "rtmv", "y4m", "webm", "theora"}:
         selected = max(1, info.count // 16)
         start = (info.count - selected) // 2
         return {"frames": (start, start + selected)}

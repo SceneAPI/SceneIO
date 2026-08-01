@@ -5472,15 +5472,33 @@ general metadata, and implicit color conversion stay out of the profile.
 
 ### M3 — Ogg/Theora
 
-- [ ] Select and pin direct libogg plus libtheora 1.2.x sources and notices.
-- [ ] Define a video-only Theora profile with exact granule/timestamp mapping,
+- [x] Select and pin direct libogg 1.3.6 plus libtheora 1.2.0 sources,
+      exact source manifests, and BSD-3-Clause notices.
+- [x] Define a video-only Theora profile with exact rational timestamp mapping,
       bounded 8-bit output, explicit chroma/color semantics, and no audio or
       arbitrary Ogg-stream claim.
-- [ ] Implement native read/write/inspect/frame-range paths with mapped input,
+- [x] Implement native read/write/inspect/frame-range paths with mapped input,
       owned decoded frames, a direct sink, and deterministic output.
-- [ ] Triangulate against libtheora reference tools and an independent Ogg-page
-      parser; add timing, malformed, lifetime, allocation, transaction, and
-      cross-platform benchmark validation.
+- [x] Triangulate libtheora payloads with an independent Ogg page/lacing/CRC
+      parser and remuxer; cover timing, malformed framing, lifetime,
+      allocation, sink identity, and public dispatch.
+- [x] Measure the local MSVC path: 16 MB/s encode, 78 MB/s decode, effectively
+      zero traced mmap/sink allocation, 16.5x inspect speedup, and 1.76x
+      selected-frame speedup on the committed benchmark fixture.
+- [x] Enable upstream MMX/SSE2 sources for GCC/AppleClang x86-64 while retaining
+      the upstream portable kernel on MSVC x64 and non-x86 targets.
+- [x] Complete the ownership/lifetime, format-correctness, and test-soundness
+      reviews. The ownership pass confirms that mapped input remains retained
+      for both scans, decoded planes are owned, file-sink callbacks are
+      synchronous, and every libogg/libtheora object has an RAII cleanup path.
+      The correctness pass added crop-underflow, page-byte-accounting,
+      granule-order, keyframe-shift, and first-frame-duplicate checks. The test
+      pass confirms independent Ogg framing/CRC/lacing/remux coverage plus
+      exact public, mmap, sink, partial, timing, and malformed-input behavior.
+      The exact local gate passes 4,357 tests with six documented skips; Ruff
+      and diff checks are clean.
+- [ ] Run the user-triggered nonpublishing Linux/macOS/Windows package matrix
+      to validate those architecture branches after the green commit is pushed.
 
 ### Exit
 
@@ -5488,6 +5506,5 @@ general metadata, and implicit color conversion stay out of the profile.
       docs, roadmap, and license inventory agree exactly.
 - [ ] The base wheel and source/build/package scans contain no FFmpeg/libav
       component or process path.
-- [ ] Keep AVIF and bounded WebM as separately reviewable green commits; do not
-      hold those or the existing image-sequence/Y4M/WebP/APNG formats open while
-      broader WebM or Theora remains future work.
+- [x] Keep AVIF, bounded WebM, RTMV, and Ogg/Theora as separately reviewable
+      green commits; the broader WebM profile remains its own final unit.
