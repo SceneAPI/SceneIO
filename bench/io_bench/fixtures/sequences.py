@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import numpy as np
@@ -169,10 +170,70 @@ def _image_sequence_directory_fixture(root, scale):
     return record, frame_count * side * side * 3
 
 
+def _rtmv_directory_fixture(root, scale):
+    source = Path(root) / "_rtmv_input"
+    source.mkdir()
+    frame_count = 8
+    side = max(8, int(256 * scale**0.5))
+    rng = np.random.default_rng(53)
+    pixels = rng.random((side, side, 4), dtype=np.float32)
+    encoded = bytes(
+        _core.write_exr(
+            _core.image(
+                pixels,
+                color_space="linear",
+                alpha_mode="premultiplied",
+            )
+        )
+    )
+    for index in range(frame_count):
+        stem = f"{index:05d}"
+        translation = [index * 0.1, -0.5, 2.0]
+        c2w = np.eye(4, dtype=np.float64)
+        c2w[:3, 3] = translation
+        metadata = {
+            "camera_data": {
+                "cam2world": c2w.T.tolist(),
+                "camera_view_matrix": np.linalg.inv(c2w).T.tolist(),
+                "camera_look_at": {
+                    "at": [translation[0], translation[1], 1.0],
+                    "eye": translation,
+                    "up": [0.0, 1.0, 0.0],
+                },
+                "width": side,
+                "height": side,
+                "intrinsics": {
+                    "cx": side / 2.0,
+                    "cy": side / 2.0,
+                    "fx": side * 1.2,
+                    "fy": side * 1.2,
+                },
+                "location_world": translation,
+                "quaternion_world_xyzw": [0.0, 0.0, 0.0, 1.0],
+                "scene_center_3d_box": [0.0, 0.0, 0.0],
+                "scene_min_3d_box": [-1.0, -1.0, -1.0],
+                "scene_max_3d_box": [1.0, 1.0, 1.0],
+            },
+            "objects": [
+                {"segmentation_id": object_id + 1}
+                for object_id in range(16)
+            ],
+        }
+        (source / f"{stem}.json").write_text(
+            json.dumps(metadata, separators=(",", ":")),
+            encoding="utf-8",
+        )
+        for suffix in (".exr", ".depth.exr", ".seg.exr"):
+            (source / f"{stem}{suffix}").write_bytes(encoded)
+    logical_bytes = frame_count * side * side * 12 * 4
+    return source, logical_bytes
+
+
 __all__ = [
     "_animated_webp_fixture",
     "_apng_fixture",
     "_image_sequence_directory_fixture",
+    "_rtmv_directory_fixture",
     "_webm_fixture",
     "_y4m_fixture",
 ]

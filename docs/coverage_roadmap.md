@@ -1,7 +1,7 @@
 # SceneIO — comprehensive coverage roadmap & execution checklist
 
 > Current shipped and branch-local status is tracked in `format_coverage.md`.
-> The status markers below have been reconciled to the live 70-format registry;
+> The status markers below have been reconciled to the live 71-format registry;
 > broader checklist boxes remain open where a codec has not completed an
 > aspirational per-format or cross-platform gate. The authoritative
 > implementation sequence for the remaining formats is
@@ -173,8 +173,8 @@ are maintained only in
   `30470889876`.
   The user-directed post-R6 3D-CV format sequence is locally complete for
   Animated WebP, APNG, HDF5/hloc, Zarr, TIFF, E57, Parquet/Arrow IPC,
-  OpenVDB, and USD/USDZ. RTMV remains the next bounded dataset layout if
-  requested. The provisional
+  OpenVDB, USD/USDZ, and bounded read-only RTMV. Ogg/Theora and broader WebM
+  temporal compression are the remaining moving-image units. The provisional
   performance ledger remains a trigger-based optimization backlog rather than
   an active gate.
 
@@ -397,7 +397,7 @@ Columns: **Ext/id** · **Record** · **Lib/oracle (license)** · **R/W** ·
 | ✅ COLMAP MVS consistency | `ConsistencyGraph` | independent `struct` parser | R+W | strict signed-int32 pixel records and positional image-index lists |
 | ✅ COLMAP fused visibility | `PointVisibility` | independent `struct` parser | R+W | strict count-prefixed uint32 positional image-index lists |
 | ✅ transforms.json | `PosedViewSet` | pure‑Python | R+W | done (OpenGL c2w) |
-| ⬜ RTMV / synthetic sets | `PosedViewSet`+`Image` | manual | R | dataset layout |
+| ✅ RTMV / synthetic sets | `RtmvDataset`+`PosedViewSet`+lazy encoded layers | independent NumPy/OpenEXR fixture | R | strict contiguous five-digit layout, complete camera/object/header validation, optional all-or-none segmentation, bounded frames; intentionally read-only |
 
 ### 3h. Camera calibration
 | Format | Record | Lib / oracle | R/W | Notes |
@@ -436,8 +436,8 @@ maintained in `format_gap_implementation_plan.md`:
    point PLY is complete);
 3. meshes and vendorable LAZ (complete locally);
 4. lazy image directories, raw Y4M, animated WebP, APNG, animated AVIF, and
-   bounded WebM VP8 all-keyframe (complete locally), followed by RTMV, broader
-   WebM temporal compression, and Ogg/Theora units;
+   bounded WebM VP8 all-keyframe and RTMV (complete locally), followed by
+   Ogg/Theora and broader WebM temporal-compression units;
 5. optional-provider TIFF/E57/Arrow integrations (complete locally);
 6. bounded USD/USDZ and OpenVDB integrations (complete locally), with
    broader scene/volume semantics and policy-gated codecs left explicit.

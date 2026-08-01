@@ -55,6 +55,7 @@
       "animated_webp": "08a79ab1e8c48046a8c92f8a524b9e4990a87102ccfaf950a2b714e60409ed2c",
       "apng": "870cec8f3e75ecc3841e4a08871afc69b6badd96741b64adfd2419dad74c5dd2",
       "animated_avif": "9cd0cf59e7338ee2804248f89b817e01cb28e1a2c7f35d28e53f25b201b688ff",
+      "rtmv": "b9258390638772f08f0396c6d718d50c44f710818290aacea53e88e90088bf72",
       "image_sequence": "5242878a747fae1d464202b7382e0f8986d4c79789fd3b8186b085fbf5194cb0",
       "colmap_sparse_txt": "cbbf77486c5f12613958e3d17ef88dc6c9cef7166a102918d6f0ee8c70afd6bf",
       "xyz": "d2d71f2c768c7b8ed521eae881d8fa7d81a2df09072588827f8f12301c31cc88",
@@ -310,6 +311,11 @@
         "inspect": "07720f5828e7a61ba8e17acb214fd08d7c970e1b642c8c4faff2fca311948cfd",
         "read_frames": "ebc689d2a048b1b1c3fe00b7cd99c45ae63ac342f495cc7e0c2a422b8ba9807f"
       },
+      "rtmv": {
+        "read": "9bf62a0e63be8805666c018bf8fe94404d435ff583849e2afc2d69114fa2dcb5",
+        "inspect": "a0839b5fa3ebbdfb89330b9af9a673644782417058a83ef684fbf6ee32f4a0f1",
+        "read_frames": "65eb500370cf02a16dd5b76a2442fb1d82f48093a0c66222f2fdd75ad83ed5c7"
+      },
       "image_sequence": {
         "read": "737e28ccb24ee0dc4554841f357cccb324d3b74effdcff43716768d958036bcb",
         "write": "a8447934d937a57dcc6d9672990ce3d2543f8a3a4d651bba4246510bb52ec413",
@@ -454,8 +460,8 @@
     "last": "tests/test_points_binary.py::test_bad_magic_rejected"
   },
   "pytest_candidate_collection": {
-    "count": 4343,
-    "sorted_normalized_node_ids_sha256": "5d4f1a9d3b1ce8a75222dbb7a0f35bcd120f4928134d673fba0efccab8744181",
+    "count": 4357,
+    "sorted_normalized_node_ids_sha256": "f31e0bcde4eb74fa6650bab279264433ce3affc8801808dce579eecfa57f7b95",
     "added_nodes": [
       "tests/codecs/test_animated_webp.py::test_sceneio_writer_is_lossless_and_oracle_readable",
       "tests/codecs/test_animated_webp.py::test_pillow_writer_is_sceneio_readable_bit_exact",
@@ -1393,6 +1399,19 @@
       "tests/codecs/test_openvdb.py::test_openvdb_existing_destination_survives_provider_failure",
       "tests/codecs/test_openvdb.py::test_openvdb_writer_refuses_provider_voxel_loss",
       "tests/codecs/test_openvdb.py::test_openvdb_license_and_template_provenance_are_distributed",
+      "tests/codecs/test_rtmv.py::test_reads_independent_rtmv_layout_and_preserves_lazy_layers",
+      "tests/codecs/test_rtmv.py::test_inspect_matches_read_without_decoding_pixels",
+      "tests/codecs/test_rtmv.py::test_partial_read_is_exact_slice_of_full_read",
+      "tests/codecs/test_rtmv.py::test_optional_segmentation_is_all_or_none",
+      "tests/codecs/test_rtmv.py::test_large_encoded_layers_are_not_materialized",
+      "tests/codecs/test_rtmv.py::test_rejects_inconsistent_camera_metadata[width-0-positive integer]",
+      "tests/codecs/test_rtmv.py::test_rejects_inconsistent_camera_metadata[intrinsics.fx-0.0-focal lengths]",
+      "tests/codecs/test_rtmv.py::test_rejects_inconsistent_camera_metadata[intrinsics.cx-9.0-principal point]",
+      "tests/codecs/test_rtmv.py::test_rejects_inconsistent_camera_metadata[quaternion_world_xyzw-value3-normalized]",
+      "tests/codecs/test_rtmv.py::test_rejects_inconsistent_camera_metadata[location_world-value4-location_world disagrees]",
+      "tests/codecs/test_rtmv.py::test_rejects_duplicate_json_keys_and_unexpected_layout_entries",
+      "tests/codecs/test_rtmv.py::test_rejects_missing_and_noncontiguous_frames",
+      "tests/codecs/test_rtmv.py::test_partial_bounds_and_read_only_contract",
       "tests/codecs/test_tiff.py::test_sceneio_tiff_write_is_exact_for_independent_oracle[shape0-uint8]",
       "tests/codecs/test_tiff.py::test_sceneio_tiff_write_is_exact_for_independent_oracle[shape1-uint16]",
       "tests/codecs/test_tiff.py::test_sceneio_tiff_write_is_exact_for_independent_oracle[shape2-float32]",
@@ -1528,6 +1547,7 @@
       "tests/test_import_guards.py::test_no_family_imports[io/_arrow.py]",
       "tests/test_import_guards.py::test_no_family_imports[io/_e57.py]",
       "tests/test_import_guards.py::test_no_family_imports[io/_openvdb.py]",
+      "tests/test_import_guards.py::test_no_family_imports[io/_rtmv.py]",
       "tests/test_import_guards.py::test_no_family_imports[io/_tiff.py]",
       "tests/test_import_guards.py::test_no_family_imports[io/_usd/__init__.py]",
       "tests/test_import_guards.py::test_no_family_imports[io/_usd/cameras.py]",

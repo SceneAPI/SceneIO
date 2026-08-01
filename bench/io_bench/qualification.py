@@ -244,6 +244,11 @@ COMPARISON_QUALIFICATIONS = MappingProxyType(
             operations=("encode", "decode", "inspect", "partial"),
             runner_kind="path",
         ),
+        "rtmv": _exemption(
+            "independent RTMV directory read/inspect throughput",
+            "tests/codecs/test_rtmv.py",
+            runner_kind="directory",
+        ),
         "image_sequence": _exemption(
             "independent benchmark directory encode/decode throughput",
             "tests/codecs/test_image_sequence.py",

@@ -27,6 +27,7 @@ from sceneio.io._inspection import inspect_codec
 from sceneio.io._inspectors.model import ArrayInspection, Inspection
 from sceneio.io._openvdb import write_openvdb
 from sceneio.io._registry.adapters import _file_sink_writer, _mmap_reader
+from sceneio.io._rtmv import RtmvDataset
 from sceneio.io._tiff import write_tiff
 from sceneio.io._usd import (
     read_scene as _read_usd_scene,
@@ -699,6 +700,7 @@ __all__ = [
     "PoseGraph",
     "PosedViewSet",
     "Reconstruction",
+    "RtmvDataset",
     "SceneGraph",
     "StateTrajectory",
     "TensorDict",

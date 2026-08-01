@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import gc
 import importlib.util
+import json
 import mmap
 import shutil
 import sqlite3
@@ -1631,6 +1632,62 @@ def _image_sequences(root: Path) -> None:
     assert sceneio.inspect(apng_path).shape == (2, 3, 5, 4)
 
 
+def _rtmv_dataset(root: Path) -> None:
+    directory = root / "rtmv"
+    directory.mkdir()
+    image = _core.image(
+        np.zeros((3, 4, 4), dtype=np.float32),
+        color_space="linear",
+        alpha_mode="premultiplied",
+    )
+    encoded = bytes(_core.write_exr(image))
+    for index in range(2):
+        stem = f"{index:05d}"
+        translation = [index + 0.25, -0.5, 2.0]
+        c2w = np.eye(4, dtype=np.float64)
+        c2w[:3, 3] = translation
+        metadata = {
+            "camera_data": {
+                "cam2world": c2w.T.tolist(),
+                "camera_view_matrix": np.linalg.inv(c2w).T.tolist(),
+                "camera_look_at": {
+                    "at": [translation[0], translation[1], 1.0],
+                    "eye": translation,
+                    "up": [0.0, 1.0, 0.0],
+                },
+                "width": 4,
+                "height": 3,
+                "intrinsics": {
+                    "cx": 2.0,
+                    "cy": 1.5,
+                    "fx": 5.0,
+                    "fy": 5.5,
+                },
+                "location_world": translation,
+                "quaternion_world_xyzw": [0.0, 0.0, 0.0, 1.0],
+                "scene_center_3d_box": [0.0, 0.0, 0.0],
+                "scene_min_3d_box": [-1.0, -1.0, -1.0],
+                "scene_max_3d_box": [1.0, 1.0, 1.0],
+            },
+            "objects": [{} for _ in range(index)],
+        }
+        (directory / f"{stem}.json").write_text(
+            json.dumps(metadata, separators=(",", ":")),
+            encoding="utf-8",
+        )
+        for suffix in (".exr", ".depth.exr", ".seg.exr"):
+            (directory / f"{stem}{suffix}").write_bytes(encoded)
+    assert sceneio.detect(directory) == "rtmv"
+    dataset = sceneio.read(directory)
+    assert dataset.num_frames == 2
+    assert dataset.object_counts == (0, 1)
+    assert dataset.views.num_cameras == 2
+    assert sceneio.inspect(directory).shape == (2, 3, 4, 4)
+    assert sceneio.read_partial(directory, frames=(1, 2)).frame_ids == (
+        "00001",
+    )
+
+
 def _avif_formats(root: Path) -> None:
     if not sceneio.capabilities("avif").available:
         assert not sceneio.capabilities("animated_avif").available
@@ -1954,6 +2011,7 @@ _SMOKE_RUNNERS: Mapping[str, Callable[[Path], None]] = MappingProxyType(
         "animated_webp": _image_sequences,
         "apng": _image_sequences,
         "animated_avif": _avif_formats,
+        "rtmv": _rtmv_dataset,
         "image_sequence": _image_sequences,
         "colmap_sparse_txt": _reconstruction_formats,
         "xyz": _point_formats,

@@ -833,7 +833,7 @@ def _assert_benchmark_components_and_metric_semantics_are_explicit():
     sequence_exemptions = extracted_families["sequences"][
         "no_oracle_exemptions"
     ]
-    assert set(sequence_exemptions) == {"image_sequence"}
+    assert set(sequence_exemptions) == {"image_sequence", "rtmv"}
     assert sequence_exemptions["image_sequence"]["unverified_property"] == (
         "independent benchmark directory encode/decode throughput"
     )
@@ -841,6 +841,14 @@ def _assert_benchmark_components_and_metric_semantics_are_explicit():
         "format parity remains covered by the independent manifest and "
         "PGM payload fixtures in tests/codecs/test_image_sequence.py"
     )
+    assert sequence_exemptions["rtmv"] == {
+        "unverified_property": (
+            "independent RTMV directory read/inspect throughput"
+        ),
+        "verification": (
+            "format parity remains covered by tests/codecs/test_rtmv.py"
+        ),
+    }
     splat_exemptions = extracted_families["splats"][
         "no_oracle_exemptions"
     ]
@@ -2724,6 +2732,23 @@ def _assert_benchmark_components_and_metric_semantics_are_explicit():
     ) as directory:
         root = Path(directory)
         directory_specs = benchmark._directory_specs(None, 0.001, root)
+        rtmv_spec = next(
+            spec for spec in directory_specs if spec.id == "rtmv"
+        )
+        assert rtmv_spec.make.func is (
+            sequence_fixture_module._rtmv_directory_fixture
+        )
+        assert rtmv_spec.w is None
+        rtmv_path, rtmv_logical_size = rtmv_spec.make()
+        assert rtmv_logical_size == rtmv_spec.nbytes(
+            rtmv_path,
+            rtmv_logical_size,
+        )
+        rtmv_dataset = rtmv_spec.r(rtmv_path)
+        assert rtmv_dataset.num_frames == 8
+        assert (rtmv_dataset.height, rtmv_dataset.width) == (8, 8)
+        assert rtmv_dataset.object_counts == (16,) * 8
+
         image_sequence_spec = next(
             spec for spec in directory_specs if spec.id == "image_sequence"
         )

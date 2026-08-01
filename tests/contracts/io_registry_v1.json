@@ -3380,6 +3380,78 @@
       }
     },
     {
+      "id": "rtmv",
+      "extensions": [],
+      "magic_hex": [],
+      "filenames": [],
+      "is_directory": true,
+      "dir_marker": "00000.json",
+      "container_kind": "directory",
+      "datatype": "rtmv_dataset",
+      "record": {
+        "module": "sceneio.io",
+        "qualname": "RtmvDataset"
+      },
+      "selectors": [
+        "frames"
+      ],
+      "streams_read": true,
+      "streams_write": false,
+      "lossy": false,
+      "requires_features": [],
+      "supported_features": [
+        "rtmv_camera_data",
+        "camera_to_world",
+        "per_view_pinhole_intrinsics",
+        "lazy_rgb_exr",
+        "lazy_depth_exr",
+        "optional_lazy_segmentation_exr",
+        "lazy_object_metadata",
+        "frame_ranges",
+        "metadata_only_inspect"
+      ],
+      "unsupported_features": [
+        "pixel_decode",
+        "object_annotation_projection",
+        "directory_write"
+      ],
+      "capabilities": {
+        "format": "rtmv",
+        "datatype": "rtmv_dataset",
+        "record_type": "RtmvDataset",
+        "extensions": [],
+        "filenames": [],
+        "container_kind": "directory",
+        "available": true,
+        "can_read": true,
+        "can_write": false,
+        "can_inspect": true,
+        "partial_selectors": [
+          "frames"
+        ],
+        "streams_read": true,
+        "streams_write": false,
+        "lossy": false,
+        "requires_features": [],
+        "supported_features": [
+          "rtmv_camera_data",
+          "camera_to_world",
+          "per_view_pinhole_intrinsics",
+          "lazy_rgb_exr",
+          "lazy_depth_exr",
+          "optional_lazy_segmentation_exr",
+          "lazy_object_metadata",
+          "frame_ranges",
+          "metadata_only_inspect"
+        ],
+        "unsupported_features": [
+          "pixel_decode",
+          "object_annotation_projection",
+          "directory_write"
+        ]
+      }
+    },
+    {
       "id": "image_sequence",
       "extensions": [],
       "magic_hex": [],

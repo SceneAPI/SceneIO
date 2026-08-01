@@ -25,7 +25,7 @@ class DirectorySpec:
 
     id: str
     make: Callable
-    w: Callable
+    w: Callable | None
     r: Callable
     nbytes: Callable
 

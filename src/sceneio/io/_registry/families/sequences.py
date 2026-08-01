@@ -5,6 +5,7 @@ from __future__ import annotations
 from functools import partial
 
 import sceneio.io._image_sequence as _image_sequence_adapter
+import sceneio.io._rtmv as _rtmv_adapter
 from sceneio import _core
 from sceneio.io._avif import (
     inspect_animated_avif,
@@ -201,6 +202,41 @@ def build_sequence_codecs(
         _ANIMATED_WEBP_CODEC,
         _APNG_CODEC,
         _ANIMATED_AVIF_CODEC,
+        Codec(
+            "rtmv",
+            (),
+            partial(_rtmv_adapter.read_rtmv_directory, frame_access),
+            None,
+            record=_rtmv_adapter.RtmvDataset,
+            datatype="rtmv_dataset",
+            is_directory=True,
+            dir_marker="00000.json",
+            streams_write=False,
+            inspect=partial(
+                _rtmv_adapter.inspect_rtmv_directory,
+                frame_access,
+            ),
+            read_frames=partial(
+                _rtmv_adapter.read_rtmv_directory_frames,
+                frame_access,
+            ),
+            supported_features=(
+                "rtmv_camera_data",
+                "camera_to_world",
+                "per_view_pinhole_intrinsics",
+                "lazy_rgb_exr",
+                "lazy_depth_exr",
+                "optional_lazy_segmentation_exr",
+                "lazy_object_metadata",
+                "frame_ranges",
+                "metadata_only_inspect",
+            ),
+            unsupported_features=(
+                "pixel_decode",
+                "object_annotation_projection",
+                "directory_write",
+            ),
+        ),
         Codec(
             "image_sequence",
             (),

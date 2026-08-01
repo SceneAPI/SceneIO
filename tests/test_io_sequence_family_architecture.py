@@ -19,6 +19,7 @@ import pytest
 
 import sceneio
 import sceneio.io._image_sequence as sequence_adapter
+import sceneio.io._rtmv as rtmv_adapter
 from sceneio import _core
 from sceneio.io import _inspection, registry
 from sceneio.io._builtin_manifest import CANONICAL_BUILTIN_IDS
@@ -34,6 +35,7 @@ SEQUENCE_IDS = (
     "animated_webp",
     "apng",
     "animated_avif",
+    "rtmv",
     "image_sequence",
 )
 FRAME_ACCESS_AST_NORMALIZATION = {
@@ -166,6 +168,7 @@ def _assert_sequence_family_imports(source: str) -> None:
         "sceneio.io._avif",
         "sceneio.io._frame_access",
         "sceneio.io._image_sequence",
+        "sceneio.io._rtmv",
         "sceneio.io._registry.adapters",
         "sceneio.io._registry.model",
     }
@@ -220,19 +223,20 @@ def test_sequence_codec_ast_contract_and_canonical_installation_are_exact():
     assert _codec_ast_hashes() == contract["codec_ast_sha256"]
 
     start = CANONICAL_BUILTIN_IDS.index("y4m")
-    assert CANONICAL_BUILTIN_IDS[start - 1 : start + 7] == (
+    assert CANONICAL_BUILTIN_IDS[start - 1 : start + 8] == (
         "avif",
         "y4m",
         "webm",
         "animated_webp",
         "apng",
         "animated_avif",
+        "rtmv",
         "image_sequence",
         "colmap_sparse_txt",
     )
-    assert tuple(registry.REGISTRY)[start : start + 6] == SEQUENCE_IDS
+    assert tuple(registry.REGISTRY)[start : start + 7] == SEQUENCE_IDS
     assert tuple(
-        codec.id for codec in registry.BUILTIN_DEFINITIONS[start : start + 6]
+        codec.id for codec in registry.BUILTIN_DEFINITIONS[start : start + 7]
     ) == SEQUENCE_IDS
     for offset, format_id in enumerate(SEQUENCE_IDS):
         assert (
@@ -288,8 +292,26 @@ def test_sequence_native_and_directory_callable_targets_are_exact():
         "prepare": None,
     }
 
-    directory = registry.REGISTRY["image_sequence"]
     access = registry._IMAGE_FRAME_ACCESS
+    rtmv = registry.REGISTRY["rtmv"]
+    assert rtmv.record is rtmv_adapter.RtmvDataset
+    assert rtmv.write is None
+    for callback, target, parameters in (
+        (rtmv.read, rtmv_adapter.read_rtmv_directory, ("path",)),
+        (rtmv.inspect, rtmv_adapter.inspect_rtmv_directory, ("path",)),
+        (
+            rtmv.read_frames,
+            rtmv_adapter.read_rtmv_directory_frames,
+            ("path", "start", "stop"),
+        ),
+    ):
+        assert isinstance(callback, partial)
+        assert callback.func is target
+        assert callback.args == (access,)
+        assert callback.keywords == {}
+        assert tuple(inspect.signature(callback).parameters) == parameters
+
+    directory = registry.REGISTRY["image_sequence"]
     callbacks = (
         (
             directory.read,
@@ -357,8 +379,13 @@ def test_sequence_factory_is_inert_reentrant_and_binds_supplied_access():
     assert first[3] is second[3] is sequence_family._APNG_CODEC
     assert first[4] is second[4] is sequence_family._ANIMATED_AVIF_CODEC
     assert first[5] is not second[5]
+    assert first[6] is not second[6]
     assert calls == []
     for codec, access in ((first[5], first_access), (second[5], second_access)):
+        for callback in (codec.read, codec.inspect, codec.read_frames):
+            assert callback.args == (access,)
+        assert codec.write is None
+    for codec, access in ((first[6], first_access), (second[6], second_access)):
         for callback in (
             codec.read,
             codec.write,
@@ -447,18 +474,19 @@ def test_sequence_family_and_registry_reload_keep_live_access():
         assert registry.REGISTRY is before_registry
         assert tuple(registry.REGISTRY.items()) == before_items
         assert registry._IMAGE_FRAME_ACCESS is old_access
-        assert reloaded_family.build_sequence_codecs(old_access)[5] is not old_sequence
+        assert reloaded_family.build_sequence_codecs(old_access)[6] is not old_sequence
 
         for _ in range(2):
             registry = importlib.reload(registry)
             ids = tuple(registry.REGISTRY)
             start = ids.index("y4m")
-            assert ids[start : start + 7] == (
+            assert ids[start : start + 8] == (
                 "y4m",
                 "webm",
                 "animated_webp",
                 "apng",
                 "animated_avif",
+                "rtmv",
                 "image_sequence",
                 "colmap_sparse_txt",
             )
@@ -565,6 +593,7 @@ def test_repository_coverage_keeps_sequence_inspection_ownership_exact():
         "animated_webp": "src/sceneio/io/_inspectors/sequences.py",
         "apng": "src/sceneio/io/_inspectors/sequences.py",
         "animated_avif": "src/sceneio/io/_avif.py",
+        "rtmv": "src/sceneio/io/_rtmv.py",
         "image_sequence": "src/sceneio/io/_image_sequence.py",
     }
 

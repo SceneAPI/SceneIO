@@ -27,7 +27,7 @@ def test_case_catalog_is_complete_ordered_and_immutable():
     definitions = codec_cases.CODEC_CASE_DEFINITIONS
     assert tuple(case.id for case in definitions) == CANONICAL_BUILTIN_IDS
     assert tuple(codec_cases.CASES_BY_ID) == CANONICAL_BUILTIN_IDS
-    assert len(definitions) == len(codec_cases.CASES_BY_ID) == 70
+    assert len(definitions) == len(codec_cases.CASES_BY_ID) == 71
     assert all(dataclasses.is_dataclass(case) for case in definitions)
     with pytest.raises(dataclasses.FrozenInstanceError):
         definitions[0].id = "changed"
@@ -108,6 +108,7 @@ def test_case_catalog_preserves_the_legacy_fixture_partitions():
     )
     assert tuple(case.id for case in codec_cases.DIRECTORY_CASES) == (
         "colmap_sparse",
+        "rtmv",
         "image_sequence",
         "colmap_sparse_txt",
         "zarr",
@@ -240,10 +241,12 @@ def test_case_catalog_selectors_match_live_builtin_capabilities():
         capability = capabilities[case.id]
         assert capability.available
         assert capability.can_read
-        assert capability.can_write
+        assert capability.can_write is (case.id != "rtmv")
         assert capability.can_inspect
         assert capability.streams_read
-        assert capability.streams_write is (case.id not in {"avif", "animated_avif"})
+        assert capability.streams_write is (
+            case.id not in {"avif", "animated_avif", "rtmv"}
+        )
         assert case.partial_selectors == capability.partial_selectors
     assert tuple(case.id for case in codec_cases.PARTIAL_CASES) == (
         "pfm",
@@ -267,6 +270,7 @@ def test_case_catalog_selectors_match_live_builtin_capabilities():
         "y4m",
         "webm",
         "animated_avif",
+        "rtmv",
         "image_sequence",
         "colmap_sparse_txt",
         "xyz",
@@ -285,7 +289,7 @@ def test_case_catalog_selectors_match_live_builtin_capabilities():
     assert sum(
         len(case.partial_selectors)
         for case in codec_cases.PARTIAL_CASES
-    ) == 41
+    ) == 42
 
 
 def test_runtime_extensions_do_not_enter_repository_case_completeness():

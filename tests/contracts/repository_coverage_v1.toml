@@ -356,6 +356,14 @@ inspection_source = "src/sceneio/io/_avif.py"
 wheel_smoke_case = "_avif_formats"
 
 [[codec]]
+id = "rtmv"
+benchmark_case = "rtmv"
+source_suite = "tests/codecs/test_rtmv.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_rtmv.py"
+wheel_smoke_case = "_rtmv_dataset"
+
+[[codec]]
 id = "image_sequence"
 benchmark_case = "image_sequence"
 source_suite = "tests/codecs/test_image_sequence.py"

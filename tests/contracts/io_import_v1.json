@@ -112,6 +112,7 @@
       "sceneio.io._registry.families.splats",
       "sceneio.io._registry.model",
       "sceneio.io._registry.native_features",
+      "sceneio.io._rtmv",
       "sceneio.io._tiff",
       "sceneio.io._usd",
       "sceneio.io._usd.cameras",

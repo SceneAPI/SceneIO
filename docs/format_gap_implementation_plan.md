@@ -8,7 +8,7 @@
   checkpoint closes at packaged source `2253e0f`; exact-head runs
   `30469273173`, `30469271293`, and build-only package run `30470889876`
   pass with publication skipped.
-- **Current local checkpoint:** the live registry has 70 formats. HDF5/hloc,
+- **Current local checkpoint:** the live registry has 71 formats. HDF5/hloc,
   Zarr v2/v3, TIFF, E57, Parquet/Arrow IPC, OpenVDB, and USD/USDZ are
   implemented through repository-owned adapters around optimized optional
   permissive providers. SceneIO owns schemas, validation, models, detection,

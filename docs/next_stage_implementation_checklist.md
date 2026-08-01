@@ -18,8 +18,9 @@
       `_wheel_smoke` returned `2`, and the 56-row structure check passed.
 - [ ] Obtain normal and build-only cross-platform results for the reviewed
       branch head before calling APNG package-validated.
-- [ ] Implement RTMV next, reusing canonical `Mask`, `CameraRig`, track,
-      `PairCorrespondences`, `FeatureSet`, and `MatchGraph` models.
+- [x] Implement bounded read-only RTMV with a canonical `PosedViewSet` and
+      lazy RGB/depth/optional-segmentation paths; do not duplicate canonical
+      `Mask`, rig, track, pair, feature, or match models.
 - [x] Implement HDF5/hloc ahead of RTMV by mapping hloc feature and match
       groups directly into `FeatureSet` and `MatchGraph`; no duplicate models
       were added.
@@ -4610,7 +4611,7 @@ Remote validation checkpoints, only after explicit user authorization:
       start another candidate sweep or format wave first.
 
 This stage is validated. The format queue resumed with animation-capable
-`ImageSequence`, animated WebP, and APNG; RTMV is next.
+`ImageSequence`, animated WebP, APNG, AVIF, WebM VP8 all-keyframe, and RTMV.
 
 ## 14. Review record
 
@@ -5368,6 +5369,36 @@ This is a finite extension, not an open-ended media program. The canonical
 3D-CV input remains an image directory. Every added container maps only video
 frames and exact timing into `ImageSequence`; audio, subtitles, chapters,
 general metadata, and implicit color conversion stay out of the profile.
+
+### D1 — RTMV directory dataset
+
+- [x] Add a repository-owned, read-only `RtmvDataset` adapter using the
+      canonical compiled `PosedViewSet` plus owned paths to lazy RGB, depth,
+      optional segmentation, and exact object-metadata files.
+- [x] Accept only a strict flat, contiguous, five-digit layout; validate every
+      camera/object document and OpenEXR header before exposing the dataset.
+- [x] Normalize RTMV's serialized row-vector matrices into standard OpenGL
+      camera-to-world poses and cross-check view inverse, location, look-at,
+      quaternion, rotation, bounds, intrinsics, and dimensions.
+- [x] Add metadata-only inspection and bounded frame selection without pixel
+      decode; prove the returned dataset survives source-handle collection.
+- [x] Use independently authored NumPy matrices and OpenEXR fixtures. Original
+      non-commercial RTMV assets and loader source remain external and are not
+      copied into the repository.
+- [x] Cover public detection/read/inspect/partial behavior, optional-layer
+      consistency, malformed metadata, directory boundaries, read-only policy,
+      wheel smoke, memory behavior, and registry/benchmark contracts.
+- [x] Remove an avoidable fixed 16 MiB JSON read allocation found by the
+      memory-focused review; the 48 MiB encoded-layer fixture now remains below
+      2 MiB traced Python allocation.
+- [x] Record a 25.2 MB benchmark: about 3.79 GB/s path read with effectively
+      zero traced allocation; inspection 1.52x and two-frame selection 4.84x faster than
+      full metadata construction. No write metric is claimed.
+- [x] Complete the resource/lifetime, camera/layout-correctness, and
+      test-soundness reviews; pass the exact full local gate with 4,351 tests
+      passing, six documented skips, Ruff clean, and clean diff checks.
+- [ ] Run the user-triggered nonpublishing Linux/macOS/Windows package matrix
+      after the green commit is pushed.
 
 ### M1 — AVIF still and sequence
 

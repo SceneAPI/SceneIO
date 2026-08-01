@@ -2,7 +2,7 @@
 
 Measures, per codec, encode (write) + decode (read) throughput (MB/s over the raw
 payload) and peak Python allocation (tracemalloc), for sceneio._core vs the oracle
-library where one exists, on representative payloads for all 67 codecs. Read
+library where one exists, on representative payloads for all 71 codecs. Read
 measurements retain the legacy whole-file bytes/copy-decode path beside the
 public registry mmap path, so their peak delta captures the input copy O1
 removes and, for NPY/FLO, the decoded-array copy O2 removes. Write measurements
@@ -758,6 +758,17 @@ def _directory_specs(reconstruction, scale, root):
             lambda record, payload: _record_nbytes(payload),
         ),
         DirectorySpec(
+            "rtmv",
+            partial(
+                sequence_fixtures._rtmv_directory_fixture,
+                root,
+                scale,
+            ),
+            None,
+            lambda path: sceneio.read(path, format="rtmv"),
+            lambda record, payload: payload,
+        ),
+        DirectorySpec(
             "image_sequence",
             partial(
                 _image_sequence_directory_fixture,
@@ -830,7 +841,7 @@ def _partial_request(codec_id, info, full_record=None):
     if codec_id in {"colmap_sparse", "colmap_sparse_txt"}:
         image_ids = np.asarray(full_record.image_ids)
         return {"image_id": int(image_ids[len(image_ids) // 2])}
-    if codec_id in {"image_sequence", "y4m", "webm"}:
+    if codec_id in {"image_sequence", "rtmv", "y4m", "webm"}:
         selected = max(1, info.count // 16)
         start = (info.count - selected) // 2
         return {"frames": (start, start + selected)}
@@ -2860,32 +2871,37 @@ def _run_benchmark(args, tmp):
     for spec in directory_specs:
         try:
             value, payload = spec.make()
-            path = Path(tmp) / spec.id
-            path.mkdir()
-            spec.w(value, str(path))
+            if spec.w is None:
+                path = Path(value)
+            else:
+                path = Path(tmp) / spec.id
+                path.mkdir()
+                spec.w(value, str(path))
             file_bytes = _directory_size(path)
             payload_bytes = spec.nbytes(value, payload)
             pmb = payload_bytes / 1e6
             fmb = file_bytes / 1e6
-            write_time, write_peak = _measure(
-                lambda: spec.w(value, str(path)), args.runs
-            )
-            write_rss = _measure_in_process_rss(
-                lambda: spec.w(value, str(path))
-            )
-            write_rows.append(
-                (
-                    spec.id,
-                    pmb,
-                    fmb,
-                    None,
-                    pmb / write_time,
-                    None,
-                    write_peak / 1e6,
-                    None,
-                    write_rss / 1e6,
+            write_time = write_peak = write_rss = None
+            if spec.w is not None:
+                write_time, write_peak = _measure(
+                    lambda: spec.w(value, str(path)), args.runs
                 )
-            )
+                write_rss = _measure_in_process_rss(
+                    lambda: spec.w(value, str(path))
+                )
+                write_rows.append(
+                    (
+                        spec.id,
+                        pmb,
+                        fmb,
+                        None,
+                        pmb / write_time,
+                        None,
+                        write_peak / 1e6,
+                        None,
+                        write_rss / 1e6,
+                    )
+                )
 
             def _directory_read(path=path, codec_id=spec.id):
                 if args.cold_cache:
@@ -2957,8 +2973,12 @@ def _run_benchmark(args, tmp):
                     "codec": spec.id,
                     "payload_mb": pmb,
                     "file_mb": fmb,
-                    "write_mbps": pmb / write_time,
-                    "path_write_mbps": pmb / write_time,
+                    "write_mbps": (
+                        None if write_time is None else pmb / write_time
+                    ),
+                    "path_write_mbps": (
+                        None if write_time is None else pmb / write_time
+                    ),
                     "read_mbps": pmb / core_read_time,
                     "path_read_mbps": pmb / path_read_time,
                     "mmap_peak_mb": read_peak / 1e6,
@@ -2969,15 +2989,19 @@ def _run_benchmark(args, tmp):
                     "partial_ms": partial_time * 1000,
                     "partial_peak_mb": partial_peak / 1e6,
                     "partial_rss_mb": partial_rss / 1e6,
-                    "sink_write_peak_mb": write_peak / 1e6,
-                    "sink_write_rss_mb": write_rss / 1e6,
+                    "sink_write_peak_mb": (
+                        None if write_peak is None else write_peak / 1e6
+                    ),
+                    "sink_write_rss_mb": (
+                        None if write_rss is None else write_rss / 1e6
+                    ),
                 }
             )
             print_directory_row(
                 spec.id,
                 pmb,
                 fmb,
-                pmb / write_time,
+                0.0 if write_time is None else pmb / write_time,
                 pmb / core_read_time,
                 pmb / path_read_time,
                 read_peak / 1e6,
@@ -2995,7 +3019,7 @@ def _run_benchmark(args, tmp):
             + len(path_specs)
             + int(include_colmap_db)
             + int(include_gltf)
-            == 67
+            == len(qualification.COMPARISON_QUALIFICATIONS)
         )
     if getattr(args, "strict_oracles", False):
         qualification.validate_strict_results(results)

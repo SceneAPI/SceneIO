@@ -456,6 +456,16 @@ documentation = "docs/format_coverage.md"
 accepted_subset = ["avif_1_2", "uint8", "grayscale", "rgb", "rgba", "straight_alpha", "exact_frame_timing", "frame_ranges", "metadata_only_inspect"]
 
 [[codec]]
+id = "rtmv"
+family = "sequences"
+adapter = "repo"
+implementation_owner = "python"
+sources = ["src/sceneio/io/_rtmv.py"]
+source_suite = "tests/codecs/test_rtmv.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["strict_flat_directory", "contiguous_five_digit_frames", "camera_and_object_metadata", "lazy_exr_paths", "optional_segmentation", "frame_ranges", "metadata_only_inspect"]
+
+[[codec]]
 id = "image_sequence"
 family = "sequences"
 adapter = "repo"
@@ -3048,6 +3058,44 @@ backend_version = "ed6fe5825c6a4fbb7f58ab35a4231c7543cd452a"
 transport_status = "qualified"
 status = "provisional"
 correctness_evidence = ["tests/codecs/test_apng.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "rtmv"
+profile = "default"
+direction = "encode"
+settings = { profile = "read_only" }
+fidelity = "not applicable"
+comparator = "read-only dataset profile"
+fixture = "rtmv:default"
+backend = "sceneio-python"
+backend_owner = "repo"
+backend_source = "src/sceneio/io/_rtmv.py"
+backend_version = "sceneio-rtmv-v1"
+transport_status = "not_applicable"
+status = "not_applicable"
+correctness_evidence = ["tests/codecs/test_rtmv.py"]
+benchmark_evidence = []
+candidate_backends = []
+evidence_gaps = ["no canonical SceneIO record preserves all RTMV object and encoded-layer payloads for exact writing"]
+
+[[operation]]
+codec_id = "rtmv"
+profile = "default"
+direction = "decode"
+settings = { layout = "strict_flat", input = "path", pixels = "lazy_encoded_paths" }
+fidelity = "lossless metadata and encoded-layer references"
+comparator = "independent NumPy/OpenEXR fixture"
+fixture = "rtmv:default"
+backend = "sceneio-python"
+backend_owner = "repo"
+backend_source = "src/sceneio/io/_rtmv.py"
+backend_version = "sceneio-rtmv-v1"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_rtmv.py"]
 benchmark_evidence = ["bench/BASELINE.md"]
 candidate_backends = []
 evidence_gaps = ["candidate comparison on all required toolchains"]

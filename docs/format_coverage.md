@@ -86,6 +86,21 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > regression guard for noncontiguous `BlockGroup` timing. Hosted package-matrix
 > validation remains user-triggered.
 >
+> **71-format RTMV checkpoint (2026-08-01):** `rtmv` adds a bounded,
+> repository-owned, read-only directory adapter. It accepts contiguous
+> five-digit frame sets containing camera JSON plus RGB/depth OpenEXR layers
+> and optional all-or-none segmentation. The adapter validates the complete
+> camera/object metadata and every EXR header, normalizes RTMV's transposed
+> row-vector matrices into standard OpenGL camera-to-world poses, and retains
+> owned absolute layer paths so pixel payloads remain lazy. Full read,
+> metadata-only inspection, and bounded frame selection are covered by a
+> clean synthetic NumPy/OpenEXR oracle; original non-commercial dataset assets
+> and loader code are neither copied nor shipped. A 25.2 MB fixture measured
+> about 3.79 GB/s path reads with effectively zero traced allocation;
+> inspection and two-frame selection were 1.52x and 4.84x faster than full metadata
+> construction. Local parity, memory, public-surface, registry, and wheel-smoke
+> checks pass; hosted package-matrix validation remains user-triggered.
+>
 > **USD standards review (2026-07-30):** AOUSD Core Specification 1.0.1,
 > supplemental 1.0.1.post0, OpenUSD 26.08, and the official
 > `UsdVolParticleField3DGaussianSplat` schema define a broader target than the
@@ -1079,6 +1094,7 @@ public-domain SQLite amalgamation statically linked into `_core`.
 | `apng` | `ImageSequence` | R+W | Pillow plus specification-derived chunk/compositing oracle in `tests/codecs/test_apng.py` | repository-owned APNG container logic over pinned lodepng; fully composited packed uint8 RGBA frames, exact rational timing representable as integer nanoseconds, loop count, source/over blend, none/background/previous disposal, mmap, streaming sink, and metadata-only inspection |
 | `avif` | `Image` | R+W | direct Pillow/libavif comparison plus specification-derived BMFF checks in `tests/codecs/test_avif.py` | optional `sceneio[avif]`; mmap-backed 8-bit gray/RGB/straight-RGBA reads, owned decoded pixels, metadata-only inspection, full-range 4:4:4 color writes through libaom; encoded output is provider-buffered rather than a direct sink |
 | `animated_avif` | `ImageSequence` | R+W | direct Pillow/libavif comparison plus specification-derived BMFF/timing checks in `tests/codecs/test_avif.py` | optional `sceneio[avif]`; owned packed 8-bit frames, exact accepted timing and bounded frame ranges; whole-millisecond contiguous timing is required for write; no loop/background/audio/subtitles; encoded output is provider-buffered |
+| `rtmv` | `RtmvDataset` containing a `PosedViewSet` plus lazy RGB/depth/segmentation paths | R, inspect, partial | independently authored NumPy camera matrices and OpenEXR files in `tests/codecs/test_rtmv.py` | strict flat contiguous five-digit directory layout; complete metadata/header validation; RTMV row-vector matrices normalize to OpenGL camera-to-world; encoded layers and exact object JSON stay path-backed; bounded frame selection; intentionally read-only |
 | `hdf5` | `TensorDict` | R+W, inspect, partial | independent **h5py** layouts in `tests/codecs/test_hdf5_hloc.py` | optional `sceneio[hdf5]`; numeric/bool datasets, nested paths, text root attrs, selected-path named reads, leading-axis hyperslabs, and atomic replacement; full reads reject indirect/virtual/object/reference/vlen layouts, while partial reads validate the selected paths and ancestors |
 | `hloc_features` | `HlocFeatureStore` of native `FeatureSet` | R+W, inspect | independent **h5py** documented layout | preserves keypoints, D×N wire descriptors as native N×D with uint8/int8/f16/f32/f64 dtype, scores, image size, nested names, and keypoint uncertainty |
 | `hloc_matches` | `HlocMatchStore` + native `MatchGraph` | R+W, inspect | independent **h5py** documented layout | preserves dense `matches0`, optional `matching_scores0`, exact endpoint names, source extents/dtypes, pair order, and mixed score presence |
@@ -1120,9 +1136,9 @@ requirement for COLMAP ecosystem closure.
 
 ### ⬜ Pending — declared roadmap gaps
 
-- Sequence/dataset: RTMV. Animated WebP, APNG, animated AVIF, and WebM VP8
+- Sequence/dataset: RTMV, animated WebP, APNG, animated AVIF, and WebM VP8
   all-keyframe are complete for their bounded profiles. General inter-frame
-  VP8/VP9 and Ogg/Theora remain separate future units.
+  VP8/VP9 and Ogg/Theora remain separate implementation units.
 - Optional CV containers are complete for the accepted profiles: HDF5/hloc,
   Zarr v2/v3, TIFF, E57, Parquet, Arrow IPC, OpenVDB, USD, and USDZ.
 - Broader semantics remain intentionally outside those bounded profiles:
@@ -1152,7 +1168,7 @@ fuzzing · ✅ direct file-sink writes · ✅ bounded measured-path workers
 (XYZ/LAS/LAZ/EXR/PNG16/WebP lossless) · ✅ partial/lazy reads (`inspect` covers all
 54; bounded pixel/point/face/mesh/primitive/state/frame/COLMAP-image/COLMAP-pair/tensor
 subsets cover capable containers) · ⬜ GPU-via-DLPack (torch-cuda/cupy) · ✅
-expanded 70-format benchmark/oracles.
+expanded 71-format benchmark/oracles.
 
 ## Infrastructure & capabilities
 
@@ -1242,6 +1258,7 @@ incremental.
 | `png` | file | yes | yes | yes | - | yes | yes | no | - |
 | `pts` | file | yes | yes | yes | points | yes | yes | no | - |
 | `ros_camera_info` | file | yes | yes | yes | - | yes | yes | no | - |
+| `rtmv` | directory | yes | no | yes | frames | yes | no | no | - |
 | `safetensors` | file | yes | yes | yes | tensors, slices | yes | yes | no | - |
 | `sog` | multi_file | yes | yes | yes | points | yes | yes | yes | - |
 | `splat` | file | yes | yes | yes | points | yes | yes | yes | - |
@@ -1310,7 +1327,7 @@ names from `_core.__native_features__`.
 | point range `points=(start,stop)` | XYZ, PTS, binary generic PLY, uncompressed binary PCD, LAS, Gaussian PLY, compressed PLY, SOG, KSplat, SPLAT | `PointCloud` / `GaussianCloud`, with convention metadata preserved |
 | face range `faces=(start,stop)` | generic mesh PLY, STL, OFF | `Mesh`; PLY/OFF retain the complete vertex domain, while STL returns local canonical triangle soup |
 | state range `states=(start,stop)` | EuRoC state CSV | `StateTrajectory` with convention metadata preserved |
-| frame range `frames=(start,stop)` | image directories, raw Y4M, animated AVIF | `ImageSequence`; directory frames remain lazy encoded paths, Y4M copies only selected planar frames, and animated AVIF returns only selected decoded output frames; animated WebP and APNG currently expose full composited reads and do not claim a bounded frame selector |
+| frame range `frames=(start,stop)` | image directories, RTMV directories, raw Y4M, animated AVIF | `ImageSequence` or `RtmvDataset`; directory payloads remain lazy encoded paths, RTMV rebuilds only selected validated metadata records, Y4M copies only selected planar frames, and animated AVIF returns only selected decoded output frames; animated WebP and APNG currently expose full composited reads and do not claim a bounded frame selector |
 | `image_id` | COLMAP binary + text | one-image `Reconstruction` plus every camera required by its retained modern rig/frame (or its one legacy camera); no point-container read |
 | `image_id` | COLMAP SQLite database | one compiled `FeatureSet`; unrelated keypoint/descriptor BLOBs remain unread |
 | unordered `pair=(image_id1,image_id2)` | COLMAP SQLite database | one compiled `MatchGraph` with raw/verified matches and optional geometry |

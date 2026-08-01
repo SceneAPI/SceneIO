@@ -3987,6 +3987,26 @@ These figures qualify the bounded all-keyframe profile only; they do not claim
 inter-frame VP8 or VP9 performance. The JSON capture SHA-256 is
 `7e0a2f04cc9fdbf120e42de5693893eee2529c9ecd9ebb5b61f716becf2acf04`.
 
+## 2026-08-01 bounded RTMV directory checkpoint
+
+The five-run local path benchmark uses an independently generated eight-frame
+directory and does not include any original RTMV dataset asset or loader code:
+
+```console
+.venv/Scripts/python.exe bench/bench_io.py --runs 5 --skip-oracles --only rtmv --json build/bench-rtmv-final.json
+```
+
+The fixture contains 25.2 MB of logical payload in 25.1 MB of files. Full
+metadata/header construction reads at about 3.79 GB/s with effectively zero
+traced Python allocation and about 0.1 MB sampled resident increase.
+Metadata-only inspection takes 4.377 ms, 1.52x faster than the 6.640 ms full
+read; selecting two of eight frames takes 1.372 ms, 4.84x faster than full
+construction. A separate test
+holds 48 MiB of encoded EXR layers and requires less than 2 MiB traced Python
+allocation, proving that inspection and read retain paths rather than copying
+encoded payloads. RTMV is intentionally read-only, so the row reports no write
+or sink metric.
+
 ### AVIF/animated AVIF optional-provider checkpoint (2026-08-01)
 
 A three-median local MSVC run used Pillow 12.3.0, libavif 1.4.2, libaom

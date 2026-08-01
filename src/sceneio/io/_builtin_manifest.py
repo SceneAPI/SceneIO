@@ -68,6 +68,7 @@ CANONICAL_BUILTIN_IDS = (
     "animated_webp",
     "apng",
     "animated_avif",
+    "rtmv",
     "image_sequence",
     "colmap_sparse_txt",
     "xyz",
@@ -163,6 +164,7 @@ FAMILY_MEMBERS = MappingProxyType(
             "animated_webp",
             "apng",
             "animated_avif",
+            "rtmv",
             "image_sequence",
         ),
         "splats": (
@@ -317,6 +319,7 @@ _NATIVE_SYMBOLS = {
     ),
     "apng": ("_inspect_apng", "read_apng", "write_apng"),
     "animated_avif": (),
+    "rtmv": (),
     "image_sequence": ("image_sequence_paths",),
     "colmap_sparse_txt": (
         "_inspect_colmap_txt",
@@ -421,6 +424,11 @@ _PYTHON_SYMBOLS = {
         "sceneio.io._avif.inspect_animated_avif",
         "sceneio.io._avif.read_animated_avif_frames",
     ),
+    "rtmv": (
+        "sceneio.io._rtmv.read_rtmv_directory",
+        "sceneio.io._rtmv.inspect_rtmv_directory",
+        "sceneio.io._rtmv.read_rtmv_directory_frames",
+    ),
     "hdf5": (
         "sceneio.io._hdf5.read_hdf5",
         "sceneio.io._hdf5.write_hdf5",
@@ -483,6 +491,7 @@ _OWNERS = {
     "image_sequence": "python",
     "avif": "python",
     "animated_avif": "python",
+    "rtmv": "python",
     "hdf5": "python",
     "hloc_features": "python",
     "hloc_matches": "python",
