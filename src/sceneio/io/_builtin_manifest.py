@@ -64,6 +64,7 @@ CANONICAL_BUILTIN_IDS = (
     "webp",
     "avif",
     "y4m",
+    "webm",
     "animated_webp",
     "apng",
     "animated_avif",
@@ -158,6 +159,7 @@ FAMILY_MEMBERS = MappingProxyType(
         ),
         "sequences": (
             "y4m",
+            "webm",
             "animated_webp",
             "apng",
             "animated_avif",
@@ -302,6 +304,12 @@ _NATIVE_SYMBOLS = {
     "webp": ("read_webp", "write_webp", "read_webp_window"),
     "avif": (),
     "y4m": ("_inspect_y4m", "read_y4m", "write_y4m", "read_y4m_frames"),
+    "webm": (
+        "_inspect_webm",
+        "read_webm",
+        "write_webm",
+        "read_webm_frames",
+    ),
     "animated_webp": (
         "_inspect_animated_webp",
         "read_animated_webp",

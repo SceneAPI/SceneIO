@@ -5402,18 +5402,42 @@ general metadata, and implicit color conversion stay out of the profile.
 - [ ] Run the user-triggered nonpublishing Linux/macOS/Windows optional-provider
       package validation after the commit is pushed.
 
-### M2 — WebM VP8/VP9
+### M2 — WebM VP8 all-keyframe
 
-- [ ] Select and pin direct libvpx plus libwebm sources and exact notices.
-- [ ] Define a video-only WebM profile: 8-bit frames, exact timestamps and
-      durations, VP8/VP9 only, no audio/subtitles/chapters, no Matroska-general
-      claim, and explicit color/range metadata guards.
-- [ ] Implement direct native read/write/inspect/frame-range paths with mapped
-      input, owned decoded frames, a direct sink, deterministic thread controls,
-      and no general video-framework dependency.
-- [ ] Triangulate against libvpx/libwebm tools and independent container parsing;
-      add malformed, truncation, lifetime, allocation, transaction, and 1-vs-N
-      lane tests plus benchmark qualification on all wheel platforms.
+- [x] Reuse the pinned libwebp 1.5.0 VP8 encoder/decoder and its already indexed
+      BSD-3-Clause terms plus upstream patent grant; add no new dependency.
+- [x] Define a video-only WebM profile: packed 8-bit sRGB RGB, progressive
+      independently decodable `V_VP8` frames, exact contiguous whole-ms
+      timestamps/durations, and explicit refusal of interframes, VP9, alpha,
+      audio, subtitles, chapters, lacing, HDR, and embedded metadata.
+- [x] Implement repository-owned EBML/WebM read, write, metadata-only inspect,
+      frame-range, mmap, owned-frame, direct-sink, and deterministic worker
+      paths without a general video framework.
+- [x] Triangulate raw VP8 packets with Pillow/libwebp and an independent EBML
+      parser/writer; cover SceneIO BlockGroup files and independently muxed
+      SimpleBlock files, timing, truncation, lifetime, allocation, and one-vs-N
+      worker behavior.
+- [x] Add the registry capability, wheel smoke, benchmark/oracle, performance
+      ledger, license inventory, and current-coverage documentation entries.
+- [x] Rebuild the extension and verify the native symbols; pass the complete
+      local suite (4,337 passed, six documented skips), Ruff, and diff checks.
+- [x] Record the final five-run benchmark: 89.70 MB/s decode versus the
+      77.55 MB/s oracle, whole-file traced allocation reduced from 0.889 MB to
+      0.011 MB through mmap, direct-sink allocation reduced from 0.890 MB to
+      0.001 MB, and one-frame selection 3.98x faster than full decode.
+- [x] Complete the resource-ownership, format-correctness, and test-independence
+      reviews. The correctness pass found noncontiguous `BlockGroup` timing;
+      the reader now refuses it and an independent-mutation regression covers
+      the fix.
+- [ ] Run the user-triggered nonpublishing Linux/macOS/Windows package matrix
+      after the green commit is pushed.
+
+### M2b — broader WebM temporal compression
+
+- [ ] Treat inter-frame VP8 and VP9 as a separate future profile. Select a
+      direct portable backend only after its build, license, fidelity, and
+      measured performance satisfy the same package matrix. The completed
+      all-keyframe profile does not claim this broader coverage.
 
 ### M3 — Ogg/Theora
 
@@ -5433,6 +5457,6 @@ general metadata, and implicit color conversion stay out of the profile.
       docs, roadmap, and license inventory agree exactly.
 - [ ] The base wheel and source/build/package scans contain no FFmpeg/libav
       component or process path.
-- [ ] AVIF, WebM, and Theora each land as a separately reviewable green commit;
-      do not hold the already complete image-sequence/Y4M/WebP/APNG formats open
-      while a later native container is in progress.
+- [ ] Keep AVIF and bounded WebM as separately reviewable green commits; do not
+      hold those or the existing image-sequence/Y4M/WebP/APNG formats open while
+      broader WebM or Theora remains future work.

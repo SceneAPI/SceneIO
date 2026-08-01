@@ -324,6 +324,14 @@ inspection_source = "src/sceneio/io/_inspectors/sequences.py"
 wheel_smoke_case = "_image_sequences"
 
 [[codec]]
+id = "webm"
+benchmark_case = "webm"
+source_suite = "tests/codecs/test_webm.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_inspectors/sequences.py"
+wheel_smoke_case = "_image_sequences"
+
+[[codec]]
 id = "animated_webp"
 benchmark_case = "animated_webp"
 source_suite = "tests/codecs/test_animated_webp.py"

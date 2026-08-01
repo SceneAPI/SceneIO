@@ -63,6 +63,7 @@ _inspect_sog_metadata
 _inspect_stl
 _inspect_tga
 _inspect_transforms_json
+_inspect_webm
 _inspect_xyz
 _inspect_xyz_file
 _inspect_y4m
@@ -207,6 +208,8 @@ read_stl_faces
 read_tga
 read_transforms_json
 read_tum
+read_webm
+read_webm_frames
 read_webp
 read_webp_window
 read_xyz
@@ -275,6 +278,7 @@ write_stl
 write_tga
 write_transforms_json
 write_tum
+write_webm
 write_webp
 write_xyz
 write_y4m

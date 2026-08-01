@@ -4,7 +4,7 @@ How the compiled core is organized, and **how to add a codec** — the two
 things that keep this expansible as the format list from
 `formats_survey.md` grows.
 
-> **Growth checkpoint:** the live registry has reached 67 format ids. The
+> **Growth checkpoint:** the live registry has reached 70 format ids. The
 > format-focused native layer remains coherent, but registry, inspection,
 > benchmark, test-matrix, dependency, and binding wiring have outgrown a flat
 > layout. The behavior-preserving R3-R5 organization work and R6 source/package
@@ -673,7 +673,7 @@ returns `ColmapDatabase`.
 | Selector | Built-in codecs |
 |---|---|
 | `faces` | `off`, `ply_mesh`, `stl` |
-| `frames` | `animated_avif`, `image_sequence`, `y4m` |
+| `frames` | `animated_avif`, `image_sequence`, `webm`, `y4m` |
 | `image_id` | `colmap_db`, `colmap_sparse`, `colmap_sparse_txt` |
 | `mesh_id` | `glb`, `gltf` |
 | `pair` | `colmap_db` |

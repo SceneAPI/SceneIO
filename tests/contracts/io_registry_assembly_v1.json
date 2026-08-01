@@ -51,6 +51,7 @@
       "webp": "244bb6c15a8cb8e2dfc1ab0cb02e3290723a18607aaa45b14e189f90831d6ceb",
       "avif": "bc6cbac25c03de12d813483a11b63e24ae8f8334ce3e09103e0a3c1219e86278",
       "y4m": "113c80bbbb985911a891769bfb02e9853deacab217c4bbb9a1a1676960ca9c7e",
+      "webm": "506b8a41c10a38ca79160bc68f3ae112f86d83e6b9d932846d28b8e1e5dace8a",
       "animated_webp": "08a79ab1e8c48046a8c92f8a524b9e4990a87102ccfaf950a2b714e60409ed2c",
       "apng": "870cec8f3e75ecc3841e4a08871afc69b6badd96741b64adfd2419dad74c5dd2",
       "animated_avif": "9cd0cf59e7338ee2804248f89b817e01cb28e1a2c7f35d28e53f25b201b688ff",
@@ -290,6 +291,11 @@
         "write": "0055c577576c5e4b8de99eca4a9db27237d9e46c1cb60936098f795dde4964bb",
         "read_frames": "bb2ab003f9c2432c713a4e1ff15277557181220841af6c8aaef40031207457ab"
       },
+      "webm": {
+        "read": "4f2c404b8376ee1be3572843b180f1490f627e662ef0cda057520bbbd9517e05",
+        "write": "19eba5e53c8fc23f2070423e0b3b7dd136b1290e18d935ed0cfe169cdf583e40",
+        "read_frames": "caeda3a89d9fdce6ecfb0be6e76ee0e19bf5ea48faefb36bceaf638b9d04fc8b"
+      },
       "animated_webp": {
         "read": "43a383aa328930fb73ddb473a4bda169b76bdba9fdf7ae95ed8d5a369ed7f366",
         "write": "4d985e4716dc3d4279a74051060dda2c4f30fd88a25f620da39d91f1f1a334ba"
@@ -448,8 +454,8 @@
     "last": "tests/test_points_binary.py::test_bad_magic_rejected"
   },
   "pytest_candidate_collection": {
-    "count": 4330,
-    "sorted_normalized_node_ids_sha256": "a64fcf0d6fea2a141fab1110e7007b22df34451ddf64a43e08b04f525e4464f0",
+    "count": 4343,
+    "sorted_normalized_node_ids_sha256": "5d4f1a9d3b1ce8a75222dbb7a0f35bcd120f4928134d673fba0efccab8744181",
     "added_nodes": [
       "tests/codecs/test_animated_webp.py::test_sceneio_writer_is_lossless_and_oracle_readable",
       "tests/codecs/test_animated_webp.py::test_pillow_writer_is_sceneio_readable_bit_exact",
@@ -1699,7 +1705,20 @@
       "tests/codecs/test_avif.py::test_profile_guards_and_malformed_inputs",
       "tests/codecs/test_avif.py::test_spec_brand_parser_rejects_invalid_box_extents",
       "tests/codecs/test_avif.py::test_pillow_buffer_oracle_accepts_sceneio_output",
-      "tests/test_import_guards.py::test_no_family_imports[io/_avif.py]"
+      "tests/test_import_guards.py::test_no_family_imports[io/_avif.py]",
+      "tests/codecs/test_webm.py::test_sceneio_writer_is_deterministic_and_oracle_decodable",
+      "tests/codecs/test_webm.py::test_independent_simpleblock_writer_is_sceneio_readable",
+      "tests/codecs/test_webm.py::test_public_detect_read_write_inspect_partial_and_direct_sink",
+      "tests/codecs/test_webm.py::test_mapped_decode_owns_pixels_after_mapping_closes",
+      "tests/codecs/test_webm.py::test_thread_modes_produce_identical_bytes_and_pixels",
+      "tests/codecs/test_webm.py::test_writer_refuses_unrepresented_pixel_layouts[<lambda>-RGB0]",
+      "tests/codecs/test_webm.py::test_writer_refuses_unrepresented_pixel_layouts[<lambda>-RGB1]",
+      "tests/codecs/test_webm.py::test_writer_refuses_unrepresentable_timing[timestamps0-durations0-start at zero]",
+      "tests/codecs/test_webm.py::test_writer_refuses_unrepresentable_timing[timestamps1-durations1-contiguous]",
+      "tests/codecs/test_webm.py::test_writer_refuses_unrepresentable_timing[timestamps2-durations2-milliseconds]",
+      "tests/codecs/test_webm.py::test_truncated_wrong_codec_and_interframe_inputs_are_rejected",
+      "tests/codecs/test_webm.py::test_partial_bounds_reject",
+      "tests/codecs/test_webm.py::test_reader_refuses_noncontiguous_blockgroup_timing"
     ],
     "removed_nodes": [
       "tests/codecs/test_compressed_ply.py::test_writer_body_is_byte_identical_to_pinned_playcanvas_vector",
@@ -1714,7 +1733,7 @@
           "buffer_codecs"
         ],
         "function_count": 14,
-        "function_ast_sha256": "d9c3eb04103a44311d46da85a6d314e1db0e77b8c8e51d781bde7475623ee3ec",
+        "function_ast_sha256": "9c4c80a74f3a9befbcb0c3c1824719f8c33e624123f36d99929f3b82667f7dc9",
         "node_suffixes": [
           "test_all_single_file_sinks_are_byte_identical",
           "test_directory_codec_writers_remain_byte_identical_file_sinks",
@@ -1742,7 +1761,7 @@
           "buffer_codecs"
         ],
         "function_count": 50,
-        "function_ast_sha256": "6b64fe68542f700981c0aebab21d1f91ec3e94610dafc6b23b5fa7b947eaed40",
+        "function_ast_sha256": "26aba23ac775081cc5ee764d1ec73f928d9a93c2f5bf46b4a53e91668649729c",
         "node_suffixes": [
           "test_inspect_matches_decoded_metadata_for_buffer_and_directory_codecs",
           "test_inspect_large_npy_reads_only_header",

@@ -45,6 +45,45 @@ _Y4M_CODEC = Codec(
     ),
 )
 
+_WEBM_CODEC = Codec(
+    "webm",
+    (".webm",),
+    _mmap_reader(_core.read_webm),
+    _file_sink_writer(_core.write_webm),
+    record=_core.ImageSequence,
+    datatype="image_sequence",
+    magic=(b"\x1a\x45\xdf\xa3",),
+    read_frames=_mmap_selector_reader(_core.read_webm_frames),
+    lossy=True,
+    supported_features=(
+        "webm",
+        "vp8",
+        "uint8",
+        "rgb",
+        "progressive",
+        "all_keyframe",
+        "simpleblock_constant_timing",
+        "exact_frame_timing",
+        "frame_ranges",
+        "worker_threads",
+        "direct_streaming_write",
+        "metadata_only_inspect",
+    ),
+    unsupported_features=(
+        "vp8_interframes",
+        "vp9",
+        "alpha",
+        "audio",
+        "subtitles",
+        "attachments",
+        "chapters",
+        "lacing",
+        "sub_millisecond_timing",
+        "hdr",
+        "embedded_metadata",
+    ),
+)
+
 _ANIMATED_WEBP_CODEC = Codec(
     "animated_webp",
     (".webp",),
@@ -158,6 +197,7 @@ def build_sequence_codecs(
 
     return (
         _Y4M_CODEC,
+        _WEBM_CODEC,
         _ANIMATED_WEBP_CODEC,
         _APNG_CODEC,
         _ANIMATED_AVIF_CODEC,

@@ -1,7 +1,7 @@
 # SceneIO — comprehensive coverage roadmap & execution checklist
 
 > Current shipped and branch-local status is tracked in `format_coverage.md`.
-> The status markers below have been reconciled to the live 69-format registry;
+> The status markers below have been reconciled to the live 70-format registry;
 > broader checklist boxes remain open where a codec has not completed an
 > aspirational per-format or cross-platform gate. The authoritative
 > implementation sequence for the remaining formats is
@@ -414,7 +414,8 @@ Columns: **Ext/id** · **Record** · **Lib/oracle (license)** · **R/W** ·
 | ✅ animated WebP | `ImageSequence` | pinned libwebp + Pillow oracle | R+W | fully composited packed RGB/RGBA frames; exact millisecond timing, loop/background metadata, mmap, direct sink, inspect |
 | ✅ APNG | `ImageSequence` | existing lodepng/miniz substrate + Pillow/spec oracle | R+W | bounded repository-owned animation chunk/state layer; composited RGBA, exact accepted-profile timing, blend/disposal, mmap, sink, inspect |
 | ✅ animated AVIF | `ImageSequence` | optional Pillow/libavif + libaom/dav1d | R+W | owned 8-bit frames, exact accepted timing, frame ranges, mmap, inspect; writer is provider-buffered and does not claim a direct sink |
-| ⬜ WebM VP8/VP9 | `ImageSequence` | direct libvpx + libwebm | R+W | proposed video-only bounded profile; no audio/subtitles and no general video framework |
+| ✅ WebM VP8 all-keyframe | `ImageSequence` | repository EBML + pinned libwebp VP8; independent EBML/Pillow oracle | R+W | packed uint8 RGB, progressive independently decodable frames, exact whole-ms timing, mmap, direct sink, inspect, frame ranges; no audio/subtitles/general video framework |
+| ⬜ WebM inter-frame VP8/VP9 | `ImageSequence` | direct codec backend still to be selected | R+W | broader temporal-compression profile remains separate from the completed all-keyframe subset |
 | ⬜ Ogg/Theora | `ImageSequence` | direct libogg + libtheora | R+W | proposed video-only bounded profile; no audio/subtitles and no general video framework |
 
 **Excluded (out of scope):** FBX (proprietary SDK), H.264/H.265/ProRes and
@@ -434,8 +435,9 @@ maintained in `format_gap_implementation_plan.md`:
 2. COLMAP DB, PCD, calibration, and other self-contained formats (generic
    point PLY is complete);
 3. meshes and vendorable LAZ (complete locally);
-4. lazy image directories, raw Y4M, animated WebP, APNG, and animated AVIF
-   (complete locally), followed by RTMV and direct WebM/Ogg-Theora units;
+4. lazy image directories, raw Y4M, animated WebP, APNG, animated AVIF, and
+   bounded WebM VP8 all-keyframe (complete locally), followed by RTMV, broader
+   WebM temporal compression, and Ogg/Theora units;
 5. optional-provider TIFF/E57/Arrow integrations (complete locally);
 6. bounded USD/USDZ and OpenVDB integrations (complete locally), with
    broader scene/volume semantics and policy-gated codecs left explicit.

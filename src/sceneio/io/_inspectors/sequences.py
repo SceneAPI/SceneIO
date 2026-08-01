@@ -108,3 +108,30 @@ def inspect_y4m(path: Path, datatype: str) -> Inspection:
             "frame_bytes": values["frame_bytes"],
         },
     )
+
+
+def inspect_webm(path: Path, datatype: str) -> Inspection:
+    values = dict(_compiled_buffer_inspect(path, _core._inspect_webm))
+    frames = values["frames"]
+    height = values["height"]
+    width = values["width"]
+    channels = values["channels"]
+    shape = (frames, height, width, channels)
+    return Inspection(
+        format="webm",
+        datatype=datatype,
+        byte_size=path.stat().st_size,
+        shape=shape,
+        dtype="uint8",
+        count=frames,
+        channels=channels,
+        arrays=(ArrayInspection("pixels", shape, "uint8"),),
+        metadata={
+            "storage_mode": "packed",
+            "color_space": values["color_space"],
+            "alpha_mode": values["alpha_mode"],
+            "codec": values["codec"],
+            "profile": values["profile"],
+            "duration_ns": values["duration_ns"],
+        },
+    )

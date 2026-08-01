@@ -27,7 +27,7 @@ def test_case_catalog_is_complete_ordered_and_immutable():
     definitions = codec_cases.CODEC_CASE_DEFINITIONS
     assert tuple(case.id for case in definitions) == CANONICAL_BUILTIN_IDS
     assert tuple(codec_cases.CASES_BY_ID) == CANONICAL_BUILTIN_IDS
-    assert len(definitions) == len(codec_cases.CASES_BY_ID) == 69
+    assert len(definitions) == len(codec_cases.CASES_BY_ID) == 70
     assert all(dataclasses.is_dataclass(case) for case in definitions)
     with pytest.raises(dataclasses.FrozenInstanceError):
         definitions[0].id = "changed"
@@ -70,6 +70,7 @@ def test_case_catalog_preserves_the_legacy_fixture_partitions():
         "exr",
         "webp",
         "y4m",
+        "webm",
         "animated_webp",
         "apng",
         "xyz",
@@ -149,6 +150,7 @@ def test_case_catalog_preserves_the_legacy_fixture_partitions():
         "exr",
         "webp",
         "y4m",
+        "webm",
         "animated_webp",
         "apng",
         "xyz",
@@ -181,7 +183,7 @@ def test_case_catalog_preserves_the_legacy_fixture_partitions():
         for case in built_cases
         if case.id != "compressed_ply"
     ]
-    assert len(portable_fixture_projection) == 49
+    assert len(portable_fixture_projection) == 50
     assert next(
         item for item in portable_fixture_projection if item[0] == "sog"
     ) == (
@@ -198,12 +200,19 @@ def test_case_catalog_preserves_the_legacy_fixture_partitions():
         1124,
         "f0a298ad93b9f6f44f6defc2bc6a7eb27544e934211893a1d1e429894dd1b071",
     )
+    assert next(
+        item for item in portable_fixture_projection if item[0] == "webm"
+    ) == (
+        "webm",
+        822,
+        "07cc5a95580ddd861331d3dc6cb0b6fd3c5ec7613191141d1715ed8a39b2629b",
+    )
     fixture_payload = json.dumps(
         portable_fixture_projection,
         separators=(",", ":"),
     )
     assert hashlib.sha256(fixture_payload.encode()).hexdigest() == (
-        "f87a427e02d8ad0ec4eef12411251e0078266c91e41c595790dd17ee05ef2b38"
+        "cfaf79e16bc4735313e8fc1a41b9fcc8a43702cc4a3bfd18c7216892c3f3cec2"
     )
     cases_by_id = {case.id: case for case in built_cases}
     assert (
@@ -256,6 +265,7 @@ def test_case_catalog_selectors_match_live_builtin_capabilities():
         "netpbm",
         "webp",
         "y4m",
+        "webm",
         "animated_avif",
         "image_sequence",
         "colmap_sparse_txt",
@@ -275,7 +285,7 @@ def test_case_catalog_selectors_match_live_builtin_capabilities():
     assert sum(
         len(case.partial_selectors)
         for case in codec_cases.PARTIAL_CASES
-    ) == 40
+    ) == 41
 
 
 def test_runtime_extensions_do_not_enter_repository_case_completeness():

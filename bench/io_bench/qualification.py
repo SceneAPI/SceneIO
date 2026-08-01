@@ -226,6 +226,10 @@ COMPARISON_QUALIFICATIONS = MappingProxyType(
             "independent NumPy implementation",
             "bench/io_bench/oracles/sequences.py",
         ),
+        "webm": _timed(
+            "independent EBML + Pillow/libwebp implementation",
+            "bench/io_bench/oracles/sequences.py",
+        ),
         "animated_webp": _timed(
             "Pillow",
             "bench/io_bench/oracles/sequences.py",

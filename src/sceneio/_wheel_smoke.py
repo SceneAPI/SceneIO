@@ -1573,6 +1573,25 @@ def _image_sequences(root: Path) -> None:
     assert sceneio.inspect(path).shape == (2, 3, 5, 3)
     assert sceneio.read_partial(path, frames=(1, 2)).y.tobytes() == y[1:].tobytes()
 
+    webm_pixels = np.zeros((2, 3, 5, 3), dtype=np.uint8)
+    webm_pixels[0, ...] = (255, 0, 0)
+    webm_pixels[1, ...] = (0, 255, 0)
+    webm_sequence = _core.image_sequence_packed(
+        webm_pixels,
+        np.array([0, 40_000_000], dtype=np.int64),
+        np.array([40_000_000, 40_000_000], dtype=np.int64),
+        "srgb",
+        "none",
+    )
+    webm_path = root / "sequence.webm"
+    sceneio.write(webm_sequence, webm_path)
+    assert sceneio.detect(webm_path) == "webm"
+    decoded_webm = sceneio.read(webm_path)
+    assert decoded_webm.pixels.shape == webm_pixels.shape
+    assert decoded_webm.durations_ns.tolist() == [40_000_000, 40_000_000]
+    assert sceneio.inspect(webm_path).shape == (2, 3, 5, 3)
+    assert sceneio.read_partial(webm_path, frames=(1, 2)).num_frames == 1
+
     pixels = np.zeros((2, 3, 5, 4), dtype=np.uint8)
     pixels[0, ...] = (255, 0, 0, 255)
     pixels[1, ...] = (0, 255, 0, 192)
@@ -1931,6 +1950,7 @@ _SMOKE_RUNNERS: Mapping[str, Callable[[Path], None]] = MappingProxyType(
         "webp": _raster_images,
         "avif": _avif_formats,
         "y4m": _image_sequences,
+        "webm": _image_sequences,
         "animated_webp": _image_sequences,
         "apng": _image_sequences,
         "animated_avif": _avif_formats,

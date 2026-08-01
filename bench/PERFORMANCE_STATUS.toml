@@ -416,6 +416,16 @@ documentation = "docs/format_coverage.md"
 accepted_subset = ["uint8", "mono", "yuv420", "yuv422", "yuv444", "frame_ranges", "exact_frame_timing"]
 
 [[codec]]
+id = "webm"
+family = "sequences"
+adapter = "repo"
+implementation_owner = "native"
+sources = ["src/cpp/codecs/sequences/webm.cpp", "src/cpp/third_party/libwebp"]
+source_suite = "tests/codecs/test_webm.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["vp8", "uint8_rgb", "progressive", "all_keyframe", "whole_millisecond_timing", "frame_ranges", "metadata_only_inspect", "direct_streaming_write"]
+
+[[codec]]
 id = "animated_webp"
 family = "sequences"
 adapter = "repo"
@@ -2886,6 +2896,44 @@ backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
 transport_status = "qualified"
 status = "provisional"
 correctness_evidence = ["tests/codecs/test_y4m.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "webm"
+profile = "default"
+direction = "encode"
+settings = { codec = "vp8", layout = "all_keyframe", channels = 3, dtype = "uint8", quality = 90, threads = true, method = 4 }
+fidelity = "lossy"
+comparator = "Pillow + independent EBML mux/demux"
+fixture = "webm:default"
+backend = "libwebp-vp8"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/libwebp"
+backend_version = "1.5.0"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_webm.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "webm"
+profile = "default"
+direction = "decode"
+settings = { codec = "vp8", layout = "all_keyframe", channels = 3, dtype = "uint8" }
+fidelity = "lossy"
+comparator = "Pillow + independent EBML mux/demux"
+fixture = "webm:default"
+backend = "libwebp-vp8"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/libwebp"
+backend_version = "1.5.0"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_webm.py"]
 benchmark_evidence = ["bench/BASELINE.md"]
 candidate_backends = []
 evidence_gaps = ["candidate comparison on all required toolchains"]

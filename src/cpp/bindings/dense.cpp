@@ -10,7 +10,7 @@ constexpr RegistrationDescriptor REGISTRATIONS[] = {
 };
 
 constexpr CodecDescriptor CODECS[] = {
-    {52,
+    {53,
      "colmap_mvs_depth",
      "dense",
      symbols("read_colmap_mvs_depth"),
@@ -19,7 +19,7 @@ constexpr CodecDescriptor CODECS[] = {
      symbols("read_colmap_mvs_depth"),
      symbols("write_colmap_mvs_depth"),
      symbols("read_colmap_mvs_depth_window")},
-    {53,
+    {54,
      "colmap_mvs_normal",
      "dense",
      symbols("read_colmap_mvs_normal"),
@@ -28,7 +28,7 @@ constexpr CodecDescriptor CODECS[] = {
      symbols("read_colmap_mvs_normal"),
      symbols("write_colmap_mvs_normal"),
      symbols("read_colmap_mvs_normal_window")},
-    {54,
+    {55,
      "colmap_mvs_consistency",
      "dense",
      symbols("read_colmap_mvs_consistency"),
@@ -37,7 +37,7 @@ constexpr CodecDescriptor CODECS[] = {
      symbols("read_colmap_mvs_consistency"),
      symbols("write_colmap_mvs_consistency"),
      symbols()},
-    {55,
+    {56,
      "colmap_fused_visibility",
      "dense",
      symbols("read_colmap_fused_visibility"),

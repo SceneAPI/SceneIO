@@ -920,7 +920,7 @@ def _assert_benchmark_components_and_metric_semantics_are_explicit():
     assert json.loads(runner_import_result.stdout) == [
         True,
         "bench.io_bench.runner",
-        51,
+        52,
     ]
 
     runner_first_probe = textwrap.dedent(
@@ -2512,6 +2512,9 @@ def _assert_benchmark_components_and_metric_semantics_are_explicit():
     assert benchmark._y4m_fixture is (
         sequence_fixture_module._y4m_fixture
     )
+    assert benchmark._webm_fixture is (
+        sequence_fixture_module._webm_fixture
+    )
     assert benchmark._animated_webp_fixture is (
         sequence_fixture_module._animated_webp_fixture
     )
@@ -2526,6 +2529,12 @@ def _assert_benchmark_components_and_metric_semantics_are_explicit():
     )
     assert benchmark._y4m_oracle_read is (
         sequence_oracle_module._y4m_oracle_read
+    )
+    assert benchmark._webm_oracle_write is (
+        sequence_oracle_module._webm_oracle_write
+    )
+    assert benchmark._webm_oracle_read is (
+        sequence_oracle_module._webm_oracle_read
     )
     assert benchmark._animated_webp_oracle_write is (
         sequence_oracle_module._animated_webp_oracle_write
@@ -2543,6 +2552,7 @@ def _assert_benchmark_components_and_metric_semantics_are_explicit():
     sequence_specs = benchmark.build_sequence_specs(0.001)
     assert [spec.id for spec in sequence_specs] == [
         "y4m",
+        "webm",
         "animated_webp",
         "apng",
     ]
@@ -2609,7 +2619,39 @@ def _assert_benchmark_components_and_metric_semantics_are_explicit():
         "interlace": y4m_core_record.interlace,
     } == y4m_metadata
 
-    animated_spec = sequence_specs[1]
+    webm_spec = sequence_specs[1]
+    assert (webm_spec.w, webm_spec.r) == (
+        _core.write_webm,
+        _core.read_webm,
+    )
+    assert (webm_spec.ow, webm_spec.orr) == (
+        sequence_oracle_module._webm_oracle_write,
+        sequence_oracle_module._webm_oracle_read,
+    )
+    webm_record, webm_payload = webm_spec.make()
+    assert webm_spec.nbytes(webm_record, webm_payload) == (
+        webm_payload["frames"].nbytes
+    )
+    for encoded in (
+        bytes(webm_spec.w(webm_record)),
+        webm_spec.ow(webm_payload),
+    ):
+        oracle_decoded = webm_spec.orr(encoded)
+        core_decoded = webm_spec.r(encoded)
+        np.testing.assert_array_equal(
+            core_decoded.pixels,
+            oracle_decoded["frames"],
+        )
+        np.testing.assert_array_equal(
+            core_decoded.timestamps_ns,
+            oracle_decoded["timestamps_ms"] * 1_000_000,
+        )
+        np.testing.assert_array_equal(
+            core_decoded.durations_ns,
+            oracle_decoded["durations_ms"] * 1_000_000,
+        )
+
+    animated_spec = sequence_specs[2]
     assert (animated_spec.w, animated_spec.r) == (
         _core.write_animated_webp,
         _core.read_animated_webp,
@@ -2643,7 +2685,7 @@ def _assert_benchmark_components_and_metric_semantics_are_explicit():
     )
     assert animated_core_record.loop_count == animated_payload["loop_count"]
 
-    apng_spec = sequence_specs[2]
+    apng_spec = sequence_specs[3]
     assert (apng_spec.w, apng_spec.r) == (
         _core.write_apng,
         _core.read_apng,
@@ -2756,6 +2798,8 @@ def _assert_benchmark_components_and_metric_semantics_are_explicit():
             "bench.bench_io" not in sys.modules,
             family._y4m_fixture is fixtures._y4m_fixture,
             family._y4m_oracle_write is oracles._y4m_oracle_write,
+            family._webm_fixture is fixtures._webm_fixture,
+            family._webm_oracle_write is oracles._webm_oracle_write,
             family._animated_webp_fixture is fixtures._animated_webp_fixture,
             family._animated_webp_oracle_write
                 is oracles._animated_webp_oracle_write,
@@ -2780,7 +2824,9 @@ def _assert_benchmark_components_and_metric_semantics_are_explicit():
         True,
         True,
         True,
-        ["y4m", "animated_webp", "apng"],
+        True,
+        True,
+        ["y4m", "webm", "animated_webp", "apng"],
     ]
 
     splat_family_module = sys.modules[
@@ -3183,6 +3229,7 @@ def _assert_benchmark_representative_fixtures_match_checked_fingerprints():
 
     image, _ = benchmark._img_u8(8, 8)
     sequence, _ = benchmark._y4m_fixture(8)
+    webm_animation, _ = benchmark._webm_fixture(8)
     animation, _ = benchmark._animated_webp_fixture(8)
     apng_animation, _ = benchmark._apng_fixture(8)
     point_cloud, _ = benchmark._pc_ply(16)
@@ -3282,6 +3329,25 @@ def _assert_benchmark_representative_fixtures_match_checked_fingerprints():
                 "loop_count",
                 "has_background",
                 "background_rgba",
+            ),
+        ),
+        "image_sequence_webm_rgb": _record_projection(
+            webm_animation,
+            (
+                "pixels",
+                "timestamps_ns",
+                "durations_ns",
+                "width",
+                "height",
+                "channels",
+                "num_frames",
+                "storage_mode",
+                "frame_dtype",
+                "color_space",
+                "alpha_mode",
+                "maxval",
+                "has_loop_count",
+                "has_background",
             ),
         ),
         "image_sequence_apng_rgba": _record_projection(

@@ -8,7 +8,7 @@
   checkpoint closes at packaged source `2253e0f`; exact-head runs
   `30469273173`, `30469271293`, and build-only package run `30470889876`
   pass with publication skipped.
-- **Current local checkpoint:** the live registry has 69 formats. HDF5/hloc,
+- **Current local checkpoint:** the live registry has 70 formats. HDF5/hloc,
   Zarr v2/v3, TIFF, E57, Parquet/Arrow IPC, OpenVDB, and USD/USDZ are
   implemented through repository-owned adapters around optimized optional
   permissive providers. SceneIO owns schemas, validation, models, detection,
@@ -31,8 +31,9 @@
   is approved and implemented as bounded still and sequence adapters using the
   permissive Pillow/libavif/libaom/dav1d stack and the accepted AOM no-charge
   patent grant. Exact live claims are in `format_coverage.md`; older unchecked
-  AVIF items below are retained as historical planning context. Direct WebM
-  VP8/VP9 and Ogg/Theora are the remaining bounded moving-image units.
+  AVIF items below are retained as historical planning context. A bounded
+  WebM VP8 all-keyframe profile is also complete; general inter-frame VP8/VP9
+  and Ogg/Theora remain separate moving-image units.
 - **Scope:** close every unblocked format gap declared by SceneIO's coverage
   documents without reimplementing the 0.2.0 codec tier.
 

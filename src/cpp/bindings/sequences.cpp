@@ -1,6 +1,7 @@
 #include "bindings/registry.hpp"
 
 void register_y4m(nanobind::module_ &);
+void register_webm(nanobind::module_ &);
 void register_animated_webp(nanobind::module_ &);
 void register_apng(nanobind::module_ &);
 
@@ -11,6 +12,7 @@ constexpr RegistrationDescriptor REGISTRATIONS[] = {
     {32, "y4m", &::register_y4m},
     {41, "animated_webp", &::register_animated_webp},
     {42, "apng", &::register_apng},
+    {43, "webm", &::register_webm},
 };
 
 constexpr CodecDescriptor CODECS[] = {
@@ -24,6 +26,15 @@ constexpr CodecDescriptor CODECS[] = {
      symbols("write_y4m"),
      symbols("read_y4m_frames")},
     {37,
+     "webm",
+     "sequences",
+     symbols("read_webm"),
+     symbols("write_webm"),
+     symbols("_inspect_webm"),
+     symbols("read_webm"),
+     symbols("write_webm"),
+     symbols("read_webm_frames")},
+    {38,
      "animated_webp",
      "sequences",
      symbols("read_animated_webp"),
@@ -32,7 +43,7 @@ constexpr CodecDescriptor CODECS[] = {
      symbols("read_animated_webp"),
      symbols("write_animated_webp"),
      symbols()},
-    {38,
+    {39,
      "apng",
      "sequences",
      symbols("read_apng"),

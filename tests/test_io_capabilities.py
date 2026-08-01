@@ -76,6 +76,7 @@ _BUILTINS = {
     "tga",
     "tiff",
     "webp",
+    "webm",
     "xyz",
     "y4m",
     "zarr",
@@ -114,6 +115,7 @@ _PARTIAL = {
     "splat": ("points",),
     "stl": ("faces",),
     "webp": ("window",),
+    "webm": ("frames",),
     "xyz": ("points",),
     "y4m": ("frames",),
     "zarr": ("tensors", "slices"),
@@ -134,6 +136,7 @@ _LOSSY = {
     "spz",
     "sog",
     "webp",
+    "webm",
 }
 
 _NATIVE_FEATURES = {

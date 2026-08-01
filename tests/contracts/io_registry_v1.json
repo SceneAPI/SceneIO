@@ -3004,6 +3004,106 @@
       }
     },
     {
+      "id": "webm",
+      "extensions": [
+        ".webm"
+      ],
+      "magic_hex": [
+        "1a45dfa3"
+      ],
+      "filenames": [],
+      "is_directory": false,
+      "dir_marker": "cameras.bin",
+      "container_kind": "file",
+      "datatype": "image_sequence",
+      "record": {
+        "module": "sceneio._core",
+        "qualname": "ImageSequence"
+      },
+      "selectors": [
+        "frames"
+      ],
+      "streams_read": true,
+      "streams_write": true,
+      "lossy": true,
+      "requires_features": [],
+      "supported_features": [
+        "webm",
+        "vp8",
+        "uint8",
+        "rgb",
+        "progressive",
+        "all_keyframe",
+        "simpleblock_constant_timing",
+        "exact_frame_timing",
+        "frame_ranges",
+        "worker_threads",
+        "direct_streaming_write",
+        "metadata_only_inspect"
+      ],
+      "unsupported_features": [
+        "vp8_interframes",
+        "vp9",
+        "alpha",
+        "audio",
+        "subtitles",
+        "attachments",
+        "chapters",
+        "lacing",
+        "sub_millisecond_timing",
+        "hdr",
+        "embedded_metadata"
+      ],
+      "capabilities": {
+        "format": "webm",
+        "datatype": "image_sequence",
+        "record_type": "ImageSequence",
+        "extensions": [
+          ".webm"
+        ],
+        "filenames": [],
+        "container_kind": "file",
+        "available": true,
+        "can_read": true,
+        "can_write": true,
+        "can_inspect": true,
+        "partial_selectors": [
+          "frames"
+        ],
+        "streams_read": true,
+        "streams_write": true,
+        "lossy": true,
+        "requires_features": [],
+        "supported_features": [
+          "webm",
+          "vp8",
+          "uint8",
+          "rgb",
+          "progressive",
+          "all_keyframe",
+          "simpleblock_constant_timing",
+          "exact_frame_timing",
+          "frame_ranges",
+          "worker_threads",
+          "direct_streaming_write",
+          "metadata_only_inspect"
+        ],
+        "unsupported_features": [
+          "vp8_interframes",
+          "vp9",
+          "alpha",
+          "audio",
+          "subtitles",
+          "attachments",
+          "chapters",
+          "lacing",
+          "sub_millisecond_timing",
+          "hdr",
+          "embedded_metadata"
+        ]
+      }
+    },
+    {
       "id": "animated_webp",
       "extensions": [
         ".webp"

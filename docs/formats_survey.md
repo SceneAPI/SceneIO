@@ -11,12 +11,13 @@ caveats**, verified against primary sources; unconfirmed items are marked
 **⚠ verify**. **Not legal advice.**
 
 > **Implementation update (2026-08-01):** the original survey predates the
-> live registry. SceneIO now supports 69 bounded format ids, including image
-> directories, raw Y4M, animated WebP, APNG, and optional still/animated AVIF.
+> live registry. SceneIO now supports 70 bounded format ids, including image
+> directories, raw Y4M, animated WebP, APNG, optional still/animated AVIF, and
+> video-only WebM VP8 all-keyframe.
 > AVIF uses a repository-owned adapter over Pillow/libavif with libaom and
 > dav1d; the base wheel remains NumPy-only. No FFmpeg/libav source, executable,
-> subprocess path, or runtime dependency is present. Direct WebM VP8/VP9 and
-> Ogg/Theora remain proposed standalone integrations.
+> subprocess path, or runtime dependency is present. Broader inter-frame
+> VP8/VP9 and Ogg/Theora remain proposed standalone integrations.
 
 ---
 
@@ -52,7 +53,8 @@ sequence** (numbered PNG/JPEG/EXR — the COLMAP/nerfstudio convention).
 Bounded royalty-free sequence codecs may be integrated directly under
 permissive source terms and an accepted no-charge patent grant. SceneIO does
 not use a general video framework. Current direct coverage is Y4M, animated
-WebP, APNG, and animated AVIF; WebM VP8/VP9 and Ogg/Theora remain proposed.
+WebP, APNG, animated AVIF, and WebM VP8 all-keyframe; broader inter-frame
+VP8/VP9 and Ogg/Theora remain proposed.
 
 See §8 for the full **Excluded (and why)** list.
 
@@ -187,8 +189,9 @@ self-implementable.
 | **Image sequence** (`frame_%06d.png/.jpg/.exr`) | ✅ **canonical input** | THE SfM/3DGS input (COLMAP/glomap/nerfstudio consume image folders). Lossless PNG/EXR sequences preserve quality. SceneIO enumerates + orders; watch zero-padding + per-frame pose association |
 | **Y4M / animated WebP / APNG** | ✅ implemented | Direct repository-owned sequence paths with exact bounded timing and no general video framework |
 | **Animated AVIF** | ✅ implemented | Optional Pillow/libavif provider; mmap input, owned 8-bit frames, exact accepted timing, inspection, and frame ranges |
+| **VP8 all-keyframe in WebM** | ✅ implemented | Repository-owned EBML container plus pinned libwebp VP8; packed RGB, exact whole-ms timing, inspect/frame ranges/direct sink, no audio or subtitles |
 | **MJPEG** | ➖ degenerate case | A stream of independent JPEG frames (libjpeg-turbo, permissive, no patents) — decodable without FFmpeg if ever needed |
-| VP8/VP9 in WebM | ⬜ proposed | Direct libvpx/libwebm video-only profile; no audio/subtitles and no general video framework |
+| Inter-frame VP8/VP9 in WebM | ⬜ proposed | Broader temporal-compression profile requiring a portable direct backend; no audio/subtitles and no general video framework |
 | **Ogg/Theora** | ⬜ proposed | Direct libogg/libtheora video-only profile under BSD terms |
 | **H.264 / H.265 / HEIC / ProRes / MP4 / MOV / AVI** | ❌ **out** | Patent pools (Via LA / Access Advance) and/or decode paths that mean FFmpeg. Extract frames upstream and feed SceneIO an image sequence |
 

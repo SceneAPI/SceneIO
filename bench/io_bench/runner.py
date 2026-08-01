@@ -188,12 +188,15 @@ _image_sequence_directory_fixture = (
 _apng_fixture = sequence_fixtures._apng_fixture
 _animated_webp_fixture = sequence_fixtures._animated_webp_fixture
 _y4m_fixture = sequence_fixtures._y4m_fixture
+_webm_fixture = sequence_fixtures._webm_fixture
 _apng_oracle_read = sequence_oracles._apng_oracle_read
 _apng_oracle_write = sequence_oracles._apng_oracle_write
 _animated_webp_oracle_read = sequence_oracles._animated_webp_oracle_read
 _animated_webp_oracle_write = sequence_oracles._animated_webp_oracle_write
 _y4m_oracle_read = sequence_oracles._y4m_oracle_read
 _y4m_oracle_write = sequence_oracles._y4m_oracle_write
+_webm_oracle_read = sequence_oracles._webm_oracle_read
+_webm_oracle_write = sequence_oracles._webm_oracle_write
 
 build_splat_specs = splat_family.build_splat_specs
 _gauss = splat_fixtures._gauss
@@ -827,7 +830,7 @@ def _partial_request(codec_id, info, full_record=None):
     if codec_id in {"colmap_sparse", "colmap_sparse_txt"}:
         image_ids = np.asarray(full_record.image_ids)
         return {"image_id": int(image_ids[len(image_ids) // 2])}
-    if codec_id in {"image_sequence", "y4m"}:
+    if codec_id in {"image_sequence", "y4m", "webm"}:
         selected = max(1, info.count // 16)
         start = (info.count - selected) // 2
         return {"frames": (start, start + selected)}
@@ -1999,6 +2002,32 @@ def _run_benchmark(args, tmp):
                         / worker_off_time,
                         "write_optimized_mbps": sioW,
                         "write_worker_on_mbps": palette_mb / worker_on_time,
+                    }
+                )
+            elif s.id == "webm":
+                worker_off = partial(
+                    _core.write_webm,
+                    rec,
+                    90.0,
+                    False,
+                    4,
+                )
+                worker_off_time, _ = _measure(worker_off, args.runs)
+                if bytes(worker_off()) != enc:
+                    raise AssertionError("WebM worker output differs")
+                o4_rows.append(
+                    (
+                        "webm",
+                        "workers-write",
+                        pmb / worker_off_time,
+                        sioW,
+                        "bytes",
+                    )
+                )
+                o4_metrics.update(
+                    {
+                        "write_worker_off_mbps": pmb / worker_off_time,
+                        "write_worker_on_mbps": sioW,
                     }
                 )
             elif s.id in {"xyz", "exr", "las"}:

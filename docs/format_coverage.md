@@ -67,6 +67,25 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > skips, the 207-test integration slice, Ruff, and the final three-run AVIF
 > benchmark. Hosted optional-provider package evidence remains user-triggered.
 >
+> **70-format WebM checkpoint (2026-08-01):** `webm` adds a repository-owned
+> EBML/WebM adapter and a bounded video-only `V_VP8` profile using the already
+> pinned libwebp 1.5.0 VP8 encoder/decoder. It accepts progressive packed
+> uint8 sRGB RGB frames, exact contiguous whole-millisecond timing, and
+> independently decodable keyframes. Reads use mmap input and owned decoded
+> frames; write, inspect, frame-range, deterministic worker-control, and direct
+> streaming-sink paths are present. The oracle independently parses and writes
+> EBML and decodes raw VP8 packets through Pillow/libwebp. VP8 interframes,
+> VP9, alpha, audio, subtitles, chapters, lacing, HDR, embedded metadata, and
+> sub-millisecond timing refuse rather than being projected. The implementation
+> adds no dependency: libwebp's BSD-3-Clause terms and upstream patent grant
+> were already indexed in `LICENSES/`. No general video framework is linked or
+> invoked by SceneIO. The rebuilt MSVC extension passes the complete local
+> suite (4,337 passed, six documented skips), Ruff, the independent-oracle
+> parity tests, and the final five-run benchmark. The review of native resource
+> ownership, format correctness, and test independence is clear after adding a
+> regression guard for noncontiguous `BlockGroup` timing. Hosted package-matrix
+> validation remains user-triggered.
+>
 > **USD standards review (2026-07-30):** AOUSD Core Specification 1.0.1,
 > supplemental 1.0.1.post0, OpenUSD 26.08, and the official
 > `UsdVolParticleField3DGaussianSplat` schema define a broader target than the
@@ -1055,6 +1074,7 @@ public-domain SQLite amalgamation statically linked into `_core`.
 | `laz` | `PointCloud` | R+W | **laspy 2.7 + lazrs 0.8.1** | pinned LAZperf 3.4.0; standard formats 0–3/6–8; strict LASzip VLR/chunk extents; chunk-aware ranges; seekable streaming sink |
 | `image_sequence` | `ImageSequence` | R+W | independent manifest/PGM fixtures + existing image-codec parity suites | flat image directories; deterministic natural order or strict versioned manifest; lazy owned paths; exact optional timing; heterogeneous frames reject; transactional bounded-copy writer; frame ranges |
 | `y4m` | `ImageSequence` | R+W | independent Python parser/writer + exact golden bytes | original dependency-free YUV4MPEG2 subset; uint8 mono/4:2:0/4:2:2/4:4:4 planar frames, odd dimensions, exact rational timing, mmap, streaming sink, inspect, and frame ranges; no RGB conversion or video-framework dependency |
+| `webm` | `ImageSequence` | R+W | independent EBML mux/demux + Pillow/libwebp raw-VP8 oracle in `tests/codecs/test_webm.py` | repository-owned WebM container; video-only progressive packed uint8 RGB, `V_VP8` all-keyframe profile, exact whole-millisecond timing, mmap, direct sink, inspect, frame ranges, and deterministic worker control; VP8 interframes, VP9, alpha, audio, subtitles, chapters, lacing, HDR, and embedded metadata refuse |
 | `animated_webp` | `ImageSequence` | R+W | Pillow/libwebp animation-container oracle in `tests/codecs/test_animated_webp.py` | repository-pinned libwebp mux/demux/animation APIs; fully composited packed uint8 RGB/RGBA frames, exact millisecond timing, loop/background metadata, mmap, streaming sink, and metadata-only inspection |
 | `apng` | `ImageSequence` | R+W | Pillow plus specification-derived chunk/compositing oracle in `tests/codecs/test_apng.py` | repository-owned APNG container logic over pinned lodepng; fully composited packed uint8 RGBA frames, exact rational timing representable as integer nanoseconds, loop count, source/over blend, none/background/previous disposal, mmap, streaming sink, and metadata-only inspection |
 | `avif` | `Image` | R+W | direct Pillow/libavif comparison plus specification-derived BMFF checks in `tests/codecs/test_avif.py` | optional `sceneio[avif]`; mmap-backed 8-bit gray/RGB/straight-RGBA reads, owned decoded pixels, metadata-only inspection, full-range 4:4:4 color writes through libaom; encoded output is provider-buffered rather than a direct sink |
@@ -1100,9 +1120,9 @@ requirement for COLMAP ecosystem closure.
 
 ### ⬜ Pending — declared roadmap gaps
 
-- Sequence/dataset: RTMV. Animated WebP, APNG, and animated AVIF are complete
-  for their bounded profiles. Direct WebM VP8/VP9 and Ogg/Theora remain
-  separate native-container units; no general video framework is permitted.
+- Sequence/dataset: RTMV. Animated WebP, APNG, animated AVIF, and WebM VP8
+  all-keyframe are complete for their bounded profiles. General inter-frame
+  VP8/VP9 and Ogg/Theora remain separate future units.
 - Optional CV containers are complete for the accepted profiles: HDF5/hloc,
   Zarr v2/v3, TIFF, E57, Parquet, Arrow IPC, OpenVDB, USD, and USDZ.
 - Broader semantics remain intentionally outside those bounded profiles:
@@ -1132,7 +1152,7 @@ fuzzing · ✅ direct file-sink writes · ✅ bounded measured-path workers
 (XYZ/LAS/LAZ/EXR/PNG16/WebP lossless) · ✅ partial/lazy reads (`inspect` covers all
 54; bounded pixel/point/face/mesh/primitive/state/frame/COLMAP-image/COLMAP-pair/tensor
 subsets cover capable containers) · ⬜ GPU-via-DLPack (torch-cuda/cupy) · ✅
-expanded 69-format benchmark/oracles.
+expanded 70-format benchmark/oracles.
 
 ## Infrastructure & capabilities
 
@@ -1141,8 +1161,8 @@ expanded 69-format benchmark/oracles.
 | nanobind + scikit‑build‑core build | ✅ | abi3/cp312, `NB_STATIC`; `Python::SABIModule`, `nanobind-static-abi3`, and the platform suffix are configure-checked; local Windows emits `_core.pyd` against `python3.dll`, Ubuntu emits `_core.abi3.so` without libpython |
 | cibuildwheel release path | ✅ | one verified sdist feeds Linux/macOS/Windows wheels; locked build inputs, all-50 installed smoke, per-wheel inventory, and tag-only publication in `publish.yml`; final build-only run `30406706115` and downloaded-artifact inspection pass, while tagging and publication remain user-gated |
 | CI parity (oracles in CI) | ✅ | At `a5e7fa4`, normal Linux CI passes 2,914 tests with nine documented platform/oracle skips, the 50-codec performance guard, pinned GCC 10 portability, and the three-OS focused matrix |
-| Codec registry + `read`/`write`/`inspect`/`read_partial`/`detect` | ✅ | inspection covers all 69; bounded partial hooks are capability-specific |
-| Repo-maintained stable codec adapters | ✅ | all 69 adapters, schemas, convention guards, inspectors, and partial policies live in `src/cpp` / `src/sceneio`; 67 have direct sinks, while AVIF writes currently use the provider's completed output buffer; optional optimized storage/parser providers remain separately installed |
+| Codec registry + `read`/`write`/`inspect`/`read_partial`/`detect` | ✅ | inspection covers all 70; bounded partial hooks are capability-specific |
+| Repo-maintained stable codec adapters | ✅ | all 70 adapters, schemas, convention guards, inspectors, and partial policies live in `src/cpp` / `src/sceneio`; 68 have direct sinks, while AVIF writes currently use the provider's completed output buffer; optional optimized storage/parser providers remain separately installed |
 | Offline native-source closure | ✅ | all selected native sources—including libwebp 1.5.0—are stored in-tree and the production CMake graph has no native-source fetch; local exact-tree proof plus final MSVC, GCC 10, and AppleClang sdist-to-wheel execution and artifact inspection pass |
 | Zero‑copy numpy + torch (DLPack) | ✅ | validated per codec |
 | Conventions‑as‑metadata + write guards | ✅ | record‑don't‑convert enforced |
@@ -1233,6 +1253,7 @@ incremental.
 | `tum` | file | yes | yes | yes | - | yes | yes | no | - |
 | `usd` | file | yes | yes | yes | - | yes | yes | no | tinyusdz |
 | `usdz` | file | yes | yes | yes | - | yes | yes | no | tinyusdz |
+| `webm` | file | yes | yes | yes | frames | yes | yes | yes | - |
 | `webp` | file | yes | yes | yes | window | yes | yes | yes | - |
 | `xyz` | file | yes | yes | yes | points | yes | yes | no | - |
 | `y4m` | file | yes | yes | yes | frames | yes | yes | no | - |

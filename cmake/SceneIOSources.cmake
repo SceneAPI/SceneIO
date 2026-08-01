@@ -93,6 +93,7 @@ set(SCENEIO_RECONSTRUCTION_CODEC_SOURCES
 set(SCENEIO_SEQUENCE_CODEC_SOURCES
   src/cpp/codecs/sequences/apng.cpp
   src/cpp/codecs/sequences/animated_webp.cpp
+  src/cpp/codecs/sequences/webm.cpp
   src/cpp/codecs/sequences/y4m.cpp)
 
 set(SCENEIO_SPLAT_CODEC_SOURCES
@@ -185,6 +186,7 @@ set(SCENEIO_CORE_SOURCES
   src/cpp/codecs/points/laz.cpp
   src/cpp/codecs/sequences/apng.cpp
   src/cpp/codecs/sequences/animated_webp.cpp
+  src/cpp/codecs/sequences/webm.cpp
   src/cpp/codecs/sequences/y4m.cpp
   src/cpp/codecs/images/webp.cpp
   src/cpp/codecs/arrays/safetensors.cpp

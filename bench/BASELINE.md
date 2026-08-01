@@ -3963,6 +3963,30 @@ without errors. The refreshed 67-row deterministic structural projection has
 SHA-256
 `817b355a8fb752025e51b3afe658524ebfa40cd6caffc8cd9e927a7117e07f65`.
 
+## 2026-08-01 bounded WebM/VP8 all-keyframe checkpoint
+
+The five-run local MSVC command
+
+```console
+.venv/Scripts/python.exe bench/bench_io.py --runs 5 --scale 0.25 --only webm --json build/webm-benchmark-final.json
+```
+
+measures a 3.146 MB packed RGB payload and a 0.880 MB file. SceneIO writes at
+17.78 MB/s and reads at 89.70 MB/s; the independent EBML plus Pillow/libwebp
+oracle records 17.29 and 77.55 MB/s. Public mmap-path read is 87.30 MB/s.
+The whole-file Python allocation falls from 0.889 MB for the bytes path to
+0.011 MB for mmap. The direct sink matches the buffer writer at 17.52 versus
+17.49 MB/s
+while reducing traced output allocation from 0.890 MB to 0.001 MB.
+
+Worker-on encoding is byte-identical to worker-off and measures 17.78 versus
+17.76 MB/s (1.00x) on this fixture. Metadata-only inspection takes 0.055 ms,
+638.75x faster than the 35.07 ms full decode. Selecting one of four frames
+takes 8.822 ms, 3.98x faster than full decode, with 0.011 MB traced allocation.
+These figures qualify the bounded all-keyframe profile only; they do not claim
+inter-frame VP8 or VP9 performance. The JSON capture SHA-256 is
+`7e0a2f04cc9fdbf120e42de5693893eee2529c9ecd9ebb5b61f716becf2acf04`.
+
 ### AVIF/animated AVIF optional-provider checkpoint (2026-08-01)
 
 A three-median local MSVC run used Pillow 12.3.0, libavif 1.4.2, libaom

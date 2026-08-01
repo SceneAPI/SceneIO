@@ -21,8 +21,8 @@ def buffer_codecs():
 
 
 def test_all_single_file_sinks_are_byte_identical(tmp_path, buffer_codecs):
-    """All 50 buffer encoders emit the exact bytes their buffer API returns."""
-    assert len(buffer_codecs) == 50
+    """All 51 buffer encoders emit the exact bytes their buffer API returns."""
+    assert len(buffer_codecs) == 51
     for spec in buffer_codecs:
         direct = tmp_path / f"direct-{spec.id}.bin"
         _core._write_to_file(spec.writer, spec.value, direct)

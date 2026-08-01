@@ -74,6 +74,31 @@ def _animated_webp_fixture(side):
     }
 
 
+def _webm_fixture(side):
+    frame_count = 4
+    rng = np.random.default_rng(47)
+    frames = rng.integers(
+        0, 256, (frame_count, side, side, 3), dtype=np.uint8
+    )
+    durations_ms = np.full(frame_count, 40, np.int64)
+    durations_ns = durations_ms * 1_000_000
+    timestamps_ns = np.arange(frame_count, dtype=np.int64) * 40_000_000
+    record = _core.image_sequence_packed(
+        frames,
+        timestamps_ns,
+        durations_ns,
+        "srgb",
+        "none",
+        None,
+        None,
+        None,
+    )
+    return record, {
+        "frames": frames,
+        "durations_ms": durations_ms,
+    }
+
+
 def _apng_fixture(side):
     frame_count = 4
     rng = np.random.default_rng(43)
@@ -148,5 +173,6 @@ __all__ = [
     "_animated_webp_fixture",
     "_apng_fixture",
     "_image_sequence_directory_fixture",
+    "_webm_fixture",
     "_y4m_fixture",
 ]

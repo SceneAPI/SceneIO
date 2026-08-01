@@ -2,7 +2,7 @@
 
 Status: complete for the original 23-codec O0-O5 scope. Its mmap, direct-sink,
 inspection, differential, memory, and partial-read capability contracts now
-cover the live 69-format registry; 34 formats expose 40 bounded selectors. This
+cover the live 70-format registry; 35 formats expose 41 bounded selectors. This
 status describes optimized I/O transport and bounded access; it does **not**
 claim that every compression/parser kernel is the fastest viable backend.
 Backend qualification remains available as a trigger-based post-R6 mechanism in
@@ -16,7 +16,7 @@ The user-directed lean closure policy accepts the verified R6 backends as
 that release baseline without promoting its 124 provisional rows to
 `qualified`; exhaustive candidate comparison is not an R6 prerequisite.
 The post-R6 COLMAP dense, HDF5/hloc, Zarr, TIFF, E57, Parquet/Arrow,
-OpenVDB, USD/USDZ, and AVIF units bring the current ledger to 162 provisional, two
+OpenVDB, USD/USDZ, AVIF, and WebM units bring the current ledger to 164 provisional, two
 known-gap, and six not-applicable operations without changing that policy.
 The C3/C4 CI correction keeps those operation counts unchanged. Its SOG
 writer uses a pinned deterministic transform and caches transformed
@@ -153,7 +153,7 @@ and Ubuntu builds use the expected stable extension names. Final build-only run
 and downloaded-artifact inspection.
 
 Post-0.2 format expansion inherits the same gates. The registry currently has
-69 formats: 62 single-file containers, four directories, and three multi-file
+70 formats: 63 single-file containers, four directories, and three multi-file
 formats. COLMAP SQLite
 remains path-native; SOG, OBJ/MTL, and glTF/external buffers have explicit
 multi-file adapters.

@@ -52,6 +52,7 @@ BUFFER_CODEC_CASE_IDS = (
     "exr",
     "webp",
     "y4m",
+    "webm",
     "animated_webp",
     "apng",
     "xyz",
@@ -312,6 +313,16 @@ def build_buffer_codec_cases() -> tuple[BufferCodecCase, ...]:
         None,
         2,
     )
+    packed_sequence_webm = _core.image_sequence_packed(
+        np.ascontiguousarray(packed_frames[..., :3]),
+        packed_timestamps,
+        packed_durations,
+        "srgb",
+        "none",
+        None,
+        None,
+        None,
+    )
     tensor = rng.standard_normal((4, 5, 3)).astype(np.float32)
     tensors = _core.tensor_dict(
         {"a": tensor, "b": np.arange(9, dtype=np.int16)}
@@ -534,6 +545,7 @@ def build_buffer_codec_cases() -> tuple[BufferCodecCase, ...]:
         case("exr", _core.read_exr, _core.write_exr, image_f32_rgba),
         case("webp", _core.read_webp, _core.write_webp, image_rgba),
         case("y4m", _core.read_y4m, _core.write_y4m, image_sequence),
+        case("webm", _core.read_webm, _core.write_webm, packed_sequence_webm),
         case(
             "animated_webp",
             _core.read_animated_webp,

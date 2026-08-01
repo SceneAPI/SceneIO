@@ -65,7 +65,7 @@ constexpr CodecDescriptor CODECS[] = {
      symbols("read_spz"),
      symbols("write_spz"),
      symbols()},
-    {51,
+    {52,
      "splat",
      "splats",
      symbols("read_splat"),
