@@ -138,8 +138,11 @@ cmake/
   polygon meshes, point clouds, and the bounded PreviewSurface material/asset
   vocabulary. Repository-owned USDA/USDZ serializers stream numeric arrays and
   texture sources; direct-layer files and package-member locators remain
-  separate from the authored portable URI. Gaussian/camera/volume/instance
-  writes remain their explicitly tracked U4-U5 mappings.
+  separate from the authored portable URI. Gaussian and camera mappings live
+  in focused `gaussians.py` and `cameras.py` adapters; camera records use one
+  unambiguous render-product resolution and an explicit local
+  camera-to-parent/OpenGL pose. Volume/semantic/instance writes remain their
+  explicitly tracked U5 mappings.
 - `PointCloud` keeps authored float display colors and opacities, point
   widths (diameters), signed 64-bit ids, velocities, accelerations, and
   display color-space metadata separate from its legacy quantized color

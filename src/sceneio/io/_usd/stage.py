@@ -33,7 +33,6 @@ _VISIBILITY = frozenset({"inherited", "invisible"})
 _PURPOSES = frozenset({"default", "render", "proxy", "guide"})
 _IMAGEABLE_PROPERTIES = frozenset({"purpose", "visibility"})
 _PENDING_PAYLOAD_TYPES = {
-    cameras.CAMERA_PRIM_TYPE: "camera",
     **{name: "material" for name in materials.MATERIAL_PRIM_TYPES},
 }
 _USDA_FEATURES = re.compile(
@@ -183,6 +182,13 @@ def _authored_imageable_tokens(
 def _authored_purpose(prim) -> str | None:
     """Read only the authored purpose token for payload reachability."""
 
+    if prim.type_name == cameras.CAMERA_PRIM_TYPE:
+        value = dict(_TOKEN_ATTRIBUTE.findall(prim.to_string())).get("purpose")
+        if value is not None and value not in _PURPOSES:
+            raise ValueError(
+                f"USD prim {prim.name!r}: unsupported purpose {value!r}"
+            )
+        return value
     if "purpose" not in set(prim.property_names()):
         return None
     attribute = prim.get_attribute("purpose")
@@ -298,6 +304,8 @@ def _render_nodes(stage) -> dict[str, tuple[np.ndarray, bool]]:
 def _has_time_samples(prim, *, point_text: str | None = None) -> bool:
     if prim.type_name == "Points":
         return points.has_time_samples(prim, text=point_text)
+    if prim.type_name == cameras.CAMERA_PRIM_TYPE:
+        return cameras.has_time_samples(prim, text=point_text)
     return any(
         bool(prim.get_attribute_timesamples(name))
         for name in prim.property_names()
@@ -307,6 +315,8 @@ def _has_time_samples(prim, *, point_text: str | None = None) -> bool:
 def _property_names(prim, *, point_text: str | None = None) -> set[str]:
     if prim.type_name == "Points":
         return points.property_names(prim, text=point_text)
+    if prim.type_name == cameras.CAMERA_PRIM_TYPE:
+        return cameras.property_names(prim, text=point_text)
     return set(prim.property_names())
 
 
@@ -333,6 +343,7 @@ def _validate_shell(
         "Scope",
         "Mesh",
         "Points",
+        cameras.CAMERA_PRIM_TYPE,
         gaussians.GAUSSIAN_PRIM_TYPE,
     }:
         category = _PENDING_PAYLOAD_TYPES.get(prim.type_name)
@@ -361,6 +372,8 @@ def _validate_shell(
         allowed |= points.POINT_PROPERTIES
     if prim.type_name == gaussians.GAUSSIAN_PRIM_TYPE:
         allowed |= gaussians.GAUSSIAN_PROPERTIES
+    if prim.type_name == cameras.CAMERA_PRIM_TYPE:
+        allowed |= cameras.CAMERA_PROPERTIES
     if prim.type_name == "Scope":
         allowed = _IMAGEABLE_PROPERTIES
     unsupported = sorted(properties - allowed)
@@ -475,7 +488,10 @@ def stage_to_scene_graph(
             "USD: purposes must contain only default/render/proxy/guide"
         )
     metadata = _stage_metadata(stage)
-    resource_paths = materials.stage_resource_paths(stage)
+    stage_cameras = cameras.collect_stage_products(stage)
+    resource_paths = (
+        materials.stage_resource_paths(stage) | stage_cameras.resource_paths
+    )
 
     roots = list(stage.root_prims())
     if len({prim.name for prim in roots}) != len(roots):
@@ -570,6 +586,7 @@ def stage_to_scene_graph(
     meshes = []
     point_clouds = []
     gaussian_clouds = []
+    camera_rows: list[dict[str, object]] = []
     path_to_node: dict[str, int] = {}
     no_payload = np.iinfo(np.uint64).max
 
@@ -579,7 +596,11 @@ def stage_to_scene_graph(
             return None
         if not _include_path(path, selected):
             return None
-        point_text = prim.to_string() if prim.type_name == "Points" else None
+        point_text = (
+            prim.to_string()
+            if prim.type_name in {"Points", cameras.CAMERA_PRIM_TYPE}
+            else None
+        )
         _validate_shell(prim, path, point_text=point_text)
         if _has_time_samples(prim, point_text=point_text):
             raise ValueError(
@@ -681,6 +702,24 @@ def stage_to_scene_graph(
                     shell_properties=_payload_shell_properties(prim),
                 )
             )
+        if (
+            prim.type_name == cameras.CAMERA_PRIM_TYPE
+            and load_payloads
+            and effective_purpose in selected_purposes
+            and _select_payload(path, selected)
+        ):
+            node_payload_kinds[index] = "camera"
+            node_payload_indices[index] = len(camera_rows)
+            camera_rows.append(
+                cameras.camera_row_from_prim(
+                    prim,
+                    path=path,
+                    product=stage_cameras.by_camera.get(path),
+                    transform=node_transforms[index],
+                    shell_properties=_payload_shell_properties(prim),
+                    text=point_text,
+                )
+            )
         point_text = None
         for child in prim.children():
             child_path = f"{path}/{child.name}"
@@ -725,6 +764,10 @@ def stage_to_scene_graph(
         meshes=meshes,
         point_clouds=point_clouds,
         gaussian_clouds=gaussian_clouds,
+        cameras=cameras.camera_rig_from_rows(
+            camera_rows,
+            scale_to_meters=metadata["meters_per_unit"],
+        ),
         materials=stage_materials.record if load_payloads else None,
         external_asset_uris=(
             stage_materials.external_asset_uris if load_payloads else ()
@@ -795,16 +838,26 @@ def inspect_scene(
     dependency_set = set(dependencies)
     unsupported: set[str] = set(authored_features)
     try:
+        stage_cameras = cameras.collect_stage_products(stage)
+    except ValueError as exc:
+        stage_cameras = None
+        unsupported.add(f"cameras: {exc}")
+    camera_resource_paths = cameras.stage_resource_paths(stage)
+    try:
         stage_materials = materials.collect_stage_materials(
             stage,
             source_path=path,
             build_record=False,
             resolve_assets=False,
         )
-        resource_paths = stage_materials.resource_paths
+        resource_paths = (
+            stage_materials.resource_paths | camera_resource_paths
+        )
     except ValueError as exc:
         stage_materials = None
-        resource_paths = materials.stage_resource_paths(stage)
+        resource_paths = (
+            materials.stage_resource_paths(stage) | camera_resource_paths
+        )
         unsupported.add(f"materials: {exc}")
 
     type_counts: dict[str, int] = {}
@@ -813,6 +866,7 @@ def inspect_scene(
     primitive_count = 0
     vertices = 0
     faces = 0
+    camera_resolutions: list[str] = []
 
     def visit(prim, parent_path: str) -> None:
         nonlocal faces, node_count, primitive_count, vertices
@@ -830,7 +884,11 @@ def inspect_scene(
                 f"{path_value}:{set_name}="
                 f"{'' if selection is None else selection}"
             )
-        point_text = prim.to_string() if prim.type_name == "Points" else None
+        point_text = (
+            prim.to_string()
+            if prim.type_name in {"Points", cameras.CAMERA_PRIM_TYPE}
+            else None
+        )
         for property_name in _property_names(prim, point_text=point_text):
             attribute = prim.get_attribute(property_name)
             if (
@@ -905,6 +963,25 @@ def inspect_scene(
                 else:
                     vertices += gaussian_count
                     primitive_count += 1
+            elif prim.type_name == cameras.CAMERA_PRIM_TYPE:
+                try:
+                    model, resolution = cameras.inspect_camera_prim(
+                        prim,
+                        path=path_value,
+                        product=(
+                            None
+                            if stage_cameras is None
+                            else stage_cameras.by_camera.get(path_value)
+                        ),
+                        shell_properties=_payload_shell_properties(prim),
+                        text=point_text,
+                    )
+                except ValueError as exc:
+                    unsupported.add(f"{path_value}: {exc}")
+                else:
+                    camera_resolutions.append(
+                        f"{path_value}={resolution[0]}x{resolution[1]}:{model}"
+                    )
         point_text = None
         for child in prim.children():
             visit(child, path_value)
@@ -954,6 +1031,17 @@ def inspect_scene(
             gaussians.GAUSSIAN_PRIM_TYPE, 0
         ),
     }
+    if (
+        cameras.CAMERA_PRIM_TYPE in type_counts
+        or cameras.RENDER_PRODUCT_PRIM_TYPE in type_counts
+    ):
+        details.update(
+            num_cameras=type_counts.get(cameras.CAMERA_PRIM_TYPE, 0),
+            num_render_products=type_counts.get(
+                cameras.RENDER_PRODUCT_PRIM_TYPE, 0
+            ),
+            camera_resolutions=tuple(camera_resolutions),
+        )
     default_prim = stage.get_metadata("defaultPrim")
     if default_prim is not None:
         details["default_prim"] = str(default_prim)
@@ -990,6 +1078,35 @@ def _write_matrix(stream, matrix: np.ndarray) -> None:
     stream.write(")")
 
 
+def _node_paths(
+    names: tuple[str, ...], parents: np.ndarray
+) -> tuple[str, ...]:
+    """Resolve absolute paths while revalidating mutable parent views."""
+
+    paths: list[str | None] = [None] * len(names)
+    visiting: set[int] = set()
+
+    def resolve(node: int) -> str:
+        cached = paths[node]
+        if cached is not None:
+            return cached
+        if node in visiting:
+            raise ValueError("USD: node hierarchy contains a cycle")
+        visiting.add(node)
+        parent = int(parents[node])
+        if parent == -1:
+            value = f"/{names[node]}"
+        elif parent < 0 or parent >= len(names):
+            raise ValueError("USD: node parent index is out of range")
+        else:
+            value = f"{resolve(parent)}/{names[node]}"
+        visiting.remove(node)
+        paths[node] = value
+        return value
+
+    return tuple(resolve(node) for node in range(len(names)))
+
+
 def _validate_writable_scene(scene) -> tuple[object, ...]:
     if not isinstance(scene, _core.SceneGraph):
         raise TypeError("USD: write_scene expects a SceneGraph")
@@ -998,7 +1115,8 @@ def _validate_writable_scene(scene) -> tuple[object, ...]:
         {
             kind
             for kind in payload_kinds
-            if kind not in {"none", "mesh", "point_cloud", "gaussian_cloud"}
+            if kind
+            not in {"none", "mesh", "point_cloud", "gaussian_cloud", "camera"}
         }
     )
     if unsupported_payloads:
@@ -1040,11 +1158,12 @@ def _validate_writable_scene(scene) -> tuple[object, ...]:
     offsets = np.asarray(scene.node_child_offsets)
     children = np.asarray(scene.node_children)
     payload_indices = np.asarray(scene.node_payload_indices)
+    node_paths = _node_paths(names, parents)
     used_meshes: set[int] = set()
     used_points: set[int] = set()
     used_gaussians: set[int] = set()
     for node, kind in enumerate(payload_kinds):
-        if kind == "none":
+        if kind in {"none", "camera"}:
             continue
         index = int(payload_indices[node])
         used = {
@@ -1092,6 +1211,13 @@ def _validate_writable_scene(scene) -> tuple[object, ...]:
         raise ValueError(
             "USD: every Gaussian payload must be referenced exactly once"
         )
+    camera_rows = cameras.validate_writable_camera_rig(
+        scene,
+        payload_kinds=payload_kinds,
+        payload_indices=payload_indices,
+        transforms=transforms,
+        node_paths=node_paths,
+    )
     return (
         transforms,
         resets,
@@ -1100,6 +1226,7 @@ def _validate_writable_scene(scene) -> tuple[object, ...]:
         children,
         payload_kinds,
         payload_indices,
+        camera_rows,
     )
 
 
@@ -1119,7 +1246,9 @@ def _write_scene_usda(
         children,
         payload_kinds,
         payload_indices,
+        camera_rows,
     ) = values
+    camera_rows_by_node = {row.node: row for row in camera_rows}
     material_scope = (
         materials.choose_material_scope(scene) if scene.has_materials else None
     )
@@ -1159,6 +1288,7 @@ def _write_scene_usda(
             "mesh": "Mesh",
             "point_cloud": "Points",
             "gaussian_cloud": gaussians.GAUSSIAN_PRIM_TYPE,
+            "camera": cameras.CAMERA_PRIM_TYPE,
         }[kind]
         mesh = (
             scene.mesh_at(int(payload_indices[node]))
@@ -1225,6 +1355,12 @@ def _write_scene_usda(
                 scene.gaussian_cloud_at(int(payload_indices[node])),
                 inner=inner,
             )
+        elif kind == "camera":
+            cameras.write_camera_attributes(
+                stream,
+                camera_rows_by_node[node],
+                inner=inner,
+            )
         begin, end = int(offsets[node]), int(offsets[node + 1])
         for child in children[begin:end]:
             stream.write("\n")
@@ -1239,6 +1375,12 @@ def _write_scene_usda(
             scene.materials,
             scope_name=material_scope,
             texture_paths=texture_paths,
+        )
+    if camera_rows:
+        cameras.write_render_products(
+            stream,
+            camera_rows,
+            names=cameras.choose_product_names(scene, len(camera_rows)),
         )
 
 

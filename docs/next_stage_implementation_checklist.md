@@ -5166,11 +5166,13 @@ checklist. No unchecked item below is a current USD I/O capability claim:
 - [x] U3: mixed meshes, points, bounded materials, and texture assets. C1 and
       C2 are committed through `917d48e`; the hosted three-OS run remains
       pending the next user-authorized push.
-- [x] U4: official `ParticleField3DGaussianSplat` mapping. C3 closes locally
+- [x] U4: official `ParticleField3DGaussianSplat` mapping. C3 is committed at
+      `a633477`
       with exact float/half, degree 0--3 SH, convention, transform, inspection,
       benchmark, and legacy-codec evidence.
-- [ ] U5: cameras/render products, OpenVDB references, semantic labels, and
-      point instancing.
+- [ ] U5: cameras/render products are implemented in the C4 worktree and their
+      focused gate is green; OpenVDB references, semantic labels, and point
+      instancing remain C5.
 - [ ] U6: qualified USDC/USDZ, evaluated composition subset, and explicitly
       selected time.
 - [ ] U7: complete verification, benchmarks, cross-platform package run, and
@@ -5233,6 +5235,18 @@ Progress:
       workflow entry are green. The complete local gate passes 4,225 tests
       with 6 documented skips, full Ruff and diff checks are clean, and all
       three review lenses sign off. Hosted execution remains user-gated.
+- [x] C4 local closure: the isolated camera adapter maps static perspective and
+      orthographic `Camera` prims, one unambiguous `RenderProduct` resolution,
+      all five conform policies, local camera-to-parent/OpenGL pose,
+      inspection, selection, and deterministic USDA/USDZ writes. The 43 camera
+      tests pass; the affected USD/CameraRig run passes 196 with one platform
+      skip; 4,275 tests collect; touched files pass Ruff; and generated
+      1,000-camera USDA/USDZ measurements are complete. Baseline, workflow,
+      contract, coverage, architecture, and plan docs are updated; 259
+      calibration/COLMAP controls and 40 docs/contracts pass; the full local
+      gate passes 4,269 with 6 documented skips; full Ruff and diff checks are
+      clean; and all three review lenses sign off. This closure unit records
+      the completed C4 result.
 
 Completed U1 evidence:
 

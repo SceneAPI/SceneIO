@@ -3846,3 +3846,33 @@ construct records. Inspection avoids native record construction but is not a
 lazy provider read, as the 1M 195--208 MB sampled RSS makes explicit. C3 does
 not add a second USD parser to conceal that boundary. A current OpenUSD
 provider comparison belongs to C6 only after the narrow TOST policy decision.
+
+### USD C4 generated many-camera checkpoint (2026-08-01)
+
+C4 adds a generated mixed perspective/orthographic camera benchmark. Each
+camera has a unique node, rigid local pose, exact K matrix, and one
+`RenderProduct`; every measured full read is checked against the generated
+`CameraRig`, selected reads must return exactly one requested camera, and
+inspection must report the exact camera/product counts. Files and JSON results
+are temporary and are not committed.
+
+```powershell
+.venv/Scripts/python.exe bench/bench_usd_cameras.py --count 1000 --runs 1
+```
+
+Local Windows/MSVC one-run observations:
+
+| representation | payload/file | write | full read | inspect | selected read |
+|---|---:|---:|---:|---:|---:|
+| USDA | 0.198/0.645 MB | 190.4 ms; 0.80 MB traced; 0.42 MB RSS | 429.6 ms; 3.33 MB traced; 41.52 MB RSS | 319.3 ms; 1.43 MB traced; 34.50 MB RSS | 235.9 ms; 1.97 MB traced; 66.05 MB RSS |
+| USDZ | 0.198/0.645 MB | 221.7 ms; 2.28 MB traced; 0.82 MB RSS | 382.3 ms; 3.33 MB traced; 39.74 MB RSS | 322.6 ms; 1.43 MB traced; 68.60 MB RSS | 236.9 ms; 1.97 MB traced; 69.33 MB RSS |
+
+The repository-owned writer remains streaming and has low sampled RSS for this
+metadata-heavy case. Selection avoids constructing unrelated geometry and
+camera records and is faster than the full read. It is not provider-lazy:
+TinyUSDZ still parses and normalizes the complete layer before SceneIO can
+apply the prim selector, which explains the selected-read RSS. These values
+therefore qualify the adapter behavior without claiming that all USD provider
+I/O is optimized. A 10,000-camera two-representation run was not recorded
+because the repeated measurement exceeded the local command window; the
+completed 1,000-camera row is the C4 closure evidence.

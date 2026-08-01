@@ -106,8 +106,9 @@ stage = sceneio.read_scene(
 )
 assert isinstance(stage, sceneio.SceneGraph)
 
-# Static meshes, point clouds, bounded PreviewSurface materials, and relative
-# PNG/JPEG/EXR textures write as deterministic USDA or aligned USDZ.
+# Static meshes, point clouds, bounded PreviewSurface materials, official
+# Gaussian fields, static cameras, and relative PNG/JPEG/EXR textures write as
+# deterministic USDA or aligned USDZ.
 sceneio.write_scene(stage, "capture-copy.usdz")
 
 hierarchy_only = sceneio.read_scene("capture.usdz", load_payloads=False)

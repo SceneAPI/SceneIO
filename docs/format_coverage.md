@@ -137,6 +137,22 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > diff checks are clean, and all three review lenses sign off. Hosted
 > execution remains pending the next user-authorized push.
 >
+> **USD C4 implementation checkpoint (2026-08-01):** the current worktree
+> maps static OpenUSD 26.08 `Camera` prims paired one-to-one with
+> `RenderProduct` resolution into the existing `CameraRig`. Perspective and
+> orthographic projection, all five aspect-conformance policies, local rigid
+> camera-to-parent pose, inspection, selected-camera reads, and deterministic
+> USDA/USDZ writes are implemented. Unrepresented physical, distortion,
+> stereo, exposure, shutter, depth-of-field, motion-blur, clipping, and output
+> fields refuse. The focused 43-test camera suite and a 196-pass affected
+> USD/CameraRig gate are green; 4,275 tests collect and touched files pass
+> Ruff. A generated 1,000-camera benchmark is complete. The exact 4,275-node
+> collection passes 4,269 with 6 documented skips; 259 calibration/COLMAP
+> controls and 40 documentation/contract checks pass; full Ruff and diff
+> checks are clean; and all three review lenses sign off. This closure unit
+> records C4. OpenUSD remains standards reference material only; it was not
+> installed or invoked for C4.
+>
 > **COLMAP dense/workspace checkpoint (2026-07-29):** the current local
 > registry has 54 codecs: 48 buffer-backed files, three path-native
 > multi-file containers, and three directories. The four additions are exact
@@ -961,7 +977,7 @@ public-domain SQLite amalgamation statically linked into `_core`.
 | `e57` | `PointCloud` | R+W, inspect | direct **pye57/libE57Format** | optional `sceneio[e57]`; exactly one Cartesian scan, exact float32 coordinates/intensity and integral RGB8, pose, explicit invalid-point filtering; exact inspection count uses the provider scan path only when invalid-state data are present |
 | `parquet` / `arrow_ipc` | `TensorDict` numeric table | R+W, inspect; Parquet named-column partial | direct **PyArrow** | optional `sceneio[arrow]`; scalar/fixed-width numeric columns, equal row counts, text attrs, mmap/threaded provider paths, transactional writes |
 | `openvdb` | sparse-grid `TensorDict` | R+W, inspect | direct **TinyVDB** | optional `sceneio[openvdb]`; one identity-transform, zero-background float32 scalar grid; ZIP/active-mask output; packaged upstream seed is fully replaced and provenance-pinned; rebuilt active count is verified and provider topology loss refuses |
-| `usd` / `usdz` | `MeshScene` compatibility projection; additive `SceneGraph` | R+W, rich mesh/points/materials R+W, inspect | direct **TinyUSDZ** | optional `sceneio[usd]`; `.usd`/`.usda`, historical `.usdc` reads through crate 10, and aligned uncompressed USDZ; legacy static mesh bytes/API unchanged; `read_scene` maps bounded hierarchy/metadata/static transforms, prim selection, static polygon meshes, points, PreviewSurface constants/textures, direct/subset bindings, and portable PNG/JPEG/EXR references; `write_scene` streams deterministic USDA sidecars or self-contained USDZ; Gaussians, cameras, volumes/instances/semantics, current crates, USDC writes, and selected animated values remain later profile units |
+| `usd` / `usdz` | `MeshScene` compatibility projection; additive `SceneGraph` | R+W, rich mesh/points/materials/Gaussians/cameras R+W, inspect and prim selection | direct **TinyUSDZ** | optional `sceneio[usd]`; `.usd`/`.usda`, historical `.usdc` reads through crate 10, and aligned uncompressed USDZ; legacy static mesh bytes/API unchanged; `read_scene` maps bounded hierarchy/metadata/static transforms, prim selection, static polygon meshes, points, PreviewSurface constants/textures, direct/subset bindings, portable PNG/JPEG/EXR references, official float/half Gaussian fields, and static cameras with unambiguous render-product resolution; `write_scene` streams deterministic USDA sidecars or self-contained USDZ; volumes/instances/semantics, current crates, USDC writes, composition, and selected animated values remain later profile units |
 
 ### Repository-owned COLMAP workflow adapters
 

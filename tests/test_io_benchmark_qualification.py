@@ -16,6 +16,7 @@ import numpy as np
 import pytest
 
 from bench.io_bench import qualification, runner
+from bench.io_bench import usd_cameras as usd_camera_benchmark
 from bench.io_bench import usd_gaussians as usd_gaussian_benchmark
 from bench.io_bench import usd_materials as usd_material_benchmark
 from bench.io_bench import usd_scene as usd_scene_benchmark
@@ -104,6 +105,26 @@ def test_rich_usd_gaussian_benchmark_smoke(tmp_path):
             assert result[operation]["ms"] >= 0
             assert result[operation]["traced_peak_mb"] >= 0
             assert result[operation]["rss_peak_mb"] >= 0
+
+
+def test_rich_usd_camera_benchmark_smoke(tmp_path):
+    results = usd_camera_benchmark.run_benchmark(
+        tmp_path,
+        runs=1,
+        camera_counts=(4,),
+        encodings=("usda",),
+    )
+
+    assert len(results) == 1
+    result = results[0]
+    assert result["encoding"] == "usda"
+    assert result["cameras"] == 4
+    assert result["payload_mb"] > 0
+    assert result["file_mb"] > 0
+    for operation in ("write", "full_read", "inspect", "selected_read"):
+        assert result[operation]["ms"] >= 0
+        assert result[operation]["traced_peak_mb"] >= 0
+        assert result[operation]["rss_peak_mb"] >= 0
 
 
 def _assembled_specs():

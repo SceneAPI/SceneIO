@@ -276,11 +276,14 @@ is the difference:
 TOST is therefore non-copyleft and does not require SceneIO source disclosure.
 Compared with MIT/BSD/zlib it has the extra Apache-style patent grant,
 patent-claim termination, modified-file notice, and NOTICE obligations.
-Compared with Apache-2.0 it grants less trademark permission. SPDX License
-List 3.28.0 catalogs the materially equivalent older text as `Pixar`, notes
-that it is essentially Apache-2.0 with a modified section 6, and does not mark
-it OSI-approved. The TOST name itself has no standard SPDX identifier;
-current `usd-core` metadata uses `LicenseRef-TOST-1.0`.
+Compared with Apache-2.0 it grants less trademark permission. The 2026-08-01
+review compared the official OpenUSD 26.08 license at `ee47c679abde` with the
+Apache Software Foundation's Apache-2.0 text and confirmed that OpenUSD itself
+identifies section 6 as the difference. SPDX License List 3.28.0 catalogs the
+materially equivalent older text as `Pixar`, notes that it is essentially
+Apache-2.0 with a modified section 6, and does not mark it OSI-approved. The
+TOST name itself has no standard SPDX identifier; current `usd-core` metadata
+uses `LicenseRef-TOST-1.0`.
 
 Project consequence:
 
@@ -297,7 +300,8 @@ Project consequence:
 
 This plan does not change the allow-list. Until that decision is made,
 OpenUSD is a standards reference only and TinyUSDZ remains the executable
-oracle/provider.
+oracle/provider. The C4 review did not install, invoke, link, vendor, or copy
+OpenUSD code.
 
 Recommended project decision: approve a narrow exception for unmodified
 official OpenUSD packages under TOST 1.0, only as an optional development/test
@@ -550,17 +554,19 @@ later unit while an earlier unit has uncommitted or failing changes.
 |---|---|---|---|
 | C1 (done) | close current U3 mesh + point worktree | focused differential/count/interpolation/lifetime tests, existing USD compatibility bytes, selected-prim proof, generated medium mesh/point measurement, full suite, Ruff, contracts | one green commit; material fields still refuse explicitly |
 | C2 (done, `917d48e`) | U3 materials + texture assets | PreviewSurface constants and texture graph, direct and subset bindings, transactional USDA/USDZ assets, independent cross-read, missing/collision/path cases, generated packaged-texture measurement | one green commit; arbitrary networks/UDIM remain explicit exclusions; hosted three-OS run is deferred to the next authorized push |
-| C3 (done locally) | U4 official Gaussian schema | locally authored, standards-derived 26.08 schema fixtures; exact quaternion/SH/precision assertions; 1k/100k/1M generated measurements; legacy splat parity | one green commit; exact schema mapping with no implicit log/logit conversion |
-| C4 | U5 cameras | camera/render-product association, projection-equivalent intrinsics and pose convention tests, default-only unrepresented fields, mixed-resolution and ambiguity refusals, camera-stage measurement | one camera rig maps exactly; distortion and independent physical metadata remain excluded |
+| C3 (done, `a633477`) | U4 official Gaussian schema | locally authored, standards-derived 26.08 schema fixtures; exact quaternion/SH/precision assertions; 1k/100k/1M generated measurements; legacy splat parity | one green commit; exact schema mapping with no implicit log/logit conversion |
+| C4 (done) | U5 cameras | camera/render-product association, projection-equivalent intrinsics and pose convention tests, default-only unrepresented fields, mixed-resolution and ambiguity refusals, camera-stage measurement | one green closure unit; hosted three-OS execution remains deferred to the next authorized push |
 | C5 | U5 volumes + semantics + instances | direct OpenVDB dependency resolution, one taxonomy/label pair, prototype identity/order/masks, mixed-stage round-trip and dependency tests; refuse volume-bearing USDZ writes | all remaining required payload kinds coexist in one USDA/USD stage |
 | C6 | U6 provider capability | narrow TOST decision, exact OpenUSD package inventory, current USDC/composition/time differential tests and provider timing, or explicit unavailable capability if not approved | no repository-owned composition/crate implementation; either qualified optional provider or exact static-only closure |
 | C7 | U7 release closure | full tests, compiler checks, benchmark ledger, docs/contracts, sdist/wheel smoke, nonpublishing platform matrix prepared | claim exactly `sceneio.usd.3dcv/1` and list optional provider flags; no "full USD" claim |
 
-Execution is intentionally capped at seven commits. C1 and C2 are committed,
-and C3 closes locally in this commit. The remaining path is four units with
-one deliverable and one exit decision each:
+Execution is intentionally capped at seven commits. C1-C3 are committed. C4
+is implemented in the current worktree and has passed its local closure gate.
+The
+remaining path is four bounded units with one deliverable and one exit
+decision each:
 
-1. map the bounded camera/render-product pair in C4;
+1. close the already implemented bounded camera/render-product pair in C4;
 2. finish volumes, semantic labels, and point instances in C5;
 3. either qualify the optional OpenUSD capability in C6 or close those flags
    as unavailable;
@@ -604,11 +610,11 @@ and public behavior remain SceneIO-owned.
 
 ### Remaining implementation audit and exact execution map
 
-The 2026-08-01 code review confirms that the remaining work is localized. The
-current C3 worktree has corrected the former schema-vocabulary defect and now
-implements the official float and half property families. The local
-per-unit gate below is green; hosted execution and the commit identifier are
-recorded separately when those events occur.
+The 2026-08-01 code review confirms that the remaining work is localized. C3
+is committed at `a633477`. The current worktree implements C4 cameras in the
+dedicated adapter and keeps stage traversal as the integration boundary. Its
+focused and complete local gates are green and this closure unit records the
+result.
 
 #### 2026-08-01 C3 closure checkpoint
 
@@ -625,10 +631,23 @@ recorded separately when those events occur.
 | format/correctness review | green after fixing direct Gaussian xform evaluation; exact schema names, float-over-half rules, WXYZ mapping, degree/metadata rules, three-sigma extent, hints, and explicit convention refusals are covered | keep the multi-Gaussian path-keyed transform differential |
 | test-soundness review | green: locally authored standards-derived literals and direct TinyUSDZ property assertions precede self-round-trip; malformed/refusal, destination, lifetime, legacy, benchmark, and public-contract cases are independent | OpenUSD executable comparison remains additive C6 evidence only if TOST use is approved |
 
+#### 2026-08-01 C4 implementation review
+
+| Evidence | Observed result | Required action before C4 closure |
+|---|---|---|
+| camera implementation | `cameras.py` maps static `Camera` plus exactly one `RenderProduct`, all five aspect-conformance policies, perspective/orthographic projection, local rigid pose, inspection, selection, and deterministic USDA/USDZ writes | retain the narrow profile: no distortion, depth of field, motion blur, stereo, nondefault clipping/exposure/shutter, or independent physical-camera preservation |
+| focused camera tests | 43 passed | retain literal standards-derived fixtures, direct TinyUSDZ cross-read, independent projection/pose math, malformed/refusal cases, source lifetime, mutation isolation, and destination preservation |
+| affected USD/CameraRig tests | 196 passed and one platform symlink skip; 259 COLMAP/calibration controls pass | retain these controls in the final release gate |
+| collection and style | exact 4,275-node contract; 4,269 passed with 6 documented skips; full Ruff and diff checks clean | preserve the count and focused workflow entry |
+| generated measurement | 1,000 cameras measured for USDA and USDZ across write, full read, inspection, and selected read | measured rows are recorded in `bench/BASELINE.md`; TinyUSDZ still parses the complete layer, so selected reads are adapter-bounded rather than provider-lazy |
+| resource/lifetime review | green: owned `CameraRig` arrays survive source/provider release; no provider-backed camera view escapes; write validation precedes destination replacement | retain lifetime and failed-write cases; do not claim low provider RSS from the selected-read timing |
+| format/correctness review | green: official 26.08 schema names/defaults, tenths-of-scene-unit optics, five conform policies, OpenGL local frame, WXYZ pose, and one-product association are covered | retain the documented camera-to-parent/local pose and USD-float projection-equivalence boundary |
+| test-soundness review | green: literal inputs and independently calculated K/pose expectations precede self-round-trip; TinyUSDZ validates emitted prim types/properties; 259 calibration/COLMAP controls and 40 docs/contracts pass | an executable OpenUSD comparison remains optional C6 evidence only after the TOST decision; it is not a C4 blocker |
+
 | Unit | Current seam | Implementation work | Focused verification | Validation and documentation exit |
 |---|---|---|---|---|
-| C3 Gaussian | done locally in this commit | preserve the exact official mapping and bounded provider transform fallback; no additional schema scope | 62 focused mapping/record tests; 222 legacy passes plus one expected skip; exact 4,231-node full gate; generated 1k/100k/1M rows | commit this green unit, then start C4; hosted execution remains deferred to the next authorized push |
-| C4 Camera | `cameras.py` contains only bounded tokens; `SceneGraph` already owns an optional `CameraRig` | implement `UsdGeomCamera` plus unambiguous `UsdRenderProduct` resolution association; map projection, filmback/focal units, clipping, and node transform to the existing camera/pose conventions; accept only defaults for fields the record cannot preserve; add selection and inspection | new `tests/codecs/test_usd_cameras.py`; literal perspective/orthographic stages; projection-equivalent intrinsics; OpenCV/OpenGL and world/camera pose direction; ambiguous/mixed resolution and unsupported-field refusals; lifetime and destination preservation | generated many-camera full/inspect/selected benchmark; existing COLMAP/calibration/camera codec controls; coverage/API/baseline updates; full local gate and one commit |
+| C3 Gaussian | committed at `a633477` | preserve the exact official mapping and bounded provider transform fallback; no additional schema scope | 62 focused mapping/record tests; 222 legacy passes plus one expected skip; exact 4,231-node full gate; generated 1k/100k/1M rows | hosted execution remains deferred to the next authorized push |
+| C4 Camera | done in this closure unit | keep `UsdGeomCamera`/`UsdRenderProduct` mapping isolated in `cameras.py`; preserve camera-to-parent/OpenGL conventions and float-precision projection equivalence | 43 camera tests; 196 affected USD/CameraRig passes; 259 calibration/COLMAP controls; 40 docs/contracts; exact 4,275-node full suite | hosted three-OS execution remains deferred to the next authorized push |
 | C5 Remaining payloads | `SceneGraph` already owns `VolumeAsset`, `InstanceSet`, and per-node semantic fields; `stage.py` currently refuses them | add focused `volumes.py`, `semantics.py`, and `instances.py` modules; map direct `UsdVolVolume`/`OpenVDBAsset` dependencies for USDA/USD, one inherited taxonomy/label pair, and `PointInstancer` prototype/order/id/mask data; keep prototype geometry shared; refuse volume-bearing USDZ output | new family tests plus one mixed-stage suite; literal relationships and attributes; missing/shared VDB sources; inherited labels; prototype order, inactive ids, masks, 1M-instance bounded-allocation case; lifetime, selection, and destination preservation | benchmark large referenced VDB without decoding it and 1M instances without expansion; update dependency inspection and all capability/docs snapshots; full local gate and one commit |
 | C6 Optional provider decision | TinyUSDZ is bounded to direct USDA/USDZ and historical crates; official `usd-core 26.8` wheels now exist but use CPython-specific ABIs and a newer Linux floor | first record the explicit narrow TOST policy decision; if approved, inventory the exact wheel and notices in a separate environment, then add an optional provider for current USDC and evaluated composition/selected time; if not approved, make those three flags explicitly unavailable and stop | direct OpenUSD 26.08 schema queries and `usdchecker`/`usdcat` comparisons when approved; current/historical crate matrix; sublayer/reference/payload/variant/inherit/specialize and selected-time cases; TinyUSDZ static controls unchanged | record provider startup/time/RSS and exact platforms; keep `usd-core` out of base dependencies and SceneIO wheels; update provider report, license inventory, capabilities, and docs; one commit in either the available or unavailable branch |
 | C7 Release closure | implementation units complete; hosted exact-tree run still user-gated | no new format scope; reconcile capability manifests, public docs, installed-package surfaces, benchmark ledger, and release metadata | complete test suite/Ruff; compiler-instrumented checks; generated malformed/differential cases; sdist and installed-wheel smoke with NumPy-only, TinyUSDZ, and any approved provider environment | prepare the nonpublishing Windows/Linux/macOS matrix; ask before push/run; close only after exact-tree hosted results; publish separately through the approved workflow |
@@ -904,14 +923,15 @@ not a C3 prerequisite.
 
 ### U5 — cameras, volumes, semantics, and instances
 
-- [ ] Map supported `UsdGeomCamera` optics and transforms to `CameraRig`.
-- [ ] Pair cameras with `UsdRenderProduct` resolution and refuse ambiguous
+- [x] Map supported `UsdGeomCamera` optics and transforms to `CameraRig`.
+- [x] Pair cameras with `UsdRenderProduct` resolution and refuse ambiguous
       pixel-intrinsic reconstruction.
-- [ ] Add explicit OpenCV/OpenGL and pose-direction tests.
-- [ ] Prove selected-camera reads do not decode unrelated geometry, camera
+- [x] Add explicit OpenCV/OpenGL and pose-direction tests.
+- [x] Prove selected-camera reads do not enter unrelated geometry adapters,
+      camera
       arrays outlive provider/source release, and write failures preserve the
       destination.
-- [ ] Measure a generated many-camera stage, including inspection and
+- [x] Measure a generated 1,000-camera stage, including inspection and
       selected-camera reads.
 - [ ] Map `UsdVolVolume`/`UsdVolOpenVDBAsset` references to the existing
       bounded OpenVDB profile for USDA/USD. Refuse volume-bearing USDZ writes;
