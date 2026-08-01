@@ -298,10 +298,13 @@ def _parse_package_source(source: str) -> tuple[Path, str] | None:
 def asset_source_for(
     stage_path: str | os.PathLike[str],
     uri: str,
+    *,
+    kind: str = "texture",
 ) -> str:
-    """Resolve one authored texture URI without loading its bytes."""
+    """Resolve one authored asset URI without loading its bytes."""
 
-    normalized = normalize_asset_uri(uri, context="USD texture")
+    context = f"USD {kind}"
+    normalized = normalize_asset_uri(uri, context=context)
     stage = Path(stage_path).resolve()
     try:
         with stage.open("rb") as source:
@@ -318,21 +321,21 @@ def asset_source_for(
                 member = str(root_parent / PurePosixPath(normalized))
                 member = normalize_asset_uri(
                     member,
-                    context="USDZ texture",
+                    context=f"USDZ {kind}",
                 )
                 try:
                     info = by_name[member]
                 except KeyError:
                     raise ValueError(
-                        f"USDZ texture {normalized!r}: package entry is missing"
+                        f"USDZ {kind} {normalized!r}: package entry is missing"
                     ) from None
                 if info.is_dir():
                     raise ValueError(
-                        f"USDZ texture {normalized!r}: entry is a directory"
+                        f"USDZ {kind} {normalized!r}: entry is a directory"
                     )
                 if info.compress_type != zipfile.ZIP_STORED:
                     raise ValueError(
-                        f"USDZ texture {normalized!r}: entry must be stored"
+                        f"USDZ {kind} {normalized!r}: entry must be stored"
                     )
         except zipfile.BadZipFile as exc:
             raise ValueError(f"USDZ: invalid package: {exc}") from exc
@@ -341,7 +344,7 @@ def asset_source_for(
     source = _resolved_relative_file(
         stage.parent,
         normalized,
-        context=f"USD texture {normalized!r}",
+        context=f"{context} {normalized!r}",
     )
     return str(source)
 
@@ -397,20 +400,23 @@ def open_asset_source(
 def validate_unpacked_asset_sources(
     destination: Path,
     assets: Iterable[tuple[str, str]],
+    *,
+    kind: str = "texture",
 ) -> None:
     """Require unpackaged URIs to name their exact recorded local sources."""
 
     root = destination.parent
+    context = f"USD {kind}"
     for uri, source_locator in assets:
-        normalized = normalize_asset_uri(uri, context="USD texture")
+        normalized = normalize_asset_uri(uri, context=context)
         expected = _resolved_relative_file(
             root,
             normalized,
-            context=f"USD texture {normalized!r}",
+            context=f"{context} {normalized!r}",
         )
         if _parse_package_source(source_locator) is not None:
             raise ValueError(
-                f"USD texture {normalized!r}: a USDZ source cannot be "
+                f"{context} {normalized!r}: a USDZ source cannot be "
                 "written unpackaged"
             )
         recorded = Path(source_locator)
@@ -420,11 +426,11 @@ def validate_unpacked_asset_sources(
             recorded = recorded.resolve(strict=True)
         except OSError as exc:
             raise ValueError(
-                f"USD texture {normalized!r}: recorded source is missing: {exc}"
+                f"{context} {normalized!r}: recorded source is missing: {exc}"
             ) from exc
         if not recorded.is_file() or not os.path.samefile(expected, recorded):
             raise ValueError(
-                f"USD texture {normalized!r}: package_assets=False requires "
+                f"{context} {normalized!r}: package_assets=False requires "
                 "the recorded source to be the destination-relative file"
             )
 
@@ -446,18 +452,23 @@ def _hash_path(path: Path) -> bytes:
     return digest.digest()
 
 
-def _asset_filename(index: int, uri: str) -> str:
+def _asset_filename(index: int, uri: str, kind: str) -> str:
     suffix = PurePosixPath(uri).suffix.lower()
-    return f"texture_{index:04d}{suffix}"
+    return f"{kind}_{index:04d}{suffix}"
 
 
 @contextmanager
 def prepared_sidecar_assets(
     destination: Path,
     assets: Iterable[tuple[str, str]],
+    *,
+    kind: str = "texture",
 ):
     """Install an immutable content-addressed sidecar directory transactionally."""
 
+    portable = "abcdefghijklmnopqrstuvwxyz0123456789_"
+    if not kind or any(character not in portable for character in kind):
+        raise ValueError("USD asset kind must be a lowercase portable identifier")
     values = list(assets)
     temporary = Path(
         tempfile.mkdtemp(
@@ -470,12 +481,13 @@ def prepared_sidecar_assets(
     manifest = hashlib.sha256()
     try:
         for index, (uri, source) in enumerate(values):
-            normalized = normalize_asset_uri(uri, context="USD texture")
+            context = f"USD {kind}"
+            normalized = normalize_asset_uri(uri, context=context)
             if normalized in mapping:
                 raise ValueError(
-                    f"USD texture {normalized!r}: duplicate external asset"
+                    f"{context} {normalized!r}: duplicate external asset"
                 )
-            name = _asset_filename(index, normalized)
+            name = _asset_filename(index, normalized, kind)
             output = temporary / name
             with output.open("wb") as stream:
                 digest = _copy_and_hash(
@@ -483,6 +495,9 @@ def prepared_sidecar_assets(
                     stream,
                     relative_to=destination.parent,
                 )
+            if kind != "texture":
+                manifest.update(kind.encode("ascii"))
+                manifest.update(b"\0")
             manifest.update(normalized.encode("utf-8"))
             manifest.update(b"\0")
             manifest.update(digest)

@@ -1,13 +1,13 @@
 # USD 3D-CV profile implementation plan
 
-Status: U0 bounded-provider matrix, U1 records, U2 stage skeleton, C1
-mesh/point mappings, and C2 materials/textures are committed through
-`917d48e`. C3 Gaussian support closes locally in this commit: its official
-schema mapping, independent property assertions, generated benchmark, exact
-contract, complete local suite, lint, and three review lenses are green. The
-focused three-OS workflow is prepared but has not run on that exact tree
-because pushing and hosted execution remain user-gated. C4-C7 are the four
-remaining finite units.
+Status: U0-U4 and the camera half of U5 are committed through C4
+(`d1ee8ea`). C5 now implements the remaining direct-static payloads in the
+worktree: bounded OpenVDB references, inherited semantic labels, and static
+PointInstancer data. Its focused USD family, generated 1M-instance/1 GiB-VDB
+measurement, exact collection contract, complete 4,299-node local gate, and
+three review lenses are green. This closure unit records completed C5.
+C6 is one explicit provider-policy decision and C7 is one release-validation
+unit. Hosted execution and pushing remain user-gated.
 Review date: 2026-08-01
 Standards baseline: AOUSD Core Specification 1.0.1, supplemental
 1.0.1.post0, and OpenUSD 26.08 (`v26.08`, `ee47c679abde`)
@@ -110,7 +110,7 @@ Repository review also found that U1 is already partly implemented:
 The implementation review distinguishes committed capability from remaining
 work:
 
-| Area | State on 2026-07-31 | Evidence or remaining gate |
+| Area | State on 2026-08-01 | Evidence or remaining gate |
 |---|---|---|
 | U0 provider baseline | committed, bounded | TinyUSDZ 0.9.4 is qualified for USDA/USD/USDZ and historical USDC through crate 10; current USDC and TOST decision remain |
 | U1 records | committed, complete | `SceneGraph`, `InstanceSet`, `VolumeAsset`, and additive mesh/point/Gaussian fields have parity and lifetime coverage |
@@ -118,8 +118,8 @@ work:
 | U3 mesh | C1 committed, complete | indexed primvars; constant/uniform/vertex/varying/face-varying domains; float display fields; orientation; double-sided state; transforms; extent; USDA/USDZ read/write |
 | U3 points | C1 committed, complete | points, normals, widths-as-diameters, ids, velocities, accelerations, display fields, indexed primvars, extent; USDA/USDZ read/write |
 | U3 materials/assets | C2 committed (`917d48e`) | bounded PreviewSurface constants/textures, direct/subset bindings, streamed asset transactions, independent fixtures, refusal/lifetime tests, benchmarks, exact contracts, complete suite, and all three review lenses are green; hosted three-OS execution remains user-gated |
-| U4 Gaussian schema | C3 implementation in progress | official float/half read/write, raw-layout mapping, inspection, selection, extent, and refusal coverage exist in the worktree; transform fallback, public exception assertions, lint, benchmarks, contracts, legacy controls, and full qualification remain |
-| U5 camera/volume/semantics/instances | records or adjacent codecs exist | USD schema adapters and mixed-stage tests remain |
+| U4 Gaussian schema | C3 committed (`a633477`) | official float/half read/write, raw-layout mapping, inspection, selection, extent, refusal coverage, generated benchmark, contracts, legacy controls, and full local qualification are green |
+| U5 camera/volume/semantics/instances | complete through C5 | camera/render-product pairs, direct scalar-float OpenVDB dependencies, one effective taxonomy/label pair, static PointInstancer data, mixed-stage coexistence, generated large-case evidence, and the complete local gate are green |
 | U6 current USDC/composition/time | unavailable | must use a qualified optional OpenUSD provider; do not build a second composition engine |
 | U7 release closure | pending | complete suite, package matrix, benchmark ledger, docs/capability snapshots |
 
@@ -293,10 +293,19 @@ Project consequence:
   explicit narrow policy decision;
 - if approved, the policy entry should be
   “TOST-1.0/Pixar, only for official OpenUSD,” not a general allowance for
-  arbitrary `LicenseRef-*` packages;
+arbitrary `LicenseRef-*` packages;
 - the exact OpenUSD wheel contents and their third-party notices still need a
   separate inventory. Approval of TOST alone does not approve every component
   that might be present in a distribution.
+
+That last distinction is material for SceneIO's strict allow-list. The
+official OpenUSD license bundle includes third-party notices in addition to
+TOST. It specifically notes that RapidJSON's `bin/jsonchecker/` is the only
+part carrying the old JSON license and says excluding that directory avoids
+that term. The JSON license has a use restriction, so it does not satisfy this
+repository's MIT/BSD/zlib/Apache/public-domain-only policy. C6 must therefore
+inspect the exact installed wheel contents and prove that component is absent;
+similarity of the top-level TOST terms is not sufficient approval.
 
 This plan does not change the allow-list. Until that decision is made,
 OpenUSD is a standards reference only and TinyUSDZ remains the executable
@@ -555,22 +564,19 @@ later unit while an earlier unit has uncommitted or failing changes.
 | C1 (done) | close current U3 mesh + point worktree | focused differential/count/interpolation/lifetime tests, existing USD compatibility bytes, selected-prim proof, generated medium mesh/point measurement, full suite, Ruff, contracts | one green commit; material fields still refuse explicitly |
 | C2 (done, `917d48e`) | U3 materials + texture assets | PreviewSurface constants and texture graph, direct and subset bindings, transactional USDA/USDZ assets, independent cross-read, missing/collision/path cases, generated packaged-texture measurement | one green commit; arbitrary networks/UDIM remain explicit exclusions; hosted three-OS run is deferred to the next authorized push |
 | C3 (done, `a633477`) | U4 official Gaussian schema | locally authored, standards-derived 26.08 schema fixtures; exact quaternion/SH/precision assertions; 1k/100k/1M generated measurements; legacy splat parity | one green commit; exact schema mapping with no implicit log/logit conversion |
-| C4 (done) | U5 cameras | camera/render-product association, projection-equivalent intrinsics and pose convention tests, default-only unrepresented fields, mixed-resolution and ambiguity refusals, camera-stage measurement | one green closure unit; hosted three-OS execution remains deferred to the next authorized push |
-| C5 | U5 volumes + semantics + instances | direct OpenVDB dependency resolution, one taxonomy/label pair, prototype identity/order/masks, mixed-stage round-trip and dependency tests; refuse volume-bearing USDZ writes | all remaining required payload kinds coexist in one USDA/USD stage |
+| C4 (done, `d1ee8ea`) | U5 cameras | camera/render-product association, projection-equivalent intrinsics and pose convention tests, default-only unrepresented fields, mixed-resolution and ambiguity refusals, camera-stage measurement | one green closure unit; hosted three-OS execution remains deferred to the next authorized push |
+| C5 (done in this closure unit) | U5 volumes + semantics + instances | direct OpenVDB dependency resolution, one taxonomy/label pair, prototype identity/order/masks, mixed-stage round-trip and dependency tests; refuse volume-bearing USDZ writes | focused/complete gates, docs, and large-case measurement are green |
 | C6 | U6 provider capability | narrow TOST decision, exact OpenUSD package inventory, current USDC/composition/time differential tests and provider timing, or explicit unavailable capability if not approved | no repository-owned composition/crate implementation; either qualified optional provider or exact static-only closure |
 | C7 | U7 release closure | full tests, compiler checks, benchmark ledger, docs/contracts, sdist/wheel smoke, nonpublishing platform matrix prepared | claim exactly `sceneio.usd.3dcv/1` and list optional provider flags; no "full USD" claim |
 
-Execution is intentionally capped at seven commits. C1-C3 are committed. C4
-is implemented in the current worktree and has passed its local closure gate.
-The
-remaining path is four bounded units with one deliverable and one exit
-decision each:
+Execution is intentionally capped at seven commits. C1-C4 are committed and
+C5 is complete in this closure unit. The remaining path is two bounded
+actions:
 
-1. close the already implemented bounded camera/render-product pair in C4;
-2. finish volumes, semantic labels, and point instances in C5;
-3. either qualify the optional OpenUSD capability in C6 or close those flags
-   as unavailable;
-4. perform release qualification once in C7.
+1. make one explicit C6 decision: qualify a separately installed OpenUSD
+   oracle/provider only after its exact license inventory passes, or mark
+   current USDC/composition/time unavailable and stop provider work;
+2. perform the C7 release qualification once.
 
 No later unit may expand an earlier unit's public profile merely to accept an
 unrepresentable input. The correct result is an explicit unsupported feature.
@@ -600,7 +606,9 @@ Keep schema logic isolated so the repository remains expandable:
 | asset resolution and USDZ entries | `src/sceneio/io/_usd/package.py` |
 | Gaussian schema | `src/sceneio/io/_usd/gaussians.py` |
 | camera schema | `src/sceneio/io/_usd/cameras.py` |
-| volume, semantics, instances | add one focused module per schema family; do not grow `stage.py` into a monolith |
+| volume dependencies | `src/sceneio/io/_usd/volumes.py` |
+| inherited semantic labels | `src/sceneio/io/_usd/semantics.py` |
+| point instances | `src/sceneio/io/_usd/instances.py` |
 | provider selection/version ceiling | `src/sceneio/io/_usd/provider.py` |
 | compatibility `MeshScene` behavior | `src/sceneio/io/_usd/legacy.py`; do not mix rich payload behavior back into it |
 
@@ -610,11 +618,10 @@ and public behavior remain SceneIO-owned.
 
 ### Remaining implementation audit and exact execution map
 
-The 2026-08-01 code review confirms that the remaining work is localized. C3
-is committed at `a633477`. The current worktree implements C4 cameras in the
-dedicated adapter and keeps stage traversal as the integration boundary. Its
-focused and complete local gates are green and this closure unit records the
-result.
+The 2026-08-01 code review confirms that the remaining work is localized.
+C3 and C4 are committed. The current worktree implements C5 in three focused
+schema modules and keeps traversal, selection, and payload dispatch in
+`stage.py`.
 
 #### 2026-08-01 C3 closure checkpoint
 
@@ -644,11 +651,26 @@ result.
 | format/correctness review | green: official 26.08 schema names/defaults, tenths-of-scene-unit optics, five conform policies, OpenGL local frame, WXYZ pose, and one-product association are covered | retain the documented camera-to-parent/local pose and USD-float projection-equivalence boundary |
 | test-soundness review | green: literal inputs and independently calculated K/pose expectations precede self-round-trip; TinyUSDZ validates emitted prim types/properties; 259 calibration/COLMAP controls and 40 docs/contracts pass | an executable OpenUSD comparison remains optional C6 evidence only after the TOST decision; it is not a C4 blocker |
 
+#### 2026-08-01 C5 implementation review
+
+| Evidence | Observed result | Closure requirement |
+|---|---|---|
+| schema adapters | `volumes.py`, `semantics.py`, and `instances.py` isolate the three schema families; `stage.py` owns only traversal, selection, dependency expansion, payload dispatch, and deterministic authoring integration | retain these ownership boundaries; do not move OpenVDB decoding or USD composition into the adapters |
+| direct volumes | one `field:<name>` relationship maps to one scalar-float `OpenVDBAsset`; shared URI/grid resources remain shared; read and inspection do not open VDB bytes; volume-bearing USDZ writes refuse because VDB is outside USDZ 1.3 | retain exact `.vdb`, data type, role/class, missing-source, shared-source, selection, and destination-preservation cases |
+| semantics | exact `SemanticsLabelsAPI:<taxonomy>` and `semantics:labels:<taxonomy>` names are used; inherited values follow USD union behavior; the bounded record accepts one effective taxonomy and one effective label per node | retain multiple-taxonomy/label refusals and inheritance-consistent writer guards |
+| point instances | ordered prototype relationships, indices, positions, float/half orientations, scales, signed ids, invisible ids, and a closed set of per-instance motion/display arrays map to owning `InstanceSet` records | retain default-value, unit-quaternion, count/type/interpolation, inactive-id, missing-prototype, prototype-cycle, selection, and lifetime checks |
+| mixed-stage evidence | one TinyUSDZ-readable USDA contains Mesh, Points, official Gaussian splats, Camera, Volume/OpenVDBAsset, PointInstancer, and inherited semantic labels; all records round-trip together | keep this as the additive public-profile coexistence test |
+| focused verification | 185 USD-family cases pass with one platform symlink skip; the post-review affected gate passes 45 tests | retain in the three-OS focused workflow |
+| allocation/performance | a 1M-instance, one-prototype layer is 51.78 MB; write is 3.75 s/80.01 MB traced, full read 10.20 s/167.79 MB traced, and inspect 6.99 s/51.79 MB traced. A sparse 1 GiB VDB dependency reads in 1.03 ms/0.024 MB traced and inspects in 0.55 ms/0.020 MB traced | describe TinyUSDZ full-layer materialization honestly; the required wins are no prototype geometry expansion and no VDB-byte decode |
+| resource/lifetime review | green after adding the large-VDB allocation bound; records own numeric arrays and strings; provider objects, source handles, and VDB files do not back returned views; sidecar transactions close before replacement | retain source-release, missing-source, selected-sibling, and failed-write cases |
+| format/correctness review | green after adding prototype-cycle parity to inspection; relationship order, signed ids, WXYZ quaternions, inheritance union, absolute prototype paths, direct asset provenance, and USDZ boundaries are explicit | keep unsupported authored values as precise refusals rather than conversions |
+| test-soundness review | green: locally authored standards-derived literals and TinyUSDZ property/type reads precede self-round-trip; allocation, malformed, lifetime, selection, mixed-payload, transaction, and generated large-case checks exercise independent outcomes | OpenUSD executable comparison remains optional C6 evidence only after the license decision |
+
 | Unit | Current seam | Implementation work | Focused verification | Validation and documentation exit |
 |---|---|---|---|---|
 | C3 Gaussian | committed at `a633477` | preserve the exact official mapping and bounded provider transform fallback; no additional schema scope | 62 focused mapping/record tests; 222 legacy passes plus one expected skip; exact 4,231-node full gate; generated 1k/100k/1M rows | hosted execution remains deferred to the next authorized push |
 | C4 Camera | done in this closure unit | keep `UsdGeomCamera`/`UsdRenderProduct` mapping isolated in `cameras.py`; preserve camera-to-parent/OpenGL conventions and float-precision projection equivalence | 43 camera tests; 196 affected USD/CameraRig passes; 259 calibration/COLMAP controls; 40 docs/contracts; exact 4,275-node full suite | hosted three-OS execution remains deferred to the next authorized push |
-| C5 Remaining payloads | `SceneGraph` already owns `VolumeAsset`, `InstanceSet`, and per-node semantic fields; `stage.py` currently refuses them | add focused `volumes.py`, `semantics.py`, and `instances.py` modules; map direct `UsdVolVolume`/`OpenVDBAsset` dependencies for USDA/USD, one inherited taxonomy/label pair, and `PointInstancer` prototype/order/id/mask data; keep prototype geometry shared; refuse volume-bearing USDZ output | new family tests plus one mixed-stage suite; literal relationships and attributes; missing/shared VDB sources; inherited labels; prototype order, inactive ids, masks, 1M-instance bounded-allocation case; lifetime, selection, and destination preservation | benchmark large referenced VDB without decoding it and 1M instances without expansion; update dependency inspection and all capability/docs snapshots; full local gate and one commit |
+| C5 Remaining payloads | locally complete in focused `volumes.py`, `semantics.py`, and `instances.py` modules | preserve the direct scalar-float VDB reference, one effective semantic pair, and static PointInstancer boundary; keep prototype geometry shared and volume-bearing USDZ unavailable | 20 family nodes plus benchmark smoke, existing USD regression family, literal relationships/attributes, missing/shared VDB, inheritance, ids/masks/order, cycle, lifetime, selection, and destination preservation are green | generated 1 GiB VDB and 1M-instance evidence recorded; exact 4,299-node gate passes 4,293 with 6 documented skips; full Ruff and docs/contracts are clean |
 | C6 Optional provider decision | TinyUSDZ is bounded to direct USDA/USDZ and historical crates; official `usd-core 26.8` wheels now exist but use CPython-specific ABIs and a newer Linux floor | first record the explicit narrow TOST policy decision; if approved, inventory the exact wheel and notices in a separate environment, then add an optional provider for current USDC and evaluated composition/selected time; if not approved, make those three flags explicitly unavailable and stop | direct OpenUSD 26.08 schema queries and `usdchecker`/`usdcat` comparisons when approved; current/historical crate matrix; sublayer/reference/payload/variant/inherit/specialize and selected-time cases; TinyUSDZ static controls unchanged | record provider startup/time/RSS and exact platforms; keep `usd-core` out of base dependencies and SceneIO wheels; update provider report, license inventory, capabilities, and docs; one commit in either the available or unavailable branch |
 | C7 Release closure | implementation units complete; hosted exact-tree run still user-gated | no new format scope; reconcile capability manifests, public docs, installed-package surfaces, benchmark ledger, and release metadata | complete test suite/Ruff; compiler-instrumented checks; generated malformed/differential cases; sdist and installed-wheel smoke with NumPy-only, TinyUSDZ, and any approved provider environment | prepare the nonpublishing Windows/Linux/macOS matrix; ask before push/run; close only after exact-tree hosted results; publish separately through the approved workflow |
 
@@ -933,20 +955,20 @@ not a C3 prerequisite.
       destination.
 - [x] Measure a generated 1,000-camera stage, including inspection and
       selected-camera reads.
-- [ ] Map `UsdVolVolume`/`UsdVolOpenVDBAsset` references to the existing
+- [x] Map `UsdVolVolume`/`UsdVolOpenVDBAsset` references to the existing
       bounded OpenVDB profile for USDA/USD. Refuse volume-bearing USDZ writes;
       `.vdb` is not an allowed USDZ 1.3 member type.
-- [ ] Map inherited semantic labels without treating them as image masks.
+- [x] Map inherited semantic labels without treating them as image masks.
       Accept at most one taxonomy/label pair per evaluated node, matching the
       current `SceneGraph`; refuse multiple labels or taxonomies.
-- [ ] Map `UsdGeomPointInstancer` to `InstanceSet`; retain prototype identity
+- [x] Map `UsdGeomPointInstancer` to `InstanceSet`; retain prototype identity
       and per-instance ordering.
-- [ ] Test missing assets, shared assets, instance prototypes, inactive ids,
-      and camera stages with and without render products.
-- [ ] Reuse C2 direct-asset provenance for OpenVDB without decoding grid bytes;
+- [x] Test missing assets, shared assets, instance prototypes, inactive ids,
+      prototype cycles, and mixed camera/geometry stages.
+- [x] Reuse C2 direct-asset provenance for OpenVDB without decoding grid bytes;
       prove shared/missing VDB sources, inherited-label ownership, masks, ids,
       prototype order, and provider/source lifetime.
-- [ ] Measure a generated large VDB dependency and 1M instances without
+- [x] Measure a generated 1 GiB VDB dependency and 1M instances without
       expanding prototype geometry per instance.
 
 Exit: the complete set of accepted 3D-CV payload kinds round-trips in one mixed
@@ -957,7 +979,9 @@ stage.
 - [ ] Make the narrow TOST decision before installing or invoking OpenUSD.
 - [ ] If approved, inventory official `usd-core 26.8` wheel contents,
       license/NOTICE files, platform tags, and transitive components before
-      provider use. Keep it in a separate oracle/provider environment.
+      provider use. Prove the RapidJSON `bin/jsonchecker/` component and every
+      other non-allow-listed component are absent. Keep it in a separate
+      oracle/provider environment.
 - [ ] Validate current OpenUSD 26.08 USDC read/write plus the historical crate
       versions selected in U0 only when an official 26.08-or-newer executable
       provider is available. Do not expose TinyUSDZ's historical crate writer

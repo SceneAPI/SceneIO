@@ -19,6 +19,7 @@ from bench.io_bench import qualification, runner
 from bench.io_bench import usd_cameras as usd_camera_benchmark
 from bench.io_bench import usd_gaussians as usd_gaussian_benchmark
 from bench.io_bench import usd_materials as usd_material_benchmark
+from bench.io_bench import usd_payloads as usd_payload_benchmark
 from bench.io_bench import usd_scene as usd_scene_benchmark
 from bench.io_bench.families.dense import validate_dense_oracle_parity
 from bench.io_bench.model import Spec
@@ -125,6 +126,28 @@ def test_rich_usd_camera_benchmark_smoke(tmp_path):
         assert result[operation]["ms"] >= 0
         assert result[operation]["traced_peak_mb"] >= 0
         assert result[operation]["rss_peak_mb"] >= 0
+
+
+def test_rich_usd_remaining_payload_benchmark_smoke(tmp_path):
+    results = usd_payload_benchmark.run_benchmark(
+        tmp_path,
+        runs=1,
+        instance_counts=(4,),
+        vdb_size_mib=1,
+    )
+
+    assert [result["case"] for result in results] == [
+        "point_instancer",
+        "openvdb_dependency",
+    ]
+    assert results[0]["instances"] == 4
+    assert results[0]["prototypes"] == 1
+    assert results[1]["vdb_file_mb"] > 1
+    for result in results:
+        for operation in set(result) & {"write", "full_read", "inspect"}:
+            assert result[operation]["ms"] >= 0
+            assert result[operation]["traced_peak_mb"] >= 0
+            assert result[operation]["rss_peak_mb"] >= 0
 
 
 def _assembled_specs():

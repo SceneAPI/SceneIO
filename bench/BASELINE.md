@@ -3876,3 +3876,36 @@ therefore qualify the adapter behavior without claiming that all USD provider
 I/O is optimized. A 10,000-camera two-representation run was not recorded
 because the repeated measurement exceeded the local command window; the
 completed 1,000-camera row is the C4 closure evidence.
+
+### USD C5 volume-reference and PointInstancer checkpoint (2026-08-01)
+
+C5 adds a generated static PointInstancer case and a sparse external-VDB
+dependency case. The instancer has one shared prototype and one million
+ordered instances; the benchmark validates exact record and inspection counts
+without expanding prototype geometry. The VDB fixture has a 1 GiB logical
+size, but the stage only resolves its direct scalar-float grid reference and
+never opens or decodes the VDB bytes. Generated files and JSON output are not
+committed.
+
+```powershell
+.venv/Scripts/python.exe bench/bench_usd_payloads.py --runs 1 `
+  --instances 1000000 --vdb-mib 1024
+```
+
+Local Windows/MSVC one-run observations:
+
+| case | payload/dependency and stage file | operation | time | traced peak | sampled RSS |
+|---|---:|---|---:|---:|---:|
+| PointInstancer | 57.00 MB payload / 51.78 MB USDA | write | 3,754.8 ms | 80.01 MB | 76.36 MB |
+| PointInstancer | same | full read | 10,200.7 ms | 167.79 MB | 302.76 MB |
+| PointInstancer | same | inspect | 6,990.0 ms | 51.79 MB | 107.36 MB |
+| OpenVDB dependency | 1,073.74 MB VDB / 0.00031 MB USDA | full read | 1.03 ms | 0.024 MB | 0.020 MB |
+| OpenVDB dependency | same | inspect | 0.55 ms | 0.020 MB | 0.020 MB |
+
+The intended bounded behavior is demonstrated: instance serialization scales
+with the instance arrays and never copies prototype geometry per instance,
+while VDB reference handling is independent of VDB file size. TinyUSDZ still
+materializes the complete numeric USDA layer before SceneIO maps it, so the
+million-instance full-read and inspection peaks are provider costs, not a
+lazy-read claim. C6 may compare a current OpenUSD provider only after the
+narrow license and package-inventory decision.

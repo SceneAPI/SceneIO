@@ -107,8 +107,10 @@ stage = sceneio.read_scene(
 assert isinstance(stage, sceneio.SceneGraph)
 
 # Static meshes, point clouds, bounded PreviewSurface materials, official
-# Gaussian fields, static cameras, and relative PNG/JPEG/EXR textures write as
-# deterministic USDA or aligned USDZ.
+# Gaussian fields, static cameras, one inherited semantic pair, static point
+# instances, and relative PNG/JPEG/EXR textures write as deterministic USDA
+# or aligned USDZ. Direct scalar-float OpenVDB references write to USDA/USD;
+# volume-bearing USDZ is refused by the bounded profile.
 sceneio.write_scene(stage, "capture-copy.usdz")
 
 hierarchy_only = sceneio.read_scene("capture.usdz", load_payloads=False)

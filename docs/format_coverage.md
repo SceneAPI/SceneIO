@@ -153,6 +153,20 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > records C4. OpenUSD remains standards reference material only; it was not
 > installed or invoked for C4.
 >
+> **USD C5 implementation checkpoint (2026-08-01):** rich `SceneGraph`
+> reads/writes now include direct scalar-float `UsdVolVolume`/
+> `OpenVDBAsset` references for USDA/USD, one effective inherited
+> `SemanticsLabelsAPI` taxonomy/label pair per node, and static
+> `UsdGeomPointInstancer` payloads with ordered prototypes, transforms, ids,
+> masks, and a closed motion/display attribute set. OpenVDB resource prims
+> remain dependencies rather than scene nodes, their bytes are not decoded,
+> and volume-bearing USDZ writes refuse. One mixed-stage fixture contains all
+> accepted 3D-CV payload kinds. The 185-pass USD family, 45-pass
+> affected gate, 32 MiB allocation assertion, and generated 1M-instance/
+> 1 GiB-VDB measurement are green. The exact 4,299-node local gate passes
+> 4,293 with 6 documented skips; full Ruff and docs/contracts are clean. This
+> closure unit records C5; OpenUSD is still reference-only.
+>
 > **COLMAP dense/workspace checkpoint (2026-07-29):** the current local
 > registry has 54 codecs: 48 buffer-backed files, three path-native
 > multi-file containers, and three directories. The four additions are exact
@@ -977,7 +991,7 @@ public-domain SQLite amalgamation statically linked into `_core`.
 | `e57` | `PointCloud` | R+W, inspect | direct **pye57/libE57Format** | optional `sceneio[e57]`; exactly one Cartesian scan, exact float32 coordinates/intensity and integral RGB8, pose, explicit invalid-point filtering; exact inspection count uses the provider scan path only when invalid-state data are present |
 | `parquet` / `arrow_ipc` | `TensorDict` numeric table | R+W, inspect; Parquet named-column partial | direct **PyArrow** | optional `sceneio[arrow]`; scalar/fixed-width numeric columns, equal row counts, text attrs, mmap/threaded provider paths, transactional writes |
 | `openvdb` | sparse-grid `TensorDict` | R+W, inspect | direct **TinyVDB** | optional `sceneio[openvdb]`; one identity-transform, zero-background float32 scalar grid; ZIP/active-mask output; packaged upstream seed is fully replaced and provenance-pinned; rebuilt active count is verified and provider topology loss refuses |
-| `usd` / `usdz` | `MeshScene` compatibility projection; additive `SceneGraph` | R+W, rich mesh/points/materials/Gaussians/cameras R+W, inspect and prim selection | direct **TinyUSDZ** | optional `sceneio[usd]`; `.usd`/`.usda`, historical `.usdc` reads through crate 10, and aligned uncompressed USDZ; legacy static mesh bytes/API unchanged; `read_scene` maps bounded hierarchy/metadata/static transforms, prim selection, static polygon meshes, points, PreviewSurface constants/textures, direct/subset bindings, portable PNG/JPEG/EXR references, official float/half Gaussian fields, and static cameras with unambiguous render-product resolution; `write_scene` streams deterministic USDA sidecars or self-contained USDZ; volumes/instances/semantics, current crates, USDC writes, composition, and selected animated values remain later profile units |
+| `usd` / `usdz` | `MeshScene` compatibility projection; additive `SceneGraph` | R+W, rich static 3D-CV profile R+W, inspect and prim selection | direct **TinyUSDZ** | optional `sceneio[usd]`; `.usd`/`.usda`, historical `.usdc` reads through crate 10, and aligned uncompressed USDZ; legacy static mesh bytes/API unchanged; `read_scene` maps bounded hierarchy/metadata/static transforms, prim selection, polygon meshes, points, PreviewSurface constants/textures and direct/subset bindings, portable PNG/JPEG/EXR references, official float/half Gaussian fields, static camera/render-product pairs, direct scalar-float OpenVDB references, one inherited semantic pair, and static PointInstancer rows; `write_scene` streams deterministic USDA sidecars or self-contained USDZ, while volume-bearing USDZ refuses; current crates, USDC writes, composition, selected animated values, multiple semantic labels/taxonomies, and broader volume/instance schemas remain unavailable |
 
 ### Repository-owned COLMAP workflow adapters
 
@@ -1016,8 +1030,8 @@ requirement for COLMAP ecosystem closure.
 - Broader semantics remain intentionally outside those bounded profiles:
   TIFF pyramids/multiple series, E57 multiple or organized scans, general
   Arrow nested/string/null schemas, multi-grid/vector/transformed OpenVDB,
-  and composed/animated/material USD scenes plus the remaining bounded
-  Gaussian/camera/volume/instance/semantic profile units.
+  and composed/animated USD scenes, general shader graphs, multiple semantic
+  values, and broader volume/instance schemas.
 - Policy-gated: AVIF, JPEG-XL, and Draco-compressed glTF. These do not enter
   implementation without an explicit decision under the patented-codec rule.
 

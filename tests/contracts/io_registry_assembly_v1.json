@@ -435,8 +435,8 @@
     "last": "tests/test_points_binary.py::test_bad_magic_rejected"
   },
   "pytest_candidate_collection": {
-    "count": 4275,
-    "sorted_normalized_node_ids_sha256": "0a725f4279f26693de7bf07e56e07e1d0d2b80c393ff346ed2f29ead10e23f0b",
+    "count": 4299,
+    "sorted_normalized_node_ids_sha256": "eab3eceb0c1c58e0811b6ccdfd673f7782437ae9265311b7e37e12dc6eba5543",
     "added_nodes": [
       "tests/codecs/test_animated_webp.py::test_sceneio_writer_is_lossless_and_oracle_readable",
       "tests/codecs/test_animated_webp.py::test_pillow_writer_is_sceneio_readable_bit_exact",
@@ -1631,7 +1631,31 @@
       "tests/codecs/test_usd_cameras.py::test_render_product_relationship_and_extension_fields_are_refused[    custom string extra = \"value\"-unsupported properties]",
       "tests/codecs/test_usd_cameras.py::test_unknown_camera_property_is_refused",
       "tests/codecs/test_usd_cameras.py::test_camera_rig_record_is_owned_and_mutation_isolated",
-      "tests/test_io_benchmark_qualification.py::test_rich_usd_camera_benchmark_smoke"
+      "tests/test_io_benchmark_qualification.py::test_rich_usd_camera_benchmark_smoke",
+      "tests/codecs/test_usd_instances.py::test_point_instancer_preserves_order_ids_transforms_and_attributes",
+      "tests/codecs/test_usd_instances.py::test_selected_instancer_adds_prototype_dependencies",
+      "tests/codecs/test_usd_instances.py::test_point_instancer_writer_is_oracle_readable_and_roundtrips",
+      "tests/codecs/test_usd_instances.py::test_inspection_counts_instances_without_expanding_prototypes",
+      "tests/codecs/test_usd_instances.py::test_unrepresentable_instance_metadata_and_missing_prototype_are_refused[def PointInstancer \"Copies\" (/n        inactiveIds = [20]/n    )-inactiveIds]",
+      "tests/codecs/test_usd_instances.py::test_unrepresentable_instance_metadata_and_missing_prototype_are_refused[rel prototypes = [</Root/Missing>, </Root/PrototypeA>]-does not name a scene prim]",
+      "tests/codecs/test_usd_instances.py::test_prototype_cycle_is_refused_by_read_and_reported_by_inspection",
+      "tests/codecs/test_usd_instances.py::test_unsupported_instance_attribute_preserves_destination",
+      "tests/codecs/test_usd_mixed_payloads.py::test_all_typed_3d_cv_payloads_coexist_in_one_stage",
+      "tests/codecs/test_usd_semantics.py::test_semantic_label_inheritance_is_evaluated_per_node",
+      "tests/codecs/test_usd_semantics.py::test_multiple_evaluated_semantic_values_are_refused[def Xform \"Root\" (/n    prepend apiSchemas = [\"SemanticsLabelsAPI:class\"]/n)/n{/n    token[] semantics:labels:class = [\"vehicle\", \"moving\"]/n}/n]",
+      "tests/codecs/test_usd_semantics.py::test_multiple_evaluated_semantic_values_are_refused[def Xform \"Root\" (/n    prepend apiSchemas = [/n        \"SemanticsLabelsAPI:class\",/n        \"SemanticsLabelsAPI:domain\"/n    ]/n)/n{/n    token[] semantics:labels:class = [\"vehicle\"]/n    token[] semantics:labels:domain = [\"road\"]/n}/n]",
+      "tests/codecs/test_usd_semantics.py::test_semantic_write_is_minimal_and_roundtrips",
+      "tests/codecs/test_usd_semantics.py::test_unrepresentable_semantic_clear_preserves_destination",
+      "tests/codecs/test_usd_volumes.py::test_shared_openvdb_dependency_is_not_decoded",
+      "tests/codecs/test_usd_volumes.py::test_large_openvdb_dependency_does_not_allocate_its_file_size",
+      "tests/codecs/test_usd_volumes.py::test_missing_vdb_is_reported_on_read_but_not_structural_inspection",
+      "tests/codecs/test_usd_volumes.py::test_selected_sibling_does_not_resolve_unselected_volume",
+      "tests/codecs/test_usd_volumes.py::test_volume_writer_roundtrips_literal_relationship_and_asset",
+      "tests/codecs/test_usd_volumes.py::test_volume_usdz_and_unrepresented_field_class_preserve_destination",
+      "tests/test_io_benchmark_qualification.py::test_rich_usd_remaining_payload_benchmark_smoke",
+      "tests/test_import_guards.py::test_no_family_imports[io/_usd/instances.py]",
+      "tests/test_import_guards.py::test_no_family_imports[io/_usd/semantics.py]",
+      "tests/test_import_guards.py::test_no_family_imports[io/_usd/volumes.py]"
     ],
     "removed_nodes": [
       "tests/codecs/test_compressed_ply.py::test_writer_body_is_byte_identical_to_pinned_playcanvas_vector",

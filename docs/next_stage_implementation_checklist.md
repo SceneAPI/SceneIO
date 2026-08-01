@@ -5170,9 +5170,11 @@ checklist. No unchecked item below is a current USD I/O capability claim:
       `a633477`
       with exact float/half, degree 0--3 SH, convention, transform, inspection,
       benchmark, and legacy-codec evidence.
-- [ ] U5: cameras/render products are implemented in the C4 worktree and their
-      focused gate is green; OpenVDB references, semantic labels, and point
-      instancing remain C5.
+- [x] U5: C4 commits static camera/render-product pairs and C5 implements
+      direct scalar-float OpenVDB references, one inherited semantic pair,
+      and static point instancing in focused schema modules. The mixed-stage,
+      lifetime/allocation, malformed, transactional, 1M-instance, and
+      1 GiB-VDB evidence is green; C5's final full-suite commit gate remains.
 - [ ] U6: qualified USDC/USDZ, evaluated composition subset, and explicitly
       selected time.
 - [ ] U7: complete verification, benchmarks, cross-platform package run, and
@@ -5247,6 +5249,17 @@ Progress:
       gate passes 4,269 with 6 documented skips; full Ruff and diff checks are
       clean; and all three review lenses sign off. This closure unit records
       the completed C4 result.
+- [x] C5 implementation maps direct scalar-float OpenVDB references without
+      decoding dependency bytes, one inherited semantic taxonomy/label pair,
+      and static PointInstancer rows without expanding prototype geometry.
+      Three focused schema modules, one all-payload mixed stage, missing/shared
+      dependency cases, inactive/mask/id/order/cycle guards, selection,
+      lifetime, allocation, and transaction tests are green. The generated
+      closure case measures 1M instances and a sparse 1 GiB VDB dependency;
+      the VDB full read remains below 0.025 MB traced allocation. The focused
+      affected gate passes 45 tests. The exact 4,299-node local gate passes
+      4,293 with 6 documented skips; full Ruff, docs/contracts, and all three
+      review lenses are green. This closure unit records completed C5.
 
 Completed U1 evidence:
 

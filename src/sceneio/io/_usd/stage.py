@@ -5,7 +5,7 @@ from __future__ import annotations
 import math
 import os
 import re
-from contextlib import suppress
+from contextlib import ExitStack, suppress
 from pathlib import Path, PurePosixPath
 
 import numpy as np
@@ -16,10 +16,13 @@ from sceneio.io._usd import (
     cameras,
     gaussians,
     geometry,
+    instances,
     materials,
     package,
     points,
     provider,
+    semantics,
+    volumes,
 )
 
 _IDENTITY = np.eye(4, dtype=np.float64)
@@ -304,6 +307,8 @@ def _render_nodes(stage) -> dict[str, tuple[np.ndarray, bool]]:
 def _has_time_samples(prim, *, point_text: str | None = None) -> bool:
     if prim.type_name == "Points":
         return points.has_time_samples(prim, text=point_text)
+    if prim.type_name == instances.INSTANCE_PRIM_TYPE:
+        return instances.has_time_samples(prim, text=point_text)
     if prim.type_name == cameras.CAMERA_PRIM_TYPE:
         return cameras.has_time_samples(prim, text=point_text)
     return any(
@@ -315,6 +320,8 @@ def _has_time_samples(prim, *, point_text: str | None = None) -> bool:
 def _property_names(prim, *, point_text: str | None = None) -> set[str]:
     if prim.type_name == "Points":
         return points.property_names(prim, text=point_text)
+    if prim.type_name == instances.INSTANCE_PRIM_TYPE:
+        return instances.property_names(prim, text=point_text)
     if prim.type_name == cameras.CAMERA_PRIM_TYPE:
         return cameras.property_names(prim, text=point_text)
     return set(prim.property_names())
@@ -325,7 +332,10 @@ def _payload_shell_properties(
     *,
     point_text: str | None = None,
 ) -> frozenset[str]:
-    return _IMAGEABLE_PROPERTIES | frozenset(
+    return _IMAGEABLE_PROPERTIES | semantics.semantic_properties(
+        prim,
+        text=point_text,
+    ) | frozenset(
         name
         for name in _property_names(prim, point_text=point_text)
         if name == "xformOpOrder" or name.startswith("xformOp:")
@@ -345,6 +355,8 @@ def _validate_shell(
         "Points",
         cameras.CAMERA_PRIM_TYPE,
         gaussians.GAUSSIAN_PRIM_TYPE,
+        volumes.VOLUME_PRIM_TYPE,
+        instances.INSTANCE_PRIM_TYPE,
     }:
         category = _PENDING_PAYLOAD_TYPES.get(prim.type_name)
         if category is not None:
@@ -374,6 +386,11 @@ def _validate_shell(
         allowed |= gaussians.GAUSSIAN_PROPERTIES
     if prim.type_name == cameras.CAMERA_PRIM_TYPE:
         allowed |= cameras.CAMERA_PROPERTIES
+    if prim.type_name == volumes.VOLUME_PRIM_TYPE:
+        allowed |= volumes.volume_properties(prim)
+    if prim.type_name == instances.INSTANCE_PRIM_TYPE:
+        allowed |= instances.INSTANCE_PROPERTIES
+    allowed |= semantics.semantic_properties(prim, text=point_text)
     if prim.type_name == "Scope":
         allowed = _IMAGEABLE_PROPERTIES
     unsupported = sorted(properties - allowed)
@@ -490,8 +507,11 @@ def stage_to_scene_graph(
     metadata = _stage_metadata(stage)
     stage_cameras = cameras.collect_stage_products(stage)
     resource_paths = (
-        materials.stage_resource_paths(stage) | stage_cameras.resource_paths
+        materials.stage_resource_paths(stage)
+        | stage_cameras.resource_paths
+        | volumes.stage_resource_paths(stage)
     )
+    prim_index = volumes.prim_index(stage)
 
     roots = list(stage.root_prims())
     if len({prim.name for prim in roots}) != len(roots):
@@ -516,6 +536,28 @@ def stage_to_scene_graph(
     for root in roots:
         collect(root, "")
     selected = _normalize_prim_selection(prims, frozenset(all_paths))
+    if selected is not None:
+        expanded = set(selected)
+        changed = True
+        while changed:
+            changed = False
+            active = frozenset(expanded)
+            for path, prim in prim_index.items():
+                if (
+                    prim.type_name != instances.INSTANCE_PRIM_TYPE
+                    or not _select_payload(path, active)
+                ):
+                    continue
+                for target in instances.prototype_paths(prim, path=path):
+                    if target not in all_paths:
+                        raise ValueError(
+                            f"USD PointInstancer {path!r}: prototype "
+                            f"{target!r} does not name a scene prim"
+                        )
+                    if target not in expanded:
+                        expanded.add(target)
+                        changed = True
+        selected = frozenset(expanded)
 
     selected_mesh_paths: set[str] = set()
     reachable_material_paths: set[str] = set()
@@ -587,10 +629,22 @@ def stage_to_scene_graph(
     point_clouds = []
     gaussian_clouds = []
     camera_rows: list[dict[str, object]] = []
+    volume_assets = []
+    openvdb_uris: list[str] = []
+    openvdb_sources: list[str] = []
+    openvdb_by_uri: dict[str, str] = {}
+    parsed_instances: list[tuple[str, instances.ParsedInstanceSet]] = []
+    node_semantic_taxonomies: list[str] = []
+    node_semantic_labels: list[str] = []
     path_to_node: dict[str, int] = {}
     no_payload = np.iinfo(np.uint64).max
 
-    def visit(prim, parent_path: str, inherited_purpose: str) -> int | None:
+    def visit(
+        prim,
+        parent_path: str,
+        inherited_purpose: str,
+        inherited_semantics: dict[str, frozenset[str]],
+    ) -> int | None:
         path = f"{parent_path}/{prim.name}"
         if path in resource_paths:
             return None
@@ -598,7 +652,12 @@ def stage_to_scene_graph(
             return None
         point_text = (
             prim.to_string()
-            if prim.type_name in {"Points", cameras.CAMERA_PRIM_TYPE}
+            if prim.type_name
+            in {
+                "Points",
+                cameras.CAMERA_PRIM_TYPE,
+                instances.INSTANCE_PRIM_TYPE,
+            }
             else None
         )
         _validate_shell(prim, path, point_text=point_text)
@@ -612,11 +671,18 @@ def stage_to_scene_graph(
             point_text=point_text,
         )
         effective_purpose = authored_purpose or inherited_purpose
+        taxonomy, label, effective_semantics = semantics.inherited_pair(
+            prim,
+            inherited_semantics,
+            text=point_text,
+        )
         index = len(node_names)
         path_to_node[path] = index
         node_names.append(prim.name)
         node_visibility.append(visibility)
         node_purpose.append(effective_purpose)
+        node_semantic_taxonomies.append(taxonomy)
+        node_semantic_labels.append(label)
         node_payload_kinds.append("none")
         node_payload_indices.append(no_payload)
         child_lists.append([])
@@ -720,19 +786,77 @@ def stage_to_scene_graph(
                     text=point_text,
                 )
             )
+        if (
+            prim.type_name == volumes.VOLUME_PRIM_TYPE
+            and load_payloads
+            and effective_purpose in selected_purposes
+            and _select_payload(path, selected)
+        ):
+            node_payload_kinds[index] = "volume"
+            node_payload_indices[index] = len(volume_assets)
+            dependency = volumes.volume_from_prim(
+                prim,
+                path=path,
+                prims=prim_index,
+                source_path=source_path,
+                source_representation=source_representation,
+                shell_properties=_payload_shell_properties(
+                    prim,
+                    point_text=point_text,
+                ),
+                resolve_asset=True,
+            )
+            previous = openvdb_by_uri.get(dependency.uri)
+            if previous is not None and previous != dependency.source:
+                raise ValueError(
+                    f"USD OpenVDB asset {dependency.uri!r}: conflicting "
+                    "source locators"
+                )
+            if previous is None:
+                openvdb_by_uri[dependency.uri] = dependency.source
+                openvdb_uris.append(dependency.uri)
+                openvdb_sources.append(dependency.source)
+            volume_assets.append(dependency.volume)
+        if (
+            prim.type_name == instances.INSTANCE_PRIM_TYPE
+            and load_payloads
+            and effective_purpose in selected_purposes
+            and _select_payload(path, selected)
+        ):
+            node_payload_kinds[index] = "instances"
+            node_payload_indices[index] = len(parsed_instances)
+            parsed_instances.append(
+                (
+                    path,
+                    instances.instance_set_from_prim(
+                        prim,
+                        path=path,
+                        shell_properties=_payload_shell_properties(
+                            prim,
+                            point_text=point_text,
+                        ),
+                        text=point_text,
+                    ),
+                )
+            )
         point_text = None
         for child in prim.children():
             child_path = f"{path}/{child.name}"
             if child_path in resource_paths:
                 continue
-            child_index = visit(child, path, effective_purpose)
+            child_index = visit(
+                child,
+                path,
+                effective_purpose,
+                effective_semantics,
+            )
             if child_index is not None:
                 child_lists[index].append(child_index)
         return index
 
     for root in roots:
         if f"/{root.name}" not in resource_paths:
-            visit(root, "", "default")
+            visit(root, "", "default", {})
 
     offsets = np.empty(len(child_lists) + 1, dtype=np.uint64)
     offsets[0] = 0
@@ -749,6 +873,18 @@ def stage_to_scene_graph(
             raise ValueError("USD: defaultPrim must name an existing root prim")
         default_prim = path_to_node.get(default_path)
 
+    instances.validate_prototype_dependencies(
+        {
+            path: parsed.prototype_paths
+            for path, parsed in parsed_instances
+        },
+        scene_paths=frozenset(path_to_node),
+    )
+    instance_sets = [
+        parsed.build(path_to_node, path=path)
+        for path, parsed in parsed_instances
+    ]
+
     return _core.scene_graph(
         node_names,
         node_child_offsets=offsets,
@@ -761,6 +897,8 @@ def stage_to_scene_graph(
         node_payload_indices=np.asarray(node_payload_indices, dtype=np.uint64),
         node_visibility=node_visibility,
         node_purpose=node_purpose,
+        node_semantic_taxonomies=node_semantic_taxonomies,
+        node_semantic_labels=node_semantic_labels,
         meshes=meshes,
         point_clouds=point_clouds,
         gaussian_clouds=gaussian_clouds,
@@ -768,17 +906,24 @@ def stage_to_scene_graph(
             camera_rows,
             scale_to_meters=metadata["meters_per_unit"],
         ),
+        volumes=volume_assets,
+        instances=instance_sets,
         materials=stage_materials.record if load_payloads else None,
         external_asset_uris=(
-            stage_materials.external_asset_uris if load_payloads else ()
+            stage_materials.external_asset_uris + tuple(openvdb_uris)
+            if load_payloads
+            else ()
         ),
         external_asset_kinds=(
             ("texture",) * len(stage_materials.external_asset_uris)
+            + ("openvdb",) * len(openvdb_uris)
             if load_payloads
             else ()
         ),
         external_asset_sources=(
-            stage_materials.external_asset_sources if load_payloads else ()
+            stage_materials.external_asset_sources + tuple(openvdb_sources)
+            if load_payloads
+            else ()
         ),
         source_representation=source_representation,
         default_prim=default_prim,
@@ -843,6 +988,8 @@ def inspect_scene(
         stage_cameras = None
         unsupported.add(f"cameras: {exc}")
     camera_resource_paths = cameras.stage_resource_paths(stage)
+    volume_resource_paths = volumes.stage_resource_paths(stage)
+    prim_index = volumes.prim_index(stage)
     try:
         stage_materials = materials.collect_stage_materials(
             stage,
@@ -851,12 +998,16 @@ def inspect_scene(
             resolve_assets=False,
         )
         resource_paths = (
-            stage_materials.resource_paths | camera_resource_paths
+            stage_materials.resource_paths
+            | camera_resource_paths
+            | volume_resource_paths
         )
     except ValueError as exc:
         stage_materials = None
         resource_paths = (
-            materials.stage_resource_paths(stage) | camera_resource_paths
+            materials.stage_resource_paths(stage)
+            | camera_resource_paths
+            | volume_resource_paths
         )
         unsupported.add(f"materials: {exc}")
 
@@ -867,15 +1018,25 @@ def inspect_scene(
     vertices = 0
     faces = 0
     camera_resolutions: list[str] = []
+    instance_count = 0
+    prototype_count = 0
+    semantic_node_count = 0
+    volume_count = 0
+    instance_dependencies: dict[str, tuple[str, ...]] = {}
 
-    def visit(prim, parent_path: str) -> None:
-        nonlocal faces, node_count, primitive_count, vertices
+    def visit(
+        prim,
+        parent_path: str,
+        inherited_semantics: dict[str, frozenset[str]],
+    ) -> None:
+        nonlocal faces, instance_count, node_count, primitive_count
+        nonlocal prototype_count, semantic_node_count, vertices, volume_count
         path_value = f"{parent_path}/{prim.name}"
         type_name = str(prim.type_name)
         type_counts[type_name] = type_counts.get(type_name, 0) + 1
         if path_value in resource_paths:
             for child in prim.children():
-                visit(child, path_value)
+                visit(child, path_value, inherited_semantics)
             return
         node_count += 1
         for set_name in prim.variant_sets():
@@ -886,7 +1047,12 @@ def inspect_scene(
             )
         point_text = (
             prim.to_string()
-            if prim.type_name in {"Points", cameras.CAMERA_PRIM_TYPE}
+            if prim.type_name
+            in {
+                "Points",
+                cameras.CAMERA_PRIM_TYPE,
+                instances.INSTANCE_PRIM_TYPE,
+            }
             else None
         )
         for property_name in _property_names(prim, point_text=point_text):
@@ -901,7 +1067,15 @@ def inspect_scene(
                     attribute.value.to_string(),
                 ):
                     dependency_set.add(match)
+        effective_semantics = inherited_semantics
         try:
+            taxonomy, label, effective_semantics = semantics.inherited_pair(
+                prim,
+                inherited_semantics,
+                text=point_text,
+            )
+            if taxonomy and label:
+                semantic_node_count += 1
             _validate_shell(prim, path_value, point_text=point_text)
         except ValueError as exc:
             unsupported.add(f"{path_value}: {exc}")
@@ -982,9 +1156,61 @@ def inspect_scene(
                     camera_resolutions.append(
                         f"{path_value}={resolution[0]}x{resolution[1]}:{model}"
                     )
+            elif prim.type_name == volumes.VOLUME_PRIM_TYPE:
+                try:
+                    volumes.volume_from_prim(
+                        prim,
+                        path=path_value,
+                        prims=prim_index,
+                        source_path=path,
+                        source_representation=representation,
+                        shell_properties=_payload_shell_properties(
+                            prim,
+                            point_text=point_text,
+                        ),
+                        resolve_asset=False,
+                    )
+                except ValueError as exc:
+                    unsupported.add(f"{path_value}: {exc}")
+                else:
+                    volume_count += 1
+                    primitive_count += 1
+            elif prim.type_name == instances.INSTANCE_PRIM_TYPE:
+                try:
+                    count, prototypes = instances.inspect_instance_prim(
+                        prim,
+                        path=path_value,
+                        shell_properties=_payload_shell_properties(
+                            prim,
+                            point_text=point_text,
+                        ),
+                        text=point_text,
+                    )
+                except ValueError as exc:
+                    unsupported.add(f"{path_value}: {exc}")
+                else:
+                    targets = instances.prototype_paths(
+                        prim,
+                        path=path_value,
+                        text=point_text,
+                    )
+                    missing_targets = sorted(
+                        target for target in targets if target not in prim_index
+                    )
+                    if missing_targets:
+                        unsupported.add(
+                            f"{path_value}: prototypes do not name scene prims: "
+                            + ", ".join(missing_targets)
+                        )
+                    else:
+                        instance_dependencies[path_value] = targets
+                    instance_count += count
+                    prototype_count += prototypes
+                    vertices += count
+                    primitive_count += 1
         point_text = None
         for child in prim.children():
-            visit(child, path_value)
+            visit(child, path_value, effective_semantics)
 
     roots = list(stage.root_prims())
     try:
@@ -996,7 +1222,15 @@ def inspect_scene(
         unsupported.add(str(exc))
 
     for root in roots:
-        visit(root, "")
+        visit(root, "", {})
+
+    try:
+        instances.validate_prototype_dependencies(
+            instance_dependencies,
+            scene_paths=frozenset(prim_index) - resource_paths,
+        )
+    except ValueError as exc:
+        unsupported.add(str(exc))
 
     mesh_projection_available = not unsupported and all(
         name in {"Xform", "Scope", "Mesh"} for name in type_counts
@@ -1031,6 +1265,16 @@ def inspect_scene(
             gaussians.GAUSSIAN_PRIM_TYPE, 0
         ),
     }
+    if volumes.VOLUME_PRIM_TYPE in type_counts:
+        details["num_volumes"] = volume_count
+    if instances.INSTANCE_PRIM_TYPE in type_counts:
+        details.update(
+            num_instance_sets=type_counts[instances.INSTANCE_PRIM_TYPE],
+            num_instances=instance_count,
+            num_instance_prototypes=prototype_count,
+        )
+    if semantic_node_count:
+        details["num_semantic_nodes"] = semantic_node_count
     if (
         cameras.CAMERA_PRIM_TYPE in type_counts
         or cameras.RENDER_PRODUCT_PRIM_TYPE in type_counts
@@ -1116,7 +1360,15 @@ def _validate_writable_scene(scene) -> tuple[object, ...]:
             kind
             for kind in payload_kinds
             if kind
-            not in {"none", "mesh", "point_cloud", "gaussian_cloud", "camera"}
+            not in {
+                "none",
+                "mesh",
+                "point_cloud",
+                "gaussian_cloud",
+                "camera",
+                "volume",
+                "instances",
+            }
         }
     )
     if unsupported_payloads:
@@ -1128,7 +1380,7 @@ def _validate_writable_scene(scene) -> tuple[object, ...]:
         {
             kind
             for kind in scene.external_asset_kinds
-            if kind != "texture"
+            if kind not in {"texture", "openvdb"}
         }
     )
     if unsupported_assets:
@@ -1137,10 +1389,6 @@ def _validate_writable_scene(scene) -> tuple[object, ...]:
             + ", ".join(unsupported_assets)
         )
     materials.validate_writable_materials(scene)
-    if any(scene.node_semantic_taxonomies) or any(scene.node_semantic_labels):
-        raise ValueError(
-            "USD: semantic labels are not available in the stage-skeleton profile"
-        )
     names = tuple(scene.node_names)
     for name in names:
         if not _IDENTIFIER.fullmatch(name):
@@ -1163,7 +1411,7 @@ def _validate_writable_scene(scene) -> tuple[object, ...]:
     used_points: set[int] = set()
     used_gaussians: set[int] = set()
     for node, kind in enumerate(payload_kinds):
-        if kind in {"none", "camera"}:
+        if kind in {"none", "camera", "volume", "instances"}:
             continue
         index = int(payload_indices[node])
         used = {
@@ -1218,6 +1466,19 @@ def _validate_writable_scene(scene) -> tuple[object, ...]:
         transforms=transforms,
         node_paths=node_paths,
     )
+    volume_rows, volume_fields = volumes.validate_writable_volumes(
+        scene,
+        payload_kinds=payload_kinds,
+        payload_indices=payload_indices,
+        node_paths=node_paths,
+    )
+    instance_rows = instances.validate_writable_instances(
+        scene,
+        payload_kinds=payload_kinds,
+        payload_indices=payload_indices,
+        node_paths=node_paths,
+    )
+    semantic_authored = semantics.validate_writable_semantics(scene, parents)
     return (
         transforms,
         resets,
@@ -1227,6 +1488,10 @@ def _validate_writable_scene(scene) -> tuple[object, ...]:
         payload_kinds,
         payload_indices,
         camera_rows,
+        volume_rows,
+        volume_fields,
+        instance_rows,
+        semantic_authored,
     )
 
 
@@ -1235,6 +1500,7 @@ def _write_scene_usda(
     stream,
     *,
     texture_paths: dict[str, str],
+    openvdb_paths: dict[str, str],
     validated: tuple[object, ...] | None = None,
 ) -> None:
     values = _validate_writable_scene(scene) if validated is None else validated
@@ -1247,8 +1513,17 @@ def _write_scene_usda(
         payload_kinds,
         payload_indices,
         camera_rows,
+        volume_rows,
+        volume_fields,
+        instance_rows,
+        semantic_authored,
     ) = values
     camera_rows_by_node = {row.node: row for row in camera_rows}
+    volume_rows_by_node = {row.node: row for row in volume_rows}
+    instance_rows_by_node = {row.node: row for row in instance_rows}
+    volume_fields_by_owner: dict[int, list[volumes.WritableField]] = {}
+    for field in volume_fields:
+        volume_fields_by_owner.setdefault(field.owner_node, []).append(field)
     material_scope = (
         materials.choose_material_scope(scene) if scene.has_materials else None
     )
@@ -1289,6 +1564,8 @@ def _write_scene_usda(
             "point_cloud": "Points",
             "gaussian_cloud": gaussians.GAUSSIAN_PRIM_TYPE,
             "camera": cameras.CAMERA_PRIM_TYPE,
+            "volume": volumes.VOLUME_PRIM_TYPE,
+            "instances": instances.INSTANCE_PRIM_TYPE,
         }[kind]
         mesh = (
             scene.mesh_at(int(payload_indices[node]))
@@ -1300,10 +1577,24 @@ def _write_scene_usda(
             and np.any(np.asarray(mesh.primitive_materials) >= 0)
         )
         stream.write(f'{indent}def {type_name} "{scene.node_names[node]}"\n')
+        api_schemas = []
         if has_material_binding:
+            api_schemas.append("MaterialBindingAPI")
+        semantic_schema = semantics.api_schema(
+            scene,
+            node,
+            semantic_authored,
+        )
+        if semantic_schema is not None:
+            api_schemas.append(semantic_schema)
+        if api_schemas:
+            encoded_schemas = ", ".join(
+                '"' + value + '"' for value in api_schemas
+            )
             stream.write(
                 f"{indent}(\n"
-                f'{indent}    prepend apiSchemas = ["MaterialBindingAPI"]\n'
+                f"{indent}    prepend apiSchemas = "
+                f"[{encoded_schemas}]\n"
                 f"{indent})\n"
             )
         stream.write(f"{indent}{{\n")
@@ -1330,6 +1621,8 @@ def _write_scene_usda(
         purpose = scene.node_purpose[node]
         if purpose != "default":
             stream.write(f'{inner}uniform token purpose = "{purpose}"\n')
+        if semantic_authored[node]:
+            semantics.write_label_attribute(scene, node, stream, inner=inner)
         if kind == "mesh":
             geometry.write_mesh_attributes(
                 stream,
@@ -1360,6 +1653,27 @@ def _write_scene_usda(
                 stream,
                 camera_rows_by_node[node],
                 inner=inner,
+            )
+        elif kind == "volume":
+            volumes.write_volume_attribute(
+                stream,
+                volume_rows_by_node[node],
+                inner=inner,
+            )
+        elif kind == "instances":
+            row = instance_rows_by_node[node]
+            instances.write_instance_attributes(
+                stream,
+                scene.instance_set_at(row.payload),
+                row,
+                inner=inner,
+            )
+        for field in volume_fields_by_owner.get(node, ()):
+            volumes.write_field_resource(
+                stream,
+                field,
+                inner=inner,
+                asset_paths=openvdb_paths,
             )
         begin, end = int(offsets[node]), int(offsets[node + 1])
         for child in children[begin:end]:
@@ -1429,12 +1743,23 @@ def write_scene(
     selected = _selected_encoding(destination, encoding)
     validated = _validate_writable_scene(scene)
     texture_assets = _texture_assets(scene)
+    openvdb_assets = _openvdb_assets(scene)
+    if selected == "usdz" and openvdb_assets:
+        raise ValueError(
+            "USDZ: OpenVDB dependencies are outside USDZ 1.3; write USDA/USD"
+        )
     if selected == "usdz" and texture_assets and not package_assets:
         raise ValueError(
             "USDZ: texture assets must be packaged in the self-contained profile"
         )
     if selected == "usda" and texture_assets and not package_assets:
         package.validate_unpacked_asset_sources(destination, texture_assets)
+    if selected == "usda" and openvdb_assets and not package_assets:
+        package.validate_unpacked_asset_sources(
+            destination,
+            openvdb_assets,
+            kind="OpenVDB asset",
+        )
     destination.parent.mkdir(parents=True, exist_ok=True)
     usda = package.temporary_path(destination, ".usda.tmp")
     output = None
@@ -1452,6 +1777,7 @@ def write_scene(
                     scene,
                     stream,
                     texture_paths=texture_paths,
+                    openvdb_paths={},
                     validated=validated,
                 )
             output = package.temporary_path(destination, ".usdz.tmp")
@@ -1464,11 +1790,29 @@ def write_scene(
                 ),
             )
             os.replace(output, destination)
-        elif texture_assets and package_assets:
-            with package.prepared_sidecar_assets(
-                destination,
-                texture_assets,
-            ) as texture_paths:
+        elif (texture_assets or openvdb_assets) and package_assets:
+            with ExitStack() as stack:
+                texture_paths = (
+                    stack.enter_context(
+                        package.prepared_sidecar_assets(
+                            destination,
+                            texture_assets,
+                        )
+                    )
+                    if texture_assets
+                    else {}
+                )
+                openvdb_paths = (
+                    stack.enter_context(
+                        package.prepared_sidecar_assets(
+                            destination,
+                            openvdb_assets,
+                            kind="openvdb",
+                        )
+                    )
+                    if openvdb_assets
+                    else {}
+                )
                 with usda.open(
                     "w",
                     encoding="utf-8",
@@ -1478,6 +1822,7 @@ def write_scene(
                         scene,
                         stream,
                         texture_paths=texture_paths,
+                        openvdb_paths=openvdb_paths,
                         validated=validated,
                     )
                 output = usda
@@ -1486,11 +1831,13 @@ def write_scene(
             texture_paths = {
                 uri: uri for uri, _ in texture_assets
             }
+            openvdb_paths = {uri: uri for uri, _ in openvdb_assets}
             with usda.open("w", encoding="utf-8", newline="\n") as stream:
                 _write_scene_usda(
                     scene,
                     stream,
                     texture_paths=texture_paths,
+                    openvdb_paths=openvdb_paths,
                     validated=validated,
                 )
             output = usda
@@ -1529,6 +1876,40 @@ def _texture_assets(scene) -> tuple[tuple[str, str], ...]:
     if tuple(uri for uri, _ in values) != first_use:
         raise ValueError(
             "USD: external texture assets must follow first material use"
+        )
+    return tuple(values)
+
+
+def _openvdb_assets(scene) -> tuple[tuple[str, str], ...]:
+    values: list[tuple[str, str]] = []
+    seen: set[str] = set()
+    for uri, kind, source in zip(
+        scene.external_asset_uris,
+        scene.external_asset_kinds,
+        scene.external_asset_sources,
+        strict=True,
+    ):
+        if kind != "openvdb":
+            continue
+        if uri in seen:
+            raise ValueError(f"USD: duplicate external OpenVDB URI {uri!r}")
+        seen.add(uri)
+        values.append((uri, source))
+    expected = {
+        scene.volume_at(index).uri for index in range(scene.num_volumes)
+    }
+    if seen != expected:
+        raise ValueError(
+            "USD: external OpenVDB assets must exactly match volume URIs"
+        )
+    first_use = tuple(
+        dict.fromkeys(
+            scene.volume_at(index).uri for index in range(scene.num_volumes)
+        )
+    )
+    if tuple(uri for uri, _ in values) != first_use:
+        raise ValueError(
+            "USD: external OpenVDB assets must follow first volume use"
         )
     return tuple(values)
 
