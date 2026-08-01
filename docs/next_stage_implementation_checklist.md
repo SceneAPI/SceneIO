@@ -5279,8 +5279,14 @@ Progress:
       profile smoke. The exact local tree collects 4,307 tests and passes 4,301
       with six documented skips; Ruff and focused contracts are green. The
       nonpublishing workflow repeats the optional-provider smoke on every wheel
-      platform. Hosted compiler and three-platform execution is the only open
-      U7 check and requires user authorization before push/run.
+      platform. Authorized package run `30701260601` passes all three wheels,
+      the sdist, installed smokes, and combined inventory with publication
+      skipped. Primary CI passed its suite and platform shards before the
+      all-codec benchmark exposed a Zarr 3.3 Linux platform-integer inference
+      mismatch. The zero-copy adapter repair passes the exact 4,310-node local
+      collection (4,304 pass, six skip), the 67-format smoke, Ruff, and all
+      three review lenses; the exact-head hosted rerun is the only open U7
+      check.
 
 Completed U1 evidence:
 

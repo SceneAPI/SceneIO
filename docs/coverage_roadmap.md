@@ -14,9 +14,12 @@
 > [`usd_3d_cv_implementation_plan.md`](usd_3d_cv_implementation_plan.md).
 > U0-U5 qualify the bounded provider, records, stage skeleton, and all direct
 > static payload kinds. C6 is closed through the explicit static-only Exit B;
-> C7 local source-to-wheel qualification is complete. The prepared hosted
-> compiler and Linux/macOS/Windows package run is the remaining user-gated
-> release evidence.
+> C7 local source-to-wheel qualification is complete. Authorized build-only
+> package run `30701260601` passes the sdist and Linux/macOS/Windows wheel
+> matrix with publication skipped. Primary CI then isolated a Zarr 3.3 Linux
+> platform-integer inference mismatch in the all-codec benchmark; the
+> zero-copy adapter repair and its exact-follow-up hosted run are the remaining
+> closure evidence.
 > Animated WebP is the 55th local codec; the preceding 54-codec hosted package
 > evidence remains a dated checkpoint rather than evidence for this addition.
 > The current branch-local COLMAP dense checkpoint adds exact depth/normal
@@ -358,7 +361,7 @@ Columns: **Ext/id** · **Record** · **Lib/oracle (license)** · **R/W** ·
 | ✅ hloc feature layout | `HlocFeatureStore` + native `FeatureSet` | documented hloc schema + h5py oracle | R+W | keypoints, D×N descriptors, scores, image size, uncertainty, nested names |
 | ✅ hloc match layout | `HlocMatchStore` + native `MatchGraph` | documented hloc schema + h5py oracle | R+W | dense `matches0`, optional scores, exact endpoints/order/dtypes |
 | ✅ safetensors | `TensorDict` | safetensors (Apache) | R+W | JSON header, mmap tensors, name/slice selectors |
-| ✅ Zarr v2/v3 | `TensorDict` | zarr (MIT) + numcodecs (MIT) | R+W | optional `sceneio[zarr]`; numeric/bool directory stores, nested paths, text root attrs, metadata inspection, named reads, leading-axis slices, transactional replacement |
+| ✅ Zarr v2/v3 | `TensorDict` | zarr (MIT) + numcodecs (MIT) | R+W | optional `sceneio[zarr]`; numeric/bool directory stores, nested paths, text root attrs, metadata inspection, named reads, leading-axis slices, transactional replacement, fixed-width zero-copy normalization for NumPy platform/generic numeric aliases |
 | ✅ Parquet / Arrow IPC | `TensorDict` numeric table | PyArrow (Apache-2.0) | R+W | optional `sceneio[arrow]`; fixed-width numeric columns, metadata, mmap reads; Parquet named-column selection |
 | ✅ OpenVDB | sparse-grid `TensorDict` | TinyVDB (Apache-2.0) | R+W | optional `sceneio[openvdb]`; one identity-transform, zero-background float32 scalar grid with sparse coordinates and ZIP/active-mask output; rebuilt active count is verified and unsupported provider topologies refuse |
 

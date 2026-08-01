@@ -193,9 +193,16 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > packages on each wheel host. SceneIO's Linux artifact retains manylinux2014;
 > TinyUSDZ's separately installed x86-64 wheel has a manylinux 2.27/2.28 floor,
 > which is why its Linux smoke runs on the Ubuntu 24.04 host rather than inside
-> the manylinux2014 build container. Hosted compiler and Linux/macOS/Windows
-> execution remains pending a user-authorized push; this local result is not
-> cross-platform evidence.
+> the manylinux2014 build container. The first authorized build-only package
+> run, `30701260601` at source `04a1749`, passes the sdist, MSVC,
+> manylinux2014 GCC 10, AppleClang, installed-provider, and combined-inventory
+> jobs with publication skipped. Primary CI run `30701254315` passed the full
+> suite and every platform shard, then its all-codec benchmark exposed a
+> Zarr 3.3 Linux platform-integer inference mismatch. The current follow-up
+> normalizes those NumPy aliases to fixed-width zero-copy views and adds
+> v2/v3 oracle regressions. Its exact 4,310-node local collection passes 4,304
+> with six documented skips; exact-follow-up hosted closure remains in
+> progress.
 >
 > **COLMAP dense/workspace checkpoint (2026-07-29):** the current local
 > registry has 54 codecs: 48 buffer-backed files, three path-native
@@ -1016,7 +1023,7 @@ public-domain SQLite amalgamation statically linked into `_core`.
 | `hdf5` | `TensorDict` | R+W, inspect, partial | independent **h5py** layouts in `tests/codecs/test_hdf5_hloc.py` | optional `sceneio[hdf5]`; numeric/bool datasets, nested paths, text root attrs, selected-path named reads, leading-axis hyperslabs, and atomic replacement; full reads reject indirect/virtual/object/reference/vlen layouts, while partial reads validate the selected paths and ancestors |
 | `hloc_features` | `HlocFeatureStore` of native `FeatureSet` | R+W, inspect | independent **h5py** documented layout | preserves keypoints, D×N wire descriptors as native N×D with uint8/int8/f16/f32/f64 dtype, scores, image size, nested names, and keypoint uncertainty |
 | `hloc_matches` | `HlocMatchStore` + native `MatchGraph` | R+W, inspect | independent **h5py** documented layout | preserves dense `matches0`, optional `matching_scores0`, exact endpoint names, source extents/dtypes, pair order, and mixed score presence |
-| `zarr` | `TensorDict` | R+W, inspect, partial | direct **zarr-python/numcodecs** | optional `sceneio[zarr]`; numeric/bool v2/v3 directory stores, nested names, text attrs, named reads, leading-axis slices, transactional replacement |
+| `zarr` | `TensorDict` | R+W, inspect, partial | direct **zarr-python/numcodecs** | optional `sceneio[zarr]`; numeric/bool v2/v3 directory stores, nested names, text attrs, named reads, leading-axis slices, transactional replacement, and zero-copy normalization of NumPy platform/generic numeric aliases before provider dispatch |
 | `tiff` | `Image`, `Mask`, or grayscale-stack `TensorDict` | R+W, inspect | **tifffile** plus independent producer/consumer checks | optional `sceneio[tiff]`; bounded single-series uint8/uint16/float32 profile, boolean masks, grayscale stacks, BigTIFF, alpha semantics, transactional path writes |
 | `e57` | `PointCloud` | R+W, inspect | direct **pye57/libE57Format** | optional `sceneio[e57]`; exactly one Cartesian scan, exact float32 coordinates/intensity and integral RGB8, pose, explicit invalid-point filtering; exact inspection count uses the provider scan path only when invalid-state data are present |
 | `parquet` / `arrow_ipc` | `TensorDict` numeric table | R+W, inspect; Parquet named-column partial | direct **PyArrow** | optional `sceneio[arrow]`; scalar/fixed-width numeric columns, equal row counts, text attrs, mmap/threaded provider paths, transactional writes |

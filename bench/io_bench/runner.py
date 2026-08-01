@@ -2,7 +2,7 @@
 
 Measures, per codec, encode (write) + decode (read) throughput (MB/s over the raw
 payload) and peak Python allocation (tracemalloc), for sceneio._core vs the oracle
-library where one exists, on representative payloads for all 59 codecs. Read
+library where one exists, on representative payloads for all 67 codecs. Read
 measurements retain the legacy whole-file bytes/copy-decode path beside the
 public registry mmap path, so their peak delta captures the input copy O1
 removes and, for NPY/FLO, the decoded-array copy O2 removes. Write measurements
@@ -2962,7 +2962,7 @@ def _run_benchmark(args, tmp):
             + len(path_specs)
             + int(include_colmap_db)
             + int(include_gltf)
-            == 59
+            == 67
         )
     if getattr(args, "strict_oracles", False):
         qualification.validate_strict_results(results)

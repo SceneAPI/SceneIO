@@ -28,8 +28,8 @@ sink RSS by 4.8 MB on the 200,000-point fixture while traced Python allocation
 remained 0.0 MB; this is the measured working-memory cost of retaining
 throughput and deterministic bytes. The COLMAP consistency reader retains
 mapped input plus exact owned vectors without an entry-count-sized link
-reservation. The active deterministic benchmark-structure guard now covers
-all 54 live rows with normalized SHA-256
+reservation. The 54-codec checkpoint's deterministic benchmark-structure
+guard covered all 54 then-live rows with normalized SHA-256
 `fd3cf4a663e737971526afe5884f229237630a0f126b21a1c8ffcde9a6015e4e`;
 the earlier 50-row family-extraction fingerprints remain historical evidence.
 Exact-head normal run `30469273173`, instrumented run `30469271293`, and
@@ -188,13 +188,27 @@ inspection had normalized the complete mesh even when no binding existed.
 The unbound/direct paths now avoid mesh text entirely, restoring the generated
 C1 full-read control from 47.15 MB to 44.03 MB traced (43.95 MB baseline).
 
-The USD C7 release unit changes no codec kernel or data path. It retains the
+The USD C7 release unit changes no USD codec kernel or data path. It retains the
 paired C6 USD/USDZ measurement in `bench/BASELINE.md` as its no-regression
 control and adds artifact-only checks: one verified source archive feeds the
 wheel build, exact runtime assets are inventoried, and fresh NumPy-only plus
 pinned TinyUSDZ environments run the installed public smoke. The prepared
 hosted wheel matrix repeats the optional-provider smoke on Windows, Linux, and
-macOS; execution remains user-gated.
+macOS. Authorized build-only run `30701260601` passes that complete package
+matrix at source `04a1749` with publication skipped. Primary CI run
+`30701254315` passed its complete test step and every platform shard, then the
+all-codec benchmark exposed Zarr 3.3 rejecting Linux's platform-native integer
+dtype class during provider inference. SceneIO now presents supported
+platform/generic numeric aliases to Zarr as fixed-width zero-copy views; v2/v3
+oracle round-trips and the all-codec harness cover the repair before the final
+exact-head hosted rerun.
+
+The refreshed local CI smoke now completes without error for all 67 live
+formats under Zarr 3.3.0. Its deterministic structural projection contains 67
+rows with normalized SHA-256
+`817b355a8fb752025e51b3afe658524ebfa40cd6caffc8cd9e927a7117e07f65`.
+The exact 4,310-node local suite passes 4,304 tests with six documented skips;
+Ruff, workflow parsing, diff checks, and all three review lenses are clean.
 
 The 2026-07-30 scale-16 profiling follow-up removed two wrapper hot spots.
 Already-native contiguous HDF5 arrays now pass directly to the native record

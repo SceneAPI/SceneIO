@@ -3948,6 +3948,22 @@ Local release qualification builds the Windows `cp312-abi3` wheel only from a
 verified source archive, verifies its exact runtime and license inventory, and
 runs fresh installed smokes with NumPy alone and with NumPy 2.2.6 plus
 TinyUSDZ 0.9.4. The latter exercises the public profile id, provider flags,
-rich static read/inspection, and composition refusal. The prepared hosted
-matrix repeats that pinned binary-provider smoke on Linux, macOS, and Windows;
-no hosted result is claimed until the user authorizes the push and run.
+rich static read/inspection, and composition refusal. Authorized build-only
+run `30701260601` at source `04a1749` passes the sdist, MSVC,
+manylinux2014 GCC 10, AppleClang, installed-provider, and combined-inventory
+jobs; publication is skipped.
+
+Primary CI run `30701254315` passed the full suite and every platform shard,
+then exposed two all-codec-smoke gaps: Zarr 3.3.0 rejected Linux's
+platform-native integer dtype class during provider inference, and the runner
+still pinned the pre-expansion row count. The adapter now presents supported
+generic/platform numeric aliases as fixed-width zero-copy views. A local
+Zarr-3.3.0 rerun passes the v2/v3 oracle suite and the complete 67-format smoke
+without errors. The refreshed 67-row deterministic structural projection has
+SHA-256
+`817b355a8fb752025e51b3afe658524ebfa40cd6caffc8cd9e927a7117e07f65`.
+Throughput values from the scale-0.001 smoke are diagnostic only; the
+compatibility fix preserves the synchronous upstream write path and adds no
+payload copy. The repaired exact local collection has 4,310 nodes and passes
+4,304 with six documented skips; Ruff, workflow parsing, diff checks, and the
+three review lenses are clean.

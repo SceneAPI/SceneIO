@@ -8,6 +8,7 @@ import zarr
 
 import sceneio
 from sceneio import _core
+from sceneio.io._zarr import _canonical_array
 
 
 def _sample() -> tuple[object, dict[str, np.ndarray]]:
@@ -89,6 +90,35 @@ def test_zarr_reads_oracle_written_store(tmp_path, zarr_format):
     assert decoded.attrs == {"purpose": "cv"}
     actual = np.asarray(decoded["depth/pyramid_0"])
     assert actual.tobytes() == expected.tobytes()
+
+
+def test_zarr_normalizes_generic_numpy_integer_dtype_without_copy():
+    source = np.array([1, 2], dtype=np.uint32) & 1
+    expected_dtype = np.dtype(source.dtype.str)
+
+    normalized = _canonical_array(source, "Zarr test array")
+
+    assert normalized.dtype == source.dtype
+    assert type(normalized.dtype) is type(expected_dtype)
+    assert np.shares_memory(normalized, source)
+
+
+@pytest.mark.parametrize("zarr_format", [2, 3])
+def test_zarr_platform_integer_roundtrip_and_oracle(tmp_path, zarr_format):
+    source = np.arange(12, dtype=np.int_).reshape(3, 4)
+    tensors = _core.tensor_dict({"indices": source})
+    path = tmp_path / f"platform-int-v{zarr_format}.zarr"
+
+    sceneio.write_zarr(tensors, path, zarr_format=zarr_format)
+
+    decoded = np.asarray(sceneio.read(path)["indices"])
+    oracle = np.asarray(
+        zarr.open_group(path, mode="r", use_consolidated=None)["indices"]
+    )
+    assert decoded.dtype == source.dtype
+    assert decoded.tobytes() == source.tobytes()
+    assert oracle.dtype == source.dtype
+    assert oracle.tobytes() == source.tobytes()
 
 
 def test_zarr_partial_reads_touch_selected_arrays_and_chunks(tmp_path):

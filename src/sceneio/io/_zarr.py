@@ -49,6 +49,13 @@ def _canonical_array(value: object, context: str) -> np.ndarray:
         )
     if not array.dtype.isnative:
         array = array.byteswap().view(array.dtype.newbyteorder("="))
+    # NumPy can expose platform/generic integer dtype classes whose public
+    # kind, width, and name match a fixed-width dtype.  Zarr 3.3's data-type
+    # inference requires the fixed-width class for some of those aliases.
+    # Re-viewing through dtype.str normalizes the class without copying data.
+    fixed_dtype = np.dtype(array.dtype.str)
+    if type(array.dtype) is not type(fixed_dtype):
+        array = array.view(fixed_dtype)
     if array.flags.c_contiguous:
         return array
     return np.array(array, copy=True, order="C", subok=False)

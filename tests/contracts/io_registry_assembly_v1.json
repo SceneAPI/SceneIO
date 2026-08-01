@@ -435,8 +435,8 @@
     "last": "tests/test_points_binary.py::test_bad_magic_rejected"
   },
   "pytest_candidate_collection": {
-    "count": 4307,
-    "sorted_normalized_node_ids_sha256": "30c0106a8bd761eb86e0cf24e3f3a9fccaec54ebeb4cf8297554e97174b01f42",
+    "count": 4310,
+    "sorted_normalized_node_ids_sha256": "4931746c57861cb5667c362fb1e32fab3b731b60957e0248231f4c9d49284a63",
     "added_nodes": [
       "tests/codecs/test_animated_webp.py::test_sceneio_writer_is_lossless_and_oracle_readable",
       "tests/codecs/test_animated_webp.py::test_pillow_writer_is_sceneio_readable_bit_exact",
@@ -1310,6 +1310,9 @@
       "tests/codecs/test_zarr.py::test_zarr_v2_v3_roundtrip_and_independent_oracle[3]",
       "tests/codecs/test_zarr.py::test_zarr_reads_oracle_written_store[2]",
       "tests/codecs/test_zarr.py::test_zarr_reads_oracle_written_store[3]",
+      "tests/codecs/test_zarr.py::test_zarr_normalizes_generic_numpy_integer_dtype_without_copy",
+      "tests/codecs/test_zarr.py::test_zarr_platform_integer_roundtrip_and_oracle[2]",
+      "tests/codecs/test_zarr.py::test_zarr_platform_integer_roundtrip_and_oracle[3]",
       "tests/codecs/test_zarr.py::test_zarr_partial_reads_touch_selected_arrays_and_chunks",
       "tests/codecs/test_zarr.py::test_zarr_inspection_reads_metadata_without_array_decode",
       "tests/codecs/test_zarr.py::test_zarr_registry_write_defaults_to_v3",
@@ -2091,8 +2094,8 @@
     "hosted_run": 30467712842,
     "extension_capture": "build/apng-56-row-benchmark.json",
     "extension_base_commit": "3c07bcefabbd0d9be935ffd22c5ef1e7f4642321",
-    "rows": 56,
-    "structural_projection_sha256": "2295f9ab10dbf141c76ef6f7cbf4561ad656a1dde3cc7c8dcbff8b5bc23d6927",
+    "rows": 67,
+    "structural_projection_sha256": "817b355a8fb752025e51b3afe658524ebfa40cd6caffc8cd9e927a7117e07f65",
     "excluded_key_suffixes": [
       "_mbps",
       "_ms"

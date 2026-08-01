@@ -14,10 +14,12 @@
   permissive providers. SceneIO owns schemas, validation, models, detection,
   inspection, partial-read policy, and transactional replacement. Direct
   provider producer/consumer tests and benchmark comparisons cover every
-  accepted profile; the NumPy-only base install is unchanged. Cross-platform
-  optional-extra package execution remains user-gated.
+  accepted profile; the NumPy-only base install is unchanged. Authorized
+  build-only package run `30701260601` passes all three wheel platforms with
+  publication skipped.
 - **Current program gate:** the user-directed lean 3D-CV format wave is in its
-  final local verification/documentation stage.
+  exact-head hosted follow-up after primary CI exposed a Zarr 3.3 Linux
+  platform-integer inference mismatch in the all-codec benchmark.
   Exhaustive backend comparison remains trigger-based, not a prerequisite for
   closing a verified codec unit.
 - **Scope:** close every unblocked format gap declared by SceneIO's coverage
