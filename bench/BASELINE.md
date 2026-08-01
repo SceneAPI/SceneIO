@@ -3799,3 +3799,50 @@ text normalization in the unbound binding path (47.15 MB traced versus the C1
 43.95 MB baseline). The O(1) unbound/direct fast path removes it; a fresh
 100k-face/100k-point read measured 44.03 MB, with the C1 selected and inspect
 peaks unchanged at 18.54 and 29.15 MB.
+
+### USD C3 official Gaussian generated baseline (2026-08-01)
+
+C3 adds a generated official `ParticleField3DGaussianSplat` benchmark and a
+binary Gaussian PLY control. The fixture uses exact float32 values, WXYZ
+quaternions, linear scales/opacities, coefficient-major RGB SH, and the
+default official rendering hints. Every measured read is checked bit-for-bit
+against the generated record. Files and JSON results are temporary and are
+not committed.
+
+```powershell
+.venv/Scripts/python.exe bench/bench_usd_gaussians.py --runs 1 `
+  --count 1000 --degree 3
+.venv/Scripts/python.exe bench/bench_usd_gaussians.py --runs 1 `
+  --count 100000 --degree 3
+.venv/Scripts/python.exe bench/bench_usd_gaussians.py --runs 1 `
+  --count 1000000 --degree 0
+```
+
+Local Windows/MSVC one-run observations:
+
+| rows / SH | representation | payload/file | write | full read | inspect |
+|---:|---|---:|---:|---:|---:|
+| 1k / degree 3 | USDA | 0.236/0.233 MB | 23.1 ms; 0.15 MB RSS | 11.8 ms; 1.08 MB RSS | 8.9 ms; 1.12 MB RSS |
+| 1k / degree 3 | USDZ | 0.236/0.234 MB | 34.4 ms; 0.23 MB RSS | 11.7 ms; 0.88 MB RSS | 9.2 ms; 1.17 MB RSS |
+| 1k / degree 3 | Gaussian PLY control | 0.236/0.237 MB | 0.25 ms; 0.05 MB RSS | 0.22 ms; 0.02 MB RSS | 0.09 ms; 0.02 MB RSS |
+| 100k / degree 3 | USDA | 23.60/23.48 MB | 3,207.5 ms; 9.60 MB traced; 8.83 MB RSS | 1,591.2 ms; 44.29 MB traced; 92.19 MB RSS | 1,202.6 ms; 44.29 MB traced; 92.18 MB RSS |
+| 100k / degree 3 | USDZ | 23.60/23.48 MB | 2,341.6 ms; 9.60 MB traced; 7.73 MB RSS | 1,282.6 ms; 44.30 MB traced; 92.18 MB RSS | 999.7 ms; 44.29 MB traced; 92.20 MB RSS |
+| 100k / degree 3 | Gaussian PLY control | 23.60/23.60 MB | 15.0 ms; 23.67 MB RSS | 13.4 ms; 46.83 MB RSS | 0.11 ms; 0.02 MB RSS |
+| 1M / degree 0 | USDA | 56.00/67.37 MB | 7,135.8 ms; 24.02 MB traced; 20.68 MB RSS | 5,802.7 ms; 83.39 MB traced; 195.44 MB RSS | 4,848.3 ms; 83.38 MB traced; 207.45 MB RSS |
+| 1M / degree 0 | USDZ | 56.00/67.37 MB | 6,720.8 ms; 24.02 MB traced; 23.27 MB RSS | 7,165.1 ms; 83.39 MB traced; 196.46 MB RSS | 6,691.9 ms; 83.38 MB traced; 208.48 MB RSS |
+| 1M / degree 0 | Gaussian PLY control | 56.00/56.00 MB | 63.8 ms; 56.02 MB RSS | 41.2 ms; 112.03 MB RSS | 0.08 ms; 0.02 MB RSS |
+
+The repository-owned writer keeps its sampled RSS below the logical payload
+for both large cases. Extent reduction is row-chunked, SH serialization uses
+1,024-row chunks, and exact float16 validation no longer joins DC and rest SH
+arrays or creates a payload-sized conversion temporary. The 100k degree-3
+write retains 7.4--10.1 MB/s, and the 1M degree-0 write retains 7.8--8.3 MB/s;
+these are text-authoring measurements, not a claim of parity with the compact
+binary PLY control.
+
+Full read and inspection remain limited by TinyUSDZ 0.9.4: the provider parses
+and materializes the complete numeric layer before SceneIO can validate or
+construct records. Inspection avoids native record construction but is not a
+lazy provider read, as the 1M 195--208 MB sampled RSS makes explicit. C3 does
+not add a second USD parser to conceal that boundary. A current OpenUSD
+provider comparison belongs to C6 only after the narrow TOST policy decision.

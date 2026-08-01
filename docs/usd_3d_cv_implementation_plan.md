@@ -1,12 +1,14 @@
 # USD 3D-CV profile implementation plan
 
-Status: U0 bounded-provider matrix, U1 records, U2 stage skeleton, and C1
-mesh/point mappings are committed. C2 materials/textures closes in this commit:
-its implementation, independent cross-reads, benchmark, exact contract,
-complete local suite, lint, and three review lenses are green. The focused
-three-OS workflow is prepared but has not run at this commit until the user
-authorizes a push. C3-C7 remain as five finite units.
-Review date: 2026-07-31
+Status: U0 bounded-provider matrix, U1 records, U2 stage skeleton, C1
+mesh/point mappings, and C2 materials/textures are committed through
+`917d48e`. C3 Gaussian support closes locally in this commit: its official
+schema mapping, independent property assertions, generated benchmark, exact
+contract, complete local suite, lint, and three review lenses are green. The
+focused three-OS workflow is prepared but has not run on that exact tree
+because pushing and hosted execution remain user-gated. C4-C7 are the four
+remaining finite units.
+Review date: 2026-08-01
 Standards baseline: AOUSD Core Specification 1.0.1, supplemental
 1.0.1.post0, and OpenUSD 26.08 (`v26.08`, `ee47c679abde`)
 
@@ -69,7 +71,7 @@ licensed implementation used by the current optional provider. Observed local
 provider behavior is recorded in
 [`usd_provider_qualification.md`](usd_provider_qualification.md).
 
-## 2026-07-30 review findings
+## 2026-07-31 review findings
 
 The current standards review changes four planning details:
 
@@ -108,15 +110,15 @@ Repository review also found that U1 is already partly implemented:
 The implementation review distinguishes committed capability from remaining
 work:
 
-| Area | State on 2026-07-30 | Evidence or remaining gate |
+| Area | State on 2026-07-31 | Evidence or remaining gate |
 |---|---|---|
 | U0 provider baseline | committed, bounded | TinyUSDZ 0.9.4 is qualified for USDA/USD/USDZ and historical USDC through crate 10; current USDC and TOST decision remain |
 | U1 records | committed, complete | `SceneGraph`, `InstanceSet`, `VolumeAsset`, and additive mesh/point/Gaussian fields have parity and lifetime coverage |
 | U2 stage skeleton | committed, complete | hierarchy, metadata, static transforms, selection, inspection, deterministic USDA/USDZ writes |
 | U3 mesh | C1 committed, complete | indexed primvars; constant/uniform/vertex/varying/face-varying domains; float display fields; orientation; double-sided state; transforms; extent; USDA/USDZ read/write |
 | U3 points | C1 committed, complete | points, normals, widths-as-diameters, ids, velocities, accelerations, display fields, indexed primvars, extent; USDA/USDZ read/write |
-| U3 materials/assets | C2 closed locally in this commit | bounded PreviewSurface constants/textures, direct/subset bindings, streamed asset transactions, independent fixtures, refusal/lifetime tests, benchmarks, exact contracts, complete suite, and all three review lenses are green; hosted three-OS execution remains user-gated |
-| U4 Gaussian schema | records/vocabulary only | official schema read/write, raw-layout proofs, and scale tests remain |
+| U3 materials/assets | C2 committed (`917d48e`) | bounded PreviewSurface constants/textures, direct/subset bindings, streamed asset transactions, independent fixtures, refusal/lifetime tests, benchmarks, exact contracts, complete suite, and all three review lenses are green; hosted three-OS execution remains user-gated |
+| U4 Gaussian schema | C3 implementation in progress | official float/half read/write, raw-layout mapping, inspection, selection, extent, and refusal coverage exist in the worktree; transform fallback, public exception assertions, lint, benchmarks, contracts, legacy controls, and full qualification remain |
 | U5 camera/volume/semantics/instances | records or adjacent codecs exist | USD schema adapters and mixed-stage tests remain |
 | U6 current USDC/composition/time | unavailable | must use a qualified optional OpenUSD provider; do not build a second composition engine |
 | U7 release closure | pending | complete suite, package matrix, benchmark ledger, docs/capability snapshots |
@@ -547,25 +549,22 @@ later unit while an earlier unit has uncommitted or failing changes.
 | Commit unit | Deliverable | Required evidence | Closure rule |
 |---|---|---|---|
 | C1 (done) | close current U3 mesh + point worktree | focused differential/count/interpolation/lifetime tests, existing USD compatibility bytes, selected-prim proof, generated medium mesh/point measurement, full suite, Ruff, contracts | one green commit; material fields still refuse explicitly |
-| C2 (done locally) | U3 materials + texture assets | PreviewSurface constants and texture graph, direct and subset bindings, transactional USDA/USDZ assets, independent cross-read, missing/collision/path cases, generated packaged-texture measurement | one green commit; arbitrary networks/UDIM remain explicit exclusions; hosted three-OS run is deferred to the next authorized push |
-| C3 | U4 official Gaussian schema | official 26.08 fixtures, exact quaternion/SH/precision assertions, 1k/100k/1M generated measurements, legacy splat parity | exact schema mapping with no implicit log/logit conversion |
+| C2 (done, `917d48e`) | U3 materials + texture assets | PreviewSurface constants and texture graph, direct and subset bindings, transactional USDA/USDZ assets, independent cross-read, missing/collision/path cases, generated packaged-texture measurement | one green commit; arbitrary networks/UDIM remain explicit exclusions; hosted three-OS run is deferred to the next authorized push |
+| C3 (done locally) | U4 official Gaussian schema | locally authored, standards-derived 26.08 schema fixtures; exact quaternion/SH/precision assertions; 1k/100k/1M generated measurements; legacy splat parity | one green commit; exact schema mapping with no implicit log/logit conversion |
 | C4 | U5 cameras | camera/render-product association, projection-equivalent intrinsics and pose convention tests, default-only unrepresented fields, mixed-resolution and ambiguity refusals, camera-stage measurement | one camera rig maps exactly; distortion and independent physical metadata remain excluded |
 | C5 | U5 volumes + semantics + instances | direct OpenVDB dependency resolution, one taxonomy/label pair, prototype identity/order/masks, mixed-stage round-trip and dependency tests; refuse volume-bearing USDZ writes | all remaining required payload kinds coexist in one USDA/USD stage |
 | C6 | U6 provider capability | narrow TOST decision, exact OpenUSD package inventory, current USDC/composition/time differential tests and provider timing, or explicit unavailable capability if not approved | no repository-owned composition/crate implementation; either qualified optional provider or exact static-only closure |
-| C7 | U7 release closure | full tests, compiler checks, benchmark ledger, docs/contracts, sdist/wheel smoke, nonpublishing platform matrix prepared | claim exactly `sceneio.usd.3dcv/1` and list optional provider flags; no “full USD” claim |
+| C7 | U7 release closure | full tests, compiler checks, benchmark ledger, docs/contracts, sdist/wheel smoke, nonpublishing platform matrix prepared | claim exactly `sceneio.usd.3dcv/1` and list optional provider flags; no "full USD" claim |
 
-Execution is intentionally capped at seven commits, of which C1 and C2 are
-closed locally. The remaining path is five units with one deliverable and one
-exit decision each:
+Execution is intentionally capped at seven commits. C1 and C2 are committed,
+and C3 closes locally in this commit. The remaining path is four units with
+one deliverable and one exit decision each:
 
-1. close C1 without adding materials or new schemas;
-2. close the bounded material/asset vocabulary in C2;
-3. map only the official Gaussian schema in C3;
-4. map the bounded camera/render-product pair in C4;
-5. finish volumes, semantic labels, and point instances in C5;
-6. either qualify the optional OpenUSD capability in C6 or close those flags
+1. map the bounded camera/render-product pair in C4;
+2. finish volumes, semantic labels, and point instances in C5;
+3. either qualify the optional OpenUSD capability in C6 or close those flags
    as unavailable;
-7. perform release qualification once in C7.
+4. perform release qualification once in C7.
 
 No later unit may expand an earlier unit's public profile merely to accept an
 unrepresentable input. The correct result is an explicit unsupported feature.
@@ -602,6 +601,42 @@ Keep schema logic isolated so the repository remains expandable:
 Provider adapters may normalize upstream API quirks, but the in-memory mapping,
 validation, deterministic USDA writer, USDZ packager, capability reporting,
 and public behavior remain SceneIO-owned.
+
+### Remaining implementation audit and exact execution map
+
+The 2026-08-01 code review confirms that the remaining work is localized. The
+current C3 worktree has corrected the former schema-vocabulary defect and now
+implements the official float and half property families. The local
+per-unit gate below is green; hosted execution and the commit identifier are
+recorded separately when those events occur.
+
+#### 2026-08-01 C3 closure checkpoint
+
+| Evidence | Observed result | Required action before C3 closure |
+|---|---|---|
+| focused Gaussian record + USD tests | 62 passed | retain the standards-derived, float/half, degree 0--3, transform, refusal, lifetime, and allocation cases in the final gate |
+| transform behavior | fixed: a payload-free Xform shadow sends only authored Gaussian xformOps back through TinyUSDZ's qualified transform evaluator | the differential translate/rotate/scale/reset test must remain equal to an ordinary Xform; do not replace it with repository-owned transform math |
+| public refusal tests | fixed: the public cases assert `sceneio.FormatError` while retaining exact domain diagnostics | keep internal `ValueError` private to the adapter boundary |
+| legacy compatibility | 222 passed with one documented SPZ-v2 oracle skip | retain Gaussian PLY, compressed PLY, SOG, KSplat, SPZ, SPLAT, record, and public API controls |
+| allocation/performance | generated 1k/100k degree-3 and 1M degree-0 USDA/USDZ plus Gaussian PLY controls are bit-exact; large write RSS stays below logical payload | retain chunked extent reduction, 1,024-row SH serialization, and separate chunked float16 SH validation; document TinyUSDZ's full-layer read/inspect RSS rather than claiming lazy provider decode |
+| contracts/workflow/docs | exact collection contract is 4,231 nodes; Gaussian tests are in both focused three-OS commands; baseline, coverage, architecture, and plan are updated | rerun contract/document tests after final edits |
+| complete local gate | exact collection 4,231; 4,225 passed and 6 documented skips; full Ruff and diff check clean | hosted three-OS execution remains user-gated and is not implied by this local result |
+| resource/lifetime review | green after removing the SH concatenation and payload-sized extent intermediates; Gaussian records own their arrays, shadow stages do not escape the read call, and returned views survive provider/source release | retain the chunk-boundary and lifetime cases |
+| format/correctness review | green after fixing direct Gaussian xform evaluation; exact schema names, float-over-half rules, WXYZ mapping, degree/metadata rules, three-sigma extent, hints, and explicit convention refusals are covered | keep the multi-Gaussian path-keyed transform differential |
+| test-soundness review | green: locally authored standards-derived literals and direct TinyUSDZ property assertions precede self-round-trip; malformed/refusal, destination, lifetime, legacy, benchmark, and public-contract cases are independent | OpenUSD executable comparison remains additive C6 evidence only if TOST use is approved |
+
+| Unit | Current seam | Implementation work | Focused verification | Validation and documentation exit |
+|---|---|---|---|---|
+| C3 Gaussian | done locally in this commit | preserve the exact official mapping and bounded provider transform fallback; no additional schema scope | 62 focused mapping/record tests; 222 legacy passes plus one expected skip; exact 4,231-node full gate; generated 1k/100k/1M rows | commit this green unit, then start C4; hosted execution remains deferred to the next authorized push |
+| C4 Camera | `cameras.py` contains only bounded tokens; `SceneGraph` already owns an optional `CameraRig` | implement `UsdGeomCamera` plus unambiguous `UsdRenderProduct` resolution association; map projection, filmback/focal units, clipping, and node transform to the existing camera/pose conventions; accept only defaults for fields the record cannot preserve; add selection and inspection | new `tests/codecs/test_usd_cameras.py`; literal perspective/orthographic stages; projection-equivalent intrinsics; OpenCV/OpenGL and world/camera pose direction; ambiguous/mixed resolution and unsupported-field refusals; lifetime and destination preservation | generated many-camera full/inspect/selected benchmark; existing COLMAP/calibration/camera codec controls; coverage/API/baseline updates; full local gate and one commit |
+| C5 Remaining payloads | `SceneGraph` already owns `VolumeAsset`, `InstanceSet`, and per-node semantic fields; `stage.py` currently refuses them | add focused `volumes.py`, `semantics.py`, and `instances.py` modules; map direct `UsdVolVolume`/`OpenVDBAsset` dependencies for USDA/USD, one inherited taxonomy/label pair, and `PointInstancer` prototype/order/id/mask data; keep prototype geometry shared; refuse volume-bearing USDZ output | new family tests plus one mixed-stage suite; literal relationships and attributes; missing/shared VDB sources; inherited labels; prototype order, inactive ids, masks, 1M-instance bounded-allocation case; lifetime, selection, and destination preservation | benchmark large referenced VDB without decoding it and 1M instances without expansion; update dependency inspection and all capability/docs snapshots; full local gate and one commit |
+| C6 Optional provider decision | TinyUSDZ is bounded to direct USDA/USDZ and historical crates; official `usd-core 26.8` wheels now exist but use CPython-specific ABIs and a newer Linux floor | first record the explicit narrow TOST policy decision; if approved, inventory the exact wheel and notices in a separate environment, then add an optional provider for current USDC and evaluated composition/selected time; if not approved, make those three flags explicitly unavailable and stop | direct OpenUSD 26.08 schema queries and `usdchecker`/`usdcat` comparisons when approved; current/historical crate matrix; sublayer/reference/payload/variant/inherit/specialize and selected-time cases; TinyUSDZ static controls unchanged | record provider startup/time/RSS and exact platforms; keep `usd-core` out of base dependencies and SceneIO wheels; update provider report, license inventory, capabilities, and docs; one commit in either the available or unavailable branch |
+| C7 Release closure | implementation units complete; hosted exact-tree run still user-gated | no new format scope; reconcile capability manifests, public docs, installed-package surfaces, benchmark ledger, and release metadata | complete test suite/Ruff; compiler-instrumented checks; generated malformed/differential cases; sdist and installed-wheel smoke with NumPy-only, TinyUSDZ, and any approved provider environment | prepare the nonpublishing Windows/Linux/macOS matrix; ask before push/run; close only after exact-tree hosted results; publish separately through the approved workflow |
+
+Each unit has a stop rule: if an authored property cannot be represented
+exactly by the named SceneIO record, refuse it with a specific diagnostic. Do
+not add opaque preservation, a second composition engine, or new non-3D-CV
+schema domains to make the unit pass.
 
 ### U0 — freeze profile and qualify providers
 
@@ -840,25 +875,26 @@ decode/copy, and no material-free C1 read regression.
 
 ### U4 — official Gaussian splats
 
-- [ ] Read/write `ParticleField3DGaussianSplat`, required built-in APIs, and
+- [x] Read/write `ParticleField3DGaussianSplat`, required built-in APIs, and
       official attribute names.
-- [ ] Support float and half `positions`, `orientations`, `scales`,
+- [x] Support float and half `positions`, `orientations`, `scales`,
       `opacities`, and SH-coefficient attributes; degree 0-3 SH, projection
       hint, sorting hint, extent, visibility, purpose, and transforms. Do not
       accept non-schema `velocities` as a Gaussian built-in.
-- [ ] Apply float-over-half precedence per attribute family, schema defaults
+- [x] Apply float-over-half precedence per attribute family, schema defaults
       for omitted optional families, mixed-selected-precision refusal, and
       exact float16 round-trippability on write.
-- [ ] Pin the TinyUSDZ XYZW provider view to SceneIO WXYZ mapping.
-- [ ] Prove coefficient reordering by raw float-bit comparison.
-- [ ] Refuse count mismatches, unsupported degrees/dtypes, non-finite values,
+- [x] Pin the TinyUSDZ XYZW provider view to SceneIO WXYZ mapping.
+- [x] Prove coefficient reordering by raw float-bit comparison.
+- [x] Refuse count mismatches, unsupported degrees/dtypes, non-finite values,
       non-positive linear scales, and opacity outside `[0, 1]`.
-- [ ] Test explicit log/logit conversion separately from USD I/O.
-- [ ] Add generated 1k, 100k, and 1M Gaussian benchmarks for USDA and USDZ;
+- [x] Test explicit log/logit conversion separately from USD I/O.
+- [x] Add generated 1k, 100k, and 1M Gaussian benchmarks for USDA and USDZ;
       do not commit the large artifacts. Current USDC rows belong to C6.
-- [ ] Add prim-selected/row-range reads where the chosen provider can avoid
-      full payload materialization.
-- [ ] Prove returned arrays remain valid after provider objects and source
+- [x] Prove prim selection avoids unselected Gaussian record construction.
+      TinyUSDZ still parses the complete layer, so C3 does not claim a row
+      range or lazy provider read that it cannot deliver.
+- [x] Prove returned arrays remain valid after provider objects and source
       files are released, and rerun every legacy splat-codec control.
 
 Exit: standards-derived official-schema fixtures read bit-exactly, SceneIO

@@ -32,6 +32,8 @@ void register_gaussian_cloud(nb::module_ &m) {
         .def_ro("opacity_space", &GaussianCloud::opacity_space)
         .def_ro("sh_layout", &GaussianCloud::sh_layout)
         .def_ro("source_precision", &GaussianCloud::source_precision)
+        .def_ro("projection_mode_hint", &GaussianCloud::projection_mode_hint)
+        .def_ro("sorting_mode_hint", &GaussianCloud::sorting_mode_hint)
         .def("__repr__", [](const GaussianCloud &g) {
             return "<GaussianCloud n=" + std::to_string(g.n) +
                    " sh_degree=" + std::to_string(g.sh_degree) + ">";

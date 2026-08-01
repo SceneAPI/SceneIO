@@ -102,7 +102,7 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > the final suite passes 4,141 tests with 5 expected skips, and full Ruff is
 > clean.
 >
-> **USD C2 local closure (2026-07-31):** rich `SceneGraph` reads/writes now
+> **USD C2 committed closure (2026-07-31, `917d48e`):** rich `SceneGraph` reads/writes now
 > map the bounded `UsdPreviewSurface` constants and texture graph, direct and
 > `GeomSubset` face bindings, and relative PNG/JPEG/EXR assets. USDA writes use
 > content-addressed sidecars; USDZ writes copy stored, aligned package members.
@@ -118,6 +118,24 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > clean, and all three review lenses sign off. The existing three-OS focused
 > workflow now includes all USD suites; its hosted execution remains pending
 > the user-authorized push.
+>
+> **USD C3 local closure (2026-08-01):** the rich `SceneGraph`
+> path reads and writes the official OpenUSD 26.08
+> `ParticleField3DGaussianSplat` float/half property families in USDA and
+> aligned USDZ. It preserves WXYZ quaternions, linear scale/opacity values,
+> coefficient-major RGB degree 0--3 SH, source precision, projection/sorting
+> hints, visibility, purpose, extent, and static transforms. Float attributes
+> take precedence over half within a family; mixed selected precision and
+> unrepresentable conventions refuse. TinyUSDZ's generic-schema transform gap
+> is handled by evaluating a payload-free Xform shadow through the same
+> provider rather than implementing transform math again. The focused
+> Gaussian suite and all six legacy splat controls are green. Generated 1k,
+> 100k, and 1M rows are recorded in `bench/BASELINE.md`; writer allocation is
+> chunk-bounded, while read/inspection RSS honestly retains the provider's
+> full-layer materialization cost. The exact collection is 4,231 nodes; the
+> complete local MSVC gate passes 4,225 with 6 documented skips, full Ruff and
+> diff checks are clean, and all three review lenses sign off. Hosted
+> execution remains pending the next user-authorized push.
 >
 > **COLMAP dense/workspace checkpoint (2026-07-29):** the current local
 > registry has 54 codecs: 48 buffer-backed files, three path-native

@@ -33,6 +33,8 @@ struct GaussianCloud {
     std::string opacity_space = "logit";
     std::string sh_layout = "channel_grouped";
     std::string source_precision = "float32";
+    std::string projection_mode_hint = "perspective";
+    std::string sorting_mode_hint = "zDepth";
 };
 
 inline int gc_deg_from_rest(size_t R) {
@@ -63,6 +65,15 @@ inline bool gc_valid_sh_layout(const std::string &value) {
 
 inline bool gc_valid_source_precision(const std::string &value) {
     return value == "float16" || value == "float32";
+}
+
+inline bool gc_valid_projection_mode_hint(const std::string &value) {
+    return value == "perspective" || value == "tangential";
+}
+
+inline bool gc_valid_sorting_mode_hint(const std::string &value) {
+    return value == "zDepth" || value == "cameraDistance" ||
+           value == "rayHitDistance";
 }
 
 inline size_t gc_expected_size(
@@ -101,6 +112,10 @@ inline void validate_gaussian_conventions(
         throw std::invalid_argument(prefix + "unknown sh_layout");
     if (!gc_valid_source_precision(cloud.source_precision))
         throw std::invalid_argument(prefix + "unknown source_precision");
+    if (!gc_valid_projection_mode_hint(cloud.projection_mode_hint))
+        throw std::invalid_argument(prefix + "unknown projection_mode_hint");
+    if (!gc_valid_sorting_mode_hint(cloud.sorting_mode_hint))
+        throw std::invalid_argument(prefix + "unknown sorting_mode_hint");
 }
 
 inline void require_legacy_gaussian_conventions(
@@ -111,10 +126,13 @@ inline void require_legacy_gaussian_conventions(
         cloud.scale_space != "log" ||
         cloud.opacity_space != "logit" ||
         cloud.sh_layout != "channel_grouped" ||
-        cloud.source_precision != "float32")
+        cloud.source_precision != "float32" ||
+        cloud.projection_mode_hint != "perspective" ||
+        cloud.sorting_mode_hint != "zDepth")
         throw std::invalid_argument(
             std::string(context) +
             ": requires quaternion_order='wxyz', scale_space='log', "
             "opacity_space='logit', sh_layout='channel_grouped', and "
-            "source_precision='float32'; convert explicitly before writing");
+            "source_precision='float32' with default USD rendering hints; "
+            "convert explicitly before writing");
 }

@@ -1039,7 +1039,8 @@ def ParticleField3DGaussianSplat "Cloud"
     assert report.metadata["prim_type_counts"] == (
         "ParticleField3DGaussianSplat=1",
     )
-    assert report.metadata["unsupported_features"]
+    assert report.metadata["unsupported_features"] == ()
+    assert report.metadata["num_gaussian_clouds"] == 1
 
 
 def test_read_scene_record_outlives_removed_source(tmp_path):

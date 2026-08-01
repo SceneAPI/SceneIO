@@ -228,7 +228,9 @@ GaussianCloud make_gc(arr means, arr scales, arr quats, arr opacities, arr sh_dc
                       std::string scale_space,
                       std::string opacity_space,
                       std::string sh_layout,
-                      std::string source_precision) {
+                      std::string source_precision,
+                      std::string projection_mode_hint,
+                      std::string sorting_mode_hint) {
     size_t nn = means.shape(0);
     auto chk = [&](const arr &a, size_t d1, const char *nm) {
         if (a.shape(0) != nn || (d1 && (a.ndim() < 2 || a.shape(1) != d1)))
@@ -248,6 +250,8 @@ GaussianCloud make_gc(arr means, arr scales, arr quats, arr opacities, arr sh_dc
     g.opacity_space = std::move(opacity_space);
     g.sh_layout = std::move(sh_layout);
     g.source_precision = std::move(source_precision);
+    g.projection_mode_hint = std::move(projection_mode_hint);
+    g.sorting_mode_hint = std::move(sorting_mode_hint);
     validate_gaussian_conventions(g, "gaussian_cloud");
     if (sh_rest) {
         size_t R = sh_rest->ndim() >= 2 ? sh_rest->shape(1) : 0;
@@ -388,6 +392,8 @@ void register_ply_gaussian(nb::module_ &m) {
           "opacity_space"_a = "logit",
           "sh_layout"_a = "channel_grouped",
           "source_precision"_a = "float32",
+          "projection_mode_hint"_a = "perspective",
+          "sorting_mode_hint"_a = "zDepth",
           "Build a GaussianCloud from arrays (numpy/torch): means (N,3), scales (N,3), "
           "quaternions (N,4), opacities (N,), sh_dc (N,3), sh_rest (N,{0,9,24,45}).");
     m.def(

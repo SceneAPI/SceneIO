@@ -16,6 +16,8 @@ def _cloud(
     opacity_space: str = "logit",
     sh_layout: str = "channel_grouped",
     source_precision: str = "float32",
+    projection_mode_hint: str = "perspective",
+    sorting_mode_hint: str = "zDepth",
 ):
     means = np.array([[1, 2, 3], [4, 5, 6]], np.float32)
     quaternions = np.array(
@@ -44,6 +46,8 @@ def _cloud(
         opacity_space=opacity_space,
         sh_layout=sh_layout,
         source_precision=source_precision,
+        projection_mode_hint=projection_mode_hint,
+        sorting_mode_hint=sorting_mode_hint,
     )
 
 
@@ -56,7 +60,17 @@ def test_gaussian_cloud_legacy_conventions_remain_the_defaults():
         cloud.opacity_space,
         cloud.sh_layout,
         cloud.source_precision,
-    ) == ("wxyz", "log", "logit", "channel_grouped", "float32")
+        cloud.projection_mode_hint,
+        cloud.sorting_mode_hint,
+    ) == (
+        "wxyz",
+        "log",
+        "logit",
+        "channel_grouped",
+        "float32",
+        "perspective",
+        "zDepth",
+    )
 
 
 @pytest.mark.parametrize(
@@ -67,6 +81,8 @@ def test_gaussian_cloud_legacy_conventions_remain_the_defaults():
         ("opacity_space", "alpha", "opacity_space"),
         ("sh_layout", "rgb_planar", "sh_layout"),
         ("source_precision", "float64", "source_precision"),
+        ("projection_mode_hint", "fisheye", "projection_mode_hint"),
+        ("sorting_mode_hint", "none", "sorting_mode_hint"),
     ],
 )
 def test_gaussian_cloud_rejects_unknown_conventions(keyword, value, message):
@@ -107,6 +123,8 @@ def test_explicit_gaussian_conversion_maps_activation_and_layout():
     )
     assert np.asarray(converted.sh_rest).tobytes() == expected_sh.tobytes()
     assert converted.source_precision == "float32"
+    assert converted.projection_mode_hint == "perspective"
+    assert converted.sorting_mode_hint == "zDepth"
 
     # Conversion returns independent record storage and does not retag input.
     assert source.quaternion_order == "wxyz"
@@ -192,4 +210,26 @@ def test_legacy_splat_writers_refuse_usd_conventions(
             cloud,
             tmp_path / f"cloud{suffix}",
             format=format_id,
+        )
+
+
+@pytest.mark.parametrize(
+    ("keyword", "value"),
+    [
+        ("projection_mode_hint", "tangential"),
+        ("sorting_mode_hint", "cameraDistance"),
+    ],
+)
+def test_legacy_splat_writers_refuse_nondefault_usd_hints(
+    tmp_path, keyword, value
+):
+    cloud = _cloud(**{keyword: value})
+
+    with pytest.raises(
+        sceneio.FormatError, match="default USD rendering hints"
+    ):
+        sceneio.write(
+            cloud,
+            tmp_path / "cloud.ply",
+            format="gaussian_ply",
         )

@@ -34,7 +34,6 @@ _PURPOSES = frozenset({"default", "render", "proxy", "guide"})
 _IMAGEABLE_PROPERTIES = frozenset({"purpose", "visibility"})
 _PENDING_PAYLOAD_TYPES = {
     cameras.CAMERA_PRIM_TYPE: "camera",
-    gaussians.GAUSSIAN_PRIM_TYPE: "gaussian",
     **{name: "material" for name in materials.MATERIAL_PRIM_TYPES},
 }
 _USDA_FEATURES = re.compile(
@@ -219,6 +218,80 @@ def _render_nodes(stage) -> dict[str, tuple[np.ndarray, bool]]:
             bool(node.has_reset_xform),
         )
         pending.extend(reversed(node.children()))
+    # TinyUSDZ 0.9.4 treats the new OpenUSD 26.08 Gaussian schema as generic
+    # typed data.  Its render-scene converter consequently emits the prim but
+    # does not evaluate xformOps authored directly on it.  Re-evaluate only
+    # those local stacks through a tiny Xform-only shadow stage.  This keeps
+    # transform math inside the qualified provider, does not serialize any
+    # Gaussian arrays, and remains O(number of Gaussian prims), not O(points).
+    gaussian_prims: list[tuple[str, object]] = []
+
+    def collect_gaussians(prim, parent_path: str) -> None:
+        path = f"{parent_path}/{prim.name}"
+        if prim.type_name == gaussians.GAUSSIAN_PRIM_TYPE:
+            names = set(prim.property_names())
+            if "xformOpOrder" in names or any(
+                name.startswith("xformOp:") for name in names
+            ):
+                gaussian_prims.append((path, prim))
+        for child in prim.children():
+            collect_gaussians(child, path)
+
+    for root in stage.root_prims():
+        collect_gaussians(root, "")
+    if not gaussian_prims:
+        return result
+
+    lines = ["#usda 1.0"]
+    shadow_paths: dict[str, str] = {}
+    for index, (path, prim) in enumerate(gaussian_prims):
+        # Selected-time evaluation is refused by the stage profile below.  Do
+        # not turn an authored time-sampled stack into a misleading default.
+        if any(
+            bool(prim.get_attribute_timesamples(name))
+            for name in prim.property_names()
+            if name == "xformOpOrder" or name.startswith("xformOp:")
+        ):
+            continue
+        shadow_name = f"SceneIOGaussianTransform{index}"
+        lines.extend((f'def Xform "{shadow_name}"', "{"))
+        for name in prim.property_names():
+            if name != "xformOpOrder" and not name.startswith("xformOp:"):
+                continue
+            attribute = prim.get_attribute(name)
+            if attribute is None or attribute.value is None:
+                continue
+            variability = "uniform " if name == "xformOpOrder" else ""
+            lines.append(
+                f"    {variability}{attribute.type_name} {name} = "
+                f"{attribute.value.to_string()}"
+            )
+        lines.append("}")
+        shadow_paths[f"/{shadow_name}"] = path
+    if not shadow_paths:
+        return result
+
+    try:
+        shadow_stage = tinyusdz.loads("\n".join(lines) + "\n")
+        shadow_render = tinyusdz.tydra.convert_to_render_scene(shadow_stage)
+    except Exception as exc:
+        raise ValueError(
+            f"USD: provider could not evaluate Gaussian static transforms: {exc}"
+        ) from exc
+    shadow_nodes = {str(node.abs_path): node for node in shadow_render.nodes()}
+    if set(shadow_nodes) != set(shadow_paths):
+        raise ValueError(
+            "USD: provider returned an incomplete Gaussian transform result"
+        )
+    for shadow_path, path in shadow_paths.items():
+        node = shadow_nodes[shadow_path]
+        matrix = np.asarray(node.local_matrix, dtype=np.float64)
+        if matrix.shape != (4, 4) or not np.isfinite(matrix).all():
+            raise ValueError(f"USD prim {path!r}: invalid local transform")
+        result[path] = (
+            np.array(matrix, copy=True, order="C"),
+            bool(node.has_reset_xform),
+        )
     return result
 
 
@@ -255,7 +328,13 @@ def _validate_shell(
     *,
     point_text: str | None = None,
 ) -> None:
-    if prim.type_name not in {"Xform", "Scope", "Mesh", "Points"}:
+    if prim.type_name not in {
+        "Xform",
+        "Scope",
+        "Mesh",
+        "Points",
+        gaussians.GAUSSIAN_PRIM_TYPE,
+    }:
         category = _PENDING_PAYLOAD_TYPES.get(prim.type_name)
         if category is not None:
             raise ValueError(
@@ -280,6 +359,8 @@ def _validate_shell(
         allowed |= geometry.MESH_PROPERTIES | materials.MESH_MATERIAL_PROPERTIES
     if prim.type_name == "Points":
         allowed |= points.POINT_PROPERTIES
+    if prim.type_name == gaussians.GAUSSIAN_PRIM_TYPE:
+        allowed |= gaussians.GAUSSIAN_PROPERTIES
     if prim.type_name == "Scope":
         allowed = _IMAGEABLE_PROPERTIES
     unsupported = sorted(properties - allowed)
@@ -488,6 +569,7 @@ def stage_to_scene_graph(
     child_lists: list[list[int]] = []
     meshes = []
     point_clouds = []
+    gaussian_clouds = []
     path_to_node: dict[str, int] = {}
     no_payload = np.iinfo(np.uint64).max
 
@@ -585,6 +667,20 @@ def stage_to_scene_graph(
             point_text = None
             point_clouds.append(_core.point_cloud(point_positions, **point_kwargs))
             del point_positions, point_kwargs
+        if (
+            prim.type_name == gaussians.GAUSSIAN_PRIM_TYPE
+            and load_payloads
+            and effective_purpose in selected_purposes
+            and _select_payload(path, selected)
+        ):
+            node_payload_kinds[index] = "gaussian_cloud"
+            node_payload_indices[index] = len(gaussian_clouds)
+            gaussian_clouds.append(
+                gaussians.gaussian_cloud_from_prim(
+                    prim,
+                    shell_properties=_payload_shell_properties(prim),
+                )
+            )
         point_text = None
         for child in prim.children():
             child_path = f"{path}/{child.name}"
@@ -628,6 +724,7 @@ def stage_to_scene_graph(
         node_purpose=node_purpose,
         meshes=meshes,
         point_clouds=point_clouds,
+        gaussian_clouds=gaussian_clouds,
         materials=stage_materials.record if load_payloads else None,
         external_asset_uris=(
             stage_materials.external_asset_uris if load_payloads else ()
@@ -797,6 +894,17 @@ def inspect_scene(
                 else:
                     vertices += point_count
                     primitive_count += 1
+            elif prim.type_name == gaussians.GAUSSIAN_PRIM_TYPE:
+                try:
+                    gaussian_count, _, _ = gaussians.inspect_gaussian_prim(
+                        prim,
+                        shell_properties=_payload_shell_properties(prim),
+                    )
+                except ValueError as exc:
+                    unsupported.add(f"{path_value}: {exc}")
+                else:
+                    vertices += gaussian_count
+                    primitive_count += 1
         point_text = None
         for child in prim.children():
             visit(child, path_value)
@@ -842,6 +950,9 @@ def inspect_scene(
             if stage_materials is None
             else len(stage_materials.external_asset_uris)
         ),
+        "num_gaussian_clouds": type_counts.get(
+            gaussians.GAUSSIAN_PRIM_TYPE, 0
+        ),
     }
     default_prim = stage.get_metadata("defaultPrim")
     if default_prim is not None:
@@ -884,7 +995,11 @@ def _validate_writable_scene(scene) -> tuple[object, ...]:
         raise TypeError("USD: write_scene expects a SceneGraph")
     payload_kinds = tuple(scene.node_payload_kinds)
     unsupported_payloads = sorted(
-        {kind for kind in payload_kinds if kind not in {"none", "mesh", "point_cloud"}}
+        {
+            kind
+            for kind in payload_kinds
+            if kind not in {"none", "mesh", "point_cloud", "gaussian_cloud"}
+        }
     )
     if unsupported_payloads:
         raise ValueError(
@@ -927,11 +1042,16 @@ def _validate_writable_scene(scene) -> tuple[object, ...]:
     payload_indices = np.asarray(scene.node_payload_indices)
     used_meshes: set[int] = set()
     used_points: set[int] = set()
+    used_gaussians: set[int] = set()
     for node, kind in enumerate(payload_kinds):
         if kind == "none":
             continue
         index = int(payload_indices[node])
-        used = used_meshes if kind == "mesh" else used_points
+        used = {
+            "mesh": used_meshes,
+            "point_cloud": used_points,
+            "gaussian_cloud": used_gaussians,
+        }[kind]
         if index in used:
             raise ValueError(
                 f"USD: {kind} payload {index} is referenced by multiple nodes"
@@ -950,11 +1070,16 @@ def _validate_writable_scene(scene) -> tuple[object, ...]:
                     else 0
                 ),
             )
-        else:
+        elif kind == "point_cloud":
             points.validate_writable_point_cloud(
                 scene.point_cloud_at(index),
                 up_axis=scene.up_axis,
                 meters_per_unit=scene.meters_per_unit,
+                context=context,
+            )
+        else:
+            gaussians.validate_writable_gaussian(
+                scene.gaussian_cloud_at(index),
                 context=context,
             )
     if used_meshes != set(range(scene.num_meshes)):
@@ -962,6 +1087,10 @@ def _validate_writable_scene(scene) -> tuple[object, ...]:
     if used_points != set(range(scene.num_point_clouds)):
         raise ValueError(
             "USD: every point-cloud payload must be referenced exactly once"
+        )
+    if used_gaussians != set(range(scene.num_gaussian_clouds)):
+        raise ValueError(
+            "USD: every Gaussian payload must be referenced exactly once"
         )
     return (
         transforms,
@@ -1029,6 +1158,7 @@ def _write_scene_usda(
             "none": "Xform",
             "mesh": "Mesh",
             "point_cloud": "Points",
+            "gaussian_cloud": gaussians.GAUSSIAN_PRIM_TYPE,
         }[kind]
         mesh = (
             scene.mesh_at(int(payload_indices[node]))
@@ -1087,6 +1217,12 @@ def _write_scene_usda(
             points.write_point_attributes(
                 stream,
                 scene.point_cloud_at(int(payload_indices[node])),
+                inner=inner,
+            )
+        elif kind == "gaussian_cloud":
+            gaussians.write_gaussian_attributes(
+                stream,
+                scene.gaussian_cloud_at(int(payload_indices[node])),
                 inner=inner,
             )
         begin, end = int(offsets[node]), int(offsets[node + 1])

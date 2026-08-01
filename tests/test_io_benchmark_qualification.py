@@ -16,6 +16,7 @@ import numpy as np
 import pytest
 
 from bench.io_bench import qualification, runner
+from bench.io_bench import usd_gaussians as usd_gaussian_benchmark
 from bench.io_bench import usd_materials as usd_material_benchmark
 from bench.io_bench import usd_scene as usd_scene_benchmark
 from bench.io_bench.families.dense import validate_dense_oracle_parity
@@ -78,6 +79,31 @@ def test_rich_usd_material_benchmark_smoke(tmp_path):
         assert result[operation]["ms"] >= 0
         assert result[operation]["traced_peak_mb"] >= 0
         assert result[operation]["rss_peak_mb"] >= 0
+
+
+def test_rich_usd_gaussian_benchmark_smoke(tmp_path):
+    results = usd_gaussian_benchmark.run_benchmark(
+        tmp_path,
+        runs=1,
+        gaussian_counts=(4,),
+        degree=1,
+        precision="float32",
+        encodings=("usda", "gaussian_ply"),
+    )
+
+    assert [result["encoding"] for result in results] == [
+        "usda",
+        "gaussian_ply",
+    ]
+    for result in results:
+        assert result["gaussians"] == 4
+        assert result["degree"] == 1
+        assert result["payload_mb"] > 0
+        assert result["file_mb"] > 0
+        for operation in ("write", "full_read", "inspect"):
+            assert result[operation]["ms"] >= 0
+            assert result[operation]["traced_peak_mb"] >= 0
+            assert result[operation]["rss_peak_mb"] >= 0
 
 
 def _assembled_specs():

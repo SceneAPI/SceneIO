@@ -5163,10 +5163,12 @@ checklist. No unchecked item below is a current USD I/O capability claim:
       mesh, point, and Gaussian payloads.
 - [x] U2: compatible rich-scene API, `.usdc` routing, stage metadata,
       inspection, and selection.
-- [x] U3: mixed meshes, points, bounded materials, and texture assets. C1 is
-      committed; C2 closes in this commit with the hosted three-OS run pending
-      the next user-authorized push.
-- [ ] U4: official `ParticleField3DGaussianSplat` mapping.
+- [x] U3: mixed meshes, points, bounded materials, and texture assets. C1 and
+      C2 are committed through `917d48e`; the hosted three-OS run remains
+      pending the next user-authorized push.
+- [x] U4: official `ParticleField3DGaussianSplat` mapping. C3 closes locally
+      with exact float/half, degree 0--3 SH, convention, transform, inspection,
+      benchmark, and legacy-codec evidence.
 - [ ] U5: cameras/render products, OpenVDB references, semantic labels, and
       point instancing.
 - [ ] U6: qualified USDC/USDZ, evaluated composition subset, and explicitly
@@ -5223,7 +5225,14 @@ Progress:
       4,177 tests with 6 expected skips; benchmark, exact contracts, docs,
       Ruff, and all three review lenses are green. The existing three-OS
       focused workflow includes all USD suites but has not run at this commit
-      until the user authorizes a push.
+      because it remains pending a user-authorized push.
+- [x] C3 implementation maps the official OpenUSD 26.08 float/half Gaussian
+      particle schema, degree 0--3 SH, rendering hints, extent, and static
+      transforms. Its focused 62-test mapping suite, 222-test legacy control,
+      generated 1k/100k/1M benchmark, exact 4,231-node contract, and focused
+      workflow entry are green. The complete local gate passes 4,225 tests
+      with 6 documented skips, full Ruff and diff checks are clean, and all
+      three review lenses sign off. Hosted execution remains user-gated.
 
 Completed U1 evidence:
 

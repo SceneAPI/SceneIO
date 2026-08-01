@@ -242,10 +242,11 @@ def test_usd_inspection_matches_decoded_scene(tmp_path, suffix):
         "prim_type_counts": ("Mesh=1", "Xform=1"),
         "dependencies": (),
         "variants": (),
-        "unsupported_features": (),
-        "num_materials": 0,
-        "num_textures": 0,
-    }
+            "unsupported_features": (),
+            "num_materials": 0,
+            "num_textures": 0,
+            "num_gaussian_clouds": 0,
+        }
 
 
 def test_usd_inspection_does_not_construct_mesh_scene(tmp_path, monkeypatch):
