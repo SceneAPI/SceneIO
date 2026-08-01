@@ -190,8 +190,12 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > installed-wheel smoke, including public rich-scene reads, profile/provider
 > inspection, and composition refusal. The nonpublishing three-platform
 > workflow repeats that optional-provider smoke with binary-only pinned
-> packages. Hosted compiler and Linux/macOS/Windows execution remains pending
-> a user-authorized push; this local result is not cross-platform evidence.
+> packages on each wheel host. SceneIO's Linux artifact retains manylinux2014;
+> TinyUSDZ's separately installed x86-64 wheel has a manylinux 2.27/2.28 floor,
+> which is why its Linux smoke runs on the Ubuntu 24.04 host rather than inside
+> the manylinux2014 build container. Hosted compiler and Linux/macOS/Windows
+> execution remains pending a user-authorized push; this local result is not
+> cross-platform evidence.
 >
 > **COLMAP dense/workspace checkpoint (2026-07-29):** the current local
 > registry has 54 codecs: 48 buffer-backed files, three path-native
@@ -1017,7 +1021,7 @@ public-domain SQLite amalgamation statically linked into `_core`.
 | `e57` | `PointCloud` | R+W, inspect | direct **pye57/libE57Format** | optional `sceneio[e57]`; exactly one Cartesian scan, exact float32 coordinates/intensity and integral RGB8, pose, explicit invalid-point filtering; exact inspection count uses the provider scan path only when invalid-state data are present |
 | `parquet` / `arrow_ipc` | `TensorDict` numeric table | R+W, inspect; Parquet named-column partial | direct **PyArrow** | optional `sceneio[arrow]`; scalar/fixed-width numeric columns, equal row counts, text attrs, mmap/threaded provider paths, transactional writes |
 | `openvdb` | sparse-grid `TensorDict` | R+W, inspect | direct **TinyVDB** | optional `sceneio[openvdb]`; one identity-transform, zero-background float32 scalar grid; ZIP/active-mask output; packaged upstream seed is fully replaced and provenance-pinned; rebuilt active count is verified and provider topology loss refuses |
-| `usd` / `usdz` | `MeshScene` compatibility projection; additive `SceneGraph` | R+W, rich static 3D-CV profile R+W, inspect and prim selection | direct **TinyUSDZ** | optional `sceneio[usd]`; `.usd`/`.usda`, historical `.usdc` reads through crate 10, and aligned uncompressed USDZ; legacy static mesh bytes/API unchanged; `read_scene` maps bounded hierarchy/metadata/static transforms, prim selection, polygon meshes, points, PreviewSurface constants/textures and direct/subset bindings, portable PNG/JPEG/EXR references, official float/half Gaussian fields, static camera/render-product pairs, direct scalar-float OpenVDB references, one inherited semantic pair, and static PointInstancer rows; `write_scene` streams deterministic USDA sidecars or self-contained USDZ, while volume-bearing USDZ refuses; current crates, USDC writes, composition, selected animated values, multiple semantic labels/taxonomies, and broader volume/instance schemas remain unavailable |
+| `usd` / `usdz` | `MeshScene` compatibility projection; additive `SceneGraph` | R+W, rich static 3D-CV profile R+W, inspect and prim selection | direct **TinyUSDZ** | optional `sceneio[usd]`; `.usd`/`.usda`, historical `.usdc` reads through crate 10, and aligned uncompressed USDZ; legacy static mesh bytes/API unchanged; `read_scene` maps bounded hierarchy/metadata/static transforms, prim selection, polygon meshes, points, PreviewSurface constants/textures and direct/subset bindings, portable PNG/JPEG/EXR references, official float/half Gaussian fields, static camera/render-product pairs, direct scalar-float OpenVDB references, one inherited semantic pair, and static PointInstancer rows; `write_scene` streams deterministic USDA sidecars or self-contained USDZ, while volume-bearing USDZ refuses; current crates, USDC writes, composition, selected animated values, multiple semantic labels/taxonomies, and broader volume/instance schemas remain unavailable; SceneIO's Linux wheel is manylinux2014, while the separately installed TinyUSDZ 0.9.4 x86-64 binary requires manylinux 2.27/2.28 |
 
 ### Repository-owned COLMAP workflow adapters
 

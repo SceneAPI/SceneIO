@@ -1039,9 +1039,12 @@ NumPy-only isolated smoke, and a fresh `sceneio[usd]` smoke with NumPy 2.2.6
 and TinyUSDZ 0.9.4. The optional smoke checks the public profile id, all three
 false provider flags, rich static reads, inspection, and composition refusal.
 The wheel inventory retains NumPy as the only unconditional requirement and
-the complete license directory. No codec implementation or measured path
-changed in C7, so the C6 paired-parent row remains the applicable performance
-control.
+the complete license directory. SceneIO's Linux wheel retains manylinux2014;
+the separately installed TinyUSDZ 0.9.4 x86-64 binary is tagged manylinux
+2.27/2.28, so the hosted optional-provider smoke intentionally runs on the
+Ubuntu 24.04 wheel host. It is not evidence that the TinyUSDZ binary supports
+glibc 2.17. No codec implementation or measured path changed in C7, so the C6
+paired-parent row remains the applicable performance control.
 
 The C7 three-lens review is green after one test-soundness correction: the
 generic smoke deliberately skips unavailable optional providers, so the hosted

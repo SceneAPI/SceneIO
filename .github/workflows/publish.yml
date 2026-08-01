@@ -190,7 +190,10 @@ jobs:
             --sdist "${{ steps.source.outputs.sdist-path }}" \
             --wheel-dir wheelhouse \
             --output "inventory-${{ matrix.label }}.json"
-      - name: Smoke installed TinyUSDZ profile
+      # TinyUSDZ 0.9.4's Linux wheel targets manylinux 2.27/2.28. Keep this
+      # optional-provider check on the runner host after cibuildwheel produces
+      # SceneIO's independent manylinux2014 artifact.
+      - name: Smoke installed TinyUSDZ profile on wheel host
         shell: bash
         run: |
           set -euo pipefail

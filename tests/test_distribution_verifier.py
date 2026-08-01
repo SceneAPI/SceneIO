@@ -1192,7 +1192,9 @@ def test_publish_workflow_builds_every_wheel_from_the_exact_sdist() -> None:
     assert "CIBW_MANYLINUX_X86_64_IMAGE:" in wheel_job
     assert "numpy==2.2.6" in wheel_job
     assert 'CIBW_TEST_REQUIRES: ""' in wheel_job
-    assert "name: Smoke installed TinyUSDZ profile" in wheel_job
+    assert "name: Smoke installed TinyUSDZ profile on wheel host" in wheel_job
+    assert "TinyUSDZ 0.9.4's Linux wheel targets manylinux 2.27/2.28" in wheel_job
+    assert "SceneIO's independent manylinux2014 artifact" in wheel_job
     assert 'python -m venv "$smoke_env"' in wheel_job
     assert '"$RUNNER_OS" == "Windows"' in wheel_job
     assert '"${wheel}[usd]"' in wheel_job

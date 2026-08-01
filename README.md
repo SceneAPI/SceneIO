@@ -88,6 +88,11 @@ Parquet/Arrow IPC, OpenVDB, and USD/USDZ:
 uv pip install "sceneio[hdf5,zarr,tiff,e57,arrow,openvdb,usd]"
 ```
 
+SceneIO's Linux wheel retains its manylinux2014 base contract. The separately
+installed TinyUSDZ 0.9.4 provider used by `sceneio[usd]` publishes x86-64
+binary wheels with a manylinux 2.27/2.28 floor, so that optional extra requires
+a compatible Linux host even though the base SceneIO wheel does not.
+
 These extras are lazy and independent; the base runtime remains NumPy-only.
 The accepted profiles are intentionally bounded and reject semantics the
 corresponding SceneIO record cannot preserve. See
