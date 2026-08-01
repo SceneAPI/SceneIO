@@ -127,7 +127,7 @@ work:
 | U4 Gaussian schema | C3 committed (`a633477`) | official float/half read/write, raw-layout mapping, inspection, selection, extent, refusal coverage, generated benchmark, contracts, legacy controls, and full local qualification are green |
 | U5 camera/volume/semantics/instances | complete through C5 | camera/render-product pairs, direct scalar-float OpenVDB dependencies, one effective taxonomy/label pair, static PointInstancer data, mixed-stage coexistence, generated large-case evidence, and the complete local gate are green |
 | U6 current USDC/composition/time | Exit B complete | explicit false provider flags; all six composition arc families and authored time samples report/refuse; no OpenUSD executable dependency |
-| U7 release closure | hosted follow-up in progress | exact 4,310-node local suite passes 4,304 with six skips; benchmark ledger, docs/contracts, verified source archive, Windows cp312-abi3 wheel, and installed smokes are green; build-only run `30701260601` passes all package jobs with publication skipped, while the exact-head rerun covers the repaired Zarr 3.3 Linux benchmark gap |
+| U7 release closure | final CI rerun in progress | exact 4,310-node local suite passes 4,304 with six skips; exact-head package `30702681469` and compiler `30702675024` pass; CI `30702675048` passes its suite, repaired 67-row smoke/structure, and every platform shard before the expanded five-run guard exhausts the old 20-minute job envelope; the unchanged guard reruns under 40 minutes |
 
 ### 2026-07-31 C2 closure evidence
 
@@ -573,7 +573,7 @@ later unit while an earlier unit has uncommitted or failing changes.
 | C4 (done, `d1ee8ea`) | U5 cameras | camera/render-product association, projection-equivalent intrinsics and pose convention tests, default-only unrepresented fields, mixed-resolution and ambiguity refusals, camera-stage measurement | one green closure unit; hosted three-OS execution remains deferred to the next authorized push |
 | C5 (done, `6eeae8e`) | U5 volumes + semantics + instances | direct OpenVDB dependency resolution, one taxonomy/label pair, prototype identity/order/masks, mixed-stage round-trip and dependency tests; refuse volume-bearing USDZ writes | focused/complete gates, docs, and large-case measurement are green |
 | C6 (done, `fa321c1`) | U6 provider capability | Exit B: TOST remains outside the literal allow-list; current USDC, evaluated composition, and selected time are explicit unavailable flags | no OpenUSD install/invocation and no repository-owned composition/crate implementation |
-| C7 (hosted follow-up in progress) | U7 release closure | full local tests, benchmark ledger, docs/contracts, exact source archive, repaired Windows wheel, NumPy-only and pinned TinyUSDZ installed smokes; nonpublishing package matrix passes in run `30701260601` | claim exactly `sceneio.usd.3dcv/1`; complete the exact-head CI/compiler rerun after the Zarr 3.3 Linux benchmark repair |
+| C7 (final CI rerun in progress) | U7 release closure | full local tests, benchmark ledger, docs/contracts, exact source archive, repaired Windows wheel, NumPy-only and pinned TinyUSDZ installed smokes; exact-head nonpublishing package and compiler runs pass | claim exactly `sceneio.usd.3dcv/1`; complete the unchanged five-run CI guard under its expanded 40-minute envelope |
 
 Execution is intentionally capped at seven commits. C1-C6 are committed and
 the local portion of C7 is complete. Authorization was received; the first

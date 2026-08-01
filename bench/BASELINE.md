@@ -3967,3 +3967,10 @@ compatibility fix preserves the synchronous upstream write path and adds no
 payload copy. The repaired exact local collection has 4,310 nodes and passes
 4,304 with six documented skips; Ruff, workflow parsing, diff checks, and the
 three review lenses are clean.
+
+Exact-head package run `30702681469` and compiler run `30702675024` pass. CI
+run `30702675048` passes the suite, 67-format smoke, deterministic structure,
+and every platform shard. The unchanged five-run qualification guard then
+reaches the job's old 20-minute limit after running for ten minutes. The
+follow-up raises only that job envelope to 40 minutes; run count, providers,
+gain requirements, memory checks, and thresholds are unchanged.

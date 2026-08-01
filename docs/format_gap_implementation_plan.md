@@ -18,8 +18,9 @@
   build-only package run `30701260601` passes all three wheel platforms with
   publication skipped.
 - **Current program gate:** the user-directed lean 3D-CV format wave is in its
-  exact-head hosted follow-up after primary CI exposed a Zarr 3.3 Linux
-  platform-integer inference mismatch in the all-codec benchmark.
+  final exact-head CI rerun. The Zarr 3.3 Linux repair, 67-row smoke, package
+  matrix, compiler checks, and all platform shards pass; only the unchanged
+  five-run guard must complete under the expanded 40-minute job window.
   Exhaustive backend comparison remains trigger-based, not a prerequisite for
   closing a verified codec unit.
 - **Scope:** close every unblocked format gap declared by SceneIO's coverage

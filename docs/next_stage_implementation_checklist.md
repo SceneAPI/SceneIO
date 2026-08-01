@@ -5285,8 +5285,11 @@ Progress:
       all-codec benchmark exposed a Zarr 3.3 Linux platform-integer inference
       mismatch. The zero-copy adapter repair passes the exact 4,310-node local
       collection (4,304 pass, six skip), the 67-format smoke, Ruff, and all
-      three review lenses; the exact-head hosted rerun is the only open U7
-      check.
+      three review lenses. Exact-head package run `30702681469` and compiler
+      run `30702675024` pass; CI run `30702675048` passes every preceding step
+      and every shard before the expanded five-run guard exhausts the inherited
+      20-minute job envelope. The same guard under a 40-minute exact-head rerun
+      is the only open U7 check.
 
 Completed U1 evidence:
 

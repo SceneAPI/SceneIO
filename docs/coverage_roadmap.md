@@ -18,8 +18,10 @@
 > package run `30701260601` passes the sdist and Linux/macOS/Windows wheel
 > matrix with publication skipped. Primary CI then isolated a Zarr 3.3 Linux
 > platform-integer inference mismatch in the all-codec benchmark; the
-> zero-copy adapter repair and its exact-follow-up hosted run are the remaining
-> closure evidence.
+> zero-copy adapter repair passes exact-head package/compiler validation and
+> the repaired 67-row Linux smoke. The remaining exact-head CI rerun retains
+> the complete five-run guard under a 40-minute job window after that expanded
+> sweep exhausted the old 20-minute limit.
 > Animated WebP is the 55th local codec; the preceding 54-codec hosted package
 > evidence remains a dated checkpoint rather than evidence for this addition.
 > The current branch-local COLMAP dense checkpoint adds exact depth/normal

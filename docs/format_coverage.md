@@ -201,8 +201,11 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > Zarr 3.3 Linux platform-integer inference mismatch. The current follow-up
 > normalizes those NumPy aliases to fixed-width zero-copy views and adds
 > v2/v3 oracle regressions. Its exact 4,310-node local collection passes 4,304
-> with six documented skips; exact-follow-up hosted closure remains in
-> progress.
+> with six documented skips. Exact-head package run `30702681469` and
+> compiler run `30702675024` pass. CI run `30702675048` passed the suite,
+> all 67 benchmark rows, their structure check, and every platform shard, then
+> the expanded five-run guard exhausted the old 20-minute job window. No guard
+> is removed; the exact-head rerun uses a 40-minute envelope.
 >
 > **COLMAP dense/workspace checkpoint (2026-07-29):** the current local
 > registry has 54 codecs: 48 buffer-backed files, three path-native
