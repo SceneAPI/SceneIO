@@ -1,7 +1,6 @@
 # USD provider qualification
 
-Status: provider matrix, C6 Exit B, and hosted package/compiler gates complete;
-final corrected primary CI rerun remains
+Status: provider matrix, C6 Exit B, and hosted package/compiler/CI gates complete
 Date: 2026-08-01
 Local provider: TinyUSDZ 0.9.4
 Standards pins: AOUSD Core 1.0.1 `2f9e746c4fbd`, supplemental
@@ -93,6 +92,8 @@ package must never be bundled into SceneIO's abi3 wheel.
       in `bench/BASELINE.md`.
 - [x] Linux/macOS/Windows TinyUSDZ optional-provider package run
       `30703473199` at implementation source `47eb2e1`; publication skipped.
+- [x] Final correction source `b16ee1c` passes compiler run `30705438179` and
+      CI `30705438186`, including the 67-row five-run allocation guard.
 
 Public capability metadata and every USD-family inspection now report
 `current_usdc`, `composition`, and `selected_time` as unavailable. Direct

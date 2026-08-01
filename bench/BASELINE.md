@@ -3993,4 +3993,12 @@ negative, absolute-cap, ceiling, and ratio-regression cases fail independently.
 A local one-run control measured 8.510/5.718 MB for
 USD full/inspect, 8.512/5.718 MB for USDZ, and 18.354/1.577 MB for Parquet
 full/selected. The exact local collection now has 4,317 nodes and passes 4,311
-with six documented skips; the final hosted CI rerun remains open.
+with six documented skips.
+
+Correction source `b16ee1c` passes final CI run `30705438186`: the complete
+suite, every platform shard, 67-row smoke, normalized structure, and five-run
+guard are green. Compiler run `30705438179` passes both jobs. The independently
+downloaded guard artifact contains 67 successful rows and measures USD at
+8.510/5.718 MB full/inspect, USDZ at 8.511/5.718 MB, and Parquet at
+18.354/1.577 MB full/selected. The smoke structure remains
+`817b355a8fb752025e51b3afe658524ebfa40cd6caffc8cd9e927a7117e07f65`.

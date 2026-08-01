@@ -21,9 +21,10 @@
   nonpublishing package matrix, compiler checks, complete suite, 67-row smoke,
   and every platform shard. The completed five-run guard exposed an overly
   broad allocation classification for documented TinyUSDZ inspection and the
-  materialized Parquet selected result. A narrow local correction retains the
-  1 MB cap everywhere else and requires those paths to reduce allocation
-  strictly versus full reads; its final hosted CI rerun remains.
+  materialized Parquet selected result. The narrow correction retains the
+  1 MB cap everywhere else and bounds those paths by measured ceilings and
+  ratios. Correction source `b16ee1c` passes final CI `30705438186`, including
+  the 67-row five-run guard, and compiler run `30705438179` passes both jobs.
   Exhaustive backend comparison remains trigger-based, not a prerequisite for
   closing a verified codec unit.
 - **Scope:** close every unblocked format gap declared by SceneIO's coverage

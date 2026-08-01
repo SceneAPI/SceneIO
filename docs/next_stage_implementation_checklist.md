@@ -5178,9 +5178,8 @@ checklist. No unchecked item below is a current USD I/O capability claim:
 - [x] U6: static-profile Exit B. Current USDC, evaluated composition, and
       selected time are explicit unavailable flags; all six planned arc
       families and authored samples report/refuse without OpenUSD execution.
-- [ ] U7: local verification, benchmarks, artifact smokes, package/compiler
-      validation, and documentation are complete. One final hosted CI rerun of
-      the corrected O5 allocation classification remains.
+- [x] U7: local verification, benchmarks, artifact smokes, package/compiler
+      validation, documentation, and final corrected CI are complete.
 
 The existing static `MeshScene` behavior remains supported throughout. Full
 USD, authoring-layer preservation, arbitrary shader/custom schemas, rendering,
@@ -5272,7 +5271,7 @@ Progress:
       4,300-pass full gate with six documented skips, Ruff, bounded-allocation
       controls, paired exact-parent benchmark, and three review lenses are
       green without installing or invoking OpenUSD. C7 artifact and hosted
-      evidence remains.
+      evidence is complete below.
 - [x] C7 local closure verifies one source archive as the sole input to a
       repaired Windows `cp312-abi3` wheel, exact runtime/license inventory,
       NumPy-only installed operation, and the pinned TinyUSDZ 0.9.4 rich USD
@@ -5293,8 +5292,9 @@ Progress:
       result. The narrow correction keeps the cap everywhere else; USD/USdz
       inspection is capped at 8 MB and 80% of full, while Parquet selection is
       capped at 2 MB and 25% of full. It passes the exact 4,317-node local
-      collection (4,311 pass, six skip). Its hosted CI rerun
-      is the only open U7 check.
+      collection (4,311 pass, six skip). Correction source `b16ee1c` passes CI
+      `30705438186`, including every shard, the 67-row smoke/structure, and the
+      five-run guard; compiler run `30705438179` passes both jobs. U7 is closed.
 
 Completed U1 evidence:
 

@@ -13,8 +13,10 @@ suite, 67-format smoke/structure, and all platform shards; its completed guard
 then reveals an overly broad allocation classification for the documented
 TinyUSDZ full-stage inspection cost. The narrow correction retains the 1 MB
 cap elsewhere; USD/USdz inspection must stay below 8 MB and 80% of full.
-Its exact 4,317-node local gate passes 4,311 with six skips; final
-hosted CI remains. Publication is still a separate tag-driven action.
+Its exact 4,317-node local gate passes 4,311 with six skips. Correction source
+`b16ee1c` passes final CI `30705438186`, including the 67-row five-run guard,
+and compiler run `30705438179` passes both jobs. Publication is still a
+separate tag-driven action.
 Review date: 2026-08-01
 Standards baseline: AOUSD Core Specification 1.0.1, supplemental
 1.0.1.post0, and OpenUSD 26.08 (`v26.08`, `ee47c679abde`)
@@ -130,7 +132,7 @@ work:
 | U4 Gaussian schema | C3 committed (`a633477`) | official float/half read/write, raw-layout mapping, inspection, selection, extent, refusal coverage, generated benchmark, contracts, legacy controls, and full local qualification are green |
 | U5 camera/volume/semantics/instances | complete through C5 | camera/render-product pairs, direct scalar-float OpenVDB dependencies, one effective taxonomy/label pair, static PointInstancer data, mixed-stage coexistence, generated large-case evidence, and the complete local gate are green |
 | U6 current USDC/composition/time | Exit B complete | explicit false provider flags; all six composition arc families and authored time samples report/refuse; no OpenUSD executable dependency |
-| U7 release closure | final corrected CI rerun pending | implementation source `47eb2e1` passes package `30703473199`, compiler `30703469313`, and every functional/platform step of CI `30703469317`; the completed guard found only the global 1 MB cap misclassified the documented 5.7 MB TinyUSDZ inspection cost and 1.6 MB Parquet result; measured ceilings and ratios are now explicit, and 4,311 tests pass with six skips |
+| U7 release closure | complete | implementation source `47eb2e1` passes package `30703473199`; correction source `b16ee1c` passes compiler `30705438179` and final CI `30705438186`, including all 67 rows and the five-run guard; measured ceilings/ratios are explicit, and 4,311 local tests pass with six skips |
 
 ### 2026-07-31 C2 closure evidence
 
@@ -576,14 +578,13 @@ later unit while an earlier unit has uncommitted or failing changes.
 | C4 (done, `d1ee8ea`) | U5 cameras | camera/render-product association, projection-equivalent intrinsics and pose convention tests, default-only unrepresented fields, mixed-resolution and ambiguity refusals, camera-stage measurement | one green closure unit; hosted three-OS execution remains deferred to the next authorized push |
 | C5 (done, `6eeae8e`) | U5 volumes + semantics + instances | direct OpenVDB dependency resolution, one taxonomy/label pair, prototype identity/order/masks, mixed-stage round-trip and dependency tests; refuse volume-bearing USDZ writes | focused/complete gates, docs, and large-case measurement are green |
 | C6 (done, `fa321c1`) | U6 provider capability | Exit B: TOST remains outside the literal allow-list; current USDC, evaluated composition, and selected time are explicit unavailable flags | no OpenUSD install/invocation and no repository-owned composition/crate implementation |
-| C7 (final corrected CI rerun pending) | U7 release closure | full local tests, benchmark ledger, docs/contracts, exact source archive, repaired Windows wheel, NumPy-only and pinned TinyUSDZ installed smokes; nonpublishing package/compiler and all functional/platform CI lanes pass | claim exactly `sceneio.usd.3dcv/1`; rerun the narrowly corrected O5 allocation classification |
+| C7 (done, `b16ee1c`) | U7 release closure | full local tests, benchmark ledger, docs/contracts, exact source archive, repaired Windows wheel, NumPy-only and pinned TinyUSDZ installed smokes; nonpublishing package/compiler and final CI pass | claim exactly `sceneio.usd.3dcv/1`; publication remains separate and tag-driven |
 
 Execution is intentionally capped at seven commits. C1-C6 are committed and
-the local portion of C7 is complete. Authorization was received; exact package
-and compiler runs are green. The primary CI functional/platform paths are also
-green, and its completed benchmark isolated the allocation-classification gap
-now corrected locally. One bounded action remains: rerun CI against that tree
-and record the result. Publication is a separate tag-driven workflow action.
+the local and hosted portions of C7 are complete. Authorization was received;
+exact package, compiler, and primary CI runs are green, including the corrected
+five-run allocation guard. Publication is a separate tag-driven workflow
+action.
 
 No later unit may expand an earlier unit's public profile merely to accept an
 unrepresentable input. The correct result is an explicit unsupported feature.
@@ -679,7 +680,7 @@ schema modules and keeps traversal, selection, and payload dispatch in
 | C4 Camera | done in this closure unit | keep `UsdGeomCamera`/`UsdRenderProduct` mapping isolated in `cameras.py`; preserve camera-to-parent/OpenGL conventions and float-precision projection equivalence | 43 camera tests; 196 affected USD/CameraRig passes; 259 calibration/COLMAP controls; 40 docs/contracts; exact 4,275-node full suite | hosted three-OS execution remains deferred to the next authorized push |
 | C5 Remaining payloads | locally complete in focused `volumes.py`, `semantics.py`, and `instances.py` modules | preserve the direct scalar-float VDB reference, one effective semantic pair, and static PointInstancer boundary; keep prototype geometry shared and volume-bearing USDZ unavailable | 20 family nodes plus benchmark smoke, existing USD regression family, literal relationships/attributes, missing/shared VDB, inheritance, ids/masks/order, cycle, lifetime, selection, and destination preservation are green | generated 1 GiB VDB and 1M-instance evidence recorded; exact 4,299-node gate passes 4,293 with 6 documented skips; full Ruff and docs/contracts are clean |
 | C6 Static-provider closure | complete through Exit B | preserve direct USDA/USDZ and historical crate reads; expose profile id plus false `current_usdc`, `composition`, and `selected_time` flags; scan/refuse sublayer/reference/payload/variant/inherit/specialize inputs and authored samples | capability, inspection, direct arc, selected-time, crate ceiling, provider-boundary, import-isolation, registry, and static TinyUSDZ controls | no OpenUSD package installed or invoked; capabilities/provider report/docs exact; C7 supplies artifact and hosted platform evidence |
-| C7 Release closure | final corrected CI rerun pending | no new format scope; capability manifests, public docs, installed-package surfaces, benchmark ledger, and release metadata are reconciled | 4,317-node local collection; 4,311 pass/6 skip; package/compiler runs and every functional/platform CI lane pass; the guard classification has narrow ceiling/ratio regressions | rerun CI for the correction; publish separately through the approved tag workflow |
+| C7 Release closure | complete at `b16ee1c` | no new format scope; capability manifests, public docs, installed-package surfaces, benchmark ledger, and release metadata are reconciled | 4,317-node local collection; 4,311 pass/6 skip; package/compiler runs, every functional/platform CI lane, and five-run guard pass | publish separately through the approved tag workflow |
 
 Each unit has a stop rule: if an authored property cannot be represented
 exactly by the named SceneIO record, refuse it with a specific diagnostic. Do
@@ -1037,8 +1038,9 @@ the NumPy-only smoke test.
 - [x] Run build-only package matrix `30701260601`; all source, wheel,
       installed-provider, and combined-inventory jobs pass and publication is
       skipped.
-- [ ] Complete final CI after the O5 allocation-classification correction and
-      record the run id. Package `30703473199` and compiler `30703469313` pass.
+- [x] Complete final CI after the O5 allocation-classification correction:
+      `30705438186` passes at `b16ee1c`; compiler `30705438179` and package
+      `30703473199` also pass, with publication skipped.
 
 Local C7 evidence uses one verified source archive as the wheel source. The
 Windows `cp312-abi3` wheel passes the exact distribution inventory, a fresh

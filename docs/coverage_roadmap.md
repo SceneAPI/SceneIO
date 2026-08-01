@@ -22,8 +22,9 @@
 > inspection has the documented TinyUSDZ full-stage cost, and Parquet's named
 > selection returns 1.6 MB of logical data. The local correction preserves the
 > universal 1 MB cap elsewhere. USD/USdz inspection is capped at 8 MB and 80%
-> of full; Parquet selection is capped at 2 MB and 25% of full. Its final
-> hosted CI rerun remains open.
+> of full; Parquet selection is capped at 2 MB and 25% of full. Correction
+> source `b16ee1c` passes final CI `30705438186`, including all 67 rows and the
+> five-run guard, while compiler run `30705438179` passes both jobs.
 > Animated WebP is the 55th local codec; the preceding 54-codec hosted package
 > evidence remains a dated checkpoint rather than evidence for this addition.
 > The current branch-local COLMAP dense checkpoint adds exact depth/normal
@@ -355,7 +356,7 @@ Columns: **Ext/id** · **Record** · **Lib/oracle (license)** · **R/W** ·
 | ✅ OFF | `Mesh` | independent parser + trimesh (MIT) | R+W | polygon-preserving ASCII vertex variants with normals, UVs, and exact RGBA8; bounded face ranges |
 | ✅ glTF / GLB (plain) | `MeshScene` | cgltf (MIT); pygltflib + trimesh oracles | R+W | 2.0 JSON/external or data buffers and GLB BIN; sparse/strided accessors, nodes/scenes, PBR subset, mesh/primitive selectors; unsupported extensions/Draco reject |
 | policy-gated Draco glTF | `MeshScene` | Draco (Apache) | R+W | requires a separate patented-codec policy decision; never required for plain glTF/GLB |
-| 🟡 USD / USDZ / historical USDC | `MeshScene` compatibility + `SceneGraph` | TinyUSDZ (Apache-2.0) | rich direct-static 3D-CV R+W | optional `sceneio[usd]`; C1-C5 cover hierarchy, polygon meshes/points, bounded PreviewSurface materials/textures, official float/half Gaussian particles, static camera/render-product pairs, direct scalar-float OpenVDB references, one inherited semantic pair, and static PointInstancer rows; historical USDC input is qualified through crate 10 and later crates refuse before provider dispatch; C6 Exit B explicitly leaves current USDC, evaluated composition, and animated selected time unavailable; OpenUSD remains reference-only under the current license allow-list; C7 local and hosted Linux/macOS/Windows package/provider evidence passes, with only the corrected primary CI guard rerun open |
+| 🟡 USD / USDZ / historical USDC | `MeshScene` compatibility + `SceneGraph` | TinyUSDZ (Apache-2.0) | rich direct-static 3D-CV R+W | optional `sceneio[usd]`; C1-C5 cover hierarchy, polygon meshes/points, bounded PreviewSurface materials/textures, official float/half Gaussian particles, static camera/render-product pairs, direct scalar-float OpenVDB references, one inherited semantic pair, and static PointInstancer rows; historical USDC input is qualified through crate 10 and later crates refuse before provider dispatch; C6 Exit B explicitly leaves current USDC, evaluated composition, and animated selected time unavailable; OpenUSD remains reference-only under the current license allow-list; C7 local and hosted Linux/macOS/Windows package/provider/compiler/CI evidence passes |
 
 ### 3e. Arrays / tensors / features
 | Format | Record | Lib / oracle | R/W | Notes |

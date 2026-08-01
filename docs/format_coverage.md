@@ -212,8 +212,12 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > retains the 1 MB cap for every other applicable row. USD/USdz inspection must
 > stay below 8 MB and 80% of full; Parquet selection must stay below 2 MB and
 > 25% of full. Its exact 4,317-node local collection passes 4,311 with six
-> documented skips; the final hosted CI rerun
-> remains open.
+> documented skips. Correction source `b16ee1c` passes final CI
+> `30705438186`, including the full suite, all platform shards, 67-row smoke,
+> deterministic structure, and five-run guard; compiler run `30705438179`
+> passes both jobs. The downloaded guard has 67 successful rows and measures
+> USD/USdz full/inspect at 8.510/5.718 MB and Parquet full/selected at
+> 18.354/1.577 MB.
 >
 > **COLMAP dense/workspace checkpoint (2026-07-29):** the current local
 > registry has 54 codecs: 48 buffer-backed files, three path-native

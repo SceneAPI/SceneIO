@@ -219,8 +219,12 @@ incorrectly applied the legacy 1 MB metadata/selection cap to those logical
 provider/output allocations. The correction retains that absolute cap for
 every other applicable row. USD/USdz inspection must remain below 8 MB and 80%
 of full; Parquet selection must remain below 2 MB and 25% of full. The exact
-4,317-node local suite passes 4,311 tests with six documented skips; final
-hosted CI remains.
+4,317-node local suite passes 4,311 tests with six documented skips. At
+correction source `b16ee1c`, final CI `30705438186` passes the complete suite,
+all platform shards, 67-row smoke, deterministic structure, and five-run
+guard; compiler run `30705438179` passes both jobs. Its downloaded guard has
+67 successful rows and reproduces the qualified 8.510/5.718 MB USD full/inspect
+and 18.354/1.577 MB Parquet full/selected relationships.
 
 The 2026-07-30 scale-16 profiling follow-up removed two wrapper hot spots.
 Already-native contiguous HDF5 arrays now pass directly to the native record
