@@ -5157,8 +5157,8 @@ It pins AOUSD Core 1.0.1, supplemental 1.0.1.post0, and tagged OpenUSD 26.08,
 and freezes a finite `sceneio.usd.3dcv/1` scope with a commit-sized U0-U7
 checklist. No unchecked item below is a current USD I/O capability claim:
 
-- [ ] U0: explicit TOST decision plus AOUSD/OpenUSD/TinyUSDZ provider
-      qualification.
+- [x] U0: provider qualification plus the explicit current-allow-list outcome:
+      TOST is distinct and OpenUSD remains reference-only.
 - [x] U1: additive `SceneGraph`/`InstanceSet` records and convention-bearing
       mesh, point, and Gaussian payloads.
 - [x] U2: compatible rich-scene API, `.usdc` routing, stage metadata,
@@ -5174,9 +5174,10 @@ checklist. No unchecked item below is a current USD I/O capability claim:
       direct scalar-float OpenVDB references, one inherited semantic pair,
       and static point instancing in focused schema modules. The mixed-stage,
       lifetime/allocation, malformed, transactional, 1M-instance, and
-      1 GiB-VDB evidence is green; C5's final full-suite commit gate remains.
-- [ ] U6: qualified USDC/USDZ, evaluated composition subset, and explicitly
-      selected time.
+      1 GiB-VDB evidence and C5's final full-suite commit gate are green.
+- [x] U6: static-profile Exit B. Current USDC, evaluated composition, and
+      selected time are explicit unavailable flags; all six planned arc
+      families and authored samples report/refuse without OpenUSD execution.
 - [ ] U7: complete verification, benchmarks, cross-platform package run, and
       documentation closure.
 
@@ -5260,6 +5261,17 @@ Progress:
       affected gate passes 45 tests. The exact 4,299-node local gate passes
       4,293 with 6 documented skips; full Ruff, docs/contracts, and all three
       review lenses are green. This closure unit records completed C5.
+- [x] C6 selects static-profile Exit B under the literal license allow-list.
+      The capability snapshot and inspection metadata expose profile
+      `sceneio.usd.3dcv/1` plus false current-USDC/composition/selected-time
+      flags. Streaming authored-feature inspection covers sublayers,
+      references, payloads, variants, inherits, and specializes; every arc
+      and authored time sample refuses before raw provider projection. The
+      245-pass USD/provider/capability/docs focus, exact 4,306-node collection,
+      4,300-pass full gate with six documented skips, Ruff, bounded-allocation
+      controls, paired exact-parent benchmark, and three review lenses are
+      green without installing or invoking OpenUSD. C7 artifact and hosted
+      evidence remains.
 
 Completed U1 evidence:
 

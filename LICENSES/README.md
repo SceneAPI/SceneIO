@@ -62,6 +62,12 @@ The MSVC runtime sidecar is the platform-toolchain exception required by the
 Windows/MSVC wheel target; all codec libraries remain under the permissive
 open-source policy.
 
+OpenUSD is documentation/reference material only. Its distinct TOST 1.0
+license is permissive and Apache-2.0-derived but is not literally in the
+current MIT/BSD/zlib/Apache/public-domain allow-list; no OpenUSD code, `pxr`
+module, executable, wheel, or notice is installed, invoked, copied, or shipped
+by SceneIO profile `sceneio.usd.3dcv/1`.
+
 No entry in this directory changes any upstream license terms.
 
 This software is based in part on the work of the Independent JPEG Group.

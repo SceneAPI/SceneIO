@@ -12,9 +12,9 @@
 > [`next_stage_implementation_checklist.md`](next_stage_implementation_checklist.md).
 > The bounded standards-based USD expansion is specified separately in
 > [`usd_3d_cv_implementation_plan.md`](usd_3d_cv_implementation_plan.md).
-> U0-U2 qualify the bounded provider, records, and stage skeleton. U3 now maps
-> static meshes, points, bounded PreviewSurface materials, and texture assets;
-> C2 is locally closed, and U4-U7 remain the finite closure.
+> U0-U5 qualify the bounded provider, records, stage skeleton, and all direct
+> static payload kinds. C6 is closed through the explicit static-only Exit B;
+> U7 release evidence is the remaining finite closure.
 > Animated WebP is the 55th local codec; the preceding 54-codec hosted package
 > evidence remains a dated checkpoint rather than evidence for this addition.
 > The current branch-local COLMAP dense checkpoint adds exact depth/normal
@@ -346,7 +346,7 @@ Columns: **Ext/id** · **Record** · **Lib/oracle (license)** · **R/W** ·
 | ✅ OFF | `Mesh` | independent parser + trimesh (MIT) | R+W | polygon-preserving ASCII vertex variants with normals, UVs, and exact RGBA8; bounded face ranges |
 | ✅ glTF / GLB (plain) | `MeshScene` | cgltf (MIT); pygltflib + trimesh oracles | R+W | 2.0 JSON/external or data buffers and GLB BIN; sparse/strided accessors, nodes/scenes, PBR subset, mesh/primitive selectors; unsupported extensions/Draco reject |
 | policy-gated Draco glTF | `MeshScene` | Draco (Apache) | R+W | requires a separate patented-codec policy decision; never required for plain glTF/GLB |
-| 🟡 USD / USDZ / historical USDC | `MeshScene` compatibility + `SceneGraph` | TinyUSDZ (Apache-2.0) | rich direct-static 3D-CV R+W | optional `sceneio[usd]`; U2 maps bounded stage hierarchy/metadata/static transforms and selection; C1-C5 add polygon meshes/points, bounded PreviewSurface materials/textures, official 26.08 float/half Gaussian particles, static camera/render-product pairs, direct scalar-float OpenVDB references, one inherited semantic pair, and static PointInstancer rows; historical USDC input is qualified only through crate 10 and later crates refuse before provider dispatch; C6-C7 are the provider-policy and release-evidence exits; OpenUSD remains a reference until the narrow TOST/package-inventory decision |
+| 🟡 USD / USDZ / historical USDC | `MeshScene` compatibility + `SceneGraph` | TinyUSDZ (Apache-2.0) | rich direct-static 3D-CV R+W | optional `sceneio[usd]`; C1-C5 cover hierarchy, polygon meshes/points, bounded PreviewSurface materials/textures, official float/half Gaussian particles, static camera/render-product pairs, direct scalar-float OpenVDB references, one inherited semantic pair, and static PointInstancer rows; historical USDC input is qualified through crate 10 and later crates refuse before provider dispatch; C6 Exit B explicitly leaves current USDC, evaluated composition, and animated selected time unavailable; OpenUSD remains reference-only under the current license allow-list; C7 artifact/hosted evidence remains |
 
 ### 3e. Arrays / tensors / features
 | Format | Record | Lib / oracle | R/W | Notes |

@@ -1,7 +1,7 @@
 # USD provider qualification
 
-Status: local U0 matrix complete; TOST/current-crate and hosted package gates remain
-Date: 2026-07-30  
+Status: local provider matrix and C6 Exit B complete; hosted package gate remains
+Date: 2026-08-01
 Local provider: TinyUSDZ 0.9.4
 Standards pins: AOUSD Core 1.0.1 `2f9e746c4fbd`, supplemental
 1.0.1.post0 `c15ae0cad3ed` (tag object `404e2bde49c1`), OpenUSD 26.08
@@ -26,10 +26,11 @@ claim. The target profile and phase checklist are in
 | `ParticleField3DGaussianSplat` | all required OpenUSD 26.08 attributes parse | use direct typed-attribute extraction |
 | `quatf[]` NumPy view | exposed as XYZW | reorder explicitly to SceneIO WXYZ |
 | asset values | authored asset attributes parse, but the Python value is an invalid placeholder even when the target exists | inspect the authored dependency separately; do not claim provider asset resolution |
-| sublayers | arc parses, but `load()` does not populate referenced prims | not an evaluated-stage provider |
-| references | arc parses, but referenced children are not populated | implement/qualify separately in U6 |
-| payloads | arc parses, but payload children are not populated | implement/qualify separately in U6 |
-| variants | definitions and selection parse, but selected children are not populated | implement/qualify separately in U6 |
+| sublayers | arc parses, but `load()` does not populate referenced prims | inspect and refuse in profile v1 |
+| references | arc parses, but referenced children are not populated | inspect and refuse in profile v1 |
+| payloads | arc parses, but payload children are not populated | inspect and refuse in profile v1 |
+| variants | definitions and selection parse, but selected children are not populated | inspect and refuse in profile v1 |
+| inherits/specializes | provider evaluation is not qualified | inspect and refuse in profile v1 |
 
 The composition probes use one external layer with a mesh and separate root
 layers containing a sublayer, reference, payload, or two-choice variant. Direct
@@ -62,34 +63,40 @@ not imply that every crate-10 value type is usable. SceneIO owns:
 - conversion from provider values to compiled records;
 - stage metadata and dependency inspection;
 - deterministic USDA and USDZ serialization;
-- explicit composition/value-resolution behavior that later passes the AOUSD
-  comparison cases.
+- explicit inspection and refusal of unevaluated composition/value-resolution
+  behavior.
 
 USDC writing and current crate 11-15 reading stay unavailable until output and
 input are accepted by an approved current OpenUSD reference and the AOUSD
 format checks. A provider self-round-trip does not qualify either direction.
 
-OpenUSD 26.08 remains a standards reference until the narrow TOST policy
-decision in U0. No OpenUSD package or library was added by this qualification
-unit.
+OpenUSD 26.08 remains a standards reference. TOST 1.0 is permissive and
+Apache-2.0-derived, but it is not literally one of this repository's approved
+MIT/BSD/zlib/Apache/public-domain licenses. C6 therefore selects Exit B: no
+OpenUSD package or library is installed, invoked, copied, or bundled.
 
 As of 2026-07-31, official `usd-core 26.8` wheels are published for supported
-CPython versions on Windows, Linux, and macOS. Availability removes the old
-version mismatch, but does not approve TOST use or change the provider boundary
-above. If approved, C6 inventories and runs that package in a separate
-oracle/provider environment; it is never bundled into SceneIO's abi3 wheel.
+CPython versions on Windows, Linux, and macOS. Availability does not approve
+TOST use or change the provider boundary above. A future policy change would
+require a fresh exact wheel/license inventory in a separate environment; the
+package must never be bundled into SceneIO's abi3 wheel.
 
-## Remaining U0 evidence
+## Provider closure evidence
 
-- [ ] Explicit TOST policy decision.
+- [x] Explicit TOST outcome: not approved under the current literal allow-list.
 - [x] AOUSD Core 1.0.1 plus supplemental 1.0.1.post0 license and fixture
       inventory.
-- [ ] OpenUSD 26.08 current crate read/write comparison.
+- [x] Current USDC comparison branch closed as unavailable for profile v1;
+      current reads and all USDC writes remain refused.
 - [x] Generated TinyUSDZ/repository-writer performance and peak-RSS comparison
       in `bench/BASELINE.md`.
-- [ ] Linux/macOS/Windows optional-provider package run.
+- [ ] Linux/macOS/Windows TinyUSDZ optional-provider package run (C7,
+      user-authorized hosted execution).
 
-The TOST decision and current-crate comparison are prerequisites for claiming
-USDC writing or current USDC reads. Evaluated composition and selected-time
-values remain later U6 implementation work. These gates do not block direct
-USDA hierarchy/payload work or the official Gaussian-schema mapping.
+Public capability metadata and every USD-family inspection now report
+`current_usdc`, `composition`, and `selected_time` as unavailable. Direct
+inspection detects all six planned arc families and reads refuse rather than
+silently returning raw unevaluated provider traversal. Typed properties with
+the same names are not misclassified, including list-op context, and a 4 MiB
+indentation fixture keeps the streamed scan below 512 KiB traced allocation.
+The exact local 4,306-node gate passes 4,300 with six documented skips.

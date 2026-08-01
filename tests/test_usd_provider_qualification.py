@@ -6,7 +6,10 @@ import importlib.metadata
 from pathlib import Path
 
 import numpy as np
+import pytest
 import tinyusdz
+
+from sceneio.io._usd import provider
 
 # Unmodified Apache-2.0 fixture bytes from AOUSD Core Specification
 # Supplemental 1.0.1.post0, peeled release commit c15ae0cad3ed:
@@ -45,6 +48,17 @@ def ParticleField3DGaussianSplat "GSplat"
     uniform token sortingModeHint = "zDepth"
 }
 """
+
+
+def test_static_profile_provider_flags_are_explicit_and_immutable():
+    assert provider.PROFILE_ID == "sceneio.usd.3dcv/1"
+    assert dict(provider.PROVIDER_FLAGS) == {
+        "current_usdc": False,
+        "composition": False,
+        "selected_time": False,
+    }
+    with pytest.raises(TypeError):
+        provider.PROVIDER_FLAGS["composition"] = True
 
 
 def test_aousd_crate_10_timesamples_exposes_provider_boundary(tmp_path):

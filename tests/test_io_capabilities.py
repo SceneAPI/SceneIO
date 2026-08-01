@@ -226,6 +226,34 @@ def test_capability_details_pin_current_fidelity_boundaries():
         safetensors.unsupported_features
     )
 
+    usd = sceneio.capabilities("usd")
+    assert {
+        "profile_sceneio_usd_3dcv_1",
+        "directly_authored_static_stage",
+        "static_gaussians",
+        "static_cameras",
+        "external_scalar_float_openvdb_references",
+        "static_point_instances",
+    } <= set(usd.supported_features)
+    assert {
+        "current_usdc",
+        "composition",
+        "selected_time",
+        "inherits",
+        "specializes",
+        "layer_stack_authoring",
+    } <= set(usd.unsupported_features)
+
+    usdz = sceneio.capabilities("usdz")
+    assert {
+        "profile_sceneio_usd_3dcv_1",
+        "uncompressed_aligned_package",
+        "static_point_instances",
+    } <= set(usdz.supported_features)
+    assert {"current_usdc", "composition", "selected_time"} <= set(
+        usdz.unsupported_features
+    )
+
 
 def test_unknown_capability_format_is_normalized():
     with pytest.raises(sceneio.FormatError, match="unknown format id"):

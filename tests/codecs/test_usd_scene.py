@@ -1121,6 +1121,9 @@ def Xform "World"
         match="selected-time value evaluation is not available",
     ):
         sceneio.read_scene(path, time=1.5)
+    inspected = sceneio.inspect(path)
+    assert inspected.metadata["provider_selected_time"] is False
+    assert "/World: time_samples" in inspected.metadata["unsupported_features"]
 
 
 def test_composition_is_reported_and_refused_without_silent_raw_projection(
@@ -1153,6 +1156,10 @@ def Xform "World"
     assert inspected.datatype == "scene_graph"
     assert inspected.metadata["dependencies"] == ("base.usda",)
     assert "references" in inspected.metadata["unsupported_features"]
+    assert inspected.metadata["profile"] == "sceneio.usd.3dcv/1"
+    assert inspected.metadata["provider_current_usdc"] is False
+    assert inspected.metadata["provider_composition"] is False
+    assert inspected.metadata["provider_selected_time"] is False
     with pytest.raises(
         sceneio.FormatError,
         match=r"evaluated composition.*references",
@@ -1166,11 +1173,78 @@ def Xform "World"
 def Xform "World"
 {
     custom string note = "payload = @string-only.usda@"
+    custom string subLayers = "plain"
+    custom string references = "plain"
+    custom string payload = "plain"
+    custom string variantSet = "plain"
+    custom string variants = "plain"
+    custom string inherits = "plain"
+    custom string specializes = "plain"
+    custom string bindMaterialAs = "plain"
 }
 """,
         encoding="utf-8",
     )
     assert stage._scan_authored_features(benign) == (frozenset(), ())
+
+
+@pytest.mark.parametrize(
+    ("feature", "body"),
+    [
+        ("sublayers", '( subLayers = [@base.usda@] )'),
+        (
+            "references",
+            'def Xform "Arc" ( prepend references = @base.usda@</Base> ) {}',
+        ),
+        (
+            "payloads",
+            'def Xform "Arc" ( payload = @base.usda@</Base> ) {}',
+        ),
+        (
+            "variants",
+            '''def Xform "Arc" (
+    variants = { string model = "A" }
+    prepend variantSets = "model"
+)
+{
+    variantSet "model" = { "A" { def Xform "Chosen" {} } }
+}''',
+        ),
+        (
+            "inherits",
+            'def Xform "Arc" ( inherits = </Base> ) {}',
+        ),
+        (
+            "specializes",
+            'def Xform "Arc" ( specializes = </Base> ) {}',
+        ),
+    ],
+    ids=(
+        "sublayers",
+        "references",
+        "payloads",
+        "variants",
+        "inherits",
+        "specializes",
+    ),
+)
+def test_direct_profile_reports_and_refuses_composition_arcs(
+    tmp_path, feature, body
+):
+    (tmp_path / "base.usda").write_text(
+        '#usda 1.0\ndef Xform "Base" {}\n', encoding="utf-8"
+    )
+    path = tmp_path / f"{feature}.usda"
+    path.write_text(f"#usda 1.0\n{body}\n", encoding="utf-8")
+
+    inspected = sceneio.inspect(path)
+    assert feature in inspected.metadata["unsupported_features"]
+    assert inspected.metadata["provider_composition"] is False
+    with pytest.raises(
+        sceneio.FormatError,
+        match=rf"evaluated composition.*{feature}",
+    ):
+        sceneio.read_scene(path)
 
 
 def test_direct_layer_feature_scan_has_bounded_python_allocation(tmp_path):
@@ -1190,6 +1264,22 @@ def test_direct_layer_feature_scan_has_bounded_python_allocation(tmp_path):
     renamed = tmp_path / "renamed.usda"
     path.replace(renamed)
     renamed.unlink()
+
+    indented = tmp_path / "indented.usda"
+    indented.write_bytes(
+        b"#usda 1.0\n("
+        + b" " * (4 * 1024 * 1024)
+        + b"references = @base.usda@</Base>\n)\n"
+    )
+    tracemalloc.start()
+    try:
+        features, dependencies = stage._scan_authored_features(indented)
+        _, peak = tracemalloc.get_traced_memory()
+    finally:
+        tracemalloc.stop()
+    assert features == frozenset({"references"})
+    assert dependencies == ("base.usda",)
+    assert peak < 512 * 1024
 
 
 def test_empty_scene_graph_roundtrips(tmp_path):

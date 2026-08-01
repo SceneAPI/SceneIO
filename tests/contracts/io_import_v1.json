@@ -13,6 +13,7 @@
     "pycolmap",
     "pye57",
     "pygltflib",
+    "pxr",
     "safetensors",
     "tifffile",
     "tinyusdz",

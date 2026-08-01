@@ -230,6 +230,10 @@ def test_usd_inspection_matches_decoded_scene(tmp_path, suffix):
     assert result.dtype == "float32"
     assert result.count == 1
     assert result.metadata == {
+        "profile": "sceneio.usd.3dcv/1",
+        "provider_current_usdc": False,
+        "provider_composition": False,
+        "provider_selected_time": False,
         "node_count": 2,
         "primitive_count": 1,
         "face_count": 2,

@@ -3907,5 +3907,35 @@ with the instance arrays and never copies prototype geometry per instance,
 while VDB reference handling is independent of VDB file size. TinyUSDZ still
 materializes the complete numeric USDA layer before SceneIO maps it, so the
 million-instance full-read and inspection peaks are provider costs, not a
-lazy-read claim. C6 may compare a current OpenUSD provider only after the
-narrow license and package-inventory decision.
+lazy-read claim. Executable OpenUSD comparison remains a future-profile option
+only after a separate license-policy and package-inventory decision.
+
+### USD C6 static-provider closure control (2026-08-01)
+
+C6 adds constant-size profile/provider flags to inspection and extends the
+bounded authored-feature scanner from four to all six planned composition arc
+families. It does not change numeric payload mapping. Exact parent `6eeae8e`
+and the candidate were built in separate editable environments and measured
+with the same seven-median, oracle-free command:
+
+```powershell
+.venv/Scripts/python.exe bench/bench_io.py --runs 7 --skip-oracles `
+  --only usd --only usdz
+```
+
+| tree/codec | write/read/path-read MB/s | sink MB/s | inspect/full | full/inspect traced peak | full/inspect sampled RSS |
+|---|---:|---:|---:|---:|---:|
+| parent `usd` | 11 / 7 / 7 | 11 | 0.67x | 8.5 / 5.7 MB | 14.6 / 15.4 MB |
+| candidate `usd` | 12 / 7 / 7 | 12 | 0.68x | 8.5 / 5.7 MB | 15.4 / 13.2 MB |
+| parent `usdz` | 10 / 7 / 7 | 10 | 0.69x | 8.5 / 5.7 MB | 15.5 / 18.7 MB |
+| candidate `usdz` | 11 / 7 / 7 | 11 | 0.70x | 8.5 / 5.7 MB | 19.0 / 17.7 MB |
+
+The candidate retains identical read throughput and traced-allocation peaks;
+write/sink medians are one rounded MB/s higher. Sampled RSS stays within the
+allocator/process noise seen across the paired runs. Inspection still asks
+TinyUSDZ to parse the complete layer and therefore is an allocation reduction,
+not a throughput claim. A separate three-median run with the TinyUSDZ oracle
+enabled measured both SceneIO reads at 7 MB/s and direct provider reads at
+13 MB/s, confirming that C6 did not conceal the established provider cost.
+Current USDC, evaluated composition, and selected-time evaluation remain
+unavailable instead of adding an unqualified implementation.

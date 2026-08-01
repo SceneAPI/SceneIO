@@ -3,11 +3,32 @@
 from __future__ import annotations
 
 import os
+from types import MappingProxyType
 
 from sceneio.io._usd.package import root_layer_prefix, validate_usdz_input
 
 USDC_MAGIC = b"PXR-USDC\x00"
 TINYUSDZ_MAX_QUALIFIED_CRATE_VERSION = 10
+PROFILE_ID = "sceneio.usd.3dcv/1"
+PROVIDER_FLAGS = MappingProxyType(
+    {
+        "current_usdc": False,
+        "composition": False,
+        "selected_time": False,
+    }
+)
+
+
+def inspection_metadata() -> dict[str, object]:
+    """Return the explicit provider boundary used by public inspection."""
+
+    return {
+        "profile": PROFILE_ID,
+        **{
+            f"provider_{name}": available
+            for name, available in PROVIDER_FLAGS.items()
+        },
+    }
 
 
 def require_tinyusdz():
@@ -63,8 +84,11 @@ def source_representation(path: str | os.PathLike[str]) -> str:
 
 
 __all__ = [
+    "PROFILE_ID",
+    "PROVIDER_FLAGS",
     "TINYUSDZ_MAX_QUALIFIED_CRATE_VERSION",
     "USDC_MAGIC",
+    "inspection_metadata",
     "load_stage",
     "require_qualified_input",
     "require_tinyusdz",

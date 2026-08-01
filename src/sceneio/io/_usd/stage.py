@@ -44,7 +44,7 @@ _USDA_FEATURES = re.compile(
     | "(?:\\[\s\S]|[^"\\])*"
     | @([^@\r\n]{1,65536})@
     | (?<![A-Za-z0-9_:])
-      (subLayers|references|payload|variantSet|variants|bindMaterialAs)
+      (subLayers|references|payload|variantSet|variants|inherits|specializes|bindMaterialAs)
       (?![A-Za-z0-9_:])
     """,
     re.VERBOSE,
@@ -54,6 +54,8 @@ _BINARY_COMPOSITION_TOKENS = {
     "references": (b"references",),
     "payloads": (b"payload",),
     "variants": (b"variantSet", b"variants"),
+    "inherits": (b"inherits",),
+    "specializes": (b"specializes",),
     "material_binding_strength": (b"bindMaterialAs",),
 }
 _FEATURE_NAMES = {
@@ -62,8 +64,47 @@ _FEATURE_NAMES = {
     b"payload": "payloads",
     b"variantSet": "variants",
     b"variants": "variants",
+    b"inherits": "inherits",
+    b"specializes": "specializes",
     b"bindMaterialAs": "material_binding_strength",
 }
+_LIST_OP_PREFIXES = frozenset(
+    {b"add", b"append", b"delete", b"prepend", b"reorder"}
+)
+_FEATURE_DELIMITERS = frozenset(b"\n\r({};")
+_HORIZONTAL_WHITESPACE = frozenset({9, 11, 12, 32})
+
+
+def _is_authored_feature_token(
+    data,
+    token_start: int,
+    *,
+    lower_bound: int,
+) -> bool:
+    """Distinguish arc metadata from same-named typed properties."""
+
+    cursor = token_start
+    while (
+        cursor > lower_bound
+        and data[cursor - 1] in _HORIZONTAL_WHITESPACE
+    ):
+        cursor -= 1
+    if cursor == lower_bound or data[cursor - 1] in _FEATURE_DELIMITERS:
+        return True
+
+    word_end = cursor
+    while cursor > lower_bound and (
+        65 <= data[cursor - 1] <= 90 or 97 <= data[cursor - 1] <= 122
+    ):
+        cursor -= 1
+    if bytes(data[cursor:word_end]) not in _LIST_OP_PREFIXES:
+        return False
+    while (
+        cursor > lower_bound
+        and data[cursor - 1] in _HORIZONTAL_WHITESPACE
+    ):
+        cursor -= 1
+    return cursor == lower_bound or data[cursor - 1] in _FEATURE_DELIMITERS
 
 
 def _scan_authored_features(
@@ -92,7 +133,11 @@ def _scan_authored_features(
                 )
                 continue
             token = match.group(2)
-            if token is not None:
+            if token is not None and _is_authored_feature_token(
+                data,
+                match.start(2),
+                lower_bound=start,
+            ):
                 features.add(_FEATURE_NAMES[token])
 
     with package.mapped_root_layer(path) as mapped_root:
@@ -1236,6 +1281,7 @@ def inspect_scene(
         name in {"Xform", "Scope", "Mesh"} for name in type_counts
     )
     details: dict[str, object] = {
+        **provider.inspection_metadata(),
         "node_count": node_count,
         "primitive_count": primitive_count,
         "face_count": faces,

@@ -126,8 +126,12 @@ beside the destination. Arbitrary shader graphs, procedural nodes, UDIM,
 explicit filtering, and unrepresented texture transforms are refused.
 
 Qualified historical `.usdc` inputs through crate version 10 route under the
-`usd` format id. Current-crate reads, USDC writes, and selected animated-value
-evaluation stay unavailable until their independent qualification gates pass.
+`usd` format id. Profile `sceneio.usd.3dcv/1` explicitly leaves current-crate
+reads, USDC writes, evaluated composition, and selected animated-value
+evaluation unavailable. `sceneio.capabilities("usd")` lists those boundaries;
+inspection returns the profile plus false `provider_current_usdc`,
+`provider_composition`, and `provider_selected_time` flags. Static `time=` is
+only snapshot metadata and never implies sample evaluation.
 
 `sceneio.inspect(path)` returns an immutable `Inspection` with shape, dtype,
 channels, repeated-record counts, and format-specific scalar metadata without

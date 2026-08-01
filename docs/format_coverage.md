@@ -167,6 +167,20 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > 4,293 with 6 documented skips; full Ruff and docs/contracts are clean. This
 > closure unit records C5; OpenUSD is still reference-only.
 >
+> **USD C6 static-profile closure (2026-08-01):** profile
+> `sceneio.usd.3dcv/1` selects provider-policy Exit B. Registry capabilities
+> and every USD-family inspection separately expose `current_usdc`,
+> `composition`, and `selected_time` as unavailable. Inspection detects
+> sublayers, references, payloads, variants, inherits, and specializes; rich
+> reads refuse those arcs and authored time samples instead of projecting the
+> provider's unevaluated raw traversal. Static selected-time metadata remains
+> an annotation only. TOST 1.0 is permissive and Apache-2.0-derived but is a
+> distinct license outside the literal project allow-list, so OpenUSD remains
+> reference material and no `pxr` module enters ordinary imports. The exact
+> 4,306-node local gate passes 4,300 with six documented skips; the 245-pass
+> focused gate, Ruff, contracts/docs, allocation checks, paired exact-parent
+> benchmark, and three review lenses are green.
+>
 > **COLMAP dense/workspace checkpoint (2026-07-29):** the current local
 > registry has 54 codecs: 48 buffer-backed files, three path-native
 > multi-file containers, and three directories. The four additions are exact
