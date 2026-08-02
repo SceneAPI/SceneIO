@@ -1192,22 +1192,22 @@ def test_assembly_dependency_direction_and_import_delta_are_exact():
     benchmark_contract = CONTRACT["benchmark_parent"]
     assert benchmark_contract["captures"] == [
         "build/c3-c4-local-benchmark-952bb8d.json",
-        "build/ci-30467712842-benchmark/sceneio-benchmark.json",
+        "build/ci-30762546918-benchmark/sceneio-benchmark.json",
     ]
     assert benchmark_contract["source_commit"] == (
-        "952bb8d6d875753ec50cc9516e19ca659bc78d33"
+        "41ff8cac2ecb3d58b5f7ea46dc89d8c4bac2b69d"
     )
-    assert benchmark_contract["hosted_run"] == 30467712842
+    assert benchmark_contract["hosted_run"] == 30762546918
     assert benchmark_contract["extension_capture"] == (
         "build/apng-56-row-benchmark.json"
     )
     assert benchmark_contract["extension_base_commit"] == (
         "3c07bcefabbd0d9be935ffd22c5ef1e7f4642321"
     )
-    assert benchmark_contract["rows"] == 72
-    assert len(CANONICAL_BUILTIN_IDS) == benchmark_contract["rows"] + 1
+    assert benchmark_contract["rows"] == 73
+    assert len(CANONICAL_BUILTIN_IDS) == benchmark_contract["rows"]
     assert benchmark_contract["structural_projection_sha256"] == (
-        "9d010021697a301eff99ac21203b9f66d042e66b81ccfd0bea7ebdce313b2851"
+        "6dde30b346753159801c5071ed56825ede67dfece77aaea6fcf859381976d766"
     )
     rows = [
         {

@@ -2236,14 +2236,14 @@
     "command": ".venv/Scripts/python.exe bench/bench_io.py --runs 1 --scale 0.001 --skip-oracles --json <output>",
     "captures": [
       "build/c3-c4-local-benchmark-952bb8d.json",
-      "build/ci-30467712842-benchmark/sceneio-benchmark.json"
+      "build/ci-30762546918-benchmark/sceneio-benchmark.json"
     ],
-    "source_commit": "952bb8d6d875753ec50cc9516e19ca659bc78d33",
-    "hosted_run": 30467712842,
+    "source_commit": "41ff8cac2ecb3d58b5f7ea46dc89d8c4bac2b69d",
+    "hosted_run": 30762546918,
     "extension_capture": "build/apng-56-row-benchmark.json",
     "extension_base_commit": "3c07bcefabbd0d9be935ffd22c5ef1e7f4642321",
-    "rows": 72,
-    "structural_projection_sha256": "9d010021697a301eff99ac21203b9f66d042e66b81ccfd0bea7ebdce313b2851",
+    "rows": 73,
+    "structural_projection_sha256": "6dde30b346753159801c5071ed56825ede67dfece77aaea6fcf859381976d766",
     "excluded_key_suffixes": [
       "_mbps",
       "_ms"
