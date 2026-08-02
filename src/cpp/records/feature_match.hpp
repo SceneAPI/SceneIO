@@ -26,6 +26,9 @@ struct FeatureSet {
     size_t rows = 0;
     size_t keypoint_columns = 2;
     std::vector<float> keypoints;  // rows * keypoint_columns
+    // Coordinates of the first pixel center measured from the upper-left
+    // image corner. COLMAP is (0.5,0.5); native hloc stores (0,0).
+    double pixel_center[2] = {0.5, 0.5};
 
     bool has_descriptors = false;
     bool descriptor_dtype_present = false;

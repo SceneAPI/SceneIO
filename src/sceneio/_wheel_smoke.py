@@ -16,6 +16,7 @@ import struct
 import tempfile
 from collections.abc import Callable, Iterator, Mapping
 from contextlib import contextmanager
+from dataclasses import fields
 from pathlib import Path
 from types import MappingProxyType
 
@@ -23,6 +24,7 @@ import numpy as np
 
 import sceneio
 from sceneio import _core
+from sceneio.coordinates import CoordinateConvention, coordinate_convention
 from sceneio.io import registry
 
 _PARTIAL_SELECTORS = (
@@ -59,6 +61,57 @@ def _record_observation(
     observations[format_id].add(property_name)
 
 
+def _known_coordinate_values_agree(
+    actual: CoordinateConvention,
+    expected: CoordinateConvention,
+) -> bool:
+    omitted = {None, "unknown", "not_applicable", "file_declared"}
+    for item in fields(CoordinateConvention):
+        if item.name == "name":
+            continue
+        value = getattr(actual, item.name)
+        if value in omitted:
+            continue
+        if value != getattr(expected, item.name):
+            return False
+    return True
+
+
+def _validate_coordinates(format_id: str, result: object, inspection: object) -> None:
+    contract = registry.REGISTRY[format_id].capabilities().coordinates
+    inspected = inspection.coordinates
+    recorded = coordinate_convention(result)
+    if contract.status == "fixed":
+        if inspected != contract.decoded:
+            raise AssertionError(
+                f"{format_id}: inspection coordinate contract differs from registry"
+            )
+        if recorded is not None and not _known_coordinate_values_agree(
+            recorded,
+            contract.decoded,
+        ):
+            raise AssertionError(
+                f"{format_id}: decoded record contradicts its coordinate contract"
+            )
+    elif contract.status == "file_declared":
+        if inspected is None:
+            raise AssertionError(
+                f"{format_id}: file-declared coordinates were not inspected"
+            )
+    elif contract.status == "unspecified":
+        if inspected != sceneio.UNKNOWN_COORDINATES:
+            raise AssertionError(
+                f"{format_id}: unspecified coordinates were presented as known"
+            )
+    elif contract.status == "not_applicable":
+        if inspected is not None or recorded is not None:
+            raise AssertionError(
+                f"{format_id}: non-coordinate data acquired a coordinate contract"
+            )
+    else:  # pragma: no cover - frozen public vocabulary
+        raise AssertionError(f"{format_id}: unknown coordinate status")
+
+
 @contextmanager
 def _observe_public_io() -> Iterator[dict[str, set[str]]]:
     definitions = tuple(registry.BUILTIN_DEFINITIONS)
@@ -85,6 +138,9 @@ def _observe_public_io() -> Iterator[dict[str, set[str]]]:
         result = original_read(path, **kwargs)
         format_id = resolve(path, kwargs.get("format"))
         _record_observation(observations, format_id, "read")
+        inspection = original_inspect(path, format=format_id)
+        _validate_coordinates(format_id, result, inspection)
+        _record_observation(observations, format_id, "coordinates")
         if capabilities[format_id].streams_read:
             _record_observation(observations, format_id, "stream_read")
         return result
@@ -132,7 +188,7 @@ def _expected_smoke_properties(codec) -> set[str]:
     capabilities = codec.capabilities()
     if not capabilities.available:
         return set()
-    expected = {"read", "inspect"}
+    expected = {"coordinates", "read", "inspect"}
     if capabilities.streams_read:
         expected.add("stream_read")
     if capabilities.can_write:
@@ -1300,6 +1356,7 @@ def _hdf5_formats(root: Path) -> None:
         np.array([0.25, 0.75], dtype=np.float32),
         image_name="db/a.jpg",
         image_size=(640, 480),
+        pixel_center=(0.0, 0.0),
     )
     feature_store = sceneio.HlocFeatureStore(
         {"db/a.jpg": feature},

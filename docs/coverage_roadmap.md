@@ -12,6 +12,12 @@
 > [`next_stage_implementation_checklist.md`](next_stage_implementation_checklist.md).
 > The bounded standards-based USD expansion is specified separately in
 > [`usd_3d_cv_implementation_plan.md`](usd_3d_cv_implementation_plan.md).
+> Coordinate-system closure is implemented independently of the remaining
+> aspirational format gates. All 73 built-ins are classified by the checked
+> manifest described in
+> [`coordinate_conventions.md`](coordinate_conventions.md); COLMAP is the
+> canonical explicit-conversion target, never an implicit label for unknown
+> source data.
 > The 2026-08-02 cross-platform correction changes no roadmap scope or format
 > capability. Local MSVC and clean Linux focused checks pass; the exact local
 > suite passes 4,372 tests with six documented skips after three
@@ -226,7 +232,10 @@ green. Don't land a codec that skips a box — file a follow‑up instead.
 - [ ] **Conventions as metadata**, never in the arrays: quaternion order, pose
       direction, axis frame, depth scale/unit, color space, opacity/scale
       activation. Reader *records* what it read; **writers guard** (refuse a
-      foreign‑convention record) — a normalizer converts on request.
+      foreign‑convention record). Conversion is an explicit public call and is
+      available only for qualified record types; unknown or file-declared
+      semantics require caller context. Canonical reconstruction adapters are
+      the documented normalization exception.
 - [ ] Register one `Codec(...)` in `io/registry.py` (+ `sniff`/magic/extension).
 - [ ] Stable/default formats keep their production adapter, grammar,
       validation, inspection, partial-read logic, and sinks in this repository.
@@ -320,7 +329,7 @@ zero‑copy + convention tags.
 | `PointCloud` | `xyz` Nx3, `rgb`/`rgb16`, normals, intensity, optional organized shape/viewpoint/LAS waveform sidecar, plus authored float display RGB/opacity, widths, signed ids, velocity, acceleration, and display color space | PLY‑point, PCD, LAS/LAZ, E57, `.xyz`, bounded USD | ✅ record; rich static fields map through `read_scene`/`write_scene` for USD while unrelated legacy writers refuse them |
 | `Mesh` | positions; ragged face offsets/indices; vertex/corner normals, UVs, RGBA8 and authored float display RGB/opacity; primitive/material ranges; coordinate metadata, transform, orientation, and tri-state double-sidedness | PLY‑mesh, OBJ, STL, OFF, glTF, USD | ✅ record; rich static geometry fields map through bounded USD while unrelated legacy writers refuse them |
 | `MeshScene` | ordered `Mesh` primitives; mesh ranges/names; shared `MaterialSet`; node hierarchy and local transforms; scene roots/names/default | glTF/GLB, bounded USD/USDZ | ✅ |
-| `FeatureSet` | `keypoints` Nx{2,4,6} f32, polymorphic `descriptors` NxD with extractor dtype/dim/name presence, keypoint colors, scores, quality, image time/id/size, and absent-state metadata | HDF5/hloc, COLMAP DB | ✅ |
+| `FeatureSet` | `keypoints` Nx{2,4,6} f32 with explicit first-pixel center, polymorphic `descriptors` NxD with extractor dtype/dim/name presence, keypoint colors, scores, quality, image time/id/size, and absent-state metadata | HDF5/hloc, COLMAP DB | ✅ |
 | `MatchGraph` | ragged per-pair raw/verified `matches` Mx2 u32, optional score rows, source/retrieval provenance, `F/E/H` 3x3, config, relative pose, and optional recovered endpoint cameras | HDF5/hloc, COLMAP DB | ✅ |
 | `PairCorrespondences` / `CorrespondenceGraph` | indexed or coordinate matches, scores, two-view geometry, ordered pair validation, and per-image feature references | hloc and detector-free matching adapters | ✅ Python-neutral models |
 | `TrackObservation` / `TrackedPointCloud` | sparse XYZ plus aligned per-point image/keypoint observations | reconstruction and dataset adapters | ✅ Python-neutral models; compiled reconstruction uses CSR tracks |

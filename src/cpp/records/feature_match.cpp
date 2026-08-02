@@ -235,7 +235,8 @@ FeatureSet make_feature_set(
     const std::string &image_name, uint32_t camera_id,
     std::array<uint64_t, 2> image_size,
     int32_t extractor_type, nb::object time_id,
-    bool keypoints_present) {
+    bool keypoints_present,
+    std::array<double, 2> pixel_center) {
     if (keypoints.ndim() != 2 ||
         (keypoints.shape(1) != 2 &&
          keypoints.shape(1) != 4 &&
@@ -251,6 +252,12 @@ FeatureSet make_feature_set(
     result.image_height = image_size[1];
     result.extractor_type = extractor_type;
     result.keypoints_present = keypoints_present;
+    for (size_t axis = 0; axis < 2; ++axis) {
+        if (!std::isfinite(pixel_center[axis]))
+            throw std::invalid_argument(
+                "feature_set: pixel_center must contain finite values");
+        result.pixel_center[axis] = pixel_center[axis];
+    }
     result.rows = keypoints.shape(0);
     result.keypoint_columns = keypoints.shape(1);
 
@@ -972,6 +979,11 @@ void validate_feature_set(
             throw std::invalid_argument(
                 std::string(context) +
                 ": keypoints must be finite");
+    for (double value : features.pixel_center)
+        if (!std::isfinite(value))
+            throw std::invalid_argument(
+                std::string(context) +
+                ": pixel_center must contain finite values");
 
     if (!features.has_descriptors) {
         if (!features.descriptors.empty() ||
@@ -2045,6 +2057,12 @@ void register_feature_match(nb::module_ &module) {
                     {value.rows, value.keypoint_columns});
             },
             reference_internal)
+        .def_prop_ro(
+            "pixel_center",
+            [](const FeatureSet &value) {
+                return nb::make_tuple(
+                    value.pixel_center[0], value.pixel_center[1]);
+            })
         .def_prop_ro(
             "descriptors",
             [](nb::handle_t<FeatureSet> self) -> nb::object {
@@ -3203,6 +3221,7 @@ void register_feature_match(nb::module_ &module) {
         "image_size"_a = std::array<uint64_t, 2>{1, 1},
         "extractor_type"_a = -1, "time_id"_a = nb::none(),
         "keypoints_present"_a = true,
+        "pixel_center"_a = std::array<double, 2>{0.5, 0.5},
         "Build a typed per-image FeatureSet. Inputs are copied into "
         "record-owned storage.");
     module.def(

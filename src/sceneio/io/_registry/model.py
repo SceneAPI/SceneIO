@@ -178,6 +178,14 @@ class CodecCapabilities:
     supported_features: tuple[str, ...]
     unsupported_features: tuple[str, ...]
 
+    @property
+    def coordinates(self):
+        """Coordinate contract for this built-in or extension codec."""
+
+        from sceneio.io._registry.coordinates import codec_coordinate_contract
+
+        return codec_coordinate_contract(self.format)
+
 
 @dataclass(frozen=True)
 class NativeFeatureCapabilities:

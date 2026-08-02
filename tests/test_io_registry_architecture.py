@@ -357,6 +357,7 @@ def test_installed_wheel_smoke_stream_properties_follow_capabilities():
         streams_write=False,
     )
     assert wheel_smoke._expected_smoke_properties(non_streaming) == {
+        "coordinates",
         "read",
         "write",
         "inspect",
@@ -369,12 +370,14 @@ def test_installed_wheel_smoke_stream_properties_follow_capabilities():
         streams_write=False,
     )
     assert wheel_smoke._expected_smoke_properties(read_streaming) == {
+        "coordinates",
         "read",
         "inspect",
         "stream_read",
     }
 
     assert wheel_smoke._expected_smoke_properties(npy) == {
+        "coordinates",
         "read",
         "write",
         "inspect",

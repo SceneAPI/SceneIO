@@ -29,6 +29,7 @@ class TestFeatureSet:
         assert len(fs) == 5
         assert fs.descriptor_dtype == "float32"
         assert fs.descriptor_dim == 8
+        assert fs.pixel_center == (0.5, 0.5)
 
     def test_valid_keypoints_only(self) -> None:
         fs = FeatureSet(keypoints=np.zeros((3, 2), dtype=np.float32))
@@ -57,6 +58,17 @@ class TestFeatureSet:
         kp[0, 0] = np.inf
         with pytest.raises(ContractViolation, match="non-finite"):
             FeatureSet(keypoints=kp)
+
+    @pytest.mark.parametrize(
+        "pixel_center",
+        [(0.0,), [0.0, 0.0], (True, 0.0), (np.nan, 0.0)],
+    )
+    def test_invalid_pixel_center_raises(self, pixel_center) -> None:
+        with pytest.raises(ContractViolation, match="pixel_center"):
+            FeatureSet(
+                keypoints=np.zeros((1, 2), dtype=np.float32),
+                pixel_center=pixel_center,
+            )
 
     def test_descriptor_row_mismatch_raises(self) -> None:
         with pytest.raises(ContractViolation, match=r"FeatureSet\.descriptors"):

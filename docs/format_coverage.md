@@ -18,6 +18,12 @@ The reviewed, bounded expansion from the current static mesh USD adapter to a
 mixed 3D-CV scene profile is in
 [`usd_3d_cv_implementation_plan.md`](usd_3d_cv_implementation_plan.md).
 
+Coordinate interpretation is tracked separately from payload coverage. The
+exact 73-format coordinate manifest, COLMAP canonical target, HLoc pixel-center
+distinction, explicit conversion surface, and verification rules are in
+[`coordinate_conventions.md`](coordinate_conventions.md). Capability discovery,
+inspection, and decoded records expose the same immutable convention contract.
+
 The 2026-08-02 closure commit `5387350` passes the full hosted compiler run
 `30738228920` plus every dedicated Linux, Windows, macOS, and GCC 10 job in CI
 run `30738228914`. That CI run's full suite and 72-row smoke also pass; its
@@ -38,6 +44,20 @@ local suite passes 4,372 tests with six documented skips. At correction commit
 are fully green; the latter passes every platform/compiler job, exact suite,
 72-row smoke/structure, and five-run performance guard. Hosted confirmation is
 complete and format capabilities are unchanged.
+
+> **73-format coordinate-contract checkpoint (2026-08-02, branch-local):**
+> every built-in now has an exact fixed/file-declared/unspecified/not-applicable
+> coordinate classification. Capabilities, metadata-only inspection, native
+> and Python records, and the installed-wheel smoke expose and cross-check that
+> contract. COLMAP is the explicit canonical conversion target; qualified
+> posed views, point clouds, and meshes convert without changing ordinary I/O.
+> Native HLoc `(0,0)` and COLMAP `(0.5,0.5)` feature pixel centers are retained
+> separately and both writers refuse the wrong convention. The exact local
+> collection has 4,445 nodes: 4,439 pass with six documented skips; Ruff and
+> the 73-format smoke pass. A bounded three-run TUM/COLMAP DB/HLoc sweep retains
+> mapped reads and direct sinks, with inspection 4.51x/3.89x/2.48x faster than
+> full reads and COLMAP image/pair selection 8.32x/8.41x faster. Hosted
+> platform confirmation remains a separate user-triggered action.
 
 <!-- sceneio-inventory-summary:start -->
 **Generated registry contract:** SceneIO has **73 built-in formats**: **64**
@@ -1077,7 +1097,7 @@ SoA, zero-copy to numpy/torch (DLPack), conventions carried as metadata.
 | `StateTrajectory` | `state_trajectory` | ✅ record / ⬜ datatype | exact int64 nanosecond timestamps plus float64 position, WXYZ orientation, velocity, gyro bias, and accelerometer bias; explicit frame/unit/sign metadata |
 | `CameraRig` | `camera_rig` | ✅ record / ⬜ datatype | ordered cameras; ragged model parameters; exact optional K/R/P; extrinsic, ROI/binning, topic, and time-offset metadata with explicit conventions |
 | `PoseGraph` | `pose_graph` | ✅ record / ⬜ datatype | ordered typed SE(3) nodes/edges, fixed-node flags, exact ids, XYZW transforms, and symmetric 6×6 information matrices with explicit direction/order metadata |
-| `FeatureSet` | `feature_set` | ✅ record / ⬜ datatype | per-image id/name/camera/size/time; Nx{2,4,6} f32 keypoints; descriptors in u8/i8/f16/f32/f64 with dtype/dimension/name presence; optional RGB colors, quality, and scores |
+| `FeatureSet` | `feature_set` | ✅ record / ⬜ datatype | per-image id/name/camera/size/time; Nx{2,4,6} f32 keypoints with explicit first-pixel center; descriptors in u8/i8/f16/f32/f64 with dtype/dimension/name presence; optional RGB colors, quality, and scores |
 | `MatchGraph` | `match_graph` | ✅ record / ⬜ datatype | canonical COLMAP image pairs and pair ids; ragged raw/verified u32 matches; optional parallel scores, provenance flags/retrieval score, F/E/H, config, relative pose, and recovered endpoint cameras |
 | `PairCorrespondences` / `CorrespondenceGraph` | neutral correspondence models | ✅ Python records | indexed or detector-free coordinate matches with optional scores and two-view geometry; the graph validates ordered image pairs and references to per-image feature sets |
 | `TrackObservation` / `TrackedPointCloud` | neutral sparse-track models | ✅ Python records | per-point lists of `(image_id, keypoint_idx)` observations aligned with sparse XYZ; compiled `Reconstruction` carries the corresponding compact CSR track representation |

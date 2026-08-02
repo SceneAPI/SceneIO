@@ -105,6 +105,30 @@ The accepted profiles are intentionally bounded and reject semantics the
 corresponding SceneIO record cannot preserve. See
 [`docs/format_coverage.md`](docs/format_coverage.md) for the exact mapping.
 
+### Coordinate-system contract
+
+COLMAP is SceneIO's canonical *conversion target*: OpenCV camera axes (+X
+right, +Y down, +Z forward), right-handed WXYZ Hamilton world-to-camera poses,
+upper-left image coordinates with first pixel center `(0.5, 0.5)`, camera-Z
+depth, and arbitrary world scale. This does not relabel every input as COLMAP.
+Each built-in format has an exact `fixed`, `file_declared`, `unspecified`, or
+`not_applicable` coordinate contract:
+
+```python
+contract = sceneio.coordinate_contract("tum")
+metadata = sceneio.inspect("trajectory.txt", format="tum")
+record = sceneio.read("trajectory.txt", format="tum")
+
+assert metadata.coordinates == record.coordinates
+canonical = sceneio.convert_coordinates(record)  # explicit, never implicit I/O
+```
+
+`FeatureSet.pixel_center` distinguishes native HLoc `(0, 0)` keypoints from
+COLMAP `(0.5, 0.5)` keypoints, and the writers refuse a mismatch instead of
+silently shifting data. See
+[`docs/coordinate_conventions.md`](docs/coordinate_conventions.md) for the
+73-format inventory, conversion limits, and verification contract.
+
 NCore V4 datasets expose a metadata-only catalog, exact owned component arrays,
 and validated standard semantic items without importing the upstream package:
 

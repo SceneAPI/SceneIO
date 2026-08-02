@@ -4,7 +4,7 @@ How the compiled core is organized, and **how to add a codec** — the two
 things that keep this expansible as the format list from
 `formats_survey.md` grows.
 
-> **Growth checkpoint:** the live registry has reached 70 format ids. The
+> **Growth checkpoint:** the live registry has reached 73 format ids. The
 > format-focused native layer remains coherent, but registry, inspection,
 > benchmark, test-matrix, dependency, and binding wiring have outgrown a flat
 > layout. The behavior-preserving R3-R5 organization work and R6 source/package
@@ -26,6 +26,10 @@ things that keep this expansible as the format list from
 > established upstream libraries own optimized storage and parsing. The
 > older 50-codec and eight-family numbers below remain immutable evidence
 > for their named commits.
+> Coordinate semantics are now a checked cross-layer contract: every built-in
+> has an exact manifest entry, capabilities and inspection expose it, decoded
+> records provide a `.coordinates` view, and conversions are explicit. See
+> [`coordinate_conventions.md`](coordinate_conventions.md).
 >
 > R3.3 closes at `811cb0d` with normal run `30300122309` and
 > compiler-instrumented run `30300122324` passing. The R3.4 installed-wheel

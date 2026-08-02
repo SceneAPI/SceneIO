@@ -155,8 +155,11 @@ _IO_FORWARDS = frozenset(
         "inspect_depth",
         "inspect_flow",
         "capabilities",
+        "coordinate_contract",
+        "coordinate_convention",
         "codecs",
         "convert_gaussian_conventions",
+        "convert_coordinates",
         "native_features",
         "ArrayInspection",
         "Camera",
@@ -169,15 +172,19 @@ _IO_FORWARDS = frozenset(
         "ColmapVideoMetadataSet",
         "ConsistencyGraph",
         "CodecCapabilities",
+        "COLMAP_COORDINATES",
+        "CoordinateConvention",
         "DepthMap",
         "DepthEncoding",
         "FlowField",
+        "FormatCoordinateContract",
         "FeatureSet",
         "FormatError",
         "GaussianCloud",
         "HlocFeatureStore",
         "HlocMatchStore",
         "Image",
+        "IMAGE_COORDINATES",
         "ImageSequence",
         "InstanceSet",
         "Inspection",
@@ -206,12 +213,20 @@ _IO_FORWARDS = frozenset(
         "SceneGraph",
         "StateTrajectory",
         "TensorDict",
+        "UNKNOWN_COORDINATES",
+        "UNSPECIFIED_FORMAT_COORDINATES",
         "VolumeAsset",
     }
 )
 
 
 def __getattr__(name: str) -> object:
+    if name == "_core":
+        module = importlib.import_module("sceneio._core")
+        from sceneio.coordinates import install_core_coordinate_properties
+
+        install_core_coordinate_properties(module)
+        return module
     if name in _NAMESPACES:
         return importlib.import_module(f"sceneio.{name}")
     if name in _IO_FORWARDS:
@@ -220,6 +235,7 @@ def __getattr__(name: str) -> object:
 
 
 __all__ = [
+    "COLMAP_COORDINATES",
     "COLMAP_DATABASE_PROFILES",
     "COLMAP_DATABASE_PROFILES_BY_NAME",
     "COLMAP_DB_TABLES",
@@ -237,12 +253,15 @@ __all__ = [
     "EXTENSION_TABLES",
     "HEADER_FMT",
     "HEADER_SIZE",
+    "IMAGE_COORDINATES",
     "MAGIC",
     "MAXX_DATABASE_APPLICATION_ID",
     "MAX_NUM_IMAGES",
     "RECORD_FMT",
     "RECORD_SIZE",
     "UNDEFINED_EXTRACTOR_TYPE",
+    "UNKNOWN_COORDINATES",
+    "UNSPECIFIED_FORMAT_COORDINATES",
     "UPSTREAM_TABLES",
     "ArrayInspection",
     "BlobStore",
@@ -260,11 +279,13 @@ __all__ = [
     "ColumnDef",
     "ConsistencyGraph",
     "ContractViolation",
+    "CoordinateConvention",
     "DatabaseProfile",
     "DepthEncoding",
     "DepthMap",
     "FeatureSet",
     "FlowField",
+    "FormatCoordinateContract",
     "FormatError",
     "GaussianCloud",
     "HlocFeatureStore",
@@ -312,7 +333,10 @@ __all__ = [
     "colmap_database_conversion_report",
     "colmap_mvs",
     "contract_dict",
+    "convert_coordinates",
     "convert_gaussian_conventions",
+    "coordinate_contract",
+    "coordinate_convention",
     "data",
     "decode_records",
     "detect",

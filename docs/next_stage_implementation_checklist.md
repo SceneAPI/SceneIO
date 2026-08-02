@@ -1,5 +1,40 @@
 # Next-stage implementation checklist
 
+## C8 coordinate-system contract closure (2026-08-02)
+
+- [x] Define one immutable public convention value covering camera axes,
+      handedness, pose direction, quaternion order/algebra, world/reference
+      frame, up axis, scale, image origin/axes/pixel center, depth meaning, and
+      optional CRS.
+- [x] Adopt the documented COLMAP camera convention as the canonical explicit
+      conversion target without treating arbitrary or file-declared data as
+      COLMAP.
+- [x] Classify all 73 built-in formats in registry order as fixed,
+      file-declared, unspecified, or not applicable; make an unclassified new
+      built-in fail the machine contract.
+- [x] Expose the contract through `coordinate_contract`, codec capabilities,
+      metadata-only inspection, `coordinate_convention(record)`, and additive
+      `.coordinates` properties on native and Python data models.
+- [x] Preserve HLoc's `(0,0)` first-pixel center separately from COLMAP's
+      `(0.5,0.5)` convention; make both writers reject a mismatched
+      `FeatureSet` rather than moving keypoints.
+- [x] Add explicit OpenCV/OpenGL, W2C/C2W, WXYZ/XYZW, scale, point, normal,
+      vector, origin, and mesh conversion for qualified records. Preserve
+      camera associations and refuse cases that need an unstated policy.
+- [x] Verify asymmetric poses against a hand-derived matrix and `pycolmap`,
+      partial metadata against decoded records, conversion round trips,
+      refusal behavior, and the manifest-driven 73-format installed-wheel
+      smoke with no property exemptions.
+- [x] Document the public contract, exact format groups, conversion semantics,
+      feature/match/track inheritance, and CamTools/COLMAP reference basis.
+- [x] Record the final local gates: 4,439 tests pass with six documented skips,
+      Ruff is clean, all 73 installed-smoke rows pass, and the representative
+      three-run TUM/COLMAP DB/HLoc sweep retains its mapped-read, direct-sink,
+      inspection, and partial-read gains. The lifetime/ownership,
+      coordinate-mathematics, and test-soundness reviews are clear after
+      tightening posed-view factory shapes/metadata, target representability,
+      and benchmark HLoc pixel metadata.
+
 ## NCore V4 first-class dataset support (validated, 2026-08-02)
 
 - [x] Pin the Apache-2.0 upstream NCore revision used as the specification and

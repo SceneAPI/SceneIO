@@ -16,6 +16,7 @@ stand on.
 
 from __future__ import annotations
 
+from sceneio.coordinates import install_coordinate_properties
 from sceneio.data.calibration import (
     Calibration,
     CameraIntrinsics,
@@ -50,6 +51,27 @@ from sceneio.data.views import (
     FrameMeta,
     ImageRef,
     PosedViewSet,
+    ViewInput,
+)
+
+install_coordinate_properties(
+    Calibration,
+    CameraIntrinsics,
+    ConfidenceMap,
+    CorrespondenceGraph,
+    DepthMap,
+    FeatureSet,
+    FrameMeta,
+    Mask,
+    PairCorrespondences,
+    Pointmap,
+    PosePrior,
+    PosedViewSet,
+    RayMap,
+    SE3,
+    Sim3,
+    TrackedPointCloud,
+    TwoViewGeometry,
     ViewInput,
 )
 

@@ -130,7 +130,7 @@ Records map onto the existing (+ deferred) SceneIO DataTypes:
 | Record (C++) | DataType | Fields (canonical dtype / shape) |
 |---|---|---|
 | `Reconstruction` | `sparse_model` | cameras (model id + `params[]`), images (pose `SE3` R\|t, name), points3D (`xyz` Nx3 f64, `rgb` Nx3 u8, `error` N, tracks) |
-| `FeatureSet` | `feature_set` | `keypoints` Nx{2,4,6} f32, `descriptors` NxD (f32/u8), `scores` N, `image_size` 2 |
+| `FeatureSet` | `feature_set` | `keypoints` Nx{2,4,6} f32 with first-pixel center, `descriptors` NxD (f32/u8), `scores` N, `image_size` 2 |
 | `MatchGraph` | `match_graph` | per-pair `matches` Mx2 u32, `scores` M, optional `F/E/H` 3x3 f64, `inliers` |
 | `GaussianCloud` | **`splat`** (new) | `means` Nx3, `scales` Nx3, `quats` Nx4, `opacity` N, `sh` Nx(3+45); activation flags |
 | `DepthMap` / `Dense` | **`dense`/`depth_map`** (new) | `depth` HxW f32 (+ `scale`, `unit`, `invalid` sentinel in metadata), `confidence` HxW |
@@ -143,8 +143,14 @@ Records map onto the existing (+ deferred) SceneIO DataTypes:
 class. Every pose-bearing record carries an explicit tag: quaternion order
 (WXYZ vs XYZW), pose direction (world→cam vs cam→world), axis frame
 (OpenCV +Z-fwd/+Y-down vs OpenGL/Blender −Z-fwd/+Y-up), and depth scale/unit
-(TUM 1/5000 m, ScanNet mm). Codecs record what they read; a normalizer
-converts on request.
+(TUM 1/5000 m, ScanNet mm). Every built-in is now classified by a checked
+73-row manifest as `fixed`, `file_declared`, `unspecified`, or
+`not_applicable`. Capabilities, inspection, and decoded records expose the
+same immutable contract. Ordinary I/O never invokes a converter; the
+established reconstruction adapters deliberately decode into the canonical
+COLMAP `Reconstruction` representation. `sceneio.convert_coordinates(...)`
+uses COLMAP as its default target and operates only on qualified record types.
+See [`coordinate_conventions.md`](coordinate_conventions.md).
 
 ---
 

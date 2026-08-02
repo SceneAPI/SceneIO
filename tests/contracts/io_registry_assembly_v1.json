@@ -472,8 +472,8 @@
     "last": "tests/test_points_binary.py::test_bad_magic_rejected"
   },
   "pytest_candidate_collection": {
-    "count": 4421,
-    "sorted_normalized_node_ids_sha256": "ec48dc1a69205dd3c7e2fdc228ca24df13b1b57f6378b4196c5e813c507f56c4",
+    "count": 4445,
+    "sorted_normalized_node_ids_sha256": "c24ccca800e0d7a86d8d12b421da34cd41a91a3885e2bf0168c46cc552a139ab",
     "added_nodes": [
       "tests/codecs/test_animated_webp.py::test_sceneio_writer_is_lossless_and_oracle_readable",
       "tests/codecs/test_animated_webp.py::test_pillow_writer_is_sceneio_readable_bit_exact",
@@ -1814,7 +1814,31 @@
       "tests/codecs/test_ncore_v4.py::test_writer_refuses_partial_components_and_preserves_destination",
       "tests/test_import_guards.py::test_no_family_imports[io/_ncore/writer.py]",
       "tests/codecs/test_ncore_v4.py::test_writer_randomized_mixed_dtype_chunk_differential",
-      "tests/codecs/test_ncore_v4.py::test_writer_large_generated_payload_has_chunk_bounded_allocation"
+      "tests/codecs/test_ncore_v4.py::test_writer_large_generated_payload_has_chunk_bounded_allocation",
+      "tests/test_coordinate_systems.py::test_colmap_canonical_contract_is_explicit_and_not_falsely_metric",
+      "tests/test_coordinate_systems.py::test_coordinate_value_types_are_frozen_and_reject_contradictions",
+      "tests/test_coordinate_systems.py::test_checked_manifest_exactly_covers_registry_in_registry_order",
+      "tests/test_coordinate_systems.py::test_extension_capability_uses_explicit_unspecified_fallback",
+      "tests/test_coordinate_systems.py::test_native_record_coordinate_views_are_additive",
+      "tests/test_coordinate_systems.py::test_python_contract_records_expose_scoped_coordinate_views",
+      "tests/test_coordinate_systems.py::test_inspection_reports_fixed_unspecified_and_file_declared_conventions",
+      "tests/test_coordinate_systems.py::test_opengl_c2w_to_colmap_w2c_matches_independent_matrix_oracle",
+      "tests/test_coordinate_systems.py::test_pose_conversion_round_trip_is_geometrically_exact",
+      "tests/test_coordinate_systems.py::test_point_conversion_transforms_basis_origin_normals_and_vectors",
+      "tests/test_coordinate_systems.py::test_conversion_refuses_unqualified_viewpoints_and_nonrigid_pose_frames",
+      "tests/test_coordinate_systems.py::test_unknown_geometry_requires_an_explicit_source_or_transform",
+      "tests/test_coordinate_systems.py::test_nonspatial_and_unqualified_conversions_refuse_clearly",
+      "tests/test_coordinate_systems.py::test_installed_wheel_smoke_checks_coordinate_contract_for_every_format",
+      "tests/test_data_features.py::TestFeatureSet::test_invalid_pixel_center_raises[pixel_center0]",
+      "tests/test_data_features.py::TestFeatureSet::test_invalid_pixel_center_raises[pixel_center1]",
+      "tests/test_data_features.py::TestFeatureSet::test_invalid_pixel_center_raises[pixel_center2]",
+      "tests/test_data_features.py::TestFeatureSet::test_invalid_pixel_center_raises[pixel_center3]",
+      "tests/codecs/test_hdf5_hloc.py::test_hloc_feature_writer_refuses_colmap_pixel_centers_atomically",
+      "tests/codecs/test_colmap_db.py::test_colmap_writer_refuses_hloc_pixel_centers_atomically",
+      "tests/test_import_guards.py::test_no_family_imports[coordinate_conversion.py]",
+      "tests/test_import_guards.py::test_no_family_imports[coordinates.py]",
+      "tests/test_import_guards.py::test_no_family_imports[io/_coordinate_manifest.py]",
+      "tests/test_import_guards.py::test_no_family_imports[io/_registry/coordinates.py]"
     ],
     "removed_nodes": [
       "tests/codecs/test_compressed_ply.py::test_writer_body_is_byte_identical_to_pinned_playcanvas_vector",

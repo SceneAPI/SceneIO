@@ -53,6 +53,14 @@ class Inspection:
         object.__setattr__(self, "arrays", tuple(self.arrays))
         object.__setattr__(self, "metadata", MappingProxyType(dict(self.metadata)))
 
+    @property
+    def coordinates(self):
+        """Coordinate convention determinable without bulk decoding."""
+
+        from sceneio.coordinates import inspection_coordinate_convention
+
+        return inspection_coordinate_convention(self.format, self.metadata)
+
 
 # These public value types historically lived in the compatibility facade.
 # Retaining that module identity preserves repr and existing pickle payloads.

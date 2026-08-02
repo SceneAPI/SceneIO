@@ -32,6 +32,7 @@ def _feature(
         np.array([0.25, 0.5, 0.75], np.float32),
         image_name=name,
         image_size=(640, 480),
+        pixel_center=(0.0, 0.0),
     )
 
 
@@ -345,6 +346,9 @@ def test_hloc_features_reads_official_layout_from_h5py(tmp_path: Path) -> None:
     np.testing.assert_array_equal(feature.scores, scores.astype(np.float32))
     assert feature.descriptors.dtype == np.float16
     assert feature.image_size == [640, 480]
+    assert feature.pixel_center == (0.0, 0.0)
+    assert feature.coordinates.pixel_center == (0.0, 0.0)
+    assert store.coordinates.pixel_center == (0.0, 0.0)
     assert store.uncertainties["db/one.jpg"] == 0.625
     path.unlink()
     gc.collect()
@@ -383,6 +387,28 @@ def test_hloc_feature_write_matches_h5py_layout_and_roundtrips(
     inspected = sceneio.inspect(path)
     assert inspected.count == 3
     assert inspected.metadata["image_count"] == 1
+    assert inspected.coordinates.pixel_center == (0.0, 0.0)
+
+
+def test_hloc_feature_writer_refuses_colmap_pixel_centers_atomically(
+    tmp_path: Path,
+) -> None:
+    feature = _core.feature_set(
+        np.array([[10.5, 20.5]], np.float32),
+        image_name="a.jpg",
+        image_size=(640, 480),
+    )
+    assert feature.pixel_center == (0.5, 0.5)
+    destination = tmp_path / "existing.h5"
+    destination.write_bytes(b"unchanged")
+
+    with pytest.raises(sceneio.FormatError, match="cannot represent"):
+        sceneio.write(
+            sceneio.HlocFeatureStore({"a.jpg": feature}),
+            destination,
+            format="hloc_features",
+        )
+    assert destination.read_bytes() == b"unchanged"
 
 
 def test_hloc_feature_guards_unrepresented_fields_and_datasets(

@@ -717,6 +717,9 @@ def test_assembly_dependency_direction_and_import_delta_are_exact():
     )
     modules = json.loads(result.stdout)
     intentional_additions = {
+        "sceneio.coordinate_conversion",
+        "sceneio.coordinates",
+        "sceneio.io._coordinate_manifest",
         "sceneio.io._inspectors.arrays",
         "sceneio.io._inspectors.dense",
         "sceneio.io._inspectors.points",
@@ -751,6 +754,7 @@ def test_assembly_dependency_direction_and_import_delta_are_exact():
         "sceneio.io._usd.volumes",
         "sceneio.io._zarr",
         "sceneio.io._registry.assembly",
+        "sceneio.io._registry.coordinates",
         "sceneio.io._registry.families.arrays",
         "sceneio.io._registry.families.containers",
         "sceneio.io._registry.families.datasets",

@@ -3127,6 +3127,7 @@ def _feature_fingerprint(value):
         value.extractor_type,
         value.keypoints_present,
         value.keypoint_columns,
+        value.pixel_center,
         value.descriptor_dtype,
         value.descriptor_dim,
         value.extractor_type_name,
@@ -4113,6 +4114,36 @@ def test_writer_guard_failure_does_not_modify_existing_file(tmp_path):
     )
     with pytest.raises(sceneio.FormatError, match="scores"):
         sceneio.write(_database(features=[scored], graph=empty_graph), path)
+    assert hashlib.sha256(path.read_bytes()).digest() == before
+
+
+def test_colmap_writer_refuses_hloc_pixel_centers_atomically(tmp_path):
+    path = tmp_path / "pixel-center.db"
+    sceneio.write(_database(), path)
+    before = hashlib.sha256(path.read_bytes()).digest()
+    hloc_feature = _core.feature_set(
+        np.zeros((1, 2), np.float32),
+        np.zeros((1, 4), np.uint8),
+        image_id=2,
+        image_name="a",
+        camera_id=5,
+        image_size=(640, 480),
+        extractor_type=0,
+        pixel_center=(0.0, 0.0),
+    )
+    empty_graph = _core.match_graph(
+        np.empty((0, 2), np.uint32),
+        np.array([0], np.uint64),
+        np.empty((0, 2), np.uint32),
+        np.array([0], np.uint64),
+        np.empty((0, 2), np.uint32),
+    )
+
+    with pytest.raises(sceneio.FormatError, match="pixel_center"):
+        sceneio.write(
+            _database(features=[hloc_feature], graph=empty_graph),
+            path,
+        )
     assert hashlib.sha256(path.read_bytes()).digest() == before
 
 

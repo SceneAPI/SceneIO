@@ -2755,6 +2755,11 @@ void write_rows(
         "image_id,type,rows,cols,data"
         ") VALUES(?1,?2,?3,?4,?5)");
     for (const FeatureSet &features : value.features) {
+        if (features.pixel_center[0] != 0.5 ||
+            features.pixel_center[1] != 0.5)
+            throw std::invalid_argument(
+                "COLMAP database writer: FeatureSet pixel_center "
+                "must be (0.5,0.5)");
         if (features.has_scores)
             throw std::invalid_argument(
                 "COLMAP database writer: feature scores "
@@ -3024,6 +3029,10 @@ std::vector<std::string> profile_incompatibilities(
     };
     const bool maxx = profile.maxx_extensions;
     for (const FeatureSet &features : value.features) {
+        if (features.pixel_center[0] != 0.5 ||
+            features.pixel_center[1] != 0.5)
+            add("COLMAP database requires FeatureSet pixel_center "
+                "(0.5,0.5)");
         if (features.has_scores)
             add("per-keypoint scores are not represented by "
                 "any selected database profile");

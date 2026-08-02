@@ -20,6 +20,17 @@ from pathlib import Path
 
 from sceneio import _core
 from sceneio.colmap_db import ColmapDatabaseConversionReport
+from sceneio.coordinate_conversion import convert_coordinates
+from sceneio.coordinates import (
+    COLMAP_COORDINATES,
+    IMAGE_COORDINATES,
+    UNKNOWN_COORDINATES,
+    UNSPECIFIED_FORMAT_COORDINATES,
+    CoordinateConvention,
+    FormatCoordinateContract,
+    coordinate_convention,
+    install_coordinate_properties,
+)
 from sceneio.io._arrow import write_arrow_ipc, write_parquet
 from sceneio.io._depth import DepthEncoding, inspect_depth, read_depth, write_depth
 from sceneio.io._hdf5 import HlocFeatureStore, HlocMatchStore
@@ -44,6 +55,7 @@ from sceneio.io._ncore import (
 )
 from sceneio.io._openvdb import write_openvdb
 from sceneio.io._registry.adapters import _file_sink_writer, _mmap_reader
+from sceneio.io._registry.coordinates import coordinate_contract
 from sceneio.io._rtmv import RtmvDataset
 from sceneio.io._tiff import write_tiff
 from sceneio.io._usd import (
@@ -101,6 +113,36 @@ ConsistencyGraph = _core.ConsistencyGraph
 PointVisibility = _core.PointVisibility
 Camera = _core.Camera
 CameraRig = _core.CameraRig
+
+install_coordinate_properties(
+    Reconstruction,
+    GaussianCloud,
+    PosedViewSet,
+    StateTrajectory,
+    TensorDict,
+    Image,
+    ImageSequence,
+    PointCloud,
+    Mesh,
+    MeshScene,
+    SceneGraph,
+    PoseGraph,
+    FeatureSet,
+    MatchGraph,
+    DepthMap,
+    FlowField,
+    NormalMap,
+    ConsistencyGraph,
+    PointVisibility,
+    Camera,
+    CameraRig,
+    RtmvDataset,
+    HlocFeatureStore,
+    HlocMatchStore,
+    NCoreDataset,
+    NCoreDatasetData,
+    ColmapDatabase,
+)
 
 _FLOW_READER = _mmap_reader(_core.read_flo_field)
 _FLOW_WRITER = _file_sink_writer(_core.write_flo_field)
@@ -683,6 +725,10 @@ def _detect_write(obj, path) -> str:
 
 
 __all__ = [
+    "COLMAP_COORDINATES",
+    "IMAGE_COORDINATES",
+    "UNKNOWN_COORDINATES",
+    "UNSPECIFIED_FORMAT_COORDINATES",
     "ArrayInspection",
     "Camera",
     "CameraRig",
@@ -696,10 +742,12 @@ __all__ = [
     "ColmapRigFrameSet",
     "ColmapVideoMetadataSet",
     "ConsistencyGraph",
+    "CoordinateConvention",
     "DepthEncoding",
     "DepthMap",
     "FeatureSet",
     "FlowField",
+    "FormatCoordinateContract",
     "FormatError",
     "GaussianCloud",
     "HlocFeatureStore",
@@ -737,7 +785,10 @@ __all__ = [
     "capabilities",
     "codecs",
     "colmap_database_conversion_report",
+    "convert_coordinates",
     "convert_gaussian_conventions",
+    "coordinate_contract",
+    "coordinate_convention",
     "detect",
     "inspect",
     "inspect_depth",

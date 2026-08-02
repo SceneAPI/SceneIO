@@ -42,6 +42,7 @@ def _hloc_feature_fixture(scale):
         scores,
         image_name=name,
         image_size=(1920, 1080),
+        pixel_center=(0.0, 0.0),
     )
     payload = {
         name: {

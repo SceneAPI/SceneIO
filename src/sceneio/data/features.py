@@ -10,6 +10,7 @@ optionally carrying its verified two-view geometry).
 
 from __future__ import annotations
 
+import math
 from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Literal
@@ -38,6 +39,7 @@ class FeatureSet:
     keypoints: np.ndarray  # (N, 2) float32, (x, y) pixel coordinates
     descriptors: np.ndarray | None = None  # (N, D), any numeric dtype
     scores: np.ndarray | None = None  # (N,) float32
+    pixel_center: tuple[float, float] = (0.5, 0.5)
 
     def __post_init__(self) -> None:
         keypoints = ensure_array(
@@ -48,6 +50,24 @@ class FeatureSet:
             finite=True,
         )
         n = keypoints.shape[0]
+        if (
+            not isinstance(self.pixel_center, tuple)
+            or len(self.pixel_center) != 2
+            or any(
+                isinstance(value, bool)
+                or not isinstance(value, int | float)
+                or not math.isfinite(float(value))
+                for value in self.pixel_center
+            )
+        ):
+            raise ContractViolation(
+                "FeatureSet.pixel_center: expected two finite numbers"
+            )
+        object.__setattr__(
+            self,
+            "pixel_center",
+            tuple(float(value) for value in self.pixel_center),
+        )
         if self.descriptors is not None:
             descriptors = ensure_array("FeatureSet.descriptors", self.descriptors, shape=(n, None))
             if not np.issubdtype(descriptors.dtype, np.number):

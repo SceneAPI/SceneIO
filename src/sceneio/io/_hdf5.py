@@ -782,6 +782,7 @@ def read_hloc_features(path: str | Path) -> HlocFeatureStore:
                 scores,
                 image_name=name,
                 image_size=(width, height),
+                pixel_center=(0.0, 0.0),
             )
             uncertainties[name] = uncertainty
     return HlocFeatureStore(features, uncertainties)
@@ -803,6 +804,7 @@ def _validate_hloc_feature_for_write(name: str, feature: _core.FeatureSet) -> No
         or feature.quality is not None
         or feature.keypoint_columns != 2
         or not feature.keypoints_present
+        or feature.pixel_center != (0.0, 0.0)
     ):
         raise ValueError(
             f"hloc features: FeatureSet {name!r} carries fields that the "
