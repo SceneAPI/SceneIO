@@ -730,6 +730,7 @@ def test_assembly_dependency_direction_and_import_delta_are_exact():
         "sceneio.io._ncore.component_io",
         "sceneio.io._ncore.itar",
         "sceneio.io._ncore.model",
+        "sceneio.io._ncore.projection",
         "sceneio.io._ncore.schema",
         "sceneio.io._openvdb",
         "sceneio.io._rtmv",

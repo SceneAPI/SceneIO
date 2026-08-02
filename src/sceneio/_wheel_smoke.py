@@ -1772,6 +1772,14 @@ def _ncore_v4(root: Path) -> None:
         ),
         encoding="utf-8",
     )
+    for child in ("static_poses", "dynamic_poses"):
+        group = component / child
+        group.mkdir()
+        (group / ".zgroup").write_text(
+            '{"zarr_format":2}',
+            encoding="utf-8",
+        )
+        (group / ".zattrs").write_text("{}", encoding="utf-8")
     assert sceneio.detect(store) == "ncore_v4"
     dataset = sceneio.read(store)
     assert dataset.sequence_id == "wheel-smoke"
@@ -1783,6 +1791,12 @@ def _ncore_v4(root: Path) -> None:
     )
     assert loaded.component == dataset.components[0]
     assert loaded.group().attributes["component_name"] == "poses"
+    semantic = sceneio.read_ncore_semantic_component(
+        store,
+        sceneio.NCoreSelection("poses", "rig"),
+    )
+    assert semantic.profile == "poses/v1"
+    assert semantic.items == ()
 
 
 def _avif_formats(root: Path) -> None:

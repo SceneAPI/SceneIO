@@ -1115,7 +1115,7 @@ SoA, zero-copy to numpy/torch (DLPack), conventions carried as metadata.
 | `openmvg` | `Reconstruction` | R+W | manual | openMVG `sfm_data.json` |
 | `npy` | ndarray | R+W | **numpy** | pinned mapped native/C-order view; byte‑exact v1.0 writer (== np.save) |
 | `npz` | `TensorDict` | R+W | **numpy** | ZIP (stored+deflate) via repository-contained miniz 3.0.2; 12 dtypes |
-| `ncore_v4` | `NCoreDataset`, `NCoreComponentData` | R, inspect, component selection | upstream **NCore** V4 implementation + generated fixtures | optional `sceneio[ncore]`; repository-owned local Zarr-v2 directory/indexed-tar catalog, sequence manifests, grouped component metadata, payload-independent inspection, and exact owned-array component loading; standard semantic mapping and writing remain active |
+| `ncore_v4` | `NCoreDataset`, `NCoreComponentData`, `NCoreSemanticComponent` | R, inspect, component/frame/timestamp selection | pinned upstream **NCore** V4 writer+reader fixture plus generated malformed cases | optional `sceneio[ncore]`; repository-owned Zarr-v2 directory/indexed-tar catalog and exact array decoder; v1 profiles for poses, intrinsics, masks, cameras, lidar, radar, cuboids, point clouds, camera labels, and arbitrary components; exact `Image`, `Mask`, and bounded metric `PointCloud` payload projections retain metadata on the source NCore item; transactional writing remains active |
 | `netpbm` | `Image` | R+W | pure‑Python | PGM P5/P2 + PPM P6/P3; 16‑bit big‑endian, comment‑tolerant |
 | `.xyz` | `PointCloud` | R+W | pure‑Python | headerless point-cloud text (fast_float parsing) |
 | `.pts` | `PointCloud` | R+W | independent parser | mandatory count header; XYZ/XYZI/XYZRGB/XYZIRGB; count validation |

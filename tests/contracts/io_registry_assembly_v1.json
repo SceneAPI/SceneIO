@@ -471,8 +471,8 @@
     "last": "tests/test_points_binary.py::test_bad_magic_rejected"
   },
   "pytest_candidate_collection": {
-    "count": 4397,
-    "sorted_normalized_node_ids_sha256": "dfc3fd670ad6911676d227c4d80691a0ce9297006c8eb159b92ecb0fc26b1a56",
+    "count": 4413,
+    "sorted_normalized_node_ids_sha256": "c9a4f0b057ad06656e943a9d9b23e01c234a3b439d610290ecf657293cdbf19b",
     "added_nodes": [
       "tests/codecs/test_animated_webp.py::test_sceneio_writer_is_lossless_and_oracle_readable",
       "tests/codecs/test_animated_webp.py::test_pillow_writer_is_sceneio_readable_bit_exact",
@@ -1789,7 +1789,23 @@
       "tests/codecs/test_ncore_v4.py::test_component_decoder_preserves_zarr_v2_chunk_and_dtype_semantics",
       "tests/codecs/test_ncore_v4.py::test_sensor_component_frame_and_timestamp_selection",
       "tests/codecs/test_ncore_v4.py::test_component_selection_rejects_non_temporal_component",
-      "tests/test_import_guards.py::test_no_family_imports[io/_ncore/component_io.py]"
+      "tests/test_import_guards.py::test_no_family_imports[io/_ncore/component_io.py]",
+      "tests/codecs/test_ncore_v4.py::test_semantic_poses_profile_preserves_named_static_and_dynamic_edges",
+      "tests/codecs/test_ncore_v4.py::test_semantic_poses_profile_rejects_inverse_duplicate",
+      "tests/codecs/test_ncore_v4.py::test_semantic_intrinsics_profile_validates_camera_and_lidar_models",
+      "tests/codecs/test_ncore_v4.py::test_semantic_masks_and_unknown_component_profiles_are_lossless",
+      "tests/codecs/test_ncore_v4.py::test_semantic_camera_profile_handles_frames_selection_and_empty_sensor",
+      "tests/codecs/test_ncore_v4.py::test_semantic_ray_sensor_profiles_validate_returns[lidars]",
+      "tests/codecs/test_ncore_v4.py::test_semantic_ray_sensor_profiles_validate_returns[radars]",
+      "tests/codecs/test_ncore_v4.py::test_semantic_point_cloud_profile_preserves_insertion_order_and_duplicates",
+      "tests/codecs/test_ncore_v4.py::test_semantic_cuboids_and_quantized_camera_labels",
+      "tests/codecs/test_ncore_v4.py::test_pinned_upstream_standard_profile_fixture_is_accepted_exactly",
+      "tests/test_import_guards.py::test_no_family_imports[io/_ncore/profiles/__init__.py]",
+      "tests/test_import_guards.py::test_no_family_imports[io/_ncore/profiles/calibration.py]",
+      "tests/test_import_guards.py::test_no_family_imports[io/_ncore/profiles/common.py]",
+      "tests/test_import_guards.py::test_no_family_imports[io/_ncore/profiles/scene.py]",
+      "tests/test_import_guards.py::test_no_family_imports[io/_ncore/profiles/sensors.py]",
+      "tests/test_import_guards.py::test_no_family_imports[io/_ncore/projection.py]"
     ],
     "removed_nodes": [
       "tests/codecs/test_compressed_ply.py::test_writer_body_is_byte_identical_to_pinned_playcanvas_vector",

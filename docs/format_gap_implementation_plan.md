@@ -15,9 +15,11 @@
   inspection, partial-read policy, and transactional replacement. Direct
   provider producer/consumer tests and benchmark comparisons cover every
   accepted profile; the NumPy-only base install is unchanged. NCore V4 is now
-  a repository-owned read/inspect catalog checkpoint for local directory and
-  indexed-tar stores plus sequence manifests; typed component loading and
-  writing remain the active implementation units. Authorized
+  a repository-owned read/inspect implementation for local directory and
+  indexed-tar stores plus sequence manifests. Exact generic array loading and
+  all nine standard v1 semantic profiles are complete against a fixture
+  generated and reopened by the pinned upstream implementation; transactional
+  directory/indexed-tar writing remains the active implementation unit. Authorized
   build-only package run `30701260601` passes all three wheel platforms with
   publication skipped.
 - **Current program gate:** implementation source `47eb2e1` passes the

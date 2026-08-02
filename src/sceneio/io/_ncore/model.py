@@ -63,6 +63,28 @@ def _half_open(value: object, context: str) -> tuple[int, int]:
     return start, stop
 
 
+def _normalize_arrays(
+    arrays: Mapping[str, np.ndarray], context: str
+) -> Mapping[str, np.ndarray]:
+    normalized: dict[str, np.ndarray] = {}
+    for name, raw_value in arrays.items():
+        _non_empty(name, f"{context} array name")
+        if name.startswith("/") or any(
+            part in {"", ".", ".."} for part in name.split("/")
+        ):
+            raise ValueError(f"{context} array names must be relative paths")
+        value = np.asarray(raw_value)
+        if value.dtype.hasobject:
+            raise ValueError(f"{context} arrays cannot use object dtype")
+        if not value.flags.owndata or not value.flags.c_contiguous:
+            value = np.array(value, copy=True, order="C")
+        value.setflags(write=False)
+        normalized[name] = value
+    if len(normalized) != len(arrays):
+        raise ValueError(f"{context} array names must be unique")
+    return MappingProxyType(normalized)
+
+
 @dataclass(frozen=True, slots=True)
 class NCoreArray:
     """Metadata for one array inside an NCore component instance."""
@@ -299,6 +321,75 @@ class NCoreGroup:
 
 
 @dataclass(frozen=True, slots=True, eq=False)
+class NCoreItem:
+    """One validated semantic item inside a standard NCore component."""
+
+    kind: str
+    id: str
+    arrays: Mapping[str, np.ndarray] = field(default_factory=dict)
+    attributes: Mapping[str, JsonValue] = field(default_factory=dict)
+    timestamp_interval_us: tuple[int, int] | None = None
+    timestamp_us: int | None = None
+    reference_frame_id: str | None = None
+
+    def __post_init__(self) -> None:
+        _non_empty(self.kind, "NCoreItem.kind")
+        _non_empty(self.id, "NCoreItem.id")
+        if self.timestamp_interval_us is not None:
+            value = self.timestamp_interval_us
+            if not isinstance(value, (tuple, list)) or len(value) != 2:
+                raise ValueError(
+                    "NCoreItem.timestamp_interval_us must contain start/stop"
+                )
+            start, stop = value
+            if (
+                isinstance(start, bool)
+                or isinstance(stop, bool)
+                or not isinstance(start, int)
+                or not isinstance(stop, int)
+                or start < 0
+                or stop < start
+                or stop > np.iinfo(np.uint64).max
+            ):
+                raise ValueError(
+                    "NCoreItem.timestamp_interval_us must satisfy uint64 "
+                    "0 <= start <= stop"
+                )
+            object.__setattr__(self, "timestamp_interval_us", (start, stop))
+        if self.timestamp_us is not None and (
+            isinstance(self.timestamp_us, bool)
+            or not isinstance(self.timestamp_us, int)
+            or not 0 <= self.timestamp_us <= np.iinfo(np.uint64).max
+        ):
+            raise ValueError("NCoreItem.timestamp_us must be a uint64 integer")
+        if self.reference_frame_id is not None:
+            _non_empty(self.reference_frame_id, "NCoreItem.reference_frame_id")
+        frozen = _freeze_json(dict(self.attributes), "NCoreItem.attributes")
+        assert isinstance(frozen, Mapping)
+        object.__setattr__(
+            self,
+            "arrays",
+            _normalize_arrays(self.arrays, "NCoreItem"),
+        )
+        object.__setattr__(self, "attributes", frozen)
+
+    def array(self, name: str) -> np.ndarray:
+        """Return one item-local array by name."""
+
+        try:
+            return self.arrays[name]
+        except KeyError:
+            raise KeyError(f"NCore item array {name!r} does not exist") from None
+
+    def to_sceneio(self):
+        """Project the exact payload; NCore metadata remains on this item."""
+
+        from sceneio.io._ncore.projection import project_ncore_item
+
+        return project_ncore_item(self)
+
+
+@dataclass(frozen=True, slots=True, eq=False)
 class NCoreComponentData:
     """Owned arrays and exact group metadata for one NCore component instance."""
 
@@ -323,24 +414,6 @@ class NCoreComponentData:
             raise ValueError(
                 "NCoreComponentData selection group disagrees with its component"
             )
-        normalized: dict[str, np.ndarray] = {}
-        for name, raw_value in self.arrays.items():
-            _non_empty(name, "NCoreComponentData array name")
-            if name.startswith("/") or any(
-                part in {"", ".", ".."} for part in name.split("/")
-            ):
-                raise ValueError(
-                    "NCoreComponentData array names must be relative paths"
-                )
-            value = np.asarray(raw_value)
-            if value.dtype.hasobject:
-                raise ValueError("NCore component arrays cannot use object dtype")
-            if not value.flags.owndata or not value.flags.c_contiguous:
-                value = np.array(value, copy=True, order="C")
-            value.setflags(write=False)
-            normalized[name] = value
-        if len(normalized) != len(self.arrays):
-            raise ValueError("NCoreComponentData array names must be unique")
         groups = tuple(self.groups)
         group_names = tuple(group.name for group in groups)
         if len(group_names) != len(set(group_names)):
@@ -350,7 +423,11 @@ class NCoreComponentData:
             raise ValueError(
                 "NCoreComponentData.selected_items must contain non-empty strings"
             )
-        object.__setattr__(self, "arrays", MappingProxyType(normalized))
+        object.__setattr__(
+            self,
+            "arrays",
+            _normalize_arrays(self.arrays, "NCoreComponentData"),
+        )
         object.__setattr__(self, "groups", groups)
         object.__setattr__(self, "selected_items", selected_items)
 
@@ -371,13 +448,59 @@ class NCoreComponentData:
         raise KeyError(f"NCore component group {name!r} does not exist")
 
 
+@dataclass(frozen=True, slots=True, eq=False)
+class NCoreSemanticComponent:
+    """Validated standard-component profile layered over exact raw NCore data."""
+
+    raw: NCoreComponentData
+    profile: str
+    items: tuple[NCoreItem, ...]
+    attributes: Mapping[str, JsonValue] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.raw, NCoreComponentData):
+            raise ValueError("NCoreSemanticComponent.raw must be component data")
+        _non_empty(self.profile, "NCoreSemanticComponent.profile")
+        items = tuple(self.items)
+        if any(not isinstance(item, NCoreItem) for item in items):
+            raise ValueError(
+                "NCoreSemanticComponent.items must contain NCoreItem records"
+            )
+        keys = tuple((item.kind, item.id) for item in items)
+        if len(keys) != len(set(keys)):
+            raise ValueError(
+                "NCoreSemanticComponent item kind/id pairs must be unique"
+            )
+        frozen = _freeze_json(
+            dict(self.attributes), "NCoreSemanticComponent.attributes"
+        )
+        assert isinstance(frozen, Mapping)
+        object.__setattr__(self, "items", items)
+        object.__setattr__(self, "attributes", frozen)
+
+    def items_of_kind(self, kind: str) -> tuple[NCoreItem, ...]:
+        """Return all items with one exact semantic kind."""
+
+        return tuple(item for item in self.items if item.kind == kind)
+
+    def item(self, kind: str, id: str) -> NCoreItem:
+        """Return one semantic item by kind and id."""
+
+        for item in self.items:
+            if item.kind == kind and item.id == id:
+                return item
+        raise KeyError(f"NCore semantic item {kind}:{id} does not exist")
+
+
 for _record in (
     NCoreArray,
     NCoreComponent,
     NCoreComponentData,
     NCoreDataset,
     NCoreGroup,
+    NCoreItem,
     NCoreSelection,
+    NCoreSemanticComponent,
     NCoreStore,
 ):
     _record.__module__ = "sceneio.io"
@@ -391,6 +514,8 @@ __all__ = [
     "NCoreComponentData",
     "NCoreDataset",
     "NCoreGroup",
+    "NCoreItem",
     "NCoreSelection",
+    "NCoreSemanticComponent",
     "NCoreStore",
 ]

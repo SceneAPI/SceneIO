@@ -24,15 +24,23 @@
       dimension separators, fill values, structured/endian dtypes, filters,
       compressors, directory/indexed-tar equivalence, and selected sensor
       frames without retaining a store handle.
-- [ ] Implement and oracle-check the standard calibration/image families:
+- [x] Implement and oracle-check the standard calibration/image families:
       poses, intrinsics, masks, and cameras. Cover empty frames, variable image
       payload lengths, optional arrays, timestamp alignment, accepted component
       versions, and exact convention mapping into existing SceneIO records where
-      the schemas are representable.
-- [ ] Implement and oracle-check point-cloud, lidar, radar, cuboid, camera-label,
-      and generic component loading. Exercise ragged offsets, empty observations,
-      optional fields, enum metadata, multiple instances/groups, frame slicing,
-      and preservation of component-local generic arrays.
+      the schemas are representable. Camera frames and scalar masks project to
+      existing `Image`/`Mask` records; named pose graphs and calibration models
+      retain their richer NCore semantics instead of being reduced.
+- [x] Implement and oracle-check point-cloud, lidar, radar, cuboid, camera-label,
+      and generic component loading. Exercise multi-return validity, empty
+      observations, optional fields, enum metadata, multiple instances/groups, frame slicing,
+      and preservation of component-local generic arrays. A uniform immutable
+      `NCoreItem`/`NCoreSemanticComponent` layer keeps profiles extensible;
+      metric point clouds project only when every declared channel fits the
+      existing `PointCloud` record. A compact indexed-tar fixture generated and
+      reopened by pinned upstream revision
+      `12f4429522c98356c5a46eee1d84f29bd846e367` covers all nine standard
+      component families.
 - [ ] Add transactional directory and indexed-tar writers. Require deterministic
       metadata/component order, exact dtype preservation, upstream-reader
       acceptance, SceneIO read-after-write equality, manifest consistency, and

@@ -14,8 +14,10 @@ from sceneio.io._ncore.itar import IndexedTarReader
 from sceneio.io._ncore.model import (
     NCoreComponent,
     NCoreComponentData,
+    NCoreDataset,
     NCoreGroup,
     NCoreSelection,
+    NCoreSemanticComponent,
 )
 from sceneio.io._ncore.schema import (
     _directory_metadata,
@@ -226,6 +228,14 @@ def _relative_group_attributes(
 ) -> dict[str, dict[str, object]]:
     prefix = _component_prefix(component)
     result: dict[str, dict[str, object]] = {}
+    for key in metadata:
+        if key == f"{prefix}/.zgroup":
+            relative = ""
+        elif key.startswith(f"{prefix}/") and key.endswith("/.zgroup"):
+            relative = key[len(prefix) + 1 : -len("/.zgroup")]
+        else:
+            continue
+        result[relative] = {}
     for key, value in metadata.items():
         if key == f"{prefix}/.zattrs":
             relative = ""
@@ -302,10 +312,16 @@ def _timestamp_item_ids(
     values: np.ndarray,
     selection: NCoreSelection,
     context: str,
+    *,
+    require_strictly_increasing: bool,
 ) -> tuple[tuple[int, ...], tuple[str, ...]]:
     if values.dtype != np.dtype("uint64") or values.ndim != 1:
         raise ValueError(f"{context} timestamps must be a uint64 vector")
-    if len(values) > 1 and not np.all(values[:-1] < values[1:]):
+    if (
+        require_strictly_increasing
+        and len(values) > 1
+        and not np.all(values[:-1] < values[1:])
+    ):
         raise ValueError(f"{context} timestamps must be strictly increasing")
     if selection.frames is not None:
         indices = tuple(
@@ -347,7 +363,10 @@ def _selection_plan(
         full_name = f"{prefix}/pc_timestamps_us"
         timestamps = _decode_array(metadata, full_name, read_key)
         indices, _item_ids = _timestamp_item_ids(
-            timestamps, selection, "NCore point-cloud"
+            timestamps,
+            selection,
+            "NCore point-cloud",
+            require_strictly_increasing=False,
         )
         selected = set(indices)
 
@@ -364,7 +383,10 @@ def _selection_plan(
         full_name = f"{prefix}/timestamps_us"
         timestamps = _decode_array(metadata, full_name, read_key)
         indices, item_ids = _timestamp_item_ids(
-            timestamps, selection, "NCore camera-label"
+            timestamps,
+            selection,
+            "NCore camera-label",
+            require_strictly_increasing=True,
         )
         selected = set(item_ids)
 
@@ -380,15 +402,10 @@ def _selection_plan(
     )
 
 
-def read_ncore_component(
-    path: str | Path,
+def _read_component(
+    dataset: NCoreDataset,
     selection: NCoreSelection,
 ) -> NCoreComponentData:
-    """Load one component into owned, read-only NumPy arrays."""
-
-    if not isinstance(selection, NCoreSelection):
-        raise TypeError("selection must be an NCoreSelection")
-    dataset = read_ncore_v4(path)
     component = dataset.find_component(selection.component, selection.instance)
     if selection.group is not None and selection.group != component.group:
         raise KeyError(
@@ -433,4 +450,30 @@ def read_ncore_component(
     )
 
 
-__all__ = ["read_ncore_component"]
+def read_ncore_component(
+    path: str | Path,
+    selection: NCoreSelection,
+) -> NCoreComponentData:
+    """Load one component into owned, read-only NumPy arrays."""
+
+    if not isinstance(selection, NCoreSelection):
+        raise TypeError("selection must be an NCoreSelection")
+    return _read_component(read_ncore_v4(path), selection)
+
+
+def read_ncore_semantic_component(
+    path: str | Path,
+    selection: NCoreSelection,
+) -> NCoreSemanticComponent:
+    """Load and validate one standard component into semantic NCore items."""
+
+    if not isinstance(selection, NCoreSelection):
+        raise TypeError("selection must be an NCoreSelection")
+    dataset = read_ncore_v4(path)
+    data = _read_component(dataset, selection)
+    from sceneio.io._ncore.profiles import interpret_ncore_component
+
+    return interpret_ncore_component(data, dataset.timestamp_interval_us)
+
+
+__all__ = ["read_ncore_component", "read_ncore_semantic_component"]

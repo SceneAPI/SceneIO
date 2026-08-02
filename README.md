@@ -105,6 +105,23 @@ The accepted profiles are intentionally bounded and reject semantics the
 corresponding SceneIO record cannot preserve. See
 [`docs/format_coverage.md`](docs/format_coverage.md) for the exact mapping.
 
+NCore V4 datasets expose a metadata-only catalog, exact owned component arrays,
+and validated standard semantic items without importing the upstream package:
+
+```python
+dataset = sceneio.read("capture.ncore4.zarr")
+selection = sceneio.NCoreSelection("cameras", "front", frames=(10, 20))
+component = sceneio.read_ncore_semantic_component(
+    "capture.ncore4.zarr", selection
+)
+first_image = component.items[0].to_sceneio()
+```
+
+The richer named-frame pose, calibration, multi-return sensor, annotation, and
+custom-array semantics stay in immutable NCore records. Projection to an older
+SceneIO record is available only for an exactly representable payload; the
+source `NCoreItem` remains the authority for timestamps, frames, and metadata.
+
 The AVIF profile uses Pillow 12.3's optimized libavif provider with libaom
 encoding and dav1d decoding. SceneIO owns detection, mmap lifetime, record
 mapping, guards, partial-frame access, and transactional paths. It supports
