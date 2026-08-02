@@ -4135,3 +4135,17 @@ downloaded guard artifact contains 67 successful rows and measures USD at
 8.510/5.718 MB full/inspect, USDZ at 8.511/5.718 MB, and Parquet at
 18.354/1.577 MB full/selected. The smoke structure remains
 `817b355a8fb752025e51b3afe658524ebfa40cd6caffc8cd9e927a7117e07f65`.
+
+## 2026-08-02 72-format structure correction
+
+The cross-platform inspection correction changes no benchmark kernel, fixture,
+capability, or threshold. A one-pass local MSVC smoke using the CI command
+
+```console
+.venv/Scripts/python.exe bench/bench_io.py --runs 1 --scale 0.001 --skip-oracles --json build/72-format-structure.json
+```
+
+completed all 72 live rows. Its normalized structural projection is
+`9d010021697a301eff99ac21203b9f66d042e66b81ccfd0bea7ebdce313b2851`.
+The checked parent contract previously retained the 67-row checkpoint above;
+updating it is a structural coverage correction, not a new throughput claim.

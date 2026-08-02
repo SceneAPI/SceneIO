@@ -12,6 +12,11 @@
 > [`next_stage_implementation_checklist.md`](next_stage_implementation_checklist.md).
 > The bounded standards-based USD expansion is specified separately in
 > [`usd_3d_cv_implementation_plan.md`](usd_3d_cv_implementation_plan.md).
+> The 2026-08-02 cross-platform correction changes no roadmap scope or format
+> capability. Local MSVC and clean Linux focused checks pass; the exact local
+> suite passes 4,369 tests with six documented skips. The remaining immediate
+> gate is automatic Linux/Windows/macOS plus compiler-instrumented validation
+> at the exact correction commit; release publication remains separate.
 > U0-U5 qualify the bounded provider, records, stage skeleton, and all direct
 > static payload kinds. C6 is closed through the explicit static-only Exit B;
 > C7 local source-to-wheel qualification is complete. At implementation source

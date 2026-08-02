@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import gc
-import tracemalloc
 from pathlib import Path
 
 import numpy as np
@@ -11,6 +10,7 @@ import tinyusdz
 import sceneio
 from sceneio import _core
 from sceneio.io._usd import geometry, points, stage
+from tests._support.memory_measurement import stable_traced_peak
 
 _HIERARCHY_USDA = """#usda 1.0
 (
@@ -1251,12 +1251,9 @@ def test_direct_layer_feature_scan_has_bounded_python_allocation(tmp_path):
     path = tmp_path / "large.usda"
     path.write_bytes(b"#usda 1.0\n#" + b"x" * (16 * 1024 * 1024) + b"\n")
 
-    tracemalloc.start()
-    try:
-        features, dependencies = stage._scan_authored_features(path)
-        _, peak = tracemalloc.get_traced_memory()
-    finally:
-        tracemalloc.stop()
+    (features, dependencies), peak = stable_traced_peak(
+        lambda: stage._scan_authored_features(path)
+    )
 
     assert features == frozenset()
     assert dependencies == ()
@@ -1271,12 +1268,9 @@ def test_direct_layer_feature_scan_has_bounded_python_allocation(tmp_path):
         + b" " * (4 * 1024 * 1024)
         + b"references = @base.usda@</Base>\n)\n"
     )
-    tracemalloc.start()
-    try:
-        features, dependencies = stage._scan_authored_features(indented)
-        _, peak = tracemalloc.get_traced_memory()
-    finally:
-        tracemalloc.stop()
+    (features, dependencies), peak = stable_traced_peak(
+        lambda: stage._scan_authored_features(indented)
+    )
     assert features == frozenset({"references"})
     assert dependencies == ("base.usda",)
     assert peak < 512 * 1024

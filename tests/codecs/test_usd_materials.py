@@ -6,7 +6,6 @@ import gc
 import io
 import os
 import struct
-import tracemalloc
 import zipfile
 from pathlib import Path
 
@@ -18,6 +17,7 @@ import sceneio
 from sceneio import _core
 from sceneio.io._usd import materials as usd_materials
 from sceneio.io._usd import package, stage
+from tests._support.memory_measurement import stable_traced_peak
 
 PIL = pytest.importorskip("PIL.Image")
 
@@ -1255,12 +1255,9 @@ def test_large_texture_write_has_bounded_python_allocation(tmp_path, suffix):
     )
     destination = tmp_path / f"large{suffix}"
 
-    tracemalloc.start()
-    try:
-        sceneio.write_scene(scene, destination)
-        _, peak = tracemalloc.get_traced_memory()
-    finally:
-        tracemalloc.stop()
+    _, peak = stable_traced_peak(
+        lambda: sceneio.write_scene(scene, destination)
+    )
 
     if suffix == ".usda":
         sidecars = list(tmp_path.glob("large.assets-*"))

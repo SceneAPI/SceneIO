@@ -16,6 +16,7 @@
 #include <filesystem>
 #include <iomanip>
 #include <limits>
+#include <locale>
 #include <map>
 #include <sstream>
 #include <stdexcept>
@@ -632,6 +633,7 @@ std::vector<std::string> schema_rows(
     std::vector<std::string> rows;
     while (statement.row()) {
         std::ostringstream row;
+        row.imbue(std::locale::classic());
         for (int column = 0; column < columns; ++column)
             append_schema_value(row, statement.get(), column);
         rows.push_back(row.str());
@@ -655,6 +657,7 @@ std::string canonical_schema(sqlite3 *database) {
     // indexes. The PRAGMA rows additionally freeze column affinity,
     // nullability, defaults, PK order, foreign keys, and index layout.
     std::ostringstream output;
+    output.imbue(std::locale::classic());
     Statement masters(
         database,
         "SELECT type,name,tbl_name,sql FROM sqlite_master "
@@ -811,6 +814,7 @@ std::string schema_signature(const std::string &schema) {
         value *= 1099511628211ULL;
     }
     std::ostringstream output;
+    output.imbue(std::locale::classic());
     output << std::hex << std::setfill('0') << std::setw(16) << value;
     return output.str();
 }
@@ -4099,6 +4103,20 @@ struct DatabaseInspection {
     std::vector<std::string> image_descriptor_dtypes;
 };
 
+template <typename T>
+nb::list integer_list(const std::vector<T> &values) {
+    nb::list result;
+    for (T value : values) result.append(nb::int_(value));
+    return result;
+}
+
+nb::list string_list(const std::vector<std::string> &values) {
+    nb::list result;
+    for (const std::string &value : values)
+        result.append(nb::str(value.data(), value.size()));
+    return result;
+}
+
 int64_t sum_column(
     sqlite3 *database, const std::string &table,
     const std::string &column) {
@@ -4359,21 +4377,19 @@ nb::dict inspection_dict(const std::string &path) {
     result["num_matches"] = value.raw_matches;
     result["num_verified_matches"] = value.verified_matches;
     result["descriptor_dimensions"] =
-        nb::cast(value.descriptor_dimensions);
-    result["image_ids"] = nb::cast(value.image_ids);
-    result["image_names"] = nb::cast(value.image_names);
-    result["keypoint_counts"] =
-        nb::cast(value.keypoint_counts);
+        integer_list(value.descriptor_dimensions);
+    result["image_ids"] = integer_list(value.image_ids);
+    result["image_names"] = string_list(value.image_names);
+    result["keypoint_counts"] = integer_list(value.keypoint_counts);
     result["keypoint_dimensions"] =
-        nb::cast(value.keypoint_dimensions);
+        integer_list(value.keypoint_dimensions);
     result["descriptor_counts"] =
-        nb::cast(value.descriptor_counts);
+        integer_list(value.descriptor_counts);
     result["image_descriptor_dimensions"] =
-        nb::cast(value.image_descriptor_dimensions);
+        integer_list(value.image_descriptor_dimensions);
     result["image_descriptor_dtypes"] =
-        nb::cast(value.image_descriptor_dtypes);
-    result["sqlite_version"] =
-        std::string(sqlite3_libversion());
+        string_list(value.image_descriptor_dtypes);
+    result["sqlite_version"] = nb::str(sqlite3_libversion());
     return result;
 }
 

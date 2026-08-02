@@ -1,5 +1,44 @@
 # Next-stage implementation checklist
 
+## 72-format cross-platform closure correction (2026-08-02)
+
+- [x] Reproduce the exact failed automatic jobs and keep the correction scoped
+      to inspection portability, source-manifest normalization, and repeatable
+      allocation accounting. No format, public API, provider, or codec profile
+      changes in this unit.
+- [x] Make Theora's dynamic version result include its nanobind string caster;
+      make WebM's dynamic inspection strings explicit Python strings.
+- [x] Make COLMAP database inspection return explicit Python integer/string
+      lists and use the classic locale for deterministic schema streams. This
+      removes platform-dependent implicit conversion and locale state from the
+      inspection boundary.
+- [x] Define the libvpx source-manifest digest over the repository's canonical
+      LF bytes (`cd887188...70ccd`) in both provenance and the inventory test.
+- [x] Keep strict allocation bounds while replacing single-sample probes for
+      the three suite-order-sensitive BAL/USD paths with the median of three
+      equivalent operations. A persistent payload-sized allocation still
+      appears in every sample and fails; the helper contract checks the odd
+      sample count, exact operation count, returned value, and median choice.
+- [x] Rebuild the MSVC extension and verify the native symbols. The focused
+      regression gate passes 335 tests with two expected Windows skips; a clean
+      CPython 3.12 Linux build passes the selected Theora/WebM/COLMAP DB,
+      BAL/USD allocation, and license-inventory cases.
+- [x] Pass the exact 4,375-node local suite (4,369 passed, six documented
+      skips), full Ruff, generated documentation contract, and diff checks.
+- [x] Run the one-pass all-format benchmark smoke. All 72 rows complete; the
+      normalized current structure is
+      `9d010021697a301eff99ac21203b9f66d042e66b81ccfd0bea7ebdce313b2851`.
+      Update the mechanical parent contract from its stale 67-row value; no
+      timing threshold or implementation-performance claim changes.
+- [ ] Require the automatic Linux/Windows/macOS jobs and hosted
+      compiler-instrumented jobs to pass at the exact pushed correction commit
+      before calling the 72-format branch head cross-platform validated. The
+      cold local instrumented container reached its fixed compile-time ceiling
+      before test execution, so it is not recorded as pass evidence.
+- [ ] Keep package publication separate. After the automatic correction gates
+      are green, use the existing workflow-driven build/publish process only
+      for an explicitly approved release or build-only validation run.
+
 ## Post-R6 APNG checkpoint (2026-07-29)
 
 - [x] Add a repository-owned APNG chunk/state layer over pinned lodepng with

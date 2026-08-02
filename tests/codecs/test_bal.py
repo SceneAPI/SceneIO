@@ -12,6 +12,7 @@ import pytest
 
 import sceneio
 from sceneio import _core
+from tests._support.memory_measurement import stable_traced_peak
 
 F = np.diag([1.0, -1.0, -1.0])
 INT32_MAX = np.iinfo(np.int32).max
@@ -480,13 +481,7 @@ def test_sparse_large_inspect_reads_only_header_with_bounded_memory(tmp_path):
     with path.open("wb") as stream:
         stream.write(b"1 1 0\n")
         stream.truncate(64 * 1024 * 1024)
-    gc.collect()
-    tracemalloc.start()
-    try:
-        info = sceneio.inspect(path)
-        _, peak = tracemalloc.get_traced_memory()
-    finally:
-        tracemalloc.stop()
+    info, peak = stable_traced_peak(lambda: sceneio.inspect(path))
     assert info.metadata["num_cameras"] == 1
     assert info.metadata["num_points3D"] == 1
     assert info.metadata["num_observations"] == 0

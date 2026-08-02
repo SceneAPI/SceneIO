@@ -13,6 +13,8 @@
 #include <string>
 #include <vector>
 
+#include <nanobind/stl/string.h>
+
 #include "ogg/ogg.h"
 #include "records/image_sequence.hpp"
 #include "theora/theoradec.h"

@@ -131,6 +131,22 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > exact local gate passes 4,357 tests with six documented skips; Ruff and diff
 > checks are clean. Hosted package-matrix validation remains user-triggered.
 >
+> **72-format cross-platform correction (2026-08-02):** the format count and
+> all public capabilities remain unchanged. Theora now includes the required
+> nanobind string conversion for inspection version metadata; WebM uses
+> explicit Python-owned dynamic metadata strings; and COLMAP DB inspection
+> uses explicit Python lists plus classic-locale schema streams. The pinned
+> libvpx source manifest is checked using its canonical LF repository bytes.
+> Three BAL/USD allocation assertions now use the median of three equivalent
+> operations, retaining the same absolute/payload-relative limits while
+> excluding a one-time optional-runtime allocation from the result. The exact
+> 4,375-node local collection passes 4,369 with six documented skips; Ruff,
+> documentation synchronization, and diff checks pass. Hosted platform and
+> compiler-instrumented confirmation remains pending for this correction. The
+> one-pass all-format smoke completes all 72 rows and updates the normalized
+> structure contract to
+> `9d010021697a301eff99ac21203b9f66d042e66b81ccfd0bea7ebdce313b2851`.
+>
 > **72-format expanded WebM checkpoint (2026-08-01):** the existing `webm`
 > format now also reads and writes temporal VP8 and VP9 through the compact,
 > repository-pinned libvpx `v1.16.0-178-g4780fac96` source closure. The

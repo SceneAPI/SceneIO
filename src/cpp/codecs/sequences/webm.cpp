@@ -1572,9 +1572,13 @@ nb::dict inspect_webm(nb::handle source) {
         parsed.codec == WebmCodec::vp8 && parsed.all_keyframes &&
         !parsed.color_present;
     result["color_space"] = legacy_rgb ? "srgb" : "ycbcr";
-    result["color_range"] = legacy_rgb ? "unknown" : parsed.color_range;
-    result["matrix"] = legacy_rgb ? "unknown" : parsed.matrix;
-    result["codec"] = codec_name(parsed.codec);
+    const std::string color_range =
+        legacy_rgb ? "unknown" : parsed.color_range;
+    const std::string matrix = legacy_rgb ? "unknown" : parsed.matrix;
+    const std::string codec = codec_name(parsed.codec);
+    result["color_range"] = nb::str(color_range.data(), color_range.size());
+    result["matrix"] = nb::str(matrix.data(), matrix.size());
+    result["codec"] = nb::str(codec.data(), codec.size());
     result["profile"] = legacy_rgb ? "all_keyframe" : "temporal";
     result["storage_mode"] = legacy_rgb ? "packed" : "yuv_planar";
     result["keyframes"] = std::count_if(

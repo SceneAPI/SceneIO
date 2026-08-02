@@ -9,6 +9,7 @@ from types import SimpleNamespace
 
 import numpy as np
 import pytest
+from _support import memory_measurement
 
 from bench.io_bench import memory_child
 from bench.io_bench.memory_child import _execute_operation, _high_water_rss
@@ -90,6 +91,27 @@ def test_memory_protocol_contract_and_repeated_sceneio_measurement(
     tmp_path,
     monkeypatch,
 ):
+    repeated_peaks = iter((15_000_000, 32_000, 48_000))
+    repeated_calls = []
+
+    def deterministic_peak(call):
+        repeated_calls.append(None)
+        return call(), next(repeated_peaks)
+
+    monkeypatch.setattr(
+        memory_measurement,
+        "traced_peak",
+        deterministic_peak,
+    )
+    repeated_value, repeated_peak = memory_measurement.stable_traced_peak(
+        lambda: "measured"
+    )
+    assert repeated_value == "measured"
+    assert repeated_peak == 48_000
+    assert len(repeated_calls) == 3
+    with pytest.raises(ValueError, match="positive odd"):
+        memory_measurement.stable_traced_peak(lambda: None, samples=2)
+
     array = np.arange(256, dtype=np.float32).reshape(16, 16)
     path = tmp_path / "probe.npy"
     np.save(path, array)

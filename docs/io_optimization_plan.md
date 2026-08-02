@@ -19,6 +19,17 @@ The post-R6 COLMAP dense, HDF5/hloc, Zarr, TIFF, E57, Parquet/Arrow,
 OpenVDB, USD/USDZ, AVIF, WebM, RTMV, and Ogg/Theora units bring the current ledger to 167
 provisional, two known-gap, and seven not-applicable operations without changing
 that policy.
+The 2026-08-02 72-format correction changes no transport, compression kernel,
+capability, or timing claim. It makes Theora/WebM/COLMAP DB inspection results
+portable across the supported compilers, hashes libvpx's source manifest using
+its canonical repository bytes, and measures three suite-order-sensitive
+allocation paths by a three-operation median while preserving their strict
+payload-relative ceilings. The exact local suite passes 4,369 tests with six
+documented skips; hosted platform and compiler-instrumented confirmation is
+pending at the correction commit. The one-pass all-format smoke completes 72
+rows with normalized structural SHA-256
+`9d010021697a301eff99ac21203b9f66d042e66b81ccfd0bea7ebdce313b2851`;
+this replaces the stale 67-row parent contract without changing a timing gate.
 The C3/C4 CI correction keeps those operation counts unchanged. Its SOG
 writer uses a pinned deterministic transform and caches transformed
 coordinates: repeated seven-run measurements on the 11.2 MB fixture report
