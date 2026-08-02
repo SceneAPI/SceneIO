@@ -214,6 +214,30 @@ def _timestamp_interval(value: object, context: str) -> tuple[int, int]:
     return start, stop
 
 
+def _numpy_dtype(value: object, context: str) -> np.dtype:
+    """Parse the JSON representation permitted for a Zarr V2 dtype."""
+
+    def structured(raw_value: list[object]) -> list[tuple[object, ...]]:
+        fields: list[tuple[object, ...]] = []
+        for field in raw_value:
+            if not isinstance(field, list) or len(field) not in {2, 3}:
+                raise ValueError(f"{context}: invalid structured dtype")
+            normalized = list(field)
+            if isinstance(normalized[1], list):
+                normalized[1] = structured(normalized[1])
+            if len(normalized) == 3 and isinstance(normalized[2], list):
+                normalized[2] = tuple(normalized[2])
+            fields.append(tuple(normalized))
+        return fields
+
+    if isinstance(value, list):
+        value = structured(value)
+    try:
+        return np.dtype(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{context}: invalid dtype") from exc
+
+
 def _array_descriptor(
     relative_name: str,
     full_name: str,
@@ -229,10 +253,9 @@ def _array_descriptor(
         raise ValueError(f"NCore array {relative_name!r}: shape/chunks must be arrays")
     shape = tuple(raw_shape)
     chunks = tuple(raw_chunks)
-    try:
-        dtype = np.dtype(document.get("dtype")).str
-    except (TypeError, ValueError) as exc:
-        raise ValueError(f"NCore array {relative_name!r}: invalid dtype") from exc
+    dtype = _numpy_dtype(
+        document.get("dtype"), f"NCore array {relative_name!r}"
+    ).str
     attrs_key = f"{full_name}/.zattrs"
     attributes = metadata.get(attrs_key, {})
     return NCoreArray(

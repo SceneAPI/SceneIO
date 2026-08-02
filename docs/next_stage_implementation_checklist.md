@@ -15,11 +15,15 @@
       detection authoritative for non-NCore inputs. Add public model exports,
       installed-wheel smoke coverage, repository contracts, and a generated
       benchmark row for catalog open/inspect.
-- [ ] Add the component access API and immutable loaded-component records.
+- [x] Add the component access API and immutable loaded-component records.
       Selection must identify one component instance and may select one frame
       or timestamp interval. Preserve array dtype/shape exactly, return owned
       arrays after the store handle closes, and retain unknown component arrays
-      and metadata through a generic component result.
+      and metadata through a generic component result. The repository-owned
+      decoder covers Zarr V2 chunk grids, edge chunks, C/Fortran order,
+      dimension separators, fill values, structured/endian dtypes, filters,
+      compressors, directory/indexed-tar equivalence, and selected sensor
+      frames without retaining a store handle.
 - [ ] Implement and oracle-check the standard calibration/image families:
       poses, intrinsics, masks, and cameras. Cover empty frames, variable image
       payload lengths, optional arrays, timestamp alignment, accepted component

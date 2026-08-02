@@ -1777,6 +1777,12 @@ def _ncore_v4(root: Path) -> None:
     assert dataset.sequence_id == "wheel-smoke"
     assert tuple(item.id for item in dataset.components) == ("poses:rig",)
     assert sceneio.inspect(store).count == 1
+    loaded = sceneio.read_ncore_component(
+        store,
+        sceneio.NCoreSelection("poses", "rig"),
+    )
+    assert loaded.component == dataset.components[0]
+    assert loaded.group().attributes["component_name"] == "poses"
 
 
 def _avif_formats(root: Path) -> None:

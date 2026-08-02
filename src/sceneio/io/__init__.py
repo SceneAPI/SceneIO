@@ -28,9 +28,12 @@ from sceneio.io._inspectors.model import ArrayInspection, Inspection
 from sceneio.io._ncore import (
     NCoreArray,
     NCoreComponent,
+    NCoreComponentData,
     NCoreDataset,
+    NCoreGroup,
     NCoreSelection,
     NCoreStore,
+    read_ncore_component,
 )
 from sceneio.io._openvdb import write_openvdb
 from sceneio.io._registry.adapters import _file_sink_writer, _mmap_reader
@@ -704,7 +707,9 @@ __all__ = [
     "MeshScene",
     "NCoreArray",
     "NCoreComponent",
+    "NCoreComponentData",
     "NCoreDataset",
+    "NCoreGroup",
     "NCoreSelection",
     "NCoreStore",
     "NativeFeatureCapabilities",
@@ -731,6 +736,7 @@ __all__ = [
     "read",
     "read_depth",
     "read_flow",
+    "read_ncore_component",
     "read_partial",
     "read_scene",
     "register",

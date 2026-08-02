@@ -471,8 +471,8 @@
     "last": "tests/test_points_binary.py::test_bad_magic_rejected"
   },
   "pytest_candidate_collection": {
-    "count": 4392,
-    "sorted_normalized_node_ids_sha256": "13125323160a3ccde78cdcf104f231b9c9f2742336dab73c06944ba0e6124b06",
+    "count": 4397,
+    "sorted_normalized_node_ids_sha256": "dfc3fd670ad6911676d227c4d80691a0ce9297006c8eb159b92ecb0fc26b1a56",
     "added_nodes": [
       "tests/codecs/test_animated_webp.py::test_sceneio_writer_is_lossless_and_oracle_readable",
       "tests/codecs/test_animated_webp.py::test_pillow_writer_is_sceneio_readable_bit_exact",
@@ -1784,7 +1784,12 @@
       "tests/test_import_guards.py::test_no_family_imports[io/_ncore/model.py]",
       "tests/test_import_guards.py::test_no_family_imports[io/_ncore/schema.py]",
       "tests/codecs/test_ncore_v4.py::test_schema_probe_leaves_generic_zarr_and_json_authoritative",
-      "tests/test_import_guards.py::test_no_family_imports[io/_registry/families/datasets.py]"
+      "tests/test_import_guards.py::test_no_family_imports[io/_registry/families/datasets.py]",
+      "tests/codecs/test_ncore_v4.py::test_component_arrays_are_owned_exact_and_directory_itar_equivalent",
+      "tests/codecs/test_ncore_v4.py::test_component_decoder_preserves_zarr_v2_chunk_and_dtype_semantics",
+      "tests/codecs/test_ncore_v4.py::test_sensor_component_frame_and_timestamp_selection",
+      "tests/codecs/test_ncore_v4.py::test_component_selection_rejects_non_temporal_component",
+      "tests/test_import_guards.py::test_no_family_imports[io/_ncore/component_io.py]"
     ],
     "removed_nodes": [
       "tests/codecs/test_compressed_ply.py::test_writer_body_is_byte_identical_to_pinned_playcanvas_vector",

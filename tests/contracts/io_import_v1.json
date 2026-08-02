@@ -92,6 +92,7 @@
       "sceneio.io._inspectors.sequences",
       "sceneio.io._inspectors.splats",
       "sceneio.io._ncore",
+      "sceneio.io._ncore.component_io",
       "sceneio.io._ncore.itar",
       "sceneio.io._ncore.model",
       "sceneio.io._ncore.schema",

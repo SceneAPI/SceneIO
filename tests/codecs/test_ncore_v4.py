@@ -5,17 +5,20 @@ from __future__ import annotations
 import io
 import json
 import lzma
+import shutil
 import struct
 import tarfile
 import tracemalloc
 from pathlib import Path
 
 import cbor2
+import numcodecs
 import numpy as np
 import pytest
 import zarr
 
 import sceneio
+from sceneio.io._ncore.component_io import read_ncore_component
 from sceneio.io._ncore.itar import IndexedTarReader, as_zarr_store
 from sceneio.io._ncore.model import NCoreDataset, NCoreSelection
 from sceneio.io._ncore.schema import inspect_ncore_v4, read_ncore_v4
@@ -66,6 +69,26 @@ def _write_directory(path: Path, metadata: dict[str, object]) -> None:
     payload = path / "poses" / "rig" / "value"
     payload.mkdir(parents=True)
     (payload / "0").write_bytes(np.arange(4, dtype=np.int32).tobytes())
+
+
+def _write_custom_directory(
+    path: Path,
+    metadata: dict[str, object],
+    chunks: dict[str, bytes],
+) -> None:
+    path.mkdir()
+    for key, value in metadata.items():
+        target = path / key
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(
+            json.dumps(value, separators=(",", ":")),
+            encoding="utf-8",
+        )
+    (path / ".zmetadata.cbor.xz").write_bytes(_consolidated(metadata))
+    for key, value in chunks.items():
+        target = path / key
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(value)
 
 
 def _write_itar(path: Path, members: dict[str, bytes]) -> None:
@@ -352,3 +375,248 @@ def test_selection_contract_has_one_optional_range_family():
         )
     with pytest.raises(ValueError, match="start < stop"):
         NCoreSelection("cameras", "front", frames=(3, 3))
+
+
+def test_component_arrays_are_owned_exact_and_directory_itar_equivalent(tmp_path):
+    metadata = _metadata()
+    compressor = numcodecs.Blosc(
+        cname="lz4",
+        clevel=5,
+        shuffle=numcodecs.Blosc.BITSHUFFLE,
+    )
+    metadata["poses/rig/value/.zarray"] = {
+        **metadata["poses/rig/value/.zarray"],
+        "compressor": compressor.get_config(),
+    }
+    raw = np.arange(4, dtype=np.int32).tobytes()
+    encoded = bytes(compressor.encode(raw))
+    directory = tmp_path / "owned.ncore4.zarr"
+    archive = tmp_path / "owned.ncore4.zarr.itar"
+    _write_custom_directory(
+        directory,
+        metadata,
+        {"poses/rig/value/0": encoded},
+    )
+    _write_itar(
+        archive,
+        {
+            **_itar_members(metadata),
+            "poses/rig/value/0": encoded,
+        },
+    )
+    selection = NCoreSelection("poses", "rig")
+    from_directory = read_ncore_component(directory, selection)
+    from_archive = sceneio.read_ncore_component(archive, selection)
+    for loaded in (from_directory, from_archive):
+        np.testing.assert_array_equal(loaded.array("value"), np.arange(4))
+        assert loaded.array("value").flags.owndata
+        assert not loaded.array("value").flags.writeable
+        assert loaded.group().attributes["component_name"] == "poses"
+        assert loaded.selected_items == ()
+    shutil.rmtree(directory)
+    archive.unlink()
+    np.testing.assert_array_equal(from_directory.array("value"), np.arange(4))
+    np.testing.assert_array_equal(from_archive.array("value"), np.arange(4))
+
+
+def test_component_decoder_preserves_zarr_v2_chunk_and_dtype_semantics(tmp_path):
+    metadata = _metadata()
+    metadata["poses/rig/matrix/.zarray"] = {
+        "chunks": [2, 3],
+        "compressor": None,
+        "dimension_separator": "/",
+        "dtype": ">i2",
+        "fill_value": -7,
+        "filters": None,
+        "order": "F",
+        "shape": [3, 5],
+        "zarr_format": 2,
+    }
+    delta = numcodecs.Delta(dtype="<i4")
+    metadata["poses/rig/delta/.zarray"] = {
+        "chunks": [4],
+        "compressor": None,
+        "dtype": "<i4",
+        "fill_value": 0,
+        "filters": [delta.get_config()],
+        "order": "C",
+        "shape": [6],
+        "zarr_format": 2,
+    }
+    structured_dtype = np.dtype([("xy", "<f4", (2,)), ("id", "<u2")])
+    metadata["poses/rig/structured/.zarray"] = {
+        "chunks": [2],
+        "compressor": None,
+        "dtype": [["xy", "<f4", [2]], ["id", "<u2"]],
+        "fill_value": 0,
+        "filters": None,
+        "order": "C",
+        "shape": [2],
+        "zarr_format": 2,
+    }
+    nested_dtype = np.dtype([("position", [("x", "<f4"), ("y", "<f4")])])
+    metadata["poses/rig/nested/.zarray"] = {
+        "chunks": [1],
+        "compressor": None,
+        "dtype": [["position", [["x", "<f4"], ["y", "<f4"]]]],
+        "fill_value": 0,
+        "filters": None,
+        "order": "C",
+        "shape": [1],
+        "zarr_format": 2,
+    }
+    metadata["poses/rig/complex_fill/.zarray"] = {
+        "chunks": [2],
+        "compressor": None,
+        "dtype": "<c8",
+        "fill_value": [1.25, -2.5],
+        "filters": None,
+        "order": "C",
+        "shape": [2],
+        "zarr_format": 2,
+    }
+    matrix_00 = np.array(
+        [[1, 2, 3], [4, 5, 6]], dtype=">i2", order="F"
+    )
+    matrix_11 = np.array(
+        [[90, 91, 92], [93, 94, 95]], dtype=">i2", order="F"
+    )
+    delta_0 = np.array([0, 1, 4, 9], dtype="<i4")
+    delta_1 = np.array([16, 25, 0, 0], dtype="<i4")
+    structured = np.array(
+        [([1.5, 2.5], 7), ([3.5, 4.5], 8)], dtype=structured_dtype
+    )
+    nested = np.array([((6.5, 7.5),)], dtype=nested_dtype)
+    path = tmp_path / "zarr-semantics.ncore4.zarr"
+    _write_custom_directory(
+        path,
+        metadata,
+        {
+            "poses/rig/value/0": np.arange(4, dtype=np.int32).tobytes(),
+            "poses/rig/matrix/0/0": matrix_00.tobytes(order="F"),
+            "poses/rig/matrix/1/1": matrix_11.tobytes(order="F"),
+            "poses/rig/delta/0": bytes(delta.encode(delta_0)),
+            "poses/rig/delta/1": bytes(delta.encode(delta_1)),
+            "poses/rig/structured/0": structured.tobytes(),
+            "poses/rig/nested/0": nested.tobytes(),
+        },
+    )
+
+    loaded = sceneio.read_ncore_component(
+        path, sceneio.NCoreSelection("poses", "rig")
+    )
+    expected_matrix = np.full((3, 5), -7, dtype=">i2")
+    expected_matrix[:2, :3] = matrix_00
+    expected_matrix[2, 3:] = matrix_11[0, :2]
+    np.testing.assert_array_equal(loaded.array("matrix"), expected_matrix)
+    assert loaded.array("matrix").dtype == np.dtype(">i2")
+    np.testing.assert_array_equal(
+        loaded.array("delta"), np.array([0, 1, 4, 9, 16, 25])
+    )
+    np.testing.assert_array_equal(loaded.array("structured"), structured)
+    assert loaded.array("structured").dtype == structured_dtype
+    np.testing.assert_array_equal(loaded.array("nested"), nested)
+    assert loaded.array("nested").dtype == nested_dtype
+    np.testing.assert_array_equal(
+        loaded.array("complex_fill"),
+        np.full(2, 1.25 - 2.5j, dtype=np.complex64),
+    )
+
+
+def _sensor_metadata() -> tuple[dict[str, object], dict[str, bytes]]:
+    metadata = _metadata()
+    for key in tuple(metadata):
+        if key.startswith("poses/"):
+            del metadata[key]
+    metadata.update(
+        {
+            "cameras/.zgroup": {"zarr_format": 2},
+            "cameras/front/.zgroup": {"zarr_format": 2},
+            "cameras/front/.zattrs": {
+                "component_name": "cameras",
+                "component_instance_name": "front",
+                "component_version": "v1",
+                "generic_meta_data": {},
+            },
+            "cameras/front/frames/.zgroup": {"zarr_format": 2},
+            "cameras/front/frames/.zattrs": {
+                "frames_timestamps_us": [
+                    [100, 110],
+                    [110, 120],
+                    [120, 130],
+                ]
+            },
+        }
+    )
+    chunks: dict[str, bytes] = {}
+    for index, timestamp in enumerate((110, 120, 130)):
+        base = f"cameras/front/frames/{timestamp}"
+        metadata[f"{base}/.zgroup"] = {"zarr_format": 2}
+        metadata[f"{base}/.zattrs"] = {"frame": index}
+        metadata[f"{base}/data/.zarray"] = {
+            "chunks": [2, 2],
+            "compressor": None,
+            "dtype": "|u1",
+            "fill_value": 0,
+            "filters": None,
+            "order": "C",
+            "shape": [2, 2],
+            "zarr_format": 2,
+        }
+        metadata[f"{base}/data/.zattrs"] = {"format": "raw"}
+        chunks[f"{base}/data/0.0"] = np.full(
+            (2, 2), index, dtype=np.uint8
+        ).tobytes()
+    return metadata, chunks
+
+
+def test_sensor_component_frame_and_timestamp_selection(tmp_path):
+    path = tmp_path / "camera.ncore4.zarr"
+    metadata, chunks = _sensor_metadata()
+    _write_custom_directory(path, metadata, chunks)
+
+    frames = sceneio.read_ncore_component(
+        path,
+        NCoreSelection("cameras", "front", frames=(1, 3)),
+    )
+    assert frames.selected_items == ("120", "130")
+    assert set(frames.arrays) == {
+        "frames/120/data",
+        "frames/130/data",
+    }
+    np.testing.assert_array_equal(
+        frames.array("frames/120/data"),
+        np.full((2, 2), 1, dtype=np.uint8),
+    )
+    assert {group.name for group in frames.groups} == {
+        "",
+        "frames",
+        "frames/120",
+        "frames/130",
+    }
+
+    timestamps = sceneio.read_ncore_component(
+        path,
+        NCoreSelection(
+            "cameras",
+            "front",
+            timestamps_us=(111, 119),
+        ),
+    )
+    assert timestamps.selected_items == ("120",)
+    assert tuple(timestamps.arrays) == ("frames/120/data",)
+    with pytest.raises(ValueError, match="available count"):
+        sceneio.read_ncore_component(
+            path,
+            NCoreSelection("cameras", "front", frames=(2, 4)),
+        )
+
+
+def test_component_selection_rejects_non_temporal_component(tmp_path):
+    path = tmp_path / "poses.ncore4.zarr"
+    _write_directory(path, _metadata())
+    with pytest.raises(ValueError, match="does not define"):
+        sceneio.read_ncore_component(
+            path,
+            NCoreSelection("poses", "rig", frames=(0, 1)),
+        )

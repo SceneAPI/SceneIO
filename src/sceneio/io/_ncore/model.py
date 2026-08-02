@@ -7,6 +7,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from types import MappingProxyType
 
+import numpy as np
+
 JsonScalar = str | int | float | bool | None
 JsonValue = JsonScalar | tuple["JsonValue", ...] | Mapping[str, "JsonValue"]
 
@@ -274,10 +276,107 @@ class NCoreSelection:
             )
 
 
+@dataclass(frozen=True, slots=True)
+class NCoreGroup:
+    """Metadata for one group relative to a loaded component root."""
+
+    name: str
+    attributes: Mapping[str, JsonValue] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.name, str):
+            raise ValueError("NCoreGroup.name must be a string")
+        if self.name and (
+            self.name.startswith("/")
+            or any(part in {"", ".", ".."} for part in self.name.split("/"))
+        ):
+            raise ValueError(
+                "NCoreGroup.name must be empty or a relative '/'-separated path"
+            )
+        frozen = _freeze_json(dict(self.attributes), "NCoreGroup.attributes")
+        assert isinstance(frozen, Mapping)
+        object.__setattr__(self, "attributes", frozen)
+
+
+@dataclass(frozen=True, slots=True, eq=False)
+class NCoreComponentData:
+    """Owned arrays and exact group metadata for one NCore component instance."""
+
+    component: NCoreComponent
+    selection: NCoreSelection
+    arrays: Mapping[str, np.ndarray]
+    groups: tuple[NCoreGroup, ...]
+    selected_items: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        if (
+            self.component.name != self.selection.component
+            or self.component.instance != self.selection.instance
+        ):
+            raise ValueError(
+                "NCoreComponentData selection disagrees with its component"
+            )
+        if (
+            self.selection.group is not None
+            and self.selection.group != self.component.group
+        ):
+            raise ValueError(
+                "NCoreComponentData selection group disagrees with its component"
+            )
+        normalized: dict[str, np.ndarray] = {}
+        for name, raw_value in self.arrays.items():
+            _non_empty(name, "NCoreComponentData array name")
+            if name.startswith("/") or any(
+                part in {"", ".", ".."} for part in name.split("/")
+            ):
+                raise ValueError(
+                    "NCoreComponentData array names must be relative paths"
+                )
+            value = np.asarray(raw_value)
+            if value.dtype.hasobject:
+                raise ValueError("NCore component arrays cannot use object dtype")
+            if not value.flags.owndata or not value.flags.c_contiguous:
+                value = np.array(value, copy=True, order="C")
+            value.setflags(write=False)
+            normalized[name] = value
+        if len(normalized) != len(self.arrays):
+            raise ValueError("NCoreComponentData array names must be unique")
+        groups = tuple(self.groups)
+        group_names = tuple(group.name for group in groups)
+        if len(group_names) != len(set(group_names)):
+            raise ValueError("NCoreComponentData group names must be unique")
+        selected_items = tuple(self.selected_items)
+        if any(not isinstance(item, str) or not item for item in selected_items):
+            raise ValueError(
+                "NCoreComponentData.selected_items must contain non-empty strings"
+            )
+        object.__setattr__(self, "arrays", MappingProxyType(normalized))
+        object.__setattr__(self, "groups", groups)
+        object.__setattr__(self, "selected_items", selected_items)
+
+    def array(self, name: str) -> np.ndarray:
+        """Return one loaded array by its component-relative path."""
+
+        try:
+            return self.arrays[name]
+        except KeyError:
+            raise KeyError(f"NCore component array {name!r} does not exist") from None
+
+    def group(self, name: str = "") -> NCoreGroup:
+        """Return one loaded group-metadata record by relative path."""
+
+        for group in self.groups:
+            if group.name == name:
+                return group
+        raise KeyError(f"NCore component group {name!r} does not exist")
+
+
 for _record in (
     NCoreArray,
     NCoreComponent,
+    NCoreComponentData,
     NCoreDataset,
+    NCoreGroup,
     NCoreSelection,
     NCoreStore,
 ):
@@ -289,7 +388,9 @@ __all__ = [
     "JsonValue",
     "NCoreArray",
     "NCoreComponent",
+    "NCoreComponentData",
     "NCoreDataset",
+    "NCoreGroup",
     "NCoreSelection",
     "NCoreStore",
 ]
