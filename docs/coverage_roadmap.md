@@ -29,8 +29,12 @@
 > its terminal guard correctly measures animated AVIF's two-frame selection at
 > 16.8 MB versus 25.2 MB for full decode. The follow-up classifies that owned
 > output by an 18 MB ceiling and 75%-of-full limit instead of the metadata-like
-> 1 MB cap; all existing limits remain unchanged. Final hosted confirmation
-> remains pending; release publication remains separate.
+> 1 MB cap; all existing limits remain unchanged. At correction commit
+> `54925ea`, compiler-instrumented run `30741117526` and CI run `30741117473`
+> are fully green. The latter passes all platform/compiler jobs, the exact
+> suite, 72-row smoke/structure, and five-run guard, which records a 1.32x
+> selected-range gain and 25.2/16.8 MB full/partial allocation. Hosted
+> confirmation is complete; release publication remains separate.
 > The first hosted correction run passed every dedicated platform shard. Its
 > remaining repository-byte and instrumented-Theora residuals are addressed by
 > canonical LF source-manifest rows for libvpx/libogg/libtheora and a documented

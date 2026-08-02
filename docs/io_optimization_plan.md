@@ -44,8 +44,12 @@ result under the blanket 1 MB selector cap. The current narrow correction
 requires animated AVIF selection to stay below both 18 MB and 75% of full-read
 allocation; every other existing cap remains unchanged. A three-run local
 remeasurement records 1.33x partial-read speedup and the same 25.2/16.8 MB
-allocation reduction. Final hosted confirmation is pending at this directional
-classification correction. The one-pass all-format smoke completes 72
+allocation reduction. At correction commit `54925ea`, compiler-instrumented
+run `30741117526` passes the exact suite and lifetime shard, while CI run
+`30741117473` passes every job and the five-run guard. Its animated AVIF row is
+1.32x faster for the selected range with 25.2/16.8 MB full/partial allocation.
+This closes hosted confirmation for the 72-format branch head. The one-pass
+all-format smoke completes 72
 rows with normalized structural SHA-256
 `9d010021697a301eff99ac21203b9f66d042e66b81ccfd0bea7ebdce313b2851`;
 this replaces the stale 67-row parent contract without changing a timing gate.

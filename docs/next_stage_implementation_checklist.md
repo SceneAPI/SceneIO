@@ -33,7 +33,7 @@
       `9d010021697a301eff99ac21203b9f66d042e66b81ccfd0bea7ebdce313b2851`.
       Update the mechanical parent contract from its stale 67-row value; no
       timing threshold or implementation-performance claim changes.
-- [ ] Require the automatic Linux/Windows/macOS jobs and hosted
+- [x] Require the automatic Linux/Windows/macOS jobs and hosted
       compiler-instrumented jobs to pass at the exact pushed correction commit
       before calling the 72-format branch head cross-platform validated. The
       cold local instrumented container reached its fixed compile-time ceiling
@@ -69,8 +69,12 @@
       then rejects the materialized two-frame output under the universal 1 MB
       metadata/selection cap. Classify only this row by an 18 MB ceiling and
       75%-of-full limit; retain every existing cap. The local three-run replay
-      passes at 1.33x and 25.2/16.8 MB. Final automatic confirmation remains
-      pending for this directional correction.
+      passes at 1.33x and 25.2/16.8 MB. At correction commit `54925ea`,
+      compiler-instrumented run `30741117526` passes the exact suite and
+      lifetime shard. CI run `30741117473` passes every job: the complete
+      suite, all ten platform/compiler shards, 72-row smoke/structure, and the
+      five-run guard. The accepted hosted animated AVIF row records 1.32x and
+      25.2/16.8 MB. Automatic confirmation is complete.
 - [x] Re-run the three-run Theora benchmark after the arithmetic correction:
       17 MB/s encode, 79 MB/s in-memory decode, 76 MB/s mmap read, zero traced
       mmap/sink allocation, and the existing 18.27x inspect/1.79x partial-read

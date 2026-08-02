@@ -33,8 +33,11 @@ and the 72-row smoke; its terminal guard then shows that animated AVIF's
 selected two-frame output uses 16.8 MB versus 25.2 MB for full decode. The
 current correction gives that materialized output a narrow 18 MB and
 75%-of-full directional limit while preserving all existing caps. The complete
-local suite passes 4,372 tests with six documented skips; final hosted
-confirmation is pending and format capabilities are unchanged.
+local suite passes 4,372 tests with six documented skips. At correction commit
+`54925ea`, compiler-instrumented run `30741117526` and CI run `30741117473`
+are fully green; the latter passes every platform/compiler job, exact suite,
+72-row smoke/structure, and five-run performance guard. Hosted confirmation is
+complete and format capabilities are unchanged.
 
 <!-- sceneio-inventory-summary:start -->
 **Generated registry contract:** SceneIO has **72 built-in formats**: **64**

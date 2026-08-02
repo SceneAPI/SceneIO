@@ -4196,5 +4196,13 @@ The correction retains the 1 MB cap for all other applicable partial rows and
 qualifies animated AVIF by both an 18 MB ceiling and a 75%-of-full allocation
 limit. A three-run local replay records 207.127/156.125 ms (1.33x), the same
 25.179/16.791 MB reduction, and direct Pillow selected-frame comparison at
-161.839 ms. The focused 35-test qualification module and Ruff pass; final
-hosted confirmation remains pending at the directional-classification commit.
+161.839 ms. The focused 35-test qualification module and Ruff pass.
+
+At correction commit `54925ea`, compiler-instrumented run `30741117526`
+passes the exact 4,378-test suite and lifetime shard. CI run `30741117473`
+passes all ten dedicated platform/compiler jobs, the complete suite, 72-row
+smoke/structure, and the five-run guard. The accepted hosted animated AVIF row
+records 391.961/297.278 ms (1.32x) and 25.2/16.8 MB full/partial allocation.
+The guard reports that stable O4 gains and mapped-read/direct-sink memory bounds
+pass. This is the final hosted 72-format closure result; publication remains a
+separate workflow action.
