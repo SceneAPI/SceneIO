@@ -24,8 +24,12 @@ run `30738228914`. That CI run's full suite and 72-row smoke also pass; its
 final five-run guard exposed only a missing benchmark output field for the
 already-supported animated AVIF inspect/frame-range comparison. The follow-up
 records direct Pillow metadata and selected-frame timings and keeps them
-distinct from COLMAP DB's image/pair selector metrics. Final hosted
-confirmation is pending; format capabilities are unchanged.
+distinct from COLMAP DB's image/pair selector metrics. Follow-up compiler run
+`30739519901` collects all 4,378 tests but stops at the stale 4,375 count
+assertion; its lifetime shard passes. The exact count/hash and workflow now
+pin 4,378, and the complete local suite passes 4,372 with six documented
+skips. Final hosted confirmation is pending; format capabilities are
+unchanged.
 
 <!-- sceneio-inventory-summary:start -->
 **Generated registry contract:** SceneIO has **72 built-in formats**: **64**

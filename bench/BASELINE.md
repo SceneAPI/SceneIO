@@ -4175,3 +4175,10 @@ and emits `oracle_inspect_*` plus `oracle_partial_*`. COLMAP DB retains its
 separate `oracle_image_*` and `oracle_pair_*` selectors. This repairs evidence
 classification without changing a codec, fixture, threshold, or accepted
 performance result; final hosted confirmation remains pending.
+
+At follow-up commit `ad26b08`, compiler run `30739519901` builds successfully,
+collects 4,378 tests, and passes the lifetime shard. Its full job stops before
+execution because the workflow still expected the pre-test count of 4,375.
+The collection contract now records count 4,378 and normalized node-id SHA-256
+`bf49c354676f3cc9bc93bd1c37fd5819d1bebf398c298fede6b68940f23faba5`;
+the complete local suite passes 4,372 tests with six documented skips.

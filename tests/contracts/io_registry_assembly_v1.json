@@ -466,8 +466,8 @@
     "last": "tests/test_points_binary.py::test_bad_magic_rejected"
   },
   "pytest_candidate_collection": {
-    "count": 4375,
-    "sorted_normalized_node_ids_sha256": "e9920b8ca8046a27ee7d6b5065f113ab636c50d15c68938afd2732672e57550f",
+    "count": 4378,
+    "sorted_normalized_node_ids_sha256": "bf49c354676f3cc9bc93bd1c37fd5819d1bebf398c298fede6b68940f23faba5",
     "added_nodes": [
       "tests/codecs/test_animated_webp.py::test_sceneio_writer_is_lossless_and_oracle_readable",
       "tests/codecs/test_animated_webp.py::test_pillow_writer_is_sceneio_readable_bit_exact",
@@ -1018,6 +1018,9 @@
       "tests/test_io_benchmark_qualification.py::test_strict_result_validation_requires_every_declared_metric[colmap_db-oracle_inspect_ms]",
       "tests/test_io_benchmark_qualification.py::test_strict_result_validation_requires_every_declared_metric[colmap_db-oracle_image_ms]",
       "tests/test_io_benchmark_qualification.py::test_strict_result_validation_requires_every_declared_metric[colmap_db-oracle_pair_ms]",
+      "tests/test_io_benchmark_qualification.py::test_strict_result_validation_requires_every_declared_metric[animated_avif-oracle_inspect_ms]",
+      "tests/test_io_benchmark_qualification.py::test_strict_result_validation_requires_every_declared_metric[animated_avif-oracle_partial_ms]",
+      "tests/test_io_benchmark_qualification.py::test_animated_avif_path_benchmark_records_oracle_partial_metrics",
       "tests/test_io_benchmark_qualification.py::test_strict_cli_rejects_partial_or_disabled_comparisons[arguments0]",
       "tests/test_io_benchmark_qualification.py::test_strict_cli_rejects_partial_or_disabled_comparisons[arguments1]",
       "tests/test_io_benchmark_qualification.py::test_strict_cli_rejects_partial_or_disabled_comparisons[arguments2]",

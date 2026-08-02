@@ -24,15 +24,19 @@ capability, or timing claim. It makes Theora/WebM/COLMAP DB inspection results
 portable across the supported compilers, hashes libvpx's source manifest using
 its canonical repository bytes, and measures three suite-order-sensitive
 allocation paths by a three-operation median while preserving their strict
-payload-relative ceilings. The exact local suite passes 4,369 tests with six
-documented skips. Commit `5387350` passes hosted compiler run `30738228920`
+payload-relative ceilings. The exact local suite now passes 4,372 tests with
+six documented skips after adding three benchmark-evidence tests. Commit
+`5387350` passes hosted compiler run `30738228920`
 and every dedicated platform job in CI run `30738228914`; that CI run's full
 suite and 72-row smoke also pass. Its final strict guard exposed a benchmark
 schema omission, not an I/O failure: animated AVIF's direct Pillow
 inspect/selected-frame comparisons were declared but not emitted by the
 generic path runner. The follow-up records those timings and gives path-range
-and COLMAP DB image/pair selectors distinct required metric keys. Final hosted
-confirmation is pending at the follow-up commit. The one-pass all-format smoke completes 72
+and COLMAP DB image/pair selectors distinct required metric keys. The first
+follow-up compiler run `30739519901` collects all 4,378 tests but its full job
+stops at the stale 4,375 count assertion; the lifetime shard passes. The exact
+count/hash and workflow assertion now match 4,378. Final hosted confirmation is
+pending at the count-correction commit. The one-pass all-format smoke completes 72
 rows with normalized structural SHA-256
 `9d010021697a301eff99ac21203b9f66d042e66b81ccfd0bea7ebdce313b2851`;
 this replaces the stale 67-row parent contract without changing a timing gate.
