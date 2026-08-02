@@ -295,12 +295,6 @@ def test_target_and_instrumentation_contracts_remain_explicit() -> None:
         "SceneIO's cp312 stable-ABI build requires Python::SABIModule"
         in dependencies
     )
-    theora_x86_guard = (
-        "if(NOT MSVC AND NOT SCENEIO_ENABLE_SANITIZERS AND\n"
-        '   CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64|amd64)$")'
-    )
-    assert dependencies.count(theora_x86_guard) == 2
-
     targets = (ROOT / "cmake/SceneIOTargets.cmake").read_text(encoding="utf-8")
     link_block = re.search(
         r"target_link_libraries\(\s*_core\s+PRIVATE\s+(.*?)\)",

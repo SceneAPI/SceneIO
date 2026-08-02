@@ -17,9 +17,9 @@ headers, core bit-packing/framing sources, and top-level provenance files.
 Tools, tests, examples, and documentation are not stored. SceneIO disables
 all upstream install surfaces and links only the private static library.
 
-The selected closure contains 18 upstream files totaling 166244 bytes.
+The selected closure contains 18 upstream files totaling 161449 bytes.
 Every selected file is recorded in case-insensitive path order in the
 1482-byte SOURCE_MANIFEST.sha256, whose SHA-256 is:
-99330ff80c3af3bbe5c2c9b723105fec28b3d5b91a9a1511979d3ab780e2412d
+504822196a6557883062aa6e93fde7da0f2677b71b6bd4c1b2a61d39b640767f
 
 There are no local source changes.

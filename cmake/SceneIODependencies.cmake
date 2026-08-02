@@ -290,8 +290,7 @@ set(_sceneio_theora_sources
   ${libtheora_SOURCE_DIR}/lib/rate.c
   ${libtheora_SOURCE_DIR}/lib/state.c
   ${libtheora_SOURCE_DIR}/lib/tokenize.c)
-if(NOT MSVC AND NOT SCENEIO_ENABLE_SANITIZERS AND
-   CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64|amd64)$")
+if(NOT MSVC AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64|amd64)$")
   list(APPEND _sceneio_theora_sources
     ${libtheora_SOURCE_DIR}/lib/x86/mmxencfrag.c
     ${libtheora_SOURCE_DIR}/lib/x86/mmxfdct.c
@@ -307,8 +306,7 @@ if(NOT MSVC AND NOT SCENEIO_ENABLE_SANITIZERS AND
     ${libtheora_SOURCE_DIR}/lib/x86/x86state.c)
 endif()
 add_library(theora_static STATIC ${_sceneio_theora_sources})
-if(NOT MSVC AND NOT SCENEIO_ENABLE_SANITIZERS AND
-   CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64|amd64)$")
+if(NOT MSVC AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64|amd64)$")
   target_compile_definitions(
     theora_static PRIVATE OC_X86_ASM OC_X86_64_ASM)
 endif()

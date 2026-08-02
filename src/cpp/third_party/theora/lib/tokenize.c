@@ -13,6 +13,10 @@
   function:
 
  ********************************************************************/
+
+/* MODIFIED BY SCENEIO (2026): trellis occupancy masks are unsigned so bit
+   63 can be represented with defined C semantics; the exact change is
+   recorded in src/cpp/third_party/theora/LOCAL_CHANGES.patch. */
 #include <stdlib.h>
 #include <string.h>
 #include "encint.h"
@@ -459,9 +463,9 @@ int oc_enc_tokenize_ac(oc_enc_ctx *_enc,int _pli,ptrdiff_t _fragi,
  const ogg_uint16_t *_dequant,const ogg_int16_t *_dct,
  int _zzi,oc_token_checkpoint **_stack,int _lambda,int _acmin){
   oc_token_checkpoint *stack;
-  ogg_int64_t          zflags;
-  ogg_int64_t          nzflags;
-  ogg_int64_t          best_flags;
+  ogg_uint64_t         zflags;
+  ogg_uint64_t         nzflags;
+  ogg_uint64_t         best_flags;
   ogg_uint32_t         d2_accum[64];
   oc_quant_token       tokens[64][2];
   ogg_uint16_t        *eob_run;
@@ -639,7 +643,7 @@ int oc_enc_tokenize_ac(oc_enc_ctx *_enc,int _pli,ptrdiff_t _fragi,
       tokens[zzi][0].cost=best_cost;
       tokens[zzi][0].bits=best_bits;
       tokens[zzi][0].qc=best_qc;
-      zflags|=(ogg_int64_t)1<<zzi;
+      zflags|=(ogg_uint64_t)1<<zzi;
       if(qc_m){
         dq=_dequant[zzi];
         if(zzi<_acmin)_lambda=0;
@@ -656,9 +660,9 @@ int oc_enc_tokenize_ac(oc_enc_ctx *_enc,int _pli,ptrdiff_t _fragi,
         tokens[zzi][1].cost=d2+_lambda*bits+tokens[zzj][tj].cost;
         tokens[zzi][1].bits=bits+tokens[zzj][tj].bits;
         tokens[zzi][1].qc=1+s^s;
-        nzflags|=(ogg_int64_t)1<<zzi;
+        nzflags|=(ogg_uint64_t)1<<zzi;
         best_flags|=
-         (ogg_int64_t)(tokens[zzi][1].cost<tokens[zzi][0].cost)<<zzi;
+         (ogg_uint64_t)(tokens[zzi][1].cost<tokens[zzi][0].cost)<<zzi;
       }
     }
     else{
@@ -694,8 +698,8 @@ int oc_enc_tokenize_ac(oc_enc_ctx *_enc,int _pli,ptrdiff_t _fragi,
       tokens[zzi][1].cost=best_cost+tokens[zzj][tj].cost;
       tokens[zzi][1].bits=best_bits+tokens[zzj][tj].bits;
       tokens[zzi][1].qc=qc;
-      nzflags|=(ogg_int64_t)1<<zzi;
-      best_flags|=(ogg_int64_t)1<<zzi;
+      nzflags|=(ogg_uint64_t)1<<zzi;
+      best_flags|=(ogg_uint64_t)1<<zzi;
     }
     zzj=zzi;
   }

@@ -32,12 +32,14 @@ rows with normalized structural SHA-256
 this replaces the stale 67-row parent contract without changing a timing gate.
 The first hosted correction run passed all dedicated platform shards but found
 that libvpx's per-file rows had been generated from a stale CRLF worktree and
-that the compiler-instrumented Theora build stopped at its first encode while
-upstream x86 assembly was enabled.
-The closure now hashes canonical LF blobs throughout and chooses libtheora's
-portable C implementation only for instrumented builds. Normal builds retain
-the optimized x86 path, so this follow-up changes neither the performance
-configuration nor any public I/O behavior.
+that upstream libtheora left-shifted a negative edge delta during the first
+instrumented encode. An all-manifest audit found the same stale-CRLF provenance
+issue in libogg and libtheora, so all three affected closures now hash canonical
+LF blobs throughout. The documented three-file libtheora patch gives defined
+arithmetic to bounded signed edge/motion deltas and 64-bit trellis masks; its
+six-test parity module passes under the same local compiler instrumentation.
+Normal optimized build selection is unchanged, as are public I/O behavior and
+performance configuration.
 The C3/C4 CI correction keeps those operation counts unchanged. Its SOG
 writer uses a pinned deterministic transform and caches transformed
 coordinates: repeated seven-run measurements on the 11.2 MB fixture report

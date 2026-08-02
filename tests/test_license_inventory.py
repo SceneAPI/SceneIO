@@ -125,8 +125,8 @@ SOURCE_CLOSURE = {
         "manifest": "SOURCE_MANIFEST.sha256",
         "path_sorted_manifest": True,
         "manifest_sha256": (
-            "99330ff80c3af3bbe5c2c9b723105fec"
-            "28b3d5b91a9a1511979d3ab780e2412d"
+            "504822196a6557883062aa6e93fde7da"
+            "0f2677b71b6bd4c1b2a61d39b640767f"
         ),
         "cmake_patterns": (
             (
@@ -154,8 +154,27 @@ SOURCE_CLOSURE = {
         "manifest": "SOURCE_MANIFEST.sha256",
         "path_sorted_manifest": True,
         "manifest_sha256": (
-            "5f7543a769e8128a656c509a7a02cf15"
-            "503d4a6b60bd0c043a663ef019ad8094"
+            "99b328e5a9d97aeb577be8355e57101f"
+            "9288b36af1a7eca38331ea5d356a5b37"
+        ),
+        "upstream_manifest": "UPSTREAM_MANIFEST.sha256",
+        "upstream_manifest_sha256": (
+            "49d68df1d5aabd055112319d927dd657d"
+            "ee3bddef0238839e2743d90c0900219"
+        ),
+        "patch": "LOCAL_CHANGES.patch",
+        "patch_sha256": (
+            "790a9423f4e308e9d6971c7796dae473"
+            "95618c1f35b42d3361ebe14cc7a13bc2"
+        ),
+        "patched_files": (
+            "lib/analyze.c",
+            "lib/mcenc.c",
+            "lib/tokenize.c",
+        ),
+        "auxiliary_files": (
+            "LOCAL_CHANGES.patch",
+            "UPSTREAM_MANIFEST.sha256",
         ),
         "cmake_patterns": (
             (

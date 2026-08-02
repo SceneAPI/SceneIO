@@ -20,9 +20,32 @@ MMX/SSE2 dispatch sources on GCC/AppleClang x86-64, and installs no separate
 library or development surface. The upstream MSVC assembly is 32-bit-only and
 is therefore not enabled for the required 64-bit Windows wheel.
 
-The selected closure contains 116 upstream files totaling 1496763 bytes.
-Every selected file is recorded in case-insensitive path order in the
-9632-byte SOURCE_MANIFEST.sha256, whose SHA-256 is:
-5f7543a769e8128a656c509a7a02cf15503d4a6b60bd0c043a663ef019ad8094
+The selected closure contains 116 files totaling 1456663 bytes after the local
+change described below. Every selected pristine upstream file is recorded in
+case-insensitive path order in the 9632-byte UPSTREAM_MANIFEST.sha256, whose
+SHA-256 is:
+49d68df1d5aabd055112319d927dd657dee3bddef0238839e2743d90c0900219
 
-There are no local source changes.
+Every selected final repository file is recorded in case-insensitive path
+order in the 9632-byte SOURCE_MANIFEST.sha256, whose SHA-256 is:
+99b328e5a9d97aeb577be8355e57101f9288b36af1a7eca38331ea5d356a5b37
+
+Local correctness patch:
+- lib/analyze.c computes four signed edge deltas with multiplication by two
+  instead of left-shifting a potentially negative int. This preserves the
+  intended arithmetic over the bounded 8-bit sample differences and gives it
+  defined C semantics. GCC's undefined-behavior instrumentation identified the
+  fourth expression during the first encoder frame; upstream master commit
+  23161c4a63fd9f9d09b9e972f95def2d56c777af still carries all four shifts as
+  of 2026-08-02.
+- lib/tokenize.c represents its three 64-bit trellis-occupancy masks as
+  ogg_uint64_t and inserts their five bits from unsigned one values. This
+  preserves the intended bitset operations and defines insertion into bit 63.
+- lib/mcenc.c doubles bounded signed motion-vector components with
+  multiplication instead of left shift at every full-pixel and refinement
+  site, preserving the intended values with defined C semantics.
+
+LOCAL_CHANGES.patch records the exact upstream-to-repository difference,
+including the prominent SceneIO modification notices in all three files. The
+9752-byte patch has SHA-256:
+790a9423f4e308e9d6971c7796dae47395618c1f35b42d3361ebe14cc7a13bc2

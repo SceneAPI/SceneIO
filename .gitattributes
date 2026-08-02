@@ -24,5 +24,9 @@ src/cpp/third_party/libvpx/** -text -whitespace
 LICENSES/libvpx.txt -text -whitespace
 LICENSES/libvpx-patents.txt -text -whitespace
 LICENSES/chromium.txt -text -whitespace
+src/cpp/third_party/ogg/** -text -whitespace
+LICENSES/ogg.txt -text -whitespace
+src/cpp/third_party/theora/** -text -whitespace
+LICENSES/theora.txt -text -whitespace
 src/cpp/third_party/musl/** -text -whitespace
 LICENSES/musl-log1p.txt -text -whitespace

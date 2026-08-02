@@ -4149,3 +4149,11 @@ completed all 72 live rows. Its normalized structural projection is
 `9d010021697a301eff99ac21203b9f66d042e66b81ccfd0bea7ebdce313b2851`.
 The checked parent contract previously retained the 67-row checkpoint above;
 updating it is a structural coverage correction, not a new throughput claim.
+
+After the documented libtheora arithmetic correction, a three-run local MSVC
+Theora check on the same 6.3 MB logical fixture measured 17 MB/s encode,
+79 MB/s in-memory decode, and 76 MB/s registry mmap read, versus the earlier
+16/78 MB/s encode/decode checkpoint. Direct-sink encode remained 16 MB/s with
+0.0 MB traced allocation; inspection and selected-frame reads remained 18.27x
+and 1.79x faster than full decode. This is no-regression evidence for the
+correctness patch, not a new performance threshold.

@@ -12,10 +12,11 @@
       lists and use the classic locale for deterministic schema streams. This
       removes platform-dependent implicit conversion and locale state from the
       inspection boundary.
-- [x] Define every libvpx source-manifest row and the manifest digest over the
-      repository's canonical LF blobs (`74539bb9...5aaa5`) in both provenance
-      and the inventory test. This replaces hashes produced from a stale
-      Windows CRLF worktree and makes the same closure verifiable on all hosts.
+- [x] Define every libvpx, libogg, and libtheora source-manifest row and digest
+      over canonical LF repository blobs. This replaces hashes produced from a
+      stale Windows CRLF worktree, makes each closure verifiable on all hosts,
+      and preserves exact distribution-license copies through explicit
+      byte-preserving attributes.
 - [x] Keep strict allocation bounds while replacing single-sample probes for
       the three suite-order-sensitive BAL/USD paths with the median of three
       equivalent operations. A persistent payload-sized allocation still
@@ -40,10 +41,17 @@
       pushed correction run passed every platform shard except the main
       repository-byte inventory, and its LSan shard passed. The ASan/UBSan run
       built and collected all 4,375 tests but stopped at the first Theora encode
-      while upstream x86 assembly was enabled; those routines sit outside
-      compiler instrumentation. The follow-up keeps normal optimized builds
-      unchanged and selects libtheora's portable C path only for instrumented
-      builds.
+      because upstream `analyze.c` left-shifted a negative edge delta. A bounded
+      local Linux reproduction then identified the complete reachable set in
+      `analyze.c`, `tokenize.c`, and `mcenc.c`. The documented local patch uses
+      equivalent multiplication for bounded signed deltas and unsigned types
+      for 64-bit occupancy masks; all six Theora parity tests pass under the
+      same compiler instrumentation. Normal optimized builds remain unchanged.
+- [x] Re-run the three-run Theora benchmark after the arithmetic correction:
+      17 MB/s encode, 79 MB/s in-memory decode, 76 MB/s mmap read, zero traced
+      mmap/sink allocation, and the existing 18.27x inspect/1.79x partial-read
+      gains. This matches or exceeds the prior 16/78 MB/s checkpoint without
+      changing a benchmark threshold.
 - [ ] Keep package publication separate. After the automatic correction gates
       are green, use the existing workflow-driven build/publish process only
       for an explicitly approved release or build-only validation run.

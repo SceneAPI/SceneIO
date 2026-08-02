@@ -148,11 +148,13 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > `9d010021697a301eff99ac21203b9f66d042e66b81ccfd0bea7ebdce313b2851`.
 > The first hosted correction pass then exposed two validation-only residuals:
 > libvpx's per-file rows still reflected a stale Windows CRLF worktree, and the
-> instrumented Theora build stopped at its first encode with upstream x86
-> assembly enabled.
-> The follow-up regenerates every libvpx row from canonical LF blobs and uses
-> libtheora's portable C path only when compiler instrumentation is enabled;
-> optimized normal builds and public format behavior are unchanged.
+> instrumented Theora build identified an upstream signed-left-shift failure in
+> `analyze.c` at its first encode.
+> The follow-up audits all vendored manifests, regenerates libvpx/libogg/
+> libtheora rows from canonical LF blobs, and uses a documented local
+> libtheora patch that gives defined arithmetic to signed edge/motion deltas
+> and 64-bit trellis masks. All six Theora parity tests pass in the local
+> instrumented build; optimized builds and public format behavior are unchanged.
 >
 > **72-format expanded WebM checkpoint (2026-08-01):** the existing `webm`
 > format now also reads and writes temporal VP8 and VP9 through the compact,
