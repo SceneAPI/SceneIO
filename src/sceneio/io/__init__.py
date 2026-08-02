@@ -90,9 +90,6 @@ _FLOW_WRITER = _file_sink_writer(_core.write_flo_field)
 _EXACT_COLMAP_DB_PROFILES = frozenset(
     item["name"] for item in _core._colmap_db_profiles()
 )
-_WEBM_WRITE_PROFILES = frozenset(
-    {"vp8-keyframe", "vp8-temporal", "vp9-temporal"}
-)
 
 
 def _resolve_flow_format(path, format: str | None, *, writing: bool) -> str:
@@ -547,11 +544,6 @@ def write(
         raise FormatError(
             f"COLMAP database writer: unknown target profile {profile!r}"
         )
-    if profile is not None and fmt == "webm" and profile not in _WEBM_WRITE_PROFILES:
-        raise FormatError(
-            f"WebM writer: unknown profile {profile!r}; expected one of "
-            + ", ".join(sorted(_WEBM_WRITE_PROFILES))
-        )
     try:
         selected_profile = profile
         if (
@@ -560,9 +552,7 @@ def write(
             and getattr(obj, "profile", None) in _EXACT_COLMAP_DB_PROFILES
         ):
             selected_profile = obj.profile
-        if selected_profile is None or (
-            fmt == "webm" and selected_profile == "vp8-keyframe"
-        ):
+        if selected_profile is None:
             codec.write(obj, str(path))
         else:
             codec.write(obj, str(path), profile=selected_profile)

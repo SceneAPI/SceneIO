@@ -1615,33 +1615,9 @@ void assign_vpx_image(
     image.bps = 12;
 }
 
-class TemporalWebmOutput {
-public:
-    explicit TemporalWebmOutput(bool streaming) : streaming_(streaming) {}
-
-    void write(const std::string &chunk) {
-        if (streaming_) {
-            nb::gil_scoped_acquire acquire;
-            if (!emit_file_chunk(chunk.data(), chunk.size()))
-                throw std::logic_error(
-                    "webm: direct file sink disappeared");
-            return;
-        }
-        if (chunk.size() > bytes_.max_size() - bytes_.size())
-            throw std::length_error("webm: encoded output is too large");
-        bytes_ += chunk;
-    }
-
-    std::string take() { return std::move(bytes_); }
-
-private:
-    bool streaming_;
-    std::string bytes_;
-};
-
 void drain_vpx_packets(
     vpx_codec_ctx_t &encoder, WebmCodec codec,
-    const ImageSequence &sequence, TemporalWebmOutput &output,
+    const ImageSequence &sequence, ChunkedOutput &output,
     size_t &packet_index) {
     TrackMetadata track{
         1, sequence.width, sequence.height, 0, codec};
@@ -1796,8 +1772,7 @@ nb::bytes write_webm_temporal(
         throw std::invalid_argument(
             vpx_failure(encoder.value, "VP9 row threading configuration"));
 
-    const bool streaming = active_file_sink != nullptr;
-    TemporalWebmOutput output(streaming);
+    ChunkedOutput output("webm");
     size_t packet_index = 0;
     {
         nb::gil_scoped_release release;
@@ -1875,9 +1850,7 @@ nb::bytes write_webm_temporal(
             throw std::runtime_error(
                 "webm: temporal encoder did not emit exactly one visible packet per frame");
     }
-    if (streaming) return nb::bytes("", 0);
-    const std::string bytes = output.take();
-    return nb::bytes(bytes.data(), bytes.size());
+    return output.finish();
 }
 
 nb::bytes write_webm(

@@ -21,28 +21,23 @@ from sceneio.io._registry.adapters import (
 )
 from sceneio.io._registry.model import Codec
 
-_WEBM_WRITE_PROFILES = (
-    "vp8-keyframe",
-    "vp8-temporal",
-    "vp9-temporal",
-)
+_WEBM_WRITERS = {
+    "vp8-keyframe": _core.write_webm,
+    "vp8-temporal": partial(_core.write_webm_temporal, codec="vp8"),
+    "vp9-temporal": partial(_core.write_webm_temporal, codec="vp9"),
+}
 
 
 def _write_webm(sequence, path: str, *, profile: str = "vp8-keyframe") -> None:
-    if profile not in _WEBM_WRITE_PROFILES:
+    try:
+        function = _WEBM_WRITERS[profile]
+    except KeyError:
         raise ValueError(
-            "WebM writer: profile must be one of "
-            + ", ".join(repr(value) for value in _WEBM_WRITE_PROFILES)
-        )
-    function = (
-        _core.write_webm
-        if profile == "vp8-keyframe"
-        else partial(
-            _core.write_webm_temporal,
-            codec="vp8" if profile == "vp8-temporal" else "vp9",
-        )
-    )
+            f"WebM writer: unknown profile {profile!r}; expected one of "
+            + ", ".join(_WEBM_WRITERS)
+        ) from None
     _core._write_to_file(function, sequence, path)
+
 
 _Y4M_CODEC = Codec(
     "y4m",

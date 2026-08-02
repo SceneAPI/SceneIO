@@ -308,6 +308,44 @@ inline bool emit_file_chunk(const char *data, size_t size) {
     return true;
 }
 
+// Collect native encoder chunks in memory or forward them to the active file
+// sink. Streaming encoders call write() while the GIL is released; the helper
+// reacquires it only for the Python-owned sink boundary.
+class ChunkedOutput {
+public:
+    explicit ChunkedOutput(std::string_view format)
+        : streaming_(active_file_sink != nullptr), format_(format) {}
+
+    void write(const char *data, size_t size) {
+        if (size == 0) return;
+        if (streaming_) {
+            nb::gil_scoped_acquire acquire;
+            if (!emit_file_chunk(data, size))
+                throw std::logic_error(
+                    format_ + ": direct file sink disappeared");
+            return;
+        }
+        if (size > bytes_.max_size() - bytes_.size())
+            throw std::length_error(
+                format_ + ": encoded output is too large");
+        bytes_.append(data, size);
+    }
+
+    void write(std::string_view value) {
+        write(value.data(), value.size());
+    }
+
+    nb::bytes finish() const {
+        if (streaming_) return nb::bytes("", 0);
+        return nb::bytes(bytes_.data(), bytes_.size());
+    }
+
+private:
+    bool streaming_;
+    std::string format_;
+    std::string bytes_;
+};
+
 // Seek the active direct file sink. Streaming containers such as LAZ write
 // forward point chunks, then patch their header and chunk-table pointer.
 // Call with the GIL held; FileSink releases it around the native seek.

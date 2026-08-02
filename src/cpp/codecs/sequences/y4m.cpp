@@ -568,37 +568,6 @@ char interlace_token(const std::string &value) {
         "y4m: unsupported interlace metadata");
 }
 
-class Y4mOutput {
-public:
-    explicit Y4mOutput(bool streaming)
-        : streaming_(streaming) {}
-
-    void write(const char *data, size_t size) {
-        if (size == 0) return;
-        if (streaming_) {
-            nb::gil_scoped_acquire acquire;
-            if (!emit_file_chunk(data, size))
-                throw std::logic_error(
-                    "y4m: direct file sink disappeared");
-            return;
-        }
-        if (size > encoded_.max_size() - encoded_.size())
-            throw std::length_error(
-                "y4m: encoded output is too large");
-        encoded_.append(data, size);
-    }
-
-    void write(const std::string &value) {
-        write(value.data(), value.size());
-    }
-
-    std::string take() { return std::move(encoded_); }
-
-private:
-    bool streaming_;
-    std::string encoded_;
-};
-
 nb::bytes write_y4m(const ImageSequence &sequence) {
     validate_image_sequence(sequence, "y4m write");
     if (sequence.storage_mode != "yuv_planar")
@@ -631,8 +600,7 @@ nb::bytes write_y4m(const ImageSequence &sequence) {
     else if (sequence.matrix == "bt2020")
         matrix = " XCOLORSPACE=BT2020";
 
-    const bool streaming = active_file_sink != nullptr;
-    Y4mOutput output(streaming);
+    ChunkedOutput output("y4m");
     {
         nb::gil_scoped_release release;
         const std::string header =
@@ -670,9 +638,7 @@ nb::bytes write_y4m(const ImageSequence &sequence) {
             }
         }
     }
-    if (streaming) return nb::bytes("", 0);
-    const std::string encoded = output.take();
-    return nb::bytes(encoded.data(), encoded.size());
+    return output.finish();
 }
 
 ImageSequence read_y4m(nb::handle source) {

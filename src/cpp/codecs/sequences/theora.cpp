@@ -542,36 +542,8 @@ void validate_write(const ImageSequence &sequence) {
     validate_write_timing(sequence);
 }
 
-class OggOutput {
-public:
-    explicit OggOutput(bool streaming) : streaming_(streaming) {}
-
-    void page(const ogg_page &page) {
-        write(reinterpret_cast<const char *>(page.header), page.header_len);
-        write(reinterpret_cast<const char *>(page.body), page.body_len);
-    }
-
-    void write(const char *data, size_t size) {
-        if (size == 0) return;
-        if (streaming_) {
-            nb::gil_scoped_acquire acquire;
-            if (!emit_file_chunk(data, size))
-                throw std::logic_error("theora: direct file sink disappeared");
-            return;
-        }
-        if (size > bytes_.max_size() - bytes_.size())
-            throw std::length_error("theora: encoded output is too large");
-        bytes_.append(data, size);
-    }
-
-    std::string take() { return std::move(bytes_); }
-
-private:
-    bool streaming_;
-    std::string bytes_;
-};
-
-void drain_pages(ogg_stream_state &stream, OggOutput &output, bool flush) {
+void drain_pages(
+    ogg_stream_state &stream, ChunkedOutput &output, bool flush) {
     for (;;) {
         ogg_page page{};
         const int status =
@@ -580,7 +552,10 @@ void drain_pages(ogg_stream_state &stream, OggOutput &output, bool flush) {
         if (status == 0) break;
         if (status < 0)
             throw std::runtime_error("theora: libogg page output failed");
-        output.page(page);
+        output.write(
+            reinterpret_cast<const char *>(page.header), page.header_len);
+        output.write(
+            reinterpret_cast<const char *>(page.body), page.body_len);
     }
 }
 
@@ -592,8 +567,7 @@ nb::bytes write_theora(
     if (keyframe_interval < 1 || keyframe_interval > 32768)
         throw std::invalid_argument(
             "theora: keyframe_interval must be in 1..32768");
-    const bool streaming = active_file_sink != nullptr;
-    OggOutput output(streaming);
+    ChunkedOutput output("theora");
     {
         nb::gil_scoped_release release;
         th_info info;
@@ -692,9 +666,7 @@ nb::bytes write_theora(
         }
         drain_pages(stream.value, output, true);
     }
-    if (streaming) return nb::bytes("", 0);
-    const std::string encoded = output.take();
-    return nb::bytes(encoded.data(), encoded.size());
+    return output.finish();
 }
 
 ImageSequence read_theora(nb::handle source) {

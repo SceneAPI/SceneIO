@@ -159,8 +159,11 @@ cmake/
   `bytes`; public single-file reads normally keep a read-only mmap alive for
   the decode. Multi-file and directory containers use format-specific direct
   path adapters. Buffer writers remain available for parity tests, while
-  public writes use native file sinks or container-specific path sinks. A
-  codec depends on `records/` and `io/`, never on another codec.
+  public writes use native file sinks or container-specific path sinks. Native
+  chunked encoders share one buffer-or-file accumulator in `io/common.hpp`, so
+  sink ownership, GIL transitions, size checks, and empty streaming returns do
+  not drift between codecs. A codec depends on `records/` and `io/`, never on
+  another codec.
 - The **Python `io` layer** is the UX + extensibility seam: the registry maps
   a format id to its extensions, magic sniff, reader, writer, optional
   inspector, partial readers, record type, and DataType;
