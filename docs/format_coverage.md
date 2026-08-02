@@ -146,6 +146,13 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > one-pass all-format smoke completes all 72 rows and updates the normalized
 > structure contract to
 > `9d010021697a301eff99ac21203b9f66d042e66b81ccfd0bea7ebdce313b2851`.
+> The first hosted correction pass then exposed two validation-only residuals:
+> libvpx's per-file rows still reflected a stale Windows CRLF worktree, and the
+> instrumented Theora build stopped at its first encode with upstream x86
+> assembly enabled.
+> The follow-up regenerates every libvpx row from canonical LF blobs and uses
+> libtheora's portable C path only when compiler instrumentation is enabled;
+> optimized normal builds and public format behavior are unchanged.
 >
 > **72-format expanded WebM checkpoint (2026-08-01):** the existing `webm`
 > format now also reads and writes temporal VP8 and VP9 through the compact,

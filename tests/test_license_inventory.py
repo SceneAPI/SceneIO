@@ -93,8 +93,8 @@ SOURCE_CLOSURE = {
         "manifest": "SOURCE_MANIFEST.sha256",
         "path_sorted_manifest": True,
         "manifest_sha256": (
-            "cd887188b81d3126e07350bcd9097a41c"
-            "b130ccf4b6df3c9145d600249870ccd"
+            "74539bb9a912b58afc11278a52efe95c"
+            "aea47539045c82bc1e44ae88f495aaa5"
         ),
         "cmake_patterns": (
             (

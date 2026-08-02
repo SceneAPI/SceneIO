@@ -17,6 +17,11 @@
 > suite passes 4,369 tests with six documented skips. The remaining immediate
 > gate is automatic Linux/Windows/macOS plus compiler-instrumented validation
 > at the exact correction commit; release publication remains separate.
+> The first hosted correction run passed every dedicated platform shard. Its
+> remaining repository-byte and instrumented-Theora residuals are addressed by
+> canonical LF source-manifest rows and a portable-C Theora selection confined
+> to instrumented builds; normal optimized builds are unchanged. Hosted rerun
+> confirmation remains required.
 > U0-U5 qualify the bounded provider, records, stage skeleton, and all direct
 > static payload kinds. C6 is closed through the explicit static-only Exit B;
 > C7 local source-to-wheel qualification is complete. At implementation source

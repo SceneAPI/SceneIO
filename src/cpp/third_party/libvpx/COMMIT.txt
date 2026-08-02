@@ -35,8 +35,8 @@ Local integration changes:
   native worker-thread support and requires the exact 155-source closure.
 - Chromium reference files are renamed CHROMIUM_* to make their origin clear.
 
-The repository closure contains 359 files totaling 5075766 bytes before this
+The repository closure contains 359 files totaling 4951208 bytes before this
 provenance record and SOURCE_MANIFEST.sha256. Every closure file is recorded
 in case-insensitive path order in SOURCE_MANIFEST.sha256.
-The 32797-byte manifest has SHA-256:
-cd887188b81d3126e07350bcd9097a41cb130ccf4b6df3c9145d600249870ccd
+The 32439-byte manifest has SHA-256:
+74539bb9a912b58afc11278a52efe95caea47539045c82bc1e44ae88f495aaa5

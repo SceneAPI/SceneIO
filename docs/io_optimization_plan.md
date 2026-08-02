@@ -30,6 +30,14 @@ pending at the correction commit. The one-pass all-format smoke completes 72
 rows with normalized structural SHA-256
 `9d010021697a301eff99ac21203b9f66d042e66b81ccfd0bea7ebdce313b2851`;
 this replaces the stale 67-row parent contract without changing a timing gate.
+The first hosted correction run passed all dedicated platform shards but found
+that libvpx's per-file rows had been generated from a stale CRLF worktree and
+that the compiler-instrumented Theora build stopped at its first encode while
+upstream x86 assembly was enabled.
+The closure now hashes canonical LF blobs throughout and chooses libtheora's
+portable C implementation only for instrumented builds. Normal builds retain
+the optimized x86 path, so this follow-up changes neither the performance
+configuration nor any public I/O behavior.
 The C3/C4 CI correction keeps those operation counts unchanged. Its SOG
 writer uses a pinned deterministic transform and caches transformed
 coordinates: repeated seven-run measurements on the 11.2 MB fixture report
