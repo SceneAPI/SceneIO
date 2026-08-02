@@ -4244,3 +4244,32 @@ modes and records representative upstream catalog/full timings in
 directory catalog/full at 1.724/5.589 ms and indexed-tar at 1.798/4.499 ms;
 SceneIO full materialization records 11.202/10.753 ms on the same compact
 nine-family fixture. These small-fixture timings are evidence, not thresholds.
+
+### Hosted NCore V4 closure
+
+Exact-head CI run
+[`30764227079`](https://github.com/SceneAPI/SceneIO/actions/runs/30764227079)
+passes the complete 4,421-node suite, deterministic 73-row structure, and the
+five-run throughput/memory guard. Its NCore row uses a 3.146 MB logical payload
+and records 95.2 MB/s write, 627.2 MB/s full materialization, 632.5 MB/s public
+path read, 0.863 ms inspection, and 1.991 ms one-frame selection versus about
+5.0 ms full materialization (2.52x). Traced allocation is 3.975 MB for the
+owned full result, 0.691 MB for inspection, and 1.044 MB for the owned selected
+component. The narrow NCore allocation control retains the universal 1 MB cap
+for other rows while requiring this result to remain below both 1.5 MB and 35%
+of its full-read peak.
+
+Instrumented run
+[`30764227087`](https://github.com/SceneAPI/SceneIO/actions/runs/30764227087)
+passes the full ASan/UBSan suite and focused lifetime shard. Build-only run
+[`30764229578`](https://github.com/SceneAPI/SceneIO/actions/runs/30764229578)
+passes the exact source distribution, manylinux2014 GCC 10 x86-64, macOS
+AppleClang arm64, Windows MSVC amd64, combined inventory, and NCore-enabled
+installed-wheel smoke. Artifact contents contain 53 license assets and the
+expected abi3 native member. The contained artifact SHA-256 values are
+`9b59601d7d0008220882162a458d3b21b8dd82db215e59565827c2fdbbada18f`
+for the sdist, `eeda34ba40b825cd45e9be290025ad418a11a1b2a52b1b624f39cb464b24b32d`
+for manylinux, `758c50e959edf1cc075108a76c61adb136e1665e31111e4c81a903b2ffc0065e`
+for macOS, and
+`c2ea12d96c1400abed92303b9eb42960e4e374525306ba9b2db4b2c8fd6bc201`
+for Windows. The tag-only publication job is skipped.

@@ -1,6 +1,6 @@
 # Next-stage implementation checklist
 
-## NCore V4 first-class dataset support (active, 2026-08-02)
+## NCore V4 first-class dataset support (validated, 2026-08-02)
 
 - [x] Pin the Apache-2.0 upstream NCore revision used as the specification and
       isolated oracle; retain `zarr` and `cbor2` as optional dependencies and
@@ -59,9 +59,17 @@
 - [x] Extend the existing build-only release matrix so its optional-provider
       wheel environment installs `sceneio[ncore]`, asserts the live NCore
       capability, and runs the manifest-driven installed-wheel smoke.
-- [ ] Push the reviewed commit and run the user-directed, nonpublishing
-      Linux/macOS/Windows build matrix. Publication remains a separate
-      tag-driven user action.
+- [x] Push the reviewed implementation and pass exact-head CI
+      [`30764227079`](https://github.com/SceneAPI/SceneIO/actions/runs/30764227079),
+      instrumented validation
+      [`30764227087`](https://github.com/SceneAPI/SceneIO/actions/runs/30764227087),
+      and the nonpublishing Linux/macOS/Windows package matrix
+      [`30764229578`](https://github.com/SceneAPI/SceneIO/actions/runs/30764229578)
+      at `8034b5c`. The five-run guard covers all 73 formats and records NCore
+      full/selected traced allocation of 3.975/1.044 MB with a 2.52x selected
+      read speedup. The exact sdist and three abi3 wheels pass inventory and
+      installed-wheel smoke; publication remains a separate tag-driven user
+      action and was skipped.
 
 ## 72-format cross-platform closure correction (2026-08-02)
 

@@ -1121,6 +1121,12 @@ SoA, zero-copy to numpy/torch (DLPack), conventions carried as metadata.
 | `.pts` | `PointCloud` | R+W | independent parser | mandatory count header; XYZ/XYZI/XYZRGB/XYZIRGB; count validation |
 | `.flo` | ndarray (raw) + `FlowField` (typed) | R+W | independent NumPy parser | raw API retains its pinned mapped view; `read_flow`/`write_flow`/`inspect_flow` attach and guard Middlebury semantics |
 
+> **Validated NCore V4 checkpoint (2026-08-02, `8034b5c`):** exact-head CI
+> run `30764227079`, instrumented run `30764227087`, and build-only package
+> run `30764229578` pass. The package run covers manylinux2014 x86-64, macOS
+> arm64, and Windows amd64 abi3 wheels with `sceneio[ncore]` installed-wheel
+> smoke; publication is skipped.
+
 ### ✅ Complete — image / point tier via **permissive native source** (no system libs)
 
 Key reframing (proven out): most "needs a C lib" formats have permissive,

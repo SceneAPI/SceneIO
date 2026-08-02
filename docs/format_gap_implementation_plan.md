@@ -8,7 +8,7 @@
   checkpoint closes at packaged source `2253e0f`; exact-head runs
   `30469273173`, `30469271293`, and build-only package run `30470889876`
   pass with publication skipped.
-- **Current local checkpoint:** the live registry has 73 formats. HDF5/hloc,
+- **Current 73-format checkpoint:** the live registry has 73 formats. HDF5/hloc,
   Zarr v2/v3, TIFF, E57, Parquet/Arrow IPC, OpenVDB, and USD/USDZ are
   implemented through repository-owned adapters around optimized optional
   permissive providers. SceneIO owns schemas, validation, models, detection,
@@ -21,11 +21,12 @@
   generated and reopened by the pinned upstream implementation. Deterministic
   transactional directory/indexed-tar writing is also complete, including
   exact dtype preservation, manifest consistency, destination rollback, and
-  output acceptance by that pinned upstream reader. Local source/wheel
-  inventory and isolated Windows abi3 wheel validation are complete; the
-  user-directed Linux/macOS/Windows build matrix remains active. Authorized
-  build-only package run `30701260601` passes all three wheel platforms with
-  publication skipped.
+  output acceptance by that pinned upstream reader. Implementation head
+  `8034b5c` passes exact-head CI `30764227079`, instrumented validation
+  `30764227087`, and build-only package run `30764229578`; the latter builds
+  the exact sdist plus manylinux2014 x86-64, macOS arm64, and Windows amd64
+  abi3 wheels, verifies combined inventory, and runs the NCore-enabled
+  installed-wheel smoke. Publication is skipped.
 - **Current program gate:** implementation source `47eb2e1` passes the
   nonpublishing package matrix, compiler checks, complete suite, 67-row smoke,
   and every platform shard. The completed five-run guard exposed an overly
