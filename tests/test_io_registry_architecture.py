@@ -240,6 +240,7 @@ def test_repository_coverage_manifest_is_complete_and_resolvable():
     contract_path = ROOT / "tests" / "contracts" / "repository_coverage_v1.toml"
     contract = tomllib.loads(contract_path.read_text(encoding="utf-8"))
     codecs = contract["codec"]
+    assert contract["builtins"] == len(CANONICAL_BUILTIN_IDS)
     assert tuple(item["id"] for item in codecs) == CANONICAL_BUILTIN_IDS
     assert len({item["id"] for item in codecs}) == 72
 

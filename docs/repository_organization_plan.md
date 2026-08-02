@@ -721,6 +721,11 @@ entries rather than inheriting a blanket claim.
 - Give each documentation surface one job: keep current status in
   `format_coverage.md`, active work in `format_gap_implementation_plan.md`, and
   move closed wave evidence to `docs/plans/completed/` with stable links.
+- Keep mechanically knowable current claims under
+  `tests/contracts/documentation_v1.toml`. The runtime built-in manifest and
+  public capability snapshots are authoritative;
+  `tools/documentation_contract.py --check` rejects stale generated sections
+  and `--write` updates them deliberately.
 
 ### R2. Split Python orchestration
 

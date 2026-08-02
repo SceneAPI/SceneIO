@@ -18,6 +18,14 @@ The reviewed, bounded expansion from the current static mesh USD adapter to a
 mixed 3D-CV scene profile is in
 [`usd_3d_cv_implementation_plan.md`](usd_3d_cv_implementation_plan.md).
 
+<!-- sceneio-inventory-summary:start -->
+**Generated registry contract:** SceneIO has **72 built-in formats**: **64**
+single-file, **5** directory, and **3** multi-file containers. **72** are readable,
+**71** writable, and **72** inspectable; **37** formats expose **43** bounded partial
+selectors. **72** provide streaming reads and **69** provide streaming writes. The
+values come directly from `CANONICAL_BUILTIN_IDS` and `sceneio.capabilities()`.
+<!-- sceneio-inventory-summary:end -->
+
 Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 
 > Status note: everything marked ✅ is implemented by the compiled
@@ -1237,8 +1245,10 @@ expanded 72-format benchmark/oracles.
 <!-- sceneio-capabilities:start -->
 ### Registry capability snapshot
 
-This table is generated conceptually from `sceneio.capabilities()` and checked
-byte-for-byte against the live registry by `tests/test_io_capabilities.py`.
+This table is generated from `sceneio.capabilities()` by
+`tools/documentation_contract.py` and checked byte-for-byte in CI. Run
+`.venv/Scripts/python.exe tools/documentation_contract.py --write` after an
+intentional registry change.
 Streaming means the public path avoids a whole-file/output-sized Python
 `bytes`; it does not imply that the underlying compression algorithm is
 incremental.
@@ -1329,8 +1339,8 @@ record rather than expanded into this summary.
 ### Optional native-feature manifest
 
 `sceneio.native_features()` reports build-time integrations even when they are
-not compiled into the current extension. The table is checked byte-for-byte
-against that public manifest.
+not compiled into the current extension. The contract tool generates this
+table and CI checks it byte-for-byte against that public manifest.
 
 | Feature | CMake option | Compiled | Planned format ids |
 |---|---|---|---|

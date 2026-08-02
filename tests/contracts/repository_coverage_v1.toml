@@ -1,5 +1,5 @@
 schema_version = 1
-builtins = 69
+builtins = 72
 
 # Test-only repository coverage; runtime extensions are intentionally exempt.
 

@@ -6,6 +6,7 @@ import hashlib
 import html
 import re
 import unicodedata
+from collections import Counter
 from pathlib import Path, PurePosixPath
 from urllib.parse import unquote
 
@@ -13,6 +14,7 @@ import pytest
 
 import sceneio
 from sceneio.io._builtin_manifest import CANONICAL_BUILTIN_IDS
+from tools import documentation_contract
 
 ROOT = Path(__file__).parents[1]
 DOCS = ROOT / "docs"
@@ -26,7 +28,6 @@ ARCHIVE_PAYLOAD_DIGESTS = {
         "91e5f41f9147ee80a213cc8c7d4c399db13fd83bdc4710fd2b4adde2ae2c28ca",
     ),
 }
-
 _INLINE_LINK = re.compile(
     r"!?\[[^\]]*\]\((?P<target><[^>]+>|[^\s)]+)"
 )
@@ -172,15 +173,77 @@ def test_exact_case_check_uses_lexical_link_components_on_windows():
 
 def test_readme_links_every_authoritative_engineering_entry_point():
     targets = _destinations((ROOT / "README.md").read_text(encoding="utf-8"))
+    contract = documentation_contract.load_contract(ROOT)
     assert {
-        "docs/format_coverage.md",
-        "docs/coverage_roadmap.md",
-        "docs/core_architecture.md",
-        "docs/repository_organization_plan.md",
-        "docs/next_stage_implementation_checklist.md",
-        "docs/format_gap_implementation_plan.md",
-        "docs/plans/completed/README.md",
+        path.as_posix() for path in contract.readme_entry_points
     } <= targets
+
+
+def test_generated_current_facts_match_authoritative_runtime_sources():
+    assert documentation_contract.synchronize_documentation(root=ROOT) == ()
+    summaries = []
+    for path in (ROOT / "README.md", DOCS / "format_coverage.md"):
+        document = path.read_text(encoding="utf-8")
+        match = re.search(
+            r"<!-- sceneio-inventory-summary:start -->\n"
+            r"(.*?)\n"
+            r"<!-- sceneio-inventory-summary:end -->",
+            document,
+            re.DOTALL,
+        )
+        assert match is not None
+        summaries.append(" ".join(match.group(1).split()))
+    assert len(set(summaries)) == 1
+
+    capabilities = sceneio.capabilities()
+    containers = Counter(cap.container_kind for cap in capabilities.values())
+    expected = (
+        "**Generated registry contract:** SceneIO has "
+        f"**{len(capabilities)} built-in formats**: **{containers['file']}** "
+        f"single-file, **{containers['directory']}** directory, and "
+        f"**{containers['multi_file']}** multi-file containers. "
+        f"**{sum(cap.can_read for cap in capabilities.values())}** are readable, "
+        f"**{sum(cap.can_write for cap in capabilities.values())}** writable, and "
+        f"**{sum(cap.can_inspect for cap in capabilities.values())}** inspectable; "
+        f"**{sum(bool(cap.partial_selectors) for cap in capabilities.values())}** "
+        "formats expose "
+        f"**{sum(len(cap.partial_selectors) for cap in capabilities.values())}** "
+        "bounded partial selectors. "
+        f"**{sum(cap.streams_read for cap in capabilities.values())}** provide "
+        "streaming reads and "
+        f"**{sum(cap.streams_write for cap in capabilities.values())}** provide "
+        "streaming writes. The values come directly from "
+        "`CANONICAL_BUILTIN_IDS` and `sceneio.capabilities()`."
+    )
+    assert summaries == [expected, expected]
+
+
+def test_builtin_count_contract_rejects_stale_metadata(monkeypatch):
+    monkeypatch.setattr(
+        documentation_contract,
+        "CANONICAL_BUILTIN_IDS",
+        CANONICAL_BUILTIN_IDS[:-1],
+    )
+    with pytest.raises(
+        documentation_contract.DocumentationContractError,
+        match="expected_builtin_count disagrees",
+    ):
+        documentation_contract.load_contract(ROOT)
+
+
+def test_generated_section_requires_one_balanced_marker_pair():
+    assert documentation_contract.replace_generated_section(
+        "<!-- example:start -->\nstale\n<!-- example:end -->",
+        "example",
+        "current",
+    ) == "<!-- example:start -->\ncurrent\n<!-- example:end -->"
+    with pytest.raises(
+        documentation_contract.DocumentationContractError,
+        match="expected exactly one",
+    ):
+        documentation_contract.replace_generated_section(
+            "<!-- example:start -->\nold", "example", "new"
+        )
 
 
 def test_active_document_roles_and_checkpoint_ownership_are_explicit():

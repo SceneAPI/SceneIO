@@ -466,8 +466,8 @@
     "last": "tests/test_points_binary.py::test_bad_magic_rejected"
   },
   "pytest_candidate_collection": {
-    "count": 4372,
-    "sorted_normalized_node_ids_sha256": "a0a6ffc95c2a155cbfb26631e9a388b75cc17a668e498b591080b17f74c18eb2",
+    "count": 4375,
+    "sorted_normalized_node_ids_sha256": "e9920b8ca8046a27ee7d6b5065f113ab636c50d15c68938afd2732672e57550f",
     "added_nodes": [
       "tests/codecs/test_animated_webp.py::test_sceneio_writer_is_lossless_and_oracle_readable",
       "tests/codecs/test_animated_webp.py::test_pillow_writer_is_sceneio_readable_bit_exact",
@@ -1038,6 +1038,9 @@
       "tests/test_license_inventory.py::test_repository_contained_native_sources_match_recorded_hashes",
       "tests/test_license_inventory.py::test_repository_contained_native_licenses_are_exact_distribution_copies",
       "tests/test_license_inventory.py::test_repository_contained_native_sources_replace_their_fetches",
+      "tests/test_documentation_consistency.py::test_generated_current_facts_match_authoritative_runtime_sources",
+      "tests/test_documentation_consistency.py::test_builtin_count_contract_rejects_stale_metadata",
+      "tests/test_documentation_consistency.py::test_generated_section_requires_one_balanced_marker_pair",
       "tests/test_distribution_verifier.py::test_runtime_source_assets_allow_only_exact_openvdb_seed_paths",
       "tests/test_distribution_verifier.py::test_distribution_verifier_accepts_expected_inventory",
       "tests/test_distribution_verifier.py::test_distribution_verifier_accepts_platform_stable_abi_member[windows]",
