@@ -61,7 +61,16 @@
       but stops at the still-pinned 4,375 collection string before execution;
       its lifetime shard passes. The collection contract and workflow now pin
       4,378, and the complete local suite passes 4,372 with six documented
-      skips.
+      skips. At count-correction commit `67acc7b`, compiler-instrumented run
+      `30740026804` passes that exact suite and lifetime shard. CI run
+      `30740026814` passes its suite, every platform/compiler shard, and the
+      72-row smoke. Its final guard records animated AVIF selection at 1.30x
+      faster than full decode with 16.8 MB versus 25.2 MB traced allocation,
+      then rejects the materialized two-frame output under the universal 1 MB
+      metadata/selection cap. Classify only this row by an 18 MB ceiling and
+      75%-of-full limit; retain every existing cap. The local three-run replay
+      passes at 1.33x and 25.2/16.8 MB. Final automatic confirmation remains
+      pending for this directional correction.
 - [x] Re-run the three-run Theora benchmark after the arithmetic correction:
       17 MB/s encode, 79 MB/s in-memory decode, 76 MB/s mmap read, zero traced
       mmap/sink allocation, and the existing 18.27x inspect/1.79x partial-read

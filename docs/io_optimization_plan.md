@@ -34,9 +34,18 @@ inspect/selected-frame comparisons were declared but not emitted by the
 generic path runner. The follow-up records those timings and gives path-range
 and COLMAP DB image/pair selectors distinct required metric keys. The first
 follow-up compiler run `30739519901` collects all 4,378 tests but its full job
-stops at the stale 4,375 count assertion; the lifetime shard passes. The exact
-count/hash and workflow assertion now match 4,378. Final hosted confirmation is
-pending at the count-correction commit. The one-pass all-format smoke completes 72
+stops at the stale 4,375 count assertion; the lifetime shard passes. At the
+count-correction commit `67acc7b`, compiler-instrumented run `30740026804`
+passes the exact 4,378-test suite and lifetime shard. CI run `30740026814`
+passes the full suite, all platform/compiler shards, and the 72-row structural
+smoke. Its terminal five-run guard measures animated AVIF frame selection at
+16.8 MB versus 25.2 MB for full decode, then rejects that owned two-frame
+result under the blanket 1 MB selector cap. The current narrow correction
+requires animated AVIF selection to stay below both 18 MB and 75% of full-read
+allocation; every other existing cap remains unchanged. A three-run local
+remeasurement records 1.33x partial-read speedup and the same 25.2/16.8 MB
+allocation reduction. Final hosted confirmation is pending at this directional
+classification correction. The one-pass all-format smoke completes 72
 rows with normalized structural SHA-256
 `9d010021697a301eff99ac21203b9f66d042e66b81ccfd0bea7ebdce313b2851`;
 this replaces the stale 67-row parent contract without changing a timing gate.

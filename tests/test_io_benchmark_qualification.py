@@ -338,6 +338,7 @@ def test_o5_directional_allocation_controls_are_narrow_and_accept_gains():
         "usdz",
     } == set(qualification.O5_INSPECTION_DIRECTIONAL_ALLOCATION_LIMITS)
     assert {
+        "animated_avif",
         "parquet",
     } == set(qualification.O5_PARTIAL_DIRECTIONAL_ALLOCATION_LIMITS)
     assert dict(qualification.O5_INSPECTION_DIRECTIONAL_ALLOCATION_LIMITS) == {
@@ -345,6 +346,7 @@ def test_o5_directional_allocation_controls_are_narrow_and_accept_gains():
         "usdz": (8.0, 0.8),
     }
     assert dict(qualification.O5_PARTIAL_DIRECTIONAL_ALLOCATION_LIMITS) == {
+        "animated_avif": (18.0, 0.75),
         "parquet": (2.0, 0.25),
     }
     qualification.validate_o5_allocation_controls(
@@ -360,11 +362,31 @@ def test_o5_directional_allocation_controls_are_narrow_and_accept_gains():
     )
     qualification.validate_o5_allocation_controls(
         "partial read",
-        {"png": (3.2, 0.01), "parquet": (18.4, 1.6)},
+        {
+            "animated_avif": (25.2, 16.8),
+            "png": (3.2, 0.01),
+            "parquet": (18.4, 1.6),
+        },
         directional_limits=(
             qualification.O5_PARTIAL_DIRECTIONAL_ALLOCATION_LIMITS
         ),
     )
+    for full_peak, partial_peak in ((25.2, 18.0), (20.0, 16.0)):
+        with pytest.raises(
+            RuntimeError,
+            match="partial read failed directional traced-allocation guard: "
+            "animated_avif",
+        ):
+            qualification.validate_o5_allocation_controls(
+                "partial read",
+                {
+                    "animated_avif": (full_peak, partial_peak),
+                    "parquet": (18.4, 1.6),
+                },
+                directional_limits=(
+                    qualification.O5_PARTIAL_DIRECTIONAL_ALLOCATION_LIMITS
+                ),
+            )
 
 
 @pytest.mark.parametrize(

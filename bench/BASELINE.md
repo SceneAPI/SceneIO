@@ -4182,3 +4182,19 @@ execution because the workflow still expected the pre-test count of 4,375.
 The collection contract now records count 4,378 and normalized node-id SHA-256
 `bf49c354676f3cc9bc93bd1c37fd5819d1bebf398c298fede6b68940f23faba5`;
 the complete local suite passes 4,372 tests with six documented skips.
+
+At count-correction commit `67acc7b`, compiler-instrumented run `30740026804`
+passes the exact 4,378-test suite and lifetime shard. CI run `30740026814`
+passes the complete suite, all ten dedicated platform/compiler jobs, and the
+72-row smoke with the same normalized structure. The five-run guard completes
+all rows and measures animated AVIF full/selected decode at 381.206/294.178 ms
+(1.30x), with traced allocation reduced from 25.2 to 16.8 MB. It then rejects
+that result because the universal 1 MB cap had treated the owned two-frame
+output like a metadata-only result.
+
+The correction retains the 1 MB cap for all other applicable partial rows and
+qualifies animated AVIF by both an 18 MB ceiling and a 75%-of-full allocation
+limit. A three-run local replay records 207.127/156.125 ms (1.33x), the same
+25.179/16.791 MB reduction, and direct Pillow selected-frame comparison at
+161.839 ms. The focused 35-test qualification module and Ruff pass; final
+hosted confirmation remains pending at the directional-classification commit.

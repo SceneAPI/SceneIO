@@ -23,8 +23,14 @@
 > Pillow timings and distinguishes that range metric from COLMAP DB's two
 > selector metrics. Follow-up compiler run `30739519901` collects all 4,378
 > tests but stops at the stale 4,375 count assertion; its lifetime shard
-> passes. The exact collection contract and workflow now pin 4,378. Final
-> hosted confirmation remains pending; release publication remains separate.
+> passes. At count-correction commit `67acc7b`, compiler-instrumented run
+> `30740026804` passes the exact suite and lifetime shard. CI `30740026814`
+> passes the suite, all platform/compiler shards, and the 72-row smoke before
+> its terminal guard correctly measures animated AVIF's two-frame selection at
+> 16.8 MB versus 25.2 MB for full decode. The follow-up classifies that owned
+> output by an 18 MB ceiling and 75%-of-full limit instead of the metadata-like
+> 1 MB cap; all existing limits remain unchanged. Final hosted confirmation
+> remains pending; release publication remains separate.
 > The first hosted correction run passed every dedicated platform shard. Its
 > remaining repository-byte and instrumented-Theora residuals are addressed by
 > canonical LF source-manifest rows for libvpx/libogg/libtheora and a documented

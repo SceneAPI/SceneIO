@@ -26,10 +26,15 @@ already-supported animated AVIF inspect/frame-range comparison. The follow-up
 records direct Pillow metadata and selected-frame timings and keeps them
 distinct from COLMAP DB's image/pair selector metrics. Follow-up compiler run
 `30739519901` collects all 4,378 tests but stops at the stale 4,375 count
-assertion; its lifetime shard passes. The exact count/hash and workflow now
-pin 4,378, and the complete local suite passes 4,372 with six documented
-skips. Final hosted confirmation is pending; format capabilities are
-unchanged.
+assertion; its lifetime shard passes. At count-correction commit `67acc7b`,
+compiler-instrumented run `30740026804` passes the exact suite and lifetime
+shard. CI `30740026814` passes the suite, all dedicated platform/compiler jobs,
+and the 72-row smoke; its terminal guard then shows that animated AVIF's
+selected two-frame output uses 16.8 MB versus 25.2 MB for full decode. The
+current correction gives that materialized output a narrow 18 MB and
+75%-of-full directional limit while preserving all existing caps. The complete
+local suite passes 4,372 tests with six documented skips; final hosted
+confirmation is pending and format capabilities are unchanged.
 
 <!-- sceneio-inventory-summary:start -->
 **Generated registry contract:** SceneIO has **72 built-in formats**: **64**
