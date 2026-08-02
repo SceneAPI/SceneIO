@@ -41,20 +41,27 @@
       reopened by pinned upstream revision
       `12f4429522c98356c5a46eee1d84f29bd846e367` covers all nine standard
       component families.
-- [ ] Add transactional directory and indexed-tar writers. Require deterministic
+- [x] Add transactional directory and indexed-tar writers. Require deterministic
       metadata/component order, exact dtype preservation, upstream-reader
       acceptance, SceneIO read-after-write equality, manifest consistency, and
       recoverable destination replacement. A record the V4 profile cannot
       represent must be refused with a clear error rather than converted.
-- [ ] Extend the benchmark from lazy catalog open to typed full/selected reads
+- [x] Extend the benchmark from lazy catalog open to typed full/selected reads
       and directory/indexed-tar writes. Record independent upstream timings,
       traced allocation and RSS for generated large fixtures, and selected-read
       equality with a full-read slice.
-- [ ] Run the complete local suite and Ruff, generated 100 MB-plus fixtures,
-      random valid/malformed differential cases, installed-wheel smoke, source
-      and wheel inventory, and the existing automatic Linux/macOS/Windows build
-      matrix. Keep hosted validation and publication as explicit user-directed
-      workflow actions.
+- [x] Pass the complete 4,421-node local collection (4,415 passed and six
+      documented skips), Ruff, the documentation contract, generated
+      100 MB-plus benchmark fixture, randomized dtype/chunk differential cases,
+      pinned-upstream reopen/checksum verification, exact source/wheel
+      inventory, and an isolated Windows cp312-abi3 wheel smoke with
+      `sceneio[ncore]` installed.
+- [x] Extend the existing build-only release matrix so its optional-provider
+      wheel environment installs `sceneio[ncore]`, asserts the live NCore
+      capability, and runs the manifest-driven installed-wheel smoke.
+- [ ] Push the reviewed commit and run the user-directed, nonpublishing
+      Linux/macOS/Windows build matrix. Publication remains a separate
+      tag-driven user action.
 
 ## 72-format cross-platform closure correction (2026-08-02)
 

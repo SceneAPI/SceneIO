@@ -1797,6 +1797,12 @@ def _ncore_v4(root: Path) -> None:
     )
     assert semantic.profile == "poses/v1"
     assert semantic.items == ()
+    exported = root / "ncore-export"
+    sceneio.write(dataset, exported, format="ncore_v4")
+    assert (exported / "dataset.ncore4.zarr.itar").is_file()
+    authored = sceneio.read(exported / "dataset.ncore4.json")
+    assert authored.sequence_id == dataset.sequence_id
+    assert tuple(item.id for item in authored.components) == ("poses:rig",)
 
 
 def _avif_formats(root: Path) -> None:

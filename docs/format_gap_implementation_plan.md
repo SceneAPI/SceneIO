@@ -18,8 +18,12 @@
   a repository-owned read/inspect implementation for local directory and
   indexed-tar stores plus sequence manifests. Exact generic array loading and
   all nine standard v1 semantic profiles are complete against a fixture
-  generated and reopened by the pinned upstream implementation; transactional
-  directory/indexed-tar writing remains the active implementation unit. Authorized
+  generated and reopened by the pinned upstream implementation. Deterministic
+  transactional directory/indexed-tar writing is also complete, including
+  exact dtype preservation, manifest consistency, destination rollback, and
+  output acceptance by that pinned upstream reader. Local source/wheel
+  inventory and isolated Windows abi3 wheel validation are complete; the
+  user-directed Linux/macOS/Windows build matrix remains active. Authorized
   build-only package run `30701260601` passes all three wheel platforms with
   publication skipped.
 - **Current program gate:** implementation source `47eb2e1` passes the

@@ -9,6 +9,7 @@ import shutil
 import struct
 import tarfile
 import tracemalloc
+from dataclasses import replace
 from pathlib import Path
 
 import cbor2
@@ -523,6 +524,16 @@ def test_component_decoder_preserves_zarr_v2_chunk_and_dtype_semantics(tmp_path)
         loaded.array("complex_fill"),
         np.full(2, 1.25 - 2.5j, dtype=np.complex64),
     )
+
+    complete = sceneio.materialize_ncore_v4(path)
+    rewritten = tmp_path / "rewritten-zarr-semantics"
+    sceneio.write_ncore_v4(complete, rewritten, storage="itar")
+    round_trip = sceneio.materialize_ncore_v4(rewritten)
+    for name, expected in complete.components[0].arrays.items():
+        actual = round_trip.components[0].arrays[name]
+        assert actual.dtype == expected.dtype
+        assert actual.shape == expected.shape
+        assert actual.tobytes() == expected.tobytes()
 
 
 def _sensor_metadata() -> tuple[dict[str, object], dict[str, bytes]]:
@@ -1216,3 +1227,312 @@ def test_component_selection_rejects_non_temporal_component(tmp_path):
             path,
             NCoreSelection("poses", "rig", frames=(0, 1)),
         )
+
+
+def _tree_payloads(path: Path) -> dict[str, bytes]:
+    return {
+        item.relative_to(path).as_posix(): item.read_bytes()
+        for item in sorted(path.rglob("*"))
+        if item.is_file()
+    }
+
+
+def _assert_materialized_equal(expected, actual) -> None:
+    assert expected.sequence_id == actual.sequence_id
+    assert expected.timestamp_interval_us == actual.timestamp_interval_us
+    assert expected.generic_metadata == actual.generic_metadata
+    assert tuple(item.component.id for item in expected.components) == tuple(
+        item.component.id for item in actual.components
+    )
+    for left, right in zip(expected.components, actual.components, strict=True):
+        assert left.component.version == right.component.version
+        assert left.component.group == right.component.group
+        assert left.component.generic_metadata == right.component.generic_metadata
+        assert tuple(
+            (group.name, group.attributes) for group in left.groups
+        ) == tuple((group.name, group.attributes) for group in right.groups)
+        assert tuple(left.arrays) == tuple(right.arrays)
+        for name in left.arrays:
+            assert left.arrays[name].dtype == right.arrays[name].dtype
+            assert left.arrays[name].shape == right.arrays[name].shape
+            assert left.arrays[name].tobytes() == right.arrays[name].tobytes()
+
+
+@pytest.mark.parametrize("storage", ["directory", "itar"])
+def test_writer_round_trips_all_standard_profiles_and_is_deterministic(
+    tmp_path,
+    storage,
+):
+    source = FIXTURES / "ncore_v4_standard_v1.ncore4.zarr.itar"
+    expected = sceneio.materialize_ncore_v4(source)
+    first = tmp_path / f"first-{storage}"
+    second = tmp_path / f"second-{storage}"
+
+    sceneio.write_ncore_v4(expected, first, storage=storage)
+    sceneio.write_ncore_v4(expected, second, storage=storage)
+
+    assert _tree_payloads(first) == _tree_payloads(second)
+    _assert_materialized_equal(expected, sceneio.materialize_ncore_v4(first))
+    manifest = first / "dataset.ncore4.json"
+    _assert_materialized_equal(
+        expected,
+        sceneio.materialize_ncore_v4(manifest),
+    )
+    document = json.loads(manifest.read_text(encoding="utf-8"))
+    assert document["sequence_id"] == expected.sequence_id
+    assert len(document["component_stores"]) == 1
+    assert len(document["component_stores"][0]["md5"]) == 32
+
+
+def test_registry_writer_defaults_to_indexed_tar_and_reports_capability(tmp_path):
+    source = FIXTURES / "ncore_v4_standard_v1.ncore4.zarr.itar"
+    dataset = sceneio.read(source)
+    destination = tmp_path / "export"
+
+    sceneio.write(dataset, destination, format="ncore_v4")
+
+    assert (destination / "dataset.ncore4.zarr.itar").is_file()
+    assert sceneio.detect(destination) == "ncore_v4"
+    capability = sceneio.capabilities("ncore_v4")
+    assert capability.can_write
+    assert capability.streams_write
+    assert "deterministic_indexed_tar_write" in capability.supported_features
+
+
+def test_writer_preserves_multiple_component_groups_and_manifest(tmp_path):
+    calibration = tmp_path / "calibration.ncore4.zarr"
+    sensors = tmp_path / "sensors.ncore4.zarr"
+    _write_directory(calibration, _metadata(group="calibration"))
+    metadata = _metadata(group="sensors")
+    metadata["poses/rig/.zattrs"] = {
+        **metadata["poses/rig/.zattrs"],
+        "component_instance_name": "world",
+    }
+    for suffix in (".zgroup", ".zattrs"):
+        metadata[f"poses/world/{suffix}"] = metadata.pop(
+            f"poses/rig/{suffix}"
+        )
+    for suffix in (".zarray", ".zattrs"):
+        metadata[f"poses/world/value/{suffix}"] = metadata.pop(
+            f"poses/rig/value/{suffix}"
+        )
+    _write_directory(sensors, metadata)
+    left = sceneio.materialize_ncore_v4(calibration)
+    right = sceneio.materialize_ncore_v4(sensors)
+    complete = sceneio.NCoreDatasetData(
+        sequence_id=left.sequence_id,
+        timestamp_interval_us=left.timestamp_interval_us,
+        generic_metadata=left.generic_metadata,
+        components=left.components + right.components,
+    )
+
+    destination = tmp_path / "grouped"
+    sceneio.write_ncore_v4(complete, destination, storage="directory")
+
+    catalog = sceneio.read(destination)
+    assert tuple(store.group for store in catalog.stores) == (
+        "calibration",
+        "sensors",
+    )
+    assert tuple(component.id for component in catalog.components) == (
+        "poses:rig",
+        "poses:world",
+    )
+    assert len(tuple(destination.glob("*.zarr"))) == 2
+    manifest = sceneio.read(destination / "dataset.ncore4.json")
+    assert manifest.components == catalog.components
+
+
+def test_writer_refuses_partial_components_and_preserves_destination(
+    tmp_path,
+    monkeypatch,
+):
+    source = tmp_path / "source.ncore4.zarr"
+    metadata, chunks = _sensor_metadata()
+    _write_custom_directory(source, metadata, chunks)
+    full = sceneio.materialize_ncore_v4(source)
+    partial = replace(
+        full.components[0],
+        selection=NCoreSelection("cameras", "front", frames=(0, 1)),
+        selected_items=("110",),
+    )
+    with pytest.raises(ValueError, match="partial selection"):
+        sceneio.NCoreDatasetData(
+            sequence_id=full.sequence_id,
+            timestamp_interval_us=full.timestamp_interval_us,
+            generic_metadata=full.generic_metadata,
+            components=(partial,),
+        )
+
+    destination = tmp_path / "existing"
+    destination.mkdir()
+    marker = destination / "marker.txt"
+    marker.write_text("original", encoding="utf-8")
+    from sceneio.io._ncore import writer as ncore_writer
+
+    original_replace = ncore_writer._replace_path
+    calls = 0
+
+    def interrupted_replace(source_path, destination_path):
+        nonlocal calls
+        calls += 1
+        if calls == 2:
+            raise OSError("injected replacement interruption")
+        original_replace(source_path, destination_path)
+
+    monkeypatch.setattr(ncore_writer, "_replace_path", interrupted_replace)
+    with pytest.raises(OSError, match="injected replacement"):
+        sceneio.write_ncore_v4(full, destination)
+    assert marker.read_text(encoding="utf-8") == "original"
+    assert not tuple(tmp_path.glob(".existing.sceneio-previous-*"))
+
+
+def _generic_dataset_data(
+    arrays: dict[str, np.ndarray],
+    chunks: dict[str, tuple[int, ...]],
+):
+    component = sceneio.NCoreComponent(
+        "custom_arrays",
+        "randomized",
+        "v7",
+        "",
+        0,
+        generic_metadata={"purpose": "writer-verification"},
+        arrays=tuple(
+            sceneio.NCoreArray(
+                name,
+                value.shape,
+                value.dtype.str,
+                chunks[name],
+                {"index": index},
+            )
+            for index, (name, value) in enumerate(arrays.items())
+        ),
+    )
+    data = sceneio.NCoreComponentData(
+        component,
+        sceneio.NCoreSelection("custom_arrays", "randomized", group=""),
+        arrays,
+        (
+            sceneio.NCoreGroup(
+                "",
+                {
+                    "component_name": "custom_arrays",
+                    "component_instance_name": "randomized",
+                    "component_version": "v7",
+                    "generic_meta_data": {
+                        "purpose": "writer-verification"
+                    },
+                },
+            ),
+        ),
+    )
+    return sceneio.NCoreDatasetData(
+        "randomized-sequence",
+        (10, 20),
+        {"seed": 420},
+        (data,),
+    )
+
+
+def test_writer_randomized_mixed_dtype_chunk_differential(tmp_path):
+    rng = np.random.default_rng(420)
+    structured = np.dtype([("xy", ">f4", (2,)), ("id", "<u2")])
+    arrays = {
+        "a_bool": rng.integers(0, 2, (7, 5), dtype=np.uint8).astype(bool),
+        "b_u8": rng.integers(0, 256, 17, dtype=np.uint8),
+        "c_be_i2": rng.integers(-2000, 2000, (9, 3), dtype=np.int16).astype(
+            ">i2"
+        ),
+        "d_u64": rng.integers(0, 1 << 40, 11, dtype=np.uint64),
+        "e_f32": rng.standard_normal((6, 4)).astype(np.float32),
+        "f_c64": (
+            rng.standard_normal(13) + 1j * rng.standard_normal(13)
+        ).astype(np.complex64),
+        "g_struct": np.array(
+            [([1.25, 2.5], 7), ([3.75, 4.0], 9)], dtype=structured
+        ),
+        "h_scalar": np.array(23, dtype=np.int32),
+        "i_empty": np.empty((0, 3), dtype=np.float64),
+    }
+    chunks = {
+        "a_bool": (4, 3),
+        "b_u8": (6,),
+        "c_be_i2": (4, 2),
+        "d_u64": (5,),
+        "e_f32": (5, 3),
+        "f_c64": (4,),
+        "g_struct": (1,),
+        "h_scalar": (),
+        "i_empty": (2, 3),
+    }
+    expected = _generic_dataset_data(arrays, chunks)
+    for storage in ("directory", "itar"):
+        destination = tmp_path / storage
+        sceneio.write_ncore_v4(expected, destination, storage=storage)
+        _assert_materialized_equal(
+            expected,
+            sceneio.materialize_ncore_v4(destination),
+        )
+
+    conflict = replace(
+        expected.components[0],
+        groups=(*expected.components[0].groups, sceneio.NCoreGroup("a_bool")),
+    )
+    malformed = replace(expected, components=(conflict,))
+    with pytest.raises(ValueError, match="both an array and a group"):
+        sceneio.write_ncore_v4(malformed, tmp_path / "conflict")
+
+    wrong_root = replace(
+        expected.components[0],
+        groups=(
+            sceneio.NCoreGroup(
+                "",
+                {
+                    "component_name": "different",
+                    "component_instance_name": "randomized",
+                    "component_version": "v7",
+                    "generic_meta_data": {
+                        "purpose": "writer-verification"
+                    },
+                },
+            ),
+        ),
+    )
+    with pytest.raises(ValueError, match="disagrees with the component catalog"):
+        sceneio.write_ncore_v4(
+            replace(expected, components=(wrong_root,)),
+            tmp_path / "wrong-root",
+        )
+    with pytest.raises(ValueError, match="relative"):
+        replace(
+            expected.components[0].component.arrays[0],
+            name=r"nested\array",
+        )
+    with pytest.raises(ValueError, match="relative"):
+        sceneio.NCoreGroup(r"nested\group")
+
+
+def test_writer_large_generated_payload_has_chunk_bounded_allocation(tmp_path):
+    positions = np.arange(2_000_000 * 3, dtype=np.float32).reshape(
+        2_000_000, 3
+    )
+    dataset = _generic_dataset_data(
+        {"positions": positions},
+        {"positions": (65_536, 3)},
+    )
+    warm = _generic_dataset_data(
+        {"positions": positions[:1]},
+        {"positions": (1, 3)},
+    )
+    sceneio.write_ncore_v4(warm, tmp_path / "warm")
+
+    tracemalloc.start()
+    sceneio.write_ncore_v4(dataset, tmp_path / "large")
+    _current, peak = tracemalloc.get_traced_memory()
+    tracemalloc.stop()
+
+    assert positions.nbytes == 24_000_000
+    assert peak < 8 * 1024 * 1024
+    actual = sceneio.materialize_ncore_v4(tmp_path / "large")
+    assert actual.components[0].array("positions").tobytes() == positions.tobytes()

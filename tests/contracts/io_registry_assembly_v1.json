@@ -77,7 +77,7 @@
       "hdf5": "33e66344c099145ee6e6cf2e7ea49ab7dfc5318b34ce5ad949b0c5facc802cb5",
       "hloc_features": "5f3d5916bc1a61b0b736f4ab86d26ee935f61a3b6f47e68d3d17bfed05cb637f",
       "hloc_matches": "7382dc0f72455e7c5908804a3843ba392c494578edec1454c9655f74d8f24d79",
-      "ncore_v4": "f71b23c6e188b5a791154671d2f279cd2024a09b8ecdd4911dee4f0b6500022c",
+      "ncore_v4": "622ded1dbb9d1e0087d931df026d6443234b16d78c9a9ce62d380ab9f3630bde",
       "zarr": "0b87633299a5bc87d8224c6e1abb3bf56372e70a4970b6aaa67deabe94f20bd5",
       "tiff": "0081bf989dd43ae44961631b2792838f8845a2188fe050147774b408b1cbe3a2",
       "e57": "86309dcebb17d7c3ca1e8bfea11647bf145b2e7aed9d9e7e392b3593cbdb2ebc",
@@ -426,6 +426,7 @@
       },
       "ncore_v4": {
         "read": "09b5c7834c67c653d0bed07276af9be27f93788926849f85ea0b956fa3fcadbd",
+        "write": "693b40d87e8218fcd4a44b6150a3bf87c7a76fa6e86b8241538cfde4a778d9f4",
         "inspect": "128e28b60dfc1f00eaf9d44e89938e095fc4cf916d51709ff20c1ca398b984f7"
       },
       "zarr": {
@@ -471,8 +472,8 @@
     "last": "tests/test_points_binary.py::test_bad_magic_rejected"
   },
   "pytest_candidate_collection": {
-    "count": 4413,
-    "sorted_normalized_node_ids_sha256": "c9a4f0b057ad06656e943a9d9b23e01c234a3b439d610290ecf657293cdbf19b",
+    "count": 4421,
+    "sorted_normalized_node_ids_sha256": "ec48dc1a69205dd3c7e2fdc228ca24df13b1b57f6378b4196c5e813c507f56c4",
     "added_nodes": [
       "tests/codecs/test_animated_webp.py::test_sceneio_writer_is_lossless_and_oracle_readable",
       "tests/codecs/test_animated_webp.py::test_pillow_writer_is_sceneio_readable_bit_exact",
@@ -1805,7 +1806,15 @@
       "tests/test_import_guards.py::test_no_family_imports[io/_ncore/profiles/common.py]",
       "tests/test_import_guards.py::test_no_family_imports[io/_ncore/profiles/scene.py]",
       "tests/test_import_guards.py::test_no_family_imports[io/_ncore/profiles/sensors.py]",
-      "tests/test_import_guards.py::test_no_family_imports[io/_ncore/projection.py]"
+      "tests/test_import_guards.py::test_no_family_imports[io/_ncore/projection.py]",
+      "tests/codecs/test_ncore_v4.py::test_writer_round_trips_all_standard_profiles_and_is_deterministic[directory]",
+      "tests/codecs/test_ncore_v4.py::test_writer_round_trips_all_standard_profiles_and_is_deterministic[itar]",
+      "tests/codecs/test_ncore_v4.py::test_registry_writer_defaults_to_indexed_tar_and_reports_capability",
+      "tests/codecs/test_ncore_v4.py::test_writer_preserves_multiple_component_groups_and_manifest",
+      "tests/codecs/test_ncore_v4.py::test_writer_refuses_partial_components_and_preserves_destination",
+      "tests/test_import_guards.py::test_no_family_imports[io/_ncore/writer.py]",
+      "tests/codecs/test_ncore_v4.py::test_writer_randomized_mixed_dtype_chunk_differential",
+      "tests/codecs/test_ncore_v4.py::test_writer_large_generated_payload_has_chunk_bounded_allocation"
     ],
     "removed_nodes": [
       "tests/codecs/test_compressed_ply.py::test_writer_body_is_byte_identical_to_pinned_playcanvas_vector",

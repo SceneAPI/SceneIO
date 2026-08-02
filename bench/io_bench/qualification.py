@@ -339,8 +339,8 @@ COMPARISON_QUALIFICATIONS = MappingProxyType(
             runner_kind="path",
         ),
         "ncore_v4": _exemption(
-            "independent NCore V4 dataset open and inspect throughput",
-            "tests/codecs/test_ncore_v4.py",
+            "automatic independent NCore V4 timing in the default sweep",
+            "tools/verify_ncore_v4_writer_oracle.py",
             runner_kind="directory",
         ),
         "zarr": _timed(

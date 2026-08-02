@@ -15,6 +15,7 @@ from sceneio.io._ncore.model import (
     NCoreComponent,
     NCoreComponentData,
     NCoreDataset,
+    NCoreDatasetData,
     NCoreGroup,
     NCoreSelection,
     NCoreSemanticComponent,
@@ -476,4 +477,32 @@ def read_ncore_semantic_component(
     return interpret_ncore_component(data, dataset.timestamp_interval_us)
 
 
-__all__ = ["read_ncore_component", "read_ncore_semantic_component"]
+def materialize_ncore_v4(path: str | Path) -> NCoreDatasetData:
+    """Load every component into an owned dataset suitable for exact writing."""
+
+    dataset = read_ncore_v4(path)
+    components = tuple(
+        _read_component(
+            dataset,
+            NCoreSelection(
+                component.name,
+                component.instance,
+                group=component.group,
+            ),
+        )
+        for component in dataset.components
+    )
+    return NCoreDatasetData(
+        sequence_id=dataset.sequence_id,
+        timestamp_interval_us=dataset.timestamp_interval_us,
+        generic_metadata=dataset.generic_metadata,
+        components=components,
+        version=dataset.version,
+    )
+
+
+__all__ = [
+    "materialize_ncore_v4",
+    "read_ncore_component",
+    "read_ncore_semantic_component",
+]

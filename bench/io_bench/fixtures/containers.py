@@ -2,9 +2,6 @@
 
 from __future__ import annotations
 
-import json
-from pathlib import Path
-
 import numpy as np
 
 import sceneio
@@ -183,50 +180,81 @@ def _openvdb_fixture(scale):
     }
 
 
-def _ncore_directory_fixture(root, scale):
-    path = Path(root) / "_ncore_v4_input.ncore4.zarr"
-    array_path = path / "point_clouds" / "lidar" / "positions"
-    array_path.mkdir(parents=True)
-    count = max(16, int(262_144 * scale))
-    positions = np.arange(count * 3, dtype=np.float32).reshape(count, 3)
-    metadata = {
-        ".zgroup": {"zarr_format": 2},
-        ".zattrs": {
-            "sequence_id": "benchmark-sequence",
-            "sequence_timestamp_interval_us": {"start": 1, "stop": 2},
-            "generic_meta_data": {"fixture": "benchmark"},
-            "version": "v4",
-            "component_group_name": "",
-        },
-        "point_clouds/.zgroup": {"zarr_format": 2},
-        "point_clouds/lidar/.zgroup": {"zarr_format": 2},
-        "point_clouds/lidar/.zattrs": {
-            "component_name": "point_clouds",
-            "component_instance_name": "lidar",
-            "component_version": "v1",
-            "generic_meta_data": {},
-        },
-        "point_clouds/lidar/positions/.zarray": {
-            "chunks": [count, 3],
-            "compressor": None,
-            "dtype": "<f4",
-            "fill_value": 0,
-            "filters": None,
-            "order": "C",
-            "shape": [count, 3],
-            "zarr_format": 2,
-        },
-        "point_clouds/lidar/positions/.zattrs": {},
-    }
-    for key, value in metadata.items():
-        target = path / key
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(
-            json.dumps(value, separators=(",", ":")),
-            encoding="utf-8",
+def _ncore_directory_fixture(_root, scale):
+    frame_count = 16
+    count = max(frame_count, int(262_144 * scale))
+    timestamps = np.arange(100, 100 + frame_count, dtype=np.uint64)
+    arrays = {"pc_timestamps_us": timestamps}
+    descriptors = [
+        sceneio.NCoreArray(
+            "pc_timestamps_us",
+            timestamps.shape,
+            timestamps.dtype.str,
+            timestamps.shape,
         )
-    (array_path / "0.0").write_bytes(positions.tobytes())
-    return path, positions.nbytes
+    ]
+    groups = [
+        sceneio.NCoreGroup(
+            "",
+            {
+                "component_name": "point_clouds",
+                "component_instance_name": "lidar",
+                "component_version": "v1",
+                "generic_meta_data": {},
+            },
+        ),
+        sceneio.NCoreGroup(
+            "pcs",
+            {"attribute_schemas": {}, "coordinate_unit": "METERS"},
+        ),
+    ]
+    offset = 0
+    for frame in range(frame_count):
+        remaining_frames = frame_count - frame
+        frame_points = (count - offset + remaining_frames - 1) // remaining_frames
+        positions = np.arange(
+            offset * 3,
+            (offset + frame_points) * 3,
+            dtype=np.float32,
+        ).reshape(frame_points, 3)
+        name = f"pcs/{frame}/xyz"
+        arrays[name] = positions
+        descriptors.append(
+            sceneio.NCoreArray(
+                name,
+                positions.shape,
+                positions.dtype.str,
+                (min(frame_points, 65_536), 3),
+            )
+        )
+        groups.append(
+            sceneio.NCoreGroup(
+                f"pcs/{frame}",
+                {"generic_meta_data": {}, "reference_frame_id": "rig"},
+            )
+        )
+        offset += frame_points
+    component = sceneio.NCoreComponent(
+        "point_clouds",
+        "lidar",
+        "v1",
+        "",
+        0,
+        arrays=tuple(descriptors),
+    )
+    component_data = sceneio.NCoreComponentData(
+        component,
+        sceneio.NCoreSelection("point_clouds", "lidar", group=""),
+        arrays,
+        tuple(groups),
+    )
+    dataset = sceneio.NCoreDatasetData(
+        "benchmark-sequence",
+        (100, 100 + frame_count),
+        {"fixture": "benchmark"},
+        (component_data,),
+    )
+    return dataset, sum(value.nbytes for value in arrays.values())
 
 
 def _usd_fixture(scale):

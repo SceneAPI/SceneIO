@@ -4219,3 +4219,28 @@ catalog open. The row deliberately reports no write or partial timing until
 the typed component and writer units land; the checked qualification ledger
 classifies its independent throughput comparison as a reviewed exemption while
 the upstream NCore implementation remains the correctness oracle.
+
+## 2026-08-02 NCore V4 full-I/O checkpoint
+
+The NCore row now authors a complete owned 16-frame point-cloud component,
+writes deterministic indexed-tar storage plus its sequence manifest, fully
+materializes typed component arrays, and selects one frame without decoding the
+other 15. On local MSVC, three runs at `--scale 0.1` (0.3 MB logical payload)
+record 3 MB/s write, 150 MB/s full read, 162 MB/s public typed read, 0.783 ms
+inspect, and 1.520 ms selected read versus 1.947 ms full read. XZ preset 0 for
+the small consolidated-metadata and archive-index documents reduced traced
+writer allocation from 97.7 MB to 3.0 MB without changing decoded data or
+upstream acceptance.
+
+The generated `--scale 32 --runs 1` case covers 100.7 MB of arrays. It records
+168 MB/s write with 3.1 MB traced allocation and 0.1 MB sampled RSS growth;
+full materialization takes 58.286 ms with the expected 109.0 MB owned-result
+allocation, inspection takes 1.162 ms with 1.5 MB, and one-frame selection
+takes 5.827 ms with 14.5 MB. Thus writer memory stays chunk-bounded while
+inspection and selection avoid full payload materialization. The pinned
+upstream tool validates all nine standard profiles from both SceneIO storage
+modes and records representative upstream catalog/full timings in
+`tools/verify_ncore_v4_writer_oracle.py`. A two-run pinned-oracle pass records
+directory catalog/full at 1.724/5.589 ms and indexed-tar at 1.798/4.499 ms;
+SceneIO full materialization records 11.202/10.753 ms on the same compact
+nine-family fixture. These small-fixture timings are evidence, not thresholds.

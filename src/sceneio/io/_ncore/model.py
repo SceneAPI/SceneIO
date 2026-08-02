@@ -69,7 +69,7 @@ def _normalize_arrays(
     normalized: dict[str, np.ndarray] = {}
     for name, raw_value in arrays.items():
         _non_empty(name, f"{context} array name")
-        if name.startswith("/") or any(
+        if name.startswith("/") or "\\" in name or any(
             part in {"", ".", ".."} for part in name.split("/")
         ):
             raise ValueError(f"{context} array names must be relative paths")
@@ -97,7 +97,7 @@ class NCoreArray:
 
     def __post_init__(self) -> None:
         _non_empty(self.name, "NCoreArray.name")
-        if self.name.startswith("/") or any(
+        if self.name.startswith("/") or "\\" in self.name or any(
             part in {"", ".", ".."} for part in self.name.split("/")
         ):
             raise ValueError("NCoreArray.name must be a relative '/'-separated path")
@@ -264,6 +264,70 @@ class NCoreDataset:
         return matches[0]
 
 
+@dataclass(frozen=True, slots=True, eq=False)
+class NCoreDatasetData:
+    """Complete owned component payloads for authoring one NCore V4 dataset."""
+
+    sequence_id: str
+    timestamp_interval_us: tuple[int, int]
+    generic_metadata: Mapping[str, JsonValue]
+    components: tuple[NCoreComponentData, ...]
+    version: str = "v4"
+
+    def __post_init__(self) -> None:
+        _non_empty(self.sequence_id, "NCoreDatasetData.sequence_id")
+        if self.version != "v4":
+            raise ValueError("NCoreDatasetData supports exactly version 'v4'")
+        interval = _half_open(
+            self.timestamp_interval_us,
+            "NCoreDatasetData.timestamp_interval_us",
+        )
+        components = tuple(self.components)
+        if not components:
+            raise ValueError("NCoreDatasetData requires at least one component")
+        if any(not isinstance(value, NCoreComponentData) for value in components):
+            raise ValueError(
+                "NCoreDatasetData.components must contain component data"
+            )
+        ids = tuple(value.component.id for value in components)
+        if len(ids) != len(set(ids)):
+            raise ValueError(
+                "NCoreDatasetData component ids must be unique across stores"
+            )
+        for value in components:
+            selection = value.selection
+            if selection.frames is not None or selection.timestamps_us is not None:
+                raise ValueError(
+                    f"NCoreDatasetData component {value.component.id} is a partial "
+                    "selection; writers require complete components"
+                )
+            descriptors = {item.name: item for item in value.component.arrays}
+            if set(descriptors) != set(value.arrays):
+                raise ValueError(
+                    f"NCoreDatasetData component {value.component.id} array "
+                    "catalog disagrees with its loaded arrays"
+                )
+            for name, array in value.arrays.items():
+                descriptor = descriptors[name]
+                if array.shape != descriptor.shape or array.dtype.str != descriptor.dtype:
+                    raise ValueError(
+                        f"NCoreDatasetData component {value.component.id} array "
+                        f"{name!r} shape or dtype disagrees with its catalog"
+                    )
+            if not any(group.name == "" for group in value.groups):
+                raise ValueError(
+                    f"NCoreDatasetData component {value.component.id} lacks its "
+                    "root group metadata"
+                )
+        frozen = _freeze_json(
+            dict(self.generic_metadata), "NCoreDatasetData.generic_metadata"
+        )
+        assert isinstance(frozen, Mapping)
+        object.__setattr__(self, "timestamp_interval_us", interval)
+        object.__setattr__(self, "generic_metadata", frozen)
+        object.__setattr__(self, "components", components)
+
+
 @dataclass(frozen=True, slots=True)
 class NCoreSelection:
     """One typed NCore component request for ``read_partial``."""
@@ -310,6 +374,7 @@ class NCoreGroup:
             raise ValueError("NCoreGroup.name must be a string")
         if self.name and (
             self.name.startswith("/")
+            or "\\" in self.name
             or any(part in {"", ".", ".."} for part in self.name.split("/"))
         ):
             raise ValueError(
@@ -497,6 +562,7 @@ for _record in (
     NCoreComponent,
     NCoreComponentData,
     NCoreDataset,
+    NCoreDatasetData,
     NCoreGroup,
     NCoreItem,
     NCoreSelection,
@@ -513,6 +579,7 @@ __all__ = [
     "NCoreComponent",
     "NCoreComponentData",
     "NCoreDataset",
+    "NCoreDatasetData",
     "NCoreGroup",
     "NCoreItem",
     "NCoreSelection",

@@ -28,6 +28,10 @@ class DirectorySpec:
     w: Callable | None
     r: Callable
     nbytes: Callable
+    path_read: Callable | None = None
+    partial: Callable | None = None
+    assert_read: Callable | None = None
+    assert_partial: Callable | None = None
 
 
 @dataclass

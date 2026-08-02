@@ -244,11 +244,11 @@ def test_case_catalog_selectors_match_live_builtin_capabilities():
         capability = capabilities[case.id]
         assert capability.available
         assert capability.can_read
-        assert capability.can_write is (case.id not in {"ncore_v4", "rtmv"})
+        assert capability.can_write is (case.id != "rtmv")
         assert capability.can_inspect
         assert capability.streams_read
         assert capability.streams_write is (
-            case.id not in {"avif", "animated_avif", "ncore_v4", "rtmv"}
+            case.id not in {"avif", "animated_avif", "rtmv"}
         )
         assert case.partial_selectors == capability.partial_selectors
     assert tuple(case.id for case in codec_cases.PARTIAL_CASES) == (

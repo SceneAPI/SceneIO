@@ -681,10 +681,10 @@ id = "ncore_v4"
 family = "datasets"
 adapter = "repo"
 implementation_owner = "python"
-sources = ["src/sceneio/io/_ncore/itar.py", "src/sceneio/io/_ncore/model.py", "src/sceneio/io/_ncore/schema.py"]
+sources = ["src/sceneio/io/_ncore/itar.py", "src/sceneio/io/_ncore/model.py", "src/sceneio/io/_ncore/schema.py", "src/sceneio/io/_ncore/component_io.py", "src/sceneio/io/_ncore/writer.py"]
 source_suite = "tests/codecs/test_ncore_v4.py"
 documentation = "docs/format_coverage.md"
-accepted_subset = ["v4", "local_directory_stores", "local_indexed_tar_stores", "sequence_manifests", "grouped_component_stores", "lazy_component_catalog", "metadata_only_inspect"]
+accepted_subset = ["v4", "local_directory_stores", "local_indexed_tar_stores", "sequence_manifests", "grouped_component_stores", "lazy_component_catalog", "metadata_only_inspect", "owned_component_materialization", "frame_and_timestamp_selection", "nine_standard_v1_profiles", "generic_components", "deterministic_transactional_write"]
 
 [[codec]]
 id = "zarr"
@@ -4198,38 +4198,39 @@ evidence_gaps = ["candidate comparison on all required toolchains"]
 codec_id = "ncore_v4"
 profile = "default"
 direction = "encode"
-settings = { profile = "read_only" }
-fidelity = "not applicable"
-comparator = "read-only catalog checkpoint"
+settings = { stores = ["directory", "itar"], compressor = "blosc-lz4-level5-bitshuffle", metadata = "cbor-xz-preset0" }
+fidelity = "lossless arrays, dtypes, groups, component metadata, and sequence manifest"
+comparator = "upstream NCore V4 reader"
 fixture = "ncore_v4:default"
 backend = "sceneio-python"
 backend_owner = "repo"
-backend_source = "src/sceneio/io/_ncore/schema.py"
-backend_version = "sceneio-ncore-v4-catalog-1"
-transport_status = "not_applicable"
-status = "not_applicable"
+backend_source = "src/sceneio/io/_ncore/writer.py"
+backend_version = "sceneio-ncore-v4-full-1"
+backend_dependencies = ["zarr >=3.1,<4", "cbor2 >=5.6,<6"]
+transport_status = "qualified"
+status = "provisional"
 correctness_evidence = ["tests/codecs/test_ncore_v4.py"]
-benchmark_evidence = []
+benchmark_evidence = ["bench/BASELINE.md", "tools/verify_ncore_v4_writer_oracle.py"]
 candidate_backends = []
-evidence_gaps = ["typed component writer is scheduled for the next implementation unit"]
+evidence_gaps = ["three-platform package validation"]
 
 [[operation]]
 codec_id = "ncore_v4"
 profile = "default"
 direction = "decode"
-settings = { stores = ["directory", "itar"], payload = "lazy_catalog" }
-fidelity = "lossless root, component, array, and generic metadata catalog"
+settings = { stores = ["directory", "itar"], payload = ["lazy_catalog", "typed_full", "selected_component"] }
+fidelity = "lossless root/component catalog plus exact owned arrays and standard semantic profiles"
 comparator = "upstream NCore V4 implementation"
 fixture = "ncore_v4:default"
 backend = "sceneio-python"
 backend_owner = "repo"
-backend_source = "src/sceneio/io/_ncore/schema.py"
-backend_version = "sceneio-ncore-v4-catalog-1"
+backend_source = "src/sceneio/io/_ncore/component_io.py"
+backend_version = "sceneio-ncore-v4-full-1"
 backend_dependencies = ["zarr >=3.1,<4", "cbor2 >=5.6,<6"]
 transport_status = "qualified"
 status = "provisional"
 correctness_evidence = ["tests/codecs/test_ncore_v4.py"]
-benchmark_evidence = ["bench/BASELINE.md"]
+benchmark_evidence = ["bench/BASELINE.md", "tools/verify_ncore_v4_writer_oracle.py"]
 candidate_backends = []
 evidence_gaps = ["three-platform package validation"]
 

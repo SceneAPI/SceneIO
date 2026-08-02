@@ -6,6 +6,7 @@ Importing this package does not import the optional Zarr or CBOR providers.
 """
 
 from sceneio.io._ncore.component_io import (
+    materialize_ncore_v4,
     read_ncore_component,
     read_ncore_semantic_component,
 )
@@ -14,6 +15,7 @@ from sceneio.io._ncore.model import (
     NCoreComponent,
     NCoreComponentData,
     NCoreDataset,
+    NCoreDatasetData,
     NCoreGroup,
     NCoreItem,
     NCoreSelection,
@@ -27,12 +29,14 @@ from sceneio.io._ncore.schema import (
     is_ncore_v4_file,
     read_ncore_v4,
 )
+from sceneio.io._ncore.writer import write_ncore_v4
 
 __all__ = [
     "NCoreArray",
     "NCoreComponent",
     "NCoreComponentData",
     "NCoreDataset",
+    "NCoreDatasetData",
     "NCoreGroup",
     "NCoreItem",
     "NCoreSelection",
@@ -41,8 +45,10 @@ __all__ = [
     "inspect_ncore_v4",
     "is_ncore_v4_directory",
     "is_ncore_v4_file",
+    "materialize_ncore_v4",
     "project_ncore_item",
     "read_ncore_component",
     "read_ncore_semantic_component",
     "read_ncore_v4",
+    "write_ncore_v4",
 ]

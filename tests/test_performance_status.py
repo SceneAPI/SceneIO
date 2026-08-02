@@ -118,9 +118,9 @@ def test_performance_rows_are_honest_about_initial_evidence():
     operations = _ledger()["operation"]
     states = Counter(item["status"] for item in operations)
     assert states == {
-        "provisional": 172,
+        "provisional": 173,
         "known_gap": 2,
-        "not_applicable": 8,
+        "not_applicable": 7,
     }
     provisional = [
         item for item in operations if item["status"] == "provisional"
@@ -133,7 +133,7 @@ def test_performance_rows_are_honest_about_initial_evidence():
             "profile-specific current-backend measurement missing",
             "candidate comparison on all required toolchains",
         ): 14,
-        ("three-platform package validation",): 5,
+        ("three-platform package validation",): 6,
     }
     assert all(item["candidate_backends"] == [] for item in provisional)
     for item in operations:
@@ -232,7 +232,7 @@ def test_performance_ledger_pins_material_backend_dependencies():
             expected.add("h5py >=3.11")
         if item["codec_id"] == "zarr":
             expected.update({"zarr >=3.1,<4", "numcodecs"})
-        if item["codec_id"] == "ncore_v4" and item["direction"] == "decode":
+        if item["codec_id"] == "ncore_v4":
             expected.update({"zarr >=3.1,<4", "cbor2 >=5.6,<6"})
         if item["codec_id"] == "tiff":
             expected.add("tifffile >=2025.5")

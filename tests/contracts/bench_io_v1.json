@@ -641,8 +641,8 @@
       "optional_oracle_source": "bench/io_bench/oracles/containers.py",
       "no_oracle_exemptions": {
         "ncore_v4": {
-          "unverified_property": "independent NCore V4 dataset open and inspect throughput",
-          "verification": "format parity remains covered by tests/codecs/test_ncore_v4.py"
+          "unverified_property": "automatic independent NCore V4 timing in the default sweep",
+          "verification": "format parity remains covered by tools/verify_ncore_v4_writer_oracle.py"
         }
       }
     }
@@ -652,15 +652,15 @@
     "builtin_count": 73,
     "timed_count": 53,
     "reviewed_exemption_count": 20,
-    "ledger_sha256": "28901cc308c6edabc29d47c4f54a5e83adf658f260e77e5330ad4a6122c88c83"
+    "ledger_sha256": "05e512c64a81ba8d3b561dc8aff8ef75af78c0636680eab318d67fb1a424768b"
   },
   "r3_2_runner_extraction": {
     "parent_commit": "cd322685d3de86931ec4264261924fb3c309b6c4",
     "source": "bench/io_bench/runner.py",
     "facade": "bench/bench_io.py",
     "facade_attribute_policy": "alias_all_non_dunder_runner_globals",
-    "facade_attribute_count": 184,
-    "facade_attributes_sha256": "ec14a11526a041b8a55f7c3df6fe9f39f904eab4d4fc4d9fba80dc01951d2850",
+    "facade_attribute_count": 186,
+    "facade_attributes_sha256": "64c4ef2593f64bc955439a8d5b2217b0c7c82e1d22d14786d1c285d4108f3250",
     "facade_rebinding_policy": "propagate_historical_attribute_mutations_to_runner",
     "facade_first_import_policy": "preserve_initialized_runner_objects_and_rebindings",
     "facade_reload_policy": "reset_runner_source_definitions_and_restore_aliases",
@@ -681,15 +681,17 @@
       "_evict_file_cache": "ce88899f9525aecc749764372ed3d85fde9f9af62ad95feb4e90cee38f77cc83",
       "_stored_size": "f76c384c22cdbd196f96fc51960866d546db6584300845583135805d9bd54f32",
       "_specs": "153fd71dbbd54191b09297c807042017390edb1588069c3b2ec78b7412f0ea82",
-      "_directory_specs": "f4d7a81f96dffc33040c805279a3534509e60875c16d3e91aa3aaacd5b6bcbb5",
+      "_directory_specs": "e3995737a976021df6eae170745eaff1f509e34f571576cad440e8d3c6d5263c",
       "_directory_size": "27992c88e0aec0a0cb6433a1e1243b929af446c71574d863905f77e7c18372e8",
+      "_assert_ncore_dataset_equal": "011d5c839e98a2d726f03c21284d641b6cec0fb03941aa6bdde1db681e83761b",
+      "_assert_ncore_partial_equal": "b5f684f0bf8e5148c618945986960de4534ad902fa00236ed04ba6846cbc173f",
       "_partial_request": "570f508726b04dc83f2b079cf481559348e1df3f578fad2c2ebafae8e9674b0e",
       "main": "c5b809e8ca512be16dd7e496fdfe65e903374265ad8f82f3f291cb9ac6f3c1fc",
       "_run_large_safetensors": "4c7533d0bc4c406858f7e00ed0704966c9a8133655a2629a63075ad7e3a9f29d",
       "_benchmark_colmap_db": "0fc2a9533c139fb1a09b94adfb2efee2fc1e8cc423cba6dccc813ab8a92144d3",
       "_benchmark_path_spec": "3bac92c60c0e5e8a35b1d698ab1005988398c7aaa6e8393634e65c7e45efc512",
       "_benchmark_gltf": "589f18f0c1bac962a14902f113d1bbcf32edc07168015792e9a42d0826506093",
-      "_run_benchmark": "f4dce109439a802acfe889b13d977aaa35b54baade548d6ba79e26a8b6243147"
+      "_run_benchmark": "487d39bd03408416ab39235382fdb41bb6929cb5b5f4666c3aec8977f2c62c9b"
     }
   },
   "r3_1a_equivalence": {

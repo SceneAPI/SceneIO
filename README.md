@@ -79,8 +79,8 @@ artifacts vocabulary — wire identity unchanged.
 <!-- sceneio-inventory-summary:start -->
 **Generated registry contract:** SceneIO has **73 built-in formats**: **64**
 single-file, **5** directory, and **4** multi-file containers. **73** are readable,
-**71** writable, and **73** inspectable; **37** formats expose **43** bounded partial
-selectors. **73** provide streaming reads and **69** provide streaming writes. The
+**72** writable, and **73** inspectable; **37** formats expose **43** bounded partial
+selectors. **73** provide streaming reads and **70** provide streaming writes. The
 values come directly from `CANONICAL_BUILTIN_IDS` and `sceneio.capabilities()`.
 <!-- sceneio-inventory-summary:end -->
 
@@ -115,12 +115,20 @@ component = sceneio.read_ncore_semantic_component(
     "capture.ncore4.zarr", selection
 )
 first_image = component.items[0].to_sceneio()
+
+# Materialize complete owned components, then write deterministic indexed-tar
+# stores plus a sequence manifest. Pass storage="directory" to the direct
+# writer when an introspectable Zarr-v2 directory layout is preferred.
+owned = sceneio.materialize_ncore_v4("capture.ncore4.zarr")
+sceneio.write_ncore_v4(owned, "capture-export", storage="itar")
 ```
 
 The richer named-frame pose, calibration, multi-return sensor, annotation, and
 custom-array semantics stay in immutable NCore records. Projection to an older
 SceneIO record is available only for an exactly representable payload; the
 source `NCoreItem` remains the authority for timestamps, frames, and metadata.
+Writers accept complete `NCoreDataset` or `NCoreDatasetData` values, preserve
+exact array dtypes and group metadata, and refuse partial component selections.
 
 The AVIF profile uses Pillow 12.3's optimized libavif provider with libaom
 encoding and dav1d decoding. SceneIO owns detection, mmap lifetime, record

@@ -460,6 +460,7 @@ _PYTHON_SYMBOLS = {
     ),
     "ncore_v4": (
         "sceneio.io._ncore.read_ncore_v4",
+        "sceneio.io._ncore.write_ncore_v4",
         "sceneio.io._ncore.inspect_ncore_v4",
     ),
     "zarr": (

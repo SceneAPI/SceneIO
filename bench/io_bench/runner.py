@@ -766,9 +766,22 @@ def _directory_specs(reconstruction, scale, root):
                 root,
                 scale,
             ),
-            None,
-            lambda path: sceneio.read(path, format="ncore_v4"),
+            lambda value, path: sceneio.write(
+                value, path, format="ncore_v4"
+            ),
+            sceneio.materialize_ncore_v4,
             lambda record, payload: payload,
+            path_read=sceneio.materialize_ncore_v4,
+            partial=lambda path: sceneio.read_ncore_component(
+                path,
+                sceneio.NCoreSelection(
+                    "point_clouds",
+                    "lidar",
+                    frames=(8, 9),
+                ),
+            ),
+            assert_read=_assert_ncore_dataset_equal,
+            assert_partial=_assert_ncore_partial_equal,
         ),
         DirectorySpec(
             "rtmv",
@@ -805,6 +818,33 @@ def _directory_size(path):
         for entry in Path(path).rglob("*")
         if entry.is_file()
     )
+
+
+def _assert_ncore_dataset_equal(expected, actual):
+    assert expected.sequence_id == actual.sequence_id
+    assert expected.timestamp_interval_us == actual.timestamp_interval_us
+    assert expected.generic_metadata == actual.generic_metadata
+    assert len(expected.components) == len(actual.components)
+    for left, right in zip(expected.components, actual.components, strict=True):
+        assert left.component.id == right.component.id
+        assert left.component.group == right.component.group
+        assert set(left.arrays) == set(right.arrays)
+        for name in sorted(left.arrays):
+            np.testing.assert_array_equal(left.arrays[name], right.arrays[name])
+
+
+def _assert_ncore_partial_equal(expected, actual):
+    source = expected.components[0]
+    assert actual.selected_items == ("8",)
+    np.testing.assert_array_equal(
+        actual.array("pc_timestamps_us"),
+        source.array("pc_timestamps_us")[8:9],
+    )
+    np.testing.assert_array_equal(
+        actual.array("pcs/8/xyz"),
+        source.array("pcs/8/xyz"),
+    )
+    assert tuple(actual.arrays) == ("pc_timestamps_us", "pcs/8/xyz")
 
 
 def _partial_request(codec_id, info, full_record=None):
@@ -3037,11 +3077,13 @@ def _run_benchmark(args, tmp):
                     )
                 )
 
-            def _directory_read(path=path, codec_id=spec.id):
+            def _directory_read(path=path, codec_id=spec.id, path_read=spec.path_read):
                 if args.cold_cache:
                     for entry in path.iterdir():
                         if entry.is_file():
                             _evict_file_cache(entry)
+                if path_read is not None:
+                    return path_read(path)
                 return sceneio.read(path, format=codec_id)
 
             core_read_time, _ = _measure(lambda: spec.r(str(path)), args.runs)
@@ -3070,21 +3112,28 @@ def _run_benchmark(args, tmp):
                     inspect_rss / 1e6,
                 )
             )
+            decoded = _directory_read()
+            if spec.assert_read is not None:
+                spec.assert_read(value, decoded)
+            del decoded
             partial_request = _partial_request(
                 spec.id, _directory_inspect(), value
             )
             partial_time = partial_peak = partial_rss = None
-            if partial_request is not None:
+            if spec.partial is not None or partial_request is not None:
 
                 def _directory_partial(
                     path=path,
                     codec_id=spec.id,
                     request=partial_request,
+                    partial=spec.partial,
                 ):
                     if args.cold_cache:
                         for entry in path.iterdir():
                             if entry.is_file():
                                 _evict_file_cache(entry)
+                    if partial is not None:
+                        return partial(path)
                     return sceneio.read_partial(
                         path, format=codec_id, **request
                     )
@@ -3093,6 +3142,10 @@ def _run_benchmark(args, tmp):
                     _directory_partial, args.runs
                 )
                 partial_rss = _measure_in_process_rss(_directory_partial)
+                selected = _directory_partial()
+                if spec.assert_partial is not None:
+                    spec.assert_partial(value, selected)
+                del selected
                 partial_rows.append(
                     (
                         spec.id,
