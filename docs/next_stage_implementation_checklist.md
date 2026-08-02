@@ -47,6 +47,16 @@
       equivalent multiplication for bounded signed deltas and unsigned types
       for 64-bit occupancy masks; all six Theora parity tests pass under the
       same compiler instrumentation. Normal optimized builds remain unchanged.
+      At correction commit `5387350`, compiler run `30738228920` passes the
+      exact 4,375-test full suite and the lifetime shard. CI run `30738228914`
+      passes its full suite, 72-row smoke, deterministic structure, GCC 10,
+      and all Linux/Windows/macOS shards; its five-run guard then identifies
+      one benchmark-contract omission: animated AVIF declared independent
+      inspect/range comparison but the generic path runner emitted only
+      encode/decode comparison timings. The follow-up adds direct Pillow
+      metadata and selected-frame timings, keeps COLMAP DB's distinct
+      image/pair fields, and pins both metric shapes in focused tests. Final
+      hosted confirmation remains pending at that follow-up commit.
 - [x] Re-run the three-run Theora benchmark after the arithmetic correction:
       17 MB/s encode, 79 MB/s in-memory decode, 76 MB/s mmap read, zero traced
       mmap/sink allocation, and the existing 18.27x inspect/1.79x partial-read

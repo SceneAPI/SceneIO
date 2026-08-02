@@ -4157,3 +4157,21 @@ Theora check on the same 6.3 MB logical fixture measured 17 MB/s encode,
 0.0 MB traced allocation; inspection and selected-frame reads remained 18.27x
 and 1.79x faster than full decode. This is no-regression evidence for the
 correctness patch, not a new performance threshold.
+
+### Hosted 72-format correction evidence
+
+At exact commit `5387350`, compiler run `30738228920` passes the complete
+4,375-test instrumented collection and the lifetime shard. CI run
+`30738228914` passes the complete suite, all 72 smoke rows, deterministic
+structure, pinned GCC 10 portability, and every Linux/Windows/macOS codec
+shard. Its five-run guard completes all 72 measurements, then rejects the
+result because the animated AVIF qualification declared independent inspect
+and partial comparisons while the path runner emitted only provider
+encode/decode timings.
+
+The follow-up measures Pillow/libavif metadata inspection and frames 1:3 on
+the same native file, checks their shape/timing/pixel results against SceneIO,
+and emits `oracle_inspect_*` plus `oracle_partial_*`. COLMAP DB retains its
+separate `oracle_image_*` and `oracle_pair_*` selectors. This repairs evidence
+classification without changing a codec, fixture, threshold, or accepted
+performance result; final hosted confirmation remains pending.

@@ -46,3 +46,7 @@ class PathSpec:
     assert_oracle: Callable
     partial: Callable | None = None
     assert_partial: Callable | None = None
+    oracle_inspect: Callable | None = None
+    assert_oracle_inspect: Callable | None = None
+    oracle_partial: Callable | None = None
+    assert_oracle_partial: Callable | None = None

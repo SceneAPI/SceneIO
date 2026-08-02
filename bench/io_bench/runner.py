@@ -1415,8 +1415,11 @@ def _benchmark_path_spec(args, tmp, spec):
         spec.assert_partial(native_partial(), payload)
 
     oracle_write_time = oracle_read_time = None
+    oracle_inspect_time = oracle_partial_time = None
     oracle_write_peak = oracle_write_rss = None
     oracle_read_peak = oracle_read_rss = None
+    oracle_inspect_peak = oracle_inspect_rss = None
+    oracle_partial_peak = oracle_partial_rss = None
     if (
         not args.skip_oracles
         and spec.ow is not None
@@ -1443,6 +1446,30 @@ def _benchmark_path_spec(args, tmp, spec):
         oracle_read_rss = _measure_in_process_rss(oracle_read)
         spec.assert_oracle(oracle_read(), payload)
         spec.assert_native(spec.r(oracle_path), payload)
+        if spec.oracle_inspect is not None:
+            def oracle_inspect():
+                if args.cold_cache:
+                    _evict_file_cache(native_path)
+                return spec.oracle_inspect(native_path)
+
+            oracle_inspect_time, oracle_inspect_peak = _measure(
+                oracle_inspect,
+                args.runs,
+            )
+            oracle_inspect_rss = _measure_in_process_rss(oracle_inspect)
+            spec.assert_oracle_inspect(native_inspect(), oracle_inspect())
+        if spec.oracle_partial is not None:
+            def oracle_partial():
+                if args.cold_cache:
+                    _evict_file_cache(native_path)
+                return spec.oracle_partial(native_path)
+
+            oracle_partial_time, oracle_partial_peak = _measure(
+                oracle_partial,
+                args.runs,
+            )
+            oracle_partial_rss = _measure_in_process_rss(oracle_partial)
+            spec.assert_oracle_partial(oracle_partial(), payload)
 
     spec.assert_native(native_read(), payload)
     inspected = native_inspect()
@@ -1454,6 +1481,36 @@ def _benchmark_path_spec(args, tmp, spec):
     oracle_metrics = {}
     if oracle_write_time is not None and oracle_read_time is not None:
         oracle_metrics = {
+            "oracle_inspect_ms": (
+                oracle_inspect_time * 1000
+                if oracle_inspect_time is not None
+                else None
+            ),
+            "oracle_inspect_peak_mb": (
+                oracle_inspect_peak / 1e6
+                if oracle_inspect_peak is not None
+                else None
+            ),
+            "oracle_inspect_rss_mb": (
+                oracle_inspect_rss / 1e6
+                if oracle_inspect_rss is not None
+                else None
+            ),
+            "oracle_partial_ms": (
+                oracle_partial_time * 1000
+                if oracle_partial_time is not None
+                else None
+            ),
+            "oracle_partial_peak_mb": (
+                oracle_partial_peak / 1e6
+                if oracle_partial_peak is not None
+                else None
+            ),
+            "oracle_partial_rss_mb": (
+                oracle_partial_rss / 1e6
+                if oracle_partial_rss is not None
+                else None
+            ),
             "oracle_write_mbps": payload_mb / oracle_write_time,
             "oracle_write_peak_mb": oracle_write_peak / 1e6,
             "oracle_write_rss_mb": oracle_write_rss / 1e6,

@@ -18,6 +18,15 @@ The reviewed, bounded expansion from the current static mesh USD adapter to a
 mixed 3D-CV scene profile is in
 [`usd_3d_cv_implementation_plan.md`](usd_3d_cv_implementation_plan.md).
 
+The 2026-08-02 closure commit `5387350` passes the full hosted compiler run
+`30738228920` plus every dedicated Linux, Windows, macOS, and GCC 10 job in CI
+run `30738228914`. That CI run's full suite and 72-row smoke also pass; its
+final five-run guard exposed only a missing benchmark output field for the
+already-supported animated AVIF inspect/frame-range comparison. The follow-up
+records direct Pillow metadata and selected-frame timings and keeps them
+distinct from COLMAP DB's image/pair selector metrics. Final hosted
+confirmation is pending; format capabilities are unchanged.
+
 <!-- sceneio-inventory-summary:start -->
 **Generated registry contract:** SceneIO has **72 built-in formats**: **64**
 single-file, **5** directory, and **3** multi-file containers. **72** are readable,

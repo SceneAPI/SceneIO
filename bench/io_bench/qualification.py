@@ -575,7 +575,6 @@ def validate_strict_results(results) -> None:
         "encode": ("oracle_write_mbps",),
         "decode": ("oracle_read_mbps",),
         "inspect": ("oracle_inspect_ms",),
-        "partial": ("oracle_image_ms", "oracle_pair_ms"),
     }
     missing = []
     for format_id, qualification in COMPARISON_QUALIFICATIONS.items():
@@ -589,7 +588,16 @@ def validate_strict_results(results) -> None:
             missing.append(f"{format_id}:successful-row")
             continue
         for operation in qualification.operations:
-            for key in operation_keys[operation]:
+            keys = (
+                ("oracle_image_ms", "oracle_pair_ms")
+                if operation == "partial" and format_id == "colmap_db"
+                else (
+                    ("oracle_partial_ms",)
+                    if operation == "partial"
+                    else operation_keys[operation]
+                )
+            )
+            for key in keys:
                 value = result.get(key)
                 if (
                     isinstance(value, bool)

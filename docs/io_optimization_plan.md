@@ -25,8 +25,14 @@ portable across the supported compilers, hashes libvpx's source manifest using
 its canonical repository bytes, and measures three suite-order-sensitive
 allocation paths by a three-operation median while preserving their strict
 payload-relative ceilings. The exact local suite passes 4,369 tests with six
-documented skips; hosted platform and compiler-instrumented confirmation is
-pending at the correction commit. The one-pass all-format smoke completes 72
+documented skips. Commit `5387350` passes hosted compiler run `30738228920`
+and every dedicated platform job in CI run `30738228914`; that CI run's full
+suite and 72-row smoke also pass. Its final strict guard exposed a benchmark
+schema omission, not an I/O failure: animated AVIF's direct Pillow
+inspect/selected-frame comparisons were declared but not emitted by the
+generic path runner. The follow-up records those timings and gives path-range
+and COLMAP DB image/pair selectors distinct required metric keys. Final hosted
+confirmation is pending at the follow-up commit. The one-pass all-format smoke completes 72
 rows with normalized structural SHA-256
 `9d010021697a301eff99ac21203b9f66d042e66b81ccfd0bea7ebdce313b2851`;
 this replaces the stale 67-row parent contract without changing a timing gate.

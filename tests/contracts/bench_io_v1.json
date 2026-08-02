@@ -674,7 +674,7 @@
       "main": "c5b809e8ca512be16dd7e496fdfe65e903374265ad8f82f3f291cb9ac6f3c1fc",
       "_run_large_safetensors": "4c7533d0bc4c406858f7e00ed0704966c9a8133655a2629a63075ad7e3a9f29d",
       "_benchmark_colmap_db": "0fc2a9533c139fb1a09b94adfb2efee2fc1e8cc423cba6dccc813ab8a92144d3",
-      "_benchmark_path_spec": "da0eff153625f532462f6035dd95cc3b3382437e920d68a5e29bf810784773d3",
+      "_benchmark_path_spec": "3bac92c60c0e5e8a35b1d698ab1005988398c7aaa6e8393634e65c7e45efc512",
       "_benchmark_gltf": "589f18f0c1bac962a14902f113d1bbcf32edc07168015792e9a42d0826506093",
       "_run_benchmark": "d91b6fe37f02b6bbc4dc939ccf264722580b981d9d8687bd36d577da7b5dd8d0"
     }
@@ -999,6 +999,20 @@
     "oracle_pair_ms",
     "oracle_pair_peak_mb",
     "oracle_pair_rss_mb",
+    "oracle_read_mbps",
+    "oracle_read_peak_mb",
+    "oracle_read_rss_mb",
+    "oracle_write_mbps",
+    "oracle_write_peak_mb",
+    "oracle_write_rss_mb"
+  ],
+  "optional_path_oracle_keys": [
+    "oracle_inspect_ms",
+    "oracle_inspect_peak_mb",
+    "oracle_inspect_rss_mb",
+    "oracle_partial_ms",
+    "oracle_partial_peak_mb",
+    "oracle_partial_rss_mb",
     "oracle_read_mbps",
     "oracle_read_peak_mb",
     "oracle_read_rss_mb",

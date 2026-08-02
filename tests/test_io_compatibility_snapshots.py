@@ -579,6 +579,9 @@ def test_benchmark_contract_matches_checked_snapshot():
     assert assigned_dict_keys(
         "_benchmark_colmap_db", "oracle_metrics"
     ) == contract["optional_colmap_db_keys"]
+    assert assigned_dict_keys(
+        "_benchmark_path_spec", "oracle_metrics"
+    ) == contract["optional_path_oracle_keys"]
     _assert_benchmark_components_and_metric_semantics_are_explicit()
     _assert_benchmark_representative_fixtures_match_checked_fingerprints()
 

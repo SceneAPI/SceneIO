@@ -602,6 +602,8 @@ def test_strict_spec_measurement_rejects_missing_payload():
         ("colmap_db", "oracle_inspect_ms"),
         ("colmap_db", "oracle_image_ms"),
         ("colmap_db", "oracle_pair_ms"),
+        ("animated_avif", "oracle_inspect_ms"),
+        ("animated_avif", "oracle_partial_ms"),
     ],
 )
 def test_strict_result_validation_requires_every_declared_metric(
@@ -621,8 +623,11 @@ def test_strict_result_validation_requires_every_declared_metric(
             if "inspect" in item.operations:
                 result["oracle_inspect_ms"] = 1.0
             if "partial" in item.operations:
-                result["oracle_image_ms"] = 1.0
-                result["oracle_pair_ms"] = 1.0
+                if format_id == "colmap_db":
+                    result["oracle_image_ms"] = 1.0
+                    result["oracle_pair_ms"] = 1.0
+                else:
+                    result["oracle_partial_ms"] = 1.0
         if format_id == "spz":
             result["spz_profiles"] = _valid_spz_profile_metrics()
         results.append(result)
@@ -656,6 +661,30 @@ def test_strict_result_validation_requires_every_declared_metric(
             match="spz:ngsp_v4_zstd:settings",
         ):
             qualification.validate_strict_results(results)
+
+
+def test_animated_avif_path_benchmark_records_oracle_partial_metrics(
+    tmp_path,
+):
+    specs = runner.build_media_path_specs(0.001)
+    if not specs:
+        pytest.skip("Pillow/libavif comparison provider is unavailable")
+    spec = next(item for item in specs if item.id == "animated_avif")
+    result, *_rest = runner._benchmark_path_spec(
+        SimpleNamespace(runs=1, cold_cache=False, skip_oracles=False),
+        tmp_path,
+        spec,
+    )
+    for metric in (
+        "oracle_inspect_ms",
+        "oracle_inspect_peak_mb",
+        "oracle_inspect_rss_mb",
+        "oracle_partial_ms",
+        "oracle_partial_peak_mb",
+        "oracle_partial_rss_mb",
+    ):
+        assert isinstance(result[metric], float)
+        assert result[metric] >= 0
 
 
 @pytest.mark.parametrize(

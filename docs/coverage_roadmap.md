@@ -14,15 +14,19 @@
 > [`usd_3d_cv_implementation_plan.md`](usd_3d_cv_implementation_plan.md).
 > The 2026-08-02 cross-platform correction changes no roadmap scope or format
 > capability. Local MSVC and clean Linux focused checks pass; the exact local
-> suite passes 4,369 tests with six documented skips. The remaining immediate
-> gate is automatic Linux/Windows/macOS plus compiler-instrumented validation
-> at the exact correction commit; release publication remains separate.
+> suite passes 4,369 tests with six documented skips. Commit `5387350` passes
+> compiler run `30738228920` and every dedicated Linux/Windows/macOS and GCC 10
+> job in CI run `30738228914`; that run's full suite and 72-row smoke also pass.
+> Its final five-run guard found one missing benchmark field for animated AVIF
+> independent inspect/frame-range comparison. The follow-up emits direct
+> Pillow timings and distinguishes that range metric from COLMAP DB's two
+> selector metrics. Final hosted confirmation remains pending; release
+> publication remains separate.
 > The first hosted correction run passed every dedicated platform shard. Its
 > remaining repository-byte and instrumented-Theora residuals are addressed by
 > canonical LF source-manifest rows for libvpx/libogg/libtheora and a documented
 > three-file arithmetic correction for upstream libtheora signed deltas and
-> bitsets; normal optimized builds are unchanged. Hosted rerun confirmation
-> remains required.
+> bitsets; normal optimized builds are unchanged.
 > U0-U5 qualify the bounded provider, records, stage skeleton, and all direct
 > static payload kinds. C6 is closed through the explicit static-only Exit B;
 > C7 local source-to-wheel qualification is complete. At implementation source

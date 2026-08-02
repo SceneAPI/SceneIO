@@ -12,7 +12,9 @@ from bench.io_bench.fixtures.media import (
 from bench.io_bench.model import PathSpec
 from bench.io_bench.oracles.media import (
     AVIF_AVAILABLE,
+    _animated_avif_oracle_inspect,
     _animated_avif_oracle_read,
+    _animated_avif_oracle_read_range,
     _animated_avif_oracle_write,
     _avif_oracle_read,
     _avif_oracle_write,
@@ -60,6 +62,24 @@ def _assert_partial_animated_avif(actual, expected) -> None:
     _assert_animated_avif(actual, subset)
 
 
+def _assert_animated_inspection(actual, expected) -> None:
+    assert actual.shape == expected["shape"]
+    assert actual.count == expected["count"]
+
+
+def _oracle_partial_animated_avif(path):
+    return _animated_avif_oracle_read_range(path, 1, 3)
+
+
+def _assert_oracle_partial_animated_avif(actual, expected) -> None:
+    subset = {
+        "frames": expected["frames"][1:3],
+        "timestamps_ns": expected["timestamps_ns"][1:3],
+        "durations_ns": expected["durations_ns"][1:3],
+    }
+    _assert_animated_payload(actual, subset)
+
+
 def build_media_path_specs(scale):
     if not AVIF_AVAILABLE:
         return []
@@ -90,8 +110,12 @@ def build_media_path_specs(scale):
             lambda _record, payload: payload["frames"].nbytes,
             _assert_animated_avif,
             _assert_animated_payload,
-            _partial_animated_avif,
-            _assert_partial_animated_avif,
+            partial=_partial_animated_avif,
+            assert_partial=_assert_partial_animated_avif,
+            oracle_inspect=_animated_avif_oracle_inspect,
+            assert_oracle_inspect=_assert_animated_inspection,
+            oracle_partial=_oracle_partial_animated_avif,
+            assert_oracle_partial=_assert_oracle_partial_animated_avif,
         ),
     ]
 

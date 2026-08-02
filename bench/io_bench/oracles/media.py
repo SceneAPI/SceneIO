@@ -48,11 +48,29 @@ def _animated_avif_oracle_write(payload, path) -> None:
 
 
 def _animated_avif_oracle_read(path):
+    return _animated_avif_oracle_read_range(path, 0, None)
+
+
+def _animated_avif_oracle_inspect(path):
+    with Image.open(path) as image:
+        return {
+            "shape": (
+                int(image.n_frames),
+                int(image.height),
+                int(image.width),
+                len(image.getbands()),
+            ),
+            "count": int(image.n_frames),
+        }
+
+
+def _animated_avif_oracle_read_range(path, start, stop):
     with Image.open(path) as image:
         frames = []
         timestamps_ns = []
         durations_ns = []
-        for index in range(image.n_frames):
+        end = int(image.n_frames) if stop is None else int(stop)
+        for index in range(int(start), end):
             image.seek(index)
             frames.append(np.asarray(image.convert("RGBA")).copy())
             timestamps_ns.append(int(image.info["timestamp"]) * 1_000_000)
@@ -66,7 +84,9 @@ def _animated_avif_oracle_read(path):
 
 __all__ = [
     "AVIF_AVAILABLE",
+    "_animated_avif_oracle_inspect",
     "_animated_avif_oracle_read",
+    "_animated_avif_oracle_read_range",
     "_animated_avif_oracle_write",
     "_avif_oracle_read",
     "_avif_oracle_write",
