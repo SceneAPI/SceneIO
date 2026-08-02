@@ -380,14 +380,19 @@ COMPARISON_QUALIFICATIONS = MappingProxyType(
 # These operations necessarily retain more than the universal 1 MB metadata/
 # selection cap. TinyUSDZ materializes the provider stage before SceneIO can
 # inspect it, the Parquet selector returns a 1.6 MB logical column, and the
-# animated-AVIF selector constructs an owned 8.4 MB two-frame result. Keep them
+# animated-AVIF selector constructs an owned 8.4 MB two-frame result, and the
+# NCore selector returns an owned component with its group metadata. Keep them
 # qualified by a measured ceiling and reduction against the corresponding full
 # read. Values are (maximum operation peak MB, maximum fraction of full).
 O5_INSPECTION_DIRECTIONAL_ALLOCATION_LIMITS = MappingProxyType(
     {"usd": (8.0, 0.8), "usdz": (8.0, 0.8)}
 )
 O5_PARTIAL_DIRECTIONAL_ALLOCATION_LIMITS = MappingProxyType(
-    {"animated_avif": (18.0, 0.75), "parquet": (2.0, 0.25)}
+    {
+        "animated_avif": (18.0, 0.75),
+        "ncore_v4": (1.5, 0.35),
+        "parquet": (2.0, 0.25),
+    }
 )
 
 

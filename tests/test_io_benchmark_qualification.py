@@ -339,6 +339,7 @@ def test_o5_directional_allocation_controls_are_narrow_and_accept_gains():
     } == set(qualification.O5_INSPECTION_DIRECTIONAL_ALLOCATION_LIMITS)
     assert {
         "animated_avif",
+        "ncore_v4",
         "parquet",
     } == set(qualification.O5_PARTIAL_DIRECTIONAL_ALLOCATION_LIMITS)
     assert dict(qualification.O5_INSPECTION_DIRECTIONAL_ALLOCATION_LIMITS) == {
@@ -347,6 +348,7 @@ def test_o5_directional_allocation_controls_are_narrow_and_accept_gains():
     }
     assert dict(qualification.O5_PARTIAL_DIRECTIONAL_ALLOCATION_LIMITS) == {
         "animated_avif": (18.0, 0.75),
+        "ncore_v4": (1.5, 0.35),
         "parquet": (2.0, 0.25),
     }
     qualification.validate_o5_allocation_controls(
@@ -364,6 +366,7 @@ def test_o5_directional_allocation_controls_are_narrow_and_accept_gains():
         "partial read",
         {
             "animated_avif": (25.2, 16.8),
+            "ncore_v4": (4.0, 1.0),
             "png": (3.2, 0.01),
             "parquet": (18.4, 1.6),
         },
@@ -381,6 +384,24 @@ def test_o5_directional_allocation_controls_are_narrow_and_accept_gains():
                 "partial read",
                 {
                     "animated_avif": (full_peak, partial_peak),
+                    "ncore_v4": (4.0, 1.0),
+                    "parquet": (18.4, 1.6),
+                },
+                directional_limits=(
+                    qualification.O5_PARTIAL_DIRECTIONAL_ALLOCATION_LIMITS
+                ),
+            )
+    for full_peak, partial_peak in ((4.0, 1.5), (3.0, 1.2)):
+        with pytest.raises(
+            RuntimeError,
+            match="partial read failed directional traced-allocation guard: "
+            "ncore_v4",
+        ):
+            qualification.validate_o5_allocation_controls(
+                "partial read",
+                {
+                    "animated_avif": (25.2, 16.8),
+                    "ncore_v4": (full_peak, partial_peak),
                     "parquet": (18.4, 1.6),
                 },
                 directional_limits=(
