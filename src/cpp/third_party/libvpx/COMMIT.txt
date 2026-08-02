@@ -1,0 +1,42 @@
+libvpx v1.16.0-178-g4780fac96 portable source closure
+
+Upstream: https://chromium.googlesource.com/webm/libvpx
+Revision: 4780fac9612992f8584227ea508c298fe8c01d05
+Stable base: v1.16.0, commit 1024874c5919305883187e2953de8fcb4c3d7fa6
+Retrieved: 2026-08-01
+License: BSD-3-Clause with the additional WebM patent grant. Exact copies are
+stored in LICENSES/libvpx.txt and LICENSES/libvpx-patents.txt.
+
+Upstream snapshot: git archive of revision
+4780fac9612992f8584227ea508c298fe8c01d05
+Size: 26347520 bytes
+SHA-256: 729c623b8038c5cd68abacdb5171f4126dfc4e86bb09d0da63be7639c440638b
+
+Chromium-generated source list/config reference:
+https://chromium.googlesource.com/chromium/src/+/d3345aa1656fdfce4861a2d7080cac649d45e814/third_party/libvpx
+Chromium revision: d3345aa1656fdfce4861a2d7080cac649d45e814
+Snapshot size: 276785 bytes
+SHA-256: dbc238fcd68680db2f1d3d9e6257b03a4f42c81e6a3fd3cef6617371d66ffd29
+The selected generated configuration/source-list material is covered by the
+Chromium BSD-3-Clause notice in LICENSES/chromium.txt.
+
+Selected repository-contained source: the exact Chromium generic source and
+header lists for VP8 and VP9 encode/decode, the generated generic runtime
+dispatch/configuration headers, public libvpx headers, upstream attribution,
+and a small SceneIO CMake target. Examples, tools, tests, sample media,
+platform assembly, and build-system-only source trees are not stored.
+
+Local integration changes:
+
+- config/vpx_config.h selects MSVC spelling and platform macros when compiled
+  by MSVC while retaining the generated generic GCC-compatible branch for
+  GCC/AppleClang.
+- CMakeLists.txt compiles the portable upstream C implementation with its
+  native worker-thread support and requires the exact 155-source closure.
+- Chromium reference files are renamed CHROMIUM_* to make their origin clear.
+
+The repository closure contains 359 files totaling 5075766 bytes before this
+provenance record and SOURCE_MANIFEST.sha256. Every closure file is recorded
+in case-insensitive path order in SOURCE_MANIFEST.sha256.
+The 32797-byte manifest has SHA-256:
+fe5bdd575666ceba5d93acd7ee50d264e3fa1c1b8d4827ec9a1cfef33f6ca33d

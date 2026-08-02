@@ -283,6 +283,7 @@ write_theora
 write_transforms_json
 write_tum
 write_webm
+write_webm_temporal
 write_webp
 write_xyz
 write_y4m

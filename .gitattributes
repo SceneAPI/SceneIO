@@ -20,5 +20,9 @@ LICENSES/lazperf-source.txt -text -whitespace
 src/cpp/third_party/libwebp/** -text -whitespace
 LICENSES/libwebp.txt -text -whitespace
 LICENSES/libwebp-patents.txt -text -whitespace
+src/cpp/third_party/libvpx/** -text -whitespace
+LICENSES/libvpx.txt -text -whitespace
+LICENSES/libvpx-patents.txt -text -whitespace
+LICENSES/chromium.txt -text -whitespace
 src/cpp/third_party/musl/** -text -whitespace
 LICENSES/musl-log1p.txt -text -whitespace

@@ -266,10 +266,9 @@ def test_sequence_native_and_directory_callable_targets_are_exact():
     assert inspect.getclosurevars(webm.read).nonlocals == {
         "fn": _core.read_webm
     }
-    assert inspect.getclosurevars(webm.write).nonlocals == {
-        "fn": _core.write_webm,
-        "prepare": None,
-    }
+    assert webm.write.__name__ == "_write_webm"
+    assert webm.write.__module__ == "sceneio.io._registry.families.sequences"
+    assert inspect.getclosurevars(webm.write).nonlocals == {}
     assert inspect.getclosurevars(webm.read_frames).nonlocals == {
         "fn": _core.read_webm_frames
     }

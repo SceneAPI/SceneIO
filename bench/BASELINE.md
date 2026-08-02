@@ -4006,9 +4006,36 @@ Worker-on encoding is byte-identical to worker-off and measures 17.78 versus
 17.76 MB/s (1.00x) on this fixture. Metadata-only inspection takes 0.055 ms,
 638.75x faster than the 35.07 ms full decode. Selecting one of four frames
 takes 8.822 ms, 3.98x faster than full decode, with 0.011 MB traced allocation.
-These figures qualify the bounded all-keyframe profile only; they do not claim
-inter-frame VP8 or VP9 performance. The JSON capture SHA-256 is
+These figures qualify the compatible all-keyframe profile. The JSON capture SHA-256 is
 `7e0a2f04cc9fdbf120e42de5693893eee2529c9ecd9ebb5b61f716becf2acf04`.
+
+### Temporal VP8/VP9 expansion
+
+The expanded harness command keeps that baseline row and adds one-lane versus
+automatic-worker temporal controls:
+
+```console
+.venv/Scripts/python.exe bench/bench_io.py --runs 5 --scale 0.25 --only webm --skip-oracles --json build/webm-temporal-benchmark.json
+```
+
+On the same 3.146 MB input, temporal VP8 writes at 30.23 MB/s with one lane
+and 42.93 MB/s with automatic worker lanes, a measured 1.42x gain; its output
+is 0.906 MB and decodes at 58.55 MB/s. Temporal VP9 writes at 20.05/38.62
+MB/s, a 1.93x gain; its output is 0.794 MB and decodes at 98.13 MB/s. The
+compatible all-keyframe output remains 0.880 MB. Metadata inspection takes
+0.062 ms and the selected-frame path takes 9.219 ms (3.96x over full legacy
+decode); mmap and direct-sink traced allocation remain effectively zero.
+The final JSON artifact has SHA-256
+`c98ed9511f84e7ccf7d3e338546eafa9aaafd691f43a18647df2e2aed3b76810`.
+
+Each fixed lane configuration is byte-deterministic. Upstream worker
+partitioning can change lossy coding decisions, so the cross-lane proof is an
+exact timeline/layout comparison plus bounded decoded-plane deltas, while
+partial reads remain byte-exact slices of their corresponding full decode.
+The independent EBML oracle checks codec ids, Colour metadata, references,
+keyframes, and timing; the pinned official libvpx API provides codec reference
+behavior. The JSON capture SHA-256 is
+`37bd819da931ccc2bab7eef49789013afa8fccc343e6e6379ee69abcd045a0fc`.
 
 ## 2026-08-01 bounded RTMV directory checkpoint
 

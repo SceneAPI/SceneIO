@@ -76,7 +76,7 @@ artifacts vocabulary — wire identity unchanged.
 
 ### Compiled format I/O — `read` / `write` / `inspect` / `read_partial`
 
-The lazy-loaded compiled core and repository-owned adapters read and write 70
+The lazy-loaded compiled core and repository-owned adapters read and write 72
 image, image-sequence, depth, tensor,
 point-cloud, Gaussian, mesh/scene, pose/state, reconstruction, calibration,
 graph, feature-database, and scientific-container formats. Stable format
@@ -300,11 +300,13 @@ assert planar.storage_mode == "yuv_planar"
 assert planar.chroma_subsampling in {"mono", "420", "422", "444"}
 selected = sceneio.read_partial("capture.y4m", frames=(100, 200))
 
-# Bounded WebM support uses video-only VP8 keyframes with exact whole-ms
-# timing. Decoded RGB frames are owned; metadata inspection does not decode.
+# Bounded WebM supports the compatible VP8-keyframe default plus explicit
+# temporal VP8/VP9 profiles with exact whole-ms timing. Temporal decode returns
+# owned planar 4:2:0; selected reads start from the required prior keyframe.
 video = sceneio.read("capture.webm")
 clip = sceneio.read_partial("capture.webm", frames=(100, 200))
 assert sceneio.inspect("capture.webm").format == "webm"
+sceneio.write(video, "temporal.webm", profile="vp9-temporal")
 
 # One COLMAP pose and its camera, without opening points3D.
 view = sceneio.read_partial("sparse/0", image_id=42)

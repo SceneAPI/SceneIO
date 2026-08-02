@@ -10,9 +10,9 @@
     "CMakeLists.txt": "800e00e796d06ef8e10637f191176ba8cb6a54b20da6545c46e6de6c2e6de7a5",
     "cmake/SceneIOInstrumentation.cmake": "f4a6ecf75085215628b6d603dd47922ad2b8e730e0c05d09f5cd33193ff0e4a3",
     "cmake/SceneIOSources.cmake": "38d74c11a881049f8511b8b0d49de8fc143a04bf39766f7602de6a9af1e6946f",
-    "cmake/SceneIODependencies.cmake": "7b8e76a6b11cbf758bd39b1c6e31d199e658138f6bc9d197cbc5384994013c16",
+    "cmake/SceneIODependencies.cmake": "b737fb608b961002db73d54f71785fd506126fb53beaf2e721c5ef32e4f2c130",
     "cmake/SceneIOBackendQualification.cmake": "bfd4d8921a2ca7935fc7c728004fd1d623f37deb699fc5c7f99c28667aea502d",
-    "cmake/SceneIOTargets.cmake": "7a1ced0908bc22f7131e8afbda7c81f235b0364d9702ff5fabaf889bfcf00288",
+    "cmake/SceneIOTargets.cmake": "7bc90e3e81ca4c5595c1f0126e0e9f094b425f22c388e0c70abc8ea91049f82d",
     "cmake/SceneIORecordJpegSimd.cmake": "629d84c45808b14dedf6edcdaedc82778652c34600a41f7f09db91d29b392cde"
   },
   "codec_source_owners": {
@@ -275,6 +275,7 @@
     "webp",
     "webpdemux",
     "libwebpmux",
+    "sceneio_vpx",
     "ogg",
     "theora_static",
     "Threads::Threads"

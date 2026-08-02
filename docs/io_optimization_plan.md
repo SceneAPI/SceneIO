@@ -196,6 +196,22 @@ zero traced mmap/sink allocation, 16.5x faster inspection, and 1.76x faster
 selected-frame reads. Upstream x86-64 MMX/SSE2 dispatch is enabled on
 GCC/AppleClang; MSVC x64 and non-x86 targets use the upstream portable kernel.
 
+The expanded WebM path retains the established libwebp all-keyframe default
+and adds direct libvpx temporal VP8/VP9 profiles. Input is still mapped,
+decoded 4:2:0 planes are record-owned, file writes stream one header and one
+cluster per encoded packet, inspection parses only EBML/frame tables, and a
+selected range begins at the nearest preceding keyframe while allocating only
+the requested output planes. The pinned portable upstream implementation uses
+its native worker lanes without a system codec or general media framework.
+Five local MSVC runs over 3.15 MB of RGB input measured temporal VP8 at
+30.2 MB/s with one lane and 42.9 MB/s with automatic lanes (1.42x), temporal
+VP9 at 20.0/38.6 MB/s (1.93x), and temporal decode at 58.5/98.1 MB/s. The VP8
+and VP9 outputs were 0.906/0.794 MB versus 0.880 MB for the compatible
+all-keyframe VP8 path. Same-configuration output is deterministic; because
+libvpx worker partitioning may change lossy coding decisions, cross-lane
+verification requires identical timing/layout and bounded decoded-sample
+deltas rather than identical compressed bytes.
+
 The AVIF extension inherits the O1/O5 read rules through a repository-owned
 path adapter over the optional Pillow 12.3/libavif 1.4.2 provider. A read-only
 mmap is retained until libavif finishes metadata or frame work; decoded pixels

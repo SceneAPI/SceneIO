@@ -1592,6 +1592,23 @@ def _image_sequences(root: Path) -> None:
     assert decoded_webm.durations_ns.tolist() == [40_000_000, 40_000_000]
     assert sceneio.inspect(webm_path).shape == (2, 3, 5, 3)
     assert sceneio.read_partial(webm_path, frames=(1, 2)).num_frames == 1
+    for webm_profile in ("vp8-temporal", "vp9-temporal"):
+        temporal_path = root / f"sequence-{webm_profile}.webm"
+        sceneio.write(
+            webm_sequence,
+            temporal_path,
+            format="webm",
+            profile=webm_profile,
+        )
+        temporal_info = sceneio.inspect(temporal_path)
+        assert temporal_info.metadata["profile"] == "temporal"
+        assert temporal_info.metadata["codec"] == webm_profile[:3]
+        temporal = sceneio.read(temporal_path)
+        assert temporal.storage_mode == "yuv_planar"
+        assert temporal.y.shape == (2, 3, 5)
+        assert sceneio.read_partial(
+            temporal_path, frames=(1, 2)
+        ).num_frames == 1
 
     theora_sequence = _core.image_sequence_yuv(
         y,

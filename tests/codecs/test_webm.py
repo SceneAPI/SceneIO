@@ -45,6 +45,33 @@ def _frames() -> np.ndarray:
     return frames
 
 
+def _temporal_sequence(frames: int = 8, height: int = 24, width: int = 32):
+    frame, row, column = np.indices((frames, height, width))
+    y = ((16 + 3 * column + 2 * row + 11 * frame) % 220).astype(np.uint8)
+    chroma_shape = (frames, (height + 1) // 2, (width + 1) // 2)
+    cframe, crow, ccolumn = np.indices(chroma_shape)
+    u = ((70 + 2 * ccolumn + 3 * crow + 5 * cframe) % 170).astype(np.uint8)
+    v = ((100 + 3 * ccolumn + 2 * crow + 4 * cframe) % 150).astype(np.uint8)
+    durations = np.full(frames, 40_000_000, np.int64)
+    timestamps = np.arange(frames, dtype=np.int64) * durations[0]
+    return _core.image_sequence_yuv(
+        y,
+        u,
+        v,
+        timestamps,
+        durations,
+        "420",
+        "unspecified",
+        "limited",
+        "bt601",
+        "progressive",
+        25,
+        1,
+        1,
+        1,
+    )
+
+
 def _id(value: int) -> bytes:
     return value.to_bytes(max(1, (value.bit_length() + 7) // 8), "big")
 
@@ -273,6 +300,65 @@ def _oracle_demux(data: bytes):
     return width, height, tuple(resolved)
 
 
+def _oracle_temporal_profile(data: bytes):
+    roots = list(_elements(data, 0, len(data)))
+    _, segment_start, segment_stop = roots[1]
+    codec = matrix = color_range = None
+    keyframes = []
+    references = []
+    for element_id, start, stop in _elements(data, segment_start, segment_stop):
+        if element_id == 0x1654AE6B:
+            entries = list(_elements(data, start, stop))
+            assert len(entries) == 1 and entries[0][0] == 0xAE
+            for track_id, track_start, track_stop in _elements(
+                data, entries[0][1], entries[0][2]
+            ):
+                if track_id == 0x86:
+                    codec = data[track_start:track_stop].decode("ascii")
+                elif track_id == 0xE0:
+                    for video_id, video_start, video_stop in _elements(
+                        data, track_start, track_stop
+                    ):
+                        if video_id != 0x55B0:
+                            continue
+                        for color_id, color_start, color_stop in _elements(
+                            data, video_start, video_stop
+                        ):
+                            if color_id == 0x55B1:
+                                matrix = _value(data, color_start, color_stop)
+                            elif color_id == 0x55B9:
+                                color_range = _value(
+                                    data, color_start, color_stop
+                                )
+        elif element_id == 0x1F43B675:
+            for cluster_id, cluster_start, cluster_stop in _elements(
+                data, start, stop
+            ):
+                if cluster_id != 0xA0:
+                    continue
+                child_ids = {
+                    child_id
+                    for child_id, _child_start, _child_stop in _elements(
+                        data, cluster_start, cluster_stop
+                    )
+                }
+                keyframes.append(0xFB not in child_ids)
+                reference = None
+                for child_id, child_start, child_stop in _elements(
+                    data, cluster_start, cluster_stop
+                ):
+                    if child_id == 0xFB:
+                        reference = int.from_bytes(
+                            data[child_start:child_stop], "big", signed=True
+                        )
+                references.append(reference)
+    assert codec in {"V_VP8", "V_VP9"}
+    assert matrix in {1, 6, 9}
+    assert color_range in {1, 2}
+    assert keyframes and keyframes[0]
+    return codec, matrix, color_range, tuple(keyframes), tuple(references)
+
+
 def _replace_first_block_duration(data: bytes, value: int) -> bytes:
     changed = bytearray(data)
     roots = list(_elements(data, 0, len(data)))
@@ -293,6 +379,30 @@ def _replace_first_block_duration(data: bytes, value: int) -> bytes:
                     changed[group_start] = value
                     return bytes(changed)
     raise AssertionError("fixture has no BlockDuration")
+
+
+def _replace_first_reference(data: bytes, value: int) -> bytes:
+    changed = bytearray(data)
+    roots = list(_elements(data, 0, len(data)))
+    _, segment_start, segment_stop = roots[1]
+    for element_id, start, stop in _elements(data, segment_start, segment_stop):
+        if element_id != 0x1F43B675:
+            continue
+        for cluster_id, cluster_start, cluster_stop in _elements(
+            data, start, stop
+        ):
+            if cluster_id != 0xA0:
+                continue
+            for group_id, group_start, group_stop in _elements(
+                data, cluster_start, cluster_stop
+            ):
+                if group_id == 0xFB:
+                    width = group_stop - group_start
+                    changed[group_start:group_stop] = value.to_bytes(
+                        width, "big", signed=True
+                    )
+                    return bytes(changed)
+    raise AssertionError("fixture has no ReferenceBlock")
 
 
 def test_sceneio_writer_is_deterministic_and_oracle_decodable():
@@ -335,6 +445,10 @@ def test_independent_simpleblock_writer_is_sceneio_readable():
         "alpha_mode": "none",
         "codec": "vp8",
         "profile": "all_keyframe",
+        "storage_mode": "packed",
+        "matrix": "unknown",
+        "color_range": "unknown",
+        "keyframes": 3,
         "duration_ns": 120_000_000,
     }
     decoded = _core.read_webm(memoryview(encoded))
@@ -361,6 +475,9 @@ def test_public_detect_read_write_inspect_partial_and_direct_sink(tmp_path):
         "alpha_mode": "none",
         "codec": "vp8",
         "profile": "all_keyframe",
+        "matrix": "unknown",
+        "color_range": "unknown",
+        "keyframes": 3,
         "duration_ns": 140_000_000,
     }
     full = sceneio.read(path)
@@ -395,6 +512,197 @@ def test_thread_modes_produce_identical_bytes_and_pixels():
         _core.read_webm(threaded).pixels,
         _core.read_webm(single).pixels,
     )
+
+
+@pytest.mark.parametrize("codec", ["vp8", "vp9"])
+def test_temporal_writer_has_independent_container_oracle_and_partial(codec):
+    sequence = _temporal_sequence()
+    source_planes = tuple(
+        np.array(plane, copy=True) for plane in (sequence.y, sequence.u, sequence.v)
+    )
+    encoded = bytes(
+        _core.write_webm_temporal(
+            sequence,
+            codec=codec,
+            quality=82,
+            threads=1,
+            keyframe_interval=4,
+        )
+    )
+    for actual, expected in zip(
+        (sequence.y, sequence.u, sequence.v), source_planes, strict=True
+    ):
+        np.testing.assert_array_equal(actual, expected)
+    oracle_codec, matrix, color_range, keyframes, references = (
+        _oracle_temporal_profile(encoded)
+    )
+    assert oracle_codec == f"V_{codec.upper()}"
+    assert (matrix, color_range) == (6, 1)
+    assert keyframes == (True, False, False, False, True, False, False, False)
+    assert references == (None, -40, -40, -40, None, -40, -40, -40)
+
+    metadata = dict(_core._inspect_webm(encoded))
+    assert metadata == {
+        "width": 32,
+        "height": 24,
+        "frames": 8,
+        "channels": 3,
+        "dtype": "uint8",
+        "alpha_mode": "none",
+        "color_space": "ycbcr",
+        "color_range": "limited",
+        "matrix": "bt601",
+        "codec": codec,
+        "profile": "temporal",
+        "storage_mode": "yuv_planar",
+        "keyframes": 2,
+        "duration_ns": 320_000_000,
+    }
+    full = _core.read_webm(encoded)
+    partial = _core.read_webm_frames(encoded, 2, 7)
+    assert full.storage_mode == partial.storage_mode == "yuv_planar"
+    assert full.matrix == partial.matrix == "bt601"
+    assert full.color_range == partial.color_range == "limited"
+    np.testing.assert_array_equal(partial.y, full.y[2:7])
+    np.testing.assert_array_equal(partial.u, full.u[2:7])
+    np.testing.assert_array_equal(partial.v, full.v[2:7])
+    assert partial.timestamps_ns.tolist() == [
+        80_000_000,
+        120_000_000,
+        160_000_000,
+        200_000_000,
+        240_000_000,
+    ]
+
+
+@pytest.mark.parametrize("profile", ["vp8-temporal", "vp9-temporal"])
+def test_public_temporal_profiles_stream_and_own_decoded_planes(
+    tmp_path, profile
+):
+    path = tmp_path / f"{profile}.webm"
+    sequence = _temporal_sequence()
+    expected = bytes(
+        _core.write_webm_temporal(sequence, codec=profile[:3])
+    )
+    sceneio.write(sequence, path, format="webm", profile=profile)
+    assert path.read_bytes() == expected
+    inspection = sceneio.inspect(path)
+    assert inspection.metadata["codec"] == profile[:3]
+    assert inspection.metadata["profile"] == "temporal"
+    assert inspection.metadata["storage_mode"] == "yuv_planar"
+    assert [array.name for array in inspection.arrays] == ["y", "u", "v"]
+
+    with path.open("rb") as stream:
+        mapped = mmap.mmap(stream.fileno(), 0, access=mmap.ACCESS_READ)
+        decoded = _core.read_webm(mapped)
+        snapshot = tuple(
+            np.array(plane, copy=True)
+            for plane in (decoded.y, decoded.u, decoded.v)
+        )
+        mapped.close()
+    gc.collect()
+    for actual, expected in zip(
+        (decoded.y, decoded.u, decoded.v), snapshot, strict=True
+    ):
+        np.testing.assert_array_equal(actual, expected)
+
+
+@pytest.mark.parametrize("codec", ["vp8", "vp9"])
+def test_temporal_worker_modes_are_repeatable_and_decode_same_timeline(codec):
+    sequence = _temporal_sequence(frames=10, height=48, width=64)
+    one = bytes(_core.write_webm_temporal(sequence, codec=codec, threads=1))
+    one_repeat = bytes(
+        _core.write_webm_temporal(sequence, codec=codec, threads=1)
+    )
+    many = bytes(_core.write_webm_temporal(sequence, codec=codec, threads=4))
+    many_repeat = bytes(
+        _core.write_webm_temporal(sequence, codec=codec, threads=4)
+    )
+    assert one == one_repeat
+    assert many == many_repeat
+    one_decoded = _core.read_webm(one)
+    many_decoded = _core.read_webm(many)
+    assert one_decoded.timestamps_ns.tolist() == many_decoded.timestamps_ns.tolist()
+    assert one_decoded.durations_ns.tolist() == many_decoded.durations_ns.tolist()
+    for first, second in zip(
+        (one_decoded.y, one_decoded.u, one_decoded.v),
+        (many_decoded.y, many_decoded.u, many_decoded.v),
+        strict=True,
+    ):
+        difference = np.abs(
+            np.asarray(first, dtype=np.int16)
+            - np.asarray(second, dtype=np.int16)
+        )
+        assert float(difference.mean()) < 1.0
+        assert int(difference.max()) <= 16
+
+
+def test_temporal_writer_refuses_unrepresented_options():
+    sequence = _temporal_sequence()
+    with pytest.raises(ValueError, match="codec"):
+        _core.write_webm_temporal(sequence, codec="av1")
+    with pytest.raises(ValueError, match="threads"):
+        _core.write_webm_temporal(sequence, threads=9)
+    with pytest.raises(ValueError, match="keyframe_interval"):
+        _core.write_webm_temporal(sequence, keyframe_interval=1)
+
+    bt709_full = _core.image_sequence_yuv(
+        sequence.y,
+        sequence.u,
+        sequence.v,
+        sequence.timestamps_ns,
+        sequence.durations_ns,
+        "420",
+        "unspecified",
+        "full",
+        "bt709",
+        "progressive",
+        25,
+        1,
+        1,
+        1,
+    )
+    vp9 = bytes(_core.write_webm_temporal(bt709_full, codec="vp9", threads=1))
+    _, matrix, color_range, _, _ = _oracle_temporal_profile(vp9)
+    assert (matrix, color_range) == (1, 2)
+    decoded = _core.read_webm(vp9)
+    assert (decoded.matrix, decoded.color_range) == ("bt709", "full")
+    with pytest.raises(ValueError, match="bt601"):
+        _core.write_webm_temporal(bt709_full, codec="vp8")
+
+    with pytest.raises(sceneio.FormatError, match="unknown profile"):
+        sceneio.write(
+            sequence,
+            "unused.webm",
+            format="webm",
+            profile="vp10-temporal",
+        )
+
+
+@pytest.mark.parametrize("codec", ["vp8", "vp9"])
+def test_temporal_rgb_conversion_preserves_input_and_exact_timing(codec):
+    frames = _frames()
+    snapshot = frames.copy()
+    sequence = _sequence(frames)
+    encoded = _core.write_webm_temporal(sequence, codec=codec, threads=1)
+    np.testing.assert_array_equal(frames, snapshot)
+    np.testing.assert_array_equal(sequence.pixels, snapshot)
+    decoded = _core.read_webm(encoded)
+    assert decoded.storage_mode == "yuv_planar"
+    assert decoded.matrix == "bt601"
+    assert decoded.color_range == "limited"
+    assert decoded.timestamps_ns.tolist() == [0, 40_000_000, 110_000_000]
+    assert decoded.durations_ns.tolist() == [
+        40_000_000,
+        70_000_000,
+        30_000_000,
+    ]
+    *_, references = _oracle_temporal_profile(bytes(encoded))
+    assert references == (None, -40, -70)
+    malformed_reference = _replace_first_reference(bytes(encoded), -1)
+    for function in (_core.read_webm, _core._inspect_webm):
+        with pytest.raises(ValueError, match="earlier frame"):
+            function(malformed_reference)
 
 
 @pytest.mark.parametrize(

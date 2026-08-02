@@ -54,6 +54,7 @@ target_link_libraries(
     webp
     webpdemux
     libwebpmux
+    sceneio_vpx
     ogg
     theora_static
     Threads::Threads)

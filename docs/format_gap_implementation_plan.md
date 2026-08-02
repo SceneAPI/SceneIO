@@ -33,7 +33,8 @@
   patent grant. Exact live claims are in `format_coverage.md`; older unchecked
   AVIF items below are retained as historical planning context. A bounded
   WebM VP8 all-keyframe profile and direct Ogg/Theora profile are also
-  complete; general inter-frame VP8/VP9 remains a separate moving-image unit.
+  complete. The final moving-image unit adds bounded temporal VP8/VP9 to the
+  same repository-owned WebM adapter through pinned direct libvpx.
 - **Scope:** close every unblocked format gap declared by SceneIO's coverage
   documents without reimplementing the 0.2.0 codec tier.
 

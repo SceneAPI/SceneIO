@@ -13,6 +13,7 @@ EXPECTED_NOTICES = {
     "apache-arrow-license.txt",
     "apache-arrow-notice.txt",
     "cgltf.txt",
+    "chromium.txt",
     "colmap.txt",
     "dav1d.txt",
     "delvewheel.txt",
@@ -31,6 +32,8 @@ EXPECTED_NOTICES = {
     "theora.txt",
     "libwebp-patents.txt",
     "libwebp.txt",
+    "libvpx-patents.txt",
+    "libvpx.txt",
     "lodepng.txt",
     "miniz-zip.txt",
     "miniz.txt",
@@ -64,6 +67,7 @@ VENDORED_NOTICE = {
     "fast_float": "fast-float.txt",
     "lazperf": "lazperf.txt",
     "libwebp": "libwebp.txt",
+    "libvpx": "libvpx.txt",
     "ogg": "ogg.txt",
     "theora": "theora.txt",
     "lodepng": "lodepng.txt",
@@ -77,6 +81,38 @@ VENDORED_NOTICE = {
 }
 
 SOURCE_CLOSURE = {
+    "libvpx": {
+        "version": "v1.16.0-178-g4780fac96",
+        "commit": "4780fac9612992f8584227ea508c298fe8c01d05",
+        "archive_sha256": (
+            "729c623b8038c5cd68abacdb5171f4126"
+            "dfc4e86bb09d0da63be7639c440638b"
+        ),
+        "notice": "libvpx.txt",
+        "license": "LICENSE",
+        "manifest": "SOURCE_MANIFEST.sha256",
+        "path_sorted_manifest": True,
+        "manifest_sha256": (
+            "fe5bdd575666ceba5d93acd7ee50d264"
+            "e3fa1c1b8d4827ec9a1cfef33f6ca33d"
+        ),
+        "cmake_patterns": (
+            (
+                r'^set\(libvpx_SOURCE_DIR '
+                r'"\$\{PROJECT_SOURCE_DIR\}/src/cpp/third_party/libvpx"\)$'
+            ),
+            (
+                r"add_subdirectory\(\s*"
+                r'"\$\{libvpx_SOURCE_DIR\}"\s*'
+                r'"\$\{CMAKE_CURRENT_BINARY_DIR\}/libvpx"\s*'
+                r"EXCLUDE_FROM_ALL\)"
+            ),
+            (
+                r"set_property\(TARGET sceneio_vpx PROPERTY "
+                r"C_VISIBILITY_PRESET hidden\)"
+            ),
+        ),
+    },
     "ogg": {
         "version": "1.3.6",
         "commit": "be05b13e98b048f0b5a0f5fa8ce514d56db5f822",
@@ -718,6 +754,17 @@ def test_repository_contained_native_licenses_are_exact_distribution_copies() ->
             assert marker in packaged_notice
         for marker in entry.get("packaged_notice_markers", ()):
             assert marker in packaged_notice
+
+    assert (
+        ROOT / "src/cpp/third_party/libvpx/PATENTS"
+    ).read_bytes() == (LICENSES / "libvpx-patents.txt").read_bytes()
+    libvpx_provenance = (
+        ROOT / "src/cpp/third_party/libvpx/COMMIT.txt"
+    ).read_text(encoding="utf-8")
+    assert "d3345aa1656fdfce4861a2d7080cac649d45e814" in libvpx_provenance
+    assert "dbc238fcd68680db2f1d3d9e6257b03a4f42c81e6a3fd3cef6617371d66ffd29" in (
+        libvpx_provenance
+    )
 
     musl_root = ROOT / "src/cpp/third_party/musl"
     provenance = (musl_root / "COMMIT.txt").read_text(encoding="utf-8")

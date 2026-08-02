@@ -48,6 +48,7 @@ _SPECIAL_PROFILES = {
     },
     "laz": {"legacy_formats_0_3", "layered_formats_6_8"},
     "spz": {"legacy_v3_gzip", "ngsp_v4_zstd"},
+    "webm": {"default", "vp8-temporal", "vp9-temporal"},
 }
 
 
@@ -95,7 +96,7 @@ def test_performance_ledger_has_stable_schema_and_exact_builtin_coverage():
 
 def test_performance_operations_cover_required_profiles_and_directions():
     operations = _ledger()["operation"]
-    assert len(operations) == 176
+    assert len(operations) == 180
     keys = [
         (item["codec_id"], item["profile"], item["direction"])
         for item in operations
@@ -117,7 +118,7 @@ def test_performance_rows_are_honest_about_initial_evidence():
     operations = _ledger()["operation"]
     states = Counter(item["status"] for item in operations)
     assert states == {
-        "provisional": 167,
+        "provisional": 171,
         "known_gap": 2,
         "not_applicable": 7,
     }
@@ -132,6 +133,7 @@ def test_performance_rows_are_honest_about_initial_evidence():
             "profile-specific current-backend measurement missing",
             "candidate comparison on all required toolchains",
         ): 14,
+        ("three-platform package validation",): 4,
     }
     assert all(item["candidate_backends"] == [] for item in provisional)
     for item in operations:

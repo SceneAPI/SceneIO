@@ -2042,6 +2042,66 @@ def _run_benchmark(args, tmp):
                         "write_worker_on_mbps": sioW,
                     }
                 )
+                for temporal_codec in ("vp8", "vp9"):
+                    one_lane = partial(
+                        _core.write_webm_temporal,
+                        rec,
+                        temporal_codec,
+                        82.0,
+                        1,
+                        6,
+                        120,
+                    )
+                    worker_lanes = partial(
+                        _core.write_webm_temporal,
+                        rec,
+                        temporal_codec,
+                        82.0,
+                        0,
+                        6,
+                        120,
+                    )
+                    one_lane_time, _ = _measure(one_lane, args.runs)
+                    worker_time, _ = _measure(worker_lanes, args.runs)
+                    temporal_bytes = bytes(worker_lanes())
+                    decode_time, _ = _measure(
+                        partial(_core.read_webm, temporal_bytes), args.runs
+                    )
+                    temporal_decoded = _core.read_webm(temporal_bytes)
+                    if (
+                        temporal_decoded.timestamps_ns.tolist()
+                        != rec.timestamps_ns.tolist()
+                        or temporal_decoded.durations_ns.tolist()
+                        != rec.durations_ns.tolist()
+                    ):
+                        raise AssertionError(
+                            f"WebM {temporal_codec} temporal timing differs"
+                        )
+                    o4_rows.append(
+                        (
+                            "webm",
+                            f"{temporal_codec}-temporal-workers",
+                            pmb / one_lane_time,
+                            pmb / worker_time,
+                            "timeline",
+                        )
+                    )
+                    o4_metrics.update(
+                        {
+                            f"{temporal_codec}_temporal_write_1_mbps": (
+                                pmb / one_lane_time
+                            ),
+                            f"{temporal_codec}_temporal_write_auto_mbps": (
+                                pmb / worker_time
+                            ),
+                            f"{temporal_codec}_temporal_read_mbps": (
+                                pmb / decode_time
+                            ),
+                            f"{temporal_codec}_temporal_encoded_bytes": len(
+                                temporal_bytes
+                            ),
+                        }
+                    )
             elif s.id in {"xyz", "exr", "las"}:
                 if s.id == "xyz":
                     one_lane_write = partial(

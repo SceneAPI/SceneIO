@@ -90,6 +90,9 @@ _FLOW_WRITER = _file_sink_writer(_core.write_flo_field)
 _EXACT_COLMAP_DB_PROFILES = frozenset(
     item["name"] for item in _core._colmap_db_profiles()
 )
+_WEBM_WRITE_PROFILES = frozenset(
+    {"vp8-keyframe", "vp8-temporal", "vp9-temporal"}
+)
 
 
 def _resolve_flow_format(path, format: str | None, *, writing: bool) -> str:
@@ -522,17 +525,19 @@ def write(
     without materializing a second output-sized Python ``bytes`` object. The
     file opens lazily after validation and encoding, so a rejected record does
     not truncate an existing destination. ``profile`` selects an exact
-    COLMAP SQLite schema and is rejected for every other format. Omitting it
-    preserves an exact profile carried by a decoded database; constructed
-    hybrid records retain the established hybrid-writer behavior.
+    COLMAP SQLite schema or one of the WebM ``vp8-keyframe``,
+    ``vp8-temporal``, and ``vp9-temporal`` encoders. Omitting it preserves an
+    exact profile carried by a decoded database and keeps WebM's compatible
+    independent-frame VP8 default.
     """
     fmt = format or _detect_write(obj, path)
     codec = get(fmt)
     if codec.write is None:
         raise FormatError(f"format {fmt!r} is read-only (no writer)")
-    if profile is not None and fmt != "colmap_db":
+    if profile is not None and fmt not in {"colmap_db", "webm"}:
         raise FormatError(
-            "profile is supported only when writing format 'colmap_db'"
+            "profile is supported only when writing format 'colmap_db' "
+            "or 'webm'"
         )
     if (
         profile is not None
@@ -542,6 +547,11 @@ def write(
         raise FormatError(
             f"COLMAP database writer: unknown target profile {profile!r}"
         )
+    if profile is not None and fmt == "webm" and profile not in _WEBM_WRITE_PROFILES:
+        raise FormatError(
+            f"WebM writer: unknown profile {profile!r}; expected one of "
+            + ", ".join(sorted(_WEBM_WRITE_PROFILES))
+        )
     try:
         selected_profile = profile
         if (
@@ -550,7 +560,9 @@ def write(
             and getattr(obj, "profile", None) in _EXACT_COLMAP_DB_PROFILES
         ):
             selected_profile = obj.profile
-        if selected_profile is None:
+        if selected_profile is None or (
+            fmt == "webm" and selected_profile == "vp8-keyframe"
+        ):
             codec.write(obj, str(path))
         else:
             codec.write(obj, str(path), profile=selected_profile)

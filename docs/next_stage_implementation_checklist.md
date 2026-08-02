@@ -5465,10 +5465,48 @@ general metadata, and implicit color conversion stay out of the profile.
 
 ### M2b — broader WebM temporal compression
 
-- [ ] Treat inter-frame VP8 and VP9 as a separate future profile. Select a
-      direct portable backend only after its build, license, fidelity, and
-      measured performance satisfy the same package matrix. The completed
-      all-keyframe profile does not claim this broader coverage.
+- [x] Keep the compatible all-keyframe VP8 default and add explicit
+      `vp8-temporal` / `vp9-temporal` public write profiles. Accept one
+      progressive video track, uint8 4:2:0, exact whole-ms timing, bounded
+      backward references, and explicit WebM matrix/range metadata.
+- [x] Pin the compact Chromium generic libvpx source closure at
+      `4780fac9612992f8584227ea508c298fe8c01d05`, record the Chromium-generated
+      configuration revision, exact source manifest, BSD-3-Clause notices,
+      and WebM patent grant, and build it directly on MSVC/GCC/AppleClang
+      without a system codec or general media framework.
+- [x] Implement stateful VP8/VP9 decode into owned planar Y'CbCr, temporal
+      encode from packed RGB or explicit planar 4:2:0, metadata-only inspect,
+      direct file streaming, and frame selection that internally begins at
+      the required preceding keyframe.
+- [x] Verify both codecs with an independent EBML oracle for codec ids,
+      Colour elements, block references, keyframe positions, and exact timing;
+      use the pinned official libvpx API as codec ground truth. Cover partial
+      equals full slice, mapping lifetime, sink/buffer identity, invalid input,
+      public profiles, deterministic same-lane output, and one-versus-worker
+      lane behavior.
+- [x] Extend the committed benchmark and performance ledger. Five local MSVC
+      runs on 3.15 MB measured VP8 one/auto encode at 30.2/42.9 MB/s (1.42x),
+      VP9 at 20.0/38.6 MB/s (1.93x), and decode at 58.5/98.1 MB/s. Record that
+      worker partitioning may alter lossy compressed bytes and decoded samples,
+      while each fixed configuration is deterministic and preserves exact
+      timeline/layout semantics.
+- [x] Update the registry capabilities, native inventory, symbol/AST snapshots,
+      wheel surface, license inventory, coverage documents, and benchmark
+      qualification ledger for the expanded profile.
+- [x] Complete the resource/lifetime, format-correctness, and test-soundness
+      reviews. Mapped inputs remain owned until parsing and decode finish;
+      decoded planes are record-owned; libvpx/libwebp objects have RAII cleanup;
+      and direct-sink callbacks are synchronous. The correctness review found
+      and fixed VP9 bitstream/container color-range disagreement plus incorrect
+      `ReferenceBlock` distances for variable-duration input. The independent
+      EBML oracle now checks exact reference offsets, malformed references
+      refuse, planar and packed inputs remain unchanged, and all public,
+      partial, mapping-lifetime, sink, metadata, and worker cases stay covered.
+- [x] Pass the exact 4,372-node local collection: 4,366 tests pass with six
+      documented skips; the installed-package smoke returns `2`; Ruff and
+      diff checks are clean.
+- [ ] Run the user-triggered nonpublishing Linux/macOS/Windows package matrix
+      after the green commit is pushed.
 
 ### M3 — Ogg/Theora
 
@@ -5502,9 +5540,9 @@ general metadata, and implicit color conversion stay out of the profile.
 
 ### Exit
 
-- [ ] Registry, capability snapshot, wheel smoke, benchmark ledger, coverage
+- [x] Registry, capability snapshot, wheel smoke, benchmark ledger, coverage
       docs, roadmap, and license inventory agree exactly.
-- [ ] The base wheel and source/build/package scans contain no FFmpeg/libav
+- [x] The base wheel and source/build/package scans contain no FFmpeg/libav
       component or process path.
-- [x] Keep AVIF, bounded WebM, RTMV, and Ogg/Theora as separately reviewable
-      green commits; the broader WebM profile remains its own final unit.
+- [x] Keep AVIF, bounded WebM, RTMV, Ogg/Theora, and temporal WebM as
+      separately reviewable green units.

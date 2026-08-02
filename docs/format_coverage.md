@@ -67,16 +67,17 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > skips, the 207-test integration slice, Ruff, and the final three-run AVIF
 > benchmark. Hosted optional-provider package evidence remains user-triggered.
 >
-> **70-format WebM checkpoint (2026-08-01):** `webm` adds a repository-owned
+> **70-format initial WebM checkpoint (2026-08-01):** `webm` added a repository-owned
 > EBML/WebM adapter and a bounded video-only `V_VP8` profile using the already
 > pinned libwebp 1.5.0 VP8 encoder/decoder. It accepts progressive packed
 > uint8 sRGB RGB frames, exact contiguous whole-millisecond timing, and
 > independently decodable keyframes. Reads use mmap input and owned decoded
 > frames; write, inspect, frame-range, deterministic worker-control, and direct
 > streaming-sink paths are present. The oracle independently parses and writes
-> EBML and decodes raw VP8 packets through Pillow/libwebp. VP8 interframes,
-> VP9, alpha, audio, subtitles, chapters, lacing, HDR, embedded metadata, and
-> sub-millisecond timing refuse rather than being projected. The implementation
+> EBML and decodes raw VP8 packets through Pillow/libwebp. At this checkpoint,
+> interframes and VP9 were still outside the accepted profile. Alpha, audio,
+> subtitles, chapters, lacing, HDR, embedded metadata, and sub-millisecond
+> timing refuse rather than being projected. The implementation
 > adds no dependency: libwebp's BSD-3-Clause terms and upstream patent grant
 > were already indexed in `LICENSES/`. No general video framework is linked or
 > invoked by SceneIO. The rebuilt MSVC extension passes the complete local
@@ -121,6 +122,26 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > page-length, granule-order, keyframe-shift, and duplicate-frame checks. The
 > exact local gate passes 4,357 tests with six documented skips; Ruff and diff
 > checks are clean. Hosted package-matrix validation remains user-triggered.
+>
+> **72-format expanded WebM checkpoint (2026-08-01):** the existing `webm`
+> format now also reads and writes temporal VP8 and VP9 through the compact,
+> repository-pinned libvpx `v1.16.0-178-g4780fac96` source closure. The
+> repository-owned EBML layer accepts one progressive video track with 8-bit
+> 4:2:0 frames, explicit WebM matrix/range metadata, exact whole-millisecond
+> timing, and backward frame references. Temporal decode returns owned planar
+> Y'CbCr; frame selection starts internally at the nearest preceding keyframe
+> and returns exactly the requested slice. Public writes select
+> `vp8-keyframe`, `vp8-temporal`, or `vp9-temporal`; the compatible default
+> remains independent-frame VP8. The direct sink, mmap, inspection, lifetime,
+> malformed-input, deterministic same-lane, and one-versus-worker-lane paths
+> are covered. An independent EBML oracle verifies codec ids, Colour elements,
+> keyframe/reference layout, and timing while the pinned official libvpx API
+> supplies codec ground truth. libvpx and Chromium-generated configuration
+> notices, pins, and exact source hashes are indexed in `LICENSES/` and beside
+> the vendored source. No general media framework is linked or invoked.
+> Five local MSVC runs on a 3.15 MB fixture measured auto-worker gains of
+> 1.41x for VP8 and 1.94x for VP9, with 59/98 MB/s decode respectively.
+> Hosted Linux/macOS/Windows package validation remains user-triggered.
 >
 > **USD standards review (2026-07-30):** AOUSD Core Specification 1.0.1,
 > supplemental 1.0.1.post0, OpenUSD 26.08, and the official
@@ -1110,7 +1131,7 @@ public-domain SQLite amalgamation statically linked into `_core`.
 | `laz` | `PointCloud` | R+W | **laspy 2.7 + lazrs 0.8.1** | pinned LAZperf 3.4.0; standard formats 0–3/6–8; strict LASzip VLR/chunk extents; chunk-aware ranges; seekable streaming sink |
 | `image_sequence` | `ImageSequence` | R+W | independent manifest/PGM fixtures + existing image-codec parity suites | flat image directories; deterministic natural order or strict versioned manifest; lazy owned paths; exact optional timing; heterogeneous frames reject; transactional bounded-copy writer; frame ranges |
 | `y4m` | `ImageSequence` | R+W | independent Python parser/writer + exact golden bytes | original dependency-free YUV4MPEG2 subset; uint8 mono/4:2:0/4:2:2/4:4:4 planar frames, odd dimensions, exact rational timing, mmap, streaming sink, inspect, and frame ranges; no RGB conversion or video-framework dependency |
-| `webm` | `ImageSequence` | R+W | independent EBML mux/demux + Pillow/libwebp raw-VP8 oracle in `tests/codecs/test_webm.py` | repository-owned WebM container; video-only progressive packed uint8 RGB, `V_VP8` all-keyframe profile, exact whole-millisecond timing, mmap, direct sink, inspect, frame ranges, and deterministic worker control; VP8 interframes, VP9, alpha, audio, subtitles, chapters, lacing, HDR, and embedded metadata refuse |
+| `webm` | `ImageSequence` | R+W | independent EBML mux/demux + Pillow/libwebp raw-VP8 oracle + pinned official libvpx API in `tests/codecs/test_webm.py` | repository-owned video-only WebM container; compatible packed-RGB VP8 keyframe profile plus temporal VP8/VP9 planar uint8 4:2:0 profiles selected by `sceneio.write(..., profile=...)`; explicit matrix/range, exact whole-ms timing, keyframe-aware frame ranges, mmap, direct sink, inspect, and worker lanes; alpha, audio, subtitles, chapters, lacing, HDR, and embedded metadata refuse |
 | `theora` | `ImageSequence` | R+W | pinned libtheora payload API + independent Ogg page/CRC/lacing/remux oracle in `tests/codecs/test_theora.py` | direct libogg/libtheora video-only profile; progressive uint8 planar 4:2:0, fixed rational timing, pixel aspect, mmap, direct sink, inspect, and frame ranges; comments, multiple streams, audio/subtitles, tagged color spaces, other chroma layouts, high bit depth, and interlacing refuse |
 | `animated_webp` | `ImageSequence` | R+W | Pillow/libwebp animation-container oracle in `tests/codecs/test_animated_webp.py` | repository-pinned libwebp mux/demux/animation APIs; fully composited packed uint8 RGB/RGBA frames, exact millisecond timing, loop/background metadata, mmap, streaming sink, and metadata-only inspection |
 | `apng` | `ImageSequence` | R+W | Pillow plus specification-derived chunk/compositing oracle in `tests/codecs/test_apng.py` | repository-owned APNG container logic over pinned lodepng; fully composited packed uint8 RGBA frames, exact rational timing representable as integer nanoseconds, loop count, source/over blend, none/background/previous disposal, mmap, streaming sink, and metadata-only inspection |
@@ -1158,9 +1179,8 @@ requirement for COLMAP ecosystem closure.
 
 ### ⬜ Pending — declared roadmap gaps
 
-- Sequence/dataset: RTMV, animated WebP, APNG, animated AVIF, WebM VP8
-  all-keyframe, and Ogg/Theora are complete for their bounded profiles.
-  General inter-frame VP8/VP9 remains a separate implementation unit.
+- Sequence/dataset: RTMV, animated WebP, APNG, animated AVIF, bounded WebM
+  VP8/VP9, and Ogg/Theora are complete for their declared profiles.
 - Optional CV containers are complete for the accepted profiles: HDF5/hloc,
   Zarr v2/v3, TIFF, E57, Parquet, Arrow IPC, OpenVDB, USD, and USDZ.
 - Broader semantics remain intentionally outside those bounded profiles:
@@ -1350,7 +1370,7 @@ names from `_core.__native_features__`.
 | point range `points=(start,stop)` | XYZ, PTS, binary generic PLY, uncompressed binary PCD, LAS, Gaussian PLY, compressed PLY, SOG, KSplat, SPLAT | `PointCloud` / `GaussianCloud`, with convention metadata preserved |
 | face range `faces=(start,stop)` | generic mesh PLY, STL, OFF | `Mesh`; PLY/OFF retain the complete vertex domain, while STL returns local canonical triangle soup |
 | state range `states=(start,stop)` | EuRoC state CSV | `StateTrajectory` with convention metadata preserved |
-| frame range `frames=(start,stop)` | image directories, RTMV directories, raw Y4M, animated AVIF | `ImageSequence` or `RtmvDataset`; directory payloads remain lazy encoded paths, RTMV rebuilds only selected validated metadata records, Y4M copies only selected planar frames, and animated AVIF returns only selected decoded output frames; animated WebP and APNG currently expose full composited reads and do not claim a bounded frame selector |
+| frame range `frames=(start,stop)` | image directories, RTMV directories, raw Y4M, animated AVIF, WebM, Ogg/Theora | `ImageSequence` or `RtmvDataset`; directory payloads remain lazy encoded paths, RTMV rebuilds only selected validated metadata records, raw codecs copy only selected planes, WebM begins decode at the required preceding keyframe, and the result always contains exactly the requested frames; animated WebP and APNG currently expose full composited reads and do not claim a bounded frame selector |
 | `image_id` | COLMAP binary + text | one-image `Reconstruction` plus every camera required by its retained modern rig/frame (or its one legacy camera); no point-container read |
 | `image_id` | COLMAP SQLite database | one compiled `FeatureSet`; unrelated keypoint/descriptor BLOBs remain unread |
 | unordered `pair=(image_id1,image_id2)` | COLMAP SQLite database | one compiled `MatchGraph` with raw/verified matches and optional geometry |

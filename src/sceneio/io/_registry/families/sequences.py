@@ -21,6 +21,29 @@ from sceneio.io._registry.adapters import (
 )
 from sceneio.io._registry.model import Codec
 
+_WEBM_WRITE_PROFILES = (
+    "vp8-keyframe",
+    "vp8-temporal",
+    "vp9-temporal",
+)
+
+
+def _write_webm(sequence, path: str, *, profile: str = "vp8-keyframe") -> None:
+    if profile not in _WEBM_WRITE_PROFILES:
+        raise ValueError(
+            "WebM writer: profile must be one of "
+            + ", ".join(repr(value) for value in _WEBM_WRITE_PROFILES)
+        )
+    function = (
+        _core.write_webm
+        if profile == "vp8-keyframe"
+        else partial(
+            _core.write_webm_temporal,
+            codec="vp8" if profile == "vp8-temporal" else "vp9",
+        )
+    )
+    _core._write_to_file(function, sequence, path)
+
 _Y4M_CODEC = Codec(
     "y4m",
     (".y4m",),
@@ -50,7 +73,7 @@ _WEBM_CODEC = Codec(
     "webm",
     (".webm",),
     _mmap_reader(_core.read_webm),
-    _file_sink_writer(_core.write_webm),
+    _write_webm,
     record=_core.ImageSequence,
     datatype="image_sequence",
     magic=(b"\x1a\x45\xdf\xa3",),
@@ -59,10 +82,14 @@ _WEBM_CODEC = Codec(
     supported_features=(
         "webm",
         "vp8",
+        "vp8_interframes",
+        "vp9",
         "uint8",
         "rgb",
+        "yuv420",
         "progressive",
         "all_keyframe",
+        "temporal_compression",
         "simpleblock_constant_timing",
         "exact_frame_timing",
         "frame_ranges",
@@ -71,8 +98,6 @@ _WEBM_CODEC = Codec(
         "metadata_only_inspect",
     ),
     unsupported_features=(
-        "vp8_interframes",
-        "vp9",
         "alpha",
         "audio",
         "subtitles",

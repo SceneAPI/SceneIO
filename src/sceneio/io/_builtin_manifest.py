@@ -312,6 +312,7 @@ _NATIVE_SYMBOLS = {
         "_inspect_webm",
         "read_webm",
         "write_webm",
+        "write_webm_temporal",
         "read_webm_frames",
     ),
     "theora": (

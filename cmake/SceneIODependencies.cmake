@@ -216,6 +216,28 @@ foreach(_webp_target
       C_VISIBILITY_PRESET hidden)
 endforeach()
 
+# libvpx 1.16 development line (BSD-3-Clause + WebM patent grant) -- the
+# repository contains the exact compact generic source set and generated
+# configuration carried by Chromium at the pinned upstream revision. The
+# direct multithreaded VP8/VP9 implementation avoids any general media
+# framework and any system codec package.
+set(libvpx_SOURCE_DIR "${PROJECT_SOURCE_DIR}/src/cpp/third_party/libvpx")
+if(NOT EXISTS "${libvpx_SOURCE_DIR}/CMakeLists.txt" OR
+   NOT EXISTS "${libvpx_SOURCE_DIR}/vpx/vpx_decoder.h" OR
+   NOT EXISTS "${libvpx_SOURCE_DIR}/vpx/vp8dx.h" OR
+   NOT EXISTS "${libvpx_SOURCE_DIR}/vpx/vp8cx.h" OR
+   NOT EXISTS "${libvpx_SOURCE_DIR}/config/vpx_config.h" OR
+   NOT EXISTS "${libvpx_SOURCE_DIR}/LICENSE" OR
+   NOT EXISTS "${libvpx_SOURCE_DIR}/PATENTS")
+  message(FATAL_ERROR
+    "Repository-contained libvpx sources are incomplete")
+endif()
+add_subdirectory(
+  "${libvpx_SOURCE_DIR}"
+  "${CMAKE_CURRENT_BINARY_DIR}/libvpx"
+  EXCLUDE_FROM_ALL)
+set_property(TARGET sceneio_vpx PROPERTY C_VISIBILITY_PRESET hidden)
+
 # libogg 1.3.6 and libtheora 1.2.0 (BSD-3-Clause) -- repository-contained
 # upstream sources. libogg retains its upstream CMake configuration; Theora is
 # built from the upstream portable C implementation so the same source set is

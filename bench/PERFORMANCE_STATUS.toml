@@ -420,10 +420,10 @@ id = "webm"
 family = "sequences"
 adapter = "repo"
 implementation_owner = "native"
-sources = ["src/cpp/codecs/sequences/webm.cpp", "src/cpp/third_party/libwebp"]
+sources = ["src/cpp/codecs/sequences/webm.cpp", "src/cpp/third_party/libwebp", "src/cpp/third_party/libvpx"]
 source_suite = "tests/codecs/test_webm.py"
 documentation = "docs/format_coverage.md"
-accepted_subset = ["vp8", "uint8_rgb", "progressive", "all_keyframe", "whole_millisecond_timing", "frame_ranges", "metadata_only_inspect", "direct_streaming_write"]
+accepted_subset = ["vp8", "vp8_interframes", "vp9", "uint8_rgb", "uint8_yuv420", "progressive", "all_keyframe", "temporal_compression", "whole_millisecond_timing", "frame_ranges", "metadata_only_inspect", "direct_streaming_write"]
 
 [[codec]]
 id = "theora"
@@ -2957,6 +2957,82 @@ correctness_evidence = ["tests/codecs/test_webm.py"]
 benchmark_evidence = ["bench/BASELINE.md"]
 candidate_backends = []
 evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "webm"
+profile = "vp8-temporal"
+direction = "encode"
+settings = { codec = "vp8", layout = "temporal_yuv420", dtype = "uint8", quality = 82, threads = "auto", speed = 6, keyframe_interval = 120 }
+fidelity = "lossy"
+comparator = "independent EBML oracle + pinned official libvpx reference API"
+fixture = "webm:default"
+backend = "libvpx-vp8"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/libvpx"
+backend_version = "v1.16.0-178-g4780fac96"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_webm.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["three-platform package validation"]
+
+[[operation]]
+codec_id = "webm"
+profile = "vp8-temporal"
+direction = "decode"
+settings = { codec = "vp8", layout = "temporal_yuv420", dtype = "uint8", threads = "auto" }
+fidelity = "lossy"
+comparator = "independent EBML oracle + pinned official libvpx reference API"
+fixture = "webm:default"
+backend = "libvpx-vp8"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/libvpx"
+backend_version = "v1.16.0-178-g4780fac96"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_webm.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["three-platform package validation"]
+
+[[operation]]
+codec_id = "webm"
+profile = "vp9-temporal"
+direction = "encode"
+settings = { codec = "vp9", layout = "temporal_yuv420", dtype = "uint8", quality = 82, threads = "auto", speed = 6, keyframe_interval = 120 }
+fidelity = "lossy"
+comparator = "independent EBML oracle + pinned official libvpx reference API"
+fixture = "webm:default"
+backend = "libvpx-vp9"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/libvpx"
+backend_version = "v1.16.0-178-g4780fac96"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_webm.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["three-platform package validation"]
+
+[[operation]]
+codec_id = "webm"
+profile = "vp9-temporal"
+direction = "decode"
+settings = { codec = "vp9", layout = "temporal_yuv420", dtype = "uint8", threads = "auto" }
+fidelity = "lossy"
+comparator = "independent EBML oracle + pinned official libvpx reference API"
+fixture = "webm:default"
+backend = "libvpx-vp9"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/libvpx"
+backend_version = "v1.16.0-178-g4780fac96"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_webm.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["three-platform package validation"]
 
 [[operation]]
 codec_id = "theora"

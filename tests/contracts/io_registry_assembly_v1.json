@@ -51,7 +51,7 @@
       "webp": "244bb6c15a8cb8e2dfc1ab0cb02e3290723a18607aaa45b14e189f90831d6ceb",
       "avif": "bc6cbac25c03de12d813483a11b63e24ae8f8334ce3e09103e0a3c1219e86278",
       "y4m": "113c80bbbb985911a891769bfb02e9853deacab217c4bbb9a1a1676960ca9c7e",
-      "webm": "506b8a41c10a38ca79160bc68f3ae112f86d83e6b9d932846d28b8e1e5dace8a",
+      "webm": "00f8f0cc0ce50d3b87428459fb55f2465a82bbf2348395d69de3bd9f5d76329d",
       "theora": "d62d12da3535169977cdb833ca5d3b9aae0aadc66dd7630ccb41801181ca0c67",
       "animated_webp": "08a79ab1e8c48046a8c92f8a524b9e4990a87102ccfaf950a2b714e60409ed2c",
       "apng": "870cec8f3e75ecc3841e4a08871afc69b6badd96741b64adfd2419dad74c5dd2",
@@ -295,7 +295,7 @@
       },
       "webm": {
         "read": "4f2c404b8376ee1be3572843b180f1490f627e662ef0cda057520bbbd9517e05",
-        "write": "19eba5e53c8fc23f2070423e0b3b7dd136b1290e18d935ed0cfe169cdf583e40",
+        "write": "ca0033ba384e2fba38c7defdcb939e74a5bb8e1df2b846a28dc5d1b768828367",
         "read_frames": "caeda3a89d9fdce6ecfb0be6e76ee0e19bf5ea48faefb36bceaf638b9d04fc8b"
       },
       "theora": {
@@ -466,8 +466,8 @@
     "last": "tests/test_points_binary.py::test_bad_magic_rejected"
   },
   "pytest_candidate_collection": {
-    "count": 4363,
-    "sorted_normalized_node_ids_sha256": "dcd692415d01de137b0c8da1ffe35745dfb3339b86169fa65ce55ce669d6bee2",
+    "count": 4372,
+    "sorted_normalized_node_ids_sha256": "a0a6ffc95c2a155cbfb26631e9a388b75cc17a668e498b591080b17f74c18eb2",
     "added_nodes": [
       "tests/codecs/test_animated_webp.py::test_sceneio_writer_is_lossless_and_oracle_readable",
       "tests/codecs/test_animated_webp.py::test_pillow_writer_is_sceneio_readable_bit_exact",
@@ -1737,6 +1737,15 @@
       "tests/codecs/test_webm.py::test_public_detect_read_write_inspect_partial_and_direct_sink",
       "tests/codecs/test_webm.py::test_mapped_decode_owns_pixels_after_mapping_closes",
       "tests/codecs/test_webm.py::test_thread_modes_produce_identical_bytes_and_pixels",
+      "tests/codecs/test_webm.py::test_temporal_writer_has_independent_container_oracle_and_partial[vp8]",
+      "tests/codecs/test_webm.py::test_temporal_writer_has_independent_container_oracle_and_partial[vp9]",
+      "tests/codecs/test_webm.py::test_public_temporal_profiles_stream_and_own_decoded_planes[vp8-temporal]",
+      "tests/codecs/test_webm.py::test_public_temporal_profiles_stream_and_own_decoded_planes[vp9-temporal]",
+      "tests/codecs/test_webm.py::test_temporal_worker_modes_are_repeatable_and_decode_same_timeline[vp8]",
+      "tests/codecs/test_webm.py::test_temporal_worker_modes_are_repeatable_and_decode_same_timeline[vp9]",
+      "tests/codecs/test_webm.py::test_temporal_writer_refuses_unrepresented_options",
+      "tests/codecs/test_webm.py::test_temporal_rgb_conversion_preserves_input_and_exact_timing[vp8]",
+      "tests/codecs/test_webm.py::test_temporal_rgb_conversion_preserves_input_and_exact_timing[vp9]",
       "tests/codecs/test_webm.py::test_writer_refuses_unrepresented_pixel_layouts[<lambda>-RGB0]",
       "tests/codecs/test_webm.py::test_writer_refuses_unrepresented_pixel_layouts[<lambda>-RGB1]",
       "tests/codecs/test_webm.py::test_writer_refuses_unrepresentable_timing[timestamps0-durations0-start at zero]",

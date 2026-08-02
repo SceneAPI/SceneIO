@@ -3030,10 +3030,14 @@
       "supported_features": [
         "webm",
         "vp8",
+        "vp8_interframes",
+        "vp9",
         "uint8",
         "rgb",
+        "yuv420",
         "progressive",
         "all_keyframe",
+        "temporal_compression",
         "simpleblock_constant_timing",
         "exact_frame_timing",
         "frame_ranges",
@@ -3042,8 +3046,6 @@
         "metadata_only_inspect"
       ],
       "unsupported_features": [
-        "vp8_interframes",
-        "vp9",
         "alpha",
         "audio",
         "subtitles",
@@ -3077,10 +3079,14 @@
         "supported_features": [
           "webm",
           "vp8",
+          "vp8_interframes",
+          "vp9",
           "uint8",
           "rgb",
+          "yuv420",
           "progressive",
           "all_keyframe",
+          "temporal_compression",
           "simpleblock_constant_timing",
           "exact_frame_timing",
           "frame_ranges",
@@ -3089,8 +3095,6 @@
           "metadata_only_inspect"
         ],
         "unsupported_features": [
-          "vp8_interframes",
-          "vp9",
           "alpha",
           "audio",
           "subtitles",

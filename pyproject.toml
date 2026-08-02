@@ -101,13 +101,13 @@ wheel.exclude = ["include/**", "lib/**", "share/**", "bin/**"]
 # Cross-platform wheel builds for the compiled core (Thread 2A). One abi3 wheel
 # per platform; `requires-python` currently caps at <3.13, so only cp312 is
 # built — relaxing that cap ships the same abi3 wheel to 3.13+ with no rebuild.
-# All selected production native sources, including libwebp, are
+# All selected production native sources, including libwebp and libvpx, are
 # repository-contained; wheel jobs do not download native source archives.
 [tool.cibuildwheel]
 build = "cp312-*"
 skip = "*-musllinux* *_i686 *-win32"
 test-requires = ["numpy"]
-# Manifest-driven NumPy-only smoke for all 70 installed built-ins: public
+# Manifest-driven NumPy-only smoke for all 72 installed built-ins: public
 # write/read/inspect, streaming paths, and every declared partial selector.
 test-command = "python -m sceneio._wheel_smoke"
 

@@ -173,8 +173,8 @@ are maintained only in
   `30470889876`.
   The user-directed post-R6 3D-CV format sequence is locally complete for
   Animated WebP, APNG, HDF5/hloc, Zarr, TIFF, E57, Parquet/Arrow IPC,
-  OpenVDB, USD/USDZ, bounded read-only RTMV, and Ogg/Theora. Broader WebM
-  temporal compression is the remaining moving-image unit. The provisional
+  OpenVDB, USD/USDZ, bounded read-only RTMV, Ogg/Theora, and bounded temporal
+  VP8/VP9 WebM. The provisional
   performance ledger remains a trigger-based optimization backlog rather than
   an active gate.
 
@@ -414,8 +414,8 @@ Columns: **Ext/id** · **Record** · **Lib/oracle (license)** · **R/W** ·
 | ✅ animated WebP | `ImageSequence` | pinned libwebp + Pillow oracle | R+W | fully composited packed RGB/RGBA frames; exact millisecond timing, loop/background metadata, mmap, direct sink, inspect |
 | ✅ APNG | `ImageSequence` | existing lodepng/miniz substrate + Pillow/spec oracle | R+W | bounded repository-owned animation chunk/state layer; composited RGBA, exact accepted-profile timing, blend/disposal, mmap, sink, inspect |
 | ✅ animated AVIF | `ImageSequence` | optional Pillow/libavif + libaom/dav1d | R+W | owned 8-bit frames, exact accepted timing, frame ranges, mmap, inspect; writer is provider-buffered and does not claim a direct sink |
-| ✅ WebM VP8 all-keyframe | `ImageSequence` | repository EBML + pinned libwebp VP8; independent EBML/Pillow oracle | R+W | packed uint8 RGB, progressive independently decodable frames, exact whole-ms timing, mmap, direct sink, inspect, frame ranges; no audio/subtitles/general video framework |
-| ⬜ WebM inter-frame VP8/VP9 | `ImageSequence` | direct codec backend still to be selected | R+W | broader temporal-compression profile remains separate from the completed all-keyframe subset |
+| ✅ WebM VP8 all-keyframe | `ImageSequence` | repository EBML + pinned libwebp VP8; independent EBML/Pillow oracle | R+W | compatible default: packed uint8 RGB, progressive independently decodable frames, exact whole-ms timing, mmap, direct sink, inspect, frame ranges |
+| ✅ WebM inter-frame VP8/VP9 | `ImageSequence` | repository EBML + pinned libvpx; independent EBML layout oracle + official codec API | R+W | explicit `vp8-temporal` / `vp9-temporal` profiles; owned planar uint8 4:2:0, Colour matrix/range, backward references, keyframe-aware ranges, mmap/direct sink/worker lanes; no audio/subtitles/general media framework |
 | ✅ Ogg/Theora | `ImageSequence` | pinned libogg/libtheora + independent Ogg page/CRC/lacing/remux oracle | R+W | progressive uint8 planar 4:2:0, fixed rational timing, pixel aspect, mmap, direct sink, inspect, frame ranges; no audio/subtitles/general video framework |
 
 **Excluded (out of scope):** FBX (proprietary SDK), H.264/H.265/ProRes and
@@ -436,8 +436,7 @@ maintained in `format_gap_implementation_plan.md`:
    point PLY is complete);
 3. meshes and vendorable LAZ (complete locally);
 4. lazy image directories, raw Y4M, animated WebP, APNG, animated AVIF,
-   bounded WebM VP8 all-keyframe, RTMV, and Ogg/Theora (complete locally),
-   followed by the broader WebM temporal-compression unit;
+   bounded WebM VP8/VP9, RTMV, and Ogg/Theora (complete locally);
 5. optional-provider TIFF/E57/Arrow integrations (complete locally);
 6. bounded USD/USDZ and OpenVDB integrations (complete locally), with
    broader scene/volume semantics and policy-gated codecs left explicit.

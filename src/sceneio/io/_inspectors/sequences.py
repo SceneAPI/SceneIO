@@ -117,6 +117,17 @@ def inspect_webm(path: Path, datatype: str) -> Inspection:
     width = values["width"]
     channels = values["channels"]
     shape = (frames, height, width, channels)
+    storage_mode = values["storage_mode"]
+    chroma_shape = (frames, (height + 1) // 2, (width + 1) // 2)
+    arrays = (
+        (ArrayInspection("pixels", shape, "uint8"),)
+        if storage_mode == "packed"
+        else (
+            ArrayInspection("y", (frames, height, width), "uint8"),
+            ArrayInspection("u", chroma_shape, "uint8"),
+            ArrayInspection("v", chroma_shape, "uint8"),
+        )
+    )
     return Inspection(
         format="webm",
         datatype=datatype,
@@ -125,13 +136,16 @@ def inspect_webm(path: Path, datatype: str) -> Inspection:
         dtype="uint8",
         count=frames,
         channels=channels,
-        arrays=(ArrayInspection("pixels", shape, "uint8"),),
+        arrays=arrays,
         metadata={
-            "storage_mode": "packed",
+            "storage_mode": storage_mode,
             "color_space": values["color_space"],
             "alpha_mode": values["alpha_mode"],
             "codec": values["codec"],
             "profile": values["profile"],
+            "matrix": values["matrix"],
+            "color_range": values["color_range"],
+            "keyframes": values["keyframes"],
             "duration_ns": values["duration_ns"],
         },
     )
