@@ -1,0 +1,16 @@
+NVIDIA NCore
+==============
+
+Upstream project: https://github.com/NVIDIA/ncore
+Reference revision: 12f4429522c98356c5a46eee1d84f29bd846e367
+
+SceneIO's indexed-tar constants and direct-seek storage algorithm are adapted
+from the NCore implementation at that revision. The implementation is
+maintained independently for SceneIO's Zarr 3 integration.
+
+SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES.
+All rights reserved.
+SPDX-License-Identifier: Apache-2.0
+
+NCore is licensed under the Apache License, Version 2.0. The complete license
+terms are present in SceneIO's repository-root LICENSE file.

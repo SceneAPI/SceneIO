@@ -466,8 +466,8 @@
     "last": "tests/test_points_binary.py::test_bad_magic_rejected"
   },
   "pytest_candidate_collection": {
-    "count": 4378,
-    "sorted_normalized_node_ids_sha256": "bf49c354676f3cc9bc93bd1c37fd5819d1bebf398c298fede6b68940f23faba5",
+    "count": 4390,
+    "sorted_normalized_node_ids_sha256": "6489490df2f923560c07e08a1a007f954ff5e139d601c7b667dacb0ae99af41f",
     "added_nodes": [
       "tests/codecs/test_animated_webp.py::test_sceneio_writer_is_lossless_and_oracle_readable",
       "tests/codecs/test_animated_webp.py::test_pillow_writer_is_sceneio_readable_bit_exact",
@@ -1765,7 +1765,19 @@
       "tests/codecs/test_theora.py::test_partial_is_bit_exact_slice_and_preserves_global_timing",
       "tests/codecs/test_theora.py::test_buffer_protocol_mmap_and_lifetime",
       "tests/codecs/test_theora.py::test_inspection_does_not_allocate_encoded_or_decoded_payload",
-      "tests/codecs/test_theora.py::test_rejects_bad_framing_checksum_chaining_comments_and_writer_projection"
+      "tests/codecs/test_theora.py::test_rejects_bad_framing_checksum_chaining_comments_and_writer_projection",
+      "tests/codecs/test_ncore_v4.py::test_directory_catalog_and_inspection_are_metadata_only",
+      "tests/codecs/test_ncore_v4.py::test_indexed_tar_direct_reads_ranges_and_zarr_chunks",
+      "tests/codecs/test_ncore_v4.py::test_directory_and_itar_catalogs_are_logically_identical",
+      "tests/codecs/test_ncore_v4.py::test_large_directory_catalog_does_not_materialize_payload",
+      "tests/codecs/test_ncore_v4.py::test_sequence_manifest_combines_consistent_component_groups",
+      "tests/codecs/test_ncore_v4.py::test_rejects_inconsistent_store_roots_and_component_identity",
+      "tests/codecs/test_ncore_v4.py::test_rejects_invalid_index_headers_and_ranges",
+      "tests/codecs/test_ncore_v4.py::test_selection_contract_has_one_optional_range_family",
+      "tests/test_import_guards.py::test_no_family_imports[io/_ncore/__init__.py]",
+      "tests/test_import_guards.py::test_no_family_imports[io/_ncore/itar.py]",
+      "tests/test_import_guards.py::test_no_family_imports[io/_ncore/model.py]",
+      "tests/test_import_guards.py::test_no_family_imports[io/_ncore/schema.py]"
     ],
     "removed_nodes": [
       "tests/codecs/test_compressed_ply.py::test_writer_body_is_byte_identical_to_pinned_playcanvas_vector",

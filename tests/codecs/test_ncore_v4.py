@@ -1,0 +1,319 @@
+"""NCore V4 storage/catalog contracts grounded in the upstream V4 layout."""
+
+from __future__ import annotations
+
+import io
+import json
+import lzma
+import struct
+import tarfile
+import tracemalloc
+from pathlib import Path
+
+import cbor2
+import numpy as np
+import pytest
+import zarr
+
+from sceneio.io._ncore.itar import IndexedTarReader, as_zarr_store
+from sceneio.io._ncore.model import NCoreDataset, NCoreSelection
+from sceneio.io._ncore.schema import inspect_ncore_v4, read_ncore_v4
+
+
+def _metadata(*, group: str = "", sequence_id: str = "sequence-a") -> dict[str, object]:
+    return {
+        ".zgroup": {"zarr_format": 2},
+        ".zattrs": {
+            "sequence_id": sequence_id,
+            "sequence_timestamp_interval_us": {"start": 100, "stop": 200},
+            "generic_meta_data": {"weather": "clear", "run": 7},
+            "version": "v4",
+            "component_group_name": group,
+        },
+        "poses/.zgroup": {"zarr_format": 2},
+        "poses/rig/.zgroup": {"zarr_format": 2},
+        "poses/rig/.zattrs": {
+            "component_name": "poses",
+            "component_instance_name": "rig",
+            "component_version": "v1",
+            "generic_meta_data": {"source": "fixture"},
+        },
+        "poses/rig/value/.zarray": {
+            "chunks": [4],
+            "compressor": None,
+            "dtype": "<i4",
+            "fill_value": 0,
+            "filters": None,
+            "order": "C",
+            "shape": [4],
+            "zarr_format": 2,
+        },
+        "poses/rig/value/.zattrs": {"unit": "index"},
+    }
+
+
+def _consolidated(metadata: dict[str, object]) -> bytes:
+    document = {"zarr_consolidated_format": 1, "metadata": metadata}
+    return lzma.compress(cbor2.dumps(document), format=lzma.FORMAT_XZ)
+
+
+def _write_directory(path: Path, metadata: dict[str, object]) -> None:
+    path.mkdir()
+    (path / ".zgroup").write_text(json.dumps(metadata[".zgroup"]), encoding="utf-8")
+    (path / ".zattrs").write_text(json.dumps(metadata[".zattrs"]), encoding="utf-8")
+    (path / ".zmetadata.cbor.xz").write_bytes(_consolidated(metadata))
+    payload = path / "poses" / "rig" / "value"
+    payload.mkdir(parents=True)
+    (payload / "0").write_bytes(np.arange(4, dtype=np.int32).tobytes())
+
+
+def _write_itar(path: Path, members: dict[str, bytes]) -> None:
+    with tarfile.open(path, mode="w") as archive:
+        for name, payload in members.items():
+            info = tarfile.TarInfo(name)
+            info.size = len(payload)
+            archive.addfile(info, io.BytesIO(payload))
+    with tarfile.open(path, mode="r") as archive:
+        indexed = tuple(
+            (member.name, member.offset_data, member.size)
+            for member in archive.getmembers()
+        )
+    with path.open("ab") as stream:
+        index_offset = stream.tell()
+        index = {
+            "items": [item[0] for item in indexed],
+            "offset_datas": [item[1] for item in indexed],
+            "sizes": [item[2] for item in indexed],
+        }
+        encoded = lzma.compress(cbor2.dumps(index), format=lzma.FORMAT_XZ)
+        stream.write(encoded)
+        remainder = stream.tell() % tarfile.BLOCKSIZE
+        if remainder:
+            stream.write(bytes(tarfile.BLOCKSIZE - remainder))
+        stream.write(struct.pack("<4sIQI", b"itar", 1, index_offset, len(encoded)))
+        remainder = stream.tell() % tarfile.BLOCKSIZE
+        if remainder:
+            stream.write(bytes(tarfile.BLOCKSIZE - remainder))
+
+
+def _itar_members(metadata: dict[str, object]) -> dict[str, bytes]:
+    return {
+        key: json.dumps(value, separators=(",", ":")).encode()
+        for key, value in metadata.items()
+    } | {
+        ".zmetadata.cbor.xz": _consolidated(metadata),
+        "poses/rig/value/0": np.arange(4, dtype=np.int32).tobytes(),
+    }
+
+
+def test_directory_catalog_and_inspection_are_metadata_only(tmp_path):
+    path = tmp_path / "sample.ncore4.zarr"
+    _write_directory(path, _metadata())
+
+    dataset = read_ncore_v4(path)
+    assert isinstance(dataset, NCoreDataset)
+    assert dataset.sequence_id == "sequence-a"
+    assert dataset.timestamp_interval_us == (100, 200)
+    assert dataset.generic_metadata == {"weather": "clear", "run": 7}
+    assert tuple(component.id for component in dataset.components) == ("poses:rig",)
+    assert dataset.components[0].arrays[0].name == "value"
+    assert dataset.components[0].arrays[0].shape == (4,)
+    assert dataset.components[0].arrays[0].dtype == "<i4"
+    assert dataset.components[0].arrays[0].attributes == {"unit": "index"}
+
+    info = inspect_ncore_v4(path)
+    assert info.format == "ncore_v4"
+    assert info.datatype == "ncore_dataset"
+    assert info.count == 1
+    assert info.arrays[0].name == "poses:rig/value"
+    assert info.metadata["standard_component_count"] == 1
+    assert info.metadata["custom_component_count"] == 0
+
+
+def test_indexed_tar_direct_reads_ranges_and_zarr_chunks(tmp_path):
+    path = tmp_path / "sample.ncore4.zarr.itar"
+    metadata = _metadata()
+    _write_itar(path, _itar_members(metadata))
+
+    with IndexedTarReader(path, tail_size=512) as reader:
+        assert reader.read("poses/rig/value/0", (4, 12)) == np.array(
+            [1, 2], dtype=np.int32
+        ).tobytes()
+        group = zarr.open_group(
+            store=as_zarr_store(reader),
+            mode="r",
+            use_consolidated=False,
+        )
+        np.testing.assert_array_equal(group["poses/rig/value"][:], np.arange(4))
+
+    with pytest.raises(ValueError, match="closed"):
+        reader.read(".zgroup")
+
+
+def test_directory_and_itar_catalogs_are_logically_identical(tmp_path):
+    metadata = _metadata(group="calibration")
+    directory = tmp_path / "sample.ncore4-calibration.zarr"
+    archive = tmp_path / "sample.ncore4-calibration.zarr.itar"
+    _write_directory(directory, metadata)
+    _write_itar(archive, _itar_members(metadata))
+
+    from_directory = read_ncore_v4(directory)
+    from_archive = read_ncore_v4(archive)
+    assert from_directory.sequence_id == from_archive.sequence_id
+    assert from_directory.timestamp_interval_us == from_archive.timestamp_interval_us
+    assert from_directory.generic_metadata == from_archive.generic_metadata
+    assert from_directory.components == from_archive.components
+    assert from_directory.stores[0].group == "calibration"
+    assert from_archive.stores[0].group == "calibration"
+    assert from_directory.stores[0].storage == "directory"
+    assert from_archive.stores[0].storage == "itar"
+
+
+def test_large_directory_catalog_does_not_materialize_payload(tmp_path):
+    path = tmp_path / "large.ncore4.zarr"
+    metadata = _metadata()
+    metadata["poses/rig/value/.zarray"] = {
+        **metadata["poses/rig/value/.zarray"],
+        "chunks": [25_000_000],
+        "shape": [25_000_000],
+    }
+    _write_directory(path, metadata)
+    payload = path / "poses" / "rig" / "value" / "0"
+    with payload.open("r+b") as stream:
+        stream.truncate(100_000_000)
+
+    tracemalloc.start()
+    dataset = read_ncore_v4(path)
+    _current, peak = tracemalloc.get_traced_memory()
+    tracemalloc.stop()
+
+    assert dataset.components[0].arrays[0].shape == (25_000_000,)
+    assert dataset.byte_size >= 100_000_000
+    # XZ's metadata dictionary accounts for roughly 8 MiB; the bound remains
+    # independent of the 100 MB component payload.
+    assert peak < 12 * 1024 * 1024
+
+
+def test_sequence_manifest_combines_consistent_component_groups(tmp_path):
+    first = tmp_path / "sample.ncore4-calibration.zarr"
+    second = tmp_path / "sample.ncore4-sensors.zarr"
+    _write_directory(first, _metadata(group="calibration"))
+    sensor_metadata = _metadata(group="sensors")
+    sensor_metadata["poses/rig/.zattrs"] = {
+        **sensor_metadata["poses/rig/.zattrs"],
+        "component_instance_name": "world",
+    }
+    sensor_metadata["poses/world/.zgroup"] = sensor_metadata.pop(
+        "poses/rig/.zgroup"
+    )
+    sensor_metadata["poses/world/.zattrs"] = sensor_metadata.pop(
+        "poses/rig/.zattrs"
+    )
+    sensor_metadata["poses/world/value/.zarray"] = sensor_metadata.pop(
+        "poses/rig/value/.zarray"
+    )
+    sensor_metadata["poses/world/value/.zattrs"] = sensor_metadata.pop(
+        "poses/rig/value/.zattrs"
+    )
+    _write_directory(second, sensor_metadata)
+    manifest = tmp_path / "sample.json"
+    manifest.write_text(
+        json.dumps(
+            {
+                "sequence_id": "sequence-a",
+                "sequence_timestamp_interval_us": {"start": 100, "stop": 200},
+                "generic_meta_data": {"weather": "clear", "run": 7},
+                "version": "v4",
+                "component_stores": [
+                    {
+                        "path": first.name,
+                        "md5": "",
+                        "components": {
+                            "poses": {
+                                "rig": {
+                                    "version": "v1",
+                                    "generic_meta_data": {"source": "fixture"},
+                                }
+                            }
+                        },
+                    },
+                    {
+                        "path": second.name,
+                        "md5": "",
+                        "components": {
+                            "poses": {
+                                "world": {
+                                    "version": "v1",
+                                    "generic_meta_data": {"source": "fixture"},
+                                }
+                            }
+                        },
+                    },
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    dataset = read_ncore_v4(manifest)
+    assert tuple(store.group for store in dataset.stores) == (
+        "calibration",
+        "sensors",
+    )
+    assert tuple(component.id for component in dataset.components) == (
+        "poses:rig",
+        "poses:world",
+    )
+
+
+def test_rejects_inconsistent_store_roots_and_component_identity(tmp_path):
+    root = tmp_path / "dataset"
+    root.mkdir()
+    _write_directory(
+        root / "sample.ncore4-a.zarr",
+        _metadata(group="a"),
+    )
+    _write_directory(
+        root / "sample.ncore4-b.zarr",
+        _metadata(group="b", sequence_id="sequence-b"),
+    )
+    with pytest.raises(ValueError, match="different sequences"):
+        read_ncore_v4(root)
+
+    malformed = tmp_path / "malformed.ncore4.zarr"
+    metadata = _metadata()
+    metadata["poses/rig/.zattrs"] = {
+        **metadata["poses/rig/.zattrs"],
+        "component_name": "cameras",
+    }
+    _write_directory(malformed, metadata)
+    with pytest.raises(ValueError, match="disagrees"):
+        read_ncore_v4(malformed)
+
+
+def test_rejects_invalid_index_headers_and_ranges(tmp_path):
+    path = tmp_path / "bad.zarr.itar"
+    _write_itar(path, _itar_members(_metadata()))
+    with path.open("r+b") as stream:
+        stream.seek(-tarfile.BLOCKSIZE, 2)
+        stream.write(b"nope")
+    with pytest.raises(ValueError, match="header magic"):
+        IndexedTarReader(path)
+
+    valid = tmp_path / "valid.zarr.itar"
+    _write_itar(valid, _itar_members(_metadata()))
+    with IndexedTarReader(valid) as reader, pytest.raises(ValueError, match="outside"):
+        reader.read(".zgroup", (0, 10_000))
+
+
+def test_selection_contract_has_one_optional_range_family():
+    assert NCoreSelection("cameras", "front", frames=(2, 4)).frames == (2, 4)
+    with pytest.raises(ValueError, match="not both"):
+        NCoreSelection(
+            "cameras",
+            "front",
+            frames=(2, 4),
+            timestamps_us=(100, 200),
+        )
+    with pytest.raises(ValueError, match="start < stop"):
+        NCoreSelection("cameras", "front", frames=(3, 3))

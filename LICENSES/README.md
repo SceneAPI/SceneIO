@@ -39,6 +39,8 @@ redistribution choice used by SceneIO is stated explicitly.
 | HDF5 | provider version selected by the separately installed h5py distribution | used through h5py; not bundled or linked into SceneIO distributions | permissive HDF5 license | [hdf5.txt](hdf5.txt) |
 | Zarr Python | optional dependency `>=3.1,<4` (3.2.1 locally validated) | separately installed optimized Zarr v2/v3 provider; not bundled in SceneIO distributions | MIT | [zarr.txt](zarr.txt) |
 | numcodecs | version selected by the separately installed Zarr distribution (0.16.5 locally validated) | separately installed compiled chunk-codec provider used by Zarr; not bundled in SceneIO distributions | MIT top-level terms; individual bundled codecs retain their upstream permissive terms in the provider distribution | [numcodecs.txt](numcodecs.txt) |
+| NVIDIA NCore | source revision `12f4429522c98356c5a46eee1d84f29bd846e367` | format specification/oracle and source of the adapted indexed-tar constants/algorithm; the upstream package is not a runtime dependency | Apache-2.0 | [ncore.txt](ncore.txt) |
+| cbor2 | optional dependency `>=5.6,<6` | separately installed CBOR provider for NCore indexed-tar metadata; not bundled in SceneIO distributions | MIT | [cbor2.txt](cbor2.txt) |
 | tifffile | optional dependency `>=2025.5` (2026.7.14 locally validated) | separately installed optimized TIFF provider; not bundled in SceneIO distributions | BSD-3-Clause | [tifffile.txt](tifffile.txt) |
 | pye57 | optional dependency `>=0.4.18,<0.5` (0.4.19 locally validated) | separately installed E57 provider; not bundled in SceneIO distributions | MIT | [pye57.txt](pye57.txt) |
 | libE57Format | version selected by the separately installed pye57 wheel | compiled into the separately installed pye57 provider; not bundled in SceneIO distributions | Boost Software License 1.0 | [libe57format.txt](libe57format.txt) |
@@ -60,7 +62,7 @@ to vendored or fetched projects are documented beside their sources in
 
 NumPy is SceneIO's sole base Python runtime dependency, but it is installed as
 a separate distribution and is not copied or linked into SceneIO wheels.
-h5py/HDF5, Zarr/numcodecs, tifffile, pye57, PyArrow, TinyVDB, TinyUSDZ, and
+h5py/HDF5, Zarr/numcodecs, cbor2, tifffile, pye57, PyArrow, TinyVDB, TinyUSDZ, and
 Pillow's libavif provider
 are separately installed only when their respective extras are selected;
 none is copied or linked into SceneIO wheels. Build tools and test-only oracle
