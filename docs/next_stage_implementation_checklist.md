@@ -1,5 +1,49 @@
 # Next-stage implementation checklist
 
+## NCore V4 first-class dataset support (active, 2026-08-02)
+
+- [x] Pin the Apache-2.0 upstream NCore revision used as the specification and
+      isolated oracle; retain `zarr` and `cbor2` as optional dependencies and
+      keep the base runtime NumPy-only.
+- [x] Add immutable dataset/store/component/array catalog records, bounded V4
+      root and manifest validation, local Zarr-v2 directory discovery, direct
+      indexed-tar range reads, and metadata-only inspection. Prove the catalog
+      does not materialize a generated 100 MB payload and compare the indexed
+      tar layout with an archive written by the isolated upstream package.
+- [x] Register `ncore_v4` as built-in format 73 with content-based directory,
+      manifest, and `.zarr.itar` detection. Keep generic Zarr and ordinary JSON
+      detection authoritative for non-NCore inputs. Add public model exports,
+      installed-wheel smoke coverage, repository contracts, and a generated
+      benchmark row for catalog open/inspect.
+- [ ] Add the component access API and immutable loaded-component records.
+      Selection must identify one component instance and may select one frame
+      or timestamp interval. Preserve array dtype/shape exactly, return owned
+      arrays after the store handle closes, and retain unknown component arrays
+      and metadata through a generic component result.
+- [ ] Implement and oracle-check the standard calibration/image families:
+      poses, intrinsics, masks, and cameras. Cover empty frames, variable image
+      payload lengths, optional arrays, timestamp alignment, accepted component
+      versions, and exact convention mapping into existing SceneIO records where
+      the schemas are representable.
+- [ ] Implement and oracle-check point-cloud, lidar, radar, cuboid, camera-label,
+      and generic component loading. Exercise ragged offsets, empty observations,
+      optional fields, enum metadata, multiple instances/groups, frame slicing,
+      and preservation of component-local generic arrays.
+- [ ] Add transactional directory and indexed-tar writers. Require deterministic
+      metadata/component order, exact dtype preservation, upstream-reader
+      acceptance, SceneIO read-after-write equality, manifest consistency, and
+      recoverable destination replacement. A record the V4 profile cannot
+      represent must be refused with a clear error rather than converted.
+- [ ] Extend the benchmark from lazy catalog open to typed full/selected reads
+      and directory/indexed-tar writes. Record independent upstream timings,
+      traced allocation and RSS for generated large fixtures, and selected-read
+      equality with a full-read slice.
+- [ ] Run the complete local suite and Ruff, generated 100 MB-plus fixtures,
+      random valid/malformed differential cases, installed-wheel smoke, source
+      and wheel inventory, and the existing automatic Linux/macOS/Windows build
+      matrix. Keep hosted validation and publication as explicit user-directed
+      workflow actions.
+
 ## 72-format cross-platform closure correction (2026-08-02)
 
 - [x] Reproduce the exact failed automatic jobs and keep the correction scoped

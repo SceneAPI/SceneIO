@@ -25,6 +25,13 @@ from sceneio.io._depth import DepthEncoding, inspect_depth, read_depth, write_de
 from sceneio.io._hdf5 import HlocFeatureStore, HlocMatchStore
 from sceneio.io._inspection import inspect_codec
 from sceneio.io._inspectors.model import ArrayInspection, Inspection
+from sceneio.io._ncore import (
+    NCoreArray,
+    NCoreComponent,
+    NCoreDataset,
+    NCoreSelection,
+    NCoreStore,
+)
 from sceneio.io._openvdb import write_openvdb
 from sceneio.io._registry.adapters import _file_sink_writer, _mmap_reader
 from sceneio.io._rtmv import RtmvDataset
@@ -695,6 +702,11 @@ __all__ = [
     "MaterialSet",
     "Mesh",
     "MeshScene",
+    "NCoreArray",
+    "NCoreComponent",
+    "NCoreDataset",
+    "NCoreSelection",
+    "NCoreStore",
     "NativeFeatureCapabilities",
     "NormalMap",
     "PointCloud",

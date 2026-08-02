@@ -4775,6 +4775,84 @@
       }
     },
     {
+      "id": "ncore_v4",
+      "extensions": [],
+      "magic_hex": [],
+      "filenames": [],
+      "is_directory": true,
+      "dir_marker": ".zattrs",
+      "container_kind": "multi_file",
+      "datatype": "ncore_dataset",
+      "record": {
+        "module": "sceneio.io",
+        "qualname": "NCoreDataset"
+      },
+      "selectors": [],
+      "streams_read": true,
+      "streams_write": false,
+      "lossy": false,
+      "requires_features": [
+        "zarr",
+        "cbor2"
+      ],
+      "supported_features": [
+        "v4",
+        "local_directory_stores",
+        "local_indexed_tar_stores",
+        "sequence_manifests",
+        "grouped_component_stores",
+        "lazy_component_catalog",
+        "metadata_only_inspect",
+        "standard_component_enumeration",
+        "custom_component_enumeration"
+      ],
+      "unsupported_features": [
+        "component_materialization",
+        "dataset_write",
+        "remote_stores",
+        "legacy_versions",
+        "custom_component_interpretation"
+      ],
+      "capabilities": {
+        "format": "ncore_v4",
+        "datatype": "ncore_dataset",
+        "record_type": "NCoreDataset",
+        "extensions": [],
+        "filenames": [],
+        "container_kind": "multi_file",
+        "available": true,
+        "can_read": true,
+        "can_write": false,
+        "can_inspect": true,
+        "partial_selectors": [],
+        "streams_read": true,
+        "streams_write": false,
+        "lossy": false,
+        "requires_features": [
+          "zarr",
+          "cbor2"
+        ],
+        "supported_features": [
+          "v4",
+          "local_directory_stores",
+          "local_indexed_tar_stores",
+          "sequence_manifests",
+          "grouped_component_stores",
+          "lazy_component_catalog",
+          "metadata_only_inspect",
+          "standard_component_enumeration",
+          "custom_component_enumeration"
+        ],
+        "unsupported_features": [
+          "component_materialization",
+          "dataset_write",
+          "remote_stores",
+          "legacy_versions",
+          "custom_component_interpretation"
+        ]
+      }
+    },
+    {
       "id": "zarr",
       "extensions": [
         ".zarr"

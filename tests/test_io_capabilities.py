@@ -51,6 +51,7 @@ _BUILTINS = {
     "npy",
     "npz",
     "nvm",
+    "ncore_v4",
     "obj",
     "off",
     "openmvg",
@@ -185,6 +186,7 @@ def test_capability_hooks_and_metadata_are_consistent():
             "hloc_features": ("h5py",),
             "hloc_matches": ("h5py",),
             "zarr": ("zarr",),
+            "ncore_v4": ("zarr", "cbor2"),
             "tiff": ("tifffile",),
             "e57": ("pye57",),
             "parquet": ("pyarrow",),
@@ -301,6 +303,7 @@ def test_optional_provider_codecs_are_registered_and_available_in_test_env():
     for format_id in (
         "hdf5",
         "zarr",
+        "ncore_v4",
         "tiff",
         "e57",
         "parquet",

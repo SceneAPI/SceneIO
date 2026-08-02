@@ -27,7 +27,7 @@ def test_case_catalog_is_complete_ordered_and_immutable():
     definitions = codec_cases.CODEC_CASE_DEFINITIONS
     assert tuple(case.id for case in definitions) == CANONICAL_BUILTIN_IDS
     assert tuple(codec_cases.CASES_BY_ID) == CANONICAL_BUILTIN_IDS
-    assert len(definitions) == len(codec_cases.CASES_BY_ID) == 72
+    assert len(definitions) == len(codec_cases.CASES_BY_ID) == 73
     assert all(dataclasses.is_dataclass(case) for case in definitions)
     with pytest.raises(dataclasses.FrozenInstanceError):
         definitions[0].id = "changed"
@@ -112,6 +112,7 @@ def test_case_catalog_preserves_the_legacy_fixture_partitions():
         "rtmv",
         "image_sequence",
         "colmap_sparse_txt",
+        "ncore_v4",
         "zarr",
     )
     assert {
@@ -243,11 +244,11 @@ def test_case_catalog_selectors_match_live_builtin_capabilities():
         capability = capabilities[case.id]
         assert capability.available
         assert capability.can_read
-        assert capability.can_write is (case.id != "rtmv")
+        assert capability.can_write is (case.id not in {"ncore_v4", "rtmv"})
         assert capability.can_inspect
         assert capability.streams_read
         assert capability.streams_write is (
-            case.id not in {"avif", "animated_avif", "rtmv"}
+            case.id not in {"avif", "animated_avif", "ncore_v4", "rtmv"}
         )
         assert case.partial_selectors == capability.partial_selectors
     assert tuple(case.id for case in codec_cases.PARTIAL_CASES) == (

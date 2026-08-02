@@ -40,10 +40,10 @@ are fully green; the latter passes every platform/compiler job, exact suite,
 complete and format capabilities are unchanged.
 
 <!-- sceneio-inventory-summary:start -->
-**Generated registry contract:** SceneIO has **72 built-in formats**: **64**
-single-file, **5** directory, and **3** multi-file containers. **72** are readable,
-**71** writable, and **72** inspectable; **37** formats expose **43** bounded partial
-selectors. **72** provide streaming reads and **69** provide streaming writes. The
+**Generated registry contract:** SceneIO has **73 built-in formats**: **64**
+single-file, **5** directory, and **4** multi-file containers. **73** are readable,
+**71** writable, and **73** inspectable; **37** formats expose **43** bounded partial
+selectors. **73** provide streaming reads and **69** provide streaming writes. The
 values come directly from `CANONICAL_BUILTIN_IDS` and `sceneio.capabilities()`.
 <!-- sceneio-inventory-summary:end -->
 
@@ -1115,6 +1115,7 @@ SoA, zero-copy to numpy/torch (DLPack), conventions carried as metadata.
 | `openmvg` | `Reconstruction` | R+W | manual | openMVG `sfm_data.json` |
 | `npy` | ndarray | R+W | **numpy** | pinned mapped native/C-order view; byte‑exact v1.0 writer (== np.save) |
 | `npz` | `TensorDict` | R+W | **numpy** | ZIP (stored+deflate) via repository-contained miniz 3.0.2; 12 dtypes |
+| `ncore_v4` | `NCoreDataset` | R, inspect | upstream **NCore** V4 implementation + generated fixtures | optional `sceneio[ncore]`; repository-owned local Zarr-v2 directory/indexed-tar catalog, sequence manifests, grouped component metadata, and payload-independent inspection; typed component materialization and writing are the next implementation unit |
 | `netpbm` | `Image` | R+W | pure‑Python | PGM P5/P2 + PPM P6/P3; 16‑bit big‑endian, comment‑tolerant |
 | `.xyz` | `PointCloud` | R+W | pure‑Python | headerless point-cloud text (fast_float parsing) |
 | `.pts` | `PointCloud` | R+W | independent parser | mandatory count header; XYZ/XYZI/XYZRGB/XYZIRGB; count validation |
@@ -1273,8 +1274,8 @@ expanded 72-format benchmark/oracles.
 | nanobind + scikit‑build‑core build | ✅ | abi3/cp312, `NB_STATIC`; `Python::SABIModule`, `nanobind-static-abi3`, and the platform suffix are configure-checked; local Windows emits `_core.pyd` against `python3.dll`, Ubuntu emits `_core.abi3.so` without libpython |
 | cibuildwheel release path | ✅ | one verified sdist feeds Linux/macOS/Windows wheels; locked build inputs, all-50 installed smoke, per-wheel inventory, and tag-only publication in `publish.yml`; final build-only run `30406706115` and downloaded-artifact inspection pass, while tagging and publication remain user-gated |
 | CI parity (oracles in CI) | ✅ | At `a5e7fa4`, normal Linux CI passes 2,914 tests with nine documented platform/oracle skips, the 50-codec performance guard, pinned GCC 10 portability, and the three-OS focused matrix |
-| Codec registry + `read`/`write`/`inspect`/`read_partial`/`detect` | ✅ | inspection covers all 72; bounded partial hooks are capability-specific |
-| Repo-maintained stable codec adapters | ✅ | all 72 adapters, schemas, convention guards, inspectors, and partial policies live in `src/cpp` / `src/sceneio`; 69 writable adapters have direct sinks, while AVIF writes currently use the provider's completed output buffer and RTMV is read-only; optional optimized storage/parser providers remain separately installed |
+| Codec registry + `read`/`write`/`inspect`/`read_partial`/`detect` | ✅ | inspection covers all 73; bounded partial hooks are capability-specific |
+| Repo-maintained stable codec adapters | 🟡 | 72 completed adapters plus the active NCore V4 catalog checkpoint live in `src/cpp` / `src/sceneio`; 69 writable adapters have direct sinks, while RTMV and the current NCore checkpoint are read-only and AVIF writes use the provider's completed output buffer; optional optimized storage/parser providers remain separately installed |
 | Offline native-source closure | ✅ | all selected native sources—including libwebp 1.5.0—are stored in-tree and the production CMake graph has no native-source fetch; local exact-tree proof plus final MSVC, GCC 10, and AppleClang sdist-to-wheel execution and artifact inspection pass |
 | Zero‑copy numpy + torch (DLPack) | ✅ | validated per codec |
 | Conventions‑as‑metadata + write guards | ✅ | record‑don't‑convert enforced |
@@ -1338,6 +1339,7 @@ incremental.
 | `ksplat` | file | yes | yes | yes | points | yes | yes | yes | - |
 | `las` | file | yes | yes | yes | points | yes | yes | yes | - |
 | `laz` | file | yes | yes | yes | points | yes | yes | yes | - |
+| `ncore_v4` | multi_file | yes | no | yes | - | yes | no | no | zarr, cbor2 |
 | `netpbm` | file | yes | yes | yes | window | yes | yes | no | - |
 | `npy` | file | yes | yes | yes | - | yes | yes | no | - |
 | `npz` | file | yes | yes | yes | - | yes | yes | no | - |

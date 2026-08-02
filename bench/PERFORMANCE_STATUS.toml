@@ -677,6 +677,16 @@ documentation = "docs/format_coverage.md"
 accepted_subset = ["matches0", "matching_scores0", "current_pair_naming", "exact_endpoint_names", "mixed_score_presence"]
 
 [[codec]]
+id = "ncore_v4"
+family = "datasets"
+adapter = "repo"
+implementation_owner = "python"
+sources = ["src/sceneio/io/_ncore/itar.py", "src/sceneio/io/_ncore/model.py", "src/sceneio/io/_ncore/schema.py"]
+source_suite = "tests/codecs/test_ncore_v4.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["v4", "local_directory_stores", "local_indexed_tar_stores", "sequence_manifests", "grouped_component_stores", "lazy_component_catalog", "metadata_only_inspect"]
+
+[[codec]]
 id = "zarr"
 family = "containers"
 adapter = "repo"
@@ -4183,6 +4193,45 @@ correctness_evidence = ["tests/codecs/test_colmap_mvs.py"]
 benchmark_evidence = ["bench/BASELINE.md"]
 candidate_backends = []
 evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "ncore_v4"
+profile = "default"
+direction = "encode"
+settings = { profile = "read_only" }
+fidelity = "not applicable"
+comparator = "read-only catalog checkpoint"
+fixture = "ncore_v4:default"
+backend = "sceneio-python"
+backend_owner = "repo"
+backend_source = "src/sceneio/io/_ncore/schema.py"
+backend_version = "sceneio-ncore-v4-catalog-1"
+transport_status = "not_applicable"
+status = "not_applicable"
+correctness_evidence = ["tests/codecs/test_ncore_v4.py"]
+benchmark_evidence = []
+candidate_backends = []
+evidence_gaps = ["typed component writer is scheduled for the next implementation unit"]
+
+[[operation]]
+codec_id = "ncore_v4"
+profile = "default"
+direction = "decode"
+settings = { stores = ["directory", "itar"], payload = "lazy_catalog" }
+fidelity = "lossless root, component, array, and generic metadata catalog"
+comparator = "upstream NCore V4 implementation"
+fixture = "ncore_v4:default"
+backend = "sceneio-python"
+backend_owner = "repo"
+backend_source = "src/sceneio/io/_ncore/schema.py"
+backend_version = "sceneio-ncore-v4-catalog-1"
+backend_dependencies = ["zarr >=3.1,<4", "cbor2 >=5.6,<6"]
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_ncore_v4.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["three-platform package validation"]
 
 [[operation]]
 codec_id = "zarr"

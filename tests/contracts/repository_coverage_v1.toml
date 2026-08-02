@@ -1,5 +1,5 @@
 schema_version = 1
-builtins = 72
+builtins = 73
 
 # Test-only repository coverage; runtime extensions are intentionally exempt.
 
@@ -532,6 +532,14 @@ source_suite = "tests/codecs/test_hdf5_hloc.py"
 documentation_row = "docs/format_coverage.md"
 inspection_source = "src/sceneio/io/_hdf5.py"
 wheel_smoke_case = "_hdf5_formats"
+
+[[codec]]
+id = "ncore_v4"
+benchmark_case = "ncore_v4"
+source_suite = "tests/codecs/test_ncore_v4.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_ncore/schema.py"
+wheel_smoke_case = "_ncore_v4"
 
 [[codec]]
 id = "zarr"

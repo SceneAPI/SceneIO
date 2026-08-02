@@ -525,9 +525,143 @@ def is_ncore_v4_path(path: str | Path) -> bool:
     return True
 
 
+def _looks_like_v4_root(value: object) -> bool:
+    if not isinstance(value, dict):
+        return False
+    interval = value.get("sequence_timestamp_interval_us")
+    return (
+        value.get("version") == "v4"
+        and isinstance(value.get("sequence_id"), str)
+        and bool(value["sequence_id"])
+        and isinstance(value.get("generic_meta_data"), dict)
+        and isinstance(value.get("component_group_name"), str)
+        and isinstance(interval, dict)
+        and set(interval) == {"start", "stop"}
+        and all(
+            isinstance(interval[name], int)
+            and not isinstance(interval[name], bool)
+            for name in ("start", "stop")
+        )
+        and 0 <= interval["start"] < interval["stop"]
+        and interval["stop"] <= np.iinfo(np.uint64).max
+    )
+
+
+def _directory_has_v4_root(path: Path) -> bool:
+    attributes = path / _ROOT_ATTRIBUTES_KEY
+    group = path / _ROOT_GROUP_KEY
+    if not attributes.is_file() or not group.is_file():
+        return False
+    try:
+        root = _decode_json(
+            _read_small_file(attributes, _MAX_JSON_BYTES, "NCore root probe"),
+            "NCore root probe",
+        )
+        group_document = _decode_json(
+            _read_small_file(group, _MAX_JSON_BYTES, "NCore group probe"),
+            "NCore group probe",
+        )
+    except (OSError, ValueError):
+        return False
+    return (
+        _looks_like_v4_root(root)
+        and isinstance(group_document, dict)
+        and group_document.get("zarr_format") == 2
+    )
+
+
+def is_ncore_v4_directory(path: str | Path) -> bool:
+    """Probe a direct store or local multi-store directory using root metadata."""
+
+    source = Path(path)
+    if not source.is_dir():
+        return False
+    if _directory_has_v4_root(source):
+        return True
+    candidates = tuple(
+        child
+        for child in source.iterdir()
+        if ".ncore4" in child.name
+        and (
+            (child.is_dir() and child.name.endswith(_STORE_DIRECTORY_SUFFIX))
+            or (child.is_file() and child.name.endswith(_STORE_FILE_SUFFIX))
+        )
+    )
+    return bool(candidates) and all(
+        _directory_has_v4_root(child)
+        if child.is_dir()
+        else is_ncore_v4_file(child)
+        for child in candidates
+    )
+
+
+def is_ncore_v4_file(path: str | Path) -> bool:
+    """Probe a sequence manifest or indexed-tar root without opening payloads."""
+
+    source = Path(path)
+    if not source.is_file():
+        return False
+    if source.name.endswith(_STORE_FILE_SUFFIX):
+        try:
+            with IndexedTarReader(source) as store:
+                root = _decode_json(
+                    store.read(_ROOT_ATTRIBUTES_KEY),
+                    "NCore indexed-tar root probe",
+                )
+                group = _decode_json(
+                    store.read(_ROOT_GROUP_KEY),
+                    "NCore indexed-tar group probe",
+                )
+        except (KeyError, OSError, RuntimeError, ValueError):
+            return False
+        return (
+            _looks_like_v4_root(root)
+            and isinstance(group, dict)
+            and group.get("zarr_format") == 2
+        )
+    if source.suffix.lower() != ".json":
+        return False
+    try:
+        document = _decode_json(
+            _read_small_file(source, _MAX_JSON_BYTES, "NCore manifest probe"),
+            "NCore manifest probe",
+        )
+    except (OSError, ValueError):
+        return False
+    if not isinstance(document, dict) or document.get("version") != "v4":
+        return False
+    stores = document.get("component_stores")
+    interval = document.get("sequence_timestamp_interval_us")
+    return (
+        isinstance(document.get("sequence_id"), str)
+        and bool(document["sequence_id"])
+        and isinstance(document.get("generic_meta_data"), dict)
+        and isinstance(interval, dict)
+        and set(interval) == {"start", "stop"}
+        and all(
+            isinstance(interval[name], int)
+            and not isinstance(interval[name], bool)
+            for name in ("start", "stop")
+        )
+        and 0 <= interval["start"] < interval["stop"]
+        and interval["stop"] <= np.iinfo(np.uint64).max
+        and isinstance(stores, list)
+        and bool(stores)
+        and all(
+            isinstance(store, dict)
+            and isinstance(store.get("path"), str)
+            and bool(store["path"])
+            and isinstance(store.get("components"), dict)
+            for store in stores
+        )
+    )
+
+
 __all__ = [
     "STANDARD_COMPONENTS",
     "inspect_ncore_v4",
+    "is_ncore_v4_directory",
+    "is_ncore_v4_file",
     "is_ncore_v4_path",
     "read_ncore_v4",
 ]

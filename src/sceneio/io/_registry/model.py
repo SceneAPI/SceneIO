@@ -10,6 +10,7 @@ from __future__ import annotations
 import importlib.util
 from collections.abc import Callable
 from dataclasses import dataclass
+from pathlib import Path
 
 
 @dataclass(frozen=True)
@@ -27,6 +28,8 @@ class Codec:
     is_directory: bool = False
     dir_marker: str = "cameras.bin"
     directory_markers: tuple[str, ...] = ()
+    file_probe: Callable[[Path], bool] | None = None
+    directory_probe: Callable[[Path], bool] | None = None
     inspect: Callable[[str], object] | None = None
     read_window: Callable[[str, int, int, int, int], object] | None = None
     read_points: Callable[[str, int, int], object] | None = None

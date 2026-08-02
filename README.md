@@ -77,10 +77,10 @@ artifacts vocabulary — wire identity unchanged.
 ### Compiled format I/O — `read` / `write` / `inspect` / `read_partial`
 
 <!-- sceneio-inventory-summary:start -->
-**Generated registry contract:** SceneIO has **72 built-in formats**: **64**
-single-file, **5** directory, and **3** multi-file containers. **72** are readable,
-**71** writable, and **72** inspectable; **37** formats expose **43** bounded partial
-selectors. **72** provide streaming reads and **69** provide streaming writes. The
+**Generated registry contract:** SceneIO has **73 built-in formats**: **64**
+single-file, **5** directory, and **4** multi-file containers. **73** are readable,
+**71** writable, and **73** inspectable; **37** formats expose **43** bounded partial
+selectors. **73** provide streaming reads and **69** provide streaming writes. The
 values come directly from `CANONICAL_BUILTIN_IDS` and `sceneio.capabilities()`.
 <!-- sceneio-inventory-summary:end -->
 
@@ -89,10 +89,10 @@ Gaussian, mesh/scene, pose/state, reconstruction, calibration, graph,
 feature-database, and scientific-container formats. Stable format contracts
 stay repository-owned; optional permissive providers supply their established
 storage kernels for HDF5/hloc, Zarr v2/v3, TIFF, E57, Parquet/Arrow IPC,
-OpenVDB, USD/USDZ, and AVIF/animated AVIF:
+OpenVDB, USD/USDZ, AVIF/animated AVIF, and NCore V4:
 
 ```console
-uv pip install "sceneio[hdf5,zarr,tiff,e57,arrow,openvdb,usd,avif]"
+uv pip install "sceneio[hdf5,zarr,tiff,e57,arrow,openvdb,usd,avif,ncore]"
 ```
 
 SceneIO's Linux wheel retains its manylinux2014 base contract. The separately

@@ -37,6 +37,7 @@ CODEC_SOURCE_PATHS = (
     "src/sceneio/io/_registry/families/arrays.py",
     "src/sceneio/io/_registry/families/calibration.py",
     "src/sceneio/io/_registry/families/containers.py",
+    "src/sceneio/io/_registry/families/datasets.py",
     "src/sceneio/io/_registry/families/dense.py",
     "src/sceneio/io/_registry/families/images.py",
     "src/sceneio/io/_registry/families/meshes.py",
@@ -725,9 +726,13 @@ def test_assembly_dependency_direction_and_import_delta_are_exact():
         "sceneio.io._avif",
         "sceneio.io._e57",
         "sceneio.io._hdf5",
-            "sceneio.io._openvdb",
-            "sceneio.io._rtmv",
-            "sceneio.io._tiff",
+        "sceneio.io._ncore",
+        "sceneio.io._ncore.itar",
+        "sceneio.io._ncore.model",
+        "sceneio.io._ncore.schema",
+        "sceneio.io._openvdb",
+        "sceneio.io._rtmv",
+        "sceneio.io._tiff",
         "sceneio.io._usd",
         "sceneio.io._usd.cameras",
         "sceneio.io._usd.gaussians",
@@ -745,6 +750,7 @@ def test_assembly_dependency_direction_and_import_delta_are_exact():
         "sceneio.io._registry.assembly",
         "sceneio.io._registry.families.arrays",
         "sceneio.io._registry.families.containers",
+        "sceneio.io._registry.families.datasets",
         "sceneio.io._registry.families.dense",
         "sceneio.io._registry.families.points",
         "sceneio.io._registry.families.reconstruction",
@@ -1196,7 +1202,7 @@ def test_assembly_dependency_direction_and_import_delta_are_exact():
         "3c07bcefabbd0d9be935ffd22c5ef1e7f4642321"
     )
     assert benchmark_contract["rows"] == 72
-    assert len(CANONICAL_BUILTIN_IDS) == 72
+    assert len(CANONICAL_BUILTIN_IDS) == benchmark_contract["rows"] + 1
     assert benchmark_contract["structural_projection_sha256"] == (
         "9d010021697a301eff99ac21203b9f66d042e66b81ccfd0bea7ebdce313b2851"
     )

@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 import numpy as np
 
 import sceneio
@@ -180,6 +183,52 @@ def _openvdb_fixture(scale):
     }
 
 
+def _ncore_directory_fixture(root, scale):
+    path = Path(root) / "_ncore_v4_input.ncore4.zarr"
+    array_path = path / "point_clouds" / "lidar" / "positions"
+    array_path.mkdir(parents=True)
+    count = max(16, int(262_144 * scale))
+    positions = np.arange(count * 3, dtype=np.float32).reshape(count, 3)
+    metadata = {
+        ".zgroup": {"zarr_format": 2},
+        ".zattrs": {
+            "sequence_id": "benchmark-sequence",
+            "sequence_timestamp_interval_us": {"start": 1, "stop": 2},
+            "generic_meta_data": {"fixture": "benchmark"},
+            "version": "v4",
+            "component_group_name": "",
+        },
+        "point_clouds/.zgroup": {"zarr_format": 2},
+        "point_clouds/lidar/.zgroup": {"zarr_format": 2},
+        "point_clouds/lidar/.zattrs": {
+            "component_name": "point_clouds",
+            "component_instance_name": "lidar",
+            "component_version": "v1",
+            "generic_meta_data": {},
+        },
+        "point_clouds/lidar/positions/.zarray": {
+            "chunks": [count, 3],
+            "compressor": None,
+            "dtype": "<f4",
+            "fill_value": 0,
+            "filters": None,
+            "order": "C",
+            "shape": [count, 3],
+            "zarr_format": 2,
+        },
+        "point_clouds/lidar/positions/.zattrs": {},
+    }
+    for key, value in metadata.items():
+        target = path / key
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(
+            json.dumps(value, separators=(",", ":")),
+            encoding="utf-8",
+        )
+    (array_path / "0.0").write_bytes(positions.tobytes())
+    return path, positions.nbytes
+
+
 def _usd_fixture(scale):
     face_count = max(1, int(25_000 * scale))
     vertex_count = face_count * 3
@@ -235,6 +284,7 @@ __all__ = [
     "_hdf5_fixture",
     "_hloc_feature_fixture",
     "_hloc_match_fixture",
+    "_ncore_directory_fixture",
     "_openvdb_fixture",
     "_usd_fixture",
 ]

@@ -77,6 +77,7 @@
       "hdf5": "33e66344c099145ee6e6cf2e7ea49ab7dfc5318b34ce5ad949b0c5facc802cb5",
       "hloc_features": "5f3d5916bc1a61b0b736f4ab86d26ee935f61a3b6f47e68d3d17bfed05cb637f",
       "hloc_matches": "7382dc0f72455e7c5908804a3843ba392c494578edec1454c9655f74d8f24d79",
+      "ncore_v4": "f71b23c6e188b5a791154671d2f279cd2024a09b8ecdd4911dee4f0b6500022c",
       "zarr": "0b87633299a5bc87d8224c6e1abb3bf56372e70a4970b6aaa67deabe94f20bd5",
       "tiff": "0081bf989dd43ae44961631b2792838f8845a2188fe050147774b408b1cbe3a2",
       "e57": "86309dcebb17d7c3ca1e8bfea11647bf145b2e7aed9d9e7e392b3593cbdb2ebc",
@@ -423,6 +424,10 @@
         "write": "86a7eae7521af7a3c748e585fc93c3f333945561fcbf5fce5a6968ebdf234950",
         "inspect": "56180e1a20477da1ca61a6734356d67ffc3f4a85dacacf59fb5289f0d801f195"
       },
+      "ncore_v4": {
+        "read": "09b5c7834c67c653d0bed07276af9be27f93788926849f85ea0b956fa3fcadbd",
+        "inspect": "128e28b60dfc1f00eaf9d44e89938e095fc4cf916d51709ff20c1ca398b984f7"
+      },
       "zarr": {
         "read": "e3a079c44a768ac72004c8bf9cb17598ff4b266b0547454644e60cedb1b5c153",
         "write": "da90b9fca56a93a61ed9acc03bb37edd2f62c600b00d108a2ebd1c5940dfae10",
@@ -466,8 +471,8 @@
     "last": "tests/test_points_binary.py::test_bad_magic_rejected"
   },
   "pytest_candidate_collection": {
-    "count": 4390,
-    "sorted_normalized_node_ids_sha256": "6489490df2f923560c07e08a1a007f954ff5e139d601c7b667dacb0ae99af41f",
+    "count": 4392,
+    "sorted_normalized_node_ids_sha256": "13125323160a3ccde78cdcf104f231b9c9f2742336dab73c06944ba0e6124b06",
     "added_nodes": [
       "tests/codecs/test_animated_webp.py::test_sceneio_writer_is_lossless_and_oracle_readable",
       "tests/codecs/test_animated_webp.py::test_pillow_writer_is_sceneio_readable_bit_exact",
@@ -1777,7 +1782,9 @@
       "tests/test_import_guards.py::test_no_family_imports[io/_ncore/__init__.py]",
       "tests/test_import_guards.py::test_no_family_imports[io/_ncore/itar.py]",
       "tests/test_import_guards.py::test_no_family_imports[io/_ncore/model.py]",
-      "tests/test_import_guards.py::test_no_family_imports[io/_ncore/schema.py]"
+      "tests/test_import_guards.py::test_no_family_imports[io/_ncore/schema.py]",
+      "tests/codecs/test_ncore_v4.py::test_schema_probe_leaves_generic_zarr_and_json_authoritative",
+      "tests/test_import_guards.py::test_no_family_imports[io/_registry/families/datasets.py]"
     ],
     "removed_nodes": [
       "tests/codecs/test_compressed_ply.py::test_writer_body_is_byte_identical_to_pinned_playcanvas_vector",

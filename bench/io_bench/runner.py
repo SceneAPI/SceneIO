@@ -62,6 +62,7 @@ from bench.io_bench.fixtures import (
 )
 from bench.io_bench.fixtures import sequences as sequence_fixtures
 from bench.io_bench.fixtures import splats as splat_fixtures
+from bench.io_bench.fixtures.containers import _ncore_directory_fixture
 from bench.io_bench.model import DirectorySpec
 from bench.io_bench.model import PathSpec as PathSpec
 from bench.io_bench.model import Spec as Spec
@@ -759,6 +760,17 @@ def _directory_specs(reconstruction, scale, root):
             lambda record, payload: _record_nbytes(payload),
         ),
         DirectorySpec(
+            "ncore_v4",
+            partial(
+                _ncore_directory_fixture,
+                root,
+                scale,
+            ),
+            None,
+            lambda path: sceneio.read(path, format="ncore_v4"),
+            lambda record, payload: payload,
+        ),
+        DirectorySpec(
             "rtmv",
             partial(
                 sequence_fixtures._rtmv_directory_fixture,
@@ -788,7 +800,11 @@ def _directory_specs(reconstruction, scale, root):
 
 
 def _directory_size(path):
-    return sum(entry.stat().st_size for entry in Path(path).iterdir() if entry.is_file())
+    return sum(
+        entry.stat().st_size
+        for entry in Path(path).rglob("*")
+        if entry.is_file()
+    )
 
 
 def _partial_request(codec_id, info, full_record=None):
@@ -3057,35 +3073,37 @@ def _run_benchmark(args, tmp):
             partial_request = _partial_request(
                 spec.id, _directory_inspect(), value
             )
+            partial_time = partial_peak = partial_rss = None
+            if partial_request is not None:
 
-            def _directory_partial(
-                path=path,
-                codec_id=spec.id,
-                request=partial_request,
-            ):
-                if args.cold_cache:
-                    for entry in path.iterdir():
-                        if entry.is_file():
-                            _evict_file_cache(entry)
-                return sceneio.read_partial(
-                    path, format=codec_id, **request
-                )
+                def _directory_partial(
+                    path=path,
+                    codec_id=spec.id,
+                    request=partial_request,
+                ):
+                    if args.cold_cache:
+                        for entry in path.iterdir():
+                            if entry.is_file():
+                                _evict_file_cache(entry)
+                    return sceneio.read_partial(
+                        path, format=codec_id, **request
+                    )
 
-            partial_time, partial_peak = _measure(
-                _directory_partial, args.runs
-            )
-            partial_rss = _measure_in_process_rss(_directory_partial)
-            partial_rows.append(
-                (
-                    spec.id,
-                    path_read_time,
-                    partial_time,
-                    read_peak / 1e6,
-                    partial_peak / 1e6,
-                    read_rss / 1e6,
-                    partial_rss / 1e6,
+                partial_time, partial_peak = _measure(
+                    _directory_partial, args.runs
                 )
-            )
+                partial_rss = _measure_in_process_rss(_directory_partial)
+                partial_rows.append(
+                    (
+                        spec.id,
+                        path_read_time,
+                        partial_time,
+                        read_peak / 1e6,
+                        partial_peak / 1e6,
+                        read_rss / 1e6,
+                        partial_rss / 1e6,
+                    )
+                )
             results.append(
                 {
                     "codec": spec.id,
@@ -3104,9 +3122,21 @@ def _run_benchmark(args, tmp):
                     "inspect_ms": inspect_time * 1000,
                     "inspect_peak_mb": inspect_peak / 1e6,
                     "inspect_rss_mb": inspect_rss / 1e6,
-                    "partial_ms": partial_time * 1000,
-                    "partial_peak_mb": partial_peak / 1e6,
-                    "partial_rss_mb": partial_rss / 1e6,
+                    "partial_ms": (
+                        None
+                        if partial_time is None
+                        else partial_time * 1000
+                    ),
+                    "partial_peak_mb": (
+                        None
+                        if partial_peak is None
+                        else partial_peak / 1e6
+                    ),
+                    "partial_rss_mb": (
+                        None
+                        if partial_rss is None
+                        else partial_rss / 1e6
+                    ),
                     "sink_write_peak_mb": (
                         None if write_peak is None else write_peak / 1e6
                     ),

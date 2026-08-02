@@ -8,13 +8,16 @@
   checkpoint closes at packaged source `2253e0f`; exact-head runs
   `30469273173`, `30469271293`, and build-only package run `30470889876`
   pass with publication skipped.
-- **Current local checkpoint:** the live registry has 72 formats. HDF5/hloc,
+- **Current local checkpoint:** the live registry has 73 formats. HDF5/hloc,
   Zarr v2/v3, TIFF, E57, Parquet/Arrow IPC, OpenVDB, and USD/USDZ are
   implemented through repository-owned adapters around optimized optional
   permissive providers. SceneIO owns schemas, validation, models, detection,
   inspection, partial-read policy, and transactional replacement. Direct
   provider producer/consumer tests and benchmark comparisons cover every
-  accepted profile; the NumPy-only base install is unchanged. Authorized
+  accepted profile; the NumPy-only base install is unchanged. NCore V4 is now
+  a repository-owned read/inspect catalog checkpoint for local directory and
+  indexed-tar stores plus sequence manifests; typed component loading and
+  writing remain the active implementation units. Authorized
   build-only package run `30701260601` passes all three wheel platforms with
   publication skipped.
 - **Current program gate:** implementation source `47eb2e1` passes the

@@ -338,6 +338,11 @@ COMPARISON_QUALIFICATIONS = MappingProxyType(
             "bench/io_bench/oracles/containers.py",
             runner_kind="path",
         ),
+        "ncore_v4": _exemption(
+            "independent NCore V4 dataset open and inspect throughput",
+            "tests/codecs/test_ncore_v4.py",
+            runner_kind="directory",
+        ),
         "zarr": _timed(
             "zarr-python",
             "bench/io_bench/oracles/containers.py",

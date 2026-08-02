@@ -1730,6 +1730,55 @@ def _rtmv_dataset(root: Path) -> None:
     )
 
 
+def _ncore_v4(root: Path) -> None:
+    if not sceneio.capabilities("ncore_v4").available:
+        return
+    store = root / "smoke.ncore4.zarr"
+    component = store / "poses" / "rig"
+    component.mkdir(parents=True)
+    (store / ".zgroup").write_text(
+        '{"zarr_format":2}',
+        encoding="utf-8",
+    )
+    (store / ".zattrs").write_text(
+        json.dumps(
+            {
+                "sequence_id": "wheel-smoke",
+                "sequence_timestamp_interval_us": {
+                    "start": 1,
+                    "stop": 2,
+                },
+                "generic_meta_data": {},
+                "version": "v4",
+                "component_group_name": "",
+            },
+            separators=(",", ":"),
+        ),
+        encoding="utf-8",
+    )
+    (component / ".zgroup").write_text(
+        '{"zarr_format":2}',
+        encoding="utf-8",
+    )
+    (component / ".zattrs").write_text(
+        json.dumps(
+            {
+                "component_name": "poses",
+                "component_instance_name": "rig",
+                "component_version": "v1",
+                "generic_meta_data": {},
+            },
+            separators=(",", ":"),
+        ),
+        encoding="utf-8",
+    )
+    assert sceneio.detect(store) == "ncore_v4"
+    dataset = sceneio.read(store)
+    assert dataset.sequence_id == "wheel-smoke"
+    assert tuple(item.id for item in dataset.components) == ("poses:rig",)
+    assert sceneio.inspect(store).count == 1
+
+
 def _avif_formats(root: Path) -> None:
     if not sceneio.capabilities("avif").available:
         assert not sceneio.capabilities("animated_avif").available
@@ -2075,6 +2124,7 @@ _SMOKE_RUNNERS: Mapping[str, Callable[[Path], None]] = MappingProxyType(
         "hdf5": _hdf5_formats,
         "hloc_features": _hdf5_formats,
         "hloc_matches": _hdf5_formats,
+        "ncore_v4": _ncore_v4,
         "zarr": _zarr_formats,
         "tiff": _tiff_formats,
         "e57": _e57_formats,

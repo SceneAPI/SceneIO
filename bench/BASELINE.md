@@ -4206,3 +4206,16 @@ records 391.961/297.278 ms (1.32x) and 25.2/16.8 MB full/partial allocation.
 The guard reports that stable O4 gains and mapped-read/direct-sink memory bounds
 pass. This is the final hosted 72-format closure result; publication remains a
 separate workflow action.
+
+## 2026-08-02 NCore V4 catalog checkpoint
+
+The 73rd benchmark row covers repository-owned NCore V4 discovery, root and
+component catalog loading, and metadata-only inspection over a generated local
+Zarr-v2 directory store. A two-run local MSVC measurement at `--scale 0.1`
+used a 0.3 MB point-array payload and recorded 242 MB/s direct catalog open,
+233 MB/s registry path open, 0.0 MB rounded traced allocation, and 0.1 MB
+sampled RSS growth. Inspection took 1.201 ms versus 1.353 ms for the full lazy
+catalog open. The row deliberately reports no write or partial timing until
+the typed component and writer units land; the checked qualification ledger
+classifies its independent throughput comparison as a reviewed exemption while
+the upstream NCore implementation remains the correctness oracle.

@@ -6,7 +6,7 @@ schema_version = 1
 inventory_source = "sceneio.io._builtin_manifest.CANONICAL_BUILTIN_IDS"
 capability_source = "sceneio.capabilities"
 native_feature_source = "sceneio.native_features"
-expected_builtin_count = 72
+expected_builtin_count = 73
 canonical_current_document = "docs/format_coverage.md"
 
 readme_entry_points = [

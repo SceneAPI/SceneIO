@@ -90,6 +90,7 @@ CANONICAL_BUILTIN_IDS = (
     "hdf5",
     "hloc_features",
     "hloc_matches",
+    "ncore_v4",
     "zarr",
     "tiff",
     "e57",
@@ -122,6 +123,7 @@ FAMILY_MEMBERS = MappingProxyType(
             "colmap_mvs_consistency",
             "colmap_fused_visibility",
         ),
+        "datasets": ("ncore_v4",),
         "images": (
             "netpbm",
             "png",
@@ -378,6 +380,7 @@ _NATIVE_SYMBOLS = {
     "hdf5": (),
     "hloc_features": (),
     "hloc_matches": (),
+    "ncore_v4": (),
     "zarr": (),
 }
 
@@ -455,6 +458,10 @@ _PYTHON_SYMBOLS = {
         "sceneio.io._hdf5.write_hloc_matches",
         "sceneio.io._hdf5.inspect_hloc_matches",
     ),
+    "ncore_v4": (
+        "sceneio.io._ncore.read_ncore_v4",
+        "sceneio.io._ncore.inspect_ncore_v4",
+    ),
     "zarr": (
         "sceneio.io._zarr.read_zarr",
         "sceneio.io._zarr.write_zarr",
@@ -504,6 +511,7 @@ _OWNERS = {
     "hdf5": "python",
     "hloc_features": "python",
     "hloc_matches": "python",
+    "ncore_v4": "python",
     "zarr": "python",
     "tiff": "python",
     "e57": "python",
@@ -539,6 +547,7 @@ def _validate_manifest() -> None:
         "calibration",
         "containers",
         "dense",
+        "datasets",
         "images",
         "meshes",
         "points",

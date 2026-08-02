@@ -12,7 +12,12 @@ from sceneio.io._ncore.model import (
     NCoreSelection,
     NCoreStore,
 )
-from sceneio.io._ncore.schema import inspect_ncore_v4, read_ncore_v4
+from sceneio.io._ncore.schema import (
+    inspect_ncore_v4,
+    is_ncore_v4_directory,
+    is_ncore_v4_file,
+    read_ncore_v4,
+)
 
 __all__ = [
     "NCoreArray",
@@ -21,5 +26,7 @@ __all__ = [
     "NCoreSelection",
     "NCoreStore",
     "inspect_ncore_v4",
+    "is_ncore_v4_directory",
+    "is_ncore_v4_file",
     "read_ncore_v4",
 ]

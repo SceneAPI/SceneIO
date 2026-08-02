@@ -15,6 +15,7 @@ import numpy as np
 import pytest
 import zarr
 
+import sceneio
 from sceneio.io._ncore.itar import IndexedTarReader, as_zarr_store
 from sceneio.io._ncore.model import NCoreDataset, NCoreSelection
 from sceneio.io._ncore.schema import inspect_ncore_v4, read_ncore_v4
@@ -129,6 +130,12 @@ def test_directory_catalog_and_inspection_are_metadata_only(tmp_path):
     assert info.metadata["standard_component_count"] == 1
     assert info.metadata["custom_component_count"] == 0
 
+    assert sceneio.detect(path) == "ncore_v4"
+    public_dataset = sceneio.read(path)
+    assert isinstance(public_dataset, sceneio.NCoreDataset)
+    assert public_dataset.sequence_id == dataset.sequence_id
+    assert sceneio.inspect(path) == info
+
 
 def test_indexed_tar_direct_reads_ranges_and_zarr_chunks(tmp_path):
     path = tmp_path / "sample.ncore4.zarr.itar"
@@ -148,6 +155,7 @@ def test_indexed_tar_direct_reads_ranges_and_zarr_chunks(tmp_path):
 
     with pytest.raises(ValueError, match="closed"):
         reader.read(".zgroup")
+    assert sceneio.detect(path) == "ncore_v4"
 
 
 def test_directory_and_itar_catalogs_are_logically_identical(tmp_path):
@@ -167,6 +175,7 @@ def test_directory_and_itar_catalogs_are_logically_identical(tmp_path):
     assert from_archive.stores[0].group == "calibration"
     assert from_directory.stores[0].storage == "directory"
     assert from_archive.stores[0].storage == "itar"
+    assert sceneio.detect(tmp_path) == "ncore_v4"
 
 
 def test_large_directory_catalog_does_not_materialize_payload(tmp_path):
@@ -264,6 +273,32 @@ def test_sequence_manifest_combines_consistent_component_groups(tmp_path):
         "poses:rig",
         "poses:world",
     )
+    assert sceneio.detect(manifest) == "ncore_v4"
+    assert sceneio.read(manifest).components == dataset.components
+
+
+def test_schema_probe_leaves_generic_zarr_and_json_authoritative(tmp_path):
+    generic = tmp_path / "generic.zarr"
+    generic.mkdir()
+    (generic / ".zgroup").write_text('{"zarr_format":2}', encoding="utf-8")
+    (generic / ".zattrs").write_text("{}", encoding="utf-8")
+    assert sceneio.detect(generic) == "zarr"
+
+    document = tmp_path / "transforms.json"
+    document.write_text('{"camera_angle_x":0.7,"frames":[]}', encoding="utf-8")
+    assert sceneio.detect(document) == "transforms_json"
+
+    overflow = tmp_path / "overflow.zarr"
+    overflow_metadata = _metadata()
+    overflow_metadata[".zattrs"] = {
+        **overflow_metadata[".zattrs"],
+        "sequence_timestamp_interval_us": {
+            "start": 1,
+            "stop": 1 << 64,
+        },
+    }
+    _write_directory(overflow, overflow_metadata)
+    assert sceneio.detect(overflow) == "zarr"
 
 
 def test_rejects_inconsistent_store_roots_and_component_identity(tmp_path):

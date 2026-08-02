@@ -35,7 +35,7 @@ jobs:
         run: .venv/bin/python tools/documentation_contract.py --check
       - name: Test
         run: .venv/bin/python -m pytest -q
-      - name: Benchmark harness smoke (all 72 codecs)
+      - name: Benchmark harness smoke (all 73 codecs)
         run: .venv/bin/python bench/bench_io.py --runs 1 --scale 0.001 --skip-oracles --json "${{ runner.temp }}/sceneio-benchmark.json"
       - name: Verify deterministic benchmark structure
         run: .venv/bin/python bench/compare_io_structure.py "${{ runner.temp }}/sceneio-benchmark.json"

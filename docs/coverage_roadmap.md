@@ -1,7 +1,7 @@
 # SceneIO — comprehensive coverage roadmap & execution checklist
 
 > Current shipped and branch-local status is tracked in `format_coverage.md`.
-> The status markers below have been reconciled to the live 72-format registry;
+> The status markers below have been reconciled to the live 73-format registry;
 > broader checklist boxes remain open where a codec has not completed an
 > aspirational per-format or cross-platform gate. The authoritative
 > implementation sequence for the remaining formats is

@@ -153,13 +153,19 @@ def detect_path(
     ordered = tuple(codecs)
     if p.is_dir():
         for codec in ordered:
-            if codec.is_directory and any(
-                (p / marker).exists() for marker in codec.directory_markers
-            ):
+            if not codec.is_directory:
+                continue
+            if codec.directory_probe is not None:
+                if codec.directory_probe(p):
+                    return codec.id
+            elif any((p / marker).exists() for marker in codec.directory_markers):
                 return codec.id
         raise format_error(f"no directory format matches {str(path)!r}")
     for codec in ordered:
         if p.name in codec.filenames:
+            return codec.id
+    for codec in ordered:
+        if codec.file_probe is not None and codec.file_probe(p):
             return codec.id
     # COLMAP dense matrices deliberately share the compound
     # ``.<photometric|geometric>.bin`` suffix. Their canonical workspace
