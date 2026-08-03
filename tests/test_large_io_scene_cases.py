@@ -114,13 +114,23 @@ def test_glb_smoke_uses_trimesh_common_input(tmp_path):
     assert validation["status"] == "pass"
 
 
-def test_colmap_smoke_has_two_observation_tracks_and_pose_contract(tmp_path):
+def test_colmap_smoke_has_two_observation_tracks_and_pose_contract(tmp_path, monkeypatch):
+    # Force the large-record comparator on the same compact smoke fixture so
+    # the bounded sampled contract remains covered without a 256 MiB run.
+    monkeypatch.setattr(cases_scene, "COLMAP_LARGE_POINT_THRESHOLD", 1)
+    original_provider_fixture = cases_scene.provider_fixture
+
+    def unexpected_provider_read(*args, **kwargs):
+        raise AssertionError("prepare_case should validate the prepared values")
+
+    monkeypatch.setattr(cases_scene, "provider_fixture", unexpected_provider_read)
     artifact = cases_scene.prepare_case(
         "colmap_tum_tracks",
         tier="smoke",
         cache=tmp_path / "cache",
         sources=_tum_seed(tmp_path),
     )
+    monkeypatch.setattr(cases_scene, "provider_fixture", original_provider_fixture)
     assert artifact.metadata["track_length"] == 2
     assert artifact.metadata["quaternion_order"] == "wxyz"
     assert artifact.metadata["pose_convention"] == "world_to_camera"
@@ -133,7 +143,13 @@ def test_colmap_smoke_has_two_observation_tracks_and_pose_contract(tmp_path):
     canonical = cases_scene._canonical_colmap(reference)
     assert canonical["obs_xy"].shape[0] == 2 * reference.num_points3D()
     assert canonical["obs_off"][-1] == canonical["obs_xy"].shape[0]
-    assert cases_scene.validate_common_input(artifact)["status"] == "pass"
+    validation = cases_scene.validate_common_input(artifact)
+    assert validation["status"] == "pass"
+    assert validation["profile"] == "colmap_tum_tracks:semantic-large-sampled-v1"
+    assert validation["sample_count"] == min(
+        cases_scene.COLMAP_LARGE_SAMPLE_LIMIT, reference.num_points3D()
+    )
+    assert validation["total_observations"] == reference.compute_num_observations()
     import sceneio
 
     selected = sceneio.read_partial(
@@ -141,6 +157,7 @@ def test_colmap_smoke_has_two_observation_tracks_and_pose_contract(tmp_path):
     )
     assert selected.num_images == 1
     assert cases_scene.partial_read_check(artifact)["status"] == "pass"
+    assert artifact.metadata["common_writer"] == "pycolmap"
 
 
 def test_scene_cross_matrix_is_directional_and_propagates_mismatch(

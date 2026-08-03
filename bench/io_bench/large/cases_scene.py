@@ -31,6 +31,13 @@ from .model import CaseArtifact, CaseDefinition
 MIB = 1024 * 1024
 STANDARD_LOGICAL_BYTES = 256 * MIB
 SMOKE_LOGICAL_BYTES = 1 * MIB
+# pycolmap's Python mapping exposes one object per point and observation.  Keep
+# the exhaustive contract for small fixtures, but switch to the bounded
+# deterministic profile before provider-native object materialization becomes
+# the dominant part of preparation.  The closure fixture uses sequential point
+# IDs, so the large profile can sample IDs without sorting the pycolmap map.
+COLMAP_LARGE_POINT_THRESHOLD = 100_000
+COLMAP_LARGE_SAMPLE_LIMIT = 4_096
 NIANTIC_SPZ_REVISION = "5bf2945de1a003cee07133b1e495fe9c6ffdc7e7"
 _SH_DIM = {0: 0, 1: 3, 2: 8, 3: 15}
 
@@ -831,14 +838,287 @@ def _write_colmap_fixture(
             stream.write(records.tobytes())
 
 
+def _camera_model_name(camera: Any) -> str:
+    """Return a stable camera-model name for both provider object models."""
+
+    model = getattr(camera, "model", None)
+    if model is None:
+        model = getattr(camera, "model_name", None)
+    if model is None:
+        model = camera.model_id
+    return str(model).rsplit(".", 1)[-1]
+
+
+def _is_sceneio_colmap(value: Any) -> bool:
+    """Identify the compact SceneIO record without importing the extension."""
+
+    return hasattr(value, "image_ids") and not callable(getattr(value, "image_ids", None))
+
+
+def _colmap_count(value: Any, name: str) -> int:
+    raw = getattr(value, name)
+    return int(raw() if callable(raw) else raw)
+
+
+def _colmap_image_summary(value: Any) -> dict[str, Any]:
+    """Collect complete camera/image metadata without touching point maps."""
+
+    if _is_sceneio_colmap(value):
+        image_ids = np.asarray(value.image_ids, dtype=np.uint32)
+        image_order = np.argsort(image_ids)
+        return {
+            "image_ids": image_ids[image_order],
+            "image_names": tuple(value.image_names[int(i)] for i in image_order),
+            "image_camera_ids": np.asarray(value.image_camera_ids, dtype=np.uint32)[
+                image_order
+            ],
+            "quaternions": np.asarray(value.quaternions, dtype=np.float64).reshape(-1, 4)[
+                image_order
+            ],
+            "translations": np.asarray(value.translations, dtype=np.float64).reshape(-1, 3)[
+                image_order
+            ],
+        }
+    image_items = []
+    for image_id, image in sorted(value.images.items()):
+        pose = image.cam_from_world() if callable(image.cam_from_world) else image.cam_from_world
+        quat_xyzw = np.asarray(pose.rotation.quat, dtype=np.float64)
+        image_items.append(
+            (
+                int(image_id),
+                image.name,
+                int(image.camera_id),
+                np.asarray([quat_xyzw[3], quat_xyzw[0], quat_xyzw[1], quat_xyzw[2]]),
+                np.asarray(pose.translation, dtype=np.float64),
+            )
+        )
+    return {
+        "image_ids": np.asarray([item[0] for item in image_items], np.uint32),
+        "image_names": tuple(item[1] for item in image_items),
+        "image_camera_ids": np.asarray([item[2] for item in image_items], np.uint32),
+        "quaternions": np.asarray([item[3] for item in image_items], np.float64).reshape(-1, 4),
+        "translations": np.asarray([item[4] for item in image_items], np.float64).reshape(-1, 3),
+    }
+
+
+def _colmap_camera_summary(value: Any) -> tuple[tuple[Any, ...], ...]:
+    if _is_sceneio_colmap(value):
+        cameras = value.cameras
+        iterator = sorted(cameras, key=lambda item: int(item.id))
+        return tuple(
+            (
+                int(camera.id),
+                _camera_model_name(camera),
+                int(camera.width),
+                int(camera.height),
+                np.asarray(camera.params, dtype=np.float64),
+            )
+            for camera in iterator
+        )
+    return tuple(
+        (
+            int(camera_id),
+            _camera_model_name(camera),
+            int(camera.width),
+            int(camera.height),
+            np.asarray(camera.params, dtype=np.float64),
+        )
+        for camera_id, camera in sorted(value.cameras.items())
+    )
+
+
+def _colmap_sample_ids(left: Any, right: Any, count: int) -> np.ndarray:
+    """Select deterministic point IDs without enumerating a pycolmap map."""
+
+    sample_count = min(max(0, int(count)), COLMAP_LARGE_SAMPLE_LIMIT)
+    if sample_count == 0:
+        return np.empty(0, dtype=np.uint64)
+    positions = np.linspace(0, count - 1, sample_count, dtype=np.int64)
+    # SceneIO keeps point IDs in its compact sorted SoA.  Prefer those IDs so
+    # a non-sequential external model can still be compared without asking
+    # pycolmap to materialize or sort its Point3DMap.  The generated fixture
+    # fallback is sequential (1..N), which is the documented large profile.
+    for value in (left, right):
+        if not _is_sceneio_colmap(value):
+            continue
+        point_ids = np.asarray(value.point3D_ids, dtype=np.uint64)
+        if point_ids.size != count:
+            raise AssertionError("COLMAP point count does not match point ID SoA")
+        if point_ids.size > 1 and np.any(point_ids[1:] < point_ids[:-1]):
+            point_ids = np.sort(point_ids)
+        return point_ids[positions]
+    return positions.astype(np.uint64) + np.uint64(1)
+
+
+def _sceneio_point_sample(value: Any, sample_ids: np.ndarray) -> dict[str, Any]:
+    point_ids = np.asarray(value.point3D_ids, dtype=np.uint64)
+    xyz = np.asarray(value.xyz, dtype=np.float64).reshape(-1, 3)
+    rgb = np.asarray(value.rgb, dtype=np.uint8).reshape(-1, 3)
+    errors = np.asarray(value.errors, dtype=np.float64)
+    if point_ids.size > 1 and np.any(point_ids[1:] < point_ids[:-1]):
+        order = np.argsort(point_ids)
+        point_ids = point_ids[order]
+        xyz = xyz[order]
+        rgb = rgb[order]
+        errors = errors[order]
+    positions = np.searchsorted(point_ids, sample_ids)
+    if np.any(positions >= point_ids.size) or not np.array_equal(
+        point_ids[positions], sample_ids
+    ):
+        raise AssertionError("COLMAP sample point ID is absent from the SceneIO record")
+    return {
+        "point_ids": point_ids[positions],
+        "xyz": xyz[positions],
+        "rgb": rgb[positions],
+        "errors": errors[positions],
+    }
+
+
+def _pycolmap_point_sample(value: Any, sample_ids: np.ndarray) -> dict[str, Any]:
+    points: list[Any] = []
+    for point_id in sample_ids:
+        identifier = int(point_id)
+        if not value.exists_point3D(identifier):
+            raise AssertionError(f"COLMAP sample point ID {identifier} is absent from pycolmap")
+        points.append(value.point3D(identifier))
+    return {
+        "point_ids": np.asarray([int(point_id) for point_id in sample_ids], dtype=np.uint64),
+        "xyz": np.asarray([point.xyz for point in points], dtype=np.float64).reshape(-1, 3),
+        "rgb": np.asarray([point.color for point in points], dtype=np.uint8).reshape(-1, 3),
+        "errors": np.asarray([point.error for point in points], dtype=np.float64),
+    }
+
+
+def _colmap_point_sample(value: Any, sample_ids: np.ndarray) -> dict[str, Any]:
+    return (
+        _sceneio_point_sample(value, sample_ids)
+        if _is_sceneio_colmap(value)
+        else _pycolmap_point_sample(value, sample_ids)
+    )
+
+
+def _sceneio_sampled_tracks(
+    value: Any, sample_ids: np.ndarray
+) -> tuple[dict[int, tuple[tuple[int, int], ...]], None]:
+    observation_ids = np.asarray(value._observation_point3D_ids)
+    offsets = np.asarray(value._observation_offsets, dtype=np.uint64)
+    image_ids = np.asarray(value.image_ids, dtype=np.uint32)
+    positions = np.flatnonzero(np.isin(observation_ids, sample_ids))
+    image_indices = np.searchsorted(offsets, positions, side="right") - 1
+    tracks = {int(point_id): [] for point_id in sample_ids}
+    for position, image_index in zip(positions, image_indices, strict=True):
+        point_id = int(observation_ids[position])
+        tracks[point_id].append(
+            (int(image_ids[image_index]), int(position - offsets[image_index]))
+        )
+    normalized = {point_id: tuple(sorted(entries)) for point_id, entries in tracks.items()}
+    return normalized, None
+
+
+def _pycolmap_sampled_tracks(
+    value: Any, sample_ids: np.ndarray
+) -> tuple[dict[int, tuple[tuple[int, int], ...]], dict[int, np.ndarray]]:
+    tracks: dict[int, tuple[tuple[int, int], ...]] = {}
+    xy: dict[int, np.ndarray] = {}
+    for point_id in sample_ids:
+        identifier = int(point_id)
+        point = value.point3D(identifier)
+        elements = sorted(
+            point.track.elements,
+            key=lambda element: (int(element.image_id), int(element.point2D_idx)),
+        )
+        tracks[identifier] = tuple(
+            (int(element.image_id), int(element.point2D_idx)) for element in elements
+        )
+        xy[identifier] = np.asarray(
+            [
+                value.images[int(element.image_id)]
+                .points2D[int(element.point2D_idx)]
+                .xy
+                for element in elements
+            ],
+            dtype=np.float64,
+        ).reshape(-1, 2)
+    return tracks, xy
+
+
+def _colmap_sampled_tracks(
+    value: Any, sample_ids: np.ndarray
+) -> tuple[dict[int, tuple[tuple[int, int], ...]], dict[int, np.ndarray] | None]:
+    if _is_sceneio_colmap(value):
+        return _sceneio_sampled_tracks(value, sample_ids)
+    return _pycolmap_sampled_tracks(value, sample_ids)
+
+
+def _colmap_observation_count(value: Any) -> int:
+    if _is_sceneio_colmap(value):
+        return int(np.asarray(value._observation_point3D_ids).size)
+    return int(value.compute_num_observations())
+
+
+def _compare_colmap_large(left: Any, right: Any) -> dict[str, Any]:
+    """Compare large COLMAP records with a bounded deterministic contract.
+
+    Camera/image metadata remains exhaustive.  Point attributes and two-entry
+    tracks are checked at evenly spaced fixture IDs (up to 4096); pycolmap is
+    queried one sampled point at a time, so no all-point object list or sort is
+    created.  Observation XY is compared only when both values expose it.
+    """
+
+    left_counts = {
+        "num_cameras": _colmap_count(left, "num_cameras"),
+        "num_images": _colmap_count(left, "num_images"),
+        "num_points3D": _colmap_count(left, "num_points3D"),
+    }
+    right_counts = {
+        "num_cameras": _colmap_count(right, "num_cameras"),
+        "num_images": _colmap_count(right, "num_images"),
+        "num_points3D": _colmap_count(right, "num_points3D"),
+    }
+    assert left_counts == right_counts
+    assert _colmap_observation_count(left) == _colmap_observation_count(right)
+    left_cameras = _colmap_camera_summary(left)
+    right_cameras = _colmap_camera_summary(right)
+    assert len(left_cameras) == len(right_cameras)
+    for left_camera, right_camera in zip(left_cameras, right_cameras, strict=True):
+        assert left_camera[:4] == right_camera[:4]
+        np.testing.assert_allclose(left_camera[4], right_camera[4], rtol=0.0, atol=1e-12)
+    left_images = _colmap_image_summary(left)
+    right_images = _colmap_image_summary(right)
+    for field in ("image_ids", "image_camera_ids"):
+        np.testing.assert_array_equal(left_images[field], right_images[field])
+    assert left_images["image_names"] == right_images["image_names"]
+    np.testing.assert_allclose(
+        left_images["translations"], right_images["translations"], rtol=0.0, atol=1e-10
+    )
+    assert _quaternion_error(left_images["quaternions"], right_images["quaternions"]) <= 1e-10
+    sample_ids = _colmap_sample_ids(left, right, left_counts["num_points3D"])
+    left_points = _colmap_point_sample(left, sample_ids)
+    right_points = _colmap_point_sample(right, sample_ids)
+    np.testing.assert_array_equal(left_points["point_ids"], right_points["point_ids"])
+    np.testing.assert_allclose(left_points["xyz"], right_points["xyz"], rtol=0.0, atol=1e-10)
+    np.testing.assert_array_equal(left_points["rgb"], right_points["rgb"])
+    np.testing.assert_allclose(left_points["errors"], right_points["errors"], rtol=0.0, atol=1e-12)
+    left_tracks, left_xy = _colmap_sampled_tracks(left, sample_ids)
+    right_tracks, right_xy = _colmap_sampled_tracks(right, sample_ids)
+    for point_id in sample_ids:
+        identifier = int(point_id)
+        assert len(left_tracks[identifier]) == 2
+        assert len(right_tracks[identifier]) == 2
+        assert left_tracks[identifier] == right_tracks[identifier]
+        if left_xy is not None and right_xy is not None:
+            np.testing.assert_allclose(
+                left_xy[identifier], right_xy[identifier], rtol=0.0, atol=1e-10
+            )
+    return {
+        "profile": "colmap:semantic-large-sampled-v1",
+        "sample_count": int(sample_ids.size),
+        "sample_point_ids": [int(item) for item in sample_ids],
+        "total_observations": _colmap_observation_count(left),
+    }
+
+
 def _canonical_colmap(value: Any) -> dict[str, Any]:
-    def camera_model(camera: Any) -> str:
-        model = getattr(camera, "model", None)
-        if model is None:
-            model = getattr(camera, "model_name", None)
-        if model is None:
-            model = camera.model_id
-        return str(model).rsplit(".", 1)[-1]
 
     if hasattr(value, "image_ids"):
         image_ids = np.asarray(value.image_ids, dtype=np.uint32)
@@ -848,7 +1128,7 @@ def _canonical_colmap(value: Any) -> dict[str, Any]:
         cameras = tuple(
             (
                 int(camera.id),
-                camera_model(camera),
+                _camera_model_name(camera),
                 int(camera.width),
                 int(camera.height),
                 np.asarray(camera.params, dtype=np.float64),
@@ -880,7 +1160,7 @@ def _canonical_colmap(value: Any) -> dict[str, Any]:
     cameras = tuple(
         (
             int(camera_id),
-            camera_model(camera),
+            _camera_model_name(camera),
             int(camera.width),
             int(camera.height),
             np.asarray(camera.params, dtype=np.float64),
@@ -944,8 +1224,12 @@ def _canonical_colmap(value: Any) -> dict[str, Any]:
     }
 
 
-def compare_colmap(left: Any, right: Any) -> None:
-    """Compare COLMAP records, including valid two-observation tracks."""
+def compare_colmap(left: Any, right: Any) -> dict[str, Any] | None:
+    """Compare COLMAP records, using a bounded profile for large fixtures."""
+
+    point_count = max(_colmap_count(left, "num_points3D"), _colmap_count(right, "num_points3D"))
+    if point_count >= COLMAP_LARGE_POINT_THRESHOLD:
+        return _compare_colmap_large(left, right)
 
     actual = _canonical_colmap(left)
     expected = _canonical_colmap(right)
@@ -969,6 +1253,7 @@ def compare_colmap(left: Any, right: Any) -> None:
         np.testing.assert_array_equal(actual["track"], expected["track"])
         np.testing.assert_array_equal(actual["track_off"], expected["track_off"])
     assert _quaternion_error(actual["quaternions"], expected["quaternions"]) <= 1e-10
+    return None
 
 
 def _pycolmap_read(path: Path):
@@ -1278,6 +1563,7 @@ def build_colmap_fixture(
     path = _cache_dir(cache, "colmap_tum_tracks", tier) / "model"
     _write_colmap_fixture(path, timestamps, quaternions, translations, point_count)
     common_writer = "independent_binary_builder"
+    pycolmap_value = None
     try:
         pycolmap_value = _pycolmap_read(path)
         canonical_path = path.with_name("common")
@@ -1343,8 +1629,8 @@ def build_colmap_fixture(
         derivation=derivation,
     )
     provider_values: dict[str, Any] = {"sceneio": record}
-    with contextlib.suppress(ProviderUnavailable):
-        provider_values["pycolmap"] = _pycolmap_read(path)
+    if pycolmap_value is not None:
+        provider_values["pycolmap"] = pycolmap_value
     if artifact.logical_bytes < target:
         raise AssertionError(
             f"COLMAP fixture logical payload {artifact.logical_bytes} is below {target}"
@@ -1464,27 +1750,44 @@ def provider_fixture(case_id: str, provider: str, artifact: CaseArtifact) -> Any
     return adapter.read(artifact.path)
 
 
-def validate_common_input(artifact: CaseArtifact) -> dict[str, Any]:
+def validate_common_input(
+    artifact: CaseArtifact,
+    *,
+    sceneio_value: Any | None = None,
+    provider_values: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
     """Decode and semantically validate the reference-written common input."""
 
     case_id = artifact.case_id
-    sceneio_value = provider_fixture(case_id, "sceneio", artifact)
+    prepared_values = provider_values or {}
+    if sceneio_value is None:
+        sceneio_value = prepared_values.get("sceneio")
+    if sceneio_value is None:
+        sceneio_value = provider_fixture(case_id, "sceneio", artifact)
     providers: dict[str, str] = {}
     unavailable: dict[str, str] = {}
+    contract: dict[str, Any] | None = None
     for provider in _CASE_BY_ID[case_id].providers:
         if provider == "sceneio":
             continue
         try:
-            value = provider_fixture(case_id, provider, artifact)
+            value = prepared_values.get(provider)
+            if value is None:
+                value = provider_fixture(case_id, provider, artifact)
         except ProviderUnavailable as exc:
             unavailable[provider] = str(exc)
             continue
-        compare_case(case_id, sceneio_value, value)
-        providers[provider] = "ok"
         if case_id == "colmap_tum_tracks":
-            for point in value.points3D.values():
-                if int(point.track.length()) != 2:
-                    raise AssertionError("COLMAP common input contains a non-two-observation track")
+            contract = compare_colmap(sceneio_value, value)
+            if contract is None:
+                for point in value.points3D.values():
+                    if int(point.track.length()) != 2:
+                        raise AssertionError(
+                            "COLMAP common input contains a non-two-observation track"
+                        )
+        else:
+            compare_case(case_id, sceneio_value, value)
+        providers[provider] = "ok"
     required_reference = {
         "spz_racoon_v4": "niantic_spz",
         "glb_box_grid": "trimesh",
@@ -1494,14 +1797,29 @@ def validate_common_input(artifact: CaseArtifact) -> dict[str, Any]:
     status = "pass" if providers else "unavailable"
     if artifact.tier == "standard" and not required_available:
         status = "fail"
-    return {
+    profile = (
+        f"{case_id}:semantic-large-sampled-v1"
+        if case_id == "colmap_tum_tracks"
+        and int(artifact.metadata.get("num_points3D", 0)) >= COLMAP_LARGE_POINT_THRESHOLD
+        else f"{case_id}:semantic-v1"
+    )
+    result = {
         "status": status,
         "providers": providers,
         "unavailable": unavailable,
         "required_reference": required_reference,
         "required_reference_available": required_available,
-        "profile": f"{case_id}:semantic-v1",
+        "profile": profile,
     }
+    if contract is not None:
+        result.update(
+            {
+                "sample_count": contract["sample_count"],
+                "sample_point_ids": contract["sample_point_ids"],
+                "total_observations": contract["total_observations"],
+            }
+        )
+    return result
 
 
 def _nonempty_output(path: Path | None) -> bool:
@@ -1512,6 +1830,16 @@ def _nonempty_output(path: Path | None) -> bool:
     return path.is_dir() and any(
         item.stat().st_size > 0 for item in path.rglob("*") if item.is_file()
     )
+
+
+def _semantic_profile(case_id: str, artifact: CaseArtifact | None = None) -> str:
+    if (
+        case_id == "colmap_tum_tracks"
+        and artifact is not None
+        and int(artifact.metadata.get("num_points3D", 0)) >= COLMAP_LARGE_POINT_THRESHOLD
+    ):
+        return f"{case_id}:semantic-large-sampled-v1"
+    return f"{case_id}:semantic-v1"
 
 
 def cross_read_matrix(
@@ -1528,8 +1856,9 @@ def cross_read_matrix(
         try:
             # Use the same independent reader for the common input and every
             # writer output. This makes the matrix directional and lets the
-            # pycolmap lane compare observations/tracks that SceneIO's public
-            # record view does not expose directly.
+            # pycolmap lanes compare observations/tracks that SceneIO's public
+            # record view does not expose directly.  Large fixtures use the
+            # bounded sampled contract rather than materializing every point.
             expected = adapters[reader].read(artifact.path)
         except Exception as exc:
             for writer in providers:
@@ -1539,7 +1868,7 @@ def cross_read_matrix(
                         "kind": "provider_output_cross_read",
                         "writer_provider": writer,
                         "reader_provider": reader,
-                        "profile": f"{case_id}:semantic-v1",
+                        "profile": _semantic_profile(case_id, artifact),
                         "status": "fail",
                         "error": (
                             "common input reader failed: "
@@ -1556,7 +1885,7 @@ def cross_read_matrix(
                     "kind": "provider_output_cross_read",
                     "writer_provider": writer,
                     "reader_provider": reader,
-                    "profile": f"{case_id}:semantic-v1",
+                    "profile": _semantic_profile(case_id, artifact),
                 }
                 if not _nonempty_output(output):
                     rows.append(
@@ -1589,6 +1918,36 @@ def cross_read_matrix(
     return rows
 
 
+def _sceneio_image_metadata(value: Any, image_id: int) -> dict[str, Any]:
+    image_ids = np.asarray(value.image_ids, dtype=np.uint32)
+    positions = np.flatnonzero(image_ids == np.uint32(image_id))
+    if positions.size != 1:
+        raise AssertionError(f"SceneIO record does not contain exactly one image {image_id}")
+    position = int(positions[0])
+    return {
+        "image_id": int(image_ids[position]),
+        "name": str(value.image_names[position]),
+        "camera_id": int(np.asarray(value.image_camera_ids, dtype=np.uint32)[position]),
+        "quaternion": np.asarray(value.quaternions, dtype=np.float64).reshape(-1, 4)[position],
+        "translation": np.asarray(value.translations, dtype=np.float64).reshape(-1, 3)[position],
+    }
+
+
+def _pycolmap_image_metadata(value: Any, image_id: int) -> dict[str, Any]:
+    image = value.images[int(image_id)]
+    pose = image.cam_from_world() if callable(image.cam_from_world) else image.cam_from_world
+    quat_xyzw = np.asarray(pose.rotation.quat, dtype=np.float64)
+    return {
+        "image_id": int(image.image_id),
+        "name": str(image.name),
+        "camera_id": int(image.camera_id),
+        "quaternion": np.asarray(
+            [quat_xyzw[3], quat_xyzw[0], quat_xyzw[1], quat_xyzw[2]], dtype=np.float64
+        ),
+        "translation": np.asarray(pose.translation, dtype=np.float64),
+    }
+
+
 def partial_read_check(artifact: CaseArtifact) -> dict[str, Any]:
     """Verify COLMAP single-image reads against full SceneIO and pycolmap data."""
 
@@ -1597,6 +1956,42 @@ def partial_read_check(artifact: CaseArtifact) -> dict[str, Any]:
     import sceneio
 
     image_id = 1
+    if int(artifact.metadata.get("num_points3D", 0)) >= COLMAP_LARGE_POINT_THRESHOLD:
+        full_value = sceneio.read(artifact.path, format="colmap_sparse")
+        selected_value = sceneio.read_partial(
+            artifact.path,
+            format="colmap_sparse",
+            image_id=image_id,
+        )
+        oracle = _pycolmap_read(artifact.path)
+        full = _sceneio_image_metadata(full_value, image_id)
+        selected = _sceneio_image_metadata(selected_value, image_id)
+        expected = _pycolmap_image_metadata(oracle, image_id)
+        equal = (
+            int(selected_value.num_images) == 1
+            and selected["image_id"] == image_id
+            and selected["name"] == full["name"] == expected["name"]
+            and selected["camera_id"] == full["camera_id"] == expected["camera_id"]
+            and _quaternion_error(
+                selected["quaternion"][None, :], full["quaternion"][None, :]
+            )
+            <= 1e-10
+            and _quaternion_error(
+                selected["quaternion"][None, :], expected["quaternion"][None, :]
+            )
+            <= 1e-10
+            and np.allclose(
+                selected["translation"], full["translation"], rtol=0.0, atol=1e-10
+            )
+            and np.allclose(
+                selected["translation"], expected["translation"], rtol=0.0, atol=1e-10
+            )
+        )
+        return {
+            "status": "pass" if equal else "fail",
+            "profile": "sceneio_single_image_large-sampled-no-point-canonicalization",
+            "image_id": image_id,
+        }
     full = _canonical_colmap(sceneio.read(artifact.path, format="colmap_sparse"))
     selected = _canonical_colmap(
         sceneio.read_partial(
@@ -1660,12 +2055,16 @@ def prepare_case(
         raise KeyError(f"unknown large scene case {case_id!r}")
     source = _source_path(sources, case.source_id or case_id)
     if case_id == "spz_racoon_v4":
-        artifact, _ = build_spz_fixture(source, tier=tier, cache=cache)
+        artifact, prepared = build_spz_fixture(source, tier=tier, cache=cache)
     elif case_id == "glb_box_grid":
-        artifact, _ = build_glb_fixture(source, tier=tier, cache=cache)
+        artifact, prepared = build_glb_fixture(source, tier=tier, cache=cache)
     else:
-        artifact, _ = build_colmap_fixture(source, tier=tier, cache=cache)
-    validation = validate_common_input(artifact)
+        artifact, prepared = build_colmap_fixture(source, tier=tier, cache=cache)
+    validation = validate_common_input(
+        artifact,
+        sceneio_value=prepared.record,
+        provider_values=prepared.provider_values,
+    )
     if tier == "standard" and validation["status"] != "pass":
         raise ProviderUnavailable(
             f"standard fixture has no available reference validator: {validation}"
@@ -1700,7 +2099,7 @@ def compare_case(case_or_artifact: str | CaseArtifact, left: Any, right: Any = N
         return {
             "status": "pass",
             "case_id": case_id,
-            "profile": f"{case_id}:semantic-v1",
+            "profile": _semantic_profile(case_id, case_or_artifact),
             "providers": ("sceneio", oracle_name),
         }
     case_id = case_or_artifact
@@ -1709,7 +2108,7 @@ def compare_case(case_or_artifact: str | CaseArtifact, left: Any, right: Any = N
     elif case_id == "glb_box_grid":
         compare_glb(left, right)
     elif case_id == "colmap_tum_tracks":
-        compare_colmap(left, right)
+        return compare_colmap(left, right)
     else:
         raise KeyError(f"unknown large scene case {case_id!r}")
 
@@ -1749,6 +2148,8 @@ build_scene_cases = case_definitions
 
 __all__ = [
     "CASE_DEFINITIONS",
+    "COLMAP_LARGE_POINT_THRESHOLD",
+    "COLMAP_LARGE_SAMPLE_LIMIT",
     "NIANTIC_SPZ_REVISION",
     "SMOKE_LOGICAL_BYTES",
     "STANDARD_LOGICAL_BYTES",

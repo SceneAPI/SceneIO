@@ -965,6 +965,9 @@ def report_markdown(document: dict[str, Any]) -> str:
 
     sceneio = document.get("sceneio", {})
     cache = document.get("cache_storage", {})
+    worker_timeout = float(
+        document.get("worker_timeout_seconds", DEFAULT_WORKER_TIMEOUT_SECONDS)
+    )
     lines = [
         "# Large-file I/O benchmark",
         "",
@@ -1147,7 +1150,7 @@ def report_markdown(document: dict[str, Any]) -> str:
             "",
             "## Reproduction",
             "",
-            f"`{sys.executable} bench/bench_large_io.py run --tier {document.get('tier', 'smoke')} --runs {document.get('runs', 3)} --cache {cache.get('path', 'build/bench-data/large-io')}`",
+            f"`{sys.executable} bench/bench_large_io.py run --tier {document.get('tier', 'smoke')} --runs {document.get('runs', 3)} --worker-timeout {worker_timeout:g} --cache {cache.get('path', 'build/bench-data/large-io')}`",
         ]
     )
     return "\n".join(lines) + "\n"

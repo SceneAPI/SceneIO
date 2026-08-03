@@ -131,12 +131,16 @@ serialization, compression, or record order. The comparison is semantic:
 - NPY: shape, dtype, order, and every value exact.
 - GLB: scene/mesh counts, vertex attributes, indices, transforms, and names
   exact after canonical ordering; float values use their stored-width bound.
-- COLMAP: cameras, image poses, names, points, colors, errors, tracks, and
-  observation coordinates exact after id sorting; quaternions are
-  sign-invariant. SceneIO's public record exposes observation association IDs
-  and offsets but not observation XY/track arrays; those hidden semantics are
-  asserted for every writer output in the pycolmap-reader directions, while
-  the SceneIO-reader directions assert its public fields and association CSR.
+- COLMAP: small fixtures exhaustively compare cameras, image poses, names,
+  points, colors, errors, tracks, and observation coordinates after id
+  sorting; quaternions are sign-invariant. The 256 MiB standard fixture keeps
+  complete camera/image metadata, counts, and total-observation checks, then
+  compares 4,096 evenly spaced sequential fixture point ids, attributes, and
+  two-entry tracks. Observation XY is also checked in directions where both
+  pycolmap records expose it. SceneIO's public record exposes association ids
+  and offsets but not observation XY/track arrays, so its sampled tracks are
+  independently derived from that CSR. The sampled profile and exact ids are
+  written into the result rather than presented as an exhaustive point check.
 - LAZ: point count and integer attributes exact; coordinates agree within
   half the declared scale plus one float32 ULP.
 - SPZ: count, degree, metadata, position, log-scale, opacity, color/SH, and
@@ -160,6 +164,11 @@ The closure run uses the following fixed protocol:
 - Persistent fixture preparation and decode-heavy cross validation also run in
   fresh children under the recorded worker timeout. A slow provider therefore
   yields a structured incomplete result instead of leaving the run unbounded.
+- The final 256 MiB closure run uses a 900-second per-child bound because one
+  timing child contains all three sequential samples and the COLMAP validation
+  child performs several full provider decodes. The earlier 300-second attempt
+  is retained as incomplete evidence; increasing the child bound does not
+  change any timed sample or fixture.
 - Reads retain the decoded object until the memory sampler observes the end of
   the operation. Writes close their destination before the timer stops.
 - A mapped raw array is not reported as a full-file read merely because its
@@ -233,7 +242,7 @@ The intended command surface is:
 ```powershell
 .venv\Scripts\python.exe bench\bench_large_io.py acquire --cache build\bench-data\large-io
 .venv\Scripts\python.exe bench\bench_large_io.py verify --cache build\bench-data\large-io
-.venv\Scripts\python.exe bench\bench_large_io.py run --tier standard --runs 3 --cache build\bench-data\large-io --json bench\results\large_io\windows-msvc-<sha>.json
+.venv\Scripts\python.exe bench\bench_large_io.py run --tier standard --runs 3 --worker-timeout 900 --cache build\bench-data\large-io --json bench\results\large_io\windows-msvc-<sha>.json
 .venv\Scripts\python.exe bench\bench_large_io.py report bench\results\large_io\windows-msvc-<sha>.json --output bench\LARGE_FILE_IO.md
 ```
 

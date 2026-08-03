@@ -149,12 +149,14 @@ def test_report_keeps_provenance_raw_samples_and_matching_ratios(tmp_path):
     document = run_benchmark(
         tier="smoke", runs=1, cache=tmp_path, only=["npy_depth_stack"]
     )
+    document["worker_timeout_seconds"] = 900.0
     report = report_markdown(document)
     assert "Fixture provenance" in report
     assert "Raw samples" in report
     assert "Encoded MiB/s" in report
     assert "Matching-operation ratios" in report
     assert "Reproduction" in report
+    assert "--worker-timeout 900" in report
 
 
 def test_case_artifact_roundtrip_is_json_safe(tmp_path):

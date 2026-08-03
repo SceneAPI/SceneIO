@@ -5894,6 +5894,11 @@ general metadata, and implicit color conversion stay out of the profile.
       world-to-camera with arbitrary world scale.
 - [x] Verify LAZ point selection and COLMAP single-image selection against a
       full decode and independent provider.
+- [x] Preserve the first standard attempt as structured incomplete evidence:
+      four cases completed with 29 successful operations and 36 passing
+      directional checks; COLMAP preparation reached the 300-second child
+      bound. Remove its duplicate prepared-record decodes, retain the 256 MiB
+      fixture, and document the bounded 4,096-point large-oracle profile.
 - [ ] Run the standard tier through a Luna Max worker and commit its raw JSON.
 - [ ] Generate `bench/LARGE_FILE_IO.md`, record interpretation/limitations,
       and mark the specification acceptance checklist from actual evidence.
