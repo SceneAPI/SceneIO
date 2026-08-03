@@ -4,11 +4,11 @@ This private npm package pins the external PlayCanvas SplatTransform executable
 used by SceneIO's Gaussian cross-implementation tests. It is test tooling only:
 it is not imported by SceneIO and is not included in SceneIO distributions.
 
-The three-platform CI lane copies `package.json` and `package-lock.json` to a
-temporary directory, installs with `npm ci --ignore-scripts`, verifies the
-pinned CLI revision, and sets `SCENEIO_SPLAT_TRANSFORM_CLI`. Normal tests keep
-the oracle optional; `SCENEIO_REQUIRE_SPLAT_ORACLES=1` turns absence into a
-failure in the dedicated lane.
+The three-platform CI lane installs this directory with
+`npm ci --ignore-scripts`, verifies the pinned CLI revision, and sets
+`SCENEIO_SPLAT_TRANSFORM_CLI`. Normal tests keep the oracle optional;
+`SCENEIO_REQUIRE_SPLAT_ORACLES=1` turns absence into a failure in the dedicated
+lane.
 
 For a local Windows run from the repository root:
 
