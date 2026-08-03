@@ -225,6 +225,257 @@ def test_modern_partial_image_keeps_its_frame_and_rig(ref):
         )
 
 
+def _write_many_short_track_legacy_model(path, point_count=50_000):
+    """Build a stdlib-only legacy model with two observations per point."""
+
+    path.mkdir()
+    (path / "cameras.bin").write_bytes(
+        struct.pack(
+            "<QIiQQ4d",
+            1,
+            1,
+            1,
+            640,
+            480,
+            500.0,
+            500.0,
+            320.0,
+            240.0,
+        )
+    )
+
+    with (path / "images.bin").open("wb") as stream:
+        stream.write(struct.pack("<Q", 2))
+        for image_id, x_offset, y_offset in (
+            (1, 0.0, 0.0),
+            (2, 0.25, -0.5),
+        ):
+            stream.write(
+                struct.pack(
+                    "<I7dI",
+                    image_id,
+                    1.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    x_offset,
+                    y_offset,
+                    0.0,
+                    1,
+                )
+            )
+            stream.write(f"short_{image_id:06d}.png\0".encode())
+            stream.write(struct.pack("<Q", point_count))
+            observations = bytearray()
+            for index in range(point_count):
+                observations.extend(
+                    struct.pack(
+                        "<ddQ",
+                        float(index) + x_offset,
+                        float(index) * 0.25 + y_offset,
+                        index + 1,
+                    )
+                )
+            stream.write(observations)
+
+    with (path / "points3D.bin").open("wb") as stream:
+        stream.write(struct.pack("<Q", point_count))
+        points = bytearray()
+        for index in range(point_count):
+            points.extend(
+                struct.pack(
+                    "<Q3d3BdQ4I",
+                    index + 1,
+                    float(index),
+                    float(index) + 1.0,
+                    float(index) + 2.0,
+                    index % 256,
+                    (index * 3) % 256,
+                    (index * 7) % 256,
+                    0.5,
+                    2,
+                    1,
+                    index,
+                    2,
+                    index,
+                )
+            )
+        stream.write(points)
+
+
+def test_many_short_tracks_decode_with_exact_csr(tmp_path):
+    point_count = 50_000
+    source = tmp_path / "many-short-tracks"
+    _write_many_short_track_legacy_model(source, point_count)
+
+    reconstruction = _core.read_colmap_sparse(str(source))
+    expected_ids = np.arange(1, point_count + 1, dtype=np.uint64)
+    expected_indices = np.arange(point_count, dtype=np.float64)
+    expected_color_indices = np.arange(point_count, dtype=np.uint64)
+    expected_xyz = np.column_stack(
+        (expected_indices, expected_indices + 1.0, expected_indices + 2.0)
+    )
+    expected_rgb = np.column_stack(
+        (
+            expected_color_indices % 256,
+            (expected_color_indices * 3) % 256,
+            (expected_color_indices * 7) % 256,
+        )
+    ).astype(np.uint8)
+
+    assert (reconstruction.num_images, reconstruction.num_points3D) == (
+        2,
+        point_count,
+    )
+    assert reconstruction.image_names == [
+        "short_000001.png",
+        "short_000002.png",
+    ]
+    np.testing.assert_array_equal(reconstruction.point3D_ids, expected_ids)
+    np.testing.assert_array_equal(reconstruction.xyz, expected_xyz)
+    np.testing.assert_array_equal(reconstruction.rgb, expected_rgb)
+    np.testing.assert_array_equal(
+        reconstruction.errors,
+        np.full(point_count, 0.5, dtype=np.float64),
+    )
+    np.testing.assert_array_equal(
+        reconstruction._observation_offsets,
+        [0, point_count, point_count * 2],
+    )
+    np.testing.assert_array_equal(
+        reconstruction._observation_point3D_ids,
+        np.concatenate((expected_ids, expected_ids)).astype(np.int64),
+    )
+
+    oracle = pycolmap.Reconstruction(str(source))
+    selected_rows = (0, point_count // 2, point_count - 1)
+    for row in selected_rows:
+        point_id = row + 1
+        point = oracle.points3D[point_id]
+        np.testing.assert_array_equal(point.xyz, expected_xyz[row])
+        np.testing.assert_array_equal(point.color, expected_rgb[row])
+        assert point.error == 0.5
+        assert sorted(
+            (int(element.image_id), int(element.point2D_idx))
+            for element in point.track.elements
+        ) == [(1, row), (2, row)]
+    for image_id, x_offset, y_offset in (
+        (1, 0.0, 0.0),
+        (2, 0.25, -0.5),
+    ):
+        image = oracle.images[image_id]
+        for row in selected_rows:
+            point2d = image.points2D[row]
+            np.testing.assert_array_equal(
+                point2d.xy,
+                [
+                    float(row) + x_offset,
+                    float(row) * 0.25 + y_offset,
+                ],
+            )
+            assert int(point2d.point3D_id) == row + 1
+
+    # Tracks are not a public ndarray, so byte-identical re-encoding checks
+    # both short track entries and the observation payload without a second
+    # oracle dependency.
+    output = tmp_path / "many-short-tracks-output"
+    output.mkdir()
+    _core.write_colmap_sparse(reconstruction, str(output))
+    for name in ("cameras.bin", "images.bin", "points3D.bin"):
+        assert (source / name).read_bytes() == (output / name).read_bytes()
+
+
+def _write_untriangulated_legacy_model(path, image_count=5_000):
+    """Build a stdlib-only legacy model with one untriangulated point per image."""
+
+    path.mkdir()
+    (path / "cameras.bin").write_bytes(
+        struct.pack(
+            "<QIiQQ4d",
+            1,
+            1,
+            1,
+            640,
+            480,
+            500.0,
+            500.0,
+            320.0,
+            240.0,
+        )
+    )
+    image_ids = [1000 + ((index * 37) % image_count) * 3 for index in range(image_count)]
+    with (path / "images.bin").open("wb") as stream:
+        stream.write(struct.pack("<Q", image_count))
+        for index, image_id in enumerate(image_ids):
+            stream.write(
+                struct.pack(
+                    "<I7dI",
+                    image_id,
+                    1.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    1,
+                )
+            )
+            stream.write(f"untracked_{index:05d}.png\0".encode())
+            stream.write(
+                struct.pack(
+                    "<QddQ",
+                    1,
+                    float(index) + 0.125,
+                    -float(index) - 0.25,
+                    2**64 - 1,
+                )
+            )
+    (path / "points3D.bin").write_bytes(struct.pack("<Q", 0))
+    return image_ids
+
+
+def test_many_untriangulated_images_preserve_sentinels(tmp_path):
+    image_count = 5_000
+    source = tmp_path / "many-untriangulated"
+    image_ids = _write_untriangulated_legacy_model(source, image_count)
+
+    reconstruction = _core.read_colmap_sparse(str(source))
+    assert (reconstruction.num_images, reconstruction.num_points3D) == (
+        image_count,
+        0,
+    )
+    np.testing.assert_array_equal(
+        reconstruction.image_ids,
+        np.asarray(image_ids, dtype=np.uint32),
+    )
+    np.testing.assert_array_equal(
+        reconstruction._observation_offsets,
+        np.arange(image_count + 1, dtype=np.uint64),
+    )
+    np.testing.assert_array_equal(
+        reconstruction._observation_point3D_ids,
+        np.full(image_count, -1, dtype=np.int64),
+    )
+
+    oracle = pycolmap.Reconstruction(str(source))
+    assert oracle.num_images() == image_count
+    assert oracle.num_points3D() == 0
+    for index in (0, image_count // 2, image_count - 1):
+        point2d = oracle.images[image_ids[index]].points2D[0]
+        np.testing.assert_array_equal(
+            point2d.xy,
+            [float(index) + 0.125, -float(index) - 0.25],
+        )
+        assert int(point2d.point3D_id) == 2**64 - 1
+
+    output = tmp_path / "many-untriangulated-output"
+    output.mkdir()
+    _core.write_colmap_sparse(reconstruction, str(output))
+    for name in ("cameras.bin", "images.bin", "points3D.bin"):
+        assert (source / name).read_bytes() == (output / name).read_bytes()
+
+
 def test_legacy_three_file_inventory_is_preserved(ref, tmp_path):
     _, modern = ref
     source = tmp_path / "legacy-source"
@@ -735,6 +986,42 @@ def test_full_reader_rejects_impossible_counts_and_trailing_data(
             (invalid / "points3D.bin").write_bytes(points_payload)
             with pytest.raises(ValueError, match="invalid sentinel"):
                 _core.read_colmap_sparse(str(invalid))
+
+
+@pytest.mark.parametrize(
+    ("filename", "payload", "match"),
+    [
+        (
+            "images.bin",
+            struct.pack("<Q", 1)
+            + struct.pack(
+                "<I7dI", 1, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1
+            )
+            + b"frame.png\0"
+            + struct.pack("<Q", 1),
+            "oversized images\\.bin observation count",
+        ),
+        (
+            "points3D.bin",
+            struct.pack("<Q", 1)
+            + struct.pack(
+                "<Q3d3BdQ", 1, 1.0, 2.0, 3.0, 10, 20, 30, 0.5, 1
+            ),
+            "oversized points3D\\.bin track count",
+        ),
+    ],
+    ids=("observation-payload", "track-payload"),
+)
+def test_full_reader_rejects_truncated_record_payload(
+    tmp_path, filename, payload, match
+):
+    source = tmp_path / filename.replace(".", "-")
+    source.mkdir()
+    for name in ("cameras.bin", "images.bin", "points3D.bin"):
+        (source / name).write_bytes(struct.pack("<Q", 0))
+    (source / filename).write_bytes(payload)
+    with pytest.raises(ValueError, match=match):
+        _core.read_colmap_sparse(str(source))
 
 
 @pytest.mark.parametrize(

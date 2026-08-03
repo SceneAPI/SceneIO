@@ -400,10 +400,6 @@ void read_images(const std::string &b, Reconstruction &r) {
                  r.obs_xy.size()) / 2)
             throw std::invalid_argument(
                 "COLMAP: oversized images.bin observation count");
-        r.obs_xy.reserve(r.obs_xy.size() +
-                         static_cast<size_t>(k) * 2);
-        r.obs_pt3d.reserve(r.obs_pt3d.size() +
-                           static_cast<size_t>(k));
         for (uint64_t j = 0; j < k; j++) {
             r.obs_xy.push_back(rd.get<double>());
             r.obs_xy.push_back(rd.get<double>());
@@ -449,8 +445,6 @@ void read_points(const std::string &b, Reconstruction &r) {
                  r.track.size()) / 2)
             throw std::invalid_argument(
                 "COLMAP: oversized points3D.bin track count");
-        r.track.reserve(r.track.size() +
-                        static_cast<size_t>(t) * 2);
         for (uint64_t j = 0; j < t; j++) {
             r.track.push_back(rd.get<uint32_t>());
             r.track.push_back(rd.get<uint32_t>());

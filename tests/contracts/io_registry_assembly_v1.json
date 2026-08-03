@@ -472,8 +472,8 @@
     "last": "tests/test_points_binary.py::test_bad_magic_rejected"
   },
   "pytest_candidate_collection": {
-    "count": 4618,
-    "sorted_normalized_node_ids_sha256": "cbeb1f09544e8b2fc11402e579988d7cf116ee6f0e6c1e8d28b5bbc0ada0ff87",
+    "count": 4622,
+    "sorted_normalized_node_ids_sha256": "d5f99e287754cd2506bf5bfecb374c3c4a0049886305ef98fae6462c94f02735",
     "collection_ignored_paths": [
       "tests/codecs/test_spz_niantic_oracle.py"
     ],
@@ -623,6 +623,10 @@
       "tests/test_colmap_db_contract.py::test_known_maxx_wire_values",
       "tests/codecs/test_colmap_db.py::test_stock_companion_writer_guard_does_not_touch_destination",
       "tests/codecs/test_colmap.py::test_binary_writer_rss_does_not_scale_with_encoded_size",
+      "tests/codecs/test_colmap.py::test_many_short_tracks_decode_with_exact_csr",
+      "tests/codecs/test_colmap.py::test_many_untriangulated_images_preserve_sentinels",
+      "tests/codecs/test_colmap.py::test_full_reader_rejects_truncated_record_payload[observation-payload]",
+      "tests/codecs/test_colmap.py::test_full_reader_rejects_truncated_record_payload[track-payload]",
       "tests/codecs/test_colmap.py::test_modern_rig_frame_parity",
       "tests/codecs/test_colmap.py::test_modern_partial_image_keeps_its_frame_and_rig",
       "tests/codecs/test_colmap.py::test_legacy_three_file_inventory_is_preserved",
