@@ -6,34 +6,46 @@ Generated: `2026-08-03T13:39:47.943951+00:00`
 Commit: `d538306ffe702df8cc894f81b0b3ce59acd2aebc` (dirty=False)
 Cache mode: `warm`
 Cache control: `{"applied": false, "reason": null, "requested": false, "status": "not_requested"}`
-Completion: **False**; correctness: **False**
-Source verification: **verified**
+Base artifact completion: **False**; base artifact correctness: **False**
+Base artifact source verification: **verified**
+
+The metadata block above belongs to the original wider `d538306` artifact.
+This manually reviewed consolidated document also incorporates the clean
+COLMAP-only closure at `8a2b917`; its exact metadata and samples remain in the
+linked JSON.
+
+Composite completion: **True**; composite correctness: **True**.
 
 Cache path: `build\bench-data\large-io`. generated or verified in cache; large inputs are not committed
 Outputs: provider outputs retained through cross-read, then removed.
 
 ## Consolidated outcome
 
-This is a finite, incomplete qualification rather than a release-wide speed
-claim. The detailed tables below come from the wider 300-second run at
-`d538306`; it completed NPY, LAZ, SPZ, and GLB with 29 successful operations,
-36 passing validation rows, and no failed measured or cross-read row. The
-follow-up run at `8eac044` used the documented 900-second child bound. It
-completed 22 operations and 24 validation rows for NPY, LAZ, and GLB, all
-passing, but the 256 MiB COLMAP preparation still reached that bound.
+This is a finite qualification rather than a release-wide speed claim. The
+wider 300-second run at `d538306` completed NPY, LAZ, SPZ, and GLB with 29
+successful operations, 36 passing validation rows, and no failed measured or
+cross-read row. The diagnostic follow-up at `8eac044` retained the same
+COLMAP timeout under a 900-second child bound. After the repo-owned COLMAP
+reader fix, the clean focused run at `8a2b917` completed the remaining case
+with seven successful operations, nine passing validation rows, two passing
+allocation checks, and no skip. The composite standard evidence is
+therefore complete: 36 measured operations and 45 validation rows pass across
+all five declared cases.
 
 | Evidence | Bound | Result | Purpose |
 | --- | ---: | --- | --- |
 | [`windows-msvc-d538306-partial.json`](results/large_io/windows-msvc-d538306-partial.json) | 300 s | four cases measured; COLMAP preparation timeout | widest measurement set and the detailed tables below |
 | [`windows-msvc-8eac044.json`](results/large_io/windows-msvc-8eac044.json) | 900 s | three cases measured; COLMAP preparation timeout; SPZ preparation-only assertion | confirms the COLMAP limit and records the follow-up exactly |
+| [`windows-msvc-8a2b917-colmap.json`](results/large_io/windows-msvc-8a2b917-colmap.json) | 900 s | COLMAP complete; 7/7 operations and 9/9 validations pass | clean focused closure after the linear-reader fix |
 
 The follow-up SPZ assertion came from comparing a pre-quantization prepared
 record with the written file. It did not occur in a timed operation, and the
 current harness fixes it by reusing prepared values only for COLMAP. The SPZ
 measurements below remain supported by all nine writer-reader directions in
 the first artifact. A focused post-fix standard SPZ preparation check then
-passed in 6.816 seconds with the Niantic-written v4 fixture; it was not used as
-a throughput sample. No third standard run was made.
+passed with the Niantic-written v4 fixture; it was not used as a throughput
+sample. No third full five-case standard run was made; the later focused
+standard run measured only the COLMAP closure.
 
 ### Performance reading
 
@@ -53,20 +65,24 @@ SceneIO. Exact medians and all three samples remain in the generated tables.
 | Racoon SPZ | write | gsply | 5.4980 | 0.9140 | 0.166 | gsply about 6.0x faster |
 | Box-grid GLB | read | trimesh | 0.3683 | 0.3924 | 1.065 | SceneIO about 6.5% faster |
 | Box-grid GLB | write | trimesh | 0.5804 | 1.2860 | 2.216 | SceneIO about 2.2x faster |
+| TUM-derived COLMAP | read | PyCOLMAP | 2.3975 | 2.7043 | 1.128 | SceneIO about 12.8% faster |
+| TUM-derived COLMAP | write | PyCOLMAP | 1.0669 | 2.0591 | 1.930 | SceneIO about 1.9x faster |
 
 SceneIO's traced Python peak stayed below 4.3 MiB for every applicable
 256 MiB-class read/write row, and every conclusive allocation check passed.
 RSS includes decoded output ownership and therefore is not interpreted as a
-whole-file Python copy. The main measured optimization opportunities are LAZ
-full read/write and SPZ write. The unmeasured blocker is COLMAP: its generated
-model occupied 537,771,252 encoded bytes across the retained model/common
-trees, but SceneIO preparation did not finish inside 900 seconds, so no COLMAP
-throughput number is reported.
+whole-file Python copy. In the focused COLMAP run, SceneIO read RSS was 440.6
+MiB versus PyCOLMAP's 494.7 MiB; its traced Python peak was 4.187 MiB and passed
+the no-file-sized-Python-allocation check. SceneIO inspection took 0.178 ms and
+single-image selection took 1.301 ms; PyCOLMAP's benchmark inspection fallback
+fully decoded the model in 2.648 seconds, so that row is a capability contrast,
+not a parser-throughput comparison. The main remaining measured optimization
+opportunities are LAZ full read/write and SPZ write.
 
-Repository validation after consolidation: 26 focused benchmark/contract
-tests passed; the full local suite passed with 4,633 tests and 16 documented
-skips; Ruff and `git diff --check` passed. Hosted Linux/macOS validation was
-not part of this local measurement run.
+Repository validation after the COLMAP closure: the COLMAP suite passes 54
+tests; the full local suite passes 4,637 tests with 16 documented skips; Ruff,
+the exact collection contract, and `git diff --check` pass. Hosted Linux/macOS
+validation was not part of this local measurement run.
 
 ## Fixture provenance
 
@@ -76,6 +92,7 @@ not part of this local measurement run.
 | laz_autzen | pdal_autzen_laz | derived_fixture | 2.201 | 203.196 | 51.842 | {"count": 10653336, "fixture_version": "laz-pf2-origin-v2", "omitted_source_fields": ["gps_time", "classification", "returns", "scan_angle", "user_data", "point_source_id", "extra_bytes", "waveform", "crs_metadata"], "profile": "las-1.2-pf2", "retained_fields": ["x", "y", "z", "intensity", "red", "green", "blue"], "source_reason": "canonical SceneIO-compatible LAZ profile"} |
 | spz_racoon_v4 | niantic_racoonfamily_spz | derived_fixture | 5.069 | 256.000 | 25.959 | {"kind": "derived_fixture", "output_profile": "SPZ v4 flags=0", "repeat_count": 2, "seed": "niantic-racoonfamily", "selected_seed_count": 932560, "translation_step": [0.125, 0.0, 0.0], "unsupported_source_flags_dropped": true} |
 | glb_box_grid | khronos_box_vertex_colors_glb | derived_fixture | 5.956 | 256.001 | 217.602 | {"color_normalization": "float-or-normalized source values rounded to uint8", "grid_order": "x-major then y then z", "kind": "derived_fixture", "repeat_count": 279621, "seed": "khronos-box-vertex-colors"} |
+| colmap_tum_tracks | tum_freiburg1_xyz_groundtruth | derived_fixture | 9.303 | 256.195 | 256.549 | {"kind": "derived_fixture", "seed": "tum-freiburg1-xyz-groundtruth", "point_count": 2334222, "observations_per_point": 2, "point_generation": "deterministic finite points; TUM contributes poses only"} |
 
 ### Licensed sources
 
@@ -138,6 +155,13 @@ Raw samples are seconds from a fresh timing child; memory is a separate fresh ch
 | glb_box_grid | trimesh | write | 1.28602 | [1.2686866000294685, 1.2860234000254422, 1.286056999815628] | 199.064 | 169.205 | 570.332 | 652.828 | ok |
 | glb_box_grid | sceneio | inspect | 9e-05 | [0.00016520009376108646, 8.999998681247234e-05, 7.519987411797047e-05] | - | - | 12.590 | 4.188 | ok |
 | glb_box_grid | trimesh | inspect | 0.439345 | [0.4393448999617249, 0.440510299988091, 0.43572710012085736] | - | - | 781.070 | 780.834 | ok |
+| colmap_tum_tracks | sceneio | read | 2.39748 | [2.311443499987945, 2.4802868999540806, 2.3974825001787394] | 106.860 | 107.008 | 440.613 | 4.187 | ok |
+| colmap_tum_tracks | pycolmap | read | 2.70429 | [2.471752799814567, 2.7042914000339806, 2.892957500182092] | 94.736 | 94.868 | 494.699 | 0.003 | ok |
+| colmap_tum_tracks | sceneio | write | 1.06694 | [1.0829286999069154, 1.0669398000463843, 0.9249113001860678] | 240.121 | 240.454 | 171.359 | 0.010 | ok |
+| colmap_tum_tracks | pycolmap | write | 2.05909 | [2.0312489001080394, 2.06454289983958, 2.059091200120747] | 124.421 | 124.594 | 0.285 | 0.004 | ok |
+| colmap_tum_tracks | sceneio | inspect | 0.0001783 | [0.0002989000640809536, 0.00017830007709562778, 0.00016409996896982193] | - | - | 12.445 | 4.187 | ok |
+| colmap_tum_tracks | pycolmap | inspect | 2.64804 | [2.5896797999739647, 2.6704215998761356, 2.6480353001970798] | - | - | 495.125 | 0.004 | ok |
+| colmap_tum_tracks | sceneio | image | 0.0013014 | [0.0014142000582069159, 0.0013014001306146383, 0.0012944999616593122] | - | - | 12.895 | 4.188 | ok |
 
 ## Matching-operation ratios
 
@@ -155,6 +179,8 @@ The SceneIO/reference speed ratio is reference seconds divided by SceneIO second
 | spz_racoon_v4 | read | niantic_spz | 0.942 |
 | spz_racoon_v4 | write | gsply | 0.166 |
 | spz_racoon_v4 | write | niantic_spz | 0.450 |
+| colmap_tum_tracks | read | pycolmap | 1.128 |
+| colmap_tum_tracks | write | pycolmap | 1.930 |
 
 ## Correctness validation
 
@@ -196,6 +222,15 @@ The SceneIO/reference speed ratio is reference seconds divided by SceneIO second
 | glb_box_grid | common_file_cross_read | - | - | pass | glb_box_grid:semantic-v1 |
 | glb_box_grid | common_file_read | - | inspect | pass | normalized_provider_metadata |
 | glb_box_grid | common_file_read | - | read | pass | provider_operations_completed |
+| colmap_tum_tracks | provider_output_cross_read | sceneio | sceneio | pass | colmap_tum_tracks:semantic-large-sampled-v1 |
+| colmap_tum_tracks | provider_output_cross_read | pycolmap | sceneio | pass | colmap_tum_tracks:semantic-large-sampled-v1 |
+| colmap_tum_tracks | provider_output_cross_read | sceneio | pycolmap | pass | colmap_tum_tracks:semantic-large-sampled-v1 |
+| colmap_tum_tracks | provider_output_cross_read | pycolmap | pycolmap | pass | colmap_tum_tracks:semantic-large-sampled-v1 |
+| colmap_tum_tracks | common_file_cross_read | - | - | pass | colmap_tum_tracks:semantic-large-sampled-v1 |
+| colmap_tum_tracks | partial_read | - | - | pass | sceneio_single_image_large-sampled-no-point-canonicalization |
+| colmap_tum_tracks | common_file_read | - | image | pass | provider_operations_completed |
+| colmap_tum_tracks | common_file_read | - | inspect | pass | normalized_provider_metadata |
+| colmap_tum_tracks | common_file_read | - | read | pass | provider_operations_completed |
 
 ## SceneIO allocation checks
 
@@ -210,12 +245,23 @@ The SceneIO/reference speed ratio is reference seconds divided by SceneIO second
 | spz_racoon_v4 | write | 0.004 | 7.229 | True | pass | no_approximately_file_sized_python_allocation |
 | glb_box_grid | read | 4.188 | 54.400 | True | pass | no_approximately_file_sized_python_allocation |
 | glb_box_grid | write | 0.008 | 54.401 | True | pass | no_approximately_file_sized_python_allocation |
+| colmap_tum_tracks | read | 4.187 | 64.137 | True | pass | no_approximately_file_sized_python_allocation |
+| colmap_tum_tracks | write | 0.010 | 64.137 | True | pass | no_approximately_file_sized_python_allocation |
 
-## Skips
+## Composite completion
+
+Across the wider `d538306` artifact and focused `8a2b917` artifact, every
+required standard case has a conclusive measurement and full directional
+validation. The focused artifact records `complete=true`,
+`correctness_passed=true`, an empty skip list, and an empty completion-reason
+list for COLMAP. The following skip and limit sections are retained verbatim as
+historical evidence from the pre-fix `d538306` artifact.
+
+## Historical skips in the d538306 partial artifact
 
 - {'case_id': 'colmap_tum_tracks', 'reason': 'worker exceeded 300 seconds', 'type': 'RuntimeError'}
 
-## Completion limits
+## Historical completion limits in the d538306 partial artifact
 
 - one or more required fixtures were not prepared
 - missing provider operations: [('colmap_tum_tracks', 'pycolmap', 'inspect'), ('colmap_tum_tracks', 'pycolmap', 'read'), ('colmap_tum_tracks', 'pycolmap', 'write'), ('colmap_tum_tracks', 'sceneio', 'image'), ('colmap_tum_tracks', 'sceneio', 'inspect'), ('colmap_tum_tracks', 'sceneio', 'read'), ('colmap_tum_tracks', 'sceneio', 'write')]
@@ -229,4 +275,10 @@ These measurements describe this recorded machine, provider versions, fixture pr
 
 ## Reproduction
 
+Original wider artifact:
+
 `.venv\Scripts\python.exe bench/bench_large_io.py run --tier standard --runs 3 --worker-timeout 300 --cache build\bench-data\large-io`
+
+Focused COLMAP closure artifact:
+
+`.venv\Scripts\python.exe bench/bench_large_io.py run --tier standard --runs 3 --worker-timeout 900 --cache build\bench-data\large-io --only colmap_tum_tracks --json bench\results\large_io\windows-msvc-8a2b917-colmap.json`

@@ -15,7 +15,15 @@ reviewed, commit-sized verification checklist is
 The finite, five-workload large-file comparison against pinned independent
 providers is specified in
 [`large_file_io_benchmark_spec.md`](large_file_io_benchmark_spec.md); its
-machine-readable run and generated report are the final local evidence unit.
+machine-readable runs and consolidated report are the final local evidence
+unit.
+The remaining COLMAP large-model gap closed at `8a2b917`: removing exact
+per-record vector reservations restored amortized-linear binary parsing without
+changing the wire or record contract. The clean 256 MiB-class run completes
+all seven operations and nine validation rows, including PyCOLMAP-backed
+cross-read rows and a SceneIO partial-read check; SceneIO's read/write medians
+are 2.397/1.067 seconds versus PyCOLMAP's 2.704/2.059 seconds. The earlier
+bounded timeouts remain recorded as before-change evidence.
 The user-directed lean closure policy accepts the verified R6 backends as
 that release baseline without promoting its 124 provisional rows to
 `qualified`; exhaustive candidate comparison is not an R6 prerequisite.

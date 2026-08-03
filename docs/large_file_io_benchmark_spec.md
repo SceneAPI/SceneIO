@@ -169,6 +169,13 @@ The closure run uses the following fixed protocol:
   child performs several full provider decodes. The earlier 300-second attempt
   is retained as incomplete evidence; increasing the child bound does not
   change any timed sample or fixture.
+- The two bounded pre-optimization attempts remain immutable. The focused
+  clean COLMAP follow-up at `8a2b917` uses the same standard tier, three-sample
+  protocol, declared fixture recipe, provider version, and 900-second child
+  bound. Its JSON records completion, correctness, and an empty skip list.
+  Together with the four completed cases in the first artifact, this supplies
+  one conclusive standard result for every declared case without rerunning
+  already-conclusive workloads.
 - Reads retain the decoded object until the memory sampler observes the end of
   the operation. Writes close their destination before the timer stops.
 - A mapped raw array is not reported as a full-file read merely because its
@@ -229,7 +236,9 @@ Each JSON result records:
 - cross-read status and the exact comparison profile; and
 - any skip or unavailable optional metric as structured data, not a zero.
 
-`bench/LARGE_FILE_IO.md` is generated or updated from that JSON and includes
+`bench/LARGE_FILE_IO.md` is generated from a single result or updated as a
+manually reviewed consolidation of the committed JSON artifact set. It
+includes
 fixture provenance, the environment, compact read/write/memory tables,
 correctness status, interpretation, limitations, and exact reproduction
 commands. It must distinguish direct licensed assets, derived fixtures, and
@@ -256,7 +265,7 @@ can be verified without rerunning the entire large experiment.
 - [x] No downloaded or generated large asset is tracked by Git or included in
       package artifacts.
 - [x] The smoke tier and result-schema tests pass without network access.
-- [ ] Every standard case reaches its declared size/count and passes both
+- [x] Every standard case reaches its declared size/count and passes both
       cross-read directions.
 - [x] Each measured row contains three raw samples, a median, throughput, RSS,
       and traced-allocation evidence, or a structured explanation of an
@@ -265,14 +274,16 @@ can be verified without rerunning the entire large experiment.
       approximately file-sized Python allocation for the applicable formats.
 - [x] Results name exact provider versions and do not combine warm and cold
       cache measurements.
-- [x] `bench/LARGE_FILE_IO.md` is reproducible from the committed JSON and
-      accurately labels source, derived, and fallback data.
+- [x] Every consolidated row in `bench/LARGE_FILE_IO.md` traces to the linked
+      committed JSON artifact set, and the report accurately labels source,
+      derived, and fallback data.
 - [x] Focused tests, documentation consistency checks, Ruff, and `git diff
       --check` pass.
 - [x] Three final reviews cover resource ownership/lifetime, format and
       coordinate correctness, and measurement/test soundness.
 
-The benchmark is complete when this checklist is green and the result document
-states any bounded provider limitation. A slower row is a finding to record,
-not permission to weaken cross-read correctness or extend the experiment
-indefinitely.
+The benchmark is complete across the retained partial artifact and the focused
+COLMAP closure artifact. The result document states the historical bounded
+provider limitation rather than overwriting it. A slower row is a finding to
+record, not permission to weaken cross-read correctness or extend the
+experiment indefinitely.

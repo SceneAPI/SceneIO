@@ -5907,3 +5907,18 @@ general metadata, and implicit color conversion stay out of the profile.
       measurement/test-soundness reviews; pass focused tests, full tests, Ruff,
       and `git diff --check`. Final local evidence: 26 focused tests and 4,633
       full-suite tests passed, with 16 documented skips.
+- [x] Profile the retained standard COLMAP fixture and isolate the parser
+      defect: exact cumulative `reserve` calls caused quadratic observation and
+      track copying. Remove only those calls so standard vector growth is
+      amortized linear; preserve all extent checks, IDs, ordering, CSR offsets,
+      validation, and vector-owned lifetimes.
+- [x] Add PyCOLMAP-backed regressions for 50,000 two-view tracks and 5,000
+      noncontiguous images, exact SceneIO CSR/SoA fields, byte-identical
+      re-encoding, and truncated per-record observation/track payloads. The
+      COLMAP suite passes 54 tests.
+- [x] Run one clean standard COLMAP-only closure at `8a2b917`: preparation
+      passes in 9.303 seconds; 7/7 operations, 9/9 validation rows, both
+      allocation checks, and cleanup pass with no skip. SceneIO read/write
+      medians are 2.397/1.067 seconds versus PyCOLMAP's 2.704/2.059 seconds.
+      The exact repository gate passes 4,637 tests with 16 documented skips;
+      Ruff, the collection contract, and `git diff --check` pass.
