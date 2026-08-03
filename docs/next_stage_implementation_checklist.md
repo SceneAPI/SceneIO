@@ -5872,3 +5872,31 @@ general metadata, and implicit color conversion stay out of the profile.
       documented skips; Ruff and the documentation contract are clean.
 - [ ] Run the updated compiler-instrumented and Linux/macOS/Windows splat lanes
       after the branch is pushed. This validation does not publish packages.
+
+## Finite large-file I/O comparison (2026-08-03)
+
+- [x] Freeze the five-case Sol specification for SPZ Gaussian data, LAZ point
+      data, GLB meshes, COLMAP reconstructions, and NPY depth stacks.
+- [x] Pin four reusable online source assets with exact revision, byte count,
+      SHA-256, license, and attribution; keep every asset under ignored
+      benchmark storage and use a deterministic generated NPY fixture.
+- [x] Isolate every provider/operation in fresh child processes; separate
+      timing and memory passes; require three standard samples and a bounded
+      worker timeout.
+- [x] Keep at most one representative writer output per provider until the
+      complete directional writer-by-reader matrix finishes, then record the
+      bounded cleanup result.
+- [x] Gate C/Fortran order for NPY, absolute coordinates and integer fields for
+      LAZ, official flag-free v4 semantics for SPZ, topology/attributes for
+      GLB, and poses/observations/tracks for COLMAP.
+- [x] Record explicit coordinate metadata: SPZ unspecified/raw-preserved, LAZ
+      unknown/raw LAS units, GLB right-handed Y-up OpenGL, and COLMAP OpenCV
+      world-to-camera with arbitrary world scale.
+- [x] Verify LAZ point selection and COLMAP single-image selection against a
+      full decode and independent provider.
+- [ ] Run the standard tier through a Luna Max worker and commit its raw JSON.
+- [ ] Generate `bench/LARGE_FILE_IO.md`, record interpretation/limitations,
+      and mark the specification acceptance checklist from actual evidence.
+- [ ] Complete the final resource/lifetime, format/coordinate, and
+      measurement/test-soundness reviews; pass focused tests, full tests, Ruff,
+      and `git diff --check`.

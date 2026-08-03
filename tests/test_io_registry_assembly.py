@@ -799,8 +799,17 @@ def test_assembly_dependency_direction_and_import_delta_are_exact():
             boundaries[name]["parent_module_count"]
         )
 
+    candidate = CONTRACT["pytest_candidate_collection"]
+    ignored_collection_paths = candidate.get("collection_ignored_paths", [])
     collection = subprocess.run(
-        [sys.executable, "-m", "pytest", "--collect-only", "-q"],
+        [
+            sys.executable,
+            "-m",
+            "pytest",
+            "--collect-only",
+            "-q",
+            *(f"--ignore={path}" for path in ignored_collection_paths),
+        ],
         cwd=ROOT,
         check=True,
         capture_output=True,
@@ -814,7 +823,6 @@ def test_assembly_dependency_direction_and_import_delta_are_exact():
         while "//" in node_id:
             node_id = node_id.replace("//", "/")
         node_ids.append(node_id)
-    candidate = CONTRACT["pytest_candidate_collection"]
     parent = CONTRACT["pytest_parent_collection"]
     assert len(node_ids) == candidate["count"]
     assert node_ids[0] == candidate["first"]

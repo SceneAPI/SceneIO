@@ -1,0 +1,42 @@
+Large-file benchmark source attribution
+=======================================
+
+SceneIO's reproducible large-file benchmark can download the four source
+artifacts listed below into the ignored build/bench-data/large-io directory.
+The files are qualification seeds only: they are not tracked in this
+repository and are not included in source or wheel distributions.  Exact
+revisions, paths, byte counts, SHA-256 digests, and acquisition URLs are in
+bench/data/large_io_sources.toml.
+
+Niantic Labs SPZ sample: racoonfamily.spz
+  Project: https://github.com/nianticlabs/spz
+  Revision: 5bf2945de1a003cee07133b1e495fe9c6ffdc7e7
+  Copyright: Niantic Labs
+  License: MIT
+  License text: https://github.com/nianticlabs/spz/blob/5bf2945de1a003cee07133b1e495fe9c6ffdc7e7/LICENSE
+
+PDAL Autzen point cloud: autzen.laz
+  Project: https://github.com/PDAL/data
+  Revision: ce0024257c573526389c4db9ab26e82739b8aaa9
+  Attribution: Aaron Reyna and Watershed Sciences; curated for libLAS/PDAL
+               testing by the PDAL/Hobu project
+  License: Creative Commons Attribution 4.0 International (CC-BY-4.0)
+  License text: https://creativecommons.org/licenses/by/4.0/legalcode
+
+Khronos glTF Sample Assets: BoxVertexColors.glb
+  Project: https://github.com/KhronosGroup/glTF-Sample-Assets
+  Revision: 2bac6f8c57bf471df0d2a1e8a8ec023c7801dddf
+  Attribution: Marco Hutter; KhronosGroup glTF Sample Assets
+  Model-file license: Creative Commons Zero 1.0 Universal (CC0-1.0)
+  License record: https://github.com/KhronosGroup/glTF-Sample-Assets/blob/2bac6f8c57bf471df0d2a1e8a8ec023c7801dddf/Models/BoxVertexColors/LICENSE.md
+
+TUM RGB-D SLAM Dataset ground-truth trajectory: freiburg1_xyz
+  Project: https://cvg.cit.tum.de/data/datasets/rgbd-dataset
+  Attribution: Computer Vision Group, Technical University of Munich
+  Dataset license: Creative Commons Attribution 4.0 International
+                   (CC-BY-4.0)
+  License text: https://creativecommons.org/licenses/by/4.0/legalcode
+
+SceneIO does not alter or replace these upstream terms.  Generated benchmark
+fixtures are explicitly labeled as derived fixtures, including any omitted
+source attributes or metadata.

@@ -5,6 +5,12 @@ single machine, local **MSVC** build, warm cache); the *conclusions* below are w
 order the O1+ sweep, not the exact MB/s. Regenerate on any machine — the harness is
 the source of truth, this file is a dated reading.
 
+For the separate 256 MiB-class Gaussian, point-cloud, mesh, reconstruction,
+and dense-array comparison against pinned reference providers, see
+[`../docs/large_file_io_benchmark_spec.md`](../docs/large_file_io_benchmark_spec.md).
+That finite run records raw samples, RSS/traced allocation, and a directional
+writer-by-reader semantic matrix in `bench/LARGE_FILE_IO.md`.
+
 This document is chronological benchmark evidence: later sections expand from
 the original 23-codec O0 scope to the live 50-codec harness. Optimized mmap,
 sink, inspection, and partial-read transport does not by itself prove every

@@ -12,6 +12,10 @@ combined default after missing the frozen q95 comparative-quality floor; the
 JPEG encode/decode gap therefore remains explicit with stb retained. The
 reviewed, commit-sized verification checklist is
 [`next_stage_implementation_checklist.md`](next_stage_implementation_checklist.md).
+The finite, five-workload large-file comparison against pinned independent
+providers is specified in
+[`large_file_io_benchmark_spec.md`](large_file_io_benchmark_spec.md); its
+machine-readable run and generated report are the final local evidence unit.
 The user-directed lean closure policy accepts the verified R6 backends as
 that release baseline without promoting its 124 provisional rows to
 `qualified`; exhaustive candidate comparison is not an R6 prerequisite.
