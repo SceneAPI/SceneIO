@@ -92,6 +92,7 @@ def inspect_gaussian_ply(path: Path, datatype: str) -> Inspection:
         b"rot_3",
     }
     seen_required = set()
+    seen_vertex_properties = set()
     rest_indices = set()
     current_element = None
     byte_order = None
@@ -130,13 +131,20 @@ def inspect_gaussian_ply(path: Path, datatype: str) -> Inspection:
                 if len(tokens) != 3:
                     raise ValueError("PLY: malformed element header")
                 current_element = tokens[1]
+                element_count = _unsigned_decimal(
+                    tokens[2], "PLY element count"
+                )
                 if current_element == b"vertex":
-                    count = _unsigned_decimal(
-                        tokens[2],
-                        "PLY vertex count",
-                    )
+                    if count is not None:
+                        raise ValueError("PLY: duplicate vertex element")
+                    count = element_count
                     if count > np.iinfo(np.uintp).max:
                         raise ValueError("PLY: malformed vertex count")
+                elif element_count != 0:
+                    raise ValueError(
+                        "PLY: nonzero non-vertex elements are unsupported by "
+                        "the Gaussian PLY codec"
+                    )
             elif tokens[0] == b"property" and current_element == b"vertex":
                 if (
                     len(tokens) != 3
@@ -146,14 +154,25 @@ def inspect_gaussian_ply(path: Path, datatype: str) -> Inspection:
                         "PLY: only float32 vertex properties are supported"
                     )
                 name = tokens[2]
+                if name in seen_vertex_properties:
+                    raise ValueError(
+                        f"PLY: duplicate vertex property {name.decode()!r}"
+                    )
+                seen_vertex_properties.add(name)
                 if name in required_names:
                     seen_required.add(name)
                 elif name.startswith(b"f_rest_"):
                     suffix = name[len(b"f_rest_") :]
-                    if suffix.isdigit():
-                        index = int(suffix)
-                        if suffix == str(index).encode() and index <= 45:
-                            rest_indices.add(index)
+                    if not suffix.isdigit():
+                        raise ValueError(
+                            f"PLY: malformed Gaussian property {name.decode()!r}"
+                        )
+                    index = int(suffix)
+                    if suffix != str(index).encode():
+                        raise ValueError(
+                            f"PLY: malformed Gaussian property {name.decode()!r}"
+                        )
+                    rest_indices.add(index)
             elif tokens[0] == b"end_header":
                 if tokens != [b"end_header"]:
                     raise ValueError("PLY: malformed end_header")
@@ -168,6 +187,10 @@ def inspect_gaussian_ply(path: Path, datatype: str) -> Inspection:
     rest = 0
     while rest in rest_indices:
         rest += 1
+    if rest_indices != set(range(rest)):
+        raise ValueError(
+            "PLY: f_rest properties must be consecutive from zero"
+        )
     if rest not in {0, 9, 24, 45}:
         raise ValueError("PLY: unsupported SH property count")
     degree = {0: 0, 9: 1, 24: 2, 45: 3}[rest]
@@ -380,6 +403,10 @@ def inspect_ksplat(path: Path, datatype: str) -> Inspection:
 def inspect_spz(path: Path, datatype: str) -> Inspection:
     """Inspect legacy gzip or v4 SPZ metadata."""
 
+    version = None
+    flags = 0
+    reserved_nonzero = False
+    toc_offset = 32
     with path.open("rb") as stream:
         prefix = _exact(stream, min(32, _size(path)), "SPZ header")
     if prefix.startswith(b"\x1f\x8b"):
@@ -388,6 +415,8 @@ def inspect_spz(path: Path, datatype: str) -> Inspection:
         magic, version, count = struct.unpack_from("<III", header)
         degree = header[12]
         fractional_bits = header[13]
+        flags = header[14]
+        reserved_nonzero = header[15] != 0
         if magic != 0x5053474E or version not in {1, 2, 3}:
             raise ValueError("SPZ: bad legacy header")
     else:
@@ -396,12 +425,30 @@ def inspect_spz(path: Path, datatype: str) -> Inspection:
         magic, version, count = struct.unpack_from("<III", prefix)
         degree = prefix[12]
         fractional_bits = prefix[13]
+        flags = prefix[14]
+        toc_offset = struct.unpack_from("<I", prefix, 16)[0]
+        reserved_nonzero = any(prefix[20:32])
         if magic != 0x5053474E or version != 4:
             raise ValueError("SPZ: bad v4 header")
-    if degree not in {0, 1, 2, 3}:
-        raise ValueError("SPZ: unsupported SH degree")
     if not 1 <= fractional_bits <= 24:
         raise ValueError("SPZ: invalid fractional_bits")
+    if (flags & 0x2) != 0:
+        prefix_name = "legacy" if version != 4 else "v4"
+        raise ValueError(f"SPZ {prefix_name}: header extensions are unsupported")
+    if (flags & 0x1) != 0:
+        prefix_name = "legacy" if version != 4 else "v4"
+        raise ValueError(f"SPZ {prefix_name}: antialiased splats are unsupported")
+    if (flags & ~0x3) != 0:
+        prefix_name = "legacy" if version != 4 else "v4"
+        raise ValueError(f"SPZ {prefix_name}: unsupported header flags")
+    if reserved_nonzero:
+        if version == 4:
+            raise ValueError("SPZ v4: reserved header bytes must be zero")
+        raise ValueError("SPZ legacy: non-zero reserved header byte")
+    if version == 4 and toc_offset != 32:
+        raise ValueError("SPZ v4: unsupported header extension zone")
+    if degree not in {0, 1, 2, 3}:
+        raise ValueError("SPZ: unsupported SH degree")
     return Inspection(
         "spz",
         datatype,

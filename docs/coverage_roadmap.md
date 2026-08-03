@@ -367,12 +367,12 @@ Columns: **Ext/id** · **Record** · **Lib/oracle (license)** · **R/W** ·
 ### 3b. 3DGS / splat
 | Format | Record | Lib / oracle | R/W | Notes |
 |---|---|---|---|---|
-| ✅ Gaussian `.ply` | `GaussianCloud` | gsply (MIT) | R+W | done |
-| ✅ `.spz` v1‑4 | `GaussianCloud` | gsply | R+W | done |
-| ✅ `.splat` | `GaussianCloud` | numpy oracle/test vectors | R+W | 32B/point; lossy 8-bit, SH dropped |
-| ✅ SuperSplat `.compressed.ply` | `GaussianCloud` | pinned splat-transform 3.1.6 vector + NumPy oracle | R+W | 256-row chunks; deterministic Morton writer; explicit lossy quantization; point ranges |
-| ✅ PlayCanvas SOG v2 | `GaussianCloud` | pinned splat-transform source + Pillow/NumPy/ZIP oracle | R+W | bundled ZIP or unbundled directory; strict lossless WebP layers; deterministic Morton/codebook/palette writer; point ranges |
-| ✅ `.ksplat` v0.1 | `GaussianCloud` | pinned GaussianSplats3D 0.4.7 vectors + struct/NumPy oracle | R+W | levels 0–2; SH degree 0–2; multi-section read; deterministic guarded writer; point ranges |
+| ✅ Gaussian `.ply` | `GaussianCloud` | executable gsply 0.4.6 + SplatTransform 3.1.6 (MIT) | R+W | both SceneIO directions independently consumed |
+| ✅ `.spz` v1‑4 | `GaussianCloud` | executable gsply 0.4.6 + SplatTransform 3.1.6 | R+W | both SceneIO directions independently consumed |
+| ✅ `.splat` | `GaussianCloud` | executable SplatTransform reader + NumPy oracle | R+W | 32B/point; lossy 8-bit; degree-0 writer refuses higher SH rather than dropping it |
+| ✅ SuperSplat `.compressed.ply` | `GaussianCloud` | executable SplatTransform 3.1.6 both directions + pinned vector + NumPy oracle | R+W | 256-row chunks; deterministic Morton writer; explicit lossy quantization; point ranges |
+| ✅ PlayCanvas SOG v2 | `GaussianCloud` | executable SplatTransform 3.1.6 both directions + Pillow/NumPy/ZIP oracle | R+W | bundled ZIP or unbundled directory; strict lossless WebP layers; deterministic Morton/codebook/palette writer; point ranges |
+| ✅ `.ksplat` v0.1 | `GaussianCloud` | executable SplatTransform reader + pinned GaussianSplats3D 0.4.7 vectors + struct/NumPy oracle | R+W | levels 0–2; SH degree 0–2; multi-section read; deterministic guarded writer; point ranges |
 
 ### 3c. Point clouds
 | Format | Record | Lib / oracle | R/W | Notes |
@@ -393,7 +393,7 @@ Columns: **Ext/id** · **Record** · **Lib/oracle (license)** · **R/W** ·
 | ✅ OFF | `Mesh` | independent parser + trimesh (MIT) | R+W | polygon-preserving ASCII vertex variants with normals, UVs, and exact RGBA8; bounded face ranges |
 | ✅ glTF / GLB (plain) | `MeshScene` | cgltf (MIT); pygltflib + trimesh oracles | R+W | 2.0 JSON/external or data buffers and GLB BIN; sparse/strided accessors, nodes/scenes, PBR subset, mesh/primitive selectors; unsupported extensions/Draco reject |
 | policy-gated Draco glTF | `MeshScene` | Draco (Apache) | R+W | requires a separate patented-codec policy decision; never required for plain glTF/GLB |
-| 🟡 USD / USDZ / historical USDC | `MeshScene` compatibility + `SceneGraph` | TinyUSDZ (Apache-2.0) | rich direct-static 3D-CV R+W | optional `sceneio[usd]`; C1-C5 cover hierarchy, polygon meshes/points, bounded PreviewSurface materials/textures, official float/half Gaussian particles, static camera/render-product pairs, direct scalar-float OpenVDB references, one inherited semantic pair, and static PointInstancer rows; historical USDC input is qualified through crate 10 and later crates refuse before provider dispatch; C6 Exit B explicitly leaves current USDC, evaluated composition, and animated selected time unavailable; OpenUSD remains reference-only under the current license allow-list; C7 local and hosted Linux/macOS/Windows package/provider/compiler/CI evidence passes |
+| 🟡 USD / USDZ / historical USDC | `MeshScene` compatibility + `SceneGraph` | TinyUSDZ (Apache-2.0) + test-only OpenUSD (TOST-1.0) oracle | rich direct-static 3D-CV R+W | optional `sceneio[usd]`; C1-C5 cover hierarchy, polygon meshes/points, bounded PreviewSurface materials/textures, official float/half Gaussian particles, static camera/render-product pairs, direct scalar-float OpenVDB references, one inherited semantic pair, and static PointInstancer rows; historical USDC input is qualified through crate 10 and later crates refuse before provider dispatch; C6 Exit B explicitly leaves current USDC, evaluated composition, and animated selected time unavailable; OpenUSD 26.08 is separately installed only in its focused USDA/USDZ Gaussian oracle lane and is not a runtime dependency; C7 local and hosted Linux/macOS/Windows package/provider/compiler/CI evidence passes |
 
 ### 3e. Arrays / tensors / features
 | Format | Record | Lib / oracle | R/W | Notes |

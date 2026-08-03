@@ -6,10 +6,18 @@ records; it is not a claim that every file on disk uses COLMAP coordinates.
 Readers expose the convention they actually return, and writers reject a
 record when the destination format cannot represent that convention.
 
-The machine-checked inventory is
-[`tests/contracts/coordinate_systems_v1.toml`](../tests/contracts/coordinate_systems_v1.toml).
-It covers all 73 built-in format ids in registry order. Adding a built-in codec
-without classifying its coordinate behavior fails the contract tests.
+The machine-checked inventories are:
+
+- [`tests/contracts/coordinate_systems_v1.toml`](../tests/contracts/coordinate_systems_v1.toml),
+  which covers all 73 built-in format ids in registry order; and
+- [`tests/contracts/coordinate_conversions_v1.toml`](../tests/contracts/coordinate_conversions_v1.toml),
+  which pins the qualified record types, transform direction and units,
+  converted fields, preserved fields, refusal rules, and a registry-ordered
+  file-to-record/record-to-file oracle ledger for every built-in format.
+
+Adding a built-in codec without classifying its coordinate behavior fails the
+contract tests. Changing conversion semantics requires an explicit update to
+the versioned conversion contract and its executable tests.
 
 ## Canonical COLMAP convention
 
@@ -109,6 +117,90 @@ Bundler, BAL, NVM, and OpenMVG already decode into SceneIO's canonical COLMAP
 `Reconstruction` representation. Their format parity suites verify that
 normalization against independent parsers or project oracles.
 
+## File-to-record and record-to-file directions
+
+The per-format ledger in `coordinate_conversions_v1.toml` distinguishes the
+two I/O directions from the separate public conversion API. Its vocabulary is:
+
+| Direction | Contract values | Meaning |
+|---|---|---|
+| file to record | `normalize_to_colmap` | a reconstruction adapter converts the file-native pose representation to canonical COLMAP fields |
+| file to record | `preserve_fixed`, `preserve_declared`, `preserve_unspecified` | decode retains the format's known, file-authored, or explicitly unknown convention |
+| record to file | `encode_from_colmap` | a reconstruction adapter performs the inverse file-native mapping |
+| record to file | `require_fixed`, `preserve_declared`, `require_unspecified` | the writer guards the record convention before encoding rather than silently changing it |
+| either | `not_applicable` | the payload has no independent coordinate transform, for example index-only matches |
+| record to file | `unsupported` | the registry has no writer; currently this is only the read-only RTMV dataset adapter |
+
+All 73 entries name their independent oracle and the executable parity suite
+that exercises it. The contract test requires exact registry order, no missing
+or duplicate id, agreement with the static coordinate status and direct
+conversion policy, agreement with actual writer availability, an existing
+test path, and read plus write evidence where the format is writable. The
+authoritative format/specification link remains
+`FormatCoordinateContract.reference`; the executable oracle is deliberately a
+separate implementation, a specification-derived parser, or a pinned upstream
+vector. Consequently, the ledger does not overstate RTMV as bidirectional and
+does not mislabel reconstruction adapter normalization as direct
+`convert_coordinates` support.
+
+The repository-wide enforcement policy lives in
+`tests/contracts/io_oracles_v1.toml` and is tested independently of the
+coordinate API by `tests/test_io_oracle_contract.py`. It also distinguishes
+lossless equality from bounded lossy/quantized comparison and adds the USD
+Gaussian schema suite to the USD/USDZ evidence. This separation matters:
+ordinary file parity proves the stored representation, while a semantic
+normalization claim additionally needs an attribute-level oracle.
+The contract names the exact decode and encode test for every row, including
+an independent PyYAML interpretation of Kalibr writer output, so a shared test
+module cannot satisfy the wrong format accidentally.
+
+For Gaussian data, the current attribute-level evidence proves log/linear
+scale, logit/linear opacity, WXYZ/XYZW component order, SH memory-layout
+transposition, and format quantization. The companion
+`tests/contracts/gaussian_oracles_v1.toml` pins the repository revision,
+license, role, and execution mode of every Gaussian reference. In particular,
+SplatTransform 3.1.6 is executed against all six legacy wire formats on the
+Windows, Linux, and macOS splat lanes; gsply 0.4.6 provides a second live
+implementation for PLY and SPZ; and GaussianSplats3D supplies pinned KSplat
+vectors. The official Niantic SPZ 3.0.0 oracle now executes official-writer to
+SceneIO-reader checks for SPZ v2, v3, and v4, and SceneIO-writer to
+official-reader checks for v3 and v4, for every SceneIO-supported SH degree.
+Its obsolete v1 profile remains excluded from that upstream claim while
+SceneIO's existing v1 parity evidence is retained. The focused OpenUSD 26.08
+oracle executes both USDA and USDZ Gaussian cross-read directions. gsplat and
+Brush are retained only as covariance/SH/rendering
+semantic references because they do not implement the entire wire-format
+matrix. USD Gaussian orientations are required to be unit quaternions, with a
+precision-aware float/half tolerance. `convert_gaussian_conventions()` can
+explicitly normalize quaternion magnitude and can retarget source precision
+and rendering hints when preparing a record for a different writer; it refuses
+float32-to-float16 retagging because that would require numeric quantization.
+Logit-to-linear conversion follows the exact float32 sigmoid, so sufficiently
+large finite logits can saturate to 0 or 1 and cannot then be inverted without
+loss. The contract does not yet claim universal
+normalization of quaternion magnitude, SH basis/phase/coefficient order, color
+space, or coordinate-frame metadata because those properties are not fully
+represented in `GaussianCloud` today. SPZ extension flags and non-default
+coordinate profiles are refused or kept outside the qualified profile rather
+than silently relabeled.
+
+The post-review local gate collects 4,599 tests and passes 4,583 with 17
+documented optional/platform skips. The independently built Niantic source
+lane passes 51 official-provider cases with one gsply-v2 writer skip, while the
+local OpenUSD lane passes all four USDA/USDZ cross-read cases. These results
+qualify the mappings above; they do not fill the still-unrepresented universal
+Gaussian coordinate-frame, color-space, or SH-basis metadata fields.
+
+The broader upstream-source qualification ledger is
+`tests/contracts/oracle_sources_v1.toml`. It allows permissive and weak
+file-level copyleft sources, including MPL-2.0, BSL-1.0, and TOST-1.0, in
+separately installed test or hosted-oracle lanes while keeping the base
+runtime NumPy-only. Each row records the pinned revision, license expression,
+star-count snapshot, authority, shared-implementation lineage, execution
+role, and exact evidence tests. Star count is a project-maturity signal only;
+an official format owner or standards body remains the preferred authority,
+and correlated forks are counted as one lineage.
+
 ## Pixel coordinates, features, matches, and tracks
 
 Pixel coordinates require an origin and a first-pixel-center offset. The offset
@@ -142,16 +234,34 @@ canonical_cloud = sceneio.convert_coordinates(
 ```
 
 `world_transform` maps source-world coordinates to target-world coordinates;
-its translation is expressed in meters. A target with arbitrary scale retains
-the source record's stronger unit scale rather than discarding that metadata.
-The qualified direct converters are:
+its translation is expressed in meters. For posed views it must be a proper
+rigid transform. Point clouds accept an invertible affine transform, except
+that scalar widths require a similarity transform because anisotropic scale
+cannot be represented by one diameter. Meshes accept an invertible,
+orientation-preserving affine transform; reflections require a caller-defined
+winding policy and are refused by this API. A target with arbitrary scale
+retains the source record's stronger unit scale rather than discarding that
+metadata. The qualified direct converters are:
 
 - native `PosedViewSet`: OpenCV/OpenGL axes, WXYZ/XYZW Hamilton quaternions,
   world-to-camera/camera-to-world poses, and unit scale; camera associations
   and intrinsics are retained;
-- native `PointCloud`: positions, origin, normals, velocities, accelerations,
-  and scale;
+- native `PointCloud`: positions, origin, normals, scalar widths, velocities,
+  accelerations, and scale;
 - native `Mesh`: positions, normals, local transform, and scale.
+
+OpenCV/OpenGL and ENU/NED have defined direct basis changes. Other frame pairs
+require `world_transform`. A posed-view change between named/reference world
+frames also requires that explicit map, even when camera axes are otherwise
+compatible. Identity conversion returns the same object only when a qualified
+record already carries the target semantics. An explicit `source=` refinement
+of an unknown record rebuilds and retags that record even when source and target
+are equal. An unsupported record never becomes convertible merely because its
+source and target convention values compare equal. The optional `source=`
+argument may refine unknown or arbitrary record metadata, but it may not
+contradict axes, scale, pixel placement, or other fields already declared by
+the record. A single point/mesh frame field cannot simultaneously encode known
+camera axes and a named ENU/NED world frame, so mixed declarations are refused.
 
 The converter refuses incomplete cases instead of inventing policy. Examples
 include unknown frames without a caller transform, non-rigid pose transforms,
@@ -166,9 +276,17 @@ is `supported` only where the public decoded record is directly convertible;
 `tests/test_coordinate_systems.py` and the per-codec parity suites enforce:
 
 - exact 73-format manifest coverage and registry order;
+- exact 73-format forward/backward directionality and one independent-oracle
+  evidence path per format;
+- executable cross-repository decode of all six legacy Gaussian formats and
+  cross-repository encode of compressed PLY, SOG, and SPZ, comparing decoded
+  attributes with quantization and quaternion-sign equivalence;
 - agreement between registry capabilities, inspection, and decoded records;
 - asymmetric pose conversion against a hand-derived matrix and `pycolmap`;
-- OpenGL/OpenCV, W2C/C2W, WXYZ/XYZW, scale, normal, and origin behavior;
+- the full 64-case product of OpenGL/OpenCV, W2C/C2W, and WXYZ/XYZW against an
+  independent matrix oracle;
+- ENU/NED, scale, scalar-width, normal, origin, mesh-local-transform, and
+  optional-field preservation behavior;
 - conversion round trips and explicit refusal cases;
 - COLMAP/HLoc pixel-center preservation and writer guards;
 - all-format installed-wheel smoke with no coordinate-property exemptions.

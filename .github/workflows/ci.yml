@@ -108,13 +108,36 @@ jobs:
             parent-profile: macos_appleclang_arm64
     env:
       SCENEIO_SPLAT_PARENT_PROFILE: ${{ matrix.parent-profile }}
+      SCENEIO_REQUIRE_SPLAT_ORACLES: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v7
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
       - name: Install
         run: |
           uv venv --seed
-          uv pip install -e ".[dev]" "numpy>=2.0,<2.5" "gsply>=0.4" "pillow>=10.0"
+          uv pip install -e ".[dev]" "numpy>=2.0,<2.5" "gsply==0.4.6" "pillow>=10.0"
+      - name: Install pinned SplatTransform oracle
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $oracleRoot = Join-Path $env:RUNNER_TEMP "sceneio-splat-oracle"
+          npm install --prefix $oracleRoot --ignore-scripts --no-audit --no-fund `
+            @playcanvas/splat-transform@3.1.6
+          $oracleCli = Join-Path $oracleRoot `
+            "node_modules\.bin\splat-transform.cmd"
+          "SCENEIO_SPLAT_TRANSFORM_CLI=$oracleCli" >> $env:GITHUB_ENV
+      - name: Install pinned SplatTransform oracle
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          oracle_root="${RUNNER_TEMP}/sceneio-splat-oracle"
+          npm install --prefix "${oracle_root}" --ignore-scripts --no-audit --no-fund \
+            @playcanvas/splat-transform@3.1.6
+          echo "SCENEIO_SPLAT_TRANSFORM_CLI=${oracle_root}/node_modules/.bin/splat-transform" \
+            >> "${GITHUB_ENV}"
       - name: Oracle-independent splat parent contract
         run: .venv/Scripts/python.exe -m pytest -q tests/test_io_splat_family_architecture.py
         if: runner.os == 'Windows'
@@ -122,10 +145,10 @@ jobs:
         run: .venv/bin/python -m pytest -q tests/test_io_splat_family_architecture.py
         if: runner.os != 'Windows'
       - name: Splat codec parity with installed oracles
-        run: .venv/Scripts/python.exe -m pytest -q -rs tests/codecs/test_ply.py tests/codecs/test_compressed_ply.py tests/codecs/test_sog.py tests/codecs/test_ksplat.py tests/codecs/test_spz.py tests/codecs/test_splat.py
+        run: .venv/Scripts/python.exe -m pytest -q -rs tests/codecs/test_ply.py tests/codecs/test_compressed_ply.py tests/codecs/test_sog.py tests/codecs/test_ksplat.py tests/codecs/test_spz.py tests/codecs/test_splat.py tests/codecs/test_splat_transform_oracle.py
         if: runner.os == 'Windows'
       - name: Splat codec parity with installed oracles
-        run: .venv/bin/python -m pytest -q -rs tests/codecs/test_ply.py tests/codecs/test_compressed_ply.py tests/codecs/test_sog.py tests/codecs/test_ksplat.py tests/codecs/test_spz.py tests/codecs/test_splat.py
+        run: .venv/bin/python -m pytest -q -rs tests/codecs/test_ply.py tests/codecs/test_compressed_ply.py tests/codecs/test_sog.py tests/codecs/test_ksplat.py tests/codecs/test_spz.py tests/codecs/test_splat.py tests/codecs/test_splat_transform_oracle.py
         if: runner.os != 'Windows'
 
   manylinux2014-portability:

@@ -25,7 +25,6 @@ pytestmark = pytest.mark.skipif(_core is None, reason="sceneio._core not built")
 
 SH_C0 = np.float32(0.28209479177387814)
 EPS = np.float32(1e-6)
-FLOOR = np.float32(1e-30)
 
 
 # --- pure-Python numpy oracle (float32, matching the C++ nearbyintf/NEP50) ----
@@ -60,8 +59,10 @@ def oracle_read_splat(data: bytes) -> dict:
     for i in range(n):
         rec = data[i * 32 : (i + 1) * 32]
         f = np.frombuffer(rec[:24], "<f4")
+        if not np.all(np.isfinite(f)) or np.any(f[3:6] <= 0):
+            raise ValueError("splat: non-finite or non-positive linear scale")
         means[i] = f[:3]
-        scales[i] = np.log(np.maximum(f[3:6], FLOOR))
+        scales[i] = np.log(f[3:6])
         col = np.frombuffer(rec[24:28], np.uint8).astype(np.float32)
         sh_dc[i] = (col[:3] / np.float32(255.0) - np.float32(0.5)) / SH_C0
         a = np.clip(col[3] / np.float32(255.0), EPS, np.float32(1.0) - EPS)
@@ -160,8 +161,8 @@ def test_writer_is_spec_correct():
 
 
 # --- external anchors: spec-derived expected values computed WITHOUT the oracle
-# (which is a numpy mirror of the C++), plus the reader guard branches (scale
-# floor / alpha-0 clamp / degenerate quat) that no random-sample seed reaches. ---
+# (which is a numpy mirror of the C++), plus the reader guard branches (alpha-0
+# clamp / degenerate quat) that no random-sample seed reaches. ---
 def test_external_anchor():
     sqrt_pi = float(np.sqrt(np.pi))  # 0.5/SH_C0 == 0.5*(2*sqrt(pi)) == sqrt(pi): anchors color independently of SH_C0
     rec0 = (
@@ -170,9 +171,9 @@ def test_external_anchor():
         + bytes([255, 0, 0, 255])  # sh_dc R=+sqrt(pi), G=B=-sqrt(pi); alpha 255 -> logit ~ +13.8
         + bytes([255, 128, 128, 128])  # w byte 255, x=y=z centered -> identity after normalize
     )
-    rec1 = (  # extremes that exercise the three reader guard branches
+    rec1 = (  # extremes that exercise the alpha and quaternion reader guards
         struct.pack("<3f", 0.0, 0.0, 0.0)
-        + struct.pack("<3f", 0.0, -1.0, 1e-40)  # all <= 1e-30 floor -> log(1e-30) ~ -69.08 (not -inf/NaN)
+        + struct.pack("<3f", 1e-30, 1e-30, 1e-30)
         + bytes([0, 0, 0, 0])  # alpha 0 -> logit(EPS clamp) ~ -13.8
         + bytes([128, 128, 128, 128])  # all-zero quat -> degenerate -> identity
     )
@@ -184,9 +185,18 @@ def test_external_anchor():
     np.testing.assert_allclose(sh[0], [sqrt_pi, -sqrt_pi, -sqrt_pi], rtol=1e-5)
     assert 13.5 < op[0] < 14.0  # logit(1-1e-6); EPS=1e-5 would give ~11.5
     np.testing.assert_allclose(q[0], [1.0, 0.0, 0.0, 0.0], atol=1e-6)
-    np.testing.assert_allclose(sc[1], [math.log(1e-30)] * 3, atol=1e-2)  # scale floor branch
+    np.testing.assert_allclose(sc[1], [math.log(1e-30)] * 3, atol=1e-2)
     assert -14.0 < op[1] < -13.5  # alpha-0 EPS-clamp branch
     np.testing.assert_allclose(q[1], [1.0, 0.0, 0.0, 0.0], atol=1e-6)  # degenerate-quat branch
+
+
+@pytest.mark.parametrize("linear_scale", [0.0, -1.0])
+def test_reader_rejects_nonpositive_linear_scales(linear_scale):
+    rec = struct.pack("<3f", 0.0, 0.0, 0.0) + struct.pack(
+        "<3f", linear_scale, 1.0, 1.0
+    ) + bytes([128, 128, 128, 255]) + bytes([255, 128, 128, 128])
+    with pytest.raises(ValueError, match="linear scale must be positive"):
+        _core.read_splat(rec)
 
 
 def test_writer_saturates():
@@ -204,21 +214,16 @@ def test_writer_saturates():
     np.testing.assert_array_equal(b[1, 24:32], [0, 0, 0, 0, 0, 128, 128, 128])  # low sat + w=-1
 
 
-def test_sh_rest_dropped_on_write():
-    # the documented lossy SH-drop: a degree-3 cloud writes identically to its
-    # degree-0 projection (sh_rest must neither error nor leak into the bytes).
+def test_writer_refuses_unrepresentable_sh_rest():
     a = _sample(7)
     rest = np.random.default_rng(70).standard_normal((16, 45)).astype(np.float32)  # degree-3 rest
     g3 = _core.gaussian_cloud(a["means"], a["scales"], a["quats"], a["opac"], a["sh0"], rest)
     assert g3.sh_degree == 3 and _cloud(a).sh_degree == 0
-    assert bytes(_core.write_splat(g3)) == bytes(_core.write_splat(_cloud(a)))
-    back = _core.read_splat(_core.write_splat(g3))
-    assert back.sh_degree == 0 and back.num_rest == 0
+    with pytest.raises(ValueError, match="only SH degree 0"):
+        _core.write_splat(g3)
 
 
-def test_nonfinite_write_is_defined():
-    # a down-converted PLY can carry NaN/inf; the float->u8 cast must stay defined
-    # (no UB): NaN -> 0, an inf quaternion -> identity. Deterministic bytes, no crash.
+def test_nonfinite_write_refuses_instead_of_substituting_values():
     z = np.zeros((1, 3), np.float32)
     cloud = _core.gaussian_cloud(
         z, z,
@@ -226,10 +231,35 @@ def test_nonfinite_write_is_defined():
         np.array([np.nan], np.float32),
         np.array([[np.nan, 1.0, 1.0]], np.float32),
     )
-    b = np.frombuffer(bytes(_core.write_splat(cloud)), np.uint8)
-    assert b.size == 32
-    assert b[24] == 0 and b[27] == 0  # NaN sh_dc / NaN opacity -> 0
-    np.testing.assert_array_equal(b[28:32], [255, 128, 128, 128])  # inf quat -> identity
+    with pytest.raises(ValueError, match="must be finite"):
+        _core.write_splat(cloud)
+
+
+def test_zero_quaternion_write_refuses_instead_of_substituting_identity():
+    a = _sample(8, n=1)
+    a["quats"][:] = 0
+
+    with pytest.raises(ValueError, match="non-zero finite norm"):
+        _core.write_splat(_cloud(a))
+
+
+def test_large_finite_quaternion_normalizes_without_overflow():
+    a = _sample(9, n=1)
+    maximum = np.finfo(np.float32).max
+    a["quats"][:] = [maximum, maximum, 0, 0]
+
+    back = _core.read_splat(_core.write_splat(_cloud(a)))
+    expected = np.array([np.sqrt(0.5), np.sqrt(0.5), 0, 0])
+    assert abs(float(np.dot(back.quaternions[0], expected))) > 0.999
+
+
+@pytest.mark.parametrize("log_scale", [-200.0, 100.0])
+def test_writer_refuses_scales_outside_linear_float32_domain(log_scale):
+    a = _sample(10, n=1)
+    a["scales"][:] = log_scale
+
+    with pytest.raises(ValueError, match="linearized scales"):
+        _core.write_splat(_cloud(a))
 
 
 def test_malformed_raises():

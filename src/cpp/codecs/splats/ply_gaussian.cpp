@@ -11,6 +11,7 @@
 #include <nanobind/stl/string.h>
 
 #include <algorithm>
+#include <cmath>
 #include <limits>
 #include <optional>
 #include <sstream>
@@ -64,6 +65,7 @@ GaussianCloud read_gaussian_ply_impl(nb::handle source, bool partial,
     bool le = true, is_ascii = false, saw_format = false;
     std::string cur;
     size_t vcount = 0;
+    bool saw_vertex = false;
     std::vector<std::string> vprops;
     while (true) {
         if (hp >= n) throw std::invalid_argument("PLY: header has no end_header");
@@ -88,6 +90,10 @@ GaussianCloud read_gaussian_ply_impl(nb::handle source, bool partial,
                 throw std::invalid_argument("PLY: malformed element header");
             cur = tk[1];
             if (cur == "vertex") {
+                if (saw_vertex)
+                    throw std::invalid_argument(
+                        "PLY: duplicate vertex element");
+                saw_vertex = true;
                 try {
                     if (tk[2].empty() ||
                         !std::all_of(tk[2].begin(), tk[2].end(),
@@ -103,6 +109,31 @@ GaussianCloud read_gaussian_ply_impl(nb::handle source, bool partial,
                 } catch (const std::exception &) {
                     throw std::invalid_argument("PLY: malformed vertex count");
                 }
+            } else {
+                unsigned long long count = 0;
+                try {
+                    if (tk[2].empty() ||
+                        !std::all_of(
+                            tk[2].begin(), tk[2].end(),
+                            [](unsigned char c) {
+                                return c >= '0' && c <= '9';
+                            }))
+                        throw std::invalid_argument("element count");
+                    size_t consumed = 0;
+                    count = std::stoull(tk[2], &consumed);
+                    if (consumed != tk[2].size())
+                        throw std::invalid_argument("element count");
+                } catch (const std::invalid_argument &) {
+                    throw std::invalid_argument(
+                        "PLY: malformed non-vertex element count");
+                } catch (const std::out_of_range &) {
+                    throw std::invalid_argument(
+                        "PLY: malformed non-vertex element count");
+                }
+                if (count != 0)
+                    throw std::invalid_argument(
+                        "PLY: nonzero non-vertex elements are unsupported by "
+                        "the Gaussian PLY codec");
             }
         } else if (tk[0] == "property" && cur == "vertex") {
             if (tk.size() < 2)
@@ -113,10 +144,15 @@ GaussianCloud read_gaussian_ply_impl(nb::handle source, bool partial,
                 throw std::invalid_argument("PLY: malformed property header");
             if (tk[1] != "float" && tk[1] != "float32")
                 throw std::invalid_argument("PLY: only float32 vertex properties are supported");
+            if (std::find(vprops.begin(), vprops.end(), tk.back()) !=
+                vprops.end())
+                throw std::invalid_argument(
+                    "PLY: duplicate vertex property '" + tk.back() + "'");
             vprops.push_back(tk.back());
         }
     }
     if (!saw_format) throw std::invalid_argument("PLY: missing format header");
+    if (!saw_vertex) throw std::invalid_argument("PLY: missing vertex element");
     if (is_ascii) throw std::invalid_argument("PLY: ASCII bodies are not supported (binary Gaussian PLY expected)");
 
     const size_t P = vprops.size();
@@ -129,6 +165,27 @@ GaussianCloud read_gaussian_ply_impl(nb::handle source, bool partial,
     };
     size_t R = 0;
     while (col.count("f_rest_" + std::to_string(R))) R++;
+    for (const std::string &name : vprops) {
+        if (name.rfind("f_rest_", 0) != 0) continue;
+        const std::string suffix = name.substr(7);
+        if (suffix.empty() ||
+            !std::all_of(suffix.begin(), suffix.end(), [](unsigned char c) {
+                return c >= '0' && c <= '9';
+            }))
+            throw std::invalid_argument(
+                "PLY: malformed Gaussian property '" + name + "'");
+        size_t consumed = 0;
+        unsigned long long index = 0;
+        try {
+            index = std::stoull(suffix, &consumed);
+        } catch (const std::exception &) {
+            throw std::invalid_argument(
+                "PLY: malformed Gaussian property '" + name + "'");
+        }
+        if (consumed != suffix.size() || index >= R)
+            throw std::invalid_argument(
+                "PLY: f_rest properties must be consecutive from zero");
+    }
     int deg = gc_deg_from_rest(R);
     if (deg < 0) throw std::invalid_argument("PLY: unexpected f_rest count " + std::to_string(R));
 
@@ -145,6 +202,9 @@ GaussianCloud read_gaussian_ply_impl(nb::handle source, bool partial,
     const size_t stride = P * sizeof(float);
     if (stride == 0 || vcount > (n - hp) / stride)
         throw std::invalid_argument("PLY: truncated vertex data");
+    const size_t body_size = vcount * stride;
+    if (n - hp != body_size)
+        throw std::invalid_argument("PLY: trailing bytes after vertex data");
     const bool swap = (le != host_is_le());
     if (!partial) {
         start = 0;
@@ -231,13 +291,21 @@ GaussianCloud make_gc(arr means, arr scales, arr quats, arr opacities, arr sh_dc
                       std::string source_precision,
                       std::string projection_mode_hint,
                       std::string sorting_mode_hint) {
+    if (means.ndim() != 2 || means.shape(1) != 3)
+        throw std::invalid_argument(
+            "gaussian_cloud: bad shape for means (expected (n, 3))");
     size_t nn = means.shape(0);
-    auto chk = [&](const arr &a, size_t d1, const char *nm) {
-        if (a.shape(0) != nn || (d1 && (a.ndim() < 2 || a.shape(1) != d1)))
-            throw std::invalid_argument(std::string("gaussian_cloud: bad shape for ") + nm);
+    auto chk_matrix = [&](const arr &a, size_t width, const char *name) {
+        if (a.ndim() != 2 || a.shape(0) != nn || a.shape(1) != width)
+            throw std::invalid_argument(
+                std::string("gaussian_cloud: bad shape for ") + name);
     };
-    chk(means, 3, "means"); chk(scales, 3, "scales"); chk(quats, 4, "quats");
-    chk(opacities, 0, "opacities"); chk(sh_dc, 3, "sh_dc");
+    chk_matrix(scales, 3, "scales");
+    chk_matrix(quats, 4, "quats");
+    chk_matrix(sh_dc, 3, "sh_dc");
+    if (opacities.ndim() != 1 || opacities.shape(0) != nn)
+        throw std::invalid_argument(
+            "gaussian_cloud: bad shape for opacities (expected (n,))");
     GaussianCloud g;
     g.n = nn;
     g.means.assign(means.data(), means.data() + nn * 3);
@@ -254,8 +322,10 @@ GaussianCloud make_gc(arr means, arr scales, arr quats, arr opacities, arr sh_dc
     g.sorting_mode_hint = std::move(sorting_mode_hint);
     validate_gaussian_conventions(g, "gaussian_cloud");
     if (sh_rest) {
-        size_t R = sh_rest->ndim() >= 2 ? sh_rest->shape(1) : 0;
-        if (sh_rest->shape(0) != nn || gc_deg_from_rest(R) < 0)
+        if (sh_rest->ndim() != 2 || sh_rest->shape(0) != nn)
+            throw std::invalid_argument("gaussian_cloud: bad sh_rest shape (n, {0,9,24,45})");
+        size_t R = sh_rest->shape(1);
+        if (gc_deg_from_rest(R) < 0)
             throw std::invalid_argument("gaussian_cloud: bad sh_rest shape (n, {0,9,24,45})");
         g.num_rest = R;
         g.sh_degree = gc_deg_from_rest(R);
@@ -269,7 +339,11 @@ GaussianCloud convert_gc(
     std::optional<std::string> quaternion_order,
     std::optional<std::string> scale_space,
     std::optional<std::string> opacity_space,
-    std::optional<std::string> sh_layout) {
+    std::optional<std::string> sh_layout,
+    std::optional<std::string> source_precision,
+    std::optional<std::string> projection_mode_hint,
+    std::optional<std::string> sorting_mode_hint,
+    bool normalize_quaternions) {
     validate_gaussian_structure(
         source, "convert_gaussian_conventions input");
     validate_gaussian_conventions(source, "convert_gaussian_conventions input");
@@ -282,12 +356,30 @@ GaussianCloud convert_gc(
         opacity_space.value_or(source.opacity_space);
     const std::string target_sh_layout =
         sh_layout.value_or(source.sh_layout);
+    const std::string target_source_precision =
+        source_precision.value_or(source.source_precision);
+    const std::string target_projection_mode_hint =
+        projection_mode_hint.value_or(source.projection_mode_hint);
+    const std::string target_sorting_mode_hint =
+        sorting_mode_hint.value_or(source.sorting_mode_hint);
 
     result.quaternion_order = target_quaternion_order;
     result.scale_space = target_scale_space;
     result.opacity_space = target_opacity_space;
     result.sh_layout = target_sh_layout;
+    result.source_precision = target_source_precision;
+    result.projection_mode_hint = target_projection_mode_hint;
+    result.sorting_mode_hint = target_sorting_mode_hint;
     validate_gaussian_conventions(result, "convert_gaussian_conventions target");
+    if (source.source_precision == "float32" &&
+        target_source_precision == "float16")
+        throw std::invalid_argument(
+            "convert_gaussian_conventions: float32 to float16 requires explicit "
+            "numeric quantization and is not a metadata conversion");
+    if (normalize_quaternions && target_source_precision == "float16")
+        throw std::invalid_argument(
+            "convert_gaussian_conventions: quaternion normalization requires "
+            "source_precision='float32'");
 
     if (source.quaternion_order != target_quaternion_order) {
         for (size_t index = 0; index < source.n; ++index) {
@@ -304,6 +396,27 @@ GaussianCloud convert_gc(
                 output[2] = input[1];
                 output[3] = input[2];
             }
+        }
+    }
+    if (normalize_quaternions) {
+        for (size_t index = 0; index < source.n; ++index) {
+            float *output = result.quats.data() + index * 4;
+            double norm_squared = 0.0;
+            for (size_t component = 0; component < 4; ++component) {
+                const double value = output[component];
+                if (!std::isfinite(value))
+                    throw std::invalid_argument(
+                        "convert_gaussian_conventions: quaternions must be finite");
+                norm_squared += value * value;
+            }
+            if (!(norm_squared > 0.0) || !std::isfinite(norm_squared))
+                throw std::invalid_argument(
+                    "convert_gaussian_conventions: quaternions must have non-zero "
+                    "finite norm");
+            const double inverse_norm = 1.0 / std::sqrt(norm_squared);
+            for (size_t component = 0; component < 4; ++component)
+                output[component] =
+                    static_cast<float>(output[component] * inverse_norm);
         }
     }
 
@@ -400,6 +513,11 @@ void register_ply_gaussian(nb::module_ &m) {
         "convert_gaussian_conventions", &convert_gc, "cloud"_a,
         "quaternion_order"_a = nb::none(), "scale_space"_a = nb::none(),
         "opacity_space"_a = nb::none(), "sh_layout"_a = nb::none(),
-        "Explicitly convert Gaussian activation, quaternion, and SH layout "
-        "conventions without changing the source record.");
+        "source_precision"_a = nb::none(),
+        "projection_mode_hint"_a = nb::none(),
+        "sorting_mode_hint"_a = nb::none(),
+        "normalize_quaternions"_a = false,
+        "Explicitly convert Gaussian activation, quaternion, SH layout, source "
+        "precision, and rendering-hint conventions without changing the source "
+        "record.");
 }

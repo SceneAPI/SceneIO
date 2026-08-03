@@ -360,6 +360,13 @@ def build_buffer_codec_cases() -> tuple[BufferCodecCase, ...]:
         np.asarray(gaussians.sh_dc),
         np.asarray(gaussians.sh_rest)[:, :24],
     )
+    gaussians_splat = _core.gaussian_cloud(
+        np.asarray(gaussians.means),
+        np.asarray(gaussians.scales),
+        np.asarray(gaussians.quaternions),
+        np.asarray(gaussians.opacities),
+        np.asarray(gaussians.sh_dc),
+    )
     reconstruction = _core.read_nvm(
         b"NVM_V3\n1\na.jpg 800 0.5 0.5 0.5 0.5 1 2 3 0 0\n"
         b"1\n1.5 -2.5 3.5 10 20 30 1 0 0 4.5 -5.5\n0\n"
@@ -612,7 +619,7 @@ def build_buffer_codec_cases() -> tuple[BufferCodecCase, ...]:
             _core.write_openmvg,
             reconstruction,
         ),
-        case("splat", _core.read_splat, _core.write_splat, gaussians),
+        case("splat", _core.read_splat, _core.write_splat, gaussians_splat),
         case(
             "colmap_mvs_depth",
             _core.read_colmap_mvs_depth,

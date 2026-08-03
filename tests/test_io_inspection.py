@@ -734,6 +734,46 @@ def test_inspect_spz_rejects_invalid_fractional_bits(tmp_path, buffer_codecs):
         sceneio.inspect(path, format="spz")
 
 
+@pytest.mark.parametrize(
+    ("container", "field", "value", "message"),
+    [
+        ("legacy", "flags", 0x01, "antialiased splats are unsupported"),
+        ("legacy", "flags", 0x02, "header extensions are unsupported"),
+        ("legacy", "flags", 0x80, "unsupported header flags"),
+        ("legacy", "reserved", 1, "non-zero reserved header byte"),
+        ("v4", "flags", 0x01, "antialiased splats are unsupported"),
+        ("v4", "flags", 0x02, "header extensions are unsupported"),
+        ("v4", "flags", 0x80, "unsupported header flags"),
+        ("v4", "reserved", 1, "reserved header bytes must be zero"),
+        ("v4", "toc_offset", 64, "unsupported header extension zone"),
+    ],
+)
+def test_inspect_spz_rejects_profiles_that_read_rejects(
+    tmp_path, buffer_codecs, container, field, value, message
+):
+    spec = next(item for item in buffer_codecs if item.id == "spz")
+    if container == "legacy":
+        raw = bytearray(gzip.decompress(spec.data))
+        offset = 14 if field == "flags" else 15
+        raw[offset] = value
+        payload = gzip.compress(raw)
+    else:
+        payload = bytearray(_core.write_spz(spec.value, version=4))
+        if field == "flags":
+            payload[14] = value
+        elif field == "reserved":
+            payload[20] = value
+        else:
+            struct.pack_into("<I", payload, 16, value)
+
+    path = tmp_path / f"unsupported-{container}-{field}-{value}.spz"
+    path.write_bytes(payload)
+    with pytest.raises(sceneio.FormatError, match=message):
+        sceneio.inspect(path, format="spz")
+    with pytest.raises(sceneio.FormatError, match=message):
+        sceneio.read(path, format="spz")
+
+
 @pytest.mark.parametrize("format_id", ["transforms_json", "openmvg"])
 def test_inspect_json_error_messages_are_bounded(tmp_path, format_id):
     path = tmp_path / f"bad-{format_id}.json"

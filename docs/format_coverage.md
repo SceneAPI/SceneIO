@@ -52,12 +52,39 @@ complete and format capabilities are unchanged.
 > contract. COLMAP is the explicit canonical conversion target; qualified
 > posed views, point clouds, and meshes convert without changing ordinary I/O.
 > Native HLoc `(0,0)` and COLMAP `(0.5,0.5)` feature pixel centers are retained
-> separately and both writers refuse the wrong convention. The exact local
-> collection has 4,445 nodes: 4,439 pass with six documented skips; Ruff and
+> separately and both writers refuse the wrong convention. After the
+> 2026-08-03 oracle qualification, the exact local collection has 4,599 nodes:
+> 4,583 pass with 17 documented optional/platform skips (the ten external
+> SplatTransform cases skip unless its pinned CLI is configured); Ruff and
 > the 73-format smoke pass. A bounded three-run TUM/COLMAP DB/HLoc sweep retains
 > mapped reads and direct sinks, with inspection 4.51x/3.89x/2.48x faster than
 > full reads and COLMAP image/pair selection 8.32x/8.41x faster. Hosted
 > platform confirmation remains a separate user-triggered action.
+> The registry-ordered conversion ledger additionally classifies file-to-record
+> and record-to-file behavior for all 73 ids and links every entry to its
+> executable independent oracle. Seventy-two formats have both directions;
+> RTMV is accurately recorded as read-only. Six reconstruction adapters
+> explicitly normalize to/from the canonical COLMAP record, three posed-view
+> formats support direct public conversion, and all other coordinate-bearing
+> writers preserve or guard their declared/fixed/unknown convention.
+
+> **Independent-oracle contract:** `tests/contracts/io_oracles_v1.toml` now
+> makes that evidence a repository-wide I/O gate rather than only a
+> coordinate-review note. Every one of the 73 built-ins must retain a named
+> independent implementation or specification-derived parser, executable
+> decode evidence, and executable encode evidence when writable. The contract
+> cross-checks the live 73-readable/72-writable capability surface and the 15
+> formats whose comparison is semantic or quantization-bounded rather than a
+> false source-byte equality claim. USD and USDZ include their dedicated
+> Gaussian schema suite in addition to their mesh/scene suites. Gaussian
+> storage and activation semantics are covered across all eight carriers;
+> quaternion normalization state, SH basis/phase/order, color space, and
+> coordinate frame remain explicitly unclaimed until those fields exist in
+> `GaussianCloud`.
+> Each row also pins the exact decode and encode pytest function carrying the
+> claim, preventing a shared codec module from lending an unrelated oracle to
+> another format. This audit added the previously missing independent PyYAML
+> interpretation of Kalibr writer output.
 
 <!-- sceneio-inventory-summary:start -->
 **Generated registry contract:** SceneIO has **73 built-in formats**: **64**
@@ -89,10 +116,11 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > optional providers are tifffile, pye57/libE57Format, PyArrow, TinyVDB, and
 > TinyUSDZ; NumPy remains the only unconditional runtime dependency. Direct
 > provider cross-reads, transactional failure tests, lifetime/inspection
-> tests, and path benchmarks cover the accepted profiles. OpenUSD was not
-> selected because its current license is outside this repository's explicit
-> allow-list; Apache-2.0 TinyUSDZ is used instead. Cross-platform
-> optional-extra package execution remains user-triggered.
+> tests, and path benchmarks cover the accepted profiles. OpenUSD 26.08 is
+> now an approved, separately installed Gaussian/USD oracle under the
+> TOST-1.0 policy; Apache-2.0 TinyUSDZ remains the normal optional provider.
+> The focused OpenUSD lane is user-triggered and never enters the runtime
+> wheel. Cross-platform optional-extra package execution remains user-triggered.
 >
 > **69-format AVIF checkpoint (2026-08-01):** `avif` and `animated_avif`
 > add repository-owned still and sequence adapters around the optional
@@ -347,8 +375,11 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > reads refuse those arcs and authored time samples instead of projecting the
 > provider's unevaluated raw traversal. Static selected-time metadata remains
 > an annotation only. TOST 1.0 is permissive and Apache-2.0-derived but is a
-> distinct license outside the literal project allow-list, so OpenUSD remains
-> reference material and no `pxr` module enters ordinary imports. The exact
+> distinct license outside the literal project allow-list at this C6
+> checkpoint, so OpenUSD remained reference material and no `pxr` module
+> entered ordinary imports. The later 2026-08-03 oracle unit permits TOST-1.0
+> for a separately installed focused test lane; ordinary imports still do not
+> load `pxr`. The exact
 > 4,306-node local gate passes 4,300 with six documented skips; the 245-pass
 > focused gate, Ruff, contracts/docs, allocation checks, paired exact-parent
 > benchmark, and three review lenses are green.
@@ -1121,12 +1152,12 @@ SoA, zero-copy to numpy/torch (DLPack), conventions carried as metadata.
 | `pfm` | ndarray (raw) + `DepthMap` (typed) | R+W | pure‑Python | gray/color raw API unchanged; explicit scalar typed-depth encoding, unit-magnitude header guard, bounded typed windows |
 | `colmap_sparse` | `Reconstruction` | R+W | **pycolmap** | legacy three-file and modern five-file `.bin`; rigs/frames and camera models 0-17; byte-identical to pycolmap 4.1.1; bounded direct writer |
 | `colmap_sparse_txt` | `Reconstruction` | R+W | **pycolmap** | legacy/modern text twin; rigs/frames; binary↔text value/byte differential |
-| `gaussian_ply` | `GaussianCloud` | R+W | **gsply** | 3DGS Gaussian PLY, channel‑grouped f_rest |
-| `compressed_ply` | `GaussianCloud` | R+W | pinned **PlayCanvas splat-transform 3.1.6** vector + pinned hosted macOS AppleClang/ARM parent fingerprint + NumPy oracle | SuperSplat chunked PLY; hosted Windows/MSVC and Ubuntu/glibc match PlayCanvas, while the characterized macOS profile differs at one lossy quantization boundary; exp/log rounding is the inferred cause; degree 0–3; bounded point reads |
-| `sog` | `GaussianCloud` | R+W | pinned **PlayCanvas splat-transform 3.1.6** source + independent Pillow/NumPy/ZIP oracle + pinned musl/fdlibm `log1p` adaptation | SOG v2 bundled ZIP and unbundled directory; strict lossless-WebP layers; cross-platform deterministic metadata plus Morton/codebook/palette writer; degree 0–3; bounded point allocation |
-| `ksplat` | `GaussianCloud` | R+W | pinned **GaussianSplats3D 0.4.7** vectors + independent struct/NumPy oracle | mkkellogg v0.1; compression levels 0–2; SH degrees 0–2; multi-section read; deterministic single-section bucketed writer; bounded point allocation |
-| `spz` | `GaussianCloud` | R+W | **gsply** | v1/2/3 read, **v3+v4 write**, v4 read; bit‑exact v3 encode |
-| `splat` | `GaussianCloud` | R+W | numpy oracle | antimatter15 blob; WXYZ+SH_C0 verified; lossy 8‑bit, SH‑drop |
+| `gaussian_ply` | `GaussianCloud` | R+W | executable **gsply 0.4.6** + executable **SplatTransform 3.1.6** | 3DGS Gaussian PLY, channel‑grouped f_rest; exact-rank factory and strict single-vertex/body framing |
+| `compressed_ply` | `GaussianCloud` | R+W | executable **SplatTransform 3.1.6** both directions + pinned PlayCanvas vector + pinned hosted macOS AppleClang/ARM parent fingerprint + NumPy oracle | SuperSplat chunked PLY; hosted Windows/MSVC and Ubuntu/glibc match PlayCanvas, while the characterized macOS profile differs at one lossy quantization boundary; exp/log rounding is the inferred cause; degree 0–3; bounded point reads |
+| `sog` | `GaussianCloud` | R+W | executable **SplatTransform 3.1.6** both directions + independent Pillow/NumPy/ZIP oracle + pinned musl/fdlibm `log1p` adaptation | SOG v2 bundled ZIP and unbundled directory; strict lossless-WebP layers; cross-platform deterministic metadata plus Morton/codebook/palette writer; degree 0–3; bounded point allocation |
+| `ksplat` | `GaussianCloud` | R+W | executable **SplatTransform 3.1.6** reader + pinned **GaussianSplats3D 0.4.7** vectors + independent struct/NumPy oracle | mkkellogg v0.1; compression levels 0–2; SH degrees 0–2; multi-section read; deterministic single-section bucketed writer; bounded point allocation |
+| `spz` | `GaussianCloud` | R+W | executable **gsply 0.4.6** + executable **SplatTransform 3.1.6** both directions + official **Niantic SPZ 3.0.0** v2/v3/v4 read and v3/v4 write oracle | v1/2/3 read, **v3+v4 write**, v4 read; bit-exact v3 encode; exact container/trailer checks; packed payload and aggregate output arrays are each capped at 1 GiB; direct-buffer v4 decode; unsupported flags/extensions/coordinate profiles refuse |
+| `splat` | `GaussianCloud` | R+W | executable **SplatTransform 3.1.6** reader + independent NumPy oracle | antimatter15 blob; WXYZ+SH_C0 verified; lossy 8‑bit; writer accepts degree 0 only and refuses higher SH; readers refuse non-finite positions/scales and non-positive linear scales |
 | `transforms_json` | `PosedViewSet` | R+W | pure‑Python | NeRF/Instant‑NGP/Nerfstudio; records OpenGL c2w |
 | `tum` | `PosedViewSet` | R+W | pure‑Python | TUM trajectory (xyzw, verbatim) |
 | `kitti` | `PosedViewSet` | R+W | pure‑Python | KITTI 3×4 [R\|t] poses |
@@ -1146,6 +1177,29 @@ SoA, zero-copy to numpy/torch (DLPack), conventions carried as metadata.
 > run `30764229578` pass. The package run covers manylinux2014 x86-64, macOS
 > arm64, and Windows amd64 abi3 wheels with `sceneio[ncore]` installed-wheel
 > smoke; publication is skipped.
+
+> **Gaussian oracle contract (2026-08-03):**
+> `tests/contracts/gaussian_oracles_v1.toml` pins repository, revision, license,
+> role, and execution status. The three-platform splat job installs npm
+> `@playcanvas/splat-transform@3.1.6` (gitHead `04b6d15`) and checks that it
+> decodes all six legacy SceneIO splat writers. SceneIO also decodes
+> SplatTransform-produced compressed PLY, SOG, and SPZ and compares every
+> Gaussian attribute through the external tool's PLY projection. gsply and
+> GaussianSplats3D remain second implementations for PLY/SPZ and KSplat.
+> gsplat 1.5.3 and Brush 0.3.0 are pinned only for the covariance/SH/render
+> roles they actually cover; neither is mislabeled as a broad wire oracle.
+> The official Niantic SPZ 3.0.0 lane executes official writes for v2, v3, and
+> v4 and SceneIO writes for v3 and v4, for SH degrees 0--3; v1 is explicitly
+> outside that upstream claim while SceneIO's existing
+> v1 vectors remain covered. The official OpenUSD 26.08 lane executes USDA and
+> USDZ Gaussian cross-read/write checks under TOST-1.0, without adding `pxr` to
+> the runtime or normal test extra.
+> The exact post-review local gate collects 4,599 nodes and passes 4,583 tests
+> with 17 documented skips. A pinned Niantic source build separately passes 51
+> official-provider cases with one gsply-v2 writer skip. The five-run scale-0.1
+> SPZ benchmark records 582 MB/s legacy-v3 read and 1,655 MB/s v4 read; both
+> writer outputs remain unchanged by the decoder hardening and deterministic
+> within each container's existing settings.
 
 ### ✅ Complete — image / point tier via **permissive native source** (no system libs)
 

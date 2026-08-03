@@ -1135,8 +1135,11 @@ def test_assembly_dependency_direction_and_import_delta_are_exact():
     )[1].split("  manylinux2014-portability:", maxsplit=1)[0]
     assert (
         'uv pip install -e ".[dev]" "numpy>=2.0,<2.5" '
-        '"gsply>=0.4" "pillow>=10.0"'
+        '"gsply==0.4.6" "pillow>=10.0"'
     ) in splat_job
+    assert "actions/setup-node@v4" in splat_job
+    assert splat_job.count("@playcanvas/splat-transform@3.1.6") == 2
+    assert splat_job.count("SCENEIO_SPLAT_TRANSFORM_CLI=") == 2
     assert splat_job.count("tests/test_io_splat_family_architecture.py") == 2
     assert splat_job.count("-m pytest -q -rs") == 2
     for suite in (
@@ -1146,6 +1149,7 @@ def test_assembly_dependency_direction_and_import_delta_are_exact():
         "test_ksplat.py",
         "test_spz.py",
         "test_splat.py",
+        "test_splat_transform_oracle.py",
     ):
         assert splat_job.count(f"tests/codecs/{suite}") == 2
     assert (

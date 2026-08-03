@@ -14,6 +14,8 @@
 // losslessly promoted float16 source should be written back as float16.
 #pragma once
 
+#include <algorithm>
+#include <cmath>
 #include <limits>
 
 #include "io/common.hpp"
@@ -135,4 +137,34 @@ inline void require_legacy_gaussian_conventions(
             "opacity_space='logit', sh_layout='channel_grouped', and "
             "source_precision='float32' with default USD rendering hints; "
             "convert explicitly before writing");
+}
+
+inline void require_finite_gaussian_values(
+    const GaussianCloud &cloud, const char *context) {
+    validate_gaussian_structure(cloud, context);
+    const std::string prefix = std::string(context) + ": ";
+    auto require_finite = [&](const std::vector<float> &values,
+                              const char *name) {
+        if (!std::all_of(values.begin(), values.end(), [](float value) {
+                return std::isfinite(value);
+            }))
+            throw std::invalid_argument(
+                prefix + name + " values must be finite");
+    };
+    require_finite(cloud.means, "mean");
+    require_finite(cloud.scales, "scale");
+    require_finite(cloud.quats, "quaternion");
+    require_finite(cloud.opacity, "opacity");
+    require_finite(cloud.sh_dc, "SH DC");
+    require_finite(cloud.sh_rest, "SH rest");
+    for (size_t index = 0; index < cloud.n; ++index) {
+        double norm_squared = 0.0;
+        for (size_t component = 0; component < 4; ++component) {
+            const double value = cloud.quats[index * 4 + component];
+            norm_squared += value * value;
+        }
+        if (!(norm_squared > 0.0) || !std::isfinite(norm_squared))
+            throw std::invalid_argument(
+                prefix + "quaternions must have non-zero finite norm");
+    }
 }

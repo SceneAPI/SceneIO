@@ -27,7 +27,7 @@ def ParticleField3DGaussianSplat "Cloud"
     token visibility = "invisible"
     point3f[] positions = [(1, 2, 3), (4, 5, 6)]
     quatf[] orientations = [
-        (1, 0.25, 0.5, 0.75), (0.5, -0.25, -0.5, -0.75)
+        (0.5, 0.5, 0.5, 0.5), (0.5, -0.5, -0.5, -0.5)
     ]
     float3[] scales = [(1, 2, 3), (4, 5, 6)]
     float[] opacities = [0.25, 0.75]
@@ -165,7 +165,7 @@ def test_read_standards_derived_float_fixture_maps_raw_layout(tmp_path):
     np.testing.assert_array_equal(cloud.means, [[1, 2, 3], [4, 5, 6]])
     np.testing.assert_array_equal(
         cloud.quaternions,
-        [[1, 0.25, 0.5, 0.75], [0.5, -0.25, -0.5, -0.75]],
+        [[0.5, 0.5, 0.5, 0.5], [0.5, -0.5, -0.5, -0.5]],
     )
     expected = np.arange(24, dtype=np.float32).reshape(2, 4, 3)
     assert np.asarray(cloud.sh_dc).tobytes() == expected[:, 0].tobytes()
@@ -259,6 +259,32 @@ def ParticleField3DGaussianSplat "Cloud"
     assert np.asarray(cloud.sh_rest).shape == (2, 0)
     assert cloud.projection_mode_hint == "perspective"
     assert cloud.sorting_mode_hint == "zDepth"
+
+
+def test_half_precision_unit_tolerance_accepts_quantized_orientation(tmp_path):
+    path = tmp_path / "half-unit.usda"
+    path.write_text(
+        '''#usda 1.0
+(
+    upAxis = "Y"
+    metersPerUnit = 1
+)
+def ParticleField3DGaussianSplat "Cloud"
+{
+    point3h[] positionsh = [(0, 0, 0)]
+    quath[] orientationsh = [(0.70703125, 0.70703125, 0, 0)]
+}
+''',
+        encoding="utf-8",
+    )
+
+    cloud = sceneio.read_scene(path).gaussian_cloud_at(0)
+
+    assert cloud.source_precision == "float16"
+    np.testing.assert_array_equal(
+        cloud.quaternions,
+        [[0.70703125, 0.70703125, 0, 0]],
+    )
 
 
 def test_float_attributes_win_over_authored_half_variants(tmp_path):
@@ -467,7 +493,12 @@ def test_float16_validation_does_not_join_sh_arrays(monkeypatch):
         (
             "point3f[] positions = [(0,0,0)]\n"
             "    quatf[] orientations = [(0,0,0,0)]",
-            "orientations must be nonzero",
+            "orientations must be unit quaternions",
+        ),
+        (
+            "point3f[] positions = [(0,0,0)]\n"
+            "    quatf[] orientations = [(2,0,0,0)]",
+            "orientations must be unit quaternions",
         ),
         (
             "point3f[] positions = [(0,0,0)]\n"
@@ -634,6 +665,26 @@ def test_float16_write_refuses_loss_and_preserves_destination(tmp_path):
         sceneio.write_scene(_scene(cloud), destination)
 
     assert destination.read_bytes() == b"old destination"
+
+
+def test_write_refuses_nonunit_gaussian_orientation(tmp_path):
+    source = _cloud(degree=0)
+    cloud = _core.gaussian_cloud(
+        source.means,
+        source.scales,
+        np.array([[2, 0, 0, 0], [1, 0, 0, 0]], np.float32),
+        source.opacities,
+        source.sh_dc,
+        source.sh_rest,
+        scale_space="linear",
+        opacity_space="linear",
+        sh_layout="coefficient_rgb",
+        projection_mode_hint=source.projection_mode_hint,
+        sorting_mode_hint=source.sorting_mode_hint,
+    )
+
+    with pytest.raises(sceneio.FormatError, match="unit quaternions"):
+        sceneio.write_scene(_scene(cloud), tmp_path / "nonunit.usda")
 
 
 def test_write_requires_explicit_usd_convention_conversion(tmp_path):

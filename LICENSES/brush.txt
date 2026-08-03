@@ -1,0 +1,13 @@
+Brush
+https://github.com/ArthurBrussee/brush
+
+Semantic reference: 0.3.0, commit
+3edecbb2fe79d3e2c87eeab85b15e0b1dd10d486. SceneIO uses this project only as
+an independent Gaussian PLY/compressed-PLY consumer and rendering-semantics
+reference. It is not installed, invoked, copied, linked, or bundled by
+SceneIO.
+
+License: Apache License 2.0. The pinned upstream license contains no separate
+project-specific copyright notice.
+
+The complete Apache License 2.0 terms are in the repository-root LICENSE.

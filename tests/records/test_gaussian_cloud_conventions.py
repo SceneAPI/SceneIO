@@ -90,6 +90,40 @@ def test_gaussian_cloud_rejects_unknown_conventions(keyword, value, message):
         _cloud(**{keyword: value})
 
 
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("means", np.zeros((2, 3, 1), np.float32)),
+        ("scales", np.zeros((2, 3, 1), np.float32)),
+        ("quaternions", np.zeros((2, 4, 1), np.float32)),
+        ("opacities", np.zeros((2, 1), np.float32)),
+        ("opacities", np.zeros((2, 0), np.float32)),
+        ("sh_dc", np.zeros((2, 3, 1), np.float32)),
+        ("sh_rest", np.zeros((2, 9, 1), np.float32)),
+    ],
+)
+def test_gaussian_cloud_factory_requires_exact_array_ranks(field, value):
+    arrays = {
+        "means": np.zeros((2, 3), np.float32),
+        "scales": np.zeros((2, 3), np.float32),
+        "quaternions": np.ones((2, 4), np.float32),
+        "opacities": np.zeros(2, np.float32),
+        "sh_dc": np.zeros((2, 3), np.float32),
+        "sh_rest": np.zeros((2, 9), np.float32),
+    }
+    arrays[field] = value
+
+    with pytest.raises(ValueError, match="shape"):
+        _core.gaussian_cloud(
+            arrays["means"],
+            arrays["scales"],
+            arrays["quaternions"],
+            arrays["opacities"],
+            arrays["sh_dc"],
+            arrays["sh_rest"],
+        )
+
+
 def test_explicit_gaussian_conversion_maps_activation_and_layout():
     source = _cloud()
 
@@ -154,6 +188,62 @@ def test_gaussian_layout_and_quaternion_conversion_are_bit_exact_roundtrip():
         np.asarray(restored.sh_rest).tobytes()
         == np.asarray(source.sh_rest).tobytes()
     )
+
+
+def test_explicit_conversion_can_prepare_usd_cloud_for_legacy_writers():
+    source = _cloud(
+        scales=np.ones((2, 3), np.float32),
+        opacities=np.array([0.25, 0.75], np.float32),
+        scale_space="linear",
+        opacity_space="linear",
+        sh_layout="coefficient_rgb",
+        source_precision="float16",
+        projection_mode_hint="tangential",
+        sorting_mode_hint="cameraDistance",
+    )
+
+    converted = sceneio.convert_gaussian_conventions(
+        source,
+        scale_space="log",
+        opacity_space="logit",
+        sh_layout="channel_grouped",
+        source_precision="float32",
+        projection_mode_hint="perspective",
+        sorting_mode_hint="zDepth",
+        normalize_quaternions=True,
+    )
+
+    np.testing.assert_allclose(
+        np.linalg.norm(converted.quaternions, axis=1),
+        1.0,
+        atol=1e-6,
+    )
+    assert converted.source_precision == "float32"
+    assert converted.projection_mode_hint == "perspective"
+    assert converted.sorting_mode_hint == "zDepth"
+    assert _core.read_gaussian_ply(
+        _core.write_gaussian_ply(converted)
+    ).num_gaussians == 2
+
+
+def test_metadata_conversion_refuses_unperformed_float16_quantization():
+    with pytest.raises(ValueError, match="numeric quantization"):
+        sceneio.convert_gaussian_conventions(
+            _cloud(), source_precision="float16"
+        )
+
+
+def test_float32_sigmoid_saturation_is_explicitly_one_way():
+    source = _cloud(opacities=np.array([20.0, -200.0], np.float32))
+    activated = sceneio.convert_gaussian_conventions(
+        source, opacity_space="linear"
+    )
+
+    np.testing.assert_array_equal(activated.opacities, [1.0, 0.0])
+    with pytest.raises(ValueError, match="strictly between zero and one"):
+        sceneio.convert_gaussian_conventions(
+            activated, opacity_space="logit"
+        )
 
 
 def test_gaussian_linear_to_raw_conversion_checks_domains():

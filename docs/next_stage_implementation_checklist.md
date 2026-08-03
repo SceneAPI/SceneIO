@@ -1,5 +1,29 @@
 # Next-stage implementation checklist
 
+## Oracle validation and normalization qualification (complete locally, 2026-08-03)
+
+The bounded implementation specification is
+[`oracle_validation_plan.md`](oracle_validation_plan.md). It strengthens the
+existing 73-format directional ledger with a pinned upstream-source catalog,
+official Niantic SPZ and OpenUSD executable checks, and an independent
+mathematical conversion oracle. It does not add formats or base runtime
+dependencies.
+
+- [x] Complete L1: source catalog, broadened open-source license policy, and
+      mathematical conversion oracle.
+- [x] Complete L2: official OpenUSD USDA/USDZ cross-read/write Gaussian oracle.
+- [x] Complete L3: official Niantic SPZ v2/v3/v4 read and v3/v4 write oracle.
+- [x] Integrate the oracle-proven corrections, run the complete validation
+      sequence, perform the three-lens review, and record exact results.
+- [x] Collect 4,599 exact nodes and pass the complete suite: 4,583 passed with
+      17 documented optional/platform skips; Ruff, dependency consistency,
+      diff checks, and installed smoke are clean.
+- [x] Measure the affected SPZ row: five-run scale-0.1 legacy/v4 reads are
+      582/1,655 MB/s, with the direct-buffer bounded inflater improving its
+      first 574 MB/s result.
+- [ ] Trigger the prepared OpenUSD and Niantic hosted lanes after a separately
+      authorized push. No publication is part of this qualification unit.
+
 ## C8 coordinate-system contract closure (2026-08-02)
 
 - [x] Define one immutable public convention value covering camera axes,
@@ -21,13 +45,41 @@
 - [x] Add explicit OpenCV/OpenGL, W2C/C2W, WXYZ/XYZW, scale, point, normal,
       vector, origin, and mesh conversion for qualified records. Preserve
       camera associations and refuse cases that need an unstated policy.
+- [x] Pin direct-conversion behavior in the versioned
+      `coordinate_conversions_v1.toml` contract: transform direction and
+      units, qualified record types, accepted transform classes, converted
+      fields, preserved fields, and refusals.
+- [x] Audit both I/O directions for every built-in and add a registry-ordered
+      73-entry ledger naming decode behavior, encode behavior, direct versus
+      adapter conversion, the independent oracle, and its executable parity
+      suite. Require exact agreement with coordinate status and real writer
+      availability; retain RTMV as the one explicitly read-only format.
+- [x] Promote the per-format evidence into the independent
+      `io_oracles_v1.toml` repository contract. Require decode and encode
+      evidence for every writable format, decode evidence for RTMV, exact live
+      capability counts, and an explicit lossy/quantized comparison class.
+      Include the USD Gaussian suite in both USD carrier rows.
+- [ ] Complete universal Gaussian semantic normalization after extending
+      `GaussianCloud` with quaternion normalization state, SH
+      basis/phase/coefficient order, color space, and coordinate frame. Until
+      then, keep those four properties explicitly outside the verified claim;
+      current tests cover storage layout, activation functions, component
+      order, and format quantization only.
+- [x] Close conversion-review findings: identity cannot bypass qualified-type
+      dispatch; `source=` can refine unknown metadata but cannot contradict
+      record-declared fields; posed-view named-frame changes require an
+      explicit rigid map; point scalar widths scale under similarity
+      transforms and refuse anisotropic ambiguity; mesh conversion preserves
+      tri-state double-sided presence; direct ENU/NED conversion is defined.
 - [x] Verify asymmetric poses against a hand-derived matrix and `pycolmap`,
-      partial metadata against decoded records, conversion round trips,
-      refusal behavior, and the manifest-driven 73-format installed-wheel
-      smoke with no property exemptions.
+      all 64 combinations of supported camera axes, pose direction, and
+      quaternion order against an independent matrix oracle, partial metadata
+      against decoded records, conversion round trips, affine point/mesh
+      geometry, field preservation, refusal behavior, and the manifest-driven
+      73-format installed-wheel smoke with no property exemptions.
 - [x] Document the public contract, exact format groups, conversion semantics,
       feature/match/track inheritance, and CamTools/COLMAP reference basis.
-- [x] Record the final local gates: 4,439 tests pass with six documented skips,
+- [x] Record the final local gates: 4,455 tests pass with six documented skips,
       Ruff is clean, all 73 installed-smoke rows pass, and the representative
       three-run TUM/COLMAP DB/HLoc sweep retains its mapped-read, direct-sink,
       inspection, and partial-read gains. The lifetime/ownership,
@@ -5348,8 +5400,11 @@ It pins AOUSD Core 1.0.1, supplemental 1.0.1.post0, and tagged OpenUSD 26.08,
 and freezes a finite `sceneio.usd.3dcv/1` scope with a commit-sized U0-U7
 checklist. No unchecked item below is a current USD I/O capability claim:
 
-- [x] U0: provider qualification plus the explicit current-allow-list outcome:
-      TOST is distinct and OpenUSD remains reference-only.
+- [x] U0: provider qualification plus the then-current allow-list outcome:
+      TOST was distinct and OpenUSD remained reference-only for that USD
+      implementation unit. The 2026-08-03 oracle unit later approved TOST-1.0
+      for a separately installed, test-only OpenUSD executable lane; it did not
+      add OpenUSD to runtime dependencies.
 - [x] U1: additive `SceneGraph`/`InstanceSet` records and convention-bearing
       mesh, point, and Gaussian payloads.
 - [x] U2: compatible rich-scene API, `.usdc` routing, stage metadata,
@@ -5736,3 +5791,84 @@ general metadata, and implicit color conversion stay out of the profile.
       component or process path.
 - [x] Keep AVIF, bounded WebM, RTMV, Ogg/Theora, and temporal WebM as
       separately reviewable green units.
+
+## Gaussian third-party oracle closure (2026-08-03)
+
+- [x] Add `tests/contracts/gaussian_oracles_v1.toml` with exact project,
+      version, revision, distribution, license, role, format direction, and
+      execution status for SplatTransform, gsply, GaussianSplats3D, gsplat,
+      and Brush.
+- [x] Install pinned npm `@playcanvas/splat-transform@3.1.6` only in the
+      existing Windows/Linux/macOS splat job and verify its gitHead banner
+      before comparisons run.
+- [x] Execute SplatTransform as an external reader for SceneIO Gaussian PLY,
+      compressed PLY, SOG, KSplat, SPZ, and `.splat` output.
+- [x] Execute SplatTransform as an external writer for compressed PLY, SOG,
+      and SPZ, then compare SceneIO's decode with SplatTransform's independent
+      PLY projection.
+- [x] Compare positions, log-scales, opacity logits, SH DC/rest values, SH
+      degree, and rotation-equivalent normalized quaternions. Keep the larger
+      bound only for the legacy format's documented 8-bit quaternion storage.
+- [x] Retain executable gsply 0.4.6 as a second PLY/SPZ oracle and pinned
+      GaussianSplats3D 0.4.7 vectors as a second KSplat oracle.
+- [x] Qualify gsplat 1.5.3 and Brush 0.3.0 under Apache-2.0, while assigning
+      them only covariance/SH/rendering or PLY-consumer roles and making no
+      unsupported broad file-format claim.
+- [x] Add exact attribution records to `LICENSES/` and update the distribution
+      inventory to distinguish test-only packages, retained vectors, and
+      reference-only projects.
+- [x] Pass all ten executable SplatTransform cases, the focused splat gate,
+      Ruff, the oracle/license/assembly contracts, and the updated 4,599-node
+      local suite: 4,583 pass with 17 documented skips when optional providers
+      are absent.
+- [ ] Run the updated three-platform splat job after the branch is pushed; no
+      publication is part of this validation.
+
+## Gaussian and coordinate conversion hardening (2026-08-03)
+
+- [x] Reconfirm the audit findings against the implementation and record
+      contracts. Keep PointCloud origin/translation behavior unchanged because
+      stored positions are origin-relative; retain sigmoid endpoint saturation
+      as an explicit one-way float32 conversion property.
+- [x] Require exact ranks for every `GaussianCloud` factory array, including a
+      one-dimensional opacity vector and a two-dimensional SH-rest matrix.
+- [x] Require USD float/half orientations to be unit quaternions with a
+      precision-aware tolerance. Add explicit quaternion normalization, source
+      precision promotion, and rendering-hint retargeting to
+      `convert_gaussian_conventions`; refuse metadata-only float16 demotion.
+- [x] Make `.splat` a degree-0-only writer, refuse non-finite inputs and
+      unrepresentable linearized scales, and normalize large finite
+      quaternions without float32 norm overflow. Apply the same finite-value and
+      stable quaternion rules to SPZ.
+- [x] Require exact SPZ container extent and strict Gaussian PLY vertex
+      structure/body extent. Preserve metadata-only PLY inspection as a
+      header-only operation and continue accepting harmless zero-count auxiliary
+      elements.
+- [x] Bound SPZ packed decode and aggregate record allocations at 1 GiB each,
+      validate legacy gzip headers/trailers before allocation, decompress v4
+      streams directly into one final buffer, and make SPZ inspection enforce
+      the reader's flags/reserved/TOC profile.
+- [x] Refuse zero or negative `.splat` linear scales because the finite
+      log-scale record cannot represent them without changing the value.
+- [x] Make point scalar-width similarity validation independent of unit scale;
+      rebuild records when an explicit source refines unknown metadata; and
+      refuse mixed camera-axis/named-world declarations that a single record
+      frame field cannot represent.
+- [x] Expand independent checks: gsply covers Gaussian PLY SH degrees 0-3;
+      SplatTransform is mandatory in its dedicated three-platform lane; USD
+      float/half orientation cases and legacy conversion paths are executable;
+      SPZ/SPLAT extreme values and exact container bounds have focused tests.
+- [x] Complete the resource/lifetime review: mapped readers and returned-array
+      ownership are unchanged; new native checks operate on record-owned
+      vectors; exceptions occur before destination publication; no borrowed
+      view or file lifetime is extended.
+- [x] Complete the format-correctness review: the pass found and corrected the
+      large-finite quaternion norm overflow and kept header-only inspection
+      distinct from full payload validation.
+- [x] Complete the test-soundness review: shared all-codec fixtures now perform
+      an explicit degree-0 projection only for `.splat`; oracle comparisons,
+      partial reads, mmap, streaming, inspection, registry snapshots, and the
+      full 4,599-node collection agree. Local result: 4,583 passed and 17
+      documented skips; Ruff and the documentation contract are clean.
+- [ ] Run the updated compiler-instrumented and Linux/macOS/Windows splat lanes
+      after the branch is pushed. This validation does not publish packages.

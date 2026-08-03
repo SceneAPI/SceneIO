@@ -30,3 +30,4 @@ src/cpp/third_party/theora/** -text -whitespace
 LICENSES/theora.txt -text -whitespace
 src/cpp/third_party/musl/** -text -whitespace
 LICENSES/musl-log1p.txt -text -whitespace
+LICENSES/openusd.txt -text -whitespace

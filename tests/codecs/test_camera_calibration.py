@@ -352,6 +352,38 @@ def test_opencv_and_ros_writers_match_independent_oracles():
     }
 
 
+def test_kalibr_writer_matches_independent_pyyaml_oracle():
+    expected = _core.read_kalibr(KALIBR_YAML)
+    source_oracle = yaml.safe_load(KALIBR_YAML)
+    oracle = yaml.safe_load(bytes(_core.write_kalibr(expected)))
+
+    assert list(oracle) == ["cam0", "cam1"]
+    assert oracle["cam0"]["camera_model"] == "pinhole"
+    assert oracle["cam0"]["intrinsics"] == [500.0, 510.0, 320.0, 240.0]
+    assert oracle["cam0"]["resolution"] == [640, 480]
+    assert oracle["cam0"]["timeshift_cam_imu"] == -0.002
+    np.testing.assert_allclose(
+        np.asarray(oracle["cam0"]["T_cam_imu"], np.float64),
+        np.asarray(source_oracle["cam0"]["T_cam_imu"], np.float64),
+        rtol=0.0,
+        atol=1e-15,
+    )
+
+    assert oracle["cam1"]["camera_model"] == "omni"
+    assert oracle["cam1"]["intrinsics"] == [1.1, 505.0, 515.0, 321.0, 241.0]
+    assert oracle["cam1"]["distortion_model"] == "equidistant"
+    assert oracle["cam1"]["distortion_coeffs"] == [0.01, 0.02, 0.03, 0.04]
+    assert oracle["cam1"]["resolution"] == [800, 600]
+    assert oracle["cam1"]["timeshift_cam_imu"] == 0.001
+
+    np.testing.assert_allclose(
+        np.asarray(oracle["cam1"]["T_cn_cnm1"], np.float64),
+        np.asarray(source_oracle["cam1"]["T_cn_cnm1"], np.float64),
+        rtol=0.0,
+        atol=1e-15,
+    )
+
+
 @pytest.mark.parametrize(
     ("format_id", "reader", "writer", "value"),
     [

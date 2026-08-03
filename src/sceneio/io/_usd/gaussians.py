@@ -81,6 +81,24 @@ _VALIDATION_CHUNK_VALUES = 1_048_576
 _EXTENT_CHUNK_ROWS = 65_536
 
 
+def _require_unit_quaternions(
+    quaternions: np.ndarray,
+    *,
+    precision: str,
+    context: str,
+) -> None:
+    if not len(quaternions):
+        return
+    tolerance = 5e-4 if precision == "float16" else 1e-5
+    norms = np.linalg.norm(
+        np.asarray(quaternions, dtype=np.float64), axis=1
+    )
+    if np.any(np.abs(norms - 1.0) > tolerance):
+        raise ValueError(
+            f"USD: {context} orientations must be unit quaternions"
+        )
+
+
 def _static_attribute(prim, name: str, expected_type: str):
     attribute = prim.get_attribute(name)
     if attribute is None:
@@ -294,10 +312,11 @@ def gaussian_arrays_from_prim(
         quaternions = np.ascontiguousarray(
             provider_quaternions[:, [3, 0, 1, 2]]
         )
-    if count and np.any(np.linalg.norm(quaternions, axis=1) == 0):
-        raise ValueError(
-            f"USD Gaussian {prim.name!r}: orientations must be nonzero"
-        )
+    _require_unit_quaternions(
+        quaternions,
+        precision=source_precision,
+        context=f"Gaussian {prim.name!r}",
+    )
 
     scales, scale_precision, _ = _selected_array(
         prim, properties, "scales"
@@ -527,10 +546,11 @@ def validate_writable_gaussian(
         raise ValueError(f"USD: {context} linear scales must be positive")
     if np.any(opacities < 0) or np.any(opacities > 1):
         raise ValueError(f"USD: {context} opacities must be in [0, 1]")
-    if len(quaternions) and np.any(
-        np.linalg.norm(quaternions, axis=1) == 0
-    ):
-        raise ValueError(f"USD: {context} orientations must be nonzero")
+    _require_unit_quaternions(
+        quaternions,
+        precision=cloud.source_precision,
+        context=context,
+    )
     if cloud.source_precision == "float16":
         for name, array in zip(
             (

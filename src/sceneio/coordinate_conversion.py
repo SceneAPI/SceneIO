@@ -12,6 +12,10 @@ from sceneio.coordinates import (
     coordinate_convention,
 )
 
+_WEAK_CONVENTION_VALUES = frozenset(
+    {None, "arbitrary", "file_declared", "not_applicable", "unknown"}
+)
+
 
 def _as_transform(value: object | None) -> np.ndarray:
     if value is None:
@@ -19,7 +23,12 @@ def _as_transform(value: object | None) -> np.ndarray:
     result = np.asarray(value, dtype=np.float64)
     if result.shape != (4, 4) or not np.isfinite(result).all():
         raise ValueError("world_transform must be a finite (4,4) matrix")
-    if not np.allclose(result[3], (0.0, 0.0, 0.0, 1.0), atol=1e-12):
+    if not np.allclose(
+        result[3],
+        (0.0, 0.0, 0.0, 1.0),
+        atol=1e-12,
+        rtol=0.0,
+    ):
         raise ValueError("world_transform must have bottom row [0,0,0,1]")
     determinant = float(np.linalg.det(result[:3, :3]))
     if not math.isfinite(determinant) or abs(determinant) < 1e-12:
@@ -32,8 +41,18 @@ def _basis(source: str, target: str) -> np.ndarray:
         return np.eye(4, dtype=np.float64)
     if {source, target} == {"opencv", "opengl"}:
         return np.diag((1.0, -1.0, -1.0, 1.0))
+    if {source, target} == {"enu", "ned"}:
+        return np.array(
+            (
+                (0.0, 1.0, 0.0, 0.0),
+                (1.0, 0.0, 0.0, 0.0),
+                (0.0, 0.0, -1.0, 0.0),
+                (0.0, 0.0, 0.0, 1.0),
+            ),
+            dtype=np.float64,
+        )
     raise ValueError(
-        f"coordinate conversion from axes {source!r} to {target!r} "
+        f"coordinate conversion from frame {source!r} to {target!r} "
         "requires world_transform"
     )
 
@@ -52,6 +71,42 @@ def _scale_pair(
     if source_scale <= 0.0 or target_scale <= 0.0:
         raise ValueError("coordinate conversion requires positive unit scales")
     return float(source_scale), float(target_scale)
+
+
+def _validate_source_override(
+    recorded: CoordinateConvention | None,
+    supplied: CoordinateConvention,
+) -> None:
+    if recorded is None:
+        return
+    for field_name in (
+        "camera_axes",
+        "handedness",
+        "pose_direction",
+        "quaternion_order",
+        "quaternion_algebra",
+        "world_frame",
+        "up_axis",
+        "scale_class",
+        "scale_to_meters",
+        "image_origin",
+        "image_x_axis",
+        "image_y_axis",
+        "pixel_center",
+        "depth_interpretation",
+        "crs",
+        "reference_frame",
+    ):
+        recorded_value = getattr(recorded, field_name)
+        supplied_value = getattr(supplied, field_name)
+        if (
+            recorded_value not in _WEAK_CONVENTION_VALUES
+            and supplied_value != recorded_value
+        ):
+            raise ValueError(
+                f"source convention conflicts with record {field_name}: "
+                f"{supplied_value!r} != {recorded_value!r}"
+            )
 
 
 def _quaternion_matrix(value: np.ndarray, order: str) -> np.ndarray:
@@ -121,9 +176,19 @@ def _invert_rigid(matrix: np.ndarray) -> np.ndarray:
 
 def _require_rigid_transform(matrix: np.ndarray) -> None:
     rotation = matrix[:3, :3]
-    if not np.allclose(rotation.T @ rotation, np.eye(3), atol=1e-10):
+    if not np.allclose(
+        rotation.T @ rotation,
+        np.eye(3),
+        atol=1e-10,
+        rtol=0.0,
+    ):
         raise ValueError("posed-view world_transform must be rigid")
-    if not np.isclose(np.linalg.det(rotation), 1.0, atol=1e-10):
+    if not np.isclose(
+        np.linalg.det(rotation),
+        1.0,
+        atol=1e-10,
+        rtol=0.0,
+    ):
         raise ValueError("posed-view world_transform must preserve handedness")
 
 
@@ -131,11 +196,20 @@ def _convert_posed_views(
     record: object,
     source: CoordinateConvention,
     target: CoordinateConvention,
-    world_transform: np.ndarray,
+    world_transform: object | None,
 ) -> object:
     from sceneio import _core
 
-    _require_rigid_transform(world_transform)
+    if world_transform is None and (
+        source.world_frame != target.world_frame
+        or source.reference_frame != target.reference_frame
+        or source.crs != target.crs
+    ):
+        raise ValueError(
+            "posed-view world-frame changes require world_transform"
+        )
+    transform = _as_transform(world_transform)
+    _require_rigid_transform(transform)
     if source.camera_axes not in {"opencv", "opengl"}:
         raise ValueError("posed-view source camera axes must be opencv or opengl")
     if target.camera_axes not in {"opencv", "opengl"}:
@@ -168,7 +242,7 @@ def _convert_posed_views(
         float(record.scale_to_meters),
     )
     camera_basis = _basis(source.camera_axes, target.camera_axes)
-    inverse_world = np.linalg.inv(world_transform)
+    inverse_world = np.linalg.inv(transform)
     source_quaternions = np.asarray(record.quaternions)
     source_translations = np.asarray(record.translations)
     quaternions = np.empty_like(source_quaternions, dtype=np.float64)
@@ -221,14 +295,20 @@ def _coordinate_transform(
     world_transform: object | None,
 ) -> tuple[np.ndarray, float]:
     source_scale, target_scale = _scale_pair(source, target, fallback_scale)
+    _require_single_spatial_frame(source, "source")
+    _require_single_spatial_frame(target, "target")
     if world_transform is None:
-        if source.camera_axes not in {"opencv", "opengl"}:
-            raise ValueError(
-                "an unknown or world coordinate frame requires world_transform"
-            )
-        if target.camera_axes not in {"opencv", "opengl"}:
-            raise ValueError("target coordinate axes are not convertible")
-        transform = _basis(source.camera_axes, target.camera_axes)
+        source_frame = _spatial_frame(source, "source")
+        target_frame = _spatial_frame(target, "target")
+        for role, frame, convention in (
+            ("source", source_frame, source),
+            ("target", target_frame, target),
+        ):
+            if frame != "unknown" and convention.handedness != "right_handed":
+                raise ValueError(
+                    f"{role} coordinate handedness must be right_handed"
+                )
+        transform = _basis(source_frame, target_frame)
     else:
         transform = _as_transform(world_transform)
     scaled = transform.copy()
@@ -260,24 +340,67 @@ def _transform_normals(values: np.ndarray | None, matrix: np.ndarray) -> np.ndar
     return np.ascontiguousarray(converted, dtype=values.dtype)
 
 
+def _require_single_spatial_frame(
+    convention: CoordinateConvention, role: str
+) -> None:
+    if convention.camera_axes in {"opencv", "opengl"}:
+        if convention.world_frame not in {
+            "unknown",
+            "arbitrary",
+            "not_applicable",
+        }:
+            raise ValueError(
+                f"{role} combines camera axes with a named world frame"
+            )
+    elif convention.world_frame in {"enu", "ned"} and (
+        convention.camera_axes not in {"unknown", "not_applicable"}
+    ):
+        raise ValueError(
+            f"{role} combines a named world frame with camera axes"
+        )
+
+
+def _spatial_frame(convention: CoordinateConvention, role: str) -> str:
+    _require_single_spatial_frame(convention, role)
+    if convention.crs is not None or convention.reference_frame is not None:
+        raise ValueError(f"{role} reference frame is not representable")
+    if convention.camera_axes in {"opencv", "opengl"}:
+        return convention.camera_axes
+    if convention.world_frame in {"enu", "ned"}:
+        return convention.world_frame
+    if convention.camera_axes in {"unknown", "not_applicable"} and (
+        convention.world_frame in {"unknown", "arbitrary", "not_applicable"}
+    ):
+        return "unknown"
+    raise ValueError(f"{role} coordinate frame is not representable")
+
+
 def _target_frame(target: CoordinateConvention, record_name: str) -> str:
-    if target.crs is not None or target.reference_frame is not None:
-        raise ValueError(f"{record_name} target reference frame is not representable")
-    if target.camera_axes in {"opencv", "opengl"}:
-        result = target.camera_axes
-    elif target.world_frame in {"enu", "ned"}:
-        result = target.world_frame
-    elif target.camera_axes in {"unknown", "not_applicable"} and target.world_frame in {
-        "unknown",
-        "arbitrary",
-        "not_applicable",
-    }:
-        result = "unknown"
-    else:
-        raise ValueError(f"{record_name} target coordinate frame is not representable")
+    result = _spatial_frame(target, f"{record_name} target")
     if result != "unknown" and target.handedness != "right_handed":
         raise ValueError(f"{record_name} target handedness must be right_handed")
     return result
+
+
+def _scalar_length_scale(matrix: np.ndarray) -> float:
+    linear = matrix[:3, :3]
+    gram = linear.T @ linear
+    scale_squared = float(np.trace(gram) / 3.0)
+    if scale_squared <= 0.0 or not math.isfinite(scale_squared):
+        raise ValueError(
+            "point-cloud scalar widths require a similarity world_transform"
+        )
+    normalized_gram = gram / scale_squared
+    if not np.allclose(
+        normalized_gram,
+        np.eye(3),
+        atol=1e-10,
+        rtol=1e-10,
+    ):
+        raise ValueError(
+            "point-cloud scalar widths require a similarity world_transform"
+        )
+    return math.sqrt(scale_squared)
 
 
 def _convert_point_cloud(
@@ -316,6 +439,12 @@ def _convert_point_cloud(
         _optional_array(record, "normals", "has_normals"),
         transform,
     )
+    widths = _optional_array(record, "widths", "has_widths")
+    if widths is not None:
+        widths = np.ascontiguousarray(
+            widths * _scalar_length_scale(transform),
+            dtype=widths.dtype,
+        )
     return _core.point_cloud(
         converted_positions,
         colors=_optional_array(record, "colors", "has_rgb"),
@@ -335,7 +464,7 @@ def _convert_point_cloud(
             "display_opacities",
             "has_display_opacities",
         ),
-        widths=_optional_array(record, "widths", "has_widths"),
+        widths=widths,
         ids=_optional_array(record, "ids", "has_ids"),
         velocities=_transform_vectors(
             _optional_array(record, "velocities", "has_velocities"),
@@ -425,7 +554,7 @@ def _convert_mesh(
         ),
         display_color_space=record.display_color_space,
         orientation=record.orientation,
-        double_sided=record.double_sided,
+        double_sided=(record.double_sided if record.has_double_sided else None),
     )
 
 
@@ -444,29 +573,38 @@ def convert_coordinates(
 
     if not isinstance(target, CoordinateConvention):
         raise TypeError("target must be a CoordinateConvention")
-    actual_source = source or coordinate_convention(record)
+    recorded_source = coordinate_convention(record)
+    actual_source = recorded_source if source is None else source
     if actual_source is None:
         raise TypeError(f"{type(record).__name__} has no coordinate semantics")
     if not isinstance(actual_source, CoordinateConvention):
         raise TypeError("source must be a CoordinateConvention")
-    if actual_source == target and world_transform is None:
-        return record
     type_name = type(record).__name__
+    if type_name not in {"PosedViewSet", "PointCloud", "Mesh"}:
+        raise TypeError(
+            f"coordinate conversion for {type_name} is not qualified; "
+            "use its format-specific adapter"
+        )
+    if source is not None:
+        _validate_source_override(recorded_source, actual_source)
+    if (
+        recorded_source == target
+        and actual_source == recorded_source
+        and world_transform is None
+    ):
+        return record
     if type_name == "PosedViewSet":
         return _convert_posed_views(
             record,
             actual_source,
             target,
-            _as_transform(world_transform),
+            world_transform,
         )
     if type_name == "PointCloud":
         return _convert_point_cloud(record, actual_source, target, world_transform)
     if type_name == "Mesh":
         return _convert_mesh(record, actual_source, target, world_transform)
-    raise TypeError(
-        f"coordinate conversion for {type_name} is not qualified; "
-        "use its format-specific adapter"
-    )
+    raise AssertionError("qualified coordinate converter dispatch is incomplete")
 
 
 __all__ = ["convert_coordinates"]

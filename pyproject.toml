@@ -61,6 +61,7 @@ usd = [
 test = [
     "pytest>=8.3",
     "numpy>=2.0,<2.5",
+    "scipy==1.18.0",
     "gsply>=0.4",
     "pycolmap>=4.1",
     "pillow>=12.3,<12.4",

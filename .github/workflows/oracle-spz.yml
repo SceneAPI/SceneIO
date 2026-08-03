@@ -1,0 +1,48 @@
+name: Official SPZ oracle
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 4 * * 6"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: oracle-spz-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  niantic-spz:
+    name: Niantic SPZ ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        # The official project is compiled from source in this focused lane;
+        # keep it separate from the NumPy-only normal CI installation.
+        os: [ubuntu-latest]
+    env:
+      SCENEIO_REQUIRE_NIANTIC_SPZ: "1"
+      SCENEIO_NIANTIC_SPZ_REVISION: 5bf2945de1a003cee07133b1e495fe9c6ffdc7e7
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v7
+      - name: Install official SPZ build libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes zlib1g-dev libzstd-dev
+      - name: Build SceneIO and install the pinned official oracle
+        run: |
+          uv venv --managed-python --python 3.12 --seed
+          uv pip install -e ".[dev,test]"
+          uv pip install \
+            "spz @ git+https://github.com/nianticlabs/spz.git@${SCENEIO_NIANTIC_SPZ_REVISION}"
+      - name: Run official SPZ read/write qualification
+        run: |
+          .venv/bin/python -m pytest -q \
+            tests/codecs/test_spz_niantic_oracle.py \
+            tests/codecs/test_spz.py
+      - name: Lint the focused oracle module
+        run: .venv/bin/python -m ruff check tests/codecs/test_spz_niantic_oracle.py

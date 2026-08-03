@@ -1,0 +1,117 @@
+schema_version = 1
+contract_test = "tests/codecs/test_splat_transform_oracle.py"
+
+# Roles are deliberately narrow. A project is not credited as a wire-format
+# oracle unless SceneIO executes it against that format or retains a pinned
+# output vector from it.
+[[oracles]]
+id = "playcanvas_splat_transform"
+project = "PlayCanvas splat-transform"
+repository = "https://github.com/playcanvas/splat-transform"
+version = "3.1.6"
+revision = "04b6d15b3c895136d2deba57fdb06df1d4ff3b91"
+captured_reference_revision = "6b07ba05d731eac1163ad4ff1b14e47e5e3f162c"
+distribution = "@playcanvas/splat-transform@3.1.6"
+license = "MIT"
+execution = "cross_platform_ci"
+roles = ["wire_decode", "wire_encode", "attribute_semantics"]
+read_formats = ["gaussian_ply", "compressed_ply", "sog", "ksplat", "spz", "splat"]
+write_formats = ["compressed_ply", "sog", "spz"]
+
+[[oracles]]
+id = "gsply"
+project = "gsply"
+repository = "https://github.com/OpsiClear/gsply"
+version = "0.4.6"
+revision = "363885c707d445ce5d925024e2ab536fc72c1b9d"
+distribution = "gsply==0.4.6"
+license = "MIT"
+execution = "normal_test_suite"
+roles = ["wire_decode", "wire_encode", "attribute_semantics"]
+read_formats = ["gaussian_ply", "spz"]
+write_formats = ["gaussian_ply", "spz"]
+
+[[oracles]]
+id = "gaussian_splats_3d"
+project = "GaussianSplats3D"
+repository = "https://github.com/mkkellogg/GaussianSplats3D"
+version = "0.4.7"
+revision = "eb2fc4593e3ea5e75388296fcdde2459542d1290"
+distribution = "pinned generated vectors"
+license = "MIT"
+execution = "embedded_vectors"
+roles = ["wire_decode", "wire_encode"]
+read_formats = ["ksplat"]
+write_formats = ["ksplat"]
+
+[[oracles]]
+id = "gsplat"
+project = "gsplat"
+repository = "https://github.com/nerfstudio-project/gsplat"
+version = "1.5.3"
+revision = "937e29912570c372bed6747a5c9bf85fed877bae"
+distribution = "reference only; not installed or bundled"
+license = "Apache-2.0"
+execution = "reference_only"
+roles = ["covariance_semantics", "spherical_harmonic_semantics", "render_semantics"]
+read_formats = []
+write_formats = []
+
+[[oracles]]
+id = "brush"
+project = "Brush"
+repository = "https://github.com/ArthurBrussee/brush"
+version = "0.3.0"
+revision = "3edecbb2fe79d3e2c87eeab85b15e0b1dd10d486"
+distribution = "reference only; not installed or bundled"
+license = "Apache-2.0"
+execution = "reference_only"
+roles = ["ply_consumer", "render_semantics"]
+read_formats = ["gaussian_ply", "compressed_ply"]
+write_formats = []
+
+[[oracles]]
+id = "niantic_spz"
+project = "Niantic SPZ"
+repository = "https://github.com/nianticlabs/spz"
+version = "3.0.0"
+revision = "5bf2945de1a003cee07133b1e495fe9c6ffdc7e7"
+distribution = "spz @ git+https://github.com/nianticlabs/spz.git@5bf2945de1a003cee07133b1e495fe9c6ffdc7e7"
+license = "MIT"
+execution = "focused_hosted_ci"
+roles = ["wire_decode", "wire_encode", "attribute_semantics", "coordinate_profile"]
+read_formats = ["spz"]
+write_formats = ["spz"]
+test_suite = "tests/codecs/test_spz_niantic_oracle.py"
+executable_versions = ["v2", "v3", "v4"]
+read_versions = ["v2", "v3", "v4"]
+write_versions = ["v3", "v4"]
+excluded_versions = ["v1"]
+
+[[oracles]]
+id = "openusd"
+project = "OpenUSD"
+repository = "https://github.com/PixarAnimationStudios/OpenUSD"
+version = "26.08"
+revision = "ee47c679abde5b467a7b6a41f3b2285564a4222e"
+distribution = "usd-core==26.8"
+source_revision_role = "v26.08 release source provenance; the executed wheel exposes distribution version 26.8, not a Git revision"
+license = "TOST-1.0"
+execution = "focused_hosted_ci"
+roles = ["usd_stage", "gaussian_schema", "attribute_semantics"]
+read_formats = ["usd", "usdz"]
+write_formats = ["usd", "usdz"]
+test_suite = "tests/codecs/test_openusd_gaussian_oracle.py"
+profiles = ["USDA", "USDZ"]
+
+[requirements]
+permitted_licenses = ["MIT", "Apache-2.0", "TOST-1.0"]
+legacy_wire_formats = ["gaussian_ply", "compressed_ply", "sog", "ksplat", "spz", "splat"]
+executable_full_family_oracle = "playcanvas_splat_transform"
+second_implementation_formats = ["gaussian_ply", "spz", "ksplat"]
+reference_only_projects_must_not_be_claimed_as_executable = ["gsplat", "brush"]
+official_oracle_ids = ["niantic_spz", "openusd"]
+official_oracle_test_suites = [
+  "tests/codecs/test_spz_niantic_oracle.py",
+  "tests/codecs/test_openusd_gaussian_oracle.py",
+]

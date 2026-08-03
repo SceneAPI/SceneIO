@@ -15,6 +15,7 @@ input, since the dequantized values are identical between v3 and v4).
 from __future__ import annotations
 
 import contextlib
+import gzip
 import os
 import struct
 import tempfile
@@ -119,6 +120,23 @@ def test_ngsp_v4_malformed_rejected():
     header = struct.pack("<IIIBBBBI", 0x5053474E, 4, 8, 3, 12, 0, 6, 32) + b"\x00" * 12
     with pytest.raises(ValueError, match="TOC"):
         _core.read_spz(header)
+
+
+def test_ngsp_v4_rejects_huge_decoded_payload_before_allocating():
+    # A tiny header can otherwise request multi-gigabyte section buffers through
+    # the uint32 point count.  The codec-local decoded-byte bound must fire
+    # before the TOC or any section allocation is touched.
+    header = struct.pack(
+        "<IIIBBBBI", 0x5053474E, 4, 0xFFFFFFFF, 3, 12, 0, 6, 32
+    ) + b"\x00" * 12
+    with pytest.raises(ValueError, match="decoded byte limit"):
+        _core.read_spz(header)
+
+
+def test_legacy_gzip_rejects_huge_declared_payload_before_inflating():
+    header = struct.pack("<IIIBBBB", 0x5053474E, 3, 0xFFFFFFFF, 3, 12, 0, 0)
+    with pytest.raises(ValueError, match="decoded byte limit"):
+        _core.read_spz(gzip.compress(header, mtime=0))
 
 
 def _sample_arrays(seed):
@@ -301,3 +319,80 @@ def test_v4_and_v3_decode_identically():
         rtol=0.0,
         atol=0.0,
     )
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "message"),
+    [
+        ("means", np.nan, "must be finite"),
+        ("scales", np.inf, "must be finite"),
+        ("opacities", np.nan, "must be finite"),
+        ("sh0", -np.inf, "must be finite"),
+        ("shN", np.nan, "must be finite"),
+    ],
+)
+def test_writer_refuses_nonfinite_values(field, value, message):
+    arrays = _sample_arrays(23)
+    arrays[field].flat[0] = value
+
+    with pytest.raises(ValueError, match=message):
+        _core.write_spz(_our_cloud(arrays))
+
+
+def test_writer_refuses_zero_quaternion():
+    arrays = _sample_arrays(29)
+    arrays["quats"][0] = 0
+
+    with pytest.raises(ValueError, match="non-zero finite norm"):
+        _core.write_spz(_our_cloud(arrays))
+
+
+def test_large_finite_quaternion_normalizes_without_overflow():
+    arrays = _sample_arrays(30)
+    maximum = np.finfo(np.float32).max
+    arrays["quats"][0] = [maximum, maximum, 0, 0]
+
+    back = _core.read_spz(_core.write_spz(_our_cloud(arrays)))
+    expected = np.array([np.sqrt(0.5), np.sqrt(0.5), 0, 0])
+    assert abs(float(np.dot(back.quaternions[0], expected))) > 0.999
+
+
+def test_readers_reject_trailing_container_bytes():
+    cloud = _our_cloud(_sample_arrays(31))
+    legacy = bytes(_core.write_spz(cloud, version=3))
+    legacy_payload = gzip.decompress(legacy) + b"\x00"
+    with pytest.raises(ValueError, match="trailing bytes"):
+        _core.read_spz(gzip.compress(legacy_payload, mtime=0))
+
+    modern = bytes(_core.write_spz(cloud, version=4))
+    with pytest.raises(ValueError, match="trailing bytes"):
+        _core.read_spz(modern + b"\x00")
+
+
+def test_legacy_gzip_roundtrip_with_payload_larger_than_inflate_chunk():
+    rng = np.random.default_rng(73)
+    n = 4096
+    cloud = _core.gaussian_cloud(
+        rng.standard_normal((n, 3)).astype(np.float32),
+        rng.standard_normal((n, 3)).astype(np.float32),
+        rng.standard_normal((n, 4)).astype(np.float32),
+        rng.standard_normal(n).astype(np.float32),
+        rng.standard_normal((n, 3)).astype(np.float32),
+        rng.standard_normal((n, 45)).astype(np.float32),
+    )
+    blob = bytes(_core.write_spz(cloud, version=3))
+    assert len(gzip.decompress(blob)) > 64 * 1024
+    back = _core.read_spz(blob)
+    assert back.num_gaussians == n
+
+
+def test_legacy_gzip_crc_trailer_is_checked():
+    cloud = _our_cloud(_sample_arrays(74))
+    blob = bytearray(_core.write_spz(cloud, version=3))
+    blob[-8] ^= 1
+    with pytest.raises(ValueError, match="CRC32"):
+        _core.read_spz(bytes(blob))
+    blob = bytearray(_core.write_spz(cloud, version=3))
+    blob[-4] ^= 1
+    with pytest.raises(ValueError, match="size trailer"):
+        _core.read_spz(bytes(blob))

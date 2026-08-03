@@ -110,6 +110,16 @@ def _ksplat_case(cloud):
     )
 
 
+def _splat_case(cloud):
+    return _core.gaussian_cloud(
+        np.asarray(cloud.means),
+        np.asarray(cloud.scales),
+        np.asarray(cloud.quaternions),
+        np.asarray(cloud.opacities),
+        np.asarray(cloud.sh_dc),
+    )
+
+
 def test_point_ranges_equal_full_read_slices(tmp_path):
     rng = np.random.default_rng(502)
     xyz = _point_cloud_case(rng)
@@ -125,7 +135,7 @@ def test_point_ranges_equal_full_read_slices(tmp_path):
         ("compressed_ply", bytes(_core.write_compressed_ply(gaussians))),
         ("sog", bytes(_core.write_sog(gaussians))),
         ("ksplat", bytes(_core.write_ksplat(_ksplat_case(gaussians)))),
-        ("splat", bytes(_core.write_splat(gaussians))),
+        ("splat", bytes(_core.write_splat(_splat_case(gaussians)))),
     )
     for index, (format_id, encoded) in enumerate(cases):
         path = tmp_path / f"points-{index}.data"
@@ -328,7 +338,7 @@ def test_partial_paths_reject_truncated_selected_payloads(tmp_path):
         ),
         (
             "splat",
-            bytes(_core.write_splat(gaussians)) + b"\x00",
+            bytes(_core.write_splat(_splat_case(gaussians))) + b"\x00",
             {"points": (0, 1)},
         ),
     )
@@ -370,8 +380,27 @@ def test_large_partial_reads_do_not_allocate_payload_sized_python_objects(
     assert peak < 1024 * 1024
 
     splat = tmp_path / "large.splat"
+    valid_splat = struct.pack(
+        "<6f8B",
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        1.0,
+        1.0,
+        128,
+        128,
+        128,
+        255,
+        255,
+        128,
+        128,
+        128,
+    )
     with splat.open("wb") as stream:
         stream.truncate(3_200_000 * 32)
+        stream.seek(1_000_000 * 32)
+        stream.write(valid_splat * 8)
     cloud, peak = _traced_peak(
         lambda: sceneio.read_partial(
             splat, format="splat", points=(1_000_000, 1_000_008)

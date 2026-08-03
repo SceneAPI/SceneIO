@@ -230,8 +230,8 @@ read → compare to oracle; and byte-mutated real files must raise, not crash).
 |---|---|---|
 | COLMAP `.bin`/`.txt`/`.db` + camera models | **pycolmap** | BSD |
 | PLY, PCD | **open3d** (MIT) + independent NumPy/stdlib parser | MIT / in-tree |
-| 3DGS `.ply` | **gsply** + gsplat/nerfstudio loader cross-check | MIT / Apache |
-| `.splat` / `.spz` / SuperSplat | reference py/JS loaders → **captured test vectors** | MIT |
+| 3DGS `.ply` | executable **gsply 0.4.6** + executable **SplatTransform 3.1.6**; gsplat/Brush are semantic references only | MIT / Apache |
+| `.splat` / `.spz` / SuperSplat / SOG / KSplat | executable **SplatTransform 3.1.6** cross-read/write where supported + gsply/official vectors + independent parsers | MIT |
 | HDF5, hloc layout | **h5py** (BSD) + **hloc** (Apache) | BSD/Apache |
 | LAS / LAZ | **laspy** + `lazrs` | BSD/Apache |
 | npy / npz | **numpy** | BSD |

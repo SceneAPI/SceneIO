@@ -15,13 +15,11 @@
 // SH scaling, NOT spz's COLOR_SCALE=0.15). Activation math mirrors spz.cpp: the
 // same EPS alpha clamp before logit and the degenerate-quat -> identity guard.
 //
-// Deviations from the reference writer, both intentional: we round with
+// Deviations from the reference writer: we round with
 // nearbyintf (the reference truncates via clip+astype(uint8), a <=1 u8-LSB
 // difference) so read->write->read is stable; and we do NOT importance-sort on
-// write (row order is non-semantic — viewers depth-sort at render time). LOSSY:
-// SH bands above DC (sh_degree>0) cannot be represented and are dropped with
-// this documented note (both reference writers accept degree-3 clouds), rather
-// than rejected — down-converting trained models for web viewers is the point.
+// write (row order is non-semantic — viewers depth-sort at render time). The
+// writer refuses SH bands above DC because this format cannot represent them.
 // The pure-C++ decode/encode runs with the GIL released (flo.cpp precedent).
 #include <algorithm>
 #include <cmath>
@@ -35,7 +33,6 @@ namespace {
 constexpr size_t kRecordSize = 32;
 constexpr float SH_C0 = 0.28209479177387814f;  // 1/(2*sqrt(pi)); antimatter15/gsplat DC scaling
 constexpr float EPS = 1e-6f;                    // alpha clamp before logit (spz.cpp)
-constexpr float kScaleFloor = 1e-30f;           // guard scale<=0 on read: log(1e-30) ~ -69
 
 GaussianCloud read_splat_impl(nb::handle source, bool partial, size_t start,
                               size_t stop) {
@@ -70,8 +67,12 @@ GaussianCloud read_splat_impl(nb::handle source, bool partial, size_t start,
             float f[6];
             std::memcpy(f, rec, 24);  // pos[3] + LINEAR scale[3], little-endian
             for (int j = 0; j < 3; j++) {
+                if (!std::isfinite(f[j]) || !std::isfinite(f[3 + j]))
+                    throw std::invalid_argument("splat: non-finite position or scale");
+                if (!(f[3 + j] > 0.0f))
+                    throw std::invalid_argument("splat: linear scale must be positive");
                 g.means[i * 3 + j] = f[j];
-                g.scales[i * 3 + j] = std::log(std::max(f[3 + j], kScaleFloor));  // LINEAR -> LOG
+                g.scales[i * 3 + j] = std::log(f[3 + j]);  // LINEAR -> LOG
                 g.sh_dc[i * 3 + j] = (static_cast<float>(rec[24 + j]) / 255.0f - 0.5f) / SH_C0;
             }
             float a = static_cast<float>(rec[27]) / 255.0f;
@@ -97,25 +98,40 @@ GaussianCloud read_splat_points(nb::handle source, size_t start, size_t stop) {
 
 nb::bytes write_splat(const GaussianCloud &g) {
     require_legacy_gaussian_conventions(g, "splat writer");
+    require_finite_gaussian_values(g, "splat writer");
+    if (g.sh_degree != 0)
+        throw std::invalid_argument(
+            "splat writer: .splat can represent only SH degree 0; "
+            "convert explicitly before writing");
     std::string out;
     {
         nb::gil_scoped_release rel;  // pure-C++ encode; reads only the record's C++ vectors
         out.reserve(g.n * kRecordSize);
         auto put_f32 = [&out](float v) { out.append(reinterpret_cast<const char *>(&v), 4); };  // LE host
-        auto clampb = [](float f) {  // fmin/fmax return the non-NaN operand -> NaN maps to 0, so the float->uint8 cast is always defined (a NaN sh_dc/opacity/quat from a down-converted PLY would otherwise be UB)
+        auto clampb = [](float f) {
             return static_cast<char>(static_cast<uint8_t>(std::fmin(std::fmax(f, 0.0f), 255.0f)));
         };
         for (size_t i = 0; i < g.n; i++) {
             for (int j = 0; j < 3; j++) put_f32(g.means[i * 3 + j]);
-            for (int j = 0; j < 3; j++) put_f32(std::exp(g.scales[i * 3 + j]));  // LOG -> LINEAR
+            for (int j = 0; j < 3; j++) {
+                const float scale = std::exp(g.scales[i * 3 + j]);
+                if (!(scale > 0.0f) || !std::isfinite(scale))
+                    throw std::invalid_argument(
+                        "splat writer: linearized scales must be positive "
+                        "finite float32 values");
+                put_f32(scale);  // LOG -> LINEAR
+            }
             for (int j = 0; j < 3; j++)
                 out.push_back(clampb(std::nearbyintf((0.5f + SH_C0 * g.sh_dc[i * 3 + j]) * 255.0f)));
             out.push_back(clampb(std::nearbyintf(255.0f / (1.0f + std::exp(-g.opacity[i])))));  // sigmoid alpha
             float q[4] = {g.quats[i * 4], g.quats[i * 4 + 1], g.quats[i * 4 + 2], g.quats[i * 4 + 3]};
-            float norm = std::sqrt(q[0] * q[0] + q[1] * q[1] + q[2] * q[2] + q[3] * q[3]);
-            if (!(norm > 0.0f) || !std::isfinite(norm))  // 0- or non-finite-norm (e.g. an inf quat -> inf/inf=NaN) -> identity
-                { q[0] = 1.0f; q[1] = q[2] = q[3] = 0.0f; norm = 1.0f; }
-            for (int k = 0; k < 4; k++) out.push_back(clampb(std::nearbyintf(q[k] / norm * 128.0f + 128.0f)));
+            double norm_squared = 0.0;
+            for (float value : q)
+                norm_squared += static_cast<double>(value) * value;
+            const double norm = std::sqrt(norm_squared);
+            for (int k = 0; k < 4; k++)
+                out.push_back(clampb(std::nearbyintf(static_cast<float>(
+                    static_cast<double>(q[k]) / norm * 128.0 + 128.0))));
         }
     }
     return emit_bytes(out.data(), out.size());
@@ -132,6 +148,6 @@ void register_splat(nb::module_ &m) {
           "Decode a non-empty half-open .splat point range without allocating "
           "the full Gaussian cloud.");
     m.def("write_splat", &write_splat, "cloud"_a,
-          "Encode a GaussianCloud to antimatter15 .splat bytes. Lossy: color/alpha/rotation "
-          "quantize to 8 bits and SH bands above the DC term are discarded; input order is kept.");
+          "Encode a degree-0 GaussianCloud to antimatter15 .splat bytes. Lossy: "
+          "color/alpha/rotation quantize to 8 bits; input order is kept.");
 }
