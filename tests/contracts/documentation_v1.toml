@@ -17,6 +17,7 @@ readme_entry_points = [
     "docs/repository_organization_plan.md",
     "docs/next_stage_implementation_checklist.md",
     "docs/format_gap_implementation_plan.md",
+    "docs/remaining_3dcv_profile_checklist.md",
     "docs/plans/completed/README.md",
 ]
 

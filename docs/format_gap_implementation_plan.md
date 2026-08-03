@@ -59,6 +59,12 @@ specified in
 [`repository_organization_plan.md`](repository_organization_plan.md). The
 reviewed, commit-sized R6 closure record is
 [`next_stage_implementation_checklist.md`](next_stage_implementation_checklist.md).
+The reviewed finite follow-on for the remaining 3D-CV representation and
+bounded-profile work is
+[`remaining_3dcv_profile_checklist.md`](remaining_3dcv_profile_checklist.md);
+it narrows the active queue to six implementation units plus one combined
+qualification gate and supplies the stopping rule that older aspirational rows
+lack.
 
 The R6 stable-ABI correction supersedes earlier local wheel-tag evidence:
 those artifacts remain valid for Python 3.12 functionality and package

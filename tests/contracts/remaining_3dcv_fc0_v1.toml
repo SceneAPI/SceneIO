@@ -1,0 +1,247 @@
+schema_version = 1
+contract_date = "2026-08-03"
+status = "locally_qualified"
+purpose = "Freeze the stable SceneIO 0.2 boundary and record provider feasibility before the finite 3D-CV profile expansion."
+
+builtin_count = 73
+registry_policy = "No format id is reserved. Add euroc_dataset only with working read, write, inspect, fixture, capability, and wheel-smoke coverage."
+public_api_policy = "Stable and additive: provisional names remain absent until their first exercising codec or projection is ready."
+global_partial_policy = "Keep the existing exactly-one-selector read_partial API; compound dataset, scan, raster, and grid selections use typed format-specific APIs."
+public_io_error_type = "sceneio.FormatError"
+record_error_types = ["sceneio.ContractViolation", "builtins.ValueError"]
+read_partial_signature = "(path, *, window=None, points=None, faces=None, mesh_id=None, primitive_id=None, states=None, frames=None, image_id=None, pair=None, tensors=None, slices=None, format: 'str | None' = None)"
+read_scene_signature = "(path, *, time: 'float | None' = None, prims=None, purposes=('default', 'render', 'proxy'), variants=None, load_payloads: 'bool' = True)"
+provisional_format_ids = ["euroc_dataset"]
+provisional_public_symbols = [
+  "ImuCalibration",
+  "ImuSequence",
+  "InstanceMap",
+  "LabelTaxonomy",
+  "PanopticMap",
+  "PointScan",
+  "RasterCollection",
+  "RasterLevel",
+  "RasterSeries",
+  "ScanSet",
+  "SceneAnimation",
+  "SemanticMap",
+  "SparseGrid",
+  "SparseVolumeSet",
+  "VisualInertialDataset",
+]
+
+[[provisional_formats]]
+id = "euroc_dataset"
+family_module = "sceneio.io._registry.families.datasets"
+container_kind = "multi_file"
+datatype = "visual_inertial_dataset"
+directory_probe_required = true
+required_globs = [
+  "mav0/cam*/data.csv",
+  "mav0/cam*/sensor.yaml",
+  "mav0/imu*/data.csv",
+  "mav0/imu*/sensor.yaml",
+]
+detection_rule = "Require at least one complete camera stream and one complete IMU stream under mav0; do not detect from the generic mav0 directory name alone."
+registration_gate = "Register only with working read, write, inspect, fixture routing, capabilities, and installed-wheel smoke."
+
+[[design_decisions]]
+id = "visual_inertial"
+outcome = "approved_for_internal_prototype"
+public_symbols = ["ImuCalibration", "ImuSequence", "VisualInertialDataset"]
+existing_symbols = ["CameraRig", "ImageSequence", "StateTrajectory"]
+required_contracts = [
+  "Keep camera calibration in CameraRig and ground-truth states in StateTrajectory.",
+  "Use separate raw IMU calibration and observation records with nanosecond timestamps and explicit units.",
+  "Use reference_time_ns = sensor_time_ns + time_offset_ns and never align clocks implicitly.",
+]
+evidence = [
+  "src/cpp/records/camera_rig.hpp",
+  "src/cpp/records/state_trajectory.hpp",
+  "docs/remaining_3dcv_profile_checklist.md",
+]
+
+[[design_decisions]]
+id = "image_acquisition_timing"
+outcome = "approved_for_internal_prototype"
+public_symbols = []
+existing_symbols = ["ImageSequence"]
+required_contracts = [
+  "Extend ImageSequence compatibly with keyword-only exposure_durations_ns, readout_step_durations_ns, readout_directions, and a timestamp reference.",
+  "Empty arrays mean absent metadata; zero remains a represented duration.",
+  "Define the acquisition instant as t + d * i * r with the timestamp reference stated explicitly.",
+]
+evidence = [
+  "src/cpp/records/image_sequence.hpp",
+  "tests/records/test_image_sequence_record.py",
+  "docs/remaining_3dcv_profile_checklist.md",
+]
+
+[[design_decisions]]
+id = "dense_label_maps"
+outcome = "approved_for_internal_prototype"
+public_symbols = ["LabelTaxonomy", "SemanticMap", "InstanceMap", "PanopticMap"]
+existing_symbols = ["Mask", "InstanceSet"]
+required_contracts = [
+  "Semantic ids use int32; instance ids use int64.",
+  "Mask remains a boolean participation or validity record and never carries integer labels.",
+  "PanopticMap composes semantic and instance records instead of assuming a packed divisor encoding.",
+]
+evidence = [
+  "src/sceneio/data/dense.py",
+  "src/cpp/records/instance_set.hpp",
+  "docs/remaining_3dcv_profile_checklist.md",
+]
+
+[[design_decisions]]
+id = "e57_scan_sets"
+outcome = "approved_for_internal_prototype"
+public_symbols = ["PointScan", "ScanSet"]
+existing_symbols = ["PointCloud"]
+required_contracts = [
+  "PointScan preserves stored rows, raw uint8 invalid states, optional int64 row and column indices, and one authoritative pose.",
+  "The valid_point_cloud projection retains the current valid-row PointCloud behavior.",
+  "Compound scan and stored-row selection stays on a typed E57 API.",
+]
+evidence = [
+  "src/cpp/records/point_cloud.hpp",
+  "src/sceneio/io/_e57.py",
+  "tests/codecs/test_e57.py::test_e57_rejects_multiple_scans",
+]
+
+[[design_decisions]]
+id = "tiff_raster_collections"
+outcome = "approved_for_internal_prototype"
+public_symbols = ["RasterLevel", "RasterSeries", "RasterCollection"]
+existing_symbols = ["Image", "Mask", "TensorDict"]
+required_contracts = [
+  "Use format-neutral records and preserve current simple TIFF return types.",
+  "Only independently unambiguous CV raster or stack series enter the bounded profile.",
+  "Compound series, level, page, and window selection stays on a typed TIFF API.",
+]
+evidence = [
+  "src/sceneio/io/_tiff.py",
+  "tests/codecs/test_tiff.py::test_tifffile_provider_pyramid_surface_and_sceneio_boundary",
+  "docs/remaining_3dcv_profile_checklist.md",
+]
+
+[[design_decisions]]
+id = "openvdb_multi_grid"
+outcome = "provider_limited"
+public_symbols = ["SparseGrid", "SparseVolumeSet"]
+existing_symbols = ["TensorDict", "VolumeAsset"]
+required_contracts = [
+  "Retain the one-grid identity-transform TensorDict read and write path.",
+  "Consider multi-grid metadata, read, and selection only for tree and value types demonstrated by TinyVDB.",
+  "Do not claim multi-grid or transformed writes while the provider cannot add grids or set transforms.",
+]
+evidence = [
+  "src/sceneio/io/_openvdb.py",
+  "tests/codecs/test_openvdb.py::test_tinyvdb_provider_authoring_surface_is_qualified",
+  "docs/remaining_3dcv_profile_checklist.md",
+]
+
+[[design_decisions]]
+id = "usd_authored_time_samples"
+outcome = "provider_limited"
+public_symbols = ["SceneAnimation"]
+existing_symbols = ["SceneGraph"]
+required_contracts = [
+  "Reuse read_scene(path, time=...) and SceneGraph.selected_time.",
+  "Keep selected-time reads refused until typed sample values and interpolation are oracle-qualified.",
+  "Export SceneAnimation only after authored transform and visibility samples can be read and written deterministically.",
+]
+evidence = [
+  "src/sceneio/io/_usd/provider.py",
+  "tests/test_usd_provider_qualification.py::test_tinyusdz_authored_usda_samples_are_enumerable_but_untyped",
+  "tests/codecs/test_usd_scene.py::test_read_scene_refuses_time_sample_evaluation_until_provider_support",
+]
+
+[[providers]]
+id = "pye57"
+extra = "e57"
+requirement = "pye57>=0.4.18,<0.5"
+observed_version = "0.4.19"
+outcome = "broader_container_operations_proven"
+formats = ["e57"]
+provider_proven_operations = ["two_scan_read_write", "distinct_scan_pose_preservation"]
+sceneio_current_refusals = ["multiple_scans", "organized_row_column"]
+evidence = ["tests/codecs/test_e57.py::test_e57_rejects_multiple_scans"]
+
+[[providers]]
+id = "tifffile"
+extra = "tiff"
+requirement = "tifffile>=2025.5"
+observed_version = "2026.7.14"
+outcome = "broader_container_operations_proven"
+formats = ["tiff"]
+provider_proven_operations = ["multiple_series_read_write", "subifd_pyramid_read_write"]
+sceneio_current_refusals = ["multiple_series", "pyramids"]
+evidence = [
+  "tests/codecs/test_tiff.py::test_tiff_rejects_multiple_series_without_decoding",
+  "tests/codecs/test_tiff.py::test_tifffile_provider_pyramid_surface_and_sceneio_boundary",
+]
+
+[[providers]]
+id = "tinyvdb"
+extra = "openvdb"
+requirement = "tinyvdb>=0.9,<1"
+observed_version = "0.9.0"
+outcome = "authoring_surface_limited"
+formats = ["openvdb"]
+provider_proven_operations = ["enumerate_existing_grids", "replace_existing_grid"]
+sceneio_current_refusals = ["multiple_grids", "transformed_grids", "vector_grids"]
+provider_limits = ["no_add_grid", "read_only_transform"]
+evidence = [
+  "tests/codecs/test_openvdb.py::test_tinyvdb_provider_authoring_surface_is_qualified",
+  "tests/codecs/test_openvdb.py::test_openvdb_sceneio_write_is_exact_for_upstream_reader",
+]
+
+[[providers]]
+id = "tinyusdz"
+extra = "usd"
+requirement = "tinyusdz>=0.9.4,<1"
+observed_version = "0.9.4"
+outcome = "authored_sample_values_unavailable"
+formats = ["usd", "usdz"]
+provider_proven_operations = ["enumerate_authored_sample_times"]
+sceneio_current_refusals = ["selected_time", "animations", "composition"]
+provider_limits = ["usda_sample_values_untyped", "qualified_usdc_sample_values_untyped"]
+evidence = [
+  "tests/test_usd_provider_qualification.py::test_aousd_crate_10_timesamples_exposes_provider_boundary",
+  "tests/test_usd_provider_qualification.py::test_tinyusdz_authored_usda_samples_are_enumerable_but_untyped",
+]
+
+[[legacy_projections]]
+formats = ["e57"]
+return_types = ["sceneio.PointCloud"]
+boundary = "One Cartesian scan; invalid rows are filtered; multiple and organized scans remain refused."
+evidence = [
+  "tests/codecs/test_e57.py::test_sceneio_reads_direct_upstream_e57_exactly",
+  "tests/codecs/test_e57.py::test_e57_invalid_cartesian_points_are_explicitly_filtered",
+]
+
+[[legacy_projections]]
+formats = ["tiff"]
+return_types = ["sceneio.Image", "sceneio.data.Mask", "sceneio.TensorDict"]
+boundary = "One unambiguous series and one level; multiple series and pyramids remain refused."
+evidence = [
+  "tests/codecs/test_tiff.py::test_sceneio_tiff_write_is_exact_for_independent_oracle",
+  "tests/codecs/test_tiff.py::test_tiff_boolean_mask_roundtrip_and_oracle",
+  "tests/codecs/test_tiff.py::test_tiff_grayscale_stack_roundtrip_and_oracle",
+]
+
+[[legacy_projections]]
+formats = ["openvdb"]
+return_types = ["sceneio.TensorDict"]
+boundary = "One float32 scalar Tree_float_5_4_3 grid with zero background and identity transform."
+evidence = ["tests/codecs/test_openvdb.py::test_openvdb_registry_roundtrip_is_bit_exact"]
+
+[[legacy_projections]]
+formats = ["usd", "usdz"]
+return_types = ["sceneio.SceneGraph"]
+boundary = "Directly authored static scene profile; composition and selected-time evaluation remain refused."
+evidence = [
+  "tests/codecs/test_usd_scene.py::test_read_scene_refuses_time_sample_evaluation_until_provider_support",
+  "tests/test_usd_provider_qualification.py::test_tinyusdz_load_is_raw_not_evaluated_composition",
+]

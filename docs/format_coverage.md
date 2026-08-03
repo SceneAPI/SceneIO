@@ -29,6 +29,23 @@ classifies all 91 public data representations by structural normalization,
 scale source/unit, coordinate source, supported conversion, refusal behavior,
 and executable evidence.
 
+Public data provenance is a separate checked contract. The
+[`public fixture corpus`](public_fixture_corpus.md) gives every one of the 73
+built-ins exactly one primary route: 13 formats use unchanged content-hashed
+upstream artifacts that were read locally, while 60 use deterministic
+oracle-derived files from CC0/CC-BY seeds. Large real bundles and broader
+profiles are optional validation data; normal CI remains offline.
+
+The finite follow-on program completed its local FC0 decision freeze on
+2026-08-03. The checked
+[`remaining_3dcv_fc0_v1.toml`](../tests/contracts/remaining_3dcv_fc0_v1.toml)
+contract pins the stable `read_partial`/`read_scene` signatures, the existing
+simple TIFF/E57/OpenVDB/USD projections, 15 non-public proposed record names,
+and one non-registered `euroc_dataset` id. Provider feasibility and exact local
+validation are recorded in the
+[`finite closure checklist`](remaining_3dcv_profile_checklist.md#63-fc0-local-qualification-result).
+This changes no current capability: the registry remains 73 formats.
+
 The 2026-08-02 closure commit `5387350` passes the full hosted compiler run
 `30738228920` plus every dedicated Linux, Windows, macOS, and GCC 10 job in CI
 run `30738228914`. That CI run's full suite and 72-row smoke also pass; its
@@ -1348,6 +1365,10 @@ requirement for COLMAP ecosystem closure.
   Arrow nested/string/null schemas, multi-grid/vector/transformed OpenVDB,
   and composed/animated USD scenes, general shader graphs, multiple semantic
   values, and broader volume/instance schemas.
+- The finite 3D-CV subset selected from those broader semantics, including its
+  compatibility boundaries, oracle requirements, commit order, and stopping
+  rule, is tracked in
+  [`remaining_3dcv_profile_checklist.md`](remaining_3dcv_profile_checklist.md).
 - Policy-gated: JPEG-XL and Draco-compressed glTF. AVIF is now accepted under
   the Alliance for Open Media no-charge, royalty-free grant and the
   permissive Pillow/libavif/libaom/dav1d stack.

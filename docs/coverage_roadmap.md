@@ -10,6 +10,12 @@
 > [`repository_organization_plan.md`](repository_organization_plan.md), with
 > its reviewed execution checklist in
 > [`next_stage_implementation_checklist.md`](next_stage_implementation_checklist.md).
+> The remaining 3D-CV representation/profile work has a finite reviewed scope
+> and completion matrix in
+> [`remaining_3dcv_profile_checklist.md`](remaining_3dcv_profile_checklist.md).
+> Its FC0 compatibility and provider-feasibility freeze is locally complete;
+> the live registry remains at 73 and FC1 visual-inertial records/I/O is the
+> first unimplemented slice.
 > The bounded standards-based USD expansion is specified separately in
 > [`usd_3d_cv_implementation_plan.md`](usd_3d_cv_implementation_plan.md).
 > Coordinate-system closure is implemented independently of the remaining
@@ -23,6 +29,10 @@
 > contract covers all 91 public representation classes with explicit
 > normalization, scaling, unit, coordinate-source, conversion, and refusal
 > rules. It changes no decoded values and keeps unknown/arbitrary scale honest.
+> Licensed fixture sourcing is tracked separately in
+> [`public_fixture_corpus.md`](public_fixture_corpus.md). Its machine contract
+> maps all 73 built-ins to 13 direct upstream formats and 60 deterministic
+> oracle-derived formats without introducing network-dependent CI.
 > The 2026-08-02 cross-platform correction changes no roadmap scope or format
 > capability. Local MSVC and clean Linux focused checks pass; the exact local
 > suite passes 4,372 tests with six documented skips after three

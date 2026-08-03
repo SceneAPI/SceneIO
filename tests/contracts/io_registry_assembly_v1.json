@@ -472,8 +472,8 @@
     "last": "tests/test_points_binary.py::test_bad_magic_rejected"
   },
   "pytest_candidate_collection": {
-    "count": 4641,
-    "sorted_normalized_node_ids_sha256": "94e384d21f05a283978d0c839bef5fe71c8544c117d6a23406c2c4f3d30152b5",
+    "count": 4651,
+    "sorted_normalized_node_ids_sha256": "abbc64c55eb6ec696025501d3dcb43c4056fe11f8c519ceb13c4d2892dffa0e2",
     "collection_ignored_paths": [
       "tests/codecs/test_spz_niantic_oracle.py"
     ],
@@ -2040,7 +2040,17 @@
       "tests/test_representation_contracts.py::test_lookup_refuses_ambiguous_or_unknown_representations",
       "tests/test_representation_contracts.py::test_conversion_and_metric_claims_stay_narrow",
       "tests/test_representation_contracts.py::test_gaussian_activation_contract_does_not_claim_world_normalization",
-      "tests/test_representation_contracts.py::test_compiled_and_neutral_records_with_same_name_remain_distinct"
+      "tests/test_representation_contracts.py::test_compiled_and_neutral_records_with_same_name_remain_distinct",
+      "tests/test_public_fixture_sources_contract.py::test_catalog_policy_is_versioned_and_excludes_restricted_data",
+      "tests/test_public_fixture_sources_contract.py::test_every_public_source_has_explicit_provenance_license_and_delivery_status",
+      "tests/test_public_fixture_sources_contract.py::test_primary_routes_cover_every_builtin_exactly_once_with_real_evidence",
+      "tests/test_public_fixture_sources_contract.py::test_profile_refusals_and_hosted_sources_are_not_counted_as_direct_fixtures",
+      "tests/codecs/test_openvdb.py::test_tinyvdb_provider_authoring_surface_is_qualified",
+      "tests/codecs/test_tiff.py::test_tifffile_provider_pyramid_surface_and_sceneio_boundary",
+      "tests/test_remaining_3dcv_fc0_contract.py::test_fc0_decisions_are_complete_provisional_and_nonpublic",
+      "tests/test_remaining_3dcv_fc0_contract.py::test_fc0_freezes_signatures_errors_and_legacy_construction",
+      "tests/test_remaining_3dcv_fc0_contract.py::test_fc0_provider_ledger_matches_dependencies_capabilities_and_evidence",
+      "tests/test_usd_provider_qualification.py::test_tinyusdz_authored_usda_samples_are_enumerable_but_untyped"
     ],
     "removed_nodes": [
       "tests/codecs/test_compressed_ply.py::test_writer_body_is_byte_identical_to_pinned_playcanvas_vector",

@@ -100,6 +100,7 @@ def test_sceneio_reads_direct_upstream_e57_exactly(tmp_path):
 
     cloud = sceneio.read(path)
 
+    assert isinstance(cloud, _core.PointCloud)
     np.testing.assert_array_equal(np.asarray(cloud.positions), positions)
     np.testing.assert_array_equal(np.asarray(cloud.colors), colors)
     np.testing.assert_array_equal(np.asarray(cloud.intensities), intensity)
@@ -159,9 +160,39 @@ def test_e57_inspect_does_not_decode_points(tmp_path, monkeypatch):
 def test_e57_rejects_multiple_scans(tmp_path):
     _cloud, positions, *_ = _fixture(3)
     path = tmp_path / "two.e57"
+    translations = (
+        np.array([1.0, 2.0, 3.0], np.float64),
+        np.array([-4.0, 5.0, -6.0], np.float64),
+    )
     with pye57.E57(str(path), mode="w") as oracle:
-        oracle.write_scan_raw(_raw_payload(positions))
-        oracle.write_scan_raw(_raw_payload(positions + np.float32(1)))
+        oracle.write_scan_raw(
+            _raw_payload(positions), translation=translations[0]
+        )
+        oracle.write_scan_raw(
+            _raw_payload(positions + np.float32(1)),
+            translation=translations[1],
+        )
+
+    with pye57.E57(str(path)) as oracle:
+        assert oracle.scan_count == 2
+        for index, expected_translation in enumerate(translations):
+            raw = oracle.read_scan_raw(index)
+            np.testing.assert_array_equal(
+                np.column_stack(
+                    [
+                        raw["cartesianX"],
+                        raw["cartesianY"],
+                        raw["cartesianZ"],
+                    ]
+                ),
+                positions + np.float32(index),
+            )
+            np.testing.assert_allclose(
+                oracle.get_header(index).translation,
+                expected_translation,
+                rtol=0,
+                atol=0,
+            )
 
     with pytest.raises(sceneio.FormatError, match="exactly one data3D scan"):
         sceneio.read(path)

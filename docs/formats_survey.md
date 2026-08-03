@@ -242,7 +242,13 @@ can support any of these formats; we only bundle data from the ✅ list.
 
 | Dataset | License | Formats it exercises | Citation |
 |---|---|---|---|
+| **DX.GL Multi-View Datasets** | CC0-1.0 | coherent RGB/depth/depth16/normals/masks, `transforms.json`, binary point PLY, and trained 3DGS PLY | [DX.GL dataset card](https://huggingface.co/datasets/dxgl/multiview-datasets) |
 | **TUM RGB-D** | CC-BY-4.0 | 16-bit PNG depth (÷5000), TUM traj `.txt` | Sturm et al., IROS 2012 |
+| **TUM Visual-Inertial** | CC-BY-4.0 | Published EuRoC/DSO exports: stereo PNG, camera/IMU CSV, calibration, and pose ground truth; not the full 17-field EuRoC state profile | [Schubert et al., IROS 2018](https://cvg.cit.tum.de/data/datasets/visual-inertial-dataset) |
+| **Monado SLAM Dataset** | CC-BY-4.0 | ASL/EuRoC directory layout with stereo camera, IMU, calibration, and 8-column pose ground truth; suitable for real-world layout/pose validation | [de Mayo et al., IROS 2025](https://huggingface.co/datasets/collabora/monado-slam-datasets) |
+| **UMA Visual-Inertial Dataset** | CC-BY-4.0 | Stereo/IMU sequences plus a published TUM-to-ASL trajectory converter and endpoint pseudo-ground-truth; not the full 17-field EuRoC state profile | [Zuñiga-Noël et al., IJRR 2020](https://mapir.uma.es/work/uma-visual-inertial-dataset) |
+| **Fire Actioncam** | CC-BY-4.0 | three-camera rig, per-frame timing, exposure, rolling-shutter line timing/direction, masks, sparse points, and metric depth bounds | [Hugging Face dataset](https://huggingface.co/datasets/jna-358/fire_actioncam) |
+| **Sweet Corals** | CC-BY-4.0 | corrected images, coherent COLMAP binary model, point cloud, and large 3DGS PLY tiles | [dataset/DOI card](https://huggingface.co/datasets/newneha123/sweet-corals) — hosted validation; confirm processed-mirror lineage before redistribution |
 | **BlendedMVS** | CC-BY-4.0 | JPG, PFM depth, MVSNet `_cam.txt`, `pair.txt` | arXiv:1911.10127 |
 | **Google Scanned Objects** | CC-BY-4.0 | OBJ/MTL + PNG, Gazebo SDF | arXiv:2204.11918 |
 | **OmniObject3D** | CC-BY-4.0 | OBJ/MTL, PLY, HDF5 point clouds, `transforms.json` | arXiv:2301.07525 |
@@ -261,7 +267,24 @@ can support any of these formats; we only bundle data from the ✅ list.
   **DL3DV-10K** (CC-BY-NC, gated), **CO3D** (CC-BY-NC), **Aachen** /
   **Cambridge Landmarks** (NC).
 - **No clear / contradictory license → treat research-only**: **Mip-NeRF 360**,
-  **DTU MVS**, **Tanks and Temples**.
+  **DTU MVS**, **Tanks and Temples**, and **LuSNAR** (the source calls the
+  dataset MIT while also requiring separate commercial-use permission).
+
+The three permissive visual-inertial alternatives above exercise the broader
+ASL/EuRoC dataset family, but they are not drop-in fixtures for SceneIO's
+`euroc_state` codec. That codec intentionally represents the complete 17-column
+state: timestamp, position, WXYZ quaternion, velocity, gyroscope bias, and
+accelerometer bias. A 2026-08-03 source audit verified Monado's
+`MIO09_short_1_updown.zip` as a 99,569,080-byte CC-BY-4.0 archive with SHA-256
+`14072018b9e424b06abfd1173169b24e53ad47632d3051e3164b27d322a0b898`; its
+`mav0/gt/data.csv` contains 3,182 rows of the common 8-column pose profile.
+Use Monado/TUM-VI/UMA-VI for dataset-layout and pose compatibility, and retain
+an independently generated trajectory plus a permissive parser oracle for the
+full-state contract.
+
+The content digests, exact upstream revisions, direct-versus-derived split,
+hosted-only sources, and all 73 primary format routes are maintained in the
+machine-checked [`public fixture corpus`](public_fixture_corpus.md).
 
 **NVIDIA specifics:** NVIDIA's scene format is **OpenUSD** (§5, Apache-family)
 — *not* NVIDIA-owned. Isaac Lab is BSD-3, Isaac Sim/Kaolin cores are

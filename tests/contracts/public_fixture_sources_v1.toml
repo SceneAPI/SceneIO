@@ -1,0 +1,641 @@
+schema_version = 1
+catalog_date = "2026-08-03"
+catalog_purpose = "Licensed public data and deterministic derivation routes for every SceneIO built-in format."
+required_builtin_count = 73
+direct_format_count = 13
+derived_format_count = 60
+
+# Network data is never required by the normal test suite. Artifacts are
+# downloaded only into an ignored cache, and every downloaded byte stream is
+# pinned by a content digest before it is used.
+allowed_source_statuses = [
+  "sceneio_read",
+  "bundle_verified",
+  "profile_refusal",
+  "hosted_only",
+  "generator",
+]
+allowed_route_modes = ["direct", "oracle_derived"]
+allowed_licenses = [
+  "Apache-2.0",
+  "BSD-3-Clause",
+  "CC0-1.0",
+  "CC-BY-4.0",
+  "E57-Test-Data",
+  "MIT",
+  "MPL-2.0",
+  "TOST-1.0",
+]
+
+[[sources]]
+id = "dxgl_apple_multiview"
+project = "DX.GL Multi-View Datasets"
+revision = "60fe6e9ca49702cf915c869faa6c4b44b9e21eab"
+revision_type = "git_commit"
+artifact = "apple_dataset.zip"
+url = "https://dx.gl/api/v/EJbs8npt2RVM/vCHDLxjWG65d/dataset"
+license = "CC0-1.0"
+license_url = "https://huggingface.co/datasets/dxgl/multiview-datasets/blob/60fe6e9ca49702cf915c869faa6c4b44b9e21eab/README.md#license"
+attribution = "DXGL; source model food_apple_01 by Poly Haven"
+status = "bundle_verified"
+redistribution = "permitted"
+default_ci = false
+expected_size_bytes = 405522108
+expected_sha256 = "89b9cdbd24d71846aba92b5cfa1dd775050f60b20ec273ad72c4d72356863035"
+observed_result = "ZIP integrity passes; 196 RGB, depth, 16-bit depth, normal, and mask images are present; all transforms.json paths resolve; SceneIO reads the transforms, representative PNGs, and points3D.ply."
+notes = "Primary coherent CC0 seed for images, masks, depths, cameras, point clouds, reconstruction derivations, and sequence derivations."
+
+[[sources]]
+id = "dxgl_apple_gaussian"
+project = "DX.GL Multi-View Datasets"
+revision = "60fe6e9ca49702cf915c869faa6c4b44b9e21eab"
+revision_type = "git_commit"
+artifact = "apple.ply"
+url = "https://dx.gl/splat/apple.ply"
+license = "CC0-1.0"
+license_url = "https://huggingface.co/datasets/dxgl/multiview-datasets/blob/60fe6e9ca49702cf915c869faa6c4b44b9e21eab/README.md#license"
+attribution = "DXGL; source model food_apple_01 by Poly Haven"
+status = "sceneio_read"
+redistribution = "permitted"
+default_ci = false
+expected_size_bytes = 9007216
+expected_sha256 = "972ebac43d0ac46c375ba83d92be3866b337ae3d9a5307137617883e3ebee879"
+observed_result = "SceneIO reads 36,313 Gaussians through format=gaussian_ply."
+notes = "Primary real 3DGS seed for Gaussian carrier conversions."
+
+[[sources]]
+id = "e57_bunny_float"
+project = "ASTM E57 example data"
+revision = "content-sha256:ed48ac81e9e79c00a14950f6d00c8f93b0a7df0b400a01e85d488d9ddea11660"
+revision_type = "content_sha256"
+artifact = "bunnyFloat.e57"
+url = "https://downloads.sourceforge.net/project/e57-3d-imgfmt/E57Example-data/bunnyFloat.e57"
+license = "E57-Test-Data"
+license_url = "https://e57-3d-imgfmt.sourceforge.net/data.html#license"
+attribution = "E57.04 3D Imaging System File Format Committee"
+status = "sceneio_read"
+redistribution = "permitted_with_notice"
+default_ci = false
+expected_size_bytes = 374784
+expected_sha256 = "ed48ac81e9e79c00a14950f6d00c8f93b0a7df0b400a01e85d488d9ddea11660"
+observed_result = "SceneIO reads one 30,571-point Cartesian scan through format=e57."
+notes = "Official small single-scan producer vector."
+
+[[sources]]
+id = "openexr_squares_swirls"
+project = "OpenEXR Images"
+revision = "e38ffb0790f62f05a6f083a6fa4cac150b3b7452"
+revision_type = "git_commit"
+artifact = "TestImages/SquaresSwirls.exr"
+url = "https://raw.githubusercontent.com/AcademySoftwareFoundation/openexr-images/e38ffb0790f62f05a6f083a6fa4cac150b3b7452/TestImages/SquaresSwirls.exr"
+license = "BSD-3-Clause"
+license_url = "https://github.com/AcademySoftwareFoundation/openexr-images/blob/e38ffb0790f62f05a6f083a6fa4cac150b3b7452/LICENSE"
+attribution = "Academy Software Foundation OpenEXR project"
+status = "sceneio_read"
+redistribution = "permitted_with_notice"
+default_ci = false
+expected_size_bytes = 437763
+expected_sha256 = "6c9f67f3cd47aaa24cc57d30198305c81c286087bc2d1f2ea53c2bf77943858f"
+observed_result = "SceneIO reads a 1000x1000 float RGB image through format=exr."
+notes = "Official reference-image producer vector."
+
+[[sources]]
+id = "openmvg_sfm_data"
+project = "OpenMVG"
+revision = "c76d87244fb3590fb8b9a752be34f07411057ae2"
+revision_type = "git_commit"
+artifact = "src/software/SfM/python/sfm_viewer/sample_data/sfm_data.json"
+url = "https://raw.githubusercontent.com/openMVG/openMVG/c76d87244fb3590fb8b9a752be34f07411057ae2/src/software/SfM/python/sfm_viewer/sample_data/sfm_data.json"
+license = "MPL-2.0"
+license_url = "https://github.com/openMVG/openMVG/blob/c76d87244fb3590fb8b9a752be34f07411057ae2/LICENSE"
+attribution = "OpenMVG authors"
+status = "sceneio_read"
+redistribution = "external_cache"
+default_ci = false
+expected_size_bytes = 9876467
+expected_sha256 = "885cb7e3e1379a469fc02e5cebbc440553272007ff2c0094b371bb5f6062b626"
+observed_result = "SceneIO reads an 11-view Reconstruction through format=openmvg."
+notes = "Kept external because MPL-2.0 is accepted for validation but is not one of the repository's preferred permissive data licenses."
+
+[[sources]]
+id = "libavif_white_1x1"
+project = "libavif"
+revision = "714beb91144ac58f3e055dce77f77daf822f4e8a"
+revision_type = "git_commit"
+artifact = "tests/data/white_1x1.avif"
+url = "https://raw.githubusercontent.com/AOMediaCodec/libavif/714beb91144ac58f3e055dce77f77daf822f4e8a/tests/data/white_1x1.avif"
+license = "BSD-3-Clause"
+license_url = "https://github.com/AOMediaCodec/libavif/blob/714beb91144ac58f3e055dce77f77daf822f4e8a/LICENSE"
+attribution = "AOMediaCodec libavif contributors"
+status = "sceneio_read"
+redistribution = "permitted_with_notice"
+default_ci = false
+expected_size_bytes = 305
+expected_sha256 = "ea4e43d1f07e4c00de16c13afa32376111bb306e51f08212cf4c1b6064df3667"
+observed_result = "SceneIO reads a 1x1 RGB still through format=avif."
+notes = "Official compact still-image vector."
+
+[[sources]]
+id = "lazperf_point_color_time_las"
+project = "laz-perf"
+revision = "14522addcb01125499119990cc8fbc6b1e43b148"
+revision_type = "git_commit"
+artifact = "cpp/test/raw-sets/point-color-time.las"
+url = "https://raw.githubusercontent.com/hobuinc/laz-perf/14522addcb01125499119990cc8fbc6b1e43b148/cpp/test/raw-sets/point-color-time.las"
+license = "Apache-2.0"
+license_url = "https://github.com/hobuinc/laz-perf/blob/14522addcb01125499119990cc8fbc6b1e43b148/COPYING"
+attribution = "laz-perf contributors"
+status = "sceneio_read"
+redistribution = "permitted_with_notice"
+default_ci = false
+expected_size_bytes = 37417
+expected_sha256 = "d88c5f2a6d9fa4c64082bd61a9d4c15e810dfb7d540f4e526961a7005cc80d6a"
+observed_result = "SceneIO reads 1,065 points through format=las."
+notes = "Official implementation test vector with color and GPS time."
+
+[[sources]]
+id = "lazperf_point10_1_1_laz"
+project = "laz-perf"
+revision = "14522addcb01125499119990cc8fbc6b1e43b148"
+revision_type = "git_commit"
+artifact = "cpp/test/raw-sets/point10-1.1.laz"
+url = "https://raw.githubusercontent.com/hobuinc/laz-perf/14522addcb01125499119990cc8fbc6b1e43b148/cpp/test/raw-sets/point10-1.1.laz"
+license = "Apache-2.0"
+license_url = "https://github.com/hobuinc/laz-perf/blob/14522addcb01125499119990cc8fbc6b1e43b148/COPYING"
+attribution = "laz-perf contributors"
+status = "sceneio_read"
+redistribution = "permitted_with_notice"
+default_ci = false
+expected_size_bytes = 366
+expected_sha256 = "468336202291e79a7c258d0e345aa66b391ce4fc3edbf76bd94af72f2cca9d9f"
+observed_result = "SceneIO reads one point through format=laz."
+notes = "Compact supported LAZ 1.1 producer vector; richer legacy laz-perf samples remain profile-refusal vectors below."
+
+[[sources]]
+id = "tum_freiburg1_xyz_groundtruth"
+project = "TUM RGB-D Dataset"
+revision = "content-sha256:aac0319a6ef4e1cdf61e779d2152b95aa7e9f7b1749d6d18717b43ddabffede2"
+revision_type = "content_sha256"
+artifact = "freiburg1/rgbd_dataset_freiburg1_xyz-groundtruth.txt"
+url = "https://cvg.cit.tum.de/rgbd/dataset/freiburg1/rgbd_dataset_freiburg1_xyz-groundtruth.txt"
+license = "CC-BY-4.0"
+license_url = "https://creativecommons.org/licenses/by/4.0/"
+attribution = "TUM Computer Vision Group RGB-D SLAM Dataset and Benchmark"
+status = "sceneio_read"
+redistribution = "permitted_with_attribution"
+default_ci = false
+expected_size_bytes = 201100
+expected_sha256 = "aac0319a6ef4e1cdf61e779d2152b95aa7e9f7b1749d6d18717b43ddabffede2"
+observed_result = "SceneIO reads the trajectory through format=tum."
+notes = "Real timestamp, translation, and quaternion seed."
+
+[[sources]]
+id = "khronos_box_gltf"
+project = "Khronos glTF Sample Assets"
+revision = "2bac6f8c57bf471df0d2a1e8a8ec023c7801dddf"
+revision_type = "git_commit"
+artifact = "Models/Box/glTF-Embedded/Box.gltf"
+url = "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/2bac6f8c57bf471df0d2a1e8a8ec023c7801dddf/Models/Box/glTF-Embedded/Box.gltf"
+license = "CC0-1.0"
+license_url = "https://github.com/KhronosGroup/glTF-Sample-Assets/blob/2bac6f8c57bf471df0d2a1e8a8ec023c7801dddf/Models/Box/LICENSE.md"
+attribution = "KhronosGroup glTF Sample Assets"
+status = "sceneio_read"
+redistribution = "permitted"
+default_ci = false
+expected_size_bytes = 3791
+expected_sha256 = "f98a369e29ffc754cc897f78d695754ac6812ba7ddcd23705dd8d4e258f5f13b"
+observed_result = "SceneIO reads a 24-corner MeshScene through format=gltf."
+notes = "Official embedded-buffer glTF vector."
+
+[[sources]]
+id = "khronos_box_glb"
+project = "Khronos glTF Sample Assets"
+revision = "2bac6f8c57bf471df0d2a1e8a8ec023c7801dddf"
+revision_type = "git_commit"
+artifact = "Models/Box/glTF-Binary/Box.glb"
+url = "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/2bac6f8c57bf471df0d2a1e8a8ec023c7801dddf/Models/Box/glTF-Binary/Box.glb"
+license = "CC0-1.0"
+license_url = "https://github.com/KhronosGroup/glTF-Sample-Assets/blob/2bac6f8c57bf471df0d2a1e8a8ec023c7801dddf/Models/Box/LICENSE.md"
+attribution = "KhronosGroup glTF Sample Assets"
+status = "sceneio_read"
+redistribution = "permitted"
+default_ci = false
+expected_size_bytes = 1664
+expected_sha256 = "ed52f7192b8311d700ac0ce80644e3852cd01537e4d62241b9acba023da3d54e"
+observed_result = "SceneIO reads a 24-corner MeshScene through format=glb."
+notes = "Official binary glTF vector."
+
+[[sources]]
+id = "niantic_racoonfamily_spz"
+project = "Niantic SPZ"
+revision = "5bf2945de1a003cee07133b1e495fe9c6ffdc7e7"
+revision_type = "git_commit"
+artifact = "samples/racoonfamily.spz"
+url = "https://raw.githubusercontent.com/nianticlabs/spz/5bf2945de1a003cee07133b1e495fe9c6ffdc7e7/samples/racoonfamily.spz"
+license = "MIT"
+license_url = "https://github.com/nianticlabs/spz/blob/5bf2945de1a003cee07133b1e495fe9c6ffdc7e7/LICENSE"
+attribution = "Niantic Labs"
+status = "profile_refusal"
+redistribution = "permitted_with_notice"
+default_ci = false
+expected_size_bytes = 24202962
+expected_sha256 = "2e068d893730955c09aee324ff170c559f71c0e8758c1b14c3811a5969333cfe"
+observed_result = "SceneIO refuses legacy antialiased metadata; the pinned Niantic reader is used to canonicalize a flag-free supported v4 derivative."
+notes = "Positive oracle seed and negative direct-profile vector."
+
+[[sources]]
+id = "openusd_simple_mesh_usdz"
+project = "OpenUSD"
+revision = "ee47c679abde5b467a7b6a41f3b2285564a4222e"
+revision_type = "git_commit"
+artifact = "pxr/usd/usdUtils/testenv/testUsdUtilsCreateNewUsdzPackage/nestedUsdz/simpleMesh.usdz"
+url = "https://raw.githubusercontent.com/PixarAnimationStudios/OpenUSD/ee47c679abde5b467a7b6a41f3b2285564a4222e/pxr/usd/usdUtils/testenv/testUsdUtilsCreateNewUsdzPackage/nestedUsdz/simpleMesh.usdz"
+license = "TOST-1.0"
+license_url = "https://github.com/PixarAnimationStudios/OpenUSD/blob/ee47c679abde5b467a7b6a41f3b2285564a4222e/LICENSE.txt"
+attribution = "Pixar Animation Studios OpenUSD"
+status = "profile_refusal"
+redistribution = "permitted_with_notice"
+default_ci = false
+expected_size_bytes = 1602
+expected_sha256 = "18ede477be83ca5e1cb086cc8615860e764e9f9b4976a1942f6ef9d00c02ee70"
+observed_result = "SceneIO refuses the missing bounded-profile upAxis and metersPerUnit declarations."
+notes = "Official package producer vector; positive USD/USDZ files are derived with explicit stage metadata through the pinned OpenUSD oracle."
+
+[[sources]]
+id = "libavif_animated_colors"
+project = "libavif"
+revision = "714beb91144ac58f3e055dce77f77daf822f4e8a"
+revision_type = "git_commit"
+artifact = "tests/data/colors-animated-8bpc.avif"
+url = "https://raw.githubusercontent.com/AOMediaCodec/libavif/714beb91144ac58f3e055dce77f77daf822f4e8a/tests/data/colors-animated-8bpc.avif"
+license = "BSD-3-Clause"
+license_url = "https://github.com/AOMediaCodec/libavif/blob/714beb91144ac58f3e055dce77f77daf822f4e8a/LICENSE"
+attribution = "AOMediaCodec libavif contributors"
+status = "profile_refusal"
+redistribution = "permitted_with_notice"
+default_ci = false
+expected_size_bytes = 1235
+expected_sha256 = "2f8683d21725261f37f86e115f0c212cc52d0fefd3a2ddfcc4fa648c1859906d"
+observed_result = "SceneIO refuses frame timing that is not exactly representable in integer nanoseconds."
+notes = "Official negative timing vector; the positive animated AVIF is generated from CC0 frames with representable timing."
+
+[[sources]]
+id = "lazperf_point_color_time_laz"
+project = "laz-perf"
+revision = "14522addcb01125499119990cc8fbc6b1e43b148"
+revision_type = "git_commit"
+artifact = "cpp/test/raw-sets/point-color-time.las.laz"
+url = "https://raw.githubusercontent.com/hobuinc/laz-perf/14522addcb01125499119990cc8fbc6b1e43b148/cpp/test/raw-sets/point-color-time.las.laz"
+license = "Apache-2.0"
+license_url = "https://github.com/hobuinc/laz-perf/blob/14522addcb01125499119990cc8fbc6b1e43b148/COPYING"
+attribution = "laz-perf contributors"
+status = "profile_refusal"
+redistribution = "permitted_with_notice"
+default_ci = false
+expected_size_bytes = 18558
+expected_sha256 = "7110e7e43d7e99fbaba77a6f27626df658f168b670ca83d6749c6b8e499d7e59"
+observed_result = "SceneIO refuses the legacy container because it does not expose exactly one supported LASzip VLR."
+notes = "Richer negative LAZ layout vector."
+
+[[sources]]
+id = "monado_mio09"
+project = "Monado SLAM Dataset"
+revision = "74c07d42d980c55775dd0edc06e58c486b848be1"
+revision_type = "git_commit"
+artifact = "M_monado_datasets/MI_valve_index/MIO_others/MIO09_short_1_updown.zip"
+url = "https://huggingface.co/datasets/collabora/monado-slam-datasets/resolve/74c07d42d980c55775dd0edc06e58c486b848be1/M_monado_datasets/MI_valve_index/MIO_others/MIO09_short_1_updown.zip"
+license = "CC-BY-4.0"
+license_url = "https://huggingface.co/datasets/collabora/monado-slam-datasets/blob/74c07d42d980c55775dd0edc06e58c486b848be1/README.md"
+attribution = "Collabora Monado SLAM Dataset authors"
+status = "hosted_only"
+redistribution = "permitted_with_attribution"
+default_ci = false
+expected_size_bytes = 99569080
+expected_sha256 = "14072018b9e424b06abfd1173169b24e53ad47632d3051e3164b27d322a0b898"
+observed_result = "Archive provenance and layout were audited; mav0/gt/data.csv contains 3,182 rows of the common 8-column pose profile."
+notes = "Real stereo, IMU, calibration, and ASL/EuRoC directory-layout validation; not the full 17-column euroc_state profile."
+
+[[sources]]
+id = "wildflow_sweet_corals_colmap"
+project = "Sweet Corals"
+revision = "ac0d86153d1f6d4bbe25fa7e4f1c4767e7e1802c"
+revision_type = "git_commit"
+artifact = "_indonesia_tabuhan_p1_20250210/colmap"
+url = "https://huggingface.co/datasets/newneha123/sweet-corals/tree/ac0d86153d1f6d4bbe25fa7e4f1c4767e7e1802c/_indonesia_tabuhan_p1_20250210"
+license = "CC-BY-4.0"
+license_url = "https://huggingface.co/datasets/newneha123/sweet-corals/blob/ac0d86153d1f6d4bbe25fa7e4f1c4767e7e1802c/README.md#license"
+attribution = "Sweet Corals contributors; Wildflow dataset DOI 10.57967/hf/5162"
+status = "hosted_only"
+redistribution = "external_cache"
+default_ci = false
+expected_size_bytes = 0
+expected_sha256 = ""
+observed_result = "Hosted tree contains a coherent COLMAP model: cameras.bin 104 bytes / 661ed4ab..., images.bin 169,516,726 bytes / 9734b321..., and points3D.bin 165,387,515 bytes / fad66178..., alongside corrected images and large 3DGS PLY files."
+notes = "Valuable large real cross-format validation. The processed tree is a mirror of the credited Wildflow dataset; confirm mirror lineage before redistributing any bytes."
+
+[[sources]]
+id = "fire_actioncam_scene001_meta"
+project = "Fire Actioncam"
+revision = "001ad0c2a06c24eff21bec326b4e0b9600a3fb04"
+revision_type = "git_commit"
+artifact = "scenes/001/meta.npz"
+url = "https://huggingface.co/datasets/jna-358/fire_actioncam/resolve/001ad0c2a06c24eff21bec326b4e0b9600a3fb04/scenes/001/meta.npz"
+license = "CC-BY-4.0"
+license_url = "https://huggingface.co/datasets/jna-358/fire_actioncam/blob/001ad0c2a06c24eff21bec326b4e0b9600a3fb04/README.md#license"
+attribution = "Fire Actioncam dataset authors"
+status = "bundle_verified"
+redistribution = "permitted_with_attribution"
+default_ci = false
+expected_size_bytes = 133334
+expected_sha256 = "7fe21660b705408e52ba30188a2d5f003ee9213ed70b95848432c306135f0930"
+observed_result = "NumPy independently reads timestamps, three-camera intrinsics/extrinsics, exposure_us, readout_us_per_line, readout direction, points, and depth bounds."
+notes = "Compact real source for future rolling-shutter, exposure, rig, and timing contracts. Its MP4 streams are not needed by SceneIO and are not part of this route."
+
+[[sources]]
+id = "ome_multichannel_4d_tiff"
+project = "OME-TIFF sample data"
+revision = "content-sha256:caf707ca2ba6c42c40ded92245432d350a781fcdd03c0b178834f5eb5e5b96f3"
+revision_type = "content_sha256"
+artifact = "bioformats-artificial/multi-channel-4D-series.ome.tif"
+url = "https://downloads.openmicroscopy.org/images/OME-TIFF/2016-06/bioformats-artificial/multi-channel-4D-series.ome.tif"
+license = "CC-BY-4.0"
+license_url = "https://downloads.openmicroscopy.org/images/OME-TIFF/2016-06/bioformats-artificial/COPYING"
+attribution = "Open Microscopy Environment"
+status = "profile_refusal"
+redistribution = "permitted_with_attribution"
+default_ci = false
+expected_size_bytes = 7889559
+expected_sha256 = "caf707ca2ba6c42c40ded92245432d350a781fcdd03c0b178834f5eb5e5b96f3"
+observed_result = "Current TIFF inspection wraps an internal TiffFrame.tags failure for this multi-channel Z/T series; this is a negative result, not a clean positive refusal contract."
+notes = "Official future-profile vector for multi-series/volume TIFF hardening; do not count it as supported or broaden the current Image contract silently."
+
+[[sources]]
+id = "google_scanned_objects"
+project = "Google Scanned Objects"
+revision = "snapshot:2026-08-03"
+revision_type = "catalog_snapshot"
+artifact = "official 1,030-object OBJ and PNG collection"
+url = "https://research.google/blog/scanned-objects-by-google-research-a-dataset-of-3d-scanned-common-household-items/"
+license = "CC-BY-4.0"
+license_url = "https://creativecommons.org/licenses/by/4.0/"
+attribution = "Google Research Scanned Objects authors"
+status = "hosted_only"
+redistribution = "permitted_with_attribution"
+default_ci = false
+expected_size_bytes = 0
+expected_sha256 = ""
+observed_result = "Official catalog documents 1,030 textured OBJ/PNG objects under CC-BY-4.0."
+notes = "Optional real textured-mesh diversity; DX.GL and Khronos remain the compact closure seeds."
+
+[[sources]]
+id = "kubric_movi_generator"
+project = "Kubric MOVi"
+revision = "61f2422c84bab75006df33c6989e0b483db3ccfe"
+revision_type = "git_commit"
+artifact = "MOVi-A deterministic renderer"
+url = "https://github.com/google-research/kubric"
+license = "Apache-2.0"
+license_url = "https://github.com/google-research/kubric/blob/61f2422c84bab75006df33c6989e0b483db3ccfe/LICENSE"
+attribution = "Google Research Kubric authors"
+status = "generator"
+redistribution = "generated_output_only"
+default_ci = false
+expected_size_bytes = 0
+expected_sha256 = ""
+observed_result = "Pinned generator can produce RGB, depth, normals, optical flow, instance masks, camera poses, and object motion from simple generated assets."
+notes = "Preferred clean route for future semantic/instance/panoptic and dynamic-scene fixtures when a redistributable hosted MOVi artifact is not explicitly licensed."
+
+# Each built-in format has exactly one primary fixture route. Direct means an
+# upstream byte stream was read locally without changing its representation.
+# Oracle-derived means a licensed seed is rewritten deterministically by a
+# separately pinned implementation or an independent format parser/writer.
+
+[[routes]]
+id = "direct_dxgl_multiview"
+mode = "direct"
+source_ids = ["dxgl_apple_multiview"]
+oracle_source_ids = ["pillow", "open3d"]
+formats = ["transforms_json", "png", "ply"]
+evidence = ["tests/codecs/test_transforms_json.py", "tests/codecs/test_png.py", "tests/codecs/test_ply_point.py"]
+derivation = "none"
+qualification = "verified local reads plus independent Pillow/NumPy structure checks"
+
+[[routes]]
+id = "direct_dxgl_gaussian"
+mode = "direct"
+source_ids = ["dxgl_apple_gaussian"]
+oracle_source_ids = ["gsply", "gaussian_splats_3d"]
+formats = ["gaussian_ply"]
+evidence = ["tests/codecs/test_ply.py", "tests/codecs/test_splat_transform_oracle.py"]
+derivation = "none"
+qualification = "verified local read of a real nerfstudio splatfacto PLY"
+
+[[routes]]
+id = "direct_e57"
+mode = "direct"
+source_ids = ["e57_bunny_float"]
+oracle_source_ids = ["libe57format"]
+formats = ["e57"]
+evidence = ["tests/codecs/test_e57.py"]
+derivation = "none"
+qualification = "verified local read of official E57 example data"
+
+[[routes]]
+id = "direct_openexr"
+mode = "direct"
+source_ids = ["openexr_squares_swirls"]
+oracle_source_ids = ["openexr"]
+formats = ["exr"]
+evidence = ["tests/codecs/test_exr.py"]
+derivation = "none"
+qualification = "verified local read of an official reference image"
+
+[[routes]]
+id = "direct_openmvg"
+mode = "direct"
+source_ids = ["openmvg_sfm_data"]
+oracle_source_ids = ["openmvg"]
+formats = ["openmvg"]
+evidence = ["tests/codecs/test_openmvg.py"]
+derivation = "none"
+qualification = "verified local read of the upstream sample reconstruction"
+
+[[routes]]
+id = "direct_avif"
+mode = "direct"
+source_ids = ["libavif_white_1x1"]
+oracle_source_ids = ["pillow"]
+formats = ["avif"]
+evidence = ["tests/codecs/test_avif.py"]
+derivation = "none"
+qualification = "verified local read of an upstream libavif still"
+
+[[routes]]
+id = "direct_las_laz"
+mode = "direct"
+source_ids = ["lazperf_point_color_time_las", "lazperf_point10_1_1_laz"]
+oracle_source_ids = ["pdal"]
+formats = ["las", "laz"]
+evidence = ["tests/codecs/test_las.py", "tests/codecs/test_laz.py"]
+derivation = "none"
+qualification = "verified local reads of Apache-2.0 implementation vectors"
+
+[[routes]]
+id = "direct_tum"
+mode = "direct"
+source_ids = ["tum_freiburg1_xyz_groundtruth"]
+oracle_source_ids = ["evo"]
+formats = ["tum"]
+evidence = ["tests/codecs/test_pose_text.py"]
+derivation = "none"
+qualification = "verified public read of a real TUM trajectory"
+
+[[routes]]
+id = "direct_khronos_gltf"
+mode = "direct"
+source_ids = ["khronos_box_gltf", "khronos_box_glb"]
+oracle_source_ids = ["khronos_gltf", "gltf_validator"]
+formats = ["gltf", "glb"]
+evidence = ["tests/codecs/test_gltf.py"]
+derivation = "none"
+qualification = "verified local reads of official CC0 embedded and binary glTF vectors"
+
+[[routes]]
+id = "derived_arrays_and_stores"
+mode = "oracle_derived"
+source_ids = ["dxgl_apple_multiview", "tum_freiburg1_xyz_groundtruth"]
+oracle_source_ids = ["numpy", "h5py", "zarr", "arrow"]
+formats = ["npy", "npz", "safetensors", "hdf5", "zarr", "parquet", "arrow_ipc"]
+evidence = ["tests/codecs/test_npy_npz.py", "tests/codecs/test_safetensors.py", "tests/codecs/test_hdf5_hloc.py", "tests/codecs/test_zarr.py", "tests/codecs/test_arrow_parquet.py"]
+derivation = "Store numeric CC0 image/depth/camera arrays through pinned independent writers; reopen with both the oracle and SceneIO."
+qualification = "bit-exact array values, dtype, shape, names, and supported metadata"
+
+[[routes]]
+id = "derived_still_images"
+mode = "oracle_derived"
+source_ids = ["dxgl_apple_multiview", "openexr_squares_swirls"]
+oracle_source_ids = ["pillow", "openexr", "tifffile"]
+formats = ["pfm", "netpbm", "jpeg", "bmp", "tga", "hdr", "webp", "tiff"]
+evidence = ["tests/codecs/test_pfm.py", "tests/codecs/test_netpbm.py", "tests/codecs/test_jpeg.py", "tests/codecs/test_bmp_tga.py", "tests/codecs/test_hdr.py", "tests/codecs/test_webp.py", "tests/codecs/test_tiff.py"]
+derivation = "Encode representative CC0 RGB/depth arrays with pinned independent writers at each format's supported dtype and fidelity profile."
+qualification = "lossless formats compare exactly; lossy formats use the existing oracle tolerances"
+
+[[routes]]
+id = "derived_sequences"
+mode = "oracle_derived"
+source_ids = ["dxgl_apple_multiview"]
+oracle_source_ids = ["pillow"]
+formats = ["y4m", "webm", "theora", "animated_webp", "apng", "animated_avif", "image_sequence"]
+evidence = ["tests/codecs/test_y4m.py", "tests/codecs/test_webm.py", "tests/codecs/test_theora.py", "tests/codecs/test_animated_webp.py", "tests/codecs/test_apng.py", "tests/codecs/test_avif.py", "tests/codecs/test_image_sequence.py"]
+derivation = "Use selected CC0 frames with exactly representable integer-nanosecond timing and each pinned independent container oracle."
+qualification = "decoded frame order, pixels/fidelity, timing, loop count, and metadata match the established sequence contracts"
+
+[[routes]]
+id = "derived_rtmv"
+mode = "oracle_derived"
+source_ids = ["dxgl_apple_multiview", "openexr_squares_swirls"]
+oracle_source_ids = ["openexr", "numpy"]
+formats = ["rtmv"]
+evidence = ["tests/codecs/test_rtmv.py"]
+derivation = "Author RTMV JSON independently around permissive EXR-derived channels and asymmetric camera transforms; do not redistribute official non-commercial RTMV data."
+qualification = "partial and full reads match the independent JSON/OpenEXR oracle"
+
+[[routes]]
+id = "derived_meshes_and_scenes"
+mode = "oracle_derived"
+source_ids = ["khronos_box_gltf", "dxgl_apple_multiview", "openusd_simple_mesh_usdz"]
+oracle_source_ids = ["trimesh", "openusd"]
+formats = ["ply_mesh", "obj", "stl", "off", "usd", "usdz", "openvdb"]
+evidence = ["tests/codecs/test_ply_mesh.py", "tests/codecs/test_obj.py", "tests/codecs/test_stl.py", "tests/codecs/test_off.py", "tests/codecs/test_usd.py", "tests/codecs/test_openvdb.py"]
+derivation = "Rewrite CC0 topology and depth-derived scalar fields through independent mesh, OpenUSD, and OpenVDB writers with explicit units and axes."
+qualification = "supported topology/attributes compare exactly; stage/profile metadata is explicit rather than inferred"
+
+[[routes]]
+id = "derived_point_text_and_pcd"
+mode = "oracle_derived"
+source_ids = ["dxgl_apple_multiview"]
+oracle_source_ids = ["open3d", "pcl", "pdal"]
+formats = ["pcd", "xyz", "pts"]
+evidence = ["tests/codecs/test_pcd.py", "tests/codecs/test_xyz.py", "tests/codecs/test_pts.py"]
+derivation = "Write selected CC0 point-cloud rows through independent text/PCD serializers."
+qualification = "positions and representable aligned attributes match the source cloud"
+
+[[routes]]
+id = "derived_optical_flow"
+mode = "oracle_derived"
+source_ids = ["dxgl_apple_multiview"]
+oracle_source_ids = ["numpy"]
+formats = ["flo"]
+evidence = ["tests/codecs/test_flo.py", "tests/codecs/test_flo_typed.py"]
+derivation = "Project CC0 depth through two known camera transforms with an independent NumPy oracle, then serialize Middlebury FLO bytes independently."
+qualification = "finite valid vectors and invalid-mask behavior compare bit-exactly"
+
+[[routes]]
+id = "derived_gaussian_carriers"
+mode = "oracle_derived"
+source_ids = ["dxgl_apple_gaussian", "niantic_racoonfamily_spz"]
+oracle_source_ids = ["niantic_spz", "splat_transform", "gsply"]
+formats = ["compressed_ply", "sog", "ksplat", "spz", "splat"]
+evidence = ["tests/codecs/test_compressed_ply.py", "tests/codecs/test_sog.py", "tests/codecs/test_ksplat.py", "tests/codecs/test_spz_niantic_oracle.py", "tests/codecs/test_splat_transform_oracle.py"]
+derivation = "Convert the real CC0 Gaussian PLY through pinned official or popular independent carrier implementations; canonicalize unsupported source flags explicitly."
+qualification = "storage layout, activations, component order, SH degree, and format quantization follow the existing Gaussian oracle contracts"
+
+[[routes]]
+id = "derived_calibration"
+mode = "oracle_derived"
+source_ids = ["monado_mio09", "fire_actioncam_scene001_meta"]
+oracle_source_ids = ["kalibr", "camtools"]
+formats = ["opencv_yaml", "opencv_xml", "ros_camera_info", "kalibr"]
+evidence = ["tests/codecs/test_camera_calibration.py"]
+derivation = "Select real licensed rig intrinsics/extrinsics and rewrite only fields representable by each pinned calibration schema."
+qualification = "models, dimensions, distortion parameters, transforms, units, and coordinate declarations round-trip exactly"
+
+[[routes]]
+id = "derived_trajectories_and_pose_graph"
+mode = "oracle_derived"
+source_ids = ["tum_freiburg1_xyz_groundtruth", "monado_mio09"]
+oracle_source_ids = ["evo", "pykitti", "g2o"]
+formats = ["kitti", "euroc_state", "g2o"]
+evidence = ["tests/codecs/test_pose_text.py", "tests/codecs/test_euroc_state.py", "tests/codecs/test_g2o.py"]
+derivation = "Convert real permissive poses through the pinned matrix oracle; add deterministic finite velocity and bias columns only for the full 17-field EuRoC state fixture."
+qualification = "pose direction, quaternion order, timestamps, units, and all state columns are independently checked"
+
+[[routes]]
+id = "derived_sparse_reconstruction"
+mode = "oracle_derived"
+source_ids = ["dxgl_apple_multiview", "wildflow_sweet_corals_colmap"]
+oracle_source_ids = ["colmap", "pycolmap", "rootba"]
+formats = ["colmap_sparse", "colmap_sparse_txt", "colmap_db", "bundler", "bal", "nvm"]
+evidence = ["tests/codecs/test_colmap.py", "tests/codecs/test_colmap_txt.py", "tests/codecs/test_colmap_db.py", "tests/codecs/test_bundler.py", "tests/codecs/test_bal.py", "tests/codecs/test_nvm.py"]
+derivation = "Build a compact coherent reconstruction from CC0 calibrated views and depth, then cross-write each representation with pinned independent reconstruction oracles."
+qualification = "cameras, poses, points, observations, tracks, ids, and format-specific conventions compare with the same canonical scene"
+
+[[routes]]
+id = "derived_dense_reconstruction"
+mode = "oracle_derived"
+source_ids = ["dxgl_apple_multiview"]
+oracle_source_ids = ["colmap", "pycolmap"]
+formats = ["dmb", "colmap_mvs_depth", "colmap_mvs_normal", "colmap_mvs_consistency", "colmap_fused_visibility"]
+evidence = ["tests/codecs/test_dmb.py", "tests/codecs/test_colmap_mvs.py"]
+derivation = "Map the coherent CC0 depth/normal/camera bundle into independent DMB and COLMAP dense layouts with exact source extents and indices."
+qualification = "partial reads equal slices of full arrays and all headers/indices match independent parsers"
+
+[[routes]]
+id = "derived_hloc"
+mode = "oracle_derived"
+source_ids = ["dxgl_apple_multiview"]
+oracle_source_ids = ["hloc", "h5py"]
+formats = ["hloc_features", "hloc_matches"]
+evidence = ["tests/codecs/test_hdf5_hloc.py"]
+derivation = "Run or independently author pinned HLoc feature and match layouts for two CC0 views, then build the matching compact COLMAP model/database from the same image names."
+qualification = "keypoints, descriptors, scores, pair endpoints, matches, and pixel-center conventions match the HLoc oracle"
+
+[[routes]]
+id = "derived_ncore"
+mode = "oracle_derived"
+source_ids = ["dxgl_apple_multiview", "fire_actioncam_scene001_meta"]
+oracle_source_ids = ["ncore"]
+formats = ["ncore_v4"]
+evidence = ["tests/codecs/test_ncore_v4.py"]
+derivation = "Write selected licensed images, masks, cameras, poses, and point data with the pinned official NCore V4 writer and retain the compact generated indexed-tar fixture."
+qualification = "official-reader reopen, checksums, schema/catalog identity, and SceneIO projections match"

@@ -56,6 +56,7 @@ def test_sceneio_tiff_write_is_exact_for_independent_oracle(
     np.testing.assert_array_equal(oracle, values)
     assert sceneio.detect(path) == "tiff"
     decoded = sceneio.read(path)
+    assert isinstance(decoded, _core.Image)
     np.testing.assert_array_equal(_pixels(decoded), values)
     assert decoded.color_space == image.color_space
     assert decoded.alpha_mode == image.alpha_mode
@@ -171,19 +172,58 @@ def test_tiff_inspect_does_not_decode_pixels(tmp_path, monkeypatch):
 
 def test_tiff_rejects_multiple_series_without_decoding(tmp_path):
     path = tmp_path / "multi-series.tif"
+    first = np.arange(4 * 5, dtype=np.uint8).reshape(4, 5)
+    second = (np.arange(3 * 7, dtype=np.uint8) + 100).reshape(3, 7)
     with tifffile.TiffWriter(path) as writer:
         writer.write(
-            np.zeros((4, 5), dtype=np.uint8),
+            first,
             photometric="minisblack",
             metadata=None,
         )
         writer.write(
-            np.zeros((3, 7), dtype=np.uint8),
+            second,
             photometric="minisblack",
             metadata=None,
         )
 
+    with tifffile.TiffFile(path) as oracle:
+        assert len(oracle.series) == 2
+        assert [tuple(series.shape) for series in oracle.series] == [
+            (4, 5),
+            (3, 7),
+        ]
+        np.testing.assert_array_equal(oracle.series[0].asarray(), first)
+        np.testing.assert_array_equal(oracle.series[1].asarray(), second)
     with pytest.raises(sceneio.FormatError, match="exactly one image series"):
+        sceneio.read(path)
+
+
+def test_tifffile_provider_pyramid_surface_and_sceneio_boundary(tmp_path):
+    path = tmp_path / "pyramid.tif"
+    full = np.arange(8 * 10, dtype=np.uint8).reshape(8, 10)
+    reduced = full[::2, ::2].copy()
+    with tifffile.TiffWriter(path) as writer:
+        writer.write(
+            full,
+            photometric="minisblack",
+            metadata=None,
+            subifds=1,
+        )
+        writer.write(
+            reduced,
+            photometric="minisblack",
+            metadata=None,
+            subfiletype=1,
+        )
+
+    with tifffile.TiffFile(path) as oracle:
+        assert len(oracle.series) == 1
+        assert len(oracle.series[0].levels) == 2
+        np.testing.assert_array_equal(oracle.series[0].levels[0].asarray(), full)
+        np.testing.assert_array_equal(
+            oracle.series[0].levels[1].asarray(), reduced
+        )
+    with pytest.raises(sceneio.FormatError, match="pyramidal image series"):
         sceneio.read(path)
 
 

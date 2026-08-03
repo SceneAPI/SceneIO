@@ -551,6 +551,9 @@ Engineering status and extension work are tracked in:
 
 - [`docs/format_coverage.md`](docs/format_coverage.md) — exact live codec
   capabilities and validation status;
+- [`docs/public_fixture_corpus.md`](docs/public_fixture_corpus.md) — the
+  licensed, content-pinned public-data corpus and deterministic oracle-derived
+  route for every built-in format;
 - [`docs/colmap_ecosystem_coverage.md`](docs/colmap_ecosystem_coverage.md) —
   the audited `colmap_mod` persisted-I/O matrix, lean closure boundary, and
   staged verification plan;
@@ -569,6 +572,10 @@ Engineering status and extension work are tracked in:
   cross-platform validation checklist for that gate;
 - [`docs/format_gap_implementation_plan.md`](docs/format_gap_implementation_plan.md)
   — the active dependency-ordered format queue and package checkpoints;
+- [`docs/remaining_3dcv_profile_checklist.md`](docs/remaining_3dcv_profile_checklist.md)
+  — the finite reviewed checklist, checked FC0 decision freeze, and stopping
+  rule for the remaining 3D-CV temporal, label, collection, volume, and
+  animation profiles;
 - [`docs/plans/completed/README.md`](docs/plans/completed/README.md) — immutable
   evidence moved out of active plans after its implementation wave closes.
 

@@ -100,10 +100,28 @@ def test_openvdb_registry_roundtrip_is_bit_exact(tmp_path):
     sceneio.write(record, path)
     decoded = sceneio.read(path)
 
+    assert isinstance(decoded, _core.TensorDict)
     assert _as_mapping(decoded["coords"], decoded["values"]) == _as_mapping(
         coords, values
     )
     assert decoded.attrs["name"] == "tsdf"
+
+
+def test_tinyvdb_provider_authoring_surface_is_qualified():
+    file = tinyvdb.open(str(_openvdb._TEMPLATE))
+    try:
+        assert file.grid_count == 1
+        assert not hasattr(file, "add_grid")
+        assert callable(file.replace_grid_from_sparse)
+        assert callable(file.extend_grid_from_sparse)
+        file.read_grids()
+        grid = file.grid(0)
+        transform = dict(grid.transform)
+        assert np.asarray(transform["matrix"]).shape == (4, 4)
+        with pytest.raises(AttributeError, match="not writable"):
+            grid.transform = transform
+    finally:
+        file.close()
 
 
 def test_openvdb_record_outlives_closed_and_removed_source(tmp_path):

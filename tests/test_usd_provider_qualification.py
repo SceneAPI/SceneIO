@@ -93,6 +93,27 @@ def test_aousd_crate_10_timesamples_exposes_provider_boundary(tmp_path):
     assert all("[invalid]" in repr(value) for _, value in samples)
 
 
+def test_tinyusdz_authored_usda_samples_are_enumerable_but_untyped():
+    stage = tinyusdz.loads(
+        """#usda 1.0
+def Xform "World"
+{
+    double value.timeSamples = {
+        1: 3.5,
+        2: 7.25
+    }
+}
+"""
+    )
+    prim = stage.root_prims()[0]
+
+    assert prim.get_attribute("value").value is None
+    samples = prim.get_attribute_timesamples("value")
+    assert [time for time, _value in samples] == [1.0, 2.0]
+    assert all("[invalid]" in repr(value) for _time, value in samples)
+    assert provider.PROVIDER_FLAGS["selected_time"] is False
+
+
 def test_tinyusdz_usd_forwarding_and_asset_value_boundary(tmp_path):
     (tmp_path / "payload.bin").write_bytes(b"fixture")
     path = tmp_path / "asset.usd"

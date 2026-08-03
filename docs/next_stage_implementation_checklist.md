@@ -1,5 +1,29 @@
 # Next-stage implementation checklist
 
+> The finite active checklist for the remaining 3D-CV model/profile work is
+> [`remaining_3dcv_profile_checklist.md`](remaining_3dcv_profile_checklist.md).
+> The historical execution record below remains authoritative for the units it
+> already closed and is not extended with another multi-thousand-line section.
+
+## Licensed public fixture corpus (complete locally, 2026-08-03)
+
+- [x] Add the versioned source manifest and give all 73 built-ins exactly one
+      licensed route: 13 unchanged upstream artifacts and 60 deterministic
+      oracle-derived files.
+- [x] Verify the compact direct artifacts and the coherent CC0 DX.GL bundle;
+      keep larger real datasets in opt-in validation storage only.
+- [x] Record future-profile sources and deliberate exclusions without
+      weakening current bounded format contracts.
+- [x] Enforce provenance, license, immutable revision/digest, unique coverage,
+      oracle linkage, and offline-CI policy with the checked corpus contract.
+- [x] Pass the complete suite, exact collection ledger, documentation gate,
+      repository-wide Ruff, and diff check. Current results live in the
+      [finite closure checklist](remaining_3dcv_profile_checklist.md#63-fc0-local-qualification-result)
+      rather than being duplicated here.
+- [ ] Optional follow-up: turn the hosted Sweet Corals, Monado, Fire Actioncam,
+      OME-TIFF, and broader E57 rows into opt-in acquisition/validation jobs
+      only when their corresponding public-model work is scheduled.
+
 ## Representation normalization/scaling contract (complete locally, 2026-08-03)
 
 - [x] Define a versioned public vocabulary that separates structural
