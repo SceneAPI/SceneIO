@@ -2060,11 +2060,16 @@ def prepare_case(
         artifact, prepared = build_glb_fixture(source, tier=tier, cache=cache)
     else:
         artifact, prepared = build_colmap_fixture(source, tier=tier, cache=cache)
-    validation = validate_common_input(
-        artifact,
-        sceneio_value=prepared.record,
-        provider_values=prepared.provider_values,
-    )
+    if case_id == "colmap_tum_tracks":
+        validation = validate_common_input(
+            artifact,
+            sceneio_value=prepared.record,
+            provider_values=prepared.provider_values,
+        )
+    else:
+        # SPZ and GLB writers may quantize or normalize their common output;
+        # validate the decoded file rather than the pre-write source record.
+        validation = validate_common_input(artifact)
     if tier == "standard" and validation["status"] != "pass":
         raise ProviderUnavailable(
             f"standard fixture has no available reference validator: {validation}"

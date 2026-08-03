@@ -1,8 +1,8 @@
 {
   "schema_version": "large-io-v1",
-  "generated_at_utc": "2026-08-03T13:39:47.943951+00:00",
+  "generated_at_utc": "2026-08-03T14:36:13.123162+00:00",
   "sceneio": {
-    "commit": "d538306ffe702df8cc894f81b0b3ce59acd2aebc",
+    "commit": "8eac04428344a94f1bc851cae3099d76d97aad71",
     "dirty": false
   },
   "environment": {
@@ -15,7 +15,7 @@
     "compiler": "MSC v.1943 64 bit (AMD64)",
     "cpu_count": 32,
     "ram_bytes": 203636297728,
-    "available_ram_bytes": 169465196544,
+    "available_ram_bytes": 168977760256,
     "psutil_available": true,
     "thread_policy": "environment values when set; otherwise provider defaults",
     "thread_variables": {
@@ -34,13 +34,6 @@
       "revision": null,
       "build": null
     },
-    "pycolmap": {
-      "name": "pycolmap",
-      "version": "4.1.1",
-      "module": "pycolmap",
-      "revision": null,
-      "build": null
-    },
     "trimesh": {
       "name": "trimesh",
       "version": "4.12.2",
@@ -48,10 +41,31 @@
       "revision": null,
       "build": null
     },
+    "pycolmap": {
+      "name": "pycolmap",
+      "version": "4.1.1",
+      "module": "pycolmap",
+      "revision": null,
+      "build": null
+    },
+    "niantic_spz": {
+      "name": "niantic_spz",
+      "version": "1.1.0",
+      "module": "spz",
+      "revision": "5bf2945de1a003cee07133b1e495fe9c6ffdc7e7",
+      "build": "distribution version; revision recorded separately"
+    },
     "sceneio": {
       "name": "sceneio",
       "version": "0.2.0",
       "module": "sceneio",
+      "revision": null,
+      "build": null
+    },
+    "gsply": {
+      "name": "gsply",
+      "version": "0.4.6",
+      "module": "gsply",
       "revision": null,
       "build": null
     },
@@ -68,20 +82,6 @@
       "module": "numpy",
       "revision": null,
       "build": null
-    },
-    "gsply": {
-      "name": "gsply",
-      "version": "0.4.6",
-      "module": "gsply",
-      "revision": null,
-      "build": null
-    },
-    "niantic_spz": {
-      "name": "niantic_spz",
-      "version": "1.1.0",
-      "module": "spz",
-      "revision": "5bf2945de1a003cee07133b1e495fe9c6ffdc7e7",
-      "build": "distribution version; revision recorded separately"
     }
   },
   "source_verification": {
@@ -180,7 +180,7 @@
   },
   "tier": "standard",
   "runs": 3,
-  "worker_timeout_seconds": 300.0,
+  "worker_timeout_seconds": 900.0,
   "cache_mode": "warm",
   "cache_control": {
     "requested": false,
@@ -191,7 +191,7 @@
   "cache_storage": {
     "path": "build\\bench-data\\large-io",
     "volume_total_bytes": 3999826702336,
-    "volume_free_bytes": 228954796032,
+    "volume_free_bytes": 227833122816,
     "required_free_bytes": 2147483648,
     "required_available_ram_bytes": 8589934592,
     "fixture_policy": "generated or verified in cache; large inputs are not committed",
@@ -296,47 +296,6 @@
       }
     },
     {
-      "case_id": "spz_racoon_v4",
-      "tier": "standard",
-      "path": "build\\bench-data\\large-io\\spz_racoon_v4\\standard\\fixture.spz",
-      "logical_bytes": 268435604,
-      "encoded_bytes": 27220225,
-      "source_id": "niantic_racoonfamily_spz",
-      "acquisition_mode": "derived_fixture",
-      "derivation": {
-        "kind": "derived_fixture",
-        "seed": "niantic-racoonfamily",
-        "selected_seed_count": 932560,
-        "repeat_count": 2,
-        "translation_step": [
-          0.125,
-          0.0,
-          0.0
-        ],
-        "output_profile": "SPZ v4 flags=0",
-        "unsupported_source_flags_dropped": true
-      },
-      "fixture": {
-        "num_gaussians": 1137439,
-        "sh_degree": 3,
-        "dtype": "float32",
-        "source_decoder": "niantic_spz",
-        "common_writer": "niantic_spz",
-        "source_profile": {
-          "container": "legacy",
-          "flags": 1,
-          "version": 2
-        },
-        "output_profile": {
-          "container": "v4",
-          "flags": 0,
-          "version": 4
-        },
-        "coordinate_profile": "unspecified:spatial/raw-preserved",
-        "coordinate_conversion": "none"
-      }
-    },
-    {
       "case_id": "glb_box_grid",
       "tier": "standard",
       "path": "build\\bench-data\\large-io\\glb_box_grid\\standard\\fixture.glb",
@@ -379,29 +338,30 @@
   "preparations": [
     {
       "case_id": "npy_depth_stack",
-      "seconds": 1.2211005000863224,
+      "seconds": 0.21748310001567006,
       "status": "pass"
     },
     {
       "case_id": "laz_autzen",
-      "seconds": 2.200678300112486,
+      "seconds": 1.0410594001878053,
       "status": "pass"
     },
     {
       "case_id": "spz_racoon_v4",
-      "seconds": 5.069060100009665,
-      "status": "pass"
+      "seconds": 5.024909399915487,
+      "status": "fail",
+      "error": "RuntimeError: AssertionError: "
     },
     {
       "case_id": "glb_box_grid",
-      "seconds": 5.956189600052312,
+      "seconds": 6.801838199840859,
       "status": "pass"
     },
     {
       "case_id": "colmap_tum_tracks",
-      "seconds": 300.0111644999124,
+      "seconds": 900.0043407001067,
       "status": "fail",
-      "error": "RuntimeError: worker exceeded 300 seconds"
+      "error": "RuntimeError: worker exceeded 900 seconds"
     }
   ],
   "operations": [
@@ -412,13 +372,13 @@
       "status": "ok",
       "measurement": {
         "raw_seconds": [
-          0.0001146998256444931,
-          5.2999937906861305e-05,
-          4.0499959141016006e-05
+          0.0006956001743674278,
+          0.0003112000413239002,
+          0.00012030010111629963
         ],
-        "median_seconds": 5.2999937906861305e-05,
-        "traced_peak_bytes": 4389904,
-        "rss_delta_bytes": 12873728,
+        "median_seconds": 0.0003112000413239002,
+        "traced_peak_bytes": 4391651,
+        "rss_delta_bytes": 13074432,
         "cache_mode": "warm"
       },
       "logical_bytes": 269107200,
@@ -447,13 +407,13 @@
       "status": "ok",
       "measurement": {
         "raw_seconds": [
-          0.00033119996078312397,
-          0.00023290002718567848,
-          0.0002118998672813177
+          0.0005465999711304903,
+          0.00032410002313554287,
+          0.00027249986305832863
         ],
-        "median_seconds": 0.00023290002718567848,
+        "median_seconds": 0.00032410002313554287,
         "traced_peak_bytes": 49842,
-        "rss_delta_bytes": 249856,
+        "rss_delta_bytes": 221184,
         "cache_mode": "warm"
       },
       "logical_bytes": 269107200,
@@ -482,19 +442,19 @@
       "status": "ok",
       "measurement": {
         "raw_seconds": [
-          0.11549060000106692,
-          0.11209759977646172,
-          0.11209619999863207
+          0.17612310010008514,
+          0.17458019987680018,
+          0.17737619997933507
         ],
-        "median_seconds": 0.11209759977646172,
-        "traced_peak_bytes": 4426266,
-        "rss_delta_bytes": 257703936,
+        "median_seconds": 0.17612310010008514,
+        "traced_peak_bytes": 4427898,
+        "rss_delta_bytes": 260640768,
         "cache_mode": "warm"
       },
       "logical_bytes": 269107200,
       "encoded_bytes": 269107328,
-      "logical_mib_s": 2289.4390737337576,
-      "encoded_mib_s": 2289.4401626983095,
+      "logical_mib_s": 1457.166180098802,
+      "encoded_mib_s": 1457.166873195349,
       "diagnostic": {
         "reduction": 137778400.14444733,
         "memory_metrics": {
@@ -518,19 +478,19 @@
       "status": "ok",
       "measurement": {
         "raw_seconds": [
-          0.11459420016035438,
-          0.11500119999982417,
-          0.1138486999552697
+          0.1776839999947697,
+          0.17828950006514788,
+          0.17854300001636147
         ],
-        "median_seconds": 0.11459420016035438,
-        "traced_peak_bytes": 82587,
-        "rss_delta_bytes": 240119808,
+        "median_seconds": 0.17828950006514788,
+        "traced_peak_bytes": 83027,
+        "rss_delta_bytes": 243339264,
         "cache_mode": "warm"
       },
       "logical_bytes": 269107200,
       "encoded_bytes": 269107328,
-      "logical_mib_s": 2239.560332380493,
-      "encoded_mib_s": 2239.561397620377,
+      "logical_mib_s": 1439.4601191108968,
+      "encoded_mib_s": 1439.460803785611,
       "diagnostic": {
         "reduction": 137778400.14444733,
         "memory_metrics": {
@@ -554,19 +514,19 @@
       "status": "ok",
       "measurement": {
         "raw_seconds": [
-          0.17802829993888736,
-          0.17177410004660487,
-          0.1686738000717014
+          0.22736370004713535,
+          0.23214929993264377,
+          0.22997520002536476
         ],
-        "median_seconds": 0.17177410004660487,
-        "traced_peak_bytes": 4391918,
-        "rss_delta_bytes": 282161152,
+        "median_seconds": 0.22997520002536476,
+        "traced_peak_bytes": 4390049,
+        "rss_delta_bytes": 282091520,
         "cache_mode": "warm"
       },
       "logical_bytes": 269107200,
       "encoded_bytes": 269107328,
-      "logical_mib_s": 1494.0589118520754,
-      "encoded_mib_s": 1494.059622496535,
+      "logical_mib_s": 1115.949132652974,
+      "encoded_mib_s": 1115.9496634506968,
       "diagnostic": {
         "memory_metrics": {
           "traced_peak_bytes": {
@@ -592,19 +552,19 @@
       "status": "ok",
       "measurement": {
         "raw_seconds": [
-          0.12795759993605316,
-          0.12925340002402663,
-          0.13062920002266765
+          0.1796677999664098,
+          0.17445890000090003,
+          0.17527869995683432
         ],
-        "median_seconds": 0.12925340002402663,
-        "traced_peak_bytes": 14440,
-        "rss_delta_bytes": 196608,
+        "median_seconds": 0.17527869995683432,
+        "traced_peak_bytes": 14776,
+        "rss_delta_bytes": 200704,
         "cache_mode": "warm"
       },
       "logical_bytes": 269107200,
       "encoded_bytes": 269107328,
-      "logical_mib_s": 1985.5618881382898,
-      "encoded_mib_s": 1985.5628325646064,
+      "logical_mib_s": 1464.1860366559233,
+      "encoded_mib_s": 1464.186733091443,
       "diagnostic": {
         "memory_metrics": {
           "traced_peak_bytes": {
@@ -630,13 +590,13 @@
       "status": "ok",
       "measurement": {
         "raw_seconds": [
-          0.00020579993724822998,
-          8.09000339359045e-05,
-          5.910010077059269e-05
+          0.0003806001041084528,
+          0.00016109994612634182,
+          0.000112100038677454
         ],
-        "median_seconds": 8.09000339359045e-05,
-        "traced_peak_bytes": 4390406,
-        "rss_delta_bytes": 13004800,
+        "median_seconds": 0.00016109994612634182,
+        "traced_peak_bytes": 4391175,
+        "rss_delta_bytes": 13078528,
         "cache_mode": "warm"
       },
       "logical_bytes": 269107200,
@@ -672,13 +632,13 @@
       "status": "ok",
       "measurement": {
         "raw_seconds": [
-          0.0003790000919252634,
-          0.0003016998525708914,
-          0.00025649997405707836
+          0.0005239001475274563,
+          0.0002813998144119978,
+          0.00024090008810162544
         ],
-        "median_seconds": 0.0003016998525708914,
+        "median_seconds": 0.0002813998144119978,
         "traced_peak_bytes": 49842,
-        "rss_delta_bytes": 253952,
+        "rss_delta_bytes": 147456,
         "cache_mode": "warm"
       },
       "logical_bytes": 269107200,
@@ -714,19 +674,19 @@
       "status": "ok",
       "measurement": {
         "raw_seconds": [
-          0.338556099915877,
-          0.33651369996368885,
-          0.3325220998376608
+          0.35898300004191697,
+          0.35504569998010993,
+          0.37564509990625083
         ],
-        "median_seconds": 0.33651369996368885,
-        "traced_peak_bytes": 4392381,
-        "rss_delta_bytes": 321236992,
+        "median_seconds": 0.35898300004191697,
+        "traced_peak_bytes": 4391674,
+        "rss_delta_bytes": 321306624,
         "cache_mode": "warm"
       },
       "logical_bytes": 213066720,
       "encoded_bytes": 54360104,
-      "logical_mib_s": 603.8275962222268,
-      "encoded_mib_s": 154.0556447703811,
+      "logical_mib_s": 566.0330949409735,
+      "encoded_mib_s": 144.41306417273046,
       "diagnostic": {
         "memory_metrics": {
           "traced_peak_bytes": {
@@ -749,19 +709,19 @@
       "status": "ok",
       "measurement": {
         "raw_seconds": [
-          0.16378599987365305,
-          0.1829488999210298,
-          0.16527409991249442
+          0.21575039997696877,
+          0.22190020000562072,
+          0.2109179999679327
         ],
-        "median_seconds": 0.16527409991249442,
-        "traced_peak_bytes": 277011421,
-        "rss_delta_bytes": 348258304,
+        "median_seconds": 0.21575039997696877,
+        "traced_peak_bytes": 277011654,
+        "rss_delta_bytes": 347185152,
         "cache_mode": "warm"
       },
       "logical_bytes": 213066720,
       "encoded_bytes": 54360104,
-      "logical_mib_s": 1229.450099274512,
-      "encoded_mib_s": 313.67186419058214,
+      "logical_mib_s": 941.8117350726254,
+      "encoded_mib_s": 240.28615950425464,
       "diagnostic": {
         "memory_metrics": {
           "traced_peak_bytes": {
@@ -784,19 +744,19 @@
       "status": "ok",
       "measurement": {
         "raw_seconds": [
-          1.623125199927017,
-          1.682469299994409,
-          1.6616320998873562
+          1.6716088999528438,
+          1.7025262999814004,
+          1.6928149000741541
         ],
-        "median_seconds": 1.6616320998873562,
-        "traced_peak_bytes": 13162,
-        "rss_delta_bytes": 4489216,
+        "median_seconds": 1.6928149000741541,
+        "traced_peak_bytes": 12962,
+        "rss_delta_bytes": 4030464,
         "cache_mode": "warm"
       },
       "logical_bytes": 213066720,
       "encoded_bytes": 54360104,
-      "logical_mib_s": 122.2871528292555,
-      "encoded_mib_s": 31.199346128115284,
+      "logical_mib_s": 120.03454041905043,
+      "encoded_mib_s": 30.624632982437543,
       "diagnostic": {
         "memory_metrics": {
           "traced_peak_bytes": {
@@ -822,19 +782,19 @@
       "status": "ok",
       "measurement": {
         "raw_seconds": [
-          0.21354479994624853,
-          0.2143122002016753,
-          0.2302470998838544
+          0.2876643999479711,
+          0.28169220010749996,
+          0.2751446000766009
         ],
-        "median_seconds": 0.2143122002016753,
-        "traced_peak_bytes": 42637137,
-        "rss_delta_bytes": 68419584,
+        "median_seconds": 0.28169220010749996,
+        "traced_peak_bytes": 42637497,
+        "rss_delta_bytes": 66949120,
         "cache_mode": "warm"
       },
       "logical_bytes": 213066720,
       "encoded_bytes": 54360104,
-      "logical_mib_s": 948.1320165333894,
-      "encoded_mib_s": 241.8986645332728,
+      "logical_mib_s": 721.3414445532311,
+      "encoded_mib_s": 184.03716894606478,
       "diagnostic": {
         "memory_metrics": {
           "traced_peak_bytes": {
@@ -860,13 +820,13 @@
       "status": "ok",
       "measurement": {
         "raw_seconds": [
-          0.012454100186005235,
-          0.013509399956092238,
-          0.012261900119483471
+          0.016394099919125438,
+          0.013458899920806289,
+          0.01475799991749227
         ],
-        "median_seconds": 0.012454100186005235,
-        "traced_peak_bytes": 4392252,
-        "rss_delta_bytes": 15499264,
+        "median_seconds": 0.01475799991749227,
+        "traced_peak_bytes": 4391254,
+        "rss_delta_bytes": 15478784,
         "cache_mode": "warm"
       },
       "logical_bytes": 213066720,
@@ -896,13 +856,13 @@
       "status": "ok",
       "measurement": {
         "raw_seconds": [
-          0.18605889985337853,
-          0.15939759998582304,
-          0.16045470000244677
+          0.18983629997819662,
+          0.208086300175637,
+          0.20292369998060167
         ],
-        "median_seconds": 0.16045470000244677,
-        "traced_peak_bytes": 277011774,
-        "rss_delta_bytes": 347152384,
+        "median_seconds": 0.20292369998060167,
+        "traced_peak_bytes": 277011654,
+        "rss_delta_bytes": 347746304,
         "cache_mode": "warm"
       },
       "logical_bytes": 213066720,
@@ -932,13 +892,13 @@
       "status": "ok",
       "measurement": {
         "raw_seconds": [
-          0.00015279999934136868,
-          6.889994256198406e-05,
-          5.060015246272087e-05
+          0.0003293000627309084,
+          0.00011819996871054173,
+          6.500002928078175e-05
         ],
-        "median_seconds": 6.889994256198406e-05,
-        "traced_peak_bytes": 4392550,
-        "rss_delta_bytes": 12857344,
+        "median_seconds": 0.00011819996871054173,
+        "traced_peak_bytes": 4390298,
+        "rss_delta_bytes": 12922880,
         "cache_mode": "warm"
       },
       "logical_bytes": 213066720,
@@ -976,13 +936,13 @@
       "status": "ok",
       "measurement": {
         "raw_seconds": [
-          0.00023719994351267815,
-          0.00015469989739358425,
-          0.0001395998988300562
+          0.0009238000493496656,
+          0.000496900174766779,
+          0.00030339998193085194
         ],
-        "median_seconds": 0.00015469989739358425,
-        "traced_peak_bytes": 21251,
-        "rss_delta_bytes": 253952,
+        "median_seconds": 0.000496900174766779,
+        "traced_peak_bytes": 21296,
+        "rss_delta_bytes": 184320,
         "cache_mode": "warm"
       },
       "logical_bytes": 213066720,
@@ -1014,282 +974,25 @@
       "error": null
     },
     {
-      "case_id": "spz_racoon_v4",
-      "provider": "sceneio",
-      "operation": "read",
-      "status": "ok",
-      "measurement": {
-        "raw_seconds": [
-          0.13739270018413663,
-          0.15070009999908507,
-          0.1393376998603344
-        ],
-        "median_seconds": 0.1393376998603344,
-        "traced_peak_bytes": 4389661,
-        "rss_delta_bytes": 308723712,
-        "cache_mode": "warm"
-      },
-      "logical_bytes": 268435604,
-      "encoded_bytes": 27220225,
-      "logical_mib_s": 1837.2640096714774,
-      "encoded_mib_s": 186.30442080872325,
-      "diagnostic": {
-        "memory_metrics": {
-          "traced_peak_bytes": {
-            "status": "available",
-            "reason": null
-          },
-          "rss_delta_bytes": {
-            "status": "available",
-            "reason": null
-          }
-        }
-      },
-      "output_paths": [],
-      "error": null
-    },
-    {
-      "case_id": "spz_racoon_v4",
-      "provider": "niantic_spz",
-      "operation": "read",
-      "status": "ok",
-      "measurement": {
-        "raw_seconds": [
-          0.13127140002325177,
-          0.14045169996097684,
-          0.13007199997082353
-        ],
-        "median_seconds": 0.13127140002325177,
-        "traced_peak_bytes": 3440,
-        "rss_delta_bytes": 269615104,
-        "cache_mode": "warm"
-      },
-      "logical_bytes": 268435604,
-      "encoded_bytes": 27220225,
-      "logical_mib_s": 1950.1592966819442,
-      "encoded_mib_s": 197.75236239349334,
-      "diagnostic": {
-        "memory_metrics": {
-          "traced_peak_bytes": {
-            "status": "available",
-            "reason": null
-          },
-          "rss_delta_bytes": {
-            "status": "available",
-            "reason": null
-          }
-        }
-      },
-      "output_paths": [],
-      "error": null
-    },
-    {
-      "case_id": "spz_racoon_v4",
-      "provider": "gsply",
-      "operation": "read",
-      "status": "ok",
-      "measurement": {
-        "raw_seconds": [
-          0.08593519986607134,
-          0.08548460016027093,
-          0.08759470004588366
-        ],
-        "median_seconds": 0.08593519986607134,
-        "traced_peak_bytes": 23028,
-        "rss_delta_bytes": 271802368,
-        "cache_mode": "warm"
-      },
-      "logical_bytes": 268435604,
-      "encoded_bytes": 27220225,
-      "logical_mib_s": 2978.9904665698227,
-      "encoded_mib_s": 302.0791190310416,
-      "diagnostic": {
-        "memory_metrics": {
-          "traced_peak_bytes": {
-            "status": "available",
-            "reason": null
-          },
-          "rss_delta_bytes": {
-            "status": "available",
-            "reason": null
-          }
-        }
-      },
-      "output_paths": [],
-      "error": null
-    },
-    {
-      "case_id": "spz_racoon_v4",
-      "provider": "sceneio",
-      "operation": "write",
-      "status": "ok",
-      "measurement": {
-        "raw_seconds": [
-          5.498000600142404,
-          5.546781899873167,
-          5.475889699999243
-        ],
-        "median_seconds": 5.498000600142404,
-        "traced_peak_bytes": 4210,
-        "rss_delta_bytes": 178589696,
-        "cache_mode": "warm"
-      },
-      "logical_bytes": 268435604,
-      "encoded_bytes": 30322515,
-      "logical_mib_s": 46.56240691155402,
-      "encoded_mib_s": 5.2596945448849635,
-      "diagnostic": {
-        "memory_metrics": {
-          "traced_peak_bytes": {
-            "status": "available",
-            "reason": null
-          },
-          "rss_delta_bytes": {
-            "status": "available",
-            "reason": null
-          }
-        },
-        "representative_encoded_bytes": 30322515
-      },
-      "output_paths": [
-        "build/bench-data/large-io/outputs/spz_racoon_v4/standard/timing/sceneio-write-4.spz"
-      ],
-      "error": null
-    },
-    {
-      "case_id": "spz_racoon_v4",
-      "provider": "niantic_spz",
-      "operation": "write",
-      "status": "ok",
-      "measurement": {
-        "raw_seconds": [
-          2.475808900082484,
-          2.5043522000778466,
-          2.4744303999468684
-        ],
-        "median_seconds": 2.475808900082484,
-        "traced_peak_bytes": 4095,
-        "rss_delta_bytes": 319488,
-        "cache_mode": "warm"
-      },
-      "logical_bytes": 268435604,
-      "encoded_bytes": 27220225,
-      "logical_mib_s": 103.40060621612191,
-      "encoded_mib_s": 10.485150719199071,
-      "diagnostic": {
-        "memory_metrics": {
-          "traced_peak_bytes": {
-            "status": "available",
-            "reason": null
-          },
-          "rss_delta_bytes": {
-            "status": "available",
-            "reason": null
-          }
-        },
-        "representative_encoded_bytes": 27220225
-      },
-      "output_paths": [
-        "build/bench-data/large-io/outputs/spz_racoon_v4/standard/timing/niantic_spz-write-4.spz"
-      ],
-      "error": null
-    },
-    {
-      "case_id": "spz_racoon_v4",
-      "provider": "gsply",
-      "operation": "write",
-      "status": "ok",
-      "measurement": {
-        "raw_seconds": [
-          0.894128399901092,
-          0.913959400029853,
-          1.0149719000328332
-        ],
-        "median_seconds": 0.913959400029853,
-        "traced_peak_bytes": 4845,
-        "rss_delta_bytes": 794624,
-        "cache_mode": "warm"
-      },
-      "logical_bytes": 268435604,
-      "encoded_bytes": 27221934,
-      "logical_mib_s": 280.1001238517127,
-      "encoded_mib_s": 28.404827717574857,
-      "diagnostic": {
-        "memory_metrics": {
-          "traced_peak_bytes": {
-            "status": "available",
-            "reason": null
-          },
-          "rss_delta_bytes": {
-            "status": "available",
-            "reason": null
-          }
-        },
-        "representative_encoded_bytes": 27221934
-      },
-      "output_paths": [
-        "build/bench-data/large-io/outputs/spz_racoon_v4/standard/timing/gsply-write-4.spz"
-      ],
-      "error": null
-    },
-    {
-      "case_id": "spz_racoon_v4",
-      "provider": "sceneio",
-      "operation": "inspect",
-      "status": "ok",
-      "measurement": {
-        "raw_seconds": [
-          0.00013950001448392868,
-          6.0900114476680756e-05,
-          4.309997893869877e-05
-        ],
-        "median_seconds": 6.0900114476680756e-05,
-        "traced_peak_bytes": 4390113,
-        "rss_delta_bytes": 12992512,
-        "cache_mode": "warm"
-      },
-      "logical_bytes": 268435604,
-      "encoded_bytes": 27220225,
-      "logical_mib_s": null,
-      "encoded_mib_s": null,
-      "diagnostic": {
-        "count": 1137439,
-        "sh_degree": 3,
-        "version": 4,
-        "memory_metrics": {
-          "traced_peak_bytes": {
-            "status": "available",
-            "reason": null
-          },
-          "rss_delta_bytes": {
-            "status": "available",
-            "reason": null
-          }
-        }
-      },
-      "output_paths": [],
-      "error": null
-    },
-    {
       "case_id": "glb_box_grid",
       "provider": "sceneio",
       "operation": "read",
       "status": "ok",
       "measurement": {
         "raw_seconds": [
-          0.3782894001342356,
-          0.3622035998851061,
-          0.36833990016020834
+          0.4404460000805557,
+          0.4330482000950724,
+          0.4385971000883728
         ],
-        "median_seconds": 0.36833990016020834,
-        "traced_peak_bytes": 4391735,
-        "rss_delta_bytes": 536469504,
+        "median_seconds": 0.4385971000883728,
+        "traced_peak_bytes": 4390604,
+        "rss_delta_bytes": 536645632,
         "cache_mode": "warm"
       },
       "logical_bytes": 268436160,
       "encoded_bytes": 228171944,
-      "logical_mib_s": 695.0120561887866,
-      "encoded_mib_s": 590.7633754112436,
+      "logical_mib_s": 583.6807204952728,
+      "encoded_mib_s": 496.13123906528483,
       "diagnostic": {
         "memory_metrics": {
           "traced_peak_bytes": {
@@ -1312,19 +1015,19 @@
       "status": "ok",
       "measurement": {
         "raw_seconds": [
-          0.3972676999401301,
-          0.3923820999916643,
-          0.3875890001654625
+          0.4808799000456929,
+          0.47112350002862513,
+          0.47677820012904704
         ],
-        "median_seconds": 0.3923820999916643,
-        "traced_peak_bytes": 818763902,
-        "rss_delta_bytes": 819109888,
+        "median_seconds": 0.47677820012904704,
+        "traced_peak_bytes": 818764622,
+        "rss_delta_bytes": 819097600,
         "cache_mode": "warm"
       },
       "logical_bytes": 268436160,
       "encoded_bytes": 228171944,
-      "logical_mib_s": 652.4269873476827,
-      "encoded_mib_s": 554.5658752575814,
+      "logical_mib_s": 536.9387092728409,
+      "encoded_mib_s": 456.40031918067575,
       "diagnostic": {
         "memory_metrics": {
           "traced_peak_bytes": {
@@ -1347,19 +1050,19 @@
       "status": "ok",
       "measurement": {
         "raw_seconds": [
-          0.5804058997891843,
-          0.5824128999374807,
-          0.5797853001859039
+          0.7061767999548465,
+          0.7289129998534918,
+          0.7059029000811279
         ],
-        "median_seconds": 0.5804058997891843,
-        "traced_peak_bytes": 8376,
-        "rss_delta_bytes": 633905152,
+        "median_seconds": 0.7061767999548465,
+        "traced_peak_bytes": 9576,
+        "rss_delta_bytes": 614055936,
         "cache_mode": "warm"
       },
       "logical_bytes": 268436160,
       "encoded_bytes": 228172388,
-      "logical_mib_s": 441.07179385961376,
-      "encoded_mib_s": 374.9137392085768,
+      "logical_mib_s": 362.51640014665963,
+      "encoded_mib_s": 308.1411711098344,
       "diagnostic": {
         "memory_metrics": {
           "traced_peak_bytes": {
@@ -1385,19 +1088,19 @@
       "status": "ok",
       "measurement": {
         "raw_seconds": [
-          1.2686866000294685,
-          1.2860234000254422,
-          1.286056999815628
+          1.3812317000702024,
+          1.4105467000044882,
+          1.3879859000444412
         ],
-        "median_seconds": 1.2860234000254422,
-        "traced_peak_bytes": 684539912,
-        "rss_delta_bytes": 598036480,
+        "median_seconds": 1.3879859000444412,
+        "traced_peak_bytes": 684540562,
+        "rss_delta_bytes": 684355584,
         "cache_mode": "warm"
       },
       "logical_bytes": 268436160,
       "encoded_bytes": 228171988,
-      "logical_mib_s": 199.06377394194703,
-      "encoded_mib_s": 169.20513629429303,
+      "logical_mib_s": 184.44039768597216,
+      "encoded_mib_s": 156.7751982725385,
       "diagnostic": {
         "memory_metrics": {
           "traced_peak_bytes": {
@@ -1423,13 +1126,13 @@
       "status": "ok",
       "measurement": {
         "raw_seconds": [
-          0.00016520009376108646,
-          8.999998681247234e-05,
-          7.519987411797047e-05
+          0.00031679985113441944,
+          0.00022369995713233948,
+          0.0001230000052601099
         ],
-        "median_seconds": 8.999998681247234e-05,
-        "traced_peak_bytes": 4391953,
-        "rss_delta_bytes": 13201408,
+        "median_seconds": 0.00022369995713233948,
+        "traced_peak_bytes": 4391528,
+        "rss_delta_bytes": 12955648,
         "cache_mode": "warm"
       },
       "logical_bytes": 268436160,
@@ -1461,13 +1164,13 @@
       "status": "ok",
       "measurement": {
         "raw_seconds": [
-          0.4393448999617249,
-          0.440510299988091,
-          0.43572710012085736
+          0.5497028999961913,
+          0.5491780999582261,
+          0.5478695000056177
         ],
-        "median_seconds": 0.4393448999617249,
-        "traced_peak_bytes": 818764022,
-        "rss_delta_bytes": 819011584,
+        "median_seconds": 0.5491780999582261,
+        "traced_peak_bytes": 818764502,
+        "rss_delta_bytes": 818950144,
         "cache_mode": "warm"
       },
       "logical_bytes": 268436160,
@@ -1739,130 +1442,6 @@
       ]
     },
     {
-      "case_id": "spz_racoon_v4",
-      "kind": "provider_output_cross_read",
-      "writer_provider": "sceneio",
-      "reader_provider": "sceneio",
-      "profile": "spz_racoon_v4:semantic-v1",
-      "status": "pass"
-    },
-    {
-      "case_id": "spz_racoon_v4",
-      "kind": "provider_output_cross_read",
-      "writer_provider": "niantic_spz",
-      "reader_provider": "sceneio",
-      "profile": "spz_racoon_v4:semantic-v1",
-      "status": "pass"
-    },
-    {
-      "case_id": "spz_racoon_v4",
-      "kind": "provider_output_cross_read",
-      "writer_provider": "gsply",
-      "reader_provider": "sceneio",
-      "profile": "spz_racoon_v4:semantic-v1",
-      "status": "pass"
-    },
-    {
-      "case_id": "spz_racoon_v4",
-      "kind": "provider_output_cross_read",
-      "writer_provider": "sceneio",
-      "reader_provider": "niantic_spz",
-      "profile": "spz_racoon_v4:semantic-v1",
-      "status": "pass"
-    },
-    {
-      "case_id": "spz_racoon_v4",
-      "kind": "provider_output_cross_read",
-      "writer_provider": "niantic_spz",
-      "reader_provider": "niantic_spz",
-      "profile": "spz_racoon_v4:semantic-v1",
-      "status": "pass"
-    },
-    {
-      "case_id": "spz_racoon_v4",
-      "kind": "provider_output_cross_read",
-      "writer_provider": "gsply",
-      "reader_provider": "niantic_spz",
-      "profile": "spz_racoon_v4:semantic-v1",
-      "status": "pass"
-    },
-    {
-      "case_id": "spz_racoon_v4",
-      "kind": "provider_output_cross_read",
-      "writer_provider": "sceneio",
-      "reader_provider": "gsply",
-      "profile": "spz_racoon_v4:semantic-v1",
-      "status": "pass"
-    },
-    {
-      "case_id": "spz_racoon_v4",
-      "kind": "provider_output_cross_read",
-      "writer_provider": "niantic_spz",
-      "reader_provider": "gsply",
-      "profile": "spz_racoon_v4:semantic-v1",
-      "status": "pass"
-    },
-    {
-      "case_id": "spz_racoon_v4",
-      "kind": "provider_output_cross_read",
-      "writer_provider": "gsply",
-      "reader_provider": "gsply",
-      "profile": "spz_racoon_v4:semantic-v1",
-      "status": "pass"
-    },
-    {
-      "case_id": "spz_racoon_v4",
-      "kind": "common_file_cross_read",
-      "status": "pass",
-      "providers": {
-        "niantic_spz": "ok",
-        "gsply": "ok"
-      },
-      "unavailable": {},
-      "required_reference": "niantic_spz",
-      "required_reference_available": true,
-      "profile": "spz_racoon_v4:semantic-v1"
-    },
-    {
-      "case_id": "spz_racoon_v4",
-      "kind": "common_file_read",
-      "operation": "inspect",
-      "status": "pass",
-      "profile": "normalized_provider_metadata",
-      "providers": [
-        "sceneio"
-      ],
-      "values": [
-        {
-          "count": 1137439,
-          "sh_degree": 3,
-          "version": 4,
-          "memory_metrics": {
-            "traced_peak_bytes": {
-              "status": "available",
-              "reason": null
-            },
-            "rss_delta_bytes": {
-              "status": "available",
-              "reason": null
-            }
-          }
-        }
-      ]
-    },
-    {
-      "case_id": "spz_racoon_v4",
-      "kind": "common_file_read",
-      "operation": "read",
-      "status": "pass",
-      "profile": "provider_operations_completed",
-      "providers": [
-        "sceneio",
-        "niantic_spz",
-        "gsply"
-      ]
-    },
-    {
       "case_id": "glb_box_grid",
       "kind": "provider_output_cross_read",
       "writer_provider": "sceneio",
@@ -1967,7 +1546,7 @@
       "provider": "sceneio",
       "operation": "map_open",
       "status": "pass",
-      "traced_peak_bytes": 4389904,
+      "traced_peak_bytes": 4391651,
       "bound_bytes": 67276832,
       "conclusive": true,
       "profile": "no_approximately_file_sized_python_allocation",
@@ -1978,7 +1557,7 @@
       "provider": "sceneio",
       "operation": "full_scan",
       "status": "pass",
-      "traced_peak_bytes": 4426266,
+      "traced_peak_bytes": 4427898,
       "bound_bytes": 67276832,
       "conclusive": true,
       "profile": "no_approximately_file_sized_python_allocation",
@@ -1989,7 +1568,7 @@
       "provider": "sceneio",
       "operation": "write",
       "status": "pass",
-      "traced_peak_bytes": 4391918,
+      "traced_peak_bytes": 4390049,
       "bound_bytes": 67276832,
       "conclusive": true,
       "profile": "no_approximately_file_sized_python_allocation",
@@ -2000,7 +1579,7 @@
       "provider": "sceneio",
       "operation": "read",
       "status": "pass",
-      "traced_peak_bytes": 4392381,
+      "traced_peak_bytes": 4391674,
       "bound_bytes": 13590026,
       "conclusive": true,
       "profile": "no_approximately_file_sized_python_allocation",
@@ -2011,30 +1590,8 @@
       "provider": "sceneio",
       "operation": "write",
       "status": "pass",
-      "traced_peak_bytes": 13162,
+      "traced_peak_bytes": 12962,
       "bound_bytes": 13590026,
-      "conclusive": true,
-      "profile": "no_approximately_file_sized_python_allocation",
-      "reason": null
-    },
-    {
-      "case_id": "spz_racoon_v4",
-      "provider": "sceneio",
-      "operation": "read",
-      "status": "pass",
-      "traced_peak_bytes": 4389661,
-      "bound_bytes": 6805056,
-      "conclusive": true,
-      "profile": "no_approximately_file_sized_python_allocation",
-      "reason": null
-    },
-    {
-      "case_id": "spz_racoon_v4",
-      "provider": "sceneio",
-      "operation": "write",
-      "status": "pass",
-      "traced_peak_bytes": 4210,
-      "bound_bytes": 7580628,
       "conclusive": true,
       "profile": "no_approximately_file_sized_python_allocation",
       "reason": null
@@ -2044,7 +1601,7 @@
       "provider": "sceneio",
       "operation": "read",
       "status": "pass",
-      "traced_peak_bytes": 4391735,
+      "traced_peak_bytes": 4390604,
       "bound_bytes": 57042986,
       "conclusive": true,
       "profile": "no_approximately_file_sized_python_allocation",
@@ -2055,7 +1612,7 @@
       "provider": "sceneio",
       "operation": "write",
       "status": "pass",
-      "traced_peak_bytes": 8376,
+      "traced_peak_bytes": 9576,
       "bound_bytes": 57043097,
       "conclusive": true,
       "profile": "no_approximately_file_sized_python_allocation",
@@ -2086,8 +1643,13 @@
   ],
   "skips": [
     {
+      "case_id": "spz_racoon_v4",
+      "reason": "AssertionError: ",
+      "type": "RuntimeError"
+    },
+    {
       "case_id": "colmap_tum_tracks",
-      "reason": "worker exceeded 300 seconds",
+      "reason": "worker exceeded 900 seconds",
       "type": "RuntimeError"
     }
   ],
@@ -2102,9 +1664,9 @@
   "complete": false,
   "completion_reasons": [
     "one or more required fixtures were not prepared",
-    "missing provider operations: [('colmap_tum_tracks', 'pycolmap', 'inspect'), ('colmap_tum_tracks', 'pycolmap', 'read'), ('colmap_tum_tracks', 'pycolmap', 'write'), ('colmap_tum_tracks', 'sceneio', 'image'), ('colmap_tum_tracks', 'sceneio', 'inspect'), ('colmap_tum_tracks', 'sceneio', 'read'), ('colmap_tum_tracks', 'sceneio', 'write')]",
-    "missing directional provider output reads: [('colmap_tum_tracks', 'pycolmap', 'pycolmap'), ('colmap_tum_tracks', 'pycolmap', 'sceneio'), ('colmap_tum_tracks', 'sceneio', 'pycolmap'), ('colmap_tum_tracks', 'sceneio', 'sceneio')]",
-    "missing common-input oracle checks: ['colmap_tum_tracks']",
+    "missing provider operations: [('colmap_tum_tracks', 'pycolmap', 'inspect'), ('colmap_tum_tracks', 'pycolmap', 'read'), ('colmap_tum_tracks', 'pycolmap', 'write'), ('colmap_tum_tracks', 'sceneio', 'image'), ('colmap_tum_tracks', 'sceneio', 'inspect'), ('colmap_tum_tracks', 'sceneio', 'read'), ('colmap_tum_tracks', 'sceneio', 'write'), ('spz_racoon_v4', 'gsply', 'read'), ('spz_racoon_v4', 'gsply', 'write'), ('spz_racoon_v4', 'niantic_spz', 'read'), ('spz_racoon_v4', 'niantic_spz', 'write'), ('spz_racoon_v4', 'sceneio', 'inspect'), ('spz_racoon_v4', 'sceneio', 'read'), ('spz_racoon_v4', 'sceneio', 'write')]",
+    "missing directional provider output reads: [('colmap_tum_tracks', 'pycolmap', 'pycolmap'), ('colmap_tum_tracks', 'pycolmap', 'sceneio'), ('colmap_tum_tracks', 'sceneio', 'pycolmap'), ('colmap_tum_tracks', 'sceneio', 'sceneio'), ('spz_racoon_v4', 'gsply', 'gsply'), ('spz_racoon_v4', 'gsply', 'niantic_spz'), ('spz_racoon_v4', 'gsply', 'sceneio'), ('spz_racoon_v4', 'niantic_spz', 'gsply'), ('spz_racoon_v4', 'niantic_spz', 'niantic_spz'), ('spz_racoon_v4', 'niantic_spz', 'sceneio'), ('spz_racoon_v4', 'sceneio', 'gsply'), ('spz_racoon_v4', 'sceneio', 'niantic_spz'), ('spz_racoon_v4', 'sceneio', 'sceneio')]",
+    "missing common-input oracle checks: ['colmap_tum_tracks', 'spz_racoon_v4']",
     "one or more cases lack cross-read validation"
   ]
 }

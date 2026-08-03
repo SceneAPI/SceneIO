@@ -6,6 +6,8 @@ is required for the test tier.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import numpy as np
 import pytest
 
@@ -117,6 +119,14 @@ def test_runner_smoke_npy_is_complete_and_cleans_outputs(tmp_path):
             "status": "pass",
         }
     ]
+    recorded_outputs = [
+        output
+        for operation in document["operations"]
+        for output in operation["output_paths"]
+    ]
+    assert recorded_outputs
+    assert all(not Path(output).is_absolute() for output in recorded_outputs)
+    assert all("opsiclear" not in output.lower() for output in recorded_outputs)
     assert not list((tmp_path / "outputs").rglob("*.npy"))
 
 

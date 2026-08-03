@@ -258,18 +258,18 @@ can be verified without rerunning the entire large experiment.
 - [x] The smoke tier and result-schema tests pass without network access.
 - [ ] Every standard case reaches its declared size/count and passes both
       cross-read directions.
-- [ ] Each measured row contains three raw samples, a median, throughput, RSS,
+- [x] Each measured row contains three raw samples, a median, throughput, RSS,
       and traced-allocation evidence, or a structured explanation of an
       unavailable metric.
-- [ ] The SceneIO path read and file-sink paths show no additional
+- [x] The SceneIO path read and file-sink paths show no additional
       approximately file-sized Python allocation for the applicable formats.
-- [ ] Results name exact provider versions and do not combine warm and cold
+- [x] Results name exact provider versions and do not combine warm and cold
       cache measurements.
-- [ ] `bench/LARGE_FILE_IO.md` is reproducible from the committed JSON and
+- [x] `bench/LARGE_FILE_IO.md` is reproducible from the committed JSON and
       accurately labels source, derived, and fallback data.
-- [ ] Focused tests, documentation consistency checks, Ruff, and `git diff
+- [x] Focused tests, documentation consistency checks, Ruff, and `git diff
       --check` pass.
-- [ ] Three final reviews cover resource ownership/lifetime, format and
+- [x] Three final reviews cover resource ownership/lifetime, format and
       coordinate correctness, and measurement/test soundness.
 
 The benchmark is complete when this checklist is green and the result document

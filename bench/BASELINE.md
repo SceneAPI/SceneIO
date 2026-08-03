@@ -10,6 +10,9 @@ and dense-array comparison against pinned reference providers, see
 [`../docs/large_file_io_benchmark_spec.md`](../docs/large_file_io_benchmark_spec.md).
 That finite run records raw samples, RSS/traced allocation, and a directional
 writer-by-reader semantic matrix in `bench/LARGE_FILE_IO.md`.
+The committed Windows result is intentionally incomplete for the 256 MiB
+COLMAP case, which exceeded the bounded preparation window; the report keeps
+that limitation alongside successful NPY, LAZ, SPZ, and GLB evidence.
 
 This document is chronological benchmark evidence: later sections expand from
 the original 23-codec O0 scope to the live 50-codec harness. Optimized mmap,

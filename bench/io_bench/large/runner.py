@@ -180,6 +180,28 @@ def _json_safe(value: Any) -> Any:
     return str(value)
 
 
+def _portable_output_path(value: str, cache: Path) -> str:
+    """Serialize deleted benchmark outputs without leaking a host path."""
+
+    resolved = Path(value).resolve()
+    try:
+        return resolved.relative_to(REPO_ROOT.resolve()).as_posix()
+    except (OSError, ValueError):
+        try:
+            relative = resolved.relative_to(cache.resolve()).as_posix()
+        except (OSError, ValueError):
+            return f"<external-output>/{resolved.name}"
+        return f"<cache>/{relative}"
+
+
+def _operation_summary(operation: OperationResult, cache: Path) -> dict[str, Any]:
+    result = operation.to_dict()
+    result["output_paths"] = [
+        _portable_output_path(value, cache) for value in operation.output_paths
+    ]
+    return result
+
+
 def _source_summary(source: Any) -> dict[str, Any]:
     spec = getattr(source, "spec", None)
     source_path = Path(getattr(source, "path", ""))
@@ -948,7 +970,7 @@ def run_benchmark(
         },
         "cases": [artifact_summary(item) for item in artifacts],
         "preparations": preparations,
-        "operations": [item.to_dict() for item in operations],
+        "operations": [_operation_summary(item, cache) for item in operations],
         "cross_reads": cross_reads,
         "memory_checks": memory_checks,
         "cleanup": cleanup_results,
@@ -968,15 +990,20 @@ def report_markdown(document: dict[str, Any]) -> str:
     worker_timeout = float(
         document.get("worker_timeout_seconds", DEFAULT_WORKER_TIMEOUT_SECONDS)
     )
+    python_command = (
+        r".venv\Scripts\python.exe"
+        if sys.platform == "win32"
+        else ".venv/bin/python"
+    )
     lines = [
         "# Large-file I/O benchmark",
         "",
-        f"Schema: `{document.get('schema_version')}`  ",
-        f"Tier: `{document.get('tier')}`  ",
-        f"Generated: `{document.get('generated_at_utc')}`  ",
-        f"Commit: `{sceneio.get('commit')}` (dirty={sceneio.get('dirty')})  ",
-        f"Cache mode: `{document.get('cache_mode')}`  ",
-        f"Cache control: `{json.dumps(document.get('cache_control', {}), sort_keys=True)}`  ",
+        f"Schema: `{document.get('schema_version')}`",
+        f"Tier: `{document.get('tier')}`",
+        f"Generated: `{document.get('generated_at_utc')}`",
+        f"Commit: `{sceneio.get('commit')}` (dirty={sceneio.get('dirty')})",
+        f"Cache mode: `{document.get('cache_mode')}`",
+        f"Cache control: `{json.dumps(document.get('cache_control', {}), sort_keys=True)}`",
         f"Completion: **{document.get('complete')}**; correctness: **{document.get('correctness_passed')}**",
         f"Source verification: **{document.get('source_verification', {}).get('status', 'unknown')}**",
         "",
@@ -1150,7 +1177,7 @@ def report_markdown(document: dict[str, Any]) -> str:
             "",
             "## Reproduction",
             "",
-            f"`{sys.executable} bench/bench_large_io.py run --tier {document.get('tier', 'smoke')} --runs {document.get('runs', 3)} --worker-timeout {worker_timeout:g} --cache {cache.get('path', 'build/bench-data/large-io')}`",
+            f"`{python_command} bench/bench_large_io.py run --tier {document.get('tier', 'smoke')} --runs {document.get('runs', 3)} --worker-timeout {worker_timeout:g} --cache {cache.get('path', 'build/bench-data/large-io')}`",
         ]
     )
     return "\n".join(lines) + "\n"

@@ -5899,9 +5899,11 @@ general metadata, and implicit color conversion stay out of the profile.
       directional checks; COLMAP preparation reached the 300-second child
       bound. Remove its duplicate prepared-record decodes, retain the 256 MiB
       fixture, and document the bounded 4,096-point large-oracle profile.
-- [ ] Run the standard tier through a Luna Max worker and commit its raw JSON.
-- [ ] Generate `bench/LARGE_FILE_IO.md`, record interpretation/limitations,
+- [x] Run the standard tier through a Luna Max worker and commit both bounded
+      raw JSON attempts; neither result is mislabeled complete.
+- [x] Generate `bench/LARGE_FILE_IO.md`, record interpretation/limitations,
       and mark the specification acceptance checklist from actual evidence.
-- [ ] Complete the final resource/lifetime, format/coordinate, and
+- [x] Complete the final resource/lifetime, format/coordinate, and
       measurement/test-soundness reviews; pass focused tests, full tests, Ruff,
-      and `git diff --check`.
+      and `git diff --check`. Final local evidence: 26 focused tests and 4,633
+      full-suite tests passed, with 16 documented skips.
