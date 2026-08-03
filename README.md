@@ -129,6 +129,19 @@ silently shifting data. See
 [`docs/coordinate_conventions.md`](docs/coordinate_conventions.md) for the
 73-format inventory, conversion limits, and verification contract.
 
+Every public in-memory data representation also has a versioned normalization
+and scaling contract:
+
+```python
+contract = sceneio.representation_contract(sceneio.GaussianCloud)
+assert contract.profile.id == "gaussian_cloud"
+assert contract.coordinates == "unknown"  # activation metadata is not a frame
+```
+
+The exact 91-record catalog, standard policy vocabulary, unit equations, and
+refusal rules are documented in
+[`docs/representation_normalization.md`](docs/representation_normalization.md).
+
 NCore V4 datasets expose a metadata-only catalog, exact owned component arrays,
 and validated standard semantic items without importing the upstream package:
 

@@ -472,8 +472,8 @@
     "last": "tests/test_points_binary.py::test_bad_magic_rejected"
   },
   "pytest_candidate_collection": {
-    "count": 4633,
-    "sorted_normalized_node_ids_sha256": "7c4bff2a463812fc241847857cdce5802c94caa716be79eaad63e4a8f216f181",
+    "count": 4641,
+    "sorted_normalized_node_ids_sha256": "94e384d21f05a283978d0c839bef5fe71c8544c117d6a23406c2c4f3d30152b5",
     "collection_ignored_paths": [
       "tests/codecs/test_spz_niantic_oracle.py"
     ],
@@ -2032,7 +2032,15 @@
       "tests/records/test_gaussian_semantic_oracles.py::test_index_oracle_covers_sh_memory_permutation_for_every_degree[2]",
       "tests/records/test_gaussian_semantic_oracles.py::test_index_oracle_covers_sh_memory_permutation_for_every_degree[3]",
       "tests/records/test_gaussian_semantic_oracles.py::test_gaussian_cloud_keeps_unqualified_semantics_absent_and_refuses_coordinate_conversion",
-      "tests/test_io_splat_family_architecture.py::test_splat_transform_oracle_install_contract_is_locked"
+      "tests/test_io_splat_family_architecture.py::test_splat_transform_oracle_install_contract_is_locked",
+      "tests/test_import_guards.py::test_no_family_imports[representations.py]",
+      "tests/test_representation_contracts.py::test_contract_catalog_exactly_covers_public_representation_classes",
+      "tests/test_representation_contracts.py::test_every_contract_uses_a_registered_profile_and_live_evidence",
+      "tests/test_representation_contracts.py::test_lookup_accepts_public_alias_type_and_unambiguous_name",
+      "tests/test_representation_contracts.py::test_lookup_refuses_ambiguous_or_unknown_representations",
+      "tests/test_representation_contracts.py::test_conversion_and_metric_claims_stay_narrow",
+      "tests/test_representation_contracts.py::test_gaussian_activation_contract_does_not_claim_world_normalization",
+      "tests/test_representation_contracts.py::test_compiled_and_neutral_records_with_same_name_remain_distinct"
     ],
     "removed_nodes": [
       "tests/codecs/test_compressed_ply.py::test_writer_body_is_byte_identical_to_pinned_playcanvas_vector",

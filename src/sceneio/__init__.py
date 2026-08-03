@@ -219,6 +219,18 @@ _IO_FORWARDS = frozenset(
     }
 )
 
+_REPRESENTATION_FORWARDS = frozenset(
+    {
+        "REPRESENTATION_CONTRACTS",
+        "REPRESENTATION_CONTRACT_SCHEMA_VERSION",
+        "REPRESENTATION_PROFILES",
+        "REPRESENTATION_UNIT_VOCABULARY",
+        "NormalizationProfile",
+        "RepresentationNormalizationContract",
+        "representation_contract",
+    }
+)
+
 
 def __getattr__(name: str) -> object:
     if name == "_core":
@@ -229,6 +241,8 @@ def __getattr__(name: str) -> object:
         return module
     if name in _NAMESPACES:
         return importlib.import_module(f"sceneio.{name}")
+    if name in _REPRESENTATION_FORWARDS:
+        return getattr(importlib.import_module("sceneio.representations"), name)
     if name in _IO_FORWARDS:
         return getattr(importlib.import_module("sceneio.io"), name)
     raise AttributeError(f"module 'sceneio' has no attribute {name!r}")
@@ -259,6 +273,10 @@ __all__ = [
     "MAX_NUM_IMAGES",
     "RECORD_FMT",
     "RECORD_SIZE",
+    "REPRESENTATION_CONTRACTS",
+    "REPRESENTATION_CONTRACT_SCHEMA_VERSION",
+    "REPRESENTATION_PROFILES",
+    "REPRESENTATION_UNIT_VOCABULARY",
     "UNDEFINED_EXTRACTOR_TYPE",
     "UNKNOWN_COORDINATES",
     "UNSPECIFIED_FORMAT_COORDINATES",
@@ -312,12 +330,14 @@ __all__ = [
     "NCoreStore",
     "NativeFeatureCapabilities",
     "NormalMap",
+    "NormalizationProfile",
     "Point3DRecord",
     "PointCloud",
     "PointVisibility",
     "PoseGraph",
     "PosedViewSet",
     "Reconstruction",
+    "RepresentationNormalizationContract",
     "RtmvDataset",
     "SceneGraph",
     "SceneIoError",
@@ -370,6 +390,7 @@ __all__ = [
     "read_partial",
     "read_record",
     "read_scene",
+    "representation_contract",
     "testing",
     "validate_sha",
     "write",

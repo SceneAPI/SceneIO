@@ -8,6 +8,9 @@ record when the destination format cannot represent that convention.
 
 The machine-checked inventories are:
 
+- [`representation_normalization.md`](representation_normalization.md), which
+  gives every public in-memory representation a versioned structural,
+  scaling, coordinate-source, conversion, and refusal contract;
 - [`tests/contracts/coordinate_systems_v1.toml`](../tests/contracts/coordinate_systems_v1.toml),
   which covers all 73 built-in format ids in registry order; and
 - [`tests/contracts/coordinate_conversions_v1.toml`](../tests/contracts/coordinate_conversions_v1.toml),
@@ -18,6 +21,11 @@ The machine-checked inventories are:
 Adding a built-in codec without classifying its coordinate behavior fails the
 contract tests. Changing conversion semantics requires an explicit update to
 the versioned conversion contract and its executable tests.
+
+The representation contract is intentionally one layer above this format
+ledger. A canonical dtype/layout does not establish meters, and a fixed camera
+frame does not imply that samples, descriptors, Gaussian activations, or world
+scale were normalized.
 
 ## Canonical COLMAP convention
 
@@ -190,6 +198,11 @@ lane passes 51 official-provider cases with one gsply-v2 writer skip, while the
 local OpenUSD lane passes all four USDA/USDZ cross-read cases. These results
 qualify the mappings above; they do not fill the still-unrepresented universal
 Gaussian coordinate-frame, color-space, or SH-basis metadata fields.
+
+The later representation-contract closure adds no coordinate conversion and
+does not broaden those claims. It classifies all 91 public data-bearing
+classes, passes the 4,641-node stable instrumented collection guard, and brings
+the complete local result to 4,656 passed with 16 documented skips.
 
 The broader upstream-source qualification ledger is
 `tests/contracts/oracle_sources_v1.toml`. It allows permissive and weak

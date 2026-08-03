@@ -1,5 +1,27 @@
 # Next-stage implementation checklist
 
+## Representation normalization/scaling contract (complete locally, 2026-08-03)
+
+- [x] Define a versioned public vocabulary that separates structural
+      normalization, numeric scale, coordinate source, and conversion policy.
+- [x] Cover exactly all 91 public data-bearing classes exported by
+      `sceneio.io`, `sceneio.data`, `sceneio.colmap`, and
+      `sceneio.colmap_mvs`; pin the non-representation helper exclusions.
+- [x] State canonical units, governing metadata/context fields, normalization
+      equations, refusal boundaries, and executable evidence for every entry.
+- [x] Keep metric claims narrow: only fixed metric profiles say `metric`;
+      COLMAP reconstruction, neutral SE3, tracked geometry, and Gaussian means
+      remain arbitrary/unknown/context-dependent as appropriate.
+- [x] Expose immutable `sceneio.REPRESENTATION_PROFILES`,
+      `sceneio.REPRESENTATION_CONTRACTS`, and
+      `sceneio.representation_contract(...)` without changing decode values.
+- [x] Add exhaustive discovery, lookup, ambiguity, direct-conversion,
+      metric-claim, compiled/neutral distinction, Gaussian-limit, and evidence
+      tests; document the complete catalog and versioning policy.
+- [x] Pass 267 focused contract/coordinate/documentation/compatibility tests,
+      the 4,641-node stable instrumented collection guard, the complete local
+      suite (4,656 passed, 16 documented skips), and repository-wide Ruff.
+
 ## Oracle validation and normalization qualification (complete locally, 2026-08-03)
 
 The bounded implementation specification is

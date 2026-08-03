@@ -23,6 +23,11 @@ exact 73-format coordinate manifest, COLMAP canonical target, HLoc pixel-center
 distinction, explicit conversion surface, and verification rules are in
 [`coordinate_conventions.md`](coordinate_conventions.md). Capability discovery,
 inspection, and decoded records expose the same immutable convention contract.
+The complementary
+[`representation_normalization.md`](representation_normalization.md) contract
+classifies all 91 public data representations by structural normalization,
+scale source/unit, coordinate source, supported conversion, refusal behavior,
+and executable evidence.
 
 The 2026-08-02 closure commit `5387350` passes the full hosted compiler run
 `30738228920` plus every dedicated Linux, Windows, macOS, and GCC 10 job in CI
@@ -96,6 +101,15 @@ complete and format capabilities are unchanged.
 > strict run installs the locked PlayCanvas package and passes all ten
 > SplatTransform cases. Focused Gaussian, RTMV, coordinate, license,
 > documentation, and repository-contract checks pass 128 tests; Ruff is clean.
+
+> **Representation-contract closure (2026-08-03):** all 91 public
+> data-bearing classes now have a versioned normalization/scaling profile.
+> The stable compiler-instrumented collection (excluding the separately gated
+> Niantic SPZ source module) is 4,641 nodes. The complete local environment,
+> including those installed provider cases, passes 4,656 tests with 16
+> documented skips. The 267-test contract/coordinate/documentation/
+> compatibility gate and repository-wide Ruff pass; no codec values or native
+> implementation changed.
 
 <!-- sceneio-inventory-summary:start -->
 **Generated registry contract:** SceneIO has **73 built-in formats**: **64**

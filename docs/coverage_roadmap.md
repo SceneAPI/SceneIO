@@ -18,6 +18,11 @@
 > [`coordinate_conventions.md`](coordinate_conventions.md); COLMAP is the
 > canonical explicit-conversion target, never an implicit label for unknown
 > source data.
+> The complementary
+> [`representation_normalization.md`](representation_normalization.md)
+> contract covers all 91 public representation classes with explicit
+> normalization, scaling, unit, coordinate-source, conversion, and refusal
+> rules. It changes no decoded values and keeps unknown/arbitrary scale honest.
 > The 2026-08-02 cross-platform correction changes no roadmap scope or format
 > capability. Local MSVC and clean Linux focused checks pass; the exact local
 > suite passes 4,372 tests with six documented skips after three
