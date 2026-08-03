@@ -22,6 +22,14 @@ The closure target is:
 5. any mismatch found by those checks is either corrected with a regression
    test or recorded as an explicit, bounded unsupported profile.
 
+The final semantic refinement also distinguishes represented operations from
+universal claims. SciPy independently checks Gaussian quaternion rotations and
+opacity activation; scalar math checks scale activation; an index-addressed
+oracle checks SH storage permutation for every supported degree. Quaternion
+raw/unit state, SH basis/phase/coefficient meaning, color space, and spatial
+frame remain explicitly unqualified because `GaussianCloud` has no fields for
+them.
+
 This is a finite qualification unit. It does not add new file formats, make
 OpenUSD or Niantic SPZ runtime dependencies, or require every reference
 application to run in the normal test suite.
@@ -181,6 +189,12 @@ Acceptance:
 - [x] Add the independent mathematical conversion suite.
 - [x] Add official OpenUSD cross-read/write tests.
 - [x] Add official Niantic SPZ v2/v3/v4 read and v3/v4 write tests.
+- [x] Lock the PlayCanvas test-only npm closure and execute all ten external
+      reader/writer cases from that lock.
+- [x] Add executable Gaussian operation oracles while retaining explicit
+      negative contracts for the four unrepresented universal semantics.
+- [x] Pin RTMV's XYZW-to-WXYZ quaternion interpretation and preserve its
+      read-only, whole-dataset-conversion refusal.
 - [x] Run the existing per-codec oracle suites for every touched format.
 - [x] Rebuild the editable extension after every C++ change.
 - [x] Run the focused contract/oracle tests, full pytest suite, and Ruff.
@@ -208,6 +222,11 @@ Acceptance:
   wheel exposes its distribution version, not a Git SHA. A Luna environment
   built the pinned Niantic SPZ 3.0.0 source and passed 51 official-provider
   cases with one unrelated gsply-v2 writer skip.
+- The locked PlayCanvas 3.1.6 closure installs with `npm ci`, reports gitHead
+  `04b6d15`, and passes all ten SplatTransform cross-implementation cases.
+  The focused Gaussian/RTMV/contract/documentation gate passes 128 tests. The
+  complete local suite passes 4,648 tests with 16 documented optional/platform
+  skips; no runtime or C++ implementation changed in this refinement.
 - The three review lenses found and corrected bounded SPZ decode allocation,
   uint32 point-count narrowing, non-representable SPLAT scales, and SPZ
   inspect/read header-profile disagreement. The final lifetime, mathematical,

@@ -270,6 +270,8 @@ opaque LAS waveform sidecars, and Gaussian/reconstruction/scene conversions
 whose semantics are not fully qualified. `FormatCoordinateContract.conversion`
 is `supported` only where the public decoded record is directly convertible;
 `requires_context` means the caller needs a format-specific adapter or policy.
+`RtmvDataset` is likewise unqualified as a whole; callers may convert its
+`views` only while explicitly preserving its path-backed layers and metadata.
 
 ## Verification contract
 

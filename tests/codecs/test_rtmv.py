@@ -44,10 +44,17 @@ def _write_exr(path: Path, value: float, channels: int = 4) -> np.ndarray:
 
 
 def _metadata(index: int) -> dict[str, object]:
-    angle = index * 0.2
-    cosine, sine = math.cos(angle), math.sin(angle)
+    angle = (index + 1) * 0.2
+    axis = np.asarray([1.0, 2.0, 3.0], dtype=np.float64) / math.sqrt(14.0)
+    half_sine = math.sin(angle / 2.0)
+    x, y, z = axis * half_sine
+    w = math.cos(angle / 2.0)
     rotation = np.asarray(
-        [[cosine, -sine, 0.0], [sine, cosine, 0.0], [0.0, 0.0, 1.0]],
+        [
+            [1.0 - 2.0 * (y * y + z * z), 2.0 * (x * y - z * w), 2.0 * (x * z + y * w)],
+            [2.0 * (x * y + z * w), 1.0 - 2.0 * (x * x + z * z), 2.0 * (y * z - x * w)],
+            [2.0 * (x * z - y * w), 2.0 * (y * z + x * w), 1.0 - 2.0 * (x * x + y * y)],
+        ],
         dtype=np.float64,
     )
     translation = np.asarray([index + 0.25, -0.5, 2.0], dtype=np.float64)
@@ -76,12 +83,7 @@ def _metadata(index: int) -> dict[str, object]:
                 "fy": 5.5 + index,
             },
             "location_world": translation.tolist(),
-            "quaternion_world_xyzw": [
-                0.0,
-                0.0,
-                math.sin(angle / 2.0),
-                math.cos(angle / 2.0),
-            ],
+            "quaternion_world_xyzw": [x, y, z, w],
             "scene_center_3d_box": [0.0, 0.0, 0.0],
             "scene_min_3d_box": [-1.0, -2.0, -3.0],
             "scene_max_3d_box": [1.0, 2.0, 3.0],
@@ -146,6 +148,26 @@ def test_reads_independent_rtmv_layout_and_preserves_lazy_layers(tmp_path):
     assert all(Path(path).is_absolute() for path in dataset.rgb_paths)
     assert dataset.views.pose_convention == "camera_to_world"
     assert dataset.views.axis_frame == "opengl"
+    assert dataset.views.quaternion_order == "wxyz"
+    # RTMV stores XYZW quaternions.  The independently derived WXYZ values
+    # below pin both component order and the row-vector -> camera-to-world
+    # normalization performed while building the posed-view record.
+    np.testing.assert_allclose(
+        np.asarray(dataset.views.quaternions),
+        np.asarray(
+            [
+                [
+                    math.cos((index + 1) * 0.1),
+                    *(np.asarray([1.0, 2.0, 3.0]) / math.sqrt(14.0)
+                      * math.sin((index + 1) * 0.1)),
+                ]
+                for index in range(3)
+            ],
+            dtype=np.float64,
+        ),
+        atol=1e-12,
+        rtol=0.0,
+    )
     np.testing.assert_allclose(
         np.asarray(dataset.views.translations),
         [[0.25, -0.5, 2.0], [1.25, -0.5, 2.0], [2.25, -0.5, 2.0]],
@@ -291,6 +313,12 @@ def test_rejects_duplicate_json_keys_and_unexpected_layout_entries(tmp_path):
     with pytest.raises(sceneio.FormatError, match="up direction disagrees"):
         sceneio.read(directory)
 
+    document = _metadata(0)
+    document["camera_data"]["quaternion_world_xyzw"] = [0.0, 0.0, 0.0, 1.0]
+    metadata.write_text(json.dumps(document), encoding="utf-8")
+    with pytest.raises(sceneio.FormatError, match="quaternion disagrees"):
+        sceneio.read(directory)
+
     metadata.write_text(json.dumps(_metadata(0)), encoding="utf-8")
     (directory / "notes.txt").write_text("unexpected", encoding="utf-8")
     with pytest.raises(sceneio.FormatError, match="unexpected file"):
@@ -316,3 +344,8 @@ def test_partial_bounds_and_read_only_contract(tmp_path):
     dataset = sceneio.read(directory)
     with pytest.raises(sceneio.FormatError, match="read-only"):
         sceneio.write(dataset, tmp_path / "copy", format="rtmv")
+    with pytest.raises(
+        TypeError,
+        match="coordinate conversion for RtmvDataset is not qualified",
+    ):
+        sceneio.convert_coordinates(dataset)

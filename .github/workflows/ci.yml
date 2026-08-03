@@ -115,27 +115,35 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+          cache: npm
+          cache-dependency-path: tools/splat-transform-oracle/package-lock.json
       - name: Install
         run: |
           uv venv --seed
           uv pip install -e ".[dev]" "numpy>=2.0,<2.5" "gsply==0.4.6" "pillow>=10.0"
-      - name: Install pinned SplatTransform oracle
+      - name: Install locked SplatTransform oracle
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
           $oracleRoot = Join-Path $env:RUNNER_TEMP "sceneio-splat-oracle"
-          npm install --prefix $oracleRoot --ignore-scripts --no-audit --no-fund `
-            @playcanvas/splat-transform@3.1.6
+          New-Item -ItemType Directory -Force $oracleRoot | Out-Null
+          $oracleManifest = Join-Path $env:GITHUB_WORKSPACE "tools\splat-transform-oracle"
+          Copy-Item "$oracleManifest\package.json", "$oracleManifest\package-lock.json" `
+            -Destination $oracleRoot
+          npm ci --prefix $oracleRoot --ignore-scripts --no-audit --no-fund
           $oracleCli = Join-Path $oracleRoot `
             "node_modules\.bin\splat-transform.cmd"
           "SCENEIO_SPLAT_TRANSFORM_CLI=$oracleCli" >> $env:GITHUB_ENV
-      - name: Install pinned SplatTransform oracle
+      - name: Install locked SplatTransform oracle
         if: runner.os != 'Windows'
         shell: bash
         run: |
           oracle_root="${RUNNER_TEMP}/sceneio-splat-oracle"
-          npm install --prefix "${oracle_root}" --ignore-scripts --no-audit --no-fund \
-            @playcanvas/splat-transform@3.1.6
+          mkdir -p "${oracle_root}"
+          oracle_manifest="${GITHUB_WORKSPACE}/tools/splat-transform-oracle"
+          cp "${oracle_manifest}/package.json" "${oracle_manifest}/package-lock.json" \
+            "${oracle_root}/"
+          npm ci --prefix "${oracle_root}" --ignore-scripts --no-audit --no-fund
           echo "SCENEIO_SPLAT_TRANSFORM_CLI=${oracle_root}/node_modules/.bin/splat-transform" \
             >> "${GITHUB_ENV}"
       - name: Oracle-independent splat parent contract

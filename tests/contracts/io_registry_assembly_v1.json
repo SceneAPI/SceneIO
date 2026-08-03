@@ -472,8 +472,8 @@
     "last": "tests/test_points_binary.py::test_bad_magic_rejected"
   },
   "pytest_candidate_collection": {
-    "count": 4622,
-    "sorted_normalized_node_ids_sha256": "d5f99e287754cd2506bf5bfecb374c3c4a0049886305ef98fae6462c94f02735",
+    "count": 4633,
+    "sorted_normalized_node_ids_sha256": "7c4bff2a463812fc241847857cdce5802c94caa716be79eaad63e4a8f216f181",
     "collection_ignored_paths": [
       "tests/codecs/test_spz_niantic_oracle.py"
     ],
@@ -2021,7 +2021,18 @@
       "tests/test_large_io_sources.py::test_acquire_uses_verified_cache_layout_without_network",
       "tests/test_large_io_sources.py::test_acquire_rejects_wrong_download_and_cleans_partial",
       "tests/test_large_io_sources.py::test_verify_reports_missing_cache_without_network",
-      "tests/test_large_io_sources.py::test_only_rejects_unknown_source_ids"
+      "tests/test_large_io_sources.py::test_only_rejects_unknown_source_ids",
+      "tests/records/test_gaussian_semantic_oracles.py::test_scipy_quaternion_reorder_and_normalization_is_rotation_equivalent[wxyz-wxyz]",
+      "tests/records/test_gaussian_semantic_oracles.py::test_scipy_quaternion_reorder_and_normalization_is_rotation_equivalent[wxyz-xyzw]",
+      "tests/records/test_gaussian_semantic_oracles.py::test_scipy_quaternion_reorder_and_normalization_is_rotation_equivalent[xyzw-wxyz]",
+      "tests/records/test_gaussian_semantic_oracles.py::test_scipy_quaternion_reorder_and_normalization_is_rotation_equivalent[xyzw-xyzw]",
+      "tests/records/test_gaussian_semantic_oracles.py::test_independent_oracles_cover_scale_and_opacity_activation_both_directions",
+      "tests/records/test_gaussian_semantic_oracles.py::test_index_oracle_covers_sh_memory_permutation_for_every_degree[0]",
+      "tests/records/test_gaussian_semantic_oracles.py::test_index_oracle_covers_sh_memory_permutation_for_every_degree[1]",
+      "tests/records/test_gaussian_semantic_oracles.py::test_index_oracle_covers_sh_memory_permutation_for_every_degree[2]",
+      "tests/records/test_gaussian_semantic_oracles.py::test_index_oracle_covers_sh_memory_permutation_for_every_degree[3]",
+      "tests/records/test_gaussian_semantic_oracles.py::test_gaussian_cloud_keeps_unqualified_semantics_absent_and_refuses_coordinate_conversion",
+      "tests/test_io_splat_family_architecture.py::test_splat_transform_oracle_install_contract_is_locked"
     ],
     "removed_nodes": [
       "tests/codecs/test_compressed_ply.py::test_writer_body_is_byte_identical_to_pinned_playcanvas_vector",

@@ -141,6 +141,7 @@ required_storage_semantics = [
 ]
 evidence_suites = [
   "tests/records/test_gaussian_cloud_conventions.py",
+  "tests/records/test_gaussian_semantic_oracles.py",
   "tests/codecs/test_ply.py",
   "tests/codecs/test_compressed_ply.py",
   "tests/codecs/test_sog.py",
@@ -151,6 +152,7 @@ evidence_suites = [
   "tests/codecs/test_usd_gaussians.py",
 ]
 oracle_sources = [
+  "SciPy 1.18.0 rotation/opacity oracle plus independent scalar/index oracles",
   "gsply 0.4.6 executable oracle",
   "Niantic SPZ 3.0.0 official executable oracle (v2/v3/v4; v1 excluded)",
   "PlayCanvas splat-transform 3.1.6 executable oracle",
@@ -169,4 +171,13 @@ pending_universal_semantics = [
   "spherical_harmonic_basis_phase_and_coefficient_order",
   "color_space",
   "coordinate_frame",
+]
+
+# These operations are represented by GaussianCloud and independently checked.
+# They do not imply any of the broader semantics listed above.
+qualified_semantic_operations = [
+  "quaternion_reorder_and_explicit_normalization",
+  "scale_activation",
+  "opacity_activation",
+  "spherical_harmonic_memory_layout",
 ]

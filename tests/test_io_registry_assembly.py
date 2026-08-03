@@ -1146,7 +1146,13 @@ def test_assembly_dependency_direction_and_import_delta_are_exact():
         '"gsply==0.4.6" "pillow>=10.0"'
     ) in splat_job
     assert "actions/setup-node@v4" in splat_job
-    assert splat_job.count("@playcanvas/splat-transform@3.1.6") == 2
+    assert (
+        "cache-dependency-path: tools/splat-transform-oracle/package-lock.json"
+        in splat_job
+    )
+    assert splat_job.count("Install locked SplatTransform oracle") == 2
+    assert splat_job.count("npm ci --prefix") == 2
+    assert "@playcanvas/splat-transform@3.1.6" not in splat_job
     assert splat_job.count("SCENEIO_SPLAT_TRANSFORM_CLI=") == 2
     assert splat_job.count("tests/test_io_splat_family_architecture.py") == 2
     assert splat_job.count("-m pytest -q -rs") == 2

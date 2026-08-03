@@ -6,9 +6,12 @@ Executable test oracle: npm 3.1.6, gitHead
 Captured compressed-PLY/SOG reference revision:
 6b07ba05d731eac1163ad4ff1b14e47e5e3f162c.
 
-The package is installed only in the splat validation job. It is not bundled
-with SceneIO. Captured outputs and independently implemented format tests are
-included in the source test suite.
+The package is installed only in the splat validation job. Its exact npm test
+closure and integrity values are retained in
+tools/splat-transform-oracle/package-lock.json; every locked package declares
+ISC, MIT, or BSD-3-Clause terms. It is not bundled with SceneIO. Captured
+outputs and independently implemented format tests are included in the source
+test suite.
 
 Copyright (c) 2011-2026 PlayCanvas Ltd.
 

@@ -574,6 +574,64 @@ def test_splat_parent_contract_metadata_is_exact():
     ]["spz_v3_v4"]
 
 
+def test_splat_transform_oracle_install_contract_is_locked():
+    manifest = json.loads(
+        (ROOT / "tools/splat-transform-oracle/package.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    lock = json.loads(
+        (ROOT / "tools/splat-transform-oracle/package-lock.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    workflow = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
+
+    assert manifest["private"] is True
+    assert manifest["dependencies"] == {
+        "@playcanvas/splat-transform": "3.1.6"
+    }
+    assert lock["lockfileVersion"] == 3
+    assert lock["packages"][""]["dependencies"] == manifest["dependencies"]
+    direct = lock["packages"]["node_modules/@playcanvas/splat-transform"]
+    assert direct["version"] == "3.1.6"
+    assert direct["integrity"] == (
+        "sha512-ohaNf+kohm3NNr0RqhuNSgQ2JrUgeBCXKxQNnOxfJZgbHKok+"
+        "gy0h1nf8XYIVO8AdObIKi+Q6/qGP0JiysoYGQ=="
+    )
+    locked_packages = {
+        path: metadata
+        for path, metadata in lock["packages"].items()
+        if path.startswith("node_modules/")
+    }
+    assert locked_packages
+    assert {metadata["license"] for metadata in locked_packages.values()} <= {
+        "BSD-3-Clause",
+        "ISC",
+        "MIT",
+    }
+    assert all(
+        metadata.get("resolved", "").startswith("https://registry.npmjs.org/")
+        and metadata.get("integrity", "").startswith("sha512-")
+        for metadata in locked_packages.values()
+    )
+
+    oracle_steps = workflow.split(
+        "      - name: Install locked SplatTransform oracle", 1
+    )[1]
+    windows_block = oracle_steps.split("if: runner.os == 'Windows'", 1)[1].split(
+        "      - name: Install locked SplatTransform oracle", 1
+    )[0]
+    posix_block = oracle_steps.split("if: runner.os != 'Windows'", 1)[1].split(
+        "      - name: Oracle-independent", 1
+    )[0]
+    assert windows_block.count("npm ci --prefix") == 1
+    assert posix_block.count("npm ci --prefix") == 1
+    assert "tools/splat-transform-oracle/package-lock.json" in workflow
+    assert "npm install --prefix" not in workflow
+    assert "@playcanvas/splat-transform@3.1.6" not in workflow
+
+
 def test_splat_codec_definitions_match_parent_ast_and_descriptors():
     assert tuple(registry.REGISTRY) == CANONICAL_BUILTIN_IDS
     assert _codec_ast_hashes() == CONTRACT["codec_ast_sha256"]

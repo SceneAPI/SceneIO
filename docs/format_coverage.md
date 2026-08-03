@@ -81,10 +81,21 @@ complete and format capabilities are unchanged.
 > quaternion normalization state, SH basis/phase/order, color space, and
 > coordinate frame remain explicitly unclaimed until those fields exist in
 > `GaussianCloud`.
+> A separate SciPy/scalar/index suite now executes the narrower operations the
+> record does represent: quaternion reorder plus requested normalization,
+> scale and opacity activation, and SH memory-layout permutation for degrees
+> 0-3. The external SplatTransform lane installs from a checked-in npm lock and
+> still leaves the normal NumPy-only runtime and test path unchanged.
 > Each row also pins the exact decode and encode pytest function carrying the
 > claim, preventing a shared codec module from lending an unrelated oracle to
 > another format. This audit added the previously missing independent PyYAML
 > interpretation of Kalibr writer output.
+
+> **Oracle-verification refinement (2026-08-03):** the complete local suite
+> passes 4,648 tests with 16 documented optional/platform skips. A separate
+> strict run installs the locked PlayCanvas package and passes all ten
+> SplatTransform cases. Focused Gaussian, RTMV, coordinate, license,
+> documentation, and repository-contract checks pass 128 tests; Ruff is clean.
 
 <!-- sceneio-inventory-summary:start -->
 **Generated registry contract:** SceneIO has **73 built-in formats**: **64**

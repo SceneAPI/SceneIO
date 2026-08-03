@@ -42,7 +42,7 @@ jobs:
           .venv/bin/python -m pytest --collect-only -q | tee "${{ runner.temp }}/asan-collection.txt"
           grep -F "tests/codecs/test_ply.py::test_read_matches_gsply" "${{ runner.temp }}/asan-collection.txt"
           grep -F "tests/codecs/test_colmap.py::test_writer_byte_identical_to_pycolmap" "${{ runner.temp }}/asan-collection.txt"
-          grep -E "^4622 tests collected in " "${{ runner.temp }}/asan-collection.txt"
+          grep -E "^4633 tests collected in " "${{ runner.temp }}/asan-collection.txt"
       - name: Run full suite under ASan and UBSan
         run: |
           export LD_PRELOAD="$(gcc -print-file-name=libasan.so):$(gcc -print-file-name=libstdc++.so.6)"

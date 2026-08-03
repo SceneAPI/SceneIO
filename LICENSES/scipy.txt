@@ -6,9 +6,9 @@ Release: 1.18.0
 Pinned revision: 7adb8c972443f664b9395a0e6e8e0283e9b4faff
 SPDX license identifier: BSD-3-Clause
 
-SciPy is installed only for the independent coordinate-conversion oracle
-tests. It is not imported by the NumPy-only runtime and is not bundled in
-SceneIO wheels.
+SciPy is installed only for independent coordinate-conversion and Gaussian
+semantic oracle tests. It is not imported by the NumPy-only runtime and is not
+bundled in SceneIO wheels.
 
 Copyright (c) 2001-2002 Enthought, Inc. 2003, SciPy Developers.
 All rights reserved.

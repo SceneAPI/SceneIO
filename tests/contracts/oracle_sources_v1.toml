@@ -537,7 +537,7 @@ notice = "LICENSES/ncore.txt"
 
 [[sources]]
 id = "scipy"
-project = "SciPy Rotation"
+project = "SciPy"
 repository = "https://github.com/scipy/scipy"
 revision = "7adb8c972443f664b9395a0e6e8e0283e9b4faff"
 version = "1.18.0"
@@ -547,12 +547,21 @@ license = "BSD-3-Clause"
 license_class = "permissive"
 distribution_role = "test_executable"
 authority = "independent_implementation"
-lineage = "scipy_rotation"
-formats = ["coordinate_conversions"]
-semantic_roles = ["quaternion_matrix", "rotation_composition", "rigid_inverse"]
+lineage = "scipy"
+formats = ["coordinate_conversions", "gaussian_attributes"]
+semantic_roles = [
+  "quaternion_matrix",
+  "rotation_composition",
+  "rigid_inverse",
+  "gaussian_quaternion_reorder_and_normalization",
+  "gaussian_opacity_activation",
+]
 execution = "math_oracle"
 execution_markers = ["scipy", "Rotation"]
-evidence_tests = ["tests/test_coordinate_math_oracle.py"]
+evidence_tests = [
+  "tests/test_coordinate_math_oracle.py",
+  "tests/records/test_gaussian_semantic_oracles.py",
+]
 qualification = "executed"
 notice = "LICENSES/scipy.txt"
 

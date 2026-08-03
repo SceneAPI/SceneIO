@@ -5800,7 +5800,9 @@ general metadata, and implicit color conversion stay out of the profile.
       and Brush.
 - [x] Install pinned npm `@playcanvas/splat-transform@3.1.6` only in the
       existing Windows/Linux/macOS splat job and verify its gitHead banner
-      before comparisons run.
+      before comparisons run. Retain its exact test-only closure in
+      `tools/splat-transform-oracle/package-lock.json` and install it with
+      `npm ci` on all three platforms.
 - [x] Execute SplatTransform as an external reader for SceneIO Gaussian PLY,
       compressed PLY, SOG, KSplat, SPZ, and `.splat` output.
 - [x] Execute SplatTransform as an external writer for compressed PLY, SOG,
@@ -5858,6 +5860,15 @@ general metadata, and implicit color conversion stay out of the profile.
       SplatTransform is mandatory in its dedicated three-platform lane; USD
       float/half orientation cases and legacy conversion paths are executable;
       SPZ/SPLAT extreme values and exact container bounds have focused tests.
+- [x] Execute SciPy rotation and opacity oracles, scalar scale-activation
+      checks, and index-addressed SH layout checks for degrees 0-3. Keep
+      quaternion raw/unit state, SH basis/phase/coefficient meaning, color
+      space, and coordinate frame explicitly unqualified rather than inferring
+      them from storage layout.
+- [x] Pin RTMV's serialized XYZW quaternion mapping to canonical WXYZ values,
+      retain its read-only writer contract, and refuse whole-dataset coordinate
+      conversion unless a future adapter can preserve its lazy paths and
+      metadata.
 - [x] Complete the resource/lifetime review: mapped readers and returned-array
       ownership are unchanged; new native checks operate on record-owned
       vectors; exceptions occur before destination publication; no borrowed
@@ -5870,6 +5881,10 @@ general metadata, and implicit color conversion stay out of the profile.
       partial reads, mmap, streaming, inspection, registry snapshots, and the
       full 4,599-node collection agree. Local result: 4,583 passed and 17
       documented skips; Ruff and the documentation contract are clean.
+- [x] Complete the finite oracle-verification refinement: locked PlayCanvas
+      run 10/10; focused integration/documentation gate 128/128; complete local
+      suite 4,648 passed with 16 documented optional/platform skips; Ruff and
+      collection fingerprints clean.
 - [ ] Run the updated compiler-instrumented and Linux/macOS/Windows splat lanes
       after the branch is pushed. This validation does not publish packages.
 

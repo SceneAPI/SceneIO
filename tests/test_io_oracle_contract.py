@@ -133,6 +133,23 @@ def test_gaussian_storage_oracles_cover_every_registered_carrier():
         "color_space",
         "coordinate_frame",
     ]
+    assert gaussian["qualified_semantic_operations"] == [
+        "quaternion_reorder_and_explicit_normalization",
+        "scale_activation",
+        "opacity_activation",
+        "spherical_harmonic_memory_layout",
+    ]
+    assert set(gaussian["pending_universal_semantics"]).isdisjoint(
+        gaussian["qualified_semantic_operations"]
+    )
+
+    semantic_source = (
+        ROOT / "tests/records/test_gaussian_semantic_oracles.py"
+    ).read_text(encoding="utf-8")
+    for executable_marker in ("Rotation.from_quat", "expit(", "logit("):
+        assert executable_marker in semantic_source
+    assert "for point, channel, coefficient in product" in semantic_source
+    assert "convert_coordinates(cloud" in semantic_source
 
 
 def test_gaussian_third_party_oracle_roles_are_pinned_and_executable():
