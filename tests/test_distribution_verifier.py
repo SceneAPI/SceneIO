@@ -1217,7 +1217,12 @@ def test_publish_workflow_builds_every_wheel_from_the_exact_sdist() -> None:
         ROOT / "pyproject.toml"
     ).read_text(encoding="utf-8")
 
-    assert "needs: [sdist, wheels, distribution-inventory]" in publish_job
+    assert (
+        "needs: [sdist, wheels, distribution-inventory, "
+        "oracle-openusd, oracle-spz]" in publish_job
+    )
+    assert "uses: ./.github/workflows/oracle-openusd.yml" in workflow
+    assert "uses: ./.github/workflows/oracle-spz.yml" in workflow
     assert (
         "if: github.event_name == 'push' && "
         "startsWith(github.ref, 'refs/tags/v')" in publish_job

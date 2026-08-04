@@ -270,9 +270,17 @@ jobs:
           path: distribution-inventory.json
           if-no-files-found: error
 
+  oracle-openusd:
+    name: dedicated OpenUSD oracle
+    uses: ./.github/workflows/oracle-openusd.yml
+
+  oracle-spz:
+    name: dedicated Niantic SPZ oracle
+    uses: ./.github/workflows/oracle-spz.yml
+
   publish:
     name: publish to PyPI
-    needs: [sdist, wheels, distribution-inventory]
+    needs: [sdist, wheels, distribution-inventory, oracle-openusd, oracle-spz]
     # A manual build stops before this job. Publishing remains a separate,
     # explicit version-tag action.
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
