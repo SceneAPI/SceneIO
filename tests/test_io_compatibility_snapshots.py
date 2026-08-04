@@ -258,6 +258,8 @@ def _public_snapshot():
         "GaussianCloud",
         "Image",
         "ImageSequence",
+        "ImuCalibration",
+        "ImuSequence",
         "InstanceSet",
         "MatchGraph",
         "MaterialSet",

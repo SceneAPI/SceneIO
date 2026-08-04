@@ -21,6 +21,15 @@ struct ImageSequence {
     std::vector<int64_t> timestamps_ns;
     std::vector<int64_t> durations_ns;
 
+    // Optional per-frame acquisition timing. Exposure durations are
+    // independently optional. Readout directions are either all global (with
+    // no step-duration array) or all rolling (with one step duration per
+    // frame); mixed global/rolling sequences require separate records.
+    std::vector<int64_t> exposure_durations_ns;
+    std::vector<int64_t> readout_step_durations_ns;
+    std::vector<std::string> readout_directions;
+    std::string timestamp_reference = "unknown";
+
     // Encoded-path storage uses UTF-8 offset/value tables so no Python object
     // arrays or borrowed path buffers enter the canonical record.
     std::vector<uint64_t> path_offsets;
@@ -66,6 +75,16 @@ struct ImageSequence {
     bool has_timing() const {
         return !timestamps_ns.empty();
     }
+    bool has_exposure_timing() const {
+        return !exposure_durations_ns.empty();
+    }
+    bool has_readout_timing() const {
+        return !readout_directions.empty();
+    }
+    bool has_acquisition_timing() const {
+        return has_exposure_timing() || has_readout_timing() ||
+               timestamp_reference != "unknown";
+    }
     bool has_paths() const { return storage_mode == "encoded_paths"; }
     bool has_pixels() const { return storage_mode == "packed"; }
     bool has_chroma() const { return !u.empty(); }
@@ -84,3 +103,6 @@ void assign_image_sequence_names(
 void validate_image_sequence(
     const ImageSequence &sequence,
     const char *context = "image sequence");
+void require_no_image_sequence_acquisition(
+    const ImageSequence &sequence,
+    const char *context);

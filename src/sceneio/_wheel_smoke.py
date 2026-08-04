@@ -1085,6 +1085,25 @@ def _camera_calibration(root: Path) -> None:
         camera_matrices=matrix,
     )
     assert sceneio.CameraRig is _core.CameraRig
+    imu_calibration = _core.imu_calibration(
+        0,
+        "imu0",
+        "/imu0",
+        np.array([1.0, 0.0, 0.0, 0.0]),
+        np.zeros(3),
+        nominal_rate_hz=200.0,
+        time_offset_ns=0,
+    )
+    imu_sequence = _core.imu_sequence(
+        0,
+        np.array([0, 5_000_000], np.int64),
+        np.zeros((2, 3)),
+        np.zeros((2, 3)),
+    )
+    assert sceneio.ImuCalibration is _core.ImuCalibration
+    assert sceneio.ImuSequence is _core.ImuSequence
+    assert imu_calibration.time_offset_ns == 0
+    assert imu_sequence.angular_velocities.shape == (2, 3)
     for format_id in ("opencv_yaml", "opencv_xml"):
         path = root / format_id
         sceneio.write(rig, path, format=format_id)

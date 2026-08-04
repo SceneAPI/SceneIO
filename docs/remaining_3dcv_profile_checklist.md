@@ -1,7 +1,9 @@
 # Finite 3D-CV profile closure checklist
 
-- **Status:** FC0 is locally qualified as of 2026-08-03; FC1-FC7 are not
-  started. Every proposed record and the `euroc_dataset` id remains
+- **Status:** FC0 and the bounded FC1A record/acquisition slice are locally
+  complete as of 2026-08-03. `ImuCalibration` and `ImuSequence` are compiled
+  public records, and `ImageSequence` carries exact optional acquisition
+  timing. `VisualInertialDataset`, the `euroc_dataset` id, and FC2-FC7 remain
   provisional and non-public.
 - **Baseline:** 73 built-in formats, each mapped to a licensed direct fixture
   or deterministic oracle-derived route.
@@ -15,6 +17,9 @@
   [`remaining_3dcv_fc0_v1.toml`](../tests/contracts/remaining_3dcv_fc0_v1.toml)
   freezes the stable signatures, provisional names, provider observations,
   legacy projections, and registration gate used by FC0.
+  [`visual_inertial_records_v1.toml`](../tests/contracts/visual_inertial_records_v1.toml)
+  freezes the implemented FC1A fields, units, vocabularies, equations, and
+  73-format registry boundary.
 
 ## 1. Review outcome
 
@@ -77,10 +82,14 @@ authorization, pagination, and retries are not applicable.
        public symbol lands.
 2. [x] Prototype each questionable provider operation with a tiny local file;
        record supported and refused behavior in capabilities.
-3. [ ] Land records only with the first codec/projection that exercises them.
-4. [ ] Run focused compatibility/oracle/benchmark checks per corrected unit.
-5. [ ] Reconcile the completion matrix and remove all superseded wording before
-       marking the program active.
+3. [x] Land records only with an exercising codec or public projection. FC1A
+       adds live normalization/coordinate projections and installed-wheel
+       construction; the dataset codec remains in FC1B.
+4. [x] Run focused compatibility and contract checks for FC1A. A codec
+       benchmark is not applicable to this record-only slice and is deferred
+       to FC1B.
+5. [x] Reconcile this checklist and completion matrix for FC1A without marking
+       the remaining profile units complete.
 
 ## 3. Finite closure boundary
 
@@ -89,7 +98,7 @@ authorization, pagination, and retries are not applicable.
 - [ ] One ASL/EuRoC-style visual-inertial directory profile containing camera
       streams, camera and IMU calibration, IMU samples, and optional ground
       truth.
-- [ ] Exact per-frame exposure and rolling-readout metadata on
+- [x] Exact per-frame exposure and rolling-readout metadata on
       `ImageSequence`.
 - [ ] Typed `SemanticMap`, `InstanceMap`, and `PanopticMap` records and explicit
       adapters for carriers that can preserve them.
@@ -327,54 +336,106 @@ Every FC1-FC6 unit must satisfy all applicable boxes in this section.
 
 ### 7.1 `ImuCalibration` record
 
-- [ ] Store sensor id, name/topic, nominal rate, and one explicit
+- [x] Store sensor id, name/topic, nominal rate, and one explicit
       sensor-to-reference rigid transform.
-- [ ] Store gyroscope noise density, gyroscope random walk, accelerometer noise
+- [x] Store gyroscope noise density, gyroscope random walk, accelerometer noise
       density, and accelerometer random walk as optional `float64` quantities
       with exact units: `rad/s/sqrt(Hz)`, `rad/s^2/sqrt(Hz)`,
       `m/s^2/sqrt(Hz)`, and `m/s^3/sqrt(Hz)` respectively.
-- [ ] Store an optional signed `int64` clock offset in nanoseconds and define
+- [x] Store an optional signed `int64` clock offset in nanoseconds and define
       `reference_time_ns = sensor_time_ns + time_offset_ns`, matching the
       existing `CameraRig` offset direction.
-- [ ] Distinguish absent calibration from a numerically zero calibration; do
+- [x] Distinguish absent calibration from a numerically zero calibration; do
       not invent defaults for missing noise terms.
-- [ ] Validate finite/nonnegative noise quantities, a valid rigid transform,
+- [x] Validate finite/nonnegative noise quantities, a valid rigid transform,
       a positive rate when present, and closed unit vocabularies.
 
 ### 7.2 `ImuSequence` record
 
-- [ ] Add contiguous `int64` nanosecond timestamps.
-- [ ] Add contiguous `float64 (N, 3)` angular velocity and linear acceleration.
-- [ ] Carry explicit angular-velocity and acceleration units, sensor axis
+- [x] Add contiguous `int64` nanosecond timestamps.
+- [x] Add contiguous `float64 (N, 3)` angular velocity and linear acceleration.
+- [x] Carry explicit angular-velocity and acceleration units, sensor axis
       frame, timestamp reference, sensor id, and clock domain.
-- [ ] Require equal row counts, finite measurements, and strictly increasing
+- [x] Require equal row counts, finite measurements, and strictly increasing
       timestamps.
-- [ ] Define empty and singleton behavior.
-- [ ] Expose owner-retaining NumPy views and DLPack consistently with other
+- [x] Define empty and singleton behavior.
+- [x] Expose owner-retaining NumPy views and DLPack consistently with other
       compiled numeric records.
-- [ ] Test pointer identity, read-only policy, `gc.collect()` lifetime,
+- [x] Test pointer identity, read-only policy, `gc.collect()` lifetime,
       non-contiguous constructor inputs, and mismatched arrays.
 
 ### 7.3 `ImageSequence` acquisition extension
 
-- [ ] Append keyword-only optional fields without changing existing positional
+- [x] Append keyword-only optional fields without changing existing positional
       construction:
       `exposure_durations_ns`, `readout_step_durations_ns`,
       `readout_directions`, and one declared timestamp reference.
-- [ ] Use empty arrays to mean absent metadata; do not use zero as absence.
-- [ ] Define the readout-direction vocabulary for global, top-to-bottom,
+- [x] Use empty arrays to mean absent metadata; do not use zero as absence.
+- [x] Define the readout-direction vocabulary for global, top-to-bottom,
       bottom-to-top, left-to-right, and right-to-left exposure.
-- [ ] Require acquisition arrays to be empty together where their semantics
+- [x] Require acquisition arrays to be empty together where their semantics
       depend on one another, or document the independently optional cases.
-- [ ] Check nonnegative durations and exact `int64` range.
-- [ ] Define the acquisition equation explicitly. For frame timestamp `t`,
+- [x] Check nonnegative durations and exact `int64` range.
+- [x] Define the acquisition equation explicitly. For frame timestamp `t`,
       step index `i`, signed direction `d`, exposure duration `e`, and readout
       step duration `r`, document the instant represented by
       `t + d * i * r` and whether `t` denotes exposure start, midpoint, or end.
-- [ ] Require global-shutter rows to omit readout-step durations and reject
+- [x] Require global-shutter rows to omit readout-step durations and reject
       contradictory direction/duration combinations.
-- [ ] Preserve existing APNG/WebP/AVIF/Y4M timing behavior byte-for-byte when
+- [x] Preserve existing APNG/WebP/AVIF/Y4M timing behavior byte-for-byte when
       acquisition fields are absent.
+
+The equation uses zero-based raster row `i` for vertical readout and
+zero-based column `i` for horizontal readout. `d` is `+1` for top-to-bottom or
+left-to-right and `-1` for bottom-to-top or right-to-left. `t` is the declared
+start, midpoint, or end instant at raster coordinate zero; therefore
+`t + d * i * r` is the same reference instant at coordinate `i`. `e` is the
+per-frame exposure duration. For midpoint references, an odd `e` can imply
+conceptual half-nanosecond interval endpoints, while the stored `t` and `e`
+remain exact integers. Construction rejects any full-row/full-column equation
+that would leave the signed `int64` domain. Exposure timing is independently
+optional; rolling direction and step duration must be present together, and a
+global/rolling mixture requires separate records.
+
+Writers for APNG, animated WebP, animated AVIF, WebM, Theora, Y4M, and image
+sequence directories reject acquisition timing because those bounded writer
+profiles cannot preserve it.
+
+### 7.3.1 FC1A local qualification result
+
+- The public surface exports the two compiled IMU records and retains 73
+  built-in format ids. `VisualInertialDataset` and `euroc_dataset` remain
+  absent.
+- The rebuilt MSVC extension exposes the new factories and record types. The
+  focused implementation/codec/contract gate passes 234 tests; the exact
+  candidate collection is 4,714 nodes; the complete local suite passes 4,729
+  tests with 16 documented optional/platform skips in 382.58 seconds.
+- The post-review focused gate passes 135 tests, including the coordinate
+  regression and exact collection contract. Repository-wide Ruff and
+  `git diff --check` pass.
+- This record-only slice changes no registered read/write/inspect/partial
+  implementation, so no codec throughput or large-file delta is claimed. The
+  dataset benchmark and independent directory-parser comparison belong to
+  FC1B.
+- Linux/macOS wheel validation remains pending and user-gated; no hosted run
+  was triggered for FC1A.
+
+### 7.3.2 FC1A three-lens review
+
+- **Lifetime/resource:** calibration arrays and IMU sample vectors are record
+  owned; exposed NumPy/DLPack views pin their parent, use a non-null empty
+  sentinel, and remain valid after `gc.collect()`. Acquisition arrays are
+  copied into `ImageSequence` ownership and their views retain the record.
+- **Behavior correctness:** exact units, optional-versus-zero presence, unit
+  quaternion/sign policy, strictly increasing timestamps, clock-offset and
+  rolling-readout equations, signed-range overflow, and writer refusal are
+  executable contracts. Review found and fixed a misplaced handedness branch:
+  Python `PosedViewSet` remains right-handed, while generic `sensor` IMU axes
+  remain unknown until ENU/NED is declared.
+- **Test soundness:** equation tests use live record values rather than
+  restating constants; malformed, boundary, ownership, DLPack, legacy, public
+  export, and every affected writer path are exercised. No unresolved FC1A
+  finding remains.
 
 ### 7.4 `VisualInertialDataset` aggregate
 
@@ -421,7 +482,20 @@ Every FC1-FC6 unit must satisfy all applicable boxes in this section.
       values for offline write/read tests.
 - [ ] Compare YAML calibration with Kalibr/CamTools equations and CSV values
       with an independent stdlib/NumPy parser.
-- [ ] Add hand-computable clock-offset and pose-direction fixtures.
+- [x] Add hand-computable clock-offset, quaternion-order, and acquisition
+      direction fixtures for the FC1A records. Dataset pose-direction fixtures
+      remain part of FC1B.
+
+### FC1A exit
+
+- [x] `ImuCalibration`, `ImuSequence`, and acquisition timing are compiled,
+      public, normalization-qualified, coordinate-qualified, and installed-
+      wheel-smoked.
+- [x] All FC1A temporal fields have exact units, presence rules, reference
+      semantics, and range checks.
+- [x] Existing sequence codecs retain legacy behavior when fields are absent
+      and refuse metadata they cannot preserve.
+- [x] The registry remains exactly 73 because no dataset codec was added.
 
 ### FC1 exit
 
@@ -816,10 +890,11 @@ plan but do not replace file-based oracle qualification.
 
 ## 14. Corrected green commit slices
 
-1. [ ] FC0 provider probes, compatibility snapshots, corrected API contracts,
-       and documentation only.
-2. [ ] `ImuCalibration`/`ImuSequence`, compatible `ImageSequence` acquisition
-       fields, and record tests.
+1. [x] FC0 provider probes, compatibility snapshots, corrected API contracts,
+       and documentation only (commit `c91a0d9`).
+2. [x] `ImuCalibration`/`ImuSequence`, compatible `ImageSequence` acquisition
+       fields, and record tests; locally green, with hosted wheel validation
+       still pending.
 3. [ ] `VisualInertialDataset` plus provisional dataset read/write/inspect,
        oracle suite, benchmark, and docs; omit the registry id if FC0 rejects it.
 4. [ ] `LabelTaxonomy` and dense label records plus NPZ/Zarr/NCore carriers,
@@ -843,7 +918,8 @@ its record and codec changes cannot be reviewed or reverted independently.
 
 | Unit | Record/API | Read | Write | Inspect | Partial | Oracle per supported direction | Large benchmark | Local suite | Hosted wheels | Docs |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| FC1 visual-inertial | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
+| FC1A IMU records/acquisition | [x] | n/a | refusal-only | n/a | n/a | [x] record vectors | n/a | [x] | pending/user-gated | [x] |
+| FC1B visual-inertial dataset | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
 | FC2 dense labels | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
 | FC3 E57 scans | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
 | FC4 TIFF collections | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |

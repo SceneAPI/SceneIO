@@ -511,6 +511,7 @@ void validate_write_timing(const ImageSequence &sequence) {
 
 void validate_write(const ImageSequence &sequence) {
     validate_image_sequence(sequence, "theora write");
+    require_no_image_sequence_acquisition(sequence, "theora write");
     if (sequence.storage_mode != "yuv_planar" ||
         sequence.frame_dtype != "uint8" ||
         sequence.color_space != "ycbcr" ||

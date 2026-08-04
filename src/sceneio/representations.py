@@ -63,6 +63,7 @@ REPRESENTATION_UNIT_VOCABULARY = frozenset(
         "frame_length_unit",
         "feature_score",
         "grid_declared",
+        "hertz",
         "index",
         "information_weight",
         "keypoint_attribute",
@@ -70,6 +71,8 @@ REPRESENTATION_UNIT_VOCABULARY = frozenset(
         "meter",
         "meter_per_second",
         "meter_per_second_squared",
+        "meter_per_second_squared_per_sqrt_hertz",
+        "meter_per_second_cubed_per_sqrt_hertz",
         "microsecond",
         "nanosecond",
         "not_applicable",
@@ -79,6 +82,8 @@ REPRESENTATION_UNIT_VOCABULARY = frozenset(
         "profile_declared",
         "projective_coefficient",
         "radian_per_second",
+        "radian_per_second_per_sqrt_hertz",
+        "radian_per_second_squared_per_sqrt_hertz",
         "record_length_unit",
         "scale_ratio",
         "second",
@@ -265,6 +270,7 @@ _PROFILES = {
                 "Packed decoded frames follow image_samples; planar YUV frames preserve declared chroma sampling/siting, range, and matrix metadata.",
                 "Encoded paths retain their codec-owned sample contract until a frame is explicitly decoded.",
                 "Timing uses exact signed int64 nanoseconds when present and is never rate-resampled.",
+                "Optional exposure/readout durations remain exact int64 nanoseconds; timestamp_reference and readout direction declare their interpretation without resampling.",
             ),
             refusal="Frame color/range conversion or timing resampling must be requested outside the record.",
         ),
@@ -498,6 +504,57 @@ _PROFILES = {
                 "Kalibr time offsets are seconds with reference_time = camera_time + time_offset_seconds.",
             ),
             refusal="Axis, transform direction, quaternion order, or scale changes require an explicit rig adapter.",
+        ),
+        _profile(
+            "imu_calibration",
+            "canonical",
+            "metric",
+            "record_declared",
+            "requires_context",
+            (
+                "meter",
+                "nanosecond",
+                "hertz",
+                "radian_per_second_per_sqrt_hertz",
+                "radian_per_second_squared_per_sqrt_hertz",
+                "meter_per_second_squared_per_sqrt_hertz",
+                "meter_per_second_cubed_per_sqrt_hertz",
+            ),
+            scale_fields=(
+                "sensor_axis_frame",
+                "reference_frame",
+                "quaternion_order",
+                "time_offset_ns",
+            ),
+            rules=(
+                "The stored unit quaternion and meter translation map sensor coordinates into the named reference frame.",
+                "Noise densities and random walks use the fixed SI-derived units exposed by the record; absent values remain distinct from zero.",
+                "Clock offsets use reference_time_ns = sensor_time_ns + time_offset_ns.",
+            ),
+            refusal="Axis, reference-frame, transform-direction, or clock-domain changes require an explicit calibrated adapter.",
+        ),
+        _profile(
+            "imu_sequence",
+            "declared",
+            "record_declared",
+            "record_declared",
+            "requires_context",
+            (
+                "nanosecond",
+                "radian_per_second",
+                "meter_per_second_squared",
+            ),
+            scale_fields=(
+                "angular_velocity_unit",
+                "linear_acceleration_unit",
+                "sensor_axis_frame",
+                "clock_domain",
+            ),
+            rules=(
+                "Timestamps are exact int64 nanoseconds in the declared clock domain and identify measurement instants.",
+                "Angular velocity and linear acceleration retain their declared closed units and sensor-axis frame without conversion.",
+            ),
+            refusal="Unit, axis-frame, gravity, clock synchronization, interpolation, and resampling changes require explicit caller context.",
         ),
         _profile(
             "posed_views",
@@ -955,6 +1012,8 @@ def _build_contracts() -> dict[str, RepresentationNormalizationContract]:
     register("hloc_matches", ("tests/codecs/test_hdf5_hloc.py",), "sceneio.HlocMatchStore")
     register("image_samples", ("tests/records/test_image.py",), "sceneio.Image")
     register("image_sequence", ("tests/records/test_image_sequence_record.py",), "sceneio.ImageSequence")
+    register("imu_calibration", ("tests/records/test_imu.py",), "sceneio.ImuCalibration")
+    register("imu_sequence", ("tests/records/test_imu.py",), "sceneio.ImuSequence")
     register("instances", ("tests/records/test_instance_set.py",), "sceneio.InstanceSet")
     register("matches", ("tests/codecs/test_colmap_db.py",), "sceneio.MatchGraph")
     register("materials", ("tests/records/test_material_set.py",), "sceneio.MaterialSet")

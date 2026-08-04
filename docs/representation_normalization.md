@@ -108,6 +108,14 @@ contract; `normalized` and `arbitrary` do not.
   poses, upper-left image coordinates—but its world scale remains arbitrary.
 - `PosedViewSet` records pose direction, axis frame, quaternion order, and
   `scale_to_meters`; it is the third directly convertible compiled record.
+- `ImuCalibration` fixes sensor-to-reference translation to meters, preserves
+  optional SI-derived noise terms without replacing absence by zero, and uses
+  `reference_time_ns = sensor_time_ns + time_offset_ns`. `ImuSequence` keeps
+  exact nanosecond sample times, declared measurement units, sensor axes, and
+  clock domain; it never synchronizes, resamples, or converts units implicitly.
+- `ImageSequence` acquisition metadata uses exact nanosecond durations. A
+  declared timestamp reference and readout direction make rolling exposure
+  timing interpretable; unsupported writers refuse it rather than dropping it.
 - `GaussianCloud` declares log/linear scale space, logit/linear opacity,
   WXYZ/XYZW quaternion layout, SH memory layout, and source precision. Its mean
   positions have no coordinate-frame or meters-per-unit field. Explicit
@@ -127,6 +135,8 @@ models grow. Every public representation still has its own mapping entry.
 |---|---|
 | `camera_intrinsics` | `sceneio.Camera`, `sceneio.data.CameraIntrinsics` |
 | `camera_rig` | `sceneio.CameraRig` |
+| `imu_calibration` | `sceneio.ImuCalibration` |
+| `imu_sequence` | `sceneio.ImuSequence` |
 | `colmap_database` | `sceneio.ColmapDatabase` |
 | `colmap_marker_companion` | `sceneio.ColmapMarkerSet`, `sceneio.colmap.SparseMarker` |
 | `colmap_pose_prior_companion` | `sceneio.ColmapPosePriorSet` |

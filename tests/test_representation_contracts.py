@@ -64,7 +64,7 @@ def _public_representation_ids() -> set[str]:
 def test_contract_catalog_exactly_covers_public_representation_classes():
     assert REPRESENTATION_CONTRACT_SCHEMA_VERSION == 1
     assert set(REPRESENTATION_CONTRACTS) == _public_representation_ids()
-    assert len(REPRESENTATION_CONTRACTS) == 91
+    assert len(REPRESENTATION_CONTRACTS) == 93
 
 
 def test_every_contract_uses_a_registered_profile_and_live_evidence():
@@ -128,6 +128,7 @@ def test_conversion_and_metric_claims_stay_narrow():
         if contract.scale == "metric"
     }
     assert metric == {
+        "sceneio.ImuCalibration",
         "sceneio.MeshScene",
         "sceneio.RtmvDataset",
         "sceneio.colmap.TimeFrame",
@@ -186,3 +187,14 @@ def test_compiled_and_neutral_records_with_same_name_remain_distinct():
 
     sequence = representation_contract("sceneio.ImageSequence")
     assert "planar YUV" in " ".join(sequence.rules)
+
+    imu_calibration = representation_contract("sceneio.ImuCalibration")
+    assert imu_calibration.scale == "metric"
+    assert "time_offset_ns" in imu_calibration.scale_fields
+    assert "absent values remain distinct from zero" in " ".join(
+        imu_calibration.rules
+    )
+
+    imu_sequence = representation_contract("sceneio.ImuSequence")
+    assert imu_sequence.scale == "record_declared"
+    assert "clock_domain" in imu_sequence.scale_fields

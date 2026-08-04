@@ -87,6 +87,8 @@ GaussianCloud = _core.GaussianCloud
 convert_gaussian_conventions = _core.convert_gaussian_conventions
 PosedViewSet = _core.PosedViewSet
 StateTrajectory = _core.StateTrajectory
+ImuCalibration = _core.ImuCalibration
+ImuSequence = _core.ImuSequence
 TensorDict = _core.TensorDict
 Image = _core.Image
 ImageSequence = _core.ImageSequence
@@ -119,6 +121,8 @@ install_coordinate_properties(
     GaussianCloud,
     PosedViewSet,
     StateTrajectory,
+    ImuCalibration,
+    ImuSequence,
     TensorDict,
     Image,
     ImageSequence,
@@ -754,6 +758,8 @@ __all__ = [
     "HlocMatchStore",
     "Image",
     "ImageSequence",
+    "ImuCalibration",
+    "ImuSequence",
     "Inspection",
     "InstanceSet",
     "MatchGraph",

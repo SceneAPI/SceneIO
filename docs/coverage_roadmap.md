@@ -353,6 +353,8 @@ zero‑copy + convention tags.
 | `TensorDict` | named ndarrays + attrs | npz, HDF5, safetensors, zarr, parquet | ✅ |
 | `CameraRig` | lossless ragged intrinsics/distortion, exact K/R/P, extrinsics, operational/time/topic metadata + convention tags | OpenCV/ROS/Kalibr calib | ✅ |
 | `StateTrajectory` | int64-ns timestamps + p/q/v/gyro-bias/accel-bias with frame/unit/sign tags | EuRoC state CSV | ✅ |
+| `ImuCalibration` | sensor id/name/topic, metric sensor-to-reference transform, optional rate/noise/random-walk terms and int64-ns clock offset | visual-inertial datasets | ✅ compiled record; dataset adapter pending |
+| `ImuSequence` | int64-ns sample times plus float64 angular velocity/linear acceleration with unit, axis, and clock-domain tags | visual-inertial datasets | ✅ compiled record; dataset adapter pending |
 | `PoseGraph` | typed SE3 nodes/edges, exact ids/fixed flags, XYZW transforms, symmetric 6×6 information + convention tags | g2o | ✅ |
 
 *(Done: `Reconstruction`, `GaussianCloud`, `PosedViewSet`, `Camera`.)*

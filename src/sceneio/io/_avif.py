@@ -414,6 +414,10 @@ def _validate_image(value) -> tuple[np.ndarray, str]:
 def _validate_sequence(value):
     if not isinstance(value, _core.ImageSequence):
         raise TypeError("animated AVIF writer: expected an ImageSequence")
+    if value.has_acquisition_timing:
+        raise ValueError(
+            "animated AVIF writer: acquisition timing metadata is not representable"
+        )
     if value.storage_mode != "packed" or value.frame_dtype != "uint8":
         raise ValueError("animated AVIF writer: requires packed uint8 frames")
     if value.maxval != 255:

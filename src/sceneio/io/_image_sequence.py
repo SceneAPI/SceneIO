@@ -261,6 +261,10 @@ def write_image_sequence_directory(
 ) -> None:
     if not isinstance(sequence, _core.ImageSequence):
         raise TypeError("image sequence: writer requires ImageSequence")
+    if sequence.has_acquisition_timing:
+        raise ValueError(
+            "image sequence: acquisition timing metadata is not representable"
+        )
     if sequence.storage_mode != "encoded_paths":
         raise ValueError("image sequence: directory writer requires encoded paths")
     names = [_validate_name(name, frame_access) for name in sequence.frame_names]

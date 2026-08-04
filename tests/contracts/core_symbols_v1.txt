@@ -13,6 +13,8 @@ FlowField
 GaussianCloud
 Image
 ImageSequence
+ImuCalibration
+ImuSequence
 InstanceSet
 LasWaveformSidecar
 MatchGraph
@@ -99,6 +101,8 @@ image
 image_sequence_packed
 image_sequence_paths
 image_sequence_yuv
+imu_calibration
+imu_sequence
 inspect_colmap_db
 inspect_glb
 inspect_gltf

@@ -21,6 +21,8 @@ from sceneio.io._builtin_manifest import CANONICAL_BUILTIN_IDS
 ROOT = Path(__file__).resolve().parents[1]
 CONTRACT_PATH = ROOT / "tests/contracts/remaining_3dcv_fc0_v1.toml"
 CONTRACT = tomllib.loads(CONTRACT_PATH.read_text(encoding="utf-8"))
+FC1_CONTRACT_PATH = ROOT / "tests/contracts/visual_inertial_records_v1.toml"
+FC1_CONTRACT = tomllib.loads(FC1_CONTRACT_PATH.read_text(encoding="utf-8"))
 
 _DESIGN_IDS = {
     "visual_inertial",
@@ -96,8 +98,15 @@ def test_fc0_decisions_are_complete_provisional_and_nonpublic():
     assert len(symbols) == len(set(symbols))
 
     public_modules = (sceneio, sceneio.io, sceneio.data)
+    implemented = set(FC1_CONTRACT["public_symbols"])
+    assert implemented <= set(symbols)
     for symbol in symbols:
-        assert all(not hasattr(module, symbol) for module in public_modules)
+        if symbol in implemented:
+            assert hasattr(sceneio, symbol)
+            assert hasattr(sceneio.io, symbol)
+            assert not hasattr(sceneio.data, symbol)
+        else:
+            assert all(not hasattr(module, symbol) for module in public_modules)
     for row in decisions:
         assert row["outcome"] in _OUTCOMES
         assert row["required_contracts"]
@@ -158,8 +167,10 @@ def test_fc0_freezes_signatures_errors_and_legacy_construction():
     assert isinstance(sequence, sceneio.ImageSequence)
     assert sequence.frame_paths == ["frame.png"]
     assert not sequence.has_timing
-    assert not hasattr(sequence, "exposure_durations_ns")
-    assert not hasattr(sequence, "readout_step_durations_ns")
+    assert not sequence.has_acquisition_timing
+    assert sequence.exposure_durations_ns.shape == (0,)
+    assert sequence.readout_step_durations_ns.shape == (0,)
+    assert sequence.timestamp_reference == "unknown"
     assert isinstance(cloud, sceneio.PointCloud)
     assert cloud.num_points == 1
     assert isinstance(tensors, sceneio.TensorDict)

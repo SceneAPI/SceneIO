@@ -15,6 +15,7 @@ void register_point_cloud(nanobind::module_ &);
 void register_depth_map(nanobind::module_ &);
 void register_flow_field(nanobind::module_ &);
 void register_state_trajectory(nanobind::module_ &);
+void register_imu(nanobind::module_ &);
 void register_camera_rig(nanobind::module_ &);
 void register_pose_graph(nanobind::module_ &);
 void register_feature_match(nanobind::module_ &);
@@ -28,7 +29,7 @@ void register_dense_mvs_records(nanobind::module_ &);
 namespace sio::bindings {
 namespace {
 
-constexpr std::array<RegistrationDescriptor, 19> RECORDS{{
+constexpr std::array<RegistrationDescriptor, 20> RECORDS{{
     {0, "reconstruction", &::register_reconstruction},
     {1, "gaussian_cloud", &::register_gaussian_cloud},
     {2, "posed_view_set", &::register_posed_view_set},
@@ -39,15 +40,16 @@ constexpr std::array<RegistrationDescriptor, 19> RECORDS{{
     {7, "depth_map", &::register_depth_map},
     {8, "flow_field", &::register_flow_field},
     {9, "state_trajectory", &::register_state_trajectory},
-    {10, "camera_rig", &::register_camera_rig},
-    {11, "pose_graph", &::register_pose_graph},
-    {12, "feature_match", &::register_feature_match},
-    {13, "material_set", &::register_material_set},
-    {14, "mesh", &::register_mesh},
-    {15, "mesh_scene", &::register_mesh_scene},
-    {16, "instance_set", &::register_instance_set},
-    {17, "scene_graph", &::register_scene_graph},
-    {18, "dense_mvs", &::register_dense_mvs_records},
+    {10, "imu", &::register_imu},
+    {11, "camera_rig", &::register_camera_rig},
+    {12, "pose_graph", &::register_pose_graph},
+    {13, "feature_match", &::register_feature_match},
+    {14, "material_set", &::register_material_set},
+    {15, "mesh", &::register_mesh},
+    {16, "mesh_scene", &::register_mesh_scene},
+    {17, "instance_set", &::register_instance_set},
+    {18, "scene_graph", &::register_scene_graph},
+    {19, "dense_mvs", &::register_dense_mvs_records},
 }};
 
 } // namespace

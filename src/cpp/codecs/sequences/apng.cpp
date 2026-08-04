@@ -721,6 +721,7 @@ std::pair<uint16_t, uint16_t> apng_delay(
 void validate_writer_input(
     const ImageSequence &sequence) {
     validate_image_sequence(sequence, "apng");
+    require_no_image_sequence_acquisition(sequence, "apng");
     if (sequence.storage_mode != "packed" ||
         sequence.frame_dtype != "uint8")
         throw std::invalid_argument(

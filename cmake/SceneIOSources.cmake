@@ -31,6 +31,7 @@ set(SCENEIO_RECORD_SOURCES
   src/cpp/records/depth_map.cpp
   src/cpp/records/flow_field.cpp
   src/cpp/records/state_trajectory.cpp
+  src/cpp/records/imu.cpp
   src/cpp/records/camera_rig.cpp
   src/cpp/records/pose_graph.cpp
   src/cpp/records/feature_match.cpp
@@ -143,6 +144,7 @@ set(SCENEIO_CORE_SOURCES
   src/cpp/records/depth_map.cpp
   src/cpp/records/flow_field.cpp
   src/cpp/records/state_trajectory.cpp
+  src/cpp/records/imu.cpp
   src/cpp/records/camera_rig.cpp
   src/cpp/records/pose_graph.cpp
   src/cpp/records/feature_match.cpp

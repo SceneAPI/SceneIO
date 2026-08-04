@@ -1480,6 +1480,7 @@ std::string make_cluster(
 uint64_t validate_writer_input(
     const ImageSequence &sequence, bool temporal = false) {
     validate_image_sequence(sequence, "webm write");
+    require_no_image_sequence_acquisition(sequence, "webm write");
     const bool packed =
         sequence.storage_mode == "packed" &&
         sequence.frame_dtype == "uint8" && sequence.channels == 3;

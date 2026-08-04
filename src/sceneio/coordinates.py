@@ -434,6 +434,34 @@ def coordinate_convention(record: object) -> CoordinateConvention | None:
             quaternion_order=str(record.quaternion_order),
             image=True,
         )
+    if type_name == "ImuCalibration":
+        axis_frame = str(record.sensor_axis_frame)
+        return CoordinateConvention(
+            name="imu_calibration",
+            camera_axes=(
+                axis_frame if axis_frame in {"enu", "ned"} else "unknown"
+            ),
+            handedness=(
+                "right_handed" if axis_frame in {"enu", "ned"} else "unknown"
+            ),
+            pose_direction="sensor_to_reference",
+            quaternion_order=str(record.quaternion_order),
+            quaternion_algebra="hamilton",
+            world_frame="reference",
+            scale_class="metric",
+            scale_to_meters=1.0,
+            reference_frame=str(record.reference_frame),
+        )
+    if type_name == "ImuSequence":
+        axis_frame = str(record.sensor_axis_frame)
+        return CoordinateConvention(
+            name="imu_sequence",
+            camera_axes=(axis_frame if axis_frame in {"enu", "ned"} else "unknown"),
+            handedness=(
+                "right_handed" if axis_frame in {"enu", "ned"} else "unknown"
+            ),
+            world_frame=(axis_frame if axis_frame in {"enu", "ned"} else "unknown"),
+        )
     if type_name in {"PointCloud", "Mesh"}:
         return _spatial_convention(
             type_name.lower(),
@@ -682,6 +710,8 @@ def install_core_coordinate_properties(core: object) -> None:
         "GaussianCloud",
         "PosedViewSet",
         "StateTrajectory",
+        "ImuCalibration",
+        "ImuSequence",
         "TensorDict",
         "Image",
         "ImageSequence",

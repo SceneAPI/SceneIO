@@ -8,6 +8,7 @@
 #include <optional>
 #include <string>
 #include <unordered_set>
+#include <utility>
 
 #include "records/image_sequence.hpp"
 
@@ -145,6 +146,46 @@ void assign_timing(
     }
 }
 
+void assign_acquisition_timing(
+    ImageSequence &sequence,
+    const std::optional<i64_array> &exposure_durations_ns,
+    const std::optional<i64_array> &readout_step_durations_ns,
+    std::optional<std::vector<std::string>> readout_directions,
+    const std::string &timestamp_reference) {
+    const auto assign_optional = [&](
+        const std::optional<i64_array> &source,
+        std::vector<int64_t> &destination,
+        const char *name) {
+        if (!source) return;
+        if (source->ndim() != 1)
+            throw std::invalid_argument(
+                std::string("image sequence: ") + name +
+                " must be one-dimensional int64");
+        const size_t count = source->shape(0);
+        if (count != 0 && count != sequence.n)
+            throw std::invalid_argument(
+                std::string("image sequence: ") + name +
+                " must be empty or (N,)");
+        if (count != 0)
+            destination.assign(source->data(), source->data() + count);
+    };
+    assign_optional(
+        exposure_durations_ns, sequence.exposure_durations_ns,
+        "exposure_durations_ns");
+    assign_optional(
+        readout_step_durations_ns,
+        sequence.readout_step_durations_ns,
+        "readout_step_durations_ns");
+    if (readout_directions) {
+        if (!readout_directions->empty() &&
+            readout_directions->size() != sequence.n)
+            throw std::invalid_argument(
+                "image sequence: readout_directions must be empty or N");
+        sequence.readout_directions = std::move(*readout_directions);
+    }
+    sequence.timestamp_reference = timestamp_reference;
+}
+
 ImageSequence make_path_sequence(
     const std::vector<std::string> &paths,
     const std::vector<std::string> &names,
@@ -155,7 +196,11 @@ ImageSequence make_path_sequence(
     size_t channels,
     const std::string &frame_dtype,
     const std::string &color_space,
-    const std::string &alpha_mode) {
+    const std::string &alpha_mode,
+    std::optional<i64_array> exposure_durations_ns,
+    std::optional<i64_array> readout_step_durations_ns,
+    std::optional<std::vector<std::string>> readout_directions,
+    const std::string &timestamp_reference) {
     if (paths.size() != names.size())
         throw std::invalid_argument(
             "image sequence: paths and names must have equal length");
@@ -170,6 +215,9 @@ ImageSequence make_path_sequence(
     assign_image_sequence_paths(sequence, paths);
     assign_image_sequence_names(sequence, names);
     assign_timing(sequence, timestamps_ns, durations_ns);
+    assign_acquisition_timing(
+        sequence, exposure_durations_ns, readout_step_durations_ns,
+        std::move(readout_directions), timestamp_reference);
     validate_image_sequence(sequence);
     return sequence;
 }
@@ -188,7 +236,11 @@ ImageSequence make_yuv_sequence(
     uint32_t frame_rate_numerator,
     uint32_t frame_rate_denominator,
     uint32_t pixel_aspect_numerator,
-    uint32_t pixel_aspect_denominator) {
+    uint32_t pixel_aspect_denominator,
+    std::optional<i64_array> exposure_durations_ns,
+    std::optional<i64_array> readout_step_durations_ns,
+    std::optional<std::vector<std::string>> readout_directions,
+    const std::string &timestamp_reference) {
     if (y.ndim() != 3)
         throw std::invalid_argument(
             "image sequence: Y plane must be (N,H,W) uint8");
@@ -256,6 +308,9 @@ ImageSequence make_yuv_sequence(
         }
     }
     assign_timing(sequence, timestamps_ns, durations_ns);
+    assign_acquisition_timing(
+        sequence, exposure_durations_ns, readout_step_durations_ns,
+        std::move(readout_directions), timestamp_reference);
     validate_image_sequence(sequence);
     return sequence;
 }
@@ -268,7 +323,11 @@ ImageSequence make_packed_sequence(
     const std::string &alpha_mode,
     std::optional<uint32_t> maxval,
     std::optional<uint32_t> loop_count,
-    std::optional<u8_array> background_rgba) {
+    std::optional<u8_array> background_rgba,
+    std::optional<i64_array> exposure_durations_ns,
+    std::optional<i64_array> readout_step_durations_ns,
+    std::optional<std::vector<std::string>> readout_directions,
+    const std::string &timestamp_reference) {
     if (pixels.ndim() != 3 && pixels.ndim() != 4)
         throw std::invalid_argument(
             "image sequence: packed pixels must be (N,H,W) or (N,H,W,C)");
@@ -324,6 +383,9 @@ ImageSequence make_packed_sequence(
             sequence.background_rgba.begin());
     }
     assign_timing(sequence, timestamps_ns, durations_ns);
+    assign_acquisition_timing(
+        sequence, exposure_durations_ns, readout_step_durations_ns,
+        std::move(readout_directions), timestamp_reference);
     validate_image_sequence(sequence);
     return sequence;
 }
@@ -410,6 +472,115 @@ void validate_image_sequence(
                 sequence.timestamps_ns[index - 1])
             throw std::invalid_argument(
                 prefix + "timestamps must be strictly increasing");
+    }
+
+    if (sequence.timestamp_reference != "unknown" &&
+        sequence.timestamp_reference != "exposure_start" &&
+        sequence.timestamp_reference != "exposure_midpoint" &&
+        sequence.timestamp_reference != "exposure_end")
+        throw std::invalid_argument(
+            prefix + "timestamp_reference must be unknown|exposure_start|"
+                     "exposure_midpoint|exposure_end");
+    if (!sequence.has_timing() &&
+        sequence.timestamp_reference != "unknown")
+        throw std::invalid_argument(
+            prefix + "timestamp_reference requires frame timing");
+    if (!sequence.exposure_durations_ns.empty() &&
+        sequence.exposure_durations_ns.size() != sequence.n)
+        throw std::invalid_argument(
+            prefix + "exposure_durations_ns must be empty or N");
+    for (int64_t duration : sequence.exposure_durations_ns)
+        if (duration < 0)
+            throw std::invalid_argument(
+                prefix + "exposure durations must be nonnegative");
+
+    const bool acquisition_arrays =
+        !sequence.exposure_durations_ns.empty() ||
+        !sequence.readout_step_durations_ns.empty() ||
+        !sequence.readout_directions.empty();
+    if (acquisition_arrays &&
+        (!sequence.has_timing() ||
+         sequence.timestamp_reference == "unknown"))
+        throw std::invalid_argument(
+            prefix + "acquisition timing requires frame timing and a "
+                     "declared timestamp_reference");
+    for (int64_t duration : sequence.readout_step_durations_ns)
+        if (duration < 0)
+            throw std::invalid_argument(
+                prefix + "readout step durations must be nonnegative");
+    if (sequence.readout_directions.empty()) {
+        if (!sequence.readout_step_durations_ns.empty())
+            throw std::invalid_argument(
+                prefix + "readout step durations require directions");
+    } else {
+        if (sequence.readout_directions.size() != sequence.n)
+            throw std::invalid_argument(
+                prefix + "readout_directions must be empty or N");
+        bool has_global = false;
+        bool has_rolling = false;
+        for (const std::string &direction :
+             sequence.readout_directions) {
+            if (direction == "global") {
+                has_global = true;
+            } else if (
+                direction == "top_to_bottom" ||
+                direction == "bottom_to_top" ||
+                direction == "left_to_right" ||
+                direction == "right_to_left") {
+                has_rolling = true;
+            } else {
+                throw std::invalid_argument(
+                    prefix + "readout direction must be global|"
+                             "top_to_bottom|bottom_to_top|left_to_right|"
+                             "right_to_left");
+            }
+        }
+        if (has_global && has_rolling)
+            throw std::invalid_argument(
+                prefix + "mixed global/rolling acquisition requires "
+                         "separate ImageSequence records");
+        if (has_global && !sequence.readout_step_durations_ns.empty())
+            throw std::invalid_argument(
+                prefix + "global readout must omit step durations");
+        if (has_rolling &&
+            sequence.readout_step_durations_ns.size() != sequence.n)
+            throw std::invalid_argument(
+                prefix + "rolling readout requires N step durations");
+        if (has_rolling) {
+            for (size_t index = 0; index < sequence.n; ++index) {
+                const std::string &direction =
+                    sequence.readout_directions[index];
+                const bool vertical =
+                    direction == "top_to_bottom" ||
+                    direction == "bottom_to_top";
+                const uint64_t steps = static_cast<uint64_t>(
+                    (vertical ? sequence.height : sequence.width) - 1);
+                const uint64_t step_duration = static_cast<uint64_t>(
+                    sequence.readout_step_durations_ns[index]);
+                if (step_duration != 0 &&
+                    steps > std::numeric_limits<uint64_t>::max() /
+                                step_duration)
+                    throw std::invalid_argument(
+                        prefix + "readout timing equation overflows int64 "
+                                 "nanoseconds");
+                const uint64_t delta = steps * step_duration;
+                const int64_t timestamp = sequence.timestamps_ns[index];
+                const bool positive =
+                    direction == "top_to_bottom" ||
+                    direction == "left_to_right";
+                const uint64_t capacity = positive
+                    ? static_cast<uint64_t>(
+                          std::numeric_limits<int64_t>::max() - timestamp)
+                    : static_cast<uint64_t>(timestamp) +
+                          static_cast<uint64_t>(
+                              std::numeric_limits<int64_t>::max()) +
+                          uint64_t{1};
+                if (delta > capacity)
+                    throw std::invalid_argument(
+                        prefix + "readout timing equation overflows int64 "
+                                 "nanoseconds");
+            }
+        }
     }
 
     if (sequence.storage_mode == "encoded_paths") {
@@ -595,6 +766,14 @@ void validate_image_sequence(
             prefix + "pixel-aspect rational must be 0:0 or positive");
 }
 
+void require_no_image_sequence_acquisition(
+    const ImageSequence &sequence, const char *context) {
+    if (sequence.has_acquisition_timing())
+        throw std::invalid_argument(
+            std::string(context) +
+            ": acquisition timing metadata is not representable");
+}
+
 void register_image_sequence(nb::module_ &module) {
     const auto internal = nb::rv_policy::reference_internal;
     nb::class_<ImageSequence>(module, "ImageSequence")
@@ -620,6 +799,15 @@ void register_image_sequence(nb::module_ &module) {
         .def_ro("pixel_aspect_denominator", &ImageSequence::pixel_aspect_denominator)
         .def_prop_ro("has_timing", [](const ImageSequence &v) {
             return v.has_timing();
+        })
+        .def_prop_ro("has_exposure_timing", [](const ImageSequence &v) {
+            return v.has_exposure_timing();
+        })
+        .def_prop_ro("has_readout_timing", [](const ImageSequence &v) {
+            return v.has_readout_timing();
+        })
+        .def_prop_ro("has_acquisition_timing", [](const ImageSequence &v) {
+            return v.has_acquisition_timing();
         })
         .def_prop_ro("has_paths", [](const ImageSequence &v) {
             return v.has_paths();
@@ -660,6 +848,37 @@ void register_image_sequence(nb::module_ &module) {
                 return sequence_view(v.durations_ns, {v.durations_ns.size()});
             },
             internal)
+        .def_prop_ro(
+            "exposure_durations_ns",
+            [](const ImageSequence &v) {
+                return sequence_view(
+                    v.exposure_durations_ns,
+                    {v.exposure_durations_ns.size()});
+            },
+            internal)
+        .def_prop_ro(
+            "readout_step_durations_ns",
+            [](const ImageSequence &v) {
+                return sequence_view(
+                    v.readout_step_durations_ns,
+                    {v.readout_step_durations_ns.size()});
+            },
+            internal)
+        .def_prop_ro(
+            "readout_directions",
+            [](const ImageSequence &v) {
+                return v.readout_directions;
+            })
+        .def_ro(
+            "timestamp_reference",
+            &ImageSequence::timestamp_reference)
+        .def_prop_ro(
+            "acquisition_timing_convention",
+            [](const ImageSequence &) {
+                return "coordinate_reference_ns = frame_timestamp_ns + "
+                       "direction_sign * step_index * "
+                       "readout_step_duration_ns";
+            })
         .def_prop_ro(
             "pixels",
             [](nb::handle_t<ImageSequence> self) -> nb::object {
@@ -732,6 +951,11 @@ void register_image_sequence(nb::module_ &module) {
         "frame_dtype"_a = "uint8",
         "color_space"_a = "unknown",
         "alpha_mode"_a = "none",
+        nb::kw_only(),
+        "exposure_durations_ns"_a = nb::none(),
+        "readout_step_durations_ns"_a = nb::none(),
+        "readout_directions"_a = nb::none(),
+        "timestamp_reference"_a = "unknown",
         "Build a lazy ImageSequence from owned UTF-8 frame references and "
         "optional exact int64 nanosecond timing.");
     module.def(
@@ -742,6 +966,11 @@ void register_image_sequence(nb::module_ &module) {
         "maxval"_a = nb::none(),
         "loop_count"_a = nb::none(),
         "background_rgba"_a = nb::none(),
+        nb::kw_only(),
+        "exposure_durations_ns"_a = nb::none(),
+        "readout_step_durations_ns"_a = nb::none(),
+        "readout_directions"_a = nb::none(),
+        "timestamp_reference"_a = "unknown",
         "Build an owned packed gray/RGB/RGBA ImageSequence from "
         "(N,H,W)/(N,H,W,C) uint8/uint16/float32 samples, with exact "
         "timing and optional APNG/WebP loop/background metadata.");
@@ -758,6 +987,11 @@ void register_image_sequence(nb::module_ &module) {
         "frame_rate_denominator"_a = 1,
         "pixel_aspect_numerator"_a = 0,
         "pixel_aspect_denominator"_a = 0,
+        nb::kw_only(),
+        "exposure_durations_ns"_a = nb::none(),
+        "readout_step_durations_ns"_a = nb::none(),
+        "readout_directions"_a = nb::none(),
+        "timestamp_reference"_a = "unknown",
         "Build an owned uint8 planar-YUV ImageSequence without converting "
         "to RGB.");
 }
