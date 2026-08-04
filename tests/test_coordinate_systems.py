@@ -302,6 +302,19 @@ def test_python_contract_records_expose_scoped_coordinate_views():
     mask = sceneio.data.Mask(np.zeros((2, 3), dtype=np.bool_))
     assert mask.coordinates == sceneio.IMAGE_COORDINATES
 
+    semantic = sceneio.data.SemanticMap(
+        np.zeros((2, 3), dtype=np.int32),
+        -1,
+    )
+    instance = sceneio.data.InstanceMap(
+        np.zeros((2, 3), dtype=np.int64),
+        0,
+    )
+    panoptic = sceneio.data.PanopticMap(semantic, instance)
+    assert semantic.coordinates == sceneio.IMAGE_COORDINATES
+    assert instance.coordinates == sceneio.IMAGE_COORDINATES
+    assert panoptic.coordinates == sceneio.IMAGE_COORDINATES
+
     features = sceneio.data.FeatureSet(
         np.array([[10.5, 20.5]], dtype=np.float32)
     )

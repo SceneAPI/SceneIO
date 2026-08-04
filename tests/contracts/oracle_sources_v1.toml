@@ -26,7 +26,7 @@ required_source_ids = [
   "colmap", "pycolmap", "camtools", "rootba", "openmvg", "alicevision",
   "evo", "pykitti", "kalibr", "g2o", "hloc", "open3d", "pcl", "pdal",
   "trimesh", "gltf_validator", "niantic_spz", "splat_transform", "gsply",
-  "gaussian_splats_3d", "openusd", "khronos_gltf", "3dgrut", "ncore",
+  "gaussian_splats_3d", "openusd", "khronos_gltf", "3dgrut", "kubric", "ncore",
   "scipy", "pyyaml", "numpy", "h5py", "zarr", "arrow", "openexr", "pillow", "tifffile",
   "libe57format",
 ]
@@ -513,6 +513,27 @@ execution_markers = ["3DGRUT"]
 evidence_tests = ["tests/codecs/test_ply.py", "tests/codecs/test_usd_gaussians.py", "tests/codecs/test_ncore_v4.py"]
 qualification = "reference"
 notice = ""
+
+[[sources]]
+id = "kubric"
+project = "Google Research Kubric"
+repository = "https://github.com/google-research/kubric"
+revision = "61f2422c84bab75006df33c6989e0b483db3ccfe"
+version = "main snapshot"
+stars = 2786
+stars_snapshot = "2026-08-03"
+license = "Apache-2.0"
+license_class = "permissive"
+distribution_role = "generated_vector"
+authority = "semantic_reference"
+lineage = "kubric"
+formats = ["label_map"]
+semantic_roles = ["semantic_labels", "instance_labels", "background_id", "renderer_id_mapping"]
+execution = "hand_evaluated_pinned_vector"
+execution_markers = ["KUBRIC_REVISION", "adjust_segmentation_idxs"]
+evidence_tests = ["tests/codecs/test_label_map_carriers.py"]
+qualification = "captured"
+notice = "LICENSES/kubric.txt"
 
 [[sources]]
 id = "ncore"

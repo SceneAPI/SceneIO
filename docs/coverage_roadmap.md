@@ -14,8 +14,9 @@
 > and completion matrix in
 > [`remaining_3dcv_profile_checklist.md`](remaining_3dcv_profile_checklist.md).
 > Its FC0 compatibility and provider-feasibility freeze and the bounded FC1
-> visual-inertial record/dataset slice are locally complete. FC2 label maps are
-> the next finite implementation unit; hosted package validation for FC1B
+> visual-inertial record/dataset slice are locally complete. FC2 label records
+> plus versioned NPZ/Zarr adapters are locally implemented; NCore and TIFF
+> projections remain the next finite units. Hosted package validation for FC1B
 > remains user-triggered.
 > The bounded standards-based USD expansion is specified separately in
 > [`usd_3d_cv_implementation_plan.md`](usd_3d_cv_implementation_plan.md).
@@ -27,7 +28,7 @@
 > source data.
 > The complementary
 > [`representation_normalization.md`](representation_normalization.md)
-> contract covers all 94 public representation classes with explicit
+> contract covers all 98 public representation classes with explicit
 > normalization, scaling, unit, coordinate-source, conversion, and refusal
 > rules. It changes no decoded values and keeps unknown/arbitrary scale honest.
 > Licensed fixture sourcing is tracked separately in
@@ -350,6 +351,10 @@ zero‑copy + convention tags.
 | `PairCorrespondences` / `CorrespondenceGraph` | indexed or coordinate matches, scores, two-view geometry, ordered pair validation, and per-image feature references | hloc and detector-free matching adapters | ✅ Python-neutral models |
 | `TrackObservation` / `TrackedPointCloud` | sparse XYZ plus aligned per-point image/keypoint observations | reconstruction and dataset adapters | ✅ Python-neutral models; compiled reconstruction uses CSR tracks |
 | `Mask` | HxW bool, `True` means the pixel participates | segmentation, filtering, and dataset adapters | ✅ Python-neutral model |
+| `LabelTaxonomy` | unique int32 semantic ids, ordered names, explicit identity/version, optional RGB colors and thing/stuff flags | typed dense labels | ✅ Python-neutral model |
+| `SemanticMap` | int32 HxW ids, explicit void, optional validity/taxonomy | NPZ/Zarr now; NCore/TIFF projections pending | ✅ generic-carrier checkpoint |
+| `InstanceMap` | int64 HxW ids, explicit background, optional validity and instance-to-class table | NPZ/Zarr now; NCore/TIFF projections pending | ✅ generic-carrier checkpoint |
+| `PanopticMap` | matching semantic/instance children and explicit packed converters | NPZ/Zarr now; NCore/TIFF projections pending | ✅ generic-carrier checkpoint |
 | `ColmapDatabase` | cameras, prior-focal flags, ordered features, match graph, nested rig/frame, pose-prior, marker, metadata-only video, and ownership records; exact profile/application/schema version | COLMAP DB | ✅ stock/current/MAXX reads and exact selected-profile writers |
 | `TensorDict` | named ndarrays + attrs | npz, HDF5, safetensors, zarr, parquet | ✅ |
 | `CameraRig` | lossless ragged intrinsics/distortion, exact K/R/P, extrinsics, operational/time/topic metadata + convention tags | OpenCV/ROS/Kalibr calib | ✅ |
@@ -418,12 +423,12 @@ Columns: **Ext/id** · **Record** · **Lib/oracle (license)** · **R/W** ·
 ### 3e. Arrays / tensors / features
 | Format | Record | Lib / oracle | R/W | Notes |
 |---|---|---|---|---|
-| ✅ `.npy` / `.npz` | ndarray / `TensorDict` | numpy (BSD) | R+W | NPY native C-order mmap view; NPZ stored/deflate |
+| ✅ `.npy` / `.npz` | ndarray / `TensorDict`; explicit typed dense-label overlay | numpy (BSD) | R+W | NPY native C-order mmap view; NPZ stored/deflate; `sceneio.label_map/1` only through explicit typed functions |
 | ✅ HDF5 `.h5` / `.hdf5` | `TensorDict` | h5py (BSD-3) + HDF5 permissive license | R+W | optional `sceneio[hdf5]`; numeric/bool datasets, nested paths, text attrs, inspect, named reads, hyperslabs, atomic path writes |
 | ✅ hloc feature layout | `HlocFeatureStore` + native `FeatureSet` | documented hloc schema + h5py oracle | R+W | keypoints, D×N descriptors, scores, image size, uncertainty, nested names |
 | ✅ hloc match layout | `HlocMatchStore` + native `MatchGraph` | documented hloc schema + h5py oracle | R+W | dense `matches0`, optional scores, exact endpoints/order/dtypes |
 | ✅ safetensors | `TensorDict` | safetensors (Apache) | R+W | JSON header, mmap tensors, name/slice selectors |
-| ✅ Zarr v2/v3 | `TensorDict` | zarr (MIT) + numcodecs (MIT) | R+W | optional `sceneio[zarr]`; numeric/bool directory stores, nested paths, text root attrs, metadata inspection, named reads, leading-axis slices, transactional replacement, fixed-width zero-copy normalization for NumPy platform/generic numeric aliases |
+| ✅ Zarr v2/v3 | `TensorDict`; explicit typed dense-label overlay | zarr (MIT) + numcodecs (MIT) | R+W | optional `sceneio[zarr]`; numeric/bool directory stores, nested paths, text root attrs, metadata inspection, named reads, leading-axis slices, transactional replacement, fixed-width normalization, and direct owned-array label reads |
 | ✅ Parquet / Arrow IPC | `TensorDict` numeric table | PyArrow (Apache-2.0) | R+W | optional `sceneio[arrow]`; fixed-width numeric columns, metadata, mmap reads; Parquet named-column selection |
 | ✅ OpenVDB | sparse-grid `TensorDict` | TinyVDB (Apache-2.0) | R+W | optional `sceneio[openvdb]`; one identity-transform, zero-background float32 scalar grid with sparse coordinates and ZIP/active-mask output; rebuilt active count is verified and unsupported provider topologies refuse |
 

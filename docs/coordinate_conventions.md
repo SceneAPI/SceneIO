@@ -126,6 +126,13 @@ Bundler, BAL, NVM, and OpenMVG already decode into SceneIO's canonical COLMAP
 `Reconstruction` representation. Their format parity suites verify that
 normalization against independent parsers or project oracles.
 
+Typed dense-label records are image rasters: `SemanticMap`, `InstanceMap`, and
+`PanopticMap` use the same upper-left origin, rightward x, downward y, and
+`(0.5, 0.5)` first-pixel center as `IMAGE_COORDINATES`. Their numeric ids have
+identity semantics and no physical scale. A raw NPZ or Zarr `TensorDict`
+remains coordinate-unspecified; only the explicit `sceneio.label_map/1` typed
+adapter attaches the image-raster record contract.
+
 ### ASL/EuRoC visual-inertial datasets
 
 The bounded `euroc_dataset` adapter preserves the file-declared sensor graph.

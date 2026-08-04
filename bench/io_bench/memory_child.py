@@ -239,6 +239,18 @@ def _execute_operation(
             format=arguments.get("format"),
             **selectors,
         )
+    if kind == "sceneio_read_label_map":
+        arguments = _require_arguments(operation, {"path"}, {"format"})
+        return sceneio.read_label_map(
+            arguments["path"],
+            format=arguments.get("format"),
+        )
+    if kind == "sceneio_inspect_label_map":
+        arguments = _require_arguments(operation, {"path"}, {"format"})
+        return sceneio.inspect_label_map(
+            arguments["path"],
+            format=arguments.get("format"),
+        )
     raise ValueError(f"unknown memory operation kind {kind!r}")
 
 

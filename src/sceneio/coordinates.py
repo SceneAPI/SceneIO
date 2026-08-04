@@ -645,7 +645,13 @@ def coordinate_convention(record: object) -> CoordinateConvention | None:
         return IMAGE_COORDINATES
     if type_name in {"NCoreDataset", "NCoreDatasetData"}:
         return FILE_DECLARED_COORDINATES
-    if type_name in {"ConfidenceMap", "Mask"}:
+    if type_name in {
+        "ConfidenceMap",
+        "InstanceMap",
+        "Mask",
+        "PanopticMap",
+        "SemanticMap",
+    }:
         return IMAGE_COORDINATES
     if type_name == "TrackedPointCloud":
         return CoordinateConvention(

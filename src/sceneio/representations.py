@@ -65,6 +65,7 @@ REPRESENTATION_UNIT_VOCABULARY = frozenset(
         "grid_declared",
         "hertz",
         "index",
+        "instance_id",
         "information_weight",
         "keypoint_attribute",
         "match_score",
@@ -87,6 +88,7 @@ REPRESENTATION_UNIT_VOCABULARY = frozenset(
         "record_length_unit",
         "scale_ratio",
         "second",
+        "semantic_id",
         "source_length_unit",
         "stage_unit",
         "stored_depth",
@@ -283,6 +285,62 @@ _PROFILES = {
             ("boolean", "pixel"),
             rules=("The canonical payload is HxW bool and True means the pixel participates.",),
             refusal="Non-boolean label or probability rasters require a different representation.",
+        ),
+        _profile(
+            "label_taxonomy",
+            "canonical",
+            "identity",
+            "not_applicable",
+            "requires_context",
+            ("semantic_id", "stored_sample", "boolean"),
+            scale_fields=("identity", "version", "semantic_ids"),
+            rules=(
+                "Unique int32 semantic ids are authoritative; ordered names, optional RGB display colors, and thing/stuff flags are metadata rows in the same order.",
+                "Taxonomy identity and version are explicit UTF-8 strings and are never inferred from class names or numeric range.",
+            ),
+            refusal="Merging, renumbering, or translating taxonomies requires an explicit caller-supplied id mapping.",
+        ),
+        _profile(
+            "semantic_labels",
+            "canonical",
+            "identity",
+            "fixed",
+            "requires_context",
+            ("semantic_id", "boolean", "pixel"),
+            scale_fields=("void_id", "taxonomy.identity", "taxonomy.version"),
+            rules=(
+                "Class ids are C-contiguous int32 HxW values in top-to-bottom image raster order; optional bool validity is independent of the explicit void id.",
+                "When present, the taxonomy declares every valid non-void id without renumbering values.",
+            ),
+            refusal="Class ids are never normalized by range or remapped without an explicit taxonomy conversion.",
+        ),
+        _profile(
+            "instance_labels",
+            "canonical",
+            "identity",
+            "fixed",
+            "requires_context",
+            ("instance_id", "semantic_id", "boolean", "pixel"),
+            scale_fields=("background_id", "instance_to_semantic_table"),
+            rules=(
+                "Instance ids are C-contiguous int64 HxW values with an explicit background id and optional bool validity.",
+                "An optional unique int64-to-int32 table declares instance-to-semantic association without narrowing large instance ids.",
+            ),
+            refusal="Background meaning, instance identity, and class association are never inferred from zero, contiguity, or numeric range.",
+        ),
+        _profile(
+            "panoptic_labels",
+            "aggregate",
+            "identity",
+            "fixed",
+            "requires_context",
+            ("semantic_id", "instance_id", "boolean", "pixel"),
+            scale_fields=("semantic.void_id", "instance.background_id", "packed_divisor"),
+            rules=(
+                "The semantic int32 and instance int64 child maps retain identical shape and validity without copying child arrays.",
+                "No packed divisor is implicit; explicit checked conversion names its divisor and output dtype.",
+            ),
+            refusal="Packed ids, void/background rules, or taxonomy mappings are never guessed from pixel values.",
         ),
         _profile(
             "confidence_unit_interval",
@@ -1087,11 +1145,31 @@ def _build_contracts() -> dict[str, RepresentationNormalizationContract]:
     register("depth_parent_scale", ("tests/test_data_dense.py",), "sceneio.data.DepthMap")
     register("features", ("tests/test_data_features.py",), "sceneio.data.FeatureSet")
     register("frame_meta", ("tests/test_data_views.py",), "sceneio.data.FrameMeta")
+    register(
+        "instance_labels",
+        ("tests/test_data_label_maps.py", "tests/codecs/test_label_map_carriers.py"),
+        "sceneio.data.InstanceMap",
+    )
+    register(
+        "label_taxonomy",
+        ("tests/test_data_label_maps.py", "tests/codecs/test_label_map_carriers.py"),
+        "sceneio.data.LabelTaxonomy",
+    )
     register("binary_mask", ("tests/test_data_dense.py",), "sceneio.data.Mask")
+    register(
+        "panoptic_labels",
+        ("tests/test_data_label_maps.py", "tests/codecs/test_label_map_carriers.py"),
+        "sceneio.data.PanopticMap",
+    )
     register("pointmap_parent_scale", ("tests/test_data_dense.py",), "sceneio.data.Pointmap")
     register("pose_prior", ("tests/test_data_pointcloud_priors.py",), "sceneio.data.PosePrior")
     register("posed_views_parent", ("tests/test_data_views.py",), "sceneio.data.PosedViewSet")
     register("unit_ray_map", ("tests/test_data_calibration.py",), "sceneio.data.RayMap")
+    register(
+        "semantic_labels",
+        ("tests/test_data_label_maps.py", "tests/codecs/test_label_map_carriers.py"),
+        "sceneio.data.SemanticMap",
+    )
     register("sim3", ("tests/test_data_transforms.py",), "sceneio.data.Sim3")
     register("track_observation", ("tests/test_data_pointcloud_priors.py",), "sceneio.data.TrackObservation")
     register("tracked_point_cloud", ("tests/test_data_pointcloud_priors.py",), "sceneio.data.TrackedPointCloud")

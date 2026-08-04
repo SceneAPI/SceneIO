@@ -2,7 +2,7 @@
 
 SceneIO has a versioned, machine-readable numeric contract for every public
 data-bearing class in `sceneio.io`, `sceneio.data`, `sceneio.colmap`, and
-`sceneio.colmap_mvs`. Version 1 covers 94 representations. Registry helpers,
+`sceneio.colmap_mvs`. Version 1 covers 98 representations. Registry helpers,
 errors, capability/inspection results, and enums are not data representations
 and are excluded by an exact test allowlist.
 
@@ -98,6 +98,12 @@ contract; `normalized` and `arbitrary` do not.
 - `Mask` is canonical HxW bool, with `True` meaning the pixel participates.
   `ConfidenceMap` is finite float32 in `[0, 1]`; arbitrary scores cannot be
   relabeled as confidence.
+- `sceneio.data.LabelTaxonomy` gives semantic `int32` ids an explicit identity
+  and version. `sceneio.data.SemanticMap` keeps those ids separate from its
+  void id; `sceneio.data.InstanceMap` keeps `int64` instance ids separate from
+  its background id and optional class table. `sceneio.data.PanopticMap`
+  composes the two child rasters without packing or copying them. Packing is an
+  explicit checked conversion with a caller-supplied divisor and output dtype.
 - Compiled `DepthMap` preserves raw float32 depth and supplies
   `scale_to_meters`, unit, invalid-value, and depth-interpretation metadata.
   Neutral `sceneio.data.DepthMap` inherits length scale from its owning
@@ -180,6 +186,10 @@ models grow. Every public representation still has its own mapping entry.
 | `depth_parent_scale` | `sceneio.data.DepthMap` |
 | `frame_meta` | `sceneio.data.FrameMeta` |
 | `binary_mask` | `sceneio.data.Mask` |
+| `label_taxonomy` | `sceneio.data.LabelTaxonomy` |
+| `semantic_labels` | `sceneio.data.SemanticMap` |
+| `instance_labels` | `sceneio.data.InstanceMap` |
+| `panoptic_labels` | `sceneio.data.PanopticMap` |
 | `pointmap_parent_scale` | `sceneio.data.Pointmap` |
 | `pose_prior` | `sceneio.data.PosePrior` |
 | `posed_views_parent` | `sceneio.data.PosedViewSet` |
@@ -202,7 +212,7 @@ models grow. Every public representation still has its own mapping entry.
 ## Verification and change policy
 
 `tests/test_representation_contracts.py` discovers exported classes from all
-four namespaces and requires exact equality with the 94-entry catalog. It also
+four namespaces and requires exact equality with the 98-entry catalog. It also
 checks profile vocabulary, immutable lookup behavior, live evidence paths,
 ambiguous-name refusal, the exact three direct-conversion records, narrow
 metric claims, compiled/neutral record distinctions, and Gaussian limitations.

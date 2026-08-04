@@ -41,6 +41,12 @@ from sceneio.io._euroc_dataset import (
 from sceneio.io._hdf5 import HlocFeatureStore, HlocMatchStore
 from sceneio.io._inspection import inspect_codec
 from sceneio.io._inspectors.model import ArrayInspection, Inspection
+from sceneio.io._label_map import (
+    LABEL_MAP_SCHEMA,
+    inspect_label_map,
+    read_label_map,
+    write_label_map,
+)
 from sceneio.io._ncore import (
     NCoreArray,
     NCoreComponent,
@@ -736,6 +742,7 @@ def _detect_write(obj, path) -> str:
 __all__ = [
     "COLMAP_COORDINATES",
     "IMAGE_COORDINATES",
+    "LABEL_MAP_SCHEMA",
     "UNKNOWN_COORDINATES",
     "UNSPECIFIED_FORMAT_COORDINATES",
     "ArrayInspection",
@@ -805,6 +812,7 @@ __all__ = [
     "inspect",
     "inspect_depth",
     "inspect_flow",
+    "inspect_label_map",
     "materialize_ncore_v4",
     "native_features",
     "project_ncore_item",
@@ -812,6 +820,7 @@ __all__ = [
     "read_depth",
     "read_euroc_dataset",
     "read_flow",
+    "read_label_map",
     "read_ncore_component",
     "read_ncore_semantic_component",
     "read_partial",
@@ -823,6 +832,7 @@ __all__ = [
     "write_depth",
     "write_euroc_dataset",
     "write_flow",
+    "write_label_map",
     "write_ncore_v4",
     "write_openvdb",
     "write_parquet",

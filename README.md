@@ -138,9 +138,39 @@ assert contract.profile.id == "gaussian_cloud"
 assert contract.coordinates == "unknown"  # activation metadata is not a frame
 ```
 
-The exact 94-record catalog, standard policy vocabulary, unit equations, and
+The exact 98-record catalog, standard policy vocabulary, unit equations, and
 refusal rules are documented in
 [`docs/representation_normalization.md`](docs/representation_normalization.md).
+
+Dense semantic, instance, and panoptic rasters use explicit integer contracts;
+an ordinary integer image is never guessed to be a label map:
+
+```python
+import numpy as np
+import sceneio
+
+taxonomy = sceneio.data.LabelTaxonomy(
+    np.array([0, 4], np.int32),
+    ("background", "vehicle"),
+    identity="example.taxonomy",
+    version="v1",
+)
+semantic = sceneio.data.SemanticMap(
+    np.array([[0, 4], [4, -1]], np.int32),
+    void_id=-1,
+    taxonomy=taxonomy,
+)
+sceneio.write_label_map(semantic, "labels.npz")
+assert sceneio.inspect_label_map("labels.npz").metadata["schema"] == (
+    "sceneio.label_map/1"
+)
+decoded = sceneio.read_label_map("labels.npz")
+```
+
+The same versioned schema is available through optional Zarr v2/v3 storage.
+Raw NPZ/Zarr APIs still return `TensorDict`; typed meaning is activated only by
+the explicit label-map functions and schema marker. NCore and TIFF label
+projections remain separate follow-on adapters.
 
 NCore V4 datasets expose a metadata-only catalog, exact owned component arrays,
 and validated standard semantic items without importing the upstream package:

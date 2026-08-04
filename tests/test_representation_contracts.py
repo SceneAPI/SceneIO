@@ -64,7 +64,7 @@ def _public_representation_ids() -> set[str]:
 def test_contract_catalog_exactly_covers_public_representation_classes():
     assert REPRESENTATION_CONTRACT_SCHEMA_VERSION == 1
     assert set(REPRESENTATION_CONTRACTS) == _public_representation_ids()
-    assert len(REPRESENTATION_CONTRACTS) == 94
+    assert len(REPRESENTATION_CONTRACTS) == 98
 
 
 def test_every_contract_uses_a_registered_profile_and_live_evidence():
@@ -160,6 +160,21 @@ def test_gaussian_activation_contract_does_not_claim_world_normalization():
     joined = " ".join((*contract.profile.rules, contract.profile.refusal))
     assert "Means use an unspecified source length unit" in joined
     assert "SH basis" in joined
+
+
+def test_dense_label_contracts_keep_ids_unscaled_and_unpacking_explicit():
+    taxonomy = representation_contract(sceneio.data.LabelTaxonomy)
+    semantic = representation_contract(sceneio.data.SemanticMap)
+    instance = representation_contract(sceneio.data.InstanceMap)
+    panoptic = representation_contract(sceneio.data.PanopticMap)
+    assert taxonomy.profile.id == "label_taxonomy"
+    assert semantic.profile.id == "semantic_labels"
+    assert instance.profile.id == "instance_labels"
+    assert panoptic.profile.id == "panoptic_labels"
+    assert semantic.canonical_units == ("semantic_id", "boolean", "pixel")
+    assert "instance_id" in instance.canonical_units
+    assert "No packed divisor is implicit" in " ".join(panoptic.rules)
+    assert all(contract.scale == "identity" for contract in (taxonomy, semantic, instance, panoptic))
 
 
 def test_compiled_and_neutral_records_with_same_name_remain_distinct():

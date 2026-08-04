@@ -84,7 +84,7 @@ the current public records.
 | [Sweet Corals](https://huggingface.co/datasets/newneha123/sweet-corals) (CC-BY-4.0) | corrected images, one large coherent COLMAP model, point cloud, and tiled 3DGS PLY outputs | Hosted large-scene validation only; confirm the processed mirror's lineage before redistributing bytes |
 | [Fire Actioncam](https://huggingface.co/datasets/jna-358/fire_actioncam) (CC-BY-4.0) | three-camera rig, per-frame times, exposure, readout direction, 2.856 µs/line rolling-shutter timing, points, and depth bounds | Compact `meta.npz` is 133,334 B, hash `7fe21660…930`; useful for future timing/rig records without ingesting its video streams |
 | [Google Scanned Objects](https://research.google/blog/scanned-objects-by-google-research-a-dataset-of-3d-scanned-common-household-items/) (CC-BY-4.0) | real textured OBJ/PNG producer diversity across 1,030 objects | Optional hosted mesh corpus; Khronos remains the compact default |
-| [Kubric MOVi generator](https://github.com/google-research/kubric) (Apache-2.0) | RGB, depth, normals, optical flow, instance masks, camera/object poses, and motion | Generate a tiny deterministic scene from simple generated assets; do not assume a hosted MOVi artifact's license |
+| [Kubric MOVi generator](https://github.com/google-research/kubric) (Apache-2.0) | RGB, depth, normals, optical flow, instance masks, camera/object poses, and motion | Normal CI pins revision `61f2422c…ccfe` and hand-evaluates its segmentation-index rule for typed-label carrier tests; a full tiny generated scene remains opt-in and no hosted MOVi artifact license is assumed |
 | [OME-TIFF samples](https://downloads.openmicroscopy.org/images/OME-TIFF/2016-06/) (CC-BY-4.0) | multi-channel Z/T and pyramid/container breadth | Future TIFF hardening/profile vectors; the checked 7,889,559 B 4D file is `caf707ca…6f3` and currently reaches a wrapped `TiffFrame.tags` failure rather than a clean supported-profile result |
 | [E57 example data](https://e57-3d-imgfmt.sourceforge.net/data.html) (permissive test-data grant) | structured scans, imagery, extensions, and multiple scans beyond BunnyFloat | Future E57 profile vectors; keep the current single-scan boundary explicit |
 
@@ -107,10 +107,12 @@ the current public records.
   vectors, not relabeled as positive fixtures and not used to weaken a record
   contract.
 
-The remaining work is now implementation breadth rather than source hunting:
-semantic/instance/panoptic maps, dynamic USD, multi-grid VDB, multi-scan E57,
-and TIFF multi-series/pyramids need explicit public models and conversion
-contracts before these broader samples can become positive round-trip cases.
+The remaining work is now implementation breadth rather than source hunting.
+Semantic/instance/panoptic records and generic NPZ/Zarr carriers are present;
+their NCore/TIFF projections and full Kubric-render regeneration remain.
+Dynamic USD, multi-grid VDB, multi-scan E57, and TIFF multi-series/pyramids
+still need explicit public models and conversion contracts before the broader
+samples can become positive round-trip cases.
 The bounded implementation and verification order is defined in
 [`remaining_3dcv_profile_checklist.md`](remaining_3dcv_profile_checklist.md).
 That plan's FC0 machine contract freezes the remaining proposed names and

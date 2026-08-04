@@ -11,6 +11,7 @@ from __future__ import annotations
 import os
 import shutil
 import tempfile
+import uuid
 from collections.abc import Mapping
 from contextlib import suppress
 from pathlib import Path
@@ -124,12 +125,12 @@ def _open_group(path: str | Path):
     return zarr.open_group(source, mode="r", use_consolidated=None)
 
 
-def _to_tensor_dict(
+def _decode_arrays(
     group,
     items: tuple[tuple[str, object], ...],
     *,
     slices: Mapping[str, tuple[int, int]] | None = None,
-):
+) -> dict[str, np.ndarray]:
     arrays: dict[str, np.ndarray] = {}
     for name, value in items:
         if slices is None or name not in slices:
@@ -148,6 +149,57 @@ def _to_tensor_dict(
                 )
             decoded = value[start:stop]
         arrays[name] = _canonical_array(decoded, f"Zarr array {name!r}")
+    return arrays
+
+
+def _array_inspections(
+    items: tuple[tuple[str, object], ...],
+) -> tuple[ArrayInspection, ...]:
+    return tuple(
+        ArrayInspection(
+            name=name,
+            shape=tuple(int(value) for value in array.shape),
+            dtype=np.dtype(array.dtype).name,
+        )
+        for name, array in items
+    )
+
+
+class _ZarrArrayReader:
+    """One-open metadata and owned-array reader for typed adapters."""
+
+    def __init__(self, path: str | Path) -> None:
+        self._group = _open_group(path)
+        self._items = _array_items(self._group)
+        self._available = dict(self._items)
+        self.inspections = _array_inspections(self._items)
+
+    def read(self, names: tuple[str, ...] | None = None) -> dict[str, np.ndarray]:
+        if names is None:
+            return _decode_arrays(self._group, self._items)
+        selected: list[tuple[str, object]] = []
+        seen: set[str] = set()
+        for raw_name in names:
+            name = _validate_name(raw_name)
+            if name in seen:
+                raise ValueError(f"Zarr: duplicate tensor selector {name!r}")
+            seen.add(name)
+            try:
+                selected.append((name, self._available[name]))
+            except KeyError:
+                raise ValueError(f"Zarr: tensor {name!r} does not exist") from None
+        if not selected:
+            raise ValueError("Zarr: tensor selection must not be empty")
+        return _decode_arrays(self._group, tuple(selected))
+
+
+def _to_tensor_dict(
+    group,
+    items: tuple[tuple[str, object], ...],
+    *,
+    slices: Mapping[str, tuple[int, int]] | None = None,
+):
+    arrays = _decode_arrays(group, items, slices=slices)
     return _core.tensor_dict(arrays, attrs=_root_attrs(group))
 
 
@@ -156,6 +208,20 @@ def read_zarr(path: str | Path):
 
     group = _open_group(path)
     return _to_tensor_dict(group, _array_items(group))
+
+
+def _read_zarr_arrays(path: str | Path) -> dict[str, np.ndarray]:
+    """Read owned arrays directly for typed adapters that do not need TensorDict."""
+
+    return _ZarrArrayReader(path).read()
+
+
+def _read_zarr_selected_arrays(
+    path: str | Path, names: tuple[str, ...]
+) -> dict[str, np.ndarray]:
+    """Read selected owned arrays without constructing a TensorDict."""
+
+    return _ZarrArrayReader(path).read(names)
 
 
 def read_zarr_tensors(path: str | Path, names: tuple[str, ...]):
@@ -240,12 +306,8 @@ def _replace_directory(temporary: Path, destination: Path) -> None:
                 f"Zarr: destination {str(destination)!r} exists and is not a directory"
             )
         backup = destination.with_name(
-            f".{destination.name}.{os.getpid()}.previous"
+            f".{destination.name}.{os.getpid()}.{uuid.uuid4().hex}.previous"
         )
-        if backup.exists():
-            raise ValueError(
-                f"Zarr: replacement staging path {str(backup)!r} already exists"
-            )
         os.replace(destination, backup)
     try:
         os.replace(temporary, destination)
@@ -254,33 +316,33 @@ def _replace_directory(temporary: Path, destination: Path) -> None:
             os.replace(backup, destination)
         raise
     if backup is not None:
-        shutil.rmtree(backup)
+        # The new store is already committed. A stale, uniquely named recovery
+        # copy must not make that successful write look failed or block the next.
+        with suppress(OSError):
+            shutil.rmtree(backup)
 
 
-def write_zarr(
-    tensors,
+def _write_zarr_arrays(
+    raw_arrays: Mapping[str, object],
     path: str | Path,
     *,
     zarr_format: int = 3,
     chunks: Mapping[str, tuple[int, ...]] | None = None,
+    attrs: Mapping[str, str] | None = None,
 ) -> None:
-    """Write a TensorDict to an optimized directory Zarr v2 or v3 store."""
+    """Write an owned-array mapping for typed adapters without TensorDict copies."""
 
     if zarr_format not in {2, 3}:
         raise ValueError("Zarr: zarr_format must be 2 or 3")
-    if not isinstance(tensors, _core.TensorDict):
-        raise TypeError("Zarr: expected a TensorDict")
-
-    tensor_names = tensors.keys()
     arrays = {
         _validate_name(name): _canonical_array(
-            tensors[name],
+            value,
             f"Zarr tensor {name!r}",
         )
-        for name in tensor_names
+        for name, value in raw_arrays.items()
     }
-    attrs = dict(tensors.attrs)
-    for name, value in attrs.items():
+    selected_attrs = dict(attrs or {})
+    for name, value in selected_attrs.items():
         if not isinstance(name, str) or not name:
             raise ValueError("Zarr: attribute names must be non-empty strings")
         if not isinstance(value, str):
@@ -302,7 +364,7 @@ def write_zarr(
             temporary,
             mode="w",
             zarr_format=zarr_format,
-            attributes=attrs,
+            attributes=selected_attrs,
         )
         for name, array in arrays.items():
             kwargs = {"data": array}
@@ -313,6 +375,28 @@ def write_zarr(
     finally:
         with suppress(FileNotFoundError):
             shutil.rmtree(temporary)
+
+
+def write_zarr(
+    tensors,
+    path: str | Path,
+    *,
+    zarr_format: int = 3,
+    chunks: Mapping[str, tuple[int, ...]] | None = None,
+) -> None:
+    """Write a TensorDict to an optimized directory Zarr v2 or v3 store."""
+
+    if zarr_format not in {2, 3}:
+        raise ValueError("Zarr: zarr_format must be 2 or 3")
+    if not isinstance(tensors, _core.TensorDict):
+        raise TypeError("Zarr: expected a TensorDict")
+    _write_zarr_arrays(
+        {name: tensors[name] for name in tensors},
+        path,
+        zarr_format=zarr_format,
+        chunks=chunks,
+        attrs=tensors.attrs,
+    )
 
 
 def inspect_zarr(path: str | Path) -> Inspection:
@@ -331,14 +415,7 @@ def inspect_zarr(path: str | Path) -> Inspection:
         datatype="tensor_dict",
         byte_size=byte_size,
         count=len(items),
-        arrays=tuple(
-            ArrayInspection(
-                name=name,
-                shape=tuple(int(value) for value in array.shape),
-                dtype=np.dtype(array.dtype).name,
-            )
-            for name, array in items
-        ),
+        arrays=_array_inspections(items),
         metadata={
             "zarr_format": zarr_format,
             "root_attribute_count": len(_root_attrs(group)),

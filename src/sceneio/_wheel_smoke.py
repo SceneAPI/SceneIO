@@ -346,10 +346,46 @@ def _numpy_archives(root: Path, values: np.ndarray) -> None:
     assert tuple(item.name for item in npz_info.arrays) == ("x", "indices")
 
 
+def _typed_label_maps(root: Path) -> None:
+    taxonomy = sceneio.data.LabelTaxonomy(
+        np.array([0, 4], np.int32),
+        ("background", "object"),
+        "sceneio.smoke",
+        "v1",
+    )
+    valid = np.array([[True, True], [False, True]])
+    semantic = sceneio.data.SemanticMap(
+        np.array([[0, 4], [-1, 4]], np.int32),
+        -1,
+        valid,
+        taxonomy,
+    )
+    instance = sceneio.data.InstanceMap(
+        np.array([[0, 9], [0, 9]], np.int64),
+        0,
+        valid,
+        np.array([9], np.int64),
+        np.array([4], np.int32),
+    )
+    panoptic = sceneio.data.PanopticMap(semantic, instance)
+    path = root / "labels.npz"
+    sceneio.write_label_map(panoptic, path)
+    assert sceneio.detect(path) == "npz"
+    info = sceneio.inspect_label_map(path)
+    assert info.metadata["schema"] == sceneio.LABEL_MAP_SCHEMA
+    assert info.shape == (2, 2)
+    decoded = sceneio.read_label_map(path)
+    assert isinstance(decoded, sceneio.data.PanopticMap)
+    assert np.array_equal(decoded.semantic.class_ids, semantic.class_ids)
+    assert np.array_equal(decoded.instance.instance_ids, instance.instance_ids)
+    assert sceneio.representation_contract(decoded).profile.id == "panoptic_labels"
+
+
 def _array_formats(root: Path) -> None:
     values = np.arange(12, dtype=np.float32).reshape(3, 4)
     _pfm_and_typed_depth(root, values)
     _numpy_archives(root, values)
+    _typed_label_maps(root)
     _mapped_safetensors(root, values)
 
 

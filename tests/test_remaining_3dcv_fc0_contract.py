@@ -96,8 +96,12 @@ def test_fc0_decisions_are_complete_provisional_and_nonpublic():
         symbol for row in decisions for symbol in row["public_symbols"]
     )
     implemented = set(CONTRACT["implemented_public_symbols"])
+    implemented_data = set(CONTRACT["implemented_data_symbols"])
     assert implemented == set(FC1_CONTRACT["public_symbols"])
-    assert sorted(set(symbols) - implemented) == CONTRACT["provisional_public_symbols"]
+    assert implemented.isdisjoint(implemented_data)
+    assert sorted(set(symbols) - implemented - implemented_data) == CONTRACT[
+        "provisional_public_symbols"
+    ]
     assert len(symbols) == len(set(symbols))
 
     public_modules = (sceneio, sceneio.io, sceneio.data)
@@ -107,6 +111,10 @@ def test_fc0_decisions_are_complete_provisional_and_nonpublic():
             assert hasattr(sceneio, symbol)
             assert hasattr(sceneio.io, symbol)
             assert not hasattr(sceneio.data, symbol)
+        elif symbol in implemented_data:
+            assert not hasattr(sceneio, symbol)
+            assert not hasattr(sceneio.io, symbol)
+            assert hasattr(sceneio.data, symbol)
         else:
             assert all(not hasattr(module, symbol) for module in public_modules)
     for row in decisions:

@@ -1,5 +1,10 @@
 # O0 baseline — SceneIO I/O harness
 
+The versioned dense-label NPZ/Zarr overlay has a focused generated 64 MiB
+comparison in [`LABEL_MAPS.md`](LABEL_MAPS.md). It remains outside the
+registry-format row count because it is an explicit typed schema over existing
+carriers, not a new codec id.
+
 Snapshot from `python bench/bench_io.py --runs 7`. **Indicative** (median of 7,
 single machine, local **MSVC** build, warm cache); the *conclusions* below are what
 order the O1+ sweep, not the exact MB/s. Regenerate on any machine — the harness is

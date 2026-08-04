@@ -40,6 +40,7 @@ EXPECTED_NOTICES = {
     "libvpx-patents.txt",
     "libvpx.txt",
     "large-io-benchmark-sources.txt",
+    "kubric.txt",
     "lodepng.txt",
     "miniz-zip.txt",
     "miniz.txt",

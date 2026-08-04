@@ -1,10 +1,9 @@
 # Finite 3D-CV profile closure checklist
 
 - **Status:** FC0 and the bounded FC1 visual-inertial slice are locally
-  complete as of 2026-08-03. `ImuCalibration`, `ImuSequence`, and
-  `VisualInertialDataset` are public, `ImageSequence` carries exact optional
-  acquisition timing, and `euroc_dataset` is built-in format 74. FC2-FC7
-  remain planned.
+  complete as of 2026-08-03. The FC2 records and versioned NPZ/Zarr carrier
+  checkpoint are also implemented locally; NCore and TIFF label projections
+  remain before FC2 is complete. FC3-FC7 remain planned.
 - **Baseline:** 74 built-in formats, each mapped to a licensed direct fixture
   or deterministic oracle-derived route.
 - **Purpose:** close the remaining 3D-computer-vision representation and
@@ -21,7 +20,9 @@
   freezes the implemented FC1A fields, units, vocabularies, and equations.
   [`euroc_dataset_v1.toml`](../tests/contracts/euroc_dataset_v1.toml) freezes
   the qualified FC1B layout, transform, timing, selection, write, and oracle
-  contract.
+  contract. [`dense_label_maps_v1.toml`](../tests/contracts/dense_label_maps_v1.toml)
+  freezes the implemented FC2 record fields, versioned generic-carrier schema,
+  oracle revision, and remaining adapter boundary.
 
 ## 1. Review outcome
 
@@ -102,7 +103,7 @@ authorization, pagination, and retries are not applicable.
       truth.
 - [x] Exact per-frame exposure and rolling-readout metadata on
       `ImageSequence`.
-- [ ] Typed `SemanticMap`, `InstanceMap`, and `PanopticMap` records and explicit
+- [x] Typed `SemanticMap`, `InstanceMap`, and `PanopticMap` records and explicit
       adapters for carriers that can preserve them.
 - [ ] Multiple Cartesian E57 scans, including raw validity and sparse
       row/column organization plus per-scan rigid poses.
@@ -552,36 +553,38 @@ profiles cannot preserve it.
 
 ### 8.1 Records
 
-- [ ] Add immutable NumPy-native records in `sceneio.data.dense`.
-- [ ] `LabelTaxonomy`: unique `int32` semantic ids, ordered names, optional
+- [x] Add immutable NumPy-native records in `sceneio.data.dense`.
+- [x] `LabelTaxonomy`: unique `int32` semantic ids, ordered names, optional
       display colors, and optional thing/stuff flags; taxonomy identity and
       version are explicit strings rather than inferred from names.
-- [ ] `SemanticMap`: `int32 (H, W)` class ids, optional boolean validity,
+- [x] `SemanticMap`: `int32 (H, W)` class ids, optional boolean validity,
       an optional `LabelTaxonomy`, and explicit void id.
-- [ ] `InstanceMap`: `int64 (H, W)` instance ids, optional boolean validity,
+- [x] `InstanceMap`: `int64 (H, W)` instance ids, optional boolean validity,
       explicit background id, and optional unique `int64 -> int32`
       instance-to-semantic table.
-- [ ] `PanopticMap`: composed `SemanticMap` and `InstanceMap` with identical
+- [x] `PanopticMap`: composed `SemanticMap` and `InstanceMap` with identical
       shape/validity plus explicit void and background semantics; do not copy
       child arrays or assume a packed divisor encoding.
-- [ ] Require C-contiguous arrays, equal shapes, finite integer-domain values,
+- [x] Require C-contiguous arrays, equal shapes, finite integer-domain values,
       and consistent instance/class tables.
-- [ ] Define packed panoptic encodings only as explicit converters whose
+- [x] Define packed panoptic encodings only as explicit converters whose
       divisor, void id, and overflow behavior are caller-visible.
-- [ ] Keep `Mask(True = participates)` unchanged and use it only for validity,
+- [x] Keep `Mask(True = participates)` unchanged and use it only for validity,
       never as an integer label carrier.
 
 ### 8.2 Typed carrier adapters
 
 - [ ] Add explicit typed adapters for NCore camera-label/mask components.
-- [ ] Add versioned NPZ/Zarr schemas for semantic, instance, and panoptic maps.
+- [x] Add versioned NPZ/Zarr schemas for semantic, instance, and panoptic maps.
 - [ ] Add a TIFF typed path only when the caller supplies a label contract or a
       versioned `sceneio.label_map/1` description tag declares the kind and
       taxonomy; never infer semantics from integer pixels.
 - [ ] Treat a TIFF without that declaration as a raster projection only. Refuse
       a typed write when non-default semantics would be lost.
-- [ ] Preserve raw `read("tiff")`, raw `TensorDict`, and NCore component APIs.
-- [ ] Refuse palettes/taxonomies that cannot be represented without loss.
+- [x] Preserve raw NPZ/Zarr `TensorDict` behavior. Raw TIFF and NCore APIs
+      remain unchanged while their typed adapters are pending.
+- [x] Refuse incomplete, unknown, or lossy generic-carrier schema fields rather
+      than inferring a palette or taxonomy.
 
 ### 8.3 FC2 oracle and data
 
@@ -593,18 +596,75 @@ profiles cannot preserve it.
       deterministic result or reconstruct the checked numeric arrays from a
       compact regeneration manifest; run full regeneration in an opt-in lane.
 - [ ] Compare typed maps with Kubric's emitted arrays and metadata.
-- [ ] Cross-read NPZ/Zarr/TIFF carriers with NumPy, Zarr, and tifffile.
-- [ ] Test non-contiguous views, void pixels, large ids, empty instance sets,
+- [x] Cross-read NPZ carriers with NumPy in both directions, stored and
+      deflated.
+- [x] Cross-read Zarr v2/v3 carriers with the official Zarr implementation in
+      both directions.
+- [ ] Cross-read the future typed TIFF carrier with tifffile.
+- [x] Test non-contiguous views, void pixels, large ids, empty instance sets,
       invalid table references, and mixed semantic/instance backgrounds.
 
 ### FC2 exit
 
-- [ ] All three maps round-trip through at least one lossless generic carrier.
+- [x] All three maps round-trip through at least one lossless generic carrier.
 - [ ] NCore projection produces the same canonical maps as its independent
       component parser.
 - [ ] Typed TIFF requires explicit meaning and cannot misclassify an ordinary
       grayscale image.
-- [ ] Coordinate and normalization contracts cover all new public records.
+- [x] Coordinate and normalization contracts cover all new public records.
+
+### 8.4 Generic-carrier local qualification result
+
+- `LabelTaxonomy`, `SemanticMap`, `InstanceMap`, and `PanopticMap` are public
+  NumPy-native records. The normalization catalog now contains 98 exact
+  representations, and image-aligned map records use `IMAGE_COORDINATES`.
+- `sceneio.label_map/1` reads, writes, and inspects exact NPZ and Zarr v2/v3
+  schemas while raw carrier APIs remain `TensorDict` operations. Inspection
+  reads container metadata and fixed small scalar arrays without decoding a
+  raster.
+- NumPy and official Zarr writers/readers verify both directions for semantic,
+  instance, and panoptic values. Normal CI uses a hand-evaluated output from
+  Kubric's pinned `adjust_segmentation_idxs` rule; a full Blender-rendered
+  Kubric scene remains an opt-in follow-on rather than a completed claim.
+- On the generated 64 MiB low-entropy semantic fixture (MSVC, three warm-cache
+  runs), the post-review typed NPZ read is 379 MB/s with 8.02 MiB traced peak,
+  versus 182 MB/s and 25.01 MiB before the bounded membership fast path. Typed
+  Zarr v3 read is 839 MB/s with 92.5 MiB fresh-process RSS, versus 237 MB/s and
+  144.6 MiB before direct retention of decoded NumPy arrays. The direct Zarr
+  writer is 699 MB/s versus 626 MB/s through the staged `TensorDict` adapter.
+  NPZ inspection is 1.63 ms/0.051 MiB traced and Zarr inspection is 25.76
+  ms/0.168 MiB traced.
+  These values are same-machine evidence, not portable thresholds. Stored NPZ
+  native decoding still peaks at 256 MiB RSS because the existing miniz path
+  stages member buffers; that optimization is recorded, not hidden.
+- NCore and TIFF typed projections, full Kubric regeneration, hosted wheels,
+  and the complete FC2 exit remain pending.
+- The exact local tree collects 4,864 tests and passes 4,848 with 16 documented
+  optional/platform skips. Ruff, the installed-wheel smoke, compatibility
+  snapshots, and the focused 64 MiB benchmark are green. Hosted validation
+  remains user-triggered.
+
+### 8.5 Generic-carrier three-lens review
+
+- **Lifetime/resource:** NPZ decode owns returned storage and releases the
+  mapping before return; Zarr typed reads retain owned NumPy arrays directly
+  and no longer copy them through `TensorDict`. Child records keep their arrays
+  alive, typed inspection avoids bulk decode, direct NPZ writes avoid a second
+  output-sized Python `bytes`, and staged replacement preserves destinations
+  on failure. Zarr replacement uses unique recovery names, and cleanup failure
+  after commit cannot block the next write.
+- **Behavior correctness:** dtypes, contiguity, shape, void/background ids,
+  taxonomy identity/version, optional fields, instance tables, validity, and
+  explicit packed-divisor overflow are guarded. Unknown schema arrays and
+  carrier-specific options on the wrong backend are refused. Packed decoding
+  promotes small integer inputs without losing `uint64`, accepts negative void
+  metadata, and validates schema metadata plus the version marker before bulk
+  payload decode.
+- **Test soundness:** independent NumPy/Zarr writers and readers cover both
+  directions, all three map variants, and every represented field; the Kubric rule is explicitly
+  labeled hand-evaluated rather than a generated-scene oracle. Large-memory,
+  mutation-isolation, file-release, malformed-schema, transactional-failure,
+  raw-compatibility, and no-full-decode inspection tests are distinct.
 
 ## 9. FC3 — E57 multiple Cartesian scans
 
@@ -937,8 +997,9 @@ plan but do not replace file-based oracle qualification.
        still pending.
 3. [x] `VisualInertialDataset` plus dataset read/write/inspect, oracle suite,
        benchmark, and docs; locally green with hosted validation user-gated.
-4. [ ] `LabelTaxonomy` and dense label records plus NPZ/Zarr/NCore carriers,
-       Kubric evidence, benchmark, and docs.
+4. [ ] `LabelTaxonomy` and dense label records plus NPZ/Zarr carriers, bounded
+       Kubric rule evidence, benchmark, and docs are locally complete. NCore,
+       typed TIFF, and full Kubric regeneration remain in this slice.
 5. [ ] `PointScan`/`ScanSet` plus E57 multi-scan/structured read/write/inspect,
        oracle suite, benchmark, and docs.
 6. [ ] Neutral raster collection plus the qualified TIFF read/write subset,
@@ -960,7 +1021,7 @@ its record and codec changes cannot be reviewed or reverted independently.
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | FC1A IMU records/acquisition | [x] | n/a | refusal-only | n/a | n/a | [x] record vectors | n/a | [x] | pending/user-gated | [x] |
 | FC1B visual-inertial dataset | [x] | [x] | [x] | [x] | [x] | [x] | [x] bounded baseline | [x] | pending/user-gated | [x] |
-| FC2 dense labels | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
+| FC2 dense labels | [x] | generic [x] | generic [x] | generic [x] | n/a for one-map carriers | NPZ/Zarr [x]; NCore/TIFF pending | [x] generic carriers | [x] 4,848 pass / 16 skip | pending/user-gated | [x] checkpoint |
 | FC3 E57 scans | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
 | FC4 TIFF collections | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
 | FC5 OpenVDB expansion | conditional | [ ] | existing one-grid | [ ] | [ ] | expanded-read + base-write | [ ] | [ ] | [ ] | [ ] |

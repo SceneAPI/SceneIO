@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import shutil
 from pathlib import Path
 
 import numpy as np
@@ -204,6 +205,37 @@ def test_zarr_replace_existing_store(tmp_path):
     assert not (path / ".zgroup").exists()
     assert sceneio.read(path).keys() == ["new"]
     assert not tuple(tmp_path.glob(".replace.zarr.*.previous"))
+
+
+def test_zarr_committed_replacement_survives_backup_cleanup_failure(
+    tmp_path, monkeypatch
+):
+    first = _core.tensor_dict({"first": np.arange(3, dtype=np.int16)})
+    second = _core.tensor_dict({"second": np.arange(4, dtype=np.float32)})
+    third = _core.tensor_dict({"third": np.arange(5, dtype=np.uint32)})
+    path = tmp_path / "replace.zarr"
+    sceneio.write_zarr(first, path)
+    real_rmtree = shutil.rmtree
+    retained = []
+
+    def fail_first_backup_cleanup(selected, *args, **kwargs):
+        selected_path = Path(selected)
+        if selected_path.name.endswith(".previous") and not retained:
+            retained.append(selected_path)
+            raise OSError("injected backup cleanup failure")
+        return real_rmtree(selected, *args, **kwargs)
+
+    monkeypatch.setattr(
+        "sceneio.io._zarr.shutil.rmtree", fail_first_backup_cleanup
+    )
+    sceneio.write_zarr(second, path)
+    assert sceneio.read(path).keys() == ["second"]
+    assert len(retained) == 1
+    assert retained[0].is_dir()
+
+    sceneio.write_zarr(third, path)
+    assert sceneio.read(path).keys() == ["third"]
+    real_rmtree(retained[0])
 
 
 @pytest.mark.parametrize(

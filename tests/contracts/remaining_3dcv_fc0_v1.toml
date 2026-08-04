@@ -14,20 +14,17 @@ read_scene_signature = "(path, *, time: 'float | None' = None, prims=None, purpo
 provisional_format_ids = []
 implemented_format_ids = ["euroc_dataset"]
 provisional_public_symbols = [
-  "InstanceMap",
-  "LabelTaxonomy",
-  "PanopticMap",
   "PointScan",
   "RasterCollection",
   "RasterLevel",
   "RasterSeries",
   "ScanSet",
   "SceneAnimation",
-  "SemanticMap",
   "SparseGrid",
   "SparseVolumeSet",
 ]
 implemented_public_symbols = ["ImuCalibration", "ImuSequence", "VisualInertialDataset"]
+implemented_data_symbols = ["InstanceMap", "LabelTaxonomy", "PanopticMap", "SemanticMap"]
 
 [[implemented_formats]]
 id = "euroc_dataset"

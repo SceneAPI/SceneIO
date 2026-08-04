@@ -733,6 +733,7 @@ def test_assembly_dependency_direction_and_import_delta_are_exact():
         "sceneio.io._euroc_dataset.model",
         "sceneio.io._euroc_dataset.yaml_subset",
         "sceneio.io._hdf5",
+        "sceneio.io._label_map",
         "sceneio.io._ncore",
         "sceneio.io._ncore.component_io",
         "sceneio.io._ncore.itar",

@@ -25,7 +25,7 @@ distinction, explicit conversion surface, and verification rules are in
 inspection, and decoded records expose the same immutable convention contract.
 The complementary
 [`representation_normalization.md`](representation_normalization.md) contract
-classifies all 94 public data representations by structural normalization,
+classifies all 98 public data representations by structural normalization,
 scale source/unit, coordinate source, supported conversion, refusal behavior,
 and executable evidence.
 
@@ -42,7 +42,10 @@ The finite follow-on program completed its local FC1B visual-inertial slice on
 still pins the original FC0 decisions, while
 [`euroc_dataset_v1.toml`](../tests/contracts/euroc_dataset_v1.toml) freezes the
 now-public bounded ASL directory profile. `VisualInertialDataset` and
-`euroc_dataset` are qualified; 12 later profile records remain non-public.
+`euroc_dataset` are qualified. The branch-local
+[`dense_label_maps_v1.toml`](../tests/contracts/dense_label_maps_v1.toml)
+additionally freezes four public FC2 records and their NPZ/Zarr typed schema;
+NCore and TIFF label projections remain pending.
 Implementation and local validation are recorded in the
 [`finite closure checklist`](remaining_3dcv_profile_checklist.md).
 The live registry now contains 74 formats.
@@ -140,9 +143,29 @@ complete and format capabilities are unchanged.
 > mapped read reaches 319.7 MB/s with 0.118 MB traced overhead, inspection uses
 > 0.047 MB, and the bounded selection takes 2.081 ms versus about 16.65 ms for
 > the full public read. These are a new-format baseline, not a regression SLA.
-> The 94-representation, 74-format contracts agree, and the complete local
-> suite passes 4,753 tests with 16 documented skips. Hosted Linux/macOS package
-> validation remains user-triggered.
+> The then-current 94-representation, 74-format contracts agree, and the
+> complete local suite passes 4,753 tests with 16 documented skips. Hosted
+> Linux/macOS package validation remains user-triggered.
+
+> **FC2 dense-label generic-carrier checkpoint (2026-08-03, branch-local):**
+> `LabelTaxonomy`, `SemanticMap`, `InstanceMap`, and `PanopticMap` bring the
+> exact normalization catalog to 98 representations without adding a format
+> id. Explicit `read_label_map`, `write_label_map`, and `inspect_label_map`
+> APIs recognize only `sceneio.label_map/1` over NPZ or Zarr v2/v3; ordinary
+> raw NPZ/Zarr operations remain `TensorDict` operations. NumPy and official
+> Zarr independently verify every field in both directions, while pinned
+> Apache-2.0 Kubric evidence is accurately limited to a hand-evaluated
+> segmentation-index rule pending full renderer regeneration. On a generated
+> 64 MiB semantic raster, optimized typed NPZ read improved from 182 to
+> 379 MB/s and traced peak from 25.01 to 8.02 MiB; direct typed Zarr retention
+> improved read throughput from 237 to 839 MB/s and fresh-process RSS from
+> 144.6 to 92.5 MiB. The direct Zarr writer reaches 699 MB/s versus 626 MB/s
+> through the staged `TensorDict` adapter on the same fixture. NPZ and Zarr
+> metadata inspection remains bulk-decode-free.
+> These are same-machine measurements, not cross-machine limits. The exact
+> local tree passes 4,848 tests with 16 documented optional/platform skips;
+> Ruff, wheel smoke, and compatibility snapshots are green. NCore and typed
+> TIFF adapters remain before FC2 is complete.
 
 <!-- sceneio-inventory-summary:start -->
 **Generated registry contract:** SceneIO has **74 built-in formats**: **64**
@@ -1193,6 +1216,10 @@ SoA, zero-copy to numpy/torch (DLPack), conventions carried as metadata.
 | `PairCorrespondences` / `CorrespondenceGraph` | neutral correspondence models | ✅ Python records | indexed or detector-free coordinate matches with optional scores and two-view geometry; the graph validates ordered image pairs and references to per-image feature sets |
 | `TrackObservation` / `TrackedPointCloud` | neutral sparse-track models | ✅ Python records | per-point lists of `(image_id, keypoint_idx)` observations aligned with sparse XYZ; compiled `Reconstruction` carries the corresponding compact CSR track representation |
 | `Mask` | neutral dense mask | ✅ Python record | bool HxW with `True` meaning that a pixel participates; reusable by feature, depth, segmentation, and dataset adapters without format-specific duplication |
+| `LabelTaxonomy` | dense-label vocabulary | ✅ Python record | ordered unique int32 semantic ids, UTF-8 names, explicit identity/version, and optional RGB display colors plus thing/stuff flags |
+| `SemanticMap` | semantic labels | ✅ Python record | C-contiguous int32 HxW class ids, explicit void id, optional independent validity, and optional checked taxonomy |
+| `InstanceMap` | instance labels | ✅ Python record | C-contiguous int64 HxW instance ids, explicit background id, optional independent validity, and optional unique instance-to-semantic table |
+| `PanopticMap` | panoptic labels | ✅ Python record | zero-copy composition of matching semantic/instance maps; packing exists only through explicit checked divisor converters |
 | `ColmapDatabase` | `match_graph` | ✅ record / ⬜ datatype | cameras, prior-focal flags, ordered features, match graph, nested rig/frame, pose-prior, marker, metadata-only video, and ownership records; exact profile/application/schema identity |
 | `ColmapRigFrameSet` | COLMAP DB companion | ✅ nested record | non-sentinel uint32 rig/frame/sensor IDs, uint64 data IDs/CSR offsets, WXYZ `sensor_from_rig`, SQL-NULL pose presence, and frame assignments; database frames intentionally carry no world pose |
 | `ColmapPosePriorSet` | COLMAP DB companion | ✅ nested record | stock plus extended MAXX priors; nullable position/gravity and XYZW `cam_from_world` rotation; logical row-major 3x3/6x6 covariance with explicit variable-order and unit tags |
@@ -1225,7 +1252,7 @@ SoA, zero-copy to numpy/torch (DLPack), conventions carried as metadata.
 | `nvm` | `Reconstruction` | R+W | manual | VisualSFM `.nvm` (NVM_V3) |
 | `openmvg` | `Reconstruction` | R+W | manual | openMVG `sfm_data.json` |
 | `npy` | ndarray | R+W | **numpy** | pinned mapped native/C-order view; byte‑exact v1.0 writer (== np.save) |
-| `npz` | `TensorDict` | R+W | **numpy** | ZIP (stored+deflate) via repository-contained miniz 3.0.2; 12 dtypes |
+| `npz` | `TensorDict`; explicit typed dense-label overlay | R+W | **numpy** | ZIP (stored+deflate) via repository-contained miniz 3.0.2; 12 dtypes; `sceneio.label_map/1` is activated only through the typed label API and exact marker |
 | `ncore_v4` | `NCoreDataset`, `NCoreDatasetData`, `NCoreComponentData`, `NCoreSemanticComponent` | R+W, inspect, component/frame/timestamp selection | pinned upstream **NCore** V4 writer+reader fixture, SceneIO output reopened by that reader, plus generated malformed cases | optional `sceneio[ncore]`; repository-owned Zarr-v2 directory/indexed-tar catalog, exact array decoder, and deterministic transactional writer; v1 profiles for poses, intrinsics, masks, cameras, lidar, radar, cuboids, point clouds, camera labels, and arbitrary components; exact `Image`, `Mask`, and bounded metric `PointCloud` payload projections retain metadata on the source NCore item; complete owned components write through Blosc-LZ4 chunks with a consistent sequence manifest, while partial inputs are refused |
 | `euroc_dataset` | `VisualInertialDataset` containing `CameraRig`, lazy `ImageSequence`, `ImuCalibration`, `ImuSequence`, and optional `StateTrajectory` children | R+W, inspect, camera/IMU/time selection | independent **PyYAML**, stdlib CSV, and **SciPy** parser plus pinned Kalibr/CamTools semantics | repository-owned bounded ASL directory adapter; exact `T_BS` sensor-to-body transforms, WXYZ quaternions, SI values, int64-ns clocks, mapped native IMU CSV, direct CSV sinks, lazy opaque image bytes, deterministic transactional copy, and explicit refusal of unsupported sensor/layout/metadata profiles |
 | `netpbm` | `Image` | R+W | pure‑Python | PGM P5/P2 + PPM P6/P3; 16‑bit big‑endian, comment‑tolerant |
@@ -1337,7 +1364,7 @@ public-domain SQLite amalgamation statically linked into `_core`.
 | `hdf5` | `TensorDict` | R+W, inspect, partial | independent **h5py** layouts in `tests/codecs/test_hdf5_hloc.py` | optional `sceneio[hdf5]`; numeric/bool datasets, nested paths, text root attrs, selected-path named reads, leading-axis hyperslabs, and atomic replacement; full reads reject indirect/virtual/object/reference/vlen layouts, while partial reads validate the selected paths and ancestors |
 | `hloc_features` | `HlocFeatureStore` of native `FeatureSet` | R+W, inspect | independent **h5py** documented layout | preserves keypoints, D×N wire descriptors as native N×D with uint8/int8/f16/f32/f64 dtype, scores, image size, nested names, and keypoint uncertainty |
 | `hloc_matches` | `HlocMatchStore` + native `MatchGraph` | R+W, inspect | independent **h5py** documented layout | preserves dense `matches0`, optional `matching_scores0`, exact endpoint names, source extents/dtypes, pair order, and mixed score presence |
-| `zarr` | `TensorDict` | R+W, inspect, partial | direct **zarr-python/numcodecs** | optional `sceneio[zarr]`; numeric/bool v2/v3 directory stores, nested names, text attrs, named reads, leading-axis slices, transactional replacement, and zero-copy normalization of NumPy platform/generic numeric aliases before provider dispatch |
+| `zarr` | `TensorDict`; explicit typed dense-label overlay | R+W, inspect, partial | direct **zarr-python/numcodecs** | optional `sceneio[zarr]`; numeric/bool v2/v3 directory stores, nested names, text attrs, named reads, leading-axis slices, transactional replacement, fixed-width normalization, and direct owned-array retention for `sceneio.label_map/1` reads |
 | `tiff` | `Image`, `Mask`, or grayscale-stack `TensorDict` | R+W, inspect | **tifffile** plus independent producer/consumer checks | optional `sceneio[tiff]`; bounded single-series uint8/uint16/float32 profile, boolean masks, grayscale stacks, BigTIFF, alpha semantics, transactional path writes |
 | `e57` | `PointCloud` | R+W, inspect | direct **pye57/libE57Format** | optional `sceneio[e57]`; exactly one Cartesian scan, exact float32 coordinates/intensity and integral RGB8, pose, explicit invalid-point filtering; exact inspection count uses the provider scan path only when invalid-state data are present |
 | `parquet` / `arrow_ipc` | `TensorDict` numeric table | R+W, inspect; Parquet named-column partial | direct **PyArrow** | optional `sceneio[arrow]`; scalar/fixed-width numeric columns, equal row counts, text attrs, mmap/threaded provider paths, transactional writes |
