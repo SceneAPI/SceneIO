@@ -179,8 +179,12 @@ complete and format capabilities are unchanged.
 > component/profile fixture and a writer-reader descriptor round-trip.
 > These are same-machine measurements, not cross-machine limits. The local
 > adapter suites and Ruff are green. The procedural Kubric evidence is now
-> materialized and hash-verified; hosted wheels remain a separately triggered
-> platform gate, not a missing adapter implementation.
+> materialized and hash-verified. User-authorized build-only Release run
+> [`30914739031`](https://github.com/SceneAPI/SceneIO/actions/runs/30914739031)
+> validates exact commit `50172b5` through the manylinux2014 GCC 10 x86-64,
+> Windows MSVC AMD64, and macOS AppleClang ARM64 installed-wheel smokes and the
+> combined distribution inventory. The same run passes the dedicated OpenUSD
+> 26.08 and official Niantic SPZ oracle jobs; its tag-only PyPI job is skipped.
 
 <!-- sceneio-inventory-summary:start -->
 **Generated registry contract:** SceneIO has **74 built-in formats**: **64**

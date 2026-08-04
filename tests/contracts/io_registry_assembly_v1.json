@@ -2758,7 +2758,7 @@
     "extension_capture": "build/apng-56-row-benchmark.json",
     "extension_base_commit": "3c07bcefabbd0d9be935ffd22c5ef1e7f4642321",
     "rows": 74,
-    "structural_projection_sha256": "6dde30b346753159801c5071ed56825ede67dfece77aaea6fcf859381976d766",
+    "structural_projection_sha256": "5b68b2f03f8de343dd681a531cc7f1a293dcfe94c565e164cfc725f0c109ad01",
     "excluded_key_suffixes": [
       "_mbps",
       "_ms"

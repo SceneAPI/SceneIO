@@ -31,3 +31,8 @@ LICENSES/theora.txt -text -whitespace
 src/cpp/third_party/musl/** -text -whitespace
 LICENSES/musl-log1p.txt -text -whitespace
 LICENSES/openusd.txt -text -whitespace
+
+# Kubric oracle bytes are hashed exactly as generated; never normalize JSON
+# line endings on a platform checkout.
+tests/fixtures/kubric_procedural_tiny_v1.json -text
+tests/fixtures/kubric_procedural_tiny_v1/** -text

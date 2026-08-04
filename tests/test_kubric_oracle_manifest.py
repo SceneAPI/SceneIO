@@ -47,6 +47,27 @@ def _manifest() -> dict[str, object]:
     return json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
 
 
+def _assert_kubric_fixture_paths_disable_git_text_normalization() -> None:
+    paths = [
+        MANIFEST_PATH,
+        *sorted(path for path in OUTPUT_PATH.iterdir() if path.is_file()),
+    ]
+    relative_paths = [path.relative_to(ROOT).as_posix() for path in paths]
+    result = subprocess.run(
+        ["git", "check-attr", "text", "--", *relative_paths],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    attributes = {}
+    for line in result.stdout.splitlines():
+        path, attribute, value = line.rsplit(": ", 2)
+        attributes[path] = (attribute, value)
+    assert set(attributes) == set(relative_paths)
+    assert all(attribute == ("text", "unset") for attribute in attributes.values())
+
+
 def _write_png(path: Path, values: np.ndarray, *, bitdepth: int) -> None:
     height, width, planes = values.shape
     writer = png.Writer(
@@ -204,6 +225,7 @@ def _run_verify(output: Path, manifest: Path = MANIFEST_PATH) -> subprocess.Comp
 
 
 def test_kubric_fixture_is_pinned_compact_and_materialized() -> None:
+    _assert_kubric_fixture_paths_disable_git_text_normalization()
     document = _manifest()
     assert document["schema"] == "sceneio.kubric_oracle/1"
     assert document["status"] == "generated"

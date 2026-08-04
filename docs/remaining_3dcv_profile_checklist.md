@@ -4,8 +4,9 @@
   complete. As of 2026-08-04, the FC2 records, NPZ/Zarr/TIFF typed carriers,
   and strict NCore camera-label projection are implemented and locally
   qualified. The procedural Kubric/Blender recipe has been executed and its 11
-  artifacts are hash-verified; hosted wheel validation remains an external
-  evidence gate, and FC3-FC7 remain planned.
+  artifacts are hash-verified. Exact-commit Linux, Windows, and macOS wheel
+  validation plus the OpenUSD and Niantic oracle lanes passed in build-only
+  run `30914739031`; FC3-FC7 remain planned.
 - **Baseline:** 74 built-in formats, each mapped to a licensed direct fixture
   or deterministic oracle-derived route.
 - **Purpose:** close the remaining 3D-computer-vision representation and
@@ -422,8 +423,9 @@ profiles cannot preserve it.
   implementation, so no codec throughput or large-file delta is claimed. The
   dataset benchmark and independent directory-parser comparison belong to
   FC1B.
-- Linux/macOS wheel validation remains pending and user-gated; no hosted run
-  was triggered for FC1A.
+- At this FC1A checkpoint, Linux/macOS wheel validation was still pending and
+  no hosted run had been triggered. The later exact-commit installed-wheel
+  smoke in run `30914739031` supersedes that package-level status.
 
 ### 7.3.2 FC1A three-lens review
 
@@ -524,8 +526,10 @@ profiles cannot preserve it.
   mapped read with 0.118 MB traced overhead, 0.047 MB inspection allocation,
   and a 2.081 ms bounded selection versus about 16.65 ms for full public read.
   It is an initial format baseline, not a fixed numeric threshold.
-- Linux/macOS wheel and hosted Monado validation remain pending and
-  user-gated; no hosted action was triggered for FC1B.
+- At this FC1B checkpoint, Linux/macOS wheel and hosted Monado validation were
+  still pending. The later exact-commit installed-wheel smoke in run
+  `30914739031` covers the bounded EuRoC package path; it does not replace the
+  independent local Monado oracle evidence above.
 
 ### 7.8 FC1B three-lens review
 
@@ -658,13 +662,16 @@ profiles cannot preserve it.
   native decoding still peaks at 256 MiB RSS because the existing miniz path
   stages member buffers; that optimization is recorded, not hidden.
 - The FC2 implementation/adapters and procedural Kubric evidence are locally
-  complete. Regeneration remains explicit; hosted wheels remain a separately
-  triggered evidence gate.
+  complete. Regeneration remains explicit. User-authorized build-only Release
+  run `30914739031` passed exact-commit Linux, Windows, and macOS installed
+  wheel smokes, the combined inventory, and the dedicated OpenUSD/Niantic
+  oracle jobs; PyPI publication was skipped.
 - The exact local tree collects 4,954 tests and passes 4,938 with 16 documented
   optional/platform skips. The provider-independent CI collection contract is
   4,919 unique nodes. Ruff, the installed-wheel smoke, compatibility snapshots,
-  and the focused 64 MiB benchmark are green. Hosted validation remains
-  user-triggered.
+  and the focused 64 MiB benchmark are green. The generated Kubric directory
+  contains 11 artifacts totaling 23,781 bytes; every artifact SHA-256 is
+  frozen in `tests/fixtures/kubric_procedural_tiny_v1.json`.
 
 ### 8.5 Generic-carrier three-lens review
 
@@ -985,6 +992,12 @@ plan but do not replace file-based oracle qualification.
 
 ### 13.2 Package and hosted gate
 
+Current FC0-FC2 evidence: build-only Release run
+[`30914739031`](https://github.com/SceneAPI/SceneIO/actions/runs/30914739031)
+passed the exact source archive, three-wheel matrix, combined inventory, and
+the OpenUSD/Niantic oracle jobs at commit `50172b5`. The boxes below remain the
+later FC7 aggregate gate because FC3-FC6 are not implemented yet.
+
 - [ ] Build the source archive and clean Windows abi3 wheel from the exact
       candidate commit.
 - [ ] Install the base wheel with NumPy only and prove every optional provider
@@ -1020,14 +1033,17 @@ plan but do not replace file-based oracle qualification.
 1. [x] FC0 provider probes, compatibility snapshots, corrected API contracts,
        and documentation only (commit `c91a0d9`).
 2. [x] `ImuCalibration`/`ImuSequence`, compatible `ImageSequence` acquisition
-       fields, and record tests; locally green, with hosted wheel validation
-       still pending.
+       fields, and record tests; locally green and covered by the hosted
+       installed-wheel smoke in run `30914739031`.
 3. [x] `VisualInertialDataset` plus dataset read/write/inspect, oracle suite,
-       benchmark, and docs; locally green with hosted validation user-gated.
+       benchmark, and docs; locally green and covered by the hosted
+       installed-wheel smoke in run `30914739031`.
 4. [x] `LabelTaxonomy` and dense label records plus NPZ/Zarr/TIFF carriers,
        strict NCore projection, bounded Kubric rule evidence, procedural
        regeneration recipe, generated/hash-verified Blender 4.3 result,
-       benchmark, and docs are locally complete.
+       benchmark, and docs are locally complete. The typed-carrier/NCore
+       package smoke is hosted-wheel green in run `30914739031`; Kubric
+       generation and hash verification remain explicit offline evidence.
 5. [ ] `PointScan`/`ScanSet` plus E57 multi-scan/structured read/write/inspect,
        oracle suite, benchmark, and docs.
 6. [ ] Neutral raster collection plus the qualified TIFF read/write subset,
@@ -1045,11 +1061,15 @@ its record and codec changes cannot be reviewed or reverted independently.
 
 ## 15. Program completion matrix
 
+`Hosted wheels` records installed-package smoke coverage. It does not replace
+the fuller local edge, conversion, or independent-oracle suites represented in
+their own columns and validation records.
+
 | Unit | Record/API | Read | Write | Inspect | Partial | Oracle per supported direction | Large benchmark | Local suite | Hosted wheels | Docs |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| FC1A IMU records/acquisition | [x] | n/a | refusal-only | n/a | n/a | [x] record vectors | n/a | [x] | pending/user-gated | [x] |
-| FC1B visual-inertial dataset | [x] | [x] | [x] | [x] | [x] | [x] | [x] bounded baseline | [x] | pending/user-gated | [x] |
-| FC2 dense labels | [x] | carriers/NCore [x] | carriers/NCore [x] | carriers [x] | n/a for one-map carriers | NPZ/Zarr/TIFF/NCore/Kubric [x] | [x] NPZ/Zarr/TIFF | [x] | pending/user-gated | [x] |
+| FC1A IMU records/acquisition | [x] | n/a | refusal-only | n/a | n/a | [x] record vectors | n/a | [x] | [x] `30914739031` | [x] |
+| FC1B visual-inertial dataset | [x] | [x] | [x] | [x] | [x] | [x] | [x] bounded baseline | [x] | [x] `30914739031` | [x] |
+| FC2 dense labels | [x] | carriers/NCore [x] | carriers/NCore [x] | carriers [x] | n/a for one-map carriers | NPZ/Zarr/TIFF/NCore/Kubric [x] | [x] NPZ/Zarr/TIFF | [x] | [x] `30914739031` | [x] |
 | FC3 E57 scans | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
 | FC4 TIFF collections | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
 | FC5 OpenVDB expansion | conditional | [ ] | existing one-grid | [ ] | [ ] | expanded-read + base-write | [ ] | [ ] | [ ] | [ ] |

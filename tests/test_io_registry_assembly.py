@@ -1234,7 +1234,7 @@ def test_assembly_dependency_direction_and_import_delta_are_exact():
     assert benchmark_contract["rows"] == 74
     assert len(CANONICAL_BUILTIN_IDS) == benchmark_contract["rows"]
     assert benchmark_contract["structural_projection_sha256"] == (
-        "6dde30b346753159801c5071ed56825ede67dfece77aaea6fcf859381976d766"
+        "5b68b2f03f8de343dd681a531cc7f1a293dcfe94c565e164cfc725f0c109ad01"
     )
     rows = [
         {

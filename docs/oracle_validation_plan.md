@@ -1,7 +1,10 @@
 # Oracle validation and normalization qualification plan
 
-Status: complete locally, 2026-08-03. The two focused hosted workflows are
-prepared; triggering them remains a separate user-authorized action.
+Status: complete locally and hosted, 2026-08-04. Build-only Release run
+[`30914739031`](https://github.com/SceneAPI/SceneIO/actions/runs/30914739031)
+validated exact commit `50172b5eeb6f3df2d642c80e3fbff43850000d3f` across the
+three wheel targets and both focused oracle lanes. PyPI publication was
+skipped.
 
 ## Outcome
 
@@ -206,7 +209,7 @@ Acceptance:
 - [x] Update `format_coverage.md`, `coordinate_conventions.md`, this plan, and
       the active checklist with measured results rather than forecasts.
 - [x] Prepare the green unit for a commit with the required co-author trailer.
-- [ ] Push and execute the hosted workflows only with separate user approval.
+- [x] Push and execute the hosted workflows only with separate user approval.
 
 ## Validation record
 
@@ -238,6 +241,24 @@ Acceptance:
   output and the new decoded-size limits.
 - Ruff, `uv pip check`, `git diff --check`, the documentation/contracts, and
   `python -m sceneio._wheel_smoke` are clean; the smoke returns `2`.
+- User-authorized build-only Release run
+  [`30914739031`](https://github.com/SceneAPI/SceneIO/actions/runs/30914739031)
+  passed the exact source-distribution closure, manylinux2014 GCC 10 x86-64,
+  Windows MSVC AMD64, macOS AppleClang ARM64, combined distribution inventory,
+  OpenUSD 26.08 USDA/USDZ oracle, and official Niantic SPZ oracle jobs. Each
+  wheel ran the manifest-driven 74-format installed smoke; the host smoke also
+  installed the USD, AVIF, NCore, and TIFF extras. The tag-only PyPI job was
+  skipped, so no package was published.
+- Compiler-instrumented run
+  [`30914599398`](https://github.com/SceneAPI/SceneIO/actions/runs/30914599398)
+  passed the exact provider-independent collection and full instrumented suite
+  plus the isolated native-lifetime shard at the same commit.
+- The preceding run `30913751835` isolated the Niantic provider-build failure
+  to Ubuntu CMake selecting a non-PIC system `libzstd.a`. Commit `50172b5`
+  scopes `CMAKE_DISABLE_FIND_PACKAGE_zstd=ON` to that external build so the
+  pinned SPZ project uses its SHA-verified, PIC-enabled zstd fallback. A clean
+  Ubuntu 24.04 container build passed before the successful replacement run;
+  SceneIO's runtime and vendored-source set were unchanged.
 
 ## Closure rule
 
