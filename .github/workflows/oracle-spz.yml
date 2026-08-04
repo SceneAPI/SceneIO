@@ -38,7 +38,10 @@ jobs:
         run: |
           uv venv --managed-python --python 3.12 --seed
           uv pip install -e ".[dev,test]"
-          uv pip install \
+          # Ubuntu's zstd CMake package selects its non-PIC static archive
+          # before the shared target. Let pinned SPZ use its SHA-verified
+          # zstd 1.5.6 fallback, which inherits the project's PIC setting.
+          CMAKE_ARGS="-DCMAKE_DISABLE_FIND_PACKAGE_zstd=ON" uv pip install \
             "spz @ git+https://github.com/nianticlabs/spz.git@${SCENEIO_NIANTIC_SPZ_REVISION}"
       - name: Run official SPZ read/write qualification
         run: |

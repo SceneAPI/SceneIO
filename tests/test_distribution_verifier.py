@@ -1223,6 +1223,11 @@ def test_publish_workflow_builds_every_wheel_from_the_exact_sdist() -> None:
     )
     assert "uses: ./.github/workflows/oracle-openusd.yml" in workflow
     assert "uses: ./.github/workflows/oracle-spz.yml" in workflow
+    spz_workflow = (
+        ROOT / ".github" / "workflows" / "oracle-spz.yml"
+    ).read_text(encoding="utf-8")
+    assert 'CMAKE_ARGS="-DCMAKE_DISABLE_FIND_PACKAGE_zstd=ON"' in spz_workflow
+    assert "zstd 1.5.6 fallback" in spz_workflow
     assert (
         "if: github.event_name == 'push' && "
         "startsWith(github.ref, 'refs/tags/v')" in publish_job
