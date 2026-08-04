@@ -1,9 +1,9 @@
 # O0 baseline — SceneIO I/O harness
 
 The versioned dense-label NPZ/Zarr overlay has a focused generated 64 MiB
-comparison in [`LABEL_MAPS.md`](LABEL_MAPS.md). It remains outside the
-registry-format row count because it is an explicit typed schema over existing
-carriers, not a new codec id.
+comparison in [`LABEL_MAPS.md`](LABEL_MAPS.md); the typed TIFF checkpoint is
+recorded below. These remain outside the registry-format row count because
+they are explicit typed schemas over existing carriers, not new codec ids.
 
 Snapshot from `python bench/bench_io.py --runs 7`. **Indicative** (median of 7,
 single machine, local **MSVC** build, warm cache); the *conclusions* below are what
@@ -4314,3 +4314,28 @@ qualified separately by independent PyYAML and stdlib CSV parsing, SciPy
 rotation comparison, and pinned Kalibr/CamTools semantics. Automatic external
 timing is a reviewed exemption for this composite directory profile; hosted
 real-data and cross-platform measurements remain explicit follow-up actions.
+
+## 2026-08-04 FC2 typed TIFF carrier baseline
+
+The generated `4096 x 4096` semantic raster (64 MiB logical payload) was
+measured with the focused carrier harness. The local MSVC capture is retained
+at `build/fc2-tiff-label-map-benchmark.json`.
+
+```console
+.venv/Scripts/python.exe bench/bench_label_maps.py --runs 3 --side 4096 --only tiff --rss-samples 3 --json build/fc2-tiff-label-map-benchmark.json
+```
+
+| operation | SceneIO | tifffile oracle | SceneIO traced peak | SceneIO fresh RSS |
+|---|---:|---:|---:|---:|
+| write | 1,802 MB/s | 1,863 MB/s | 0.026 MiB | not measured |
+| read | 1,571 MB/s | 2,781 MB/s | 72.02 MiB | 77.42 MiB |
+| inspect | 1.59 ms | 0.50 ms | 0.029 MiB | 5.30 MiB |
+
+The TIFF path cross-checks SceneIO output with tifffile reads and tifffile
+output with SceneIO reads before timing. These are same-machine comparative
+measurements, not portable thresholds. The timed tifffile read returns pixels
+only, while SceneIO also validates the typed page contract and constructs the
+label record; the numbers therefore compare implementation boundaries, not
+interchangeable APIs. The typed path remains an overlay over the existing TIFF
+codec. Reusing the validated TIFF handle for decode raised the local read
+median from 1,507 to 1,571 MB/s while ensuring both phases observe one file.

@@ -104,6 +104,10 @@ contract; `normalized` and `arbitrary` do not.
   its background id and optional class table. `sceneio.data.PanopticMap`
   composes the two child rasters without packing or copying them. Packing is an
   explicit checked conversion with a caller-supplied divisor and output dtype.
+  NPZ, Zarr, and TIFF attach these meanings only through the exact
+  `sceneio.label_map/1` typed adapter (or an explicit TIFF caller contract).
+  NCore does so only for a `SEGMENTATION` descriptor that owns the same exact
+  extension; neither carrier names nor observed ids activate the contract.
 - Compiled `DepthMap` preserves raw float32 depth and supplies
   `scale_to_meters`, unit, invalid-value, and depth-interpretation metadata.
   Neutral `sceneio.data.DepthMap` inherits length scale from its owning

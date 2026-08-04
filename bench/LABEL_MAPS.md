@@ -1,10 +1,11 @@
 # Dense-label carrier benchmark
 
-This ledger covers the explicit `sceneio.label_map/1` overlay on NPZ and Zarr.
+This ledger covers the explicit `sceneio.label_map/1` overlay on NPZ, Zarr,
+and TIFF.
 It is separate from the registry-wide `bench_io.py` table because the typed
 overlay is an API/schema profile, not a new format id. The executable harness
-is `bench/bench_label_maps.py` and cross-checks SceneIO with NumPy and the
-official Zarr implementation before recording timings.
+is `bench/bench_label_maps.py` and cross-checks SceneIO with NumPy, the
+official Zarr implementation, and tifffile before recording timings.
 
 ## FC2 generic-carrier checkpoint — 2026-08-03
 
@@ -40,6 +41,33 @@ semantic schema fixture before timing. Inspection parity separately checks
 shape, dtype, marker, and void metadata. Typed inspection does not decode the
 64 MiB raster.
 
+## FC2 TIFF checkpoint — 2026-08-04
+
+Command:
+
+```powershell
+.venv\Scripts\python.exe bench/bench_label_maps.py `
+  --runs 3 --side 4096 --only tiff --rss-samples 3 `
+  --json build/fc2-tiff-label-map-benchmark.json
+```
+
+The fixture is the same 64 MiB logical semantic raster. The TIFF carrier is
+uncompressed, so both SceneIO and the independently written tifffile artifact
+occupy 64.001 MiB. Cross-reads and exact typed-array comparisons run before
+the timers.
+
+| TIFF operation | SceneIO | tifffile | SceneIO traced peak | SceneIO fresh RSS |
+|---|---:|---:|---:|---:|
+| write | 1,802 MB/s | 1,863 MB/s | 0.026 MiB | not measured |
+| read | 1,571 MB/s | 2,781 MB/s | 72.02 MiB | 77.42 MiB |
+| inspect | 1.59 ms | 0.50 ms | 0.029 MiB | 5.30 MiB |
+
+The timed tifffile read returns pixels only. SceneIO additionally validates
+the versioned page roles and constructs `SemanticMap`, so the read figures
+compare provider boundaries rather than identical APIs. Inspection remains
+metadata-only in both paths. These same-machine results are evidence, not a
+portable threshold.
+
 ## Optimization delta
 
 The initial qualified implementation exposed two avoidable adapter costs. The
@@ -50,6 +78,7 @@ final checkpoint keeps only the improved path:
 | Bounded taxonomy membership, NPZ typed read | 182 MB/s; 25.01 MiB traced | 379 MB/s; 8.02 MiB traced | 2.08x throughput; 68% less traced peak |
 | Direct owned-array Zarr typed read | 237 MB/s; 144.6 MiB fresh RSS | 839 MB/s; 92.5 MiB fresh RSS | 3.54x throughput; 36% less fresh RSS |
 | Direct owned-array Zarr typed write, current fixture | staged `TensorDict`: 626 MB/s | direct: 699 MB/s | 1.12x throughput and no temporary `TensorDict` copy |
+| Same-handle TIFF validation and decode | two opens: 1,507 MB/s | one open: 1,571 MB/s | 1.04x throughput; validation and decode share one file snapshot |
 
 The Zarr correction removes the temporary copy through `TensorDict`; raw Zarr
 continues to return `TensorDict` for compatibility. The membership correction

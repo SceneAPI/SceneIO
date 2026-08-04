@@ -524,14 +524,14 @@ stars = 2786
 stars_snapshot = "2026-08-03"
 license = "Apache-2.0"
 license_class = "permissive"
-distribution_role = "generated_vector"
+distribution_role = "reference_only"
 authority = "semantic_reference"
 lineage = "kubric"
 formats = ["label_map"]
 semantic_roles = ["semantic_labels", "instance_labels", "background_id", "renderer_id_mapping"]
-execution = "hand_evaluated_pinned_vector"
-execution_markers = ["KUBRIC_REVISION", "adjust_segmentation_idxs"]
-evidence_tests = ["tests/codecs/test_label_map_carriers.py"]
+execution = "hand_evaluated_pinned_vector_plus_opt_in_procedural_recipe"
+execution_markers = ["KUBRIC_REVISION", "adjust_segmentation_idxs", "_render_scene"]
+evidence_tests = ["tests/codecs/test_label_map_carriers.py", "tests/test_kubric_oracle_manifest.py"]
 qualification = "captured"
 notice = "LICENSES/kubric.txt"
 
@@ -552,7 +552,7 @@ formats = ["ncore_v4"]
 semantic_roles = ["indexed_tar", "tensor_chunks", "multisensor_metadata"]
 execution = "pinned_vectors"
 execution_markers = ["NCore", "ncore"]
-evidence_tests = ["tests/codecs/test_ncore_v4.py"]
+evidence_tests = ["tests/codecs/test_ncore_v4.py", "tests/codecs/test_ncore_v4_labels.py"]
 qualification = "captured"
 notice = "LICENSES/ncore.txt"
 

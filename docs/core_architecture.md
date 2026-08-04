@@ -4,7 +4,7 @@ How the compiled core is organized, and **how to add a codec** — the two
 things that keep this expansible as the format list from
 `formats_survey.md` grows.
 
-> **Growth checkpoint:** the live registry has reached 73 format ids. The
+> **Growth checkpoint:** the live registry has reached 74 format ids. The
 > format-focused native layer remains coherent, but registry, inspection,
 > benchmark, test-matrix, dependency, and binding wiring have outgrown a flat
 > layout. The behavior-preserving R3-R5 organization work and R6 source/package

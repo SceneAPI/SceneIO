@@ -537,6 +537,7 @@ wheel_smoke_case = "_hdf5_formats"
 id = "ncore_v4"
 benchmark_case = "ncore_v4"
 source_suite = "tests/codecs/test_ncore_v4.py"
+additional_source_suites = ["tests/codecs/test_ncore_v4_labels.py"]
 documentation_row = "docs/format_coverage.md"
 inspection_source = "src/sceneio/io/_ncore/schema.py"
 wheel_smoke_case = "_ncore_v4"

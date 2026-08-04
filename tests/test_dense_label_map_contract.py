@@ -24,7 +24,7 @@ FIXTURE_CONTRACT = tomllib.loads(
 
 def test_contract_identity_public_surface_and_live_fields() -> None:
     assert CONTRACT["schema_version"] == 1
-    assert CONTRACT["status"] == "npz_zarr_qualified"
+    assert CONTRACT["status"] == "adapters_qualified_oracle_generated"
     assert date.fromisoformat(CONTRACT["contract_date"]).isoformat() == CONTRACT[
         "contract_date"
     ]
@@ -65,15 +65,16 @@ def test_carrier_schema_names_are_exact_and_nonoverlapping() -> None:
     assert len(flattened) == len(set(flattened))
     assert arrays["required_marker"] == [CONTRACT["marker_array"]]
     assert arrays["unknown_array_policy"] == "reject"
-    assert CONTRACT["carrier_formats"] == ["npz", "zarr"]
-    assert CONTRACT["pending_adapters"] == ["ncore_v4", "tiff"]
+    assert CONTRACT["carrier_formats"] == ["npz", "zarr", "tiff"]
+    assert CONTRACT["projection_formats"] == ["ncore_v4"]
+    assert CONTRACT["pending_adapters"] == []
 
 
 def test_oracle_revision_matches_public_fixture_catalog() -> None:
     [source] = [
         item
         for item in FIXTURE_CONTRACT["sources"]
-        if item["id"] == "kubric_movi_generator"
+        if item["id"] == "kubric_procedural_generator"
     ]
     oracle = CONTRACT["kubric_oracle"]
     assert source["revision"] == oracle["revision"]
@@ -89,6 +90,12 @@ def test_generic_carrier_claims_match_dependency_boundaries() -> None:
     assert "zarr>=3.1,<4" in project["project"]["optional-dependencies"]["zarr"]
     assert CONTRACT["npz"]["encodings"] == ["stored", "deflate"]
     assert CONTRACT["zarr"]["versions"] == [2, 3]
+    assert CONTRACT["tiff"]["oracle"] == "tifffile"
+    assert CONTRACT["ncore_v4"]["qualifiers"] == [
+        "semantic",
+        "instance",
+        "panoptic",
+    ]
     assert "TensorDict" in CONTRACT["raw_compatibility"]
 
 
@@ -104,5 +111,6 @@ def test_focused_benchmark_contract_is_present_and_qualifying() -> None:
         "fresh_process_read_rss",
         "fresh_process_inspect_rss",
     ]
-    assert benchmark["oracles"] == ["numpy", "zarr"]
+    assert benchmark["carriers"] == ["npz", "zarr", "tiff"]
+    assert benchmark["oracles"] == ["numpy", "zarr", "tifffile"]
     assert "not a collection" in benchmark["selection"]

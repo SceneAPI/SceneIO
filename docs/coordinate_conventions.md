@@ -129,9 +129,12 @@ normalization against independent parsers or project oracles.
 Typed dense-label records are image rasters: `SemanticMap`, `InstanceMap`, and
 `PanopticMap` use the same upper-left origin, rightward x, downward y, and
 `(0.5, 0.5)` first-pixel center as `IMAGE_COORDINATES`. Their numeric ids have
-identity semantics and no physical scale. A raw NPZ or Zarr `TensorDict`
-remains coordinate-unspecified; only the explicit `sceneio.label_map/1` typed
-adapter attaches the image-raster record contract.
+identity semantics and no physical scale. Raw NPZ/Zarr `TensorDict`, TIFF
+image/stack, and NCore component reads retain their carrier-native contracts.
+The image-raster label convention is attached only by the exact
+`sceneio.label_map/1` NPZ/Zarr/TIFF declaration (or an explicit TIFF caller
+contract), or by an NCore `SEGMENTATION` descriptor whose owned extension
+declares that same schema. No adapter infers label meaning from observed ids.
 
 ### ASL/EuRoC visual-inertial datasets
 

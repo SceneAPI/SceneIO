@@ -1,14 +1,15 @@
 schema_version = 1
-contract_date = "2026-08-03"
-status = "npz_zarr_qualified"
+contract_date = "2026-08-04"
+status = "adapters_qualified_oracle_generated"
 schema = "sceneio.label_map/1"
 marker_array = "__sceneio_label_map_v1__"
 public_namespace = "sceneio.data"
 public_symbols = ["InstanceMap", "LabelTaxonomy", "PanopticMap", "SemanticMap"]
 typed_io = ["inspect_label_map", "read_label_map", "write_label_map"]
-carrier_formats = ["npz", "zarr"]
-pending_adapters = ["ncore_v4", "tiff"]
-raw_compatibility = "Raw NPZ/Zarr reads and writes remain TensorDict operations; typed meaning is recognized only through the explicit marker and exact schema."
+carrier_formats = ["npz", "zarr", "tiff"]
+projection_formats = ["ncore_v4"]
+pending_adapters = []
+raw_compatibility = "Raw NPZ/Zarr remain TensorDict operations, raw TIFF remains Image/Mask/TensorDict, and raw NCore remains NCore records; typed meaning is activated only through the exact versioned declaration."
 
 [label_taxonomy]
 fields = ["semantic_ids", "names", "identity", "version", "display_colors", "is_thing"]
@@ -58,12 +59,29 @@ versions = [2, 3]
 write_replacement = "transactional directory replacement"
 inspection = "group/array metadata plus fixed small scalar arrays; raster chunks are not decoded"
 
+[tiff]
+oracle = "tifffile"
+activation = "sceneio.label_map/1 ImageDescription on every page, or an explicit caller label_contract for an untagged integer raster"
+page_roles = ["semantic_ids", "instance_ids", "valid"]
+write_replacement = "temporary sibling plus atomic replace"
+inspection = "IFD/page metadata only; raster samples are not decoded"
+ordinary_tiff = "never inferred as a label map without the exact description or caller contract"
+
+[ncore_v4]
+oracle = "pinned NVIDIA NCore V4 component schema and independent component/profile fixture"
+activation = "SEGMENTATION qualifier plus descriptor-owned __sceneio_label_map_v1__ extension"
+qualifiers = ["semantic", "instance", "panoptic"]
+unknown_field_policy = "reject"
+item_extension_policy = "typed extension belongs to the component descriptor; per-item overrides are rejected"
+raw_compatibility = "camera masks remain boolean Mask projections; non-label NCore components are unchanged"
+
 [benchmark]
 entrypoint = "bench/bench_label_maps.py"
 default_side = 4096
 logical_payload_mib = 64
 operations = ["write", "read", "inspect", "fresh_process_read_rss", "fresh_process_inspect_rss"]
-oracles = ["numpy", "zarr"]
+carriers = ["npz", "zarr", "tiff"]
+oracles = ["numpy", "zarr", "tifffile"]
 selection = "not applicable: one label map is not a collection"
 
 [kubric_oracle]
@@ -72,5 +90,11 @@ revision = "61f2422c84bab75006df33c6989e0b483db3ccfe"
 license = "Apache-2.0"
 function = "kubric.post_processing.adjust_segmentation_idxs"
 rule = "foreground renderer ids start at one and zero remains background"
-normal_ci = "deterministic hand-evaluated tiny output; Kubric and Blender are not installed"
-evidence = ["tests/codecs/test_label_map_carriers.py"]
+normal_ci = "deterministic hand-evaluated rule plus hash verification of the checked-in generated result; Kubric and Blender are not installed"
+generation_status = "generated_and_hash_verified"
+scene = "repository-owned procedural Cube/Sphere scene; no external asset manifest"
+recipe_manifest = "tests/fixtures/kubric_procedural_tiny_v1.json"
+generation_tool = "tools/generate_kubric_oracle.py"
+regeneration_command = "python tools/generate_kubric_oracle.py generate --upstream <kubric-checkout> --output <directory>"
+evidence = ["tests/codecs/test_label_map_carriers.py", "tests/test_kubric_oracle_manifest.py"]
+hash_policy = "The Blender 4.3.0/Python 3.11 generation run semantically validated the complete output before atomically publishing all 11 recorded hashes; regeneration repeats that operation, and no hosted MOVi bytes or external asset-manifest outputs are assumed."

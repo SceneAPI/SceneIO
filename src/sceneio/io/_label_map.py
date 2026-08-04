@@ -1,4 +1,4 @@
-"""Typed, versioned dense-label adapters over NPZ and Zarr tensor carriers."""
+"""Typed, versioned dense-label adapters over NPZ, Zarr, and TIFF."""
 
 from __future__ import annotations
 
@@ -243,21 +243,34 @@ def _resolve(path, format: str | None, *, writing: bool) -> str:
         selected = Path(path).suffix.lower().removeprefix(".")
     else:
         selected = detect(path)
-    if selected not in {"npz", "zarr"}:
+    if selected == "tif":
+        selected = "tiff"
+    if selected not in {"npz", "tiff", "zarr"}:
         operation = "write" if writing else "read"
         rendered = selected or Path(path).suffix.lower() or "<none>"
         raise FormatError(
-            f"{operation}_label_map supports typed labels for npz and zarr "
+            f"{operation}_label_map supports typed labels for npz, tiff, and zarr "
             f"(selected {rendered!r})"
         )
     return selected
 
 
-def read_label_map(path, *, format: str | None = None):
-    """Read the exact ``sceneio.label_map/1`` schema from NPZ or Zarr."""
+def read_label_map(
+    path,
+    *,
+    format: str | None = None,
+    label_contract: object | None = None,
+):
+    """Read ``sceneio.label_map/1`` or an explicitly contracted TIFF."""
 
     selected = _resolve(path, format, writing=False)
     try:
+        if selected == "tiff":
+            from sceneio.io._tiff import read_tiff_label_map
+
+            return read_tiff_label_map(path, label_contract=label_contract)
+        if label_contract is not None:
+            raise ValueError("label_contract is a TIFF-only label-map option")
         if selected == "npz":
             _preflight(path, selected)
             from sceneio.io.registry import get
@@ -336,6 +349,7 @@ def write_label_map(
     compress: bool = False,
     zarr_format: int = 3,
     chunks: tuple[int, int] | None = None,
+    bigtiff: bool | None = None,
 ) -> None:
     """Write a versioned lossless label map without changing raw carrier APIs."""
 
@@ -357,8 +371,21 @@ def write_label_map(
         raise ValueError("zarr_format is a Zarr-only label-map option")
     if selected == "zarr" and compress:
         raise ValueError("compress is an NPZ-only label-map option")
-    arrays = _schema_arrays(label_map)
+    if selected == "tiff" and compress:
+        raise ValueError("compress is an NPZ-only label-map option")
+    if selected == "tiff" and selected_chunks is not None:
+        raise ValueError("TIFF label maps do not support Zarr chunk shapes")
+    if selected == "tiff" and selected_zarr_format != 3:
+        raise ValueError("zarr_format is a Zarr-only label-map option")
+    if selected != "tiff" and bigtiff is not None:
+        raise ValueError("bigtiff is a TIFF-only label-map option")
     try:
+        if selected == "tiff":
+            from sceneio.io._tiff import write_tiff_label_map
+
+            write_tiff_label_map(label_map, path, bigtiff=bigtiff)
+            return
+        arrays = _schema_arrays(label_map)
         if selected == "npz":
             tensors = _core.tensor_dict(arrays)
             _write_npz(tensors, path, compress=compress)
@@ -559,11 +586,22 @@ def _preflight(
     return base, structure, scalars
 
 
-def inspect_label_map(path, *, format: str | None = None) -> Inspection:
+def inspect_label_map(
+    path,
+    *,
+    format: str | None = None,
+    label_contract: object | None = None,
+) -> Inspection:
     """Inspect a typed label schema without decoding its raster payloads."""
 
     selected = _resolve(path, format, writing=False)
     try:
+        if selected == "tiff":
+            from sceneio.io._tiff import inspect_tiff_label_map
+
+            return inspect_tiff_label_map(path, label_contract=label_contract)
+        if label_contract is not None:
+            raise ValueError("label_contract is a TIFF-only label-map option")
         base, structure, scalars = _preflight(
             path,
             selected,

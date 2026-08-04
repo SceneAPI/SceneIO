@@ -14,10 +14,13 @@
 > and completion matrix in
 > [`remaining_3dcv_profile_checklist.md`](remaining_3dcv_profile_checklist.md).
 > Its FC0 compatibility and provider-feasibility freeze and the bounded FC1
-> visual-inertial record/dataset slice are locally complete. FC2 label records
-> plus versioned NPZ/Zarr adapters are locally implemented; NCore and TIFF
-> projections remain the next finite units. Hosted package validation for FC1B
-> remains user-triggered.
+> visual-inertial record/dataset slice are locally complete. FC2 label records,
+> NPZ/Zarr/TIFF typed carriers, and strict NCore camera-label projection are
+> locally implemented. The pinned procedural Kubric render is complete: the
+> Blender 4.3.0/Python 3.11 result is checked in with 11 verified hashes. Its
+> generation tool validates the complete semantic/pose/flow/runtime result and
+> atomically replaces hashes in that same operation. Hosted package validation
+> remains a separately triggered evidence gate.
 > The bounded standards-based USD expansion is specified separately in
 > [`usd_3d_cv_implementation_plan.md`](usd_3d_cv_implementation_plan.md).
 > Coordinate-system closure is implemented independently of the remaining
@@ -352,9 +355,9 @@ zero‑copy + convention tags.
 | `TrackObservation` / `TrackedPointCloud` | sparse XYZ plus aligned per-point image/keypoint observations | reconstruction and dataset adapters | ✅ Python-neutral models; compiled reconstruction uses CSR tracks |
 | `Mask` | HxW bool, `True` means the pixel participates | segmentation, filtering, and dataset adapters | ✅ Python-neutral model |
 | `LabelTaxonomy` | unique int32 semantic ids, ordered names, explicit identity/version, optional RGB colors and thing/stuff flags | typed dense labels | ✅ Python-neutral model |
-| `SemanticMap` | int32 HxW ids, explicit void, optional validity/taxonomy | NPZ/Zarr now; NCore/TIFF projections pending | ✅ generic-carrier checkpoint |
-| `InstanceMap` | int64 HxW ids, explicit background, optional validity and instance-to-class table | NPZ/Zarr now; NCore/TIFF projections pending | ✅ generic-carrier checkpoint |
-| `PanopticMap` | matching semantic/instance children and explicit packed converters | NPZ/Zarr now; NCore/TIFF projections pending | ✅ generic-carrier checkpoint |
+| `SemanticMap` | int32 HxW ids, explicit void, optional validity/taxonomy | NPZ/Zarr/TIFF typed carriers and NCore semantic projection | ✅ locally qualified |
+| `InstanceMap` | int64 HxW ids, explicit background, optional validity and instance-to-class table | NPZ/Zarr/TIFF typed carriers and NCore instance projection | ✅ locally qualified |
+| `PanopticMap` | matching semantic/instance children and explicit packed converters | NPZ/Zarr/TIFF typed carriers and explicit-divisor NCore panoptic projection | ✅ locally qualified |
 | `ColmapDatabase` | cameras, prior-focal flags, ordered features, match graph, nested rig/frame, pose-prior, marker, metadata-only video, and ownership records; exact profile/application/schema version | COLMAP DB | ✅ stock/current/MAXX reads and exact selected-profile writers |
 | `TensorDict` | named ndarrays + attrs | npz, HDF5, safetensors, zarr, parquet | ✅ |
 | `CameraRig` | lossless ragged intrinsics/distortion, exact K/R/P, extrinsics, operational/time/topic metadata + convention tags | OpenCV/ROS/Kalibr calib | ✅ |

@@ -346,12 +346,14 @@ def _numpy_archives(root: Path, values: np.ndarray) -> None:
     assert tuple(item.name for item in npz_info.arrays) == ("x", "indices")
 
 
-def _typed_label_maps(root: Path) -> None:
+def _smoke_label_maps():
     taxonomy = sceneio.data.LabelTaxonomy(
         np.array([0, 4], np.int32),
         ("background", "object"),
         "sceneio.smoke",
         "v1",
+        np.array([[0, 0, 0], [220, 20, 60]], np.uint8),
+        np.array([False, True], np.bool_),
     )
     valid = np.array([[True, True], [False, True]])
     semantic = sceneio.data.SemanticMap(
@@ -368,17 +370,94 @@ def _typed_label_maps(root: Path) -> None:
         np.array([4], np.int32),
     )
     panoptic = sceneio.data.PanopticMap(semantic, instance)
-    path = root / "labels.npz"
-    sceneio.write_label_map(panoptic, path)
-    assert sceneio.detect(path) == "npz"
-    info = sceneio.inspect_label_map(path)
-    assert info.metadata["schema"] == sceneio.LABEL_MAP_SCHEMA
-    assert info.shape == (2, 2)
-    decoded = sceneio.read_label_map(path)
-    assert isinstance(decoded, sceneio.data.PanopticMap)
-    assert np.array_equal(decoded.semantic.class_ids, semantic.class_ids)
-    assert np.array_equal(decoded.instance.instance_ids, instance.instance_ids)
-    assert sceneio.representation_contract(decoded).profile.id == "panoptic_labels"
+    return semantic, instance, panoptic
+
+
+def _assert_smoke_taxonomy(actual, expected) -> None:
+    assert (actual is None) == (expected is None)
+    if actual is None:
+        return
+    assert actual.identity == expected.identity
+    assert actual.version == expected.version
+    assert actual.names == expected.names
+    np.testing.assert_array_equal(actual.semantic_ids, expected.semantic_ids)
+    assert (actual.display_colors is None) == (expected.display_colors is None)
+    if actual.display_colors is not None:
+        np.testing.assert_array_equal(actual.display_colors, expected.display_colors)
+    assert (actual.is_thing is None) == (expected.is_thing is None)
+    if actual.is_thing is not None:
+        np.testing.assert_array_equal(actual.is_thing, expected.is_thing)
+
+
+def _assert_smoke_instance_table(actual, expected) -> None:
+    assert (actual.table_instance_ids is None) == (
+        expected.table_instance_ids is None
+    )
+    assert (actual.table_semantic_ids is None) == (
+        expected.table_semantic_ids is None
+    )
+    if actual.table_instance_ids is not None:
+        np.testing.assert_array_equal(
+            actual.table_instance_ids,
+            expected.table_instance_ids,
+        )
+        np.testing.assert_array_equal(
+            actual.table_semantic_ids,
+            expected.table_semantic_ids,
+        )
+
+
+def _assert_smoke_label_map(actual, expected) -> None:
+    assert type(actual) is type(expected)
+    if isinstance(expected, sceneio.data.SemanticMap):
+        np.testing.assert_array_equal(actual.class_ids, expected.class_ids)
+        assert actual.void_id == expected.void_id
+        _assert_smoke_taxonomy(actual.taxonomy, expected.taxonomy)
+    elif isinstance(expected, sceneio.data.InstanceMap):
+        np.testing.assert_array_equal(actual.instance_ids, expected.instance_ids)
+        assert actual.background_id == expected.background_id
+        _assert_smoke_instance_table(actual, expected)
+    else:
+        np.testing.assert_array_equal(
+            actual.semantic.class_ids,
+            expected.semantic.class_ids,
+        )
+        np.testing.assert_array_equal(
+            actual.instance.instance_ids,
+            expected.instance.instance_ids,
+        )
+        assert actual.semantic.void_id == expected.semantic.void_id
+        assert actual.instance.background_id == expected.instance.background_id
+        _assert_smoke_taxonomy(
+            actual.semantic.taxonomy,
+            expected.semantic.taxonomy,
+        )
+        _assert_smoke_instance_table(actual.instance, expected.instance)
+    actual_valid = actual.valid
+    expected_valid = expected.valid
+    assert (actual_valid is None) == (expected_valid is None)
+    if actual_valid is not None:
+        np.testing.assert_array_equal(actual_valid, expected_valid)
+
+
+def _typed_label_maps(root: Path) -> None:
+    for kind, expected in zip(
+        ("semantic", "instance", "panoptic"),
+        _smoke_label_maps(),
+        strict=True,
+    ):
+        path = root / f"{kind}-labels.npz"
+        sceneio.write_label_map(expected, path)
+        assert sceneio.detect(path) == "npz"
+        info = sceneio.inspect_label_map(path)
+        assert info.metadata["schema"] == sceneio.LABEL_MAP_SCHEMA
+        assert info.metadata["kind"] == kind
+        assert info.shape == (2, 2)
+        decoded = sceneio.read_label_map(path)
+        _assert_smoke_label_map(decoded, expected)
+        assert sceneio.representation_contract(decoded).profile.id == (
+            f"{kind}_labels"
+        )
 
 
 def _array_formats(root: Path) -> None:
@@ -1475,6 +1554,17 @@ def _zarr_formats(root: Path) -> None:
     np.testing.assert_array_equal(selected["ids"], tensors["ids"])
     sliced = sceneio.read_partial(path, slices={"dense/a": (1, 3)})
     np.testing.assert_array_equal(sliced["dense/a"], tensors["dense/a"][1:3])
+    for kind, expected in zip(
+        ("semantic", "instance", "panoptic"),
+        _smoke_label_maps(),
+        strict=True,
+    ):
+        label_path = root / f"{kind}-labels.zarr"
+        sceneio.write_label_map(expected, label_path)
+        label_info = sceneio.inspect_label_map(label_path)
+        assert label_info.metadata["schema"] == sceneio.LABEL_MAP_SCHEMA
+        assert label_info.metadata["kind"] == kind
+        _assert_smoke_label_map(sceneio.read_label_map(label_path), expected)
 
 
 def _tiff_formats(root: Path) -> None:
@@ -1488,6 +1578,39 @@ def _tiff_formats(root: Path) -> None:
     assert sceneio.detect(path) == "tiff"
     np.testing.assert_array_equal(sceneio.read(path).pixels, pixels)
     assert sceneio.inspect(path).shape == pixels.shape
+
+    for kind, expected in zip(
+        ("semantic", "instance", "panoptic"),
+        _smoke_label_maps(),
+        strict=True,
+    ):
+        label_path = root / f"{kind}-labels.tiff"
+        sceneio.write_label_map(expected, label_path)
+        _assert_smoke_label_map(sceneio.read_label_map(label_path), expected)
+        label_info = sceneio.inspect_label_map(label_path)
+        assert label_info.metadata["schema"] == sceneio.LABEL_MAP_SCHEMA
+        assert label_info.metadata["kind"] == kind
+
+    import tifffile
+
+    untagged_path = root / "untagged-semantic.tiff"
+    untagged = np.array([[0, 4], [4, 0]], dtype=np.uint16)
+    tifffile.imwrite(
+        untagged_path,
+        untagged,
+        photometric="minisblack",
+        metadata=None,
+    )
+    contract = {"kind": "semantic", "void_id": -1}
+    decoded_untagged = sceneio.read_label_map(
+        untagged_path,
+        label_contract=contract,
+    )
+    np.testing.assert_array_equal(decoded_untagged.class_ids, untagged)
+    assert sceneio.inspect_label_map(
+        untagged_path,
+        label_contract=contract,
+    ).metadata["schema_source"] == "caller_contract"
 
 
 def _e57_formats(root: Path) -> None:
@@ -1909,6 +2032,73 @@ def _ncore_v4(root: Path) -> None:
     )
     assert semantic.profile == "poses/v1"
     assert semantic.items == ()
+
+    from sceneio.io._ncore.projection import (
+        _component_data_from_sceneio_label_map,
+    )
+
+    for kind, source_labels in zip(
+        ("semantic", "instance", "panoptic"),
+        _smoke_label_maps(),
+        strict=True,
+    ):
+        if kind == "semantic":
+            expected_labels = sceneio.data.SemanticMap(
+                source_labels.class_ids,
+                source_labels.void_id,
+                taxonomy=source_labels.taxonomy,
+            )
+        elif kind == "instance":
+            expected_labels = sceneio.data.InstanceMap(
+                source_labels.instance_ids,
+                source_labels.background_id,
+                table_instance_ids=source_labels.table_instance_ids,
+                table_semantic_ids=source_labels.table_semantic_ids,
+            )
+        else:
+            semantic_ids = np.array(
+                source_labels.semantic.class_ids,
+                copy=True,
+                order="C",
+            )
+            semantic_ids[semantic_ids == source_labels.semantic.void_id] = 0
+            expected_labels = sceneio.data.PanopticMap(
+                sceneio.data.SemanticMap(
+                    semantic_ids,
+                    source_labels.semantic.void_id,
+                    taxonomy=source_labels.semantic.taxonomy,
+                ),
+                sceneio.data.InstanceMap(
+                    source_labels.instance.instance_ids,
+                    source_labels.instance.background_id,
+                    table_instance_ids=source_labels.instance.table_instance_ids,
+                    table_semantic_ids=source_labels.instance.table_semantic_ids,
+                ),
+            )
+        instance_name = f"{kind}@front"
+        label_component = _component_data_from_sceneio_label_map(
+            expected_labels,
+            instance_name=instance_name,
+            camera_id="front",
+            timestamp_us=123,
+            panoptic_label_divisor=100 if kind == "panoptic" else None,
+        )
+        label_dataset = sceneio.NCoreDatasetData(
+            f"wheel-smoke-{kind}-labels",
+            (100, 200),
+            {},
+            (label_component,),
+        )
+        label_root = root / f"ncore-{kind}-labels"
+        sceneio.write_ncore_v4(label_dataset, label_root, storage="directory")
+        label_profile = sceneio.read_ncore_semantic_component(
+            label_root,
+            sceneio.NCoreSelection("camera_labels", instance_name),
+        )
+        projected_labels = label_profile.item("camera_label", "123").to_sceneio()
+        _assert_smoke_label_map(projected_labels, expected_labels)
+        assert label_profile.profile == "camera_labels/v1"
+
     exported = root / "ncore-export"
     sceneio.write(dataset, exported, format="ncore_v4")
     assert (exported / "dataset.ncore4.zarr.itar").is_file()

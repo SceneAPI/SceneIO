@@ -167,10 +167,13 @@ assert sceneio.inspect_label_map("labels.npz").metadata["schema"] == (
 decoded = sceneio.read_label_map("labels.npz")
 ```
 
-The same versioned schema is available through optional Zarr v2/v3 storage.
-Raw NPZ/Zarr APIs still return `TensorDict`; typed meaning is activated only by
-the explicit label-map functions and schema marker. NCore and TIFF label
-projections remain separate follow-on adapters.
+The same versioned schema is available through optional Zarr v2/v3 and TIFF
+storage (`labels.tif`/`labels.tiff`). Raw NPZ/Zarr/TIFF APIs retain their
+ordinary records; typed meaning is activated only by the explicit label-map
+functions and exact declaration (or an explicit TIFF caller contract). NCore
+V4 camera-label items project to the same records only when a `SEGMENTATION`
+descriptor owns the exact versioned extension; values are never guessed from
+observed ids.
 
 NCore V4 datasets expose a metadata-only catalog, exact owned component arrays,
 and validated standard semantic items without importing the upstream package:

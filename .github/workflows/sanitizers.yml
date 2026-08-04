@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   asan-ubsan-full:
-    name: ASan + UBSan full suite
+    name: ASan + UBSan provider-independent suite
     runs-on: ubuntu-latest
     timeout-minutes: 40
     env:
@@ -29,21 +29,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v7
-      - name: Install instrumented extension and complete oracle surface
+      - name: Install instrumented extension and provider-independent oracles
         run: |
           uv venv --managed-python --python 3.12 --seed
           uv pip install -e ".[dev,test]"
           uv pip install torch --index https://download.pytorch.org/whl/cpu
-      - name: Verify oracle imports and exact full-suite collection
+      - name: Verify core oracle imports and exact provider-independent collection
         run: |
           export LD_PRELOAD="$(gcc -print-file-name=libasan.so):$(gcc -print-file-name=libstdc++.so.6)"
           .venv/bin/python -c "import gsply, llvmlite, numba, pycolmap"
           set -o pipefail
-          .venv/bin/python -m pytest --collect-only -q | tee "${{ runner.temp }}/asan-collection.txt"
+          # Official SPZ and OpenUSD execution stays in oracle-spz.yml and
+          # oracle-openusd.yml, which install their pinned providers directly.
+          .venv/bin/python -m pytest --collect-only -q \
+            --ignore=tests/codecs/test_spz_niantic_oracle.py \
+            --ignore=tests/codecs/test_openusd_gaussian_oracle.py \
+            | tee "${{ runner.temp }}/asan-collection.txt"
           grep -F "tests/codecs/test_ply.py::test_read_matches_gsply" "${{ runner.temp }}/asan-collection.txt"
           grep -F "tests/codecs/test_colmap.py::test_writer_byte_identical_to_pycolmap" "${{ runner.temp }}/asan-collection.txt"
-          grep -E "^4833 tests collected in " "${{ runner.temp }}/asan-collection.txt"
-      - name: Run full suite under ASan and UBSan
+          grep -E "^4919 tests collected in " "${{ runner.temp }}/asan-collection.txt"
+      - name: Run available suite under ASan and UBSan
         run: |
           export LD_PRELOAD="$(gcc -print-file-name=libasan.so):$(gcc -print-file-name=libstdc++.so.6)"
           .venv/bin/python -m pytest -q

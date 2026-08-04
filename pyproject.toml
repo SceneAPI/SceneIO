@@ -113,7 +113,7 @@ wheel.exclude = ["include/**", "lib/**", "share/**", "bin/**"]
 build = "cp312-*"
 skip = "*-musllinux* *_i686 *-win32"
 test-requires = ["numpy"]
-# Manifest-driven NumPy-only smoke for all 73 installed built-ins: public
+# Manifest-driven NumPy-only smoke for all 74 installed built-ins: public
 # write/read/inspect, streaming paths, and every declared partial selector.
 test-command = "python -m sceneio._wheel_smoke"
 

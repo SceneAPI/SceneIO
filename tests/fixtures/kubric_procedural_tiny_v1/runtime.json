@@ -1,0 +1,26 @@
+{
+  "blender_version": "4.3.0",
+  "dependency_versions": {
+    "OpenEXR": "3.3.3",
+    "bpy": "4.3.0",
+    "imageio": "2.37.0",
+    "numpy": "1.26.4",
+    "pypng": "0.20220715.0",
+    "pyquaternion": "0.9.9",
+    "tensorflow-cpu": "2.16.1",
+    "tifffile": "2023.7.10",
+    "traitlets": "5.14.3",
+    "trimesh": "4.6.4"
+  },
+  "kubric_module": "kubric/__init__.py",
+  "kubric_revision": "61f2422c84bab75006df33c6989e0b483db3ccfe",
+  "python_version": "3.11.15",
+  "render_layers": [
+    "rgba",
+    "forward_flow",
+    "depth",
+    "segmentation"
+  ],
+  "samples_per_pixel": 64,
+  "schema": "sceneio.kubric_runtime/1"
+}

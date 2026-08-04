@@ -1,0 +1,471 @@
+{
+  "schema": "sceneio.kubric_oracle/1",
+  "status": "generated",
+  "generated": true,
+  "upstream": {
+    "project": "Google Research Kubric",
+    "repository": "https://github.com/google-research/kubric",
+    "revision": "61f2422c84bab75006df33c6989e0b483db3ccfe",
+    "license": "Apache-2.0",
+    "source_references": [
+      "kubric/renderer/blender.py",
+      "kubric/renderer/blender_utils.py",
+      "kubric/file_io.py",
+      "kubric/post_processing.py",
+      "kubric/utils.py",
+      "kubric/core/traits.py",
+      "kubric/core/cameras.py",
+      "kubric/core/objects.py"
+    ],
+    "generator_entrypoint": "tools/generate_kubric_oracle.py:_render_scene"
+  },
+  "runtime": {
+    "required": [
+      "clean pinned Kubric checkout",
+      "official bpy 4.3.0 wheel",
+      "Python 3.11"
+    ],
+    "blender_version": "4.3.0",
+    "python_version": "3.11",
+    "source": "official bpy 4.3.0 CPython wheel matching the pinned Kubric Blender 4.3 API",
+    "provenance_artifact": "runtime.json",
+    "runner": "Use the pinned Kubric Blender environment; this repository does not install either dependency."
+  },
+  "recipe": {
+    "variant": "SceneIO procedural FC2",
+    "seed": 20260804,
+    "frame_start": 0,
+    "frame_end": 1,
+    "frame_rate": 12,
+    "resolution": "32x32",
+    "object_count": 2,
+    "objects": [
+      "cube",
+      "sphere"
+    ],
+    "camera": "fixed_perspective",
+    "camera_position": [
+      3.0,
+      -6.0,
+      3.5
+    ],
+    "camera_look_at": [
+      0.0,
+      0.0,
+      0.5
+    ],
+    "object_position_tracks": {
+      "cube": [
+        [
+          -0.8,
+          0.0,
+          0.6
+        ],
+        [
+          -0.45,
+          0.0,
+          0.6
+        ]
+      ],
+      "sphere": [
+        [
+          0.8,
+          0.0,
+          0.65
+        ],
+        [
+          0.45,
+          0.0,
+          0.65
+        ]
+      ]
+    },
+    "assets": {
+      "mode": "procedural_only",
+      "source": "Kubric core Cube/Sphere primitives at the pinned revision",
+      "external_manifest": null,
+      "redistributed": false,
+      "license": "Apache-2.0"
+    },
+    "command": [
+      "python",
+      "tools/generate_kubric_oracle.py",
+      "generate",
+      "--upstream=<kubric-checkout>",
+      "--output=<output>",
+      "--python=<kubric-python>"
+    ]
+  },
+  "artifacts": [
+    {
+      "id": "rgba",
+      "path": "rgba_00000.png",
+      "frame": 0,
+      "dtype": "uint8",
+      "shape": [
+        32,
+        32,
+        4
+      ],
+      "channels": "RGBA",
+      "row_order": "top_to_bottom",
+      "sha256": "c6742e80cdd7481efc53923d2d6858e118ff7ccc7475564b99ba15b7a62c3aee"
+    },
+    {
+      "id": "rgba_frame1",
+      "path": "rgba_00001.png",
+      "frame": 1,
+      "dtype": "uint8",
+      "shape": [
+        32,
+        32,
+        4
+      ],
+      "channels": "RGBA",
+      "row_order": "top_to_bottom",
+      "sha256": "70e2013295a44171582ef1fda4171efaacffe08c824e11c4372e6651bb1a7d17"
+    },
+    {
+      "id": "depth",
+      "path": "depth_00000.tiff",
+      "frame": 0,
+      "dtype": "float32",
+      "shape": [
+        32,
+        32,
+        1
+      ],
+      "encoded_shape": [
+        32,
+        32
+      ],
+      "unit": "scene_units",
+      "meaning": "distance from camera center",
+      "row_order": "top_to_bottom",
+      "sha256": "384db60f6f3d241d8c75d4034203a8ddb7bcd5c87f8df404a8d01fa33c997ef8"
+    },
+    {
+      "id": "depth_frame1",
+      "path": "depth_00001.tiff",
+      "frame": 1,
+      "dtype": "float32",
+      "shape": [
+        32,
+        32,
+        1
+      ],
+      "encoded_shape": [
+        32,
+        32
+      ],
+      "unit": "scene_units",
+      "meaning": "distance from camera center",
+      "row_order": "top_to_bottom",
+      "sha256": "4c86ad55351801b79495017bbbb8ed8e200e8f55579166374b5d80a1434f27e6"
+    },
+    {
+      "id": "renderer_segmentation",
+      "path": "segmentation_00000.png",
+      "frame": 0,
+      "dtype": "uint8",
+      "shape": [
+        32,
+        32,
+        1
+      ],
+      "encoded_shape": [
+        32,
+        32
+      ],
+      "background_id": 0,
+      "meaning": "Kubric renderer/instance id; foreground ids start at one",
+      "sha256": "79afb7f3923609fc1caf6eb525ba939e7b83df7a1b8773f30c7471e1389cbbc0"
+    },
+    {
+      "id": "renderer_segmentation_frame1",
+      "path": "segmentation_00001.png",
+      "frame": 1,
+      "dtype": "uint8",
+      "shape": [
+        32,
+        32,
+        1
+      ],
+      "encoded_shape": [
+        32,
+        32
+      ],
+      "background_id": 0,
+      "meaning": "Kubric renderer/instance id; foreground ids start at one",
+      "sha256": "4d18c60b1dd25c9da671ee90cce761e8a46412cb58435bd6af7d67a0adf2114e"
+    },
+    {
+      "id": "forward_flow",
+      "path": "forward_flow_00000.png",
+      "frame": 0,
+      "dtype": "float32",
+      "encoded_dtype": "uint16",
+      "shape": [
+        32,
+        32,
+        2
+      ],
+      "encoded_shape": [
+        32,
+        32,
+        3
+      ],
+      "encoded_padding": "channel 2 is zero and discarded",
+      "component_order": "delta_row_delta_column",
+      "sceneio_component_order": "uv",
+      "unit": "pixels",
+      "range_source": "data_ranges.json#/forward_flow",
+      "sha256": "47aba07a7a247cbd9e196d185589f62ac5863a59bf95faabac8eab9686ee023a"
+    },
+    {
+      "id": "forward_flow_frame1",
+      "path": "forward_flow_00001.png",
+      "frame": 1,
+      "dtype": "float32",
+      "encoded_dtype": "uint16",
+      "shape": [
+        32,
+        32,
+        2
+      ],
+      "encoded_shape": [
+        32,
+        32,
+        3
+      ],
+      "encoded_padding": "channel 2 is zero and discarded",
+      "component_order": "delta_row_delta_column",
+      "sceneio_component_order": "uv",
+      "unit": "pixels",
+      "range_source": "data_ranges.json#/forward_flow",
+      "sha256": "ac105b293d17bf6d31ff37baa7ace086d3d759d09ab62980f0237bb4bf5517b2"
+    },
+    {
+      "id": "flow_ranges",
+      "path": "data_ranges.json",
+      "dtype": "json",
+      "fields": [
+        "forward_flow.min",
+        "forward_flow.max"
+      ],
+      "sha256": "468a48dbbc5f1ce0bdd98b3174177c2cad3f61c337f4df6d8c7383ec745fa3f3"
+    },
+    {
+      "id": "runtime_provenance",
+      "path": "runtime.json",
+      "dtype": "json",
+      "fields": [
+        "schema",
+        "kubric_revision",
+        "kubric_module",
+        "blender_version",
+        "python_version",
+        "dependency_versions",
+        "render_layers",
+        "samples_per_pixel"
+      ],
+      "sha256": "c944c09c377ebbd598fff1b2465b5bcc2b31a34ab4d75f7178be5e881fd807c0"
+    },
+    {
+      "id": "scene_metadata",
+      "path": "metadata.json",
+      "dtype": "json",
+      "fields": [
+        "metadata.seed",
+        "metadata.resolution",
+        "metadata.frame_rate",
+        "metadata.num_frames",
+        "camera.positions",
+        "camera.quaternions",
+        "camera.R",
+        "instances.positions",
+        "instances.quaternions",
+        "instances.renderer_id",
+        "instances.visibility",
+        "instances.image_positions"
+      ],
+      "sha256": "70765f9df2177d44367591eb36797c6b28198e463642176c9a75e037b1a4b30c"
+    }
+  ],
+  "derived_fields": {
+    "semantic_ids": {
+      "source": "renderer_segmentation and renderer_segmentation_frame1",
+      "dtype": "int32",
+      "shape": [
+        32,
+        32
+      ],
+      "void_id": -1,
+      "taxonomy_identity": "org.sceneio.kubric-procedural-fc2",
+      "taxonomy_version": "61f2422c84bab75006df33c6989e0b483db3ccfe",
+      "renderer_to_semantic": {
+        "0": 0,
+        "1": 4,
+        "2": 9
+      },
+      "mapping_origin": "SceneIO-declared taxonomy applied to Kubric instance ids; Kubric does not emit semantic class ids"
+    },
+    "instance_ids": {
+      "source": "renderer_segmentation and renderer_segmentation_frame1",
+      "dtype": "int64",
+      "shape": [
+        32,
+        32
+      ],
+      "background_id": 0,
+      "meaning": "renderer ids retained as canonical instance ids"
+    },
+    "camera_poses": {
+      "source": "scene_metadata#camera",
+      "positions_field": "positions",
+      "quaternions_field": "quaternions",
+      "canonical_dtype": "float32",
+      "frame": "world_from_camera",
+      "units": "scene_units",
+      "quaternion_order": "wxyz"
+    },
+    "object_poses": {
+      "source": "scene_metadata#instances",
+      "positions_field": "positions",
+      "quaternions_field": "quaternions",
+      "canonical_dtype": "float32",
+      "frame": "world_from_object",
+      "units": "scene_units",
+      "quaternion_order": "wxyz"
+    },
+    "forward_flow_uv": {
+      "source": "forward_flow and forward_flow_frame1",
+      "decode": "delta_row_delta_column = encoded_uint16 / 65535 * (max - min) + min",
+      "canonical_transform": "u = delta_column; v = delta_row",
+      "canonical_dtype": "float32",
+      "units": "pixels"
+    }
+  },
+  "hand_evaluated_label_vector": {
+    "purpose": "independent rule vector; not claimed to be a rendered crop from this recipe",
+    "renderer_ids": [
+      [
+        0,
+        1,
+        1,
+        2
+      ],
+      [
+        0,
+        1,
+        2,
+        2
+      ],
+      [
+        0,
+        0,
+        2,
+        1
+      ]
+    ],
+    "valid": [
+      [
+        true,
+        true,
+        true,
+        true
+      ],
+      [
+        true,
+        true,
+        true,
+        true
+      ],
+      [
+        false,
+        true,
+        true,
+        true
+      ]
+    ],
+    "semantic_ids": [
+      [
+        0,
+        4,
+        4,
+        9
+      ],
+      [
+        0,
+        4,
+        9,
+        9
+      ],
+      [
+        0,
+        0,
+        9,
+        4
+      ]
+    ],
+    "instance_ids": [
+      [
+        0,
+        1,
+        1,
+        2
+      ],
+      [
+        0,
+        1,
+        2,
+        2
+      ],
+      [
+        0,
+        0,
+        2,
+        1
+      ]
+    ],
+    "taxonomy": {
+      "semantic_ids": [
+        0,
+        4,
+        9
+      ],
+      "names": [
+        "background",
+        "cube",
+        "sphere"
+      ],
+      "identity": "org.sceneio.kubric-procedural-fc2",
+      "version": "61f2422c84bab75006df33c6989e0b483db3ccfe",
+      "display_colors": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          220,
+          20,
+          60
+        ],
+        [
+          30,
+          144,
+          255
+        ]
+      ],
+      "is_thing": [
+        false,
+        true,
+        true
+      ]
+    },
+    "void_id": -1,
+    "background_id": 0
+  },
+  "hash_policy": "The checked-in hashes were recorded only after the procedural Kubric/Blender generate command produced and validated the complete named inventory, renderer-id identity and visibility, flow range/order/direction, exact camera look-at and fixed poses, unit WXYZ quaternions, and runtime provenance. Regeneration replaces output and hashes through the same staged atomic publication. Never fill hashes from hosted MOVi or external asset-manifest scenes."
+}

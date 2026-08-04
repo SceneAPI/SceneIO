@@ -66,7 +66,7 @@ match, track, and storage derivations internally checkable.
 | Sparse reconstruction | `colmap_sparse`, `colmap_sparse_txt`, `colmap_db`, `bundler`, `bal`, `nvm` | compact coherent model from DX.GL cameras/depth → COLMAP/pycolmap/RootBA and independent legacy writers |
 | Dense reconstruction | `dmb`, `colmap_mvs_depth`, `colmap_mvs_normal`, `colmap_mvs_consistency`, `colmap_fused_visibility` | DX.GL depth/normal/camera bundle → independent DMB/COLMAP dense layouts |
 | Local features/matches | `hloc_features`, `hloc_matches` | two CC0 views and the same image names used by the compact COLMAP model → HLoc/h5py layouts |
-| NCore V4 | `ncore_v4` | selected permissive images, masks, cameras, poses, and points → pinned official NCore writer and reader |
+| NCore V4 | `ncore_v4` | selected permissive images, masks, cameras, poses, points, and an independently authored typed-label component → pinned NCore schema plus SceneIO writer/reader cross-checks |
 
 The exact source IDs, derivation text, oracle IDs, and executable evidence paths
 are in the TOML contract. A new format cannot enter the built-in registry
@@ -84,7 +84,7 @@ the current public records.
 | [Sweet Corals](https://huggingface.co/datasets/newneha123/sweet-corals) (CC-BY-4.0) | corrected images, one large coherent COLMAP model, point cloud, and tiled 3DGS PLY outputs | Hosted large-scene validation only; confirm the processed mirror's lineage before redistributing bytes |
 | [Fire Actioncam](https://huggingface.co/datasets/jna-358/fire_actioncam) (CC-BY-4.0) | three-camera rig, per-frame times, exposure, readout direction, 2.856 µs/line rolling-shutter timing, points, and depth bounds | Compact `meta.npz` is 133,334 B, hash `7fe21660…930`; useful for future timing/rig records without ingesting its video streams |
 | [Google Scanned Objects](https://research.google/blog/scanned-objects-by-google-research-a-dataset-of-3d-scanned-common-household-items/) (CC-BY-4.0) | real textured OBJ/PNG producer diversity across 1,030 objects | Optional hosted mesh corpus; Khronos remains the compact default |
-| [Kubric MOVi generator](https://github.com/google-research/kubric) (Apache-2.0) | RGB, depth, normals, optical flow, instance masks, camera/object poses, and motion | Normal CI pins revision `61f2422c…ccfe` and hand-evaluates its segmentation-index rule for typed-label carrier tests; a full tiny generated scene remains opt-in and no hosted MOVi artifact license is assumed |
+| [Kubric generator](https://github.com/google-research/kubric) (Apache-2.0) | RGBA, depth, optical flow, instance masks, camera/object poses, and motion | Normal CI pins revision `61f2422c…ccfe`, hand-evaluates its segmentation-index rule, and hash-verifies a generated 32x32 two-frame procedural result. The Blender 4.3.0/Python 3.11 recipe uses only Kubric Cube/Sphere primitives, not its external asset manifest; `generate` validates semantic/pose/flow/runtime rules and atomically replaces all 11 hashes as one operation. No hosted MOVi artifact license is assumed |
 | [OME-TIFF samples](https://downloads.openmicroscopy.org/images/OME-TIFF/2016-06/) (CC-BY-4.0) | multi-channel Z/T and pyramid/container breadth | Future TIFF hardening/profile vectors; the checked 7,889,559 B 4D file is `caf707ca…6f3` and currently reaches a wrapped `TiffFrame.tags` failure rather than a clean supported-profile result |
 | [E57 example data](https://e57-3d-imgfmt.sourceforge.net/data.html) (permissive test-data grant) | structured scans, imagery, extensions, and multiple scans beyond BunnyFloat | Future E57 profile vectors; keep the current single-scan boundary explicit |
 
@@ -108,8 +108,10 @@ the current public records.
   contract.
 
 The remaining work is now implementation breadth rather than source hunting.
-Semantic/instance/panoptic records and generic NPZ/Zarr carriers are present;
-their NCore/TIFF projections and full Kubric-render regeneration remain.
+Semantic/instance/panoptic records, NPZ/Zarr/TIFF carriers, strict NCore
+projections, and the hash-verified procedural Kubric result are present.
+Kubric regeneration remains an explicit evidence operation rather than normal
+CI or adapter work.
 Dynamic USD, multi-grid VDB, multi-scan E57, and TIFF multi-series/pyramids
 still need explicit public models and conversion contracts before the broader
 samples can become positive round-trip cases.

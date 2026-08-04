@@ -1,9 +1,11 @@
 # Finite 3D-CV profile closure checklist
 
 - **Status:** FC0 and the bounded FC1 visual-inertial slice are locally
-  complete as of 2026-08-03. The FC2 records and versioned NPZ/Zarr carrier
-  checkpoint are also implemented locally; NCore and TIFF label projections
-  remain before FC2 is complete. FC3-FC7 remain planned.
+  complete. As of 2026-08-04, the FC2 records, NPZ/Zarr/TIFF typed carriers,
+  and strict NCore camera-label projection are implemented and locally
+  qualified. The procedural Kubric/Blender recipe has been executed and its 11
+  artifacts are hash-verified; hosted wheel validation remains an external
+  evidence gate, and FC3-FC7 remain planned.
 - **Baseline:** 74 built-in formats, each mapped to a licensed direct fixture
   or deterministic oracle-derived route.
 - **Purpose:** close the remaining 3D-computer-vision representation and
@@ -21,8 +23,8 @@
   [`euroc_dataset_v1.toml`](../tests/contracts/euroc_dataset_v1.toml) freezes
   the qualified FC1B layout, transform, timing, selection, write, and oracle
   contract. [`dense_label_maps_v1.toml`](../tests/contracts/dense_label_maps_v1.toml)
-  freezes the implemented FC2 record fields, versioned generic-carrier schema,
-  oracle revision, and remaining adapter boundary.
+  freezes the implemented FC2 record fields, versioned carrier schemas,
+  NCore projection boundary, and oracle-recipe status.
 
 ## 1. Review outcome
 
@@ -574,58 +576,74 @@ profiles cannot preserve it.
 
 ### 8.2 Typed carrier adapters
 
-- [ ] Add explicit typed adapters for NCore camera-label/mask components.
+- [x] Add strict typed projections for NCore `SEGMENTATION` camera-label
+      qualifiers (`semantic`, `instance`, and `panoptic`). Keep static NCore
+      camera masks as boolean `Mask` projections.
 - [x] Add versioned NPZ/Zarr schemas for semantic, instance, and panoptic maps.
-- [ ] Add a TIFF typed path only when the caller supplies a label contract or a
+- [x] Add a TIFF typed path only when the caller supplies a label contract or a
       versioned `sceneio.label_map/1` description tag declares the kind and
       taxonomy; never infer semantics from integer pixels.
-- [ ] Treat a TIFF without that declaration as a raster projection only. Refuse
+- [x] Treat a TIFF without that declaration as a raster projection only. Refuse
       a typed write when non-default semantics would be lost.
-- [x] Preserve raw NPZ/Zarr `TensorDict` behavior. Raw TIFF and NCore APIs
-      remain unchanged while their typed adapters are pending.
+- [x] Preserve raw NPZ/Zarr `TensorDict` behavior plus raw TIFF and NCore
+      behavior; typed entry points do not change ordinary reads.
 - [x] Refuse incomplete, unknown, or lossy generic-carrier schema fields rather
       than inferring a palette or taxonomy.
 
 ### 8.3 FC2 oracle and data
 
-- [ ] Generate one tiny deterministic Kubric scene with RGB, depth, semantic
-      ids, instance ids, object poses, and optical flow.
-- [ ] Pin the Kubric revision, generation parameters, assets, and resulting
-      hashes; do not depend on a hosted MOVi artifact's implicit terms.
-- [ ] Keep Kubric/Blender out of normal CI. Store only a tiny attributed
+- [x] Define one tiny deterministic 32x32, two-frame procedural Kubric scene
+      with RGBA, depth, instance ids, object poses, and optical flow. Semantic
+      ids are an explicit SceneIO taxonomy mapping, not a Kubric-emitted claim.
+- [x] Pin the Kubric revision and generation parameters. Use only Kubric's
+      Apache-2.0 procedural Cube/Sphere primitives; do not use its external
+      KuBasic asset manifest or a hosted MOVi artifact.
+- [x] Keep Kubric/Blender out of normal CI. Store only a compact attributed
       deterministic result or reconstruct the checked numeric arrays from a
       compact regeneration manifest; run full regeneration in an opt-in lane.
-- [ ] Compare typed maps with Kubric's emitted arrays and metadata.
+- [x] Execute the opt-in recipe. Its single `generate` operation validates
+      typed maps, fixed poses, unit WXYZ quaternions, flow ranges/conversion,
+      and runtime provenance before atomically recording the resulting hashes.
+      The accepted run used Blender 4.3.0/Python 3.11 and published 11 compact
+      artifacts totaling 23,781 bytes.
 - [x] Cross-read NPZ carriers with NumPy in both directions, stored and
       deflated.
 - [x] Cross-read Zarr v2/v3 carriers with the official Zarr implementation in
       both directions.
-- [ ] Cross-read the future typed TIFF carrier with tifffile.
+- [x] Cross-read the typed TIFF carrier with tifffile in both directions,
+      including classic TIFF, BigTIFF, endian variation, and page metadata.
 - [x] Test non-contiguous views, void pixels, large ids, empty instance sets,
       invalid table references, and mixed semantic/instance backgrounds.
 
 ### FC2 exit
 
 - [x] All three maps round-trip through at least one lossless generic carrier.
-- [ ] NCore projection produces the same canonical maps as its independent
+- [x] NCore projection produces the same canonical maps as its independent
       component parser.
-- [ ] Typed TIFF requires explicit meaning and cannot misclassify an ordinary
+- [x] Typed TIFF requires explicit meaning and cannot misclassify an ordinary
       grayscale image.
 - [x] Coordinate and normalization contracts cover all new public records.
 
-### 8.4 Generic-carrier local qualification result
+### 8.4 Typed-carrier local qualification result
 
 - `LabelTaxonomy`, `SemanticMap`, `InstanceMap`, and `PanopticMap` are public
   NumPy-native records. The normalization catalog now contains 98 exact
   representations, and image-aligned map records use `IMAGE_COORDINATES`.
-- `sceneio.label_map/1` reads, writes, and inspects exact NPZ and Zarr v2/v3
-  schemas while raw carrier APIs remain `TensorDict` operations. Inspection
-  reads container metadata and fixed small scalar arrays without decoding a
-  raster.
-- NumPy and official Zarr writers/readers verify both directions for semantic,
-  instance, and panoptic values. Normal CI uses a hand-evaluated output from
-  Kubric's pinned `adjust_segmentation_idxs` rule; a full Blender-rendered
-  Kubric scene remains an opt-in follow-on rather than a completed claim.
+- `sceneio.label_map/1` reads, writes, and inspects exact NPZ, Zarr v2/v3, and
+  TIFF schemas while preserving all raw carrier behavior. TIFF requires an
+  exact description or caller contract. Inspection reads container/page
+  metadata without decoding raster samples.
+- NumPy, official Zarr, and tifffile writers/readers verify both directions.
+  NCore uses only exact `SEGMENTATION` qualifiers plus a descriptor-owned
+  `__sceneio_label_map_v1__` extension; unknown, incompatible, per-item, and
+  unmarked typed fields are refused. A manually authored component fixture
+  crosses the NCore profile parser before projection, and SceneIO-written
+  components reopen through the repository reader with exact descriptors.
+- Normal CI uses a hand-evaluated vector for Kubric's pinned
+  `adjust_segmentation_idxs` rule and verifies all hashes of the generated
+  procedural scene without installing Kubric or Blender. The fixture has no
+  external asset manifest. Generation and hash recording remain one validated,
+  atomic operation; the checked-in result is accurately reported as generated.
 - On the generated 64 MiB low-entropy semantic fixture (MSVC, three warm-cache
   runs), the post-review typed NPZ read is 379 MB/s with 8.02 MiB traced peak,
   versus 182 MB/s and 25.01 MiB before the bounded membership fast path. Typed
@@ -633,16 +651,20 @@ profiles cannot preserve it.
   144.6 MiB before direct retention of decoded NumPy arrays. The direct Zarr
   writer is 699 MB/s versus 626 MB/s through the staged `TensorDict` adapter.
   NPZ inspection is 1.63 ms/0.051 MiB traced and Zarr inspection is 25.76
-  ms/0.168 MiB traced.
+  ms/0.168 MiB traced. Typed TIFF writes at 1,802 MB/s and reads at
+  1,571 MB/s on the same 64 MiB fixture; the tifffile comparison boundary is
+  documented in `bench/LABEL_MAPS.md`.
   These values are same-machine evidence, not portable thresholds. Stored NPZ
   native decoding still peaks at 256 MiB RSS because the existing miniz path
   stages member buffers; that optimization is recorded, not hidden.
-- NCore and TIFF typed projections, full Kubric regeneration, hosted wheels,
-  and the complete FC2 exit remain pending.
-- The exact local tree collects 4,864 tests and passes 4,848 with 16 documented
-  optional/platform skips. Ruff, the installed-wheel smoke, compatibility
-  snapshots, and the focused 64 MiB benchmark are green. Hosted validation
-  remains user-triggered.
+- The FC2 implementation/adapters and procedural Kubric evidence are locally
+  complete. Regeneration remains explicit; hosted wheels remain a separately
+  triggered evidence gate.
+- The exact local tree collects 4,954 tests and passes 4,938 with 16 documented
+  optional/platform skips. The provider-independent CI collection contract is
+  4,919 unique nodes. Ruff, the installed-wheel smoke, compatibility snapshots,
+  and the focused 64 MiB benchmark are green. Hosted validation remains
+  user-triggered.
 
 ### 8.5 Generic-carrier three-lens review
 
@@ -651,8 +673,10 @@ profiles cannot preserve it.
   and no longer copy them through `TensorDict`. Child records keep their arrays
   alive, typed inspection avoids bulk decode, direct NPZ writes avoid a second
   output-sized Python `bytes`, and staged replacement preserves destinations
-  on failure. Zarr replacement uses unique recovery names, and cleanup failure
-  after commit cannot block the next write.
+  on failure. TIFF validates and decodes through one open file and bounds its
+  uint8 validity check without a raster-sized temporary. Canonical RAW NCore
+  labels retain their already-owned arrays. Zarr replacement uses unique
+  recovery names, and cleanup failure after commit cannot block the next write.
 - **Behavior correctness:** dtypes, contiguity, shape, void/background ids,
   taxonomy identity/version, optional fields, instance tables, validity, and
   explicit packed-divisor overflow are guarded. Unknown schema arrays and
@@ -660,9 +684,12 @@ profiles cannot preserve it.
   promotes small integer inputs without losing `uint64`, accepts negative void
   metadata, and validates schema metadata plus the version marker before bulk
   payload decode.
-- **Test soundness:** independent NumPy/Zarr writers and readers cover both
-  directions, all three map variants, and every represented field; the Kubric rule is explicitly
-  labeled hand-evaluated rather than a generated-scene oracle. Large-memory,
+- **Test soundness:** independent NumPy/Zarr/tifffile writers and readers cover
+  both directions, all three map variants, and every represented field; the
+  Kubric rule is explicitly labeled hand-evaluated rather than a generated-scene
+  oracle. Its opt-in result validator independently checks renderer identity,
+  visibility, projected object centers, fixed camera look-at, and forward-flow
+  order/direction before hashes can be recorded. Large-memory,
   mutation-isolation, file-release, malformed-schema, transactional-failure,
   raw-compatibility, and no-full-decode inspection tests are distinct.
 
@@ -997,9 +1024,10 @@ plan but do not replace file-based oracle qualification.
        still pending.
 3. [x] `VisualInertialDataset` plus dataset read/write/inspect, oracle suite,
        benchmark, and docs; locally green with hosted validation user-gated.
-4. [ ] `LabelTaxonomy` and dense label records plus NPZ/Zarr carriers, bounded
-       Kubric rule evidence, benchmark, and docs are locally complete. NCore,
-       typed TIFF, and full Kubric regeneration remain in this slice.
+4. [x] `LabelTaxonomy` and dense label records plus NPZ/Zarr/TIFF carriers,
+       strict NCore projection, bounded Kubric rule evidence, procedural
+       regeneration recipe, generated/hash-verified Blender 4.3 result,
+       benchmark, and docs are locally complete.
 5. [ ] `PointScan`/`ScanSet` plus E57 multi-scan/structured read/write/inspect,
        oracle suite, benchmark, and docs.
 6. [ ] Neutral raster collection plus the qualified TIFF read/write subset,
@@ -1021,7 +1049,7 @@ its record and codec changes cannot be reviewed or reverted independently.
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | FC1A IMU records/acquisition | [x] | n/a | refusal-only | n/a | n/a | [x] record vectors | n/a | [x] | pending/user-gated | [x] |
 | FC1B visual-inertial dataset | [x] | [x] | [x] | [x] | [x] | [x] | [x] bounded baseline | [x] | pending/user-gated | [x] |
-| FC2 dense labels | [x] | generic [x] | generic [x] | generic [x] | n/a for one-map carriers | NPZ/Zarr [x]; NCore/TIFF pending | [x] generic carriers | [x] 4,848 pass / 16 skip | pending/user-gated | [x] checkpoint |
+| FC2 dense labels | [x] | carriers/NCore [x] | carriers/NCore [x] | carriers [x] | n/a for one-map carriers | NPZ/Zarr/TIFF/NCore/Kubric [x] | [x] NPZ/Zarr/TIFF | [x] | pending/user-gated | [x] |
 | FC3 E57 scans | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
 | FC4 TIFF collections | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
 | FC5 OpenVDB expansion | conditional | [ ] | existing one-grid | [ ] | [ ] | expanded-read + base-write | [ ] | [ ] | [ ] | [ ] |

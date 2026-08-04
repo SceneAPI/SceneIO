@@ -388,11 +388,11 @@ observed_result = "Official catalog documents 1,030 textured OBJ/PNG objects und
 notes = "Optional real textured-mesh diversity; DX.GL and Khronos remain the compact closure seeds."
 
 [[sources]]
-id = "kubric_movi_generator"
-project = "Kubric MOVi"
+id = "kubric_procedural_generator"
+project = "Google Research Kubric"
 revision = "61f2422c84bab75006df33c6989e0b483db3ccfe"
 revision_type = "git_commit"
-artifact = "MOVi-A deterministic renderer"
+artifact = "deterministic procedural Kubric renderer recipe"
 url = "https://github.com/google-research/kubric"
 license = "Apache-2.0"
 license_url = "https://github.com/google-research/kubric/blob/61f2422c84bab75006df33c6989e0b483db3ccfe/LICENSE"
@@ -400,10 +400,10 @@ attribution = "Google Research Kubric authors"
 status = "generator"
 redistribution = "generated_output_only"
 default_ci = false
-expected_size_bytes = 0
+expected_size_bytes = 23781
 expected_sha256 = ""
-observed_result = "Pinned generator can produce RGB, depth, normals, optical flow, instance masks, camera poses, and object motion from simple generated assets."
-notes = "Preferred clean route for future semantic/instance/panoptic and dynamic-scene fixtures when a redistributable hosted MOVi artifact is not explicitly licensed."
+observed_result = "Pinned Blender 4.3.0/Python 3.11 generation rendered, validated, and atomically recorded 11 artifacts for a 32x32, two-frame Cube/Sphere scene; normal CI verifies every recorded hash offline."
+notes = "See tests/fixtures/kubric_procedural_tiny_v1.json, tests/fixtures/kubric_procedural_tiny_v1/, and tools/generate_kubric_oracle.py. The scene uses only Kubric's Apache-2.0 procedural primitives, no external asset manifest, and no hosted MOVi artifact. expected_size_bytes is the exact sum of the 11 generated artifacts."
 
 # Each built-in format has exactly one primary fixture route. Direct means an
 # upstream byte stream was read locally without changing its representation.
@@ -636,7 +636,7 @@ mode = "oracle_derived"
 source_ids = ["dxgl_apple_multiview", "fire_actioncam_scene001_meta"]
 oracle_source_ids = ["ncore"]
 formats = ["ncore_v4"]
-evidence = ["tests/codecs/test_ncore_v4.py"]
+evidence = ["tests/codecs/test_ncore_v4.py", "tests/codecs/test_ncore_v4_labels.py"]
 derivation = "Write selected licensed images, masks, cameras, poses, and point data with the pinned official NCore V4 writer and retain the compact generated indexed-tar fixture."
 qualification = "official-reader reopen, checksums, schema/catalog identity, and SceneIO projections match"
 

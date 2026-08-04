@@ -1,9 +1,10 @@
-"""Focused benchmark for the versioned dense-label NPZ/Zarr adapters."""
+"""Focused benchmark for the versioned dense-label carrier adapters."""
 
 from __future__ import annotations
 
 import gc
 import io
+import json
 import statistics
 import time
 import tracemalloc
@@ -182,6 +183,94 @@ def _zarr_oracle_inspect(path: Path) -> tuple[tuple[int, ...], str]:
     return tuple(array.shape), np.dtype(array.dtype).name
 
 
+def _require_tifffile():
+    try:
+        import tifffile
+    except ImportError:
+        raise RuntimeError(
+            "TIFF benchmark requested; install the sceneio[tiff] extra"
+        ) from None
+    return tifffile
+
+
+def _tiff_description(value: SemanticMap) -> str:
+    taxonomy = value.taxonomy
+    assert taxonomy is not None
+    taxonomy_document: dict[str, object] = {
+        "semantic_ids": [int(item) for item in taxonomy.semantic_ids],
+        "names": list(taxonomy.names),
+        "identity": taxonomy.identity,
+        "version": taxonomy.version,
+    }
+    if taxonomy.display_colors is not None:
+        taxonomy_document["display_colors"] = taxonomy.display_colors.tolist()
+    if taxonomy.is_thing is not None:
+        taxonomy_document["is_thing"] = taxonomy.is_thing.tolist()
+    return json.dumps(
+        {
+            "schema": "sceneio.label_map/1",
+            "kind": "semantic",
+            "roles": ["semantic_ids"],
+            "role": "semantic_ids",
+            "shape": list(value.shape),
+            "dtypes": {"semantic_ids": "int32"},
+            "void_id": int(value.void_id),
+            "taxonomy": taxonomy_document,
+            "table_instance_ids": None,
+            "table_semantic_ids": None,
+        },
+        ensure_ascii=True,
+        separators=(",", ":"),
+        sort_keys=True,
+    )
+
+
+def _tiff_oracle_write(path: Path, value: SemanticMap) -> None:
+    _require_tifffile().imwrite(
+        path,
+        value.class_ids,
+        photometric="minisblack",
+        metadata=None,
+        description=_tiff_description(value),
+    )
+
+
+def _tiff_oracle_read(path: Path) -> np.ndarray:
+    with _require_tifffile().TiffFile(path) as tiff:
+        return np.array(tiff.pages[0].asarray(), copy=True, order="C")
+
+
+def _tiff_oracle_arrays(path: Path) -> dict[str, np.ndarray]:
+    with _require_tifffile().TiffFile(path) as tiff:
+        page = tiff.pages[0]
+        document = json.loads(page.description)
+        pixels = np.array(page.asarray(), copy=True, order="C")
+    taxonomy = document["taxonomy"]
+    value = SemanticMap(
+        pixels,
+        int(document["void_id"]),
+        taxonomy=LabelTaxonomy(
+            np.asarray(taxonomy["semantic_ids"], dtype=np.int32),
+            tuple(taxonomy["names"]),
+            taxonomy["identity"],
+            taxonomy["version"],
+            None
+            if "display_colors" not in taxonomy
+            else np.asarray(taxonomy["display_colors"], dtype=np.uint8),
+            None
+            if "is_thing" not in taxonomy
+            else np.asarray(taxonomy["is_thing"], dtype=bool),
+        ),
+    )
+    return _oracle_arrays(value)
+
+
+def _tiff_oracle_inspect(path: Path) -> tuple[tuple[int, ...], str]:
+    with _require_tifffile().TiffFile(path) as tiff:
+        page = tiff.pages[0]
+        return tuple(page.shape), np.dtype(page.dtype).name
+
+
 def _assert_sceneio_read(value: object, expected: SemanticMap) -> None:
     if not isinstance(value, SemanticMap):
         raise AssertionError("typed label read did not return SemanticMap")
@@ -349,7 +438,7 @@ def run_benchmark(
     *,
     side: int = 4096,
     runs: int = 3,
-    carriers: tuple[str, ...] = ("npz", "zarr"),
+    carriers: tuple[str, ...] = ("npz", "zarr", "tiff"),
     zarr_format: int = 3,
     chunk_side: int = 1024,
     rss_samples: int = 3,
@@ -364,8 +453,8 @@ def run_benchmark(
         raise TypeError("rss_samples must be a non-negative integer")
     if rss_samples < 0:
         raise ValueError("rss_samples must be a non-negative integer")
-    if not carriers or any(item not in {"npz", "zarr"} for item in carriers):
-        raise ValueError("carriers must contain npz and/or zarr")
+    if not carriers or any(item not in {"npz", "tiff", "zarr"} for item in carriers):
+        raise ValueError("carriers must contain npz, tiff, and/or zarr")
     value = label_map_fixture(side)
     arrays = _oracle_arrays(value)
     destination = Path(root)
@@ -424,6 +513,24 @@ def run_benchmark(
                     zarr_format=zarr_format,
                     chunks={"semantic_ids": chunks},
                 ),
+            )
+        )
+    if "tiff" in carriers:
+        path = destination / "sceneio-labels.tiff"
+        oracle_path = destination / "oracle-labels.tiff"
+        results.append(
+            _result(
+                carrier="tiff",
+                value=value,
+                path=path,
+                oracle_path=oracle_path,
+                runs=runs,
+                write=lambda: sceneio.write_label_map(value, path),
+                oracle_write=lambda: _tiff_oracle_write(oracle_path, value),
+                oracle_read=_tiff_oracle_read,
+                oracle_arrays=_tiff_oracle_arrays,
+                oracle_inspect=_tiff_oracle_inspect,
+                rss_samples=rss_samples,
             )
         )
     return results

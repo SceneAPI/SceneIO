@@ -50,6 +50,8 @@ _LABEL_SOURCES = {
 
 
 def _dtype(value: object, context: str) -> np.dtype:
+    if not isinstance(value, str) or not value:
+        raise ValueError(f"{context} has an invalid dtype")
     try:
         result = np.dtype(value)
     except (TypeError, ValueError) as exc:
@@ -260,12 +262,17 @@ def _label_descriptor(value: object) -> tuple[Mapping[str, object], np.dtype, tu
     label_type = mapping(
         descriptor.get("label_type"), "NCore camera-label label_type"
     )
-    if label_type.get("category") not in _LABEL_CATEGORIES:
+    category = label_type.get("category")
+    if not isinstance(category, str) or category not in _LABEL_CATEGORIES:
         raise ValueError("NCore camera-label category is invalid")
     non_empty_string(label_type.get("qualifier"), "NCore camera-label qualifier")
-    if label_type.get("unit") not in _LABEL_UNITS | {None}:
+    unit = label_type.get("unit")
+    if unit is not None and (
+        not isinstance(unit, str) or unit not in _LABEL_UNITS
+    ):
         raise ValueError("NCore camera-label unit is invalid")
-    if descriptor.get("label_source") not in _LABEL_SOURCES:
+    label_source = descriptor.get("label_source")
+    if not isinstance(label_source, str) or label_source not in _LABEL_SOURCES:
         raise ValueError("NCore camera-label source is invalid")
     schema = mapping(
         descriptor.get("label_schema"), "NCore camera-label schema"
@@ -275,7 +282,7 @@ def _label_descriptor(value: object) -> tuple[Mapping[str, object], np.dtype, tu
         schema.get("shape_suffix", ()), "NCore camera-label shape_suffix"
     )
     encoding = schema.get("encoding")
-    if encoding not in {"RAW", "IMAGE_ENCODED"}:
+    if not isinstance(encoding, str) or encoding not in {"RAW", "IMAGE_ENCODED"}:
         raise ValueError("NCore camera-label encoding is invalid")
     encoded_format = schema.get("encoded_format")
     if encoding == "IMAGE_ENCODED":
@@ -374,6 +381,11 @@ def read_camera_labels_profile(
                     "generic_meta_data": dict(generic),
                     "encoding": encoding,
                     "logical_dtype": logical_dtype.name,
+                    # Keep the complete upstream descriptor with the item.
+                    # The descriptor carries the only unambiguous label kind
+                    # (category + qualifier), while its generic metadata is
+                    # where explicit project taxonomies/void ids may live.
+                    "descriptor": dict(descriptor),
                 },
                 timestamp_us=timestamp,
                 reference_frame_id=str(descriptor["camera_id"]),

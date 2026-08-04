@@ -5,8 +5,8 @@ prepared; triggering them remains a separate user-authorized action.
 
 ## Outcome
 
-SceneIO already has a directional oracle ledger for all 73 built-in formats:
-73 readable formats, 72 writable formats, and RTMV as the only declared
+SceneIO already has a directional oracle ledger for all 74 built-in formats:
+74 readable formats, 73 writable formats, and RTMV as the only declared
 read-only format. This unit strengthens that evidence without expanding the
 runtime dependency surface or reopening completed format coverage.
 

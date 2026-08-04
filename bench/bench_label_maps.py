@@ -1,4 +1,4 @@
-"""CLI for the generated dense-label NPZ/Zarr benchmark."""
+"""CLI for the generated dense-label carrier benchmark."""
 
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--runs", type=int, default=3)
     parser.add_argument("--side", type=int, default=4096)
-    parser.add_argument("--only", choices=("npz", "zarr"), action="append")
+    parser.add_argument("--only", choices=("npz", "zarr", "tiff"), action="append")
     parser.add_argument("--zarr-format", choices=(2, 3), type=int, default=3)
     parser.add_argument("--chunk-side", type=int, default=1024)
     parser.add_argument("--rss-samples", type=int, default=3)
@@ -32,7 +32,7 @@ def main() -> None:
         parser.error("--chunk-side must be positive")
     if args.rss_samples < 0:
         parser.error("--rss-samples must be nonnegative")
-    carriers = tuple(dict.fromkeys(args.only or ("npz", "zarr")))
+    carriers = tuple(dict.fromkeys(args.only or ("npz", "zarr", "tiff")))
     with TemporaryDirectory(prefix="sceneio-label-map-bench-") as directory:
         results = run_benchmark(
             directory,

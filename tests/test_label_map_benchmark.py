@@ -18,10 +18,12 @@ def test_label_map_benchmark_fixture_is_deterministic() -> None:
     assert first.taxonomy.identity == "sceneio.generated.label-benchmark"
 
 
-@pytest.mark.parametrize("carrier", ["npz", "zarr"])
+@pytest.mark.parametrize("carrier", ["npz", "zarr", "tiff"])
 def test_label_map_benchmark_runs_oracle_comparison(tmp_path, carrier: str) -> None:
     if carrier == "zarr":
         pytest.importorskip("zarr")
+    if carrier == "tiff":
+        pytest.importorskip("tifffile")
     [result] = run_benchmark(
         tmp_path,
         side=16,
