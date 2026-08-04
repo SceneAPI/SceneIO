@@ -14,16 +14,14 @@ read_scene_signature = "(path, *, time: 'float | None' = None, prims=None, purpo
 provisional_format_ids = []
 implemented_format_ids = ["euroc_dataset"]
 provisional_public_symbols = [
-  "PointScan",
   "RasterCollection",
   "RasterLevel",
   "RasterSeries",
-  "ScanSet",
   "SceneAnimation",
   "SparseGrid",
   "SparseVolumeSet",
 ]
-implemented_public_symbols = ["ImuCalibration", "ImuSequence", "VisualInertialDataset"]
+implemented_public_symbols = ["ImuCalibration", "ImuSequence", "PointScan", "ScanSet", "VisualInertialDataset"]
 implemented_data_symbols = ["InstanceMap", "LabelTaxonomy", "PanopticMap", "SemanticMap"]
 
 [[implemented_formats]]
@@ -91,7 +89,7 @@ evidence = [
 
 [[design_decisions]]
 id = "e57_scan_sets"
-outcome = "approved_for_internal_prototype"
+outcome = "qualified"
 public_symbols = ["PointScan", "ScanSet"]
 existing_symbols = ["PointCloud"]
 required_contracts = [
@@ -101,8 +99,12 @@ required_contracts = [
 ]
 evidence = [
   "src/cpp/records/point_cloud.hpp",
+  "src/cpp/records/point_scan.hpp",
+  "tests/records/test_point_scan.py",
   "src/sceneio/io/_e57.py",
-  "tests/codecs/test_e57.py::test_e57_rejects_multiple_scans",
+  "tests/codecs/test_e57.py::test_e57_typed_scan_preserves_stored_rows_invalid_states_and_indices",
+  "tests/codecs/test_e57.py::test_e57_typed_scan_set_write_reopens_with_provider_oracle",
+  "docs/e57_multiscan_benchmark.md",
 ]
 
 [[design_decisions]]
@@ -160,9 +162,26 @@ requirement = "pye57>=0.4.18,<0.5"
 observed_version = "0.4.19"
 outcome = "broader_container_operations_proven"
 formats = ["e57"]
-provider_proven_operations = ["two_scan_read_write", "distinct_scan_pose_preservation"]
-sceneio_current_refusals = ["multiple_scans", "organized_row_column"]
-evidence = ["tests/codecs/test_e57.py::test_e57_rejects_multiple_scans"]
+provider_proven_operations = [
+  "typed_multiple_scan_read_write",
+  "typed_organized_row_column",
+  "typed_raw_invalid_states",
+  "typed_stored_point_range",
+  "typed_metadata_only_inspect",
+  "distinct_scan_pose_preservation",
+]
+sceneio_current_refusals = [
+  "legacy_multiple_scans",
+  "legacy_organized_row_column",
+  "spherical_coordinates",
+  "images",
+]
+evidence = [
+  "tests/codecs/test_e57.py::test_e57_typed_scan_preserves_stored_rows_invalid_states_and_indices",
+  "tests/codecs/test_e57.py::test_e57_typed_stored_range_streams_without_read_scan_raw",
+  "tests/codecs/test_e57.py::test_e57_typed_inspect_reports_all_scans_without_decoding",
+  "tests/codecs/test_e57.py::test_e57_typed_scan_set_write_reopens_with_provider_oracle",
+]
 
 [[providers]]
 id = "tifffile"
@@ -211,7 +230,7 @@ evidence = [
 [[legacy_projections]]
 formats = ["e57"]
 return_types = ["sceneio.PointCloud"]
-boundary = "One Cartesian scan; invalid rows are filtered; multiple and organized scans remain refused."
+boundary = "The generic API returns one Cartesian PointCloud with invalid rows filtered; multiple and organized scans remain refused there and are available only through the additive typed E57 scan API."
 evidence = [
   "tests/codecs/test_e57.py::test_sceneio_reads_direct_upstream_e57_exactly",
   "tests/codecs/test_e57.py::test_e57_invalid_cartesian_points_are_explicitly_filtered",

@@ -186,6 +186,25 @@ complete and format capabilities are unchanged.
 > combined distribution inventory. The same run passes the dedicated OpenUSD
 > 26.08 and official Niantic SPZ oracle jobs; its tag-only PyPI job is skipped.
 
+> **FC3 E57 scan-set checkpoint (2026-08-04, branch-local):** `PointScan` and
+> `ScanSet` bring the exact normalization catalog to 100 representations
+> without adding a format id. The additive typed API reads one scan, all
+> ordered scans, fixed-capacity half-open stored-row ranges, and header-only
+> aggregate inspection; it writes `PointCloud`, `PointScan`, or `ScanSet`
+> transactionally. Raw invalid states, sparse row/column indices and bounds,
+> exact RGB8/float32 intensity, and WXYZ scan-to-reference poses are preserved.
+> Generic `sceneio.read` retains its one-scan valid-row `PointCloud` behavior.
+> Direct pye57/libE57Format format-owner differentials verify both directions,
+> including a hand-computable rotated pose; they are not represented as a
+> second parser lineage. Three official Pump artifacts are digest-pinned
+> opt-in refusal vectors for non-float32 coordinates, imagery/metadata, and
+> extensions. On the generated 113.25 MB logical fixture, selecting 104,857
+> rows used 11.33 MB traced peak versus 151.00 MB for direct full-decode plus
+> slice. The provider-buffered writer is measured but is not claimed as a
+> memory improvement. Local validation is complete; an exact-head hosted wheel
+> rerun remains pending. The complete local gate passes 4,962 tests with 16
+> documented optional/platform skips, and repository-wide Ruff is clean.
+
 <!-- sceneio-inventory-summary:start -->
 **Generated registry contract:** SceneIO has **74 built-in formats**: **64**
 single-file, **5** directory, and **5** multi-file containers. **74** are readable,
@@ -1385,7 +1404,7 @@ public-domain SQLite amalgamation statically linked into `_core`.
 | `hloc_matches` | `HlocMatchStore` + native `MatchGraph` | R+W, inspect | independent **h5py** documented layout | preserves dense `matches0`, optional `matching_scores0`, exact endpoint names, source extents/dtypes, pair order, and mixed score presence |
 | `zarr` | `TensorDict`; explicit typed dense-label overlay | R+W, inspect, partial | direct **zarr-python/numcodecs** | optional `sceneio[zarr]`; numeric/bool v2/v3 directory stores, nested names, text attrs, named reads, leading-axis slices, transactional replacement, fixed-width normalization, and direct owned-array retention for `sceneio.label_map/1` reads |
 | `tiff` | `Image`, `Mask`, grayscale-stack `TensorDict`, or explicit typed dense label map | R+W, inspect | **tifffile** plus independent producer/consumer checks | optional `sceneio[tiff]`; bounded single-series uint8/uint16/float32 profile, boolean masks, grayscale stacks, BigTIFF, alpha semantics, and transactional path writes; typed semantic/instance/panoptic pages require exact `sceneio.label_map/1` descriptions or an explicit contract for untagged integer rasters, and ordinary TIFF is never inferred as labels |
-| `e57` | `PointCloud` | R+W, inspect | direct **pye57/libE57Format** | optional `sceneio[e57]`; exactly one Cartesian scan, exact float32 coordinates/intensity and integral RGB8, pose, explicit invalid-point filtering; exact inspection count uses the provider scan path only when invalid-state data are present |
+| `e57` | legacy `PointCloud`; typed `PointScan` / `ScanSet` | R+W, inspect; typed scan/range selection | direct **pye57/libE57Format** | optional `sceneio[e57]`; generic API retains exactly one unorganized Cartesian scan with invalid rows filtered; additive typed APIs preserve ordered scans, stored rows, raw invalid states, sparse row/column organization and bounds, exact float32 coordinates/intensity, integral RGB8, and WXYZ scan-to-reference pose; typed inspection is header-only and selected ranges use fixed-capacity provider chunks |
 | `parquet` / `arrow_ipc` | `TensorDict` numeric table | R+W, inspect; Parquet named-column partial | direct **PyArrow** | optional `sceneio[arrow]`; scalar/fixed-width numeric columns, equal row counts, text attrs, mmap/threaded provider paths, transactional writes |
 | `openvdb` | sparse-grid `TensorDict` | R+W, inspect | direct **TinyVDB** | optional `sceneio[openvdb]`; one identity-transform, zero-background float32 scalar grid; ZIP/active-mask output; packaged upstream seed is fully replaced and provenance-pinned; rebuilt active count is verified and provider topology loss refuses |
 | `usd` / `usdz` | `MeshScene` compatibility projection; additive `SceneGraph` | R+W, rich static 3D-CV profile R+W, inspect and prim selection | direct **TinyUSDZ** | optional `sceneio[usd]`; `.usd`/`.usda`, historical `.usdc` reads through crate 10, and aligned uncompressed USDZ; legacy static mesh bytes/API unchanged; `read_scene` maps bounded hierarchy/metadata/static transforms, prim selection, polygon meshes, points, PreviewSurface constants/textures and direct/subset bindings, portable PNG/JPEG/EXR references, official float/half Gaussian fields, static camera/render-product pairs, direct scalar-float OpenVDB references, one inherited semantic pair, and static PointInstancer rows; `write_scene` streams deterministic USDA sidecars or self-contained USDZ, while volume-bearing USDZ refuses; current crates, USDC writes, composition, selected animated values, multiple semantic labels/taxonomies, and broader volume/instance schemas remain unavailable; SceneIO's Linux wheel is manylinux2014, while the separately installed TinyUSDZ 0.9.4 x86-64 binary requires manylinux 2.27/2.28 |
@@ -1426,10 +1445,10 @@ requirement for COLMAP ecosystem closure.
 - Optional CV containers are complete for the accepted profiles: HDF5/hloc,
   Zarr v2/v3, TIFF, E57, Parquet, Arrow IPC, OpenVDB, USD, and USDZ.
 - Broader semantics remain intentionally outside those bounded profiles:
-  TIFF pyramids/multiple series, E57 multiple or organized scans, general
-  Arrow nested/string/null schemas, multi-grid/vector/transformed OpenVDB,
-  and composed/animated USD scenes, general shader graphs, multiple semantic
-  values, and broader volume/instance schemas.
+  TIFF pyramids/multiple series, E57 spherical coordinates/imagery/extensions,
+  general Arrow nested/string/null schemas, multi-grid/vector/transformed
+  OpenVDB, and composed/animated USD scenes, general shader graphs, multiple
+  semantic values, and broader volume/instance schemas.
 - The finite 3D-CV subset selected from those broader semantics, including its
   compatibility boundaries, oracle requirements, commit order, and stopping
   rule, is tracked in

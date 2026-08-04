@@ -97,7 +97,10 @@ def test_fc0_decisions_are_complete_provisional_and_nonpublic():
     )
     implemented = set(CONTRACT["implemented_public_symbols"])
     implemented_data = set(CONTRACT["implemented_data_symbols"])
-    assert implemented == set(FC1_CONTRACT["public_symbols"])
+    assert implemented == set(FC1_CONTRACT["public_symbols"]) | {
+        "PointScan",
+        "ScanSet",
+    }
     assert implemented.isdisjoint(implemented_data)
     assert sorted(set(symbols) - implemented - implemented_data) == CONTRACT[
         "provisional_public_symbols"

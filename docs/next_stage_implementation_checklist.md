@@ -5433,10 +5433,12 @@ v2/v3 oracle parity. The NumPy-only base install is unchanged.
 - [ ] User-trigger the nonpublishing Linux/macOS/Windows optional-package
       workflow before treating these providers as cross-platform qualified.
 
-The bounded implementations close the requested format ids. Broader
-multi-series TIFF, multi-scan E57, nested/nullable Arrow, multi-grid or
-transformed OpenVDB, and composed/animated/material USD semantics are explicit
-future profiles, not silent fallbacks.
+The bounded implementations close the requested format ids. The later FC3
+slice adds typed multi-scan/organized Cartesian E57 without changing this
+generic one-scan projection. Broader multi-series TIFF, E57 spherical/imagery/
+extension data, nested/nullable Arrow, multi-grid or transformed OpenVDB, and
+composed/animated/material USD semantics are explicit future profiles, not
+silent fallbacks.
 
 ### Planned USD 3D-CV profile expansion
 

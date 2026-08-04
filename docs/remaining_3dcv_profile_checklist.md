@@ -1,12 +1,15 @@
 # Finite 3D-CV profile closure checklist
 
-- **Status:** FC0 and the bounded FC1 visual-inertial slice are locally
-  complete. As of 2026-08-04, the FC2 records, NPZ/Zarr/TIFF typed carriers,
-  and strict NCore camera-label projection are implemented and locally
-  qualified. The procedural Kubric/Blender recipe has been executed and its 11
-  artifacts are hash-verified. Exact-commit Linux, Windows, and macOS wheel
-  validation plus the OpenUSD and Niantic oracle lanes passed in build-only
-  run `30914739031`; FC3-FC7 remain planned.
+- **Status:** FC0-FC3 are locally complete as of 2026-08-04. FC2 includes the
+  dense-label records/carriers, strict NCore projection, and hash-verified
+  Kubric/Blender recipe. FC3 adds typed E57 scan records, multi-scan I/O,
+  header inspection, bounded stored-row selection, oracle evidence, and a
+  large generated benchmark. Exact-commit Linux, Windows, and macOS wheel
+  validation plus the OpenUSD and Niantic lanes passed for the prior FC2 head
+  in build-only run `30914739031`; FC3 still needs the next exact-head hosted
+  wheel run. The FC3 local aggregate gate passes 4,962 tests with 16 documented
+  optional/platform skips, and repository-wide Ruff is clean. FC4-FC7 remain
+  planned.
 - **Baseline:** 74 built-in formats, each mapped to a licensed direct fixture
   or deterministic oracle-derived route.
 - **Purpose:** close the remaining 3D-computer-vision representation and
@@ -108,7 +111,7 @@ authorization, pagination, and retries are not applicable.
       `ImageSequence`.
 - [x] Typed `SemanticMap`, `InstanceMap`, and `PanopticMap` records and explicit
       adapters for carriers that can preserve them.
-- [ ] Multiple Cartesian E57 scans, including raw validity and sparse
+- [x] Multiple Cartesian E57 scans, including raw validity and sparse
       row/column organization plus per-scan rigid poses.
 - [ ] Homogeneous 3D-CV TIFF series and image pyramids with explicit axes.
 - [ ] Multiple supported OpenVDB grids for metadata, read, and selection;
@@ -702,73 +705,108 @@ profiles cannot preserve it.
 
 ## 9. FC3 — E57 multiple Cartesian scans
 
+**Status (2026-08-04): locally complete; hosted wheel rerun pending.** The
+typed API is additive: generic `sceneio.read` keeps its one-scan `PointCloud`
+projection, while the four explicit E57 scan functions expose stored rows,
+organization, and ordered scan sets. The accepted profile is intentionally
+Cartesian and exactly representable; broader E57 content remains a tested or
+digest-pinned refusal.
+
 ### 9.1 `PointScan` and `ScanSet`
 
-- [ ] `PointScan` owns one `PointCloud` containing stored E57 rows plus optional
+- [x] `PointScan` owns one `PointCloud` containing stored E57 rows plus optional
       raw `uint8` invalid-state values of the same length; zero means valid and
       nonzero values remain distinguishable.
-- [ ] Preserve optional raw `int64` row and column indices rather than forcing
+- [x] Preserve optional raw `int64` row and column indices rather than forcing
       sparse organized scans into `PointCloud.width * height == point_count`.
-- [ ] Store declared row/column bounds separately and validate every index
+- [x] Store declared row/column bounds separately and validate every index
       against them.
-- [ ] Store stable scan name/guid, optional acquisition timestamp, rigid pose,
+- [x] Store stable scan name/guid, optional acquisition timestamp, rigid pose,
       and source-coordinate metadata.
-- [ ] Make the `PointScan` pose authoritative. Keep the child cloud viewpoint
+- [x] Make the `PointScan` pose authoritative. Keep the child cloud viewpoint
       neutral and have `valid_point_cloud()` apply the pose to the legacy
       `PointCloud.viewpoint`, avoiding two independently mutable copies.
-- [ ] Pin the exact E57 pose direction/quaternion ordering with pye57 and a
+- [x] Pin the exact E57 pose direction/quaternion ordering with pye57 and a
       hand-computable translated/rotated scan before naming public fields.
-- [ ] Provide an explicit `valid_point_cloud()` projection matching the legacy
+- [x] Provide an explicit `valid_point_cloud()` projection matching the legacy
       E57 reader's current valid-row behavior.
-- [ ] `ScanSet` owns ordered `PointScan` children and rejects duplicate scan
-      identifiers.
+- [x] `ScanSet` owns ordered `PointScan` children and rejects duplicate scan
+      identifiers and duplicate nonempty GUIDs.
 
 ### 9.2 E57 adapter expansion
 
-- [ ] Preserve current one-scan unorganized `PointCloud` return behavior; use
+- [x] Preserve current one-scan unorganized `PointCloud` return behavior; use
       the typed scan API for raw validity/organization.
-- [ ] Return `ScanSet` for multi-scan or structured input and accept
-      `PointCloud`, `PointScan`, or `ScanSet` for writing.
-- [ ] Add `scan_index` and combined `scan_index` + half-open
+- [x] Make typed `read_e57_scans` return `ScanSet`, make `read_e57_scan`
+      return one `PointScan`, and accept `PointCloud`, `PointScan`, or
+      `ScanSet` for typed writing.
+- [x] Add `scan_index` and combined `scan_index` + half-open
       `stored_point_range` to the typed E57 scan API. Do not call a stored-row
       range a valid point range or add these compound values to global
       `read_partial`.
-- [ ] Inspect every scan's count, organization, bounds, fields, and pose
+- [x] Inspect every scan's count, organization, bounds, fields, and pose
       without decoding point payloads.
-- [ ] Report stored counts from headers; report valid counts as unknown unless
+- [x] Report stored counts from headers; report valid counts as unknown unless
       the provider exposes them without reading `cartesianInvalidState`.
-- [ ] Preserve supported Cartesian coordinates, intensity, RGB, row/column
+- [x] Preserve supported Cartesian coordinates, intensity, RGB, row/column
       organization, and rigid pose fields per scan.
-- [ ] Retain the existing exact-float32 Cartesian and uint8-color boundary.
+- [x] Retain the existing exact-float32 Cartesian and uint8-color boundary.
       Valid values must round-trip exactly; coordinate payloads on invalid rows
       are canonicalized to a documented placeholder because the invalid-state
       field, not those coordinates, carries meaning.
-- [ ] Keep imagery, non-Cartesian coordinates, unsupported extensions, and
+- [x] Keep imagery, non-Cartesian coordinates, unsupported extensions, and
       lossy field narrowing as explicit refusals.
-- [ ] Verify temporary output cleanup and destination preservation when a later
+- [x] Verify temporary output cleanup and destination preservation when a later
       scan fails to write.
 
 ### 9.3 FC3 oracle and data
 
-- [ ] Select at least one official permissive multi-scan E57 example and pin
-      its content digest.
+- [x] Pin the official permissively granted five-scan Pump example and two
+      broader profile examples by exact byte count and SHA-256. They are
+      refusal vectors because their values or metadata exceed this profile.
 - [x] Generate a tiny two-scan file with `pye57` in the provider probe, with
       distinct poses and exact Cartesian values.
-- [ ] Extend that generated case with invalid-state, row/column, and organized
+- [x] Extend that generated case with invalid-state, row/column, and organized
       dimension fields as part of the FC3 record implementation.
-- [ ] Compare every scan with `pye57.read_scan_raw` and header metadata.
-- [ ] Have `pye57` reopen SceneIO's multi-scan output and compare scan order,
+- [x] Compare every scan with `pye57.read_scan_raw` and header metadata.
+- [x] Have `pye57` reopen SceneIO's multi-scan output and compare scan order,
       poses, stored/valid counts, invalid-state values, row/column indices, and
       every valid point attribute.
-- [ ] Retain official examples containing imagery or unsupported extensions as
-      expected-refusal cases.
+- [x] Retain official examples containing imagery or unsupported extensions as
+      digest-pinned, opt-in expected-refusal cases.
 
 ### FC3 exit
 
-- [ ] One- and multi-scan behavior is documented and oracle-proven.
-- [ ] Selected scan/range reads equal full-read slices.
-- [ ] Large multi-scan read/write measurements show bounded per-selection
-      allocation.
+- [x] One- and multi-scan behavior is documented and direct-provider-proven in
+      both directions.
+- [x] Selected scan/range reads equal full-read slices.
+- [x] Large multi-scan read/write measurements record time, traced allocation,
+      and RSS. The fixed-capacity selected reader is bounded by chunk plus
+      result size; the provider-buffered writer is measured without claiming
+      an allocation improvement.
+
+FC3's generated 3,145,728-row fixture contains 113.25 MB of logical payload.
+On local Windows/MSVC, selecting 104,857 stored rows reduced traced peak from
+151.00 MB to 11.33 MB and RSS growth from 148.83 MB to 11.07 MB versus direct
+`pye57.read_scan_raw` plus slicing. Full measurements and limitations are in
+[`e57_multiscan_benchmark.md`](e57_multiscan_benchmark.md).
+
+### FC3 three-angle review
+
+- **Ownership/lifetime:** native optional arrays expose zero-length views when
+  absent; present views retain their record owner; `ScanSet` owns its children;
+  projections and decoded arrays own their storage after provider handles and
+  source files close. Low-level range readers and staged writers close in all
+  paths.
+- **Behavior correctness:** the WXYZ scan-to-reference pose is checked against
+  pye57 and a hand-computable 90-degree Z rotation; exact float32/RGB8,
+  invalid-state, bounds, scan-id, GUID, timestamp, and unsupported-field
+  boundaries are guarded rather than narrowed.
+- **Test soundness:** direct pye57/libE57Format authors input and reopens output
+  as a format-owner differential (not a second parser lineage);
+  public typed wrappers, range/full equivalence, no-full-decode inspection,
+  ownership, transactional failure, official-file boundaries, and measured
+  large-fixture behavior are separate tests or evidence rows.
 
 ## 10. FC4 — bounded TIFF series and pyramids
 
@@ -992,11 +1030,12 @@ plan but do not replace file-based oracle qualification.
 
 ### 13.2 Package and hosted gate
 
-Current FC0-FC2 evidence: build-only Release run
+Current FC0-FC2 hosted evidence: build-only Release run
 [`30914739031`](https://github.com/SceneAPI/SceneIO/actions/runs/30914739031)
 passed the exact source archive, three-wheel matrix, combined inventory, and
-the OpenUSD/Niantic oracle jobs at commit `50172b5`. The boxes below remain the
-later FC7 aggregate gate because FC3-FC6 are not implemented yet.
+the OpenUSD/Niantic oracle jobs at commit `50172b5`. FC3 is locally complete
+but not covered by that older run. The boxes below remain the later FC7
+aggregate gate because FC4-FC6 are not implemented yet.
 
 - [ ] Build the source archive and clean Windows abi3 wheel from the exact
       candidate commit.
@@ -1044,8 +1083,9 @@ later FC7 aggregate gate because FC3-FC6 are not implemented yet.
        benchmark, and docs are locally complete. The typed-carrier/NCore
        package smoke is hosted-wheel green in run `30914739031`; Kubric
        generation and hash verification remain explicit offline evidence.
-5. [ ] `PointScan`/`ScanSet` plus E57 multi-scan/structured read/write/inspect,
-       oracle suite, benchmark, and docs.
+5. [x] `PointScan`/`ScanSet` plus E57 multi-scan/structured read/write/inspect,
+       oracle suite, benchmark, and docs are locally complete. Hosted wheel
+       validation awaits the next exact-head build-only run.
 6. [ ] Neutral raster collection plus the qualified TIFF read/write subset,
        oracle suite, benchmark, and docs.
 7. [ ] OpenVDB read/inspect/grid-selection expansion or evidence-backed
@@ -1070,7 +1110,7 @@ their own columns and validation records.
 | FC1A IMU records/acquisition | [x] | n/a | refusal-only | n/a | n/a | [x] record vectors | n/a | [x] | [x] `30914739031` | [x] |
 | FC1B visual-inertial dataset | [x] | [x] | [x] | [x] | [x] | [x] | [x] bounded baseline | [x] | [x] `30914739031` | [x] |
 | FC2 dense labels | [x] | carriers/NCore [x] | carriers/NCore [x] | carriers [x] | n/a for one-map carriers | NPZ/Zarr/TIFF/NCore/Kubric [x] | [x] NPZ/Zarr/TIFF | [x] | [x] `30914739031` | [x] |
-| FC3 E57 scans | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
+| FC3 E57 scans | [x] | [x] | [x] | [x] | [x] | [x] | [x] | [x] | pending exact-head run | [x] |
 | FC4 TIFF collections | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
 | FC5 OpenVDB expansion | conditional | [ ] | existing one-grid | [ ] | [ ] | expanded-read + base-write | [ ] | [ ] | [ ] | [ ] |
 | FC6 dynamic USD | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |

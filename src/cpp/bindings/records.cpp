@@ -25,11 +25,12 @@ void register_mesh_scene(nanobind::module_ &);
 void register_instance_set(nanobind::module_ &);
 void register_scene_graph(nanobind::module_ &);
 void register_dense_mvs_records(nanobind::module_ &);
+void register_point_scan(nanobind::module_ &);
 
 namespace sio::bindings {
 namespace {
 
-constexpr std::array<RegistrationDescriptor, 20> RECORDS{{
+constexpr std::array<RegistrationDescriptor, 21> RECORDS{{
     {0, "reconstruction", &::register_reconstruction},
     {1, "gaussian_cloud", &::register_gaussian_cloud},
     {2, "posed_view_set", &::register_posed_view_set},
@@ -50,6 +51,7 @@ constexpr std::array<RegistrationDescriptor, 20> RECORDS{{
     {17, "instance_set", &::register_instance_set},
     {18, "scene_graph", &::register_scene_graph},
     {19, "dense_mvs", &::register_dense_mvs_records},
+    {20, "point_scan", &::register_point_scan},
 }};
 
 } // namespace

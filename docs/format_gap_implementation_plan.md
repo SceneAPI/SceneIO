@@ -2394,18 +2394,20 @@ bounded TIFF, E57, and Parquet/Arrow IPC profiles are also complete locally:
 
 1. TIFF maps unambiguous numeric CV rasters, masks, and grayscale stacks to
    existing records through the optimized tifffile provider.
-2. E57 maps one Cartesian scan, optional intensity/RGB, pose, and invalid-point
-   filtering to `PointCloud` through pye57/libE57Format. Inspection reads only
-   metadata for ordinary scans and uses the provider scan path when an
-   invalid-state field must be counted exactly.
+2. E57 keeps its one-Cartesian-scan `PointCloud` compatibility projection and
+   adds typed `PointScan`/`ScanSet` operations for ordered scans, stored rows,
+   raw invalid states, sparse row/column organization, scan poses, header-only
+   inspection, and fixed-capacity stored-row selection through
+   pye57/libE57Format.
 3. Parquet and Arrow IPC map numeric scalar and fixed-width vector columns to
    `TensorDict`; Parquet supports named-column partial reads.
 
 The adapters own validation, atomic destination replacement, capability
 reporting, and public API stability. The providers own their established
-storage kernels. Independent provider-written and provider-read fixtures are
-the ground truth. Broader TIFF series/pyramid semantics, multiple E57 scans,
-and general Arrow nullable/nested schemas remain explicit follow-on profiles.
+storage kernels. Direct provider-written and provider-read fixtures are the
+ground truth for adapter mapping. Broader TIFF series/pyramid semantics, E57
+spherical/imagery/extension content, and general Arrow nullable/nested schemas
+remain explicit follow-on profiles.
 
 ### 12.7 Wave F — chunked and heavyweight ecosystems
 

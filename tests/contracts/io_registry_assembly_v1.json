@@ -81,7 +81,7 @@
       "euroc_dataset": "451e451cca3cf9248ceb8b7dd81412a5c41f90ae4da2ea52f5c9c3fc70e9a524",
       "zarr": "0b87633299a5bc87d8224c6e1abb3bf56372e70a4970b6aaa67deabe94f20bd5",
       "tiff": "0081bf989dd43ae44961631b2792838f8845a2188fe050147774b408b1cbe3a2",
-      "e57": "86309dcebb17d7c3ca1e8bfea11647bf145b2e7aed9d9e7e392b3593cbdb2ebc",
+      "e57": "f505bda47db4d78ec87aa57907ad2f34f2b22d8fbf188ac77aadefae2cb18fcd",
       "parquet": "4bbafde29e2816f1a020bf8270c14339ebbe968bbd604e247fc5117355703f8b",
       "arrow_ipc": "9235a5117ca19e295483feabd6426a13d0906335c514ad32ba7b5514e5848571",
       "openvdb": "14ec776e14d5625e4df168452ce9304e4e0621cbca6d2508021683ae5cb01980"
@@ -478,8 +478,8 @@
     "last": "tests/test_points_binary.py::test_bad_magic_rejected"
   },
   "pytest_candidate_collection": {
-    "count": 4919,
-    "sorted_normalized_node_ids_sha256": "07ee2f6e56c195b4f9c5aded06b4077298ef294122c3196d7617a3937fb8c12f",
+    "count": 4943,
+    "sorted_normalized_node_ids_sha256": "bc3982346e15ac504897404cb6f6f5b8a9db3c26f0a19cc047000e5a2b9c4f34",
     "collection_ignored_paths": [
       "tests/codecs/test_spz_niantic_oracle.py",
       "tests/codecs/test_openusd_gaussian_oracle.py"
@@ -2325,7 +2325,31 @@
       "tests/test_kubric_oracle_manifest.py::test_output_conventions_are_explicit[renderer_segmentation]",
       "tests/test_kubric_oracle_manifest.py::test_output_conventions_are_explicit[forward_flow]",
       "tests/test_kubric_oracle_manifest.py::test_pose_and_flow_conversions_are_explicit_and_evaluable",
-      "tests/test_kubric_oracle_manifest.py::test_manifest_matches_pinned_kubric_output_names_and_metadata_fields"
+      "tests/test_kubric_oracle_manifest.py::test_manifest_matches_pinned_kubric_output_names_and_metadata_fields",
+      "tests/codecs/test_e57.py::test_e57_typed_scan_preserves_stored_rows_invalid_states_and_indices",
+      "tests/codecs/test_e57.py::test_e57_typed_pose_is_scan_to_reference_wxyz",
+      "tests/codecs/test_e57.py::test_e57_typed_scan_owns_buffers_after_source_close",
+      "tests/codecs/test_e57.py::test_e57_typed_stored_range_streams_without_read_scan_raw",
+      "tests/codecs/test_e57.py::test_e57_typed_stored_range_crosses_provider_chunk_boundary",
+      "tests/codecs/test_e57.py::test_e57_all_invalid_typed_scan_has_empty_valid_projection",
+      "tests/codecs/test_e57.py::test_e57_typed_inspect_reports_all_scans_without_decoding",
+      "tests/codecs/test_e57.py::test_e57_typed_guards_reject_non_e57_states_ids_and_empty_files",
+      "tests/codecs/test_e57.py::test_e57_typed_scan_set_write_reopens_with_provider_oracle",
+      "tests/codecs/test_e57.py::test_e57_typed_writer_refuses_unrepresentable_guid_and_bounds",
+      "tests/codecs/test_e57.py::test_e57_typed_multi_scan_write_is_transactional",
+      "tests/records/test_point_scan.py::test_point_scan_preserves_stored_rows_and_metadata",
+      "tests/records/test_point_scan.py::test_absent_stored_row_arrays_are_shaped_empty_and_presence_is_explicit",
+      "tests/records/test_point_scan.py::test_empty_scan_can_retain_explicit_source_bounds",
+      "tests/records/test_point_scan.py::test_dense_bounds_use_row_extent_and_single_column",
+      "tests/records/test_point_scan.py::test_valid_projection_is_owned_and_preserves_fields",
+      "tests/records/test_point_scan.py::test_point_scan_view_owns_scan_after_gc",
+      "tests/records/test_point_scan.py::test_point_scan_rejects_conflicting_or_invalid_inputs",
+      "tests/records/test_point_scan.py::test_scan_set_is_ordered_and_rejects_duplicate_ids_or_guids",
+      "tests/records/test_point_scan.py::test_public_exports_coordinates_and_normalization_contracts",
+      "tests/test_e57_multiscan_benchmark.py::test_e57_multiscan_fixture_is_deterministic",
+      "tests/test_e57_multiscan_benchmark.py::test_e57_multiscan_pye57_oracle_roundtrip",
+      "tests/test_e57_multiscan_benchmark.py::test_e57_multiscan_benchmark_smoke",
+      "tests/test_io_inspection_shared.py::test_inspection_metadata_recursively_detaches_and_freezes_containers"
     ],
     "removed_nodes": [
       "tests/codecs/test_compressed_ply.py::test_writer_body_is_byte_identical_to_pinned_playcanvas_vector",

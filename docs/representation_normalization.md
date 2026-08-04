@@ -2,7 +2,7 @@
 
 SceneIO has a versioned, machine-readable numeric contract for every public
 data-bearing class in `sceneio.io`, `sceneio.data`, `sceneio.colmap`, and
-`sceneio.colmap_mvs`. Version 1 covers 98 representations. Registry helpers,
+`sceneio.colmap_mvs`. Version 1 covers 100 representations. Registry helpers,
 errors, capability/inspection results, and enums are not data representations
 and are excluded by an exact test allowlist.
 
@@ -114,6 +114,13 @@ contract; `normalized` and `arbitrary` do not.
   `FrameMeta`.
 - `PointCloud` and `Mesh` carry an explicit frame and `scale_to_meters`; their
   public coordinate conversion is direct and refuses fields it cannot preserve.
+- `PointScan` preserves stored rows, raw uint8 invalid states, optional int64
+  row/column indices with inclusive bounds, and one authoritative scan-to-
+  reference wxyz pose. `valid_point_cloud()` owns a valid-row projection while
+  retaining representable child fields and coordinate metadata.
+- `ScanSet` preserves child order and stable identifiers, rejects duplicate ids
+  and non-empty GUIDs, and exposes an aggregate coordinate convention only when
+  all children agree.
 - `Reconstruction` is canonical COLMAP—OpenCV axes, WXYZ world-to-camera
   poses, upper-left image coordinates—but its world scale remains arbitrary.
 - `PosedViewSet` records pose direction, axis frame, quaternion order, and
@@ -176,11 +183,13 @@ models grow. Every public representation still has its own mapping entry.
 | `ncore_payload` | `sceneio.NCoreComponentData`, `sceneio.NCoreDatasetData`, `sceneio.NCoreItem`, `sceneio.NCoreSemanticComponent` |
 | `normal_vectors` | `sceneio.NormalMap` |
 | `point_cloud` | `sceneio.PointCloud` |
+| `point_scan` | `sceneio.PointScan` |
 | `pose_graph` | `sceneio.PoseGraph` |
 | `posed_views` | `sceneio.PosedViewSet` |
 | `reconstruction_colmap` | `sceneio.Reconstruction` |
 | `rtmv_dataset` | `sceneio.RtmvDataset` |
 | `scene_graph` | `sceneio.SceneGraph` |
+| `scan_set` | `sceneio.ScanSet` |
 | `state_trajectory` | `sceneio.StateTrajectory` |
 | `tensor_container` | `sceneio.TensorDict` |
 | `volume_reference` | `sceneio.VolumeAsset` |
@@ -216,7 +225,7 @@ models grow. Every public representation still has its own mapping entry.
 ## Verification and change policy
 
 `tests/test_representation_contracts.py` discovers exported classes from all
-four namespaces and requires exact equality with the 98-entry catalog. It also
+four namespaces and requires exact equality with the 100-entry catalog. It also
 checks profile vocabulary, immutable lookup behavior, live evidence paths,
 ambiguous-name refusal, the exact three direct-conversion records, narrow
 metric claims, compiled/neutral record distinctions, and Gaussian limitations.

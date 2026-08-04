@@ -5,7 +5,7 @@ catalog_purpose = "Pinned external implementations and specifications used to qu
 # This is a test/reference catalog.  It is intentionally separate from the
 # runtime registry: importing SceneIO must continue to require NumPy only.
 allowed_roles = ["runtime_required", "runtime_optional", "test_executable", "generated_vector", "reference_only"]
-allowed_authorities = ["format_owner", "standards_body", "independent_implementation", "semantic_reference"]
+allowed_authorities = ["format_owner", "standards_body", "independent_implementation", "provider_binding", "semantic_reference"]
 allowed_qualifications = ["executed", "captured", "reference", "candidate"]
 allowed_license_classes = ["permissive", "weak_copyleft", "mixed_scoped", "strong_copyleft_reference"]
 permitted_license_expressions = [
@@ -28,7 +28,7 @@ required_source_ids = [
   "trimesh", "gltf_validator", "niantic_spz", "splat_transform", "gsply",
   "gaussian_splats_3d", "openusd", "khronos_gltf", "3dgrut", "kubric", "ncore",
   "scipy", "pyyaml", "numpy", "h5py", "zarr", "arrow", "openexr", "pillow", "tifffile",
-  "libe57format",
+  "pye57", "libe57format",
 ]
 
 [[sources]]
@@ -757,6 +757,27 @@ qualification = "executed"
 notice = "LICENSES/tifffile.txt"
 
 [[sources]]
+id = "pye57"
+project = "pye57"
+repository = "https://github.com/davidcaron/pye57"
+revision = "64c9000738ad54242e87e1da6bca6b683b13374b"
+version = "0.4.19"
+stars = 106
+stars_snapshot = "2026-08-03"
+license = "MIT"
+license_class = "permissive"
+distribution_role = "test_executable"
+authority = "provider_binding"
+lineage = "e57"
+formats = ["e57"]
+semantic_roles = ["python_binding", "scan_headers", "raw_point_arrays", "scan_writer"]
+execution = "pytest_optional"
+execution_markers = ["pye57"]
+evidence_tests = ["tests/codecs/test_e57.py", "tests/test_e57_multiscan_benchmark.py"]
+qualification = "executed"
+notice = "LICENSES/pye57.txt"
+
+[[sources]]
 id = "libe57format"
 project = "libE57Format"
 repository = "https://github.com/asmaloney/libE57Format"
@@ -770,7 +791,7 @@ distribution_role = "test_executable"
 authority = "format_owner"
 lineage = "e57"
 formats = ["e57"]
-semantic_roles = ["e57_point_record", "cartesian_points", "intensity"]
+semantic_roles = ["e57_point_record", "ordered_scans", "cartesian_points", "intensity", "rgb8", "invalid_states", "row_column_indices", "scan_pose"]
 execution = "pytest_optional"
 execution_markers = ["pye57", "E57"]
 evidence_tests = ["tests/codecs/test_e57.py"]

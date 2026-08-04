@@ -33,6 +33,10 @@ from sceneio.coordinates import (
 )
 from sceneio.io._arrow import write_arrow_ipc, write_parquet
 from sceneio.io._depth import DepthEncoding, inspect_depth, read_depth, write_depth
+from sceneio.io._e57 import inspect_e57_scans as _inspect_e57_scans
+from sceneio.io._e57 import read_e57_scan as _read_e57_scan
+from sceneio.io._e57 import read_e57_scans as _read_e57_scans
+from sceneio.io._e57 import write_e57_scans as _write_e57_scans
 from sceneio.io._euroc_dataset import (
     VisualInertialDataset,
     read_euroc_dataset,
@@ -104,6 +108,8 @@ TensorDict = _core.TensorDict
 Image = _core.Image
 ImageSequence = _core.ImageSequence
 PointCloud = _core.PointCloud
+PointScan = _core.PointScan
+ScanSet = _core.ScanSet
 MaterialSet = _core.MaterialSet
 Mesh = _core.Mesh
 MeshScene = _core.MeshScene
@@ -138,6 +144,8 @@ install_coordinate_properties(
     Image,
     ImageSequence,
     PointCloud,
+    PointScan,
+    ScanSet,
     Mesh,
     MeshScene,
     SceneGraph,
@@ -239,6 +247,75 @@ def inspect_flow(path, *, format: str | None = None) -> Inspection:
             "invalid_policy": "component_abs_gt_1e9",
         },
     )
+
+
+def read_e57_scan(
+    path,
+    *,
+    scan_index: int = 0,
+    stored_point_range: tuple[int, int] | None = None,
+) -> PointScan:
+    """Read one E57 scan while preserving stored rows and scan metadata.
+
+    ``stored_point_range`` is a half-open range over stored rows, including
+    invalid rows. The result owns its arrays after the E57 file is closed.
+    """
+
+    try:
+        return _read_e57_scan(
+            path,
+            scan_index=scan_index,
+            stored_point_range=stored_point_range,
+        )
+    except FormatError:
+        raise
+    except Exception as exc:
+        raise FormatError(
+            f"reading E57 scan {scan_index!r} from {str(path)!r}: {exc}"
+        ) from exc
+
+
+def read_e57_scans(path) -> ScanSet:
+    """Read every supported Cartesian E57 scan in stored order."""
+
+    try:
+        return _read_e57_scans(path)
+    except FormatError:
+        raise
+    except Exception as exc:
+        raise FormatError(
+            f"reading E57 scan set from {str(path)!r}: {exc}"
+        ) from exc
+
+
+def write_e57_scans(value, path) -> None:
+    """Atomically write a PointCloud, PointScan, or ordered ScanSet as E57."""
+
+    try:
+        _write_e57_scans(value, path)
+    except FormatError:
+        raise
+    except Exception as exc:
+        raise FormatError(
+            f"writing E57 scan set to {str(path)!r}: {exc}"
+        ) from exc
+
+
+def inspect_e57_scans(
+    path,
+    *,
+    scan_index: int | None = None,
+) -> Inspection:
+    """Inspect all E57 scan headers, or one selected header, without decoding."""
+
+    try:
+        return _inspect_e57_scans(path, scan_index=scan_index)
+    except FormatError:
+        raise
+    except Exception as exc:
+        raise FormatError(
+            f"inspecting E57 scan headers in {str(path)!r}: {exc}"
+        ) from exc
 
 
 def read(path, *, format: str | None = None):
@@ -791,11 +868,13 @@ __all__ = [
     "NativeFeatureCapabilities",
     "NormalMap",
     "PointCloud",
+    "PointScan",
     "PointVisibility",
     "PoseGraph",
     "PosedViewSet",
     "Reconstruction",
     "RtmvDataset",
+    "ScanSet",
     "SceneGraph",
     "StateTrajectory",
     "TensorDict",
@@ -811,6 +890,7 @@ __all__ = [
     "detect",
     "inspect",
     "inspect_depth",
+    "inspect_e57_scans",
     "inspect_flow",
     "inspect_label_map",
     "materialize_ncore_v4",
@@ -818,6 +898,8 @@ __all__ = [
     "project_ncore_item",
     "read",
     "read_depth",
+    "read_e57_scan",
+    "read_e57_scans",
     "read_euroc_dataset",
     "read_flow",
     "read_label_map",
@@ -830,6 +912,7 @@ __all__ = [
     "write_arrow_ipc",
     "write_colmap_db",
     "write_depth",
+    "write_e57_scans",
     "write_euroc_dataset",
     "write_flow",
     "write_label_map",

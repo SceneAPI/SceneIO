@@ -120,6 +120,31 @@ def test_compatibility_facade_and_lower_consumers_share_exact_model_objects():
     assert _image_sequence.Inspection is model.Inspection
 
 
+def test_inspection_metadata_recursively_detaches_and_freezes_containers():
+    source = {
+        "scans": [
+            {
+                "name": "scan-a",
+                "point_fields": ["cartesianX", "cartesianY", "cartesianZ"],
+            }
+        ]
+    }
+    info = model.Inspection("e57", "point_scan_set", 64, metadata=source)
+
+    source["scans"][0]["name"] = "changed"
+    source["scans"].append({"name": "scan-b", "point_fields": []})
+    scans = info.metadata["scans"]
+    assert len(scans) == 1
+    assert scans[0]["name"] == "scan-a"
+    assert scans[0]["point_fields"] == (
+        "cartesianX",
+        "cartesianY",
+        "cartesianZ",
+    )
+    with pytest.raises(TypeError):
+        scans[0]["name"] = "mutated"
+
+
 def test_common_exact_and_unsigned_decimal_preserve_historical_grammar():
     assert common._exact(io.BytesIO(b"abc"), 3, "sample") == b"abc"
     with pytest.raises(ValueError, match=r"^truncated sample$"):

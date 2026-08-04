@@ -9,7 +9,7 @@ route.
 
 ## Current closure
 
-As of 2026-08-03, all **74 built-in formats** have a fixture route:
+As of 2026-08-04, all **74 built-in formats** have a fixture route:
 
 - **13 direct formats** use an unchanged, content-hashed upstream artifact
   that SceneIO read locally;
@@ -86,7 +86,9 @@ the current public records.
 | [Google Scanned Objects](https://research.google/blog/scanned-objects-by-google-research-a-dataset-of-3d-scanned-common-household-items/) (CC-BY-4.0) | real textured OBJ/PNG producer diversity across 1,030 objects | Optional hosted mesh corpus; Khronos remains the compact default |
 | [Kubric generator](https://github.com/google-research/kubric) (Apache-2.0) | RGBA, depth, optical flow, instance masks, camera/object poses, and motion | Normal CI pins revision `61f2422c…ccfe`, hand-evaluates its segmentation-index rule, and hash-verifies a generated 32x32 two-frame procedural result. The Blender 4.3.0/Python 3.11 recipe uses only Kubric Cube/Sphere primitives, not its external asset manifest; `generate` validates semantic/pose/flow/runtime rules and atomically replaces all 11 hashes as one operation. No hosted MOVi artifact license is assumed |
 | [OME-TIFF samples](https://downloads.openmicroscopy.org/images/OME-TIFF/2016-06/) (CC-BY-4.0) | multi-channel Z/T and pyramid/container breadth | Future TIFF hardening/profile vectors; the checked 7,889,559 B 4D file is `caf707ca…6f3` and currently reaches a wrapped `TiffFrame.tags` failure rather than a clean supported-profile result |
-| [E57 example data](https://e57-3d-imgfmt.sourceforge.net/data.html) (permissive test-data grant) | structured scans, imagery, extensions, and multiple scans beyond BunnyFloat | Future E57 profile vectors; keep the current single-scan boundary explicit |
+| [E57 Pump: no invalid points](https://e57-3d-imgfmt.sourceforge.net/data.html) (permissive test-data grant) | five ordered structured Cartesian scans and 1,213,990 stored rows | Opt-in profile refusal: 22,146,048 B, `5b85b18f…ff5a5`; public read first reports unrepresented standard scan metadata, and a direct payload probe also finds nonexact float32 coordinates |
+| [E57 Pump: visual reference image](https://e57-3d-imgfmt.sourceforge.net/data.html) (permissive test-data grant) | embedded imagery and broader scan metadata | Opt-in profile refusal: 4,110,336 B, `d45bebb0…689a`; unrepresented metadata/imagery are not dropped |
+| [E57 Pump: row/column extensions](https://e57-3d-imgfmt.sourceforge.net/data.html) (permissive test-data grant) | extension-qualified root, scan, and point fields | Opt-in profile refusal: 3,067,904 B, `b0995500…39fb`; unsupported extensions are reported and refused |
 
 ## Deliberate exclusions and irreducible generated cases
 
@@ -112,9 +114,12 @@ Semantic/instance/panoptic records, NPZ/Zarr/TIFF carriers, strict NCore
 projections, and the hash-verified procedural Kubric result are present.
 Kubric regeneration remains an explicit evidence operation rather than normal
 CI or adapter work.
-Dynamic USD, multi-grid VDB, multi-scan E57, and TIFF multi-series/pyramids
-still need explicit public models and conversion contracts before the broader
-samples can become positive round-trip cases.
+Dynamic USD, multi-grid VDB, and TIFF multi-series/pyramids still need explicit
+public models and conversion contracts before broader samples can become
+positive round-trip cases. Multi-scan/organized Cartesian E57 now has typed
+`PointScan`/`ScanSet` contracts and a generated pye57-positive oracle fixture;
+the official Pump files above remain refusal vectors for values or metadata
+outside that bounded profile.
 The bounded implementation and verification order is defined in
 [`remaining_3dcv_profile_checklist.md`](remaining_3dcv_profile_checklist.md).
 That plan's FC0 machine contract freezes the remaining proposed names and

@@ -9,7 +9,7 @@
   "cmake_file_sha256": {
     "CMakeLists.txt": "800e00e796d06ef8e10637f191176ba8cb6a54b20da6545c46e6de6c2e6de7a5",
     "cmake/SceneIOInstrumentation.cmake": "f4a6ecf75085215628b6d603dd47922ad2b8e730e0c05d09f5cd33193ff0e4a3",
-    "cmake/SceneIOSources.cmake": "f6dbe1fa26b1e4a9517c75d85141c79658ca773716d4f4fa522fbd0be5655fba",
+    "cmake/SceneIOSources.cmake": "ca8ba1c88b4bbaba7b3e598e76850f79190c19c3126dee4e1564d722fc00c471",
     "cmake/SceneIODependencies.cmake": "b737fb608b961002db73d54f71785fd506126fb53beaf2e721c5ef32e4f2c130",
     "cmake/SceneIOBackendQualification.cmake": "bfd4d8921a2ca7935fc7c728004fd1d623f37deb699fc5c7f99c28667aea502d",
     "cmake/SceneIOTargets.cmake": "7bc90e3e81ca4c5595c1f0126e0e9f094b425f22c388e0c70abc8ea91049f82d",
@@ -101,7 +101,8 @@
     "mesh_scene.cpp",
     "instance_set.cpp",
     "scene_graph.cpp",
-    "dense_mvs.cpp"
+    "dense_mvs.cpp",
+    "point_scan.cpp"
   ],
   "binding_sources": [
     "registry.cpp",
@@ -136,7 +137,8 @@
     "register_mesh_scene",
     "register_instance_set",
     "register_scene_graph",
-    "register_dense_mvs_records"
+    "register_dense_mvs_records",
+    "register_point_scan"
   ],
   "codec_registration_order": [
     "register_pfm",
@@ -218,6 +220,7 @@
     "src/cpp/records/instance_set.cpp",
     "src/cpp/records/scene_graph.cpp",
     "src/cpp/records/dense_mvs.cpp",
+    "src/cpp/records/point_scan.cpp",
     "src/cpp/codecs/arrays/pfm.cpp",
     "src/cpp/codecs/reconstruction/colmap.cpp",
     "src/cpp/codecs/splats/ply_gaussian.cpp",

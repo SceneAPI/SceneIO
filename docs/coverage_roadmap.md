@@ -409,7 +409,7 @@ Columns: **Ext/id** · **Record** · **Lib/oracle (license)** · **R/W** ·
 | ✅ PCD | `PointCloud` | independent parser + Open3D (MIT) | R+W | PCD 0.7 ASCII/binary/LZF `binary_compressed`; organization/viewpoint; binary point ranges |
 | ✅ LAS | `PointCloud` | laspy (BSD) | R+W | mmap; point formats 0‑10; internal waveform formats 4/5/9/10 retain a validated lossless sidecar |
 | ✅ LAZ | `PointCloud` | LAZperf 3.4.0 (Apache‑2.0/BSD‑3-Clause/BSD‑2-Clause) + laspy/lazrs oracle | R+W | formats 0‑3 and 6‑8; mmap, seekable direct sink, inspect, and chunk-aware point ranges; waveform/extra-byte/metadata extensions reject |
-| ✅ E57 | `PointCloud` | pye57 (MIT) / libE57Format (BSL-1.0) | R+W | optional `sceneio[e57]`; one Cartesian scan, exact RGB8/intensity/pose, invalid-state filtering; inspection stays metadata-only unless exact valid-point counting requires the provider scan path |
+| ✅ E57 | legacy `PointCloud`; typed `PointScan` / `ScanSet` | pye57 (MIT) / libE57Format (BSL-1.0) | R+W | optional `sceneio[e57]`; generic one-scan projection remains compatible; typed APIs preserve ordered Cartesian scans, raw invalid states, sparse row/column organization, exact RGB8/float32 values, WXYZ scan-to-reference poses, header-only inspection, and fixed-capacity stored-row ranges; spherical data, imagery, extensions, and nonexact narrowing refuse |
 | ✅ `.xyz` / ✅ count-prefixed `.pts` | `PointCloud` | independent parser | R+W | `.pts` is a distinct count-validated grammar, not an alias |
 
 ### 3d. Meshes

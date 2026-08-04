@@ -51,7 +51,7 @@ _ID = re.compile(r"^[a-z][a-z0-9_]*$")
 
 def test_catalog_policy_is_versioned_and_excludes_restricted_data():
     assert CATALOG["schema_version"] == 1
-    assert CATALOG["catalog_date"] == "2026-08-03"
+    assert CATALOG["catalog_date"] == "2026-08-04"
     assert date.fromisoformat(CATALOG["catalog_date"]).isoformat() == CATALOG[
         "catalog_date"
     ]

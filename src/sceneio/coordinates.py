@@ -462,6 +462,23 @@ def coordinate_convention(record: object) -> CoordinateConvention | None:
             ),
             world_frame=(axis_frame if axis_frame in {"enu", "ned"} else "unknown"),
         )
+    if type_name == "PointScan":
+        return _spatial_convention(
+            "point_scan",
+            str(record.coordinate_frame),
+            float(record.scale_to_meters),
+            pose_direction="sensor_to_reference",
+            quaternion_order="wxyz",
+        )
+    if type_name == "ScanSet":
+        conventions = {
+            coordinate_convention(scan)
+            for scan in record.scans
+        }
+        conventions.discard(None)
+        if len(conventions) == 1:
+            return replace(conventions.pop(), name="scan_set")
+        return UNKNOWN_COORDINATES
     if type_name in {"PointCloud", "Mesh"}:
         return _spatial_convention(
             type_name.lower(),
@@ -722,6 +739,8 @@ def install_core_coordinate_properties(core: object) -> None:
         "Image",
         "ImageSequence",
         "PointCloud",
+        "PointScan",
+        "ScanSet",
         "Mesh",
         "MeshScene",
         "SceneGraph",

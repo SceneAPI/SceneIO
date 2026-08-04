@@ -6,15 +6,24 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from types import MappingProxyType
 
-MetadataValue = (
-    str
-    | int
-    | float
-    | bool
-    | tuple[int, ...]
-    | tuple[float, ...]
-    | tuple[str, ...]
+type MetadataScalar = str | int | float | bool | None
+type MetadataValue = (
+    MetadataScalar
+    | tuple[MetadataValue, ...]
+    | Mapping[str, MetadataValue]
 )
+
+
+def _freeze_metadata(value):
+    """Recursively detach inspection metadata from caller-owned containers."""
+
+    if isinstance(value, Mapping):
+        return MappingProxyType(
+            {str(key): _freeze_metadata(item) for key, item in value.items()}
+        )
+    if isinstance(value, (list, tuple)):
+        return tuple(_freeze_metadata(item) for item in value)
+    return value
 
 
 @dataclass(frozen=True)
@@ -51,7 +60,7 @@ class Inspection:
         if self.shape is not None:
             object.__setattr__(self, "shape", tuple(self.shape))
         object.__setattr__(self, "arrays", tuple(self.arrays))
-        object.__setattr__(self, "metadata", MappingProxyType(dict(self.metadata)))
+        object.__setattr__(self, "metadata", _freeze_metadata(self.metadata))
 
     @property
     def coordinates(self):

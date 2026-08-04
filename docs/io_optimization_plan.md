@@ -245,6 +245,15 @@ latency in `bench/bench_io.py`. Parquet additionally reports named-column
 selection. No new compressed payload is routed through a Python whole-file
 `bytes` copy.
 
+FC3 adds a dedicated E57 multi-scan harness because the legacy registry row is
+deliberately a one-scan `PointCloud` compatibility path. The typed selected
+reader uses a fixed 65,536-row libE57Format buffer and copies only the requested
+half-open stored-row overlap. On the 113.25 MB logical local fixture this cut
+traced peak from 151.00 MB to 11.33 MB versus direct `read_scan_raw` plus slice;
+header inspection used 0.024 MB. Full reads and writes remain provider-buffered
+and are reported without an optimization claim. See
+[`e57_multiscan_benchmark.md`](e57_multiscan_benchmark.md).
+
 The RTMV directory adapter extends the same O1/O5 path discipline to a fifth
 directory format. It validates camera JSON and OpenEXR headers without decoding
 pixels, retains owned absolute paths for RGB, depth, and optional segmentation

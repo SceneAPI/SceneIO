@@ -428,6 +428,45 @@ _PROFILES = {
             refusal="An unknown frame/default scale is not metric, motion timing needs source context, and acquisition metadata/sidecars convert only when preservable.",
         ),
         _profile(
+            "point_scan",
+            "mixed",
+            "record_declared",
+            "record_declared",
+            "requires_context",
+            ("stored_sample", "index", "record_length_unit", "meter", "second", "dimensionless"),
+            scale_fields=(
+                "coordinate_frame",
+                "scale_to_meters",
+                "intensity_range",
+                "row_minimum",
+                "row_maximum",
+                "column_minimum",
+                "column_maximum",
+                "pose_convention",
+                "quaternion_order",
+            ),
+            rules=(
+                "Stored rows, raw uint8 invalid states, and optional int64 row/column indices retain their source values and declared bounds.",
+                "The scan-level wxyz pose is authoritative; valid_point_cloud returns an owned valid-row PointCloud with that viewpoint and preserves representable child fields.",
+                "Positions, origin, and scalar fields follow the child PointCloud coordinate and scale metadata; timestamps remain optional source seconds.",
+            ),
+            refusal="Sparse row/column bounds, invalid-state semantics, and scan pose are not inferred across scans; conversion requires explicit preservation of stored-row metadata.",
+        ),
+        _profile(
+            "scan_set",
+            "aggregate",
+            "mixed",
+            "component_declared",
+            "requires_context",
+            ("stored_sample", "index", "record_length_unit", "meter", "second", "dimensionless"),
+            scale_fields=("scans",),
+            rules=(
+                "Children retain insertion order and stable scan identifiers; duplicate identifiers are refused.",
+                "An aggregate convention is available only when all children agree; mixed or empty sets remain unknown.",
+            ),
+            refusal="Scan selection, frame reconciliation, and cross-scan normalization require an explicit typed adapter.",
+        ),
+        _profile(
             "pointmap_parent_scale",
             "canonical",
             "component_declared",
@@ -1128,11 +1167,13 @@ def _build_contracts() -> dict[str, RepresentationNormalizationContract]:
     )
     register("normal_vectors", ("tests/records/test_dense_mvs.py",), "sceneio.NormalMap")
     register("point_cloud", ("tests/records/test_point_cloud.py",), "sceneio.PointCloud")
+    register("point_scan", ("tests/records/test_point_scan.py",), "sceneio.PointScan")
     register("pose_graph", ("tests/records/test_pose_graph.py",), "sceneio.PoseGraph")
     register("posed_views", ("tests/test_coordinate_math_oracle.py",), "sceneio.PosedViewSet")
     register("reconstruction_colmap", ("tests/codecs/test_colmap.py",), "sceneio.Reconstruction")
     register("rtmv_dataset", ("tests/codecs/test_rtmv.py",), "sceneio.RtmvDataset")
     register("scene_graph", ("tests/records/test_scene_graph.py",), "sceneio.SceneGraph")
+    register("scan_set", ("tests/records/test_point_scan.py",), "sceneio.ScanSet")
     register("state_trajectory", ("tests/records/test_state_trajectory.py",), "sceneio.StateTrajectory")
     register("tensor_container", ("tests/records/test_tensor_dict.py",), "sceneio.TensorDict")
     register("volume_reference", ("tests/records/test_scene_graph.py",), "sceneio.VolumeAsset")

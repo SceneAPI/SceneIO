@@ -23,10 +23,12 @@ Mesh
 MeshScene
 NormalMap
 PointCloud
+PointScan
 PointVisibility
 PoseGraph
 PosedViewSet
 Reconstruction
+ScanSet
 SceneGraph
 StateTrajectory
 TensorDict
@@ -118,6 +120,7 @@ mesh_scene
 normal_map
 obj_material_library
 point_cloud
+point_scan
 point_visibility
 pose_graph
 posed_view_set
@@ -226,6 +229,7 @@ read_xyz
 read_xyz_points
 read_y4m
 read_y4m_frames
+scan_set
 scene_graph
 state_trajectory
 tensor_dict

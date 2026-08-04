@@ -724,7 +724,7 @@ implementation_owner = "python"
 sources = ["src/sceneio/io/_e57.py"]
 source_suite = "tests/codecs/test_e57.py"
 documentation = "docs/format_coverage.md"
-accepted_subset = ["single_cartesian_scan", "float32_coordinates", "rgb8", "float32_intensity", "pose", "invalid_state_filtering"]
+accepted_subset = ["legacy_single_cartesian_scan", "typed_ordered_scan_sets", "typed_sparse_row_column", "typed_raw_invalid_states", "typed_stored_point_ranges", "float32_coordinates", "rgb8", "float32_intensity", "pose"]
 
 [[codec]]
 id = "parquet"
@@ -1608,7 +1608,7 @@ evidence_gaps = ["candidate comparison on all required toolchains"]
 codec_id = "e57"
 profile = "default"
 direction = "encode"
-settings = { scans = 1 }
+settings = { legacy_scans = 1, typed_scans = "ordered_multiple" }
 fidelity = "lossless"
 comparator = "direct-pye57"
 fixture = "e57:default"
@@ -1619,8 +1619,8 @@ backend_version = "pye57 >=0.4.18,<0.5"
 backend_dependencies = ["pye57 >=0.4.18,<0.5", "libE57Format", "Xerces-C++", "pyquaternion"]
 transport_status = "qualified"
 status = "provisional"
-correctness_evidence = ["tests/codecs/test_e57.py"]
-benchmark_evidence = ["bench/BASELINE.md"]
+correctness_evidence = ["tests/codecs/test_e57.py", "tests/test_e57_multiscan_benchmark.py"]
+benchmark_evidence = ["docs/e57_multiscan_benchmark.md"]
 candidate_backends = []
 evidence_gaps = ["candidate comparison on all required toolchains"]
 
@@ -1628,7 +1628,7 @@ evidence_gaps = ["candidate comparison on all required toolchains"]
 codec_id = "e57"
 profile = "default"
 direction = "decode"
-settings = { scans = 1 }
+settings = { legacy_scans = 1, typed_scans = "ordered_multiple", typed_selection = "stored_point_range" }
 fidelity = "lossless"
 comparator = "direct-pye57"
 fixture = "e57:default"
@@ -1639,8 +1639,8 @@ backend_version = "pye57 >=0.4.18,<0.5"
 backend_dependencies = ["pye57 >=0.4.18,<0.5", "libE57Format", "Xerces-C++", "pyquaternion"]
 transport_status = "qualified"
 status = "provisional"
-correctness_evidence = ["tests/codecs/test_e57.py"]
-benchmark_evidence = ["bench/BASELINE.md"]
+correctness_evidence = ["tests/codecs/test_e57.py", "tests/test_e57_multiscan_benchmark.py"]
+benchmark_evidence = ["docs/e57_multiscan_benchmark.md"]
 candidate_backends = []
 evidence_gaps = ["candidate comparison on all required toolchains"]
 
