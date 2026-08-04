@@ -114,6 +114,7 @@ CODEC_CASE_DEFINITIONS = (
     _case("hloc_features", "path", ()),
     _case("hloc_matches", "path", ()),
     _case("ncore_v4", "directory", ()),
+    _case("euroc_dataset", "directory", ()),
     _case("zarr", "directory", ("tensors", "slices")),
     _case("tiff", "path", ()),
     _case("e57", "path", ()),
@@ -162,7 +163,7 @@ def _validate_case_definitions() -> None:
     if (len(BUFFER_CASES), len(PATH_CASES), len(DIRECTORY_CASES)) != (
         52,
         15,
-        6,
+        7,
     ):
         raise RuntimeError("cross-codec fixture partitions changed")
 

@@ -180,22 +180,6 @@ ImuSequence make_imu_sequence(
             "imu_sequence: sample count overflows field extents");
     require_matrix(angular_velocities, count, "angular_velocities");
     require_matrix(linear_accelerations, count, "linear_accelerations");
-    if (!imu_valid_angular_velocity_unit(angular_velocity_unit))
-        throw std::invalid_argument(
-            "imu_sequence: angular_velocity_unit must be "
-            "radians_per_second|degrees_per_second");
-    if (!imu_valid_linear_acceleration_unit(linear_acceleration_unit))
-        throw std::invalid_argument(
-            "imu_sequence: linear_acceleration_unit must be "
-            "meters_per_second_squared|standard_gravity");
-    if (!imu_valid_axis_frame(sensor_axis_frame))
-        throw std::invalid_argument(
-            "imu_sequence: sensor_axis_frame must be sensor|enu|ned");
-    if (!imu_valid_timestamp_reference(timestamp_reference))
-        throw std::invalid_argument(
-            "imu_sequence: timestamp_reference must be measurement");
-    validate_text(clock_domain, "clock_domain");
-
     ImuSequence sequence;
     sequence.sensor_id = sensor_id;
     sequence.n = count;
@@ -207,25 +191,9 @@ ImuSequence make_imu_sequence(
 
     {
         nb::gil_scoped_release release;
-        const int64_t *timestamps = timestamps_ns.data();
-        for (size_t index = 0; index < count; ++index) {
-            if (timestamps[index] < 0)
-                throw std::invalid_argument(
-                    "imu_sequence: timestamps must be nonnegative");
-            if (index != 0 && timestamps[index] <= timestamps[index - 1])
-                throw std::invalid_argument(
-                    "imu_sequence: timestamps must be strictly increasing");
-        }
-        for (size_t index = 0; index < count * 3; ++index) {
-            if (!std::isfinite(angular_velocities.data()[index]))
-                throw std::invalid_argument(
-                    "imu_sequence: angular velocity values must be finite");
-            if (!std::isfinite(linear_accelerations.data()[index]))
-                throw std::invalid_argument(
-                    "imu_sequence: linear acceleration values must be finite");
-        }
         if (count != 0) {
-            sequence.timestamps_ns.assign(timestamps, timestamps + count);
+            sequence.timestamps_ns.assign(
+                timestamps_ns.data(), timestamps_ns.data() + count);
             sequence.angular_velocities.assign(
                 angular_velocities.data(),
                 angular_velocities.data() + count * 3);
@@ -233,6 +201,7 @@ ImuSequence make_imu_sequence(
                 linear_accelerations.data(),
                 linear_accelerations.data() + count * 3);
         }
+        validate_imu_sequence(sequence);
     }
     return sequence;
 }
@@ -248,6 +217,53 @@ nb::ndarray<nb::numpy, const T> imu_sequence_view(
 }
 
 }  // namespace
+
+void validate_imu_sequence(
+    const ImuSequence &sequence, const char *context) {
+    const std::string prefix = std::string(context) + ": ";
+    if (sequence.n > std::numeric_limits<size_t>::max() / 3 ||
+        sequence.timestamps_ns.size() != sequence.n ||
+        sequence.angular_velocities.size() != sequence.n * 3 ||
+        sequence.linear_accelerations.size() != sequence.n * 3)
+        throw std::invalid_argument(
+            prefix + "inconsistent IMU sequence field lengths");
+    if (!imu_valid_angular_velocity_unit(
+            sequence.angular_velocity_unit))
+        throw std::invalid_argument(
+            prefix + "angular_velocity_unit must be "
+                     "radians_per_second|degrees_per_second");
+    if (!imu_valid_linear_acceleration_unit(
+            sequence.linear_acceleration_unit))
+        throw std::invalid_argument(
+            prefix + "linear_acceleration_unit must be "
+                     "meters_per_second_squared|standard_gravity");
+    if (!imu_valid_axis_frame(sequence.sensor_axis_frame))
+        throw std::invalid_argument(
+            prefix + "sensor_axis_frame must be sensor|enu|ned");
+    if (!imu_valid_timestamp_reference(
+            sequence.timestamp_reference))
+        throw std::invalid_argument(
+            prefix + "timestamp_reference must be measurement");
+    validate_text(sequence.clock_domain, "clock_domain");
+    for (size_t index = 0; index < sequence.n; ++index) {
+        const int64_t timestamp = sequence.timestamps_ns[index];
+        if (timestamp < 0)
+            throw std::invalid_argument(
+                prefix + "timestamps must be nonnegative");
+        if (index != 0 &&
+            timestamp <= sequence.timestamps_ns[index - 1])
+            throw std::invalid_argument(
+                prefix + "timestamps must be strictly increasing");
+    }
+    for (size_t index = 0; index < sequence.n * 3; ++index) {
+        if (!std::isfinite(sequence.angular_velocities[index]))
+            throw std::invalid_argument(
+                prefix + "angular velocity values must be finite");
+        if (!std::isfinite(sequence.linear_accelerations[index]))
+            throw std::invalid_argument(
+                prefix + "linear acceleration values must be finite");
+    }
+}
 
 void register_imu(nb::module_ &module) {
     nb::class_<ImuCalibration>(module, "ImuCalibration")

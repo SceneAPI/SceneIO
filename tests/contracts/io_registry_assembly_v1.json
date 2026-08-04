@@ -78,6 +78,7 @@
       "hloc_features": "5f3d5916bc1a61b0b736f4ab86d26ee935f61a3b6f47e68d3d17bfed05cb637f",
       "hloc_matches": "7382dc0f72455e7c5908804a3843ba392c494578edec1454c9655f74d8f24d79",
       "ncore_v4": "622ded1dbb9d1e0087d931df026d6443234b16d78c9a9ce62d380ab9f3630bde",
+      "euroc_dataset": "451e451cca3cf9248ceb8b7dd81412a5c41f90ae4da2ea52f5c9c3fc70e9a524",
       "zarr": "0b87633299a5bc87d8224c6e1abb3bf56372e70a4970b6aaa67deabe94f20bd5",
       "tiff": "0081bf989dd43ae44961631b2792838f8845a2188fe050147774b408b1cbe3a2",
       "e57": "86309dcebb17d7c3ca1e8bfea11647bf145b2e7aed9d9e7e392b3593cbdb2ebc",
@@ -429,6 +430,11 @@
         "write": "693b40d87e8218fcd4a44b6150a3bf87c7a76fa6e86b8241538cfde4a778d9f4",
         "inspect": "128e28b60dfc1f00eaf9d44e89938e095fc4cf916d51709ff20c1ca398b984f7"
       },
+      "euroc_dataset": {
+        "read": "6099d953524a533218e1e05b178d0eed9090e77cd0403e030e6e51412ded1821",
+        "write": "eb49fae91ddbe2727071b1538bae6f1332a490f8ca8853561fb70dfb1cb37b1a",
+        "inspect": "0f54acd3471f78d7f99c8876dbbca6a7dd5984f6774f163d6363816e095de354"
+      },
       "zarr": {
         "read": "e3a079c44a768ac72004c8bf9cb17598ff4b266b0547454644e60cedb1b5c153",
         "write": "da90b9fca56a93a61ed9acc03bb37edd2f62c600b00d108a2ebd1c5940dfae10",
@@ -472,8 +478,8 @@
     "last": "tests/test_points_binary.py::test_bad_magic_rejected"
   },
   "pytest_candidate_collection": {
-    "count": 4714,
-    "sorted_normalized_node_ids_sha256": "c3553c10a48dde35cd8169495dcce90931ff075f47b9eb49e09cd447cd913bce",
+    "count": 4738,
+    "sorted_normalized_node_ids_sha256": "b7ffca8ef3f48911ec561acb248e712becd42f09488969bff33b09c69e22c667",
     "collection_ignored_paths": [
       "tests/codecs/test_spz_niantic_oracle.py"
     ],
@@ -2113,7 +2119,31 @@
       "tests/records/test_imu.py::test_record_metadata_is_keyword_only",
       "tests/test_visual_inertial_records_contract.py::test_fc1_public_surface_and_registry_boundary",
       "tests/test_visual_inertial_records_contract.py::test_calibration_contract_matches_live_record",
-      "tests/test_visual_inertial_records_contract.py::test_sample_and_acquisition_equations_match_live_records"
+      "tests/test_visual_inertial_records_contract.py::test_sample_and_acquisition_equations_match_live_records",
+      "tests/codecs/test_euroc_dataset.py::test_versioned_profile_contract_matches_the_live_codec",
+      "tests/codecs/test_euroc_dataset.py::test_oracle_authored_directory_decodes_exact_calibration_and_samples",
+      "tests/codecs/test_euroc_dataset.py::test_public_detect_inspect_write_and_oracle_readback",
+      "tests/codecs/test_euroc_dataset.py::test_typed_selection_equals_slices_of_full_read",
+      "tests/codecs/test_euroc_dataset.py::test_mmap_is_released_and_child_views_remain_owned",
+      "tests/codecs/test_euroc_dataset.py::test_inspection_does_not_decode_image_payloads",
+      "tests/codecs/test_euroc_dataset.py::test_native_imu_buffer_sink_oracle_and_input_ownership",
+      "tests/codecs/test_euroc_dataset.py::test_native_imu_mmap_avoids_whole_file_python_bytes",
+      "tests/codecs/test_euroc_dataset.py::test_invalid_directory_rows_are_refused[mav0/cam0/data.csv-200,200.pgm-100,200.pgm-strictly increasing]",
+      "tests/codecs/test_euroc_dataset.py::test_invalid_directory_rows_are_refused[mav0/cam0/data.csv-200.pgm-../200.pgm-single path]",
+      "tests/codecs/test_euroc_dataset.py::test_invalid_directory_rows_are_refused[mav0/cam0/sensor.yaml-sensor_type: camera-sensor_type: lidar-sensor_type]",
+      "tests/codecs/test_euroc_dataset.py::test_invalid_directory_rows_are_refused[mav0/imu0/data.csv-150,10-90,10-strictly increasing]",
+      "tests/codecs/test_euroc_dataset.py::test_invalid_directory_rows_are_refused[mav0/imu0/data.csv-90,0,0.125,0.25,0.375,0.5,0.625-90,0,0.125,nan,0.375,0.5,0.625-non-finite]",
+      "tests/codecs/test_euroc_dataset.py::test_invalid_directory_rows_are_refused[mav0/cam0/sensor.yaml-  rows: 4-  rows: 3-4x4]",
+      "tests/codecs/test_euroc_dataset.py::test_missing_frame_and_noncontiguous_sensor_indices_are_refused",
+      "tests/codecs/test_euroc_dataset.py::test_selection_validation_and_empty_ranges_are_explicit",
+      "tests/codecs/test_euroc_dataset.py::test_failed_staging_preserves_existing_destination",
+      "tests/codecs/test_euroc_dataset.py::test_writer_refuses_metadata_the_directory_cannot_preserve",
+      "tests/codecs/test_euroc_dataset.py::test_yaml_subset_rejects_duplicate_and_unsupported_values",
+      "tests/codecs/test_euroc_dataset.py::test_native_imu_rejects_invalid_schema_and_conventions",
+      "tests/codecs/test_colmap_db.py::test_nonempty_rig_table_is_represented_and_handle_released",
+      "tests/test_io_capabilities.py::test_optional_provider_codecs_are_registered_and_available_in_test_env",
+      "tests/test_io_sequence_family_architecture.py::test_sequence_lower_inspector_uses_only_compiled_metadata_entry_points",
+      "tests/test_io_sequence_family_architecture.py::test_repository_coverage_keeps_sequence_inspection_ownership_exact"
     ],
     "removed_nodes": [
       "tests/codecs/test_compressed_ply.py::test_writer_body_is_byte_identical_to_pinned_playcanvas_vector",
@@ -2545,7 +2575,7 @@
     "hosted_run": 30762546918,
     "extension_capture": "build/apng-56-row-benchmark.json",
     "extension_base_commit": "3c07bcefabbd0d9be935ffd22c5ef1e7f4642321",
-    "rows": 73,
+    "rows": 74,
     "structural_projection_sha256": "6dde30b346753159801c5071ed56825ede67dfece77aaea6fcf859381976d766",
     "excluded_key_suffixes": [
       "_mbps",

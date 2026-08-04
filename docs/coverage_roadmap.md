@@ -1,7 +1,7 @@
 # SceneIO — comprehensive coverage roadmap & execution checklist
 
 > Current shipped and branch-local status is tracked in `format_coverage.md`.
-> The status markers below have been reconciled to the live 73-format registry;
+> The status markers below have been reconciled to the live 74-format registry;
 > broader checklist boxes remain open where a codec has not completed an
 > aspirational per-format or cross-platform gate. The authoritative
 > implementation sequence for the remaining formats is
@@ -13,25 +13,26 @@
 > The remaining 3D-CV representation/profile work has a finite reviewed scope
 > and completion matrix in
 > [`remaining_3dcv_profile_checklist.md`](remaining_3dcv_profile_checklist.md).
-> Its FC0 compatibility and provider-feasibility freeze is locally complete;
-> the live registry remains at 73 and FC1 visual-inertial records/I/O is the
-> first unimplemented slice.
+> Its FC0 compatibility and provider-feasibility freeze and the bounded FC1
+> visual-inertial record/dataset slice are locally complete. FC2 label maps are
+> the next finite implementation unit; hosted package validation for FC1B
+> remains user-triggered.
 > The bounded standards-based USD expansion is specified separately in
 > [`usd_3d_cv_implementation_plan.md`](usd_3d_cv_implementation_plan.md).
 > Coordinate-system closure is implemented independently of the remaining
-> aspirational format gates. All 73 built-ins are classified by the checked
+> aspirational format gates. All 74 built-ins are classified by the checked
 > manifest described in
 > [`coordinate_conventions.md`](coordinate_conventions.md); COLMAP is the
 > canonical explicit-conversion target, never an implicit label for unknown
 > source data.
 > The complementary
 > [`representation_normalization.md`](representation_normalization.md)
-> contract covers all 91 public representation classes with explicit
+> contract covers all 94 public representation classes with explicit
 > normalization, scaling, unit, coordinate-source, conversion, and refusal
 > rules. It changes no decoded values and keeps unknown/arbitrary scale honest.
 > Licensed fixture sourcing is tracked separately in
 > [`public_fixture_corpus.md`](public_fixture_corpus.md). Its machine contract
-> maps all 73 built-ins to 13 direct upstream formats and 60 deterministic
+> maps all 74 built-ins to 13 direct upstream formats and 61 deterministic
 > oracle-derived formats without introducing network-dependent CI.
 > The 2026-08-02 cross-platform correction changes no roadmap scope or format
 > capability. Local MSVC and clean Linux focused checks pass; the exact local
@@ -353,8 +354,9 @@ zero‑copy + convention tags.
 | `TensorDict` | named ndarrays + attrs | npz, HDF5, safetensors, zarr, parquet | ✅ |
 | `CameraRig` | lossless ragged intrinsics/distortion, exact K/R/P, extrinsics, operational/time/topic metadata + convention tags | OpenCV/ROS/Kalibr calib | ✅ |
 | `StateTrajectory` | int64-ns timestamps + p/q/v/gyro-bias/accel-bias with frame/unit/sign tags | EuRoC state CSV | ✅ |
-| `ImuCalibration` | sensor id/name/topic, metric sensor-to-reference transform, optional rate/noise/random-walk terms and int64-ns clock offset | visual-inertial datasets | ✅ compiled record; dataset adapter pending |
-| `ImuSequence` | int64-ns sample times plus float64 angular velocity/linear acceleration with unit, axis, and clock-domain tags | visual-inertial datasets | ✅ compiled record; dataset adapter pending |
+| `ImuCalibration` | sensor id/name/topic, metric sensor-to-reference transform, optional rate/noise/random-walk terms and int64-ns clock offset | visual-inertial datasets | ✅ compiled record; exercised by the bounded ASL adapter |
+| `ImuSequence` | int64-ns sample times plus float64 angular velocity/linear acceleration with unit, axis, and clock-domain tags | visual-inertial datasets | ✅ compiled record; native mapped CSV decode and direct sink |
+| `VisualInertialDataset` | camera rig, ordered lazy camera streams, exact camera clocks, IMU calibration/sample streams, and optional state trajectory | bounded ASL/EuRoC directories | ✅ format-neutral aggregate with typed sensor/time selection |
 | `PoseGraph` | typed SE3 nodes/edges, exact ids/fixed flags, XYZW transforms, symmetric 6×6 information + convention tags | g2o | ✅ |
 
 *(Done: `Reconstruction`, `GaussianCloud`, `PosedViewSet`, `Camera`.)*
@@ -379,6 +381,7 @@ Columns: **Ext/id** · **Record** · **Lib/oracle (license)** · **R/W** ·
 | ✅ BAL `.txt` / `.bal` | `Reconstruction` | UW specification + independent parser | R+W | angle-axis cameras, centered observations, strict canonical writer; generic `.txt` requires `format="bal"` |
 | ✅ TUM / ✅ KITTI | `PosedViewSet` | pure‑Python | R+W | done (retrofit fast_float) |
 | ✅ EuRoC `state_groundtruth` | `StateTrajectory` | independent stdlib CSV parser | R+W | exact int64 ns; p_RS_R, q_RS WXYZ, v_RS_R, b_w_RS_S, b_a_RS_S; mmap/sink/inspect/state ranges |
+| ✅ ASL/EuRoC dataset directory | `VisualInertialDataset` | PyYAML + stdlib CSV + SciPy; Kalibr/CamTools semantics | R+W, inspect, typed selection | repository-owned bounded `mav0/cam*`, `imu*`, and optional ground-truth layout; lazy image bytes; exact `T_BS`, SI units, and int64-ns clocks |
 | ✅ g2o | `PoseGraph` | independent strict parser + g2o BSD-3 source semantics | R+W | SE3:QUAT nodes/edges, FIX, XYZW, symmetric 6×6 information; mmap/sink/inspect |
 
 ### 3b. 3DGS / splat

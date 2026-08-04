@@ -64,7 +64,7 @@ def _public_representation_ids() -> set[str]:
 def test_contract_catalog_exactly_covers_public_representation_classes():
     assert REPRESENTATION_CONTRACT_SCHEMA_VERSION == 1
     assert set(REPRESENTATION_CONTRACTS) == _public_representation_ids()
-    assert len(REPRESENTATION_CONTRACTS) == 93
+    assert len(REPRESENTATION_CONTRACTS) == 94
 
 
 def test_every_contract_uses_a_registered_profile_and_live_evidence():

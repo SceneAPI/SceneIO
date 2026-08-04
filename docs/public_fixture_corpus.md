@@ -9,11 +9,11 @@ route.
 
 ## Current closure
 
-As of 2026-08-03, all **73 built-in formats** have a fixture route:
+As of 2026-08-03, all **74 built-in formats** have a fixture route:
 
 - **13 direct formats** use an unchanged, content-hashed upstream artifact
   that SceneIO read locally;
-- **60 derived formats** have a specified deterministic route from a
+- **61 derived formats** have a specified deterministic route from a
   CC0/CC-BY seed through a separately pinned independent writer/parser; and
 - large real datasets and broader format profiles remain optional validation
   inputs, never normal-CI downloads.
@@ -48,7 +48,7 @@ The DX.GL archive is the coherent anchor rather than merely another image. Its
 one camera model and one scene. That makes reconstruction, dense-map, feature,
 match, track, and storage derivations internally checkable.
 
-## Deterministic routes for the other 60 formats
+## Deterministic routes for the other 61 formats
 
 | Fixture family | Formats | Seed and independent qualification route |
 |---|---|---|
@@ -62,6 +62,7 @@ match, track, and storage derivations internally checkable.
 | Gaussian carriers | `compressed_ply`, `sog`, `ksplat`, `spz`, `splat` | real DX.GL Gaussian PLY → Niantic SPZ, SplatTransform, and gsply oracles |
 | Calibration | `opencv_yaml`, `opencv_xml`, `ros_camera_info`, `kalibr` | real Monado/Fire Actioncam rig values → Kalibr/CamTools and independent YAML/XML writers |
 | Trajectory/graph | `kitti`, `euroc_state`, `g2o` | permissive TUM/Monado poses → matrix oracle; deterministic finite velocity/bias values complete the 17-field EuRoC state record |
+| Visual-inertial dataset | `euroc_dataset` | pinned CC-BY-4.0 Monado ASL layout and deterministic values → PyYAML/stdlib CSV/SciPy interpretation plus Kalibr/CamTools transform semantics |
 | Sparse reconstruction | `colmap_sparse`, `colmap_sparse_txt`, `colmap_db`, `bundler`, `bal`, `nvm` | compact coherent model from DX.GL cameras/depth → COLMAP/pycolmap/RootBA and independent legacy writers |
 | Dense reconstruction | `dmb`, `colmap_mvs_depth`, `colmap_mvs_normal`, `colmap_mvs_consistency`, `colmap_fused_visibility` | DX.GL depth/normal/camera bundle → independent DMB/COLMAP dense layouts |
 | Local features/matches | `hloc_features`, `hloc_matches` | two CC0 views and the same image names used by the compact COLMAP model → HLoc/h5py layouts |
@@ -107,15 +108,13 @@ the current public records.
   contract.
 
 The remaining work is now implementation breadth rather than source hunting:
-first-class IMU/visual-inertial aggregates, rolling-shutter/exposure records,
 semantic/instance/panoptic maps, dynamic USD, multi-grid VDB, multi-scan E57,
 and TIFF multi-series/pyramids need explicit public models and conversion
 contracts before these broader samples can become positive round-trip cases.
 The bounded implementation and verification order is defined in
 [`remaining_3dcv_profile_checklist.md`](remaining_3dcv_profile_checklist.md).
-That plan's FC0 machine contract now freezes the proposed names and provider
-limits; it deliberately adds no fixture route because no new format has
-landed.
+That plan's FC0 machine contract freezes the remaining proposed names and
+provider limits; FC1B's `euroc_dataset` route is now checked separately.
 
 ## Validation rule
 

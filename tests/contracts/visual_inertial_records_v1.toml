@@ -1,10 +1,11 @@
 schema_version = 1
 contract_date = "2026-08-03"
-status = "implemented_records"
-builtin_count = 73
-public_symbols = ["ImuCalibration", "ImuSequence"]
+status = "dataset_qualified"
+builtin_count = 74
+public_symbols = ["ImuCalibration", "ImuSequence", "VisualInertialDataset"]
 core_factories = ["imu_calibration", "imu_sequence"]
-registry_policy = "Record-only FC1 does not add a codec id; euroc_dataset remains provisional."
+core_io_functions = ["_inspect_euroc_imu", "read_euroc_imu", "read_euroc_imu_time_range", "write_euroc_imu"]
+registry_policy = "The working euroc_dataset read/write/inspect adapter is registered as the 74th built-in."
 
 [imu_calibration]
 required_fields = [

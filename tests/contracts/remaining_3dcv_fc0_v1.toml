@@ -3,18 +3,17 @@ contract_date = "2026-08-03"
 status = "locally_qualified"
 purpose = "Freeze the stable SceneIO 0.2 boundary and record provider feasibility before the finite 3D-CV profile expansion."
 
-builtin_count = 73
-registry_policy = "No format id is reserved. Add euroc_dataset only with working read, write, inspect, fixture, capability, and wheel-smoke coverage."
+builtin_count = 74
+registry_policy = "euroc_dataset passed its read, write, inspect, fixture, capability, and wheel-smoke gate and is registered as the 74th built-in."
 public_api_policy = "Stable and additive: provisional names remain absent until their first exercising codec or projection is ready."
 global_partial_policy = "Keep the existing exactly-one-selector read_partial API; compound dataset, scan, raster, and grid selections use typed format-specific APIs."
 public_io_error_type = "sceneio.FormatError"
 record_error_types = ["sceneio.ContractViolation", "builtins.ValueError"]
 read_partial_signature = "(path, *, window=None, points=None, faces=None, mesh_id=None, primitive_id=None, states=None, frames=None, image_id=None, pair=None, tensors=None, slices=None, format: 'str | None' = None)"
 read_scene_signature = "(path, *, time: 'float | None' = None, prims=None, purposes=('default', 'render', 'proxy'), variants=None, load_payloads: 'bool' = True)"
-provisional_format_ids = ["euroc_dataset"]
+provisional_format_ids = []
+implemented_format_ids = ["euroc_dataset"]
 provisional_public_symbols = [
-  "ImuCalibration",
-  "ImuSequence",
   "InstanceMap",
   "LabelTaxonomy",
   "PanopticMap",
@@ -27,10 +26,10 @@ provisional_public_symbols = [
   "SemanticMap",
   "SparseGrid",
   "SparseVolumeSet",
-  "VisualInertialDataset",
 ]
+implemented_public_symbols = ["ImuCalibration", "ImuSequence", "VisualInertialDataset"]
 
-[[provisional_formats]]
+[[implemented_formats]]
 id = "euroc_dataset"
 family_module = "sceneio.io._registry.families.datasets"
 container_kind = "multi_file"
@@ -47,7 +46,7 @@ registration_gate = "Register only with working read, write, inspect, fixture ro
 
 [[design_decisions]]
 id = "visual_inertial"
-outcome = "approved_for_internal_prototype"
+outcome = "qualified"
 public_symbols = ["ImuCalibration", "ImuSequence", "VisualInertialDataset"]
 existing_symbols = ["CameraRig", "ImageSequence", "StateTrajectory"]
 required_contracts = [

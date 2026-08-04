@@ -19,32 +19,33 @@ mixed 3D-CV scene profile is in
 [`usd_3d_cv_implementation_plan.md`](usd_3d_cv_implementation_plan.md).
 
 Coordinate interpretation is tracked separately from payload coverage. The
-exact 73-format coordinate manifest, COLMAP canonical target, HLoc pixel-center
+exact 74-format coordinate manifest, COLMAP canonical target, HLoc pixel-center
 distinction, explicit conversion surface, and verification rules are in
 [`coordinate_conventions.md`](coordinate_conventions.md). Capability discovery,
 inspection, and decoded records expose the same immutable convention contract.
 The complementary
 [`representation_normalization.md`](representation_normalization.md) contract
-classifies all 91 public data representations by structural normalization,
+classifies all 94 public data representations by structural normalization,
 scale source/unit, coordinate source, supported conversion, refusal behavior,
 and executable evidence.
 
 Public data provenance is a separate checked contract. The
-[`public fixture corpus`](public_fixture_corpus.md) gives every one of the 73
+[`public fixture corpus`](public_fixture_corpus.md) gives every one of the 74
 built-ins exactly one primary route: 13 formats use unchanged content-hashed
-upstream artifacts that were read locally, while 60 use deterministic
+upstream artifacts that were read locally, while 61 use deterministic
 oracle-derived files from CC0/CC-BY seeds. Large real bundles and broader
 profiles are optional validation data; normal CI remains offline.
 
-The finite follow-on program completed its local FC0 decision freeze on
+The finite follow-on program completed its local FC1B visual-inertial slice on
 2026-08-03. The checked
 [`remaining_3dcv_fc0_v1.toml`](../tests/contracts/remaining_3dcv_fc0_v1.toml)
-contract pins the stable `read_partial`/`read_scene` signatures, the existing
-simple TIFF/E57/OpenVDB/USD projections, 15 non-public proposed record names,
-and one non-registered `euroc_dataset` id. Provider feasibility and exact local
-validation are recorded in the
-[`finite closure checklist`](remaining_3dcv_profile_checklist.md#63-fc0-local-qualification-result).
-This changes no current capability: the registry remains 73 formats.
+still pins the original FC0 decisions, while
+[`euroc_dataset_v1.toml`](../tests/contracts/euroc_dataset_v1.toml) freezes the
+now-public bounded ASL directory profile. `VisualInertialDataset` and
+`euroc_dataset` are qualified; 12 later profile records remain non-public.
+Implementation and local validation are recorded in the
+[`finite closure checklist`](remaining_3dcv_profile_checklist.md).
+The live registry now contains 74 formats.
 
 The 2026-08-02 closure commit `5387350` passes the full hosted compiler run
 `30738228920` plus every dedicated Linux, Windows, macOS, and GCC 10 job in CI
@@ -92,10 +93,10 @@ complete and format capabilities are unchanged.
 
 > **Independent-oracle contract:** `tests/contracts/io_oracles_v1.toml` now
 > makes that evidence a repository-wide I/O gate rather than only a
-> coordinate-review note. Every one of the 73 built-ins must retain a named
+> coordinate-review note. Every one of the 74 built-ins must retain a named
 > independent implementation or specification-derived parser, executable
 > decode evidence, and executable encode evidence when writable. The contract
-> cross-checks the live 73-readable/72-writable capability surface and the 15
+> cross-checks the live 74-readable/73-writable capability surface and the 15
 > formats whose comparison is semantic or quantization-bounded rather than a
 > false source-byte equality claim. USD and USDZ include their dedicated
 > Gaussian schema suite in addition to their mesh/scene suites. Gaussian
@@ -128,11 +129,26 @@ complete and format capabilities are unchanged.
 > compatibility gate and repository-wide Ruff pass; no codec values or native
 > implementation changed.
 
+> **FC1B EuRoC/ASL dataset checkpoint (2026-08-03, branch-local):** format 74
+> adds repository-owned detection, inspection, reading, typed sensor/time
+> selection, and deterministic transactional writing for the bounded ASL
+> directory layout. Camera images stay lazy and byte-preserved; native IMU CSV
+> decode accepts mapped buffers and owns its returned vectors, while IMU and
+> state writers stream directly to file sinks. Independent PyYAML, stdlib CSV,
+> SciPy rotation, Kalibr, and CamTools evidence verifies both directions and
+> `T_BS` semantics. On the generated 6.858 MB five-run MSVC fixture, public
+> mapped read reaches 319.7 MB/s with 0.118 MB traced overhead, inspection uses
+> 0.047 MB, and the bounded selection takes 2.081 ms versus about 16.65 ms for
+> the full public read. These are a new-format baseline, not a regression SLA.
+> The 94-representation, 74-format contracts agree, and the complete local
+> suite passes 4,753 tests with 16 documented skips. Hosted Linux/macOS package
+> validation remains user-triggered.
+
 <!-- sceneio-inventory-summary:start -->
-**Generated registry contract:** SceneIO has **73 built-in formats**: **64**
-single-file, **5** directory, and **4** multi-file containers. **73** are readable,
-**72** writable, and **73** inspectable; **37** formats expose **43** bounded partial
-selectors. **73** provide streaming reads and **70** provide streaming writes. The
+**Generated registry contract:** SceneIO has **74 built-in formats**: **64**
+single-file, **5** directory, and **5** multi-file containers. **74** are readable,
+**73** writable, and **74** inspectable; **37** formats expose **43** bounded partial
+selectors. **74** provide streaming reads and **71** provide streaming writes. The
 values come directly from `CANONICAL_BUILTIN_IDS` and `sceneio.capabilities()`.
 <!-- sceneio-inventory-summary:end -->
 
@@ -1211,6 +1227,7 @@ SoA, zero-copy to numpy/torch (DLPack), conventions carried as metadata.
 | `npy` | ndarray | R+W | **numpy** | pinned mapped native/C-order view; byte‑exact v1.0 writer (== np.save) |
 | `npz` | `TensorDict` | R+W | **numpy** | ZIP (stored+deflate) via repository-contained miniz 3.0.2; 12 dtypes |
 | `ncore_v4` | `NCoreDataset`, `NCoreDatasetData`, `NCoreComponentData`, `NCoreSemanticComponent` | R+W, inspect, component/frame/timestamp selection | pinned upstream **NCore** V4 writer+reader fixture, SceneIO output reopened by that reader, plus generated malformed cases | optional `sceneio[ncore]`; repository-owned Zarr-v2 directory/indexed-tar catalog, exact array decoder, and deterministic transactional writer; v1 profiles for poses, intrinsics, masks, cameras, lidar, radar, cuboids, point clouds, camera labels, and arbitrary components; exact `Image`, `Mask`, and bounded metric `PointCloud` payload projections retain metadata on the source NCore item; complete owned components write through Blosc-LZ4 chunks with a consistent sequence manifest, while partial inputs are refused |
+| `euroc_dataset` | `VisualInertialDataset` containing `CameraRig`, lazy `ImageSequence`, `ImuCalibration`, `ImuSequence`, and optional `StateTrajectory` children | R+W, inspect, camera/IMU/time selection | independent **PyYAML**, stdlib CSV, and **SciPy** parser plus pinned Kalibr/CamTools semantics | repository-owned bounded ASL directory adapter; exact `T_BS` sensor-to-body transforms, WXYZ quaternions, SI values, int64-ns clocks, mapped native IMU CSV, direct CSV sinks, lazy opaque image bytes, deterministic transactional copy, and explicit refusal of unsupported sensor/layout/metadata profiles |
 | `netpbm` | `Image` | R+W | pure‑Python | PGM P5/P2 + PPM P6/P3; 16‑bit big‑endian, comment‑tolerant |
 | `.xyz` | `PointCloud` | R+W | pure‑Python | headerless point-cloud text (fast_float parsing) |
 | `.pts` | `PointCloud` | R+W | independent parser | mandatory count header; XYZ/XYZI/XYZRGB/XYZIRGB; count validation |
@@ -1391,9 +1408,9 @@ schedule retained · ✅ compiler-instrumented native reliability workflow passe
 its complete and focused jobs at `a5e7fa4` · ⬜ randomized oracle-triangulated
 fuzzing · ✅ direct file-sink writes · ✅ bounded measured-path workers
 (XYZ/LAS/LAZ/EXR/PNG16/WebP lossless) · ✅ partial/lazy reads (`inspect` covers all
-54; bounded pixel/point/face/mesh/primitive/state/frame/COLMAP-image/COLMAP-pair/tensor
+74; bounded pixel/point/face/mesh/primitive/state/frame/COLMAP-image/COLMAP-pair/tensor
 subsets cover capable containers) · ⬜ GPU-via-DLPack (torch-cuda/cupy) · ✅
-expanded 72-format benchmark/oracles.
+expanded 74-format benchmark/oracles.
 
 ## Infrastructure & capabilities
 
@@ -1402,8 +1419,8 @@ expanded 72-format benchmark/oracles.
 | nanobind + scikit‑build‑core build | ✅ | abi3/cp312, `NB_STATIC`; `Python::SABIModule`, `nanobind-static-abi3`, and the platform suffix are configure-checked; local Windows emits `_core.pyd` against `python3.dll`, Ubuntu emits `_core.abi3.so` without libpython |
 | cibuildwheel release path | ✅ | one verified sdist feeds Linux/macOS/Windows wheels; locked build inputs, all-50 installed smoke, per-wheel inventory, and tag-only publication in `publish.yml`; final build-only run `30406706115` and downloaded-artifact inspection pass, while tagging and publication remain user-gated |
 | CI parity (oracles in CI) | ✅ | At `a5e7fa4`, normal Linux CI passes 2,914 tests with nine documented platform/oracle skips, the 50-codec performance guard, pinned GCC 10 portability, and the three-OS focused matrix |
-| Codec registry + `read`/`write`/`inspect`/`read_partial`/`detect` | ✅ | inspection covers all 73; bounded partial hooks are capability-specific |
-| Repo-maintained stable codec adapters | ✅ | all 73 adapters live in `src/cpp` / `src/sceneio`; 70 writable adapters stream directly to paths, RTMV is read-only, and the two AVIF writers use the provider's completed output buffer; optional optimized storage/parser providers remain separately installed |
+| Codec registry + `read`/`write`/`inspect`/`read_partial`/`detect` | ✅ | inspection covers all 74; bounded partial hooks are capability-specific |
+| Repo-maintained stable codec adapters | ✅ | all 74 adapters live in `src/cpp` / `src/sceneio`; 71 writable adapters stream directly to paths, RTMV is read-only, and the two AVIF writers use the provider's completed output buffer; optional optimized storage/parser providers remain separately installed |
 | Offline native-source closure | ✅ | all selected native sources—including libwebp 1.5.0—are stored in-tree and the production CMake graph has no native-source fetch; local exact-tree proof plus final MSVC, GCC 10, and AppleClang sdist-to-wheel execution and artifact inspection pass |
 | Zero‑copy numpy + torch (DLPack) | ✅ | validated per codec |
 | Conventions‑as‑metadata + write guards | ✅ | record‑don't‑convert enforced |
@@ -1449,6 +1466,7 @@ incremental.
 | `compressed_ply` | file | yes | yes | yes | points | yes | yes | yes | - |
 | `dmb` | file | yes | yes | yes | window | yes | yes | no | - |
 | `e57` | file | yes | yes | yes | - | yes | yes | no | pye57 |
+| `euroc_dataset` | multi_file | yes | yes | yes | - | yes | yes | no | - |
 | `euroc_state` | file | yes | yes | yes | states | yes | yes | no | - |
 | `exr` | file | yes | yes | yes | - | yes | yes | no | - |
 | `flo` | file | yes | yes | yes | window | yes | yes | no | - |

@@ -2,7 +2,7 @@
 
 Measures, per codec, encode (write) + decode (read) throughput (MB/s over the raw
 payload) and peak Python allocation (tracemalloc), for sceneio._core vs the oracle
-library where one exists, on representative payloads for all 71 codecs. Read
+library where one exists, on representative payloads for all 74 codecs. Read
 measurements retain the legacy whole-file bytes/copy-decode path beside the
 public registry mmap path, so their peak delta captures the input copy O1
 removes and, for NPY/FLO, the decoded-array copy O2 removes. Write measurements
@@ -63,6 +63,7 @@ from bench.io_bench.fixtures import (
 from bench.io_bench.fixtures import sequences as sequence_fixtures
 from bench.io_bench.fixtures import splats as splat_fixtures
 from bench.io_bench.fixtures.containers import _ncore_directory_fixture
+from bench.io_bench.fixtures.datasets import _euroc_dataset_fixture
 from bench.io_bench.model import DirectorySpec
 from bench.io_bench.model import PathSpec as PathSpec
 from bench.io_bench.model import Spec as Spec
@@ -784,6 +785,24 @@ def _directory_specs(reconstruction, scale, root):
             assert_partial=_assert_ncore_partial_equal,
         ),
         DirectorySpec(
+            "euroc_dataset",
+            partial(_euroc_dataset_fixture, root, scale),
+            lambda value, path: sceneio.write(
+                value, path, format="euroc_dataset"
+            ),
+            sceneio.read_euroc_dataset,
+            lambda record, payload: payload,
+            partial=lambda path: sceneio.read_euroc_dataset(
+                path,
+                cameras=("cam0",),
+                imus=[],
+                frame_range=(0, 1),
+                include_ground_truth=False,
+            ),
+            assert_read=_assert_euroc_dataset_equal,
+            assert_partial=_assert_euroc_dataset_partial,
+        ),
+        DirectorySpec(
             "rtmv",
             partial(
                 sequence_fixtures._rtmv_directory_fixture,
@@ -831,6 +850,35 @@ def _assert_ncore_dataset_equal(expected, actual):
         assert set(left.arrays) == set(right.arrays)
         for name in sorted(left.arrays):
             np.testing.assert_array_equal(left.arrays[name], right.arrays[name])
+
+
+def _assert_euroc_dataset_equal(expected, actual):
+    assert expected.camera_names == actual.camera_names
+    assert expected.imu_names == actual.imu_names
+    assert expected.camera_rates_hz == actual.camera_rates_hz
+    for left, right in zip(
+        expected.camera_timestamps_ns,
+        actual.camera_timestamps_ns,
+        strict=True,
+    ):
+        np.testing.assert_array_equal(left, right)
+    for left, right in zip(expected.imu_streams, actual.imu_streams, strict=True):
+        np.testing.assert_array_equal(left.timestamps_ns, right.timestamps_ns)
+        np.testing.assert_array_equal(
+            left.angular_velocities,
+            right.angular_velocities,
+        )
+        np.testing.assert_array_equal(
+            left.linear_accelerations,
+            right.linear_accelerations,
+        )
+
+
+def _assert_euroc_dataset_partial(_expected, actual):
+    assert actual.camera_names == ("cam0",)
+    assert actual.imu_names == ()
+    assert actual.num_camera_frames == 1
+    assert not actual.has_ground_truth
 
 
 def _assert_ncore_partial_equal(expected, actual):
@@ -3079,7 +3127,7 @@ def _run_benchmark(args, tmp):
 
             def _directory_read(path=path, codec_id=spec.id, path_read=spec.path_read):
                 if args.cold_cache:
-                    for entry in path.iterdir():
+                    for entry in path.rglob("*"):
                         if entry.is_file():
                             _evict_file_cache(entry)
                 if path_read is not None:
@@ -3092,7 +3140,7 @@ def _run_benchmark(args, tmp):
 
             def _directory_inspect(path=path, codec_id=spec.id):
                 if args.cold_cache:
-                    for entry in path.iterdir():
+                    for entry in path.rglob("*"):
                         if entry.is_file():
                             _evict_file_cache(entry)
                 return sceneio.inspect(path, format=codec_id)

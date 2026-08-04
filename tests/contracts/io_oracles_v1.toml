@@ -3,9 +3,9 @@ inventory_source = "sceneio.io._builtin_manifest.CANONICAL_BUILTIN_IDS"
 capability_source = "sceneio.capabilities"
 ledger_source = "tests/contracts/coordinate_conversions_v1.toml"
 ledger_table = "format_verification"
-expected_builtin_count = 73
-expected_readable_count = 73
-expected_writable_count = 72
+expected_builtin_count = 74
+expected_readable_count = 74
+expected_writable_count = 73
 read_only_formats = ["rtmv"]
 
 # A codec is qualified only when its normal test run executes evidence in both
@@ -113,6 +113,7 @@ hdf5 = { decode = "test_generic_hdf5_reads_independent_h5py_fixture", encode = "
 hloc_features = { decode = "test_hloc_features_reads_official_layout_from_h5py", encode = "test_hloc_feature_write_matches_h5py_layout_and_roundtrips" }
 hloc_matches = { decode = "test_hloc_matches_reads_official_layout_and_reverses_to_native_order", encode = "test_hloc_match_write_matches_h5py_and_preserves_mixed_scores" }
 ncore_v4 = { decode = "test_pinned_upstream_standard_profile_fixture_is_accepted_exactly", encode = "test_writer_randomized_mixed_dtype_chunk_differential" }
+euroc_dataset = { decode = "test_oracle_authored_directory_decodes_exact_calibration_and_samples", encode = "test_public_detect_inspect_write_and_oracle_readback" }
 zarr = { decode = "test_zarr_reads_oracle_written_store", encode = "test_zarr_v2_v3_roundtrip_and_independent_oracle" }
 tiff = { decode = "test_sceneio_reads_oracle_tiff_endianness_exactly", encode = "test_sceneio_tiff_write_is_exact_for_independent_oracle" }
 e57 = { decode = "test_sceneio_reads_direct_upstream_e57_exactly", encode = "test_sceneio_e57_write_is_exact_for_direct_upstream_reader" }

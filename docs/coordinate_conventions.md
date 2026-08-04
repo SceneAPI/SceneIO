@@ -12,7 +12,7 @@ The machine-checked inventories are:
   gives every public in-memory representation a versioned structural,
   scaling, coordinate-source, conversion, and refusal contract;
 - [`tests/contracts/coordinate_systems_v1.toml`](../tests/contracts/coordinate_systems_v1.toml),
-  which covers all 73 built-in format ids in registry order; and
+  which covers all 74 built-in format ids in registry order; and
 - [`tests/contracts/coordinate_conversions_v1.toml`](../tests/contracts/coordinate_conversions_v1.toml),
   which pins the qualified record types, transform direction and units,
   converted fields, preserved fields, refusal rules, and a registry-ordered
@@ -112,6 +112,7 @@ above is the exact per-id source of truth.
 | fixed | camera, depth, image, spatial | `rtmv` |
 | file-declared | spatial | `ply_mesh`, `las`, `laz`, `e57` |
 | file-declared | camera, spatial | `usd`, `usdz` |
+| file-declared | camera, image, trajectory | `euroc_dataset` |
 | file-declared | tensor | `ncore_v4` |
 | file-declared | spatial, tensor | `openvdb` |
 | unspecified | spatial | `gaussian_ply`, `compressed_ply`, `sog`, `ksplat`, `obj`, `stl`, `off`, `ply`, `pcd`, `spz`, `xyz`, `pts`, `splat` |
@@ -124,6 +125,26 @@ Ordinary reads do not silently convert source-native records. The established
 Bundler, BAL, NVM, and OpenMVG already decode into SceneIO's canonical COLMAP
 `Reconstruction` representation. Their format parity suites verify that
 normalization against independent parsers or project oracles.
+
+### ASL/EuRoC visual-inertial datasets
+
+The bounded `euroc_dataset` adapter preserves the file-declared sensor graph.
+In the ASL schema, `T_BS` maps coordinates from sensor frame `S` into body
+frame `B`. SceneIO therefore stores camera rows as `camera_to_reference` and
+IMU rows as `sensor_to_reference`, with the shared reference frame named
+`rig`; it does not invert either transform during ordinary I/O. Optional
+ground truth preserves `p_RS_R` and Hamilton `q_RS` in WXYZ order as a
+sensor-to-reference trajectory.
+
+Translations use metres, angular velocity uses radians per second, linear
+acceleration uses metres per second squared, and sample instants are exact
+signed `int64` nanoseconds. A camera clock offset follows
+`reference_time = camera_time + timeshift_cam_imu`. The adapter never aligns,
+interpolates, rescales, or relabels clocks implicitly, and its writer rejects
+records whose frame, unit, quaternion, epoch, or clock conventions the ASL
+directory cannot preserve. PyYAML, the Python CSV parser, SciPy rotations,
+Kalibr semantics, and CamTools equations provide independent executable and
+reference evidence.
 
 ## File-to-record and record-to-file directions
 
@@ -139,7 +160,7 @@ two I/O directions from the separate public conversion API. Its vocabulary is:
 | either | `not_applicable` | the payload has no independent coordinate transform, for example index-only matches |
 | record to file | `unsupported` | the registry has no writer; currently this is only the read-only RTMV dataset adapter |
 
-All 73 entries name their independent oracle and the executable parity suite
+All 74 entries name their independent oracle and the executable parity suite
 that exercises it. The contract test requires exact registry order, no missing
 or duplicate id, agreement with the static coordinate status and direct
 conversion policy, agreement with actual writer availability, an existing
@@ -290,8 +311,8 @@ is `supported` only where the public decoded record is directly convertible;
 
 `tests/test_coordinate_systems.py` and the per-codec parity suites enforce:
 
-- exact 73-format manifest coverage and registry order;
-- exact 73-format forward/backward directionality and one independent-oracle
+- exact 74-format manifest coverage and registry order;
+- exact 74-format forward/backward directionality and one independent-oracle
   evidence path per format;
 - executable cross-repository decode of all six legacy Gaussian formats and
   cross-repository encode of compressed PLY, SOG, and SPZ, comparing decoded

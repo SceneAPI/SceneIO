@@ -77,10 +77,10 @@ artifacts vocabulary — wire identity unchanged.
 ### Compiled format I/O — `read` / `write` / `inspect` / `read_partial`
 
 <!-- sceneio-inventory-summary:start -->
-**Generated registry contract:** SceneIO has **73 built-in formats**: **64**
-single-file, **5** directory, and **4** multi-file containers. **73** are readable,
-**72** writable, and **73** inspectable; **37** formats expose **43** bounded partial
-selectors. **73** provide streaming reads and **70** provide streaming writes. The
+**Generated registry contract:** SceneIO has **74 built-in formats**: **64**
+single-file, **5** directory, and **5** multi-file containers. **74** are readable,
+**73** writable, and **74** inspectable; **37** formats expose **43** bounded partial
+selectors. **74** provide streaming reads and **71** provide streaming writes. The
 values come directly from `CANONICAL_BUILTIN_IDS` and `sceneio.capabilities()`.
 <!-- sceneio-inventory-summary:end -->
 
@@ -127,7 +127,7 @@ canonical = sceneio.convert_coordinates(record)  # explicit, never implicit I/O
 COLMAP `(0.5, 0.5)` keypoints, and the writers refuse a mismatch instead of
 silently shifting data. See
 [`docs/coordinate_conventions.md`](docs/coordinate_conventions.md) for the
-73-format inventory, conversion limits, and verification contract.
+74-format inventory, conversion limits, and verification contract.
 
 Every public in-memory data representation also has a versioned normalization
 and scaling contract:
@@ -138,7 +138,7 @@ assert contract.profile.id == "gaussian_cloud"
 assert contract.coordinates == "unknown"  # activation metadata is not a frame
 ```
 
-The exact 91-record catalog, standard policy vocabulary, unit equations, and
+The exact 94-record catalog, standard policy vocabulary, unit equations, and
 refusal rules are documented in
 [`docs/representation_normalization.md`](docs/representation_normalization.md).
 
@@ -166,6 +166,24 @@ SceneIO record is available only for an exactly representable payload; the
 source `NCoreItem` remains the authority for timestamps, frames, and metadata.
 Writers accept complete `NCoreDataset` or `NCoreDatasetData` values, preserve
 exact array dtypes and group metadata, and refuse partial component selections.
+
+ASL/EuRoC visual-inertial directories expose calibrated camera and IMU
+streams without decoding image payloads eagerly:
+
+```python
+dataset = sceneio.read_euroc_dataset("mav-sequence")
+window = sceneio.read_euroc_dataset(
+    "mav-sequence",
+    cameras=("cam0",),
+    imus=("imu0",),
+    time_range_ns=(1_400_000_000_000_000_000, 1_400_000_001_000_000_000),
+)
+sceneio.write_euroc_dataset(dataset, "mav-sequence-copy")
+```
+
+Camera image bytes remain opaque and lazy. Sample times are exact `int64`
+nanoseconds, IMU values retain SI units, and the official ASL `T_BS`
+sensor-to-body direction is preserved without implicit clock alignment.
 
 The AVIF profile uses Pillow 12.3's optimized libavif provider with libaom
 encoding and dav1d decoding. SceneIO owns detection, mmap lifetime, record

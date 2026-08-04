@@ -33,6 +33,11 @@ from sceneio.coordinates import (
 )
 from sceneio.io._arrow import write_arrow_ipc, write_parquet
 from sceneio.io._depth import DepthEncoding, inspect_depth, read_depth, write_depth
+from sceneio.io._euroc_dataset import (
+    VisualInertialDataset,
+    read_euroc_dataset,
+    write_euroc_dataset,
+)
 from sceneio.io._hdf5 import HlocFeatureStore, HlocMatchStore
 from sceneio.io._inspection import inspect_codec
 from sceneio.io._inspectors.model import ArrayInspection, Inspection
@@ -787,6 +792,7 @@ __all__ = [
     "SceneGraph",
     "StateTrajectory",
     "TensorDict",
+    "VisualInertialDataset",
     "VolumeAsset",
     "capabilities",
     "codecs",
@@ -804,6 +810,7 @@ __all__ = [
     "project_ncore_item",
     "read",
     "read_depth",
+    "read_euroc_dataset",
     "read_flow",
     "read_ncore_component",
     "read_ncore_semantic_component",
@@ -814,6 +821,7 @@ __all__ = [
     "write_arrow_ipc",
     "write_colmap_db",
     "write_depth",
+    "write_euroc_dataset",
     "write_flow",
     "write_ncore_v4",
     "write_openvdb",

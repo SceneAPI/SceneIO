@@ -1,5 +1,5 @@
 schema_version = 1
-builtins = 73
+builtins = 74
 
 # Test-only repository coverage; runtime extensions are intentionally exempt.
 
@@ -540,6 +540,14 @@ source_suite = "tests/codecs/test_ncore_v4.py"
 documentation_row = "docs/format_coverage.md"
 inspection_source = "src/sceneio/io/_ncore/schema.py"
 wheel_smoke_case = "_ncore_v4"
+
+[[codec]]
+id = "euroc_dataset"
+benchmark_case = "euroc_dataset"
+source_suite = "tests/codecs/test_euroc_dataset.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_euroc_dataset/codec.py"
+wheel_smoke_case = "_euroc_dataset"
 
 [[codec]]
 id = "zarr"

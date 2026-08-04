@@ -31,7 +31,7 @@ from sceneio.io._registry.detection import detect_path as _detect_path
 from sceneio.io._registry.families.arrays import build_array_codecs
 from sceneio.io._registry.families.calibration import CALIBRATION_CODECS
 from sceneio.io._registry.families.containers import CONTAINER_CODECS
-from sceneio.io._registry.families.datasets import DATASET_CODECS
+from sceneio.io._registry.families.datasets import build_dataset_codecs
 from sceneio.io._registry.families.dense import DENSE_CODECS
 from sceneio.io._registry.families.images import IMAGE_CODECS
 from sceneio.io._registry.families.meshes import MESH_CODECS
@@ -229,12 +229,15 @@ _define_builtin_family("meshes", MESH_CODECS)
 _define_builtin_family("points", POINT_CODECS)
 _define_builtin_family("calibration", CALIBRATION_CODECS)
 _define_builtin_family("containers", CONTAINER_CODECS)
-_define_builtin_family("datasets", DATASET_CODECS)
 _define_builtin_family("dense", DENSE_CODECS)
 _define_builtin_family("images", IMAGE_CODECS)
 _IMAGE_FRAME_ACCESS = ImageFrameAccess(
     extensions=_registered_image_extensions,
     inspect=_inspect_registered_path,
+)
+_define_builtin_family(
+    "datasets",
+    build_dataset_codecs(_IMAGE_FRAME_ACCESS),
 )
 _define_builtin_family(
     "sequences",

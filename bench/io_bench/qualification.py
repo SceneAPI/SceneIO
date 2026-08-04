@@ -343,6 +343,11 @@ COMPARISON_QUALIFICATIONS = MappingProxyType(
             "tools/verify_ncore_v4_writer_oracle.py",
             runner_kind="directory",
         ),
+        "euroc_dataset": _exemption(
+            "independent stdlib/PyYAML/SciPy parity and generated directory timing",
+            "tests/codecs/test_euroc_dataset.py",
+            runner_kind="directory",
+        ),
         "zarr": _timed(
             "zarr-python",
             "bench/io_bench/oracles/containers.py",

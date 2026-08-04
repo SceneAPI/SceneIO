@@ -4861,6 +4861,84 @@
       }
     },
     {
+      "id": "euroc_dataset",
+      "extensions": [],
+      "magic_hex": [],
+      "filenames": [],
+      "is_directory": true,
+      "dir_marker": "mav0",
+      "container_kind": "multi_file",
+      "datatype": "visual_inertial_dataset",
+      "record": {
+        "module": "sceneio.io",
+        "qualname": "VisualInertialDataset"
+      },
+      "selectors": [],
+      "streams_read": true,
+      "streams_write": true,
+      "lossy": false,
+      "requires_features": [],
+      "supported_features": [
+        "asl_directory_profile",
+        "multi_camera",
+        "multi_imu",
+        "lazy_encoded_images",
+        "exact_int64_nanosecond_timestamps",
+        "camera_intrinsics_and_distortion",
+        "sensor_to_body_extrinsics",
+        "imu_noise_calibration",
+        "optional_ground_truth_states",
+        "typed_sensor_and_time_selection",
+        "metadata_only_inspect",
+        "direct_streaming_csv_write",
+        "transactional_directory_write"
+      ],
+      "unsupported_features": [
+        "implicit_clock_alignment",
+        "image_transcoding",
+        "non_camera_or_imu_sensors",
+        "arbitrary_yaml"
+      ],
+      "capabilities": {
+        "format": "euroc_dataset",
+        "datatype": "visual_inertial_dataset",
+        "record_type": "VisualInertialDataset",
+        "extensions": [],
+        "filenames": [],
+        "container_kind": "multi_file",
+        "available": true,
+        "can_read": true,
+        "can_write": true,
+        "can_inspect": true,
+        "partial_selectors": [],
+        "streams_read": true,
+        "streams_write": true,
+        "lossy": false,
+        "requires_features": [],
+        "supported_features": [
+          "asl_directory_profile",
+          "multi_camera",
+          "multi_imu",
+          "lazy_encoded_images",
+          "exact_int64_nanosecond_timestamps",
+          "camera_intrinsics_and_distortion",
+          "sensor_to_body_extrinsics",
+          "imu_noise_calibration",
+          "optional_ground_truth_states",
+          "typed_sensor_and_time_selection",
+          "metadata_only_inspect",
+          "direct_streaming_csv_write",
+          "transactional_directory_write"
+        ],
+        "unsupported_features": [
+          "implicit_clock_alignment",
+          "image_transcoding",
+          "non_camera_or_imu_sensors",
+          "arbitrary_yaml"
+        ]
+      }
+    },
+    {
       "id": "zarr",
       "extensions": [
         ".zarr"

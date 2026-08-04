@@ -1,11 +1,11 @@
 # Finite 3D-CV profile closure checklist
 
-- **Status:** FC0 and the bounded FC1A record/acquisition slice are locally
-  complete as of 2026-08-03. `ImuCalibration` and `ImuSequence` are compiled
-  public records, and `ImageSequence` carries exact optional acquisition
-  timing. `VisualInertialDataset`, the `euroc_dataset` id, and FC2-FC7 remain
-  provisional and non-public.
-- **Baseline:** 73 built-in formats, each mapped to a licensed direct fixture
+- **Status:** FC0 and the bounded FC1 visual-inertial slice are locally
+  complete as of 2026-08-03. `ImuCalibration`, `ImuSequence`, and
+  `VisualInertialDataset` are public, `ImageSequence` carries exact optional
+  acquisition timing, and `euroc_dataset` is built-in format 74. FC2-FC7
+  remain planned.
+- **Baseline:** 74 built-in formats, each mapped to a licensed direct fixture
   or deterministic oracle-derived route.
 - **Purpose:** close the remaining 3D-computer-vision representation and
   bounded-profile gaps without turning SceneIO into a general scientific,
@@ -18,8 +18,10 @@
   freezes the stable signatures, provisional names, provider observations,
   legacy projections, and registration gate used by FC0.
   [`visual_inertial_records_v1.toml`](../tests/contracts/visual_inertial_records_v1.toml)
-  freezes the implemented FC1A fields, units, vocabularies, equations, and
-  73-format registry boundary.
+  freezes the implemented FC1A fields, units, vocabularies, and equations.
+  [`euroc_dataset_v1.toml`](../tests/contracts/euroc_dataset_v1.toml) freezes
+  the qualified FC1B layout, transform, timing, selection, write, and oracle
+  contract.
 
 ## 1. Review outcome
 
@@ -95,7 +97,7 @@ authorization, pagination, and retries are not applicable.
 
 ### Included profiles
 
-- [ ] One ASL/EuRoC-style visual-inertial directory profile containing camera
+- [x] One ASL/EuRoC-style visual-inertial directory profile containing camera
       streams, camera and IMU calibration, IMU samples, and optional ground
       truth.
 - [x] Exact per-frame exposure and rolling-readout metadata on
@@ -439,52 +441,51 @@ profiles cannot preserve it.
 
 ### 7.4 `VisualInertialDataset` aggregate
 
-- [ ] Store one `CameraRig`, ordered IMU calibrations, ordered named camera
+- [x] Store one `CameraRig`, ordered IMU calibrations, ordered named camera
       streams, ordered IMU streams, and optional `StateTrajectory` ground truth
       without copying child arrays.
-- [ ] Validate sensor ids/topics against the rig and reject duplicate names.
-- [ ] Declare one timestamp epoch and clock domain per stream; do not align or
+- [x] Validate sensor ids/topics against the rig and reject duplicate names.
+- [x] Declare one timestamp epoch and clock domain per stream; do not align or
       interpolate clocks implicitly.
-- [ ] Carry dataset-root-relative image names as inert paths.
-- [ ] Define partial selection by camera, IMU sensor, frame range, and
+- [x] Carry dataset-root-relative image names as inert paths.
+- [x] Define partial selection by camera, IMU sensor, frame range, and
       nanosecond interval on the format-specific dataset API; do not extend the
       global `read_partial` signature for compound sensor selection.
-- [ ] Test child lifetime after the aggregate and local path handles leave
+- [x] Test child lifetime after the aggregate and local path handles leave
       scope.
 
-### 7.5 provisional `euroc_dataset` directory adapter
+### 7.5 `euroc_dataset` directory adapter
 
-- [ ] Implement repository-owned layout parsing in
-      `src/sceneio/io/_euroc_dataset.py` and register it under the dataset
+- [x] Implement repository-owned layout parsing in
+      `src/sceneio/io/_euroc_dataset/` and register it under the dataset
       family.
-- [ ] Support the bounded ASL layout: `mav0/cam*/data.csv`, image paths,
+- [x] Support the bounded ASL layout: `mav0/cam*/data.csv`, image paths,
       `sensor.yaml`, `mav0/imu*/data.csv`, and optional state ground truth.
-- [ ] Preserve calibrated intrinsics, distortion, camera/IMU extrinsics,
+- [x] Preserve calibrated intrinsics, distortion, camera/IMU extrinsics,
       sensor rate/noise/random-walk metadata, clock offsets, and nanosecond
       timestamps.
-- [ ] Write a deterministic bounded directory with relative paths and atomic
+- [x] Write a deterministic bounded directory with relative paths and atomic
       destination replacement.
-- [ ] Keep image bytes opaque; do not transcode or add a video path.
-- [ ] Add `inspect` counts, time ranges, sensor names, resolutions, and presence
+- [x] Keep image bytes opaque; do not transcode or add a video path.
+- [x] Add `inspect` counts, time ranges, sensor names, resolutions, and presence
       flags without reading image payloads.
-- [ ] Add camera/frame/time/IMU selection to the format-specific dataset API
+- [x] Add camera/frame/time/IMU selection to the format-specific dataset API
       and verify it against full reads.
-- [ ] Reject unsupported sensor types, duplicate timestamps, missing files,
+- [x] Reject unsupported sensor types, duplicate timestamps, missing files,
       ambiguous transforms, and inconsistent CSV/YAML rows.
 
 ### 7.6 FC1 oracle and data
 
-- [ ] Use permissively licensed TUM-VI and Monado layouts as hosted read
-      sources; keep official EuRoC bytes excluded from redistribution.
-- [ ] Use Fire Actioncam `meta.npz` only to qualify exposure/readout mapping,
+- [x] Use the pinned CC-BY-4.0 Monado ASL layout as the public fixture source;
+      keep official EuRoC bytes excluded from redistribution and hosted use.
+- [x] Use Fire Actioncam `meta.npz` only to qualify exposure/readout mapping,
       with NumPy as the independent parser.
-- [ ] Build a tiny deterministic ASL directory from the pinned permissive
+- [x] Build a tiny deterministic ASL directory from the pinned permissive
       values for offline write/read tests.
-- [ ] Compare YAML calibration with Kalibr/CamTools equations and CSV values
+- [x] Compare YAML calibration with Kalibr/CamTools equations and CSV values
       with an independent stdlib/NumPy parser.
-- [x] Add hand-computable clock-offset, quaternion-order, and acquisition
-      direction fixtures for the FC1A records. Dataset pose-direction fixtures
-      remain part of FC1B.
+- [x] Add hand-computable clock-offset, quaternion-order, acquisition
+      direction, and dataset pose-direction fixtures.
 
 ### FC1A exit
 
@@ -499,14 +500,53 @@ profiles cannot preserve it.
 
 ### FC1 exit
 
-- [ ] `euroc_dataset` reads, writes, inspects, and partially selects the bounded
+- [x] `euroc_dataset` reads, writes, inspects, and partially selects the bounded
       directory profile.
-- [ ] All temporal fields have exact units and reference semantics.
-- [ ] Existing sequence codecs remain byte/value compatible.
-- [ ] The fixture, coordinate, representation, registry, and documentation
-      contracts agree on 74 built-ins if the provisional dataset id passes
-      FC0; otherwise the aggregate remains an explicit high-level API and the
-      registry stays at 73.
+- [x] All temporal fields have exact units and reference semantics.
+- [x] Existing sequence codecs remain byte/value compatible.
+- [x] The fixture, coordinate, representation, registry, and documentation
+      contracts agree on 74 built-ins.
+
+### 7.7 FC1B local qualification result
+
+- The rebuilt MSVC extension exposes native mapped-buffer IMU inspection,
+  full/time-range reads, and direct sink writing. Public discovery, inspection,
+  read/write, typed selection, installed-wheel smoke, coordinate,
+  representation, fixture, oracle, benchmark, architecture, and compatibility
+  contracts agree on the 74th format.
+- The final complete local run passes 4,753 tests with 16 documented
+  optional/platform skips in 411.87 seconds. Repository-wide Ruff, the
+  generated documentation contract, and `git diff --check` pass.
+- The five-run generated 6.858 MB directory baseline records 319.7 MB/s public
+  mapped read with 0.118 MB traced overhead, 0.047 MB inspection allocation,
+  and a 2.081 ms bounded selection versus about 16.65 ms for full public read.
+  It is an initial format baseline, not a fixed numeric threshold.
+- Linux/macOS wheel and hosted Monado validation remain pending and
+  user-gated; no hosted action was triggered for FC1B.
+
+### 7.8 FC1B three-lens review
+
+- **Lifetime/resource:** each native call pins its contiguous input until GIL-
+  released parsing completes, decoded IMU vectors own their storage, and the
+  Python mapping closes only after the native call returns. Child array views
+  outlive the dataset aggregate, Windows rename proves mappings/file handles
+  are released, camera paths remain lazy, and transactional staging preserves
+  an existing destination on failure.
+- **Behavior correctness:** the independent parser confirms ASL `T_BS` as
+  sensor-to-body, WXYZ quaternion order, metres/SI values, exact int64-ns
+  timestamps, signed camera clock offsets, half-open selection, and all
+  read/write fields. The writer refuses unsupported units, frames, metadata,
+  layouts, duplicate names/IMU ids, and non-contiguous sensor indices instead
+  of converting or dropping them.
+- **Test soundness:** PyYAML, stdlib CSV, and SciPy rotation code do not reuse
+  the production parser; Kalibr/CamTools pin semantic direction. Tests cover
+  oracle-authored and SceneIO-authored directories, bytes versus mmap,
+  mutation isolation, empty/truncated rows, lifetime, inspection without image
+  decode, typed slices versus full reads, deterministic output, and staged
+  failure. Review found and fixed incomplete writer-oracle assertions: every
+  intrinsic, distortion, topic, offset, noise term, transform, state field,
+  CSV row, and copied image now participates. No unresolved FC1B finding
+  remains.
 
 ## 8. FC2 — semantic, instance, and panoptic raster maps
 
@@ -875,8 +915,8 @@ plan but do not replace file-based oracle qualification.
 
 ### 13.3 Final documentation reconciliation
 
-- [ ] Generate/validate registry capability tables from the 73-format runtime,
-      or 74 only if the provisional dataset codec qualified and landed.
+- [ ] Generate/validate registry capability tables from the current 74-format
+      runtime before final FC7 closure.
 - [ ] Update the public-fixture manifest counts and route only if the
       provisional dataset format lands.
 - [ ] Confirm every new public representation is present exactly once in the
@@ -895,8 +935,8 @@ plan but do not replace file-based oracle qualification.
 2. [x] `ImuCalibration`/`ImuSequence`, compatible `ImageSequence` acquisition
        fields, and record tests; locally green, with hosted wheel validation
        still pending.
-3. [ ] `VisualInertialDataset` plus provisional dataset read/write/inspect,
-       oracle suite, benchmark, and docs; omit the registry id if FC0 rejects it.
+3. [x] `VisualInertialDataset` plus dataset read/write/inspect, oracle suite,
+       benchmark, and docs; locally green with hosted validation user-gated.
 4. [ ] `LabelTaxonomy` and dense label records plus NPZ/Zarr/NCore carriers,
        Kubric evidence, benchmark, and docs.
 5. [ ] `PointScan`/`ScanSet` plus E57 multi-scan/structured read/write/inspect,
@@ -919,7 +959,7 @@ its record and codec changes cannot be reviewed or reverted independently.
 | Unit | Record/API | Read | Write | Inspect | Partial | Oracle per supported direction | Large benchmark | Local suite | Hosted wheels | Docs |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | FC1A IMU records/acquisition | [x] | n/a | refusal-only | n/a | n/a | [x] record vectors | n/a | [x] | pending/user-gated | [x] |
-| FC1B visual-inertial dataset | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
+| FC1B visual-inertial dataset | [x] | [x] | [x] | [x] | [x] | [x] | [x] bounded baseline | [x] | pending/user-gated | [x] |
 | FC2 dense labels | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
 | FC3 E57 scans | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
 | FC4 TIFF collections | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
@@ -932,8 +972,8 @@ its record and codec changes cannot be reviewed or reverted independently.
 The follow-on program is closed when FC1-FC6 satisfy the matrix and FC7 passes.
 At that point:
 
-- the registry remains at 73 built-ins or reaches 74 only if the provisional
-  visual-inertial directory codec passes every format gate;
+- the registry contains exactly 74 built-ins, including the qualified bounded
+  visual-inertial directory codec;
 - all new behavior is constrained by versioned 3D-CV profiles;
 - every supported read/write direction has independent evidence, and every
   unsupported direction has a tested capability/refusal entry;

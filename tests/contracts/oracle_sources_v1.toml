@@ -27,7 +27,7 @@ required_source_ids = [
   "evo", "pykitti", "kalibr", "g2o", "hloc", "open3d", "pcl", "pdal",
   "trimesh", "gltf_validator", "niantic_spz", "splat_transform", "gsply",
   "gaussian_splats_3d", "openusd", "khronos_gltf", "3dgrut", "ncore",
-  "scipy", "numpy", "h5py", "zarr", "arrow", "openexr", "pillow", "tifffile",
+  "scipy", "pyyaml", "numpy", "h5py", "zarr", "arrow", "openexr", "pillow", "tifffile",
   "libe57format",
 ]
 
@@ -86,11 +86,11 @@ license_class = "permissive"
 distribution_role = "reference_only"
 authority = "semantic_reference"
 lineage = "camtools"
-formats = ["transforms_json", "colmap_sparse"]
-semantic_roles = ["opencv_opengl", "w2c_c2w", "camera_pose"]
+formats = ["transforms_json", "colmap_sparse", "euroc_dataset"]
+semantic_roles = ["opencv_opengl", "w2c_c2w", "camera_pose", "sensor_to_body"]
 execution = "manual_reference"
 execution_markers = ["camtools"]
-evidence_tests = ["tests/test_coordinate_systems.py"]
+evidence_tests = ["tests/test_coordinate_systems.py", "tests/codecs/test_euroc_dataset.py"]
 qualification = "reference"
 notice = ""
 
@@ -212,11 +212,11 @@ license_class = "permissive"
 distribution_role = "reference_only"
 authority = "independent_implementation"
 lineage = "kalibr"
-formats = ["kalibr", "opencv_yaml", "ros_camera_info"]
-semantic_roles = ["camera_chain", "time_offset", "camera_intrinsics"]
+formats = ["kalibr", "opencv_yaml", "ros_camera_info", "euroc_dataset"]
+semantic_roles = ["camera_chain", "time_offset", "camera_intrinsics", "sensor_to_body"]
 execution = "manual_reference"
 execution_markers = ["kalibr"]
-evidence_tests = ["tests/codecs/test_camera_calibration.py"]
+evidence_tests = ["tests/codecs/test_camera_calibration.py", "tests/codecs/test_euroc_dataset.py"]
 qualification = "reference"
 notice = ""
 
@@ -548,22 +548,45 @@ license_class = "permissive"
 distribution_role = "test_executable"
 authority = "independent_implementation"
 lineage = "scipy"
-formats = ["coordinate_conversions", "gaussian_attributes"]
+formats = ["coordinate_conversions", "gaussian_attributes", "euroc_dataset"]
 semantic_roles = [
   "quaternion_matrix",
   "rotation_composition",
   "rigid_inverse",
   "gaussian_quaternion_reorder_and_normalization",
   "gaussian_opacity_activation",
+  "euroc_rigid_transform",
 ]
 execution = "math_oracle"
 execution_markers = ["scipy", "Rotation"]
 evidence_tests = [
   "tests/test_coordinate_math_oracle.py",
   "tests/records/test_gaussian_semantic_oracles.py",
+  "tests/codecs/test_euroc_dataset.py",
 ]
 qualification = "executed"
 notice = "LICENSES/scipy.txt"
+
+[[sources]]
+id = "pyyaml"
+project = "PyYAML"
+repository = "https://github.com/yaml/pyyaml"
+revision = "49790e73684bebad1df05ef8d828fa12f685bffb"
+version = "6.0.3"
+stars = 2927
+stars_snapshot = "2026-08-03"
+license = "MIT"
+license_class = "permissive"
+distribution_role = "test_executable"
+authority = "independent_implementation"
+lineage = "pyyaml"
+formats = ["opencv_yaml", "ros_camera_info", "kalibr", "euroc_dataset"]
+semantic_roles = ["yaml_mapping", "opencv_matrix_tag", "asl_sensor_schema"]
+execution = "pytest_test_dependency"
+execution_markers = ["yaml", "SafeLoader"]
+evidence_tests = ["tests/codecs/test_camera_calibration.py", "tests/codecs/test_euroc_dataset.py"]
+qualification = "executed"
+notice = "LICENSES/pyyaml.txt"
 
 [[sources]]
 id = "numpy"

@@ -80,6 +80,7 @@ format_verification = [
   { id = "hloc_features", decode = "preserve_fixed", encode = "require_fixed", conversion = "requires_context", oracle = "h5py plus official HLoc feature layout", tests = ["tests/codecs/test_hdf5_hloc.py"] },
   { id = "hloc_matches", decode = "not_applicable", encode = "not_applicable", conversion = "not_applicable", oracle = "h5py plus official HLoc pair layout", tests = ["tests/codecs/test_hdf5_hloc.py"] },
   { id = "ncore_v4", decode = "preserve_declared", encode = "preserve_declared", conversion = "requires_context", oracle = "pinned upstream NCore package/tool plus Zarr", tests = ["tests/codecs/test_ncore_v4.py"] },
+  { id = "euroc_dataset", decode = "preserve_declared", encode = "preserve_declared", conversion = "requires_context", oracle = "independent PyYAML/CSV/SciPy parser plus Kalibr and CamTools conventions", tests = ["tests/codecs/test_euroc_dataset.py"] },
   { id = "zarr", decode = "preserve_unspecified", encode = "require_unspecified", conversion = "requires_context", oracle = "official zarr Python implementation", tests = ["tests/codecs/test_zarr.py"] },
   { id = "tiff", decode = "preserve_fixed", encode = "require_fixed", conversion = "not_applicable", oracle = "tifffile implementation", tests = ["tests/codecs/test_tiff.py"] },
   { id = "e57", decode = "preserve_declared", encode = "preserve_declared", conversion = "requires_context", oracle = "pye57/libE57Format implementation", tests = ["tests/codecs/test_e57.py"] },

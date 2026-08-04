@@ -37,6 +37,7 @@ redistribution choice used by SceneIO is stated explicitly.
 | COLMAP persisted formats | upstream schema/format references pinned at `0b31f98133b470eae62811b557dc2bcff1e4f9a5` (3.13.0), `a0d785fba74b2664f31edc4a29026a8b27c00f67` (4.1.1), and `64805cb870b574a569dccc34918d95a2db2b2fee` (current-main snapshot); OpsiClear database/dense reference pinned at `de15b08a2dba98b55d6ddfb7cedac147838afbb4` and compact-adapter reference pinned at `a3cfdd784d16a493878877f445fd1e27333fd8fc` | independently implemented sparse/database/dense codecs plus workspace, extended-sidecar, MappingInput, MegaLoc, rig, SIFT, pair/match, and Sim3 adapters; no COLMAP library is linked or bundled | BSD-3-Clause for upstream COLMAP formats; SceneIO implementation Apache-2.0 | [COLMAP notice](colmap.txt), [OpsiClear compatibility authorization record](opsiclear-colmap-mod.txt) |
 | h5py | optional dependency `>=3.11` (3.16.0 locally validated) | separately installed optional HDF5 provider; not bundled in SceneIO distributions | BSD-3-Clause | [h5py.txt](h5py.txt) |
 | SciPy | test extra `==1.18.0`, release commit `7adb8c972443f664b9395a0e6e8e0283e9b4faff` | separately installed mathematical conversion oracle; never imported by the NumPy-only runtime and not bundled in wheels | BSD-3-Clause | [scipy.txt](scipy.txt) |
+| PyYAML | test extra `==6.0.3`, release commit `49790e73684bebad1df05ef8d828fa12f685bffb` | separately installed YAML syntax oracle for calibration and EuRoC/ASL fixtures; never imported by the NumPy-only runtime and not bundled in wheels | MIT | [pyyaml.txt](pyyaml.txt) |
 | HDF5 | provider version selected by the separately installed h5py distribution | used through h5py; not bundled or linked into SceneIO distributions | permissive HDF5 license | [hdf5.txt](hdf5.txt) |
 | Zarr Python | optional dependency `>=3.1,<4` (3.2.1 locally validated) | separately installed optimized Zarr v2/v3 provider; not bundled in SceneIO distributions | MIT | [zarr.txt](zarr.txt) |
 | numcodecs | version selected by the separately installed Zarr distribution (0.16.5 locally validated) | separately installed compiled chunk-codec provider used by Zarr; not bundled in SceneIO distributions | MIT top-level terms; individual bundled codecs retain their upstream permissive terms in the provider distribution | [numcodecs.txt](numcodecs.txt) |
@@ -74,8 +75,8 @@ a separate distribution and is not copied or linked into SceneIO wheels.
 h5py/HDF5, Zarr/numcodecs, cbor2, tifffile, pye57, PyArrow, TinyVDB, TinyUSDZ,
 and Pillow's libavif provider are separately installed only when their
 respective extras are selected; none is copied or linked into SceneIO wheels.
-gsply and PlayCanvas splat-transform are installed only in test environments.
-Build tools and other test-only oracle packages are not bundled.
+PyYAML, gsply, and PlayCanvas splat-transform are installed only in test
+environments. Build tools and other test-only oracle packages are not bundled.
 GaussianSplats3D contributes pinned test vectors only; gsplat and Brush are
 reference-only. Delvewheel
 itself is not bundled, but its generated Windows bootstrap and the verifier's

@@ -34,7 +34,7 @@ _DESIGN_IDS = {
     "usd_authored_time_samples",
 }
 _PROVIDER_IDS = {"pye57", "tifffile", "tinyvdb", "tinyusdz"}
-_OUTCOMES = {"approved_for_internal_prototype", "provider_limited"}
+_OUTCOMES = {"approved_for_internal_prototype", "provider_limited", "qualified"}
 _PROVIDER_OUTCOMES = {
     "broader_container_operations_proven",
     "authoring_surface_limited",
@@ -70,23 +70,24 @@ def test_fc0_decisions_are_complete_provisional_and_nonpublic():
     assert date.fromisoformat(CONTRACT["contract_date"]).isoformat() == (
         CONTRACT["contract_date"]
     )
-    assert CONTRACT["builtin_count"] == len(CANONICAL_BUILTIN_IDS) == 73
-    assert CONTRACT["provisional_format_ids"] == ["euroc_dataset"]
-    assert "euroc_dataset" not in CANONICAL_BUILTIN_IDS
-    [provisional_format] = CONTRACT["provisional_formats"]
-    assert provisional_format["id"] == "euroc_dataset"
-    assert provisional_format["family_module"].endswith(".families.datasets")
-    assert provisional_format["container_kind"] == "multi_file"
-    assert provisional_format["datatype"] == "visual_inertial_dataset"
-    assert provisional_format["directory_probe_required"] is True
-    assert set(provisional_format["required_globs"]) == {
+    assert CONTRACT["builtin_count"] == len(CANONICAL_BUILTIN_IDS) == 74
+    assert CONTRACT["provisional_format_ids"] == []
+    assert CONTRACT["implemented_format_ids"] == ["euroc_dataset"]
+    assert "euroc_dataset" in CANONICAL_BUILTIN_IDS
+    [implemented_format] = CONTRACT["implemented_formats"]
+    assert implemented_format["id"] == "euroc_dataset"
+    assert implemented_format["family_module"].endswith(".families.datasets")
+    assert implemented_format["container_kind"] == "multi_file"
+    assert implemented_format["datatype"] == "visual_inertial_dataset"
+    assert implemented_format["directory_probe_required"] is True
+    assert set(implemented_format["required_globs"]) == {
         "mav0/cam*/data.csv",
         "mav0/cam*/sensor.yaml",
         "mav0/imu*/data.csv",
         "mav0/imu*/sensor.yaml",
     }
-    assert provisional_format["detection_rule"].strip()
-    assert provisional_format["registration_gate"].strip()
+    assert implemented_format["detection_rule"].strip()
+    assert implemented_format["registration_gate"].strip()
 
     decisions = CONTRACT["design_decisions"]
     assert {row["id"] for row in decisions} == _DESIGN_IDS
@@ -94,11 +95,12 @@ def test_fc0_decisions_are_complete_provisional_and_nonpublic():
     symbols = sorted(
         symbol for row in decisions for symbol in row["public_symbols"]
     )
-    assert symbols == CONTRACT["provisional_public_symbols"]
+    implemented = set(CONTRACT["implemented_public_symbols"])
+    assert implemented == set(FC1_CONTRACT["public_symbols"])
+    assert sorted(set(symbols) - implemented) == CONTRACT["provisional_public_symbols"]
     assert len(symbols) == len(set(symbols))
 
     public_modules = (sceneio, sceneio.io, sceneio.data)
-    implemented = set(FC1_CONTRACT["public_symbols"])
     assert implemented <= set(symbols)
     for symbol in symbols:
         if symbol in implemented:

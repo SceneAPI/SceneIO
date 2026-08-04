@@ -728,6 +728,10 @@ def test_assembly_dependency_direction_and_import_delta_are_exact():
         "sceneio.io._arrow",
         "sceneio.io._avif",
         "sceneio.io._e57",
+        "sceneio.io._euroc_dataset",
+        "sceneio.io._euroc_dataset.codec",
+        "sceneio.io._euroc_dataset.model",
+        "sceneio.io._euroc_dataset.yaml_subset",
         "sceneio.io._hdf5",
         "sceneio.io._ncore",
         "sceneio.io._ncore.component_io",
@@ -1226,7 +1230,7 @@ def test_assembly_dependency_direction_and_import_delta_are_exact():
     assert benchmark_contract["extension_base_commit"] == (
         "3c07bcefabbd0d9be935ffd22c5ef1e7f4642321"
     )
-    assert benchmark_contract["rows"] == 73
+    assert benchmark_contract["rows"] == 74
     assert len(CANONICAL_BUILTIN_IDS) == benchmark_contract["rows"]
     assert benchmark_contract["structural_projection_sha256"] == (
         "6dde30b346753159801c5071ed56825ede67dfece77aaea6fcf859381976d766"

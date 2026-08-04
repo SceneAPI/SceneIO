@@ -46,6 +46,7 @@ _inspect_colmap_mvs_depth
 _inspect_colmap_mvs_normal
 _inspect_colmap_txt
 _inspect_dmb
+_inspect_euroc_imu
 _inspect_euroc_state
 _inspect_g2o
 _inspect_kalibr
@@ -142,6 +143,8 @@ read_compressed_ply
 read_compressed_ply_points
 read_dmb
 read_dmb_window
+read_euroc_imu
+read_euroc_imu_time_range
 read_euroc_state
 read_euroc_state_states
 read_exr
@@ -241,6 +244,7 @@ write_colmap_sparse
 write_colmap_txt
 write_compressed_ply
 write_dmb
+write_euroc_imu
 write_euroc_state
 write_exr
 write_exr_depth

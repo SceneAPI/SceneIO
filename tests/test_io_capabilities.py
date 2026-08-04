@@ -29,6 +29,7 @@ _BUILTINS = {
     "compressed_ply",
     "dmb",
     "e57",
+    "euroc_dataset",
     "euroc_state",
     "exr",
     "flo",

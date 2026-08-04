@@ -77,7 +77,7 @@ def test_performance_ledger_has_stable_schema_and_exact_builtin_coverage():
 
     codecs = ledger["codec"]
     assert tuple(item["id"] for item in codecs) == CANONICAL_BUILTIN_IDS
-    assert len({item["id"] for item in codecs}) == 73
+    assert len({item["id"] for item in codecs}) == 74
     for item in codecs:
         ownership = BUILTIN_OWNERSHIP[item["id"]]
         assert item["family"] == ownership.family
@@ -96,7 +96,7 @@ def test_performance_ledger_has_stable_schema_and_exact_builtin_coverage():
 
 def test_performance_operations_cover_required_profiles_and_directions():
     operations = _ledger()["operation"]
-    assert len(operations) == 182
+    assert len(operations) == 184
     keys = [
         (item["codec_id"], item["profile"], item["direction"])
         for item in operations
@@ -118,7 +118,7 @@ def test_performance_rows_are_honest_about_initial_evidence():
     operations = _ledger()["operation"]
     states = Counter(item["status"] for item in operations)
     assert states == {
-        "provisional": 173,
+        "provisional": 175,
         "known_gap": 2,
         "not_applicable": 7,
     }
@@ -133,7 +133,7 @@ def test_performance_rows_are_honest_about_initial_evidence():
             "profile-specific current-backend measurement missing",
             "candidate comparison on all required toolchains",
         ): 14,
-        ("three-platform package validation",): 6,
+        ("three-platform package validation",): 8,
     }
     assert all(item["candidate_backends"] == [] for item in provisional)
     for item in operations:

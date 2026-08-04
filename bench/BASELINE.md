@@ -4285,3 +4285,27 @@ for manylinux, `758c50e959edf1cc075108a76c61adb136e1665e31111e4c81a903b2ffc0065e
 for macOS, and
 `c2ea12d96c1400abed92303b9eb42960e4e374525306ba9b2db4b2c8fd6bc201`
 for Windows. The tag-only publication job is skipped.
+
+## 2026-08-03 EuRoC/ASL dataset baseline
+
+The 74th row uses the generated bounded ASL directory fixture and the command:
+
+```console
+.venv/Scripts/python.exe bench/bench_io.py --runs 5 --scale 1 --skip-oracles --only euroc_dataset --json build/bench-euroc-fc1b-final.json
+```
+
+On local MSVC, the 5.324 MB logical payload occupies 6.858 MB across the
+directory. Median results are 72.1 MB/s write, 291.7 MB/s direct read, and
+319.7 MB/s public path read. The mapped read adds 0.118 MB traced allocation
+and 2.679 MB sampled RSS; metadata inspection takes 9.268 ms with 0.047 MB
+traced allocation. The bounded camera/IMU/time selection takes 2.081 ms with
+0.087 MB traced allocation and 0.020 MB sampled RSS, about 8.0x faster than
+the approximately 16.65 ms full public read. The direct dataset sink adds
+1.209 MB traced allocation and 3.088 MB sampled RSS.
+
+This generated small/medium result is the initial format baseline, not a
+before/after comparison or a numeric release threshold. Correctness is
+qualified separately by independent PyYAML and stdlib CSV parsing, SciPy
+rotation comparison, and pinned Kalibr/CamTools semantics. Automatic external
+timing is a reviewed exemption for this composite directory profile; hosted
+real-data and cross-platform measurements remain explicit follow-up actions.

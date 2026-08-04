@@ -687,6 +687,16 @@ documentation = "docs/format_coverage.md"
 accepted_subset = ["v4", "local_directory_stores", "local_indexed_tar_stores", "sequence_manifests", "grouped_component_stores", "lazy_component_catalog", "metadata_only_inspect", "owned_component_materialization", "frame_and_timestamp_selection", "nine_standard_v1_profiles", "generic_components", "deterministic_transactional_write"]
 
 [[codec]]
+id = "euroc_dataset"
+family = "datasets"
+adapter = "repo"
+implementation_owner = "python"
+sources = ["src/sceneio/io/_euroc_dataset/codec.py", "src/sceneio/io/_euroc_dataset/model.py", "src/sceneio/io/_euroc_dataset/yaml_subset.py", "src/cpp/codecs/reconstruction/euroc_state.cpp"]
+source_suite = "tests/codecs/test_euroc_dataset.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["bounded_asl_directory", "multi_camera", "multi_imu", "opaque_image_payloads", "camera_and_imu_calibration", "optional_ground_truth", "metadata_only_inspect", "typed_sensor_frame_and_time_selection", "streamed_csv_write", "transactional_directory_write"]
+
+[[codec]]
 id = "zarr"
 family = "containers"
 adapter = "repo"
@@ -4231,6 +4241,46 @@ transport_status = "qualified"
 status = "provisional"
 correctness_evidence = ["tests/codecs/test_ncore_v4.py"]
 benchmark_evidence = ["bench/BASELINE.md", "tools/verify_ncore_v4_writer_oracle.py"]
+candidate_backends = []
+evidence_gaps = ["three-platform package validation"]
+
+[[operation]]
+codec_id = "euroc_dataset"
+profile = "default"
+direction = "encode"
+settings = { layout = "bounded_asl", image_payload = "opaque_copy", csv = "direct_file_sink" }
+fidelity = "lossless representable calibration, exact timestamps and samples, and byte-identical encoded images"
+comparator = "independent PyYAML, stdlib CSV, and SciPy implementation"
+fixture = "euroc_dataset:default"
+backend = "sceneio-hybrid"
+backend_owner = "repo"
+backend_source = "src/sceneio/io/_euroc_dataset/codec.py"
+backend_version = "sceneio-euroc-asl-1"
+backend_dependencies = []
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_euroc_dataset.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["three-platform package validation"]
+
+[[operation]]
+codec_id = "euroc_dataset"
+profile = "default"
+direction = "decode"
+settings = { layout = "bounded_asl", csv_input = "mmap", images = "lazy_encoded_paths" }
+fidelity = "lossless calibration, exact timestamps and samples, and independently checked transform directions"
+comparator = "independent PyYAML, stdlib CSV, and SciPy implementation"
+fixture = "euroc_dataset:default"
+backend = "sceneio-hybrid"
+backend_owner = "repo"
+backend_source = "src/sceneio/io/_euroc_dataset/codec.py"
+backend_version = "sceneio-euroc-asl-1"
+backend_dependencies = []
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_euroc_dataset.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
 candidate_backends = []
 evidence_gaps = ["three-platform package validation"]
 

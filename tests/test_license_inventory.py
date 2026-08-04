@@ -55,6 +55,7 @@ EXPECTED_NOTICES = {
     "opsiclear-colmap-mod.txt",
     "pillow.txt",
     "pye57.txt",
+    "pyyaml.txt",
     "pyquaternion.txt",
     "scipy.txt",
     "sqlite.txt",

@@ -2,7 +2,7 @@
 
 SceneIO has a versioned, machine-readable numeric contract for every public
 data-bearing class in `sceneio.io`, `sceneio.data`, `sceneio.colmap`, and
-`sceneio.colmap_mvs`. Version 1 covers 91 representations. Registry helpers,
+`sceneio.colmap_mvs`. Version 1 covers 94 representations. Registry helpers,
 errors, capability/inspection results, and enums are not data representations
 and are excluded by an exact test allowlist.
 
@@ -113,6 +113,10 @@ contract; `normalized` and `arbitrary` do not.
   `reference_time_ns = sensor_time_ns + time_offset_ns`. `ImuSequence` keeps
   exact nanosecond sample times, declared measurement units, sensor axes, and
   clock domain; it never synchronizes, resamples, or converts units implicitly.
+- `VisualInertialDataset` is an aggregate: camera rigs, lazy image streams,
+  IMU calibrations/samples, and optional state trajectories retain their child
+  contracts. Exact per-stream clock domains and epochs are preserved; no
+  synchronization or interpolation is inferred.
 - `ImageSequence` acquisition metadata uses exact nanosecond durations. A
   declared timestamp reference and readout direction make rolling exposure
   timing interpretable; unsupported writers refuse it rather than dropping it.
@@ -137,6 +141,7 @@ models grow. Every public representation still has its own mapping entry.
 | `camera_rig` | `sceneio.CameraRig` |
 | `imu_calibration` | `sceneio.ImuCalibration` |
 | `imu_sequence` | `sceneio.ImuSequence` |
+| `visual_inertial_dataset` | `sceneio.VisualInertialDataset` |
 | `colmap_database` | `sceneio.ColmapDatabase` |
 | `colmap_marker_companion` | `sceneio.ColmapMarkerSet`, `sceneio.colmap.SparseMarker` |
 | `colmap_pose_prior_companion` | `sceneio.ColmapPosePriorSet` |
@@ -197,12 +202,12 @@ models grow. Every public representation still has its own mapping entry.
 ## Verification and change policy
 
 `tests/test_representation_contracts.py` discovers exported classes from all
-four namespaces and requires exact equality with the 91-entry catalog. It also
+four namespaces and requires exact equality with the 94-entry catalog. It also
 checks profile vocabulary, immutable lookup behavior, live evidence paths,
 ambiguous-name refusal, the exact three direct-conversion records, narrow
 metric claims, compiled/neutral record distinctions, and Gaussian limitations.
 
-Format-specific decode/encode normalization remains governed by the 73-row
+Format-specific decode/encode normalization remains governed by the 74-row
 oracle ledger in
 [`tests/contracts/coordinate_conversions_v1.toml`](../tests/contracts/coordinate_conversions_v1.toml)
 and the independent I/O ledger in

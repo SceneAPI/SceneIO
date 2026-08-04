@@ -1,9 +1,9 @@
 schema_version = 1
 catalog_date = "2026-08-03"
 catalog_purpose = "Licensed public data and deterministic derivation routes for every SceneIO built-in format."
-required_builtin_count = 73
+required_builtin_count = 74
 direct_format_count = 13
-derived_format_count = 60
+derived_format_count = 61
 
 # Network data is never required by the normal test suite. Artifacts are
 # downloaded only into an ignored cache, and every downloaded byte stream is
@@ -639,3 +639,13 @@ formats = ["ncore_v4"]
 evidence = ["tests/codecs/test_ncore_v4.py"]
 derivation = "Write selected licensed images, masks, cameras, poses, and point data with the pinned official NCore V4 writer and retain the compact generated indexed-tar fixture."
 qualification = "official-reader reopen, checksums, schema/catalog identity, and SceneIO projections match"
+
+[[routes]]
+id = "derived_visual_inertial_dataset"
+mode = "oracle_derived"
+source_ids = ["monado_mio09"]
+oracle_source_ids = ["kalibr", "camtools", "pyyaml", "scipy"]
+formats = ["euroc_dataset"]
+evidence = ["tests/codecs/test_euroc_dataset.py"]
+derivation = "Author a compact ASL directory from the pinned permissive Monado layout and deterministic hand-computable calibration, image, inertial, and state values."
+qualification = "PyYAML, stdlib CSV, and SciPy independently verify schema values, rigid transforms, units, timestamps, selections, and both I/O directions"

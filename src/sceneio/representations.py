@@ -557,6 +557,32 @@ _PROFILES = {
             refusal="Unit, axis-frame, gravity, clock synchronization, interpolation, and resampling changes require explicit caller context.",
         ),
         _profile(
+            "visual_inertial_dataset",
+            "aggregate",
+            "component_declared",
+            "component_declared",
+            "requires_context",
+            (
+                "nanosecond",
+                "meter",
+                "pixel",
+                "radian_per_second",
+                "meter_per_second_squared",
+            ),
+            scale_fields=(
+                "rig",
+                "imu_calibrations",
+                "camera_clock_domains",
+                "camera_timestamp_epochs",
+                "imu_timestamp_epochs",
+            ),
+            rules=(
+                "Camera, IMU, image-sequence, and state-trajectory children retain their own normalization and coordinate contracts.",
+                "Each stream preserves exact int64 nanosecond timestamps plus an explicit clock domain and epoch; the aggregate never aligns or interpolates clocks.",
+            ),
+            refusal="Cross-sensor synchronization, pose-frame conversion, resampling, and unit conversion require an explicit calibrated adapter.",
+        ),
+        _profile(
             "posed_views",
             "declared",
             "record_declared",
@@ -1014,6 +1040,11 @@ def _build_contracts() -> dict[str, RepresentationNormalizationContract]:
     register("image_sequence", ("tests/records/test_image_sequence_record.py",), "sceneio.ImageSequence")
     register("imu_calibration", ("tests/records/test_imu.py",), "sceneio.ImuCalibration")
     register("imu_sequence", ("tests/records/test_imu.py",), "sceneio.ImuSequence")
+    register(
+        "visual_inertial_dataset",
+        ("tests/codecs/test_euroc_dataset.py",),
+        "sceneio.VisualInertialDataset",
+    )
     register("instances", ("tests/records/test_instance_set.py",), "sceneio.InstanceSet")
     register("matches", ("tests/codecs/test_colmap_db.py",), "sceneio.MatchGraph")
     register("materials", ("tests/records/test_material_set.py",), "sceneio.MaterialSet")
@@ -1094,7 +1125,10 @@ def _public_path(value: object) -> str:
     cls = value if isinstance(value, type) else type(value)
     module = cls.__module__
     name = cls.__qualname__
-    if module == "sceneio._core" or module.startswith("sceneio.io._"):
+    if (
+        module in {"sceneio._core", "sceneio.io"}
+        or module.startswith("sceneio.io._")
+    ):
         return f"sceneio.{name}"
     if module.startswith("sceneio.data."):
         return f"sceneio.data.{name}"

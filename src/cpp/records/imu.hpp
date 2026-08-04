@@ -52,6 +52,10 @@ struct ImuSequence {
     size_t num_samples() const { return n; }
 };
 
+void validate_imu_sequence(
+    const ImuSequence &sequence,
+    const char *context = "imu_sequence");
+
 inline bool imu_valid_quaternion_order(const std::string &value) {
     return value == "wxyz" || value == "xyzw";
 }

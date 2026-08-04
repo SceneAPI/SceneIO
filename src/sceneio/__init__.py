@@ -130,6 +130,7 @@ _IO_FORWARDS = frozenset(
         "read",
         "read_depth",
         "read_flow",
+        "read_euroc_dataset",
         "read_ncore_component",
         "read_ncore_semantic_component",
         "materialize_ncore_v4",
@@ -142,6 +143,7 @@ _IO_FORWARDS = frozenset(
         "colmap_database_conversion_report",
         "write_depth",
         "write_flow",
+        "write_euroc_dataset",
         "write_parquet",
         "write_openvdb",
         "write_ncore_v4",
@@ -218,6 +220,7 @@ _IO_FORWARDS = frozenset(
         "UNKNOWN_COORDINATES",
         "UNSPECIFIED_FORMAT_COORDINATES",
         "VolumeAsset",
+        "VisualInertialDataset",
     }
 )
 
@@ -348,6 +351,7 @@ __all__ = [
     "StateTrajectory",
     "TableDef",
     "TensorDict",
+    "VisualInertialDataset",
     "VolumeAsset",
     "__version__",
     "capabilities",
@@ -387,6 +391,7 @@ __all__ = [
     "project_ncore_item",
     "read",
     "read_depth",
+    "read_euroc_dataset",
     "read_flow",
     "read_header",
     "read_ncore_component",
@@ -401,6 +406,7 @@ __all__ = [
     "write_checkpoint",
     "write_colmap_db",
     "write_depth",
+    "write_euroc_dataset",
     "write_flow",
     "write_header",
     "write_ncore_v4",

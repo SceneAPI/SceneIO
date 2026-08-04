@@ -1,0 +1,66 @@
+schema_version = 1
+contract_date = "2026-08-03"
+format_id = "euroc_dataset"
+profile = "bounded EuRoC MAV ASL directory"
+container_kind = "multi_file"
+datatype = "visual_inertial_dataset"
+reference = "EuRoC MAV Dataset ASL sensor.yaml and data.csv schemas"
+
+[layout]
+root = "mav0"
+minimum_streams = ["cam0", "imu0"]
+camera_files = ["sensor.yaml", "data.csv", "data/*"]
+imu_files = ["sensor.yaml", "data.csv"]
+optional_ground_truth = "state_groundtruth_estimate0"
+sensor_indices = "contiguous_from_zero"
+image_payload = "opaque_encoded_bytes"
+path_policy = "dataset_root_relative_posix_components"
+
+[coordinates]
+t_bs_direction = "sensor_to_body"
+sceneio_reference_frame = "rig"
+camera_transform_convention = "camera_to_reference"
+imu_transform_convention = "sensor_to_reference"
+camera_axis_frame = "opencv"
+ground_truth_pose_convention = "sensor_to_reference"
+quaternion_order = "wxyz"
+writer_quaternion_sign = "canonical_positive_w"
+translation_unit = "meters"
+
+[time]
+timestamp_dtype = "int64"
+timestamp_unit = "nanoseconds"
+timestamp_reference = "measurement"
+timestamp_order = "nonnegative_strictly_increasing"
+stream_epoch = "dataset"
+clock_alignment = "never_implicit"
+camera_offset_equation = "reference_time = camera_time + timeshift_cam_imu_seconds"
+selection_interval = "half_open"
+
+[imu]
+angular_velocity_unit = "radians_per_second"
+linear_acceleration_unit = "meters_per_second_squared"
+axis_frame = "sensor"
+noise_terms = [
+  "gyroscope_noise_density",
+  "gyroscope_random_walk",
+  "accelerometer_noise_density",
+  "accelerometer_random_walk",
+]
+
+[operations]
+read = true
+write = true
+inspect = true
+typed_selectors = ["cameras", "imus", "frame_range", "time_range_ns", "include_ground_truth"]
+inspect_decodes_image_pixels = false
+write_replacement = "transactional_directory"
+write_images = "byte_copy_without_transcode"
+
+[oracles]
+yaml = "PyYAML SafeLoader with an independent OpenCV-matrix constructor"
+csv = "Python standard-library csv"
+rotations = "scipy.spatial.transform.Rotation"
+camera_semantics = ["Kalibr", "CamTools"]
+fixture_source = "permissive Monado layout and deterministic oracle-authored values"
+evidence = ["tests/codecs/test_euroc_dataset.py"]

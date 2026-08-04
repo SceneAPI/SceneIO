@@ -248,6 +248,10 @@ _RAW: dict[str, FormatCoordinateContract] = {
     "hloc_features": _fixed(("image",), _HLOC_IMAGE, "https://github.com/cvg/Hierarchical-Localization/blob/master/hloc/triangulation.py"),
     "hloc_matches": _not_applicable("https://github.com/cvg/Hierarchical-Localization"),
     "ncore_v4": _declared(("tensor",), _SCENEIO_DOC),
+    "euroc_dataset": _declared(
+        ("camera", "image", "trajectory"),
+        "https://projects.asl.ethz.ch/datasets/doku.php?id=kmavvisualinertialdatasets",
+    ),
     "zarr": _unspecified(("tensor",)),
     "tiff": _IMAGE,
     "e57": _declared(("spatial",), "https://www.astm.org/e2807-11r19e01.html"),

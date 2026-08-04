@@ -23,21 +23,31 @@ CONTRACT = tomllib.loads(
 
 def test_fc1_public_surface_and_registry_boundary():
     assert CONTRACT["schema_version"] == 1
-    assert CONTRACT["status"] == "implemented_records"
+    assert CONTRACT["status"] == "dataset_qualified"
     assert date.fromisoformat(CONTRACT["contract_date"]).isoformat() == CONTRACT[
         "contract_date"
     ]
-    assert CONTRACT["builtin_count"] == len(CANONICAL_BUILTIN_IDS) == 73
-    assert "euroc_dataset" not in CANONICAL_BUILTIN_IDS
-    assert CONTRACT["public_symbols"] == ["ImuCalibration", "ImuSequence"]
+    assert CONTRACT["builtin_count"] == len(CANONICAL_BUILTIN_IDS) == 74
+    assert "euroc_dataset" in CANONICAL_BUILTIN_IDS
+    assert CONTRACT["public_symbols"] == [
+        "ImuCalibration",
+        "ImuSequence",
+        "VisualInertialDataset",
+    ]
     assert CONTRACT["core_factories"] == ["imu_calibration", "imu_sequence"]
-    for name in CONTRACT["public_symbols"]:
+    for name in ("ImuCalibration", "ImuSequence"):
         assert getattr(sceneio, name) is getattr(sceneio.io, name)
         assert getattr(sceneio, name) is getattr(_core, name)
         assert sceneio.representation_contract(name).representation == (
             f"sceneio.{name}"
         )
+    assert sceneio.VisualInertialDataset is sceneio.io.VisualInertialDataset
+    assert sceneio.representation_contract(
+        "VisualInertialDataset"
+    ).representation == "sceneio.VisualInertialDataset"
     for name in CONTRACT["core_factories"]:
+        assert callable(getattr(_core, name))
+    for name in CONTRACT["core_io_functions"]:
         assert callable(getattr(_core, name))
 
 

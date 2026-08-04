@@ -91,6 +91,7 @@ CANONICAL_BUILTIN_IDS = (
     "hloc_features",
     "hloc_matches",
     "ncore_v4",
+    "euroc_dataset",
     "zarr",
     "tiff",
     "e57",
@@ -123,7 +124,7 @@ FAMILY_MEMBERS = MappingProxyType(
             "colmap_mvs_consistency",
             "colmap_fused_visibility",
         ),
-        "datasets": ("ncore_v4",),
+        "datasets": ("ncore_v4", "euroc_dataset"),
         "images": (
             "netpbm",
             "png",
@@ -381,6 +382,12 @@ _NATIVE_SYMBOLS = {
     "hloc_features": (),
     "hloc_matches": (),
     "ncore_v4": (),
+    "euroc_dataset": (
+        "_inspect_euroc_imu",
+        "read_euroc_imu",
+        "read_euroc_imu_time_range",
+        "write_euroc_imu",
+    ),
     "zarr": (),
 }
 
@@ -463,6 +470,11 @@ _PYTHON_SYMBOLS = {
         "sceneio.io._ncore.write_ncore_v4",
         "sceneio.io._ncore.inspect_ncore_v4",
     ),
+    "euroc_dataset": (
+        "sceneio.io._euroc_dataset.codec.read_euroc_dataset",
+        "sceneio.io._euroc_dataset.codec.write_euroc_dataset",
+        "sceneio.io._euroc_dataset.codec.inspect_euroc_dataset",
+    ),
     "zarr": (
         "sceneio.io._zarr.read_zarr",
         "sceneio.io._zarr.write_zarr",
@@ -513,6 +525,7 @@ _OWNERS = {
     "hloc_features": "python",
     "hloc_matches": "python",
     "ncore_v4": "python",
+    "euroc_dataset": "python",
     "zarr": "python",
     "tiff": "python",
     "e57": "python",

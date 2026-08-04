@@ -55,10 +55,10 @@ def test_catalog_policy_is_versioned_and_excludes_restricted_data():
     assert date.fromisoformat(CATALOG["catalog_date"]).isoformat() == CATALOG[
         "catalog_date"
     ]
-    assert CATALOG["required_builtin_count"] == len(CANONICAL_BUILTIN_IDS) == 73
+    assert CATALOG["required_builtin_count"] == len(CANONICAL_BUILTIN_IDS) == 74
     assert CATALOG["direct_format_count"] == 13
-    assert CATALOG["derived_format_count"] == 60
-    assert CATALOG["direct_format_count"] + CATALOG["derived_format_count"] == 73
+    assert CATALOG["derived_format_count"] == 61
+    assert CATALOG["direct_format_count"] + CATALOG["derived_format_count"] == 74
     assert all("-NC" not in license for license in CATALOG["allowed_licenses"])
 
 

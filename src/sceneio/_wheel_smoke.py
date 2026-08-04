@@ -1881,6 +1881,86 @@ def _ncore_v4(root: Path) -> None:
     assert tuple(item.id for item in authored.components) == ("poses:rig",)
 
 
+def _euroc_dataset(root: Path) -> None:
+    source = root / "source"
+    camera = source / "mav0" / "cam0"
+    image_directory = camera / "data"
+    imu = source / "mav0" / "imu0"
+    image_directory.mkdir(parents=True)
+    imu.mkdir()
+    transform = (
+        "T_BS: !!opencv-matrix\n"
+        "  rows: 4\n"
+        "  cols: 4\n"
+        "  dt: d\n"
+        "  data: [1, 0, 0, 0.1, 0, 1, 0, 0.2, "
+        "0, 0, 1, 0.3, 0, 0, 0, 1]\n"
+    )
+    for timestamp, value in ((10, 7), (20, 11)):
+        pixels = np.full((2, 3), value, dtype=np.uint8)
+        (image_directory / f"{timestamp}.pgm").write_bytes(
+            b"P5\n3 2\n255\n" + pixels.tobytes()
+        )
+    (camera / "data.csv").write_text(
+        "#timestamp [ns],filename\n10,10.pgm\n20,20.pgm\n",
+        encoding="ascii",
+        newline="\n",
+    )
+    (camera / "sensor.yaml").write_text(
+        "%YAML:1.0\n---\nsensor_type: camera\n"
+        + transform
+        + "rate_hz: 20\n"
+        + "resolution: [3, 2]\n"
+        + "camera_model: pinhole\n"
+        + "intrinsics: [3, 3, 1.5, 1]\n"
+        + "distortion_model: radtan\n"
+        + "distortion_coefficients: [0, 0, 0, 0]\n",
+        encoding="ascii",
+        newline="\n",
+    )
+    (imu / "data.csv").write_text(
+        "#timestamp [ns],w_RS_S_x [rad s^-1],"
+        "w_RS_S_y [rad s^-1],w_RS_S_z [rad s^-1],"
+        "a_RS_S_x [m s^-2],a_RS_S_y [m s^-2],"
+        "a_RS_S_z [m s^-2]\n"
+        "10,1,2,3,4,5,6\n20,7,8,9,10,11,12\n",
+        encoding="ascii",
+        newline="\n",
+    )
+    (imu / "sensor.yaml").write_text(
+        "%YAML:1.0\n---\nsensor_type: imu\n"
+        + transform
+        + "rate_hz: 200\n"
+        + "gyroscope_noise_density: 0.001\n"
+        + "accelerometer_noise_density: 0.002\n",
+        encoding="ascii",
+        newline="\n",
+    )
+
+    assert sceneio.detect(source) == "euroc_dataset"
+    dataset = sceneio.read(source)
+    assert dataset.camera_names == ("cam0",)
+    assert dataset.imu_names == ("imu0",)
+    assert dataset.num_camera_frames == 2
+    assert dataset.num_imu_samples == 2
+    assert sceneio.inspect(source).metadata["imu_counts"] == (2,)
+    selected = sceneio.read_euroc_dataset(
+        source,
+        time_range_ns=(15, 25),
+    )
+    assert selected.camera_timestamps_ns[0].tolist() == [20]
+    assert selected.imu_streams[0].timestamps_ns.tolist() == [20]
+
+    destination = root / "copy"
+    sceneio.write(dataset, destination, format="euroc_dataset")
+    copied = sceneio.read(destination)
+    assert copied.camera_timestamps_ns[0].tolist() == [10, 20]
+    assert copied.imu_streams[0].timestamps_ns.tolist() == [10, 20]
+    assert (
+        destination / "mav0" / "cam0" / "data" / "10.pgm"
+    ).read_bytes() == (image_directory / "10.pgm").read_bytes()
+
+
 def _avif_formats(root: Path) -> None:
     if not sceneio.capabilities("avif").available:
         assert not sceneio.capabilities("animated_avif").available
@@ -2227,6 +2307,7 @@ _SMOKE_RUNNERS: Mapping[str, Callable[[Path], None]] = MappingProxyType(
         "hloc_features": _hdf5_formats,
         "hloc_matches": _hdf5_formats,
         "ncore_v4": _ncore_v4,
+        "euroc_dataset": _euroc_dataset,
         "zarr": _zarr_formats,
         "tiff": _tiff_formats,
         "e57": _e57_formats,
