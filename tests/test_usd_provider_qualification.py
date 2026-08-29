@@ -50,12 +50,12 @@ def ParticleField3DGaussianSplat "GSplat"
 """
 
 
-def test_static_profile_provider_flags_are_explicit_and_immutable():
+def test_qualified_profile_provider_flags_are_explicit_and_immutable():
     assert provider.PROFILE_ID == "sceneio.usd.3dcv/1"
     assert dict(provider.PROVIDER_FLAGS) == {
         "current_usdc": False,
         "composition": False,
-        "selected_time": False,
+        "selected_time": True,
     }
     with pytest.raises(TypeError):
         provider.PROVIDER_FLAGS["composition"] = True
@@ -111,7 +111,9 @@ def Xform "World"
     samples = prim.get_attribute_timesamples("value")
     assert [time for time, _value in samples] == [1.0, 2.0]
     assert all("[invalid]" in repr(value) for _time, value in samples)
-    assert provider.PROVIDER_FLAGS["selected_time"] is False
+    # TinyUSDZ supplies traversal/sample-time enumeration; the qualified
+    # repository parser supplies typed selected-time USDA values.
+    assert provider.PROVIDER_FLAGS["selected_time"] is True
 
 
 def test_tinyusdz_usd_forwarding_and_asset_value_boundary(tmp_path):

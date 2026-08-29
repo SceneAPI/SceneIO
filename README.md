@@ -258,11 +258,15 @@ explicit filtering, and unrepresented texture transforms are refused.
 
 Qualified historical `.usdc` inputs through crate version 10 route under the
 `usd` format id. Profile `sceneio.usd.3dcv/1` explicitly leaves current-crate
-reads, USDC writes, evaluated composition, and selected animated-value
-evaluation unavailable. `sceneio.capabilities("usd")` lists those boundaries;
-inspection returns the profile plus false `provider_current_usdc`,
-`provider_composition`, and `provider_selected_time` flags. Static `time=` is
-only snapshot metadata and never implies sample evaluation.
+reads, USDC writes, evaluated composition, authored-animation preservation,
+and dynamic writing unavailable. `read_scene(path, time=...)` does qualify
+directly authored USDA/USDA-root USDZ matrix-transform and visibility samples;
+matrices interpolate component-wise and visibility/endpoints are held exactly
+as OpenUSD 26.8. Inspection reports the sampled properties/count/range plus
+false `provider_current_usdc`/`provider_composition` and true
+`provider_selected_time`. USDC selected time, sampled payload values, and
+arbitrary sampled xform stacks remain explicit refusals. See the
+[state-B qualification](docs/usd_animation_benchmark.md).
 
 `sceneio.inspect(path)` returns an immutable `Inspection` with shape, dtype,
 channels, repeated-record counts, and format-specific scalar metadata without

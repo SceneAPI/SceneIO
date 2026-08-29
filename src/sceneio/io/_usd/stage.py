@@ -13,6 +13,7 @@ import numpy as np
 from sceneio import _core
 from sceneio.io._inspectors.model import Inspection
 from sceneio.io._usd import (
+    animation,
     cameras,
     gaussians,
     geometry,
@@ -152,6 +153,24 @@ def _scan_authored_features(
         scan(data)
         carry = data[-65537:]
     return frozenset(features), tuple(sorted(dependencies))
+
+
+def _root_layer_has_time_samples(path: str | os.PathLike[str]) -> bool:
+    """Return whether the authored root layer contains a timeSamples token."""
+
+    token = b".timeSamples"
+    with package.mapped_root_layer(path) as mapped_root:
+        if mapped_root is not None:
+            mapped, start, end = mapped_root
+            return mapped.find(token, start, end) >= 0
+
+    carry = b""
+    for chunk in package.iter_root_layer_chunks(path):
+        data = carry + chunk
+        if token in data:
+            return True
+        carry = data[-(len(token) - 1) :]
+    return False
 
 
 def _metadata_float(stage, name: str, default: float) -> float:
@@ -350,15 +369,12 @@ def _render_nodes(stage) -> dict[str, tuple[np.ndarray, bool]]:
 
 
 def _has_time_samples(prim, *, point_text: str | None = None) -> bool:
-    if prim.type_name == "Points":
-        return points.has_time_samples(prim, text=point_text)
-    if prim.type_name == instances.INSTANCE_PRIM_TYPE:
-        return instances.has_time_samples(prim, text=point_text)
-    if prim.type_name == cameras.CAMERA_PRIM_TYPE:
-        return cameras.has_time_samples(prim, text=point_text)
-    return any(
-        bool(prim.get_attribute_timesamples(name))
-        for name in prim.property_names()
+    text = prim.to_string() if point_text is None else point_text
+    return bool(
+        animation.sampled_property_names(
+            text,
+            context=f"USD prim {prim.name!r}",
+        )
     )
 
 
@@ -550,6 +566,13 @@ def stage_to_scene_graph(
             "USD: purposes must contain only default/render/proxy/guide"
         )
     metadata = _stage_metadata(stage)
+    selected_time_usda = package.root_layer_prefix(source_path).startswith(
+        b"#usda"
+    )
+    scan_authored_samples = (
+        not selected_time_usda
+        or _root_layer_has_time_samples(source_path)
+    )
     stage_cameras = cameras.collect_stage_products(stage)
     resource_paths = (
         materials.stage_resource_paths(stage)
@@ -683,6 +706,7 @@ def stage_to_scene_graph(
     node_semantic_labels: list[str] = []
     path_to_node: dict[str, int] = {}
     no_payload = np.iinfo(np.uint64).max
+    evaluated_selected_time = False
 
     def visit(
         prim,
@@ -690,6 +714,7 @@ def stage_to_scene_graph(
         inherited_purpose: str,
         inherited_semantics: dict[str, frozenset[str]],
     ) -> int | None:
+        nonlocal evaluated_selected_time
         path = f"{parent_path}/{prim.name}"
         if path in resource_paths:
             return None
@@ -697,7 +722,8 @@ def stage_to_scene_graph(
             return None
         point_text = (
             prim.to_string()
-            if prim.type_name
+            if scan_authored_samples
+            or prim.type_name
             in {
                 "Points",
                 cameras.CAMERA_PRIM_TYPE,
@@ -706,15 +732,35 @@ def stage_to_scene_graph(
             else None
         )
         _validate_shell(prim, path, point_text=point_text)
-        if _has_time_samples(prim, point_text=point_text):
-            raise ValueError(
-                f"USD prim {path!r}: selected-time value evaluation "
-                "is not available with the qualified provider"
+        sampled = (
+            animation.parse_prim_samples(point_text, path=path)
+            if scan_authored_samples
+            else animation.ParsedPrimSamples(frozenset())
+        )
+        selected_values = animation.SelectedPrimValues()
+        if sampled.sampled_properties:
+            if time is None:
+                raise ValueError(
+                    f"USD prim {path!r}: authored time samples require "
+                    "read_scene(..., time=...); animation preservation is "
+                    "unavailable"
+                )
+            if not selected_time_usda:
+                raise ValueError(
+                    f"USD prim {path!r}: selected-time evaluation is limited "
+                    "to directly authored USDA root layers"
+                )
+            selected_values = animation.evaluate_prim_samples(
+                sampled,
+                time=time,
             )
+            evaluated_selected_time = True
         visibility, authored_purpose = _authored_imageable_tokens(
             prim,
             point_text=point_text,
         )
+        if selected_values.visibility is not None:
+            visibility = selected_values.visibility
         effective_purpose = authored_purpose or inherited_purpose
         taxonomy, label, effective_semantics = semantics.inherited_pair(
             prim,
@@ -732,12 +778,16 @@ def stage_to_scene_graph(
         node_payload_indices.append(no_payload)
         child_lists.append([])
         if prim.type_name != "Scope":
-            try:
-                transform, resets = render_nodes[path]
-            except KeyError:
-                raise ValueError(
-                    f"USD prim {path!r}: transform evaluation is unavailable"
-                ) from None
+            if selected_values.transform is not None:
+                transform = selected_values.transform
+                resets = selected_values.transform_resets_stack
+            else:
+                try:
+                    transform, resets = render_nodes[path]
+                except KeyError:
+                    raise ValueError(
+                        f"USD prim {path!r}: transform evaluation is unavailable"
+                    ) from None
             node_transforms.append(transform)
             node_resets.append(int(resets))
         else:
@@ -811,6 +861,10 @@ def stage_to_scene_graph(
                 gaussians.gaussian_cloud_from_prim(
                     prim,
                     shell_properties=_payload_shell_properties(prim),
+                    coordinate_frame=(
+                        "opengl" if metadata["up_axis"] == "y" else "enu"
+                    ),
+                    scale_to_meters=metadata["meters_per_unit"],
                 )
             )
         if (
@@ -972,7 +1026,7 @@ def stage_to_scene_graph(
         ),
         source_representation=source_representation,
         default_prim=default_prim,
-        selected_time=time,
+        selected_time=time if evaluated_selected_time else None,
         **metadata,
     )
 
@@ -1068,6 +1122,48 @@ def inspect_scene(
     semantic_node_count = 0
     volume_count = 0
     instance_dependencies: dict[str, tuple[str, ...]] = {}
+    sampled_properties: list[str] = []
+    sampled_times: list[float] = []
+    sampled_value_count = 0
+    prefix = package.root_layer_prefix(path)
+    selected_time_usda = prefix.startswith(b"#usda")
+    scan_authored_samples = (
+        not selected_time_usda or _root_layer_has_time_samples(path)
+    )
+
+    def record_samples(prim_text: str, path_value: str) -> None:
+        nonlocal sampled_value_count
+        try:
+            names = animation.sampled_property_names(
+                prim_text,
+                context=f"USD prim {path_value!r}",
+            )
+        except ValueError as exc:
+            unsupported.add(f"{path_value}: {exc}")
+            return
+        if not names:
+            return
+        sampled_properties.extend(
+            f"{path_value}:{name}" for name in sorted(names)
+        )
+        # Reading without a selected time cannot preserve authored samples in
+        # the state-B profile, even when selected-time materialization is safe.
+        unsupported.add(f"{path_value}: time_samples")
+        try:
+            parsed = animation.parse_prim_samples(
+                prim_text,
+                path=path_value,
+            )
+        except ValueError as exc:
+            unsupported.add(str(exc))
+            return
+        sampled_value_count += parsed.sample_count
+        sampled_times.extend(float(value) for value in parsed.sample_times)
+        if not selected_time_usda:
+            unsupported.add(
+                f"{path_value}: selected-time evaluation requires a "
+                "directly authored USDA root layer"
+            )
 
     def visit(
         prim,
@@ -1079,10 +1175,20 @@ def inspect_scene(
         path_value = f"{parent_path}/{prim.name}"
         type_name = str(prim.type_name)
         type_counts[type_name] = type_counts.get(type_name, 0) + 1
+        point_text = None
+        if scan_authored_samples:
+            point_text = prim.to_string()
+            record_samples(point_text, path_value)
         if path_value in resource_paths:
             for child in prim.children():
                 visit(child, path_value, inherited_semantics)
             return
+        if point_text is None and prim.type_name in {
+            "Points",
+            cameras.CAMERA_PRIM_TYPE,
+            instances.INSTANCE_PRIM_TYPE,
+        }:
+            point_text = prim.to_string()
         node_count += 1
         for set_name in prim.variant_sets():
             selection = prim.variant_selection(set_name)
@@ -1090,16 +1196,6 @@ def inspect_scene(
                 f"{path_value}:{set_name}="
                 f"{'' if selection is None else selection}"
             )
-        point_text = (
-            prim.to_string()
-            if prim.type_name
-            in {
-                "Points",
-                cameras.CAMERA_PRIM_TYPE,
-                instances.INSTANCE_PRIM_TYPE,
-            }
-            else None
-        )
         for property_name in _property_names(prim, point_text=point_text):
             attribute = prim.get_attribute(property_name)
             if (
@@ -1125,8 +1221,6 @@ def inspect_scene(
         except ValueError as exc:
             unsupported.add(f"{path_value}: {exc}")
         else:
-            if _has_time_samples(prim, point_text=point_text):
-                unsupported.add(f"{path_value}: time_samples")
             if prim.type_name == "Mesh":
                 try:
                     positions, counts, _, _ = geometry.mesh_arrays_from_prim(
@@ -1290,6 +1384,10 @@ def inspect_scene(
         "up_axis": metadata["up_axis"],
         "meters_per_unit": metadata["meters_per_unit"],
         "time_codes_per_second": metadata["time_codes_per_second"],
+        "selected_time_profile": "direct_usda_matrix_visibility_v1",
+        "selected_time_representation_supported": selected_time_usda,
+        "sampled_properties": tuple(sorted(sampled_properties)),
+        "sample_count": sampled_value_count,
         "mesh_projection_available": mesh_projection_available,
         "prim_type_counts": tuple(
             f"{name}={count}" for name, count in sorted(type_counts.items())
@@ -1340,7 +1438,11 @@ def inspect_scene(
             metadata["start_time_code"],
             metadata["end_time_code"],
         )
-    prefix = package.root_layer_prefix(path)
+    if sampled_times:
+        details["sample_time_range"] = (
+            min(sampled_times),
+            max(sampled_times),
+        )
     if prefix.startswith(provider.USDC_MAGIC) and len(prefix) >= 10:
         details["crate_version"] = int(prefix[9])
 
@@ -1494,6 +1596,10 @@ def _validate_writable_scene(scene) -> tuple[object, ...]:
             gaussians.validate_writable_gaussian(
                 scene.gaussian_cloud_at(index),
                 context=context,
+                coordinate_frame=(
+                    "opengl" if scene.up_axis == "y" else "enu"
+                ),
+                scale_to_meters=scene.meters_per_unit,
             )
     if used_meshes != set(range(scene.num_meshes)):
         raise ValueError("USD: every mesh payload must be referenced exactly once")

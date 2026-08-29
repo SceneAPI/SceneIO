@@ -1,11 +1,13 @@
 # USD 3D-CV profile implementation plan
 
-Status: U0-U5 are committed through C5 (`6eeae8e`). C6 closes through Exit B
-under the current permissive-license allow-list: OpenUSD is not installed,
-invoked, copied, or bundled; current USDC, evaluated composition, and animated
-selected-time evaluation are explicit unavailable provider flags. The direct
-static profile detects and refuses sublayers, references, payloads, variants,
-inherits, and specializes before projecting a raw stage. C7 local release
+Status: U0-U5 are committed through C5 (`6eeae8e`). The original C6 static
+checkpoint and C7 release evidence below remain historical records. FC6 on
+2026-08-29 supersedes only the selected-time boundary: direct USDA and
+USDA-root USDZ matrix/visibility evaluation is now qualified through a bounded
+repository grammar and test-only OpenUSD 26.8 oracle. Current USDC,
+composition, animation preservation, and dynamic writing remain unavailable.
+The direct profile detects and refuses sublayers, references, payloads,
+variants, inherits, and specializes before projecting a raw stage. C7 local release
 qualification and hosted package/compiler validation are complete. At final
 implementation source `47eb2e1`, package run `30703473199` and compiler run
 `30703469313` pass with publication skipped. CI `30703469317` passes its full
@@ -339,19 +341,13 @@ official unmodified OpenUSD packages only; optional oracle/provider only;
 never bundled in SceneIO wheels; complete package notice inventory required.
 ```
 
-Package availability is a separate gate from source-release availability. As
-of 2026-07-31, PyPI publishes official `usd-core 26.8` wheels for CPython
-3.9-3.14 on Windows x86-64, manylinux glibc 2.27/2.28 x86-64, and macOS
-universal2. This makes an exact-version C6 oracle feasible, but it does not
-approve the TOST license or make OpenUSD part of SceneIO's abi3/manylinux2014
-wheel. If the narrow policy entry is not approved, close current
-USDC/composition/time as unavailable instead of waiting or adding a
-repository-owned composition/crate implementation.
-
-If that narrow entry is not approved, SceneIO still closes the direct static
-profile with TinyUSDZ and repository-owned USDA/USDZ output. It reports
-current USDC, composition, and selected-time evaluation as unavailable rather
-than extending the project indefinitely.
+Package availability is a separate gate from source-release availability. The
+later policy decision approved official `usd-core==26.8` only as a separately
+installed test oracle; it remains outside SceneIO's abi3/manylinux2014 wheel
+and normal imports. FC6 uses that oracle to qualify the bounded direct-USDA
+selected-time grammar, not as a runtime composition/crate provider. Current
+USDC, composition, and animation preservation/writing therefore stay
+unavailable.
 
 ## Target profile contract
 
@@ -679,7 +675,7 @@ schema modules and keeps traversal, selection, and payload dispatch in
 | C3 Gaussian | committed at `a633477` | preserve the exact official mapping and bounded provider transform fallback; no additional schema scope | 62 focused mapping/record tests; 222 legacy passes plus one expected skip; exact 4,231-node full gate; generated 1k/100k/1M rows | hosted execution remains deferred to the next authorized push |
 | C4 Camera | done in this closure unit | keep `UsdGeomCamera`/`UsdRenderProduct` mapping isolated in `cameras.py`; preserve camera-to-parent/OpenGL conventions and float-precision projection equivalence | 43 camera tests; 196 affected USD/CameraRig passes; 259 calibration/COLMAP controls; 40 docs/contracts; exact 4,275-node full suite | hosted three-OS execution remains deferred to the next authorized push |
 | C5 Remaining payloads | locally complete in focused `volumes.py`, `semantics.py`, and `instances.py` modules | preserve the direct scalar-float VDB reference, one effective semantic pair, and static PointInstancer boundary; keep prototype geometry shared and volume-bearing USDZ unavailable | 20 family nodes plus benchmark smoke, existing USD regression family, literal relationships/attributes, missing/shared VDB, inheritance, ids/masks/order, cycle, lifetime, selection, and destination preservation are green | generated 1 GiB VDB and 1M-instance evidence recorded; exact 4,299-node gate passes 4,293 with 6 documented skips; full Ruff and docs/contracts are clean |
-| C6 Static-provider closure | complete through Exit B | preserve direct USDA/USDZ and historical crate reads; expose profile id plus false `current_usdc`, `composition`, and `selected_time` flags; scan/refuse sublayer/reference/payload/variant/inherit/specialize inputs and authored samples | capability, inspection, direct arc, selected-time, crate ceiling, provider-boundary, import-isolation, registry, and static TinyUSDZ controls | no OpenUSD package installed or invoked; capabilities/provider report/docs exact; C7 supplies artifact and hosted platform evidence |
+| C6 Static-provider closure | historical checkpoint, superseded by FC6 state B on 2026-08-29 | preserve direct USDA/USDZ and historical crate reads; retain false `current_usdc`/`composition`; direct USDA matrix/visibility selected time is now qualified while preservation/write remain excluded | original static controls plus the bounded grammar contract and 22-case OpenUSD 26.8 selected-time oracle | OpenUSD remains test-only; current state-B evidence is in `usd_animation_benchmark.md` |
 | C7 Release closure | complete at `b16ee1c` | no new format scope; capability manifests, public docs, installed-package surfaces, benchmark ledger, and release metadata are reconciled | 4,317-node local collection; 4,311 pass/6 skip; package/compiler runs, every functional/platform CI lane, and five-run guard pass | publish separately through the approved tag workflow |
 
 Each unit has a stop rule: if an authored property cannot be represented
@@ -984,7 +980,7 @@ not a C3 prerequisite.
 Exit: the complete set of accepted 3D-CV payload kinds round-trips in one mixed
 stage.
 
-### U6 — static-profile provider closure
+### U6 — historical static-profile provider closure (superseded for selected time)
 
 - [x] Apply the current literal allow-list: TOST 1.0 is not approved for an
       executable dependency, so do not install or invoke OpenUSD.
@@ -1001,17 +997,19 @@ stage.
       exposing TinyUSDZ's unevaluated raw traversal.
 - [x] Refuse non-empty variant selections because evaluated variants are
       unavailable.
-- [x] Detect authored time samples and refuse reads, including explicit
-      `time=` requests. A finite time on a wholly static stage is metadata,
-      not animated-value evaluation.
+- [x] At this historical checkpoint, detect authored time samples and refuse
+      reads. FC6 state B later replaces this one item with bounded direct-USDA
+      matrix/visibility evaluation and sets no selected time on wholly static
+      stages.
 - [x] Write only the directly authored flattened static snapshot.
-- [x] Report authored asset dependencies, unsupported arcs, profile id, and
-      the three false provider flags in `inspect()`.
+- [x] At this checkpoint, report authored asset dependencies, unsupported arcs,
+      profile id, and the three provider flags in `inspect()`; FC6 later changes
+      only bounded direct-USDA `selected_time` to true.
 
-Exit B is selected: direct static profile closure proceeds, and both
-capabilities and inspection explicitly report `current_usdc`, `composition`,
-and `selected_time` as unavailable. Layer-stack authoring remains out of
-scope. C6 does not change SceneIO's base wheel contract.
+This historical exit reported `current_usdc`, `composition`, and
+`selected_time` unavailable. FC6 state B now reports selected time available
+only for the named direct-USDA matrix/visibility subset. Layer-stack authoring
+and the base wheel contract remain unchanged.
 
 Provider validation must run in a separately installed environment because
 `usd-core` has CPython/platform-specific wheels and a newer Linux floor than
@@ -1063,9 +1061,9 @@ lens additionally removes each installed USD/USDZ source and collects garbage
 before re-reading the retained rich-scene positions. The format/convention
 lens retains exact profile/provider metadata and requires composition refusal.
 
-Exit: the docs claim exactly `sceneio.usd.3dcv/1`, separately report
-`current_usdc`, `composition`, and `selected_time` provider flags, and no
-document says “full USD.”
+Exit: the docs claim exactly `sceneio.usd.3dcv/1`, separately report false
+`current_usdc`/`composition` and true bounded-direct-USDA `selected_time`, and
+no document says “full USD.”
 
 ### Per-commit documentation checklist
 

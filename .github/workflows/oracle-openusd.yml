@@ -12,8 +12,8 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  gaussian-usda-usdz:
-    name: OpenUSD 26.08 Gaussian USDA/USDZ
+  openusd-usda-usdz:
+    name: OpenUSD 26.08 Gaussian and selected-time USDA/USDZ
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -27,3 +27,5 @@ jobs:
         run: uv pip install --python .venv/bin/python usd-core==26.8
       - name: Run official OpenUSD Gaussian cross-read suite
         run: .venv/bin/python -m pytest -q -rs tests/codecs/test_openusd_gaussian_oracle.py
+      - name: Run official OpenUSD selected-time cross-read suite
+        run: .venv/bin/python -m pytest -q -rs tests/codecs/test_openusd_animation_oracle.py

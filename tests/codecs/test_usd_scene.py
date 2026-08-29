@@ -155,7 +155,9 @@ def _rich_geometry_scene(
     return _core.scene_graph(**values)
 
 
-def test_read_scene_maps_hierarchy_metadata_and_selected_static_time(tmp_path):
+def test_read_scene_maps_hierarchy_metadata_without_false_static_selection(
+    tmp_path,
+):
     path = tmp_path / "hierarchy.usda"
     path.write_text(_HIERARCHY_USDA, encoding="utf-8")
 
@@ -179,7 +181,7 @@ def test_read_scene_maps_hierarchy_metadata_and_selected_static_time(tmp_path):
     assert scene.meters_per_unit == 0.01
     assert scene.source_representation == "usda"
     assert scene.default_prim == 0
-    assert scene.selected_time == 2.5
+    assert scene.selected_time is None
     assert scene.start_time_code == 1.0
     assert scene.end_time_code == 5.0
     assert scene.time_codes_per_second == 30.0
@@ -868,7 +870,7 @@ def test_geometry_guards_preserve_destinations_and_refuse_bad_domains(tmp_path):
         2: [(1,1,1)]
     }
 }""",
-            "selected-time value evaluation is not available",
+            "time-varying properties.*points",
         ),
     )
     for index, (body, message) in enumerate(malformed):
@@ -1098,7 +1100,7 @@ def test_write_scene_refuses_unqualified_usdc_and_unrepresentable_visibility(
     assert visible.read_bytes() == b"keep"
 
 
-def test_read_scene_refuses_time_sample_evaluation_until_provider_support(
+def test_read_scene_evaluates_qualified_matrix_samples(
     tmp_path,
 ):
     path = tmp_path / "animated.usda"
@@ -1116,13 +1118,14 @@ def Xform "World"
         encoding="utf-8",
     )
 
-    with pytest.raises(
-        sceneio.FormatError,
-        match="selected-time value evaluation is not available",
-    ):
-        sceneio.read_scene(path, time=1.5)
+    actual = sceneio.read_scene(path, time=1.5)
+    np.testing.assert_array_equal(
+        actual.node_local_transforms[0, :3, 3],
+        [1.5, 0, 0],
+    )
+    assert actual.selected_time == 1.5
     inspected = sceneio.inspect(path)
-    assert inspected.metadata["provider_selected_time"] is False
+    assert inspected.metadata["provider_selected_time"] is True
     assert "/World: time_samples" in inspected.metadata["unsupported_features"]
 
 
@@ -1159,7 +1162,7 @@ def Xform "World"
     assert inspected.metadata["profile"] == "sceneio.usd.3dcv/1"
     assert inspected.metadata["provider_current_usdc"] is False
     assert inspected.metadata["provider_composition"] is False
-    assert inspected.metadata["provider_selected_time"] is False
+    assert inspected.metadata["provider_selected_time"] is True
     with pytest.raises(
         sceneio.FormatError,
         match=r"evaluated composition.*references",

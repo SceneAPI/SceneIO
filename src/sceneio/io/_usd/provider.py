@@ -14,7 +14,7 @@ PROVIDER_FLAGS = MappingProxyType(
     {
         "current_usdc": False,
         "composition": False,
-        "selected_time": False,
+        "selected_time": True,
     }
 )
 

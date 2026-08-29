@@ -233,7 +233,7 @@ def test_usd_inspection_matches_decoded_scene(tmp_path, suffix):
         "profile": "sceneio.usd.3dcv/1",
         "provider_current_usdc": False,
         "provider_composition": False,
-        "provider_selected_time": False,
+        "provider_selected_time": True,
         "node_count": 2,
         "primitive_count": 1,
         "face_count": 2,
@@ -242,15 +242,19 @@ def test_usd_inspection_matches_decoded_scene(tmp_path, suffix):
         "up_axis": "y",
         "meters_per_unit": 1.0,
         "time_codes_per_second": 24.0,
+        "selected_time_profile": "direct_usda_matrix_visibility_v1",
+        "selected_time_representation_supported": True,
+        "sampled_properties": (),
+        "sample_count": 0,
         "mesh_projection_available": True,
         "prim_type_counts": ("Mesh=1", "Xform=1"),
         "dependencies": (),
         "variants": (),
-            "unsupported_features": (),
-            "num_materials": 0,
-            "num_textures": 0,
-            "num_gaussian_clouds": 0,
-        }
+        "unsupported_features": (),
+        "num_materials": 0,
+        "num_textures": 0,
+        "num_gaussian_clouds": 0,
+    }
 
 
 def test_usd_inspection_does_not_construct_mesh_scene(tmp_path, monkeypatch):

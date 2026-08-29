@@ -1,7 +1,7 @@
 # USD provider qualification
 
-Status: provider matrix, C6 Exit B, and hosted package/compiler/CI gates complete
-Date: 2026-08-01
+Status: provider matrix complete; FC6 selected-time state B locally complete
+Date: 2026-08-29
 Local provider: TinyUSDZ 0.9.4
 Standards pins: AOUSD Core 1.0.1 `2f9e746c4fbd`, supplemental
 1.0.1.post0 `c15ae0cad3ed` (tag object `404e2bde49c1`), OpenUSD 26.08
@@ -31,6 +31,10 @@ claim. The target profile and phase checklist are in
 | payloads | arc parses, but payload children are not populated | inspect and refuse in profile v1 |
 | variants | definitions and selection parse, but selected children are not populated | inspect and refuse in profile v1 |
 | inherits/specializes | provider evaluation is not qualified | inspect and refuse in profile v1 |
+| USDA matrix samples | sample times enumerate but values are invalid placeholders | repository-owned bounded parser evaluates only direct `matrix4d xformOp:transform.timeSamples` |
+| USDA visibility samples | Python binding exposes neither typed values nor sample times | the same bounded parser evaluates only inherited/invisible held tokens |
+| USDA-root USDZ samples | root text has the same provider-normalized direct representation | qualify the same selected-time subset after USDZ layout validation |
+| selected-time interpolation | TinyUSDZ has no typed evaluation route | match exact/between/endpoints to test-only OpenUSD 26.8; keep USDC excluded |
 
 The composition probes use one external layer with a mesh and separate root
 layers containing a sublayer, reference, payload, or two-choice variant. Direct
@@ -63,6 +67,8 @@ not imply that every crate-10 value type is usable. SceneIO owns:
 - conversion from provider values to compiled records;
 - stage metadata and dependency inspection;
 - deterministic USDA and USDZ serialization;
+- bounded selected-time parsing/evaluation for direct USDA matrix and
+  visibility sample tables;
 - explicit inspection and refusal of unevaluated composition/value-resolution
   behavior.
 
@@ -70,20 +76,16 @@ USDC writing and current crate 11-15 reading stay unavailable until output and
 input are accepted by an approved current OpenUSD reference and the AOUSD
 format checks. A provider self-round-trip does not qualify either direction.
 
-OpenUSD 26.08 remains a standards reference. TOST 1.0 is permissive and
-Apache-2.0-derived, but it is not literally one of this repository's approved
-MIT/BSD/zlib/Apache/public-domain licenses. C6 therefore selects Exit B: no
-OpenUSD package or library is installed, invoked, copied, or bundled.
-
-As of 2026-07-31, official `usd-core 26.8` wheels are published for supported
-CPython versions on Windows, Linux, and macOS. Availability does not approve
-TOST use or change the provider boundary above. A future policy change would
-require a fresh exact wheel/license inventory in a separate environment; the
-package must never be bundled into SceneIO's abi3 wheel.
+OpenUSD 26.08 remains a separately installed, test-only standards oracle under
+the repository's recorded TOST policy. The focused workflow installs
+`usd-core==26.8` only for executable cross-checks; `pxr` is never imported by
+ordinary SceneIO code, is not a runtime dependency, and is not bundled in the
+abi3 wheel. This oracle role does not change TinyUSDZ's runtime boundary.
 
 ## Provider closure evidence
 
-- [x] Explicit TOST outcome: not approved under the current literal allow-list.
+- [x] Explicit TOST outcome and test-only oracle role recorded in the source
+      catalog/license policy; no runtime or bundled use.
 - [x] AOUSD Core 1.0.1 plus supplemental 1.0.1.post0 license and fixture
       inventory.
 - [x] Current USDC comparison branch closed as unavailable for profile v1;
@@ -94,11 +96,17 @@ package must never be bundled into SceneIO's abi3 wheel.
       `30703473199` at implementation source `47eb2e1`; publication skipped.
 - [x] Final correction source `b16ee1c` passes compiler run `30705438179` and
       CI `30705438186`, including the 67-row five-run allocation guard.
+- [x] FC6 state-B grammar and limits frozen in
+      `tests/contracts/usd_selected_time_v1.toml`; direct USDA and USDA-root
+      USDZ exact/between/endpoint values match OpenUSD 26.8.
+- [x] Selected-time scale evidence retained in
+      `docs/usd_animation_benchmark.md`; preservation/write are marked not
+      applicable rather than inferred from value materialization.
 
 Public capability metadata and every USD-family inspection now report
-`current_usdc`, `composition`, and `selected_time` as unavailable. Direct
-inspection detects all six planned arc families and reads refuse rather than
-silently returning raw unevaluated provider traversal. Typed properties with
-the same names are not misclassified, including list-op context, and a 4 MiB
-indentation fixture keeps the streamed scan below 512 KiB traced allocation.
-The exact local 4,306-node gate passes 4,300 with six documented skips.
+`current_usdc` and `composition` as unavailable and `selected_time` as
+available for the named direct-USDA subset. Inspection records the selected
+profile, representation support, property list, sample count, and time range.
+It still reports authored samples as not preservable when no `time` is given.
+Dynamic writing, USDC selected time, composition, arbitrary sampled xform
+stacks, and sampled payloads remain explicit unsupported features.

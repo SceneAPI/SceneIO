@@ -144,7 +144,10 @@ cmake/
   texture sources; direct-layer files and package-member locators remain
   separate from the authored portable URI. Schema mappings live in focused
   `gaussians.py`, `cameras.py`, `volumes.py`, `semantics.py`, and
-  `instances.py` adapters. Camera records use one unambiguous render-product
+  `instances.py` adapters. The state-B `animation.py` adapter structurally
+  parses only provider-normalized direct-USDA matrix/visibility sample tables
+  and materializes one selected static value; it owns no composition or
+  animation-preservation model. Camera records use one unambiguous render-product
   resolution and an explicit local camera-to-parent/OpenGL pose. Volume
   records retain one direct scalar-float OpenVDB dependency without decoding
   it; semantics retain one effective inherited pair; and point instances
