@@ -1,15 +1,19 @@
 # Finite 3D-CV profile closure checklist
 
-- **Status:** FC0-FC4 and FC6 are validated as of 2026-08-29; FC5 is closed by
+- **Status:** Complete and merged as of 2026-08-29. FC0-FC4 and FC6 are
+  validated; FC5 is closed by
   evidence-backed exclusion. Exact implementation candidate
   `9a20bc61f177c28ba228b89e80cff665e3f1b426` passes the complete local gate,
   strict benchmark, exact source closure, Linux/macOS/Windows installed-wheel
   matrix, OpenUSD and Niantic SPZ oracles, standard CI, and ASan/UBSan in
   nonpublishing Release run
   [`33249900572`](https://github.com/SceneAPI/SceneIO/actions/runs/33249900572)
-  and its linked final runs. FC7's technical and evidence gates are closed;
-  the existing PR remains a mergeable draft pending the user's review-state
-  decision, and publication remains a separate tag-driven action.
+  and its linked final runs. PR
+  [`#1`](https://github.com/SceneAPI/SceneIO/pull/1) merged the completed
+  program to `main` as `b82858d5bc79354107d0d2e3d78260bf62c46ef8`.
+  Post-merge [CI](https://github.com/SceneAPI/SceneIO/actions/runs/33253820086)
+  and [Sanitizers](https://github.com/SceneAPI/SceneIO/actions/runs/33253820079)
+  passed; publication remains a separate tag-driven action.
 - **Baseline:** 74 built-in formats, each mapped to a licensed direct fixture
   or deterministic oracle-derived route.
 - **Purpose:** close the remaining 3D-computer-vision representation and
@@ -18,10 +22,10 @@
 - **Authority:** current shipped capability remains
   [`format_coverage.md`](format_coverage.md). This document owns only the
   dependency order and acceptance checklist for the finite follow-on work.
-- **Execution plan:**
-  [`remaining_gap_implementation_plan.md`](remaining_gap_implementation_plan.md)
-  turns this checklist into ordered work packages, file/API change surfaces,
-  validation commands, provider decision gates, and commit boundaries.
+- **Execution plan:** the completed ordered work packages, file/API change
+  surfaces, validation commands, provider decisions, commit boundaries, and
+  immutable evidence are in the
+  [`archived implementation plan`](plans/completed/remaining_gap_implementation_plan_2026-08-29.md).
 - **Machine decision contract:**
   [`remaining_3dcv_fc0_v1.toml`](../tests/contracts/remaining_3dcv_fc0_v1.toml)
   freezes the stable signatures, provisional names, provider observations,
@@ -1063,8 +1067,8 @@ macOS, manylinux, and Windows wheel payloads are respectively
 `3c4d95189bd5e01fc528d7918e1a5c668180ce67493069bddd789a3c224f6487`,
 `4592504f971810d0e25f1719d34e683fac1ad758946905130ba91de157c3e08d`,
 and `bb567c00961e94ad784294861b5ebaee817296aacf68e81d394df04cc8715750`.
-The complete nine-artifact payload/archive digest ledger is in
-[`remaining_gap_implementation_plan.md`](remaining_gap_implementation_plan.md#93-distribution-and-hosted-gate).
+The complete nine-artifact payload/archive digest ledger is in the
+[`archived implementation plan`](plans/completed/remaining_gap_implementation_plan_2026-08-29.md#93-distribution-and-hosted-gate).
 
 Both final CI copies
 ([push `33249897819`](https://github.com/SceneAPI/SceneIO/actions/runs/33249897819),
@@ -1088,8 +1092,9 @@ pass. The retained five-run strict benchmark is
       evidence.
 - [x] Mark each profile `validated` or `excluded`; leave no unexplained pending
       row.
-- [ ] Move completed execution evidence into `docs/plans/completed/` only after
-      its immutable archive contract is updated deliberately.
+- [x] Move completed execution evidence into
+      [`docs/plans/completed/`](plans/completed/README.md) and extend its
+      content-hash contract deliberately.
 
 ## 14. Corrected green commit slices
 
@@ -1145,8 +1150,8 @@ their own columns and validation records.
 
 ## 16. Final stopping rule
 
-The follow-on program is closed when FC1-FC6 satisfy the matrix and FC7 passes.
-At that point:
+The follow-on program is closed: FC1-FC6 satisfy the matrix and FC7 passes.
+The final state is:
 
 - the registry contains exactly 74 built-ins, including the qualified bounded
   visual-inertial directory codec;

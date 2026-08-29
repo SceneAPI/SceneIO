@@ -13,3 +13,6 @@ Current codec capabilities and validation status remain in
 
 - [`format_gap_waves_a_c_2026-07-25.md`](format_gap_waves_a_c_2026-07-25.md)
   — completed typed-depth, self-contained G2, and canonical mesh wave evidence.
+- [`remaining_gap_implementation_plan_2026-08-29.md`](remaining_gap_implementation_plan_2026-08-29.md)
+  — completed G1 Gaussian semantics and FC4-FC7 TIFF, OpenVDB, selected-time
+  USD, package, oracle, CI, sanitizer, and merge evidence.

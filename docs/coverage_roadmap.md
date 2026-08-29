@@ -10,17 +10,14 @@
 > [`repository_organization_plan.md`](repository_organization_plan.md), with
 > its reviewed execution checklist in
 > [`next_stage_implementation_checklist.md`](next_stage_implementation_checklist.md).
-> The remaining 3D-CV representation/profile work has a finite reviewed scope
-> and completion matrix in
-> [`remaining_3dcv_profile_checklist.md`](remaining_3dcv_profile_checklist.md).
-> Its FC0 compatibility and provider-feasibility freeze and the bounded FC1
-> visual-inertial record/dataset slice are locally complete. FC2 label records,
-> NPZ/Zarr/TIFF typed carriers, and strict NCore camera-label projection are
-> locally implemented. The pinned procedural Kubric render is complete: the
-> Blender 4.3.0/Python 3.11 result is checked in with 11 verified hashes. Its
-> generation tool validates the complete semantic/pose/flow/runtime result and
-> atomically replaces hashes in that same operation. Hosted package validation
-> remains a separately triggered evidence gate.
+> The finite 3D-CV representation/profile program is complete and merged. Its
+> final matrix remains in
+> [`remaining_3dcv_profile_checklist.md`](remaining_3dcv_profile_checklist.md),
+> and its content-hashed execution record is in the
+> [`completed-plan archive`](plans/completed/remaining_gap_implementation_plan_2026-08-29.md).
+> Exact-candidate package/oracle validation and post-merge CI plus sanitizers
+> pass; broader USD/OpenVDB semantics remain explicit future profiles rather
+> than unfinished work in that program.
 > The bounded standards-based USD expansion is specified separately in
 > [`usd_3d_cv_implementation_plan.md`](usd_3d_cv_implementation_plan.md).
 > Coordinate-system closure is implemented independently of the remaining
@@ -421,7 +418,7 @@ Columns: **Ext/id** · **Record** · **Lib/oracle (license)** · **R/W** ·
 | ✅ OFF | `Mesh` | independent parser + trimesh (MIT) | R+W | polygon-preserving ASCII vertex variants with normals, UVs, and exact RGBA8; bounded face ranges |
 | ✅ glTF / GLB (plain) | `MeshScene` | cgltf (MIT); pygltflib + trimesh oracles | R+W | 2.0 JSON/external or data buffers and GLB BIN; sparse/strided accessors, nodes/scenes, PBR subset, mesh/primitive selectors; unsupported extensions/Draco reject |
 | policy-gated Draco glTF | `MeshScene` | Draco (Apache) | R+W | requires a separate patented-codec policy decision; never required for plain glTF/GLB |
-| 🟡 USD / USDZ / historical USDC | `MeshScene` compatibility + `SceneGraph` | TinyUSDZ (Apache-2.0) + test-only OpenUSD (TOST-1.0) oracle | rich direct-static 3D-CV R+W; bounded selected-time R | optional `sceneio[usd]`; C1-C5 cover hierarchy, polygon meshes/points, bounded PreviewSurface materials/textures, official float/half Gaussian particles, static camera/render-product pairs, direct scalar-float OpenVDB references, one inherited semantic pair, and static PointInstancer rows; historical USDC input is qualified through crate 10 and later crates refuse before provider dispatch; FC6 state B adds direct USDA/USDA-root USDZ matrix and visibility selected-time evaluation while leaving current USDC, composition, animation preservation, dynamic writing, and sampled payloads unavailable; OpenUSD 26.8 is separately installed only in focused Gaussian and selected-time oracle lanes and is not a runtime dependency; final exact-candidate cross-platform confirmation belongs to FC7 |
+| 🟡 USD / USDZ / historical USDC | `MeshScene` compatibility + `SceneGraph` | TinyUSDZ (Apache-2.0) + test-only OpenUSD (TOST-1.0) oracle | rich direct-static 3D-CV R+W; bounded selected-time R | optional `sceneio[usd]`; C1-C5 cover hierarchy, polygon meshes/points, bounded PreviewSurface materials/textures, official float/half Gaussian particles, static camera/render-product pairs, direct scalar-float OpenVDB references, one inherited semantic pair, and static PointInstancer rows; historical USDC input is qualified through crate 10 and later crates refuse before provider dispatch; FC6 state B adds direct USDA/USDA-root USDZ matrix and visibility selected-time evaluation while leaving current USDC, composition, animation preservation, dynamic writing, and sampled payloads unavailable; OpenUSD 26.8 is separately installed only in focused Gaussian and selected-time oracle lanes and is not a runtime dependency; final exact-candidate cross-platform confirmation passed in FC7 |
 
 ### 3e. Arrays / tensors / features
 | Format | Record | Lib / oracle | R/W | Notes |

@@ -36,21 +36,21 @@ upstream artifacts that were read locally, while 61 use deterministic
 oracle-derived files from CC0/CC-BY seeds. Large real bundles and broader
 profiles are optional validation data; normal CI remains offline.
 
-The finite follow-on program completed its local FC1B visual-inertial slice on
-2026-08-03. The checked
-[`remaining_3dcv_fc0_v1.toml`](../tests/contracts/remaining_3dcv_fc0_v1.toml)
-still pins the original FC0 decisions, while
-[`euroc_dataset_v1.toml`](../tests/contracts/euroc_dataset_v1.toml) freezes the
-now-public bounded ASL directory profile. `VisualInertialDataset` and
-`euroc_dataset` are qualified. The branch-local
-[`dense_label_maps_v1.toml`](../tests/contracts/dense_label_maps_v1.toml)
-additionally freezes four public FC2 records, NPZ/Zarr/TIFF typed carriers,
-and the strict NCore camera-label projection. The procedural Kubric oracle was
-rendered with the pinned source on Blender 4.3.0/Python 3.11; its 11 compact
-artifacts and exact hashes are checked and verified offline.
-Implementation and local validation are recorded in the
-[`finite closure checklist`](remaining_3dcv_profile_checklist.md).
-The live registry now contains 74 formats.
+The finite FC0-FC7 follow-on program is complete and merged in
+[PR #1](https://github.com/SceneAPI/SceneIO/pull/1). Its checked contracts
+freeze the visual-inertial dataset, dense-label carriers and NCore projection,
+Gaussian semantics, bounded TIFF collections, the evidence-backed OpenVDB
+exclusion, and selected-time USD state B. Exact implementation candidate
+`9a20bc61f177c28ba228b89e80cff665e3f1b426` passed nonpublishing Release run
+[`33249900572`](https://github.com/SceneAPI/SceneIO/actions/runs/33249900572);
+merge commit `b82858d5bc79354107d0d2e3d78260bf62c46ef8` passed post-merge
+[CI](https://github.com/SceneAPI/SceneIO/actions/runs/33253820086) and
+[Sanitizers](https://github.com/SceneAPI/SceneIO/actions/runs/33253820079).
+The final acceptance matrix remains in the
+[`finite closure checklist`](remaining_3dcv_profile_checklist.md), and the
+ordered execution evidence is preserved in the
+[`completed-plan archive`](plans/completed/remaining_gap_implementation_plan_2026-08-29.md).
+The live registry contains 74 formats.
 
 The 2026-08-02 closure commit `5387350` passes the full hosted compiler run
 `30738228920` plus every dedicated Linux, Windows, macOS, and GCC 10 job in CI
