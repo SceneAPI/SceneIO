@@ -105,10 +105,10 @@ complete and format capabilities are unchanged.
 > formats whose comparison is semantic or quantization-bounded rather than a
 > false source-byte equality claim. USD and USDZ include their dedicated
 > Gaussian schema suite in addition to their mesh/scene suites. Gaussian
-> storage and activation semantics are covered across all eight carriers;
-> quaternion normalization state, SH basis/phase/order, color space, and
-> coordinate frame remain explicitly unclaimed until those fields exist in
-> `GaussianCloud`.
+> storage and activation semantics are covered across all carriers. The
+> additive `gaussian_semantics_v1.toml` contract now represents quaternion unit
+> state, SH basis/phase/order, color space, coordinate frame, and metric-scale
+> provenance, using explicit `unknown` values where carrier evidence is absent.
 > A separate SciPy/scalar/index suite now executes the narrower operations the
 > record does represent: quaternion reorder plus requested normalization,
 > scale and opacity activation, and SH memory-layout permutation for degrees
@@ -502,6 +502,19 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > 4,306-node local gate passes 4,300 with six documented skips; the 245-pass
 > focused gate, Ruff, contracts/docs, allocation checks, paired exact-parent
 > benchmark, and three review lenses are green.
+>
+> **USD FC6 selected-time state-B closure (2026-08-29):** the existing
+> `read_scene(path, time=...)` route now evaluates directly authored USDA and
+> USDA-root USDZ `matrix4d xformOp:transform.timeSamples` plus held
+> inherited/invisible visibility samples. A repository-owned structural parser
+> enforces fixed grammar and text/line/token/string/65,536-sample limits;
+> USDC, composition, clips, arbitrary sampled stacks, sampled payload values,
+> animation preservation, and dynamic writing remain explicit refusals. The
+> optional OpenUSD 26.8 suite passes 22 USDA/USDZ exact/interpolated/endpoint
+> cases. The 256-node, 6,912-sample retained benchmark measures 229.74 ms
+> selected read and 241.13 ms inspection with 0.425/0.506 MB traced peaks.
+> `SceneAnimation` remains absent because FC6 closes in state B, and writing a
+> selected result is qualified only as a static snapshot.
 >
 > **USD C7 local release closure (2026-08-01):** the exact local tree collects
 > 4,307 tests and passes 4,301 with six documented skips. A verified source
@@ -1320,6 +1333,13 @@ SoA, zero-copy to numpy/torch (DLPack), conventions carried as metadata.
 > v1 vectors remain covered. The official OpenUSD 26.08 lane executes USDA and
 > USDZ Gaussian cross-read/write checks under TOST-1.0, without adding `pxr` to
 > the runtime or normal test extra.
+> The additive G1 semantic contract maps all seven carrier profiles (with USD
+> and USDZ sharing one schema carrier), verifies quaternion rotations through
+> SciPy, evaluates the pinned 3DGS degree-0/1 basis at axial, asymmetric, and
+> seeded random directions, and qualifies Gaussian coordinate conversion only
+> for orientation-preserving similarities. Directional-SH rotation, nonlinear
+> color/SH conversion, unknown frames without caller context, reflections, and
+> nonsimilar transforms are explicit refusals.
 > The exact post-review local gate collects 4,599 nodes and passes 4,583 tests
 > with 17 documented skips. A pinned Niantic source build separately passes 51
 > official-provider cases with one gsply-v2 writer skip. The five-run scale-0.1
@@ -1403,11 +1423,11 @@ public-domain SQLite amalgamation statically linked into `_core`.
 | `hloc_features` | `HlocFeatureStore` of native `FeatureSet` | R+W, inspect | independent **h5py** documented layout | preserves keypoints, D×N wire descriptors as native N×D with uint8/int8/f16/f32/f64 dtype, scores, image size, nested names, and keypoint uncertainty |
 | `hloc_matches` | `HlocMatchStore` + native `MatchGraph` | R+W, inspect | independent **h5py** documented layout | preserves dense `matches0`, optional `matching_scores0`, exact endpoint names, source extents/dtypes, pair order, and mixed score presence |
 | `zarr` | `TensorDict`; explicit typed dense-label overlay | R+W, inspect, partial | direct **zarr-python/numcodecs** | optional `sceneio[zarr]`; numeric/bool v2/v3 directory stores, nested names, text attrs, named reads, leading-axis slices, transactional replacement, fixed-width normalization, and direct owned-array retention for `sceneio.label_map/1` reads |
-| `tiff` | `Image`, `Mask`, grayscale-stack `TensorDict`, or explicit typed dense label map | R+W, inspect | **tifffile** plus independent producer/consumer checks | optional `sceneio[tiff]`; bounded single-series uint8/uint16/float32 profile, boolean masks, grayscale stacks, BigTIFF, alpha semantics, and transactional path writes; typed semantic/instance/panoptic pages require exact `sceneio.label_map/1` descriptions or an explicit contract for untagged integer rasters, and ordinary TIFF is never inferred as labels |
+| `tiff` | legacy `Image` / `Mask` / grayscale-stack `TensorDict`; typed `RasterCollection`; explicit typed dense label map | R+W, inspect; typed series/level/page/window selection | **tifffile** plus **Zarr** and independent producer/consumer checks | optional `sceneio[tiff]`; the generic API retains the bounded one-series/one-level projection; typed collection APIs preserve classic/BigTIFF, endian, strip/tile layout, bounded CV series and homogeneous SubIFD pyramids, exact axes/dtypes, and transactional deterministic writes; arbitrary OME axes and nonportable writer topologies refuse; semantic/instance/panoptic pages still require the exact label-map adapter |
 | `e57` | legacy `PointCloud`; typed `PointScan` / `ScanSet` | R+W, inspect; typed scan/range selection | direct **pye57/libE57Format** | optional `sceneio[e57]`; generic API retains exactly one unorganized Cartesian scan with invalid rows filtered; additive typed APIs preserve ordered scans, stored rows, raw invalid states, sparse row/column organization and bounds, exact float32 coordinates/intensity, integral RGB8, and WXYZ scan-to-reference pose; typed inspection is header-only and selected ranges use fixed-capacity provider chunks |
 | `parquet` / `arrow_ipc` | `TensorDict` numeric table | R+W, inspect; Parquet named-column partial | direct **PyArrow** | optional `sceneio[arrow]`; scalar/fixed-width numeric columns, equal row counts, text attrs, mmap/threaded provider paths, transactional writes |
-| `openvdb` | sparse-grid `TensorDict` | R+W, inspect | direct **TinyVDB** | optional `sceneio[openvdb]`; one identity-transform, zero-background float32 scalar grid; ZIP/active-mask output; packaged upstream seed is fully replaced and provenance-pinned; rebuilt active count is verified and provider topology loss refuses |
-| `usd` / `usdz` | `MeshScene` compatibility projection; additive `SceneGraph` | R+W, rich static 3D-CV profile R+W, inspect and prim selection | direct **TinyUSDZ** | optional `sceneio[usd]`; `.usd`/`.usda`, historical `.usdc` reads through crate 10, and aligned uncompressed USDZ; legacy static mesh bytes/API unchanged; `read_scene` maps bounded hierarchy/metadata/static transforms, prim selection, polygon meshes, points, PreviewSurface constants/textures and direct/subset bindings, portable PNG/JPEG/EXR references, official float/half Gaussian fields, static camera/render-product pairs, direct scalar-float OpenVDB references, one inherited semantic pair, and static PointInstancer rows; `write_scene` streams deterministic USDA sidecars or self-contained USDZ, while volume-bearing USDZ refuses; current crates, USDC writes, composition, selected animated values, multiple semantic labels/taxonomies, and broader volume/instance schemas remain unavailable; SceneIO's Linux wheel is manylinux2014, while the separately installed TinyUSDZ 0.9.4 x86-64 binary requires manylinux 2.27/2.28 |
+| `openvdb` | sparse-grid `TensorDict` | R+W, inspect | direct **TinyVDB** | optional `sceneio[openvdb]`; one nonempty identity-transform, zero-background float32 scalar grid; ZIP/active-mask output; packaged upstream seed is fully replaced and provenance-pinned; rebuilt active count is verified and provider topology loss refuses |
+| `usd` / `usdz` | `MeshScene` compatibility projection; additive `SceneGraph` | R+W, rich static 3D-CV profile R+W, bounded selected-time R, inspect and prim selection | direct **TinyUSDZ** plus repository-owned selected-time grammar | optional `sceneio[usd]`; `.usd`/`.usda`, historical `.usdc` reads through crate 10, and aligned uncompressed USDZ; legacy static mesh bytes/API unchanged; `read_scene` maps bounded hierarchy/metadata/static transforms, prim selection, polygon meshes, points, PreviewSurface constants/textures and direct/subset bindings, portable PNG/JPEG/EXR references, official float/half Gaussian fields, static camera/render-product pairs, direct scalar-float OpenVDB references, one inherited semantic pair, and static PointInstancer rows; direct USDA/USDA-root USDZ matrix and visibility samples materialize at `time=` with OpenUSD-compatible interpolation/holding; `write_scene` streams deterministic static USDA sidecars or self-contained USDZ, while volume-bearing USDZ refuses; current crates, USDC writes/selected time, composition, animation preservation/dynamic writing, sampled payloads, multiple semantic labels/taxonomies, and broader volume/instance schemas remain unavailable; SceneIO's Linux wheel is manylinux2014, while the separately installed TinyUSDZ 0.9.4 x86-64 binary requires manylinux 2.27/2.28 |
 
 ### Repository-owned COLMAP workflow adapters
 
@@ -1445,8 +1465,9 @@ requirement for COLMAP ecosystem closure.
 - Optional CV containers are complete for the accepted profiles: HDF5/hloc,
   Zarr v2/v3, TIFF, E57, Parquet, Arrow IPC, OpenVDB, USD, and USDZ.
 - Broader semantics remain intentionally outside those bounded profiles:
-  TIFF pyramids/multiple series, E57 spherical coordinates/imagery/extensions,
-  general Arrow nested/string/null schemas, multi-grid/vector/transformed
+  arbitrary OME microscopy semantics, E57 spherical
+  coordinates/imagery/extensions, general Arrow nested/string/null schemas,
+  multi-grid/vector/transformed
   OpenVDB, and composed/animated USD scenes, general shader graphs, multiple
   semantic values, and broader volume/instance schemas.
 - The finite 3D-CV subset selected from those broader semantics, including its
@@ -1577,7 +1598,7 @@ incremental.
 | `stl` | file | yes | yes | yes | faces | yes | yes | no | - |
 | `tga` | file | yes | yes | yes | - | yes | yes | no | - |
 | `theora` | file | yes | yes | yes | frames | yes | yes | yes | - |
-| `tiff` | file | yes | yes | yes | - | yes | yes | no | tifffile |
+| `tiff` | file | yes | yes | yes | - | yes | yes | no | tifffile, zarr |
 | `transforms_json` | file | yes | yes | yes | - | yes | yes | no | - |
 | `tum` | file | yes | yes | yes | - | yes | yes | no | - |
 | `usd` | file | yes | yes | yes | - | yes | yes | no | tinyusdz |

@@ -188,7 +188,7 @@ def test_capability_hooks_and_metadata_are_consistent():
             "hloc_matches": ("h5py",),
             "zarr": ("zarr",),
             "ncore_v4": ("zarr", "cbor2"),
-            "tiff": ("tifffile",),
+            "tiff": ("tifffile", "zarr"),
             "e57": ("pye57",),
             "parquet": ("pyarrow",),
             "arrow_ipc": ("pyarrow",),
@@ -252,11 +252,17 @@ def test_capability_details_pin_current_fidelity_boundaries():
         "static_cameras",
         "external_scalar_float_openvdb_references",
         "static_point_instances",
+        "direct_usda_selected_time",
+        "matrix_transform_time_samples",
+        "visibility_time_samples",
     } <= set(usd.supported_features)
     assert {
         "current_usdc",
         "composition",
-        "selected_time",
+        "authored_animation_preservation",
+        "dynamic_write",
+        "usdc_selected_time",
+        "time_varying_payloads",
         "inherits",
         "specializes",
         "layer_stack_authoring",
@@ -267,8 +273,9 @@ def test_capability_details_pin_current_fidelity_boundaries():
         "profile_sceneio_usd_3dcv_1",
         "uncompressed_aligned_package",
         "static_point_instances",
+        "direct_usda_selected_time",
     } <= set(usdz.supported_features)
-    assert {"current_usdc", "composition", "selected_time"} <= set(
+    assert {"current_usdc", "composition", "usdc_selected_time"} <= set(
         usdz.unsupported_features
     )
 

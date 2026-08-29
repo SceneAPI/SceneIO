@@ -420,7 +420,7 @@ redistribution = "permitted_with_attribution"
 default_ci = false
 expected_size_bytes = 7889559
 expected_sha256 = "caf707ca2ba6c42c40ded92245432d350a781fcdd03c0b178834f5eb5e5b96f3"
-observed_result = "Current TIFF inspection wraps an internal TiffFrame.tags failure for this multi-channel Z/T series; this is a negative result, not a clean positive refusal contract."
+observed_result = "Typed TIFF collection inspect now traverses TiffFrame metadata through its keyframe and deliberately refuses the TCZYX OME-XML profile; generic inspect independently refuses the ambiguous axes."
 notes = "Official future-profile vector for multi-series/volume TIFF hardening; do not count it as supported or broaden the current Image contract silently."
 
 [[sources]]

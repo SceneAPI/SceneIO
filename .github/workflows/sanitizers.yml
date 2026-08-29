@@ -47,7 +47,7 @@ jobs:
             | tee "${{ runner.temp }}/asan-collection.txt"
           grep -F "tests/codecs/test_ply.py::test_read_matches_gsply" "${{ runner.temp }}/asan-collection.txt"
           grep -F "tests/codecs/test_colmap.py::test_writer_byte_identical_to_pycolmap" "${{ runner.temp }}/asan-collection.txt"
-          grep -E "^4943 tests collected in " "${{ runner.temp }}/asan-collection.txt"
+          grep -E "^5066 tests collected in " "${{ runner.temp }}/asan-collection.txt"
       - name: Run available suite under ASan and UBSan
         run: |
           export LD_PRELOAD="$(gcc -print-file-name=libasan.so):$(gcc -print-file-name=libstdc++.so.6)"

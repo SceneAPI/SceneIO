@@ -121,6 +121,46 @@ parquet = { decode = "test_sceneio_reads_direct_arrow_oracle_tables_exactly", en
 arrow_ipc = { decode = "test_sceneio_reads_direct_arrow_oracle_tables_exactly", encode = "test_sceneio_columnar_writes_are_exact_for_direct_arrow_oracle" }
 openvdb = { decode = "test_openvdb_sceneio_reads_upstream_fixture_exactly", encode = "test_openvdb_sceneio_write_is_exact_for_upstream_reader" }
 
+[tiff_collections]
+contract = "tests/contracts/tiff_collections_v1.toml"
+records = ["RasterLevel", "RasterSeries", "RasterCollection"]
+typed_apis = ["read_tiff_collection", "inspect_tiff_collection", "write_tiff_collection"]
+providers = ["tifffile>=2025.5", "zarr>=3.1,<4"]
+qualified_operations = [
+  "classic_and_bigtiff",
+  "little_and_big_endian",
+  "stripped_and_tiled",
+  "multiple_series",
+  "subifd_pyramids",
+  "metadata_only_inspection",
+  "series_level_page_and_window_selection",
+  "transactional_deterministic_write",
+]
+evidence = [
+  "tests/records/test_raster_collection.py",
+  "tests/codecs/test_tiff_collections.py",
+  "tests/test_tiff_provider_qualification.py",
+]
+
+[openvdb_provider_limits]
+contract = "tests/contracts/openvdb_provider_limits_v1.toml"
+decision = "exclusion"
+oracle = "official pyopenvdb 10.0.1 author; TinyVDB 0.9.0 consumer"
+generator = "tools/generate_openvdb_provider_vectors.py"
+qualified_limits = [
+  "all_grid_decode_only",
+  "no_selected_grid_decode",
+  "vector_payload_loss",
+  "empty_transform_loss",
+  "no_add_grid",
+  "read_only_transform",
+]
+evidence = [
+  "tests/test_openvdb_provider_qualification.py",
+  "tests/codecs/test_openvdb.py",
+  "docs/openvdb_provider_qualification.md",
+]
+
 [gaussian_attributes]
 carrier_formats = [
   "gaussian_ply",
@@ -165,13 +205,14 @@ oracle_sources = [
   "OpenUSD 26.08 official USDA/USDZ Gaussian executable oracle",
 ]
 
-# These are not represented by GaussianCloud yet, so the repository must not
-# claim a universal cross-ecosystem normalization oracle for them.
-pending_universal_semantics = [
+# Every broader semantic is now represented. A carrier may map a property to
+# explicit `unknown`; that is a truthful result, not permission to infer it.
+pending_universal_semantics = []
+represented_universal_semantics = [
   "quaternion_raw_or_unit_state",
   "spherical_harmonic_basis_phase_and_coefficient_order",
   "color_space",
-  "coordinate_frame",
+  "coordinate_frame_and_metric_scale_source",
 ]
 
 # These operations are represented by GaussianCloud and independently checked.
@@ -181,4 +222,7 @@ qualified_semantic_operations = [
   "scale_activation",
   "opacity_activation",
   "spherical_harmonic_memory_layout",
+  "spherical_harmonic_basis_phase_and_coefficient_order",
+  "semantic_metadata_validation_and_refusal",
+  "degree_zero_coordinate_conversion",
 ]

@@ -1,5 +1,5 @@
 schema_version = 1
-contract_date = "2026-08-03"
+contract_date = "2026-08-29"
 status = "locally_qualified"
 purpose = "Freeze the stable SceneIO 0.2 boundary and record provider feasibility before the finite 3D-CV profile expansion."
 
@@ -14,15 +14,12 @@ read_scene_signature = "(path, *, time: 'float | None' = None, prims=None, purpo
 provisional_format_ids = []
 implemented_format_ids = ["euroc_dataset"]
 provisional_public_symbols = [
-  "RasterCollection",
-  "RasterLevel",
-  "RasterSeries",
-  "SceneAnimation",
   "SparseGrid",
   "SparseVolumeSet",
 ]
 implemented_public_symbols = ["ImuCalibration", "ImuSequence", "PointScan", "ScanSet", "VisualInertialDataset"]
 implemented_data_symbols = ["InstanceMap", "LabelTaxonomy", "PanopticMap", "SemanticMap"]
+implemented_shared_symbols = ["RasterCollection", "RasterLevel", "RasterSeries"]
 
 [[implemented_formats]]
 id = "euroc_dataset"
@@ -109,7 +106,7 @@ evidence = [
 
 [[design_decisions]]
 id = "tiff_raster_collections"
-outcome = "approved_for_internal_prototype"
+outcome = "qualified"
 public_symbols = ["RasterLevel", "RasterSeries", "RasterCollection"]
 existing_symbols = ["Image", "Mask", "TensorDict"]
 required_contracts = [
@@ -118,41 +115,51 @@ required_contracts = [
   "Compound series, level, page, and window selection stays on a typed TIFF API.",
 ]
 evidence = [
+  "src/sceneio/data/raster.py",
   "src/sceneio/io/_tiff.py",
-  "tests/codecs/test_tiff.py::test_tifffile_provider_pyramid_surface_and_sceneio_boundary",
+  "tests/codecs/test_tiff_collections.py::test_typed_tiff_reads_independent_classic_bigtiff_endian_and_layout_oracle",
+  "tests/codecs/test_tiff_collections.py::test_tiff_collection_compound_page_window_selection_uses_chunk_store",
   "docs/remaining_3dcv_profile_checklist.md",
 ]
 
 [[design_decisions]]
 id = "openvdb_multi_grid"
-outcome = "provider_limited"
+outcome = "qualified_exclusion"
 public_symbols = ["SparseGrid", "SparseVolumeSet"]
 existing_symbols = ["TensorDict", "VolumeAsset"]
 required_contracts = [
   "Retain the one-grid identity-transform TensorDict read and write path.",
-  "Consider multi-grid metadata, read, and selection only for tree and value types demonstrated by TinyVDB.",
-  "Do not claim multi-grid or transformed writes while the provider cannot add grids or set transforms.",
+  "Do not export multi-grid records or selection while TinyVDB can only decode all grids together.",
+  "Reject empty grids because TinyVDB loses their authored transform.",
+  "Do not claim vector, multi-grid, empty, or transformed writes while the provider loses values or cannot add grids and set transforms.",
 ]
 evidence = [
   "src/sceneio/io/_openvdb.py",
-  "tests/codecs/test_openvdb.py::test_tinyvdb_provider_authoring_surface_is_qualified",
+  "tests/contracts/openvdb_provider_limits_v1.toml",
+  "tests/test_openvdb_provider_qualification.py::test_tinyvdb_selection_and_authoring_surface_forces_fc5_exclusion",
+  "tests/test_openvdb_provider_qualification.py::test_official_openvdb_multi_scalar_vector_and_empty_observations",
+  "docs/openvdb_provider_qualification.md",
   "docs/remaining_3dcv_profile_checklist.md",
 ]
 
 [[design_decisions]]
 id = "usd_authored_time_samples"
-outcome = "provider_limited"
-public_symbols = ["SceneAnimation"]
+outcome = "qualified"
+public_symbols = []
 existing_symbols = ["SceneGraph"]
 required_contracts = [
   "Reuse read_scene(path, time=...) and SceneGraph.selected_time.",
-  "Keep selected-time reads refused until typed sample values and interpolation are oracle-qualified.",
-  "Export SceneAnimation only after authored transform and visibility samples can be read and written deterministically.",
+  "Evaluate only directly authored USDA matrix transforms and visibility samples through the bounded state-B grammar.",
+  "Keep SceneAnimation, authored animation preservation, dynamic writing, USDC selected time, and sampled payloads excluded.",
 ]
 evidence = [
   "src/sceneio/io/_usd/provider.py",
+  "src/sceneio/io/_usd/animation.py",
+  "tests/contracts/usd_selected_time_v1.toml",
   "tests/test_usd_provider_qualification.py::test_tinyusdz_authored_usda_samples_are_enumerable_but_untyped",
-  "tests/codecs/test_usd_scene.py::test_read_scene_refuses_time_sample_evaluation_until_provider_support",
+  "tests/codecs/test_usd_animation.py::test_selected_time_matrix_visibility_hierarchy_and_static_payload",
+  "tests/codecs/test_openusd_animation_oracle.py::test_sceneio_selected_time_matches_openusd_26_8",
+  "docs/usd_animation_benchmark.md",
 ]
 
 [[providers]]
@@ -190,11 +197,19 @@ requirement = "tifffile>=2025.5"
 observed_version = "2026.7.14"
 outcome = "broader_container_operations_proven"
 formats = ["tiff"]
-provider_proven_operations = ["multiple_series_read_write", "subifd_pyramid_read_write"]
-sceneio_current_refusals = ["multiple_series", "pyramids"]
+provider_proven_operations = [
+  "multiple_series_read_write",
+  "subifd_pyramid_read_write",
+  "metadata_only_topology_inspect",
+  "series_and_level_selection",
+  "chunked_page_and_window_selection",
+]
+sceneio_current_refusals = ["legacy_multiple_series", "legacy_pyramids", "ome_semantics"]
 evidence = [
-  "tests/codecs/test_tiff.py::test_tiff_rejects_multiple_series_without_decoding",
-  "tests/codecs/test_tiff.py::test_tifffile_provider_pyramid_surface_and_sceneio_boundary",
+  "tests/test_tiff_provider_qualification.py::test_tiff_collection_provider_versions_and_selection_surface_are_qualified",
+  "tests/test_tiff_provider_qualification.py::test_tifffile_ome_frames_use_keyframe_metadata_and_sceneio_refuses_deliberately",
+  "tests/test_tiff_provider_qualification.py::test_tifffile_subifd_base_aszarr_is_group_unless_level_is_selected",
+  "tests/codecs/test_tiff_collections.py::test_tiff_collection_writer_reopens_with_sceneio_and_provider_oracles",
 ]
 
 [[providers]]
@@ -202,13 +217,25 @@ id = "tinyvdb"
 extra = "openvdb"
 requirement = "tinyvdb>=0.9,<1"
 observed_version = "0.9.0"
-outcome = "authoring_surface_limited"
+outcome = "qualified_exclusion"
 formats = ["openvdb"]
-provider_proven_operations = ["enumerate_existing_grids", "replace_existing_grid"]
-sceneio_current_refusals = ["multiple_grids", "transformed_grids", "vector_grids"]
-provider_limits = ["no_add_grid", "read_only_transform"]
+provider_proven_operations = [
+  "enumerate_grid_count_names_and_tree_types",
+  "decode_all_nonempty_scalar_grids",
+  "preserve_nonempty_scalar_affine_transform",
+  "replace_existing_grid",
+]
+sceneio_current_refusals = ["multiple_grids", "transformed_grids", "vector_grids", "empty_grids"]
+provider_limits = [
+  "no_selected_grid_decode",
+  "no_add_grid",
+  "read_only_transform",
+  "vector_payload_loss",
+  "empty_transform_loss",
+]
 evidence = [
-  "tests/codecs/test_openvdb.py::test_tinyvdb_provider_authoring_surface_is_qualified",
+  "tests/test_openvdb_provider_qualification.py::test_tinyvdb_selection_and_authoring_surface_forces_fc5_exclusion",
+  "tests/test_openvdb_provider_qualification.py::test_official_openvdb_multi_scalar_vector_and_empty_observations",
   "tests/codecs/test_openvdb.py::test_openvdb_sceneio_write_is_exact_for_upstream_reader",
 ]
 
@@ -220,7 +247,7 @@ observed_version = "0.9.4"
 outcome = "authored_sample_values_unavailable"
 formats = ["usd", "usdz"]
 provider_proven_operations = ["enumerate_authored_sample_times"]
-sceneio_current_refusals = ["selected_time", "animations", "composition"]
+sceneio_current_refusals = ["usdc_selected_time", "authored_animation_preservation", "composition"]
 provider_limits = ["usda_sample_values_untyped", "qualified_usdc_sample_values_untyped"]
 evidence = [
   "tests/test_usd_provider_qualification.py::test_aousd_crate_10_timesamples_exposes_provider_boundary",
@@ -239,7 +266,7 @@ evidence = [
 [[legacy_projections]]
 formats = ["tiff"]
 return_types = ["sceneio.Image", "sceneio.data.Mask", "sceneio.TensorDict"]
-boundary = "One unambiguous series and one level; multiple series and pyramids remain refused."
+boundary = "The generic API remains one unambiguous series and one level; the additive typed TIFF collection API handles the bounded multi-series and pyramid profile."
 evidence = [
   "tests/codecs/test_tiff.py::test_sceneio_tiff_write_is_exact_for_independent_oracle",
   "tests/codecs/test_tiff.py::test_tiff_boolean_mask_roundtrip_and_oracle",
@@ -249,14 +276,14 @@ evidence = [
 [[legacy_projections]]
 formats = ["openvdb"]
 return_types = ["sceneio.TensorDict"]
-boundary = "One float32 scalar Tree_float_5_4_3 grid with zero background and identity transform."
+boundary = "One nonempty float32 scalar Tree_float_5_4_3 grid with zero background and identity transform."
 evidence = ["tests/codecs/test_openvdb.py::test_openvdb_registry_roundtrip_is_bit_exact"]
 
 [[legacy_projections]]
 formats = ["usd", "usdz"]
 return_types = ["sceneio.SceneGraph"]
-boundary = "Directly authored static scene profile; composition and selected-time evaluation remain refused."
+boundary = "Directly authored static scene profile plus bounded direct-USDA matrix/visibility selected-time materialization; composition, preservation, dynamic writing, and USDC selected time remain refused."
 evidence = [
-  "tests/codecs/test_usd_scene.py::test_read_scene_refuses_time_sample_evaluation_until_provider_support",
+  "tests/codecs/test_usd_animation.py::test_selected_time_matrix_visibility_hierarchy_and_static_payload",
   "tests/test_usd_provider_qualification.py::test_tinyusdz_load_is_raw_not_evaluated_composition",
 ]

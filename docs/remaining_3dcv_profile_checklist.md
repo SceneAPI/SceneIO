@@ -1,15 +1,20 @@
 # Finite 3D-CV profile closure checklist
 
-- **Status:** FC0-FC3 are locally complete as of 2026-08-04. FC2 includes the
+- **Status:** FC0-FC3 are locally and package complete as of 2026-08-29. FC2 includes the
   dense-label records/carriers, strict NCore projection, and hash-verified
   Kubric/Blender recipe. FC3 adds typed E57 scan records, multi-scan I/O,
   header inspection, bounded stored-row selection, oracle evidence, and a
   large generated benchmark. Exact-commit Linux, Windows, and macOS wheel
-  validation plus the OpenUSD and Niantic lanes passed for the prior FC2 head
-  in build-only run `30914739031`; FC3 still needs the next exact-head hosted
-  wheel run. The FC3 local aggregate gate passes 4,962 tests with 16 documented
-  optional/platform skips, and repository-wide Ruff is clean. FC4-FC7 remain
-  planned.
+  validation plus the OpenUSD and Niantic lanes passed for the FC3 head
+  `3fcdf8195e8909e3e1cc2a6091a237f89af3bc41` in nonpublishing Release run
+  [`33231962034`](https://github.com/SceneAPI/SceneIO/actions/runs/33231962034).
+  The FC3 local aggregate gate passes 4,962 tests with 16 documented
+  optional/platform skips, repository-wide Ruff is clean, and the retained
+  five-run strict benchmark guard passes. G1 and FC4-FC6 are locally closed;
+  FC5 is an evidence-backed exclusion and FC6 closes in selected-time state B.
+  FC7's local aggregate, strict benchmark, exact-source, repaired Windows
+  wheel, and isolated-extra package gates pass. The exact-SHA hosted matrix
+  and evidence links remain active.
 - **Baseline:** 74 built-in formats, each mapped to a licensed direct fixture
   or deterministic oracle-derived route.
 - **Purpose:** close the remaining 3D-computer-vision representation and
@@ -18,6 +23,10 @@
 - **Authority:** current shipped capability remains
   [`format_coverage.md`](format_coverage.md). This document owns only the
   dependency order and acceptance checklist for the finite follow-on work.
+- **Execution plan:**
+  [`remaining_gap_implementation_plan.md`](remaining_gap_implementation_plan.md)
+  turns this checklist into ordered work packages, file/API change surfaces,
+  validation commands, provider decision gates, and commit boundaries.
 - **Machine decision contract:**
   [`remaining_3dcv_fc0_v1.toml`](../tests/contracts/remaining_3dcv_fc0_v1.toml)
   freezes the stable signatures, provisional names, provider observations,
@@ -27,8 +36,11 @@
   [`euroc_dataset_v1.toml`](../tests/contracts/euroc_dataset_v1.toml) freezes
   the qualified FC1B layout, transform, timing, selection, write, and oracle
   contract. [`dense_label_maps_v1.toml`](../tests/contracts/dense_label_maps_v1.toml)
-  freezes the implemented FC2 record fields, versioned carrier schemas,
-  NCore projection boundary, and oracle-recipe status.
+   freezes the implemented FC2 record fields, versioned carrier schemas,
+   NCore projection boundary, and oracle-recipe status.
+  [`gaussian_semantics_v1.toml`](../tests/contracts/gaussian_semantics_v1.toml)
+  freezes the locally complete G1 quaternion, SH, color, coordinate, scale,
+  quantization, and carrier mappings.
 
 ## 1. Review outcome
 
@@ -67,7 +79,7 @@ authorization, pagination, and retries are not applicable.
 | Organized E57 was mapped onto an insufficient record | `PointCloud` requires `width * height == point_count` and has no raw invalid-state or sparse row/column arrays; the current E57 reader drops invalid rows | Lost organization/validity; [AIP-180](https://google.aip.dev/180) | Add `PointScan` around a `PointCloud`, raw invalid-state values, row/column indices, and pose; `ScanSet` owns scans |
 | `TiffCollection` is format-specific | Existing public records are neutral and reused across codecs | API duplication and weak reuse; [AIP-190](https://google.aip.dev/190) | Use neutral `RasterLevel`, `RasterSeries`, and `RasterCollection` records; TIFF is one adapter |
 | OpenVDB write scope exceeds the installed provider | TinyVDB 0.9 exposes no `add_grid`; its template has one scalar grid, and `VDBGrid.transform` is read-only | An advertised round trip could not be implemented honestly; [AIP-182](https://google.aip.dev/182) | Support multi-grid metadata/read/select only in this closure, retain one-grid writes, and mark broader writes excluded unless provider qualification proves them |
-| USD already exposes selected-time input | `read_scene(..., time=...)` and `SceneGraph.selected_time` exist, but provider qualification currently reports `selected_time=False` | Redundant methods and contradictory behavior; [AIP-180](https://google.aip.dev/180) | Qualify and activate the existing `time` parameter; add `SceneAnimation` only after authored-sample extraction is proven |
+| USD already exposes selected-time input | `read_scene(..., time=...)` and `SceneGraph.selected_time` existed while the FC0 provider probe reported `selected_time=False`; FC6 state B now qualifies the bounded direct-USDA subset | Redundant methods and contradictory behavior; [AIP-180](https://google.aip.dev/180) | [x] Activate the existing `time` parameter; keep `SceneAnimation` absent because preservation/write did not qualify |
 | Compound selections do not fit the current global API | `read_partial` accepts exactly one fixed selector family, while scan/raster/grid selections need an id plus a range/window | Signature sprawl or ambiguous combinations; [AIP-140](https://google.aip.dev/140) and [AIP-180](https://google.aip.dev/180) | Keep compound operations on typed format-specific methods in this program; leave `read_partial` unchanged unless a future cross-format selection design is reviewed separately |
 | Error behavior was underspecified | The first plan allowed either `ValueError` or `FormatError`; public I/O currently normalizes codec faults to `FormatError` | Callers cannot write stable handling; [AIP-193](https://google.aip.dev/193) | Keep record construction errors as `ContractViolation`/`ValueError`; require public I/O to raise `FormatError` with stable operation/format/feature prefixes |
 | The plan prematurely reserved names and a registry count | No new record or dataset codec exists yet | Speculative public commitments; [AIP-180](https://google.aip.dev/180) | Treat names and `euroc_dataset` as provisional until an FC0 prototype and compatibility test pass; update 73 -> 74 only with a working codec |
@@ -113,31 +125,31 @@ authorization, pagination, and retries are not applicable.
       adapters for carriers that can preserve them.
 - [x] Multiple Cartesian E57 scans, including raw validity and sparse
       row/column organization plus per-scan rigid poses.
-- [ ] Homogeneous 3D-CV TIFF series and image pyramids with explicit axes.
-- [ ] Multiple supported OpenVDB grids for metadata, read, and selection;
-      broader write support remains contingent on a provider that can create
-      grids and set transforms.
-- [ ] USD time-sampled node transforms and visibility with static payload
-      topology.
+- [x] Homogeneous 3D-CV TIFF series and image pyramids with explicit axes.
+- [x] Close the proposed OpenVDB multi-grid profile by evidence-backed
+      exclusion because TinyVDB cannot preserve or select the required grids;
+      retain and harden the existing one-grid profile.
+- [x] USD time-sampled node transforms and visibility with static payload
+      topology in selected-time state B.
 
 ### Explicit non-goals
 
-- [ ] Do not add a general ROS bag, MCAP, or arbitrary sensor-log reader.
-- [ ] Do not ingest video streams from visual-inertial datasets; image paths or
+- [x] Do not add a general ROS bag, MCAP, or arbitrary sensor-log reader.
+- [x] Do not ingest video streams from visual-inertial datasets; image paths or
       already-supported image sequences remain the carrier.
-- [ ] Do not add FFmpeg code, binaries, bindings, or a runtime dependency.
-- [ ] Do not implement arbitrary OME microscopy axes, vendor TIFF tags, or a
+- [x] Do not add FFmpeg code, binaries, bindings, or a runtime dependency.
+- [x] Do not implement arbitrary OME microscopy axes, vendor TIFF tags, or a
       general metadata editor.
-- [ ] Do not add E57 spherical/cylindrical coordinates, embedded imagery, or
+- [x] Do not add E57 spherical/cylindrical coordinates, embedded imagery, or
       arbitrary extension schemas in this closure.
-- [ ] Do not add arbitrary OpenVDB tree types, point grids, nonlinear
+- [x] Do not add arbitrary OpenVDB tree types, point grids, nonlinear
       transforms, inactive-tile fidelity, or level-set editing.
-- [ ] Do not claim multi-grid/vector/transformed OpenVDB writing through
+- [x] Do not claim multi-grid/vector/transformed OpenVDB writing through
       TinyVDB 0.9; its current file API cannot add a grid or mutate a transform.
-- [ ] Do not add USD layer authoring, variants, references/payload composition,
+- [x] Do not add USD layer authoring, variants, references/payload composition,
       value clips, deforming topology, general shader graphs, rendering, or
       simulation schemas.
-- [ ] Do not reopen JPEG-XL, Draco, generic Arrow schemas, or formats unrelated
+- [x] Do not reopen JPEG-XL, Draco, generic Arrow schemas, or formats unrelated
       to 3D-CV models.
 
 An explicit refusal with a capability entry is a completed outcome for every
@@ -161,9 +173,9 @@ FC0 contract and provider-feasibility freeze
 - [ ] Land one record/API unit at a time.
 - [ ] Keep record-only commits adjacent to the first codec commit that uses
       them; do not land unused speculative types.
-- [ ] Do not mix repository moves, provider replacement, or unrelated
+- [x] Do not mix repository moves, provider replacement, or unrelated
       optimization with a profile-expansion commit.
-- [ ] Preserve the current optional-provider boundaries and NumPy-only base
+- [x] Preserve the current optional-provider boundaries and NumPy-only base
       runtime.
 - [ ] End every green implementation commit with the required co-author line.
 
@@ -173,80 +185,86 @@ Every FC1-FC6 unit must satisfy all applicable boxes in this section.
 
 ### 5.1 Representation contract
 
-- [ ] Define shape, dtype, ownership, ordering, optional-field presence, units,
+- [x] Define shape, dtype, ownership, ordering, optional-field presence, units,
       coordinate frame, pose direction, quaternion order, timestamp epoch, and
       time reference before implementing I/O.
-- [ ] Add the representation to `sceneio.representation_contract(...)` and the
+- [x] Add the representation to `sceneio.representation_contract(...)` and the
       exhaustive public-representation discovery test.
-- [ ] Add or update coordinate contracts for every affected format.
-- [ ] Preserve source values when the record can represent them; otherwise
+- [x] Add or update coordinate contracts for every affected format.
+- [x] Preserve source values when the record can represent them; otherwise
       reject instead of guessing. Record construction uses
       `ContractViolation`/`ValueError`; the public I/O facade normalizes codec
       failures to `FormatError`.
-- [ ] Make any conversion an explicit public operation with forward/backward
+- [x] Make any conversion an explicit public operation with forward/backward
       tests against an independent mathematical reference.
-- [ ] Retain existing constructor calls, defaults, return types for currently
+- [x] Retain existing constructor calls, defaults, return types for currently
       supported files, and raw compatibility APIs.
 
 ### 5.2 Fixture and oracle contract
 
-- [ ] Add every new source, revision, artifact digest, license, attribution,
+- [x] Add every new source, revision, artifact digest, license, attribution,
       and delivery decision to
       [`public_fixture_sources_v1.toml`](../tests/contracts/public_fixture_sources_v1.toml).
-- [ ] Keep normal tests offline; acquisition writes only to an ignored cache.
-- [ ] Require oracle-written -> SceneIO-read coverage.
-- [ ] Require SceneIO-written -> oracle-read coverage.
-- [ ] Keep SceneIO self-round-trip as supplementary evidence, never the sole
+- [x] Keep normal tests offline; acquisition writes only to an ignored cache.
+- [x] Require oracle-written -> SceneIO-read coverage.
+- [x] Require SceneIO-written -> oracle-read coverage for every supported
+      write direction; excluded directions retain tested refusals.
+- [x] Keep SceneIO self-round-trip as supplementary evidence, never the sole
       evidence.
-- [ ] Compare every represented array and convention field; do not reduce
+- [x] Compare every represented array and convention field; do not reduce
       parity to dimensions or element counts.
-- [ ] State exact equality, byte equality, or a justified numeric tolerance per
+- [x] State exact equality, byte equality, or a justified numeric tolerance per
       field.
-- [ ] Retain valid broader-profile artifacts as expected-refusal vectors.
+- [x] Retain valid broader-profile artifacts as expected-refusal vectors.
 
 ### 5.3 Public I/O contract
 
-- [ ] `write -> detect -> inspect -> read` passes through the public API.
-- [ ] `inspect` obtains structural metadata without decoding bulk samples.
-- [ ] Every collection profile has a bounded selector whose result equals the
+- [x] `write -> detect -> inspect -> read` passes through the public API for
+      supported write directions.
+- [x] `inspect` obtains structural metadata without decoding bulk samples.
+- [x] Every collection profile has a bounded selector whose result equals the
       corresponding full-read slice.
-- [ ] Direct-file writes are transactional and do not build an output-sized
+- [x] Direct-file writes are transactional and do not build an output-sized
       Python `bytes` object.
-- [ ] Mapped or provider-owned inputs remain valid for the lifetime of every
+- [x] Mapped or provider-owned inputs remain valid for the lifetime of every
       exposed array view.
-- [ ] Empty, singleton, large, truncated, inconsistent, unsupported-profile,
+- [x] Empty, singleton, large, truncated, inconsistent, unsupported-profile,
       and destination-replacement cases have focused tests.
-- [ ] Capabilities list supported and refused subfeatures exactly.
-- [ ] Public errors begin with stable operation, format id, and refused-feature
+- [x] Capabilities list supported and refused subfeatures exactly.
+- [x] Public errors begin with stable operation, format id, and refused-feature
       context; tests do not make provider wording part of the public contract.
 
 ### 5.4 Performance and resource contract
 
-- [ ] Add a representative builder and oracle comparison to `bench/bench_io.py`.
-- [ ] Measure full read, selected read, inspect, write, encoded size,
-      `tracemalloc`, and fresh-process RSS.
-- [ ] Include one generated 64-128 MiB logical payload per implemented
+- [x] Add a representative builder and oracle comparison to `bench/bench_io.py`
+      or a dedicated typed-profile benchmark where the generic selector model
+      cannot express the operation.
+- [x] Measure every applicable full read, selected read, inspect, write,
+      encoded size, `tracemalloc`, warmed-parent RSS, and strict fresh-process
+      RSS; state-B preservation read/write remain explicit non-applications.
+- [x] Include one generated 64-128 MiB logical payload per implemented
       profile; add a larger case only where it materially exercises a measured
       chunk or selection boundary.
-- [ ] Prove inspect and selected reads allocate materially less than full
-      decode for large fixtures.
-- [ ] Record same-machine before/after and SceneIO/oracle results in the
+- [x] Prove inspect and selected reads allocate materially less than full
+      decode for large fixtures where a full decode exists; FC6 state B has no
+      preservation read to mislabel as a full-animation control.
+- [x] Record same-machine before/after and SceneIO/oracle results in the
       benchmark ledger; do not introduce brittle cross-machine absolute SLAs.
-- [ ] Run the lifetime/resource, format-correctness, and test-soundness review
+- [x] Run the lifetime/resource, format-correctness, and test-soundness review
       and resolve every finding before commit.
 
 ### 5.5 Documentation and platform contract
 
-- [ ] Update `format_coverage.md`, `coverage_roadmap.md`, public API docs,
+- [x] Update `format_coverage.md`, `coverage_roadmap.md`, public API docs,
       representation normalization, coordinate conventions, and this
       checklist in the implementing commit.
-- [ ] Update installed-wheel smoke for every new symbol, selector, provider
+- [x] Update installed-wheel smoke for every new symbol, selector, provider
       extra, and supported/refused feature.
-- [ ] Verify the optional dependency is absent from the base import graph.
-- [ ] Verify the source archive and wheels contain required license and
+- [x] Verify the optional dependency is absent from the base import graph.
+- [x] Verify the source archive and wheels contain required license and
       attribution files but no downloaded dataset cache.
-- [ ] Pass local MSVC tests and the existing Linux/macOS/Windows package lanes
-      before marking a unit validated.
+- [ ] Pass the exact-candidate Linux/macOS/Windows package lanes before
+      upgrading locally complete units to `validated`.
 
 ## 6. FC0 — freeze APIs, provider feasibility, and compatibility
 
@@ -291,8 +309,9 @@ Every FC1-FC6 unit must satisfy all applicable boxes in this section.
       `TensorDict`, and `SceneGraph`.
 - [x] Pin the current simple TIFF, one-scan E57, one-grid VDB, and static USD
       return types.
-- [x] Pin the existing `read_scene(..., time=...)` signature and its current
-      deliberate refusal while provider-selected-time support is unavailable.
+- [x] Pin the existing `read_scene(..., time=...)` signature and its
+      then-current FC0 refusal; FC6 later activates that same signature without
+      adding another method.
 - [x] Pin the current E57 projection behavior that returns only valid Cartesian
       rows, so the new raw `PointScan` path cannot silently change legacy
       `PointCloud` values.
@@ -705,7 +724,7 @@ profiles cannot preserve it.
 
 ## 9. FC3 — E57 multiple Cartesian scans
 
-**Status (2026-08-04): locally complete; hosted wheel rerun pending.** The
+**Status (2026-08-29): locally and package complete.** The
 typed API is additive: generic `sceneio.read` keeps its one-scan `PointCloud`
 projection, while the four explicit E57 scan functions expose stored rows,
 organization, and ordered scan sets. The accepted profile is intentionally
@@ -791,6 +810,16 @@ On local Windows/MSVC, selecting 104,857 stored rows reduced traced peak from
 `pye57.read_scan_raw` plus slicing. Full measurements and limitations are in
 [`e57_multiscan_benchmark.md`](e57_multiscan_benchmark.md).
 
+Exact-head qualification rebuilt the editable package, passed the 64-test
+focused E57/FC3 gate, passed the complete suite (4,962 passed, 16 documented
+skips), and passed the five-run strict O4/O5/oracle benchmark retained at
+`build/v0-benchmark-3fcdf81.json`. Nonpublishing Release run
+[`33231962034`](https://github.com/SceneAPI/SceneIO/actions/runs/33231962034)
+then passed its exact-source-distribution job, Linux/macOS/Windows installed
+wheels, combined distribution inventory, OpenUSD 26.08 oracle, and Niantic SPZ
+oracle at exact commit `3fcdf8195e8909e3e1cc2a6091a237f89af3bc41`;
+the PyPI publish job was intentionally skipped.
+
 ### FC3 three-angle review
 
 - **Ownership/lifetime:** native optional arrays expose zero-length views when
@@ -812,54 +841,54 @@ On local Windows/MSVC, selecting 104,857 stored rows reduced traced peak from
 
 ### 10.1 neutral raster collection model
 
-- [ ] Define `RasterLevel`, `RasterSeries`, and `RasterCollection` as
+- [x] Define `RasterLevel`, `RasterSeries`, and `RasterCollection` as
       format-neutral immutable Python records.
-- [ ] Store ordered series/levels, explicit axes, dtype, shape, payload kind,
+- [x] Store ordered series/levels, explicit axes, dtype, shape, payload kind,
       and `Image`/`Mask`/`TensorDict` children that own their arrays.
-- [ ] Limit each series to the currently accepted CV raster/stack dtypes and
+- [x] Limit each series to the currently accepted CV raster/stack dtypes and
       axes.
-- [ ] Permit multiple series only when each series is independently
+- [x] Permit multiple series only when each series is independently
       unambiguous under the bounded profile.
-- [ ] Preserve the current `Image`, `Mask`, or `TensorDict` return for a simple
+- [x] Preserve the current `Image`, `Mask`, or `TensorDict` return for a simple
       one-series, one-level file.
 
 ### 10.2 TIFF adapter expansion
 
-- [ ] Fix frame/page metadata traversal so valid OME frames do not produce the
+- [x] Fix frame/page metadata traversal so valid OME frames do not produce the
       current wrapped `TiffFrame.tags` failure.
-- [ ] Add `series_index`, `level_index`, `page_range`, and `window` to the
+- [x] Add `series_index`, `level_index`, `page_range`, and `window` to the
       typed TIFF collection API; define valid combinations without changing
       global `read_partial`.
-- [ ] Inspect all series/levels and report axes, shapes, dtypes, page counts,
+- [x] Inspect all series/levels and report axes, shapes, dtypes, page counts,
       tile/strip layout, and BigTIFF status without decoding samples.
-- [ ] Read only the selected series/level/page/window when tifffile exposes a
+- [x] Read only the selected series/level/page/window when tifffile exposes a
       bounded path; document unavoidable provider granularity.
-- [ ] Write deterministic homogeneous series and pyramid files through
+- [x] Write deterministic homogeneous series and pyramid files through
       tifffile and reopen them before atomic replacement.
-- [ ] Before exporting `RasterCollection`, prove tifffile can write and reopen
-      the exact bounded subIFD/series layouts on all supported platforms. If
-      not, keep multi-series/pyramid support read/select-only and report that
-      capability honestly.
-- [ ] Reject ambiguous OME axes, structured dtypes, mixed unsupported
+- [ ] Confirm the exact bounded SubIFD/series writer layouts on hosted Linux
+      and macOS; Windows write/reopen is green. If either hosted provider
+      differs, keep that layout read/select-only and report the capability
+      boundary before upgrading FC4 from locally complete to validated.
+- [x] Reject ambiguous OME axes, structured dtypes, mixed unsupported
       photometric interpretations, and metadata that the record would drop.
-- [ ] Keep arbitrary OME-XML editing outside the profile.
+- [x] Keep arbitrary OME-XML editing outside the profile.
 
 ### 10.3 FC4 oracle and data
 
-- [ ] Pin the checked CC-BY-4.0 OME-TIFF 4D file and one permissive pyramid
+- [x] Pin the checked CC-BY-4.0 OME-TIFF 4D file and one permissive pyramid
       sample or generate the pyramid independently with tifffile.
-- [ ] Compare series/level/page/window arrays and metadata with tifffile.
-- [ ] Have tifffile reopen SceneIO-written classic TIFF and BigTIFF variants.
-- [ ] Test tiled and stripped files, endian variants, one/many pages, and
+- [x] Compare series/level/page/window arrays and metadata with tifffile.
+- [x] Have tifffile reopen SceneIO-written classic TIFF and BigTIFF variants.
+- [x] Test tiled and stripped files, endian variants, one/many pages, and
       selected reads that cross tile/strip boundaries.
 
 ### FC4 exit
 
-- [ ] The previously checked OME file either reads under the bounded profile or
+- [x] The previously checked OME file either reads under the bounded profile or
       fails with a deliberate documented boundary, never an incidental
       provider attribute error.
-- [ ] Simple TIFF compatibility is unchanged.
-- [ ] Pyramid/series selection shows a measured memory advantage over full
+- [x] Simple TIFF compatibility is unchanged.
+- [x] Pyramid/series selection shows a measured memory advantage over full
       collection decoding.
 
 ## 11. FC5 — provider-constrained OpenVDB expansion
@@ -875,174 +904,150 @@ plan but do not replace file-based oracle qualification.
 - [x] Pin TinyVDB 0.9's actual local surface: it can enumerate existing grids
       and replace one existing template grid, but has no `add_grid` and exposes
       a read-only transform.
-- [ ] Test multi-grid files containing every candidate value/tree type before
+- [x] Test multi-grid files containing every candidate value/tree type before
       declaring that type readable.
-- [ ] Test whether selecting one grid avoids materializing other grids; do not
+- [x] Test whether selecting one grid avoids materializing other grids; do not
       advertise bounded selection based only on a post-decode slice.
-- [ ] Evaluate an alternative provider only through the existing dependency
-      intake/benchmark process. Do not pull full OpenVDB/Boost/TBB into release
-      wheels merely to satisfy an aspirational checklist row.
-- [ ] Choose one explicit state: implemented read expansion with current
-      provider, qualified provider replacement, or documented exclusion.
+- [x] Evaluate the official OpenVDB binding as an oracle author; retain
+      TinyVDB after the alternative-provider wheel/intake gate fails. Do not
+      pull full OpenVDB/Boost/TBB into release wheels for this excluded profile.
+- [x] Choose documented provider exclusion and record it in
+      `tests/contracts/openvdb_provider_limits_v1.toml`.
 
 ### 11.2 read/inspect/select profile
 
-- [ ] If the feasibility gate passes, add `SparseGrid` only for value types
-      actually returned by the provider and `SparseVolumeSet` for ordered
-      uniquely named grids.
-- [ ] Carry observed grid name, class, value kind, background, tree type, and
-      finite `float64 (4, 4)` index-to-world matrix without claiming those
-      fields are writable.
-- [ ] Read multiple supported grids while preserving file order and names.
-- [ ] Add `grid_name`/`grid_index` and optional index-space/world-space bounds
-      to the typed OpenVDB API only where the provider demonstrates bounded
-      access. Grid selection is required; bounding-box selection is optional
-      and measured.
-- [ ] Inspect grid count, names, types, active counts, bounds, backgrounds,
-      classes, and transforms without materializing active voxels.
-- [ ] Preserve affine transforms in the returned record within declared
-      float64 tolerance.
-- [ ] Continue refusing unsupported tree/value types, point grids, nonlinear
-      transforms, inactive-tile semantics, and level sets that cannot survive
-      the sparse record.
-- [ ] Ensure USD volume assets select an exact named grid rather than silently
-      using the first grid.
-- [ ] Retain the legacy identity scalar `TensorDict` read/write path unchanged.
-- [ ] Reject `SparseVolumeSet` writes with a stable feature-specific
-      `FormatError` while the provider cannot create grids/set transforms.
+- [x] Keep `SparseGrid` and `SparseVolumeSet` absent rather than exporting
+      records that promise values and metadata TinyVDB cannot preserve.
+- [x] Do not claim multiple-grid read: TinyVDB only decompresses all grids and
+      loses candidate vector and empty-grid semantics.
+- [x] Do not add `grid_name`, `grid_index`, or bounds selectors without a
+      bounded provider operation.
+- [x] Limit header-only provider evidence to grid count, names, and types;
+      richer metadata requires all-grid decode and is not exported.
+- [x] Preserve the legacy identity-transform boundary; nonempty-scalar affine
+      reads remain provider evidence, not a public-record claim.
+- [x] Continue refusing unsupported tree/value types, point grids, nonlinear
+      transforms, inactive-tile semantics, and level sets.
+- [x] Ensure USD volume assets retain their exact authored grid name and never
+      silently default to the first grid.
+- [x] Retain the legacy nonempty identity scalar `TensorDict` read/write path.
+- [x] Keep multiple/vector/transformed public writes discoverably unsupported.
 
 ### 11.3 FC5 oracle and data
 
-- [ ] Generate scalar density and three-component velocity grids with distinct
-      affine transforms through official OpenVDB; use only the subset the local
-      provider can read as positive fixtures.
-- [ ] Cross-read expanded files with TinyVDB locally and official OpenVDB in
-      the hosted lane.
-- [ ] Keep the existing one-grid SceneIO-write -> TinyVDB-read oracle as the
-      write-direction evidence; do not mislabel it as multi-grid write parity.
-- [ ] Run an official OpenVDB comparison in the optional hosted lane for
-      metadata, transforms, active coordinates, and values.
-- [ ] Test duplicate names, singular transforms, nonzero backgrounds, empty
+- [x] Generate scalar density and three-component velocity grids with distinct
+      affine transforms through official OpenVDB.
+- [x] Author with official OpenVDB and cross-read with TinyVDB locally; retain
+      the generator for the optional hosted lane.
+- [x] Keep the existing one-grid SceneIO-write -> TinyVDB-read oracle as the
+      write-direction evidence; do not mislabel it as multi-grid parity.
+- [x] Use official OpenVDB-authored values as the format-owner side of the
+      provider-loss comparison; no expanded positive profile is claimed.
+- [x] Test duplicate names, affine transforms, nonzero backgrounds, empty
       grids, negative coordinates, and unsupported grid classes.
 
 ### FC5 exit
 
-- [ ] Legacy single identity-grid files retain their current compatibility
+- [x] Legacy nonempty single identity-grid files retain their compatibility
       return path.
-- [ ] Multi-grid read, exact grid selection, and affine metadata are
-      oracle-proven for the declared types, or the feature is explicitly
-      excluded with provider evidence.
-- [ ] Multi-grid/vector/transformed writes remain listed as unsupported unless
+- [x] Multi-grid read and exact selection are explicitly excluded with
+      executable provider evidence.
+- [x] Multi-grid/vector/transformed writes remain listed as unsupported unless
       a later provider qualifies both directions.
-- [ ] Selected-grid memory excludes unselected grid payloads; no stronger
-      bounded-region claim is made without measurement.
+- [x] No selected-grid memory claim is made because the provider has no
+      selected-grid operation; post-decode slicing does not qualify.
 
 ## 12. FC6 — bounded dynamic USD
 
-### 12.1 provider and authored-sample feasibility
+FC6 closes in **state B: selected-time read only**. TinyUSDZ 0.9.4 enumerates
+matrix sample times but exposes untyped values and does not expose visibility
+sample values. SceneIO therefore adds a bounded repository-owned evaluator for
+provider-normalized, directly authored USDA prim text; it does not claim USDC
+or general USDA parsing.
 
-- [x] Preserve and snapshot the existing `read_scene(path, time=...)` method and
-      `SceneGraph.selected_time`; do not add a competing time method.
-- [ ] Prove whether TinyUSDZ exposes authored transform/visibility sample times
-      and values for USDA, USDA-root USDZ, and qualified USDC inputs.
-- [ ] If TinyUSDZ cannot expose them, assess a bounded repository-owned USDA
-      parser only for the exact directly authored profile; do not claim USDC
-      animation support through text scanning.
-- [ ] Compare exact authored-time and between-sample evaluation with OpenUSD
-      before setting `provider_selected_time=True`.
-- [ ] Keep the current deliberate refusal when the provider/path cannot
-      evaluate the requested time correctly.
+### 12.1 provider, grammar, and API
 
-### 12.2 conditional `SceneAnimation`
+- [x] Preserve the existing `read_scene(path, time=...)` method and
+      `SceneGraph.selected_time`; add no competing time method.
+- [x] Probe USDA, USDA-root USDZ, and qualified historical USDC sample
+      exposure and record the provider's untyped-value boundary.
+- [x] Freeze a structural matrix/token grammar with explicit prim-text, line,
+      token, string, and 65,536-sample-per-property limits.
+- [x] Support only `matrix4d xformOp:transform.timeSamples` with one matrix op
+      and `token visibility.timeSamples` with inherited/invisible values.
+- [x] Match OpenUSD 26.8 component-wise matrix interpolation, held tokens, and
+      held endpoints at exact, between, negative, and fractional times.
+- [x] Set `selected_time` only when at least one accepted sample table was
+      actually evaluated.
 
-- [ ] Export `SceneAnimation` only after section 12.1 proves authored-sample
-      extraction and deterministic writing; otherwise close with selected-time
-      read support plus an explicit animation-preservation refusal.
-- [ ] Attach optional animation to `SceneGraph`; do not duplicate static nodes
-      or payloads.
-- [ ] Store node-indexed CSR time samples for local 4x4 transforms.
-- [ ] Store node-indexed CSR time samples for visibility.
-- [ ] Preserve authored float64 time codes, stage start/end time, and
-      `timeCodesPerSecond`.
-- [ ] Require strictly increasing sample times per property, valid node
-      indices, finite transforms, and consistent CSR offsets.
-- [ ] Keep mesh topology, point arrays, Gaussian attributes, camera optics,
-      materials, and volume assets static in the proposed dynamic profile.
+### 12.2 explicit state-B exclusions
 
-### 12.3 USD adapter expansion
+- [x] Keep `SceneAnimation` absent because authored sample preservation and
+      deterministic two-direction writing did not qualify.
+- [x] Keep `dynamic_write`, `authored_animation_preservation`, USDC selected
+      time, composition, clips, arbitrary sampled xform stacks, and sampled
+      payload values in the unsupported capability set.
+- [x] Permit writing an evaluated result only as a static snapshot and prove
+      that no `.timeSamples` declaration is emitted.
+- [x] Keep topology, meshes, points, Gaussians, cameras, materials, volumes,
+      instances, and semantic payloads static.
 
-- [ ] Read authored transform and visibility samples without baking them into
-      one static value.
-- [ ] Activate the existing `time` argument to materialize one static
-      `SceneGraph` using qualified USD interpolation behavior. Report it as a
-      high-level supported feature; do not extend global `read_partial` in this
-      program.
-- [ ] Write deterministic USDA/USDZ time samples and preserve stage timing
-      metadata.
-- [ ] Support rigid animation of mesh, point-cloud, Gaussian, camera, volume,
-      and instance payload nodes through their owning node transform.
-- [ ] Reject time-varying topology, primvars, per-point/per-Gaussian values,
-      camera optics, material networks, value clips, and unsupported
-      composition.
-- [ ] Keep the existing static `usd-3dcv-1` profile unchanged; declare a new
-      versioned dynamic profile only if both authored-sample read and write are
-      qualified, instead of silently widening profile 1.
+### 12.3 evidence and exit
 
-### 12.4 FC6 oracle and data
+- [x] `tests/codecs/test_usd_animation.py` covers the two-node/three-transform
+      fixture, visibility, a static Gaussian, hierarchy/selection/reset stacks,
+      USDA/USDZ, malformed limits, and refusal paths.
+- [x] `tests/codecs/test_openusd_animation_oracle.py` executes 22 official
+      OpenUSD 26.8 comparisons when the optional oracle is installed.
+- [x] `tests/contracts/usd_selected_time_v1.toml` freezes state B, semantics,
+      limits, inspection fields, capabilities, and nonclaims.
+- [x] Inspection reports sampled properties/count/range and whether the root
+      representation supports selected-time evaluation.
+- [x] The retained 256-node/6,912-sample benchmark measures selected read,
+      inspection, equal-node static control, traced allocation, and RSS in
+      `docs/usd_animation_benchmark.md`.
 
-- [ ] Author a tiny permissive USDA fixture with two nodes, three nonuniform
-      transform samples, visibility changes, and one static Gaussian payload.
-- [ ] Compare authored sample arrays and selected-time evaluation with
-      OpenUSD in the hosted oracle lane.
-- [ ] Have TinyUSDZ read SceneIO-authored USDA/USDZ locally and compare every
-      supported static payload plus the time metadata it actually exposes.
-- [ ] Test negative/fractional time codes, non-24 rates, held endpoints,
-      interpolation between samples, and malformed sample arrays.
-- [ ] Retain composed, clipped, or deforming official USD examples as
-      expected-refusal vectors.
-
-### FC6 exit
-
-- [ ] Static USD fixtures remain value/byte compatible where deterministic.
-- [ ] Dynamic transform/visibility samples cross-read both directions.
-- [ ] If two-direction preservation is not feasible with the qualified
-      provider, selected-time read is reported separately and dynamic writing
-      remains explicitly unsupported rather than marking this box complete.
-- [ ] Selected-time reads equal the OpenUSD-evaluated static scene within the
-      declared transform tolerance.
-- [ ] Per-Gaussian deformation and general USD authoring remain clearly out of
-      scope.
+FC6 is locally complete. Hosted OpenUSD and installed-wheel confirmation for
+the final exact candidate belongs to FC7.
 
 ## 13. FC7 — combined qualification and closure
 
 ### 13.1 Local aggregate gate
 
-- [ ] Rebuild after every C++/CMake change with
+- [x] Rebuild after every C++/CMake change with
       `uv pip install -e ".[dev,test]"`.
-- [ ] Verify every new `_core` symbol from the repository interpreter.
-- [ ] Run focused record and codec suites after each unit.
-- [ ] Run the registry-driven public API, oracle, partial-read, mapping
+- [x] Verify every new `_core` symbol from the repository interpreter.
+- [x] Run focused record and codec suites after each unit.
+- [x] Run the registry-driven public API, oracle, partial-read, mapping
       lifetime, documentation, package-inventory, and installed-wheel smoke
       tests.
-- [ ] Run the complete suite and repository-wide Ruff.
-- [ ] Run `git diff --check` and review the complete diff for unrelated edits.
-- [ ] Run the five-run benchmark guard and record new rows/deltas.
+- [x] Run the complete suite and repository-wide Ruff.
+- [x] Run `git diff --check` and review the complete diff for unrelated edits.
+- [x] Run the five-run benchmark guard and record new rows/deltas.
+
+Local result on 2026-08-29: 5,066 collected registry nodes; 5,082 tests pass
+with 19 reviewed optional/platform skips. Ruff, documentation, lock, and diff
+checks pass. `build/fc7-post-memory-strict-benchmark.json` passes every strict
+O4/O5 guard.
+The retained 64 MiB TIFF and 65.89 MiB USD profiles each add three strict
+fresh-process RSS samples per applicable operation.
 
 ### 13.2 Package and hosted gate
 
-Current FC0-FC2 hosted evidence: build-only Release run
-[`30914739031`](https://github.com/SceneAPI/SceneIO/actions/runs/30914739031)
+Current FC0-FC3 hosted evidence: nonpublishing Release run
+[`33231962034`](https://github.com/SceneAPI/SceneIO/actions/runs/33231962034)
 passed the exact source archive, three-wheel matrix, combined inventory, and
-the OpenUSD/Niantic oracle jobs at commit `50172b5`. FC3 is locally complete
-but not covered by that older run. The boxes below remain the later FC7
-aggregate gate because FC4-FC6 are not implemented yet.
+the OpenUSD/Niantic oracle jobs at commit
+`3fcdf8195e8909e3e1cc2a6091a237f89af3bc41`. G1 and FC4-FC6 now await the
+later exact-candidate hosted confirmation described below.
 
-- [ ] Build the source archive and clean Windows abi3 wheel from the exact
-      candidate commit.
-- [ ] Install the base wheel with NumPy only and prove every optional provider
+- [x] Build the source archive and clean Windows abi3 wheel from the exact
+      local candidate snapshot; repeat the build from the immutable candidate
+      commit in the hosted matrix.
+- [x] Install the base wheel with NumPy only and prove every optional provider
       remains lazy.
-- [ ] Install each affected extra separately and run its installed-wheel smoke.
-- [ ] Verify source archive and wheel license inventories.
+- [x] Install each affected extra separately and run its installed-wheel smoke.
+- [x] Verify source archive and wheel license inventories.
 - [ ] Run the affected optional-provider hosted lane after each locally green
       provider unit rather than deferring every platform finding to FC7.
 - [ ] Push and trigger Linux/macOS/Windows build-only validation only after the
@@ -1052,17 +1057,22 @@ aggregate gate because FC4-FC6 are not implemented yet.
 - [ ] Record workflow links, artifact hashes, platform results, optional skips,
       and benchmark summaries in the coverage documents.
 
+The local source closure contains 1,624 expected files plus `PKG-INFO`.
+Independent base, TIFF, OpenVDB, USD, and NCore Python 3.12 environments all
+load the repaired wheel from `site-packages`, expose only their intended
+optional capability, and pass `python -I -m sceneio._wheel_smoke`.
+
 ### 13.3 Final documentation reconciliation
 
-- [ ] Generate/validate registry capability tables from the current 74-format
+- [x] Generate/validate registry capability tables from the current 74-format
       runtime before final FC7 closure.
-- [ ] Update the public-fixture manifest counts and route only if the
-      provisional dataset format lands.
-- [ ] Confirm every new public representation is present exactly once in the
+- [x] No provisional dataset format landed; public-fixture manifest route/count
+      changes are not applicable.
+- [x] Confirm every new public representation is present exactly once in the
       normalization contract.
-- [ ] Confirm every affected format has a coordinate contract and executable
+- [x] Confirm every affected format has a coordinate contract and executable
       evidence.
-- [ ] Mark each profile `validated`, `locally complete awaiting hosted result`,
+- [x] Mark each profile `validated`, `locally complete awaiting hosted result`,
       or `excluded`; leave no unexplained pending row.
 - [ ] Move completed execution evidence into `docs/plans/completed/` only after
       its immutable archive contract is updated deliberately.
@@ -1086,15 +1096,16 @@ aggregate gate because FC4-FC6 are not implemented yet.
 5. [x] `PointScan`/`ScanSet` plus E57 multi-scan/structured read/write/inspect,
        oracle suite, benchmark, and docs are locally complete. Hosted wheel
        validation awaits the next exact-head build-only run.
-6. [ ] Neutral raster collection plus the qualified TIFF read/write subset,
+6. [x] Neutral raster collection plus the qualified TIFF read/write subset,
        oracle suite, benchmark, and docs.
-7. [ ] OpenVDB read/inspect/grid-selection expansion or evidence-backed
-       exclusion, retaining the current one-grid writer.
-8. [ ] USD selected-time qualification through the existing API, followed by
-       `SceneAnimation`/dynamic writing only if both directions pass.
+7. [x] Evidence-backed OpenVDB expansion exclusion, retaining and hardening the
+       qualified nonempty one-grid writer.
+8. [x] USD selected-time qualification through the existing API in state B;
+       `SceneAnimation` and dynamic writing remain explicit exclusions.
 9. [ ] Per-provider hosted correction commits, if platform results require
        focused changes.
-10. [ ] FC7 exact-head package, aggregate hosted validation, and final evidence.
+10. [ ] FC7 exact-head aggregate hosted validation and final evidence; local
+        aggregate/package validation is complete.
 
 Do not combine slices merely to reduce commit count. A slice may be split when
 its record and codec changes cannot be reviewed or reverted independently.
@@ -1110,11 +1121,12 @@ their own columns and validation records.
 | FC1A IMU records/acquisition | [x] | n/a | refusal-only | n/a | n/a | [x] record vectors | n/a | [x] | [x] `30914739031` | [x] |
 | FC1B visual-inertial dataset | [x] | [x] | [x] | [x] | [x] | [x] | [x] bounded baseline | [x] | [x] `30914739031` | [x] |
 | FC2 dense labels | [x] | carriers/NCore [x] | carriers/NCore [x] | carriers [x] | n/a for one-map carriers | NPZ/Zarr/TIFF/NCore/Kubric [x] | [x] NPZ/Zarr/TIFF | [x] | [x] `30914739031` | [x] |
-| FC3 E57 scans | [x] | [x] | [x] | [x] | [x] | [x] | [x] | [x] | pending exact-head run | [x] |
-| FC4 TIFF collections | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
-| FC5 OpenVDB expansion | conditional | [ ] | existing one-grid | [ ] | [ ] | expanded-read + base-write | [ ] | [ ] | [ ] | [ ] |
-| FC6 dynamic USD | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
-| FC7 aggregate | n/a | n/a | n/a | n/a | n/a | [ ] | [ ] | [ ] | [ ] | [ ] |
+| FC3 E57 scans | [x] | [x] | [x] | [x] | [x] | [x] | [x] | [x] | [x] `33231962034` | [x] |
+| G1 Gaussian semantics | [x] | carrier mapping [x] | guarded writers [x] | n/a | existing carrier selectors [x] | [x] local official lanes | [x] | [x] | local Windows [x]; hosted pending | [x] |
+| FC4 TIFF collections | [x] | [x] | [x] | [x] | [x] | [x] | [x] | [x] | local Windows [x]; hosted pending | [x] |
+| FC5 OpenVDB exclusion | n/a | existing one-grid [x] | existing one-grid [x] | [x] | excluded | official provider loss probes [x] | n/a | [x] | local Windows [x]; hosted pending | [x] |
+| FC6 USD state B | no new record [x] | selected time [x] | dynamic excluded [x] | [x] | existing `time` API [x] | OpenUSD 26.8 [x] | [x] | [x] | local Windows [x]; hosted pending | [x] |
+| FC7 aggregate | n/a | n/a | n/a | n/a | n/a | local [x]; hosted [ ] | [x] | [x] | local Windows [x]; hosted [ ] | local [x]; final links [ ] |
 
 ## 16. Final stopping rule
 

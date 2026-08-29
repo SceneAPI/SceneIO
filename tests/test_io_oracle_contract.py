@@ -105,6 +105,67 @@ def test_oracle_contract_matches_runtime_direction_and_loss_metadata():
     } == set(CONTRACT["read_only_formats"])
 
 
+def test_tiff_collection_oracle_profile_is_executable_and_complete():
+    profile = CONTRACT["tiff_collections"]
+    assert (ROOT / profile["contract"]).is_file()
+    assert profile["records"] == [
+        "RasterLevel",
+        "RasterSeries",
+        "RasterCollection",
+    ]
+    assert profile["typed_apis"] == [
+        "read_tiff_collection",
+        "inspect_tiff_collection",
+        "write_tiff_collection",
+    ]
+    assert set(profile["qualified_operations"]) == {
+        "classic_and_bigtiff",
+        "little_and_big_endian",
+        "stripped_and_tiled",
+        "multiple_series",
+        "subifd_pyramids",
+        "metadata_only_inspection",
+        "series_level_page_and_window_selection",
+        "transactional_deterministic_write",
+    }
+    source = "\n".join(
+        (ROOT / path).read_text(encoding="utf-8") for path in profile["evidence"]
+    )
+    for marker in (
+        "independent_classic_bigtiff_endian_and_layout_oracle",
+        "inspection_reads_metadata_without_sample_decode",
+        "compound_page_window_selection_uses_chunk_store",
+        "writer_reopens_with_sceneio_and_provider_oracles",
+        "ome_frames_use_keyframe_metadata",
+    ):
+        assert marker in source
+
+
+def test_openvdb_provider_exclusion_is_oracle_backed_and_complete():
+    profile = CONTRACT["openvdb_provider_limits"]
+    assert profile["decision"] == "exclusion"
+    assert (ROOT / profile["contract"]).is_file()
+    assert (ROOT / profile["generator"]).is_file()
+    assert set(profile["qualified_limits"]) == {
+        "all_grid_decode_only",
+        "no_selected_grid_decode",
+        "vector_payload_loss",
+        "empty_transform_loss",
+        "no_add_grid",
+        "read_only_transform",
+    }
+    source = "\n".join(
+        (ROOT / path).read_text(encoding="utf-8") for path in profile["evidence"]
+    )
+    for marker in (
+        "read_grids(0)",
+        "Tree_vec3s_5_4_3",
+        "empty grids are unsupported",
+        "provider exclusion",
+    ):
+        assert marker in source
+
+
 def test_gaussian_storage_oracles_cover_every_registered_carrier():
     gaussian = CONTRACT["gaussian_attributes"]
     ledger_by_id = {entry["id"]: entry for entry in LEDGER}
@@ -127,17 +188,21 @@ def test_gaussian_storage_oracles_cover_every_registered_carrier():
     for semantic in ("scale", "opacity", "quaternion", "sh_layout"):
         assert semantic in convention_source
 
-    assert gaussian["pending_universal_semantics"] == [
+    assert gaussian["pending_universal_semantics"] == []
+    assert gaussian["represented_universal_semantics"] == [
         "quaternion_raw_or_unit_state",
         "spherical_harmonic_basis_phase_and_coefficient_order",
         "color_space",
-        "coordinate_frame",
+        "coordinate_frame_and_metric_scale_source",
     ]
     assert gaussian["qualified_semantic_operations"] == [
         "quaternion_reorder_and_explicit_normalization",
         "scale_activation",
         "opacity_activation",
         "spherical_harmonic_memory_layout",
+        "spherical_harmonic_basis_phase_and_coefficient_order",
+        "semantic_metadata_validation_and_refusal",
+        "degree_zero_coordinate_conversion",
     ]
     assert set(gaussian["pending_universal_semantics"]).isdisjoint(
         gaussian["qualified_semantic_operations"]

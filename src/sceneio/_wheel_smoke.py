@@ -559,6 +559,22 @@ def _laz(root: Path) -> None:
     )
 
 
+def _assert_gaussian_semantics(
+    cloud: object,
+    *,
+    quaternion_norm: str,
+    coordinate_frame: str = "unknown",
+) -> None:
+    assert cloud.quaternion_norm == quaternion_norm
+    assert cloud.sh_basis == "3dgs_real"
+    assert cloud.sh_phase == "3dgs"
+    assert cloud.sh_coefficient_order == "degree_then_m_neg_to_pos"
+    assert cloud.color_space == "unknown"
+    assert cloud.coordinate_frame == coordinate_frame
+    assert cloud.scale_to_meters is None
+    assert cloud.scale_to_meters_source == "unknown"
+
+
 def _compressed_ply(root: Path) -> None:
     count = 5
     cloud = _core.gaussian_cloud(
@@ -576,6 +592,7 @@ def _compressed_ply(root: Path) -> None:
     assert isinstance(decoded, _core.GaussianCloud)
     assert decoded.num_gaussians == count
     assert decoded.sh_degree == 1
+    _assert_gaussian_semantics(decoded, quaternion_norm="unit")
     assert sceneio.inspect(path).metadata["num_chunks"] == 1
     selected = sceneio.read_partial(path, points=(1, 4))
     assert np.array_equal(selected.means, decoded.means[1:4])
@@ -602,6 +619,7 @@ def _sog(root: Path) -> None:
     decoded = sceneio.read(bundle)
     assert decoded.num_gaussians == count
     assert decoded.sh_degree == 2
+    _assert_gaussian_semantics(decoded, quaternion_norm="unit")
     assert sceneio.inspect(bundle).metadata["packaging"] == "zip"
     selected = sceneio.read_partial(bundle, points=(2, 6))
     assert np.array_equal(selected.means, decoded.means[2:6])
@@ -639,6 +657,7 @@ def _ksplat(root: Path) -> None:
     decoded = sceneio.read(path)
     assert decoded.num_gaussians == count
     assert decoded.sh_degree == 2
+    _assert_gaussian_semantics(decoded, quaternion_norm="unit")
     assert sceneio.inspect(path).metadata["compression_level"] == 1
     selected = sceneio.read_partial(path, points=(2, 7))
     assert np.array_equal(selected.means, decoded.means[2:7])
@@ -664,6 +683,7 @@ def _gaussian_ply(root: Path) -> None:
     assert sceneio.inspect(path).count == count
     decoded = sceneio.read(path)
     assert decoded.num_gaussians == count
+    _assert_gaussian_semantics(decoded, quaternion_norm="unconstrained")
     selected = sceneio.read_partial(path, points=(1, 5))
     assert np.array_equal(selected.means, decoded.means[1:5])
     retired = path.with_suffix(".retired")
@@ -688,6 +708,11 @@ def _spz(root: Path) -> None:
     assert sceneio.inspect(path).count == count
     decoded = sceneio.read(path)
     assert decoded.num_gaussians == count
+    _assert_gaussian_semantics(
+        decoded,
+        quaternion_norm="unit",
+        coordinate_frame="opengl",
+    )
     assert sceneio.capabilities("spz").partial_selectors == ()
     retired = path.with_suffix(".retired")
     path.rename(retired)
@@ -710,6 +735,7 @@ def _splat(root: Path) -> None:
     assert sceneio.inspect(path).count == count
     decoded = sceneio.read(path)
     assert decoded.num_gaussians == count
+    _assert_gaussian_semantics(decoded, quaternion_norm="unit")
     selected = sceneio.read_partial(path, points=(1, 5))
     assert np.array_equal(selected.means, decoded.means[1:5])
     retired = path.with_suffix(".retired")
@@ -1579,6 +1605,50 @@ def _tiff_formats(root: Path) -> None:
     np.testing.assert_array_equal(sceneio.read(path).pixels, pixels)
     assert sceneio.inspect(path).shape == pixels.shape
 
+    full = np.arange(32 * 48, dtype=np.uint16).reshape(32, 48)
+    reduced = full[::2, ::2].copy()
+    color = np.arange(24 * 28 * 3, dtype=np.uint8).reshape(24, 28, 3)
+
+    def level(index: int, values: np.ndarray) -> sceneio.RasterLevel:
+        axes = "YX" if values.ndim == 2 else "YXC"
+        return sceneio.RasterLevel(
+            index,
+            axes,
+            values.shape,
+            values.dtype.name,
+            "image",
+            _core.image(values),
+        )
+
+    collection = sceneio.RasterCollection(
+        (
+            sceneio.RasterSeries(
+                0,
+                None,
+                (level(0, full), level(1, reduced)),
+            ),
+            sceneio.RasterSeries(1, None, (level(0, color),)),
+        )
+    )
+    collection_path = root / "collection.tiff"
+    sceneio.write_tiff_collection(collection, collection_path, tile=(16, 16))
+    assert sceneio.inspect_tiff_collection(collection_path).count == 2
+    decoded_collection = sceneio.read_tiff_collection(collection_path)
+    np.testing.assert_array_equal(
+        decoded_collection.series_at(0).level_at(1).array,
+        reduced,
+    )
+    selected = sceneio.read_tiff_collection(
+        collection_path,
+        series_index=1,
+        level_index=0,
+        window=(3, 19, 4, 23),
+    )
+    np.testing.assert_array_equal(
+        selected.series_at(1).level_at(0).array,
+        color[3:19, 4:23],
+    )
+
     for kind, expected in zip(
         ("semantic", "instance", "panoptic"),
         _smoke_label_maps(),
@@ -1697,8 +1767,11 @@ def _usd_formats(root: Path) -> None:
         return
 
     usd_capabilities = sceneio.capabilities("usd")
-    assert "profile_sceneio_usd_3dcv_1" in usd_capabilities.supported_features
-    assert {"current_usdc", "composition", "selected_time"} <= set(
+    assert {
+        "profile_sceneio_usd_3dcv_1",
+        "direct_usda_selected_time",
+    } <= set(usd_capabilities.supported_features)
+    assert {"current_usdc", "composition", "usdc_selected_time"} <= set(
         usd_capabilities.unsupported_features
     )
 
@@ -1738,7 +1811,7 @@ def _usd_formats(root: Path) -> None:
         assert info.metadata["profile"] == "sceneio.usd.3dcv/1"
         assert info.metadata["provider_current_usdc"] is False
         assert info.metadata["provider_composition"] is False
-        assert info.metadata["provider_selected_time"] is False
+        assert info.metadata["provider_selected_time"] is True
         rich = sceneio.read_scene(path)
         assert rich.node_names == ["Triangle"]
         retained_positions = rich.mesh_at(0).positions
@@ -1746,6 +1819,27 @@ def _usd_formats(root: Path) -> None:
         path.unlink()
         gc.collect()
         np.testing.assert_array_equal(retained_positions, positions)
+
+    animated = root / "selected-time.usda"
+    animated.write_text(
+        """#usda 1.0
+def Xform "Animated"
+{
+    matrix4d xformOp:transform.timeSamples = {
+        -1: ((1,0,0,1),(0,1,0,0),(0,0,1,0),(0,0,0,1)),
+        3: ((1,0,0,5),(0,1,0,0),(0,0,1,0),(0,0,0,1))
+    }
+    uniform token[] xformOpOrder = ["xformOp:transform"]
+}
+""",
+        encoding="utf-8",
+    )
+    selected = sceneio.read_scene(animated, time=1.0)
+    np.testing.assert_array_equal(
+        selected.node_local_transforms[0, :3, 3],
+        [3, 0, 0],
+    )
+    assert selected.selected_time == 1.0
 
     arc = root / "unsupported-arc.usda"
     arc.write_text(

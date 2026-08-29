@@ -34,11 +34,17 @@ _DESIGN_IDS = {
     "usd_authored_time_samples",
 }
 _PROVIDER_IDS = {"pye57", "tifffile", "tinyvdb", "tinyusdz"}
-_OUTCOMES = {"approved_for_internal_prototype", "provider_limited", "qualified"}
+_OUTCOMES = {
+    "approved_for_internal_prototype",
+    "provider_limited",
+    "qualified",
+    "qualified_exclusion",
+}
 _PROVIDER_OUTCOMES = {
     "broader_container_operations_proven",
     "authoring_surface_limited",
     "authored_sample_values_unavailable",
+    "qualified_exclusion",
 }
 
 
@@ -97,14 +103,17 @@ def test_fc0_decisions_are_complete_provisional_and_nonpublic():
     )
     implemented = set(CONTRACT["implemented_public_symbols"])
     implemented_data = set(CONTRACT["implemented_data_symbols"])
+    implemented_shared = set(CONTRACT["implemented_shared_symbols"])
     assert implemented == set(FC1_CONTRACT["public_symbols"]) | {
         "PointScan",
         "ScanSet",
     }
     assert implemented.isdisjoint(implemented_data)
-    assert sorted(set(symbols) - implemented - implemented_data) == CONTRACT[
-        "provisional_public_symbols"
-    ]
+    assert implemented.isdisjoint(implemented_shared)
+    assert implemented_data.isdisjoint(implemented_shared)
+    assert sorted(
+        set(symbols) - implemented - implemented_data - implemented_shared
+    ) == CONTRACT["provisional_public_symbols"]
     assert len(symbols) == len(set(symbols))
 
     public_modules = (sceneio, sceneio.io, sceneio.data)
@@ -116,6 +125,10 @@ def test_fc0_decisions_are_complete_provisional_and_nonpublic():
             assert not hasattr(sceneio.data, symbol)
         elif symbol in implemented_data:
             assert not hasattr(sceneio, symbol)
+            assert not hasattr(sceneio.io, symbol)
+            assert hasattr(sceneio.data, symbol)
+        elif symbol in implemented_shared:
+            assert hasattr(sceneio, symbol)
             assert not hasattr(sceneio.io, symbol)
             assert hasattr(sceneio.data, symbol)
         else:

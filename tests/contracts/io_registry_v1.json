@@ -1032,6 +1032,9 @@
         "ascii_usd",
         "historical_usdc_read_through_crate_10",
         "directly_authored_static_stage",
+        "direct_usda_selected_time",
+        "matrix_transform_time_samples",
+        "visibility_time_samples",
         "static_meshes",
         "static_points",
         "static_gaussians",
@@ -1056,7 +1059,11 @@
         "current_usdc",
         "usdc_write",
         "composition",
-        "selected_time",
+        "authored_animation_preservation",
+        "dynamic_write",
+        "usdc_selected_time",
+        "time_varying_payloads",
+        "arbitrary_sampled_xform_stacks",
         "subdivision_surfaces",
         "animations",
         "skins",
@@ -1099,6 +1106,9 @@
           "ascii_usd",
           "historical_usdc_read_through_crate_10",
           "directly_authored_static_stage",
+          "direct_usda_selected_time",
+          "matrix_transform_time_samples",
+          "visibility_time_samples",
           "static_meshes",
           "static_points",
           "static_gaussians",
@@ -1123,7 +1133,11 @@
           "current_usdc",
           "usdc_write",
           "composition",
-          "selected_time",
+          "authored_animation_preservation",
+          "dynamic_write",
+          "usdc_selected_time",
+          "time_varying_payloads",
+          "arbitrary_sampled_xform_stacks",
           "subdivision_surfaces",
           "animations",
           "skins",
@@ -1171,6 +1185,9 @@
         "embedded_ascii_root_layer",
         "historical_usdc_root_read_through_crate_10",
         "directly_authored_static_stage",
+        "direct_usda_selected_time",
+        "matrix_transform_time_samples",
+        "visibility_time_samples",
         "static_meshes",
         "static_points",
         "static_gaussians",
@@ -1195,7 +1212,11 @@
         "current_usdc",
         "binary_root_layer_write",
         "composition",
-        "selected_time",
+        "authored_animation_preservation",
+        "dynamic_write",
+        "usdc_selected_time",
+        "time_varying_payloads",
+        "arbitrary_sampled_xform_stacks",
         "subdivision_surfaces",
         "animations",
         "skins",
@@ -1237,6 +1258,9 @@
           "embedded_ascii_root_layer",
           "historical_usdc_root_read_through_crate_10",
           "directly_authored_static_stage",
+          "direct_usda_selected_time",
+          "matrix_transform_time_samples",
+          "visibility_time_samples",
           "static_meshes",
           "static_points",
           "static_gaussians",
@@ -1261,7 +1285,11 @@
           "current_usdc",
           "binary_root_layer_write",
           "composition",
-          "selected_time",
+          "authored_animation_preservation",
+          "dynamic_write",
+          "usdc_selected_time",
+          "time_varying_payloads",
+          "arbitrary_sampled_xform_stacks",
           "subdivision_surfaces",
           "animations",
           "skins",
@@ -5051,7 +5079,8 @@
       "streams_write": true,
       "lossy": false,
       "requires_features": [
-        "tifffile"
+        "tifffile",
+        "zarr"
       ],
       "supported_features": [
         "classic_tiff",
@@ -5067,11 +5096,21 @@
         "associated_alpha",
         "unassociated_alpha",
         "metadata_only_inspect",
-        "transactional_path_write"
-      ],
-      "unsupported_features": [
+        "transactional_path_write",
+        "typed_raster_collection",
         "multiple_series",
         "pyramids",
+        "series_selection",
+        "level_selection",
+        "page_range_selection",
+        "window_selection",
+        "tiled",
+        "stripped",
+        "byteorder_selection"
+      ],
+      "unsupported_features": [
+        "legacy_multiple_series",
+        "legacy_pyramids",
         "planar_separate",
         "non_top_left_orientation",
         "palette",
@@ -5097,7 +5136,8 @@
         "streams_write": true,
         "lossy": false,
         "requires_features": [
-          "tifffile"
+          "tifffile",
+          "zarr"
         ],
         "supported_features": [
           "classic_tiff",
@@ -5113,11 +5153,21 @@
           "associated_alpha",
           "unassociated_alpha",
           "metadata_only_inspect",
-          "transactional_path_write"
-        ],
-        "unsupported_features": [
+          "transactional_path_write",
+          "typed_raster_collection",
           "multiple_series",
           "pyramids",
+          "series_selection",
+          "level_selection",
+          "page_range_selection",
+          "window_selection",
+          "tiled",
+          "stripped",
+          "byteorder_selection"
+        ],
+        "unsupported_features": [
+          "legacy_multiple_series",
+          "legacy_pyramids",
           "planar_separate",
           "non_top_left_orientation",
           "palette",
@@ -5430,7 +5480,8 @@
         "nonzero_background",
         "transformed_grids",
         "half_precision_storage",
-        "custom_grid_metadata"
+        "custom_grid_metadata",
+        "empty_grids"
       ],
       "capabilities": {
         "format": "openvdb",
@@ -5472,7 +5523,8 @@
           "nonzero_background",
           "transformed_grids",
           "half_precision_storage",
-          "custom_grid_metadata"
+          "custom_grid_metadata",
+          "empty_grids"
         ]
       }
     }

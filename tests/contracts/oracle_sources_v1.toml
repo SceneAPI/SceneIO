@@ -465,10 +465,10 @@ distribution_role = "test_executable"
 authority = "format_owner"
 lineage = "openusd"
 formats = ["usd", "usdz"]
-semantic_roles = ["usd_stage", "gaussian_schema", "meters_per_unit", "up_axis"]
+semantic_roles = ["usd_stage", "gaussian_schema", "meters_per_unit", "up_axis", "matrix_interpolation", "visibility_holding", "sample_endpoints"]
 execution = "focused_oracle_lane"
 execution_markers = ["pxr", "OpenUSD"]
-evidence_tests = ["tests/codecs/test_openusd_gaussian_oracle.py"]
+evidence_tests = ["tests/codecs/test_openusd_gaussian_oracle.py", "tests/codecs/test_openusd_animation_oracle.py"]
 qualification = "executed"
 notice = "LICENSES/openusd.txt"
 

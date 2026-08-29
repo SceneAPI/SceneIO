@@ -6,6 +6,11 @@ validated exact commit `50172b5eeb6f3df2d642c80e3fbff43850000d3f` across the
 three wheel targets and both focused oracle lanes. PyPI publication was
 skipped.
 
+The 2026-08-29 G1 follow-on in
+[`remaining_gap_implementation_plan.md`](remaining_gap_implementation_plan.md)
+supersedes only this historical unit's deliberately unrepresented Gaussian
+field boundary. Its original validation evidence remains unchanged.
+
 ## Outcome
 
 SceneIO already has a directional oracle ledger for all 74 built-in formats:
@@ -28,10 +33,11 @@ The closure target is:
 The final semantic refinement also distinguishes represented operations from
 universal claims. SciPy independently checks Gaussian quaternion rotations and
 opacity activation; scalar math checks scale activation; an index-addressed
-oracle checks SH storage permutation for every supported degree. Quaternion
-raw/unit state, SH basis/phase/coefficient meaning, color space, and spatial
-frame remain explicitly unqualified because `GaussianCloud` has no fields for
-them.
+oracle checks SH storage permutation for every supported degree. The G1
+follow-on adds explicit quaternion-state, SH-basis/phase/layout, color-space,
+coordinate-frame, source-precision, and rendering-hint fields to
+`GaussianCloud`; carriers either populate their qualified values or preserve
+an explicit `unknown`, and unsupported conversions refuse.
 
 This is a finite qualification unit. It does not add new file formats, make
 OpenUSD or Niantic SPZ runtime dependencies, or require every reference
@@ -191,6 +197,8 @@ Acceptance:
 - [x] Update the license inventory for newly executed or captured sources.
 - [x] Add the independent mathematical conversion suite.
 - [x] Add official OpenUSD cross-read/write tests.
+- [x] Extend the official OpenUSD lane with bounded USDA/USDZ selected-time
+      matrix/visibility evaluation for FC6 state B.
 - [x] Add official Niantic SPZ v2/v3/v4 read and v3/v4 write tests.
 - [x] Lock the PlayCanvas test-only npm closure and execute all ten external
       reader/writer cases from that lock.
@@ -220,7 +228,8 @@ Acceptance:
   The complete post-correction run passes 4,583 tests with 17 documented
   skips. The focused touched-format/oracle gate passes 292 tests with two
   expected optional-provider skips.
-- OpenUSD `usd-core==26.8` executes four USDA/USDZ cross-read tests locally.
+- OpenUSD `usd-core==26.8` executes the original four Gaussian USDA/USDZ
+  cross-read tests plus 22 FC6 selected-time authored/evaluation cases locally.
   Its v26.08 Git revision is recorded as source-release provenance because the
   wheel exposes its distribution version, not a Git SHA. A Luna environment
   built the pinned Niantic SPZ 3.0.0 source and passed 51 official-provider
