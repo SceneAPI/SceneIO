@@ -190,11 +190,11 @@ jobs:
             --sdist "${{ steps.source.outputs.sdist-path }}" \
             --wheel-dir wheelhouse \
             --output "inventory-${{ matrix.label }}.json"
-      # TinyUSDZ 0.9.4 and Pillow 12.3's optimized provider wheels have their
-      # own platform floors. Keep this optional-provider check on the runner
-      # host after cibuildwheel produces it. SceneIO's independent manylinux2014 artifact
-      # remains built separately.
-      - name: Smoke installed USD, AVIF, NCore, and TIFF profiles on wheel host
+      # TinyUSDZ 0.9.4, TinyVDB 0.9.0, and Pillow 12.3's optimized provider
+      # wheels have their own platform floors. Keep this optional-provider check
+      # on the runner host after cibuildwheel produces it.
+      # SceneIO's independent manylinux2014 artifact remains built separately.
+      - name: Smoke installed USD, AVIF, NCore, TIFF, and OpenVDB profiles on wheel host
         shell: bash
         run: |
           set -euo pipefail
@@ -209,9 +209,10 @@ jobs:
           test "$count" -eq 1
           wheel=$(find wheelhouse -maxdepth 1 -type f -name '*.whl')
           "$smoke_python" -m pip install --only-binary=:all: \
-            "${wheel}[usd,avif,ncore,tiff]" numpy==2.2.6 tinyusdz==0.9.4 pillow==12.3.0
+            "${wheel}[usd,avif,ncore,tiff,openvdb]" numpy==2.2.6 \
+            tinyusdz==0.9.4 tinyvdb==0.9.0 pillow==12.3.0
           "$smoke_python" -I -c \
-            'import sceneio; assert sceneio.capabilities("usd").available; assert sceneio.capabilities("avif").available; assert sceneio.capabilities("ncore_v4").available; assert sceneio.capabilities("tiff").available'
+            'import sceneio; assert sceneio.capabilities("usd").available; assert sceneio.capabilities("avif").available; assert sceneio.capabilities("ncore_v4").available; assert sceneio.capabilities("tiff").available; assert sceneio.capabilities("openvdb").available'
           "$smoke_python" -I -m sceneio._wheel_smoke
       - uses: actions/upload-artifact@v4
         with:
