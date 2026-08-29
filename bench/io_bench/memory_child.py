@@ -223,6 +223,60 @@ def _execute_operation(
             arguments["path"],
             format=arguments.get("format"),
         )
+    if kind == "sceneio_read_scene":
+        arguments = _require_arguments(
+            operation,
+            {"path"},
+            {"time", "load_payloads"},
+        )
+        keywords = {}
+        if "time" in arguments:
+            keywords["time"] = arguments["time"]
+        if "load_payloads" in arguments:
+            load_payloads = arguments["load_payloads"]
+            if not isinstance(load_payloads, bool):
+                raise ValueError(
+                    "sceneio_read_scene load_payloads must be boolean"
+                )
+            keywords["load_payloads"] = load_payloads
+        return sceneio.read_scene(arguments["path"], **keywords)
+    if kind == "sceneio_read_tiff_collection":
+        arguments = _require_arguments(
+            operation,
+            {"path"},
+            {
+                "series_index",
+                "level_index",
+                "page_range",
+                "window",
+            },
+        )
+        keywords = {
+            name: arguments[name]
+            for name in ("series_index", "level_index")
+            if name in arguments
+        }
+        for name, size in (("page_range", 2), ("window", 4)):
+            if name not in arguments:
+                continue
+            value = arguments[name]
+            if (
+                not isinstance(value, list)
+                or len(value) != size
+                or any(
+                    isinstance(item, bool) or not isinstance(item, int)
+                    for item in value
+                )
+            ):
+                raise ValueError(
+                    f"sceneio_read_tiff_collection {name} must contain "
+                    f"{size} integers"
+                )
+            keywords[name] = tuple(value)
+        return sceneio.read_tiff_collection(arguments["path"], **keywords)
+    if kind == "sceneio_inspect_tiff_collection":
+        arguments = _require_arguments(operation, {"path"})
+        return sceneio.inspect_tiff_collection(arguments["path"])
     if kind == "sceneio_read_partial":
         arguments = _require_arguments(
             operation,

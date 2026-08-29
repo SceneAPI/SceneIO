@@ -137,12 +137,19 @@ contract; `normalized` and `arbitrary` do not.
 - `ImageSequence` acquisition metadata uses exact nanosecond durations. A
   declared timestamp reference and readout direction make rolling exposure
   timing interpretable; unsupported writers refuse it rather than dropping it.
+- `RasterLevel` preserves one native-endian, contiguous image, mask, or
+  grayscale stack with explicit axes and sample dtype. `RasterSeries` binds
+  homogeneous levels into a decreasing spatial pyramid, and
+  `RasterCollection` orders independent series without inventing a common
+  physical scale, coordinate frame, or OME interpretation.
 - `GaussianCloud` declares log/linear scale space, logit/linear opacity,
-  WXYZ/XYZW quaternion layout, SH memory layout, and source precision. Its mean
-  positions have no coordinate-frame or meters-per-unit field. Explicit
-  Gaussian conversion therefore covers represented activation/layout/order
-  semantics, not a universal world-frame, color-space, SH-basis/phase, or
-  physical-scale normalization.
+  WXYZ/XYZW quaternion layout and unit state, SH basis/phase/coefficient and
+  memory order, color space, source precision, coordinate frame, and optional
+  meters-per-unit provenance. Unknown remains a valid, truthful value when a
+  carrier does not specify a semantic. Explicit convention conversion covers
+  activation/layout/order changes; coordinate conversion covers qualified
+  orientation-preserving similarities and refuses directional-SH rotations
+  until an explicit SH-rotation policy exists.
 - `TensorDict`, HDF5/hloc, NCore, and workspace/container records never infer
   numeric semantics from array names. Recognized profiles or child records
   declare units; unknown arrays remain lossless and unqualified.
@@ -199,6 +206,7 @@ models grow. Every public representation still has its own mapping entry.
 | `depth_parent_scale` | `sceneio.data.DepthMap` |
 | `frame_meta` | `sceneio.data.FrameMeta` |
 | `binary_mask` | `sceneio.data.Mask` |
+| `raster_collection` | `sceneio.data.RasterCollection`, `sceneio.data.RasterLevel`, `sceneio.data.RasterSeries` |
 | `label_taxonomy` | `sceneio.data.LabelTaxonomy` |
 | `semantic_labels` | `sceneio.data.SemanticMap` |
 | `instance_labels` | `sceneio.data.InstanceMap` |
@@ -225,10 +233,10 @@ models grow. Every public representation still has its own mapping entry.
 ## Verification and change policy
 
 `tests/test_representation_contracts.py` discovers exported classes from all
-four namespaces and requires exact equality with the 100-entry catalog. It also
+four namespaces and requires exact equality with the 103-entry catalog. It also
 checks profile vocabulary, immutable lookup behavior, live evidence paths,
-ambiguous-name refusal, the exact three direct-conversion records, narrow
-metric claims, compiled/neutral record distinctions, and Gaussian limitations.
+ambiguous-name refusal, the exact four direct-conversion records, narrow metric
+claims, compiled/neutral record distinctions, and Gaussian refusal boundaries.
 
 Format-specific decode/encode normalization remains governed by the 74-row
 oracle ledger in

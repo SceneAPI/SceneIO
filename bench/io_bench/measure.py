@@ -8,7 +8,12 @@ import threading
 import time
 import tracemalloc
 import warnings
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
+
+from bench.io_bench.memory_protocol import (
+    MemoryCase,
+    measure_memory_cases,
+)
 
 try:
     import psutil
@@ -86,3 +91,59 @@ def measure_in_process_rss(fn: Callable[[], object]) -> int:
         running = False
         sampler.join()
     return max(0, peak - baseline)
+
+
+def measure_fresh_process_rss(
+    cases: Sequence[MemoryCase],
+    *,
+    samples: int,
+    timeout_seconds: float,
+) -> dict[str, object]:
+    """Measure qualification-grade RSS in one fresh child per sample."""
+
+    measured = measure_memory_cases(
+        cases,
+        samples=samples,
+        strict=True,
+        timeout_seconds=timeout_seconds,
+    )
+    operations: dict[str, object] = {}
+    for case in cases:
+        case_samples = [
+            sample for sample in measured if sample.case_label == case.label
+        ]
+        deltas = [sample.delta_rss_bytes for sample in case_samples]
+        if not deltas or any(delta is None for delta in deltas):
+            raise RuntimeError(
+                f"fresh-process RSS is unavailable for {case.label!r}"
+            )
+        integer_deltas = [int(delta) for delta in deltas if delta is not None]
+        operations[case.label] = {
+            "median_delta_rss_bytes": int(statistics.median(integer_deltas)),
+            "samples": [
+                {
+                    "baseline_rss_bytes": sample.baseline_rss_bytes,
+                    "baseline_high_water_rss_bytes": (
+                        sample.baseline_high_water_rss_bytes
+                    ),
+                    "peak_rss_bytes": sample.peak_rss_bytes,
+                    "peak_high_water_rss_bytes": (
+                        sample.peak_high_water_rss_bytes
+                    ),
+                    "sampled_delta_rss_bytes": (
+                        sample.sampled_delta_rss_bytes
+                    ),
+                    "high_water_delta_rss_bytes": (
+                        sample.high_water_delta_rss_bytes
+                    ),
+                    "delta_rss_bytes": sample.delta_rss_bytes,
+                    "sampler_backend": sample.sampler["backend"],
+                }
+                for sample in case_samples
+            ],
+        }
+    return {
+        "protocol": "sceneio-fresh-child-memory-v1",
+        "samples_per_operation": samples,
+        "operations": operations,
+    }

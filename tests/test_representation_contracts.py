@@ -64,7 +64,7 @@ def _public_representation_ids() -> set[str]:
 def test_contract_catalog_exactly_covers_public_representation_classes():
     assert REPRESENTATION_CONTRACT_SCHEMA_VERSION == 1
     assert set(REPRESENTATION_CONTRACTS) == _public_representation_ids()
-    assert len(REPRESENTATION_CONTRACTS) == 100
+    assert len(REPRESENTATION_CONTRACTS) == 103
 
 
 def test_every_contract_uses_a_registered_profile_and_live_evidence():
@@ -97,6 +97,9 @@ def test_lookup_accepts_public_alias_type_and_unambiguous_name():
     assert representation_contract(sceneio.data.Mask).representation == (
         "sceneio.data.Mask"
     )
+    assert representation_contract(sceneio.RasterCollection).profile.id == (
+        "raster_collection"
+    )
     assert representation_contract(sceneio.colmap.SimilarityTransform).profile.id == (
         "colmap_adapter_sim3"
     )
@@ -120,7 +123,12 @@ def test_conversion_and_metric_claims_stay_narrow():
         for name, contract in REPRESENTATION_CONTRACTS.items()
         if contract.profile.conversion == "direct"
     }
-    assert direct == {"sceneio.Mesh", "sceneio.PointCloud", "sceneio.PosedViewSet"}
+    assert direct == {
+        "sceneio.GaussianCloud",
+        "sceneio.Mesh",
+        "sceneio.PointCloud",
+        "sceneio.PosedViewSet",
+    }
 
     metric = {
         name
@@ -144,22 +152,31 @@ def test_conversion_and_metric_claims_stay_narrow():
         assert "unit-normalizes nonzero normals" in " ".join(contract.rules)
 
 
-def test_gaussian_activation_contract_does_not_claim_world_normalization():
+def test_gaussian_semantic_contract_qualifies_only_declared_world_normalization():
     contract = representation_contract(sceneio.io.GaussianCloud)
     assert contract.normalization == "declared"
     assert contract.scale == "mixed"
-    assert contract.coordinates == "unknown"
-    assert contract.profile.conversion == "requires_context"
+    assert contract.coordinates == "record_declared"
+    assert contract.profile.conversion == "direct"
     assert set(contract.profile.scale_fields) == {
+        "color_space",
+        "coordinate_frame",
         "opacity_space",
+        "quaternion_norm",
         "quaternion_order",
+        "scale_to_meters",
+        "scale_to_meters_source",
         "scale_space",
+        "sh_basis",
+        "sh_coefficient_order",
         "sh_layout",
+        "sh_phase",
         "source_precision",
     }
     joined = " ".join((*contract.profile.rules, contract.profile.refusal))
-    assert "Means use an unspecified source length unit" in joined
-    assert "SH basis" in joined
+    assert "qualified scale_to_meters" in joined
+    assert "SH basis/phase/coefficient" in joined
+    assert "directional-SH rotations" in joined
 
 
 def test_dense_label_contracts_keep_ids_unscaled_and_unpacking_explicit():

@@ -286,11 +286,13 @@ def test_tiff_failed_provider_write_preserves_destination(
 def test_tiff_capabilities_and_license_contract():
     capabilities = sceneio.capabilities("tiff")
     assert capabilities.available
-    assert capabilities.requires_features == ("tifffile",)
+    assert capabilities.requires_features == ("tifffile", "zarr")
     assert capabilities.streams_read
     assert capabilities.streams_write
     assert "bigtiff" in capabilities.supported_features
-    assert "pyramids" in capabilities.unsupported_features
+    assert "pyramids" in capabilities.supported_features
+    assert "window_selection" in capabilities.supported_features
+    assert "legacy_pyramids" in capabilities.unsupported_features
 
     license_text = (
         Path(__file__).resolve().parents[2] / "LICENSES" / "tifffile.txt"

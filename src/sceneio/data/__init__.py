@@ -43,6 +43,14 @@ from sceneio.data.features import (
 )
 from sceneio.data.pointcloud import TrackedPointCloud, TrackObservation
 from sceneio.data.priors import PosePrior
+from sceneio.data.raster import (
+    RASTER_AXES,
+    RASTER_DTYPES,
+    RASTER_PAYLOAD_KINDS,
+    RasterCollection,
+    RasterLevel,
+    RasterSeries,
+)
 from sceneio.data.transforms import (
     DEFAULT_CONVENTION,
     POSE_CONVENTIONS,
@@ -78,6 +86,9 @@ install_coordinate_properties(
     SE3,
     Sim3,
     SemanticMap,
+    RasterCollection,
+    RasterLevel,
+    RasterSeries,
     TrackedPointCloud,
     TwoViewGeometry,
     ViewInput,
@@ -88,6 +99,9 @@ __all__ = [
     "DEFAULT_CONVENTION",
     "POINTMAP_FRAMES",
     "POSE_CONVENTIONS",
+    "RASTER_AXES",
+    "RASTER_DTYPES",
+    "RASTER_PAYLOAD_KINDS",
     "SCALE_CLASSES",
     "SCALE_PROVENANCES",
     "SE3",
@@ -108,6 +122,9 @@ __all__ = [
     "Pointmap",
     "PosePrior",
     "PosedViewSet",
+    "RasterCollection",
+    "RasterLevel",
+    "RasterSeries",
     "RayMap",
     "SemanticMap",
     "Sim3",

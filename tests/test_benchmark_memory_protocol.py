@@ -581,6 +581,92 @@ def test_bounded_read_control_returns_the_requested_bytes(
     MemorySample.from_response(response)
 
 
+def test_profile_specific_memory_operations_dispatch_exact_arguments():
+    calls = []
+
+    class Sceneio:
+        @staticmethod
+        def read_scene(path, **keywords):
+            calls.append(("read_scene", path, keywords))
+            return "scene"
+
+        @staticmethod
+        def read_tiff_collection(path, **keywords):
+            calls.append(("read_tiff_collection", path, keywords))
+            return "collection"
+
+        @staticmethod
+        def inspect_tiff_collection(path):
+            calls.append(("inspect_tiff_collection", path, {}))
+            return "inspection"
+
+    def execute(operation):
+        return _execute_operation(
+            operation.as_request(),
+            sceneio=Sceneio(),
+            payload_bytes=0,
+            allocation_headroom_bytes=0,
+        )
+
+    assert execute(
+        MemoryOperation(
+            "sceneio_read_scene",
+            {"path": "stage.usda", "time": 1.25, "load_payloads": False},
+        )
+    ) == "scene"
+    assert execute(
+        MemoryOperation(
+            "sceneio_read_tiff_collection",
+            {
+                "path": "collection.tif",
+                "series_index": 1,
+                "level_index": 2,
+                "page_range": [3, 4],
+                "window": [5, 6, 7, 8],
+            },
+        )
+    ) == "collection"
+    assert execute(
+        MemoryOperation(
+            "sceneio_inspect_tiff_collection",
+            {"path": "collection.tif"},
+        )
+    ) == "inspection"
+    assert calls == [
+        (
+            "read_scene",
+            "stage.usda",
+            {"time": 1.25, "load_payloads": False},
+        ),
+        (
+            "read_tiff_collection",
+            "collection.tif",
+            {
+                "series_index": 1,
+                "level_index": 2,
+                "page_range": (3, 4),
+                "window": (5, 6, 7, 8),
+            },
+        ),
+        ("inspect_tiff_collection", "collection.tif", {}),
+    ]
+
+    with pytest.raises(ValueError, match="load_payloads must be boolean"):
+        execute(
+            MemoryOperation(
+                "sceneio_read_scene",
+                {"path": "stage.usda", "load_payloads": 1},
+            )
+        )
+    with pytest.raises(ValueError, match="page_range must contain 2 integers"):
+        execute(
+            MemoryOperation(
+                "sceneio_read_tiff_collection",
+                {"path": "collection.tif", "page_range": [0, True]},
+            )
+        )
+
+
 @pytest.mark.parametrize(
     ("constructor", "message"),
     [

@@ -491,22 +491,30 @@ _PROFILES = {
             "gaussian_cloud",
             "declared",
             "mixed",
-            "unknown",
-            "requires_context",
-            ("source_length_unit", "dimensionless", "activation_value"),
+            "record_declared",
+            "direct",
+            ("record_length_unit", "dimensionless", "activation_value"),
             scale_fields=(
                 "scale_space",
                 "opacity_space",
                 "quaternion_order",
+                "quaternion_norm",
                 "sh_layout",
+                "sh_basis",
+                "sh_phase",
+                "sh_coefficient_order",
+                "color_space",
                 "source_precision",
+                "coordinate_frame",
+                "scale_to_meters",
+                "scale_to_meters_source",
             ),
             rules=(
-                "Means use an unspecified source length unit; no coordinate frame or meters-per-unit value is present.",
-                "Scale and opacity activation spaces, quaternion order, SH layout, and precision are explicit metadata.",
-                "convert_gaussian_conventions performs only requested representable activation/layout/order changes and normalizes quaternion magnitude explicitly.",
+                "Means and scales retain record units; coordinate_frame plus a qualified scale_to_meters maps those lengths to a declared frame and meters.",
+                "Activation spaces, quaternion order/unit state, SH basis/phase/coefficient and memory order, color space, precision, and scale provenance are explicit metadata.",
+                "convert_gaussian_conventions changes only qualified activation/layout/order values; convert_coordinates applies orientation-preserving similarities and refuses directional-SH rotations.",
             ),
-            refusal="Metric/frame conversion and unrepresented SH basis, phase, color-space, or universal coefficient-order changes require external metadata.",
+            refusal="Unknown frames require caller context; reflections, nonsimilar transforms, nonlinear color/SH changes, and directional-SH rotations require an explicit policy.",
         ),
         _profile(
             "mesh",
@@ -1100,6 +1108,20 @@ _PROFILES = {
             rules=("Workspace paths and indices coordinate child reconstruction, depth, normal, consistency, and visibility contracts.",),
             refusal="Opening or inspecting a workspace does not normalize its child numeric payloads.",
         ),
+        _profile(
+            "raster_collection",
+            "aggregate",
+            "component_declared",
+            "component_declared",
+            "requires_context",
+            ("component_declared", "stored_sample", "pixel"),
+            rules=(
+                "RasterLevel preserves a native-endian C-contiguous sample array with explicit axes, dtype, and payload kind.",
+                "RasterSeries requires homogeneous semantics and strictly decreasing spatial pyramid dimensions.",
+                "RasterCollection orders independently meaningful series without inferring a shared scale or coordinate frame.",
+            ),
+            refusal="Cross-series normalization, arbitrary OME axes, and physical scaling require application context outside this bounded aggregate.",
+        ),
     )
 }
 
@@ -1197,6 +1219,13 @@ def _build_contracts() -> dict[str, RepresentationNormalizationContract]:
         "sceneio.data.LabelTaxonomy",
     )
     register("binary_mask", ("tests/test_data_dense.py",), "sceneio.data.Mask")
+    register(
+        "raster_collection",
+        ("tests/records/test_raster_collection.py",),
+        "sceneio.data.RasterCollection",
+        "sceneio.data.RasterLevel",
+        "sceneio.data.RasterSeries",
+    )
     register(
         "panoptic_labels",
         ("tests/test_data_label_maps.py", "tests/codecs/test_label_map_carriers.py"),

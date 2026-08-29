@@ -140,6 +140,7 @@ _IO_FORWARDS = frozenset(
         "project_ncore_item",
         "read_partial",
         "read_scene",
+        "read_tiff_collection",
         "write",
         "write_arrow_ipc",
         "write_colmap_db",
@@ -153,6 +154,7 @@ _IO_FORWARDS = frozenset(
         "write_openvdb",
         "write_ncore_v4",
         "write_tiff",
+        "write_tiff_collection",
         "write_usd",
         "write_usdz",
         "write_scene",
@@ -163,6 +165,7 @@ _IO_FORWARDS = frozenset(
         "inspect_e57_scans",
         "inspect_flow",
         "inspect_label_map",
+        "inspect_tiff_collection",
         "capabilities",
         "coordinate_contract",
         "coordinate_convention",
@@ -234,6 +237,14 @@ _IO_FORWARDS = frozenset(
     }
 )
 
+_DATA_FORWARDS = frozenset(
+    {
+        "RasterCollection",
+        "RasterLevel",
+        "RasterSeries",
+    }
+)
+
 _REPRESENTATION_FORWARDS = frozenset(
     {
         "REPRESENTATION_CONTRACTS",
@@ -258,6 +269,8 @@ def __getattr__(name: str) -> object:
         return importlib.import_module(f"sceneio.{name}")
     if name in _REPRESENTATION_FORWARDS:
         return getattr(importlib.import_module("sceneio.representations"), name)
+    if name in _DATA_FORWARDS:
+        return getattr(importlib.import_module("sceneio.data"), name)
     if name in _IO_FORWARDS:
         return getattr(importlib.import_module("sceneio.io"), name)
     raise AttributeError(f"module 'sceneio' has no attribute {name!r}")
@@ -355,6 +368,9 @@ __all__ = [
     "PointVisibility",
     "PoseGraph",
     "PosedViewSet",
+    "RasterCollection",
+    "RasterLevel",
+    "RasterSeries",
     "Reconstruction",
     "RepresentationNormalizationContract",
     "RtmvDataset",
@@ -390,6 +406,7 @@ __all__ = [
     "inspect_e57_scans",
     "inspect_flow",
     "inspect_label_map",
+    "inspect_tiff_collection",
     "io",
     "is_colmap_native_extractor_type",
     "is_extension_column",
@@ -417,6 +434,7 @@ __all__ = [
     "read_partial",
     "read_record",
     "read_scene",
+    "read_tiff_collection",
     "representation_contract",
     "testing",
     "validate_sha",
@@ -433,6 +451,8 @@ __all__ = [
     "write_openvdb",
     "write_record",
     "write_scene",
+    "write_tiff",
+    "write_tiff_collection",
     "write_usd",
     "write_usdz",
     "write_zarr",

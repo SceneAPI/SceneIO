@@ -1,8 +1,8 @@
 """Bounded computer-vision TIFF adapter backed by upstream ``tifffile``.
 
-The provider handles classic TIFF and BigTIFF directly from file paths.
-SceneIO intentionally supports one unambiguous series containing either one
-grayscale/RGB/RGBA image, one boolean mask, or a grayscale page/volume stack.
+The provider handles classic TIFF and BigTIFF directly from file paths. The
+legacy projection intentionally supports one unambiguous image/mask/stack;
+the additive typed API preserves bounded CV series and homogeneous pyramids.
 """
 
 from __future__ import annotations
@@ -13,6 +13,7 @@ import os
 import tempfile
 from collections.abc import Mapping
 from contextlib import nullcontext, suppress
+from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
@@ -23,6 +24,9 @@ from sceneio.data import (
     LabelTaxonomy,
     Mask,
     PanopticMap,
+    RasterCollection,
+    RasterLevel,
+    RasterSeries,
     SemanticMap,
 )
 from sceneio.io._inspectors.model import ArrayInspection, Inspection
@@ -55,8 +59,7 @@ def _require_tifffile():
         import tifffile
     except ModuleNotFoundError:
         raise RuntimeError(
-            "TIFF support requires the optional dependency; "
-            "install sceneio[tiff]"
+            "TIFF support requires the optional dependency; install sceneio[tiff]"
         ) from None
     return tifffile
 
@@ -70,6 +73,36 @@ def _native_c_array(value: object, context: str) -> np.ndarray:
     return np.ascontiguousarray(array)
 
 
+def _metadata_page(page):
+    """Return the tag-owning page for a TiffPage or lightweight TiffFrame."""
+
+    return page if hasattr(page, "tags") else page.keyframe
+
+
+def _classify_raster(
+    axes: str,
+    shape: tuple[int, ...],
+    dtype: np.dtype,
+) -> tuple[str, str, int]:
+    if dtype.fields is not None or dtype.subdtype is not None:
+        raise ValueError("TIFF: structured and subarray dtypes are unsupported")
+    if any(dimension <= 0 for dimension in shape):
+        raise ValueError("TIFF: empty raster dimensions are unsupported")
+    if axes == "YX" and len(shape) == 2:
+        if dtype.name not in _STACK_DTYPES:
+            raise ValueError(f"TIFF image: unsupported dtype {dtype.name!r}")
+        return ("mask" if dtype.name == "bool" else "image"), "YX", 1
+    if axes in {"YXS", "YXC"} and len(shape) == 3 and shape[-1] in {3, 4}:
+        if dtype.name not in _IMAGE_DTYPES:
+            raise ValueError(f"TIFF image: unsupported dtype {dtype.name!r}")
+        return "image", "YXC", shape[-1]
+    if axes in _STACK_AXES and len(shape) == 3:
+        if dtype.name not in _STACK_DTYPES:
+            raise ValueError(f"TIFF stack: unsupported dtype {dtype.name!r}")
+        return "stack", axes, 1
+    raise ValueError(f"TIFF: unsupported or ambiguous axes {axes!r} and shape {shape!r}")
+
+
 def _validate_file_layout(tiff):
     if len(tiff.series) != 1:
         raise ValueError("TIFF: exactly one image series is supported")
@@ -79,41 +112,25 @@ def _validate_file_layout(tiff):
     axes = str(series.axes)
     shape = tuple(int(value) for value in series.shape)
     dtype = np.dtype(series.dtype)
-    if dtype.fields is not None or dtype.subdtype is not None:
-        raise ValueError("TIFF: structured and subarray dtypes are unsupported")
     if not series.pages:
         raise ValueError("TIFF: image series has no pages")
     for page in series.pages:
+        page = _metadata_page(page)
         orientation = page.tags.get("Orientation")
         if orientation is not None and int(orientation.value) != 1:
             raise ValueError("TIFF: only top-left orientation is supported")
         planar = page.planarconfig
         if planar is not None and int(planar) != 1:
             raise ValueError("TIFF: planar-separate samples are unsupported")
-    if axes == "YX":
-        if dtype.name not in _STACK_DTYPES:
-            raise ValueError(f"TIFF image: unsupported dtype {dtype.name!r}")
-        kind = "mask" if dtype.name == "bool" else "image"
-        channels = 1
-    elif axes in {"YXS", "YXC"} and len(shape) == 3 and shape[-1] in {3, 4}:
-        if dtype.name not in _IMAGE_DTYPES:
-            raise ValueError(f"TIFF image: unsupported dtype {dtype.name!r}")
-        kind = "image"
-        channels = shape[-1]
-    elif axes in _STACK_AXES and len(shape) == 3:
-        if dtype.name not in _STACK_DTYPES:
-            raise ValueError(f"TIFF stack: unsupported dtype {dtype.name!r}")
-        kind = "stack"
-        channels = 1
-    else:
-        raise ValueError(
-            f"TIFF: unsupported or ambiguous axes {axes!r} and shape {shape!r}"
-        )
+    kind, _normalized_axes, channels = _classify_raster(axes, shape, dtype)
     return series, axes, shape, dtype, kind, channels
 
 
 def _image_metadata(series, channels: int) -> tuple[str, str]:
-    page = series.pages[0]
+    return _image_metadata_from_page(_metadata_page(series.pages[0]), channels)
+
+
+def _image_metadata_from_page(page, channels: int) -> tuple[str, str]:
     photometric = int(page.photometric)
     if channels == 1:
         if photometric not in {0, 1}:
@@ -128,9 +145,7 @@ def _image_metadata(series, channels: int) -> tuple[str, str]:
         return "srgb", "premultiplied"
     if extras == (2,):
         return "srgb", "straight"
-    raise ValueError(
-        "TIFF image: RGBA samples require associated or unassociated alpha"
-    )
+    raise ValueError("TIFF image: RGBA samples require associated or unassociated alpha")
 
 
 def read_tiff(path: str | Path):
@@ -156,9 +171,7 @@ def read_tiff(path: str | Path):
 def _image_write_args(image) -> tuple[np.ndarray, dict[str, object]]:
     pixels = _native_c_array(image.pixels, "TIFF image")
     if pixels.dtype.name not in _IMAGE_DTYPES:
-        raise ValueError(
-            f"TIFF image: unsupported dtype {pixels.dtype.name!r}"
-        )
+        raise ValueError(f"TIFF image: unsupported dtype {pixels.dtype.name!r}")
     channels = 1 if pixels.ndim == 2 else pixels.shape[-1]
     expected_maxval = {
         "uint8": 255,
@@ -166,14 +179,10 @@ def _image_write_args(image) -> tuple[np.ndarray, dict[str, object]]:
         "float32": 0,
     }[pixels.dtype.name]
     if image.maxval != expected_maxval:
-        raise ValueError(
-            "TIFF image: only the dtype's full-range maxval is representable"
-        )
+        raise ValueError("TIFF image: only the dtype's full-range maxval is representable")
     if channels == 1:
         if image.color_space != "gray" or image.alpha_mode != "none":
-            raise ValueError(
-                "TIFF image: grayscale requires gray color and no alpha"
-            )
+            raise ValueError("TIFF image: grayscale requires gray color and no alpha")
         return pixels, {"photometric": "minisblack"}
     if image.color_space != "srgb":
         raise ValueError("TIFF image: RGB/RGBA requires srgb color")
@@ -184,9 +193,7 @@ def _image_write_args(image) -> tuple[np.ndarray, dict[str, object]]:
     if channels == 4 and image.alpha_mode in {"straight", "premultiplied"}:
         alpha = "unassalpha" if image.alpha_mode == "straight" else "assocalpha"
         return pixels, {"photometric": "rgb", "extrasamples": (alpha,)}
-    raise ValueError(
-        "TIFF image: RGBA requires straight or premultiplied alpha"
-    )
+    raise ValueError("TIFF image: RGBA requires straight or premultiplied alpha")
 
 
 def _stack_write_args(tensors) -> tuple[np.ndarray, dict[str, object]]:
@@ -194,14 +201,10 @@ def _stack_write_args(tensors) -> tuple[np.ndarray, dict[str, object]]:
         raise ValueError("TIFF stack: TensorDict must contain only 'pages'")
     attrs = dict(tensors.attrs)
     if set(attrs) != {"axes"} or attrs["axes"] not in _STACK_AXES:
-        raise ValueError(
-            "TIFF stack: attrs must contain one supported 'axes' value"
-        )
+        raise ValueError("TIFF stack: attrs must contain one supported 'axes' value")
     array = _native_c_array(tensors["pages"], "TIFF stack")
     if array.ndim != 3 or array.dtype.name not in _STACK_DTYPES:
-        raise ValueError(
-            "TIFF stack: pages must be a rank-3 bool/uint8/uint16/float32 array"
-        )
+        raise ValueError("TIFF stack: pages must be a rank-3 bool/uint8/uint16/float32 array")
     return array, {
         "photometric": "minisblack",
         "metadata": {"axes": attrs["axes"]},
@@ -292,13 +295,597 @@ def inspect_tiff(path: str | Path) -> Inspection:
     )
 
 
+@dataclass(frozen=True)
+class _CollectionLevel:
+    index: int
+    source_axes: str
+    axes: str
+    shape: tuple[int, ...]
+    dtype: str
+    payload_kind: str
+    channels: int
+    page_count: int
+    layout: str
+    tile_shape: tuple[int, int] | None
+    rows_per_strip: tuple[int, ...]
+    compression: tuple[str, ...]
+    photometric: str
+    planar_config: str
+    orientation: int
+    color_space: str
+    alpha_mode: str
+
+
+@dataclass(frozen=True)
+class _CollectionSeries:
+    index: int
+    name: str | None
+    levels: tuple[_CollectionLevel, ...]
+
+
+def _enum_label(value: object) -> str:
+    name = getattr(value, "name", None)
+    if isinstance(name, str):
+        return name.lower()
+    return str(int(value))
+
+
+def _ordered_unique(values) -> tuple:
+    return tuple(dict.fromkeys(values))
+
+
+def _spatial_axis_indices(axes: str) -> tuple[int, int]:
+    return (0, 1) if axes == "YXC" else (-2, -1)
+
+
+def _spatial_shape(axes: str, shape: tuple[int, ...]) -> tuple[int, int]:
+    row_axis, column_axis = _spatial_axis_indices(axes)
+    return shape[row_axis], shape[column_axis]
+
+
+def _non_spatial_shape(axes: str, shape: tuple[int, ...]) -> tuple[int, ...]:
+    if axes == "YXC":
+        return shape[2:]
+    return shape[:-2]
+
+
+def _describe_collection_level(level, index: int, *, is_ome: bool) -> _CollectionLevel:
+    source_axes = str(level.axes)
+    shape = tuple(int(value) for value in level.shape)
+    dtype = np.dtype(level.dtype)
+    if not level.pages:
+        raise ValueError("TIFF collection: raster level has no pages")
+
+    pages = tuple(_metadata_page(page) for page in level.pages)
+    orientations = []
+    planar_configs = []
+    photometrics = []
+    tiled = []
+    tile_shapes = []
+    rows_per_strip = []
+    compressions = []
+    extrasamples = []
+    for page in pages:
+        orientation_tag = page.tags.get("Orientation")
+        orientations.append(1 if orientation_tag is None else int(orientation_tag.value))
+        planar_configs.append(1 if page.planarconfig is None else int(page.planarconfig))
+        photometrics.append(int(page.photometric))
+        tiled.append(bool(page.is_tiled))
+        if page.is_tiled:
+            tile_shapes.append((int(page.tilelength), int(page.tilewidth)))
+        else:
+            rows_per_strip.append(int(page.rowsperstrip))
+        compressions.append(_enum_label(page.compression))
+        extrasamples.append(tuple(int(value) for value in page.extrasamples))
+
+    if set(orientations) != {1}:
+        raise ValueError("TIFF collection: only top-left orientation is supported")
+    if set(planar_configs) != {1}:
+        raise ValueError("TIFF collection: planar-separate samples are unsupported")
+    if len(set(photometrics)) != 1 or len(set(extrasamples)) != 1:
+        raise ValueError("TIFF collection: mixed photometric interpretations are unsupported")
+    if is_ome:
+        raise ValueError(
+            "TIFF collection: OME-XML and OME axes "
+            f"{source_axes!r} are outside the bounded CV profile"
+        )
+
+    kind, axes, channels = _classify_raster(source_axes, shape, dtype)
+    first = pages[0]
+    if kind == "image":
+        color_space, alpha_mode = _image_metadata_from_page(first, channels)
+    else:
+        if photometrics[0] not in {0, 1}:
+            raise ValueError("TIFF collection: masks and stacks require grayscale photometric data")
+        color_space, alpha_mode = "not_applicable", "not_applicable"
+    if all(tiled):
+        layout = "tiled"
+        unique_tiles = _ordered_unique(tile_shapes)
+        tile_shape = unique_tiles[0] if len(unique_tiles) == 1 else None
+    elif not any(tiled):
+        layout = "stripped"
+        tile_shape = None
+    else:
+        layout = "mixed"
+        tile_shape = None
+    return _CollectionLevel(
+        index=index,
+        source_axes=source_axes,
+        axes=axes,
+        shape=shape,
+        dtype=dtype.name,
+        payload_kind="tensor" if kind == "stack" else kind,
+        channels=channels,
+        page_count=len(pages),
+        layout=layout,
+        tile_shape=tile_shape,
+        rows_per_strip=_ordered_unique(rows_per_strip),
+        compression=_ordered_unique(compressions),
+        photometric=_enum_label(first.photometric),
+        planar_config="contiguous",
+        orientation=1,
+        color_space=color_space,
+        alpha_mode=alpha_mode,
+    )
+
+
+def _validate_collection_series(series: _CollectionSeries) -> None:
+    first = series.levels[0]
+    previous = first
+    for level in series.levels[1:]:
+        if (
+            level.axes != first.axes
+            or level.dtype != first.dtype
+            or level.payload_kind != first.payload_kind
+            or level.channels != first.channels
+            or level.color_space != first.color_space
+            or level.alpha_mode != first.alpha_mode
+            or _non_spatial_shape(level.axes, level.shape)
+            != _non_spatial_shape(first.axes, first.shape)
+        ):
+            raise ValueError("TIFF collection: pyramid levels must have homogeneous semantics")
+        if (
+            _spatial_shape(level.axes, level.shape)[0]
+            > _spatial_shape(previous.axes, previous.shape)[0]
+            or _spatial_shape(level.axes, level.shape)[1]
+            > _spatial_shape(previous.axes, previous.shape)[1]
+            or _spatial_shape(level.axes, level.shape)
+            == _spatial_shape(previous.axes, previous.shape)
+        ):
+            raise ValueError("TIFF collection: pyramid spatial dimensions must decrease")
+        previous = level
+
+
+def _describe_tiff_collection(tiff) -> tuple[_CollectionSeries, ...]:
+    if not tiff.series:
+        raise ValueError("TIFF collection: file has no image series")
+    result = []
+    for series_index, provider_series in enumerate(tiff.series):
+        provider_levels = tuple(provider_series.levels)
+        if not provider_levels:
+            raise ValueError("TIFF collection: image series has no levels")
+        name = str(provider_series.name or "") or None
+        levels = tuple(
+            _describe_collection_level(
+                level,
+                level_index,
+                is_ome=bool(tiff.is_ome),
+            )
+            for level_index, level in enumerate(provider_levels)
+        )
+        series = _CollectionSeries(series_index, name, levels)
+        _validate_collection_series(series)
+        result.append(series)
+    return tuple(result)
+
+
+def _selector_index(value: object | None, name: str) -> int | None:
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        raise TypeError(f"{name} must be a non-negative integer or None")
+    try:
+        selected = operator.index(value)
+    except TypeError:
+        raise TypeError(f"{name} must be a non-negative integer or None") from None
+    if selected < 0:
+        raise ValueError(f"{name} must be non-negative")
+    return int(selected)
+
+
+def _bounded_range(
+    value: object | None,
+    *,
+    name: str,
+    limit: int,
+    length: int,
+) -> tuple[int, ...] | None:
+    if value is None:
+        return None
+    if not isinstance(value, (tuple, list)) or len(value) != length:
+        raise TypeError(f"{name} must be a length-{length} tuple or list")
+    result = []
+    for item in value:
+        if isinstance(item, bool):
+            raise TypeError(f"{name} values must be integers")
+        try:
+            result.append(int(operator.index(item)))
+        except TypeError:
+            raise TypeError(f"{name} values must be integers") from None
+    pairs = zip(result[::2], result[1::2], strict=True)
+    if any(start < 0 or start >= stop or stop > limit for start, stop in pairs):
+        raise ValueError(f"{name} must contain non-empty half-open in-range bounds")
+    return tuple(result)
+
+
+def _selected_collection_infos(
+    series: tuple[_CollectionSeries, ...],
+    *,
+    series_index: object | None,
+    level_index: object | None,
+    page_range: object | None,
+    window: object | None,
+) -> tuple[
+    tuple[tuple[_CollectionSeries, tuple[_CollectionLevel, ...]], ...],
+    tuple[int, int] | None,
+    tuple[int, int, int, int] | None,
+]:
+    selected_series = _selector_index(series_index, "series_index")
+    selected_level = _selector_index(level_index, "level_index")
+    if selected_level is not None and selected_series is None:
+        raise ValueError("level_index requires series_index")
+    if (page_range is not None or window is not None) and selected_level is None:
+        raise ValueError("page_range and window require series_index and level_index")
+    if selected_series is not None and selected_series >= len(series):
+        raise IndexError("TIFF collection series_index out of range")
+
+    selected: list[tuple[_CollectionSeries, tuple[_CollectionLevel, ...]]] = []
+    source_series = series if selected_series is None else (series[selected_series],)
+    for series_info in source_series:
+        if selected_level is None:
+            levels = series_info.levels
+        else:
+            if selected_level >= len(series_info.levels):
+                raise IndexError("TIFF collection level_index out of range")
+            levels = (series_info.levels[selected_level],)
+        selected.append((series_info, levels))
+
+    page_bounds = None
+    window_bounds = None
+    if selected_level is not None:
+        level = selected[0][1][0]
+        if page_range is not None:
+            if level.axes not in _STACK_AXES:
+                raise ValueError("page_range is supported only for rank-3 stacks")
+            page_bounds = _bounded_range(
+                page_range,
+                name="page_range",
+                limit=level.shape[0],
+                length=2,
+            )
+        if window is not None:
+            spatial_shape = _spatial_shape(level.axes, level.shape)
+            window_bounds = _bounded_range(
+                window,
+                name="window",
+                limit=max(spatial_shape),
+                length=4,
+            )
+            assert window_bounds is not None
+            _row_start, row_stop, _column_start, column_stop = window_bounds
+            if row_stop > spatial_shape[0] or column_stop > spatial_shape[1]:
+                raise ValueError("window must contain non-empty half-open in-range bounds")
+    return tuple(selected), page_bounds, window_bounds
+
+
+def _zarr_selected_array(
+    provider_series,
+    level_index: int,
+    selection: tuple[slice, ...],
+) -> np.ndarray:
+    try:
+        import zarr
+    except ModuleNotFoundError:
+        raise RuntimeError(
+            "TIFF collection page/window selection requires zarr; install sceneio[tiff]"
+        ) from None
+    store = provider_series.aszarr(level=level_index)
+    try:
+        array = zarr.open(store, mode="r")
+        return np.asarray(array[selection])
+    finally:
+        store.close()
+
+
+def _level_payload(info: _CollectionLevel, array: np.ndarray):
+    array = _native_c_array(array, "TIFF collection")
+    if info.payload_kind == "mask":
+        return Mask(array)
+    if info.payload_kind == "tensor":
+        return _core.tensor_dict({"pages": array}, attrs={"axes": info.axes})
+    return _core.image(
+        array,
+        color_space=info.color_space,
+        alpha_mode=info.alpha_mode,
+    )
+
+
+def read_tiff_collection(
+    path: str | Path,
+    *,
+    series_index: int | None = None,
+    level_index: int | None = None,
+    page_range: tuple[int, int] | None = None,
+    window: tuple[int, int, int, int] | None = None,
+) -> RasterCollection:
+    """Read all or a bounded selection of TIFF series and pyramid levels."""
+
+    tifffile = _require_tifffile()
+    with tifffile.TiffFile(path) as tiff:
+        infos = _describe_tiff_collection(tiff)
+        selected, page_bounds, window_bounds = _selected_collection_infos(
+            infos,
+            series_index=series_index,
+            level_index=level_index,
+            page_range=page_range,
+            window=window,
+        )
+        decoded_series = []
+        for series_info, levels in selected:
+            decoded_levels = []
+            for level_info in levels:
+                provider_level = tiff.series[series_info.index].levels[level_info.index]
+                selected_shape = list(level_info.shape)
+                if page_bounds is None and window_bounds is None:
+                    array = provider_level.asarray()
+                else:
+                    selection = [slice(None)] * len(level_info.shape)
+                    if page_bounds is not None:
+                        selection[0] = slice(*page_bounds)
+                        selected_shape[0] = page_bounds[1] - page_bounds[0]
+                    if window_bounds is not None:
+                        row_start, row_stop, column_start, column_stop = window_bounds
+                        row_axis, column_axis = _spatial_axis_indices(level_info.axes)
+                        selection[row_axis] = slice(row_start, row_stop)
+                        selection[column_axis] = slice(column_start, column_stop)
+                        selected_shape[row_axis] = row_stop - row_start
+                        selected_shape[column_axis] = column_stop - column_start
+                    provider_series = tiff.series[series_info.index]
+                    array = _zarr_selected_array(
+                        provider_series,
+                        level_info.index,
+                        tuple(selection),
+                    )
+                payload = _level_payload(level_info, array)
+                decoded_levels.append(
+                    RasterLevel(
+                        level_info.index,
+                        level_info.axes,
+                        tuple(selected_shape),
+                        level_info.dtype,
+                        level_info.payload_kind,
+                        payload,
+                    )
+                )
+            decoded_series.append(
+                RasterSeries(
+                    series_info.index,
+                    series_info.name,
+                    tuple(decoded_levels),
+                )
+            )
+    return RasterCollection(tuple(decoded_series))
+
+
+def _inspection_level(info: _CollectionLevel) -> dict[str, object]:
+    return {
+        "index": info.index,
+        "axes": info.axes,
+        "source_axes": info.source_axes,
+        "shape": info.shape,
+        "dtype": info.dtype,
+        "payload_kind": info.payload_kind,
+        "page_count": info.page_count,
+        "layout": info.layout,
+        "tile_shape": info.tile_shape,
+        "rows_per_strip": info.rows_per_strip,
+        "compression": info.compression,
+        "photometric": info.photometric,
+        "planar_config": info.planar_config,
+        "orientation": info.orientation,
+    }
+
+
+def inspect_tiff_collection(path: str | Path) -> Inspection:
+    """Inspect every supported series and level without decoding samples."""
+
+    tifffile = _require_tifffile()
+    source = Path(path)
+    with tifffile.TiffFile(source) as tiff:
+        infos = _describe_tiff_collection(tiff)
+        bigtiff = bool(tiff.is_bigtiff)
+        byteorder = str(tiff.byteorder)
+    arrays = tuple(
+        ArrayInspection(
+            f"series[{series.index}].level[{level.index}]",
+            level.shape,
+            level.dtype,
+        )
+        for series in infos
+        for level in series.levels
+    )
+    return Inspection(
+        format="tiff",
+        datatype="raster_collection",
+        byte_size=source.stat().st_size,
+        count=len(infos),
+        arrays=arrays,
+        metadata={
+            "schema": "sceneio.raster_collection/1",
+            "bigtiff": bigtiff,
+            "byteorder": byteorder,
+            "series": tuple(
+                {
+                    "index": series.index,
+                    "name": series.name,
+                    "levels": tuple(_inspection_level(level) for level in series.levels),
+                }
+                for series in infos
+            ),
+        },
+    )
+
+
+def _collection_write_options(
+    value: RasterCollection,
+    *,
+    bigtiff: bool | None,
+    byteorder: str | None,
+    tile: tuple[int, int] | None,
+    rowsperstrip: int | None,
+) -> tuple[bool, str | None, tuple[int, int] | None, int | None]:
+    if not isinstance(value, RasterCollection):
+        raise TypeError("TIFF collection: expected RasterCollection")
+    if bigtiff is not None and not isinstance(bigtiff, bool):
+        raise TypeError("bigtiff must be bool or None")
+    byteorders = {None: None, "native": None, "little": "<", "big": ">", "<": "<", ">": ">"}
+    if byteorder not in byteorders:
+        raise ValueError("byteorder must be native, little, big, '<', '>', or None")
+    if tile is not None:
+        if (
+            not isinstance(tile, (tuple, list))
+            or len(tile) != 2
+            or any(isinstance(item, bool) for item in tile)
+        ):
+            raise TypeError("tile must be a pair of positive integer multiples of 16")
+        try:
+            tile = tuple(int(operator.index(item)) for item in tile)
+        except TypeError:
+            raise TypeError("tile must be a pair of positive integer multiples of 16") from None
+        if any(item <= 0 or item % 16 for item in tile):
+            raise ValueError("tile dimensions must be positive multiples of 16")
+    if rowsperstrip is not None:
+        if isinstance(rowsperstrip, bool):
+            raise TypeError("rowsperstrip must be a positive integer or None")
+        try:
+            rowsperstrip = int(operator.index(rowsperstrip))
+        except TypeError:
+            raise TypeError("rowsperstrip must be a positive integer or None") from None
+        if rowsperstrip <= 0:
+            raise ValueError("rowsperstrip must be positive")
+    if tile is not None and rowsperstrip is not None:
+        raise ValueError("tile and rowsperstrip are mutually exclusive")
+    if tuple(series.index for series in value.series) != tuple(range(value.num_series)):
+        raise ValueError("TIFF collection writer requires contiguous series indices")
+    for series in value.series:
+        if series.name is not None:
+            raise ValueError("TIFF collection writer does not support series names")
+        if tuple(level.index for level in series.levels) != tuple(range(series.num_levels)):
+            raise ValueError("TIFF collection writer requires contiguous level indices")
+        if value.num_series > 1 and series.levels[0].payload_kind == "tensor":
+            raise ValueError("TIFF collection writer does not support multi-series stacks")
+        if series.num_levels > 1 and series.levels[0].payload_kind == "tensor":
+            raise ValueError("TIFF collection writer does not support stack pyramids")
+    logical_bytes = sum(level.array.nbytes for series in value.series for level in series.levels)
+    selected_bigtiff = logical_bytes >= (1 << 32) - (1 << 25) if bigtiff is None else bigtiff
+    return selected_bigtiff, byteorders[byteorder], tile, rowsperstrip
+
+
+def _collection_level_write_args(level: RasterLevel) -> tuple[np.ndarray, dict[str, object]]:
+    if level.payload_kind == "image":
+        return _image_write_args(level.payload)
+    if level.payload_kind == "mask":
+        return _native_c_array(level.array, "TIFF collection mask"), {"photometric": "minisblack"}
+    return _stack_write_args(level.payload)
+
+
+def _assert_reopened_collection(
+    expected: RasterCollection,
+    actual: tuple[_CollectionSeries, ...],
+) -> None:
+    if len(actual) != expected.num_series:
+        raise RuntimeError("TIFF collection reopen changed the series count")
+    for expected_series, actual_series in zip(expected.series, actual, strict=True):
+        if len(actual_series.levels) != expected_series.num_levels:
+            raise RuntimeError("TIFF collection reopen changed the level count")
+        for expected_level, actual_level in zip(
+            expected_series.levels,
+            actual_series.levels,
+            strict=True,
+        ):
+            if (
+                actual_level.axes != expected_level.axes
+                or actual_level.shape != expected_level.shape
+                or actual_level.dtype != expected_level.dtype
+                or actual_level.payload_kind != expected_level.payload_kind
+            ):
+                raise RuntimeError("TIFF collection reopen changed raster topology")
+
+
+def write_tiff_collection(
+    value: RasterCollection,
+    path: str | Path,
+    *,
+    bigtiff: bool | None = None,
+    byteorder: str | None = None,
+    tile: tuple[int, int] | None = None,
+    rowsperstrip: int | None = None,
+) -> None:
+    """Atomically write the portable bounded TIFF collection subset."""
+
+    selected_bigtiff, selected_byteorder, tile, rowsperstrip = _collection_write_options(
+        value,
+        bigtiff=bigtiff,
+        byteorder=byteorder,
+        tile=tile,
+        rowsperstrip=rowsperstrip,
+    )
+    tifffile = _require_tifffile()
+    destination = Path(path)
+    destination.parent.mkdir(parents=False, exist_ok=True)
+    descriptor, temporary_name = tempfile.mkstemp(
+        prefix=f".{destination.name}.",
+        suffix=".tmp",
+        dir=destination.parent,
+    )
+    os.close(descriptor)
+    temporary = Path(temporary_name)
+    try:
+        with tifffile.TiffWriter(
+            temporary,
+            bigtiff=selected_bigtiff,
+            byteorder=selected_byteorder,
+        ) as writer:
+            for series in value.series:
+                for level_index, level in enumerate(series.levels):
+                    array, kwargs = _collection_level_write_args(level)
+                    writer.write(
+                        array,
+                        software="SceneIO",
+                        subifds=(
+                            series.num_levels - 1
+                            if level_index == 0 and series.num_levels > 1
+                            else None
+                        ),
+                        subfiletype=(0 if level_index == 0 else 1),
+                        tile=tile,
+                        rowsperstrip=rowsperstrip,
+                        **kwargs,
+                    )
+        with tifffile.TiffFile(temporary) as reopened:
+            actual = _describe_tiff_collection(reopened)
+            _assert_reopened_collection(value, actual)
+        os.replace(temporary, destination)
+    finally:
+        with suppress(FileNotFoundError):
+            temporary.unlink()
+
+
 def _label_kind(value: object) -> str:
     if not isinstance(value, str):
         raise ValueError("TIFF label-map kind must be a string")
     if value not in _LABEL_KINDS:
-        raise ValueError(
-            "TIFF label-map kind must be semantic, instance, or panoptic"
-        )
+        raise ValueError("TIFF label-map kind must be semantic, instance, or panoptic")
     return value
 
 
@@ -311,9 +898,7 @@ def _json_integer(value: object, name: str, dtype: object) -> int:
         raise ValueError(f"TIFF label-map {name} must be an integer") from None
     bounds = np.iinfo(dtype)
     if selected < bounds.min or selected > bounds.max:
-        raise ValueError(
-            f"TIFF label-map {name} is outside {np.dtype(dtype).name}"
-        )
+        raise ValueError(f"TIFF label-map {name} is outside {np.dtype(dtype).name}")
     return int(selected)
 
 
@@ -362,9 +947,7 @@ def _json_color_array(value: object, name: str, count: int) -> np.ndarray:
         try:
             columns = tuple(row)  # type: ignore[arg-type]
         except TypeError:
-            raise ValueError(
-                f"TIFF label-map {name} must be a uint8 (K,3) array"
-            ) from None
+            raise ValueError(f"TIFF label-map {name} must be a uint8 (K,3) array") from None
         if len(columns) != 3:
             raise ValueError(f"TIFF label-map {name} has incompatible shape")
         for column_index, item in enumerate(columns):
@@ -418,8 +1001,7 @@ def _taxonomy_from_metadata(value: object) -> LabelTaxonomy | None:
     missing = required - set(value)
     if missing:
         raise ValueError(
-            "TIFF label-map taxonomy is incomplete; missing "
-            + ", ".join(sorted(missing))
+            "TIFF label-map taxonomy is incomplete; missing " + ", ".join(sorted(missing))
         )
     ids = _json_integer_vector(value["semantic_ids"], "taxonomy.semantic_ids", np.int32)
     names_value = value["names"]
@@ -433,16 +1015,12 @@ def _taxonomy_from_metadata(value: object) -> LabelTaxonomy | None:
         raise ValueError("TIFF label-map taxonomy.names must contain strings")
     colors = value.get("display_colors")
     if colors is not None:
-        colors = _json_color_array(
-            colors, "taxonomy.display_colors", len(ids)
-        )
+        colors = _json_color_array(colors, "taxonomy.display_colors", len(ids))
     thing = value.get("is_thing")
     if thing is not None:
         thing = _json_bool_vector(thing, "taxonomy.is_thing")
         if thing.shape != (len(ids),):
-            raise ValueError(
-                "TIFF label-map taxonomy.is_thing has incompatible shape"
-            )
+            raise ValueError("TIFF label-map taxonomy.is_thing has incompatible shape")
     try:
         return LabelTaxonomy(
             ids,
@@ -486,9 +1064,7 @@ def _contract_metadata(
         )
     selected_kind = _label_kind(source.get("kind", kind))
     if kind is not None and selected_kind != kind:
-        raise ValueError(
-            f"TIFF label-map contract kind {selected_kind!r} disagrees with {kind!r}"
-        )
+        raise ValueError(f"TIFF label-map contract kind {selected_kind!r} disagrees with {kind!r}")
     incompatible = {
         "semantic": {"background_id", "table_instance_ids", "table_semantic_ids"},
         "instance": {"void_id", "taxonomy"},
@@ -508,15 +1084,11 @@ def _contract_metadata(
     }
     if selected_kind in {"semantic", "panoptic"}:
         if "void_id" not in source:
-            raise ValueError(
-                "TIFF label-map explicit semantic contract requires void_id"
-            )
+            raise ValueError("TIFF label-map explicit semantic contract requires void_id")
         metadata["void_id"] = _json_integer(source["void_id"], "void_id", np.int32)
     if selected_kind in {"instance", "panoptic"}:
         if "background_id" not in source:
-            raise ValueError(
-                "TIFF label-map explicit instance contract requires background_id"
-            )
+            raise ValueError("TIFF label-map explicit instance contract requires background_id")
         metadata["background_id"] = _json_integer(
             source["background_id"], "background_id", np.int64
         )
@@ -533,9 +1105,7 @@ def _contract_metadata(
         value = metadata[name]
         if value is not None:
             metadata[name] = _json_integer_vector(value, name, dtype).tolist()
-    if (metadata["table_instance_ids"] is None) != (
-        metadata["table_semantic_ids"] is None
-    ):
+    if (metadata["table_instance_ids"] is None) != (metadata["table_semantic_ids"] is None):
         raise ValueError("TIFF label-map instance table must declare both vectors")
     roles = metadata["roles"]
     if roles is not None:
@@ -544,9 +1114,7 @@ def _contract_metadata(
         try:
             roles = tuple(roles)  # type: ignore[arg-type]
         except TypeError:
-            raise ValueError(
-                "TIFF label-map contract roles must be a string vector"
-            ) from None
+            raise ValueError("TIFF label-map contract roles must be a string vector") from None
         if any(not isinstance(role, str) for role in roles):
             raise ValueError("TIFF label-map contract roles must contain strings")
         metadata["roles"] = list(roles)
@@ -586,22 +1154,18 @@ def _map_metadata(value: object) -> tuple[str, dict[str, object], list[tuple[str
         metadata["void_id"] = int(semantic.void_id)
         metadata["taxonomy"] = _taxonomy_metadata(semantic.taxonomy)
     if instance is not None:
-        pages.append(("instance_ids", _native_c_array(instance.instance_ids, "TIFF instance labels")))
+        pages.append(
+            ("instance_ids", _native_c_array(instance.instance_ids, "TIFF instance labels"))
+        )
         metadata["background_id"] = int(instance.background_id)
         if instance.table_instance_ids is not None:
-            metadata["table_instance_ids"] = [
-                int(item) for item in instance.table_instance_ids
-            ]
-            metadata["table_semantic_ids"] = [
-                int(item) for item in instance.table_semantic_ids
-            ]
+            metadata["table_instance_ids"] = [int(item) for item in instance.table_instance_ids]
+            metadata["table_semantic_ids"] = [int(item) for item in instance.table_semantic_ids]
     valid = semantic.valid if semantic is not None else instance.valid
     if valid is not None:
         pages.append(("valid", _native_c_array(valid, "TIFF label validity")))
     metadata["roles"] = [role for role, _array in pages]
-    metadata["dtypes"] = {
-        role: array.dtype.name for role, array in pages
-    }
+    metadata["dtypes"] = {role: array.dtype.name for role, array in pages}
     return kind, metadata, pages
 
 
@@ -641,14 +1205,10 @@ def _description(value: object) -> dict[str, object] | None:
     try:
         decoded = json.loads(text, object_pairs_hook=_unique_json_object)
     except _DuplicateDescriptionKey as exc:
-        raise ValueError(
-            f"TIFF label-map ImageDescription repeats key {str(exc)!r}"
-        ) from None
+        raise ValueError(f"TIFF label-map ImageDescription repeats key {str(exc)!r}") from None
     except (TypeError, ValueError):
         if "sceneio.label_map" in text:
-            raise ValueError(
-                "TIFF label-map ImageDescription is not valid JSON"
-            ) from None
+            raise ValueError("TIFF label-map ImageDescription is not valid JSON") from None
         return None
     if not isinstance(decoded, dict):
         return None
@@ -660,17 +1220,15 @@ def _description(value: object) -> dict[str, object] | None:
 
 def _page_roles(kind: str, page_count: int, roles: object | None) -> list[str]:
     if roles is None:
-        primary = ["semantic_ids", "instance_ids"] if kind == "panoptic" else [
-            _LABEL_PRIMARY_ROLES[kind]
-        ]
+        primary = (
+            ["semantic_ids", "instance_ids"] if kind == "panoptic" else [_LABEL_PRIMARY_ROLES[kind]]
+        )
         if kind == "panoptic":
             primary += ["valid"] if page_count == 3 else []
         elif page_count == 2:
             primary.append("valid")
         if len(primary) != page_count:
-            raise ValueError(
-                "TIFF label-map page count requires an explicit roles contract"
-            )
+            raise ValueError("TIFF label-map page count requires an explicit roles contract")
         return primary
     if isinstance(roles, (str, bytes)):
         raise ValueError("TIFF label-map roles must be a string vector")
@@ -687,8 +1245,10 @@ def _page_roles(kind: str, page_count: int, roles: object | None) -> list[str]:
     }[kind]
     if set(selected) - expected or len(set(selected)) != len(selected):
         raise ValueError("TIFF label-map roles contain unknown or duplicate pages")
-    required = {"semantic_ids"} if kind == "semantic" else (
-        {"instance_ids"} if kind == "instance" else {"semantic_ids", "instance_ids"}
+    required = (
+        {"semantic_ids"}
+        if kind == "semantic"
+        else ({"instance_ids"} if kind == "instance" else {"semantic_ids", "instance_ids"})
     )
     if not required <= set(selected):
         raise ValueError("TIFF label-map roles omit a required raster")
@@ -711,8 +1271,7 @@ def _validate_header(
     missing = required - set(header)
     if missing:
         raise ValueError(
-            "TIFF label-map description is incomplete; missing "
-            + ", ".join(sorted(missing))
+            "TIFF label-map description is incomplete; missing " + ", ".join(sorted(missing))
         )
     unknown = set(header) - required
     if unknown:
@@ -727,16 +1286,12 @@ def _validate_header(
         metadata["background_id"] = _json_integer(
             metadata["background_id"], "background_id", np.int64
         )
-    metadata["taxonomy"] = _taxonomy_metadata(
-        _taxonomy_from_metadata(metadata.get("taxonomy"))
-    )
+    metadata["taxonomy"] = _taxonomy_metadata(_taxonomy_from_metadata(metadata.get("taxonomy")))
     for name, dtype in (("table_instance_ids", np.int64), ("table_semantic_ids", np.int32)):
         selected = metadata.get(name)
         if selected is not None:
             metadata[name] = _json_integer_vector(selected, name, dtype).tolist()
-    if (metadata.get("table_instance_ids") is None) != (
-        metadata.get("table_semantic_ids") is None
-    ):
+    if (metadata.get("table_instance_ids") is None) != (metadata.get("table_semantic_ids") is None):
         raise ValueError("TIFF label-map instance table must declare both vectors")
     if kind == "semantic" and metadata.get("table_instance_ids") is not None:
         raise ValueError("TIFF semantic label-map cannot declare an instance table")
@@ -782,9 +1337,7 @@ def _validate_header(
             if name == "taxonomy":
                 expected = _taxonomy_metadata(_taxonomy_from_metadata(expected))
             if actual != expected:
-                raise ValueError(
-                    f"TIFF label-map contract {name} disagrees with description"
-                )
+                raise ValueError(f"TIFF label-map contract {name} disagrees with description")
     return kind, metadata, roles, True
 
 
@@ -806,18 +1359,17 @@ def _tiff_label_pages(source, label_contract: object | None):
             if any(description is None for description in descriptions):
                 raise ValueError("TIFF label-map pages have incomplete descriptions")
             assert first is not None
-            kind, metadata, roles, _ = _validate_header(
-                first, len(pages), label_contract
-            )
+            kind, metadata, roles, _ = _validate_header(first, len(pages), label_contract)
             for index, description in enumerate(descriptions[1:], start=1):
                 assert description is not None
                 if set(description) != _LABEL_PAGE_KEYS:
                     raise ValueError(
                         "TIFF label-map page description fields are incomplete or unknown"
                     )
-                if description.get("schema") != LABEL_MAP_SCHEMA or _label_kind(
-                    description.get("kind")
-                ) != kind:
+                if (
+                    description.get("schema") != LABEL_MAP_SCHEMA
+                    or _label_kind(description.get("kind")) != kind
+                ):
                     raise ValueError("TIFF label-map page description disagrees with header")
                 role = roles[index]
                 if description.get("role") != role:
@@ -840,23 +1392,15 @@ def _tiff_label_pages(source, label_contract: object | None):
         arrays = []
         for index, (role, page) in enumerate(zip(roles, pages, strict=True)):
             if page.subifds:
-                raise ValueError(
-                    "TIFF label-map does not support pyramid SubIFDs"
-                )
+                raise ValueError("TIFF label-map does not support pyramid SubIFDs")
             orientation = page.tags.get("Orientation")
             if orientation is not None and int(orientation.value) != 1:
-                raise ValueError(
-                    "TIFF label-map requires top-left page orientation"
-                )
+                raise ValueError("TIFF label-map requires top-left page orientation")
             planar = page.planarconfig
             if planar is not None and int(planar) != 1:
-                raise ValueError(
-                    "TIFF label-map does not support planar-separate pages"
-                )
+                raise ValueError("TIFF label-map does not support planar-separate pages")
             if int(page.samplesperpixel) != 1 or int(page.photometric) not in {0, 1}:
-                raise ValueError(
-                    "TIFF label-map pages must contain one grayscale sample"
-                )
+                raise ValueError("TIFF label-map pages must contain one grayscale sample")
             page_shape = tuple(int(item) for item in page.shape)
             page_dtype = np.dtype(page.dtype)
             if page_dtype.fields is not None or page_dtype.subdtype is not None:
@@ -881,9 +1425,7 @@ def _tiff_label_pages(source, label_contract: object | None):
                 if page_dtype not in {np.dtype("bool"), np.dtype("uint8")}:
                     raise ValueError("TIFF label-map validity must be bool or uint8")
             elif not np.issubdtype(page_dtype, np.integer):
-                raise ValueError(
-                    f"TIFF label-map {role} page must have an integer dtype"
-                )
+                raise ValueError(f"TIFF label-map {role} page must have an integer dtype")
             arrays.append((role, index, page_dtype))
         assert shape is not None
         if metadata.get("shape") is not None and tuple(metadata["shape"]) != shape:
@@ -896,38 +1438,24 @@ def _tiff_label_pages(source, label_contract: object | None):
 def _map_from_tiff_pages(path: str | Path, label_contract: object | None):
     tifffile = _require_tifffile()
     with tifffile.TiffFile(path) as tiff:
-        _bigtiff, kind, metadata, pages, _tagged = _tiff_label_pages(
-            tiff, label_contract
-        )
+        _bigtiff, kind, metadata, pages, _tagged = _tiff_label_pages(tiff, label_contract)
         decoded = {}
         for role, index, _dtype in pages:
-            array = _native_c_array(
-                tiff.pages[index].asarray(), f"TIFF label-map {role}"
-            )
+            array = _native_c_array(tiff.pages[index].asarray(), f"TIFF label-map {role}")
             if not _tagged:
                 if role == "semantic_ids":
                     bounds = np.iinfo(np.int32)
                     if array.size and (
-                        int(array.min()) < bounds.min
-                        or int(array.max()) > bounds.max
+                        int(array.min()) < bounds.min or int(array.max()) > bounds.max
                     ):
-                        raise ValueError(
-                            "TIFF label-map semantic ids exceed int32"
-                        )
+                        raise ValueError("TIFF label-map semantic ids exceed int32")
                 elif role == "instance_ids":
                     bounds = np.iinfo(np.int64)
                     if array.size and (
-                        int(array.min()) < bounds.min
-                        or int(array.max()) > bounds.max
+                        int(array.min()) < bounds.min or int(array.max()) > bounds.max
                     ):
-                        raise ValueError(
-                            "TIFF label-map instance ids exceed int64"
-                        )
-                elif (
-                    array.dtype == np.dtype("uint8")
-                    and array.size
-                    and int(array.max()) > 1
-                ):
+                        raise ValueError("TIFF label-map instance ids exceed int64")
+                elif array.dtype == np.dtype("uint8") and array.size and int(array.max()) > 1:
                     raise ValueError("TIFF label-map validity must contain only 0/1")
             decoded[role] = array.astype(
                 {"semantic_ids": np.int32, "instance_ids": np.int64, "valid": np.bool_}[role],
@@ -951,12 +1479,8 @@ def _map_from_tiff_pages(path: str | Path, label_contract: object | None):
             decoded["instance_ids"],
             int(metadata["background_id"]),
             valid,
-            None
-            if table_instances is None
-            else np.asarray(table_instances, dtype=np.int64),
-            None
-            if table_semantics is None
-            else np.asarray(table_semantics, dtype=np.int32),
+            None if table_instances is None else np.asarray(table_instances, dtype=np.int64),
+            None if table_semantics is None else np.asarray(table_semantics, dtype=np.int32),
         )
     if semantic is not None and instance is not None:
         return PanopticMap(semantic, instance)
@@ -982,12 +1506,12 @@ def inspect_tiff_label_map(
 
     tifffile = _require_tifffile()
     with tifffile.TiffFile(path) as tiff:
-        bigtiff, kind, metadata, pages, tagged = _tiff_label_pages(
-            tiff, label_contract
-        )
+        bigtiff, kind, metadata, pages, tagged = _tiff_label_pages(tiff, label_contract)
         byte_size = int(tiff.filehandle.size)
     shape = tuple(metadata["shape"])
-    primary_role = _LABEL_PRIMARY_ROLES["semantic" if kind in {"semantic", "panoptic"} else "instance"]
+    primary_role = _LABEL_PRIMARY_ROLES[
+        "semantic" if kind in {"semantic", "panoptic"} else "instance"
+    ]
     dtype = {"semantic_ids": "int32", "instance_ids": "int64"}[primary_role]
     arrays = tuple(
         ArrayInspection(
@@ -1018,11 +1542,7 @@ def inspect_tiff_label_map(
             "has_taxonomy": metadata.get("taxonomy") is not None,
             "has_instance_table": metadata.get("table_instance_ids") is not None,
             "bigtiff": bool(bigtiff),
-            **(
-                {"void_id": int(metadata["void_id"])}
-                if "void_id" in metadata
-                else {}
-            ),
+            **({"void_id": int(metadata["void_id"])} if "void_id" in metadata else {}),
             **(
                 {"background_id": int(metadata["background_id"])}
                 if "background_id" in metadata
@@ -1044,9 +1564,7 @@ def write_tiff_label_map(
         raise TypeError("bigtiff must be bool or None")
     kind, metadata, pages = _map_metadata(value)
     selected_bigtiff = (
-        sum(array.nbytes for _role, array in pages) > 2**32 - 2**25
-        if bigtiff is None
-        else bigtiff
+        sum(array.nbytes for _role, array in pages) > 2**32 - 2**25 if bigtiff is None else bigtiff
     )
     encoded_pages: list[tuple[np.ndarray, str]] = []
     for index, (role, array) in enumerate(pages):
@@ -1107,9 +1625,12 @@ def write_tiff_label_map(
 __all__ = [
     "LABEL_MAP_SCHEMA",
     "inspect_tiff",
+    "inspect_tiff_collection",
     "inspect_tiff_label_map",
     "read_tiff",
+    "read_tiff_collection",
     "read_tiff_label_map",
     "write_tiff",
+    "write_tiff_collection",
     "write_tiff_label_map",
 ]

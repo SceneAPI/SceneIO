@@ -17,6 +17,7 @@ import operator
 from collections.abc import Mapping
 from dataclasses import replace
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from sceneio import _core
 from sceneio.colmap_db import ColmapDatabaseConversionReport
@@ -72,7 +73,12 @@ from sceneio.io._openvdb import write_openvdb
 from sceneio.io._registry.adapters import _file_sink_writer, _mmap_reader
 from sceneio.io._registry.coordinates import coordinate_contract
 from sceneio.io._rtmv import RtmvDataset
+from sceneio.io._tiff import (
+    inspect_tiff_collection as _inspect_tiff_collection,
+)
+from sceneio.io._tiff import read_tiff_collection as _read_tiff_collection
 from sceneio.io._tiff import write_tiff
+from sceneio.io._tiff import write_tiff_collection as _write_tiff_collection
 from sceneio.io._usd import (
     read_scene as _read_usd_scene,
 )
@@ -95,6 +101,9 @@ from sceneio.io.registry import (
     native_feature_capabilities,
     register,
 )
+
+if TYPE_CHECKING:
+    from sceneio.data import RasterCollection
 
 # Record types produced by the codecs (re-exported for convenience/isinstance).
 Reconstruction = _core.Reconstruction
@@ -315,6 +324,73 @@ def inspect_e57_scans(
     except Exception as exc:
         raise FormatError(
             f"inspecting E57 scan headers in {str(path)!r}: {exc}"
+        ) from exc
+
+
+def read_tiff_collection(
+    path,
+    *,
+    series_index: int | None = None,
+    level_index: int | None = None,
+    page_range: tuple[int, int] | None = None,
+    window: tuple[int, int, int, int] | None = None,
+) -> RasterCollection:
+    """Read a typed TIFF series/level collection or a bounded selection."""
+
+    try:
+        return _read_tiff_collection(
+            path,
+            series_index=series_index,
+            level_index=level_index,
+            page_range=page_range,
+            window=window,
+        )
+    except FormatError:
+        raise
+    except Exception as exc:
+        raise FormatError(
+            f"reading TIFF collection from {str(path)!r}: {exc}"
+        ) from exc
+
+
+def inspect_tiff_collection(path) -> Inspection:
+    """Inspect TIFF collection topology and storage without decoding samples."""
+
+    try:
+        return _inspect_tiff_collection(path)
+    except FormatError:
+        raise
+    except Exception as exc:
+        raise FormatError(
+            f"inspecting TIFF collection in {str(path)!r}: {exc}"
+        ) from exc
+
+
+def write_tiff_collection(
+    value: RasterCollection,
+    path,
+    *,
+    bigtiff: bool | None = None,
+    byteorder: str | None = None,
+    tile: tuple[int, int] | None = None,
+    rowsperstrip: int | None = None,
+) -> None:
+    """Atomically write SceneIO's portable typed TIFF collection subset."""
+
+    try:
+        _write_tiff_collection(
+            value,
+            path,
+            bigtiff=bigtiff,
+            byteorder=byteorder,
+            tile=tile,
+            rowsperstrip=rowsperstrip,
+        )
+    except FormatError:
+        raise
+    except Exception as exc:
+        raise FormatError(
+            f"writing TIFF collection to {str(path)!r}: {exc}"
         ) from exc
 
 
@@ -893,6 +969,7 @@ __all__ = [
     "inspect_e57_scans",
     "inspect_flow",
     "inspect_label_map",
+    "inspect_tiff_collection",
     "materialize_ncore_v4",
     "native_features",
     "project_ncore_item",
@@ -907,6 +984,7 @@ __all__ = [
     "read_ncore_semantic_component",
     "read_partial",
     "read_scene",
+    "read_tiff_collection",
     "register",
     "write",
     "write_arrow_ipc",
@@ -921,6 +999,7 @@ __all__ = [
     "write_parquet",
     "write_scene",
     "write_tiff",
+    "write_tiff_collection",
     "write_usd",
     "write_usdz",
     "write_zarr",
