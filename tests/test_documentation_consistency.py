@@ -27,6 +27,11 @@ ARCHIVE_PAYLOAD_DIGESTS = {
         "\n---\n",
         "91e5f41f9147ee80a213cc8c7d4c399db13fd83bdc4710fd2b4adde2ae2c28ca",
     ),
+    "remaining_gap_implementation_plan_2026-08-29.md": (
+        "# Remaining-gap implementation plan",
+        "<!-- immutable-archive:end -->",
+        "f5deaa7c4b8fbae09514fa9b79ccfc09b229030bcb13fb524983d1ee3ecb3acf",
+    ),
 }
 _INLINE_LINK = re.compile(
     r"!?\[[^\]]*\]\((?P<target><[^>]+>|[^\s)]+)"
@@ -299,6 +304,17 @@ def test_completed_archive_is_indexed_reachable_and_immutable():
     assert "docs/plans/completed/README.md" in (
         ROOT / "README.md"
     ).read_text(encoding="utf-8")
+    remaining_stub = (DOCS / "remaining_gap_implementation_plan.md").read_text(
+        encoding="utf-8"
+    )
+    assert "plans/completed/remaining_gap_implementation_plan_2026-08-29.md" in (
+        remaining_stub
+    )
+    closure = (DOCS / "remaining_3dcv_profile_checklist.md").read_text(
+        encoding="utf-8"
+    )
+    assert "Complete and merged as of 2026-08-29" in closure
+    assert "content-hash contract deliberately" in closure
     archive_targets = _destinations(archived)
     assert {
         "../../format_gap_implementation_plan.md#129-per-commit-verification-gate",

@@ -6,8 +6,8 @@ validated exact commit `50172b5eeb6f3df2d642c80e3fbff43850000d3f` across the
 three wheel targets and both focused oracle lanes. PyPI publication was
 skipped.
 
-The 2026-08-29 G1 follow-on in
-[`remaining_gap_implementation_plan.md`](remaining_gap_implementation_plan.md)
+The completed 2026-08-29 G1 follow-on in the
+[`archived remaining-gap implementation plan`](plans/completed/remaining_gap_implementation_plan_2026-08-29.md)
 supersedes only this historical unit's deliberately unrepresented Gaussian
 field boundary. Its original validation evidence remains unchanged.
 
