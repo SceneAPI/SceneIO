@@ -28,7 +28,7 @@
 > source data.
 > The complementary
 > [`representation_normalization.md`](representation_normalization.md)
-> contract covers all 100 public representation classes with explicit
+> contract covers all 103 public representation classes with explicit
 > normalization, scaling, unit, coordinate-source, conversion, and refusal
 > rules. It changes no decoded values and keeps unknown/arbitrary scale honest.
 > Licensed fixture sourcing is tracked separately in

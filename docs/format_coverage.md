@@ -25,7 +25,7 @@ distinction, explicit conversion surface, and verification rules are in
 inspection, and decoded records expose the same immutable convention contract.
 The complementary
 [`representation_normalization.md`](representation_normalization.md) contract
-classifies all 100 public data representations by structural normalization,
+classifies all 103 public data representations by structural normalization,
 scale source/unit, coordinate source, supported conversion, refusal behavior,
 and executable evidence.
 

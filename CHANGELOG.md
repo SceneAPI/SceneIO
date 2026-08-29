@@ -13,7 +13,7 @@ kept in [`docs/releases/`](docs/releases/).
   scene, scientific-container, visual-inertial dataset, label-map, and video
   profiles, with strict rejection outside each documented bounded profile.
 - Added explicit coordinate contracts for every built-in format and versioned
-  normalization contracts for all 100 public data representations.
+  normalization contracts for all 103 public data representations.
 - Added transactional output handling, direct and mapped I/O paths, exact
   repository-to-sdist source-closure checks, provider qualification, public
   fixture provenance, and cross-platform installed-wheel validation.

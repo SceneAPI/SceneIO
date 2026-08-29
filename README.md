@@ -139,7 +139,7 @@ assert contract.profile.id == "gaussian_cloud"
 assert contract.coordinates == "unknown"  # activation metadata is not a frame
 ```
 
-The exact 100-record catalog, standard policy vocabulary, unit equations, and
+The exact 103-record catalog, standard policy vocabulary, unit equations, and
 refusal rules are documented in
 [`docs/representation_normalization.md`](docs/representation_normalization.md).
 
