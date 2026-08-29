@@ -478,8 +478,8 @@
     "last": "tests/test_points_binary.py::test_bad_magic_rejected"
   },
   "pytest_candidate_collection": {
-    "count": 5068,
-    "sorted_normalized_node_ids_sha256": "c66a4b09c7ac2cdc5bd3277304fd4ae216f1fa51a58e3ca8c1596c560a9aa0af",
+    "count": 5069,
+    "sorted_normalized_node_ids_sha256": "a8fa633cf4b0f98c9ef833a15848cbe094bef3536745719f3fdb11f5ca1a6614",
     "collection_ignored_paths": [
       "tests/codecs/test_spz_niantic_oracle.py",
       "tests/codecs/test_openusd_gaussian_oracle.py"
@@ -1063,6 +1063,7 @@
       "tests/test_license_inventory.py::test_repository_contained_native_sources_match_recorded_hashes",
       "tests/test_license_inventory.py::test_repository_contained_native_licenses_are_exact_distribution_copies",
       "tests/test_license_inventory.py::test_repository_contained_native_sources_replace_their_fetches",
+      "tests/test_documentation_consistency.py::test_representation_count_claims_match_runtime_catalog",
       "tests/test_documentation_consistency.py::test_generated_current_facts_match_authoritative_runtime_sources",
       "tests/test_documentation_consistency.py::test_release_version_surfaces_agree",
       "tests/test_documentation_consistency.py::test_builtin_count_contract_rejects_stale_metadata",

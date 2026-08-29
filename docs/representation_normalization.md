@@ -2,7 +2,7 @@
 
 SceneIO has a versioned, machine-readable numeric contract for every public
 data-bearing class in `sceneio.io`, `sceneio.data`, `sceneio.colmap`, and
-`sceneio.colmap_mvs`. Version 1 covers 100 representations. Registry helpers,
+`sceneio.colmap_mvs`. Version 1 covers 103 representations. Registry helpers,
 errors, capability/inspection results, and enums are not data representations
 and are excluded by an exact test allowlist.
 

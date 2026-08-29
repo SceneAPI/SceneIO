@@ -15,6 +15,7 @@ import pytest
 
 import sceneio
 from sceneio.io._builtin_manifest import CANONICAL_BUILTIN_IDS
+from sceneio.representations import REPRESENTATION_CONTRACTS
 from tools import documentation_contract
 
 ROOT = Path(__file__).parents[1]
@@ -183,6 +184,28 @@ def test_readme_links_every_authoritative_engineering_entry_point():
     assert {
         path.as_posix() for path in contract.readme_entry_points
     } <= targets
+
+
+def test_representation_count_claims_match_runtime_catalog():
+    count = len(REPRESENTATION_CONTRACTS)
+    claims = {
+        ROOT / "CHANGELOG.md": f"all {count} public data representations",
+        ROOT / "README.md": f"exact {count}-record catalog",
+        DOCS / "coverage_roadmap.md": (
+            f"covers all {count} public representation classes"
+        ),
+        DOCS / "format_coverage.md": (
+            f"classifies all {count} public data representations"
+        ),
+        DOCS / "releases" / "v0.3.0.md": (
+            f"All {count} public in-memory data representations"
+        ),
+        DOCS / "representation_normalization.md": (
+            f"Version 1 covers {count} representations"
+        ),
+    }
+    for path, claim in claims.items():
+        assert claim in path.read_text(encoding="utf-8"), path.relative_to(ROOT)
 
 
 def test_generated_current_facts_match_authoritative_runtime_sources():
