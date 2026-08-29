@@ -105,7 +105,7 @@ if TYPE_CHECKING:
         testing,
     )
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 # The contract namespaces are import-isolated: they are loaded lazily on
 # first attribute access so that `import sceneio` alone stays cheap

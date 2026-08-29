@@ -478,8 +478,8 @@
     "last": "tests/test_points_binary.py::test_bad_magic_rejected"
   },
   "pytest_candidate_collection": {
-    "count": 5066,
-    "sorted_normalized_node_ids_sha256": "bc9084b6aa3d9c9f21139a4997fa67109551a32dbaa3b87cb8ad48df6ade9363",
+    "count": 5068,
+    "sorted_normalized_node_ids_sha256": "c66a4b09c7ac2cdc5bd3277304fd4ae216f1fa51a58e3ca8c1596c560a9aa0af",
     "collection_ignored_paths": [
       "tests/codecs/test_spz_niantic_oracle.py",
       "tests/codecs/test_openusd_gaussian_oracle.py"
@@ -735,6 +735,7 @@
       "tests/test_backend_qualification.py::test_qualification_manifest_records_reproducible_toolchain_inputs",
       "tests/test_backend_qualification.py::test_candidate_build_records_generated_simd_configuration",
       "tests/test_backend_qualification_harness.py::test_declared_jpeg_matrix_matches_the_frozen_contract_and_candidate_ledger",
+      "tests/test_backend_qualification_harness.py::test_frozen_config_identity_is_independent_of_platform_line_endings",
       "tests/test_backend_qualification_harness.py::test_q90_is_core_buffer_only_and_q95_covers_real_sink_surfaces",
       "tests/test_backend_qualification_harness.py::test_matrix_loader_rejects_duplicate_cells_and_candidate_only_decode",
       "tests/test_backend_qualification_harness.py::test_schedule_is_seeded_balanced_interleaved_and_complete",
@@ -1063,6 +1064,7 @@
       "tests/test_license_inventory.py::test_repository_contained_native_licenses_are_exact_distribution_copies",
       "tests/test_license_inventory.py::test_repository_contained_native_sources_replace_their_fetches",
       "tests/test_documentation_consistency.py::test_generated_current_facts_match_authoritative_runtime_sources",
+      "tests/test_documentation_consistency.py::test_release_version_surfaces_agree",
       "tests/test_documentation_consistency.py::test_builtin_count_contract_rejects_stale_metadata",
       "tests/test_documentation_consistency.py::test_generated_section_requires_one_balanced_marker_pair",
       "tests/test_distribution_verifier.py::test_runtime_source_assets_allow_only_exact_openvdb_seed_paths",

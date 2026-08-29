@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import html
 import re
+import tomllib
 import unicodedata
 from collections import Counter
 from pathlib import Path, PurePosixPath
@@ -221,6 +222,31 @@ def test_generated_current_facts_match_authoritative_runtime_sources():
         "`CANONICAL_BUILTIN_IDS` and `sceneio.capabilities()`."
     )
     assert summaries == [expected, expected]
+
+
+def test_release_version_surfaces_agree():
+    project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    version = project["project"]["version"]
+    assert sceneio.__version__ == version
+
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    assert f"- Version: `{version}`" in readme
+
+    native_sog = (ROOT / "src/cpp/codecs/splats/sog.cpp").read_text(
+        encoding="utf-8"
+    )
+    assert f'"SceneIO {version}"' in native_sog
+
+    changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+    assert f"## [{version}]" in changelog
+    assert (DOCS / "releases" / f"v{version}.md").is_file()
+
+    lock = tomllib.loads((ROOT / "uv.lock").read_text(encoding="utf-8"))
+    locked_sceneio = [
+        package for package in lock["package"] if package["name"] == "sceneio"
+    ]
+    assert len(locked_sceneio) == 1
+    assert locked_sceneio[0]["version"] == version
 
 
 def test_builtin_count_contract_rejects_stale_metadata(monkeypatch):

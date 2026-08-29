@@ -273,6 +273,7 @@ def _assert_sog_metadata(metadata: bytes) -> tuple[str, str]:
     metadata_sha256 = hashlib.sha256(metadata).hexdigest()
     means_min_z_hex = float(parsed["means"]["mins"][2]).hex()
     encoding = CONTRACT["sog_encoding_contract"]
+    assert parsed["asset"]["generator"] == encoding["generator"]
     assert metadata_sha256 == encoding["metadata_sha256"]
     assert means_min_z_hex == encoding["means_min_z_hex"]
     return metadata_sha256, means_min_z_hex
@@ -552,18 +553,19 @@ def test_splat_parent_contract_metadata_is_exact():
         "manylinux2014_gcc10_x86_64": linux_sog,
     }
     ubuntu = evidence["profiles"]["ubuntu_latest_x86_64_glibc"]
-    assert CONTRACT["valid"]["sog"]["sha256"] == ubuntu[
-        "sog_archive_sha256"
-    ]
-    assert CONTRACT["sog_encoding_contract"]["metadata_sha256"] == ubuntu[
-        "sog_metadata_sha256"
-    ]
-    assert CONTRACT["sog_encoding_contract"]["means_min_z_hex"] == ubuntu[
-        "sog_means_min_z_hex"
-    ]
+    encoding = CONTRACT["sog_encoding_contract"]
+    assert encoding["generator"] == "SceneIO 0.3.0"
+    assert encoding["metadata_sha256"] == (
+        "742d2354c144cb43a5fbf0df5a6e1ddfc89b7076e031ffbe9c5140b1b6441a3b"
+    )
+    assert encoding["metadata_sha256"] != ubuntu["sog_metadata_sha256"]
+    assert encoding["means_min_z_hex"] == ubuntu["sog_means_min_z_hex"]
+    assert CONTRACT["valid"]["sog"]["sha256"] == (
+        "9792ce4b15542cff16b4aaf22eb06434fe8799d829f87284cda4811b98da8982"
+    )
     assert CONTRACT["valid"]["sog_directory"]["files"]["meta.json"][
         "sha256"
-    ] == ubuntu["sog_metadata_sha256"]
+    ] == encoding["metadata_sha256"]
     assert {
         "ksplat": CONTRACT["valid"]["ksplat"]["record_sha256"],
         "spz_v3_v4": CONTRACT["valid"]["spz"]["record_sha256"],

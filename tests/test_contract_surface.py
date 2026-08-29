@@ -26,8 +26,8 @@ def test_star_import_exposes_all() -> None:
         assert name in ns, f"{name} not exported by `from sceneio import *`"
 
 
-def test_version_is_020() -> None:
-    assert sceneio.__version__ == "0.2.0"
+def test_version_is_030() -> None:
+    assert sceneio.__version__ == "0.3.0"
 
 
 def test_sceneio_error_is_an_exception() -> None:

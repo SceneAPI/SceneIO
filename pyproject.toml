@@ -1,6 +1,6 @@
 [project]
 name = "sceneio"
-version = "0.2.0"
+version = "0.3.0"
 description = "The contract plane for SceneAPI — numpy-native data contracts, mapping/matching procedure contracts, wire codecs, and format registries."
 readme = "README.md"
 license = "Apache-2.0"
@@ -14,6 +14,12 @@ requires-python = ">=3.12,<3.13"
 # numpy is a hard dependency — the data/procedure contracts are
 # numpy-native (np.ndarray in the contract surface).
 dependencies = ["numpy>=1.26"]
+
+[project.urls]
+Homepage = "https://github.com/SceneAPI/SceneIO"
+Repository = "https://github.com/SceneAPI/SceneIO"
+Issues = "https://github.com/SceneAPI/SceneIO/issues"
+Changelog = "https://github.com/SceneAPI/SceneIO/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 dev = [

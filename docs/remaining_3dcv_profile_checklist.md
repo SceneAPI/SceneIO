@@ -13,7 +13,8 @@
   program to `main` as `b82858d5bc79354107d0d2e3d78260bf62c46ef8`.
   Post-merge [CI](https://github.com/SceneAPI/SceneIO/actions/runs/33253820086)
   and [Sanitizers](https://github.com/SceneAPI/SceneIO/actions/runs/33253820079)
-  passed; publication remains a separate tag-driven action.
+  passed. The validated closure is assigned to SceneIO 0.3.0; only the
+  matching protected tag workflow may publish the distribution.
 - **Baseline:** 74 built-in formats, each mapped to a licensed direct fixture
   or deterministic oracle-derived route.
 - **Purpose:** close the remaining 3D-computer-vision representation and

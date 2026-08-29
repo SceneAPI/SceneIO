@@ -194,7 +194,7 @@ def test_case_catalog_preserves_the_legacy_fixture_partitions():
     ) == (
         "sog",
         16916,
-        "ebc297e5675fda6b939ad35aeff6a822c6c71a05c63ebd0b16ee4633aef4f23e",
+        "5b5597b8857233bb925ec7a390150da7339b995efaffebb2ef0d803228beb04d",
     )
     assert next(
         item
@@ -217,7 +217,7 @@ def test_case_catalog_preserves_the_legacy_fixture_partitions():
         separators=(",", ":"),
     )
     assert hashlib.sha256(fixture_payload.encode()).hexdigest() == (
-        "922e9b2156861681033b25337989acae106119b8635d8d4b462c6abbb108361d"
+        "1080848bde07b507e0d40d97587e92a0fbce68a5e065696a11ab26d822f5a9ae"
     )
     cases_by_id = {case.id: case for case in built_cases}
     assert (

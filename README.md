@@ -8,7 +8,8 @@ not an implementation. The SceneAPI core, the implementation bundles
 
 - Distribution: `sceneio`
 - Import package: `sceneio`
-- Version: `0.2.0`
+- Version: `0.3.0`
+- Release history: [`CHANGELOG.md`](https://github.com/SceneAPI/SceneIO/blob/main/CHANGELOG.md)
 - Dependencies: `numpy>=1.26` (the contracts are numpy-native)
 - Leaf property: imports **nothing from the SceneAPI family**
   (`sceneapi` / `sfm_hub` / `app`) — guard-tested
@@ -138,7 +139,7 @@ assert contract.profile.id == "gaussian_cloud"
 assert contract.coordinates == "unknown"  # activation metadata is not a frame
 ```
 
-The exact 98-record catalog, standard policy vocabulary, unit equations, and
+The exact 100-record catalog, standard policy vocabulary, unit equations, and
 refusal rules are documented in
 [`docs/representation_normalization.md`](docs/representation_normalization.md).
 

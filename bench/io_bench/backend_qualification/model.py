@@ -509,8 +509,8 @@ def load_config(path: str | Path) -> QualificationConfig:
     """Load and validate the frozen backend-qualification matrix."""
 
     resolved = Path(path).resolve()
-    raw = resolved.read_bytes()
-    payload = tomllib.loads(raw.decode("utf-8"))
+    text = resolved.read_text(encoding="utf-8")
+    payload = tomllib.loads(text)
     required = {
         "schema_version",
         "decision_id",
@@ -544,7 +544,9 @@ def load_config(path: str | Path) -> QualificationConfig:
         raise ValueError("thresholds must contain finite numeric values")
     config = QualificationConfig(
         path=resolved,
-        sha256=hashlib.sha256(raw).hexdigest(),
+        # Text mode canonicalizes CRLF/CR to LF so a frozen configuration has
+        # the same identity on every supported checkout platform.
+        sha256=hashlib.sha256(text.encode("utf-8")).hexdigest(),
         decision_id=_nonempty_string(
             payload["decision_id"], "decision_id"
         ),
