@@ -85,6 +85,19 @@ def test_declared_jpeg_matrix_matches_the_frozen_contract_and_candidate_ledger()
         assert f'"{profile_id}"' in candidates
 
 
+def test_frozen_config_identity_is_independent_of_platform_line_endings(
+    tmp_path,
+):
+    source = CONFIG_PATH.read_text(encoding="utf-8")
+    lf_path = tmp_path / "qualification-lf.toml"
+    crlf_path = tmp_path / "qualification-crlf.toml"
+    lf_path.write_bytes(source.encode("utf-8"))
+    crlf_path.write_bytes(source.replace("\n", "\r\n").encode("utf-8"))
+
+    assert load_config(lf_path).sha256 == CONTRACT["config_sha256"]
+    assert load_config(crlf_path).sha256 == CONTRACT["config_sha256"]
+
+
 def test_q90_is_core_buffer_only_and_q95_covers_real_sink_surfaces():
     config = _config()
     assert config.encode_profile("rgb8_q90_420").paths == ("core_buffer",)

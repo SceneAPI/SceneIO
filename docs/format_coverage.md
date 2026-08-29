@@ -25,7 +25,7 @@ distinction, explicit conversion surface, and verification rules are in
 inspection, and decoded records expose the same immutable convention contract.
 The complementary
 [`representation_normalization.md`](representation_normalization.md) contract
-classifies all 98 public data representations by structural normalization,
+classifies all 100 public data representations by structural normalization,
 scale source/unit, coordinate source, supported conversion, refusal behavior,
 and executable evidence.
 
@@ -218,14 +218,11 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > Status note: everything marked ✅ is implemented by the compiled
 > `sceneio._core` or by a repository-owned adapter around a separately
 > installed, optimized permissive provider. SceneIO owns the schema,
-> convention guards, public mapping, and tests in both cases. The original 23
-> codecs ship in SceneIO 0.2.0; safetensors,
-> PTS, DMB, BAL, BMP, TGA, generic point PLY, PCD, EuRoC state CSV, and the
-> OpenCV/ROS/Kalibr calibration codecs, g2o pose graphs, and the COLMAP
-> feature database, SuperSplat compressed PLY, PlayCanvas SOG, KSplat,
-> mesh/scene codecs, LAZ, lazy image directories, and raw Y4M are post-0.2
-> formats on
-> `phase0-nanobind-core` and are not released yet.
+> convention guards, public mapping, and tests in both cases. SceneIO 0.3.0
+> packages the complete current 74-format registry: the original 23-codec
+> 0.2.0 tier plus the reconstruction, calibration, point, Gaussian, mesh,
+> scene, scientific-container, dataset, dense-label, and sequence profiles
+> documented below.
 >
 > **67-format local checkpoint (2026-07-30):** the live registry contains 60
 > single-file formats, four directory formats, and three multi-file formats.

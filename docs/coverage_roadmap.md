@@ -28,7 +28,7 @@
 > source data.
 > The complementary
 > [`representation_normalization.md`](representation_normalization.md)
-> contract covers all 98 public representation classes with explicit
+> contract covers all 100 public representation classes with explicit
 > normalization, scaling, unit, coordinate-source, conversion, and refusal
 > rules. It changes no decoded values and keeps unknown/arbitrary scale honest.
 > Licensed fixture sourcing is tracked separately in
@@ -57,7 +57,8 @@
 > are fully green. The latter passes all platform/compiler jobs, the exact
 > suite, 72-row smoke/structure, and five-run guard, which records a 1.32x
 > selected-range gain and 25.2/16.8 MB full/partial allocation. Hosted
-> confirmation is complete; release publication remains separate.
+> confirmation is complete. SceneIO 0.3.0 is the assigned release; only the
+> matching protected tag workflow may publish it.
 > The first hosted correction run passed every dedicated platform shard. Its
 > remaining repository-byte and instrumented-Theora residuals are addressed by
 > canonical LF source-manifest rows for libvpx/libogg/libtheora and a documented

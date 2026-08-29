@@ -2495,8 +2495,9 @@ After all local commits in a dependency wave are green:
 4. With explicit user authorization, push the branch and dispatch:
 
    ```powershell
-   gh workflow run sanitizers.yml --ref phase0-nanobind-core
-   gh workflow run publish.yml --ref phase0-nanobind-core
+   $candidateRef = git branch --show-current
+   gh workflow run sanitizers.yml --ref $candidateRef
+   gh workflow run publish.yml --ref $candidateRef
    ```
 
    For the current R6 head, the automatic normal and native-runtime workflows
