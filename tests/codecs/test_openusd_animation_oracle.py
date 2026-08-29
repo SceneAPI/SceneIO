@@ -7,30 +7,37 @@ import importlib.metadata
 import numpy as np
 import pytest
 
-pytest.importorskip(
-    "pxr",
-    reason="OpenUSD oracle is optional; install usd-core==26.8 for this suite",
-)
+import sceneio
+from sceneio.io._usd import package
+from tests.codecs.test_usd_animation import _ANIMATED_USDA
 
 try:
     _USD_CORE_VERSION = importlib.metadata.version("usd-core")
 except importlib.metadata.PackageNotFoundError:
-    pytest.skip(
-        "OpenUSD oracle requires the usd-core distribution",
-        allow_module_level=True,
+    _USD_CORE_VERSION = None
+
+try:
+    from pxr import Usd, UsdGeom
+except ModuleNotFoundError:
+    Usd = None
+    UsdGeom = None
+
+if _USD_CORE_VERSION is None or Usd is None or UsdGeom is None:
+    _OPENUSD_SKIP_REASON = (
+        "OpenUSD oracle is optional; install usd-core==26.8 for this suite"
     )
-if _USD_CORE_VERSION != "26.8":
-    pytest.skip(
+elif _USD_CORE_VERSION != "26.8":
+    _OPENUSD_SKIP_REASON = (
         "OpenUSD oracle suite is pinned to usd-core==26.8; "
-        f"found {_USD_CORE_VERSION}",
-        allow_module_level=True,
+        f"found {_USD_CORE_VERSION}"
     )
+else:
+    _OPENUSD_SKIP_REASON = None
 
-from pxr import Usd, UsdGeom
-
-import sceneio
-from sceneio.io._usd import package
-from tests.codecs.test_usd_animation import _ANIMATED_USDA
+pytestmark = pytest.mark.skipif(
+    _OPENUSD_SKIP_REASON is not None,
+    reason=_OPENUSD_SKIP_REASON or "",
+)
 
 
 def _fixture(tmp_path, suffix):
