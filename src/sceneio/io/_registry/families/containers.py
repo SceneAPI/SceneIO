@@ -244,6 +244,7 @@ CONTAINER_CODECS: tuple[Codec, ...] = (
             "transformed_grids",
             "half_precision_storage",
             "custom_grid_metadata",
+            "empty_grids",
         ),
     ),
 )

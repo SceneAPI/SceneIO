@@ -49,6 +49,11 @@ def _open_single_grid(path: str | os.PathLike[str]):
             )
         file.read_grids()
         grid = file.grid(0)
+        if int(grid.active_voxel_count()) == 0:
+            raise ValueError(
+                "OpenVDB: empty grids are unsupported because TinyVDB 0.9 "
+                "does not preserve their authored transform"
+            )
         transform = grid.transform
         matrix = np.asarray(transform.get("matrix"), dtype=np.float64)
         if matrix.shape != (4, 4) or not np.array_equal(
@@ -99,6 +104,8 @@ def _validate_record(record) -> tuple[np.ndarray, np.ndarray, str]:
         raise ValueError("OpenVDB: values must have dtype float32 and shape (N,)")
     if len(coords) != len(values):
         raise ValueError("OpenVDB: coords and values must have equal length")
+    if len(coords) == 0:
+        raise ValueError("OpenVDB: empty sparse grids are unsupported")
     if values.size and not np.isfinite(values).all():
         raise ValueError("OpenVDB: values must be finite")
     if len(coords) and len(np.unique(coords, axis=0)) != len(coords):

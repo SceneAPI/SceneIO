@@ -227,6 +227,19 @@ def test_openvdb_writer_refuses_nonfinite_values(tmp_path):
         sceneio.write(record, tmp_path / "nonfinite.vdb")
 
 
+def test_openvdb_writer_refuses_empty_grid_before_destination_access(tmp_path):
+    record = _core.tensor_dict(
+        {
+            "coords": np.empty((0, 3), dtype=np.int32),
+            "values": np.empty(0, dtype=np.float32),
+        }
+    )
+    destination = tmp_path / "empty.vdb"
+    with pytest.raises(sceneio.FormatError, match="empty sparse grids"):
+        sceneio.write(record, destination)
+    assert not destination.exists()
+
+
 def test_openvdb_existing_destination_survives_provider_failure(
     tmp_path, monkeypatch
 ):
