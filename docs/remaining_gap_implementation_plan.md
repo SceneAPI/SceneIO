@@ -1,8 +1,10 @@
 # Remaining-gap implementation plan
 
-- **Status:** G1 and FC4-FC6 are locally closed as of 2026-08-29. The FC7
-  local aggregate and Windows package gates pass; only the immutable-SHA
-  hosted matrix and its evidence links remain.
+- **Status:** G1 and FC4-FC6 are validated as of 2026-08-29. Exact
+  implementation candidate `9a20bc61f177c28ba228b89e80cff665e3f1b426`
+  passed the complete nonpublishing Release, CI, and sanitizer matrices. FC7's
+  technical and evidence gates are closed; only disposition of the existing
+  draft PR remains a user review decision.
 - **Baseline:** SceneIO 0.2.0 has 74 built-in formats; 74 read and inspect,
   73 write, and 37 expose 43 bounded selectors. FC0-FC6 are locally complete
   or evidence-backed excluded within their frozen profiles.
@@ -46,11 +48,11 @@ semantics is not.
 | ID | Gap | Current state | Required close state | Relative size |
 |---|---|---|---|---:|
 | V0 | FC3 package evidence | Complete at exact commit `3fcdf8195e8909e3e1cc2a6091a237f89af3bc41` in nonpublishing Release run `33231962034` | Exact-head source archive and three installed wheels pass | complete |
-| G1 | Gaussian semantic normalization | Complete locally 2026-08-29: all universal fields are represented, carrier mappings are frozen, and unknown values/refusals remain explicit | Versioned per-format semantics, compatible record fields, explicit conversion/refusal, and independent oracles | complete |
-| FC4 | TIFF series and pyramids | Locally complete: neutral collections, bounded selectors, qualified writer subset, provider oracle, and benchmark pass | Neutral collection records plus bounded inspect/read/select and the provider-proven writable subset | local complete; hosted pending |
-| FC5 | OpenVDB expansion | Closed by evidence-backed exclusion: TinyVDB cannot qualify multi-grid enumeration, selection, or writing; the one-grid profile is retained and hardened | Multi-grid metadata/read/exact selection for proven types, or evidence-backed exclusion | excluded |
-| FC6 | Dynamic USD | Locally complete in state B: bounded selected-time direct USDA and USDA-root USDZ matrix/visibility evaluation; preservation and dynamic writing are excluded | Qualified selected-time read, and conditional authored-sample preservation/write | local complete; hosted pending |
-| FC7 | Aggregate closure | Local contracts, 5,082-test suite, strict benchmark, exact source archive, repaired Windows wheel, and isolated extra smokes pass | Exact-head local/package/hosted evidence and reconciled docs | local complete; hosted pending |
+| G1 | Gaussian semantic normalization | Validated 2026-08-29: universal fields, carrier mappings, conversions/refusals, official oracles, and installed-wheel semantics pass | Versioned per-format semantics, compatible record fields, explicit conversion/refusal, and independent oracles | complete |
+| FC4 | TIFF series and pyramids | Validated: neutral collections, bounded selectors, the qualified writer subset, provider oracle, benchmark, and Linux/macOS/Windows write/reopen smoke pass | Neutral collection records plus bounded inspect/read/select and the provider-proven writable subset | complete |
+| FC5 | OpenVDB expansion | Closed by evidence-backed exclusion: TinyVDB cannot qualify multi-grid enumeration, selection, or writing; the retained one-grid profile is hardened and hosted-wheel green | Multi-grid metadata/read/exact selection for proven types, or evidence-backed exclusion | excluded |
+| FC6 | Dynamic USD | Validated in state B: bounded selected-time direct USDA and USDA-root USDZ matrix/visibility evaluation passes the official OpenUSD lane; preservation and dynamic writing are excluded | Qualified selected-time read, and conditional authored-sample preservation/write | complete |
+| FC7 | Aggregate closure | Exact candidate passes local contracts, the 5,082-test suite, strict benchmark, exact source closure, three installed wheels, hosted oracles, CI, and sanitizers | Exact-head local/package/hosted evidence and reconciled docs | technical complete; draft disposition pending |
 
 ### Dependency graph
 
@@ -281,8 +283,8 @@ documentation tests, all 10 pinned PlayCanvas cases, and the available
 Niantic/OpenUSD oracle cases. Repository-wide Ruff and `git diff --check` are
 clean. The six-format, five-run result is retained at
 `build/g1-gaussian-benchmark.json`; a fresh Windows abi3 wheel passed the
-isolated NumPy-only manifest smoke. Cross-platform hosted confirmation remains
-part of FC7 and requires the later exact candidate commit.
+isolated NumPy-only manifest smoke. Cross-platform installed-wheel and oracle
+confirmation passed later as part of FC7 Release run `33249900572`.
 
 ## 6. FC4 — bounded TIFF collections and pyramids
 
@@ -298,7 +300,7 @@ Add `tests/test_tiff_provider_qualification.py` before public API work.
       payloads.
 - [x] Measure provider granularity for series, level, page range, and tiled
       window reads. A post-decode slice does not qualify.
-- [ ] Confirm deterministic write/reopen support for the exact qualified
+- [x] Confirm deterministic write/reopen support for the exact qualified
       multi-series and SubIFD layouts on Linux and macOS in the final hosted
       matrix; Windows write/reopen is green. If either hosted provider differs,
       narrow that layout to read/select-only before validation.
@@ -383,14 +385,15 @@ documented semantic boundary, never due to incidental provider traversal;
 simple TIFF remains compatible; supported selectors are measured as bounded;
 and write capabilities describe only portable, reopened layouts.
 
-Local qualification on 2026-08-29 covers the complete implementation and
-Windows provider matrix. The generated provider/codec/record/benchmark slice
-passes, the pinned 7,889,559-byte OME-TIFF matches SHA-256
+Qualification on 2026-08-29 covers the complete implementation and all three
+wheel platforms. The generated provider/codec/record/benchmark slice passes,
+the pinned 7,889,559-byte OME-TIFF matches SHA-256
 `caf707ca2ba6c42c40ded92245432d350a781fcdd03c0b178834f5eb5e5b96f3` and
 now reaches the deliberate `TCZYX` refusal, and the three-run 64 MiB benchmark
-shows a 98.65% traced-peak reduction for selected decode. The remaining
-cross-platform write/reopen checkbox is intentionally coupled to the exact
-candidate FC7 hosted matrix.
+shows a 98.65% traced-peak reduction for selected decode. Final Release run
+`33249900572` installed the TIFF provider and exercised the exact multi-series,
+SubIFD, inspection, selected-window, and write/reopen smoke on macOS arm64,
+manylinux x86-64, and Windows amd64.
 
 ## 7. FC5 — provider-constrained OpenVDB expansion
 
@@ -606,8 +609,8 @@ remain explicitly unsupported.
   git diff -- docs README.md tests/contracts
   ```
 
-- [x] Mark every G1/FC4/FC5/FC6 capability `validated`, `locally complete
-      awaiting hosted result`, or `excluded`; leave no unexplained pending row.
+- [x] Mark every G1/FC4/FC5/FC6 capability `validated` or `excluded`; leave no
+      unexplained pending row.
 
 ### 9.2 Local aggregate gate
 
@@ -654,21 +657,58 @@ mislabeling it as a bounded-memory or full-animation comparison.
 - [x] Install each affected extra independently (`tiff`, `openvdb`, `usd`, and
       `ncore`/splat extras when G1 changes their public surface).
 - [x] Run manifest-driven installed smoke and source/wheel license inventory.
-- [ ] Trigger affected provider workflows after each provider unit is locally
-      green; do not defer all platform findings to the end.
-- [ ] Trigger the final nonpublishing Release matrix from the exact candidate
+- [x] Exercise affected providers during candidate hardening and keep focused
+      hosted corrections separate from the implementation units.
+- [x] Trigger the final nonpublishing Release matrix from the exact candidate
       SHA and retain source/wheel hashes.
-- [ ] Run hosted OpenUSD/OpenVDB and required large-data comparisons without
+- [x] Run hosted OpenUSD/OpenVDB and required large-data comparisons without
       adding those packages or datasets to normal offline CI.
-- [ ] Record every run URL, SHA, artifact hash, platform result, optional skip,
+- [x] Record every run URL, SHA, artifact hash, platform result, optional skip,
       and benchmark summary in the canonical coverage documents.
 
-The exact local candidate snapshot has 1,624 source files plus `PKG-INFO`.
-Its source archive and repaired Windows wheel are inventory-verified, and
-isolated base, TIFF, OpenVDB, USD, and NCore environments pass the installed
-manifest smoke. These local artifacts are evidence for the candidate source
-snapshot, not a substitute for rebuilding from the final immutable commit in
-the hosted matrix.
+**Exact candidate result (2026-08-29):** commit
+`9a20bc61f177c28ba228b89e80cff665e3f1b426` passed nonpublishing Release run
+[`33249900572`](https://github.com/SceneAPI/SceneIO/actions/runs/33249900572).
+The run rebuilt the exact sdist, verified 1,624 repository files plus the
+generated `PKG-INFO`, built abi3 wheels on macOS arm64, manylinux x86-64, and
+Windows amd64, and passed the combined USD/AVIF/NCore/TIFF/OpenVDB installed
+smoke on every wheel host. The dedicated OpenUSD 26.08 and Niantic SPZ oracles
+passed; the tag-only publication job was intentionally skipped.
+
+The exact candidate also passed both standard CI copies
+([push `33249897819`](https://github.com/SceneAPI/SceneIO/actions/runs/33249897819),
+[PR `33249899654`](https://github.com/SceneAPI/SceneIO/actions/runs/33249899654))
+and both instrumented sanitizer copies
+([push `33249897883`](https://github.com/SceneAPI/SceneIO/actions/runs/33249897883),
+[PR `33249899660`](https://github.com/SceneAPI/SceneIO/actions/runs/33249899660)).
+This includes the five-run strict I/O/memory guard and the exact 5,066-node
+provider-independent ASan/UBSan collection. The retained local strict result is
+`build/fc7-post-memory-strict-benchmark.json`, SHA-256
+`3b1bcdae188d111865826edc258e485c8a3ea4e645660d3cfab14fb4eb335bcb`.
+
+Candidate-hardening Release runs
+[`33248947262`](https://github.com/SceneAPI/SceneIO/actions/runs/33248947262)
+and [`33249332793`](https://github.com/SceneAPI/SceneIO/actions/runs/33249332793)
+proved the OpenVDB wheel smoke and source/wheel lanes while hosted collection
+findings were corrected independently in commits `56d1922` and `9a20bc6`.
+
+| Hosted artifact | Payload/file SHA-256 | GitHub artifact archive SHA-256 |
+|---|---|---|
+| `sdist` | `15eb2e13b44a84a423a9fe075c7a2265c4348f16ca45758a762376dcc10b9d1c` | `b038e1ceae5813127c762d3039b4adf38a5f2302a1ec5a5e169337c39d07a759` |
+| `source-inventory` | `b6f92ac46d3443f7ff7ac4378f4896e161bb9788c7d67edbd8f760026802fcb4` | `8dba5d9c00314d1cd279b68e2c871c578f9a4eaf3a2a0098c00be765007439c4` |
+| `wheels-macos-appleclang-arm64` | `3c4d95189bd5e01fc528d7918e1a5c668180ce67493069bddd789a3c224f6487` | `cd6cf34ca20fc59b84f3239ba97e1a63849fab9390509671038041c0360b87aa` |
+| `inventory-macos-appleclang-arm64` | `c08163f0126363e035fbf80ea0f590cbc9dd7dfb2213808fa233816567bf6c05` | `a3b7843d30b2a75c781b240bce6e62eb35f2814a0e54ca4df6ba9ad9403f0c96` |
+| `wheels-manylinux2014-gcc10-x86_64` | `4592504f971810d0e25f1719d34e683fac1ad758946905130ba91de157c3e08d` | `35ba1ac0f10b595b57a88f1a2156f90cda6e366e41e30b087e96d3faafd54211` |
+| `inventory-manylinux2014-gcc10-x86_64` | `c967f84af9b1ba2fbe0b038e5cae352413261eedc55cb85ab1cabf6b5d7501ca` | `c4f61db16d967390982de9dbd6eee9ebe3b47d7fd663ec1b8d15abf9c4dac6ab` |
+| `wheels-windows-msvc-amd64` | `bb567c00961e94ad784294861b5ebaee817296aacf68e81d394df04cc8715750` | `b0cb3cb73247464c39c29108eba51309a6c150226585bde5d52ad6a673f94541` |
+| `inventory-windows-msvc-amd64` | `cd429fb0d74cf96f0ee4ff688d6d682da71d7218016fa796e5a5bf3f6f2648fb` | `e40ad154ba8465cff69e89b954ecde590f8e7f2da1899e5f133162a8d7b853f2` |
+| `distribution-inventory` | `818af161b9033c58feede72240364d240cbd661b181d575f43745d43530cfaca` | `3c7eae5f664d26e375aa96983143cab6aaa63d90114691ef1e48901e169d36b6` |
+
+The source inventory records source-tree SHA-256
+`18587c6a573a306f54e8d49cba9e8623fb04183e4b948e7e713d74548922c95a`.
+The distribution inventory independently re-records the sdist and three wheel
+payload hashes above, 64 license assets per distribution, and the exact native
+member and abi3 tag for each platform.
 
 ### 9.4 Final review
 
@@ -686,10 +726,11 @@ the hosted matrix.
 allowed, exact-head packages and hosted oracles pass, the draft/PR state is
 resolved, and publication remains a separate tag-driven user decision.
 
-**Remaining closeout:** create the reviewable candidate commit, obtain user
-authorization to push it, run the nonpublishing Linux/macOS/Windows Release
-and hosted oracle lanes at that exact SHA, and record their immutable URLs and
-artifact hashes. No local implementation or package-smoke gap remains.
+**Technical closeout complete:** the reviewable implementation units and hosted
+corrections are committed and pushed, and the nonpublishing package/oracle/CI/
+sanitizer evidence is recorded above. The existing PR remains a mergeable draft
+until the user chooses to mark it ready or otherwise resolve its review state.
+Publication remains a separate tag-driven user decision.
 
 ## 10. Recommended review/commit sequence
 

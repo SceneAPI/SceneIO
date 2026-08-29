@@ -1,20 +1,15 @@
 # Finite 3D-CV profile closure checklist
 
-- **Status:** FC0-FC3 are locally and package complete as of 2026-08-29. FC2 includes the
-  dense-label records/carriers, strict NCore projection, and hash-verified
-  Kubric/Blender recipe. FC3 adds typed E57 scan records, multi-scan I/O,
-  header inspection, bounded stored-row selection, oracle evidence, and a
-  large generated benchmark. Exact-commit Linux, Windows, and macOS wheel
-  validation plus the OpenUSD and Niantic lanes passed for the FC3 head
-  `3fcdf8195e8909e3e1cc2a6091a237f89af3bc41` in nonpublishing Release run
-  [`33231962034`](https://github.com/SceneAPI/SceneIO/actions/runs/33231962034).
-  The FC3 local aggregate gate passes 4,962 tests with 16 documented
-  optional/platform skips, repository-wide Ruff is clean, and the retained
-  five-run strict benchmark guard passes. G1 and FC4-FC6 are locally closed;
-  FC5 is an evidence-backed exclusion and FC6 closes in selected-time state B.
-  FC7's local aggregate, strict benchmark, exact-source, repaired Windows
-  wheel, and isolated-extra package gates pass. The exact-SHA hosted matrix
-  and evidence links remain active.
+- **Status:** FC0-FC4 and FC6 are validated as of 2026-08-29; FC5 is closed by
+  evidence-backed exclusion. Exact implementation candidate
+  `9a20bc61f177c28ba228b89e80cff665e3f1b426` passes the complete local gate,
+  strict benchmark, exact source closure, Linux/macOS/Windows installed-wheel
+  matrix, OpenUSD and Niantic SPZ oracles, standard CI, and ASan/UBSan in
+  nonpublishing Release run
+  [`33249900572`](https://github.com/SceneAPI/SceneIO/actions/runs/33249900572)
+  and its linked final runs. FC7's technical and evidence gates are closed;
+  the existing PR remains a mergeable draft pending the user's review-state
+  decision, and publication remains a separate tag-driven action.
 - **Baseline:** 74 built-in formats, each mapped to a licensed direct fixture
   or deterministic oracle-derived route.
 - **Purpose:** close the remaining 3D-computer-vision representation and
@@ -39,7 +34,7 @@
    freezes the implemented FC2 record fields, versioned carrier schemas,
    NCore projection boundary, and oracle-recipe status.
   [`gaussian_semantics_v1.toml`](../tests/contracts/gaussian_semantics_v1.toml)
-  freezes the locally complete G1 quaternion, SH, color, coordinate, scale,
+  freezes the validated G1 quaternion, SH, color, coordinate, scale,
   quantization, and carrier mappings.
 
 ## 1. Review outcome
@@ -170,14 +165,14 @@ FC0 contract and provider-feasibility freeze
           +-- FC7 combined package and hosted qualification
 ```
 
-- [ ] Land one record/API unit at a time.
-- [ ] Keep record-only commits adjacent to the first codec commit that uses
+- [x] Land one record/API unit at a time.
+- [x] Keep record-only commits adjacent to the first codec commit that uses
       them; do not land unused speculative types.
 - [x] Do not mix repository moves, provider replacement, or unrelated
       optimization with a profile-expansion commit.
 - [x] Preserve the current optional-provider boundaries and NumPy-only base
       runtime.
-- [ ] End every green implementation commit with the required co-author line.
+- [x] End every green implementation commit with the required co-author line.
 
 ## 5. Universal acceptance contract
 
@@ -263,7 +258,7 @@ Every FC1-FC6 unit must satisfy all applicable boxes in this section.
 - [x] Verify the optional dependency is absent from the base import graph.
 - [x] Verify the source archive and wheels contain required license and
       attribution files but no downloaded dataset cache.
-- [ ] Pass the exact-candidate Linux/macOS/Windows package lanes before
+- [x] Pass the exact-candidate Linux/macOS/Windows package lanes before
       upgrading locally complete units to `validated`.
 
 ## 6. FC0 — freeze APIs, provider feasibility, and compatibility
@@ -865,7 +860,7 @@ the PyPI publish job was intentionally skipped.
       bounded path; document unavoidable provider granularity.
 - [x] Write deterministic homogeneous series and pyramid files through
       tifffile and reopen them before atomic replacement.
-- [ ] Confirm the exact bounded SubIFD/series writer layouts on hosted Linux
+- [x] Confirm the exact bounded SubIFD/series writer layouts on hosted Linux
       and macOS; Windows write/reopen is green. If either hosted provider
       differs, keep that layout read/select-only and report the capability
       boundary before upgrading FC4 from locally complete to validated.
@@ -1007,8 +1002,8 @@ or general USDA parsing.
       inspection, equal-node static control, traced allocation, and RSS in
       `docs/usd_animation_benchmark.md`.
 
-FC6 is locally complete. Hosted OpenUSD and installed-wheel confirmation for
-the final exact candidate belongs to FC7.
+FC6 is validated in state B. Final candidate Release run `33249900572` passed
+the dedicated OpenUSD 26.08 comparisons and installed-wheel confirmation.
 
 ## 13. FC7 — combined qualification and closure
 
@@ -1034,12 +1029,12 @@ fresh-process RSS samples per applicable operation.
 
 ### 13.2 Package and hosted gate
 
-Current FC0-FC3 hosted evidence: nonpublishing Release run
-[`33231962034`](https://github.com/SceneAPI/SceneIO/actions/runs/33231962034)
-passed the exact source archive, three-wheel matrix, combined inventory, and
-the OpenUSD/Niantic oracle jobs at commit
-`3fcdf8195e8909e3e1cc2a6091a237f89af3bc41`. G1 and FC4-FC6 now await the
-later exact-candidate hosted confirmation described below.
+Final exact-candidate evidence: nonpublishing Release run
+[`33249900572`](https://github.com/SceneAPI/SceneIO/actions/runs/33249900572)
+passed the exact source archive, three-wheel matrix, combined provider smoke,
+distribution inventory, OpenUSD 26.08, and Niantic SPZ jobs at commit
+`9a20bc61f177c28ba228b89e80cff665e3f1b426`. Publication was intentionally
+skipped because this was a manual build, not a version tag.
 
 - [x] Build the source archive and clean Windows abi3 wheel from the exact
       local candidate snapshot; repeat the build from the immutable candidate
@@ -1048,19 +1043,38 @@ later exact-candidate hosted confirmation described below.
       remains lazy.
 - [x] Install each affected extra separately and run its installed-wheel smoke.
 - [x] Verify source archive and wheel license inventories.
-- [ ] Run the affected optional-provider hosted lane after each locally green
-      provider unit rather than deferring every platform finding to FC7.
-- [ ] Push and trigger Linux/macOS/Windows build-only validation only after the
+- [x] Exercise affected providers during candidate hardening and land focused
+      corrections for hosted findings before the final FC7 run.
+- [x] Push and trigger Linux/macOS/Windows build-only validation only after the
       local candidate is green and the user authorizes that exact action.
-- [ ] Run hosted OpenUSD/OpenVDB and large-data comparisons without adding
+- [x] Run hosted OpenUSD/OpenVDB and large-data comparisons without adding
       those packages or datasets to normal CI.
-- [ ] Record workflow links, artifact hashes, platform results, optional skips,
+- [x] Record workflow links, artifact hashes, platform results, optional skips,
       and benchmark summaries in the coverage documents.
 
-The local source closure contains 1,624 expected files plus `PKG-INFO`.
-Independent base, TIFF, OpenVDB, USD, and NCore Python 3.12 environments all
-load the repaired wheel from `site-packages`, expose only their intended
-optional capability, and pass `python -I -m sceneio._wheel_smoke`.
+The hosted source closure contains 1,624 expected files plus `PKG-INFO`, with
+source-tree SHA-256
+`18587c6a573a306f54e8d49cba9e8623fb04183e4b948e7e713d74548922c95a`.
+Independent base, TIFF, OpenVDB, USD, and NCore Python 3.12 environments load
+the wheel from `site-packages`, expose only their intended optional capability,
+and pass `python -I -m sceneio._wheel_smoke`. The sdist payload SHA-256 is
+`15eb2e13b44a84a423a9fe075c7a2265c4348f16ca45758a762376dcc10b9d1c`;
+macOS, manylinux, and Windows wheel payloads are respectively
+`3c4d95189bd5e01fc528d7918e1a5c668180ce67493069bddd789a3c224f6487`,
+`4592504f971810d0e25f1719d34e683fac1ad758946905130ba91de157c3e08d`,
+and `bb567c00961e94ad784294861b5ebaee817296aacf68e81d394df04cc8715750`.
+The complete nine-artifact payload/archive digest ledger is in
+[`remaining_gap_implementation_plan.md`](remaining_gap_implementation_plan.md#93-distribution-and-hosted-gate).
+
+Both final CI copies
+([push `33249897819`](https://github.com/SceneAPI/SceneIO/actions/runs/33249897819),
+[PR `33249899654`](https://github.com/SceneAPI/SceneIO/actions/runs/33249899654))
+and both sanitizer copies
+([push `33249897883`](https://github.com/SceneAPI/SceneIO/actions/runs/33249897883),
+[PR `33249899660`](https://github.com/SceneAPI/SceneIO/actions/runs/33249899660))
+pass. The retained five-run strict benchmark is
+`build/fc7-post-memory-strict-benchmark.json`, SHA-256
+`3b1bcdae188d111865826edc258e485c8a3ea4e645660d3cfab14fb4eb335bcb`.
 
 ### 13.3 Final documentation reconciliation
 
@@ -1072,8 +1086,8 @@ optional capability, and pass `python -I -m sceneio._wheel_smoke`.
       normalization contract.
 - [x] Confirm every affected format has a coordinate contract and executable
       evidence.
-- [x] Mark each profile `validated`, `locally complete awaiting hosted result`,
-      or `excluded`; leave no unexplained pending row.
+- [x] Mark each profile `validated` or `excluded`; leave no unexplained pending
+      row.
 - [ ] Move completed execution evidence into `docs/plans/completed/` only after
       its immutable archive contract is updated deliberately.
 
@@ -1094,18 +1108,19 @@ optional capability, and pass `python -I -m sceneio._wheel_smoke`.
        package smoke is hosted-wheel green in run `30914739031`; Kubric
        generation and hash verification remain explicit offline evidence.
 5. [x] `PointScan`/`ScanSet` plus E57 multi-scan/structured read/write/inspect,
-       oracle suite, benchmark, and docs are locally complete. Hosted wheel
-       validation awaits the next exact-head build-only run.
+       oracle suite, benchmark, and docs are validated through the final
+       exact-head build-only run.
 6. [x] Neutral raster collection plus the qualified TIFF read/write subset,
        oracle suite, benchmark, and docs.
 7. [x] Evidence-backed OpenVDB expansion exclusion, retaining and hardening the
        qualified nonempty one-grid writer.
 8. [x] USD selected-time qualification through the existing API in state B;
        `SceneAnimation` and dynamic writing remain explicit exclusions.
-9. [ ] Per-provider hosted correction commits, if platform results require
-       focused changes.
-10. [ ] FC7 exact-head aggregate hosted validation and final evidence; local
-        aggregate/package validation is complete.
+9. [x] Per-provider hosted corrections: `3e329c9` added OpenVDB to the combined
+       wheel smoke, `56d1922` isolated the sanitizer collection finding, and
+       `9a20bc6` stabilized optional OpenUSD oracle collection at 5,066 nodes.
+10. [x] FC7 exact-head aggregate hosted validation and final evidence at
+        implementation candidate `9a20bc61` and Release run `33249900572`.
 
 Do not combine slices merely to reduce commit count. A slice may be split when
 its record and codec changes cannot be reviewed or reverted independently.
@@ -1122,11 +1137,11 @@ their own columns and validation records.
 | FC1B visual-inertial dataset | [x] | [x] | [x] | [x] | [x] | [x] | [x] bounded baseline | [x] | [x] `30914739031` | [x] |
 | FC2 dense labels | [x] | carriers/NCore [x] | carriers/NCore [x] | carriers [x] | n/a for one-map carriers | NPZ/Zarr/TIFF/NCore/Kubric [x] | [x] NPZ/Zarr/TIFF | [x] | [x] `30914739031` | [x] |
 | FC3 E57 scans | [x] | [x] | [x] | [x] | [x] | [x] | [x] | [x] | [x] `33231962034` | [x] |
-| G1 Gaussian semantics | [x] | carrier mapping [x] | guarded writers [x] | n/a | existing carrier selectors [x] | [x] local official lanes | [x] | [x] | local Windows [x]; hosted pending | [x] |
-| FC4 TIFF collections | [x] | [x] | [x] | [x] | [x] | [x] | [x] | [x] | local Windows [x]; hosted pending | [x] |
-| FC5 OpenVDB exclusion | n/a | existing one-grid [x] | existing one-grid [x] | [x] | excluded | official provider loss probes [x] | n/a | [x] | local Windows [x]; hosted pending | [x] |
-| FC6 USD state B | no new record [x] | selected time [x] | dynamic excluded [x] | [x] | existing `time` API [x] | OpenUSD 26.8 [x] | [x] | [x] | local Windows [x]; hosted pending | [x] |
-| FC7 aggregate | n/a | n/a | n/a | n/a | n/a | local [x]; hosted [ ] | [x] | [x] | local Windows [x]; hosted [ ] | local [x]; final links [ ] |
+| G1 Gaussian semantics | [x] | carrier mapping [x] | guarded writers [x] | n/a | existing carrier selectors [x] | [x] official lanes | [x] | [x] | [x] `33249900572` | [x] |
+| FC4 TIFF collections | [x] | [x] | [x] | [x] | [x] | [x] | [x] | [x] | [x] `33249900572` | [x] |
+| FC5 OpenVDB exclusion | n/a | existing one-grid [x] | existing one-grid [x] | [x] | excluded | official provider loss probes [x] | n/a | [x] | [x] `33249900572` | [x] |
+| FC6 USD state B | no new record [x] | selected time [x] | dynamic excluded [x] | [x] | existing `time` API [x] | OpenUSD 26.8 [x] | [x] | [x] | [x] `33249900572` | [x] |
+| FC7 aggregate | n/a | n/a | n/a | n/a | n/a | local [x]; hosted [x] | [x] | [x] | [x] `33249900572` | [x] |
 
 ## 16. Final stopping rule
 
