@@ -1,0 +1,36 @@
+miniz 3.0.2
+
+Upstream: https://github.com/richgel999/miniz
+Tag: 3.0.2
+Commit: 293d4db1b7d0ffee9756d035b9ac6f7431ef8492
+Retrieved: 2026-07-28
+License: MIT (see LICENSE). The ZIP archive implementation in miniz.c carries
+an additional Martin Raiber copyright under the same MIT terms; its exact
+notice text is distributed as LICENSES/miniz-zip.txt.
+
+Source archive:
+https://github.com/richgel999/miniz/releases/download/3.0.2/miniz-3.0.2.zip
+Size: 99268 bytes
+SHA-256:
+ada38db0b703a56d3dd6d57bf84a9c5d664921d870d8fea4db153979fb5332c5
+
+Repository-contained files:
+- ChangeLog.md
+  SHA-256 261c5cfb87942b5c47735b98ae2fa87ba5f3058d3c755838756b6117f3b0c0dd
+- LICENSE
+  SHA-256 0115478d567121238cf6cc1c0c361926cf07a49d9e4c9e66da97fac6a01646b3
+- miniz.c
+  SHA-256 0fcdc9888cb3a29ca8f176bac087e5fe6c7258a6ab06b1c271c1e109a11d3740
+- miniz.h
+  SHA-256 295d1a0041aea09609598c0f1f35c1977ca05ad662acbadcfdaac44c140af37b
+- readme.md
+  SHA-256 b4ea367be28a36e5386f65118b73962bc659a67936d248be68b7a7c03b8d359b
+
+SceneIO builds only miniz.c and exposes this directory to the extension so
+TinyEXR and SceneIO's SPZ/ZIP users consume the same miniz.h. The integration
+builds one position-independent static library with hidden C symbol
+visibility. Upstream CMake files, shared libraries, install rules, tools,
+examples, and tests are not configured or built.
+
+Local patches: none. Every repository-contained upstream file is byte-exact
+with the selected release archive.

@@ -1,0 +1,92 @@
+schema_version = 1
+catalog_date = "2026-08-03"
+cache_root = "build/bench-data/large-io"
+
+# This manifest is the provenance authority for the large-file closure run.
+# Files are downloaded below the ignored build/bench-data/ tree and are never
+# packaged or committed.  Every expected size and digest was measured from the
+# URL and revision recorded here on 2026-08-03.
+
+[[source]]
+id = "niantic_racoonfamily_spz"
+use = "Gaussian/SPZ seed and qualification source"
+repository = "https://github.com/nianticlabs/spz"
+revision = "5bf2945de1a003cee07133b1e495fe9c6ffdc7e7"
+revision_type = "git_commit"
+source_path = "samples/racoonfamily.spz"
+url = "https://raw.githubusercontent.com/nianticlabs/spz/5bf2945de1a003cee07133b1e495fe9c6ffdc7e7/samples/racoonfamily.spz"
+filename = "racoonfamily.spz"
+license = "MIT"
+license_url = "https://github.com/nianticlabs/spz/blob/5bf2945de1a003cee07133b1e495fe9c6ffdc7e7/LICENSE"
+attribution = "Niantic Labs, nianticlabs/spz"
+expected_size_bytes = 24202962
+expected_sha256 = "2e068d893730955c09aee324ff170c559f71c0e8758c1b14c3811a5969333cfe"
+media_type = "application/octet-stream"
+acquisition = "direct_upstream"
+derivation = "omit unsupported antialias metadata, rewrite as SPZ v4, and deterministically repeat translated Gaussians to the target logical payload"
+sceneio_direct_supported = false
+sceneio_direct_reason = "sceneio.inspect refuses: SPZ legacy: antialiased splats are unsupported"
+
+[[source]]
+id = "pdal_autzen_laz"
+use = "Real LiDAR/LAZ workload"
+repository = "https://github.com/PDAL/data"
+revision = "ce0024257c573526389c4db9ab26e82739b8aaa9"
+revision_type = "git_commit"
+source_path = "autzen/autzen.laz"
+# PDAL/data stores this object with Git LFS.  Use the immutable media URL,
+# rather than downloading the small Git LFS pointer from raw.githubusercontent.
+url = "https://media.githubusercontent.com/media/PDAL/data/ce0024257c573526389c4db9ab26e82739b8aaa9/autzen/autzen.laz"
+filename = "autzen.laz"
+license = "CC-BY-4.0"
+license_url = "https://creativecommons.org/licenses/by/4.0/"
+attribution = "Aaron Reyna and Watershed Sciences; curated in PDAL/data by PDAL/Hobu"
+expected_size_bytes = 56350988
+expected_sha256 = "944b947501156e45df1b3b9d25bc1dc04ff5ef377e7e169576ba59231c2896ba"
+media_type = "application/octet-stream"
+acquisition = "git_lfs_media"
+derivation = "decode with laspy/lazrs and canonicalize to a supported LAS/LAZ representation for the derived workload"
+sceneio_direct_supported = false
+sceneio_direct_reason = "sceneio refuses: laz: exactly one LASzip VLR is required"
+
+[[source]]
+id = "khronos_box_vertex_colors_glb"
+use = "Topology and vertex-attribute seed"
+repository = "https://github.com/KhronosGroup/glTF-Sample-Assets"
+revision = "2bac6f8c57bf471df0d2a1e8a8ec023c7801dddf"
+revision_type = "git_commit"
+source_path = "Models/BoxVertexColors/glTF-Binary/BoxVertexColors.glb"
+url = "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/2bac6f8c57bf471df0d2a1e8a8ec023c7801dddf/Models/BoxVertexColors/glTF-Binary/BoxVertexColors.glb"
+filename = "BoxVertexColors.glb"
+license = "CC0-1.0"
+license_url = "https://github.com/KhronosGroup/glTF-Sample-Assets/blob/2bac6f8c57bf471df0d2a1e8a8ec023c7801dddf/Models/BoxVertexColors/LICENSE.md"
+attribution = "Marco Hutter; KhronosGroup glTF Sample Assets BoxVertexColors"
+expected_size_bytes = 1924
+expected_sha256 = "9c48227f33b0ba2fbcf23b98ebf60d1c8ae0c6e6c5281e0aa3cc58affee10382"
+media_type = "model/gltf-binary"
+acquisition = "direct_upstream"
+derivation = "convert float COLOR_0 to normalized uint8, flatten geometry, and deterministically repeat it on a translation grid"
+sceneio_direct_supported = false
+sceneio_direct_reason = "sceneio refuses: glTF core preserves COLOR_0 only as normalized unsigned bytes"
+
+[[source]]
+id = "tum_freiburg1_xyz_groundtruth"
+use = "Realistic timestamp, translation, and quaternion seed for reconstruction"
+repository = "https://cvg.cit.tum.de/data/datasets/rgbd-dataset"
+# TUM publishes this text artifact outside a versioned source repository.  The
+# content digest is therefore the immutable revision identifier.
+revision = "content-sha256:aac0319a6ef4e1cdf61e779d2152b95aa7e9f7b1749d6d18717b43ddabffede2"
+revision_type = "content_sha256"
+source_path = "freiburg1/rgbd_dataset_freiburg1_xyz-groundtruth.txt"
+url = "https://cvg.cit.tum.de/rgbd/dataset/freiburg1/rgbd_dataset_freiburg1_xyz-groundtruth.txt"
+filename = "rgbd_dataset_freiburg1_xyz-groundtruth.txt"
+license = "CC-BY-4.0"
+license_url = "https://creativecommons.org/licenses/by/4.0/"
+attribution = "TUM Computer Vision Group RGB-D SLAM Dataset and Benchmark"
+expected_size_bytes = 201100
+expected_sha256 = "aac0319a6ef4e1cdf61e779d2152b95aa7e9f7b1749d6d18717b43ddabffede2"
+media_type = "text/plain"
+acquisition = "official_download"
+derivation = "sample poses as a reconstruction seed, then generate finite points and observations deterministically"
+sceneio_direct_supported = true
+sceneio_direct_reason = "sceneio supports the TUM trajectory with explicit format='tum'"

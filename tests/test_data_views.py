@@ -7,6 +7,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+from sceneio.coordinates import coordinate_convention
 from sceneio.data import (
     SE3,
     Calibration,
@@ -164,6 +165,10 @@ class TestPosedViewSet:
         poses = (SE3.identity(), SE3.identity())
         vs = PosedViewSet(views=views, poses=poses, frame=FrameMeta())
         assert len(vs) == 2
+        coordinates = coordinate_convention(vs)
+        assert coordinates is not None
+        assert coordinates.handedness == "right_handed"
+        assert coordinates.world_frame == "first_view"
 
     def test_lists_normalized_to_tuples(self) -> None:
         vs = PosedViewSet(views=list(self._views(1)), poses=[SE3.identity()], frame=FrameMeta())

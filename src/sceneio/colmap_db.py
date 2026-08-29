@@ -1,12 +1,12 @@
-"""COLMAP scene-database schema — the sfmapi core data-format contract.
+"""Repository-owned COLMAP SQLite profile and schema contracts.
 
-sfmapi treats the COLMAP SQLite scene database as a first-class core
+SceneIO treats the COLMAP SQLite scene database as a first-class core
 *contract*: the canonical on-disk representation that COLMAP-family
 backends produce and that portable tooling (the C++ port, importers,
 exporters, the bridge) reads. This module is the single source of truth
 for that schema in the framework.
 
-Ownership: this contract is **owned here**. sfmapi defines the standard;
+Ownership: this contract is **owned here**. SceneIO defines the standard;
 implementations conform to it, not the reverse. The reference COLMAP
 fork (``Opsiclear-internal/colmap_mod``) is one such implementation and
 is expected to match this schema — if the two ever diverge, this module
@@ -14,21 +14,21 @@ is authoritative and the divergence is a bug to reconcile, not a signal
 to re-sync from the fork. Changes here are deliberate contract decisions.
 
 This is also a *data standard*, not a dependency. Core declares the
-schema as plain data; it never imports the ``sfmapi_colmap`` plugin or
-links the COLMAP C++ library. (The
-``test_core_does_not_import_plugin_distributions`` guard enforces the
-direction.)
+schema as plain data; it never imports a COLMAP plugin or links the COLMAP
+C++ library.
 
-The contract defines an **extended** COLMAP schema — a superset of
-vanilla upstream COLMAP. Tables/columns absent from upstream are marked
+The contract defines exact historical/current stock profiles plus the MAXX
+extension profile. Tables/columns absent from current upstream are marked
 ``extension=True`` so consumers can tell the portable core from the
 extended surface. The extended surface:
 
 * ``images.time_id`` — per-image 4D / multi-time-frame capture tag
-* ``videos`` + ``video_frames`` — video ingestion + frame mapping
+* ``videos`` + ``video_frames`` — metadata-only source/frame mapping
 * ``image_qualities`` — per-image blur/sharpness
 * ``markers`` + ``marker_projections`` — GCPs / named 3D points
-* ``descriptors.type`` — extractor type, blocks cross-extractor matching
+* self-describing descriptor metadata, keypoint colors, match scores and
+  pair provenance;
+* extended priors, quality, marker, and source/timing metadata.
 
 4D support: ``images.time_id`` is the canonical per-image capture-time
 store (every image read populates ``Image.time_id`` from it);
@@ -37,14 +37,10 @@ value. The column is nullable and ignored by non-4D readers, so the
 ``images`` table stays backward-compatible with vanilla upstream COLMAP
 (NULL ``time_id`` == static SfM).
 
-Provenance: the initial values here were established by reading the
-reference implementation (``colmap_mod`` ``src/colmap/scene/database_sqlite.cc``
-+ ``src/colmap/util/{version,types}.h`` at commit ``8f8e4dd92``,
-COLMAP 3.14.0.dev0, database schema revision 2). That is provenance, not
-a sync source: evolving the contract is a deliberate edit to this module
-(bump ``DATABASE_SCHEMA_REVISION``, update the tables/registry), after
-which the reference implementation is expected to conform. The contract
-test pins the version + extension surface so unintended drift is caught.
+Provenance is pinned in :data:`COLMAP_DATABASE_PROFILES`. The MAXX surface was
+reimplemented from the user-owned ``colmap_mod`` repository at commit
+``de15b08a2dba98b55d6ddfb7cedac147838afbb4``. It is a data-format reference,
+not a runtime dependency.
 """
 
 from __future__ import annotations
@@ -61,7 +57,8 @@ from dataclasses import dataclass
 DATABASE_VERSION_MAJOR = 3
 DATABASE_VERSION_MINOR = 14
 DATABASE_VERSION_PATCH = 0
-DATABASE_SCHEMA_REVISION = 2
+DATABASE_SCHEMA_REVISION = 3
+MAXX_DATABASE_APPLICATION_ID = 0x4D415858
 
 
 def make_database_version_number(major: int, minor: int, patch: int, revision: int) -> int:
@@ -80,12 +77,84 @@ DATABASE_VERSION_NUMBER = make_database_version_number(
     DATABASE_SCHEMA_REVISION,
 )
 
+
+@dataclass(frozen=True)
+class DatabaseProfile:
+    """Exact SQLite identity used by inspection and profile writers."""
+
+    name: str
+    source_revision: str
+    application_id: int
+    user_version: int
+    typed_descriptors: bool
+    generalized_pose_priors: bool
+    recovered_two_view_cameras: bool
+    maxx_extensions: bool = False
+    ownership_row: bool = False
+
+
+@dataclass(frozen=True)
+class ColmapDatabaseConversionReport:
+    """Destination-free analysis for one exact database-profile write."""
+
+    source_profile: str
+    target_profile: str
+    writable: bool
+    identity_changes: tuple[tuple[str, object, object], ...]
+    incompatibilities: tuple[str, ...]
+
+
+COLMAP_DATABASE_PROFILES: tuple[DatabaseProfile, ...] = (
+    DatabaseProfile(
+        "colmap-3.13.0",
+        "0b31f98133b470eae62811b557dc2bcff1e4f9a5",
+        0,
+        3900,
+        False,
+        False,
+        False,
+    ),
+    DatabaseProfile(
+        "colmap-4.1.1",
+        "a0d785fba74b2664f31edc4a29026a8b27c00f67",
+        0,
+        4_010_100,
+        True,
+        True,
+        False,
+    ),
+    DatabaseProfile(
+        "colmap-main-64805cb870b5",
+        "64805cb870b574a569dccc34918d95a2db2b2fee",
+        0,
+        4_020_000,
+        True,
+        True,
+        True,
+    ),
+    DatabaseProfile(
+        "maxx-v1",
+        "de15b08a2dba98b55d6ddfb7cedac147838afbb4",
+        MAXX_DATABASE_APPLICATION_ID,
+        DATABASE_VERSION_NUMBER,
+        True,
+        True,
+        True,
+        maxx_extensions=True,
+        ownership_row=True,
+    ),
+)
+
+COLMAP_DATABASE_PROFILES_BY_NAME: dict[str, DatabaseProfile] = {
+    profile.name: profile for profile in COLMAP_DATABASE_PROFILES
+}
+
 # --- feature extractor / matcher type registry ---------------------------
 #
 # ``descriptors.type`` records WHICH extractor produced a descriptor set so
 # the matcher can refuse to join incompatible descriptor types. colmap_mod
 # backs this with a *closed* C++ enum (``FeatureExtractorType``), but the
-# sfmapi contract treats extractor identity as an **open registry**:
+# SceneIO contract treats extractor identity as an **open registry**:
 #
 #   * The invariant is the GUARD, not a fixed enum -- "a match may only
 #     join two descriptor sets of the same extractor type." Arbitrary
@@ -125,6 +194,36 @@ COLMAP_KNOWN_MATCHER_TYPES: tuple[str, ...] = (
     "ALIKED_BRUTEFORCE",
     "ALIKED_LIGHTGLUE",
 )
+
+#: Descriptor scalar dtype names and their append-only MAXX wire values.
+COLMAP_KNOWN_DESCRIPTOR_DTYPES: dict[str, int] = {
+    "uint8": 0,
+    "int8": 1,
+    "float16": 2,
+    "float32": 3,
+    "float64": 4,
+}
+
+#: Known bits in the append-only ``pair_provenance.source_flags`` mask.
+#: Readers preserve bits outside this mapping.
+COLMAP_KNOWN_MATCH_SOURCE_FLAGS: dict[str, int] = {
+    "UNKNOWN": 0,
+    "SEQUENTIAL": 1 << 0,
+    "RETRIEVAL": 1 << 1,
+    "SPATIAL": 1 << 2,
+    "EXHAUSTIVE": 1 << 3,
+    "VOCAB_TREE": 1 << 4,
+    "TRANSITIVE": 1 << 5,
+    "IMPORTED": 1 << 6,
+}
+
+#: Marker type names and their MAXX wire values.
+COLMAP_KNOWN_MARKER_TYPES: dict[str, int] = {
+    "REGULAR": 0,
+    "VERTEX": 1,
+    "FIDUCIAL": 2,
+    "CODED_TARGET": 3,
+}
 
 
 def is_colmap_native_extractor_type(name: str) -> bool:
@@ -207,9 +306,21 @@ def _col(name: str, sql_type: str, **kw: object) -> ColumnDef:
 
 # --- the schema -----------------------------------------------------------
 #
-# Ordering matches CreateTables() in colmap_mod database_sqlite.cc.
+# The model is grouped into current-upstream tables followed by MAXX-only
+# tables. Exact per-profile DDL order is carried by the profile writer.
 
 COLMAP_DB_TABLES: tuple[TableDef, ...] = (
+    TableDef(
+        "maxx_schema_info",
+        (
+            _col("schema_version", "INTEGER"),
+            _col("minimum_reader_version", "INTEGER"),
+            _col("producer_version", "TEXT"),
+            _col("producer_commit", "TEXT"),
+        ),
+        extension=True,
+        note="MAXX ownership and reader-compatibility metadata.",
+    ),
     # ---- upstream-standard (COLMAP 3.10+ rig/frame/sensor model) ----
     TableDef(
         "rigs",
@@ -286,9 +397,9 @@ COLMAP_DB_TABLES: tuple[TableDef, ...] = (
             _col("position_covariance", "BLOB"),
             _col("gravity", "BLOB"),
             _col("coordinate_system", "INTEGER"),
-            _col("rotation", "BLOB"),
-            _col("rotation_covariance", "BLOB"),
-            _col("pose_covariance", "BLOB"),
+            _col("rotation", "BLOB", extension=True),
+            _col("rotation_covariance", "BLOB", extension=True),
+            _col("pose_covariance", "BLOB", extension=True),
         ),
     ),
     TableDef(
@@ -307,11 +418,13 @@ COLMAP_DB_TABLES: tuple[TableDef, ...] = (
             _col(
                 "type",
                 "INTEGER",
-                extension=True,
                 note="Extractor type (SIFT/ALIKED/...) so cross-extractor "
-                "matching is rejected. Added at schema revision 1 "
-                "(default SIFT for migrated rows).",
+                "matching is rejected. This is stock in COLMAP 4.1.1+; "
+                "3.13 omits it and implies SIFT.",
             ),
+            _col("type_name", "TEXT", extension=True),
+            _col("dtype", "INTEGER", extension=True),
+            _col("dim", "INTEGER", extension=True),
             _col("rows", "INTEGER"),
             _col("cols", "INTEGER"),
             _col("data", "BLOB"),
@@ -339,6 +452,8 @@ COLMAP_DB_TABLES: tuple[TableDef, ...] = (
             _col("H", "BLOB"),
             _col("qvec", "BLOB"),
             _col("tvec", "BLOB"),
+            _col("camera1", "BLOB"),
+            _col("camera2", "BLOB"),
         ),
     ),
     # ---- fork-specific extension tables (colmap_mod) ----
@@ -358,7 +473,7 @@ COLMAP_DB_TABLES: tuple[TableDef, ...] = (
             _col("sync_group", "TEXT"),
         ),
         extension=True,
-        note="Video ingestion source metadata.",
+        note="Metadata-only video source description; paths are inert strings.",
     ),
     TableDef(
         "video_frames",
@@ -370,7 +485,7 @@ COLMAP_DB_TABLES: tuple[TableDef, ...] = (
             _col("time_id", "INTEGER"),
         ),
         extension=True,
-        note="Maps decoded video frames to image ids.",
+        note="Metadata-only mapping from source-frame indices to image ids.",
     ),
     TableDef(
         "image_qualities",
@@ -381,6 +496,16 @@ COLMAP_DB_TABLES: tuple[TableDef, ...] = (
         extension=True,
         note="Per-image blur/sharpness (variance of Laplacian); written "
         "when ImageReaderOptions.estimate_quality is on.",
+    ),
+    TableDef(
+        "pair_provenance",
+        (
+            _col("pair_id", "INTEGER"),
+            _col("source_flags", "INTEGER"),
+            _col("retrieval_score", "REAL"),
+        ),
+        extension=True,
+        note="Per-pair source flags and optional retrieval score.",
     ),
     TableDef(
         "markers",
@@ -410,6 +535,28 @@ COLMAP_DB_TABLES: tuple[TableDef, ...] = (
         extension=True,
         note="Per-image 2D projections of markers.",
     ),
+    TableDef(
+        "keypoint_colors",
+        (
+            _col("image_id", "INTEGER"),
+            _col("rows", "INTEGER"),
+            _col("cols", "INTEGER"),
+            _col("data", "BLOB"),
+        ),
+        extension=True,
+        note="RGB uint8 values parallel to the image keypoint rows.",
+    ),
+    TableDef(
+        "match_scores",
+        (
+            _col("pair_id", "INTEGER"),
+            _col("rows", "INTEGER"),
+            _col("cols", "INTEGER"),
+            _col("data", "BLOB"),
+        ),
+        extension=True,
+        note="Float32 values parallel to raw match rows.",
+    ),
 )
 
 COLMAP_DB_TABLES_BY_NAME: dict[str, TableDef] = {t.name: t for t in COLMAP_DB_TABLES}
@@ -438,21 +585,17 @@ def is_extension_column(table: str, column: str) -> bool:
 #
 # contract_dict() renders the whole contract as a deterministic, language-
 # neutral dict. It is the single thing the cross-tier parity machinery
-# diffs: the Python source of truth is serialized here, the same bytes are
-# embedded into the C++ port via codegen, and a check_sync gate fails if
-# the two ever diverge. Ordering is the declaration order of
+# diffs. Ordering is the declaration order of
 # COLMAP_DB_TABLES / columns, so the JSON is stable across runs.
 
 CONTRACT_NAME = "colmap_db"
-CONTRACT_SCHEMA_VERSION = 1  # version of THIS serialization shape, not the DB
+CONTRACT_SCHEMA_VERSION = 3  # version of THIS serialization shape, not the DB
 
 
 def contract_dict() -> dict:
     """The COLMAP scene-database contract as a deterministic dict.
 
-    This is the authoritative, repo-owned definition; ``tools/gen_contracts.py``
-    serializes it to JSON + a C++ ``.inc``, and check_sync's ``contract-parity``
-    gate enforces that the embedded C++ copy stays byte-identical.
+    This is the authoritative, repo-owned machine-readable definition.
     """
     return {
         "contract": CONTRACT_NAME,
@@ -464,6 +607,20 @@ def contract_dict() -> dict:
             "patch": DATABASE_VERSION_PATCH,
             "revision": DATABASE_SCHEMA_REVISION,
         },
+        "profiles": [
+            {
+                "name": profile.name,
+                "source_revision": profile.source_revision,
+                "application_id": profile.application_id,
+                "user_version": profile.user_version,
+                "typed_descriptors": profile.typed_descriptors,
+                "generalized_pose_priors": profile.generalized_pose_priors,
+                "recovered_two_view_cameras": profile.recovered_two_view_cameras,
+                "maxx_extensions": profile.maxx_extensions,
+                "ownership_row": profile.ownership_row,
+            }
+            for profile in COLMAP_DATABASE_PROFILES
+        ],
         "pair_id": {"max_num_images": MAX_NUM_IMAGES},
         "extractor_types": {
             "known": dict(COLMAP_KNOWN_EXTRACTOR_TYPES),
@@ -473,6 +630,19 @@ def contract_dict() -> dict:
         "matcher_types": {
             "known": list(COLMAP_KNOWN_MATCHER_TYPES),
             "open_registry": True,
+        },
+        "descriptor_dtypes": {
+            "known": dict(COLMAP_KNOWN_DESCRIPTOR_DTYPES),
+            "append_only": True,
+        },
+        "match_source_flags": {
+            "known": dict(COLMAP_KNOWN_MATCH_SOURCE_FLAGS),
+            "append_only": True,
+            "preserve_unknown_bits": True,
+        },
+        "marker_types": {
+            "known": dict(COLMAP_KNOWN_MARKER_TYPES),
+            "closed_values": True,
         },
         "tables": [
             {
@@ -498,20 +668,28 @@ def contract_dict() -> dict:
 
 
 __all__ = [
+    "COLMAP_DATABASE_PROFILES",
+    "COLMAP_DATABASE_PROFILES_BY_NAME",
     "COLMAP_DB_TABLES",
     "COLMAP_DB_TABLES_BY_NAME",
+    "COLMAP_KNOWN_DESCRIPTOR_DTYPES",
     "COLMAP_KNOWN_EXTRACTOR_TYPES",
+    "COLMAP_KNOWN_MARKER_TYPES",
     "COLMAP_KNOWN_MATCHER_TYPES",
+    "COLMAP_KNOWN_MATCH_SOURCE_FLAGS",
     "CONTRACT_NAME",
     "CONTRACT_SCHEMA_VERSION",
     "DATABASE_SCHEMA_REVISION",
     "DATABASE_VERSION_NUMBER",
     "EXTENSION_COLUMNS",
     "EXTENSION_TABLES",
+    "MAXX_DATABASE_APPLICATION_ID",
     "MAX_NUM_IMAGES",
     "UNDEFINED_EXTRACTOR_TYPE",
     "UPSTREAM_TABLES",
+    "ColmapDatabaseConversionReport",
     "ColumnDef",
+    "DatabaseProfile",
     "TableDef",
     "contract_dict",
     "image_pair_to_pair_id",

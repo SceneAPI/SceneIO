@@ -1,0 +1,31 @@
+name: OpenUSD oracle qualification
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: oracle-openusd-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  openusd-usda-usdz:
+    name: OpenUSD 26.08 Gaussian and selected-time USDA/USDZ
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v7
+      - name: Install SceneIO test environment
+        run: |
+          uv venv --seed --python 3.12
+          uv pip install --python .venv/bin/python -e ".[dev,test]"
+      - name: Install pinned OpenUSD oracle
+        run: uv pip install --python .venv/bin/python usd-core==26.8
+      - name: Run official OpenUSD Gaussian cross-read suite
+        run: .venv/bin/python -m pytest -q -rs tests/codecs/test_openusd_gaussian_oracle.py
+      - name: Run official OpenUSD selected-time cross-read suite
+        run: .venv/bin/python -m pytest -q -rs tests/codecs/test_openusd_animation_oracle.py

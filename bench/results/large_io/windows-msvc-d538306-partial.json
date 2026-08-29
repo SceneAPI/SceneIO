@@ -1,0 +1,2110 @@
+{
+  "schema_version": "large-io-v1",
+  "generated_at_utc": "2026-08-03T13:39:47.943951+00:00",
+  "sceneio": {
+    "commit": "d538306ffe702df8cc894f81b0b3ce59acd2aebc",
+    "dirty": false
+  },
+  "environment": {
+    "platform": "Windows-11-10.0.26100-SP0",
+    "system": "Windows",
+    "machine": "AMD64",
+    "processor": "AMD64 Family 26 Model 68 Stepping 0, AuthenticAMD",
+    "python": "3.12.10 (tags/v3.12.10:0cc8128, Apr  8 2025, 12:21:36) [MSC v.1943 64 bit (AMD64)]",
+    "python_implementation": "CPython",
+    "compiler": "MSC v.1943 64 bit (AMD64)",
+    "cpu_count": 32,
+    "ram_bytes": 203636297728,
+    "available_ram_bytes": 169465196544,
+    "psutil_available": true,
+    "thread_policy": "environment values when set; otherwise provider defaults",
+    "thread_variables": {
+      "OMP_NUM_THREADS": "provider defaults",
+      "OPENBLAS_NUM_THREADS": "provider defaults",
+      "MKL_NUM_THREADS": "provider defaults",
+      "NUMEXPR_NUM_THREADS": "provider defaults",
+      "WEBP_THREAD_LEVEL": "provider defaults"
+    }
+  },
+  "providers": {
+    "laspy": {
+      "name": "laspy",
+      "version": "2.7.0",
+      "module": "laspy",
+      "revision": null,
+      "build": null
+    },
+    "pycolmap": {
+      "name": "pycolmap",
+      "version": "4.1.1",
+      "module": "pycolmap",
+      "revision": null,
+      "build": null
+    },
+    "trimesh": {
+      "name": "trimesh",
+      "version": "4.12.2",
+      "module": "trimesh",
+      "revision": null,
+      "build": null
+    },
+    "sceneio": {
+      "name": "sceneio",
+      "version": "0.2.0",
+      "module": "sceneio",
+      "revision": null,
+      "build": null
+    },
+    "lazrs": {
+      "name": "lazrs",
+      "version": "0.8.1",
+      "module": "lazrs",
+      "revision": null,
+      "build": null
+    },
+    "numpy": {
+      "name": "numpy",
+      "version": "2.4.6",
+      "module": "numpy",
+      "revision": null,
+      "build": null
+    },
+    "gsply": {
+      "name": "gsply",
+      "version": "0.4.6",
+      "module": "gsply",
+      "revision": null,
+      "build": null
+    },
+    "niantic_spz": {
+      "name": "niantic_spz",
+      "version": "1.1.0",
+      "module": "spz",
+      "revision": "5bf2945de1a003cee07133b1e495fe9c6ffdc7e7",
+      "build": "distribution version; revision recorded separately"
+    }
+  },
+  "source_verification": {
+    "status": "verified",
+    "required_source_ids": [
+      "khronos_box_vertex_colors_glb",
+      "niantic_racoonfamily_spz",
+      "pdal_autzen_laz",
+      "tum_freiburg1_xyz_groundtruth"
+    ],
+    "optional_source_ids": [],
+    "verified_source_ids": [
+      "khronos_box_vertex_colors_glb",
+      "niantic_racoonfamily_spz",
+      "pdal_autzen_laz",
+      "tum_freiburg1_xyz_groundtruth"
+    ]
+  },
+  "sources": {
+    "niantic_racoonfamily_spz": {
+      "source_id": "niantic_racoonfamily_spz",
+      "path": "build/bench-data/large-io/niantic_racoonfamily_spz/racoonfamily.spz",
+      "size_bytes": 24202962,
+      "sha256": "2e068d893730955c09aee324ff170c559f71c0e8758c1b14c3811a5969333cfe",
+      "url": "https://raw.githubusercontent.com/nianticlabs/spz/5bf2945de1a003cee07133b1e495fe9c6ffdc7e7/samples/racoonfamily.spz",
+      "repository": "https://github.com/nianticlabs/spz",
+      "revision": "5bf2945de1a003cee07133b1e495fe9c6ffdc7e7",
+      "revision_type": "git_commit",
+      "source_path": "samples/racoonfamily.spz",
+      "license": "MIT",
+      "license_url": "https://github.com/nianticlabs/spz/blob/5bf2945de1a003cee07133b1e495fe9c6ffdc7e7/LICENSE",
+      "attribution": "Niantic Labs, nianticlabs/spz",
+      "media_type": "application/octet-stream",
+      "acquisition": "direct_upstream",
+      "derivation": "omit unsupported antialias metadata, rewrite as SPZ v4, and deterministically repeat translated Gaussians to the target logical payload",
+      "sceneio_direct_supported": false,
+      "sceneio_direct_reason": "sceneio.inspect refuses: SPZ legacy: antialiased splats are unsupported"
+    },
+    "pdal_autzen_laz": {
+      "source_id": "pdal_autzen_laz",
+      "path": "build/bench-data/large-io/pdal_autzen_laz/autzen.laz",
+      "size_bytes": 56350988,
+      "sha256": "944b947501156e45df1b3b9d25bc1dc04ff5ef377e7e169576ba59231c2896ba",
+      "url": "https://media.githubusercontent.com/media/PDAL/data/ce0024257c573526389c4db9ab26e82739b8aaa9/autzen/autzen.laz",
+      "repository": "https://github.com/PDAL/data",
+      "revision": "ce0024257c573526389c4db9ab26e82739b8aaa9",
+      "revision_type": "git_commit",
+      "source_path": "autzen/autzen.laz",
+      "license": "CC-BY-4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "attribution": "Aaron Reyna and Watershed Sciences; curated in PDAL/data by PDAL/Hobu",
+      "media_type": "application/octet-stream",
+      "acquisition": "git_lfs_media",
+      "derivation": "decode with laspy/lazrs and canonicalize to a supported LAS/LAZ representation for the derived workload",
+      "sceneio_direct_supported": false,
+      "sceneio_direct_reason": "sceneio refuses: laz: exactly one LASzip VLR is required"
+    },
+    "khronos_box_vertex_colors_glb": {
+      "source_id": "khronos_box_vertex_colors_glb",
+      "path": "build/bench-data/large-io/khronos_box_vertex_colors_glb/BoxVertexColors.glb",
+      "size_bytes": 1924,
+      "sha256": "9c48227f33b0ba2fbcf23b98ebf60d1c8ae0c6e6c5281e0aa3cc58affee10382",
+      "url": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/2bac6f8c57bf471df0d2a1e8a8ec023c7801dddf/Models/BoxVertexColors/glTF-Binary/BoxVertexColors.glb",
+      "repository": "https://github.com/KhronosGroup/glTF-Sample-Assets",
+      "revision": "2bac6f8c57bf471df0d2a1e8a8ec023c7801dddf",
+      "revision_type": "git_commit",
+      "source_path": "Models/BoxVertexColors/glTF-Binary/BoxVertexColors.glb",
+      "license": "CC0-1.0",
+      "license_url": "https://github.com/KhronosGroup/glTF-Sample-Assets/blob/2bac6f8c57bf471df0d2a1e8a8ec023c7801dddf/Models/BoxVertexColors/LICENSE.md",
+      "attribution": "Marco Hutter; KhronosGroup glTF Sample Assets BoxVertexColors",
+      "media_type": "model/gltf-binary",
+      "acquisition": "direct_upstream",
+      "derivation": "convert float COLOR_0 to normalized uint8, flatten geometry, and deterministically repeat it on a translation grid",
+      "sceneio_direct_supported": false,
+      "sceneio_direct_reason": "sceneio refuses: glTF core preserves COLOR_0 only as normalized unsigned bytes"
+    },
+    "tum_freiburg1_xyz_groundtruth": {
+      "source_id": "tum_freiburg1_xyz_groundtruth",
+      "path": "build/bench-data/large-io/tum_freiburg1_xyz_groundtruth/rgbd_dataset_freiburg1_xyz-groundtruth.txt",
+      "size_bytes": 201100,
+      "sha256": "aac0319a6ef4e1cdf61e779d2152b95aa7e9f7b1749d6d18717b43ddabffede2",
+      "url": "https://cvg.cit.tum.de/rgbd/dataset/freiburg1/rgbd_dataset_freiburg1_xyz-groundtruth.txt",
+      "repository": "https://cvg.cit.tum.de/data/datasets/rgbd-dataset",
+      "revision": "content-sha256:aac0319a6ef4e1cdf61e779d2152b95aa7e9f7b1749d6d18717b43ddabffede2",
+      "revision_type": "content_sha256",
+      "source_path": "freiburg1/rgbd_dataset_freiburg1_xyz-groundtruth.txt",
+      "license": "CC-BY-4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "attribution": "TUM Computer Vision Group RGB-D SLAM Dataset and Benchmark",
+      "media_type": "text/plain",
+      "acquisition": "official_download",
+      "derivation": "sample poses as a reconstruction seed, then generate finite points and observations deterministically",
+      "sceneio_direct_supported": true,
+      "sceneio_direct_reason": "sceneio supports the TUM trajectory with explicit format='tum'"
+    }
+  },
+  "tier": "standard",
+  "runs": 3,
+  "worker_timeout_seconds": 300.0,
+  "cache_mode": "warm",
+  "cache_control": {
+    "requested": false,
+    "applied": false,
+    "status": "not_requested",
+    "reason": null
+  },
+  "cache_storage": {
+    "path": "build\\bench-data\\large-io",
+    "volume_total_bytes": 3999826702336,
+    "volume_free_bytes": 228954796032,
+    "required_free_bytes": 2147483648,
+    "required_available_ram_bytes": 8589934592,
+    "fixture_policy": "generated or verified in cache; large inputs are not committed",
+    "output_policy": "provider outputs retained through cross-read, then removed"
+  },
+  "cases": [
+    {
+      "case_id": "npy_depth_stack",
+      "tier": "standard",
+      "path": "build\\bench-data\\large-io\\npy_depth_stack\\standard\\depth_stack.npy",
+      "logical_bytes": 269107200,
+      "encoded_bytes": 269107328,
+      "source_id": null,
+      "acquisition_mode": "synthetic_fallback",
+      "derivation": {
+        "seed": "arange-remainder-v1",
+        "fixture_version": "npy-depth-v2",
+        "geometry": [
+          640,
+          480
+        ],
+        "frames": 219
+      },
+      "fixture": {
+        "shape": [
+          219,
+          480,
+          640
+        ],
+        "dtype": "<f4",
+        "order": "C",
+        "reduction": "sum_float64"
+      }
+    },
+    {
+      "case_id": "laz_autzen",
+      "tier": "standard",
+      "path": "build\\bench-data\\large-io\\laz_autzen\\standard\\canonical.laz",
+      "logical_bytes": 213066720,
+      "encoded_bytes": 54360104,
+      "source_id": "pdal_autzen_laz",
+      "acquisition_mode": "derived_fixture",
+      "derivation": {
+        "source_reason": "canonical SceneIO-compatible LAZ profile",
+        "profile": "las-1.2-pf2",
+        "count": 10653336,
+        "fixture_version": "laz-pf2-origin-v2",
+        "retained_fields": [
+          "x",
+          "y",
+          "z",
+          "intensity",
+          "red",
+          "green",
+          "blue"
+        ],
+        "omitted_source_fields": [
+          "gps_time",
+          "classification",
+          "returns",
+          "scan_angle",
+          "user_data",
+          "point_source_id",
+          "extra_bytes",
+          "waveform",
+          "crs_metadata"
+        ]
+      },
+      "fixture": {
+        "count": 10653336,
+        "fields": [
+          "x",
+          "y",
+          "z",
+          "intensity",
+          "red",
+          "green",
+          "blue"
+        ],
+        "coordinate_frame": "unknown",
+        "coordinate_representation": "relative-f32-plus-origin-f64",
+        "coordinate_unit": "source LAS units; no coordinate conversion",
+        "coordinate_scale": [
+          0.001,
+          0.001,
+          0.001
+        ],
+        "origin": [
+          637177.98,
+          849393.9500000001,
+          411.19
+        ],
+        "retained_fields": [
+          "x",
+          "y",
+          "z",
+          "intensity",
+          "red",
+          "green",
+          "blue"
+        ]
+      }
+    },
+    {
+      "case_id": "spz_racoon_v4",
+      "tier": "standard",
+      "path": "build\\bench-data\\large-io\\spz_racoon_v4\\standard\\fixture.spz",
+      "logical_bytes": 268435604,
+      "encoded_bytes": 27220225,
+      "source_id": "niantic_racoonfamily_spz",
+      "acquisition_mode": "derived_fixture",
+      "derivation": {
+        "kind": "derived_fixture",
+        "seed": "niantic-racoonfamily",
+        "selected_seed_count": 932560,
+        "repeat_count": 2,
+        "translation_step": [
+          0.125,
+          0.0,
+          0.0
+        ],
+        "output_profile": "SPZ v4 flags=0",
+        "unsupported_source_flags_dropped": true
+      },
+      "fixture": {
+        "num_gaussians": 1137439,
+        "sh_degree": 3,
+        "dtype": "float32",
+        "source_decoder": "niantic_spz",
+        "common_writer": "niantic_spz",
+        "source_profile": {
+          "container": "legacy",
+          "flags": 1,
+          "version": 2
+        },
+        "output_profile": {
+          "container": "v4",
+          "flags": 0,
+          "version": 4
+        },
+        "coordinate_profile": "unspecified:spatial/raw-preserved",
+        "coordinate_conversion": "none"
+      }
+    },
+    {
+      "case_id": "glb_box_grid",
+      "tier": "standard",
+      "path": "build\\bench-data\\large-io\\glb_box_grid\\standard\\fixture.glb",
+      "logical_bytes": 268436160,
+      "encoded_bytes": 228171944,
+      "source_id": "khronos_box_vertex_colors_glb",
+      "acquisition_mode": "derived_fixture",
+      "derivation": {
+        "kind": "derived_fixture",
+        "seed": "khronos-box-vertex-colors",
+        "repeat_count": 279621,
+        "grid_order": "x-major then y then z",
+        "color_normalization": "float-or-normalized source values rounded to uint8"
+      },
+      "fixture": {
+        "num_vertices": 6710904,
+        "num_faces": 3355452,
+        "grid_repeats": 279621,
+        "grid_spacing": [
+          4.0,
+          4.0,
+          4.0
+        ],
+        "instance_translation": [
+          0.75,
+          -1.25,
+          2.5
+        ],
+        "color_dtype": "uint8",
+        "common_writer": "trimesh",
+        "color_transform": "BoxVertexColors values canonicalized/quantized to RGBA8",
+        "coordinate_frame": "opengl",
+        "coordinate_handedness": "right",
+        "up_axis": "y",
+        "scale_to_meters": 1.0,
+        "coordinate_conversion": "none after deterministic translations"
+      }
+    }
+  ],
+  "preparations": [
+    {
+      "case_id": "npy_depth_stack",
+      "seconds": 1.2211005000863224,
+      "status": "pass"
+    },
+    {
+      "case_id": "laz_autzen",
+      "seconds": 2.200678300112486,
+      "status": "pass"
+    },
+    {
+      "case_id": "spz_racoon_v4",
+      "seconds": 5.069060100009665,
+      "status": "pass"
+    },
+    {
+      "case_id": "glb_box_grid",
+      "seconds": 5.956189600052312,
+      "status": "pass"
+    },
+    {
+      "case_id": "colmap_tum_tracks",
+      "seconds": 300.0111644999124,
+      "status": "fail",
+      "error": "RuntimeError: worker exceeded 300 seconds"
+    }
+  ],
+  "operations": [
+    {
+      "case_id": "npy_depth_stack",
+      "provider": "sceneio",
+      "operation": "map_open",
+      "status": "ok",
+      "measurement": {
+        "raw_seconds": [
+          0.0001146998256444931,
+          5.2999937906861305e-05,
+          4.0499959141016006e-05
+        ],
+        "median_seconds": 5.2999937906861305e-05,
+        "traced_peak_bytes": 4389904,
+        "rss_delta_bytes": 12873728,
+        "cache_mode": "warm"
+      },
+      "logical_bytes": 269107200,
+      "encoded_bytes": 269107328,
+      "logical_mib_s": null,
+      "encoded_mib_s": null,
+      "diagnostic": {
+        "memory_metrics": {
+          "traced_peak_bytes": {
+            "status": "available",
+            "reason": null
+          },
+          "rss_delta_bytes": {
+            "status": "available",
+            "reason": null
+          }
+        }
+      },
+      "output_paths": [],
+      "error": null
+    },
+    {
+      "case_id": "npy_depth_stack",
+      "provider": "numpy",
+      "operation": "map_open",
+      "status": "ok",
+      "measurement": {
+        "raw_seconds": [
+          0.00033119996078312397,
+          0.00023290002718567848,
+          0.0002118998672813177
+        ],
+        "median_seconds": 0.00023290002718567848,
+        "traced_peak_bytes": 49842,
+        "rss_delta_bytes": 249856,
+        "cache_mode": "warm"
+      },
+      "logical_bytes": 269107200,
+      "encoded_bytes": 269107328,
+      "logical_mib_s": null,
+      "encoded_mib_s": null,
+      "diagnostic": {
+        "memory_metrics": {
+          "traced_peak_bytes": {
+            "status": "available",
+            "reason": null
+          },
+          "rss_delta_bytes": {
+            "status": "available",
+            "reason": null
+          }
+        }
+      },
+      "output_paths": [],
+      "error": null
+    },
+    {
+      "case_id": "npy_depth_stack",
+      "provider": "sceneio",
+      "operation": "full_scan",
+      "status": "ok",
+      "measurement": {
+        "raw_seconds": [
+          0.11549060000106692,
+          0.11209759977646172,
+          0.11209619999863207
+        ],
+        "median_seconds": 0.11209759977646172,
+        "traced_peak_bytes": 4426266,
+        "rss_delta_bytes": 257703936,
+        "cache_mode": "warm"
+      },
+      "logical_bytes": 269107200,
+      "encoded_bytes": 269107328,
+      "logical_mib_s": 2289.4390737337576,
+      "encoded_mib_s": 2289.4401626983095,
+      "diagnostic": {
+        "reduction": 137778400.14444733,
+        "memory_metrics": {
+          "traced_peak_bytes": {
+            "status": "available",
+            "reason": null
+          },
+          "rss_delta_bytes": {
+            "status": "available",
+            "reason": null
+          }
+        }
+      },
+      "output_paths": [],
+      "error": null
+    },
+    {
+      "case_id": "npy_depth_stack",
+      "provider": "numpy",
+      "operation": "full_scan",
+      "status": "ok",
+      "measurement": {
+        "raw_seconds": [
+          0.11459420016035438,
+          0.11500119999982417,
+          0.1138486999552697
+        ],
+        "median_seconds": 0.11459420016035438,
+        "traced_peak_bytes": 82587,
+        "rss_delta_bytes": 240119808,
+        "cache_mode": "warm"
+      },
+      "logical_bytes": 269107200,
+      "encoded_bytes": 269107328,
+      "logical_mib_s": 2239.560332380493,
+      "encoded_mib_s": 2239.561397620377,
+      "diagnostic": {
+        "reduction": 137778400.14444733,
+        "memory_metrics": {
+          "traced_peak_bytes": {
+            "status": "available",
+            "reason": null
+          },
+          "rss_delta_bytes": {
+            "status": "available",
+            "reason": null
+          }
+        }
+      },
+      "output_paths": [],
+      "error": null
+    },
+    {
+      "case_id": "npy_depth_stack",
+      "provider": "sceneio",
+      "operation": "write",
+      "status": "ok",
+      "measurement": {
+        "raw_seconds": [
+          0.17802829993888736,
+          0.17177410004660487,
+          0.1686738000717014
+        ],
+        "median_seconds": 0.17177410004660487,
+        "traced_peak_bytes": 4391918,
+        "rss_delta_bytes": 282161152,
+        "cache_mode": "warm"
+      },
+      "logical_bytes": 269107200,
+      "encoded_bytes": 269107328,
+      "logical_mib_s": 1494.0589118520754,
+      "encoded_mib_s": 1494.059622496535,
+      "diagnostic": {
+        "memory_metrics": {
+          "traced_peak_bytes": {
+            "status": "available",
+            "reason": null
+          },
+          "rss_delta_bytes": {
+            "status": "available",
+            "reason": null
+          }
+        },
+        "representative_encoded_bytes": 269107328
+      },
+      "output_paths": [
+        "build/bench-data/large-io/outputs/npy_depth_stack/standard/timing/sceneio-write-4.npy"
+      ],
+      "error": null
+    },
+    {
+      "case_id": "npy_depth_stack",
+      "provider": "numpy",
+      "operation": "write",
+      "status": "ok",
+      "measurement": {
+        "raw_seconds": [
+          0.12795759993605316,
+          0.12925340002402663,
+          0.13062920002266765
+        ],
+        "median_seconds": 0.12925340002402663,
+        "traced_peak_bytes": 14440,
+        "rss_delta_bytes": 196608,
+        "cache_mode": "warm"
+      },
+      "logical_bytes": 269107200,
+      "encoded_bytes": 269107328,
+      "logical_mib_s": 1985.5618881382898,
+      "encoded_mib_s": 1985.5628325646064,
+      "diagnostic": {
+        "memory_metrics": {
+          "traced_peak_bytes": {
+            "status": "available",
+            "reason": null
+          },
+          "rss_delta_bytes": {
+            "status": "available",
+            "reason": null
+          }
+        },
+        "representative_encoded_bytes": 269107328
+      },
+      "output_paths": [
+        "build/bench-data/large-io/outputs/npy_depth_stack/standard/timing/numpy-write-4.npy"
+      ],
+      "error": null
+    },
+    {
+      "case_id": "npy_depth_stack",
+      "provider": "sceneio",
+      "operation": "inspect",
+      "status": "ok",
+      "measurement": {
+        "raw_seconds": [
+          0.00020579993724822998,
+          8.09000339359045e-05,
+          5.910010077059269e-05
+        ],
+        "median_seconds": 8.09000339359045e-05,
+        "traced_peak_bytes": 4390406,
+        "rss_delta_bytes": 13004800,
+        "cache_mode": "warm"
+      },
+      "logical_bytes": 269107200,
+      "encoded_bytes": 269107328,
+      "logical_mib_s": null,
+      "encoded_mib_s": null,
+      "diagnostic": {
+        "shape": [
+          219,
+          480,
+          640
+        ],
+        "dtype": "float32",
+        "order": "C",
+        "memory_metrics": {
+          "traced_peak_bytes": {
+            "status": "available",
+            "reason": null
+          },
+          "rss_delta_bytes": {
+            "status": "available",
+            "reason": null
+          }
+        }
+      },
+      "output_paths": [],
+      "error": null
+    },
+    {
+      "case_id": "npy_depth_stack",
+      "provider": "numpy",
+      "operation": "inspect",
+      "status": "ok",
+      "measurement": {
+        "raw_seconds": [
+          0.0003790000919252634,
+          0.0003016998525708914,
+          0.00025649997405707836
+        ],
+        "median_seconds": 0.0003016998525708914,
+        "traced_peak_bytes": 49842,
+        "rss_delta_bytes": 253952,
+        "cache_mode": "warm"
+      },
+      "logical_bytes": 269107200,
+      "encoded_bytes": 269107328,
+      "logical_mib_s": null,
+      "encoded_mib_s": null,
+      "diagnostic": {
+        "shape": [
+          219,
+          480,
+          640
+        ],
+        "dtype": "float32",
+        "order": "C",
+        "memory_metrics": {
+          "traced_peak_bytes": {
+            "status": "available",
+            "reason": null
+          },
+          "rss_delta_bytes": {
+            "status": "available",
+            "reason": null
+          }
+        }
+      },
+      "output_paths": [],
+      "error": null
+    },
+    {
+      "case_id": "laz_autzen",
+      "provider": "sceneio",
+      "operation": "read",
+      "status": "ok",
+      "measurement": {
+        "raw_seconds": [
+          0.338556099915877,
+          0.33651369996368885,
+          0.3325220998376608
+        ],
+        "median_seconds": 0.33651369996368885,
+        "traced_peak_bytes": 4392381,
+        "rss_delta_bytes": 321236992,
+        "cache_mode": "warm"
+      },
+      "logical_bytes": 213066720,
+      "encoded_bytes": 54360104,
+      "logical_mib_s": 603.8275962222268,
+      "encoded_mib_s": 154.0556447703811,
+      "diagnostic": {
+        "memory_metrics": {
+          "traced_peak_bytes": {
+            "status": "available",
+            "reason": null
+          },
+          "rss_delta_bytes": {
+            "status": "available",
+            "reason": null
+          }
+        }
+      },
+      "output_paths": [],
+      "error": null
+    },
+    {
+      "case_id": "laz_autzen",
+      "provider": "laspy",
+      "operation": "read",
+      "status": "ok",
+      "measurement": {
+        "raw_seconds": [
+          0.16378599987365305,
+          0.1829488999210298,
+          0.16527409991249442
+        ],
+        "median_seconds": 0.16527409991249442,
+        "traced_peak_bytes": 277011421,
+        "rss_delta_bytes": 348258304,
+        "cache_mode": "warm"
+      },
+      "logical_bytes": 213066720,
+      "encoded_bytes": 54360104,
+      "logical_mib_s": 1229.450099274512,
+      "encoded_mib_s": 313.67186419058214,
+      "diagnostic": {
+        "memory_metrics": {
+          "traced_peak_bytes": {
+            "status": "available",
+            "reason": null
+          },
+          "rss_delta_bytes": {
+            "status": "available",
+            "reason": null
+          }
+        }
+      },
+      "output_paths": [],
+      "error": null
+    },
+    {
+      "case_id": "laz_autzen",
+      "provider": "sceneio",
+      "operation": "write",
+      "status": "ok",
+      "measurement": {
+        "raw_seconds": [
+          1.623125199927017,
+          1.682469299994409,
+          1.6616320998873562
+        ],
+        "median_seconds": 1.6616320998873562,
+        "traced_peak_bytes": 13162,
+        "rss_delta_bytes": 4489216,
+        "cache_mode": "warm"
+      },
+      "logical_bytes": 213066720,
+      "encoded_bytes": 54360104,
+      "logical_mib_s": 122.2871528292555,
+      "encoded_mib_s": 31.199346128115284,
+      "diagnostic": {
+        "memory_metrics": {
+          "traced_peak_bytes": {
+            "status": "available",
+            "reason": null
+          },
+          "rss_delta_bytes": {
+            "status": "available",
+            "reason": null
+          }
+        },
+        "representative_encoded_bytes": 54360104
+      },
+      "output_paths": [
+        "build/bench-data/large-io/outputs/laz_autzen/standard/timing/sceneio-write-4.laz"
+      ],
+      "error": null
+    },
+    {
+      "case_id": "laz_autzen",
+      "provider": "laspy",
+      "operation": "write",
+      "status": "ok",
+      "measurement": {
+        "raw_seconds": [
+          0.21354479994624853,
+          0.2143122002016753,
+          0.2302470998838544
+        ],
+        "median_seconds": 0.2143122002016753,
+        "traced_peak_bytes": 42637137,
+        "rss_delta_bytes": 68419584,
+        "cache_mode": "warm"
+      },
+      "logical_bytes": 213066720,
+      "encoded_bytes": 54360104,
+      "logical_mib_s": 948.1320165333894,
+      "encoded_mib_s": 241.8986645332728,
+      "diagnostic": {
+        "memory_metrics": {
+          "traced_peak_bytes": {
+            "status": "available",
+            "reason": null
+          },
+          "rss_delta_bytes": {
+            "status": "available",
+            "reason": null
+          }
+        },
+        "representative_encoded_bytes": 54360104
+      },
+      "output_paths": [
+        "build/bench-data/large-io/outputs/laz_autzen/standard/timing/laspy-write-4.laz"
+      ],
+      "error": null
+    },
+    {
+      "case_id": "laz_autzen",
+      "provider": "sceneio",
+      "operation": "point_select",
+      "status": "ok",
+      "measurement": {
+        "raw_seconds": [
+          0.012454100186005235,
+          0.013509399956092238,
+          0.012261900119483471
+        ],
+        "median_seconds": 0.012454100186005235,
+        "traced_peak_bytes": 4392252,
+        "rss_delta_bytes": 15499264,
+        "cache_mode": "warm"
+      },
+      "logical_bytes": 213066720,
+      "encoded_bytes": 54360104,
+      "logical_mib_s": null,
+      "encoded_mib_s": null,
+      "diagnostic": {
+        "count": 256,
+        "memory_metrics": {
+          "traced_peak_bytes": {
+            "status": "available",
+            "reason": null
+          },
+          "rss_delta_bytes": {
+            "status": "available",
+            "reason": null
+          }
+        }
+      },
+      "output_paths": [],
+      "error": null
+    },
+    {
+      "case_id": "laz_autzen",
+      "provider": "laspy",
+      "operation": "point_select",
+      "status": "ok",
+      "measurement": {
+        "raw_seconds": [
+          0.18605889985337853,
+          0.15939759998582304,
+          0.16045470000244677
+        ],
+        "median_seconds": 0.16045470000244677,
+        "traced_peak_bytes": 277011774,
+        "rss_delta_bytes": 347152384,
+        "cache_mode": "warm"
+      },
+      "logical_bytes": 213066720,
+      "encoded_bytes": 54360104,
+      "logical_mib_s": null,
+      "encoded_mib_s": null,
+      "diagnostic": {
+        "count": 256,
+        "memory_metrics": {
+          "traced_peak_bytes": {
+            "status": "available",
+            "reason": null
+          },
+          "rss_delta_bytes": {
+            "status": "available",
+            "reason": null
+          }
+        }
+      },
+      "output_paths": [],
+      "error": null
+    },
+    {
+      "case_id": "laz_autzen",
+      "provider": "sceneio",
+      "operation": "inspect",
+      "status": "ok",
+      "measurement": {
+        "raw_seconds": [
+          0.00015279999934136868,
+          6.889994256198406e-05,
+          5.060015246272087e-05
+        ],
+        "median_seconds": 6.889994256198406e-05,
+        "traced_peak_bytes": 4392550,
+        "rss_delta_bytes": 12857344,
+        "cache_mode": "warm"
+      },
+      "logical_bytes": 213066720,
+      "encoded_bytes": 54360104,
+      "logical_mib_s": null,
+      "encoded_mib_s": null,
+      "diagnostic": {
+        "count": 10653336,
+        "shape": [
+          10653336,
+          3
+        ],
+        "dtype": "float32",
+        "point_format": 2,
+        "has_color": true,
+        "has_intensity": true,
+        "memory_metrics": {
+          "traced_peak_bytes": {
+            "status": "available",
+            "reason": null
+          },
+          "rss_delta_bytes": {
+            "status": "available",
+            "reason": null
+          }
+        }
+      },
+      "output_paths": [],
+      "error": null
+    },
+    {
+      "case_id": "laz_autzen",
+      "provider": "laspy",
+      "operation": "inspect",
+      "status": "ok",
+      "measurement": {
+        "raw_seconds": [
+          0.00023719994351267815,
+          0.00015469989739358425,
+          0.0001395998988300562
+        ],
+        "median_seconds": 0.00015469989739358425,
+        "traced_peak_bytes": 21251,
+        "rss_delta_bytes": 253952,
+        "cache_mode": "warm"
+      },
+      "logical_bytes": 213066720,
+      "encoded_bytes": 54360104,
+      "logical_mib_s": null,
+      "encoded_mib_s": null,
+      "diagnostic": {
+        "count": 10653336,
+        "shape": [
+          10653336,
+          3
+        ],
+        "dtype": "float32",
+        "point_format": 2,
+        "has_color": true,
+        "has_intensity": true,
+        "memory_metrics": {
+          "traced_peak_bytes": {
+            "status": "available",
+            "reason": null
+          },
+          "rss_delta_bytes": {
+            "status": "available",
+            "reason": null
+          }
+        }
+      },
+      "output_paths": [],
+      "error": null
+    },
+    {
+      "case_id": "spz_racoon_v4",
+      "provider": "sceneio",
+      "operation": "read",
+      "status": "ok",
+      "measurement": {
+        "raw_seconds": [
+          0.13739270018413663,
+          0.15070009999908507,
+          0.1393376998603344
+        ],
+        "median_seconds": 0.1393376998603344,
+        "traced_peak_bytes": 4389661,
+        "rss_delta_bytes": 308723712,
+        "cache_mode": "warm"
+      },
+      "logical_bytes": 268435604,
+      "encoded_bytes": 27220225,
+      "logical_mib_s": 1837.2640096714774,
+      "encoded_mib_s": 186.30442080872325,
+      "diagnostic": {
+        "memory_metrics": {
+          "traced_peak_bytes": {
+            "status": "available",
+            "reason": null
+          },
+          "rss_delta_bytes": {
+            "status": "available",
+            "reason": null
+          }
+        }
+      },
+      "output_paths": [],
+      "error": null
+    },
+    {
+      "case_id": "spz_racoon_v4",
+      "provider": "niantic_spz",
+      "operation": "read",
+      "status": "ok",
+      "measurement": {
+        "raw_seconds": [
+          0.13127140002325177,
+          0.14045169996097684,
+          0.13007199997082353
+        ],
+        "median_seconds": 0.13127140002325177,
+        "traced_peak_bytes": 3440,
+        "rss_delta_bytes": 269615104,
+        "cache_mode": "warm"
+      },
+      "logical_bytes": 268435604,
+      "encoded_bytes": 27220225,
+      "logical_mib_s": 1950.1592966819442,
+      "encoded_mib_s": 197.75236239349334,
+      "diagnostic": {
+        "memory_metrics": {
+          "traced_peak_bytes": {
+            "status": "available",
+            "reason": null
+          },
+          "rss_delta_bytes": {
+            "status": "available",
+            "reason": null
+          }
+        }
+      },
+      "output_paths": [],
+      "error": null
+    },
+    {
+      "case_id": "spz_racoon_v4",
+      "provider": "gsply",
+      "operation": "read",
+      "status": "ok",
+      "measurement": {
+        "raw_seconds": [
+          0.08593519986607134,
+          0.08548460016027093,
+          0.08759470004588366
+        ],
+        "median_seconds": 0.08593519986607134,
+        "traced_peak_bytes": 23028,
+        "rss_delta_bytes": 271802368,
+        "cache_mode": "warm"
+      },
+      "logical_bytes": 268435604,
+      "encoded_bytes": 27220225,
+      "logical_mib_s": 2978.9904665698227,
+      "encoded_mib_s": 302.0791190310416,
+      "diagnostic": {
+        "memory_metrics": {
+          "traced_peak_bytes": {
+            "status": "available",
+            "reason": null
+          },
+          "rss_delta_bytes": {
+            "status": "available",
+            "reason": null
+          }
+        }
+      },
+      "output_paths": [],
+      "error": null
+    },
+    {
+      "case_id": "spz_racoon_v4",
+      "provider": "sceneio",
+      "operation": "write",
+      "status": "ok",
+      "measurement": {
+        "raw_seconds": [
+          5.498000600142404,
+          5.546781899873167,
+          5.475889699999243
+        ],
+        "median_seconds": 5.498000600142404,
+        "traced_peak_bytes": 4210,
+        "rss_delta_bytes": 178589696,
+        "cache_mode": "warm"
+      },
+      "logical_bytes": 268435604,
+      "encoded_bytes": 30322515,
+      "logical_mib_s": 46.56240691155402,
+      "encoded_mib_s": 5.2596945448849635,
+      "diagnostic": {
+        "memory_metrics": {
+          "traced_peak_bytes": {
+            "status": "available",
+            "reason": null
+          },
+          "rss_delta_bytes": {
+            "status": "available",
+            "reason": null
+          }
+        },
+        "representative_encoded_bytes": 30322515
+      },
+      "output_paths": [
+        "build/bench-data/large-io/outputs/spz_racoon_v4/standard/timing/sceneio-write-4.spz"
+      ],
+      "error": null
+    },
+    {
+      "case_id": "spz_racoon_v4",
+      "provider": "niantic_spz",
+      "operation": "write",
+      "status": "ok",
+      "measurement": {
+        "raw_seconds": [
+          2.475808900082484,
+          2.5043522000778466,
+          2.4744303999468684
+        ],
+        "median_seconds": 2.475808900082484,
+        "traced_peak_bytes": 4095,
+        "rss_delta_bytes": 319488,
+        "cache_mode": "warm"
+      },
+      "logical_bytes": 268435604,
+      "encoded_bytes": 27220225,
+      "logical_mib_s": 103.40060621612191,
+      "encoded_mib_s": 10.485150719199071,
+      "diagnostic": {
+        "memory_metrics": {
+          "traced_peak_bytes": {
+            "status": "available",
+            "reason": null
+          },
+          "rss_delta_bytes": {
+            "status": "available",
+            "reason": null
+          }
+        },
+        "representative_encoded_bytes": 27220225
+      },
+      "output_paths": [
+        "build/bench-data/large-io/outputs/spz_racoon_v4/standard/timing/niantic_spz-write-4.spz"
+      ],
+      "error": null
+    },
+    {
+      "case_id": "spz_racoon_v4",
+      "provider": "gsply",
+      "operation": "write",
+      "status": "ok",
+      "measurement": {
+        "raw_seconds": [
+          0.894128399901092,
+          0.913959400029853,
+          1.0149719000328332
+        ],
+        "median_seconds": 0.913959400029853,
+        "traced_peak_bytes": 4845,
+        "rss_delta_bytes": 794624,
+        "cache_mode": "warm"
+      },
+      "logical_bytes": 268435604,
+      "encoded_bytes": 27221934,
+      "logical_mib_s": 280.1001238517127,
+      "encoded_mib_s": 28.404827717574857,
+      "diagnostic": {
+        "memory_metrics": {
+          "traced_peak_bytes": {
+            "status": "available",
+            "reason": null
+          },
+          "rss_delta_bytes": {
+            "status": "available",
+            "reason": null
+          }
+        },
+        "representative_encoded_bytes": 27221934
+      },
+      "output_paths": [
+        "build/bench-data/large-io/outputs/spz_racoon_v4/standard/timing/gsply-write-4.spz"
+      ],
+      "error": null
+    },
+    {
+      "case_id": "spz_racoon_v4",
+      "provider": "sceneio",
+      "operation": "inspect",
+      "status": "ok",
+      "measurement": {
+        "raw_seconds": [
+          0.00013950001448392868,
+          6.0900114476680756e-05,
+          4.309997893869877e-05
+        ],
+        "median_seconds": 6.0900114476680756e-05,
+        "traced_peak_bytes": 4390113,
+        "rss_delta_bytes": 12992512,
+        "cache_mode": "warm"
+      },
+      "logical_bytes": 268435604,
+      "encoded_bytes": 27220225,
+      "logical_mib_s": null,
+      "encoded_mib_s": null,
+      "diagnostic": {
+        "count": 1137439,
+        "sh_degree": 3,
+        "version": 4,
+        "memory_metrics": {
+          "traced_peak_bytes": {
+            "status": "available",
+            "reason": null
+          },
+          "rss_delta_bytes": {
+            "status": "available",
+            "reason": null
+          }
+        }
+      },
+      "output_paths": [],
+      "error": null
+    },
+    {
+      "case_id": "glb_box_grid",
+      "provider": "sceneio",
+      "operation": "read",
+      "status": "ok",
+      "measurement": {
+        "raw_seconds": [
+          0.3782894001342356,
+          0.3622035998851061,
+          0.36833990016020834
+        ],
+        "median_seconds": 0.36833990016020834,
+        "traced_peak_bytes": 4391735,
+        "rss_delta_bytes": 536469504,
+        "cache_mode": "warm"
+      },
+      "logical_bytes": 268436160,
+      "encoded_bytes": 228171944,
+      "logical_mib_s": 695.0120561887866,
+      "encoded_mib_s": 590.7633754112436,
+      "diagnostic": {
+        "memory_metrics": {
+          "traced_peak_bytes": {
+            "status": "available",
+            "reason": null
+          },
+          "rss_delta_bytes": {
+            "status": "available",
+            "reason": null
+          }
+        }
+      },
+      "output_paths": [],
+      "error": null
+    },
+    {
+      "case_id": "glb_box_grid",
+      "provider": "trimesh",
+      "operation": "read",
+      "status": "ok",
+      "measurement": {
+        "raw_seconds": [
+          0.3972676999401301,
+          0.3923820999916643,
+          0.3875890001654625
+        ],
+        "median_seconds": 0.3923820999916643,
+        "traced_peak_bytes": 818763902,
+        "rss_delta_bytes": 819109888,
+        "cache_mode": "warm"
+      },
+      "logical_bytes": 268436160,
+      "encoded_bytes": 228171944,
+      "logical_mib_s": 652.4269873476827,
+      "encoded_mib_s": 554.5658752575814,
+      "diagnostic": {
+        "memory_metrics": {
+          "traced_peak_bytes": {
+            "status": "available",
+            "reason": null
+          },
+          "rss_delta_bytes": {
+            "status": "available",
+            "reason": null
+          }
+        }
+      },
+      "output_paths": [],
+      "error": null
+    },
+    {
+      "case_id": "glb_box_grid",
+      "provider": "sceneio",
+      "operation": "write",
+      "status": "ok",
+      "measurement": {
+        "raw_seconds": [
+          0.5804058997891843,
+          0.5824128999374807,
+          0.5797853001859039
+        ],
+        "median_seconds": 0.5804058997891843,
+        "traced_peak_bytes": 8376,
+        "rss_delta_bytes": 633905152,
+        "cache_mode": "warm"
+      },
+      "logical_bytes": 268436160,
+      "encoded_bytes": 228172388,
+      "logical_mib_s": 441.07179385961376,
+      "encoded_mib_s": 374.9137392085768,
+      "diagnostic": {
+        "memory_metrics": {
+          "traced_peak_bytes": {
+            "status": "available",
+            "reason": null
+          },
+          "rss_delta_bytes": {
+            "status": "available",
+            "reason": null
+          }
+        },
+        "representative_encoded_bytes": 228172388
+      },
+      "output_paths": [
+        "build/bench-data/large-io/outputs/glb_box_grid/standard/timing/sceneio-write-4.glb"
+      ],
+      "error": null
+    },
+    {
+      "case_id": "glb_box_grid",
+      "provider": "trimesh",
+      "operation": "write",
+      "status": "ok",
+      "measurement": {
+        "raw_seconds": [
+          1.2686866000294685,
+          1.2860234000254422,
+          1.286056999815628
+        ],
+        "median_seconds": 1.2860234000254422,
+        "traced_peak_bytes": 684539912,
+        "rss_delta_bytes": 598036480,
+        "cache_mode": "warm"
+      },
+      "logical_bytes": 268436160,
+      "encoded_bytes": 228171988,
+      "logical_mib_s": 199.06377394194703,
+      "encoded_mib_s": 169.20513629429303,
+      "diagnostic": {
+        "memory_metrics": {
+          "traced_peak_bytes": {
+            "status": "available",
+            "reason": null
+          },
+          "rss_delta_bytes": {
+            "status": "available",
+            "reason": null
+          }
+        },
+        "representative_encoded_bytes": 228171988
+      },
+      "output_paths": [
+        "build/bench-data/large-io/outputs/glb_box_grid/standard/timing/trimesh-write-4.glb"
+      ],
+      "error": null
+    },
+    {
+      "case_id": "glb_box_grid",
+      "provider": "sceneio",
+      "operation": "inspect",
+      "status": "ok",
+      "measurement": {
+        "raw_seconds": [
+          0.00016520009376108646,
+          8.999998681247234e-05,
+          7.519987411797047e-05
+        ],
+        "median_seconds": 8.999998681247234e-05,
+        "traced_peak_bytes": 4391953,
+        "rss_delta_bytes": 13201408,
+        "cache_mode": "warm"
+      },
+      "logical_bytes": 268436160,
+      "encoded_bytes": 228171944,
+      "logical_mib_s": null,
+      "encoded_mib_s": null,
+      "diagnostic": {
+        "num_meshes": 1,
+        "num_vertices": 6710904,
+        "num_faces": 3355452,
+        "memory_metrics": {
+          "traced_peak_bytes": {
+            "status": "available",
+            "reason": null
+          },
+          "rss_delta_bytes": {
+            "status": "available",
+            "reason": null
+          }
+        }
+      },
+      "output_paths": [],
+      "error": null
+    },
+    {
+      "case_id": "glb_box_grid",
+      "provider": "trimesh",
+      "operation": "inspect",
+      "status": "ok",
+      "measurement": {
+        "raw_seconds": [
+          0.4393448999617249,
+          0.440510299988091,
+          0.43572710012085736
+        ],
+        "median_seconds": 0.4393448999617249,
+        "traced_peak_bytes": 818764022,
+        "rss_delta_bytes": 819011584,
+        "cache_mode": "warm"
+      },
+      "logical_bytes": 268436160,
+      "encoded_bytes": 228171944,
+      "logical_mib_s": null,
+      "encoded_mib_s": null,
+      "diagnostic": {
+        "num_meshes": 1,
+        "num_vertices": 6710904,
+        "num_faces": 3355452,
+        "memory_metrics": {
+          "traced_peak_bytes": {
+            "status": "available",
+            "reason": null
+          },
+          "rss_delta_bytes": {
+            "status": "available",
+            "reason": null
+          }
+        }
+      },
+      "output_paths": [],
+      "error": null
+    }
+  ],
+  "cross_reads": [
+    {
+      "case_id": "npy_depth_stack",
+      "kind": "provider_output_cross_read",
+      "writer_provider": "sceneio",
+      "reader_provider": "sceneio",
+      "profile": "shape_dtype_order_exact",
+      "status": "pass"
+    },
+    {
+      "case_id": "npy_depth_stack",
+      "kind": "provider_output_cross_read",
+      "writer_provider": "sceneio",
+      "reader_provider": "numpy",
+      "profile": "shape_dtype_order_exact",
+      "status": "pass"
+    },
+    {
+      "case_id": "npy_depth_stack",
+      "kind": "provider_output_cross_read",
+      "writer_provider": "numpy",
+      "reader_provider": "sceneio",
+      "profile": "shape_dtype_order_exact",
+      "status": "pass"
+    },
+    {
+      "case_id": "npy_depth_stack",
+      "kind": "provider_output_cross_read",
+      "writer_provider": "numpy",
+      "reader_provider": "numpy",
+      "profile": "shape_dtype_order_exact",
+      "status": "pass"
+    },
+    {
+      "case_id": "npy_depth_stack",
+      "kind": "common_file_cross_read",
+      "status": "pass",
+      "profile": "shape_dtype_fixed_float64_reduction",
+      "shape": [
+        219,
+        480,
+        640
+      ],
+      "dtype": "float32",
+      "reduction": [
+        137778400.14444733,
+        137778400.14444733
+      ]
+    },
+    {
+      "case_id": "npy_depth_stack",
+      "kind": "common_file_read",
+      "operation": "full_scan",
+      "status": "pass",
+      "profile": "fixed_float64_reduction",
+      "values": [
+        137778400.14444733,
+        137778400.14444733
+      ]
+    },
+    {
+      "case_id": "npy_depth_stack",
+      "kind": "common_file_read",
+      "operation": "inspect",
+      "status": "pass",
+      "profile": "normalized_provider_metadata",
+      "providers": [
+        "sceneio",
+        "numpy"
+      ],
+      "values": [
+        {
+          "shape": [
+            219,
+            480,
+            640
+          ],
+          "dtype": "float32",
+          "order": "C",
+          "memory_metrics": {
+            "traced_peak_bytes": {
+              "status": "available",
+              "reason": null
+            },
+            "rss_delta_bytes": {
+              "status": "available",
+              "reason": null
+            }
+          }
+        },
+        {
+          "shape": [
+            219,
+            480,
+            640
+          ],
+          "dtype": "float32",
+          "order": "C",
+          "memory_metrics": {
+            "traced_peak_bytes": {
+              "status": "available",
+              "reason": null
+            },
+            "rss_delta_bytes": {
+              "status": "available",
+              "reason": null
+            }
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "npy_depth_stack",
+      "kind": "common_file_read",
+      "operation": "map_open",
+      "status": "pass",
+      "profile": "provider_operations_completed",
+      "providers": [
+        "sceneio",
+        "numpy"
+      ]
+    },
+    {
+      "case_id": "laz_autzen",
+      "kind": "provider_output_cross_read",
+      "writer_provider": "sceneio",
+      "reader_provider": "sceneio",
+      "profile": "absolute_xyz_half_scale_plus_f32_ulp_and_integer_attributes",
+      "status": "pass"
+    },
+    {
+      "case_id": "laz_autzen",
+      "kind": "provider_output_cross_read",
+      "writer_provider": "sceneio",
+      "reader_provider": "laspy",
+      "profile": "absolute_xyz_half_scale_plus_f32_ulp_and_integer_attributes",
+      "status": "pass"
+    },
+    {
+      "case_id": "laz_autzen",
+      "kind": "provider_output_cross_read",
+      "writer_provider": "laspy",
+      "reader_provider": "sceneio",
+      "profile": "absolute_xyz_half_scale_plus_f32_ulp_and_integer_attributes",
+      "status": "pass"
+    },
+    {
+      "case_id": "laz_autzen",
+      "kind": "provider_output_cross_read",
+      "writer_provider": "laspy",
+      "reader_provider": "laspy",
+      "profile": "absolute_xyz_half_scale_plus_f32_ulp_and_integer_attributes",
+      "status": "pass"
+    },
+    {
+      "case_id": "laz_autzen",
+      "kind": "common_file_cross_read",
+      "status": "pass",
+      "profile": "laspy_sceneio_scale_and_integer_attributes",
+      "count": 10653336
+    },
+    {
+      "case_id": "laz_autzen",
+      "kind": "partial_read",
+      "status": "pass",
+      "profile": "sceneio_point_window_equals_laspy_full_slice",
+      "count": 256
+    },
+    {
+      "case_id": "laz_autzen",
+      "kind": "common_file_read",
+      "operation": "inspect",
+      "status": "pass",
+      "profile": "normalized_provider_metadata",
+      "providers": [
+        "sceneio",
+        "laspy"
+      ],
+      "values": [
+        {
+          "count": 10653336,
+          "shape": [
+            10653336,
+            3
+          ],
+          "dtype": "float32",
+          "point_format": 2,
+          "has_color": true,
+          "has_intensity": true,
+          "memory_metrics": {
+            "traced_peak_bytes": {
+              "status": "available",
+              "reason": null
+            },
+            "rss_delta_bytes": {
+              "status": "available",
+              "reason": null
+            }
+          }
+        },
+        {
+          "count": 10653336,
+          "shape": [
+            10653336,
+            3
+          ],
+          "dtype": "float32",
+          "point_format": 2,
+          "has_color": true,
+          "has_intensity": true,
+          "memory_metrics": {
+            "traced_peak_bytes": {
+              "status": "available",
+              "reason": null
+            },
+            "rss_delta_bytes": {
+              "status": "available",
+              "reason": null
+            }
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "laz_autzen",
+      "kind": "common_file_read",
+      "operation": "point_select",
+      "status": "pass",
+      "profile": "provider_operations_completed",
+      "providers": [
+        "sceneio",
+        "laspy"
+      ]
+    },
+    {
+      "case_id": "laz_autzen",
+      "kind": "common_file_read",
+      "operation": "read",
+      "status": "pass",
+      "profile": "provider_operations_completed",
+      "providers": [
+        "sceneio",
+        "laspy"
+      ]
+    },
+    {
+      "case_id": "spz_racoon_v4",
+      "kind": "provider_output_cross_read",
+      "writer_provider": "sceneio",
+      "reader_provider": "sceneio",
+      "profile": "spz_racoon_v4:semantic-v1",
+      "status": "pass"
+    },
+    {
+      "case_id": "spz_racoon_v4",
+      "kind": "provider_output_cross_read",
+      "writer_provider": "niantic_spz",
+      "reader_provider": "sceneio",
+      "profile": "spz_racoon_v4:semantic-v1",
+      "status": "pass"
+    },
+    {
+      "case_id": "spz_racoon_v4",
+      "kind": "provider_output_cross_read",
+      "writer_provider": "gsply",
+      "reader_provider": "sceneio",
+      "profile": "spz_racoon_v4:semantic-v1",
+      "status": "pass"
+    },
+    {
+      "case_id": "spz_racoon_v4",
+      "kind": "provider_output_cross_read",
+      "writer_provider": "sceneio",
+      "reader_provider": "niantic_spz",
+      "profile": "spz_racoon_v4:semantic-v1",
+      "status": "pass"
+    },
+    {
+      "case_id": "spz_racoon_v4",
+      "kind": "provider_output_cross_read",
+      "writer_provider": "niantic_spz",
+      "reader_provider": "niantic_spz",
+      "profile": "spz_racoon_v4:semantic-v1",
+      "status": "pass"
+    },
+    {
+      "case_id": "spz_racoon_v4",
+      "kind": "provider_output_cross_read",
+      "writer_provider": "gsply",
+      "reader_provider": "niantic_spz",
+      "profile": "spz_racoon_v4:semantic-v1",
+      "status": "pass"
+    },
+    {
+      "case_id": "spz_racoon_v4",
+      "kind": "provider_output_cross_read",
+      "writer_provider": "sceneio",
+      "reader_provider": "gsply",
+      "profile": "spz_racoon_v4:semantic-v1",
+      "status": "pass"
+    },
+    {
+      "case_id": "spz_racoon_v4",
+      "kind": "provider_output_cross_read",
+      "writer_provider": "niantic_spz",
+      "reader_provider": "gsply",
+      "profile": "spz_racoon_v4:semantic-v1",
+      "status": "pass"
+    },
+    {
+      "case_id": "spz_racoon_v4",
+      "kind": "provider_output_cross_read",
+      "writer_provider": "gsply",
+      "reader_provider": "gsply",
+      "profile": "spz_racoon_v4:semantic-v1",
+      "status": "pass"
+    },
+    {
+      "case_id": "spz_racoon_v4",
+      "kind": "common_file_cross_read",
+      "status": "pass",
+      "providers": {
+        "niantic_spz": "ok",
+        "gsply": "ok"
+      },
+      "unavailable": {},
+      "required_reference": "niantic_spz",
+      "required_reference_available": true,
+      "profile": "spz_racoon_v4:semantic-v1"
+    },
+    {
+      "case_id": "spz_racoon_v4",
+      "kind": "common_file_read",
+      "operation": "inspect",
+      "status": "pass",
+      "profile": "normalized_provider_metadata",
+      "providers": [
+        "sceneio"
+      ],
+      "values": [
+        {
+          "count": 1137439,
+          "sh_degree": 3,
+          "version": 4,
+          "memory_metrics": {
+            "traced_peak_bytes": {
+              "status": "available",
+              "reason": null
+            },
+            "rss_delta_bytes": {
+              "status": "available",
+              "reason": null
+            }
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "spz_racoon_v4",
+      "kind": "common_file_read",
+      "operation": "read",
+      "status": "pass",
+      "profile": "provider_operations_completed",
+      "providers": [
+        "sceneio",
+        "niantic_spz",
+        "gsply"
+      ]
+    },
+    {
+      "case_id": "glb_box_grid",
+      "kind": "provider_output_cross_read",
+      "writer_provider": "sceneio",
+      "reader_provider": "sceneio",
+      "profile": "glb_box_grid:semantic-v1",
+      "status": "pass"
+    },
+    {
+      "case_id": "glb_box_grid",
+      "kind": "provider_output_cross_read",
+      "writer_provider": "trimesh",
+      "reader_provider": "sceneio",
+      "profile": "glb_box_grid:semantic-v1",
+      "status": "pass"
+    },
+    {
+      "case_id": "glb_box_grid",
+      "kind": "provider_output_cross_read",
+      "writer_provider": "sceneio",
+      "reader_provider": "trimesh",
+      "profile": "glb_box_grid:semantic-v1",
+      "status": "pass"
+    },
+    {
+      "case_id": "glb_box_grid",
+      "kind": "provider_output_cross_read",
+      "writer_provider": "trimesh",
+      "reader_provider": "trimesh",
+      "profile": "glb_box_grid:semantic-v1",
+      "status": "pass"
+    },
+    {
+      "case_id": "glb_box_grid",
+      "kind": "common_file_cross_read",
+      "status": "pass",
+      "providers": {
+        "trimesh": "ok"
+      },
+      "unavailable": {},
+      "required_reference": "trimesh",
+      "required_reference_available": true,
+      "profile": "glb_box_grid:semantic-v1"
+    },
+    {
+      "case_id": "glb_box_grid",
+      "kind": "common_file_read",
+      "operation": "inspect",
+      "status": "pass",
+      "profile": "normalized_provider_metadata",
+      "providers": [
+        "sceneio",
+        "trimesh"
+      ],
+      "values": [
+        {
+          "num_meshes": 1,
+          "num_vertices": 6710904,
+          "num_faces": 3355452,
+          "memory_metrics": {
+            "traced_peak_bytes": {
+              "status": "available",
+              "reason": null
+            },
+            "rss_delta_bytes": {
+              "status": "available",
+              "reason": null
+            }
+          }
+        },
+        {
+          "num_meshes": 1,
+          "num_vertices": 6710904,
+          "num_faces": 3355452,
+          "memory_metrics": {
+            "traced_peak_bytes": {
+              "status": "available",
+              "reason": null
+            },
+            "rss_delta_bytes": {
+              "status": "available",
+              "reason": null
+            }
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "glb_box_grid",
+      "kind": "common_file_read",
+      "operation": "read",
+      "status": "pass",
+      "profile": "provider_operations_completed",
+      "providers": [
+        "sceneio",
+        "trimesh"
+      ]
+    }
+  ],
+  "memory_checks": [
+    {
+      "case_id": "npy_depth_stack",
+      "provider": "sceneio",
+      "operation": "map_open",
+      "status": "pass",
+      "traced_peak_bytes": 4389904,
+      "bound_bytes": 67276832,
+      "conclusive": true,
+      "profile": "no_approximately_file_sized_python_allocation",
+      "reason": null
+    },
+    {
+      "case_id": "npy_depth_stack",
+      "provider": "sceneio",
+      "operation": "full_scan",
+      "status": "pass",
+      "traced_peak_bytes": 4426266,
+      "bound_bytes": 67276832,
+      "conclusive": true,
+      "profile": "no_approximately_file_sized_python_allocation",
+      "reason": null
+    },
+    {
+      "case_id": "npy_depth_stack",
+      "provider": "sceneio",
+      "operation": "write",
+      "status": "pass",
+      "traced_peak_bytes": 4391918,
+      "bound_bytes": 67276832,
+      "conclusive": true,
+      "profile": "no_approximately_file_sized_python_allocation",
+      "reason": null
+    },
+    {
+      "case_id": "laz_autzen",
+      "provider": "sceneio",
+      "operation": "read",
+      "status": "pass",
+      "traced_peak_bytes": 4392381,
+      "bound_bytes": 13590026,
+      "conclusive": true,
+      "profile": "no_approximately_file_sized_python_allocation",
+      "reason": null
+    },
+    {
+      "case_id": "laz_autzen",
+      "provider": "sceneio",
+      "operation": "write",
+      "status": "pass",
+      "traced_peak_bytes": 13162,
+      "bound_bytes": 13590026,
+      "conclusive": true,
+      "profile": "no_approximately_file_sized_python_allocation",
+      "reason": null
+    },
+    {
+      "case_id": "spz_racoon_v4",
+      "provider": "sceneio",
+      "operation": "read",
+      "status": "pass",
+      "traced_peak_bytes": 4389661,
+      "bound_bytes": 6805056,
+      "conclusive": true,
+      "profile": "no_approximately_file_sized_python_allocation",
+      "reason": null
+    },
+    {
+      "case_id": "spz_racoon_v4",
+      "provider": "sceneio",
+      "operation": "write",
+      "status": "pass",
+      "traced_peak_bytes": 4210,
+      "bound_bytes": 7580628,
+      "conclusive": true,
+      "profile": "no_approximately_file_sized_python_allocation",
+      "reason": null
+    },
+    {
+      "case_id": "glb_box_grid",
+      "provider": "sceneio",
+      "operation": "read",
+      "status": "pass",
+      "traced_peak_bytes": 4391735,
+      "bound_bytes": 57042986,
+      "conclusive": true,
+      "profile": "no_approximately_file_sized_python_allocation",
+      "reason": null
+    },
+    {
+      "case_id": "glb_box_grid",
+      "provider": "sceneio",
+      "operation": "write",
+      "status": "pass",
+      "traced_peak_bytes": 8376,
+      "bound_bytes": 57043097,
+      "conclusive": true,
+      "profile": "no_approximately_file_sized_python_allocation",
+      "reason": null
+    }
+  ],
+  "cleanup": [
+    {
+      "path": "build\\bench-data\\large-io\\outputs\\npy_depth_stack\\standard",
+      "status": "pass"
+    },
+    {
+      "path": "build\\bench-data\\large-io\\outputs\\laz_autzen\\standard",
+      "status": "pass"
+    },
+    {
+      "path": "build\\bench-data\\large-io\\outputs\\spz_racoon_v4\\standard",
+      "status": "pass"
+    },
+    {
+      "path": "build\\bench-data\\large-io\\outputs\\glb_box_grid\\standard",
+      "status": "pass"
+    },
+    {
+      "path": "build\\bench-data\\large-io\\outputs\\colmap_tum_tracks\\standard",
+      "status": "pass"
+    }
+  ],
+  "skips": [
+    {
+      "case_id": "colmap_tum_tracks",
+      "reason": "worker exceeded 300 seconds",
+      "type": "RuntimeError"
+    }
+  ],
+  "required_cases": [
+    "colmap_tum_tracks",
+    "glb_box_grid",
+    "laz_autzen",
+    "npy_depth_stack",
+    "spz_racoon_v4"
+  ],
+  "correctness_passed": false,
+  "complete": false,
+  "completion_reasons": [
+    "one or more required fixtures were not prepared",
+    "missing provider operations: [('colmap_tum_tracks', 'pycolmap', 'inspect'), ('colmap_tum_tracks', 'pycolmap', 'read'), ('colmap_tum_tracks', 'pycolmap', 'write'), ('colmap_tum_tracks', 'sceneio', 'image'), ('colmap_tum_tracks', 'sceneio', 'inspect'), ('colmap_tum_tracks', 'sceneio', 'read'), ('colmap_tum_tracks', 'sceneio', 'write')]",
+    "missing directional provider output reads: [('colmap_tum_tracks', 'pycolmap', 'pycolmap'), ('colmap_tum_tracks', 'pycolmap', 'sceneio'), ('colmap_tum_tracks', 'sceneio', 'pycolmap'), ('colmap_tum_tracks', 'sceneio', 'sceneio')]",
+    "missing common-input oracle checks: ['colmap_tum_tracks']",
+    "one or more cases lack cross-read validation"
+  ]
+}

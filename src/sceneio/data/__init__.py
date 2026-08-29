@@ -16,6 +16,7 @@ stand on.
 
 from __future__ import annotations
 
+from sceneio.coordinates import install_coordinate_properties
 from sceneio.data.calibration import (
     Calibration,
     CameraIntrinsics,
@@ -26,8 +27,12 @@ from sceneio.data.dense import (
     POINTMAP_FRAMES,
     ConfidenceMap,
     DepthMap,
+    InstanceMap,
+    LabelTaxonomy,
     Mask,
+    PanopticMap,
     Pointmap,
+    SemanticMap,
 )
 from sceneio.data.features import (
     CORRESPONDENCE_MODES,
@@ -38,6 +43,14 @@ from sceneio.data.features import (
 )
 from sceneio.data.pointcloud import TrackedPointCloud, TrackObservation
 from sceneio.data.priors import PosePrior
+from sceneio.data.raster import (
+    RASTER_AXES,
+    RASTER_DTYPES,
+    RASTER_PAYLOAD_KINDS,
+    RasterCollection,
+    RasterLevel,
+    RasterSeries,
+)
 from sceneio.data.transforms import (
     DEFAULT_CONVENTION,
     POSE_CONVENTIONS,
@@ -53,11 +66,42 @@ from sceneio.data.views import (
     ViewInput,
 )
 
+install_coordinate_properties(
+    Calibration,
+    CameraIntrinsics,
+    ConfidenceMap,
+    CorrespondenceGraph,
+    DepthMap,
+    FeatureSet,
+    FrameMeta,
+    InstanceMap,
+    LabelTaxonomy,
+    Mask,
+    PairCorrespondences,
+    PanopticMap,
+    Pointmap,
+    PosePrior,
+    PosedViewSet,
+    RayMap,
+    SE3,
+    Sim3,
+    SemanticMap,
+    RasterCollection,
+    RasterLevel,
+    RasterSeries,
+    TrackedPointCloud,
+    TwoViewGeometry,
+    ViewInput,
+)
+
 __all__ = [
     "CORRESPONDENCE_MODES",
     "DEFAULT_CONVENTION",
     "POINTMAP_FRAMES",
     "POSE_CONVENTIONS",
+    "RASTER_AXES",
+    "RASTER_DTYPES",
+    "RASTER_PAYLOAD_KINDS",
     "SCALE_CLASSES",
     "SCALE_PROVENANCES",
     "SE3",
@@ -70,12 +114,19 @@ __all__ = [
     "FeatureSet",
     "FrameMeta",
     "ImageRef",
+    "InstanceMap",
+    "LabelTaxonomy",
     "Mask",
     "PairCorrespondences",
+    "PanopticMap",
     "Pointmap",
     "PosePrior",
     "PosedViewSet",
+    "RasterCollection",
+    "RasterLevel",
+    "RasterSeries",
     "RayMap",
+    "SemanticMap",
     "Sim3",
     "TrackObservation",
     "TrackedPointCloud",

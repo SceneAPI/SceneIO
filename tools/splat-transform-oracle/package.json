@@ -1,0 +1,13 @@
+{
+  "name": "@sceneio/splat-transform-oracle",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Pinned test-only PlayCanvas SplatTransform oracle for SceneIO",
+  "packageManager": "npm@10.9.3",
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@playcanvas/splat-transform": "3.1.6"
+  }
+}

@@ -10,6 +10,16 @@ license · copyright/steward · citation · payload · SceneIO relevance &
 caveats**, verified against primary sources; unconfirmed items are marked
 **⚠ verify**. **Not legal advice.**
 
+> **Implementation update (2026-08-01):** the original survey predates the
+> live registry. SceneIO now supports 72 bounded format ids, including image
+> directories, raw Y4M, animated WebP, APNG, optional still/animated AVIF, and
+> video-only WebM VP8/VP9.
+> AVIF uses a repository-owned adapter over Pillow/libavif with libaom and
+> dav1d; the base wheel remains NumPy-only. No FFmpeg/libav source, executable,
+> subprocess path, or runtime dependency is present. Temporal VP8/VP9 is
+> implemented directly through pinned BSD-licensed libvpx; Ogg/Theora is
+> implemented directly through pinned BSD libraries.
+
 ---
 
 ## 1. Scope & license policy (what stays, what's cut)
@@ -24,12 +34,12 @@ that popularized it.
 - ✅ **Allow-list** (SceneIO's dependency or self-implementation must be one
   of): **MIT, BSD-2/3-Clause, Apache-2.0, ISC, Zlib, Boost (BSL-1.0),
   public-domain / CC0** — or SceneIO writes the codec itself from a
-  documented, patent-free format.
+  documented format with an accepted no-charge, royalty-free grant.
 - ❌ **Cut — SceneIO would have to depend on something unsafe**: GPL / LGPL /
   AGPL (this is why **FFmpeg is out**), non-commercial / research-only code,
   or a proprietary SDK / EULA.
-- ❌ **Cut — patent-encumbered** (esp. video): H.264/AVC, H.265/HEVC, HEIC,
-  ProRes-encode.
+- ❌ **Cut — royalty-bearing or no accepted open grant** (especially video):
+  H.264/AVC, H.265/HEVC, HEIC, ProRes-encode.
 - ❌ **Cut — "messy"**: proprietary undocumented binaries, paywalled specs,
   or no schema at all.
 
@@ -39,12 +49,12 @@ own code. The INRIA 3DGS and NVIDIA instant-ngp **non-commercial** terms
 bind only *their training code and pretrained weights* — which SceneIO does
 not distribute. Interop is safe; vendoring their engines would not be.
 
-**Video policy:** SceneIO's canonical moving-image input is an **image
+**Video policy:** SceneIO's canonical moving-image input remains an **image
 sequence** (numbered PNG/JPEG/EXR — the COLMAP/nerfstudio convention).
-SceneIO bundles **no video decoder**: no FFmpeg, no patented codecs. If a
-project must decode video, it does so upstream and hands SceneIO the frames.
-(Royalty-free AV1 / VP8-VP9 have permissive decoders — dav1d / libvpx, BSD —
-and MJPEG is just JPEG frames; these are noted, not bundled.)
+Bounded royalty-free sequence codecs may be integrated directly under
+permissive source terms and an accepted no-charge patent grant. SceneIO does
+not use a general video framework. Current direct coverage is Y4M, animated
+WebP, APNG, animated AVIF, bounded WebM VP8/VP9, and Ogg/Theora.
 
 See §8 for the full **Excluded (and why)** list.
 
@@ -158,7 +168,7 @@ self-implementable.
 | **WebP** | `.webp` | Google | libwebp **BSD-3** | Google | RFC 9649 (2024) | lossy (8-bit YUV420) / lossless (8-bit RGBA), alpha | Common in web datasets + PlayCanvas SOG. Lossy subsamples chroma; **8-bit only** |
 | **OpenEXR** | `.exr` | ILM → ASWF | OpenEXR + Imath **BSD-3** | ASWF | openexr.com | 16/32-bit **float**, arbitrary named channels, tiled/multi-part, **DEEP** samples | **Standard for HDR scene-linear + GT depth/normal/albedo AOVs.** Deep EXR for occlusion-aware supervision |
 | **Radiance HDR** | `.hdr` | Greg Ward (LBNL) | own codec (rgbe.c free); LBNL permissive | LBNL / Ward | Ward, Graphics Gems II (1991) | RGBE 32-bpp shared-exponent HDR | Legacy HDR environment maps / IBL. Lower precision than EXR. Niche |
-| **AVIF** | `.avif` | Alliance for Open Media | libavif **BSD-2** + dav1d **BSD** (AV1 = royalty-free) | AOM | AVIF v1.2.0 (2025) | AV1 still, up to 12-bit, alpha, HDR, aux depth | **Royalty-free, permissive impl** — a clean modern still format. Niche (growing) |
+| **AVIF** | `.avif` | Alliance for Open Media | Pillow/libavif **MIT-CMU/BSD-2** + libaom/dav1d **BSD** (AOM royalty-free grant) | AOM | AVIF v1.2.0 (2025) | AV1 still/sequence, up to 12-bit, alpha, HDR, aux depth | **Implemented bounded profile:** 8-bit gray/RGB/straight RGBA still and animation; high-bit-depth/HDR/auxiliary profiles remain unavailable |
 | **JPEG XL** | `.jxl` | JPEG + Google | libjxl **BSD-3** (royalty-free) | JPEG committee | ISO/IEC 18181-1:2022 | lossy/lossless, up to 32-bit float, HDR, alpha | Promising for HDR + high bit depth + lossless. **Tooling still thin (2026)**. Niche |
 | **netpbm (PPM/PGM/PBM/PAM)** | `.ppm` `.pgm` `.pbm` | Netpbm | own codec (**public-domain**) | Netpbm project | netpbm.sourceforge.net | 8/16-bit gray, RGB, 1-bit, PAM | **Dead-simple numpy read/write, zero deps** → debug/intermediate. Big-endian samples |
 | **BMP** | `.bmp` | Microsoft | own codec (trivial) | Microsoft | Windows BMP/DIB | 1–32-bit RGB(A), uncompressed / RLE | Simple debug exchange. Rows bottom-up, BGR, 4-byte padded. Niche |
@@ -172,13 +182,17 @@ self-implementable.
 | **EXR depth** | `.exr` | renderer AOV convention | BSD-3 (OpenEXR) | openexr.com | float Z channel, optionally **deep** | Standard synthetic depth GT; co-packs with normals/flow. Deep EXR → per-sample depth |
 | **Optical flow `.flo`** | `.flo` | Middlebury flow (Baker et al.) | informal (own codec) | vision.middlebury.edu/flow | 2-ch float32 (u,v), LE, tag "PIEH" | Per-pixel float motion field. Not depth; sentinel >1e9 = unknown. Niche |
 
-**Video / moving images** — **no FFmpeg, no patented codecs.**
+**Video / moving images** — **no FFmpeg; royalty-free grants only.**
 
 | What | Status | Notes |
 |---|---|---|
 | **Image sequence** (`frame_%06d.png/.jpg/.exr`) | ✅ **canonical input** | THE SfM/3DGS input (COLMAP/glomap/nerfstudio consume image folders). Lossless PNG/EXR sequences preserve quality. SceneIO enumerates + orders; watch zero-padding + per-frame pose association |
+| **Y4M / animated WebP / APNG** | ✅ implemented | Direct repository-owned sequence paths with exact bounded timing and no general video framework |
+| **Animated AVIF** | ✅ implemented | Optional Pillow/libavif provider; mmap input, owned 8-bit frames, exact accepted timing, inspection, and frame ranges |
+| **VP8 all-keyframe in WebM** | ✅ implemented | Compatible default: repository-owned EBML plus pinned libwebp VP8; packed RGB, exact whole-ms timing, inspect/frame ranges/direct sink |
+| **Inter-frame VP8/VP9 in WebM** | ✅ implemented | Explicit temporal profiles use pinned libvpx; owned planar 8-bit 4:2:0, Colour matrix/range, keyframe-aware frame ranges, direct sink and worker lanes; no audio/subtitles/general media framework |
+| **Ogg/Theora** | ✅ implemented | Pinned direct libogg/libtheora profile; planar 4:2:0, fixed rational timing, inspect/frame ranges/direct sink, independent Ogg framing/remux oracle, no audio or subtitles |
 | **MJPEG** | ➖ degenerate case | A stream of independent JPEG frames (libjpeg-turbo, permissive, no patents) — decodable without FFmpeg if ever needed |
-| AV1 / VP8-VP9 (in WebM/MKV) | ➖ noted, not bundled | Royalty-free; permissive decoders exist (**dav1d / libvpx, BSD**). SceneIO still recommends extracting frames upstream rather than bundling a decoder |
 | **H.264 / H.265 / HEIC / ProRes / MP4 / MOV / AVI** | ❌ **out** | Patent pools (Via LA / Access Advance) and/or decode paths that mean FFmpeg. Extract frames upstream and feed SceneIO an image sequence |
 
 **Uncertainties (§6):** libjpeg-turbo is a composite license (IJG + BSD-3 + zlib); AVIF v1.2.0 clause-level not re-checked; BMP/netpbm/PFM/.flo have no standards steward (self-implement).
@@ -228,7 +242,13 @@ can support any of these formats; we only bundle data from the ✅ list.
 
 | Dataset | License | Formats it exercises | Citation |
 |---|---|---|---|
+| **DX.GL Multi-View Datasets** | CC0-1.0 | coherent RGB/depth/depth16/normals/masks, `transforms.json`, binary point PLY, and trained 3DGS PLY | [DX.GL dataset card](https://huggingface.co/datasets/dxgl/multiview-datasets) |
 | **TUM RGB-D** | CC-BY-4.0 | 16-bit PNG depth (÷5000), TUM traj `.txt` | Sturm et al., IROS 2012 |
+| **TUM Visual-Inertial** | CC-BY-4.0 | Published EuRoC/DSO exports: stereo PNG, camera/IMU CSV, calibration, and pose ground truth; not the full 17-field EuRoC state profile | [Schubert et al., IROS 2018](https://cvg.cit.tum.de/data/datasets/visual-inertial-dataset) |
+| **Monado SLAM Dataset** | CC-BY-4.0 | ASL/EuRoC directory layout with stereo camera, IMU, calibration, and 8-column pose ground truth; suitable for real-world layout/pose validation | [de Mayo et al., IROS 2025](https://huggingface.co/datasets/collabora/monado-slam-datasets) |
+| **UMA Visual-Inertial Dataset** | CC-BY-4.0 | Stereo/IMU sequences plus a published TUM-to-ASL trajectory converter and endpoint pseudo-ground-truth; not the full 17-field EuRoC state profile | [Zuñiga-Noël et al., IJRR 2020](https://mapir.uma.es/work/uma-visual-inertial-dataset) |
+| **Fire Actioncam** | CC-BY-4.0 | three-camera rig, per-frame timing, exposure, rolling-shutter line timing/direction, masks, sparse points, and metric depth bounds | [Hugging Face dataset](https://huggingface.co/datasets/jna-358/fire_actioncam) |
+| **Sweet Corals** | CC-BY-4.0 | corrected images, coherent COLMAP binary model, point cloud, and large 3DGS PLY tiles | [dataset/DOI card](https://huggingface.co/datasets/newneha123/sweet-corals) — hosted validation; confirm processed-mirror lineage before redistribution |
 | **BlendedMVS** | CC-BY-4.0 | JPG, PFM depth, MVSNet `_cam.txt`, `pair.txt` | arXiv:1911.10127 |
 | **Google Scanned Objects** | CC-BY-4.0 | OBJ/MTL + PNG, Gazebo SDF | arXiv:2204.11918 |
 | **OmniObject3D** | CC-BY-4.0 | OBJ/MTL, PLY, HDF5 point clouds, `transforms.json` | arXiv:2301.07525 |
@@ -247,7 +267,24 @@ can support any of these formats; we only bundle data from the ✅ list.
   **DL3DV-10K** (CC-BY-NC, gated), **CO3D** (CC-BY-NC), **Aachen** /
   **Cambridge Landmarks** (NC).
 - **No clear / contradictory license → treat research-only**: **Mip-NeRF 360**,
-  **DTU MVS**, **Tanks and Temples**.
+  **DTU MVS**, **Tanks and Temples**, and **LuSNAR** (the source calls the
+  dataset MIT while also requiring separate commercial-use permission).
+
+The three permissive visual-inertial alternatives above exercise the broader
+ASL/EuRoC dataset family, but they are not drop-in fixtures for SceneIO's
+`euroc_state` codec. That codec intentionally represents the complete 17-column
+state: timestamp, position, WXYZ quaternion, velocity, gyroscope bias, and
+accelerometer bias. A 2026-08-03 source audit verified Monado's
+`MIO09_short_1_updown.zip` as a 99,569,080-byte CC-BY-4.0 archive with SHA-256
+`14072018b9e424b06abfd1173169b24e53ad47632d3051e3164b27d322a0b898`; its
+`mav0/gt/data.csv` contains 3,182 rows of the common 8-column pose profile.
+Use Monado/TUM-VI/UMA-VI for dataset-layout and pose compatibility, and retain
+an independently generated trajectory plus a permissive parser oracle for the
+full-state contract.
+
+The content digests, exact upstream revisions, direct-versus-derived split,
+hosted-only sources, and all 73 primary format routes are maintained in the
+machine-checked [`public fixture corpus`](public_fixture_corpus.md).
 
 **NVIDIA specifics:** NVIDIA's scene format is **OpenUSD** (§5, Apache-family)
 — *not* NVIDIA-owned. Isaac Lab is BSD-3, Isaac Sim/Kaolin cores are
@@ -320,8 +357,9 @@ DataType. Order = value × cost.
 - **OBJ / STL / OFF** (mesh/shape datasets), **Kapture** (unified VisLoc),
   **PlayCanvas SOG/SOGS** (web splats), **netpbm/PFM/BMP** (debug I/O)
 
-**Non-goals (per the §1 policy):** video decode (image sequences only —
-no FFmpeg, no patented codecs), FBX / Agisoft / RealityCapture (proprietary),
+**Non-goals (per the §1 policy):** general video frameworks and
+royalty-bearing codecs without an accepted open grant, FBX / Agisoft /
+RealityCapture (proprietary),
 E57 / XYZ (paywalled/messy), pickle ingestion, and bundling any
 non-commercial dataset.
 

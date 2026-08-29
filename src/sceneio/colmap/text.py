@@ -1,0 +1,415 @@
+"""Strict COLMAP feature, pair, match, and similarity text adapters."""
+
+from __future__ import annotations
+
+import math
+import os
+import tempfile
+from pathlib import Path
+
+import numpy as np
+
+from .models import (
+    ColmapAdapterError,
+    NamedMatches,
+    SiftFeatures,
+    SimilarityTransform,
+)
+
+_MAX_LINE_BYTES = 2 << 20
+_MAX_RECORDS = 100_000_000
+_UINT32_MAX = (1 << 32) - 1
+
+
+def _lines(path, *, comments: bool = False):
+    source = Path(path)
+    try:
+        stream = source.open("rb")
+    except OSError as exc:
+        raise ColmapAdapterError(f"cannot read {str(source)!r}: {exc}") from exc
+    with stream:
+        line_number = 0
+        while True:
+            payload = stream.readline(_MAX_LINE_BYTES + 1)
+            if not payload:
+                break
+            line_number += 1
+            if len(payload) > _MAX_LINE_BYTES:
+                raise ColmapAdapterError(f"{source.name} line {line_number} exceeds 2 MiB")
+            try:
+                line = payload.decode("utf-8")
+            except UnicodeDecodeError as exc:
+                raise ColmapAdapterError(
+                    f"{source.name} line {line_number} is not UTF-8"
+                ) from exc
+            value = line.strip()
+            if comments and (not value or value.startswith("#")):
+                continue
+            yield line_number, value
+
+
+def _atomic_text(path, writer) -> None:
+    target = Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w+",
+            encoding="utf-8",
+            newline="\n",
+            dir=target.parent,
+            prefix=f".{target.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as stream:
+            temporary = Path(stream.name)
+            writer(stream)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, target)
+    except Exception:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
+        raise
+
+
+def _finite(token: str, label: str) -> float:
+    try:
+        value = float(token)
+    except ValueError as exc:
+        raise ColmapAdapterError(f"{label} is not numeric") from exc
+    if not math.isfinite(value):
+        raise ColmapAdapterError(f"{label} must be finite")
+    return value
+
+
+def _uint(token: str, label: str, maximum: int = _UINT32_MAX) -> int:
+    try:
+        value = int(token, 10)
+    except ValueError as exc:
+        raise ColmapAdapterError(f"{label} is not an integer") from exc
+    if value < 0 or value > maximum:
+        raise ColmapAdapterError(f"{label} is outside its unsigned domain")
+    return value
+
+
+def _sift_descriptor(token: str, label: str) -> int:
+    value = _finite(token, label)
+    if value < 0 or value > 255:
+        raise ColmapAdapterError(f"{label} must be in [0, 255]")
+    # Explicitly match the reference importer's TruncateCast<float, uint8_t>.
+    # Canonical SceneIO output is integral, so this conversion is never hidden.
+    return int(value)
+
+
+def read_similarity_transform(path) -> SimilarityTransform:
+    """Read COLMAP's one-line ``scale qw qx qy qz tx ty tz`` format."""
+
+    rows = [(line_number, value) for line_number, value in _lines(path) if value]
+    if len(rows) != 1:
+        raise ColmapAdapterError("Sim3 file must contain exactly one nonempty line")
+    fields = rows[0][1].split()
+    if len(fields) != 8:
+        raise ColmapAdapterError("Sim3 line must contain exactly 8 values")
+    values = np.asarray(
+        [_finite(field, f"Sim3 field {index}") for index, field in enumerate(fields)],
+        dtype=np.float64,
+    )
+    return SimilarityTransform(values[0], values[1:5], values[5:8])
+
+
+def write_similarity_transform(value: SimilarityTransform, path) -> None:
+    """Write COLMAP's locale-independent precision-17 Sim3 text."""
+
+    if not isinstance(value, SimilarityTransform):
+        raise TypeError("value must be SimilarityTransform")
+    values = (
+        value.scale,
+        *value.quaternion_wxyz.tolist(),
+        *value.translation.tolist(),
+    )
+    _atomic_text(
+        path,
+        lambda stream: stream.write(
+            " ".join(format(float(item), ".17g") for item in values) + "\n"
+        ),
+    )
+
+
+def read_sift_features(path) -> SiftFeatures:
+    """Read one COLMAP SIFT text file with exact uint8 descriptors."""
+
+    iterator = iter(_lines(path))
+    try:
+        try:
+            file_size = Path(path).stat().st_size
+        except OSError as exc:
+            raise ColmapAdapterError(f"cannot inspect SIFT file: {exc}") from exc
+        return _read_sift_rows(iterator, file_size)
+    finally:
+        iterator.close()
+
+
+def _read_sift_rows(iterator, file_size: int) -> SiftFeatures:
+    try:
+        header_line, header = next(iterator)
+    except StopIteration as exc:
+        raise ColmapAdapterError("SIFT file is empty") from exc
+    header_fields = header.split()
+    if len(header_fields) != 2:
+        raise ColmapAdapterError(f"SIFT header line {header_line} needs 2 fields")
+    count = _uint(header_fields[0], "SIFT feature count", _MAX_RECORDS)
+    if _uint(header_fields[1], "SIFT descriptor dimension") != 128:
+        raise ColmapAdapterError("SIFT descriptor dimension must be 128")
+    if count and file_size < count * 263:
+        raise ColmapAdapterError("SIFT feature count exceeds the text payload")
+    keypoints = np.empty((count, 4), dtype=np.float32)
+    descriptors = np.empty((count, 128), dtype=np.uint8)
+    for index in range(count):
+        try:
+            line_number, line = next(iterator)
+        except StopIteration as exc:
+            raise ColmapAdapterError("SIFT feature rows are truncated") from exc
+        fields = line.split()
+        if len(fields) != 132:
+            raise ColmapAdapterError(f"SIFT line {line_number} must contain 132 fields")
+        keypoints[index] = [
+            _finite(field, f"SIFT line {line_number} keypoint") for field in fields[:4]
+        ]
+        descriptors[index] = [
+            _sift_descriptor(field, f"SIFT line {line_number} descriptor") for field in fields[4:]
+        ]
+    for line_number, value in iterator:
+        if value:
+            raise ColmapAdapterError(f"SIFT line {line_number} follows the declared feature rows")
+    return SiftFeatures(keypoints, descriptors)
+
+
+def write_sift_features(value: SiftFeatures, path) -> None:
+    """Stream a canonical SIFT text file."""
+
+    if not isinstance(value, SiftFeatures):
+        raise TypeError("value must be SiftFeatures")
+
+    def write(stream) -> None:
+        stream.write(f"{value.keypoints.shape[0]} 128\n")
+        for keypoint, descriptor in zip(value.keypoints, value.descriptors, strict=True):
+            fields = [
+                *(format(float(item), ".9g") for item in keypoint),
+                *(str(int(item)) for item in descriptor),
+            ]
+            stream.write(" ".join(fields) + "\n")
+
+    _atomic_text(path, write)
+
+
+def read_image_pairs(
+    path,
+    *,
+    cap_path=None,
+) -> tuple[tuple[tuple[str, str], ...], np.ndarray | None]:
+    """Read strict image pairs and an optional positional positive-cap sidecar."""
+
+    pairs: list[tuple[str, str]] = []
+    seen: set[tuple[str, str]] = set()
+    rows = iter(_lines(path, comments=True))
+    try:
+        for line_number, line in rows:
+            fields = line.split()
+            if len(fields) != 2:
+                raise ColmapAdapterError(
+                    f"pair line {line_number} must contain exactly two names"
+                )
+            if fields[0] == fields[1]:
+                raise ColmapAdapterError(f"pair line {line_number} is a self-pair")
+            key = tuple(sorted(fields))
+            if key in seen:
+                raise ColmapAdapterError(f"pair line {line_number} is duplicated")
+            seen.add(key)
+            pairs.append((fields[0], fields[1]))
+            if len(pairs) > _MAX_RECORDS:
+                raise ColmapAdapterError("pair file has too many rows")
+    finally:
+        rows.close()
+    if cap_path is None:
+        return tuple(pairs), None
+    caps = []
+    rows = iter(_lines(cap_path, comments=True))
+    try:
+        for line_number, line in rows:
+            fields = line.split()
+            if len(fields) != 1:
+                raise ColmapAdapterError(
+                    f"cap line {line_number} must contain exactly one integer"
+                )
+            value = _uint(fields[0], f"cap line {line_number}", (1 << 31) - 1)
+            if value == 0:
+                raise ColmapAdapterError(
+                    f"cap line {line_number} must be positive"
+                )
+            caps.append(value)
+    finally:
+        rows.close()
+    if len(caps) != len(pairs):
+        raise ColmapAdapterError("cap row count must equal the image-pair count")
+    result = np.asarray(caps, dtype=np.uint32)
+    result.setflags(write=False)
+    return tuple(pairs), result
+
+
+def read_stock_image_pairs(path) -> tuple[tuple[str, str], ...]:
+    """Read the stock pairing grammar with one ASCII-space separator."""
+
+    pairs: list[tuple[str, str]] = []
+    seen: set[tuple[str, str]] = set()
+    rows = iter(_lines(path, comments=True))
+    try:
+        for line_number, line in rows:
+            fields = line.split(" ")
+            if len(fields) != 2 or not all(fields):
+                raise ColmapAdapterError(
+                    f"stock pair line {line_number} needs one ASCII-space separator"
+                )
+            if fields[0] == fields[1]:
+                raise ColmapAdapterError(
+                    f"stock pair line {line_number} is a self-pair"
+                )
+            key = tuple(sorted(fields))
+            if key in seen:
+                raise ColmapAdapterError(
+                    f"stock pair line {line_number} is duplicated"
+                )
+            seen.add(key)
+            pairs.append((fields[0], fields[1]))
+            if len(pairs) > _MAX_RECORDS:
+                raise ColmapAdapterError("stock pair file has too many rows")
+    finally:
+        rows.close()
+    return tuple(pairs)
+
+
+def write_image_pairs(
+    pairs: tuple[tuple[str, str], ...],
+    path,
+    *,
+    caps: np.ndarray | None = None,
+    cap_path=None,
+) -> None:
+    """Write a canonical image-pair list and optional cap sidecar."""
+
+    normalized: list[tuple[str, str]] = []
+    seen = set()
+    for index, pair in enumerate(pairs):
+        if len(pair) != 2 or any(
+            not isinstance(name, str) or not name or any(character.isspace() for character in name)
+            for name in pair
+        ):
+            raise ColmapAdapterError(f"pair {index} must contain two valid names")
+        if pair[0] == pair[1]:
+            raise ColmapAdapterError(f"pair {index} is a self-pair")
+        key = tuple(sorted(pair))
+        if key in seen:
+            raise ColmapAdapterError(f"pair {index} is duplicated")
+        seen.add(key)
+        normalized.append(pair)
+
+    def write_pairs(stream) -> None:
+        for first, second in normalized:
+            stream.write(f"{first} {second}\n")
+
+    if caps is None:
+        if cap_path is not None:
+            raise ColmapAdapterError("cap_path requires caps")
+        _atomic_text(path, write_pairs)
+        return
+    if cap_path is None:
+        raise ColmapAdapterError("caps require cap_path")
+    if Path(path).resolve(strict=False) == Path(cap_path).resolve(strict=False):
+        raise ColmapAdapterError("pair and cap paths must be distinct")
+    cap_values = np.asarray(caps)
+    if cap_values.dtype != np.uint32 or cap_values.shape != (len(normalized),):
+        raise ColmapAdapterError("caps must be positive int32-range uint32 values per pair")
+    for start in range(0, cap_values.size, 65_536):
+        chunk = cap_values[start : start + 65_536]
+        if bool(np.any(chunk == 0)) or bool(np.any(chunk > (1 << 31) - 1)):
+            raise ColmapAdapterError(
+                "caps must be positive int32-range uint32 values per pair"
+            )
+
+    def write_caps(stream) -> None:
+        for value in cap_values:
+            stream.write(f"{int(value)}\n")
+
+    _atomic_text(path, write_pairs)
+    _atomic_text(cap_path, write_caps)
+
+
+def read_feature_matches(path) -> tuple[NamedMatches, ...]:
+    """Read strict COLMAP feature-match blocks separated by blank lines."""
+
+    rows = iter(_lines(path))
+    try:
+        return _read_feature_match_rows(rows)
+    finally:
+        rows.close()
+
+
+def _read_feature_match_rows(rows) -> tuple[NamedMatches, ...]:
+    result: list[NamedMatches] = []
+    seen = set()
+    while True:
+        try:
+            line_number, line = next(rows)
+        except StopIteration:
+            break
+        if not line:
+            continue
+        names = line.split()
+        if len(names) != 2:
+            raise ColmapAdapterError(f"match header line {line_number} needs two image names")
+        key = tuple(sorted(names))
+        if names[0] == names[1] or key in seen:
+            raise ColmapAdapterError(f"match header line {line_number} is duplicate or self-paired")
+        seen.add(key)
+        values = []
+        for match_line, match in rows:
+            if not match:
+                break
+            fields = match.split()
+            if len(fields) != 2:
+                raise ColmapAdapterError(f"match line {match_line} needs two indices")
+            values.append(
+                (
+                    _uint(fields[0], f"match line {match_line} first index"),
+                    _uint(fields[1], f"match line {match_line} second index"),
+                )
+            )
+            if len(values) > _MAX_RECORDS:
+                raise ColmapAdapterError("match block has too many rows")
+        matches = np.asarray(values, dtype=np.uint32).reshape(-1, 2)
+        result.append(NamedMatches(names[0], names[1], matches))
+    return tuple(result)
+
+
+def write_feature_matches(value: tuple[NamedMatches, ...], path) -> None:
+    """Stream canonical blank-line-delimited COLMAP match blocks."""
+
+    if any(not isinstance(item, NamedMatches) for item in value):
+        raise TypeError("value must contain NamedMatches records")
+    seen: set[tuple[str, str]] = set()
+    for index, item in enumerate(value):
+        key = tuple(sorted((item.image_name1, item.image_name2)))
+        if item.image_name1 == item.image_name2 or key in seen:
+            raise ColmapAdapterError(
+                f"match block {index} is duplicate or self-paired"
+            )
+        seen.add(key)
+
+    def write(stream) -> None:
+        for item in value:
+            stream.write(f"{item.image_name1} {item.image_name2}\n")
+            for first, second in item.matches:
+                stream.write(f"{int(first)} {int(second)}\n")
+            stream.write("\n")
+
+    _atomic_text(path, write)

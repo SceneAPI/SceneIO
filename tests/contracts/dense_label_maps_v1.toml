@@ -1,0 +1,100 @@
+schema_version = 1
+contract_date = "2026-08-04"
+status = "adapters_qualified_oracle_generated"
+schema = "sceneio.label_map/1"
+marker_array = "__sceneio_label_map_v1__"
+public_namespace = "sceneio.data"
+public_symbols = ["InstanceMap", "LabelTaxonomy", "PanopticMap", "SemanticMap"]
+typed_io = ["inspect_label_map", "read_label_map", "write_label_map"]
+carrier_formats = ["npz", "zarr", "tiff"]
+projection_formats = ["ncore_v4"]
+pending_adapters = []
+raw_compatibility = "Raw NPZ/Zarr remain TensorDict operations, raw TIFF remains Image/Mask/TensorDict, and raw NCore remains NCore records; typed meaning is activated only through the exact versioned declaration."
+
+[label_taxonomy]
+fields = ["semantic_ids", "names", "identity", "version", "display_colors", "is_thing"]
+id_dtype = "int32"
+id_order = "row_ordered_unique"
+text_encoding = "utf8"
+color_dtype_shape = "uint8 (K,3) RGB"
+thing_dtype_shape = "bool (K)"
+
+[semantic_map]
+fields = ["class_ids", "void_id", "valid", "taxonomy"]
+payload = "C-contiguous int32 (H,W)"
+validity = "optional C-contiguous bool (H,W), independent of void_id"
+taxonomy_rule = "every valid non-void id belongs to the optional taxonomy"
+
+[instance_map]
+fields = ["instance_ids", "background_id", "valid", "table_instance_ids", "table_semantic_ids"]
+payload = "C-contiguous int64 (H,W)"
+validity = "optional C-contiguous bool (H,W), independent of background_id"
+table = "optional unique int64 instance id to int32 semantic id rows"
+
+[panoptic_map]
+fields = ["semantic", "instance"]
+composition = "child arrays are retained without copy and have equal shape/validity"
+void_background = "valid semantic void pixels use the instance background id"
+packing = "no implicit packing; checked semantic_id * divisor + instance_id conversion requires divisor and output dtype"
+
+[carrier_arrays]
+required_marker = ["__sceneio_label_map_v1__"]
+semantic = ["semantic_ids", "semantic_void_id"]
+instance = ["instance_ids", "instance_background_id"]
+validity = ["valid"]
+taxonomy_required = ["taxonomy_semantic_ids", "taxonomy_names_utf8", "taxonomy_name_offsets", "taxonomy_identity_utf8", "taxonomy_version_utf8"]
+taxonomy_optional = ["taxonomy_display_colors", "taxonomy_is_thing"]
+instance_table = ["table_instance_ids", "table_semantic_ids"]
+unknown_array_policy = "reject"
+
+[npz]
+oracle = "NumPy savez/savez_compressed and load"
+encodings = ["stored", "deflate"]
+write_replacement = "temporary sibling plus atomic replace"
+inspection = "ZIP and NPY headers plus fixed small scalar arrays; raster members are not decoded"
+
+[zarr]
+oracle = "official Zarr Python implementation"
+versions = [2, 3]
+write_replacement = "transactional directory replacement"
+inspection = "group/array metadata plus fixed small scalar arrays; raster chunks are not decoded"
+
+[tiff]
+oracle = "tifffile"
+activation = "sceneio.label_map/1 ImageDescription on every page, or an explicit caller label_contract for an untagged integer raster"
+page_roles = ["semantic_ids", "instance_ids", "valid"]
+write_replacement = "temporary sibling plus atomic replace"
+inspection = "IFD/page metadata only; raster samples are not decoded"
+ordinary_tiff = "never inferred as a label map without the exact description or caller contract"
+
+[ncore_v4]
+oracle = "pinned NVIDIA NCore V4 component schema and independent component/profile fixture"
+activation = "SEGMENTATION qualifier plus descriptor-owned __sceneio_label_map_v1__ extension"
+qualifiers = ["semantic", "instance", "panoptic"]
+unknown_field_policy = "reject"
+item_extension_policy = "typed extension belongs to the component descriptor; per-item overrides are rejected"
+raw_compatibility = "camera masks remain boolean Mask projections; non-label NCore components are unchanged"
+
+[benchmark]
+entrypoint = "bench/bench_label_maps.py"
+default_side = 4096
+logical_payload_mib = 64
+operations = ["write", "read", "inspect", "fresh_process_read_rss", "fresh_process_inspect_rss"]
+carriers = ["npz", "zarr", "tiff"]
+oracles = ["numpy", "zarr", "tifffile"]
+selection = "not applicable: one label map is not a collection"
+
+[kubric_oracle]
+project = "google-research/kubric"
+revision = "61f2422c84bab75006df33c6989e0b483db3ccfe"
+license = "Apache-2.0"
+function = "kubric.post_processing.adjust_segmentation_idxs"
+rule = "foreground renderer ids start at one and zero remains background"
+normal_ci = "deterministic hand-evaluated rule plus hash verification of the checked-in generated result; Kubric and Blender are not installed"
+generation_status = "generated_and_hash_verified"
+scene = "repository-owned procedural Cube/Sphere scene; no external asset manifest"
+recipe_manifest = "tests/fixtures/kubric_procedural_tiny_v1.json"
+generation_tool = "tools/generate_kubric_oracle.py"
+regeneration_command = "python tools/generate_kubric_oracle.py generate --upstream <kubric-checkout> --output <directory>"
+evidence = ["tests/codecs/test_label_map_carriers.py", "tests/test_kubric_oracle_manifest.py"]
+hash_policy = "The Blender 4.3.0/Python 3.11 generation run semantically validated the complete output before atomically publishing all 11 recorded hashes; regeneration repeats that operation, and no hosted MOVi bytes or external asset-manifest outputs are assumed."

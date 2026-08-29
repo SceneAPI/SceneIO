@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, phase0-nanobind-core]
   pull_request:
 
 permissions:
@@ -15,15 +15,173 @@ concurrency:
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v7
+      - name: Install
+        # [test] pulls the parity oracles (gsply, pycolmap, Open3D) so the codec
+        # parity suites actually run in CI instead of skipping; builds _core.
+        run: |
+          uv venv --seed
+          uv pip install -e ".[dev,test]"
+      - name: Install CPU Torch interop oracle
+        # Torch remains test-only and outside SceneIO's extras/runtime surface.
+        # One required Linux lane exercises writable DLPack/from_numpy behavior.
+        run: uv pip install torch --index https://download.pytorch.org/whl/cpu
+      - name: Ruff
+        run: .venv/bin/python -m ruff check
+      - name: Documentation contract
+        run: .venv/bin/python tools/documentation_contract.py --check
+      - name: Test
+        run: .venv/bin/python -m pytest -q
+      - name: Benchmark harness smoke (all 74 codecs)
+        run: .venv/bin/python bench/bench_io.py --runs 1 --scale 0.001 --skip-oracles --json "${{ runner.temp }}/sceneio-benchmark.json"
+      - name: Verify deterministic benchmark structure
+        run: .venv/bin/python bench/compare_io_structure.py "${{ runner.temp }}/sceneio-benchmark.json"
+      - name: I/O throughput and memory regression guard
+        run: .venv/bin/python bench/bench_io.py --runs 5 --strict-oracles --require-o4-gains --require-o5-inspect-gains --require-o5-partial-gains --json "${{ runner.temp }}/sceneio-benchmark-guard.json"
+      - name: Upload benchmark smoke results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sceneio-benchmark-results
+          path: ${{ runner.temp }}/sceneio-benchmark*.json
+
+  mmap-platform:
+    name: mmap (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v7
       - name: Install
         run: |
           uv venv --seed
-          uv pip install -e ".[dev]"
-      - name: Ruff
-        run: .venv/bin/ruff check src tests
-      - name: Test
-        run: .venv/bin/python -m pytest -q
+          uv pip install -e ".[dev,test]"
+      - name: Cross-platform mmap, partial-read, streaming, and USD profile tests
+        run: .venv/Scripts/python.exe -m pytest -q tests/test_benchmark_memory_protocol.py tests/test_io_mmap.py tests/test_io_streaming.py tests/test_io_inspection.py tests/test_io_partial.py tests/test_io_partial_arrays.py tests/test_io_partial_images.py tests/test_io_partial_meshes.py tests/test_io_partial_points.py tests/test_io_partial_reconstruction.py tests/test_io_zero_copy.py tests/test_io_parallel.py tests/test_io_array_family_architecture.py tests/test_io_point_family_architecture.py tests/records/test_state_trajectory.py tests/codecs/test_pfm.py tests/codecs/test_npy_npz.py tests/codecs/test_safetensors.py tests/codecs/test_flo.py tests/codecs/test_xyz.py tests/codecs/test_pts.py tests/codecs/test_dmb.py tests/codecs/test_bal.py tests/codecs/test_bmp_tga.py tests/codecs/test_ply_point.py tests/codecs/test_pcd.py tests/codecs/test_las.py tests/codecs/test_las_waveform.py tests/codecs/test_euroc_state.py tests/codecs/test_stl.py tests/codecs/test_off.py tests/codecs/test_y4m.py tests/codecs/test_colmap_db.py tests/codecs/test_usd.py tests/codecs/test_usd_scene.py tests/codecs/test_usd_materials.py tests/codecs/test_usd_gaussians.py tests/codecs/test_usd_cameras.py tests/codecs/test_usd_semantics.py tests/codecs/test_usd_volumes.py tests/codecs/test_usd_instances.py tests/codecs/test_usd_mixed_payloads.py tests/codecs/test_tiff.py tests/codecs/test_ncore_v4_labels.py tests/codecs/test_label_map_carriers.py tests/test_dense_label_map_contract.py tests/test_kubric_oracle_manifest.py
+        if: runner.os == 'Windows'
+      - name: Cross-platform mmap, partial-read, streaming, and USD profile tests
+        run: .venv/bin/python -m pytest -q tests/test_benchmark_memory_protocol.py tests/test_io_mmap.py tests/test_io_streaming.py tests/test_io_inspection.py tests/test_io_partial.py tests/test_io_partial_arrays.py tests/test_io_partial_images.py tests/test_io_partial_meshes.py tests/test_io_partial_points.py tests/test_io_partial_reconstruction.py tests/test_io_zero_copy.py tests/test_io_parallel.py tests/test_io_array_family_architecture.py tests/test_io_point_family_architecture.py tests/records/test_state_trajectory.py tests/codecs/test_pfm.py tests/codecs/test_npy_npz.py tests/codecs/test_safetensors.py tests/codecs/test_flo.py tests/codecs/test_xyz.py tests/codecs/test_pts.py tests/codecs/test_dmb.py tests/codecs/test_bal.py tests/codecs/test_bmp_tga.py tests/codecs/test_ply_point.py tests/codecs/test_pcd.py tests/codecs/test_las.py tests/codecs/test_las_waveform.py tests/codecs/test_laz.py tests/codecs/test_euroc_state.py tests/codecs/test_stl.py tests/codecs/test_off.py tests/codecs/test_y4m.py tests/codecs/test_colmap_db.py tests/codecs/test_usd.py tests/codecs/test_usd_scene.py tests/codecs/test_usd_materials.py tests/codecs/test_usd_gaussians.py tests/codecs/test_usd_cameras.py tests/codecs/test_usd_semantics.py tests/codecs/test_usd_volumes.py tests/codecs/test_usd_instances.py tests/codecs/test_usd_mixed_payloads.py tests/codecs/test_tiff.py tests/codecs/test_ncore_v4_labels.py tests/codecs/test_label_map_carriers.py tests/test_dense_label_map_contract.py tests/test_kubric_oracle_manifest.py
+        if: runner.os != 'Windows'
+
+  reconstruction-platform:
+    name: reconstruction (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v7
+      - name: Install
+        run: |
+          uv venv --seed
+          uv pip install -e ".[dev,test]"
+      - name: Reconstruction architecture and codec parity
+        run: .venv/Scripts/python.exe -m pytest -q tests/test_io_reconstruction_family_architecture.py tests/codecs/test_colmap.py tests/codecs/test_transforms_json.py tests/codecs/test_pose_text.py tests/codecs/test_euroc_state.py tests/codecs/test_g2o.py tests/codecs/test_colmap_db.py tests/codecs/test_colmap_txt.py tests/codecs/test_bundler.py tests/codecs/test_bal.py tests/codecs/test_nvm.py tests/codecs/test_openmvg.py
+        if: runner.os == 'Windows'
+      - name: Reconstruction architecture and codec parity
+        run: .venv/bin/python -m pytest -q tests/test_io_reconstruction_family_architecture.py tests/codecs/test_colmap.py tests/codecs/test_transforms_json.py tests/codecs/test_pose_text.py tests/codecs/test_euroc_state.py tests/codecs/test_g2o.py tests/codecs/test_colmap_db.py tests/codecs/test_colmap_txt.py tests/codecs/test_bundler.py tests/codecs/test_bal.py tests/codecs/test_nvm.py tests/codecs/test_openmvg.py
+        if: runner.os != 'Windows'
+
+  splat-platform:
+    name: splats (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            parent-profile: ubuntu_latest_x86_64_glibc
+          - os: windows-latest
+            parent-profile: windows_msvc_x86_64
+          - os: macos-latest
+            parent-profile: macos_appleclang_arm64
+    env:
+      SCENEIO_SPLAT_PARENT_PROFILE: ${{ matrix.parent-profile }}
+      SCENEIO_REQUIRE_SPLAT_ORACLES: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v7
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: tools/splat-transform-oracle/package-lock.json
+      - name: Install
+        run: |
+          uv venv --seed
+          uv pip install -e ".[dev]" "numpy>=2.0,<2.5" "gsply==0.4.6" "pillow>=10.0"
+      - name: Install locked SplatTransform oracle
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          npm ci --prefix tools/splat-transform-oracle `
+            --ignore-scripts --no-audit --no-fund
+          $oracleCli = Join-Path $env:GITHUB_WORKSPACE `
+            "tools\splat-transform-oracle\node_modules\.bin\splat-transform.cmd"
+          "SCENEIO_SPLAT_TRANSFORM_CLI=$oracleCli" >> $env:GITHUB_ENV
+      - name: Install locked SplatTransform oracle
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          npm ci --prefix tools/splat-transform-oracle \
+            --ignore-scripts --no-audit --no-fund
+          echo "SCENEIO_SPLAT_TRANSFORM_CLI=${GITHUB_WORKSPACE}/tools/splat-transform-oracle/node_modules/.bin/splat-transform" \
+            >> "${GITHUB_ENV}"
+      - name: Oracle-independent splat parent contract
+        run: .venv/Scripts/python.exe -m pytest -q tests/test_io_splat_family_architecture.py
+        if: runner.os == 'Windows'
+      - name: Oracle-independent splat parent contract
+        run: .venv/bin/python -m pytest -q tests/test_io_splat_family_architecture.py
+        if: runner.os != 'Windows'
+      - name: Splat codec parity with installed oracles
+        run: .venv/Scripts/python.exe -m pytest -q -rs tests/codecs/test_ply.py tests/codecs/test_compressed_ply.py tests/codecs/test_sog.py tests/codecs/test_ksplat.py tests/codecs/test_spz.py tests/codecs/test_splat.py tests/codecs/test_splat_transform_oracle.py
+        if: runner.os == 'Windows'
+      - name: Splat codec parity with installed oracles
+        run: .venv/bin/python -m pytest -q -rs tests/codecs/test_ply.py tests/codecs/test_compressed_ply.py tests/codecs/test_sog.py tests/codecs/test_ksplat.py tests/codecs/test_spz.py tests/codecs/test_splat.py tests/codecs/test_splat_transform_oracle.py
+        if: runner.os != 'Windows'
+
+  manylinux2014-portability:
+    name: manylinux2014 GCC 10 portability
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and run focused native portability tests
+        run: |
+          docker run --rm -v "$PWD:/src:ro" \
+            quay.io/pypa/manylinux2014_x86_64@sha256:92f4005bb23138b89ed22ba1491ddbedb0564747e7ce44b33c52aa6f1a786d23 \
+            /bin/bash -lc '
+              set -euo pipefail
+              test "$(g++ -dumpversion | cut -d. -f1)" = 10
+              mkdir -p /work
+              tar -C /src --exclude=.git --exclude=.venv --exclude=build \
+                --exclude=dist --exclude=.pytest_cache \
+                --exclude='__pycache__' --exclude='*.pyc' \
+                -cf - . | tar -C /work -xf -
+              cd /work
+              py=/opt/python/cp312-cp312/bin/python
+              "$py" -m pip install -q "numpy>=2.0,<2.5" psutil pytest
+              "$py" -m pip install -q --no-deps .
+              cd /tmp
+              SCENEIO_SPLAT_PARENT_PROFILE=manylinux2014_gcc10_x86_64 \
+                PYTHONPATH=/work "$py" -m pytest -q \
+                /work/tests/test_io_reconstruction_family_architecture.py \
+                /work/tests/test_io_splat_family_architecture.py \
+                /work/tests/codecs/test_y4m.py \
+                /work/tests/codecs/test_colmap_db.py \
+                /work/tests/test_io_partial_reconstruction.py::test_colmap_binary_checks_selected_observation_bytes_before_allocating \
+                /work/tests/test_io_partial_reconstruction.py::test_colmap_binary_validates_selected_name_terminator_before_allocating \
+                /work/tests/test_io_partial_reconstruction.py::test_colmap_observation_error_rss_growth_is_payload_relative \
+                /work/tests/test_io_partial_reconstruction.py::test_colmap_name_error_rss_growth_is_payload_relative
+            '

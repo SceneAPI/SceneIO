@@ -1,0 +1,100 @@
+{
+  "schema": "sceneio.backend-qualification-receipt.v1",
+  "schema_version": 1,
+  "decision_id": "jpeg-rgb8-v1",
+  "codec_id": "jpeg",
+  "platform_profile": "windows_msvc_x86_64",
+  "result_state": "measurement_complete",
+  "source": {
+    "clean": true,
+    "commit": "7a88e7c726eed5bdd4ff0ad05b381c9795af9dfe",
+    "tree": "7d543e253594a2a63faf219df22ee68cbc6ae65d"
+  },
+  "configuration": {
+    "include_remote": true,
+    "sha256": "8f7b38a73dc3e46ec1efc59c45084a6853a07013da239d2cba39dc1ffbc1f7be",
+    "cells": 122,
+    "paired_sessions": 8,
+    "raw_session_records": 16,
+    "startup_observations": 24,
+    "determinism_observations": 6,
+    "memory_observations": 24
+  },
+  "corpus": {
+    "manifest_sha256": "ba303a6e65ad44b0d72f3e00fe295a140d9ca760082396707e057aefa01e9cf9",
+    "raw_fixture_count": 5,
+    "encoded_fixture_count": 34,
+    "pillow_version": "12.3.0"
+  },
+  "wheels": {
+    "stb": {
+      "sha256": "c166025b9ba6a11bc932a586231f9dc22adc572f2e6e76efde4b1c23ae28e285",
+      "native_sha256": "27f16ed2817e724b8bdc198bc50973c4188771e89389cbb6508e08989f9a2259",
+      "bytes": 2195463,
+      "native_bytes": 4323840,
+      "members": 83,
+      "runtime_requirements": [
+        "numpy>=1.26"
+      ]
+    },
+    "libjpeg-turbo": {
+      "sha256": "cabc8ce5cb6d6956378e1675e582a27dd6929e690dce84a2e086c2e52b5e2017",
+      "native_sha256": "0fb88569dc1620fc7e1b73d9276319aaedcd52b62f9c5aea528ce3c977919210",
+      "bytes": 2390430,
+      "native_bytes": 4983296,
+      "members": 83,
+      "runtime_requirements": [
+        "numpy>=1.26"
+      ]
+    }
+  },
+  "candidate_build": {
+    "backend": "libjpeg-turbo",
+    "version": "3.2.0",
+    "commit": "c85e6b905bf237038faa936dab160ebfc5da0344",
+    "archive_sha256": "6f30092cef9fb839779646608f4ee14ae3cbac989c47fa05e841b0841f09878e",
+    "compiler": "MSVC 19.44.35215.0",
+    "generator": "Visual Studio 17 2022",
+    "simd_architecture": "X86_64",
+    "simd_evidence_sha256": "5301e350f6018b61372594cd4280e8ba91bcfe8220f58ace37a61433e2d28ae6",
+    "generated_header_sha256": "0e2fb18a8cb1fc19ce3cd79bd65e26af71aa0df445b67f047ed1dee790eb1ae6"
+  },
+  "aggregates": {
+    "encode_median_geomean": 4.787465745341367,
+    "encode_robust_geomean": 4.637013005413213,
+    "decode_median_geomean": 1.7817035746717813,
+    "decode_robust_geomean": 1.7271810252153181,
+    "public_sink_encode_median_geomean": 4.507945770339254,
+    "public_sink_encode_robust_geomean": 4.365087602253539,
+    "public_path_decode_median_geomean": 1.8567452018692268,
+    "public_path_decode_robust_geomean": 1.796322046022585,
+    "rgb8_q90_420_quality_delta_db": 0.0008210551669698418,
+    "rgb8_q95_444_quality_delta_db": -0.05824218633100031,
+    "rgb8_q90_420_size_geomean_ratio": 0.9991718943430538,
+    "rgb8_q95_444_size_geomean_ratio": 0.997878114314959
+  },
+  "validation": {
+    "status": "failed",
+    "passed": false,
+    "gate_count": 1597,
+    "passed_gate_count": 1596,
+    "failed_gate_count": 1,
+    "failed_gates": [
+      {
+        "name": "quality-profile:rgb8_q95_444",
+        "median_delta_db": -0.05824218633100031,
+        "required_delta_db": -0.05
+      }
+    ]
+  },
+  "full_report": {
+    "bytes": 3211788,
+    "sha256": "f32b7c60f19956438023c51cc9c0b07f44ace79c66dff4a43c30fc7cfdcd80b1"
+  },
+  "decision": {
+    "candidate": "libjpeg-turbo 3.2.0",
+    "outcome": "rejected_quality_gate",
+    "stable_backend": "stb",
+    "remote_workflow_dispatched": false
+  }
+}

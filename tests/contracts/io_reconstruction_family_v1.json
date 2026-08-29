@@ -1,0 +1,2491 @@
+{
+  "schema_version": 1,
+  "parent": {
+    "commit": "074d8d9b33711658423de8e7787a97f43bf09982",
+    "tree": "b329d05eabea9387e51efa1edcf2a29535c5c802",
+    "collection_nodes": 3184,
+    "collection_sha256": "76d13c72f8b3b4903bc05112dd3f1446fb64ed17e18a2e9cead2fecb58c44cab",
+    "import_module_counts": {
+      "import_sceneio": 7,
+      "import_io": 41,
+      "import_core": 8
+    }
+  },
+  "family_ids": [
+    "colmap_sparse",
+    "transforms_json",
+    "tum",
+    "kitti",
+    "euroc_state",
+    "g2o",
+    "colmap_db",
+    "colmap_sparse_txt",
+    "bundler",
+    "bal",
+    "nvm",
+    "openmvg"
+  ],
+  "canonical_positions": {
+    "colmap_sparse": 1,
+    "transforms_json": 15,
+    "tum": 16,
+    "kitti": 17,
+    "euroc_state": 18,
+    "g2o": 23,
+    "colmap_db": 24,
+    "colmap_sparse_txt": 40,
+    "bundler": 47,
+    "bal": 48,
+    "nvm": 49,
+    "openmvg": 50
+  },
+  "registry": {
+    "colmap_sparse": {
+      "record": "Reconstruction",
+      "datatype": "sparse_model",
+      "extensions": [],
+      "magic_hex": [],
+      "filenames": [],
+      "is_directory": true,
+      "dir_marker": "cameras.bin",
+      "lossy": false,
+      "container_kind": "directory",
+      "supported_features": [
+        "cameras",
+        "images",
+        "points3D",
+        "tracks"
+      ],
+      "unsupported_features": [],
+      "operations": {
+        "read": {
+          "module": "sceneio._core",
+          "name": "read_colmap_sparse"
+        },
+        "write": {
+          "module": "sceneio._core",
+          "name": "write_colmap_sparse"
+        },
+        "read_image": {
+          "module": "sceneio._core",
+          "name": "read_colmap_sparse_image"
+        },
+        "read_pair": null,
+        "read_states": null
+      }
+    },
+    "transforms_json": {
+      "record": "PosedViewSet",
+      "datatype": "posed_views",
+      "extensions": [],
+      "magic_hex": [],
+      "filenames": [
+        "transforms.json"
+      ],
+      "is_directory": false,
+      "dir_marker": "cameras.bin",
+      "lossy": false,
+      "container_kind": "file",
+      "supported_features": [],
+      "unsupported_features": [],
+      "operations": {
+        "read": {
+          "module": "sceneio.io._registry.adapters",
+          "name": "read",
+          "closure": {
+            "fn": "sceneio._core.read_transforms_json"
+          }
+        },
+        "write": {
+          "module": "sceneio.io._registry.adapters",
+          "name": "write",
+          "closure": {
+            "fn": "sceneio._core.write_transforms_json",
+            "prepare": null
+          }
+        },
+        "read_image": null,
+        "read_pair": null,
+        "read_states": null
+      }
+    },
+    "tum": {
+      "record": "PosedViewSet",
+      "datatype": "posed_views",
+      "extensions": [],
+      "magic_hex": [],
+      "filenames": [],
+      "is_directory": false,
+      "dir_marker": "cameras.bin",
+      "lossy": false,
+      "container_kind": "file",
+      "supported_features": [],
+      "unsupported_features": [],
+      "operations": {
+        "read": {
+          "module": "sceneio.io._registry.adapters",
+          "name": "read",
+          "closure": {
+            "fn": "sceneio._core.read_tum"
+          }
+        },
+        "write": {
+          "module": "sceneio.io._registry.adapters",
+          "name": "write",
+          "closure": {
+            "fn": "sceneio._core.write_tum",
+            "prepare": null
+          }
+        },
+        "read_image": null,
+        "read_pair": null,
+        "read_states": null
+      }
+    },
+    "kitti": {
+      "record": "PosedViewSet",
+      "datatype": "posed_views",
+      "extensions": [],
+      "magic_hex": [],
+      "filenames": [],
+      "is_directory": false,
+      "dir_marker": "cameras.bin",
+      "lossy": false,
+      "container_kind": "file",
+      "supported_features": [],
+      "unsupported_features": [],
+      "operations": {
+        "read": {
+          "module": "sceneio.io._registry.adapters",
+          "name": "read",
+          "closure": {
+            "fn": "sceneio._core.read_kitti"
+          }
+        },
+        "write": {
+          "module": "sceneio.io._registry.adapters",
+          "name": "write",
+          "closure": {
+            "fn": "sceneio._core.write_kitti",
+            "prepare": null
+          }
+        },
+        "read_image": null,
+        "read_pair": null,
+        "read_states": null
+      }
+    },
+    "euroc_state": {
+      "record": "StateTrajectory",
+      "datatype": "state_trajectory",
+      "extensions": [],
+      "magic_hex": [
+        "2374696d657374616d70205b6e735d2c"
+      ],
+      "filenames": [],
+      "is_directory": false,
+      "dir_marker": "cameras.bin",
+      "lossy": false,
+      "container_kind": "file",
+      "supported_features": [
+        "int64_nanosecond_timestamps",
+        "position",
+        "wxyz_orientation",
+        "velocity",
+        "gyroscope_bias",
+        "accelerometer_bias",
+        "state_ranges"
+      ],
+      "unsupported_features": [],
+      "operations": {
+        "read": {
+          "module": "sceneio.io._registry.adapters",
+          "name": "read",
+          "closure": {
+            "fn": "sceneio._core.read_euroc_state"
+          }
+        },
+        "write": {
+          "module": "sceneio.io._registry.adapters",
+          "name": "write",
+          "closure": {
+            "fn": "sceneio._core.write_euroc_state",
+            "prepare": null
+          }
+        },
+        "read_image": null,
+        "read_pair": null,
+        "read_states": {
+          "module": "sceneio.io._registry.adapters",
+          "name": "read",
+          "closure": {
+            "fn": "sceneio._core.read_euroc_state_states"
+          }
+        }
+      }
+    },
+    "g2o": {
+      "record": "PoseGraph",
+      "datatype": "pose_graph",
+      "extensions": [
+        ".g2o"
+      ],
+      "magic_hex": [
+        "232067326f20706f7365206772617068",
+        "5645525445585f5345333a51554154",
+        "454447455f5345333a51554154"
+      ],
+      "filenames": [],
+      "is_directory": false,
+      "dir_marker": "cameras.bin",
+      "lossy": false,
+      "container_kind": "file",
+      "supported_features": [
+        "vertex_se3_quat",
+        "edge_se3_quat",
+        "fixed_vertices",
+        "symmetric_information_6x6"
+      ],
+      "unsupported_features": [
+        "mixed_vertex_types",
+        "mixed_edge_types",
+        "parameters",
+        "robust_kernels"
+      ],
+      "operations": {
+        "read": {
+          "module": "sceneio.io._registry.adapters",
+          "name": "read",
+          "closure": {
+            "fn": "sceneio._core.read_g2o"
+          }
+        },
+        "write": {
+          "module": "sceneio.io._registry.adapters",
+          "name": "write",
+          "closure": {
+            "fn": "sceneio._core.write_g2o",
+            "prepare": null
+          }
+        },
+        "read_image": null,
+        "read_pair": null,
+        "read_states": null
+      }
+    },
+    "colmap_db": {
+      "record": "ColmapDatabase",
+      "datatype": "match_graph",
+      "extensions": [
+        ".db"
+      ],
+      "magic_hex": [
+        "53514c69746520666f726d6174203300"
+      ],
+      "filenames": [
+        "database.db"
+      ],
+      "is_directory": false,
+      "dir_marker": "cameras.bin",
+      "lossy": false,
+      "container_kind": "file",
+      "supported_features": [
+        "cameras",
+        "images",
+        "keypoints_2_4_6",
+        "uint8_descriptors",
+        "extractor_type",
+        "raw_matches",
+        "verified_matches",
+        "F_E_H",
+        "relative_pose",
+        "sparse_ids",
+        "current_recovered_camera_reads",
+        "current_recovered_camera_writes",
+        "stock_rig_frame_reads",
+        "stock_rig_frame_writes",
+        "stock_pose_prior_reads",
+        "stock_pose_prior_writes",
+        "maxx_image_time_reads",
+        "maxx_descriptor_metadata_reads",
+        "maxx_keypoint_color_reads",
+        "maxx_match_score_reads",
+        "maxx_pair_provenance_reads",
+        "maxx_image_quality_reads",
+        "maxx_extended_pose_prior_reads",
+        "maxx_marker_reads",
+        "maxx_video_metadata_reads",
+        "maxx_ownership_reads",
+        "maxx_extension_writes",
+        "exact_profile_writes",
+        "conversion_reports",
+        "read_only_reads",
+        "transactional_writes"
+      ],
+      "unsupported_features": [
+        "per_keypoint_score_writes"
+      ],
+      "operations": {
+        "read": {
+          "module": "sceneio._core",
+          "name": "read_colmap_db"
+        },
+        "write": {
+          "module": "sceneio._core",
+          "name": "write_colmap_db"
+        },
+        "read_image": {
+          "module": "sceneio._core",
+          "name": "read_colmap_db_image"
+        },
+        "read_pair": {
+          "module": "sceneio._core",
+          "name": "read_colmap_db_pair"
+        },
+        "read_states": null
+      }
+    },
+    "colmap_sparse_txt": {
+      "record": "Reconstruction",
+      "datatype": "sparse_model",
+      "extensions": [],
+      "magic_hex": [],
+      "filenames": [],
+      "is_directory": true,
+      "dir_marker": "cameras.txt",
+      "lossy": false,
+      "container_kind": "directory",
+      "supported_features": [
+        "cameras",
+        "images",
+        "points3D",
+        "tracks"
+      ],
+      "unsupported_features": [],
+      "operations": {
+        "read": {
+          "module": "sceneio._core",
+          "name": "read_colmap_txt"
+        },
+        "write": {
+          "module": "sceneio._core",
+          "name": "write_colmap_txt"
+        },
+        "read_image": {
+          "module": "sceneio._core",
+          "name": "read_colmap_txt_image"
+        },
+        "read_pair": null,
+        "read_states": null
+      }
+    },
+    "bundler": {
+      "record": "Reconstruction",
+      "datatype": "sparse_model",
+      "extensions": [
+        ".out"
+      ],
+      "magic_hex": [
+        "232042756e646c652066696c65"
+      ],
+      "filenames": [],
+      "is_directory": false,
+      "dir_marker": "cameras.bin",
+      "lossy": false,
+      "container_kind": "file",
+      "supported_features": [],
+      "unsupported_features": [],
+      "operations": {
+        "read": {
+          "module": "sceneio.io._registry.adapters",
+          "name": "read",
+          "closure": {
+            "fn": "sceneio._core.read_bundler"
+          }
+        },
+        "write": {
+          "module": "sceneio.io._registry.adapters",
+          "name": "write",
+          "closure": {
+            "fn": "sceneio._core.write_bundler",
+            "prepare": null
+          }
+        },
+        "read_image": null,
+        "read_pair": null,
+        "read_states": null
+      }
+    },
+    "bal": {
+      "record": "Reconstruction",
+      "datatype": "sparse_model",
+      "extensions": [
+        ".bal"
+      ],
+      "magic_hex": [],
+      "filenames": [],
+      "is_directory": false,
+      "dir_marker": "cameras.bin",
+      "lossy": false,
+      "container_kind": "file",
+      "supported_features": [
+        "angle_axis",
+        "radial_k1_k2",
+        "centered_observations",
+        "deterministic_17_digit_writer"
+      ],
+      "unsupported_features": [
+        "bzip2",
+        "image_names",
+        "image_dimensions",
+        "principal_points",
+        "point_colors",
+        "point_errors",
+        "untriangulated_observations"
+      ],
+      "operations": {
+        "read": {
+          "module": "sceneio.io._registry.adapters",
+          "name": "read",
+          "closure": {
+            "fn": "sceneio._core.read_bal"
+          }
+        },
+        "write": {
+          "module": "sceneio.io._registry.adapters",
+          "name": "write",
+          "closure": {
+            "fn": "sceneio._core.write_bal",
+            "prepare": null
+          }
+        },
+        "read_image": null,
+        "read_pair": null,
+        "read_states": null
+      }
+    },
+    "nvm": {
+      "record": "Reconstruction",
+      "datatype": "sparse_model",
+      "extensions": [
+        ".nvm"
+      ],
+      "magic_hex": [
+        "4e564d5f5633"
+      ],
+      "filenames": [],
+      "is_directory": false,
+      "dir_marker": "cameras.bin",
+      "lossy": false,
+      "container_kind": "file",
+      "supported_features": [],
+      "unsupported_features": [],
+      "operations": {
+        "read": {
+          "module": "sceneio.io._registry.adapters",
+          "name": "read",
+          "closure": {
+            "fn": "sceneio._core.read_nvm"
+          }
+        },
+        "write": {
+          "module": "sceneio.io._registry.adapters",
+          "name": "write",
+          "closure": {
+            "fn": "sceneio._core.write_nvm",
+            "prepare": null
+          }
+        },
+        "read_image": null,
+        "read_pair": null,
+        "read_states": null
+      }
+    },
+    "openmvg": {
+      "record": "Reconstruction",
+      "datatype": "sparse_model",
+      "extensions": [],
+      "magic_hex": [],
+      "filenames": [
+        "sfm_data.json"
+      ],
+      "is_directory": false,
+      "dir_marker": "cameras.bin",
+      "lossy": false,
+      "container_kind": "file",
+      "supported_features": [],
+      "unsupported_features": [],
+      "operations": {
+        "read": {
+          "module": "sceneio.io._registry.adapters",
+          "name": "read",
+          "closure": {
+            "fn": "sceneio._core.read_openmvg"
+          }
+        },
+        "write": {
+          "module": "sceneio.io._registry.adapters",
+          "name": "write",
+          "closure": {
+            "fn": "sceneio._core.write_openmvg",
+            "prepare": null
+          }
+        },
+        "read_image": null,
+        "read_pair": null,
+        "read_states": null
+      }
+    }
+  },
+  "benchmark_parent": {
+    "command": ".venv/Scripts/python.exe bench/bench_io.py --runs 1 --scale 0.001 --skip-oracles --json <output>",
+    "captures": [
+      "build/r2-reconstruction-parent-a.json",
+      "build/r2-reconstruction-parent-b.json"
+    ],
+    "benchmark_order_family_ids": [
+      "transforms_json",
+      "tum",
+      "kitti",
+      "euroc_state",
+      "g2o",
+      "bundler",
+      "bal",
+      "nvm",
+      "openmvg",
+      "colmap_db",
+      "colmap_sparse",
+      "colmap_sparse_txt"
+    ],
+    "all_codec_projection_sha256": "97c98367e8ea602e9b9c1682b8c6ef1ca8fd483a66b233cd64dbc5976d0c7948",
+    "reconstruction_rows_projection_sha256": "92d354dfd4aa415cbd908168d55310902e56fd21541c94d66fc740c1915540d9"
+  },
+  "valid": {
+    "colmap_sparse": {
+      "artifact": {
+        "kind": "directory",
+        "members": {
+          "cameras.bin": {
+            "byte_size": 56,
+            "sha256": "b0f6dee954ec05a828196604863d4b8c59ebd7dab1eb63640404543c8795796f"
+          },
+          "images.bin": {
+            "byte_size": 86,
+            "sha256": "d90fd74b7e779ac49efb7b69d45b4e8d99c2db15129fc0e71bf27ff3d51e22f0"
+          },
+          "points3D.bin": {
+            "byte_size": 59,
+            "sha256": "89cb8b1017fd53285f0c646d6e43d69d201e613c053d272f0298df9dac09e548"
+          }
+        }
+      },
+      "detected": "colmap_sparse",
+      "inspection": {
+        "format": "colmap_sparse",
+        "datatype": "sparse_model",
+        "byte_size": 201,
+        "shape": [
+          1
+        ],
+        "dtype": "float64",
+        "channels": null,
+        "count": 1,
+        "arrays": [],
+        "metadata": {
+          "num_cameras": 1,
+          "num_images": 1,
+          "num_points3D": 1
+        }
+      },
+      "record": {
+        "type": "Reconstruction",
+        "cameras": [
+          {
+            "id": 1,
+            "model_id": 0,
+            "model": "SIMPLE_PINHOLE",
+            "width": 0,
+            "height": 0,
+            "params": {
+              "dtype": "<f8",
+              "shape": [
+                3
+              ],
+              "sha256": "35c612b85ae489df3abbc87a6a678e0f7c131210119815bddc1da5019163e141"
+            }
+          }
+        ],
+        "image_names": [
+          "a.jpg"
+        ],
+        "arrays": {
+          "image_ids": {
+            "dtype": "<u4",
+            "shape": [
+              1
+            ],
+            "sha256": "67abdd721024f0ff4e0b3f4c2fc13bc5bad42d0b7851d456d88d203d15aaa450"
+          },
+          "image_camera_ids": {
+            "dtype": "<u4",
+            "shape": [
+              1
+            ],
+            "sha256": "67abdd721024f0ff4e0b3f4c2fc13bc5bad42d0b7851d456d88d203d15aaa450"
+          },
+          "quaternions": {
+            "dtype": "<f8",
+            "shape": [
+              1,
+              4
+            ],
+            "sha256": "5e5c794534608bdcc5f3c19fd8d94ad66ab3aedaeb79694b00adab9d1df8e25f"
+          },
+          "translations": {
+            "dtype": "<f8",
+            "shape": [
+              1,
+              3
+            ],
+            "sha256": "e8e5d56c696b406140b99f5a129d4fb875b37d31a59f9a0752cf410035a0b4c9"
+          },
+          "point3D_ids": {
+            "dtype": "<u8",
+            "shape": [
+              1
+            ],
+            "sha256": "7c9fa136d4413fa6173637e883b6998d32e1d675f88cddff9dcbcf331820f4b8"
+          },
+          "xyz": {
+            "dtype": "<f8",
+            "shape": [
+              1,
+              3
+            ],
+            "sha256": "5829f558094736f8a23f54746cee8db44d22f991aee747e2bf37219bc6eacd56"
+          },
+          "rgb": {
+            "dtype": "|u1",
+            "shape": [
+              1,
+              3
+            ],
+            "sha256": "6951bbd9c2178b2a9d01714687307afda1eb6161ff8c398486a76683e7b42925"
+          },
+          "errors": {
+            "dtype": "<f8",
+            "shape": [
+              1
+            ],
+            "sha256": "e77817b649821c634355a917817c1224a360514b1244fe09e832bac4e8ea4440"
+          }
+        },
+        "quaternion_order": "wxyz",
+        "pose_convention": "world_to_camera"
+      }
+    },
+    "transforms_json": {
+      "artifact": {
+        "kind": "file",
+        "byte_size": 216,
+        "sha256": "2c420abaffa44bc1aef8f4cc68764ffb8b9170531da15f877348538182cfb2bc"
+      },
+      "detected": "transforms_json",
+      "inspection": {
+        "format": "transforms_json",
+        "datatype": "posed_views",
+        "byte_size": 216,
+        "shape": [
+          1
+        ],
+        "dtype": "float64",
+        "channels": null,
+        "count": 1,
+        "arrays": [],
+        "metadata": {
+          "num_views": 1,
+          "num_cameras": 1
+        }
+      },
+      "record": {
+        "type": "PosedViewSet",
+        "cameras": [
+          {
+            "id": 0,
+            "model_id": 1,
+            "model": "PINHOLE",
+            "width": 640,
+            "height": 480,
+            "params": {
+              "dtype": "<f8",
+              "shape": [
+                4
+              ],
+              "sha256": "471d2209abef0b58537f45b803454f445176d42311afea706fd1406d011d7695"
+            }
+          }
+        ],
+        "names": [
+          "a.png"
+        ],
+        "arrays": {
+          "quaternions": {
+            "dtype": "<f8",
+            "shape": [
+              1,
+              4
+            ],
+            "sha256": "41e57a811ac9776a5931d1ac2f1f354df344c042329b13e20b4b516db8b78410"
+          },
+          "translations": {
+            "dtype": "<f8",
+            "shape": [
+              1,
+              3
+            ],
+            "sha256": "a68de4b5e96a60c8ceb3c7b7ef93461725bdbbff3516b136585a743b5c0ec664"
+          },
+          "camera_indices": {
+            "dtype": "<i4",
+            "shape": [
+              1
+            ],
+            "sha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119"
+          },
+          "timestamps": {
+            "dtype": "<f8",
+            "shape": [
+              0
+            ],
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          }
+        },
+        "quaternion_order": "wxyz",
+        "pose_convention": "camera_to_world",
+        "axis_frame": "opengl",
+        "scale_to_meters": 1.0
+      }
+    },
+    "tum": {
+      "artifact": {
+        "kind": "file",
+        "byte_size": 16,
+        "sha256": "b4888fd165fa7e86d4551dd93e21b095a9a5a5f793dec805bb48161d0afd4456"
+      },
+      "detected": "explicit_only",
+      "inspection": {
+        "format": "tum",
+        "datatype": "posed_views",
+        "byte_size": 16,
+        "shape": [
+          1
+        ],
+        "dtype": "float64",
+        "channels": null,
+        "count": 1,
+        "arrays": [],
+        "metadata": {}
+      },
+      "record": {
+        "type": "PosedViewSet",
+        "cameras": [],
+        "names": [],
+        "arrays": {
+          "quaternions": {
+            "dtype": "<f8",
+            "shape": [
+              1,
+              4
+            ],
+            "sha256": "ae2cc60d29de85c7ed46adf5bb27e89a62bdafc75e3f8822473568055af8b86e"
+          },
+          "translations": {
+            "dtype": "<f8",
+            "shape": [
+              1,
+              3
+            ],
+            "sha256": "a68de4b5e96a60c8ceb3c7b7ef93461725bdbbff3516b136585a743b5c0ec664"
+          },
+          "camera_indices": {
+            "dtype": "<i4",
+            "shape": [
+              0
+            ],
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "timestamps": {
+            "dtype": "<f8",
+            "shape": [
+              1
+            ],
+            "sha256": "af5570f5a1810b7af78caf4bc70a660f0df51e42baf91d4de5b2328de0e83dfc"
+          }
+        },
+        "quaternion_order": "xyzw",
+        "pose_convention": "camera_to_world",
+        "axis_frame": "opencv",
+        "scale_to_meters": 1.0
+      }
+    },
+    "kitti": {
+      "artifact": {
+        "kind": "file",
+        "byte_size": 24,
+        "sha256": "a5de86643a243cc30e34931235c35c8e995b32217f0241aa09b0309d45eaee07"
+      },
+      "detected": "explicit_only",
+      "inspection": {
+        "format": "kitti",
+        "datatype": "posed_views",
+        "byte_size": 24,
+        "shape": [
+          1
+        ],
+        "dtype": "float64",
+        "channels": null,
+        "count": 1,
+        "arrays": [],
+        "metadata": {}
+      },
+      "record": {
+        "type": "PosedViewSet",
+        "cameras": [],
+        "names": [],
+        "arrays": {
+          "quaternions": {
+            "dtype": "<f8",
+            "shape": [
+              1,
+              4
+            ],
+            "sha256": "41e57a811ac9776a5931d1ac2f1f354df344c042329b13e20b4b516db8b78410"
+          },
+          "translations": {
+            "dtype": "<f8",
+            "shape": [
+              1,
+              3
+            ],
+            "sha256": "a68de4b5e96a60c8ceb3c7b7ef93461725bdbbff3516b136585a743b5c0ec664"
+          },
+          "camera_indices": {
+            "dtype": "<i4",
+            "shape": [
+              0
+            ],
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "timestamps": {
+            "dtype": "<f8",
+            "shape": [
+              0
+            ],
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          }
+        },
+        "quaternion_order": "wxyz",
+        "pose_convention": "camera_to_world",
+        "axis_frame": "opencv",
+        "scale_to_meters": 1.0
+      }
+    },
+    "euroc_state": {
+      "artifact": {
+        "kind": "file",
+        "byte_size": 626,
+        "sha256": "ae33d7c7fc84b53c054f83bdb9e98b7fef5dce31aeb024533b368dde34f6dfaf"
+      },
+      "detected": "euroc_state",
+      "inspection": {
+        "format": "euroc_state",
+        "datatype": "state_trajectory",
+        "byte_size": 626,
+        "shape": [
+          1
+        ],
+        "dtype": "float64",
+        "channels": null,
+        "count": 1,
+        "arrays": [],
+        "metadata": {
+          "timestamp_unit": "nanoseconds",
+          "quaternion_order": "wxyz",
+          "quaternion_sign": "preserved",
+          "pose_convention": "sensor_to_reference",
+          "position_frame": "reference",
+          "velocity_frame": "reference",
+          "bias_frame": "sensor",
+          "position_unit": "meters",
+          "velocity_unit": "meters_per_second",
+          "gyro_bias_unit": "radians_per_second",
+          "accel_bias_unit": "meters_per_second_squared",
+          "first_timestamp_ns": 1403636580000000000,
+          "last_timestamp_ns": 1403636580000000000
+        }
+      },
+      "record": {
+        "type": "StateTrajectory",
+        "arrays": {
+          "timestamps_ns": {
+            "dtype": "<i8",
+            "shape": [
+              1
+            ],
+            "sha256": "49ea0ed22d8b65cd3872423ea74da677e15450542a490d76ee23b1d283ce52c5"
+          },
+          "positions": {
+            "dtype": "<f8",
+            "shape": [
+              1,
+              3
+            ],
+            "sha256": "85ea419151ed867001649cb6deec1d78b2d79d15d1e01c075dacb32e5bf9cc0f"
+          },
+          "quaternions": {
+            "dtype": "<f8",
+            "shape": [
+              1,
+              4
+            ],
+            "sha256": "a850734f4dc2ed82472df2a74b884a2a6145f8a0d97e5e3b17195c151bfcdfaf"
+          },
+          "velocities": {
+            "dtype": "<f8",
+            "shape": [
+              1,
+              3
+            ],
+            "sha256": "5b1a8295fa90f249913e89d5b1bdec2b5ea64a228194b09de8e200d3fb60eccf"
+          },
+          "gyro_biases": {
+            "dtype": "<f8",
+            "shape": [
+              1,
+              3
+            ],
+            "sha256": "81fcc140a44174151ead1fcf56361095c28dfdf28748d28857a7cc4961f5f63c"
+          },
+          "accel_biases": {
+            "dtype": "<f8",
+            "shape": [
+              1,
+              3
+            ],
+            "sha256": "c74a4edeb7100f5e4f3bcb709783e7e2ccb80170ceecfc6937f2a52d4243a3ff"
+          }
+        },
+        "metadata": {
+          "timestamp_unit": "nanoseconds",
+          "quaternion_order": "wxyz",
+          "quaternion_sign": "preserved",
+          "pose_convention": "sensor_to_reference",
+          "position_frame": "reference",
+          "velocity_frame": "reference",
+          "bias_frame": "sensor",
+          "position_unit": "meters",
+          "velocity_unit": "meters_per_second",
+          "gyro_bias_unit": "radians_per_second",
+          "accel_bias_unit": "meters_per_second_squared"
+        }
+      }
+    },
+    "g2o": {
+      "artifact": {
+        "kind": "file",
+        "byte_size": 249,
+        "sha256": "c6aa11493f8f3074cdebfe75fd72969d6cd46484cee75bb679d430bf2550e100"
+      },
+      "detected": "g2o",
+      "inspection": {
+        "format": "g2o",
+        "datatype": "pose_graph",
+        "byte_size": 249,
+        "shape": [
+          2
+        ],
+        "dtype": "float64",
+        "channels": null,
+        "count": 2,
+        "arrays": [],
+        "metadata": {
+          "num_nodes": 2,
+          "num_edges": 1,
+          "num_fixed_nodes": 1,
+          "quaternion_order": "xyzw",
+          "quaternion_sign": "preserved",
+          "node_transform_convention": "node_to_reference",
+          "edge_transform_convention": "source_inverse_times_target",
+          "translation_unit": "unspecified",
+          "information_variable_order": "tx_ty_tz_qx_qy_qz"
+        }
+      },
+      "record": {
+        "type": "PoseGraph",
+        "arrays": {
+          "node_ids": {
+            "dtype": "<i8",
+            "shape": [
+              2
+            ],
+            "sha256": "8e8f6841378f772c40db2f07e876776d50c481ed7329ebcab75312e3b1fa7807"
+          },
+          "node_translations": {
+            "dtype": "<f8",
+            "shape": [
+              2,
+              3
+            ],
+            "sha256": "1cdb6369d78c8c428b0fe5bacfa56ac1210e8fa83604a8cae0eff87bdf9ebeff"
+          },
+          "node_quaternions": {
+            "dtype": "<f8",
+            "shape": [
+              2,
+              4
+            ],
+            "sha256": "1d7ce8105d4632a4b1c8d6fbc8fbef4de8c0a422ccee417daeae463e181034bc"
+          },
+          "fixed": {
+            "dtype": "|u1",
+            "shape": [
+              2
+            ],
+            "sha256": "47dc540c94ceb704a23875c11273e16bb0b8a87aed84de911f2133568115f254"
+          },
+          "edge_endpoints": {
+            "dtype": "<i8",
+            "shape": [
+              1,
+              2
+            ],
+            "sha256": "8e8f6841378f772c40db2f07e876776d50c481ed7329ebcab75312e3b1fa7807"
+          },
+          "edge_translations": {
+            "dtype": "<f8",
+            "shape": [
+              1,
+              3
+            ],
+            "sha256": "6e392417d776dc7626bb45abaf8939325f6ce996b3e963e7622a981f6fcaa7f8"
+          },
+          "edge_quaternions": {
+            "dtype": "<f8",
+            "shape": [
+              1,
+              4
+            ],
+            "sha256": "ae2cc60d29de85c7ed46adf5bb27e89a62bdafc75e3f8822473568055af8b86e"
+          },
+          "information_matrices": {
+            "dtype": "<f8",
+            "shape": [
+              1,
+              6,
+              6
+            ],
+            "sha256": "fe7f03d336210c0ede5316a178d818a67ebf348cdf2bffac790ba49244eabdf3"
+          }
+        },
+        "node_types": [
+          "se3",
+          "se3"
+        ],
+        "edge_types": [
+          "se3"
+        ],
+        "metadata": {
+          "quaternion_order": "xyzw",
+          "quaternion_sign": "preserved",
+          "node_transform_convention": "node_to_reference",
+          "edge_transform_convention": "source_inverse_times_target",
+          "translation_unit": "unspecified",
+          "information_variable_order": "tx_ty_tz_qx_qy_qz",
+          "information_storage": "symmetric_6x6"
+        }
+      }
+    },
+    "colmap_db": {
+      "artifact": {
+        "kind": "file",
+        "same_host": {
+          "platform": "win32",
+          "sqlite_version": "3.53.4",
+          "byte_size": 77824,
+          "sha256": "91cc83aac19d518b97c977e43ee58ad24c652d086e5b89594179b094b5f6af29"
+        }
+      },
+      "detected": "colmap_db",
+      "inspection": {
+        "format": "colmap_db",
+        "datatype": "match_graph",
+        "byte_size": 77824,
+        "shape": [
+          2
+        ],
+        "dtype": null,
+        "channels": null,
+        "count": 2,
+        "arrays": [
+          {
+            "name": "2/keypoints",
+            "shape": [
+              2,
+              2
+            ],
+            "dtype": "float32"
+          },
+          {
+            "name": "2/descriptors",
+            "shape": [
+              2,
+              4
+            ],
+            "dtype": "uint8"
+          },
+          {
+            "name": "11/keypoints",
+            "shape": [
+              2,
+              2
+            ],
+            "dtype": "float32"
+          },
+          {
+            "name": "11/descriptors",
+            "shape": [
+              2,
+              4
+            ],
+            "dtype": "uint8"
+          }
+        ],
+        "metadata": {
+          "user_version": 3140002,
+          "sqlite_version": "3.53.4",
+          "num_rigs": 0,
+          "num_rig_sensors": 0,
+          "num_frames": 0,
+          "num_frame_data": 0,
+          "num_pose_priors": 0,
+          "pose_prior_layout": "correlated-extended",
+          "num_keypoint_color_rows": 0,
+          "num_match_score_pairs": 0,
+          "num_image_qualities": 0,
+          "num_pair_provenance": 0,
+          "num_markers": 0,
+          "num_marker_projections": 0,
+          "num_videos": 0,
+          "num_video_frames": 0,
+          "num_cameras": 1,
+          "num_images": 2,
+          "num_keypoint_rows": 2,
+          "num_descriptor_rows": 2,
+          "num_match_pairs": 1,
+          "num_verified_pairs": 1,
+          "num_matches": 1,
+          "num_verified_matches": 1,
+          "descriptor_dimensions": [
+            4
+          ],
+          "image_ids": [
+            2,
+            11
+          ],
+          "image_names": [
+            "2.jpg",
+            "11.jpg"
+          ]
+        }
+      },
+      "record": {
+        "type": "ColmapDatabase",
+        "profile": "sceneio-hybrid-v1",
+        "application_id": 0,
+        "user_version": 3140002,
+        "cameras": [
+          {
+            "id": 5,
+            "model_id": 1,
+            "model": "PINHOLE",
+            "width": 640,
+            "height": 480,
+            "params": {
+              "dtype": "<f8",
+              "shape": [
+                4
+              ],
+              "sha256": "9e6afb30a6214954b4e350ebf528a3fae9cf957ef3057698ae4dd530faae7b9f"
+            }
+          }
+        ],
+        "image_ids": [
+          2,
+          11
+        ],
+        "prior_focal_length": {
+          "dtype": "|u1",
+          "shape": [
+            1
+          ],
+          "sha256": "4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a"
+        },
+        "features": [
+          {
+            "image_id": 2,
+            "image_name": "2.jpg",
+            "camera_id": 5,
+            "image_size": [
+              640,
+              480
+            ],
+            "extractor_type": 0,
+            "time_id": null,
+            "descriptor_dtype": "uint8",
+            "descriptor_dim": 4,
+            "descriptor_dtype_present": false,
+            "descriptor_dim_present": false,
+            "extractor_type_name": null,
+            "keypoints_present": true,
+            "quality": null,
+            "arrays": {
+              "keypoints": {
+                "dtype": "<f4",
+                "shape": [
+                  2,
+                  2
+                ],
+                "sha256": "beca39ea48a7a8e3e46775d302848fb64a367509e7465020ca4890f3384a5923"
+              },
+              "descriptors": {
+                "dtype": "|u1",
+                "shape": [
+                  2,
+                  4
+                ],
+                "sha256": "117c9035800fb3497693c4c08747397e1c69e3b3b799ed286adb2978df427f49"
+              },
+              "keypoint_colors": null,
+              "scores": null
+            }
+          },
+          {
+            "image_id": 11,
+            "image_name": "11.jpg",
+            "camera_id": 5,
+            "image_size": [
+              640,
+              480
+            ],
+            "extractor_type": 0,
+            "time_id": null,
+            "descriptor_dtype": "uint8",
+            "descriptor_dim": 4,
+            "descriptor_dtype_present": false,
+            "descriptor_dim_present": false,
+            "extractor_type_name": null,
+            "keypoints_present": true,
+            "quality": null,
+            "arrays": {
+              "keypoints": {
+                "dtype": "<f4",
+                "shape": [
+                  2,
+                  2
+                ],
+                "sha256": "beca39ea48a7a8e3e46775d302848fb64a367509e7465020ca4890f3384a5923"
+              },
+              "descriptors": {
+                "dtype": "|u1",
+                "shape": [
+                  2,
+                  4
+                ],
+                "sha256": "705e957007eeb0252694f331048b238bb61b52a8efd341cdb926d3d6275a2184"
+              },
+              "keypoint_colors": null,
+              "scores": null
+            }
+          }
+        ],
+        "match_graph": {
+          "arrays": {
+            "image_pairs": {
+              "dtype": "<u4",
+              "shape": [
+                1,
+                2
+              ],
+              "sha256": "ed9355b4c282e304132b2d00970ed2b20359e38ffdee4079f1370e90ae887775"
+            },
+            "pair_ids": {
+              "dtype": "<i8",
+              "shape": [
+                1
+              ],
+              "sha256": "16bce557773683d52432d256eb51b2c75eabbfe67012662e5398966b0cd6a6c5"
+            },
+            "match_offsets": {
+              "dtype": "<u8",
+              "shape": [
+                2
+              ],
+              "sha256": "9d34149fbd1fe777eb238799054c8cbfbce372255f219f8740838def9bfd02db"
+            },
+            "matches": {
+              "dtype": "<u4",
+              "shape": [
+                1,
+                2
+              ],
+              "sha256": "01acecb507abfe1a354aa8064f4af5d3f1acd019e37db3c11c97523b71c76e9d"
+            },
+            "scores": null,
+            "match_score_present": {
+              "dtype": "|u1",
+              "shape": [
+                1
+              ],
+              "sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d"
+            },
+            "verified_offsets": {
+              "dtype": "<u8",
+              "shape": [
+                2
+              ],
+              "sha256": "9d34149fbd1fe777eb238799054c8cbfbce372255f219f8740838def9bfd02db"
+            },
+            "verified_matches": {
+              "dtype": "<u4",
+              "shape": [
+                1,
+                2
+              ],
+              "sha256": "01acecb507abfe1a354aa8064f4af5d3f1acd019e37db3c11c97523b71c76e9d"
+            },
+            "configs": {
+              "dtype": "<i4",
+              "shape": [
+                1
+              ],
+              "sha256": "26b25d457597a7b0463f9620f666dd10aa2c4373a505967c7c8d70922a2d6ece"
+            },
+            "fundamental_matrices": {
+              "dtype": "<f8",
+              "shape": [
+                1,
+                3,
+                3
+              ],
+              "sha256": "1332df685c45a61a0ac008a6a653295b8c5655361c1d34b6304b22ec40235fb8"
+            },
+            "essential_matrices": {
+              "dtype": "<f8",
+              "shape": [
+                1,
+                3,
+                3
+              ],
+              "sha256": "834a709ba2534ebe3ee1397fd4f7bd288b2acc1d20a08d6c862dcd99b6f04400"
+            },
+            "homographies": {
+              "dtype": "<f8",
+              "shape": [
+                1,
+                3,
+                3
+              ],
+              "sha256": "834a709ba2534ebe3ee1397fd4f7bd288b2acc1d20a08d6c862dcd99b6f04400"
+            },
+            "qvecs": {
+              "dtype": "<f8",
+              "shape": [
+                1,
+                4
+              ],
+              "sha256": "66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925"
+            },
+            "tvecs": {
+              "dtype": "<f8",
+              "shape": [
+                1,
+                3
+              ],
+              "sha256": "9d908ecfb6b256def8b49a7c504e6c889c4b0e41fe6ce3e01863dd7b61a20aa0"
+            },
+            "match_present": {
+              "dtype": "|u1",
+              "shape": [
+                1
+              ],
+              "sha256": "4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a"
+            },
+            "geometry_present": {
+              "dtype": "|u1",
+              "shape": [
+                1
+              ],
+              "sha256": "4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a"
+            },
+            "F_present": {
+              "dtype": "|u1",
+              "shape": [
+                1
+              ],
+              "sha256": "4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a"
+            },
+            "E_present": {
+              "dtype": "|u1",
+              "shape": [
+                1
+              ],
+              "sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d"
+            },
+            "H_present": {
+              "dtype": "|u1",
+              "shape": [
+                1
+              ],
+              "sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d"
+            },
+            "pose_present": {
+              "dtype": "|u1",
+              "shape": [
+                1
+              ],
+              "sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d"
+            },
+            "provenance_present": {
+              "dtype": "|u1",
+              "shape": [
+                1
+              ],
+              "sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d"
+            },
+            "source_flags": {
+              "dtype": "<u4",
+              "shape": [
+                1
+              ],
+              "sha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119"
+            },
+            "retrieval_score_present": {
+              "dtype": "|u1",
+              "shape": [
+                1
+              ],
+              "sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d"
+            },
+            "retrieval_scores": {
+              "dtype": "<f4",
+              "shape": [
+                1
+              ],
+              "sha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119"
+            }
+          },
+          "quaternion_order": "wxyz",
+          "relative_pose_convention": "second_from_first"
+        },
+        "pose_priors": {
+          "generalized": true,
+          "arrays": {
+            "prior_ids": {
+              "dtype": "<u4",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "correlated_data_ids": {
+              "dtype": "<u8",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "correlated_sensor_ids": {
+              "dtype": "<u4",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "correlated_sensor_types": {
+              "dtype": "<i4",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "coordinate_systems": {
+              "dtype": "<i4",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "position_present": {
+              "dtype": "|u1",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "positions": {
+              "dtype": "<f8",
+              "shape": [
+                0,
+                3
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "position_covariance_present": {
+              "dtype": "|u1",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "position_covariances": {
+              "dtype": "<f8",
+              "shape": [
+                0,
+                3,
+                3
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "gravity_present": {
+              "dtype": "|u1",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "gravities": {
+              "dtype": "<f8",
+              "shape": [
+                0,
+                3
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "rotation_present": {
+              "dtype": "|u1",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "rotations": {
+              "dtype": "<f8",
+              "shape": [
+                0,
+                4
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "rotation_covariance_present": {
+              "dtype": "|u1",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "rotation_covariances": {
+              "dtype": "<f8",
+              "shape": [
+                0,
+                3,
+                3
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "pose_covariance_present": {
+              "dtype": "|u1",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "pose_covariances": {
+              "dtype": "<f8",
+              "shape": [
+                0,
+                6,
+                6
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+          },
+          "rotation_order": "xyzw",
+          "rotation_convention": "cam_from_world",
+          "covariance_storage": "row_major",
+          "rotation_covariance_variable_order": "rotation_tangent_xyz",
+          "pose_covariance_variable_order": "rotation_tangent_xyz_translation_xyz",
+          "rotation_covariance_unit": "radians_squared",
+          "position_covariance_unit": "meters_squared",
+          "pose_covariance_cross_unit": "radian_meters"
+        },
+        "markers": {
+          "arrays": {
+            "marker_ids": {
+              "dtype": "<u4",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "marker_types": {
+              "dtype": "<i4",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "world_position_present": {
+              "dtype": "|u1",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "world_positions": {
+              "dtype": "<f8",
+              "shape": [
+                0,
+                3
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "world_position_covariance_present": {
+              "dtype": "|u1",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "world_position_covariances": {
+              "dtype": "<f8",
+              "shape": [
+                0,
+                3,
+                3
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "point3D_ids": {
+              "dtype": "<u8",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "enabled": {
+              "dtype": "|u1",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "projection_marker_ids": {
+              "dtype": "<u4",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "projection_image_ids": {
+              "dtype": "<u4",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "projection_xy": {
+              "dtype": "<f8",
+              "shape": [
+                0,
+                2
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "projection_sizes": {
+              "dtype": "<f8",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "projection_pinned": {
+              "dtype": "|u1",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "projection_point2D_indices": {
+              "dtype": "<u4",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+          },
+          "labels": [],
+          "projection_coordinate_origin": "top_left",
+          "projection_coordinate_unit": "pixels",
+          "projection_size_unit": "pixels"
+        },
+        "video_metadata": {
+          "arrays": {
+            "video_ids": {
+              "dtype": "<u4",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "source_path_present": {
+              "dtype": "|u1",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "content_hash_present": {
+              "dtype": "|u1",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "widths": {
+              "dtype": "<i4",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "heights": {
+              "dtype": "<i4",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "num_frames": {
+              "dtype": "<i8",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "fps": {
+              "dtype": "<f8",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "duration_seconds": {
+              "dtype": "<f8",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "codec_name_present": {
+              "dtype": "|u1",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "sync_group_present": {
+              "dtype": "|u1",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "frame_video_ids": {
+              "dtype": "<u4",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "frame_image_ids": {
+              "dtype": "<u4",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "video_frame_indices": {
+              "dtype": "<i8",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "pts_present": {
+              "dtype": "|u1",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "pts_seconds": {
+              "dtype": "<f8",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "time_id_present": {
+              "dtype": "|u1",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "time_ids": {
+              "dtype": "<u4",
+              "shape": [
+                0
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+          },
+          "names": [],
+          "source_paths": [],
+          "content_hashes": [],
+          "codec_names": [],
+          "sync_groups": []
+        },
+        "maxx_schema_info": null
+      }
+    },
+    "colmap_sparse_txt": {
+      "artifact": {
+        "kind": "directory",
+        "members": {
+          "cameras.txt": {
+            "byte_size": 146,
+            "sha256": "cf8f4cf5126a744b762a611fb9f33cdd83bfeb043ac1efc33d7bd1228697acd3"
+          },
+          "images.txt": {
+            "byte_size": 232,
+            "sha256": "20a152db74c085606f8ad58f3e01bd642f573c69ff0d6e684b5ebd3b9bcf44b7"
+          },
+          "points3D.txt": {
+            "byte_size": 196,
+            "sha256": "6f45d834c7038dea0aad76d5359deecb92d426ff5d59ce0fc1c2a15306dd051a"
+          }
+        }
+      },
+      "detected": "colmap_sparse_txt",
+      "inspection": {
+        "format": "colmap_sparse_txt",
+        "datatype": "sparse_model",
+        "byte_size": 574,
+        "shape": [
+          1
+        ],
+        "dtype": "float64",
+        "channels": null,
+        "count": 1,
+        "arrays": [],
+        "metadata": {
+          "num_cameras": 1,
+          "num_images": 1,
+          "num_points3D": 1
+        }
+      },
+      "record": {
+        "type": "Reconstruction",
+        "cameras": [
+          {
+            "id": 1,
+            "model_id": 0,
+            "model": "SIMPLE_PINHOLE",
+            "width": 0,
+            "height": 0,
+            "params": {
+              "dtype": "<f8",
+              "shape": [
+                3
+              ],
+              "sha256": "35c612b85ae489df3abbc87a6a678e0f7c131210119815bddc1da5019163e141"
+            }
+          }
+        ],
+        "image_names": [
+          "a.jpg"
+        ],
+        "arrays": {
+          "image_ids": {
+            "dtype": "<u4",
+            "shape": [
+              1
+            ],
+            "sha256": "67abdd721024f0ff4e0b3f4c2fc13bc5bad42d0b7851d456d88d203d15aaa450"
+          },
+          "image_camera_ids": {
+            "dtype": "<u4",
+            "shape": [
+              1
+            ],
+            "sha256": "67abdd721024f0ff4e0b3f4c2fc13bc5bad42d0b7851d456d88d203d15aaa450"
+          },
+          "quaternions": {
+            "dtype": "<f8",
+            "shape": [
+              1,
+              4
+            ],
+            "sha256": "5e5c794534608bdcc5f3c19fd8d94ad66ab3aedaeb79694b00adab9d1df8e25f"
+          },
+          "translations": {
+            "dtype": "<f8",
+            "shape": [
+              1,
+              3
+            ],
+            "sha256": "e8e5d56c696b406140b99f5a129d4fb875b37d31a59f9a0752cf410035a0b4c9"
+          },
+          "point3D_ids": {
+            "dtype": "<u8",
+            "shape": [
+              1
+            ],
+            "sha256": "7c9fa136d4413fa6173637e883b6998d32e1d675f88cddff9dcbcf331820f4b8"
+          },
+          "xyz": {
+            "dtype": "<f8",
+            "shape": [
+              1,
+              3
+            ],
+            "sha256": "5829f558094736f8a23f54746cee8db44d22f991aee747e2bf37219bc6eacd56"
+          },
+          "rgb": {
+            "dtype": "|u1",
+            "shape": [
+              1,
+              3
+            ],
+            "sha256": "6951bbd9c2178b2a9d01714687307afda1eb6161ff8c398486a76683e7b42925"
+          },
+          "errors": {
+            "dtype": "<f8",
+            "shape": [
+              1
+            ],
+            "sha256": "e77817b649821c634355a917817c1224a360514b1244fe09e832bac4e8ea4440"
+          }
+        },
+        "quaternion_order": "wxyz",
+        "pose_convention": "world_to_camera"
+      }
+    },
+    "bundler": {
+      "artifact": {
+        "kind": "file",
+        "byte_size": 82,
+        "sha256": "6742f4a3710668cbbaaf3f431b019a2d6c196ab2d1c8dea5ffdd8c2789c9e96d"
+      },
+      "detected": "bundler",
+      "inspection": {
+        "format": "bundler",
+        "datatype": "sparse_model",
+        "byte_size": 82,
+        "shape": [
+          1
+        ],
+        "dtype": "float64",
+        "channels": null,
+        "count": 1,
+        "arrays": [],
+        "metadata": {
+          "num_cameras": 1,
+          "num_images": 1,
+          "num_points3D": 1
+        }
+      },
+      "record": {
+        "type": "Reconstruction",
+        "cameras": [
+          {
+            "id": 1,
+            "model_id": 2,
+            "model": "SIMPLE_RADIAL",
+            "width": 0,
+            "height": 0,
+            "params": {
+              "dtype": "<f8",
+              "shape": [
+                4
+              ],
+              "sha256": "3884aa976b6d29426f395fd475b157bf2f774a571107e0d5f0781a5e82f7853e"
+            }
+          }
+        ],
+        "image_names": [
+          ""
+        ],
+        "arrays": {
+          "image_ids": {
+            "dtype": "<u4",
+            "shape": [
+              1
+            ],
+            "sha256": "67abdd721024f0ff4e0b3f4c2fc13bc5bad42d0b7851d456d88d203d15aaa450"
+          },
+          "image_camera_ids": {
+            "dtype": "<u4",
+            "shape": [
+              1
+            ],
+            "sha256": "67abdd721024f0ff4e0b3f4c2fc13bc5bad42d0b7851d456d88d203d15aaa450"
+          },
+          "quaternions": {
+            "dtype": "<f8",
+            "shape": [
+              1,
+              4
+            ],
+            "sha256": "5e5c794534608bdcc5f3c19fd8d94ad66ab3aedaeb79694b00adab9d1df8e25f"
+          },
+          "translations": {
+            "dtype": "<f8",
+            "shape": [
+              1,
+              3
+            ],
+            "sha256": "e8e5d56c696b406140b99f5a129d4fb875b37d31a59f9a0752cf410035a0b4c9"
+          },
+          "point3D_ids": {
+            "dtype": "<u8",
+            "shape": [
+              1
+            ],
+            "sha256": "7c9fa136d4413fa6173637e883b6998d32e1d675f88cddff9dcbcf331820f4b8"
+          },
+          "xyz": {
+            "dtype": "<f8",
+            "shape": [
+              1,
+              3
+            ],
+            "sha256": "5829f558094736f8a23f54746cee8db44d22f991aee747e2bf37219bc6eacd56"
+          },
+          "rgb": {
+            "dtype": "|u1",
+            "shape": [
+              1,
+              3
+            ],
+            "sha256": "6951bbd9c2178b2a9d01714687307afda1eb6161ff8c398486a76683e7b42925"
+          },
+          "errors": {
+            "dtype": "<f8",
+            "shape": [
+              1
+            ],
+            "sha256": "e77817b649821c634355a917817c1224a360514b1244fe09e832bac4e8ea4440"
+          }
+        },
+        "quaternion_order": "wxyz",
+        "pose_convention": "world_to_camera"
+      }
+    },
+    "bal": {
+      "artifact": {
+        "kind": "file",
+        "byte_size": 136,
+        "sha256": "bc510b34e42064d1363caa7f9c5067c919d25a5f71eaa4a5d291b51ad42b3d18"
+      },
+      "detected": "bal",
+      "inspection": {
+        "format": "bal",
+        "datatype": "sparse_model",
+        "byte_size": 136,
+        "shape": [
+          1
+        ],
+        "dtype": "float64",
+        "channels": null,
+        "count": 1,
+        "arrays": [],
+        "metadata": {
+          "num_cameras": 1,
+          "num_images": 1,
+          "num_points3D": 1,
+          "num_observations": 1
+        }
+      },
+      "record": {
+        "type": "Reconstruction",
+        "cameras": [
+          {
+            "id": 1,
+            "model_id": 3,
+            "model": "RADIAL",
+            "width": 0,
+            "height": 0,
+            "params": {
+              "dtype": "<f8",
+              "shape": [
+                5
+              ],
+              "sha256": "cfb71d4175fc2e22410d88b7e34f4a0ecffaa2adee619923b54deae072997907"
+            }
+          }
+        ],
+        "image_names": [
+          ""
+        ],
+        "arrays": {
+          "image_ids": {
+            "dtype": "<u4",
+            "shape": [
+              1
+            ],
+            "sha256": "67abdd721024f0ff4e0b3f4c2fc13bc5bad42d0b7851d456d88d203d15aaa450"
+          },
+          "image_camera_ids": {
+            "dtype": "<u4",
+            "shape": [
+              1
+            ],
+            "sha256": "67abdd721024f0ff4e0b3f4c2fc13bc5bad42d0b7851d456d88d203d15aaa450"
+          },
+          "quaternions": {
+            "dtype": "<f8",
+            "shape": [
+              1,
+              4
+            ],
+            "sha256": "1b11810b413b046348c92216a94cfad3b6f770f07b6652df482d9483803859d5"
+          },
+          "translations": {
+            "dtype": "<f8",
+            "shape": [
+              1,
+              3
+            ],
+            "sha256": "c20d4e11a0060f5420a465565c9f93f18868c522e307bb12458529766550284b"
+          },
+          "point3D_ids": {
+            "dtype": "<u8",
+            "shape": [
+              1
+            ],
+            "sha256": "7c9fa136d4413fa6173637e883b6998d32e1d675f88cddff9dcbcf331820f4b8"
+          },
+          "xyz": {
+            "dtype": "<f8",
+            "shape": [
+              1,
+              3
+            ],
+            "sha256": "fb5817b3260d4f8e1050818e7f2131bb7dab854da89e38c8f23fa7bed7f50816"
+          },
+          "rgb": {
+            "dtype": "|u1",
+            "shape": [
+              1,
+              3
+            ],
+            "sha256": "709e80c88487a2411e1ee4dfb9f22a861492d20c4765150c0c794abd70f8147c"
+          },
+          "errors": {
+            "dtype": "<f8",
+            "shape": [
+              1
+            ],
+            "sha256": "e77817b649821c634355a917817c1224a360514b1244fe09e832bac4e8ea4440"
+          }
+        },
+        "quaternion_order": "wxyz",
+        "pose_convention": "world_to_camera"
+      }
+    },
+    "nvm": {
+      "artifact": {
+        "kind": "file",
+        "byte_size": 73,
+        "sha256": "a45c608e8015f56ab9290114a3acfb5434d2afa3efc0995b9c44bea74846a569"
+      },
+      "detected": "nvm",
+      "inspection": {
+        "format": "nvm",
+        "datatype": "sparse_model",
+        "byte_size": 73,
+        "shape": [
+          1
+        ],
+        "dtype": "float64",
+        "channels": null,
+        "count": 1,
+        "arrays": [],
+        "metadata": {
+          "num_cameras": 1,
+          "num_images": 1,
+          "num_points3D": 1
+        }
+      },
+      "record": {
+        "type": "Reconstruction",
+        "cameras": [
+          {
+            "id": 1,
+            "model_id": 0,
+            "model": "SIMPLE_PINHOLE",
+            "width": 0,
+            "height": 0,
+            "params": {
+              "dtype": "<f8",
+              "shape": [
+                3
+              ],
+              "sha256": "35c612b85ae489df3abbc87a6a678e0f7c131210119815bddc1da5019163e141"
+            }
+          }
+        ],
+        "image_names": [
+          "a.jpg"
+        ],
+        "arrays": {
+          "image_ids": {
+            "dtype": "<u4",
+            "shape": [
+              1
+            ],
+            "sha256": "67abdd721024f0ff4e0b3f4c2fc13bc5bad42d0b7851d456d88d203d15aaa450"
+          },
+          "image_camera_ids": {
+            "dtype": "<u4",
+            "shape": [
+              1
+            ],
+            "sha256": "67abdd721024f0ff4e0b3f4c2fc13bc5bad42d0b7851d456d88d203d15aaa450"
+          },
+          "quaternions": {
+            "dtype": "<f8",
+            "shape": [
+              1,
+              4
+            ],
+            "sha256": "5e5c794534608bdcc5f3c19fd8d94ad66ab3aedaeb79694b00adab9d1df8e25f"
+          },
+          "translations": {
+            "dtype": "<f8",
+            "shape": [
+              1,
+              3
+            ],
+            "sha256": "e8e5d56c696b406140b99f5a129d4fb875b37d31a59f9a0752cf410035a0b4c9"
+          },
+          "point3D_ids": {
+            "dtype": "<u8",
+            "shape": [
+              1
+            ],
+            "sha256": "7c9fa136d4413fa6173637e883b6998d32e1d675f88cddff9dcbcf331820f4b8"
+          },
+          "xyz": {
+            "dtype": "<f8",
+            "shape": [
+              1,
+              3
+            ],
+            "sha256": "5829f558094736f8a23f54746cee8db44d22f991aee747e2bf37219bc6eacd56"
+          },
+          "rgb": {
+            "dtype": "|u1",
+            "shape": [
+              1,
+              3
+            ],
+            "sha256": "6951bbd9c2178b2a9d01714687307afda1eb6161ff8c398486a76683e7b42925"
+          },
+          "errors": {
+            "dtype": "<f8",
+            "shape": [
+              1
+            ],
+            "sha256": "e77817b649821c634355a917817c1224a360514b1244fe09e832bac4e8ea4440"
+          }
+        },
+        "quaternion_order": "wxyz",
+        "pose_convention": "world_to_camera"
+      }
+    },
+    "openmvg": {
+      "artifact": {
+        "kind": "file",
+        "byte_size": 644,
+        "sha256": "a11fed7cf3493739495e73094cf74b151f74623fd08e0406f60b7c11b5b8e402"
+      },
+      "detected": "openmvg",
+      "inspection": {
+        "format": "openmvg",
+        "datatype": "sparse_model",
+        "byte_size": 644,
+        "shape": [
+          1
+        ],
+        "dtype": "float64",
+        "channels": null,
+        "count": 1,
+        "arrays": [],
+        "metadata": {
+          "num_cameras": 1,
+          "num_images": 1,
+          "num_points3D": 1
+        }
+      },
+      "record": {
+        "type": "Reconstruction",
+        "cameras": [
+          {
+            "id": 1,
+            "model_id": 0,
+            "model": "SIMPLE_PINHOLE",
+            "width": 0,
+            "height": 0,
+            "params": {
+              "dtype": "<f8",
+              "shape": [
+                3
+              ],
+              "sha256": "35c612b85ae489df3abbc87a6a678e0f7c131210119815bddc1da5019163e141"
+            }
+          }
+        ],
+        "image_names": [
+          "a.jpg"
+        ],
+        "arrays": {
+          "image_ids": {
+            "dtype": "<u4",
+            "shape": [
+              1
+            ],
+            "sha256": "67abdd721024f0ff4e0b3f4c2fc13bc5bad42d0b7851d456d88d203d15aaa450"
+          },
+          "image_camera_ids": {
+            "dtype": "<u4",
+            "shape": [
+              1
+            ],
+            "sha256": "67abdd721024f0ff4e0b3f4c2fc13bc5bad42d0b7851d456d88d203d15aaa450"
+          },
+          "quaternions": {
+            "dtype": "<f8",
+            "shape": [
+              1,
+              4
+            ],
+            "sha256": "5e5c794534608bdcc5f3c19fd8d94ad66ab3aedaeb79694b00adab9d1df8e25f"
+          },
+          "translations": {
+            "dtype": "<f8",
+            "shape": [
+              1,
+              3
+            ],
+            "sha256": "e8e5d56c696b406140b99f5a129d4fb875b37d31a59f9a0752cf410035a0b4c9"
+          },
+          "point3D_ids": {
+            "dtype": "<u8",
+            "shape": [
+              1
+            ],
+            "sha256": "7c9fa136d4413fa6173637e883b6998d32e1d675f88cddff9dcbcf331820f4b8"
+          },
+          "xyz": {
+            "dtype": "<f8",
+            "shape": [
+              1,
+              3
+            ],
+            "sha256": "5829f558094736f8a23f54746cee8db44d22f991aee747e2bf37219bc6eacd56"
+          },
+          "rgb": {
+            "dtype": "|u1",
+            "shape": [
+              1,
+              3
+            ],
+            "sha256": "709e80c88487a2411e1ee4dfb9f22a861492d20c4765150c0c794abd70f8147c"
+          },
+          "errors": {
+            "dtype": "<f8",
+            "shape": [
+              1
+            ],
+            "sha256": "e77817b649821c634355a917817c1224a360514b1244fe09e832bac4e8ea4440"
+          }
+        },
+        "quaternion_order": "wxyz",
+        "pose_convention": "world_to_camera"
+      }
+    }
+  },
+  "malformed": {
+    "colmap_sparse": {
+      "cause_type": "ValueError",
+      "cause_message": "truncated cameras.bin"
+    },
+    "transforms_json": {
+      "cause_type": "ValueError",
+      "cause_message": "transforms.json: malformed JSON"
+    },
+    "tum": {
+      "cause_type": "ValueError",
+      "cause_message": "tum: expected at least 8 fields per data line"
+    },
+    "kitti": {
+      "cause_type": "ValueError",
+      "cause_message": "kitti: expected at least 12 fields per data line"
+    },
+    "euroc_state": {
+      "cause_type": "ValueError",
+      "cause_message": "EuRoC state: line 1 must contain exactly 17 columns"
+    },
+    "g2o": {
+      "cause_type": "ValueError",
+      "cause_message": "g2o: unsupported record type 'bad' on line 1"
+    },
+    "colmap_db": {
+      "cause_type": "RuntimeError",
+      "cause_message": "COLMAP database: preparing SQL: file is not a database (code 26)"
+    },
+    "colmap_sparse_txt": {
+      "cause_type": "ValueError",
+      "cause_message": "COLMAP text: cannot open {path}/images.txt"
+    },
+    "bundler": {
+      "cause_type": "ValueError",
+      "cause_message": "Bundler: missing '# Bundle file v0.3' header"
+    },
+    "bal": {
+      "cause_type": "ValueError",
+      "cause_message": "BAL: bad integer for num_cameras 'bad'"
+    },
+    "nvm": {
+      "cause_type": "ValueError",
+      "cause_message": "NVM: bad header"
+    },
+    "openmvg": {
+      "cause_type": "ValueError",
+      "cause_message": "OpenMVG sfm_data: malformed metadata JSON"
+    }
+  }
+}

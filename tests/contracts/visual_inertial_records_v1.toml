@@ -1,0 +1,79 @@
+schema_version = 1
+contract_date = "2026-08-03"
+status = "dataset_qualified"
+builtin_count = 74
+public_symbols = ["ImuCalibration", "ImuSequence", "VisualInertialDataset"]
+core_factories = ["imu_calibration", "imu_sequence"]
+core_io_functions = ["_inspect_euroc_imu", "read_euroc_imu", "read_euroc_imu_time_range", "write_euroc_imu"]
+registry_policy = "The working euroc_dataset read/write/inspect adapter is registered as the 74th built-in."
+
+[imu_calibration]
+required_fields = [
+  "sensor_id",
+  "name",
+  "topic",
+  "quaternion",
+  "translation",
+]
+optional_fields = [
+  "nominal_rate_hz",
+  "gyroscope_noise_density",
+  "gyroscope_random_walk",
+  "accelerometer_noise_density",
+  "accelerometer_random_walk",
+  "time_offset_ns",
+]
+transform_convention = "sensor_to_reference"
+translation_unit = "meters"
+nominal_rate_unit = "hertz"
+time_offset_equation = "reference_time_ns = sensor_time_ns + time_offset_ns"
+time_offset_unit = "nanoseconds"
+gyroscope_noise_density_unit = "radians_per_second_per_sqrt_hertz"
+gyroscope_random_walk_unit = "radians_per_second_squared_per_sqrt_hertz"
+accelerometer_noise_density_unit = "meters_per_second_squared_per_sqrt_hertz"
+accelerometer_random_walk_unit = "meters_per_second_cubed_per_sqrt_hertz"
+axis_frames = ["sensor", "enu", "ned"]
+quaternion_orders = ["wxyz", "xyzw"]
+quaternion_signs = ["preserved", "canonical_positive_w"]
+
+[imu_sequence]
+array_fields = [
+  "timestamps_ns",
+  "angular_velocities",
+  "linear_accelerations",
+]
+timestamp_unit = "nanoseconds"
+timestamp_reference = "measurement"
+angular_velocity_units = ["radians_per_second", "degrees_per_second"]
+linear_acceleration_units = [
+  "meters_per_second_squared",
+  "standard_gravity",
+]
+axis_frames = ["sensor", "enu", "ned"]
+ordering = "timestamps_ns are nonnegative and strictly increasing"
+
+[image_sequence_acquisition]
+optional_fields = [
+  "exposure_durations_ns",
+  "readout_step_durations_ns",
+  "readout_directions",
+  "timestamp_reference",
+]
+timestamp_references = [
+  "unknown",
+  "exposure_start",
+  "exposure_midpoint",
+  "exposure_end",
+]
+readout_directions = [
+  "global",
+  "top_to_bottom",
+  "bottom_to_top",
+  "left_to_right",
+  "right_to_left",
+]
+positive_direction = ["top_to_bottom", "left_to_right"]
+negative_direction = ["bottom_to_top", "right_to_left"]
+equation = "coordinate_reference_ns = frame_timestamp_ns + direction_sign * step_index * readout_step_duration_ns"
+presence_rule = "Exposure timing is independently optional. Global readout omits step durations; rolling readout requires one step duration per frame; mixed global/rolling sequences use separate records."
+legacy_default = "All acquisition arrays are empty and timestamp_reference is unknown."

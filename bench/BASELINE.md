@@ -1,0 +1,4341 @@
+# O0 baseline — SceneIO I/O harness
+
+The versioned dense-label NPZ/Zarr overlay has a focused generated 64 MiB
+comparison in [`LABEL_MAPS.md`](LABEL_MAPS.md); the typed TIFF checkpoint is
+recorded below. These remain outside the registry-format row count because
+they are explicit typed schemas over existing carriers, not new codec ids.
+
+Snapshot from `python bench/bench_io.py --runs 7`. **Indicative** (median of 7,
+single machine, local **MSVC** build, warm cache); the *conclusions* below are what
+order the O1+ sweep, not the exact MB/s. Regenerate on any machine — the harness is
+the source of truth, this file is a dated reading.
+
+For the separate 256 MiB-class Gaussian, point-cloud, mesh, reconstruction,
+and dense-array comparison against pinned reference providers, see
+[`../docs/large_file_io_benchmark_spec.md`](../docs/large_file_io_benchmark_spec.md).
+That finite run records raw samples, RSS/traced allocation, and a directional
+writer-by-reader semantic matrix in `bench/LARGE_FILE_IO.md`.
+The first two committed Windows attempts are intentionally retained as
+incomplete evidence because COLMAP exceeded their bounded preparation windows.
+The focused clean follow-up at `8a2b917` closes that case: all seven COLMAP
+operations and all nine validation rows pass. The consolidated report
+keeps both the earlier limit and the completed NPY, LAZ, SPZ, GLB, and COLMAP
+evidence.
+
+This document is chronological benchmark evidence: later sections expand from
+the original 23-codec O0 scope to the live 50-codec harness. Optimized mmap,
+sink, inspection, and partial-read transport does not by itself prove every
+codec kernel is the fastest viable backend. The per-codec qualification ledger
+and candidate-selection gate are defined in
+[`../docs/repository_organization_plan.md`](../docs/repository_organization_plan.md);
+JPEG encode/decode remains the first known backend gap.
+
+Columns: `payloadMB` raw array size · `fileMB` encoded size · `sioW/sioR` sceneio
+write/read MB/s over the payload · `oraW/oraR` the oracle lib (0 = no oracle) ·
+`rPeakMB` peak Python alloc on `read_bytes()->decode` · `sio/ora` read-throughput ratio.
+
+```
+codec          payloadMB   fileMB     sioW     sioR     oraW     oraR  rPeakMB  sio/ora
+---------------------------------------------------------------------------------------
+png                  3.1      3.1       47      235       44      330      3.2     0.71
+jpeg                 3.1      2.5       60      154      924      541      2.5     0.28
+webp                 3.1      3.1       14      290       36      196      3.2     1.48
+hdr                 12.6      4.1      832     1265        -        -      4.1      -
+exr                 12.6     12.5       55      327        -        -     12.5      -
+netpbm               3.1      3.1     2511    10021        -        -      3.2      -
+xyz                 12.0     56.5       21       82        -        -     56.5      -
+las                 12.0     26.0      206     2713      271     3710     26.0     0.73
+gaussian_ply        11.2     11.2     3154     5682        -        -     11.2      -
+spz                 11.2      3.4      106      772        -        -      3.4      -
+splat               11.2      6.4      978     2522        -        -      6.4      -
+npy                  8.4      8.4     4474     8110     4147     5802      8.4     1.40
+```
+Oracles: Pillow (png/jpeg/webp), laspy (las), numpy (npy). hdr/exr/netpbm/xyz/
+gaussian/spz/splat have no in-process oracle wired yet.
+
+## Conclusions (these order the sweep)
+
+1. **O1 (mmap) is a universal, confirmed win.** `rPeakMB == fileMB` for *every*
+   codec — the read path allocates a whole-file `bytes` copy equal to the file
+   size, exactly what mmap removes. Largest absolute savings: **xyz 56 MB, las 26,
+   exr 12.5, gaussian_ply 11, npy 8.4** per read. O1 applies uniformly and the
+   memory reduction is deterministic, not speculative. Do O1 first.
+
+2. **Codec-kernel throughput has three real hotspots.** Decode is competitive
+   with or faster than the available oracles for NPY and WebP and within the
+   same order for LAS; JPEG is the clear bidirectional exception:
+   - **JPEG write/read 60/154 MB/s vs the Pillow libjpeg-backed reference at
+     924/541 MB/s.** SIMD/threads around stb will not fix an algorithmic backend
+     gap; evaluate a faster permissive implementation such as libjpeg-turbo
+     outside O4.
+   - **xyz write 21 MB/s** — text float→string formatting bound, and 4.7× file
+     bloat (56 MB for a 12 MB payload). O4 candidate (faster float formatter) —
+     but text is inherently the slow/fat path.
+   - **webp lossless write 14 MB/s** — libwebp lossless effort; O4 can lower the
+     effort level or enable its worker threads.
+
+3. **Read peak is dominated by the bytes copy, not decode** — confirming the
+   optimization order: O1 (kill the copy) before O4 (speed the decode), because the
+   copy is the bigger, universal cost.
+
+## Harness coverage added with O1
+
+The harness now builds non-empty `Reconstruction` and `PosedViewSet` inputs and
+covers all original 23 codecs, including both COLMAP directory variants, Bundler, NVM,
+OpenMVG, transforms.json, TUM, KITTI, and NPZ. ImageIO/OpenEXR-backed oracle
+adapters are wired for Netpbm/HDR/EXR and degrade cleanly when the installed
+ImageIO backend cannot handle Radiance HDR. `--scale` generates large fixtures,
+`--cold-cache` requests `POSIX_FADV_DONTNEED` where supported, and the table
+reports both `tracemalloc` and sampled RSS.
+
+## O1 mmap delta — 2026-07-23
+
+Local MSVC run after O1 (`bench_io.py --runs 3`). `bPeakMB` retains the legacy
+`read_bytes()` measurement and `mPeakMB` measures the same decoder over a
+read-only mmap. Throughput columns remain in-memory codec measurements and are
+within baseline noise; the deterministic result is that the Python whole-file
+allocation disappears for every single-file codec.
+
+```
+codec          fileMB  bPeakMB  mPeakMB
+---------------------------------------
+png                3.1       3.2       0.0
+jpeg               2.5       2.5       0.0
+webp               3.1       3.2       0.0
+hdr                4.1       4.1       0.0
+exr               12.5      12.5       0.0
+netpbm             3.1       3.2       0.0
+xyz               56.5      56.5       0.0
+las               26.0      26.0       0.0
+gaussian_ply      11.2      11.2       0.0
+spz                3.4       3.4       0.0
+splat              6.4       6.4       0.0
+npy                8.4       8.4       0.0
+pfm                4.2       4.2       0.0
+flo                8.4       8.4       0.0
+npz                1.1       1.1       0.0
+transforms_json     0.0       0.0       0.0
+tum                0.0       0.0       0.0
+kitti              0.0       0.0       0.0
+bundler            0.0       0.0       0.0
+nvm                0.0       0.0       0.0
+openmvg            0.0       0.0       0.0
+```
+
+The exact traced mmap peaks were below the table's 0.05 MB display precision.
+The committed 16 MiB `.npy` memory test also requires mmap peak allocation below
+one eighth of file size while the bytes path must account for at least 90% of
+the file size. A generated `--scale 2 --runs 1` sweep exercised a 113.0 MB XYZ
+file and retained a 0.0 MB displayed mmap peak. RSS columns include decoded
+output, allocator reuse, and mmap page residency, so the input-copy proof is the
+traced-allocation delta plus exact exporter/core pointer identity; RSS remains a
+whole-process diagnostic rather than an isolated-copy assertion.
+
+## O2 raw zero-copy delta — 2026-07-23
+
+Local MSVC run after O2 (`bench_io.py --runs 3`). `sioR` is the unchanged
+in-memory copy decoder; `pathR` is the public warm mmap path, which now parses
+the small header and returns a pinned read-only ndarray view. `bRSSMB` includes
+the legacy Python file bytes plus decoded C++ vector, while `mRSSMB` samples the
+view path.
+
+```
+codec   payloadMB  sioR MB/s  pathR MB/s  bRSSMB  mRSSMB
+--------------------------------------------------------
+npy           8.4       4919       63647     16.8      0.0
+flo           8.4       4936       72316     16.8      0.0
+```
+
+The throughput improvement is the expected removal of the payload-sized copy;
+the path operation now measures header validation plus ndarray construction.
+Exact mapped-address assertions are the copy-proof, while sampled RSS supplies
+the process-level memory delta. NPY byte-swapped/Fortran inputs intentionally
+retain the canonical copy fallback. PFM was evaluated but its mandatory
+bottom-to-top row reversal remains an owned positive-stride decode: the rejected
+negative-stride view could make ordinary NumPy-to-DLPack normalization abort.
+
+## O3 direct file-sink delta — 2026-07-23
+
+Local MSVC run after the signed-off O3 implementation (`bench_io.py --runs 7`).
+`bytesW` is the former public
+shape—encode to Python `bytes`, then `Path.write_bytes`—while `sinkW` writes the
+encoder's existing C++ buffer directly to an unbuffered file descriptor without
+exposing the pointer to Python. `bPeakMB`/`sPeakMB` are the corresponding peak
+traced Python allocations.
+
+```
+codec              fileMB  bytesW MB/s  sinkW MB/s  bPeakMB  sPeakMB
+--------------------------------------------------------------------
+png                    3.1           45           46      3.2      0.0
+jpeg                   2.5           57           57      2.5      0.0
+webp                   3.1           13           13      3.2      0.0
+hdr                    4.1          701          740      4.1      0.0
+exr                   12.5           53           54     12.5      0.0
+netpbm                 3.1         1316         1858      3.2      0.0
+xyz                   56.5           18           18     56.5      0.0
+las                   26.0          167          176     26.0      0.0
+gaussian_ply          11.2         1468         1995     11.2      0.0
+spz                    3.4           99          102      3.4      0.0
+splat                  6.4          813          897      6.4      0.0
+npy                    8.4         1941         2878      8.4      0.0
+pfm                    4.2         1839         2456      4.2      0.0
+flo                    8.4         2068         2956      8.4      0.0
+npz                    1.1          408          407      1.1      0.0
+transforms_json        1.2           29           32      1.2      0.0
+tum                    0.2           69           71      0.2      0.0
+kitti                  0.2           38           38      0.2      0.0
+bundler                0.2           83           84      0.2      0.0
+nvm                    0.2           80           80      0.2      0.0
+openmvg                0.6           44           43      0.6      0.0
+```
+
+All 21 single-file outputs were byte-identical. The two COLMAP directory codecs
+already used direct file sinks and remain byte-identical through the public
+registry. At table precision every output-sized Python allocation disappeared;
+the 16 MiB NPY bound asserts the exact property independent of timer/RSS noise.
+Sink throughput was equal or faster within normal run noise (NPZ's 408 vs
+407 MB/s and OpenMVG's 44 vs 43 MB/s are sub-millisecond-scale differences).
+
+## O4 measured hot-path delta — 2026-07-23
+
+Final local MSVC run (`bench_io.py --runs 7`). Each base is the retained
+one-lane/worker-off or old-effort control measured in the same process. `bytes`
+means encoded output is identical; `values`/`pixels` means decoded arrays and
+record metadata are identical where compression settings intentionally changed.
+
+```
+codec   operation           base MB/s  optimized MB/s  gain   identity
+----------------------------------------------------------------------
+png16   swap-write                 68              69  1.02x  bytes
+png16   swap-read                 417             421  1.01x  values
+webp    balanced-config            12              34  2.75x  pixels
+webp    workers-palette            10              19  1.93x  bytes
+exr     planar-write              254             252  0.99x  bytes
+exr     planar-read              1133            1293  1.14x  values
+xyz     format-write               20             101  5.16x  bytes
+las     points-write              347            1054  3.03x  bytes
+las     points-read              1997            2765  1.38x  values
+```
+
+PNG16's conversion and the outer EXR planar write are small fractions of their
+whole-codec costs. Repeated sweeps placed those ratios on both sides of 1.0, so
+the table records the final run but makes no speedup claim for them. The larger
+targets are stable and directional. WebP's balanced production default is
+method 5 / effort 75 / workers enabled; the worker row uses a structured palette
+case that makes libwebp create independent lossless candidates and verifies a
+native side-worker launch rather than merely toggling `thread_level`. Lossy WebP
+retains the pre-O4 method-4/worker-off configuration.
+
+All controlled one-vs-many paths compare their actual bytes or decoded
+values/metadata before reporting a row. TinyEXR output also matches a pinned
+pre-O4 SHA-256, and a malformed duplicate-destination scanline fixture is
+required to reject. Final verification: 1,165 passed / 3 optional skips on
+Windows and 1,102 passed / 44 optional-platform skips under the instrumented
+Linux ASan/UBSan/LSan build.
+
+CI runs the original all-23-codec smoke and uploads its JSON. A second five-run sweep
+fails when any retained stable high-signal O4 control (WebP balanced config and
+palette workers, XYZ write, LAS read/write) loses its paired in-process gain, or
+when mmap/file-sink traced allocation rises above one quarter of the retained
+whole-file bytes control for material fixtures. Small compression-dominated
+PNG16/EXR-planar timing deltas remain recorded but do not create a flaky timing
+gate.
+
+## O5 metadata-only inspection delta — 2026-07-24
+
+Final local MSVC five-run sweep for the first O5 unit (`bench_io.py --runs 5
+--require-o4-gains --require-o5-inspect-gains`). `full ms` is the public
+mmap-backed full read; `inspect ms` constructs only immutable scalar metadata.
+RSS is sampled process growth. Bounded compiled scans keep headerless text
+inspection at effectively 0 MB growth, including malformed no-newline inputs.
+
+```
+codec               full ms  inspect ms  speedup  full RSS MB  inspect RSS MB
+-----------------------------------------------------------------------------
+png                    14.99        0.05  331.7x          10.9             0.0
+jpeg                   23.59        0.04  581.1x           8.5             0.0
+webp                   14.22        0.04  333.0x          10.5             0.0
+hdr                    13.81        0.06  221.0x          28.0             0.0
+exr                    11.09        0.09  128.8x          35.1             0.0
+netpbm                  0.87        0.04   19.6x           6.3             0.0
+xyz                   183.12       72.77    2.5x          68.5             0.0
+las                     6.28        0.04  167.1x          43.8             0.0
+gaussian_ply            5.46        0.05  108.6x          21.6             0.0
+spz                    17.14        0.12  148.8x          13.8             0.0
+splat                   7.68        0.01  745.7x          16.8             0.0
+npy                     0.05        0.05    0.9x           0.0             0.0
+pfm                     1.29        0.05   25.5x           7.4             0.0
+flo                     0.05        0.03    1.4x           0.0             0.0
+npz                     2.26        0.12   19.5x           2.1             0.0
+transforms_json        27.60       10.69    2.6x           1.2             1.2
+tum                    14.47        2.75    5.3x           0.2             0.0
+kitti                  21.78        3.13    7.0x           0.3             0.0
+bundler                 1.27        0.04   29.8x           0.2             0.0
+nvm                     1.29        0.04   30.5x           0.2             0.0
+openmvg                17.91       16.46    1.1x           0.6             0.6
+colmap_sparse           2.28        0.15   15.2x           0.0             0.0
+colmap_sparse_txt       2.88        0.37    7.8x           0.0             0.0
+```
+
+NPY and FLO full reads were already O2 header-parse + mapped-view construction,
+so their complete public reads are as cheap as inspection within sub-millisecond
+noise; inspection adds a Python metadata object but no payload allocation.
+Transforms/OpenMVG are JSON metadata containers, so JSON parsing dominates both
+paths and record-array avoidance is a smaller gain. The stable binary rows
+(PNG/EXR/LAS/Gaussian PLY/SPZ) retain directional CI latency and RSS-gain
+guards, every inspection must stay below 1 MB of traced Python allocation, and
+the two JSON readers retain a coarse full-read/SAX ratio bound that catches
+large decode-path regressions. This committed table remains the historical
+control for smaller timing movement.
+
+## O5 bounded partial-read delta — 2026-07-24
+
+Final local MSVC five-run sweep (`bench_io.py --runs 5 --require-o4-gains
+--require-o5-inspect-gains --require-o5-partial-gains`). `full ms` is the
+normal public mmap-backed read and `partial ms` returns the normal record type
+while materializing only the selected window, point range, or COLMAP image.
+
+```
+codec                 full ms  partial ms  speedup  full RSS MB  part RSS MB
+----------------------------------------------------------------------------
+webp                     11.84        6.14    1.93x          9.8          4.3
+netpbm                    0.87        0.10    8.35x          6.3          0.0
+xyz                     173.16      101.92    1.70x         68.5         56.5
+las                       5.84        0.52   11.21x         47.3          1.4
+gaussian_ply              5.16        0.26   19.55x         21.6          0.7
+splat                      6.14        0.33   18.79x         16.7          0.2
+pfm                        1.36        0.13   10.25x          8.0          0.4
+flo                        0.04        0.04    1.00x          0.0          0.0
+colmap_sparse              2.21        0.04   53.19x          0.0          0.0
+colmap_sparse_txt          3.12        0.04   85.11x          0.0          0.0
+```
+
+Every partial traced-allocation peak remained below the table's 0.05 MB
+display precision. WebP measures a lossless VP8L crop; binary P5/P6 is the
+bounded Netpbm path. ASCII P2/P3 and lossy VP8 reject rather than performing a
+non-bounded or non-slice-exact operation. XYZ must still scan mapped text to
+find and validate row boundaries, so kernels may charge the whole encoded file
+to RSS. Its guard caps resident growth at the encoded size plus 8 MB; the other
+material rows require a directional ratio gain. The paired five-run CI guard
+passed together with all retained O4 and O5
+inspection controls. Final verification passed 1,289 tests / 3 optional skips
+on Windows and 1,208 / 62 expected skips under ASan/UBSan/LSan on Linux.
+
+## Safetensors expansion delta — 2026-07-24
+
+The 24-codec harness now includes safetensors and its independent
+`safetensors.numpy 0.8.0` oracle. The dedicated large-fixture mode generates
+files in a temporary directory and commits no payload:
+
+```text
+python bench/bench_io.py --runs 3 --large-safetensors-mib 128
+python bench/bench_io.py --runs 1 --large-safetensors-mib 1024
+```
+
+`full` is SceneIO's complete mapped `TensorDict` construction without touching
+tensor pages. `selected` maps only the named 2 KiB tensor. Oracle full-read
+numbers use `safetensors.numpy.load_file`, which materializes the arrays.
+Write is SceneIO's native chunked file sink versus the oracle's file writer.
+
+```text
+fixture       write ms  full ms  inspect ms  selected ms  traced peak MB  RSS MB
+-------------------------------------------------------------------------------
+SceneIO 128M      76.76      0.12        0.11         0.05            0.01    0.02
+oracle  128M      79.45     58.96        0.04         0.05          134.22  268.47
+SceneIO   1G     673.91      0.21        0.11         0.08            0.01    0.02
+oracle    1G     651.07    503.19        0.08         0.07         1073.75 2147.51
+```
+
+The measured result validates the intended qualitative target: SceneIO's
+mapped full and selected paths remain effectively constant in traced
+allocation/RSS as the fixture grows from 128 MiB to 1 GiB, while streaming
+write throughput stays comparable to the reference writer. Inspection and
+single-tensor selection are sub-millisecond for both implementations. The
+ordinary all-codec smoke was also extended from 23 to 24 entries.
+
+## Count-prefixed PTS expansion delta — 2026-07-24
+
+PTS is measured by the 25-codec harness against an independent NumPy text
+parser/writer. A three-run `--scale 0.1` fixture contains 100,000 XYZ points
+(1.2 MB raw, 5.7 MB encoded):
+
+```text
+operation                         SceneIO          oracle / control
+-------------------------------------------------------------------
+write throughput                  55 MB/s          12 MB/s
+buffer read throughput            81 MB/s          62 MB/s
+public mmap read throughput       75 MB/s          -
+buffer/mmap traced read peak      5.7 / 0.0 MB     -
+buffer/sink traced write peak     5.7 / 0.0 MB     -
+inspect latency                   0.056 ms          full read 15.903 ms
+middle point-range latency        8.585 ms          full read 15.903 ms
+```
+
+The result validates the intended qualitative gains: mmap and file-sink paths
+remove the encoded-size Python allocation, header-only inspection is roughly
+282x faster than full parsing, and a bounded middle range is about 1.85x
+faster while allocating only its selected records. The range reader still
+scans the count-prefixed text to validate row structure and the declared total,
+so resident pages can approach the encoded file size even though heap output
+does not.
+
+## Scalar DMB expansion delta — 2026-07-24
+
+DMB extends the harness to 26 codecs and uses an independent little-endian
+NumPy/`struct` oracle. The five-run CI-equivalent regression sweep uses a
+1024x1024 scalar float32 depth map (4.194 MB raw and encoded):
+
+```text
+operation                         result
+-------------------------------------------------------------
+buffer / public mmap read         7,123 / 3,530 MB/s
+buffer / public sink write        1,975 / 6,264 MB/s
+oracle writer                     4,609 MB/s
+buffer / mmap traced read peak    4.203 / 0.010 MB
+buffer / sink traced write peak   4.205 / 0.001 MB
+full / inspect latency            1.188 / 0.050 ms
+128x128 middle-window latency     0.129 ms
+inspect / partial traced peak     0.010 / 0.011 MB
+```
+
+The mmap and direct-sink paths remove the encoded-size Python allocation.
+Header inspection is about 23.6x faster than full record construction and the
+bounded middle window is about 9.2x faster. The generated 4096x4096 (64 MiB)
+sparse-file test is the larger structural memory gate and keeps both inspection
+and a selected 8x8 window below 1 MiB of traced allocation. All payloads are
+generated during the run or test and are not committed. The complete
+same-run O4/O5 regression guard passed with DMB included.
+
+## BAL reconstruction expansion delta — 2026-07-24
+
+BAL extends the harness to 27 codecs and is compared with an independent
+NumPy/text parser and writer. The five-run CI-equivalent regression sweep uses
+1,000 cameras, 10,000 points, and 20,000 observations (0.8 MB decoded numeric
+payload, 1.6 MB encoded text):
+
+```text
+operation                         result
+-------------------------------------------------------------
+buffer / public mmap read         206 / 190 MB/s
+buffer / public sink write        44 / 46 MB/s
+independent writer / reader       21 / 38 MB/s
+buffer / mmap traced read peak    1.6 / 0.0 MB
+buffer / sink traced write peak   1.6 / 0.0 MB
+full / inspect latency            4.161 / 0.045 ms
+full / inspect RSS growth         1.2 / 0.0 MB
+```
+
+The mmap and direct-sink paths remove the encoded-size Python allocation while
+preserving exact records and canonical bytes. Three-count header inspection is
+about 92.9x faster than full reconstruction parsing. The compiled reader is
+about 5.5x faster than the independent parser on the same numeric payload, and
+the chunked sink retains buffer-writer throughput without returning an
+output-sized `bytes`. A separate generated 64 MiB sparse-file test bounds
+header-only inspection below 1 MiB traced allocation. The complete same-run
+O4/O5 throughput and memory regression guard passed with BAL included.
+
+## BMP/TGA image expansion delta — 2026-07-24
+
+BMP and TGA extend the harness to 29 codecs with Pillow as the independent
+pixel oracle. The five-run CI-equivalent sweep uses a 1024x1024 uint8 RGB image
+(3.146 MB raw; 3.146 MB BMP and 3.154 MB RLE TGA):
+
+```text
+operation                    BMP result          TGA result
+----------------------------------------------------------------
+buffer / public mmap read    1,097 / 940 MB/s    561 / 512 MB/s
+buffer / public sink write   527 / 778 MB/s      420 / 550 MB/s
+Pillow writer / reader       851 / 1,161 MB/s    889 / 1,136 MB/s
+buffer / mmap read peak      3.2 / 0.0 MB        3.2 / 0.0 MB
+buffer / sink write peak     3.2 / 0.0 MB        3.2 / 0.0 MB
+full / inspect latency       3.346 / 0.048 ms    6.145 / 0.058 ms
+full / inspect RSS growth    6.3 / 0.0 MB        6.3 / 0.0 MB
+```
+
+Both mmap readers remove the encoded-size Python input copy. Their native
+256 KiB callback staging makes direct file writes genuinely bounded and also
+faster than returning a complete Python `bytes` on this fixture. Header-only
+inspection is about 69.4x faster for BMP and 105.6x faster for TGA. Pixel
+correctness is separately triangulated across Windows top/bottom orientation,
+BMP palettes and 16-bit bitfields, TGA raw/RLE top/bottom orientation,
+zero-origin palettes, packed 16-bit color, and gray/RGB/RGBA modes. The
+complete same-run O4/O5 throughput and memory regression guard passed with both
+formats included.
+
+## Typed FLO semantic-adapter delta — 2026-07-24
+
+The raw FLO benchmark row remains unchanged and continues to measure the
+zero-copy mapped ndarray path. A dedicated nested row now measures the owning
+`FlowField` adapter on the same 1024x1024 float32 UV raster (8.389 MB):
+
+```text
+operation                         result
+-------------------------------------------------------------
+typed mmap read                   2,864 MB/s
+typed direct-sink write           2,253 MB/s
+typed header inspection           0.038 ms
+typed read/write traced peak      0.011 / 0.001 MB
+raw public mmap read              180,400 MB/s
+raw direct-sink write             2,515 MB/s
+```
+
+The large raw-read number reflects the intended O2 mapped view, whereas the
+typed read intentionally owns one native copy so its `FlowField` outlives the
+mapping. Both paths avoid an encoded-size Python `bytes`; typed sink output is
+byte-identical to the raw writer and independent NumPy oracle. The five-run
+29-codec O4/O5 throughput and memory regression guard passed.
+
+## Typed PFM depth-adapter delta — 2026-07-24
+
+The raw PFM benchmark row remains the compatibility reference for grayscale
+and RGB ndarray I/O. A nested row measures the explicit scalar `DepthMap`
+adapter on the same 1024x1024 float32 raster (4.194 MB), including a bounded
+middle window:
+
+```text
+operation                         result
+-------------------------------------------------------------
+typed mmap read                   2,026 MB/s
+typed direct-sink write           1,955 MB/s
+typed header inspection           0.056 ms
+typed read/write traced peak      0.011 / 0.001 MB
+typed middle-window latency       0.55 ms
+raw public mmap read              2,059 MB/s
+raw direct-sink write             2,198 MB/s
+```
+
+The typed reader owns exactly one native float32 raster because PFM's required
+bottom-to-top transform prevents a positive-stride mapped view. It avoids an
+additional encoded-size Python `bytes`, preserves every float bit, and attaches
+only the caller-supplied immutable `DepthEncoding`. Typed output is
+byte-identical to the raw writer and independent oracle. A generated 128 MiB
+sparse-file test keeps typed inspection plus an 8x8 bounded window below 1 MiB
+of traced Python allocation. The five-run 29-codec O4/O5 throughput and memory
+regression guard passed.
+
+## Typed PNG depth-adapter delta — 2026-07-24
+
+A nested PNG row measures the explicit `DepthMap` adapter on a 1024x1024
+grayscale uint16 raster, reported over the 4.194 MB widened float32 depth
+payload:
+
+```text
+operation                         result
+-------------------------------------------------------------
+typed mmap read                     979 MB/s
+typed direct-sink write             193 MB/s
+typed header inspection           0.052 ms
+typed read/write traced peak      0.011 / 0.001 MB
+```
+
+The reader losslessly widens uint16 samples to float32 and records only the
+mandatory external `DepthEncoding`; it never applies a scale. The writer scans
+for exact integral `[0,65535]` representability, rejects negative zero,
+non-finite/fractional/out-of-range values and confidence, then produces bytes
+identical to the existing deterministic grayscale uint16 Image writer. The
+compressed container cannot provide a bounded window without a full inflate, so
+the typed API rejects that selector explicitly. The five-run 29-codec O4/O5
+throughput and memory regression guard passed.
+
+## Typed EXR depth-adapter delta — 2026-07-24
+
+A nested EXR row measures the explicit named-channel `DepthMap` adapter on a
+1024x1024 scalar FLOAT raster, reported over the 4.194 MB raw float32 payload:
+
+```text
+operation                         result
+-------------------------------------------------------------
+typed mmap read                   1,341 MB/s
+typed direct-sink write             304 MB/s
+typed header inspection           0.057 ms
+typed read/write traced peak      0.011 / 0.001 MB
+```
+
+The reader checks the exact selected channel in the same TinyEXR parse that
+decodes the raster, preventing a mutable-source gap between validation and
+decode. FLOAT bits are preserved exactly and HALF uses the unchanged exact
+widening path; no scale, transfer function, or invalid-value policy is applied.
+The typed writer shares the raw encoder while supplying an explicit scalar
+channel name; typed `Y` output is byte-identical to the original raw scalar
+writer. EXR compression cannot provide a bounded typed window without full
+decode, so that selector rejects before invoking the reader. The accepted
+five-run 29-codec O4/O5 throughput and memory regression guard passed.
+
+## Generic point PLY baseline — 2026-07-24
+
+The harness now covers 30 codecs and reports all three generic point PLY
+encodings. A three-run generated 4,000,000-point fixture carries float32
+positions/normals plus uint8 RGB: 108.0 MB of logical data and 108.0 MB for
+either binary file (319.6 MB as canonical ASCII).
+
+```text
+encoding / operation                 result
+-------------------------------------------------------------
+binary little-endian write             762 MB/s
+binary little-endian read              891 MB/s
+binary big-endian write                547 MB/s
+binary big-endian read                 546 MB/s
+ASCII write                             22 MB/s
+ASCII read                             108 MB/s
+public mmap read                       612 MB/s
+direct file-sink write                 521 MB/s
+header-only inspect                  0.082 ms
+middle 1/16 point range             12.559 ms
+full read                           176.338 ms
+```
+
+Inspection was 2,148x faster than full decode and touched no measurable payload
+RSS. The fixed-record point range was 14.04x faster, with 12.3 MB sampled RSS
+versus 215.4 MB for the full mapping plus output record. The public mmap path
+removed the 108.0 MB traced whole-file `bytes` allocation, and the direct sink
+removed the corresponding 108.0 MB Python write allocation.
+
+A separate three-run 100,000-point oracle pass measured SceneIO at 768 MB/s
+write and 930 MB/s read versus Open3D 0.19 at 23 MB/s and 128 MB/s. Open3D is
+MIT-licensed and test-only. The plan's earlier `plyfile` suggestion was
+discarded because its current GPLv3 license violates SceneIO's
+permissive-license-only rule.
+
+The accepted five-run 30-codec guard then measured the default 1,000,000-point
+PLY row at 753 MB/s write and 851 MB/s read, with a 469x inspection gain and
+20.76x partial-read gain. Every retained O4/O5 directional and mmap/sink
+allocation guard passed.
+
+## PCD baseline — 2026-07-24
+
+The harness now covers 31 codecs and reports PCD 0.7 ASCII, little-endian
+binary, and LZF `binary_compressed` variants. A three-run generated
+4,000,000-point fixture carries float32 positions/normals plus uint8 RGB:
+108.0 MB of logical arrays, 112.0 MB as binary (packed RGB occupies four
+bytes), 310.1 MB as ASCII, and 114.9 MB as LZF. The random fixture is
+intentionally incompressible; LZF correctly grows it slightly rather than
+claiming a synthetic compression win.
+
+```text
+encoding / operation                 result
+-------------------------------------------------------------
+binary write                          1,937 MB/s
+binary read                           3,595 MB/s
+binary_compressed write                 168 MB/s
+binary_compressed read                1,566 MB/s
+ASCII write                              25 MB/s
+ASCII read                              113 MB/s
+public mmap binary read               1,238 MB/s
+direct streaming binary sink          1,155 MB/s
+header-only inspect                   0.086 ms
+middle 1/16 point range               3.882 ms
+full public read                     87.258 ms
+```
+
+Inspection was 1,015x faster than full decode and added 0.02 MB sampled RSS.
+The fixed-record range was 22.48x faster and used 12.9 MB sampled RSS versus
+219.2 MB for the full mapping plus output record. Mmap removed 112.0 MB of
+traced input allocation. The chunked binary sink reduced traced allocation
+from 112.0 MB to 0.001 MB and sampled RSS from 112.0 MB to 1.9 MB while
+remaining byte-identical to the buffer writer.
+
+A separate three-run 100,000-point oracle pass measured SceneIO binary write
+and read at 1,894 and 3,233 MB/s versus Open3D 0.19 at 25 and 63 MB/s.
+Open3D is MIT-licensed and test-only; no new native or runtime dependency was
+added.
+
+The accepted five-run 31-codec guard measured the default 1,000,000-point PCD
+row at 1,933 MB/s write and 3,414 MB/s read, with a 276x inspection gain and
+26.34x partial-read gain. Every retained O4/O5 directional and mmap/sink
+allocation guard passed.
+
+## EuRoC state CSV baseline — 2026-07-24
+
+The harness now covers 32 codecs. The default generated fixture contains
+100,000 complete navigation states: 13.6 MB of logical int64/float64 SoA data
+and 35.2 MB of deterministic 17-column CSV.
+
+```text
+operation                              result
+-------------------------------------------------------------
+buffer write                           42 MB/s
+buffer read                           202 MB/s
+public mmap read                      176 MB/s
+stdlib CSV oracle write/read        16 / 18 MB/s
+direct streaming sink                 42 MB/s
+metadata inspection                 73.407 ms
+middle 1/16 state range             73.730 ms
+full public read                    77.434 ms
+```
+
+The separate oracle run measured the compiled reader at 11.19x the independent
+stdlib CSV reader. In the accepted five-run all-codec guard, metadata
+inspection and the selected range were each 1.05x faster than full decode and
+avoided constructing most of the 13.6 MB state arrays. The selected range
+reduced sampled RSS from 48.4 MB to 35.1 MB while validating every unselected
+row.
+Mmap removed the 35.2 MB traced input allocation. The chunked file sink reduced
+traced output allocation from 35.2 MB to effectively zero and sampled RSS from
+42.1 MB to effectively zero while remaining byte-identical to the buffer
+writer. Every retained 32-codec O4/O5 directional and mmap/sink allocation
+guard passed.
+
+## Camera calibration baseline — 2026-07-24
+
+The harness now covers 36 codecs (34 single-file plus the two COLMAP
+directories). OpenCV YAML, OpenCV XML, ROS CameraInfo YAML, and Kalibr YAML use
+the new lossless `CameraRig` record. The representative OpenCV and ROS fixtures
+contain one camera (452 logical bytes); the Kalibr fixture contains 64 cameras
+(27,408 logical bytes, 23,644 encoded bytes). Five-run medians were:
+
+```text
+codec             native W/R MB/s    oracle W/R MB/s    native/oracle read
+---------------------------------------------------------------------------
+opencv_yaml            129 / 52             2 / 1              62.75x
+opencv_xml             119 / 89            19 / 36              2.43x
+ros_camera_info         77 / 38             1 / <1             76.92x
+kalibr                  134 / 81             2 / 1              91.56x
+```
+
+The independent oracles are test-only PyYAML for all YAML schemas and stdlib
+ElementTree for XML. The tiny single-camera files make filesystem latency
+dominate public-path timing, but the direct sink was consistently faster than
+buffer-plus-file output (roughly 3–4 MB/s versus 2–3 MB/s; Kalibr 82 versus
+75 MB/s) and remained byte-identical.
+
+A separate 1.65 MB comment-padded valid OpenCV YAML fixture isolates transport
+allocation: bytes input traced 1.659 MB while the warmed mmap public path
+traced 0.010 MB. The complete one-run 36-codec harness completed without codec
+failures, preserving the established mmap/sink allocation directions and all
+retained O4/O5 controls. Calibration inspection validates the complete small
+metadata document; because these formats contain no bulk payload beyond that
+metadata, it intentionally has approximately the same latency as a full
+record decode.
+
+## g2o pose-graph baseline — 2026-07-24
+
+The harness now covers 37 codecs (35 single-file plus the two COLMAP
+directories). The representative g2o fixture contains 25,000 SE3 nodes, 24,999
+SE3 edges, one fixed node, and full symmetric float64 information matrices:
+10.6 MB of logical record arrays and 4.7 MB of deterministic text. Five-run
+medians were:
+
+```text
+operation                         throughput
+------------------------------------------------
+native buffer write              104 MB/s
+native direct-sink write          106 MB/s
+independent writer                50 MB/s
+native in-memory read             248 MB/s
+native public mmap read           255 MB/s
+independent reader                98 MB/s
+native/oracle read                2.53x
+full read / inspection            41.714 / 31.929 ms (1.31x)
+```
+
+The independent implementation is a strict stdlib/NumPy parser/writer rather
+than the SceneIO reader reflected through Python. It validates vertex ids,
+XYZ+XYZW coefficients, fixed declarations, edge endpoints, all 21
+upper-triangle information coefficients, and exact record widths.
+
+Bytes input traced 4.7 MB while the public mmap path traced effectively zero.
+Buffer-plus-file output traced 4.7 MB while the chunked direct sink traced
+effectively zero and remained byte-identical. Sampled RSS is dominated by the
+owned graph arrays and hash tables (about 56–59 MB on read); inspection reduces
+that to about 39 MB by retaining only ids/endpoints needed for whole-graph
+referential validation. No partial selector is claimed because a range slice
+would need a separately specified induced/subgraph contract.
+
+## COLMAP feature-database baseline — 2026-07-24
+
+The harness now covers 38 codecs: 35 buffer-backed files, the path-native
+SQLite database, and two COLMAP directory formats. The representative database
+contains one camera, 64 images with 1,024 four-column keypoints and 128-byte
+descriptors each, and 63 consecutive image pairs with raw and verified
+matches. That is 9.65 MB of logical record data in a 9.92 MB SQLite file.
+Five-run medians were:
+
+```text
+operation                              result
+-------------------------------------------------------------
+native transactional write            178 MB/s
+stdlib sqlite3 transaction             185 MB/s
+native full read                     1,405 MB/s
+stdlib sqlite3 full materialization  1,634 MB/s
+metadata inspection                  0.808 ms  (8.50x vs full)
+one-image partial read               0.525 ms (13.10x vs full)
+one-pair partial read                0.421 ms (16.31x vs full)
+```
+
+## SuperSplat compressed-Ply baseline — 2026-07-24
+
+Compressed PLY raises the harness to 39 codecs: 36 mmap-backed single-file
+formats, the path-native SQLite database, and two COLMAP directories. The
+representative degree-0 cloud has 200,000 Gaussians (11.2 MB of canonical
+`GaussianCloud` values) and encodes to 3.3 MB. Five-run local MSVC medians:
+
+```text
+operation                              result
+-------------------------------------------------------------
+deterministic Morton/quantized write   341 MB/s
+in-memory decode                        98 MB/s
+public mmap decode                      97 MB/s
+metadata inspection                  0.094 ms (1,230.84x vs full)
+1/16 point selection                  7.684 ms (15.01x vs full)
+```
+
+The public mmap read removes the 3.3 MB whole-file Python allocation and the
+direct sink removes the same output-sized allocation while measuring 346 MB/s
+versus 332 MB/s for the buffer-plus-file path. The partial result materializes
+only its selected `GaussianCloud` rows; its sampled RSS increase was 0.3 MB
+versus 13.7 MB for the full decode. A generated 103+ MiB sparse-container test
+also keeps traced Python allocation below 4 MiB for an eight-point selection.
+The writer body is byte-identical to the pinned PlayCanvas
+`splat-transform` 3.1.6 reference vector; the producer-specific header comment
+is intentionally different.
+
+The independent reference uses stdlib `sqlite3` prepared statements and an
+explicit transaction; pycolmap separately verifies both directions in the
+parity suite. Native full read, inspection, both selectors, and transactional
+write each stayed below 0.05 MB traced Python allocation. Full-read sampled RSS
+was 8.9 MB for the owned decoded arrays; inspection and either selector stayed
+near zero above the SQLite page cache and selected output.
+
+## PlayCanvas SOG v2 baseline — 2026-07-24
+
+SOG raises the harness to 40 codecs and the buffer-backed differential/sink
+sweep to 37. The representative degree-0 cloud has 200,000 Gaussians (11.2 MB
+of canonical values) and encodes to a 2.9 MB stored ZIP whose payload members
+are lossless WebP. Five-run local MSVC medians:
+
+```text
+operation                              result
+-------------------------------------------------------------
+deterministic Morton/codebook write     35 MB/s
+in-memory decode                       454 MB/s
+public mmap decode                     430 MB/s
+metadata inspection                  0.353 ms (73.65x vs full)
+1/16 point selection                 18.273 ms (1.42x vs full)
+```
+
+The public mmap path removes the 2.9 MB whole-file Python allocation, and the
+direct sink removes the same output-sized allocation while retaining 34 MB/s
+throughput. Full decode sampled 22.4 MB RSS growth; the point-selection path
+sampled 11.1 MB because WebP has no sub-image random access but only selected
+`GaussianCloud` rows are allocated. A generated 106.4 MB logical fixture keeps
+traced Python allocation below 4 MiB for an eight-row selection.
+
+Both SceneIO- and PlayCanvas-produced SH2 archives were cross-decoded through
+pinned `splat-transform` 3.1.6 commit
+`6b07ba05d731eac1163ad4ff1b14e47e5e3f162c`; all six exposed fields were
+bit-identical after the reference re-exported them as Gaussian PLY. The
+committed independent Pillow/NumPy/ZIP oracle covers every SH degree without
+sharing the SceneIO codec.
+
+## mkkellogg KSplat v0.1 baseline — 2026-07-24
+
+KSplat raises the harness to 41 codecs and the buffer-backed
+differential/sink sweep to 38. The representative degree-0 cloud contains
+200,000 Gaussians (11.2 MB of canonical values) and encodes to 4.8 MB with the
+default level-1 float16/bucket representation. Five-run local MSVC medians:
+
+```text
+operation                              result
+-------------------------------------------------------------
+deterministic bucketed write             568 MB/s
+in-memory decode                         988 MB/s
+public mmap decode                       874 MB/s
+metadata inspection                    0.039 ms (332.84x vs full)
+1/16 point selection                   0.774 ms (16.56x vs full)
+```
+
+The public mmap path removes the 4.8 MB whole-file Python allocation, and the
+direct sink removes the same output-sized allocation while retaining 542 MB/s
+throughput. Full decode sampled 15.2 MB RSS growth; the selector sampled
+0.1 MB because it validates the complete section layout but allocates only the
+selected `GaussianCloud` rows. A generated 105.6 MB level-0 fixture keeps
+traced Python allocation below 4 MiB for an eight-row selection.
+
+## Polygon-preserving mesh PLY baseline — 2026-07-24
+
+Mesh PLY raises the harness to 42 codecs and the buffer-backed
+differential/sink sweep to 39. The representative full-domain mesh contains
+333,333 vertices, 166,666 triangle faces, independent vertex/corner normals,
+UVs, and RGBA, plus primitive/material ranges. Its canonical buffers total
+28.0 MB and encode to 30.0 MB. Five-run local MSVC medians:
+
+```text
+operation                              result
+-------------------------------------------------------------
+deterministic binary-LE write           886 MB/s
+in-memory decode                        325 MB/s
+public mmap decode                      283 MB/s
+metadata inspection                   0.089 ms (1,110.41x vs full)
+1/16 face selection                  72.240 ms (1.34x vs full)
+```
+
+The public mmap path removes the 30.0 MB whole-file Python allocation. The
+direct sink removes the same output-sized allocation while reaching 673 MB/s
+versus 618 MB/s for the buffer-plus-file path. A separate oracle-enabled run
+measured SceneIO and trimesh decode at 315 and 325 MB/s respectively; the
+triangle output opens in trimesh with exact vertices and indices. The
+independent struct/NumPy oracle additionally verifies all polygon, corner,
+primitive, material, transform, and coordinate fields that trimesh does not
+retain.
+
+A generated 105.6 MB binary mesh fixture keeps traced Python allocation below
+4 MiB on the public mmap path. A separate 50.0 MB, two-face fixture places
+12.5 million corners in an unselected face: the face-range reader validates
+every index without retaining that face, keeps traced Python allocation below
+1 MiB, and uses less than three-fifths of the full decoder's fresh-process RSS.
+On the representative fixture, sampled RSS falls from 63.4 MB to 42.1 MB
+because the contract retains the complete vertex domain while omitting
+unselected face/corner arrays.
+
+The complete one-run 42-codec harness finishes without failures; its mesh row
+measured 855 MB/s write, 328 MB/s in-memory decode, 289 MB/s public mmap
+decode, 0.142 ms inspection, and a 1.36x face-selection speedup.
+
+## Polygon-preserving OBJ/MTL baseline — 2026-07-25
+
+OBJ/MTL raises the harness to 43 codecs and the buffer-backed benchmark sweep
+to 40. The representative mesh contains 333,333 vertices and 111,111 triangle
+faces with vertex-domain normals, UVs, and RGB8. Its canonical buffers total
+14.7 MB and encode to a 53.8 MB deterministic OBJ. Five-run local MSVC medians
+were:
+
+```text
+operation                                 result
+----------------------------------------------------------------
+deterministic write before formatter fix   7.4 MB/s
+locale-independent deterministic write   20.4 MB/s (2.78x)
+in-memory decode                          18.5 MB/s
+public mmap decode                        12.7 MB/s
+trimesh decode                             9.1 MB/s
+metadata inspection                    544.790 ms (2.12x vs full)
+```
+
+Replacing one locale-classic stream construction per scalar with an explicit
+C numeric locale per encode and bounded canonical float appends produced the
+writer gain while preserving byte-for-byte determinism across process locales
+and float32 round trips. The public mmap path removes the 53.8 MB
+whole-file Python allocation (53.83 MB to 0.013 MB traced), and the direct sink
+removes the same output-sized write allocation (53.83 MB to 0.005 MB traced)
+while matching the buffer writer. Inspection retains only directive counts and
+material/texture metadata; sampled RSS falls from 265.5 MB for a full decode to
+53.8 MB. No face selector is claimed: headerless OBJ requires a complete
+directive/index scan, and its independent attribute pools need an explicit
+subset contract before a partial result can be lossless.
+
+The independent Trimesh writer/reader is measured alongside hand-built
+polygon, negative-index, object/group/smoothing, MTL-factor, and texture-map
+fixtures. Both core and public-path suites preserve vertex- versus corner-domain
+normal/UV indexing, and malformed/lossy constructs reject rather than being
+silently triangulated or discarded.
+
+## Strict STL/OFF mesh baseline — 2026-07-25
+
+STL and OFF raise the harness to 45 codecs and the buffer-backed differential
+and direct-sink sweep to 42. The representative STL contains 111,111
+independent triangles with explicit facet normals (8.0 MB of canonical arrays,
+5.56 MB binary file). The indexed OFF fixture contains 33,333 vertices reused
+by 333,333 triangles (8.4 MB of canonical arrays, 7.55 MB ASCII file). Five-run
+local MSVC medians:
+
+```text
+codec  write     read      mmap read  oracle W/R  inspect            partial
+--------------------------------------------------------------------------------
+stl    1,021 MB/s 1,166 MB/s 935 MB/s   362/204     2.331 ms (3.67x)  2.624 ms (3.26x)
+off      206 MB/s   442 MB/s 396 MB/s    41/13     10.685 ms (1.98x) 17.487 ms (1.21x)
+```
+
+STL's public mmap read removes the 5.57 MB traced input allocation and its
+direct sink removes the 5.57 MB output allocation (both fall to about
+0.01/0.001 MB). OFF removes the corresponding 7.56 MB input and output
+allocations. The STL sink reaches 1,047 MB/s versus 814 MB/s for the
+buffer-plus-file path; OFF reaches 201 versus 189 MB/s.
+
+Independent binary `struct` and ASCII token parsers validate exact file
+records, all eight supported OFF vertex variants, polygon boundaries, facet
+normal policy, and malformed extent/index handling. Trimesh consumes both
+writers and supplies independent binary/ASCII STL and OFF inputs. Face
+selection validates the complete mapped input while materializing only the
+selected topology; OFF deliberately retains its complete vertex domain.
+
+## Plain glTF/GLB scene baseline — 2026-07-25
+
+Plain glTF and GLB raise the registry and harness to 47 codecs. The benchmark
+scene has one source mesh split into four triangle primitives, one node, and one
+scene. Its canonical buffers total 13.2 MB for the trimesh-compatible glTF
+payload view and 14.7 MB including SceneIO's GLB attribute accounting; the
+deterministic outputs are 12.0 MB JSON+BIN and 13.3 MB GLB. Five-run local MSVC
+medians were:
+
+```text
+codec  core write  core read  mmap read  oracle W/R  inspect             partial
+----------------------------------------------------------------------------------
+gltf   573 MB/s    904 MB/s   739 MB/s   231/1045    0.081 ms (220.26x)  4.168 ms (4.29x)
+glb    526 MB/s    948 MB/s   751 MB/s   215/746     0.097 ms (200.61x)  5.044 ms (3.87x)
+```
+
+The public mmap readers remove the complete 12.0/13.3 MB encoded-size Python
+allocation (traced peaks fall to displayed 0.0 MB). Direct sinks likewise
+remove the output-sized Python allocation and match the buffer writers
+byte-for-byte. The paired glTF sink encodes once, writes JSON and BIN native
+temporaries, and atomically installs the pair; at this size it measured
+451 MB/s versus 467 MB/s for non-atomic buffer-plus-direct-file writes. GLB
+measured 471 versus 431 MB/s. One-of-four primitive reads reduce sampled RSS
+from 26.4 to 5.1 MB for glTF and from 29.2 to 5.7 MB for GLB.
+
+Hand-built independent JSON/GLB fixtures exercise external and data URI
+buffers, byte strides, normalized u16 UVs, normalized RGB8 colors, sparse
+accessors, duplicate/empty material names, samplers, and node TRS. Both
+pygltflib and trimesh consume SceneIO output. Lifetime, truncation, malformed
+extent, convention-guard, missing-resource, rollback, sink-identity, and
+large-external-buffer allocation tests cover the optimized paths.
+
+## LAZ compressed-point baseline — 2026-07-25
+
+LAZ raises the registry and benchmark harness to 48 codecs and the
+buffer-backed differential/direct-sink sweep to 43. The representative
+fixture contains one million colored/intensity points (12.0 MB of canonical
+XYZ payload) and encodes to a 14.6 MB format-2 LAZ file with 50,000-point
+chunks. Five-run local MSVC medians were:
+
+```text
+operation                         SceneIO       oracle laspy/lazrs
+-----------------------------------------------------------------
+direct-sink write                  66 MB/s              144 MB/s
+in-memory read                    235 MB/s              393 MB/s
+public mmap read                  184 MB/s                    -
+metadata inspection            0.049 ms (1,335x)               -
+one-sixteenth point range      20.558 ms (3.17x)                -
+```
+
+The mapped read removes the full 14.6 MB Python input allocation, and the
+seekable streaming sink removes the corresponding output allocation while
+improving over the 62 MB/s buffer-plus-file path. The partial decoder validates
+the LAS/LASzip container, reads one anchor point to preserve the full record's
+origin, and decompresses only overlapping chunks. Its sampled RSS was 1.5 MB
+versus 47.2 MB for a full decode. SceneIO and the laspy/lazrs oracle encode the
+same format-2 XYZ, RGB16, and intensity fields from a shared exact-u16 fixture.
+
+Independent laspy/lazrs fixtures cover point formats 0-3 and 6-8 in both LAS
+1.2 and 1.4 containers. The codec rejects waveform formats, extra bytes,
+unrelated VLR/EVLR metadata, COPC, invalid global-encoding semantics, malformed
+item schemas, unbounded chunk metadata, and trailing unindexed bytes. Bytes,
+memoryview, mmap, one/many lanes, direct sink, short writes, empty files,
+multi-chunk ranges, every truncated prefix, and isolated lifetime/memory paths
+are checked separately from the benchmark.
+
+The N0 instrumented run exposed signed overflow in upstream LAZperf while
+decoding a malformed format-1.4 integer layer. SceneIO's local arithmetic patch
+keeps valid full-int32 transitions bit-exact and makes that mutation reject.
+The ordinary five-run harness measured the exact pre-patch commit at
+178/168 MB/s for buffer/mmap read and the patched build at 179/168 MB/s after
+unrelated background build load was removed.
+A same-machine, alternating direct-kernel check used the unchanged one-million
+point fixture and identical 14,584,870-byte output
+(`d35a9d4e38cb907a5d7a39607890b59548f0c2c0fc9e802dc40100b759468ef0`):
+
+```text
+pair/order       unpatched read   patched read   patched delta
+----------------------------------------------------------------
+old then new        162.01 MB/s     184.27 MB/s          +13.7%
+new then old        193.37 MB/s     185.08 MB/s           -4.3%
+old then new        205.41 MB/s     201.56 MB/s           -1.9%
+```
+
+There is no consistent directional loss. The median of the three paired
+deltas is -1.9%; independently dividing the two column medians gives -4.3%.
+Both are within the observed same-host run-order variation. The surrounding
+five-run harness also remained structurally green: mmap removed the 14.6 MB
+Python allocation, the sink removed the output allocation, inspection stayed
+above 1,000x, and partial decode stayed above 2.8x.
+
+## N0.5 local closure checkpoint — 2026-07-25
+
+The one-run, `--scale 0.001` all-50-codec smoke completed successfully. The
+first production-scale five-run guard had one non-reproduced reversal for LAS
+parallel read (0.75x). An immediate `--only las --runs 5` diagnostic measured
+1.43x, and the complete 50-codec rerun measured 1.82x for the same row while
+passing every retained O4/O5 directional and mmap/sink allocation guard. The
+isolated diagnostic changed only scope to LAS; the two complete guards used
+identical thresholds, fixtures, codec set, and lane counts.
+
+The exact sequence was `bench/bench_io.py --runs 1 --scale 0.001`,
+`bench/bench_io.py --runs 5 --require-o4-gains --require-o5-inspect-gains
+--require-o5-partial-gains`, `bench/bench_io.py --only las --runs 5`, then the
+unchanged complete five-run guard again. Each invocation also used `--json`
+to retain its result under `build/`.
+
+The corresponding option-off MSVC tree collected 2,923 tests and passed 2,919
+with four documented skips. An sdist-first Windows wheel build, exact license
+and payload audit, native dependency inspection, and clean Python 3.12
+environment containing only SceneIO plus NumPy all passed. Artifact hashes and
+entry-level evidence are recorded in
+`docs/next_stage_implementation_checklist.md`.
+
+## N0.5 hosted LAZ boundary follow-up — 2026-07-25
+
+Snapshot `c759f3c` passed normal CI, the full retained performance guard, the
+three-OS mmap matrix, pinned GCC-10 portability, and the three-platform
+wheel-build dry run. The full compiler-instrumented suite reproducibly stopped
+at the first valid format-0 `INT32_MAX`/`INT32_MIN` transition. An isolated
+GCC-13 reproduction identified signed coordinate reconstruction in the pinned
+LAZperf legacy path; after that path was corrected, the format-6 case exposed
+the equivalent layered path.
+
+The follow-up centralizes the specified LAS modulo-2^32 conversion and uses it
+for legacy and layered coordinate differences and reconstruction. Direct
+native checks cover wrapped addition/subtraction, the full-range compressor,
+and both corrector configurations. The focused GCC-13 build passes all 62 LAZ
+tests, a fresh manylinux2014 GCC-10 build passes the same 62 tests, and the
+complete local MSVC suite passes 2,919 tests with four documented skips.
+
+The first local five-run timing overlapped a Linux rebuild and is retained only
+as diagnostic evidence. An uncontended repeat measured 229 MB/s in-memory read
+and 178 MB/s mmap-path read, versus 179/168 MB/s at the earlier ordinary
+checkpoint. Bytes and sink writes both measured 63 MB/s, the sink retained its
+whole-output allocation reduction, inspection remained 1,091x faster than
+full decode, and partial read remained 3.24x faster.
+
+## N0.5 hosted closure at `a5e7fa4` — 2026-07-25
+
+Normal CI run
+[30181287022](https://github.com/SceneAPI/SceneIO/actions/runs/30181287022)
+passes the complete Linux suite, all 50 benchmark builders, the retained
+directional and mmap/sink allocation guard, pinned GCC 10, and the
+Linux/Windows/macOS focused matrix. The hosted LAZ row measured 56 MB/s on
+both in-memory and mmap reads, with 14.6 MB versus 0.0 MB traced input
+allocation. Buffer and sink writes both measured 42 MB/s, with 14.6 MB versus
+0.0 MB traced output allocation. Inspection was 4,991.79x faster than full
+decode and the bounded point range was 6.53x faster. These hosted values are a
+separate runner checkpoint, not a replacement for the local MSVC baseline.
+
+Compiler-instrumented run
+[30181287161](https://github.com/SceneAPI/SceneIO/actions/runs/30181287161)
+collects exactly 2,923 tests and completes 2,894 passes with 29 documented
+platform/oracle skips; its focused native lifetime job also passes. Explicit
+attempt 2 repeats those exact collection/pass/skip counts and the focused
+native lifetime pass at the same `a5e7fa4` commit. The
+nonpublishing release run
+[30181286675](https://github.com/SceneAPI/SceneIO/actions/runs/30181286675)
+builds and smoke-tests Linux, macOS, and Windows wheel sets plus the source
+archive, with the PyPI job skipped.
+
+## ImageSequence directory and raw Y4M baseline — 2026-07-25
+
+The sequence wave raises the registry and complete harness to 50 codecs and
+the buffer-backed differential/direct-sink sweep to 44. `ImageSequence`
+supports owned lazy encoded paths or owned uint8 planar Y/U/V frames, with
+exact optional nanosecond timing and explicit chroma/range/matrix/rate/aspect
+metadata.
+
+The representative Y4M fixture contains four odd-dimension-ready 4:2:0 frames
+(6.3 MB of canonical planes and a 6.3 MB file). Five-run local MSVC medians:
+
+```text
+operation                                  result
+--------------------------------------------------------------
+direct native encode                    1,932 MB/s
+in-memory decode                        7,584 MB/s
+public mmap decode                      2,574 MB/s
+metadata inspection                    0.073 ms (33.48x)
+one-sixteenth frame range               0.583 ms (4.19x)
+```
+
+The mmap path removes the full 6.3 MB traced Python input allocation, and the
+direct sink removes the matching 6.3 MB output allocation while reaching
+3,902 MB/s versus 1,113 MB/s for buffer-plus-file writing. Full decode sampled
+12.4 MB RSS growth; the selected range sampled 1.5 MB. A separate oracle-enabled
+three-run pass measured the independent Python writer/reader at 676/804 MB/s.
+All six supported
+layout tokens (mono, three 4:2:0 sitings, 4:2:2, and 4:4:4), odd dimensions,
+exact rational timing, CRLF, malformed prefixes, mmap lifetime, and short
+writes are independently pinned. The implementation performs no RGB
+conversion and has no video-framework dependency.
+
+The companion directory fixture stores 32 independently encoded PPM frames
+(6.3 MB). Lazy reads retain only validated absolute frame paths and optional
+manifest timing. The bounded transactional copy writer measured 242 MB/s with
+a 1.3 MB traced peak, independent of total output size; full lazy read measured
+1,565 MB/s, inspection was 1.45x faster, and a middle frame range was 1.61x
+faster. Exact encoded bytes, natural ordering, deterministic manifests,
+same-directory replacement, heterogeneous-frame rejection, and failed-stage
+rollback are covered separately from timing.
+
+## COLMAP malformed-input RSS qualification — 2026-07-25
+
+The former absolute 16 MiB checks are replaced by a payload-relative
+fresh-process protocol. Each child first exercises a fixed 64-byte malformed
+fixture to warm imports, native dispatch, filesystem metadata, and allocator
+pools. It then measures one first size-dependent operation using both sampled
+current RSS and the platform process high-water mark. Three independent child
+processes are run for approximately 8 MiB and 32 MiB malformed payloads, and
+the median increase between sizes must stay below one quarter of the added
+file-controlled extent.
+
+The test retains exact `FormatError` checks at both measured sizes for
+oversized observation counts and unterminated image names, plus a 1 MiB
+`tracemalloc` ceiling. A test-only transient resident allocation clears the
+process-startup high-water headroom, adds one file-controlled extent, releases
+it before the final current-RSS sample, and is required to fail the same
+payload-relative assertion using its high-water delta. This independently
+checks the platform high-water conversion rather than relying on sampler
+timing or retained current RSS.
+
+Local MSVC medians were:
+
+```text
+malformed case       SceneIO 8/32 MiB delta    transient high-water control
+------------------------------------------------------------------------------
+observation extent       0.160 / 0.156 MiB           8.15 / 32.15 MiB
+unterminated name        0.141 / 0.156 MiB           8.14 / 32.13 MiB
+```
+
+The absolute values are diagnostic only. The portable regression contract is
+the paired slope, failure diagnostics containing every repeated sample, exact
+error behavior, and a positive allocating control. The clean pinned
+manylinux2014 GCC 10.2 job passes that contract; the pending hosted
+Windows/Linux/macOS portability workflow will validate it by pass/fail rather
+than treating any single machine's RSS as a numeric SLA.
+
+## R2 aggregate-registry equivalence — 2026-07-26
+
+The aggregate staging boundary changes registry construction only; codec
+payload and metric behavior must remain unchanged. Two parent captures at
+`14bf53b` and one candidate capture used:
+
+```text
+.venv/Scripts/python.exe bench/bench_io.py \
+  --runs 1 --scale 0.001 --skip-oracles --json <output>
+```
+
+All three contain the same 50 rows and reproduce portable structural
+projection SHA-256
+`2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`.
+The projection retains codec order, payload/file sizes, nested result schema,
+and every traced-allocation key. It normalizes `*_peak_mb` values because
+`tracemalloc` baselines vary with the Python runtime and platform, and it
+excludes timing/throughput and RSS diagnostics. The first hosted Linux run
+made that distinction observable: its image-sequence inspect and partial
+peaks were about 7.5 KiB below the Windows captures despite identical
+behavior. The comparator still fails when a peak field disappears or is
+renamed, or when a stable structural value changes. Top-level O1/O3/O5
+benchmark acceptance remains in the separate strict guard described below;
+the typed-adapter allocation paths retain their focused memory tests.
+
+`bench/compare_io_structure.py` makes the portable comparison reproducible.
+The normal CI smoke uses the contract's matching `--skip-oracles` fixture
+surface before invoking it; oracle correctness remains covered by the full
+test suite.
+
+A separate default-scale five-run candidate invocation with
+`--require-o4-gains --require-o5-inspect-gains
+--require-o5-partial-gains` completed successfully and reported that the
+stable O4 directions plus mmap/sink allocation bounds passed. Its JSON is
+intentionally not compared with the small-fixture structural hash because
+payload and encoded sizes scale with the generated fixture.
+
+Fifteen same-host samples were interleaved between an extracted parent source
+tree and the candidate source tree. Candidate/parent median import times were
+5.632/5.659 ms for `import sceneio`, 75.163/75.218 ms for the I/O facade, and
+7.394/7.464 ms for `_core`. The candidate adds exactly one eager facade
+module, `sceneio.io._registry.assembly`; the other two import boundaries have
+no module-set delta. These timings are local diagnostic evidence. The durable
+contracts are the exact module sets, the existing broad alert thresholds, and
+the same-host relative comparison.
+
+## R2 arrays-family structural equivalence — 2026-07-26
+
+The arrays extraction is an organization-only move for PFM, NPY, NPZ,
+safetensors, FLO, and DMB. Two parent captures at exact commit `6086315` and
+the committed result at `d99dcf0` use the same small all-codec command as the
+aggregate unit. The result reproduces both the portable 50-row projection SHA-256
+`2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`
+and the six-array-row projection SHA-256
+`5c0104dc8a0372ede12a86f48c8c57a7426718b030c95ec9d7088a9b26364aac`.
+This unit claims no codec speedup: encoded sizes, stable schema, traced-memory
+fields, mmap/sink relationships, inspection results, and partial-read
+surfaces remain exact.
+
+The default-scale five-run invocation with all retained O4/O5 requirements
+completed successfully and reported stable O4 gains plus mmap/sink memory
+bounds. Its JSON remains separate from the small-fixture structural
+projection because generated payload sizes intentionally differ.
+
+Fifteen interleaved Windows samples compared extracted parent and candidate
+source trees while using the same compiled module. Candidate/parent medians
+were 19.797/19.889 ms for `import sceneio`, 97.138/96.928 ms for the I/O
+facade, and 22.042/22.218 ms for direct `_core`. Only the I/O facade changes
+its eager module set, adding exactly `_registry.families.arrays` and
+`_inspectors.arrays`; counts move from 37 to 39. The other two module sets are
+unchanged. Timing remains same-host diagnostic evidence; exact module sets,
+parent-derived behavior contracts, and the structural hashes are the durable
+acceptance evidence.
+
+Normal CI run 30207617248 and compiler-instrumented run 30207617253 pass the
+exact `d99dcf0` commit, including the retained throughput/allocation guard and
+the full cross-platform and instrumented validation lanes.
+
+## R2 points-family structural equivalence â€” 2026-07-26
+
+The points extraction is an organization-only move for PLY, PCD, XYZ, PTS,
+LAS, and LAZ. Two parent captures at exact commit `efb106e` and the working
+candidate use the same small all-codec command as the aggregate unit. All
+three reproduce portable 50-row projection SHA-256
+`2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`
+and six-point-row projection SHA-256
+`8282b574166aeb88d0eb51ded126566d7a4f21b0752244ea0c987dcee06437bd`.
+This unit claims no codec speedup: encoded sizes, stable schema, traced-memory
+fields, mmap/sink relationships, inspection results, and point-range surfaces
+remain exact.
+
+The default-scale five-run invocation with all retained O4/O5 requirements
+passes and reports stable O4 gains plus mmap/sink memory bounds. Generated
+50,000-point fixtures separately confirm bounded metadata inspection and
+prompt path release for all six formats.
+
+Fifteen interleaved Windows samples compare exact parent and candidate source
+trees with the same compiled module. Candidate/parent medians are
+17.565/18.287 ms for `import sceneio`, 89.031/87.407 ms for the I/O facade,
+and 19.725/19.734 ms for direct `_core`. Only the I/O facade changes its eager
+module set, adding exactly `_registry.families.points` and
+`_inspectors.points`; counts move from 39 to 41. The other two module sets are
+unchanged. Timing is same-host diagnostic evidence; exact module sets,
+parent-derived behavior contracts, and structural hashes are the durable
+acceptance evidence.
+
+The pre-review staged-tree package check uses tree
+`942314b30d5e21a62420a0c1ff1332356046792b`. Its source archive SHA-256 is
+`2cd51368e13c5f93fb98e53214861c9d0356686f9a727bda5f23157cc14a4405`;
+the Windows cp312-abi3 wheel SHA-256 is
+`8310dfb7102cb4dd1b6e8390a9b803831ae3bd7877273aa3c5c418f76694aa5c`.
+The wheel adds only the two intended lower point modules relative to the
+arrays checkpoint and passes a fresh NumPy-only installed smoke plus all-six
+point and point-range probes.
+
+All three independent reviews are clear for staged tree
+`442093b402db2af290c9a19a61747b6691e2af1c`. The test/performance review
+independently reproduced both benchmark projections and the strict guard, and
+its 729-test focused matrix passed. No review required a source change. A final
+exact-tree artifact confirmation follows this documentation closure.
+
+The final exact staged tree is
+`688f0a4caa81edf6e499f7b72e1bc03117a4ddf0`. Its source archive SHA-256 is
+`cad77d9a9b311c686279d150cc2a68c4a4221f21db1b1cdc2473af38d96ce3ab`
+and its Windows cp312-abi3 wheel SHA-256 is
+`171aa3ff0b6e28a59ca45489b72818289a2dbb7f8bf63dd5e666be9b9221676a`.
+The exact tree is commit `686f42e`; normal CI run 30210055913 and
+compiler-instrumented run 30210055930 pass, including the retained
+throughput/allocation guard and the full cross-platform lanes.
+
+## R2 reconstruction-family registry equivalence — 2026-07-26
+
+The reconstruction registry extraction is an organization-only move for the
+12 non-contiguous reconstruction, pose, state, graph, and database codecs.
+Two candidate captures use:
+
+```text
+.venv/Scripts/python.exe bench/bench_io.py \
+  --runs 1 --scale 0.001 --skip-oracles --json <output>
+```
+
+Both reproduce the portable all-50 projection SHA-256
+`2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`
+and ordered 12-row projection SHA-256
+`92d354dfd4aa415cbd908168d55310902e56fd21541c94d66fc740c1915540d9`,
+matching both frozen parent captures. The strict default-scale five-run
+invocation with all retained O4/O5 requirements also passes. This extraction
+claims no codec speedup; identical output structure, mmap/sink allocation
+relationships, inspection, and partial-read behavior are the acceptance
+criteria.
+
+A separate three-run family-only diagnostic uses `--scale 1 --cold-cache` and
+all 12 `--only` selectors. Encoded sizes range through 35.2 MiB for EuRoC and
+9.9 MiB for COLMAP DB. Traced Python allocation remains approximately zero
+above the mmap/direct-path readers and direct sinks, while the corresponding
+bytes writers allocate approximately the encoded size. Metadata-only reads
+remain faster than full decode for every scaled family member in this sample;
+COLMAP image/pair selectors remain materially faster, while the EuRoC
+half-open state range selected by this fixture is intentionally large and is
+treated as a behavior/memory diagnostic rather than a timing target.
+
+Windows has no `POSIX_FADV_DONTNEED`, and the harness reports:
+
+```text
+WARNING: this platform has no POSIX_FADV_DONTNEED; cold-cache hint was unavailable.
+```
+
+Therefore these family measurements are warm-cache diagnostics. They are not
+presented as confirmed cold-cache results.
+
+Fifteen interleaved parent/candidate imports were also run from exact exported
+source trees with `python -S` and an explicit `PYTHONPATH`, so the editable
+install could not redirect either sample to the working tree. Median timings
+are diagnostic rather than acceptance thresholds:
+
+| Import | Parent | Candidate | SceneIO modules |
+|---|---:|---:|---|
+| `import sceneio` | 18.687 ms | 18.771 ms | 7 / 7, exact same set |
+| I/O facade | 96.710 ms | 96.938 ms | 42 / 43 |
+| direct `_core` | 21.696 ms | 21.711 ms | 8 / 8, exact same set |
+
+The sole I/O-facade module addition is
+`sceneio.io._registry.families.reconstruction`, as required by the extraction.
+The measured deltas are within ordinary import-timing variation and no speed
+claim is made.
+
+The reviewed exact-tree package inventory is 321 tracked files, 322
+source-archive files (only generated `PKG-INFO` is extra), and 79 wheel
+members. All tracked archive files and all changed packaged runtime files
+match their Git blobs. The wheel retains 15 license/attribution members, one
+native extension, NumPy as its sole unconditional dependency, and the same
+native dependency list as the parent. An external NumPy-only installed-wheel
+run exercises every reconstruction family member and completes the packaged
+smoke.
+
+The first hosted normal run at extraction commit `be836a0` found an
+AppleClang-only byte spelling in BAL's canonical 180-degree quaternion:
+`[-0.0, 1.0, 0.0, 0.0]` instead of `[0.0, 1.0, 0.0, 0.0]`. The nonzero
+components and represented rotation are identical. The repair normalizes only
+exact-zero quaternion components after canonical sign selection. Benchmark
+structure, the retained guard, and exact-tree package evidence are rerun
+before closing the checkpoint; no speed claim is attached to this
+deterministic-output correction.
+
+The repaired candidate reproduces the portable all-50 structural SHA-256
+`2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`,
+and the default-scale five-run throughput/allocation guard passes. The
+zero-component store has no measurable BAL regression.
+
+The closed combined implementation tree is
+`06f89e8b685c3536af0e67a462d9cff90a86bc9c`. Its source archive SHA-256 is
+`89304b849aeef699fadb79c2fed8c211b6bd84150ff4bfe313b9b7547ff7bccb`;
+the derived Windows cp312-abi3 wheel SHA-256 is
+`ffbc561b547423cb6266db2540afdb698f75b5f30785077bd1cead7f8570b87b`.
+Normal run `30218232248` passes the complete suite, retained performance
+guard, all three reconstruction operating systems, all mmap lanes, and the
+isolated GCC-10 lane. Compiler-instrumented run `30218232246` passes both
+jobs.
+
+## R2 splat-family inspector equivalence — 2026-07-26
+
+The six splat metadata readers moved without algorithm changes from the
+compatibility facade to `_inspectors/splats.py`. Two candidate runs use:
+
+```text
+.venv/Scripts/python.exe bench/bench_io.py \
+  --runs 1 --scale 0.001 --skip-oracles --json <output>
+```
+
+Both reproduce the portable all-50 structural SHA-256
+`2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`
+and ordered six-row SHA-256
+`5c6adc3584ba25050c885b37313d009311e2253b0c841cbc8738b806cb090bfd`,
+matching both frozen parent captures. The separate default-scale five-run
+invocation with all retained O4/O5 requirements passes.
+
+An exact-parent inspector comparison uses the generated 36 MiB-plus fixtures
+for every family member. It takes 15 randomized interleaved timing samples
+and 15 traced-allocation samples per parent/candidate implementation. A row
+passes when the candidate median increase is no larger than the maximum of
+10 percent of the parent median, three times the sum of both median absolute
+deviations, or 0.05 ms, and its maximum traced allocation does not exceed the
+parent maximum.
+
+| Codec | Parent inspect | Candidate inspect | Parent/candidate peak |
+|---|---:|---:|---:|
+| `gaussian_ply` | 0.0343 ms | 0.0355 ms | 11,650 / 11,650 bytes |
+| `compressed_ply` | 0.0852 ms | 0.0841 ms | 15,339 / 15,339 bytes |
+| `sog` | 0.3667 ms | 0.3642 ms | 1,059,105 / 1,059,105 bytes |
+| `ksplat` | 0.0292 ms | 0.0297 ms | 14,394 / 14,394 bytes |
+| `spz` | 0.0324 ms | 0.0324 ms | 10,012 / 10,012 bytes |
+| `splat` | 0.0057 ms | 0.0059 ms | 1,320 / 1,320 bytes |
+
+Every row passes. This is equivalence evidence for the ownership-only move,
+not a performance-gain claim. The broader read/write/partial family
+comparison remains in the registry-extraction gate.
+
+Pre-final package tree `301fd6693fe758dfd555337708bf7bd0ca73384a`
+produces a 326-file source archive with only generated `PKG-INFO` beyond its
+325 tracked files and no missing or differing blob. Its SHA-256 is
+`f04fc37d7b79ecc41d19744dee7195746ab306e78f626a1dc387e48ef3a29606`.
+The derived 80-member Windows cp312-abi3 wheel SHA-256 is
+`c6a7248a0eb88a5920c7f11f28e745d66dc42f8b442c0c680162d1481a8d5904`.
+The wheel retains one native extension, all 15 attribution entries, NumPy as
+its only unconditional dependency, and no packaged build/include/lib/share/bin
+tree. A fresh NumPy-only environment passes the packaged smoke and explicit
+all-six splat inspection/read/partial/path-release probe.
+
+## R2 splat-family registry equivalence — 2026-07-26
+
+The final family extraction moves the same six `Codec(...)` expressions into
+`_registry/families/splats.py` and injects the facade-owned SOG callbacks. It
+changes registry ownership only. Two candidate captures use the command above
+and reproduce both the portable all-50 structural SHA-256
+`2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`
+and ordered six-row SHA-256
+`5c6adc3584ba25050c885b37313d009311e2253b0c841cbc8738b806cb090bfd`.
+The default-scale five-run throughput/allocation guard passes.
+
+A separate exact-parent comparison uses one identical 256-Gaussian corpus for
+commit `0696533e515b5f8e65cbb676df28d852f9d0a049` and the candidate. It takes
+15 randomized interleaved fresh-process samples per source. Each process warms
+the operation, measures one call, and separately records traced allocation.
+The acceptance limit is parent median plus the maximum of 10 percent of that
+median, three times the sum of parent/candidate median absolute deviations, or
+0.05 ms. Candidate maximum traced allocation must not exceed the parent.
+
+| Operation | Parent | Candidate | Acceptance limit | Parent/candidate peak |
+|---|---:|---:|---:|---:|
+| compressed PLY inspect | 0.1841 ms | 0.1836 ms | 0.2341 ms | 16,307 / 16,307 B |
+| compressed PLY partial | 0.1561 ms | 0.1552 ms | 0.2061 ms | 11,402 / 11,402 B |
+| compressed PLY read | 0.2498 ms | 0.2635 ms | 0.2998 ms | 11,218 / 11,218 B |
+| compressed PLY write | 0.4896 ms | 0.5126 ms | 0.6501 ms | 3,189 / 3,189 B |
+| Gaussian PLY inspect | 0.1182 ms | 0.1208 ms | 0.1682 ms | 12,797 / 12,797 B |
+| Gaussian PLY partial | 0.1180 ms | 0.1265 ms | 0.1738 ms | 11,358 / 11,358 B |
+| Gaussian PLY read | 0.1801 ms | 0.1778 ms | 0.3466 ms | 11,174 / 11,174 B |
+| Gaussian PLY write | 0.4929 ms | 0.4838 ms | 0.5826 ms | 3,134 / 3,134 B |
+| KSplat inspect | 0.0879 ms | 0.0946 ms | 0.1379 ms | 15,650 / 15,650 B |
+| KSplat partial | 0.1037 ms | 0.0999 ms | 0.1537 ms | 11,370 / 11,370 B |
+| KSplat read | 0.1009 ms | 0.1044 ms | 0.1509 ms | 11,186 / 11,186 B |
+| KSplat write | 0.4969 ms | 0.4910 ms | 0.6574 ms | 3,149 / 3,149 B |
+| SOG inspect | 0.4278 ms | 0.4409 ms | 0.5505 ms | 33,748 / 33,748 B |
+| SOG partial | 0.3558 ms | 0.3630 ms | 0.4359 ms | 12,009 / 12,009 B |
+| SOG read | 0.3644 ms | 0.3666 ms | 0.4169 ms | 11,825 / 11,825 B |
+| SOG write | 2.1216 ms | 2.1311 ms | 2.3652 ms | 3,764 / 3,764 B |
+| SPLAT inspect | 0.0328 ms | 0.0340 ms | 0.0828 ms | 3,091 / 3,091 B |
+| SPLAT partial | 0.0999 ms | 0.0983 ms | 0.1499 ms | 11,366 / 11,366 B |
+| SPLAT read | 0.0970 ms | 0.0955 ms | 0.1470 ms | 11,182 / 11,182 B |
+| SPLAT write | 0.4350 ms | 0.4390 ms | 0.5634 ms | 3,144 / 3,144 B |
+| SPZ inspect | 0.1821 ms | 0.1840 ms | 0.2321 ms | 160,322 / 160,322 B |
+| SPZ read | 0.1029 ms | 0.0985 ms | 0.1529 ms | 11,174 / 11,174 B |
+| SPZ write | 0.5224 ms | 0.5314 ms | 0.7417 ms | 3,134 / 3,134 B |
+
+All 23 rows pass. Every candidate allocation maximum is byte-for-byte equal
+to its parent maximum. This is non-regression evidence, not a speed claim.
+
+A scale-1 family diagnostic uses 11.2 MiB logical clouds. Encoded files are
+11.2 MiB Gaussian PLY, 3.3 MiB compressed PLY, 2.9 MiB SOG, 4.8 MiB KSplat,
+3.4 MiB SPZ, and 6.4 MiB SPLAT. Public path-read traced allocation remains
+0.0 MiB at the displayed precision, and sink-write traced allocation remains
+0.0 MiB while the legacy byte writers peak near encoded size. Windows reports
+that the requested `POSIX_FADV_DONTNEED` hint is unavailable, so these are
+warm-cache diagnostics rather than cold-cache measurements.
+
+Fifteen randomized interleaved fresh-process import samples produce:
+
+| Import | Parent | Candidate | SceneIO modules |
+|---|---:|---:|---:|
+| `import sceneio` | 5.230 ms | 4.452 ms | 7 / 7, exact same set |
+| I/O facade | 75.253 ms | 69.788 ms | 43 / 45 |
+| direct `_core` | 7.013 ms | 6.271 ms | 8 / 8, exact same set |
+
+The I/O facade adds only `_inspectors.splats` and
+`_registry.families.splats`, as planned. Import timings are diagnostic; exact
+module sets are the acceptance contract.
+
+Pre-final package tree `7ab4f960dcb43ac95c4cf7269fed7d733bad71cc`
+contains 326 tracked files. Its 327-file source archive adds only generated
+`PKG-INFO`; every tracked blob is present and byte-identical. The archive
+SHA-256 is
+`47211c9a22d05e673265daaa99a813ac74ac1607116d3b5c9331d9accaf1e04c`.
+The 81-member Windows cp312-abi3 wheel derived only from that source archive
+has SHA-256
+`b3cd1f1046297339c7fc88c0f89c66deb4e6a4cc78cc96bce9ce99565c06fb2a`.
+It contains one native extension, all 15 attribution members, no packaged
+build/include/lib/share/bin tree, and NumPy as its only unconditional
+dependency. The three changed runtime files match across Git, source archive,
+and wheel; the native module depends only on Python and standard Windows
+runtimes. A fresh external NumPy-only environment passes the complete wheel
+smoke, including all six splat read/inspect/partial/lifetime/path-release
+probes.
+
+As with the prior inspector checkpoint, the final package confirmation is a
+no-further-edit rebuild after this evidence is staged. Its hashes remain
+outside the source tree so recording them cannot invalidate the tree they
+describe.
+
+The first hosted all-six parity lane exposed one existing platform-specific
+fingerprint outside the benchmark corpus: on the characterized hosted macOS
+AppleClang/ARM profile, the larger compressed-PLY PlayCanvas vector has body
+SHA-256
+`412aed8223afa9dd6e38cd3e36052ac8520ecb9381517567d292ba1cf8457c5f`
+while hosted Windows/MSVC and Ubuntu/glibc retain PlayCanvas-exact
+`e32c9d9340ff7489177d93403078faa695e2a67ad19f763a4755ff24bdf3eff5`.
+Native exp/log rounding is the inferred cause consistent with the one changed
+lossy quantization boundary, not a universal platform claim. Both outputs
+pass the independent layout/decode oracle. The exact hosted-profile
+fingerprints are now explicit; codec and benchmark behavior are unchanged.
+
+Registry implementation `3e46d82` and test-contract repair `9928c6d` are
+pushed. The repair's exact tree
+`79819558208fdb8099b23d3c38fd1afee3ee2f7c` contains 326 tracked files,
+a byte-consistent 327-file source archive, and an 81-member Windows abi3
+wheel. The source archive SHA-256 is
+`33e0bb7f0a85a630f8fbe45117c4e645979848bf11d5edc6bbfa963c7f067134`;
+the derived wheel SHA-256 is
+`1796fffd3a207fa9033f05500986fee36be152884cec2230ca9a68889bb4a112`.
+The external NumPy-only installed smoke passes. Normal run `30228235491`
+passes the all-50 benchmark structure and retained five-run guard plus every
+platform lane; compiler-instrumented run `30228235535` passes both jobs. R2
+is closed.
+
+## R3.1a benchmark-boundary equivalence (2026-07-26)
+
+R3.1a is a development-harness organization change, not a codec optimization.
+The compatible `bench/bench_io.py` entry point now delegates shared models,
+timing/traced allocation and warmed-parent RSS measurement, and console
+formatting to `bench/io_bench/{model,measure,reporting}.py`. The JSON envelope,
+row ordering, nested shapes, fixture builders, codec operations, and guard
+logic remain unchanged. The existing `*_rss_mb` values are explicitly named
+`in_process_rss` internally and remain exploratory warmed-parent deltas; they
+are not fresh-process qualification evidence.
+
+The frozen parent is commit
+`683ae483a3a2407dc192fb32cdcf964eb3b1fe9a`, tree
+`5dfe9bbd36940bfa4b03a322a2b452b38d3f463e`, benchmark blob
+`bcb502936cc8ccce4a52b843a1220f27cdddba1f`. All three captures used:
+
+```text
+.venv/Scripts/python.exe bench/bench_io.py --runs 1 --scale 0.001 --skip-oracles --json <output>
+```
+
+The parent JSON SHA-256 is
+`d30840742c571dd4a8ad86076ef0af8dd1fc884ecf59e1af2f3330adffaffd57`.
+The two candidate JSON SHA-256 values are
+`c0ec1a358ae5e7e51d650d3b1fd1069f76c97bf9f8573d917cd2e74ef976521e`
+and
+`5ae19649975f4ced69d9f0817a15c000c7a82e4c93cb5d3f873763273e43c7b8`.
+Timing and sampled-memory values naturally differ, but all three reproduce the
+50-row structural projection
+`2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`
+and identical deterministic values. The parent/candidate combined AST hash for
+the eight representative fixture builders is
+`ce8dda677da61550035dcd2062d4cb53aed20f21e37024d87d5f50449ba1fbfd`.
+Record-aware fingerprints additionally cover image color/channel metadata,
+Y4M timing/chroma conventions, point-cloud conventions, mesh topology and
+scene graph, Gaussian parameter spaces, camera conventions, tensor metadata,
+and reconstruction structure. A checked synthetic transcript pins every
+reporting variant.
+
+The first unchanged complete five-run command rejected only the LAS
+`points-read` comparator during a noisy sample. A seven-run isolated
+diagnostic then measured 1.41x, and a complete no-oracle repeat passed. Per the
+benchmark repeat policy, the unchanged complete command was run again:
+
+```text
+.venv/Scripts/python.exe bench/bench_io.py --runs 5 --require-o4-gains --require-o5-inspect-gains --require-o5-partial-gains
+```
+
+The confirming run passes all retained O4/O5 and mmap/sink allocation guards.
+Its LAS read pair is 2,178 versus 2,882 MB/s (1.32x); LAS write is 487 versus
+1,015 MB/s (2.08x), XYZ write retains 6.33x, and both WebP comparisons retain
+directional gains. The confirming JSON SHA-256 is
+`b426086aaf02483d4a36bb4e4297fba4c7ac85b8786d849cd4de3ff07726dc3b`.
+These values confirm behavior preservation under the retained controls; they
+do not replace the codec-performance baseline or make a new optimization
+claim. The final local MSVC gate collects 3,309 nodes, passes 3,305 with the
+same four documented skips, and passes Ruff. Exact-commit normal run
+[30231629465](https://github.com/SceneAPI/SceneIO/actions/runs/30231629465)
+passes the complete suite, 50-codec smoke, retained performance guard, all
+platform lanes, and GCC-10 job. Exact-commit compiler-instrumented run
+[30231629496](https://github.com/SceneAPI/SceneIO/actions/runs/30231629496)
+passes both jobs.
+
+## R3.1b fresh-child memory protocol (2026-07-26)
+
+R3.1b separates qualification evidence from the legacy warmed-parent
+`*_rss_mb` table fields. `bench/io_bench/memory_protocol.py` launches one new
+interpreter per sample. The child imports SceneIO, executes one explicit
+warm-up, collects garbage, records current and platform-high-water baselines,
+retains calibration pages until current RSS reaches the prior high-water mark,
+starts a 0.5 ms `psutil` sampler, confirms its first reading, and executes
+exactly one measured operation. Warm-up receives a fixed zero payload size.
+The version-1 response reports payload bytes, baseline/peak/delta RSS,
+calibration and residual headroom, platform, sampler backend and availability,
+canonical warm/measured operation signatures, and operation counts. Strict
+mode requires three or more samples per size, an available sampler, and zero
+residual headroom; non-strict probes return `unavailable` with all RSS fields
+null rather than numeric zero. Response identity and sampling interval must
+match the request. Growth assessment compares every larger payload with the
+smallest, not only the endpoints. The validator accepts only Windows
+`peak_wset`, Linux/macOS `ru_maxrss`, or the explicitly non-qualifying
+current-only fallback, and recomputes headroom from the baseline counters.
+The lifetime value is the monotonic envelope of the named native counter and
+all observed current-RSS samples. This preserves a coherent high-water value
+when Linux `/proc` RSS briefly exceeds `ru_maxrss`, without dropping either a
+native or sampled allocation peak. The sampler is stopped before the final
+envelope is captured while the measured result and calibration pages remain
+alive.
+Instrumented runtimes report the protocol unavailable because their resident
+memory is not comparable. Throughput timing remains in the separate timing
+path and is not performed under this sampler.
+
+The generated control run uses three independent children at 8 MiB and
+48 MiB:
+
+| Control | 8 MiB median delta | 48 MiB median delta | Growth | 10 MiB bound | Result |
+|---|---:|---:|---:|---:|---|
+| 64 KiB bounded file read | 208,896 B | 192,512 B | 0 B | 10,485,760 B | pass |
+| touched whole-payload allocation | 8,523,776 B | 50,462,720 B | 41,938,944 B | 10,485,760 B | fail as intended |
+
+The raw six-sample-per-control JSON has SHA-256
+`cf3764e50ed5aceae576989c0439341070df510b1ec456584fbf08dd6b3b761f`
+and remains generated development output under `build/`, not a committed
+fixture. The checked response contract is
+`tests/contracts/memory_protocol_v1.json`; focused tests also run actual NPY
+read and inspect operations and prove strict versus non-strict missing-sampler
+behavior. A direct bounded-read result check and counterexample matrices cover
+semantic-signature mismatch, insufficient repetitions, intermediate-size
+spikes, request/response mismatch, and obscured high-water windows. The same
+protocol test now runs in the existing three-platform mmap/partial CI lane.
+R3.3, not this unit, owns the staged migration of existing codec-test-local
+subprocess helpers.
+
+The final local R3.1b tree collects 3,320 tests and passes 3,316 with the same
+four documented skips. The unchanged complete five-run guard passes with JSON
+SHA-256
+`a8c5366a999cbe90b7f29ca7f6face5584612cb021708b99644496ceb08951bc`.
+Representative retained comparisons are:
+
+| Comparator | Baseline | Optimized | Gain |
+|---|---:|---:|---:|
+| XYZ write | 20.81 MB/s | 101.41 MB/s | 4.87x |
+| LAS read | 1,407.76 MB/s | 3,139.14 MB/s | 2.23x |
+| LAS write | 526.43 MB/s | 1,092.20 MB/s | 2.07x |
+| WebP balanced configuration | 13.35 MB/s | 35.71 MB/s | 2.68x |
+| WebP worker control | 18.10 MB/s | 19.64 MB/s | 1.09x |
+
+All three independent reviews are clear. Exact-source packaging contains 336
+byte-identical repository files plus generated `PKG-INFO`; the derived
+81-member Windows abi3 wheel excludes development/build content and passes the
+isolated NumPy-only installed smoke. The first exact hosted attempt,
+`aafd283`, exposed the Linux `/proc` versus `ru_maxrss` boundary and a final
+sampler-read ordering window in CI run `30234117571`; its
+compiler-instrumented run `30234117580` passes. The follow-up preserves the
+response validator's high-water invariant, adds deterministic
+counter-mismatch and join-time peak controls, passes all 3,316 local tests,
+and passes the 11-test protocol suite under the pinned manylinux2014 GCC-10
+image. Follow-up commit `0bdfe0f` closes R3.1b: normal run
+[30234796010](https://github.com/SceneAPI/SceneIO/actions/runs/30234796010)
+and compiler-instrumented run
+[30234796025](https://github.com/SceneAPI/SceneIO/actions/runs/30234796025)
+both pass.
+
+## R3.2 arrays benchmark-family extraction (2026-07-26)
+
+The first R3.2 checkpoint moves all six array `Spec` builders and their inline
+fixtures to `bench/io_bench/families/arrays.py`, with the deterministic DMB
+fixture, NumPy/NPZ/DMB independent oracles, and optional safetensors bindings
+under `bench/io_bench/{fixtures,oracles}/arrays.py`. The compatible
+`bench/bench_io.py` facade re-exports every historical compatibility helper
+and splices the family hook into the same result position, so commands and
+developer imports are unchanged. The benchmark contract records each helper's
+owning source and AST hash in addition to the existing representative fixture
+fingerprints.
+
+Direct controls round-trip NumPy, NPZ, and DMB. When safetensors is installed,
+all five buffer/file/open bindings must be callable and execute successfully;
+otherwise all five must be absent together. PFM and FLO retain explicit
+exemptions for independent benchmark encode/decode throughput while their
+format parity remains independently tested. A one-run 50-codec smoke retains
+structural projection
+`2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`.
+Focused compatibility, array-family, and parity validation passes 334 tests
+with one documented optional OpenCV skip. Adding the typed PFM/FLO suites
+expands that run to 445 passes with the same skip. The complete suite passes
+3,316 tests with the same four documented skips, and Ruff is clean. A fresh
+exact-tree source archive has 343 members and contains all six new benchmark
+family/fixture/oracle modules without generated cache files. Its derived
+81-member wheel contains no benchmark, test, or safetensors module, retains
+all 15 attribution files, and keeps `numpy>=1.26` as its sole unconditional
+dependency. This is a mechanical ownership change and makes no
+codec-performance claim. Exact commit `6d9ec34` passes normal run
+[30236069971](https://github.com/SceneAPI/SceneIO/actions/runs/30236069971)
+and compiler-instrumented run
+[30236069959](https://github.com/SceneAPI/SceneIO/actions/runs/30236069959).
+
+## R3.2 calibration benchmark-family extraction (2026-07-27)
+
+The second R3.2 checkpoint moves the complete `opencv_yaml`, `opencv_xml`,
+`ros_camera_info`, and `kalibr` `Spec` hook to
+`bench/io_bench/families/calibration.py`. Deterministic rig builders now live
+in `fixtures/calibration.py`; PyYAML and standard-library XML oracles live in
+`oracles/calibration.py`. The unchanged record-size helper moves once to
+`families/common.py` because pose, reconstruction, and calibration specs share
+it. The facade retains exact historical helper identities and inserts the
+four-codec hook at the same position.
+
+All seven moved helper ASTs match the parent exactly. Contract controls pin the
+four core bindings, fixture/partial arguments, logical-size results, and
+oracle identities. They execute all installed PyYAML and XML pairs through
+the actual `Spec` objects; a fresh process with PyYAML blocked proves all
+three YAML-backed pairs become unavailable together while XML remains active.
+Lower-module imports do not load the facade. The four-codec live benchmark
+produces independent write/read metrics for every row, and the complete
+50-codec smoke retains structural projection
+`2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`.
+Focused calibration/contract validation passes 117 tests; the complete suite
+passes 3,316 with the same four documented skips, and Ruff is clean. A fresh
+347-member exact-tree source archive contains exactly the four new
+calibration/common benchmark modules and no generated cache files. Its
+81-member derived wheel contains no benchmark, test, or YAML module, retains
+all 15 attribution files, and keeps `numpy>=1.26` as its sole unconditional
+dependency; `pyyaml>=6.0` remains test-extra only. A fresh environment with
+that wheel and NumPy, but without PyYAML, passes
+`python -m sceneio._wheel_smoke`. All three independent reviews are clear.
+This is a mechanical ownership change and makes no codec-performance claim.
+Exact commit `5dc03f4` passes normal run
+[30237676629](https://github.com/SceneAPI/SceneIO/actions/runs/30237676629)
+and compiler-instrumented run
+[30237676648](https://github.com/SceneAPI/SceneIO/actions/runs/30237676648).
+
+## R3.2 raster-image benchmark-family extraction (2026-07-27)
+
+The third R3.2 checkpoint moves the complete `png`, `jpeg`, `bmp`, `tga`,
+`webp`, `hdr`, `exr`, and `netpbm` hook to
+`bench/io_bench/families/images.py`. Its unchanged uint8/float32 builders live
+in `fixtures/images.py`; optional Pillow, imageio, and OpenEXR comparisons live
+in `oracles/images.py`. The facade preserves every historical helper identity
+and splices the two image-hook slices around the unchanged interleaved `y4m`
+row, retaining exact order.
+
+All nine moved helper ASTs match the parent exactly. Contract controls pin
+family-to-fixture/oracle identities, core callback settings, image dtype,
+shape, and logical size, plus the complete optional-library matrix and
+Netpbm's imageio-to-Pillow fallback. Every available non-HDR oracle writer and
+reader executes as the actual `Spec` pair; EXR packed and planar channel
+layouts are normalized to RGB and compared exactly for both oracle- and
+core-produced files. The installed imageio/Pillow environment cannot
+portably encode or decode Radiance HDR float32 RGB, so independent benchmark
+throughput for that pair is an explicit reviewed exemption; codec parity
+continues to use the independent NumPy RGBE parser and serializer in
+`tests/codecs/test_hdr.py`.
+
+Seven of eight live rows produce independent write/read metrics; only the
+declared HDR comparison is null. The complete 50-codec smoke retains
+structural projection
+`2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`.
+Focused raster/contract validation passes 352 tests; the complete suite passes
+3,316 with the same four documented skips, and Ruff is clean. A fresh
+350-member exact-tree source archive contains exactly the three new image
+benchmark modules and no generated cache files. Its 81-member derived wheel
+contains no benchmark, test, Pillow, imageio, or OpenEXR module, retains all
+15 attribution files, and keeps `numpy>=1.26` as its sole unconditional
+dependency; those three comparison libraries remain test-extra only. A fresh
+environment with that wheel and NumPy, but without any of them, passes
+`python -m sceneio._wheel_smoke`. All three independent reviews are clear.
+This is a mechanical ownership change and makes no codec-performance claim.
+Exact commit `6572a76` passes normal run
+[30239455960](https://github.com/SceneAPI/SceneIO/actions/runs/30239455960)
+and compiler-instrumented run
+[30239455952](https://github.com/SceneAPI/SceneIO/actions/runs/30239455952).
+
+## R3.2 mesh benchmark-family extraction (2026-07-27)
+
+The fourth R3.2 checkpoint moves the five buffer-backed `ply_mesh`, `obj`,
+`stl`, `off`, and `glb` specs to `bench/io_bench/families/meshes.py`. The five
+unchanged mesh/scene builders now live in `fixtures/meshes.py`; all 12 optional
+trimesh comparison helpers, including the multi-file glTF pair, live in
+`oracles/meshes.py`. The specialized `gltf` benchmark row remains in
+`bench_io.py::_benchmark_gltf` until the final R3.2 runner extraction, but
+consumes the same lower-owned fixture/oracle helpers through exact facade
+aliases.
+
+All 17 moved helper ASTs and all five standard `Spec` ASTs match the raster
+checkpoint exactly. Contract controls pin lower/facade identities, core
+callbacks, payload-size accounting, installed and absent trimesh states, and
+the unchanged interleaved mesh result positions. Real trimesh writer-to-reader
+and core-to-trimesh paths execute for all five standard rows and specialized
+glTF. Their transformed scene geometry is canonicalized by triangle and
+compared to the fixture's positions and connectivity, so equal face counts
+alone cannot pass. The complete 50-codec smoke retains structural projection
+`2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`.
+
+All six live mesh rows produce independent write/read metrics. Focused
+mesh/contract validation passes 336 tests; the complete suite passes 3,316
+with the same four documented skips, and Ruff is clean. A fresh 353-member
+exact-tree source archive contains exactly the three new mesh benchmark
+modules and no generated cache files. Its 81-member derived wheel contains no
+benchmark, test, trimesh, or pygltflib module, retains all 15 attribution
+files, and keeps `numpy>=1.26` as its sole unconditional dependency; trimesh
+and pygltflib remain test-extra only. A fresh environment with that wheel and
+NumPy, but without either comparison library, passes
+`python -m sceneio._wheel_smoke`. This is a mechanical ownership change and
+makes no codec-performance claim.
+
+Exact mesh commit `613fd26` passes normal run
+[30241711640](https://github.com/SceneAPI/SceneIO/actions/runs/30241711640)
+and compiler-instrumented run
+[30241711620](https://github.com/SceneAPI/SceneIO/actions/runs/30241711620).
+
+## R3.2 point benchmark-family extraction (2026-07-27)
+
+The fifth R3.2 checkpoint moves the non-contiguous `xyz`, `pts`, point `ply`,
+`pcd`, `las`, and `laz` specs to
+`bench/io_bench/families/points.py`. Their three deterministic fixtures now
+live in `fixtures/points.py`; nine comparison helpers—the portable PTS pair
+and optional Open3D/LASpy pairs—live in `oracles/points.py`. The compatible
+facade re-exports the same helpers and optional bindings, then slices the
+point hook around the already extracted five-row mesh block so all 50 result
+positions remain unchanged.
+
+The 11 unaffected moved helper ASTs and five unaffected standard `Spec` ASTs
+match the mesh checkpoint. Review found that the historical LAS comparison
+encoded XYZ-only point format 0 through LASpy while SceneIO encoded point
+format 2 with RGB and intensity. The repaired LAS/LAZ specs use one
+point-format-2 payload on both sides and retain the same positions-equivalent
+throughput denominator. Contract controls pin lower/facade identities, core
+callbacks, scale arguments, logical payload sizes, installed and independently
+absent Open3D/LASpy states, and real writer-to-reader plus core-to-reader
+comparisons. PTS arrays compare exactly; PLY/PCD positions, normals, and colors
+compare within `1e-6`; LAS/LAZ compare positions within half the declared
+`0.001` scale and keep RGB/intensity exact. Five of six live rows produce
+independent write/read metrics. XYZ records the exact unverified property,
+independent benchmark encode/decode throughput, while its NumPy text parser
+and serializer continue to provide independent parity in
+`tests/codecs/test_xyz.py`.
+
+The complete 50-codec smoke retains structural projection
+`2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`.
+Focused point/contract validation passes 449 tests; the complete suite passes
+3,316 with the same four documented skips, and Ruff is clean. A fresh
+356-member exact-tree source archive contains exactly the three new point
+benchmark modules and no generated cache files. Its 81-member derived wheel
+contains no benchmark, test, Open3D, LASpy, or LAZ-backend module, retains all
+15 attribution files, and keeps `numpy>=1.26` as its sole unconditional
+dependency; comparison packages remain test-extra only. A fresh environment
+with that wheel and NumPy, but without those packages, passes
+`python -m sceneio._wheel_smoke`. This combines an ownership move with a
+benchmark-fixture correction and makes no codec-implementation performance
+claim.
+
+Exact point commit `45e2757` passes normal run
+[30244892746](https://github.com/SceneAPI/SceneIO/actions/runs/30244892746)
+and compiler-instrumented run
+[30244892600](https://github.com/SceneAPI/SceneIO/actions/runs/30244892600).
+
+## R3.2 reconstruction benchmark-family extraction (2026-07-27)
+
+The sixth R3.2 checkpoint moves the nine buffer-backed `transforms_json`,
+`tum`, `kitti`, `euroc_state`, `g2o`, `bundler`, `bal`, `nvm`, and `openmvg`
+specs to `bench/io_bench/families/reconstruction.py`. Their deterministic
+pose, state, graph, and reconstruction fixtures now live in
+`fixtures/reconstruction.py`; the portable EuRoC, g2o, and BAL comparisons
+live in `oracles/reconstruction.py`. The facade slices the hook around the
+four calibration rows, preserving the 50-row order. Specialized
+`colmap_sparse`, `colmap_sparse_txt`, and `colmap_db` orchestration remains
+facade-owned until the shared runner moves.
+
+All nine `Spec` ASTs and 12 of the 13 moved helper ASTs match the point
+checkpoint. Review strengthened `_g2o_oracle_read`, the sole intentional
+helper difference, from a count-only result to complete node, edge, fixed-id,
+quaternion, translation, and symmetric information-matrix materialization.
+The regenerated live capture therefore times a full semantic decode. EuRoC,
+g2o, and BAL produce independent write/read metrics. The other six rows carry
+the exact exemption, independent benchmark encode/decode throughput, backed
+by their independent codec parity suites.
+
+The complete 50-codec smoke retains structural projection
+`2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`.
+Focused reconstruction/contract validation passes 505 tests with one existing
+optional PyCOLMAP skip; the complete suite passes 3,316 with the same four
+documented skips, and Ruff is clean. The exact-tree source archive has 359
+members and exactly the three new reconstruction benchmark modules. Its
+81-member wheel excludes benchmark, test, and PyCOLMAP modules, retains all 15
+attribution files, and keeps NumPy as its sole unconditional dependency;
+PyCOLMAP remains test-extra only. A fresh NumPy-only environment without
+PyCOLMAP passes the installed-wheel smoke. All three independent reviews are
+clear. This checkpoint changes benchmark ownership and strengthens one
+comparison workload; it makes no codec-implementation performance claim.
+
+Exact reconstruction commit `76ed21b` passes normal run
+[30247662591](https://github.com/SceneAPI/SceneIO/actions/runs/30247662591)
+and compiler-instrumented run
+[30247662622](https://github.com/SceneAPI/SceneIO/actions/runs/30247662622).
+
+## R3.2 sequence benchmark-family extraction (2026-07-27)
+
+The seventh R3.2 checkpoint moves the buffer-backed `y4m` spec to
+`bench/io_bench/families/sequences.py`, its deterministic planar-YUV fixture
+and the image-directory fixture to `fixtures/sequences.py`, and the portable
+Y4M parser/writer to `oracles/sequences.py`. The facade preserves the Y4M
+position between WebP and HDR. The `image_sequence` `DirectorySpec` remains
+facade-owned until the shared runner moves, but consumes the lower fixture
+through an exact compatibility alias.
+
+The Y4M `Spec` AST, directory orchestration AST, and three of four moved helper
+ASTs match the reconstruction checkpoint. Review strengthened
+`_y4m_oracle_read`, the sole intentional helper difference, so the timed
+comparison validates and returns all Y/U/V planes plus dimensions, frame rate,
+pixel aspect, chroma configuration, range, matrix, and interlace. The live Y4M
+row has portable independent write/read metrics. `image_sequence` records the
+exact exemption, independent benchmark directory encode/decode throughput;
+manifest and PGM payload parity remain independently covered in
+`tests/codecs/test_image_sequence.py`. Its SceneIO directory round trip pins
+dimensions, channels, frame dtype, resolved paths, timing, and byte-identical
+copied frames.
+
+The complete 50-codec smoke retains structural projection
+`2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`.
+Focused sequence/contract validation passes 225 tests, the complete suite
+passes 3,316 with four documented skips, and Ruff is clean. The exact-tree
+source archive has 362 members and exactly the three new sequence benchmark
+modules. Its 81-member wheel excludes benchmark and test modules, retains all
+15 attribution files, and keeps NumPy as its sole unconditional dependency. A
+fresh NumPy-only environment passes the installed-wheel smoke. All three
+independent reviews are clear. This checkpoint changes benchmark ownership
+and strengthens one comparison workload; it makes no codec-implementation
+performance claim.
+
+Exact sequence commit `4b8c829` passes normal run
+[30250394890](https://github.com/SceneAPI/SceneIO/actions/runs/30250394890)
+and compiler-instrumented run
+[30250394906](https://github.com/SceneAPI/SceneIO/actions/runs/30250394906).
+
+## R3.2 splat benchmark-family extraction (2026-07-27)
+
+The eighth R3.2 family checkpoint moves all six ordinary splat specifications
+to `bench/io_bench/families/splats.py`, the deterministic Gaussian fixture to
+`fixtures/splats.py`, and the optional `gsply` PLY/SPZ adapters to
+`oracles/splats.py`. Canonical order remains `gaussian_ply`,
+`compressed_ply`, `sog`, `ksplat`, `spz`, and `splat` between the point and
+array families.
+
+All six `Spec` ASTs and all five moved helper ASTs are unchanged from the
+sequence checkpoint. Gaussian PLY and SPZ retain live independent `gsply`
+encode/decode measurements. The contract records the exact missing
+independent benchmark encode/decode throughput for Compressed PLY, SOG,
+KSplat, and `.splat`; their independent format parity remains covered by the
+corresponding codec suites. Installed-`gsply` tests compare every Gaussian
+field in both producer directions, with SPZ compared after its specified
+quantization. A fresh process without `gsply` retains all six SceneIO rows and
+removes only the two optional comparison pairs.
+
+The six live rows execute successfully, and the complete 50-codec smoke
+retains structural projection
+`2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`.
+Focused splat/contract validation passes 176 tests with one documented SPZ-v2
+writer skip; the complete suite passes 3,316 with four documented skips, and
+Ruff is clean. The exact-tree source archive has 365 members and exactly the
+three new splat benchmark modules. Its sdist-derived 81-member Windows wheel
+contains no benchmark, test, or `gsply` payload, retains all 15 attribution
+files, and keeps NumPy as its sole unconditional dependency. A fresh
+NumPy-only environment passes the installed-wheel smoke. All three independent
+reviews are clear. This checkpoint changes benchmark ownership only; it makes
+no codec-implementation performance claim.
+
+Exact splat commit `cd32268` passes normal run
+[30253301819](https://github.com/SceneAPI/SceneIO/actions/runs/30253301819)
+and compiler-instrumented run
+[30253301871](https://github.com/SceneAPI/SceneIO/actions/runs/30253301871).
+
+## R3.2 benchmark-runner extraction (2026-07-27)
+
+The ninth R3.2 ownership checkpoint moves the complete sweep, specialized
+glTF/COLMAP/image-directory orchestration, CLI parser, and all supporting
+helpers to `bench/io_bench/runner.py`. `bench/bench_io.py` is now a small
+compatible entry point that re-exports the runner's complete historical
+non-dunder helper surface and delegates direct execution.
+
+All 20 moved function ASTs match the splat checkpoint. The exact 166-name
+attribute surface has the same checked SHA-256, and importing the lower runner
+does not import the facade. A first facade import preserves existing runner
+callable identities and rebindings; explicit facade reload restores the runner
+source definitions. Facade attribute rebinding propagates to runner globals as
+it did when functions shared the facade namespace, while star imports retain
+the exact parent 67-name public surface. Direct facade
+execution retains the same program name, options, defaults, rejection
+behavior, row schemas, output order, and bare-list JSON envelope. The complete
+50-codec smoke retains structural
+projection
+`2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`.
+This is an ownership-only move and makes no codec-implementation performance
+claim. Repository-built-in completeness and strict comparison-provider
+qualification remain the final R3.2 behavior checkpoint.
+
+Focused runner/contract validation passes 145 tests; the complete suite
+passes 3,316 with four documented skips, and Ruff is clean. The exact staged
+tree has 365 tracked files and produces a 366-member source archive whose only
+generated member is `PKG-INFO`. Its sdist-derived 81-member Windows wheel
+excludes benchmark and test modules, retains all 15 attribution files, and
+keeps NumPy as its sole unconditional dependency. A fresh NumPy-only
+installation passes `sceneio._wheel_smoke`.
+
+Exact runner commit `cf8d117` passes normal run
+[30257105454](https://github.com/SceneAPI/SceneIO/actions/runs/30257105454)
+and compiler-instrumented run
+[30257105468](https://github.com/SceneAPI/SceneIO/actions/runs/30257105468).
+
+## R3.2 repository-complete comparison qualification (2026-07-27)
+
+The final R3.2 behavior checkpoint adds an immutable 50-entry comparison
+ledger in `bench/io_bench/qualification.py`. The ledger is keyed by
+`CANONICAL_BUILTIN_IDS`, not the mutable runtime registry: 33 formats require
+timed independent encode/decode comparisons (with COLMAP DB also covering
+inspect and partial operations), while 17 record a reviewed exemption with
+the exact untimed property and parity-suite path.
+
+Every complete sweep validates the canonical 50-id set before selector
+filtering or measurement. A runtime-added codec remains usable through the
+public registry but cannot enter repository fixture/comparison completeness.
+`--strict-oracles` is a complete-sweep qualification mode and therefore
+rejects `--only`, `--skip-oracles`, and the safetensors-only large-fixture
+mode. It preflights binding availability for every timed callback, propagates
+provider execution failures, and audits every declared metric after the
+complete sweep; the optional `_try(...)` path remains available only to
+ordinary developer runs.
+
+The local one-run strict sweep produces 50 successful rows: all 33 timed
+entries have both comparison metrics and all 17 reviewed exemptions remain
+untimed by declaration. The separate skip-comparison smoke retains structural
+SHA-256
+`2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`.
+The CI performance guard now uses strict qualification without changing the
+existing O4/O5 acceptance rules. The complete five-run strict guard passes;
+the exact local tree collects 3,339 tests and passes 3,335 with four documented
+skips, and Ruff is clean. All three independent closure reviews are clear. The
+exact staged tree has 367 tracked files and produces a 368-file sdist whose
+only generated file is `PKG-INFO`; its sdist-derived 81-member Windows abi3
+wheel contains one native module and all 15 attribution files, excludes
+benchmark/test/build payloads, and installs only SceneIO plus NumPy in a fresh
+environment. `sceneio._wheel_smoke` returns `2`.
+
+Exact qualification commit `0e54cf5` passes normal run
+[30263506366](https://github.com/SceneAPI/SceneIO/actions/runs/30263506366)
+and compiler-instrumented run
+[30263506270](https://github.com/SceneAPI/SceneIO/actions/runs/30263506270).
+
+## R3.3 non-consuming cross-codec case catalog (2026-07-27)
+
+The first R3.3 checkpoint adds a test-only, immutable case catalog in
+`tests/_support/codec_cases.py` without changing any benchmark or codec
+consumer. Its canonical-order definitions cover all 50 repository built-ins:
+44 use the existing buffer-fixture path, three use path-native fixtures, and
+three use directory fixtures. The catalog separately pins the exact 28
+partial-capable codecs and their 32 selector declarations.
+
+The independent one-run all-codec benchmark smoke still returns 50 successful
+rows and retains structural SHA-256
+`2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`.
+Six focused architecture controls pin completeness, ordered partitions,
+family ownership, live capability agreement, runtime-extension isolation,
+and the non-consuming boundary. The complete local suite collects 3,345 tests
+and passes 3,341 with four documented skips; Ruff is clean. All three
+independent reviews are clear. This checkpoint establishes reusable test
+ownership only and makes no codec-implementation performance claim. The exact
+staged tree has 370 tracked files and produces a 371-file sdist whose only
+generated file is `PKG-INFO`; its sdist-derived 81-member Windows abi3 wheel
+contains one native module and all 15 attribution files, excludes benchmark
+and test payloads, and installs only SceneIO plus NumPy in a fresh
+environment. `sceneio._wheel_smoke` returns `2`.
+
+Exact catalog commit `81f143b` passes normal run
+[30266501529](https://github.com/SceneAPI/SceneIO/actions/runs/30266501529)
+and compiler-instrumented run
+[30266501618](https://github.com/SceneAPI/SceneIO/actions/runs/30266501618).
+
+## R3.3 mmap consumer migration (2026-07-27)
+
+The mmap behavior suite now consumes the reusable deterministic 44-case
+builder in `tests/_support/buffer_codec_cases.py`. The original local builder
+remains as an independent migration comparator: the focused control proves
+the exact traversal order, reader/writer identity, every encoded byte string,
+and every full record fingerprint before the mutation-sensitive mmap tests
+run. No codec implementation or benchmark path changes.
+
+The mmap suite passes 114 tests. The complete local suite collects 3,346 tests
+and passes 3,342 with four documented skips; Ruff is clean. All three
+independent reviews are clear. The independent one-run all-codec benchmark
+smoke returns 50 successful rows and retains structural SHA-256
+`2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`.
+This is a test-ownership migration and makes no codec-implementation
+performance claim. The exact staged tree has 371 tracked files and produces a
+372-file sdist whose only generated file is `PKG-INFO`; its sdist-derived
+81-member Windows abi3 wheel contains one native module and all 15 attribution
+files, excludes benchmark and test payloads, and installs only SceneIO plus
+NumPy in a fresh environment. `sceneio._wheel_smoke` returns `2`.
+
+Exact mmap migration commit `9a73892` passes normal run
+[30268797350](https://github.com/SceneAPI/SceneIO/actions/runs/30268797350)
+and compiler-instrumented run
+[30268797374](https://github.com/SceneAPI/SceneIO/actions/runs/30268797374).
+
+## R3.3 mmap legacy-matrix removal (2026-07-27)
+
+After exact local equivalence and both hosted workflows passed, the duplicated
+`_legacy_buffer_codecs` matrix and its temporary comparison node were removed.
+The lower-owned builder remains the only source for these 44 deterministic
+cases. Its architecture contract pins the exact original traversal order,
+live reader/writer identities, and 43-codec portable encoded-fixture projection
+SHA-256
+`b21a55c6cbde2a46d89bf2bc013b6e81ffe3d58565922dcd690c2605f31143ab`.
+Compressed PLY is excluded from that universal byte hash because native
+exp/log quantization has an established AppleClang profile; its shared
+semantic Gaussian input and platform-profiled parity test remain checked. The
+existing mmap suite continues to validate semantic records, lifetimes, buffer
+protocol behavior, truncation, and deterministic mutations.
+
+The candidate collection returns exactly to 3,345 nodes with sorted normalized
+SHA-256
+`fc4934cb3fcf4a1a37fb5a087dcf0b13821df1f926f12412931b8ce040b93a05`;
+no original node id, parameter id, or skip reason changes. The complete local
+suite passes 3,341 tests with four documented skips, and Ruff is clean. The
+one-run all-codec benchmark smoke returns 50 successful rows and retains
+structural SHA-256
+`2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`.
+This cleanup changes test ownership only and makes no codec-implementation
+performance claim.
+
+Exact mmap legacy-matrix removal commit `fc86f44` passes normal run
+[30271311308](https://github.com/SceneAPI/SceneIO/actions/runs/30271311308)
+and compiler-instrumented run
+[30271309916](https://github.com/SceneAPI/SceneIO/actions/runs/30271309916).
+
+## R3.3 streaming consumer migration (2026-07-27)
+
+The 14 O3 file-sink behavior functions now live in the focused
+`tests/test_io_streaming.py` module and continue to consume the reusable
+44-case builder in `tests/_support/buffer_codec_cases.py`. Their 16 collected
+nodes retain the exact test names and three `npy`/`pfm`/`flo` parameter ids;
+the assembly contract records every old `test_io_mmap.py` node and its exact
+new path. An AST comparison against `fc86f44` proves the moved function bodies
+are unchanged apart from renaming the shared allocation helper. That helper
+now lives in `tests/_support/memory_measurement.py` and is reused by the mmap
+allocation control instead of being duplicated.
+
+The focused streaming, mmap, and assembly suites pass 124 tests. The complete
+local suite still collects 3,345 nodes and passes 3,341 with four documented
+skips; sorted normalized collection SHA-256 is
+`1131f211bb324c4d6800350b71364eb1f95efd13acef5a6dc4e984d708a88d53`,
+and Ruff is clean. The independent one-run all-codec benchmark returns 50
+successful rows and retains structural SHA-256
+`2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`.
+This checkpoint changes test ownership only and makes no codec-implementation
+performance claim. Its exact staged tree has 373 files and produces a
+374-file sdist whose only generated member is `PKG-INFO`; the sdist-derived
+81-member Windows abi3 wheel contains one native module and all 15
+attribution files, with no test, benchmark, build, include, library, or
+shared-data payload. A fresh environment installs only SceneIO and NumPy, and
+`sceneio._wheel_smoke` returns `2`. The focused mmap platform job runs the
+new streaming module explicitly on Windows, Linux, and macOS.
+
+Exact streaming migration commit `914702d` passes normal run
+[30274413815](https://github.com/SceneAPI/SceneIO/actions/runs/30274413815)
+and compiler-instrumented run
+[30274413693](https://github.com/SceneAPI/SceneIO/actions/runs/30274413693).
+
+## R3.3 inspection consumer migration (2026-07-27)
+
+Inspection behavior now has focused ownership in
+`tests/test_io_inspection.py`. The 47 tests and three local helpers are
+AST-identical to their `914702d` definitions and produce the same 76 test
+names and parameter ids. Both mmap and inspection continue to consume the
+same 44 deterministic buffer cases without importing one another. The
+collection contract now represents path-only moves as reusable rename groups:
+the prior 16 streaming nodes and these 76 inspection nodes expand to exact
+old/new paths independently of feature additions and removals.
+
+The focused mmap, inspection, assembly, and catalog suites pass 114 tests.
+The complete collection remains 3,345 nodes with sorted normalized SHA-256
+`f90c2f368fa8d5f976291cc8af3c7038c740893ac1abc78ec9b1bcf4ca5af959`.
+The Windows, Linux, and macOS mmap-platform commands each include the focused
+inspection module explicitly. The independent one-run all-codec benchmark
+retains 50 successful rows and structural SHA-256
+`2f7172317f354f43b493ab5373566fec246cb83d918d1f74a3ed32daaf6d5376`.
+This checkpoint changes test ownership only and makes no codec-implementation
+performance claim. Its exact package verification records 374 staged files,
+a 375-file sdist whose only generated member is `PKG-INFO`, and the unchanged
+81-member wheel with one native module and 15 attribution files. The wheel
+installs with only SceneIO and NumPy and passes `sceneio._wheel_smoke`.
+
+Exact inspection migration commit `0e21e27` passes normal run
+[30278777267](https://github.com/SceneAPI/SceneIO/actions/runs/30278777267)
+and compiler-instrumented run
+[30278777173](https://github.com/SceneAPI/SceneIO/actions/runs/30278777173).
+
+## R3.3 array partial-consumer migration (2026-07-27)
+
+The DMB window test and both FLO mapped-window lifetime/error-release tests
+move unchanged into `tests/test_io_partial_arrays.py`. Their three destination
+function ASTs match `0e21e27` exactly with projection SHA-256
+`a1733b7513c8633d4eff9c228d68ff2beadee5b9191083086671fc7925544051`.
+The assembly contract pins all three path-only node renames. Broad
+cross-family window, endian, validation, truncation, and memory relationships
+remain in `tests/test_io_partial.py`. Both platform commands run the shared
+and array-focused modules explicitly. The complete collection remains 3,345
+with normalized SHA-256
+`ae4ab66a375c9c130ddf10682eb37e2ba21a0433ba2fb454ecce4358ef616414`.
+This unit changes test ownership only and makes no codec performance claim.
+Its exact package verification records 375 source files, a 376-file sdist
+whose only generated member is `PKG-INFO`, and an 81-member Windows abi3
+wheel with one native module and all 15 license/inventory files. The wheel
+installs with only SceneIO and NumPy and returns `2` from
+`sceneio._wheel_smoke`.
+
+Exact array partial migration commit `5009ea0` passes normal run
+[30282057346](https://github.com/SceneAPI/SceneIO/actions/runs/30282057346)
+and compiler-instrumented run
+[30282056576](https://github.com/SceneAPI/SceneIO/actions/runs/30282056576).
+
+## R3.3 image partial-consumer migration (2026-07-27)
+
+Three unchanged Netpbm/WebP test functions now live in
+`tests/test_io_partial_images.py` and produce the same 10 parameterized nodes.
+Their function projection SHA-256 is
+`c501630b2918a9faae74f88672a5c9bbdf7206fc5452d202592f1a57afbf90ad`.
+The unchanged `_pixels` and `_assert_image_window` helpers move once into
+`tests/_support/partial_read.py`, with projection SHA-256
+`5299b065b8e4a6dbc78ea41bff275a26be1eeeaba2a4e200634f8cc9ce0415b1`.
+The shared cross-family window differential imports those lower assertions;
+test modules do not import one another. Exact node and helper moves plus both
+platform commands are contract-pinned. The complete collection remains 3,345
+with normalized SHA-256
+`c9db2c71c11f6af8d4fcd5a08a5bf75a2428ea915805e3671c5cadb2ef581cc4`.
+This unit changes test ownership only and makes no codec performance claim.
+Exact package verification records 377 source files, a 378-file sdist whose
+only generated member is `PKG-INFO`, and the unchanged 81-member Windows abi3
+wheel. It contains one native module and all 15 attribution members, excludes
+repository test/benchmark/build payloads, and passes `sceneio._wheel_smoke` in
+a fresh SceneIO-plus-NumPy environment.
+
+Exact image partial migration commit `d198560` passes normal run
+[30285128366](https://github.com/SceneAPI/SceneIO/actions/runs/30285128366)
+and compiler-instrumented run
+[30285128448](https://github.com/SceneAPI/SceneIO/actions/runs/30285128448).
+
+## R3.3 mesh partial-consumer migration (2026-07-27)
+
+The unchanged mesh face-range semantic and mapping-close test now lives in
+`tests/test_io_partial_meshes.py`. Its single exact path-only rename and
+destination function AST projection SHA-256
+`68eb089e1f7c5fe457354b435c1d3dcd8160f45c18360ee002a48c4cb9396ae9`
+are contract-pinned. Both platform commands name the focused module. The
+complete collection remains 3,345 with normalized SHA-256
+`c658cb0d7353ad5c6cf4f6e38b01a02418f693b121e6d8f4bba887945821cc9d`.
+This unit changes test ownership only and makes no codec performance claim.
+Exact package verification records 378 source files, a 379-file sdist whose
+only generated member is `PKG-INFO`, and the unchanged 81-member Windows abi3
+wheel. It contains one native module and all 15 attribution members, excludes
+repository test/benchmark/build payloads, and passes `sceneio._wheel_smoke` in
+a fresh SceneIO-plus-NumPy environment.
+
+Exact mesh partial migration commit `4294dbe` passes normal run
+[30287854716](https://github.com/SceneAPI/SceneIO/actions/runs/30287854716)
+and compiler-instrumented run
+[30287854692](https://github.com/SceneAPI/SceneIO/actions/runs/30287854692).
+
+## R3.3 point partial-consumer migration (2026-07-27)
+
+Three unchanged XYZ/LAS functions now live in
+`tests/test_io_partial_points.py` and produce the same 13 parameterized nodes.
+The unchanged `_assert_point_range` helper moves once into
+`tests/_support/partial_read.py`, where the shared point/splat differential
+continues to consume it. Function projection SHA-256 is
+`4cfa5aea51601322a2d7d83cad7cfd1f00eb3eb3395c7fda351347352b5c12d3`;
+helper projection SHA-256 is
+`f0c527f421207171019327332821e81c1a47561b5b935fa65a1e4a3dea52c24c`.
+Exact node/helper moves and both platform commands are contract-pinned. The
+complete collection remains 3,345 with normalized SHA-256
+`2451c9bb2606ac1587011eafeb2345fc9f34f7e08df7ea17b239b5a1e78a624f`.
+This unit changes test ownership only and makes no codec performance claim.
+Exact package verification records 379 source files, a 380-file sdist whose
+only generated member is `PKG-INFO`, and the unchanged 81-member Windows abi3
+wheel. It contains one native module and all 15 attribution members, excludes
+repository test/benchmark/build payloads, and passes `sceneio._wheel_smoke` in
+a fresh SceneIO-plus-NumPy environment.
+
+Exact point partial migration commit `ac1a4d1` passes normal run
+[30290617469](https://github.com/SceneAPI/SceneIO/actions/runs/30290617469)
+and compiler-instrumented run
+[30290617607](https://github.com/SceneAPI/SceneIO/actions/runs/30290617607).
+
+## R3.3 reconstruction partial-consumer migration (2026-07-27)
+
+Twelve unchanged COLMAP functions now live in
+`tests/test_io_partial_reconstruction.py` and produce the same 15 nodes. Nine
+private reconstruction helpers move with them. The unchanged
+`_fresh_process_partial_rss` helper moves once into
+`tests/_support/partial_read.py`, where the retained cross-family large-read
+test and reconstruction suite both consume it. Test projection SHA-256 is
+`49ef051e49cd4beb6b9c26f7cfe314d67cd3bd59fa91c78ffb16971903b2acdb`;
+private-helper projection SHA-256 is
+`a45d371755429aa070f514854d35bd83ca6afe032fad3d6a242835fdf5aa4e92`;
+the lower helper projection is
+`b22d3960f81b894d7b666067cb584e530858349a6ca53fefb6c58705e6892a13`.
+Exact node/helper moves and both platform commands are contract-pinned. The
+complete collection remains 3,345 with normalized SHA-256
+`217c227e566a6767fc59b031b1217202ced5ba0dc6a14b3b7fa2d27c0f9314f4`.
+This unit changes test ownership only and makes no codec performance claim.
+Exact package verification records 380 source files, a 381-file sdist whose
+only generated member is `PKG-INFO`, and the unchanged 81-member Windows abi3
+wheel. It contains one native module and all 15 attribution members, excludes
+repository test/benchmark/build payloads, and passes `sceneio._wheel_smoke` in
+a fresh SceneIO-plus-NumPy environment.
+The first hosted normal run `30294120621` exposed four explicit manylinux
+selectors that still named the pre-move shared module. The focused module
+paths are corrected and the assembly suite now rejects both a missing new
+selector and any retained stale selector. Compiler-instrumented run
+`30294120444` passed the exact reconstruction commit. Follow-up commit
+`b5e5c55` passes normal run `30296172958` and compiler-instrumented run
+`30296174522`.
+
+## R3.3 sequence/splat ownership disposition (2026-07-27)
+
+The remaining audit makes no benchmark or codec change. Eight sequence
+partial-behavior functions already live in the sequence architecture/Y4M/
+directory-sequence suites, and three splat range/selector functions already
+live in the splat-family architecture suite. The seven tests retained in
+`tests/test_io_partial.py` deliberately span multiple families. Their AST
+projection SHA-256 is
+`171b853303af63ada53183f4ca76d9bdc0c54e55b9218f56ab70207e88535bf0`;
+the sequence anchor projections are
+`19600f254659e7cb0c7049f22f254ef1d9b7dfcd68fbbddf7c80810ccb8d81ef`,
+`399158a382461bfb55da3339625cd6477ec9c194c9f5318b67fb17b792116dbd`,
+and `5364d79d5b96dcc28497dfbc756ec40889f64f13b68d9387add4f4ee3e27a2d0`;
+the splat anchor projection is
+`a504deeef1ea23d2e53d0398fbc010464c5e692faf23eb37f0cea9acb3a485f7`.
+The assembly contract verifies those projections, all 21 exact
+family-owned collected node/parameter ids, and the AST-derived format-id map
+for each shared function without adding or renaming a pytest node.
+
+The complete five-run strict O4/O5 guard passes unchanged. The closure
+candidate collects 3,345 tests and passes 3,341 with four documented skips;
+Ruff is clean. Exact staged packaging records 380 source files, a 381-file
+sdist whose only generated member is `PKG-INFO`, and an 81-member Windows ABI3
+wheel with one native module and all 15 attribution files. The wheel excludes
+repository test/benchmark/build payloads, keeps NumPy as its sole
+unconditional dependency, and passes a fresh SceneIO-plus-NumPy installed
+smoke.
+
+Exact R3.3 closure commit `811cb0d` passes normal run
+[30300122309](https://github.com/SceneAPI/SceneIO/actions/runs/30300122309)
+and compiler-instrumented run
+[30300122324](https://github.com/SceneAPI/SceneIO/actions/runs/30300122324).
+
+## R3.4 complete installed-wheel smoke qualification (2026-07-27)
+
+The package smoke no longer relies on a manually called representative helper
+list. An immutable format-to-runner map must equal the exact
+`BUILTIN_DEFINITIONS` ids and order, and the runner rejects disagreement with
+the installed registry or public codec listing. Successful public operations
+are observed per format; expected write/read/inspect, stream, and partial
+properties are derived from each live capability record.
+
+The candidate covers all 50 built-ins, pairs each declared streaming direction
+with a successful corresponding public path call, and exercises all 32
+selector declarations across the 28 partial-capable codecs. Dedicated mmap
+and sink suites independently prove the allocation behavior represented by
+those capability flags. The reviewable property-specific exemption mapping is
+empty. This changes package verification breadth only: no codec, timed path,
+fixture payload, or performance threshold changes, so no speedup is claimed.
+Focused
+architecture/documentation tests and the source-tree NumPy-only smoke pass.
+The complete tree collects 3,348 tests and passes 3,344 with four documented
+skips; Ruff and the complete five-run strict O4/O5 guard pass.
+
+The first frozen package tree contains 380 files and produces a 381-file sdist
+whose only generated member is `PKG-INFO`; all source members are byte-identical
+to their staged Git blobs. Its sdist-derived 81-member Windows ABI3 wheel has
+one native module, all 15 attribution files, no excluded repository or native
+development payload, and NumPy as its sole unconditional dependency. A fresh
+outside-repository SceneIO-plus-NumPy environment returns `2` from the
+complete installed smoke. The final documentation tree repeats this package
+gate before review; artifact hashes remain in immutable commit evidence rather
+than this self-referential source document.
+
+## R4.1 modular native-build preservation (2026-07-27)
+
+R4.1 changes build ownership only. The root CMake file now assembles focused
+instrumentation, source-manifest, dependency, and SceneIO-target modules. The
+dependency block is byte-identical to parent `9ca6bb8`; the source contract
+retains the original `_core` link order while partitioning all 40 codec files
+across the eight manifest families and listing all 16 record files.
+
+Fresh MSVC and manylinux2014 GCC 10.2.1 parent/candidate configurations have
+no non-path cache difference. The normalized MSVC `_core` command stream is
+exact across 60 commands; GCC 10 is exact across 59 compile commands and its
+final link command. Both toolchains build the candidate. Since no codec,
+adapter, fixture, compiler option, source, or link dependency changed, this
+unit makes no throughput claim. The unchanged complete five-run strict O4/O5
+and mmap/sink allocation guard passes; raw results are retained locally as
+`build/r4_1_strict_guard.json`.
+
+The 386-file staged tree produces a 387-file sdist with only generated
+`PKG-INFO` added. All 386 repository members are byte-identical to their staged
+Git blobs; the Windows qualification archive disables checkout line-ending
+conversion before extraction. Its sdist-derived 81-member Windows ABI3 wheel
+retains one native module, all 15 attribution files, no excluded build payload,
+and NumPy as its sole unconditional dependency. Complete installed smoke
+returns `2` in a fresh SceneIO-plus-NumPy environment.
+
+R4.1 is pushed at `b2cf5d4`. Normal run `30310780347` and
+compiler-instrumented run `30310780355` pass that exact commit.
+
+## R4.2 family-owned native binding closure (2026-07-27)
+
+R4.2 changes binding ownership only. A dedicated record table and eight
+codec-family tables own the historical 16 record and 40 codec registration
+functions behind one validated assembler. The same family descriptors expose a
+canonical private inventory for all 49 native/hybrid built-ins; the
+Python-owned `image_sequence` adapter remains outside that projection and is
+separately checked through its declared Python operations.
+
+The committed implementation builds with MSVC and manylinux2014 GCC 10.2.1. Its
+non-dunder `_core` surface remains 232 names, a focused 416-test I/O and
+architecture sweep passes, and collection is exactly 3,354 nodes. The
+unchanged complete five-run strict O4/O5 and mmap/sink allocation guard passes
+and is retained locally as `build/r4_2_strict_guard_final.json`. No codec timed loop,
+transport adapter, fixture, compiler option, or native dependency changed, so
+this mechanical unit makes no throughput claim. The complete 3,354-node suite
+passes 3,350 tests with four documented skips, and Ruff is clean.
+
+The 398-file staged tree produces a 399-file sdist whose only generated member
+is `PKG-INFO`; every repository member is byte-identical to its staged Git
+blob. The sdist-derived 81-member Windows ABI3 wheel contains one native
+module, all 15 notices, no excluded build payload, and NumPy as its sole
+unconditional dependency. It contains no FFmpeg/libav payload. A fresh
+outside-repository environment contains only SceneIO 0.2.0 and NumPy 2.5.1,
+and the complete installed smoke returns `2`. All three confirmation reviews
+are clear. Commit `81e0e1c`, normal run `30316577366`, and
+compiler-instrumented run `30316577369` close the checkpoint.
+
+The first independent review pass found no native pointer, reference-count, or
+descriptor-lifetime defect. It identified an operation-category test gap,
+mutable inventory rows, and basename/nonrecursive source checks that would
+weaken after R4.3. The candidate now freezes every ordered operation tuple in
+an independent 49-row contract, requires every referenced symbol to be
+callable, publishes mapping-proxy rows, and validates codec ownership
+recursively by full path. These changes affect registration metadata and tests
+only; no timed codec path changed.
+
+## R4.3 arrays-family source move closure (2026-07-27)
+
+PFM, NPY/NPZ, Safetensors, FLO, and DMB move from the flat native codec
+directory to `src/cpp/codecs/arrays/`. Their implementation blobs are
+unchanged apart from the Safetensors source-location comment. CMake family
+ownership, the frozen core link order, the native-build contract, and all
+performance-ledger provenance paths use the new locations.
+
+The MSVC editable build passes. A 561-node array-family and cross-I/O sweep
+covers codec parity, bytes/mmap reads, direct sinks, inspection, partial
+reads, the public API, and native build/inventory contracts; 560 pass with one
+documented absent-OpenCV oracle skip. Ruff, the 232-name non-dunder
+`_core` surface, and the 49-entry native inventory remain unchanged. No timed
+codec implementation changed, so this unit makes no performance claim.
+
+The first complete strict run encountered a single noisy
+`transforms_json` full-read/inspection control ratio. A focused five-run
+confirmation measured 26.543 ms versus 10.437 ms (2.54x, inside the 3x
+control) and is retained as
+`build/r4_3_arrays_transforms_confirm.json`. A second complete five-run strict
+all-50-codec sweep passed in 363 seconds and is retained as
+`build/r4_3_arrays_strict_guard.json`; its final verdict confirms the stable
+O4 controls, O5 inspection/partial controls, and mmap/sink allocation bounds.
+The architecture/lifetime, test/performance, and
+platform/package/documentation reviews are clear.
+Commit `f57c677` is pushed to `phase0-nanobind-core`.
+
+## R4.3 calibration-family source move closure (2026-07-27)
+
+The shared OpenCV/ROS/Kalibr implementation moves to
+`src/cpp/codecs/calibration/camera_calibration.cpp`. Its executable source is
+unchanged; the embedded source-location comment and the CMake,
+native-build-contract, and performance-ledger paths use the new location.
+The frozen core link and registration order remain unchanged.
+
+The MSVC editable build and 223 focused codec/family/mmap/sink/inspection/API
+tests pass. The complete suite passes 3,350 tests with four documented skips;
+Ruff, the 232-name non-dunder `_core` surface, and the 49-entry native
+inventory remain unchanged. The complete five-run strict all-50-codec guard
+passes in 363.5 seconds and is retained as
+`build/r4_3_calibration_strict_guard.json`. No timed codec implementation
+changed, so this unit makes no performance claim. The architecture/lifetime,
+test/performance, and platform/package/documentation reviews are clear.
+Commit `366aac0` is pushed to `phase0-nanobind-core`.
+
+## R4.3 images-family source move closure (2026-07-27)
+
+Netpbm, PNG, JPEG, BMP/TGA, HDR, EXR, and WebP move to
+`src/cpp/codecs/images/`. Netpbm and BMP/TGA are byte-identical moves; the
+other five executable bodies are unchanged and only their first-line
+source-location comments use the new paths. CMake ownership, frozen link
+order, native-build contracts, and the live performance-ledger paths move
+with them.
+
+The MSVC editable build and 493 focused codec/family/mmap/sink/inspection/
+partial/API tests pass. The complete suite passes 3,350 tests with four
+documented skips; Ruff, the 232-name non-dunder `_core` surface, and the
+49-entry native inventory remain unchanged. The complete five-run strict
+all-50-codec guard passes in 363.4 seconds and is retained as
+`build/r4_3_images_strict_guard.json`. No timed codec implementation changed,
+so this unit makes no performance claim. The architecture/lifetime,
+test/performance, and platform/package/documentation reviews are clear.
+Commit `aff2a37` is pushed to `phase0-nanobind-core`.
+
+## R4.3 meshes-family source move closure (2026-07-27)
+
+PLY-mesh, OBJ/MTL, STL/OFF, and glTF move to `src/cpp/codecs/meshes/`.
+PLY-mesh and OBJ/MTL are byte-identical moves; the other two executable bodies
+are unchanged and only their first-line source-location comments use the new
+paths. CMake ownership, frozen link order, native-build contracts, and the
+live performance-ledger paths move with them.
+
+The MSVC editable build and 419 focused codec/family/mmap/sink/inspection/
+partial/API tests pass. The complete suite passes 3,350 tests with four
+documented skips; Ruff, the 232-name non-dunder `_core` surface, and the
+49-entry native inventory remain unchanged. The complete five-run strict
+all-50-codec guard passes in 372.9 seconds and is retained as
+`build/r4_3_meshes_strict_guard.json`. No timed codec implementation changed,
+so this unit makes no performance claim. The architecture/lifetime,
+test/performance, and platform/package/documentation reviews are clear.
+Commit `c5de24b` is pushed to `phase0-nanobind-core`.
+
+## R4.3 points-family source move closure (2026-07-27)
+
+PLY-point, PCD, XYZ/PTS, LAS, and LAZ move to `src/cpp/codecs/points/`.
+PLY-point and PCD are byte-identical moves; the other three executable bodies
+are unchanged and only their first-line source-location comments use the new
+paths. CMake ownership, frozen link order, native-build contracts, and all 32
+live performance-ledger paths move with them.
+
+The MSVC editable build and 583 focused codec/family/mmap/sink/inspection/
+partial/API tests pass. The complete suite passes 3,350 tests with four
+documented skips; Ruff, the 232-name non-dunder `_core` surface, and the
+49-entry native inventory remain unchanged. The complete five-run strict
+all-50-codec guard passes in 373.5 seconds and is retained as
+`build/r4_3_points_strict_guard.json`. No timed codec implementation changed,
+so this unit makes no performance claim. The architecture/lifetime,
+test/performance, and platform/package/documentation reviews are clear.
+Commit `97b24e2` is pushed to `phase0-nanobind-core`.
+
+## R4.3 reconstruction-family source move closure (2026-07-27)
+
+All eleven native sparse-model, pose/state, JSON, and COLMAP database sources
+move to `src/cpp/codecs/reconstruction/`. BAL is byte-identical; every other
+executable body is unchanged and only its first-line source-location comment
+uses the new path. CMake ownership, frozen link order, native-build contracts,
+and all 34 live performance-ledger paths move with them.
+
+The MSVC editable build and 691 focused codec/family/mmap/sink/inspection/
+partial/API tests pass with two documented skips. The complete suite passes
+3,350 tests with four documented skips; Ruff, the 232-name non-dunder `_core`
+surface, and the 49-entry native inventory remain unchanged. The complete
+five-run strict all-50-codec guard passes in 364.5 seconds and is retained as
+`build/r4_3_reconstruction_strict_guard.json`. No timed codec implementation
+changed, so this unit makes no performance claim. The architecture/lifetime,
+test/performance, and platform/package/documentation reviews are clear.
+Commit `25f74bb` is pushed to `phase0-nanobind-core`.
+
+## R4.3 sequence-family source move closure (2026-07-27)
+
+Y4M moves to `src/cpp/codecs/sequences/`. Its executable body is
+byte-identical and only the first-line source-location comment uses the new
+path. CMake ownership, frozen link order, the native-build contract, and the
+live performance-ledger path move with it.
+
+The MSVC editable build and 245 focused codec/family/mmap/sink/inspection/
+partial/API tests pass. The complete suite passes 3,350 tests with four
+documented skips; Ruff, the 232-name non-dunder `_core` surface, and the
+49-entry native inventory remain unchanged. The complete five-run strict
+all-50-codec guard passes in 368.1 seconds and is retained as
+`build/r4_3_sequences_strict_guard.json`. No timed codec implementation
+changed, so this unit makes no performance claim. All three independent
+reviews are clear.
+Commit `2e30e9f` is pushed to `phase0-nanobind-core`.
+
+## R4.3 splats-family source move closure (2026-07-27)
+
+Gaussian PLY, compressed PLY, SOG, KSplat, SPZ, and SPLAT move to
+`src/cpp/codecs/splats/`. Gaussian PLY, compressed PLY, KSplat, and SPZ are
+byte-identical moves; the SOG and SPLAT executable bodies are unchanged and
+only their first-line source-location comments use the new paths. CMake
+ownership, frozen link order, native-build contracts, and all 16 live
+performance-ledger paths move with them. All 40 native codec sources are now
+nested under the eight family directories, with no flat codec source left.
+
+The MSVC editable build and 332 focused codec/family/mmap/sink/inspection/
+partial/API tests pass with one documented skip. The complete suite passes
+3,350 tests with four documented skips; Ruff, the 232-name non-dunder `_core`
+surface, and the 49-entry native inventory remain unchanged. The complete
+five-run strict all-50-codec guard passes in 373.4 seconds and is retained as
+`build/r4_3_splats_strict_guard.json`. No timed codec implementation changed,
+so this unit makes no performance claim. All three independent reviews are
+clear. Commit `da1d709` is pushed to `phase0-nanobind-core`.
+
+## Final R4 qualification (2026-07-27)
+
+Exact pushed commit `da1d709` builds on local MSVC and manylinux2014 GCC
+10.2.1. The complete suite passes 3,350 tests with four documented skips,
+Ruff is clean, the retained five-run all-50-codec guard passes, and 319
+public/API/architecture/license checks preserve the 232-name `_core` surface
+and 49-entry native inventory.
+
+The exact Git archive contains 398 files. Its sdist contains those same 398
+byte-identical blobs plus only generated `PKG-INFO`; its SHA-256 is
+`2b6d46e71fc4cf28b9d5b9ca2886e7b66a41a93d352bba6a16ab65384fe35afb`.
+The sdist-derived Windows CPython-3.12 ABI3 wheel has SHA-256
+`51d658366be1a0f7f06bb9a8082a97d137470250649904d39ce75d62c2f8390b`.
+Its 81-member layout matches R4.2 exactly, includes one native module and all
+15 attribution files, and includes no header, static-library, build-tree, or
+tool payload. The exact source and package artifacts contain no FFmpeg/libav
+source, linkage, executable, or payload. Its native module depends only on
+CPython and standard Windows/MSVC runtimes. A fresh environment contains only
+SceneIO 0.2.0 and NumPy 2.5.1 and returns `2` from `sceneio._wheel_smoke`.
+
+Normal run
+[30326256230](https://github.com/SceneAPI/SceneIO/actions/runs/30326256230)
+passes the complete Linux suite, retained benchmark guard, all three mmap,
+splat, and reconstruction lanes, and the pinned manylinux2014 GCC 10 job.
+Instrumented run
+[30326256137](https://github.com/SceneAPI/SceneIO/actions/runs/30326256137)
+passes its complete and focused native-lifetime jobs. All three final R4
+reviews are clear. R4 changes organization only and makes no performance
+claim.
+
+## R5.1 JPEG backend intake and isolation (2026-07-28)
+
+The stable JPEG backend remains stb. `bench/BACKEND_CANDIDATES.toml` records
+the exact candidate survey and selects libjpeg-turbo 3.2.0 only as the
+throughput finalist to measure. Its official archive is pinned to commit
+`c85e6b905bf237038faa936dab160ebfc5da0344` and SHA-256
+`6f30092cef9fb839779646608f4ee14ae3cbac989c47fa05e841b0841f09878e`.
+The default-off qualification build requires SIMD and used NASM 3.02 on local
+MSVC; scalar fallback is not accepted as optimized evidence.
+
+Both the stb and libjpeg-turbo qualification wheels traverse the same
+`read_jpeg`/`write_jpeg`, mmap/path, and direct-sink layers. The ordinary
+83-member wheel remains at 232 non-dunder core names and contains no candidate
+source, symbol, or payload. The explicit stb and libjpeg-turbo builds expose
+one private marker for 233 names. Every wheel includes the two exact upstream
+libjpeg-turbo/IJG notices, for 17 attribution members total, and no native
+development payload.
+
+Fresh wheel SHA-256 values are:
+
+- ordinary stb:
+  `533ae7e3dba3de866324efc411a0bdf932c4a6f03c29a424fcf30964befee798`;
+- explicit stb:
+  `a2385d468804dd139b082d639c9eb185b7e790d98d87d97b3794b7935dfa0855`;
+- libjpeg-turbo:
+  `63f33e635ff0b20547cc93fb7f48642b722ec1c612e1be0e72bf9f6e76ca20a9`.
+
+All three fresh SceneIO-plus-NumPy environments return `2` from the installed
+all-50-codec smoke. With pytest and Pillow then added, focused installed
+JPEG/intake tests pass 21 with one environment-only absent-torch skip for the
+ordinary and explicit stb wheels, and 20 with the absent-torch plus
+retained-byte skips for the turbo wheel. The candidate wheel costs 659,456
+uncompressed native bytes and 195,056 compressed wheel bytes. Its
+native module depends only on CPython and standard Windows/MSVC runtimes,
+preserves the retained module's Windows export set, and adds no JPEG or
+libjpeg-turbo export.
+
+Visual Studio and MSVC/Ninja builds cover both archive layouts. CMake 3.18.6,
+the truthful project floor, configures and builds the full optimized candidate
+core with Ninja Multi-Config and concrete per-configuration byproducts. The
+exact wheel also verifies the shortened external-project prefix used to stay
+within Windows path limits.
+Generated evidence records the exact compiler, CMake version, generator,
+runtime, external cache, option fingerprint, target processor, SIMD-required
+policy, NASM version/hash, and export policy; the generated candidate header
+records `SIMD_ARCHITECTURE X86_64`. These results establish build viability
+and isolation, not candidate throughput or backend selection. The historical
+JPEG numbers above remain gap detection only because their encoders used
+different settings and their decoders consumed different bytes. R5.2 will
+replace that comparison with predeclared quality/subsampling profiles, one
+hashed decode corpus, paired raw samples, memory/startup/package evidence, and
+three-toolchain results.
+
+The seam itself is a measured retained-path non-regression. After restoring
+the original `std::string::append` callback and reserving the known raw input
+size, four interleaved processes per backend with 15 timed runs each measured
+R4 versus current core writes at 60.420 versus 60.538 MB/s (+0.19%). The two
+filesystem-inclusive paths differed by -1.00% and -1.03% inside their noisier
+envelopes, while their Python code and the six locked encoded-byte vectors are
+unchanged.
+
+The default-backend all-50-codec five-run sweep used strict comparison
+providers plus the retained O4 and O5 partial-read guards and wrote 50 unique
+rows to `build/r5_1_default_guard_no_json_control.json` (SHA-256
+`faf64165be690e221fd01cb233bd9c4079f0da6248d5c15ab9d819cc93198d68`).
+The exact O5 inspection predicates applied to that same JSON also pass;
+`transforms_json` measured 46.133 ms full versus 18.944 ms inspection
+(2.435x). An immediately preceding fully gated run measured that historically
+marginal control above 3x. Focused repetitions of the untouched R4 wheel on
+the same host also measured 3.136x--3.265x, while the R5.1 diff contains no
+JSON codec, registry, or benchmark-path change. The repository's 3x control
+therefore remains unchanged; this intake checkpoint records the paired host
+variance rather than weakening the guard or claiming a JSON-path change.
+
+## R5.2 JPEG qualification methodology (2026-07-28)
+
+`bench/BACKEND_QUALIFICATION.toml` freezes the comparison before the full
+measurement. The local matrix has 97 cells; including the generated 8K
+fixture produces 122. It covers q90 4:2:0 and q95 4:4:4 encoding through the
+available core/public buffer and sink surfaces, and baseline 4:2:0/4:4:4,
+progressive, restart-marker, grayscale, CMYK, and YCCK decoding through core
+bytes, core mmap, and public paths. Decoder timing uses the same hashed
+retained/Pillow/spec fixture corpus for both wheels.
+
+The controller launches copied self-contained workers with each isolated
+environment's absolute Python executable and `-I`. Six local or eight
+remote-inclusive sessions use a seeded balanced order. Every raw integer
+sample is retained; the primary summary is the paired retained/candidate
+median ratio and 1.4826-scaled MAD of log ratios, with a two-MAD robust lower
+bound. Predeclared gates cover per-cell variability and non-regression,
+encode/decode aggregate gains, public surfaces, decoded parity, comparative
+PSNR and output size, deterministic output where applicable, traced
+allocation, fresh-process RSS, RSS plateau, import/first-call cost, and
+wheel/native size. CMYK and YCCK exercise the retained fallback for
+compatibility and are excluded from candidate throughput claims. Neither
+backend exposes a selected intra-file lane control, so the frozen policy
+records and measures one lane only. Cache state is warm; no cold-cache result
+is claimed.
+
+The harness rejects dirty source for an official report. A dirty-tree quick
+run exists only to verify the protocol and is labeled `smoke_only`. The
+current quick run covers 19 cells, four installed-wheel sessions, eight
+independent encode-first/decode-first startup workers, and two repeatability
+workers; its report SHA-256 is
+`159f1fe98df290d3952bba9cab95b102eb7a16127193001d242ec1ee7b7e5166`.
+The installed Python package members and native module are both bound to the
+supplied wheel, every declared session/cell/raw sample is required, SceneIO
+import timing excludes Pillow setup, and a prior result is released before
+the next timed sample. Fresh-process RSS warms only `small_odd`, then measures
+the first target-fixture operation so retained large-case memory remains
+visible.
+The candidate CMake build separately emits a receipt derived from the
+generated libjpeg-turbo header; the local probe records
+`SIMD_ARCHITECTURE X86_64` and the header hash.
+
+`.github/workflows/backend-qualification.yml` is manual and nonpublishing.
+It builds paired wheels and runs the full remote-inclusive matrix on Windows
+MSVC x86-64, the pinned manylinux2014 GCC 10 x86-64 image, and macOS
+AppleClang arm64, then validates exact source/configuration identity across
+the three reports. That workflow has not been dispatched. These entries
+describe implemented measurement machinery, not a completed comparison:
+stb remains the stable JPEG backend and no R5.4 selection is recorded.
+
+## R5.2 JPEG MSVC qualification result (2026-07-28)
+
+The binding local result uses clean source commit
+`7a88e7c726eed5bdd4ff0ad05b381c9795af9dfe` and fresh isolated
+Windows ABI3 wheels. Its remote-inclusive configuration runs eight paired
+sessions over all 122 frozen cells, 24 independent startup observations, six
+repeatability observations, and 24 fresh-process memory observations. The
+canonical report SHA-256 is
+`f32b7c60f19956438023c51cc9c0b07f44ace79c66dff4a43c30fc7cfdcd80b1`.
+The checked compact receipt is
+`bench/results/backend_qualification/jpeg-rgb8-v1-windows-msvc-7a88e7c.json`;
+it binds the full report, source/configuration/corpus, wheels, gate accounting,
+failed gate, and decision-driving aggregates.
+
+libjpeg-turbo 3.2.0 is materially faster:
+
+- encode median/robust geomeans: 4.787x / 4.637x;
+- decode median/robust geomeans: 1.782x / 1.727x;
+- public sink encode median/robust geomeans: 4.508x / 4.365x;
+- public path decode median/robust geomeans: 1.857x / 1.796x.
+
+It also passes decoded parity, deterministic output, output-size, startup,
+repeatability, traced-allocation, fresh-process RSS, RSS-plateau, wheel-size,
+and native-size gates. Focused installed-wheel parity separately retains the
+malformed/truncated behavior checks. Both wheels contain 83 members
+and require only NumPy at runtime. The retained/candidate wheel SHA-256 values
+are `c166025b9ba6a11bc932a586231f9dc22adc572f2e6e76efde4b1c23ae28e285`
+and `cabc8ce5cb6d6956378e1675e582a27dd6929e690dce84a2e086c2e52b5e2017`.
+
+The candidate nevertheless fails one of 1,597 frozen gates. For
+`rgb8_q95_444`, its median comparative PSNR delta is `-0.058242 dB`, below
+the predeclared `-0.05 dB` non-inferiority floor. The q90 profile passes
+(`+0.000821 dB`), and both profile output-size geomeans pass, but a fast
+candidate that misses any required fidelity profile is not conforming.
+
+The stable backend therefore remains the repository-owned stb implementation.
+No default, ABI, public symbol, encoded-byte contract, or dependency changed.
+The manual GCC 10/AppleClang workflow was not dispatched because the sole
+finalist failed the first platform gate and there is no selection commit to
+validate. The JPEG row remains a documented performance gap with
+libjpeg-turbo recorded as evaluated and rejected for the combined default.
+
+## R6 Zstd profile qualification (2026-07-28)
+
+The R6 Zstd intake review found that the original SPZ benchmark row described
+the combined miniz/Zstd implementation while its default writer produced only
+the legacy v3 gzip container. The corrected harness retains that public-default
+measurement and adds an explicit v4 NGSP profile bound to `version=4`.
+`bench/PERFORMANCE_STATUS.toml` now records four operations instead of one
+ambiguous pair:
+
+- `legacy_v3_gzip`: gzip magic `1f8b`, version 3, fractional bits 12,
+  repository-contained miniz 3.0.2;
+- `ngsp_v4_zstd`: NGSP magic `4e475350`, version 4, fractional bits 12,
+  Zstd level 12, repository-contained Zstd 1.5.6.
+
+The benchmark checks those signatures before timing and requires both profiles
+to decode to identical GaussianCloud arrays. Its strict result validator
+rejects a missing profile, changed setting, incorrect backend, invalid magic,
+or non-positive measurement.
+
+On the same 11.2 MB generated cloud, the confirming five-run strict sweep
+measured:
+
+| Profile | File MB | Encode MB/s | Decode MB/s |
+|---|---:|---:|---:|
+| v3 gzip/miniz | 3.394 | 105 | 769 |
+| v4 NGSP/Zstd | 3.355 | 257 | 1,391 |
+
+The all-50-codec run passed every retained O4/O5, mapped-read, and file-sink
+gate. Its 52,067-byte JSON has SHA-256
+`b3d4666ad09aa60419ca980c658519fcbe72691528fecf3a176f40e965e278d0`.
+The intentional additive `spz_profiles` result field has full-size strict-run
+structural projection SHA-256
+`8f218ff77bcf2ea1e918d4ed164f7184fa2662eb252508c387b5f131a053a8e7`;
+the separate `--runs 1 --scale 0.001 --skip-oracles` CI smoke and family
+contracts lock projection
+`97c98367e8ea602e9b9c1682b8c6ef1ca8fd483a66b233cd64dbc5976d0c7948`.
+This is local MSVC evidence; the user-gated build-only multi-platform run
+remains outstanding.
+
+## R6 fast_float source-ownership confirmation (2026-07-28)
+
+The production parser remains upstream fast_float 6.1.6 with identical
+headers; this R6 unit changes source ownership, not parsing policy or encoded
+output. The nine public headers used by the text codecs now come from
+`src/cpp/third_party/fast_float`, and CMake exposes them through a local
+header-only interface target instead of downloading the tag during configure.
+
+The confirming five-run strict sweep passed every retained O4/O5, mapped-read,
+and file-sink gate. Its 52,081-byte JSON has SHA-256
+`e9847667ed9849b2de9832997c59069dd0077e7c6ebfc5bdf293437844d96fca`
+and matches structural projection
+`8f218ff77bcf2ea1e918d4ed164f7184fa2662eb252508c387b5f131a053a8e7`.
+Representative decode throughput for parser-backed profiles was:
+
+| Codec/profile | Decode MB/s |
+|---|---:|
+| XYZ | 83 |
+| PTS | 81 |
+| PLY ASCII | 115 |
+| PCD ASCII | 114 |
+| EuRoC state | 204 |
+| g2o | 313 |
+| Bundler | 369 |
+| BAL | 204 |
+| NVM | 362 |
+
+The same run retained the optimized XYZ writer at 102 MB/s, or 4.80x its
+one-lane reference. These results confirm that moving the byte-exact headers
+in-tree did not change the benchmark contract or remove the measured text I/O
+gains. This is local MSVC evidence; the final user-gated build-only
+multi-platform R6 validation was outstanding at this checkpoint and later
+passes in final-tree release run `30470889876`.
+
+## R6 LAZperf source-ownership confirmation (2026-07-28)
+
+The production LAZ codec remains the pinned LAZperf 3.4.0 implementation with
+the same seven-file local correctness patch. This R6 unit changes source and
+build ownership: the complete 47-file public-header/library tree is now stored
+under `src/cpp/third_party/lazperf`, and CMake builds an explicit 15-file
+static target rather than downloading and mutating the archive at configure
+time.
+
+The confirming five-run strict sweep passed every retained O4/O5, mapped-read,
+and file-sink gate. Its 52,069-byte JSON has SHA-256
+`f80ca7015254975f0066df2b157b34b0a3f4c529edc1e25f21d972542c707683`
+and matches structural projection
+`8f218ff77bcf2ea1e918d4ed164f7184fa2662eb252508c387b5f131a053a8e7`.
+The LAZ row measured:
+
+| Direction/path | Result |
+|---|---:|
+| Encode | 64 MB/s |
+| Buffer decode | 232 MB/s |
+| Public mapped path read | 231 MB/s |
+| Direct file sink | 64 MB/s |
+| Metadata inspection | 0.045 ms / 1,149x full-read speedup |
+| Chunk-aware point subset | 16.49 ms / 3.15x full-read speedup |
+
+The mapped path retained the 14.6 MB whole-file allocation reduction
+(14.59 MB for a Python `bytes` input versus 0.01 MB traced overhead), and the
+direct sink retained approximately 0.0006 MB traced overhead. The extension
+no longer exports LAZperf API symbols. These results show no source-ownership
+regression and preserve the established optimized LAZ paths. This is local
+MSVC evidence; the final user-gated build-only multi-platform R6 validation
+remains outstanding.
+
+## R6 libwebp source-ownership confirmation (2026-07-28)
+
+The production WebP codec remains upstream libwebp 1.5.0 with its qualified
+SIMD dispatch and unchanged codec configuration. The exact 203-file
+core-library/build closure is now stored under
+`src/cpp/third_party/libwebp`, and CMake configures that unmodified upstream
+tree locally rather than downloading the tag. Tools, examples, tests, shared
+libraries, and optional utilities remain disabled.
+
+The confirming five-run strict sweep passed every retained O4/O5, mapped-read,
+and file-sink gate. Its 52,081-byte JSON has SHA-256
+`b719008899536b47900ed20f658200f1311f4426ced03899e605aa5898414829`
+and matches structural projection
+`8f218ff77bcf2ea1e918d4ed164f7184fa2662eb252508c387b5f131a053a8e7`.
+The WebP row measured:
+
+| Direction/path | Result |
+|---|---:|
+| Balanced lossless encode | 35 MB/s |
+| Retained effort-100 control | 13 MB/s |
+| Buffer decode | 285 MB/s |
+| Public mapped path read | 258 MB/s |
+| Direct file sink | 36 MB/s |
+| Metadata inspection | 0.054 ms / 226x full-read speedup |
+| Lossless pixel window | 6.06 ms / 2.01x full-read speedup |
+
+The balanced configuration retains a 2.70x gain over the old control, and the
+palette worker-on path remains faster than its worker-off control while
+producing identical bytes. The mapped path reduces traced allocation from
+3.16 MB to 0.01 MB, and the direct sink retains approximately 0.0006 MB traced
+overhead. These results preserve the established optimized WebP paths and show
+no source-ownership regression. This is local MSVC evidence; the final
+user-gated build-only multi-platform R6 validation was outstanding at this
+checkpoint and later passes in final-tree release run `30470889876`.
+
+## R6 disconnected package and stable-ABI correction (2026-07-28)
+
+The first shared local package run started from clean exact commit
+`8ef25375cc9b47a8e7b67f11d4714ab88f4e4d82` in fresh source, build,
+distribution, and installation directories. It disables package indexes and
+PEP 517 isolation, uses preinstalled pinned build tools, sets
+`FETCHCONTENT_FULLY_DISCONNECTED=ON`, builds the sdist first, and builds the
+Windows wheel only from the unpacked sdist. That run remains valid source,
+inventory, license, Python 3.12 smoke, and benchmark evidence. It is withdrawn
+as stable-ABI evidence: the `cp312-abi3`-tagged wheel contained
+`_core.cp312-win_amd64.pyd` linked to `python312.dll`.
+
+| Artifact/check | Result |
+|---|---|
+| Exact source export | 827 files |
+| Source distribution | 5,818,092 bytes; 828 members; SHA-256 `674423c13196e1a2aee7c67c6c85877684bf4c6f0573b387679fe24058aad466` |
+| Superseded Windows wheel | 2,187,867 bytes; 88 members; SHA-256 `f045b52e334298ad7cbdf336c70356140df5b1a05ceace42954b3f313ccf9595`; functional on Python 3.12 but not stable-ABI evidence |
+| Distribution license assets | all 22 present in both artifacts |
+| Wheel native payload | one `_core` extension; no additional native library or source/build payload |
+| Runtime requirement | `numpy>=1.26` only |
+| Installed smoke | phase `2`; all 50 built-ins |
+| Extension exports | 21 total: `PyInit__core` plus 20 nanobind exception-runtime names; no libwebp, SharpYUV, or LAZperf exports |
+| Corrected Windows native build | `_core.pyd`; `nanobind-static-abi3`; `Py_LIMITED_API=0x030C0000`; `python3.dll`; imports with all 49 native/hybrid entries |
+| Corrected Ubuntu native build | `_core.abi3.so`; `nanobind-static-abi3`; no libpython dependency; imports and passes the native-build architecture suite |
+
+The optimized I/O benchmark is unchanged by this package-only closure. A fresh
+all-50 five-run sweep against the corrected stable-ABI build passes every
+retained O4/O5, mapped-read, and file-sink gate. Its 52,064-byte JSON has
+SHA-256
+`19a379668f6180dc8570d5dbc83b0ca7267e93058f5c0749fb658819c14ed307`
+and structural projection
+`8f218ff77bcf2ea1e918d4ed164f7184fa2662eb252508c387b5f131a053a8e7`.
+`tools/verify_distribution.py` now makes the package inventory repeatable,
+requires matching `cp312-abi3` filename/internal tags and the exact platform
+matrix, while `tools/r6-wheelhouse.lock` pins the build and smoke inputs. The
+build-only release graph hashes one sdist and makes its manylinux2014 GCC 10,
+Windows MSVC, and macOS AppleClang wheel jobs consume that exact artifact. Final
+run `30406706115` passes this hosted confirmation; its non-self-referential
+hashes are retained in the closure record.
+
+The automatic run for exact R6 package commit `3747447` exposed that the
+scale-0.001 smoke contract incorrectly held the full-size strict projection.
+Correction commit `7d51423` binds the smoke/family contracts to independently
+matching Windows and hosted-Linux projection
+`97c98367e8ea602e9b9c1682b8c6ef1ca8fd483a66b233cd64dbc5976d0c7948`
+without changing the retained strict projection above. Exact-commit normal
+run [30390986854](https://github.com/SceneAPI/SceneIO/actions/runs/30390986854)
+passes the complete suite, corrected deterministic structure check, five-run
+performance guard, three-OS codec shards, and pinned GCC 10 portability.
+Compiler-instrumented run
+[30390986672](https://github.com/SceneAPI/SceneIO/actions/runs/30390986672)
+passes both jobs. Neither run is the still-user-gated build-only package
+matrix.
+
+## Lean R6 performance-closure policy (2026-07-28)
+
+The performance ledger contains 132 operation rows: 124 `provisional`, two
+documented JPEG `known_gap` rows, and six `not_applicable` rows. Of the
+provisional rows, 110 retain only a future candidate-comparison gap and 14
+also lack a profile-specific current-backend measurement. None has an active
+replacement candidate. Those 14 specialized profiles are accepted for
+correctness and compatibility only; R6 makes no profile-specific performance
+claim for them, and they are first in the trigger-based backlog.
+
+The user-directed lean closure accepts the correctness-tested current backends
+as the R6 release baseline when the retained all-50 performance guard and final
+package matrix pass. This is a release decision, not a global optimization
+claim: the 124 rows remain `provisional`, their evidence gaps remain intact,
+and no row is promoted to `qualified` by policy. Exhaustive alternative
+discovery moves to a trigger-based post-R6 backlog. A future comparison starts
+only for a measured regression, material hotspot, or concrete replacement
+proposal and continues to use the existing production-path qualification
+protocol.
+
+That bounded closure is complete at packaged source commit
+`105b3017dae37345a6974f289e661d9173186a2a`. Exact-head CI
+`30405666674` and native-runtime run `30405666673` pass. Build-only
+`publish.yml` run `30406706115` passes one exact sdist, all three cp312-abi3
+wheel jobs, combined inventory, and installed all-50-codec smoke; its PyPI job
+is skipped.
+
+The sdist has 835 members (834 exact source files plus `PKG-INFO`), 24 license
+assets, source-tree SHA-256
+`3e353c2b6cd14d044bc71a0280091ab0f6396e2c649262061e26c015049ffcf4`,
+and archive SHA-256
+`cf8673ec3db22a8fa5d6bd13e23b5ce132680204c8d1f2e3c2e22874f61d410d`.
+Wheel SHA-256 values are
+`30bcb3799fe45f60c055d11e95ef2c41c9d188c779391f629a508dc709da1e8c`
+for macOS arm64,
+`b13edb065fa3260656cadeac0a792ee7dc7d86fd4293373c57d7ec889fa69266`
+for manylinux2014 x86-64, and
+`0107fe62e4e3b7f7732b234eb0b8923c396d2f924b8acefeec4e05047c37d17d`
+for Windows amd64. All retain `numpy>=1.26` as the sole Python runtime
+requirement. This package-only closure does not change any benchmark result or
+promote a provisional backend row. The documentation-only closure record does
+not recursively repeat the package matrix; PyPI configuration, tags, and
+publication remain separate release-time work.
+
+## COLMAP ecosystem C0 bounded binary writer (2026-07-28)
+
+The modern sparse-model compatibility unit replaces the binary directory
+writer's output-sized `std::string` construction with a 64 KiB buffered,
+bulk-array direct-file writer. The isolated old/new writer comparison used the
+same legacy three-file record on both builds:
+
+```powershell
+.venv/Scripts/python.exe bench/bench_io.py --runs 7 --scale 32 `
+  --only colmap_sparse --skip-oracles
+```
+
+| build | raw payload | encoded directory | write throughput | traced peak | sampled sink RSS |
+|---|---:|---:|---:|---:|---:|
+| `7e5d284` output-sized writer | 13.8 MB | 16.3 MB | 480 MB/s | 0.0 MB | 0.1 MB |
+| C0 bounded direct writer | 13.8 MB | 16.3 MB | 1,058 MB/s | 0.0 MB | 0.0 MB |
+
+The final validated source measured a 2.20x write gain with identical files.
+After the default fixture was promoted to modern form, the final legacy
+measurement was repeated three times through the same seven-run `measure`
+helper; the median values were 1,031, 1,058, and 1,081 MB/s. This A/B row
+deliberately isolates the writer replacement; it does not include the modern
+rig/frame association pass.
+
+The committed harness now wraps that record in a deterministic one-rig,
+one-frame five-file model. Three final-source runs of the displayed command
+measured 251, 286, and 330 MB/s (286 MB/s median), with 0.0 MB traced Python
+allocation and 20.0-20.2 MB sampled sink RSS. That row exercises the modern
+association checks; its temporary native lookup workspace scales with the
+represented reconstruction, not with a staged copy of the encoded directory.
+
+A separate fresh-child regression writes 100,000 and 600,000-point legacy
+records after establishing the resident baseline. Encoded size grows from
+5,100,150 to 30,600,150 bytes while sampled writer RSS changes from 335,872 to
+86,016 bytes. The test requires the large output to exceed 5x the small output,
+remain below half its encoded size, and stay within 8 MiB of the small-write
+delta. This independently guards the absence of an output-sized native staging
+buffer. Read throughput is not used for the old/new writer comparison because
+C0 also adds rig/frame parsing and Windows cache state varied between runs.
+
+## COLMAP database C1c stock companion regression (2026-07-29)
+
+C1c adds exact stock rig/frame and pose-prior parsing without changing the
+default legacy benchmark fixture or SQLite backend. A fresh three-run focused
+measurement used:
+
+```powershell
+.venv/Scripts/python.exe bench/bench_io.py --runs 3 `
+  --only colmap_db --skip-oracles
+```
+
+The default 9.6 MB logical / 9.9 MB encoded fixture measured 1,092 MB/s full
+read, 166 MB/s direct write, 1.823 ms metadata inspection, 0.784 ms indexed
+image read, and 0.735 ms indexed pair read. Inspection was 4.85x faster than
+full materialization; the selectors were 11.27x and 12.03x faster. Traced
+Python allocation remained 0.0 MB for path reads, inspection, selectors, and
+the direct sink. The sampled full-read RSS delta was 10.4 MB, while inspection
+and partial reads remained at 0.1 MB or less.
+
+This is regression evidence for the unchanged legacy fixture, not a claim
+that it times populated stock companion rows. Populated 3.13, 4.1.1, and
+current companion payloads are covered by independent wire fixtures,
+bit-level comparisons, lifetime tests, and malformed-row tests in
+`tests/codecs/test_colmap_db.py`.
+
+## COLMAP database C1e exact-profile writers (2026-07-29)
+
+C1e adds a profile selector to the existing path-native SQLite benchmark:
+
+```powershell
+.venv/Scripts/python.exe bench/bench_io.py --runs 3 --scale 1 `
+  --only colmap_db --skip-oracles `
+  --colmap-db-profile colmap-4.1.1
+```
+
+The same 9.65 MB logical core fixture was emitted through every exact schema.
+These are local MSVC medians; the oracle lane was omitted because this row
+compares SceneIO's four exact writer branches, while wire/schema correctness is
+covered independently by SQLite fixtures and the live 4.1.1 lane.
+
+| exact profile | encoded | write | full read | inspect | image | pair |
+|---|---:|---:|---:|---:|---:|---:|
+| 3.13.0 | 9.92 MB | 153 MB/s | 1,141 MB/s | 1.928 ms | 1.038 ms | 1.018 ms |
+| 4.1.1 | 9.92 MB | 153 MB/s | 1,118 MB/s | 1.993 ms | 0.981 ms | 1.009 ms |
+| current `64805cb` | 9.92 MB | 160 MB/s | 1,131 MB/s | 1.929 ms | 0.978 ms | 1.086 ms |
+| MAXX v1 | 10.00 MB | 150 MB/s | 1,018 MB/s | 2.895 ms | 1.102 ms | 1.087 ms |
+
+Traced direct-write allocation rounds to 0.000 MB and mapped-read allocation
+to 0.003 MB for all four profiles. The additional pre-commit schema,
+foreign-key, identity, and integrity checks therefore remain within the
+existing direct-sink performance band while adding no payload-sized Python
+staging.
+
+The final post-review tree was sampled again with the same command after
+structural index validation and SQL-REAL presence guards landed. Writes were
+149, 145, 144, and 144 MB/s for 3.13, 4.1.1, current, and MAXX; reads were
+1,008, 1,063, 1,062, and 964 MB/s. Traced read/write allocation still rounded
+to 0.0 MB, inspection remained 3.53x-4.53x faster than full materialization,
+and indexed image/pair reads remained 7.31x-9.15x faster. The unchanged reader
+showed the expected cache-state variation, while the new preflight work stayed
+inside the prior direct-write band and introduced no payload-sized staging.
+
+## COLMAP dense C2 transport baseline (2026-07-29)
+
+The four native dense formats were sampled on the final local MSVC build with
+three runs at the small deterministic scale:
+
+```powershell
+.venv/Scripts/python.exe bench/bench_io.py --runs 3 --scale 0.1 `
+  --only colmap_mvs_depth --only colmap_mvs_normal `
+  --only colmap_mvs_consistency --only colmap_fused_visibility
+```
+
+| codec | core buffer read | public mapped read | direct sink | inspect speedup | bounded window |
+|---|---:|---:|---:|---:|---:|
+| `colmap_mvs_depth` | 57,960 MB/s | 3,328 MB/s | 1,704 MB/s | 2.61x | 2.70x |
+| `colmap_mvs_normal` | 4,224 MB/s | 2,580 MB/s | 978 MB/s | 10.17x | 7.97x |
+| `colmap_mvs_consistency` | 3,508 MB/s | 2,166 MB/s | 851 MB/s | 1.71x | n/a |
+| `colmap_fused_visibility` | 3,474 MB/s | 2,349 MB/s | 908 MB/s | 1.46x | n/a |
+
+Traced Python allocation rounded to 0.000 MB for every direct sink. The
+benchmark qualification lane uses independent `struct`/NumPy readers and
+writers rather than the production implementation. Before timing, it requires
+native bytes to equal independent bytes, native decodes of independent bytes
+to equal the fixtures, and independent decodes of native bytes to equal the
+same values for all four formats. A separate live-oracle smoke at scale
+`0.001` passed for all four rows. These measurements establish a local
+transport baseline; they do not replace the final three-platform package run.
+Consistency and fused-visibility decoding use a validating count pass before
+exact record allocation; this prevents malformed or link-heavy payloads from
+driving speculative payload-maximum reserves while retaining multi-GB/s local
+decode throughput.
+
+## COLMAP compact-adapter C3 transport baseline (2026-07-29)
+
+The repository-owned adapters were measured with one million two-component
+MappingInput rows and an equal-sized MegaLoc float32 payload, using three
+repetitions:
+
+```powershell
+.venv/Scripts/python.exe bench/bench_colmap_adapters.py `
+  --rows 1000000 --repeats 3
+```
+
+| adapter path | throughput | median | traced Python peak |
+|---|---:|---:|---:|
+| MappingInput mapped read | 3,158 MB/s | 2.533 ms | 0.104 MB |
+| MappingInput streaming write | 1,339 MB/s | 5.976 ms | 0.014 MB |
+| MegaLoc descriptor mapped read | 3,211 MB/s | 2.491 ms | 0.027 MB |
+| MegaLoc descriptor streaming write | 494 MB/s | 16.186 ms | 0.021 MB |
+
+The benchmark includes record validation and atomic replacement. Its read
+peaks are far below the 8 MB numeric payloads, proving that neither mapped
+path creates a whole-file Python copy. Separate generated-fixture tests cover
+the same property for MappingInput, MegaLoc, and the large fixed sparse tag
+sidecars. Compact text and JSON companions are correctness-tested with
+independent fixtures; they are not assigned throughput claims because they
+are control metadata rather than measured hot paths.
+
+## C3/C4 CI correction measurements (2026-07-29)
+
+The SOG metadata correction was measured against an isolated editable build
+of exact parent `97be60d5620d2afe95107ffd4deaf04626bd02ca`. Both builds used
+the same 11.2 MB logical fixture and seven-run harness:
+
+```powershell
+.venv/Scripts/python.exe bench/bench_io.py --only sog --runs 7
+```
+
+| build | buffer write | direct sink | encoded size | traced sink peak | sampled sink RSS |
+|---|---:|---:|---:|---:|---:|
+| exact parent | 34 MB/s | 33 MB/s | 2.9 MB | 0.0 MB | 30.7 MB |
+| deterministic candidate | 34 MB/s | 34 MB/s | 2.9 MB | 0.0 MB | 35.5 MB |
+
+The candidate computes each deterministic transformed coordinate once and
+reuses it for range discovery and quantization. This offsets the portable
+polynomial cost while preserving the traced Python allocation target and
+streaming the encoded output without a whole-file Python bytes object. The
+cache is exactly `3 * point_count * sizeof(double)`, or 24 bytes per point.
+It accounts for the 4.8 MB sampled-RSS increase on this 200,000-point fixture
+and is a deliberate bounded working-memory tradeoff for deterministic output
+at unchanged throughput. MSVC and GCC produce the same hash over five million
+deterministic finite float32 inputs, including the former cross-platform
+counterexample, and the complete Windows/Ubuntu SOG archive and catalog
+contracts match exactly.
+
+The COLMAP consistency-graph correction does not change the native reader.
+Its RSS test now budgets the 12-byte mapped entry plus the exact 16-byte
+decoded entry representation and fixed allocator headroom. A separately
+scoped architecture assertion pins `image_indices.reserve(stats.links)` in
+both the consistency and visibility readers, so the looser process-level RSS
+ceiling cannot conceal an entry-count-sized link allocation.
+
+The first corrected hosted run, `30467712842`, completed all platform-specific
+codec lanes but exposed that the active benchmark-structure guard still named
+the historical 50-row registry. Its uploaded Ubuntu capture and a fresh local
+MSVC capture each contain the current 54 rows, in the same order, with
+normalized structural SHA-256
+`fd3cf4a663e737971526afe5884f229237630a0f126b21a1c8ffcde9a6015e4e`.
+The active assembly contract now pins that pair and the exact exposing commit;
+the immutable 50-row R2/R3 family evidence retains its original hash.
+
+Exact-head normal run
+[30469273173](https://github.com/SceneAPI/SceneIO/actions/runs/30469273173)
+passes the complete suite, all platform lanes, the corrected 54-row structure,
+and retained O4/O5 performance guard. Instrumented run
+[30469271293](https://github.com/SceneAPI/SceneIO/actions/runs/30469271293)
+passes its complete and lifetime jobs. Build-only release run
+[30470889876](https://github.com/SceneAPI/SceneIO/actions/runs/30470889876)
+validates packaged source `2253e0f`: the 869-member sdist has SHA-256
+`3bffc64b75ea751617923f19ca6f6935bd433dd23882af0ca4f1bc26a62cf826`;
+the macOS, manylinux2014, and Windows cp312-abi3 wheel hashes are
+`779ff0db0bc516b8b05dfb67a0fe81dc9ba53f556204575b34a7ac4e1b8aaf0a`,
+`ece92774dc88cc5c657bc1215044d34f70958b78e6b7f66892ea21464baa2506`,
+and
+`80f2a75aa7ac2f7a0a3b97291c7019122d2880d0068b89caaeab9bb09f290b6b`.
+All four artifacts contain 27 attribution assets; every wheel retains
+`numpy>=1.26` as its only runtime requirement and passes installed smoke plus
+the combined inventory. Publication is skipped.
+
+## Animated WebP sequence checkpoint (2026-07-29)
+
+Animated WebP uses the repository-pinned libwebp animation APIs and Pillow as
+an independent cross-read/write oracle. The focused local MSVC measurement was:
+
+```powershell
+.venv/Scripts/python.exe bench/bench_io.py --runs 3 --scale 0.05 `
+  --only animated_webp --json build/animated-webp-performance.json
+```
+
+| metric | SceneIO | Pillow oracle |
+|---|---:|---:|
+| logical payload / encoded file | 0.8 MB / 0.8 MB | same corpus |
+| buffer write | 23 MB/s | 95 MB/s |
+| buffer read | 493 MB/s | 312 MB/s |
+| public mapped-path read | 462 MB/s | — |
+| traced read peak, bytes / mapped path | 0.8 MB / 0.0 MB | — |
+| traced write peak, bytes / direct sink | 0.8 MB / 0.0 MB | — |
+| full read / metadata inspection | 1.799 ms / 0.061 ms | — |
+| inspection gain | 29.68x | — |
+
+The measured SceneIO/oracle read-throughput ratio is 1.58. The current encoder
+is slower than the Pillow reference on this fixture; both use libwebp-family
+code, but the wrappers and effective settings are not assumed equivalent.
+This is recorded as a measured optimization backlog item, not hidden as a
+regression or used to weaken correctness requirements.
+
+A complete one-run, small-scale local capture covers all 55 registry rows:
+
+```powershell
+.venv/Scripts/python.exe bench/bench_io.py --runs 1 --scale 0.001 `
+  --skip-oracles --json build/animated-webp-55-row-benchmark.json
+```
+
+Its normalized deterministic structural SHA-256 is
+`91fff73b8f1e8e599a4400a7de1f22c053704e89c0fef1ecee55a07703c44e80`.
+These figures are local MSVC evidence. Cross-platform package validation for
+the 55-codec tree is recorded separately after its user-authorized workflow.
+
+## APNG sequence checkpoint (2026-07-29)
+
+APNG uses a repository-owned animation container/state layer over the pinned
+lodepng/deflate substrate. Pillow provides independent full-frame
+cross-read/write evidence, while a separate specification-derived chunk and
+compositing oracle covers subrectangles, blend, disposal, and rational timing.
+The focused local MSVC measurement was:
+
+```powershell
+.venv/Scripts/python.exe bench/bench_io.py --runs 3 --scale 0.01 `
+  --only apng --json build/apng-56-benchmark.json
+```
+
+| metric | SceneIO | Pillow oracle |
+|---|---:|---:|
+| logical payload / encoded file | 0.2 MB / 0.2 MB | same corpus |
+| buffer write | 45 MB/s | 46 MB/s |
+| buffer read | 224 MB/s | 629 MB/s |
+| public mapped-path read | 203 MB/s | — |
+| traced read peak, bytes / mapped path | 0.2 MB / 0.0 MB | — |
+| traced write peak, bytes / direct sink | 0.2 MB / 0.0 MB | — |
+| full read / metadata inspection | 0.820 ms / 0.134 ms | — |
+| inspection gain | 6.11x | — |
+
+SceneIO and Pillow encode at similar throughput on this fixture. Pillow's
+decode backend is faster; the 0.36 SceneIO/oracle ratio is retained as an
+explicit future backend-comparison item. The landed I/O gains are the removal
+of encoded-size Python allocations for mapped reads and direct sinks, plus the
+metadata-only inspection path. The direct sink also emits container chunks
+incrementally instead of retaining the complete encoded APNG in a C++ vector.
+
+A complete one-run, small-scale local capture covers all 56 registry rows:
+
+```powershell
+.venv/Scripts/python.exe bench/bench_io.py --runs 1 --scale 0.001 `
+  --skip-oracles --json build/apng-56-row-benchmark.json
+```
+
+Its normalized deterministic structural SHA-256 is
+`2295f9ab10dbf141c76ef6f7cbf4561ad656a1dde3cc7c8dcbff8b5bc23d6927`.
+
+## HDF5 and hloc path-native checkpoint (2026-07-29)
+
+The optional `sceneio[hdf5]` provider uses h5py/HDF5 directly; SceneIO adds
+repository-owned schemas, validation, native-record mapping, metadata
+inspection, selection, and atomic replacement. The focused local MSVC command
+was:
+
+```powershell
+.venv/Scripts/python.exe bench/bench_io.py --runs 3 --scale 1 `
+  --only hdf5 --only hloc_features --only hloc_matches `
+  --json build/hdf5-hloc-benchmark-scale1-final.json
+```
+
+| codec | payload/file MB | SceneIO write MB/s | SceneIO read MB/s | direct h5py write/read MB/s | inspect gain |
+|---|---:|---:|---:|---:|---:|
+| `hdf5` | 1.1 / 1.1 | 322 | 757 | 126 / 862 | 2.24x |
+| `hloc_features` | 1.1 / 1.2 | 435 | 277 | 114 / 622 | 2.14x |
+| `hloc_matches` | 2.1 / 2.1 | 179 | 462 | 258 / 1,671 | 5.38x |
+
+The generic HDF5 named-dataset read was 2.47x faster than full
+materialization and its traced peak rounded to 0.0 MB while the full read
+materialized 2.1 MB. The SceneIO read path intentionally performs schema and
+native-record validation beyond direct h5py array loading; the measured
+provider ratios stay visible and are not described as equivalent work.
+Writes are path-native and never build a complete encoded Python byte string.
+
+A complete one-run, small-scale capture covers all 59 registry rows:
+
+```powershell
+.venv/Scripts/python.exe bench/bench_io.py --runs 1 --scale 0.001 `
+  --skip-oracles --json build/hdf5-hloc-59-row-sweep.json
+```
+
+Its normalized deterministic structural SHA-256 is
+`ff176c7296bfa45e4c1536346fb542f176c05ce00385fbdc3ae3336dd4044099`.
+Cross-platform package measurements remain pending for the optional extra.
+
+### HDF5/hloc hot-path follow-up (2026-07-30)
+
+Profiling the scale-16 fixtures found two wrapper costs rather than an HDF5
+provider limitation: generic HDF5 cloned arrays that were already
+native-endian and C-contiguous, and the hloc match writer used `numpy.unique`
+to validate source indices. The canonical-array path now reuses suitable
+storage and copies only when layout or byte order requires it. Match validation
+uses an ordered fast path and, for unordered input, one sorted copy followed by
+an adjacent duplicate check.
+
+The exact command was run before and after the patch, changing only the JSON
+destination from `before` to `after`:
+
+```powershell
+.venv/Scripts/python.exe bench/bench_io.py --runs 5 --scale 16 `
+  --only hdf5 --only hloc_matches `
+  --json build/hdf5-hloc-opt-before.json
+```
+
+| metric | before | after | change |
+|---|---:|---:|---:|
+| HDF5 write | 1,777 MB/s | 2,921 MB/s | 1.64x |
+| HDF5 read | 1,658 MB/s | 2,266 MB/s | 1.37x |
+| HDF5 traced read peak | 33.6 MB | 16.8 MB | -50% |
+| HDF5 traced write peak | 16.8 MB | rounded 0.0 MB | payload clone removed |
+| hloc matches write | 95 MB/s | 1,417 MB/s | 14.92x |
+
+The hloc read implementation did not change in this unit, so its run-to-run
+throughput difference is not attributed to the patch. Focused tests cover
+native, strided, and non-native-endian arrays plus ordered, shuffled, empty,
+and duplicate match-index inputs. High-cardinality metadata traversal and
+native hloc decode conversion remain separate measured follow-up items.
+
+### HDF5 high-cardinality traversal follow-up (2026-07-30)
+
+Generic HDF5 full reads and inspection previously performed separate global
+link and object walks. Named and sliced reads also paid both walks even though
+they selected one path. Full enumeration now validates links, groups, and
+datasets in one pass. Partial reads resolve only the selected paths and their
+ancestor groups; root metadata and every selected link, attribute set, dtype,
+layout, and virtual-dataset condition remain validated. Unselected objects
+are not interpreted as part of a partial result.
+
+A generated file with 5,000 scalar datasets across 50 groups measured:
+
+| operation | before | after | change |
+|---|---:|---:|---:|
+| selected final dataset | 447.016 ms | 0.522 ms | 856.35x |
+| inspect all datasets | 459.803 ms | 363.624 ms | 1.26x |
+| direct h5py selected read | 0.185 ms | 0.202 ms | reference |
+
+The 1.971 MB fixture is generated during measurement and is not committed.
+The focused regression test replaces the global visitor with a failing stub
+while a selected read succeeds, so future changes cannot silently restore the
+whole-file metadata walk. Full read and inspection intentionally remain
+linear in the number of represented objects.
+
+The reusable after-state command is:
+
+```powershell
+.venv/Scripts/python.exe bench/bench_hdf5_cardinality.py `
+  --datasets 5000 --groups 50 --runs 5 `
+  --json build/hdf5-cardinality-after.json
+```
+
+Its local MSVC median was 0.329 ms selected, 357.433 ms inspection, and
+0.315 ms for the direct h5py selected reference. Dataset values and the
+inspection count are checked during every timed invocation.
+
+### Native hloc match decode follow-up (2026-07-30)
+
+The hloc reader previously materialized validity masks, sparse indices,
+stacked edges, per-pair score arrays, concatenated arrays, and then copied
+those arrays into `MatchGraph`. A private compiled factory now validates the
+dense int16/int32/int64 rows and optional float16/float32 scores, then writes
+the final ragged vectors directly while the GIL is released.
+
+The same five-run scale-16 fixture measured:
+
+| metric | before | after | change |
+|---|---:|---:|---:|
+| hloc match read | 843 MB/s | 1,194 MB/s | 1.42x |
+| traced read peak | 62.9 MB | 33.6 MB | -46.6% |
+| sampled RSS growth | 69.3 MB | 45.7 MB | -34.1% |
+
+The focused test covers every documented wire dtype, reversed endpoints,
+mixed score presence, malformed values, and input-array lifetime. Existing
+h5py oracle and round-trip tests remain byte/value exact.
+
+### Zarr v2/v3 CV tensor stores (2026-07-30)
+
+The optional `sceneio[zarr]` path uses the upstream optimized Zarr/numcodecs
+provider while SceneIO owns the bounded numeric schema, `TensorDict` mapping,
+partial reads, inspection, and directory replacement. The independent
+provider comparison was run locally on MSVC with:
+
+```powershell
+.venv/Scripts/python.exe bench/bench_io.py `
+  --runs 3 --scale 1 --only zarr `
+  --json build/zarr-benchmark-scale1.json
+```
+
+| operation | SceneIO | direct zarr-python | ratio |
+|---|---:|---:|---:|
+| write | 53 MB/s | 54 MB/s | 0.98x |
+| read | 207 MB/s | 220 MB/s | 0.94x |
+
+The 1.1 MB logical fixture encoded to 1.0 MB. Metadata inspection took
+2.976 ms versus 5.096 ms for a full read (1.71x), and the selected-array read
+took 2.784 ms (1.83x). Full-read traced allocation was 3.1 MB versus 0.1 MB
+for both bounded paths. This verifies that the SceneIO schema layer remains
+close to the upstream provider while the requested partial and inspection
+paths avoid full-array materialization.
+
+### TIFF, E57, Arrow, OpenVDB, and USD provider wave (2026-07-30)
+
+The final optional-provider wave was measured locally on MSVC with three
+median runs. TIFF, E57, Parquet/Arrow IPC, and USD/USDZ use scale-1 generated
+fixtures. TinyVDB 0.9's sparse builder is measured with 4,096 active voxels,
+the largest regular fixture retained by this provider path without loss:
+
+```powershell
+.venv/Scripts/python.exe bench/bench_io.py --runs 3 --scale 1 `
+  --only tiff --only e57 --only parquet --only arrow_ipc `
+  --only openvdb --only usd --only usdz `
+  --json build/provider-wave-scale1.json
+```
+
+| codec | payload/file MB | SceneIO write/read MB/s | direct provider write/read MB/s | inspection gain |
+|---|---:|---:|---:|---:|
+| `tiff` | 3.1 / 3.1 | 1,832 / 2,354 | 1,399 / 1,534 | 5.20x |
+| `e57` | 5.0 / 5.0 | 129 / 143 | 135 / 160 | 4.28x |
+| `parquet` | 18.5 / 16.8 | 348 / 453 | 382 / 563 | 252.36x |
+| `arrow_ipc` | 18.5 / 18.4 | 2,938 / 1,608 | 3,348 / 3,115 | 13.49x |
+| `openvdb` | 0.066 / 0.041 | 15 / 252 | 30 / 283 | 0.92x |
+| `usd` | 3.2 / 6.2 | 11 / 12 | 5 / 12 | 1.00x |
+| `usdz` | 3.2 / 6.2 | 11 / 12 | 6 / 13 | 1.00x |
+
+Parquet named-column selection took 3.037 ms versus 40.807 ms for the full
+read (13.44x) and materialized 1.6 MB rather than 18.4 MB of traced Python
+storage. TIFF, E57, Parquet, and Arrow inspection reduced traced allocation
+from 3.2/16.0/18.4/18.4 MB to values that round to 0.0 MB. USD inspection must
+still parse and evaluate the provider stage, so it is not a throughput win,
+but it no longer constructs a `MeshScene`: traced storage fell from 3.6 MB to
+0.2 MB for both USD and USDZ.
+
+SceneIO's E57 write peak is approximately 159 MB on this fixture; the direct
+pye57 path has the same provider-level allocation pattern, so this is recorded
+as upstream overhead rather than a repository wrapper regression. Arrow IPC
+decode also pays for owned `TensorDict` arrays while the direct PyArrow
+reference can expose provider-backed buffers; the value comparison remains
+bit exact.
+
+The first run of this capture found that TinyVDB silently retained only part
+of a larger sparse topology. SceneIO now checks the rebuilt active-voxel count
+before replacing the destination and raises a clear error if the provider
+cannot preserve every coordinate. The benchmark uses a provider-preserved
+4,096-voxel topology; the direct-provider writer does not perform this guard,
+which accounts for part of its measured write advantage. The 67-row
+qualification ledger has 50 timed paths and 17 reviewed exemptions, with
+normalized SHA-256
+`5941120e40ce72d174222c939698b11c318fae3d1e2e5d993e7eb7f0e1e8481f`.
+
+### USD U1 Gaussian convention control (2026-07-30)
+
+The additive convention-bearing `GaussianCloud` unit was checked with three
+median runs over all six existing splat formats:
+
+```powershell
+.venv/Scripts/python.exe bench/bench_io.py --runs 3 --skip-oracles `
+  --only gaussian_ply --only spz --only compressed_ply `
+  --only sog --only ksplat --only splat
+```
+
+| codec | encode/read MB/s | sink MB/s | mmap traced peak | inspect gain |
+|---|---:|---:|---:|---:|
+| `gaussian_ply` | 2,155 / 3,131 | 1,350 | 0.0 MB | 126.10x |
+| `compressed_ply` | 115 / 79 | 103 | 0.0 MB | 620.34x |
+| `sog` | 25 / 414 | 25 | 0.0 MB | 71.05x |
+| `ksplat` | 382 / 579 | 327 | 0.0 MB | 212.02x |
+| `spz` v3 | 91 / 556 | 74 | 0.0 MB | 151.65x |
+| `splat` | 839 / 1,544 | 562 | 0.0 MB | 541.90x |
+
+This is a non-regression control, not an optimization claim. Accepted legacy
+records still produce the existing encoded bytes; the new constant-time
+convention guard precedes each writer. Linear/coefficient-major USD records
+are refused until the caller explicitly converts them. The focused parity
+surface passes 141 tests with one documented SPZ-v2 oracle skip.
+
+### USD U1 rich-scene record foundation (2026-07-30)
+
+`SceneGraph`, `InstanceSet`, and `VolumeAsset` are additive in-memory records.
+They do not yet participate in a codec read/write path, so this unit has no
+throughput improvement claim and does not add a new benchmark row. The
+existing static-mesh USD/USDZ benchmark remains the non-regression control;
+U2 will add rich-scene hierarchy-only paths before payload throughput is
+measured in U3-U5. Focused validation covers 33 new construction, topology,
+payload-index, convention, copy, read-only-view, and owner-lifetime cases.
+
+The control was rerun with three medians and no oracle timing:
+
+```powershell
+.venv/Scripts/python.exe bench/bench_io.py --runs 3 --skip-oracles `
+  --only usd --only usdz
+```
+
+| codec | write/read/path-read MB/s | sink MB/s | mmap traced peak |
+|---|---:|---:|---:|
+| `usd` | 12 / 12 / 12 | 12 | 3.6 MB |
+| `usdz` | 11 / 12 / 12 | 11 | 3.6 MB |
+
+These match the preceding scale-1 provider-wave range; no codec source or
+encoded output changed in U1b.
+
+### USD U1 point/mesh payload compatibility control (2026-07-30)
+
+U1c adds in-memory scene fields and constant-time presence guards to every
+existing point and mesh writer. The formats do not map those fields yet, so
+this is a compatibility control rather than a throughput claim. Three median
+runs covered every touched family plus the unchanged static USD paths:
+
+```powershell
+.venv/Scripts/python.exe bench/bench_io.py --runs 3 --skip-oracles `
+  --only xyz --only pts --only ply --only pcd --only las --only laz `
+  --only e57 --only ply_mesh --only obj --only stl --only off `
+  --only gltf --only glb --only usd --only usdz
+```
+
+| codec | write/read MB/s | sink MB/s | mmap traced peak |
+|---|---:|---:|---:|
+| `xyz` / `pts` | 136/84; 97/80 | 83; 80 | 0.0 MB |
+| `ply` / `ply_mesh` | 742/875; 879/310 | 589; 649 | 0.0 MB |
+| `pcd` / `las` / `laz` | 1,827/3,258; 1,083/2,911; 62/177 | 1,369; 608; 63 | 0.0 MB |
+| `obj` / `stl` / `off` | 24/22; 774/1,069; 200/488 | 23; 1,071; 206 | 0.0 MB |
+| `gltf` / `glb` | 566/889; 507/894 | 470; 466 | 0.0 MB |
+| `e57` | 127/137 | 127 | 16.0 MB provider path |
+| `usd` / `usdz` | 11/13; 11/13 | 11; 11 | 3.6 MB |
+
+The public mmap paths retain the established zero-Python-allocation result for
+all native point and mesh formats. Static USD/USDZ remain within the previous
+U1b control range. Focused parity verifies that default records retain their
+existing encoded output, while each additive field independently causes every
+legacy writer to refuse before replacing a destination.
+
+### USD U0 provider-boundary control (2026-07-30)
+
+The AOUSD 1.0.1 supplemental matrix qualifies TinyUSDZ 0.9.4 only through
+historical USDC crate version 10 and adds a prefix check before provider
+dispatch. The normal static USDA/USDZ workload was rerun with the direct
+TinyUSDZ comparison enabled:
+
+```powershell
+.venv/Scripts/python.exe bench/bench_io.py --runs 3 `
+  --only usd --only usdz
+```
+
+| codec | SceneIO write/read/path-read MB/s | direct write/read MB/s | mmap traced peak | sink traced peak |
+|---|---:|---:|---:|---:|
+| `usd` | 12 / 13 / 13 | 6 / 12 | 3.6 MB | 0.4 MB |
+| `usdz` | 11 / 12 / 12 | 6 / 13 | 3.6 MB | 2.1 MB |
+
+The bounded input check does not regress the prior 11–13 MB/s control range.
+This measurement does not qualify current crate 11–15 input or USDC output;
+those operations remain unavailable pending the explicit provider decision
+and current reference comparison.
+
+### USD U2 rich-stage skeleton control (2026-07-30)
+
+U2 adds the `SceneGraph` stage API, historical-USDC routing, richer inspection,
+and a bounded module layout without changing the compatibility `MeshScene`
+encoder or decoder. The final three-median control used the direct TinyUSDZ
+comparison:
+
+```powershell
+.venv/Scripts/python.exe bench/bench_io.py --runs 3 `
+  --only usd --only usdz
+```
+
+| codec | SceneIO write/read/path-read MB/s | direct write/read MB/s | inspect/full | inspect traced peak |
+|---|---:|---:|---:|---:|
+| `usd` | 12 / 12 / 12 | 5 / 12 | 0.96x | 0.2 MB |
+| `usdz` | 10 / 12 / 12 | 6 / 13 | 0.93x | 0.2 MB |
+
+A second post-review control measured `usd` at 11/8/8 MB/s against direct
+4/9 MB/s and `usdz` at 10/13/13 MB/s against direct 6/11 MB/s. The paired
+SceneIO/direct read ratios remain 0.95–1.13 despite host-level timing
+variation, and decoded values/legacy bytes remain exact. TinyUSDZ must still
+parse the whole stage for inspection, so inspection is an allocation
+improvement rather than a throughput claim: both controls retain only 0.2 MB
+of traced Python storage versus 3.6 MB for full decode. U2's authored-feature
+scanner maps direct layers and stored USDZ roots and keeps a generated 16 MiB
+direct-layer scan below 512 KiB traced Python allocation. The first U2
+measurement copied the stored USDZ root while scanning; mapping the exact
+local-entry extent removed that 3.4 MB traced regression before this result
+was recorded.
+
+The final scanner also distinguishes authored syntax from comments and quoted
+metadata, accepts whitespace-separated arc syntax, and releases its file map
+before the source path is renamed or removed. Compressed nonstandard ZIP roots
+are scanned through a bounded temporary map; standard USDZ output remains
+stored and 64-byte aligned.
+
+### USD C1 rich mesh-and-points initial baseline (2026-07-30)
+
+C1 adds a dedicated generated benchmark for the rich `SceneGraph` geometry
+path. The fixture contains 100,000 independent triangle faces and 100,000
+points with mesh normals/UVs/display colors and point
+normals/widths/ids/velocities/display colors. It is generated in a temporary
+directory and is not committed.
+
+```powershell
+.venv/Scripts/python.exe bench/bench_usd_scene.py --runs 1 `
+  --faces 100000 --points 100000 --only usda
+.venv/Scripts/python.exe bench/bench_usd_scene.py --runs 1 `
+  --faces 100000 --points 100000 --only usdz
+```
+
+The two representations were measured separately on the local Windows/MSVC
+host to avoid keeping both large provider stages live at once:
+
+| representation | payload/file | write | full read | inspect | selected `/Samples` |
+|---|---:|---:|---:|---:|---:|
+| USDA | 22.40/42.97 MB | 2,045 ms; 1.04 MB traced; 0.52 MB RSS | 6,113 ms; 43.95 MB traced; 69.19 MB RSS | 5,497 ms; 29.15 MB traced; 67.29 MB RSS | 3,031 ms; 18.54 MB traced; 45.94 MB RSS |
+| USDZ | 22.40/42.97 MB | 2,779 ms; 2.13 MB traced; 3.26 MB RSS | 8,610 ms; 43.95 MB traced; 71.02 MB RSS | 7,397 ms; 29.15 MB traced; 69.05 MB RSS | 3,136 ms; 18.54 MB traced; 45.14 MB RSS |
+
+Repository-owned numeric serialization is bounded: traced write allocation is
+2.4% of the USDA file size and 5.0% of the USDZ file size. Selected-point
+reads avoid mesh record/value construction and reduce traced allocation by
+58% versus full read. Inspection avoids payload-record construction, validates
+point arrays sequentially, and reduces traced allocation by 34%; it does not
+claim that the provider avoids parsing or materializing every numeric value.
+TinyUSDZ still parses the complete stored stage and exports normalized text
+for `UsdGeomPoints`, which limits inspection and selection latency and RSS.
+The benchmark keeps that provider boundary visible rather than presenting it
+as a repository-owned decode cost.
+
+These are single-run observational rows, not a regression threshold or proof
+that every USD path is optimized. The structural evidence is bounded streaming
+write allocation and lower retained Python allocation for inspection and
+selected-prim reads. C1 closure reruns the benchmark after the final worktree
+changes; C7 establishes the repeatable comparison ledger. When
+`--cold-cache` is requested, JSON output records
+`cold_cache_requested`, `cold_cache_supported`, and `cold_cache_applied` so an
+unsupported host is not mislabeled as a cold-cache measurement.
+
+The final C1 run caught two allocation regressions before closure. Retaining
+every normalized Points string until final `SceneGraph` construction increased
+full-read traced peak by about 10 MB. Reusing a helper that called
+`prim.to_string()` for primvar metadata and using `str.strip()` to test a
+3.6 MB normalized numeric array increased selected-read peak from 18.54 MB to
+24.85 MB. Per-included-prim normalization, metadata checks over the existing
+text, and the allocation-free `str.isspace()` test restore the 43.95 MB full
+and 18.54 MB selected peaks while retaining the stricter validation.
+
+### USD C2 materials and streamed assets closure (2026-07-31)
+
+C2 adds a dedicated generated benchmark with 100,000 independent triangle
+faces, eight alternating material assignments, one bounded PreviewSurface
+texture graph, and a 100 MiB generated asset. The asset is created and copied
+in fixed-size chunks; no large artifact is committed.
+
+```powershell
+.venv/Scripts/python.exe bench/bench_usd_materials.py --runs 1 `
+  --faces 100000 --materials 8 --texture-mb 100 --only usda
+.venv/Scripts/python.exe bench/bench_usd_materials.py --runs 1 `
+  --faces 100000 --materials 8 --texture-mb 100 --only usdz
+```
+
+| representation | payload/stage file | write | full read | inspect |
+|---|---:|---:|---:|---:|
+| USDA | 112.86/15.52 MB plus 104.86 MB sidecar | 949.9 ms; 118.8 MB/s; 12.17 MB traced; 12.22 MB RSS | 1,583.7 ms; 71.3 MB/s; 30.87 MB traced; 32.46 MB RSS | 1,338.6 ms; 22.45 MB traced; 32.75 MB RSS |
+| USDZ | 112.86/120.38 MB | 868.3 ms; 130.0 MB/s; 12.16 MB traced; 12.24 MB RSS | 1,607.3 ms; 70.2 MB/s; 30.87 MB traced; 33.32 MB RSS | 1,340.3 ms; 22.45 MB traced; 28.64 MB RSS |
+
+The write peak is about 11% of logical payload and does not scale with the
+100 MiB asset, demonstrating that both package paths stream instead of
+materializing an asset-sized Python object. The 100k-face alternating subset
+case exercises the linear grouped/chunked serializer. Inspection parses stage
+metadata through TinyUSDZ but does not resolve or open the texture source.
+These one-run local MSVC values are observational; C7 will establish the
+repeatable platform ledger. The first control exposed an accidental full-mesh
+text normalization in the unbound binding path (47.15 MB traced versus the C1
+43.95 MB baseline). The O(1) unbound/direct fast path removes it; a fresh
+100k-face/100k-point read measured 44.03 MB, with the C1 selected and inspect
+peaks unchanged at 18.54 and 29.15 MB.
+
+### USD C3 official Gaussian generated baseline (2026-08-01)
+
+C3 adds a generated official `ParticleField3DGaussianSplat` benchmark and a
+binary Gaussian PLY control. The fixture uses exact float32 values, WXYZ
+quaternions, linear scales/opacities, coefficient-major RGB SH, and the
+default official rendering hints. Every measured read is checked bit-for-bit
+against the generated record. Files and JSON results are temporary and are
+not committed.
+
+```powershell
+.venv/Scripts/python.exe bench/bench_usd_gaussians.py --runs 1 `
+  --count 1000 --degree 3
+.venv/Scripts/python.exe bench/bench_usd_gaussians.py --runs 1 `
+  --count 100000 --degree 3
+.venv/Scripts/python.exe bench/bench_usd_gaussians.py --runs 1 `
+  --count 1000000 --degree 0
+```
+
+Local Windows/MSVC one-run observations:
+
+| rows / SH | representation | payload/file | write | full read | inspect |
+|---:|---|---:|---:|---:|---:|
+| 1k / degree 3 | USDA | 0.236/0.233 MB | 23.1 ms; 0.15 MB RSS | 11.8 ms; 1.08 MB RSS | 8.9 ms; 1.12 MB RSS |
+| 1k / degree 3 | USDZ | 0.236/0.234 MB | 34.4 ms; 0.23 MB RSS | 11.7 ms; 0.88 MB RSS | 9.2 ms; 1.17 MB RSS |
+| 1k / degree 3 | Gaussian PLY control | 0.236/0.237 MB | 0.25 ms; 0.05 MB RSS | 0.22 ms; 0.02 MB RSS | 0.09 ms; 0.02 MB RSS |
+| 100k / degree 3 | USDA | 23.60/23.48 MB | 3,207.5 ms; 9.60 MB traced; 8.83 MB RSS | 1,591.2 ms; 44.29 MB traced; 92.19 MB RSS | 1,202.6 ms; 44.29 MB traced; 92.18 MB RSS |
+| 100k / degree 3 | USDZ | 23.60/23.48 MB | 2,341.6 ms; 9.60 MB traced; 7.73 MB RSS | 1,282.6 ms; 44.30 MB traced; 92.18 MB RSS | 999.7 ms; 44.29 MB traced; 92.20 MB RSS |
+| 100k / degree 3 | Gaussian PLY control | 23.60/23.60 MB | 15.0 ms; 23.67 MB RSS | 13.4 ms; 46.83 MB RSS | 0.11 ms; 0.02 MB RSS |
+| 1M / degree 0 | USDA | 56.00/67.37 MB | 7,135.8 ms; 24.02 MB traced; 20.68 MB RSS | 5,802.7 ms; 83.39 MB traced; 195.44 MB RSS | 4,848.3 ms; 83.38 MB traced; 207.45 MB RSS |
+| 1M / degree 0 | USDZ | 56.00/67.37 MB | 6,720.8 ms; 24.02 MB traced; 23.27 MB RSS | 7,165.1 ms; 83.39 MB traced; 196.46 MB RSS | 6,691.9 ms; 83.38 MB traced; 208.48 MB RSS |
+| 1M / degree 0 | Gaussian PLY control | 56.00/56.00 MB | 63.8 ms; 56.02 MB RSS | 41.2 ms; 112.03 MB RSS | 0.08 ms; 0.02 MB RSS |
+
+The repository-owned writer keeps its sampled RSS below the logical payload
+for both large cases. Extent reduction is row-chunked, SH serialization uses
+1,024-row chunks, and exact float16 validation no longer joins DC and rest SH
+arrays or creates a payload-sized conversion temporary. The 100k degree-3
+write retains 7.4--10.1 MB/s, and the 1M degree-0 write retains 7.8--8.3 MB/s;
+these are text-authoring measurements, not a claim of parity with the compact
+binary PLY control.
+
+Full read and inspection remain limited by TinyUSDZ 0.9.4: the provider parses
+and materializes the complete numeric layer before SceneIO can validate or
+construct records. Inspection avoids native record construction but is not a
+lazy provider read, as the 1M 195--208 MB sampled RSS makes explicit. C3 does
+not add a second USD parser to conceal that boundary. A current OpenUSD
+provider comparison belongs to C6 only after the narrow TOST policy decision.
+
+### USD C4 generated many-camera checkpoint (2026-08-01)
+
+C4 adds a generated mixed perspective/orthographic camera benchmark. Each
+camera has a unique node, rigid local pose, exact K matrix, and one
+`RenderProduct`; every measured full read is checked against the generated
+`CameraRig`, selected reads must return exactly one requested camera, and
+inspection must report the exact camera/product counts. Files and JSON results
+are temporary and are not committed.
+
+```powershell
+.venv/Scripts/python.exe bench/bench_usd_cameras.py --count 1000 --runs 1
+```
+
+Local Windows/MSVC one-run observations:
+
+| representation | payload/file | write | full read | inspect | selected read |
+|---|---:|---:|---:|---:|---:|
+| USDA | 0.198/0.645 MB | 190.4 ms; 0.80 MB traced; 0.42 MB RSS | 429.6 ms; 3.33 MB traced; 41.52 MB RSS | 319.3 ms; 1.43 MB traced; 34.50 MB RSS | 235.9 ms; 1.97 MB traced; 66.05 MB RSS |
+| USDZ | 0.198/0.645 MB | 221.7 ms; 2.28 MB traced; 0.82 MB RSS | 382.3 ms; 3.33 MB traced; 39.74 MB RSS | 322.6 ms; 1.43 MB traced; 68.60 MB RSS | 236.9 ms; 1.97 MB traced; 69.33 MB RSS |
+
+The repository-owned writer remains streaming and has low sampled RSS for this
+metadata-heavy case. Selection avoids constructing unrelated geometry and
+camera records and is faster than the full read. It is not provider-lazy:
+TinyUSDZ still parses and normalizes the complete layer before SceneIO can
+apply the prim selector, which explains the selected-read RSS. These values
+therefore qualify the adapter behavior without claiming that all USD provider
+I/O is optimized. A 10,000-camera two-representation run was not recorded
+because the repeated measurement exceeded the local command window; the
+completed 1,000-camera row is the C4 closure evidence.
+
+### USD C5 volume-reference and PointInstancer checkpoint (2026-08-01)
+
+C5 adds a generated static PointInstancer case and a sparse external-VDB
+dependency case. The instancer has one shared prototype and one million
+ordered instances; the benchmark validates exact record and inspection counts
+without expanding prototype geometry. The VDB fixture has a 1 GiB logical
+size, but the stage only resolves its direct scalar-float grid reference and
+never opens or decodes the VDB bytes. Generated files and JSON output are not
+committed.
+
+```powershell
+.venv/Scripts/python.exe bench/bench_usd_payloads.py --runs 1 `
+  --instances 1000000 --vdb-mib 1024
+```
+
+Local Windows/MSVC one-run observations:
+
+| case | payload/dependency and stage file | operation | time | traced peak | sampled RSS |
+|---|---:|---|---:|---:|---:|
+| PointInstancer | 57.00 MB payload / 51.78 MB USDA | write | 3,754.8 ms | 80.01 MB | 76.36 MB |
+| PointInstancer | same | full read | 10,200.7 ms | 167.79 MB | 302.76 MB |
+| PointInstancer | same | inspect | 6,990.0 ms | 51.79 MB | 107.36 MB |
+| OpenVDB dependency | 1,073.74 MB VDB / 0.00031 MB USDA | full read | 1.03 ms | 0.024 MB | 0.020 MB |
+| OpenVDB dependency | same | inspect | 0.55 ms | 0.020 MB | 0.020 MB |
+
+The intended bounded behavior is demonstrated: instance serialization scales
+with the instance arrays and never copies prototype geometry per instance,
+while VDB reference handling is independent of VDB file size. TinyUSDZ still
+materializes the complete numeric USDA layer before SceneIO maps it, so the
+million-instance full-read and inspection peaks are provider costs, not a
+lazy-read claim. Executable OpenUSD comparison remains a future-profile option
+only after a separate license-policy and package-inventory decision.
+
+### USD C6 static-provider closure control (2026-08-01)
+
+C6 adds constant-size profile/provider flags to inspection and extends the
+bounded authored-feature scanner from four to all six planned composition arc
+families. It does not change numeric payload mapping. Exact parent `6eeae8e`
+and the candidate were built in separate editable environments and measured
+with the same seven-median, oracle-free command:
+
+```powershell
+.venv/Scripts/python.exe bench/bench_io.py --runs 7 --skip-oracles `
+  --only usd --only usdz
+```
+
+| tree/codec | write/read/path-read MB/s | sink MB/s | inspect/full | full/inspect traced peak | full/inspect sampled RSS |
+|---|---:|---:|---:|---:|---:|
+| parent `usd` | 11 / 7 / 7 | 11 | 0.67x | 8.5 / 5.7 MB | 14.6 / 15.4 MB |
+| candidate `usd` | 12 / 7 / 7 | 12 | 0.68x | 8.5 / 5.7 MB | 15.4 / 13.2 MB |
+| parent `usdz` | 10 / 7 / 7 | 10 | 0.69x | 8.5 / 5.7 MB | 15.5 / 18.7 MB |
+| candidate `usdz` | 11 / 7 / 7 | 11 | 0.70x | 8.5 / 5.7 MB | 19.0 / 17.7 MB |
+
+The candidate retains identical read throughput and traced-allocation peaks;
+write/sink medians are one rounded MB/s higher. Sampled RSS stays within the
+allocator/process noise seen across the paired runs. Inspection still asks
+TinyUSDZ to parse the complete layer and therefore is an allocation reduction,
+not a throughput claim. A separate three-median run with the TinyUSDZ oracle
+enabled measured both SceneIO reads at 7 MB/s and direct provider reads at
+13 MB/s, confirming that C6 did not conceal the established provider cost.
+Current USDC, evaluated composition, and selected-time evaluation remain
+unavailable instead of adding an unqualified implementation.
+
+### USD C7 release-artifact control (2026-08-01)
+
+C7 changes no codec kernel, payload mapping, or benchmark fixture. The paired
+C6 USD/USDZ row above is therefore the retained no-regression measurement.
+Local release qualification builds the Windows `cp312-abi3` wheel only from a
+verified source archive, verifies its exact runtime and license inventory, and
+runs fresh installed smokes with NumPy alone and with NumPy 2.2.6 plus
+TinyUSDZ 0.9.4. The latter exercises the public profile id, provider flags,
+rich static read/inspection, and composition refusal. Authorized build-only
+run `30701260601` at source `04a1749` passes the sdist, MSVC,
+manylinux2014 GCC 10, AppleClang, installed-provider, and combined-inventory
+jobs; publication is skipped.
+
+Primary CI run `30701254315` passed the full suite and every platform shard,
+then exposed two all-codec-smoke gaps: Zarr 3.3.0 rejected Linux's
+platform-native integer dtype class during provider inference, and the runner
+still pinned the pre-expansion row count. The adapter now presents supported
+generic/platform numeric aliases as fixed-width zero-copy views. A local
+Zarr-3.3.0 rerun passes the v2/v3 oracle suite and the complete 67-format smoke
+without errors. The refreshed 67-row deterministic structural projection has
+SHA-256
+`817b355a8fb752025e51b3afe658524ebfa40cd6caffc8cd9e927a7117e07f65`.
+
+## 2026-08-01 bounded Ogg/Theora checkpoint
+
+The five-run local MSVC command
+
+```console
+.venv/Scripts/python.exe bench/bench_io.py --only theora --runs 5 --skip-oracles --json build/theora-72-row-benchmark.json
+```
+
+measures a 6.3 MB planar 4:2:0 payload and a 4.9 MB Ogg file. The pinned
+libtheora path writes at 16 MB/s, decodes in memory at 78 MB/s, and decodes
+through the public mmap path at 76 MB/s. Mapped reads remove the 4.9 MB
+whole-file Python allocation. Direct-sink output is byte-identical to buffered
+output, retains 16 MB/s throughput, reduces traced output allocation from
+4.9 MB to effectively zero, and lowers sampled output RSS from 19.5 to 15.3 MB.
+
+Metadata-only inspection takes 4.979 ms versus 82.324 ms for full decode, a
+16.54x speedup. The selected-frame path takes 46.661 ms, a 1.76x speedup, and
+materializes only the selected planar output. The independent benchmark
+exemption is narrow: `tests/codecs/test_theora.py` validates Ogg page headers,
+lacing, CRCs, packet reconstruction, and independent remuxing while the pinned
+libtheora API is the payload reference. The capture SHA-256 is
+`8894ab1b3bb99307289f89d2ae158bad9d16c124c0f06bad8a161d257c5d8f3c`.
+
+## 2026-08-01 bounded WebM/VP8 all-keyframe checkpoint
+
+The five-run local MSVC command
+
+```console
+.venv/Scripts/python.exe bench/bench_io.py --runs 5 --scale 0.25 --only webm --json build/webm-benchmark-final.json
+```
+
+measures a 3.146 MB packed RGB payload and a 0.880 MB file. SceneIO writes at
+17.78 MB/s and reads at 89.70 MB/s; the independent EBML plus Pillow/libwebp
+oracle records 17.29 and 77.55 MB/s. Public mmap-path read is 87.30 MB/s.
+The whole-file Python allocation falls from 0.889 MB for the bytes path to
+0.011 MB for mmap. The direct sink matches the buffer writer at 17.52 versus
+17.49 MB/s
+while reducing traced output allocation from 0.890 MB to 0.001 MB.
+
+Worker-on encoding is byte-identical to worker-off and measures 17.78 versus
+17.76 MB/s (1.00x) on this fixture. Metadata-only inspection takes 0.055 ms,
+638.75x faster than the 35.07 ms full decode. Selecting one of four frames
+takes 8.822 ms, 3.98x faster than full decode, with 0.011 MB traced allocation.
+These figures qualify the compatible all-keyframe profile. The JSON capture SHA-256 is
+`7e0a2f04cc9fdbf120e42de5693893eee2529c9ecd9ebb5b61f716becf2acf04`.
+
+### Temporal VP8/VP9 expansion
+
+The expanded harness command keeps that baseline row and adds one-lane versus
+automatic-worker temporal controls:
+
+```console
+.venv/Scripts/python.exe bench/bench_io.py --runs 5 --scale 0.25 --only webm --skip-oracles --json build/webm-temporal-benchmark.json
+```
+
+On the same 3.146 MB input, temporal VP8 writes at 30.23 MB/s with one lane
+and 42.93 MB/s with automatic worker lanes, a measured 1.42x gain; its output
+is 0.906 MB and decodes at 58.55 MB/s. Temporal VP9 writes at 20.05/38.62
+MB/s, a 1.93x gain; its output is 0.794 MB and decodes at 98.13 MB/s. The
+compatible all-keyframe output remains 0.880 MB. Metadata inspection takes
+0.062 ms and the selected-frame path takes 9.219 ms (3.96x over full legacy
+decode); mmap and direct-sink traced allocation remain effectively zero.
+The final JSON artifact has SHA-256
+`c98ed9511f84e7ccf7d3e338546eafa9aaafd691f43a18647df2e2aed3b76810`.
+
+Each fixed lane configuration is byte-deterministic. Upstream worker
+partitioning can change lossy coding decisions, so the cross-lane proof is an
+exact timeline/layout comparison plus bounded decoded-plane deltas, while
+partial reads remain byte-exact slices of their corresponding full decode.
+The independent EBML oracle checks codec ids, Colour metadata, references,
+keyframes, and timing; the pinned official libvpx API provides codec reference
+behavior. The JSON capture SHA-256 is
+`37bd819da931ccc2bab7eef49789013afa8fccc343e6e6379ee69abcd045a0fc`.
+
+## 2026-08-01 bounded RTMV directory checkpoint
+
+The five-run local path benchmark uses an independently generated eight-frame
+directory and does not include any original RTMV dataset asset or loader code:
+
+```console
+.venv/Scripts/python.exe bench/bench_io.py --runs 5 --skip-oracles --only rtmv --json build/bench-rtmv-final.json
+```
+
+The fixture contains 25.2 MB of logical payload in 25.1 MB of files. Full
+metadata/header construction reads at about 3.79 GB/s with effectively zero
+traced Python allocation and about 0.1 MB sampled resident increase.
+Metadata-only inspection takes 4.377 ms, 1.52x faster than the 6.640 ms full
+read; selecting two of eight frames takes 1.372 ms, 4.84x faster than full
+construction. A separate test
+holds 48 MiB of encoded EXR layers and requires less than 2 MiB traced Python
+allocation, proving that inspection and read retain paths rather than copying
+encoded payloads. RTMV is intentionally read-only, so the row reports no write
+or sink metric.
+
+### AVIF/animated AVIF optional-provider checkpoint (2026-08-01)
+
+A three-median local MSVC run used Pillow 12.3.0, libavif 1.4.2, libaom
+3.14.1, and dav1d 1.5.3:
+
+```powershell
+.venv/Scripts/python.exe bench/bench_io.py --runs 3 --scale 1 `
+  --only avif --only animated_avif --json build/avif-benchmark-final.json
+```
+
+| codec | payload/file | SceneIO write/read | direct provider write/read | mapped read peak | inspect time/peak | partial time/peak |
+|---|---:|---:|---:|---:|---:|---:|
+| `avif` | 3.146 / 1.802 MB | 16.45 / 98.28 MB/s | 12.30 / 79.52 MB/s | 3.158 MB | 0.100 ms / 0.014 MB | - |
+| `animated_avif` | 16.777 / 14.362 MB | 10.06 / 80.70 MB/s | 9.93 / 76.08 MB/s | 25.179 MB | 0.148 ms / 0.018 MB | 157.748 ms / 16.791 MB |
+
+Still and sequence reads are 1.24x and 1.06x the direct-provider read rates on
+the same fixture. The wrapper's write rate is equivalent to or slightly above
+the direct comparison because both paths use the same optimized provider and
+settings. Inspection is 321x/1406x faster than full decode and does not request
+a frame. Selecting two of four animated frames is 1.32x faster and reduces
+traced output allocation from 25.179 to 16.791 MB.
+
+Mapped-read peaks include decoded output, not an encoded-input copy. The
+separate 12 MiB padded-container test requires peak traced allocation below
+one quarter of file size and confirms that the mmap is held only through the
+provider call; returned pixels survive file removal. Pillow's writer creates a
+completed encoded payload before the path write, so the 6.313/14.380 MB traced
+write peaks are recorded and AVIF does not claim a direct sink. The JSON
+capture SHA-256 is
+`6e3565b544f8c9cb4bbd73377122ad5c257135212a98629a602789adf945cc9f`.
+This final run includes the bounded ISO-BMFF profile walk that refuses
+high-bit-depth, HDR, derived, layered, audio, and subtitle structures before
+provider decode. The exact 4,330-node local collection passes 4,324 tests with
+six documented skips; the 207-test integration slice, Ruff, and diff checks
+also pass.
+
+### Prior hosted optional-provider closure evidence
+
+Throughput values from the scale-0.001 smoke are diagnostic only; the
+compatibility fix preserves the synchronous upstream write path and adds no
+payload copy. The repaired exact local collection has 4,310 nodes and passes
+4,304 with six documented skips; Ruff, workflow parsing, diff checks, and the
+three review lenses are clean.
+
+Exact-head package run `30702681469` and compiler run `30702675024` pass. CI
+run `30702675048` passes the suite, 67-format smoke, deterministic structure,
+and every platform shard. The unchanged five-run qualification guard then
+reaches the job's old 20-minute limit after running for ten minutes. The
+follow-up raises only that job envelope to 40 minutes; run count, providers,
+gain requirements, memory checks, and thresholds are unchanged.
+
+Final implementation source `47eb2e1` passes build-only package run
+`30703473199` and compiler run `30703469313`. CI run `30703469317` passes the
+complete suite, 67-format smoke and structural projection, plus every GCC 10,
+Linux, Windows, and macOS focused shard. The five-run guard completes and
+reproduces the accepted C6 provider boundary: USD and USDZ full reads retain
+8.5 MB traced while inspection retains 5.7 MB. It also measures Parquet full
+and named-column reads at 18.4 and 1.6 MB. The guard failed because its legacy
+1 MB absolute cap had been globalized to these newly added rows, despite the
+recorded TinyUSDZ full-stage parse and the selected Parquet result itself being
+larger than that cap.
+
+The correction keeps the 1 MB cap for every other applicable inspection and
+partial row. USD/USdz inspection must stay below 8 MB and 80% of full;
+Parquet selection must stay below 2 MB and 25% of full. Missing, non-finite,
+negative, absolute-cap, ceiling, and ratio-regression cases fail independently.
+A local one-run control measured 8.510/5.718 MB for
+USD full/inspect, 8.512/5.718 MB for USDZ, and 18.354/1.577 MB for Parquet
+full/selected. The exact local collection now has 4,317 nodes and passes 4,311
+with six documented skips.
+
+Correction source `b16ee1c` passes final CI run `30705438186`: the complete
+suite, every platform shard, 67-row smoke, normalized structure, and five-run
+guard are green. Compiler run `30705438179` passes both jobs. The independently
+downloaded guard artifact contains 67 successful rows and measures USD at
+8.510/5.718 MB full/inspect, USDZ at 8.511/5.718 MB, and Parquet at
+18.354/1.577 MB full/selected. The smoke structure remains
+`817b355a8fb752025e51b3afe658524ebfa40cd6caffc8cd9e927a7117e07f65`.
+
+## 2026-08-02 72-format structure correction
+
+The cross-platform inspection correction changes no benchmark kernel, fixture,
+capability, or threshold. A one-pass local MSVC smoke using the CI command
+
+```console
+.venv/Scripts/python.exe bench/bench_io.py --runs 1 --scale 0.001 --skip-oracles --json build/72-format-structure.json
+```
+
+completed all 72 live rows. Its normalized structural projection is
+`9d010021697a301eff99ac21203b9f66d042e66b81ccfd0bea7ebdce313b2851`.
+The checked parent contract previously retained the 67-row checkpoint above;
+updating it is a structural coverage correction, not a new throughput claim.
+
+After the documented libtheora arithmetic correction, a three-run local MSVC
+Theora check on the same 6.3 MB logical fixture measured 17 MB/s encode,
+79 MB/s in-memory decode, and 76 MB/s registry mmap read, versus the earlier
+16/78 MB/s encode/decode checkpoint. Direct-sink encode remained 16 MB/s with
+0.0 MB traced allocation; inspection and selected-frame reads remained 18.27x
+and 1.79x faster than full decode. This is no-regression evidence for the
+correctness patch, not a new performance threshold.
+
+### Hosted 72-format correction evidence
+
+At exact commit `5387350`, compiler run `30738228920` passes the complete
+4,375-test instrumented collection and the lifetime shard. CI run
+`30738228914` passes the complete suite, all 72 smoke rows, deterministic
+structure, pinned GCC 10 portability, and every Linux/Windows/macOS codec
+shard. Its five-run guard completes all 72 measurements, then rejects the
+result because the animated AVIF qualification declared independent inspect
+and partial comparisons while the path runner emitted only provider
+encode/decode timings.
+
+The follow-up measures Pillow/libavif metadata inspection and frames 1:3 on
+the same native file, checks their shape/timing/pixel results against SceneIO,
+and emits `oracle_inspect_*` plus `oracle_partial_*`. COLMAP DB retains its
+separate `oracle_image_*` and `oracle_pair_*` selectors. This repairs evidence
+classification without changing a codec, fixture, threshold, or accepted
+performance result; final hosted confirmation remains pending.
+
+At follow-up commit `ad26b08`, compiler run `30739519901` builds successfully,
+collects 4,378 tests, and passes the lifetime shard. Its full job stops before
+execution because the workflow still expected the pre-test count of 4,375.
+The collection contract now records count 4,378 and normalized node-id SHA-256
+`bf49c354676f3cc9bc93bd1c37fd5819d1bebf398c298fede6b68940f23faba5`;
+the complete local suite passes 4,372 tests with six documented skips.
+
+At count-correction commit `67acc7b`, compiler-instrumented run `30740026804`
+passes the exact 4,378-test suite and lifetime shard. CI run `30740026814`
+passes the complete suite, all ten dedicated platform/compiler jobs, and the
+72-row smoke with the same normalized structure. The five-run guard completes
+all rows and measures animated AVIF full/selected decode at 381.206/294.178 ms
+(1.30x), with traced allocation reduced from 25.2 to 16.8 MB. It then rejects
+that result because the universal 1 MB cap had treated the owned two-frame
+output like a metadata-only result.
+
+The correction retains the 1 MB cap for all other applicable partial rows and
+qualifies animated AVIF by both an 18 MB ceiling and a 75%-of-full allocation
+limit. A three-run local replay records 207.127/156.125 ms (1.33x), the same
+25.179/16.791 MB reduction, and direct Pillow selected-frame comparison at
+161.839 ms. The focused 35-test qualification module and Ruff pass.
+
+At correction commit `54925ea`, compiler-instrumented run `30741117526`
+passes the exact 4,378-test suite and lifetime shard. CI run `30741117473`
+passes all ten dedicated platform/compiler jobs, the complete suite, 72-row
+smoke/structure, and the five-run guard. The accepted hosted animated AVIF row
+records 391.961/297.278 ms (1.32x) and 25.2/16.8 MB full/partial allocation.
+The guard reports that stable O4 gains and mapped-read/direct-sink memory bounds
+pass. This is the final hosted 72-format closure result; publication remains a
+separate workflow action.
+
+## 2026-08-02 NCore V4 catalog checkpoint
+
+The 73rd benchmark row covers repository-owned NCore V4 discovery, root and
+component catalog loading, and metadata-only inspection over a generated local
+Zarr-v2 directory store. A two-run local MSVC measurement at `--scale 0.1`
+used a 0.3 MB point-array payload and recorded 242 MB/s direct catalog open,
+233 MB/s registry path open, 0.0 MB rounded traced allocation, and 0.1 MB
+sampled RSS growth. Inspection took 1.201 ms versus 1.353 ms for the full lazy
+catalog open. The row deliberately reports no write or partial timing until
+the typed component and writer units land; the checked qualification ledger
+classifies its independent throughput comparison as a reviewed exemption while
+the upstream NCore implementation remains the correctness oracle.
+
+## 2026-08-02 NCore V4 full-I/O checkpoint
+
+The NCore row now authors a complete owned 16-frame point-cloud component,
+writes deterministic indexed-tar storage plus its sequence manifest, fully
+materializes typed component arrays, and selects one frame without decoding the
+other 15. On local MSVC, three runs at `--scale 0.1` (0.3 MB logical payload)
+record 3 MB/s write, 150 MB/s full read, 162 MB/s public typed read, 0.783 ms
+inspect, and 1.520 ms selected read versus 1.947 ms full read. XZ preset 0 for
+the small consolidated-metadata and archive-index documents reduced traced
+writer allocation from 97.7 MB to 3.0 MB without changing decoded data or
+upstream acceptance.
+
+The generated `--scale 32 --runs 1` case covers 100.7 MB of arrays. It records
+168 MB/s write with 3.1 MB traced allocation and 0.1 MB sampled RSS growth;
+full materialization takes 58.286 ms with the expected 109.0 MB owned-result
+allocation, inspection takes 1.162 ms with 1.5 MB, and one-frame selection
+takes 5.827 ms with 14.5 MB. Thus writer memory stays chunk-bounded while
+inspection and selection avoid full payload materialization. The pinned
+upstream tool validates all nine standard profiles from both SceneIO storage
+modes and records representative upstream catalog/full timings in
+`tools/verify_ncore_v4_writer_oracle.py`. A two-run pinned-oracle pass records
+directory catalog/full at 1.724/5.589 ms and indexed-tar at 1.798/4.499 ms;
+SceneIO full materialization records 11.202/10.753 ms on the same compact
+nine-family fixture. These small-fixture timings are evidence, not thresholds.
+
+### Hosted NCore V4 closure
+
+Exact-head CI run
+[`30764227079`](https://github.com/SceneAPI/SceneIO/actions/runs/30764227079)
+passes the complete 4,421-node suite, deterministic 73-row structure, and the
+five-run throughput/memory guard. Its NCore row uses a 3.146 MB logical payload
+and records 95.2 MB/s write, 627.2 MB/s full materialization, 632.5 MB/s public
+path read, 0.863 ms inspection, and 1.991 ms one-frame selection versus about
+5.0 ms full materialization (2.52x). Traced allocation is 3.975 MB for the
+owned full result, 0.691 MB for inspection, and 1.044 MB for the owned selected
+component. The narrow NCore allocation control retains the universal 1 MB cap
+for other rows while requiring this result to remain below both 1.5 MB and 35%
+of its full-read peak.
+
+Instrumented run
+[`30764227087`](https://github.com/SceneAPI/SceneIO/actions/runs/30764227087)
+passes the full ASan/UBSan suite and focused lifetime shard. Build-only run
+[`30764229578`](https://github.com/SceneAPI/SceneIO/actions/runs/30764229578)
+passes the exact source distribution, manylinux2014 GCC 10 x86-64, macOS
+AppleClang arm64, Windows MSVC amd64, combined inventory, and NCore-enabled
+installed-wheel smoke. Artifact contents contain 53 license assets and the
+expected abi3 native member. The contained artifact SHA-256 values are
+`9b59601d7d0008220882162a458d3b21b8dd82db215e59565827c2fdbbada18f`
+for the sdist, `eeda34ba40b825cd45e9be290025ad418a11a1b2a52b1b624f39cb464b24b32d`
+for manylinux, `758c50e959edf1cc075108a76c61adb136e1665e31111e4c81a903b2ffc0065e`
+for macOS, and
+`c2ea12d96c1400abed92303b9eb42960e4e374525306ba9b2db4b2c8fd6bc201`
+for Windows. The tag-only publication job is skipped.
+
+## 2026-08-03 EuRoC/ASL dataset baseline
+
+The 74th row uses the generated bounded ASL directory fixture and the command:
+
+```console
+.venv/Scripts/python.exe bench/bench_io.py --runs 5 --scale 1 --skip-oracles --only euroc_dataset --json build/bench-euroc-fc1b-final.json
+```
+
+On local MSVC, the 5.324 MB logical payload occupies 6.858 MB across the
+directory. Median results are 72.1 MB/s write, 291.7 MB/s direct read, and
+319.7 MB/s public path read. The mapped read adds 0.118 MB traced allocation
+and 2.679 MB sampled RSS; metadata inspection takes 9.268 ms with 0.047 MB
+traced allocation. The bounded camera/IMU/time selection takes 2.081 ms with
+0.087 MB traced allocation and 0.020 MB sampled RSS, about 8.0x faster than
+the approximately 16.65 ms full public read. The direct dataset sink adds
+1.209 MB traced allocation and 3.088 MB sampled RSS.
+
+This generated small/medium result is the initial format baseline, not a
+before/after comparison or a numeric release threshold. Correctness is
+qualified separately by independent PyYAML and stdlib CSV parsing, SciPy
+rotation comparison, and pinned Kalibr/CamTools semantics. Automatic external
+timing is a reviewed exemption for this composite directory profile; hosted
+real-data and cross-platform measurements remain explicit follow-up actions.
+
+## 2026-08-04 FC2 typed TIFF carrier baseline
+
+The generated `4096 x 4096` semantic raster (64 MiB logical payload) was
+measured with the focused carrier harness. The local MSVC capture is retained
+at `build/fc2-tiff-label-map-benchmark.json`.
+
+```console
+.venv/Scripts/python.exe bench/bench_label_maps.py --runs 3 --side 4096 --only tiff --rss-samples 3 --json build/fc2-tiff-label-map-benchmark.json
+```
+
+| operation | SceneIO | tifffile oracle | SceneIO traced peak | SceneIO fresh RSS |
+|---|---:|---:|---:|---:|
+| write | 1,802 MB/s | 1,863 MB/s | 0.026 MiB | not measured |
+| read | 1,571 MB/s | 2,781 MB/s | 72.02 MiB | 77.42 MiB |
+| inspect | 1.59 ms | 0.50 ms | 0.029 MiB | 5.30 MiB |
+
+The TIFF path cross-checks SceneIO output with tifffile reads and tifffile
+output with SceneIO reads before timing. These are same-machine comparative
+measurements, not portable thresholds. The timed tifffile read returns pixels
+only, while SceneIO also validates the typed page contract and constructs the
+label record; the numbers therefore compare implementation boundaries, not
+interchangeable APIs. The typed path remains an overlay over the existing TIFF
+codec. Reusing the validated TIFF handle for decode raised the local read
+median from 1,507 to 1,571 MB/s while ensuring both phases observe one file.

@@ -1,0 +1,228 @@
+schema_version = 1
+inventory_source = "sceneio.io._builtin_manifest.CANONICAL_BUILTIN_IDS"
+capability_source = "sceneio.capabilities"
+ledger_source = "tests/contracts/coordinate_conversions_v1.toml"
+ledger_table = "format_verification"
+expected_builtin_count = 74
+expected_readable_count = 74
+expected_writable_count = 73
+read_only_formats = ["rtmv"]
+
+# A codec is qualified only when its normal test run executes evidence in both
+# file-to-record and record-to-file directions. Read-only formats must instead
+# name and test that limitation. Round-trip-only evidence is insufficient:
+# every ledger row must also name an implementation or an independently
+# implemented specification-level parser as its oracle.
+required_row_fields = ["id", "decode", "encode", "conversion", "oracle", "tests"]
+evidence_directory = "tests/codecs"
+read_test_name_markers = ["read", "decode", "roundtrip", "parity", "oracle"]
+write_test_name_markers = ["write", "writer", "encode", "roundtrip", "parity", "oracle"]
+source_evidence_markers = ["oracle", "parity"]
+disallowed_oracle_descriptions = ["sceneio", "roundtrip only", "self"]
+
+# These capabilities can intentionally change values. Their oracle tests must
+# compare decoded semantics or a documented error/quantization bound rather
+# than claim byte equality with the source record.
+lossy_or_quantized_formats = [
+  "compressed_ply",
+  "sog",
+  "ksplat",
+  "spz",
+  "jpeg",
+  "hdr",
+  "webp",
+  "avif",
+  "webm",
+  "theora",
+  "animated_webp",
+  "animated_avif",
+  "las",
+  "laz",
+  "splat",
+]
+
+# Exact pytest functions that carry the directional oracle claim. These names
+# prevent a format from borrowing an unrelated oracle test merely because it
+# shares a module with another adapter. A single bidirectional differential
+# test may intentionally appear in both columns.
+[directional_evidence]
+pfm = { decode = "test_parity_oracle_write_ours_read", encode = "test_parity_ours_write_oracle_read" }
+colmap_sparse = { decode = "test_camera_parity", encode = "test_writer_byte_identical_to_pycolmap" }
+gaussian_ply = { decode = "test_read_matches_gsply", encode = "test_writer_readable_by_gsply" }
+compressed_ply = { decode = "test_reader_matches_independent_oracle_for_every_sh_degree", encode = "test_writer_body_matches_pinned_platform_reference" }
+sog = { decode = "test_independent_vector_decode_all_sh_degrees", encode = "test_writer_is_deterministic_and_independently_decodable" }
+ksplat = { decode = "test_pinned_official_vectors_match_independent_oracle", encode = "test_writer_is_deterministic_and_independently_decodable" }
+ply_mesh = { decode = "test_ascii_independent_fixture_preserves_every_domain", encode = "test_writer_is_deterministic_roundtrips_and_matches_independent_oracle" }
+obj = { decode = "test_trimesh_export_is_accepted_without_triangulation_loss", encode = "test_simple_output_is_accepted_by_trimesh_oracle" }
+stl = { decode = "test_trimesh_binary_and_ascii_writer_outputs_decode", encode = "test_writer_bytes_are_independently_parseable" }
+off = { decode = "test_trimesh_reads_ours_and_ours_reads_trimesh", encode = "test_trimesh_reads_ours_and_ours_reads_trimesh" }
+gltf = { decode = "test_independent_json_fixture_external_and_data_uri", encode = "test_compiled_writer_roundtrip_and_independent_oracles" }
+glb = { decode = "test_independent_glb_fixture_and_buffer_differential", encode = "test_compiled_writer_roundtrip_and_independent_oracles" }
+usd = { decode = "test_sceneio_reads_upstream_written_binary_usdz", encode = "test_sceneio_usd_writer_is_readable_by_upstream_oracle" }
+usdz = { decode = "test_sceneio_reads_upstream_written_binary_usdz", encode = "test_sceneio_usd_writer_is_readable_by_upstream_oracle" }
+ply = { decode = "test_open3d_reads_sceneio_and_sceneio_reads_open3d", encode = "test_writer_roundtrip_and_independent_oracle" }
+pcd = { decode = "test_open3d_bidirectional_parity_all_storage_modes", encode = "test_open3d_bidirectional_parity_all_storage_modes" }
+spz = { decode = "test_read_matches_gsply", encode = "test_write_matches_gsply_encode" }
+transforms_json = { decode = "test_oracle_write_then_our_read", encode = "test_write_then_oracle_read_is_input" }
+tum = { decode = "test_tum_oracle_write_our_read", encode = "test_tum_our_write_oracle_read" }
+kitti = { decode = "test_kitti_oracle_write_our_read", encode = "test_kitti_our_write_oracle_read" }
+euroc_state = { decode = "test_golden_fixture_matches_independent_csv_oracle", encode = "test_buffer_roundtrip_is_float_bit_exact_and_timestamp_exact" }
+opencv_yaml = { decode = "test_opencv_yaml_golden_matches_independent_pyyaml_oracle", encode = "test_opencv_and_ros_writers_match_independent_oracles" }
+opencv_xml = { decode = "test_opencv_xml_golden_matches_stdlib_elementtree_oracle", encode = "test_opencv_and_ros_writers_match_independent_oracles" }
+ros_camera_info = { decode = "test_ros_golden_matches_independent_pyyaml_oracle", encode = "test_opencv_and_ros_writers_match_independent_oracles" }
+kalibr = { decode = "test_kalibr_golden_chain_and_time_convention_match_oracle", encode = "test_kalibr_writer_matches_independent_pyyaml_oracle" }
+g2o = { decode = "test_oracle_and_native_agree_on_supported_golden_file", encode = "test_writer_is_deterministic_and_independent_oracle_reads_every_field" }
+colmap_db = { decode = "test_sceneio_reads_pycolmap_writer", encode = "test_pycolmap_reads_sceneio_writer" }
+npy = { decode = "test_parity_oracle_write_ours_read", encode = "test_parity_ours_write_oracle_read" }
+npz = { decode = "test_parity_npz_oracle_write_ours_read", encode = "test_parity_npz_ours_write_oracle_read" }
+safetensors = { decode = "test_oracle_write_sceneio_read_all_supported_dtypes", encode = "test_sceneio_write_oracle_read_all_supported_dtypes" }
+netpbm = { decode = "test_parity_oracle_write_ours_read", encode = "test_parity_ours_write_oracle_read" }
+png = { decode = "test_u16_reads_pypng", encode = "test_pypng_reads_u16_writer" }
+jpeg = { decode = "test_read_matches_pillow_decode", encode = "test_write_decodes_close_via_pillow" }
+bmp = { decode = "test_bmp_manual_orientation_and_pillow_parity", encode = "test_bmp_writer_is_deterministic_and_pillow_decodes_exactly" }
+tga = { decode = "test_tga_pillow_read_parity", encode = "test_tga_writer_is_deterministic_rle_and_pillow_exact" }
+hdr = { decode = "test_read_anchor", encode = "test_write_decodes_correctly" }
+exr = { decode = "test_reads_oracle_rgb", encode = "test_oracle_reads_our_writer" }
+webp = { decode = "test_reads_pillow_lossless", encode = "test_pillow_reads_our_lossless" }
+avif = { decode = "test_pillow_still_is_sceneio_readable", encode = "test_pillow_buffer_oracle_accepts_sceneio_output" }
+y4m = { decode = "test_independent_oracle_bidirectional_parity_for_every_layout", encode = "test_independent_oracle_bidirectional_parity_for_every_layout" }
+webm = { decode = "test_independent_simpleblock_writer_is_sceneio_readable", encode = "test_sceneio_writer_is_deterministic_and_oracle_decodable" }
+theora = { decode = "test_sceneio_write_is_valid_for_independent_ogg_oracle_and_remux", encode = "test_sceneio_write_is_valid_for_independent_ogg_oracle_and_remux" }
+animated_webp = { decode = "test_pillow_writer_is_sceneio_readable_bit_exact", encode = "test_sceneio_writer_is_lossless_and_oracle_readable" }
+apng = { decode = "test_pillow_writer_is_sceneio_readable_bit_exact", encode = "test_sceneio_writer_is_lossless_deterministic_and_oracle_readable" }
+animated_avif = { decode = "test_animated_cross_read_write_timing_and_partial", encode = "test_animated_cross_read_write_timing_and_partial" }
+rtmv = { decode = "test_reads_independent_rtmv_layout_and_preserves_lazy_layers", encode = "unsupported" }
+image_sequence = { decode = "test_unmanifested_directory_uses_deterministic_natural_order", encode = "test_directory_write_copies_encoded_bytes_and_is_deterministic" }
+colmap_sparse_txt = { decode = "test_all_camera_models_text_binary_and_oracle", encode = "test_pycolmap_reads_our_text" }
+xyz = { decode = "test_parity_oracle_write_ours_read", encode = "test_parity_ours_write_oracle_read" }
+pts = { decode = "test_oracle_write_sceneio_read_supported_layouts", encode = "test_sceneio_write_oracle_read_supported_layouts" }
+las = { decode = "test_reads_laspy", encode = "test_laspy_reads_our_writer" }
+laz = { decode = "test_reads_lazrs_all_supported_point_formats", encode = "test_lazrs_reads_sceneio_all_supported_point_formats" }
+flo = { decode = "test_parity_oracle_write_ours_read", encode = "test_parity_ours_write_oracle_read" }
+dmb = { decode = "test_oracle_write_sceneio_read_bit_exact", encode = "test_sceneio_write_oracle_read_and_golden_bytes" }
+bundler = { decode = "test_cross_impl_read_parity", encode = "test_oracle_reads_our_writer" }
+bal = { decode = "test_oracle_write_sceneio_read_parity_and_conventions", encode = "test_sceneio_write_oracle_read_and_observation_preservation" }
+nvm = { decode = "test_cross_impl_equality_hand_fixture", encode = "test_oracle_reads_our_writer" }
+openmvg = { decode = "test_cross_impl_oracle_parity", encode = "test_oracle_reads_our_writer" }
+splat = { decode = "test_read_matches_oracle", encode = "test_write_matches_oracle_bytes" }
+colmap_mvs_depth = { decode = "test_pycolmap_depth_producer_and_consumer", encode = "test_pycolmap_depth_producer_and_consumer" }
+colmap_mvs_normal = { decode = "test_normal_pycolmap_roundtrip_is_wire_only_oracle", encode = "test_normal_pycolmap_roundtrip_is_wire_only_oracle" }
+colmap_mvs_consistency = { decode = "test_hand_built_goldens_are_bit_exact", encode = "test_hand_built_goldens_are_bit_exact" }
+colmap_fused_visibility = { decode = "test_hand_built_goldens_are_bit_exact", encode = "test_hand_built_goldens_are_bit_exact" }
+hdf5 = { decode = "test_generic_hdf5_reads_independent_h5py_fixture", encode = "test_generic_hdf5_write_is_h5py_ground_truth_and_partial" }
+hloc_features = { decode = "test_hloc_features_reads_official_layout_from_h5py", encode = "test_hloc_feature_write_matches_h5py_layout_and_roundtrips" }
+hloc_matches = { decode = "test_hloc_matches_reads_official_layout_and_reverses_to_native_order", encode = "test_hloc_match_write_matches_h5py_and_preserves_mixed_scores" }
+ncore_v4 = { decode = "test_pinned_upstream_standard_profile_fixture_is_accepted_exactly", encode = "test_writer_randomized_mixed_dtype_chunk_differential" }
+euroc_dataset = { decode = "test_oracle_authored_directory_decodes_exact_calibration_and_samples", encode = "test_public_detect_inspect_write_and_oracle_readback" }
+zarr = { decode = "test_zarr_reads_oracle_written_store", encode = "test_zarr_v2_v3_roundtrip_and_independent_oracle" }
+tiff = { decode = "test_sceneio_reads_oracle_tiff_endianness_exactly", encode = "test_sceneio_tiff_write_is_exact_for_independent_oracle" }
+e57 = { decode = "test_e57_typed_scan_preserves_stored_rows_invalid_states_and_indices", encode = "test_e57_typed_scan_set_write_reopens_with_provider_oracle" }
+parquet = { decode = "test_sceneio_reads_direct_arrow_oracle_tables_exactly", encode = "test_sceneio_columnar_writes_are_exact_for_direct_arrow_oracle" }
+arrow_ipc = { decode = "test_sceneio_reads_direct_arrow_oracle_tables_exactly", encode = "test_sceneio_columnar_writes_are_exact_for_direct_arrow_oracle" }
+openvdb = { decode = "test_openvdb_sceneio_reads_upstream_fixture_exactly", encode = "test_openvdb_sceneio_write_is_exact_for_upstream_reader" }
+
+[tiff_collections]
+contract = "tests/contracts/tiff_collections_v1.toml"
+records = ["RasterLevel", "RasterSeries", "RasterCollection"]
+typed_apis = ["read_tiff_collection", "inspect_tiff_collection", "write_tiff_collection"]
+providers = ["tifffile>=2025.5", "zarr>=3.1,<4"]
+qualified_operations = [
+  "classic_and_bigtiff",
+  "little_and_big_endian",
+  "stripped_and_tiled",
+  "multiple_series",
+  "subifd_pyramids",
+  "metadata_only_inspection",
+  "series_level_page_and_window_selection",
+  "transactional_deterministic_write",
+]
+evidence = [
+  "tests/records/test_raster_collection.py",
+  "tests/codecs/test_tiff_collections.py",
+  "tests/test_tiff_provider_qualification.py",
+]
+
+[openvdb_provider_limits]
+contract = "tests/contracts/openvdb_provider_limits_v1.toml"
+decision = "exclusion"
+oracle = "official pyopenvdb 10.0.1 author; TinyVDB 0.9.0 consumer"
+generator = "tools/generate_openvdb_provider_vectors.py"
+qualified_limits = [
+  "all_grid_decode_only",
+  "no_selected_grid_decode",
+  "vector_payload_loss",
+  "empty_transform_loss",
+  "no_add_grid",
+  "read_only_transform",
+]
+evidence = [
+  "tests/test_openvdb_provider_qualification.py",
+  "tests/codecs/test_openvdb.py",
+  "docs/openvdb_provider_qualification.md",
+]
+
+[gaussian_attributes]
+carrier_formats = [
+  "gaussian_ply",
+  "compressed_ply",
+  "sog",
+  "ksplat",
+  "spz",
+  "splat",
+  "usd",
+  "usdz",
+]
+required_storage_semantics = [
+  "positions",
+  "scale_activation",
+  "opacity_activation",
+  "quaternion_component_order",
+  "spherical_harmonic_memory_layout",
+  "format_quantization",
+]
+evidence_suites = [
+  "tests/records/test_gaussian_cloud_conventions.py",
+  "tests/records/test_gaussian_semantic_oracles.py",
+  "tests/codecs/test_ply.py",
+  "tests/codecs/test_compressed_ply.py",
+  "tests/codecs/test_sog.py",
+  "tests/codecs/test_ksplat.py",
+  "tests/codecs/test_spz.py",
+  "tests/codecs/test_splat.py",
+  "tests/codecs/test_splat_transform_oracle.py",
+  "tests/codecs/test_usd_gaussians.py",
+]
+oracle_sources = [
+  "SciPy 1.18.0 rotation/opacity oracle plus independent scalar/index oracles",
+  "gsply 0.4.6 executable oracle",
+  "Niantic SPZ 3.0.0 official executable oracle (v2/v3/v4; v1 excluded)",
+  "PlayCanvas splat-transform 3.1.6 executable oracle",
+  "GaussianSplats3D 0.4.7 pinned vectors",
+  "gsplat 1.5.3 semantic reference",
+  "Brush 0.3.0 semantic reference",
+  "independent NumPy/struct parsers",
+  "OpenUSD ParticleField3DGaussianSplat schema",
+  "OpenUSD 26.08 official USDA/USDZ Gaussian executable oracle",
+]
+
+# Every broader semantic is now represented. A carrier may map a property to
+# explicit `unknown`; that is a truthful result, not permission to infer it.
+pending_universal_semantics = []
+represented_universal_semantics = [
+  "quaternion_raw_or_unit_state",
+  "spherical_harmonic_basis_phase_and_coefficient_order",
+  "color_space",
+  "coordinate_frame_and_metric_scale_source",
+]
+
+# These operations are represented by GaussianCloud and independently checked.
+# They do not imply any of the broader semantics listed above.
+qualified_semantic_operations = [
+  "quaternion_reorder_and_explicit_normalization",
+  "scale_activation",
+  "opacity_activation",
+  "spherical_harmonic_memory_layout",
+  "spherical_harmonic_basis_phase_and_coefficient_order",
+  "semantic_metadata_validation_and_refusal",
+  "degree_zero_coordinate_conversion",
+]

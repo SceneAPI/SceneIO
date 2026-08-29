@@ -1,57 +1,313 @@
 name: Release
 
+# A manual run is build-only. A matching version tag builds the same artifact
+# graph and, only after every inventory/smoke job passes, publishes it.
 on:
   push:
     tags: ["v*.*.*"]
-  workflow_dispatch:
-    inputs:
-      tag:
-        description: "Tag to release (vX.Y.Z). Required for manual run."
-        required: true
+  workflow_dispatch: {}
 
 permissions:
   contents: read
-  id-token: write
 
 concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
-  publish:
-    runs-on: ubuntu-latest
-    environment: pypi
+  sdist:
+    name: exact source distribution
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    outputs:
+      sha256: ${{ steps.sdist.outputs.sha256 }}
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
       - uses: astral-sh/setup-uv@v7
-      - name: Resolve version
-        id: version
+        with:
+          version: "0.8.6"
+      - name: Prepare locked build tools
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            TAG="${{ github.event.inputs.tag }}"
-          else
-            TAG="${GITHUB_REF#refs/tags/}"
-          fi
-          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
-      - name: Check package version
+          python -m pip download \
+            --dest "$RUNNER_TEMP/r6-build-wheelhouse" \
+            --only-binary=:all: \
+            --no-deps \
+            --require-hashes \
+            --requirement tools/r6-wheelhouse.lock
+          uv venv "$RUNNER_TEMP/r6-build-env"
+          uv pip install \
+            --python "$RUNNER_TEMP/r6-build-env/bin/python" \
+            --no-index \
+            --no-deps \
+            --find-links "$RUNNER_TEMP/r6-build-wheelhouse" \
+            scikit-build-core==1.0.3 \
+            nanobind==2.13.0 \
+            packaging==26.2 \
+            pathspec==1.1.1
+      - name: Build exact source distribution
         env:
-          VERSION: ${{ steps.version.outputs.version }}
+          PIP_NO_INDEX: "1"
+          UV_OFFLINE: "1"
+        run: >-
+          uv build
+          --sdist
+          --offline
+          --no-index
+          --no-build-isolation
+          --python "$RUNNER_TEMP/r6-build-env/bin/python"
+      - id: sdist
+        name: Record source distribution
+        shell: bash
         run: |
-          python - <<'PY'
-          import os
-          import tomllib
-          from pathlib import Path
+          set -euo pipefail
+          count=$(find dist -maxdepth 1 -type f -name '*.tar.gz' | wc -l)
+          test "$count" -eq 1
+          sdist=$(find dist -maxdepth 1 -type f -name '*.tar.gz')
+          sha256=$(python -c \
+            "import hashlib,pathlib,sys; print(hashlib.sha256(pathlib.Path(sys.argv[1]).read_bytes()).hexdigest())" \
+            "$sdist")
+          echo "sha256=$sha256" >> "$GITHUB_OUTPUT"
+      - name: Verify exact repository-to-sdist closure
+        run: >-
+          "$RUNNER_TEMP/r6-build-env/bin/python" tools/verify_distribution.py
+          --source-root .
+          --sdist dist/*.tar.gz
+          --require-git-source-closure
+          --output source-inventory.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sdist
+          path: dist/*.tar.gz
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: source-inventory
+          path: source-inventory.json
+          if-no-files-found: error
 
-          actual = tomllib.loads(Path("pyproject.toml").read_text())["project"]["version"]
-          expected = os.environ["VERSION"]
-          if actual != expected:
-              raise SystemExit(f"pyproject version {actual!r} does not match tag {expected!r}")
-          PY
-      - name: Build package
+  wheels:
+    name: wheel (${{ matrix.label }})
+    needs: sdist
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: manylinux2014-gcc10-x86_64
+            os: ubuntu-24.04
+            arch: x86_64
+          - label: windows-msvc-amd64
+            os: windows-2022
+            arch: AMD64
+          - label: macos-appleclang-arm64
+            os: macos-15
+            arch: arm64
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/download-artifact@v4
+        with:
+          name: sdist
+          path: dist
+      - id: source
+        name: Verify and unpack exact source distribution
+        shell: bash
+        env:
+          EXPECTED_SHA256: ${{ needs.sdist.outputs.sha256 }}
         run: |
-          uv venv --seed
-          uv pip install build
-          .venv/bin/python -m build --sdist --wheel
-      - name: Publish to PyPI
-        if: github.event_name == 'push'
-        uses: pypa/gh-action-pypi-publish@release/v1
+          set -euo pipefail
+          count=$(find dist -maxdepth 1 -type f -name '*.tar.gz' | wc -l)
+          test "$count" -eq 1
+          sdist=$(find dist -maxdepth 1 -type f -name '*.tar.gz')
+          actual=$(python -c \
+            "import hashlib,pathlib,sys; print(hashlib.sha256(pathlib.Path(sys.argv[1]).read_bytes()).hexdigest())" \
+            "$sdist")
+          test "$actual" = "$EXPECTED_SHA256"
+          mkdir -p build/sdist-source
+          tar -xzf "$sdist" -C build/sdist-source
+          count=$(find build/sdist-source -mindepth 1 -maxdepth 1 -type d | wc -l)
+          test "$count" -eq 1
+          package_dir=$(find build/sdist-source -mindepth 1 -maxdepth 1 -type d)
+          echo "package-dir=$package_dir" >> "$GITHUB_OUTPUT"
+          echo "sdist-path=$sdist" >> "$GITHUB_OUTPUT"
+      - name: Prepare locked wheelhouse
+        shell: bash
+        run: |
+          set -euo pipefail
+          package_dir="${{ steps.source.outputs.package-dir }}"
+          python -m pip download \
+            --dest "$package_dir/.build-wheelhouse" \
+            --only-binary=:all: \
+            --no-deps \
+            --require-hashes \
+            --requirement "$package_dir/tools/r6-wheelhouse.lock"
+      - name: Build and smoke-test wheel from exact sdist
+        uses: pypa/cibuildwheel@v4.1.0
+        env:
+          CIBW_ARCHS: ${{ matrix.arch }}
+          CIBW_BUILD_FRONTEND: "pip; args: --no-build-isolation --no-index"
+          CIBW_BEFORE_BUILD: >-
+            python -m pip install
+            --no-index
+            --no-deps
+            --find-links {package}/.build-wheelhouse
+            scikit-build-core==1.0.3
+            nanobind==2.13.0
+            packaging==26.2
+            pathspec==1.1.1
+          CIBW_BEFORE_TEST: >-
+            python -m pip install
+            --no-index
+            --no-deps
+            --find-links {package}/.build-wheelhouse
+            numpy==2.2.6
+          CIBW_TEST_REQUIRES: ""
+          CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: >-
+            python "{package}/tools/repair_windows_wheel.py"
+            --wheel "{wheel}"
+            --dest-dir "{dest_dir}"
+          CIBW_ENVIRONMENT: >-
+            CMAKE_ARGS="-DFETCHCONTENT_FULLY_DISCONNECTED=ON"
+            MACOSX_DEPLOYMENT_TARGET=11.0
+          CIBW_MANYLINUX_X86_64_IMAGE: >-
+            quay.io/pypa/manylinux2014_x86_64@sha256:92f4005bb23138b89ed22ba1491ddbedb0564747e7ce44b33c52aa6f1a786d23
+        with:
+          package-dir: ${{ steps.source.outputs.package-dir }}
+          output-dir: wheelhouse
+          config-file: "{package}/pyproject.toml"
+      - name: Verify wheel inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          package_dir="${{ steps.source.outputs.package-dir }}"
+          python "$package_dir/tools/verify_distribution.py" \
+            --source-root "$package_dir" \
+            --sdist "${{ steps.source.outputs.sdist-path }}" \
+            --wheel-dir wheelhouse \
+            --output "inventory-${{ matrix.label }}.json"
+      # TinyUSDZ 0.9.4, TinyVDB 0.9.0, and Pillow 12.3's optimized provider
+      # wheels have their own platform floors. Keep this optional-provider check
+      # on the runner host after cibuildwheel produces it.
+      # SceneIO's independent manylinux2014 artifact remains built separately.
+      - name: Smoke installed USD, AVIF, NCore, TIFF, and OpenVDB profiles on wheel host
+        shell: bash
+        run: |
+          set -euo pipefail
+          smoke_env="$RUNNER_TEMP/sceneio-provider-smoke"
+          python -m venv "$smoke_env"
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            smoke_python="$smoke_env/Scripts/python.exe"
+          else
+            smoke_python="$smoke_env/bin/python"
+          fi
+          count=$(find wheelhouse -maxdepth 1 -type f -name '*.whl' | wc -l)
+          test "$count" -eq 1
+          wheel=$(find wheelhouse -maxdepth 1 -type f -name '*.whl')
+          "$smoke_python" -m pip install --only-binary=:all: \
+            "${wheel}[usd,avif,ncore,tiff,openvdb]" numpy==2.2.6 \
+            tinyusdz==0.9.4 tinyvdb==0.9.0 pillow==12.3.0
+          "$smoke_python" -I -c \
+            'import sceneio; assert sceneio.capabilities("usd").available; assert sceneio.capabilities("avif").available; assert sceneio.capabilities("ncore_v4").available; assert sceneio.capabilities("tiff").available; assert sceneio.capabilities("openvdb").available'
+          "$smoke_python" -I -m sceneio._wheel_smoke
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.label }}
+          path: wheelhouse/*.whl
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: inventory-${{ matrix.label }}
+          path: inventory-${{ matrix.label }}.json
+          if-no-files-found: error
+
+  distribution-inventory:
+    name: combined distribution inventory
+    needs: [sdist, wheels]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/download-artifact@v4
+        with:
+          name: sdist
+          path: dist
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: wheels-*
+          path: wheelhouse
+          merge-multiple: true
+      - id: source
+        name: Unpack source distribution
+        shell: bash
+        run: |
+          set -euo pipefail
+          sdist=$(find dist -maxdepth 1 -type f -name '*.tar.gz')
+          mkdir -p build/sdist-source
+          tar -xzf "$sdist" -C build/sdist-source
+          package_dir=$(find build/sdist-source -mindepth 1 -maxdepth 1 -type d)
+          echo "package-dir=$package_dir" >> "$GITHUB_OUTPUT"
+          echo "sdist-path=$sdist" >> "$GITHUB_OUTPUT"
+      - name: Verify combined inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          package_dir="${{ steps.source.outputs.package-dir }}"
+          python "$package_dir/tools/verify_distribution.py" \
+            --source-root "$package_dir" \
+            --sdist "${{ steps.source.outputs.sdist-path }}" \
+            --wheel-dir wheelhouse \
+            --require-exact-wheel-matrix \
+            --output distribution-inventory.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: distribution-inventory
+          path: distribution-inventory.json
+          if-no-files-found: error
+
+  oracle-openusd:
+    name: dedicated OpenUSD oracle
+    uses: ./.github/workflows/oracle-openusd.yml
+
+  oracle-spz:
+    name: dedicated Niantic SPZ oracle
+    uses: ./.github/workflows/oracle-spz.yml
+
+  publish:
+    name: publish to PyPI
+    needs: [sdist, wheels, distribution-inventory, oracle-openusd, oracle-spz]
+    # A manual build stops before this job. Publishing remains a separate,
+    # explicit version-tag action.
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify tag matches package version
+        run: |
+          TAG="${GITHUB_REF#refs/tags/v}"
+          VER=$(python3 -c "import tomllib, pathlib; print(tomllib.loads(pathlib.Path('pyproject.toml').read_text())['project']['version'])")
+          echo "tag=$TAG pyproject=$VER"
+          test "$TAG" = "$VER" || { echo "::error::tag v$TAG != pyproject version $VER"; exit 1; }
+      - uses: actions/download-artifact@v4
+        with:
+          name: sdist
+          path: dist
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: wheels-*
+          path: dist
+          merge-multiple: true
+      - name: List artifacts
+        run: ls -R dist
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist

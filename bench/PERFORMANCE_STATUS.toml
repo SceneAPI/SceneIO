@@ -1,0 +1,4325 @@
+schema_version = 1
+baseline_document = "bench/BASELINE.md"
+validated_implementation = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+provisional_definition = "implemented and correctness-tested, but backend qualification is incomplete; evidence_gaps states what remains"
+r6_release_policy = "verified current backends are accepted as the R6 release baseline; provisional candidate-comparison gaps remain an optional post-R6 backlog and do not claim qualification"
+r6_release_decision = "user-directed lean full-closure plan, 2026-07-28"
+r6_unmeasured_profile_policy = "14 specialized provisional rows are accepted for correctness and compatibility only; R6 makes no profile-specific performance claim for them"
+
+[status_definitions]
+qualified = "candidate comparison, fidelity checks, fixtures, and required toolchain evidence are complete"
+provisional = "correct implementation exists, but one or more qualification inputs remain"
+known_gap = "current backend has a measured performance gap; evaluated, rejected, and remaining candidates are explicit"
+native_by_necessity = "no acceptable reusable backend exists after a recorded candidate survey"
+not_applicable = "the direction or profile is intentionally unsupported"
+
+[[codec]]
+id = "pfm"
+family = "arrays"
+adapter = "repo"
+implementation_owner = "native"
+sources = ["src/cpp/codecs/arrays/pfm.cpp"]
+source_suite = "tests/codecs/test_pfm.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["grayscale", "rgb", "float32", "little_endian", "big_endian", "typed_depth_adapter"]
+
+[[codec]]
+id = "colmap_sparse"
+family = "reconstruction"
+adapter = "repo"
+implementation_owner = "native"
+sources = ["src/cpp/codecs/reconstruction/colmap.cpp"]
+source_suite = "tests/codecs/test_colmap.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["cameras", "images", "points3D", "tracks"]
+
+[[codec]]
+id = "gaussian_ply"
+family = "splats"
+adapter = "repo"
+implementation_owner = "native"
+sources = ["src/cpp/codecs/splats/ply_gaussian.cpp"]
+source_suite = "tests/codecs/test_ply.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["base supported profile"]
+
+[[codec]]
+id = "compressed_ply"
+family = "splats"
+adapter = "repo"
+implementation_owner = "native"
+sources = ["src/cpp/codecs/splats/compressed_ply.cpp"]
+source_suite = "tests/codecs/test_compressed_ply.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["playcanvas_chunk_256", "legacy_direct_color_read", "position_11_10_11", "scale_11_10_11", "largest_three_quaternion", "rgba8", "sh_degrees_0_3", "morton_ordered_write"]
+
+[[codec]]
+id = "sog"
+family = "splats"
+adapter = "repo"
+implementation_owner = "hybrid"
+sources = ["src/cpp/codecs/splats/sog.cpp", "src/cpp/third_party/musl/log1p.hpp", "src/sceneio/io/registry.py"]
+source_suite = "tests/codecs/test_sog.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["playcanvas_v2", "bundled_zip", "unbundled_directory", "lossless_webp_layers", "position_16bit_log", "largest_three_quaternion", "shared_scale_dc_codebooks", "sh_degrees_0_3", "sh_palette", "morton_ordered_write"]
+
+[[codec]]
+id = "ksplat"
+family = "splats"
+adapter = "repo"
+implementation_owner = "native"
+sources = ["src/cpp/codecs/splats/ksplat.cpp"]
+source_suite = "tests/codecs/test_ksplat.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["mkkellogg_v0_1", "compression_levels_0_2", "float16_scale_rotation", "bucketed_position_uint16", "rgba8", "sh_degrees_0_2", "sh_uint8_level_2", "multi_section_read", "deterministic_single_section_write"]
+
+[[codec]]
+id = "ply_mesh"
+family = "meshes"
+adapter = "repo"
+implementation_owner = "native"
+sources = ["src/cpp/codecs/meshes/ply_mesh.cpp"]
+source_suite = "tests/codecs/test_ply_mesh.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["ascii", "binary_little_endian", "binary_big_endian", "polygon_boundaries", "vertex_normals", "corner_normals", "vertex_uvs", "corner_uvs", "vertex_rgba8", "corner_rgba8", "primitive_ranges", "material_indices", "coordinate_metadata", "local_transform"]
+
+[[codec]]
+id = "obj"
+family = "meshes"
+adapter = "repo"
+implementation_owner = "hybrid"
+sources = ["src/cpp/codecs/meshes/obj_mtl.cpp", "src/sceneio/io/_obj.py"]
+source_suite = "tests/codecs/test_obj.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["polygon_boundaries", "negative_indices", "vertex_normals", "corner_normals", "vertex_uvs", "corner_uvs", "vertex_rgb8", "object_names", "single_group_names", "smoothing_groups", "single_material_library", "pbr_mtl_factors", "mtl_texture_maps", "texture_clamp"]
+
+[[codec]]
+id = "stl"
+family = "meshes"
+adapter = "repo"
+implementation_owner = "native"
+sources = ["src/cpp/codecs/meshes/stl_off.cpp"]
+source_suite = "tests/codecs/test_stl.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["ascii", "binary_little_endian", "triangle_soup", "facet_normals", "face_ranges"]
+
+[[codec]]
+id = "off"
+family = "meshes"
+adapter = "repo"
+implementation_owner = "native"
+sources = ["src/cpp/codecs/meshes/stl_off.cpp"]
+source_suite = "tests/codecs/test_off.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["ascii", "record_per_line", "polygon_boundaries", "vertex_normals", "vertex_uvs", "vertex_rgba8", "face_ranges"]
+
+[[codec]]
+id = "gltf"
+family = "meshes"
+adapter = "repo"
+implementation_owner = "hybrid"
+sources = ["src/cpp/codecs/meshes/gltf.cpp", "src/sceneio/io/_gltf.py"]
+source_suite = "tests/codecs/test_gltf.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["gltf_2_0_json", "external_buffers", "base64_data_buffers", "buffer_views", "strided_accessors", "sparse_accessors", "triangle_primitives", "uint8_uint16_uint32_indices", "vertex_normals", "texcoord_0", "normalized_rgba8", "node_hierarchy", "node_transforms", "multiple_scenes", "metallic_roughness_materials", "uri_image_references"]
+
+[[codec]]
+id = "glb"
+family = "meshes"
+adapter = "repo"
+implementation_owner = "hybrid"
+sources = ["src/cpp/codecs/meshes/gltf.cpp", "src/sceneio/io/_gltf.py"]
+source_suite = "tests/codecs/test_gltf.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["glb_2_0", "embedded_binary_buffer", "buffer_views", "strided_accessors", "sparse_accessors", "triangle_primitives", "uint8_uint16_uint32_indices", "vertex_normals", "texcoord_0", "normalized_rgba8", "node_hierarchy", "node_transforms", "multiple_scenes", "metallic_roughness_materials", "uri_image_references"]
+
+[[codec]]
+id = "usd"
+family = "meshes"
+adapter = "repo"
+implementation_owner = "python"
+sources = ["src/sceneio/io/_usd/__init__.py", "src/sceneio/io/_usd/legacy.py", "src/sceneio/io/_usd/provider.py", "src/sceneio/io/_usd/package.py", "src/sceneio/io/_usd/geometry.py", "src/sceneio/io/_usd/stage.py", "src/sceneio/io/_usd/materials.py", "src/sceneio/io/_usd/gaussians.py", "src/sceneio/io/_usd/cameras.py"]
+source_suite = "tests/codecs/test_usd.py"
+additional_source_suites = ["tests/codecs/test_usd_scene.py"]
+documentation = "docs/format_coverage.md"
+accepted_subset = ["static_single_scene", "triangle_meshes", "vertex_or_corner_normals", "vertex_or_corner_uvs", "node_hierarchy", "xform_matrices", "y_up", "meters", "usda_input", "historical_usdc_through_crate_10"]
+
+[[codec]]
+id = "usdz"
+family = "meshes"
+adapter = "repo"
+implementation_owner = "python"
+sources = ["src/sceneio/io/_usd/__init__.py", "src/sceneio/io/_usd/legacy.py", "src/sceneio/io/_usd/provider.py", "src/sceneio/io/_usd/package.py", "src/sceneio/io/_usd/geometry.py", "src/sceneio/io/_usd/stage.py", "src/sceneio/io/_usd/materials.py", "src/sceneio/io/_usd/gaussians.py", "src/sceneio/io/_usd/cameras.py"]
+source_suite = "tests/codecs/test_usd.py"
+additional_source_suites = ["tests/codecs/test_usd_scene.py"]
+documentation = "docs/format_coverage.md"
+accepted_subset = ["static_single_scene", "triangle_meshes", "vertex_or_corner_normals", "vertex_or_corner_uvs", "node_hierarchy", "xform_matrices", "y_up", "meters", "aligned_uncompressed_package"]
+
+[[codec]]
+id = "ply"
+family = "points"
+adapter = "repo"
+implementation_owner = "native"
+sources = ["src/cpp/codecs/points/ply_point.cpp"]
+source_suite = "tests/codecs/test_ply_point.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["ascii", "binary_little_endian", "binary_big_endian", "standard_scalar_types_read", "normals", "rgb8", "rgb16", "intensity"]
+
+[[codec]]
+id = "pcd"
+family = "points"
+adapter = "repo"
+implementation_owner = "native"
+sources = ["src/cpp/codecs/points/pcd.cpp"]
+source_suite = "tests/codecs/test_pcd.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["pcd_0_7", "ascii", "binary", "binary_compressed", "organized", "viewpoint", "standard_scalar_types_read", "normals", "packed_rgb8", "intensity"]
+
+[[codec]]
+id = "spz"
+family = "splats"
+adapter = "repo"
+implementation_owner = "native"
+sources = ["src/cpp/codecs/splats/spz.cpp"]
+source_suite = "tests/codecs/test_spz.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["v1_read", "v2_read", "v3_read_write", "v4_read_write"]
+
+[[codec]]
+id = "transforms_json"
+family = "reconstruction"
+adapter = "repo"
+implementation_owner = "native"
+sources = ["src/cpp/codecs/reconstruction/transforms_json.cpp"]
+source_suite = "tests/codecs/test_transforms_json.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["base supported profile"]
+
+[[codec]]
+id = "tum"
+family = "reconstruction"
+adapter = "repo"
+implementation_owner = "native"
+sources = ["src/cpp/codecs/reconstruction/pose_text.cpp"]
+source_suite = "tests/codecs/test_pose_text.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["base supported profile"]
+
+[[codec]]
+id = "kitti"
+family = "reconstruction"
+adapter = "repo"
+implementation_owner = "native"
+sources = ["src/cpp/codecs/reconstruction/pose_text.cpp"]
+source_suite = "tests/codecs/test_pose_text.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["base supported profile"]
+
+[[codec]]
+id = "euroc_state"
+family = "reconstruction"
+adapter = "repo"
+implementation_owner = "native"
+sources = ["src/cpp/codecs/reconstruction/euroc_state.cpp"]
+source_suite = "tests/codecs/test_euroc_state.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["int64_nanosecond_timestamps", "position", "wxyz_orientation", "velocity", "gyroscope_bias", "accelerometer_bias", "state_ranges"]
+
+[[codec]]
+id = "opencv_yaml"
+family = "calibration"
+adapter = "repo"
+implementation_owner = "native"
+sources = ["src/cpp/codecs/calibration/camera_calibration.cpp"]
+source_suite = "tests/codecs/test_camera_calibration.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["camera_matrix", "distortion_coefficients", "rectification_matrix", "projection_matrix"]
+
+[[codec]]
+id = "opencv_xml"
+family = "calibration"
+adapter = "repo"
+implementation_owner = "native"
+sources = ["src/cpp/codecs/calibration/camera_calibration.cpp"]
+source_suite = "tests/codecs/test_camera_calibration.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["camera_matrix", "distortion_coefficients", "rectification_matrix", "projection_matrix"]
+
+[[codec]]
+id = "ros_camera_info"
+family = "calibration"
+adapter = "repo"
+implementation_owner = "native"
+sources = ["src/cpp/codecs/calibration/camera_calibration.cpp"]
+source_suite = "tests/codecs/test_camera_calibration.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["camera_matrix", "distortion_coefficients", "rectification_matrix", "projection_matrix", "binning", "roi"]
+
+[[codec]]
+id = "kalibr"
+family = "calibration"
+adapter = "repo"
+implementation_owner = "native"
+sources = ["src/cpp/codecs/calibration/camera_calibration.cpp"]
+source_suite = "tests/codecs/test_camera_calibration.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["multi_camera", "pinhole", "omni", "chained_extrinsics", "imu_extrinsics", "camera_imu_time_offsets", "topics"]
+
+[[codec]]
+id = "g2o"
+family = "reconstruction"
+adapter = "repo"
+implementation_owner = "native"
+sources = ["src/cpp/codecs/reconstruction/g2o.cpp"]
+source_suite = "tests/codecs/test_g2o.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["vertex_se3_quat", "edge_se3_quat", "fixed_vertices", "symmetric_information_6x6"]
+
+[[codec]]
+id = "colmap_db"
+family = "reconstruction"
+adapter = "repo"
+implementation_owner = "native"
+sources = ["src/cpp/codecs/reconstruction/colmap_db.cpp"]
+source_suite = "tests/codecs/test_colmap_db.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["cameras", "images", "keypoints_2_4_6", "uint8_descriptors", "extractor_type", "raw_matches", "verified_matches", "F_E_H", "relative_pose", "sparse_ids", "read_only_reads", "transactional_writes"]
+
+[[codec]]
+id = "npy"
+family = "arrays"
+adapter = "repo"
+implementation_owner = "native"
+sources = ["src/cpp/codecs/arrays/npy_npz.cpp"]
+source_suite = "tests/codecs/test_npy_npz.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["v1", "c_order", "native_endian_mmap_view"]
+
+[[codec]]
+id = "npz"
+family = "arrays"
+adapter = "repo"
+implementation_owner = "native"
+sources = ["src/cpp/codecs/arrays/npy_npz.cpp"]
+source_suite = "tests/codecs/test_npy_npz.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["stored", "deflate", "numeric_dtypes"]
+
+[[codec]]
+id = "safetensors"
+family = "arrays"
+adapter = "repo"
+implementation_owner = "native"
+sources = ["src/cpp/codecs/arrays/safetensors.cpp"]
+source_suite = "tests/codecs/test_safetensors.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["metadata", "bool", "signed_integers", "unsigned_integers", "float16", "float32", "float64", "mmap_views", "leading_axis_slices"]
+
+[[codec]]
+id = "netpbm"
+family = "images"
+adapter = "repo"
+implementation_owner = "native"
+sources = ["src/cpp/codecs/images/netpbm.cpp"]
+source_suite = "tests/codecs/test_netpbm.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["p2", "p3", "p5", "p6", "uint8", "uint16"]
+
+[[codec]]
+id = "png"
+family = "images"
+adapter = "repo"
+implementation_owner = "native"
+sources = ["src/cpp/codecs/images/png.cpp"]
+source_suite = "tests/codecs/test_png.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["grayscale", "rgb", "rgba", "palette", "uint8", "uint16", "typed_depth_adapter"]
+
+[[codec]]
+id = "jpeg"
+family = "images"
+adapter = "repo"
+implementation_owner = "native"
+sources = ["src/cpp/codecs/images/jpeg.cpp"]
+source_suite = "tests/codecs/test_jpeg.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["baseline", "progressive", "grayscale_read", "rgb"]
+
+[[codec]]
+id = "bmp"
+family = "images"
+adapter = "repo"
+implementation_owner = "native"
+sources = ["src/cpp/codecs/images/bmp_tga.cpp"]
+source_suite = "tests/codecs/test_bmp_tga.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["windows_v3_v4_v5", "bottom_up", "top_down", "palette_read", "packed_16bit_read", "rgb", "rgba_bitfields"]
+
+[[codec]]
+id = "tga"
+family = "images"
+adapter = "repo"
+implementation_owner = "native"
+sources = ["src/cpp/codecs/images/bmp_tga.cpp"]
+source_suite = "tests/codecs/test_bmp_tga.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["uncompressed", "rle", "grayscale", "rgb", "rgba", "palette_read", "packed_15_16bit_read", "top_bottom_origin"]
+
+[[codec]]
+id = "hdr"
+family = "images"
+adapter = "repo"
+implementation_owner = "native"
+sources = ["src/cpp/codecs/images/hdr.cpp"]
+source_suite = "tests/codecs/test_hdr.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["rgbe", "rle", "float32_rgb"]
+
+[[codec]]
+id = "exr"
+family = "images"
+adapter = "repo"
+implementation_owner = "native"
+sources = ["src/cpp/codecs/images/exr.cpp"]
+source_suite = "tests/codecs/test_exr.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["single_channel", "rgb", "rgba", "half_to_float", "typed_depth_adapter"]
+
+[[codec]]
+id = "webp"
+family = "images"
+adapter = "repo"
+implementation_owner = "native"
+sources = ["src/cpp/codecs/images/webp.cpp"]
+source_suite = "tests/codecs/test_webp.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["lossless", "lossy", "rgb", "rgba"]
+
+[[codec]]
+id = "avif"
+family = "images"
+adapter = "repo"
+implementation_owner = "python"
+sources = ["src/sceneio/io/_avif.py"]
+source_suite = "tests/codecs/test_avif.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["avif_1_2", "uint8", "grayscale", "rgb", "rgba", "straight_alpha", "full_range", "metadata_only_inspect"]
+
+[[codec]]
+id = "y4m"
+family = "sequences"
+adapter = "repo"
+implementation_owner = "native"
+sources = ["src/cpp/codecs/sequences/y4m.cpp"]
+source_suite = "tests/codecs/test_y4m.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["uint8", "mono", "yuv420", "yuv422", "yuv444", "frame_ranges", "exact_frame_timing"]
+
+[[codec]]
+id = "webm"
+family = "sequences"
+adapter = "repo"
+implementation_owner = "native"
+sources = ["src/cpp/codecs/sequences/webm.cpp", "src/cpp/third_party/libwebp", "src/cpp/third_party/libvpx"]
+source_suite = "tests/codecs/test_webm.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["vp8", "vp8_interframes", "vp9", "uint8_rgb", "uint8_yuv420", "progressive", "all_keyframe", "temporal_compression", "whole_millisecond_timing", "frame_ranges", "metadata_only_inspect", "direct_streaming_write"]
+
+[[codec]]
+id = "theora"
+family = "sequences"
+adapter = "repo"
+implementation_owner = "native"
+sources = ["src/cpp/codecs/sequences/theora.cpp", "src/cpp/third_party/ogg", "src/cpp/third_party/theora"]
+source_suite = "tests/codecs/test_theora.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["ogg", "theora_1_2", "uint8_yuv420", "progressive", "fixed_rational_timing", "pixel_aspect", "frame_ranges", "metadata_only_inspect", "direct_streaming_write"]
+
+[[codec]]
+id = "animated_webp"
+family = "sequences"
+adapter = "repo"
+implementation_owner = "native"
+sources = ["src/cpp/codecs/sequences/animated_webp.cpp"]
+source_suite = "tests/codecs/test_animated_webp.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["lossless", "lossy", "rgb", "rgba", "composited_frames", "exact_millisecond_timing", "loop_count", "background_rgba"]
+
+[[codec]]
+id = "apng"
+family = "sequences"
+adapter = "repo"
+implementation_owner = "native"
+sources = ["src/cpp/codecs/sequences/apng.cpp"]
+source_suite = "tests/codecs/test_apng.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["uint8", "rgb", "rgba", "composited_frames", "exact_rational_timing", "loop_count", "blend_source", "blend_over", "dispose_none", "dispose_background", "dispose_previous"]
+
+[[codec]]
+id = "animated_avif"
+family = "sequences"
+adapter = "repo"
+implementation_owner = "python"
+sources = ["src/sceneio/io/_avif.py"]
+source_suite = "tests/codecs/test_avif.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["avif_1_2", "uint8", "grayscale", "rgb", "rgba", "straight_alpha", "exact_frame_timing", "frame_ranges", "metadata_only_inspect"]
+
+[[codec]]
+id = "rtmv"
+family = "sequences"
+adapter = "repo"
+implementation_owner = "python"
+sources = ["src/sceneio/io/_rtmv.py"]
+source_suite = "tests/codecs/test_rtmv.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["strict_flat_directory", "contiguous_five_digit_frames", "camera_and_object_metadata", "lazy_exr_paths", "optional_segmentation", "frame_ranges", "metadata_only_inspect"]
+
+[[codec]]
+id = "image_sequence"
+family = "sequences"
+adapter = "repo"
+implementation_owner = "python"
+sources = ["src/sceneio/io/_image_sequence.py"]
+source_suite = "tests/codecs/test_image_sequence.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["lazy_encoded_frames", "natural_order", "manifest_timing", "frame_ranges"]
+
+[[codec]]
+id = "colmap_sparse_txt"
+family = "reconstruction"
+adapter = "repo"
+implementation_owner = "native"
+sources = ["src/cpp/codecs/reconstruction/colmap_txt.cpp"]
+source_suite = "tests/codecs/test_colmap_txt.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["cameras", "images", "points3D", "tracks"]
+
+[[codec]]
+id = "xyz"
+family = "points"
+adapter = "repo"
+implementation_owner = "native"
+sources = ["src/cpp/codecs/points/xyz.cpp"]
+source_suite = "tests/codecs/test_xyz.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["base supported profile"]
+
+[[codec]]
+id = "pts"
+family = "points"
+adapter = "repo"
+implementation_owner = "native"
+sources = ["src/cpp/codecs/points/xyz.cpp"]
+source_suite = "tests/codecs/test_pts.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["count_header", "xyz", "intensity", "rgb8"]
+
+[[codec]]
+id = "las"
+family = "points"
+adapter = "repo"
+implementation_owner = "native"
+sources = ["src/cpp/codecs/points/las.cpp"]
+source_suite = "tests/codecs/test_las.py"
+additional_source_suites = ["tests/codecs/test_las_waveform.py"]
+documentation = "docs/format_coverage.md"
+accepted_subset = ["point_formats_0_5", "point_formats_6_10", "waveform_sidecar", "rgb16", "georef"]
+
+[[codec]]
+id = "laz"
+family = "points"
+adapter = "repo"
+implementation_owner = "native"
+sources = ["src/cpp/codecs/points/laz.cpp"]
+source_suite = "tests/codecs/test_laz.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["point_formats_0_3", "point_formats_6_8", "chunked_point_ranges", "rgb16", "georef"]
+
+[[codec]]
+id = "flo"
+family = "arrays"
+adapter = "repo"
+implementation_owner = "native"
+sources = ["src/cpp/codecs/arrays/flo.cpp"]
+source_suite = "tests/codecs/test_flo.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["float32", "native_endian_mmap_view", "typed_flow_adapter"]
+
+[[codec]]
+id = "dmb"
+family = "arrays"
+adapter = "repo"
+implementation_owner = "native"
+sources = ["src/cpp/codecs/arrays/dmb.cpp"]
+source_suite = "tests/codecs/test_dmb.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["scalar_float32", "little_endian", "zero_invalid", "pixel_windows"]
+
+[[codec]]
+id = "bundler"
+family = "reconstruction"
+adapter = "repo"
+implementation_owner = "native"
+sources = ["src/cpp/codecs/reconstruction/bundler.cpp"]
+source_suite = "tests/codecs/test_bundler.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["base supported profile"]
+
+[[codec]]
+id = "bal"
+family = "reconstruction"
+adapter = "repo"
+implementation_owner = "native"
+sources = ["src/cpp/codecs/reconstruction/bal.cpp"]
+source_suite = "tests/codecs/test_bal.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["angle_axis", "radial_k1_k2", "centered_observations", "deterministic_17_digit_writer"]
+
+[[codec]]
+id = "nvm"
+family = "reconstruction"
+adapter = "repo"
+implementation_owner = "native"
+sources = ["src/cpp/codecs/reconstruction/nvm.cpp"]
+source_suite = "tests/codecs/test_nvm.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["base supported profile"]
+
+[[codec]]
+id = "openmvg"
+family = "reconstruction"
+adapter = "repo"
+implementation_owner = "native"
+sources = ["src/cpp/codecs/reconstruction/openmvg.cpp"]
+source_suite = "tests/codecs/test_openmvg.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["base supported profile"]
+
+[[codec]]
+id = "splat"
+family = "splats"
+adapter = "repo"
+implementation_owner = "native"
+sources = ["src/cpp/codecs/splats/splat.cpp"]
+source_suite = "tests/codecs/test_splat.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["rgb8", "opacity8", "scale8", "quaternion8"]
+
+[[codec]]
+id = "colmap_mvs_depth"
+family = "dense"
+adapter = "repo"
+implementation_owner = "native"
+sources = ["src/cpp/codecs/dense/colmap_mvs.cpp"]
+source_suite = "tests/codecs/test_colmap_mvs.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["little_endian_float32", "single_channel", "planar_wire_layout", "camera_z", "pixel_windows"]
+
+[[codec]]
+id = "colmap_mvs_normal"
+family = "dense"
+adapter = "repo"
+implementation_owner = "native"
+sources = ["src/cpp/codecs/dense/colmap_mvs.cpp"]
+source_suite = "tests/codecs/test_colmap_mvs.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["little_endian_float32", "xyz", "planar_wire_layout", "opencv_camera", "pixel_windows"]
+
+[[codec]]
+id = "colmap_mvs_consistency"
+family = "dense"
+adapter = "repo"
+implementation_owner = "native"
+sources = ["src/cpp/codecs/dense/colmap_mvs.cpp"]
+source_suite = "tests/codecs/test_colmap_mvs.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["little_endian_int32", "ordered_image_indices", "duplicate_pixel_entries", "zero_count_entries"]
+
+[[codec]]
+id = "colmap_fused_visibility"
+family = "dense"
+adapter = "repo"
+implementation_owner = "native"
+sources = ["src/cpp/codecs/dense/colmap_mvs.cpp"]
+source_suite = "tests/codecs/test_colmap_mvs.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["little_endian_uint64_point_count", "little_endian_uint32_lists", "ordered_image_indices", "zero_count_points"]
+
+[[codec]]
+id = "hdf5"
+family = "containers"
+adapter = "repo"
+implementation_owner = "python"
+sources = ["src/sceneio/io/_hdf5.py"]
+source_suite = "tests/codecs/test_hdf5_hloc.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["numeric_datasets", "nested_dataset_paths", "string_root_attributes", "named_tensor_reads", "leading_axis_hyperslabs"]
+
+[[codec]]
+id = "hloc_features"
+family = "containers"
+adapter = "repo"
+implementation_owner = "python"
+sources = ["src/sceneio/io/_hdf5.py"]
+source_suite = "tests/codecs/test_hdf5_hloc.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["keypoints", "descriptors_D_by_N", "scores", "image_size", "keypoint_uncertainty", "nested_image_names"]
+
+[[codec]]
+id = "hloc_matches"
+family = "containers"
+adapter = "repo"
+implementation_owner = "python"
+sources = ["src/sceneio/io/_hdf5.py"]
+source_suite = "tests/codecs/test_hdf5_hloc.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["matches0", "matching_scores0", "current_pair_naming", "exact_endpoint_names", "mixed_score_presence"]
+
+[[codec]]
+id = "ncore_v4"
+family = "datasets"
+adapter = "repo"
+implementation_owner = "python"
+sources = ["src/sceneio/io/_ncore/itar.py", "src/sceneio/io/_ncore/model.py", "src/sceneio/io/_ncore/schema.py", "src/sceneio/io/_ncore/component_io.py", "src/sceneio/io/_ncore/writer.py"]
+source_suite = "tests/codecs/test_ncore_v4.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["v4", "local_directory_stores", "local_indexed_tar_stores", "sequence_manifests", "grouped_component_stores", "lazy_component_catalog", "metadata_only_inspect", "owned_component_materialization", "frame_and_timestamp_selection", "nine_standard_v1_profiles", "generic_components", "deterministic_transactional_write"]
+
+[[codec]]
+id = "euroc_dataset"
+family = "datasets"
+adapter = "repo"
+implementation_owner = "python"
+sources = ["src/sceneio/io/_euroc_dataset/codec.py", "src/sceneio/io/_euroc_dataset/model.py", "src/sceneio/io/_euroc_dataset/yaml_subset.py", "src/cpp/codecs/reconstruction/euroc_state.cpp"]
+source_suite = "tests/codecs/test_euroc_dataset.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["bounded_asl_directory", "multi_camera", "multi_imu", "opaque_image_payloads", "camera_and_imu_calibration", "optional_ground_truth", "metadata_only_inspect", "typed_sensor_frame_and_time_selection", "streamed_csv_write", "transactional_directory_write"]
+
+[[codec]]
+id = "zarr"
+family = "containers"
+adapter = "repo"
+implementation_owner = "python"
+sources = ["src/sceneio/io/_zarr.py"]
+source_suite = "tests/codecs/test_zarr.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["v2_directory_store", "v3_directory_store", "numeric_arrays", "nested_array_paths", "string_root_attributes", "named_tensor_reads", "leading_axis_slices"]
+
+[[codec]]
+id = "tiff"
+family = "images"
+adapter = "repo"
+implementation_owner = "python"
+sources = ["src/sceneio/io/_tiff.py"]
+source_suite = "tests/codecs/test_tiff.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["single_rgb_or_rgba_image", "single_mask", "grayscale_stack", "uint8", "uint16", "float32", "uncompressed", "deflate", "zstd"]
+
+[[codec]]
+id = "e57"
+family = "points"
+adapter = "repo"
+implementation_owner = "python"
+sources = ["src/sceneio/io/_e57.py"]
+source_suite = "tests/codecs/test_e57.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["legacy_single_cartesian_scan", "typed_ordered_scan_sets", "typed_sparse_row_column", "typed_raw_invalid_states", "typed_stored_point_ranges", "float32_coordinates", "rgb8", "float32_intensity", "pose"]
+
+[[codec]]
+id = "parquet"
+family = "containers"
+adapter = "repo"
+implementation_owner = "python"
+sources = ["src/sceneio/io/_arrow.py"]
+source_suite = "tests/codecs/test_arrow_parquet.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["numeric_rank_1_columns", "fixed_width_rank_2_columns", "string_attributes", "zstd", "named_column_reads"]
+
+[[codec]]
+id = "arrow_ipc"
+family = "containers"
+adapter = "repo"
+implementation_owner = "python"
+sources = ["src/sceneio/io/_arrow.py"]
+source_suite = "tests/codecs/test_arrow_parquet.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["numeric_rank_1_columns", "fixed_width_rank_2_columns", "string_attributes", "ipc_file_container", "memory_mapped_input"]
+
+[[codec]]
+id = "openvdb"
+family = "containers"
+adapter = "repo"
+implementation_owner = "python"
+sources = ["src/sceneio/io/_openvdb.py", "src/sceneio/io/_assets/openvdb_float_template.vdb", "src/sceneio/io/_assets/openvdb_float_template.PROVENANCE.txt"]
+source_suite = "tests/codecs/test_openvdb.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["single_float32_scalar_grid", "sparse_coordinates", "identity_transform", "zero_background", "unclassified_or_fog_volume", "zip_active_mask"]
+
+[[operation]]
+codec_id = "pfm"
+profile = "default"
+direction = "encode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "pfm:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/arrays/pfm.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_pfm.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "pfm"
+profile = "default"
+direction = "decode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "pfm:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/arrays/pfm.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_pfm.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "colmap_sparse"
+profile = "default"
+direction = "encode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "colmap_sparse:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/reconstruction/colmap.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_colmap.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "colmap_sparse"
+profile = "default"
+direction = "decode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "colmap_sparse:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/reconstruction/colmap.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_colmap.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "gaussian_ply"
+profile = "default"
+direction = "encode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "gaussian_ply:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/splats/ply_gaussian.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_ply.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "gaussian_ply"
+profile = "default"
+direction = "decode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "gaussian_ply:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/splats/ply_gaussian.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_ply.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "compressed_ply"
+profile = "default"
+direction = "encode"
+settings = {}
+fidelity = "format_quantized"
+comparator = "source-parity-suite"
+fixture = "compressed_ply:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/splats/compressed_ply.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_compressed_ply.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "compressed_ply"
+profile = "default"
+direction = "decode"
+settings = {}
+fidelity = "format_quantized"
+comparator = "source-parity-suite"
+fixture = "compressed_ply:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/splats/compressed_ply.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_compressed_ply.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "sog"
+profile = "default"
+direction = "encode"
+settings = {}
+fidelity = "format_quantized"
+comparator = "source-parity-suite"
+fixture = "sog:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/splats/sog.cpp"
+backend_version = "sceneio-sog-canonical-v1"
+backend_source_sha256 = "849656fefd4f365e55cabc6a8b168b1611d07adec7001de12a23b5a6ba453f4e"
+backend_dependencies = ["libwebp 1.5.0", "miniz 3.0.2", "musl/fdlibm log1p 1.2.5", "nlohmann_json 3.11.3"]
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_sog.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "sog"
+profile = "default"
+direction = "decode"
+settings = {}
+fidelity = "format_quantized"
+comparator = "source-parity-suite"
+fixture = "sog:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/splats/sog.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+backend_dependencies = ["libwebp 1.5.0", "miniz 3.0.2", "nlohmann_json 3.11.3"]
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_sog.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "ksplat"
+profile = "default"
+direction = "encode"
+settings = {}
+fidelity = "format_quantized"
+comparator = "source-parity-suite"
+fixture = "ksplat:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/splats/ksplat.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_ksplat.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "ksplat"
+profile = "default"
+direction = "decode"
+settings = {}
+fidelity = "format_quantized"
+comparator = "source-parity-suite"
+fixture = "ksplat:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/splats/ksplat.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_ksplat.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "ply_mesh"
+profile = "default"
+direction = "encode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "ply_mesh:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/meshes/ply_mesh.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_ply_mesh.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "ply_mesh"
+profile = "default"
+direction = "decode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "ply_mesh:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/meshes/ply_mesh.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+backend_dependencies = ["fast_float 6.1.6"]
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_ply_mesh.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "obj"
+profile = "default"
+direction = "encode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "obj:default"
+backend = "sceneio-native+tinyobjloader"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/tinyobjloader"
+backend_version = "45636bdcef1a4fec140346b90c0b50bf0bc3e23b"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_obj.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "obj"
+profile = "default"
+direction = "decode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "obj:default"
+backend = "sceneio-native+tinyobjloader"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/tinyobjloader"
+backend_version = "45636bdcef1a4fec140346b90c0b50bf0bc3e23b"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_obj.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "stl"
+profile = "default"
+direction = "encode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "stl:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/meshes/stl_off.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_stl.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "stl"
+profile = "default"
+direction = "decode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "stl:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/meshes/stl_off.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+backend_dependencies = ["fast_float 6.1.6"]
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_stl.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "off"
+profile = "default"
+direction = "encode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "off:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/meshes/stl_off.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_off.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "off"
+profile = "default"
+direction = "decode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "off:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/meshes/stl_off.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+backend_dependencies = ["fast_float 6.1.6"]
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_off.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "gltf"
+profile = "default"
+direction = "encode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "gltf:default"
+backend = "sceneio-native+cgltf"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/cgltf"
+backend_version = "360db1a95480fe102ae9c69b27c5d101167ff5ba"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_gltf.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "gltf"
+profile = "default"
+direction = "decode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "gltf:default"
+backend = "sceneio-native+cgltf"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/cgltf"
+backend_version = "360db1a95480fe102ae9c69b27c5d101167ff5ba"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_gltf.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "glb"
+profile = "default"
+direction = "encode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "glb:default"
+backend = "sceneio-native+cgltf"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/cgltf"
+backend_version = "360db1a95480fe102ae9c69b27c5d101167ff5ba"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_gltf.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "glb"
+profile = "default"
+direction = "decode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "glb:default"
+backend = "sceneio-native+cgltf"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/cgltf"
+backend_version = "360db1a95480fe102ae9c69b27c5d101167ff5ba"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_gltf.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "ply"
+profile = "point_binary_little_endian"
+direction = "encode"
+settings = { variant = "point_binary_little_endian" }
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "ply:point_binary_little_endian"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/points/ply_point.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_ply_point.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "ply"
+profile = "point_binary_little_endian"
+direction = "decode"
+settings = { variant = "point_binary_little_endian" }
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "ply:point_binary_little_endian"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/points/ply_point.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_ply_point.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "ply"
+profile = "point_binary_big_endian"
+direction = "encode"
+settings = { variant = "point_binary_big_endian" }
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "ply:point_binary_big_endian"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/points/ply_point.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_ply_point.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "ply"
+profile = "point_binary_big_endian"
+direction = "decode"
+settings = { variant = "point_binary_big_endian" }
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "ply:point_binary_big_endian"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/points/ply_point.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_ply_point.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "ply"
+profile = "point_ascii"
+direction = "encode"
+settings = { variant = "point_ascii" }
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "ply:point_ascii"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/points/ply_point.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_ply_point.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "ply"
+profile = "point_ascii"
+direction = "decode"
+settings = { variant = "point_ascii" }
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "ply:point_ascii"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/points/ply_point.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+backend_dependencies = ["fast_float 6.1.6"]
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_ply_point.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "pcd"
+profile = "binary"
+direction = "encode"
+settings = { variant = "binary" }
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "pcd:binary"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/points/pcd.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_pcd.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "pcd"
+profile = "binary"
+direction = "decode"
+settings = { variant = "binary" }
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "pcd:binary"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/points/pcd.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_pcd.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "pcd"
+profile = "binary_compressed"
+direction = "encode"
+settings = { variant = "binary_compressed" }
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "pcd:binary_compressed"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/points/pcd.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_pcd.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "pcd"
+profile = "binary_compressed"
+direction = "decode"
+settings = { variant = "binary_compressed" }
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "pcd:binary_compressed"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/points/pcd.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_pcd.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "pcd"
+profile = "ascii"
+direction = "encode"
+settings = { variant = "ascii" }
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "pcd:ascii"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/points/pcd.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_pcd.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "pcd"
+profile = "ascii"
+direction = "decode"
+settings = { variant = "ascii" }
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "pcd:ascii"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/points/pcd.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+backend_dependencies = ["fast_float 6.1.6"]
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_pcd.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "spz"
+profile = "legacy_v3_gzip"
+direction = "encode"
+settings = { version = 3, fractional_bits = 12, container_magic = "1f8b" }
+fidelity = "format_quantized"
+comparator = "source-parity-suite"
+fixture = "spz:v3_gzip"
+backend = "miniz"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/miniz"
+backend_version = "miniz-3.0.2"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_spz.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "spz"
+profile = "legacy_v3_gzip"
+direction = "decode"
+settings = { version = 3, fractional_bits = 12, container_magic = "1f8b" }
+fidelity = "format_quantized"
+comparator = "source-parity-suite"
+fixture = "spz:v3_gzip"
+backend = "miniz"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/miniz"
+backend_version = "miniz-3.0.2"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_spz.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "usd"
+profile = "default"
+direction = "encode"
+settings = { encoding = "usda" }
+fidelity = "lossless"
+comparator = "direct-tinyusdz-stage"
+fixture = "usd:default"
+backend = "sceneio-usda-stream"
+backend_owner = "repo"
+backend_source = "src/sceneio/io/_usd/legacy.py"
+backend_version = "sceneio-usd-static-v1"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_usd.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "usd"
+profile = "default"
+direction = "decode"
+settings = { profile = "static_cv_mesh_scene" }
+fidelity = "lossless"
+comparator = "direct-tinyusdz-stage"
+fixture = "usd:default"
+backend = "tinyusdz"
+backend_owner = "fetched"
+backend_source = "src/sceneio/io/_usd/legacy.py"
+backend_version = "tinyusdz >=0.9.4,<1"
+backend_dependencies = ["tinyusdz >=0.9.4,<1"]
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_usd.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "usdz"
+profile = "default"
+direction = "encode"
+settings = { compression = "stored", alignment = 64 }
+fidelity = "lossless"
+comparator = "direct-tinyusdz-stage"
+fixture = "usdz:default"
+backend = "sceneio-usdz-stream"
+backend_owner = "repo"
+backend_source = "src/sceneio/io/_usd/package.py"
+backend_version = "sceneio-usd-static-v1"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_usd.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "usdz"
+profile = "default"
+direction = "decode"
+settings = { profile = "static_cv_mesh_scene" }
+fidelity = "lossless"
+comparator = "direct-tinyusdz-stage"
+fixture = "usdz:default"
+backend = "tinyusdz"
+backend_owner = "fetched"
+backend_source = "src/sceneio/io/_usd/legacy.py"
+backend_version = "tinyusdz >=0.9.4,<1"
+backend_dependencies = ["tinyusdz >=0.9.4,<1"]
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_usd.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "tiff"
+profile = "default"
+direction = "encode"
+settings = { compression = "none" }
+fidelity = "lossless"
+comparator = "pillow-tiff"
+fixture = "tiff:default"
+backend = "tifffile"
+backend_owner = "fetched"
+backend_source = "src/sceneio/io/_tiff.py"
+backend_version = "tifffile >=2025.5"
+backend_dependencies = ["tifffile >=2025.5"]
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_tiff.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "tiff"
+profile = "default"
+direction = "decode"
+settings = { profile = "bounded_cv_raster" }
+fidelity = "lossless"
+comparator = "pillow-tiff"
+fixture = "tiff:default"
+backend = "tifffile"
+backend_owner = "fetched"
+backend_source = "src/sceneio/io/_tiff.py"
+backend_version = "tifffile >=2025.5"
+backend_dependencies = ["tifffile >=2025.5"]
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_tiff.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "e57"
+profile = "default"
+direction = "encode"
+settings = { legacy_scans = 1, typed_scans = "ordered_multiple" }
+fidelity = "lossless"
+comparator = "direct-pye57"
+fixture = "e57:default"
+backend = "pye57"
+backend_owner = "fetched"
+backend_source = "src/sceneio/io/_e57.py"
+backend_version = "pye57 >=0.4.18,<0.5"
+backend_dependencies = ["pye57 >=0.4.18,<0.5", "libE57Format", "Xerces-C++", "pyquaternion"]
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_e57.py", "tests/test_e57_multiscan_benchmark.py"]
+benchmark_evidence = ["docs/e57_multiscan_benchmark.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "e57"
+profile = "default"
+direction = "decode"
+settings = { legacy_scans = 1, typed_scans = "ordered_multiple", typed_selection = "stored_point_range" }
+fidelity = "lossless"
+comparator = "direct-pye57"
+fixture = "e57:default"
+backend = "pye57"
+backend_owner = "fetched"
+backend_source = "src/sceneio/io/_e57.py"
+backend_version = "pye57 >=0.4.18,<0.5"
+backend_dependencies = ["pye57 >=0.4.18,<0.5", "libE57Format", "Xerces-C++", "pyquaternion"]
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_e57.py", "tests/test_e57_multiscan_benchmark.py"]
+benchmark_evidence = ["docs/e57_multiscan_benchmark.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "parquet"
+profile = "default"
+direction = "encode"
+settings = { compression = "zstd", dictionary = false }
+fidelity = "lossless"
+comparator = "direct-pyarrow"
+fixture = "parquet:default"
+backend = "pyarrow"
+backend_owner = "fetched"
+backend_source = "src/sceneio/io/_arrow.py"
+backend_version = "pyarrow >=18,<24"
+backend_dependencies = ["pyarrow >=18,<24"]
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_arrow_parquet.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "parquet"
+profile = "default"
+direction = "decode"
+settings = { memory_map = true, threads = true }
+fidelity = "lossless"
+comparator = "direct-pyarrow"
+fixture = "parquet:default"
+backend = "pyarrow"
+backend_owner = "fetched"
+backend_source = "src/sceneio/io/_arrow.py"
+backend_version = "pyarrow >=18,<24"
+backend_dependencies = ["pyarrow >=18,<24"]
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_arrow_parquet.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "arrow_ipc"
+profile = "default"
+direction = "encode"
+settings = { container = "file" }
+fidelity = "lossless"
+comparator = "direct-pyarrow"
+fixture = "arrow_ipc:default"
+backend = "pyarrow"
+backend_owner = "fetched"
+backend_source = "src/sceneio/io/_arrow.py"
+backend_version = "pyarrow >=18,<24"
+backend_dependencies = ["pyarrow >=18,<24"]
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_arrow_parquet.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "arrow_ipc"
+profile = "default"
+direction = "decode"
+settings = { memory_map = true }
+fidelity = "lossless"
+comparator = "direct-pyarrow"
+fixture = "arrow_ipc:default"
+backend = "pyarrow"
+backend_owner = "fetched"
+backend_source = "src/sceneio/io/_arrow.py"
+backend_version = "pyarrow >=18,<24"
+backend_dependencies = ["pyarrow >=18,<24"]
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_arrow_parquet.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "openvdb"
+profile = "default"
+direction = "encode"
+settings = { compression = "zip_active_mask" }
+fidelity = "lossless"
+comparator = "direct-tinyvdb"
+fixture = "openvdb:default"
+backend = "tinyvdb"
+backend_owner = "fetched"
+backend_source = "src/sceneio/io/_openvdb.py"
+backend_version = "tinyvdb >=0.9,<1"
+backend_dependencies = ["tinyvdb >=0.9,<1"]
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_openvdb.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "openvdb"
+profile = "default"
+direction = "decode"
+settings = { profile = "single_sparse_float_grid" }
+fidelity = "lossless"
+comparator = "direct-tinyvdb"
+fixture = "openvdb:default"
+backend = "tinyvdb"
+backend_owner = "fetched"
+backend_source = "src/sceneio/io/_openvdb.py"
+backend_version = "tinyvdb >=0.9,<1"
+backend_dependencies = ["tinyvdb >=0.9,<1"]
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_openvdb.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "spz"
+profile = "ngsp_v4_zstd"
+direction = "encode"
+settings = { version = 4, fractional_bits = 12, zstd_level = 12, container_magic = "4e475350" }
+fidelity = "format_quantized"
+comparator = "source-parity-suite"
+fixture = "spz:v4_ngsp"
+backend = "zstd"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/zstd"
+backend_version = "zstd-1.5.6"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_spz.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "spz"
+profile = "ngsp_v4_zstd"
+direction = "decode"
+settings = { version = 4, fractional_bits = 12, zstd_level = 12, container_magic = "4e475350" }
+fidelity = "format_quantized"
+comparator = "source-parity-suite"
+fixture = "spz:v4_ngsp"
+backend = "zstd"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/zstd"
+backend_version = "zstd-1.5.6"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_spz.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "transforms_json"
+profile = "default"
+direction = "encode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "transforms_json:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/reconstruction/transforms_json.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+backend_dependencies = ["nlohmann_json 3.11.3"]
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_transforms_json.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "transforms_json"
+profile = "default"
+direction = "decode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "transforms_json:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/reconstruction/transforms_json.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+backend_dependencies = ["nlohmann_json 3.11.3"]
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_transforms_json.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "tum"
+profile = "default"
+direction = "encode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "tum:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/reconstruction/pose_text.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_pose_text.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "tum"
+profile = "default"
+direction = "decode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "tum:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/reconstruction/pose_text.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_pose_text.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "kitti"
+profile = "default"
+direction = "encode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "kitti:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/reconstruction/pose_text.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_pose_text.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "kitti"
+profile = "default"
+direction = "decode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "kitti:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/reconstruction/pose_text.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_pose_text.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "euroc_state"
+profile = "default"
+direction = "encode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "euroc_state:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/reconstruction/euroc_state.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_euroc_state.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "euroc_state"
+profile = "default"
+direction = "decode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "euroc_state:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/reconstruction/euroc_state.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+backend_dependencies = ["fast_float 6.1.6"]
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_euroc_state.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "opencv_yaml"
+profile = "default"
+direction = "encode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "opencv_yaml:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/calibration/camera_calibration.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_camera_calibration.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "opencv_yaml"
+profile = "default"
+direction = "decode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "opencv_yaml:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/calibration/camera_calibration.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+backend_dependencies = ["fast_float 6.1.6"]
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_camera_calibration.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "opencv_xml"
+profile = "default"
+direction = "encode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "opencv_xml:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/calibration/camera_calibration.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_camera_calibration.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "opencv_xml"
+profile = "default"
+direction = "decode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "opencv_xml:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/calibration/camera_calibration.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+backend_dependencies = ["fast_float 6.1.6"]
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_camera_calibration.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "ros_camera_info"
+profile = "default"
+direction = "encode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "ros_camera_info:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/calibration/camera_calibration.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_camera_calibration.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "ros_camera_info"
+profile = "default"
+direction = "decode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "ros_camera_info:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/calibration/camera_calibration.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+backend_dependencies = ["fast_float 6.1.6"]
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_camera_calibration.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "kalibr"
+profile = "default"
+direction = "encode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "kalibr:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/calibration/camera_calibration.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_camera_calibration.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "kalibr"
+profile = "default"
+direction = "decode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "kalibr:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/calibration/camera_calibration.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+backend_dependencies = ["fast_float 6.1.6"]
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_camera_calibration.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "g2o"
+profile = "default"
+direction = "encode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "g2o:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/reconstruction/g2o.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_g2o.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "g2o"
+profile = "default"
+direction = "decode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "g2o:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/reconstruction/g2o.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+backend_dependencies = ["fast_float 6.1.6"]
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_g2o.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "colmap_db"
+profile = "default"
+direction = "encode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "colmap_db:default"
+backend = "sqlite"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/sqlite"
+backend_version = "2026-07-24 bf7c7f30031888f4e796e429ab3978879485813aaca6f641c7b33e4e09459bcc"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_colmap_db.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "colmap_db"
+profile = "default"
+direction = "decode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "colmap_db:default"
+backend = "sqlite"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/sqlite"
+backend_version = "2026-07-24 bf7c7f30031888f4e796e429ab3978879485813aaca6f641c7b33e4e09459bcc"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_colmap_db.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "npy"
+profile = "default"
+direction = "encode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "npy:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/arrays/npy_npz.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_npy_npz.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "npy"
+profile = "default"
+direction = "decode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "npy:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/arrays/npy_npz.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_npy_npz.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "npz"
+profile = "default"
+direction = "encode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "npz:default"
+backend = "miniz"
+backend_owner = "fetched"
+backend_source = "cmake/SceneIODependencies.cmake"
+backend_version = "3.0.2"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_npy_npz.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "npz"
+profile = "default"
+direction = "decode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "npz:default"
+backend = "miniz"
+backend_owner = "fetched"
+backend_source = "cmake/SceneIODependencies.cmake"
+backend_version = "3.0.2"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_npy_npz.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "safetensors"
+profile = "default"
+direction = "encode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "safetensors:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/arrays/safetensors.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+backend_dependencies = ["nlohmann_json 3.11.3"]
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_safetensors.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "safetensors"
+profile = "default"
+direction = "decode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "safetensors:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/arrays/safetensors.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+backend_dependencies = ["nlohmann_json 3.11.3"]
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_safetensors.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "netpbm"
+profile = "default"
+direction = "encode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "netpbm:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/images/netpbm.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_netpbm.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "netpbm"
+profile = "default"
+direction = "decode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "netpbm:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/images/netpbm.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_netpbm.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "png"
+profile = "rgb8_default"
+direction = "encode"
+settings = { channels = 3, dtype = "uint8" }
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "png:rgb8_default"
+backend = "lodepng"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/lodepng"
+backend_version = "ed6fe5825c6a4fbb7f58ab35a4231c7543cd452a"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_png.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "png"
+profile = "rgb8_default"
+direction = "decode"
+settings = { channels = 3, dtype = "uint8" }
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "png:rgb8_default"
+backend = "lodepng"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/lodepng"
+backend_version = "ed6fe5825c6a4fbb7f58ab35a4231c7543cd452a"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_png.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "png"
+profile = "rgb16_default"
+direction = "encode"
+settings = { channels = 3, dtype = "uint16" }
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "png:rgb16_default"
+backend = "lodepng"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/lodepng"
+backend_version = "ed6fe5825c6a4fbb7f58ab35a4231c7543cd452a"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_png.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "png"
+profile = "rgb16_default"
+direction = "decode"
+settings = { channels = 3, dtype = "uint16" }
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "png:rgb16_default"
+backend = "lodepng"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/lodepng"
+backend_version = "ed6fe5825c6a4fbb7f58ab35a4231c7543cd452a"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_png.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "jpeg"
+profile = "default"
+direction = "encode"
+settings = { sceneio_quality = 95, oracle_quality = "library_default" }
+fidelity = "lossy"
+comparator = "pillow-libjpeg"
+fixture = "jpeg:default"
+backend = "stb"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/stb"
+backend_version = "31c1ad37456438565541f4919958214b6e762fb4"
+backend_patch_set = "sceneio-stb-3-local-patches-v1"
+transport_status = "qualified"
+status = "known_gap"
+correctness_evidence = ["tests/codecs/test_jpeg.py"]
+benchmark_evidence = ["bench/BASELINE.md", "bench/BACKEND_QUALIFICATION.toml"]
+candidate_backends = []
+rejected_backends = [{ id = "libjpeg-turbo", version = "3.2.0", scope = "combined_default", platform = "windows_msvc_x86_64", source_commit = "7a88e7c726eed5bdd4ff0ad05b381c9795af9dfe", report_sha256 = "f32b7c60f19956438023c51cc9c0b07f44ace79c66dff4a43c30fc7cfdcd80b1", gate = "quality-profile:rgb8_q95_444", observed_delta_db = -0.05824218633100031, required_delta_db = -0.05 }]
+evidence_gaps = ["no conforming replacement candidate after libjpeg-turbo 3.2.0 evaluation"]
+
+[[operation]]
+codec_id = "jpeg"
+profile = "default"
+direction = "decode"
+settings = { sceneio_quality = 95, oracle_quality = "library_default" }
+fidelity = "lossy"
+comparator = "pillow-libjpeg"
+fixture = "jpeg:default"
+backend = "stb"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/stb"
+backend_version = "31c1ad37456438565541f4919958214b6e762fb4"
+backend_patch_set = "sceneio-stb-3-local-patches-v1"
+transport_status = "qualified"
+status = "known_gap"
+correctness_evidence = ["tests/codecs/test_jpeg.py"]
+benchmark_evidence = ["bench/BASELINE.md", "bench/BACKEND_QUALIFICATION.toml"]
+candidate_backends = []
+rejected_backends = [{ id = "libjpeg-turbo", version = "3.2.0", scope = "combined_default", platform = "windows_msvc_x86_64", source_commit = "7a88e7c726eed5bdd4ff0ad05b381c9795af9dfe", report_sha256 = "f32b7c60f19956438023c51cc9c0b07f44ace79c66dff4a43c30fc7cfdcd80b1", gate = "quality-profile:rgb8_q95_444", observed_delta_db = -0.05824218633100031, required_delta_db = -0.05 }]
+evidence_gaps = ["no conforming replacement candidate after libjpeg-turbo 3.2.0 evaluation"]
+
+[[operation]]
+codec_id = "bmp"
+profile = "default"
+direction = "encode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "bmp:default"
+backend = "stb"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/stb"
+backend_version = "31c1ad37456438565541f4919958214b6e762fb4"
+backend_patch_set = "sceneio-stb-3-local-patches-v1"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_bmp_tga.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "bmp"
+profile = "default"
+direction = "decode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "bmp:default"
+backend = "stb"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/stb"
+backend_version = "31c1ad37456438565541f4919958214b6e762fb4"
+backend_patch_set = "sceneio-stb-3-local-patches-v1"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_bmp_tga.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "tga"
+profile = "default"
+direction = "encode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "tga:default"
+backend = "stb"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/stb"
+backend_version = "31c1ad37456438565541f4919958214b6e762fb4"
+backend_patch_set = "sceneio-stb-3-local-patches-v1"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_bmp_tga.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "tga"
+profile = "default"
+direction = "decode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "tga:default"
+backend = "stb"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/stb"
+backend_version = "31c1ad37456438565541f4919958214b6e762fb4"
+backend_patch_set = "sceneio-stb-3-local-patches-v1"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_bmp_tga.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "hdr"
+profile = "default"
+direction = "encode"
+settings = {}
+fidelity = "format_quantized"
+comparator = "source-parity-suite"
+fixture = "hdr:default"
+backend = "stb"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/stb"
+backend_version = "31c1ad37456438565541f4919958214b6e762fb4"
+backend_patch_set = "sceneio-stb-3-local-patches-v1"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_hdr.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "hdr"
+profile = "default"
+direction = "decode"
+settings = {}
+fidelity = "format_quantized"
+comparator = "source-parity-suite"
+fixture = "hdr:default"
+backend = "stb"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/stb"
+backend_version = "31c1ad37456438565541f4919958214b6e762fb4"
+backend_patch_set = "sceneio-stb-3-local-patches-v1"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_hdr.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "exr"
+profile = "scanline_float32_zip"
+direction = "encode"
+settings = { variant = "scanline_float32_zip" }
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "exr:scanline_float32_zip"
+backend = "tinyexr"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/tinyexr"
+backend_version = "1b106618644dbf8a0935c2348ba51a2d863dd7c2"
+backend_patch_set = "sceneio-tinyexr-threaded-integration-v1"
+backend_dependencies = ["miniz 3.0.2"]
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_exr.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "exr"
+profile = "scanline_float32_zip"
+direction = "decode"
+settings = { variant = "scanline_float32_zip" }
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "exr:scanline_float32_zip"
+backend = "tinyexr"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/tinyexr"
+backend_version = "1b106618644dbf8a0935c2348ba51a2d863dd7c2"
+backend_patch_set = "sceneio-tinyexr-threaded-integration-v1"
+backend_dependencies = ["miniz 3.0.2"]
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_exr.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "exr"
+profile = "scanline_float32_no"
+direction = "decode"
+settings = { variant = "scanline_float32_no" }
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "exr:scanline_float32_no"
+backend = "tinyexr"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/tinyexr"
+backend_version = "1b106618644dbf8a0935c2348ba51a2d863dd7c2"
+backend_patch_set = "sceneio-tinyexr-threaded-integration-v1"
+backend_dependencies = ["miniz 3.0.2"]
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_exr.py"]
+benchmark_evidence = []
+candidate_backends = []
+evidence_gaps = ["profile-specific current-backend measurement missing", "candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "exr"
+profile = "scanline_float32_rle"
+direction = "decode"
+settings = { variant = "scanline_float32_rle" }
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "exr:scanline_float32_rle"
+backend = "tinyexr"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/tinyexr"
+backend_version = "1b106618644dbf8a0935c2348ba51a2d863dd7c2"
+backend_patch_set = "sceneio-tinyexr-threaded-integration-v1"
+backend_dependencies = ["miniz 3.0.2"]
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_exr.py"]
+benchmark_evidence = []
+candidate_backends = []
+evidence_gaps = ["profile-specific current-backend measurement missing", "candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "exr"
+profile = "scanline_float32_zips"
+direction = "decode"
+settings = { variant = "scanline_float32_zips" }
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "exr:scanline_float32_zips"
+backend = "tinyexr"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/tinyexr"
+backend_version = "1b106618644dbf8a0935c2348ba51a2d863dd7c2"
+backend_patch_set = "sceneio-tinyexr-threaded-integration-v1"
+backend_dependencies = ["miniz 3.0.2"]
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_exr.py"]
+benchmark_evidence = []
+candidate_backends = []
+evidence_gaps = ["profile-specific current-backend measurement missing", "candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "exr"
+profile = "scanline_float32_piz"
+direction = "decode"
+settings = { variant = "scanline_float32_piz" }
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "exr:scanline_float32_piz"
+backend = "tinyexr"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/tinyexr"
+backend_version = "1b106618644dbf8a0935c2348ba51a2d863dd7c2"
+backend_patch_set = "sceneio-tinyexr-threaded-integration-v1"
+backend_dependencies = ["miniz 3.0.2"]
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_exr.py"]
+benchmark_evidence = []
+candidate_backends = []
+evidence_gaps = ["profile-specific current-backend measurement missing", "candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "exr"
+profile = "scanline_float32_no"
+direction = "encode"
+settings = { variant = "scanline_float32_no" }
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "exr:scanline_float32_no"
+backend = "tinyexr"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/tinyexr"
+backend_version = "1b106618644dbf8a0935c2348ba51a2d863dd7c2"
+backend_patch_set = "sceneio-tinyexr-threaded-integration-v1"
+backend_dependencies = ["miniz 3.0.2"]
+transport_status = "not_applicable"
+status = "not_applicable"
+correctness_evidence = ["tests/codecs/test_exr.py"]
+benchmark_evidence = []
+candidate_backends = []
+evidence_gaps = ["the EXR writer exposes ZIP compression only"]
+[[operation]]
+codec_id = "exr"
+profile = "scanline_float32_rle"
+direction = "encode"
+settings = { variant = "scanline_float32_rle" }
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "exr:scanline_float32_rle"
+backend = "tinyexr"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/tinyexr"
+backend_version = "1b106618644dbf8a0935c2348ba51a2d863dd7c2"
+backend_patch_set = "sceneio-tinyexr-threaded-integration-v1"
+backend_dependencies = ["miniz 3.0.2"]
+transport_status = "not_applicable"
+status = "not_applicable"
+correctness_evidence = ["tests/codecs/test_exr.py"]
+benchmark_evidence = []
+candidate_backends = []
+evidence_gaps = ["the EXR writer exposes ZIP compression only"]
+[[operation]]
+codec_id = "exr"
+profile = "scanline_float32_zips"
+direction = "encode"
+settings = { variant = "scanline_float32_zips" }
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "exr:scanline_float32_zips"
+backend = "tinyexr"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/tinyexr"
+backend_version = "1b106618644dbf8a0935c2348ba51a2d863dd7c2"
+backend_patch_set = "sceneio-tinyexr-threaded-integration-v1"
+backend_dependencies = ["miniz 3.0.2"]
+transport_status = "not_applicable"
+status = "not_applicable"
+correctness_evidence = ["tests/codecs/test_exr.py"]
+benchmark_evidence = []
+candidate_backends = []
+evidence_gaps = ["the EXR writer exposes ZIP compression only"]
+[[operation]]
+codec_id = "exr"
+profile = "scanline_float32_piz"
+direction = "encode"
+settings = { variant = "scanline_float32_piz" }
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "exr:scanline_float32_piz"
+backend = "tinyexr"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/tinyexr"
+backend_version = "1b106618644dbf8a0935c2348ba51a2d863dd7c2"
+backend_patch_set = "sceneio-tinyexr-threaded-integration-v1"
+backend_dependencies = ["miniz 3.0.2"]
+transport_status = "not_applicable"
+status = "not_applicable"
+correctness_evidence = ["tests/codecs/test_exr.py"]
+benchmark_evidence = []
+candidate_backends = []
+evidence_gaps = ["the EXR writer exposes ZIP compression only"]
+[[operation]]
+codec_id = "webp"
+profile = "lossless_rgb8_default"
+direction = "encode"
+settings = { mode = "lossless", channels = 3, dtype = "uint8", threads = true, effort = 75, method = 5 }
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "webp:lossless_rgb8_default"
+backend = "libwebp"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/libwebp"
+backend_version = "1.5.0"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_webp.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "webp"
+profile = "lossless_rgb8_default"
+direction = "decode"
+settings = { mode = "lossless", channels = 3, dtype = "uint8", threads = true, effort = 75, method = 5 }
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "webp:lossless_rgb8_default"
+backend = "libwebp"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/libwebp"
+backend_version = "1.5.0"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_webp.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "webp"
+profile = "lossy_rgb8_q90"
+direction = "encode"
+settings = { mode = "lossy", quality = 90, channels = 3, dtype = "uint8", threads = false, method = 4 }
+fidelity = "lossy"
+comparator = "source-parity-suite"
+fixture = "webp:lossy_rgb8_q90"
+backend = "libwebp"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/libwebp"
+backend_version = "1.5.0"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_webp.py"]
+benchmark_evidence = []
+candidate_backends = []
+evidence_gaps = ["profile-specific current-backend measurement missing", "candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "avif"
+profile = "default"
+direction = "encode"
+settings = { quality = 90, speed = 6, subsampling = "444", range = "full", autotiling = true }
+fidelity = "lossy"
+comparator = "direct Pillow/libavif provider"
+fixture = "avif:default"
+backend = "Pillow/libavif with libaom"
+backend_owner = "fetched"
+backend_source = "src/sceneio/io/_avif.py"
+backend_version = "Pillow 12.3.0 / libavif 1.4.2 / libaom 3.14.1"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_avif.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "avif"
+profile = "default"
+direction = "decode"
+settings = { output = "uint8_rgb_or_rgba", threads = "provider_default", input = "mmap" }
+fidelity = "decoded-pixel parity"
+comparator = "direct Pillow/libavif provider"
+fixture = "avif:default"
+backend = "Pillow/libavif with dav1d"
+backend_owner = "fetched"
+backend_source = "src/sceneio/io/_avif.py"
+backend_version = "Pillow 12.3.0 / libavif 1.4.2 / dav1d 1.5.3"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_avif.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "webp"
+profile = "lossy_rgb8_q90"
+direction = "decode"
+settings = { mode = "lossy", quality = 90, channels = 3, dtype = "uint8", threads = false, method = 4 }
+fidelity = "lossy"
+comparator = "source-parity-suite"
+fixture = "webp:lossy_rgb8_q90"
+backend = "libwebp"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/libwebp"
+backend_version = "1.5.0"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_webp.py"]
+benchmark_evidence = []
+candidate_backends = []
+evidence_gaps = ["profile-specific current-backend measurement missing", "candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "y4m"
+profile = "default"
+direction = "encode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "y4m:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/sequences/y4m.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_y4m.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "y4m"
+profile = "default"
+direction = "decode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "y4m:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/sequences/y4m.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_y4m.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "webm"
+profile = "default"
+direction = "encode"
+settings = { codec = "vp8", layout = "all_keyframe", channels = 3, dtype = "uint8", quality = 90, threads = true, method = 4 }
+fidelity = "lossy"
+comparator = "Pillow + independent EBML mux/demux"
+fixture = "webm:default"
+backend = "libwebp-vp8"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/libwebp"
+backend_version = "1.5.0"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_webm.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "webm"
+profile = "default"
+direction = "decode"
+settings = { codec = "vp8", layout = "all_keyframe", channels = 3, dtype = "uint8" }
+fidelity = "lossy"
+comparator = "Pillow + independent EBML mux/demux"
+fixture = "webm:default"
+backend = "libwebp-vp8"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/libwebp"
+backend_version = "1.5.0"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_webm.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "webm"
+profile = "vp8-temporal"
+direction = "encode"
+settings = { codec = "vp8", layout = "temporal_yuv420", dtype = "uint8", quality = 82, threads = "auto", speed = 6, keyframe_interval = 120 }
+fidelity = "lossy"
+comparator = "independent EBML oracle + pinned official libvpx reference API"
+fixture = "webm:default"
+backend = "libvpx-vp8"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/libvpx"
+backend_version = "v1.16.0-178-g4780fac96"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_webm.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["three-platform package validation"]
+
+[[operation]]
+codec_id = "webm"
+profile = "vp8-temporal"
+direction = "decode"
+settings = { codec = "vp8", layout = "temporal_yuv420", dtype = "uint8", threads = "auto" }
+fidelity = "lossy"
+comparator = "independent EBML oracle + pinned official libvpx reference API"
+fixture = "webm:default"
+backend = "libvpx-vp8"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/libvpx"
+backend_version = "v1.16.0-178-g4780fac96"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_webm.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["three-platform package validation"]
+
+[[operation]]
+codec_id = "webm"
+profile = "vp9-temporal"
+direction = "encode"
+settings = { codec = "vp9", layout = "temporal_yuv420", dtype = "uint8", quality = 82, threads = "auto", speed = 6, keyframe_interval = 120 }
+fidelity = "lossy"
+comparator = "independent EBML oracle + pinned official libvpx reference API"
+fixture = "webm:default"
+backend = "libvpx-vp9"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/libvpx"
+backend_version = "v1.16.0-178-g4780fac96"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_webm.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["three-platform package validation"]
+
+[[operation]]
+codec_id = "webm"
+profile = "vp9-temporal"
+direction = "decode"
+settings = { codec = "vp9", layout = "temporal_yuv420", dtype = "uint8", threads = "auto" }
+fidelity = "lossy"
+comparator = "independent EBML oracle + pinned official libvpx reference API"
+fixture = "webm:default"
+backend = "libvpx-vp9"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/libvpx"
+backend_version = "v1.16.0-178-g4780fac96"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_webm.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["three-platform package validation"]
+
+[[operation]]
+codec_id = "theora"
+profile = "default"
+direction = "encode"
+settings = { codec = "theora", pixel_format = "420", dtype = "uint8", quality = 48, keyframe_interval = 64 }
+fidelity = "lossy"
+comparator = "independent Ogg framing oracle + pinned libtheora reference API"
+fixture = "theora:default"
+backend = "libtheora"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/theora"
+backend_version = "8e4808736e9c181b971306cc3f05df9e61354004"
+backend_dependencies = ["libogg 1.3.6"]
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_theora.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "theora"
+profile = "default"
+direction = "decode"
+settings = { codec = "theora", pixel_format = "420", dtype = "uint8" }
+fidelity = "lossy"
+comparator = "independent Ogg framing oracle + pinned libtheora reference API"
+fixture = "theora:default"
+backend = "libtheora"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/theora"
+backend_version = "8e4808736e9c181b971306cc3f05df9e61354004"
+backend_dependencies = ["libogg 1.3.6"]
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_theora.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "animated_webp"
+profile = "default"
+direction = "encode"
+settings = { mode = "lossless", channels = 4, dtype = "uint8", threads = true, effort = 75, method = 5 }
+fidelity = "lossless"
+comparator = "Pillow"
+fixture = "animated_webp:default"
+backend = "libwebp"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/libwebp"
+backend_version = "1.5.0"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_animated_webp.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "animated_webp"
+profile = "default"
+direction = "decode"
+settings = { mode = "composited_rgba", channels = 4, dtype = "uint8", threads = true }
+fidelity = "lossless"
+comparator = "Pillow"
+fixture = "animated_webp:default"
+backend = "libwebp"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/libwebp"
+backend_version = "1.5.0"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_animated_webp.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "apng"
+profile = "default"
+direction = "encode"
+settings = { mode = "full_canvas", channels = 4, dtype = "uint8", blend = "source", dispose = "none" }
+fidelity = "lossless"
+comparator = "Pillow + specification-derived chunk oracle"
+fixture = "apng:default"
+backend = "lodepng + SceneIO APNG"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/lodepng"
+backend_version = "ed6fe5825c6a4fbb7f58ab35a4231c7543cd452a"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_apng.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "animated_avif"
+profile = "default"
+direction = "encode"
+settings = { quality = 90, speed = 6, subsampling = "444", range = "full", autotiling = true, timing = "integer_ms" }
+fidelity = "lossy pixels; exact timing"
+comparator = "direct Pillow/libavif provider"
+fixture = "animated_avif:default"
+backend = "Pillow/libavif with libaom"
+backend_owner = "fetched"
+backend_source = "src/sceneio/io/_avif.py"
+backend_version = "Pillow 12.3.0 / libavif 1.4.2 / libaom 3.14.1"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_avif.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "animated_avif"
+profile = "default"
+direction = "decode"
+settings = { output = "composited_uint8", threads = "provider_default", input = "mmap", timing = "exact_ns" }
+fidelity = "decoded-pixel and exact-timing parity"
+comparator = "direct Pillow/libavif provider"
+fixture = "animated_avif:default"
+backend = "Pillow/libavif with dav1d"
+backend_owner = "fetched"
+backend_source = "src/sceneio/io/_avif.py"
+backend_version = "Pillow 12.3.0 / libavif 1.4.2 / dav1d 1.5.3"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_avif.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "apng"
+profile = "default"
+direction = "decode"
+settings = { mode = "composited_rgba", channels = 4, dtype = "uint8" }
+fidelity = "lossless"
+comparator = "Pillow + specification-derived chunk oracle"
+fixture = "apng:default"
+backend = "lodepng + SceneIO APNG"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/lodepng"
+backend_version = "ed6fe5825c6a4fbb7f58ab35a4231c7543cd452a"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_apng.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "rtmv"
+profile = "default"
+direction = "encode"
+settings = { profile = "read_only" }
+fidelity = "not applicable"
+comparator = "read-only dataset profile"
+fixture = "rtmv:default"
+backend = "sceneio-python"
+backend_owner = "repo"
+backend_source = "src/sceneio/io/_rtmv.py"
+backend_version = "sceneio-rtmv-v1"
+transport_status = "not_applicable"
+status = "not_applicable"
+correctness_evidence = ["tests/codecs/test_rtmv.py"]
+benchmark_evidence = []
+candidate_backends = []
+evidence_gaps = ["no canonical SceneIO record preserves all RTMV object and encoded-layer payloads for exact writing"]
+
+[[operation]]
+codec_id = "rtmv"
+profile = "default"
+direction = "decode"
+settings = { layout = "strict_flat", input = "path", pixels = "lazy_encoded_paths" }
+fidelity = "lossless metadata and encoded-layer references"
+comparator = "independent NumPy/OpenEXR fixture"
+fixture = "rtmv:default"
+backend = "sceneio-python"
+backend_owner = "repo"
+backend_source = "src/sceneio/io/_rtmv.py"
+backend_version = "sceneio-rtmv-v1"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_rtmv.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "image_sequence"
+profile = "default"
+direction = "encode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "image_sequence:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/sceneio/io/_image_sequence.py"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_image_sequence.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "image_sequence"
+profile = "default"
+direction = "decode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "image_sequence:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/sceneio/io/_image_sequence.py"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_image_sequence.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "colmap_sparse_txt"
+profile = "default"
+direction = "encode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "colmap_sparse_txt:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/reconstruction/colmap_txt.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_colmap_txt.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "colmap_sparse_txt"
+profile = "default"
+direction = "decode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "colmap_sparse_txt:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/reconstruction/colmap_txt.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+backend_dependencies = ["fast_float 6.1.6"]
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_colmap_txt.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "xyz"
+profile = "default"
+direction = "encode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "xyz:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/points/xyz.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_xyz.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "xyz"
+profile = "default"
+direction = "decode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "xyz:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/points/xyz.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+backend_dependencies = ["fast_float 6.1.6"]
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_xyz.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "pts"
+profile = "default"
+direction = "encode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "pts:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/points/xyz.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_pts.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "pts"
+profile = "default"
+direction = "decode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "pts:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/points/xyz.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+backend_dependencies = ["fast_float 6.1.6"]
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_pts.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "las"
+profile = "fresh_standard_formats_0_2"
+direction = "encode"
+settings = { variant = "fresh_standard_formats_0_2" }
+fidelity = "format_quantized"
+comparator = "source-parity-suite"
+fixture = "las:fresh_standard_formats_0_2"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/points/las.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_las.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+[[operation]]
+codec_id = "las"
+profile = "fresh_standard_formats_0_2"
+direction = "decode"
+settings = { variant = "fresh_standard_formats_0_2" }
+fidelity = "format_quantized"
+comparator = "source-parity-suite"
+fixture = "las:fresh_standard_formats_0_2"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/points/las.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_las.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+[[operation]]
+codec_id = "las"
+profile = "legacy_decode_formats_1_3"
+direction = "encode"
+settings = { variant = "legacy_decode_formats_1_3" }
+fidelity = "format_quantized"
+comparator = "source-parity-suite"
+fixture = "las:legacy_decode_formats_1_3"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/points/las.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+transport_status = "not_applicable"
+status = "not_applicable"
+correctness_evidence = ["tests/codecs/test_las.py"]
+benchmark_evidence = []
+candidate_backends = []
+evidence_gaps = ["the LAS writer does not synthesize point formats 1 or 3"]
+[[operation]]
+codec_id = "las"
+profile = "legacy_decode_formats_1_3"
+direction = "decode"
+settings = { variant = "legacy_decode_formats_1_3" }
+fidelity = "format_quantized"
+comparator = "source-parity-suite"
+fixture = "las:legacy_decode_formats_1_3"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/points/las.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_las.py"]
+benchmark_evidence = []
+candidate_backends = []
+evidence_gaps = ["profile-specific current-backend measurement missing", "candidate comparison on all required toolchains"]
+[[operation]]
+codec_id = "las"
+profile = "extended_decode_formats_6_8"
+direction = "encode"
+settings = { variant = "extended_decode_formats_6_8" }
+fidelity = "format_quantized"
+comparator = "source-parity-suite"
+fixture = "las:extended_decode_formats_6_8"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/points/las.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+transport_status = "not_applicable"
+status = "not_applicable"
+correctness_evidence = ["tests/codecs/test_las.py"]
+benchmark_evidence = []
+candidate_backends = []
+evidence_gaps = ["the LAS writer does not synthesize standard point formats 6-8"]
+[[operation]]
+codec_id = "las"
+profile = "extended_decode_formats_6_8"
+direction = "decode"
+settings = { variant = "extended_decode_formats_6_8" }
+fidelity = "format_quantized"
+comparator = "source-parity-suite"
+fixture = "las:extended_decode_formats_6_8"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/points/las.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_las.py"]
+benchmark_evidence = []
+candidate_backends = []
+evidence_gaps = ["profile-specific current-backend measurement missing", "candidate comparison on all required toolchains"]
+[[operation]]
+codec_id = "las"
+profile = "preserved_waveform_formats_4_5"
+direction = "encode"
+settings = { variant = "preserved_waveform_formats_4_5" }
+fidelity = "format_quantized"
+comparator = "source-parity-suite"
+fixture = "las:preserved_waveform_formats_4_5"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/points/las.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_las.py", "tests/codecs/test_las_waveform.py"]
+benchmark_evidence = []
+candidate_backends = []
+evidence_gaps = ["profile-specific current-backend measurement missing", "candidate comparison on all required toolchains"]
+[[operation]]
+codec_id = "las"
+profile = "preserved_waveform_formats_4_5"
+direction = "decode"
+settings = { variant = "preserved_waveform_formats_4_5" }
+fidelity = "format_quantized"
+comparator = "source-parity-suite"
+fixture = "las:preserved_waveform_formats_4_5"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/points/las.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_las.py", "tests/codecs/test_las_waveform.py"]
+benchmark_evidence = []
+candidate_backends = []
+evidence_gaps = ["profile-specific current-backend measurement missing", "candidate comparison on all required toolchains"]
+[[operation]]
+codec_id = "las"
+profile = "preserved_waveform_formats_9_10"
+direction = "encode"
+settings = { variant = "preserved_waveform_formats_9_10" }
+fidelity = "format_quantized"
+comparator = "source-parity-suite"
+fixture = "las:preserved_waveform_formats_9_10"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/points/las.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_las.py", "tests/codecs/test_las_waveform.py"]
+benchmark_evidence = []
+candidate_backends = []
+evidence_gaps = ["profile-specific current-backend measurement missing", "candidate comparison on all required toolchains"]
+[[operation]]
+codec_id = "las"
+profile = "preserved_waveform_formats_9_10"
+direction = "decode"
+settings = { variant = "preserved_waveform_formats_9_10" }
+fidelity = "format_quantized"
+comparator = "source-parity-suite"
+fixture = "las:preserved_waveform_formats_9_10"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/points/las.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_las.py", "tests/codecs/test_las_waveform.py"]
+benchmark_evidence = []
+candidate_backends = []
+evidence_gaps = ["profile-specific current-backend measurement missing", "candidate comparison on all required toolchains"]
+[[operation]]
+codec_id = "laz"
+profile = "legacy_formats_0_3"
+direction = "encode"
+settings = { variant = "legacy_formats_0_3" }
+fidelity = "format_quantized"
+comparator = "source-parity-suite"
+fixture = "laz:legacy_formats_0_3"
+backend = "lazperf"
+backend_owner = "fetched"
+backend_source = "cmake/SceneIODependencies.cmake"
+backend_version = "b7bbe26109dc986f42d4fc80b8de3d2b6ca634ce"
+backend_patch_set = "sceneio-lazperf-portability-v1"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_laz.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "laz"
+profile = "legacy_formats_0_3"
+direction = "decode"
+settings = { variant = "legacy_formats_0_3" }
+fidelity = "format_quantized"
+comparator = "source-parity-suite"
+fixture = "laz:legacy_formats_0_3"
+backend = "lazperf"
+backend_owner = "fetched"
+backend_source = "cmake/SceneIODependencies.cmake"
+backend_version = "b7bbe26109dc986f42d4fc80b8de3d2b6ca634ce"
+backend_patch_set = "sceneio-lazperf-portability-v1"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_laz.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "laz"
+profile = "layered_formats_6_8"
+direction = "encode"
+settings = { variant = "layered_formats_6_8" }
+fidelity = "format_quantized"
+comparator = "source-parity-suite"
+fixture = "laz:layered_formats_6_8"
+backend = "lazperf"
+backend_owner = "fetched"
+backend_source = "cmake/SceneIODependencies.cmake"
+backend_version = "b7bbe26109dc986f42d4fc80b8de3d2b6ca634ce"
+backend_patch_set = "sceneio-lazperf-portability-v1"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_laz.py"]
+benchmark_evidence = []
+candidate_backends = []
+evidence_gaps = ["profile-specific current-backend measurement missing", "candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "laz"
+profile = "layered_formats_6_8"
+direction = "decode"
+settings = { variant = "layered_formats_6_8" }
+fidelity = "format_quantized"
+comparator = "source-parity-suite"
+fixture = "laz:layered_formats_6_8"
+backend = "lazperf"
+backend_owner = "fetched"
+backend_source = "cmake/SceneIODependencies.cmake"
+backend_version = "b7bbe26109dc986f42d4fc80b8de3d2b6ca634ce"
+backend_patch_set = "sceneio-lazperf-portability-v1"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_laz.py"]
+benchmark_evidence = []
+candidate_backends = []
+evidence_gaps = ["profile-specific current-backend measurement missing", "candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "flo"
+profile = "default"
+direction = "encode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "flo:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/arrays/flo.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_flo.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "flo"
+profile = "default"
+direction = "decode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "flo:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/arrays/flo.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_flo.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "dmb"
+profile = "default"
+direction = "encode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "dmb:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/arrays/dmb.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_dmb.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "dmb"
+profile = "default"
+direction = "decode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "dmb:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/arrays/dmb.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_dmb.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "bundler"
+profile = "default"
+direction = "encode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "bundler:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/reconstruction/bundler.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_bundler.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "bundler"
+profile = "default"
+direction = "decode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "bundler:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/reconstruction/bundler.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+backend_dependencies = ["fast_float 6.1.6"]
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_bundler.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "bal"
+profile = "default"
+direction = "encode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "bal:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/reconstruction/bal.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_bal.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "bal"
+profile = "default"
+direction = "decode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "bal:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/reconstruction/bal.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+backend_dependencies = ["fast_float 6.1.6"]
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_bal.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "nvm"
+profile = "default"
+direction = "encode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "nvm:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/reconstruction/nvm.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_nvm.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "nvm"
+profile = "default"
+direction = "decode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "nvm:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/reconstruction/nvm.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+backend_dependencies = ["fast_float 6.1.6"]
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_nvm.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "openmvg"
+profile = "default"
+direction = "encode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "openmvg:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/reconstruction/openmvg.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+backend_dependencies = ["nlohmann_json 3.11.3"]
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_openmvg.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "openmvg"
+profile = "default"
+direction = "decode"
+settings = {}
+fidelity = "lossless"
+comparator = "source-parity-suite"
+fixture = "openmvg:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/reconstruction/openmvg.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+backend_dependencies = ["nlohmann_json 3.11.3"]
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_openmvg.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "splat"
+profile = "default"
+direction = "encode"
+settings = {}
+fidelity = "format_quantized"
+comparator = "source-parity-suite"
+fixture = "splat:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/splats/splat.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_splat.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "splat"
+profile = "default"
+direction = "decode"
+settings = {}
+fidelity = "format_quantized"
+comparator = "source-parity-suite"
+fixture = "splat:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/splats/splat.cpp"
+backend_version = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_splat.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "colmap_mvs_depth"
+profile = "default"
+direction = "encode"
+settings = {}
+fidelity = "lossless"
+comparator = "independent-struct-numpy"
+fixture = "colmap_mvs_depth:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/dense/colmap_mvs.cpp"
+backend_version = "sceneio-native-c2-2026-07-29"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_colmap_mvs.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "colmap_mvs_depth"
+profile = "default"
+direction = "decode"
+settings = {}
+fidelity = "lossless"
+comparator = "independent-struct-numpy"
+fixture = "colmap_mvs_depth:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/dense/colmap_mvs.cpp"
+backend_version = "sceneio-native-c2-2026-07-29"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_colmap_mvs.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "colmap_mvs_normal"
+profile = "default"
+direction = "encode"
+settings = {}
+fidelity = "lossless"
+comparator = "independent-struct-numpy"
+fixture = "colmap_mvs_normal:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/dense/colmap_mvs.cpp"
+backend_version = "sceneio-native-c2-2026-07-29"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_colmap_mvs.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "colmap_mvs_normal"
+profile = "default"
+direction = "decode"
+settings = {}
+fidelity = "lossless"
+comparator = "independent-struct-numpy"
+fixture = "colmap_mvs_normal:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/dense/colmap_mvs.cpp"
+backend_version = "sceneio-native-c2-2026-07-29"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_colmap_mvs.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "colmap_mvs_consistency"
+profile = "default"
+direction = "encode"
+settings = {}
+fidelity = "lossless"
+comparator = "independent-struct-numpy"
+fixture = "colmap_mvs_consistency:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/dense/colmap_mvs.cpp"
+backend_version = "sceneio-native-c2-2026-07-29"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_colmap_mvs.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "colmap_mvs_consistency"
+profile = "default"
+direction = "decode"
+settings = {}
+fidelity = "lossless"
+comparator = "independent-struct-numpy"
+fixture = "colmap_mvs_consistency:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/dense/colmap_mvs.cpp"
+backend_version = "sceneio-native-c2-2026-07-29"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_colmap_mvs.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "colmap_fused_visibility"
+profile = "default"
+direction = "encode"
+settings = {}
+fidelity = "lossless"
+comparator = "independent-struct-numpy"
+fixture = "colmap_fused_visibility:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/dense/colmap_mvs.cpp"
+backend_version = "sceneio-native-c2-2026-07-29"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_colmap_mvs.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "hdf5"
+profile = "default"
+direction = "encode"
+settings = { schema = "numeric-v1" }
+fidelity = "lossless"
+comparator = "independent-h5py-layout"
+fixture = "hdf5:default"
+backend = "h5py"
+backend_owner = "fetched"
+backend_source = "src/sceneio/io/_hdf5.py"
+backend_version = "h5py >=3.11"
+backend_dependencies = ["h5py >=3.11"]
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_hdf5_hloc.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "hdf5"
+profile = "default"
+direction = "decode"
+settings = { schema = "numeric-v1" }
+fidelity = "lossless"
+comparator = "independent-h5py-layout"
+fixture = "hdf5:default"
+backend = "h5py"
+backend_owner = "fetched"
+backend_source = "src/sceneio/io/_hdf5.py"
+backend_version = "h5py >=3.11"
+backend_dependencies = ["h5py >=3.11"]
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_hdf5_hloc.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "hloc_features"
+profile = "default"
+direction = "encode"
+settings = { schema = "documented-hloc-features" }
+fidelity = "lossless"
+comparator = "independent-h5py-layout"
+fixture = "hloc_features:default"
+backend = "h5py"
+backend_owner = "fetched"
+backend_source = "src/sceneio/io/_hdf5.py"
+backend_version = "h5py >=3.11"
+backend_dependencies = ["h5py >=3.11"]
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_hdf5_hloc.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "hloc_features"
+profile = "default"
+direction = "decode"
+settings = { schema = "documented-hloc-features" }
+fidelity = "lossless"
+comparator = "independent-h5py-layout"
+fixture = "hloc_features:default"
+backend = "h5py"
+backend_owner = "fetched"
+backend_source = "src/sceneio/io/_hdf5.py"
+backend_version = "h5py >=3.11"
+backend_dependencies = ["h5py >=3.11"]
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_hdf5_hloc.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "hloc_matches"
+profile = "default"
+direction = "encode"
+settings = { schema = "documented-hloc-matches0" }
+fidelity = "lossless"
+comparator = "independent-h5py-layout"
+fixture = "hloc_matches:default"
+backend = "h5py"
+backend_owner = "fetched"
+backend_source = "src/sceneio/io/_hdf5.py"
+backend_version = "h5py >=3.11"
+backend_dependencies = ["h5py >=3.11"]
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_hdf5_hloc.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "hloc_matches"
+profile = "default"
+direction = "decode"
+settings = { schema = "documented-hloc-matches0" }
+fidelity = "lossless"
+comparator = "independent-h5py-layout"
+fixture = "hloc_matches:default"
+backend = "h5py"
+backend_owner = "fetched"
+backend_source = "src/sceneio/io/_hdf5.py"
+backend_version = "h5py >=3.11"
+backend_dependencies = ["h5py >=3.11"]
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_hdf5_hloc.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "colmap_fused_visibility"
+profile = "default"
+direction = "decode"
+settings = {}
+fidelity = "lossless"
+comparator = "independent-struct-numpy"
+fixture = "colmap_fused_visibility:default"
+backend = "sceneio-native"
+backend_owner = "repo"
+backend_source = "src/cpp/codecs/dense/colmap_mvs.cpp"
+backend_version = "sceneio-native-c2-2026-07-29"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_colmap_mvs.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "ncore_v4"
+profile = "default"
+direction = "encode"
+settings = { stores = ["directory", "itar"], compressor = "blosc-lz4-level5-bitshuffle", metadata = "cbor-xz-preset0" }
+fidelity = "lossless arrays, dtypes, groups, component metadata, and sequence manifest"
+comparator = "upstream NCore V4 reader"
+fixture = "ncore_v4:default"
+backend = "sceneio-python"
+backend_owner = "repo"
+backend_source = "src/sceneio/io/_ncore/writer.py"
+backend_version = "sceneio-ncore-v4-full-1"
+backend_dependencies = ["zarr >=3.1,<4", "cbor2 >=5.6,<6"]
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_ncore_v4.py"]
+benchmark_evidence = ["bench/BASELINE.md", "tools/verify_ncore_v4_writer_oracle.py"]
+candidate_backends = []
+evidence_gaps = ["three-platform package validation"]
+
+[[operation]]
+codec_id = "ncore_v4"
+profile = "default"
+direction = "decode"
+settings = { stores = ["directory", "itar"], payload = ["lazy_catalog", "typed_full", "selected_component"] }
+fidelity = "lossless root/component catalog plus exact owned arrays and standard semantic profiles"
+comparator = "upstream NCore V4 implementation"
+fixture = "ncore_v4:default"
+backend = "sceneio-python"
+backend_owner = "repo"
+backend_source = "src/sceneio/io/_ncore/component_io.py"
+backend_version = "sceneio-ncore-v4-full-1"
+backend_dependencies = ["zarr >=3.1,<4", "cbor2 >=5.6,<6"]
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_ncore_v4.py"]
+benchmark_evidence = ["bench/BASELINE.md", "tools/verify_ncore_v4_writer_oracle.py"]
+candidate_backends = []
+evidence_gaps = ["three-platform package validation"]
+
+[[operation]]
+codec_id = "euroc_dataset"
+profile = "default"
+direction = "encode"
+settings = { layout = "bounded_asl", image_payload = "opaque_copy", csv = "direct_file_sink" }
+fidelity = "lossless representable calibration, exact timestamps and samples, and byte-identical encoded images"
+comparator = "independent PyYAML, stdlib CSV, and SciPy implementation"
+fixture = "euroc_dataset:default"
+backend = "sceneio-hybrid"
+backend_owner = "repo"
+backend_source = "src/sceneio/io/_euroc_dataset/codec.py"
+backend_version = "sceneio-euroc-asl-1"
+backend_dependencies = []
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_euroc_dataset.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["three-platform package validation"]
+
+[[operation]]
+codec_id = "euroc_dataset"
+profile = "default"
+direction = "decode"
+settings = { layout = "bounded_asl", csv_input = "mmap", images = "lazy_encoded_paths" }
+fidelity = "lossless calibration, exact timestamps and samples, and independently checked transform directions"
+comparator = "independent PyYAML, stdlib CSV, and SciPy implementation"
+fixture = "euroc_dataset:default"
+backend = "sceneio-hybrid"
+backend_owner = "repo"
+backend_source = "src/sceneio/io/_euroc_dataset/codec.py"
+backend_version = "sceneio-euroc-asl-1"
+backend_dependencies = []
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_euroc_dataset.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["three-platform package validation"]
+
+[[operation]]
+codec_id = "zarr"
+profile = "default"
+direction = "encode"
+settings = { store = "directory", zarr_format = 3 }
+fidelity = "lossless"
+comparator = "independent-zarr-python"
+fixture = "zarr:default"
+backend = "zarr-python"
+backend_owner = "fetched"
+backend_source = "src/sceneio/io/_zarr.py"
+backend_version = "zarr >=3.1,<4"
+backend_dependencies = ["zarr >=3.1,<4", "numcodecs"]
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_zarr.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "zarr"
+profile = "default"
+direction = "decode"
+settings = { store = "directory", zarr_format = 3 }
+fidelity = "lossless"
+comparator = "independent-zarr-python"
+fixture = "zarr:default"
+backend = "zarr-python"
+backend_owner = "fetched"
+backend_source = "src/sceneio/io/_zarr.py"
+backend_version = "zarr >=3.1,<4"
+backend_dependencies = ["zarr >=3.1,<4", "numcodecs"]
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_zarr.py"]
+benchmark_evidence = ["bench/BASELINE.md"]
+candidate_backends = []
+evidence_gaps = ["candidate comparison on all required toolchains"]

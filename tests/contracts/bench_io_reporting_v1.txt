@@ -1,0 +1,45 @@
+codec          payloadMB   fileMB     sioW     sioR    pathR     oraW     oraR  bPeakMB  mPeakMB   bRSSMB   mRSSMB  sio/ora
+---------------------------------------------------------------------------------------------------------------------------
+codec_x              1.2      0.5       10       20       30        0       40      1.1      0.2      3.3      0.4     0.50
+  png typed adapter: read=12 MB/s write=6 MB/s inspect=0.123 ms traced read/write=0.001/0.003 MB
+  PLY encodings: ascii: W=1/R=3 MB/s, binary: W=6/R=8 MB/s
+colmap_db            1.0      2.0        3        4        4        0        6        -      0.7        -      0.8        -
+directory            1.0      2.0        3        4        5        -        -        -      0.6        -      0.7        -
+failed         ERROR: ValueError: broken
+
+MB/s over raw payload; fileMB = encoded size (= the whole-file copy O1/O3 remove).
+sioR = in-memory copy decode; pathR = public registry mmap read/view.
+bPeakMB/mPeakMB = peak Python allocation for bytes/mmap reads (O1 delta).
+bRSSMB/mRSSMB = sampled resident-set growth for bytes/mmap reads.
+
+O3 write-path delta:
+codec              payloadMB   fileMB   bytesW    sinkW  bPeakMB  sPeakMB   bRSSMB   sRSSMB
+-------------------------------------------------------------------------------------------
+fmt                      1.0      2.0        -        3        -      0.4        -      0.5
+bytesW/sinkW = legacy bytes+file/public file-sink write MB/s.
+bPeakMB/sPeakMB = peak Python allocation for bytes/file-sink writes (O3 delta).
+bRSSMB/sRSSMB = sampled resident-set growth for bytes/file-sink writes.
+
+O4 one-lane/old-setting delta:
+codec       operation            base MB/s    opt MB/s     gain   identity
+--------------------------------------------------------------------------
+fmt         operation                    2           3    1.50x      bytes
+Identity is encoded bytes where compression settings are unchanged; otherwise decoded values/pixels.
+
+O5 metadata-only inspection delta:
+codec                 full ms  inspect ms   speedup   fullPeak  inspPeak   fullRSS  inspRSS
+-------------------------------------------------------------------------------------------
+fmt                    10.000       2.000     5.00x        1.0       0.2       3.0      0.4
+Inspection reads headers/streamed metadata and constructs no compiled record arrays.
+
+O5 partial-read delta:
+codec                 full ms  partial ms   speedup   fullPeak  partPeak   fullRSS  partRSS
+-------------------------------------------------------------------------------------------
+fmt                    10.000       4.000     2.50x        1.0       0.3       3.0      0.5
+Partial reads return the normal record type while materializing only the selected pixel, point, face, state, frame, tensor, COLMAP-image, or match-pair subset.
+CI regression guard: stable O4 gains and mmap/sink memory bounds passed.
+WARNING: this platform has no POSIX_FADV_DONTNEED; cold-cache hint was unavailable.
+{
+  "codec": "large",
+  "value": 1
+}

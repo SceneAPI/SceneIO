@@ -1,5 +1,10 @@
 # SceneIO I/O + memory implementation plan (nanobind core)
 
+> This document records the original compiled-core build-out. SceneIO 0.2.0
+> completed its 23-codec baseline. Remaining format work now follows
+> [`format_gap_implementation_plan.md`](format_gap_implementation_plan.md),
+> including per-codec verification and cross-platform wheel validation.
+
 **Status: DRAFT for review.** How to implement read/write **and** the
 in-memory representation for the safe format set
 (`docs/formats_survey.md`), as a **nanobind (C++)** core that hands back
@@ -125,7 +130,7 @@ Records map onto the existing (+ deferred) SceneIO DataTypes:
 | Record (C++) | DataType | Fields (canonical dtype / shape) |
 |---|---|---|
 | `Reconstruction` | `sparse_model` | cameras (model id + `params[]`), images (pose `SE3` R\|t, name), points3D (`xyz` Nx3 f64, `rgb` Nx3 u8, `error` N, tracks) |
-| `FeatureSet` | `feature_set` | `keypoints` Nx{2,4,6} f32, `descriptors` NxD (f32/u8), `scores` N, `image_size` 2 |
+| `FeatureSet` | `feature_set` | `keypoints` Nx{2,4,6} f32 with first-pixel center, `descriptors` NxD (f32/u8), `scores` N, `image_size` 2 |
 | `MatchGraph` | `match_graph` | per-pair `matches` Mx2 u32, `scores` M, optional `F/E/H` 3x3 f64, `inliers` |
 | `GaussianCloud` | **`splat`** (new) | `means` Nx3, `scales` Nx3, `quats` Nx4, `opacity` N, `sh` Nx(3+45); activation flags |
 | `DepthMap` / `Dense` | **`dense`/`depth_map`** (new) | `depth` HxW f32 (+ `scale`, `unit`, `invalid` sentinel in metadata), `confidence` HxW |
@@ -138,8 +143,14 @@ Records map onto the existing (+ deferred) SceneIO DataTypes:
 class. Every pose-bearing record carries an explicit tag: quaternion order
 (WXYZ vs XYZW), pose direction (world→cam vs cam→world), axis frame
 (OpenCV +Z-fwd/+Y-down vs OpenGL/Blender −Z-fwd/+Y-up), and depth scale/unit
-(TUM 1/5000 m, ScanNet mm). Codecs record what they read; a normalizer
-converts on request.
+(TUM 1/5000 m, ScanNet mm). Every built-in is now classified by a checked
+73-row manifest as `fixed`, `file_declared`, `unspecified`, or
+`not_applicable`. Capabilities, inspection, and decoded records expose the
+same immutable contract. Ordinary I/O never invokes a converter; the
+established reconstruction adapters deliberately decode into the canonical
+COLMAP `Reconstruction` representation. `sceneio.convert_coordinates(...)`
+uses COLMAP as its default target and operates only on qualified record types.
+See [`coordinate_conventions.md`](coordinate_conventions.md).
 
 ---
 
@@ -218,9 +229,9 @@ read → compare to oracle; and byte-mutated real files must raise, not crash).
 | Format(s) | Oracle | License |
 |---|---|---|
 | COLMAP `.bin`/`.txt`/`.db` + camera models | **pycolmap** | BSD |
-| PLY, PCD | **open3d** (MIT) / **plyfile** (BSD) | MIT/BSD |
-| 3DGS `.ply` | plyfile + **gsplat/nerfstudio** loader cross-check | Apache |
-| `.splat` / `.spz` / SuperSplat | reference py/JS loaders → **captured test vectors** | MIT |
+| PLY, PCD | **open3d** (MIT) + independent NumPy/stdlib parser | MIT / in-tree |
+| 3DGS `.ply` | executable **gsply 0.4.6** + executable **SplatTransform 3.1.6**; gsplat/Brush are semantic references only | MIT / Apache |
+| `.splat` / `.spz` / SuperSplat / SOG / KSplat | executable **SplatTransform 3.1.6** cross-read/write where supported + gsply/official vectors + independent parsers | MIT |
 | HDF5, hloc layout | **h5py** (BSD) + **hloc** (Apache) | BSD/Apache |
 | LAS / LAZ | **laspy** + `lazrs` | BSD/Apache |
 | npy / npz | **numpy** | BSD |
@@ -252,7 +263,7 @@ docs, and closes with "all parity green."
   end-to-end** (`.npy` or PFM) as the reference codec pattern.
 - **Phase 1 — Tier-1 spine, zero external deps.** COLMAP `.bin`/`.txt` +
   camera models, PLY, `.npy`/`.npz`, PFM, PPM/PGM, `transforms.json`,
-  TUM/KITTI/g2o text. Oracles: pycolmap, plyfile, numpy, imageio. *(Also:
+  TUM/KITTI/g2o text. Oracles: pycolmap, Open3D, numpy, imageio. *(Also:
   wire the `Reconstruction`/`FeatureSet` Records to the existing
   `sparse_model`/`feature_set` DataTypes.)*
 - **Phase 2 — 3DGS splat → unblocks the `splat` DataType.** 3DGS `.ply`,

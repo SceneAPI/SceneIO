@@ -1,0 +1,330 @@
+name: Backend qualification
+
+# This workflow never publishes packages. It produces paired installed-wheel
+# measurements and an auditable three-toolchain qualification report.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-qualification-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  windows:
+    name: Windows MSVC x86-64
+    runs-on: windows-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v7
+      - name: Install pinned NASM 3.02
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $archive = Join-Path $env:RUNNER_TEMP "nasm-3.02-win64.zip"
+          $directory = Join-Path $env:RUNNER_TEMP "nasm"
+          Invoke-WebRequest `
+            -Uri "https://www.nasm.us/pub/nasm/releasebuilds/3.02/win64/nasm-3.02-win64.zip" `
+            -OutFile $archive
+          Expand-Archive -LiteralPath $archive -DestinationPath $directory
+          $nasm = Get-ChildItem $directory -Recurse -Filter nasm.exe |
+            Select-Object -First 1
+          if ($null -eq $nasm) {
+            throw "NASM executable was not found"
+          }
+          $actual = (Get-FileHash $nasm.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+          $expected = "04ec2385879f7e1c45dbe76c4020970555de48eeb97c23f59620ede061328f51"
+          if ($actual -ne $expected) {
+            throw "NASM executable hash is $actual, expected $expected"
+          }
+          $nasm.DirectoryName | Out-File -FilePath $env:GITHUB_PATH -Append
+          & $nasm.FullName -v
+      - name: Build paired qualification wheels
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $root = Join-Path $env:RUNNER_TEMP "sceneio-backend-qualification"
+          $stbWheelDirectory = Join-Path $root "stb-wheel"
+          $turboWheelDirectory = Join-Path $root "turbo-wheel"
+          $stbBuild = Join-Path $root "stb-build"
+          $turboBuild = Join-Path $root "turbo-build"
+          New-Item -ItemType Directory -Force $stbWheelDirectory, $turboWheelDirectory | Out-Null
+          uv build --wheel --out-dir $stbWheelDirectory `
+            -C "build-dir=$stbBuild" `
+            -C "cmake.args=-DSCENEIO_BUILD_BACKEND_QUALIFICATION=ON;-DSCENEIO_QUALIFICATION_JPEG_BACKEND=stb"
+          uv build --wheel --out-dir $turboWheelDirectory `
+            -C "build-dir=$turboBuild" `
+            -C "cmake.args=-DSCENEIO_BUILD_BACKEND_QUALIFICATION=ON;-DSCENEIO_QUALIFICATION_JPEG_BACKEND=libjpeg-turbo"
+          $stbWheel = (Get-ChildItem $stbWheelDirectory -Filter *.whl -File).FullName
+          $turboWheel = (Get-ChildItem $turboWheelDirectory -Filter *.whl -File).FullName
+          $stbManifest = (Get-ChildItem $stbBuild -Filter "sceneio-backend-qualification-Release.json" -File).FullName
+          $turboManifest = (Get-ChildItem $turboBuild -Filter "sceneio-backend-qualification-Release.json" -File).FullName
+          $simd = (Get-ChildItem $turboBuild -Filter "sceneio-jpeg-simd-Release.json" -File).FullName
+          if (@($stbWheel).Count -ne 1 -or @($turboWheel).Count -ne 1) {
+            throw "Each backend must produce exactly one wheel"
+          }
+          "QUAL_ROOT=$root" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "STB_WHEEL=$stbWheel" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "TURBO_WHEEL=$turboWheel" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "STB_MANIFEST=$stbManifest" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "TURBO_MANIFEST=$turboManifest" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "TURBO_SIMD=$simd" | Out-File -FilePath $env:GITHUB_ENV -Append
+      - name: Create isolated installed-wheel environments
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $stbEnvironment = Join-Path $env:QUAL_ROOT "stb-env"
+          $turboEnvironment = Join-Path $env:QUAL_ROOT "turbo-env"
+          uv venv --managed-python --python 3.12 --seed $stbEnvironment
+          uv venv --managed-python --python 3.12 --seed $turboEnvironment
+          uv pip install --python "$stbEnvironment\Scripts\python.exe" `
+            $env:STB_WHEEL "numpy>=2.0,<2.5" "pillow>=10" "psutil>=6" "pytest>=8.3"
+          uv pip install --python "$turboEnvironment\Scripts\python.exe" `
+            $env:TURBO_WHEEL "numpy>=2.0,<2.5" "pillow>=10" "psutil>=6" "pytest>=8.3"
+          "STB_PYTHON=$stbEnvironment\Scripts\python.exe" |
+            Out-File -FilePath $env:GITHUB_ENV -Append
+          "TURBO_PYTHON=$turboEnvironment\Scripts\python.exe" |
+            Out-File -FilePath $env:GITHUB_ENV -Append
+      - name: Run focused installed-wheel parity
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $env:SCENEIO_EXPECT_JPEG_BACKEND = "stb"
+          & $env:STB_PYTHON -m pytest -q `
+            tests/codecs/test_jpeg.py tests/test_backend_qualification.py
+          $env:SCENEIO_EXPECT_JPEG_BACKEND = "libjpeg-turbo-3.2.0"
+          & $env:TURBO_PYTHON -m pytest -q `
+            tests/codecs/test_jpeg.py tests/test_backend_qualification.py
+      - name: Run paired production-path qualification
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          & $env:STB_PYTHON bench/qualify_backend.py run `
+            --retained-python $env:STB_PYTHON `
+            --retained-wheel $env:STB_WHEEL `
+            --retained-cmake-manifest $env:STB_MANIFEST `
+            --candidate-python $env:TURBO_PYTHON `
+            --candidate-wheel $env:TURBO_WHEEL `
+            --candidate-cmake-manifest $env:TURBO_MANIFEST `
+            --candidate-simd-evidence $env:TURBO_SIMD `
+            --platform-profile windows_msvc_x86_64 `
+            --work-dir "$env:QUAL_ROOT\measurement" `
+            --output "$env:QUAL_ROOT\windows_msvc_x86_64.json" `
+            --include-remote
+      - name: Upload Windows evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-qualification-windows
+          path: |
+            ${{ env.QUAL_ROOT }}/*.json
+            ${{ env.QUAL_ROOT }}/*-wheel/*.whl
+            ${{ env.QUAL_ROOT }}/*-build/sceneio-backend-qualification-Release.json
+            ${{ env.QUAL_ROOT }}/turbo-build/sceneio-jpeg-simd-Release.json
+
+  manylinux:
+    name: manylinux2014 GCC 10 x86-64
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build, test, and measure inside the pinned image
+        run: |
+          mkdir -p "${RUNNER_TEMP}/backend-qualification-linux"
+          docker run --rm \
+            -v "$PWD:/src:ro" \
+            -v "${RUNNER_TEMP}/backend-qualification-linux:/out" \
+            quay.io/pypa/manylinux2014_x86_64@sha256:92f4005bb23138b89ed22ba1491ddbedb0564747e7ce44b33c52aa6f1a786d23 \
+            /bin/bash -lc '
+              set -euo pipefail
+              git config --global --add safe.directory /src
+              test "$(g++ -dumpversion | cut -d. -f1)" = 10
+              py=/opt/python/cp312-cp312/bin/python
+              nasm_archive=/work/nasm-3.02.tar.xz
+              "$py" -c "import urllib.request; urllib.request.urlretrieve(\"https://www.nasm.us/pub/nasm/releasebuilds/3.02/nasm-3.02.tar.xz\", \"$nasm_archive\")"
+              echo "87336eba53b4acfe917424ab5d500d2b0054d9f5148d35c2273ccf2cfb712f0d  $nasm_archive" \
+                | sha256sum -c -
+              tar -C /work -xf "$nasm_archive"
+              cd /work/nasm-3.02
+              ./configure --prefix=/work/nasm
+              make -j2
+              make install
+              export PATH="/work/nasm/bin:$PATH"
+              nasm -v
+              mkdir -p /work/stb-wheel /work/turbo-wheel
+              "$py" -m pip wheel --no-deps --wheel-dir /work/stb-wheel \
+                --config-settings=build-dir=/work/stb-build \
+                --config-settings="cmake.args=-DSCENEIO_BUILD_BACKEND_QUALIFICATION=ON;-DSCENEIO_QUALIFICATION_JPEG_BACKEND=stb" \
+                /src
+              "$py" -m pip wheel --no-deps --wheel-dir /work/turbo-wheel \
+                --config-settings=build-dir=/work/turbo-build \
+                --config-settings="cmake.args=-DSCENEIO_BUILD_BACKEND_QUALIFICATION=ON;-DSCENEIO_QUALIFICATION_JPEG_BACKEND=libjpeg-turbo" \
+                /src
+              stb_wheel="$(find /work/stb-wheel -maxdepth 1 -name "*.whl" -print -quit)"
+              turbo_wheel="$(find /work/turbo-wheel -maxdepth 1 -name "*.whl" -print -quit)"
+              stb_manifest="$(find /work/stb-build -maxdepth 1 -name "sceneio-backend-qualification-*.json" -print -quit)"
+              turbo_manifest="$(find /work/turbo-build -maxdepth 1 -name "sceneio-backend-qualification-*.json" -print -quit)"
+              turbo_simd="$(find /work/turbo-build -maxdepth 1 -name "sceneio-jpeg-simd-*.json" -print -quit)"
+              test -n "$stb_wheel"
+              test -n "$turbo_wheel"
+              test -n "$stb_manifest"
+              test -n "$turbo_manifest"
+              test -n "$turbo_simd"
+              "$py" -m venv /work/stb-env
+              "$py" -m venv /work/turbo-env
+              /work/stb-env/bin/python -m pip install \
+                "$stb_wheel" "numpy>=2.0,<2.5" "pillow>=10" "psutil>=6" "pytest>=8.3"
+              /work/turbo-env/bin/python -m pip install \
+                "$turbo_wheel" "numpy>=2.0,<2.5" "pillow>=10" "psutil>=6" "pytest>=8.3"
+              cd /src
+              SCENEIO_EXPECT_JPEG_BACKEND=stb \
+                /work/stb-env/bin/python -m pytest -q \
+                tests/codecs/test_jpeg.py tests/test_backend_qualification.py
+              SCENEIO_EXPECT_JPEG_BACKEND=libjpeg-turbo-3.2.0 \
+                /work/turbo-env/bin/python -m pytest -q \
+                tests/codecs/test_jpeg.py tests/test_backend_qualification.py
+              /work/stb-env/bin/python bench/qualify_backend.py run \
+                --retained-python /work/stb-env/bin/python \
+                --retained-wheel "$stb_wheel" \
+                --retained-cmake-manifest "$stb_manifest" \
+                --candidate-python /work/turbo-env/bin/python \
+                --candidate-wheel "$turbo_wheel" \
+                --candidate-cmake-manifest "$turbo_manifest" \
+                --candidate-simd-evidence "$turbo_simd" \
+                --platform-profile manylinux2014_gcc10_x86_64 \
+                --work-dir /work/measurement \
+                --output /out/manylinux2014_gcc10_x86_64.json \
+                --include-remote
+              mkdir -p /out/stb /out/turbo
+              cp "$stb_wheel" "$stb_manifest" /out/stb/
+              cp "$turbo_wheel" "$turbo_manifest" "$turbo_simd" /out/turbo/
+            '
+      - name: Upload manylinux evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-qualification-manylinux
+          path: ${{ runner.temp }}/backend-qualification-linux/*
+
+  macos:
+    name: macOS AppleClang arm64
+    runs-on: macos-14
+    timeout-minutes: 180
+    env:
+      MACOSX_DEPLOYMENT_TARGET: "11.0"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v7
+      - name: Verify runner architecture
+        run: |
+          test "$(uname -m)" = arm64
+          clang --version
+      - name: Build paired qualification wheels
+        run: |
+          set -euo pipefail
+          root="${RUNNER_TEMP}/sceneio-backend-qualification"
+          mkdir -p "$root/stb-wheel" "$root/turbo-wheel"
+          uv build --wheel --out-dir "$root/stb-wheel" \
+            -C "build-dir=$root/stb-build" \
+            -C "cmake.args=-DSCENEIO_BUILD_BACKEND_QUALIFICATION=ON;-DSCENEIO_QUALIFICATION_JPEG_BACKEND=stb"
+          uv build --wheel --out-dir "$root/turbo-wheel" \
+            -C "build-dir=$root/turbo-build" \
+            -C "cmake.args=-DSCENEIO_BUILD_BACKEND_QUALIFICATION=ON;-DSCENEIO_QUALIFICATION_JPEG_BACKEND=libjpeg-turbo"
+          stb_wheel="$(find "$root/stb-wheel" -maxdepth 1 -name "*.whl" -print -quit)"
+          turbo_wheel="$(find "$root/turbo-wheel" -maxdepth 1 -name "*.whl" -print -quit)"
+          stb_manifest="$(find "$root/stb-build" -maxdepth 1 -name "sceneio-backend-qualification-*.json" -print -quit)"
+          turbo_manifest="$(find "$root/turbo-build" -maxdepth 1 -name "sceneio-backend-qualification-*.json" -print -quit)"
+          turbo_simd="$(find "$root/turbo-build" -maxdepth 1 -name "sceneio-jpeg-simd-*.json" -print -quit)"
+          test -n "$stb_wheel"
+          test -n "$turbo_wheel"
+          test -n "$stb_manifest"
+          test -n "$turbo_manifest"
+          test -n "$turbo_simd"
+          {
+            echo "QUAL_ROOT=$root"
+            echo "STB_WHEEL=$stb_wheel"
+            echo "TURBO_WHEEL=$turbo_wheel"
+            echo "STB_MANIFEST=$stb_manifest"
+            echo "TURBO_MANIFEST=$turbo_manifest"
+            echo "TURBO_SIMD=$turbo_simd"
+          } >> "$GITHUB_ENV"
+      - name: Create isolated installed-wheel environments
+        run: |
+          set -euo pipefail
+          uv venv --managed-python --python 3.12 --seed "$QUAL_ROOT/stb-env"
+          uv venv --managed-python --python 3.12 --seed "$QUAL_ROOT/turbo-env"
+          uv pip install --python "$QUAL_ROOT/stb-env/bin/python" \
+            "$STB_WHEEL" "numpy>=2.0,<2.5" "pillow>=10" "psutil>=6" "pytest>=8.3"
+          uv pip install --python "$QUAL_ROOT/turbo-env/bin/python" \
+            "$TURBO_WHEEL" "numpy>=2.0,<2.5" "pillow>=10" "psutil>=6" "pytest>=8.3"
+          {
+            echo "STB_PYTHON=$QUAL_ROOT/stb-env/bin/python"
+            echo "TURBO_PYTHON=$QUAL_ROOT/turbo-env/bin/python"
+          } >> "$GITHUB_ENV"
+      - name: Run focused installed-wheel parity
+        run: |
+          SCENEIO_EXPECT_JPEG_BACKEND=stb \
+            "$STB_PYTHON" -m pytest -q \
+            tests/codecs/test_jpeg.py tests/test_backend_qualification.py
+          SCENEIO_EXPECT_JPEG_BACKEND=libjpeg-turbo-3.2.0 \
+            "$TURBO_PYTHON" -m pytest -q \
+            tests/codecs/test_jpeg.py tests/test_backend_qualification.py
+      - name: Run paired production-path qualification
+        run: |
+          "$STB_PYTHON" bench/qualify_backend.py run \
+            --retained-python "$STB_PYTHON" \
+            --retained-wheel "$STB_WHEEL" \
+            --retained-cmake-manifest "$STB_MANIFEST" \
+            --candidate-python "$TURBO_PYTHON" \
+            --candidate-wheel "$TURBO_WHEEL" \
+            --candidate-cmake-manifest "$TURBO_MANIFEST" \
+            --candidate-simd-evidence "$TURBO_SIMD" \
+            --platform-profile macos_appleclang_arm64 \
+            --work-dir "$QUAL_ROOT/measurement" \
+            --output "$QUAL_ROOT/macos_appleclang_arm64.json" \
+            --include-remote
+      - name: Upload macOS evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-qualification-macos
+          path: |
+            ${{ env.QUAL_ROOT }}/*.json
+            ${{ env.QUAL_ROOT }}/*-wheel/*.whl
+            ${{ env.QUAL_ROOT }}/*-build/sceneio-backend-qualification-*.json
+            ${{ env.QUAL_ROOT }}/turbo-build/sceneio-jpeg-simd-*.json
+
+  validate:
+    name: Validate three-platform evidence set
+    if: always()
+    needs: [windows, manylinux, macos]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: backend-qualification-*
+          path: ${{ runner.temp }}/reports
+      - name: Validate exact source and configuration identity
+        run: |
+          set -euo pipefail
+          windows="$(find "${RUNNER_TEMP}/reports" -name windows_msvc_x86_64.json -print -quit)"
+          manylinux="$(find "${RUNNER_TEMP}/reports" -name manylinux2014_gcc10_x86_64.json -print -quit)"
+          macos="$(find "${RUNNER_TEMP}/reports" -name macos_appleclang_arm64.json -print -quit)"
+          test -n "$windows"
+          test -n "$manylinux"
+          test -n "$macos"
+          python3 bench/qualify_backend.py validate-set \
+            --report "$windows" \
+            --report "$manylinux" \
+            --report "$macos" \
+            --output "${RUNNER_TEMP}/backend-qualification-set.json"
+      - name: Upload qualification-set summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-qualification-set
+          path: ${{ runner.temp }}/backend-qualification-set.json

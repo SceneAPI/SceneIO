@@ -1,0 +1,19 @@
+Google Research Kubric
+======================
+
+Upstream project: https://github.com/google-research/kubric
+Reference revision: 61f2422c84bab75006df33c6989e0b483db3ccfe
+
+Kubric's deterministic segmentation rules and generated outputs are used as
+test-oracle evidence for SceneIO's semantic, instance, and panoptic label-map
+contracts. Kubric and Blender are not runtime or wheel dependencies, and no
+Kubric source code is copied into SceneIO.
+
+Copyright ownership and attribution remain with the upstream Kubric
+contributors at the pinned revision; SceneIO does not invent or replace an
+upstream copyright notice.
+
+SPDX-License-Identifier: Apache-2.0
+
+Kubric is licensed under the Apache License, Version 2.0. The complete license
+terms are present in SceneIO's repository-root LICENSE file.

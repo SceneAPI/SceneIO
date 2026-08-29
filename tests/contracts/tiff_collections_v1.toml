@@ -1,0 +1,83 @@
+schema_version = 1
+contract_date = "2026-08-29"
+format_id = "tiff"
+provider = "tifffile>=2025.5"
+selection_provider = "zarr>=3.1,<4"
+legacy_projection = "one_series_one_level_returns_Image_Mask_or_TensorDict"
+
+[records]
+level_fields = ["index", "axes", "shape", "dtype", "payload_kind", "payload"]
+series_fields = ["index", "name", "levels"]
+collection_fields = ["series"]
+axes = ["YX", "YXC", "CYX", "IYX", "QYX", "TYX", "ZYX"]
+dtypes = ["bool", "uint8", "uint16", "float32"]
+payload_kinds = ["image", "mask", "tensor"]
+empty_dimensions = "refused"
+pyramid_rule = "homogeneous_semantics_and_strictly_decreasing_spatial_shape"
+
+[selectors]
+series_index = "non_negative_in_range"
+level_index = "requires_series_index"
+page_range = "non_empty_half_open_stack_range_requires_series_and_level"
+window = "non_empty_half_open_yx_range_requires_series_and_level"
+compound_page_window = true
+selected_result = "RasterCollection_retaining_source_indices"
+backend = "tifffile_aszarr_chunk_selection"
+
+[inspection]
+sample_decode = false
+fields = [
+  "axes",
+  "source_axes",
+  "shape",
+  "dtype",
+  "page_count",
+  "layout",
+  "tile_shape",
+  "rows_per_strip",
+  "compression",
+  "photometric",
+  "planar_config",
+  "orientation",
+  "bigtiff",
+  "byteorder",
+]
+
+[writer]
+transaction = "sibling_temporary_reopen_then_atomic_replace"
+containers = ["classic", "bigtiff"]
+byteorders = ["native", "little", "big"]
+layouts = ["stripped", "tiled"]
+multiple_series = "YX_or_YXC_images_and_YX_masks"
+pyramids = "homogeneous_images_or_masks"
+single_series_stacks = true
+refuses = [
+  "series_names",
+  "multi_series_stacks",
+  "stack_pyramids",
+  "ome_xml",
+  "structured_or_subarray_dtype",
+  "mixed_photometric",
+  "planar_separate",
+  "non_top_left_orientation",
+]
+
+[provider_granularity]
+series = "selected_series_only"
+level = "selected_level_only"
+pages = "leading_axis_zarr_chunks"
+window = "intersecting_strip_or_tile_chunks"
+post_decode_slice_does_not_qualify = true
+
+[benchmark]
+implementation = "bench/io_bench/tiff_collections.py"
+evidence = "docs/tiff_collection_benchmark.md"
+large_fixture_logical_bytes = 67108864
+fresh_process_protocol = "sceneio-fresh-child-memory-v1"
+fresh_process_samples = 3
+operations = ["typed_full_read", "typed_selected_read", "typed_inspect"]
+
+[ome]
+four_dimensional_axes = "deliberate_refusal"
+frame_metadata = "read_via_TiffFrame_keyframe"
+arbitrary_xml_editing = false

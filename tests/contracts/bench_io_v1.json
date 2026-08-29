@@ -1,0 +1,1205 @@
+{
+  "schema_version": 1,
+  "existing_json_envelope": "bare_list",
+  "metric_semantics": {
+    "json_fields": "*_rss_mb",
+    "implementation_name": "in_process_rss",
+    "scope": "warmed_parent_process_peak_rss_delta",
+    "qualification_role": "exploratory_not_fresh_process_evidence",
+    "unavailable_json_value_mb": 0
+  },
+  "representative_fixture_fingerprints": {
+    "algorithm": "sha256-canonical-fixture-v1",
+    "builder_ast_functions": [
+      "_animated_webp_fixture",
+      "_apng_fixture",
+      "_gauss",
+      "_img_u8",
+      "_mesh_scene",
+      "_pc_ply",
+      "_poses_and_reconstruction",
+      "_single_calibration",
+      "_specs",
+      "_theora_fixture",
+      "_webm_fixture",
+      "_y4m_fixture"
+    ],
+    "builder_ast_sources": {
+      "_animated_webp_fixture": "bench/io_bench/fixtures/sequences.py",
+      "_apng_fixture": "bench/io_bench/fixtures/sequences.py",
+      "_webm_fixture": "bench/io_bench/fixtures/sequences.py",
+      "_theora_fixture": "bench/io_bench/fixtures/sequences.py",
+      "_gauss": "bench/io_bench/fixtures/splats.py",
+      "_img_u8": "bench/io_bench/fixtures/images.py",
+      "_mesh_scene": "bench/io_bench/fixtures/meshes.py",
+      "_pc_ply": "bench/io_bench/fixtures/points.py",
+      "_poses_and_reconstruction": "bench/io_bench/fixtures/reconstruction.py",
+      "_single_calibration": "bench/io_bench/fixtures/calibration.py",
+      "_specs": "bench/io_bench/runner.py",
+      "_y4m_fixture": "bench/io_bench/fixtures/sequences.py"
+    },
+    "parent_and_candidate_builder_ast_sha256": "ce8dda677da61550035dcd2062d4cb53aed20f21e37024d87d5f50449ba1fbfd",
+    "current_builder_ast_sha256": "cef56f6af4454372216c8e4f415a1740fbd091fc29392fbfaadfe020fa53beaf",
+    "fixtures": {
+      "camera_calibration": "5e2b5f1e70aa57bd8d219b06a16ce36dfec48aa4d0905ef45cdf503cca8b511c",
+      "gaussian_cloud": "dc358708428493fafd834f6c9626f87dd1e91626d324fea3865320561176b1cf",
+      "image_rgb8": "a47c7a9af619b88f4a861d0d0233ce89cf8497d5d934bf43bf9ccf2b7c4778f6",
+      "image_sequence_animated_rgba": "3f35235980954ad241d18bb2c04d08359f3765ca499afc9e53c5da7d130624d1",
+      "image_sequence_apng_rgba": "d4a801f1636913bc101cffa5309bfbcc39aa2e6c9a3b8952b3af816867ce57ea",
+      "image_sequence_webm_rgb": "f253269b01d4220c153c9403bfb3ceaa1c7e64a084e69b5ea864a5a9c8735d24",
+      "image_sequence_yuv420": "f4bd49409011672e13a22eaf899edb621715440e9c3103c6bec692463fafd398",
+      "mesh_scene": "69f8355dbb149640abafa5221ab7a6a09f56562d588a044796591ce5016b8b6d",
+      "point_cloud_ply": "718f1d8592ca964d6b8303ca73f77f8739a525d954d50865cc904705fd939da3",
+      "reconstruction": "32b1c26e3bb277b76c6ce3506fd34591483a13fb1c9b5cb960f7f84aad1eb39f",
+      "tensor_dict": "988ba625ca1f012b60705dea6b395eb741b58cc63660cc7c443dedbeef0fa377"
+    }
+  },
+  "r3_2_family_extraction": {
+    "arrays": {
+      "family_functions": {
+        "_array_fixture_values": {
+          "source": "bench/io_bench/families/arrays.py",
+          "ast_sha256": "f7d68dbd7f31d047fb6bc7f9c5c9630da1fdb21572fa00dc800ee6f3f3ce5033"
+        },
+        "build_array_specs": {
+          "source": "bench/io_bench/families/arrays.py",
+          "ast_sha256": "046468f7f7d8a86f9e67185ba72022d3c9fd38301f0ba7389f77845b3d2d56c2"
+        }
+      },
+      "facade_family_exports": [
+        "build_array_specs"
+      ],
+      "functions": {
+        "_depth_map": {
+          "source": "bench/io_bench/fixtures/arrays.py",
+          "ast_sha256": "d9a10f6a74cb7041980d6c060880112ab31970f47e6713fba4a348b2977b3f6f"
+        },
+        "_dmb_oracle_read": {
+          "source": "bench/io_bench/oracles/arrays.py",
+          "ast_sha256": "b1b95de33f0d7ffa63cccf8c3bb3de646b7f813702fb47af4cd8d27ce36f7fec"
+        },
+        "_dmb_oracle_write": {
+          "source": "bench/io_bench/oracles/arrays.py",
+          "ast_sha256": "f7dda5ee31015e42b86428177417f923d6a53147cd422a95e9356786dc0ba5d2"
+        },
+        "_load_npz_oracle": {
+          "source": "bench/io_bench/oracles/arrays.py",
+          "ast_sha256": "a59204f39a7f6c385cb599f6d6a227c728bd2356d85d380b03fcab42712a38e7"
+        },
+        "_np_r": {
+          "source": "bench/io_bench/oracles/arrays.py",
+          "ast_sha256": "9659189626001bb25eb3c1779fe490f4999863fc6c5d8b7081ee36baa379ccc7"
+        },
+        "_np_w": {
+          "source": "bench/io_bench/oracles/arrays.py",
+          "ast_sha256": "898aa45c2816bd23c78df7505e53f3e633313d85bbcf54c59ffc9aae150b1734"
+        },
+        "_save_npz_oracle": {
+          "source": "bench/io_bench/oracles/arrays.py",
+          "ast_sha256": "b5800d03900f5fe54abc337e293a26a12a9e0af0b4288ed69a776cf6663fc9d8"
+        }
+      },
+      "optional_oracle_bindings": [
+        "safetensors_load",
+        "safetensors_load_file",
+        "safetensors_open",
+        "safetensors_save",
+        "safetensors_save_file"
+      ],
+      "optional_oracle_source": "bench/io_bench/oracles/arrays.py",
+      "no_oracle_exemptions": {
+        "flo": {
+          "unverified_property": "independent benchmark encode/decode throughput",
+          "verification": "format parity remains covered by the independent Python/OpenCV codec suite in tests/codecs/test_flo.py"
+        },
+        "pfm": {
+          "unverified_property": "independent benchmark encode/decode throughput",
+          "verification": "format parity remains covered by the independent Python codec suite in tests/codecs/test_pfm.py"
+        }
+      }
+    },
+    "calibration": {
+      "family_functions": {
+        "build_calibration_specs": {
+          "source": "bench/io_bench/families/calibration.py",
+          "ast_sha256": "9bbd45ab429596cd22a82ea0d452191cacd22df96b74c093512a1c2370c4dc42"
+        }
+      },
+      "facade_family_exports": [
+        "build_calibration_specs"
+      ],
+      "functions": {
+        "_kalibr_calibration": {
+          "source": "bench/io_bench/fixtures/calibration.py",
+          "ast_sha256": "142df279c2ba62007b8d14bac735734ba1f9fb296f011aea31428f36496310da"
+        },
+        "_record_nbytes": {
+          "source": "bench/io_bench/families/common.py",
+          "ast_sha256": "e4fcd157db9ea4de775585aecc2deb819dc4daa05a7bddc39ea0f5f6044e8edc"
+        },
+        "_single_calibration": {
+          "source": "bench/io_bench/fixtures/calibration.py",
+          "ast_sha256": "0a04087933d81c5b3031dbce718cab1f951dbc10b0c67431f3e6db92c3e1f55f"
+        },
+        "_xml_oracle_read": {
+          "source": "bench/io_bench/oracles/calibration.py",
+          "ast_sha256": "b47cf6d8307e38905dded3f4610f72c748bea605e6cc861df3238264b7cc0150"
+        },
+        "_xml_oracle_write": {
+          "source": "bench/io_bench/oracles/calibration.py",
+          "ast_sha256": "944941b83febccbf1e87342e3877dbe4118b2f33a5c4075d45cbd6f3262d52a7"
+        },
+        "_yaml_oracle_read": {
+          "source": "bench/io_bench/oracles/calibration.py",
+          "ast_sha256": "439951852e265a235563f27b4b9467204d08b890a209baa5d7ecb5e62d7da679"
+        },
+        "_yaml_oracle_write": {
+          "source": "bench/io_bench/oracles/calibration.py",
+          "ast_sha256": "6623d66761c43bda658e5481003dcd5a84dba71edc0a365fc0b26fa2d1932939"
+        }
+      },
+      "optional_oracle_bindings": [
+        "yaml"
+      ],
+      "optional_oracle_source": "bench/io_bench/oracles/calibration.py",
+      "no_oracle_exemptions": {}
+    },
+    "images": {
+      "family_functions": {
+        "build_image_specs": {
+          "source": "bench/io_bench/families/images.py",
+          "ast_sha256": "47d2c7742a5c16bb2a690137aff74ed3e2313f5154d906e6ffc0ca38817d041d"
+        }
+      },
+      "facade_family_exports": [
+        "build_image_specs"
+      ],
+      "functions": {
+        "_imageio_r": {
+          "source": "bench/io_bench/oracles/images.py",
+          "ast_sha256": "0289864d8b2c77ee70da916542669e267b028dcb7e2961d4e7641aa4ba28c9cf"
+        },
+        "_imageio_w": {
+          "source": "bench/io_bench/oracles/images.py",
+          "ast_sha256": "20fdca7cb32a2afe59ba590661c7e825784544ca693def3b8d82b628fbfe1ee5"
+        },
+        "_img_f32": {
+          "source": "bench/io_bench/fixtures/images.py",
+          "ast_sha256": "c5fc9d140f7180fd2016052146cd3c3cef14b608f9f2d5b495b3bca12d90f6da"
+        },
+        "_img_u8": {
+          "source": "bench/io_bench/fixtures/images.py",
+          "ast_sha256": "0cd247c5b8999e2924e47558ce296cebe12e787b0d778226ce40295f8c672bab"
+        },
+        "_img_webp_palette": {
+          "source": "bench/io_bench/fixtures/images.py",
+          "ast_sha256": "f020074de5ac089c622d5694769724aff32687cf488ecc48148d66f435933a09"
+        },
+        "_openexr_r": {
+          "source": "bench/io_bench/oracles/images.py",
+          "ast_sha256": "ce3013175078c64772a350e779cc33c5e3519020fe4fb4ceff9083ffe394d15f"
+        },
+        "_openexr_w": {
+          "source": "bench/io_bench/oracles/images.py",
+          "ast_sha256": "f9dd3f1f3778a801e39d25d007bae0a65682e295ceee7f32f28105e2b985353a"
+        },
+        "_pil_r": {
+          "source": "bench/io_bench/oracles/images.py",
+          "ast_sha256": "21449e91255aca810fd5978724d685dd702e62c92222d8c06d2ef435ecc2a41d"
+        },
+        "_pil_w": {
+          "source": "bench/io_bench/oracles/images.py",
+          "ast_sha256": "871d099c605ac0bef239420097c871eb0e3718b9675548d8d287cfdad76fa75b"
+        }
+      },
+      "optional_oracle_bindings": [
+        "OpenEXR",
+        "PILImage",
+        "iio"
+      ],
+      "optional_oracle_source": "bench/io_bench/oracles/images.py",
+      "no_oracle_exemptions": {
+        "hdr": {
+          "unverified_property": "portable independent benchmark encode/decode throughput for Radiance HDR",
+          "verification": "format parity remains covered by the independent NumPy RGBE parser and serializer in tests/codecs/test_hdr.py"
+        }
+      }
+    },
+    "meshes": {
+      "family_functions": {
+        "build_mesh_specs": {
+          "source": "bench/io_bench/families/meshes.py",
+          "ast_sha256": "90d898ad80f52032c0591625a75f414b26b6d83276547f53db768c51e4c0726a"
+        }
+      },
+      "facade_family_exports": [
+        "build_mesh_specs"
+      ],
+      "functions": {
+        "_mesh_obj": {
+          "source": "bench/io_bench/fixtures/meshes.py",
+          "ast_sha256": "8d269bcf1c32d3fc0e7ceea5d5e9bbe8da0c01f8b6711b16c451b541b5f00da0"
+        },
+        "_mesh_off": {
+          "source": "bench/io_bench/fixtures/meshes.py",
+          "ast_sha256": "3254c7f6e5afff214a5e44359001a29b05da41d45966ba70badee796552711db"
+        },
+        "_mesh_ply": {
+          "source": "bench/io_bench/fixtures/meshes.py",
+          "ast_sha256": "a42e855a44e0967327c73907808d2cb9e14d8f5162e44fea9732eb5a430aec6e"
+        },
+        "_mesh_scene": {
+          "source": "bench/io_bench/fixtures/meshes.py",
+          "ast_sha256": "c789d470bda4cb21f855291c7e9be81bbbcdf861b95332381b95e30f92053e12"
+        },
+        "_mesh_stl": {
+          "source": "bench/io_bench/fixtures/meshes.py",
+          "ast_sha256": "cc51aa65610e485b3c568720d1f18bea5825eef6cfe17d3741387247d3d0522a"
+        },
+        "_trimesh_glb_r": {
+          "source": "bench/io_bench/oracles/meshes.py",
+          "ast_sha256": "94218529b9653d41cef64fa191349d019f8fcf65d8d32f3c9ac42b4ae1b0e9ac"
+        },
+        "_trimesh_glb_w": {
+          "source": "bench/io_bench/oracles/meshes.py",
+          "ast_sha256": "38e8eae83d5cb803c7374f3e136f5edfbfac3ae023ddb6854d4ff99792d236c0"
+        },
+        "_trimesh_gltf_r": {
+          "source": "bench/io_bench/oracles/meshes.py",
+          "ast_sha256": "25a6c62805c4d3b2a1f7710e46fd8bc96dec1eecd9af3291fe8f6dc8bccf5451"
+        },
+        "_trimesh_gltf_w": {
+          "source": "bench/io_bench/oracles/meshes.py",
+          "ast_sha256": "58be9c9f50def8d0ca4d177306a3704bf69dc12a4f005d1c67dd58e5321718b4"
+        },
+        "_trimesh_obj_r": {
+          "source": "bench/io_bench/oracles/meshes.py",
+          "ast_sha256": "40108c96616fb60bcda0a574dd2a821d8c084cc3eb2111e2fbe5f4a0d413a607"
+        },
+        "_trimesh_obj_w": {
+          "source": "bench/io_bench/oracles/meshes.py",
+          "ast_sha256": "390df861bfe25c05453058e44d09b2fe7a3da61c01803ddb105fe5cea2df0456"
+        },
+        "_trimesh_off_r": {
+          "source": "bench/io_bench/oracles/meshes.py",
+          "ast_sha256": "5d28bde8bc196bca336cdaef4d3d33cead3f0c4dc747c4364d13219644d96644"
+        },
+        "_trimesh_off_w": {
+          "source": "bench/io_bench/oracles/meshes.py",
+          "ast_sha256": "e36fb17ca2260b1bd0c660e1e1c95079cb6de0c9f439563e36904df80d1e720a"
+        },
+        "_trimesh_ply_r": {
+          "source": "bench/io_bench/oracles/meshes.py",
+          "ast_sha256": "b7ff91d72545021f4f52e27f0a101d41fbbb17d3ea0d81033effc1436dbf414b"
+        },
+        "_trimesh_ply_w": {
+          "source": "bench/io_bench/oracles/meshes.py",
+          "ast_sha256": "335d54ea5abfeb7001c003b0eb71eeb7e833424a90f363eeda8620863f69aebf"
+        },
+        "_trimesh_stl_r": {
+          "source": "bench/io_bench/oracles/meshes.py",
+          "ast_sha256": "68f083596f85e2b8d8a163e8272cf233f094b95afe01d41f45ae5244f5756e42"
+        },
+        "_trimesh_stl_w": {
+          "source": "bench/io_bench/oracles/meshes.py",
+          "ast_sha256": "6d80bb3c841e7d8c87ade156a03086ef360b32885602ade2e7c6c9e9d47d478d"
+        }
+      },
+      "optional_oracle_bindings": [
+        "trimesh"
+      ],
+      "optional_oracle_source": "bench/io_bench/oracles/meshes.py",
+      "no_oracle_exemptions": {}
+    },
+    "points": {
+      "family_functions": {
+        "build_point_specs": {
+          "source": "bench/io_bench/families/points.py",
+          "ast_sha256": "17f6efe0f6fb73a46c35caae277206ca1f162841892d08dea99dae63d54e3185"
+        }
+      },
+      "facade_family_exports": [
+        "build_point_specs"
+      ],
+      "functions": {
+        "_laspy_laz_w": {
+          "source": "bench/io_bench/oracles/points.py",
+          "ast_sha256": "b23825d0d890a3eb59e89c1e51ce35798e72af01aacff0065a1813edd1642b52"
+        },
+        "_laspy_r": {
+          "source": "bench/io_bench/oracles/points.py",
+          "ast_sha256": "f95e216c595778aa1fec21c4a0ae22020a7b47317e87c78c7d08a6dcf0fdc63b"
+        },
+        "_laspy_w": {
+          "source": "bench/io_bench/oracles/points.py",
+          "ast_sha256": "eba3f5323c4d57abd794485b5641fda2e17e85711f7b04b92e69b723aafbe835"
+        },
+        "_open3d_pcd_r": {
+          "source": "bench/io_bench/oracles/points.py",
+          "ast_sha256": "765482744df96adc674d5681ed9fc96948fbfc094236958bbf784c06f97c1b11"
+        },
+        "_open3d_pcd_w": {
+          "source": "bench/io_bench/oracles/points.py",
+          "ast_sha256": "d7bac2b2b34df7bf17ffa6744c8441dd20af1f861a285f6540ce4637792a8cf6"
+        },
+        "_open3d_ply_r": {
+          "source": "bench/io_bench/oracles/points.py",
+          "ast_sha256": "593ee36d2e90f75e24f79951c7582cb36ead063f36eb1495ccb86be2fc3f08ea"
+        },
+        "_open3d_ply_w": {
+          "source": "bench/io_bench/oracles/points.py",
+          "ast_sha256": "dabdcf43d0cf555544b35237b3e6e046665fc1047d60edc421249acd7d39ce6d"
+        },
+        "_pc": {
+          "source": "bench/io_bench/fixtures/points.py",
+          "ast_sha256": "f1d59bc3aaa051933bf7c51697180e94592327d1309c56e3e6f8730572e66674"
+        },
+        "_pc_laz": {
+          "source": "bench/io_bench/fixtures/points.py",
+          "ast_sha256": "b1ea17f72b97770d3ef5a2dfb38c798b21a976050e445cfa31aa101281cdc135"
+        },
+        "_pc_ply": {
+          "source": "bench/io_bench/fixtures/points.py",
+          "ast_sha256": "e3c4a25347020a852494dd7dfa8430be2d05a950a38d1269166c1517dfc78c2a"
+        },
+        "_pts_oracle_read": {
+          "source": "bench/io_bench/oracles/points.py",
+          "ast_sha256": "b8dd601344d68e1df7b7f5e6e37383bcf5992d452f560b630a006dc39bf18103"
+        },
+        "_pts_oracle_write": {
+          "source": "bench/io_bench/oracles/points.py",
+          "ast_sha256": "2bcf52ed9cd1c81c1ddc50457be7202f7933cefe487e94cea7941c62f928090f"
+        }
+      },
+      "optional_oracle_bindings": [
+        "laspy",
+        "o3d"
+      ],
+      "optional_oracle_source": "bench/io_bench/oracles/points.py",
+      "benchmark_equivalence_repairs": {
+        "las_laz": {
+          "issue": "LASpy previously encoded XYZ-only LAS point format 0 while SceneIO encoded point format 2 with XYZ, RGB, and intensity",
+          "verification": "LAS and LAZ now use one XYZ, RGB, and intensity payload on both sides and retain one positions-equivalent throughput denominator"
+        }
+      },
+      "no_oracle_exemptions": {
+        "xyz": {
+          "unverified_property": "independent benchmark encode/decode throughput",
+          "verification": "format parity remains covered by the independent NumPy text parser and serializer in tests/codecs/test_xyz.py"
+        }
+      }
+    },
+    "reconstruction": {
+      "family_functions": {
+        "build_reconstruction_specs": {
+          "source": "bench/io_bench/families/reconstruction.py",
+          "ast_sha256": "835e6ff5be2dcb54bf8cfd95c3dacaf3a3f6ff37217e6e9f9ac735f7dce3c061"
+        }
+      },
+      "facade_family_exports": [
+        "build_reconstruction_specs"
+      ],
+      "functions": {
+        "_bal_fixture": {
+          "source": "bench/io_bench/fixtures/reconstruction.py",
+          "ast_sha256": "aa8b97893e5d321049d9a0a5436461da470bf8ed45cafafb58d8362fdc6c7dad"
+        },
+        "_bal_oracle_read": {
+          "source": "bench/io_bench/oracles/reconstruction.py",
+          "ast_sha256": "b3870bfd1971718cf0196fa77bacd345d7c05a3f4e3f250330817feb8aee30dd"
+        },
+        "_bal_oracle_write": {
+          "source": "bench/io_bench/oracles/reconstruction.py",
+          "ast_sha256": "aedae2539d20205328bf57f9015222415e6575a79a1f64c30d06b41af0377286"
+        },
+        "_bal_payload_nbytes": {
+          "source": "bench/io_bench/families/reconstruction.py",
+          "ast_sha256": "001ffcddb528c47c212da2b0872608acc899186c163d825000c035cb3ad4309c"
+        },
+        "_euroc_fixture": {
+          "source": "bench/io_bench/fixtures/reconstruction.py",
+          "ast_sha256": "40c07a8f891ec9de11157f06a1125ff3129007a1bb4c4508f3ba2caf0dbb63e5"
+        },
+        "_euroc_oracle_read": {
+          "source": "bench/io_bench/oracles/reconstruction.py",
+          "ast_sha256": "5f01ac3007baecdb20c2307ca85324acf94f2ba8313fe54543f4e2f9b5f5a6f9"
+        },
+        "_euroc_oracle_write": {
+          "source": "bench/io_bench/oracles/reconstruction.py",
+          "ast_sha256": "479771c362c4e1fa8a8145330a5879b03830743ef9587401775741db4cfc8e8d"
+        },
+        "_euroc_payload_nbytes": {
+          "source": "bench/io_bench/families/reconstruction.py",
+          "ast_sha256": "2c5ff9f359b1b0266309899c7b16c9395c33dfb37579da6eed5541742dd07332"
+        },
+        "_g2o_fixture": {
+          "source": "bench/io_bench/fixtures/reconstruction.py",
+          "ast_sha256": "ec0539ffe7733c01bda3bdbda5668e855e01f6c4c3dc50680367069ef1a1f9cf"
+        },
+        "_g2o_oracle_read": {
+          "source": "bench/io_bench/oracles/reconstruction.py",
+          "ast_sha256": "0f78961cc11cb40ebcbbae9269dee0c8b956c466f18f26c97dcaa9af7b61d46f"
+        },
+        "_g2o_oracle_write": {
+          "source": "bench/io_bench/oracles/reconstruction.py",
+          "ast_sha256": "3d8e546e551dfad837997cd5698e35a362bfc82d41f4159b0e848d7b9e1c0207"
+        },
+        "_g2o_payload_nbytes": {
+          "source": "bench/io_bench/families/reconstruction.py",
+          "ast_sha256": "f80cf74b989b0c6ec4619cae93432fa36bcf9a405608cdeb05da2b2c5a4c13db"
+        },
+        "_poses_and_reconstruction": {
+          "source": "bench/io_bench/fixtures/reconstruction.py",
+          "ast_sha256": "2ff5e65be2129f43a7ba4c76e1ff7a1478923ebf3f7531f0d4c0020d6b22b2f4"
+        }
+      },
+      "facade_constant_exports": [
+        "_EUROC_HEADER"
+      ],
+      "optional_oracle_bindings": [],
+      "optional_oracle_source": "bench/io_bench/oracles/reconstruction.py",
+      "no_oracle_exemptions": {
+        "bundler": {
+          "unverified_property": "independent benchmark encode/decode throughput",
+          "verification": "format parity remains covered by the independent token-stream parser in tests/codecs/test_bundler.py"
+        },
+        "colmap_sparse": {
+          "unverified_property": "independent benchmark directory encode/decode throughput",
+          "verification": "format parity remains covered by independent binary fixtures and PyCOLMAP comparisons in tests/codecs/test_colmap.py"
+        },
+        "colmap_sparse_txt": {
+          "unverified_property": "independent benchmark directory encode/decode throughput",
+          "verification": "format parity remains covered by the independent text parser and PyCOLMAP comparisons in tests/codecs/test_colmap_txt.py"
+        },
+        "kitti": {
+          "unverified_property": "independent benchmark encode/decode throughput",
+          "verification": "format parity remains covered by the independent NumPy text parser and serializer in tests/codecs/test_pose_text.py"
+        },
+        "nvm": {
+          "unverified_property": "independent benchmark encode/decode throughput",
+          "verification": "format parity remains covered by the independent NVM parser and emitter in tests/codecs/test_nvm.py"
+        },
+        "openmvg": {
+          "unverified_property": "independent benchmark encode/decode throughput",
+          "verification": "format parity remains covered by the independent JSON parser and pose conversion in tests/codecs/test_openmvg.py"
+        },
+        "transforms_json": {
+          "unverified_property": "independent benchmark encode/decode throughput",
+          "verification": "format parity remains covered by the independent JSON parser, serializer, and matrix math in tests/codecs/test_transforms_json.py"
+        },
+        "tum": {
+          "unverified_property": "independent benchmark encode/decode throughput",
+          "verification": "format parity remains covered by the independent NumPy text parser and serializer in tests/codecs/test_pose_text.py"
+        }
+      }
+    },
+    "sequences": {
+      "family_functions": {
+        "build_sequence_specs": {
+          "source": "bench/io_bench/families/sequences.py",
+          "ast_sha256": "c717f406d21d2a6f032d42c1b773fece477bcda7d74070a457b3e8d9ebf931da"
+        }
+      },
+      "facade_family_exports": [
+        "build_sequence_specs"
+      ],
+      "functions": {
+        "_animated_webp_fixture": {
+          "source": "bench/io_bench/fixtures/sequences.py",
+          "ast_sha256": "930f439dfbf2d96fa13c29c3cfb2c9706b6f8e99de0f5d720835aadbdf250215"
+        },
+        "_animated_webp_oracle_read": {
+          "source": "bench/io_bench/oracles/sequences.py",
+          "ast_sha256": "9495605c00bb75fee9a845d574419863c47ca61cde7fce21d9da3a1c3459ff22"
+        },
+        "_animated_webp_oracle_write": {
+          "source": "bench/io_bench/oracles/sequences.py",
+          "ast_sha256": "69b43aadf98e23589daa098b9019db0dfe09d006a08a56253dfd534bccaddbf4"
+        },
+        "_apng_fixture": {
+          "source": "bench/io_bench/fixtures/sequences.py",
+          "ast_sha256": "392b5aafa9b4265fe097ede3c1f86fcfc2da0aaa0c908cb8307672a14cc82850"
+        },
+        "_apng_oracle_read": {
+          "source": "bench/io_bench/oracles/sequences.py",
+          "ast_sha256": "9548e6bc5418ef5212836f5fab0c3c0cdc7e1ade6018931f05933fd4c554f41c"
+        },
+        "_apng_oracle_write": {
+          "source": "bench/io_bench/oracles/sequences.py",
+          "ast_sha256": "0501de295f59d1779213c831614c2bd445461d6e920d6d0db5c3fe7f50a69035"
+        },
+        "_image_sequence_directory_fixture": {
+          "source": "bench/io_bench/fixtures/sequences.py",
+          "ast_sha256": "26ed06f11389b0e95e1345ed1bd0709e359dfb669fc90b9071de51511a64a949"
+        },
+        "_webm_fixture": {
+          "source": "bench/io_bench/fixtures/sequences.py",
+          "ast_sha256": "cd1a4b89a64cb8e69f032252d1172880d54144121559b2931f7569dbd38e2eb7"
+        },
+        "_webm_oracle_read": {
+          "source": "bench/io_bench/oracles/sequences.py",
+          "ast_sha256": "e754bad456892e52f72d0a4a8ec39c7016b8e1bed47a58a39af05af9a106d818"
+        },
+        "_webm_oracle_write": {
+          "source": "bench/io_bench/oracles/sequences.py",
+          "ast_sha256": "1c9cbeee5aadf3d326fce32187b5034c243bab367a1095653553845c1f3ad668"
+        },
+        "_theora_fixture": {
+          "source": "bench/io_bench/fixtures/sequences.py",
+          "ast_sha256": "773f1941fef118f679c2791752a011c77a181e3bf77b74bafff8ba2c7eef827e"
+        },
+        "_y4m_fixture": {
+          "source": "bench/io_bench/fixtures/sequences.py",
+          "ast_sha256": "b69997cf85861ea91b94c80ca64a27eb27273008f81fc3b0d65e5d8631d08324"
+        },
+        "_y4m_oracle_read": {
+          "source": "bench/io_bench/oracles/sequences.py",
+          "ast_sha256": "d8968e4168ca5bdcee02fffe4e84ee52b5914c4c6e613294c52a92e805a2d0e4"
+        },
+        "_y4m_oracle_write": {
+          "source": "bench/io_bench/oracles/sequences.py",
+          "ast_sha256": "8eb3775d94710c5aa183bf24fdbe308aa256da2392afd4077eb1e58682f1d02e"
+        }
+      },
+      "optional_oracle_bindings": [],
+      "optional_oracle_source": "bench/io_bench/oracles/sequences.py",
+      "no_oracle_exemptions": {
+        "theora": {
+          "unverified_property": "direct pinned libtheora with independent Ogg framing oracle",
+          "verification": "container framing and payload parity remain covered by tests/codecs/test_theora.py"
+        },
+        "rtmv": {
+          "unverified_property": "independent RTMV directory read/inspect throughput",
+          "verification": "format parity remains covered by tests/codecs/test_rtmv.py"
+        },
+        "image_sequence": {
+          "unverified_property": "independent benchmark directory encode/decode throughput",
+          "verification": "format parity remains covered by the independent manifest and PGM payload fixtures in tests/codecs/test_image_sequence.py"
+        }
+      }
+    },
+    "splats": {
+      "family_functions": {
+        "build_splat_specs": {
+          "source": "bench/io_bench/families/splats.py",
+          "ast_sha256": "bc3523d33ca18293e8366c5751ee3f29b4f7f3f6cda1d384e283eb931bea68df"
+        }
+      },
+      "facade_family_exports": [
+        "build_splat_specs"
+      ],
+      "functions": {
+        "_gauss": {
+          "source": "bench/io_bench/fixtures/splats.py",
+          "ast_sha256": "fbd0d28f54abab172cd055b0d1007fb861b533f2425501e9e48e92f0b28e5bec"
+        },
+        "_gsply_ply_r": {
+          "source": "bench/io_bench/oracles/splats.py",
+          "ast_sha256": "4b721931a2bdb9b6a5e99fcce11852c39924cca03c16d50c0d004044f4d2410c"
+        },
+        "_gsply_ply_w": {
+          "source": "bench/io_bench/oracles/splats.py",
+          "ast_sha256": "826d89e4757d7788cbdf9090bc163641eb6c5f0a3832caf67e7a6294e5bbbf40"
+        },
+        "_gsply_spz_r": {
+          "source": "bench/io_bench/oracles/splats.py",
+          "ast_sha256": "a1b44a718bd519aae473df0c3f23edc7c11946e7d8f1dc7031d0585885ba9638"
+        },
+        "_gsply_spz_w": {
+          "source": "bench/io_bench/oracles/splats.py",
+          "ast_sha256": "bcaa63a082ae57b68e3cf043f9404dee85d44119816bf0898a298f12dda4d69c"
+        }
+      },
+      "optional_oracle_bindings": [
+        "gsply"
+      ],
+      "optional_oracle_source": "bench/io_bench/oracles/splats.py",
+      "no_oracle_exemptions": {
+        "compressed_ply": {
+          "unverified_property": "independent benchmark encode/decode throughput",
+          "verification": "format parity remains covered by tests/codecs/test_compressed_ply.py"
+        },
+        "ksplat": {
+          "unverified_property": "independent benchmark encode/decode throughput",
+          "verification": "format parity remains covered by tests/codecs/test_ksplat.py"
+        },
+        "sog": {
+          "unverified_property": "independent benchmark encode/decode throughput",
+          "verification": "format parity remains covered by tests/codecs/test_sog.py"
+        },
+        "splat": {
+          "unverified_property": "independent benchmark encode/decode throughput",
+          "verification": "format parity remains covered by tests/codecs/test_splat.py"
+        }
+      }
+    },
+    "datasets": {
+      "family_functions": {},
+      "facade_family_exports": [],
+      "functions": {},
+      "optional_oracle_bindings": [],
+      "optional_oracle_source": "bench/io_bench/oracles/containers.py",
+      "no_oracle_exemptions": {
+        "ncore_v4": {
+          "unverified_property": "automatic independent NCore V4 timing in the default sweep",
+          "verification": "format parity remains covered by tools/verify_ncore_v4_writer_oracle.py"
+        },
+        "euroc_dataset": {
+          "unverified_property": "independent stdlib/PyYAML/SciPy parity and generated directory timing",
+          "verification": "format parity remains covered by tests/codecs/test_euroc_dataset.py"
+        }
+      }
+    }
+  },
+  "r3_2_qualification": {
+    "source": "bench/io_bench/qualification.py",
+    "builtin_count": 74,
+    "timed_count": 53,
+    "reviewed_exemption_count": 21,
+    "ledger_sha256": "c0f01d1f34c4a91b322ff6509e7fcc95b3f9b515aabce0f9f7819f99d60b7eb8"
+  },
+  "r3_2_runner_extraction": {
+    "parent_commit": "cd322685d3de86931ec4264261924fb3c309b6c4",
+    "source": "bench/io_bench/runner.py",
+    "facade": "bench/bench_io.py",
+    "facade_attribute_policy": "alias_all_non_dunder_runner_globals",
+    "facade_attribute_count": 189,
+    "facade_attributes_sha256": "5ac12624f3a946edcc318dbf69cb538a2ddfd215b1444fce3924827996cd8d4b",
+    "facade_rebinding_policy": "propagate_historical_attribute_mutations_to_runner",
+    "facade_first_import_policy": "preserve_initialized_runner_objects_and_rebindings",
+    "facade_reload_policy": "reset_runner_source_definitions_and_restore_aliases",
+    "star_import_policy": "parent_public_names_without_explicit_all",
+    "star_import_count": 72,
+    "star_import_sha256": "7b18ab7bb60a1cbf82bc6a68d5ebd3c7416d149cd69c08daa90c468b4c1aa151",
+    "function_ast_sha256": {
+      "_colmap_db_fixture": "21fca110721a74e5314b837211e72d958a2e8b9ed59bb7c204027f90c26a7ab6",
+      "_colmap_db_payload_nbytes": "a68d8e879f360c0595f76f747079ce07c4822774f22b5b4cefee8bd396dffb32",
+      "_colmap_blob": "1510f9e3f19529d08b1e29d8ff6ab25ff568d1f41b5d93c20e55819b46a75d74",
+      "_sqlite_reference_write_colmap_db": "21d9bf176dcc34b91c663cbb60f09d552433237dde94e982fe35f0c6a33fa408",
+      "_sqlite_reference_query": "81eefe9fd08369ddb528afee8f3fe393faefa895480d270f1c6e25aba5967c1d",
+      "_sqlite_reference_read_colmap_db": "e50153bfd1dbdd129545abc1b1f7b37d691a6da220634d7b219ec013e7e03bc6",
+      "_sqlite_reference_inspect_colmap_db": "1a4f469a1d30e9b035f81039d678e6fb4749923bdecf372315675e8674507982",
+      "_sqlite_reference_read_colmap_db_image": "1590c76b16a2c935a7f00736180a5b4858f5d86cd852367749385b8d203f367e",
+      "_sqlite_reference_read_colmap_db_pair": "ec87e08a59243c23622d83a9a00112a5a0657a119c948d39d7d357b747714d85",
+      "_assert_colmap_db_equal": "da1cf206f5c6dbebc8f20ecf10631ad1fea998a6c83adb97354936611f3b7dce",
+      "_evict_file_cache": "ce88899f9525aecc749764372ed3d85fde9f9af62ad95feb4e90cee38f77cc83",
+      "_stored_size": "f76c384c22cdbd196f96fc51960866d546db6584300845583135805d9bd54f32",
+      "_specs": "153fd71dbbd54191b09297c807042017390edb1588069c3b2ec78b7412f0ea82",
+      "_directory_specs": "b507b6a9b59b6a5dc22528a7a15b3926d800b648b9e5ac6bb3be4316cd8bd46c",
+      "_directory_size": "27992c88e0aec0a0cb6433a1e1243b929af446c71574d863905f77e7c18372e8",
+      "_assert_ncore_dataset_equal": "011d5c839e98a2d726f03c21284d641b6cec0fb03941aa6bdde1db681e83761b",
+      "_assert_euroc_dataset_equal": "e06e437270fe5ecd1b498f6b8a5976b595b9a39561bd547cce95ce12c7c8a572",
+      "_assert_euroc_dataset_partial": "0fa559abe228ddf096f02e6f0ad517d78be939f0f5c4eacd2277325a21c2289a",
+      "_assert_ncore_partial_equal": "b5f684f0bf8e5148c618945986960de4534ad902fa00236ed04ba6846cbc173f",
+      "_partial_request": "570f508726b04dc83f2b079cf481559348e1df3f578fad2c2ebafae8e9674b0e",
+      "main": "c5b809e8ca512be16dd7e496fdfe65e903374265ad8f82f3f291cb9ac6f3c1fc",
+      "_run_large_safetensors": "4c7533d0bc4c406858f7e00ed0704966c9a8133655a2629a63075ad7e3a9f29d",
+      "_benchmark_colmap_db": "0fc2a9533c139fb1a09b94adfb2efee2fc1e8cc423cba6dccc813ab8a92144d3",
+      "_benchmark_path_spec": "3bac92c60c0e5e8a35b1d698ab1005988398c7aaa6e8393634e65c7e45efc512",
+      "_benchmark_gltf": "589f18f0c1bac962a14902f113d1bbcf32edc07168015792e9a42d0826506093",
+      "_run_benchmark": "f2d050d0fb665f7f25a12807c0d9b7d531a403ff4079530ee9fda8346fd5d5d6"
+    }
+  },
+  "r3_1a_equivalence": {
+    "parent_commit": "683ae483a3a2407dc192fb32cdcf964eb3b1fe9a",
+    "parent_tree": "5dfe9bbd36940bfa4b03a322a2b452b38d3f463e",
+    "parent_benchmark_blob": "bcb502936cc8ccce4a52b843a1220f27cdddba1f",
+    "candidate_benchmark_blob": "9714e081322b925eddc560f1a724b4dd2a68dc78",
+    "capture_command": ".venv/Scripts/python.exe bench/bench_io.py --runs 1 --scale 0.001 --skip-oracles --json <output>",
+    "parent_capture_sha256": "d30840742c571dd4a8ad86076ef0af8dd1fc884ecf59e1af2f3330adffaffd57",
+    "candidate_capture_sha256": [
+      "c0ec1a358ae5e7e51d650d3b1fd1069f76c97bf9f8573d917cd2e74ef976521e",
+      "5ae19649975f4ced69d9f0817a15c000c7a82e4c93cb5d3f873763273e43c7b8"
+    ],
+    "structural_projection_sha256": "f1e71435c9cf5660851636707ab897e1b65e9ca71b82174bf47238676a3034e7",
+    "confirming_strict_capture_sha256": "b426086aaf02483d4a36bb4e4297fba4c7ac85b8786d849cd4de3ff07726dc3b",
+    "deterministic_projection": "identical"
+  },
+  "cli_options": [
+    "--cold-cache",
+    "--colmap-db-profile",
+    "--help",
+    "--json",
+    "--large-safetensors-mib",
+    "--only",
+    "--require-o4-gains",
+    "--require-o5-inspect-gains",
+    "--require-o5-partial-gains",
+    "--runs",
+    "--scale",
+    "--skip-oracles",
+    "--strict-oracles"
+  ],
+  "defaults": {
+    "runs": 7,
+    "scale": 1.0,
+    "cold_cache": false,
+    "only": null,
+    "skip_oracles": false,
+    "strict_oracles": false,
+    "large_safetensors_mib": 0,
+    "require_o4_gains": false,
+    "require_o5_inspect_gains": false,
+    "require_o5_partial_gains": false,
+    "json": null,
+    "colmap_db_profile": "sceneio-hybrid-v1"
+  },
+  "incompatibilities": [
+    [
+      "only",
+      "require_o4_gains"
+    ],
+    [
+      "only",
+      "require_o5_inspect_gains"
+    ],
+    [
+      "only",
+      "require_o5_partial_gains"
+    ],
+    [
+      "only",
+      "large_safetensors_mib"
+    ],
+    [
+      "strict_oracles",
+      "skip_oracles"
+    ],
+    [
+      "strict_oracles",
+      "only"
+    ],
+    [
+      "strict_oracles",
+      "large_safetensors_mib"
+    ]
+  ],
+  "result_order": [
+    "png",
+    "jpeg",
+    "bmp",
+    "tga",
+    "webp",
+    "y4m",
+    "webm",
+    "theora",
+    "animated_webp",
+    "apng",
+    "hdr",
+    "exr",
+    "netpbm",
+    "xyz",
+    "pts",
+    "ply",
+    "ply_mesh",
+    "obj",
+    "stl",
+    "off",
+    "glb",
+    "pcd",
+    "las",
+    "laz",
+    "gaussian_ply",
+    "compressed_ply",
+    "sog",
+    "ksplat",
+    "spz",
+    "splat",
+    "npy",
+    "pfm",
+    "flo",
+    "dmb",
+    "npz",
+    "safetensors",
+    "transforms_json",
+    "tum",
+    "kitti",
+    "euroc_state",
+    "opencv_yaml",
+    "opencv_xml",
+    "ros_camera_info",
+    "kalibr",
+    "g2o",
+    "bundler",
+    "bal",
+    "nvm",
+    "openmvg",
+    "colmap_mvs_depth",
+    "colmap_mvs_normal",
+    "colmap_mvs_consistency",
+    "colmap_fused_visibility",
+    "gltf",
+    "colmap_db",
+    "hdf5",
+    "hloc_features",
+    "hloc_matches",
+    "zarr",
+    "tiff",
+    "e57",
+    "parquet",
+    "arrow_ipc",
+    "openvdb",
+    "usd",
+    "usdz",
+    "avif",
+    "animated_avif",
+    "colmap_sparse",
+    "colmap_sparse_txt",
+    "ncore_v4",
+    "euroc_dataset",
+    "rtmv",
+    "image_sequence"
+  ],
+  "row_key_variants": {
+    "common": [
+      "bytes_path_write_mbps",
+      "bytes_peak_mb",
+      "bytes_rss_mb",
+      "bytes_write_peak_mb",
+      "bytes_write_rss_mb",
+      "codec",
+      "file_mb",
+      "inspect_ms",
+      "inspect_peak_mb",
+      "inspect_rss_mb",
+      "mmap_peak_mb",
+      "mmap_rss_mb",
+      "o4",
+      "oracle_read_mbps",
+      "oracle_write_mbps",
+      "partial_ms",
+      "partial_peak_mb",
+      "partial_rss_mb",
+      "path_read_mbps",
+      "path_write_mbps",
+      "payload_mb",
+      "pcd_variants",
+      "ply_variants",
+      "read_mbps",
+      "sink_write_peak_mb",
+      "sink_write_rss_mb",
+      "spz_profiles",
+      "typed_adapter",
+      "write_mbps"
+    ],
+    "gltf": [
+      "bytes_path_write_mbps",
+      "bytes_peak_mb",
+      "bytes_rss_mb",
+      "bytes_write_peak_mb",
+      "bytes_write_rss_mb",
+      "codec",
+      "file_mb",
+      "inspect_ms",
+      "inspect_peak_mb",
+      "inspect_rss_mb",
+      "mmap_peak_mb",
+      "mmap_rss_mb",
+      "oracle_read_mbps",
+      "oracle_write_mbps",
+      "partial_ms",
+      "partial_peak_mb",
+      "partial_rss_mb",
+      "path_read_mbps",
+      "path_write_mbps",
+      "payload_mb",
+      "read_mbps",
+      "sink_write_peak_mb",
+      "sink_write_rss_mb",
+      "write_mbps"
+    ],
+    "colmap_db": [
+      "codec",
+      "file_mb",
+      "inspect_ms",
+      "inspect_peak_mb",
+      "inspect_rss_mb",
+      "mmap_peak_mb",
+      "mmap_rss_mb",
+      "partial_image_ms",
+      "partial_image_peak_mb",
+      "partial_image_rss_mb",
+      "partial_ms",
+      "partial_pair_ms",
+      "partial_pair_peak_mb",
+      "partial_pair_rss_mb",
+      "partial_peak_mb",
+      "partial_rss_mb",
+      "path_read_mbps",
+      "path_write_mbps",
+      "payload_mb",
+      "profile",
+      "read_mbps",
+      "sink_write_peak_mb",
+      "sink_write_rss_mb",
+      "write_mbps"
+    ],
+    "directory": [
+      "codec",
+      "file_mb",
+      "inspect_ms",
+      "inspect_peak_mb",
+      "inspect_rss_mb",
+      "mmap_peak_mb",
+      "mmap_rss_mb",
+      "partial_ms",
+      "partial_peak_mb",
+      "partial_rss_mb",
+      "path_read_mbps",
+      "path_write_mbps",
+      "payload_mb",
+      "read_mbps",
+      "sink_write_peak_mb",
+      "sink_write_rss_mb",
+      "write_mbps"
+    ],
+    "path": [
+      "codec",
+      "file_mb",
+      "inspect_ms",
+      "inspect_peak_mb",
+      "inspect_rss_mb",
+      "mmap_peak_mb",
+      "mmap_rss_mb",
+      "path_read_mbps",
+      "path_write_mbps",
+      "payload_mb",
+      "read_mbps",
+      "sink_write_peak_mb",
+      "sink_write_rss_mb",
+      "write_mbps"
+    ],
+    "error": [
+      "codec",
+      "error"
+    ],
+    "large_safetensors": [
+      "codec",
+      "file_mb",
+      "fixture_mib",
+      "full_ms",
+      "full_peak_mb",
+      "full_rss_mb",
+      "inspect_ms",
+      "inspect_peak_mb",
+      "inspect_rss_mb",
+      "selected_ms",
+      "selected_peak_mb",
+      "selected_rss_mb",
+      "write_ms",
+      "write_peak_mb",
+      "write_rss_mb"
+    ]
+  },
+  "optional_large_safetensors_keys": [
+    "oracle_full_ms",
+    "oracle_full_peak_mb",
+    "oracle_full_rss_mb",
+    "oracle_inspect_ms",
+    "oracle_inspect_peak_mb",
+    "oracle_inspect_rss_mb",
+    "oracle_selected_ms",
+    "oracle_selected_peak_mb",
+    "oracle_selected_rss_mb",
+    "oracle_write_ms",
+    "oracle_write_peak_mb",
+    "oracle_write_rss_mb"
+  ],
+  "nullable_common_nested_fields": [
+    "o4",
+    "pcd_variants",
+    "ply_variants",
+    "spz_profiles",
+    "typed_adapter"
+  ],
+  "optional_colmap_db_keys": [
+    "oracle_image_ms",
+    "oracle_image_peak_mb",
+    "oracle_image_rss_mb",
+    "oracle_inspect_ms",
+    "oracle_inspect_peak_mb",
+    "oracle_inspect_rss_mb",
+    "oracle_pair_ms",
+    "oracle_pair_peak_mb",
+    "oracle_pair_rss_mb",
+    "oracle_read_mbps",
+    "oracle_read_peak_mb",
+    "oracle_read_rss_mb",
+    "oracle_write_mbps",
+    "oracle_write_peak_mb",
+    "oracle_write_rss_mb"
+  ],
+  "optional_path_oracle_keys": [
+    "oracle_inspect_ms",
+    "oracle_inspect_peak_mb",
+    "oracle_inspect_rss_mb",
+    "oracle_partial_ms",
+    "oracle_partial_peak_mb",
+    "oracle_partial_rss_mb",
+    "oracle_read_mbps",
+    "oracle_read_peak_mb",
+    "oracle_read_rss_mb",
+    "oracle_write_mbps",
+    "oracle_write_peak_mb",
+    "oracle_write_rss_mb"
+  ],
+  "nested_shapes": {
+    "png": {
+      "o4": {
+        "keys": [
+          "png16_read_one_lane_mbps",
+          "png16_read_optimized_mbps",
+          "png16_write_one_lane_mbps",
+          "png16_write_optimized_mbps"
+        ]
+      },
+      "typed_adapter": {
+        "keys": [
+          "format",
+          "inspect_ms",
+          "inspect_peak_mb",
+          "inspect_rss_mb",
+          "read_mbps",
+          "read_peak_mb",
+          "read_rss_mb",
+          "write_mbps",
+          "write_peak_mb",
+          "write_rss_mb"
+        ]
+      }
+    },
+    "webp": {
+      "o4": {
+        "keys": [
+          "write_old_mbps",
+          "write_optimized_mbps",
+          "write_worker_off_mbps",
+          "write_worker_on_mbps"
+        ]
+      }
+    },
+    "exr": {
+      "o4": {
+        "keys": [
+          "read_one_lane_mbps",
+          "read_optimized_mbps",
+          "write_one_lane_mbps",
+          "write_optimized_mbps"
+        ]
+      },
+      "typed_adapter": {
+        "keys": [
+          "format",
+          "inspect_ms",
+          "inspect_peak_mb",
+          "inspect_rss_mb",
+          "read_mbps",
+          "read_peak_mb",
+          "read_rss_mb",
+          "write_mbps",
+          "write_peak_mb",
+          "write_rss_mb"
+        ]
+      }
+    },
+    "xyz": {
+      "o4": {
+        "keys": [
+          "write_one_lane_mbps",
+          "write_optimized_mbps"
+        ]
+      }
+    },
+    "ply": {
+      "ply_variants": {
+        "keys": [
+          "ascii",
+          "binary_big_endian",
+          "binary_little_endian"
+        ],
+        "value_keys": [
+          "file_mb",
+          "read_mbps",
+          "write_mbps"
+        ]
+      }
+    },
+    "pcd": {
+      "pcd_variants": {
+        "keys": [
+          "ascii",
+          "binary",
+          "binary_compressed"
+        ],
+        "value_keys": [
+          "file_mb",
+          "read_mbps",
+          "write_mbps"
+        ]
+      }
+    },
+    "las": {
+      "o4": {
+        "keys": [
+          "read_one_lane_mbps",
+          "read_optimized_mbps",
+          "write_one_lane_mbps",
+          "write_optimized_mbps"
+        ]
+      }
+    },
+    "pfm": {
+      "typed_adapter": {
+        "keys": [
+          "format",
+          "inspect_ms",
+          "inspect_peak_mb",
+          "inspect_rss_mb",
+          "partial_ms",
+          "partial_peak_mb",
+          "partial_rss_mb",
+          "read_mbps",
+          "read_peak_mb",
+          "read_rss_mb",
+          "write_mbps",
+          "write_peak_mb",
+          "write_rss_mb"
+        ]
+      }
+    },
+    "spz": {
+      "spz_profiles": {
+        "keys": [
+          "legacy_v3_gzip",
+          "ngsp_v4_zstd"
+        ],
+        "value_keys": [
+          "backend",
+          "container_magic",
+          "file_mb",
+          "fractional_bits",
+          "read_mbps",
+          "version",
+          "write_mbps",
+          "zstd_level"
+        ]
+      }
+    },
+    "flo": {
+      "typed_adapter": {
+        "keys": [
+          "format",
+          "inspect_ms",
+          "inspect_peak_mb",
+          "inspect_rss_mb",
+          "read_mbps",
+          "read_peak_mb",
+          "read_rss_mb",
+          "write_mbps",
+          "write_peak_mb",
+          "write_rss_mb"
+        ]
+      }
+    }
+  }
+}

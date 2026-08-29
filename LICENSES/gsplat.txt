@@ -1,0 +1,12 @@
+gsplat
+https://github.com/nerfstudio-project/gsplat
+
+Semantic reference: 1.5.3, commit
+937e29912570c372bed6747a5c9bf85fed877bae. SceneIO uses this project only as a
+reference for covariance, spherical-harmonic, and rendering semantics. It is
+not installed, invoked, copied, linked, or bundled by SceneIO.
+
+License: Apache License 2.0.
+Copyright 2025 Nerfstudio Team.
+
+The complete Apache License 2.0 terms are in the repository-root LICENSE.

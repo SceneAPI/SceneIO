@@ -3,9 +3,11 @@ name = "sceneio"
 version = "0.2.0"
 description = "The contract plane for SceneAPI — numpy-native data contracts, mapping/matching procedure contracts, wire codecs, and format registries."
 readme = "README.md"
-license = { text = "Apache-2.0" }
-classifiers = [
-    "License :: OSI Approved :: Apache Software License",
+license = "Apache-2.0"
+license-files = [
+    "LICENSE",
+    "LICENSES/*.md",
+    "LICENSES/*.txt",
 ]
 requires-python = ">=3.12,<3.13"
 # Leaf package: imports nothing from the SceneAPI family (guard-tested).
@@ -18,17 +20,123 @@ dev = [
     "pytest>=8.3",
     "ruff>=0.8",
 ]
+hdf5 = [
+    "h5py>=3.11",
+]
+zarr = [
+    "zarr>=3.1,<4",
+]
+ncore = [
+    "zarr>=3.1,<4",
+    "cbor2>=5.6,<6",
+]
+tiff = [
+    "tifffile>=2025.5",
+    "zarr>=3.1,<4",
+]
+e57 = [
+    "pye57>=0.4.18,<0.5",
+]
+arrow = [
+    "pyarrow>=18,<24",
+]
+openvdb = [
+    "tinyvdb>=0.9,<1",
+]
+avif = [
+    "pillow>=12.3,<12.4",
+]
+usd = [
+    "tinyusdz>=0.9.4,<1",
+]
+# Codec parity oracles — kept out of runtime and `dev` so `import sceneio` stays
+# a numpy-only leaf. gsply (3DGS PLY + SPZ, incl. its C++ backend for v4),
+# pycolmap (COLMAP), pillow + pypng (PNG; pypng gives exact 16-bit RGB/RGBA that
+# Pillow's rgb48 handling truncates). Open3D is the MIT-licensed generic PLY/PCD
+# oracle; trimesh is the permissively licensed cross-consumer mesh oracle. The
+# current GPLv3 `plyfile` package is intentionally excluded.
+# numpy is capped <2.5 because gsply's numba
+# needs NumPy <=2.4, and pinned >=2.0 to keep the NEP-50 float32 semantics the
+# SPZ encode parity relies on. Torch remains outside package extras/runtime;
+# the required Linux CI lane installs a CPU wheel solely for interop tests.
+test = [
+    "pytest>=8.3",
+    "numpy>=2.0,<2.5",
+    "scipy==1.18.0",
+    "gsply>=0.4",
+    "pycolmap>=4.1",
+    "pillow>=12.3,<12.4",
+    "pypng>=0.20220715",
+    "openexr>=3.2",
+    "laspy>=2.5",
+    "lazrs>=0.8.1",
+    "imageio>=2.37",
+    "psutil>=6.0",
+    "safetensors>=0.8",
+    "open3d>=0.19",
+    "trimesh>=4.0",
+    "pygltflib>=1.16",
+    "pyyaml>=6.0",
+    "h5py>=3.11",
+    "zarr>=3.1,<4",
+    "cbor2>=5.6,<6",
+    "tifffile>=2025.5",
+    "pye57>=0.4.18,<0.5",
+    "pyarrow>=18,<24",
+    "tinyvdb>=0.9,<1",
+    "tinyusdz>=0.9.4,<1",
+]
 
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["scikit-build-core>=0.10", "nanobind>=2.4"]
+build-backend = "scikit_build_core.build"
 
-[tool.hatch.build.targets.wheel]
-packages = ["src/sceneio"]
+# Compiled-only sceneio (decision D1, docs/io_implementation_plan.md): the
+# nanobind `sceneio._core` extension is built by CMake and is mandatory.
+[tool.scikit-build]
+minimum-version = "0.10"
+build-dir = "build/{wheel_tag}"
+wheel.packages = ["src/sceneio"]
+# abi3 wheel from CPython 3.12 (matches nanobind STABLE_ABI in
+# cmake/SceneIOTargets.cmake).
+wheel.py-api = "cp312"
+# Repository-contained upstream projects may define development-only
+# `install()` rules. Exclude those headers, static libraries, and CMake metadata;
+# the runtime wheel is just the `sceneio` package + `_core`.
+wheel.exclude = ["include/**", "lib/**", "share/**", "bin/**"]
+
+# Cross-platform wheel builds for the compiled core (Thread 2A). One abi3 wheel
+# per platform; `requires-python` currently caps at <3.13, so only cp312 is
+# built — relaxing that cap ships the same abi3 wheel to 3.13+ with no rebuild.
+# All selected production native sources, including libwebp and libvpx, are
+# repository-contained; wheel jobs do not download native source archives.
+[tool.cibuildwheel]
+build = "cp312-*"
+skip = "*-musllinux* *_i686 *-win32"
+test-requires = ["numpy"]
+# Manifest-driven NumPy-only smoke for all 74 installed built-ins: public
+# write/read/inspect, streaming paths, and every declared partial selector.
+test-command = "python -m sceneio._wheel_smoke"
+
+[tool.cibuildwheel.linux]
+manylinux-x86_64-image = "manylinux2014"
+# New NumPy releases no longer publish glibc-2.17 wheels. During the wheel
+# smoke test, select the newest compatible binary (currently 2.2.x) instead of
+# attempting to build an incompatible newer NumPy sdist with GCC 10.2.
+environment = { PIP_ONLY_BINARY = "numpy" }
+
+[tool.cibuildwheel.macos]
+environment = { MACOSX_DEPLOYMENT_TARGET = "11.0" }
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra"
+# the npz duplicate-member test intentionally writes a duplicate zip entry
+filterwarnings = [
+    "ignore:Duplicate name:UserWarning",
+    # a point_cloud foreign-dtype pin intentionally casts 1e40 -> float32 inf
+    "ignore:overflow encountered in cast:RuntimeWarning",
+]
 
 [tool.ruff]
 line-length = 100
@@ -37,3 +145,11 @@ target-version = "py312"
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "SIM", "PT", "RUF"]
 ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests favor terse fixtures: one-shot file reads, compound asserts, and
+# throwaway unpacking are fine here.
+"tests/**" = ["SIM105", "SIM115", "PT018", "PT011", "RUF059"]
+# The bench harness times lambdas synchronously inside a loop (invoked before the
+# loop var advances), so the loop-var-binding warning is a false positive here.
+"bench/**" = ["B023"]

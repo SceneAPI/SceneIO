@@ -13,9 +13,72 @@ from sceneio import colmap_db as db
 
 
 def test_database_version_number_matches_colmap_mod() -> None:
-    # colmap_mod: COLMAP 3.14.0, schema revision 2 -> 3*1e6+14*1e4+0+2.
-    assert db.DATABASE_VERSION_NUMBER == 3_140_002
-    assert db.DATABASE_SCHEMA_REVISION == 2
+    # Current MAXX: COLMAP 3.14.0, schema revision 3.
+    assert db.DATABASE_VERSION_NUMBER == 3_140_003
+    assert db.DATABASE_SCHEMA_REVISION == 3
+    assert db.MAXX_DATABASE_APPLICATION_ID == 0x4D415858
+
+
+def test_exact_profile_catalog_is_pinned() -> None:
+    assert [
+        (
+            profile.name,
+            profile.application_id,
+            profile.user_version,
+            profile.source_revision,
+            profile.typed_descriptors,
+            profile.generalized_pose_priors,
+            profile.recovered_two_view_cameras,
+            profile.maxx_extensions,
+            profile.ownership_row,
+        )
+        for profile in db.COLMAP_DATABASE_PROFILES
+    ] == [
+        (
+            "colmap-3.13.0",
+            0,
+            3900,
+            "0b31f98133b470eae62811b557dc2bcff1e4f9a5",
+            False,
+            False,
+            False,
+            False,
+            False,
+        ),
+        (
+            "colmap-4.1.1",
+            0,
+            4_010_100,
+            "a0d785fba74b2664f31edc4a29026a8b27c00f67",
+            True,
+            True,
+            False,
+            False,
+            False,
+        ),
+        (
+            "colmap-main-64805cb870b5",
+            0,
+            4_020_000,
+            "64805cb870b574a569dccc34918d95a2db2b2fee",
+            True,
+            True,
+            True,
+            False,
+            False,
+        ),
+        (
+            "maxx-v1",
+            0x4D415858,
+            3_140_003,
+            "de15b08a2dba98b55d6ddfb7cedac147838afbb4",
+            True,
+            True,
+            True,
+            True,
+            True,
+        ),
+    ]
 
 
 def test_make_version_number_rejects_overflowing_components() -> None:
@@ -41,15 +104,36 @@ def test_pair_id_rejects_out_of_range_ids() -> None:
 
 def test_extension_tables_are_exactly_the_fork_additions() -> None:
     assert (
-        frozenset({"videos", "video_frames", "image_qualities", "markers", "marker_projections"})
+        frozenset(
+            {
+                "maxx_schema_info",
+                "videos",
+                "video_frames",
+                "image_qualities",
+                "pair_provenance",
+                "markers",
+                "marker_projections",
+                "keypoint_colors",
+                "match_scores",
+            }
+        )
         == db.EXTENSION_TABLES
     )
 
 
-def test_extension_columns_are_4d_time_and_descriptor_type() -> None:
-    # Two extension columns on otherwise-upstream tables: the 4D
-    # per-image capture tag, and the descriptor extractor type.
-    assert frozenset({"images.time_id", "descriptors.type"}) == db.EXTENSION_COLUMNS
+def test_extension_columns_are_exactly_the_maxx_additions() -> None:
+    assert frozenset(
+        {
+            "images.time_id",
+            "pose_priors.rotation",
+            "pose_priors.rotation_covariance",
+            "pose_priors.pose_covariance",
+            "descriptors.type_name",
+            "descriptors.dtype",
+            "descriptors.dim",
+        }
+    ) == db.EXTENSION_COLUMNS
+    assert not db.is_extension_column("descriptors", "type")
 
 
 def test_images_time_id_is_the_canonical_4d_extension() -> None:
@@ -120,6 +204,32 @@ def test_known_matcher_types_seed() -> None:
     )
 
 
+def test_known_maxx_wire_values() -> None:
+    assert db.COLMAP_KNOWN_DESCRIPTOR_DTYPES == {
+        "uint8": 0,
+        "int8": 1,
+        "float16": 2,
+        "float32": 3,
+        "float64": 4,
+    }
+    assert db.COLMAP_KNOWN_MATCH_SOURCE_FLAGS == {
+        "UNKNOWN": 0,
+        "SEQUENTIAL": 1,
+        "RETRIEVAL": 2,
+        "SPATIAL": 4,
+        "EXHAUSTIVE": 8,
+        "VOCAB_TREE": 16,
+        "TRANSITIVE": 32,
+        "IMPORTED": 64,
+    }
+    assert db.COLMAP_KNOWN_MARKER_TYPES == {
+        "REGULAR": 0,
+        "VERTEX": 1,
+        "FIDUCIAL": 2,
+        "CODED_TARGET": 3,
+    }
+
+
 def test_contract_dict_is_json_serializable_and_self_describing() -> None:
     import json
 
@@ -130,6 +240,15 @@ def test_contract_dict_is_json_serializable_and_self_describing() -> None:
     assert payload["contract_schema_version"] == db.CONTRACT_SCHEMA_VERSION
     assert payload["database_version"]["number"] == db.DATABASE_VERSION_NUMBER
     assert payload["pair_id"]["max_num_images"] == db.MAX_NUM_IMAGES
+    assert payload["descriptor_dtypes"]["known"] == (
+        db.COLMAP_KNOWN_DESCRIPTOR_DTYPES
+    )
+    assert payload["match_source_flags"]["known"] == (
+        db.COLMAP_KNOWN_MATCH_SOURCE_FLAGS
+    )
+    assert payload["match_source_flags"]["preserve_unknown_bits"]
+    assert payload["marker_types"]["known"] == db.COLMAP_KNOWN_MARKER_TYPES
+    assert payload["marker_types"]["closed_values"]
 
 
 def test_contract_dict_tables_match_the_table_model() -> None:

@@ -1,0 +1,601 @@
+schema_version = 1
+builtins = 74
+
+# Test-only repository coverage; runtime extensions are intentionally exempt.
+
+[[codec]]
+id = "pfm"
+benchmark_case = "pfm"
+source_suite = "tests/codecs/test_pfm.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_inspectors/arrays.py"
+wheel_smoke_case = "_array_formats"
+
+[[codec]]
+id = "colmap_sparse"
+benchmark_case = "colmap_sparse"
+source_suite = "tests/codecs/test_colmap.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_inspectors/reconstruction.py"
+wheel_smoke_case = "_reconstruction_formats"
+
+[[codec]]
+id = "gaussian_ply"
+benchmark_case = "gaussian_ply"
+source_suite = "tests/codecs/test_ply.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_inspectors/splats.py"
+wheel_smoke_case = "_splats"
+
+[[codec]]
+id = "compressed_ply"
+benchmark_case = "compressed_ply"
+source_suite = "tests/codecs/test_compressed_ply.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_inspectors/splats.py"
+wheel_smoke_case = "_splats"
+
+[[codec]]
+id = "sog"
+benchmark_case = "sog"
+source_suite = "tests/codecs/test_sog.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_inspectors/splats.py"
+wheel_smoke_case = "_splats"
+
+[[codec]]
+id = "ksplat"
+benchmark_case = "ksplat"
+source_suite = "tests/codecs/test_ksplat.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_inspectors/splats.py"
+wheel_smoke_case = "_splats"
+
+[[codec]]
+id = "ply_mesh"
+benchmark_case = "ply_mesh"
+source_suite = "tests/codecs/test_ply_mesh.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_inspectors/meshes.py"
+wheel_smoke_case = "_mesh_ply"
+
+[[codec]]
+id = "obj"
+benchmark_case = "obj"
+source_suite = "tests/codecs/test_obj.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_obj.py"
+wheel_smoke_case = "_obj_mtl"
+
+[[codec]]
+id = "stl"
+benchmark_case = "stl"
+source_suite = "tests/codecs/test_stl.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_inspectors/meshes.py"
+wheel_smoke_case = "_stl_off"
+
+[[codec]]
+id = "off"
+benchmark_case = "off"
+source_suite = "tests/codecs/test_off.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_inspectors/meshes.py"
+wheel_smoke_case = "_stl_off"
+
+[[codec]]
+id = "gltf"
+benchmark_case = "gltf"
+source_suite = "tests/codecs/test_gltf.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_gltf.py"
+wheel_smoke_case = "_gltf_glb"
+
+[[codec]]
+id = "glb"
+benchmark_case = "glb"
+source_suite = "tests/codecs/test_gltf.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_gltf.py"
+wheel_smoke_case = "_gltf_glb"
+
+[[codec]]
+id = "usd"
+benchmark_case = "usd"
+source_suite = "tests/codecs/test_usd.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_usd/__init__.py"
+wheel_smoke_case = "_usd_formats"
+
+[[codec]]
+id = "usdz"
+benchmark_case = "usdz"
+source_suite = "tests/codecs/test_usd.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_usd/__init__.py"
+wheel_smoke_case = "_usd_formats"
+
+[[codec]]
+id = "ply"
+benchmark_case = "ply"
+source_suite = "tests/codecs/test_ply_point.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_inspectors/points.py"
+wheel_smoke_case = "_point_formats"
+
+[[codec]]
+id = "pcd"
+benchmark_case = "pcd"
+source_suite = "tests/codecs/test_pcd.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_inspectors/points.py"
+wheel_smoke_case = "_point_formats"
+
+[[codec]]
+id = "spz"
+benchmark_case = "spz"
+source_suite = "tests/codecs/test_spz.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_inspectors/splats.py"
+wheel_smoke_case = "_splats"
+
+[[codec]]
+id = "transforms_json"
+benchmark_case = "transforms_json"
+source_suite = "tests/codecs/test_transforms_json.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_inspectors/reconstruction.py"
+wheel_smoke_case = "_reconstruction_formats"
+
+[[codec]]
+id = "tum"
+benchmark_case = "tum"
+source_suite = "tests/codecs/test_pose_text.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_inspectors/reconstruction.py"
+wheel_smoke_case = "_reconstruction_formats"
+
+[[codec]]
+id = "kitti"
+benchmark_case = "kitti"
+source_suite = "tests/codecs/test_pose_text.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_inspectors/reconstruction.py"
+wheel_smoke_case = "_reconstruction_formats"
+
+[[codec]]
+id = "euroc_state"
+benchmark_case = "euroc_state"
+source_suite = "tests/codecs/test_euroc_state.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_inspectors/reconstruction.py"
+wheel_smoke_case = "_state_trajectory"
+
+[[codec]]
+id = "opencv_yaml"
+benchmark_case = "opencv_yaml"
+source_suite = "tests/codecs/test_camera_calibration.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_inspectors/calibration.py"
+wheel_smoke_case = "_camera_calibration"
+
+[[codec]]
+id = "opencv_xml"
+benchmark_case = "opencv_xml"
+source_suite = "tests/codecs/test_camera_calibration.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_inspectors/calibration.py"
+wheel_smoke_case = "_camera_calibration"
+
+[[codec]]
+id = "ros_camera_info"
+benchmark_case = "ros_camera_info"
+source_suite = "tests/codecs/test_camera_calibration.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_inspectors/calibration.py"
+wheel_smoke_case = "_camera_calibration"
+
+[[codec]]
+id = "kalibr"
+benchmark_case = "kalibr"
+source_suite = "tests/codecs/test_camera_calibration.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_inspectors/calibration.py"
+wheel_smoke_case = "_camera_calibration"
+
+[[codec]]
+id = "g2o"
+benchmark_case = "g2o"
+source_suite = "tests/codecs/test_g2o.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_inspectors/reconstruction.py"
+wheel_smoke_case = "_pose_graph"
+
+[[codec]]
+id = "colmap_db"
+benchmark_case = "colmap_db"
+source_suite = "tests/codecs/test_colmap_db.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_inspectors/reconstruction.py"
+wheel_smoke_case = "_colmap_database"
+
+[[codec]]
+id = "npy"
+benchmark_case = "npy"
+source_suite = "tests/codecs/test_npy_npz.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_inspectors/arrays.py"
+wheel_smoke_case = "_array_formats"
+
+[[codec]]
+id = "npz"
+benchmark_case = "npz"
+source_suite = "tests/codecs/test_npy_npz.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_inspectors/arrays.py"
+wheel_smoke_case = "_array_formats"
+
+[[codec]]
+id = "safetensors"
+benchmark_case = "safetensors"
+source_suite = "tests/codecs/test_safetensors.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_inspectors/arrays.py"
+wheel_smoke_case = "_array_formats"
+
+[[codec]]
+id = "netpbm"
+benchmark_case = "netpbm"
+source_suite = "tests/codecs/test_netpbm.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_inspectors/images.py"
+wheel_smoke_case = "_raster_images"
+
+[[codec]]
+id = "png"
+benchmark_case = "png"
+source_suite = "tests/codecs/test_png.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_inspectors/images.py"
+wheel_smoke_case = "_raster_images"
+
+[[codec]]
+id = "jpeg"
+benchmark_case = "jpeg"
+source_suite = "tests/codecs/test_jpeg.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_inspectors/images.py"
+wheel_smoke_case = "_raster_images"
+
+[[codec]]
+id = "bmp"
+benchmark_case = "bmp"
+source_suite = "tests/codecs/test_bmp_tga.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_inspectors/images.py"
+wheel_smoke_case = "_raster_images"
+
+[[codec]]
+id = "tga"
+benchmark_case = "tga"
+source_suite = "tests/codecs/test_bmp_tga.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_inspectors/images.py"
+wheel_smoke_case = "_raster_images"
+
+[[codec]]
+id = "hdr"
+benchmark_case = "hdr"
+source_suite = "tests/codecs/test_hdr.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_inspectors/images.py"
+wheel_smoke_case = "_raster_images"
+
+[[codec]]
+id = "exr"
+benchmark_case = "exr"
+source_suite = "tests/codecs/test_exr.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_inspectors/images.py"
+wheel_smoke_case = "_raster_images"
+
+[[codec]]
+id = "webp"
+benchmark_case = "webp"
+source_suite = "tests/codecs/test_webp.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_inspectors/images.py"
+wheel_smoke_case = "_raster_images"
+
+[[codec]]
+id = "avif"
+benchmark_case = "avif"
+source_suite = "tests/codecs/test_avif.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_avif.py"
+wheel_smoke_case = "_avif_formats"
+
+[[codec]]
+id = "y4m"
+benchmark_case = "y4m"
+source_suite = "tests/codecs/test_y4m.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_inspectors/sequences.py"
+wheel_smoke_case = "_image_sequences"
+
+[[codec]]
+id = "webm"
+benchmark_case = "webm"
+source_suite = "tests/codecs/test_webm.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_inspectors/sequences.py"
+wheel_smoke_case = "_image_sequences"
+
+[[codec]]
+id = "theora"
+benchmark_case = "theora"
+source_suite = "tests/codecs/test_theora.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_inspectors/sequences.py"
+wheel_smoke_case = "_image_sequences"
+
+[[codec]]
+id = "animated_webp"
+benchmark_case = "animated_webp"
+source_suite = "tests/codecs/test_animated_webp.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_inspectors/sequences.py"
+wheel_smoke_case = "_image_sequences"
+
+[[codec]]
+id = "apng"
+benchmark_case = "apng"
+source_suite = "tests/codecs/test_apng.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_inspectors/sequences.py"
+wheel_smoke_case = "_image_sequences"
+
+[[codec]]
+id = "animated_avif"
+benchmark_case = "animated_avif"
+source_suite = "tests/codecs/test_avif.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_avif.py"
+wheel_smoke_case = "_avif_formats"
+
+[[codec]]
+id = "rtmv"
+benchmark_case = "rtmv"
+source_suite = "tests/codecs/test_rtmv.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_rtmv.py"
+wheel_smoke_case = "_rtmv_dataset"
+
+[[codec]]
+id = "image_sequence"
+benchmark_case = "image_sequence"
+source_suite = "tests/codecs/test_image_sequence.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_image_sequence.py"
+wheel_smoke_case = "_image_sequences"
+
+[[codec]]
+id = "colmap_sparse_txt"
+benchmark_case = "colmap_sparse_txt"
+source_suite = "tests/codecs/test_colmap_txt.py"
+source_case_token = "colmap_txt"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_inspectors/reconstruction.py"
+wheel_smoke_case = "_reconstruction_formats"
+
+[[codec]]
+id = "xyz"
+benchmark_case = "xyz"
+source_suite = "tests/codecs/test_xyz.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_inspectors/points.py"
+wheel_smoke_case = "_point_formats"
+
+[[codec]]
+id = "pts"
+benchmark_case = "pts"
+source_suite = "tests/codecs/test_pts.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_inspectors/points.py"
+wheel_smoke_case = "_point_formats"
+
+[[codec]]
+id = "las"
+benchmark_case = "las"
+source_suite = "tests/codecs/test_las.py"
+additional_source_suites = ["tests/codecs/test_las_waveform.py"]
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_inspectors/points.py"
+wheel_smoke_case = "_las_waveform"
+
+[[codec]]
+id = "laz"
+benchmark_case = "laz"
+source_suite = "tests/codecs/test_laz.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_inspectors/points.py"
+wheel_smoke_case = "_laz"
+
+[[codec]]
+id = "flo"
+benchmark_case = "flo"
+source_suite = "tests/codecs/test_flo.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_inspectors/arrays.py"
+wheel_smoke_case = "_point_formats"
+
+[[codec]]
+id = "dmb"
+benchmark_case = "dmb"
+source_suite = "tests/codecs/test_dmb.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_inspectors/arrays.py"
+wheel_smoke_case = "_point_formats"
+
+[[codec]]
+id = "bundler"
+benchmark_case = "bundler"
+source_suite = "tests/codecs/test_bundler.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_inspectors/reconstruction.py"
+wheel_smoke_case = "_reconstruction_formats"
+
+[[codec]]
+id = "bal"
+benchmark_case = "bal"
+source_suite = "tests/codecs/test_bal.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_inspectors/reconstruction.py"
+wheel_smoke_case = "_bal"
+
+[[codec]]
+id = "nvm"
+benchmark_case = "nvm"
+source_suite = "tests/codecs/test_nvm.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_inspectors/reconstruction.py"
+wheel_smoke_case = "_reconstruction_formats"
+
+[[codec]]
+id = "openmvg"
+benchmark_case = "openmvg"
+source_suite = "tests/codecs/test_openmvg.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_inspectors/reconstruction.py"
+wheel_smoke_case = "_reconstruction_formats"
+
+[[codec]]
+id = "splat"
+benchmark_case = "splat"
+source_suite = "tests/codecs/test_splat.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_inspectors/splats.py"
+wheel_smoke_case = "_splats"
+
+[[codec]]
+id = "colmap_mvs_depth"
+benchmark_case = "colmap_mvs_depth"
+source_suite = "tests/codecs/test_colmap_mvs.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_inspectors/dense.py"
+wheel_smoke_case = "_dense_mvs"
+
+[[codec]]
+id = "colmap_mvs_normal"
+benchmark_case = "colmap_mvs_normal"
+source_suite = "tests/codecs/test_colmap_mvs.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_inspectors/dense.py"
+wheel_smoke_case = "_dense_mvs"
+
+[[codec]]
+id = "colmap_mvs_consistency"
+benchmark_case = "colmap_mvs_consistency"
+source_suite = "tests/codecs/test_colmap_mvs.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_inspectors/dense.py"
+wheel_smoke_case = "_dense_mvs"
+
+[[codec]]
+id = "colmap_fused_visibility"
+benchmark_case = "colmap_fused_visibility"
+source_suite = "tests/codecs/test_colmap_mvs.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_inspectors/dense.py"
+wheel_smoke_case = "_dense_mvs"
+
+[[codec]]
+id = "hdf5"
+benchmark_case = "hdf5"
+source_suite = "tests/codecs/test_hdf5_hloc.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_hdf5.py"
+wheel_smoke_case = "_hdf5_formats"
+
+[[codec]]
+id = "hloc_features"
+benchmark_case = "hloc_features"
+source_suite = "tests/codecs/test_hdf5_hloc.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_hdf5.py"
+wheel_smoke_case = "_hdf5_formats"
+
+[[codec]]
+id = "hloc_matches"
+benchmark_case = "hloc_matches"
+source_suite = "tests/codecs/test_hdf5_hloc.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_hdf5.py"
+wheel_smoke_case = "_hdf5_formats"
+
+[[codec]]
+id = "ncore_v4"
+benchmark_case = "ncore_v4"
+source_suite = "tests/codecs/test_ncore_v4.py"
+additional_source_suites = ["tests/codecs/test_ncore_v4_labels.py"]
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_ncore/schema.py"
+wheel_smoke_case = "_ncore_v4"
+
+[[codec]]
+id = "euroc_dataset"
+benchmark_case = "euroc_dataset"
+source_suite = "tests/codecs/test_euroc_dataset.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_euroc_dataset/codec.py"
+wheel_smoke_case = "_euroc_dataset"
+
+[[codec]]
+id = "zarr"
+benchmark_case = "zarr"
+source_suite = "tests/codecs/test_zarr.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_zarr.py"
+wheel_smoke_case = "_zarr_formats"
+
+[[codec]]
+id = "tiff"
+benchmark_case = "tiff"
+source_suite = "tests/codecs/test_tiff.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_tiff.py"
+wheel_smoke_case = "_tiff_formats"
+
+[[codec]]
+id = "e57"
+benchmark_case = "e57"
+source_suite = "tests/codecs/test_e57.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_e57.py"
+wheel_smoke_case = "_e57_formats"
+
+[[codec]]
+id = "parquet"
+benchmark_case = "parquet"
+source_suite = "tests/codecs/test_arrow_parquet.py"
+source_case_token = "parquet"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_arrow.py"
+wheel_smoke_case = "_columnar_formats"
+
+[[codec]]
+id = "arrow_ipc"
+benchmark_case = "arrow_ipc"
+source_suite = "tests/codecs/test_arrow_parquet.py"
+source_case_token = "arrow"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_arrow.py"
+wheel_smoke_case = "_columnar_formats"
+
+[[codec]]
+id = "openvdb"
+benchmark_case = "openvdb"
+source_suite = "tests/codecs/test_openvdb.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_openvdb.py"
+wheel_smoke_case = "_openvdb_formats"

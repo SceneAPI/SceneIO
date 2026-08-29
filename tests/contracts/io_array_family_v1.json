@@ -1,0 +1,206 @@
+{
+  "schema_version": 1,
+  "parent": {
+    "commit": "6086315ea877c5e85136e05d47da3fe41f524d5a",
+    "tree": "01c7425ac2ae1a9e4f36d98f9a15100f0f93a406"
+  },
+  "family_ids": [
+    "pfm",
+    "npy",
+    "npz",
+    "safetensors",
+    "flo",
+    "dmb"
+  ],
+  "canonical_positions": {
+    "pfm": 0,
+    "npy": 25,
+    "npz": 26,
+    "safetensors": 27,
+    "flo": 45,
+    "dmb": 46
+  },
+  "benchmark_parent": {
+    "command": ".venv/Scripts/python.exe bench/bench_io.py --runs 1 --scale 0.001 --skip-oracles --json <output>",
+    "captures": [
+      "build/r2-arrays-parent-a.json",
+      "build/r2-arrays-parent-b.json"
+    ],
+    "all_codec_projection_sha256": "97c98367e8ea602e9b9c1682b8c6ef1ca8fd483a66b233cd64dbc5976d0c7948",
+    "array_rows_projection_sha256": "5c0104dc8a0372ede12a86f48c8c57a7426718b030c95ec9d7088a9b26364aac"
+  },
+  "valid": {
+    "pfm": {
+      "byte_size": 156,
+      "sha256": "16bb9c19a1eac3e2c5b73fcb8e1769189d60c5f23f1225c29e47595696246170",
+      "inspection": {
+        "format": "pfm",
+        "datatype": "depth_map",
+        "shape": [
+          3,
+          4,
+          3
+        ],
+        "dtype": "float32",
+        "channels": 3,
+        "count": null,
+        "arrays": [],
+        "metadata": {
+          "byte_order": "little"
+        }
+      }
+    },
+    "npy": {
+      "byte_size": 152,
+      "sha256": "230e271ef7d33c5bff2a1dfa4eb30bec20465f7e497b3358ae123e922c045abd",
+      "inspection": {
+        "format": "npy",
+        "datatype": "tensor",
+        "shape": [
+          3,
+          4
+        ],
+        "dtype": "int16",
+        "channels": null,
+        "count": 12,
+        "arrays": [],
+        "metadata": {
+          "fortran_order": false
+        }
+      }
+    },
+    "npz": {
+      "byte_size": 502,
+      "sha256": "867a0a04cc1c6277cd3c56686eb5257825ef1cb8c6217afe561b986c83012722",
+      "inspection": {
+        "format": "npz",
+        "datatype": "tensor_dict",
+        "shape": null,
+        "dtype": null,
+        "channels": null,
+        "count": 2,
+        "arrays": [
+          {
+            "name": "x",
+            "shape": [
+              2,
+              3
+            ],
+            "dtype": "int16"
+          },
+          {
+            "name": "empty",
+            "shape": [
+              0,
+              2
+            ],
+            "dtype": "float32"
+          }
+        ],
+        "metadata": {}
+      }
+    },
+    "safetensors": {
+      "byte_size": 203,
+      "sha256": "ce982f2f8365e9183025b2dea025a88a53ba26554eb77b8dbe4e9d2786fa0015",
+      "inspection": {
+        "format": "safetensors",
+        "datatype": "tensor_dict",
+        "shape": null,
+        "dtype": null,
+        "channels": null,
+        "count": 2,
+        "arrays": [
+          {
+            "name": "weights",
+            "shape": [
+              2,
+              3
+            ],
+            "dtype": "float32"
+          },
+          {
+            "name": "mask",
+            "shape": [
+              3
+            ],
+            "dtype": "bool"
+          }
+        ],
+        "metadata": {
+          "metadata_keys": [
+            "frame",
+            "unit"
+          ]
+        }
+      }
+    },
+    "flo": {
+      "byte_size": 108,
+      "sha256": "7458ad0d1b63a975754361a9dc1d0716503ad21d3eec72667f84ea3f5ee87e67",
+      "inspection": {
+        "format": "flo",
+        "datatype": "flow",
+        "shape": [
+          3,
+          4,
+          2
+        ],
+        "dtype": "float32",
+        "channels": 2,
+        "count": null,
+        "arrays": [],
+        "metadata": {}
+      }
+    },
+    "dmb": {
+      "byte_size": 64,
+      "sha256": "f4abdfc881498e7beb33eabdeb12b10a6640e4eb8a093e4a29396ea1706f58cb",
+      "inspection": {
+        "format": "dmb",
+        "datatype": "depth_map",
+        "shape": [
+          3,
+          4
+        ],
+        "dtype": "float32",
+        "channels": 1,
+        "count": 12,
+        "arrays": [],
+        "metadata": {
+          "channels": 1,
+          "image_type": 1,
+          "unit": "unknown",
+          "scale_to_meters": 0.0,
+          "invalid_policy": "zero"
+        }
+      }
+    }
+  },
+  "malformed": {
+    "pfm": {
+      "cause_type": "ValueError",
+      "cause_message": "PFM: bad magic (expected 'PF' or 'Pf')"
+    },
+    "npy": {
+      "cause_type": "ValueError",
+      "cause_message": "npy: bad magic (not a .npy file)"
+    },
+    "npz": {
+      "cause_type": "BadZipFile",
+      "cause_message": "File is not a zip file"
+    },
+    "safetensors": {
+      "cause_type": "ValueError",
+      "cause_message": "safetensors: file is smaller than the 8-byte header length"
+    },
+    "flo": {
+      "cause_type": "ValueError",
+      "cause_message": "truncated FLO header"
+    },
+    "dmb": {
+      "cause_type": "ValueError",
+      "cause_message": "dmb: truncated header (need four little-endian int32 fields)"
+    }
+  }
+}

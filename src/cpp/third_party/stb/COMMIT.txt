@@ -1,0 +1,16 @@
+nothings/stb @ 31c1ad37456438565541f4919958214b6e762fb4
+
+LOCAL PATCHES (re-apply after any re-vendor):
+- stb_image.h, stbi__hdr_load flat/RLE-fallback loop: the upstream
+  `stbi__getn(s, rgbe, 4);` ignores its return value, so a truncated Radiance
+  .hdr leaves the per-pixel rgbe[] buffer uninitialized and leaks stack bytes
+  into the decoded image (no error). Patched to check the return and fail with
+  "corrupt HDR" (freeing hdr_data). Marked in-source with "[sceneio LOCAL PATCH]".
+- stb_image.h, stbi__decode_jpeg_image marker loop: this pinned revision returns
+  success when stbi__process_marker rejects a corrupt marker. That exposes
+  partially uninitialized JPEG component buffers (a mutated DHT reproduced
+  nondeterministic pixels across bytes/mmap and repeated calls). Current
+  upstream returns failure. Patched `return 1` to `return 0`; marked in-source.
+- stb_image_write.h, JPEG entropy writer: use an unsigned bit accumulator.
+  Upstream's signed accumulator left-shifts negative values, which UBSan reports
+  and C++ defines as undefined behavior. Marked in-source.

@@ -1,0 +1,93 @@
+schema_version = 1
+contract_date = "2026-08-29"
+format_id = "openvdb"
+provider = "tinyvdb==0.9.0"
+oracle = "official pyopenvdb 10.0.1 Python binding"
+oracle_environment = "Ubuntu 24.04 python3-openvdb 10.0.1-2.1build5"
+generator = "tools/generate_openvdb_provider_vectors.py"
+decision = "exclusion"
+status = "qualified_provider_exclusion"
+reason = "TinyVDB has no selected-grid decode, loses vector payloads and some empty-grid transforms, and cannot add grids or write transforms."
+provisional_symbols = ["SparseGrid", "SparseVolumeSet"]
+provisional_apis = ["inspect_openvdb_grids", "read_openvdb_grid", "read_openvdb_grids"]
+legacy_profile = "one_nonempty_identity_zero_background_Tree_float_5_4_3_grid"
+evidence = [
+  "tests/test_openvdb_provider_qualification.py",
+  "tests/codecs/test_openvdb.py",
+  "docs/openvdb_provider_qualification.md",
+]
+
+[metadata]
+header_only = ["grid_count", "grid_name", "grid_type_name"]
+requires_all_grid_decode = [
+  "grid_class",
+  "background",
+  "transform",
+  "active_voxel_count",
+  "active_bbox",
+]
+predecode_values_are_placeholders = true
+
+[selection]
+api = "VDBFile.read_grids()"
+doc = "Read and decompress all grids"
+accepts_grid_selector = false
+bounded_selected_grid = false
+bounded_region = false
+post_decode_slice_does_not_qualify = true
+
+[authoring]
+add_grid = false
+set_transform = false
+replace_existing_grid = true
+multi_grid_write = false
+transformed_write = false
+
+[observed_types]
+float_tree = "Tree_float_5_4_3_exact_for_nonempty_scalar_values_and_affine_transform"
+vec3s_tree = "Tree_vec3s_5_4_3_enumerated_but_active_values_background_and_transform_lost"
+bool_tree = "Tree_bool_5_4_3_enumerated_but_not_sparse_decodable"
+empty_float = "active_count_preserved_but_uniform_scale_transform_lost"
+duplicate_names = "preserved_and_ambiguous"
+
+[[vectors]]
+file = "multi_scalar_transformed.vdb"
+grids = ["density", "temperature", "empty"]
+types = ["float", "float", "float"]
+purpose = "multi_grid_scalar_order_background_affine_empty"
+
+[[vectors]]
+file = "scalar_transformed.vdb"
+grids = ["temperature"]
+types = ["float"]
+purpose = "single_grid_affine_refusal"
+
+[[vectors]]
+file = "empty_transformed_zero_background.vdb"
+grids = ["empty_zero_background"]
+types = ["float"]
+purpose = "provider_transform_loss_regression"
+
+[[vectors]]
+file = "level_set.vdb"
+grids = ["surface"]
+types = ["float"]
+purpose = "unsupported_grid_class"
+
+[[vectors]]
+file = "vector_velocity.vdb"
+grids = ["velocity"]
+types = ["vec3s"]
+purpose = "vector_payload_loss"
+
+[[vectors]]
+file = "mixed_types.vdb"
+grids = ["density", "velocity", "mask"]
+types = ["float", "vec3s", "bool"]
+purpose = "mixed_type_enumeration_and_all_grid_decode"
+
+[[vectors]]
+file = "duplicate_names.vdb"
+grids = ["duplicate", "duplicate"]
+types = ["float", "float"]
+purpose = "ambiguous_name_selection"

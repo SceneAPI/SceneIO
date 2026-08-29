@@ -1,0 +1,245 @@
+{
+  "schema_version": 1,
+  "parent": {
+    "commit": "efb106e9f1264c5666b37578972a4e902bc642a0",
+    "tree": "fdaa2ced61b9aae9da9e32872bff16d20a80de9f"
+  },
+  "family_ids": [
+    "ply",
+    "pcd",
+    "xyz",
+    "pts",
+    "las",
+    "laz"
+  ],
+  "canonical_positions": {
+    "ply": 12,
+    "pcd": 13,
+    "xyz": 41,
+    "pts": 42,
+    "las": 43,
+    "laz": 44
+  },
+  "benchmark_parent": {
+    "command": ".venv/Scripts/python.exe bench/bench_io.py --runs 1 --scale 0.001 --skip-oracles --json <output>",
+    "captures": [
+      "build/r2-points-parent-a.json",
+      "build/r2-points-parent-b.json"
+    ],
+    "all_codec_projection_sha256": "97c98367e8ea602e9b9c1682b8c6ef1ca8fd483a66b233cd64dbc5976d0c7948",
+    "point_rows_projection_sha256": "8282b574166aeb88d0eb51ded126566d7a4f21b0752244ea0c987dcee06437bd"
+  },
+  "valid": {
+    "ply": {
+      "byte_size": 163,
+      "sha256": "6a42c00445074769a1e2654a900a35029956d4c8f4da88da90d9a0235b03572a",
+      "inspection": {
+        "format": "ply",
+        "datatype": "point_cloud",
+        "byte_size": 163,
+        "shape": [
+          4,
+          3
+        ],
+        "dtype": "float32",
+        "channels": null,
+        "count": 4,
+        "arrays": [],
+        "metadata": {
+          "byte_order": "little",
+          "color_dtype": "none",
+          "encoding": "binary_little_endian",
+          "has_color": false,
+          "has_intensity": false,
+          "has_normals": false,
+          "intensity_range": "unknown",
+          "properties": [
+            "x",
+            "y",
+            "z"
+          ],
+          "property_types": [
+            "float",
+            "float",
+            "float"
+          ],
+          "vertex_stride": 12
+        }
+      }
+    },
+    "pcd": {
+      "byte_size": 211,
+      "sha256": "266d244eb82808729c37ad6ec7b6ddedb29f0416d1e705acbe89c65e1aa6f5e4",
+      "inspection": {
+        "format": "pcd",
+        "datatype": "point_cloud",
+        "byte_size": 211,
+        "shape": [
+          4,
+          3
+        ],
+        "dtype": "float32",
+        "channels": null,
+        "count": 4,
+        "arrays": [],
+        "metadata": {
+          "compressed_size": 0,
+          "counts": [
+            1,
+            1,
+            1
+          ],
+          "fields": [
+            "x",
+            "y",
+            "z"
+          ],
+          "has_color": false,
+          "has_intensity": false,
+          "has_normals": false,
+          "height": 1,
+          "intensity_range": "unknown",
+          "organized": false,
+          "point_stride": 12,
+          "sizes": [
+            4,
+            4,
+            4
+          ],
+          "storage": "binary",
+          "types": [
+            "F",
+            "F",
+            "F"
+          ],
+          "viewpoint": [
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "width": 4
+        }
+      }
+    },
+    "xyz": {
+      "byte_size": 47,
+      "sha256": "02bdb9d41286899904cf460527021889b12402a1bbfc6064040209ec19fd1795",
+      "inspection": {
+        "format": "xyz",
+        "datatype": "point_cloud",
+        "byte_size": 47,
+        "shape": [
+          4,
+          3
+        ],
+        "dtype": "float32",
+        "channels": null,
+        "count": 4,
+        "arrays": [],
+        "metadata": {
+          "columns": 3,
+          "has_color": false,
+          "has_intensity": false,
+          "has_normals": false
+        }
+      }
+    },
+    "pts": {
+      "byte_size": 49,
+      "sha256": "3916ace1de36a7a3cc64ca20d5beaf2fe41498c21d8414d42c3305c8a0ecaffe",
+      "inspection": {
+        "format": "pts",
+        "datatype": "point_cloud",
+        "byte_size": 49,
+        "shape": [
+          4,
+          3
+        ],
+        "dtype": "float32",
+        "channels": null,
+        "count": 4,
+        "arrays": [],
+        "metadata": {
+          "declared_count": 4
+        }
+      }
+    },
+    "las": {
+      "byte_size": 307,
+      "sha256": "ad0267c03c2c2f377c2d5e93a37204401561e076a0d76d5805b61a92a043f46b",
+      "inspection": {
+        "format": "las",
+        "datatype": "point_cloud",
+        "byte_size": 307,
+        "shape": [
+          4,
+          3
+        ],
+        "dtype": "float32",
+        "channels": null,
+        "count": 4,
+        "arrays": [],
+        "metadata": {
+          "has_color": false,
+          "has_intensity": true,
+          "has_waveform": false,
+          "point_format": 0
+        }
+      }
+    },
+    "laz": {
+      "byte_size": 388,
+      "sha256": "aa789b2f76ef83755980cfa9c1dbf5efc8d61bd415af7598b1b1547a19d5efeb",
+      "inspection": {
+        "format": "laz",
+        "datatype": "point_cloud",
+        "byte_size": 388,
+        "shape": [
+          4,
+          3
+        ],
+        "dtype": "float32",
+        "channels": null,
+        "count": 4,
+        "arrays": [],
+        "metadata": {
+          "chunk_size": 50000,
+          "has_color": false,
+          "has_intensity": true,
+          "has_waveform": false,
+          "point_format": 0
+        }
+      }
+    }
+  },
+  "malformed": {
+    "ply": {
+      "cause_type": "ValueError",
+      "cause_message": "PLY: header exceeds 1 MiB or has an unterminated line"
+    },
+    "pcd": {
+      "cause_type": "ValueError",
+      "cause_message": "PCD: header exceeds 1 MiB or has an unterminated line"
+    },
+    "xyz": {
+      "cause_type": "ValueError",
+      "cause_message": "xyz: unsupported column count 1 (supported: 3, 4, 6, 7, 9)"
+    },
+    "pts": {
+      "cause_type": "ValueError",
+      "cause_message": "pts: count header on line 1 must contain exactly one unsigned integer"
+    },
+    "las": {
+      "cause_type": "ValueError",
+      "cause_message": "las: bad or truncated public header"
+    },
+    "laz": {
+      "cause_type": "ValueError",
+      "cause_message": "laz: bad or truncated public header"
+    }
+  }
+}

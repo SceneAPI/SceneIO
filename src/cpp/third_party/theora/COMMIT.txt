@@ -1,0 +1,51 @@
+libtheora 1.2.0
+
+Upstream: https://github.com/xiph/theora
+Tag: v1.2.0
+Commit: 8e4808736e9c181b971306cc3f05df9e61354004
+Retrieved: 2026-08-01
+License: BSD-3-Clause. COPYING contains the upstream license and an exact
+distribution copy is stored in LICENSES/theora.txt.
+
+Source snapshot archive: git archive of tag v1.2.0
+Size: 1597440 bytes
+SHA-256: c3e5af504d1393f4e93a9fc371b553cfe953644568fecb76dd9a8ae2df62cd1c
+
+Selected repository-contained source: public headers, core encoder/decoder C
+sources (including upstream architecture directories for source closure), and
+top-level provenance files. Tools, tests, examples, documentation, and sample
+media are not stored. SceneIO's CMake target compiles the portable upstream C
+implementation on MSVC and non-x86 targets, enables the upstream x86-64
+MMX/SSE2 dispatch sources on GCC/AppleClang x86-64, and installs no separate
+library or development surface. The upstream MSVC assembly is 32-bit-only and
+is therefore not enabled for the required 64-bit Windows wheel.
+
+The selected closure contains 116 files totaling 1456663 bytes after the local
+change described below. Every selected pristine upstream file is recorded in
+case-insensitive path order in the 9632-byte UPSTREAM_MANIFEST.sha256, whose
+SHA-256 is:
+49d68df1d5aabd055112319d927dd657dee3bddef0238839e2743d90c0900219
+
+Every selected final repository file is recorded in case-insensitive path
+order in the 9632-byte SOURCE_MANIFEST.sha256, whose SHA-256 is:
+99b328e5a9d97aeb577be8355e57101f9288b36af1a7eca38331ea5d356a5b37
+
+Local correctness patch:
+- lib/analyze.c computes four signed edge deltas with multiplication by two
+  instead of left-shifting a potentially negative int. This preserves the
+  intended arithmetic over the bounded 8-bit sample differences and gives it
+  defined C semantics. GCC's undefined-behavior instrumentation identified the
+  fourth expression during the first encoder frame; upstream master commit
+  23161c4a63fd9f9d09b9e972f95def2d56c777af still carries all four shifts as
+  of 2026-08-02.
+- lib/tokenize.c represents its three 64-bit trellis-occupancy masks as
+  ogg_uint64_t and inserts their five bits from unsigned one values. This
+  preserves the intended bitset operations and defines insertion into bit 63.
+- lib/mcenc.c doubles bounded signed motion-vector components with
+  multiplication instead of left shift at every full-pixel and refinement
+  site, preserving the intended values with defined C semantics.
+
+LOCAL_CHANGES.patch records the exact upstream-to-repository difference,
+including the prominent SceneIO modification notices in all three files. The
+9752-byte patch has SHA-256:
+790a9423f4e308e9d6971c7796dae47395618c1f35b42d3361ebe14cc7a13bc2

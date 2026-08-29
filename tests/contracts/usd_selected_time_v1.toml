@@ -1,0 +1,94 @@
+schema_version = 1
+contract_date = "2026-08-29"
+profile = "sceneio.usd.3dcv/1"
+close_state = "B_selected_time_read_only"
+runtime_provider = "tinyusdz==0.9.4"
+oracle_provider = "usd-core==26.8"
+evaluator = "repository_owned_bounded_normalized_usda_parser"
+
+[representations]
+supported = ["usda", "usd_forwarded_usda", "usdz_usda_root"]
+refused = ["usdc", "usdz_usdc_root", "composed_layers", "value_clips"]
+
+[samples]
+properties = ["xformOp:transform", "visibility"]
+transform_type = "matrix4d"
+transform_interpolation = "component_wise_linear"
+visibility_type = "token"
+visibility_interpolation = "held"
+endpoint_behavior = "held"
+visibility_values = ["inherited", "invisible"]
+xform_orders = [
+  "xformOp:transform",
+  "!resetXformStack!,xformOp:transform",
+]
+empty_tables = "refused"
+duplicate_times = "refused"
+nonfinite_times_or_values = "refused"
+
+[limits]
+max_prim_text_chars = 268435456
+max_line_chars = 67108864
+max_samples_per_property = 65536
+max_tokens_per_property = 2000000
+max_string_chars = 256
+grammar_depth = "fixed_sample_map_matrix4x4_or_token"
+
+[read]
+method = "read_scene(path, time=...)"
+result = "SceneGraph"
+selected_time_field = "requested_finite_time_code"
+static_payloads = [
+  "topology",
+  "mesh",
+  "points",
+  "gaussian",
+  "camera",
+  "material",
+  "volume",
+  "instances",
+  "semantics",
+]
+
+[preservation]
+scene_animation_record = false
+authored_sample_read_without_time = "refused"
+authored_sample_write = false
+selected_snapshot_write = "static_snapshot_only"
+
+[inspection]
+fields = [
+  "selected_time_profile",
+  "selected_time_representation_supported",
+  "sampled_properties",
+  "sample_count",
+  "sample_time_range",
+]
+sampled_stage_without_time = "reported_as_not_preservable"
+
+[oracle]
+provider = "OpenUSD 26.08"
+suite = "tests/codecs/test_openusd_animation_oracle.py"
+formats = ["usda", "usdz"]
+times = ["negative", "fractional", "exact", "between", "before", "after"]
+
+[benchmark]
+implementation = "bench/io_bench/usd_animation.py"
+evidence = "docs/usd_animation_benchmark.md"
+operations = ["selected_time", "inspect", "static_control"]
+large_fixture_min_bytes = 67108864
+fresh_process_protocol = "sceneio-fresh-child-memory-v1"
+fresh_process_samples = 3
+
+[refusals]
+features = [
+  "animation_preservation",
+  "dynamic_write",
+  "usdc_selected_time",
+  "sampled_topology",
+  "sampled_primvars",
+  "sampled_camera_optics",
+  "sampled_materials",
+  "sampled_payloads",
+  "arbitrary_sampled_xform_stacks",
+]

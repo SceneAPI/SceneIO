@@ -1,0 +1,20 @@
+AOUSD Core Specification Supplemental attribution
+
+Copyright 2026 Alliance for OpenUSD (AOUSD) contributors.
+
+The unmodified USDC fixture bytes embedded in
+tests/test_usd_provider_qualification.py come from:
+
+  Project: AOUSD Core Specification Supplemental
+  Release: 1.0.1.post0
+  Tag object: 404e2bde49c19105a7e608db6dc1cb1a7131bfc7
+  Peeled release commit: c15ae0cad3ed9e07a25dffd6699627d2c166cab0
+  Upstream path:
+    releases/1.0.1/file_formats/tests/assets/binary/gen_timesamples.usdc
+  SHA-256:
+    0155f5e4e9b8839a685728131c6c35d32981fcc74b8cb23cb8abead8a49cd420
+
+The fixture and supplemental project are licensed under the Apache License,
+Version 2.0. The complete Apache-2.0 terms are distributed in the
+repository-root LICENSE file. The binary bytes are unmodified; base64 is only
+their source-text transport encoding.

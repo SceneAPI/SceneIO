@@ -1,0 +1,76 @@
+{
+  "schema": "sceneio.backend-qualification.v1",
+  "schema_version": 1,
+  "config_path": "bench/BACKEND_QUALIFICATION.toml",
+  "config_sha256": "8f7b38a73dc3e46ec1efc59c45084a6853a07013da239d2cba39dc1ffbc1f7be",
+  "decision_id": "jpeg-rgb8-v1",
+  "retained_backend": "stb",
+  "candidate_backend": "libjpeg-turbo",
+  "fixture_ids": [
+    "small_odd",
+    "photo_fhd",
+    "chroma_odd",
+    "texture_4k",
+    "photo_8k"
+  ],
+  "encode_profile_ids": [
+    "rgb8_q90_420",
+    "rgb8_q95_444"
+  ],
+  "decode_profile_ids": [
+    "baseline_rgb_420",
+    "baseline_rgb_444",
+    "progressive_rgb",
+    "restart_markers",
+    "grayscale",
+    "cmyk",
+    "ycck"
+  ],
+  "local_cell_count": 97,
+  "remote_cell_count": 122,
+  "local_sessions": 6,
+  "remote_sessions": 8,
+  "startup_processes": 6,
+  "worker_actions": [
+    "determinism",
+    "memory",
+    "prepare_corpus",
+    "probe",
+    "session",
+    "startup"
+  ],
+  "report_keys": [
+    "aggregates",
+    "cmake_manifests",
+    "codec_id",
+    "configuration",
+    "corpus",
+    "decision_id",
+    "determinism",
+    "environments",
+    "memory",
+    "platform_profile",
+    "raw_sessions",
+    "result_state",
+    "schedule",
+    "schema",
+    "schema_version",
+    "simd_evidence",
+    "source",
+    "startup",
+    "validation",
+    "wheels",
+    "worker"
+  ],
+  "platform_profiles": [
+    "windows_msvc_x86_64",
+    "manylinux2014_gcc10_x86_64",
+    "macos_appleclang_arm64"
+  ],
+  "ycck_fixture_sha256": "2a3223d511c8750927237bd7b3b0d1d6e2aeb7bfe14e96197f00632907ef01c0",
+  "generator_hashes": {
+    "small_odd": "6f6f612d7f10c17ee2db893db6f919680e079d540f65fd8480cae1fa5b151c6b",
+    "photo_fhd": "984d9ca4781e9cf6c25df24acd082d9a03d537c1cdeb8ce0e9468600273598c0",
+    "chroma_odd": "3c97c9b41a88753e1fa80f0fbf2ecd8f4b4523748c137850ba18740579678a7e"
+  }
+}

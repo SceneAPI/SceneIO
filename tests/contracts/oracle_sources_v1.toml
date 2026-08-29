@@ -1,0 +1,799 @@
+schema_version = 1
+catalog_date = "2026-08-03"
+catalog_purpose = "Pinned external implementations and specifications used to qualify SceneIO conversion and normalization claims."
+
+# This is a test/reference catalog.  It is intentionally separate from the
+# runtime registry: importing SceneIO must continue to require NumPy only.
+allowed_roles = ["runtime_required", "runtime_optional", "test_executable", "generated_vector", "reference_only"]
+allowed_authorities = ["format_owner", "standards_body", "independent_implementation", "provider_binding", "semantic_reference"]
+allowed_qualifications = ["executed", "captured", "reference", "candidate"]
+allowed_license_classes = ["permissive", "weak_copyleft", "mixed_scoped", "strong_copyleft_reference"]
+permitted_license_expressions = [
+  "Apache-2.0",
+  "BSD-2-Clause",
+  "BSD-3-Clause",
+  "BSL-1.0",
+  "ISC",
+  "MIT",
+  "MIT-CMU",
+  "MPL-2.0",
+  "TOST-1.0",
+  "Zlib",
+  "LGPL-3.0-or-later",
+]
+reference_only_license_expressions = ["GPL-3.0", "GPL-3.0-or-later", "AGPL-3.0-or-later"]
+required_source_ids = [
+  "colmap", "pycolmap", "camtools", "rootba", "openmvg", "alicevision",
+  "evo", "pykitti", "kalibr", "g2o", "hloc", "open3d", "pcl", "pdal",
+  "trimesh", "gltf_validator", "niantic_spz", "splat_transform", "gsply",
+  "gaussian_splats_3d", "openusd", "khronos_gltf", "3dgrut", "kubric", "ncore",
+  "scipy", "pyyaml", "numpy", "h5py", "zarr", "arrow", "openexr", "pillow", "tifffile",
+  "pye57", "libe57format",
+]
+
+[[sources]]
+id = "colmap"
+project = "COLMAP"
+repository = "https://github.com/colmap/colmap"
+revision = "7e7b86ecb4a4cd69519e8610f42aefe91d672973"
+version = "main snapshot"
+stars = 12365
+stars_snapshot = "2026-08-03"
+license = "BSD-3-Clause"
+license_class = "permissive"
+distribution_role = "reference_only"
+authority = "format_owner"
+lineage = "colmap"
+formats = ["colmap_sparse", "colmap_sparse_txt", "colmap_db", "colmap_mvs_depth", "colmap_mvs_normal", "colmap_mvs_consistency", "colmap_fused_visibility"]
+semantic_roles = ["sparse_model", "database", "dense_maps", "camera_pose"]
+execution = "manual_reference"
+execution_markers = ["pycolmap"]
+evidence_tests = ["tests/codecs/test_colmap.py", "tests/codecs/test_colmap_txt.py", "tests/codecs/test_colmap_db.py", "tests/codecs/test_colmap_mvs.py"]
+qualification = "reference"
+notice = "LICENSES/colmap.txt"
+
+[[sources]]
+id = "pycolmap"
+project = "pycolmap"
+repository = "https://github.com/colmap/pycolmap"
+revision = "b6627db2266f098c21c3d7e4b7844b4b90d8e02d"
+version = "4.1.1"
+stars = 998
+stars_snapshot = "2026-08-03"
+license = "BSD-3-Clause"
+license_class = "permissive"
+distribution_role = "test_executable"
+authority = "format_owner"
+lineage = "colmap"
+formats = ["colmap_sparse", "colmap_sparse_txt", "colmap_db", "colmap_mvs_depth"]
+semantic_roles = ["sparse_model", "database", "dense_maps", "camera_pose"]
+execution = "pytest_optional"
+execution_markers = ["pycolmap"]
+evidence_tests = ["tests/codecs/test_colmap.py", "tests/codecs/test_colmap_txt.py", "tests/codecs/test_colmap_db.py", "tests/codecs/test_colmap_mvs.py"]
+qualification = "executed"
+notice = "LICENSES/colmap.txt"
+
+[[sources]]
+id = "camtools"
+project = "CamTools"
+repository = "https://github.com/yxlao/camtools"
+revision = "80681326a80037caacb5e7878fcc431a2871d458"
+version = "main snapshot"
+stars = 206
+stars_snapshot = "2026-08-03"
+license = "MIT"
+license_class = "permissive"
+distribution_role = "reference_only"
+authority = "semantic_reference"
+lineage = "camtools"
+formats = ["transforms_json", "colmap_sparse", "euroc_dataset"]
+semantic_roles = ["opencv_opengl", "w2c_c2w", "camera_pose", "sensor_to_body"]
+execution = "manual_reference"
+execution_markers = ["camtools"]
+evidence_tests = ["tests/test_coordinate_systems.py", "tests/codecs/test_euroc_dataset.py"]
+qualification = "reference"
+notice = ""
+
+[[sources]]
+id = "rootba"
+project = "RootBA"
+repository = "https://github.com/nikolausdemmel/rootba"
+revision = "d3900037fc4bc98328e5d8d26f1c4eed922f88cc"
+version = "main snapshot"
+stars = 319
+stars_snapshot = "2026-08-03"
+license = "BSD-3-Clause"
+license_class = "permissive"
+distribution_role = "reference_only"
+authority = "independent_implementation"
+lineage = "rootba"
+formats = ["bundler", "bal"]
+semantic_roles = ["bal_layout", "bundler_pose", "negative_z_viewing"]
+execution = "manual_reference"
+execution_markers = ["rootba"]
+evidence_tests = ["tests/codecs/test_bundler.py", "tests/codecs/test_bal.py"]
+qualification = "reference"
+notice = ""
+
+[[sources]]
+id = "openmvg"
+project = "OpenMVG"
+repository = "https://github.com/openMVG/openMVG"
+revision = "c76d87244fb3590fb8b9a752be34f07411057ae2"
+version = "develop snapshot"
+stars = 6531
+stars_snapshot = "2026-08-03"
+license = "MPL-2.0"
+license_class = "weak_copyleft"
+distribution_role = "reference_only"
+authority = "format_owner"
+lineage = "openmvg"
+formats = ["openmvg"]
+semantic_roles = ["sfm_data", "camera_pose", "intrinsics"]
+execution = "manual_reference"
+execution_markers = ["openmvg"]
+evidence_tests = ["tests/codecs/test_openmvg.py"]
+qualification = "reference"
+notice = ""
+
+[[sources]]
+id = "alicevision"
+project = "AliceVision"
+repository = "https://github.com/alicevision/AliceVision"
+revision = "02b5dd4e845381813d5952d3d067163e2d3f1f70"
+version = "develop snapshot"
+stars = 3466
+stars_snapshot = "2026-08-03"
+license = "MPL-2.0"
+license_class = "weak_copyleft"
+distribution_role = "reference_only"
+authority = "independent_implementation"
+lineage = "alicevision"
+formats = ["openmvg", "nvm"]
+semantic_roles = ["sfm_pipeline", "camera_pose", "nvm_import"]
+execution = "manual_reference"
+execution_markers = ["alicevision"]
+evidence_tests = ["tests/codecs/test_openmvg.py", "tests/codecs/test_nvm.py"]
+qualification = "reference"
+notice = ""
+
+[[sources]]
+id = "evo"
+project = "evo"
+repository = "https://github.com/MichaelGrupp/evo"
+revision = "d6356b91b4973b6b996ca0c34a91c86465c78b1d"
+version = "main snapshot"
+stars = 4290
+stars_snapshot = "2026-08-03"
+license = "GPL-3.0"
+license_class = "strong_copyleft_reference"
+distribution_role = "reference_only"
+authority = "independent_implementation"
+lineage = "evo"
+formats = ["tum", "kitti", "euroc_state", "g2o"]
+semantic_roles = ["trajectory", "pose_direction", "quaternion_layout"]
+execution = "manual_reference"
+execution_markers = ["evo"]
+evidence_tests = ["tests/codecs/test_pose_text.py", "tests/codecs/test_euroc_state.py"]
+qualification = "reference"
+notice = ""
+
+[[sources]]
+id = "pykitti"
+project = "pykitti"
+repository = "https://github.com/utiasSTARS/pykitti"
+revision = "de337234413f4b9d192da7e3d3fc28de5281c748"
+version = "master snapshot"
+stars = 1242
+stars_snapshot = "2026-08-03"
+license = "MIT"
+license_class = "permissive"
+distribution_role = "reference_only"
+authority = "independent_implementation"
+lineage = "pykitti"
+formats = ["kitti"]
+semantic_roles = ["calibration", "trajectory", "sensor_pose"]
+execution = "manual_reference"
+execution_markers = ["pykitti"]
+evidence_tests = ["tests/codecs/test_pose_text.py"]
+qualification = "reference"
+notice = ""
+
+[[sources]]
+id = "kalibr"
+project = "Kalibr"
+repository = "https://github.com/ethz-asl/kalibr"
+revision = "1f60227442d25e36365ef5f72cd80b9666d73467"
+version = "master snapshot"
+stars = 5614
+stars_snapshot = "2026-08-03"
+license = "BSD-3-Clause"
+license_class = "permissive"
+distribution_role = "reference_only"
+authority = "independent_implementation"
+lineage = "kalibr"
+formats = ["kalibr", "opencv_yaml", "ros_camera_info", "euroc_dataset"]
+semantic_roles = ["camera_chain", "time_offset", "camera_intrinsics", "sensor_to_body"]
+execution = "manual_reference"
+execution_markers = ["kalibr"]
+evidence_tests = ["tests/codecs/test_camera_calibration.py", "tests/codecs/test_euroc_dataset.py"]
+qualification = "reference"
+notice = ""
+
+[[sources]]
+id = "g2o"
+project = "g2o (BSD core/layout reference)"
+repository = "https://github.com/RainerKuemmerle/g2o"
+revision = "57cb4b17e6cf850730da8103c8229ebc7cf75109"
+version = "master snapshot"
+stars = 3452
+stars_snapshot = "2026-08-03"
+license = "BSD-3-Clause"
+license_class = "mixed_scoped"
+distribution_role = "reference_only"
+authority = "independent_implementation"
+lineage = "g2o"
+formats = ["g2o"]
+semantic_roles = ["pose_graph", "quaternion_layout", "edge_measurements"]
+execution = "manual_reference"
+execution_markers = ["g2o"]
+evidence_tests = ["tests/codecs/test_g2o.py"]
+qualification = "reference"
+notice = ""
+
+[[sources]]
+id = "hloc"
+project = "Hierarchical-Localization"
+repository = "https://github.com/cvg/Hierarchical-Localization"
+revision = "c13273bd0ecc2917a35910fd843712a1c6243193"
+version = "master snapshot"
+stars = 4164
+stars_snapshot = "2026-08-03"
+license = "Apache-2.0"
+license_class = "permissive"
+distribution_role = "reference_only"
+authority = "independent_implementation"
+lineage = "hloc"
+formats = ["hloc_features", "hloc_matches", "colmap_db"]
+semantic_roles = ["feature_hdf5", "match_hdf5", "pixel_center"]
+execution = "manual_reference"
+execution_markers = ["hloc"]
+evidence_tests = ["tests/codecs/test_hdf5_hloc.py"]
+qualification = "reference"
+notice = ""
+
+[[sources]]
+id = "open3d"
+project = "Open3D"
+repository = "https://github.com/isl-org/Open3D"
+revision = "d7d057445bd28200cda5301b2f65c0f11490d2ef"
+version = "main snapshot"
+stars = 13856
+stars_snapshot = "2026-08-03"
+license = "MIT"
+license_class = "permissive"
+distribution_role = "test_executable"
+authority = "independent_implementation"
+lineage = "open3d"
+formats = ["ply", "pcd"]
+semantic_roles = ["point_cloud", "mesh", "normals", "organized_cloud"]
+execution = "pytest_optional"
+execution_markers = ["open3d"]
+evidence_tests = ["tests/codecs/test_ply_point.py", "tests/codecs/test_pcd.py"]
+qualification = "executed"
+notice = ""
+
+[[sources]]
+id = "pcl"
+project = "Point Cloud Library"
+repository = "https://github.com/PointCloudLibrary/pcl"
+revision = "6a4f535faad59bb22afdcb4becafc2e35e99c711"
+version = "master snapshot"
+stars = 11082
+stars_snapshot = "2026-08-03"
+license = "BSD-3-Clause"
+license_class = "permissive"
+distribution_role = "reference_only"
+authority = "independent_implementation"
+lineage = "pcl"
+formats = ["ply", "pcd"]
+semantic_roles = ["point_cloud", "normals", "point_attributes"]
+execution = "manual_reference"
+execution_markers = ["pcl"]
+evidence_tests = ["tests/codecs/test_ply.py", "tests/codecs/test_pcd.py"]
+qualification = "reference"
+notice = ""
+
+[[sources]]
+id = "pdal"
+project = "PDAL"
+repository = "https://github.com/PDAL/PDAL"
+revision = "b3b408b32b781a5e3c556937afee9aa8fcd2ed81"
+version = "master snapshot"
+stars = 1400
+stars_snapshot = "2026-08-03"
+license = "BSD-3-Clause"
+license_class = "permissive"
+distribution_role = "reference_only"
+authority = "independent_implementation"
+lineage = "pdal"
+formats = ["las", "laz", "e57"]
+semantic_roles = ["point_cloud", "scale_offsets", "point_formats"]
+execution = "manual_reference"
+execution_markers = ["pdal"]
+evidence_tests = ["tests/codecs/test_las.py", "tests/codecs/test_laz.py", "tests/codecs/test_e57.py"]
+qualification = "reference"
+notice = ""
+
+[[sources]]
+id = "trimesh"
+project = "trimesh"
+repository = "https://github.com/mikedh/trimesh"
+revision = "cdb90eb87678a56295ae8bb2fd0369f5910c4fe0"
+version = "main snapshot"
+stars = 3640
+stars_snapshot = "2026-08-03"
+license = "MIT"
+license_class = "permissive"
+distribution_role = "test_executable"
+authority = "independent_implementation"
+lineage = "trimesh"
+formats = ["obj", "stl", "off", "ply_mesh", "gltf", "glb"]
+semantic_roles = ["mesh", "face_winding", "gltf_scene"]
+execution = "pytest_optional"
+execution_markers = ["trimesh"]
+evidence_tests = ["tests/codecs/test_obj.py", "tests/codecs/test_stl.py", "tests/codecs/test_off.py", "tests/codecs/test_ply_mesh.py", "tests/codecs/test_gltf.py"]
+qualification = "executed"
+notice = ""
+
+[[sources]]
+id = "gltf_validator"
+project = "Khronos glTF Validator"
+repository = "https://github.com/KhronosGroup/glTF-Validator"
+revision = "434283be08a668a8fb4e437145630ddbf93b0686"
+version = "main snapshot"
+stars = 455
+stars_snapshot = "2026-08-03"
+license = "Apache-2.0"
+license_class = "permissive"
+distribution_role = "reference_only"
+authority = "standards_body"
+lineage = "gltf_validator"
+formats = ["gltf", "glb"]
+semantic_roles = ["schema_validation", "quaternion_layout", "asset_structure"]
+execution = "manual_reference"
+execution_markers = ["gltf-validator"]
+evidence_tests = ["tests/codecs/test_gltf.py"]
+qualification = "reference"
+notice = ""
+
+[[sources]]
+id = "niantic_spz"
+project = "Niantic SPZ"
+repository = "https://github.com/nianticlabs/spz"
+revision = "5bf2945de1a003cee07133b1e495fe9c6ffdc7e7"
+version = "3.0.0"
+stars = 901
+stars_snapshot = "2026-08-03"
+license = "MIT"
+license_class = "permissive"
+distribution_role = "test_executable"
+authority = "format_owner"
+lineage = "niantic_spz"
+formats = ["spz"]
+semantic_roles = ["spz_wire", "quantization", "coordinate_profiles", "spherical_harmonics"]
+execution = "focused_oracle_lane"
+execution_markers = ["Niantic", "_PINNED_REVISION"]
+evidence_tests = ["tests/codecs/test_spz_niantic_oracle.py"]
+qualification = "executed"
+notice = "LICENSES/niantic-spz.txt"
+
+[[sources]]
+id = "splat_transform"
+project = "PlayCanvas splat-transform"
+repository = "https://github.com/playcanvas/splat-transform"
+revision = "04b6d15b3c895136d2deba57fdb06df1d4ff3b91"
+version = "3.1.6"
+stars = 1269
+stars_snapshot = "2026-08-03"
+license = "MIT"
+license_class = "permissive"
+distribution_role = "test_executable"
+authority = "independent_implementation"
+lineage = "playcanvas_splat"
+formats = ["gaussian_ply", "compressed_ply", "sog", "ksplat", "spz", "splat"]
+semantic_roles = ["gaussian_wire", "scale_activation", "opacity_activation", "quaternion_order"]
+execution = "cross_platform_ci"
+execution_markers = ["splat-transform", "SCENEIO_SPLAT_TRANSFORM_CLI"]
+evidence_tests = ["tests/codecs/test_splat_transform_oracle.py"]
+qualification = "executed"
+notice = "LICENSES/splat-transform.txt"
+
+[[sources]]
+id = "gsply"
+project = "gsply"
+repository = "https://github.com/OpsiClear/gsply"
+revision = "363885c707d445ce5d925024e2ab536fc72c1b9d"
+version = "0.4.6"
+stars = 59
+stars_snapshot = "2026-08-03"
+license = "MIT"
+license_class = "permissive"
+distribution_role = "test_executable"
+authority = "independent_implementation"
+lineage = "gsply"
+formats = ["gaussian_ply", "spz"]
+semantic_roles = ["gaussian_wire", "quantization", "spherical_harmonics"]
+execution = "normal_test_suite"
+execution_markers = ["gsply"]
+evidence_tests = ["tests/codecs/test_ply.py", "tests/codecs/test_spz.py"]
+qualification = "executed"
+notice = "LICENSES/gsply.txt"
+
+[[sources]]
+id = "gaussian_splats_3d"
+project = "GaussianSplats3D"
+repository = "https://github.com/mkkellogg/GaussianSplats3D"
+revision = "eb2fc4593e3ea5e75388296fcdde2459542d1290"
+version = "0.4.7"
+stars = 2847
+stars_snapshot = "2026-08-03"
+license = "MIT"
+license_class = "permissive"
+distribution_role = "generated_vector"
+authority = "independent_implementation"
+lineage = "gaussian_splats_3d"
+formats = ["ksplat"]
+semantic_roles = ["ksplat_wire", "quaternion_order"]
+execution = "pinned_vectors"
+execution_markers = ["GaussianSplats3D", "ksplat"]
+evidence_tests = ["tests/codecs/test_ksplat.py"]
+qualification = "captured"
+notice = "LICENSES/gaussian-splats-3d.txt"
+
+[[sources]]
+id = "openusd"
+project = "OpenUSD"
+repository = "https://github.com/PixarAnimationStudios/OpenUSD"
+revision = "ee47c679abde5b467a7b6a41f3b2285564a4222e"
+version = "26.08"
+stars = 7417
+stars_snapshot = "2026-08-03"
+license = "TOST-1.0"
+license_class = "permissive"
+distribution_role = "test_executable"
+authority = "format_owner"
+lineage = "openusd"
+formats = ["usd", "usdz"]
+semantic_roles = ["usd_stage", "gaussian_schema", "meters_per_unit", "up_axis", "matrix_interpolation", "visibility_holding", "sample_endpoints"]
+execution = "focused_oracle_lane"
+execution_markers = ["pxr", "OpenUSD"]
+evidence_tests = ["tests/codecs/test_openusd_gaussian_oracle.py", "tests/codecs/test_openusd_animation_oracle.py"]
+qualification = "executed"
+notice = "LICENSES/openusd.txt"
+
+[[sources]]
+id = "khronos_gltf"
+project = "Khronos glTF"
+repository = "https://github.com/KhronosGroup/glTF"
+revision = "77b44be7bef26e01fb0b140e3d5bb1716421c5e9"
+version = "main snapshot"
+stars = 7807
+stars_snapshot = "2026-08-03"
+license = "Apache-2.0"
+license_class = "permissive"
+distribution_role = "reference_only"
+authority = "standards_body"
+lineage = "khronos_gltf"
+formats = ["gltf", "glb"]
+semantic_roles = ["scene_graph", "quaternion_order", "gaussian_schema"]
+execution = "manual_reference"
+execution_markers = ["KHR_gaussian_splatting", "glTF"]
+evidence_tests = ["tests/codecs/test_gltf.py"]
+qualification = "reference"
+notice = ""
+
+[[sources]]
+id = "3dgrut"
+project = "NVIDIA 3DGRUT"
+repository = "https://github.com/nv-tlabs/3DGRUT"
+revision = "a37ef721012dea0f29c0fcfff2d525023b4e854a"
+version = "main snapshot"
+stars = 2353
+stars_snapshot = "2026-08-03"
+license = "Apache-2.0"
+license_class = "permissive"
+distribution_role = "reference_only"
+authority = "independent_implementation"
+lineage = "3dgrut"
+formats = ["gaussian_ply", "usd", "ncore_v4"]
+semantic_roles = ["gaussian_attributes", "particle_field", "ncore_conversion"]
+execution = "manual_reference"
+execution_markers = ["3DGRUT"]
+evidence_tests = ["tests/codecs/test_ply.py", "tests/codecs/test_usd_gaussians.py", "tests/codecs/test_ncore_v4.py"]
+qualification = "reference"
+notice = ""
+
+[[sources]]
+id = "kubric"
+project = "Google Research Kubric"
+repository = "https://github.com/google-research/kubric"
+revision = "61f2422c84bab75006df33c6989e0b483db3ccfe"
+version = "main snapshot"
+stars = 2786
+stars_snapshot = "2026-08-03"
+license = "Apache-2.0"
+license_class = "permissive"
+distribution_role = "reference_only"
+authority = "semantic_reference"
+lineage = "kubric"
+formats = ["label_map"]
+semantic_roles = ["semantic_labels", "instance_labels", "background_id", "renderer_id_mapping"]
+execution = "hand_evaluated_pinned_vector_plus_opt_in_procedural_recipe"
+execution_markers = ["KUBRIC_REVISION", "adjust_segmentation_idxs", "_render_scene"]
+evidence_tests = ["tests/codecs/test_label_map_carriers.py", "tests/test_kubric_oracle_manifest.py"]
+qualification = "captured"
+notice = "LICENSES/kubric.txt"
+
+[[sources]]
+id = "ncore"
+project = "NVIDIA NCore"
+repository = "https://github.com/NVIDIA/ncore"
+revision = "12f4429522c98356c5a46eee1d84f29bd846e367"
+version = "main snapshot"
+stars = 183
+stars_snapshot = "2026-08-03"
+license = "Apache-2.0"
+license_class = "permissive"
+distribution_role = "generated_vector"
+authority = "format_owner"
+lineage = "ncore"
+formats = ["ncore_v4"]
+semantic_roles = ["indexed_tar", "tensor_chunks", "multisensor_metadata"]
+execution = "pinned_vectors"
+execution_markers = ["NCore", "ncore"]
+evidence_tests = ["tests/codecs/test_ncore_v4.py", "tests/codecs/test_ncore_v4_labels.py"]
+qualification = "captured"
+notice = "LICENSES/ncore.txt"
+
+[[sources]]
+id = "scipy"
+project = "SciPy"
+repository = "https://github.com/scipy/scipy"
+revision = "7adb8c972443f664b9395a0e6e8e0283e9b4faff"
+version = "1.18.0"
+stars = 14878
+stars_snapshot = "2026-08-03"
+license = "BSD-3-Clause"
+license_class = "permissive"
+distribution_role = "test_executable"
+authority = "independent_implementation"
+lineage = "scipy"
+formats = ["coordinate_conversions", "gaussian_attributes", "euroc_dataset"]
+semantic_roles = [
+  "quaternion_matrix",
+  "rotation_composition",
+  "rigid_inverse",
+  "gaussian_quaternion_reorder_and_normalization",
+  "gaussian_opacity_activation",
+  "euroc_rigid_transform",
+]
+execution = "math_oracle"
+execution_markers = ["scipy", "Rotation"]
+evidence_tests = [
+  "tests/test_coordinate_math_oracle.py",
+  "tests/records/test_gaussian_semantic_oracles.py",
+  "tests/codecs/test_euroc_dataset.py",
+]
+qualification = "executed"
+notice = "LICENSES/scipy.txt"
+
+[[sources]]
+id = "pyyaml"
+project = "PyYAML"
+repository = "https://github.com/yaml/pyyaml"
+revision = "49790e73684bebad1df05ef8d828fa12f685bffb"
+version = "6.0.3"
+stars = 2927
+stars_snapshot = "2026-08-03"
+license = "MIT"
+license_class = "permissive"
+distribution_role = "test_executable"
+authority = "independent_implementation"
+lineage = "pyyaml"
+formats = ["opencv_yaml", "ros_camera_info", "kalibr", "euroc_dataset"]
+semantic_roles = ["yaml_mapping", "opencv_matrix_tag", "asl_sensor_schema"]
+execution = "pytest_test_dependency"
+execution_markers = ["yaml", "SafeLoader"]
+evidence_tests = ["tests/codecs/test_camera_calibration.py", "tests/codecs/test_euroc_dataset.py"]
+qualification = "executed"
+notice = "LICENSES/pyyaml.txt"
+
+[[sources]]
+id = "numpy"
+project = "NumPy"
+repository = "https://github.com/numpy/numpy"
+revision = "899d0c20b755a9bfc3b9dba16d6bafc20b95c216"
+version = "main snapshot"
+stars = 32479
+stars_snapshot = "2026-08-03"
+license = "BSD-3-Clause"
+license_class = "permissive"
+distribution_role = "runtime_required"
+authority = "format_owner"
+lineage = "numpy"
+formats = ["npy", "npz"]
+semantic_roles = ["array_header", "dtype", "shape"]
+execution = "normal_runtime"
+execution_markers = ["numpy", "np."]
+evidence_tests = ["tests/codecs/test_npy_npz.py"]
+qualification = "executed"
+notice = ""
+
+[[sources]]
+id = "h5py"
+project = "h5py"
+repository = "https://github.com/h5py/h5py"
+revision = "ddfe8a0a938cbbf625f2aed39c53a72c418e6bf0"
+version = "master snapshot"
+stars = 2242
+stars_snapshot = "2026-08-03"
+license = "BSD-3-Clause"
+license_class = "permissive"
+distribution_role = "test_executable"
+authority = "independent_implementation"
+lineage = "h5py"
+formats = ["hdf5", "hloc_features", "hloc_matches"]
+semantic_roles = ["hdf5_layout", "feature_dataset", "match_dataset"]
+execution = "pytest_optional"
+execution_markers = ["h5py"]
+evidence_tests = ["tests/codecs/test_hdf5_hloc.py"]
+qualification = "executed"
+notice = "LICENSES/h5py.txt"
+
+[[sources]]
+id = "zarr"
+project = "Zarr Python"
+repository = "https://github.com/zarr-developers/zarr-python"
+revision = "24f9ad19430dc88bc1d92b5e1936ac6b3e20f4fe"
+version = "main snapshot"
+stars = 2028
+stars_snapshot = "2026-08-03"
+license = "MIT"
+license_class = "permissive"
+distribution_role = "test_executable"
+authority = "format_owner"
+lineage = "zarr"
+formats = ["zarr"]
+semantic_roles = ["zarr_v2", "zarr_v3", "chunking", "dtype"]
+execution = "pytest_optional"
+execution_markers = ["zarr"]
+evidence_tests = ["tests/codecs/test_zarr.py"]
+qualification = "executed"
+notice = "LICENSES/zarr.txt"
+
+[[sources]]
+id = "arrow"
+project = "Apache Arrow"
+repository = "https://github.com/apache/arrow"
+revision = "fd38cf68cfb88ad74c2b3190746289137e732e8b"
+version = "main snapshot"
+stars = 16972
+stars_snapshot = "2026-08-03"
+license = "Apache-2.0"
+license_class = "permissive"
+distribution_role = "test_executable"
+authority = "format_owner"
+lineage = "arrow"
+formats = ["parquet", "arrow_ipc"]
+semantic_roles = ["columnar_schema", "nullability", "nested_arrays"]
+execution = "pytest_optional"
+execution_markers = ["pyarrow", "parquet"]
+evidence_tests = ["tests/codecs/test_arrow_parquet.py"]
+qualification = "executed"
+notice = "LICENSES/apache-arrow-license.txt"
+
+[[sources]]
+id = "openexr"
+project = "OpenEXR"
+repository = "https://github.com/AcademySoftwareFoundation/openexr"
+revision = "1b1bdf97b8642efb5c47e20080b4304362b064a3"
+version = "main snapshot"
+stars = 1828
+stars_snapshot = "2026-08-03"
+license = "BSD-3-Clause"
+license_class = "permissive"
+distribution_role = "test_executable"
+authority = "format_owner"
+lineage = "openexr"
+formats = ["exr"]
+semantic_roles = ["channels", "half_float", "color_space"]
+execution = "pytest_optional"
+execution_markers = ["OpenEXR", "exr"]
+evidence_tests = ["tests/codecs/test_exr.py"]
+qualification = "executed"
+notice = ""
+
+[[sources]]
+id = "pillow"
+project = "Pillow"
+repository = "https://github.com/python-pillow/Pillow"
+revision = "425a038b89afc76f145b522fd5e399385b56b09b"
+version = "main snapshot"
+stars = 13731
+stars_snapshot = "2026-08-03"
+license = "MIT-CMU"
+license_class = "permissive"
+distribution_role = "test_executable"
+authority = "independent_implementation"
+lineage = "pillow"
+formats = ["png", "jpeg", "bmp", "tga", "webp", "avif", "animated_webp", "apng", "animated_avif"]
+semantic_roles = ["image_pixels", "color_channels", "animation_frames"]
+execution = "pytest_optional"
+execution_markers = ["PIL", "pillow"]
+evidence_tests = ["tests/codecs/test_png.py", "tests/codecs/test_jpeg.py", "tests/codecs/test_bmp_tga.py", "tests/codecs/test_webp.py", "tests/codecs/test_animated_webp.py", "tests/codecs/test_apng.py", "tests/codecs/test_avif.py"]
+qualification = "executed"
+notice = "LICENSES/pillow.txt"
+
+[[sources]]
+id = "tifffile"
+project = "tifffile"
+repository = "https://github.com/cgohlke/tifffile"
+revision = "940f7630df48edf8e13913962035ed80b408b5f4"
+version = "master snapshot"
+stars = 660
+stars_snapshot = "2026-08-03"
+license = "BSD-3-Clause"
+license_class = "permissive"
+distribution_role = "test_executable"
+authority = "independent_implementation"
+lineage = "tifffile"
+formats = ["tiff"]
+semantic_roles = ["tiff_tags", "endianness", "image_pages"]
+execution = "pytest_optional"
+execution_markers = ["tifffile"]
+evidence_tests = ["tests/codecs/test_tiff.py"]
+qualification = "executed"
+notice = "LICENSES/tifffile.txt"
+
+[[sources]]
+id = "pye57"
+project = "pye57"
+repository = "https://github.com/davidcaron/pye57"
+revision = "64c9000738ad54242e87e1da6bca6b683b13374b"
+version = "0.4.19"
+stars = 106
+stars_snapshot = "2026-08-03"
+license = "MIT"
+license_class = "permissive"
+distribution_role = "test_executable"
+authority = "provider_binding"
+lineage = "e57"
+formats = ["e57"]
+semantic_roles = ["python_binding", "scan_headers", "raw_point_arrays", "scan_writer"]
+execution = "pytest_optional"
+execution_markers = ["pye57"]
+evidence_tests = ["tests/codecs/test_e57.py", "tests/test_e57_multiscan_benchmark.py"]
+qualification = "executed"
+notice = "LICENSES/pye57.txt"
+
+[[sources]]
+id = "libe57format"
+project = "libE57Format"
+repository = "https://github.com/asmaloney/libE57Format"
+revision = "2b84ff0d4ee451d9c191a5eab48a889db8823cc6"
+version = "master snapshot"
+stars = 190
+stars_snapshot = "2026-08-03"
+license = "BSL-1.0"
+license_class = "permissive"
+distribution_role = "test_executable"
+authority = "format_owner"
+lineage = "e57"
+formats = ["e57"]
+semantic_roles = ["e57_point_record", "ordered_scans", "cartesian_points", "intensity", "rgb8", "invalid_states", "row_column_indices", "scan_pose"]
+execution = "pytest_optional"
+execution_markers = ["pye57", "E57"]
+evidence_tests = ["tests/codecs/test_e57.py"]
+qualification = "executed"
+notice = "LICENSES/libe57format.txt"

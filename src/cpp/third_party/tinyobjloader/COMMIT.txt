@@ -1,0 +1,25 @@
+TinyObjLoader release branch
+
+Upstream: https://github.com/tinyobjloader/tinyobjloader
+Commit: 45636bdcef1a4fec140346b90c0b50bf0bc3e23b
+Retrieved: 2026-07-25
+License: MIT; the single header also carries the bundled mapbox/earcut.hpp ISC
+notice (see LICENSE) and embedded fast_float MIT/Apache-2.0/BSL-1.0 notices.
+All are permissive.
+
+Vendored files:
+- tiny_obj_loader.h
+- LICENSE
+
+SHA-256:
+- tiny_obj_loader.h:
+  f32cd11276d8dd1a6a1f80cb56cb414086e0715c18b03b5707cbf20f2c33da9e
+- LICENSE:
+  75d217cb1b3c6f4aa58d2fd7e0ff9cf2caaef6e91a41eb5b7893db8a8d3ccbfb
+
+No local source patch is applied. SceneIO compiles the single-header C++ loader
+into `_core` with triangulation disabled and supplies OBJ/MTL contents from
+caller-owned read-only buffers. Its embedded fast_float is macro-namespaced to
+`tinyobj_fast_float` in the implementation translation unit so it cannot
+collide with SceneIO's separately pinned fast_float v6 definitions. Path
+resolution and the supported strict MTL subset remain in SceneIO code.

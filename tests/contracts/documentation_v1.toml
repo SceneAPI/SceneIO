@@ -1,0 +1,47 @@
+schema_version = 1
+
+# Runtime ownership and capability metadata are authoritative. The count is an
+# explicit compatibility assertion: adding or removing a built-in must update
+# this contract in the same change.
+inventory_source = "sceneio.io._builtin_manifest.CANONICAL_BUILTIN_IDS"
+capability_source = "sceneio.capabilities"
+native_feature_source = "sceneio.native_features"
+expected_builtin_count = 74
+canonical_current_document = "docs/format_coverage.md"
+
+readme_entry_points = [
+    "docs/format_coverage.md",
+    "docs/coordinate_conventions.md",
+    "docs/coverage_roadmap.md",
+    "docs/core_architecture.md",
+    "docs/repository_organization_plan.md",
+    "docs/next_stage_implementation_checklist.md",
+    "docs/format_gap_implementation_plan.md",
+    "docs/remaining_3dcv_profile_checklist.md",
+    "docs/plans/completed/README.md",
+]
+
+[[generated_section]]
+document = "README.md"
+marker = "sceneio-inventory-summary"
+renderer = "inventory_summary"
+
+[[generated_section]]
+document = "docs/format_coverage.md"
+marker = "sceneio-inventory-summary"
+renderer = "inventory_summary"
+
+[[generated_section]]
+document = "docs/format_coverage.md"
+marker = "sceneio-capability-rows"
+renderer = "capability_rows"
+
+[[generated_section]]
+document = "docs/format_coverage.md"
+marker = "sceneio-native-feature-rows"
+renderer = "native_feature_rows"
+
+[[generated_section]]
+document = "docs/core_architecture.md"
+marker = "sceneio-partial-summary"
+renderer = "partial_selector_rows"

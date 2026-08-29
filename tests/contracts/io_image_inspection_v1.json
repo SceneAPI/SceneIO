@@ -1,0 +1,117 @@
+{
+  "parent_commit": "8040bc7",
+  "valid": {
+    "netpbm": {
+      "shape": [5, 7, 3],
+      "dtype": "uint8",
+      "channels": 3,
+      "count": null,
+      "metadata": {
+        "ascii": false,
+        "maxval": 255
+      }
+    },
+    "png": {
+      "shape": [5, 7, 3],
+      "dtype": "uint8",
+      "channels": 3,
+      "count": null,
+      "metadata": {
+        "interlaced": false
+      }
+    },
+    "jpeg": {
+      "shape": [5, 7, 3],
+      "dtype": "uint8",
+      "channels": 3,
+      "count": null,
+      "metadata": {
+        "precision": 8,
+        "progressive": false
+      }
+    },
+    "bmp": {
+      "shape": [5, 7, 3],
+      "dtype": "uint8",
+      "channels": 3,
+      "count": null,
+      "metadata": {
+        "bits_per_pixel": 24,
+        "compression": "BI_RGB",
+        "palette": false,
+        "top_down": false
+      }
+    },
+    "tga": {
+      "shape": [5, 7, 3],
+      "dtype": "uint8",
+      "channels": 3,
+      "count": null,
+      "metadata": {
+        "bits_per_pixel": 24,
+        "origin": "bottom_left",
+        "palette": false,
+        "rle": true
+      }
+    },
+    "hdr": {
+      "shape": [5, 7, 3],
+      "dtype": "float32",
+      "channels": 3,
+      "count": null,
+      "metadata": {}
+    },
+    "exr": {
+      "shape": [5, 7, 3],
+      "dtype": "float32",
+      "channels": 3,
+      "count": null,
+      "metadata": {
+        "channel_dtypes": ["float32", "float32", "float32"],
+        "channel_name_encodings": ["utf8", "utf8", "utf8"],
+        "channel_names": ["B", "G", "R"]
+      }
+    },
+    "webp": {
+      "shape": [5, 7, 3],
+      "dtype": "uint8",
+      "channels": 3,
+      "count": null,
+      "metadata": {}
+    }
+  },
+  "malformed": {
+    "netpbm": {
+      "cause_type": "ValueError",
+      "cause_message": "netpbm: invalid dimensions or maxval"
+    },
+    "png": {
+      "cause_type": "ValueError",
+      "cause_message": "png: bad signature"
+    },
+    "jpeg": {
+      "cause_type": "ValueError",
+      "cause_message": "jpeg: bad signature"
+    },
+    "bmp": {
+      "cause_type": "ValueError",
+      "cause_message": "bmp: not a Windows BMP stream (missing BM header)"
+    },
+    "tga": {
+      "cause_type": "ValueError",
+      "cause_message": "tga: truncated 18-byte header"
+    },
+    "hdr": {
+      "cause_type": "ValueError",
+      "cause_message": "hdr: bad signature"
+    },
+    "exr": {
+      "cause_type": "ValueError",
+      "cause_message": "exr: bad signature"
+    },
+    "webp": {
+      "cause_type": "ValueError",
+      "cause_message": "webp: bad RIFF/WEBP signature"
+    }
+  }
+}

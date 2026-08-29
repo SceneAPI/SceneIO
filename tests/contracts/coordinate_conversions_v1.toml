@@ -1,0 +1,127 @@
+schema_version = 1
+api = "sceneio.convert_coordinates"
+default_target = "colmap"
+world_transform_direction = "source_world_meters_to_target_world_meters"
+world_transform_translation_unit = "meters"
+identity_policy = "only_qualified_records_may_return_identity"
+source_override = "may_refine_unknown_or_arbitrary_fields_but_must_not_conflict_with_declared_fields"
+
+# Per-format file <-> record directionality.  `decode` is file-to-record,
+# `encode` is record-to-file, and `conversion` states whether the public
+# record can use sceneio.convert_coordinates directly, needs the format
+# adapter/context, or has no independent spatial conversion.  `tests` points
+# at the executable independent-oracle evidence; the authoritative format
+# reference remains FormatCoordinateContract.reference.
+format_verification = [
+  { id = "pfm", decode = "preserve_unspecified", encode = "require_unspecified", conversion = "requires_context", oracle = "independent NumPy PFM parser/writer", tests = ["tests/codecs/test_pfm.py", "tests/codecs/test_pfm_typed.py"] },
+  { id = "colmap_sparse", decode = "normalize_to_colmap", encode = "encode_from_colmap", conversion = "adapter", oracle = "pycolmap binary sparse-model implementation", tests = ["tests/codecs/test_colmap.py"] },
+  { id = "gaussian_ply", decode = "preserve_unspecified", encode = "require_unspecified", conversion = "requires_context", oracle = "gsply PLY implementation", tests = ["tests/codecs/test_ply.py"] },
+  { id = "compressed_ply", decode = "preserve_unspecified", encode = "require_unspecified", conversion = "requires_context", oracle = "independent NumPy parser plus pinned PlayCanvas vector", tests = ["tests/codecs/test_compressed_ply.py"] },
+  { id = "sog", decode = "preserve_unspecified", encode = "require_unspecified", conversion = "requires_context", oracle = "independent ZIP, Pillow, and NumPy oracle", tests = ["tests/codecs/test_sog.py"] },
+  { id = "ksplat", decode = "preserve_unspecified", encode = "require_unspecified", conversion = "requires_context", oracle = "independent struct/NumPy parser plus pinned GaussianSplats3D vectors", tests = ["tests/codecs/test_ksplat.py"] },
+  { id = "ply_mesh", decode = "preserve_declared", encode = "preserve_declared", conversion = "requires_context", oracle = "independent struct/NumPy PLY parser/writer", tests = ["tests/codecs/test_ply_mesh.py"] },
+  { id = "obj", decode = "preserve_unspecified", encode = "require_unspecified", conversion = "requires_context", oracle = "trimesh OBJ implementation", tests = ["tests/codecs/test_obj.py"] },
+  { id = "stl", decode = "preserve_unspecified", encode = "require_unspecified", conversion = "requires_context", oracle = "trimesh STL implementation", tests = ["tests/codecs/test_stl.py"] },
+  { id = "off", decode = "preserve_unspecified", encode = "require_unspecified", conversion = "requires_context", oracle = "trimesh OFF implementation", tests = ["tests/codecs/test_off.py"] },
+  { id = "gltf", decode = "preserve_fixed", encode = "require_fixed", conversion = "requires_context", oracle = "pygltflib and trimesh glTF implementations", tests = ["tests/codecs/test_gltf.py"] },
+  { id = "glb", decode = "preserve_fixed", encode = "require_fixed", conversion = "requires_context", oracle = "pygltflib and trimesh GLB implementations", tests = ["tests/codecs/test_gltf.py"] },
+  { id = "usd", decode = "preserve_declared", encode = "preserve_declared", conversion = "requires_context", oracle = "TinyUSDZ and official OpenUSD schema implementations", tests = ["tests/codecs/test_usd.py", "tests/codecs/test_usd_scene.py", "tests/codecs/test_usd_gaussians.py"] },
+  { id = "usdz", decode = "preserve_declared", encode = "preserve_declared", conversion = "requires_context", oracle = "TinyUSDZ and official OpenUSD package/schema implementations", tests = ["tests/codecs/test_usd.py", "tests/codecs/test_usd_scene.py", "tests/codecs/test_usd_gaussians.py"] },
+  { id = "ply", decode = "preserve_unspecified", encode = "require_unspecified", conversion = "requires_context", oracle = "independent struct/NumPy point-PLY parser/writer", tests = ["tests/codecs/test_ply_point.py"] },
+  { id = "pcd", decode = "preserve_unspecified", encode = "require_unspecified", conversion = "requires_context", oracle = "independent struct/NumPy PCD parser/writer", tests = ["tests/codecs/test_pcd.py"] },
+  { id = "spz", decode = "preserve_unspecified", encode = "require_unspecified", conversion = "requires_context", oracle = "gsply SPZ implementation", tests = ["tests/codecs/test_spz.py"] },
+  { id = "transforms_json", decode = "preserve_fixed", encode = "require_fixed", conversion = "direct", oracle = "independent JSON/NumPy matrix oracle", tests = ["tests/codecs/test_transforms_json.py"] },
+  { id = "tum", decode = "preserve_fixed", encode = "require_fixed", conversion = "direct", oracle = "independent text/quaternion oracle", tests = ["tests/codecs/test_pose_text.py"] },
+  { id = "kitti", decode = "preserve_fixed", encode = "require_fixed", conversion = "direct", oracle = "independent text/matrix oracle", tests = ["tests/codecs/test_pose_text.py"] },
+  { id = "euroc_state", decode = "preserve_fixed", encode = "require_fixed", conversion = "requires_context", oracle = "independent CSV/quaternion oracle", tests = ["tests/codecs/test_euroc_state.py"] },
+  { id = "opencv_yaml", decode = "preserve_fixed", encode = "require_fixed", conversion = "requires_context", oracle = "independent PyYAML/OpenCV-layout oracle", tests = ["tests/codecs/test_camera_calibration.py"] },
+  { id = "opencv_xml", decode = "preserve_fixed", encode = "require_fixed", conversion = "requires_context", oracle = "independent ElementTree/OpenCV-layout oracle", tests = ["tests/codecs/test_camera_calibration.py"] },
+  { id = "ros_camera_info", decode = "preserve_fixed", encode = "require_fixed", conversion = "requires_context", oracle = "independent PyYAML/ROS CameraInfo oracle", tests = ["tests/codecs/test_camera_calibration.py"] },
+  { id = "kalibr", decode = "preserve_fixed", encode = "require_fixed", conversion = "requires_context", oracle = "independent PyYAML/Kalibr chain oracle", tests = ["tests/codecs/test_camera_calibration.py"] },
+  { id = "g2o", decode = "preserve_fixed", encode = "require_fixed", conversion = "requires_context", oracle = "independent g2o token parser/writer", tests = ["tests/codecs/test_g2o.py"] },
+  { id = "colmap_db", decode = "preserve_fixed", encode = "require_fixed", conversion = "requires_context", oracle = "SQLite and pycolmap database implementations", tests = ["tests/codecs/test_colmap_db.py"] },
+  { id = "npy", decode = "preserve_unspecified", encode = "require_unspecified", conversion = "requires_context", oracle = "NumPy NPY implementation", tests = ["tests/codecs/test_npy_npz.py"] },
+  { id = "npz", decode = "preserve_unspecified", encode = "require_unspecified", conversion = "requires_context", oracle = "NumPy NPZ implementation", tests = ["tests/codecs/test_npy_npz.py"] },
+  { id = "safetensors", decode = "preserve_unspecified", encode = "require_unspecified", conversion = "requires_context", oracle = "safetensors.numpy implementation", tests = ["tests/codecs/test_safetensors.py"] },
+  { id = "netpbm", decode = "preserve_fixed", encode = "require_fixed", conversion = "not_applicable", oracle = "independent NumPy Netpbm parser/writer", tests = ["tests/codecs/test_netpbm.py"] },
+  { id = "png", decode = "preserve_fixed", encode = "require_fixed", conversion = "not_applicable", oracle = "Pillow and pypng implementations", tests = ["tests/codecs/test_png.py", "tests/codecs/test_png_depth_typed.py"] },
+  { id = "jpeg", decode = "preserve_fixed", encode = "require_fixed", conversion = "not_applicable", oracle = "Pillow/libjpeg implementation", tests = ["tests/codecs/test_jpeg.py"] },
+  { id = "bmp", decode = "preserve_fixed", encode = "require_fixed", conversion = "not_applicable", oracle = "Pillow BMP implementation", tests = ["tests/codecs/test_bmp_tga.py"] },
+  { id = "tga", decode = "preserve_fixed", encode = "require_fixed", conversion = "not_applicable", oracle = "Pillow TGA implementation", tests = ["tests/codecs/test_bmp_tga.py"] },
+  { id = "hdr", decode = "preserve_fixed", encode = "require_fixed", conversion = "not_applicable", oracle = "independent NumPy RGBE parser/writer", tests = ["tests/codecs/test_hdr.py"] },
+  { id = "exr", decode = "preserve_fixed", encode = "require_fixed", conversion = "not_applicable", oracle = "OpenEXR Python implementation", tests = ["tests/codecs/test_exr.py", "tests/codecs/test_exr_depth_typed.py"] },
+  { id = "webp", decode = "preserve_fixed", encode = "require_fixed", conversion = "not_applicable", oracle = "Pillow independently packaged libwebp", tests = ["tests/codecs/test_webp.py"] },
+  { id = "avif", decode = "preserve_fixed", encode = "require_fixed", conversion = "not_applicable", oracle = "Pillow/libavif plus independent BMFF parser", tests = ["tests/codecs/test_avif.py"] },
+  { id = "y4m", decode = "preserve_fixed", encode = "require_fixed", conversion = "not_applicable", oracle = "independent YUV4MPEG2 parser/writer", tests = ["tests/codecs/test_y4m.py"] },
+  { id = "webm", decode = "preserve_fixed", encode = "require_fixed", conversion = "not_applicable", oracle = "independent EBML parser plus Pillow/libwebp and libvpx", tests = ["tests/codecs/test_webm.py"] },
+  { id = "theora", decode = "preserve_fixed", encode = "require_fixed", conversion = "not_applicable", oracle = "official libtheora API plus independent Ogg framing", tests = ["tests/codecs/test_theora.py"] },
+  { id = "animated_webp", decode = "preserve_fixed", encode = "require_fixed", conversion = "not_applicable", oracle = "Pillow/libwebp animation implementation", tests = ["tests/codecs/test_animated_webp.py"] },
+  { id = "apng", decode = "preserve_fixed", encode = "require_fixed", conversion = "not_applicable", oracle = "Pillow plus independent PNG chunk/compositing oracle", tests = ["tests/codecs/test_apng.py"] },
+  { id = "animated_avif", decode = "preserve_fixed", encode = "require_fixed", conversion = "not_applicable", oracle = "Pillow/libavif plus independent BMFF parser", tests = ["tests/codecs/test_avif.py"] },
+  { id = "rtmv", decode = "preserve_fixed", encode = "unsupported", conversion = "requires_context", oracle = "independently authored OpenEXR/NumPy RTMV fixture", tests = ["tests/codecs/test_rtmv.py"] },
+  { id = "image_sequence", decode = "preserve_fixed", encode = "require_fixed", conversion = "not_applicable", oracle = "independent JSON-manifest and PGM oracle", tests = ["tests/codecs/test_image_sequence.py"] },
+  { id = "colmap_sparse_txt", decode = "normalize_to_colmap", encode = "encode_from_colmap", conversion = "adapter", oracle = "pycolmap text implementation plus binary cross-oracle", tests = ["tests/codecs/test_colmap_txt.py"] },
+  { id = "xyz", decode = "preserve_unspecified", encode = "require_unspecified", conversion = "requires_context", oracle = "independent NumPy XYZ parser/writer", tests = ["tests/codecs/test_xyz.py"] },
+  { id = "pts", decode = "preserve_unspecified", encode = "require_unspecified", conversion = "requires_context", oracle = "independent NumPy PTS parser/writer", tests = ["tests/codecs/test_pts.py"] },
+  { id = "las", decode = "preserve_declared", encode = "preserve_declared", conversion = "requires_context", oracle = "laspy LAS implementation", tests = ["tests/codecs/test_las.py", "tests/codecs/test_las_waveform.py"] },
+  { id = "laz", decode = "preserve_declared", encode = "preserve_declared", conversion = "requires_context", oracle = "laspy with independent lazrs backend", tests = ["tests/codecs/test_laz.py"] },
+  { id = "flo", decode = "preserve_fixed", encode = "require_fixed", conversion = "requires_context", oracle = "independent struct/NumPy Middlebury-flow oracle", tests = ["tests/codecs/test_flo.py", "tests/codecs/test_flo_typed.py"] },
+  { id = "dmb", decode = "preserve_unspecified", encode = "require_unspecified", conversion = "requires_context", oracle = "independent struct/NumPy DMB parser/writer", tests = ["tests/codecs/test_dmb.py"] },
+  { id = "bundler", decode = "normalize_to_colmap", encode = "encode_from_colmap", conversion = "adapter", oracle = "independent token parser plus hand-derived frame pins", tests = ["tests/codecs/test_bundler.py"] },
+  { id = "bal", decode = "normalize_to_colmap", encode = "encode_from_colmap", conversion = "adapter", oracle = "independent BAL parser/writer plus hand-derived projection pins", tests = ["tests/codecs/test_bal.py"] },
+  { id = "nvm", decode = "normalize_to_colmap", encode = "encode_from_colmap", conversion = "adapter", oracle = "independent NVM parser/writer plus hand-derived center pins", tests = ["tests/codecs/test_nvm.py"] },
+  { id = "openmvg", decode = "normalize_to_colmap", encode = "encode_from_colmap", conversion = "adapter", oracle = "independent JSON/cereal parser plus hand-derived pose pins", tests = ["tests/codecs/test_openmvg.py"] },
+  { id = "splat", decode = "preserve_unspecified", encode = "require_unspecified", conversion = "requires_context", oracle = "independent struct/NumPy splat parser/writer", tests = ["tests/codecs/test_splat.py"] },
+  { id = "colmap_mvs_depth", decode = "preserve_fixed", encode = "require_fixed", conversion = "requires_context", oracle = "independent struct/NumPy COLMAP dense-map oracle", tests = ["tests/codecs/test_colmap_mvs.py"] },
+  { id = "colmap_mvs_normal", decode = "preserve_fixed", encode = "require_fixed", conversion = "requires_context", oracle = "independent struct/NumPy COLMAP dense-map oracle", tests = ["tests/codecs/test_colmap_mvs.py"] },
+  { id = "colmap_mvs_consistency", decode = "preserve_fixed", encode = "require_fixed", conversion = "not_applicable", oracle = "independent struct/NumPy COLMAP consistency oracle", tests = ["tests/codecs/test_colmap_mvs.py"] },
+  { id = "colmap_fused_visibility", decode = "not_applicable", encode = "not_applicable", conversion = "not_applicable", oracle = "independent struct/JSON COLMAP visibility oracle", tests = ["tests/codecs/test_colmap_mvs.py"] },
+  { id = "hdf5", decode = "preserve_unspecified", encode = "require_unspecified", conversion = "requires_context", oracle = "h5py HDF5 implementation", tests = ["tests/codecs/test_hdf5_hloc.py"] },
+  { id = "hloc_features", decode = "preserve_fixed", encode = "require_fixed", conversion = "requires_context", oracle = "h5py plus official HLoc feature layout", tests = ["tests/codecs/test_hdf5_hloc.py"] },
+  { id = "hloc_matches", decode = "not_applicable", encode = "not_applicable", conversion = "not_applicable", oracle = "h5py plus official HLoc pair layout", tests = ["tests/codecs/test_hdf5_hloc.py"] },
+  { id = "ncore_v4", decode = "preserve_declared", encode = "preserve_declared", conversion = "requires_context", oracle = "pinned upstream NCore package/tool plus Zarr", tests = ["tests/codecs/test_ncore_v4.py"] },
+  { id = "euroc_dataset", decode = "preserve_declared", encode = "preserve_declared", conversion = "requires_context", oracle = "independent PyYAML/CSV/SciPy parser plus Kalibr and CamTools conventions", tests = ["tests/codecs/test_euroc_dataset.py"] },
+  { id = "zarr", decode = "preserve_unspecified", encode = "require_unspecified", conversion = "requires_context", oracle = "official zarr Python implementation", tests = ["tests/codecs/test_zarr.py"] },
+  { id = "tiff", decode = "preserve_fixed", encode = "require_fixed", conversion = "not_applicable", oracle = "tifffile and Zarr implementations", tests = ["tests/codecs/test_tiff.py", "tests/codecs/test_tiff_collections.py"] },
+  { id = "e57", decode = "preserve_declared", encode = "preserve_declared", conversion = "requires_context", oracle = "pye57/libE57Format implementation", tests = ["tests/codecs/test_e57.py"] },
+  { id = "parquet", decode = "preserve_unspecified", encode = "require_unspecified", conversion = "requires_context", oracle = "pyarrow Parquet implementation", tests = ["tests/codecs/test_arrow_parquet.py"] },
+  { id = "arrow_ipc", decode = "preserve_unspecified", encode = "require_unspecified", conversion = "requires_context", oracle = "pyarrow IPC implementation", tests = ["tests/codecs/test_arrow_parquet.py"] },
+  { id = "openvdb", decode = "preserve_declared", encode = "preserve_declared", conversion = "requires_context", oracle = "tinyvdb OpenVDB implementation", tests = ["tests/codecs/test_openvdb.py"] },
+]
+
+[qualified.PosedViewSet]
+camera_axes = ["opencv", "opengl"]
+pose_directions = ["world_to_camera", "camera_to_world"]
+quaternion_orders = ["wxyz", "xyzw"]
+world_transform = "proper_rigid"
+converted = ["camera_axes", "pose_direction", "quaternion_order", "translations", "unit_scale"]
+preserved = ["names", "timestamps", "camera_indices", "cameras"]
+
+[qualified.PointCloud]
+coordinate_frames = ["unknown", "opencv", "opengl", "enu", "ned"]
+implicit_frame_pairs = ["opencv:opengl", "opengl:opencv", "enu:ned", "ned:enu"]
+world_transform = "invertible_affine"
+converted = ["positions", "origin", "normals", "widths", "velocities", "accelerations", "unit_scale"]
+preserved = ["colors", "colors16", "intensities", "display_colors", "display_opacities", "ids", "organization", "display_color_space"]
+refuses = ["nondefault_viewpoint", "las_waveform", "nonsimilarity_with_scalar_widths"]
+
+[qualified.GaussianCloud]
+coordinate_frames = ["unknown", "opencv", "opengl", "enu", "ned"]
+implicit_frame_pairs = ["opencv:opengl", "opengl:opencv", "enu:ned", "ned:enu"]
+world_transform = "orientation_preserving_similarity"
+directional_sh = "identity_rotation_only"
+converted = ["means", "scales", "quaternions", "quaternion_order", "quaternion_norm", "coordinate_frame", "unit_scale"]
+preserved = ["opacities", "sh_dc", "sh_rest", "activation_spaces", "sh_layout", "semantic_tags", "rendering_hints"]
+refuses = ["unknown_frame_without_source", "reflection", "nonsimilarity", "directional_sh_rotation"]
+
+[qualified.Mesh]
+coordinate_frames = ["unknown", "opencv", "opengl", "enu", "ned"]
+implicit_frame_pairs = ["opencv:opengl", "opengl:opencv", "enu:ned", "ned:enu"]
+world_transform = "orientation_preserving_invertible_affine"
+converted = ["positions", "vertex_normals", "corner_normals", "local_transform", "unit_scale"]
+preserved = ["topology", "uvs", "colors", "display_fields", "primitive_metadata", "materials", "orientation", "double_sided_presence"]
+refuses = ["reflection_without_winding_policy"]
+
+[unqualified]
+record_types = ["Image", "Reconstruction"]
+identity_still_refuses = true
