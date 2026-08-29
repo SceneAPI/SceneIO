@@ -519,6 +519,7 @@ GaussianCloud decode_compressed_ply(const uint8_t *data, size_t size,
 
     const size_t selected = stop - start;
     GaussianCloud cloud;
+    cloud.quaternion_norm = "unit";
     cloud.n = selected;
     cloud.num_rest = layout.rest;
     cloud.sh_degree = layout.degree;

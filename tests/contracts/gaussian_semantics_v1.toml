@@ -1,0 +1,169 @@
+schema_version = 1
+contract_date = "2026-08-29"
+record = "sceneio.GaussianCloud"
+
+[vocabulary]
+quaternion_norm = ["unknown", "unconstrained", "unit"]
+sh_basis = ["unknown", "3dgs_real"]
+sh_phase = ["unknown", "3dgs"]
+sh_coefficient_order = ["unknown", "degree_then_m_neg_to_pos"]
+color_space = ["unknown", "srgb", "linear_srgb"]
+coordinate_frame = ["unknown", "opencv", "opengl", "enu", "ned"]
+scale_to_meters_source = ["unknown", "format", "file", "caller"]
+
+# `3dgs_real` is the real, orthonormal polynomial basis used by the original
+# 3DGS implementation. `3dgs` pins its signs/phase to the explicit degree 0-3
+# equations in sh_utils.py instead of relying on an overloaded phase name.
+[spherical_harmonics]
+basis = "3dgs_real"
+normalization = "orthonormal"
+phase = "3dgs"
+coefficient_order = "degree_then_m_neg_to_pos"
+dc_equation = "rgb = 0.5 + 0.28209479177387814 * sh_dc"
+degree_one_equation = "rgb = dc - C1*y*c_1n1 + C1*z*c_10 - C1*x*c_1p1"
+reference = "https://github.com/graphdeco-inria/gaussian-splatting/blob/54c035f7834b564019656c3e3fcc3646292f727d/utils/sh_utils.py"
+
+[[carriers]]
+id = "gaussian_ply"
+quaternion_order = "wxyz"
+quaternion_norm = "unconstrained"
+quaternion_consumer = "normalizes_before_covariance"
+sh_basis = "3dgs_real"
+sh_phase = "3dgs"
+sh_coefficient_order = "degree_then_m_neg_to_pos"
+sh_layout = "channel_grouped"
+degrees = [0, 1, 2, 3]
+color_space = "unknown"
+coordinate_frame = "unknown"
+scale_to_meters_source = "unknown"
+quantization = "exact_float32"
+inverse = "exact"
+evidence = [
+  "https://github.com/graphdeco-inria/gaussian-splatting/blob/54c035f7834b564019656c3e3fcc3646292f727d/scene/gaussian_model.py",
+  "https://github.com/graphdeco-inria/gaussian-splatting/blob/54c035f7834b564019656c3e3fcc3646292f727d/utils/general_utils.py",
+  "tests/codecs/test_ply.py",
+]
+
+[[carriers]]
+id = "compressed_ply"
+quaternion_order = "wxyz"
+quaternion_norm = "unit"
+quaternion_consumer = "smallest_three_decode"
+sh_basis = "3dgs_real"
+sh_phase = "3dgs"
+sh_coefficient_order = "degree_then_m_neg_to_pos"
+sh_layout = "channel_grouped"
+degrees = [0, 1, 2, 3]
+color_space = "unknown"
+coordinate_frame = "unknown"
+scale_to_meters_source = "unknown"
+quantization = "chunk_unorm_and_uint8_sh"
+inverse = "approximate"
+evidence = [
+  "https://github.com/playcanvas/splat-transform/tree/04b6d15b3c895136d2deba57fdb06df1d4ff3b91",
+  "tests/codecs/test_compressed_ply.py",
+]
+
+[[carriers]]
+id = "sog"
+quaternion_order = "wxyz"
+quaternion_norm = "unit"
+quaternion_consumer = "smallest_three_decode"
+sh_basis = "3dgs_real"
+sh_phase = "3dgs"
+sh_coefficient_order = "degree_then_m_neg_to_pos"
+sh_layout = "channel_grouped"
+degrees = [0, 1, 2, 3]
+color_space = "unknown"
+coordinate_frame = "unknown"
+scale_to_meters_source = "unknown"
+quantization = "webp_transport_with_attribute_codebooks"
+inverse = "approximate"
+evidence = [
+  "https://github.com/playcanvas/splat-transform/tree/04b6d15b3c895136d2deba57fdb06df1d4ff3b91",
+  "tests/codecs/test_sog.py",
+]
+
+[[carriers]]
+id = "ksplat"
+quaternion_order = "wxyz"
+quaternion_norm = "unit"
+quaternion_consumer = "normalized_on_decode"
+sh_basis = "3dgs_real"
+sh_phase = "3dgs"
+sh_coefficient_order = "degree_then_m_neg_to_pos"
+sh_layout = "channel_grouped"
+degrees = [0, 1, 2]
+color_space = "unknown"
+coordinate_frame = "unknown"
+scale_to_meters_source = "unknown"
+quantization = "profile_dependent_float32_float16_or_uint8_sh"
+inverse = "profile_dependent"
+evidence = [
+  "https://github.com/mkkellogg/GaussianSplats3D/tree/eb2fc4593e3ea5e75388296fcdde2459542d1290",
+  "tests/codecs/test_ksplat.py",
+]
+
+[[carriers]]
+id = "spz"
+quaternion_order = "wxyz"
+quaternion_norm = "unit"
+quaternion_consumer = "smallest_three_decode"
+sh_basis = "3dgs_real"
+sh_phase = "3dgs"
+sh_coefficient_order = "degree_then_m_neg_to_pos"
+sh_layout = "channel_grouped"
+degrees = [0, 1, 2, 3]
+color_space = "unknown"
+coordinate_frame = "opengl"
+coordinate_wire_name = "RUB"
+scale_to_meters_source = "unknown"
+quantization = "fixed_point_uint8_and_smallest_three"
+inverse = "approximate"
+evidence = [
+  "https://github.com/nianticlabs/spz/blob/5bf2945de1a003cee07133b1e495fe9c6ffdc7e7/README.md",
+  "https://github.com/nianticlabs/spz/blob/5bf2945de1a003cee07133b1e495fe9c6ffdc7e7/src/cc/splat-types.h",
+  "tests/codecs/test_spz_niantic_oracle.py",
+]
+
+[[carriers]]
+id = "splat"
+quaternion_order = "wxyz"
+quaternion_norm = "unit"
+quaternion_consumer = "normalized_on_decode"
+sh_basis = "3dgs_real"
+sh_phase = "3dgs"
+sh_coefficient_order = "degree_then_m_neg_to_pos"
+sh_layout = "channel_grouped"
+degrees = [0]
+color_space = "unknown"
+coordinate_frame = "unknown"
+scale_to_meters_source = "unknown"
+quantization = "uint8_color_opacity_and_quaternion"
+inverse = "approximate"
+evidence = [
+  "https://github.com/antimatter15/splat/tree/ba182b51b7c2ad5738cdd6741cd63336d27470fb",
+  "tests/codecs/test_splat.py",
+]
+
+[[carriers]]
+id = "usd_gaussian"
+format_ids = ["usd", "usdz"]
+quaternion_order = "wxyz"
+quaternion_norm = "unit"
+quaternion_consumer = "schema_requires_unit_orientation"
+sh_basis = "3dgs_real"
+sh_phase = "3dgs"
+sh_coefficient_order = "degree_then_m_neg_to_pos"
+sh_layout = "coefficient_rgb"
+degrees = [0, 1, 2, 3]
+color_space = "unknown"
+coordinate_frame = "file_declared"
+scale_to_meters_source = "file"
+quantization = "float16_or_float32"
+inverse = "exact_when_float16_values_are_representable"
+evidence = [
+  "https://github.com/PixarAnimationStudios/OpenUSD/blob/ee47c679abde5b467a7b6a41f3b2285564a4222e/docs/user_guides/schemas/usdVol/ParticleFieldSphericalHarmonicsAttributeAPI.md",
+  "https://github.com/PixarAnimationStudios/OpenUSD/blob/ee47c679abde5b467a7b6a41f3b2285564a4222e/extras/imaging/examples/hdParticleField/gsRenderer.cpp",
+  "tests/codecs/test_openusd_gaussian_oracle.py",
+]

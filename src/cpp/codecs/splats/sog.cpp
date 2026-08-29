@@ -690,6 +690,7 @@ GaussianCloud decode_sog(const SogMetadata &meta, Load &&load,
     }
 
     GaussianCloud cloud;
+    cloud.quaternion_norm = "unit";
     cloud.n = stop - start;
     cloud.sh_degree = meta.bands;
     cloud.num_rest = meta.rest;

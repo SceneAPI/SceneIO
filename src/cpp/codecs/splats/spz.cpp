@@ -142,6 +142,8 @@ GaussianCloud decode_spz_payload(const uint8_t *buf, size_t n, int sh_degree,
     const float inv_frac = 1.0f / static_cast<float>(1u << frac_bits);
 
     GaussianCloud g;
+    g.quaternion_norm = "unit";
+    g.coordinate_frame = "opengl";  // SPZ's extension-free wire profile is RUB.
     g.n = n;
     g.num_rest = static_cast<size_t>(sh_dim) * 3;
     g.sh_degree = sh_degree;
@@ -622,7 +624,7 @@ void encode_sections(const GaussianCloud &g, int fractional_bits, int sh_dim,
 // container (smallest-three quats); version==4 writes the NGSP zstd container
 // (per-section independent zstd streams). Both share encode_sections().
 nb::bytes write_spz(const GaussianCloud &g, int version, int fractional_bits, int zstd_level) {
-    require_legacy_gaussian_conventions(g, "SPZ writer");
+    require_legacy_gaussian_conventions(g, "SPZ writer", "opengl");
     require_finite_gaussian_values(g, "SPZ writer");
     if (version != 3 && version != 4)
         throw std::invalid_argument("write_spz: only version 3 (gzip) or 4 (zstd) is supported");

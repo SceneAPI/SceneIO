@@ -17,6 +17,7 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <optional>
 
 #include "io/common.hpp"
 
@@ -37,6 +38,18 @@ struct GaussianCloud {
     std::string source_precision = "float32";
     std::string projection_mode_hint = "perspective";
     std::string sorting_mode_hint = "zDepth";
+    // Semantic metadata beyond byte layout. The legacy factory defaults are
+    // intentionally conservative: raw 3DGS quaternions are magnitude-
+    // unconstrained, RGB transfer and coordinates are not tagged by PLY, and
+    // no metric scale is inferred.
+    std::string quaternion_norm = "unconstrained";
+    std::string sh_basis = "3dgs_real";
+    std::string sh_phase = "3dgs";
+    std::string sh_coefficient_order = "degree_then_m_neg_to_pos";
+    std::string color_space = "unknown";
+    std::string coordinate_frame = "unknown";
+    std::optional<double> scale_to_meters;
+    std::string scale_to_meters_source = "unknown";
 };
 
 inline int gc_deg_from_rest(size_t R) {
@@ -76,6 +89,39 @@ inline bool gc_valid_projection_mode_hint(const std::string &value) {
 inline bool gc_valid_sorting_mode_hint(const std::string &value) {
     return value == "zDepth" || value == "cameraDistance" ||
            value == "rayHitDistance";
+}
+
+inline bool gc_valid_quaternion_norm(const std::string &value) {
+    return value == "unknown" || value == "unconstrained" ||
+           value == "unit";
+}
+
+inline bool gc_valid_sh_basis(const std::string &value) {
+    return value == "unknown" || value == "3dgs_real";
+}
+
+inline bool gc_valid_sh_phase(const std::string &value) {
+    return value == "unknown" || value == "3dgs";
+}
+
+inline bool gc_valid_sh_coefficient_order(const std::string &value) {
+    return value == "unknown" ||
+           value == "degree_then_m_neg_to_pos";
+}
+
+inline bool gc_valid_color_space(const std::string &value) {
+    return value == "unknown" || value == "srgb" ||
+           value == "linear_srgb";
+}
+
+inline bool gc_valid_coordinate_frame(const std::string &value) {
+    return value == "unknown" || value == "opencv" ||
+           value == "opengl" || value == "enu" || value == "ned";
+}
+
+inline bool gc_valid_scale_to_meters_source(const std::string &value) {
+    return value == "unknown" || value == "format" || value == "file" ||
+           value == "caller";
 }
 
 inline size_t gc_expected_size(
@@ -118,10 +164,54 @@ inline void validate_gaussian_conventions(
         throw std::invalid_argument(prefix + "unknown projection_mode_hint");
     if (!gc_valid_sorting_mode_hint(cloud.sorting_mode_hint))
         throw std::invalid_argument(prefix + "unknown sorting_mode_hint");
+    if (!gc_valid_quaternion_norm(cloud.quaternion_norm))
+        throw std::invalid_argument(prefix + "unknown quaternion_norm");
+    if (!gc_valid_sh_basis(cloud.sh_basis))
+        throw std::invalid_argument(prefix + "unknown sh_basis");
+    if (!gc_valid_sh_phase(cloud.sh_phase))
+        throw std::invalid_argument(prefix + "unknown sh_phase");
+    if (!gc_valid_sh_coefficient_order(cloud.sh_coefficient_order))
+        throw std::invalid_argument(prefix + "unknown sh_coefficient_order");
+    if (!gc_valid_color_space(cloud.color_space))
+        throw std::invalid_argument(prefix + "unknown color_space");
+    if (!gc_valid_coordinate_frame(cloud.coordinate_frame))
+        throw std::invalid_argument(prefix + "unknown coordinate_frame");
+    if (!gc_valid_scale_to_meters_source(cloud.scale_to_meters_source))
+        throw std::invalid_argument(prefix + "unknown scale_to_meters_source");
+    if (cloud.scale_to_meters.has_value()) {
+        if (!std::isfinite(*cloud.scale_to_meters) ||
+            !(*cloud.scale_to_meters > 0.0))
+            throw std::invalid_argument(
+                prefix + "scale_to_meters must be finite and positive");
+        if (cloud.scale_to_meters_source == "unknown")
+            throw std::invalid_argument(
+                prefix + "scale_to_meters requires a known source");
+    } else if (cloud.scale_to_meters_source != "unknown") {
+        throw std::invalid_argument(
+            prefix + "scale_to_meters_source requires scale_to_meters");
+    }
+    if (cloud.quaternion_norm == "unit") {
+        // A unit declaration describes rotation semantics, not the original
+        // quantizer. Packed carriers can retain float16/uint10 rounding after
+        // promotion, so use one strict-but-transport-safe tolerance.
+        const double tolerance = 5e-4;
+        for (size_t index = 0; index < cloud.n; ++index) {
+            double norm_squared = 0.0;
+            for (size_t component = 0; component < 4; ++component) {
+                const double value = cloud.quats[index * 4 + component];
+                norm_squared += value * value;
+            }
+            if (!std::isfinite(norm_squared) ||
+                std::abs(std::sqrt(norm_squared) - 1.0) > tolerance)
+                throw std::invalid_argument(
+                    prefix + "quaternion_norm='unit' requires unit values");
+        }
+    }
 }
 
 inline void require_legacy_gaussian_conventions(
-    const GaussianCloud &cloud, const char *context) {
+    const GaussianCloud &cloud, const char *context,
+    const char *declared_coordinate_frame = "unknown") {
     validate_gaussian_structure(cloud, context);
     validate_gaussian_conventions(cloud, context);
     if (cloud.quaternion_order != "wxyz" ||
@@ -130,12 +220,23 @@ inline void require_legacy_gaussian_conventions(
         cloud.sh_layout != "channel_grouped" ||
         cloud.source_precision != "float32" ||
         cloud.projection_mode_hint != "perspective" ||
-        cloud.sorting_mode_hint != "zDepth")
+        cloud.sorting_mode_hint != "zDepth" ||
+        (cloud.quaternion_norm != "unconstrained" &&
+         cloud.quaternion_norm != "unit") ||
+        cloud.sh_basis != "3dgs_real" ||
+        cloud.sh_phase != "3dgs" ||
+        cloud.sh_coefficient_order != "degree_then_m_neg_to_pos" ||
+        cloud.color_space != "unknown" ||
+        (cloud.coordinate_frame != "unknown" &&
+         cloud.coordinate_frame != declared_coordinate_frame) ||
+        cloud.scale_to_meters.has_value() ||
+        cloud.scale_to_meters_source != "unknown")
         throw std::invalid_argument(
             std::string(context) +
             ": requires quaternion_order='wxyz', scale_space='log', "
             "opacity_space='logit', sh_layout='channel_grouped', and "
-            "source_precision='float32' with default USD rendering hints; "
+            "source_precision='float32', 3DGS SH semantics, untagged RGB and "
+            "coordinates, and default USD rendering hints; "
             "convert explicitly before writing");
 }
 

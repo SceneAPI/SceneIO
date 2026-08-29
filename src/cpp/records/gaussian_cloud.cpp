@@ -1,6 +1,7 @@
 // records/gaussian_cloud.cpp — GaussianCloud nanobind binding. Registered
 // once and shared by the PLY and SPZ codecs; conventions are metadata.
 #include <nanobind/stl/string.h>
+#include <nanobind/stl/optional.h>
 
 #include "records/gaussian_cloud.hpp"
 
@@ -34,6 +35,16 @@ void register_gaussian_cloud(nb::module_ &m) {
         .def_ro("source_precision", &GaussianCloud::source_precision)
         .def_ro("projection_mode_hint", &GaussianCloud::projection_mode_hint)
         .def_ro("sorting_mode_hint", &GaussianCloud::sorting_mode_hint)
+        .def_ro("quaternion_norm", &GaussianCloud::quaternion_norm)
+        .def_ro("sh_basis", &GaussianCloud::sh_basis)
+        .def_ro("sh_phase", &GaussianCloud::sh_phase)
+        .def_ro("sh_coefficient_order", &GaussianCloud::sh_coefficient_order)
+        .def_ro("color_space", &GaussianCloud::color_space)
+        .def_ro("coordinate_frame", &GaussianCloud::coordinate_frame)
+        .def_ro("scale_to_meters", &GaussianCloud::scale_to_meters)
+        .def_ro(
+            "scale_to_meters_source",
+            &GaussianCloud::scale_to_meters_source)
         .def("__repr__", [](const GaussianCloud &g) {
             return "<GaussianCloud n=" + std::to_string(g.n) +
                    " sh_degree=" + std::to_string(g.sh_degree) + ">";

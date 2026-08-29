@@ -429,6 +429,7 @@ GaussianCloud read_ksplat_impl(nb::handle source, bool partial, size_t start,
     const uint8_t *data = view.data();
     const size_t size = view.size();
     GaussianCloud cloud;
+    cloud.quaternion_norm = "unit";
     {
         nb::gil_scoped_release release;
         Layout layout = parse_layout(data, size, size, true);

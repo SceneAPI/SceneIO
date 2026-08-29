@@ -82,7 +82,7 @@ format_verification = [
   { id = "ncore_v4", decode = "preserve_declared", encode = "preserve_declared", conversion = "requires_context", oracle = "pinned upstream NCore package/tool plus Zarr", tests = ["tests/codecs/test_ncore_v4.py"] },
   { id = "euroc_dataset", decode = "preserve_declared", encode = "preserve_declared", conversion = "requires_context", oracle = "independent PyYAML/CSV/SciPy parser plus Kalibr and CamTools conventions", tests = ["tests/codecs/test_euroc_dataset.py"] },
   { id = "zarr", decode = "preserve_unspecified", encode = "require_unspecified", conversion = "requires_context", oracle = "official zarr Python implementation", tests = ["tests/codecs/test_zarr.py"] },
-  { id = "tiff", decode = "preserve_fixed", encode = "require_fixed", conversion = "not_applicable", oracle = "tifffile implementation", tests = ["tests/codecs/test_tiff.py"] },
+  { id = "tiff", decode = "preserve_fixed", encode = "require_fixed", conversion = "not_applicable", oracle = "tifffile and Zarr implementations", tests = ["tests/codecs/test_tiff.py", "tests/codecs/test_tiff_collections.py"] },
   { id = "e57", decode = "preserve_declared", encode = "preserve_declared", conversion = "requires_context", oracle = "pye57/libE57Format implementation", tests = ["tests/codecs/test_e57.py"] },
   { id = "parquet", decode = "preserve_unspecified", encode = "require_unspecified", conversion = "requires_context", oracle = "pyarrow Parquet implementation", tests = ["tests/codecs/test_arrow_parquet.py"] },
   { id = "arrow_ipc", decode = "preserve_unspecified", encode = "require_unspecified", conversion = "requires_context", oracle = "pyarrow IPC implementation", tests = ["tests/codecs/test_arrow_parquet.py"] },
@@ -105,6 +105,15 @@ converted = ["positions", "origin", "normals", "widths", "velocities", "accelera
 preserved = ["colors", "colors16", "intensities", "display_colors", "display_opacities", "ids", "organization", "display_color_space"]
 refuses = ["nondefault_viewpoint", "las_waveform", "nonsimilarity_with_scalar_widths"]
 
+[qualified.GaussianCloud]
+coordinate_frames = ["unknown", "opencv", "opengl", "enu", "ned"]
+implicit_frame_pairs = ["opencv:opengl", "opengl:opencv", "enu:ned", "ned:enu"]
+world_transform = "orientation_preserving_similarity"
+directional_sh = "identity_rotation_only"
+converted = ["means", "scales", "quaternions", "quaternion_order", "quaternion_norm", "coordinate_frame", "unit_scale"]
+preserved = ["opacities", "sh_dc", "sh_rest", "activation_spaces", "sh_layout", "semantic_tags", "rendering_hints"]
+refuses = ["unknown_frame_without_source", "reflection", "nonsimilarity", "directional_sh_rotation"]
+
 [qualified.Mesh]
 coordinate_frames = ["unknown", "opencv", "opengl", "enu", "ned"]
 implicit_frame_pairs = ["opencv:opengl", "opengl:opencv", "enu:ned", "ned:enu"]
@@ -114,5 +123,5 @@ preserved = ["topology", "uvs", "colors", "display_fields", "primitive_metadata"
 refuses = ["reflection_without_winding_policy"]
 
 [unqualified]
-record_types = ["Image", "GaussianCloud", "Reconstruction"]
+record_types = ["Image", "Reconstruction"]
 identity_still_refuses = true

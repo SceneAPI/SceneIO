@@ -382,14 +382,12 @@ def _target_frame(target: CoordinateConvention, record_name: str) -> str:
     return result
 
 
-def _scalar_length_scale(matrix: np.ndarray) -> float:
+def _scalar_length_scale(matrix: np.ndarray, refusal: str) -> float:
     linear = matrix[:3, :3]
     gram = linear.T @ linear
     scale_squared = float(np.trace(gram) / 3.0)
     if scale_squared <= 0.0 or not math.isfinite(scale_squared):
-        raise ValueError(
-            "point-cloud scalar widths require a similarity world_transform"
-        )
+        raise ValueError(refusal)
     normalized_gram = gram / scale_squared
     if not np.allclose(
         normalized_gram,
@@ -397,9 +395,7 @@ def _scalar_length_scale(matrix: np.ndarray) -> float:
         atol=1e-10,
         rtol=1e-10,
     ):
-        raise ValueError(
-            "point-cloud scalar widths require a similarity world_transform"
-        )
+        raise ValueError(refusal)
     return math.sqrt(scale_squared)
 
 
@@ -442,7 +438,11 @@ def _convert_point_cloud(
     widths = _optional_array(record, "widths", "has_widths")
     if widths is not None:
         widths = np.ascontiguousarray(
-            widths * _scalar_length_scale(transform),
+            widths
+            * _scalar_length_scale(
+                transform,
+                "point-cloud scalar widths require a similarity world_transform",
+            ),
             dtype=widths.dtype,
         )
     return _core.point_cloud(
@@ -475,6 +475,121 @@ def _convert_point_cloud(
             transform,
         ),
         display_color_space=record.display_color_space,
+    )
+
+
+def _convert_gaussian_cloud(
+    record: object,
+    source: CoordinateConvention,
+    target: CoordinateConvention,
+    world_transform: object | None,
+) -> object:
+    """Convert a qualified Gaussian frame without guessing SH rotations."""
+
+    from sceneio import _core
+
+    fallback_scale = (
+        1.0
+        if record.scale_to_meters is None
+        else float(record.scale_to_meters)
+    )
+    transform, effective_target_scale = _coordinate_transform(
+        source,
+        target,
+        fallback_scale,
+        world_transform,
+    )
+    length_scale = _scalar_length_scale(
+        transform,
+        "Gaussian coordinate conversion requires a similarity world_transform",
+    )
+    rotation = transform[:3, :3] / length_scale
+    if np.linalg.det(rotation) <= 0.0:
+        raise ValueError(
+            "Gaussian coordinate conversion requires an orientation-preserving "
+            "similarity transform"
+        )
+    if record.sh_degree > 0 and not np.allclose(
+        rotation,
+        np.eye(3),
+        atol=1e-10,
+        rtol=1e-10,
+    ):
+        raise ValueError(
+            "Gaussian coordinate rotation with directional SH requires an "
+            "explicit SH rotation policy; degree-0 clouds are qualified"
+        )
+    if (
+        record.sh_basis != "3dgs_real"
+        or record.sh_phase != "3dgs"
+        or record.sh_coefficient_order != "degree_then_m_neg_to_pos"
+    ):
+        raise ValueError(
+            "Gaussian coordinate conversion requires qualified 3DGS SH semantics"
+        )
+
+    means = np.asarray(record.means, dtype=np.float64)
+    converted_means = means @ transform[:3, :3].T + transform[:3, 3]
+    scales = np.asarray(record.scales, dtype=np.float64)
+    if record.scale_space == "log":
+        converted_scales = scales + math.log(length_scale)
+    elif record.scale_space == "linear":
+        converted_scales = scales * length_scale
+    else:  # The native record validator should make this unreachable.
+        raise ValueError("Gaussian scale_space is not convertible")
+
+    target_order = (
+        target.quaternion_order
+        if target.quaternion_order in {"wxyz", "xyzw"}
+        else record.quaternion_order
+    )
+    quaternions = np.empty((record.num_gaussians, 4), dtype=np.float64)
+    for index, value in enumerate(np.asarray(record.quaternions)):
+        source_rotation = _quaternion_matrix(value, record.quaternion_order)
+        quaternions[index] = _matrix_quaternion(
+            rotation @ source_rotation,
+            target_order,
+        )
+
+    target_frame = _target_frame(target, "Gaussian cloud")
+    if target.scale_to_meters is not None:
+        target_metric_scale = float(target.scale_to_meters)
+        target_scale_source = "caller"
+    elif record.scale_to_meters is not None:
+        target_metric_scale = effective_target_scale
+        target_scale_source = record.scale_to_meters_source
+    elif source.scale_to_meters is not None:
+        target_metric_scale = effective_target_scale
+        target_scale_source = "caller"
+    else:
+        target_metric_scale = None
+        target_scale_source = "unknown"
+    return _core.gaussian_cloud(
+        np.ascontiguousarray(converted_means, dtype=np.float32),
+        np.ascontiguousarray(converted_scales, dtype=np.float32),
+        np.ascontiguousarray(quaternions, dtype=np.float32),
+        np.ascontiguousarray(np.asarray(record.opacities), dtype=np.float32),
+        np.ascontiguousarray(np.asarray(record.sh_dc), dtype=np.float32),
+        (
+            np.ascontiguousarray(np.asarray(record.sh_rest), dtype=np.float32)
+            if record.num_rest
+            else None
+        ),
+        quaternion_order=target_order,
+        scale_space=record.scale_space,
+        opacity_space=record.opacity_space,
+        sh_layout=record.sh_layout,
+        source_precision="float32",
+        projection_mode_hint=record.projection_mode_hint,
+        sorting_mode_hint=record.sorting_mode_hint,
+        quaternion_norm="unit",
+        sh_basis=record.sh_basis,
+        sh_phase=record.sh_phase,
+        sh_coefficient_order=record.sh_coefficient_order,
+        color_space=record.color_space,
+        coordinate_frame=target_frame,
+        scale_to_meters=target_metric_scale,
+        scale_to_meters_source=target_scale_source,
     )
 
 
@@ -580,7 +695,7 @@ def convert_coordinates(
     if not isinstance(actual_source, CoordinateConvention):
         raise TypeError("source must be a CoordinateConvention")
     type_name = type(record).__name__
-    if type_name not in {"PosedViewSet", "PointCloud", "Mesh"}:
+    if type_name not in {"PosedViewSet", "PointCloud", "GaussianCloud", "Mesh"}:
         raise TypeError(
             f"coordinate conversion for {type_name} is not qualified; "
             "use its format-specific adapter"
@@ -602,6 +717,13 @@ def convert_coordinates(
         )
     if type_name == "PointCloud":
         return _convert_point_cloud(record, actual_source, target, world_transform)
+    if type_name == "GaussianCloud":
+        return _convert_gaussian_cloud(
+            record,
+            actual_source,
+            target,
+            world_transform,
+        )
     if type_name == "Mesh":
         return _convert_mesh(record, actual_source, target, world_transform)
     raise AssertionError("qualified coordinate converter dispatch is incomplete")

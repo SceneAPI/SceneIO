@@ -193,11 +193,14 @@ The contract names the exact decode and encode test for every row, including
 an independent PyYAML interpretation of Kalibr writer output, so a shared test
 module cannot satisfy the wrong format accidentally.
 
-For Gaussian data, the current attribute-level evidence proves log/linear
-scale, logit/linear opacity, WXYZ/XYZW component order, SH memory-layout
-transposition, and format quantization. The companion
-`tests/contracts/gaussian_oracles_v1.toml` pins the repository revision,
-license, role, and execution mode of every Gaussian reference. In particular,
+For Gaussian data, the attribute-level evidence proves log/linear scale,
+logit/linear opacity, WXYZ/XYZW component order, quaternion unit state, the
+3DGS real-SH basis/phase/coefficient order, SH memory-layout transposition,
+coordinate/scale provenance, and format quantization. The companion
+`tests/contracts/gaussian_semantics_v1.toml` freezes the per-carrier mapping and
+closed vocabularies; `tests/contracts/gaussian_oracles_v1.toml` pins the
+repository revision, license, role, and execution mode of every Gaussian
+reference. In particular,
 SplatTransform 3.1.6 is executed against all six legacy wire formats on the
 Windows, Linux, and macOS splat lanes; gsply 0.4.6 provides a second live
 implementation for PLY and SPZ; and GaussianSplats3D supplies pinned KSplat
@@ -210,30 +213,29 @@ oracle executes both USDA and USDZ Gaussian cross-read directions. gsplat and
 Brush are retained only as covariance/SH/rendering
 semantic references because they do not implement the entire wire-format
 matrix. USD Gaussian orientations are required to be unit quaternions, with a
-precision-aware float/half tolerance. `convert_gaussian_conventions()` can
-explicitly normalize quaternion magnitude and can retarget source precision
-and rendering hints when preparing a record for a different writer; it refuses
-float32-to-float16 retagging because that would require numeric quantization.
+precision-aware float/half tolerance. SPZ's extension-free wire profile is
+tagged as right-handed OpenGL/RUB; generic Gaussian PLY and the other legacy
+carriers remain coordinate-unknown because their bytes do not declare a frame.
+`convert_gaussian_conventions()` can explicitly normalize quaternion magnitude
+and can retarget source precision and rendering hints when preparing a record
+for a different writer; it refuses float32-to-float16 retagging because that
+would require numeric quantization.
 Logit-to-linear conversion follows the exact float32 sigmoid, so sufficiently
 large finite logits can saturate to 0 or 1 and cannot then be inverted without
-loss. The contract does not yet claim universal
-normalization of quaternion magnitude, SH basis/phase/coefficient order, color
-space, or coordinate-frame metadata because those properties are not fully
-represented in `GaussianCloud` today. SPZ extension flags and non-default
-coordinate profiles are refused or kept outside the qualified profile rather
-than silently relabeled.
+loss. All universal semantic properties are represented, but the record does
+not invent values: color space remains `unknown` for carriers without a
+normative transfer-function claim, scale remains unqualified without file or
+caller evidence, and incompatible/nonlinear semantic retagging is refused.
+SPZ extension flags and non-default coordinate profiles remain outside the
+qualified profile rather than being silently relabeled.
 
 The post-review local gate collects 4,599 tests and passes 4,583 with 17
 documented optional/platform skips. The independently built Niantic source
 lane passes 51 official-provider cases with one gsply-v2 writer skip, while the
 local OpenUSD lane passes all four USDA/USDZ cross-read cases. These results
-qualify the mappings above; they do not fill the still-unrepresented universal
-Gaussian coordinate-frame, color-space, or SH-basis metadata fields.
-
-The later representation-contract closure adds no coordinate conversion and
-does not broaden those claims. It classifies all 91 public data-bearing
-classes, passes the 4,641-node stable instrumented collection guard, and brings
-the complete local result to 4,656 passed with 16 documented skips.
+qualify the mappings above. The G1 semantic contract adds explicit fields and
+refusal behavior without turning an `unknown` carrier property into a canonical
+claim.
 
 The broader upstream-source qualification ledger is
 `tests/contracts/oracle_sources_v1.toml`. It allows permissive and weak
@@ -292,6 +294,10 @@ metadata. The qualified direct converters are:
   and intrinsics are retained;
 - native `PointCloud`: positions, origin, normals, scalar widths, velocities,
   accelerations, and scale;
+- native `GaussianCloud`: means, scale magnitudes, rotations, quaternion order
+  and unit state, coordinate frame, and unit scale under an
+  orientation-preserving similarity. Directional SH coefficients may pass
+  only when the spatial rotation is identity;
 - native `Mesh`: positions, normals, local transform, and scale.
 
 OpenCV/OpenGL and ENU/NED have defined direct basis changes. Other frame pairs
@@ -310,8 +316,9 @@ camera axes and a named ENU/NED world frame, so mixed declarations are refused.
 The converter refuses incomplete cases instead of inventing policy. Examples
 include unknown frames without a caller transform, non-rigid pose transforms,
 mesh reflections without a winding policy, non-default acquisition viewpoints,
-opaque LAS waveform sidecars, and Gaussian/reconstruction/scene conversions
-whose semantics are not fully qualified. `FormatCoordinateContract.conversion`
+opaque LAS waveform sidecars, Gaussian reflections/nonsimilar transforms or
+directional-SH rotations, and reconstruction/scene conversions whose semantics
+are not fully qualified. `FormatCoordinateContract.conversion`
 is `supported` only where the public decoded record is directly convertible;
 `requires_context` means the caller needs a format-specific adapter or policy.
 `RtmvDataset` is likewise unqualified as a whole; callers may convert its
@@ -333,6 +340,9 @@ is `supported` only where the public decoded record is directly convertible;
   independent matrix oracle;
 - ENU/NED, scale, scalar-width, normal, origin, mesh-local-transform, and
   optional-field preservation behavior;
+- Gaussian quaternion rotation equivalence, degree-0/1 3DGS SH equations,
+  seeded unit directions, scale provenance, similarity conversion, and refusal
+  boundaries;
 - conversion round trips and explicit refusal cases;
 - COLMAP/HLoc pixel-center preservation and writer guards;
 - all-format installed-wheel smoke with no coordinate-property exemptions.

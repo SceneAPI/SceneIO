@@ -272,6 +272,8 @@ def gaussian_arrays_from_prim(
     prim,
     *,
     shell_properties: frozenset[str] = frozenset(),
+    coordinate_frame: str = "unknown",
+    scale_to_meters: float | None = None,
 ) -> tuple[np.ndarray, dict[str, object]]:
     """Validate and extract one official Gaussian particle field."""
 
@@ -454,6 +456,16 @@ def gaussian_arrays_from_prim(
         "source_precision": source_precision,
         "projection_mode_hint": str(projection),
         "sorting_mode_hint": str(sorting),
+        "quaternion_norm": "unit",
+        "sh_basis": "3dgs_real",
+        "sh_phase": "3dgs",
+        "sh_coefficient_order": "degree_then_m_neg_to_pos",
+        "color_space": "unknown",
+        "coordinate_frame": coordinate_frame,
+        "scale_to_meters": scale_to_meters,
+        "scale_to_meters_source": (
+            "file" if scale_to_meters is not None else "unknown"
+        ),
     }
 
 
@@ -461,9 +473,14 @@ def gaussian_cloud_from_prim(
     prim,
     *,
     shell_properties: frozenset[str] = frozenset(),
+    coordinate_frame: str = "unknown",
+    scale_to_meters: float | None = None,
 ):
     positions, kwargs = gaussian_arrays_from_prim(
-        prim, shell_properties=shell_properties
+        prim,
+        shell_properties=shell_properties,
+        coordinate_frame=coordinate_frame,
+        scale_to_meters=scale_to_meters,
     )
     return _core.gaussian_cloud(positions, **kwargs)
 
@@ -504,6 +521,8 @@ def validate_writable_gaussian(
     cloud,
     *,
     context: str,
+    coordinate_frame: str | None = None,
+    scale_to_meters: float | None = None,
 ) -> tuple[np.ndarray, ...]:
     if (
         cloud.quaternion_order != "wxyz"
@@ -516,6 +535,37 @@ def validate_writable_gaussian(
             "scale_space='linear', opacity_space='linear', and "
             "sh_layout='coefficient_rgb'; convert explicitly before writing"
         )
+    if (
+        cloud.quaternion_norm not in {"unconstrained", "unit"}
+        or cloud.sh_basis != "3dgs_real"
+        or cloud.sh_phase != "3dgs"
+        or cloud.sh_coefficient_order != "degree_then_m_neg_to_pos"
+        or cloud.color_space != "unknown"
+    ):
+        raise ValueError(
+            f"USD: {context} requires unit quaternions, 3DGS real SH "
+            "basis/phase/order, and untagged color semantics; convert "
+            "explicitly before writing"
+        )
+    if coordinate_frame is not None and cloud.coordinate_frame not in {
+        "unknown",
+        coordinate_frame,
+    }:
+        raise ValueError(
+            f"USD: {context} coordinate_frame must be 'unknown' or "
+            f"{coordinate_frame!r}"
+        )
+    if (
+        scale_to_meters is not None
+        and cloud.scale_to_meters is not None
+        and not np.isclose(
+            cloud.scale_to_meters,
+            scale_to_meters,
+            rtol=0.0,
+            atol=0.0,
+        )
+    ):
+        raise ValueError(f"USD: {context} scale_to_meters does not match the stage")
     if cloud.source_precision not in {"float16", "float32"}:
         raise ValueError(
             f"USD: {context} source_precision must be float16 or float32"

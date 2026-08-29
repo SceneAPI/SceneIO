@@ -283,14 +283,22 @@ nb::bytes write_gaussian_ply(const GaussianCloud &g) {
 
 using arr = nb::ndarray<const float, nb::c_contig, nb::device::cpu>;
 GaussianCloud make_gc(arr means, arr scales, arr quats, arr opacities, arr sh_dc,
-                      std::optional<arr> sh_rest,
-                      std::string quaternion_order,
-                      std::string scale_space,
-                      std::string opacity_space,
-                      std::string sh_layout,
-                      std::string source_precision,
-                      std::string projection_mode_hint,
-                      std::string sorting_mode_hint) {
+                       std::optional<arr> sh_rest,
+                       std::string quaternion_order,
+                       std::string scale_space,
+                       std::string opacity_space,
+                       std::string sh_layout,
+                       std::string source_precision,
+                       std::string projection_mode_hint,
+                       std::string sorting_mode_hint,
+                       std::string quaternion_norm,
+                       std::string sh_basis,
+                       std::string sh_phase,
+                       std::string sh_coefficient_order,
+                       std::string color_space,
+                       std::string coordinate_frame,
+                       std::optional<double> scale_to_meters,
+                       std::string scale_to_meters_source) {
     if (means.ndim() != 2 || means.shape(1) != 3)
         throw std::invalid_argument(
             "gaussian_cloud: bad shape for means (expected (n, 3))");
@@ -320,6 +328,14 @@ GaussianCloud make_gc(arr means, arr scales, arr quats, arr opacities, arr sh_dc
     g.source_precision = std::move(source_precision);
     g.projection_mode_hint = std::move(projection_mode_hint);
     g.sorting_mode_hint = std::move(sorting_mode_hint);
+    g.quaternion_norm = std::move(quaternion_norm);
+    g.sh_basis = std::move(sh_basis);
+    g.sh_phase = std::move(sh_phase);
+    g.sh_coefficient_order = std::move(sh_coefficient_order);
+    g.color_space = std::move(color_space);
+    g.coordinate_frame = std::move(coordinate_frame);
+    g.scale_to_meters = scale_to_meters;
+    g.scale_to_meters_source = std::move(scale_to_meters_source);
     validate_gaussian_conventions(g, "gaussian_cloud");
     if (sh_rest) {
         if (sh_rest->ndim() != 2 || sh_rest->shape(0) != nn)
@@ -343,7 +359,14 @@ GaussianCloud convert_gc(
     std::optional<std::string> source_precision,
     std::optional<std::string> projection_mode_hint,
     std::optional<std::string> sorting_mode_hint,
-    bool normalize_quaternions) {
+    bool normalize_quaternions,
+    std::optional<std::string> quaternion_norm,
+    std::optional<std::string> sh_basis,
+    std::optional<std::string> sh_phase,
+    std::optional<std::string> sh_coefficient_order,
+    std::optional<std::string> color_space,
+    std::optional<std::string> coordinate_frame,
+    std::optional<std::string> scale_to_meters_source) {
     validate_gaussian_structure(
         source, "convert_gaussian_conventions input");
     validate_gaussian_conventions(source, "convert_gaussian_conventions input");
@@ -362,6 +385,20 @@ GaussianCloud convert_gc(
         projection_mode_hint.value_or(source.projection_mode_hint);
     const std::string target_sorting_mode_hint =
         sorting_mode_hint.value_or(source.sorting_mode_hint);
+    const std::string target_quaternion_norm = quaternion_norm.value_or(
+        normalize_quaternions ? "unit" : source.quaternion_norm);
+    const std::string target_sh_basis =
+        sh_basis.value_or(source.sh_basis);
+    const std::string target_sh_phase =
+        sh_phase.value_or(source.sh_phase);
+    const std::string target_sh_coefficient_order =
+        sh_coefficient_order.value_or(source.sh_coefficient_order);
+    const std::string target_color_space =
+        color_space.value_or(source.color_space);
+    const std::string target_coordinate_frame =
+        coordinate_frame.value_or(source.coordinate_frame);
+    const std::string target_scale_to_meters_source =
+        scale_to_meters_source.value_or(source.scale_to_meters_source);
 
     result.quaternion_order = target_quaternion_order;
     result.scale_space = target_scale_space;
@@ -370,7 +407,45 @@ GaussianCloud convert_gc(
     result.source_precision = target_source_precision;
     result.projection_mode_hint = target_projection_mode_hint;
     result.sorting_mode_hint = target_sorting_mode_hint;
-    validate_gaussian_conventions(result, "convert_gaussian_conventions target");
+    result.quaternion_norm = target_quaternion_norm;
+    result.sh_basis = target_sh_basis;
+    result.sh_phase = target_sh_phase;
+    result.sh_coefficient_order = target_sh_coefficient_order;
+    result.color_space = target_color_space;
+    result.coordinate_frame = target_coordinate_frame;
+    result.scale_to_meters_source = target_scale_to_meters_source;
+    if (normalize_quaternions && target_quaternion_norm != "unit")
+        throw std::invalid_argument(
+            "convert_gaussian_conventions: normalize_quaternions requires "
+            "quaternion_norm='unit'");
+    if (!normalize_quaternions && source.quaternion_norm != "unit" &&
+        target_quaternion_norm == "unit")
+        throw std::invalid_argument(
+            "convert_gaussian_conventions: quaternion_norm='unit' requires "
+            "normalize_quaternions=True");
+    auto require_metadata_identity = [](
+        const std::string &source_value, const std::string &target_value,
+        const char *name) {
+        if (source_value == target_value || target_value == "unknown") return;
+        throw std::invalid_argument(
+            std::string("convert_gaussian_conventions: ") + name +
+            " conversion is not qualified");
+    };
+    require_metadata_identity(source.sh_basis, target_sh_basis, "sh_basis");
+    require_metadata_identity(source.sh_phase, target_sh_phase, "sh_phase");
+    require_metadata_identity(
+        source.sh_coefficient_order, target_sh_coefficient_order,
+        "sh_coefficient_order");
+    require_metadata_identity(
+        source.color_space, target_color_space, "color_space");
+    if (source.coordinate_frame != target_coordinate_frame)
+        throw std::invalid_argument(
+            "convert_gaussian_conventions: use convert_coordinates for "
+            "coordinate_frame changes");
+    if (source.scale_to_meters_source != target_scale_to_meters_source)
+        throw std::invalid_argument(
+            "convert_gaussian_conventions: use convert_coordinates for "
+            "scale_to_meters_source changes");
     if (source.source_precision == "float32" &&
         target_source_precision == "float16")
         throw std::invalid_argument(
@@ -419,6 +494,9 @@ GaussianCloud convert_gc(
                     static_cast<float>(output[component] * inverse_norm);
         }
     }
+
+    validate_gaussian_conventions(
+        result, "convert_gaussian_conventions target");
 
     if (source.scale_space != target_scale_space) {
         for (size_t index = 0; index < source.scales.size(); ++index) {
@@ -507,6 +585,15 @@ void register_ply_gaussian(nb::module_ &m) {
           "source_precision"_a = "float32",
           "projection_mode_hint"_a = "perspective",
           "sorting_mode_hint"_a = "zDepth",
+          nb::kw_only(),
+          "quaternion_norm"_a = "unconstrained",
+          "sh_basis"_a = "3dgs_real",
+          "sh_phase"_a = "3dgs",
+          "sh_coefficient_order"_a = "degree_then_m_neg_to_pos",
+          "color_space"_a = "unknown",
+          "coordinate_frame"_a = "unknown",
+          "scale_to_meters"_a = nb::none(),
+          "scale_to_meters_source"_a = "unknown",
           "Build a GaussianCloud from arrays (numpy/torch): means (N,3), scales (N,3), "
           "quaternions (N,4), opacities (N,), sh_dc (N,3), sh_rest (N,{0,9,24,45}).");
     m.def(
@@ -517,6 +604,13 @@ void register_ply_gaussian(nb::module_ &m) {
         "projection_mode_hint"_a = nb::none(),
         "sorting_mode_hint"_a = nb::none(),
         "normalize_quaternions"_a = false,
+        nb::kw_only(),
+        "quaternion_norm"_a = nb::none(),
+        "sh_basis"_a = nb::none(), "sh_phase"_a = nb::none(),
+        "sh_coefficient_order"_a = nb::none(),
+        "color_space"_a = nb::none(),
+        "coordinate_frame"_a = nb::none(),
+        "scale_to_meters_source"_a = nb::none(),
         "Explicitly convert Gaussian activation, quaternion, SH layout, source "
         "precision, and rendering-hint conventions without changing the source "
         "record.");

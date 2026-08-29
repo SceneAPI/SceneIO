@@ -380,6 +380,20 @@ def coordinate_convention(record: object) -> CoordinateConvention | None:
     type_name = type(record).__name__
     if type_name in {"Image", "ImageSequence", "Mask"}:
         return IMAGE_COORDINATES
+    if type_name == "RasterLevel":
+        return coordinate_convention(record.payload)
+    if type_name == "RasterSeries":
+        conventions = {coordinate_convention(level) for level in record.levels}
+        conventions.discard(None)
+        if len(conventions) == 1:
+            return replace(conventions.pop(), name="raster_series")
+        return UNKNOWN_COORDINATES
+    if type_name == "RasterCollection":
+        conventions = {coordinate_convention(series) for series in record.series}
+        conventions.discard(None)
+        if len(conventions) == 1:
+            return replace(conventions.pop(), name="raster_collection")
+        return UNKNOWN_COORDINATES
     if type_name == "Reconstruction":
         return COLMAP_COORDINATES
     if type_name == "PosedViewSet" and hasattr(record, "axis_frame"):
@@ -486,7 +500,34 @@ def coordinate_convention(record: object) -> CoordinateConvention | None:
             float(record.scale_to_meters),
         )
     if type_name == "GaussianCloud":
-        return UNKNOWN_COORDINATES
+        frame = str(record.coordinate_frame)
+        scale = record.scale_to_meters
+        if frame == "unknown" and scale is None:
+            return UNKNOWN_COORDINATES
+        metric = scale is not None
+        return CoordinateConvention(
+            name="gaussian_cloud",
+            camera_axes=(
+                frame if frame in {"opencv", "opengl"} else "unknown"
+            ),
+            handedness=(
+                "right_handed"
+                if frame in {"opencv", "opengl", "enu", "ned"}
+                else "unknown"
+            ),
+            quaternion_order=str(record.quaternion_order),
+            quaternion_algebra="hamilton",
+            world_frame=(frame if frame in {"enu", "ned"} else "arbitrary"),
+            up_axis=(
+                "y"
+                if frame == "opengl"
+                else "z"
+                if frame == "enu"
+                else "unknown"
+            ),
+            scale_class="metric" if metric else "arbitrary",
+            scale_to_meters=(float(scale) if metric else None),
+        )
     if type_name == "SceneGraph":
         return CoordinateConvention(
             name="usd_stage",

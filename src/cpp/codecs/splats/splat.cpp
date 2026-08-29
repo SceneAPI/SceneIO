@@ -40,6 +40,7 @@ GaussianCloud read_splat_impl(nb::handle source, bool partial, size_t start,
     const uint8_t *p = data.data();
     const size_t fn = data.size();
     GaussianCloud g;
+    g.quaternion_norm = "unit";
     {
         nb::gil_scoped_release rel;  // pure-C++ decode; no Python objects touched
         if (fn % kRecordSize != 0)

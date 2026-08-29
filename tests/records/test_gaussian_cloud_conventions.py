@@ -18,6 +18,14 @@ def _cloud(
     source_precision: str = "float32",
     projection_mode_hint: str = "perspective",
     sorting_mode_hint: str = "zDepth",
+    quaternion_norm: str = "unconstrained",
+    sh_basis: str = "3dgs_real",
+    sh_phase: str = "3dgs",
+    sh_coefficient_order: str = "degree_then_m_neg_to_pos",
+    color_space: str = "unknown",
+    coordinate_frame: str = "unknown",
+    scale_to_meters: float | None = None,
+    scale_to_meters_source: str = "unknown",
 ):
     means = np.array([[1, 2, 3], [4, 5, 6]], np.float32)
     quaternions = np.array(
@@ -48,6 +56,14 @@ def _cloud(
         source_precision=source_precision,
         projection_mode_hint=projection_mode_hint,
         sorting_mode_hint=sorting_mode_hint,
+        quaternion_norm=quaternion_norm,
+        sh_basis=sh_basis,
+        sh_phase=sh_phase,
+        sh_coefficient_order=sh_coefficient_order,
+        color_space=color_space,
+        coordinate_frame=coordinate_frame,
+        scale_to_meters=scale_to_meters,
+        scale_to_meters_source=scale_to_meters_source,
     )
 
 
@@ -62,6 +78,14 @@ def test_gaussian_cloud_legacy_conventions_remain_the_defaults():
         cloud.source_precision,
         cloud.projection_mode_hint,
         cloud.sorting_mode_hint,
+        cloud.quaternion_norm,
+        cloud.sh_basis,
+        cloud.sh_phase,
+        cloud.sh_coefficient_order,
+        cloud.color_space,
+        cloud.coordinate_frame,
+        cloud.scale_to_meters,
+        cloud.scale_to_meters_source,
     ) == (
         "wxyz",
         "log",
@@ -70,6 +94,14 @@ def test_gaussian_cloud_legacy_conventions_remain_the_defaults():
         "float32",
         "perspective",
         "zDepth",
+        "unconstrained",
+        "3dgs_real",
+        "3dgs",
+        "degree_then_m_neg_to_pos",
+        "unknown",
+        "unknown",
+        None,
+        "unknown",
     )
 
 
@@ -83,6 +115,13 @@ def test_gaussian_cloud_legacy_conventions_remain_the_defaults():
         ("source_precision", "float64", "source_precision"),
         ("projection_mode_hint", "fisheye", "projection_mode_hint"),
         ("sorting_mode_hint", "none", "sorting_mode_hint"),
+        ("quaternion_norm", "normalized", "quaternion_norm"),
+        ("sh_basis", "complex", "sh_basis"),
+        ("sh_phase", "none", "sh_phase"),
+        ("sh_coefficient_order", "xyz", "sh_coefficient_order"),
+        ("color_space", "display-p3", "color_space"),
+        ("coordinate_frame", "rub", "coordinate_frame"),
+        ("scale_to_meters_source", "header", "scale_to_meters_source"),
     ],
 )
 def test_gaussian_cloud_rejects_unknown_conventions(keyword, value, message):
@@ -159,6 +198,7 @@ def test_explicit_gaussian_conversion_maps_activation_and_layout():
     assert converted.source_precision == "float32"
     assert converted.projection_mode_hint == "perspective"
     assert converted.sorting_mode_hint == "zDepth"
+    assert converted.quaternion_norm == "unconstrained"
 
     # Conversion returns independent record storage and does not retag input.
     assert source.quaternion_order == "wxyz"
@@ -221,9 +261,69 @@ def test_explicit_conversion_can_prepare_usd_cloud_for_legacy_writers():
     assert converted.source_precision == "float32"
     assert converted.projection_mode_hint == "perspective"
     assert converted.sorting_mode_hint == "zDepth"
+    assert converted.quaternion_norm == "unit"
     assert _core.read_gaussian_ply(
         _core.write_gaussian_ply(converted)
     ).num_gaussians == 2
+
+
+def test_gaussian_metric_metadata_requires_a_positive_value_and_source():
+    with pytest.raises(ValueError, match="known source"):
+        _cloud(scale_to_meters=1.0)
+    with pytest.raises(ValueError, match="requires scale_to_meters"):
+        _cloud(scale_to_meters_source="caller")
+    with pytest.raises(ValueError, match="finite and positive"):
+        _cloud(scale_to_meters=0.0, scale_to_meters_source="caller")
+
+    cloud = _cloud(
+        coordinate_frame="opengl",
+        scale_to_meters=0.01,
+        scale_to_meters_source="caller",
+    )
+    assert cloud.scale_to_meters == 0.01
+    assert cloud.scale_to_meters_source == "caller"
+
+
+def test_unit_quaternion_metadata_is_checked_and_explicit_normalization_sets_it():
+    with pytest.raises(ValueError, match="requires unit values"):
+        _cloud(quaternion_norm="unit")
+
+    converted = sceneio.convert_gaussian_conventions(
+        _cloud(),
+        normalize_quaternions=True,
+    )
+    assert converted.quaternion_norm == "unit"
+    np.testing.assert_allclose(
+        np.linalg.norm(converted.quaternions, axis=1),
+        1.0,
+        atol=1e-6,
+    )
+
+    with pytest.raises(ValueError, match="requires normalize_quaternions"):
+        sceneio.convert_gaussian_conventions(
+            _cloud(), quaternion_norm="unit"
+        )
+
+
+def test_new_semantic_factory_fields_are_keyword_only():
+    cloud = _cloud()
+    with pytest.raises(TypeError):
+        _core.gaussian_cloud(
+            cloud.means,
+            cloud.scales,
+            cloud.quaternions,
+            cloud.opacities,
+            cloud.sh_dc,
+            cloud.sh_rest,
+            "wxyz",
+            "log",
+            "logit",
+            "channel_grouped",
+            "float32",
+            "perspective",
+            "zDepth",
+            "unit",
+        )
 
 
 def test_metadata_conversion_refuses_unperformed_float16_quantization():

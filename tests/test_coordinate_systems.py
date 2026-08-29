@@ -180,6 +180,7 @@ def test_checked_conversion_contract_pins_the_public_semantics():
     assert tuple(CONVERSION_CONTRACT["qualified"]) == (
         "PosedViewSet",
         "PointCloud",
+        "GaussianCloud",
         "Mesh",
     )
     assert CONVERSION_CONTRACT["qualified"]["PosedViewSet"]["world_transform"] == (
@@ -187,6 +188,12 @@ def test_checked_conversion_contract_pins_the_public_semantics():
     )
     assert CONVERSION_CONTRACT["qualified"]["PointCloud"]["world_transform"] == (
         "invertible_affine"
+    )
+    assert CONVERSION_CONTRACT["qualified"]["GaussianCloud"]["world_transform"] == (
+        "orientation_preserving_similarity"
+    )
+    assert CONVERSION_CONTRACT["qualified"]["GaussianCloud"]["directional_sh"] == (
+        "identity_rotation_only"
     )
     assert CONVERSION_CONTRACT["qualified"]["Mesh"]["world_transform"] == (
         "orientation_preserving_invertible_affine"
@@ -995,22 +1002,6 @@ def test_nonspatial_and_unqualified_conversions_refuse_clearly():
     image = _core.image(np.zeros((2, 3, 3), dtype=np.uint8))
     with pytest.raises(TypeError, match="not qualified"):
         sceneio.convert_coordinates(image)
-    gaussian = _core.gaussian_cloud(
-        np.zeros((1, 3), dtype=np.float32),
-        np.ones((1, 3), dtype=np.float32),
-        np.array([[1.0, 0.0, 0.0, 0.0]], dtype=np.float32),
-        np.zeros(1, dtype=np.float32),
-        np.zeros((1, 3), dtype=np.float32),
-    )
-    with pytest.raises(TypeError, match="not qualified"):
-        sceneio.convert_coordinates(
-            gaussian,
-            source=replace(
-                sceneio.COLMAP_COORDINATES,
-                name="declared_gaussian_source",
-                camera_axes="opengl",
-            ),
-        )
 
     reconstruction = _core.read_bal(b"0 0 0\n")
     conflicting_source = replace(
@@ -1027,17 +1018,9 @@ def test_nonspatial_and_unqualified_conversions_refuse_clearly():
 
 def test_unqualified_records_cannot_bypass_dispatch_via_identity_target():
     image = _core.image(np.zeros((2, 3, 3), dtype=np.uint8))
-    gaussian = _core.gaussian_cloud(
-        np.zeros((1, 3), dtype=np.float32),
-        np.ones((1, 3), dtype=np.float32),
-        np.array([[1.0, 0.0, 0.0, 0.0]], dtype=np.float32),
-        np.zeros(1, dtype=np.float32),
-        np.zeros((1, 3), dtype=np.float32),
-    )
     reconstruction = _core.read_bal(b"0 0 0\n")
     cases = (
         (image, sceneio.IMAGE_COORDINATES),
-        (gaussian, sceneio.UNKNOWN_COORDINATES),
         (reconstruction, sceneio.COLMAP_COORDINATES),
     )
     for record, target in cases:
@@ -1148,6 +1131,13 @@ def test_qualified_semantic_identity_returns_the_original_record():
         _core.point_cloud(
             np.zeros((1, 3), dtype=np.float32),
             coordinate_frame="opencv",
+        ),
+        _core.gaussian_cloud(
+            np.zeros((1, 3), dtype=np.float32),
+            np.ones((1, 3), dtype=np.float32),
+            np.array([[1.0, 0.0, 0.0, 0.0]], dtype=np.float32),
+            np.zeros(1, dtype=np.float32),
+            np.zeros((1, 3), dtype=np.float32),
         ),
         _core.mesh(
             np.zeros((3, 3), dtype=np.float32),
