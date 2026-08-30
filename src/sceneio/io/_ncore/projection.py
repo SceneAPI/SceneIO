@@ -13,7 +13,7 @@ from collections.abc import Mapping
 import numpy as np
 
 from sceneio import _core
-from sceneio.data.dense import (
+from sceneio._data.dense import (
     InstanceMap,
     LabelTaxonomy,
     Mask,

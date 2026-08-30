@@ -195,7 +195,7 @@ def _check_against_oracle(data: bytes) -> None:
 
     q, t = np.asarray(R.quaternions), np.asarray(R.translations)
     names = list(R.image_names)
-    cams = {c.id: c for c in R.cameras}
+    cams = dict(zip(np.asarray(R.camera_ids), R.cameras, strict=True))
     for k, oc in enumerate(parsed["cams"]):
         assert names[k] == oc["name"]
         np.testing.assert_array_equal(q[k], oc["q"])  # verbatim
@@ -283,7 +283,8 @@ def test_projection_consistency_pin():
     R = _core.read_nvm(data)
     q = np.asarray(R.quaternions)[0]
     t = np.asarray(R.translations)[0]
-    f = np.asarray({c.id: c for c in R.cameras}[1].params)[0]
+    cameras = dict(zip(np.asarray(R.camera_ids), R.cameras, strict=True))
+    f = np.asarray(cameras[1].params)[0]
 
     X = np.array([3.0, 6.0, 4.0])
     P = quat_wxyz_to_mat(q) @ X + t  # (1, 2, 4), exact (R has 0/1 entries, t integral)
@@ -316,7 +317,7 @@ def test_model_mapping():
         b"0\n0\n"
     )
     R = _core.read_nvm(data)
-    cams = {c.id: c for c in R.cameras}
+    cams = dict(zip(np.asarray(R.camera_ids), R.cameras, strict=True))
     assert cams[1].model == "SIMPLE_PINHOLE"
     np.testing.assert_array_equal(np.asarray(cams[1].params), [500.0, 0.0, 0.0])
     assert cams[2].model == "SIMPLE_RADIAL"

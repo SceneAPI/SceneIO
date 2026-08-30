@@ -8,7 +8,7 @@ from dataclasses import fields
 from pathlib import Path
 
 import sceneio
-from sceneio.data import (
+from sceneio import (
     RASTER_AXES,
     RASTER_DTYPES,
     RASTER_PAYLOAD_KINDS,

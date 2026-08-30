@@ -101,7 +101,8 @@ def test_shared_model_is_the_exact_historical_public_model():
     for name in ("Codec", "CodecCapabilities", "NativeFeatureCapabilities"):
         shared = getattr(model, name)
         assert getattr(registry, name) is shared
-        assert getattr(sceneio.io, name) is shared
+        assert getattr(sceneio, name) is shared
+        assert not hasattr(sceneio.io, name)
         assert shared.__module__ == "sceneio.io.registry"
         assert shared.__qualname__ == name
 

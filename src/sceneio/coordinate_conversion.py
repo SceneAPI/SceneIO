@@ -270,7 +270,7 @@ def _convert_posed_views(
     timestamps = np.asarray(record.timestamps)
     camera_indices = np.asarray(record.camera_indices)
     cameras = list(record.cameras)
-    return _core.posed_view_set(
+    return _core.pose_storage(
         np.ascontiguousarray(quaternions),
         np.ascontiguousarray(translations),
         names=list(record.names) or None,
@@ -475,6 +475,17 @@ def _convert_point_cloud(
             transform,
         ),
         display_color_space=record.display_color_space,
+        track_offsets=(
+            np.ascontiguousarray(record.track_offsets)
+            if record.has_tracks
+            else None
+        ),
+        track_image_ids=(list(record.track_image_ids) if record.has_tracks else None),
+        track_keypoint_indices=(
+            np.ascontiguousarray(record.track_keypoint_indices)
+            if record.has_tracks
+            else None
+        ),
     )
 
 
@@ -695,7 +706,7 @@ def convert_coordinates(
     if not isinstance(actual_source, CoordinateConvention):
         raise TypeError("source must be a CoordinateConvention")
     type_name = type(record).__name__
-    if type_name not in {"PosedViewSet", "PointCloud", "GaussianCloud", "Mesh"}:
+    if type_name not in {"PoseStorage", "PointCloud", "GaussianCloud", "Mesh"}:
         raise TypeError(
             f"coordinate conversion for {type_name} is not qualified; "
             "use its format-specific adapter"
@@ -708,7 +719,7 @@ def convert_coordinates(
         and world_transform is None
     ):
         return record
-    if type_name == "PosedViewSet":
+    if type_name == "PoseStorage":
         return _convert_posed_views(
             record,
             actual_source,

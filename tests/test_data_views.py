@@ -1,4 +1,4 @@
-"""Validation tests for sceneio.data.views (+ FrameMeta)."""
+"""Validation tests for sceneio.views (+ FrameMeta)."""
 
 from __future__ import annotations
 
@@ -7,20 +7,20 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from sceneio.coordinates import coordinate_convention
-from sceneio.data import (
+from sceneio import (
     SE3,
     Calibration,
-    CameraIntrinsics,
     CameraModel,
-    DepthMap,
     FrameMeta,
     Mask,
     PosedViewSet,
     PosePrior,
     RayMap,
     ViewInput,
+    camera_intrinsics,
+    depth_map,
 )
+from sceneio.coordinates import coordinate_convention
 from sceneio.errors import ContractViolation
 from sceneio.imagesource import MaterializedImage
 
@@ -31,8 +31,8 @@ def rgb(h: int = 4, w: int = 6) -> np.ndarray:
 
 def intrinsics(w: int, h: int) -> Calibration:
     return Calibration.from_intrinsics(
-        CameraIntrinsics(
-            model=CameraModel.SIMPLE_PINHOLE,
+        camera_intrinsics(
+            model_id=CameraModel.SIMPLE_PINHOLE.model_id,
             width=w,
             height=h,
             params=np.array([float(w), w / 2, h / 2]),
@@ -113,7 +113,7 @@ class TestViewInput:
         ViewInput(
             image=rgb(4, 6),
             calibration=intrinsics(6, 4),
-            depth_prior=DepthMap(depth=np.ones((4, 6), dtype=np.float32)),
+            depth_prior=depth_map(np.ones((4, 6), dtype=np.float32)),
             mask=Mask(mask=np.ones((4, 6), dtype=bool)),
             pose_prior=PosePrior(pose=SE3.identity()),
         )
@@ -126,7 +126,7 @@ class TestViewInput:
         with pytest.raises(ContractViolation, match="resolution mismatch"):
             ViewInput(
                 image=rgb(4, 6),
-                depth_prior=DepthMap(depth=np.ones((4, 7), dtype=np.float32)),
+                depth_prior=depth_map(np.ones((4, 7), dtype=np.float32)),
             )
 
     def test_calibration_resolution_mismatch_raises(self) -> None:
@@ -146,60 +146,83 @@ class TestViewInput:
         ViewInput(
             image=img,
             calibration=intrinsics(6, 4),
-            depth_prior=DepthMap(depth=np.ones((4, 6), dtype=np.float32)),
+            depth_prior=depth_map(np.ones((4, 6), dtype=np.float32)),
         )
         with pytest.raises(ContractViolation, match="resolution mismatch"):
             ViewInput(
                 image=img,
                 calibration=intrinsics(6, 4),
-                depth_prior=DepthMap(depth=np.ones((4, 7), dtype=np.float32)),
+                depth_prior=depth_map(np.ones((4, 7), dtype=np.float32)),
             )
 
 
 class TestPosedViewSet:
-    def _views(self, n: int = 2) -> tuple[ViewInput, ...]:
-        return tuple(ViewInput(image=rgb(), name=f"v{i}") for i in range(n))
-
     def test_valid(self) -> None:
-        views = self._views(2)
         poses = (SE3.identity(), SE3.identity())
-        vs = PosedViewSet(views=views, poses=poses, frame=FrameMeta())
+        vs = PosedViewSet(
+            poses=poses,
+            frame=FrameMeta(),
+            names=("v0", "v1"),
+            timestamps=(0.0, 1.0),
+        )
         assert len(vs) == 2
+        assert vs.num_views == 2
         coordinates = coordinate_convention(vs)
         assert coordinates is not None
         assert coordinates.handedness == "right_handed"
         assert coordinates.world_frame == "first_view"
+        assert coordinates.pose_direction == "camera_to_world"
 
     def test_lists_normalized_to_tuples(self) -> None:
-        vs = PosedViewSet(views=list(self._views(1)), poses=[SE3.identity()], frame=FrameMeta())
-        assert isinstance(vs.views, tuple)
+        vs = PosedViewSet(
+            poses=[SE3.identity()],
+            frame=FrameMeta(),
+            names=["v0"],
+        )
         assert isinstance(vs.poses, tuple)
+        assert isinstance(vs.names, tuple)
+        assert vs.timestamps == (None,)
+        assert vs.images == (None,)
+        assert vs.calibrations == (None,)
 
-    def test_empty_views_raises(self) -> None:
-        with pytest.raises(ContractViolation, match="at least one view"):
-            PosedViewSet(views=(), poses=(), frame=FrameMeta())
+    def test_empty_is_valid(self) -> None:
+        value = PosedViewSet(poses=(), frame=FrameMeta())
+        assert len(value) == 0
+        assert value.names == value.timestamps == ()
 
-    def test_length_mismatch_raises(self) -> None:
-        with pytest.raises(ContractViolation, match="one pose per view"):
-            PosedViewSet(views=self._views(2), poses=(SE3.identity(),), frame=FrameMeta())
+    def test_metadata_length_mismatch_raises(self) -> None:
+        with pytest.raises(ContractViolation, match="one item per pose"):
+            PosedViewSet(
+                poses=(SE3.identity(), SE3.identity()),
+                frame=FrameMeta(),
+                names=("only-one",),
+            )
 
-    def test_mixed_conventions_raise(self) -> None:
-        poses = (SE3.identity(), SE3.identity(convention="opencv_world2cam"))
-        with pytest.raises(ContractViolation, match="mixed pose conventions"):
-            PosedViewSet(views=self._views(2), poses=poses, frame=FrameMeta())
+    def test_noncanonical_convention_raises(self) -> None:
+        with pytest.raises(ContractViolation, match="opencv_cam2world"):
+            PosedViewSet(
+                poses=(SE3.identity(convention="opencv_world2cam"),),
+                frame=FrameMeta(),
+            )
 
-    def test_wrong_view_type_raises(self) -> None:
-        with pytest.raises(ContractViolation, match=r"PosedViewSet\.views\[0\]"):
-            PosedViewSet(views=(rgb(),), poses=(SE3.identity(),), frame=FrameMeta())  # type: ignore[arg-type]
+    def test_optional_metadata_validation(self) -> None:
+        with pytest.raises(ContractViolation, match=r"PosedViewSet\.names\[0\]"):
+            PosedViewSet(poses=(SE3.identity(),), frame=FrameMeta(), names=("",))
+        with pytest.raises(ContractViolation, match=r"PosedViewSet\.timestamps\[0\]"):
+            PosedViewSet(poses=(SE3.identity(),), frame=FrameMeta(), timestamps=(np.nan,))
+        with pytest.raises(ContractViolation, match=r"PosedViewSet\.images\[0\]"):
+            PosedViewSet(poses=(SE3.identity(),), frame=FrameMeta(), images=("a.png",))  # type: ignore[arg-type]
+        with pytest.raises(ContractViolation, match=r"PosedViewSet\.calibrations\[0\]"):
+            PosedViewSet(poses=(SE3.identity(),), frame=FrameMeta(), calibrations=(42,))  # type: ignore[arg-type]
 
     def test_wrong_pose_type_raises(self) -> None:
         with pytest.raises(ContractViolation, match=r"PosedViewSet\.poses\[0\]"):
-            PosedViewSet(views=self._views(1), poses=(np.eye(4),), frame=FrameMeta())  # type: ignore[arg-type]
+            PosedViewSet(poses=(np.eye(4),), frame=FrameMeta())  # type: ignore[arg-type]
 
     def test_wrong_frame_type_raises(self) -> None:
         with pytest.raises(ContractViolation, match=r"PosedViewSet\.frame"):
-            PosedViewSet(views=self._views(1), poses=(SE3.identity(),), frame="world")  # type: ignore[arg-type]
+            PosedViewSet(poses=(SE3.identity(),), frame="world")  # type: ignore[arg-type]
 
-    def test_non_sequence_views_raises(self) -> None:
-        with pytest.raises(ContractViolation, match=r"PosedViewSet\.views"):
-            PosedViewSet(views=42, poses=(SE3.identity(),), frame=FrameMeta())  # type: ignore[arg-type]
+    def test_non_sequence_poses_raises(self) -> None:
+        with pytest.raises(ContractViolation, match=r"PosedViewSet\.poses"):
+            PosedViewSet(poses=42, frame=FrameMeta())  # type: ignore[arg-type]

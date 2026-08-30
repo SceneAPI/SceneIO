@@ -13,7 +13,6 @@ import numpy as np
 import pytest
 
 import sceneio
-import sceneio.data
 import sceneio.io
 from sceneio import _core
 from sceneio.io._builtin_manifest import CANONICAL_BUILTIN_IDS
@@ -116,21 +115,13 @@ def test_fc0_decisions_are_complete_provisional_and_nonpublic():
     ) == CONTRACT["provisional_public_symbols"]
     assert len(symbols) == len(set(symbols))
 
-    public_modules = (sceneio, sceneio.io, sceneio.data)
+    public_modules = (sceneio, sceneio.io)
+    implemented_root = implemented | implemented_data | implemented_shared
     assert implemented <= set(symbols)
     for symbol in symbols:
-        if symbol in implemented:
-            assert hasattr(sceneio, symbol)
-            assert hasattr(sceneio.io, symbol)
-            assert not hasattr(sceneio.data, symbol)
-        elif symbol in implemented_data:
-            assert not hasattr(sceneio, symbol)
-            assert not hasattr(sceneio.io, symbol)
-            assert hasattr(sceneio.data, symbol)
-        elif symbol in implemented_shared:
+        if symbol in implemented_root:
             assert hasattr(sceneio, symbol)
             assert not hasattr(sceneio.io, symbol)
-            assert hasattr(sceneio.data, symbol)
         else:
             assert all(not hasattr(module, symbol) for module in public_modules)
     for row in decisions:

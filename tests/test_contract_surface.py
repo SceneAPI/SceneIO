@@ -27,7 +27,7 @@ def test_star_import_exposes_all() -> None:
 
 
 def test_version_is_030() -> None:
-    assert sceneio.__version__ == "0.3.0"
+    assert sceneio.__version__ == "0.4.0"
 
 
 def test_sceneio_error_is_an_exception() -> None:

@@ -1,11 +1,11 @@
 // codecs/reconstruction/transforms_json.cpp -- NeRF / Instant-NGP / Nerfstudio transforms.json
-// camera poses <-> PosedViewSet (io_implementation_plan.md).
+// camera poses <-> PoseStorage (io_implementation_plan.md).
 //
 // The file is a JSON object of (usually shared) intrinsics — fl_x/fl_y/cx/cy/w/h
 // plus optional OpenCV distortion and a "camera_model" tag — and a "frames"
 // array; each frame carries a "file_path" and a 4x4 row-major camera-to-world
 // "transform_matrix" in the OpenGL/Blender camera axes (x right, y up, z back).
-// We RECORD those conventions on the PosedViewSet (wxyz / camera_to_world /
+// We RECORD those conventions on the PoseStorage (wxyz / camera_to_world /
 // opengl) rather than converting: the top-left 3x3 becomes a WXYZ quaternion,
 // the top-right 3x1 the translation. read->write->read reproduces poses +
 // intrinsics + tags exactly (nlohmann's shortest-round-trip float dump).
@@ -18,7 +18,7 @@
 #include <vector>
 
 #include "io/json_metadata_guard.hpp"
-#include "records/posed_view_set.hpp"
+#include "records/pose_storage.hpp"
 
 using namespace nb::literals;
 using sio::emit_bytes;
@@ -175,7 +175,7 @@ void write_intrinsics(json &o, const Camera &c) {
     o["h"] = c.height;
 }
 
-PosedViewSet read_transforms_json(nb::handle source) {
+PoseStorage read_transforms_json(nb::handle source) {
     sio::ByteView data(source);
     json d;
     try {  // map JSON parse/type errors to ValueError, per the codec bad-input contract
@@ -192,7 +192,7 @@ PosedViewSet read_transforms_json(nb::handle source) {
     const json &frames = *fit;
     const size_t nv = frames.size();
 
-    PosedViewSet p;
+    PoseStorage p;
     p.quaternion_order = "wxyz";
     p.pose_convention = "camera_to_world";
     p.axis_frame = "opengl";
@@ -392,14 +392,14 @@ std::pair<size_t, size_t> inspect_transforms_json(nb::handle source) {
     return {sax.views, cameras};
 }
 
-nb::bytes write_transforms_json(const PosedViewSet &views) {
+nb::bytes write_transforms_json(const PoseStorage &views) {
     // record-don't-convert: refuse to emit a foreign-convention record under
     // transforms.json's implicit camera_to_world / OpenGL / meters labeling
-    // rather than silently mislabel it (normalize the PosedViewSet first).
+    // rather than silently mislabel it (normalize the PoseStorage first).
     if (views.pose_convention != "camera_to_world" || views.axis_frame != "opengl" ||
         views.scale_to_meters != 1.0)
         throw std::invalid_argument(
-            "transforms.json needs a camera_to_world / opengl / scale-1.0 PosedViewSet; got " +
+            "transforms.json needs a camera_to_world / opengl / scale-1.0 PoseStorage; got " +
             views.pose_convention + " / " + views.axis_frame + " — normalize it first");
     const size_t nv = views.num_views();
     json d = json::object();
@@ -460,7 +460,7 @@ void register_transforms_json(nb::module_ &m) {
     m.def("_inspect_transforms_json", &inspect_transforms_json, "data"_a,
           "Return (view_count, camera_count) without constructing pose arrays.");
     m.def("read_transforms_json", &read_transforms_json, "data"_a,
-          "Decode transforms.json (NeRF/Instant-NGP/Nerfstudio) bytes into a PosedViewSet.");
+          "Decode transforms.json (NeRF/Instant-NGP/Nerfstudio) bytes into a PoseStorage.");
     m.def("write_transforms_json", &write_transforms_json, "views"_a,
-          "Encode a PosedViewSet to transforms.json bytes.");
+          "Encode a PoseStorage to transforms.json bytes.");
 }

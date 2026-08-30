@@ -1,4 +1,4 @@
-"""Bounded USD mesh value extraction shared by legacy and rich reads."""
+"""Bounded USD mesh value extraction for the unified SceneGraph reader."""
 
 from __future__ import annotations
 

@@ -296,7 +296,7 @@ def test_contract_is_a_leaf_and_imports_no_backend() -> None:
         assert getattr(sceneio, name) is getattr(db, name)
     io = sys.modules.get("sceneio.io")
     if io is not None:
-        assert io.ColmapDatabaseConversionReport is db.ColmapDatabaseConversionReport
+        assert not hasattr(io, "ColmapDatabaseConversionReport")
     assert all(
         isinstance(profile, sceneio.DatabaseProfile) for profile in sceneio.COLMAP_DATABASE_PROFILES
     )

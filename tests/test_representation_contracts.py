@@ -1,14 +1,12 @@
 from __future__ import annotations
 
-import inspect
 from pathlib import Path
 
 import pytest
 
 import sceneio.colmap
 import sceneio.colmap_mvs
-import sceneio.data
-import sceneio.io
+from sceneio.contracts import PUBLIC_TYPE_CONTRACTS
 from sceneio.representations import (
     REPRESENTATION_CONTRACT_SCHEMA_VERSION,
     REPRESENTATION_CONTRACTS,
@@ -19,52 +17,18 @@ from sceneio.representations import (
 
 ROOT = Path(__file__).resolve().parents[1]
 
-_NAMESPACES = (
-    ("sceneio", sceneio.io),
-    ("sceneio.data", sceneio.data),
-    ("sceneio.colmap", sceneio.colmap),
-    ("sceneio.colmap_mvs", sceneio.colmap_mvs),
-)
-_NON_REPRESENTATION_CLASSES = {
-    "sceneio": {
-        "ArrayInspection",
-        "Codec",
-        "CodecCapabilities",
-        "ColmapDatabaseConversionReport",
-        "CoordinateConvention",
-        "DepthEncoding",
-        "FormatCoordinateContract",
-        "FormatError",
-        "Inspection",
-        "NativeFeatureCapabilities",
-    },
-    "sceneio.data": {"CameraModel"},
-    "sceneio.colmap": {"ColmapAdapterError"},
-    "sceneio.colmap_mvs": {"ColmapMvsError"},
-}
-
-
-def _public_representation_ids() -> set[str]:
-    result: set[str] = set()
-    for public_prefix, module in _NAMESPACES:
-        exclusions = _NON_REPRESENTATION_CLASSES[public_prefix]
-        exported_classes = {
-            name
-            for name in module.__all__
-            if inspect.isclass(getattr(module, name))
-        }
-        assert exclusions <= exported_classes
-        result.update(
-            f"{public_prefix}.{name}"
-            for name in exported_classes - exclusions
-        )
-    return result
-
-
 def test_contract_catalog_exactly_covers_public_representation_classes():
     assert REPRESENTATION_CONTRACT_SCHEMA_VERSION == 1
-    assert set(REPRESENTATION_CONTRACTS) == _public_representation_ids()
-    assert len(REPRESENTATION_CONTRACTS) == 103
+    assert set(REPRESENTATION_CONTRACTS) == {
+        path
+        for path, contract in PUBLIC_TYPE_CONTRACTS.items()
+        if contract.kind == "representation"
+    }
+    assert len(REPRESENTATION_CONTRACTS) == 90
+    assert not any(
+        path.startswith(("sceneio.data.", "sceneio.io."))
+        for path in REPRESENTATION_CONTRACTS
+    )
 
 
 def test_every_contract_uses_a_registered_profile_and_live_evidence():
@@ -89,28 +53,22 @@ def test_every_contract_uses_a_registered_profile_and_live_evidence():
     assert used_units == REPRESENTATION_UNIT_VOCABULARY
 
 
-def test_lookup_accepts_public_alias_type_and_unambiguous_name():
+def test_lookup_accepts_root_type_and_unambiguous_name():
     assert representation_contract("Image").representation == "sceneio.Image"
-    assert representation_contract("sceneio.io.Image") is representation_contract(
-        sceneio.io.Image
-    )
-    assert representation_contract(sceneio.data.Mask).representation == (
-        "sceneio.data.Mask"
+    assert representation_contract(sceneio.Image).representation == "sceneio.Image"
+    assert representation_contract(sceneio.Mask).representation == (
+        "sceneio.Mask"
     )
     assert representation_contract(sceneio.RasterCollection).profile.id == (
         "raster_collection"
-    )
-    assert representation_contract(sceneio.colmap.SimilarityTransform).profile.id == (
-        "colmap_adapter_sim3"
     )
     assert representation_contract(sceneio.colmap_mvs.ProjectionMatrix).profile.id == (
         "mvs_projection"
     )
 
 
-def test_lookup_refuses_ambiguous_or_unknown_representations():
-    with pytest.raises(ValueError, match=r"ambiguous representation.*sceneio.DepthMap"):
-        representation_contract("DepthMap")
+def test_lookup_refuses_unknown_representations():
+    assert representation_contract("DepthMap").representation == "sceneio.DepthMap"
     with pytest.raises(KeyError, match="unknown SceneIO representation"):
         representation_contract("NotARecord")
     with pytest.raises(TypeError, match="no normalization/scaling contract"):
@@ -127,7 +85,6 @@ def test_conversion_and_metric_claims_stay_narrow():
         "sceneio.GaussianCloud",
         "sceneio.Mesh",
         "sceneio.PointCloud",
-        "sceneio.PosedViewSet",
     }
 
     metric = {
@@ -137,13 +94,12 @@ def test_conversion_and_metric_claims_stay_narrow():
     }
     assert metric == {
         "sceneio.ImuCalibration",
-        "sceneio.MeshScene",
         "sceneio.RtmvDataset",
         "sceneio.colmap.TimeFrame",
     }
     assert representation_contract("sceneio.Reconstruction").scale == "arbitrary"
-    assert representation_contract("sceneio.data.SE3").scale == "arbitrary"
-    assert representation_contract("sceneio.data.FrameMeta").scale == (
+    assert representation_contract("sceneio.SE3").scale == "arbitrary"
+    assert representation_contract("sceneio.FrameMeta").scale == (
         "record_declared"
     )
     for name in ("sceneio.Mesh", "sceneio.PointCloud"):
@@ -153,7 +109,7 @@ def test_conversion_and_metric_claims_stay_narrow():
 
 
 def test_gaussian_semantic_contract_qualifies_only_declared_world_normalization():
-    contract = representation_contract(sceneio.io.GaussianCloud)
+    contract = representation_contract(sceneio.GaussianCloud)
     assert contract.normalization == "declared"
     assert contract.scale == "mixed"
     assert contract.coordinates == "record_declared"
@@ -180,10 +136,10 @@ def test_gaussian_semantic_contract_qualifies_only_declared_world_normalization(
 
 
 def test_dense_label_contracts_keep_ids_unscaled_and_unpacking_explicit():
-    taxonomy = representation_contract(sceneio.data.LabelTaxonomy)
-    semantic = representation_contract(sceneio.data.SemanticMap)
-    instance = representation_contract(sceneio.data.InstanceMap)
-    panoptic = representation_contract(sceneio.data.PanopticMap)
+    taxonomy = representation_contract(sceneio.LabelTaxonomy)
+    semantic = representation_contract(sceneio.SemanticMap)
+    instance = representation_contract(sceneio.InstanceMap)
+    panoptic = representation_contract(sceneio.PanopticMap)
     assert taxonomy.profile.id == "label_taxonomy"
     assert semantic.profile.id == "semantic_labels"
     assert instance.profile.id == "instance_labels"
@@ -194,13 +150,10 @@ def test_dense_label_contracts_keep_ids_unscaled_and_unpacking_explicit():
     assert all(contract.scale == "identity" for contract in (taxonomy, semantic, instance, panoptic))
 
 
-def test_compiled_and_neutral_records_with_same_name_remain_distinct():
-    compiled_depth = representation_contract("sceneio.DepthMap")
-    neutral_depth = representation_contract("sceneio.data.DepthMap")
-    assert compiled_depth.profile.id == "depth_declared"
-    assert neutral_depth.profile.id == "depth_parent_scale"
-    assert "scale_to_meters" in compiled_depth.profile.scale_fields
-    assert "FrameMeta.scale" in neutral_depth.profile.scale_fields
+def test_consolidated_records_have_one_owner_and_complete_semantics():
+    depth = representation_contract("sceneio.DepthMap")
+    assert depth.profile.id == "depth_declared"
+    assert "scale_to_meters" in depth.profile.scale_fields
 
     rig = representation_contract("sceneio.CameraRig")
     assert "second" in rig.canonical_units

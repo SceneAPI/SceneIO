@@ -12,7 +12,7 @@ from pathlib import PurePosixPath
 from types import MappingProxyType
 from typing import Literal, get_args
 
-PUBLIC_TYPE_CONTRACT_SCHEMA_VERSION = 1
+PUBLIC_TYPE_CONTRACT_SCHEMA_VERSION = 2
 
 ContractKind = Literal[
     "representation",
@@ -35,7 +35,6 @@ ContractMutability = Literal[
     "not_applicable",
 ]
 ContractRelationKind = Literal[
-    "adapts_to",
     "contains",
     "input_to",
     "output_of",

@@ -1,10 +1,9 @@
 # Representation normalization and scaling
 
 SceneIO has a versioned, machine-readable numeric contract for every public
-data-bearing class in `sceneio.io`, `sceneio.data`, `sceneio.colmap`, and
-`sceneio.colmap_mvs`. Version 1 covers 103 representations. Registry helpers,
-errors, capability/inspection results, and enums are not data representations
-and are excluded by an exact test allowlist.
+data-bearing class exported from `sceneio`, `sceneio.colmap`, and
+`sceneio.colmap_mvs`. Version 1 covers 90 representations. Registry helpers,
+errors, capability/inspection results, and enums are not data representations.
 
 The source of truth is `sceneio.REPRESENTATION_CONTRACTS`. A contract answers
 four separate questions that must not be collapsed into the word
@@ -42,16 +41,10 @@ assert cloud_contract.scale_fields == (
     "display_color_space",
 )
 
-# The compiled and neutral DepthMap records intentionally have different
-# contracts, so a bare ambiguous name is refused.
-compiled = sceneio.representation_contract("sceneio.DepthMap")
-neutral = sceneio.representation_contract("sceneio.data.DepthMap")
+# Consolidated representations have one canonical root path.
+depth = sceneio.representation_contract("sceneio.DepthMap")
+assert sceneio.representation_contract("DepthMap") is depth
 ```
-
-Use `sceneio.canonical` to cross the loaded/native and neutral procedure
-layers. The adapters are explicit, preserve the common subset, and reject or
-require acknowledgement for fields the destination cannot carry. See
-[Loaded records and neutral contracts](canonicalization.md).
 
 `REPRESENTATION_PROFILES` is an immutable mapping of reusable standard
 profiles. `REPRESENTATION_CONTRACTS` is an immutable mapping from public import
@@ -103,26 +96,22 @@ contract; `normalized` and `arbitrary` do not.
 - `Mask` is canonical HxW bool, with `True` meaning the pixel participates.
   `ConfidenceMap` is finite float32 in `[0, 1]`; arbitrary scores cannot be
   relabeled as confidence.
-- `sceneio.data.LabelTaxonomy` gives semantic `int32` ids an explicit identity
-  and version. `sceneio.data.SemanticMap` keeps those ids separate from its
-  void id; `sceneio.data.InstanceMap` keeps `int64` instance ids separate from
-  its background id and optional class table. `sceneio.data.PanopticMap`
+- `sceneio.LabelTaxonomy` gives semantic `int32` ids an explicit identity
+  and version. `sceneio.SemanticMap` keeps those ids separate from its
+  void id; `sceneio.InstanceMap` keeps `int64` instance ids separate from
+  its background id and optional class table. `sceneio.PanopticMap`
   composes the two child rasters without packing or copying them. Packing is an
   explicit checked conversion with a caller-supplied divisor and output dtype.
   NPZ, Zarr, and TIFF attach these meanings only through the exact
   `sceneio.label_map/1` typed adapter (or an explicit TIFF caller contract).
   NCore does so only for a `SEGMENTATION` descriptor that owns the same exact
   extension; neither carrier names nor observed ids activate the contract.
-- Compiled `DepthMap` preserves raw float32 depth and supplies
+- `DepthMap` preserves raw float32 depth and supplies
   `scale_to_meters`, unit, invalid-value, and depth-interpretation metadata.
-  Neutral `sceneio.data.DepthMap` inherits length scale from its owning
-  `FrameMeta`. `sceneio.canonical.depth_map_from_native` therefore requires an
-  explicit stored-to-parent scale and never guesses it.
-- Compiled and neutral `Camera`/`CameraIntrinsics`, `FeatureSet`,
-  `MatchGraph`/`CorrespondenceGraph`, `DepthMap`, and `PosedViewSet` pairs keep
-  distinct identities and roles. Reciprocal `adapts_to` edges in the public
-  contract catalog point to the checked `sceneio.canonical` functions; shared
-  normalization profiles alone never imply identity or automatic conversion.
+  Parent-frame interpretation is explicit and no conversion guesses scale.
+- `CameraIntrinsics`, `FeatureSet`, `CorrespondenceGraph`, `DepthMap`, and
+  `PosedViewSet` each have one public identity. Storage-specific details are
+  private implementation concerns, not parallel public representations.
 - `PointCloud` and `Mesh` carry an explicit frame and `scale_to_meters`; their
   public coordinate conversion is direct and refuses fields it cannot preserve.
 - `PointScan` preserves stored rows, raw uint8 invalid states, optional int64
@@ -172,7 +161,7 @@ models grow. Every public representation still has its own mapping entry.
 
 | Profile | Public representations |
 |---|---|
-| `camera_intrinsics` | `sceneio.Camera`, `sceneio.data.CameraIntrinsics` |
+| `camera_intrinsics` | `sceneio.CameraIntrinsics` |
 | `camera_rig` | `sceneio.CameraRig` |
 | `imu_calibration` | `sceneio.ImuCalibration` |
 | `imu_sequence` | `sceneio.ImuSequence` |
@@ -185,7 +174,7 @@ models grow. Every public representation still has its own mapping entry.
 | `video_metadata` | `sceneio.ColmapVideoMetadataSet` |
 | `index_graph` | `sceneio.ConsistencyGraph`, `sceneio.PointVisibility`, `sceneio.colmap_mvs.PmvsVisibilityGraph` |
 | `depth_declared` | `sceneio.DepthMap` |
-| `features` | `sceneio.FeatureSet`, `sceneio.data.FeatureSet` |
+| `features` | `sceneio.FeatureSet` |
 | `optical_flow` | `sceneio.FlowField` |
 | `gaussian_cloud` | `sceneio.GaussianCloud` |
 | `hloc_features` | `sceneio.HlocFeatureStore` |
@@ -193,10 +182,9 @@ models grow. Every public representation still has its own mapping entry.
 | `image_samples` | `sceneio.Image` |
 | `image_sequence` | `sceneio.ImageSequence` |
 | `instances` | `sceneio.InstanceSet` |
-| `matches` | `sceneio.MatchGraph`, `sceneio.data.CorrespondenceGraph`, `sceneio.data.PairCorrespondences`, `sceneio.data.TwoViewGeometry` |
+| `matches` | `sceneio.CorrespondenceGraph`, `sceneio.PairCorrespondences`, `sceneio.TwoViewGeometry` |
 | `materials` | `sceneio.MaterialSet` |
 | `mesh` | `sceneio.Mesh` |
-| `mesh_scene` | `sceneio.MeshScene` |
 | `ncore_schema` | `sceneio.NCoreArray`, `sceneio.NCoreComponent`, `sceneio.NCoreDataset`, `sceneio.NCoreGroup`, `sceneio.NCoreSelection`, `sceneio.NCoreStore` |
 | `ncore_payload` | `sceneio.NCoreComponentData`, `sceneio.NCoreDatasetData`, `sceneio.NCoreItem`, `sceneio.NCoreSemanticComponent` |
 | `normal_vectors` | `sceneio.NormalMap` |
@@ -211,43 +199,39 @@ models grow. Every public representation still has its own mapping entry.
 | `state_trajectory` | `sceneio.StateTrajectory` |
 | `tensor_container` | `sceneio.TensorDict` |
 | `volume_reference` | `sceneio.VolumeAsset` |
-| `se3` | `sceneio.data.SE3` |
-| `calibration_union` | `sceneio.data.Calibration` |
-| `confidence_unit_interval` | `sceneio.data.ConfidenceMap` |
-| `depth_parent_scale` | `sceneio.data.DepthMap` |
-| `frame_meta` | `sceneio.data.FrameMeta` |
-| `binary_mask` | `sceneio.data.Mask` |
-| `raster_collection` | `sceneio.data.RasterCollection`, `sceneio.data.RasterLevel`, `sceneio.data.RasterSeries` |
-| `label_taxonomy` | `sceneio.data.LabelTaxonomy` |
-| `semantic_labels` | `sceneio.data.SemanticMap` |
-| `instance_labels` | `sceneio.data.InstanceMap` |
-| `panoptic_labels` | `sceneio.data.PanopticMap` |
-| `pointmap_parent_scale` | `sceneio.data.Pointmap` |
-| `pose_prior` | `sceneio.data.PosePrior` |
-| `posed_views_parent` | `sceneio.data.PosedViewSet` |
-| `unit_ray_map` | `sceneio.data.RayMap` |
-| `sim3` | `sceneio.data.Sim3` |
-| `track_observation` | `sceneio.data.TrackObservation` |
-| `tracked_point_cloud` | `sceneio.data.TrackedPointCloud` |
-| `view_input` | `sceneio.data.ViewInput` |
-| `colmap_adapter_calibration` | `sceneio.colmap.CharucoBoard`, `sceneio.colmap.CharucoCalibration`, `sceneio.colmap.MappingCamera` |
+| `se3` | `sceneio.SE3` |
+| `calibration_union` | `sceneio.Calibration` |
+| `confidence_unit_interval` | `sceneio.ConfidenceMap` |
+| `frame_meta` | `sceneio.FrameMeta` |
+| `binary_mask` | `sceneio.Mask` |
+| `raster_collection` | `sceneio.RasterCollection`, `sceneio.RasterLevel`, `sceneio.RasterSeries` |
+| `label_taxonomy` | `sceneio.LabelTaxonomy` |
+| `semantic_labels` | `sceneio.SemanticMap` |
+| `instance_labels` | `sceneio.InstanceMap` |
+| `panoptic_labels` | `sceneio.PanopticMap` |
+| `pointmap_parent_scale` | `sceneio.Pointmap` |
+| `pose_prior` | `sceneio.PosePrior` |
+| `unit_ray_map` | `sceneio.RayMap` |
+| `sim3` | `sceneio.Sim3` |
+| `track_observation` | `sceneio.TrackObservation` |
+| `view_input` | `sceneio.ViewInput` |
+| `colmap_adapter_calibration` | `sceneio.colmap.CharucoBoard`, `sceneio.colmap.CharucoCalibration` |
 | `colmap_adapter_scene` | `sceneio.colmap.ExtendedSparseModel`, `sceneio.colmap.MappingInput`, `sceneio.colmap.SparseExtensions` |
 | `megaloc_artifacts` | `sceneio.colmap.MegaLocArtifacts` |
 | `retrieval_pair` | `sceneio.colmap.MegaLocPair` |
-| `colmap_adapter_features` | `sceneio.colmap.MappingImage`, `sceneio.colmap.MappingMatch`, `sceneio.colmap.NamedMatches`, `sceneio.colmap.SiftFeatures`, `sceneio.colmap.SparseMarkerProjection` |
+| `colmap_adapter_features` | `sceneio.colmap.SparseMarkerProjection` |
 | `colmap_rig_configuration` | `sceneio.colmap.RigConfigCamera`, `sceneio.colmap.RigConfiguration` |
-| `colmap_adapter_sim3` | `sceneio.colmap.SimilarityTransform` |
 | `time_metadata` | `sceneio.colmap.TimeFrame` |
 | `mvs_workspace` | `sceneio.colmap_mvs.ColmapMvsWorkspace`, `sceneio.colmap_mvs.DenseMapSet`, `sceneio.colmap_mvs.LegacyMvsWorkspace`, `sceneio.colmap_mvs.WorkspaceInspection`, `sceneio.colmap_mvs.WorkspaceValidation` |
 | `mvs_projection` | `sceneio.colmap_mvs.ProjectionMatrix` |
 
 ## Verification and change policy
 
-`tests/test_representation_contracts.py` discovers exported classes from all
-four namespaces and requires exact equality with the 103-entry catalog. It also
+`tests/test_representation_contracts.py` discovers exported classes from the
+canonical public namespaces and requires exact equality with the 90-entry catalog. It also
 checks profile vocabulary, immutable lookup behavior, live evidence paths,
-ambiguous-name refusal, the exact four direct-conversion records, narrow metric
-claims, compiled/neutral record distinctions, and Gaussian refusal boundaries.
+short-name lookup, the exact three direct-conversion records, narrow metric
+claims, consolidated record ownership, and Gaussian refusal boundaries.
 
 Format-specific decode/encode normalization remains governed by the 74-row
 oracle ledger in

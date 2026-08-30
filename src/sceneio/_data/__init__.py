@@ -1,32 +1,28 @@
-"""Numpy-native data contracts shared across the SceneAPI family.
+"""Private implementations backing SceneIO's root data contracts.
 
 The neutral nouns every mapping/matching implementation — classical
 (COLMAP-style) or feed-forward (MapAnything-style) — agrees on:
 calibration, poses, priors, dense per-pixel outputs, sparse features
-and correspondences, tracked point clouds, and the view-level inputs.
+and correspondences, point clouds with optional tracks, and view-level inputs.
 Every array-carrying type validates shape/dtype/value on construction
 and raises :class:`sceneio.errors.ContractViolation` with a precise
 message on violation.
 
-This namespace imports nothing from the SceneAPI family (guard-tested)
-and nothing from the sibling :mod:`sceneio.mapping` /
-:mod:`sceneio.matching` namespaces — it is the shared floor both
-stand on.
+Public identities live at :mod:`sceneio`. This namespace imports nothing from
+the SceneAPI family (guard-tested) and nothing from the sibling
+:mod:`sceneio.mapping` / :mod:`sceneio.matching` namespaces.
 """
 
 from __future__ import annotations
 
-from sceneio.coordinates import install_coordinate_properties
-from sceneio.data.calibration import (
+from sceneio._data.calibration import (
     Calibration,
-    CameraIntrinsics,
     CameraModel,
     RayMap,
 )
-from sceneio.data.dense import (
+from sceneio._data.dense import (
     POINTMAP_FRAMES,
     ConfidenceMap,
-    DepthMap,
     InstanceMap,
     LabelTaxonomy,
     Mask,
@@ -34,16 +30,15 @@ from sceneio.data.dense import (
     Pointmap,
     SemanticMap,
 )
-from sceneio.data.features import (
+from sceneio._data.features import (
     CORRESPONDENCE_MODES,
     CorrespondenceGraph,
-    FeatureSet,
     PairCorrespondences,
     TwoViewGeometry,
 )
-from sceneio.data.pointcloud import TrackedPointCloud, TrackObservation
-from sceneio.data.priors import PosePrior
-from sceneio.data.raster import (
+from sceneio._data.pointcloud import TrackObservation
+from sceneio._data.priors import PosePrior
+from sceneio._data.raster import (
     RASTER_AXES,
     RASTER_DTYPES,
     RASTER_PAYLOAD_KINDS,
@@ -51,13 +46,13 @@ from sceneio.data.raster import (
     RasterLevel,
     RasterSeries,
 )
-from sceneio.data.transforms import (
+from sceneio._data.transforms import (
     DEFAULT_CONVENTION,
     POSE_CONVENTIONS,
     SE3,
     Sim3,
 )
-from sceneio.data.views import (
+from sceneio._data.views import (
     SCALE_CLASSES,
     SCALE_PROVENANCES,
     FrameMeta,
@@ -65,14 +60,12 @@ from sceneio.data.views import (
     PosedViewSet,
     ViewInput,
 )
+from sceneio.coordinates import install_coordinate_properties
 
 install_coordinate_properties(
     Calibration,
-    CameraIntrinsics,
     ConfidenceMap,
     CorrespondenceGraph,
-    DepthMap,
-    FeatureSet,
     FrameMeta,
     InstanceMap,
     LabelTaxonomy,
@@ -89,7 +82,6 @@ install_coordinate_properties(
     RasterCollection,
     RasterLevel,
     RasterSeries,
-    TrackedPointCloud,
     TwoViewGeometry,
     ViewInput,
 )
@@ -104,20 +96,13 @@ __all__ = [
     "RASTER_PAYLOAD_KINDS",
     "SCALE_CLASSES",
     "SCALE_PROVENANCES",
-    "SE3",
-    "Calibration",
-    "CameraIntrinsics",
     "CameraModel",
     "ConfidenceMap",
-    "CorrespondenceGraph",
-    "DepthMap",
-    "FeatureSet",
     "FrameMeta",
     "ImageRef",
     "InstanceMap",
     "LabelTaxonomy",
     "Mask",
-    "PairCorrespondences",
     "PanopticMap",
     "Pointmap",
     "PosePrior",
@@ -125,11 +110,7 @@ __all__ = [
     "RasterCollection",
     "RasterLevel",
     "RasterSeries",
-    "RayMap",
     "SemanticMap",
-    "Sim3",
     "TrackObservation",
-    "TrackedPointCloud",
-    "TwoViewGeometry",
     "ViewInput",
 ]

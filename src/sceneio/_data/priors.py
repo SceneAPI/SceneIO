@@ -5,8 +5,8 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 
-from sceneio.data._validation import as_float64, ensure_instance
-from sceneio.data.transforms import SE3
+from sceneio._data._validation import as_float64, ensure_instance
+from sceneio._data.transforms import SE3
 from sceneio.errors import ContractViolation
 
 

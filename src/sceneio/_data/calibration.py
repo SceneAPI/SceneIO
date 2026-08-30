@@ -18,12 +18,13 @@ from typing import Literal
 
 import numpy as np
 
+from sceneio import _core
 from sceneio._camera_models import (
     CAMERA_MODEL_IDS_BY_NAME,
     CAMERA_MODEL_NAMES,
     CAMERA_MODEL_PARAMETER_NAMES,
 )
-from sceneio.data._validation import as_float64, ensure_array, ensure_positive_int
+from sceneio._data._validation import ensure_array
 from sceneio.errors import ContractViolation
 
 
@@ -61,41 +62,6 @@ CameraModel = enum.Enum(
     module=__name__,
 )
 CameraModel.__doc__ = "COLMAP's camera-model vocabulary (names, ids, and param layouts)."
-
-
-@dataclass(frozen=True)
-class CameraIntrinsics:
-    """Parametric camera calibration in COLMAP's model vocabulary."""
-
-    model: CameraModel
-    width: int
-    height: int
-    params: np.ndarray  # (model.num_params,) float64
-
-    def __post_init__(self) -> None:
-        model = self.model
-        if isinstance(model, str):
-            try:
-                model = CameraModel(model)
-            except ValueError:
-                raise ContractViolation(
-                    f"CameraIntrinsics.model: unknown camera model {self.model!r}; "
-                    f"expected one of {[m.value for m in CameraModel]}"
-                ) from None
-            object.__setattr__(self, "model", model)
-        elif not isinstance(model, CameraModel):
-            raise ContractViolation(
-                f"CameraIntrinsics.model: expected CameraModel, got {type(model).__name__}"
-            )
-        ensure_positive_int("CameraIntrinsics.width", self.width)
-        ensure_positive_int("CameraIntrinsics.height", self.height)
-        params = as_float64("CameraIntrinsics.params", self.params, (None,))
-        if params.shape[0] != model.num_params:
-            raise ContractViolation(
-                f"CameraIntrinsics.params: model {model.value} takes "
-                f"{model.num_params} params {model.param_names}, got {params.shape[0]}"
-            )
-        object.__setattr__(self, "params", params)
 
 
 @dataclass(frozen=True)
@@ -141,7 +107,7 @@ class RayMap:
 class Calibration:
     """Exactly one calibration form: parametric intrinsics XOR a ray map."""
 
-    intrinsics: CameraIntrinsics | None = None
+    intrinsics: _core.CameraIntrinsics | None = None
     rays: RayMap | None = None
 
     def __post_init__(self) -> None:
@@ -150,7 +116,9 @@ class Calibration:
             raise ContractViolation(
                 f"Calibration: exactly one of intrinsics/rays must be set, got {given}"
             )
-        if self.intrinsics is not None and not isinstance(self.intrinsics, CameraIntrinsics):
+        if self.intrinsics is not None and not isinstance(
+            self.intrinsics, _core.CameraIntrinsics
+        ):
             raise ContractViolation(
                 f"Calibration.intrinsics: expected CameraIntrinsics, "
                 f"got {type(self.intrinsics).__name__}"
@@ -161,7 +129,7 @@ class Calibration:
             )
 
     @classmethod
-    def from_intrinsics(cls, intrinsics: CameraIntrinsics) -> Calibration:
+    def from_intrinsics(cls, intrinsics: _core.CameraIntrinsics) -> Calibration:
         return cls(intrinsics=intrinsics)
 
     @classmethod

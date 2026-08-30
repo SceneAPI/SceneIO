@@ -433,10 +433,15 @@ def _rgba8_colors(mesh: Any) -> np.ndarray:
 
 
 def _canonical_mesh(value: Any) -> dict[str, Any]:
-    """Canonicalize a SceneIO MeshScene or trimesh Scene for comparisons."""
+    """Canonicalize a SceneIO SceneGraph or trimesh Scene for comparisons."""
 
-    if hasattr(value, "num_primitives") and hasattr(value, "primitive_at"):
-        meshes = [value.primitive_at(i) for i in range(value.num_primitives)]
+    if hasattr(value, "num_mesh_primitives") and hasattr(
+        value, "mesh_primitive_at"
+    ):
+        meshes = [
+            value.mesh_primitive_at(i)
+            for i in range(value.num_mesh_primitives)
+        ]
         names = tuple(getattr(value, "mesh_names", ()))
         positions = []
         faces = []
@@ -467,7 +472,18 @@ def _canonical_mesh(value: Any) -> dict[str, Any]:
             else:
                 has_colors = False
             vertex_offset += len(pos)
-        node_meshes = np.asarray(value.node_meshes, dtype=np.int64)
+        payload_kinds = tuple(value.node_payload_kinds)
+        payload_indices = np.asarray(
+            value.node_payload_indices,
+            dtype=np.uint64,
+        )
+        node_meshes = np.array(
+            [
+                int(payload_indices[index]) if kind == "mesh" else -1
+                for index, kind in enumerate(payload_kinds)
+            ],
+            dtype=np.int64,
+        )
         local_transforms = np.asarray(value.node_local_transforms, dtype=np.float64)
         child_offsets = np.asarray(value.node_child_offsets, dtype=np.uint64)
         children = np.asarray(value.node_children, dtype=np.uint64)
@@ -563,11 +579,19 @@ def _trimesh_from_scene(value: Any):
     trimesh = _module("trimesh")
     scene = trimesh.Scene()
     names = tuple(getattr(value, "mesh_names", ()))
-    node_meshes = np.asarray(value.node_meshes, dtype=np.int64)
+    payload_kinds = tuple(value.node_payload_kinds)
+    payload_indices = np.asarray(value.node_payload_indices, dtype=np.uint64)
+    node_meshes = np.array(
+        [
+            int(payload_indices[index]) if kind == "mesh" else -1
+            for index, kind in enumerate(payload_kinds)
+        ],
+        dtype=np.int64,
+    )
     node_names = tuple(value.node_names)
     local_transforms = np.asarray(value.node_local_transforms, dtype=np.float64)
-    for index in range(value.num_primitives):
-        mesh = value.primitive_at(index)
+    for index in range(value.num_mesh_primitives):
+        mesh = value.mesh_primitive_at(index)
         offsets = np.asarray(mesh.face_offsets, np.uint64)
         indices = np.asarray(mesh.face_indices, np.uint64)
         if not all(int(stop - start) == 3 for start, stop in pairwise(offsets)):
@@ -903,17 +927,19 @@ def _colmap_image_summary(value: Any) -> dict[str, Any]:
 
 def _colmap_camera_summary(value: Any) -> tuple[tuple[Any, ...], ...]:
     if _is_sceneio_colmap(value):
-        cameras = value.cameras
-        iterator = sorted(cameras, key=lambda item: int(item.id))
+        iterator = sorted(
+            zip(np.asarray(value.camera_ids), value.cameras, strict=True),
+            key=lambda item: int(item[0]),
+        )
         return tuple(
             (
-                int(camera.id),
+                int(camera_id),
                 _camera_model_name(camera),
                 int(camera.width),
                 int(camera.height),
                 np.asarray(camera.params, dtype=np.float64),
             )
-            for camera in iterator
+            for camera_id, camera in iterator
         )
     return tuple(
         (
@@ -1127,13 +1153,16 @@ def _canonical_colmap(value: Any) -> dict[str, Any]:
         point_order = np.argsort(point_ids)
         cameras = tuple(
             (
-                int(camera.id),
+                int(camera_id),
                 _camera_model_name(camera),
                 int(camera.width),
                 int(camera.height),
                 np.asarray(camera.params, dtype=np.float64),
             )
-            for camera in sorted(value.cameras, key=lambda item: int(item.id))
+            for camera_id, camera in sorted(
+                zip(np.asarray(value.camera_ids), value.cameras, strict=True),
+                key=lambda item: int(item[0]),
+            )
         )
         return {
             "cameras": cameras,
@@ -1487,15 +1516,16 @@ def build_glb_fixture(
     )
     instance_transform = np.eye(4, dtype=np.float64)
     instance_transform[:3, 3] = [0.75, -1.25, 2.5]
-    scene = _core.mesh_scene(
-        [mesh],
-        np.asarray([0, 1], dtype=np.uint64),
+    scene = _core.scene_graph(
+        ["box_grid"],
+        meshes=[mesh],
+        mesh_primitive_offsets=np.asarray([0, 1], dtype=np.uint64),
         mesh_names=["box_grid"],
-        node_meshes=np.asarray([0], dtype=np.int64),
+        node_payload_kinds=["mesh"],
+        node_payload_indices=np.asarray([0], dtype=np.uint64),
         node_child_offsets=np.asarray([0, 0], dtype=np.uint64),
         node_children=np.empty(0, dtype=np.uint64),
         node_local_transforms=instance_transform[None],
-        node_names=["box_grid"],
         scene_root_offsets=np.asarray([0, 1], dtype=np.uint64),
         scene_roots=np.asarray([0], dtype=np.uint64),
         scene_names=["box_grid"],

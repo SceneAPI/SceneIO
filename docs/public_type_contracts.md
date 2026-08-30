@@ -8,10 +8,10 @@ runtime codec inventory in [Format coverage](format_coverage.md). The
 the compatibility decisions and implementation gates that produced this API.
 
 <!-- sceneio-public-contract-summary:start -->
-**Generated public-type contract:** SceneIO classifies all **144 public class
-identities**: **103** representations, **21** descriptors, **5** procedure values, **6**
+**Generated public-type contract:** SceneIO classifies all **131 public class
+identities**: **90** representations, **21** descriptors, **5** procedure values, **6**
 protocols, **3** vocabularies, **5** errors, and **1** wire record. The catalog records
-**60 supported alias paths** and relates all **26 built-in payload kinds** to the public
+**0 supported alias paths** and relates all **26 built-in payload kinds** to the public
 types and formats they carry. Values come directly from
 `sceneio.contracts.PUBLIC_TYPE_CONTRACTS` and
 `sceneio.contracts.BUILTIN_CODEC_PAYLOAD_KINDS`.
@@ -36,11 +36,12 @@ same = sceneio.contracts.public_type_contract(
 assert same is contract
 ```
 
-Canonical paths, supported aliases, classes, instances, and unambiguous short
-names are accepted. Ambiguous short names, such as `DepthMap`, require a
-qualified path. Unknown strings and unsupported objects fail explicitly.
+Canonical paths, classes, instances, and unambiguous short names are accepted.
+Ambiguous short names, if introduced by an extension, require a qualified
+path. Unknown strings and unsupported objects fail explicitly. The built-in
+0.4 catalog intentionally has no public alias paths.
 
-For normalization, scale, coordinate, or conversion details on one of the 103
+For normalization, scale, coordinate, or conversion details on one of the 90
 data representations, continue to use `sceneio.representation_contract()`.
 The generic representation envelope references the exact same specialized
 contract object; it does not copy that authority.
@@ -57,12 +58,11 @@ member semantics, invariants, refusal behavior, executable evidence, and typed
 relations. All model values and public mappings are immutable. Implementation
 module paths are diagnostic lookup identities, not supported public aliases.
 
-The `adapts_to` relation connects the distinct loaded and neutral camera,
-feature, match, depth, and posed-view roles implemented by
-`sceneio.canonical`. It records that an explicit checked adapter exists; it
-does not assert universal losslessness. Adapter-specific context, loss, and
-refusal rules are documented in
-[Loaded records and neutral contracts](canonicalization.md).
+The consolidated 0.4 catalog has no `alias_of` or `adapts_to` relations.
+Cameras, features, correspondence graphs, depth maps, posed views, point
+tracks, and scenes each have one public owner. Format-specific storage carriers
+remain private implementation details and cannot be discovered as alternative
+public representations.
 
 The catalog is provider-independent: importing `sceneio.contracts` does not
 load NumPy, the compiled core, mapping or matching implementations, or optional
@@ -77,92 +77,107 @@ kind-specific contract is authoritative.
 | Canonical public path | Kind | Supported aliases | Specialized profile / procedure role |
 |---|---|---|---|
 <!-- sceneio-public-type-rows:start -->
-| `sceneio.ArrayInspection` | `descriptor` | `sceneio.io.ArrayInspection` | - |
+| `sceneio.ArrayInspection` | `descriptor` | - | - |
 | `sceneio.BlobStore` | `protocol` | - | - |
-| `sceneio.Camera` | `representation` | `sceneio.io.Camera` | `camera_intrinsics` |
-| `sceneio.CameraRig` | `representation` | `sceneio.io.CameraRig` | `camera_rig` |
+| `sceneio.Calibration` | `representation` | - | `calibration_union` |
+| `sceneio.CameraIntrinsics` | `representation` | - | `camera_intrinsics` |
+| `sceneio.CameraModel` | `vocabulary` | - | - |
+| `sceneio.CameraRig` | `representation` | - | `camera_rig` |
 | `sceneio.CheckpointRef` | `descriptor` | - | - |
-| `sceneio.CodecCapabilities` | `descriptor` | `sceneio.io.CodecCapabilities` | - |
-| `sceneio.ColmapDatabase` | `representation` | `sceneio.io.ColmapDatabase` | `colmap_database` |
-| `sceneio.ColmapDatabaseConversionReport` | `descriptor` | `sceneio.io.ColmapDatabaseConversionReport` | - |
-| `sceneio.ColmapMarkerSet` | `representation` | `sceneio.io.ColmapMarkerSet` | `colmap_marker_companion` |
-| `sceneio.ColmapMaxxSchemaInfo` | `representation` | `sceneio.io.ColmapMaxxSchemaInfo` | `structural_metadata` |
-| `sceneio.ColmapPosePriorSet` | `representation` | `sceneio.io.ColmapPosePriorSet` | `colmap_pose_prior_companion` |
-| `sceneio.ColmapRigFrameSet` | `representation` | `sceneio.io.ColmapRigFrameSet` | `colmap_rig_frame_companion` |
-| `sceneio.ColmapVideoMetadataSet` | `representation` | `sceneio.io.ColmapVideoMetadataSet` | `video_metadata` |
+| `sceneio.Codec` | `descriptor` | - | - |
+| `sceneio.CodecCapabilities` | `descriptor` | - | - |
+| `sceneio.ColmapDatabase` | `representation` | - | `colmap_database` |
+| `sceneio.ColmapDatabaseConversionReport` | `descriptor` | - | - |
+| `sceneio.ColmapMarkerSet` | `representation` | - | `colmap_marker_companion` |
+| `sceneio.ColmapMaxxSchemaInfo` | `representation` | - | `structural_metadata` |
+| `sceneio.ColmapPosePriorSet` | `representation` | - | `colmap_pose_prior_companion` |
+| `sceneio.ColmapRigFrameSet` | `representation` | - | `colmap_rig_frame_companion` |
+| `sceneio.ColmapVideoMetadataSet` | `representation` | - | `video_metadata` |
 | `sceneio.ColumnDef` | `descriptor` | - | - |
-| `sceneio.ConsistencyGraph` | `representation` | `sceneio.io.ConsistencyGraph` | `index_graph` |
+| `sceneio.ConfidenceMap` | `representation` | - | `confidence_unit_interval` |
+| `sceneio.ConsistencyGraph` | `representation` | - | `index_graph` |
 | `sceneio.ContractViolation` | `error` | - | - |
-| `sceneio.CoordinateConvention` | `descriptor` | `sceneio.io.CoordinateConvention` | - |
+| `sceneio.CoordinateConvention` | `descriptor` | - | - |
+| `sceneio.CorrespondenceGraph` | `representation` | - | `matches` |
 | `sceneio.DatabaseProfile` | `descriptor` | - | - |
-| `sceneio.DepthEncoding` | `descriptor` | `sceneio.io.DepthEncoding` | - |
-| `sceneio.DepthMap` | `representation` | `sceneio.io.DepthMap` | `depth_declared` |
-| `sceneio.FeatureSet` | `representation` | `sceneio.io.FeatureSet` | `features` |
-| `sceneio.FlowField` | `representation` | `sceneio.io.FlowField` | `optical_flow` |
-| `sceneio.FormatCoordinateContract` | `descriptor` | `sceneio.io.FormatCoordinateContract` | - |
-| `sceneio.FormatError` | `error` | `sceneio.io.FormatError` | - |
-| `sceneio.GaussianCloud` | `representation` | `sceneio.io.GaussianCloud` | `gaussian_cloud` |
-| `sceneio.HlocFeatureStore` | `representation` | `sceneio.io.HlocFeatureStore` | `hloc_features` |
-| `sceneio.HlocMatchStore` | `representation` | `sceneio.io.HlocMatchStore` | `hloc_matches` |
-| `sceneio.Image` | `representation` | `sceneio.io.Image` | `image_samples` |
-| `sceneio.ImageSequence` | `representation` | `sceneio.io.ImageSequence` | `image_sequence` |
+| `sceneio.DepthEncoding` | `descriptor` | - | - |
+| `sceneio.DepthMap` | `representation` | - | `depth_declared` |
+| `sceneio.FeatureSet` | `representation` | - | `features` |
+| `sceneio.FlowField` | `representation` | - | `optical_flow` |
+| `sceneio.FormatCoordinateContract` | `descriptor` | - | - |
+| `sceneio.FormatError` | `error` | - | - |
+| `sceneio.FrameMeta` | `representation` | - | `frame_meta` |
+| `sceneio.GaussianCloud` | `representation` | - | `gaussian_cloud` |
+| `sceneio.HlocFeatureStore` | `representation` | - | `hloc_features` |
+| `sceneio.HlocMatchStore` | `representation` | - | `hloc_matches` |
+| `sceneio.Image` | `representation` | - | `image_samples` |
+| `sceneio.ImageSequence` | `representation` | - | `image_sequence` |
 | `sceneio.ImageSourceImpl` | `protocol` | - | - |
-| `sceneio.ImuCalibration` | `representation` | `sceneio.io.ImuCalibration` | `imu_calibration` |
-| `sceneio.ImuSequence` | `representation` | `sceneio.io.ImuSequence` | `imu_sequence` |
-| `sceneio.Inspection` | `descriptor` | `sceneio.io.Inspection` | - |
-| `sceneio.InstanceSet` | `representation` | `sceneio.io.InstanceSet` | `instances` |
-| `sceneio.MatchGraph` | `representation` | `sceneio.io.MatchGraph` | `matches` |
-| `sceneio.MaterialSet` | `representation` | `sceneio.io.MaterialSet` | `materials` |
+| `sceneio.ImuCalibration` | `representation` | - | `imu_calibration` |
+| `sceneio.ImuSequence` | `representation` | - | `imu_sequence` |
+| `sceneio.Inspection` | `descriptor` | - | - |
+| `sceneio.InstanceMap` | `representation` | - | `instance_labels` |
+| `sceneio.InstanceSet` | `representation` | - | `instances` |
+| `sceneio.LabelTaxonomy` | `representation` | - | `label_taxonomy` |
+| `sceneio.Mask` | `representation` | - | `binary_mask` |
+| `sceneio.MaterialSet` | `representation` | - | `materials` |
 | `sceneio.MaterializedImage` | `descriptor` | - | - |
-| `sceneio.Mesh` | `representation` | `sceneio.io.Mesh` | `mesh` |
-| `sceneio.MeshScene` | `representation` | `sceneio.io.MeshScene` | `mesh_scene` |
-| `sceneio.NCoreArray` | `representation` | `sceneio.io.NCoreArray` | `ncore_schema` |
-| `sceneio.NCoreComponent` | `representation` | `sceneio.io.NCoreComponent` | `ncore_schema` |
-| `sceneio.NCoreComponentData` | `representation` | `sceneio.io.NCoreComponentData` | `ncore_payload` |
-| `sceneio.NCoreDataset` | `representation` | `sceneio.io.NCoreDataset` | `ncore_schema` |
-| `sceneio.NCoreDatasetData` | `representation` | `sceneio.io.NCoreDatasetData` | `ncore_payload` |
-| `sceneio.NCoreGroup` | `representation` | `sceneio.io.NCoreGroup` | `ncore_schema` |
-| `sceneio.NCoreItem` | `representation` | `sceneio.io.NCoreItem` | `ncore_payload` |
-| `sceneio.NCoreSelection` | `representation` | `sceneio.io.NCoreSelection` | `ncore_schema` |
-| `sceneio.NCoreSemanticComponent` | `representation` | `sceneio.io.NCoreSemanticComponent` | `ncore_payload` |
-| `sceneio.NCoreStore` | `representation` | `sceneio.io.NCoreStore` | `ncore_schema` |
-| `sceneio.NativeFeatureCapabilities` | `descriptor` | `sceneio.io.NativeFeatureCapabilities` | - |
-| `sceneio.NormalMap` | `representation` | `sceneio.io.NormalMap` | `normal_vectors` |
+| `sceneio.Mesh` | `representation` | - | `mesh` |
+| `sceneio.NCoreArray` | `representation` | - | `ncore_schema` |
+| `sceneio.NCoreComponent` | `representation` | - | `ncore_schema` |
+| `sceneio.NCoreComponentData` | `representation` | - | `ncore_payload` |
+| `sceneio.NCoreDataset` | `representation` | - | `ncore_schema` |
+| `sceneio.NCoreDatasetData` | `representation` | - | `ncore_payload` |
+| `sceneio.NCoreGroup` | `representation` | - | `ncore_schema` |
+| `sceneio.NCoreItem` | `representation` | - | `ncore_payload` |
+| `sceneio.NCoreSelection` | `representation` | - | `ncore_schema` |
+| `sceneio.NCoreSemanticComponent` | `representation` | - | `ncore_payload` |
+| `sceneio.NCoreStore` | `representation` | - | `ncore_schema` |
+| `sceneio.NativeFeatureCapabilities` | `descriptor` | - | - |
+| `sceneio.NormalMap` | `representation` | - | `normal_vectors` |
 | `sceneio.NormalizationProfile` | `descriptor` | - | - |
+| `sceneio.PairCorrespondences` | `representation` | - | `matches` |
+| `sceneio.PanopticMap` | `representation` | - | `panoptic_labels` |
 | `sceneio.Point3DRecord` | `wire_record` | - | - |
-| `sceneio.PointCloud` | `representation` | `sceneio.io.PointCloud` | `point_cloud` |
-| `sceneio.PointScan` | `representation` | `sceneio.io.PointScan` | `point_scan` |
-| `sceneio.PointVisibility` | `representation` | `sceneio.io.PointVisibility` | `index_graph` |
-| `sceneio.PoseGraph` | `representation` | `sceneio.io.PoseGraph` | `pose_graph` |
-| `sceneio.PosedViewSet` | `representation` | `sceneio.io.PosedViewSet` | `posed_views` |
-| `sceneio.Reconstruction` | `representation` | `sceneio.io.Reconstruction` | `reconstruction_colmap` |
+| `sceneio.PointCloud` | `representation` | - | `point_cloud` |
+| `sceneio.PointScan` | `representation` | - | `point_scan` |
+| `sceneio.PointVisibility` | `representation` | - | `index_graph` |
+| `sceneio.Pointmap` | `representation` | - | `pointmap_parent_scale` |
+| `sceneio.PoseGraph` | `representation` | - | `pose_graph` |
+| `sceneio.PosePrior` | `representation` | - | `pose_prior` |
+| `sceneio.PosedViewSet` | `representation` | - | `posed_views` |
+| `sceneio.RasterCollection` | `representation` | - | `raster_collection` |
+| `sceneio.RasterLevel` | `representation` | - | `raster_collection` |
+| `sceneio.RasterSeries` | `representation` | - | `raster_collection` |
+| `sceneio.RayMap` | `representation` | - | `unit_ray_map` |
+| `sceneio.Reconstruction` | `representation` | - | `reconstruction_colmap` |
 | `sceneio.RepresentationNormalizationContract` | `descriptor` | - | - |
-| `sceneio.RtmvDataset` | `representation` | `sceneio.io.RtmvDataset` | `rtmv_dataset` |
-| `sceneio.ScanSet` | `representation` | `sceneio.io.ScanSet` | `scan_set` |
-| `sceneio.SceneGraph` | `representation` | `sceneio.io.SceneGraph` | `scene_graph` |
+| `sceneio.RtmvDataset` | `representation` | - | `rtmv_dataset` |
+| `sceneio.SE3` | `representation` | - | `se3` |
+| `sceneio.ScanSet` | `representation` | - | `scan_set` |
+| `sceneio.SceneGraph` | `representation` | - | `scene_graph` |
 | `sceneio.SceneIoError` | `error` | - | - |
-| `sceneio.StateTrajectory` | `representation` | `sceneio.io.StateTrajectory` | `state_trajectory` |
+| `sceneio.SemanticMap` | `representation` | - | `semantic_labels` |
+| `sceneio.Sim3` | `representation` | - | `sim3` |
+| `sceneio.StateTrajectory` | `representation` | - | `state_trajectory` |
 | `sceneio.TableDef` | `descriptor` | - | - |
-| `sceneio.TensorDict` | `representation` | `sceneio.io.TensorDict` | `tensor_container` |
-| `sceneio.VisualInertialDataset` | `representation` | `sceneio.io.VisualInertialDataset` | `visual_inertial_dataset` |
-| `sceneio.VolumeAsset` | `representation` | `sceneio.io.VolumeAsset` | `volume_reference` |
+| `sceneio.TensorDict` | `representation` | - | `tensor_container` |
+| `sceneio.TrackObservation` | `representation` | - | `track_observation` |
+| `sceneio.TwoViewGeometry` | `representation` | - | `matches` |
+| `sceneio.ViewInput` | `representation` | - | `view_input` |
+| `sceneio.VisualInertialDataset` | `representation` | - | `visual_inertial_dataset` |
+| `sceneio.VolumeAsset` | `representation` | - | `volume_reference` |
 | `sceneio.colmap.CharucoBoard` | `representation` | - | `colmap_adapter_calibration` |
 | `sceneio.colmap.CharucoCalibration` | `representation` | - | `colmap_adapter_calibration` |
 | `sceneio.colmap.ColmapAdapterError` | `error` | - | - |
 | `sceneio.colmap.ExtendedSparseModel` | `representation` | - | `colmap_adapter_scene` |
 | `sceneio.colmap.IdTags` | `representation` | - | `structural_metadata` |
-| `sceneio.colmap.MappingCamera` | `representation` | - | `colmap_adapter_calibration` |
-| `sceneio.colmap.MappingImage` | `representation` | - | `colmap_adapter_features` |
 | `sceneio.colmap.MappingInput` | `representation` | - | `colmap_adapter_scene` |
-| `sceneio.colmap.MappingMatch` | `representation` | - | `colmap_adapter_features` |
 | `sceneio.colmap.MegaLocArtifacts` | `representation` | - | `megaloc_artifacts` |
 | `sceneio.colmap.MegaLocImage` | `representation` | - | `structural_metadata` |
 | `sceneio.colmap.MegaLocPair` | `representation` | - | `retrieval_pair` |
-| `sceneio.colmap.NamedMatches` | `representation` | - | `colmap_adapter_features` |
 | `sceneio.colmap.RigConfigCamera` | `representation` | - | `colmap_rig_configuration` |
 | `sceneio.colmap.RigConfiguration` | `representation` | - | `colmap_rig_configuration` |
-| `sceneio.colmap.SiftFeatures` | `representation` | - | `colmap_adapter_features` |
-| `sceneio.colmap.SimilarityTransform` | `representation` | - | `colmap_adapter_sim3` |
 | `sceneio.colmap.SparseExtensions` | `representation` | - | `colmap_adapter_scene` |
 | `sceneio.colmap.SparseMarker` | `representation` | - | `colmap_marker_companion` |
 | `sceneio.colmap.SparseMarkerProjection` | `representation` | - | `colmap_adapter_features` |
@@ -182,36 +197,8 @@ kind-specific contract is authoritative.
 | `sceneio.contracts.ContractMember` | `descriptor` | - | - |
 | `sceneio.contracts.ContractRelation` | `descriptor` | - | - |
 | `sceneio.contracts.PublicTypeContract` | `descriptor` | - | - |
-| `sceneio.data.Calibration` | `representation` | - | `calibration_union` |
-| `sceneio.data.CameraIntrinsics` | `representation` | - | `camera_intrinsics` |
-| `sceneio.data.CameraModel` | `vocabulary` | - | - |
-| `sceneio.data.ConfidenceMap` | `representation` | - | `confidence_unit_interval` |
-| `sceneio.data.CorrespondenceGraph` | `representation` | - | `matches` |
-| `sceneio.data.DepthMap` | `representation` | - | `depth_parent_scale` |
-| `sceneio.data.FeatureSet` | `representation` | - | `features` |
-| `sceneio.data.FrameMeta` | `representation` | - | `frame_meta` |
-| `sceneio.data.InstanceMap` | `representation` | - | `instance_labels` |
-| `sceneio.data.LabelTaxonomy` | `representation` | - | `label_taxonomy` |
-| `sceneio.data.Mask` | `representation` | - | `binary_mask` |
-| `sceneio.data.PairCorrespondences` | `representation` | - | `matches` |
-| `sceneio.data.PanopticMap` | `representation` | - | `panoptic_labels` |
-| `sceneio.data.Pointmap` | `representation` | - | `pointmap_parent_scale` |
-| `sceneio.data.PosePrior` | `representation` | - | `pose_prior` |
-| `sceneio.data.PosedViewSet` | `representation` | - | `posed_views_parent` |
-| `sceneio.data.RasterCollection` | `representation` | `sceneio.RasterCollection` | `raster_collection` |
-| `sceneio.data.RasterLevel` | `representation` | `sceneio.RasterLevel` | `raster_collection` |
-| `sceneio.data.RasterSeries` | `representation` | `sceneio.RasterSeries` | `raster_collection` |
-| `sceneio.data.RayMap` | `representation` | - | `unit_ray_map` |
-| `sceneio.data.SE3` | `representation` | - | `se3` |
-| `sceneio.data.SemanticMap` | `representation` | - | `semantic_labels` |
-| `sceneio.data.Sim3` | `representation` | - | `sim3` |
-| `sceneio.data.TrackObservation` | `representation` | - | `track_observation` |
-| `sceneio.data.TrackedPointCloud` | `representation` | - | `tracked_point_cloud` |
-| `sceneio.data.TwoViewGeometry` | `representation` | - | `matches` |
-| `sceneio.data.ViewInput` | `representation` | - | `view_input` |
 | `sceneio.formats.DataType` | `vocabulary` | - | - |
 | `sceneio.formats.FormatSpec` | `vocabulary` | - | - |
-| `sceneio.io.Codec` | `descriptor` | - | - |
 | `sceneio.mapping.Mapper` | `protocol` | - | - |
 | `sceneio.mapping.MapperTraits` | `procedure_value` | - | `traits` |
 | `sceneio.mapping.MappingOptions` | `procedure_value` | - | `options` |
@@ -241,15 +228,15 @@ or detected file profile.
 <!-- sceneio-payload-kind-rows:start -->
 | `camera_rig` | static | `sceneio.CameraRig` | - | `opencv_yaml`, `opencv_xml`, `ros_camera_info`, `kalibr` |
 | `consistency_graph` | static | `sceneio.ConsistencyGraph` | - | `colmap_mvs_consistency` |
-| `depth_map` | dynamic | `sceneio.DepthMap`, `sceneio.data.DepthMap` | - | `pfm`, `dmb`, `colmap_mvs_depth` |
+| `depth_map` | dynamic | `sceneio.DepthMap` | - | `pfm`, `dmb`, `colmap_mvs_depth` |
 | `feature_set` | static | `sceneio.FeatureSet`, `sceneio.HlocFeatureStore` | `feature_set` | `hloc_features` |
 | `flow` | dynamic | `sceneio.FlowField` | - | `flo` |
 | `image` | static | `sceneio.Image` | - | `netpbm`, `png`, `jpeg`, `bmp`, `tga`, `hdr`, `exr`, `webp`, `avif` |
-| `image_or_mask_or_stack` | dynamic | `sceneio.Image`, `sceneio.data.Mask`, `sceneio.data.RasterCollection`, `sceneio.TensorDict` | - | `tiff` |
+| `image_or_mask_or_stack` | dynamic | `sceneio.Image`, `sceneio.Mask`, `sceneio.RasterCollection`, `sceneio.TensorDict` | - | `tiff` |
 | `image_sequence` | static | `sceneio.ImageSequence` | `image_sequence` | `y4m`, `webm`, `theora`, `animated_webp`, `apng`, `animated_avif`, `image_sequence` |
-| `match_graph` | static | `sceneio.ColmapDatabase`, `sceneio.HlocMatchStore`, `sceneio.MatchGraph` | `match_graph` | `colmap_db`, `hloc_matches` |
+| `match_graph` | static | `sceneio.ColmapDatabase`, `sceneio.HlocMatchStore`, `sceneio.CorrespondenceGraph` | `match_graph` | `colmap_db`, `hloc_matches` |
 | `mesh` | static | `sceneio.Mesh` | - | `ply_mesh`, `obj`, `stl`, `off` |
-| `mesh_scene` | static | `sceneio.MeshScene`, `sceneio.SceneGraph` | - | `gltf`, `glb`, `usd`, `usdz` |
+| `scene_graph` | static | `sceneio.SceneGraph` | - | `gltf`, `glb`, `usd`, `usdz` |
 | `ncore_dataset` | static | `sceneio.NCoreDataset`, `sceneio.NCoreDatasetData` | - | `ncore_v4` |
 | `normal_map` | static | `sceneio.NormalMap` | - | `colmap_mvs_normal` |
 | `numeric_table` | static | `sceneio.TensorDict` | - | `parquet`, `arrow_ipc` |

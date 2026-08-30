@@ -116,7 +116,7 @@ def test_pycolmap_reads_our_output(ref, tmp_path):
 def test_camera_parity(ref):
     rec, d = ref
     R = _core.read_colmap_sparse(d)
-    ours = {c.id: c for c in R.cameras}
+    ours = dict(zip(R.camera_ids, R.cameras, strict=True))
     for cid, cam in rec.cameras.items():
         c = ours[int(cid)]
         assert (c.width, c.height) == (cam.width, cam.height)

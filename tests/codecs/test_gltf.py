@@ -232,7 +232,10 @@ def _assert_scene(actual, expected):
     np.testing.assert_array_equal(
         actual.mesh_primitive_offsets, expected.mesh_primitive_offsets
     )
-    np.testing.assert_array_equal(actual.node_meshes, expected.node_meshes)
+    assert actual.node_payload_kinds == expected.node_payload_kinds
+    np.testing.assert_array_equal(
+        actual.node_payload_indices, expected.node_payload_indices
+    )
     np.testing.assert_array_equal(
         actual.node_child_offsets, expected.node_child_offsets
     )
@@ -265,9 +268,12 @@ def _assert_scene(actual, expected):
                 getattr(actual.materials, name),
                 getattr(expected.materials, name),
             )
-    assert actual.num_primitives == expected.num_primitives
-    for index in range(actual.num_primitives):
-        _assert_mesh(actual.primitive_at(index), expected.primitive_at(index))
+    assert actual.num_mesh_primitives == expected.num_mesh_primitives
+    for index in range(actual.num_mesh_primitives):
+        _assert_mesh(
+            actual.mesh_primitive_at(index),
+            expected.mesh_primitive_at(index),
+        )
 
 
 @pytest.mark.parametrize("data_uri", [False, True])
@@ -291,7 +297,7 @@ def test_independent_json_fixture_external_and_data_uri(data_uri):
     np.testing.assert_array_equal(
         scene.node_local_transforms[1], np.diag([2, 2, 2, 1])
     )
-    first = scene.primitive_at(0)
+    first = scene.mesh_primitive_at(0)
     np.testing.assert_array_equal(
         first.positions, [[0, 0, 0], [2, 0, 0], [0, 2, 0]]
     )
@@ -301,7 +307,7 @@ def test_independent_json_fixture_external_and_data_uri(data_uri):
         [[255, 0, 0, 255], [0, 255, 0, 255], [0, 0, 255, 255]],
     )
     np.testing.assert_array_equal(
-        scene.primitive_at(1).positions,
+        scene.mesh_primitive_at(1).positions,
         [[0, 0, 1], [1, 0, 1], [0, 1, 1]],
     )
     assert scene.materials.names == ["", ""]
@@ -425,7 +431,7 @@ def test_public_api_e2e_sink_inspect_partial_and_lifetime(tmp_path, suffix):
     decoded = sceneio.read(path)
     _assert_scene(decoded, source)
     inspected = sceneio.inspect(path)
-    assert inspected.datatype == "mesh_scene"
+    assert inspected.datatype == "scene_graph"
     assert inspected.shape == (6, 3)
     assert inspected.metadata["num_meshes"] == 2
     assert inspected.metadata["num_primitives"] == 2
@@ -433,10 +439,16 @@ def test_public_api_e2e_sink_inspect_partial_and_lifetime(tmp_path, suffix):
     selected_primitive = sceneio.read_partial(path, primitive_id=0)
     assert selected_mesh.mesh_names == ["sparse"]
     assert selected_primitive.mesh_names == ["surface"]
-    _assert_mesh(selected_mesh.primitive_at(0), source.primitive_at(1))
-    _assert_mesh(selected_primitive.primitive_at(0), source.primitive_at(0))
+    _assert_mesh(
+        selected_mesh.mesh_primitive_at(0),
+        source.mesh_primitive_at(1),
+    )
+    _assert_mesh(
+        selected_primitive.mesh_primitive_at(0),
+        source.mesh_primitive_at(0),
+    )
 
-    positions = decoded.primitive_at(1).positions
+    positions = decoded.mesh_primitive_at(1).positions
     if suffix == ".gltf":
         path.with_suffix(".bin").unlink()
     path.unlink()
@@ -469,13 +481,13 @@ def test_glb_sink_matches_buffer_writer_byte_for_byte(tmp_path):
 
 @pytest.mark.parametrize("suffix", [".gltf", ".glb"])
 def test_empty_scene_roundtrip(tmp_path, suffix):
-    source = _core.mesh_scene([], np.array([0], np.uint64))
+    source = _core.scene_graph([])
     path = tmp_path / f"empty{suffix}"
 
     sceneio.write(source, path)
     actual = sceneio.read(path)
 
-    assert actual.num_meshes == actual.num_primitives == 0
+    assert actual.num_meshes == actual.num_mesh_primitives == 0
     assert sceneio.inspect(path).shape == (0, 3)
 
 
@@ -650,7 +662,7 @@ def test_public_gltf_read_does_not_allocate_whole_file_python_bytes(tmp_path):
     _, peak = tracemalloc.get_traced_memory()
     tracemalloc.stop()
 
-    assert scene.primitive_at(0).num_vertices == count
+    assert scene.mesh_primitive_at(0).num_vertices == count
     assert peak < len(binary) // 3
 
 
@@ -667,7 +679,7 @@ def test_random_truncations_never_escape_as_non_python_fault():
 def test_public_capabilities_include_exact_subset_and_selectors():
     for format_id in ("gltf", "glb"):
         capabilities = sceneio.capabilities(format_id)
-        assert capabilities.record_type == "MeshScene"
+        assert capabilities.record_type == "SceneGraph"
         assert capabilities.partial_selectors == ("mesh_id", "primitive_id")
         assert "sparse_accessors" in capabilities.supported_features
         assert "draco" in capabilities.unsupported_features
@@ -683,7 +695,7 @@ def test_external_uri_percent_decoding(tmp_path):
 
     scene = sceneio.read(path)
 
-    assert scene.num_primitives == 2
+    assert scene.num_mesh_primitives == 2
 
 
 def test_missing_external_buffer_is_clear(tmp_path):
@@ -704,7 +716,11 @@ def test_writer_guards_unrepresentable_mesh_conventions():
         corner_uvs=np.array([[0, 0], [1, 0], [0, 1]], np.float32),
         coordinate_frame="opengl",
     )
-    scene = _core.mesh_scene([mesh], np.array([0, 1], np.uint64))
+    scene = _core.scene_graph(
+        [],
+        meshes=[mesh],
+        mesh_primitive_offsets=np.array([0, 1], np.uint64),
+    )
 
     with pytest.raises(ValueError, match="corner-domain"):
         _core.write_glb(scene)

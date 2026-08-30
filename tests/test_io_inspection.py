@@ -98,27 +98,32 @@ def _assert_inspection_matches(info, decoded):
         assert info.count == decoded.num_vertices
         assert info.metadata["num_vertices"] == decoded.num_vertices
         assert info.metadata["num_faces"] == decoded.num_faces
-    elif isinstance(decoded, _core.MeshScene):
+    elif isinstance(decoded, _core.SceneGraph):
         vertices = sum(
-            decoded.primitive_at(index).num_vertices
-            for index in range(decoded.num_primitives)
+            decoded.mesh_primitive_at(index).num_vertices
+            for index in range(decoded.num_mesh_primitives)
         )
         faces = sum(
-            decoded.primitive_at(index).num_faces
-            for index in range(decoded.num_primitives)
+            decoded.mesh_primitive_at(index).num_faces
+            for index in range(decoded.num_mesh_primitives)
         )
         assert info.shape == (vertices, 3)
         assert info.dtype == "float32"
         assert info.count == vertices
         assert info.metadata["num_meshes"] == decoded.num_meshes
-        assert info.metadata["num_primitives"] == decoded.num_primitives
+        assert (
+            info.metadata["num_primitives"]
+            == decoded.num_mesh_primitives
+        )
         assert info.metadata["num_faces"] == faces
-    elif isinstance(decoded, _core.PosedViewSet):
-        assert info.shape == (decoded.num_views,)
-        assert info.dtype == decoded.quaternions.dtype.name
-        assert info.count == decoded.num_views
+    elif isinstance(decoded, sceneio.PosedViewSet):
+        assert info.shape == (len(decoded),)
+        assert info.dtype == "float64"
+        assert info.count == len(decoded)
         if "num_cameras" in info.metadata:
-            assert info.metadata["num_cameras"] == decoded.num_cameras
+            storage = decoded._source_storage
+            assert storage is not None
+            assert info.metadata["num_cameras"] == storage.num_cameras
     elif isinstance(decoded, _core.StateTrajectory):
         assert info.shape == (decoded.num_states,)
         assert info.dtype == "float64"

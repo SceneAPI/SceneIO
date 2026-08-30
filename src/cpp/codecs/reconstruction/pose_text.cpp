@@ -1,4 +1,4 @@
-// codecs/reconstruction/pose_text.cpp -- plain-text pose-trajectory formats <-> PosedViewSet:
+// codecs/reconstruction/pose_text.cpp -- plain-text pose-trajectory formats <-> PoseStorage:
 // TUM (`timestamp tx ty tz qx qy qz qw`) and KITTI (12 numbers = a 3x4
 // row-major pose matrix per line). Both are permissive/spec-only formats.
 //
@@ -9,7 +9,7 @@
 // quaternion is stored verbatim); KITTI round-trips to floating-point tolerance
 // (it passes through R->quat->R). The writers refuse a foreign-convention
 // record rather than mislabel it. (g2o pose graphs are deferred — their edges
-// don't fit PosedViewSet.)
+// don't fit PoseStorage.)
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -19,7 +19,7 @@
 #include <string>
 #include <vector>
 
-#include "records/posed_view_set.hpp"
+#include "records/pose_storage.hpp"
 
 using namespace nb::literals;
 using sio::emit_bytes;
@@ -139,7 +139,7 @@ void quat_wxyz_to_mat(double w, double x, double y, double z, double R[9]) {
 
 // A view's quaternion as (w,x,y,z), honoring the record's stated order so a
 // writer serializes faithfully regardless of how the record was built.
-void view_quat_wxyz(const PosedViewSet &p, size_t i, double &w, double &x, double &y, double &z) {
+void view_quat_wxyz(const PoseStorage &p, size_t i, double &w, double &x, double &y, double &z) {
     const double *q = p.quats.data() + i * 4;
     if (p.quaternion_order == "xyzw") {
         x = q[0];
@@ -156,9 +156,9 @@ void view_quat_wxyz(const PosedViewSet &p, size_t i, double &w, double &x, doubl
 
 // --- TUM: `timestamp tx ty tz qx qy qz qw` (XYZW, camera_to_world, meters) --
 
-PosedViewSet read_tum(nb::handle source) {
+PoseStorage read_tum(nb::handle source) {
     sio::ByteView data(source);
-    PosedViewSet p;
+    PoseStorage p;
     for_each_bounded_line(data, "TUM", [&](const std::string &line) {
         if (skip_line(line)) return;
         std::istringstream ls(line);
@@ -182,10 +182,10 @@ PosedViewSet read_tum(nb::handle source) {
     return p;
 }
 
-nb::bytes write_tum(const PosedViewSet &p) {
+nb::bytes write_tum(const PoseStorage &p) {
     if (p.pose_convention != "camera_to_world" || p.axis_frame != "opencv" || p.scale_to_meters != 1.0)
         throw std::invalid_argument(
-            "TUM needs a camera_to_world / opencv / scale-1.0 PosedViewSet; got " + p.pose_convention +
+            "TUM needs a camera_to_world / opencv / scale-1.0 PoseStorage; got " + p.pose_convention +
             " / " + p.axis_frame + " — normalize it first");
     const size_t nv = p.num_views();
     const bool has_stamps = p.stamps.size() == nv;
@@ -217,9 +217,9 @@ nb::bytes write_tum(const PosedViewSet &p) {
 
 // --- KITTI: 12 numbers = row-major 3x4 [R|t] (camera_to_world; R<->WXYZ) ----
 
-PosedViewSet read_kitti(nb::handle source) {
+PoseStorage read_kitti(nb::handle source) {
     sio::ByteView data(source);
-    PosedViewSet p;
+    PoseStorage p;
     for_each_bounded_line(data, "KITTI", [&](const std::string &line) {
         if (skip_line(line)) return;
         std::istringstream ls(line);
@@ -246,10 +246,10 @@ PosedViewSet read_kitti(nb::handle source) {
     return p;
 }
 
-nb::bytes write_kitti(const PosedViewSet &p) {
+nb::bytes write_kitti(const PoseStorage &p) {
     if (p.pose_convention != "camera_to_world" || p.axis_frame != "opencv" || p.scale_to_meters != 1.0)
         throw std::invalid_argument(
-            "KITTI needs a camera_to_world / opencv / scale-1.0 PosedViewSet; got " + p.pose_convention +
+            "KITTI needs a camera_to_world / opencv / scale-1.0 PoseStorage; got " + p.pose_convention +
             " / " + p.axis_frame + " — normalize it first");
     const size_t nv = p.num_views();
     std::string out;
@@ -272,8 +272,8 @@ nb::bytes write_kitti(const PosedViewSet &p) {
 }  // namespace
 
 void register_pose_text(nb::module_ &m) {
-    m.def("read_tum", &read_tum, "data"_a, "Decode a TUM trajectory (bytes) into a PosedViewSet.");
-    m.def("write_tum", &write_tum, "views"_a, "Encode a PosedViewSet to TUM trajectory bytes.");
-    m.def("read_kitti", &read_kitti, "data"_a, "Decode a KITTI pose file (bytes) into a PosedViewSet.");
-    m.def("write_kitti", &write_kitti, "views"_a, "Encode a PosedViewSet to KITTI pose bytes.");
+    m.def("read_tum", &read_tum, "data"_a, "Decode a TUM trajectory (bytes) into a PoseStorage.");
+    m.def("write_tum", &write_tum, "views"_a, "Encode a PoseStorage to TUM trajectory bytes.");
+    m.def("read_kitti", &read_kitti, "data"_a, "Decode a KITTI pose file (bytes) into a PoseStorage.");
+    m.def("write_kitti", &write_kitti, "views"_a, "Encode a PoseStorage to KITTI pose bytes.");
 }

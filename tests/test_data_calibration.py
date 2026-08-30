@@ -1,17 +1,17 @@
-"""Validation tests for sceneio.data.calibration."""
+"""Validation tests for sceneio.calibration."""
 
 from __future__ import annotations
 
 import numpy as np
 import pytest
 
-from sceneio.data import Calibration, CameraIntrinsics, CameraModel, RayMap
+from sceneio import Calibration, CameraIntrinsics, CameraModel, RayMap, camera_intrinsics
 from sceneio.errors import ContractViolation
 
 
 def pinhole(width: int = 640, height: int = 480) -> CameraIntrinsics:
-    return CameraIntrinsics(
-        model=CameraModel.PINHOLE,
+    return camera_intrinsics(
+        model_id=CameraModel.PINHOLE.model_id,
         width=width,
         height=height,
         params=np.array([500.0, 500.0, width / 2, height / 2]),
@@ -70,34 +70,39 @@ class TestCameraIntrinsics:
         assert cam.params.dtype == np.float64
         assert cam.params.shape == (4,)
 
-    def test_model_accepts_string_name(self) -> None:
-        cam = CameraIntrinsics(
-            model="SIMPLE_PINHOLE", width=10, height=10, params=np.array([5.0, 5.0, 5.0])
+    def test_model_name_is_materialized(self) -> None:
+        cam = camera_intrinsics(
+            model_id=CameraModel.SIMPLE_PINHOLE.model_id,
+            width=10,
+            height=10,
+            params=np.array([5.0, 5.0, 5.0]),
         )
-        assert cam.model is CameraModel.SIMPLE_PINHOLE
+        assert cam.model == "SIMPLE_PINHOLE"
+        assert cam.model_id == CameraModel.SIMPLE_PINHOLE.model_id
 
-    def test_unknown_model_string_raises(self) -> None:
-        with pytest.raises(ContractViolation, match="unknown camera model"):
-            CameraIntrinsics(model="EQUIRECT", width=10, height=10, params=np.zeros(3))
+    def test_unknown_model_id_raises(self) -> None:
+        with pytest.raises(ContractViolation, match="unknown camera model id"):
+            camera_intrinsics(model_id=99, width=10, height=10, params=np.zeros(3))
 
     def test_non_model_type_raises(self) -> None:
-        with pytest.raises(ContractViolation, match=r"CameraIntrinsics\.model"):
-            CameraIntrinsics(model=1, width=10, height=10, params=np.zeros(4))  # type: ignore[arg-type]
+        with pytest.raises(ContractViolation, match=r"CameraIntrinsics\.model_id"):
+            camera_intrinsics(  # type: ignore[arg-type]
+                model_id="PINHOLE", width=10, height=10, params=np.zeros(4)
+            )
 
     def test_wrong_param_count_raises(self) -> None:
         with pytest.raises(ContractViolation, match="PINHOLE takes 4 params"):
-            CameraIntrinsics(model=CameraModel.PINHOLE, width=10, height=10, params=np.zeros(3))
-
-    def test_param_count_message_names_params(self) -> None:
-        with pytest.raises(ContractViolation, match=r"\('f', 'cx', 'cy'\)"):
-            CameraIntrinsics(
-                model=CameraModel.SIMPLE_PINHOLE, width=10, height=10, params=np.zeros(4)
+            camera_intrinsics(
+                model_id=CameraModel.PINHOLE.model_id,
+                width=10,
+                height=10,
+                params=np.zeros(3),
             )
 
     def test_non_finite_params_raise(self) -> None:
         with pytest.raises(ContractViolation, match="non-finite"):
-            CameraIntrinsics(
-                model=CameraModel.SIMPLE_PINHOLE,
+            camera_intrinsics(
+                model_id=CameraModel.SIMPLE_PINHOLE.model_id,
                 width=10,
                 height=10,
                 params=np.array([np.nan, 5.0, 5.0]),
@@ -106,15 +111,15 @@ class TestCameraIntrinsics:
     @pytest.mark.parametrize("bad", [0, -1, 1.5, "640", True])
     def test_bad_width_height_raise(self, bad: object) -> None:
         with pytest.raises(ContractViolation, match="positive int"):
-            CameraIntrinsics(
-                model=CameraModel.SIMPLE_PINHOLE,
+            camera_intrinsics(
+                model_id=CameraModel.SIMPLE_PINHOLE.model_id,
                 width=bad,
                 height=10,
                 params=np.zeros(3),  # type: ignore[arg-type]
             )
         with pytest.raises(ContractViolation, match="positive int"):
-            CameraIntrinsics(
-                model=CameraModel.SIMPLE_PINHOLE,
+            camera_intrinsics(
+                model_id=CameraModel.SIMPLE_PINHOLE.model_id,
                 width=10,
                 height=bad,
                 params=np.zeros(3),  # type: ignore[arg-type]
@@ -122,8 +127,11 @@ class TestCameraIntrinsics:
 
     def test_params_bad_shape_raises(self) -> None:
         with pytest.raises(ContractViolation, match=r"CameraIntrinsics\.params"):
-            CameraIntrinsics(
-                model=CameraModel.PINHOLE, width=10, height=10, params=np.zeros((2, 2))
+            camera_intrinsics(
+                model_id=CameraModel.PINHOLE.model_id,
+                width=10,
+                height=10,
+                params=np.zeros((2, 2)),
             )
 
 

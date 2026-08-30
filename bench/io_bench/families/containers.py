@@ -87,18 +87,23 @@ def _assert_match_store(actual, expected) -> None:
     for index, pair in enumerate(actual.pair_names):
         values = expected[pair]
         assert actual.source_keypoint_counts[index] == len(values["matches0"])
-        begin = int(actual.graph.match_offsets[index])
-        end = int(actual.graph.match_offsets[index + 1])
-        sparse = np.asarray(actual.graph.matches)[begin:end]
+        graph_pairs = actual.correspondences.pairs
+        if pair in graph_pairs:
+            correspondences = graph_pairs[pair]
+            source_column, target_column = 0, 1
+        else:
+            correspondences = graph_pairs[(pair[1], pair[0])]
+            source_column, target_column = 1, 0
+        sparse = np.asarray(correspondences.indices)
         dense = np.full(len(values["matches0"]), -1, dtype=np.int64)
-        dense[sparse[:, 0]] = sparse[:, 1]
+        dense[sparse[:, source_column]] = sparse[:, target_column]
         np.testing.assert_array_equal(dense, values["matches0"])
         expected_scores = values["matching_scores0"]
         if expected_scores is not None:
             dense_scores = np.zeros(len(dense), dtype=np.float32)
-            dense_scores[sparse[:, 0]] = np.asarray(actual.graph.scores)[
-                begin:end
-            ]
+            dense_scores[sparse[:, source_column]] = np.asarray(
+                correspondences.scores
+            )
             np.testing.assert_array_equal(dense_scores, expected_scores)
 
 
@@ -238,10 +243,10 @@ def _assert_sparse_payload(actual, expected) -> None:
 
 
 def _assert_usd_scene(actual, expected) -> None:
-    assert actual.num_meshes == actual.num_primitives == 1
-    assert actual.num_nodes == actual.num_scenes == 1
+    assert actual.num_meshes == actual.num_mesh_primitives == 1
+    assert actual.num_nodes == 1
     assert list(actual.node_names) == [expected["attrs"]["node_name"]]
-    mesh = actual.primitive_at(0)
+    mesh = actual.mesh_at(0)
     for name, value in expected["arrays"].items():
         observed = np.asarray(getattr(mesh, name))
         assert observed.dtype == value.dtype

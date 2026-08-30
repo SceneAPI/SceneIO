@@ -2,12 +2,13 @@
 // the other records) and shared by the point codecs (.xyz/.pts, point PLY,
 // PCD, and LAS; LAZ/E57 later). Array accessors are fixed-dtype zero-copy
 // views (the vw + rv_policy::reference_internal pattern, like GaussianCloud /
-// PosedViewSet — NOT the sio::view(self,...) trick, which Image needs only
+// PoseStorage — NOT the sio::view(self,...) trick, which Image needs only
 // because its getter returns a dtype-polymorphic nb::object). Conventions are
 // metadata the codec recorded, and a `point_cloud(...)` factory builds one from
 // arrays for tests.
 #include <nanobind/stl/optional.h>
 #include <nanobind/stl/string.h>
+#include <nanobind/stl/vector.h>
 
 #include <array>
 #include <cmath>
@@ -20,7 +21,7 @@ using namespace nb::literals;
 using namespace sio;
 
 namespace {
-// Fixed-dtype zero-copy view (the GaussianCloud/PosedViewSet vw + rv_policy
+// Fixed-dtype zero-copy view (the GaussianCloud/PoseStorage vw + rv_policy
 // pattern). The optional fields legitimately produce shaped-empty views ((0,3),
 // (0,)) when absent or when N==0, whose vector .data() may be nullptr; feed
 // numpy a static sentinel instead so a 0-size view never carries a null base
@@ -44,6 +45,8 @@ using c16arr = nb::ndarray<const uint16_t, nb::c_contig, nb::device::cpu>;
 using darr = nb::ndarray<const double, nb::c_contig, nb::device::cpu>;
 using i64arr =
     nb::ndarray<const int64_t, nb::c_contig, nb::device::cpu>;
+using u64arr =
+    nb::ndarray<const uint64_t, nb::c_contig, nb::device::cpu>;
 
 bool fixed_ascii(
     const uint8_t *data, size_t size,
@@ -139,7 +142,10 @@ PointCloud make_pc(farr positions, std::optional<carr> colors, std::optional<far
                    std::optional<i64arr> ids,
                    std::optional<farr> velocities,
                    std::optional<farr> accelerations,
-                   const std::string &display_color_space) {
+                   const std::string &display_color_space,
+                   std::optional<u64arr> track_offsets,
+                   std::optional<std::vector<std::string>> track_image_ids,
+                   std::optional<u64arr> track_keypoint_indices) {
     // 1. positions (N,3): ndim==2 && shape(1)==3; N==0 is legal (an empty .xyz
     //    file must round-trip once the codec lands).
     if (positions.ndim() != 2 || positions.shape(1) != 3)
@@ -220,6 +226,50 @@ PointCloud make_pc(farr positions, std::optional<carr> colors, std::optional<far
         velocities, p.velocities, "velocities");
     assign_optional_rows(
         accelerations, p.accelerations, "accelerations");
+    const bool any_tracks = track_offsets.has_value() ||
+                            track_image_ids.has_value() ||
+                            track_keypoint_indices.has_value();
+    const bool all_tracks = track_offsets.has_value() &&
+                            track_image_ids.has_value() &&
+                            track_keypoint_indices.has_value();
+    if (any_tracks && !all_tracks)
+        throw std::invalid_argument(
+            "point_cloud: track_offsets, track_image_ids, and "
+            "track_keypoint_indices must be provided together");
+    if (all_tracks) {
+        if (track_offsets->ndim() != 1 ||
+            track_offsets->shape(0) != N + 1)
+            throw std::invalid_argument(
+                "point_cloud: track_offsets must have shape (N+1,) uint64");
+        if (track_keypoint_indices->ndim() != 1)
+            throw std::invalid_argument(
+                "point_cloud: track_keypoint_indices must be one-dimensional uint64");
+        const size_t observations = track_keypoint_indices->shape(0);
+        if (track_image_ids->size() != observations)
+            throw std::invalid_argument(
+                "point_cloud: track observation columns must have equal length");
+        if (track_offsets->data()[0] != 0 ||
+            track_offsets->data()[N] != observations)
+            throw std::invalid_argument(
+                "point_cloud: track_offsets must begin at zero and end at the observation count");
+        for (size_t index = 1; index <= N; ++index)
+            if (track_offsets->data()[index] <
+                    track_offsets->data()[index - 1] ||
+                track_offsets->data()[index] > observations)
+                throw std::invalid_argument(
+                    "point_cloud: track_offsets must be monotonic and in bounds");
+        for (const std::string &image_id : *track_image_ids)
+            if (image_id.empty() || image_id.find('\0') != std::string::npos)
+                throw std::invalid_argument(
+                    "point_cloud: track image identities must be non-empty strings without NUL");
+        p.track_offsets.assign(
+            track_offsets->data(), track_offsets->data() + N + 1);
+        p.track_image_ids = std::move(*track_image_ids);
+        if (observations != 0)
+            p.track_keypoint_indices.assign(
+                track_keypoint_indices->data(),
+                track_keypoint_indices->data() + observations);
+    }
     p.display_color_space = display_color_space;
     if (origin) {
         if (origin->ndim() != 1 || origin->shape(0) != 3)
@@ -443,6 +493,33 @@ void validate_point_cloud(
          cloud.accelerations.size() != count * 3))
         throw std::invalid_argument(
             prefix + "inconsistent PointCloud field lengths");
+    if (cloud.has_tracks()) {
+        if (cloud.track_offsets.size() != count + 1 ||
+            cloud.track_offsets.front() != 0 ||
+            cloud.track_image_ids.size() !=
+                cloud.track_keypoint_indices.size() ||
+            cloud.track_offsets.back() !=
+                cloud.track_image_ids.size())
+            throw std::invalid_argument(
+                prefix + "inconsistent PointCloud track CSR lengths");
+        for (size_t index = 1;
+             index < cloud.track_offsets.size(); ++index)
+            if (cloud.track_offsets[index] <
+                    cloud.track_offsets[index - 1] ||
+                cloud.track_offsets[index] >
+                    cloud.track_image_ids.size())
+                throw std::invalid_argument(
+                    prefix + "PointCloud track offsets are not monotonic");
+        for (const std::string &image_id : cloud.track_image_ids)
+            if (image_id.empty() ||
+                image_id.find('\0') != std::string::npos)
+                throw std::invalid_argument(
+                    prefix + "PointCloud track image identity is invalid");
+    } else if (!cloud.track_image_ids.empty() ||
+               !cloud.track_keypoint_indices.empty()) {
+        throw std::invalid_argument(
+            prefix + "PointCloud track columns require offsets");
+    }
     if (!pc_valid_frame(cloud.coordinate_frame) ||
         !pc_valid_intensity_range(cloud.intensity_range))
         throw std::invalid_argument(
@@ -634,6 +711,23 @@ void register_point_cloud(nb::module_ &m) {
                     {p.has_accelerations() ? p.n : 0, 3});
             },
             ri)
+        .def_prop_ro(
+            "track_offsets",
+            [](const PointCloud &p) {
+                return vw(p.track_offsets, {p.track_offsets.size()});
+            },
+            ri)
+        .def_prop_ro(
+            "track_image_ids",
+            [](const PointCloud &p) { return p.track_image_ids; })
+        .def_prop_ro(
+            "track_keypoint_indices",
+            [](const PointCloud &p) {
+                return vw(
+                    p.track_keypoint_indices,
+                    {p.track_keypoint_indices.size()});
+            },
+            ri)
         .def_prop_ro("has_rgb", [](const PointCloud &p) { return p.has_rgb(); })
         .def_prop_ro("has_rgb16", [](const PointCloud &p) { return p.has_rgb16(); })
         .def_prop_ro("has_normals", [](const PointCloud &p) { return p.has_normals(); })
@@ -663,6 +757,14 @@ void register_point_cloud(nb::module_ &m) {
             "has_accelerations",
             [](const PointCloud &p) {
                 return p.has_accelerations();
+            })
+        .def_prop_ro(
+            "has_tracks",
+            [](const PointCloud &p) { return p.has_tracks(); })
+        .def_prop_ro(
+            "num_track_observations",
+            [](const PointCloud &p) {
+                return p.num_track_observations();
             })
         .def_prop_ro(
             "has_las_waveform",
@@ -703,6 +805,7 @@ void register_point_cloud(nb::module_ &m) {
             return "<PointCloud n=" + std::to_string(p.n) + (p.has_rgb() ? " rgb" : "") +
                    (p.has_normals() ? " normals" : "") + (p.has_intensity() ? " intensity" : "") +
                    (p.has_las_waveform() ? " las-waveform" : "") +
+                   (p.has_tracks() ? " tracks" : "") +
                    (p.is_organized() ? " organized" : "") +
                    " " + p.coordinate_frame + ">";
         });
@@ -719,11 +822,15 @@ void register_point_cloud(nb::module_ &m) {
           "velocities"_a = nb::none(),
           "accelerations"_a = nb::none(),
           "display_color_space"_a = "unknown",
+          "track_offsets"_a = nb::none(),
+          "track_image_ids"_a = nb::none(),
+          "track_keypoint_indices"_a = nb::none(),
           "Build a PointCloud from arrays (numpy/torch): positions (N,3) float32, optional "
           "colors (N,3) uint8 / colors16 (N,3) uint16 / normals (N,3) float32 / intensity (N,) "
           "float32 (foreign dtypes are copy-converted), recorded convention tags "
           "(coordinate_frame, scale_to_meters, intensity_range), a georef origin (3,) float64, "
           "optional organized width/height, viewpoint (tx,ty,tz,qw,qx,qy,qz), "
           "a validated opaque LAS waveform sidecar, and optional float display "
-          "colors/opacities, widths, ids, velocities, and accelerations.");
+          "colors/opacities, widths, ids, velocities, accelerations, and optional "
+          "per-point observation tracks in CSR form.");
 }

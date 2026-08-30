@@ -28,7 +28,8 @@ using anyarr = nb::ndarray<nb::ro, nb::c_contig, nb::device::cpu>;
 DepthMap make_depth_map(anyarr depth, std::optional<anyarr> confidence,
                         std::optional<std::string> unit, std::optional<double> scale_to_meters,
                         const std::string &invalid_policy,
-                        const std::string &depth_convention) {
+                        const std::string &depth_convention,
+                        std::optional<anyarr> valid) {
     // 1. shape: exactly (H,W), both >= 1 (the H,W >= 1 invariant keeps every
     // view over a non-empty buffer, so the null-data sentinel concern never
     // arises and confidence-absent can safely mean "empty vector").
@@ -58,6 +59,26 @@ DepthMap make_depth_map(anyarr depth, std::optional<anyarr> confidence,
                 "depth_map: confidence must be (H,W) float32 matching depth");
         const auto *cp = static_cast<const float *>(c.data());
         d.confidence.assign(cp, cp + cnt);
+    }
+
+    if (valid) {
+        const anyarr &mask = *valid;
+        if (mask.ndim() != 2 || mask.shape(0) != H ||
+            mask.shape(1) != W || mask.dtype() != nb::dtype<bool>())
+            throw std::invalid_argument(
+                "depth_map: valid must be (H,W) bool matching depth");
+        const auto *values = static_cast<const bool *>(mask.data());
+        bool all_valid = true;
+        d.valid.resize(cnt);
+        for (size_t index = 0; index < cnt; ++index) {
+            d.valid[index] = static_cast<uint8_t>(values[index]);
+            all_valid = all_valid && values[index];
+            if (values[index] &&
+                (!std::isfinite(d.depth[index]) || d.depth[index] <= 0.0f))
+                throw std::invalid_argument(
+                    "depth_map: valid pixels must be finite and positive");
+        }
+        if (all_valid) d.valid.clear();
     }
 
     // 4. unit / scale_to_meters resolution (both optional; derive-then-pair,
@@ -117,6 +138,7 @@ DepthMap make_depth_map(anyarr depth, std::optional<anyarr> confidence,
             "depth_map: depth_convention must be "
             "unspecified|camera_z|ray_distance");
     d.depth_convention = depth_convention;
+    if (!valid) depth_map_derive_validity(d);
 
     return d;
 }
@@ -127,11 +149,15 @@ void register_depth_map(nb::module_ &m) {
     nb::class_<DepthMap>(m, "DepthMap")
         .def_prop_ro("height", [](const DepthMap &d) { return d.height; })
         .def_prop_ro("width", [](const DepthMap &d) { return d.width; })
+        .def_prop_ro("shape", [](const DepthMap &d) {
+            return nb::make_tuple(d.height, d.width);
+        })
         .def_prop_ro("has_confidence", [](const DepthMap &d) { return d.has_confidence(); })
+        .def_prop_ro("has_validity", [](const DepthMap &d) { return d.has_validity(); })
         // Owner-carrying zero-copy views. Because the confidence getter returns
         // a dynamically-typed nb::object (None or an array),
         // rv_policy::reference_internal cannot attach the owner the way the
-        // fixed-dtype records (GaussianCloud, PosedViewSet) do through a bare
+        // fixed-dtype records (GaussianCloud, PoseStorage) do through a bare
         // vw() return. Instead sio::view(self, ...) bakes `self` in as the
         // array's owner, so the backing buffer stays alive for as long as the
         // returned array does (the gc.collect() lifetime test pins this).
@@ -146,6 +172,16 @@ void register_depth_map(nb::module_ &m) {
                          const DepthMap &d = nb::cast<const DepthMap &>(self);
                          if (!d.has_confidence()) return nb::none();
                          return nb::cast(sio::view(self, d.confidence.data(), {d.height, d.width}));
+                     })
+        .def_prop_ro("valid",
+                     [](nb::handle_t<DepthMap> self) -> nb::object {
+                         const DepthMap &d = nb::cast<const DepthMap &>(self);
+                         if (!d.has_validity()) return nb::none();
+                         static_assert(sizeof(bool) == sizeof(uint8_t));
+                         return nb::cast(sio::view(
+                             self,
+                             reinterpret_cast<const bool *>(d.valid.data()),
+                             {d.height, d.width}));
                      })
         // conventions the codec recorded (metadata):
         .def_prop_ro("unit", [](const DepthMap &d) { return d.unit; })
@@ -167,6 +203,7 @@ void register_depth_map(nb::module_ &m) {
           "unit"_a = nb::none(), "scale_to_meters"_a = nb::none(),
           "invalid_policy"_a = "none",
           "depth_convention"_a = "unspecified",
+          "valid"_a = nb::none(),
           "Build a DepthMap from a (H,W) float32 array (numpy or torch) + optional (H,W) float32 "
           "confidence; unit/scale_to_meters/invalid_policy recorded as metadata (arrays never "
           "rescaled). unit in {meters,millimeters,custom,unitless,unknown}; scale_to_meters is the "

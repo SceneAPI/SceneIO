@@ -143,6 +143,7 @@ DepthMap make_pfm_depth(std::vector<float> values, size_t height, size_t width,
     result.unit = unit;
     result.scale_to_meters = scale_to_meters;
     result.invalid_policy = invalid_policy;
+    depth_map_derive_validity(result);
     return result;
 }
 
@@ -359,6 +360,9 @@ nb::bytes write_pfm(nb::ndarray<const float, nb::c_contig, nb::device::cpu> img)
 nb::bytes write_pfm_depth(const DepthMap &depth, const std::string &unit,
                           double scale_to_meters,
                           const std::string &invalid_policy) {
+    if (!depth_map_validity_matches_policy(depth))
+        throw std::invalid_argument(
+            "PFM depth: validity mask disagrees with invalid_policy encoding");
     require_depth_encoding(unit, scale_to_meters, invalid_policy);
     if (depth.unit != unit || depth.scale_to_meters != scale_to_meters ||
         depth.invalid_policy != invalid_policy)

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import ast
 import dataclasses
+import functools
 import gc
 import hashlib
 import importlib
@@ -95,7 +96,6 @@ def _arrays(value, names: tuple[str, ...]) -> dict[str, object]:
 
 def _camera(value) -> dict[str, object]:
     return {
-        "id": int(value.id),
         "model_id": int(value.model_id),
         "model": value.model,
         "width": int(value.width),
@@ -131,6 +131,7 @@ def _record(value) -> dict[str, object]:
     if name == "Reconstruction":
         return {
             "type": name,
+            "camera_ids": [int(item) for item in value.camera_ids],
             "cameras": [_camera(camera) for camera in value.cameras],
             "image_names": list(value.image_names),
             "arrays": _arrays(
@@ -150,6 +151,33 @@ def _record(value) -> dict[str, object]:
             "pose_convention": value.pose_convention,
         }
     if name == "PosedViewSet":
+        if hasattr(value, "poses"):
+            return {
+                "type": name,
+                "poses": [
+                    {
+                        "rotation": _array(pose.rotation),
+                        "translation": _array(pose.translation),
+                        "convention": pose.convention,
+                    }
+                    for pose in value.poses
+                ],
+                "frame": dataclasses.asdict(value.frame),
+                "names": list(value.names),
+                "timestamps": list(value.timestamps),
+                "calibrations": [
+                    (
+                        None
+                        if calibration is None
+                        else (
+                            _camera(calibration.intrinsics)
+                            if calibration.intrinsics is not None
+                            else {"kind": "ray_map"}
+                        )
+                    )
+                    for calibration in value.calibrations
+                ],
+            }
         return {
             "type": name,
             "cameras": [_camera(camera) for camera in value.cameras],
@@ -232,12 +260,13 @@ def _record(value) -> dict[str, object]:
         }
     if name == "ColmapDatabase":
         image_ids = [int(image_id) for image_id in np.asarray(value.image_ids)]
-        match_graph = value.match_graph
+        match_graph = value._correspondence_storage
         return {
             "type": name,
             "profile": value.profile,
             "application_id": int(value.application_id),
             "user_version": int(value.user_version),
+            "camera_ids": [int(item) for item in value.camera_ids],
             "cameras": [_camera(camera) for camera in value.cameras],
             "image_ids": image_ids,
             "prior_focal_length": _array(value.prior_focal_length),
@@ -395,8 +424,7 @@ def _record(value) -> dict[str, object]:
 
 
 def _database_record():
-    camera = _core.camera(
-        5,
+    camera = _core.camera_intrinsics(
         1,
         640,
         480,
@@ -414,7 +442,7 @@ def _database_record():
         )
         for image_id in (2, 11)
     ]
-    graph = _core.match_graph(
+    graph = _core.correspondence_storage(
         np.array([[2, 11]], np.uint32),
         np.array([0, 1], np.uint64),
         np.array([[0, 1]], np.uint32),
@@ -427,6 +455,7 @@ def _database_record():
         match_present=np.array([1], np.uint8),
     )
     return _core.colmap_database(
+        np.array([5], np.uint32),
         [camera],
         features,
         graph,
@@ -583,12 +612,22 @@ def _operation_descriptor(value) -> dict[str, object] | None:
     }
     closure = inspect.getclosurevars(value).nonlocals if inspect.isfunction(value) else {}
     if closure:
+        def describe(target: object) -> object:
+            if target is None or isinstance(target, str | int | float | bool):
+                return target
+            if isinstance(target, functools.partial):
+                keywords = ", ".join(
+                    f"{name}={value!r}"
+                    for name, value in sorted((target.keywords or {}).items())
+                )
+                suffix = f", {keywords}" if keywords else ""
+                return f"functools.partial({describe(target.func)}{suffix})"
+            module = getattr(target, "__module__", None)
+            name = getattr(target, "__name__", None)
+            return f"{module}.{name}" if module and name else repr(target)
+
         descriptor["closure"] = {
-            name: (
-                None
-                if target is None
-                else f"{target.__module__}.{target.__name__}"
-            )
+            name: describe(target)
             for name, target in closure.items()
         }
     return descriptor
@@ -665,7 +704,11 @@ def test_reconstruction_family_module_is_lower_layer_only():
     imports = _absolute_imports(source)
     assert {module for module, _ in imports} <= {
         "__future__",
+        "functools",
         "sceneio",
+        "sceneio._correspondence",
+        "sceneio._data.views",
+        "sceneio._posed_views",
         "sceneio.io._registry.adapters",
         "sceneio.io._registry.model",
     }

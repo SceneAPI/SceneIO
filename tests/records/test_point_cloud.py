@@ -364,14 +364,11 @@ def test_foreign_dtype_input_behavior_pin():
         np.testing.assert_array_equal(pc.positions, xyz64.astype(np.float32))  # ...,inf
 
 
-# --- public surface (io re-export identity) --------------------------------
+# --- canonical public surface ----------------------------------------------
 def test_public_reexport_identity():
-    # The wired seam `sceneio.io.PointCloud` must BE the compiled class and be in
-    # __all__: a wrong-class typo in the re-export (e.g. `= _core.PosedViewSet`)
-    # would otherwise pass the entire suite, since every other test uses `_core`
-    # directly. Mirrors test_io_api.py's GaussianCloud isinstance pin.
     import sceneio
 
-    assert sceneio.io.PointCloud is _core.PointCloud
-    assert "PointCloud" in sceneio.io.__all__
-    assert isinstance(_core.point_cloud(np.zeros((1, 3), np.float32)), sceneio.io.PointCloud)
+    assert sceneio.PointCloud is _core.PointCloud
+    assert not hasattr(sceneio.io, "PointCloud")
+    assert "PointCloud" not in sceneio.io.__all__
+    assert isinstance(_core.point_cloud(np.zeros((1, 3), np.float32)), sceneio.PointCloud)

@@ -4339,3 +4339,25 @@ label record; the numbers therefore compare implementation boundaries, not
 interchangeable APIs. The typed path remains an overlay over the existing TIFF
 codec. Reusing the validated TIFF handle for decode raised the local read
 median from 1,507 to 1,571 MB/s while ensuring both phases observe one file.
+
+## 2026-08-30 representation contract reset
+
+The 0.4.0 in-memory representation consolidation retains all 74 benchmark
+rows and the same result schema. A clean capture of baseline commit
+`182c9120` reproduces structural projection SHA-256
+`5b68b2f03f8de343dd681a531cc7f1a293dcfe94c565e164cfc725f0c109ad01`.
+The consolidated capture records
+`3f392b8d9f248457a2a8f0d8d40b56d6e7a962a2012d113e4fae94d6de4d6a2d`.
+
+The stable projection differs in exactly seven values:
+
+- Bundler, NVM, OpenMVG, and both COLMAP sparse rows count the explicit
+  aggregate-owned `camera_ids` array, increasing each logical payload by
+  eight bytes. Encoded files remain unchanged.
+- USD and USDZ add the standard two-value mesh `extent` property, increasing
+  the deterministic fixture by 92 bytes. All mesh arrays and topology remain
+  identical.
+
+Both captures use the ordinary one-run, scale-0.001, no-oracle command. The
+full consolidated sweep completes without a failed codec, and
+`bench/compare_io_structure.py` enforces the new projection.

@@ -194,8 +194,10 @@ def test_scan_set_is_ordered_and_rejects_duplicate_ids_or_guids():
 
 
 def test_public_exports_coordinates_and_normalization_contracts():
-    assert sceneio.PointScan is sceneio.io.PointScan is _core.PointScan
-    assert sceneio.ScanSet is sceneio.io.ScanSet is _core.ScanSet
+    assert sceneio.PointScan is _core.PointScan
+    assert sceneio.ScanSet is _core.ScanSet
+    assert not hasattr(sceneio.io, "PointScan")
+    assert not hasattr(sceneio.io, "ScanSet")
     scan = _core.point_scan(_cloud(1))
     assert scan.coordinates.pose_direction == "sensor_to_reference"
     assert scan.coordinates.quaternion_order == "wxyz"

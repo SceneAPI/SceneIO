@@ -554,14 +554,14 @@ def test_splat_parent_contract_metadata_is_exact():
     }
     ubuntu = evidence["profiles"]["ubuntu_latest_x86_64_glibc"]
     encoding = CONTRACT["sog_encoding_contract"]
-    assert encoding["generator"] == "SceneIO 0.3.0"
+    assert encoding["generator"] == "SceneIO 0.4.0"
     assert encoding["metadata_sha256"] == (
-        "742d2354c144cb43a5fbf0df5a6e1ddfc89b7076e031ffbe9c5140b1b6441a3b"
+        "ec159eac08f53077632a1b4eda2c4d043b519c20ef1545d045959165166728ef"
     )
     assert encoding["metadata_sha256"] != ubuntu["sog_metadata_sha256"]
     assert encoding["means_min_z_hex"] == ubuntu["sog_means_min_z_hex"]
     assert CONTRACT["valid"]["sog"]["sha256"] == (
-        "9792ce4b15542cff16b4aaf22eb06434fe8799d829f87284cda4811b98da8982"
+        "2e3eb3dd5e32c8dbc7b73f5446c2fe82cc312334b64e5f9ef01e542d7cf61585"
     )
     assert CONTRACT["valid"]["sog_directory"]["files"]["meta.json"][
         "sha256"

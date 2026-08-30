@@ -17,8 +17,7 @@ from _support.partial_read import (
 )
 
 import sceneio
-from sceneio import _core
-from sceneio.io import FormatError
+from sceneio import FormatError, _core
 
 
 def test_pixel_windows_equal_full_read_slices(tmp_path):

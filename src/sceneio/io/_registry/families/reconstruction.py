@@ -2,7 +2,12 @@
 
 from __future__ import annotations
 
+from functools import partial
+
 from sceneio import _core
+from sceneio._correspondence import read_colmap_database_pair
+from sceneio._data.views import PosedViewSet
+from sceneio._posed_views import posed_view_reader, posed_view_storage
 from sceneio.io._registry.adapters import (
     _file_sink_writer,
     _mmap_reader,
@@ -27,9 +32,15 @@ RECONSTRUCTION_CODECS: tuple[Codec, ...] = (
     Codec(
         "transforms_json",
         (),
-        _mmap_reader(_core.read_transforms_json),
-        _file_sink_writer(_core.write_transforms_json),
-        record=_core.PosedViewSet,
+        posed_view_reader(
+            _mmap_reader(_core.read_transforms_json),
+            "transforms_json",
+        ),
+        _file_sink_writer(
+            _core.write_transforms_json,
+            prepare=partial(posed_view_storage, profile="transforms_json"),
+        ),
+        record=PosedViewSet,
         datatype="posed_views",
         filenames=("transforms.json",),
     ),
@@ -38,17 +49,23 @@ RECONSTRUCTION_CODECS: tuple[Codec, ...] = (
     Codec(
         "tum",
         (),
-        _mmap_reader(_core.read_tum),
-        _file_sink_writer(_core.write_tum),
-        record=_core.PosedViewSet,
+        posed_view_reader(_mmap_reader(_core.read_tum), "tum"),
+        _file_sink_writer(
+            _core.write_tum,
+            prepare=partial(posed_view_storage, profile="tum"),
+        ),
+        record=PosedViewSet,
         datatype="posed_views",
     ),
     Codec(
         "kitti",
         (),
-        _mmap_reader(_core.read_kitti),
-        _file_sink_writer(_core.write_kitti),
-        record=_core.PosedViewSet,
+        posed_view_reader(_mmap_reader(_core.read_kitti), "kitti"),
+        _file_sink_writer(
+            _core.write_kitti,
+            prepare=partial(posed_view_storage, profile="kitti"),
+        ),
+        record=PosedViewSet,
         datatype="posed_views",
     ),
     Codec(
@@ -107,7 +124,7 @@ RECONSTRUCTION_CODECS: tuple[Codec, ...] = (
         magic=(b"SQLite format 3\x00",),
         filenames=("database.db",),
         read_image=_core.read_colmap_db_image,
-        read_pair=_core.read_colmap_db_pair,
+        read_pair=read_colmap_database_pair,
         supported_features=(
             "cameras",
             "images",

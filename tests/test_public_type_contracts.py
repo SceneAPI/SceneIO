@@ -24,7 +24,6 @@ import sceneio.colmap
 import sceneio.colmap_mvs
 import sceneio.contracts
 import sceneio.contracts.payloads as payload_module
-import sceneio.data
 import sceneio.formats
 import sceneio.io
 import sceneio.mapping
@@ -57,13 +56,11 @@ from sceneio.io._registry.assembly import _validate_payload_contracts
 from sceneio.representations import REPRESENTATION_CONTRACTS
 
 ROOT = Path(__file__).resolve().parents[1]
-SNAPSHOT_PATH = ROOT / "tests/contracts/public_type_standardization_v1.toml"
+SNAPSHOT_PATH = ROOT / "tests/contracts/public_type_standardization_v2.toml"
 SNAPSHOT = tomllib.loads(SNAPSHOT_PATH.read_text(encoding="utf-8"))
 
 _PUBLIC_MODULES = {
     "sceneio": sceneio,
-    "sceneio.io": sceneio.io,
-    "sceneio.data": sceneio.data,
     "sceneio.colmap": sceneio.colmap,
     "sceneio.colmap_mvs": sceneio.colmap_mvs,
     "sceneio.formats": sceneio.formats,
@@ -140,14 +137,14 @@ def _minimal_descriptor(
 
 
 def test_frozen_census_exactly_matches_every_public_class_identity() -> None:
-    assert SNAPSHOT["schema_version"] == 1
+    assert SNAPSHOT["schema_version"] == 2
     assert tuple(_PUBLIC_MODULES) == tuple(SNAPSHOT["catalog_namespaces"])
     assert tuple(SNAPSHOT["baseline_namespaces"]) == tuple(_PUBLIC_MODULES)[:-1]
     assert tuple(SNAPSHOT["catalog_namespaces"]) == PUBLIC_TYPE_NAMESPACES
     assert tuple(SNAPSHOT["baseline_namespaces"]) == (BASELINE_PUBLIC_TYPE_NAMESPACES)
 
     exports = _exported_class_paths()
-    assert len(exports) == SNAPSHOT["catalog_identity_count"] == 144
+    assert len(exports) == SNAPSHOT["catalog_identity_count"] == 131
     assert len(PUBLIC_TYPE_CONTRACTS) == len(exports)
 
     resolved_paths: set[str] = set()
@@ -164,7 +161,7 @@ def test_frozen_census_exactly_matches_every_public_class_identity() -> None:
         path for path in PUBLIC_TYPE_CONTRACTS if not path.startswith("sceneio.contracts.")
     )
     assert baseline_paths == tuple(SNAPSHOT["baseline"]["canonical_paths"])
-    assert len(baseline_paths) == SNAPSHOT["baseline_identity_count"] == 139
+    assert len(baseline_paths) == SNAPSHOT["baseline_identity_count"] == 126
     assert (
         Counter(contract.kind for contract in PUBLIC_TYPE_CONTRACTS.values())
         == (SNAPSHOT["contract_kind_counts"])
@@ -199,7 +196,7 @@ def test_representation_envelopes_adapt_the_authoritative_objects() -> None:
         for path, contract in PUBLIC_TYPE_CONTRACTS.items()
         if contract.kind == "representation"
     }
-    assert len(representation_entries) == SNAPSHOT["representation_count"] == 103
+    assert len(representation_entries) == SNAPSHOT["representation_count"] == 90
     assert set(representation_entries) == set(REPRESENTATION_CONTRACTS)
     for path, entry in representation_entries.items():
         specialized = REPRESENTATION_CONTRACTS[path]
@@ -376,11 +373,11 @@ def test_contract_metadata_types_self_classify() -> None:
 
 
 def test_vocabulary_contracts_preserve_exact_runtime_values() -> None:
-    camera_contract = public_type_contract(sceneio.data.CameraModel)
+    camera_contract = public_type_contract(sceneio.CameraModel)
     assert camera_contract.kind == "vocabulary"
     assert tuple(
         (member.name, ast.literal_eval(member.default)) for member in camera_contract.members
-    ) == tuple((member.name, member.value) for member in sceneio.data.CameraModel)
+    ) == tuple((member.name, member.value) for member in sceneio.CameraModel)
 
     assert tuple(item.type_id for item in CORE_DATA_TYPES) == tuple(
         SNAPSHOT["logical_data_types"]["ids"]
@@ -400,19 +397,19 @@ def test_lookup_canonical_alias_class_instance_and_short_name_rules() -> None:
     assert public_type_contract("Point3DRecord") is contract
     assert public_type_contract(sceneio.Point3DRecord) is contract
     assert public_type_contract(value) is contract
-    assert PUBLIC_TYPE_ALIASES["sceneio.io.Image"] == "sceneio.Image"
+    assert not PUBLIC_TYPE_ALIASES
     _validate_runtime_identities()
 
     wrong_alias = dataclasses.replace(
         contract,
-        aliases=("sceneio.Camera",),
+        aliases=("sceneio.SceneGraph",),
     )
     with pytest.raises(ValueError, match="does not resolve to canonical identity"):
         _validate_runtime_identities((wrong_alias,))
 
-    with pytest.raises(ValueError, match=r"ambiguous.*sceneio\.DepthMap") as exc_info:
-        public_type_contract("DepthMap")
-    assert "sceneio.data.DepthMap" in str(exc_info.value)
+    assert public_type_contract("DepthMap") is PUBLIC_TYPE_CONTRACTS[
+        "sceneio.DepthMap"
+    ]
     with pytest.raises(KeyError, match="unknown public type contract"):
         public_type_contract("NotAPublicType")
     with pytest.raises(KeyError, match="unknown public type contract path"):
@@ -473,10 +470,10 @@ def test_model_and_registry_reject_malformed_contracts() -> None:
     with pytest.raises(ValueError, match="unknown contains relation target"):
         _validate_catalog((invalid_relation,), indexes[2])
 
-    representation = PUBLIC_TYPE_CONTRACTS["sceneio.Camera"]
+    representation = PUBLIC_TYPE_CONTRACTS["sceneio.SceneGraph"]
     mismatched = dataclasses.replace(
         representation,
-        specialized_contract_key="sceneio.WrongCamera",
+        specialized_contract_key="sceneio.WrongSceneGraph",
     )
     indexes = _build_path_index((mismatched,))
     with pytest.raises(ValueError, match="specialized contract key differs"):
@@ -493,19 +490,13 @@ def test_contract_models_and_public_mappings_are_immutable() -> None:
         BUILTIN_CODEC_PAYLOAD_KINDS["changed"] = object()  # type: ignore[index]
 
 
-@pytest.mark.parametrize(
-    ("source", "target"),
-    [
-        ("sceneio.Camera", "sceneio.data.CameraIntrinsics"),
-        ("sceneio.FeatureSet", "sceneio.data.FeatureSet"),
-        ("sceneio.MatchGraph", "sceneio.data.CorrespondenceGraph"),
-        ("sceneio.DepthMap", "sceneio.data.DepthMap"),
-        ("sceneio.PosedViewSet", "sceneio.data.PosedViewSet"),
-    ],
-)
-def test_native_and_neutral_roles_declare_bidirectional_adapters(source: str, target: str) -> None:
-    assert ContractRelation("adapts_to", target) in PUBLIC_TYPE_CONTRACTS[source].relations
-    assert ContractRelation("adapts_to", source) in PUBLIC_TYPE_CONTRACTS[target].relations
+def test_consolidated_catalog_has_no_alias_or_adapter_relations() -> None:
+    assert not PUBLIC_TYPE_ALIASES
+    assert all(
+        relation.kind != "adapts_to"
+        for contract in PUBLIC_TYPE_CONTRACTS.values()
+        for relation in contract.relations
+    )
 
 
 def test_every_evidence_path_and_exact_node_exists() -> None:
@@ -662,8 +653,8 @@ def test_builtin_payload_validation_is_closed_but_runtime_extensions_remain_open
 
 def test_catalog_serialization_is_detached_plain_and_process_deterministic() -> None:
     payload = catalog_dict()
-    assert payload["contract_schema_version"] == 1
-    assert len(payload["contracts"]) == 144
+    assert payload["contract_schema_version"] == 2
+    assert len(payload["contracts"]) == 131
     assert len(payload["builtin_codec_payload_kinds"]) == 26
 
     def visit(value: object) -> None:
@@ -721,6 +712,7 @@ assert contracts.PUBLIC_TYPE_CONTRACTS
 for forbidden in (
     'numpy',
     'sceneio._core',
+    'sceneio._data',
     'sceneio.io',
     'sceneio.data',
     'sceneio.mapping',

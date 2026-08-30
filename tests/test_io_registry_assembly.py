@@ -719,6 +719,18 @@ def test_assembly_dependency_direction_and_import_delta_are_exact():
     modules = json.loads(result.stdout)
     intentional_additions = {
         "sceneio._camera_models",
+        "sceneio._correspondence",
+        "sceneio._data",
+        "sceneio._data._validation",
+        "sceneio._data.calibration",
+        "sceneio._data.dense",
+        "sceneio._data.features",
+        "sceneio._data.pointcloud",
+        "sceneio._data.priors",
+        "sceneio._data.raster",
+        "sceneio._data.transforms",
+        "sceneio._data.views",
+        "sceneio._posed_views",
         "sceneio.contracts",
         "sceneio.contracts.payloads",
         "sceneio.coordinate_conversion",
@@ -754,7 +766,6 @@ def test_assembly_dependency_direction_and_import_delta_are_exact():
         "sceneio.io._usd.gaussians",
         "sceneio.io._usd.geometry",
         "sceneio.io._usd.instances",
-        "sceneio.io._usd.legacy",
         "sceneio.io._usd.materials",
         "sceneio.io._usd.package",
         "sceneio.io._usd.points",
@@ -772,16 +783,6 @@ def test_assembly_dependency_direction_and_import_delta_are_exact():
         "sceneio.io._registry.families.points",
         "sceneio.io._registry.families.reconstruction",
         "sceneio.io._registry.families.splats",
-        "sceneio.data",
-        "sceneio.data.raster",
-        "sceneio.data._validation",
-        "sceneio.data.calibration",
-        "sceneio.data.dense",
-        "sceneio.data.features",
-        "sceneio.data.pointcloud",
-        "sceneio.data.priors",
-        "sceneio.data.transforms",
-        "sceneio.data.views",
     }
     assert intentional_additions <= set(modules)
     parent_modules = [
@@ -1226,8 +1227,21 @@ def test_assembly_dependency_direction_and_import_delta_are_exact():
     assert benchmark_contract["rows"] == 74
     assert len(CANONICAL_BUILTIN_IDS) == benchmark_contract["rows"]
     assert benchmark_contract["structural_projection_sha256"] == (
-        "5b68b2f03f8de343dd681a531cc7f1a293dcfe94c565e164cfc725f0c109ad01"
+        "3f392b8d9f248457a2a8f0d8d40b56d6e7a962a2012d113e4fae94d6de4d6a2d"
     )
+    assert benchmark_contract["representation_reset"] == {
+        "release": "0.4.0",
+        "date": "2026-08-30",
+        "baseline_commit": "182c9120",
+        "baseline_structural_projection_sha256": (
+            "5b68b2f03f8de343dd681a531cc7f1a293dcfe94c565e164cfc725f0c109ad01"
+        ),
+        "changes": [
+            "Reconstruction payload accounting includes the aggregate-owned "
+            "camera_ids array.",
+            "Unified SceneGraph USD output emits the standard mesh extent property.",
+        ],
+    }
     rows = [
         {
             "codec": "probe",

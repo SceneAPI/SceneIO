@@ -132,15 +132,15 @@ def test_coordinate_value_types_are_frozen_and_reject_contradictions():
     quaternions = np.array([[1.0, 0.0, 0.0, 0.0]], dtype=np.float64)
     translations = np.zeros((1, 3), dtype=np.float64)
     with pytest.raises(ValueError, match="need quaternions"):
-        _core.posed_view_set(quaternions[..., None], translations)
+        _core.pose_storage(quaternions[..., None], translations)
     with pytest.raises(ValueError, match="timestamps"):
-        _core.posed_view_set(
+        _core.pose_storage(
             quaternions,
             translations,
             timestamps=np.zeros((1, 1), dtype=np.float64),
         )
     with pytest.raises(ValueError, match="scale_to_meters"):
-        _core.posed_view_set(
+        _core.pose_storage(
             quaternions,
             translations,
             scale_to_meters=0.0,
@@ -277,7 +277,7 @@ def test_checked_conversion_contract_pins_the_public_semantics():
 
 
 def test_extension_capability_uses_explicit_unspecified_fallback():
-    codec = sceneio.io.Codec(
+    codec = sceneio.Codec(
         "extension_probe",
         (".probe",),
         lambda path: path,
@@ -306,33 +306,33 @@ def test_native_record_coordinate_views_are_additive():
 
 
 def test_python_contract_records_expose_scoped_coordinate_views():
-    mask = sceneio.data.Mask(np.zeros((2, 3), dtype=np.bool_))
+    mask = sceneio.Mask(np.zeros((2, 3), dtype=np.bool_))
     assert mask.coordinates == sceneio.IMAGE_COORDINATES
 
-    semantic = sceneio.data.SemanticMap(
+    semantic = sceneio.SemanticMap(
         np.zeros((2, 3), dtype=np.int32),
         -1,
     )
-    instance = sceneio.data.InstanceMap(
+    instance = sceneio.InstanceMap(
         np.zeros((2, 3), dtype=np.int64),
         0,
     )
-    panoptic = sceneio.data.PanopticMap(semantic, instance)
+    panoptic = sceneio.PanopticMap(semantic, instance)
     assert semantic.coordinates == sceneio.IMAGE_COORDINATES
     assert instance.coordinates == sceneio.IMAGE_COORDINATES
     assert panoptic.coordinates == sceneio.IMAGE_COORDINATES
 
-    features = sceneio.data.FeatureSet(
+    features = sceneio.feature_set(
         np.array([[10.5, 20.5]], dtype=np.float32)
     )
-    pairs = sceneio.data.PairCorrespondences.from_coordinates(
+    pairs = sceneio.PairCorrespondences.from_coordinates(
         np.array([[10.5, 20.5]], dtype=np.float32),
         np.array([[30.5, 40.5]], dtype=np.float32),
     )
     assert features.coordinates == sceneio.IMAGE_COORDINATES
     assert pairs.coordinates == sceneio.IMAGE_COORDINATES
 
-    indexed = sceneio.data.PairCorrespondences.from_indices(
+    indexed = sceneio.PairCorrespondences.from_indices(
         np.array([[0, 0]], dtype=np.uint32)
     )
     assert indexed.coordinates is None
@@ -347,13 +347,13 @@ def test_python_contract_records_expose_scoped_coordinate_views():
     assert native_colmap_features.coordinates.pixel_center == (0.5, 0.5)
     assert native_hloc_features.coordinates.pixel_center == (0.0, 0.0)
 
-    hloc_graph = sceneio.data.CorrespondenceGraph(
+    hloc_graph = sceneio.CorrespondenceGraph(
         features={
-            "a": sceneio.data.FeatureSet(
+            "a": sceneio.feature_set(
                 np.array([[10.0, 20.0]], dtype=np.float32),
                 pixel_center=(0.0, 0.0),
             ),
-            "b": sceneio.data.FeatureSet(
+            "b": sceneio.feature_set(
                 np.array([[30.0, 40.0]], dtype=np.float32),
                 pixel_center=(0.0, 0.0),
             ),
@@ -362,7 +362,7 @@ def test_python_contract_records_expose_scoped_coordinate_views():
     )
     assert hloc_graph.coordinates.pixel_center == (0.0, 0.0)
 
-    frame = sceneio.data.FrameMeta(
+    frame = sceneio.FrameMeta(
         world_frame="capture_rig",
         scale="metric",
         scale_provenance="prior_anchored",
@@ -371,9 +371,9 @@ def test_python_contract_records_expose_scoped_coordinate_views():
     assert frame.coordinates.reference_frame == "capture_rig"
     assert frame.coordinates.scale_to_meters == 1.0
 
-    tracked = sceneio.data.TrackedPointCloud(
+    tracked = sceneio.point_cloud(
         np.zeros((1, 3), dtype=np.float32),
-        tracks=((sceneio.data.TrackObservation("image", 0),),),
+        tracks=((sceneio.TrackObservation("image", 0),),),
     )
     assert tracked.coordinates.world_frame == "unknown"
 
@@ -400,14 +400,13 @@ def test_opengl_c2w_to_colmap_w2c_matches_independent_matrix_oracle():
         dtype=np.float64,
     )
     source_translation = np.array([[1.25, -2.5, 4.75]], dtype=np.float64)
-    camera = _core.camera(
-        7,
+    camera = _core.camera_intrinsics(
         1,
         640,
         480,
         np.array([500.0, 510.0, 320.5, 240.5], dtype=np.float64),
     )
-    source = _core.posed_view_set(
+    source = _core.pose_storage(
         source_quaternion,
         source_translation,
         names=["view.png"],
@@ -443,7 +442,7 @@ def test_opengl_c2w_to_colmap_w2c_matches_independent_matrix_oracle():
     assert converted.quaternion_order == "wxyz"
     assert converted.names == ["view.png"]
     np.testing.assert_array_equal(converted.camera_indices, [0])
-    assert converted.cameras[0].id == 7
+    assert converted.cameras[0].model_id == 1
 
     camera_center = -actual_w2c[:3, :3].T @ actual_w2c[:3, 3]
     np.testing.assert_allclose(camera_center, source_c2w[:3, 3])
@@ -451,11 +450,11 @@ def test_opengl_c2w_to_colmap_w2c_matches_independent_matrix_oracle():
     del source, camera
     gc.collect()
     np.testing.assert_allclose(converted.translations, expected_w2c[:3, 3][None])
-    assert converted.cameras[0].id == 7
+    np.testing.assert_allclose(converted.cameras[0].params, [500.0, 510.0, 320.5, 240.5])
 
 
 def test_pose_conversion_round_trip_is_geometrically_exact():
-    source = _core.posed_view_set(
+    source = _core.pose_storage(
         np.array([[0.8, 0.1, -0.3, 0.5]], dtype=np.float64),
         np.array([[2.0, -7.0, 11.0]], dtype=np.float64),
         quaternion_order="wxyz",
@@ -475,7 +474,7 @@ def test_pose_conversion_round_trip_is_geometrically_exact():
     )
     np.testing.assert_allclose(actual, expected, atol=1e-12)
 
-    xyzw_source = _core.posed_view_set(
+    xyzw_source = _core.pose_storage(
         np.array([[0.0, 0.0, 0.0, 1.0]], dtype=np.float64),
         np.array([[100.0, 0.0, 0.0]], dtype=np.float64),
         quaternion_order="xyzw",
@@ -536,7 +535,7 @@ def _assert_pose_contract_case(
             [1.0, -1.0, -1.0, -1.0]
         )
 
-    record = _core.posed_view_set(
+    record = _core.pose_storage(
         _ordered_quaternion(source_quaternion, source_order)[None],
         (source_pose[:3, 3] / source_scale)[None],
         quaternion_order=source_order,
@@ -609,7 +608,7 @@ def test_pose_contract_cartesian_product_matches_matrix_oracle():
 
 
 def test_pose_world_frame_change_requires_an_explicit_rigid_map():
-    record = _core.posed_view_set(
+    record = _core.pose_storage(
         np.array([[1.0, 0.0, 0.0, 0.0]], dtype=np.float64),
         np.zeros((1, 3), dtype=np.float64),
     )
@@ -933,7 +932,7 @@ def test_conversion_refuses_unqualified_viewpoints_and_nonrigid_pose_frames():
     with pytest.raises(ValueError, match="acquisition viewpoint"):
         sceneio.convert_coordinates(cloud)
 
-    views = _core.posed_view_set(
+    views = _core.pose_storage(
         np.array([[1.0, 0.0, 0.0, 0.0]], dtype=np.float64),
         np.zeros((1, 3), dtype=np.float64),
         axis_frame="opengl",
@@ -1124,7 +1123,7 @@ def test_point_conversion_refuses_mixed_camera_and_named_world_frames(role):
 
 def test_qualified_semantic_identity_returns_the_original_record():
     records = (
-        _core.posed_view_set(
+        _core.pose_storage(
             np.array([[1.0, 0.0, 0.0, 0.0]], dtype=np.float64),
             np.zeros((1, 3), dtype=np.float64),
         ),

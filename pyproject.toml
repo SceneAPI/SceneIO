@@ -1,6 +1,6 @@
 [project]
 name = "sceneio"
-version = "0.3.0"
+version = "0.4.0"
 description = "The contract plane for SceneAPI — numpy-native data contracts, mapping/matching procedure contracts, wire codecs, and format registries."
 readme = "README.md"
 license = "Apache-2.0"

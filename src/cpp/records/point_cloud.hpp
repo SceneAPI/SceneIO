@@ -5,7 +5,7 @@
 // when present, hold exactly `n` rows.
 //
 // Unlike GaussianCloud's fixed constants, the conventions here are RECORDED
-// metadata (the PosedViewSet flavor) because point formats declare no
+// metadata (the PoseStorage flavor) because point formats declare no
 // frame/unit/intensity range — the reader tags what it read and future writers
 // guard. See docs/io_implementation_plan.md.
 //
@@ -53,6 +53,13 @@ struct PointCloud {
     std::vector<int64_t> ids;             // n or empty, unique
     std::vector<float> velocities;        // n*3 or empty
     std::vector<float> accelerations;     // n*3 or empty
+    // Optional per-point observation tracks in canonical CSR form.  When
+    // present, offsets has n+1 entries and the two observation columns have
+    // offsets.back() rows. Image identities are stable UTF-8 names rather
+    // than format-local numeric ids.
+    std::vector<uint64_t> track_offsets;
+    std::vector<std::string> track_image_ids;
+    std::vector<uint64_t> track_keypoint_indices;
     std::string display_color_space = "unknown";
     // conventions the codec recorded (metadata, not fixed like GaussianCloud's):
     std::string coordinate_frame = "unknown";  // "unknown"|"opencv"|"opengl"|"enu"|"ned"
@@ -85,6 +92,10 @@ struct PointCloud {
     bool has_velocities() const { return !velocities.empty(); }
     bool has_accelerations() const {
         return !accelerations.empty();
+    }
+    bool has_tracks() const { return !track_offsets.empty(); }
+    size_t num_track_observations() const {
+        return track_image_ids.size();
     }
     bool has_las_waveform() const {
         return static_cast<bool>(las_waveform);
@@ -130,7 +141,7 @@ inline bool pc_has_extended_scene_fields(const PointCloud &cloud) {
     return cloud.has_display_colors() ||
            cloud.has_display_opacities() || cloud.has_widths() ||
            cloud.has_ids() || cloud.has_velocities() ||
-           cloud.has_accelerations() ||
+           cloud.has_accelerations() || cloud.has_tracks() ||
            cloud.display_color_space != "unknown";
 }
 inline void require_no_extended_point_fields(
@@ -139,6 +150,6 @@ inline void require_no_extended_point_fields(
         throw std::invalid_argument(
             std::string(context) +
             ": cannot represent float display colors/opacities, widths, "
-            "ids, velocities, accelerations, or display_color_space; "
+            "ids, velocities, accelerations, tracks, or display_color_space; "
             "remove them explicitly before writing");
 }

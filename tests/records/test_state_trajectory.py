@@ -38,7 +38,7 @@ def _make(count: int = 4, **metadata):
 def test_public_type_and_fixed_shapes():
     trajectory = _make()
     assert isinstance(trajectory, sceneio.StateTrajectory)
-    assert isinstance(trajectory, sceneio.io.StateTrajectory)
+    assert not hasattr(sceneio.io, "StateTrajectory")
     assert trajectory.num_states == 4
     assert trajectory.timestamps_ns.shape == (4,)
     assert trajectory.timestamps_ns.dtype == np.int64

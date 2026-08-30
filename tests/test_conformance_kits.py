@@ -12,7 +12,7 @@ from collections.abc import Sequence
 import numpy as np
 import pytest
 
-from sceneio.data import (
+from sceneio import (
     SE3,
     ConfidenceMap,
     CorrespondenceGraph,
@@ -21,9 +21,9 @@ from sceneio.data import (
     ImageRef,
     PairCorrespondences,
     Pointmap,
-    TrackedPointCloud,
     TwoViewGeometry,
     ViewInput,
+    point_cloud,
 )
 from sceneio.errors import ContractViolation
 from sceneio.mapping import Mapper, MapperTraits, MappingOptions, MappingResult
@@ -112,7 +112,7 @@ class FakeMapper:
                     )
                 )
             dense = tuple(dense)
-        geometry = TrackedPointCloud(xyz=np.zeros((4, 3), dtype=np.float32))
+        geometry = point_cloud(np.zeros((4, 3), dtype=np.float32))
         scale = "metric" if self._traits.metric_capable else "arbitrary"
         provenance = "model_claimed" if scale == "metric" else "unknown"
         return MappingResult(

@@ -117,9 +117,10 @@ cmake/
   authority. Python contracts and COLMAP adapters import its derived tables;
   CMake generates the native `colmap_model_info()` header from the same
   manifest before `_core` is defined.
-- `sceneio.canonical` owns explicit native/loaded-to-neutral projections.
-  Native records remain storage-faithful and `sceneio.data` stays the procedure
-  floor; equal short names are not aliases.
+- The package root owns the one public representation vocabulary. Private
+  implementation modules and native storage records may differ internally,
+  but codecs project directly into the root contracts rather than through a
+  second public model layer.
 - A **record** (e.g. `Reconstruction`, `GaussianCloud`) is a memory
   representation. It owns contiguous SoA buffers, hands out zero-copy
   ndarray views (numpy default; torch/cupy via DLPack), and **carries its
@@ -127,8 +128,8 @@ cmake/
   direction, scale/opacity space) — never only in comments. A record is
   registered **once** and reused by every codec that produces it (SPZ and
   PLY both yield `GaussianCloud`).
-- Rich 3D-CV stages use the additive `SceneGraph` record rather than widening
-  the established `MeshScene` contract. `SceneGraph` owns node topology,
+- Static mesh scenes and rich 3D-CV stages share the `SceneGraph` record.
+  `SceneGraph` owns node topology,
   transforms, typed payload references, visibility/purpose, stage
   axis/unit/time metadata, authored external dependency URIs, separate source
   locators used for transactional copying, and semantic labels.
@@ -545,10 +546,10 @@ exposes them:
   tangent xyz before translation xyz, with metre-squared translation and
   radian-metre cross terms.
 - `FeatureSet` uses explicit presence for descriptor dtype/dimension/name,
-  keypoint colors, and quality. `MatchGraph.scores` is absent when no score
-  row exists anywhere; otherwise it is parallel to all raw matches and
-  zero-filled for pairs whose `match_score_present` is zero. Pair provenance
-  follows the same presence-first rule and retains unknown source-mask bits.
+  keypoint colors, and quality. `CorrespondenceGraph` preserves the distinction
+  between raw and verified pairs, optional score rows, and source metadata;
+  its private native storage retains unknown source-mask bits and zero-fills
+  score slots only where the storage presence arrays mark them absent.
 - `ColmapDatabase.markers` exposes optional position/covariance BLOB presence
   and top-left-origin pixel projections. `video_metadata` carries only SQLite
   metadata; nullable strings have presence arrays and source paths are never
@@ -561,7 +562,7 @@ exposes them:
   explicit numeric conversion and preserves the rendering hints; writers
   never activate, reorder, or discard values implicitly.
 - `Mesh.coordinate_frame == "opengl"` for canonical glTF geometry;
-  `MeshScene` retains the source node hierarchy, local transforms, scenes, and
+  `SceneGraph` retains the source node hierarchy, local transforms, scenes, and
   mesh-to-primitive ranges instead of baking or flattening transforms.
 
 ## Adding a codec — current wiring recipe
@@ -679,7 +680,7 @@ official datasets using the generic `.txt` suffix require `format="bal"`.
 returns the same public record kind as `read()`. The deliberate exception is
 `colmap_db`: a selected image returns `FeatureSet` including time,
 descriptor dtype/dimension/name, colors, and quality. A selected pair returns
-`MatchGraph` including score-row and provenance state, while a full read
+`CorrespondenceGraph` including score-row and provenance state, while a full read
 returns `ColmapDatabase`.
 
 <!-- sceneio-partial-summary:start -->
@@ -721,10 +722,10 @@ Selector semantics are:
   does not open `points3D.bin` / `points3D.txt`.
 - `image_id=<persisted COLMAP id>` on `colmap_db` returns that image's compiled
   `FeatureSet`; `pair=(image_id1, image_id2)` returns the unordered pair's
-  compiled `MatchGraph`. Both use indexed SQL queries and do not fetch
+  canonical `CorrespondenceGraph`. Both use indexed SQL queries and do not fetch
   unrelated feature or match BLOBs.
 - `mesh_id=<source mesh index>` or `primitive_id=<flattened source primitive
-  index>` on glTF/GLB returns a `MeshScene` containing only those selected
+  index>` on glTF/GLB returns a `SceneGraph` containing only those selected
   primitive arrays and the shared materials.
 
 PFM, binary Netpbm, and DMB copy only selected rows, lossless WebP uses
@@ -747,7 +748,7 @@ full and partial readers; image names retain their unbounded format behavior.
 The compiled cgltf-backed path preserves multiple meshes/primitives, node
 parent/child relationships, local matrix/TRS transforms, multiple scenes,
 default-scene identity, metallic-roughness material factors, URI image
-references, and sampler metadata in `MeshScene` + `MaterialSet`. JSON glTF maps
+references, and sampler metadata in `SceneGraph` + `MaterialSet`. JSON glTF maps
 each relative external buffer beside the document; data-URI buffers and the
 GLB BIN chunk are also supported. Dense, strided, and sparse accessors normalize
 to canonical record arrays while preserving their values.

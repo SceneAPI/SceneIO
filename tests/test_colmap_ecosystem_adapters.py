@@ -10,7 +10,14 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from sceneio import _core
+from sceneio import (
+    CorrespondenceGraph,
+    PairCorrespondences,
+    Sim3,
+    _core,
+    camera_intrinsics,
+    feature_set,
+)
 from sceneio.colmap import (
     UINT32_MAX,
     CharucoBoard,
@@ -18,18 +25,12 @@ from sceneio.colmap import (
     ColmapAdapterError,
     ExtendedSparseModel,
     IdTags,
-    MappingCamera,
-    MappingImage,
     MappingInput,
-    MappingMatch,
     MegaLocArtifacts,
     MegaLocImage,
     MegaLocPair,
-    NamedMatches,
     RigConfigCamera,
     RigConfiguration,
-    SiftFeatures,
-    SimilarityTransform,
     SparseExtensions,
     inspect_mapping_input,
     inspect_megaloc_artifacts,
@@ -54,6 +55,7 @@ from sceneio.colmap import (
 )
 from sceneio.colmap import mapping_input as mapping_input_module
 from sceneio.colmap import megaloc as megaloc_module
+from sceneio.errors import ContractViolation
 
 
 def _mapping_bytes(version: int) -> bytes:
@@ -87,19 +89,54 @@ def _mapping_bytes(version: int) -> bytes:
     return b"".join(parts)
 
 
+def _mapping_camera():
+    return camera_intrinsics(
+        1,
+        10,
+        10,
+        np.ones(4, dtype=np.float64),
+    )
+
+
+def _mapping_value(
+    *,
+    version: int,
+    features: dict[str, object],
+    pairs: dict[tuple[str, str], PairCorrespondences] | None = None,
+    configurations: dict[tuple[str, str], int] | None = None,
+    time_ids: dict[str, int] | None = None,
+) -> MappingInput:
+    names = tuple(features)
+    return MappingInput(
+        version=version,
+        cameras={1: _mapping_camera()},
+        camera_prior_focal_length={1: False},
+        image_ids={name: index + 1 for index, name in enumerate(names)},
+        image_camera_ids={name: 1 for name in names},
+        image_time_ids={
+            name: (time_ids or {}).get(name, UINT32_MAX) for name in names
+        },
+        correspondences=CorrespondenceGraph(
+            features,
+            {} if pairs is None else pairs,
+            configurations={} if configurations is None else configurations,
+        ),
+    )
+
+
 @pytest.mark.parametrize("version", [1, 2])
 def test_mapping_input_independent_wire_roundtrip_and_lifetime(tmp_path, version):
     source = tmp_path / f"mapping-v{version}.pcmapin"
     source.write_bytes(_mapping_bytes(version))
     value = read_mapping_input(source)
     assert value.version == version
-    assert value.images[0].time_id == (UINT32_MAX if version == 1 else 21)
+    left = "left/é.png"
+    assert value.image_time_ids[left] == (UINT32_MAX if version == 1 else 21)
     np.testing.assert_array_equal(
-        value.matches[0].matches,
+        value.correspondences.pairs[(left, "right.png")].indices,
         np.array([[0, 1], [1, 0]], dtype=np.uint32),
     )
-    assert not value.images[0].keypoints.flags.writeable
-    keypoints = value.images[0].keypoints
+    keypoints = value.correspondences.features[left].keypoints
     del value
     gc.collect()
     np.testing.assert_array_equal(
@@ -149,89 +186,91 @@ def test_mapping_input_rejects_malformed(tmp_path, mutation, message):
 
 
 def test_mapping_input_constructed_records_guard_match_indices():
-    camera = MappingCamera(1, 1, 10, 10, np.ones(4, np.float64))
-    images = (
-        MappingImage(1, 1, 2, "a", np.zeros((1, 2), np.float32)),
-        MappingImage(2, 1, 2, "b", np.zeros((1, 2), np.float32)),
-    )
-    match = MappingMatch(1, 2, 1, np.array([[1, 0]], np.uint32))
-    with pytest.raises(ColmapAdapterError, match="exceeds"):
-        MappingInput(2, (camera,), images, (match,))
+    features = {
+        "a": feature_set(np.zeros((1, 2), np.float32)),
+        "b": feature_set(np.zeros((1, 2), np.float32)),
+    }
+    with pytest.raises(ContractViolation, match="out of range"):
+        CorrespondenceGraph(
+            features,
+            {
+                ("a", "b"): PairCorrespondences.from_indices(
+                    np.array([[1, 0]], np.uint32)
+                )
+            },
+        )
     with pytest.raises(ColmapAdapterError, match="positive"):
-        MappingCamera(0, 1, 10, 10, np.ones(4, np.float64))
+        MappingInput(
+            2,
+            {0: _mapping_camera()},
+            {0: False},
+            {"a": 1},
+            {"a": 0},
+            {"a": 2},
+            CorrespondenceGraph({"a": features["a"]}, {}),
+        )
     with pytest.raises(ColmapAdapterError, match="positive"):
-        MappingImage(0, 1, 2, "a", np.zeros((0, 2), np.float32))
-    with pytest.raises(ColmapAdapterError, match=r"0\.\.9"):
-        MappingMatch(1, 2, 10, np.empty((0, 2), np.uint32))
+        MappingInput(
+            2,
+            {1: _mapping_camera()},
+            {1: False},
+            {"a": 0},
+            {"a": 1},
+            {"a": 2},
+            CorrespondenceGraph({"a": features["a"]}, {}),
+        )
+    with pytest.raises(ContractViolation, match=r"0\.\.9"):
+        CorrespondenceGraph(
+            features,
+            {
+                ("a", "b"): PairCorrespondences.from_indices(
+                    np.empty((0, 2), np.uint32)
+                )
+            },
+            configurations={("a", "b"): 10},
+        )
 
 
 def test_mapping_input_empty_arrays_and_v1_time_guard(
     tmp_path,
     monkeypatch,
 ):
-    camera = MappingCamera(1, 1, 10, 10, np.ones(4, np.float64))
-    images = (
-        MappingImage(
-            1,
-            1,
-            UINT32_MAX,
-            "empty-left.png",
-            np.empty((0, 2), np.float32),
-        ),
-        MappingImage(
-            2,
-            1,
-            UINT32_MAX,
-            "empty-right.png",
-            np.empty((0, 2), np.float32),
-        ),
+    features = {
+        "empty-left.png": feature_set(np.empty((0, 2), np.float32)),
+        "empty-right.png": feature_set(np.empty((0, 2), np.float32)),
+    }
+    key = ("empty-left.png", "empty-right.png")
+    value = _mapping_value(
+        version=1,
+        features=features,
+        pairs={
+            key: PairCorrespondences.from_indices(
+                np.empty((0, 2), np.uint32)
+            )
+        },
+        configurations={key: 0},
     )
-    matches = (
-        MappingMatch(
-            1,
-            2,
-            0,
-            np.empty((0, 2), np.uint32),
-        ),
-    )
-    value = MappingInput(1, (camera,), images, matches)
     path = tmp_path / "empty-v1.pcmapin"
     write_mapping_input(value, path)
     decoded = read_mapping_input(path)
-    assert decoded.images[0].keypoints.shape == (0, 2)
-    assert decoded.matches[0].matches.shape == (0, 2)
+    assert decoded.correspondences.features["empty-left.png"].keypoints.shape == (
+        0,
+        2,
+    )
+    assert decoded.correspondences.pairs[key].indices.shape == (0, 2)
 
-    lossy = MappingInput(
-        1,
-        (camera,),
-        (
-            MappingImage(
-                1,
-                1,
-                7,
-                "timed.png",
-                np.empty((0, 2), np.float32),
-            ),
-        ),
-        (),
+    lossy = _mapping_value(
+        version=1,
+        features={"timed.png": feature_set(np.empty((0, 2), np.float32))},
+        time_ids={"timed.png": 7},
     )
     with pytest.raises(ColmapAdapterError, match="v1 cannot represent"):
         write_mapping_input(lossy, tmp_path / "lossy-v1.pcmapin")
 
     monkeypatch.setattr(mapping_input_module, "_MAX_TEXT_BYTES", 3)
-    oversized_name = MappingInput(
-        1,
-        (camera,),
-        (
-            MappingImage(
-                1,
-                1,
-                UINT32_MAX,
-                "éé",
-                np.empty((0, 2), np.float32),
-            ),
-        ),
-        (),
+    oversized_name = _mapping_value(
+        version=1,
+        features={"éé": feature_set(np.empty((0, 2), np.float32))},
     )
     oversized_path = tmp_path / "oversized-name.pcmapin"
     with pytest.raises(ColmapAdapterError, match="name exceeds"):
@@ -261,7 +300,10 @@ def test_mapping_input_mapped_read_avoids_file_sized_python_copy(tmp_path):
     value = read_mapping_input(path)
     _, peak = tracemalloc.get_traced_memory()
     tracemalloc.stop()
-    assert value.images[0].keypoints.shape == (keypoint_count, 2)
+    assert value.correspondences.features["a"].keypoints.shape == (
+        keypoint_count,
+        2,
+    )
     assert peak < path.stat().st_size // 2
 
 
@@ -764,15 +806,20 @@ def test_sparse_rejected_record_releases_mapped_file(tmp_path):
 def test_sim3_sift_pairs_caps_and_match_blocks(tmp_path):
     sim3_path = tmp_path / "sim3.txt"
     sim3_path.write_text("2 1 0 0 0 3 4 5\n", encoding="utf-8")
-    sim3 = read_similarity_transform(sim3_path)
+    sim3 = read_similarity_transform(sim3_path, convention="opencv_cam2world")
     output = tmp_path / "sim3-out.txt"
     write_similarity_transform(sim3, output)
-    expected_sim3 = SimilarityTransform(
-        2.0, np.array([1, 0, 0, 0], np.float64), np.array([3, 4, 5], np.float64)
+    expected_sim3 = Sim3.from_quaternion_wxyz(
+        2.0,
+        np.array([1, 0, 0, 0], np.float64),
+        np.array([3, 4, 5], np.float64),
+        convention="opencv_cam2world",
     )
-    actual_sim3 = read_similarity_transform(output)
+    actual_sim3 = read_similarity_transform(output, convention="opencv_cam2world")
     assert actual_sim3.scale == expected_sim3.scale
-    np.testing.assert_array_equal(actual_sim3.quaternion_wxyz, expected_sim3.quaternion_wxyz)
+    np.testing.assert_array_equal(
+        actual_sim3.to_quaternion_wxyz(), expected_sim3.to_quaternion_wxyz()
+    )
     np.testing.assert_array_equal(actual_sim3.translation, expected_sim3.translation)
 
     sift_path = tmp_path / "sift.txt"
@@ -807,18 +854,14 @@ def test_sim3_sift_pairs_caps_and_match_blocks(tmp_path):
     matches_path = tmp_path / "matches.txt"
     matches_path.write_text("a.png b.png\n0 1\n2 3\n\n", encoding="utf-8")
     matches = read_feature_matches(matches_path)
-    expected_matches = NamedMatches(
-        "a.png",
-        "b.png",
-        np.array([[0, 1], [2, 3]], dtype=np.uint32),
-    )
-    assert (matches[0].image_name1, matches[0].image_name2) == ("a.png", "b.png")
-    np.testing.assert_array_equal(matches[0].matches, expected_matches.matches)
+    key = ("a.png", "b.png")
+    expected_matches = np.array([[0, 1], [2, 3]], dtype=np.uint32)
+    np.testing.assert_array_equal(matches.pairs[key].indices, expected_matches)
     match_output = tmp_path / "matches-out.txt"
     write_feature_matches(matches, match_output)
     np.testing.assert_array_equal(
-        read_feature_matches(match_output)[0].matches,
-        matches[0].matches,
+        read_feature_matches(match_output).pairs[key].indices,
+        matches.pairs[key].indices,
     )
 
 
@@ -844,12 +887,17 @@ def test_text_writers_prevalidate_multifile_and_pair_contracts(tmp_path):
             cap_path=pairs_path,
         )
 
-    duplicate_blocks = (
-        NamedMatches("a", "b", np.empty((0, 2), np.uint32)),
-        NamedMatches("b", "a", np.empty((0, 2), np.uint32)),
+    unrepresentable = CorrespondenceGraph(
+        {},
+        {
+            ("a", "b"): PairCorrespondences.from_coordinates(
+                np.empty((0, 2), np.float32),
+                np.empty((0, 2), np.float32),
+            )
+        },
     )
-    with pytest.raises(ColmapAdapterError, match="duplicate"):
-        write_feature_matches(duplicate_blocks, tmp_path / "matches.txt")
+    with pytest.raises(ColmapAdapterError, match="indexed"):
+        write_feature_matches(unrepresentable, tmp_path / "matches.txt")
 
 
 @pytest.mark.parametrize(
@@ -864,8 +912,13 @@ def test_text_writers_prevalidate_multifile_and_pair_contracts(tmp_path):
 def test_text_adapters_reject_malformed(tmp_path, payload, reader, message):
     path = tmp_path / "bad.txt"
     path.write_text(payload, encoding="utf-8")
+    kwargs = (
+        {"convention": "opencv_cam2world"}
+        if reader is read_similarity_transform
+        else {}
+    )
     with pytest.raises(ColmapAdapterError, match=message) as caught:
-        reader(path)
+        reader(path, **kwargs)
     path.unlink()
     assert caught.value
 
@@ -1051,11 +1104,12 @@ def test_constructed_megaloc_and_sift_types_enforce_wire_dtypes(
                 descriptor_file="real/shared",
                 pair_list_file="alias/shared",
             )
-    with pytest.raises(ColmapAdapterError, match="dtype"):
-        SiftFeatures(
-            np.zeros((1, 4), np.float64),
-            np.zeros((1, 128), np.uint8),
-        )
+    invalid_sift = feature_set(
+        np.zeros((1, 4), np.float32),
+        np.zeros((1, 127), np.uint8),
+    )
+    with pytest.raises(ColmapAdapterError, match="128"):
+        write_sift_features(invalid_sift, tmp_path / "invalid-sift.txt")
     with pytest.raises(ColmapAdapterError, match="model/parameter"):
         RigConfigCamera(
             "camera/",

@@ -418,7 +418,7 @@ def test_unregistered_camera_skip():
     R = _core.read_bundler(_three_cam_middle_unregistered([(0, 0, 1.0, 2.0), (2, 0, 3.0, 4.0)]))
     assert R.num_images == 2
     np.testing.assert_array_equal(np.asarray(R.image_ids), [1, 3])  # 1-based file position
-    assert [c.id for c in R.cameras] == [1, 3]
+    np.testing.assert_array_equal(np.asarray(R.camera_ids), [1, 3])
 
     # write-side COMPACTION: the 3-camera file (with a hole at file position 1)
     # re-writes as a DENSE 2-camera file, so the point's view-list camera indices

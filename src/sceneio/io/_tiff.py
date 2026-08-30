@@ -19,7 +19,7 @@ from pathlib import Path
 import numpy as np
 
 from sceneio import _core
-from sceneio.data import (
+from sceneio._data import (
     InstanceMap,
     LabelTaxonomy,
     Mask,

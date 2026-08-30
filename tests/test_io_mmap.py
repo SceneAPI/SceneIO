@@ -14,6 +14,7 @@ from _support.memory_measurement import traced_peak
 
 import sceneio
 from sceneio import _core
+from sceneio._posed_views import posed_views_from_storage
 from sceneio.io._registry import adapters
 
 
@@ -24,7 +25,6 @@ def _array_fingerprint(value):
 
 def _camera_fingerprint(camera):
     return (
-        camera.id,
         camera.model_id,
         camera.width,
         camera.height,
@@ -34,6 +34,17 @@ def _camera_fingerprint(camera):
 
 def _fingerprint(value):
     """Capture every exposed field of a decoded record."""
+    if isinstance(value, _core.PoseStorage):
+        profile = (
+            "transforms_json"
+            if value.axis_frame == "opengl"
+            else "tum"
+            if np.asarray(value.timestamps).shape == (value.num_views,)
+            else "kitti"
+        )
+        return _fingerprint(
+            posed_views_from_storage(value, source_profile=profile)
+        )
     if isinstance(value, np.ndarray):
         fields = _array_fingerprint(value)
     elif isinstance(value, _core.Image):
@@ -193,7 +204,7 @@ def _fingerprint(value):
                 )
             ),
         )
-    elif isinstance(value, _core.MeshScene):
+    elif isinstance(value, _core.SceneGraph):
         materials = value.materials
         material_fields = (
             tuple(materials.names),
@@ -219,7 +230,7 @@ def _fingerprint(value):
         )
         fields = (
             value.num_meshes,
-            value.num_primitives,
+            value.num_mesh_primitives,
             value.num_nodes,
             value.num_scenes,
             value.has_materials,
@@ -229,14 +240,14 @@ def _fingerprint(value):
             tuple(value.scene_names),
             material_fields,
             tuple(
-                _fingerprint(value.primitive_at(index))
-                for index in range(value.num_primitives)
+                _fingerprint(value.mesh_primitive_at(index))
+                for index in range(value.num_mesh_primitives)
             ),
             *(
                 _array_fingerprint(getattr(value, name))
                 for name in (
                     "mesh_primitive_offsets",
-                    "node_meshes",
+                    "node_payload_indices",
                     "node_child_offsets",
                     "node_children",
                     "node_local_transforms",
@@ -245,19 +256,29 @@ def _fingerprint(value):
                 )
             ),
         )
-    elif isinstance(value, _core.PosedViewSet):
+    elif isinstance(value, sceneio.PosedViewSet):
         fields = (
-            value.num_views,
-            value.num_cameras,
-            value.quaternion_order,
-            value.pose_convention,
-            value.axis_frame,
-            value.scale_to_meters,
+            len(value),
+            (
+                value.frame.world_frame,
+                value.frame.scale,
+                value.frame.scale_provenance,
+            ),
             tuple(value.names),
-            tuple(_camera_fingerprint(camera) for camera in value.cameras),
-            *(
-                _array_fingerprint(getattr(value, name))
-                for name in ("quaternions", "translations", "camera_indices", "timestamps")
+            tuple(value.timestamps),
+            tuple(
+                (
+                    pose.convention,
+                    _array_fingerprint(pose.rotation),
+                    _array_fingerprint(pose.translation),
+                )
+                for pose in value.poses
+            ),
+            tuple(
+                None
+                if calibration is None
+                else _camera_fingerprint(calibration.intrinsics)
+                for calibration in value.calibrations
             ),
         )
     elif isinstance(value, _core.StateTrajectory):
@@ -361,6 +382,7 @@ def _fingerprint(value):
             value.num_points3D,
             value.quaternion_order,
             value.pose_convention,
+            tuple(value.camera_ids),
             tuple(value.image_names),
             tuple(_camera_fingerprint(camera) for camera in value.cameras),
             *(

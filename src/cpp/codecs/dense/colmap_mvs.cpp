@@ -204,6 +204,7 @@ DepthMap decode_depth(const uint8_t *data, const MatrixInfo &info,
                                 (source + column) * sizeof(float));
         }
     }
+    depth_map_derive_validity(result);
     return result;
 }
 
@@ -547,6 +548,9 @@ private:
 };
 
 void validate_depth_write(const DepthMap &depth) {
+    if (!depth_map_validity_matches_policy(depth))
+        throw std::invalid_argument(
+            "colmap_mvs_depth: validity mask disagrees with invalid_policy encoding");
     if (depth.height == 0 || depth.width == 0 ||
         depth.height > kColmapMvsDimensionCap ||
         depth.width > kColmapMvsDimensionCap ||

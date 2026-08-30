@@ -85,7 +85,6 @@ def test_tinyvdb_selection_and_authoring_surface_forces_fc5_exclusion():
     assert CONTRACT["selection"]["bounded_selected_grid"] is False
     for symbol in CONTRACT["provisional_symbols"]:
         assert not hasattr(sceneio, symbol)
-        assert not hasattr(sceneio.data, symbol)
     for name in CONTRACT["provisional_apis"]:
         assert not hasattr(sceneio, name)
         assert not hasattr(sceneio.io, name)

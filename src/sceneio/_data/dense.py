@@ -13,7 +13,7 @@ from typing import Literal
 
 import numpy as np
 
-from sceneio.data._validation import ensure_array, ensure_choice
+from sceneio._data._validation import ensure_array, ensure_choice
 from sceneio.errors import ContractViolation
 
 POINTMAP_FRAMES: frozenset[str] = frozenset({"world", "camera"})
@@ -476,47 +476,6 @@ class PanopticMap:
                     f"PanopticMap: packed values exceed {output_dtype.name}"
                 )
         return np.array(packed, dtype=output_dtype, copy=True, order="C")
-
-
-@dataclass(frozen=True)
-class DepthMap:
-    """Per-pixel depth in the camera frame — (H, W) float32.
-
-    ``valid`` marks pixels carrying a real measurement; ``None`` means
-    every pixel is valid. Valid pixels must be finite and strictly
-    positive; invalid pixels may hold anything (0, NaN, garbage).
-    Depth units follow the owning set's :class:`FrameMeta` scale.
-    """
-
-    depth: np.ndarray  # (H, W) float32
-    valid: np.ndarray | None = None  # (H, W) bool
-
-    def __post_init__(self) -> None:
-        depth = ensure_array("DepthMap.depth", self.depth, dtypes=(np.float32,), shape=(None, None))
-        if self.valid is not None:
-            ensure_array(
-                "DepthMap.valid",
-                self.valid,
-                dtypes=(np.bool_,),
-                shape=(depth.shape[0], depth.shape[1]),
-            )
-            observed = depth[self.valid]
-        else:
-            observed = depth.reshape(-1)
-        if observed.size:
-            if not np.isfinite(observed).all():
-                raise ContractViolation(
-                    "DepthMap.depth: valid pixels contain non-finite values (NaN/Inf)"
-                )
-            min_depth = float(observed.min())
-            if min_depth <= 0.0:
-                raise ContractViolation(
-                    f"DepthMap.depth: valid pixels must be > 0 (min {min_depth:g})"
-                )
-
-    @property
-    def shape(self) -> tuple[int, int]:
-        return (int(self.depth.shape[0]), int(self.depth.shape[1]))
 
 
 @dataclass(frozen=True)

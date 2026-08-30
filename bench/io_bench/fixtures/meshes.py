@@ -139,7 +139,7 @@ def _mesh_off(n):
     )
 
 
-def _mesh_scene(n):
+def _scene_graph(n):
     rng = np.random.default_rng(41)
     vertices = max(3, (n // 3) * 3)
     faces = max(1, vertices // 3)
@@ -171,15 +171,16 @@ def _mesh_scene(n):
                 coordinate_frame="opengl",
             )
         )
-    scene = _core.mesh_scene(
-        primitives,
-        np.array([0, primitive_count], np.uint64),
+    scene = _core.scene_graph(
+        ["node"],
+        meshes=primitives,
+        mesh_primitive_offsets=np.array([0, primitive_count], np.uint64),
         mesh_names=["mesh"],
-        node_meshes=np.array([0], np.int64),
+        node_payload_kinds=["mesh"],
+        node_payload_indices=np.array([0], np.uint64),
         node_child_offsets=np.array([0, 0], np.uint64),
         node_children=np.array([], np.uint64),
         node_local_transforms=np.eye(4, dtype=np.float64)[None],
-        node_names=["node"],
         scene_root_offsets=np.array([0, 1], np.uint64),
         scene_roots=np.array([0], np.uint64),
         scene_names=["scene"],
@@ -199,6 +200,6 @@ __all__ = [
     "_mesh_obj",
     "_mesh_off",
     "_mesh_ply",
-    "_mesh_scene",
     "_mesh_stl",
+    "_scene_graph",
 ]

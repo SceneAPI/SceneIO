@@ -1,9 +1,11 @@
 // records/scene_graph.hpp -- bounded, typed 3D-CV scene graph.
 //
-// This is the rich-scene record used by USD-family I/O.  MeshScene remains the
-// compatibility record for static mesh-only callers.  Nodes use CSR children,
-// one local transform, and at most one typed payload reference.  Numeric tables
-// are contiguous and exposed as owner-retaining ndarray views.
+// This is the single aggregate scene record used by USD- and glTF-family I/O.
+// Nodes use CSR children, one local transform, and at most one typed payload
+// reference. Mesh payloads may be grouped so a glTF logical mesh can retain
+// heterogeneous primitives without flattening. Named scene root sets preserve
+// glTF's multi-scene document structure. Numeric tables are contiguous and
+// exposed as owner-retaining ndarray views.
 #pragma once
 
 #include <cstdint>
@@ -50,6 +52,11 @@ struct SceneGraph {
     std::vector<std::string> node_semantic_labels;
 
     std::vector<Mesh> meshes;
+    // Logical mesh groups span the mesh payload vector. USD records use the
+    // canonical one-payload-per-group default; glTF may group heterogeneous
+    // primitive payloads under one node mesh reference.
+    std::vector<uint64_t> mesh_primitive_offsets;  // G+1
+    std::vector<std::string> mesh_names;            // G
     std::vector<PointCloud> point_clouds;
     std::vector<GaussianCloud> gaussian_clouds;
     bool has_camera_rig = false;
@@ -72,6 +79,13 @@ struct SceneGraph {
     std::string source_representation = "unknown";
     int64_t default_prim = -1;
 
+    // Optional named document scenes. These are orthogonal to USD defaultPrim:
+    // each row is a root-node set and default_scene selects one row.
+    std::vector<uint64_t> scene_root_offsets;  // S+1
+    std::vector<uint64_t> scene_roots;         // R
+    std::vector<std::string> scene_names;      // S
+    int64_t default_scene = -1;
+
     bool has_selected_time = false;
     double selected_time = 0.0;
     bool has_time_range = false;
@@ -80,6 +94,17 @@ struct SceneGraph {
     double time_codes_per_second = 24.0;
 
     size_t num_nodes() const { return n; }
+    size_t num_meshes() const {
+        return mesh_primitive_offsets.empty()
+                   ? 0
+                   : mesh_primitive_offsets.size() - 1;
+    }
+    size_t num_mesh_primitives() const { return meshes.size(); }
+    size_t num_scenes() const {
+        return scene_root_offsets.empty()
+                   ? 0
+                   : scene_root_offsets.size() - 1;
+    }
 };
 
 const char *scene_payload_kind_name(uint8_t value);

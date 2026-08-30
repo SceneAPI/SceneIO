@@ -10,10 +10,8 @@ import pytest
 import tifffile
 
 import sceneio
-import sceneio.data
 import sceneio.io
-from sceneio import _core
-from sceneio.data import Mask, RasterCollection, RasterLevel, RasterSeries
+from sceneio import Mask, RasterCollection, RasterLevel, RasterSeries, _core
 from sceneio.io import _tiff
 
 
@@ -97,9 +95,9 @@ def _portable_collection() -> tuple[RasterCollection, tuple[np.ndarray, ...]]:
 
 
 def test_tiff_collection_public_surface_is_additive_and_shared_records_are_neutral():
-    assert sceneio.RasterCollection is sceneio.data.RasterCollection
-    assert sceneio.RasterLevel is sceneio.data.RasterLevel
-    assert sceneio.RasterSeries is sceneio.data.RasterSeries
+    assert sceneio.RasterCollection is sceneio.RasterCollection
+    assert sceneio.RasterLevel is sceneio.RasterLevel
+    assert sceneio.RasterSeries is sceneio.RasterSeries
     assert not hasattr(sceneio.io, "RasterCollection")
     assert sceneio.read_tiff_collection is sceneio.io.read_tiff_collection
     assert sceneio.inspect_tiff_collection is sceneio.io.inspect_tiff_collection

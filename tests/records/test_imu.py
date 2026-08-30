@@ -47,7 +47,7 @@ def test_calibration_preserves_euroc_asl_quantities_and_exact_units():
     )
 
     assert isinstance(calibration, sceneio.ImuCalibration)
-    assert isinstance(calibration, sceneio.io.ImuCalibration)
+    assert not hasattr(sceneio.io, "ImuCalibration")
     assert (calibration.sensor_id, calibration.name, calibration.topic) == (
         7,
         "imu0",
@@ -180,7 +180,7 @@ def test_sequence_public_type_shapes_units_and_input_ownership():
         value[...] = 0
 
     assert isinstance(sequence, sceneio.ImuSequence)
-    assert isinstance(sequence, sceneio.io.ImuSequence)
+    assert not hasattr(sceneio.io, "ImuSequence")
     assert sequence.sensor_id == 7
     assert sequence.num_samples == 4
     assert sequence.timestamps_ns.dtype == np.int64

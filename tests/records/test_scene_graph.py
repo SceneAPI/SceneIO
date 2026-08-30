@@ -266,12 +266,6 @@ def test_scene_graph_copy_and_pickle_policy_is_explicit_rejection(operation):
         ),
         (
             {
-                "node_names": ["prototype", "same", "same", "fog", "copies"],
-            },
-            "sibling node names",
-        ),
-        (
-            {
                 "node_semantic_taxonomies": ["", "", "class", "", ""],
                 "node_semantic_labels": ["", "", "", "", ""],
             },

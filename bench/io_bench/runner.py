@@ -132,7 +132,7 @@ PILImage = image_oracles.PILImage
 _mesh_obj = mesh_fixtures._mesh_obj
 _mesh_off = mesh_fixtures._mesh_off
 _mesh_ply = mesh_fixtures._mesh_ply
-_mesh_scene = mesh_fixtures._mesh_scene
+_scene_graph = mesh_fixtures._scene_graph
 _mesh_stl = mesh_fixtures._mesh_stl
 _trimesh_glb_r = mesh_oracles._trimesh_glb_r
 _trimesh_glb_w = mesh_oracles._trimesh_glb_w
@@ -221,8 +221,7 @@ def _colmap_db_fixture(scale, profile="sceneio-hybrid-v1"):
     feature_count = max(1, int(1024 * scale))
     match_count = min(feature_count, max(1, int(256 * scale)))
     descriptor_columns = 128
-    camera = _core.camera(
-        1,
+    camera = _core.camera_intrinsics(
         1,
         1920,
         1080,
@@ -283,7 +282,7 @@ def _colmap_db_fixture(scale, profile="sceneio-hybrid-v1"):
     tvecs = np.zeros((pair_count, 3), np.float64)
     tvecs[:, 0] = np.arange(pair_count, dtype=np.float64) * 0.01
     present = np.ones(pair_count, np.uint8)
-    graph = _core.match_graph(
+    graph = _core.correspondence_storage(
         image_pairs,
         match_offsets,
         matches,
@@ -313,6 +312,7 @@ def _colmap_db_fixture(scale, profile="sceneio-hybrid-v1"):
         else None
     )
     return _core.colmap_database(
+        np.array([1], np.uint32),
         [camera],
         features,
         graph,
@@ -331,7 +331,7 @@ def _colmap_db_payload_nbytes(value):
             total += np.asarray(feature.descriptors).nbytes
         if feature.scores is not None:
             total += np.asarray(feature.scores).nbytes
-    graph = value.match_graph
+    graph = value._correspondence_storage
     for name in (
         "image_pairs",
         "match_offsets",
@@ -406,7 +406,7 @@ def _sqlite_reference_write_colmap_db(value, path):
             "INSERT INTO cameras VALUES(?,?,?,?,?,?)",
             (
                 (
-                    camera.id,
+                    int(value.camera_ids[index]),
                     camera.model_id,
                     camera.width,
                     camera.height,
@@ -457,7 +457,7 @@ def _sqlite_reference_write_colmap_db(value, path):
         connection.executemany(
             "INSERT INTO descriptors VALUES(?,?,?,?,?)", descriptor_rows
         )
-        graph = value.match_graph
+        graph = value._correspondence_storage
         match_rows = []
         geometry_rows = []
         for pair in range(graph.num_pairs):
@@ -613,14 +613,13 @@ def _assert_colmap_db_equal(actual, expected):
     if actual.profile == expected.profile:
         assert actual.user_version == expected.user_version
     assert len(actual.cameras) == len(expected.cameras)
+    np.testing.assert_array_equal(actual.camera_ids, expected.camera_ids)
     for left, right in zip(actual.cameras, expected.cameras, strict=True):
         assert (
-            left.id,
             left.model_id,
             left.width,
             left.height,
         ) == (
-            right.id,
             right.model_id,
             right.width,
             right.height,
@@ -657,8 +656,8 @@ def _assert_colmap_db_equal(actual, expected):
             np.testing.assert_array_equal(
                 left.descriptors, right.descriptors
             )
-    left_graph = actual.match_graph
-    right_graph = expected.match_graph
+    left_graph = actual._correspondence_storage
+    right_graph = expected._correspondence_storage
     for name in (
         "pair_ids",
         "image_pairs",
@@ -1215,8 +1214,8 @@ def _benchmark_colmap_db(args, tmp):
     selected_image_id = value.feature_at(value.num_images // 2).image_id
     selected_pair = tuple(
         int(item)
-        for item in value.match_graph.image_pairs[
-            value.match_graph.num_pairs // 2
+        for item in value._correspondence_storage.image_pairs[
+            value._correspondence_storage.num_pairs // 2
         ]
     )
 
@@ -1372,16 +1371,18 @@ def _benchmark_colmap_db(args, tmp):
         selected_feature.descriptors, expected_feature.descriptors
     )
     selected_graph = native_pair_read()
-    expected_pair_index = value.match_graph.num_pairs // 2
-    match_begin = int(value.match_graph.match_offsets[expected_pair_index])
-    match_end = int(value.match_graph.match_offsets[expected_pair_index + 1])
+    storage = value._correspondence_storage
+    expected_pair_index = storage.num_pairs // 2
+    match_begin = int(storage.match_offsets[expected_pair_index])
+    match_end = int(storage.match_offsets[expected_pair_index + 1])
+    selected_correspondences = next(iter(selected_graph.pairs.values()))
     np.testing.assert_array_equal(
-        selected_graph.matches,
-        value.match_graph.matches[match_begin:match_end],
+        selected_correspondences.indices,
+        storage.matches[match_begin:match_end],
     )
     inspected = native_inspect()
     assert inspected.count == value.num_images
-    assert inspected.metadata["num_matches"] == value.match_graph.num_matches
+    assert inspected.metadata["num_matches"] == storage.num_matches
 
     file_mb = native_path.stat().st_size / 1e6
     result = {
@@ -1698,7 +1699,7 @@ def _benchmark_path_spec(args, tmp, spec):
 
 def _benchmark_gltf(args, tmp):
     points = max(3, int(300_000 * args.scale))
-    record, payload = _mesh_scene(points)
+    record, payload = _scene_graph(points)
     payload_bytes = sum(value.nbytes for value in payload.values())
     payload_mb = payload_bytes / 1e6
     path = Path(tmp) / "gltf_scene.gltf"

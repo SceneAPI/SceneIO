@@ -10,7 +10,7 @@ class SceneIoError(Exception):
 class ContractViolation(SceneIoError):
     """A data or procedure contract was violated.
 
-    Raised by the numpy-native datatypes in :mod:`sceneio.data` (bad
+    Raised by the numpy-native datatypes in :mod:`sceneio._data` (bad
     shape, dtype, value range, or inconsistent components) and by
     conforming :mod:`sceneio.mapping` / :mod:`sceneio.matching`
     implementations when a call breaks the declared contract (for

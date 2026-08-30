@@ -21,6 +21,8 @@ from typing import Any
 import numpy as np
 
 from sceneio import _core
+from sceneio._correspondence import graph_from_storage, storage_from_graph
+from sceneio._data.features import CorrespondenceGraph
 from sceneio.io._inspectors.model import ArrayInspection, Inspection
 
 HDF5_AVAILABLE = importlib.util.find_spec("h5py") is not None
@@ -495,14 +497,14 @@ class HlocFeatureStore(Mapping[str, _core.FeatureSet]):
 
 @dataclass(frozen=True, slots=True)
 class HlocMatchStore:
-    """Native ``MatchGraph`` plus lossless hloc endpoint and dense-row metadata."""
+    """Canonical correspondences plus lossless hloc dense-row metadata."""
 
     image_names: tuple[str, ...]
     pair_names: tuple[tuple[str, str], ...]
     source_keypoint_counts: tuple[int, ...]
     match_dtypes: tuple[str, ...]
     score_dtypes: tuple[str | None, ...]
-    graph: _core.MatchGraph
+    correspondences: CorrespondenceGraph
 
     def __post_init__(self) -> None:
         image_names = tuple(self.image_names)
@@ -510,13 +512,15 @@ class HlocMatchStore:
         source_counts = tuple(int(value) for value in self.source_keypoint_counts)
         match_dtypes = tuple(self.match_dtypes)
         score_dtypes = tuple(self.score_dtypes)
-        if not isinstance(self.graph, _core.MatchGraph):
-            raise TypeError("hloc matches: graph must be MatchGraph")
+        if not isinstance(self.correspondences, CorrespondenceGraph):
+            raise TypeError(
+                "hloc matches: correspondences must be CorrespondenceGraph"
+            )
         if len(image_names) != len(set(image_names)):
             raise ValueError("hloc matches: image names must be unique")
         for name in image_names:
             _validate_hloc_image_name(name)
-        pair_count = int(self.graph.num_pairs)
+        pair_count = len(self.correspondences.pairs)
         if not (
             len(pair_names)
             == len(source_counts)
@@ -530,9 +534,10 @@ class HlocMatchStore:
         if len(pair_names) != len(set(frozenset(pair) for pair in pair_names)):
             raise ValueError("hloc matches: unordered image pairs must be unique")
         ids = {name: index + 1 for index, name in enumerate(image_names)}
-        image_pairs = np.asarray(self.graph.image_pairs)
-        offsets = np.asarray(self.graph.match_offsets)
-        score_presence = np.asarray(self.graph.match_score_present)
+        storage = storage_from_graph(self.correspondences, image_ids=ids)
+        image_pairs = np.asarray(storage.image_pairs)
+        offsets = np.asarray(storage.match_offsets)
+        score_presence = np.asarray(storage.match_score_present)
         for index, pair in enumerate(pair_names):
             if len(pair) != 2 or pair[0] == pair[1]:
                 raise ValueError(
@@ -564,7 +569,7 @@ class HlocMatchStore:
                     f"hloc matches: score dtype presence disagrees for pair {pair!r}"
                 )
             begin, end = int(offsets[index]), int(offsets[index + 1])
-            matches = np.asarray(self.graph.matches)[begin:end]
+            matches = np.asarray(storage.matches)[begin:end]
             source_column = 0 if ids[pair[0]] < ids[pair[1]] else 1
             if len(matches) and int(matches[:, source_column].max()) >= source_counts[index]:
                 raise ValueError(
@@ -992,7 +997,7 @@ def _validate_match_group_metadata(
 
 
 def read_hloc_matches(path: str | Path) -> HlocMatchStore:
-    """Read current hloc ``matches0`` groups into one native ``MatchGraph``."""
+    """Read current hloc ``matches0`` groups into canonical correspondences."""
 
     h5py = _require_h5py()
     records: list[
@@ -1045,12 +1050,13 @@ def read_hloc_matches(path: str | Path) -> HlocMatchStore:
         reverse_flags.append(int(id0 > id1))
 
     pair_count = len(records)
-    graph = _core.hloc_match_graph(
+    storage = _core.hloc_correspondence_storage(
         np.asarray(image_pairs, dtype=np.uint32).reshape(pair_count, 2),
         dense_matches,
         score_rows,
         np.asarray(reverse_flags, dtype=np.uint8),
     )
+    graph = graph_from_storage(storage, image_names=tuple(all_names))
     return HlocMatchStore(
         tuple(all_names),
         tuple(pair_names),
@@ -1061,8 +1067,9 @@ def read_hloc_matches(path: str | Path) -> HlocMatchStore:
     )
 
 
-def _validate_hloc_match_graph(value: HlocMatchStore) -> None:
-    graph = value.graph
+def _validate_hloc_correspondences(value: HlocMatchStore):
+    ids = {name: index + 1 for index, name in enumerate(value.image_names)}
+    graph = storage_from_graph(value.correspondences, image_ids=ids)
     if (
         int(graph.num_verified_matches) != 0
         or np.any(np.asarray(graph.geometry_present))
@@ -1076,9 +1083,10 @@ def _validate_hloc_match_graph(value: HlocMatchStore) -> None:
         or not np.all(np.asarray(graph.match_present) == 1)
     ):
         raise ValueError(
-            "hloc matches: MatchGraph carries fields that the documented "
+            "hloc matches: CorrespondenceGraph carries fields that the documented "
             "matches0 layout cannot represent"
         )
+    return graph
 
 
 def _hloc_pair_storage_name(name0: str, name1: str) -> str:
@@ -1086,16 +1094,16 @@ def _hloc_pair_storage_name(name0: str, name1: str) -> str:
 
 
 def write_hloc_matches(value: HlocMatchStore, path: str | Path) -> None:
-    """Write a native match graph in current hloc dense ``matches0`` form."""
+    """Write canonical correspondences in current hloc dense ``matches0`` form."""
 
     if not isinstance(value, HlocMatchStore):
         raise TypeError("hloc match writer expects HlocMatchStore")
-    _validate_hloc_match_graph(value)
+    graph = _validate_hloc_correspondences(value)
     ids = {name: index + 1 for index, name in enumerate(value.image_names)}
-    graph_matches = np.asarray(value.graph.matches)
-    graph_scores = np.asarray(value.graph.scores)
-    offsets = np.asarray(value.graph.match_offsets)
-    score_presence = np.asarray(value.graph.match_score_present)
+    graph_matches = np.asarray(graph.matches)
+    graph_scores = np.asarray(graph.scores)
+    offsets = np.asarray(graph.match_offsets)
+    score_presence = np.asarray(graph.match_score_present)
     storage_names = [
         _hloc_pair_storage_name(name0, name1)
         for name0, name1 in value.pair_names

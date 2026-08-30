@@ -9,8 +9,7 @@ import numpy as np
 import pytest
 
 import sceneio
-from sceneio import _core
-from sceneio.io import FormatError
+from sceneio import FormatError, _core
 
 
 def test_dmb_pixel_windows_equal_full_depth_slices(tmp_path):

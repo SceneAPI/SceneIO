@@ -8,7 +8,10 @@ direction is ``"opencv_world2cam"`` — COLMAP's native pose direction.
 
 Conversion helpers to/from COLMAP's world-to-camera quaternion form
 (``qvec`` as ``(w, x, y, z)`` + ``tvec``, the ``images.txt`` layout) are
-provided so adapters never hand-roll the inversion.
+provided so adapters never hand-roll the inversion. Relative poses use the
+separate ``"opencv_second_from_first"`` and
+``"opencv_first_from_second"`` inverse pair; camera/world and relative-frame
+roles cannot be relabeled as one another.
 """
 
 from __future__ import annotations
@@ -18,16 +21,42 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from sceneio.data._validation import as_float64, ensure_choice
+from sceneio._data._validation import as_float64, ensure_choice
 from sceneio.errors import ContractViolation
 
 DEFAULT_CONVENTION = "opencv_cam2world"
 
-POSE_CONVENTIONS: frozenset[str] = frozenset({"opencv_cam2world", "opencv_world2cam"})
+POSE_CONVENTIONS: frozenset[str] = frozenset(
+    {
+        "opencv_cam2world",
+        "opencv_world2cam",
+        "opencv_second_from_first",
+        "opencv_first_from_second",
+    }
+)
 
-_FLIPPED = {"opencv_cam2world": "opencv_world2cam", "opencv_world2cam": "opencv_cam2world"}
+_FLIPPED = {
+    "opencv_cam2world": "opencv_world2cam",
+    "opencv_world2cam": "opencv_cam2world",
+    "opencv_second_from_first": "opencv_first_from_second",
+    "opencv_first_from_second": "opencv_second_from_first",
+}
 
 _ROTATION_ATOL = 1e-5
+
+
+def _requires_inverse(name: str, current: str, requested: str) -> bool:
+    """Validate a convention change and report whether inversion is required."""
+
+    ensure_choice(f"{name}.convention", requested, POSE_CONVENTIONS)
+    if requested == current:
+        return False
+    if requested != _FLIPPED[current]:
+        raise ContractViolation(
+            f"{name}: cannot convert between unrelated frame roles "
+            f"{current!r} and {requested!r}"
+        )
+    return True
 
 
 def _validate_rotation(name: str, rotation: np.ndarray) -> None:
@@ -122,6 +151,31 @@ class SE3:
     def identity(cls, convention: str = DEFAULT_CONVENTION) -> SE3:
         return cls(np.eye(3), np.zeros(3), convention=convention)
 
+    @classmethod
+    def from_quaternion_wxyz(
+        cls,
+        quaternion_wxyz: object,
+        translation: object,
+        *,
+        convention: str,
+    ) -> SE3:
+        """Build a rigid transform from a deterministic WXYZ quaternion."""
+
+        quaternion = _validated_unit_quat(
+            "SE3.from_quaternion_wxyz.quaternion_wxyz",
+            quaternion_wxyz,
+        )
+        return cls(
+            _quat_wxyz_to_rotation(quaternion),
+            translation,
+            convention=convention,
+        )
+
+    def to_quaternion_wxyz(self) -> np.ndarray:
+        """Return a normalized WXYZ quaternion with deterministic sign."""
+
+        return _rotation_to_quat_wxyz(self.rotation)
+
     @property
     def matrix(self) -> np.ndarray:
         """The 4x4 homogeneous matrix form."""
@@ -140,9 +194,8 @@ class SE3:
         )
 
     def as_convention(self, convention: str) -> SE3:
-        """Re-express this transform under ``convention`` (flip if needed)."""
-        ensure_choice("SE3.as_convention.convention", convention, POSE_CONVENTIONS)
-        if convention == self.convention:
+        """Re-express this transform under its paired inverse convention."""
+        if not _requires_inverse("SE3.as_convention", self.convention, convention):
             return self
         return self.inverse()
 
@@ -208,6 +261,34 @@ class Sim3:
     def from_se3(cls, se3: SE3, *, scale: float = 1.0) -> Sim3:
         return cls(scale, se3.rotation, se3.translation, convention=se3.convention)
 
+    @classmethod
+    def from_quaternion_wxyz(
+        cls,
+        scale: float,
+        quaternion_wxyz: object,
+        translation: object,
+        *,
+        convention: str,
+    ) -> Sim3:
+        """Build a similarity transform from a deterministic WXYZ quaternion.
+
+        ``convention`` is required because a bare similarity-transform text
+        record does not identify the source and target frames.
+        """
+        quaternion = _validated_unit_quat(
+            "Sim3.from_quaternion_wxyz.quaternion_wxyz", quaternion_wxyz
+        )
+        return cls(
+            scale,
+            _quat_wxyz_to_rotation(quaternion),
+            translation,
+            convention=convention,
+        )
+
+    def to_quaternion_wxyz(self) -> np.ndarray:
+        """Return a normalized WXYZ quaternion with a deterministic sign."""
+        return _rotation_to_quat_wxyz(self.rotation)
+
     @property
     def matrix(self) -> np.ndarray:
         """The 4x4 homogeneous matrix form (rotation block scaled)."""
@@ -226,3 +307,9 @@ class Sim3:
             -scale * (rotation @ self.translation),
             convention=_FLIPPED[self.convention],
         )
+
+    def as_convention(self, convention: str) -> Sim3:
+        """Re-express this transform under its paired inverse convention."""
+        if not _requires_inverse("Sim3.as_convention", self.convention, convention):
+            return self
+        return self.inverse()

@@ -7,15 +7,62 @@
 #pragma once
 
 #include <string>
+#include <utility>
+#include <vector>
 
 #include "io/common.hpp"
 
-struct Camera {
-    uint32_t id = 0;
+struct CameraIntrinsics {
     int32_t model_id = 0;
     uint64_t width = 0, height = 0;
     std::vector<double> params;
+
+    CameraIntrinsics() = default;
+    CameraIntrinsics(
+        int32_t model_id, uint64_t width, uint64_t height,
+        std::vector<double> params)
+        : model_id(model_id), width(width), height(height),
+          params(std::move(params)) {}
 };
+
+// Camera ids belong to their containing reconstruction/database. Keep this
+// codec-facing row internal and expose CameraIntrinsics plus a separate id
+// vector at the Python boundary.
+struct Camera : CameraIntrinsics {
+    uint32_t id = 0;
+
+    Camera() = default;
+    Camera(
+        uint32_t id, int32_t model_id, uint64_t width,
+        uint64_t height, std::vector<double> params)
+        : CameraIntrinsics(
+              model_id, width, height, std::move(params)),
+          id(id) {}
+    Camera(uint32_t id, CameraIntrinsics intrinsics)
+        : CameraIntrinsics(std::move(intrinsics)), id(id) {}
+};
+
+inline CameraIntrinsics camera_intrinsics(const Camera &camera) {
+    return static_cast<const CameraIntrinsics &>(camera);
+}
+
+inline std::vector<CameraIntrinsics> camera_intrinsics(
+    const std::vector<Camera> &cameras) {
+    std::vector<CameraIntrinsics> result;
+    result.reserve(cameras.size());
+    for (const Camera &camera : cameras)
+        result.push_back(camera_intrinsics(camera));
+    return result;
+}
+
+inline std::vector<uint32_t> camera_ids(
+    const std::vector<Camera> &cameras) {
+    std::vector<uint32_t> result;
+    result.reserve(cameras.size());
+    for (const Camera &camera : cameras)
+        result.push_back(camera.id);
+    return result;
+}
 
 struct Reconstruction {
     std::vector<Camera> cameras;

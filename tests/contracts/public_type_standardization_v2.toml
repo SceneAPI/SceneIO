@@ -1,15 +1,13 @@
-schema_version = 1
-baseline_identity_count = 139
-catalog_identity_count = 144
-representation_count = 103
+schema_version = 2
+baseline_identity_count = 126
+catalog_identity_count = 131
+representation_count = 90
 payload_kind_count = 26
 builtin_format_count = 74
-catalog_json_bytes = 187980
-catalog_json_sha256 = "7330748de50b224a5b6cea875cc62e283803c73bb3239fa8265174c65bbb7fc7"
+catalog_json_bytes = 175709
+catalog_json_sha256 = "c4aca35317a08c308f3310843c57c34632a8ad2ab8123d04d0ebf3b56608e479"
 baseline_namespaces = [
   "sceneio",
-  "sceneio.io",
-  "sceneio.data",
   "sceneio.colmap",
   "sceneio.colmap_mvs",
   "sceneio.formats",
@@ -19,8 +17,6 @@ baseline_namespaces = [
 ]
 catalog_namespaces = [
   "sceneio",
-  "sceneio.io",
-  "sceneio.data",
   "sceneio.colmap",
   "sceneio.colmap_mvs",
   "sceneio.formats",
@@ -31,20 +27,20 @@ catalog_namespaces = [
 ]
 
 [baseline_classification]
-representation = 103
+representation = 90
 dataclass = 24
 protocol = 6
 error = 5
 enum = 1
 
 [contract_kind_counts]
-representation = 103
-wire_record = 1
 descriptor = 21
-procedure_value = 5
 protocol = 6
+representation = 90
 vocabulary = 3
 error = 5
+wire_record = 1
+procedure_value = 5
 
 [logical_data_types]
 ids = [
@@ -62,9 +58,12 @@ ids = [
 canonical_paths = [
   "sceneio.ArrayInspection",
   "sceneio.BlobStore",
-  "sceneio.Camera",
+  "sceneio.Calibration",
+  "sceneio.CameraIntrinsics",
+  "sceneio.CameraModel",
   "sceneio.CameraRig",
   "sceneio.CheckpointRef",
+  "sceneio.Codec",
   "sceneio.CodecCapabilities",
   "sceneio.ColmapDatabase",
   "sceneio.ColmapDatabaseConversionReport",
@@ -74,9 +73,11 @@ canonical_paths = [
   "sceneio.ColmapRigFrameSet",
   "sceneio.ColmapVideoMetadataSet",
   "sceneio.ColumnDef",
+  "sceneio.ConfidenceMap",
   "sceneio.ConsistencyGraph",
   "sceneio.ContractViolation",
   "sceneio.CoordinateConvention",
+  "sceneio.CorrespondenceGraph",
   "sceneio.DatabaseProfile",
   "sceneio.DepthEncoding",
   "sceneio.DepthMap",
@@ -84,6 +85,7 @@ canonical_paths = [
   "sceneio.FlowField",
   "sceneio.FormatCoordinateContract",
   "sceneio.FormatError",
+  "sceneio.FrameMeta",
   "sceneio.GaussianCloud",
   "sceneio.HlocFeatureStore",
   "sceneio.HlocMatchStore",
@@ -93,12 +95,13 @@ canonical_paths = [
   "sceneio.ImuCalibration",
   "sceneio.ImuSequence",
   "sceneio.Inspection",
+  "sceneio.InstanceMap",
   "sceneio.InstanceSet",
-  "sceneio.MatchGraph",
+  "sceneio.LabelTaxonomy",
+  "sceneio.Mask",
   "sceneio.MaterialSet",
   "sceneio.MaterializedImage",
   "sceneio.Mesh",
-  "sceneio.MeshScene",
   "sceneio.NCoreArray",
   "sceneio.NCoreComponent",
   "sceneio.NCoreComponentData",
@@ -112,21 +115,35 @@ canonical_paths = [
   "sceneio.NativeFeatureCapabilities",
   "sceneio.NormalMap",
   "sceneio.NormalizationProfile",
+  "sceneio.PairCorrespondences",
+  "sceneio.PanopticMap",
   "sceneio.Point3DRecord",
   "sceneio.PointCloud",
   "sceneio.PointScan",
   "sceneio.PointVisibility",
+  "sceneio.Pointmap",
   "sceneio.PoseGraph",
+  "sceneio.PosePrior",
   "sceneio.PosedViewSet",
+  "sceneio.RasterCollection",
+  "sceneio.RasterLevel",
+  "sceneio.RasterSeries",
+  "sceneio.RayMap",
   "sceneio.Reconstruction",
   "sceneio.RepresentationNormalizationContract",
   "sceneio.RtmvDataset",
+  "sceneio.SE3",
   "sceneio.ScanSet",
   "sceneio.SceneGraph",
   "sceneio.SceneIoError",
+  "sceneio.SemanticMap",
+  "sceneio.Sim3",
   "sceneio.StateTrajectory",
   "sceneio.TableDef",
   "sceneio.TensorDict",
+  "sceneio.TrackObservation",
+  "sceneio.TwoViewGeometry",
+  "sceneio.ViewInput",
   "sceneio.VisualInertialDataset",
   "sceneio.VolumeAsset",
   "sceneio.colmap.CharucoBoard",
@@ -134,18 +151,12 @@ canonical_paths = [
   "sceneio.colmap.ColmapAdapterError",
   "sceneio.colmap.ExtendedSparseModel",
   "sceneio.colmap.IdTags",
-  "sceneio.colmap.MappingCamera",
-  "sceneio.colmap.MappingImage",
   "sceneio.colmap.MappingInput",
-  "sceneio.colmap.MappingMatch",
   "sceneio.colmap.MegaLocArtifacts",
   "sceneio.colmap.MegaLocImage",
   "sceneio.colmap.MegaLocPair",
-  "sceneio.colmap.NamedMatches",
   "sceneio.colmap.RigConfigCamera",
   "sceneio.colmap.RigConfiguration",
-  "sceneio.colmap.SiftFeatures",
-  "sceneio.colmap.SimilarityTransform",
   "sceneio.colmap.SparseExtensions",
   "sceneio.colmap.SparseMarker",
   "sceneio.colmap.SparseMarkerProjection",
@@ -160,36 +171,8 @@ canonical_paths = [
   "sceneio.colmap_mvs.ProjectionMatrix",
   "sceneio.colmap_mvs.WorkspaceInspection",
   "sceneio.colmap_mvs.WorkspaceValidation",
-  "sceneio.data.Calibration",
-  "sceneio.data.CameraIntrinsics",
-  "sceneio.data.CameraModel",
-  "sceneio.data.ConfidenceMap",
-  "sceneio.data.CorrespondenceGraph",
-  "sceneio.data.DepthMap",
-  "sceneio.data.FeatureSet",
-  "sceneio.data.FrameMeta",
-  "sceneio.data.InstanceMap",
-  "sceneio.data.LabelTaxonomy",
-  "sceneio.data.Mask",
-  "sceneio.data.PairCorrespondences",
-  "sceneio.data.PanopticMap",
-  "sceneio.data.Pointmap",
-  "sceneio.data.PosePrior",
-  "sceneio.data.PosedViewSet",
-  "sceneio.data.RasterCollection",
-  "sceneio.data.RasterLevel",
-  "sceneio.data.RasterSeries",
-  "sceneio.data.RayMap",
-  "sceneio.data.SE3",
-  "sceneio.data.SemanticMap",
-  "sceneio.data.Sim3",
-  "sceneio.data.TrackObservation",
-  "sceneio.data.TrackedPointCloud",
-  "sceneio.data.TwoViewGeometry",
-  "sceneio.data.ViewInput",
   "sceneio.formats.DataType",
   "sceneio.formats.FormatSpec",
-  "sceneio.io.Codec",
   "sceneio.mapping.Mapper",
   "sceneio.mapping.MapperTraits",
   "sceneio.mapping.MappingOptions",
@@ -213,7 +196,7 @@ ids = [
   "image_sequence",
   "match_graph",
   "mesh",
-  "mesh_scene",
+  "scene_graph",
   "ncore_dataset",
   "normal_map",
   "numeric_table",

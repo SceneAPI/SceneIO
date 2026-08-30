@@ -15,9 +15,9 @@ from __future__ import annotations
 
 import numpy as np
 
-from sceneio.data import (
+from sceneio import FeatureSet, feature_set
+from sceneio._data import (
     CorrespondenceGraph,
-    FeatureSet,
     PairCorrespondences,
     ViewInput,
 )
@@ -78,7 +78,7 @@ def make_synthetic_feature_set(
     ).astype(np.float32)
     descriptors = rng.normal(size=(num_keypoints, descriptor_dim)).astype(np.float32)
     scores = rng.uniform(0, 1, size=num_keypoints).astype(np.float32)
-    return FeatureSet(keypoints=keypoints, descriptors=descriptors, scores=scores)
+    return feature_set(keypoints, descriptors, scores)
 
 
 def make_synthetic_correspondence_graph(

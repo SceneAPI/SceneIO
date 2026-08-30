@@ -229,7 +229,7 @@ def test_representation_count_claims_match_runtime_catalog():
         DOCS / "format_coverage.md": (
             f"classifies all {count} public data representations"
         ),
-        DOCS / "releases" / "v0.3.0.md": (
+        DOCS / "releases" / "v0.4.0.md": (
             f"All {count} public in-memory data representations"
         ),
         DOCS / "representation_normalization.md": (

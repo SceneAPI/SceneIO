@@ -143,7 +143,7 @@ std::vector<uint8_t> optional_flags(
     if (!source) return result;
     if (source->ndim() != 1 || source->shape(0) != count)
         throw std::invalid_argument(
-            std::string("match_graph: ") + name +
+            std::string("correspondence_storage: ") + name +
             " must be (P,) uint8");
     assign_nonempty(result, source->data(), count);
     return result;
@@ -155,7 +155,7 @@ std::vector<int32_t> optional_configs(
     if (!source) return result;
     if (source->ndim() != 1 || source->shape(0) != count)
         throw std::invalid_argument(
-            "match_graph: configs must be (P,) int32");
+            "correspondence_storage: configs must be (P,) int32");
     assign_nonempty(result, source->data(), count);
     return result;
 }
@@ -168,7 +168,7 @@ std::vector<double> optional_matrices(
         source->shape(0) != count ||
         source->shape(1) != 3 || source->shape(2) != 3)
         throw std::invalid_argument(
-            std::string("match_graph: ") + name +
+            std::string("correspondence_storage: ") + name +
             " must be (P,3,3) float64");
     std::vector<double> result;
     assign_nonempty(result, source->data(), count * 9);
@@ -236,7 +236,10 @@ FeatureSet make_feature_set(
     std::array<uint64_t, 2> image_size,
     int32_t extractor_type, nb::object time_id,
     bool keypoints_present,
-    std::array<double, 2> pixel_center) {
+    std::array<double, 2> pixel_center,
+    nb::object extractor_type_name,
+    nb::object keypoint_colors,
+    nb::object quality) {
     if (keypoints.ndim() != 2 ||
         (keypoints.shape(1) != 2 &&
          keypoints.shape(1) != 4 &&
@@ -275,20 +278,34 @@ FeatureSet make_feature_set(
         descriptor_info =
             sio::dtype_from_dlpack(descriptor_array.dtype());
         if (!descriptor_info ||
-            (descriptor_info->tag != sio::DType::U8 &&
-             descriptor_info->tag != sio::DType::I8 &&
-             descriptor_info->tag != sio::DType::F16 &&
-             descriptor_info->tag != sio::DType::F32 &&
-             descriptor_info->tag != sio::DType::F64))
+            descriptor_info->tag == sio::DType::Bool)
             throw std::invalid_argument(
-                "feature_set: descriptor dtype must be uint8, int8, "
-                "float16, float32, or float64");
+                "feature_set: descriptor dtype must be numeric");
         result.has_descriptors = true;
         result.descriptor_dtype = descriptor_info->tag;
         result.descriptor_columns = descriptor_array.shape(1);
     } else if (extractor_type != -1) {
         throw std::invalid_argument(
             "feature_set: extractor_type must be -1 without descriptors");
+    }
+    if (!extractor_type_name.is_none()) {
+        result.extractor_type_name = nb::cast<std::string>(
+            extractor_type_name);
+        result.extractor_type_name_present = true;
+    }
+
+    u8_array color_array;
+    if (!keypoint_colors.is_none()) {
+        if (!nb::try_cast<u8_array>(keypoint_colors, color_array))
+            throw nb::type_error(
+                "feature_set: keypoint_colors must be a C-contiguous "
+                "uint8 CPU array");
+        if (color_array.ndim() != 2 ||
+            color_array.shape(0) != result.rows ||
+            color_array.shape(1) != 3)
+            throw std::invalid_argument(
+                "feature_set: keypoint_colors must be (N,3) uint8");
+        result.keypoint_colors_present = true;
     }
 
     f32_array score_array;
@@ -307,6 +324,10 @@ FeatureSet make_feature_set(
     if (!time_id.is_none()) {
         result.time_id = nb::cast<int64_t>(time_id);
         result.has_time_id = true;
+    }
+    if (!quality.is_none()) {
+        result.quality = nb::cast<double>(quality);
+        result.quality_present = true;
     }
 
     {
@@ -327,12 +348,16 @@ FeatureSet make_feature_set(
         if (result.has_scores)
             assign_nonempty(
                 result.scores, score_array.data(), result.rows);
+        if (result.keypoint_colors_present)
+            assign_nonempty(
+                result.keypoint_colors, color_array.data(),
+                result.rows * 3);
         validate_feature_set(result);
     }
     return result;
 }
 
-MatchGraph make_match_graph(
+CorrespondenceStorage make_correspondence_storage(
     u32_array image_pairs, u64_array match_offsets,
     u32_array matches, u64_array verified_offsets,
     u32_array verified_matches,
@@ -348,63 +373,65 @@ MatchGraph make_match_graph(
     std::optional<u8_array> pose_present,
     std::optional<u8_array> match_present,
     std::optional<u8_array> geometry_present,
-    std::optional<std::vector<std::optional<Camera>>>
+    std::optional<std::vector<std::optional<CameraIntrinsics>>>
         recovered_camera1,
+    std::optional<u32_array> recovered_camera1_ids,
     std::optional<u8_array> camera1_present,
     std::optional<u8_array> camera1_prior_focal_length,
-    std::optional<std::vector<std::optional<Camera>>>
+    std::optional<std::vector<std::optional<CameraIntrinsics>>>
         recovered_camera2,
+    std::optional<u32_array> recovered_camera2_ids,
     std::optional<u8_array> camera2_present,
     std::optional<u8_array> camera2_prior_focal_length,
     std::optional<u8_array> match_score_present) {
     if (image_pairs.ndim() != 2 || image_pairs.shape(1) != 2)
         throw std::invalid_argument(
-            "match_graph: image_pairs must be (P,2) uint32");
+            "correspondence_storage: image_pairs must be (P,2) uint32");
     const size_t count = image_pairs.shape(0);
     if (match_offsets.ndim() != 1 ||
         match_offsets.shape(0) != count + 1 ||
         matches.ndim() != 2 || matches.shape(1) != 2)
         throw std::invalid_argument(
-            "match_graph: matches require offsets (P+1,) uint64 "
+            "correspondence_storage: matches require offsets (P+1,) uint64 "
             "and values (M,2) uint32");
     if (verified_offsets.ndim() != 1 ||
         verified_offsets.shape(0) != count + 1 ||
         verified_matches.ndim() != 2 ||
         verified_matches.shape(1) != 2)
         throw std::invalid_argument(
-            "match_graph: verified matches require offsets (P+1,) "
+            "correspondence_storage: verified matches require offsets (P+1,) "
             "uint64 and values (K,2) uint32");
     if (count > std::numeric_limits<size_t>::max() / 36)
         throw std::invalid_argument(
-            "match_graph: pair count overflows field extents");
+            "correspondence_storage: pair count overflows field extents");
 
     f32_array score_array;
     const bool has_scores = !scores.is_none();
     if (has_scores) {
         if (!nb::try_cast<f32_array>(scores, score_array))
             throw nb::type_error(
-                "match_graph: scores must be a C-contiguous "
+                "correspondence_storage: scores must be a C-contiguous "
                 "float32 CPU array");
         if (score_array.ndim() != 1 ||
             score_array.shape(0) != matches.shape(0))
             throw std::invalid_argument(
-                "match_graph: scores must be (M,) float32");
+                "correspondence_storage: scores must be (M,) float32");
     }
     if (static_cast<bool>(qvecs) != static_cast<bool>(tvecs))
         throw std::invalid_argument(
-            "match_graph: qvecs and tvecs must be supplied together");
+            "correspondence_storage: qvecs and tvecs must be supplied together");
     if (qvecs &&
         (qvecs->ndim() != 2 || qvecs->shape(0) != count ||
          qvecs->shape(1) != 4))
         throw std::invalid_argument(
-            "match_graph: qvecs must be (P,4) float64");
+            "correspondence_storage: qvecs must be (P,4) float64");
     if (tvecs &&
         (tvecs->ndim() != 2 || tvecs->shape(0) != count ||
          tvecs->shape(1) != 3))
         throw std::invalid_argument(
-            "match_graph: tvecs must be (P,3) float64");
+            "correspondence_storage: tvecs must be (P,3) float64");
 
-    MatchGraph result;
+    CorrespondenceStorage result;
     result.pair_count = count;
     result.has_scores = has_scores;
     result.match_score_present = optional_flags(
@@ -444,7 +471,8 @@ MatchGraph make_match_graph(
     result.recovered_camera2.assign(count, Camera{});
     const auto assign_recovered =
         [&](std::optional<
-                std::vector<std::optional<Camera>>> &source,
+                std::vector<std::optional<CameraIntrinsics>>> &source,
+            std::optional<u32_array> &source_ids,
             std::optional<u8_array> &explicit_present,
             std::vector<Camera> &cameras,
             std::vector<uint8_t> &present,
@@ -452,16 +480,33 @@ MatchGraph make_match_graph(
             const char *presence_name) {
             std::vector<uint8_t> inferred(
                 count, uint8_t{0});
+            if (static_cast<bool>(source) !=
+                static_cast<bool>(source_ids))
+                throw std::invalid_argument(
+                    std::string("correspondence_storage: ") + camera_name +
+                    " and its ids must be supplied together");
             if (source) {
                 if (source->size() != count)
                     throw std::invalid_argument(
-                        std::string("match_graph: ") +
+                        std::string("correspondence_storage: ") +
                         camera_name +
                         " must have P camera-or-None values");
+                if (source_ids->ndim() != 1 ||
+                    source_ids->shape(0) != count)
+                    throw std::invalid_argument(
+                        std::string("correspondence_storage: ") + camera_name +
+                        " ids must be (P,) uint32");
                 for (size_t index = 0; index < count; ++index) {
-                    if (!(*source)[index]) continue;
-                    cameras[index] =
-                        std::move(*(*source)[index]);
+                    if (!(*source)[index]) {
+                        if (source_ids->data()[index] != 0)
+                            throw std::invalid_argument(
+                                std::string("correspondence_storage: absent ") +
+                                camera_name + " ids must be zero");
+                        continue;
+                    }
+                    cameras[index] = Camera(
+                        source_ids->data()[index],
+                        std::move(*(*source)[index]));
                     inferred[index] = 1;
                 }
             }
@@ -474,16 +519,18 @@ MatchGraph make_match_graph(
                 presence_name);
             if (present != inferred)
                 throw std::invalid_argument(
-                    std::string("match_graph: ") +
+                    std::string("correspondence_storage: ") +
                     presence_name +
                     " must agree with camera-or-None values");
         };
     assign_recovered(
-        recovered_camera1, camera1_present,
+        recovered_camera1, recovered_camera1_ids,
+        camera1_present,
         result.recovered_camera1, result.camera1_present,
         "recovered_camera1", "camera1_present");
     assign_recovered(
-        recovered_camera2, camera2_present,
+        recovered_camera2, recovered_camera2_ids,
+        camera2_present,
         result.recovered_camera2, result.camera2_present,
         "recovered_camera2", "camera2_present");
     result.F = optional_matrices(
@@ -538,7 +585,7 @@ MatchGraph make_match_graph(
             result.pair_ids.push_back(colmap_pair_id(
                 result.image_pairs[index * 2],
                 result.image_pairs[index * 2 + 1]));
-        validate_match_graph(result);
+        validate_correspondence_storage(result);
     }
     return result;
 }
@@ -601,7 +648,7 @@ void dispatch_hloc_matches(
             return;
         default:
             throw std::invalid_argument(
-                "hloc_match_graph: matches must be "
+                "hloc_correspondence_storage: matches must be "
                 "int16, int32, or int64");
     }
 }
@@ -617,27 +664,27 @@ float hloc_score_at(
             static_cast<const uint16_t *>(
                 input.scores->data())[index]);
     throw std::invalid_argument(
-        "hloc_match_graph: scores must be float16 or float32");
+        "hloc_correspondence_storage: scores must be float16 or float32");
 }
 
-MatchGraph make_hloc_match_graph(
+CorrespondenceStorage make_hloc_correspondence_storage(
     u32_array image_pairs,
     std::vector<any_array> dense_matches,
     nb::list dense_scores,
     u8_array reverse_flags) {
     if (image_pairs.ndim() != 2 || image_pairs.shape(1) != 2)
         throw std::invalid_argument(
-            "hloc_match_graph: image_pairs must be (P,2) uint32");
+            "hloc_correspondence_storage: image_pairs must be (P,2) uint32");
     const size_t count = image_pairs.shape(0);
     if (dense_matches.size() != count ||
         dense_scores.size() != count ||
         reverse_flags.ndim() != 1 ||
         reverse_flags.shape(0) != count)
         throw std::invalid_argument(
-            "hloc_match_graph: dense inputs must have one item per pair");
+            "hloc_correspondence_storage: dense inputs must have one item per pair");
     if (count > std::numeric_limits<size_t>::max() / 36)
         throw std::invalid_argument(
-            "hloc_match_graph: pair count overflows field extents");
+            "hloc_correspondence_storage: pair count overflows field extents");
 
     std::vector<HlocDenseInput> inputs;
     inputs.reserve(count);
@@ -651,7 +698,7 @@ MatchGraph make_hloc_match_graph(
              match_info->tag != sio::DType::I32 &&
              match_info->tag != sio::DType::I64))
             throw std::invalid_argument(
-                "hloc_match_graph: each match array must be "
+                "hloc_correspondence_storage: each match array must be "
                 "contiguous int16, int32, or int64 (N,)");
         std::optional<any_array> scores;
         sio::DType score_dtype = sio::DType::F32;
@@ -666,7 +713,7 @@ MatchGraph make_hloc_match_graph(
                 (score_info->tag != sio::DType::F16 &&
                  score_info->tag != sio::DType::F32))
                 throw std::invalid_argument(
-                    "hloc_match_graph: each score array must be "
+                    "hloc_correspondence_storage: each score array must be "
                     "contiguous float16/float32 with match shape");
             score_dtype = score_info->tag;
             has_any_scores = true;
@@ -674,13 +721,13 @@ MatchGraph make_hloc_match_graph(
         const uint8_t reverse = reverse_flags.data()[index];
         if (reverse > 1)
             throw std::invalid_argument(
-                "hloc_match_graph: reverse flags must be 0 or 1");
+                "hloc_correspondence_storage: reverse flags must be 0 or 1");
         inputs.push_back(HlocDenseInput{
             std::move(matches), std::move(scores),
             match_info->tag, score_dtype, reverse != 0});
     }
 
-    MatchGraph result;
+    CorrespondenceStorage result;
     result.pair_count = count;
     result.has_scores = has_any_scores;
     result.match_present.assign(count, 1);
@@ -721,7 +768,7 @@ MatchGraph make_hloc_match_graph(
                 source_count - 1 >
                     std::numeric_limits<uint32_t>::max())
                 throw std::invalid_argument(
-                    "hloc_match_graph: source index exceeds uint32");
+                    "hloc_correspondence_storage: source index exceeds uint32");
             size_t valid_count = 0;
             dispatch_hloc_matches(
                 input, [&](const auto *values) {
@@ -737,14 +784,14 @@ MatchGraph make_hloc_match_graph(
                                     std::numeric_limits<
                                         uint32_t>::max()))
                             throw std::invalid_argument(
-                                "hloc_match_graph: target index "
+                                "hloc_correspondence_storage: target index "
                                 "is outside uint32");
                         if (!std::isfinite(score))
                             throw std::invalid_argument(
-                                "hloc_match_graph: scores must be finite");
+                                "hloc_correspondence_storage: scores must be finite");
                         if (target < 0 && score != 0.0f)
                             throw std::invalid_argument(
-                                "hloc_match_graph: unmatched source "
+                                "hloc_correspondence_storage: unmatched source "
                                 "score must be zero");
                         valid_count += static_cast<size_t>(target >= 0);
                     }
@@ -752,7 +799,7 @@ MatchGraph make_hloc_match_graph(
             if (valid_count >
                 std::numeric_limits<size_t>::max() - total_matches)
                 throw std::invalid_argument(
-                    "hloc_match_graph: match count overflows");
+                    "hloc_correspondence_storage: match count overflows");
             total_matches += valid_count;
             result.match_offsets[pair + 1] =
                 static_cast<uint64_t>(total_matches);
@@ -762,7 +809,7 @@ MatchGraph make_hloc_match_graph(
         if (total_matches >
             std::numeric_limits<size_t>::max() / 2)
             throw std::invalid_argument(
-                "hloc_match_graph: match storage overflows");
+                "hloc_correspondence_storage: match storage overflows");
         result.matches.reserve(total_matches * 2);
         if (has_any_scores) result.scores.reserve(total_matches);
         for (size_t pair = 0; pair < count; ++pair) {
@@ -794,24 +841,32 @@ MatchGraph make_hloc_match_graph(
             result.pair_ids.push_back(colmap_pair_id(
                 result.image_pairs[index * 2],
                 result.image_pairs[index * 2 + 1]));
-        validate_match_graph(result, "hloc_match_graph");
+        validate_correspondence_storage(result, "hloc_correspondence_storage");
     }
     return result;
 }
 
 ColmapDatabase make_colmap_database(
-    std::vector<Camera> cameras,
+    u32_array camera_ids,
+    std::vector<CameraIntrinsics> intrinsics,
     std::vector<FeatureSet> features,
-    const MatchGraph &match_graph,
+    const CorrespondenceStorage &correspondence_storage,
     std::optional<u8_array> prior_focal_length,
     int32_t user_version,
     const std::string &profile,
     int32_t application_id,
     nb::object maxx_schema_info) {
     ColmapDatabase result;
-    result.cameras = std::move(cameras);
+    if (camera_ids.ndim() != 1 ||
+        camera_ids.shape(0) != intrinsics.size())
+        throw std::invalid_argument(
+            "colmap_database: camera_ids must be (num_cameras,) uint32");
+    result.cameras.reserve(intrinsics.size());
+    for (size_t index = 0; index < intrinsics.size(); ++index)
+        result.cameras.emplace_back(
+            camera_ids.data()[index], std::move(intrinsics[index]));
     result.features = std::move(features);
-    result.match_graph = match_graph;
+    result.correspondence_storage = correspondence_storage;
     result.user_version = user_version;
     result.profile = profile;
     result.application_id = application_id;
@@ -868,19 +923,15 @@ ColmapMaxxSchemaInfo make_colmap_maxx_schema_info(
     return result;
 }
 
-Camera make_camera(
-    uint32_t id, int32_t model_id, uint64_t width,
+CameraIntrinsics make_camera_intrinsics(
+    int32_t model_id, uint64_t width,
     uint64_t height, f64_array params) {
     const auto model = colmap_model_info(model_id);
-    if (id == std::numeric_limits<uint32_t>::max())
-        throw std::invalid_argument(
-            "camera: id must not be UINT32_MAX");
     if (params.ndim() != 1 ||
         params.shape(0) != static_cast<size_t>(model.nparams))
         throw std::invalid_argument(
-            "camera: params length disagrees with camera model");
-    Camera result;
-    result.id = id;
+            "camera_intrinsics: params length disagrees with camera model");
+    CameraIntrinsics result;
     result.model_id = model_id;
     result.width = width;
     result.height = height;
@@ -888,11 +939,11 @@ Camera make_camera(
         result.params, params.data(), params.shape(0));
     if (width == 0 || height == 0)
         throw std::invalid_argument(
-            "camera: width and height must be positive");
+            "camera_intrinsics: width and height must be positive");
     for (double value : result.params)
         if (!std::isfinite(value))
             throw std::invalid_argument(
-                "camera: params must be finite");
+                "camera_intrinsics: params must be finite");
     return result;
 }
 
@@ -997,14 +1048,10 @@ void validate_feature_set(
                 std::string(context) +
                 ": absent descriptors carry descriptor metadata");
     } else {
-        if (features.descriptor_dtype != sio::DType::U8 &&
-            features.descriptor_dtype != sio::DType::I8 &&
-            features.descriptor_dtype != sio::DType::F16 &&
-            features.descriptor_dtype != sio::DType::F32 &&
-            features.descriptor_dtype != sio::DType::F64)
+        if (features.descriptor_dtype == sio::DType::Bool)
             throw std::invalid_argument(
                 std::string(context) +
-                ": descriptor dtype is not a MAXX wire dtype");
+                ": descriptor dtype must be numeric");
         if ((features.extractor_type == 0 &&
              features.descriptor_dtype != sio::DType::U8) ||
             ((features.extractor_type == 1 ||
@@ -1073,8 +1120,8 @@ void validate_feature_set(
     }
 }
 
-void validate_match_graph(
-    const MatchGraph &graph, const char *context) {
+void validate_correspondence_storage(
+    const CorrespondenceStorage &graph, const char *context) {
     const size_t count = graph.pair_count;
     if (count > std::numeric_limits<size_t>::max() / 9 ||
         graph.pair_ids.size() != count ||
@@ -1104,7 +1151,7 @@ void validate_match_graph(
         graph.retrieval_scores.size() != count)
         throw std::invalid_argument(
             std::string(context) +
-            ": inconsistent MatchGraph field lengths");
+            ": inconsistent CorrespondenceStorage field lengths");
 
     const size_t match_count = graph.matches.size() / 2;
     if (graph.matches.size() % 2 != 0)
@@ -1878,7 +1925,7 @@ void validate_colmap_database(
                 ": image names must be unique");
     }
 
-    validate_match_graph(database.match_graph, context);
+    validate_correspondence_storage(database.correspondence_storage, context);
     validate_colmap_rig_frames(database.rig_frames, context);
     validate_colmap_pose_priors(database.pose_priors, context);
     validate_colmap_markers(database.markers, context);
@@ -1974,7 +2021,7 @@ void validate_colmap_database(
                 std::string(context) +
                 ": video frame references a missing image");
     }
-    const MatchGraph &graph = database.match_graph;
+    const CorrespondenceStorage &graph = database.correspondence_storage;
     for (size_t pair = 0; pair < graph.pair_count; ++pair) {
         const uint32_t image_a = graph.image_pairs[pair * 2];
         const uint32_t image_b = graph.image_pairs[pair * 2 + 1];
@@ -2149,32 +2196,32 @@ void register_feature_match(nb::module_ &module) {
                        ">";
             });
 
-    nb::class_<MatchGraph>(module, "MatchGraph")
+    nb::class_<CorrespondenceStorage>(module, "CorrespondenceStorage")
         .def_prop_ro(
             "num_pairs",
-            [](const MatchGraph &value) {
+            [](const CorrespondenceStorage &value) {
                 return value.num_pairs();
             })
         .def_prop_ro(
             "num_matches",
-            [](const MatchGraph &value) {
+            [](const CorrespondenceStorage &value) {
                 return value.num_matches();
             })
         .def_prop_ro(
             "num_verified_matches",
-            [](const MatchGraph &value) {
+            [](const CorrespondenceStorage &value) {
                 return value.num_verified_matches();
             })
         .def_prop_ro(
             "pair_ids",
-            [](const MatchGraph &value) {
+            [](const CorrespondenceStorage &value) {
                 return typed_view(
                     value.pair_ids, {value.pair_count});
             },
             reference_internal)
         .def_prop_ro(
             "image_pairs",
-            [](const MatchGraph &value) {
+            [](const CorrespondenceStorage &value) {
                 return typed_view(
                     value.image_pairs,
                     {value.pair_count, 2});
@@ -2182,14 +2229,14 @@ void register_feature_match(nb::module_ &module) {
             reference_internal)
         .def_prop_ro(
             "match_present",
-            [](const MatchGraph &value) {
+            [](const CorrespondenceStorage &value) {
                 return typed_view(
                     value.match_present, {value.pair_count});
             },
             reference_internal)
         .def_prop_ro(
             "geometry_present",
-            [](const MatchGraph &value) {
+            [](const CorrespondenceStorage &value) {
                 return typed_view(
                     value.geometry_present,
                     {value.pair_count});
@@ -2197,7 +2244,7 @@ void register_feature_match(nb::module_ &module) {
             reference_internal)
         .def_prop_ro(
             "match_offsets",
-            [](const MatchGraph &value) {
+            [](const CorrespondenceStorage &value) {
                 return typed_view(
                     value.match_offsets,
                     {value.pair_count + 1});
@@ -2205,7 +2252,7 @@ void register_feature_match(nb::module_ &module) {
             reference_internal)
         .def_prop_ro(
             "matches",
-            [](const MatchGraph &value) {
+            [](const CorrespondenceStorage &value) {
                 return typed_view(
                     value.matches,
                     {value.num_matches(), 2});
@@ -2213,9 +2260,9 @@ void register_feature_match(nb::module_ &module) {
             reference_internal)
         .def_prop_ro(
             "scores",
-            [](nb::handle_t<MatchGraph> self) -> nb::object {
-                const MatchGraph &value =
-                    nb::cast<const MatchGraph &>(self);
+            [](nb::handle_t<CorrespondenceStorage> self) -> nb::object {
+                const CorrespondenceStorage &value =
+                    nb::cast<const CorrespondenceStorage &>(self);
                 return value.has_scores
                            ? owner_typed_view(
                                  self, value.scores,
@@ -2224,7 +2271,7 @@ void register_feature_match(nb::module_ &module) {
             })
         .def_prop_ro(
             "match_score_present",
-            [](const MatchGraph &value) {
+            [](const CorrespondenceStorage &value) {
                 return typed_view(
                     value.match_score_present,
                     {value.pair_count});
@@ -2232,7 +2279,7 @@ void register_feature_match(nb::module_ &module) {
             reference_internal)
         .def_prop_ro(
             "provenance_present",
-            [](const MatchGraph &value) {
+            [](const CorrespondenceStorage &value) {
                 return typed_view(
                     value.provenance_present,
                     {value.pair_count});
@@ -2240,7 +2287,7 @@ void register_feature_match(nb::module_ &module) {
             reference_internal)
         .def_prop_ro(
             "source_flags",
-            [](const MatchGraph &value) {
+            [](const CorrespondenceStorage &value) {
                 return typed_view(
                     value.source_flags,
                     {value.pair_count});
@@ -2248,7 +2295,7 @@ void register_feature_match(nb::module_ &module) {
             reference_internal)
         .def_prop_ro(
             "retrieval_score_present",
-            [](const MatchGraph &value) {
+            [](const CorrespondenceStorage &value) {
                 return typed_view(
                     value.retrieval_score_present,
                     {value.pair_count});
@@ -2256,7 +2303,7 @@ void register_feature_match(nb::module_ &module) {
             reference_internal)
         .def_prop_ro(
             "retrieval_scores",
-            [](const MatchGraph &value) {
+            [](const CorrespondenceStorage &value) {
                 return typed_view(
                     value.retrieval_scores,
                     {value.pair_count});
@@ -2264,7 +2311,7 @@ void register_feature_match(nb::module_ &module) {
             reference_internal)
         .def_prop_ro(
             "verified_offsets",
-            [](const MatchGraph &value) {
+            [](const CorrespondenceStorage &value) {
                 return typed_view(
                     value.verified_offsets,
                     {value.pair_count + 1});
@@ -2272,7 +2319,7 @@ void register_feature_match(nb::module_ &module) {
             reference_internal)
         .def_prop_ro(
             "verified_matches",
-            [](const MatchGraph &value) {
+            [](const CorrespondenceStorage &value) {
                 return typed_view(
                     value.verified_matches,
                     {value.num_verified_matches(), 2});
@@ -2280,77 +2327,77 @@ void register_feature_match(nb::module_ &module) {
             reference_internal)
         .def_prop_ro(
             "configs",
-            [](const MatchGraph &value) {
+            [](const CorrespondenceStorage &value) {
                 return typed_view(
                     value.configs, {value.pair_count});
             },
             reference_internal)
         .def_prop_ro(
             "F_present",
-            [](const MatchGraph &value) {
+            [](const CorrespondenceStorage &value) {
                 return typed_view(
                     value.F_present, {value.pair_count});
             },
             reference_internal)
         .def_prop_ro(
             "E_present",
-            [](const MatchGraph &value) {
+            [](const CorrespondenceStorage &value) {
                 return typed_view(
                     value.E_present, {value.pair_count});
             },
             reference_internal)
         .def_prop_ro(
             "H_present",
-            [](const MatchGraph &value) {
+            [](const CorrespondenceStorage &value) {
                 return typed_view(
                     value.H_present, {value.pair_count});
             },
             reference_internal)
         .def_prop_ro(
             "fundamental_matrices",
-            [](const MatchGraph &value) {
+            [](const CorrespondenceStorage &value) {
                 return typed_view(
                     value.F, {value.pair_count, 3, 3});
             },
             reference_internal)
         .def_prop_ro(
             "essential_matrices",
-            [](const MatchGraph &value) {
+            [](const CorrespondenceStorage &value) {
                 return typed_view(
                     value.E, {value.pair_count, 3, 3});
             },
             reference_internal)
         .def_prop_ro(
             "homographies",
-            [](const MatchGraph &value) {
+            [](const CorrespondenceStorage &value) {
                 return typed_view(
                     value.H, {value.pair_count, 3, 3});
             },
             reference_internal)
         .def_prop_ro(
             "pose_present",
-            [](const MatchGraph &value) {
+            [](const CorrespondenceStorage &value) {
                 return typed_view(
                     value.pose_present, {value.pair_count});
             },
             reference_internal)
         .def_prop_ro(
             "qvecs",
-            [](const MatchGraph &value) {
+            [](const CorrespondenceStorage &value) {
                 return typed_view(
                     value.qvecs, {value.pair_count, 4});
             },
             reference_internal)
         .def_prop_ro(
             "tvecs",
-            [](const MatchGraph &value) {
+            [](const CorrespondenceStorage &value) {
                 return typed_view(
                     value.tvecs, {value.pair_count, 3});
             },
             reference_internal)
         .def_prop_ro(
             "camera1_present",
-            [](const MatchGraph &value) {
+            [](const CorrespondenceStorage &value) {
                 return typed_view(
                     value.camera1_present,
                     {value.pair_count});
@@ -2358,7 +2405,7 @@ void register_feature_match(nb::module_ &module) {
             reference_internal)
         .def_prop_ro(
             "camera2_present",
-            [](const MatchGraph &value) {
+            [](const CorrespondenceStorage &value) {
                 return typed_view(
                     value.camera2_present,
                     {value.pair_count});
@@ -2366,7 +2413,7 @@ void register_feature_match(nb::module_ &module) {
             reference_internal)
         .def_prop_ro(
             "camera1_prior_focal_length",
-            [](const MatchGraph &value) {
+            [](const CorrespondenceStorage &value) {
                 return typed_view(
                     value.camera1_prior_focal_length,
                     {value.pair_count});
@@ -2374,48 +2421,58 @@ void register_feature_match(nb::module_ &module) {
             reference_internal)
         .def_prop_ro(
             "camera2_prior_focal_length",
-            [](const MatchGraph &value) {
+            [](const CorrespondenceStorage &value) {
                 return typed_view(
                     value.camera2_prior_focal_length,
                     {value.pair_count});
             },
             reference_internal)
+        .def_prop_ro(
+            "recovered_camera1_ids",
+            [](const CorrespondenceStorage &value) {
+                return ::camera_ids(value.recovered_camera1);
+            })
+        .def_prop_ro(
+            "recovered_camera2_ids",
+            [](const CorrespondenceStorage &value) {
+                return ::camera_ids(value.recovered_camera2);
+            })
         .def(
             "recovered_camera1",
-            [](const MatchGraph &value,
+            [](const CorrespondenceStorage &value,
                size_t index) -> nb::object {
                 if (index >= value.pair_count)
                     throw nb::index_error();
                 if (!value.camera1_present[index])
                     return nb::none();
-                return nb::cast(Camera(
+                return nb::cast(camera_intrinsics(
                     value.recovered_camera1[index]));
             },
             "index"_a)
         .def(
             "recovered_camera2",
-            [](const MatchGraph &value,
+            [](const CorrespondenceStorage &value,
                size_t index) -> nb::object {
                 if (index >= value.pair_count)
                     throw nb::index_error();
                 if (!value.camera2_present[index])
                     return nb::none();
-                return nb::cast(Camera(
+                return nb::cast(camera_intrinsics(
                     value.recovered_camera2[index]));
             },
             "index"_a)
         .def_prop_ro(
             "quaternion_order",
-            [](const MatchGraph &) { return "wxyz"; })
+            [](const CorrespondenceStorage &) { return "wxyz"; })
         .def_prop_ro(
             "relative_pose_convention",
-            [](const MatchGraph &) {
+            [](const CorrespondenceStorage &) {
                 return "second_from_first";
             })
         .def(
             "__repr__",
-            [](const MatchGraph &value) {
-                return "<MatchGraph pairs=" +
+            [](const CorrespondenceStorage &value) {
+                return "<CorrespondenceStorage pairs=" +
                        std::to_string(value.pair_count) +
                        " matches=" +
                        std::to_string(value.num_matches()) +
@@ -3108,9 +3165,14 @@ void register_feature_match(nb::module_ &module) {
                 return value.num_images();
             })
         .def_prop_ro(
+            "camera_ids",
+            [](const ColmapDatabase &value) {
+                return ::camera_ids(value.cameras);
+            })
+        .def_prop_ro(
             "cameras",
             [](const ColmapDatabase &value) {
-                return value.cameras;
+                return camera_intrinsics(value.cameras);
             })
         .def_prop_ro(
             "prior_focal_length",
@@ -3150,12 +3212,19 @@ void register_feature_match(nb::module_ &module) {
             },
             reference_internal)
         .def_prop_ro(
-            "match_graph",
+            "_correspondence_storage",
             [](const ColmapDatabase &value)
-                -> const MatchGraph & {
-                return value.match_graph;
+                -> const CorrespondenceStorage & {
+                return value.correspondence_storage;
             },
             reference_internal)
+        .def_prop_ro(
+            "correspondences",
+            [](nb::handle_t<ColmapDatabase> self) {
+                return nb::module_::import_(
+                           "sceneio._correspondence")
+                    .attr("graph_from_colmap_database")(self);
+            })
         .def_prop_ro(
             "rig_frames",
             [](const ColmapDatabase &value)
@@ -3204,15 +3273,15 @@ void register_feature_match(nb::module_ &module) {
                        std::to_string(value.features.size()) +
                        " pairs=" +
                        std::to_string(
-                           value.match_graph.pair_count) +
+                           value.correspondence_storage.pair_count) +
                        ">";
             });
 
     module.def(
-        "camera", &make_camera,
-        "id"_a, "model_id"_a, "width"_a, "height"_a,
+        "camera_intrinsics", &make_camera_intrinsics,
+        "model_id"_a, "width"_a, "height"_a,
         "params"_a,
-        "Build a COLMAP camera with model-checked float64 params.");
+        "Build model-checked COLMAP camera intrinsics.");
     module.def(
         "feature_set", &make_feature_set,
         "keypoints"_a, "descriptors"_a = nb::none(),
@@ -3222,10 +3291,13 @@ void register_feature_match(nb::module_ &module) {
         "extractor_type"_a = -1, "time_id"_a = nb::none(),
         "keypoints_present"_a = true,
         "pixel_center"_a = std::array<double, 2>{0.5, 0.5},
+        "extractor_type_name"_a = nb::none(),
+        "keypoint_colors"_a = nb::none(),
+        "quality"_a = nb::none(),
         "Build a typed per-image FeatureSet. Inputs are copied into "
         "record-owned storage.");
     module.def(
-        "match_graph", &make_match_graph,
+        "correspondence_storage", &make_correspondence_storage,
         "image_pairs"_a, "match_offsets"_a, "matches"_a,
         "verified_offsets"_a, "verified_matches"_a,
         "scores"_a = nb::none(), "configs"_a = nb::none(),
@@ -3240,18 +3312,20 @@ void register_feature_match(nb::module_ &module) {
         "match_present"_a = nb::none(),
         "geometry_present"_a = nb::none(),
         "recovered_camera1"_a = nb::none(),
+        "recovered_camera1_ids"_a = nb::none(),
         "camera1_present"_a = nb::none(),
         "camera1_prior_focal_length"_a = nb::none(),
         "recovered_camera2"_a = nb::none(),
+        "recovered_camera2_ids"_a = nb::none(),
         "camera2_present"_a = nb::none(),
         "camera2_prior_focal_length"_a = nb::none(),
         "match_score_present"_a = nb::none(),
-        "Build a typed ragged image-pair MatchGraph.");
+        "Build a typed ragged image-pair CorrespondenceStorage.");
     module.def(
-        "hloc_match_graph", &make_hloc_match_graph,
+        "hloc_correspondence_storage", &make_hloc_correspondence_storage,
         "image_pairs"_a, "dense_matches"_a, "dense_scores"_a,
         "reverse_flags"_a,
-        "Build a MatchGraph directly from dense hloc match rows.");
+        "Build a CorrespondenceStorage directly from dense hloc match rows.");
     module.def(
         "colmap_maxx_schema_info",
         &make_colmap_maxx_schema_info,
@@ -3262,7 +3336,7 @@ void register_feature_match(nb::module_ &module) {
         "Build explicit MAXX database ownership metadata.");
     module.def(
         "colmap_database", &make_colmap_database,
-        "cameras"_a, "features"_a, "match_graph"_a,
+        "camera_ids"_a, "cameras"_a, "features"_a, "correspondence_storage"_a,
         "prior_focal_length"_a = nb::none(),
         "user_version"_a = 3140002,
         "profile"_a = "sceneio-hybrid-v1",

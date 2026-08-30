@@ -215,6 +215,7 @@ DepthMap read_exr_depth(nb::handle source, const std::string &unit,
     result.unit = unit;
     result.scale_to_meters = scale_to_meters;
     result.invalid_policy = invalid_policy;
+    depth_map_derive_validity(result);
     return result;
 }
 
@@ -317,6 +318,9 @@ nb::bytes write_exr_depth(const DepthMap &depth, const std::string &unit,
                           double scale_to_meters,
                           const std::string &invalid_policy,
                           const std::string &channel_name, size_t lanes) {
+    if (!depth_map_validity_matches_policy(depth))
+        throw std::invalid_argument(
+            "EXR depth: validity mask disagrees with invalid_policy encoding");
     require_exr_depth_encoding(unit, scale_to_meters, invalid_policy);
     require_exr_channel_name(channel_name);
     if (depth.unit != unit ||

@@ -3,7 +3,7 @@
 > Current shipped and branch-local status is tracked in `format_coverage.md`.
 > The status markers below have been reconciled to the live 74-format registry;
 > broader checklist boxes remain open only for aspirational or optional future
-> gates; they are not missing SceneIO 0.3.0 release requirements. The completed
+> gates; they are not missing SceneIO 0.4.0 release requirements. The completed
 > format-expansion execution record is
 > [`format_gap_implementation_plan.md`](format_gap_implementation_plan.md), and
 > the completed maintainability and backend-selection work is in
@@ -28,7 +28,7 @@
 > source data.
 > The complementary
 > [`representation_normalization.md`](representation_normalization.md)
-> contract covers all 103 public representation classes with explicit
+> contract covers all 90 public representation classes with explicit
 > normalization, scaling, unit, coordinate-source, conversion, and refusal
 > rules. It changes no decoded values and keeps unknown/arbitrary scale honest.
 > Licensed fixture sourcing is tracked separately in
@@ -344,13 +344,12 @@ zero‑copy + convention tags.
 | `ConsistencyGraph` | pixel/image-index CSR + row/column/index conventions | COLMAP MVS consistency graphs | ✅ |
 | `PointVisibility` | fused-point/image-index CSR + index convention | COLMAP fused visibility | ✅ |
 | `FlowField` | `vectors` HxWx2 f32 + component/axis/row/unit/invalid meta | typed `.flo` adapter | ✅ |
-| `PointCloud` | `xyz` Nx3, `rgb`/`rgb16`, normals, intensity, optional organized shape/viewpoint/LAS waveform sidecar, plus authored float display RGB/opacity, widths, signed ids, velocity, acceleration, and display color space | PLY‑point, PCD, LAS/LAZ, E57, `.xyz`, bounded USD | ✅ record; rich static fields map through `read_scene`/`write_scene` for USD while unrelated legacy writers refuse them |
-| `Mesh` | positions; ragged face offsets/indices; vertex/corner normals, UVs, RGBA8 and authored float display RGB/opacity; primitive/material ranges; coordinate metadata, transform, orientation, and tri-state double-sidedness | PLY‑mesh, OBJ, STL, OFF, glTF, USD | ✅ record; rich static geometry fields map through bounded USD while unrelated legacy writers refuse them |
-| `MeshScene` | ordered `Mesh` primitives; mesh ranges/names; shared `MaterialSet`; node hierarchy and local transforms; scene roots/names/default | glTF/GLB, bounded USD/USDZ | ✅ |
-| `FeatureSet` | `keypoints` Nx{2,4,6} f32 with explicit first-pixel center, polymorphic `descriptors` NxD with extractor dtype/dim/name presence, keypoint colors, scores, quality, image time/id/size, and absent-state metadata | HDF5/hloc, COLMAP DB | ✅ |
-| `MatchGraph` | ragged per-pair raw/verified `matches` Mx2 u32, optional score rows, source/retrieval provenance, `F/E/H` 3x3, config, relative pose, and optional recovered endpoint cameras | HDF5/hloc, COLMAP DB | ✅ |
-| `PairCorrespondences` / `CorrespondenceGraph` | indexed or coordinate matches, scores, two-view geometry, ordered pair validation, and per-image feature references | hloc and detector-free matching adapters | ✅ Python-neutral models |
-| `TrackObservation` / `TrackedPointCloud` | sparse XYZ plus aligned per-point image/keypoint observations | reconstruction and dataset adapters | ✅ Python-neutral models; compiled reconstruction uses CSR tracks |
+| `PointCloud` | `xyz` Nx3, `rgb`/`rgb16`, normals, intensity, optional track CSR, organized shape/viewpoint/LAS waveform sidecar, plus authored float display RGB/opacity, widths, signed ids, velocity, acceleration, and display color space | PLY‑point, PCD, LAS/LAZ, E57, `.xyz`, bounded USD | ✅ record; rich static fields map through `read_scene`/`write_scene` for USD while other format writers refuse unsupported additive fields |
+| `Mesh` | positions; ragged face offsets/indices; vertex/corner normals, UVs, RGBA8 and authored float display RGB/opacity; primitive/material ranges; coordinate metadata, transform, orientation, and tri-state double-sidedness | PLY‑mesh, OBJ, STL, OFF, glTF, USD | ✅ record; rich static geometry fields map through bounded USD while other format writers refuse unsupported additive fields |
+| `SceneGraph` | ordered `Mesh` primitives; mesh ranges/names; shared `MaterialSet`; node hierarchy and local transforms; scene roots/names/default | glTF/GLB, bounded USD/USDZ | ✅ unified scene representation |
+| `FeatureSet` | `keypoints` Nx{2,4,6} f32 with explicit first-pixel center, polymorphic `descriptors` NxD with extractor dtype/dim/name presence, keypoint colors, scores, quality, and absent-state metadata | HDF5/hloc, COLMAP DB | ✅ canonical feature payload; collection identity belongs to the enclosing store or reconstruction |
+| `PairCorrespondences` / `CorrespondenceGraph` | ragged per-pair raw/verified indexed or coordinate matches, optional scores, source/retrieval provenance, `F/E/H` 3x3 geometry, config, relative pose, recovered endpoint cameras, ordered-pair validation, and per-image feature references | HDF5/hloc, COLMAP DB, and detector-free matching adapters | ✅ canonical pair and aggregate correspondence models |
+| `TrackObservation` / `PointCloud` tracks | sparse XYZ plus aligned per-point image/keypoint observations | reconstruction and dataset adapters | ✅ canonical observations stored directly by point clouds; compiled reconstruction uses CSR tracks |
 | `Mask` | HxW bool, `True` means the pixel participates | segmentation, filtering, and dataset adapters | ✅ Python-neutral model |
 | `LabelTaxonomy` | unique int32 semantic ids, ordered names, explicit identity/version, optional RGB colors and thing/stuff flags | typed dense labels | ✅ Python-neutral model |
 | `SemanticMap` | int32 HxW ids, explicit void, optional validity/taxonomy | NPZ/Zarr/TIFF typed carriers and NCore semantic projection | ✅ locally qualified |
@@ -365,7 +364,7 @@ zero‑copy + convention tags.
 | `VisualInertialDataset` | camera rig, ordered lazy camera streams, exact camera clocks, IMU calibration/sample streams, and optional state trajectory | bounded ASL/EuRoC directories | ✅ format-neutral aggregate with typed sensor/time selection |
 | `PoseGraph` | typed SE3 nodes/edges, exact ids/fixed flags, XYZW transforms, symmetric 6×6 information + convention tags | g2o | ✅ |
 
-*(Done: `Reconstruction`, `GaussianCloud`, `PosedViewSet`, `Camera`.)*
+*(Done: `Reconstruction`, `GaussianCloud`, `PosedViewSet`, `CameraIntrinsics`.)*
 
 ---
 
@@ -379,7 +378,7 @@ Columns: **Ext/id** · **Record** · **Lib/oracle (license)** · **R/W** ·
 |---|---|---|---|---|
 | ✅ COLMAP `.bin` | `Reconstruction` | pycolmap (BSD) | R+W | legacy three-file + modern five-file byte identity; rigs/frames; camera models 0-17; bounded direct writer |
 | ✅ COLMAP `.txt` | `Reconstruction` | pycolmap | R+W | legacy/modern text twin; rigs/frames; fast_float parse |
-| ✅ COLMAP `.db` | `ColmapDatabase` (`FeatureSet`/`MatchGraph`/nested companions) | pycolmap + sqlite3 (PD) | inspect + R/W all exact profiles + partial | exact 3.13/4.1.1/current/MAXX identity and profile-preserving public writes; guarded cross-profile conversion reports; hybrid compatibility writer retained for constructed core records |
+| ✅ COLMAP `.db` | `ColmapDatabase` (`FeatureSet`/`CorrespondenceGraph`/nested companions) | pycolmap + sqlite3 (PD) | inspect + R/W all exact profiles + partial | exact 3.13/4.1.1/current/MAXX identity and profile-preserving public writes; guarded cross-profile conversion reports; hybrid compatibility writer retained for constructed core records |
 | ✅ COLMAP dense workspace | lazy paths + dense records | independent format parsers + pycolmap comparison | inspect + R/W + partial | canonical, PMVS, and CMP-MVS topology; patch/fusion configs, projections, name lists, and raw visibility; encoded images remain opaque paths |
 | ✅ Bundler `.out` | `Reconstruction` | pycolmap/manual | R+W | y‑down camera convention pinned |
 | ✅ VisualSFM `.nvm` | `Reconstruction` | manual | R+W | quat WXYZ, focal in px |
@@ -407,7 +406,7 @@ Columns: **Ext/id** · **Record** · **Lib/oracle (license)** · **R/W** ·
 | ✅ PCD | `PointCloud` | independent parser + Open3D (MIT) | R+W | PCD 0.7 ASCII/binary/LZF `binary_compressed`; organization/viewpoint; binary point ranges |
 | ✅ LAS | `PointCloud` | laspy (BSD) | R+W | mmap; point formats 0‑10; internal waveform formats 4/5/9/10 retain a validated lossless sidecar |
 | ✅ LAZ | `PointCloud` | LAZperf 3.4.0 (Apache‑2.0/BSD‑3-Clause/BSD‑2-Clause) + laspy/lazrs oracle | R+W | formats 0‑3 and 6‑8; mmap, seekable direct sink, inspect, and chunk-aware point ranges; waveform/extra-byte/metadata extensions reject |
-| ✅ E57 | legacy `PointCloud`; typed `PointScan` / `ScanSet` | pye57 (MIT) / libE57Format (BSL-1.0) | R+W | optional `sceneio[e57]`; generic one-scan projection remains compatible; typed APIs preserve ordered Cartesian scans, raw invalid states, sparse row/column organization, exact RGB8/float32 values, WXYZ scan-to-reference poses, header-only inspection, and fixed-capacity stored-row ranges; spherical data, imagery, extensions, and nonexact narrowing refuse |
+| ✅ E57 | `PointCloud`; typed `PointScan` / `ScanSet` | pye57 (MIT) / libE57Format (BSL-1.0) | R+W | optional `sceneio[e57]`; generic one-scan projection remains compatible; typed APIs preserve ordered Cartesian scans, raw invalid states, sparse row/column organization, exact RGB8/float32 values, WXYZ scan-to-reference poses, header-only inspection, and fixed-capacity stored-row ranges; spherical data, imagery, extensions, and nonexact narrowing refuse |
 | ✅ `.xyz` / ✅ count-prefixed `.pts` | `PointCloud` | independent parser | R+W | `.pts` is a distinct count-validated grammar, not an alias |
 
 ### 3d. Meshes
@@ -417,17 +416,17 @@ Columns: **Ext/id** · **Record** · **Lib/oracle (license)** · **R/W** ·
 | ✅ OBJ (+MTL) | `Mesh` + `MaterialSet` | pinned tinyobjloader/trimesh (MIT) | R+W | strict polygon-preserving independent indices; factors/textures and sampler clamp preserved; mmap read, paired direct-sink write, metadata inspect |
 | ✅ STL | `Mesh` | independent parser + trimesh (MIT) | R+W | strict ASCII + binary LE; unwelded triangle soup and facet normals; bounded face ranges |
 | ✅ OFF | `Mesh` | independent parser + trimesh (MIT) | R+W | polygon-preserving ASCII vertex variants with normals, UVs, and exact RGBA8; bounded face ranges |
-| ✅ glTF / GLB (plain) | `MeshScene` | cgltf (MIT); pygltflib + trimesh oracles | R+W | 2.0 JSON/external or data buffers and GLB BIN; sparse/strided accessors, nodes/scenes, PBR subset, mesh/primitive selectors; unsupported extensions/Draco reject |
-| policy-gated Draco glTF | `MeshScene` | Draco (Apache) | R+W | requires a separate patented-codec policy decision; never required for plain glTF/GLB |
-| 🟡 USD / USDZ / historical USDC | `MeshScene` compatibility + `SceneGraph` | TinyUSDZ (Apache-2.0) + test-only OpenUSD (TOST-1.0) oracle | rich direct-static 3D-CV R+W; bounded selected-time R | optional `sceneio[usd]`; C1-C5 cover hierarchy, polygon meshes/points, bounded PreviewSurface materials/textures, official float/half Gaussian particles, static camera/render-product pairs, direct scalar-float OpenVDB references, one inherited semantic pair, and static PointInstancer rows; historical USDC input is qualified through crate 10 and later crates refuse before provider dispatch; FC6 state B adds direct USDA/USDA-root USDZ matrix and visibility selected-time evaluation while leaving current USDC, composition, animation preservation, dynamic writing, and sampled payloads unavailable; OpenUSD 26.8 is separately installed only in focused Gaussian and selected-time oracle lanes and is not a runtime dependency; final exact-candidate cross-platform confirmation passed in FC7 |
+| ✅ glTF / GLB (plain) | `SceneGraph` | cgltf (MIT); pygltflib + trimesh oracles | R+W | 2.0 JSON/external or data buffers and GLB BIN; sparse/strided accessors, nodes/scenes, PBR subset, mesh/primitive selectors; unsupported extensions/Draco reject |
+| policy-gated Draco glTF | `SceneGraph` | Draco (Apache) | R+W | requires a separate patented-codec policy decision; never required for plain glTF/GLB |
+| 🟡 USD / USDZ / historical USDC | `SceneGraph` | TinyUSDZ (Apache-2.0) + test-only OpenUSD (TOST-1.0) oracle | rich direct-static 3D-CV R+W; bounded selected-time R | optional `sceneio[usd]`; C1-C5 cover hierarchy, polygon meshes/points, bounded PreviewSurface materials/textures, official float/half Gaussian particles, static camera/render-product pairs, direct scalar-float OpenVDB references, one inherited semantic pair, and static PointInstancer rows; historical USDC input is qualified through crate 10 and later crates refuse before provider dispatch; FC6 state B adds direct USDA/USDA-root USDZ matrix and visibility selected-time evaluation while leaving current USDC, composition, animation preservation, dynamic writing, and sampled payloads unavailable; OpenUSD 26.8 is separately installed only in focused Gaussian and selected-time oracle lanes and is not a runtime dependency; final exact-candidate cross-platform confirmation passed in FC7 |
 
 ### 3e. Arrays / tensors / features
 | Format | Record | Lib / oracle | R/W | Notes |
 |---|---|---|---|---|
 | ✅ `.npy` / `.npz` | ndarray / `TensorDict`; explicit typed dense-label overlay | numpy (BSD) | R+W | NPY native C-order mmap view; NPZ stored/deflate; `sceneio.label_map/1` only through explicit typed functions |
 | ✅ HDF5 `.h5` / `.hdf5` | `TensorDict` | h5py (BSD-3) + HDF5 permissive license | R+W | optional `sceneio[hdf5]`; numeric/bool datasets, nested paths, text attrs, inspect, named reads, hyperslabs, atomic path writes |
-| ✅ hloc feature layout | `HlocFeatureStore` + native `FeatureSet` | documented hloc schema + h5py oracle | R+W | keypoints, D×N descriptors, scores, image size, uncertainty, nested names |
-| ✅ hloc match layout | `HlocMatchStore` + native `MatchGraph` | documented hloc schema + h5py oracle | R+W | dense `matches0`, optional scores, exact endpoints/order/dtypes |
+| ✅ hloc feature layout | `HlocFeatureStore` + canonical `FeatureSet` | documented hloc schema + h5py oracle | R+W | keypoints, D×N descriptors, scores, image size, uncertainty, nested names |
+| ✅ hloc match layout | `HlocMatchStore` + canonical `CorrespondenceGraph` | documented hloc schema + h5py oracle | R+W | dense `matches0`, optional scores, exact endpoints/order/dtypes |
 | ✅ safetensors | `TensorDict` | safetensors (Apache) | R+W | JSON header, mmap tensors, name/slice selectors |
 | ✅ Zarr v2/v3 | `TensorDict`; explicit typed dense-label overlay | zarr (MIT) + numcodecs (MIT) | R+W | optional `sceneio[zarr]`; numeric/bool directory stores, nested paths, text root attrs, metadata inspection, named reads, leading-axis slices, transactional replacement, fixed-width normalization, and direct owned-array label reads |
 | ✅ Parquet / Arrow IPC | `TensorDict` numeric table | PyArrow (Apache-2.0) | R+W | optional `sceneio[arrow]`; fixed-width numeric columns, metadata, mmap reads; Parquet named-column selection |

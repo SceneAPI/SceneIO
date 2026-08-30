@@ -396,7 +396,7 @@ def coordinate_convention(record: object) -> CoordinateConvention | None:
         return UNKNOWN_COORDINATES
     if type_name == "Reconstruction":
         return COLMAP_COORDINATES
-    if type_name == "PosedViewSet" and hasattr(record, "axis_frame"):
+    if type_name == "PoseStorage":
         return _spatial_convention(
             "posed_view_set",
             str(record.axis_frame),
@@ -406,11 +406,6 @@ def coordinate_convention(record: object) -> CoordinateConvention | None:
             image=True,
         )
     if type_name == "PosedViewSet" and hasattr(record, "frame"):
-        conventions = {pose.convention for pose in record.poses}
-        pose_direction = {
-            "opencv_cam2world": "camera_to_world",
-            "opencv_world2cam": "world_to_camera",
-        }.get(next(iter(conventions), ""), "unknown")
         frame_name = str(record.frame.world_frame)
         world_frame = (
             frame_name
@@ -422,7 +417,9 @@ def coordinate_convention(record: object) -> CoordinateConvention | None:
             name="contract_posed_view_set",
             camera_axes="opencv",
             handedness="right_handed",
-            pose_direction=pose_direction,
+            pose_direction="camera_to_world",
+            quaternion_order="wxyz",
+            quaternion_algebra="hamilton",
             world_frame=world_frame,
             up_axis="z" if world_frame in {"enu", "ned"} else "unknown",
             scale_class=str(record.frame.scale),
@@ -530,23 +527,13 @@ def coordinate_convention(record: object) -> CoordinateConvention | None:
         )
     if type_name == "SceneGraph":
         return CoordinateConvention(
-            name="usd_stage",
+            name="scene_graph",
             camera_axes="file_declared",
             handedness="right_handed",
             world_frame="reference",
             up_axis=str(record.up_axis),
             scale_class="metric",
             scale_to_meters=float(record.meters_per_unit),
-        )
-    if type_name == "MeshScene":
-        return CoordinateConvention(
-            name="gltf_scene",
-            camera_axes="opengl",
-            handedness="right_handed",
-            world_frame="reference",
-            up_axis="y",
-            scale_class="metric",
-            scale_to_meters=1.0,
         )
     if type_name == "StateTrajectory":
         scale = 1.0 if record.position_unit == "meters" else 0.001
@@ -668,7 +655,7 @@ def coordinate_convention(record: object) -> CoordinateConvention | None:
         )
     if type_name == "NormalMap":
         return _COLMAP_NORMAL_COORDINATES
-    if type_name in {"Camera", "ColmapDatabase"}:
+    if type_name == "ColmapDatabase":
         return _COLMAP_CAMERA_COORDINATES
     if type_name == "FeatureSet" and hasattr(record, "pixel_center"):
         return replace(
@@ -697,8 +684,6 @@ def coordinate_convention(record: object) -> CoordinateConvention | None:
         return UNKNOWN_COORDINATES
     if type_name == "TwoViewGeometry":
         return None
-    if type_name == "MatchGraph":
-        return _COLMAP_CAMERA_COORDINATES
     if type_name in {"ConsistencyGraph", "FeatureSet"}:
         return IMAGE_COORDINATES
     if type_name in {"NCoreDataset", "NCoreDatasetData"}:
@@ -711,14 +696,6 @@ def coordinate_convention(record: object) -> CoordinateConvention | None:
         "SemanticMap",
     }:
         return IMAGE_COORDINATES
-    if type_name == "TrackedPointCloud":
-        return CoordinateConvention(
-            name="tracked_point_cloud",
-            camera_axes="unknown",
-            handedness="unknown",
-            world_frame="unknown",
-            scale_class="unknown",
-        )
     if type_name in {"PointVisibility", "TensorDict", "_MappedArray", "ndarray"}:
         return None if type_name == "PointVisibility" else UNKNOWN_COORDINATES
     if type_name == "RtmvDataset":
@@ -772,7 +749,7 @@ def install_core_coordinate_properties(core: object) -> None:
     names = (
         "Reconstruction",
         "GaussianCloud",
-        "PosedViewSet",
+        "PoseStorage",
         "StateTrajectory",
         "ImuCalibration",
         "ImuSequence",
@@ -783,17 +760,15 @@ def install_core_coordinate_properties(core: object) -> None:
         "PointScan",
         "ScanSet",
         "Mesh",
-        "MeshScene",
         "SceneGraph",
         "PoseGraph",
         "FeatureSet",
-        "MatchGraph",
         "DepthMap",
         "FlowField",
         "NormalMap",
         "ConsistencyGraph",
         "PointVisibility",
-        "Camera",
+        "CameraIntrinsics",
         "CameraRig",
         "ColmapDatabase",
     )

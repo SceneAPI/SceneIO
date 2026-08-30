@@ -19,8 +19,7 @@ from bench.io_bench.memory_protocol import (
     MemoryOperation,
     measure_memory_cases,
 )
-from sceneio import _core
-from sceneio.data import LabelTaxonomy, SemanticMap
+from sceneio import LabelTaxonomy, SemanticMap, _core
 
 
 def label_map_fixture(side: int) -> SemanticMap:

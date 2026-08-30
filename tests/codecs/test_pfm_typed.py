@@ -626,7 +626,7 @@ def test_inspector_exposes_signed_header_token(tmp_path):
 
 
 def test_public_exports_and_capability_marker():
-    assert sceneio.DepthEncoding is sceneio.io.DepthEncoding
+    assert not hasattr(sceneio.io, "DepthEncoding")
     assert sceneio.read_depth is sceneio.io.read_depth
     assert sceneio.write_depth is sceneio.io.write_depth
     assert sceneio.inspect_depth is sceneio.io.inspect_depth

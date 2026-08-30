@@ -1,22 +1,23 @@
-"""Validation tests for sceneio.data.features."""
+"""Validation tests for sceneio.features."""
 
 from __future__ import annotations
 
 import numpy as np
 import pytest
 
-from sceneio.data import (
+from sceneio import (
     CorrespondenceGraph,
     FeatureSet,
     PairCorrespondences,
     TwoViewGeometry,
 )
+from sceneio import feature_set as make_feature_set
 from sceneio.errors import ContractViolation
 
 
 def feature_set(n: int = 5, d: int = 8, dtype: type = np.float32) -> FeatureSet:
     rng = np.random.default_rng(n)
-    return FeatureSet(
+    return make_feature_set(
         keypoints=rng.uniform(0, 100, size=(n, 2)).astype(np.float32),
         descriptors=rng.uniform(0, 1, size=(n, d)).astype(dtype),
         scores=rng.uniform(0, 1, size=(n,)).astype(np.float32),
@@ -32,7 +33,7 @@ class TestFeatureSet:
         assert fs.pixel_center == (0.5, 0.5)
 
     def test_valid_keypoints_only(self) -> None:
-        fs = FeatureSet(keypoints=np.zeros((3, 2), dtype=np.float32))
+        fs = make_feature_set(keypoints=np.zeros((3, 2), dtype=np.float32))
         assert fs.descriptor_dtype is None
         assert fs.descriptor_dim is None
         assert fs.scores is None
@@ -42,22 +43,22 @@ class TestFeatureSet:
         assert fs.descriptor_dtype == "uint8"
 
     def test_empty_feature_set_allowed(self) -> None:
-        fs = FeatureSet(keypoints=np.zeros((0, 2), dtype=np.float32))
+        fs = make_feature_set(keypoints=np.zeros((0, 2), dtype=np.float32))
         assert len(fs) == 0
 
     def test_keypoints_wrong_dtype_raises(self) -> None:
         with pytest.raises(ContractViolation, match=r"FeatureSet\.keypoints.*float32"):
-            FeatureSet(keypoints=np.zeros((3, 2), dtype=np.float64))
+            make_feature_set(keypoints=np.zeros((3, 2), dtype=np.float64))
 
     def test_keypoints_wrong_shape_raises(self) -> None:
         with pytest.raises(ContractViolation, match=r"FeatureSet\.keypoints"):
-            FeatureSet(keypoints=np.zeros((3, 3), dtype=np.float32))
+            make_feature_set(keypoints=np.zeros((3, 3), dtype=np.float32))
 
     def test_keypoints_non_finite_raises(self) -> None:
         kp = np.zeros((3, 2), dtype=np.float32)
         kp[0, 0] = np.inf
         with pytest.raises(ContractViolation, match="non-finite"):
-            FeatureSet(keypoints=kp)
+            make_feature_set(keypoints=kp)
 
     @pytest.mark.parametrize(
         "pixel_center",
@@ -65,35 +66,35 @@ class TestFeatureSet:
     )
     def test_invalid_pixel_center_raises(self, pixel_center) -> None:
         with pytest.raises(ContractViolation, match="pixel_center"):
-            FeatureSet(
+            make_feature_set(
                 keypoints=np.zeros((1, 2), dtype=np.float32),
                 pixel_center=pixel_center,
             )
 
     def test_descriptor_row_mismatch_raises(self) -> None:
         with pytest.raises(ContractViolation, match=r"FeatureSet\.descriptors"):
-            FeatureSet(
+            make_feature_set(
                 keypoints=np.zeros((3, 2), dtype=np.float32),
                 descriptors=np.zeros((4, 8), dtype=np.float32),
             )
 
     def test_non_numeric_descriptors_raise(self) -> None:
         with pytest.raises(ContractViolation, match="numeric dtype"):
-            FeatureSet(
+            make_feature_set(
                 keypoints=np.zeros((2, 2), dtype=np.float32),
                 descriptors=np.zeros((2, 4), dtype=bool),
             )
 
     def test_scores_shape_mismatch_raises(self) -> None:
         with pytest.raises(ContractViolation, match=r"FeatureSet\.scores"):
-            FeatureSet(
+            make_feature_set(
                 keypoints=np.zeros((3, 2), dtype=np.float32),
                 scores=np.zeros((4,), dtype=np.float32),
             )
 
     def test_scores_wrong_dtype_raises(self) -> None:
         with pytest.raises(ContractViolation, match=r"FeatureSet\.scores.*float32"):
-            FeatureSet(
+            make_feature_set(
                 keypoints=np.zeros((3, 2), dtype=np.float32),
                 scores=np.zeros((3,), dtype=np.float64),
             )

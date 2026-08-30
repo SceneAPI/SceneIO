@@ -79,7 +79,7 @@ required_contracts = [
   "PanopticMap composes semantic and instance records instead of assuming a packed divisor encoding.",
 ]
 evidence = [
-  "src/sceneio/data/dense.py",
+  "src/sceneio/_data/dense.py",
   "src/cpp/records/instance_set.hpp",
   "docs/remaining_3dcv_profile_checklist.md",
 ]
@@ -115,7 +115,7 @@ required_contracts = [
   "Compound series, level, page, and window selection stays on a typed TIFF API.",
 ]
 evidence = [
-  "src/sceneio/data/raster.py",
+  "src/sceneio/_data/raster.py",
   "src/sceneio/io/_tiff.py",
   "tests/codecs/test_tiff_collections.py::test_typed_tiff_reads_independent_classic_bigtiff_endian_and_layout_oracle",
   "tests/codecs/test_tiff_collections.py::test_tiff_collection_compound_page_window_selection_uses_chunk_store",
@@ -265,7 +265,7 @@ evidence = [
 
 [[legacy_projections]]
 formats = ["tiff"]
-return_types = ["sceneio.Image", "sceneio.data.Mask", "sceneio.TensorDict"]
+return_types = ["sceneio.Image", "sceneio.Mask", "sceneio.TensorDict"]
 boundary = "The generic API remains one unambiguous series and one level; the additive typed TIFF collection API handles the bounded multi-series and pyramid profile."
 evidence = [
   "tests/codecs/test_tiff.py::test_sceneio_tiff_write_is_exact_for_independent_oracle",

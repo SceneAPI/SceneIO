@@ -12,6 +12,7 @@ import pytest
 
 import sceneio
 from sceneio import _core
+from sceneio._correspondence import graph_from_storage
 from sceneio.io import _hdf5 as hdf5_adapter
 
 
@@ -45,7 +46,7 @@ def _match_store(*, mixed_scores: bool = False) -> sceneio.HlocMatchStore:
     scores = np.array([0.5, 0.75, 0.25], np.float32)
     if mixed_scores:
         scores[:2] = 0
-    graph = _core.match_graph(
+    graph = _core.correspondence_storage(
         np.array([[1, 3], [2, 3]], np.uint32),
         np.array([0, 2, 3], np.uint64),
         np.array([[1, 0], [3, 2], [1, 4]], np.uint32),
@@ -65,7 +66,7 @@ def _match_store(*, mixed_scores: bool = False) -> sceneio.HlocMatchStore:
         (5, 3),
         ("int16", "int32"),
         (None if mixed_scores else "float16", "float32"),
-        graph,
+        graph_from_storage(graph, image_names=image_names),
     )
 
 
@@ -507,17 +508,17 @@ def test_hloc_matches_reads_official_layout_and_reverses_to_native_order(
     assert store.match_dtypes == ("int16",)
     assert store.score_dtypes == ("float16",)
     np.testing.assert_array_equal(
-        store.graph.matches,
+        store.correspondences.pairs[("db-a.jpg", "query-b.jpg")].indices,
         np.array([[2, 0], [0, 2], [3, 4]], np.uint32),
     )
     np.testing.assert_array_equal(
-        store.graph.scores,
+        store.correspondences.pairs[("db-a.jpg", "query-b.jpg")].scores,
         np.array([0.5, 0.75, 0.25], np.float32),
     )
     path.unlink()
     gc.collect()
     np.testing.assert_array_equal(
-        store.graph.matches,
+        store.correspondences.pairs[("db-a.jpg", "query-b.jpg")].indices,
         np.array([[2, 0], [0, 2], [3, 4]], np.uint32),
     )
 
@@ -533,7 +534,7 @@ def test_native_hloc_match_graph_converts_wire_dtypes_and_owns_results() -> None
         None,
         np.array([0.75, 0.0], np.float32),
     ]
-    graph = _core.hloc_match_graph(
+    graph = _core.hloc_correspondence_storage(
         np.array([[1, 2], [1, 3], [2, 3]], np.uint32),
         dense_rows,
         score_rows,
@@ -554,21 +555,21 @@ def test_native_hloc_match_graph_converts_wire_dtypes_and_owns_results() -> None
     )
 
     with pytest.raises(ValueError, match="outside uint32"):
-        _core.hloc_match_graph(
+        _core.hloc_correspondence_storage(
             np.array([[1, 2]], np.uint32),
             [np.array([0x1_0000_0000], np.int64)],
             [None],
             np.array([0], np.uint8),
         )
     with pytest.raises(ValueError, match="finite"):
-        _core.hloc_match_graph(
+        _core.hloc_correspondence_storage(
             np.array([[1, 2]], np.uint32),
             [np.array([0], np.int16)],
             [np.array([np.nan], np.float32)],
             np.array([0], np.uint8),
         )
     with pytest.raises(ValueError, match="unmatched"):
-        _core.hloc_match_graph(
+        _core.hloc_correspondence_storage(
             np.array([[1, 2]], np.uint32),
             [np.array([-1], np.int16)],
             [np.array([0.5], np.float16)],
@@ -606,11 +607,18 @@ def test_hloc_match_write_matches_h5py_and_preserves_mixed_scores(
 
     decoded = sceneio.read(path)
     assert decoded.pair_names == source.pair_names
-    np.testing.assert_array_equal(decoded.graph.matches, source.graph.matches)
-    np.testing.assert_array_equal(
-        decoded.graph.match_score_present,
-        source.graph.match_score_present,
-    )
+    for key, pair in source.correspondences.pairs.items():
+        np.testing.assert_array_equal(
+            decoded.correspondences.pairs[key].indices,
+            pair.indices,
+        )
+        if pair.scores is None:
+            assert decoded.correspondences.pairs[key].scores is None
+        else:
+            np.testing.assert_array_equal(
+                decoded.correspondences.pairs[key].scores,
+                pair.scores,
+            )
     inspected = sceneio.inspect(path)
     assert inspected.count == 2
     assert inspected.metadata["scored_pair_count"] == 1
@@ -639,7 +647,7 @@ def test_hloc_match_write_handles_shuffled_sources_and_refuses_duplicates(
     tmp_path: Path,
 ) -> None:
     def store(matches: np.ndarray) -> sceneio.HlocMatchStore:
-        graph = _core.match_graph(
+        graph = _core.correspondence_storage(
             np.array([[1, 2]], np.uint32),
             np.array([0, len(matches)], np.uint64),
             matches,
@@ -654,7 +662,7 @@ def test_hloc_match_write_handles_shuffled_sources_and_refuses_duplicates(
             (4,),
             ("int16",),
             (None,),
-            graph,
+            graph_from_storage(graph, image_names=("a.jpg", "b.jpg")),
         )
 
     path = tmp_path / "shuffled.h5"
@@ -691,7 +699,7 @@ def test_hloc_matches_guards_malformed_and_unrepresented_values(
     with pytest.raises(sceneio.FormatError, match="unmatched"):
         sceneio.read(malformed, format="hloc_matches")
 
-    graph = _core.match_graph(
+    graph = _core.correspondence_storage(
         np.array([[1, 2]], np.uint32),
         np.array([0, 1], np.uint64),
         np.array([[0, 1]], np.uint32),
@@ -706,7 +714,7 @@ def test_hloc_matches_guards_malformed_and_unrepresented_values(
         (2,),
         ("int16",),
         (None,),
-        graph,
+        graph_from_storage(graph, image_names=("a.jpg", "b.jpg")),
     )
     existing = tmp_path / "existing.h5"
     existing.write_bytes(b"unchanged")

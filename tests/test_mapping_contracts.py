@@ -5,15 +5,15 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from sceneio.data import (
+from sceneio import (
     SE3,
     Calibration,
-    CameraIntrinsics,
     CameraModel,
     ConfidenceMap,
     FrameMeta,
     Pointmap,
-    TrackedPointCloud,
+    camera_intrinsics,
+    point_cloud,
 )
 from sceneio.errors import ContractViolation
 from sceneio.mapping import MapperTraits, MappingOptions, MappingResult
@@ -89,8 +89,8 @@ class TestMappingResult:
 
     def test_full_valid(self) -> None:
         calibration = Calibration.from_intrinsics(
-            CameraIntrinsics(
-                model=CameraModel.SIMPLE_PINHOLE,
+            camera_intrinsics(
+                model_id=CameraModel.SIMPLE_PINHOLE.model_id,
                 width=4,
                 height=4,
                 params=np.array([4.0, 2.0, 2.0]),
@@ -100,7 +100,7 @@ class TestMappingResult:
             poses=self._poses(2),
             frame=FrameMeta(scale="metric", scale_provenance="prior_anchored"),
             calibrations=(calibration, calibration),
-            geometry=TrackedPointCloud(xyz=np.zeros((3, 3), dtype=np.float32)),
+            geometry=point_cloud(np.zeros((3, 3), dtype=np.float32)),
             dense=(dense_pair(), dense_pair()),
             stats={"num_registered": 2},
         )
@@ -147,8 +147,8 @@ class TestMappingResult:
 
     def test_calibration_entries_may_be_none(self) -> None:
         calibration = Calibration.from_intrinsics(
-            CameraIntrinsics(
-                model=CameraModel.SIMPLE_PINHOLE,
+            camera_intrinsics(
+                model_id=CameraModel.SIMPLE_PINHOLE.model_id,
                 width=4,
                 height=4,
                 params=np.array([4.0, 2.0, 2.0]),
@@ -178,8 +178,8 @@ class TestMappingResult:
 
     def test_calibrations_length_mismatch_raises(self) -> None:
         calibration = Calibration.from_intrinsics(
-            CameraIntrinsics(
-                model=CameraModel.SIMPLE_PINHOLE,
+            camera_intrinsics(
+                model_id=CameraModel.SIMPLE_PINHOLE.model_id,
                 width=4,
                 height=4,
                 params=np.array([4.0, 2.0, 2.0]),

@@ -194,7 +194,7 @@ def test_case_catalog_preserves_the_legacy_fixture_partitions():
     ) == (
         "sog",
         16916,
-        "5b5597b8857233bb925ec7a390150da7339b995efaffebb2ef0d803228beb04d",
+        "a69dc48f2fa90ad685a6a46af9f56b0705e6e917e5e281181cb9872222f4cd1f",
     )
     assert next(
         item
@@ -217,7 +217,7 @@ def test_case_catalog_preserves_the_legacy_fixture_partitions():
         separators=(",", ":"),
     )
     assert hashlib.sha256(fixture_payload.encode()).hexdigest() == (
-        "1080848bde07b507e0d40d97587e92a0fbce68a5e065696a11ab26d822f5a9ae"
+        "ae4dc5b567ffa8c6c22f010f8951337a7c007332ce827154c0b6b8ef30972548"
     )
     cases_by_id = {case.id: case for case in built_cases}
     assert (
@@ -343,6 +343,7 @@ def test_case_catalog_has_lower_ownership_and_no_consumer_imports():
         "dataclasses",
         "numpy",
         "sceneio",
+        "sceneio._posed_views",
     }
     for consumer in (
         "test_io_mmap.py",

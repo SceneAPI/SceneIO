@@ -16,11 +16,8 @@ checkpoint is evidence for that revision, not the current capability source.
 - [`representation_normalization.md`](representation_normalization.md) —
   versioned normalization, units, scale, and conversion policies for public
   data representations.
-- [`canonicalization.md`](canonicalization.md) - explicit loaded-record to
-  neutral-contract adapters, loss/refusal boundaries, and the shared camera
-  model authority.
 - [`public_type_contracts.md`](public_type_contracts.md) — generated exhaustive
-  public class identity, kind, alias, evidence, and built-in codec payload
+  public class identity, kind, evidence, and built-in codec payload
   relationship catalog.
 - [`colmap_adapters.md`](colmap_adapters.md) — public COLMAP workflow adapter
   surface outside the format registry.
@@ -30,12 +27,12 @@ checkpoint is evidence for that revision, not the current capability source.
 For a current fact, these documents and the runtime contracts they name take
 precedence over dated plans and benchmark checkpoints.
 
-## Current engineering policy
+## Current engineering policy and release record
 
 - [`plans/representation_consolidation_2026-08-30.md`](plans/representation_consolidation_2026-08-30.md)
-  — active compatibility-safe plan for consolidating shared transform,
-  calibration, feature, correspondence, and scene semantics through explicit
-  checked adapters while retaining storage/wire views.
+  — completed 0.4 contract reset that consolidated cameras, features,
+  correspondences, depth, posed views, point tracks, and scenes without a
+  legacy adapter layer.
 - [`coverage_roadmap.md`](coverage_roadmap.md) — deliberate exclusions,
   aspirational gates, and optional future sequencing. It does not override the
   shipped capability table.
@@ -49,6 +46,8 @@ precedence over dated plans and benchmark checkpoints.
 ## Release information
 
 - [`../CHANGELOG.md`](../CHANGELOG.md) — concise release history.
+- [`releases/v0.4.0.md`](releases/v0.4.0.md) — SceneIO 0.4.0 canonical
+  representation contract and unchanged I/O inventory.
 - [`releases/v0.3.0.md`](releases/v0.3.0.md) — SceneIO 0.3.0 scope,
   compatibility boundaries, and publication evidence.
 

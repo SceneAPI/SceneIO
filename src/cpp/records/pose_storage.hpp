@@ -1,4 +1,4 @@
-// records/posed_view_set.hpp — a set of posed camera views (an SE3 pose per
+// records/pose_storage.hpp — a set of posed camera views (an SE3 pose per
 // view + optional shared/per-view intrinsics), the memory representation for
 // the camera-pose formats (transforms.json, TUM/KITTI trajectories).
 //
@@ -12,7 +12,7 @@
 
 #include "records/reconstruction.hpp"  // reuse the Camera struct for intrinsics
 
-struct PosedViewSet {
+struct PoseStorage {
     // pose per view (SoA); the semantics of these numbers are given by the
     // convention tags below, which the reader sets from the source.
     std::vector<double> quats;       // N*4, order per `quaternion_order`

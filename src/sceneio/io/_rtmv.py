@@ -17,6 +17,8 @@ from pathlib import Path
 import numpy as np
 
 from sceneio import _core
+from sceneio._data.views import PosedViewSet
+from sceneio._posed_views import posed_views_from_storage
 from sceneio.io._frame_access import ImageFrameAccess
 from sceneio.io._inspectors.model import Inspection
 
@@ -33,14 +35,14 @@ _MATRIX_ATOL = 2e-4
 class RtmvDataset:
     """One validated, path-backed RTMV scene directory.
 
-    ``views`` carries the OpenGL camera-to-world poses and per-frame pinhole
-    intrinsics.  The path tuples keep all encoded layers and original object
+    ``views`` carries canonical OpenCV camera-to-world poses and per-frame
+    pinhole intrinsics. The path tuples keep all encoded layers and original object
     metadata accessible without copying or silently projecting their content
     into a narrower SceneIO record.
     """
 
     root: str
-    views: _core.PosedViewSet
+    views: PosedViewSet
     frame_ids: tuple[str, ...]
     metadata_paths: tuple[str, ...]
     rgb_paths: tuple[str, ...]
@@ -56,7 +58,7 @@ class RtmvDataset:
     def __post_init__(self) -> None:
         if not isinstance(self.root, str) or not Path(self.root).is_absolute():
             raise ValueError("RtmvDataset.root must be an absolute path")
-        if not isinstance(self.views, _core.PosedViewSet):
+        if not isinstance(self.views, PosedViewSet):
             raise TypeError("RtmvDataset.views must be a PosedViewSet")
         for name in (
             "frame_ids",
@@ -479,7 +481,10 @@ def _build_views(frames: tuple[_Frame, ...], cameras: tuple[_Camera, ...]):
         ]
     }
     payload = json.dumps(document, separators=(",", ":"), allow_nan=False).encode()
-    return _core.read_transforms_json(payload)
+    return posed_views_from_storage(
+        _core.read_transforms_json(payload),
+        source_profile="transforms_json",
+    )
 
 
 def _dataset(

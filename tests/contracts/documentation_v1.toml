@@ -9,7 +9,7 @@ native_feature_source = "sceneio.native_features"
 public_type_source = "sceneio.contracts.PUBLIC_TYPE_CONTRACTS"
 payload_kind_source = "sceneio.contracts.BUILTIN_CODEC_PAYLOAD_KINDS"
 expected_builtin_count = 74
-expected_public_type_count = 144
+expected_public_type_count = 131
 expected_payload_kind_count = 26
 canonical_current_document = "docs/format_coverage.md"
 

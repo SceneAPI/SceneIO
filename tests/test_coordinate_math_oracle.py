@@ -103,7 +103,7 @@ def test_scipy_pose_oracle_covers_axis_pose_and_quaternion_layout(
     )
     source_xyzw = Rotation.from_matrix(source_pose[:3, :3]).as_quat()
     source_quaternion = _as_order(source_xyzw, source_order)
-    source = _core.posed_view_set(
+    source = _core.pose_storage(
         source_quaternion[None],
         (source_pose[:3, 3] / source_scale)[None],
         quaternion_order=source_order,
@@ -141,7 +141,7 @@ def test_scipy_pose_oracle_checks_world_transform_composition():
     source_w2c[:3, 3] = (-3.0, 1.75, 9.25)
     source_pose = np.linalg.inv(source_w2c)
     source_xyzw = Rotation.from_matrix(source_pose[:3, :3]).as_quat()
-    source = _core.posed_view_set(
+    source = _core.pose_storage(
         _as_order(source_xyzw, "xyzw")[None],
         (source_pose[:3, 3] / source_scale)[None],
         quaternion_order="xyzw",
