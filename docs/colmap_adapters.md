@@ -1,7 +1,7 @@
 # COLMAP workflow adapters
 
 `sceneio.colmap` owns portable COLMAP ecosystem data that is not a standalone
-entry in the 54-codec registry. These adapters are implemented in this
+entry in the 74-format registry. These adapters are implemented in this
 repository, require only NumPy at runtime, and never open an encoded image or
 video referenced by a path.
 
@@ -23,6 +23,14 @@ The standard `sceneio.read(..., format="colmap_sparse")` and
 `read_extended_sparse_model` when the caller explicitly wants all 14 possible
 binary/text companion filenames. This keeps the normal registry route from
 silently ignoring fields.
+
+All camera-bearing adapters share the package-owned ids 0 through 17 in
+`src/sceneio/_camera_models.py`; none owns a local parameter-count table.
+`sceneio.data.CameraModel` exposes the same names, ids, and ordered parameter
+layouts, while CMake generates the compiled core lookup from that manifest.
+Use the camera and feature/match bridges in
+[`canonicalization.md`](canonicalization.md) when a loaded COLMAP record must
+enter the neutral procedure layer.
 
 ## Wire and lifetime behavior
 

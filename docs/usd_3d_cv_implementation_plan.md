@@ -17,8 +17,8 @@ TinyUSDZ full-stage inspection cost. The narrow correction retains the 1 MB
 cap elsewhere; USD/USdz inspection must stay below 8 MB and 80% of full.
 Its exact 4,317-node local gate passes 4,311 with six skips. Correction source
 `b16ee1c` passes final CI `30705438186`, including the 67-row five-run guard,
-and compiler run `30705438179` passes both jobs. Publication is still a
-separate tag-driven action.
+and compiler run `30705438179` passes both jobs. The completed profile later
+shipped in [`SceneIO 0.3.0`](https://github.com/SceneAPI/SceneIO/releases/tag/v0.3.0).
 Review date: 2026-08-01
 Standards baseline: AOUSD Core Specification 1.0.1, supplemental
 1.0.1.post0, and OpenUSD 26.08 (`v26.08`, `ee47c679abde`)
@@ -38,7 +38,8 @@ unavailable in profile version 1.
 The closure boundary is intentionally finite:
 
 - reads return one directly authored static snapshot; a finite `time=` value
-  may annotate a static snapshot but does not evaluate animated samples;
+  may evaluate the FC6-bounded direct USDA matrix/visibility sample subset but
+  does not preserve or author animation;
 - writes produce a self-contained layer or package rather than reconstructing
   an input layer stack;
 - the accepted material vocabulary is a documented `UsdPreviewSurface`
@@ -574,7 +575,7 @@ later unit while an earlier unit has uncommitted or failing changes.
 | C4 (done, `d1ee8ea`) | U5 cameras | camera/render-product association, projection-equivalent intrinsics and pose convention tests, default-only unrepresented fields, mixed-resolution and ambiguity refusals, camera-stage measurement | one green closure unit; hosted three-OS execution remains deferred to the next authorized push |
 | C5 (done, `6eeae8e`) | U5 volumes + semantics + instances | direct OpenVDB dependency resolution, one taxonomy/label pair, prototype identity/order/masks, mixed-stage round-trip and dependency tests; refuse volume-bearing USDZ writes | focused/complete gates, docs, and large-case measurement are green |
 | C6 (done, `fa321c1`) | U6 provider capability | Exit B: TOST remains outside the literal allow-list; current USDC, evaluated composition, and selected time are explicit unavailable flags | no OpenUSD install/invocation and no repository-owned composition/crate implementation |
-| C7 (done, `b16ee1c`) | U7 release closure | full local tests, benchmark ledger, docs/contracts, exact source archive, repaired Windows wheel, NumPy-only and pinned TinyUSDZ installed smokes; nonpublishing package/compiler and final CI pass | claim exactly `sceneio.usd.3dcv/1`; publication remains separate and tag-driven |
+| C7 (done, `b16ee1c`) | U7 release closure | full local tests, benchmark ledger, docs/contracts, exact source archive, repaired Windows wheel, NumPy-only and pinned TinyUSDZ installed smokes; nonpublishing package/compiler and final CI pass | claim exactly `sceneio.usd.3dcv/1`; this checkpoint preceded the later 0.3.0 publication |
 
 Execution is intentionally capped at seven commits. C1-C6 are committed and
 the local and hosted portions of C7 are complete. Authorization was received;
@@ -676,7 +677,7 @@ schema modules and keeps traversal, selection, and payload dispatch in
 | C4 Camera | done in this closure unit | keep `UsdGeomCamera`/`UsdRenderProduct` mapping isolated in `cameras.py`; preserve camera-to-parent/OpenGL conventions and float-precision projection equivalence | 43 camera tests; 196 affected USD/CameraRig passes; 259 calibration/COLMAP controls; 40 docs/contracts; exact 4,275-node full suite | hosted three-OS execution remains deferred to the next authorized push |
 | C5 Remaining payloads | locally complete in focused `volumes.py`, `semantics.py`, and `instances.py` modules | preserve the direct scalar-float VDB reference, one effective semantic pair, and static PointInstancer boundary; keep prototype geometry shared and volume-bearing USDZ unavailable | 20 family nodes plus benchmark smoke, existing USD regression family, literal relationships/attributes, missing/shared VDB, inheritance, ids/masks/order, cycle, lifetime, selection, and destination preservation are green | generated 1 GiB VDB and 1M-instance evidence recorded; exact 4,299-node gate passes 4,293 with 6 documented skips; full Ruff and docs/contracts are clean |
 | C6 Static-provider closure | historical checkpoint, superseded by FC6 state B on 2026-08-29 | preserve direct USDA/USDZ and historical crate reads; retain false `current_usdc`/`composition`; direct USDA matrix/visibility selected time is now qualified while preservation/write remain excluded | original static controls plus the bounded grammar contract and 22-case OpenUSD 26.8 selected-time oracle | OpenUSD remains test-only; current state-B evidence is in `usd_animation_benchmark.md` |
-| C7 Release closure | complete at `b16ee1c` | no new format scope; capability manifests, public docs, installed-package surfaces, benchmark ledger, and release metadata are reconciled | 4,317-node local collection; 4,311 pass/6 skip; package/compiler runs, every functional/platform CI lane, and five-run guard pass | publish separately through the approved tag workflow |
+| C7 Release closure | complete at `b16ee1c` | no new format scope; capability manifests, public docs, installed-package surfaces, benchmark ledger, and release metadata are reconciled | 4,317-node local collection; 4,311 pass/6 skip; package/compiler runs, every functional/platform CI lane, and five-run guard pass | later published through the approved `v0.3.0` tag workflow |
 
 Each unit has a stop rule: if an authored property cannot be represented
 exactly by the named SceneIO record, refuse it with a specific diagnostic. Do
@@ -1195,8 +1196,9 @@ manylinux floor, so it cannot become a requirement of the SceneIO
 manylinux2014 wheel. If approved, it is a separately installed optional
 reference/composition provider and is validated in a compatible job.
 
-The hosted package workflow remains user-triggered. PyPI publication and
-trusted-publisher configuration remain separate user-gated actions.
+The hosted package workflow was user-triggered for this plan. The completed
+profile was subsequently published through the protected `v0.3.0` tag and
+trusted publisher; future releases remain separately user-gated actions.
 
 ## Fixed exclusions
 

@@ -15,6 +15,9 @@ from pathlib import Path
 import numpy as np
 
 from sceneio import _core
+from sceneio._camera_models import (
+    CAMERA_MODEL_PARAMETER_COUNTS as _CAMERA_PARAM_COUNTS,
+)
 
 from .models import (
     UINT32_MAX,
@@ -60,26 +63,6 @@ _U64 = struct.Struct("<Q")
 _F64 = struct.Struct("<d")
 _MAX_ENTRIES = 100_000_000
 _MAX_STRING = 1 << 30
-_CAMERA_PARAM_COUNTS = (
-    3,
-    4,
-    4,
-    5,
-    8,
-    8,
-    12,
-    5,
-    4,
-    5,
-    12,
-    16,
-    4,
-    5,
-    3,
-    4,
-    6,
-    2,
-)
 
 
 def _write_le_array(stream, value: np.ndarray, dtype: str) -> None:
@@ -375,9 +358,7 @@ def _text_rows(path: Path):
             try:
                 line = payload.decode("utf-8")
             except UnicodeDecodeError as exc:
-                raise ColmapAdapterError(
-                    f"{path.name} line {line_number} is not UTF-8"
-                ) from exc
+                raise ColmapAdapterError(f"{path.name} line {line_number} is not UTF-8") from exc
             stripped = line.strip()
             if stripped and not stripped.startswith("#"):
                 yield line_number, stripped
@@ -490,9 +471,7 @@ def _read_id_tags_text(path: Path) -> IdTags:
         for index, (line_number, line) in enumerate(rows):
             fields = line.split()
             if len(fields) != 2:
-                raise ColmapAdapterError(
-                    f"{path.name} line {line_number} needs 2 fields"
-                )
+                raise ColmapAdapterError(f"{path.name} line {line_number} needs 2 fields")
             ids[index] = _integer(fields[0], (1 << 64) - 1, "tag id")
             tags[index] = _integer(fields[1], (1 << 64) - 1, "tag value")
     finally:
@@ -672,35 +651,28 @@ def _validate_reconstruction_links(model: ExtendedSparseModel) -> None:
         for index, image_id in enumerate(model.reconstruction.image_ids)
     }
     if extensions.marker_projections is not None and any(
-        item.point2D_idx != UINT32_MAX
-        and item.point2D_idx >= observation_counts[item.image_id]
+        item.point2D_idx != UINT32_MAX and item.point2D_idx >= observation_counts[item.image_id]
         for item in extensions.marker_projections
     ):
         raise ColmapAdapterError(
             "marker projection point2D index exceeds sparse image observations"
         )
-    markers_by_id = {
-        item.marker_id: item for item in extensions.markers or ()
-    }
+    markers_by_id = {item.marker_id: item for item in extensions.markers or ()}
     image_rows = {
-        int(image_id): index
-        for index, image_id in enumerate(model.reconstruction.image_ids)
+        int(image_id): index for index, image_id in enumerate(model.reconstruction.image_ids)
     }
     if extensions.marker_projections is not None and any(
         item.point2D_idx != UINT32_MAX
         and markers_by_id[item.marker_id].point3D_id != (1 << 64) - 1
         and int(
             observation_point_ids[
-                int(observation_offsets[image_rows[item.image_id]])
-                + item.point2D_idx
+                int(observation_offsets[image_rows[item.image_id]]) + item.point2D_idx
             ]
         )
         not in (-1, markers_by_id[item.marker_id].point3D_id)
         for item in extensions.marker_projections
     ):
-        raise ColmapAdapterError(
-            "marker projection observation and marker point3D ids disagree"
-        )
+        raise ColmapAdapterError("marker projection observation and marker point3D ids disagree")
     if extensions.markers is not None and any(
         item.point3D_id != (1 << 64) - 1 and item.point3D_id not in point_ids
         for item in extensions.markers
@@ -725,30 +697,22 @@ def read_extended_sparse_model(path) -> ExtendedSparseModel:
     if has_binary:
         encoding = "binary"
         opposite = _TEXT_NAMES
-        opposite_base = tuple(
-            name for name in _BASE_NAMES if name.endswith(".txt")
-        )
+        opposite_base = tuple(name for name in _BASE_NAMES if name.endswith(".txt"))
     elif has_text:
         encoding = "text"
         opposite = _BINARY_NAMES
-        opposite_base = tuple(
-            name for name in _BASE_NAMES if name.endswith(".bin")
-        )
+        opposite_base = tuple(name for name in _BASE_NAMES if name.endswith(".bin"))
     else:
         raise ColmapAdapterError("extended sparse model has no cameras.bin or cameras.txt")
     mixed_base = sorted(name for name in opposite_base if (root / name).is_file())
     if mixed_base:
         raise ColmapAdapterError(
-            "extended sparse model has opposite-encoding base files: "
-            + ", ".join(mixed_base)
+            "extended sparse model has opposite-encoding base files: " + ", ".join(mixed_base)
         )
-    mismatched = sorted(
-        name for name in opposite.values() if (root / name).is_file()
-    )
+    mismatched = sorted(name for name in opposite.values() if (root / name).is_file())
     if mismatched:
         raise ColmapAdapterError(
-            "extended sparse model has opposite-encoding sidecars: "
-            + ", ".join(mismatched)
+            "extended sparse model has opposite-encoding sidecars: " + ", ".join(mismatched)
         )
     if encoding == "binary":
         reconstruction = _core._read_colmap_sparse_with_sidecars(str(root))
@@ -785,9 +749,7 @@ def _preflight_extensions(
         if len(payload) > _MAX_STRING:
             raise ColmapAdapterError(f"{label} exceeds its text bound")
         if encoding == "text" and ("\r" in value or "\n" in value):
-            raise ColmapAdapterError(
-                f"{label} cannot contain line breaks in text encoding"
-            )
+            raise ColmapAdapterError(f"{label} cannot contain line breaks in text encoding")
 
     for item in extensions.markers or ():
         check(item.label, "marker label")

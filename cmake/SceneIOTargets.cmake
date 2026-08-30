@@ -30,6 +30,7 @@ target_include_directories(
   _core
   PRIVATE
     src/cpp
+    ${SCENEIO_GENERATED_INCLUDE_DIR}
     ${zstd_SOURCE_DIR}/lib
     src/cpp/third_party/stb
     src/cpp/third_party/tinyexr

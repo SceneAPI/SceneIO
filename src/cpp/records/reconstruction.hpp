@@ -94,26 +94,5 @@ struct ModelInfo {
     const char *name;
     int nparams;
 };
-inline ModelInfo colmap_model_info(int id) {
-    switch (id) {
-        case 0: return {"SIMPLE_PINHOLE", 3};
-        case 1: return {"PINHOLE", 4};
-        case 2: return {"SIMPLE_RADIAL", 4};
-        case 3: return {"RADIAL", 5};
-        case 4: return {"OPENCV", 8};
-        case 5: return {"OPENCV_FISHEYE", 8};
-        case 6: return {"FULL_OPENCV", 12};
-        case 7: return {"FOV", 5};
-        case 8: return {"SIMPLE_RADIAL_FISHEYE", 4};
-        case 9: return {"RADIAL_FISHEYE", 5};
-        case 10: return {"THIN_PRISM_FISHEYE", 12};
-        case 11: return {"RAD_TAN_THIN_PRISM_FISHEYE", 16};
-        case 12: return {"SIMPLE_DIVISION", 4};
-        case 13: return {"DIVISION", 5};
-        case 14: return {"SIMPLE_FISHEYE", 3};
-        case 15: return {"FISHEYE", 4};
-        case 16: return {"EUCM", 6};
-        case 17: return {"EQUIRECTANGULAR", 2};
-        default: throw std::invalid_argument("COLMAP: unknown camera model id " + std::to_string(id));
-    }
-}
+
+#include "sceneio_camera_models.generated.hpp"

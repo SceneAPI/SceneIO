@@ -59,6 +59,12 @@ void reject_bad_document(
     if (std::memchr(bytes, '\0', size))
         throw std::invalid_argument(
             std::string(format) + ": NUL byte in text document");
+    const std::string_view text(
+        reinterpret_cast<const char *>(bytes), size);
+    if (!sio::valid_utf8(text))
+        throw std::invalid_argument(
+            std::string(format) +
+            ": text document is not valid UTF-8");
 }
 
 std::vector<std::string_view> split_lines(

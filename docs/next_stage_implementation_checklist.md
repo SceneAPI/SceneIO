@@ -1,9 +1,12 @@
 # Next-stage implementation checklist
 
-> The finite active checklist for the remaining 3D-CV model/profile work is
-> [`remaining_3dcv_profile_checklist.md`](remaining_3dcv_profile_checklist.md).
-> The historical execution record below remains authoritative for the units it
-> already closed and is not extended with another multi-thousand-line section.
+> **Status: complete historical execution record.** The later finite 3D-CV
+> checklist in
+> [`remaining_3dcv_profile_checklist.md`](remaining_3dcv_profile_checklist.md)
+> is also complete and merged. Current capabilities live in
+> [`format_coverage.md`](format_coverage.md). Counts and “current” statements
+> below describe their dated implementation checkpoints and are not rewritten
+> to match later registry growth.
 
 ## Licensed public fixture corpus (complete locally, 2026-08-03)
 

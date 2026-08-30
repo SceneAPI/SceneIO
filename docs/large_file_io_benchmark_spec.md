@@ -1,7 +1,8 @@
 # Large-file 3D-CV I/O benchmark specification
 
-Status: Sol specification approved for local execution, 2026-08-03. The
-benchmark is an evidence run, not a permanent performance-tuning loop.
+Status: complete, 2026-08-03. The retained partial artifact plus focused
+COLMAP closure artifact cover every declared case. This benchmark is a finite
+evidence run, not a permanent performance-tuning loop.
 
 ## Goal and boundary
 
@@ -21,7 +22,7 @@ must answer four questions:
 This is deliberately a five-case closure run. It does not benchmark every
 registered format, tune codec internals, add a runtime dependency, download a
 general media framework, or establish machine-independent numeric pass/fail
-thresholds. `bench/bench_io.py` remains the complete 73-format regression
+thresholds. `bench/bench_io.py` remains the complete 74-format regression
 harness; this benchmark supplies large, representative evidence for Gaussian,
 point-cloud, mesh, reconstruction, and dense-array workloads.
 

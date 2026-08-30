@@ -470,16 +470,7 @@
       }
     }
   },
-  "pytest_parent_collection": {
-    "count": 3083,
-    "node_ids_sha256": "69923599382c4b6625575efdcd7e41fc9e7a65cc2159405051d910276630da13",
-    "sorted_normalized_node_ids_sha256": "3cb84bc35def58c7cf5823c9103ccc611ac6407b309c336d7d6691b34fe94020",
-    "first": "tests/codecs/test_bal.py::test_oracle_write_sceneio_read_parity_and_conventions",
-    "last": "tests/test_points_binary.py::test_bad_magic_rejected"
-  },
   "pytest_candidate_collection": {
-    "count": 5069,
-    "sorted_normalized_node_ids_sha256": "a8fa633cf4b0f98c9ef833a15848cbe094bef3536745719f3fdb11f5ca1a6614",
     "collection_ignored_paths": [
       "tests/codecs/test_spz_niantic_oracle.py",
       "tests/codecs/test_openusd_gaussian_oracle.py"
@@ -1898,6 +1889,11 @@
       "tests/codecs/test_splat_transform_oracle.py::test_sceneio_readers_match_splat_transform_writers[sog-options1]",
       "tests/codecs/test_splat_transform_oracle.py::test_sceneio_readers_match_splat_transform_writers[spz-options2]",
       "tests/codecs/test_camera_calibration.py::test_kalibr_writer_matches_independent_pyyaml_oracle",
+      "tests/codecs/test_camera_calibration.py::test_calibration_text_documents_require_valid_utf8[opencv-yaml]",
+      "tests/codecs/test_camera_calibration.py::test_calibration_text_documents_require_valid_utf8[opencv-xml]",
+      "tests/codecs/test_camera_calibration.py::test_calibration_text_documents_require_valid_utf8[ros-camera-info]",
+      "tests/codecs/test_camera_calibration.py::test_calibration_text_documents_require_valid_utf8[kalibr]",
+      "tests/codecs/test_camera_calibration.py::test_opencv_yaml_accepts_valid_multibyte_camera_names",
       "tests/codecs/test_ply.py::test_read_matches_gsply[0]",
       "tests/codecs/test_ply.py::test_read_matches_gsply[1]",
       "tests/codecs/test_ply.py::test_read_matches_gsply[2]",
@@ -2475,14 +2471,77 @@
       "tests/test_usd_selected_time_contract.py::test_usd_selected_time_contract_has_oracle_benchmark_and_docs",
       "tests/test_usd_selected_time_contract.py::test_usd_selected_time_contract_matches_api_and_provider_boundary",
       "tests/test_usd_selected_time_contract.py::test_usd_selected_time_contract_matches_capabilities",
-      "tests/test_usd_selected_time_contract.py::test_usd_selected_time_contract_matches_parser_limits"
+      "tests/test_usd_selected_time_contract.py::test_usd_selected_time_contract_matches_parser_limits",
+      "tests/test_documentation_consistency.py::test_markdown_fences_are_balanced",
+      "tests/test_documentation_consistency.py::test_generated_architecture_facts_match_ownership_manifest",
+      "tests/test_documentation_consistency.py::test_document_roles_and_checkpoint_ownership_are_explicit",
+      "tests/test_documentation_consistency.py::test_readme_installation_metadata_matches_pyproject",
+      "tests/test_documentation_consistency.py::test_readme_python_examples_parse_and_reference_public_symbols",
+      "tests/test_documentation_consistency.py::test_all_python_documentation_fences_parse",
+      "tests/test_documentation_consistency.py::test_current_document_preambles_do_not_reassert_superseded_counts_or_state",
+      "tests/test_documentation_consistency.py::test_release_notes_record_published_tag_and_immutable_description_correction",
+      "tests/test_import_guards.py::test_no_family_imports[contracts/__init__.py]",
+      "tests/test_import_guards.py::test_no_family_imports[contracts/manifest.py]",
+      "tests/test_import_guards.py::test_no_family_imports[contracts/model.py]",
+      "tests/test_import_guards.py::test_no_family_imports[contracts/payloads.py]",
+      "tests/test_import_guards.py::test_no_family_imports[contracts/registry.py]",
+      "tests/test_import_guards.py::test_no_family_imports[contracts/serialization.py]",
+      "tests/test_import_guards.py::test_public_surface_imports[sceneio.contracts]",
+      "tests/test_public_type_contracts.py::test_frozen_census_exactly_matches_every_public_class_identity",
+      "tests/test_public_type_contracts.py::test_representation_envelopes_adapt_the_authoritative_objects",
+      "tests/test_public_type_contracts.py::test_non_representation_contracts_match_runtime_surface",
+      "tests/test_public_type_contracts.py::test_protocol_contracts_match_runtime_signatures",
+      "tests/test_public_type_contracts.py::test_error_contracts_match_hierarchy",
+      "tests/test_public_type_contracts.py::test_contract_metadata_types_self_classify",
+      "tests/test_public_type_contracts.py::test_vocabulary_contracts_preserve_exact_runtime_values",
+      "tests/test_public_type_contracts.py::test_lookup_canonical_alias_class_instance_and_short_name_rules",
+      "tests/test_public_type_contracts.py::test_model_and_registry_reject_malformed_contracts",
+      "tests/test_public_type_contracts.py::test_contract_models_and_public_mappings_are_immutable",
+      "tests/test_public_type_contracts.py::test_every_evidence_path_and_exact_node_exists",
+      "tests/test_public_type_contracts.py::test_payload_catalog_exactly_covers_builtin_registry",
+      "tests/test_public_type_contracts.py::test_payload_kind_alias_does_not_change_dataclass_compatibility_shape",
+      "tests/test_public_type_contracts.py::test_builtin_payload_validation_is_closed_but_runtime_extensions_remain_open",
+      "tests/test_public_type_contracts.py::test_catalog_serialization_is_detached_plain_and_process_deterministic",
+      "tests/test_public_type_contracts.py::test_contract_namespace_import_is_lazy_stdlib_only_and_provider_free",
+      "tests/test_data_calibration.py::TestCameraModel::test_param_counts[CameraModel.RAD_TAN_THIN_PRISM_FISHEYE-16]",
+      "tests/test_data_calibration.py::TestCameraModel::test_param_counts[CameraModel.SIMPLE_DIVISION-4]",
+      "tests/test_data_calibration.py::TestCameraModel::test_param_counts[CameraModel.DIVISION-5]",
+      "tests/test_data_calibration.py::TestCameraModel::test_param_counts[CameraModel.SIMPLE_FISHEYE-3]",
+      "tests/test_data_calibration.py::TestCameraModel::test_param_counts[CameraModel.FISHEYE-4]",
+      "tests/test_data_calibration.py::TestCameraModel::test_param_counts[CameraModel.EUCM-6]",
+      "tests/test_data_calibration.py::TestCameraModel::test_param_counts[CameraModel.EQUIRECTANGULAR-2]",
+      "tests/test_canonicalization.py::test_camera_manifest_is_the_python_and_native_authority",
+      "tests/test_canonicalization.py::test_camera_adapter_round_trips_every_model",
+      "tests/test_canonicalization.py::test_feature_adapter_exact_subset_and_explicit_loss",
+      "tests/test_canonicalization.py::test_feature_adapter_refuses_native_unsupported_descriptor_dtype",
+      "tests/test_canonicalization.py::test_match_adapter_round_trips_shared_raw_subset",
+      "tests/test_canonicalization.py::test_match_adapter_requires_channel_and_loss_acknowledgement",
+      "tests/test_canonicalization.py::test_match_adapter_uses_the_selected_channel_presence_flag",
+      "tests/test_canonicalization.py::test_match_adapter_materializes_verified_rows_without_matrices",
+      "tests/test_canonicalization.py::test_match_adapter_refuses_coordinate_pairs_and_reversed_native_ids",
+      "tests/test_canonicalization.py::test_depth_adapter_converts_units_and_encodes_validity",
+      "tests/test_canonicalization.py::test_depth_adapter_refuses_implicit_semantic_loss",
+      "tests/test_canonicalization.py::test_posed_view_adapter_round_trips_metric_pose_and_calibration",
+      "tests/test_canonicalization.py::test_posed_view_adapter_refuses_unrepresented_context",
+      "tests/test_canonicalization.py::test_posed_view_adapter_requires_explicit_scale_conversion",
+      "tests/test_canonicalization.py::test_posed_view_adapter_accounts_for_unreferenced_cameras",
+      "tests/test_canonicalization.py::test_same_short_names_keep_distinct_roles",
+      "tests/test_public_type_contracts.py::test_native_and_neutral_roles_declare_bidirectional_adapters[sceneio.Camera-sceneio.data.CameraIntrinsics]",
+      "tests/test_public_type_contracts.py::test_native_and_neutral_roles_declare_bidirectional_adapters[sceneio.FeatureSet-sceneio.data.FeatureSet]",
+      "tests/test_public_type_contracts.py::test_native_and_neutral_roles_declare_bidirectional_adapters[sceneio.MatchGraph-sceneio.data.CorrespondenceGraph]",
+      "tests/test_public_type_contracts.py::test_native_and_neutral_roles_declare_bidirectional_adapters[sceneio.DepthMap-sceneio.data.DepthMap]",
+      "tests/test_public_type_contracts.py::test_native_and_neutral_roles_declare_bidirectional_adapters[sceneio.PosedViewSet-sceneio.data.PosedViewSet]",
+      "tests/test_import_guards.py::test_no_family_imports[_camera_models.py]",
+      "tests/test_import_guards.py::test_no_family_imports[canonical.py]",
+      "tests/test_import_guards.py::test_public_surface_imports[sceneio.canonical]"
     ],
     "removed_nodes": [
       "tests/codecs/test_compressed_ply.py::test_writer_body_is_byte_identical_to_pinned_playcanvas_vector",
       "tests/test_colmap_db_contract.py::test_extension_columns_are_4d_time_and_descriptor_type",
       "tests/codecs/test_ply.py::test_read_matches_gsply",
       "tests/codecs/test_splat.py::test_sh_rest_dropped_on_write",
-      "tests/codecs/test_splat.py::test_nonfinite_write_is_defined"
+      "tests/codecs/test_splat.py::test_nonfinite_write_is_defined",
+      "tests/test_documentation_consistency.py::test_active_document_roles_and_checkpoint_ownership_are_explicit"
     ],
     "renamed_node_groups": [
       {
@@ -2893,9 +2952,7 @@
           ]
         }
       }
-    },
-    "first": "tests/codecs/test_animated_webp.py::test_sceneio_writer_is_lossless_and_oracle_readable",
-    "last": "tests/test_windows_wheel_repair.py::test_repair_wheel_prioritizes_redist_and_disables_mangling"
+    }
   },
   "benchmark_parent": {
     "command": ".venv/Scripts/python.exe bench/bench_io.py --runs 1 --scale 0.001 --skip-oracles --json <output>",

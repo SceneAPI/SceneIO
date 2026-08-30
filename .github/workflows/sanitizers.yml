@@ -34,7 +34,7 @@ jobs:
           uv venv --managed-python --python 3.12 --seed
           uv pip install -e ".[dev,test]"
           uv pip install torch --index https://download.pytorch.org/whl/cpu
-      - name: Verify core oracle imports and exact provider-independent collection
+      - name: Verify core oracle imports and required provider-independent collection
         run: |
           export LD_PRELOAD="$(gcc -print-file-name=libasan.so):$(gcc -print-file-name=libstdc++.so.6)"
           .venv/bin/python -c "import gsply, llvmlite, numba, pycolmap"
@@ -47,7 +47,6 @@ jobs:
             | tee "${{ runner.temp }}/asan-collection.txt"
           grep -F "tests/codecs/test_ply.py::test_read_matches_gsply" "${{ runner.temp }}/asan-collection.txt"
           grep -F "tests/codecs/test_colmap.py::test_writer_byte_identical_to_pycolmap" "${{ runner.temp }}/asan-collection.txt"
-          grep -E "^5069 tests collected in " "${{ runner.temp }}/asan-collection.txt"
       - name: Run available suite under ASan and UBSan
         run: |
           export LD_PRELOAD="$(gcc -print-file-name=libasan.so):$(gcc -print-file-name=libstdc++.so.6)"

@@ -102,13 +102,13 @@ guard covered all 54 then-live rows with normalized SHA-256
 the earlier 50-row family-extraction fingerprints remain historical evidence.
 Exact-head normal run `30469273173`, instrumented run `30469271293`, and
 nonpublishing three-platform package run `30470889876` pass at packaged source
-`2253e0f`; this closes the current 54-codec transport verification.
+`2253e0f`; this closed that 54-codec transport checkpoint.
 Animated WebP subsequently extends the local transport contracts to 55 rows
 and the buffer-backed differential/sink sweeps to 49. Its 55-row deterministic
 structure capture has normalized SHA-256
 `91fff73b8f1e8e599a4400a7de1f22c053704e89c0fef1ecee55a07703c44e80`;
 cross-platform package evidence remains pending for that addition.
-Current benchmark ownership work does not reopen O0-O5 or change codec
+The then-current benchmark ownership work did not reopen O0-O5 or change codec
 capabilities or implementation-performance claims. Points close at `45e2757`
 with normal run `30244892746` and compiler-instrumented run `30244892600`.
 Reconstruction closes at `76ed21b` with normal run `30247662591` and
@@ -325,8 +325,9 @@ platform/generic numeric aliases to Zarr as fixed-width zero-copy views; v2/v3
 oracle round-trips and the all-codec harness cover the repair before the final
 exact-head hosted rerun.
 
-The refreshed local CI smoke now completes without error for all 67 live
-formats under Zarr 3.3.0. Its deterministic structural projection contains 67
+At the C7 checkpoint, the refreshed local CI smoke completed without error for
+all 67 then-live formats under Zarr 3.3.0. Its deterministic structural
+projection contains 67
 rows with normalized SHA-256
 `817b355a8fb752025e51b3afe658524ebfa40cd6caffc8cd9e927a7117e07f65`.
 The exact 4,310-node local suite passes 4,304 tests with six documented skips;
@@ -821,7 +822,8 @@ test-soundness review lenses signed off with no remaining blockers.
 
 The original 23 per-codec **parity suites + the public-API E2E test remain the
 ground-truth oracle**. Optimizations added exactly these guards across the
-**original 23-codec scope**; the registry-driven equivalents now cover all 55:
+**original 23-codec scope**; the registry-driven equivalents now cover all 74
+built-ins and all 43 selectors exposed by 37 formats:
 
 1. **Differential (path-equivalence) tests** — for every fast path: `fast == slow`
    **bit-exact** (mmap==bytes, zero-copy==copy, sink==buffer, partial==slice). One

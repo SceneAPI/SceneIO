@@ -12,6 +12,8 @@ on, organized as import-isolated namespaces:
 - :mod:`sceneio.matching` — `FeatureExtractor` / `PairMatcher` /
   `GeometricVerifier` + traits.
 - :mod:`sceneio.testing` — conformance kits for implementations.
+- :mod:`sceneio.contracts` — immutable generic public-type and built-in
+  payload-kind discovery.
 
 Plus the pre-0.2 surface, unchanged and re-exported flat off this
 module: the ``application/x-sfm-points-v1`` wire codec
@@ -95,8 +97,10 @@ from sceneio.points_binary import (
 
 if TYPE_CHECKING:
     from sceneio import (
+        canonical,
         colmap,
         colmap_mvs,
+        contracts,
         data,
         formats,
         io,
@@ -112,8 +116,10 @@ __version__ = "0.3.0"
 # and no namespace ever depends on a sibling being imported.
 _NAMESPACES = frozenset(
     {
+        "canonical",
         "colmap",
         "colmap_mvs",
+        "contracts",
         "data",
         "formats",
         "io",
@@ -257,6 +263,13 @@ _REPRESENTATION_FORWARDS = frozenset(
     }
 )
 
+_CONTRACT_FORWARDS = frozenset(
+    {
+        "PUBLIC_TYPE_CONTRACTS",
+        "public_type_contract",
+    }
+)
+
 
 def __getattr__(name: str) -> object:
     if name == "_core":
@@ -269,6 +282,8 @@ def __getattr__(name: str) -> object:
         return importlib.import_module(f"sceneio.{name}")
     if name in _REPRESENTATION_FORWARDS:
         return getattr(importlib.import_module("sceneio.representations"), name)
+    if name in _CONTRACT_FORWARDS:
+        return getattr(importlib.import_module("sceneio.contracts"), name)
     if name in _DATA_FORWARDS:
         return getattr(importlib.import_module("sceneio.data"), name)
     if name in _IO_FORWARDS:
@@ -300,6 +315,7 @@ __all__ = [
     "MAGIC",
     "MAXX_DATABASE_APPLICATION_ID",
     "MAX_NUM_IMAGES",
+    "PUBLIC_TYPE_CONTRACTS",
     "RECORD_FMT",
     "RECORD_SIZE",
     "REPRESENTATION_CONTRACTS",
@@ -383,6 +399,7 @@ __all__ = [
     "VisualInertialDataset",
     "VolumeAsset",
     "__version__",
+    "canonical",
     "capabilities",
     "checkpoint_root",
     "codecs",
@@ -390,6 +407,7 @@ __all__ = [
     "colmap_database_conversion_report",
     "colmap_mvs",
     "contract_dict",
+    "contracts",
     "convert_coordinates",
     "convert_gaussian_conventions",
     "coordinate_contract",
@@ -421,6 +439,7 @@ __all__ = [
     "native_features",
     "pair_id_to_image_pair",
     "project_ncore_item",
+    "public_type_contract",
     "read",
     "read_depth",
     "read_e57_scan",

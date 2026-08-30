@@ -10,15 +10,17 @@ license · copyright/steward · citation · payload · SceneIO relevance &
 caveats**, verified against primary sources; unconfirmed items are marked
 **⚠ verify**. **Not legal advice.**
 
-> **Implementation update (2026-08-01):** the original survey predates the
-> live registry. SceneIO now supports 72 bounded format ids, including image
-> directories, raw Y4M, animated WebP, APNG, optional still/animated AVIF, and
-> video-only WebM VP8/VP9.
+> **Implementation update (2026-08-29):** the original survey predates the
+> live registry. SceneIO 0.3.0 supports 74 bounded format ids, including image
+> directories, raw Y4M, animated WebP, APNG, optional still/animated AVIF,
+> video-only WebM VP8/VP9 and Ogg/Theora, NCore V4, and EuRoC/ASL datasets.
 > AVIF uses a repository-owned adapter over Pillow/libavif with libaom and
 > dav1d; the base wheel remains NumPy-only. No FFmpeg/libav source, executable,
 > subprocess path, or runtime dependency is present. Temporal VP8/VP9 is
 > implemented directly through pinned BSD-licensed libvpx; Ogg/Theora is
-> implemented directly through pinned BSD libraries.
+> implemented directly through pinned BSD libraries. This survey remains a
+> research/licensing record; [`format_coverage.md`](format_coverage.md) is the
+> shipped-support authority.
 
 ---
 
@@ -90,7 +92,7 @@ a permissive lib; the *pose/quaternion/axis conventions* are the real work.
 | **COLMAP sparse model (binary)** | `.bin` | COLMAP (ETH Zürich / UNC) | own numpy codec; pycolmap **New BSD** | ETH Zürich & UNC; Schönberger | colmap.github.io/format.html ; Schönberger & Frahm, CVPR 2016 | little-endian packed cameras, images `(qw,qx,qy,qz,tx,ty,tz)`, points3D+RGB+tracks | **The essential target.** Quaternion **WXYZ**, pose **world→camera**, cam center = −Rᵀt |
 | **COLMAP sparse model (text)** | `.txt` | COLMAP | own codec; **New BSD** | ETH Zürich & UNC | colmap.github.io/format.html | same payload, human-readable | Slower/larger than `.bin`; identical semantics |
 | **COLMAP database** | `database.db` | COLMAP | SQLite (**public domain**) + own BLOB decode | ETH Zürich & UNC | colmap.github.io/database.html | tables: cameras, images, keypoints (`f32`), descriptors (`u8`), matches (`u32`), two_view_geometries (F/E/H `f64`) | Reuse features/matches without re-detection. BLOBs row-major LE; `pair_id = id1*2147483647 + id2` |
-| **COLMAP camera models** | (within above) | COLMAP | own codec; **New BSD** | ETH Zürich & UNC | colmap.github.io/cameras.html | SIMPLE_PINHOLE, PINHOLE, SIMPLE_RADIAL(_FISHEYE), RADIAL, OPENCV, OPENCV_FISHEYE, FULL_OPENCV, FOV, THIN_PRISM_FISHEYE | each = ordered `params[]`; contract must carry the model id. Superset of OpenCV distortion |
+| **COLMAP camera models** | (within above) | COLMAP + authorized `colmap_mod` compatibility profile | own codec; **New BSD** / repository authorization record | ETH Zürich & UNC; OpsiClear extension reference | colmap.github.io/cameras.html; pinned compatibility sources in `LICENSES/opsiclear-colmap-mod.txt` | persisted ids 0–17: the original pinhole/radial/OpenCV/FOV/thin-prism family plus RAD_TAN_THIN_PRISM_FISHEYE, division/equidistant fisheye, EUCM, and EQUIRECTANGULAR | one package-owned manifest fixes every id, name, count, and ordered `params[]`; Python and generated C++ consumers share it |
 | **Kapture** | `.txt`/`.csv` set + dirs | NAVER Labs Europe | own reader; kapture **BSD-3** | NAVER Corp | arXiv:2007.13867 ; github.com/naver/kapture | unified: sensors/rigs, trajectories, records, keypoints/descriptors/global-features, matches, 3D points+observations | **Closest existing analog to SceneIO's contract-plane goal** — strong reference model (BSD-3, directory-of-tables) |
 | **TUM RGB-D trajectory** | `.txt` | TU München CVG | own parser; eval tools **BSD-2** | TUM CVG; Sturm et al. | Sturm et al., IROS 2012 | `timestamp tx ty tz qx qy qz qw` | De-facto for evo/ATE/RPE. Pose **camera→world**, quaternion **XYZW**, seconds, `#` comments |
 | **KITTI odometry poses** | `.txt` | KIT & TTI-Chicago | own parser (trivial text) | Geiger et al. | cvlibs.net/datasets/kitti ; Geiger et al., CVPR 2012 | 12 floats = row-major 3×4 `[R\|t]`, cam i rel. frame 0 | Format is safe to read; the **KITTI data is CC-BY-NC-SA** (don't bundle it, §8). Cam→world; no timestamps in `poses.txt` |

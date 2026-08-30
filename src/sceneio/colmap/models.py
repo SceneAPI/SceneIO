@@ -10,29 +10,15 @@ from typing import Any
 
 import numpy as np
 
+from sceneio._camera_models import (
+    CAMERA_MODEL_PARAMETER_COUNTS as _CAMERA_PARAMETER_COUNTS,
+)
+from sceneio._camera_models import (
+    CAMERA_MODEL_PARAMETER_COUNTS_BY_NAME as _CAMERA_PARAMETER_COUNTS_BY_NAME,
+)
+
 UINT32_MAX = 0xFFFFFFFF
 UINT64_MAX = 0xFFFFFFFFFFFFFFFF
-_CAMERA_PARAMETER_COUNTS = (3, 4, 4, 5, 8, 8, 12, 5, 4, 5, 12, 16, 4, 5, 3, 4, 6, 2)
-_CAMERA_PARAMETER_COUNTS_BY_NAME = {
-    "SIMPLE_PINHOLE": 3,
-    "PINHOLE": 4,
-    "SIMPLE_RADIAL": 4,
-    "RADIAL": 5,
-    "OPENCV": 8,
-    "OPENCV_FISHEYE": 8,
-    "FULL_OPENCV": 12,
-    "FOV": 5,
-    "SIMPLE_RADIAL_FISHEYE": 4,
-    "RADIAL_FISHEYE": 5,
-    "THIN_PRISM_FISHEYE": 12,
-    "RAD_TAN_THIN_PRISM_FISHEYE": 16,
-    "SIMPLE_DIVISION": 4,
-    "DIVISION": 5,
-    "SIMPLE_FISHEYE": 3,
-    "FISHEYE": 4,
-    "EUCM": 6,
-    "EQUIRECTANGULAR": 2,
-}
 _VALIDATION_CHUNK = 65_536
 _MAX_MEGALOC_VALUES = 1_000_000_000
 _MAX_MEGALOC_RECORDS = 100_000_000
@@ -246,9 +232,9 @@ class MappingInput:
         for item in self.matches:
             for start in range(0, item.matches.shape[0], _VALIDATION_CHUNK):
                 chunk = item.matches[start : start + _VALIDATION_CHUNK]
-                if bool(
-                    np.any(chunk[:, 0] >= keypoint_counts[item.image_id1])
-                ) or bool(np.any(chunk[:, 1] >= keypoint_counts[item.image_id2])):
+                if bool(np.any(chunk[:, 0] >= keypoint_counts[item.image_id1])) or bool(
+                    np.any(chunk[:, 1] >= keypoint_counts[item.image_id2])
+                ):
                     raise ColmapAdapterError(
                         "MappingInput match index exceeds an image's keypoints"
                     )
@@ -330,9 +316,7 @@ class IdTags:
         object.__setattr__(self, "tags", _array(tags, np.uint64, tags.shape, "tag values"))
         for start in range(0, tags.size, _VALIDATION_CHUNK):
             if bool(np.any(tags[start : start + _VALIDATION_CHUNK] >= UINT32_MAX)):
-                raise ColmapAdapterError(
-                    "tag values must be valid uint32 frame/time ids"
-                )
+                raise ColmapAdapterError("tag values must be valid uint32 frame/time ids")
         if ids.size > 1:
             ordered_ids = np.sort(ids)
             for start in range(0, ordered_ids.size - 1, _VALIDATION_CHUNK):
@@ -370,9 +354,7 @@ class CharucoBoard:
         if self.dictionary not in range(20):
             raise ColmapAdapterError("ChArUco dictionary must be in 0..19")
         if self.squares_x < 2 or self.squares_y < 2:
-            raise ColmapAdapterError(
-                "ChArUco board dimensions must each be at least 2"
-            )
+            raise ColmapAdapterError("ChArUco board dimensions must each be at least 2")
         if (
             not np.isfinite(self.square_length)
             or not np.isfinite(self.marker_length)
@@ -451,9 +433,7 @@ class CharucoCalibration:
             ]
             norms = np.linalg.norm(quaternions, axis=1)
             if bool(np.any(np.abs(norms - 1.0) > 1e-10)):
-                raise ColmapAdapterError(
-                    "per-image camera pose quaternions must be unit length"
-                )
+                raise ColmapAdapterError("per-image camera pose quaternions must be unit length")
 
 
 @dataclass(frozen=True)
@@ -541,9 +521,7 @@ class MegaLocPair:
         with np.errstate(over="ignore", invalid="ignore"):
             canonical_score = np.float32(self.score).item()
         if np.isinf(canonical_score):
-            raise ColmapAdapterError(
-                "MegaLoc pair score must be finite-float32 or NaN"
-            )
+            raise ColmapAdapterError("MegaLoc pair score must be finite-float32 or NaN")
         object.__setattr__(self, "score", canonical_score)
         if not isinstance(self.is_retrieval, bool) or not isinstance(self.is_sequential, bool):
             raise ColmapAdapterError("MegaLoc pair flags must be boolean")
@@ -567,10 +545,7 @@ class MegaLocArtifacts:
     _owner: Any = field(default=None, repr=False, compare=False)
 
     def __post_init__(self) -> None:
-        if (
-            len(self.images) > _MAX_MEGALOC_RECORDS
-            or len(self.pairs) > _MAX_MEGALOC_RECORDS
-        ):
+        if len(self.images) > _MAX_MEGALOC_RECORDS or len(self.pairs) > _MAX_MEGALOC_RECORDS:
             raise ColmapAdapterError("MegaLoc record count exceeds its bound")
         if len({item.image_id for item in self.images}) != len(self.images):
             raise ColmapAdapterError("MegaLoc image ids must be unique")
@@ -586,13 +561,8 @@ class MegaLocArtifacts:
             descriptors = np.asarray(self.descriptors)
             if descriptors.ndim != 2 or descriptors.shape[0] != len(self.images):
                 raise ColmapAdapterError("MegaLoc descriptors must have one row per image")
-            if (
-                descriptors.shape[1] > _MAX_MEGALOC_VALUES
-                or descriptors.size > _MAX_MEGALOC_VALUES
-            ):
-                raise ColmapAdapterError(
-                    "MegaLoc descriptor dimensions are outside bounds"
-                )
+            if descriptors.shape[1] > _MAX_MEGALOC_VALUES or descriptors.size > _MAX_MEGALOC_VALUES:
+                raise ColmapAdapterError("MegaLoc descriptor dimensions are outside bounds")
             object.__setattr__(
                 self,
                 "descriptors",

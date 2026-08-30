@@ -652,6 +652,26 @@ def test_nul_and_oversized_documents_are_rejected(reader):
         reader(b"x" * (16 * 1024 * 1024 + 1))
 
 
+@pytest.mark.parametrize(
+    ("reader", "data"),
+    [
+        (_core.read_opencv_yaml, OPENCV_YAML),
+        (_core.read_opencv_xml, OPENCV_XML),
+        (_core.read_ros_camera_info, ROS_YAML),
+        (_core.read_kalibr, KALIBR_YAML),
+    ],
+    ids=("opencv-yaml", "opencv-xml", "ros-camera-info", "kalibr"),
+)
+def test_calibration_text_documents_require_valid_utf8(reader, data):
+    with pytest.raises(ValueError, match="valid UTF-8"):
+        reader(data + b"\n# invalid: \x8b\n")
+
+
+def test_opencv_yaml_accepts_valid_multibyte_camera_names():
+    data = OPENCV_YAML.replace(b"front''left", "frønt".encode())
+    assert _core.read_opencv_yaml(data).names == ["frønt"]
+
+
 def test_line_limit_is_enforced():
     with pytest.raises(ValueError, match="1 MiB"):
         _core.read_opencv_yaml(b"%YAML:1.0\n" + b"x" * (1024 * 1024 + 1))

@@ -6,14 +6,21 @@ schema_version = 1
 inventory_source = "sceneio.io._builtin_manifest.CANONICAL_BUILTIN_IDS"
 capability_source = "sceneio.capabilities"
 native_feature_source = "sceneio.native_features"
+public_type_source = "sceneio.contracts.PUBLIC_TYPE_CONTRACTS"
+payload_kind_source = "sceneio.contracts.BUILTIN_CODEC_PAYLOAD_KINDS"
 expected_builtin_count = 74
+expected_public_type_count = 144
+expected_payload_kind_count = 26
 canonical_current_document = "docs/format_coverage.md"
 
 readme_entry_points = [
+    "docs/README.md",
     "docs/format_coverage.md",
     "docs/coordinate_conventions.md",
     "docs/coverage_roadmap.md",
     "docs/core_architecture.md",
+    "docs/plans/completed/public_type_contract_standardization_2026-08-29.md",
+    "docs/public_type_contracts.md",
     "docs/repository_organization_plan.md",
     "docs/next_stage_implementation_checklist.md",
     "docs/format_gap_implementation_plan.md",
@@ -45,3 +52,28 @@ renderer = "native_feature_rows"
 document = "docs/core_architecture.md"
 marker = "sceneio-partial-summary"
 renderer = "partial_selector_rows"
+
+[[generated_section]]
+document = "docs/core_architecture.md"
+marker = "sceneio-architecture-summary"
+renderer = "architecture_summary"
+
+[[generated_section]]
+document = "docs/repository_organization_plan.md"
+marker = "sceneio-architecture-summary"
+renderer = "architecture_summary"
+
+[[generated_section]]
+document = "docs/public_type_contracts.md"
+marker = "sceneio-public-contract-summary"
+renderer = "public_contract_summary"
+
+[[generated_section]]
+document = "docs/public_type_contracts.md"
+marker = "sceneio-public-type-rows"
+renderer = "public_type_rows"
+
+[[generated_section]]
+document = "docs/public_type_contracts.md"
+marker = "sceneio-payload-kind-rows"
+renderer = "payload_kind_rows"

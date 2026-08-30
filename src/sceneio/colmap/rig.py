@@ -9,29 +9,13 @@ from pathlib import Path
 
 import numpy as np
 
+from sceneio._camera_models import (
+    CAMERA_MODEL_PARAMETER_COUNTS_BY_NAME as _MODEL_PARAM_COUNTS,
+)
+
 from .models import ColmapAdapterError, RigConfigCamera, RigConfiguration
 
 _MAX_JSON_BYTES = 64 * 1024 * 1024
-_MODEL_PARAM_COUNTS = {
-    "SIMPLE_PINHOLE": 3,
-    "PINHOLE": 4,
-    "SIMPLE_RADIAL": 4,
-    "RADIAL": 5,
-    "OPENCV": 8,
-    "OPENCV_FISHEYE": 8,
-    "FULL_OPENCV": 12,
-    "FOV": 5,
-    "SIMPLE_RADIAL_FISHEYE": 4,
-    "RADIAL_FISHEYE": 5,
-    "THIN_PRISM_FISHEYE": 12,
-    "RAD_TAN_THIN_PRISM_FISHEYE": 16,
-    "SIMPLE_DIVISION": 4,
-    "DIVISION": 5,
-    "SIMPLE_FISHEYE": 3,
-    "FISHEYE": 4,
-    "EUCM": 6,
-    "EQUIRECTANGULAR": 2,
-}
 _CAMERA_KEYS = {
     "image_prefix",
     "ref_sensor",

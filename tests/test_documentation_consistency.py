@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import ast
 import hashlib
 import html
+import importlib
 import re
 import tomllib
 import unicodedata
@@ -33,6 +35,11 @@ ARCHIVE_PAYLOAD_DIGESTS = {
         "# Remaining-gap implementation plan",
         "<!-- immutable-archive:end -->",
         "f5deaa7c4b8fbae09514fa9b79ccfc09b229030bcb13fb524983d1ee3ecb3acf",
+    ),
+    "public_type_contract_standardization_2026-08-29.md": (
+        "# Public type-contract standardization implementation plan",
+        "<!-- immutable-archive:end -->",
+        "61afd05dfd6c30ace5f507277f36027c4b067257e594d3f687b553c56d00145c",
     ),
 }
 _INLINE_LINK = re.compile(
@@ -171,6 +178,31 @@ def test_relative_markdown_links_resolve_with_exact_case_and_valid_anchors():
     assert not failures, "\n".join(failures)
 
 
+def test_markdown_fences_are_balanced():
+    failures: list[str] = []
+    for source in _documents():
+        fence: str | None = None
+        start_line: int | None = None
+        for line_number, line in enumerate(
+            source.read_text(encoding="utf-8").splitlines(), start=1
+        ):
+            match = _FENCE.match(line.lstrip())
+            if not match:
+                continue
+            marker = match.group(0)
+            if fence is None:
+                fence = marker
+                start_line = line_number
+            elif marker == fence:
+                fence = None
+                start_line = None
+        if fence is not None:
+            failures.append(
+                f"{source.relative_to(ROOT)}:{start_line}: unclosed {fence} fence"
+            )
+    assert not failures, "\n".join(failures)
+
+
 def test_exact_case_check_uses_lexical_link_components_on_windows():
     with pytest.raises(AssertionError, match="incorrect case"):
         _resolve_relative_with_exact_case(
@@ -247,6 +279,26 @@ def test_generated_current_facts_match_authoritative_runtime_sources():
     assert summaries == [expected, expected]
 
 
+def test_generated_architecture_facts_match_ownership_manifest():
+    expected = documentation_contract.render_architecture_summary(
+        sceneio.capabilities(), sceneio.native_features()
+    )
+    for path in (
+        DOCS / "core_architecture.md",
+        DOCS / "repository_organization_plan.md",
+    ):
+        document = path.read_text(encoding="utf-8")
+        match = re.search(
+            r"<!-- sceneio-architecture-summary:start -->\n"
+            r"(.*?)\n"
+            r"<!-- sceneio-architecture-summary:end -->",
+            document,
+            re.DOTALL,
+        )
+        assert match is not None
+        assert match.group(1) == expected
+
+
 def test_release_version_surfaces_agree():
     project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     version = project["project"]["version"]
@@ -300,7 +352,7 @@ def test_generated_section_requires_one_balanced_marker_pair():
         )
 
 
-def test_active_document_roles_and_checkpoint_ownership_are_explicit():
+def test_document_roles_and_checkpoint_ownership_are_explicit():
     coverage = (DOCS / "format_coverage.md").read_text(encoding="utf-8")
     roadmap = (DOCS / "coverage_roadmap.md").read_text(encoding="utf-8")
     active = ACTIVE_PLAN.read_text(encoding="utf-8")
@@ -309,7 +361,9 @@ def test_active_document_roles_and_checkpoint_ownership_are_explicit():
     assert "current codec capabilities and\nvalidation status" in coverage
     assert "intentionally does not duplicate" in roadmap
     assert "github.com/SceneAPI/SceneIO/actions/runs/" not in roadmap
-    assert "**active dependency queue**" in active
+    assert "**historical dependency queue**" in active
+    assert "**active dependency queue**" not in active
+    assert "The format-expansion program shipped in SceneIO 0.3.0" in active
     assert "[`plans/completed/`](plans/completed/README.md)" in active
     preamble = active.split("## 1. Outcome and boundaries", maxsplit=1)[0]
     assert "`a5e7fa4`" not in preamble
@@ -321,6 +375,124 @@ def test_active_document_roles_and_checkpoint_ownership_are_explicit():
         "### 12.1 Current checkpoint and status vocabulary", maxsplit=1
     )[1]
     assert "github.com/SceneAPI/SceneIO/actions/runs/" not in checkpoint
+
+
+def test_readme_installation_metadata_matches_pyproject():
+    project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))[
+        "project"
+    ]
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+
+    assert f"- Python: `{project['requires-python']}`" in readme
+    for dependency in project["dependencies"]:
+        assert f"`{dependency}`" in readme
+
+    match = re.search(r'python -m pip install "sceneio\[([^]]+)\]"', readme)
+    assert match is not None
+    documented_extras = set(match.group(1).split(","))
+    runtime_extras = set(project["optional-dependencies"]) - {"dev", "test"}
+    assert documented_extras == runtime_extras
+    assert "uv run python -m pytest -q" in readme
+    assert "uv run pytest -q" not in readme
+
+
+def test_readme_python_examples_parse_and_reference_public_symbols():
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    blocks = re.findall(r"```python\n(.*?)\n```", readme, re.DOTALL)
+    assert blocks
+
+    for index, block in enumerate(blocks, start=1):
+        tree = ast.parse(block, filename=f"README.md python block {index}")
+        uses_sceneio_name = any(
+            isinstance(node, ast.Name)
+            and node.id == "sceneio"
+            and isinstance(node.ctx, ast.Load)
+            for node in ast.walk(tree)
+        )
+        imports_sceneio_name = any(
+            isinstance(node, ast.Import)
+            and any(alias.name == "sceneio" for alias in node.names)
+            for node in tree.body
+        )
+        assert not uses_sceneio_name or imports_sceneio_name, (
+            f"README block {index} uses sceneio without importing it"
+        )
+        for node in ast.walk(tree):
+            if (
+                isinstance(node, ast.Attribute)
+                and isinstance(node.value, ast.Name)
+                and node.value.id == "sceneio"
+            ):
+                assert hasattr(sceneio, node.attr), (
+                    f"README block {index} references missing sceneio.{node.attr}"
+                )
+            if (
+                isinstance(node, ast.ImportFrom)
+                and node.module
+                and (
+                    node.module == "sceneio"
+                    or node.module.startswith("sceneio.")
+                )
+            ):
+                module = importlib.import_module(node.module)
+                for alias in node.names:
+                    if alias.name != "*":
+                        assert hasattr(module, alias.name), (
+                            f"README block {index} imports missing "
+                            f"{node.module}.{alias.name}"
+                        )
+
+    assert 'assert not sceneio.native_features("hdf5").available' not in readme
+
+    gaussian = sceneio.representation_contract(sceneio.GaussianCloud)
+    assert gaussian.profile.id == "gaussian_cloud"
+    assert gaussian.coordinates == "record_declared"
+    assert 'assert contract.coordinates == "record_declared"' in readme
+
+
+def test_all_python_documentation_fences_parse():
+    for source in _documents():
+        document = source.read_text(encoding="utf-8")
+        for index, block in enumerate(
+            re.findall(r"```python\n(.*?)\n```", document, re.DOTALL),
+            start=1,
+        ):
+            ast.parse(
+                block,
+                filename=f"{source.relative_to(ROOT)} python block {index}",
+            )
+
+
+def test_current_document_preambles_do_not_reassert_superseded_counts_or_state():
+    index = (DOCS / "README.md").read_text(encoding="utf-8")
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    survey = (DOCS / "formats_survey.md").read_text(encoding="utf-8")
+    large_io = (DOCS / "large_file_io_benchmark_spec.md").read_text(
+        encoding="utf-8"
+    )
+    adapters = (DOCS / "colmap_adapters.md").read_text(encoding="utf-8")
+    closure = (DOCS / "remaining_3dcv_profile_checklist.md").read_text(
+        encoding="utf-8"
+    )
+    coverage = (DOCS / "format_coverage.md").read_text(encoding="utf-8")
+
+    assert "[`documentation index`](docs/README.md)" in readme
+    assert "Current user and API contracts" in index
+    assert "Completed implementation records" in index
+    assert "supports 72 bounded format ids" not in survey
+    assert "complete 73-format regression" not in large_io
+    assert "entry in the 54-codec registry" not in adapters
+    assert "The validated closure shipped in" in closure
+    assert "Pending — declared roadmap gaps" not in coverage
+    assert "In progress — Phase 7" not in coverage
+
+
+def test_release_notes_record_published_tag_and_immutable_description_correction():
+    release = (DOCS / "releases" / "v0.3.0.md").read_text(encoding="utf-8")
+    assert "releases/tag/v0.3.0" in release
+    assert "actions/runs/33269098190" in release
+    assert "immutable PyPI 0.3.0 long description" in release
+    assert "runtime and current repository contract contain 103" in release
 
 
 def test_completed_archive_is_indexed_reachable_and_immutable():

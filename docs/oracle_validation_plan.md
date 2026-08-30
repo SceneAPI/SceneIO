@@ -4,7 +4,8 @@ Status: complete locally and hosted, 2026-08-04. Build-only Release run
 [`30914739031`](https://github.com/SceneAPI/SceneIO/actions/runs/30914739031)
 validated exact commit `50172b5eeb6f3df2d642c80e3fbff43850000d3f` across the
 three wheel targets and both focused oracle lanes. PyPI publication was
-skipped.
+skipped in that qualification run; the accumulated validated profile later
+shipped in SceneIO 0.3.0.
 
 The completed 2026-08-29 G1 follow-on in the
 [`archived remaining-gap implementation plan`](plans/completed/remaining_gap_implementation_plan_2026-08-29.md)

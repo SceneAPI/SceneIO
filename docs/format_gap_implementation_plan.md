@@ -1,14 +1,15 @@
 # Format-gap implementation, verification, and validation plan
 
-- **Status:** the existing-format R6 gate is closed at packaged source commit
-  `105b3017dae37345a6974f289e661d9173186a2a`. Exact current capabilities,
-  test counts, workflow evidence, and release state are maintained in
-  [`format_coverage.md`](format_coverage.md).
+- **Status:** complete. The format-expansion program shipped in SceneIO 0.3.0;
+  the earlier existing-format R6 gate closed at packaged source commit
+  `105b3017dae37345a6974f289e661d9173186a2a`. Exact current capabilities and
+  validation state are maintained in [`format_coverage.md`](format_coverage.md).
 - **Post-R6 ecosystem closure:** the 54-codec COLMAP dense and companion-I/O
   checkpoint closes at packaged source `2253e0f`; exact-head runs
   `30469273173`, `30469271293`, and build-only package run `30470889876`
   pass with publication skipped.
-- **Current 73-format checkpoint:** the live registry has 73 formats. HDF5/hloc,
+- **Historical 73-format checkpoint:** at this checkpoint the registry had 73
+  formats. HDF5/hloc,
   Zarr v2/v3, TIFF, E57, Parquet/Arrow IPC, OpenVDB, and USD/USDZ are
   implemented through repository-owned adapters around optimized optional
   permissive providers. SceneIO owns schemas, validation, models, detection,
@@ -27,7 +28,7 @@
   the exact sdist plus manylinux2014 x86-64, macOS arm64, and Windows amd64
   abi3 wheels, verifies combined inventory, and runs the NCore-enabled
   installed-wheel smoke. Publication is skipped.
-- **Current program gate:** implementation source `47eb2e1` passes the
+- **Historical program gate:** implementation source `47eb2e1` passes the
   nonpublishing package matrix, compiler checks, complete suite, 67-row smoke,
   and every platform shard. The completed five-run guard exposed an overly
   broad allocation classification for documented TinyUSDZ inspection and the
@@ -48,9 +49,11 @@
 - **Scope:** close every unblocked format gap declared by SceneIO's coverage
   documents without reimplementing the 0.2.0 codec tier.
 
-This plan is subordinate to the current shipped-state inventory in
-`format_coverage.md` and records the **active dependency queue** used for this
-implementation. Completed execution evidence is indexed under
+This completed plan is subordinate to the current shipped-state inventory in
+`format_coverage.md` and records the **historical dependency queue** used for
+the 0.3.0 implementation. Dated status and “current worktree” statements below
+describe their named checkpoint, not the present repository. Completed
+execution evidence is indexed under
 [`plans/completed/`](plans/completed/README.md). `coverage_roadmap.md` owns
 policy and future sequencing; Phase G0 below records the mechanism that keeps
 these documents and the public capability manifest aligned. Repository
@@ -59,12 +62,11 @@ specified in
 [`repository_organization_plan.md`](repository_organization_plan.md). The
 reviewed, commit-sized R6 closure record is
 [`next_stage_implementation_checklist.md`](next_stage_implementation_checklist.md).
-The reviewed finite follow-on for the remaining 3D-CV representation and
-bounded-profile work is
+The reviewed finite follow-on for the 3D-CV representation and bounded-profile
+work is
 [`remaining_3dcv_profile_checklist.md`](remaining_3dcv_profile_checklist.md);
-it narrows the active queue to six implementation units plus one combined
-qualification gate and supplies the stopping rule that older aspirational rows
-lack.
+it subsequently narrowed this queue to six implementation units plus one
+combined qualification gate. That follow-on is also complete and merged.
 
 The R6 stable-ABI correction supersedes earlier local wheel-tag evidence:
 those artifacts remain valid for Python 3.12 functionality and package
@@ -1699,7 +1701,7 @@ Existing calls remain source-compatible:
 sceneio.read(path, format=None)
 sceneio.write(record, path, format=None, profile=None)
 sceneio.inspect(path, format=None)
-sceneio.read_partial(path, format=None, ...)
+sceneio.read_partial(path, format=None, window=(0, 128, 0, 128))
 ```
 
 Add keyword-only selectors as their records land:
@@ -1725,7 +1727,7 @@ callers never need import-time probing:
 
 ```python
 caps = sceneio.capabilities("tiff")
-if caps.available and "window" in caps.partial_selectors:
+if caps.available and "window_selection" in caps.supported_features:
     ...
 ```
 

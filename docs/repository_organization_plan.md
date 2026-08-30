@@ -13,23 +13,33 @@ The commit-sized execution order, tests, verification, validation, and
 documentation checklist is
 [`next_stage_implementation_checklist.md`](next_stage_implementation_checklist.md).
 
-## Current checkpoint
+## Current repository snapshot
 
-The post-R6 registry now contains 67 canonical formats: 60 file codecs, four
-directory codecs, and three multi-file codecs. The optional HDF5/hloc, Zarr,
-TIFF, E57, Arrow/Parquet, OpenVDB, and USD/USDZ integrations are isolated in
-one focused adapter module per provider. Registry families continue to own
-only immutable definitions; public dispatch, provider imports, and format
-logic do not leak into family assembly. Stable public behavior therefore
-remains repository-owned while established providers supply their optimized
-storage kernels. The live 67-row benchmark qualification and performance
-ledgers, rather than the historical evidence below, govern new work.
+<!-- sceneio-architecture-summary:start -->
+**Generated ownership contract:** The **74** built-ins span **11** registry families:
+**53** native, **4** hybrid, and **17** Python-owned rows. The compiled
+`_core.__codec_inventory__` projection therefore contains **57** native/hybrid rows;
+Python-owned rows remain outside that compiled inventory. The values come directly from
+`FAMILY_MEMBERS` and `BUILTIN_OWNERSHIP`.
+<!-- sceneio-architecture-summary:end -->
 
-The live 54-codec benchmark-structure contract is distinct from immutable
-50-codec R2/R3 family evidence. Commit `952bb8d` produced matching hosted
+The optional HDF5/hloc, Zarr, TIFF, E57, Arrow/Parquet, OpenVDB, USD/USDZ,
+AVIF, and NCore integrations remain isolated behind focused adapters and lazy
+provider imports. Registry families own immutable definitions; the repository
+owns stable schemas, validation, public mapping, and capability metadata while
+qualified providers supply storage or parsing kernels.
+
+## Historical checkpoint evidence
+
+The 67-row and 54-row statements below describe their named post-R6
+checkpoints. Current registry and benchmark completeness come from the live
+manifest and generated documentation contract.
+
+At that checkpoint, the 54-codec benchmark-structure contract was distinct
+from immutable 50-codec R2/R3 family evidence. Commit `952bb8d` produced matching hosted
 Ubuntu and local MSVC 54-row captures with normalized SHA-256
 `fd3cf4a663e737971526afe5884f229237630a0f126b21a1c8ffcde9a6015e4e`;
-the active assembly guard now pins that structure and its provenance.
+the checkpoint assembly guard pins that structure and its provenance.
 Final packaged source `2253e0f` passes normal run `30469273173`, instrumented
 run `30469271293`, and nonpublishing MSVC/GCC 10/AppleClang package run
 `30470889876`. Downloaded artifact inspection confirms the exact wheel matrix,

@@ -12,6 +12,10 @@ from pathlib import Path
 
 import numpy as np
 
+from sceneio._camera_models import (
+    CAMERA_MODEL_PARAMETER_COUNTS as _CAMERA_PARAM_COUNTS,
+)
+
 from .models import (
     UINT32_MAX,
     ColmapAdapterError,
@@ -27,26 +31,6 @@ _U8 = struct.Struct("<B")
 _U32 = struct.Struct("<I")
 _I32 = struct.Struct("<i")
 _U64 = struct.Struct("<Q")
-_CAMERA_PARAM_COUNTS = {
-    0: 3,
-    1: 4,
-    2: 4,
-    3: 5,
-    4: 8,
-    5: 8,
-    6: 12,
-    7: 5,
-    8: 4,
-    9: 5,
-    10: 12,
-    11: 16,
-    12: 4,
-    13: 5,
-    14: 3,
-    15: 4,
-    16: 6,
-    17: 2,
-}
 _MAX_RECORDS = 100_000_000
 _MAX_TEXT_BYTES = 64 * 1024 * 1024
 
@@ -137,7 +121,11 @@ def read_mapping_input(path) -> MappingInput:
             width = cursor.unpack(_U64, f"camera {index} width")
             height = cursor.unpack(_U64, f"camera {index} height")
             num_params = cursor.unpack(_U32, f"camera {index} parameter count")
-            expected = _CAMERA_PARAM_COUNTS.get(model_id)
+            expected = (
+                _CAMERA_PARAM_COUNTS[model_id]
+                if model_id < len(_CAMERA_PARAM_COUNTS)
+                else None
+            )
             if expected is None or num_params != expected:
                 raise ColmapAdapterError(
                     f"MappingInput camera {index} model/parameter count is unsupported"
@@ -271,23 +259,15 @@ def write_mapping_input(value: MappingInput, path) -> None:
 
     if not isinstance(value, MappingInput):
         raise TypeError("value must be a MappingInput")
-    if value.version == 1 and any(
-        image.time_id != UINT32_MAX for image in value.images
-    ):
-        raise ColmapAdapterError(
-            "MappingInput v1 cannot represent image time_id values"
-        )
+    if value.version == 1 and any(image.time_id != UINT32_MAX for image in value.images):
+        raise ColmapAdapterError("MappingInput v1 cannot represent image time_id values")
     for index, image in enumerate(value.images):
         try:
             encoded = image.name.encode("utf-8")
         except UnicodeEncodeError as exc:
-            raise ColmapAdapterError(
-                f"MappingInput image {index} name is not valid UTF-8"
-            ) from exc
+            raise ColmapAdapterError(f"MappingInput image {index} name is not valid UTF-8") from exc
         if len(encoded) > _MAX_TEXT_BYTES:
-            raise ColmapAdapterError(
-                f"MappingInput image {index} name exceeds its bound"
-            )
+            raise ColmapAdapterError(f"MappingInput image {index} name exceeds its bound")
     target = Path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
     temporary = None

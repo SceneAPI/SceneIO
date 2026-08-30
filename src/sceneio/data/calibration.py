@@ -12,98 +12,55 @@ union of the two.
 from __future__ import annotations
 
 import enum
+import operator
 from dataclasses import dataclass
 from typing import Literal
 
 import numpy as np
 
+from sceneio._camera_models import (
+    CAMERA_MODEL_IDS_BY_NAME,
+    CAMERA_MODEL_NAMES,
+    CAMERA_MODEL_PARAMETER_NAMES,
+)
 from sceneio.data._validation import as_float64, ensure_array, ensure_positive_int
 from sceneio.errors import ContractViolation
 
 
-class CameraModel(enum.Enum):
-    """COLMAP's camera-model vocabulary (names, ids, and param layouts)."""
-
-    SIMPLE_PINHOLE = "SIMPLE_PINHOLE"
-    PINHOLE = "PINHOLE"
-    SIMPLE_RADIAL = "SIMPLE_RADIAL"
-    RADIAL = "RADIAL"
-    OPENCV = "OPENCV"
-    OPENCV_FISHEYE = "OPENCV_FISHEYE"
-    FULL_OPENCV = "FULL_OPENCV"
-    FOV = "FOV"
-    SIMPLE_RADIAL_FISHEYE = "SIMPLE_RADIAL_FISHEYE"
-    RADIAL_FISHEYE = "RADIAL_FISHEYE"
-    THIN_PRISM_FISHEYE = "THIN_PRISM_FISHEYE"
-
+class _CameraModelMixin:
     @property
     def model_id(self) -> int:
         """COLMAP's integer model id."""
-        return _MODEL_IDS[self]
+        return CAMERA_MODEL_IDS_BY_NAME[self.value]
 
     @property
     def param_names(self) -> tuple[str, ...]:
         """COLMAP's ordered parameter names for this model."""
-        return _PARAM_NAMES[self]
+        return CAMERA_MODEL_PARAMETER_NAMES[self.model_id]
 
     @property
     def num_params(self) -> int:
-        return len(_PARAM_NAMES[self])
+        return len(self.param_names)
+
+    @classmethod
+    def from_id(cls, model_id: object):
+        """Resolve a persisted integer id or raise ``ValueError``."""
+        try:
+            selected = operator.index(model_id)
+        except TypeError:
+            raise ValueError(f"unknown camera model id {model_id!r}") from None
+        if selected < 0 or selected >= len(CAMERA_MODEL_NAMES):
+            raise ValueError(f"unknown camera model id {selected}")
+        return cls(CAMERA_MODEL_NAMES[selected])
 
 
-_MODEL_IDS: dict[CameraModel, int] = {
-    CameraModel.SIMPLE_PINHOLE: 0,
-    CameraModel.PINHOLE: 1,
-    CameraModel.SIMPLE_RADIAL: 2,
-    CameraModel.RADIAL: 3,
-    CameraModel.OPENCV: 4,
-    CameraModel.OPENCV_FISHEYE: 5,
-    CameraModel.FULL_OPENCV: 6,
-    CameraModel.FOV: 7,
-    CameraModel.SIMPLE_RADIAL_FISHEYE: 8,
-    CameraModel.RADIAL_FISHEYE: 9,
-    CameraModel.THIN_PRISM_FISHEYE: 10,
-}
-
-_PARAM_NAMES: dict[CameraModel, tuple[str, ...]] = {
-    CameraModel.SIMPLE_PINHOLE: ("f", "cx", "cy"),
-    CameraModel.PINHOLE: ("fx", "fy", "cx", "cy"),
-    CameraModel.SIMPLE_RADIAL: ("f", "cx", "cy", "k"),
-    CameraModel.RADIAL: ("f", "cx", "cy", "k1", "k2"),
-    CameraModel.OPENCV: ("fx", "fy", "cx", "cy", "k1", "k2", "p1", "p2"),
-    CameraModel.OPENCV_FISHEYE: ("fx", "fy", "cx", "cy", "k1", "k2", "k3", "k4"),
-    CameraModel.FULL_OPENCV: (
-        "fx",
-        "fy",
-        "cx",
-        "cy",
-        "k1",
-        "k2",
-        "p1",
-        "p2",
-        "k3",
-        "k4",
-        "k5",
-        "k6",
-    ),
-    CameraModel.FOV: ("fx", "fy", "cx", "cy", "omega"),
-    CameraModel.SIMPLE_RADIAL_FISHEYE: ("f", "cx", "cy", "k"),
-    CameraModel.RADIAL_FISHEYE: ("f", "cx", "cy", "k1", "k2"),
-    CameraModel.THIN_PRISM_FISHEYE: (
-        "fx",
-        "fy",
-        "cx",
-        "cy",
-        "k1",
-        "k2",
-        "p1",
-        "p2",
-        "k3",
-        "k4",
-        "sx1",
-        "sy1",
-    ),
-}
+CameraModel = enum.Enum(
+    "CameraModel",
+    {name: name for name in CAMERA_MODEL_NAMES},
+    type=_CameraModelMixin,
+    module=__name__,
+)
+CameraModel.__doc__ = "COLMAP's camera-model vocabulary (names, ids, and param layouts)."
 
 
 @dataclass(frozen=True)

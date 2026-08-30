@@ -2,11 +2,11 @@
 
 > Current shipped and branch-local status is tracked in `format_coverage.md`.
 > The status markers below have been reconciled to the live 74-format registry;
-> broader checklist boxes remain open where a codec has not completed an
-> aspirational per-format or cross-platform gate. The authoritative
-> implementation sequence for the remaining formats is
-> [`format_gap_implementation_plan.md`](format_gap_implementation_plan.md);
-> the prerequisite maintainability and backend-selection work is in
+> broader checklist boxes remain open only for aspirational or optional future
+> gates; they are not missing SceneIO 0.3.0 release requirements. The completed
+> format-expansion execution record is
+> [`format_gap_implementation_plan.md`](format_gap_implementation_plan.md), and
+> the completed maintainability and backend-selection work is in
 > [`repository_organization_plan.md`](repository_organization_plan.md), with
 > its reviewed execution checklist in
 > [`next_stage_implementation_checklist.md`](next_stage_implementation_checklist.md).
@@ -20,8 +20,8 @@
 > than unfinished work in that program.
 > The bounded standards-based USD expansion is specified separately in
 > [`usd_3d_cv_implementation_plan.md`](usd_3d_cv_implementation_plan.md).
-> Coordinate-system closure is implemented independently of the remaining
-> aspirational format gates. All 74 built-ins are classified by the checked
+> Coordinate-system closure is implemented independently of future
+> aspirational gates. All 74 built-ins are classified by the checked
 > manifest described in
 > [`coordinate_conventions.md`](coordinate_conventions.md); COLMAP is the
 > canonical explicit-conversion target, never an implicit label for unknown

@@ -29,8 +29,12 @@ class TestCameraModel:
         assert CameraModel.SIMPLE_PINHOLE.model_id == 0
         assert CameraModel.PINHOLE.model_id == 1
         assert CameraModel.THIN_PRISM_FISHEYE.model_id == 10
-        assert len(CameraModel) == 11
-        assert len({m.model_id for m in CameraModel}) == 11
+        assert CameraModel.EQUIRECTANGULAR.model_id == 17
+        assert CameraModel.from_id(16) is CameraModel.EUCM
+        assert len(CameraModel) == 18
+        assert len({m.model_id for m in CameraModel}) == 18
+        with pytest.raises(ValueError, match="unknown camera model id"):
+            CameraModel.from_id(18)
 
     @pytest.mark.parametrize(
         ("model", "count"),
@@ -46,6 +50,13 @@ class TestCameraModel:
             (CameraModel.SIMPLE_RADIAL_FISHEYE, 4),
             (CameraModel.RADIAL_FISHEYE, 5),
             (CameraModel.THIN_PRISM_FISHEYE, 12),
+            (CameraModel.RAD_TAN_THIN_PRISM_FISHEYE, 16),
+            (CameraModel.SIMPLE_DIVISION, 4),
+            (CameraModel.DIVISION, 5),
+            (CameraModel.SIMPLE_FISHEYE, 3),
+            (CameraModel.FISHEYE, 4),
+            (CameraModel.EUCM, 6),
+            (CameraModel.EQUIRECTANGULAR, 2),
         ],
     )
     def test_param_counts(self, model: CameraModel, count: int) -> None:

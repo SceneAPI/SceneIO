@@ -6,7 +6,7 @@ validation status**. It reconciles the live registry
 Future policy and sequencing live in
 [`coverage_roadmap.md`](coverage_roadmap.md), not in current-evidence claims.
 
-The detailed execution, verification, and wheel-validation record for format
+The completed execution, verification, and wheel-validation record for format
 expansion is in
 [`format_gap_implementation_plan.md`](format_gap_implementation_plan.md).
 The module-boundary, offline-source, bounded package-closure, and trigger-based
@@ -51,6 +51,28 @@ The final acceptance matrix remains in the
 ordered execution evidence is preserved in the
 [`completed-plan archive`](plans/completed/remaining_gap_implementation_plan_2026-08-29.md).
 The live registry contains 74 formats.
+
+<!-- sceneio-inventory-summary:start -->
+**Generated registry contract:** SceneIO has **74 built-in formats**: **64**
+single-file, **5** directory, and **5** multi-file containers. **74** are readable,
+**73** writable, and **74** inspectable; **37** formats expose **43** bounded partial
+selectors. **74** provide streaming reads and **71** provide streaming writes. The
+values come directly from `CANONICAL_BUILTIN_IDS` and `sceneio.capabilities()`.
+<!-- sceneio-inventory-summary:end -->
+
+Current tables: [data structures](#data-structures-memory-records),
+[formats](#formats-codecs), [infrastructure](#infrastructure--capabilities), and
+[partial reads](#partial-read-capability).
+
+Everything marked ✅ is implemented by the compiled `sceneio._core` or by a
+repository-owned adapter around a separately installed, optimized permissive
+provider. SceneIO owns the schema, convention guards, public mapping, and tests
+in both cases. SceneIO 0.3.0 packages the complete current registry.
+
+## Validation history
+
+The dated checkpoints below preserve evidence for their named revisions. Their
+older format, representation, and test counts are not current inventory claims.
 
 The 2026-08-02 closure commit `5387350` passes the full hosted compiler run
 `30738228920` plus every dedicated Linux, Windows, macOS, and GCC 10 job in CI
@@ -204,25 +226,6 @@ complete and format capabilities are unchanged.
 > memory improvement. Local validation is complete; an exact-head hosted wheel
 > rerun remains pending. The complete local gate passes 4,962 tests with 16
 > documented optional/platform skips, and repository-wide Ruff is clean.
-
-<!-- sceneio-inventory-summary:start -->
-**Generated registry contract:** SceneIO has **74 built-in formats**: **64**
-single-file, **5** directory, and **5** multi-file containers. **74** are readable,
-**73** writable, and **74** inspectable; **37** formats expose **43** bounded partial
-selectors. **74** provide streaming reads and **71** provide streaming writes. The
-values come directly from `CANONICAL_BUILTIN_IDS` and `sceneio.capabilities()`.
-<!-- sceneio-inventory-summary:end -->
-
-Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
-
-> Status note: everything marked ✅ is implemented by the compiled
-> `sceneio._core` or by a repository-owned adapter around a separately
-> installed, optimized permissive provider. SceneIO owns the schema,
-> convention guards, public mapping, and tests in both cases. SceneIO 0.3.0
-> packages the complete current 74-format registry: the original 23-codec
-> 0.2.0 tier plus the reconstruction, calibration, point, Gaussian, mesh,
-> scene, scientific-container, dataset, dense-label, and sequence profiles
-> documented below.
 >
 > **67-format local checkpoint (2026-07-30):** the live registry contains 60
 > single-file formats, four directory formats, and three multi-file formats.
@@ -656,7 +659,8 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 > verify the embedded extension’s ABI. R6 review found a CPython-specific
 > fallback. The current branch requires `Python::SABIModule`, checks the
 > nanobind stable target/suffix, and produces `_core.pyd` on Windows plus
-> `_core.abi3.so` on Unix. No corrected release has been published.
+> `_core.abi3.so` on Unix. At this checkpoint no corrected release had been
+> published; the fix later shipped in SceneIO 0.3.0.
 >
 > **R6 closure (2026-07-28):** the correctness-tested current backends are
 > accepted as this stage's release baseline at packaged source commit
@@ -1235,6 +1239,8 @@ Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
 [r2-reconstruction-registry-final-ci]: https://github.com/SceneAPI/SceneIO/actions/runs/30218232248
 [r2-reconstruction-registry-final-instrumented]: https://github.com/SceneAPI/SceneIO/actions/runs/30218232246
 
+Legend: ✅ done · 🟡 partial · ⬜ pending · **R** read · **W** write
+
 ## Data structures (memory Records)
 
 SoA, zero-copy to numpy/torch (DLPack), conventions carried as metadata.
@@ -1455,7 +1461,7 @@ Encoded image paths and model paths remain opaque values. Embedded or
 standalone `.xmp` metadata remains optional generic metadata work, not a
 requirement for COLMAP ecosystem closure.
 
-### ⬜ Pending — declared roadmap gaps
+### Deliberate boundaries and policy-gated future work
 
 - Sequence/dataset: RTMV, animated WebP, APNG, animated AVIF, bounded WebM
   VP8/VP9, and Ogg/Theora are complete for their declared profiles.
@@ -1479,7 +1485,7 @@ Draco-compressed glTF remains policy-gated. Plain glTF/GLB is implemented and
 rejects Draco, meshopt, unknown extensions, and unrepresented scene features
 rather than silently flattening or dropping them.
 
-### 🟡 In progress — Phase 7 (reliability and performance)
+### Optional future reliability and performance work
 ✅ mmap-backed reads for all buffer-backed file codecs plus paired OBJ/MTL and
 glTF/external-buffer mappings (SOG additionally supports an unbundled native
 multi-file path; COLMAP DB and the two COLMAP directory codecs read paths
@@ -1500,8 +1506,8 @@ expanded 74-format benchmark/oracles.
 | Piece | Status | Notes |
 |---|---|---|
 | nanobind + scikit‑build‑core build | ✅ | abi3/cp312, `NB_STATIC`; `Python::SABIModule`, `nanobind-static-abi3`, and the platform suffix are configure-checked; local Windows emits `_core.pyd` against `python3.dll`, Ubuntu emits `_core.abi3.so` without libpython |
-| cibuildwheel release path | ✅ | one verified sdist feeds Linux/macOS/Windows wheels; locked build inputs, all-50 installed smoke, per-wheel inventory, and tag-only publication in `publish.yml`; final build-only run `30406706115` and downloaded-artifact inspection pass, while tagging and publication remain user-gated |
-| CI parity (oracles in CI) | ✅ | At `a5e7fa4`, normal Linux CI passes 2,914 tests with nine documented platform/oracle skips, the 50-codec performance guard, pinned GCC 10 portability, and the three-OS focused matrix |
+| cibuildwheel release path | ✅ | one verified sdist feeds Linux/macOS/Windows wheels; locked build inputs, all-74 installed smoke, per-wheel inventory, and protected-tag publication in `publish.yml`; `v0.3.0` Release run [`33269098190`](https://github.com/SceneAPI/SceneIO/actions/runs/33269098190) published the sdist and all three wheel targets |
+| CI parity (oracles in CI) | ✅ | the exact 0.3.0 tag passed release, CI, and sanitizer gates; the post-release 103-representation correction passes main [CI `33271892348`](https://github.com/SceneAPI/SceneIO/actions/runs/33271892348) and [Sanitizers `33271892375`](https://github.com/SceneAPI/SceneIO/actions/runs/33271892375) |
 | Codec registry + `read`/`write`/`inspect`/`read_partial`/`detect` | ✅ | inspection covers all 74; bounded partial hooks are capability-specific |
 | Repo-maintained stable codec adapters | ✅ | all 74 adapters live in `src/cpp` / `src/sceneio`; 71 writable adapters stream directly to paths, RTMV is read-only, and the two AVIF writers use the provider's completed output buffer; optional optimized storage/parser providers remain separately installed |
 | Offline native-source closure | ✅ | all selected native sources—including libwebp 1.5.0—are stored in-tree and the production CMake graph has no native-source fetch; local exact-tree proof plus final MSVC, GCC 10, and AppleClang sdist-to-wheel execution and artifact inspection pass |
@@ -1513,7 +1519,7 @@ expanded 74-format benchmark/oracles.
 | Optional optimized providers | ✅ | h5py, Zarr/numcodecs, tifffile, pye57/libE57Format, PyArrow, TinyVDB, TinyUSDZ, and Pillow/libavif are isolated extras with repo-owned adapters and direct-provider comparison tests; future `SCENEIO_WITH_*` entries are native-candidate seams, not missing format support |
 | mmap / streaming sources | ✅ | mmap reads + raw NPY/FLO views + direct file-sink writes complete |
 | Bounded intra-file workers | ✅ | measured O4 paths; deterministic one-vs-many lane tests |
-| Instrumented + mmap differential CI | ✅ | at `a5e7fa4`, exact 2,923-test collection, complete compiler-instrumented suite, focused native lifetime controls, and the three-case push backing-store sweep pass; the retained default-branch schedule raises that sweep to 100 cases |
+| Instrumented + mmap differential CI | ✅ | the 0.3.0 candidate passed ASan/UBSan and focused lifetime controls; post-release main Sanitizers run [`33271892375`](https://github.com/SceneAPI/SceneIO/actions/runs/33271892375) also passes, and the default-branch backing-store schedule retains its 100-case sweep |
 | Capability flags (`reads/writes/inspect/partial/streams/lossy/needs_dep`) | ✅ | frozen metadata through `sceneio.capabilities()`; snapshot below is CI-validated |
 | `splat` / `posed_views` DataTypes in the vocabulary | ⬜ | **Phase‑C** (wire identity; cross‑repo) |
 

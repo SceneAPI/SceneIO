@@ -1,36 +1,27 @@
 # SceneIO core architecture (nanobind)
 
-How the compiled core is organized, and **how to add a codec** — the two
-things that keep this expansible as the format list from
-`formats_survey.md` grows.
+How the compiled core is organized and how to add a codec. Current format
+capabilities are listed separately in
+[`format_coverage.md`](format_coverage.md).
 
-> **Growth checkpoint:** the live registry has reached 74 format ids. The
-> format-focused native layer remains coherent, but registry, inspection,
-> benchmark, test-matrix, dependency, and binding wiring have outgrown a flat
-> layout. The behavior-preserving R3-R5 organization work and R6 source/package
-> closure are complete at packaged source commit `105b301`. Exact-head CI,
-> native-runtime validation, the MSVC/GCC 10/AppleClang build-only matrix,
-> artifact inspection, and closure review pass; publication is skipped. A new
-> codec wave starts only on explicit user direction. The paths below describe
-> the current family boundaries and compatibility contracts; full closure
-> evidence is in
-> [`next_stage_implementation_checklist.md`](next_stage_implementation_checklist.md#r6-closure-evidence).
-> The post-R6 COLMAP dense unit adds a ninth `dense` family, three records,
-> four buffer codecs, and a lazy workspace adapter. The current inventory is
-> 55 native/hybrid rows, 12 Python-owned optional-provider rows, ten registry
-> families, and 19 compiled record-registration units. The optional-provider
-> adapters are
-> isolated by family (`_hdf5`, `_zarr`, `_tiff`, `_e57`, `_arrow`,
-> `_openvdb`, `_usd`) and preserve the NumPy-only base import. The repository
-> owns their stable schema, validation, inspection, and public mapping while
-> established upstream libraries own optimized storage and parsing. The
-> older 50-codec and eight-family numbers below remain immutable evidence
-> for their named commits.
-> Coordinate semantics are now a checked cross-layer contract: every built-in
-> has an exact manifest entry, capabilities and inspection expose it, decoded
-> records provide a `.coordinates` view, and conversions are explicit. See
-> [`coordinate_conventions.md`](coordinate_conventions.md).
->
+The behavior-preserving R1-R6 organization and source/package closure are
+complete. Optional-provider adapters remain isolated and preserve the
+NumPy-only base import. Coordinate semantics are a checked cross-layer
+contract; see [`coordinate_conventions.md`](coordinate_conventions.md).
+
+<!-- sceneio-architecture-summary:start -->
+**Generated ownership contract:** The **74** built-ins span **11** registry families:
+**53** native, **4** hybrid, and **17** Python-owned rows. The compiled
+`_core.__codec_inventory__` projection therefore contains **57** native/hybrid rows;
+Python-owned rows remain outside that compiled inventory. The values come directly from
+`FAMILY_MEMBERS` and `BUILTIN_OWNERSHIP`.
+<!-- sceneio-architecture-summary:end -->
+
+The dated R3-R6 paragraphs below preserve migration evidence for their named
+commits. Their older codec, family, source, and test counts are historical,
+not descriptions of the current registry.
+
+> **Historical migration log:**
 > R3.3 closes at `811cb0d` with normal run `30300122309` and
 > compiler-instrumented run `30300122324` passing. The R3.4 installed-wheel
 > smoke is now manifest-driven: it requires exact agreement among all 50
@@ -107,20 +98,28 @@ sceneio (Python)                     public, stable surface
 sceneio._core (C++ / nanobind)
   records/     SoA in-memory types + zero-copy views + **convention metadata**
   codecs/      format-focused translation units: read_<fmt>() / write_<fmt>()
-  bindings/    record + nine codec-family descriptor tables and assembler
+  bindings/    record + nine native codec-family tables and assembler
   io/          format-agnostic helpers: endian, byte reader/writer, gzip
   module.cpp   invokes the record pass, codec pass, then publishes inventory
 
 cmake/
   SceneIOInstrumentation.cmake  opt-in compiler instrumentation
-  SceneIOSources.cmake          bindings, records + nine codec-family owners
+  SceneIOSources.cmake          bindings, records + nine native codec-family owners
   SceneIODependencies.cmake     Python/nanobind + native dependency targets
+  SceneIOCameraModels.cmake     generated native lookup from Python authority
   SceneIOBackendQualification.cmake
                                 internal defaults + default-off comparison
   SceneIOTargets.cmake          _core and native-control targets
 ```
 
 **Separation of concerns**
+- `src/sceneio/_camera_models.py` is the sole camera-model id/name/parameter
+  authority. Python contracts and COLMAP adapters import its derived tables;
+  CMake generates the native `colmap_model_info()` header from the same
+  manifest before `_core` is defined.
+- `sceneio.canonical` owns explicit native/loaded-to-neutral projections.
+  Native records remain storage-faithful and `sceneio.data` stays the procedure
+  floor; equal short names are not aliases.
 - A **record** (e.g. `Reconstruction`, `GaussianCloud`) is a memory
   representation. It owns contiguous SoA buffers, hands out zero-copy
   ndarray views (numpy default; torch/cupy via DLPack), and **carries its
@@ -175,9 +174,11 @@ cmake/
   a format id to its extensions, magic sniff, reader, writer, optional
   inspector, partial readers, record type, and DataType;
   `read()`/`write()`/`inspect()`/`read_partial()`/`detect()` dispatch through it
-  and map errors. Today, registration plus inspector, benchmark, test-matrix,
-  CMake, and nanobind wiring are separate touch points. R1-R4 preserve this
-  public facade while deriving those family views from one codec manifest.
+  and map errors. The immutable built-in manifest assigns every id to one
+  implementation owner and family; registry assembly validates the complete
+  candidate before publishing it. The following detail records the R2-R4
+  extraction sequence that produced the current lower modules and public
+  compatibility facade.
   The image-sequence directory adapter is the first completed R2 boundary: its
   live image-extension catalog and frame inspector are injected through
   `ImageFrameAccess`, so it no longer imports the registry or public I/O facade
@@ -286,9 +287,9 @@ cmake/
   `9928c6d` are pushed. Normal run `30228235491` and
   compiler-instrumented run `30228235535` pass the final tree, including the
   three-OS splat parity matrix and GCC-10 lane. Exact-tree source/wheel
-  packaging and all three independent reviews also pass. R2 is closed; R3
-  now splits benchmark and cross-codec verification ownership.
-  The current ninth family is `dense`. Its four definitions live in
+  packaging and all three independent reviews also pass. R2 closed before R3
+  split benchmark and cross-codec verification ownership.
+  The later `dense` family has four definitions in
   `_registry/families/dense.py`, metadata conversion lives in
   `_inspectors/dense.py`, native bindings live in `bindings/dense.cpp`, and
   the shared records/codecs live in `records/dense_mvs.*` and
@@ -303,7 +304,7 @@ cmake/
   PMVS, and CMP-MVS path topology, configs, optional raw-PMVS projections,
   Bundler-profile workspaces, raw visibility, and existing image-codec paths
   without opening encoded image payloads.
-  The tenth registry family is `containers`. Its lower-owned
+  The `containers` registry family uses lower-owned
   `_registry/families/containers.py` definitions and `_hdf5.py` adapters add
   generic HDF5 plus the documented hloc feature and match schemas. Importing
   SceneIO does not import h5py; capabilities report these codecs unavailable
@@ -312,7 +313,10 @@ cmake/
   validation, detection, native-record mapping, metadata inspection, partial
   selection, and atomic path replacement. The C-native
   `SCENEIO_WITH_HDF5` manifest entry remains a future comparison seam rather
-  than the current implementation.
+  than the current implementation. The same family owns the Zarr,
+  Parquet/Arrow IPC, and OpenVDB optional-provider rows. The `datasets` family
+  owns the NCore V4 and EuRoC/ASL multi-file adapters. Provider imports remain
+  lazy and do not widen the NumPy-only base dependency.
   The public `sceneio.colmap` package follows the same adapter boundary for
   portable fork workflow data: extended sparse sidecars, semantic
   MappingInput v1/v2, MegaLoc artifacts, rig JSON, SIFT, pair/cap and match
@@ -508,8 +512,8 @@ must ultimately be pinned under `src/cpp/third_party/`, built into `_core`, and
   Corrected local MSVC and Ubuntu builds produce `_core.pyd` and
   `_core.abi3.so`, respectively; the Windows binary imports `python3.dll` and
   the Unix binary has no libpython dependency. The exact-tree disconnected
-  MSVC sdist-to-wheel build, package inventory, license gate, and all-50
-  installed smoke form the final local package gate. The release workflow
+  MSVC sdist-to-wheel build, package inventory, license gate, and all-74
+  installed smoke form the final package gate. The release workflow
   makes every platform wheel consume that one verified sdist with hash-locked
   build inputs. Final run `30406706115` passes its MSVC, GCC 10, and AppleClang
   execution and downloaded-artifact inspection, closing R6. The R5 JPEG
@@ -518,8 +522,9 @@ additionally built by a default-off external project from the official
 libjpeg-turbo 3.2.0 archive. The clean MSVC qualification rejected that exact
 candidate as the combined stable default after it missed the frozen q95
 comparative-quality floor, so it does not enter ordinary builds or wheels and
-stb remains the repository-owned default. Separately installed libraries and
-executables remain verification oracles; they are not runtime delegates.
+stb remains the repository-owned default. Declared optional providers are
+runtime delegates only for their named extras; qualification-only libraries
+and executables remain test oracles and never enter normal runtime imports.
 
 ## Conventions are data, not comments
 
@@ -561,9 +566,8 @@ exposes them:
 
 ## Adding a codec — current wiring recipe
 
-This recipe describes the committed R4.2 binding boundary and the in-progress
-R4.3 family layout. During this behavior-preserving migration, use the recipe
-to verify compatibility and do not start a new format.
+This recipe describes the current manifest, family, binding, documentation,
+and validation boundaries.
 
 1. **Declare ownership** — add the built-in id, family,
    `implementation_owner`, native symbols, and Python adapter symbols to
@@ -574,8 +578,7 @@ to verify compatibility and do not start a new format.
    `records/<name>.hpp` (the SoA struct + conventions) and
    `records/<name>.cpp` (`register_<name>()` binding zero-copy views +
    convention properties). Reuse an existing record otherwise.
-3. **Codec** — use `codecs/<family>/<fmt>.cpp`; existing flat sources move
-   one family at a time during R4.3. Implement `read_<fmt>()` /
+3. **Codec** — use `codecs/<family>/<fmt>.cpp`. Implement `read_<fmt>()` /
    `write_<fmt>()` over `records/` + `io/`, plus a `register_<fmt>()` that
    `m.def(...)`s them. Map malformed input to a thrown
    `std::invalid_argument`.

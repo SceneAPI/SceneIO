@@ -122,17 +122,20 @@ def test_extension_tables_are_exactly_the_fork_additions() -> None:
 
 
 def test_extension_columns_are_exactly_the_maxx_additions() -> None:
-    assert frozenset(
-        {
-            "images.time_id",
-            "pose_priors.rotation",
-            "pose_priors.rotation_covariance",
-            "pose_priors.pose_covariance",
-            "descriptors.type_name",
-            "descriptors.dtype",
-            "descriptors.dim",
-        }
-    ) == db.EXTENSION_COLUMNS
+    assert (
+        frozenset(
+            {
+                "images.time_id",
+                "pose_priors.rotation",
+                "pose_priors.rotation_covariance",
+                "pose_priors.pose_covariance",
+                "descriptors.type_name",
+                "descriptors.dtype",
+                "descriptors.dim",
+            }
+        )
+        == db.EXTENSION_COLUMNS
+    )
     assert not db.is_extension_column("descriptors", "type")
 
 
@@ -240,12 +243,8 @@ def test_contract_dict_is_json_serializable_and_self_describing() -> None:
     assert payload["contract_schema_version"] == db.CONTRACT_SCHEMA_VERSION
     assert payload["database_version"]["number"] == db.DATABASE_VERSION_NUMBER
     assert payload["pair_id"]["max_num_images"] == db.MAX_NUM_IMAGES
-    assert payload["descriptor_dtypes"]["known"] == (
-        db.COLMAP_KNOWN_DESCRIPTOR_DTYPES
-    )
-    assert payload["match_source_flags"]["known"] == (
-        db.COLMAP_KNOWN_MATCH_SOURCE_FLAGS
-    )
+    assert payload["descriptor_dtypes"]["known"] == (db.COLMAP_KNOWN_DESCRIPTOR_DTYPES)
+    assert payload["match_source_flags"]["known"] == (db.COLMAP_KNOWN_MATCH_SOURCE_FLAGS)
     assert payload["match_source_flags"]["preserve_unknown_bits"]
     assert payload["marker_types"]["known"] == db.COLMAP_KNOWN_MARKER_TYPES
     assert payload["marker_types"]["closed_values"]
@@ -265,14 +264,45 @@ def test_contract_is_a_leaf_and_imports_no_backend() -> None:
     # The contract is a data standard, not a dependency: importing it must
     # not pull in the sceneapi core, the deprecated ``app``/``sfmapi``
     # aliases, or any ``sfmapi_*`` backend plugin. sceneio is a leaf.
-    import importlib
+    import subprocess
     import sys
+    from pathlib import Path
 
-    before = set(sys.modules)
-    importlib.reload(db)
-    leaked = {
-        m
-        for m in (set(sys.modules) - before)
-        if m.split(".")[0] in {"sceneapi", "app", "sfmapi"} or m.startswith("sfmapi_")
-    }
-    assert not leaked, f"contract import leaked backend modules: {leaked}"
+    import sceneio
+
+    code = (
+        "import sys;"
+        "import sceneio.colmap_db;"
+        "blocked={name for name in sys.modules if "
+        "name.split('.')[0] in {'sceneapi','app','sfmapi'} "
+        "or name.startswith('sfmapi_')};"
+        "assert not blocked, blocked"
+    )
+    subprocess.run(
+        [sys.executable, "-c", code],
+        cwd=Path(__file__).resolve().parents[1],
+        check=True,
+    )
+    for name in (
+        "COLMAP_DATABASE_PROFILES",
+        "COLMAP_DATABASE_PROFILES_BY_NAME",
+        "COLMAP_DB_TABLES",
+        "COLMAP_DB_TABLES_BY_NAME",
+        "ColmapDatabaseConversionReport",
+        "ColumnDef",
+        "DatabaseProfile",
+        "TableDef",
+    ):
+        assert getattr(sceneio, name) is getattr(db, name)
+    io = sys.modules.get("sceneio.io")
+    if io is not None:
+        assert io.ColmapDatabaseConversionReport is db.ColmapDatabaseConversionReport
+    assert all(
+        isinstance(profile, sceneio.DatabaseProfile) for profile in sceneio.COLMAP_DATABASE_PROFILES
+    )
+    assert all(isinstance(table, sceneio.TableDef) for table in sceneio.COLMAP_DB_TABLES)
+    assert all(
+        isinstance(column, sceneio.ColumnDef)
+        for table in sceneio.COLMAP_DB_TABLES
+        for column in table.columns
+    )

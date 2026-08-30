@@ -1,18 +1,39 @@
 # sceneio
 
 The **contract plane** for [SceneAPI](https://github.com/SceneAPI): the data
-contracts *and* the procedure contracts the whole family agrees on. This is a
-contract package — datatypes, Protocols, wire codecs, and format registries —
-not an implementation. The SceneAPI core, the implementation bundles
-(SceneMap, SceneMatch, ...), and the generated SDKs all meet here.
+contracts *and* the procedure contracts the whole family agrees on. SceneIO
+implements those shared datatypes, Protocols, wire codecs, and bounded format
+adapters; it does not implement mapping, matching, training, or other SceneAPI
+application backends. The SceneAPI core, implementation bundles (SceneMap,
+SceneMatch, ...), and generated SDKs all meet here.
 
 - Distribution: `sceneio`
 - Import package: `sceneio`
 - Version: `0.3.0`
+- Python: `>=3.12,<3.13`
+- PyPI: [`sceneio`](https://pypi.org/project/sceneio/)
 - Release history: [`CHANGELOG.md`](https://github.com/SceneAPI/SceneIO/blob/main/CHANGELOG.md)
 - Dependencies: `numpy>=1.26` (the contracts are numpy-native)
 - Leaf property: imports **nothing from the SceneAPI family**
   (`sceneapi` / `sfm_hub` / `app`) — guard-tested
+
+## Installation
+
+Install the NumPy-only base package on CPython 3.12:
+
+```console
+python -m pip install sceneio
+```
+
+Optional providers are independent extras. Install only the integrations an
+application needs, for example:
+
+```console
+python -m pip install "sceneio[hdf5,zarr,tiff,e57,arrow,openvdb,usd,avif,ncore]"
+```
+
+The accepted provider-specific profiles and platform limits are listed in the
+[`format coverage contract`](docs/format_coverage.md).
 
 ## What it owns
 
@@ -36,6 +57,30 @@ Numpy-native, construction-validated datatypes (violations raise
   in-memory array + optional calibration/priors/mask), `PosedViewSet`, and
   `FrameMeta` (`world_frame="first_view"`, scale
   `arbitrary | normalized | metric` + scale provenance).
+
+### Loaded records and neutral contracts (`sceneio.canonical`)
+
+Compiled I/O records preserve source/storage facts; `sceneio.data` records are
+the smaller procedure-contract floor. They are deliberately distinct even
+when they share a short name. Explicit checked adapters cover cameras,
+features, matches, depth, and posed views in both directions:
+
+```python
+import sceneio
+
+loaded = sceneio.read("features.h5", format="hloc_features")
+neutral = {
+    name: sceneio.canonical.feature_set_from_native(record, allow_loss=True)
+    for name, record in loaded.items()
+}
+```
+
+Adapters refuse missing geometric context and refuse storage-only omission
+unless `allow_loss=True` acknowledges it. Camera ids 0 through 17, names,
+parameter counts, and ordered parameter layouts come from one manifest shared
+by the Python contracts, COLMAP adapters, and generated native lookup. See
+[`docs/canonicalization.md`](docs/canonicalization.md) for the exact conversion
+matrix and refusal boundaries.
 
 ### Procedure contracts — `sceneio.mapping` / `sceneio.matching`
 
@@ -92,10 +137,6 @@ stay repository-owned; optional permissive providers supply their established
 storage kernels for HDF5/hloc, Zarr v2/v3, TIFF, E57, Parquet/Arrow IPC,
 OpenVDB, USD/USDZ, AVIF/animated AVIF, and NCore V4:
 
-```console
-uv pip install "sceneio[hdf5,zarr,tiff,e57,arrow,openvdb,usd,avif,ncore]"
-```
-
 SceneIO's Linux wheel retains its manylinux2014 base contract. The separately
 installed TinyUSDZ 0.9.4 provider used by `sceneio[usd]` publishes x86-64
 binary wheels with a manylinux 2.27/2.28 floor, so that optional extra requires
@@ -116,6 +157,8 @@ Each built-in format has an exact `fixed`, `file_declared`, `unspecified`, or
 `not_applicable` coordinate contract:
 
 ```python
+import sceneio
+
 contract = sceneio.coordinate_contract("tum")
 metadata = sceneio.inspect("trajectory.txt", format="tum")
 record = sceneio.read("trajectory.txt", format="tum")
@@ -134,14 +177,38 @@ Every public in-memory data representation also has a versioned normalization
 and scaling contract:
 
 ```python
+import sceneio
+
 contract = sceneio.representation_contract(sceneio.GaussianCloud)
 assert contract.profile.id == "gaussian_cloud"
-assert contract.coordinates == "unknown"  # activation metadata is not a frame
+assert contract.coordinates == "record_declared"
 ```
 
 The exact 103-record catalog, standard policy vocabulary, unit equations, and
 refusal rules are documented in
 [`docs/representation_normalization.md`](docs/representation_normalization.md).
+
+Every public class identity also has a generic, immutable contract describing
+its canonical path and aliases, kind, members, invariants, refusal boundary,
+evidence, and typed relationships. Representation entries reference the exact
+specialized contract above rather than copying it:
+
+```python
+import sceneio
+
+contract = sceneio.public_type_contract(sceneio.Point3DRecord)
+assert contract.kind == "wire_record"
+assert contract is sceneio.contracts.public_type_contract(
+    "sceneio.points_binary.Point3DRecord"
+)
+
+catalog = sceneio.contracts.catalog_dict()  # deterministic plain data
+```
+
+The generated [public type contract catalog](docs/public_type_contracts.md)
+lists every class identity and the closed payload-kind vocabulary for built-in
+codecs. `Codec.datatype` remains compatible; `payload_kind` is a read-only
+alias, and third-party codecs may continue to use external tokens.
 
 Dense semantic, instance, and panoptic rasters use explicit integer contracts;
 an ordinary integer image is never guessed to be a label map:
@@ -180,6 +247,8 @@ NCore V4 datasets expose a metadata-only catalog, exact owned component arrays,
 and validated standard semantic items without importing the upstream package:
 
 ```python
+import sceneio
+
 dataset = sceneio.read("capture.ncore4.zarr")
 selection = sceneio.NCoreSelection("cameras", "front", frames=(10, 20))
 component = sceneio.read_ncore_semantic_component(
@@ -205,6 +274,8 @@ ASL/EuRoC visual-inertial directories expose calibrated camera and IMU
 streams without decoding image payloads eagerly:
 
 ```python
+import sceneio
+
 dataset = sceneio.read_euroc_dataset("mav-sequence")
 window = sceneio.read_euroc_dataset(
     "mav-sequence",
@@ -230,6 +301,8 @@ Rich USD-family stages use the additive `SceneGraph` API. The established
 mesh-only profile:
 
 ```python
+import sceneio
+
 stage = sceneio.read_scene(
     "capture.usdz",
     time=12.0,
@@ -492,8 +565,11 @@ assert caps.can_read and caps.can_write and caps.can_inspect
 assert caps.partial_selectors == ("window",)
 assert "animation" in caps.unsupported_features
 
-# Optional compiled integrations remain discoverable when unavailable.
-assert not sceneio.native_features("hdf5").available
+# Default-off native-backend seams are discoverable independently of the
+# Python provider extras used by the current adapters.
+native_hdf5 = sceneio.native_features("hdf5")
+assert native_hdf5.build_option == "SCENEIO_WITH_HDF5"
+assert native_hdf5.formats == ("hdf5", "hloc_features", "hloc_matches")
 ```
 
 `sceneio.FeatureSet`, `sceneio.MatchGraph`, `sceneio.ColmapDatabase`,
@@ -505,7 +581,8 @@ assert not sceneio.native_features("hdf5").available
 `sceneio.HlocFeatureStore` and `sceneio.HlocMatchStore` are immutable
 repository-owned schema adapters over those native feature and match records.
 The procedure-contract `sceneio.data.FeatureSet` remains a separate Python
-record for matcher APIs.
+record for matcher APIs. Use `sceneio.canonical` for an explicit checked
+projection instead of reconstructing either representation by hand.
 
 Partial reads are available only when the container has a genuine bounded
 access path; requesting one from a codec that would have to decode the complete
@@ -579,7 +656,8 @@ class MyMapper:
     def traits(self) -> MapperTraits: ...
     def map(self, views, *, correspondences=None, options=None) -> MappingResult: ...
 
-# prove conformance in your test suite:
+# Replace the ellipses with the backend implementation, then prove conformance
+# in its test suite:
 from sceneio.testing import assert_mapper_conformance
 assert_mapper_conformance(MyMapper())
 ```
@@ -598,12 +676,13 @@ records, bbox_min, bbox_max = decode_records(blob)
 ## Development
 
 ```powershell
-uv pip install -e ".[dev,test]"
-.venv/Scripts/python.exe -m ruff check
-.venv/Scripts/python.exe -m pytest -q
+uv sync --extra dev --extra test
+uv run ruff check .
+uv run python -m pytest -q
 ```
 
-Engineering status and extension work are tracked in:
+The [`documentation index`](docs/README.md) separates current contracts from
+completed implementation records and future policy. The main entry points are:
 
 - [`docs/format_coverage.md`](docs/format_coverage.md) — exact live codec
   capabilities and validation status;
@@ -617,21 +696,25 @@ Engineering status and extension work are tracked in:
   sparse-sidecar, MappingInput, MegaLoc, rig, SIFT, pair/match, and Sim3
   workflow adapters;
 - [`docs/coverage_roadmap.md`](docs/coverage_roadmap.md) — format policy,
-  declared destinations, and future sequencing rather than current evidence;
+  deliberate exclusions, and optional future work rather than current
+  evidence;
 - [`docs/core_architecture.md`](docs/core_architecture.md) — current public and
   native boundaries;
+- [`docs/public_type_contracts.md`](docs/public_type_contracts.md) — generated
+  exhaustive class-kind, alias, evidence, and built-in payload relationship
+  contract;
+- [`docs/plans/completed/public_type_contract_standardization_2026-08-29.md`](docs/plans/completed/public_type_contract_standardization_2026-08-29.md)
+  — the active additive plan for exhaustive public-type contracts, aliases,
+  evidence, and codec payload-kind relationships;
 - [`docs/repository_organization_plan.md`](docs/repository_organization_plan.md)
-  — the completed family split, offline-source closure, trigger-based backend
-  comparison mechanism, and bounded final R6 package gate;
+  — completed family-split, offline-source, backend-comparison, and R6 package
+  evidence;
 - [`docs/next_stage_implementation_checklist.md`](docs/next_stage_implementation_checklist.md)
-  — the reviewed commit-by-commit implementation, testing, benchmark, and
-  cross-platform validation checklist for that gate;
+  — the completed commit-by-commit implementation and validation record;
 - [`docs/format_gap_implementation_plan.md`](docs/format_gap_implementation_plan.md)
-  — the active dependency-ordered format queue and package checkpoints;
+  — the completed 0.3.0 format-expansion plan and historical checkpoints;
 - [`docs/remaining_3dcv_profile_checklist.md`](docs/remaining_3dcv_profile_checklist.md)
-  — the finite reviewed checklist, checked FC0 decision freeze, and stopping
-  rule for the remaining 3D-CV temporal, label, collection, volume, and
-  animation profiles;
+  — the completed FC0-FC7 acceptance record for the finite 3D-CV profile;
 - [`docs/plans/completed/README.md`](docs/plans/completed/README.md) — immutable
   evidence moved out of active plans after its implementation wave closes.
 

@@ -353,6 +353,9 @@ void validate_camera_rig(const CameraRig &rig, const char *context) {
     std::unordered_set<std::string> names;
     auto valid_text = [&](const std::string &value,
                           const char *name) {
+        if (!sio::valid_utf8(value))
+            throw std::invalid_argument(
+                prefix + name + " strings must be valid UTF-8");
         for (unsigned char character : value)
             if (character < 0x20)
                 throw std::invalid_argument(

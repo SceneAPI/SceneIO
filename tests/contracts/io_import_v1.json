@@ -54,9 +54,12 @@
     ],
     "import_io": [
       "sceneio",
+      "sceneio._camera_models",
       "sceneio._core",
       "sceneio.blobstore",
       "sceneio.colmap_db",
+      "sceneio.contracts",
+      "sceneio.contracts.payloads",
       "sceneio.coordinate_conversion",
       "sceneio.coordinates",
       "sceneio.data",

@@ -12,6 +12,20 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
+_PARTIAL_SELECTORS = (
+    ("read_window", "window"),
+    ("read_points", "points"),
+    ("read_faces", "faces"),
+    ("read_mesh", "mesh_id"),
+    ("read_primitive", "primitive_id"),
+    ("read_states", "states"),
+    ("read_frames", "frames"),
+    ("read_image", "image_id"),
+    ("read_pair", "pair"),
+    ("read_tensors", "tensors"),
+    ("read_slices", "slices"),
+)
+
 
 @dataclass(frozen=True)
 class Codec:
@@ -41,9 +55,7 @@ class Codec:
     read_image: Callable[[str, int], object] | None = None
     read_pair: Callable[[str, int, int], object] | None = None
     read_tensors: Callable[[str, tuple[str, ...]], object] | None = None
-    read_slices: Callable[
-        [str, tuple[tuple[str, int, int], ...]], object
-    ] | None = None
+    read_slices: Callable[[str, tuple[tuple[str, int, int], ...]], object] | None = None
     streams_read: bool = True
     streams_write: bool = True
     lossy: bool = False
@@ -51,12 +63,11 @@ class Codec:
     supported_features: tuple[str, ...] = ()
     unsupported_features: tuple[str, ...] = ()
     container_kind: str | None = None
+
     def __post_init__(self) -> None:
         kind = self.container_kind or ("directory" if self.is_directory else "file")
         if kind not in {"file", "directory", "multi_file"}:
-            raise ValueError(
-                "container_kind must be 'file', 'directory', or 'multi_file'"
-            )
+            raise ValueError("container_kind must be 'file', 'directory', or 'multi_file'")
         if self.is_directory and kind not in {"directory", "multi_file"}:
             raise ValueError("is_directory and container_kind disagree")
         if not self.is_directory and kind == "directory":
@@ -90,8 +101,7 @@ class Codec:
         overlap = set(self.supported_features) & set(self.unsupported_features)
         if overlap:
             raise ValueError(
-                "supported_features and unsupported_features overlap: "
-                + ", ".join(sorted(overlap))
+                "supported_features and unsupported_features overlap: " + ", ".join(sorted(overlap))
             )
 
     def capabilities(self) -> CodecCapabilities:
@@ -101,29 +111,11 @@ class Codec:
             importlib.util.find_spec(requirement) is not None
             for requirement in self.requires_features
         )
-        selectors = []
-        if self.read_window is not None:
-            selectors.append("window")
-        if self.read_points is not None:
-            selectors.append("points")
-        if self.read_faces is not None:
-            selectors.append("faces")
-        if self.read_mesh is not None:
-            selectors.append("mesh_id")
-        if self.read_primitive is not None:
-            selectors.append("primitive_id")
-        if self.read_states is not None:
-            selectors.append("states")
-        if self.read_frames is not None:
-            selectors.append("frames")
-        if self.read_image is not None:
-            selectors.append("image_id")
-        if self.read_pair is not None:
-            selectors.append("pair")
-        if self.read_tensors is not None:
-            selectors.append("tensors")
-        if self.read_slices is not None:
-            selectors.append("slices")
+        selectors = tuple(
+            selector
+            for field_name, selector in _PARTIAL_SELECTORS
+            if getattr(self, field_name) is not None
+        )
         return CodecCapabilities(
             format=self.id,
             datatype=self.datatype,
@@ -135,18 +127,20 @@ class Codec:
             can_read=available,
             can_write=available and self.write is not None,
             can_inspect=available,
-            partial_selectors=tuple(selectors),
+            partial_selectors=selectors,
             streams_read=available and self.streams_read,
-            streams_write=(
-                available
-                and self.write is not None
-                and self.streams_write
-            ),
+            streams_write=(available and self.write is not None and self.streams_write),
             lossy=self.lossy,
             requires_features=self.requires_features,
             supported_features=self.supported_features,
             unsupported_features=self.unsupported_features,
         )
+
+    @property
+    def payload_kind(self) -> str:
+        """Stable payload-kind alias for the legacy ``datatype`` field."""
+
+        return self.datatype
 
 
 @dataclass(frozen=True)
@@ -177,6 +171,12 @@ class CodecCapabilities:
     requires_features: tuple[str, ...]
     supported_features: tuple[str, ...]
     unsupported_features: tuple[str, ...]
+
+    @property
+    def payload_kind(self) -> str:
+        """Stable payload-kind alias for the legacy ``datatype`` field."""
+
+        return self.datatype
 
     @property
     def coordinates(self):

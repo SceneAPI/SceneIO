@@ -1,13 +1,14 @@
 # COLMAP ecosystem I/O coverage
 
-This document is the authoritative gap matrix for interoperability with the
-user-owned `colmap_mod` repository. It complements
+This document records the completed interoperability matrix derived from an
+authorized `colmap_mod` reference checkout. It complements
 [`format_coverage.md`](format_coverage.md), which lists SceneIO's live public
 codec registry.
 
 Reference snapshot:
 
-- repository: `C:\Users\opsiclear\Desktop\projects\colmap_mod`
+- repository: authorized local `colmap_mod` checkout (not a runtime or build
+  dependency)
 - compact-adapter reference commit:
   `a3cfdd784d16a493878877f445fd1e27333fd8fc`
 - database/dense fixtures retain their earlier exact pin:
@@ -23,9 +24,9 @@ Reference snapshot:
   `src/colmap/scene/database_ownership.cc`, with the pinned database and Python
   tests used as behavioral references.
 
-No FFmpeg/libav implementation, build dependency, runtime dependency, or
-encoded-video implementation is included. Encoded containers may be used only
-as external verification references.
+The COLMAP adapter surface adds no FFmpeg/libav implementation, build
+dependency, or runtime dependency. SceneIO's separately documented bounded
+WebM and Ogg/Theora codecs do not adopt the fork's encoded-video stack.
 
 ## Closure boundary
 
@@ -46,7 +47,7 @@ Status terms:
 - **partial**: useful fields are supported, but a documented persisted field or
   companion file is not;
 - **planned**: in the lean closure implementation queue;
-- **adapter**: supported outside the 54-codec core registry because it is a
+- **adapter**: supported outside the 74-format registry because it is a
   workflow bundle rather than a standalone scene format;
 - **reference only**: inventoried for verification, not implemented.
 
@@ -57,38 +58,38 @@ Status terms:
 | Legacy COLMAP sparse binary: cameras/images/points3D | complete | Retain byte identity |
 | Modern sparse binary: rigs/cameras/frames/images/points3D | complete | Retain five-file byte identity, models 0-17, multi-sensor rigs, bounded writes, and the exact-commit three-toolchain validation |
 | Legacy and modern sparse text twins | complete | Retain value parity, binary-text-binary identity, and the exact-commit three-toolchain validation |
-| Markers and marker projections, binary/text | implemented locally adapter | `sceneio.colmap` preserves the exact binary/text fields, quoted Unicode labels, NaN absence, sentinels, and optional-file state |
-| Image-time, point-frame, and time-frame sidecars | implemented locally adapter | Mapped binary input, bounded text input, exact IDs/timestamps/text, and explicit presence |
-| ChArUco board and calibration sidecars | implemented locally adapter | Typed boards/sessions with guarded camera model cardinality and per-image WXYZ poses/errors |
+| Markers and marker projections, binary/text | complete adapter | `sceneio.colmap` preserves the exact binary/text fields, quoted Unicode labels, NaN absence, sentinels, and optional-file state |
+| Image-time, point-frame, and time-frame sidecars | complete adapter | Mapped binary input, bounded text input, exact IDs/timestamps/text, and explicit presence |
+| ChArUco board and calibration sidecars | complete adapter | Typed boards/sessions with guarded camera model cardinality and per-image WXYZ poses/errors |
 | Stock COLMAP 3.13 database | complete | Exact schema, typed rows, selected-profile writer, conversion report, and transactional validation |
 | Stock COLMAP 4.1.1 database | complete | Exact schema, typed rows, selected-profile writer, conversion report, and transactional validation |
 | Current upstream database | complete | Exact schema, recovered cameras, selected-profile writer, conversion report, and transactional validation |
 | Current OpsiClear/MAXX database | complete | Exact ownership plus timing, quality, provenance, markers, typed descriptors, scores, video metadata, extended priors, and exact selected-profile writer |
 | Database profile import/export reports | complete adapter | Structured destination-free compatibility and field-loss report |
-| COLMAP MVS depth maps | implemented locally | Repo-owned `width&height&1&` camera-Z float32 codec; distinct from Gipuma DMB |
-| COLMAP MVS normal maps | implemented locally | Repo-owned planar-wire/HWC-record float32 XYZ codec |
-| Consistency graphs | implemented locally | Bounded ordered CSR over exact `(column,row,count,images...)` tuples |
-| Fused point visibility `.vis` | implemented locally | Bounded ordered point/image CSR with exact `fused.ply.vis` detection |
-| Canonical COLMAP dense workspace and configs | implemented locally adapter | Lazy `sceneio.colmap_mvs` topology, patch-match/fusion configs, nested names, explicit map dispatch, and cross-file validation |
-| PMVS/CMP-MVS export topology | implemented locally adapter | Opaque encoded-image paths plus exact projection text; PMVS Bundler name list and raw-domain `vis.dat` are read/write |
+| COLMAP MVS depth maps | complete | Repo-owned `width&height&1&` camera-Z float32 codec; distinct from Gipuma DMB |
+| COLMAP MVS normal maps | complete | Repo-owned planar-wire/HWC-record float32 XYZ codec |
+| Consistency graphs | complete | Bounded ordered CSR over exact `(column,row,count,images...)` tuples |
+| Fused point visibility `.vis` | complete | Bounded ordered point/image CSR with exact `fused.ply.vis` detection |
+| Canonical COLMAP dense workspace and configs | complete adapter | Lazy `sceneio.colmap_mvs` topology, patch-match/fusion configs, nested names, explicit map dispatch, and cross-file validation |
+| PMVS/CMP-MVS export topology | complete adapter | Opaque encoded-image paths plus exact projection text; PMVS Bundler name list and raw-domain `vis.dat` are read/write |
 | NVM model | complete | No new codec |
 | Bundler bundle | complete with adapter companion | Core bundle values plus repository-owned one-name-per-line PMVS/Bundler list I/O |
 | Point/mesh PLY | complete | Keep SceneIO implementation; use current upstream only as a validation reference |
 | CAM export | optional write helper | Lossy camera-subset exporter; not a lossless closure gate |
 | Recon3D export | optional write helper | Lossy coordinated visualization/export files; not a lossless closure gate |
 | VRML camera/point export | outside closure | Derived visualization output |
-| Rig config JSON | implemented locally adapter | Strict multi-rig topology, exactly one reference sensor, paired WXYZ/XYZ transform and camera-model fields |
+| Rig config JSON | complete adapter | Strict multi-rig topology, exactly one reference sensor, paired WXYZ/XYZ transform and camera-model fields |
 | Project INI and joint-BA/alias JSON | outside closure | Application option documents, not scene interchange |
-| SIFT text import and pair/match text | implemented locally adapter | Exact SIFT shape, explicit reference truncation, stock/dense pair grammars, dense cap rows, and match blocks |
-| Sim3 and alignment text | implemented locally / outside closure | Sim3 is typed R+W; command-specific alignment name lists are selectors outside the lean closure |
+| SIFT text import and pair/match text | complete adapter | Exact SIFT shape, explicit reference truncation, stock/dense pair grammars, dense cap rows, and match blocks |
+| Sim3 and alignment text | complete adapter / outside closure | Sim3 is typed R+W; command-specific alignment name lists are selectors outside the lean closure |
 | Standalone undistorter image/model line | outside closure | One-command selector/configuration input, not a persisted scene model; camera models remain losslessly represented by the sparse adapters |
-| MappingInput `PCMAPIN` v1/v2 | implemented locally adapter | Semantic little-endian v1/v2, mapped read-only arrays, exact exhaustion, reference checks, and streaming atomic writes |
-| MegaLoc descriptor/pair artifact directory | implemented locally adapter | Mapped raw float32 descriptors, strict v1 manifest/name/pair cross-validation, metadata preservation, and streaming writes |
+| MappingInput `PCMAPIN` v1/v2 | complete adapter | Semantic little-endian v1/v2, mapped read-only arrays, exact exhaustion, reference checks, and streaming atomic writes |
+| MegaLoc descriptor/pair artifact directory | complete adapter | Mapped raw float32 descriptors, strict v1 manifest/name/pair cross-validation, metadata preservation, and streaming writes |
 | IncrementalVLAD NPZ | outside closure | Reproducible retrieval-index cache; existing NPZ remains available without enabling pickle |
 | Raster pixels shared with SceneIO codecs | complete by listed extension | Image paths remain opaque; TIFF is a separate optional generic format if selected |
 | EXIF/XMP metadata, embedded or `.xmp` sidecar | optional future adapter | Not required to preserve COLMAP image references; no Exiv2 dependency |
 | Video synchronization manifests | outside closure | Metadata-only application scheduling state; no encoded-media reader, writer, or dependency |
-| Encoded video and container readers/writers | reference only | No FFmpeg/libav or fork video implementation; use only for external verification |
+| Fork-specific encoded video and container readers/writers | reference only | No FFmpeg/libav or fork video implementation; SceneIO's bounded WebM and Ogg/Theora profiles are separate codecs |
 | FAISS vocabulary and inverted-index binaries | reference only | Retrieval-engine state tied to an optional external implementation, not portable scene interchange |
 | Hardware engines, ONNX/TensorRT state, RoMaXX runtime artifacts | reference only | Treat as application runtime state, not scene interchange |
 | Solver logs, profiling, reports, and decoded/staged caches | outside closure | No core codec |

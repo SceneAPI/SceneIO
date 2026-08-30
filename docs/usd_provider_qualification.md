@@ -1,6 +1,7 @@
 # USD provider qualification
 
-Status: provider matrix complete; FC6 selected-time state B locally complete
+Status: provider matrix and FC6 selected-time state B complete locally and in
+the SceneIO 0.3.0 release gate
 Date: 2026-08-29
 Local provider: TinyUSDZ 0.9.4
 Standards pins: AOUSD Core 1.0.1 `2f9e746c4fbd`, supplemental

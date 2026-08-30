@@ -48,6 +48,11 @@ compiled = sceneio.representation_contract("sceneio.DepthMap")
 neutral = sceneio.representation_contract("sceneio.data.DepthMap")
 ```
 
+Use `sceneio.canonical` to cross the loaded/native and neutral procedure
+layers. The adapters are explicit, preserve the common subset, and reject or
+require acknowledgement for fields the destination cannot carry. See
+[Loaded records and neutral contracts](canonicalization.md).
+
 `REPRESENTATION_PROFILES` is an immutable mapping of reusable standard
 profiles. `REPRESENTATION_CONTRACTS` is an immutable mapping from public import
 path to `RepresentationNormalizationContract`. Each entry names executable
@@ -111,7 +116,13 @@ contract; `normalized` and `arbitrary` do not.
 - Compiled `DepthMap` preserves raw float32 depth and supplies
   `scale_to_meters`, unit, invalid-value, and depth-interpretation metadata.
   Neutral `sceneio.data.DepthMap` inherits length scale from its owning
-  `FrameMeta`.
+  `FrameMeta`. `sceneio.canonical.depth_map_from_native` therefore requires an
+  explicit stored-to-parent scale and never guesses it.
+- Compiled and neutral `Camera`/`CameraIntrinsics`, `FeatureSet`,
+  `MatchGraph`/`CorrespondenceGraph`, `DepthMap`, and `PosedViewSet` pairs keep
+  distinct identities and roles. Reciprocal `adapts_to` edges in the public
+  contract catalog point to the checked `sceneio.canonical` functions; shared
+  normalization profiles alone never imply identity or automatic conversion.
 - `PointCloud` and `Mesh` carry an explicit frame and `scale_to_meters`; their
   public coordinate conversion is direct and refuses fields it cannot preserve.
 - `PointScan` preserves stored rows, raw uint8 invalid states, optional int64
