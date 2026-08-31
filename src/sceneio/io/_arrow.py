@@ -297,7 +297,7 @@ def _inspection_from_schema(
     _attrs_from_schema(schema)
     return Inspection(
         format=format_id,
-        datatype="numeric_table",
+        payload_kind="numeric_table",
         byte_size=path.stat().st_size,
         shape=(row_count, len(arrays)),
         count=row_count,

@@ -9,7 +9,7 @@ from sceneio.io._inspectors.common import _compiled_buffer_inspect
 from sceneio.io._inspectors.model import ArrayInspection, Inspection
 
 
-def inspect_apng(path: Path, datatype: str) -> Inspection:
+def inspect_apng(path: Path, payload_kind: str) -> Inspection:
     values = dict(_compiled_buffer_inspect(path, _core._inspect_apng))
     frames = values["frames"]
     height = values["height"]
@@ -18,7 +18,7 @@ def inspect_apng(path: Path, datatype: str) -> Inspection:
     shape = (frames, height, width, channels)
     return Inspection(
         format="apng",
-        datatype=datatype,
+        payload_kind=payload_kind,
         byte_size=path.stat().st_size,
         shape=shape,
         dtype="uint8",
@@ -35,7 +35,7 @@ def inspect_apng(path: Path, datatype: str) -> Inspection:
     )
 
 
-def inspect_animated_webp(path: Path, datatype: str) -> Inspection:
+def inspect_animated_webp(path: Path, payload_kind: str) -> Inspection:
     values = dict(
         _compiled_buffer_inspect(path, _core._inspect_animated_webp)
     )
@@ -46,7 +46,7 @@ def inspect_animated_webp(path: Path, datatype: str) -> Inspection:
     shape = (frames, height, width, channels)
     return Inspection(
         format="animated_webp",
-        datatype=datatype,
+        payload_kind=payload_kind,
         byte_size=path.stat().st_size,
         shape=shape,
         dtype="uint8",
@@ -64,7 +64,7 @@ def inspect_animated_webp(path: Path, datatype: str) -> Inspection:
     )
 
 
-def inspect_y4m(path: Path, datatype: str) -> Inspection:
+def inspect_y4m(path: Path, payload_kind: str) -> Inspection:
     values = dict(_compiled_buffer_inspect(path, _core._inspect_y4m))
     frames = values["frames"]
     height = values["height"]
@@ -87,7 +87,7 @@ def inspect_y4m(path: Path, datatype: str) -> Inspection:
         )
     return Inspection(
         format="y4m",
-        datatype=datatype,
+        payload_kind=payload_kind,
         byte_size=path.stat().st_size,
         shape=(frames, height, width, channels),
         dtype="uint8",
@@ -110,7 +110,7 @@ def inspect_y4m(path: Path, datatype: str) -> Inspection:
     )
 
 
-def inspect_webm(path: Path, datatype: str) -> Inspection:
+def inspect_webm(path: Path, payload_kind: str) -> Inspection:
     values = dict(_compiled_buffer_inspect(path, _core._inspect_webm))
     frames = values["frames"]
     height = values["height"]
@@ -130,7 +130,7 @@ def inspect_webm(path: Path, datatype: str) -> Inspection:
     )
     return Inspection(
         format="webm",
-        datatype=datatype,
+        payload_kind=payload_kind,
         byte_size=path.stat().st_size,
         shape=shape,
         dtype="uint8",
@@ -151,7 +151,7 @@ def inspect_webm(path: Path, datatype: str) -> Inspection:
     )
 
 
-def inspect_theora(path: Path, datatype: str) -> Inspection:
+def inspect_theora(path: Path, payload_kind: str) -> Inspection:
     values = dict(_compiled_buffer_inspect(path, _core._inspect_theora))
     frames = values["frames"]
     height = values["height"]
@@ -163,7 +163,7 @@ def inspect_theora(path: Path, datatype: str) -> Inspection:
     )
     return Inspection(
         format="theora",
-        datatype=datatype,
+        payload_kind=payload_kind,
         byte_size=path.stat().st_size,
         shape=(frames, height, width, 3),
         dtype="uint8",

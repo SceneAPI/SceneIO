@@ -30,7 +30,6 @@ _EXPORT_MODULES = {
     "CodecPayloadKind": "sceneio.contracts.payloads",
     "builtin_payload_kind": "sceneio.contracts.payloads",
     "is_builtin_payload_kind": "sceneio.contracts.payloads",
-    "PUBLIC_TYPE_ALIASES": "sceneio.contracts.registry",
     "PUBLIC_TYPE_CONTRACTS": "sceneio.contracts.registry",
     "public_type_contract": "sceneio.contracts.registry",
     "catalog_dict": "sceneio.contracts.serialization",
@@ -46,7 +45,6 @@ def __getattr__(name: str) -> object:
 
 __all__ = [
     "BUILTIN_CODEC_PAYLOAD_KINDS",
-    "PUBLIC_TYPE_ALIASES",
     "PUBLIC_TYPE_CONTRACTS",
     "PUBLIC_TYPE_CONTRACT_SCHEMA_VERSION",
     "CodecPayloadKind",

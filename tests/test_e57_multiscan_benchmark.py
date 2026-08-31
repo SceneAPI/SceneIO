@@ -4,14 +4,6 @@ import numpy as np
 import pytest
 
 from bench.io_bench import e57_multiscan
-from sceneio import _core
-
-
-def _typed_fc3_available() -> bool:
-    return all(
-        getattr(_core, name, None) is not None
-        for name in ("point_scan", "scan_set")
-    )
 
 
 def test_e57_multiscan_fixture_is_deterministic():
@@ -52,10 +44,6 @@ def test_e57_multiscan_pye57_oracle_roundtrip(tmp_path):
     assert all("rowIndex" in row["fields"] for row in headers)
 
 
-@pytest.mark.skipif(
-    not _typed_fc3_available(),
-    reason="FC3 typed PointScan/ScanSet records are not built yet",
-)
 def test_e57_multiscan_benchmark_smoke(tmp_path):
     pytest.importorskip("pye57")
     result = e57_multiscan.run_benchmark(

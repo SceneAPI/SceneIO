@@ -178,7 +178,6 @@ class PublicTypeContract:
     """Common envelope for one canonical public class identity."""
 
     canonical_path: str
-    aliases: tuple[str, ...]
     implementation_paths: tuple[str, ...]
     kind: ContractKind
     stability: ContractStability
@@ -201,12 +200,6 @@ class PublicTypeContract:
         canonical = _non_empty_text(self.canonical_path, "PublicTypeContract.canonical_path")
         if _PUBLIC_SCENEIO_PATH.fullmatch(canonical) is None:
             raise ValueError("PublicTypeContract.canonical_path must be a public sceneio path")
-        aliases = _unique_text_tuple(self.aliases, "PublicTypeContract.aliases")
-        if canonical in aliases:
-            raise ValueError("canonical path must not be repeated as an alias")
-        if any(_PUBLIC_SCENEIO_PATH.fullmatch(alias) is None for alias in aliases):
-            raise ValueError("public aliases must be public sceneio paths")
-        object.__setattr__(self, "aliases", aliases)
         implementation_paths = _unique_text_tuple(
             self.implementation_paths,
             "PublicTypeContract.implementation_paths",

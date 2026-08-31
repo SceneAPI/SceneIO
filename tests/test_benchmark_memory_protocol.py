@@ -595,11 +595,6 @@ def test_profile_specific_memory_operations_dispatch_exact_arguments():
             calls.append(("read_tiff_collection", path, keywords))
             return "collection"
 
-        @staticmethod
-        def inspect_tiff_collection(path):
-            calls.append(("inspect_tiff_collection", path, {}))
-            return "inspection"
-
     def execute(operation):
         return _execute_operation(
             operation.as_request(),
@@ -626,12 +621,6 @@ def test_profile_specific_memory_operations_dispatch_exact_arguments():
             },
         )
     ) == "collection"
-    assert execute(
-        MemoryOperation(
-            "sceneio_inspect_tiff_collection",
-            {"path": "collection.tif"},
-        )
-    ) == "inspection"
     assert calls == [
         (
             "read_scene",
@@ -648,7 +637,6 @@ def test_profile_specific_memory_operations_dispatch_exact_arguments():
                 "window": (5, 6, 7, 8),
             },
         ),
-        ("inspect_tiff_collection", "collection.tif", {}),
     ]
 
     with pytest.raises(ValueError, match="load_payloads must be boolean"):

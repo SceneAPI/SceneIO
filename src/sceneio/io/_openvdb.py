@@ -178,7 +178,7 @@ def inspect_openvdb(path: str | os.PathLike[str]) -> Inspection:
         bbox_max = tuple(int(value) for value in bbox[1]) if count else ()
         return Inspection(
             format="openvdb",
-            datatype="sparse_volume",
+            payload_kind="sparse_volume",
             byte_size=Path(path).stat().st_size,
             count=count,
             arrays=(

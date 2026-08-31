@@ -27,7 +27,7 @@ def _unsigned_decimal(token: bytes, what: str) -> int:
 
 def _image(
     format_id: str,
-    datatype: str,
+    payload_kind: str,
     byte_size: int,
     height: int,
     width: int,
@@ -55,7 +55,7 @@ def _image(
     shape = (height, width) if channels == 1 else (height, width, channels)
     return Inspection(
         format_id,
-        datatype,
+        payload_kind,
         byte_size,
         shape=shape,
         dtype=dtype,

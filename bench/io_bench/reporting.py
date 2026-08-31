@@ -187,7 +187,7 @@ def print_summary(
             f"{(f'{brss:.1f}' if brss is not None else '-'):>9}"
             f"{srss:>9.1f}"
         )
-    print("bytesW/sinkW = legacy bytes+file/public file-sink write MB/s.")
+    print("bytesW/sinkW = baseline bytes+file/public file-sink write MB/s.")
     print("bPeakMB/sPeakMB = peak Python allocation for bytes/file-sink writes (O3 delta).")
     print("bRSSMB/sRSSMB = sampled resident-set growth for bytes/file-sink writes.")
     print("\nO4 one-lane/old-setting delta:")

@@ -1448,7 +1448,7 @@ def inspect_scene(
 
     return Inspection(
         format=format_id,
-        datatype="scene_graph",
+        payload_kind="scene_graph",
         byte_size=Path(path).stat().st_size,
         shape=(vertices, 3),
         dtype="float32" if primitive_count else None,
@@ -1604,7 +1604,7 @@ def _validate_writable_scene(scene) -> tuple[object, ...]:
         context = f"node {node} {kind} payload {index}"
         if kind == "mesh":
             geometry.validate_writable_mesh(
-                scene.mesh_at(index),
+                scene.mesh_primitive_at(index),
                 up_axis=scene.up_axis,
                 meters_per_unit=scene.meters_per_unit,
                 context=context,
@@ -1749,7 +1749,7 @@ def _write_scene_usda(
             "instances": instances.INSTANCE_PRIM_TYPE,
         }[kind]
         mesh = (
-            scene.mesh_at(int(payload_indices[node]))
+            scene.mesh_primitive_at(int(payload_indices[node]))
             if kind == "mesh"
             else None
         )

@@ -543,8 +543,9 @@ adapter = "repo"
 implementation_owner = "native"
 sources = ["src/cpp/codecs/arrays/flo.cpp"]
 source_suite = "tests/codecs/test_flo.py"
+additional_source_suites = ["tests/codecs/test_flo_integration.py"]
 documentation = "docs/format_coverage.md"
-accepted_subset = ["float32", "native_endian_mmap_view", "typed_flow_adapter"]
+accepted_subset = ["float32", "fixed_uv_conventions", "pixel_windows"]
 
 [[codec]]
 id = "dmb"
@@ -712,9 +713,9 @@ family = "images"
 adapter = "repo"
 implementation_owner = "python"
 sources = ["src/sceneio/io/_tiff.py"]
-source_suite = "tests/codecs/test_tiff.py"
+source_suite = "tests/codecs/test_tiff_collections.py"
 documentation = "docs/format_coverage.md"
-accepted_subset = ["single_rgb_or_rgba_image", "single_mask", "grayscale_stack", "uint8", "uint16", "float32", "uncompressed", "deflate", "zstd"]
+accepted_subset = ["raster_collection", "multiple_series", "homogeneous_pyramids", "single_series_stacks", "uint8", "uint16", "float32", "boolean", "stripped", "tiled", "little_endian", "big_endian", "bounded_selection"]
 
 [[codec]]
 id = "e57"
@@ -724,7 +725,7 @@ implementation_owner = "python"
 sources = ["src/sceneio/io/_e57.py"]
 source_suite = "tests/codecs/test_e57.py"
 documentation = "docs/format_coverage.md"
-accepted_subset = ["legacy_single_cartesian_scan", "typed_ordered_scan_sets", "typed_sparse_row_column", "typed_raw_invalid_states", "typed_stored_point_ranges", "float32_coordinates", "rgb8", "float32_intensity", "pose"]
+accepted_subset = ["ordered_scan_sets", "sparse_row_column", "raw_invalid_states", "stored_point_ranges", "float32_coordinates", "rgb8", "float32_intensity", "pose"]
 
 [[codec]]
 id = "parquet"
@@ -920,7 +921,7 @@ backend = "sceneio-native"
 backend_owner = "repo"
 backend_source = "src/cpp/codecs/splats/sog.cpp"
 backend_version = "sceneio-sog-canonical-v1"
-backend_source_sha256 = "c3b5a791d488ddbe74751576e9ee274cce52a3b3c2e7e3d13395d64eb28b3477"
+backend_source_sha256 = "37d2ecf869e636df6227ddb7b759f0db77e46e410d8bbf08fb5dc72a34df9866"
 backend_dependencies = ["libwebp 1.5.0", "miniz 3.0.2", "musl/fdlibm log1p 1.2.5", "nlohmann_json 3.11.3"]
 transport_status = "qualified"
 status = "provisional"
@@ -1568,9 +1569,9 @@ evidence_gaps = ["candidate comparison on all required toolchains"]
 codec_id = "tiff"
 profile = "default"
 direction = "encode"
-settings = { compression = "none" }
+settings = { record = "RasterCollection", compression = "none" }
 fidelity = "lossless"
-comparator = "pillow-tiff"
+comparator = "direct-tifffile"
 fixture = "tiff:default"
 backend = "tifffile"
 backend_owner = "fetched"
@@ -1579,8 +1580,8 @@ backend_version = "tifffile >=2025.5"
 backend_dependencies = ["tifffile >=2025.5"]
 transport_status = "qualified"
 status = "provisional"
-correctness_evidence = ["tests/codecs/test_tiff.py"]
-benchmark_evidence = ["bench/BASELINE.md"]
+correctness_evidence = ["tests/codecs/test_tiff_collections.py"]
+benchmark_evidence = ["docs/tiff_collection_benchmark.md"]
 candidate_backends = []
 evidence_gaps = ["candidate comparison on all required toolchains"]
 
@@ -1588,9 +1589,9 @@ evidence_gaps = ["candidate comparison on all required toolchains"]
 codec_id = "tiff"
 profile = "default"
 direction = "decode"
-settings = { profile = "bounded_cv_raster" }
+settings = { record = "RasterCollection", profile = "bounded_cv_raster_collection" }
 fidelity = "lossless"
-comparator = "pillow-tiff"
+comparator = "direct-tifffile"
 fixture = "tiff:default"
 backend = "tifffile"
 backend_owner = "fetched"
@@ -1599,8 +1600,8 @@ backend_version = "tifffile >=2025.5"
 backend_dependencies = ["tifffile >=2025.5"]
 transport_status = "qualified"
 status = "provisional"
-correctness_evidence = ["tests/codecs/test_tiff.py"]
-benchmark_evidence = ["bench/BASELINE.md"]
+correctness_evidence = ["tests/codecs/test_tiff_collections.py"]
+benchmark_evidence = ["docs/tiff_collection_benchmark.md"]
 candidate_backends = []
 evidence_gaps = ["candidate comparison on all required toolchains"]
 
@@ -1608,7 +1609,7 @@ evidence_gaps = ["candidate comparison on all required toolchains"]
 codec_id = "e57"
 profile = "default"
 direction = "encode"
-settings = { legacy_scans = 1, typed_scans = "ordered_multiple" }
+settings = { record = "ScanSet", scans = "ordered_multiple" }
 fidelity = "lossless"
 comparator = "direct-pye57"
 fixture = "e57:default"
@@ -1628,7 +1629,7 @@ evidence_gaps = ["candidate comparison on all required toolchains"]
 codec_id = "e57"
 profile = "default"
 direction = "decode"
-settings = { legacy_scans = 1, typed_scans = "ordered_multiple", typed_selection = "stored_point_range" }
+settings = { record = "ScanSet", scans = "ordered_multiple", selection = "stored_point_range" }
 fidelity = "lossless"
 comparator = "direct-pye57"
 fixture = "e57:default"

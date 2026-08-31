@@ -16,7 +16,7 @@ CALIBRATION_CODECS: tuple[Codec, ...] = (
         _mmap_reader(_core.read_opencv_yaml),
         _file_sink_writer(_core.write_opencv_yaml),
         record=_core.CameraRig,
-        datatype="camera_rig",
+        payload_kind="camera_rig",
         magic=(b"%YAML:1.0",),
         supported_features=(
             "camera_matrix",
@@ -32,7 +32,7 @@ CALIBRATION_CODECS: tuple[Codec, ...] = (
         _mmap_reader(_core.read_opencv_xml),
         _file_sink_writer(_core.write_opencv_xml),
         record=_core.CameraRig,
-        datatype="camera_rig",
+        payload_kind="camera_rig",
         magic=(b"<opencv_storage",),
         supported_features=(
             "camera_matrix",
@@ -48,7 +48,7 @@ CALIBRATION_CODECS: tuple[Codec, ...] = (
         _mmap_reader(_core.read_ros_camera_info),
         _file_sink_writer(_core.write_ros_camera_info),
         record=_core.CameraRig,
-        datatype="camera_rig",
+        payload_kind="camera_rig",
         magic=(b"image_width:",),
         supported_features=(
             "camera_matrix",
@@ -65,7 +65,7 @@ CALIBRATION_CODECS: tuple[Codec, ...] = (
         _mmap_reader(_core.read_kalibr),
         _file_sink_writer(_core.write_kalibr),
         record=_core.CameraRig,
-        datatype="camera_rig",
+        payload_kind="camera_rig",
         magic=(b"cam0:",),
         supported_features=(
             "multi_camera",

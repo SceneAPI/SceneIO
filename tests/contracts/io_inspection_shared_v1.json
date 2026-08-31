@@ -1,24 +1,17 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "types": {
     "ArrayInspection": {
-      "module": "sceneio.io._inspection",
+      "module": "sceneio.io._inspectors.model",
       "qualname": "ArrayInspection",
       "signature": "(name: 'str', shape: 'tuple[int, ...]', dtype: 'str') -> None",
-      "type_pickle_protocol_4_hex": "8004952e000000000000008c167363656e65696f2e696f2e5f696e7370656374696f6e948c0f4172726179496e7370656374696f6e9493942e",
-      "instance_pickle_protocol_4_hex": "80049566000000000000008c167363656e65696f2e696f2e5f696e7370656374696f6e948c0f4172726179496e7370656374696f6e9493942981947d94288c046e616d65948c0676616c756573948c057368617065944b024b0386948c056474797065948c07666c6f617433329475622e",
       "repr": "ArrayInspection(name='values', shape=(2, 3), dtype='float32')"
     },
     "Inspection": {
-      "module": "sceneio.io._inspection",
+      "module": "sceneio.io._inspectors.model",
       "qualname": "Inspection",
-      "signature": "(format: 'str', datatype: 'str', byte_size: 'int', shape: 'tuple[int, ...] | None' = None, dtype: 'str | None' = None, count: 'int | None' = None, channels: 'int | None' = None, arrays: 'tuple[ArrayInspection, ...]' = (), metadata: 'Mapping[str, MetadataValue]' = <factory>) -> None",
-      "type_pickle_protocol_4_hex": "80049529000000000000008c167363656e65696f2e696f2e5f696e7370656374696f6e948c0a496e7370656374696f6e9493942e",
-      "instance_pickle_protocol_4": {
-        "exception": "TypeError",
-        "message": "cannot pickle 'mappingproxy' object"
-      },
-      "repr": "Inspection(format='npy', datatype='tensor', byte_size=128, shape=(2, 3), dtype='float32', count=6, channels=None, arrays=(), metadata=mappingproxy({}))"
+      "signature": "(format: 'str', payload_kind: 'str', byte_size: 'int', shape: 'tuple[int, ...] | None' = None, dtype: 'str | None' = None, count: 'int | None' = None, channels: 'int | None' = None, arrays: 'tuple[ArrayInspection, ...]' = (), metadata: 'Mapping[str, MetadataValue]' = <factory>) -> None",
+      "repr": "Inspection(format='npy', payload_kind='tensor', byte_size=128, shape=(2, 3), dtype='float32', count=6, channels=None, arrays=(), metadata=mappingproxy({}))"
     }
   }
 }

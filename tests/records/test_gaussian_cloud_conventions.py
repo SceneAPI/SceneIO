@@ -67,7 +67,7 @@ def _cloud(
     )
 
 
-def test_gaussian_cloud_legacy_conventions_remain_the_defaults():
+def test_gaussian_cloud_3dgs_conventions_are_the_defaults():
     cloud = _cloud()
 
     assert (
@@ -230,7 +230,7 @@ def test_gaussian_layout_and_quaternion_conversion_are_bit_exact_roundtrip():
     )
 
 
-def test_explicit_conversion_can_prepare_usd_cloud_for_legacy_writers():
+def test_explicit_conversion_can_prepare_usd_cloud_for_3dgs_writers():
     source = _cloud(
         scales=np.ones((2, 3), np.float32),
         opacities=np.array([0.25, 0.75], np.float32),
@@ -381,7 +381,7 @@ def test_gaussian_linear_to_raw_conversion_checks_domains():
         ("splat", ".splat"),
     ],
 )
-def test_legacy_splat_writers_refuse_usd_conventions(
+def test_3dgs_writers_refuse_usd_conventions(
     tmp_path, format_id, suffix
 ):
     cloud = _cloud(
@@ -410,7 +410,7 @@ def test_legacy_splat_writers_refuse_usd_conventions(
         ("sorting_mode_hint", "cameraDistance"),
     ],
 )
-def test_legacy_splat_writers_refuse_nondefault_usd_hints(
+def test_3dgs_writers_refuse_nondefault_usd_hints(
     tmp_path, keyword, value
 ):
     cloud = _cloud(**{keyword: value})

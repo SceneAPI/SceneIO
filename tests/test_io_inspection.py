@@ -63,6 +63,18 @@ def _assert_inspection_matches(info, decoded):
         assert info.dtype == decoded.depth.dtype.name
         assert info.count == decoded.height * decoded.width
         assert info.channels == 1
+    elif isinstance(decoded, _core.FlowField):
+        assert info.shape == decoded.vectors.shape
+        assert info.dtype == decoded.vectors.dtype.name
+        assert info.channels == 2
+        assert info.metadata == {
+            "component_order": decoded.component_order,
+            "u_axis": decoded.u_axis,
+            "v_axis": decoded.v_axis,
+            "row_order": decoded.row_order,
+            "unit": decoded.unit,
+            "invalid_policy": decoded.invalid_policy,
+        }
     elif isinstance(decoded, _core.NormalMap):
         assert info.shape == decoded.normals.shape
         assert info.dtype == decoded.normals.dtype.name
@@ -242,7 +254,7 @@ def test_inspect_matches_decoded_metadata_for_buffer_and_directory_codecs(
         info = sceneio.inspect(path, format=spec.id)
         decoded = sceneio.read(path, format=spec.id)
         assert info.format == spec.id
-        assert info.datatype == registry.get(spec.id).datatype
+        assert info.payload_kind == registry.get(spec.id).payload_kind
         assert info.byte_size == len(spec.data)
         _assert_inspection_matches(info, decoded)
         if spec.id == "pfm":

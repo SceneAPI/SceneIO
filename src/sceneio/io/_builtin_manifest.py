@@ -1,7 +1,7 @@
 """Immutable ownership metadata for SceneIO's repository-owned codecs.
 
 This module deliberately describes ownership only.  Runtime dispatch remains
-defined by :class:`sceneio.io.registry.Codec`; keeping the two concerns
+defined by :class:`sceneio.Codec`; keeping the two concerns
 separate lets repository checks reason about built-ins without changing the
 public registration contract or excluding third-party registrations.
 """
@@ -349,7 +349,7 @@ _NATIVE_SYMBOLS = {
     "pts": ("_inspect_pts", "read_pts", "write_pts", "read_pts_points"),
     "las": ("read_las", "write_las", "read_las_points"),
     "laz": ("read_laz", "write_laz", "read_laz_points"),
-    "flo": ("read_flo", "read_flo_view", "write_flo"),
+    "flo": ("read_flo", "write_flo", "read_flo_window"),
     "dmb": ("_inspect_dmb", "read_dmb", "write_dmb", "read_dmb_window"),
     "bundler": ("_inspect_bundler", "read_bundler", "write_bundler"),
     "bal": ("_inspect_bal", "read_bal", "write_bal"),

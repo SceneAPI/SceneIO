@@ -1,7 +1,7 @@
 schema_version = 1
 
 # Runtime ownership and capability metadata are authoritative. The count is an
-# explicit compatibility assertion: adding or removing a built-in must update
+# explicit inventory assertion: adding or removing a built-in must update
 # this contract in the same change.
 inventory_source = "sceneio.io._builtin_manifest.CANONICAL_BUILTIN_IDS"
 capability_source = "sceneio.capabilities"
@@ -10,7 +10,7 @@ public_type_source = "sceneio.contracts.PUBLIC_TYPE_CONTRACTS"
 payload_kind_source = "sceneio.contracts.BUILTIN_CODEC_PAYLOAD_KINDS"
 expected_builtin_count = 74
 expected_public_type_count = 131
-expected_payload_kind_count = 26
+expected_payload_kind_count = 27
 canonical_current_document = "docs/format_coverage.md"
 
 readme_entry_points = [

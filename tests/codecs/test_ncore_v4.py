@@ -150,7 +150,7 @@ def test_directory_catalog_and_inspection_are_metadata_only(tmp_path):
 
     info = inspect_ncore_v4(path)
     assert info.format == "ncore_v4"
-    assert info.datatype == "ncore_dataset"
+    assert info.payload_kind == "ncore_dataset"
     assert info.count == 1
     assert info.arrays[0].name == "poses:rig/value"
     assert info.metadata["standard_component_count"] == 1

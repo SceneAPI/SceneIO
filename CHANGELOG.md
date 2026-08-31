@@ -5,7 +5,25 @@ kept in [`docs/releases/`](docs/releases/).
 
 ## Unreleased
 
-No unreleased changes yet.
+- Made `payload_kind` the single codec and inspection payload field; removed
+  the duplicate `datatype` alias and compatibility-only module/pickle
+  identities. Public records now retain their real, importable definition
+  modules instead of synthetic `sceneio.io` identities.
+- Consolidated Middlebury FLO I/O onto `FlowField` for full and bounded reads,
+  writes, and inspection; removed the parallel raw ndarray and specialized
+  flow-wrapper APIs.
+- Consolidated generic E57 I/O onto `ScanSet` and generic TIFF I/O onto
+  `RasterCollection`; retained only the format-specific bounded selectors
+  `read_e57_scan` and `read_tiff_collection`.
+- Removed redundant `PointScan` aliases and presence flags, the ambiguous
+  `SceneGraph.mesh_at` primitive accessor, and native-record compatibility
+  fallbacks. `point_cloud`, `num_stored_points`,
+  `has_row_column_indices`, and `mesh_primitive_at` are the sole forms.
+- Made inspector and registry family modules the direct owners of dispatch
+  functions and registry value types instead of re-exporting compatibility
+  wrappers through their parent modules.
+- Removed the unused private blob-hash validation alias and refreshed the
+  public contracts, documentation, benchmarks, and native inventories.
 
 ## [0.4.0] - 2026-08-30
 

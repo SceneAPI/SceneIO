@@ -1,4 +1,4 @@
-"""Qualification tests for bounded typed TIFF collections."""
+"""Qualification tests for bounded TIFF raster collections."""
 
 from __future__ import annotations
 
@@ -94,14 +94,12 @@ def _portable_collection() -> tuple[RasterCollection, tuple[np.ndarray, ...]]:
     return value, (full, reduced, rgb, mask)
 
 
-def test_tiff_collection_public_surface_is_additive_and_shared_records_are_neutral():
+def test_tiff_collection_is_the_canonical_public_surface():
     assert sceneio.RasterCollection is sceneio.RasterCollection
     assert sceneio.RasterLevel is sceneio.RasterLevel
     assert sceneio.RasterSeries is sceneio.RasterSeries
     assert not hasattr(sceneio.io, "RasterCollection")
     assert sceneio.read_tiff_collection is sceneio.io.read_tiff_collection
-    assert sceneio.inspect_tiff_collection is sceneio.io.inspect_tiff_collection
-    assert sceneio.write_tiff_collection is sceneio.io.write_tiff_collection
     assert str(inspect.signature(sceneio.read_tiff_collection)) == (
         "(path, *, series_index: 'int | None' = None, "
         "level_index: 'int | None' = None, "
@@ -115,7 +113,7 @@ def test_tiff_collection_public_surface_is_additive_and_shared_records_are_neutr
     ("bigtiff", "byteorder", "tiled"),
     [(False, "<", False), (False, ">", True), (True, "<", True), (True, ">", False)],
 )
-def test_typed_tiff_reads_independent_classic_bigtiff_endian_and_layout_oracle(
+def test_tiff_reads_independent_classic_bigtiff_endian_and_layout_oracle(
     tmp_path,
     bigtiff,
     byteorder,
@@ -129,7 +127,7 @@ def test_typed_tiff_reads_independent_classic_bigtiff_endian_and_layout_oracle(
         tiled=tiled,
     )
 
-    actual = sceneio.read_tiff_collection(path)
+    actual = sceneio.read(path)
 
     assert actual.num_series == 2
     assert [series.num_levels for series in actual.series] == [2, 1]
@@ -137,14 +135,12 @@ def test_typed_tiff_reads_independent_classic_bigtiff_endian_and_layout_oracle(
     np.testing.assert_array_equal(actual.series_at(0).level_at(1).array, reduced)
     np.testing.assert_array_equal(actual.series_at(1).level_at(0).array, rgb)
     assert all(level.array.dtype.isnative for series in actual.series for level in series.levels)
-    info = sceneio.inspect_tiff_collection(path)
+    info = sceneio.inspect(path)
     assert info.count == 2
     assert info.metadata["bigtiff"] is bigtiff
     assert info.metadata["byteorder"] == byteorder
     assert [len(series["levels"]) for series in info.metadata["series"]] == [2, 1]
     assert info.metadata["series"][0]["levels"][0]["layout"] == ("tiled" if tiled else "stripped")
-    with pytest.raises(sceneio.FormatError, match="exactly one image series"):
-        sceneio.read(path)
 
 
 def test_tiff_collection_inspection_reads_metadata_without_sample_decode(tmp_path, monkeypatch):
@@ -157,7 +153,7 @@ def test_tiff_collection_inspection_reads_metadata_without_sample_decode(tmp_pat
     monkeypatch.setattr(tifffile.TiffPage, "asarray", fail_decode)
     monkeypatch.setattr(tifffile.TiffPageSeries, "asarray", fail_decode)
 
-    info = sceneio.inspect_tiff_collection(path)
+    info = sceneio.inspect(path)
 
     assert [(array.name, array.shape) for array in info.arrays] == [
         ("series[0].level[0]", (64, 80)),
@@ -245,7 +241,7 @@ def test_tiff_collection_writer_reopens_with_sceneio_and_provider_oracles(
     path = tmp_path / f"written-{bigtiff}-{byteorder}-{layout}.tiff"
     kwargs = {"tile": (16, 16)} if layout == "tile" else {"rowsperstrip": 7}
 
-    sceneio.write_tiff_collection(
+    sceneio.write_tiff(
         expected,
         path,
         bigtiff=bigtiff,
@@ -267,7 +263,7 @@ def test_tiff_collection_writer_reopens_with_sceneio_and_provider_oracles(
     for actual, wanted in zip(observed, arrays, strict=True):
         np.testing.assert_array_equal(actual, wanted)
 
-    decoded = sceneio.read_tiff_collection(path)
+    decoded = sceneio.read(path)
     decoded_arrays = [
         decoded.series[0].levels[0].array,
         decoded.series[0].levels[1].array,
@@ -283,8 +279,8 @@ def test_tiff_collection_writer_is_byte_deterministic(tmp_path):
     first = tmp_path / "first.tif"
     second = tmp_path / "second.tif"
 
-    sceneio.write_tiff_collection(value, first, tile=(16, 16), byteorder="little")
-    sceneio.write_tiff_collection(value, second, tile=(16, 16), byteorder="little")
+    sceneio.write_tiff(value, first, tile=(16, 16), byteorder="little")
+    sceneio.write_tiff(value, second, tile=(16, 16), byteorder="little")
 
     assert first.read_bytes() == second.read_bytes()
 
@@ -295,14 +291,14 @@ def test_tiff_collection_writer_supports_one_stack_and_refuses_nonportable_topol
     values = np.arange(4 * 20 * 24, dtype=np.float32).reshape(4, 20, 24)
     stack = RasterCollection((RasterSeries(0, None, (_stack_level(0, values, "TYX"),)),))
     path = tmp_path / "stack.tif"
-    sceneio.write_tiff_collection(stack, path)
-    actual = sceneio.read_tiff_collection(path)
+    sceneio.write_tiff(stack, path)
+    actual = sceneio.read(path)
     np.testing.assert_array_equal(actual.series_at(0).level_at(0).array, values)
     assert actual.series_at(0).level_at(0).axes == "TYX"
 
     named = RasterCollection((RasterSeries(0, "named", (_image_level(0, values[0]),)),))
     with pytest.raises(sceneio.FormatError, match="does not support series names"):
-        sceneio.write_tiff_collection(named, tmp_path / "named.tif")
+        sceneio.write(named, tmp_path / "named.tif")
 
     multiple_with_stack = RasterCollection(
         (
@@ -311,7 +307,7 @@ def test_tiff_collection_writer_supports_one_stack_and_refuses_nonportable_topol
         )
     )
     with pytest.raises(sceneio.FormatError, match="multi-series stacks"):
-        sceneio.write_tiff_collection(multiple_with_stack, tmp_path / "multi-stack.tif")
+        sceneio.write(multiple_with_stack, tmp_path / "multi-stack.tif")
 
 
 def test_tiff_collection_writer_is_transactional_on_provider_failure(tmp_path, monkeypatch):
@@ -324,7 +320,7 @@ def test_tiff_collection_writer_is_transactional_on_provider_failure(tmp_path, m
 
     monkeypatch.setattr(_tiff, "_assert_reopened_collection", fail_reopen)
     with pytest.raises(sceneio.FormatError, match="injected reopen failure"):
-        sceneio.write_tiff_collection(value, path)
+        sceneio.write(value, path)
 
     assert path.read_bytes() == b"previous"
     assert not tuple(tmp_path.glob(".preserve.tif.*.tmp"))
@@ -361,15 +357,15 @@ def test_tiff_collection_truncated_payload_failure_is_normalized(tmp_path):
     tifffile.imwrite(source, values, photometric="minisblack", metadata=None)
     broken.write_bytes(source.read_bytes()[:-128])
 
-    with pytest.raises(sceneio.FormatError, match="reading TIFF collection"):
-        sceneio.read_tiff_collection(broken)
+    with pytest.raises(sceneio.FormatError, match="failed to read"):
+        sceneio.read(broken)
 
 
 def test_tiff_collection_singleton_is_exact_and_empty_dimensions_refuse(tmp_path):
     singleton = tmp_path / "singleton.tif"
     values = np.array([[17]], dtype=np.uint16)
     tifffile.imwrite(singleton, values, photometric="minisblack", metadata=None)
-    actual = sceneio.read_tiff_collection(singleton)
+    actual = sceneio.read(singleton)
     np.testing.assert_array_equal(actual.series_at(0).level_at(0).array, values)
 
     empty = tmp_path / "empty.tif"
@@ -381,4 +377,4 @@ def test_tiff_collection_singleton_is_exact_and_empty_dimensions_refuse(tmp_path
             metadata=None,
         )
     with pytest.raises(sceneio.FormatError, match="empty raster dimensions"):
-        sceneio.inspect_tiff_collection(empty)
+        sceneio.inspect(empty)

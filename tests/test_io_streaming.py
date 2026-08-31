@@ -224,14 +224,11 @@ assert path.read_bytes() == expected
     assert result.returncode == 0, result.stderr
 
 
-@pytest.mark.parametrize("format_id", ["npy", "pfm", "flo"])
+@pytest.mark.parametrize("format_id", ["npy", "pfm"])
 def test_registry_prepares_array_protocols_before_file_sink(tmp_path, format_id):
     inner = np.arange(17, dtype=np.int16)
     inner_bytes = bytes(_core.write_npy(inner))
-    if format_id == "flo":
-        outer = np.arange(24, dtype=np.float32).reshape(3, 4, 2)
-        encoder = _core.write_flo
-    elif format_id == "pfm":
+    if format_id == "pfm":
         outer = np.arange(12, dtype=np.float32).reshape(3, 4)
         encoder = _core.write_pfm
     else:

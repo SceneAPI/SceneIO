@@ -32,7 +32,7 @@ def test_pixel_windows_equal_full_read_slices(tmp_path):
         ("netpbm", bytes(_core.write_netpbm(_core.image(gray16), False))),
         ("netpbm", bytes(_core.write_netpbm(_core.image(rgb), False))),
         ("pfm", bytes(_core.write_pfm(pfm))),
-        ("flo", bytes(_core.write_flo(flow))),
+        ("flo", bytes(_core.write_flo(_core.flow_field(flow)))),
         (
             "webp",
             bytes(
@@ -268,7 +268,9 @@ def test_partial_paths_reject_truncated_selected_payloads(tmp_path):
             "flo",
             bytes(
                 _core.write_flo(
-                    rng.standard_normal((7, 9, 2)).astype(np.float32)
+                    _core.flow_field(
+                        rng.standard_normal((7, 9, 2)).astype(np.float32)
+                    )
                 )
             )[:-4],
             {"window": (0, 1, 0, 1)},

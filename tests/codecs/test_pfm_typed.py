@@ -292,7 +292,7 @@ def test_public_read_write_inspect_and_raw_api_unchanged(tmp_path):
     assert isinstance(raw, np.ndarray)
     _assert_bits_equal(raw, values)
     assert info.format == "pfm"
-    assert info.datatype == "depth_map"
+    assert info.payload_kind == "depth_map"
     assert info.shape == values.shape
     assert info.dtype == "float32"
     assert info.channels == 1

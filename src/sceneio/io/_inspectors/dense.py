@@ -9,13 +9,13 @@ from sceneio.io._inspectors.common import _compiled_buffer_inspect
 from sceneio.io._inspectors.model import Inspection
 
 
-def inspect_colmap_mvs_depth(path: Path, datatype: str) -> Inspection:
+def inspect_colmap_mvs_depth(path: Path, payload_kind: str) -> Inspection:
     height, width, channels = _compiled_buffer_inspect(
         path, _core._inspect_colmap_mvs_depth
     )
     return Inspection(
         "colmap_mvs_depth",
-        datatype,
+        payload_kind,
         path.stat().st_size,
         shape=(height, width),
         dtype="float32",
@@ -33,13 +33,13 @@ def inspect_colmap_mvs_depth(path: Path, datatype: str) -> Inspection:
     )
 
 
-def inspect_colmap_mvs_normal(path: Path, datatype: str) -> Inspection:
+def inspect_colmap_mvs_normal(path: Path, payload_kind: str) -> Inspection:
     height, width, channels = _compiled_buffer_inspect(
         path, _core._inspect_colmap_mvs_normal
     )
     return Inspection(
         "colmap_mvs_normal",
-        datatype,
+        payload_kind,
         path.stat().st_size,
         shape=(height, width, channels),
         dtype="float32",
@@ -57,13 +57,13 @@ def inspect_colmap_mvs_normal(path: Path, datatype: str) -> Inspection:
     )
 
 
-def inspect_colmap_mvs_consistency(path: Path, datatype: str) -> Inspection:
+def inspect_colmap_mvs_consistency(path: Path, payload_kind: str) -> Inspection:
     height, width, entries, links = _compiled_buffer_inspect(
         path, _core._inspect_colmap_mvs_consistency
     )
     return Inspection(
         "colmap_mvs_consistency",
-        datatype,
+        payload_kind,
         path.stat().st_size,
         shape=(height, width),
         dtype="int32",
@@ -77,14 +77,14 @@ def inspect_colmap_mvs_consistency(path: Path, datatype: str) -> Inspection:
 
 
 def inspect_colmap_fused_visibility(
-    path: Path, datatype: str
+    path: Path, payload_kind: str
 ) -> Inspection:
     points, links = _compiled_buffer_inspect(
         path, _core._inspect_colmap_fused_visibility
     )
     return Inspection(
         "colmap_fused_visibility",
-        datatype,
+        payload_kind,
         path.stat().st_size,
         count=points,
         metadata={

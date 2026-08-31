@@ -342,7 +342,7 @@ def _assert_datasets_equal(expected, actual) -> None:
 
 def test_versioned_profile_contract_matches_the_live_codec():
     assert CONTRACT["format_id"] == "euroc_dataset"
-    assert CONTRACT["datatype"] == "visual_inertial_dataset"
+    assert CONTRACT["payload_kind"] == "visual_inertial_dataset"
     assert CONTRACT["coordinates"] == {
         "t_bs_direction": "sensor_to_body",
         "sceneio_reference_frame": "rig",
@@ -477,7 +477,7 @@ def test_public_detect_inspect_write_and_oracle_readback(tmp_path):
     inspection = sceneio.inspect(source)
     assert sceneio.detect(source) == "euroc_dataset"
     assert inspection.format == "euroc_dataset"
-    assert inspection.datatype == "visual_inertial_dataset"
+    assert inspection.payload_kind == "visual_inertial_dataset"
     assert inspection.count == 16
     assert inspection.metadata == {
         "camera_names": ("cam0", "cam1"),

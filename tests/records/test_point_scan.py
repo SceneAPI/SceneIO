@@ -67,7 +67,6 @@ def test_point_scan_preserves_stored_rows_and_metadata():
 def test_absent_stored_row_arrays_are_shaped_empty_and_presence_is_explicit():
     scan = _core.point_scan(_cloud(3))
     assert not scan.has_invalid_states
-    assert not scan.has_row_indices and not scan.has_column_indices
     assert not scan.has_row_column_indices
     assert scan.invalid_states.shape == (0,)
     assert scan.row_indices.shape == (0,)

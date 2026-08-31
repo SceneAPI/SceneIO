@@ -61,7 +61,7 @@ def test_tiff_collection_contract_matches_dependencies_and_capabilities():
     capabilities = sceneio.capabilities("tiff")
     assert capabilities.requires_features == ("tifffile", "zarr")
     assert {
-        "typed_raster_collection",
+        "raster_collection",
         "multiple_series",
         "pyramids",
         "series_selection",
@@ -69,9 +69,7 @@ def test_tiff_collection_contract_matches_dependencies_and_capabilities():
         "page_range_selection",
         "window_selection",
     } <= set(capabilities.supported_features)
-    assert {"legacy_multiple_series", "legacy_pyramids", "ome_semantics"} <= set(
-        capabilities.unsupported_features
-    )
+    assert "ome_semantics" in capabilities.unsupported_features
 
 
 def test_tiff_collection_contract_has_live_benchmark_and_documentation():
@@ -91,7 +89,7 @@ def test_tiff_collection_contract_has_live_benchmark_and_documentation():
     )
     assert benchmark["fresh_process_samples"] == 3
     assert benchmark["operations"] == [
-        "typed_full_read",
-        "typed_selected_read",
-        "typed_inspect",
+        "full_read",
+        "selected_read",
+        "inspect",
     ]

@@ -19,7 +19,7 @@ _INSPECTORS = {
 def inspect_camera_rig(
     path: Path,
     format_id: str,
-    datatype: str,
+    payload_kind: str,
 ) -> Inspection:
     """Inspect one calibration file using lower shared primitives."""
 
@@ -30,7 +30,7 @@ def inspect_camera_rig(
     resolutions = tuple(int(value) for value in flat_resolutions)
     return Inspection(
         format_id,
-        datatype,
+        payload_kind,
         path.stat().st_size,
         shape=(count,),
         dtype="float64",

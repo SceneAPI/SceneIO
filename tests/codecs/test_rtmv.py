@@ -182,7 +182,7 @@ def test_inspect_matches_read_without_decoding_pixels(tmp_path, monkeypatch):
     info = sceneio.inspect(directory)
     dataset = sceneio.read(directory)
     assert info.format == "rtmv"
-    assert info.datatype == "rtmv_dataset"
+    assert info.payload_kind == "rtmv_dataset"
     assert info.shape == (2, 3, 4, 4)
     assert info.dtype == "float32" and info.channels == 4
     assert info.count == dataset.num_frames == 2

@@ -3,10 +3,8 @@
 // stored raw and are never reordered, rescaled, scrubbed, or interpreted by
 // the record; the convention fields describe how callers must interpret them.
 //
-// The first consumer is the Middlebury .flo typed adapter. The raw .flo codec
-// remains a bare ndarray API for source compatibility and mapped zero-copy
-// reads. A typed adapter copies those exact bits into this owning record and
-// records the fixed .flo conventions.
+// Middlebury .flo uses this record directly so raw vectors and their semantic
+// conventions cannot diverge into parallel in-memory representations.
 #pragma once
 
 #include <string>

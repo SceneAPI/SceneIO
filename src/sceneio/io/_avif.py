@@ -554,7 +554,7 @@ def _inspect(path: str | Path, *, sequence: bool) -> Inspection:
         }
         return Inspection(
             format="animated_avif" if sequence else "avif",
-            datatype="image_sequence" if sequence else "image",
+            payload_kind="image_sequence" if sequence else "image",
             byte_size=source.stat().st_size,
             shape=shape,
             dtype="uint8",

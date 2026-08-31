@@ -141,7 +141,7 @@ def test_inspection_reports_camera_profile_without_records(tmp_path):
 
     info = sceneio.inspect(path)
 
-    assert info.datatype == "scene_graph"
+    assert info.payload_kind == "scene_graph"
     assert info.metadata["num_cameras"] == 2
     assert info.metadata["num_render_products"] == 2
     assert info.metadata["camera_resolutions"] == (

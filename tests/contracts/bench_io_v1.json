@@ -59,14 +59,14 @@
       "family_functions": {
         "_array_fixture_values": {
           "source": "bench/io_bench/families/arrays.py",
-          "ast_sha256": "f7d68dbd7f31d047fb6bc7f9c5c9630da1fdb21572fa00dc800ee6f3f3ce5033"
+          "ast_sha256": "292947df1aebcb97b5e5ff6053806da74aa259d220bdfa6e714c7aefee7efb1a"
         },
         "build_array_specs": {
           "source": "bench/io_bench/families/arrays.py",
-          "ast_sha256": "046468f7f7d8a86f9e67185ba72022d3c9fd38301f0ba7389f77845b3d2d56c2"
+          "ast_sha256": "448ec32b34a9ab35ef0cfc70a5bd593d99ab646f951c0a55fa8077d5fb8b6716"
         }
       },
-      "facade_family_exports": [
+      "runner_family_exports": [
         "build_array_specs"
       ],
       "functions": {
@@ -125,7 +125,7 @@
           "ast_sha256": "9bbd45ab429596cd22a82ea0d452191cacd22df96b74c093512a1c2370c4dc42"
         }
       },
-      "facade_family_exports": [
+      "runner_family_exports": [
         "build_calibration_specs"
       ],
       "functions": {
@@ -171,7 +171,7 @@
           "ast_sha256": "47d2c7742a5c16bb2a690137aff74ed3e2313f5154d906e6ffc0ca38817d041d"
         }
       },
-      "facade_family_exports": [
+      "runner_family_exports": [
         "build_image_specs"
       ],
       "functions": {
@@ -232,7 +232,7 @@
           "ast_sha256": "b73de1cb9fcfdea7c9061a62c4f2b093e5878e59099c0f57dcf49e5b7222fa48"
         }
       },
-      "facade_family_exports": [
+      "runner_family_exports": [
         "build_mesh_specs"
       ],
       "functions": {
@@ -318,7 +318,7 @@
           "ast_sha256": "17f6efe0f6fb73a46c35caae277206ca1f162841892d08dea99dae63d54e3185"
         }
       },
-      "facade_family_exports": [
+      "runner_family_exports": [
         "build_point_specs"
       ],
       "functions": {
@@ -396,7 +396,7 @@
           "ast_sha256": "cbe6746efe256fcf967491cf02dcf16a07f7ad04e2233684a69098ed7116baf1"
         }
       },
-      "facade_family_exports": [
+      "runner_family_exports": [
         "build_reconstruction_specs"
       ],
       "functions": {
@@ -453,7 +453,7 @@
           "ast_sha256": "5bb6b981e7908dd34c6224f108d98ac45eb0e4d11714ce3dbaa8cca327f2b59a"
         }
       },
-      "facade_constant_exports": [
+      "runner_constant_exports": [
         "_EUROC_HEADER"
       ],
       "optional_oracle_bindings": [],
@@ -500,7 +500,7 @@
           "ast_sha256": "c717f406d21d2a6f032d42c1b773fece477bcda7d74070a457b3e8d9ebf931da"
         }
       },
-      "facade_family_exports": [
+      "runner_family_exports": [
         "build_sequence_specs"
       ],
       "functions": {
@@ -585,7 +585,7 @@
           "ast_sha256": "bc3523d33ca18293e8366c5751ee3f29b4f7f3f6cda1d384e283eb931bea68df"
         }
       },
-      "facade_family_exports": [
+      "runner_family_exports": [
         "build_splat_specs"
       ],
       "functions": {
@@ -635,7 +635,7 @@
     },
     "datasets": {
       "family_functions": {},
-      "facade_family_exports": [],
+      "runner_family_exports": [],
       "functions": {},
       "optional_oracle_bindings": [],
       "optional_oracle_source": "bench/io_bench/oracles/containers.py",
@@ -661,16 +661,8 @@
   "r3_2_runner_extraction": {
     "parent_commit": "cd322685d3de86931ec4264261924fb3c309b6c4",
     "source": "bench/io_bench/runner.py",
-    "facade": "bench/bench_io.py",
-    "facade_attribute_policy": "alias_all_non_dunder_runner_globals",
-    "facade_attribute_count": 189,
-    "facade_attributes_sha256": "f3f63983ca83fb2050bb76a7148b99accd482e50df9ccd6037c52b8f815ae30e",
-    "facade_rebinding_policy": "propagate_historical_attribute_mutations_to_runner",
-    "facade_first_import_policy": "preserve_initialized_runner_objects_and_rebindings",
-    "facade_reload_policy": "reset_runner_source_definitions_and_restore_aliases",
-    "star_import_policy": "parent_public_names_without_explicit_all",
-    "star_import_count": 72,
-    "star_import_sha256": "7b18ab7bb60a1cbf82bc6a68d5ebd3c7416d149cd69c08daa90c468b4c1aa151",
+    "cli": "bench/bench_io.py",
+    "cli_policy": "import_and_call_runner_main_only",
     "function_ast_sha256": {
       "_colmap_db_fixture": "ab90c5b0ce3b9d884b4af44992868c80701c9e740bac1b0560c24a2507ac5fe4",
       "_colmap_db_payload_nbytes": "0182dee86467192bd95f4859ff3d6c5491aa2dec7df50c0ac8d1b20ac21712c0",
@@ -697,7 +689,7 @@
       "_benchmark_colmap_db": "d6d88ec39d620393a191a3d542564b83bd3aad96668c5ef6c58ed3cbcac2bda9",
       "_benchmark_path_spec": "3bac92c60c0e5e8a35b1d698ab1005988398c7aaa6e8393634e65c7e45efc512",
       "_benchmark_gltf": "3e6901a8b273c6eebb8c3601a9b9586504637db988d57afef0975f84e904867d",
-      "_run_benchmark": "b9046e0eb04f1019f3743fcaa9ec4107bcd6ef6fe5ecb9b9746b8d8e98a13b44"
+      "_run_benchmark": "1cfe8dd61e760f3aa32c8fb1c8d69921f0b3d2fee81fbfe90a1db2b54a005382"
     }
   },
   "r3_1a_equivalence": {
@@ -1182,22 +1174,6 @@
           "version",
           "write_mbps",
           "zstd_level"
-        ]
-      }
-    },
-    "flo": {
-      "typed_adapter": {
-        "keys": [
-          "format",
-          "inspect_ms",
-          "inspect_peak_mb",
-          "inspect_rss_mb",
-          "read_mbps",
-          "read_peak_mb",
-          "read_rss_mb",
-          "write_mbps",
-          "write_peak_mb",
-          "write_rss_mb"
         ]
       }
     }

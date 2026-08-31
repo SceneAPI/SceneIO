@@ -47,7 +47,7 @@ class Inspection:
     """
 
     format: str
-    datatype: str
+    payload_kind: str
     byte_size: int
     shape: tuple[int, ...] | None = None
     dtype: str | None = None
@@ -69,9 +69,3 @@ class Inspection:
         from sceneio.coordinates import inspection_coordinate_convention
 
         return inspection_coordinate_convention(self.format, self.metadata)
-
-
-# These public value types historically lived in the compatibility facade.
-# Retaining that module identity preserves repr and existing pickle payloads.
-ArrayInspection.__module__ = "sceneio.io._inspection"
-Inspection.__module__ = "sceneio.io._inspection"

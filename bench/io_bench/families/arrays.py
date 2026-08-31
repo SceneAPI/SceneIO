@@ -38,13 +38,19 @@ def _array_fixture_values(scale):
         .astype(np.float32),
         "b": np.arange(max(1, tensor_side), dtype=np.int32),
     }
-    return side, tensor_side, flow, pfm, npz_arrays, _core.tensor_dict(
-        npz_arrays
+    return (
+        side,
+        tensor_side,
+        flow,
+        _core.flow_field(flow),
+        pfm,
+        npz_arrays,
+        _core.tensor_dict(npz_arrays),
     )
 
 
 def build_array_specs(scale):
-    side, tensor_side, flow, pfm, npz_arrays, tensors = (
+    side, tensor_side, flow, flow_field, pfm, npz_arrays, tensors = (
         _array_fixture_values(scale)
     )
     return [
@@ -75,7 +81,7 @@ def build_array_specs(scale):
         ),
         Spec(
             "flo",
-            lambda: (flow, flow),
+            lambda: (flow_field, flow),
             _core.write_flo,
             _core.read_flo,
             None,

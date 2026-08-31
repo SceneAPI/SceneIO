@@ -65,7 +65,7 @@ format_verification = [
   { id = "pts", decode = "preserve_unspecified", encode = "require_unspecified", conversion = "requires_context", oracle = "independent NumPy PTS parser/writer", tests = ["tests/codecs/test_pts.py"] },
   { id = "las", decode = "preserve_declared", encode = "preserve_declared", conversion = "requires_context", oracle = "laspy LAS implementation", tests = ["tests/codecs/test_las.py", "tests/codecs/test_las_waveform.py"] },
   { id = "laz", decode = "preserve_declared", encode = "preserve_declared", conversion = "requires_context", oracle = "laspy with independent lazrs backend", tests = ["tests/codecs/test_laz.py"] },
-  { id = "flo", decode = "preserve_fixed", encode = "require_fixed", conversion = "requires_context", oracle = "independent struct/NumPy Middlebury-flow oracle", tests = ["tests/codecs/test_flo.py", "tests/codecs/test_flo_typed.py"] },
+  { id = "flo", decode = "preserve_fixed", encode = "require_fixed", conversion = "requires_context", oracle = "independent struct/NumPy Middlebury-flow oracle", tests = ["tests/codecs/test_flo.py", "tests/codecs/test_flo_integration.py"] },
   { id = "dmb", decode = "preserve_unspecified", encode = "require_unspecified", conversion = "requires_context", oracle = "independent struct/NumPy DMB parser/writer", tests = ["tests/codecs/test_dmb.py"] },
   { id = "bundler", decode = "normalize_to_colmap", encode = "encode_from_colmap", conversion = "adapter", oracle = "independent token parser plus hand-derived frame pins", tests = ["tests/codecs/test_bundler.py"] },
   { id = "bal", decode = "normalize_to_colmap", encode = "encode_from_colmap", conversion = "adapter", oracle = "independent BAL parser/writer plus hand-derived projection pins", tests = ["tests/codecs/test_bal.py"] },

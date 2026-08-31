@@ -41,20 +41,20 @@
     "splat": 11
   },
   "codec_ast_sha256": {
-    "gaussian_ply": "914948d24bd91d56ef54f14f934f06050bd6eda0f306eb9b25419fe627251d29",
-    "compressed_ply": "9f8ec8c27b9c8b6241e309ceae0fe292210074bfd72c4fd3bd6ea732da567db8",
-    "sog": "3be12d4cfa3c00ad4c6508175a78ea37aeac918b7042faf9d4e867d4b90fa55b",
-    "ksplat": "d874193723c5b1d470029f907bd847705b86fc8b1b9c620c8f8e6d925a58359b",
-    "spz": "26eda7c4ef87c8d75e871b4ca25d36c36fa483004842988f05b81ead82a8f8b5",
-    "splat": "9bbc88768287239345932a7e8fa99f612476e4ff66daddb2bf9cee2edb22f657"
+    "gaussian_ply": "1d7f7e321ab13fb952b011667e34abb715501bb867b5241bad71864e22095801",
+    "compressed_ply": "8fbfac7a1643b62e77a0d2f70c1d233fdfeb00ae8a9e0c2b87f54957bdff25e2",
+    "sog": "a32a51846a49e493c7e381ee6ba1d4d6c490f0f208b6e2afc320400f489c32ee",
+    "ksplat": "3a28d60f6d46bea3f4bb86a90c7eeaf141d597ac1badcb5d288a66548c28bb00",
+    "spz": "58f4703a17f433ab46ee261399f01cb3cc2150882db281852a45531ad7255ded",
+    "splat": "8d0c60c5752c4d94833b157253bf0b8e6005c9d1107b0e1abc9a5461b4e9d88a"
   },
   "codec_descriptor_sha256": {
-    "gaussian_ply": "5abc1b46d3586c46dfec921a6ffd285a393a724165f2b24a2070b49909564bc3",
-    "compressed_ply": "4d2c03f475f6207bfd58b77b55b5a493791b141dec8ff3e2a0c0fa0543d55ccc",
-    "sog": "012758ff0ec0e8d66f282da9076752a07962669ff9bd1b08cad0d7f3848ecf8f",
-    "ksplat": "1f9aa8ae139106cfcf3e9c5bab662a894aec62a4f7e1ac2f331852bd7969c5ca",
-    "spz": "d196053c942168e4787d151841dce81da6ad833f5f7dcdbeab3870a2f2d0d7ea",
-    "splat": "d5114f6722609207a8826907f4abad7429d82e51d98edb3c84d525dd8af06eea"
+    "gaussian_ply": "c94ae2eb8d7c11683623bea44b8d6316e471788afddf8d7eecc75304c40a52d0",
+    "compressed_ply": "89951e18e84d90f2ae316da17f837650522344b5cce9cb4f5b72f4a425365c37",
+    "sog": "917ddbc8ec5d56105d6fe6bea2df406a4ba221fb5b3273d84ee70c6e230c89c9",
+    "ksplat": "c5d78c9333a62832605a034c5c9ed3df593a6e6cf6427f96cb6f50fe33473936",
+    "spz": "24c91b814531c3f05b63fece9da5fb3d085811bdcaaacf8b8e85cfa726d0eb7d",
+    "splat": "297ef556fbd2a4d9f61e998cb891477d77748eb1e002db2e695c969b755b5a0c"
   },
   "platform_evidence": {
     "exposing_commit": "93fcf1b39350a3a0080a7b87ead65d0d9343d354",
@@ -135,7 +135,10 @@
       "ulp_field": {
         "name": "scales",
         "dtype": "float32",
-        "shape": [8, 3],
+        "shape": [
+          8,
+          3
+        ],
         "canonical_base64": "JRKAvzysbL/eHVm/1ZdFv2AyMr8Vpx6/RTMLv3px775Dpci++nyhviUidb6Qeie+H5CyvX8KObynjIU9OVUQPjQUXj4CKZY+s+28Ps3b4z63gQU/Cu8YP25lLD9RyT8/",
         "max_ulp": 1
       }
@@ -151,7 +154,10 @@
       "ulp_field": {
         "name": "quaternions",
         "dtype": "float32",
-        "shape": [8, 4],
+        "shape": [
+          8,
+          4
+        ],
         "canonical_base64": "AACAPwAAAAAAAAAAAAAAANzD/z4MWgA/3MP/PtzD/z7zBDU/8wQ1PwAAAAAAAAAA8wQ1PwAAAADzBDU/AAAAAPMENT8AAAAAAAAAAPMENT//DF4/TXfevk13Xj6ODN09oAo7PqAKuz74Rwy/j+E6P9zD/74MWgA/3MP/vtzD/z4=",
         "max_ulp": 1
       }
@@ -167,7 +173,10 @@
       "ulp_field": {
         "name": "scales",
         "dtype": "float32",
-        "shape": [8, 3],
+        "shape": [
+          8,
+          3
+        ],
         "canonical_base64": "AACAv5CFbL8hC1m/spBFv0MWMr/Tmx6/ZCELv+pN774LWci+LWShvpredL7f9Ca+RhayvWEWMryykIU9FbIQPtCbXj7IQpY+pze9Pocs5D6ykAU/IQsZP5GFLD8BAEA/",
         "max_ulp": 1
       }
@@ -180,9 +189,11 @@
       "record_sha256": "cd9a3fc5a24294457d141ff438fd7a28cf240bf4e0ffa4742c83cd0a364c785a",
       "inspection": {
         "format": "gaussian_ply",
-        "datatype": "splat",
+        "payload_kind": "splat",
         "byte_size": 805,
-        "shape": [8],
+        "shape": [
+          8
+        ],
         "dtype": "float32",
         "channels": null,
         "count": 8,
@@ -200,9 +211,11 @@
       "record_sha256": "838a8c81ecc6bc01364ebddb1a678b23a590144004366a2152365a6a84bc1a3c",
       "inspection": {
         "format": "compressed_ply",
-        "datatype": "splat",
+        "payload_kind": "splat",
         "byte_size": 885,
-        "shape": [8],
+        "shape": [
+          8
+        ],
         "dtype": "float32",
         "channels": null,
         "count": 8,
@@ -212,10 +225,28 @@
           "byte_order": "little",
           "chunk_size": 256,
           "num_chunks": 1,
-          "position_bits": [11, 10, 11],
-          "scale_bits": [11, 10, 11],
-          "quaternion_bits": [2, 10, 10, 10],
-          "color_bits": [8, 8, 8, 8],
+          "position_bits": [
+            11,
+            10,
+            11
+          ],
+          "scale_bits": [
+            11,
+            10,
+            11
+          ],
+          "quaternion_bits": [
+            2,
+            10,
+            10,
+            10
+          ],
+          "color_bits": [
+            8,
+            8,
+            8,
+            8
+          ],
           "chunk_color_ranges": true,
           "sh_degree": 0,
           "num_rest": 0
@@ -228,9 +259,11 @@
       "record_sha256": "35db6f3b74ecf866b2d5c53d4e94f9bef2cc8b49ccab751ed96439765b61a8b7",
       "inspection": {
         "format": "sog",
-        "datatype": "splat",
+        "payload_kind": "splat",
         "byte_size": 4698,
-        "shape": [8],
+        "shape": [
+          8
+        ],
         "dtype": "float32",
         "channels": null,
         "count": 8,
@@ -251,9 +284,11 @@
       "record_sha256": "4539ee6ba28328de2652bca1b70b9347a3d6261a7dcd9b4dd8a22bc1a7280e19",
       "inspection": {
         "format": "ksplat",
-        "datatype": "splat",
+        "payload_kind": "splat",
         "byte_size": 5344,
-        "shape": [8],
+        "shape": [
+          8
+        ],
         "dtype": "float32",
         "channels": null,
         "count": 8,
@@ -266,8 +301,15 @@
           "section_count": 1,
           "loaded_section_count": 1,
           "loaded_count": 8,
-          "scene_center": [0.0, 0.0, 0.0],
-          "sh_quantization_range": [-1.5, 1.5]
+          "scene_center": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "sh_quantization_range": [
+            -1.5,
+            1.5
+          ]
         }
       }
     },
@@ -277,9 +319,11 @@
       "record_sha256": "4e4981eee24d6c1d1e9b85ca309e24459a038d4ad0b28a97cf150c833fe09a13",
       "inspection": {
         "format": "spz",
-        "datatype": "splat",
+        "payload_kind": "splat",
         "byte_size": 199,
-        "shape": [8],
+        "shape": [
+          8
+        ],
         "dtype": "float32",
         "channels": null,
         "count": 8,
@@ -297,9 +341,11 @@
       "record_sha256": "4f10b2b198cbabcf0a601921d34282ab46884dcd2e527a940b76d234f301457e",
       "inspection": {
         "format": "splat",
-        "datatype": "splat",
+        "payload_kind": "splat",
         "byte_size": 256,
-        "shape": [8],
+        "shape": [
+          8
+        ],
         "dtype": "float32",
         "channels": null,
         "count": 8,
@@ -316,9 +362,11 @@
       "record_sha256": "2d220b4ca6e5a29c0c8e336e298348efdb1ff24967fba33169c52d75b048407d",
       "inspection": {
         "format": "spz",
-        "datatype": "splat",
+        "payload_kind": "splat",
         "byte_size": 41,
-        "shape": [1],
+        "shape": [
+          1
+        ],
         "dtype": "float32",
         "channels": null,
         "count": 1,
@@ -337,9 +385,11 @@
       "record_sha256": "2d220b4ca6e5a29c0c8e336e298348efdb1ff24967fba33169c52d75b048407d",
       "inspection": {
         "format": "spz",
-        "datatype": "splat",
+        "payload_kind": "splat",
         "byte_size": 42,
-        "shape": [1],
+        "shape": [
+          1
+        ],
         "dtype": "float32",
         "channels": null,
         "count": 1,
@@ -357,9 +407,11 @@
       "record_sha256": "4e4981eee24d6c1d1e9b85ca309e24459a038d4ad0b28a97cf150c833fe09a13",
       "inspection": {
         "format": "spz",
-        "datatype": "splat",
+        "payload_kind": "splat",
         "byte_size": 298,
-        "shape": [8],
+        "shape": [
+          8
+        ],
         "dtype": "float32",
         "channels": null,
         "count": 8,
@@ -375,9 +427,11 @@
       "record_sha256": "35db6f3b74ecf866b2d5c53d4e94f9bef2cc8b49ccab751ed96439765b61a8b7",
       "inspection": {
         "format": "sog",
-        "datatype": "splat",
+        "payload_kind": "splat",
         "byte_size": 4000,
-        "shape": [8],
+        "shape": [
+          8
+        ],
         "dtype": "float32",
         "channels": null,
         "count": 8,

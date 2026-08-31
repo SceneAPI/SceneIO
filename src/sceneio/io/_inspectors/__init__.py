@@ -1,1 +1,1 @@
-"""Format-family metadata inspectors behind :mod:`sceneio.io._inspection`."""
+"""Canonical format-family metadata inspectors."""

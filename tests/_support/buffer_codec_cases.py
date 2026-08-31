@@ -237,6 +237,7 @@ def build_buffer_codec_cases() -> tuple[BufferCodecCase, ...]:
         default_scene=0,
     )
     flow = rng.standard_normal((5, 6, 2)).astype(np.float32)
+    flow_field = _core.flow_field(flow)
     depth = _core.depth_map(
         rng.standard_normal((5, 6)).astype(np.float32),
         unit="unknown",
@@ -622,7 +623,7 @@ def build_buffer_codec_cases() -> tuple[BufferCodecCase, ...]:
         case("pcd", _core.read_pcd, _core.write_pcd, points_pcd),
         case("las", _core.read_las, _core.write_las, points_las),
         case("laz", _core.read_laz, _core.write_laz, points_las),
-        case("flo", _core.read_flo, _core.write_flo, flow),
+        case("flo", _core.read_flo, _core.write_flo, flow_field),
         case("dmb", _core.read_dmb, _core.write_dmb, depth),
         case(
             "bundler",

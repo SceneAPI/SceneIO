@@ -5,6 +5,12 @@ Status: complete. R1-R6 close at packaged source commit
 three-platform build-only matrix, artifact inspection, and final review pass.
 No next format implementation is implied by closure.
 
+Post-closure pre-1 cleanup removed the compatibility-only inspection wrappers,
+registry type-module rewrites, and benchmark helper-export facade described in
+the historical checkpoints below. Current ownership is documented in
+[`core_architecture.md`](core_architecture.md); `bench/bench_io.py` is now only
+an import-and-call CLI shim.
+
 This plan keeps SceneIO manageable as the registry grows beyond 50 codecs. It
 is a behavior-preserving architecture and evidence pass: no format is added,
 removed, or semantically changed while this gate is open.

@@ -462,9 +462,13 @@ zero-origin palettes, packed 16-bit color, and gray/RGB/RGBA modes. The
 complete same-run O4/O5 throughput and memory regression guard passed with both
 formats included.
 
-## Typed FLO semantic-adapter delta — 2026-07-24
+## Historical typed FLO adapter delta — 2026-07-24 (superseded)
 
-The raw FLO benchmark row remains unchanged and continues to measure the
+This measurement records the former dual raw/typed API. The current codec has
+one canonical `FlowField` path for generic and partial I/O; the mapped ndarray
+path and the nested adapter benchmark no longer exist.
+
+At that checkpoint, the raw FLO benchmark row measured the
 zero-copy mapped ndarray path. A dedicated nested row now measures the owning
 `FlowField` adapter on the same 1024x1024 float32 UV raster (8.389 MB):
 
@@ -479,11 +483,11 @@ raw public mmap read              180,400 MB/s
 raw direct-sink write             2,515 MB/s
 ```
 
-The large raw-read number reflects the intended O2 mapped view, whereas the
-typed read intentionally owns one native copy so its `FlowField` outlives the
-mapping. Both paths avoid an encoded-size Python `bytes`; typed sink output is
-byte-identical to the raw writer and independent NumPy oracle. The five-run
-29-codec O4/O5 throughput and memory regression guard passed.
+The large raw-read number reflected the former O2 mapped view, whereas the
+typed read owned one native copy so its `FlowField` outlived the mapping. Both
+paths avoided an encoded-size Python `bytes`; sink output was byte-identical to
+the independent NumPy oracle. The five-run 29-codec O4/O5 throughput and memory
+regression guard passed at that checkpoint.
 
 ## Typed PFM depth-adapter delta — 2026-07-24
 

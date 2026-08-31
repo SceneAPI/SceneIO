@@ -1,4 +1,4 @@
-"""Checked compatibility snapshots for the behavior-preserving R1 boundary."""
+"""Checked snapshots for the canonical public I/O and registry contracts."""
 
 from __future__ import annotations
 
@@ -29,7 +29,8 @@ from sceneio import _core
 from sceneio.io import registry
 from sceneio.io._builtin_manifest import CANONICAL_BUILTIN_IDS
 from sceneio.io._depth import DepthEncoding
-from sceneio.io._inspection import ArrayInspection, Inspection
+from sceneio.io._inspectors.model import ArrayInspection, Inspection
+from sceneio.io._registry import model as registry_model
 
 ROOT = Path(__file__).resolve().parents[1]
 CONTRACTS = ROOT / "tests" / "contracts"
@@ -54,14 +55,8 @@ def _read_json(name: str):
 
 
 def _load_benchmark_module(name: str):
-    benchmark_path = ROOT / "bench" / "bench_io.py"
-    spec = importlib.util.spec_from_file_location(name, benchmark_path)
-    assert spec is not None
-    assert spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
-    return module
+    del name
+    return importlib.import_module("bench.io_bench.runner")
 
 
 def _fixture_fingerprint(value) -> str:
@@ -141,7 +136,7 @@ def _registry_snapshot():
                 "is_directory": codec.is_directory,
                 "dir_marker": codec.dir_marker,
                 "container_kind": codec.container_kind,
-                "datatype": codec.datatype,
+                "payload_kind": codec.payload_kind,
                 "record": record,
                 "selectors": [
                     name for name, field in _SELECTORS if getattr(codec, field) is not None
@@ -287,7 +282,7 @@ def _public_snapshot():
         "ArrayInspection": ArrayInspection("values", (2, 3), "float32"),
         "Inspection": Inspection(
             format="npy",
-            datatype="tensor",
+            payload_kind="tensor",
             byte_size=128,
             shape=(2, 3),
             dtype="float32",
@@ -315,10 +310,11 @@ def _public_snapshot():
         "types": types,
         "format_error": _type_contract(sceneio.FormatError),
         "source_identity": {
-            "Codec": sceneio.Codec is registry.Codec,
-            "CodecCapabilities": sceneio.CodecCapabilities is registry.CodecCapabilities,
+            "Codec": sceneio.Codec is registry_model.Codec,
+            "CodecCapabilities": sceneio.CodecCapabilities is registry_model.CodecCapabilities,
             "NativeFeatureCapabilities": (
-                sceneio.NativeFeatureCapabilities is registry.NativeFeatureCapabilities
+                sceneio.NativeFeatureCapabilities
+                is registry_model.NativeFeatureCapabilities
             ),
             "ArrayInspection": sceneio.ArrayInspection is ArrayInspection,
             "Inspection": sceneio.Inspection is Inspection,
@@ -420,28 +416,20 @@ def test_import_boundary_matches_checked_module_set(boundary, statement):
 
 def test_benchmark_contract_matches_checked_snapshot():
     contract = _read_json("bench_io_v1.json")
-    benchmark_path = ROOT / "bench" / "bench_io.py"
     probe = textwrap.dedent(
-        f"""
+        """
         import argparse
-        import importlib.util
         import json
         import pathlib
-        import sys
+        from bench.io_bench import runner as module
 
         original_parse_args = argparse.ArgumentParser.parse_args
-        captured = {{}}
+        captured = {}
 
         def capturing_parse_args(parser, *unused_args, **unused_kwargs):
             captured["parser"] = parser
             return original_parse_args(parser, [])
 
-        spec = importlib.util.spec_from_file_location(
-            "sceneio_bench_contract", {str(benchmark_path)!r}
-        )
-        module = importlib.util.module_from_spec(spec)
-        sys.modules[spec.name] = module
-        spec.loader.exec_module(module)
         module.argparse.ArgumentParser.parse_args = capturing_parse_args
         module._run_benchmark = lambda args, tmp: ([], [])
         module.main()
@@ -463,16 +451,16 @@ def test_benchmark_contract_matches_checked_snapshot():
                 root=pathlib.Path("build"),
             )
         )
-        print(json.dumps({{
+        print(json.dumps({
             "options": sorted(
                 option
                 for action in parser._actions
                 for option in action.option_strings
                 if option.startswith("--")
             ),
-            "defaults": {{action.dest: action.default for action in actions}},
+            "defaults": {action.dest: action.default for action in actions},
             "order": order,
-        }}))
+        }))
         """
     )
     observed = json.loads(
@@ -620,66 +608,9 @@ def _assert_benchmark_components_and_metric_semantics_are_explicit():
         for node in ast.walk(benchmark_tree)
     )
     runner_contract = contract["r3_2_runner_extraction"]
-    assert runner_contract["facade"] == "bench/bench_io.py"
-    assert runner_contract["facade_attribute_policy"] == (
-        "alias_all_non_dunder_runner_globals"
-    )
-    assert runner_contract["facade_rebinding_policy"] == (
-        "propagate_historical_attribute_mutations_to_runner"
-    )
-    assert runner_contract["facade_first_import_policy"] == (
-        "preserve_initialized_runner_objects_and_rebindings"
-    )
-    assert runner_contract["facade_reload_policy"] == (
-        "reset_runner_source_definitions_and_restore_aliases"
-    )
-    assert runner_contract["star_import_policy"] == (
-        "parent_public_names_without_explicit_all"
-    )
-    runner_module = benchmark._runner
-    assert runner_module is sys.modules["bench.io_bench.runner"]
-    assert not hasattr(benchmark, "__all__")
-    assert tuple(benchmark._COMPAT_EXPORTS) == tuple(
-        name for name in vars(runner_module) if not name.startswith("__")
-    )
-    assert len(benchmark._COMPAT_EXPORTS) == runner_contract[
-        "facade_attribute_count"
-    ]
-    assert hashlib.sha256(
-        "\n".join(sorted(benchmark._COMPAT_EXPORTS)).encode()
-    ).hexdigest() == runner_contract["facade_attributes_sha256"]
-    for name in benchmark._COMPAT_EXPORTS:
-        assert getattr(benchmark, name) is getattr(runner_module, name)
-    star_import_names = sorted(
-        name for name in vars(benchmark) if not name.startswith("_")
-    )
-    assert len(star_import_names) == runner_contract[
-        "star_import_count"
-    ]
-    assert hashlib.sha256(
-        "\n".join(star_import_names).encode()
-    ).hexdigest() == runner_contract["star_import_sha256"]
-    star_namespace = {}
-    exec(
-        f"from {benchmark.__name__} import *",
-        star_namespace,
-    )
-    assert sorted(
-        name for name in star_namespace if name != "__builtins__"
-    ) == star_import_names
-    original_try = benchmark._try
-
-    def replacement_try(operation):
-        return operation()
-
-    try:
-        benchmark._try = replacement_try
-        assert benchmark._try is replacement_try
-        assert runner_module._try is replacement_try
-    finally:
-        benchmark._try = original_try
-    assert benchmark._try is original_try
-    assert runner_module._try is original_try
+    assert runner_contract["cli"] == "bench/bench_io.py"
+    assert runner_contract["cli_policy"] == "import_and_call_runner_main_only"
+    assert benchmark is sys.modules["bench.io_bench.runner"]
     assert not any(
         isinstance(node, ast.FunctionDef)
         for node in benchmark_tree.body
@@ -705,7 +636,10 @@ def _assert_benchmark_components_and_metric_semantics_are_explicit():
             ).encode()
         ).hexdigest()
         assert observed == expected
-        assert getattr(benchmark, name) is getattr(runner_module, name)
+        assert getattr(benchmark, name) is getattr(
+            sys.modules["bench.io_bench.runner"],
+            name,
+        )
     assert not any(
         isinstance(node, ast.Call)
         and isinstance(node.func, ast.Name)
@@ -732,7 +666,7 @@ def _assert_benchmark_components_and_metric_semantics_are_explicit():
             assert getattr(sys.modules[source_module], name).__module__ == (
                 source_module
             )
-        for name in family["facade_family_exports"]:
+        for name in family["runner_family_exports"]:
             source_module = family["family_functions"][name]["source"][
                 :-3
             ].replace("/", ".")
@@ -829,7 +763,7 @@ def _assert_benchmark_components_and_metric_semantics_are_explicit():
         )
         assert exemption["verification"].startswith("format parity remains covered by ")
     assert extracted_families["reconstruction"][
-        "facade_constant_exports"
+        "runner_constant_exports"
     ] == ["_EUROC_HEADER"]
     sequence_exemptions = extracted_families["sequences"][
         "no_oracle_exemptions"
@@ -889,7 +823,7 @@ def _assert_benchmark_components_and_metric_semantics_are_explicit():
         for module in modules:
             importlib.import_module(module)
         print(json.dumps({{
-            "facade_loaded": "bench.bench_io" in sys.modules,
+            "cli_loaded": "bench.bench_io" in sys.modules,
             "modules": modules,
         }}))
         """
@@ -902,7 +836,7 @@ def _assert_benchmark_components_and_metric_semantics_are_explicit():
         text=True,
     )
     lower_import_observed = json.loads(lower_import_result.stdout)
-    assert not lower_import_observed["facade_loaded"]
+    assert not lower_import_observed["cli_loaded"]
     assert lower_import_observed["modules"] == lower_modules
 
     runner_import_probe = textwrap.dedent(
@@ -930,107 +864,6 @@ def _assert_benchmark_components_and_metric_semantics_are_explicit():
         True,
         "bench.io_bench.runner",
         53,
-    ]
-
-    runner_first_probe = textwrap.dedent(
-        """
-        import importlib
-        import json
-
-        runner = importlib.import_module("bench.io_bench.runner")
-        original_main = runner.main
-        original_specs = runner._specs
-        original_run_benchmark = runner._run_benchmark
-
-        def replacement(operation):
-            return operation()
-
-        runner._try = replacement
-        facade = importlib.import_module("bench.bench_io")
-        print(json.dumps([
-            runner.main is original_main,
-            runner._specs is original_specs,
-            runner._run_benchmark is original_run_benchmark,
-            runner._try is replacement,
-            facade._try is replacement,
-        ]))
-        """
-    )
-    runner_first_result = subprocess.run(
-        [sys.executable, "-c", runner_first_probe],
-        cwd=ROOT,
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-    assert json.loads(runner_first_result.stdout) == [
-        True,
-        True,
-        True,
-        True,
-        True,
-    ]
-
-    facade_reload_probe = textwrap.dedent(
-        """
-        import importlib
-        import json
-
-        facade = importlib.import_module("bench.bench_io")
-        runner = importlib.import_module("bench.io_bench.runner")
-        original_module = facade._try.__module__
-
-        def replacement(operation):
-            return operation()
-
-        facade._try = replacement
-        assignment_propagated = runner._try is replacement
-        rebound_reload = importlib.reload(facade)
-        rebound_reset = (
-            rebound_reload is facade
-            and facade._try is runner._try
-            and facade._try is not replacement
-            and facade._try.__module__ == original_module
-        )
-
-        del facade._try
-        deletion_propagated = (
-            not hasattr(facade, "_try")
-            and not hasattr(runner, "_try")
-        )
-        deleted_reload = importlib.reload(facade)
-        deletion_reset = (
-            deleted_reload is facade
-            and facade._try is runner._try
-            and facade._try.__module__ == original_module
-        )
-        namespace = {}
-        exec("from bench.bench_io import *", namespace)
-        public_names = sorted(
-            name for name in namespace if name != "__builtins__"
-        )
-        print(json.dumps([
-            assignment_propagated,
-            rebound_reset,
-            deletion_propagated,
-            deletion_reset,
-            len(public_names),
-        ]))
-        """
-    )
-    facade_reload_result = subprocess.run(
-        [sys.executable, "-c", facade_reload_probe],
-        cwd=ROOT,
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-    assert json.loads(facade_reload_result.stdout) == [
-        True,
-        True,
-        True,
-        True,
-        runner_contract["star_import_count"],
     ]
 
     calibration_family_module = sys.modules[
@@ -1161,7 +994,7 @@ def _assert_benchmark_components_and_metric_semantics_are_explicit():
         family = importlib.import_module(
             "bench.io_bench.families.calibration"
         )
-        facade = importlib.import_module("bench.bench_io")
+        runner = importlib.import_module("bench.io_bench.runner")
         specs = {
             spec.id: spec
             for spec in family.build_calibration_specs(0.001)
@@ -1169,10 +1002,10 @@ def _assert_benchmark_components_and_metric_semantics_are_explicit():
         print(json.dumps([
             oracles.yaml is None,
             family.yaml is None,
-            facade.yaml is None,
-            facade.build_calibration_specs is family.build_calibration_specs,
-            facade._yaml_oracle_write is oracles._yaml_oracle_write,
-            facade._yaml_oracle_read is oracles._yaml_oracle_read,
+            runner.yaml is None,
+            runner.build_calibration_specs is family.build_calibration_specs,
+            runner._yaml_oracle_write is oracles._yaml_oracle_write,
+            runner._yaml_oracle_read is oracles._yaml_oracle_read,
             family._yaml_oracle_write is oracles._yaml_oracle_write,
             family._yaml_oracle_read is oracles._yaml_oracle_read,
             specs["opencv_yaml"].ow is None,
@@ -1422,7 +1255,7 @@ def _assert_benchmark_components_and_metric_semantics_are_explicit():
             family = importlib.import_module(
                 "bench.io_bench.families.images"
             )
-            facade = importlib.import_module("bench.bench_io")
+            runner = importlib.import_module("bench.io_bench.runner")
             specs = {{
                 spec.id: spec
                 for spec in family.build_image_specs(0.001)
@@ -1433,11 +1266,11 @@ def _assert_benchmark_components_and_metric_semantics_are_explicit():
                     "PILImage": oracles.PILImage is not None,
                     "iio": oracles.iio is not None,
                 }},
-                "facade_identity": [
-                    facade.OpenEXR is oracles.OpenEXR,
-                    facade.PILImage is oracles.PILImage,
-                    facade.iio is oracles.iio,
-                    facade.build_image_specs is family.build_image_specs,
+                "runner_identity": [
+                    runner.OpenEXR is oracles.OpenEXR,
+                    runner.PILImage is oracles.PILImage,
+                    runner.iio is oracles.iio,
+                    runner.build_image_specs is family.build_image_specs,
                 ],
                 "oracle_pairs": {{
                     codec_id: [
@@ -1469,7 +1302,7 @@ def _assert_benchmark_components_and_metric_semantics_are_explicit():
         "PILImage": False,
         "iio": False,
     }
-    assert all(all_images_blocked["facade_identity"])
+    assert all(all_images_blocked["runner_identity"])
     assert all(
         pair == [False, False]
         for pair in all_images_blocked["oracle_pairs"].values()
@@ -1708,22 +1541,22 @@ def _assert_benchmark_components_and_metric_semantics_are_explicit():
         family = importlib.import_module(
             "bench.io_bench.families.meshes"
         )
-        facade = importlib.import_module("bench.bench_io")
+        runner = importlib.import_module("bench.io_bench.runner")
         specs = family.build_mesh_specs(0.001)
         fixture_names = {mesh_fixture_names!r}
         oracle_names = {mesh_oracle_names!r}
         print(json.dumps([
             oracles.trimesh is None,
             family.trimesh is oracles.trimesh,
-            facade.trimesh is oracles.trimesh,
-            facade.build_mesh_specs is family.build_mesh_specs,
+            runner.trimesh is oracles.trimesh,
+            runner.build_mesh_specs is family.build_mesh_specs,
             all(
                 getattr(family, name) is getattr(fixtures, name)
-                and getattr(facade, name) is getattr(fixtures, name)
+                and getattr(runner, name) is getattr(fixtures, name)
                 for name in fixture_names
             ),
             all(
-                getattr(facade, name) is getattr(oracles, name)
+                getattr(runner, name) is getattr(oracles, name)
                 for name in oracle_names
             ),
             all(
@@ -1993,7 +1826,7 @@ def _assert_benchmark_components_and_metric_semantics_are_explicit():
             family = importlib.import_module(
                 "bench.io_bench.families.points"
             )
-            facade = importlib.import_module("bench.bench_io")
+            runner = importlib.import_module("bench.io_bench.runner")
             specs = {{
                 spec.id: spec
                 for spec in family.build_point_specs(0.001)
@@ -2006,17 +1839,17 @@ def _assert_benchmark_components_and_metric_semantics_are_explicit():
                     "o3d": oracles.o3d is not None,
                 }},
                 "identities": [
-                    facade.laspy is oracles.laspy,
-                    facade.o3d is oracles.o3d,
-                    facade.build_point_specs is family.build_point_specs,
+                    runner.laspy is oracles.laspy,
+                    runner.o3d is oracles.o3d,
+                    runner.build_point_specs is family.build_point_specs,
                     all(
                         getattr(family, name) is getattr(fixtures, name)
-                        and getattr(facade, name) is getattr(fixtures, name)
+                        and getattr(runner, name) is getattr(fixtures, name)
                         for name in fixture_names
                     ),
                     all(
                         getattr(family, name) is getattr(oracles, name)
-                        and getattr(facade, name) is getattr(oracles, name)
+                        and getattr(runner, name) is getattr(oracles, name)
                         for name in oracle_names
                     ),
                 ],
@@ -2217,7 +2050,7 @@ def _assert_benchmark_components_and_metric_semantics_are_explicit():
         family = importlib.import_module(
             "bench.io_bench.families.arrays"
         )
-        facade = importlib.import_module("bench.bench_io")
+        runner = importlib.import_module("bench.io_bench.runner")
         specs = {
             spec.id: spec
             for spec in family.build_array_specs(0.001)
@@ -2230,11 +2063,11 @@ def _assert_benchmark_components_and_metric_semantics_are_explicit():
             oracles.safetensors_save_file is None,
             family.safetensors_load is None,
             family.safetensors_save is None,
-            facade.safetensors_load is None,
-            facade.safetensors_load_file is None,
-            facade.safetensors_open is None,
-            facade.safetensors_save is None,
-            facade.safetensors_save_file is None,
+            runner.safetensors_load is None,
+            runner.safetensors_load_file is None,
+            runner.safetensors_open is None,
+            runner.safetensors_save is None,
+            runner.safetensors_save_file is None,
             specs["safetensors"].ow is None,
             specs["safetensors"].orr is None,
         ]))
@@ -3057,18 +2890,18 @@ def _assert_benchmark_components_and_metric_semantics_are_explicit():
         family = importlib.import_module(
             "bench.io_bench.families.splats"
         )
-        facade = importlib.import_module("bench.bench_io")
+        runner = importlib.import_module("bench.io_bench.runner")
         specs = family.build_splat_specs(0.001)
         print(json.dumps([
             oracles.gsply is None,
             family.gsply is oracles.gsply,
-            facade.gsply is oracles.gsply,
-            facade.build_splat_specs is family.build_splat_specs,
+            runner.gsply is oracles.gsply,
+            runner.build_splat_specs is family.build_splat_specs,
             family._gauss is fixtures._gauss,
-            facade._gauss is fixtures._gauss,
+            runner._gauss is fixtures._gauss,
             all(
                 getattr(family, name) is getattr(oracles, name)
-                and getattr(facade, name) is getattr(oracles, name)
+                and getattr(runner, name) is getattr(oracles, name)
                 for name in (
                     "_gsply_ply_r",
                     "_gsply_ply_w",
@@ -3632,7 +3465,7 @@ def test_benchmark_json_envelope_common_rows_and_nested_shapes(tmp_path):
         module = importlib.util.module_from_spec(spec)
         sys.modules[spec.name] = module
         spec.loader.exec_module(module)
-        print(module.Spec.__module__)
+        print(module.main.__module__)
         """
     )
     canonical = subprocess.run(
@@ -3642,7 +3475,7 @@ def test_benchmark_json_envelope_common_rows_and_nested_shapes(tmp_path):
         capture_output=True,
         text=True,
     )
-    assert canonical.stdout.strip() == "bench.io_bench.model"
+    assert canonical.stdout.strip() == "bench.io_bench.runner"
 
 
 @pytest.mark.parametrize(

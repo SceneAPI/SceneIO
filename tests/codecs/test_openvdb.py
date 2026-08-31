@@ -164,7 +164,7 @@ def test_openvdb_inspect_does_not_materialize_sparse_voxels(
     result = sceneio.inspect(path)
 
     assert result.format == "openvdb"
-    assert result.datatype == "sparse_volume"
+    assert result.payload_kind == "sparse_volume"
     assert result.count == 4
     assert result.byte_size == path.stat().st_size
     assert [(item.name, item.shape, item.dtype) for item in result.arrays] == [

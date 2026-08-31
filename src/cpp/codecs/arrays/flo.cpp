@@ -1,10 +1,7 @@
 // Middlebury .flo optical-flow codec (Tier-1, zero-dep; formats_survey §3g).
-// Returns a bare (H,W,2) float32 ndarray (u,v interleaved). The copy reader
-// uses sio::own_array; the public path views the raw mmap payload directly on
-// little-endian hosts. This follows the PFM bare-ndarray precedent
-// (registry record=None) for source compatibility. The additive typed API
-// copies these same bits into FlowField, which records the conventions that
-// .flo fixes but does not serialize as explicit metadata.
+// Returns an owning FlowField whose contiguous (H,W,2) float32 vectors retain
+// the u/v bits exactly and whose convention fields make the format's otherwise
+// implicit semantics explicit.
 //
 // Byte layout (little-endian throughout, total = 12 + W*H*2*4 bytes):
 //   [0,4)   float32 magic 202021.25 == the ASCII bytes "PIEH" (validated by
@@ -75,7 +72,6 @@ int32_t bswap32i(int32_t v) {
 struct FloInfo {
     size_t height;
     size_t width;
-    size_t count;
 };
 
 FloInfo parse_flo(const uint8_t *p, size_t n) {
@@ -101,16 +97,35 @@ FloInfo parse_flo(const uint8_t *p, size_t n) {
     if (count * 4ull > static_cast<uint64_t>(n - 12))
         throw std::invalid_argument("flo: truncated flow raster");
     // Trailing bytes after the raster are ignored (PFM/netpbm precedent).
-    return {static_cast<size_t>(h32), static_cast<size_t>(w32),
-            static_cast<size_t>(count)};
+    return {static_cast<size_t>(h32), static_cast<size_t>(w32)};
 }
 
-std::vector<float> copy_flo(const uint8_t *p, const FloInfo &info) {
-    std::vector<float> buf(info.count);
-    std::memcpy(buf.data(), p + 12, info.count * sizeof(float));  // one bulk copy; NO flip
+std::vector<float> copy_flo_window(const uint8_t *p, const FloInfo &info,
+                                   size_t row_start, size_t row_stop,
+                                   size_t col_start, size_t col_stop) {
+    const size_t height = row_stop - row_start;
+    const size_t width = col_stop - col_start;
+    const size_t row_count = width * 2;
+    std::vector<float> buf(height * row_count);
+    for (size_t row = 0; row < height; ++row) {
+        const uint8_t *source =
+            p + 12 +
+            ((row_start + row) * info.width + col_start) * 2 * sizeof(float);
+        std::memcpy(buf.data() + row * row_count, source,
+                    row_count * sizeof(float));
+    }
     if (!host_is_le())
         for (float &f : buf) f = bswap32f(f);
     return buf;
+}
+
+FlowField make_flow_field(std::vector<float> vectors, size_t height,
+                          size_t width) {
+    FlowField result;
+    result.height = height;
+    result.width = width;
+    result.vectors = std::move(vectors);
+    return result;
 }
 
 size_t checked_value_count(size_t height, size_t width) {
@@ -150,7 +165,7 @@ std::string encode_flo(const float *source, size_t height, size_t width,
     return writer.out;
 }
 
-nb::ndarray<nb::numpy, float> read_flo(nb::handle source) {
+FlowField read_flo(nb::handle source) {
     sio::ByteView data(source);
     const uint8_t *p = data.data();
     FloInfo info;
@@ -158,63 +173,34 @@ nb::ndarray<nb::numpy, float> read_flo(nb::handle source) {
     {
         nb::gil_scoped_release rel;  // pure C++ decode; touches no Python object
         info = parse_flo(p, data.size());
-        buf = copy_flo(p, info);
+        buf = copy_flo_window(p, info, 0, info.height, 0, info.width);
     }
-    return own_array(std::move(buf), {info.height, info.width, 2});
+    return make_flow_field(std::move(buf), info.height, info.width);
 }
 
-FlowField read_flo_field(nb::handle source) {
+FlowField read_flo_window(nb::handle source, size_t row_start,
+                          size_t row_stop, size_t col_start,
+                          size_t col_stop) {
     sio::ByteView data(source);
     const uint8_t *bytes = data.data();
     FloInfo info;
-    FlowField result;
+    size_t height = 0;
+    size_t width = 0;
+    std::vector<float> vectors;
     {
         nb::gil_scoped_release release;
         info = parse_flo(bytes, data.size());
-        result.height = info.height;
-        result.width = info.width;
-        result.vectors = copy_flo(bytes, info);
+        height = checked_half_open_range(
+            row_start, row_stop, info.height, "flo row window");
+        width = checked_half_open_range(
+            col_start, col_stop, info.width, "flo column window");
+        vectors = copy_flo_window(bytes, info, row_start, row_stop,
+                                  col_start, col_stop);
     }
-    return result;
+    return make_flow_field(std::move(vectors), height, width);
 }
 
-nb::object read_flo_view(nb::handle source) {
-    sio::ByteView data(source);
-    const uint8_t *p = data.data();
-    FloInfo info;
-    {
-        nb::gil_scoped_release rel;
-        info = parse_flo(p, data.size());
-    }
-    if (host_is_le())
-        return borrowed_bytes(data, p + 12, {info.height, info.width, 2},
-                              "float32", sizeof(float));
-
-    std::vector<float> buf;
-    {
-        nb::gil_scoped_release rel;
-        buf = copy_flo(p, info);
-    }
-    return nb::cast(own_array(std::move(buf), {info.height, info.width, 2}));
-}
-
-nb::bytes write_flo(nb::ndarray<const float, nb::c_contig, nb::device::cpu> flow) {
-    if (flow.ndim() != 3 || flow.shape(2) != 2)
-        throw std::invalid_argument(
-            "write_flo: expected float32 (H,W,2) flow (u=[...,0] horizontal, v=[...,1] vertical)");
-    const size_t height = flow.shape(0);
-    const size_t width = flow.shape(1);
-    const size_t count = checked_value_count(height, width);
-    const float *source = flow.data();
-    std::string out;
-    {
-        nb::gil_scoped_release release;
-        out = encode_flo(source, height, width, count);
-    }
-    return emit_bytes(out.data(), out.size());
-}
-
-nb::bytes write_flo_field(const FlowField &flow) {
+nb::bytes write_flo(const FlowField &flow) {
     const size_t count = checked_value_count(flow.height, flow.width);
     if (flow.vectors.size() != count)
         throw std::invalid_argument(
@@ -251,21 +237,13 @@ nb::bytes write_flo_field(const FlowField &flow) {
 
 void register_flo(nb::module_ &m) {
     m.def("read_flo", &read_flo, "data"_a,
-          "Decode Middlebury .flo bytes to a float32 (H,W,2) ndarray: [...,0]=u horizontal "
-          "(+right), [...,1]=v vertical (+down), rows top-to-bottom, units pixels; |value|>1e9 "
-          "conventionally marks unknown flow (sentinel 1e10) and is passed through raw.");
-    m.def("read_flo_view", &read_flo_view, "data"_a,
-          "Decode little-endian .flo as a read-only zero-copy (H,W,2) view on native "
-          "little-endian hosts; big-endian hosts use the canonical copy path. The backing storage "
-          "must remain byte-stable for the returned array and all derived views.");
-    m.def("write_flo", &write_flo, "flow"_a,
-          "Encode a float32 (H,W,2) flow array (numpy or torch) to Middlebury .flo bytes "
-          "(little-endian, magic 202021.25 'PIEH'); values incl. NaN/unknown-flow sentinels "
-          "pass through bit-exact.");
-    m.def("read_flo_field", &read_flo_field, "data"_a,
           "Decode Middlebury .flo bytes into an owning FlowField with uv, +right/+down, "
           "top-to-bottom, pixel, and component-abs-greater-than-1e9 conventions.");
-    m.def("write_flo_field", &write_flo_field, "flow"_a,
+    m.def("read_flo_window", &read_flo_window, "data"_a, "row_start"_a,
+          "row_stop"_a, "col_start"_a, "col_stop"_a,
+          "Decode a half-open pixel window from Middlebury .flo bytes into an owning "
+          "FlowField with the same fixed conventions.");
+    m.def("write_flo", &write_flo, "flow"_a,
           "Encode a canonical Middlebury-convention FlowField to .flo bytes. Foreign "
           "component, axis, row, unit, or invalid-value conventions are rejected.");
 }

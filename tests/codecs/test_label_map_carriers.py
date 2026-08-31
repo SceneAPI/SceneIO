@@ -279,7 +279,7 @@ def test_inspect_reports_contract_without_full_raster_decode(
     expected_kind = ("semantic", "instance", "panoptic")[index]
     expected_dtype = ("int32", "int64", None)[index]
     assert info.format == format_id
-    assert info.datatype == f"{expected_kind}_map"
+    assert info.payload_kind == f"{expected_kind}_map"
     assert info.shape == (3, 4)
     assert info.dtype == expected_dtype
     assert info.count == 12
@@ -314,7 +314,7 @@ def test_npz_bare_member_names_match_decoder_and_inspector(tmp_path: Path) -> No
             archive.writestr(name, payload.getvalue())
     _assert_map(sceneio.read_label_map(path), expected)
     inspection = sceneio.inspect_label_map(path)
-    assert inspection.datatype == "semantic_map"
+    assert inspection.payload_kind == "semantic_map"
     assert inspection.shape == expected.shape
 
 

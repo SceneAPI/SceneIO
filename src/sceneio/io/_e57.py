@@ -1,9 +1,4 @@
-"""Cartesian E57 adapters backed by ``pye57``.
-
-The generic registry path retains the historical one-scan ``PointCloud``
-boundary.  Explicit typed helpers expose stored-row ``PointScan`` and ordered
-``ScanSet`` profiles without changing that legacy return type.
-"""
+"""Cartesian E57 adapter for ordered, metadata-preserving scan sets."""
 
 from __future__ import annotations
 
@@ -123,15 +118,6 @@ def _scan_header(source, index: int):
     count = int(header.point_count)
     if count < 1:
         raise ValueError("E57: empty scans are unsupported")
-    return header, fields
-
-
-def _single_header(source):
-    if source.scan_count != 1:
-        raise ValueError("E57: exactly one data3D scan is supported")
-    header, fields = _scan_header(source, 0)
-    if "rowIndex" in fields or "columnIndex" in fields:
-        raise ValueError("E57: organized row/column scans are unsupported")
     return header, fields
 
 
@@ -320,34 +306,13 @@ def _read_raw_range(source, header, fields, start: int, stop: int):
     return output
 
 
-def _require_point_scan_api():
-    factory = getattr(_core, "point_scan", None)
-    scan_type = getattr(_core, "PointScan", None)
-    if factory is None or scan_type is None:
-        raise RuntimeError(
-            "E57 typed scans require the PointScan/ScanSet record support"
-        )
-    return factory, scan_type
-
-
-def _require_scan_set_api():
-    factory = getattr(_core, "scan_set", None)
-    scan_type = getattr(_core, "ScanSet", None)
-    if factory is None or scan_type is None:
-        raise RuntimeError(
-            "E57 scan sets require the PointScan/ScanSet record support"
-        )
-    return factory, scan_type
-
-
-def _typed_scan_from_raw(
+def _scan_from_raw(
     header,
     fields,
     raw: dict[str, object],
     *,
     scan_index: int,
 ):
-    factory, _scan_type = _require_point_scan_api()
     count = len(np.asarray(raw["cartesianX"]))
     raw = _copy_raw_arrays(raw, fields, count)
     invalid_states = None
@@ -404,7 +369,7 @@ def _typed_scan_from_raw(
     translation = np.asarray(header.translation, dtype=np.float64)
     rotation = np.asarray(header.rotation, dtype=np.float64)
     viewpoint = np.concatenate((translation, rotation))
-    return factory(
+    return _core.point_scan(
         cloud,
         scan_id=int(scan_index),
         invalid_states=invalid_states,
@@ -421,7 +386,7 @@ def _typed_scan_from_raw(
     )
 
 
-def _read_typed_scan(source, index: int, stored_point_range=None):
+def _read_scan(source, index: int, stored_point_range=None):
     header, fields = _scan_header(source, index)
     count = int(header.point_count)
     start, stop = _selected_range(count, stored_point_range)
@@ -429,7 +394,7 @@ def _read_typed_scan(source, index: int, stored_point_range=None):
         raw = source.read_scan_raw(index)
     else:
         raw = _read_raw_range(source, header, fields, start, stop)
-    return _typed_scan_from_raw(
+    return _scan_from_raw(
         header,
         fields,
         raw,
@@ -438,61 +403,23 @@ def _read_typed_scan(source, index: int, stored_point_range=None):
 
 
 def _is_point_scan(value) -> bool:
-    scan_type = getattr(_core, "PointScan", None)
-    return scan_type is not None and isinstance(value, scan_type)
+    return isinstance(value, _core.PointScan)
 
 
 def _is_scan_set(value) -> bool:
-    scan_type = getattr(_core, "ScanSet", None)
-    return scan_type is not None and isinstance(value, scan_type)
-
-
-def _read_legacy_scan(source):
-    header, fields = _single_header(source)
-    raw = source.read_scan_raw(0)
-    count = int(header.point_count)
-    raw = _copy_raw_arrays(raw, fields, count)
-    valid = np.ones(count, dtype=bool)
-    if "cartesianInvalidState" in fields:
-        invalid = _exact_invalid_state(raw["cartesianInvalidState"], "cartesianInvalidState")
-        valid = invalid == 0
-    if not np.any(valid):
-        raise ValueError("E57: scan contains no valid Cartesian points")
-    positions = np.column_stack(
-        [_exact_float32(raw[name][valid], name) for name in _CARTESIAN_FIELDS]
-    ).astype(np.float32, copy=False)
-    colors = None
-    if all(name in fields for name in _COLOR_FIELDS):
-        colors = np.column_stack(
-            [_exact_uint8(raw[name][valid], name) for name in _COLOR_FIELDS]
-        )
-    intensity = None
-    if "intensity" in fields:
-        intensity = _exact_float32(raw["intensity"][valid], "intensity")
-    translation = np.asarray(header.translation, dtype=np.float64)
-    rotation = np.asarray(header.rotation, dtype=np.float64)
-    viewpoint = np.concatenate((translation, rotation))
-    return _core.point_cloud(
-        positions,
-        colors=colors,
-        intensity=intensity,
-        coordinate_frame="unknown",
-        scale_to_meters=1.0,
-        intensity_range="unknown",
-        viewpoint=viewpoint,
-    )
+    return isinstance(value, _core.ScanSet)
 
 
 def read_e57(path: str | Path):
-    """Read one legacy unorganized E57 scan into a PointCloud.
-
-    Multi-scan and organized/raw-validity profiles stay on the explicit typed
-    :func:`read_e57_scan` / :func:`read_e57_scans` APIs.
-    """
+    """Read every stored scan into one ordered ScanSet."""
 
     pye57 = _require_pye57()
     with pye57.E57(str(path)) as source:
-        return _read_legacy_scan(source)
+        if source.scan_count < 1:
+            raise ValueError("E57: file contains no data3D scans")
+        return _core.scan_set(
+            tuple(_read_scan(source, index) for index in range(source.scan_count))
+        )
 
 
 def read_e57_scan(
@@ -501,24 +428,11 @@ def read_e57_scan(
     scan_index: int = 0,
     stored_point_range: tuple[int, int] | None = None,
 ):
-    """Read one typed E57 scan, optionally selecting stored rows."""
+    """Read one E57 scan, optionally selecting stored rows."""
 
     pye57 = _require_pye57()
     with pye57.E57(str(path)) as source:
-        return _read_typed_scan(source, scan_index, stored_point_range)
-
-
-def read_e57_scans(path: str | Path):
-    """Read every stored scan into one ordered typed ScanSet."""
-
-    pye57 = _require_pye57()
-    with pye57.E57(str(path)) as source:
-        if source.scan_count < 1:
-            raise ValueError("E57: file contains no data3D scans")
-        factory, _scan_type = _require_scan_set_api()
-        return factory(
-            tuple(_read_typed_scan(source, index) for index in range(source.scan_count))
-        )
+        return _read_scan(source, scan_index, stored_point_range)
 
 
 def _cloud_payload(cloud) -> tuple[dict[str, np.ndarray], np.ndarray, np.ndarray]:
@@ -588,7 +502,7 @@ def _point_scan_payload(scan):
     data, _rotation, _translation = _cloud_payload(cloud)
     count = int(cloud.num_points)
     invalid = None
-    if bool(getattr(scan, "has_invalid_states", False)):
+    if scan.has_invalid_states:
         invalid = scan.invalid_states
     if invalid is not None:
         invalid = _exact_invalid_state(invalid, "invalid_states")
@@ -604,7 +518,7 @@ def _point_scan_payload(scan):
 
     row_indices = None
     column_indices = None
-    if bool(getattr(scan, "has_row_indices", False)):
+    if scan.has_row_column_indices:
         row_indices = scan.row_indices
         column_indices = scan.column_indices
     if (row_indices is None) != (column_indices is None):
@@ -654,13 +568,13 @@ def _point_scan_payload(scan):
     viewpoint = np.asarray(scan.viewpoint, dtype=np.float64)
     if viewpoint.shape != (7,) or not np.isfinite(viewpoint).all():
         raise ValueError("E57: PointScan viewpoint must be finite float64 (7,)")
-    name = str(getattr(scan, "name", ""))
-    guid = str(getattr(scan, "guid", ""))
+    name = str(scan.name)
+    guid = str(scan.guid)
     if guid:
         raise ValueError(
             "E57: pye57 generates scan GUIDs; non-empty PointScan.guid is not writable"
         )
-    timestamp = getattr(scan, "timestamp", None)
+    timestamp = scan.timestamp
     if timestamp is not None:
         try:
             timestamp = float(timestamp)
@@ -670,7 +584,7 @@ def _point_scan_payload(scan):
             raise ValueError("E57: PointScan.timestamp must be finite")
     else:
         raise ValueError(
-            "E57: typed writes require a timestamp because pye57 authors acquisitionStart"
+            "E57: writes require a timestamp because pye57 authors acquisitionStart"
         )
 
     # pye57 only accepts provider-defined index fields and always emits a
@@ -717,7 +631,7 @@ def _point_scan_payload(scan):
     )
 
 
-def _write_typed_scan(output, scan, scan_index: int) -> None:
+def _write_scan(output, scan, scan_index: int) -> None:
     if int(scan.scan_id) != int(scan_index):
         raise ValueError(
             "E57: scan_id is not representable; it must equal output scan index"
@@ -733,15 +647,12 @@ def _write_typed_scan(output, scan, scan_index: int) -> None:
     )
 
 
-def _write_typed_scans(value, path: str | Path) -> None:
-    if _is_point_scan(value):
-        scans = (value,)
-    elif _is_scan_set(value):
-        scans = tuple(value.scans)
-        if not scans:
-            raise ValueError("E57: empty ScanSet is unsupported")
-    else:
-        raise TypeError("E57: expected PointCloud, PointScan, or ScanSet")
+def _write_scan_set(value, path: str | Path) -> None:
+    if not _is_scan_set(value):
+        raise TypeError("E57: expected a ScanSet")
+    scans = tuple(value.scans)
+    if not scans:
+        raise ValueError("E57: empty ScanSet is unsupported")
     pye57 = _require_pye57()
     destination = Path(path)
     destination.parent.mkdir(parents=False, exist_ok=True)
@@ -756,7 +667,7 @@ def _write_typed_scans(value, path: str | Path) -> None:
         temporary.unlink()
         with pye57.E57(str(temporary), mode="w") as output:
             for index, scan in enumerate(scans):
-                _write_typed_scan(output, scan, index)
+                _write_scan(output, scan, index)
         os.replace(temporary, destination)
     finally:
         with suppress(FileNotFoundError):
@@ -764,51 +675,12 @@ def _write_typed_scans(value, path: str | Path) -> None:
 
 
 def write_e57(value, path: str | Path) -> None:
-    """Write a PointCloud, typed PointScan, or ordered ScanSet atomically."""
+    """Write one ordered ScanSet atomically."""
 
-    if _is_point_scan(value) or _is_scan_set(value):
-        _write_typed_scans(value, path)
-        return
-    data, rotation, translation = _cloud_payload(value)
-    pye57 = _require_pye57()
-    destination = Path(path)
-    destination.parent.mkdir(parents=False, exist_ok=True)
-    descriptor, temporary_name = tempfile.mkstemp(
-        prefix=f".{destination.name}.",
-        suffix=".e57.tmp",
-        dir=destination.parent,
-    )
-    os.close(descriptor)
-    temporary = Path(temporary_name)
-    try:
-        temporary.unlink()
-        with pye57.E57(str(temporary), mode="w") as output:
-            output.write_scan_raw(
-                data,
-                rotation=rotation,
-                translation=translation,
-            )
-        os.replace(temporary, destination)
-    finally:
-        with suppress(FileNotFoundError):
-            temporary.unlink()
+    _write_scan_set(value, path)
 
 
-def write_e57_scan(scan, path: str | Path) -> None:
-    """Write one typed PointScan atomically."""
-
-    if not _is_point_scan(scan):
-        raise TypeError("E57: write_e57_scan expects a PointScan")
-    _write_typed_scans(scan, path)
-
-
-def write_e57_scans(value, path: str | Path) -> None:
-    """Write a PointCloud, PointScan, or ordered ScanSet atomically."""
-
-    write_e57(value, path)
-
-
-def _typed_scan_inspection(
+def _scan_inspection(
     source_path: Path,
     header,
     fields,
@@ -845,7 +717,7 @@ def _typed_scan_inspection(
     }
     return Inspection(
         format="e57",
-        datatype="point_scan_set",
+        payload_kind="scan_set",
         byte_size=source_path.stat().st_size,
         shape=(count, 3),
         dtype=None,
@@ -854,18 +726,12 @@ def _typed_scan_inspection(
     )
 
 
-def inspect_e57_scans(
-    path: str | Path,
-    *,
-    scan_index: int | None = None,
-) -> Inspection:
+def inspect_e57(path: str | Path) -> Inspection:
     """Inspect E57 scan headers without decoding point payloads.
 
-    The return type is always :class:`Inspection`; a selector narrows the
-    shape/count to one scan, while an omitted selector reports the ordered
-    scan-set extent and immutable per-scan metadata. ``dtype`` is ``None``
-    because this is a heterogeneous scan aggregate; exact coordinate and
-    attribute fields are reported per scan in ``metadata["scans"]``.
+    ``dtype`` is ``None`` because this is a heterogeneous scan aggregate;
+    exact coordinate and attribute fields are reported per scan in
+    ``metadata["scans"]``.
     """
 
     pye57 = _require_pye57()
@@ -873,111 +739,35 @@ def inspect_e57_scans(
     with pye57.E57(str(source_path)) as source:
         if source.scan_count < 1:
             raise ValueError("E57: file contains no data3D scans")
-        if scan_index is None:
-            headers = tuple(
-                _scan_header(source, index)
-                for index in range(source.scan_count)
-            )
-            scans = tuple(
-                _typed_scan_inspection(source_path, header, fields, scan_index=index)
-                for index, (header, fields) in enumerate(headers)
-            )
-            metadata = {
+        headers = tuple(
+            _scan_header(source, index)
+            for index in range(source.scan_count)
+        )
+        scans = tuple(
+            _scan_inspection(source_path, header, fields, scan_index=index)
+            for index, (header, fields) in enumerate(headers)
+        )
+        count = sum(item.count or 0 for item in scans)
+        return Inspection(
+            format="e57",
+            payload_kind="scan_set",
+            byte_size=source_path.stat().st_size,
+            shape=(len(scans),),
+            dtype=None,
+            count=count,
+            metadata={
                 "scan_count": len(scans),
-                "stored_point_count": sum(item.count or 0 for item in scans),
-                "element_count": sum(item.count or 0 for item in scans),
+                "stored_point_count": count,
+                "element_count": count,
                 "valid_point_count": None,
                 "scans": tuple(dict(item.metadata) for item in scans),
-            }
-            return Inspection(
-                format="e57",
-                datatype="point_scan_set",
-                byte_size=source_path.stat().st_size,
-                shape=(len(scans),),
-                dtype=None,
-                count=sum(item.count or 0 for item in scans),
-                metadata=metadata,
-            )
-        header, fields = _scan_header(source, scan_index)
-        result = _typed_scan_inspection(
-            source_path,
-            header,
-            fields,
-            scan_index=operator.index(scan_index),
-        )
-        selected = dict(result.metadata)
-        return Inspection(
-            format=result.format,
-            datatype=result.datatype,
-            byte_size=result.byte_size,
-            shape=(1,),
-            dtype=None,
-            count=result.count,
-            metadata={
-                "scan_count": 1,
-                "stored_point_count": result.count,
-                "element_count": result.count,
-                "valid_point_count": None,
-                "scans": (selected,),
             },
         )
 
 
-def inspect_e57_scan(path: str | Path, *, scan_index: int = 0) -> Inspection:
-    """Inspect one typed scan while retaining the aggregate Inspection shape."""
-
-    return inspect_e57_scans(path, scan_index=scan_index)
-
-
-def inspect_e57(path: str | Path) -> Inspection:
-    """Inspect the legacy single-scan E57 profile without decoding bulk data."""
-
-    pye57 = _require_pye57()
-    source_path = Path(path)
-    with pye57.E57(str(source_path)) as source:
-        header, fields = _single_header(source)
-        count = int(header.point_count)
-        has_colors = all(name in fields for name in _COLOR_FIELDS)
-        has_intensity = "intensity" in fields
-        has_invalid_state = "cartesianInvalidState" in fields
-        stored_count = count
-        if has_invalid_state:
-            raw = source.read_scan_raw(0)
-            invalid = _exact_invalid_state(
-                raw["cartesianInvalidState"], "cartesianInvalidState"
-            )
-            if invalid.ndim != 1 or len(invalid) != stored_count:
-                raise ValueError(
-                    "E57: invalid-state count does not match the scan header"
-                )
-            count = int(np.count_nonzero(invalid == 0))
-            if count < 1:
-                raise ValueError("E57: scan contains no valid Cartesian points")
-    return Inspection(
-        format="e57",
-        datatype="point_cloud",
-        byte_size=source_path.stat().st_size,
-        shape=(count, 3),
-        dtype="float32",
-        count=count,
-        metadata={
-            "scan_count": 1,
-            "has_colors": has_colors,
-            "has_intensity": has_intensity,
-            "has_invalid_state": has_invalid_state,
-            "stored_point_count": stored_count,
-        },
-    )
-
-
 __all__ = [
     "inspect_e57",
-    "inspect_e57_scan",
-    "inspect_e57_scans",
     "read_e57",
     "read_e57_scan",
-    "read_e57_scans",
     "write_e57",
-    "write_e57_scan",
-    "write_e57_scans",
 ]

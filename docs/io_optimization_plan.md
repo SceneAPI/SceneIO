@@ -117,7 +117,8 @@ normal run `30250394890` and compiler-instrumented run `30250394906`. Splats
 close at `cd32268` with normal run `30253301819` and compiler-instrumented run
 `30253301871`. The complete sweep and specialized glTF/COLMAP/
 image-directory orchestration are lower-owned by `io_bench/runner.py`;
-`bench_io.py` preserves CLI and helper compatibility. Runner commit `cf8d117`
+`bench_io.py` is now an import-and-call CLI shim; `io_bench/runner.py` owns the
+benchmark implementation. Runner commit `cf8d117`
 passes normal run `30257105454` and compiler-instrumented run `30257105468`.
 The final R3.2 behavior checkpoint is implemented locally: every sweep checks
 the immutable 50 built-ins, runtime extensions are excluded from repository
@@ -245,9 +246,8 @@ latency in `bench/bench_io.py`. Parquet additionally reports named-column
 selection. No new compressed payload is routed through a Python whole-file
 `bytes` copy.
 
-FC3 adds a dedicated E57 multi-scan harness because the legacy registry row is
-deliberately a one-scan `PointCloud` compatibility path. The typed selected
-reader uses a fixed 65,536-row libE57Format buffer and copies only the requested
+FC3 adds a dedicated E57 multi-scan harness for the canonical `ScanSet` path.
+The selected reader uses a fixed 65,536-row libE57Format buffer and copies only the requested
 half-open stored-row overlap. On the 113.25 MB logical local fixture this cut
 traced peak from 151.00 MB to 11.33 MB versus direct `read_scan_raw` plus slice;
 header inspection used 0.024 MB. Full reads and writes remain provider-buffered
@@ -567,7 +567,7 @@ because DLPack has no read-only bit.
 | Format | Zero-copy? | Note |
 |---|---|---|
 | `.npy` | ✅ high value | contiguous typed array; view directly (endianness/contiguity permitting) |
-| `.flo` | ✅ | contiguous float payload after a small header |
+| `.flo` | ❌ canonical record owns values | `FlowField` carries format semantics that a bare mapped ndarray cannot represent |
 | `.pfm` | ❌ | mandated bottom-to-top rows require a row flip; a negative-stride mapped view is unsafe for common DLPack normalization |
 | uncompressed `.las` | ❌ | needs quantize→f32 + origin rebase (a real transform) |
 | png/jpeg/webp/exr/spz/npz | ❌ | compressed — a decode is physically unavoidable |
@@ -579,11 +579,10 @@ the zero-copy path. Uniform *evaluation*, format-nature-limited *application*.
 outlives the file handle (`gc.collect()` then still-valid, the Image lifetime
 pattern); mutation isolation. **Verify:** npy read peak-memory → ~0 above the mmap.
 
-**Landed:** `_core.read_npy_view` and `read_flo_view` back the public registry
-path. NPY views native-endian C-order payloads and preserves all 12 supported
-dtypes; byte-swapped and multi-dimensional Fortran payloads retain the canonical
-owned-copy fallback. FLO directly views its little-endian interleaved payload on
-the supported little-endian build matrix. Every direct view is read-only, aliases
+**Landed:** `_core.read_npy_view` backs the public NPY registry path. It views
+native-endian C-order payloads and preserves all 12 supported dtypes;
+byte-swapped and multi-dimensional Fortran payloads retain the canonical
+owned-copy fallback. Every direct view is read-only, aliases
 the exact mapped payload address, pins the export until all derived views die,
 and remains valid after the file handle closes and `gc.collect()` runs.
 On Windows this intentionally keeps the mapped file locked for the array's
@@ -594,11 +593,11 @@ writing through to the source file. PFM was evaluated but keeps its canonical
 owned, positive-stride row-flip decode: exposing the stored row order as a
 negative-stride view can make ordinary `np.asarray` + DLPack consumers abort.
 
-The final local MSVC benchmark measured public-path throughput of 63.6 GB/s NPY
-and 72.3 GB/s FLO for warm mapped fixtures (header parse + view construction),
-versus 4.9/4.9 GB/s for the in-memory copy decoders. Sampled RSS growth fell
-from 16.8/16.8 MB to 0.0 MB at table precision, and the 16 MiB NPY
-traced-allocation bound plus exact address identity remained green. The final
+The historical local MSVC benchmark measured public-path throughput of 63.6
+GB/s for warm mapped NPY fixtures. FLO was subsequently consolidated onto the
+owning `FlowField` representation, so its former mapped-ndarray result is no
+longer part of the API. The 16 MiB NPY traced-allocation bound plus exact
+address identity remained green. The final
 Windows gate passed 1,133 tests (3 optional skips); the full instrumented Linux
 gate passed 1,070 tests (44 expected oracle/platform skips) under
 ASan/UBSan/LSan. The memory-safety, correctness, and test-soundness review
@@ -622,10 +621,10 @@ succeeds, so guard failures do not truncate an existing destination. It handles
 partial writes, closes on every exception path, and restores its thread-local
 scope after success or failure. The raw encoder pointer is never handed to an
 overridable Python `write()` method. Overridable `open`/`fileno`/`close`
-callbacks run with sink interception suppressed. NPY, NPZ, PFM, and FLO finish
-all NumPy/DLPack/mapping protocol conversion before activating the sink, so
-those arbitrary Python callbacks can re-enter an encoder without interleaving
-the outer file.
+callbacks run with sink interception suppressed. NPY, NPZ, and PFM finish all
+NumPy/DLPack/mapping protocol conversion before activating the sink, so those
+arbitrary Python callbacks can re-enter an encoder without interleaving the
+outer file. FLO accepts an already validated `FlowField` directly.
 
 **Testing:** sink-written file is byte-identical to the buffer writer for all 21
 single-file codecs; direct/public directory outputs are identical for the other
@@ -638,9 +637,9 @@ gates: 1,150 passed / 3 skipped on MSVC and 1,087 passed / 44 optional-platform
 skips under ASan/UBSan/LSan on Linux. The memory-safety, correctness, and
 test-soundness review lenses all signed off with no remaining blockers.
 The current repository-organization checkpoint gives these O3 behaviors
-focused ownership in `tests/test_io_streaming.py`. Its 14 functions retain
-the same 16 collected tests, including the `npy`/`pfm`/`flo` parameter ids,
-and consume the shared deterministic 44-codec buffer builder.
+focused ownership in `tests/test_io_streaming.py`; the canonical FLO sink is
+covered with its `FlowField` integration tests and the shared deterministic
+buffer-codec builder.
 
 **Measured:** every single-file `tracemalloc` peak fell by approximately the
 encoded size (largest: XYZ 56.5 MB → 0.0 MB, LAS 26.0 → 0.0, EXR 12.5 → 0.0,

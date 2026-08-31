@@ -431,7 +431,7 @@ def test_public_api_e2e_sink_inspect_partial_and_lifetime(tmp_path, suffix):
     decoded = sceneio.read(path)
     _assert_scene(decoded, source)
     inspected = sceneio.inspect(path)
-    assert inspected.datatype == "scene_graph"
+    assert inspected.payload_kind == "scene_graph"
     assert inspected.shape == (6, 3)
     assert inspected.metadata["num_meshes"] == 2
     assert inspected.metadata["num_primitives"] == 2

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from sceneio import _core
 from sceneio.io._registry.adapters import (
-    _array_window_reader,
     _file_sink_writer,
     _mmap_reader,
     _mmap_selector_reader,
@@ -17,7 +16,7 @@ def build_array_codecs(
     _canon,
     _prepare_tensor_dict,
 ) -> tuple[Codec, ...]:
-    """Build the array family with facade-owned preparation callbacks."""
+    """Build the array family with registry-owned preparation callbacks."""
 
     return (
         Codec(
@@ -26,7 +25,7 @@ def build_array_codecs(
             _mmap_reader(_core.read_pfm),
             _file_sink_writer(_core.write_pfm, prepare=_canon),
             record=None,
-            datatype="depth_map",
+            payload_kind="depth_map",
             magic=(b"PF", b"Pf"),
             read_window=_mmap_selector_reader(_core.read_pfm_window),
             supported_features=(
@@ -45,7 +44,7 @@ def build_array_codecs(
             _mmap_view_reader(_core.read_npy_view, _core.read_npy),
             _file_sink_writer(_core.write_npy, prepare=_canon),
             record=None,
-            datatype="tensor",
+            payload_kind="tensor",
             magic=(b"\x93NUMPY",),
             supported_features=("v1", "c_order", "native_endian_mmap_view"),
             unsupported_features=("fortran_order", "object_dtype"),
@@ -56,7 +55,7 @@ def build_array_codecs(
             _mmap_reader(_core.read_npz),
             _file_sink_writer(_core.write_npz, prepare=_prepare_tensor_dict),
             record=_core.TensorDict,
-            datatype="tensor_dict",
+            payload_kind="tensor_dict",
             supported_features=("stored", "deflate", "numeric_dtypes"),
             unsupported_features=("object_dtype",),
         ),
@@ -72,7 +71,7 @@ def build_array_codecs(
                 prepare=_prepare_tensor_dict,
             ),
             record=_core.TensorDict,
-            datatype="tensor_dict",
+            payload_kind="tensor_dict",
             read_tensors=_mmap_view_reader(
                 _core.read_safetensors_tensors_view,
                 _core.read_safetensors_tensors,
@@ -103,18 +102,16 @@ def build_array_codecs(
         Codec(
             "flo",
             (".flo",),
-            _mmap_view_reader(_core.read_flo_view, _core.read_flo),
-            _file_sink_writer(_core.write_flo, prepare=_canon),
-            record=None,
-            datatype="flow",
+            _mmap_reader(_core.read_flo),
+            _file_sink_writer(_core.write_flo),
+            record=_core.FlowField,
+            payload_kind="flow",
             magic=(b"PIEH",),
-            read_window=_array_window_reader(
-                _mmap_view_reader(_core.read_flo_view, _core.read_flo)
-            ),
+            read_window=_mmap_selector_reader(_core.read_flo_window),
             supported_features=(
                 "float32",
-                "native_endian_mmap_view",
-                "typed_flow_adapter",
+                "fixed_uv_conventions",
+                "pixel_windows",
             ),
         ),
         Codec(
@@ -123,7 +120,7 @@ def build_array_codecs(
             _mmap_reader(_core.read_dmb),
             _file_sink_writer(_core.write_dmb),
             record=_core.DepthMap,
-            datatype="depth_map",
+            payload_kind="depth_map",
             read_window=_mmap_selector_reader(_core.read_dmb_window),
             supported_features=(
                 "scalar_float32",

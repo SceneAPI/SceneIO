@@ -431,7 +431,7 @@ def inspect_hdf5(path: str | Path) -> Inspection:
             )
     return Inspection(
         format="hdf5",
-        datatype="tensor_dict",
+        payload_kind="tensor_dict",
         byte_size=Path(path).stat().st_size,
         count=len(arrays),
         arrays=tuple(arrays),
@@ -879,7 +879,7 @@ def inspect_hloc_features(path: str | Path) -> Inspection:
             descriptor_groups += int("descriptors" in group)
     return Inspection(
         format="hloc_features",
-        datatype="feature_set",
+        payload_kind="feature_set",
         byte_size=Path(path).stat().st_size,
         count=total_keypoints,
         arrays=tuple(arrays),
@@ -1188,7 +1188,7 @@ def inspect_hloc_matches(path: str | Path) -> Inspection:
             scored_pairs += int("matching_scores0" in group)
     return Inspection(
         format="hloc_matches",
-        datatype="match_graph",
+        payload_kind="match_graph",
         byte_size=Path(path).stat().st_size,
         count=pair_count,
         arrays=tuple(arrays),

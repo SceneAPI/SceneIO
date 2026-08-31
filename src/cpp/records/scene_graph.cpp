@@ -981,12 +981,6 @@ void register_scene_graph(nb::module_ &module) {
             "node_semantic_labels",
             &SceneGraph::node_semantic_labels)
         .def(
-            "mesh_at",
-            [](SceneGraph &value, size_t index) -> Mesh & {
-                return payload_at(value.meshes, index);
-            },
-            reference_internal)
-        .def(
             "mesh_primitive_at",
             [](SceneGraph &value, size_t index) -> Mesh & {
                 return payload_at(value.meshes, index);

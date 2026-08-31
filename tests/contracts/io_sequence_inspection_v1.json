@@ -5,24 +5,37 @@
     "frame_access": "__FRAME_ACCESS__"
   },
   "codec_ast_sha256": {
-    "y4m": "113c80bbbb985911a891769bfb02e9853deacab217c4bbb9a1a1676960ca9c7e",
-    "webm": "00f8f0cc0ce50d3b87428459fb55f2465a82bbf2348395d69de3bd9f5d76329d",
-    "theora": "d62d12da3535169977cdb833ca5d3b9aae0aadc66dd7630ccb41801181ca0c67",
-    "animated_webp": "08a79ab1e8c48046a8c92f8a524b9e4990a87102ccfaf950a2b714e60409ed2c",
-    "apng": "870cec8f3e75ecc3841e4a08871afc69b6badd96741b64adfd2419dad74c5dd2",
-    "animated_avif": "9cd0cf59e7338ee2804248f89b817e01cb28e1a2c7f35d28e53f25b201b688ff",
-    "rtmv": "b9258390638772f08f0396c6d718d50c44f710818290aacea53e88e90088bf72",
-    "image_sequence": "5242878a747fae1d464202b7382e0f8986d4c79789fd3b8186b085fbf5194cb0"
+    "y4m": "d60697c09a277760e326397fdd766045fae91d35060d3cfcdbd2a854b9b5dab7",
+    "webm": "785295a461b7b863c454e0e234a4e17c5452bed292e1b05209521310cbec31f6",
+    "theora": "f7ca9f66758cf2bf13d9be4319e1914040beaafe5d4b401d9129bee293918826",
+    "animated_webp": "a4dd66cfdfbf597a237821728b22b5790eaef554b8faf504007822ea1550f9db",
+    "apng": "3288bd352ccf46a514bb1946cec26d76355e276098ee7cc23770dcdce59679b9",
+    "animated_avif": "5cb2c2630e198774d8d9d542da7c7f31494ed37d06e3059c27fedb995c0daea6",
+    "rtmv": "a55384b0efbe4970ee6691d866986dfa8841843fdb628da422df4cb37e16f3ca",
+    "image_sequence": "938264c5bcc830ef227e4a97ea42de2253fd8cdf5dcc1eb3e5d2da8b997eb4c5"
   },
   "y4m": {
     "mono": {
       "byte_size": 46,
-      "shape": [1, 2, 2, 1],
+      "shape": [
+        1,
+        2,
+        2,
+        1
+      ],
       "dtype": "uint8",
       "count": 1,
       "channels": 1,
       "arrays": [
-        {"name": "y", "shape": [1, 2, 2], "dtype": "uint8"}
+        {
+          "name": "y",
+          "shape": [
+            1,
+            2,
+            2
+          ],
+          "dtype": "uint8"
+        }
       ],
       "metadata": {
         "storage_mode": "yuv_planar",
@@ -40,14 +53,43 @@
     },
     "color422": {
       "byte_size": 130,
-      "shape": [2, 2, 3, 3],
+      "shape": [
+        2,
+        2,
+        3,
+        3
+      ],
       "dtype": "uint8",
       "count": 2,
       "channels": 3,
       "arrays": [
-        {"name": "y", "shape": [2, 2, 3], "dtype": "uint8"},
-        {"name": "u", "shape": [2, 2, 2], "dtype": "uint8"},
-        {"name": "v", "shape": [2, 2, 2], "dtype": "uint8"}
+        {
+          "name": "y",
+          "shape": [
+            2,
+            2,
+            3
+          ],
+          "dtype": "uint8"
+        },
+        {
+          "name": "u",
+          "shape": [
+            2,
+            2,
+            2
+          ],
+          "dtype": "uint8"
+        },
+        {
+          "name": "v",
+          "shape": [
+            2,
+            2,
+            2
+          ],
+          "dtype": "uint8"
+        }
       ],
       "metadata": {
         "storage_mode": "yuv_planar",
@@ -78,7 +120,12 @@
     "unmanifested": {
       "inspection": {
         "byte_size": 51,
-        "shape": [3, 2, 3, 1],
+        "shape": [
+          3,
+          2,
+          3,
+          1
+        ],
         "dtype": "uint8",
         "count": 3,
         "channels": 1,
@@ -87,11 +134,19 @@
           "storage_mode": "encoded_paths",
           "has_timing": false,
           "manifest": false,
-          "frame_names": ["frame1.pgm", "frame2.pgm", "frame10.pgm"]
+          "frame_names": [
+            "frame1.pgm",
+            "frame2.pgm",
+            "frame10.pgm"
+          ]
         }
       },
       "full": {
-        "frame_names": ["frame1.pgm", "frame2.pgm", "frame10.pgm"],
+        "frame_names": [
+          "frame1.pgm",
+          "frame2.pgm",
+          "frame10.pgm"
+        ],
         "timestamps_ns": [],
         "durations_ns": [],
         "height": 2,
@@ -101,7 +156,10 @@
         "storage_mode": "encoded_paths"
       },
       "partial": {
-        "frame_names": ["frame2.pgm", "frame10.pgm"],
+        "frame_names": [
+          "frame2.pgm",
+          "frame10.pgm"
+        ],
         "timestamps_ns": [],
         "durations_ns": [],
         "height": 2,
@@ -114,7 +172,12 @@
     "manifested": {
       "inspection": {
         "byte_size": 249,
-        "shape": [3, 2, 3, 1],
+        "shape": [
+          3,
+          2,
+          3,
+          1
+        ],
         "dtype": "uint8",
         "count": 3,
         "channels": 1,
@@ -123,13 +186,29 @@
           "storage_mode": "encoded_paths",
           "has_timing": true,
           "manifest": true,
-          "frame_names": ["c.pgm", "a.pgm", "b.pgm"]
+          "frame_names": [
+            "c.pgm",
+            "a.pgm",
+            "b.pgm"
+          ]
         }
       },
       "full": {
-        "frame_names": ["c.pgm", "a.pgm", "b.pgm"],
-        "timestamps_ns": [100, 140, 181],
-        "durations_ns": [40, 41, 39],
+        "frame_names": [
+          "c.pgm",
+          "a.pgm",
+          "b.pgm"
+        ],
+        "timestamps_ns": [
+          100,
+          140,
+          181
+        ],
+        "durations_ns": [
+          40,
+          41,
+          39
+        ],
         "height": 2,
         "width": 3,
         "channels": 1,
@@ -137,9 +216,18 @@
         "storage_mode": "encoded_paths"
       },
       "partial": {
-        "frame_names": ["a.pgm", "b.pgm"],
-        "timestamps_ns": [140, 181],
-        "durations_ns": [41, 39],
+        "frame_names": [
+          "a.pgm",
+          "b.pgm"
+        ],
+        "timestamps_ns": [
+          140,
+          181
+        ],
+        "durations_ns": [
+          41,
+          39
+        ],
         "height": 2,
         "width": 3,
         "channels": 1,

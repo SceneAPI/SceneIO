@@ -1013,7 +1013,7 @@ GaussianCloud read_compressed_ply_points(nb::handle source, size_t start,
 }
 
 nb::bytes write_compressed_ply(const GaussianCloud &cloud) {
-    require_legacy_gaussian_conventions(cloud, "compressed PLY writer");
+    require_3dgs_gaussian_conventions(cloud, "compressed PLY writer");
     std::string output;
     {
         nb::gil_scoped_release release;

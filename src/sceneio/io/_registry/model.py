@@ -1,9 +1,4 @@
-"""Shared registry value types.
-
-The classes retain their historical ``sceneio.io.registry`` module identity so
-existing repr and pickle contracts remain stable while family modules can
-depend on this lower layer without importing the registry facade.
-"""
+"""Shared registry value types."""
 
 from __future__ import annotations
 
@@ -36,7 +31,7 @@ class Codec:
     read: Callable[[str], object]
     write: Callable[[object, str], None] | None
     record: type | None
-    datatype: str
+    payload_kind: str
     magic: tuple[bytes, ...] = ()
     filenames: tuple[str, ...] = ()
     is_directory: bool = False
@@ -118,7 +113,7 @@ class Codec:
         )
         return CodecCapabilities(
             format=self.id,
-            datatype=self.datatype,
+            payload_kind=self.payload_kind,
             record_type=self.record.__name__ if self.record is not None else None,
             extensions=self.extensions,
             filenames=self.filenames,
@@ -136,13 +131,6 @@ class Codec:
             unsupported_features=self.unsupported_features,
         )
 
-    @property
-    def payload_kind(self) -> str:
-        """Stable payload-kind alias for the legacy ``datatype`` field."""
-
-        return self.datatype
-
-
 @dataclass(frozen=True)
 class CodecCapabilities:
     """Stable, immutable discovery metadata for one registered format.
@@ -155,7 +143,7 @@ class CodecCapabilities:
     """
 
     format: str
-    datatype: str
+    payload_kind: str
     record_type: str | None
     extensions: tuple[str, ...]
     filenames: tuple[str, ...]
@@ -171,12 +159,6 @@ class CodecCapabilities:
     requires_features: tuple[str, ...]
     supported_features: tuple[str, ...]
     unsupported_features: tuple[str, ...]
-
-    @property
-    def payload_kind(self) -> str:
-        """Stable payload-kind alias for the legacy ``datatype`` field."""
-
-        return self.datatype
 
     @property
     def coordinates(self):
@@ -201,9 +183,3 @@ class NativeFeatureCapabilities:
     build_option: str
     available: bool
     formats: tuple[str, ...]
-
-
-# These are public compatibility identities, not claims about source location.
-Codec.__module__ = "sceneio.io.registry"
-CodecCapabilities.__module__ = "sceneio.io.registry"
-NativeFeatureCapabilities.__module__ = "sceneio.io.registry"

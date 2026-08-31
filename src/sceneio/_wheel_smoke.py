@@ -1041,18 +1041,20 @@ def _point_depth_and_flow(root: Path, values: np.ndarray) -> None:
     assert flow.vectors.shape == (2, 3, 2)
     assert flow.component_order == "uv"
     flo = root / "flow.flo"
-    sceneio.write(flow.vectors, flo, format="flo")
+    sceneio.write(flow, flo, format="flo")
     generic_flow = sceneio.read(flo)
-    assert np.array_equal(generic_flow, flow.vectors)
+    assert isinstance(generic_flow, _core.FlowField)
+    assert np.array_equal(generic_flow.vectors, flow.vectors)
     assert sceneio.inspect(flo).shape == (2, 3, 2)
     selected_flow = sceneio.read_partial(
         flo,
         window=(0, 2, 1, 3),
     )
-    assert np.array_equal(selected_flow, flow.vectors[:, 1:3])
-    decoded = sceneio.read_flow(flo)
+    assert isinstance(selected_flow, _core.FlowField)
+    assert np.array_equal(selected_flow.vectors, flow.vectors[:, 1:3])
+    decoded = sceneio.read(flo)
     assert np.array_equal(decoded.vectors, flow.vectors)
-    assert sceneio.inspect_flow(flo).metadata["unit"] == "pixels"
+    assert sceneio.inspect(flo).metadata["unit"] == "pixels"
 
 
 def _point_formats(root: Path) -> None:
@@ -1624,14 +1626,6 @@ def _tiff_formats(root: Path) -> None:
     if not sceneio.capabilities("tiff").available:
         return
 
-    pixels = np.arange(4 * 5 * 3, dtype=np.uint8).reshape(4, 5, 3)
-    image = _core.image(pixels, color_space="srgb")
-    path = root / "image.tiff"
-    sceneio.write(image, path)
-    assert sceneio.detect(path) == "tiff"
-    np.testing.assert_array_equal(sceneio.read(path).pixels, pixels)
-    assert sceneio.inspect(path).shape == pixels.shape
-
     full = np.arange(32 * 48, dtype=np.uint16).reshape(32, 48)
     reduced = full[::2, ::2].copy()
     color = np.arange(24 * 28 * 3, dtype=np.uint8).reshape(24, 28, 3)
@@ -1658,9 +1652,10 @@ def _tiff_formats(root: Path) -> None:
         )
     )
     collection_path = root / "collection.tiff"
-    sceneio.write_tiff_collection(collection, collection_path, tile=(16, 16))
-    assert sceneio.inspect_tiff_collection(collection_path).count == 2
-    decoded_collection = sceneio.read_tiff_collection(collection_path)
+    sceneio.write(collection, collection_path)
+    assert sceneio.detect(collection_path) == "tiff"
+    assert sceneio.inspect(collection_path).count == 2
+    decoded_collection = sceneio.read(collection_path)
     np.testing.assert_array_equal(
         decoded_collection.series_at(0).level_at(1).array,
         reduced,
@@ -1722,12 +1717,16 @@ def _e57_formats(root: Path) -> None:
         colors=colors,
         intensity=intensity,
     )
+    scans = _core.scan_set(
+        (_core.point_scan(cloud, scan_id=0, timestamp=0.0),)
+    )
     path = root / "points.e57"
-    sceneio.write(cloud, path)
+    sceneio.write(scans, path)
     assert sceneio.detect(path) == "e57"
     decoded = sceneio.read(path)
-    np.testing.assert_array_equal(decoded.positions, positions)
-    np.testing.assert_array_equal(decoded.colors, colors)
+    assert decoded.num_scans == 1
+    np.testing.assert_array_equal(decoded.scans[0].point_cloud.positions, positions)
+    np.testing.assert_array_equal(decoded.scans[0].point_cloud.colors, colors)
     assert sceneio.inspect(path).count == 6
 
 
@@ -1827,7 +1826,7 @@ def _usd_formats(root: Path) -> None:
         assert sceneio.detect(path) == format_id
         decoded = sceneio.read(path)
         np.testing.assert_array_equal(
-            decoded.mesh_at(0).positions,
+            decoded.mesh_primitive_at(0).positions,
             positions,
         )
         info = sceneio.inspect(path)
@@ -1838,7 +1837,7 @@ def _usd_formats(root: Path) -> None:
         assert info.metadata["provider_selected_time"] is True
         rich = sceneio.read_scene(path)
         assert rich.node_names == ["Triangle"]
-        retained_positions = rich.mesh_at(0).positions
+        retained_positions = rich.mesh_primitive_at(0).positions
         np.testing.assert_array_equal(retained_positions, positions)
         path.unlink()
         gc.collect()

@@ -1,8 +1,8 @@
-"""Typed TIFF collection selection benchmark.
+"""TIFF raster-collection selection benchmark.
 
 The default deterministic fixture is a 64 MiB tiled uint16 ZYX stack.  The
 benchmark compares SceneIO's Zarr-backed page/window selection with both a
-typed full read and a direct tifffile full-decode-then-slice control.
+full collection read and a direct tifffile full-decode-then-slice control.
 """
 
 from __future__ import annotations
@@ -84,10 +84,10 @@ def run_benchmark(
     ]
     expected = np.ascontiguousarray(values[selection])
 
-    def typed_full_read():
-        return sceneio.read_tiff_collection(path)
+    def full_read():
+        return sceneio.read(path, format="tiff")
 
-    def typed_selected_read():
+    def selected_read():
         return sceneio.read_tiff_collection(
             path,
             series_index=0,
@@ -100,36 +100,36 @@ def run_benchmark(
         decoded = tifffile.imread(path)
         return np.ascontiguousarray(decoded[selection])
 
-    def typed_inspect():
-        return sceneio.inspect_tiff_collection(path)
+    def inspect_collection():
+        return sceneio.inspect(path, format="tiff")
 
     metrics = {
-        "typed_full_read": _metrics(typed_full_read, runs=runs),
-        "typed_selected_read": _metrics(typed_selected_read, runs=runs),
+        "full_read": _metrics(full_read, runs=runs),
+        "selected_read": _metrics(selected_read, runs=runs),
         "provider_full_then_slice": _metrics(provider_full_then_slice, runs=runs),
-        "typed_inspect": _metrics(typed_inspect, runs=runs),
+        "inspect": _metrics(inspect_collection, runs=runs),
     }
 
-    full = typed_full_read().series_at(0).level_at(0).array
-    selected = typed_selected_read().series_at(0).level_at(0).array
+    full = full_read().series_at(0).level_at(0).array
+    selected = selected_read().series_at(0).level_at(0).array
     control = provider_full_then_slice()
     np.testing.assert_array_equal(full, values)
     np.testing.assert_array_equal(selected, expected)
     np.testing.assert_array_equal(control, expected)
-    inspection = typed_inspect()
+    inspection = inspect_collection()
     if inspection.arrays[0].shape != shape:
         raise AssertionError("TIFF collection inspection changed fixture shape")
 
     selection_bytes = int(expected.nbytes)
     logical_bytes = int(values.nbytes)
     for operation, byte_count in (
-        ("typed_full_read", logical_bytes),
-        ("typed_selected_read", selection_bytes),
+        ("full_read", logical_bytes),
+        ("selected_read", selection_bytes),
         ("provider_full_then_slice", selection_bytes),
     ):
         metrics[operation]["logical_mbps"] = byte_count / 1e6 / (metrics[operation]["ms"] / 1000)
 
-    selected_peak = metrics["typed_selected_read"]["traced_peak_mb"]
+    selected_peak = metrics["selected_read"]["traced_peak_mb"]
     control_peak = metrics["provider_full_then_slice"]["traced_peak_mb"]
     result = {
         "schema_version": "tiff-collection-benchmark-v1",
@@ -162,15 +162,15 @@ def run_benchmark(
         result["fresh_process_rss"] = measure_fresh_process_rss(
             [
                 MemoryCase(
-                    "typed_full_read",
+                    "full_read",
                     path.stat().st_size,
                     MemoryOperation(
-                        "sceneio_read_tiff_collection",
-                        {"path": resolved},
+                        "sceneio_read",
+                        {"path": resolved, "format": "tiff"},
                     ),
                 ),
                 MemoryCase(
-                    "typed_selected_read",
+                    "selected_read",
                     path.stat().st_size,
                     MemoryOperation(
                         "sceneio_read_tiff_collection",
@@ -184,11 +184,11 @@ def run_benchmark(
                     ),
                 ),
                 MemoryCase(
-                    "typed_inspect",
+                    "inspect",
                     path.stat().st_size,
                     MemoryOperation(
-                        "sceneio_inspect_tiff_collection",
-                        {"path": resolved},
+                        "sceneio_inspect",
+                        {"path": resolved, "format": "tiff"},
                     ),
                 ),
             ],

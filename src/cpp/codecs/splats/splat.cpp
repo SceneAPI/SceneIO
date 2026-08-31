@@ -98,7 +98,7 @@ GaussianCloud read_splat_points(nb::handle source, size_t start, size_t stop) {
 }
 
 nb::bytes write_splat(const GaussianCloud &g) {
-    require_legacy_gaussian_conventions(g, "splat writer");
+    require_3dgs_gaussian_conventions(g, "splat writer");
     require_finite_gaussian_values(g, "splat writer");
     if (g.sh_degree != 0)
         throw std::invalid_argument(

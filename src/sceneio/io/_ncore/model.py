@@ -556,22 +556,6 @@ class NCoreSemanticComponent:
                 return item
         raise KeyError(f"NCore semantic item {kind}:{id} does not exist")
 
-
-for _record in (
-    NCoreArray,
-    NCoreComponent,
-    NCoreComponentData,
-    NCoreDataset,
-    NCoreDatasetData,
-    NCoreGroup,
-    NCoreItem,
-    NCoreSelection,
-    NCoreSemanticComponent,
-    NCoreStore,
-):
-    _record.__module__ = "sceneio.io"
-
-
 __all__ = [
     "JsonScalar",
     "JsonValue",

@@ -112,7 +112,7 @@ def _inspection(format_id: str, byte_size: int, values: dict) -> Inspection:
     vertices = values["num_vertices"]
     return Inspection(
         format=format_id,
-        datatype="scene_graph",
+        payload_kind="scene_graph",
         byte_size=byte_size,
         shape=(vertices, 3),
         dtype=values["dtype"],

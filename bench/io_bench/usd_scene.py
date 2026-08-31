@@ -176,7 +176,8 @@ def _verify(
     if (
         full.num_meshes != 1
         or full.num_point_clouds != 1
-        or full.mesh_at(0).num_faces != expected.mesh_at(0).num_faces
+        or full.mesh_primitive_at(0).num_faces
+        != expected.mesh_primitive_at(0).num_faces
         or (
             full.point_cloud_at(0).num_points
             != expected.point_cloud_at(0).num_points
@@ -197,7 +198,7 @@ def _verify(
         inspected.count != 2
         or inspected.shape
         != (
-            expected.mesh_at(0).num_vertices
+            expected.mesh_primitive_at(0).num_vertices
             + expected.point_cloud_at(0).num_points,
             3,
         )
@@ -212,8 +213,8 @@ def _verify(
         "vertex_display_colors",
     ):
         np.testing.assert_array_equal(
-            getattr(full.mesh_at(0), name),
-            getattr(expected.mesh_at(0), name),
+            getattr(full.mesh_primitive_at(0), name),
+            getattr(expected.mesh_primitive_at(0), name),
         )
     for name in (
         "positions",

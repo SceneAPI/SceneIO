@@ -19,6 +19,10 @@
   [`33269098190`](https://github.com/SceneAPI/SceneIO/actions/runs/33269098190).
 - **Baseline:** 74 built-in formats, each mapped to a licensed direct fixture
   or deterministic oracle-derived route.
+- **Current pre-1 representation model:** generic E57 I/O uses `ScanSet`,
+  generic TIFF I/O uses `RasterCollection`, and FLO uses `FlowField`.
+  Historical “raw” and “typed” carrier language below describes the completed
+  label-map and benchmark checkpoints, not parallel current representations.
 - **Purpose:** close the remaining 3D-computer-vision representation and
   bounded-profile gaps without turning SceneIO into a general scientific,
   media, or scene-authoring framework.
@@ -32,7 +36,7 @@
 - **Machine decision contract:**
   [`remaining_3dcv_fc0_v1.toml`](../tests/contracts/remaining_3dcv_fc0_v1.toml)
   freezes the stable signatures, provisional names, provider observations,
-  legacy projections, and registration gate used by FC0.
+  canonical records, and registration gate used by FC0.
   [`visual_inertial_records_v1.toml`](../tests/contracts/visual_inertial_records_v1.toml)
   freezes the implemented FC1A fields, units, vocabularies, and equations.
   [`euroc_dataset_v1.toml`](../tests/contracts/euroc_dataset_v1.toml) freezes
@@ -58,7 +62,7 @@ foundations:
 | `Mask` | Keep boolean participation/validity semantics | Integer semantic, instance, and panoptic label rasters |
 | `InstanceSet` | Keep 3-D scene-object instances | Per-pixel instance identifiers and their class association |
 | `PointCloud` | Keep one dense/unstructured cloud's owned samples, organization, and attributes | `PointScan` for raw validity/row/column indexing and `ScanSet` for multiple scans |
-| TIFF `Image`/`Mask`/`TensorDict` profile | Preserve current simple-file return behavior | A format-neutral `RasterCollection` for multiple series and pyramid levels |
+| TIFF raster/stack profiles | Canonicalize all accepted shapes as `RasterCollection` | Series/level/page/window selection over the same format-neutral record |
 | OpenVDB `TensorDict` profile | Preserve compatibility for one identity-transform scalar grid | Multi-grid read/inspect/select only unless a qualified provider can also write the profile |
 | `SceneGraph` | Keep static topology and payload ownership | Authored node-transform and visibility time samples |
 
@@ -82,7 +86,7 @@ authorization, pagination, and retries are not applicable.
 | `TiffCollection` is format-specific | Existing public records are neutral and reused across codecs | API duplication and weak reuse; [AIP-190](https://google.aip.dev/190) | Use neutral `RasterLevel`, `RasterSeries`, and `RasterCollection` records; TIFF is one adapter |
 | OpenVDB write scope exceeds the installed provider | TinyVDB 0.9 exposes no `add_grid`; its template has one scalar grid, and `VDBGrid.transform` is read-only | An advertised round trip could not be implemented honestly; [AIP-182](https://google.aip.dev/182) | Support multi-grid metadata/read/select only in this closure, retain one-grid writes, and mark broader writes excluded unless provider qualification proves them |
 | USD already exposes selected-time input | `read_scene(..., time=...)` and `SceneGraph.selected_time` existed while the FC0 provider probe reported `selected_time=False`; FC6 state B now qualifies the bounded direct-USDA subset | Redundant methods and contradictory behavior; [AIP-180](https://google.aip.dev/180) | [x] Activate the existing `time` parameter; keep `SceneAnimation` absent because preservation/write did not qualify |
-| Compound selections do not fit the current global API | `read_partial` accepts exactly one fixed selector family, while scan/raster/grid selections need an id plus a range/window | Signature sprawl or ambiguous combinations; [AIP-140](https://google.aip.dev/140) and [AIP-180](https://google.aip.dev/180) | Keep compound operations on typed format-specific methods in this program; leave `read_partial` unchanged unless a future cross-format selection design is reviewed separately |
+| Compound selections do not fit the current global API | `read_partial` accepts exactly one fixed selector family, while scan/raster/grid selections need an id plus a range/window | Signature sprawl or ambiguous combinations; [AIP-140](https://google.aip.dev/140) and [AIP-180](https://google.aip.dev/180) | Keep compound operations on format-specific selectors in this program; leave `read_partial` unchanged unless a future cross-format selection design is reviewed separately |
 | Error behavior was underspecified | The first plan allowed either `ValueError` or `FormatError`; public I/O currently normalizes codec faults to `FormatError` | Callers cannot write stable handling; [AIP-193](https://google.aip.dev/193) | Keep record construction errors as `ContractViolation`/`ValueError`; require public I/O to raise `FormatError` with stable operation/format/feature prefixes |
 | The plan prematurely reserved names and a registry count | No new record or dataset codec exists yet | Speculative public commitments; [AIP-180](https://google.aip.dev/180) | Treat names and `euroc_dataset` as provisional until an FC0 prototype and compatibility test pass; update 73 -> 74 only with a working codec |
 | The verification schedule was too large | Six profiles each mandated 100/512 MiB fixtures and sixteen commits before provider feasibility | Excess runtime without proportional evidence | Use one 64-128 MiB qualifying fixture per implemented profile, a larger case only for a demonstrated selector/chunk boundary, and ten reviewable commits |
@@ -726,12 +730,11 @@ profiles cannot preserve it.
 
 ## 9. FC3 — E57 multiple Cartesian scans
 
-**Status (2026-08-29): locally and package complete.** The
-typed API is additive: generic `sceneio.read` keeps its one-scan `PointCloud`
-projection, while the four explicit E57 scan functions expose stored rows,
-organization, and ordered scan sets. The accepted profile is intentionally
-Cartesian and exactly representable; broader E57 content remains a tested or
-digest-pinned refusal.
+**Status (2026-08-30): locally and package complete.** The generic E57 API
+uses `ScanSet` for both one-scan and multi-scan files. `read_e57_scan` is the
+single format-specific selector for one scan or a stored-row range. The
+accepted profile is intentionally Cartesian and exactly representable;
+broader E57 content remains a tested or digest-pinned refusal.
 
 ### 9.1 `PointScan` and `ScanSet`
 
@@ -745,24 +748,24 @@ digest-pinned refusal.
 - [x] Store stable scan name/guid, optional acquisition timestamp, rigid pose,
       and source-coordinate metadata.
 - [x] Make the `PointScan` pose authoritative. Keep the child cloud viewpoint
-      neutral and have `valid_point_cloud()` apply the pose to the legacy
+      neutral and have `valid_point_cloud()` apply the pose to the projected
       `PointCloud.viewpoint`, avoiding two independently mutable copies.
 - [x] Pin the exact E57 pose direction/quaternion ordering with pye57 and a
       hand-computable translated/rotated scan before naming public fields.
-- [x] Provide an explicit `valid_point_cloud()` projection matching the legacy
-      E57 reader's current valid-row behavior.
+- [x] Provide an explicit `valid_point_cloud()` projection for consumers that
+      need invalid rows removed.
 - [x] `ScanSet` owns ordered `PointScan` children and rejects duplicate scan
       identifiers and duplicate nonempty GUIDs.
 
 ### 9.2 E57 adapter expansion
 
-- [x] Preserve current one-scan unorganized `PointCloud` return behavior; use
-      the typed scan API for raw validity/organization.
-- [x] Make typed `read_e57_scans` return `ScanSet`, make `read_e57_scan`
-      return one `PointScan`, and accept `PointCloud`, `PointScan`, or
-      `ScanSet` for typed writing.
+- [x] Make generic `read` return `ScanSet` for every accepted E57 file and
+      accept only `ScanSet` for generic writing.
+- [x] Keep `read_e57_scan` as the one format-specific selector returning a
+      single `PointScan`; do not duplicate generic full-read/write/inspect
+      operations under E57-specific names.
 - [x] Add `scan_index` and combined `scan_index` + half-open
-      `stored_point_range` to the typed E57 scan API. Do not call a stored-row
+      `stored_point_range` to the E57 scan selector. Do not call a stored-row
       range a valid point range or add these compound values to global
       `read_partial`.
 - [x] Inspect every scan's count, organization, bounds, fields, and pose
@@ -835,7 +838,7 @@ the PyPI publish job was intentionally skipped.
   boundaries are guarded rather than narrowed.
 - **Test soundness:** direct pye57/libE57Format authors input and reopens output
   as a format-owner differential (not a second parser lineage);
-  public typed wrappers, range/full equivalence, no-full-decode inspection,
+  public generic/selector paths, range/full equivalence, no-full-decode inspection,
   ownership, transactional failure, official-file boundaries, and measured
   large-fixture behavior are separate tests or evidence rows.
 
@@ -851,15 +854,15 @@ the PyPI publish job was intentionally skipped.
       axes.
 - [x] Permit multiple series only when each series is independently
       unambiguous under the bounded profile.
-- [x] Preserve the current `Image`, `Mask`, or `TensorDict` return for a simple
-      one-series, one-level file.
+- [x] Return `RasterCollection` from generic reads for simple and compound
+      TIFF files alike.
 
 ### 10.2 TIFF adapter expansion
 
 - [x] Fix frame/page metadata traversal so valid OME frames do not produce the
       current wrapped `TiffFrame.tags` failure.
 - [x] Add `series_index`, `level_index`, `page_range`, and `window` to the
-      typed TIFF collection API; define valid combinations without changing
+      `read_tiff_collection` selector; define valid combinations without changing
       global `read_partial`.
 - [x] Inspect all series/levels and report axes, shapes, dtypes, page counts,
       tile/strip layout, and BigTIFF status without decoding samples.
@@ -889,7 +892,7 @@ the PyPI publish job was intentionally skipped.
 - [x] The previously checked OME file either reads under the bounded profile or
       fails with a deliberate documented boundary, never an incidental
       provider attribute error.
-- [x] Simple TIFF compatibility is unchanged.
+- [x] Generic TIFF read/write/inspect consistently use `RasterCollection`.
 - [x] Pyramid/series selection shows a measured memory advantage over full
       collection decoding.
 

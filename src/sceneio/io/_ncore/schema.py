@@ -515,7 +515,7 @@ def inspect_ncore_v4(path: str | Path) -> Inspection:
     )
     return Inspection(
         format="ncore_v4",
-        datatype="ncore_dataset",
+        payload_kind="ncore_dataset",
         byte_size=dataset.byte_size,
         count=len(dataset.components),
         arrays=arrays,

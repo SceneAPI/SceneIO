@@ -595,7 +595,7 @@ def test_public_detect_read_write_inspect_and_direct_sink(tmp_path):
     _assert_equal(mesh, decoded)
     info = sceneio.inspect(path)
     assert info.format == "ply_mesh"
-    assert info.datatype == "mesh"
+    assert info.payload_kind == "mesh"
     assert info.shape == (5, 3)
     assert info.count == 5
     assert info.metadata["num_faces"] == 2

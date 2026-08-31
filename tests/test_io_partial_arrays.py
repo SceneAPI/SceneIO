@@ -6,7 +6,6 @@ import gc
 import struct
 
 import numpy as np
-import pytest
 
 import sceneio
 from sceneio import FormatError, _core
@@ -50,7 +49,7 @@ def test_dmb_pixel_windows_equal_full_depth_slices(tmp_path):
         )
 
 
-def test_partial_flo_window_retains_mapping_and_is_read_only(tmp_path):
+def test_partial_flo_window_returns_an_owning_flow_field(tmp_path):
     path = tmp_path / "flow.flo"
     height, width = 6, 7
     values = np.arange(height * width * 2, dtype=np.float32).reshape(
@@ -62,11 +61,26 @@ def test_partial_flo_window_retains_mapping_and_is_read_only(tmp_path):
     window = sceneio.read_partial(
         path, format="flo", window=(1, 5, 2, 6)
     )
+    path.unlink()
     gc.collect()
-    np.testing.assert_array_equal(window, values[1:5, 2:6])
-    assert not window.flags.writeable
-    with pytest.raises(ValueError):
-        window[0, 0, 0] = 123.0
+    assert isinstance(window, _core.FlowField)
+    np.testing.assert_array_equal(window.vectors, values[1:5, 2:6])
+    assert window.vectors.flags.owndata is False
+    assert (
+        window.component_order,
+        window.u_axis,
+        window.v_axis,
+        window.row_order,
+        window.unit,
+        window.invalid_policy,
+    ) == (
+        "uv",
+        "right",
+        "down",
+        "top_to_bottom",
+        "pixels",
+        "component_abs_gt_1e9",
+    )
 
 
 def test_invalid_flo_window_releases_mapping_with_retained_exception(

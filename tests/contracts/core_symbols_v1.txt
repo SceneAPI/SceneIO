@@ -151,8 +151,7 @@ read_euroc_state_states
 read_exr
 read_exr_depth
 read_flo
-read_flo_field
-read_flo_view
+read_flo_window
 read_g2o
 read_gaussian_ply
 read_gaussian_ply_points
@@ -251,7 +250,6 @@ write_euroc_state
 write_exr
 write_exr_depth
 write_flo
-write_flo_field
 write_g2o
 write_gaussian_ply
 write_glb

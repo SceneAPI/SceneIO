@@ -1,4 +1,4 @@
-"""Build-time native-feature metadata independent of the registry facade."""
+"""Build-time native-feature metadata independent of registry state."""
 
 from __future__ import annotations
 

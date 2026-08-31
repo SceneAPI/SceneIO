@@ -3,7 +3,7 @@ contract_date = "2026-08-29"
 format_id = "tiff"
 provider = "tifffile>=2025.5"
 selection_provider = "zarr>=3.1,<4"
-legacy_projection = "one_series_one_level_returns_Image_Mask_or_TensorDict"
+canonical_record = "RasterCollection"
 
 [records]
 level_fields = ["index", "axes", "shape", "dtype", "payload_kind", "payload"]
@@ -75,7 +75,7 @@ evidence = "docs/tiff_collection_benchmark.md"
 large_fixture_logical_bytes = 67108864
 fresh_process_protocol = "sceneio-fresh-child-memory-v1"
 fresh_process_samples = 3
-operations = ["typed_full_read", "typed_selected_read", "typed_inspect"]
+operations = ["full_read", "selected_read", "inspect"]
 
 [ome]
 four_dimensional_axes = "deliberate_refusal"

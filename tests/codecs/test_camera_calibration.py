@@ -427,7 +427,7 @@ def test_buffer_protocol_mmap_public_dispatch_sink_and_inspection(
         transforms_exact=format_id != "kalibr",
     )
     info = sceneio.inspect(path)
-    assert (info.format, info.datatype, info.count) == (
+    assert (info.format, info.payload_kind, info.count) == (
         format_id,
         "camera_rig",
         expected.num_cameras,

@@ -143,7 +143,7 @@ def test_sceneio_usd_writer_is_readable_by_upstream_oracle(tmp_path, suffix):
     mesh = meshes[0]
     np.testing.assert_array_equal(
         np.asarray(mesh.get_attribute("points").value),
-        np.asarray(scene.mesh_at(0).positions),
+        np.asarray(scene.mesh_primitive_at(0).positions),
     )
     np.testing.assert_array_equal(
         np.asarray(mesh.get_attribute("faceVertexCounts").value),
@@ -151,7 +151,7 @@ def test_sceneio_usd_writer_is_readable_by_upstream_oracle(tmp_path, suffix):
     )
     np.testing.assert_array_equal(
         np.asarray(mesh.get_attribute("faceVertexIndices").value),
-        np.asarray(scene.mesh_at(0).face_indices).astype(np.int32),
+        np.asarray(scene.mesh_primitive_at(0).face_indices).astype(np.int32),
     )
     rendered = tinyusdz.tydra.convert_to_render_scene(stage)
     assert [(node.abs_path, node.name) for node in rendered.nodes()] == [
@@ -184,7 +184,7 @@ def Xform "World"
 
     assert list(scene.node_names) == ["World", "Triangle"]
     assert scene.node_payload_kinds == ["none", "mesh"]
-    mesh = scene.mesh_at(0)
+    mesh = scene.mesh_primitive_at(0)
     np.testing.assert_array_equal(
         np.asarray(mesh.positions),
         np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0]], np.float32),
@@ -215,8 +215,8 @@ def test_usd_record_outlives_removed_source(tmp_path, suffix):
     gc.collect()
 
     np.testing.assert_array_equal(
-        np.asarray(decoded.mesh_at(0).positions),
-        np.asarray(_fixture().mesh_at(0).positions),
+        np.asarray(decoded.mesh_primitive_at(0).positions),
+        np.asarray(_fixture().mesh_primitive_at(0).positions),
     )
 
 
@@ -228,7 +228,7 @@ def test_usd_inspection_matches_decoded_scene(tmp_path, suffix):
     result = sceneio.inspect(path)
 
     assert result.format == ("usdz" if suffix == ".usdz" else "usd")
-    assert result.datatype == "scene_graph"
+    assert result.payload_kind == "scene_graph"
     assert result.shape == (4, 3)
     assert result.dtype == "float32"
     assert result.count == 1
@@ -346,7 +346,7 @@ def test_usd_writer_preserves_transform_on_mesh_node(tmp_path):
     transforms[1, 0, 3] = 1
     scene = _core.scene_graph(
         list(source.node_names),
-        meshes=[source.mesh_at(0)],
+        meshes=[source.mesh_primitive_at(0)],
         node_payload_kinds=list(source.node_payload_kinds),
         node_payload_indices=np.array(source.node_payload_indices, copy=True),
         node_child_offsets=np.array(source.node_child_offsets, copy=True),

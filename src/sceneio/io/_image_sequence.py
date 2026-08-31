@@ -233,7 +233,7 @@ def inspect_image_sequence_directory(frame_access: ImageFrameAccess, path: str):
     )
     return Inspection(
         format="image_sequence",
-        datatype="image_sequence",
+        payload_kind="image_sequence",
         byte_size=byte_size,
         shape=(len(paths), height, width, channels),
         dtype=dtype,

@@ -15,7 +15,6 @@ from __future__ import annotations
 
 import operator
 from collections.abc import Mapping, Sequence
-from dataclasses import replace
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -44,10 +43,7 @@ from sceneio.io._depth import (
     read_depth,
     write_depth,
 )
-from sceneio.io._e57 import inspect_e57_scans as _inspect_e57_scans
 from sceneio.io._e57 import read_e57_scan as _read_e57_scan
-from sceneio.io._e57 import read_e57_scans as _read_e57_scans
-from sceneio.io._e57 import write_e57_scans as _write_e57_scans
 from sceneio.io._euroc_dataset import (
     read_euroc_dataset,
     write_euroc_dataset,
@@ -82,15 +78,15 @@ from sceneio.io._ncore import (
     write_ncore_v4,
 )
 from sceneio.io._openvdb import write_openvdb
-from sceneio.io._registry.adapters import _file_sink_writer, _mmap_reader
 from sceneio.io._registry.coordinates import coordinate_contract
-from sceneio.io._rtmv import RtmvDataset as _RtmvDataset
-from sceneio.io._tiff import (
-    inspect_tiff_collection as _inspect_tiff_collection,
+from sceneio.io._registry.model import Codec as _Codec
+from sceneio.io._registry.model import CodecCapabilities as _CodecCapabilities
+from sceneio.io._registry.model import (
+    NativeFeatureCapabilities as _NativeFeatureCapabilities,
 )
-from sceneio.io._tiff import read_tiff_collection as _read_tiff_collection
+from sceneio.io._rtmv import RtmvDataset as _RtmvDataset
+from sceneio.io._tiff import read_tiff as _read_tiff_collection
 from sceneio.io._tiff import write_tiff
-from sceneio.io._tiff import write_tiff_collection as _write_tiff_collection
 from sceneio.io._usd import (
     read_scene as _read_usd_scene,
 )
@@ -110,16 +106,7 @@ from sceneio.io.registry import (
     register,
 )
 from sceneio.io.registry import (
-    Codec as _Codec,
-)
-from sceneio.io.registry import (
-    CodecCapabilities as _CodecCapabilities,
-)
-from sceneio.io.registry import (
     FormatError as _FormatError,
-)
-from sceneio.io.registry import (
-    NativeFeatureCapabilities as _NativeFeatureCapabilities,
 )
 
 if TYPE_CHECKING:
@@ -671,86 +658,9 @@ install_coordinate_properties(
     _core.ColmapDatabase,
 )
 
-_FLOW_READER = _mmap_reader(_core.read_flo_field)
-_FLOW_WRITER = _file_sink_writer(_core.write_flo_field)
 _EXACT_COLMAP_DB_PROFILES = frozenset(
     item["name"] for item in _core._colmap_db_profiles()
 )
-
-
-def _resolve_flow_format(path, format: str | None, *, writing: bool) -> str:
-    if format is not None:
-        selected = format
-    elif writing:
-        selected = "flo" if Path(path).suffix.lower() == ".flo" else ""
-    else:
-        selected = detect(path)
-    if selected != "flo":
-        operation = "write" if writing else "read"
-        rendered = selected or Path(path).suffix.lower() or "<none>"
-        raise _FormatError(
-            f"{operation}_flow supports only Middlebury 'flo' "
-            f"(selected {rendered!r})"
-        )
-    return selected
-
-
-def read_flow(path, *, format: str | None = None) -> _core.FlowField:
-    """Read Middlebury ``.flo`` into a convention-tagged :class:`FlowField`.
-
-    The file is decoded through a read-only mmap into record-owned storage.
-    Existing :func:`read` behavior is unchanged and continues to return the raw
-    mapped ``(H,W,2)`` ndarray.
-    """
-
-    _resolve_flow_format(path, format, writing=False)
-    try:
-        return _FLOW_READER(str(path))
-    except _FormatError:
-        raise
-    except Exception as exc:
-        raise _FormatError(f"reading {str(path)!r} as typed flow: {exc}") from exc
-
-
-def write_flow(
-    flow: _core.FlowField,
-    path,
-    *,
-    format: str | None = None,
-) -> None:
-    """Write a canonical Middlebury-convention :class:`FlowField`.
-
-    The writer refuses component, axis, row, unit, or invalid-value
-    conventions that ``.flo`` cannot preserve. It uses the direct native file
-    sink and does not materialize an output-sized Python ``bytes`` object.
-    """
-
-    _resolve_flow_format(path, format, writing=True)
-    try:
-        _FLOW_WRITER(flow, str(path))
-    except _FormatError:
-        raise
-    except Exception as exc:
-        raise _FormatError(f"writing {str(path)!r} as typed flow: {exc}") from exc
-
-
-def inspect_flow(path, *, format: str | None = None) -> _Inspection:
-    """Inspect a ``.flo`` header and attach its fixed semantic conventions."""
-
-    selected = _resolve_flow_format(path, format, writing=False)
-    result = inspect(path, format=selected)
-    return replace(
-        result,
-        metadata={
-            **result.metadata,
-            "component_order": "uv",
-            "u_axis": "right",
-            "v_axis": "down",
-            "row_order": "top_to_bottom",
-            "unit": "pixels",
-            "invalid_policy": "component_abs_gt_1e9",
-        },
-    )
 
 
 def read_e57_scan(
@@ -779,49 +689,6 @@ def read_e57_scan(
         ) from exc
 
 
-def read_e57_scans(path) -> _core.ScanSet:
-    """Read every supported Cartesian E57 scan in stored order."""
-
-    try:
-        return _read_e57_scans(path)
-    except _FormatError:
-        raise
-    except Exception as exc:
-        raise _FormatError(
-            f"reading E57 scan set from {str(path)!r}: {exc}"
-        ) from exc
-
-
-def write_e57_scans(value, path) -> None:
-    """Atomically write a PointCloud, PointScan, or ordered ScanSet as E57."""
-
-    try:
-        _write_e57_scans(value, path)
-    except _FormatError:
-        raise
-    except Exception as exc:
-        raise _FormatError(
-            f"writing E57 scan set to {str(path)!r}: {exc}"
-        ) from exc
-
-
-def inspect_e57_scans(
-    path,
-    *,
-    scan_index: int | None = None,
-) -> _Inspection:
-    """Inspect all E57 scan headers, or one selected header, without decoding."""
-
-    try:
-        return _inspect_e57_scans(path, scan_index=scan_index)
-    except _FormatError:
-        raise
-    except Exception as exc:
-        raise _FormatError(
-            f"inspecting E57 scan headers in {str(path)!r}: {exc}"
-        ) from exc
-
-
 def read_tiff_collection(
     path,
     *,
@@ -830,7 +697,7 @@ def read_tiff_collection(
     page_range: tuple[int, int] | None = None,
     window: tuple[int, int, int, int] | None = None,
 ) -> RasterCollection:
-    """Read a typed TIFF series/level collection or a bounded selection."""
+    """Read a TIFF series, level, page, or window from its RasterCollection."""
 
     try:
         return _read_tiff_collection(
@@ -848,53 +715,12 @@ def read_tiff_collection(
         ) from exc
 
 
-def inspect_tiff_collection(path) -> _Inspection:
-    """Inspect TIFF collection topology and storage without decoding samples."""
-
-    try:
-        return _inspect_tiff_collection(path)
-    except _FormatError:
-        raise
-    except Exception as exc:
-        raise _FormatError(
-            f"inspecting TIFF collection in {str(path)!r}: {exc}"
-        ) from exc
-
-
-def write_tiff_collection(
-    value: RasterCollection,
-    path,
-    *,
-    bigtiff: bool | None = None,
-    byteorder: str | None = None,
-    tile: tuple[int, int] | None = None,
-    rowsperstrip: int | None = None,
-) -> None:
-    """Atomically write SceneIO's portable typed TIFF collection subset."""
-
-    try:
-        _write_tiff_collection(
-            value,
-            path,
-            bigtiff=bigtiff,
-            byteorder=byteorder,
-            tile=tile,
-            rowsperstrip=rowsperstrip,
-        )
-    except _FormatError:
-        raise
-    except Exception as exc:
-        raise _FormatError(
-            f"writing TIFF collection to {str(path)!r}: {exc}"
-        ) from exc
-
-
 def read(path, *, format: str | None = None):
     """Read ``path`` into a record, dispatching on ``format`` or detection.
 
     Single-file codecs use a read-only mmap. The file must remain byte-stable
-    during decoding. Native-endian, C-order NPY and FLO results are read-only
-    views that retain the mapping. Safetensors returns a ``TensorDict`` whose
+    during decoding. Native-endian, C-order NPY results are read-only views
+    that retain the mapping. Safetensors returns a ``TensorDict`` whose
     aligned tensors are likewise read-only mapped views. Their backing file must
     not be modified or truncated until the record, returned arrays, and all
     derived views are released; a POSIX shrink can otherwise cause ``SIGBUS`` on
@@ -959,7 +785,7 @@ def inspect(path, *, format: str | None = None) -> _Inspection:
     fmt = format or detect(path)
     codec = get(fmt)
     try:
-        return inspect_codec(path, fmt, codec.datatype, codec.inspect)
+        return inspect_codec(path, fmt, codec.payload_kind, codec.inspect)
     except _FormatError:
         raise
     except Exception as exc:
@@ -1407,10 +1233,7 @@ __all__ = [
     "feature_set",
     "inspect",
     "inspect_depth",
-    "inspect_e57_scans",
-    "inspect_flow",
     "inspect_label_map",
-    "inspect_tiff_collection",
     "materialize_ncore_v4",
     "native_features",
     "point_cloud",
@@ -1418,9 +1241,7 @@ __all__ = [
     "read",
     "read_depth",
     "read_e57_scan",
-    "read_e57_scans",
     "read_euroc_dataset",
-    "read_flow",
     "read_label_map",
     "read_ncore_component",
     "read_ncore_semantic_component",
@@ -1432,16 +1253,13 @@ __all__ = [
     "write_arrow_ipc",
     "write_colmap_db",
     "write_depth",
-    "write_e57_scans",
     "write_euroc_dataset",
-    "write_flow",
     "write_label_map",
     "write_ncore_v4",
     "write_openvdb",
     "write_parquet",
     "write_scene",
     "write_tiff",
-    "write_tiff_collection",
     "write_usd",
     "write_usdz",
     "write_zarr",

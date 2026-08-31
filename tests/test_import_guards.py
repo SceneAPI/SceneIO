@@ -149,7 +149,7 @@ def test_plain_import_is_numpy_lazy() -> None:
 
 
 @pytest.mark.parametrize("namespace", ["sceneio.data", "sceneio.canonical"])
-def test_removed_legacy_namespaces_do_not_import(namespace: str) -> None:
+def test_removed_namespaces_do_not_import(namespace: str) -> None:
     with pytest.raises((ImportError, FileNotFoundError)):
         importlib.import_module(namespace)
 

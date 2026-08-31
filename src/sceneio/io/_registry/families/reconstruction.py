@@ -22,12 +22,12 @@ RECONSTRUCTION_CODECS: tuple[Codec, ...] = (
         _core.read_colmap_sparse,
         _core.write_colmap_sparse,
         record=_core.Reconstruction,
-        datatype="sparse_model",
+        payload_kind="sparse_model",
         is_directory=True,
         read_image=_core.read_colmap_sparse_image,
         supported_features=("cameras", "images", "points3D", "tracks"),
     ),
-    # Camera-pose formats -> PosedViewSet. `datatype` here is informational; a
+    # Camera-pose formats -> PosedViewSet. `payload_kind` here is informational; a
     # vocabulary id is pending, like `splat` (see formats/datatypes.py).
     Codec(
         "transforms_json",
@@ -41,7 +41,7 @@ RECONSTRUCTION_CODECS: tuple[Codec, ...] = (
             prepare=partial(posed_view_storage, profile="transforms_json"),
         ),
         record=PosedViewSet,
-        datatype="posed_views",
+        payload_kind="posed_views",
         filenames=("transforms.json",),
     ),
     # TUM/KITTI claim no extension (`.txt` is ambiguous), so they are
@@ -55,7 +55,7 @@ RECONSTRUCTION_CODECS: tuple[Codec, ...] = (
             prepare=partial(posed_view_storage, profile="tum"),
         ),
         record=PosedViewSet,
-        datatype="posed_views",
+        payload_kind="posed_views",
     ),
     Codec(
         "kitti",
@@ -66,7 +66,7 @@ RECONSTRUCTION_CODECS: tuple[Codec, ...] = (
             prepare=partial(posed_view_storage, profile="kitti"),
         ),
         record=PosedViewSet,
-        datatype="posed_views",
+        payload_kind="posed_views",
     ),
     Codec(
         "euroc_state",
@@ -74,7 +74,7 @@ RECONSTRUCTION_CODECS: tuple[Codec, ...] = (
         _mmap_reader(_core.read_euroc_state),
         _file_sink_writer(_core.write_euroc_state),
         record=_core.StateTrajectory,
-        datatype="state_trajectory",
+        payload_kind="state_trajectory",
         magic=(b"#timestamp [ns],",),
         read_states=_mmap_selector_reader(
             _core.read_euroc_state_states
@@ -95,7 +95,7 @@ RECONSTRUCTION_CODECS: tuple[Codec, ...] = (
         _mmap_reader(_core.read_g2o),
         _file_sink_writer(_core.write_g2o),
         record=_core.PoseGraph,
-        datatype="pose_graph",
+        payload_kind="pose_graph",
         magic=(
             b"# g2o pose graph",
             b"VERTEX_SE3:QUAT",
@@ -120,7 +120,7 @@ RECONSTRUCTION_CODECS: tuple[Codec, ...] = (
         _core.read_colmap_db,
         _core.write_colmap_db,
         record=_core.ColmapDatabase,
-        datatype="match_graph",
+        payload_kind="match_graph",
         magic=(b"SQLite format 3\x00",),
         filenames=("database.db",),
         read_image=_core.read_colmap_db_image,
@@ -170,7 +170,7 @@ RECONSTRUCTION_CODECS: tuple[Codec, ...] = (
         _core.read_colmap_txt,
         _core.write_colmap_txt,
         record=_core.Reconstruction,
-        datatype="sparse_model",
+        payload_kind="sparse_model",
         is_directory=True,
         dir_marker="cameras.txt",
         read_image=_core.read_colmap_txt_image,
@@ -184,7 +184,7 @@ RECONSTRUCTION_CODECS: tuple[Codec, ...] = (
         _mmap_reader(_core.read_bundler),
         _file_sink_writer(_core.write_bundler),
         record=_core.Reconstruction,
-        datatype="sparse_model",
+        payload_kind="sparse_model",
         magic=(b"# Bundle file",),
     ),
     Codec(
@@ -193,7 +193,7 @@ RECONSTRUCTION_CODECS: tuple[Codec, ...] = (
         _mmap_reader(_core.read_bal),
         _file_sink_writer(_core.write_bal),
         record=_core.Reconstruction,
-        datatype="sparse_model",
+        payload_kind="sparse_model",
         supported_features=(
             "angle_axis",
             "radial_k1_k2",
@@ -216,7 +216,7 @@ RECONSTRUCTION_CODECS: tuple[Codec, ...] = (
         _mmap_reader(_core.read_nvm),
         _file_sink_writer(_core.write_nvm),
         record=_core.Reconstruction,
-        datatype="sparse_model",
+        payload_kind="sparse_model",
         magic=(b"NVM_V3",),
     ),
     Codec(
@@ -225,7 +225,7 @@ RECONSTRUCTION_CODECS: tuple[Codec, ...] = (
         _mmap_reader(_core.read_openmvg),
         _file_sink_writer(_core.write_openmvg),
         record=_core.Reconstruction,
-        datatype="sparse_model",
+        payload_kind="sparse_model",
         filenames=("sfm_data.json",),
     ),
 )

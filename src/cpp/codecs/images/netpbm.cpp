@@ -279,7 +279,7 @@ nb::bytes write_netpbm(const Image &img, bool ascii) {
                 "netpbm: dtype/maxval mismatch (uint16 needs maxval in 256..65535) — convert the record first");
     }
 
-    const size_t count = img.num_samples();
+    const size_t count = img.count();
     // Every sample must fit the declared maxval. O(N) extra pass — negligible for
     // a debug/interchange format, flagged so a future profile doesn't mistake it
     // for accidental work.

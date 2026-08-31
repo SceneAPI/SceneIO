@@ -1,15 +1,16 @@
 # E57 multi-scan benchmark evidence
 
-The FC3 benchmark is separate from the legacy one-scan `e57` row in
-`bench/bench_io.py`.  It exercises the typed scan API:
+The FC3 benchmark supplements the ordinary `e57` row in `bench/bench_io.py`
+with stored-row selection and provider differentials for the canonical scan
+API:
 
 - `_core.point_scan` and `_core.scan_set` build a deterministic three-scan
   fixture;
-- `sceneio.read_e57_scans` measures the complete `ScanSet` read;
+- `sceneio.read` measures the complete `ScanSet` read;
 - `sceneio.read_e57_scan(..., scan_index=..., stored_point_range=(start, stop))`
   measures a half-open stored-row selection;
-- `sceneio.write_e57_scans` measures the typed writer; and
-- `sceneio.inspect_e57_scans` measures header-only typed inspection.
+- `sceneio.write` measures the `ScanSet` writer; and
+- `sceneio.inspect` measures header-only inspection.
 
 The benchmark resolves these functions lazily so importing the benchmark does
 not make the optional E57 provider a runtime dependency. The inspection row
@@ -29,7 +30,7 @@ Each run writes two files. This is a direct-provider/format-owner differential:
 pye57 and SceneIO's adapter share the libE57Format lineage, so it is not
 described as an independent parser comparison.
 
-1. SceneIO writes the typed `ScanSet`; pye57 reopens it and checks every raw
+1. SceneIO writes the `ScanSet`; pye57 reopens it and checks every raw
    field, valid row, pose, and scan count.
 2. pye57 writes the same payload; SceneIO reopens it and checks the same
    contract, including `PointScan.valid_point_cloud()`.
@@ -53,7 +54,7 @@ For a larger generated fixture, increase `--scale` (`--scale 256` produces
 the platform cache hint
 when available.  The JSON result has schema
 `e57-multiscan-benchmark-v1` and records file sizes, selected scan/range,
-throughput inputs, traced Python peak allocation, and sampled RSS for typed
+throughput inputs, traced Python peak allocation, and sampled RSS for SceneIO
 and oracle write/full-read/selected-read/inspect operations.
 
 SceneIO's selected reader uses libE57Format's sequential reader with a fixed
@@ -68,17 +69,17 @@ Windows/MSVC, Python 3.12, pye57 0.4.19, warm cache, one measured large run:
 
 | operation | ms | traced peak MB | RSS growth MB | logical MB/s |
 |---|---:|---:|---:|---:|
-| typed selected read | 81.055 | 11.333 | 11.067 | 46.57 |
+| selected read | 81.055 | 11.333 | 11.067 | 46.57 |
 | direct pye57 selected control | 424.467 | 151.004 | 148.828 | 8.89 |
-| typed full `ScanSet` read | 706.567 | 113.259 | 205.791 | 160.28 |
+| full `ScanSet` read | 706.567 | 113.259 | 205.791 | 160.28 |
 | direct pye57 full read | 451.110 | 151.004 | 150.045 | 251.04 |
-| typed header inspection | 11.714 | 0.024 | 0.033 | — |
-| typed write | 1172.989 | 199.951 | 195.146 | 96.55 |
+| header inspection | 11.714 | 0.024 | 0.033 | — |
+| write | 1172.989 | 199.951 | 195.146 | 96.55 |
 | direct pye57 write | 744.922 | 180.012 | 38.261 | 152.02 |
 
 The fixture was 113,246,376 logical bytes; both outputs were 68,870,144 bytes.
 The selected range contained 104,857 rows from one scan. Against the direct
-pye57 full-decode control, the typed range reduced traced peak allocation by
+pye57 full-decode control, the selected range reduced traced peak allocation by
 92.5%, RSS growth by 92.6%, and elapsed time by 80.9%. A separate three-run
 28.31 MB sweep showed the same direction (3.31 versus 37.76 MB traced peak).
 The write rows expose pye57's fixed internal authoring buffers; FC3 does not
@@ -94,7 +95,7 @@ The opt-in official `pumpNoInvalidPoints.e57` sample is pinned at 22,146,048
 bytes and SHA-256
 `5b85b18fe9860e9f9a2f397434530f2d403fefcc15cf1ff92d75d96d274ff5a5`.
 pye57 reports five ordered structured Cartesian scans and 1,213,990 stored
-rows. The public typed reader first refuses unrepresented standard scan
+rows. The public reader first refuses unrepresented standard scan
 metadata; a direct payload probe also finds coordinates that fail exact
 float32 representation. SceneIO therefore cannot accept this file by silently
 dropping metadata or narrowing values. The generated fixture is the positive

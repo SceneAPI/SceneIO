@@ -1,9 +1,8 @@
 """Closed payload-kind vocabulary for SceneIO-owned built-in codecs.
 
-``Codec.datatype`` is a stable compatibility field and remains open for
-runtime extensions.  This module classifies only the repository-owned built-in
-tokens; it does not expand or reinterpret the cross-repository logical
-``CORE_DATA_TYPES`` vocabulary.
+``Codec.payload_kind`` remains open for runtime extensions. This module
+classifies only the repository-owned built-in tokens; it does not expand or
+reinterpret the cross-repository logical ``CORE_DATA_TYPES`` vocabulary.
 """
 
 from __future__ import annotations
@@ -34,7 +33,7 @@ def _strings(value: object, field_name: str) -> tuple[str, ...]:
 
 @dataclass(frozen=True, slots=True)
 class CodecPayloadKind:
-    """One repository-owned built-in ``Codec.datatype`` token."""
+    """One repository-owned built-in ``Codec.payload_kind`` token."""
 
     id: str
     title: str
@@ -145,13 +144,9 @@ _PAYLOADS = (
     _payload(
         "flow",
         "Optical flow",
-        "Raw or explicitly typed two-component pixel displacement fields.",
+        "Convention-tagged two-component pixel displacement fields.",
         ("sceneio.FlowField",),
         ("flo",),
-        dynamic_output_rule=(
-            "Generic read returns the legacy ndarray view; read_flow returns "
-            "the typed FlowField contract."
-        ),
     ),
     _payload(
         "image",
@@ -159,22 +154,6 @@ _PAYLOADS = (
         "One decoded image with explicit stored-sample metadata.",
         ("sceneio.Image",),
         ("netpbm", "png", "jpeg", "bmp", "tga", "hdr", "exr", "webp", "avif"),
-    ),
-    _payload(
-        "image_or_mask_or_stack",
-        "Image, mask, or raster stack",
-        "TIFF payload selected by exact series, level, page, and typed profile.",
-        (
-            "sceneio.Image",
-            "sceneio.Mask",
-            "sceneio.RasterCollection",
-            "sceneio.TensorDict",
-        ),
-        ("tiff",),
-        dynamic_output_rule=(
-            "TIFF return identity depends on the simple-file shape or the "
-            "explicit typed collection/label-map API."
-        ),
     ),
     _payload(
         "image_sequence",
@@ -243,8 +222,8 @@ _PAYLOADS = (
         "point_cloud",
         "Point cloud",
         "Unstructured or organized point samples and attributes.",
-        ("sceneio.PointCloud", "sceneio.PointScan", "sceneio.ScanSet"),
-        ("ply", "pcd", "xyz", "pts", "las", "laz", "e57"),
+        ("sceneio.PointCloud",),
+        ("ply", "pcd", "xyz", "pts", "las", "laz"),
     ),
     _payload(
         "point_visibility",
@@ -268,11 +247,25 @@ _PAYLOADS = (
         ("transforms_json", "tum", "kitti"),
     ),
     _payload(
+        "raster_collection",
+        "Raster collection",
+        "Ordered TIFF series and homogeneous pyramid levels with typed payloads.",
+        ("sceneio.RasterCollection",),
+        ("tiff",),
+    ),
+    _payload(
         "rtmv_dataset",
         "RTMV dataset",
         "Read-only RTMV camera/image/depth dataset aggregate.",
         ("sceneio.RtmvDataset",),
         ("rtmv",),
+    ),
+    _payload(
+        "scan_set",
+        "Scan set",
+        "Ordered point scans with stored-row validity, organization, and pose metadata.",
+        ("sceneio.ScanSet",),
+        ("e57",),
     ),
     _payload(
         "sparse_model",

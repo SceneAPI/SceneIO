@@ -3,10 +3,8 @@
 from __future__ import annotations
 
 import ast
-import base64
 import inspect
 import json
-import pickle
 import subprocess
 import sys
 import textwrap
@@ -97,48 +95,17 @@ def _assert_lower_imports(module_name: str, source: str) -> None:
                 )
 
 
-def test_shared_model_is_the_exact_historical_public_model():
+def test_shared_model_has_one_canonical_definition_and_public_reexports():
     for name in ("Codec", "CodecCapabilities", "NativeFeatureCapabilities"):
         shared = getattr(model, name)
-        assert getattr(registry, name) is shared
         assert getattr(sceneio, name) is shared
+        assert not hasattr(registry, name)
         assert not hasattr(sceneio.io, name)
-        assert shared.__module__ == "sceneio.io.registry"
+        assert shared.__module__ == "sceneio.io._registry.model"
         assert shared.__qualname__ == name
 
-    codec = _codec("pickle_probe", extensions=(".probe",))
-    capability = codec.capabilities()
-    native = model.NativeFeatureCapabilities(
-        "probe",
-        "SCENEIO_WITH_PROBE",
-        False,
-        ("probe",),
-    )
-    for value in (codec, capability, native):
-        payload = pickle.dumps(value)
-        assert b"sceneio.io.registry" in payload
-        restored = pickle.loads(payload)
-        assert type(restored) is type(value)
-        assert restored == value
 
-
-def test_pre_move_pickles_load_and_new_emission_stays_legacy_compatible():
-    current = {
-        "CodecCapabilities": sceneio.capabilities("npy"),
-        "NativeFeatureCapabilities": sceneio.native_features("hdf5"),
-    }
-    assert CONTRACT["pre_move_commit"] == "40d5412"
-    for name, expected in current.items():
-        fixture = CONTRACT["protocol_4_pickles"][name]
-        payload = base64.b64decode(fixture["base64"])
-        restored = pickle.loads(payload)
-        assert type(restored) is type(expected)
-        assert restored == expected
-        assert repr(restored) == fixture["repr"]
-        assert pickle.dumps(expected, protocol=4) == payload
-
-
-def test_shared_model_constructor_and_facade_function_signatures_are_stable():
+def test_shared_model_constructor_and_public_function_signatures():
     callables = {
         "Codec": model.Codec,
         "CodecCapabilities": model.CodecCapabilities,
@@ -153,18 +120,7 @@ def test_shared_model_constructor_and_facade_function_signatures_are_stable():
     } == CONTRACT["signatures"]
 
 
-def test_adapter_factories_are_reexported_without_renaming(tmp_path):
-    names = (
-        "_bytes_reader",
-        "_mmap_reader",
-        "_mmap_selector_reader",
-        "_mmap_view_reader",
-        "_array_window_reader",
-        "_file_sink_writer",
-    )
-    for name in names:
-        assert getattr(registry, name) is getattr(adapters, name)
-
+def test_adapter_factories_are_owned_by_the_adapter_module(tmp_path):
     path = tmp_path / "payload.bin"
     path.write_bytes(b"payload")
     assert adapters._bytes_reader(bytes)(path) == b"payload"
@@ -193,24 +149,26 @@ def test_lower_registry_import_guard_rejects_relative_upward_spelling():
             _assert_lower_imports("sceneio.io._registry.probe", source)
 
 
-def test_lower_model_import_preserves_existing_eager_parent_and_identity():
+def test_lower_model_import_preserves_root_identity():
     code = textwrap.dedent(
         """
         import sys
-        from sceneio.io._registry import model
+        import sceneio
         from sceneio.io import registry
+        from sceneio.io._registry import model
 
         assert "sceneio.io" in sys.modules
         assert "sceneio.io.registry" in sys.modules
-        assert model.Codec is registry.Codec
-        assert model.CodecCapabilities is registry.CodecCapabilities
-        assert model.NativeFeatureCapabilities is registry.NativeFeatureCapabilities
+        assert model.Codec is sceneio.Codec
+        assert model.CodecCapabilities is sceneio.CodecCapabilities
+        assert model.NativeFeatureCapabilities is sceneio.NativeFeatureCapabilities
+        assert not hasattr(registry, "Codec")
         """
     )
     subprocess.run([sys.executable, "-c", code], check=True)
 
 
-def test_registry_facade_reload_remains_supported_in_a_fresh_process():
+def test_registry_reload_remains_supported_in_a_fresh_process():
     code = textwrap.dedent(
         """
         import importlib
@@ -220,7 +178,7 @@ def test_registry_facade_reload_remains_supported_in_a_fresh_process():
 
         reloaded = importlib.reload(registry)
         assert tuple(reloaded.REGISTRY) == CANONICAL_BUILTIN_IDS
-        assert reloaded.Codec is model.Codec
+        assert not hasattr(reloaded, "Codec")
         """
     )
     subprocess.run([sys.executable, "-c", code], check=True)

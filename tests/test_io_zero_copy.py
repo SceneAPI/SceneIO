@@ -1,4 +1,4 @@
-"""O2 zero-copy decode coverage for the raw NPY and FLO formats."""
+"""O2 zero-copy decode coverage for the raw NPY format."""
 
 from __future__ import annotations
 
@@ -27,10 +27,8 @@ class RawCase:
 
 
 def _raw_cases():
-    flow = np.arange(3 * 4 * 2, dtype=np.float32).reshape(3, 4, 2)
     tensor = np.arange(3 * 8, dtype=np.int32).reshape(3, 8)
     return [
-        RawCase("flo", flow, bytes(_core.write_flo(flow)), _core.read_flo, _core.read_flo_view),
         RawCase("npy", tensor, bytes(_core.write_npy(tensor)), _core.read_npy, _core.read_npy_view),
     ]
 
@@ -54,8 +52,6 @@ def _pfm_data_offset(data):
 
 
 def _logical_data_offset(case):
-    if case.id == "flo":
-        return 12
     if case.id == "npy":
         return _npy_data_offset(case.data)
     raise AssertionError(f"unknown raw view format {case.id}")
@@ -139,10 +135,8 @@ import numpy as np
 from sceneio import _core
 _core._PinnedBuffer = object()
 del _core._PinnedBuffer
-flow = np.arange(12, dtype=np.float32).reshape(2, 3, 2)
 npy = np.arange(8, dtype=np.int32)
 for expected, data, reader in (
-    (flow, _core.write_flo(flow), _core.read_flo_view),
     (npy, _core.write_npy(npy), _core.read_npy_view),
 ):
     actual = reader(data)
@@ -184,9 +178,8 @@ root = Path(sys.argv[1])
 values = {
     "npy": np.arange(12, dtype=np.int32).reshape(3, 4),
     "pfm": np.arange(18, dtype=np.float32).reshape(2, 3, 3),
-    "flo": np.arange(12, dtype=np.float32).reshape(2, 3, 2),
 }
-writers = {"npy": _core.write_npy, "pfm": _core.write_pfm, "flo": _core.write_flo}
+writers = {"npy": _core.write_npy, "pfm": _core.write_pfm}
 for format_id, expected in values.items():
     path = root / ("mapped." + format_id)
     encoded = bytes(writers[format_id](expected))

@@ -1,59 +1,26 @@
 {
-  "schema_version": 1,
   "codecs": [
     {
-      "id": "pfm",
-      "extensions": [
-        ".pfm"
-      ],
-      "magic_hex": [
-        "5046",
-        "5066"
-      ],
-      "filenames": [],
-      "is_directory": false,
-      "dir_marker": "cameras.bin",
-      "container_kind": "file",
-      "datatype": "depth_map",
-      "record": null,
-      "selectors": [
-        "window"
-      ],
-      "streams_read": true,
-      "streams_write": true,
-      "lossy": false,
-      "requires_features": [],
-      "supported_features": [
-        "grayscale",
-        "rgb",
-        "float32",
-        "little_endian",
-        "big_endian",
-        "typed_depth_adapter"
-      ],
-      "unsupported_features": [
-        "native_positive_stride_mmap_view"
-      ],
       "capabilities": {
-        "format": "pfm",
-        "datatype": "depth_map",
-        "record_type": null,
+        "available": true,
+        "can_inspect": true,
+        "can_read": true,
+        "can_write": true,
+        "container_kind": "file",
         "extensions": [
           ".pfm"
         ],
         "filenames": [],
-        "container_kind": "file",
-        "available": true,
-        "can_read": true,
-        "can_write": true,
-        "can_inspect": true,
+        "format": "pfm",
+        "lossy": false,
         "partial_selectors": [
           "window"
         ],
+        "payload_kind": "depth_map",
+        "record_type": null,
+        "requires_features": [],
         "streams_read": true,
         "streams_write": true,
-        "lossy": false,
-        "requires_features": [],
         "supported_features": [
           "grayscale",
           "rgb",
@@ -65,53 +32,59 @@
         "unsupported_features": [
           "native_positive_stride_mmap_view"
         ]
-      }
-    },
-    {
-      "id": "colmap_sparse",
-      "extensions": [],
-      "magic_hex": [],
-      "filenames": [],
-      "is_directory": true,
-      "dir_marker": "cameras.bin",
-      "container_kind": "directory",
-      "datatype": "sparse_model",
-      "record": {
-        "module": "sceneio._core",
-        "qualname": "Reconstruction"
       },
+      "container_kind": "file",
+      "dir_marker": "cameras.bin",
+      "extensions": [
+        ".pfm"
+      ],
+      "filenames": [],
+      "id": "pfm",
+      "is_directory": false,
+      "lossy": false,
+      "magic_hex": [
+        "5046",
+        "5066"
+      ],
+      "payload_kind": "depth_map",
+      "record": null,
+      "requires_features": [],
       "selectors": [
-        "image_id"
+        "window"
       ],
       "streams_read": true,
       "streams_write": true,
-      "lossy": false,
-      "requires_features": [],
       "supported_features": [
-        "cameras",
-        "images",
-        "points3D",
-        "tracks"
+        "grayscale",
+        "rgb",
+        "float32",
+        "little_endian",
+        "big_endian",
+        "typed_depth_adapter"
       ],
-      "unsupported_features": [],
+      "unsupported_features": [
+        "native_positive_stride_mmap_view"
+      ]
+    },
+    {
       "capabilities": {
-        "format": "colmap_sparse",
-        "datatype": "sparse_model",
-        "record_type": "Reconstruction",
-        "extensions": [],
-        "filenames": [],
-        "container_kind": "directory",
         "available": true,
+        "can_inspect": true,
         "can_read": true,
         "can_write": true,
-        "can_inspect": true,
+        "container_kind": "directory",
+        "extensions": [],
+        "filenames": [],
+        "format": "colmap_sparse",
+        "lossy": false,
         "partial_selectors": [
           "image_id"
         ],
+        "payload_kind": "sparse_model",
+        "record_type": "Reconstruction",
+        "requires_features": [],
         "streams_read": true,
         "streams_write": true,
-        "lossy": false,
-        "requires_features": [],
         "supported_features": [
           "cameras",
           "images",
@@ -119,118 +92,105 @@
           "tracks"
         ],
         "unsupported_features": []
-      }
-    },
-    {
-      "id": "gaussian_ply",
-      "extensions": [
-        ".ply"
-      ],
-      "magic_hex": [
-        "706c79"
-      ],
-      "filenames": [],
-      "is_directory": false,
+      },
+      "container_kind": "directory",
       "dir_marker": "cameras.bin",
-      "container_kind": "file",
-      "datatype": "splat",
+      "extensions": [],
+      "filenames": [],
+      "id": "colmap_sparse",
+      "is_directory": true,
+      "lossy": false,
+      "magic_hex": [],
+      "payload_kind": "sparse_model",
       "record": {
         "module": "sceneio._core",
-        "qualname": "GaussianCloud"
+        "qualname": "Reconstruction"
       },
+      "requires_features": [],
       "selectors": [
-        "points"
+        "image_id"
       ],
       "streams_read": true,
       "streams_write": true,
-      "lossy": false,
-      "requires_features": [],
-      "supported_features": [],
-      "unsupported_features": [],
+      "supported_features": [
+        "cameras",
+        "images",
+        "points3D",
+        "tracks"
+      ],
+      "unsupported_features": []
+    },
+    {
       "capabilities": {
-        "format": "gaussian_ply",
-        "datatype": "splat",
-        "record_type": "GaussianCloud",
+        "available": true,
+        "can_inspect": true,
+        "can_read": true,
+        "can_write": true,
+        "container_kind": "file",
         "extensions": [
           ".ply"
         ],
         "filenames": [],
-        "container_kind": "file",
-        "available": true,
-        "can_read": true,
-        "can_write": true,
-        "can_inspect": true,
+        "format": "gaussian_ply",
+        "lossy": false,
         "partial_selectors": [
           "points"
         ],
+        "payload_kind": "splat",
+        "record_type": "GaussianCloud",
+        "requires_features": [],
         "streams_read": true,
         "streams_write": true,
-        "lossy": false,
-        "requires_features": [],
         "supported_features": [],
         "unsupported_features": []
-      }
-    },
-    {
-      "id": "compressed_ply",
+      },
+      "container_kind": "file",
+      "dir_marker": "cameras.bin",
       "extensions": [
-        ".compressed.ply"
+        ".ply"
       ],
+      "filenames": [],
+      "id": "gaussian_ply",
+      "is_directory": false,
+      "lossy": false,
       "magic_hex": [
         "706c79"
       ],
-      "filenames": [],
-      "is_directory": false,
-      "dir_marker": "cameras.bin",
-      "container_kind": "file",
-      "datatype": "splat",
+      "payload_kind": "splat",
       "record": {
         "module": "sceneio._core",
         "qualname": "GaussianCloud"
       },
+      "requires_features": [],
       "selectors": [
         "points"
       ],
       "streams_read": true,
       "streams_write": true,
-      "lossy": true,
-      "requires_features": [],
-      "supported_features": [
-        "playcanvas_chunk_256",
-        "legacy_direct_color_read",
-        "position_11_10_11",
-        "scale_11_10_11",
-        "largest_three_quaternion",
-        "rgba8",
-        "sh_degrees_0_3",
-        "morton_ordered_write"
-      ],
-      "unsupported_features": [
-        "ascii",
-        "binary_big_endian",
-        "unknown_elements",
-        "unknown_properties"
-      ],
+      "supported_features": [],
+      "unsupported_features": []
+    },
+    {
       "capabilities": {
-        "format": "compressed_ply",
-        "datatype": "splat",
-        "record_type": "GaussianCloud",
+        "available": true,
+        "can_inspect": true,
+        "can_read": true,
+        "can_write": true,
+        "container_kind": "file",
         "extensions": [
           ".compressed.ply"
         ],
         "filenames": [],
-        "container_kind": "file",
-        "available": true,
-        "can_read": true,
-        "can_write": true,
-        "can_inspect": true,
+        "format": "compressed_ply",
+        "lossy": true,
         "partial_selectors": [
           "points"
         ],
+        "payload_kind": "splat",
+        "record_type": "GaussianCloud",
+        "requires_features": [],
         "streams_read": true,
         "streams_write": true,
-        "lossy": true,
-        "requires_features": [],
         "supported_features": [
           "playcanvas_chunk_256",
           "legacy_direct_color_read",
@@ -247,72 +207,70 @@
           "unknown_elements",
           "unknown_properties"
         ]
-      }
-    },
-    {
-      "id": "sog",
+      },
+      "container_kind": "file",
+      "dir_marker": "cameras.bin",
       "extensions": [
-        ".sog"
+        ".compressed.ply"
       ],
-      "magic_hex": [],
-      "filenames": [
-        "meta.json"
+      "filenames": [],
+      "id": "compressed_ply",
+      "is_directory": false,
+      "lossy": true,
+      "magic_hex": [
+        "706c79"
       ],
-      "is_directory": true,
-      "dir_marker": "meta.json",
-      "container_kind": "multi_file",
-      "datatype": "splat",
+      "payload_kind": "splat",
       "record": {
         "module": "sceneio._core",
         "qualname": "GaussianCloud"
       },
+      "requires_features": [],
       "selectors": [
         "points"
       ],
       "streams_read": true,
       "streams_write": true,
-      "lossy": true,
-      "requires_features": [],
       "supported_features": [
-        "playcanvas_v2",
-        "bundled_zip",
-        "unbundled_directory",
-        "lossless_webp_layers",
-        "position_16bit_log",
+        "playcanvas_chunk_256",
+        "legacy_direct_color_read",
+        "position_11_10_11",
+        "scale_11_10_11",
         "largest_three_quaternion",
-        "shared_scale_dc_codebooks",
+        "rgba8",
         "sh_degrees_0_3",
-        "sh_palette",
         "morton_ordered_write"
       ],
       "unsupported_features": [
-        "legacy_v1",
-        "lossy_webp_layers",
-        "streamed_lod",
-        "unknown_layers"
-      ],
+        "ascii",
+        "binary_big_endian",
+        "unknown_elements",
+        "unknown_properties"
+      ]
+    },
+    {
       "capabilities": {
-        "format": "sog",
-        "datatype": "splat",
-        "record_type": "GaussianCloud",
+        "available": true,
+        "can_inspect": true,
+        "can_read": true,
+        "can_write": true,
+        "container_kind": "multi_file",
         "extensions": [
           ".sog"
         ],
         "filenames": [
           "meta.json"
         ],
-        "container_kind": "multi_file",
-        "available": true,
-        "can_read": true,
-        "can_write": true,
-        "can_inspect": true,
+        "format": "sog",
+        "lossy": true,
         "partial_selectors": [
           "points"
         ],
+        "payload_kind": "splat",
+        "record_type": "GaussianCloud",
+        "requires_features": [],
         "streams_read": true,
         "streams_write": true,
-        "lossy": true,
-        "requires_features": [],
         "supported_features": [
           "playcanvas_v2",
           "bundled_zip",
@@ -331,66 +289,70 @@
           "streamed_lod",
           "unknown_layers"
         ]
-      }
-    },
-    {
-      "id": "ksplat",
+      },
+      "container_kind": "multi_file",
+      "dir_marker": "meta.json",
       "extensions": [
-        ".ksplat"
+        ".sog"
       ],
+      "filenames": [
+        "meta.json"
+      ],
+      "id": "sog",
+      "is_directory": true,
+      "lossy": true,
       "magic_hex": [],
-      "filenames": [],
-      "is_directory": false,
-      "dir_marker": "cameras.bin",
-      "container_kind": "file",
-      "datatype": "splat",
+      "payload_kind": "splat",
       "record": {
         "module": "sceneio._core",
         "qualname": "GaussianCloud"
       },
+      "requires_features": [],
       "selectors": [
         "points"
       ],
       "streams_read": true,
       "streams_write": true,
-      "lossy": true,
-      "requires_features": [],
       "supported_features": [
-        "mkkellogg_v0_1",
-        "compression_levels_0_2",
-        "float16_scale_rotation",
-        "bucketed_position_uint16",
-        "rgba8",
-        "sh_degrees_0_2",
-        "sh_uint8_level_2",
-        "multi_section_read",
-        "deterministic_single_section_write"
+        "playcanvas_v2",
+        "bundled_zip",
+        "unbundled_directory",
+        "lossless_webp_layers",
+        "position_16bit_log",
+        "largest_three_quaternion",
+        "shared_scale_dc_codebooks",
+        "sh_degrees_0_3",
+        "sh_palette",
+        "morton_ordered_write"
       ],
       "unsupported_features": [
-        "sh_degree_3",
-        "unknown_versions",
-        "streamed_lod"
-      ],
+        "legacy_v1",
+        "lossy_webp_layers",
+        "streamed_lod",
+        "unknown_layers"
+      ]
+    },
+    {
       "capabilities": {
-        "format": "ksplat",
-        "datatype": "splat",
-        "record_type": "GaussianCloud",
+        "available": true,
+        "can_inspect": true,
+        "can_read": true,
+        "can_write": true,
+        "container_kind": "file",
         "extensions": [
           ".ksplat"
         ],
         "filenames": [],
-        "container_kind": "file",
-        "available": true,
-        "can_read": true,
-        "can_write": true,
-        "can_inspect": true,
+        "format": "ksplat",
+        "lossy": true,
         "partial_selectors": [
           "points"
         ],
+        "payload_kind": "splat",
+        "record_type": "GaussianCloud",
+        "requires_features": [],
         "streams_read": true,
         "streams_write": true,
-        "lossy": true,
-        "requires_features": [],
         "supported_features": [
           "mkkellogg_v0_1",
           "compression_levels_0_2",
@@ -407,75 +369,66 @@
           "unknown_versions",
           "streamed_lod"
         ]
-      }
-    },
-    {
-      "id": "ply_mesh",
+      },
+      "container_kind": "file",
+      "dir_marker": "cameras.bin",
       "extensions": [
-        ".ply"
-      ],
-      "magic_hex": [
-        "706c79"
+        ".ksplat"
       ],
       "filenames": [],
+      "id": "ksplat",
       "is_directory": false,
-      "dir_marker": "cameras.bin",
-      "container_kind": "file",
-      "datatype": "mesh",
+      "lossy": true,
+      "magic_hex": [],
+      "payload_kind": "splat",
       "record": {
         "module": "sceneio._core",
-        "qualname": "Mesh"
+        "qualname": "GaussianCloud"
       },
+      "requires_features": [],
       "selectors": [
-        "faces"
+        "points"
       ],
       "streams_read": true,
       "streams_write": true,
-      "lossy": false,
-      "requires_features": [],
       "supported_features": [
-        "ascii",
-        "binary_little_endian",
-        "binary_big_endian",
-        "polygon_boundaries",
-        "vertex_normals",
-        "corner_normals",
-        "vertex_uvs",
-        "corner_uvs",
-        "vertex_rgba8",
-        "corner_rgba8",
-        "primitive_ranges",
-        "material_indices",
-        "coordinate_metadata",
-        "local_transform"
+        "mkkellogg_v0_1",
+        "compression_levels_0_2",
+        "float16_scale_rotation",
+        "bucketed_position_uint16",
+        "rgba8",
+        "sh_degrees_0_2",
+        "sh_uint8_level_2",
+        "multi_section_read",
+        "deterministic_single_section_write"
       ],
       "unsupported_features": [
-        "unknown_elements",
-        "unknown_properties",
-        "implicit_triangulation",
-        "texture_file_comments_without_material_set",
-        "obj_info_metadata"
-      ],
+        "sh_degree_3",
+        "unknown_versions",
+        "streamed_lod"
+      ]
+    },
+    {
       "capabilities": {
-        "format": "ply_mesh",
-        "datatype": "mesh",
-        "record_type": "Mesh",
+        "available": true,
+        "can_inspect": true,
+        "can_read": true,
+        "can_write": true,
+        "container_kind": "file",
         "extensions": [
           ".ply"
         ],
         "filenames": [],
-        "container_kind": "file",
-        "available": true,
-        "can_read": true,
-        "can_write": true,
-        "can_inspect": true,
+        "format": "ply_mesh",
+        "lossy": false,
         "partial_selectors": [
           "faces"
         ],
+        "payload_kind": "mesh",
+        "record_type": "Mesh",
+        "requires_features": [],
         "streams_read": true,
         "streams_write": true,
-        "lossy": false,
-        "requires_features": [],
         "supported_features": [
           "ascii",
           "binary_little_endian",
@@ -499,73 +452,73 @@
           "texture_file_comments_without_material_set",
           "obj_info_metadata"
         ]
-      }
-    },
-    {
-      "id": "obj",
-      "extensions": [
-        ".obj"
-      ],
-      "magic_hex": [],
-      "filenames": [],
-      "is_directory": false,
+      },
+      "container_kind": "file",
       "dir_marker": "cameras.bin",
-      "container_kind": "multi_file",
-      "datatype": "mesh",
+      "extensions": [
+        ".ply"
+      ],
+      "filenames": [],
+      "id": "ply_mesh",
+      "is_directory": false,
+      "lossy": false,
+      "magic_hex": [
+        "706c79"
+      ],
+      "payload_kind": "mesh",
       "record": {
         "module": "sceneio._core",
         "qualname": "Mesh"
       },
-      "selectors": [],
+      "requires_features": [],
+      "selectors": [
+        "faces"
+      ],
       "streams_read": true,
       "streams_write": true,
-      "lossy": false,
-      "requires_features": [],
       "supported_features": [
+        "ascii",
+        "binary_little_endian",
+        "binary_big_endian",
         "polygon_boundaries",
-        "negative_indices",
         "vertex_normals",
         "corner_normals",
         "vertex_uvs",
         "corner_uvs",
-        "vertex_rgb8",
-        "object_names",
-        "single_group_names",
-        "smoothing_groups",
-        "single_material_library",
-        "pbr_mtl_factors",
-        "mtl_texture_maps",
-        "texture_clamp"
+        "vertex_rgba8",
+        "corner_rgba8",
+        "primitive_ranges",
+        "material_indices",
+        "coordinate_metadata",
+        "local_transform"
       ],
       "unsupported_features": [
-        "line_and_point_primitives",
-        "freeform_geometry",
-        "multiple_simultaneous_groups",
-        "multiple_material_libraries",
-        "unknown_directives",
+        "unknown_elements",
+        "unknown_properties",
         "implicit_triangulation",
-        "corner_colors",
-        "vertex_alpha",
-        "texture_transform_options"
-      ],
+        "texture_file_comments_without_material_set",
+        "obj_info_metadata"
+      ]
+    },
+    {
       "capabilities": {
-        "format": "obj",
-        "datatype": "mesh",
-        "record_type": "Mesh",
+        "available": true,
+        "can_inspect": true,
+        "can_read": true,
+        "can_write": true,
+        "container_kind": "multi_file",
         "extensions": [
           ".obj"
         ],
         "filenames": [],
-        "container_kind": "multi_file",
-        "available": true,
-        "can_read": true,
-        "can_write": true,
-        "can_inspect": true,
+        "format": "obj",
+        "lossy": false,
         "partial_selectors": [],
+        "payload_kind": "mesh",
+        "record_type": "Mesh",
+        "requires_features": [],
         "streams_read": true,
         "streams_write": true,
-        "lossy": false,
-        "requires_features": [],
         "supported_features": [
           "polygon_boundaries",
           "negative_indices",
@@ -593,69 +546,75 @@
           "vertex_alpha",
           "texture_transform_options"
         ]
-      }
-    },
-    {
-      "id": "stl",
+      },
+      "container_kind": "multi_file",
+      "dir_marker": "cameras.bin",
       "extensions": [
-        ".stl"
-      ],
-      "magic_hex": [
-        "736f6c6964"
+        ".obj"
       ],
       "filenames": [],
+      "id": "obj",
       "is_directory": false,
-      "dir_marker": "cameras.bin",
-      "container_kind": "file",
-      "datatype": "mesh",
+      "lossy": false,
+      "magic_hex": [],
+      "payload_kind": "mesh",
       "record": {
         "module": "sceneio._core",
         "qualname": "Mesh"
       },
-      "selectors": [
-        "faces"
-      ],
+      "requires_features": [],
+      "selectors": [],
       "streams_read": true,
       "streams_write": true,
-      "lossy": false,
-      "requires_features": [],
       "supported_features": [
-        "ascii",
-        "binary_little_endian",
-        "triangle_soup",
-        "facet_normals",
-        "face_ranges"
+        "polygon_boundaries",
+        "negative_indices",
+        "vertex_normals",
+        "corner_normals",
+        "vertex_uvs",
+        "corner_uvs",
+        "vertex_rgb8",
+        "object_names",
+        "single_group_names",
+        "smoothing_groups",
+        "single_material_library",
+        "pbr_mtl_factors",
+        "mtl_texture_maps",
+        "texture_clamp"
       ],
       "unsupported_features": [
-        "indexed_connectivity",
-        "non_triangle_faces",
-        "binary_facet_attributes",
-        "binary_color_extensions",
-        "vertex_colors",
+        "line_and_point_primitives",
+        "freeform_geometry",
+        "multiple_simultaneous_groups",
+        "multiple_material_libraries",
+        "unknown_directives",
+        "implicit_triangulation",
         "corner_colors",
-        "uvs",
-        "coordinate_metadata"
-      ],
+        "vertex_alpha",
+        "texture_transform_options"
+      ]
+    },
+    {
       "capabilities": {
-        "format": "stl",
-        "datatype": "mesh",
-        "record_type": "Mesh",
+        "available": true,
+        "can_inspect": true,
+        "can_read": true,
+        "can_write": true,
+        "container_kind": "file",
         "extensions": [
           ".stl"
         ],
         "filenames": [],
-        "container_kind": "file",
-        "available": true,
-        "can_read": true,
-        "can_write": true,
-        "can_inspect": true,
+        "format": "stl",
+        "lossy": false,
         "partial_selectors": [
           "faces"
         ],
+        "payload_kind": "mesh",
+        "record_type": "Mesh",
+        "requires_features": [],
         "streams_read": true,
         "streams_write": true,
-        "lossy": false,
-        "requires_features": [],
         "supported_features": [
           "ascii",
           "binary_little_endian",
@@ -673,79 +632,69 @@
           "uvs",
           "coordinate_metadata"
         ]
-      }
-    },
-    {
-      "id": "off",
+      },
+      "container_kind": "file",
+      "dir_marker": "cameras.bin",
       "extensions": [
-        ".off"
-      ],
-      "magic_hex": [
-        "4f4646",
-        "4e4f4646",
-        "434f4646",
-        "434e4f4646",
-        "53544f4646",
-        "53544e4f4646",
-        "5354434f4646",
-        "5354434e4f4646"
+        ".stl"
       ],
       "filenames": [],
+      "id": "stl",
       "is_directory": false,
-      "dir_marker": "cameras.bin",
-      "container_kind": "file",
-      "datatype": "mesh",
+      "lossy": false,
+      "magic_hex": [
+        "736f6c6964"
+      ],
+      "payload_kind": "mesh",
       "record": {
         "module": "sceneio._core",
         "qualname": "Mesh"
       },
+      "requires_features": [],
       "selectors": [
         "faces"
       ],
       "streams_read": true,
       "streams_write": true,
-      "lossy": false,
-      "requires_features": [],
       "supported_features": [
         "ascii",
-        "record_per_line",
-        "polygon_boundaries",
-        "vertex_normals",
-        "vertex_uvs",
-        "vertex_rgba8",
+        "binary_little_endian",
+        "triangle_soup",
+        "facet_normals",
         "face_ranges"
       ],
       "unsupported_features": [
-        "binary",
-        "face_colors",
-        "homogeneous_coordinates",
-        "n_dimensional_vertices",
-        "cross_line_records",
-        "records_over_1_mib",
-        "corner_attributes",
-        "material_metadata",
+        "indexed_connectivity",
+        "non_triangle_faces",
+        "binary_facet_attributes",
+        "binary_color_extensions",
+        "vertex_colors",
+        "corner_colors",
+        "uvs",
         "coordinate_metadata"
-      ],
+      ]
+    },
+    {
       "capabilities": {
-        "format": "off",
-        "datatype": "mesh",
-        "record_type": "Mesh",
+        "available": true,
+        "can_inspect": true,
+        "can_read": true,
+        "can_write": true,
+        "container_kind": "file",
         "extensions": [
           ".off"
         ],
         "filenames": [],
-        "container_kind": "file",
-        "available": true,
-        "can_read": true,
-        "can_write": true,
-        "can_inspect": true,
+        "format": "off",
+        "lossy": false,
         "partial_selectors": [
           "faces"
         ],
+        "payload_kind": "mesh",
+        "record_type": "Mesh",
+        "requires_features": [],
         "streams_read": true,
         "streams_write": true,
-        "lossy": false,
-        "requires_features": [],
         "supported_features": [
           "ascii",
           "record_per_line",
@@ -766,87 +715,80 @@
           "material_metadata",
           "coordinate_metadata"
         ]
-      }
-    },
-    {
-      "id": "gltf",
-      "extensions": [
-        ".gltf"
-      ],
-      "magic_hex": [],
-      "filenames": [],
-      "is_directory": false,
+      },
+      "container_kind": "file",
       "dir_marker": "cameras.bin",
-      "container_kind": "multi_file",
-      "datatype": "scene_graph",
+      "extensions": [
+        ".off"
+      ],
+      "filenames": [],
+      "id": "off",
+      "is_directory": false,
+      "lossy": false,
+      "magic_hex": [
+        "4f4646",
+        "4e4f4646",
+        "434f4646",
+        "434e4f4646",
+        "53544f4646",
+        "53544e4f4646",
+        "5354434f4646",
+        "5354434e4f4646"
+      ],
+      "payload_kind": "mesh",
       "record": {
         "module": "sceneio._core",
-        "qualname": "SceneGraph"
+        "qualname": "Mesh"
       },
+      "requires_features": [],
       "selectors": [
-        "mesh_id",
-        "primitive_id"
+        "faces"
       ],
       "streams_read": true,
       "streams_write": true,
-      "lossy": false,
-      "requires_features": [],
       "supported_features": [
-        "gltf_2_0_json",
-        "external_buffers",
-        "base64_data_buffers",
-        "buffer_views",
-        "strided_accessors",
-        "sparse_accessors",
-        "triangle_primitives",
-        "uint8_uint16_uint32_indices",
+        "ascii",
+        "record_per_line",
+        "polygon_boundaries",
         "vertex_normals",
-        "texcoord_0",
-        "normalized_rgba8",
-        "node_hierarchy",
-        "node_transforms",
-        "multiple_scenes",
-        "metallic_roughness_materials",
-        "uri_image_references"
+        "vertex_uvs",
+        "vertex_rgba8",
+        "face_ranges"
       ],
       "unsupported_features": [
-        "non_triangle_primitive_modes",
+        "binary",
+        "face_colors",
+        "homogeneous_coordinates",
+        "n_dimensional_vertices",
+        "cross_line_records",
+        "records_over_1_mib",
         "corner_attributes",
-        "texcoord_sets_above_zero",
-        "float_or_uint16_colors",
-        "buffer_view_images",
-        "double_sided_materials",
-        "texture_transforms",
-        "skins",
-        "morph_targets",
-        "animations",
-        "cameras",
-        "lights",
-        "extensions",
-        "draco",
-        "meshopt"
-      ],
+        "material_metadata",
+        "coordinate_metadata"
+      ]
+    },
+    {
       "capabilities": {
-        "format": "gltf",
-        "datatype": "scene_graph",
-        "record_type": "SceneGraph",
+        "available": true,
+        "can_inspect": true,
+        "can_read": true,
+        "can_write": true,
+        "container_kind": "multi_file",
         "extensions": [
           ".gltf"
         ],
         "filenames": [],
-        "container_kind": "multi_file",
-        "available": true,
-        "can_read": true,
-        "can_write": true,
-        "can_inspect": true,
+        "format": "gltf",
+        "lossy": false,
         "partial_selectors": [
           "mesh_id",
           "primitive_id"
         ],
+        "payload_kind": "scene_graph",
+        "record_type": "SceneGraph",
+        "requires_features": [],
         "streams_read": true,
         "streams_write": true,
-        "lossy": false,
-        "requires_features": [],
         "supported_features": [
           "gltf_2_0_json",
           "external_buffers",
@@ -882,36 +824,33 @@
           "draco",
           "meshopt"
         ]
-      }
-    },
-    {
-      "id": "glb",
+      },
+      "container_kind": "multi_file",
+      "dir_marker": "cameras.bin",
       "extensions": [
-        ".glb"
-      ],
-      "magic_hex": [
-        "676c5446"
+        ".gltf"
       ],
       "filenames": [],
+      "id": "gltf",
       "is_directory": false,
-      "dir_marker": "cameras.bin",
-      "container_kind": "file",
-      "datatype": "scene_graph",
+      "lossy": false,
+      "magic_hex": [],
+      "payload_kind": "scene_graph",
       "record": {
         "module": "sceneio._core",
         "qualname": "SceneGraph"
       },
+      "requires_features": [],
       "selectors": [
         "mesh_id",
         "primitive_id"
       ],
       "streams_read": true,
       "streams_write": true,
-      "lossy": false,
-      "requires_features": [],
       "supported_features": [
-        "glb_2_0",
-        "embedded_binary_buffer",
+        "gltf_2_0_json",
+        "external_buffers",
+        "base64_data_buffers",
         "buffer_views",
         "strided_accessors",
         "sparse_accessors",
@@ -942,28 +881,30 @@
         "extensions",
         "draco",
         "meshopt"
-      ],
+      ]
+    },
+    {
       "capabilities": {
-        "format": "glb",
-        "datatype": "scene_graph",
-        "record_type": "SceneGraph",
+        "available": true,
+        "can_inspect": true,
+        "can_read": true,
+        "can_write": true,
+        "container_kind": "file",
         "extensions": [
           ".glb"
         ],
         "filenames": [],
-        "container_kind": "file",
-        "available": true,
-        "can_read": true,
-        "can_write": true,
-        "can_inspect": true,
+        "format": "glb",
+        "lossy": false,
         "partial_selectors": [
           "mesh_id",
           "primitive_id"
         ],
+        "payload_kind": "scene_graph",
+        "record_type": "SceneGraph",
+        "requires_features": [],
         "streams_read": true,
         "streams_write": true,
-        "lossy": false,
-        "requires_features": [],
         "supported_features": [
           "glb_2_0",
           "embedded_binary_buffer",
@@ -998,109 +939,89 @@
           "draco",
           "meshopt"
         ]
-      }
-    },
-    {
-      "id": "usd",
+      },
+      "container_kind": "file",
+      "dir_marker": "cameras.bin",
       "extensions": [
-        ".usd",
-        ".usda",
-        ".usdc"
-      ],
-      "magic_hex": [
-        "237573646120312e30",
-        "5058522d5553444300"
+        ".glb"
       ],
       "filenames": [],
+      "id": "glb",
       "is_directory": false,
-      "dir_marker": "cameras.bin",
-      "container_kind": "file",
-      "datatype": "scene_graph",
+      "lossy": false,
+      "magic_hex": [
+        "676c5446"
+      ],
+      "payload_kind": "scene_graph",
       "record": {
         "module": "sceneio._core",
         "qualname": "SceneGraph"
       },
-      "selectors": [],
+      "requires_features": [],
+      "selectors": [
+        "mesh_id",
+        "primitive_id"
+      ],
       "streams_read": true,
       "streams_write": true,
-      "lossy": false,
-      "requires_features": [
-        "tinyusdz"
-      ],
       "supported_features": [
-        "profile_sceneio_usd_3dcv_1",
-        "ascii_usd",
-        "historical_usdc_read_through_crate_10",
-        "directly_authored_static_stage",
-        "direct_usda_selected_time",
-        "matrix_transform_time_samples",
-        "visibility_time_samples",
-        "static_meshes",
-        "static_points",
-        "static_gaussians",
-        "bounded_preview_surface_materials",
-        "relative_png_jpeg_exr_textures",
-        "static_cameras",
-        "external_scalar_float_openvdb_references",
-        "single_inherited_semantic_pair",
-        "static_point_instances",
-        "polygon_boundaries",
+        "glb_2_0",
+        "embedded_binary_buffer",
+        "buffer_views",
+        "strided_accessors",
+        "sparse_accessors",
+        "triangle_primitives",
+        "uint8_uint16_uint32_indices",
         "vertex_normals",
-        "corner_normals",
-        "vertex_uvs",
-        "corner_uvs",
+        "texcoord_0",
+        "normalized_rgba8",
         "node_hierarchy",
-        "matrix_transforms",
-        "single_scene",
-        "streaming_repository_writer",
-        "transactional_path_write"
+        "node_transforms",
+        "multiple_scenes",
+        "metallic_roughness_materials",
+        "uri_image_references"
       ],
       "unsupported_features": [
-        "current_usdc",
-        "usdc_write",
-        "composition",
-        "authored_animation_preservation",
-        "dynamic_write",
-        "usdc_selected_time",
-        "time_varying_payloads",
-        "arbitrary_sampled_xform_stacks",
-        "subdivision_surfaces",
-        "animations",
+        "non_triangle_primitive_modes",
+        "corner_attributes",
+        "texcoord_sets_above_zero",
+        "float_or_uint16_colors",
+        "buffer_view_images",
+        "double_sided_materials",
+        "texture_transforms",
         "skins",
-        "blend_shapes",
+        "morph_targets",
+        "animations",
+        "cameras",
         "lights",
-        "references",
-        "payloads",
-        "variants",
-        "inherits",
-        "specializes",
-        "layer_stack_authoring",
-        "multiple_semantic_labels",
-        "volume_grid_decoding",
-        "custom_metadata"
-      ],
+        "extensions",
+        "draco",
+        "meshopt"
+      ]
+    },
+    {
       "capabilities": {
-        "format": "usd",
-        "datatype": "scene_graph",
-        "record_type": "SceneGraph",
+        "available": true,
+        "can_inspect": true,
+        "can_read": true,
+        "can_write": true,
+        "container_kind": "file",
         "extensions": [
           ".usd",
           ".usda",
           ".usdc"
         ],
         "filenames": [],
-        "container_kind": "file",
-        "available": true,
-        "can_read": true,
-        "can_write": true,
-        "can_inspect": true,
-        "partial_selectors": [],
-        "streams_read": true,
-        "streams_write": true,
+        "format": "usd",
         "lossy": false,
+        "partial_selectors": [],
+        "payload_kind": "scene_graph",
+        "record_type": "SceneGraph",
         "requires_features": [
           "tinyusdz"
         ],
+        "streams_read": true,
+        "streams_write": true,
         "supported_features": [
           "profile_sceneio_usd_3dcv_1",
           "ascii_usd",
@@ -1153,37 +1074,37 @@
           "volume_grid_decoding",
           "custom_metadata"
         ]
-      }
-    },
-    {
-      "id": "usdz",
+      },
+      "container_kind": "file",
+      "dir_marker": "cameras.bin",
       "extensions": [
-        ".usdz"
-      ],
-      "magic_hex": [
-        "504b0304"
+        ".usd",
+        ".usda",
+        ".usdc"
       ],
       "filenames": [],
+      "id": "usd",
       "is_directory": false,
-      "dir_marker": "cameras.bin",
-      "container_kind": "file",
-      "datatype": "scene_graph",
+      "lossy": false,
+      "magic_hex": [
+        "237573646120312e30",
+        "5058522d5553444300"
+      ],
+      "payload_kind": "scene_graph",
       "record": {
         "module": "sceneio._core",
         "qualname": "SceneGraph"
       },
-      "selectors": [],
-      "streams_read": true,
-      "streams_write": true,
-      "lossy": false,
       "requires_features": [
         "tinyusdz"
       ],
+      "selectors": [],
+      "streams_read": true,
+      "streams_write": true,
       "supported_features": [
         "profile_sceneio_usd_3dcv_1",
-        "uncompressed_aligned_package",
-        "embedded_ascii_root_layer",
-        "historical_usdc_root_read_through_crate_10",
+        "ascii_usd",
+        "historical_usdc_read_through_crate_10",
         "directly_authored_static_stage",
         "direct_usda_selected_time",
         "matrix_transform_time_samples",
@@ -1192,8 +1113,9 @@
         "static_points",
         "static_gaussians",
         "bounded_preview_surface_materials",
-        "packaged_png_jpeg_exr_textures",
+        "relative_png_jpeg_exr_textures",
         "static_cameras",
+        "external_scalar_float_openvdb_references",
         "single_inherited_semantic_pair",
         "static_point_instances",
         "polygon_boundaries",
@@ -1208,9 +1130,8 @@
         "transactional_path_write"
       ],
       "unsupported_features": [
-        "arbitrary_embedded_assets",
         "current_usdc",
-        "binary_root_layer_write",
+        "usdc_write",
         "composition",
         "authored_animation_preservation",
         "dynamic_write",
@@ -1229,29 +1150,31 @@
         "specializes",
         "layer_stack_authoring",
         "multiple_semantic_labels",
-        "openvdb_assets",
+        "volume_grid_decoding",
         "custom_metadata"
-      ],
+      ]
+    },
+    {
       "capabilities": {
-        "format": "usdz",
-        "datatype": "scene_graph",
-        "record_type": "SceneGraph",
+        "available": true,
+        "can_inspect": true,
+        "can_read": true,
+        "can_write": true,
+        "container_kind": "file",
         "extensions": [
           ".usdz"
         ],
         "filenames": [],
-        "container_kind": "file",
-        "available": true,
-        "can_read": true,
-        "can_write": true,
-        "can_inspect": true,
-        "partial_selectors": [],
-        "streams_read": true,
-        "streams_write": true,
+        "format": "usdz",
         "lossy": false,
+        "partial_selectors": [],
+        "payload_kind": "scene_graph",
+        "record_type": "SceneGraph",
         "requires_features": [
           "tinyusdz"
         ],
+        "streams_read": true,
+        "streams_write": true,
         "supported_features": [
           "profile_sceneio_usd_3dcv_1",
           "uncompressed_aligned_package",
@@ -1305,66 +1228,105 @@
           "openvdb_assets",
           "custom_metadata"
         ]
-      }
-    },
-    {
-      "id": "ply",
-      "extensions": [
-        ".ply"
-      ],
-      "magic_hex": [],
-      "filenames": [],
-      "is_directory": false,
-      "dir_marker": "cameras.bin",
+      },
       "container_kind": "file",
-      "datatype": "point_cloud",
+      "dir_marker": "cameras.bin",
+      "extensions": [
+        ".usdz"
+      ],
+      "filenames": [],
+      "id": "usdz",
+      "is_directory": false,
+      "lossy": false,
+      "magic_hex": [
+        "504b0304"
+      ],
+      "payload_kind": "scene_graph",
       "record": {
         "module": "sceneio._core",
-        "qualname": "PointCloud"
+        "qualname": "SceneGraph"
       },
-      "selectors": [
-        "points"
+      "requires_features": [
+        "tinyusdz"
       ],
+      "selectors": [],
       "streams_read": true,
       "streams_write": true,
-      "lossy": false,
-      "requires_features": [],
       "supported_features": [
-        "ascii",
-        "binary_little_endian",
-        "binary_big_endian",
-        "standard_scalar_types_read",
-        "normals",
-        "rgb8",
-        "rgb16",
-        "intensity"
+        "profile_sceneio_usd_3dcv_1",
+        "uncompressed_aligned_package",
+        "embedded_ascii_root_layer",
+        "historical_usdc_root_read_through_crate_10",
+        "directly_authored_static_stage",
+        "direct_usda_selected_time",
+        "matrix_transform_time_samples",
+        "visibility_time_samples",
+        "static_meshes",
+        "static_points",
+        "static_gaussians",
+        "bounded_preview_surface_materials",
+        "packaged_png_jpeg_exr_textures",
+        "static_cameras",
+        "single_inherited_semantic_pair",
+        "static_point_instances",
+        "polygon_boundaries",
+        "vertex_normals",
+        "corner_normals",
+        "vertex_uvs",
+        "corner_uvs",
+        "node_hierarchy",
+        "matrix_transforms",
+        "single_scene",
+        "streaming_repository_writer",
+        "transactional_path_write"
       ],
       "unsupported_features": [
-        "vertex_lists",
-        "unknown_vertex_properties",
-        "non_vertex_elements",
-        "ascii_point_ranges"
-      ],
+        "arbitrary_embedded_assets",
+        "current_usdc",
+        "binary_root_layer_write",
+        "composition",
+        "authored_animation_preservation",
+        "dynamic_write",
+        "usdc_selected_time",
+        "time_varying_payloads",
+        "arbitrary_sampled_xform_stacks",
+        "subdivision_surfaces",
+        "animations",
+        "skins",
+        "blend_shapes",
+        "lights",
+        "references",
+        "payloads",
+        "variants",
+        "inherits",
+        "specializes",
+        "layer_stack_authoring",
+        "multiple_semantic_labels",
+        "openvdb_assets",
+        "custom_metadata"
+      ]
+    },
+    {
       "capabilities": {
-        "format": "ply",
-        "datatype": "point_cloud",
-        "record_type": "PointCloud",
+        "available": true,
+        "can_inspect": true,
+        "can_read": true,
+        "can_write": true,
+        "container_kind": "file",
         "extensions": [
           ".ply"
         ],
         "filenames": [],
-        "container_kind": "file",
-        "available": true,
-        "can_read": true,
-        "can_write": true,
-        "can_inspect": true,
+        "format": "ply",
+        "lossy": false,
         "partial_selectors": [
           "points"
         ],
+        "payload_kind": "point_cloud",
+        "record_type": "PointCloud",
+        "requires_features": [],
         "streams_read": true,
         "streams_write": true,
-        "lossy": false,
-        "requires_features": [],
         "supported_features": [
           "ascii",
           "binary_little_endian",
@@ -1381,71 +1343,66 @@
           "non_vertex_elements",
           "ascii_point_ranges"
         ]
-      }
-    },
-    {
-      "id": "pcd",
+      },
+      "container_kind": "file",
+      "dir_marker": "cameras.bin",
       "extensions": [
-        ".pcd"
-      ],
-      "magic_hex": [
-        "23202e504344"
+        ".ply"
       ],
       "filenames": [],
+      "id": "ply",
       "is_directory": false,
-      "dir_marker": "cameras.bin",
-      "container_kind": "file",
-      "datatype": "point_cloud",
+      "lossy": false,
+      "magic_hex": [],
+      "payload_kind": "point_cloud",
       "record": {
         "module": "sceneio._core",
         "qualname": "PointCloud"
       },
+      "requires_features": [],
       "selectors": [
         "points"
       ],
       "streams_read": true,
       "streams_write": true,
-      "lossy": false,
-      "requires_features": [],
       "supported_features": [
-        "pcd_0_7",
         "ascii",
-        "binary",
-        "binary_compressed",
-        "organized",
-        "viewpoint",
+        "binary_little_endian",
+        "binary_big_endian",
         "standard_scalar_types_read",
         "normals",
-        "packed_rgb8",
+        "rgb8",
+        "rgb16",
         "intensity"
       ],
       "unsupported_features": [
-        "unknown_fields",
-        "multi_count_fields",
-        "rgb16",
-        "ascii_point_ranges",
-        "compressed_point_ranges"
-      ],
+        "vertex_lists",
+        "unknown_vertex_properties",
+        "non_vertex_elements",
+        "ascii_point_ranges"
+      ]
+    },
+    {
       "capabilities": {
-        "format": "pcd",
-        "datatype": "point_cloud",
-        "record_type": "PointCloud",
+        "available": true,
+        "can_inspect": true,
+        "can_read": true,
+        "can_write": true,
+        "container_kind": "file",
         "extensions": [
           ".pcd"
         ],
         "filenames": [],
-        "container_kind": "file",
-        "available": true,
-        "can_read": true,
-        "can_write": true,
-        "can_inspect": true,
+        "format": "pcd",
+        "lossy": false,
         "partial_selectors": [
           "points"
         ],
+        "payload_kind": "point_cloud",
+        "record_type": "PointCloud",
+        "requires_features": [],
         "streams_read": true,
         "streams_write": true,
-        "lossy": false,
-        "requires_features": [],
         "supported_features": [
           "pcd_0_7",
           "ascii",
@@ -1465,56 +1422,69 @@
           "ascii_point_ranges",
           "compressed_point_ranges"
         ]
-      }
-    },
-    {
-      "id": "spz",
+      },
+      "container_kind": "file",
+      "dir_marker": "cameras.bin",
       "extensions": [
-        ".spz"
-      ],
-      "magic_hex": [
-        "1f8b",
-        "4e475350"
+        ".pcd"
       ],
       "filenames": [],
+      "id": "pcd",
       "is_directory": false,
-      "dir_marker": "cameras.bin",
-      "container_kind": "file",
-      "datatype": "splat",
+      "lossy": false,
+      "magic_hex": [
+        "23202e504344"
+      ],
+      "payload_kind": "point_cloud",
       "record": {
         "module": "sceneio._core",
-        "qualname": "GaussianCloud"
+        "qualname": "PointCloud"
       },
-      "selectors": [],
+      "requires_features": [],
+      "selectors": [
+        "points"
+      ],
       "streams_read": true,
       "streams_write": true,
-      "lossy": true,
-      "requires_features": [],
       "supported_features": [
-        "v1_read",
-        "v2_read",
-        "v3_read_write",
-        "v4_read_write"
+        "pcd_0_7",
+        "ascii",
+        "binary",
+        "binary_compressed",
+        "organized",
+        "viewpoint",
+        "standard_scalar_types_read",
+        "normals",
+        "packed_rgb8",
+        "intensity"
       ],
-      "unsupported_features": [],
+      "unsupported_features": [
+        "unknown_fields",
+        "multi_count_fields",
+        "rgb16",
+        "ascii_point_ranges",
+        "compressed_point_ranges"
+      ]
+    },
+    {
       "capabilities": {
-        "format": "spz",
-        "datatype": "splat",
-        "record_type": "GaussianCloud",
+        "available": true,
+        "can_inspect": true,
+        "can_read": true,
+        "can_write": true,
+        "container_kind": "file",
         "extensions": [
           ".spz"
         ],
         "filenames": [],
-        "container_kind": "file",
-        "available": true,
-        "can_read": true,
-        "can_write": true,
-        "can_inspect": true,
+        "format": "spz",
+        "lossy": true,
         "partial_selectors": [],
+        "payload_kind": "splat",
+        "record_type": "GaussianCloud",
+        "requires_features": [],
         "streams_read": true,
         "streams_write": true,
-        "lossy": true,
-        "requires_features": [],
         "supported_features": [
           "v1_read",
           "v2_read",
@@ -1522,182 +1492,180 @@
           "v4_read_write"
         ],
         "unsupported_features": []
-      }
-    },
-    {
-      "id": "transforms_json",
-      "extensions": [],
-      "magic_hex": [],
-      "filenames": [
-        "transforms.json"
-      ],
-      "is_directory": false,
-      "dir_marker": "cameras.bin",
-      "container_kind": "file",
-      "datatype": "posed_views",
-      "record": {
-        "module": "sceneio._data.views",
-        "qualname": "PosedViewSet"
       },
+      "container_kind": "file",
+      "dir_marker": "cameras.bin",
+      "extensions": [
+        ".spz"
+      ],
+      "filenames": [],
+      "id": "spz",
+      "is_directory": false,
+      "lossy": true,
+      "magic_hex": [
+        "1f8b",
+        "4e475350"
+      ],
+      "payload_kind": "splat",
+      "record": {
+        "module": "sceneio._core",
+        "qualname": "GaussianCloud"
+      },
+      "requires_features": [],
       "selectors": [],
       "streams_read": true,
       "streams_write": true,
-      "lossy": false,
-      "requires_features": [],
-      "supported_features": [],
-      "unsupported_features": [],
+      "supported_features": [
+        "v1_read",
+        "v2_read",
+        "v3_read_write",
+        "v4_read_write"
+      ],
+      "unsupported_features": []
+    },
+    {
       "capabilities": {
-        "format": "transforms_json",
-        "datatype": "posed_views",
-        "record_type": "PosedViewSet",
+        "available": true,
+        "can_inspect": true,
+        "can_read": true,
+        "can_write": true,
+        "container_kind": "file",
         "extensions": [],
         "filenames": [
           "transforms.json"
         ],
-        "container_kind": "file",
-        "available": true,
-        "can_read": true,
-        "can_write": true,
-        "can_inspect": true,
+        "format": "transforms_json",
+        "lossy": false,
         "partial_selectors": [],
+        "payload_kind": "posed_views",
+        "record_type": "PosedViewSet",
+        "requires_features": [],
         "streams_read": true,
         "streams_write": true,
-        "lossy": false,
-        "requires_features": [],
         "supported_features": [],
         "unsupported_features": []
-      }
-    },
-    {
-      "id": "tum",
-      "extensions": [],
-      "magic_hex": [],
-      "filenames": [],
-      "is_directory": false,
-      "dir_marker": "cameras.bin",
+      },
       "container_kind": "file",
-      "datatype": "posed_views",
+      "dir_marker": "cameras.bin",
+      "extensions": [],
+      "filenames": [
+        "transforms.json"
+      ],
+      "id": "transforms_json",
+      "is_directory": false,
+      "lossy": false,
+      "magic_hex": [],
+      "payload_kind": "posed_views",
       "record": {
         "module": "sceneio._data.views",
         "qualname": "PosedViewSet"
       },
+      "requires_features": [],
       "selectors": [],
       "streams_read": true,
       "streams_write": true,
-      "lossy": false,
-      "requires_features": [],
       "supported_features": [],
-      "unsupported_features": [],
+      "unsupported_features": []
+    },
+    {
       "capabilities": {
+        "available": true,
+        "can_inspect": true,
+        "can_read": true,
+        "can_write": true,
+        "container_kind": "file",
+        "extensions": [],
+        "filenames": [],
         "format": "tum",
-        "datatype": "posed_views",
-        "record_type": "PosedViewSet",
-        "extensions": [],
-        "filenames": [],
-        "container_kind": "file",
-        "available": true,
-        "can_read": true,
-        "can_write": true,
-        "can_inspect": true,
+        "lossy": false,
         "partial_selectors": [],
+        "payload_kind": "posed_views",
+        "record_type": "PosedViewSet",
+        "requires_features": [],
         "streams_read": true,
         "streams_write": true,
-        "lossy": false,
-        "requires_features": [],
         "supported_features": [],
         "unsupported_features": []
-      }
-    },
-    {
-      "id": "kitti",
-      "extensions": [],
-      "magic_hex": [],
-      "filenames": [],
-      "is_directory": false,
-      "dir_marker": "cameras.bin",
+      },
       "container_kind": "file",
-      "datatype": "posed_views",
+      "dir_marker": "cameras.bin",
+      "extensions": [],
+      "filenames": [],
+      "id": "tum",
+      "is_directory": false,
+      "lossy": false,
+      "magic_hex": [],
+      "payload_kind": "posed_views",
       "record": {
         "module": "sceneio._data.views",
         "qualname": "PosedViewSet"
       },
+      "requires_features": [],
       "selectors": [],
       "streams_read": true,
       "streams_write": true,
-      "lossy": false,
-      "requires_features": [],
       "supported_features": [],
-      "unsupported_features": [],
-      "capabilities": {
-        "format": "kitti",
-        "datatype": "posed_views",
-        "record_type": "PosedViewSet",
-        "extensions": [],
-        "filenames": [],
-        "container_kind": "file",
-        "available": true,
-        "can_read": true,
-        "can_write": true,
-        "can_inspect": true,
-        "partial_selectors": [],
-        "streams_read": true,
-        "streams_write": true,
-        "lossy": false,
-        "requires_features": [],
-        "supported_features": [],
-        "unsupported_features": []
-      }
+      "unsupported_features": []
     },
     {
-      "id": "euroc_state",
-      "extensions": [],
-      "magic_hex": [
-        "2374696d657374616d70205b6e735d2c"
-      ],
-      "filenames": [],
-      "is_directory": false,
-      "dir_marker": "cameras.bin",
-      "container_kind": "file",
-      "datatype": "state_trajectory",
-      "record": {
-        "module": "sceneio._core",
-        "qualname": "StateTrajectory"
-      },
-      "selectors": [
-        "states"
-      ],
-      "streams_read": true,
-      "streams_write": true,
-      "lossy": false,
-      "requires_features": [],
-      "supported_features": [
-        "int64_nanosecond_timestamps",
-        "position",
-        "wxyz_orientation",
-        "velocity",
-        "gyroscope_bias",
-        "accelerometer_bias",
-        "state_ranges"
-      ],
-      "unsupported_features": [],
       "capabilities": {
-        "format": "euroc_state",
-        "datatype": "state_trajectory",
-        "record_type": "StateTrajectory",
-        "extensions": [],
-        "filenames": [],
-        "container_kind": "file",
         "available": true,
+        "can_inspect": true,
         "can_read": true,
         "can_write": true,
+        "container_kind": "file",
+        "extensions": [],
+        "filenames": [],
+        "format": "kitti",
+        "lossy": false,
+        "partial_selectors": [],
+        "payload_kind": "posed_views",
+        "record_type": "PosedViewSet",
+        "requires_features": [],
+        "streams_read": true,
+        "streams_write": true,
+        "supported_features": [],
+        "unsupported_features": []
+      },
+      "container_kind": "file",
+      "dir_marker": "cameras.bin",
+      "extensions": [],
+      "filenames": [],
+      "id": "kitti",
+      "is_directory": false,
+      "lossy": false,
+      "magic_hex": [],
+      "payload_kind": "posed_views",
+      "record": {
+        "module": "sceneio._data.views",
+        "qualname": "PosedViewSet"
+      },
+      "requires_features": [],
+      "selectors": [],
+      "streams_read": true,
+      "streams_write": true,
+      "supported_features": [],
+      "unsupported_features": []
+    },
+    {
+      "capabilities": {
+        "available": true,
         "can_inspect": true,
+        "can_read": true,
+        "can_write": true,
+        "container_kind": "file",
+        "extensions": [],
+        "filenames": [],
+        "format": "euroc_state",
+        "lossy": false,
         "partial_selectors": [
           "states"
         ],
+        "payload_kind": "state_trajectory",
+        "record_type": "StateTrajectory",
+        "requires_features": [],
         "streams_read": true,
         "streams_write": true,
-        "lossy": false,
-        "requires_features": [],
         "supported_features": [
           "int64_nanosecond_timestamps",
           "position",
@@ -1708,28 +1676,85 @@
           "state_ranges"
         ],
         "unsupported_features": []
-      }
+      },
+      "container_kind": "file",
+      "dir_marker": "cameras.bin",
+      "extensions": [],
+      "filenames": [],
+      "id": "euroc_state",
+      "is_directory": false,
+      "lossy": false,
+      "magic_hex": [
+        "2374696d657374616d70205b6e735d2c"
+      ],
+      "payload_kind": "state_trajectory",
+      "record": {
+        "module": "sceneio._core",
+        "qualname": "StateTrajectory"
+      },
+      "requires_features": [],
+      "selectors": [
+        "states"
+      ],
+      "streams_read": true,
+      "streams_write": true,
+      "supported_features": [
+        "int64_nanosecond_timestamps",
+        "position",
+        "wxyz_orientation",
+        "velocity",
+        "gyroscope_bias",
+        "accelerometer_bias",
+        "state_ranges"
+      ],
+      "unsupported_features": []
     },
     {
-      "id": "opencv_yaml",
+      "capabilities": {
+        "available": true,
+        "can_inspect": true,
+        "can_read": true,
+        "can_write": true,
+        "container_kind": "file",
+        "extensions": [],
+        "filenames": [],
+        "format": "opencv_yaml",
+        "lossy": false,
+        "partial_selectors": [],
+        "payload_kind": "camera_rig",
+        "record_type": "CameraRig",
+        "requires_features": [],
+        "streams_read": true,
+        "streams_write": true,
+        "supported_features": [
+          "camera_matrix",
+          "distortion_coefficients",
+          "rectification_matrix",
+          "projection_matrix"
+        ],
+        "unsupported_features": [
+          "stereo_extrinsics"
+        ]
+      },
+      "container_kind": "file",
+      "dir_marker": "cameras.bin",
       "extensions": [],
+      "filenames": [],
+      "id": "opencv_yaml",
+      "is_directory": false,
+      "lossy": false,
       "magic_hex": [
         "2559414d4c3a312e30"
       ],
-      "filenames": [],
-      "is_directory": false,
-      "dir_marker": "cameras.bin",
-      "container_kind": "file",
-      "datatype": "camera_rig",
+      "payload_kind": "camera_rig",
       "record": {
         "module": "sceneio._core",
         "qualname": "CameraRig"
       },
+      "requires_features": [],
       "selectors": [],
       "streams_read": true,
       "streams_write": true,
-      "lossy": false,
-      "requires_features": [],
       "supported_features": [
         "camera_matrix",
         "distortion_coefficients",
@@ -1738,23 +1763,25 @@
       ],
       "unsupported_features": [
         "stereo_extrinsics"
-      ],
+      ]
+    },
+    {
       "capabilities": {
-        "format": "opencv_yaml",
-        "datatype": "camera_rig",
-        "record_type": "CameraRig",
-        "extensions": [],
-        "filenames": [],
-        "container_kind": "file",
         "available": true,
+        "can_inspect": true,
         "can_read": true,
         "can_write": true,
-        "can_inspect": true,
+        "container_kind": "file",
+        "extensions": [],
+        "filenames": [],
+        "format": "opencv_xml",
+        "lossy": false,
         "partial_selectors": [],
+        "payload_kind": "camera_rig",
+        "record_type": "CameraRig",
+        "requires_features": [],
         "streams_read": true,
         "streams_write": true,
-        "lossy": false,
-        "requires_features": [],
         "supported_features": [
           "camera_matrix",
           "distortion_coefficients",
@@ -1764,28 +1791,26 @@
         "unsupported_features": [
           "stereo_extrinsics"
         ]
-      }
-    },
-    {
-      "id": "opencv_xml",
+      },
+      "container_kind": "file",
+      "dir_marker": "cameras.bin",
       "extensions": [],
+      "filenames": [],
+      "id": "opencv_xml",
+      "is_directory": false,
+      "lossy": false,
       "magic_hex": [
         "3c6f70656e63765f73746f72616765"
       ],
-      "filenames": [],
-      "is_directory": false,
-      "dir_marker": "cameras.bin",
-      "container_kind": "file",
-      "datatype": "camera_rig",
+      "payload_kind": "camera_rig",
       "record": {
         "module": "sceneio._core",
         "qualname": "CameraRig"
       },
+      "requires_features": [],
       "selectors": [],
       "streams_read": true,
       "streams_write": true,
-      "lossy": false,
-      "requires_features": [],
       "supported_features": [
         "camera_matrix",
         "distortion_coefficients",
@@ -1794,79 +1819,25 @@
       ],
       "unsupported_features": [
         "stereo_extrinsics"
-      ],
-      "capabilities": {
-        "format": "opencv_xml",
-        "datatype": "camera_rig",
-        "record_type": "CameraRig",
-        "extensions": [],
-        "filenames": [],
-        "container_kind": "file",
-        "available": true,
-        "can_read": true,
-        "can_write": true,
-        "can_inspect": true,
-        "partial_selectors": [],
-        "streams_read": true,
-        "streams_write": true,
-        "lossy": false,
-        "requires_features": [],
-        "supported_features": [
-          "camera_matrix",
-          "distortion_coefficients",
-          "rectification_matrix",
-          "projection_matrix"
-        ],
-        "unsupported_features": [
-          "stereo_extrinsics"
-        ]
-      }
+      ]
     },
     {
-      "id": "ros_camera_info",
-      "extensions": [],
-      "magic_hex": [
-        "696d6167655f77696474683a"
-      ],
-      "filenames": [],
-      "is_directory": false,
-      "dir_marker": "cameras.bin",
-      "container_kind": "file",
-      "datatype": "camera_rig",
-      "record": {
-        "module": "sceneio._core",
-        "qualname": "CameraRig"
-      },
-      "selectors": [],
-      "streams_read": true,
-      "streams_write": true,
-      "lossy": false,
-      "requires_features": [],
-      "supported_features": [
-        "camera_matrix",
-        "distortion_coefficients",
-        "rectification_matrix",
-        "projection_matrix",
-        "binning",
-        "roi"
-      ],
-      "unsupported_features": [],
       "capabilities": {
-        "format": "ros_camera_info",
-        "datatype": "camera_rig",
-        "record_type": "CameraRig",
-        "extensions": [],
-        "filenames": [],
-        "container_kind": "file",
         "available": true,
+        "can_inspect": true,
         "can_read": true,
         "can_write": true,
-        "can_inspect": true,
+        "container_kind": "file",
+        "extensions": [],
+        "filenames": [],
+        "format": "ros_camera_info",
+        "lossy": false,
         "partial_selectors": [],
+        "payload_kind": "camera_rig",
+        "record_type": "CameraRig",
+        "requires_features": [],
         "streams_read": true,
         "streams_write": true,
-        "lossy": false,
-        "requires_features": [],
         "supported_features": [
           "camera_matrix",
           "distortion_coefficients",
@@ -1876,54 +1847,53 @@
           "roi"
         ],
         "unsupported_features": []
-      }
-    },
-    {
-      "id": "kalibr",
-      "extensions": [],
-      "magic_hex": [
-        "63616d303a"
-      ],
-      "filenames": [],
-      "is_directory": false,
-      "dir_marker": "cameras.bin",
+      },
       "container_kind": "file",
-      "datatype": "camera_rig",
+      "dir_marker": "cameras.bin",
+      "extensions": [],
+      "filenames": [],
+      "id": "ros_camera_info",
+      "is_directory": false,
+      "lossy": false,
+      "magic_hex": [
+        "696d6167655f77696474683a"
+      ],
+      "payload_kind": "camera_rig",
       "record": {
         "module": "sceneio._core",
         "qualname": "CameraRig"
       },
+      "requires_features": [],
       "selectors": [],
       "streams_read": true,
       "streams_write": true,
-      "lossy": false,
-      "requires_features": [],
       "supported_features": [
-        "multi_camera",
-        "pinhole",
-        "omni",
-        "chained_extrinsics",
-        "imu_extrinsics",
-        "camera_imu_time_offsets",
-        "topics"
+        "camera_matrix",
+        "distortion_coefficients",
+        "rectification_matrix",
+        "projection_matrix",
+        "binning",
+        "roi"
       ],
-      "unsupported_features": [],
+      "unsupported_features": []
+    },
+    {
       "capabilities": {
-        "format": "kalibr",
-        "datatype": "camera_rig",
-        "record_type": "CameraRig",
-        "extensions": [],
-        "filenames": [],
-        "container_kind": "file",
         "available": true,
+        "can_inspect": true,
         "can_read": true,
         "can_write": true,
-        "can_inspect": true,
+        "container_kind": "file",
+        "extensions": [],
+        "filenames": [],
+        "format": "kalibr",
+        "lossy": false,
         "partial_selectors": [],
+        "payload_kind": "camera_rig",
+        "record_type": "CameraRig",
+        "requires_features": [],
         "streams_read": true,
         "streams_write": true,
-        "lossy": false,
-        "requires_features": [],
         "supported_features": [
           "multi_camera",
           "pinhole",
@@ -1934,62 +1904,56 @@
           "topics"
         ],
         "unsupported_features": []
-      }
-    },
-    {
-      "id": "g2o",
-      "extensions": [
-        ".g2o"
-      ],
-      "magic_hex": [
-        "232067326f20706f7365206772617068",
-        "5645525445585f5345333a51554154",
-        "454447455f5345333a51554154"
-      ],
-      "filenames": [],
-      "is_directory": false,
-      "dir_marker": "cameras.bin",
+      },
       "container_kind": "file",
-      "datatype": "pose_graph",
+      "dir_marker": "cameras.bin",
+      "extensions": [],
+      "filenames": [],
+      "id": "kalibr",
+      "is_directory": false,
+      "lossy": false,
+      "magic_hex": [
+        "63616d303a"
+      ],
+      "payload_kind": "camera_rig",
       "record": {
         "module": "sceneio._core",
-        "qualname": "PoseGraph"
+        "qualname": "CameraRig"
       },
+      "requires_features": [],
       "selectors": [],
       "streams_read": true,
       "streams_write": true,
-      "lossy": false,
-      "requires_features": [],
       "supported_features": [
-        "vertex_se3_quat",
-        "edge_se3_quat",
-        "fixed_vertices",
-        "symmetric_information_6x6"
+        "multi_camera",
+        "pinhole",
+        "omni",
+        "chained_extrinsics",
+        "imu_extrinsics",
+        "camera_imu_time_offsets",
+        "topics"
       ],
-      "unsupported_features": [
-        "mixed_vertex_types",
-        "mixed_edge_types",
-        "parameters",
-        "robust_kernels"
-      ],
+      "unsupported_features": []
+    },
+    {
       "capabilities": {
-        "format": "g2o",
-        "datatype": "pose_graph",
-        "record_type": "PoseGraph",
+        "available": true,
+        "can_inspect": true,
+        "can_read": true,
+        "can_write": true,
+        "container_kind": "file",
         "extensions": [
           ".g2o"
         ],
         "filenames": [],
-        "container_kind": "file",
-        "available": true,
-        "can_read": true,
-        "can_write": true,
-        "can_inspect": true,
+        "format": "g2o",
+        "lossy": false,
         "partial_selectors": [],
+        "payload_kind": "pose_graph",
+        "record_type": "PoseGraph",
+        "requires_features": [],
         "streams_read": true,
         "streams_write": true,
-        "lossy": false,
-        "requires_features": [],
         "supported_features": [
           "vertex_se3_quat",
           "edge_se3_quat",
@@ -2002,94 +1966,67 @@
           "parameters",
           "robust_kernels"
         ]
-      }
-    },
-    {
-      "id": "colmap_db",
-      "extensions": [
-        ".db"
-      ],
-      "magic_hex": [
-        "53514c69746520666f726d6174203300"
-      ],
-      "filenames": [
-        "database.db"
-      ],
-      "is_directory": false,
-      "dir_marker": "cameras.bin",
+      },
       "container_kind": "file",
-      "datatype": "match_graph",
+      "dir_marker": "cameras.bin",
+      "extensions": [
+        ".g2o"
+      ],
+      "filenames": [],
+      "id": "g2o",
+      "is_directory": false,
+      "lossy": false,
+      "magic_hex": [
+        "232067326f20706f7365206772617068",
+        "5645525445585f5345333a51554154",
+        "454447455f5345333a51554154"
+      ],
+      "payload_kind": "pose_graph",
       "record": {
         "module": "sceneio._core",
-        "qualname": "ColmapDatabase"
+        "qualname": "PoseGraph"
       },
-      "selectors": [
-        "image_id",
-        "pair"
-      ],
+      "requires_features": [],
+      "selectors": [],
       "streams_read": true,
       "streams_write": true,
-      "lossy": false,
-      "requires_features": [],
       "supported_features": [
-        "cameras",
-        "images",
-        "keypoints_2_4_6",
-        "uint8_descriptors",
-        "extractor_type",
-        "raw_matches",
-        "verified_matches",
-        "F_E_H",
-        "relative_pose",
-        "sparse_ids",
-        "current_recovered_camera_reads",
-        "current_recovered_camera_writes",
-        "stock_rig_frame_reads",
-        "stock_rig_frame_writes",
-        "stock_pose_prior_reads",
-        "stock_pose_prior_writes",
-        "maxx_image_time_reads",
-        "maxx_descriptor_metadata_reads",
-        "maxx_keypoint_color_reads",
-        "maxx_match_score_reads",
-        "maxx_pair_provenance_reads",
-        "maxx_image_quality_reads",
-        "maxx_extended_pose_prior_reads",
-        "maxx_marker_reads",
-        "maxx_video_metadata_reads",
-        "maxx_ownership_reads",
-        "maxx_extension_writes",
-        "exact_profile_writes",
-        "conversion_reports",
-        "read_only_reads",
-        "transactional_writes"
+        "vertex_se3_quat",
+        "edge_se3_quat",
+        "fixed_vertices",
+        "symmetric_information_6x6"
       ],
       "unsupported_features": [
-        "per_keypoint_score_writes"
-      ],
+        "mixed_vertex_types",
+        "mixed_edge_types",
+        "parameters",
+        "robust_kernels"
+      ]
+    },
+    {
       "capabilities": {
-        "format": "colmap_db",
-        "datatype": "match_graph",
-        "record_type": "ColmapDatabase",
+        "available": true,
+        "can_inspect": true,
+        "can_read": true,
+        "can_write": true,
+        "container_kind": "file",
         "extensions": [
           ".db"
         ],
         "filenames": [
           "database.db"
         ],
-        "container_kind": "file",
-        "available": true,
-        "can_read": true,
-        "can_write": true,
-        "can_inspect": true,
+        "format": "colmap_db",
+        "lossy": false,
         "partial_selectors": [
           "image_id",
           "pair"
         ],
+        "payload_kind": "match_graph",
+        "record_type": "ColmapDatabase",
+        "requires_features": [],
         "streams_read": true,
         "streams_write": true,
-        "lossy": false,
-        "requires_features": [],
         "supported_features": [
           "cameras",
           "images",
@@ -2126,54 +2063,89 @@
         "unsupported_features": [
           "per_keypoint_score_writes"
         ]
-      }
-    },
-    {
-      "id": "npy",
-      "extensions": [
-        ".npy"
-      ],
-      "magic_hex": [
-        "934e554d5059"
-      ],
-      "filenames": [],
-      "is_directory": false,
-      "dir_marker": "cameras.bin",
+      },
       "container_kind": "file",
-      "datatype": "tensor",
-      "record": null,
-      "selectors": [],
+      "dir_marker": "cameras.bin",
+      "extensions": [
+        ".db"
+      ],
+      "filenames": [
+        "database.db"
+      ],
+      "id": "colmap_db",
+      "is_directory": false,
+      "lossy": false,
+      "magic_hex": [
+        "53514c69746520666f726d6174203300"
+      ],
+      "payload_kind": "match_graph",
+      "record": {
+        "module": "sceneio._core",
+        "qualname": "ColmapDatabase"
+      },
+      "requires_features": [],
+      "selectors": [
+        "image_id",
+        "pair"
+      ],
       "streams_read": true,
       "streams_write": true,
-      "lossy": false,
-      "requires_features": [],
       "supported_features": [
-        "v1",
-        "c_order",
-        "native_endian_mmap_view"
+        "cameras",
+        "images",
+        "keypoints_2_4_6",
+        "uint8_descriptors",
+        "extractor_type",
+        "raw_matches",
+        "verified_matches",
+        "F_E_H",
+        "relative_pose",
+        "sparse_ids",
+        "current_recovered_camera_reads",
+        "current_recovered_camera_writes",
+        "stock_rig_frame_reads",
+        "stock_rig_frame_writes",
+        "stock_pose_prior_reads",
+        "stock_pose_prior_writes",
+        "maxx_image_time_reads",
+        "maxx_descriptor_metadata_reads",
+        "maxx_keypoint_color_reads",
+        "maxx_match_score_reads",
+        "maxx_pair_provenance_reads",
+        "maxx_image_quality_reads",
+        "maxx_extended_pose_prior_reads",
+        "maxx_marker_reads",
+        "maxx_video_metadata_reads",
+        "maxx_ownership_reads",
+        "maxx_extension_writes",
+        "exact_profile_writes",
+        "conversion_reports",
+        "read_only_reads",
+        "transactional_writes"
       ],
       "unsupported_features": [
-        "fortran_order",
-        "object_dtype"
-      ],
+        "per_keypoint_score_writes"
+      ]
+    },
+    {
       "capabilities": {
-        "format": "npy",
-        "datatype": "tensor",
-        "record_type": null,
+        "available": true,
+        "can_inspect": true,
+        "can_read": true,
+        "can_write": true,
+        "container_kind": "file",
         "extensions": [
           ".npy"
         ],
         "filenames": [],
-        "container_kind": "file",
-        "available": true,
-        "can_read": true,
-        "can_write": true,
-        "can_inspect": true,
+        "format": "npy",
+        "lossy": false,
         "partial_selectors": [],
+        "payload_kind": "tensor",
+        "record_type": null,
+        "requires_features": [],
         "streams_read": true,
         "streams_write": true,
-        "lossy": false,
-        "requires_features": [],
         "supported_features": [
           "v1",
           "c_order",
@@ -2183,54 +2155,54 @@
           "fortran_order",
           "object_dtype"
         ]
-      }
-    },
-    {
-      "id": "npz",
-      "extensions": [
-        ".npz"
-      ],
-      "magic_hex": [],
-      "filenames": [],
-      "is_directory": false,
-      "dir_marker": "cameras.bin",
-      "container_kind": "file",
-      "datatype": "tensor_dict",
-      "record": {
-        "module": "sceneio._core",
-        "qualname": "TensorDict"
       },
+      "container_kind": "file",
+      "dir_marker": "cameras.bin",
+      "extensions": [
+        ".npy"
+      ],
+      "filenames": [],
+      "id": "npy",
+      "is_directory": false,
+      "lossy": false,
+      "magic_hex": [
+        "934e554d5059"
+      ],
+      "payload_kind": "tensor",
+      "record": null,
+      "requires_features": [],
       "selectors": [],
       "streams_read": true,
       "streams_write": true,
-      "lossy": false,
-      "requires_features": [],
       "supported_features": [
-        "stored",
-        "deflate",
-        "numeric_dtypes"
+        "v1",
+        "c_order",
+        "native_endian_mmap_view"
       ],
       "unsupported_features": [
+        "fortran_order",
         "object_dtype"
-      ],
+      ]
+    },
+    {
       "capabilities": {
-        "format": "npz",
-        "datatype": "tensor_dict",
-        "record_type": "TensorDict",
+        "available": true,
+        "can_inspect": true,
+        "can_read": true,
+        "can_write": true,
+        "container_kind": "file",
         "extensions": [
           ".npz"
         ],
         "filenames": [],
-        "container_kind": "file",
-        "available": true,
-        "can_read": true,
-        "can_write": true,
-        "can_inspect": true,
+        "format": "npz",
+        "lossy": false,
         "partial_selectors": [],
+        "payload_kind": "tensor_dict",
+        "record_type": "TensorDict",
+        "requires_features": [],
         "streams_read": true,
         "streams_write": true,
-        "lossy": false,
-        "requires_features": [],
         "supported_features": [
           "stored",
           "deflate",
@@ -2239,70 +2211,57 @@
         "unsupported_features": [
           "object_dtype"
         ]
-      }
-    },
-    {
-      "id": "safetensors",
-      "extensions": [
-        ".safetensors"
-      ],
-      "magic_hex": [],
-      "filenames": [],
-      "is_directory": false,
-      "dir_marker": "cameras.bin",
+      },
       "container_kind": "file",
-      "datatype": "tensor_dict",
+      "dir_marker": "cameras.bin",
+      "extensions": [
+        ".npz"
+      ],
+      "filenames": [],
+      "id": "npz",
+      "is_directory": false,
+      "lossy": false,
+      "magic_hex": [],
+      "payload_kind": "tensor_dict",
       "record": {
         "module": "sceneio._core",
         "qualname": "TensorDict"
       },
-      "selectors": [
-        "tensors",
-        "slices"
-      ],
+      "requires_features": [],
+      "selectors": [],
       "streams_read": true,
       "streams_write": true,
-      "lossy": false,
-      "requires_features": [],
       "supported_features": [
-        "metadata",
-        "bool",
-        "signed_integers",
-        "unsigned_integers",
-        "float16",
-        "float32",
-        "float64",
-        "mmap_views",
-        "leading_axis_slices"
+        "stored",
+        "deflate",
+        "numeric_dtypes"
       ],
       "unsupported_features": [
-        "bfloat16",
-        "float8",
-        "complex64",
-        "sub_byte_dtypes",
-        "strided_tensors"
-      ],
+        "object_dtype"
+      ]
+    },
+    {
       "capabilities": {
-        "format": "safetensors",
-        "datatype": "tensor_dict",
-        "record_type": "TensorDict",
+        "available": true,
+        "can_inspect": true,
+        "can_read": true,
+        "can_write": true,
+        "container_kind": "file",
         "extensions": [
           ".safetensors"
         ],
         "filenames": [],
-        "container_kind": "file",
-        "available": true,
-        "can_read": true,
-        "can_write": true,
-        "can_inspect": true,
+        "format": "safetensors",
+        "lossy": false,
         "partial_selectors": [
           "tensors",
           "slices"
         ],
+        "payload_kind": "tensor_dict",
+        "record_type": "TensorDict",
+        "requires_features": [],
         "streams_read": true,
         "streams_write": true,
-        "lossy": false,
-        "requires_features": [],
         "supported_features": [
           "metadata",
           "bool",
@@ -2321,70 +2280,71 @@
           "sub_byte_dtypes",
           "strided_tensors"
         ]
-      }
-    },
-    {
-      "id": "netpbm",
+      },
+      "container_kind": "file",
+      "dir_marker": "cameras.bin",
       "extensions": [
-        ".ppm",
-        ".pgm",
-        ".pnm"
-      ],
-      "magic_hex": [
-        "5032",
-        "5033",
-        "5035",
-        "5036"
+        ".safetensors"
       ],
       "filenames": [],
+      "id": "safetensors",
       "is_directory": false,
-      "dir_marker": "cameras.bin",
-      "container_kind": "file",
-      "datatype": "image",
+      "lossy": false,
+      "magic_hex": [],
+      "payload_kind": "tensor_dict",
       "record": {
         "module": "sceneio._core",
-        "qualname": "Image"
+        "qualname": "TensorDict"
       },
+      "requires_features": [],
       "selectors": [
-        "window"
+        "tensors",
+        "slices"
       ],
       "streams_read": true,
       "streams_write": true,
-      "lossy": false,
-      "requires_features": [],
       "supported_features": [
-        "p2",
-        "p3",
-        "p5",
-        "p6",
-        "uint8",
-        "uint16"
+        "metadata",
+        "bool",
+        "signed_integers",
+        "unsigned_integers",
+        "float16",
+        "float32",
+        "float64",
+        "mmap_views",
+        "leading_axis_slices"
       ],
       "unsupported_features": [
-        "ascii_window"
-      ],
+        "bfloat16",
+        "float8",
+        "complex64",
+        "sub_byte_dtypes",
+        "strided_tensors"
+      ]
+    },
+    {
       "capabilities": {
-        "format": "netpbm",
-        "datatype": "image",
-        "record_type": "Image",
+        "available": true,
+        "can_inspect": true,
+        "can_read": true,
+        "can_write": true,
+        "container_kind": "file",
         "extensions": [
           ".ppm",
           ".pgm",
           ".pnm"
         ],
         "filenames": [],
-        "container_kind": "file",
-        "available": true,
-        "can_read": true,
-        "can_write": true,
-        "can_inspect": true,
+        "format": "netpbm",
+        "lossy": false,
         "partial_selectors": [
           "window"
         ],
+        "payload_kind": "image",
+        "record_type": "Image",
+        "requires_features": [],
         "streams_read": true,
         "streams_write": true,
-        "lossy": false,
-        "requires_features": [],
         "supported_features": [
           "p2",
           "p3",
@@ -2396,58 +2356,66 @@
         "unsupported_features": [
           "ascii_window"
         ]
-      }
-    },
-    {
-      "id": "png",
+      },
+      "container_kind": "file",
+      "dir_marker": "cameras.bin",
       "extensions": [
-        ".png"
-      ],
-      "magic_hex": [
-        "89504e470d0a1a0a"
+        ".ppm",
+        ".pgm",
+        ".pnm"
       ],
       "filenames": [],
+      "id": "netpbm",
       "is_directory": false,
-      "dir_marker": "cameras.bin",
-      "container_kind": "file",
-      "datatype": "image",
+      "lossy": false,
+      "magic_hex": [
+        "5032",
+        "5033",
+        "5035",
+        "5036"
+      ],
+      "payload_kind": "image",
       "record": {
         "module": "sceneio._core",
         "qualname": "Image"
       },
-      "selectors": [],
+      "requires_features": [],
+      "selectors": [
+        "window"
+      ],
       "streams_read": true,
       "streams_write": true,
-      "lossy": false,
-      "requires_features": [],
       "supported_features": [
-        "grayscale",
-        "rgb",
-        "rgba",
-        "palette",
+        "p2",
+        "p3",
+        "p5",
+        "p6",
         "uint8",
-        "uint16",
-        "typed_depth_adapter"
+        "uint16"
       ],
-      "unsupported_features": [],
+      "unsupported_features": [
+        "ascii_window"
+      ]
+    },
+    {
       "capabilities": {
-        "format": "png",
-        "datatype": "image",
-        "record_type": "Image",
+        "available": true,
+        "can_inspect": true,
+        "can_read": true,
+        "can_write": true,
+        "container_kind": "file",
         "extensions": [
           ".png"
         ],
         "filenames": [],
-        "container_kind": "file",
-        "available": true,
-        "can_read": true,
-        "can_write": true,
-        "can_inspect": true,
+        "format": "png",
+        "lossy": false,
         "partial_selectors": [],
+        "payload_kind": "image",
+        "record_type": "Image",
+        "requires_features": [],
         "streams_read": true,
         "streams_write": true,
-        "lossy": false,
-        "requires_features": [],
         "supported_features": [
           "grayscale",
           "rgb",
@@ -2458,60 +2426,59 @@
           "typed_depth_adapter"
         ],
         "unsupported_features": []
-      }
-    },
-    {
-      "id": "jpeg",
+      },
+      "container_kind": "file",
+      "dir_marker": "cameras.bin",
       "extensions": [
-        ".jpg",
-        ".jpeg"
-      ],
-      "magic_hex": [
-        "ffd8ff"
+        ".png"
       ],
       "filenames": [],
+      "id": "png",
       "is_directory": false,
-      "dir_marker": "cameras.bin",
-      "container_kind": "file",
-      "datatype": "image",
+      "lossy": false,
+      "magic_hex": [
+        "89504e470d0a1a0a"
+      ],
+      "payload_kind": "image",
       "record": {
         "module": "sceneio._core",
         "qualname": "Image"
       },
+      "requires_features": [],
       "selectors": [],
       "streams_read": true,
       "streams_write": true,
-      "lossy": true,
-      "requires_features": [],
       "supported_features": [
-        "baseline",
-        "progressive",
-        "grayscale_read",
-        "rgb"
+        "grayscale",
+        "rgb",
+        "rgba",
+        "palette",
+        "uint8",
+        "uint16",
+        "typed_depth_adapter"
       ],
-      "unsupported_features": [
-        "cmyk_write",
-        "rgba_write"
-      ],
+      "unsupported_features": []
+    },
+    {
       "capabilities": {
-        "format": "jpeg",
-        "datatype": "image",
-        "record_type": "Image",
+        "available": true,
+        "can_inspect": true,
+        "can_read": true,
+        "can_write": true,
+        "container_kind": "file",
         "extensions": [
           ".jpg",
           ".jpeg"
         ],
         "filenames": [],
-        "container_kind": "file",
-        "available": true,
-        "can_read": true,
-        "can_write": true,
-        "can_inspect": true,
+        "format": "jpeg",
+        "lossy": true,
         "partial_selectors": [],
+        "payload_kind": "image",
+        "record_type": "Image",
+        "requires_features": [],
         "streams_read": true,
         "streams_write": true,
-        "lossy": true,
-        "requires_features": [],
         "supported_features": [
           "baseline",
           "progressive",
@@ -2522,65 +2489,59 @@
           "cmyk_write",
           "rgba_write"
         ]
-      }
-    },
-    {
-      "id": "bmp",
+      },
+      "container_kind": "file",
+      "dir_marker": "cameras.bin",
       "extensions": [
-        ".bmp"
-      ],
-      "magic_hex": [
-        "424d"
+        ".jpg",
+        ".jpeg"
       ],
       "filenames": [],
+      "id": "jpeg",
       "is_directory": false,
-      "dir_marker": "cameras.bin",
-      "container_kind": "file",
-      "datatype": "image",
+      "lossy": true,
+      "magic_hex": [
+        "ffd8ff"
+      ],
+      "payload_kind": "image",
       "record": {
         "module": "sceneio._core",
         "qualname": "Image"
       },
+      "requires_features": [],
       "selectors": [],
       "streams_read": true,
       "streams_write": true,
-      "lossy": false,
-      "requires_features": [],
       "supported_features": [
-        "windows_v3_v4_v5",
-        "bottom_up",
-        "top_down",
-        "palette_read",
-        "packed_16bit_read",
-        "rgb",
-        "rgba_bitfields"
+        "baseline",
+        "progressive",
+        "grayscale_read",
+        "rgb"
       ],
       "unsupported_features": [
-        "os2",
-        "rle4",
-        "rle8",
-        "embedded_jpeg_png",
-        "alphabitfields",
-        "grayscale_write"
-      ],
+        "cmyk_write",
+        "rgba_write"
+      ]
+    },
+    {
       "capabilities": {
-        "format": "bmp",
-        "datatype": "image",
-        "record_type": "Image",
+        "available": true,
+        "can_inspect": true,
+        "can_read": true,
+        "can_write": true,
+        "container_kind": "file",
         "extensions": [
           ".bmp"
         ],
         "filenames": [],
-        "container_kind": "file",
-        "available": true,
-        "can_read": true,
-        "can_write": true,
-        "can_inspect": true,
+        "format": "bmp",
+        "lossy": false,
         "partial_selectors": [],
+        "payload_kind": "image",
+        "record_type": "Image",
+        "requires_features": [],
         "streams_read": true,
         "streams_write": true,
-        "lossy": false,
-        "requires_features": [],
         "supported_features": [
           "windows_v3_v4_v5",
           "bottom_up",
@@ -2598,62 +2559,65 @@
           "alphabitfields",
           "grayscale_write"
         ]
-      }
-    },
-    {
-      "id": "tga",
-      "extensions": [
-        ".tga"
-      ],
-      "magic_hex": [],
-      "filenames": [],
-      "is_directory": false,
-      "dir_marker": "cameras.bin",
+      },
       "container_kind": "file",
-      "datatype": "image",
+      "dir_marker": "cameras.bin",
+      "extensions": [
+        ".bmp"
+      ],
+      "filenames": [],
+      "id": "bmp",
+      "is_directory": false,
+      "lossy": false,
+      "magic_hex": [
+        "424d"
+      ],
+      "payload_kind": "image",
       "record": {
         "module": "sceneio._core",
         "qualname": "Image"
       },
+      "requires_features": [],
       "selectors": [],
       "streams_read": true,
       "streams_write": true,
-      "lossy": false,
-      "requires_features": [],
       "supported_features": [
-        "uncompressed",
-        "rle",
-        "grayscale",
-        "rgb",
-        "rgba",
+        "windows_v3_v4_v5",
+        "bottom_up",
+        "top_down",
         "palette_read",
-        "packed_15_16bit_read",
-        "top_bottom_origin"
+        "packed_16bit_read",
+        "rgb",
+        "rgba_bitfields"
       ],
       "unsupported_features": [
-        "right_to_left",
-        "interleaving",
-        "nonzero_palette_origin",
-        "grayscale_alpha"
-      ],
+        "os2",
+        "rle4",
+        "rle8",
+        "embedded_jpeg_png",
+        "alphabitfields",
+        "grayscale_write"
+      ]
+    },
+    {
       "capabilities": {
-        "format": "tga",
-        "datatype": "image",
-        "record_type": "Image",
+        "available": true,
+        "can_inspect": true,
+        "can_read": true,
+        "can_write": true,
+        "container_kind": "file",
         "extensions": [
           ".tga"
         ],
         "filenames": [],
-        "container_kind": "file",
-        "available": true,
-        "can_read": true,
-        "can_write": true,
-        "can_inspect": true,
+        "format": "tga",
+        "lossy": false,
         "partial_selectors": [],
+        "payload_kind": "image",
+        "record_type": "Image",
+        "requires_features": [],
         "streams_read": true,
         "streams_write": true,
-        "lossy": false,
-        "requires_features": [],
         "supported_features": [
           "uncompressed",
           "rle",
@@ -2670,116 +2634,117 @@
           "nonzero_palette_origin",
           "grayscale_alpha"
         ]
-      }
-    },
-    {
-      "id": "hdr",
+      },
+      "container_kind": "file",
+      "dir_marker": "cameras.bin",
       "extensions": [
-        ".hdr"
-      ],
-      "magic_hex": [
-        "233f52414449414e4345",
-        "233f52474245"
+        ".tga"
       ],
       "filenames": [],
+      "id": "tga",
       "is_directory": false,
-      "dir_marker": "cameras.bin",
-      "container_kind": "file",
-      "datatype": "image",
+      "lossy": false,
+      "magic_hex": [],
+      "payload_kind": "image",
       "record": {
         "module": "sceneio._core",
         "qualname": "Image"
       },
+      "requires_features": [],
       "selectors": [],
       "streams_read": true,
       "streams_write": true,
-      "lossy": true,
-      "requires_features": [],
       "supported_features": [
-        "rgbe",
+        "uncompressed",
         "rle",
-        "float32_rgb"
+        "grayscale",
+        "rgb",
+        "rgba",
+        "palette_read",
+        "packed_15_16bit_read",
+        "top_bottom_origin"
       ],
-      "unsupported_features": [],
+      "unsupported_features": [
+        "right_to_left",
+        "interleaving",
+        "nonzero_palette_origin",
+        "grayscale_alpha"
+      ]
+    },
+    {
       "capabilities": {
-        "format": "hdr",
-        "datatype": "image",
-        "record_type": "Image",
+        "available": true,
+        "can_inspect": true,
+        "can_read": true,
+        "can_write": true,
+        "container_kind": "file",
         "extensions": [
           ".hdr"
         ],
         "filenames": [],
-        "container_kind": "file",
-        "available": true,
-        "can_read": true,
-        "can_write": true,
-        "can_inspect": true,
+        "format": "hdr",
+        "lossy": true,
         "partial_selectors": [],
+        "payload_kind": "image",
+        "record_type": "Image",
+        "requires_features": [],
         "streams_read": true,
         "streams_write": true,
-        "lossy": true,
-        "requires_features": [],
         "supported_features": [
           "rgbe",
           "rle",
           "float32_rgb"
         ],
         "unsupported_features": []
-      }
-    },
-    {
-      "id": "exr",
+      },
+      "container_kind": "file",
+      "dir_marker": "cameras.bin",
       "extensions": [
-        ".exr"
-      ],
-      "magic_hex": [
-        "762f3101"
+        ".hdr"
       ],
       "filenames": [],
+      "id": "hdr",
       "is_directory": false,
-      "dir_marker": "cameras.bin",
-      "container_kind": "file",
-      "datatype": "image",
+      "lossy": true,
+      "magic_hex": [
+        "233f52414449414e4345",
+        "233f52474245"
+      ],
+      "payload_kind": "image",
       "record": {
         "module": "sceneio._core",
         "qualname": "Image"
       },
+      "requires_features": [],
       "selectors": [],
       "streams_read": true,
       "streams_write": true,
-      "lossy": false,
-      "requires_features": [],
       "supported_features": [
-        "single_channel",
-        "rgb",
-        "rgba",
-        "half_to_float",
-        "typed_depth_adapter"
+        "rgbe",
+        "rle",
+        "float32_rgb"
       ],
-      "unsupported_features": [
-        "multipart",
-        "deep",
-        "tiled",
-        "uint_channels"
-      ],
+      "unsupported_features": []
+    },
+    {
       "capabilities": {
-        "format": "exr",
-        "datatype": "image",
-        "record_type": "Image",
+        "available": true,
+        "can_inspect": true,
+        "can_read": true,
+        "can_write": true,
+        "container_kind": "file",
         "extensions": [
           ".exr"
         ],
         "filenames": [],
-        "container_kind": "file",
-        "available": true,
-        "can_read": true,
-        "can_write": true,
-        "can_inspect": true,
+        "format": "exr",
+        "lossy": false,
         "partial_selectors": [],
+        "payload_kind": "image",
+        "record_type": "Image",
+        "requires_features": [],
         "streams_read": true,
         "streams_write": true,
-        "lossy": false,
-        "requires_features": [],
         "supported_features": [
           "single_channel",
           "rgb",
@@ -2793,60 +2758,63 @@
           "tiled",
           "uint_channels"
         ]
-      }
-    },
-    {
-      "id": "webp",
-      "extensions": [
-        ".webp"
-      ],
-      "magic_hex": [],
-      "filenames": [],
-      "is_directory": false,
-      "dir_marker": "cameras.bin",
+      },
       "container_kind": "file",
-      "datatype": "image",
+      "dir_marker": "cameras.bin",
+      "extensions": [
+        ".exr"
+      ],
+      "filenames": [],
+      "id": "exr",
+      "is_directory": false,
+      "lossy": false,
+      "magic_hex": [
+        "762f3101"
+      ],
+      "payload_kind": "image",
       "record": {
         "module": "sceneio._core",
         "qualname": "Image"
       },
-      "selectors": [
-        "window"
-      ],
+      "requires_features": [],
+      "selectors": [],
       "streams_read": true,
       "streams_write": true,
-      "lossy": true,
-      "requires_features": [],
       "supported_features": [
-        "lossless",
-        "lossy",
+        "single_channel",
         "rgb",
-        "rgba"
+        "rgba",
+        "half_to_float",
+        "typed_depth_adapter"
       ],
       "unsupported_features": [
-        "animation",
-        "lossy_window"
-      ],
+        "multipart",
+        "deep",
+        "tiled",
+        "uint_channels"
+      ]
+    },
+    {
       "capabilities": {
-        "format": "webp",
-        "datatype": "image",
-        "record_type": "Image",
+        "available": true,
+        "can_inspect": true,
+        "can_read": true,
+        "can_write": true,
+        "container_kind": "file",
         "extensions": [
           ".webp"
         ],
         "filenames": [],
-        "container_kind": "file",
-        "available": true,
-        "can_read": true,
-        "can_write": true,
-        "can_inspect": true,
+        "format": "webp",
+        "lossy": true,
         "partial_selectors": [
           "window"
         ],
+        "payload_kind": "image",
+        "record_type": "Image",
+        "requires_features": [],
         "streams_read": true,
         "streams_write": true,
-        "lossy": true,
-        "requires_features": [],
         "supported_features": [
           "lossless",
           "lossy",
@@ -2857,77 +2825,60 @@
           "animation",
           "lossy_window"
         ]
-      }
-    },
-    {
-      "id": "avif",
-      "extensions": [
-        ".avif"
-      ],
-      "magic_hex": [],
-      "filenames": [],
-      "is_directory": false,
-      "dir_marker": "cameras.bin",
+      },
       "container_kind": "file",
-      "datatype": "image",
+      "dir_marker": "cameras.bin",
+      "extensions": [
+        ".webp"
+      ],
+      "filenames": [],
+      "id": "webp",
+      "is_directory": false,
+      "lossy": true,
+      "magic_hex": [],
+      "payload_kind": "image",
       "record": {
         "module": "sceneio._core",
         "qualname": "Image"
       },
-      "selectors": [],
-      "streams_read": true,
-      "streams_write": false,
-      "lossy": true,
-      "requires_features": [
-        "PIL"
+      "requires_features": [],
+      "selectors": [
+        "window"
       ],
+      "streams_read": true,
+      "streams_write": true,
       "supported_features": [
-        "avif_1_2",
-        "uint8",
-        "grayscale",
+        "lossless",
+        "lossy",
         "rgb",
-        "rgba",
-        "straight_alpha",
-        "full_range",
-        "libavif",
-        "libaom_encode",
-        "dav1d_decode",
-        "worker_threads",
-        "metadata_only_inspect"
+        "rgba"
       ],
       "unsupported_features": [
-        "high_bit_depth",
-        "hdr",
-        "gain_maps",
-        "grids",
-        "layered_images",
-        "embedded_icc",
-        "embedded_exif",
-        "embedded_xmp",
-        "non_identity_orientation",
-        "premultiplied_alpha_input",
-        "direct_streaming_write"
-      ],
+        "animation",
+        "lossy_window"
+      ]
+    },
+    {
       "capabilities": {
-        "format": "avif",
-        "datatype": "image",
-        "record_type": "Image",
+        "available": true,
+        "can_inspect": true,
+        "can_read": true,
+        "can_write": true,
+        "container_kind": "file",
         "extensions": [
           ".avif"
         ],
         "filenames": [],
-        "container_kind": "file",
-        "available": true,
-        "can_read": true,
-        "can_write": true,
-        "can_inspect": true,
-        "partial_selectors": [],
-        "streams_read": true,
-        "streams_write": false,
+        "format": "avif",
         "lossy": true,
+        "partial_selectors": [],
+        "payload_kind": "image",
+        "record_type": "Image",
         "requires_features": [
           "PIL"
         ],
+        "streams_read": true,
+        "streams_write": false,
         "supported_features": [
           "avif_1_2",
           "uint8",
@@ -2955,66 +2906,77 @@
           "premultiplied_alpha_input",
           "direct_streaming_write"
         ]
-      }
-    },
-    {
-      "id": "y4m",
+      },
+      "container_kind": "file",
+      "dir_marker": "cameras.bin",
       "extensions": [
-        ".y4m"
-      ],
-      "magic_hex": [
-        "595556344d50454732"
+        ".avif"
       ],
       "filenames": [],
+      "id": "avif",
       "is_directory": false,
-      "dir_marker": "cameras.bin",
-      "container_kind": "file",
-      "datatype": "image_sequence",
+      "lossy": true,
+      "magic_hex": [],
+      "payload_kind": "image",
       "record": {
         "module": "sceneio._core",
-        "qualname": "ImageSequence"
+        "qualname": "Image"
       },
-      "selectors": [
-        "frames"
+      "requires_features": [
+        "PIL"
       ],
+      "selectors": [],
       "streams_read": true,
-      "streams_write": true,
-      "lossy": false,
-      "requires_features": [],
+      "streams_write": false,
       "supported_features": [
+        "avif_1_2",
         "uint8",
-        "mono",
-        "yuv420",
-        "yuv422",
-        "yuv444",
-        "frame_ranges",
-        "exact_frame_timing"
+        "grayscale",
+        "rgb",
+        "rgba",
+        "straight_alpha",
+        "full_range",
+        "libavif",
+        "libaom_encode",
+        "dav1d_decode",
+        "worker_threads",
+        "metadata_only_inspect"
       ],
       "unsupported_features": [
-        "rgb_conversion",
         "high_bit_depth",
-        "per_frame_tags"
-      ],
+        "hdr",
+        "gain_maps",
+        "grids",
+        "layered_images",
+        "embedded_icc",
+        "embedded_exif",
+        "embedded_xmp",
+        "non_identity_orientation",
+        "premultiplied_alpha_input",
+        "direct_streaming_write"
+      ]
+    },
+    {
       "capabilities": {
-        "format": "y4m",
-        "datatype": "image_sequence",
-        "record_type": "ImageSequence",
+        "available": true,
+        "can_inspect": true,
+        "can_read": true,
+        "can_write": true,
+        "container_kind": "file",
         "extensions": [
           ".y4m"
         ],
         "filenames": [],
-        "container_kind": "file",
-        "available": true,
-        "can_read": true,
-        "can_write": true,
-        "can_inspect": true,
+        "format": "y4m",
+        "lossy": false,
         "partial_selectors": [
           "frames"
         ],
+        "payload_kind": "image_sequence",
+        "record_type": "ImageSequence",
+        "requires_features": [],
         "streams_read": true,
         "streams_write": true,
-        "lossy": false,
-        "requires_features": [],
         "supported_features": [
           "uint8",
           "mono",
@@ -3029,81 +2991,66 @@
           "high_bit_depth",
           "per_frame_tags"
         ]
-      }
-    },
-    {
-      "id": "webm",
+      },
+      "container_kind": "file",
+      "dir_marker": "cameras.bin",
       "extensions": [
-        ".webm"
-      ],
-      "magic_hex": [
-        "1a45dfa3"
+        ".y4m"
       ],
       "filenames": [],
+      "id": "y4m",
       "is_directory": false,
-      "dir_marker": "cameras.bin",
-      "container_kind": "file",
-      "datatype": "image_sequence",
+      "lossy": false,
+      "magic_hex": [
+        "595556344d50454732"
+      ],
+      "payload_kind": "image_sequence",
       "record": {
         "module": "sceneio._core",
         "qualname": "ImageSequence"
       },
+      "requires_features": [],
       "selectors": [
         "frames"
       ],
       "streams_read": true,
       "streams_write": true,
-      "lossy": true,
-      "requires_features": [],
       "supported_features": [
-        "webm",
-        "vp8",
-        "vp8_interframes",
-        "vp9",
         "uint8",
-        "rgb",
+        "mono",
         "yuv420",
-        "progressive",
-        "all_keyframe",
-        "temporal_compression",
-        "simpleblock_constant_timing",
-        "exact_frame_timing",
+        "yuv422",
+        "yuv444",
         "frame_ranges",
-        "worker_threads",
-        "direct_streaming_write",
-        "metadata_only_inspect"
+        "exact_frame_timing"
       ],
       "unsupported_features": [
-        "alpha",
-        "audio",
-        "subtitles",
-        "attachments",
-        "chapters",
-        "lacing",
-        "sub_millisecond_timing",
-        "hdr",
-        "embedded_metadata"
-      ],
+        "rgb_conversion",
+        "high_bit_depth",
+        "per_frame_tags"
+      ]
+    },
+    {
       "capabilities": {
-        "format": "webm",
-        "datatype": "image_sequence",
-        "record_type": "ImageSequence",
+        "available": true,
+        "can_inspect": true,
+        "can_read": true,
+        "can_write": true,
+        "container_kind": "file",
         "extensions": [
           ".webm"
         ],
         "filenames": [],
-        "container_kind": "file",
-        "available": true,
-        "can_read": true,
-        "can_write": true,
-        "can_inspect": true,
+        "format": "webm",
+        "lossy": true,
         "partial_selectors": [
           "frames"
         ],
+        "payload_kind": "image_sequence",
+        "record_type": "ImageSequence",
+        "requires_features": [],
         "streams_read": true,
         "streams_write": true,
-        "lossy": true,
-        "requires_features": [],
         "supported_features": [
           "webm",
           "vp8",
@@ -3133,80 +3080,82 @@
           "hdr",
           "embedded_metadata"
         ]
-      }
-    },
-    {
-      "id": "theora",
+      },
+      "container_kind": "file",
+      "dir_marker": "cameras.bin",
       "extensions": [
-        ".ogv",
-        ".ogg"
-      ],
-      "magic_hex": [
-        "4f676753"
+        ".webm"
       ],
       "filenames": [],
+      "id": "webm",
       "is_directory": false,
-      "dir_marker": "cameras.bin",
-      "container_kind": "file",
-      "datatype": "image_sequence",
+      "lossy": true,
+      "magic_hex": [
+        "1a45dfa3"
+      ],
+      "payload_kind": "image_sequence",
       "record": {
         "module": "sceneio._core",
         "qualname": "ImageSequence"
       },
+      "requires_features": [],
       "selectors": [
         "frames"
       ],
       "streams_read": true,
       "streams_write": true,
-      "lossy": true,
-      "requires_features": [],
       "supported_features": [
-        "ogg",
-        "theora_1_2",
+        "webm",
+        "vp8",
+        "vp8_interframes",
+        "vp9",
         "uint8",
+        "rgb",
         "yuv420",
         "progressive",
-        "fixed_rational_timing",
-        "pixel_aspect",
+        "all_keyframe",
+        "temporal_compression",
+        "simpleblock_constant_timing",
+        "exact_frame_timing",
         "frame_ranges",
+        "worker_threads",
         "direct_streaming_write",
         "metadata_only_inspect"
       ],
       "unsupported_features": [
-        "rgb_conversion",
-        "monochrome",
-        "yuv422",
-        "yuv444",
-        "high_bit_depth",
-        "tagged_color_space",
-        "user_comments",
-        "multiple_logical_streams",
+        "alpha",
         "audio",
         "subtitles",
+        "attachments",
         "chapters",
-        "interlaced_video"
-      ],
+        "lacing",
+        "sub_millisecond_timing",
+        "hdr",
+        "embedded_metadata"
+      ]
+    },
+    {
       "capabilities": {
-        "format": "theora",
-        "datatype": "image_sequence",
-        "record_type": "ImageSequence",
+        "available": true,
+        "can_inspect": true,
+        "can_read": true,
+        "can_write": true,
+        "container_kind": "file",
         "extensions": [
           ".ogv",
           ".ogg"
         ],
         "filenames": [],
-        "container_kind": "file",
-        "available": true,
-        "can_read": true,
-        "can_write": true,
-        "can_inspect": true,
+        "format": "theora",
+        "lossy": true,
         "partial_selectors": [
           "frames"
         ],
+        "payload_kind": "image_sequence",
+        "record_type": "ImageSequence",
+        "requires_features": [],
         "streams_read": true,
         "streams_write": true,
-        "lossy": true,
-        "requires_features": [],
         "supported_features": [
           "ogg",
           "theora_1_2",
@@ -3233,64 +3182,77 @@
           "chapters",
           "interlaced_video"
         ]
-      }
-    },
-    {
-      "id": "animated_webp",
-      "extensions": [
-        ".webp"
-      ],
-      "magic_hex": [],
-      "filenames": [],
-      "is_directory": false,
-      "dir_marker": "cameras.bin",
+      },
       "container_kind": "file",
-      "datatype": "image_sequence",
+      "dir_marker": "cameras.bin",
+      "extensions": [
+        ".ogv",
+        ".ogg"
+      ],
+      "filenames": [],
+      "id": "theora",
+      "is_directory": false,
+      "lossy": true,
+      "magic_hex": [
+        "4f676753"
+      ],
+      "payload_kind": "image_sequence",
       "record": {
         "module": "sceneio._core",
         "qualname": "ImageSequence"
       },
-      "selectors": [],
+      "requires_features": [],
+      "selectors": [
+        "frames"
+      ],
       "streams_read": true,
       "streams_write": true,
-      "lossy": true,
-      "requires_features": [],
       "supported_features": [
-        "lossless",
-        "lossy",
-        "rgb",
-        "rgba",
-        "composited_frames",
-        "exact_frame_timing",
-        "loop_count",
-        "background_rgba"
+        "ogg",
+        "theora_1_2",
+        "uint8",
+        "yuv420",
+        "progressive",
+        "fixed_rational_timing",
+        "pixel_aspect",
+        "frame_ranges",
+        "direct_streaming_write",
+        "metadata_only_inspect"
       ],
       "unsupported_features": [
-        "sub_millisecond_timing",
-        "zero_duration_frames",
-        "raw_frame_rectangles",
-        "icc",
-        "exif",
-        "xmp"
-      ],
+        "rgb_conversion",
+        "monochrome",
+        "yuv422",
+        "yuv444",
+        "high_bit_depth",
+        "tagged_color_space",
+        "user_comments",
+        "multiple_logical_streams",
+        "audio",
+        "subtitles",
+        "chapters",
+        "interlaced_video"
+      ]
+    },
+    {
       "capabilities": {
-        "format": "animated_webp",
-        "datatype": "image_sequence",
-        "record_type": "ImageSequence",
+        "available": true,
+        "can_inspect": true,
+        "can_read": true,
+        "can_write": true,
+        "container_kind": "file",
         "extensions": [
           ".webp"
         ],
         "filenames": [],
-        "container_kind": "file",
-        "available": true,
-        "can_read": true,
-        "can_write": true,
-        "can_inspect": true,
+        "format": "animated_webp",
+        "lossy": true,
         "partial_selectors": [],
+        "payload_kind": "image_sequence",
+        "record_type": "ImageSequence",
+        "requires_features": [],
         "streams_read": true,
         "streams_write": true,
-        "lossy": true,
-        "requires_features": [],
         "supported_features": [
           "lossless",
           "lossy",
@@ -3309,72 +3271,65 @@
           "exif",
           "xmp"
         ]
-      }
-    },
-    {
-      "id": "apng",
-      "extensions": [
-        ".png",
-        ".apng"
-      ],
-      "magic_hex": [],
-      "filenames": [],
-      "is_directory": false,
-      "dir_marker": "cameras.bin",
+      },
       "container_kind": "file",
-      "datatype": "image_sequence",
+      "dir_marker": "cameras.bin",
+      "extensions": [
+        ".webp"
+      ],
+      "filenames": [],
+      "id": "animated_webp",
+      "is_directory": false,
+      "lossy": true,
+      "magic_hex": [],
+      "payload_kind": "image_sequence",
       "record": {
         "module": "sceneio._core",
         "qualname": "ImageSequence"
       },
+      "requires_features": [],
       "selectors": [],
       "streams_read": true,
       "streams_write": true,
-      "lossy": false,
-      "requires_features": [],
       "supported_features": [
-        "uint8",
+        "lossless",
+        "lossy",
         "rgb",
         "rgba",
         "composited_frames",
         "exact_frame_timing",
         "loop_count",
-        "blend_source",
-        "blend_over",
-        "dispose_none",
-        "dispose_background",
-        "dispose_previous"
+        "background_rgba"
       ],
       "unsupported_features": [
-        "separate_default_image",
-        "grayscale",
-        "palette",
-        "high_bit_depth",
-        "nonintegral_nanosecond_timing",
+        "sub_millisecond_timing",
+        "zero_duration_frames",
         "raw_frame_rectangles",
         "icc",
         "exif",
         "xmp"
-      ],
+      ]
+    },
+    {
       "capabilities": {
-        "format": "apng",
-        "datatype": "image_sequence",
-        "record_type": "ImageSequence",
+        "available": true,
+        "can_inspect": true,
+        "can_read": true,
+        "can_write": true,
+        "container_kind": "file",
         "extensions": [
           ".png",
           ".apng"
         ],
         "filenames": [],
-        "container_kind": "file",
-        "available": true,
-        "can_read": true,
-        "can_write": true,
-        "can_inspect": true,
+        "format": "apng",
+        "lossy": false,
         "partial_selectors": [],
+        "payload_kind": "image_sequence",
+        "record_type": "ImageSequence",
+        "requires_features": [],
         "streams_read": true,
         "streams_write": true,
-        "lossy": false,
-        "requires_features": [],
         "supported_features": [
           "uint8",
           "rgb",
@@ -3399,86 +3354,76 @@
           "exif",
           "xmp"
         ]
-      }
-    },
-    {
-      "id": "animated_avif",
-      "extensions": [
-        ".avif",
-        ".avifs"
-      ],
-      "magic_hex": [],
-      "filenames": [],
-      "is_directory": false,
-      "dir_marker": "cameras.bin",
+      },
       "container_kind": "file",
-      "datatype": "image_sequence",
+      "dir_marker": "cameras.bin",
+      "extensions": [
+        ".png",
+        ".apng"
+      ],
+      "filenames": [],
+      "id": "apng",
+      "is_directory": false,
+      "lossy": false,
+      "magic_hex": [],
+      "payload_kind": "image_sequence",
       "record": {
         "module": "sceneio._core",
         "qualname": "ImageSequence"
       },
-      "selectors": [
-        "frames"
-      ],
+      "requires_features": [],
+      "selectors": [],
       "streams_read": true,
-      "streams_write": false,
-      "lossy": true,
-      "requires_features": [
-        "PIL"
-      ],
+      "streams_write": true,
       "supported_features": [
-        "avif_1_2",
         "uint8",
-        "grayscale",
         "rgb",
         "rgba",
-        "straight_alpha",
+        "composited_frames",
         "exact_frame_timing",
-        "frame_ranges",
-        "libavif",
-        "libaom_encode",
-        "dav1d_decode",
-        "worker_threads",
-        "metadata_only_inspect"
+        "loop_count",
+        "blend_source",
+        "blend_over",
+        "dispose_none",
+        "dispose_background",
+        "dispose_previous"
       ],
       "unsupported_features": [
-        "sub_millisecond_write_timing",
-        "loop_count",
-        "background_rgba",
-        "audio",
-        "subtitles",
+        "separate_default_image",
+        "grayscale",
+        "palette",
         "high_bit_depth",
-        "hdr",
-        "gain_maps",
-        "embedded_icc",
-        "embedded_exif",
-        "embedded_xmp",
-        "non_identity_orientation",
-        "direct_streaming_write"
-      ],
+        "nonintegral_nanosecond_timing",
+        "raw_frame_rectangles",
+        "icc",
+        "exif",
+        "xmp"
+      ]
+    },
+    {
       "capabilities": {
-        "format": "animated_avif",
-        "datatype": "image_sequence",
-        "record_type": "ImageSequence",
+        "available": true,
+        "can_inspect": true,
+        "can_read": true,
+        "can_write": true,
+        "container_kind": "file",
         "extensions": [
           ".avif",
           ".avifs"
         ],
         "filenames": [],
-        "container_kind": "file",
-        "available": true,
-        "can_read": true,
-        "can_write": true,
-        "can_inspect": true,
+        "format": "animated_avif",
+        "lossy": true,
         "partial_selectors": [
           "frames"
         ],
-        "streams_read": true,
-        "streams_write": false,
-        "lossy": true,
+        "payload_kind": "image_sequence",
+        "record_type": "ImageSequence",
         "requires_features": [
           "PIL"
         ],
+        "streams_read": true,
+        "streams_write": false,
         "supported_features": [
           "avif_1_2",
           "uint8",
@@ -3509,62 +3454,81 @@
           "non_identity_orientation",
           "direct_streaming_write"
         ]
-      }
-    },
-    {
-      "id": "rtmv",
-      "extensions": [],
-      "magic_hex": [],
-      "filenames": [],
-      "is_directory": true,
-      "dir_marker": "00000.json",
-      "container_kind": "directory",
-      "datatype": "rtmv_dataset",
-      "record": {
-        "module": "sceneio.io",
-        "qualname": "RtmvDataset"
       },
+      "container_kind": "file",
+      "dir_marker": "cameras.bin",
+      "extensions": [
+        ".avif",
+        ".avifs"
+      ],
+      "filenames": [],
+      "id": "animated_avif",
+      "is_directory": false,
+      "lossy": true,
+      "magic_hex": [],
+      "payload_kind": "image_sequence",
+      "record": {
+        "module": "sceneio._core",
+        "qualname": "ImageSequence"
+      },
+      "requires_features": [
+        "PIL"
+      ],
       "selectors": [
         "frames"
       ],
       "streams_read": true,
       "streams_write": false,
-      "lossy": false,
-      "requires_features": [],
       "supported_features": [
-        "rtmv_camera_data",
-        "camera_to_world",
-        "per_view_pinhole_intrinsics",
-        "lazy_rgb_exr",
-        "lazy_depth_exr",
-        "optional_lazy_segmentation_exr",
-        "lazy_object_metadata",
+        "avif_1_2",
+        "uint8",
+        "grayscale",
+        "rgb",
+        "rgba",
+        "straight_alpha",
+        "exact_frame_timing",
         "frame_ranges",
+        "libavif",
+        "libaom_encode",
+        "dav1d_decode",
+        "worker_threads",
         "metadata_only_inspect"
       ],
       "unsupported_features": [
-        "pixel_decode",
-        "object_annotation_projection",
-        "directory_write"
-      ],
+        "sub_millisecond_write_timing",
+        "loop_count",
+        "background_rgba",
+        "audio",
+        "subtitles",
+        "high_bit_depth",
+        "hdr",
+        "gain_maps",
+        "embedded_icc",
+        "embedded_exif",
+        "embedded_xmp",
+        "non_identity_orientation",
+        "direct_streaming_write"
+      ]
+    },
+    {
       "capabilities": {
-        "format": "rtmv",
-        "datatype": "rtmv_dataset",
-        "record_type": "RtmvDataset",
-        "extensions": [],
-        "filenames": [],
-        "container_kind": "directory",
         "available": true,
+        "can_inspect": true,
         "can_read": true,
         "can_write": false,
-        "can_inspect": true,
+        "container_kind": "directory",
+        "extensions": [],
+        "filenames": [],
+        "format": "rtmv",
+        "lossy": false,
         "partial_selectors": [
           "frames"
         ],
+        "payload_kind": "rtmv_dataset",
+        "record_type": "RtmvDataset",
+        "requires_features": [],
         "streams_read": true,
         "streams_write": false,
-        "lossy": false,
-        "requires_features": [],
         "supported_features": [
           "rtmv_camera_data",
           "camera_to_world",
@@ -3581,57 +3545,62 @@
           "object_annotation_projection",
           "directory_write"
         ]
-      }
-    },
-    {
-      "id": "image_sequence",
-      "extensions": [],
-      "magic_hex": [],
-      "filenames": [],
-      "is_directory": true,
-      "dir_marker": "sceneio_sequence.json",
-      "container_kind": "directory",
-      "datatype": "image_sequence",
-      "record": {
-        "module": "sceneio._core",
-        "qualname": "ImageSequence"
       },
+      "container_kind": "directory",
+      "dir_marker": "00000.json",
+      "extensions": [],
+      "filenames": [],
+      "id": "rtmv",
+      "is_directory": true,
+      "lossy": false,
+      "magic_hex": [],
+      "payload_kind": "rtmv_dataset",
+      "record": {
+        "module": "sceneio.io._rtmv",
+        "qualname": "RtmvDataset"
+      },
+      "requires_features": [],
       "selectors": [
         "frames"
       ],
       "streams_read": true,
-      "streams_write": true,
-      "lossy": false,
-      "requires_features": [],
+      "streams_write": false,
       "supported_features": [
-        "lazy_encoded_frames",
-        "natural_order",
-        "manifest_timing",
-        "frame_ranges"
+        "rtmv_camera_data",
+        "camera_to_world",
+        "per_view_pinhole_intrinsics",
+        "lazy_rgb_exr",
+        "lazy_depth_exr",
+        "optional_lazy_segmentation_exr",
+        "lazy_object_metadata",
+        "frame_ranges",
+        "metadata_only_inspect"
       ],
       "unsupported_features": [
-        "recursive_directories",
-        "heterogeneous_frames",
-        "pixel_decode"
-      ],
+        "pixel_decode",
+        "object_annotation_projection",
+        "directory_write"
+      ]
+    },
+    {
       "capabilities": {
-        "format": "image_sequence",
-        "datatype": "image_sequence",
-        "record_type": "ImageSequence",
-        "extensions": [],
-        "filenames": [],
-        "container_kind": "directory",
         "available": true,
+        "can_inspect": true,
         "can_read": true,
         "can_write": true,
-        "can_inspect": true,
+        "container_kind": "directory",
+        "extensions": [],
+        "filenames": [],
+        "format": "image_sequence",
+        "lossy": false,
         "partial_selectors": [
           "frames"
         ],
+        "payload_kind": "image_sequence",
+        "record_type": "ImageSequence",
+        "requires_features": [],
         "streams_read": true,
         "streams_write": true,
-        "lossy": false,
-        "requires_features": [],
         "supported_features": [
           "lazy_encoded_frames",
           "natural_order",
@@ -3643,53 +3612,57 @@
           "heterogeneous_frames",
           "pixel_decode"
         ]
-      }
-    },
-    {
-      "id": "colmap_sparse_txt",
-      "extensions": [],
-      "magic_hex": [],
-      "filenames": [],
-      "is_directory": true,
-      "dir_marker": "cameras.txt",
+      },
       "container_kind": "directory",
-      "datatype": "sparse_model",
+      "dir_marker": "sceneio_sequence.json",
+      "extensions": [],
+      "filenames": [],
+      "id": "image_sequence",
+      "is_directory": true,
+      "lossy": false,
+      "magic_hex": [],
+      "payload_kind": "image_sequence",
       "record": {
         "module": "sceneio._core",
-        "qualname": "Reconstruction"
+        "qualname": "ImageSequence"
       },
+      "requires_features": [],
       "selectors": [
-        "image_id"
+        "frames"
       ],
       "streams_read": true,
       "streams_write": true,
-      "lossy": false,
-      "requires_features": [],
       "supported_features": [
-        "cameras",
-        "images",
-        "points3D",
-        "tracks"
+        "lazy_encoded_frames",
+        "natural_order",
+        "manifest_timing",
+        "frame_ranges"
       ],
-      "unsupported_features": [],
+      "unsupported_features": [
+        "recursive_directories",
+        "heterogeneous_frames",
+        "pixel_decode"
+      ]
+    },
+    {
       "capabilities": {
-        "format": "colmap_sparse_txt",
-        "datatype": "sparse_model",
-        "record_type": "Reconstruction",
-        "extensions": [],
-        "filenames": [],
-        "container_kind": "directory",
         "available": true,
+        "can_inspect": true,
         "can_read": true,
         "can_write": true,
-        "can_inspect": true,
+        "container_kind": "directory",
+        "extensions": [],
+        "filenames": [],
+        "format": "colmap_sparse_txt",
+        "lossy": false,
         "partial_selectors": [
           "image_id"
         ],
+        "payload_kind": "sparse_model",
+        "record_type": "Reconstruction",
+        "requires_features": [],
         "streams_read": true,
         "streams_write": true,
-        "lossy": false,
-        "requires_features": [],
         "supported_features": [
           "cameras",
           "images",
@@ -3697,109 +3670,103 @@
           "tracks"
         ],
         "unsupported_features": []
-      }
-    },
-    {
-      "id": "xyz",
-      "extensions": [
-        ".xyz"
-      ],
-      "magic_hex": [],
+      },
+      "container_kind": "directory",
+      "dir_marker": "cameras.txt",
+      "extensions": [],
       "filenames": [],
-      "is_directory": false,
-      "dir_marker": "cameras.bin",
-      "container_kind": "file",
-      "datatype": "point_cloud",
+      "id": "colmap_sparse_txt",
+      "is_directory": true,
+      "lossy": false,
+      "magic_hex": [],
+      "payload_kind": "sparse_model",
       "record": {
         "module": "sceneio._core",
-        "qualname": "PointCloud"
+        "qualname": "Reconstruction"
       },
+      "requires_features": [],
       "selectors": [
-        "points"
+        "image_id"
       ],
       "streams_read": true,
       "streams_write": true,
-      "lossy": false,
-      "requires_features": [],
-      "supported_features": [],
-      "unsupported_features": [],
+      "supported_features": [
+        "cameras",
+        "images",
+        "points3D",
+        "tracks"
+      ],
+      "unsupported_features": []
+    },
+    {
       "capabilities": {
-        "format": "xyz",
-        "datatype": "point_cloud",
-        "record_type": "PointCloud",
+        "available": true,
+        "can_inspect": true,
+        "can_read": true,
+        "can_write": true,
+        "container_kind": "file",
         "extensions": [
           ".xyz"
         ],
         "filenames": [],
-        "container_kind": "file",
-        "available": true,
-        "can_read": true,
-        "can_write": true,
-        "can_inspect": true,
+        "format": "xyz",
+        "lossy": false,
         "partial_selectors": [
           "points"
         ],
+        "payload_kind": "point_cloud",
+        "record_type": "PointCloud",
+        "requires_features": [],
         "streams_read": true,
         "streams_write": true,
-        "lossy": false,
-        "requires_features": [],
         "supported_features": [],
         "unsupported_features": []
-      }
-    },
-    {
-      "id": "pts",
-      "extensions": [
-        ".pts"
-      ],
-      "magic_hex": [],
-      "filenames": [],
-      "is_directory": false,
-      "dir_marker": "cameras.bin",
+      },
       "container_kind": "file",
-      "datatype": "point_cloud",
+      "dir_marker": "cameras.bin",
+      "extensions": [
+        ".xyz"
+      ],
+      "filenames": [],
+      "id": "xyz",
+      "is_directory": false,
+      "lossy": false,
+      "magic_hex": [],
+      "payload_kind": "point_cloud",
       "record": {
         "module": "sceneio._core",
         "qualname": "PointCloud"
       },
+      "requires_features": [],
       "selectors": [
         "points"
       ],
       "streams_read": true,
       "streams_write": true,
-      "lossy": false,
-      "requires_features": [],
-      "supported_features": [
-        "count_header",
-        "xyz",
-        "intensity",
-        "rgb8"
-      ],
-      "unsupported_features": [
-        "normals",
-        "rgb16",
-        "georef"
-      ],
+      "supported_features": [],
+      "unsupported_features": []
+    },
+    {
       "capabilities": {
-        "format": "pts",
-        "datatype": "point_cloud",
-        "record_type": "PointCloud",
+        "available": true,
+        "can_inspect": true,
+        "can_read": true,
+        "can_write": true,
+        "container_kind": "file",
         "extensions": [
           ".pts"
         ],
         "filenames": [],
-        "container_kind": "file",
-        "available": true,
-        "can_read": true,
-        "can_write": true,
-        "can_inspect": true,
+        "format": "pts",
+        "lossy": false,
         "partial_selectors": [
           "points"
         ],
+        "payload_kind": "point_cloud",
+        "record_type": "PointCloud",
+        "requires_features": [],
         "streams_read": true,
         "streams_write": true,
-        "lossy": false,
-        "requires_features": [],
         "supported_features": [
           "count_header",
           "xyz",
@@ -3811,63 +3778,61 @@
           "rgb16",
           "georef"
         ]
-      }
-    },
-    {
-      "id": "las",
+      },
+      "container_kind": "file",
+      "dir_marker": "cameras.bin",
       "extensions": [
-        ".las"
-      ],
-      "magic_hex": [
-        "4c415346"
+        ".pts"
       ],
       "filenames": [],
+      "id": "pts",
       "is_directory": false,
-      "dir_marker": "cameras.bin",
-      "container_kind": "file",
-      "datatype": "point_cloud",
+      "lossy": false,
+      "magic_hex": [],
+      "payload_kind": "point_cloud",
       "record": {
         "module": "sceneio._core",
         "qualname": "PointCloud"
       },
+      "requires_features": [],
       "selectors": [
         "points"
       ],
       "streams_read": true,
       "streams_write": true,
-      "lossy": true,
-      "requires_features": [],
       "supported_features": [
-        "point_formats_0_5",
-        "point_formats_6_10",
-        "waveform_sidecar",
-        "rgb16",
-        "georef"
+        "count_header",
+        "xyz",
+        "intensity",
+        "rgb8"
       ],
       "unsupported_features": [
-        "external_waveform_packets",
-        "laz"
-      ],
+        "normals",
+        "rgb16",
+        "georef"
+      ]
+    },
+    {
       "capabilities": {
-        "format": "las",
-        "datatype": "point_cloud",
-        "record_type": "PointCloud",
+        "available": true,
+        "can_inspect": true,
+        "can_read": true,
+        "can_write": true,
+        "container_kind": "file",
         "extensions": [
           ".las"
         ],
         "filenames": [],
-        "container_kind": "file",
-        "available": true,
-        "can_read": true,
-        "can_write": true,
-        "can_inspect": true,
+        "format": "las",
+        "lossy": true,
         "partial_selectors": [
           "points"
         ],
+        "payload_kind": "point_cloud",
+        "record_type": "PointCloud",
+        "requires_features": [],
         "streams_read": true,
         "streams_write": true,
-        "lossy": true,
-        "requires_features": [],
         "supported_features": [
           "point_formats_0_5",
           "point_formats_6_10",
@@ -3879,64 +3844,63 @@
           "external_waveform_packets",
           "laz"
         ]
-      }
-    },
-    {
-      "id": "laz",
-      "extensions": [
-        ".laz"
-      ],
-      "magic_hex": [],
-      "filenames": [],
-      "is_directory": false,
-      "dir_marker": "cameras.bin",
+      },
       "container_kind": "file",
-      "datatype": "point_cloud",
+      "dir_marker": "cameras.bin",
+      "extensions": [
+        ".las"
+      ],
+      "filenames": [],
+      "id": "las",
+      "is_directory": false,
+      "lossy": true,
+      "magic_hex": [
+        "4c415346"
+      ],
+      "payload_kind": "point_cloud",
       "record": {
         "module": "sceneio._core",
         "qualname": "PointCloud"
       },
+      "requires_features": [],
       "selectors": [
         "points"
       ],
       "streams_read": true,
       "streams_write": true,
-      "lossy": true,
-      "requires_features": [],
       "supported_features": [
-        "point_formats_0_3",
-        "point_formats_6_8",
-        "chunked_point_ranges",
+        "point_formats_0_5",
+        "point_formats_6_10",
+        "waveform_sidecar",
         "rgb16",
         "georef"
       ],
       "unsupported_features": [
-        "point_formats_4_5",
-        "point_formats_9_10",
-        "waveform",
-        "extra_bytes",
-        "vlr_metadata"
-      ],
+        "external_waveform_packets",
+        "laz"
+      ]
+    },
+    {
       "capabilities": {
-        "format": "laz",
-        "datatype": "point_cloud",
-        "record_type": "PointCloud",
+        "available": true,
+        "can_inspect": true,
+        "can_read": true,
+        "can_write": true,
+        "container_kind": "file",
         "extensions": [
           ".laz"
         ],
         "filenames": [],
-        "container_kind": "file",
-        "available": true,
-        "can_read": true,
-        "can_write": true,
-        "can_inspect": true,
+        "format": "laz",
+        "lossy": true,
         "partial_selectors": [
           "points"
         ],
+        "payload_kind": "point_cloud",
+        "record_type": "PointCloud",
+        "requires_features": [],
         "streams_read": true,
         "streams_write": true,
-        "lossy": true,
-        "requires_features": [],
         "supported_features": [
           "point_formats_0_3",
           "point_formats_6_8",
@@ -3951,116 +3915,122 @@
           "extra_bytes",
           "vlr_metadata"
         ]
-      }
-    },
-    {
-      "id": "flo",
+      },
+      "container_kind": "file",
+      "dir_marker": "cameras.bin",
       "extensions": [
-        ".flo"
-      ],
-      "magic_hex": [
-        "50494548"
+        ".laz"
       ],
       "filenames": [],
+      "id": "laz",
       "is_directory": false,
-      "dir_marker": "cameras.bin",
-      "container_kind": "file",
-      "datatype": "flow",
-      "record": null,
+      "lossy": true,
+      "magic_hex": [],
+      "payload_kind": "point_cloud",
+      "record": {
+        "module": "sceneio._core",
+        "qualname": "PointCloud"
+      },
+      "requires_features": [],
       "selectors": [
-        "window"
+        "points"
       ],
       "streams_read": true,
       "streams_write": true,
-      "lossy": false,
-      "requires_features": [],
       "supported_features": [
-        "float32",
-        "native_endian_mmap_view",
-        "typed_flow_adapter"
+        "point_formats_0_3",
+        "point_formats_6_8",
+        "chunked_point_ranges",
+        "rgb16",
+        "georef"
       ],
-      "unsupported_features": [],
+      "unsupported_features": [
+        "point_formats_4_5",
+        "point_formats_9_10",
+        "waveform",
+        "extra_bytes",
+        "vlr_metadata"
+      ]
+    },
+    {
       "capabilities": {
-        "format": "flo",
-        "datatype": "flow",
-        "record_type": null,
+        "available": true,
+        "can_inspect": true,
+        "can_read": true,
+        "can_write": true,
+        "container_kind": "file",
         "extensions": [
           ".flo"
         ],
         "filenames": [],
-        "container_kind": "file",
-        "available": true,
-        "can_read": true,
-        "can_write": true,
-        "can_inspect": true,
+        "format": "flo",
+        "lossy": false,
         "partial_selectors": [
           "window"
         ],
+        "payload_kind": "flow",
+        "record_type": "FlowField",
+        "requires_features": [],
         "streams_read": true,
         "streams_write": true,
-        "lossy": false,
-        "requires_features": [],
         "supported_features": [
           "float32",
-          "native_endian_mmap_view",
-          "typed_flow_adapter"
+          "fixed_uv_conventions",
+          "pixel_windows"
         ],
         "unsupported_features": []
-      }
-    },
-    {
-      "id": "dmb",
-      "extensions": [
-        ".dmb"
-      ],
-      "magic_hex": [],
-      "filenames": [],
-      "is_directory": false,
-      "dir_marker": "cameras.bin",
+      },
       "container_kind": "file",
-      "datatype": "depth_map",
+      "dir_marker": "cameras.bin",
+      "extensions": [
+        ".flo"
+      ],
+      "filenames": [],
+      "id": "flo",
+      "is_directory": false,
+      "lossy": false,
+      "magic_hex": [
+        "50494548"
+      ],
+      "payload_kind": "flow",
       "record": {
         "module": "sceneio._core",
-        "qualname": "DepthMap"
+        "qualname": "FlowField"
       },
+      "requires_features": [],
       "selectors": [
         "window"
       ],
       "streams_read": true,
       "streams_write": true,
-      "lossy": false,
-      "requires_features": [],
       "supported_features": [
-        "scalar_float32",
-        "little_endian",
-        "zero_invalid",
+        "float32",
+        "fixed_uv_conventions",
         "pixel_windows"
       ],
-      "unsupported_features": [
-        "normal_maps",
-        "confidence",
-        "embedded_scale"
-      ],
+      "unsupported_features": []
+    },
+    {
       "capabilities": {
-        "format": "dmb",
-        "datatype": "depth_map",
-        "record_type": "DepthMap",
+        "available": true,
+        "can_inspect": true,
+        "can_read": true,
+        "can_write": true,
+        "container_kind": "file",
         "extensions": [
           ".dmb"
         ],
         "filenames": [],
-        "container_kind": "file",
-        "available": true,
-        "can_read": true,
-        "can_write": true,
-        "can_inspect": true,
+        "format": "dmb",
+        "lossy": false,
         "partial_selectors": [
           "window"
         ],
+        "payload_kind": "depth_map",
+        "record_type": "DepthMap",
+        "requires_features": [],
         "streams_read": true,
         "streams_write": true,
-        "lossy": false,
-        "requires_features": [],
         "supported_features": [
           "scalar_float32",
           "little_endian",
@@ -4072,107 +4042,105 @@
           "confidence",
           "embedded_scale"
         ]
-      }
-    },
-    {
-      "id": "bundler",
+      },
+      "container_kind": "file",
+      "dir_marker": "cameras.bin",
       "extensions": [
-        ".out"
-      ],
-      "magic_hex": [
-        "232042756e646c652066696c65"
+        ".dmb"
       ],
       "filenames": [],
+      "id": "dmb",
       "is_directory": false,
-      "dir_marker": "cameras.bin",
-      "container_kind": "file",
-      "datatype": "sparse_model",
+      "lossy": false,
+      "magic_hex": [],
+      "payload_kind": "depth_map",
       "record": {
         "module": "sceneio._core",
-        "qualname": "Reconstruction"
+        "qualname": "DepthMap"
       },
-      "selectors": [],
+      "requires_features": [],
+      "selectors": [
+        "window"
+      ],
       "streams_read": true,
       "streams_write": true,
-      "lossy": false,
-      "requires_features": [],
-      "supported_features": [],
-      "unsupported_features": [],
+      "supported_features": [
+        "scalar_float32",
+        "little_endian",
+        "zero_invalid",
+        "pixel_windows"
+      ],
+      "unsupported_features": [
+        "normal_maps",
+        "confidence",
+        "embedded_scale"
+      ]
+    },
+    {
       "capabilities": {
-        "format": "bundler",
-        "datatype": "sparse_model",
-        "record_type": "Reconstruction",
+        "available": true,
+        "can_inspect": true,
+        "can_read": true,
+        "can_write": true,
+        "container_kind": "file",
         "extensions": [
           ".out"
         ],
         "filenames": [],
-        "container_kind": "file",
-        "available": true,
-        "can_read": true,
-        "can_write": true,
-        "can_inspect": true,
+        "format": "bundler",
+        "lossy": false,
         "partial_selectors": [],
+        "payload_kind": "sparse_model",
+        "record_type": "Reconstruction",
+        "requires_features": [],
         "streams_read": true,
         "streams_write": true,
-        "lossy": false,
-        "requires_features": [],
         "supported_features": [],
         "unsupported_features": []
-      }
-    },
-    {
-      "id": "bal",
-      "extensions": [
-        ".bal"
-      ],
-      "magic_hex": [],
-      "filenames": [],
-      "is_directory": false,
-      "dir_marker": "cameras.bin",
+      },
       "container_kind": "file",
-      "datatype": "sparse_model",
+      "dir_marker": "cameras.bin",
+      "extensions": [
+        ".out"
+      ],
+      "filenames": [],
+      "id": "bundler",
+      "is_directory": false,
+      "lossy": false,
+      "magic_hex": [
+        "232042756e646c652066696c65"
+      ],
+      "payload_kind": "sparse_model",
       "record": {
         "module": "sceneio._core",
         "qualname": "Reconstruction"
       },
+      "requires_features": [],
       "selectors": [],
       "streams_read": true,
       "streams_write": true,
-      "lossy": false,
-      "requires_features": [],
-      "supported_features": [
-        "angle_axis",
-        "radial_k1_k2",
-        "centered_observations",
-        "deterministic_17_digit_writer"
-      ],
-      "unsupported_features": [
-        "bzip2",
-        "image_names",
-        "image_dimensions",
-        "principal_points",
-        "point_colors",
-        "point_errors",
-        "untriangulated_observations"
-      ],
+      "supported_features": [],
+      "unsupported_features": []
+    },
+    {
       "capabilities": {
-        "format": "bal",
-        "datatype": "sparse_model",
-        "record_type": "Reconstruction",
+        "available": true,
+        "can_inspect": true,
+        "can_read": true,
+        "can_write": true,
+        "container_kind": "file",
         "extensions": [
           ".bal"
         ],
         "filenames": [],
-        "container_kind": "file",
-        "available": true,
-        "can_read": true,
-        "can_write": true,
-        "can_inspect": true,
+        "format": "bal",
+        "lossy": false,
         "partial_selectors": [],
+        "payload_kind": "sparse_model",
+        "record_type": "Reconstruction",
+        "requires_features": [],
         "streams_read": true,
         "streams_write": true,
-        "lossy": false,
-        "requires_features": [],
         "supported_features": [
           "angle_axis",
           "radial_k1_k2",
@@ -4188,149 +4156,153 @@
           "point_errors",
           "untriangulated_observations"
         ]
-      }
-    },
-    {
-      "id": "nvm",
+      },
+      "container_kind": "file",
+      "dir_marker": "cameras.bin",
       "extensions": [
-        ".nvm"
-      ],
-      "magic_hex": [
-        "4e564d5f5633"
+        ".bal"
       ],
       "filenames": [],
+      "id": "bal",
       "is_directory": false,
-      "dir_marker": "cameras.bin",
-      "container_kind": "file",
-      "datatype": "sparse_model",
+      "lossy": false,
+      "magic_hex": [],
+      "payload_kind": "sparse_model",
       "record": {
         "module": "sceneio._core",
         "qualname": "Reconstruction"
       },
+      "requires_features": [],
       "selectors": [],
       "streams_read": true,
       "streams_write": true,
-      "lossy": false,
-      "requires_features": [],
-      "supported_features": [],
-      "unsupported_features": [],
+      "supported_features": [
+        "angle_axis",
+        "radial_k1_k2",
+        "centered_observations",
+        "deterministic_17_digit_writer"
+      ],
+      "unsupported_features": [
+        "bzip2",
+        "image_names",
+        "image_dimensions",
+        "principal_points",
+        "point_colors",
+        "point_errors",
+        "untriangulated_observations"
+      ]
+    },
+    {
       "capabilities": {
-        "format": "nvm",
-        "datatype": "sparse_model",
-        "record_type": "Reconstruction",
+        "available": true,
+        "can_inspect": true,
+        "can_read": true,
+        "can_write": true,
+        "container_kind": "file",
         "extensions": [
           ".nvm"
         ],
         "filenames": [],
-        "container_kind": "file",
-        "available": true,
-        "can_read": true,
-        "can_write": true,
-        "can_inspect": true,
+        "format": "nvm",
+        "lossy": false,
         "partial_selectors": [],
+        "payload_kind": "sparse_model",
+        "record_type": "Reconstruction",
+        "requires_features": [],
         "streams_read": true,
         "streams_write": true,
-        "lossy": false,
-        "requires_features": [],
         "supported_features": [],
         "unsupported_features": []
-      }
-    },
-    {
-      "id": "openmvg",
-      "extensions": [],
-      "magic_hex": [],
-      "filenames": [
-        "sfm_data.json"
-      ],
-      "is_directory": false,
-      "dir_marker": "cameras.bin",
+      },
       "container_kind": "file",
-      "datatype": "sparse_model",
+      "dir_marker": "cameras.bin",
+      "extensions": [
+        ".nvm"
+      ],
+      "filenames": [],
+      "id": "nvm",
+      "is_directory": false,
+      "lossy": false,
+      "magic_hex": [
+        "4e564d5f5633"
+      ],
+      "payload_kind": "sparse_model",
       "record": {
         "module": "sceneio._core",
         "qualname": "Reconstruction"
       },
+      "requires_features": [],
       "selectors": [],
       "streams_read": true,
       "streams_write": true,
-      "lossy": false,
-      "requires_features": [],
       "supported_features": [],
-      "unsupported_features": [],
+      "unsupported_features": []
+    },
+    {
       "capabilities": {
-        "format": "openmvg",
-        "datatype": "sparse_model",
-        "record_type": "Reconstruction",
+        "available": true,
+        "can_inspect": true,
+        "can_read": true,
+        "can_write": true,
+        "container_kind": "file",
         "extensions": [],
         "filenames": [
           "sfm_data.json"
         ],
-        "container_kind": "file",
-        "available": true,
-        "can_read": true,
-        "can_write": true,
-        "can_inspect": true,
+        "format": "openmvg",
+        "lossy": false,
         "partial_selectors": [],
+        "payload_kind": "sparse_model",
+        "record_type": "Reconstruction",
+        "requires_features": [],
         "streams_read": true,
         "streams_write": true,
-        "lossy": false,
-        "requires_features": [],
         "supported_features": [],
         "unsupported_features": []
-      }
-    },
-    {
-      "id": "splat",
-      "extensions": [
-        ".splat"
-      ],
-      "magic_hex": [],
-      "filenames": [],
-      "is_directory": false,
-      "dir_marker": "cameras.bin",
+      },
       "container_kind": "file",
-      "datatype": "splat",
+      "dir_marker": "cameras.bin",
+      "extensions": [],
+      "filenames": [
+        "sfm_data.json"
+      ],
+      "id": "openmvg",
+      "is_directory": false,
+      "lossy": false,
+      "magic_hex": [],
+      "payload_kind": "sparse_model",
       "record": {
         "module": "sceneio._core",
-        "qualname": "GaussianCloud"
+        "qualname": "Reconstruction"
       },
-      "selectors": [
-        "points"
-      ],
+      "requires_features": [],
+      "selectors": [],
       "streams_read": true,
       "streams_write": true,
-      "lossy": true,
-      "requires_features": [],
-      "supported_features": [
-        "rgb8",
-        "opacity8",
-        "scale8",
-        "quaternion8"
-      ],
-      "unsupported_features": [
-        "spherical_harmonics"
-      ],
+      "supported_features": [],
+      "unsupported_features": []
+    },
+    {
       "capabilities": {
-        "format": "splat",
-        "datatype": "splat",
-        "record_type": "GaussianCloud",
+        "available": true,
+        "can_inspect": true,
+        "can_read": true,
+        "can_write": true,
+        "container_kind": "file",
         "extensions": [
           ".splat"
         ],
         "filenames": [],
-        "container_kind": "file",
-        "available": true,
-        "can_read": true,
-        "can_write": true,
-        "can_inspect": true,
+        "format": "splat",
+        "lossy": true,
         "partial_selectors": [
           "points"
         ],
+        "payload_kind": "splat",
+        "record_type": "GaussianCloud",
+        "requires_features": [],
         "streams_read": true,
         "streams_write": true,
-        "lossy": true,
-        "requires_features": [],
         "supported_features": [
           "rgb8",
           "opacity8",
@@ -4340,57 +4312,57 @@
         "unsupported_features": [
           "spherical_harmonics"
         ]
-      }
-    },
-    {
-      "id": "colmap_mvs_depth",
-      "extensions": [],
-      "magic_hex": [],
-      "filenames": [],
-      "is_directory": false,
-      "dir_marker": "cameras.bin",
+      },
       "container_kind": "file",
-      "datatype": "depth_map",
+      "dir_marker": "cameras.bin",
+      "extensions": [
+        ".splat"
+      ],
+      "filenames": [],
+      "id": "splat",
+      "is_directory": false,
+      "lossy": true,
+      "magic_hex": [],
+      "payload_kind": "splat",
       "record": {
         "module": "sceneio._core",
-        "qualname": "DepthMap"
+        "qualname": "GaussianCloud"
       },
+      "requires_features": [],
       "selectors": [
-        "window"
+        "points"
       ],
       "streams_read": true,
       "streams_write": true,
-      "lossy": false,
-      "requires_features": [],
       "supported_features": [
-        "scalar_float32",
-        "little_endian",
-        "nonpositive_invalid",
-        "pixel_windows",
-        "camera_z"
+        "rgb8",
+        "opacity8",
+        "scale8",
+        "quaternion8"
       ],
       "unsupported_features": [
-        "confidence",
-        "embedded_scale"
-      ],
+        "spherical_harmonics"
+      ]
+    },
+    {
       "capabilities": {
-        "format": "colmap_mvs_depth",
-        "datatype": "depth_map",
-        "record_type": "DepthMap",
-        "extensions": [],
-        "filenames": [],
-        "container_kind": "file",
         "available": true,
+        "can_inspect": true,
         "can_read": true,
         "can_write": true,
-        "can_inspect": true,
+        "container_kind": "file",
+        "extensions": [],
+        "filenames": [],
+        "format": "colmap_mvs_depth",
+        "lossy": false,
         "partial_selectors": [
           "window"
         ],
+        "payload_kind": "depth_map",
+        "record_type": "DepthMap",
+        "requires_features": [],
         "streams_read": true,
         "streams_write": true,
-        "lossy": false,
-        "requires_features": [],
         "supported_features": [
           "scalar_float32",
           "little_endian",
@@ -4402,53 +4374,57 @@
           "confidence",
           "embedded_scale"
         ]
-      }
-    },
-    {
-      "id": "colmap_mvs_normal",
-      "extensions": [],
-      "magic_hex": [],
-      "filenames": [],
-      "is_directory": false,
-      "dir_marker": "cameras.bin",
+      },
       "container_kind": "file",
-      "datatype": "normal_map",
+      "dir_marker": "cameras.bin",
+      "extensions": [],
+      "filenames": [],
+      "id": "colmap_mvs_depth",
+      "is_directory": false,
+      "lossy": false,
+      "magic_hex": [],
+      "payload_kind": "depth_map",
       "record": {
         "module": "sceneio._core",
-        "qualname": "NormalMap"
+        "qualname": "DepthMap"
       },
+      "requires_features": [],
       "selectors": [
         "window"
       ],
       "streams_read": true,
       "streams_write": true,
-      "lossy": false,
-      "requires_features": [],
       "supported_features": [
-        "planar_float32",
+        "scalar_float32",
         "little_endian",
-        "camera_xyz",
-        "pixel_windows"
+        "nonpositive_invalid",
+        "pixel_windows",
+        "camera_z"
       ],
-      "unsupported_features": [],
+      "unsupported_features": [
+        "confidence",
+        "embedded_scale"
+      ]
+    },
+    {
       "capabilities": {
-        "format": "colmap_mvs_normal",
-        "datatype": "normal_map",
-        "record_type": "NormalMap",
-        "extensions": [],
-        "filenames": [],
-        "container_kind": "file",
         "available": true,
+        "can_inspect": true,
         "can_read": true,
         "can_write": true,
-        "can_inspect": true,
+        "container_kind": "file",
+        "extensions": [],
+        "filenames": [],
+        "format": "colmap_mvs_normal",
+        "lossy": false,
         "partial_selectors": [
           "window"
         ],
+        "payload_kind": "normal_map",
+        "record_type": "NormalMap",
+        "requires_features": [],
         "streams_read": true,
         "streams_write": true,
-        "lossy": false,
-        "requires_features": [],
         "supported_features": [
           "planar_float32",
           "little_endian",
@@ -4456,178 +4432,159 @@
           "pixel_windows"
         ],
         "unsupported_features": []
-      }
-    },
-    {
-      "id": "colmap_mvs_consistency",
-      "extensions": [],
-      "magic_hex": [],
-      "filenames": [],
-      "is_directory": false,
-      "dir_marker": "cameras.bin",
+      },
       "container_kind": "file",
-      "datatype": "consistency_graph",
+      "dir_marker": "cameras.bin",
+      "extensions": [],
+      "filenames": [],
+      "id": "colmap_mvs_normal",
+      "is_directory": false,
+      "lossy": false,
+      "magic_hex": [],
+      "payload_kind": "normal_map",
       "record": {
         "module": "sceneio._core",
-        "qualname": "ConsistencyGraph"
+        "qualname": "NormalMap"
       },
-      "selectors": [],
+      "requires_features": [],
+      "selectors": [
+        "window"
+      ],
       "streams_read": true,
       "streams_write": true,
-      "lossy": false,
-      "requires_features": [],
       "supported_features": [
-        "ordered_pixel_entries",
-        "zero_count_entries",
-        "mvs_sequential_image_indices"
+        "planar_float32",
+        "little_endian",
+        "camera_xyz",
+        "pixel_windows"
       ],
-      "unsupported_features": [],
+      "unsupported_features": []
+    },
+    {
       "capabilities": {
-        "format": "colmap_mvs_consistency",
-        "datatype": "consistency_graph",
-        "record_type": "ConsistencyGraph",
-        "extensions": [],
-        "filenames": [],
-        "container_kind": "file",
         "available": true,
+        "can_inspect": true,
         "can_read": true,
         "can_write": true,
-        "can_inspect": true,
+        "container_kind": "file",
+        "extensions": [],
+        "filenames": [],
+        "format": "colmap_mvs_consistency",
+        "lossy": false,
         "partial_selectors": [],
+        "payload_kind": "consistency_graph",
+        "record_type": "ConsistencyGraph",
+        "requires_features": [],
         "streams_read": true,
         "streams_write": true,
-        "lossy": false,
-        "requires_features": [],
         "supported_features": [
           "ordered_pixel_entries",
           "zero_count_entries",
           "mvs_sequential_image_indices"
         ],
         "unsupported_features": []
-      }
-    },
-    {
-      "id": "colmap_fused_visibility",
-      "extensions": [],
-      "magic_hex": [],
-      "filenames": [
-        "fused.ply.vis"
-      ],
-      "is_directory": false,
-      "dir_marker": "cameras.bin",
+      },
       "container_kind": "file",
-      "datatype": "point_visibility",
+      "dir_marker": "cameras.bin",
+      "extensions": [],
+      "filenames": [],
+      "id": "colmap_mvs_consistency",
+      "is_directory": false,
+      "lossy": false,
+      "magic_hex": [],
+      "payload_kind": "consistency_graph",
       "record": {
         "module": "sceneio._core",
-        "qualname": "PointVisibility"
+        "qualname": "ConsistencyGraph"
       },
+      "requires_features": [],
       "selectors": [],
       "streams_read": true,
       "streams_write": true,
-      "lossy": false,
-      "requires_features": [],
       "supported_features": [
-        "csr",
-        "zero_visibility_points",
+        "ordered_pixel_entries",
+        "zero_count_entries",
         "mvs_sequential_image_indices"
       ],
-      "unsupported_features": [],
+      "unsupported_features": []
+    },
+    {
       "capabilities": {
-        "format": "colmap_fused_visibility",
-        "datatype": "point_visibility",
-        "record_type": "PointVisibility",
+        "available": true,
+        "can_inspect": true,
+        "can_read": true,
+        "can_write": true,
+        "container_kind": "file",
         "extensions": [],
         "filenames": [
           "fused.ply.vis"
         ],
-        "container_kind": "file",
-        "available": true,
-        "can_read": true,
-        "can_write": true,
-        "can_inspect": true,
+        "format": "colmap_fused_visibility",
+        "lossy": false,
         "partial_selectors": [],
+        "payload_kind": "point_visibility",
+        "record_type": "PointVisibility",
+        "requires_features": [],
         "streams_read": true,
         "streams_write": true,
-        "lossy": false,
-        "requires_features": [],
         "supported_features": [
           "csr",
           "zero_visibility_points",
           "mvs_sequential_image_indices"
         ],
         "unsupported_features": []
-      }
-    },
-    {
-      "id": "hdf5",
-      "extensions": [
-        ".h5",
-        ".hdf5"
-      ],
-      "magic_hex": [
-        "894844460d0a1a0a"
-      ],
-      "filenames": [],
-      "is_directory": false,
-      "dir_marker": "cameras.bin",
+      },
       "container_kind": "file",
-      "datatype": "tensor_dict",
+      "dir_marker": "cameras.bin",
+      "extensions": [],
+      "filenames": [
+        "fused.ply.vis"
+      ],
+      "id": "colmap_fused_visibility",
+      "is_directory": false,
+      "lossy": false,
+      "magic_hex": [],
+      "payload_kind": "point_visibility",
       "record": {
         "module": "sceneio._core",
-        "qualname": "TensorDict"
+        "qualname": "PointVisibility"
       },
-      "selectors": [
-        "tensors",
-        "slices"
-      ],
+      "requires_features": [],
+      "selectors": [],
       "streams_read": true,
       "streams_write": true,
-      "lossy": false,
-      "requires_features": [
-        "h5py"
-      ],
       "supported_features": [
-        "numeric_datasets",
-        "nested_dataset_paths",
-        "string_root_attributes",
-        "named_tensor_reads",
-        "leading_axis_hyperslabs",
-        "transactional_path_write"
+        "csr",
+        "zero_visibility_points",
+        "mvs_sequential_image_indices"
       ],
-      "unsupported_features": [
-        "string_datasets",
-        "compound_dtypes",
-        "variable_length_dtypes",
-        "references",
-        "external_links",
-        "hard_link_aliases",
-        "virtual_datasets",
-        "non_root_attributes"
-      ],
+      "unsupported_features": []
+    },
+    {
       "capabilities": {
-        "format": "hdf5",
-        "datatype": "tensor_dict",
-        "record_type": "TensorDict",
+        "available": true,
+        "can_inspect": true,
+        "can_read": true,
+        "can_write": true,
+        "container_kind": "file",
         "extensions": [
           ".h5",
           ".hdf5"
         ],
         "filenames": [],
-        "container_kind": "file",
-        "available": true,
-        "can_read": true,
-        "can_write": true,
-        "can_inspect": true,
+        "format": "hdf5",
+        "lossy": false,
         "partial_selectors": [
           "tensors",
           "slices"
         ],
-        "streams_read": true,
-        "streams_write": true,
-        "lossy": false,
+        "payload_kind": "tensor_dict",
+        "record_type": "TensorDict",
         "requires_features": [
           "h5py"
         ],
+        "streams_read": true,
+        "streams_write": true,
         "supported_features": [
           "numeric_datasets",
           "nested_dataset_paths",
@@ -4646,70 +4603,75 @@
           "virtual_datasets",
           "non_root_attributes"
         ]
-      }
-    },
-    {
-      "id": "hloc_features",
+      },
+      "container_kind": "file",
+      "dir_marker": "cameras.bin",
       "extensions": [
         ".h5",
         ".hdf5"
       ],
+      "filenames": [],
+      "id": "hdf5",
+      "is_directory": false,
+      "lossy": false,
       "magic_hex": [
         "894844460d0a1a0a"
       ],
-      "filenames": [],
-      "is_directory": false,
-      "dir_marker": "cameras.bin",
-      "container_kind": "file",
-      "datatype": "feature_set",
+      "payload_kind": "tensor_dict",
       "record": {
-        "module": "sceneio.io._hdf5",
-        "qualname": "HlocFeatureStore"
+        "module": "sceneio._core",
+        "qualname": "TensorDict"
       },
-      "selectors": [],
-      "streams_read": true,
-      "streams_write": true,
-      "lossy": false,
       "requires_features": [
         "h5py"
       ],
+      "selectors": [
+        "tensors",
+        "slices"
+      ],
+      "streams_read": true,
+      "streams_write": true,
       "supported_features": [
-        "per_image_groups",
-        "keypoints",
-        "descriptors_D_by_N",
-        "scores",
-        "image_size",
-        "keypoint_uncertainty",
-        "nested_image_names",
-        "native_feature_set"
+        "numeric_datasets",
+        "nested_dataset_paths",
+        "string_root_attributes",
+        "named_tensor_reads",
+        "leading_axis_hyperslabs",
+        "transactional_path_write"
       ],
       "unsupported_features": [
-        "global_descriptor_only",
-        "feature_scales",
-        "feature_orientations",
-        "line_features"
-      ],
+        "string_datasets",
+        "compound_dtypes",
+        "variable_length_dtypes",
+        "references",
+        "external_links",
+        "hard_link_aliases",
+        "virtual_datasets",
+        "non_root_attributes"
+      ]
+    },
+    {
       "capabilities": {
-        "format": "hloc_features",
-        "datatype": "feature_set",
-        "record_type": "HlocFeatureStore",
+        "available": true,
+        "can_inspect": true,
+        "can_read": true,
+        "can_write": true,
+        "container_kind": "file",
         "extensions": [
           ".h5",
           ".hdf5"
         ],
         "filenames": [],
-        "container_kind": "file",
-        "available": true,
-        "can_read": true,
-        "can_write": true,
-        "can_inspect": true,
-        "partial_selectors": [],
-        "streams_read": true,
-        "streams_write": true,
+        "format": "hloc_features",
         "lossy": false,
+        "partial_selectors": [],
+        "payload_kind": "feature_set",
+        "record_type": "HlocFeatureStore",
         "requires_features": [
           "h5py"
         ],
+        "streams_read": true,
+        "streams_write": true,
         "supported_features": [
           "per_image_groups",
           "keypoints",
@@ -4726,67 +4688,70 @@
           "feature_orientations",
           "line_features"
         ]
-      }
-    },
-    {
-      "id": "hloc_matches",
+      },
+      "container_kind": "file",
+      "dir_marker": "cameras.bin",
       "extensions": [
         ".h5",
         ".hdf5"
       ],
+      "filenames": [],
+      "id": "hloc_features",
+      "is_directory": false,
+      "lossy": false,
       "magic_hex": [
         "894844460d0a1a0a"
       ],
-      "filenames": [],
-      "is_directory": false,
-      "dir_marker": "cameras.bin",
-      "container_kind": "file",
-      "datatype": "match_graph",
+      "payload_kind": "feature_set",
       "record": {
         "module": "sceneio.io._hdf5",
-        "qualname": "HlocMatchStore"
+        "qualname": "HlocFeatureStore"
       },
-      "selectors": [],
-      "streams_read": true,
-      "streams_write": true,
-      "lossy": false,
       "requires_features": [
         "h5py"
       ],
+      "selectors": [],
+      "streams_read": true,
+      "streams_write": true,
       "supported_features": [
-        "matches0",
-        "matching_scores0",
-        "current_pair_naming",
-        "exact_endpoint_names",
-        "mixed_score_presence",
-        "native_match_graph"
+        "per_image_groups",
+        "keypoints",
+        "descriptors_D_by_N",
+        "scores",
+        "image_size",
+        "keypoint_uncertainty",
+        "nested_image_names",
+        "native_feature_set"
       ],
       "unsupported_features": [
-        "verified_geometry",
-        "multiple_matches_per_source",
-        "legacy_underscore_pair_enumeration"
-      ],
+        "global_descriptor_only",
+        "feature_scales",
+        "feature_orientations",
+        "line_features"
+      ]
+    },
+    {
       "capabilities": {
-        "format": "hloc_matches",
-        "datatype": "match_graph",
-        "record_type": "HlocMatchStore",
+        "available": true,
+        "can_inspect": true,
+        "can_read": true,
+        "can_write": true,
+        "container_kind": "file",
         "extensions": [
           ".h5",
           ".hdf5"
         ],
         "filenames": [],
-        "container_kind": "file",
-        "available": true,
-        "can_read": true,
-        "can_write": true,
-        "can_inspect": true,
-        "partial_selectors": [],
-        "streams_read": true,
-        "streams_write": true,
+        "format": "hloc_matches",
         "lossy": false,
+        "partial_selectors": [],
+        "payload_kind": "match_graph",
+        "record_type": "HlocMatchStore",
         "requires_features": [
           "h5py"
         ],
+        "streams_read": true,
+        "streams_write": true,
         "supported_features": [
           "matches0",
           "matching_scores0",
@@ -4800,70 +4765,65 @@
           "multiple_matches_per_source",
           "legacy_underscore_pair_enumeration"
         ]
-      }
-    },
-    {
-      "id": "ncore_v4",
-      "extensions": [],
-      "magic_hex": [],
-      "filenames": [],
-      "is_directory": true,
-      "dir_marker": ".zattrs",
-      "container_kind": "multi_file",
-      "datatype": "ncore_dataset",
-      "record": {
-        "module": "sceneio.io",
-        "qualname": "NCoreDataset"
       },
+      "container_kind": "file",
+      "dir_marker": "cameras.bin",
+      "extensions": [
+        ".h5",
+        ".hdf5"
+      ],
+      "filenames": [],
+      "id": "hloc_matches",
+      "is_directory": false,
+      "lossy": false,
+      "magic_hex": [
+        "894844460d0a1a0a"
+      ],
+      "payload_kind": "match_graph",
+      "record": {
+        "module": "sceneio.io._hdf5",
+        "qualname": "HlocMatchStore"
+      },
+      "requires_features": [
+        "h5py"
+      ],
       "selectors": [],
       "streams_read": true,
       "streams_write": true,
-      "lossy": false,
-      "requires_features": [
-        "zarr",
-        "cbor2"
-      ],
       "supported_features": [
-        "v4",
-        "local_directory_stores",
-        "local_indexed_tar_stores",
-        "sequence_manifests",
-        "grouped_component_stores",
-        "lazy_component_catalog",
-        "metadata_only_inspect",
-        "standard_component_enumeration",
-        "custom_component_enumeration",
-        "component_materialization",
-        "standard_semantic_profiles",
-        "generic_component_interpretation",
-        "deterministic_directory_write",
-        "deterministic_indexed_tar_write",
-        "sequence_manifest_write",
-        "transactional_path_write"
+        "matches0",
+        "matching_scores0",
+        "current_pair_naming",
+        "exact_endpoint_names",
+        "mixed_score_presence",
+        "native_match_graph"
       ],
       "unsupported_features": [
-        "remote_stores",
-        "legacy_versions"
-      ],
+        "verified_geometry",
+        "multiple_matches_per_source",
+        "legacy_underscore_pair_enumeration"
+      ]
+    },
+    {
       "capabilities": {
-        "format": "ncore_v4",
-        "datatype": "ncore_dataset",
-        "record_type": "NCoreDataset",
-        "extensions": [],
-        "filenames": [],
-        "container_kind": "multi_file",
         "available": true,
+        "can_inspect": true,
         "can_read": true,
         "can_write": true,
-        "can_inspect": true,
-        "partial_selectors": [],
-        "streams_read": true,
-        "streams_write": true,
+        "container_kind": "multi_file",
+        "extensions": [],
+        "filenames": [],
+        "format": "ncore_v4",
         "lossy": false,
+        "partial_selectors": [],
+        "payload_kind": "ncore_dataset",
+        "record_type": "NCoreDataset",
         "requires_features": [
           "zarr",
           "cbor2"
         ],
+        "streams_read": true,
+        "streams_write": true,
         "supported_features": [
           "v4",
           "local_directory_stores",
@@ -4886,63 +4846,67 @@
           "remote_stores",
           "legacy_versions"
         ]
-      }
-    },
-    {
-      "id": "euroc_dataset",
-      "extensions": [],
-      "magic_hex": [],
-      "filenames": [],
-      "is_directory": true,
-      "dir_marker": "mav0",
-      "container_kind": "multi_file",
-      "datatype": "visual_inertial_dataset",
-      "record": {
-        "module": "sceneio.io",
-        "qualname": "VisualInertialDataset"
       },
+      "container_kind": "multi_file",
+      "dir_marker": ".zattrs",
+      "extensions": [],
+      "filenames": [],
+      "id": "ncore_v4",
+      "is_directory": true,
+      "lossy": false,
+      "magic_hex": [],
+      "payload_kind": "ncore_dataset",
+      "record": {
+        "module": "sceneio.io._ncore.model",
+        "qualname": "NCoreDataset"
+      },
+      "requires_features": [
+        "zarr",
+        "cbor2"
+      ],
       "selectors": [],
       "streams_read": true,
       "streams_write": true,
-      "lossy": false,
-      "requires_features": [],
       "supported_features": [
-        "asl_directory_profile",
-        "multi_camera",
-        "multi_imu",
-        "lazy_encoded_images",
-        "exact_int64_nanosecond_timestamps",
-        "camera_intrinsics_and_distortion",
-        "sensor_to_body_extrinsics",
-        "imu_noise_calibration",
-        "optional_ground_truth_states",
-        "typed_sensor_and_time_selection",
+        "v4",
+        "local_directory_stores",
+        "local_indexed_tar_stores",
+        "sequence_manifests",
+        "grouped_component_stores",
+        "lazy_component_catalog",
         "metadata_only_inspect",
-        "direct_streaming_csv_write",
-        "transactional_directory_write"
+        "standard_component_enumeration",
+        "custom_component_enumeration",
+        "component_materialization",
+        "standard_semantic_profiles",
+        "generic_component_interpretation",
+        "deterministic_directory_write",
+        "deterministic_indexed_tar_write",
+        "sequence_manifest_write",
+        "transactional_path_write"
       ],
       "unsupported_features": [
-        "implicit_clock_alignment",
-        "image_transcoding",
-        "non_camera_or_imu_sensors",
-        "arbitrary_yaml"
-      ],
+        "remote_stores",
+        "legacy_versions"
+      ]
+    },
+    {
       "capabilities": {
-        "format": "euroc_dataset",
-        "datatype": "visual_inertial_dataset",
-        "record_type": "VisualInertialDataset",
-        "extensions": [],
-        "filenames": [],
-        "container_kind": "multi_file",
         "available": true,
+        "can_inspect": true,
         "can_read": true,
         "can_write": true,
-        "can_inspect": true,
+        "container_kind": "multi_file",
+        "extensions": [],
+        "filenames": [],
+        "format": "euroc_dataset",
+        "lossy": false,
         "partial_selectors": [],
+        "payload_kind": "visual_inertial_dataset",
+        "record_type": "VisualInertialDataset",
+        "requires_features": [],
         "streams_read": true,
         "streams_write": true,
-        "lossy": false,
-        "requires_features": [],
         "supported_features": [
           "asl_directory_profile",
           "multi_camera",
@@ -4964,76 +4928,70 @@
           "non_camera_or_imu_sensors",
           "arbitrary_yaml"
         ]
-      }
-    },
-    {
-      "id": "zarr",
-      "extensions": [
-        ".zarr"
-      ],
-      "magic_hex": [],
-      "filenames": [],
-      "is_directory": true,
-      "dir_marker": "zarr.json",
-      "container_kind": "directory",
-      "datatype": "tensor_dict",
-      "record": {
-        "module": "sceneio._core",
-        "qualname": "TensorDict"
       },
-      "selectors": [
-        "tensors",
-        "slices"
-      ],
+      "container_kind": "multi_file",
+      "dir_marker": "mav0",
+      "extensions": [],
+      "filenames": [],
+      "id": "euroc_dataset",
+      "is_directory": true,
+      "lossy": false,
+      "magic_hex": [],
+      "payload_kind": "visual_inertial_dataset",
+      "record": {
+        "module": "sceneio.io._euroc_dataset.model",
+        "qualname": "VisualInertialDataset"
+      },
+      "requires_features": [],
+      "selectors": [],
       "streams_read": true,
       "streams_write": true,
-      "lossy": false,
-      "requires_features": [
-        "zarr"
-      ],
       "supported_features": [
-        "v2_directory_store",
-        "v3_directory_store",
-        "numeric_arrays",
-        "nested_array_paths",
-        "string_root_attributes",
-        "chunked_reads",
-        "named_tensor_reads",
-        "leading_axis_slices",
-        "transactional_path_write"
+        "asl_directory_profile",
+        "multi_camera",
+        "multi_imu",
+        "lazy_encoded_images",
+        "exact_int64_nanosecond_timestamps",
+        "camera_intrinsics_and_distortion",
+        "sensor_to_body_extrinsics",
+        "imu_noise_calibration",
+        "optional_ground_truth_states",
+        "typed_sensor_and_time_selection",
+        "metadata_only_inspect",
+        "direct_streaming_csv_write",
+        "transactional_directory_write"
       ],
       "unsupported_features": [
-        "object_arrays",
-        "string_arrays",
-        "structured_dtypes",
-        "remote_stores",
-        "zip_stores",
-        "sharded_arrays",
-        "non_root_attributes"
-      ],
+        "implicit_clock_alignment",
+        "image_transcoding",
+        "non_camera_or_imu_sensors",
+        "arbitrary_yaml"
+      ]
+    },
+    {
       "capabilities": {
-        "format": "zarr",
-        "datatype": "tensor_dict",
-        "record_type": "TensorDict",
+        "available": true,
+        "can_inspect": true,
+        "can_read": true,
+        "can_write": true,
+        "container_kind": "directory",
         "extensions": [
           ".zarr"
         ],
         "filenames": [],
-        "container_kind": "directory",
-        "available": true,
-        "can_read": true,
-        "can_write": true,
-        "can_inspect": true,
+        "format": "zarr",
+        "lossy": false,
         "partial_selectors": [
           "tensors",
           "slices"
         ],
-        "streams_read": true,
-        "streams_write": true,
-        "lossy": false,
+        "payload_kind": "tensor_dict",
+        "record_type": "TensorDict",
         "requires_features": [
           "zarr"
         ],
+        "streams_read": true,
+        "streams_write": true,
         "supported_features": [
           "v2_directory_store",
           "v3_directory_store",
@@ -5054,91 +5012,75 @@
           "sharded_arrays",
           "non_root_attributes"
         ]
-      }
-    },
-    {
-      "id": "tiff",
+      },
+      "container_kind": "directory",
+      "dir_marker": "zarr.json",
       "extensions": [
-        ".tif",
-        ".tiff"
-      ],
-      "magic_hex": [
-        "49492a00",
-        "4d4d002a",
-        "49492b00",
-        "4d4d002b"
+        ".zarr"
       ],
       "filenames": [],
-      "is_directory": false,
-      "dir_marker": "cameras.bin",
-      "container_kind": "file",
-      "datatype": "image_or_mask_or_stack",
-      "record": null,
-      "selectors": [],
-      "streams_read": true,
-      "streams_write": true,
+      "id": "zarr",
+      "is_directory": true,
       "lossy": false,
+      "magic_hex": [],
+      "payload_kind": "tensor_dict",
+      "record": {
+        "module": "sceneio._core",
+        "qualname": "TensorDict"
+      },
       "requires_features": [
-        "tifffile",
         "zarr"
       ],
+      "selectors": [
+        "tensors",
+        "slices"
+      ],
+      "streams_read": true,
+      "streams_write": true,
       "supported_features": [
-        "classic_tiff",
-        "bigtiff",
-        "grayscale",
-        "rgb",
-        "rgba",
-        "boolean_mask",
-        "grayscale_stack",
-        "uint8",
-        "uint16",
-        "float32",
-        "associated_alpha",
-        "unassociated_alpha",
-        "metadata_only_inspect",
-        "transactional_path_write",
-        "typed_raster_collection",
-        "multiple_series",
-        "pyramids",
-        "series_selection",
-        "level_selection",
-        "page_range_selection",
-        "window_selection",
-        "tiled",
-        "stripped",
-        "byteorder_selection"
+        "v2_directory_store",
+        "v3_directory_store",
+        "numeric_arrays",
+        "nested_array_paths",
+        "string_root_attributes",
+        "chunked_reads",
+        "named_tensor_reads",
+        "leading_axis_slices",
+        "transactional_path_write"
       ],
       "unsupported_features": [
-        "legacy_multiple_series",
-        "legacy_pyramids",
-        "planar_separate",
-        "non_top_left_orientation",
-        "palette",
-        "cmyk",
-        "ome_semantics"
-      ],
+        "object_arrays",
+        "string_arrays",
+        "structured_dtypes",
+        "remote_stores",
+        "zip_stores",
+        "sharded_arrays",
+        "non_root_attributes"
+      ]
+    },
+    {
       "capabilities": {
-        "format": "tiff",
-        "datatype": "image_or_mask_or_stack",
-        "record_type": null,
+        "available": true,
+        "can_inspect": true,
+        "can_read": true,
+        "can_write": true,
+        "container_kind": "file",
         "extensions": [
           ".tif",
           ".tiff"
         ],
         "filenames": [],
-        "container_kind": "file",
-        "available": true,
-        "can_read": true,
-        "can_write": true,
-        "can_inspect": true,
-        "partial_selectors": [],
-        "streams_read": true,
-        "streams_write": true,
+        "format": "tiff",
         "lossy": false,
+        "partial_selectors": [],
+        "payload_kind": "raster_collection",
+        "record_type": "RasterCollection",
         "requires_features": [
           "tifffile",
           "zarr"
         ],
+        "streams_read": true,
+        "streams_write": true,
         "supported_features": [
           "classic_tiff",
           "bigtiff",
@@ -5154,7 +5096,7 @@
           "unassociated_alpha",
           "metadata_only_inspect",
           "transactional_path_write",
-          "typed_raster_collection",
+          "raster_collection",
           "multiple_series",
           "pyramids",
           "series_selection",
@@ -5166,177 +5108,184 @@
           "byteorder_selection"
         ],
         "unsupported_features": [
-          "legacy_multiple_series",
-          "legacy_pyramids",
           "planar_separate",
           "non_top_left_orientation",
           "palette",
           "cmyk",
           "ome_semantics"
         ]
-      }
-    },
-    {
-      "id": "e57",
+      },
+      "container_kind": "file",
+      "dir_marker": "cameras.bin",
       "extensions": [
-        ".e57"
-      ],
-      "magic_hex": [
-        "4153544d2d453537"
+        ".tif",
+        ".tiff"
       ],
       "filenames": [],
+      "id": "tiff",
       "is_directory": false,
-      "dir_marker": "cameras.bin",
-      "container_kind": "file",
-      "datatype": "point_cloud",
+      "lossy": false,
+      "magic_hex": [
+        "49492a00",
+        "4d4d002a",
+        "49492b00",
+        "4d4d002b"
+      ],
+      "payload_kind": "raster_collection",
       "record": {
-        "module": "sceneio._core",
-        "qualname": "PointCloud"
+        "module": "sceneio._data.raster",
+        "qualname": "RasterCollection"
       },
+      "requires_features": [
+        "tifffile",
+        "zarr"
+      ],
       "selectors": [],
       "streams_read": true,
       "streams_write": true,
-      "lossy": false,
-      "requires_features": [
-        "pye57"
-      ],
       "supported_features": [
-        "single_scan",
-        "cartesian_float32_exact",
-        "rgb8",
-        "float32_intensity",
-        "invalid_point_filtering",
-        "scan_pose",
+        "classic_tiff",
+        "bigtiff",
+        "grayscale",
+        "rgb",
+        "rgba",
+        "boolean_mask",
+        "grayscale_stack",
+        "uint8",
+        "uint16",
+        "float32",
+        "associated_alpha",
+        "unassociated_alpha",
         "metadata_only_inspect",
         "transactional_path_write",
-        "typed_multiple_scans",
-        "typed_organized_row_column",
-        "typed_raw_invalid_states",
-        "typed_stored_point_range",
-        "typed_metadata_only_inspect"
+        "raster_collection",
+        "multiple_series",
+        "pyramids",
+        "series_selection",
+        "level_selection",
+        "page_range_selection",
+        "window_selection",
+        "tiled",
+        "stripped",
+        "byteorder_selection"
       ],
       "unsupported_features": [
-        "legacy_multiple_scans",
-        "spherical_coordinates",
-        "legacy_organized_row_column",
-        "normals",
-        "rgb16",
-        "images",
-        "point_grouping",
-        "non_float32_exact_coordinates"
-      ],
+        "planar_separate",
+        "non_top_left_orientation",
+        "palette",
+        "cmyk",
+        "ome_semantics"
+      ]
+    },
+    {
       "capabilities": {
-        "format": "e57",
-        "datatype": "point_cloud",
-        "record_type": "PointCloud",
+        "available": true,
+        "can_inspect": true,
+        "can_read": true,
+        "can_write": true,
+        "container_kind": "file",
         "extensions": [
           ".e57"
         ],
         "filenames": [],
-        "container_kind": "file",
-        "available": true,
-        "can_read": true,
-        "can_write": true,
-        "can_inspect": true,
-        "partial_selectors": [],
-        "streams_read": true,
-        "streams_write": true,
+        "format": "e57",
         "lossy": false,
+        "partial_selectors": [],
+        "payload_kind": "scan_set",
+        "record_type": "ScanSet",
         "requires_features": [
           "pye57"
         ],
+        "streams_read": true,
+        "streams_write": true,
         "supported_features": [
-          "single_scan",
           "cartesian_float32_exact",
           "rgb8",
           "float32_intensity",
-          "invalid_point_filtering",
+          "invalid_state_rows",
           "scan_pose",
           "metadata_only_inspect",
           "transactional_path_write",
-          "typed_multiple_scans",
-          "typed_organized_row_column",
-          "typed_raw_invalid_states",
-          "typed_stored_point_range",
-          "typed_metadata_only_inspect"
+          "multiple_scans",
+          "organized_row_column",
+          "stored_point_ranges"
         ],
         "unsupported_features": [
-          "legacy_multiple_scans",
           "spherical_coordinates",
-          "legacy_organized_row_column",
           "normals",
           "rgb16",
           "images",
           "point_grouping",
           "non_float32_exact_coordinates"
         ]
-      }
-    },
-    {
-      "id": "parquet",
+      },
+      "container_kind": "file",
+      "dir_marker": "cameras.bin",
       "extensions": [
-        ".parquet"
-      ],
-      "magic_hex": [
-        "50415231"
+        ".e57"
       ],
       "filenames": [],
+      "id": "e57",
       "is_directory": false,
-      "dir_marker": "cameras.bin",
-      "container_kind": "file",
-      "datatype": "numeric_table",
+      "lossy": false,
+      "magic_hex": [
+        "4153544d2d453537"
+      ],
+      "payload_kind": "scan_set",
       "record": {
         "module": "sceneio._core",
-        "qualname": "TensorDict"
+        "qualname": "ScanSet"
       },
-      "selectors": [
-        "tensors"
+      "requires_features": [
+        "pye57"
       ],
+      "selectors": [],
       "streams_read": true,
       "streams_write": true,
-      "lossy": false,
-      "requires_features": [
-        "pyarrow"
-      ],
       "supported_features": [
-        "numeric_scalar_columns",
-        "fixed_size_vector_columns",
-        "string_schema_attributes",
-        "zstd",
-        "snappy",
-        "named_column_reads",
+        "cartesian_float32_exact",
+        "rgb8",
+        "float32_intensity",
+        "invalid_state_rows",
+        "scan_pose",
         "metadata_only_inspect",
-        "transactional_path_write"
+        "transactional_path_write",
+        "multiple_scans",
+        "organized_row_column",
+        "stored_point_ranges"
       ],
       "unsupported_features": [
-        "nulls",
-        "variable_lists",
-        "strings",
-        "nested_structs",
-        "partitioned_datasets"
-      ],
+        "spherical_coordinates",
+        "normals",
+        "rgb16",
+        "images",
+        "point_grouping",
+        "non_float32_exact_coordinates"
+      ]
+    },
+    {
       "capabilities": {
-        "format": "parquet",
-        "datatype": "numeric_table",
-        "record_type": "TensorDict",
+        "available": true,
+        "can_inspect": true,
+        "can_read": true,
+        "can_write": true,
+        "container_kind": "file",
         "extensions": [
           ".parquet"
         ],
         "filenames": [],
-        "container_kind": "file",
-        "available": true,
-        "can_read": true,
-        "can_write": true,
-        "can_inspect": true,
+        "format": "parquet",
+        "lossy": false,
         "partial_selectors": [
           "tensors"
         ],
-        "streams_read": true,
-        "streams_write": true,
-        "lossy": false,
+        "payload_kind": "numeric_table",
+        "record_type": "TensorDict",
         "requires_features": [
           "pyarrow"
         ],
+        "streams_read": true,
+        "streams_write": true,
         "supported_features": [
           "numeric_scalar_columns",
           "fixed_size_vector_columns",
@@ -5354,69 +5303,71 @@
           "nested_structs",
           "partitioned_datasets"
         ]
-      }
-    },
-    {
-      "id": "arrow_ipc",
+      },
+      "container_kind": "file",
+      "dir_marker": "cameras.bin",
       "extensions": [
-        ".arrow"
-      ],
-      "magic_hex": [
-        "4152524f57310000"
+        ".parquet"
       ],
       "filenames": [],
+      "id": "parquet",
       "is_directory": false,
-      "dir_marker": "cameras.bin",
-      "container_kind": "file",
-      "datatype": "numeric_table",
+      "lossy": false,
+      "magic_hex": [
+        "50415231"
+      ],
+      "payload_kind": "numeric_table",
       "record": {
         "module": "sceneio._core",
         "qualname": "TensorDict"
       },
-      "selectors": [],
-      "streams_read": true,
-      "streams_write": true,
-      "lossy": false,
       "requires_features": [
         "pyarrow"
       ],
+      "selectors": [
+        "tensors"
+      ],
+      "streams_read": true,
+      "streams_write": true,
       "supported_features": [
-        "ipc_file",
         "numeric_scalar_columns",
         "fixed_size_vector_columns",
         "string_schema_attributes",
-        "memory_mapped_read",
+        "zstd",
+        "snappy",
+        "named_column_reads",
         "metadata_only_inspect",
         "transactional_path_write"
       ],
       "unsupported_features": [
-        "ipc_stream",
         "nulls",
         "variable_lists",
         "strings",
         "nested_structs",
-        "feather_v1"
-      ],
+        "partitioned_datasets"
+      ]
+    },
+    {
       "capabilities": {
-        "format": "arrow_ipc",
-        "datatype": "numeric_table",
-        "record_type": "TensorDict",
+        "available": true,
+        "can_inspect": true,
+        "can_read": true,
+        "can_write": true,
+        "container_kind": "file",
         "extensions": [
           ".arrow"
         ],
         "filenames": [],
-        "container_kind": "file",
-        "available": true,
-        "can_read": true,
-        "can_write": true,
-        "can_inspect": true,
-        "partial_selectors": [],
-        "streams_read": true,
-        "streams_write": true,
+        "format": "arrow_ipc",
         "lossy": false,
+        "partial_selectors": [],
+        "payload_kind": "numeric_table",
+        "record_type": "TensorDict",
         "requires_features": [
           "pyarrow"
         ],
+        "streams_read": true,
+        "streams_write": true,
         "supported_features": [
           "ipc_file",
           "numeric_scalar_columns",
@@ -5434,75 +5385,69 @@
           "nested_structs",
           "feather_v1"
         ]
-      }
-    },
-    {
-      "id": "openvdb",
+      },
+      "container_kind": "file",
+      "dir_marker": "cameras.bin",
       "extensions": [
-        ".vdb"
-      ],
-      "magic_hex": [
-        "20424456"
+        ".arrow"
       ],
       "filenames": [],
+      "id": "arrow_ipc",
       "is_directory": false,
-      "dir_marker": "cameras.bin",
-      "container_kind": "file",
-      "datatype": "sparse_volume",
+      "lossy": false,
+      "magic_hex": [
+        "4152524f57310000"
+      ],
+      "payload_kind": "numeric_table",
       "record": {
         "module": "sceneio._core",
         "qualname": "TensorDict"
       },
+      "requires_features": [
+        "pyarrow"
+      ],
       "selectors": [],
       "streams_read": true,
       "streams_write": true,
-      "lossy": false,
-      "requires_features": [
-        "tinyvdb"
-      ],
       "supported_features": [
-        "single_grid",
-        "float32_scalar_grid",
-        "sparse_voxels",
-        "zero_background",
-        "identity_index_to_world",
-        "zip_compression",
-        "active_mask_compression",
+        "ipc_file",
+        "numeric_scalar_columns",
+        "fixed_size_vector_columns",
+        "string_schema_attributes",
+        "memory_mapped_read",
         "metadata_only_inspect",
         "transactional_path_write"
       ],
       "unsupported_features": [
-        "multiple_grids",
-        "vector_grids",
-        "point_data_grids",
-        "level_sets",
-        "grid_class_semantics",
-        "nonzero_background",
-        "transformed_grids",
-        "half_precision_storage",
-        "custom_grid_metadata",
-        "empty_grids"
-      ],
+        "ipc_stream",
+        "nulls",
+        "variable_lists",
+        "strings",
+        "nested_structs",
+        "feather_v1"
+      ]
+    },
+    {
       "capabilities": {
-        "format": "openvdb",
-        "datatype": "sparse_volume",
-        "record_type": "TensorDict",
+        "available": true,
+        "can_inspect": true,
+        "can_read": true,
+        "can_write": true,
+        "container_kind": "file",
         "extensions": [
           ".vdb"
         ],
         "filenames": [],
-        "container_kind": "file",
-        "available": true,
-        "can_read": true,
-        "can_write": true,
-        "can_inspect": true,
-        "partial_selectors": [],
-        "streams_read": true,
-        "streams_write": true,
+        "format": "openvdb",
         "lossy": false,
+        "partial_selectors": [],
+        "payload_kind": "sparse_volume",
+        "record_type": "TensorDict",
         "requires_features": [
           "tinyvdb"
         ],
+        "streams_read": true,
+        "streams_write": true,
         "supported_features": [
           "single_grid",
           "float32_scalar_grid",
@@ -5526,10 +5471,57 @@
           "custom_grid_metadata",
           "empty_grids"
         ]
-      }
+      },
+      "container_kind": "file",
+      "dir_marker": "cameras.bin",
+      "extensions": [
+        ".vdb"
+      ],
+      "filenames": [],
+      "id": "openvdb",
+      "is_directory": false,
+      "lossy": false,
+      "magic_hex": [
+        "20424456"
+      ],
+      "payload_kind": "sparse_volume",
+      "record": {
+        "module": "sceneio._core",
+        "qualname": "TensorDict"
+      },
+      "requires_features": [
+        "tinyvdb"
+      ],
+      "selectors": [],
+      "streams_read": true,
+      "streams_write": true,
+      "supported_features": [
+        "single_grid",
+        "float32_scalar_grid",
+        "sparse_voxels",
+        "zero_background",
+        "identity_index_to_world",
+        "zip_compression",
+        "active_mask_compression",
+        "metadata_only_inspect",
+        "transactional_path_write"
+      ],
+      "unsupported_features": [
+        "multiple_grids",
+        "vector_grids",
+        "point_data_grids",
+        "level_sets",
+        "grid_class_semantics",
+        "nonzero_background",
+        "transformed_grids",
+        "half_precision_storage",
+        "custom_grid_metadata",
+        "empty_grids"
+      ]
     }
   ],
   "collisions": {
+    "directory_markers": {},
     "extensions": {
       ".avif": [
         "avif",
@@ -5560,7 +5552,6 @@
       ]
     },
     "filenames": {},
-    "directory_markers": {},
     "magic_prefixes": [
       [
         "706c79",
@@ -5599,5 +5590,6 @@
         "hloc_matches"
       ]
     ]
-  }
+  },
+  "schema_version": 1
 }

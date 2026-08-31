@@ -7,10 +7,10 @@ import inspect
 import subprocess
 import sys
 import textwrap
-from pathlib import Path
 
 import pytest
 
+import sceneio
 from sceneio import _core
 from sceneio.io import _inspection, registry
 from sceneio.io._builtin_manifest import (
@@ -21,8 +21,8 @@ from sceneio.io._inspectors import calibration as calibration_inspector
 from sceneio.io._registry.families import calibration as calibration_family
 
 
-def _probe_codec(format_id: str) -> registry.Codec:
-    return registry.Codec(
+def _probe_codec(format_id: str) -> sceneio.Codec:
+    return sceneio.Codec(
         format_id,
         (),
         str,
@@ -190,22 +190,7 @@ def test_builtin_family_validation_is_atomic():
 
 
 @pytest.mark.parametrize("format_id", FAMILY_MEMBERS["calibration"])
-def test_calibration_inspector_facade_preserves_historical_wrapper_signature(
-    format_id,
-    monkeypatch,
-):
-    marker = object()
-    calls = []
-
-    def inspect_family(path, selected, datatype):
-        calls.append((path, selected, datatype))
-        return marker
-
-    monkeypatch.setattr(
-        _inspection,
-        "_inspect_calibration_camera_rig",
-        inspect_family,
+def test_calibration_inspection_dispatch_uses_family_implementation(format_id):
+    assert _inspection._FORMAT_AWARE_INSPECTORS[format_id] is (
+        calibration_inspector.inspect_camera_rig
     )
-    path = Path("calibration.fixture")
-    assert _inspection._inspect_camera_rig(path, format_id, "camera_rig") is marker
-    assert calls == [(path, format_id, "camera_rig")]

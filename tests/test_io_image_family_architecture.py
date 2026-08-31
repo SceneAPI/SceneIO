@@ -67,6 +67,7 @@ def _assert_image_family_imports(source: str) -> None:
     } <= {
         "__future__",
         "sceneio",
+        "sceneio._data",
         "sceneio.io._avif",
         "sceneio.io._tiff",
         "sceneio.io._registry.adapters",
@@ -131,7 +132,7 @@ def test_image_definitions_preserve_canonical_order_and_identity():
         assert registry.REGISTRY[codec.id] is codec
         assert registry.BUILTIN_DEFINITIONS[position] is codec
         if codec.id == "tiff":
-            assert codec.record is None
+            assert codec.record is sceneio.RasterCollection
             assert codec.inspect is not None
         else:
             assert codec.record is _core.Image
@@ -258,7 +259,7 @@ def test_image_family_registry_reload_and_live_frame_access_are_idempotent():
         import importlib
         from functools import partial
 
-        from sceneio import _core
+        from sceneio import Codec, _core
         from sceneio.io import registry
         from sceneio.io._builtin_manifest import (
             CANONICAL_BUILTIN_IDS,
@@ -305,13 +306,13 @@ def test_image_family_registry_reload_and_live_frame_access_are_idempotent():
                 assert isinstance(callback, partial)
                 assert callback.args[0] is access
 
-            probe = reloaded_registry.Codec(
+            probe = Codec(
                 "image-contract-probe",
                 (".CONTRACT-IMAGE",),
                 lambda path: path,
                 lambda record, path: None,
                 record=_core.Image,
-                datatype="image",
+                payload_kind="image",
             )
             reloaded_registry.register(probe)
             try:
@@ -325,36 +326,25 @@ def test_image_family_registry_reload_and_live_frame_access_are_idempotent():
 
 
 @pytest.mark.parametrize(
-    ("wrapper_name", "delegate_name"),
+    "format_id",
     [
-        ("_inspect_netpbm", "_inspect_image_netpbm"),
-        ("_inspect_png", "_inspect_image_png"),
-        ("_inspect_jpeg", "_inspect_image_jpeg"),
-        ("_inspect_bmp", "_inspect_image_bmp"),
-        ("_inspect_tga", "_inspect_image_tga"),
-        ("_inspect_hdr", "_inspect_image_hdr"),
-        ("_inspect_exr", "_inspect_image_exr"),
-        ("_inspect_webp", "_inspect_image_webp"),
+        "netpbm",
+        "png",
+        "jpeg",
+        "bmp",
+        "tga",
+        "hdr",
+        "exr",
+        "webp",
     ],
 )
-def test_image_inspector_facade_preserves_historical_wrapper_signatures(
-    wrapper_name,
-    delegate_name,
-    monkeypatch,
-):
-    marker = object()
-    calls = []
-
-    def inspect_family(path, datatype):
-        calls.append((path, datatype))
-        return marker
-
-    monkeypatch.setattr(_inspection, delegate_name, inspect_family)
-    path = Path("image.fixture")
-    wrapper = getattr(_inspection, wrapper_name)
-    assert tuple(inspect.signature(wrapper).parameters) == ("path", "datatype")
-    assert wrapper(path, "image") is marker
-    assert calls == [(path, "image")]
+def test_image_inspection_dispatch_uses_family_implementation(format_id):
+    selected = _inspection._PATH_INSPECTORS[format_id]
+    expected = getattr(image_inspector, f"inspect_{format_id}")
+    assert (selected.__module__, selected.__name__) == (
+        expected.__module__,
+        expected.__name__,
+    )
 
 
 def test_repository_coverage_tracks_all_moved_image_inspectors():

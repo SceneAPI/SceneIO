@@ -1,12 +1,12 @@
 schema_version = 1
 contract_date = "2026-08-29"
 status = "locally_qualified"
-purpose = "Freeze the stable SceneIO 0.2 boundary and record provider feasibility before the finite 3D-CV profile expansion."
+purpose = "Record the qualified finite 3D-CV profile and its canonical data contracts."
 
 builtin_count = 74
 registry_policy = "euroc_dataset passed its read, write, inspect, fixture, capability, and wheel-smoke gate and is registered as the 74th built-in."
-public_api_policy = "Stable and additive: provisional names remain absent until their first exercising codec or projection is ready."
-global_partial_policy = "Keep the existing exactly-one-selector read_partial API; compound dataset, scan, raster, and grid selections use typed format-specific APIs."
+public_api_policy = "Pre-1 canonical API: remove superseded names instead of carrying aliases or compatibility projections."
+global_partial_policy = "Keep the exactly-one-selector read_partial API; compound dataset, scan, raster, and grid selections use format-specific selectors."
 public_io_error_type = "sceneio.FormatError"
 record_error_types = ["sceneio.ContractViolation", "builtins.ValueError"]
 read_partial_signature = "(path, *, window=None, points=None, faces=None, mesh_id=None, primitive_id=None, states=None, frames=None, image_id=None, pair=None, tensors=None, slices=None, format: 'str | None' = None)"
@@ -25,7 +25,7 @@ implemented_shared_symbols = ["RasterCollection", "RasterLevel", "RasterSeries"]
 id = "euroc_dataset"
 family_module = "sceneio.io._registry.families.datasets"
 container_kind = "multi_file"
-datatype = "visual_inertial_dataset"
+payload_kind = "visual_inertial_dataset"
 directory_probe_required = true
 required_globs = [
   "mav0/cam*/data.csv",
@@ -91,16 +91,16 @@ public_symbols = ["PointScan", "ScanSet"]
 existing_symbols = ["PointCloud"]
 required_contracts = [
   "PointScan preserves stored rows, raw uint8 invalid states, optional int64 row and column indices, and one authoritative pose.",
-  "The valid_point_cloud projection retains the current valid-row PointCloud behavior.",
-  "Compound scan and stored-row selection stays on a typed E57 API.",
+  "The valid_point_cloud projection produces a canonical valid-row PointCloud view.",
+  "Compound scan and stored-row selection stays on the E57 selector API.",
 ]
 evidence = [
   "src/cpp/records/point_cloud.hpp",
   "src/cpp/records/point_scan.hpp",
   "tests/records/test_point_scan.py",
   "src/sceneio/io/_e57.py",
-  "tests/codecs/test_e57.py::test_e57_typed_scan_preserves_stored_rows_invalid_states_and_indices",
-  "tests/codecs/test_e57.py::test_e57_typed_scan_set_write_reopens_with_provider_oracle",
+  "tests/codecs/test_e57.py::test_e57_scan_preserves_stored_rows_invalid_states_and_indices",
+  "tests/codecs/test_e57.py::test_e57_scan_set_write_reopens_with_provider_oracle",
   "docs/e57_multiscan_benchmark.md",
 ]
 
@@ -110,14 +110,14 @@ outcome = "qualified"
 public_symbols = ["RasterLevel", "RasterSeries", "RasterCollection"]
 existing_symbols = ["Image", "Mask", "TensorDict"]
 required_contracts = [
-  "Use format-neutral records and preserve current simple TIFF return types.",
+  "Use RasterCollection as the one format-neutral TIFF return type.",
   "Only independently unambiguous CV raster or stack series enter the bounded profile.",
-  "Compound series, level, page, and window selection stays on a typed TIFF API.",
+  "Compound series, level, page, and window selection stays on the TIFF selector API.",
 ]
 evidence = [
   "src/sceneio/_data/raster.py",
   "src/sceneio/io/_tiff.py",
-  "tests/codecs/test_tiff_collections.py::test_typed_tiff_reads_independent_classic_bigtiff_endian_and_layout_oracle",
+  "tests/codecs/test_tiff_collections.py::test_tiff_reads_independent_classic_bigtiff_endian_and_layout_oracle",
   "tests/codecs/test_tiff_collections.py::test_tiff_collection_compound_page_window_selection_uses_chunk_store",
   "docs/remaining_3dcv_profile_checklist.md",
 ]
@@ -170,24 +170,19 @@ observed_version = "0.4.19"
 outcome = "broader_container_operations_proven"
 formats = ["e57"]
 provider_proven_operations = [
-  "typed_multiple_scan_read_write",
-  "typed_organized_row_column",
-  "typed_raw_invalid_states",
-  "typed_stored_point_range",
-  "typed_metadata_only_inspect",
+  "multiple_scan_read_write",
+  "organized_row_column",
+  "raw_invalid_states",
+  "stored_point_range",
+  "metadata_only_inspect",
   "distinct_scan_pose_preservation",
 ]
-sceneio_current_refusals = [
-  "legacy_multiple_scans",
-  "legacy_organized_row_column",
-  "spherical_coordinates",
-  "images",
-]
+sceneio_current_refusals = ["spherical_coordinates", "images"]
 evidence = [
-  "tests/codecs/test_e57.py::test_e57_typed_scan_preserves_stored_rows_invalid_states_and_indices",
-  "tests/codecs/test_e57.py::test_e57_typed_stored_range_streams_without_read_scan_raw",
-  "tests/codecs/test_e57.py::test_e57_typed_inspect_reports_all_scans_without_decoding",
-  "tests/codecs/test_e57.py::test_e57_typed_scan_set_write_reopens_with_provider_oracle",
+  "tests/codecs/test_e57.py::test_e57_scan_preserves_stored_rows_invalid_states_and_indices",
+  "tests/codecs/test_e57.py::test_e57_stored_range_streams_without_read_scan_raw",
+  "tests/codecs/test_e57.py::test_e57_inspect_reports_all_scans_without_decoding",
+  "tests/codecs/test_e57.py::test_e57_scan_set_write_reopens_with_provider_oracle",
 ]
 
 [[providers]]
@@ -204,7 +199,7 @@ provider_proven_operations = [
   "series_and_level_selection",
   "chunked_page_and_window_selection",
 ]
-sceneio_current_refusals = ["legacy_multiple_series", "legacy_pyramids", "ome_semantics"]
+sceneio_current_refusals = ["ome_semantics"]
 evidence = [
   "tests/test_tiff_provider_qualification.py::test_tiff_collection_provider_versions_and_selection_surface_are_qualified",
   "tests/test_tiff_provider_qualification.py::test_tifffile_ome_frames_use_keyframe_metadata_and_sceneio_refuses_deliberately",
@@ -254,32 +249,31 @@ evidence = [
   "tests/test_usd_provider_qualification.py::test_tinyusdz_authored_usda_samples_are_enumerable_but_untyped",
 ]
 
-[[legacy_projections]]
+[[canonical_records]]
 formats = ["e57"]
-return_types = ["sceneio.PointCloud"]
-boundary = "The generic API returns one Cartesian PointCloud with invalid rows filtered; multiple and organized scans remain refused there and are available only through the additive typed E57 scan API."
+return_types = ["sceneio.ScanSet"]
+boundary = "The generic API returns every ordered scan and preserves stored rows, invalid states, row and column indices, and scan poses."
 evidence = [
   "tests/codecs/test_e57.py::test_sceneio_reads_direct_upstream_e57_exactly",
-  "tests/codecs/test_e57.py::test_e57_invalid_cartesian_points_are_explicitly_filtered",
+  "tests/codecs/test_e57.py::test_e57_invalid_cartesian_states_and_valid_projection_are_preserved",
 ]
 
-[[legacy_projections]]
+[[canonical_records]]
 formats = ["tiff"]
-return_types = ["sceneio.Image", "sceneio.Mask", "sceneio.TensorDict"]
-boundary = "The generic API remains one unambiguous series and one level; the additive typed TIFF collection API handles the bounded multi-series and pyramid profile."
+return_types = ["sceneio.RasterCollection"]
+boundary = "The generic TIFF API returns RasterCollection for the bounded single-series, multi-series, and pyramid profile."
 evidence = [
-  "tests/codecs/test_tiff.py::test_sceneio_tiff_write_is_exact_for_independent_oracle",
-  "tests/codecs/test_tiff.py::test_tiff_boolean_mask_roundtrip_and_oracle",
-  "tests/codecs/test_tiff.py::test_tiff_grayscale_stack_roundtrip_and_oracle",
+  "tests/codecs/test_tiff_collections.py::test_tiff_reads_independent_classic_bigtiff_endian_and_layout_oracle",
+  "tests/codecs/test_tiff_collections.py::test_tiff_collection_writer_reopens_with_sceneio_and_provider_oracles",
 ]
 
-[[legacy_projections]]
+[[canonical_records]]
 formats = ["openvdb"]
 return_types = ["sceneio.TensorDict"]
 boundary = "One nonempty float32 scalar Tree_float_5_4_3 grid with zero background and identity transform."
 evidence = ["tests/codecs/test_openvdb.py::test_openvdb_registry_roundtrip_is_bit_exact"]
 
-[[legacy_projections]]
+[[canonical_records]]
 formats = ["usd", "usdz"]
 return_types = ["sceneio.SceneGraph"]
 boundary = "Directly authored static scene profile plus bounded direct-USDA matrix/visibility selected-time materialization; composition, preservation, dynamic writing, and USDC selected time remain refused."

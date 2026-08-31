@@ -74,12 +74,10 @@ def _build_path_index(
     entries: tuple[PublicTypeContract, ...],
 ) -> tuple[
     MappingProxyType[str, PublicTypeContract],
-    MappingProxyType[str, str],
     MappingProxyType[str, PublicTypeContract],
     MappingProxyType[str, tuple[str, ...]],
 ]:
     canonical: dict[str, PublicTypeContract] = {}
-    aliases: dict[str, str] = {}
     lookup: dict[str, PublicTypeContract] = {}
     short_names: defaultdict[str, list[str]] = defaultdict(list)
 
@@ -90,7 +88,7 @@ def _build_path_index(
         canonical[path] = entry
 
     for entry in entries:
-        for path in (entry.canonical_path, *entry.aliases, *entry.implementation_paths):
+        for path in (entry.canonical_path, *entry.implementation_paths):
             existing = lookup.get(path)
             if existing is not None and existing is not entry:
                 raise ValueError(
@@ -98,24 +96,15 @@ def _build_path_index(
                     f"{existing.canonical_path!r} and {entry.canonical_path!r}"
                 )
             lookup[path] = entry
-        for alias in entry.aliases:
-            if alias in canonical:
-                raise ValueError(f"public alias collides with canonical path: {alias!r}")
-            existing_path = aliases.get(alias)
-            if existing_path is not None and existing_path != entry.canonical_path:
-                raise ValueError(f"duplicate public type alias: {alias!r}")
-            aliases[alias] = entry.canonical_path
         short_names[entry.canonical_path.rsplit(".", 1)[-1]].append(entry.canonical_path)
 
     ordered_canonical = dict(sorted(canonical.items()))
-    ordered_aliases = dict(sorted(aliases.items()))
     ordered_lookup = dict(sorted(lookup.items()))
     ordered_short_names = {
         name: tuple(sorted(paths)) for name, paths in sorted(short_names.items())
     }
     return (
         MappingProxyType(ordered_canonical),
-        MappingProxyType(ordered_aliases),
         MappingProxyType(ordered_lookup),
         MappingProxyType(ordered_short_names),
     )
@@ -190,19 +179,17 @@ def _validate_catalog(
 
 def _build_catalog() -> tuple[
     MappingProxyType[str, PublicTypeContract],
-    MappingProxyType[str, str],
     MappingProxyType[str, PublicTypeContract],
     MappingProxyType[str, tuple[str, ...]],
 ]:
     entries = manifest_entries()
     indexes = _build_path_index(entries)
-    _validate_catalog(entries, indexes[2])
+    _validate_catalog(entries, indexes[1])
     return indexes
 
 
 (
     PUBLIC_TYPE_CONTRACTS,
-    PUBLIC_TYPE_ALIASES,
     _PATH_LOOKUP,
     _SHORT_NAMES,
 ) = _build_catalog()
@@ -242,8 +229,8 @@ def _object_candidate_paths(subject: type[object] | object) -> tuple[str, ...]:
 def public_type_contract(subject: str | type[object] | object) -> PublicTypeContract:
     """Return the immutable contract for a public path, class, or instance.
 
-    Qualified strings accept canonical paths, supported aliases, and recorded
-    implementation identities. Bare names resolve only when unambiguous.
+    Qualified strings accept canonical paths and recorded implementation
+    identities. Bare names resolve only when unambiguous.
     """
 
     if isinstance(subject, str):
@@ -282,7 +269,7 @@ def _runtime_path_value(path: str) -> object:
 def _validate_runtime_identities(
     entries: tuple[PublicTypeContract, ...] | None = None,
 ) -> None:
-    """Validate importable canonical, alias, and implementation identities.
+    """Validate importable canonical and implementation identities.
 
     This audit is deliberately not part of stdlib-only catalog construction;
     callers opt into importing the public runtime namespaces.
@@ -291,7 +278,7 @@ def _validate_runtime_identities(
     values = tuple(PUBLIC_TYPE_CONTRACTS.values()) if entries is None else entries
     for entry in values:
         canonical = _runtime_path_value(entry.canonical_path)
-        for path in (*entry.aliases, *entry.implementation_paths):
+        for path in entry.implementation_paths:
             if _runtime_path_value(path) is not canonical:
                 raise ValueError(
                     f"public type path {path!r} does not resolve to canonical "
@@ -300,7 +287,6 @@ def _validate_runtime_identities(
 
 
 __all__ = [
-    "PUBLIC_TYPE_ALIASES",
     "PUBLIC_TYPE_CONTRACTS",
     "public_type_contract",
 ]

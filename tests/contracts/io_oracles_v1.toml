@@ -115,8 +115,8 @@ hloc_matches = { decode = "test_hloc_matches_reads_official_layout_and_reverses_
 ncore_v4 = { decode = "test_pinned_upstream_standard_profile_fixture_is_accepted_exactly", encode = "test_writer_randomized_mixed_dtype_chunk_differential" }
 euroc_dataset = { decode = "test_oracle_authored_directory_decodes_exact_calibration_and_samples", encode = "test_public_detect_inspect_write_and_oracle_readback" }
 zarr = { decode = "test_zarr_reads_oracle_written_store", encode = "test_zarr_v2_v3_roundtrip_and_independent_oracle" }
-tiff = { decode = "test_sceneio_reads_oracle_tiff_endianness_exactly", encode = "test_sceneio_tiff_write_is_exact_for_independent_oracle" }
-e57 = { decode = "test_e57_typed_scan_preserves_stored_rows_invalid_states_and_indices", encode = "test_e57_typed_scan_set_write_reopens_with_provider_oracle" }
+tiff = { decode = "test_tiff_reads_independent_classic_bigtiff_endian_and_layout_oracle", encode = "test_tiff_collection_writer_reopens_with_sceneio_and_provider_oracles" }
+e57 = { decode = "test_e57_scan_preserves_stored_rows_invalid_states_and_indices", encode = "test_e57_scan_set_write_reopens_with_provider_oracle" }
 parquet = { decode = "test_sceneio_reads_direct_arrow_oracle_tables_exactly", encode = "test_sceneio_columnar_writes_are_exact_for_direct_arrow_oracle" }
 arrow_ipc = { decode = "test_sceneio_reads_direct_arrow_oracle_tables_exactly", encode = "test_sceneio_columnar_writes_are_exact_for_direct_arrow_oracle" }
 openvdb = { decode = "test_openvdb_sceneio_reads_upstream_fixture_exactly", encode = "test_openvdb_sceneio_write_is_exact_for_upstream_reader" }
@@ -124,7 +124,7 @@ openvdb = { decode = "test_openvdb_sceneio_reads_upstream_fixture_exactly", enco
 [tiff_collections]
 contract = "tests/contracts/tiff_collections_v1.toml"
 records = ["RasterLevel", "RasterSeries", "RasterCollection"]
-typed_apis = ["read_tiff_collection", "inspect_tiff_collection", "write_tiff_collection"]
+apis = ["read", "inspect", "read_tiff_collection", "write_tiff"]
 providers = ["tifffile>=2025.5", "zarr>=3.1,<4"]
 qualified_operations = [
   "classic_and_bigtiff",

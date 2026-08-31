@@ -1,9 +1,8 @@
-"""FC3 E57 multi-scan benchmark and provider differential.
+"""FC3 E57 scan-set benchmark and provider differential.
 
-The ordinary ``e57`` path benchmark remains in
-``families.containers.build_container_specs``.  This module is deliberately
-separate because the typed FC3 API returns a ``ScanSet`` and has selection
-arguments that do not fit the legacy ``PathSpec`` interface.
+The ordinary ``e57`` row uses the canonical ``ScanSet`` path. This module adds
+stored-row selection and detailed provider comparisons that do not fit the
+ordinary ``PathSpec`` interface.
 
 The fixture is deterministic and generated in memory.  pye57/libE57Format is
 used as the format oracle: SceneIO output is reopened by pye57, and a pye57
@@ -24,6 +23,7 @@ from typing import Any
 
 import numpy as np
 
+import sceneio
 from bench.io_bench.measure import measure, measure_in_process_rss
 from sceneio import _core
 
@@ -74,7 +74,7 @@ class E57ScanPayload:
 
 @dataclass(frozen=True)
 class E57MultiScanFixture:
-    """Typed record plus payloads for a deterministic multi-scan case."""
+    """Canonical record plus payloads for a deterministic multi-scan case."""
 
     record: Any
     scans: tuple[E57ScanPayload, ...]
@@ -166,7 +166,7 @@ def build_payloads(
                 column_indices=column_indices,
                 viewpoint=viewpoint,
                 # E57 has an ordered scan index but no portable scan-id field;
-                # use that stable index as the typed record identifier.
+                # use that stable index as the record identifier.
                 scan_id=scan_index,
                 name=f"sceneio-benchmark-{scan_index}",
                 row_minimum=row_minimum,
@@ -183,7 +183,7 @@ def build_fixture(
     *,
     scan_count: int = 3,
 ) -> E57MultiScanFixture:
-    """Build the typed ``ScanSet`` and its independent payload description."""
+    """Build the canonical ``ScanSet`` and its payload description."""
 
     point_scan = getattr(_core, "point_scan", None)
     scan_set = getattr(_core, "scan_set", None)
@@ -192,14 +192,14 @@ def build_fixture(
             "FC3 E57 benchmark requires _core.point_scan and _core.scan_set"
         )
     scans = build_payloads(scale, scan_count=scan_count)
-    typed_scans = []
+    point_scans = []
     for payload in scans:
         cloud = _core.point_cloud(
             payload.positions,
             colors=payload.colors,
             intensity=payload.intensity,
         )
-        typed_scans.append(
+        point_scans.append(
             point_scan(
                 cloud,
                 scan_id=payload.scan_id,
@@ -213,12 +213,12 @@ def build_fixture(
                 name=payload.name,
                 guid="",
                 # pye57 always authors acquisitionStart; a represented zero
-                # keeps the typed presence contract exact in both directions.
+                # keeps the presence contract exact in both directions.
                 timestamp=0.0,
                 viewpoint=payload.viewpoint,
             )
         )
-    return E57MultiScanFixture(scan_set(typed_scans), scans)
+    return E57MultiScanFixture(scan_set(point_scans), scans)
 
 
 def _pye57():
@@ -335,42 +335,24 @@ def oracle_inspect(path: str | Path) -> tuple[dict[str, object], ...]:
     return tuple(result)
 
 
-def _typed_owner(name: str):
-    import sceneio
-    import sceneio.io as sceneio_io
-    from sceneio.io import _e57 as e57_io
-
-    for owner in (sceneio_io, sceneio, e57_io):
-        function = getattr(owner, name, None)
-        if function is not None:
-            return function
-    raise RuntimeError(f"FC3 E57 typed function is unavailable: {name}")
+def _write(value, path: Path) -> None:
+    sceneio.write(value, path, format="e57")
 
 
-def _typed_write(value, path: Path) -> None:
-    _typed_owner("write_e57_scans")(value, path)
+def _read_scans(path: Path):
+    return sceneio.read(path, format="e57")
 
 
-def _typed_read_scans(path: Path):
-    return _typed_owner("read_e57_scans")(path)
-
-
-def _typed_read_scan(path: Path, scan_index: int, stored_point_range):
-    return _typed_owner("read_e57_scan")(
+def _read_scan(path: Path, scan_index: int, stored_point_range):
+    return sceneio.read_e57_scan(
         path,
         scan_index=scan_index,
         stored_point_range=stored_point_range,
     )
 
 
-def _typed_inspect(path: Path):
-    """Use the typed inspector when exported; otherwise use pye57 headers."""
-
-    try:
-        function = _typed_owner("inspect_e57_scans")
-    except RuntimeError:
-        return oracle_inspect(path), "pye57-header"
-    return function(path), "sceneio"
+def _inspect(path: Path):
+    return sceneio.inspect(path, format="e57"), "sceneio"
 
 
 def _scans(value) -> tuple[Any, ...]:
@@ -400,7 +382,7 @@ def _scan_viewpoint(scan) -> np.ndarray:
     return np.asarray(value, dtype=np.float64)
 
 
-def _assert_typed_scan(scan, expected: E57ScanPayload) -> None:
+def _assert_scan(scan, expected: E57ScanPayload) -> None:
     cloud = _scan_cloud(scan)
     assert int(scan.scan_id) == expected.scan_id
     assert str(scan.name) == expected.name
@@ -414,7 +396,7 @@ def _assert_typed_scan(scan, expected: E57ScanPayload) -> None:
     assert int(scan.column_maximum) == expected.column_maximum
     invalid = _scan_array(scan, "invalid_states")
     if invalid is None:
-        raise AssertionError("typed E57 scan lost invalid states")
+        raise AssertionError("E57 scan lost invalid states")
     np.testing.assert_array_equal(invalid, expected.invalid_states)
     valid = expected.invalid_states == 0
     np.testing.assert_array_equal(
@@ -565,7 +547,7 @@ def run_benchmark(
     stored_point_range: tuple[int, int] | None = None,
     cold_cache: bool = False,
 ) -> dict[str, object]:
-    """Measure typed E57 full/selected reads, write, and inspection.
+    """Measure E57 full/selected reads, write, and inspection.
 
     ``stored_point_range`` is a half-open range over stored rows, not valid
     points.  The result retains traced Python allocation and sampled RSS for
@@ -596,7 +578,7 @@ def run_benchmark(
     oracle_path = root / "e57-multiscan-oracle.e57"
 
     def native_write():
-        _typed_write(fixture.record, native_path)
+        _write(fixture.record, native_path)
 
     def oracle_write_operation():
         oracle_write(fixture.scans, oracle_path)
@@ -607,7 +589,7 @@ def run_benchmark(
     def native_full_read():
         if cold_cache:
             _evict_file_cache(native_path)
-        return _typed_read_scans(native_path)
+        return _read_scans(native_path)
 
     def oracle_full_read():
         if cold_cache:
@@ -617,7 +599,7 @@ def run_benchmark(
     def native_selected_read():
         if cold_cache:
             _evict_file_cache(native_path)
-        return _typed_read_scan(
+        return _read_scan(
             native_path,
             selection_scan,
             stored_point_range,
@@ -639,31 +621,31 @@ def run_benchmark(
     def native_inspect():
         if cold_cache:
             _evict_file_cache(native_path)
-        return _typed_inspect(native_path)
+        return _inspect(native_path)
 
     metrics = {
-        "typed_write": _metrics(native_write, runs=runs),
+        "write": _metrics(native_write, runs=runs),
         "oracle_write": _metrics(oracle_write_operation, runs=runs),
-        "typed_full_read": _metrics(native_full_read, runs=runs),
+        "full_read": _metrics(native_full_read, runs=runs),
         "oracle_full_read": _metrics(oracle_full_read, runs=runs),
-        "typed_selected_read": _metrics(native_selected_read, runs=runs),
+        "selected_read": _metrics(native_selected_read, runs=runs),
         "oracle_selected_read": _metrics(oracle_selected_read, runs=runs),
-        "typed_inspect": _metrics(native_inspect, runs=runs),
+        "inspect": _metrics(native_inspect, runs=runs),
     }
 
-    typed_native = _typed_read_scans(native_path)
-    typed_oracle = _typed_read_scans(oracle_path)
-    if len(_scans(typed_native)) != len(fixture.scans):
-        raise AssertionError("typed native output scan count differs")
-    if len(_scans(typed_oracle)) != len(fixture.scans):
-        raise AssertionError("typed oracle output scan count differs")
+    native_record = _read_scans(native_path)
+    oracle_record = _read_scans(oracle_path)
+    if len(_scans(native_record)) != len(fixture.scans):
+        raise AssertionError("native output scan count differs")
+    if len(_scans(oracle_record)) != len(fixture.scans):
+        raise AssertionError("oracle output scan count differs")
     for native_scan, oracle_scan, expected in zip(
-        _scans(typed_native), _scans(typed_oracle), fixture.scans, strict=True
+        _scans(native_record), _scans(oracle_record), fixture.scans, strict=True
     ):
-        _assert_typed_scan(native_scan, expected)
-        _assert_typed_scan(oracle_scan, expected)
+        _assert_scan(native_scan, expected)
+        _assert_scan(oracle_scan, expected)
     _assert_selected(
-        _typed_read_scan(native_path, selection_scan, stored_point_range),
+        _read_scan(native_path, selection_scan, stored_point_range),
         selected_payload,
         start,
         stop,
@@ -686,11 +668,11 @@ def run_benchmark(
 
     selection_bytes = _logical_slice_bytes(selected_payload, start, stop)
     for operation, logical_bytes in (
-        ("typed_write", fixture.logical_bytes),
+        ("write", fixture.logical_bytes),
         ("oracle_write", fixture.logical_bytes),
-        ("typed_full_read", fixture.logical_bytes),
+        ("full_read", fixture.logical_bytes),
         ("oracle_full_read", fixture.logical_bytes),
-        ("typed_selected_read", selection_bytes),
+        ("selected_read", selection_bytes),
         ("oracle_selected_read", selection_bytes),
     ):
         metrics[operation]["logical_mbps"] = logical_bytes / 1e6 / (

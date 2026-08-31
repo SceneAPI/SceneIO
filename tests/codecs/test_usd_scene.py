@@ -235,14 +235,14 @@ def test_generic_read_and_read_scene_share_scene_graph_contract(tmp_path):
     assert rich.node_payload_kinds == ["none", "mesh", "none"]
     assert rich.num_meshes == 1
     np.testing.assert_array_equal(
-        rich.mesh_at(0).positions,
+        rich.mesh_primitive_at(0).positions,
         [[0, 0, 0], [1, 0, 0], [0, 1, 0]],
     )
     assert isinstance(generic, sceneio.SceneGraph)
     assert generic.node_payload_kinds == rich.node_payload_kinds
     np.testing.assert_array_equal(
-        generic.mesh_at(0).positions,
-        rich.mesh_at(0).positions,
+        generic.mesh_primitive_at(0).positions,
+        rich.mesh_primitive_at(0).positions,
     )
 
 
@@ -304,7 +304,7 @@ def Points "Samples"
         actual.node_local_transforms[0, :3, 3],
         [2, 0, 0],
     )
-    mesh = actual.mesh_at(0)
+    mesh = actual.mesh_primitive_at(0)
     np.testing.assert_array_equal(
         mesh.vertex_display_colors,
         [[1, 0, 0], [0, 1, 0], [1, 0, 0]],
@@ -360,7 +360,7 @@ def test_write_scene_geometry_cross_reads_and_roundtrips(tmp_path, suffix):
     assert [prim.type_name for prim in roots] == ["Mesh", "Points"]
     np.testing.assert_array_equal(
         np.asarray(roots[0].get_attribute("points").value),
-        expected.mesh_at(0).positions,
+        expected.mesh_primitive_at(0).positions,
     )
     np.testing.assert_array_equal(
         np.asarray(roots[0].get_attribute("faceVertexCounts").value),
@@ -403,11 +403,11 @@ def test_write_scene_geometry_cross_reads_and_roundtrips(tmp_path, suffix):
         "corner_display_opacities",
     ):
         np.testing.assert_array_equal(
-            getattr(actual.mesh_at(0), name),
-            getattr(expected.mesh_at(0), name),
+            getattr(actual.mesh_primitive_at(0), name),
+            getattr(expected.mesh_primitive_at(0), name),
         )
-    assert actual.mesh_at(0).orientation == "left_handed"
-    assert actual.mesh_at(0).double_sided is False
+    assert actual.mesh_primitive_at(0).orientation == "left_handed"
+    assert actual.mesh_primitive_at(0).double_sided is False
     for name in (
         "positions",
         "normals",
@@ -457,7 +457,7 @@ def Mesh "Surface"
         encoding="utf-8",
     )
 
-    mesh = sceneio.read_scene(path).mesh_at(0)
+    mesh = sceneio.read_scene(path).mesh_primitive_at(0)
 
     np.testing.assert_array_equal(
         mesh.vertex_normals,
@@ -525,7 +525,7 @@ def test_srgb_display_fields_author_and_roundtrip_color_space(tmp_path):
     text = path.read_text(encoding="utf-8")
     assert text.count('colorSpace = "srgb_rec709_scene"') == 2
     actual = sceneio.read_scene(path)
-    assert actual.mesh_at(0).display_color_space == "srgb"
+    assert actual.mesh_primitive_at(0).display_color_space == "srgb"
     assert actual.point_cloud_at(0).display_color_space == "srgb"
 
 
@@ -546,8 +546,8 @@ def test_empty_mesh_and_points_payloads_roundtrip(tmp_path):
     sceneio.write_scene(scene, path)
     actual = sceneio.read_scene(path)
 
-    assert actual.mesh_at(0).num_vertices == 0
-    assert actual.mesh_at(0).num_faces == 0
+    assert actual.mesh_primitive_at(0).num_vertices == 0
+    assert actual.mesh_primitive_at(0).num_faces == 0
     assert actual.point_cloud_at(0).num_points == 0
 
 
@@ -560,13 +560,13 @@ def test_z_up_geometry_preserves_coordinates_and_payload_conventions(tmp_path):
 
     assert actual.up_axis == "z"
     assert actual.meters_per_unit == 0.01
-    assert actual.mesh_at(0).coordinate_frame == "enu"
+    assert actual.mesh_primitive_at(0).coordinate_frame == "enu"
     assert actual.point_cloud_at(0).coordinate_frame == "enu"
-    assert actual.mesh_at(0).scale_to_meters == 0.01
+    assert actual.mesh_primitive_at(0).scale_to_meters == 0.01
     assert actual.point_cloud_at(0).scale_to_meters == 0.01
     np.testing.assert_array_equal(
-        actual.mesh_at(0).positions,
-        expected.mesh_at(0).positions,
+        actual.mesh_primitive_at(0).positions,
+        expected.mesh_primitive_at(0).positions,
     )
     np.testing.assert_array_equal(
         actual.point_cloud_at(0).positions,
@@ -587,7 +587,7 @@ def test_points_inspection_and_selection_do_not_construct_records(
     monkeypatch.setattr(points._core, "point_cloud", fail_factory)
     monkeypatch.setattr(points, "point_arrays_from_prim", fail_factory)
     inspected = sceneio.inspect(path)
-    assert inspected.datatype == "scene_graph"
+    assert inspected.payload_kind == "scene_graph"
     assert inspected.metadata["prim_type_counts"] == (
         "Mesh=1",
         "Points=1",
@@ -953,8 +953,8 @@ def test_geometry_views_outlive_scene_provider_and_source(tmp_path, suffix):
     path = tmp_path / f"owned{suffix}"
     sceneio.write_scene(_rich_geometry_scene(), path)
     scene = sceneio.read_scene(path)
-    mesh_positions = scene.mesh_at(0).positions
-    mesh_normals = scene.mesh_at(0).vertex_normals
+    mesh_positions = scene.mesh_primitive_at(0).positions
+    mesh_normals = scene.mesh_primitive_at(0).vertex_normals
     point_widths = scene.point_cloud_at(0).widths
     point_ids = scene.point_cloud_at(0).ids
 
@@ -1015,7 +1015,7 @@ def test_rich_inspection_reports_stage_metadata_and_projection_boundary(
 
     result = sceneio.inspect(hierarchy)
 
-    assert result.datatype == "scene_graph"
+    assert result.payload_kind == "scene_graph"
     assert result.metadata["representation"] == "usda"
     assert result.metadata["up_axis"] == "z"
     assert result.metadata["meters_per_unit"] == 0.01
@@ -1035,7 +1035,7 @@ def ParticleField3DGaussianSplat "Cloud"
         encoding="utf-8",
     )
     report = sceneio.inspect(unsupported)
-    assert report.datatype == "scene_graph"
+    assert report.payload_kind == "scene_graph"
     assert report.metadata["mesh_projection_available"] is False
     assert report.metadata["prim_type_counts"] == (
         "ParticleField3DGaussianSplat=1",
@@ -1155,7 +1155,7 @@ def Xform "World"
     )
 
     inspected = sceneio.inspect(path)
-    assert inspected.datatype == "scene_graph"
+    assert inspected.payload_kind == "scene_graph"
     assert inspected.metadata["dependencies"] == ("base.usda",)
     assert "references" in inspected.metadata["unsupported_features"]
     assert inspected.metadata["profile"] == "sceneio.usd.3dcv/1"

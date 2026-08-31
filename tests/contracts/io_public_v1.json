@@ -1,5 +1,241 @@
 {
-  "schema_version": 1,
+  "core_record_identity": {
+    "CameraIntrinsics": true,
+    "CameraRig": true,
+    "ColmapDatabase": true,
+    "ColmapMarkerSet": true,
+    "ColmapMaxxSchemaInfo": true,
+    "ColmapPosePriorSet": true,
+    "ColmapRigFrameSet": true,
+    "ColmapVideoMetadataSet": true,
+    "ConsistencyGraph": true,
+    "DepthMap": true,
+    "FeatureSet": true,
+    "FlowField": true,
+    "GaussianCloud": true,
+    "Image": true,
+    "ImageSequence": true,
+    "ImuCalibration": true,
+    "ImuSequence": true,
+    "InstanceSet": true,
+    "MaterialSet": true,
+    "Mesh": true,
+    "NormalMap": true,
+    "PointCloud": true,
+    "PointScan": true,
+    "PointVisibility": true,
+    "PoseGraph": true,
+    "Reconstruction": true,
+    "ScanSet": true,
+    "SceneGraph": true,
+    "StateTrajectory": true,
+    "TensorDict": true,
+    "VolumeAsset": true
+  },
+  "exceptions": {
+    "duplicate_registration": {
+      "message_prefix": "codec id already registered: ",
+      "module": "builtins",
+      "qualname": "ValueError"
+    },
+    "unknown_codec": {
+      "message_prefix": "unknown format id ",
+      "module": "sceneio.io.registry",
+      "qualname": "FormatError"
+    },
+    "unknown_native_feature": {
+      "message_prefix": "unknown native feature ",
+      "module": "sceneio.io.registry",
+      "qualname": "FormatError"
+    }
+  },
+  "format_error": {
+    "module": "sceneio.io.registry",
+    "qualname": "FormatError"
+  },
+  "io_forwards": [
+    "COLMAP_COORDINATES",
+    "IMAGE_COORDINATES",
+    "LABEL_MAP_SCHEMA",
+    "UNKNOWN_COORDINATES",
+    "UNSPECIFIED_FORMAT_COORDINATES",
+    "camera_intrinsics",
+    "capabilities",
+    "codecs",
+    "colmap_database_conversion_report",
+    "convert_coordinates",
+    "convert_gaussian_conventions",
+    "coordinate_contract",
+    "coordinate_convention",
+    "depth_map",
+    "detect",
+    "feature_set",
+    "inspect",
+    "inspect_depth",
+    "inspect_label_map",
+    "materialize_ncore_v4",
+    "native_features",
+    "point_cloud",
+    "project_ncore_item",
+    "read",
+    "read_depth",
+    "read_e57_scan",
+    "read_euroc_dataset",
+    "read_label_map",
+    "read_ncore_component",
+    "read_ncore_semantic_component",
+    "read_partial",
+    "read_scene",
+    "read_tiff_collection",
+    "write",
+    "write_colmap_db",
+    "write_depth",
+    "write_euroc_dataset",
+    "write_label_map",
+    "write_ncore_v4",
+    "write_openvdb",
+    "write_scene",
+    "write_tiff",
+    "write_usd",
+    "write_usdz",
+    "write_zarr"
+  ],
+  "namespaces": [
+    "colmap",
+    "colmap_mvs",
+    "contracts",
+    "formats",
+    "io",
+    "mapping",
+    "matching",
+    "testing"
+  ],
+  "native_features": {
+    "arrow": {
+      "available": false,
+      "build_option": "SCENEIO_WITH_ARROW",
+      "formats": [
+        "parquet",
+        "arrow_ipc"
+      ],
+      "name": "arrow"
+    },
+    "avif": {
+      "available": false,
+      "build_option": "SCENEIO_WITH_AVIF",
+      "formats": [
+        "avif"
+      ],
+      "name": "avif"
+    },
+    "draco": {
+      "available": false,
+      "build_option": "SCENEIO_WITH_DRACO",
+      "formats": [
+        "gltf",
+        "glb"
+      ],
+      "name": "draco"
+    },
+    "e57": {
+      "available": false,
+      "build_option": "SCENEIO_WITH_E57",
+      "formats": [
+        "e57"
+      ],
+      "name": "e57"
+    },
+    "hdf5": {
+      "available": false,
+      "build_option": "SCENEIO_WITH_HDF5",
+      "formats": [
+        "hdf5",
+        "hloc_features",
+        "hloc_matches"
+      ],
+      "name": "hdf5"
+    },
+    "jxl": {
+      "available": false,
+      "build_option": "SCENEIO_WITH_JXL",
+      "formats": [
+        "jpeg_xl"
+      ],
+      "name": "jxl"
+    },
+    "openvdb": {
+      "available": false,
+      "build_option": "SCENEIO_WITH_OPENVDB",
+      "formats": [
+        "openvdb"
+      ],
+      "name": "openvdb"
+    },
+    "tiff": {
+      "available": false,
+      "build_option": "SCENEIO_WITH_TIFF",
+      "formats": [
+        "tiff"
+      ],
+      "name": "tiff"
+    },
+    "usd": {
+      "available": false,
+      "build_option": "SCENEIO_WITH_USD",
+      "formats": [
+        "usd",
+        "usdz"
+      ],
+      "name": "usd"
+    }
+  },
+  "reexport_identity": {
+    "COLMAP_COORDINATES": true,
+    "IMAGE_COORDINATES": true,
+    "LABEL_MAP_SCHEMA": true,
+    "UNKNOWN_COORDINATES": true,
+    "UNSPECIFIED_FORMAT_COORDINATES": true,
+    "camera_intrinsics": true,
+    "capabilities": true,
+    "codecs": true,
+    "colmap_database_conversion_report": true,
+    "convert_coordinates": true,
+    "convert_gaussian_conventions": true,
+    "coordinate_contract": true,
+    "coordinate_convention": true,
+    "depth_map": true,
+    "detect": true,
+    "feature_set": true,
+    "inspect": true,
+    "inspect_depth": true,
+    "inspect_label_map": true,
+    "materialize_ncore_v4": true,
+    "native_features": true,
+    "point_cloud": true,
+    "project_ncore_item": true,
+    "read": true,
+    "read_depth": true,
+    "read_e57_scan": true,
+    "read_euroc_dataset": true,
+    "read_label_map": true,
+    "read_ncore_component": true,
+    "read_ncore_semantic_component": true,
+    "read_partial": true,
+    "read_scene": true,
+    "read_tiff_collection": true,
+    "write": true,
+    "write_colmap_db": true,
+    "write_depth": true,
+    "write_euroc_dataset": true,
+    "write_label_map": true,
+    "write_ncore_v4": true,
+    "write_openvdb": true,
+    "write_scene": true,
+    "write_tiff": true,
+    "write_usd": true,
+    "write_usdz": true,
+    "write_zarr": true
+  },
   "sceneio_all": [
     "COLMAP_COORDINATES",
     "COLMAP_DATABASE_PROFILES",
@@ -159,10 +395,7 @@
     "image_pair_to_pair_id",
     "inspect",
     "inspect_depth",
-    "inspect_e57_scans",
-    "inspect_flow",
     "inspect_label_map",
-    "inspect_tiff_collection",
     "io",
     "is_colmap_native_extractor_type",
     "is_extension_column",
@@ -182,9 +415,7 @@
     "read",
     "read_depth",
     "read_e57_scan",
-    "read_e57_scans",
     "read_euroc_dataset",
-    "read_flow",
     "read_header",
     "read_label_map",
     "read_ncore_component",
@@ -200,9 +431,7 @@
     "write_checkpoint",
     "write_colmap_db",
     "write_depth",
-    "write_e57_scans",
     "write_euroc_dataset",
-    "write_flow",
     "write_header",
     "write_label_map",
     "write_ncore_v4",
@@ -210,7 +439,6 @@
     "write_record",
     "write_scene",
     "write_tiff",
-    "write_tiff_collection",
     "write_usd",
     "write_usdz",
     "write_zarr"
@@ -234,10 +462,7 @@
     "feature_set",
     "inspect",
     "inspect_depth",
-    "inspect_e57_scans",
-    "inspect_flow",
     "inspect_label_map",
-    "inspect_tiff_collection",
     "materialize_ncore_v4",
     "native_features",
     "point_cloud",
@@ -245,9 +470,7 @@
     "read",
     "read_depth",
     "read_e57_scan",
-    "read_e57_scans",
     "read_euroc_dataset",
-    "read_flow",
     "read_label_map",
     "read_ncore_component",
     "read_ncore_semantic_component",
@@ -259,342 +482,87 @@
     "write_arrow_ipc",
     "write_colmap_db",
     "write_depth",
-    "write_e57_scans",
     "write_euroc_dataset",
-    "write_flow",
     "write_label_map",
     "write_ncore_v4",
     "write_openvdb",
     "write_parquet",
     "write_scene",
     "write_tiff",
-    "write_tiff_collection",
     "write_usd",
     "write_usdz",
     "write_zarr"
   ],
-  "namespaces": [
-    "colmap",
-    "colmap_mvs",
-    "contracts",
-    "formats",
-    "io",
-    "mapping",
-    "matching",
-    "testing"
-  ],
-  "io_forwards": [
-    "COLMAP_COORDINATES",
-    "IMAGE_COORDINATES",
-    "LABEL_MAP_SCHEMA",
-    "UNKNOWN_COORDINATES",
-    "UNSPECIFIED_FORMAT_COORDINATES",
-    "camera_intrinsics",
-    "capabilities",
-    "codecs",
-    "colmap_database_conversion_report",
-    "convert_coordinates",
-    "convert_gaussian_conventions",
-    "coordinate_contract",
-    "coordinate_convention",
-    "depth_map",
-    "detect",
-    "feature_set",
-    "inspect",
-    "inspect_depth",
-    "inspect_e57_scans",
-    "inspect_flow",
-    "inspect_label_map",
-    "inspect_tiff_collection",
-    "materialize_ncore_v4",
-    "native_features",
-    "point_cloud",
-    "project_ncore_item",
-    "read",
-    "read_depth",
-    "read_e57_scan",
-    "read_e57_scans",
-    "read_euroc_dataset",
-    "read_flow",
-    "read_label_map",
-    "read_ncore_component",
-    "read_ncore_semantic_component",
-    "read_partial",
-    "read_scene",
-    "read_tiff_collection",
-    "write",
-    "write_colmap_db",
-    "write_depth",
-    "write_e57_scans",
-    "write_euroc_dataset",
-    "write_flow",
-    "write_label_map",
-    "write_ncore_v4",
-    "write_openvdb",
-    "write_scene",
-    "write_tiff",
-    "write_tiff_collection",
-    "write_usd",
-    "write_usdz",
-    "write_zarr"
-  ],
-  "reexport_identity": {
-    "COLMAP_COORDINATES": true,
-    "IMAGE_COORDINATES": true,
-    "LABEL_MAP_SCHEMA": true,
-    "UNKNOWN_COORDINATES": true,
-    "UNSPECIFIED_FORMAT_COORDINATES": true,
-    "camera_intrinsics": true,
-    "capabilities": true,
-    "codecs": true,
-    "colmap_database_conversion_report": true,
-    "convert_coordinates": true,
-    "convert_gaussian_conventions": true,
-    "coordinate_contract": true,
-    "coordinate_convention": true,
-    "depth_map": true,
-    "detect": true,
-    "feature_set": true,
-    "inspect": true,
-    "inspect_depth": true,
-    "inspect_e57_scans": true,
-    "inspect_flow": true,
-    "inspect_label_map": true,
-    "inspect_tiff_collection": true,
-    "materialize_ncore_v4": true,
-    "native_features": true,
-    "point_cloud": true,
-    "project_ncore_item": true,
-    "read": true,
-    "read_depth": true,
-    "read_e57_scan": true,
-    "read_e57_scans": true,
-    "read_euroc_dataset": true,
-    "read_flow": true,
-    "read_label_map": true,
-    "read_ncore_component": true,
-    "read_ncore_semantic_component": true,
-    "read_partial": true,
-    "read_scene": true,
-    "read_tiff_collection": true,
-    "write": true,
-    "write_colmap_db": true,
-    "write_depth": true,
-    "write_e57_scans": true,
-    "write_euroc_dataset": true,
-    "write_flow": true,
-    "write_label_map": true,
-    "write_ncore_v4": true,
-    "write_openvdb": true,
-    "write_scene": true,
-    "write_tiff": true,
-    "write_tiff_collection": true,
-    "write_usd": true,
-    "write_usdz": true,
-    "write_zarr": true
+  "schema_version": 1,
+  "source_identity": {
+    "ArrayInspection": true,
+    "Codec": true,
+    "CodecCapabilities": true,
+    "DepthEncoding": true,
+    "FormatError": true,
+    "Inspection": true,
+    "NativeFeatureCapabilities": true
   },
   "types": {
-    "Codec": {
-      "module": "sceneio.io.registry",
-      "qualname": "Codec",
-      "repr_normalized": "Codec(id='npy', extensions=('.npy',), read=<function _mmap_view_reader.<locals>.read at 0xADDRESS>, write=<function _file_sink_writer.<locals>.write at 0xADDRESS>, record=None, datatype='tensor', magic=(b'\\x93NUMPY',), filenames=(), is_directory=False, dir_marker='cameras.bin', directory_markers=(), file_probe=None, directory_probe=None, inspect=None, read_window=None, read_points=None, read_faces=None, read_mesh=None, read_primitive=None, read_states=None, read_frames=None, read_image=None, read_pair=None, read_tensors=None, read_slices=None, streams_read=True, streams_write=True, lossy=False, requires_features=(), supported_features=('v1', 'c_order', 'native_endian_mmap_view'), unsupported_features=('fortran_order', 'object_dtype'), container_kind='file')",
+    "ArrayInspection": {
+      "module": "sceneio.io._inspectors.model",
       "pickle": {
-        "outcome": "raises",
+        "equal": true,
+        "outcome": "roundtrip",
+        "type_identity": true
+      },
+      "qualname": "ArrayInspection",
+      "repr_normalized": "ArrayInspection(name='values', shape=(2, 3), dtype='float32')"
+    },
+    "Codec": {
+      "module": "sceneio.io._registry.model",
+      "pickle": {
         "exception": "AttributeError",
-        "message_prefix": "Can't pickle local object '_mmap_view_reader.<locals>.read'"
-      }
+        "message_prefix": "Can't pickle local object '_mmap_view_reader.<locals>.read'",
+        "outcome": "raises"
+      },
+      "qualname": "Codec",
+      "repr_normalized": "Codec(id='npy', extensions=('.npy',), read=<function _mmap_view_reader.<locals>.read at 0xADDRESS>, write=<function _file_sink_writer.<locals>.write at 0xADDRESS>, record=None, payload_kind='tensor', magic=(b'\\x93NUMPY',), filenames=(), is_directory=False, dir_marker='cameras.bin', directory_markers=(), file_probe=None, directory_probe=None, inspect=None, read_window=None, read_points=None, read_faces=None, read_mesh=None, read_primitive=None, read_states=None, read_frames=None, read_image=None, read_pair=None, read_tensors=None, read_slices=None, streams_read=True, streams_write=True, lossy=False, requires_features=(), supported_features=('v1', 'c_order', 'native_endian_mmap_view'), unsupported_features=('fortran_order', 'object_dtype'), container_kind='file')"
     },
     "CodecCapabilities": {
-      "module": "sceneio.io.registry",
+      "module": "sceneio.io._registry.model",
+      "pickle": {
+        "equal": true,
+        "outcome": "roundtrip",
+        "type_identity": true
+      },
       "qualname": "CodecCapabilities",
-      "repr_normalized": "CodecCapabilities(format='npy', datatype='tensor', record_type=None, extensions=('.npy',), filenames=(), container_kind='file', available=True, can_read=True, can_write=True, can_inspect=True, partial_selectors=(), streams_read=True, streams_write=True, lossy=False, requires_features=(), supported_features=('v1', 'c_order', 'native_endian_mmap_view'), unsupported_features=('fortran_order', 'object_dtype'))",
-      "pickle": {
-        "outcome": "roundtrip",
-        "type_identity": true,
-        "equal": true
-      }
-    },
-    "NativeFeatureCapabilities": {
-      "module": "sceneio.io.registry",
-      "qualname": "NativeFeatureCapabilities",
-      "repr_normalized": "NativeFeatureCapabilities(name='hdf5', build_option='SCENEIO_WITH_HDF5', available=False, formats=('hdf5', 'hloc_features', 'hloc_matches'))",
-      "pickle": {
-        "outcome": "roundtrip",
-        "type_identity": true,
-        "equal": true
-      }
+      "repr_normalized": "CodecCapabilities(format='npy', payload_kind='tensor', record_type=None, extensions=('.npy',), filenames=(), container_kind='file', available=True, can_read=True, can_write=True, can_inspect=True, partial_selectors=(), streams_read=True, streams_write=True, lossy=False, requires_features=(), supported_features=('v1', 'c_order', 'native_endian_mmap_view'), unsupported_features=('fortran_order', 'object_dtype'))"
     },
     "DepthEncoding": {
       "module": "sceneio.io._depth",
+      "pickle": {
+        "equal": true,
+        "outcome": "roundtrip",
+        "type_identity": true
+      },
       "qualname": "DepthEncoding",
-      "repr_normalized": "DepthEncoding(unit='meters', scale_to_meters=1.0, invalid_policy='none', channel_name=None)",
-      "pickle": {
-        "outcome": "roundtrip",
-        "type_identity": true,
-        "equal": true
-      }
-    },
-    "ArrayInspection": {
-      "module": "sceneio.io._inspection",
-      "qualname": "ArrayInspection",
-      "repr_normalized": "ArrayInspection(name='values', shape=(2, 3), dtype='float32')",
-      "pickle": {
-        "outcome": "roundtrip",
-        "type_identity": true,
-        "equal": true
-      }
+      "repr_normalized": "DepthEncoding(unit='meters', scale_to_meters=1.0, invalid_policy='none', channel_name=None)"
     },
     "Inspection": {
-      "module": "sceneio.io._inspection",
-      "qualname": "Inspection",
-      "repr_normalized": "Inspection(format='npy', datatype='tensor', byte_size=128, shape=(2, 3), dtype='float32', count=6, channels=None, arrays=(), metadata=mappingproxy({}))",
+      "module": "sceneio.io._inspectors.model",
       "pickle": {
-        "outcome": "raises",
         "exception": "TypeError",
-        "message_prefix": "cannot pickle 'mappingproxy' object"
-      }
-    }
-  },
-  "format_error": {
-    "module": "sceneio.io.registry",
-    "qualname": "FormatError"
-  },
-  "source_identity": {
-    "Codec": true,
-    "CodecCapabilities": true,
-    "NativeFeatureCapabilities": true,
-    "ArrayInspection": true,
-    "Inspection": true,
-    "DepthEncoding": true,
-    "FormatError": true
-  },
-  "core_record_identity": {
-    "CameraIntrinsics": true,
-    "CameraRig": true,
-    "ColmapDatabase": true,
-    "ColmapMarkerSet": true,
-    "ColmapMaxxSchemaInfo": true,
-    "ColmapPosePriorSet": true,
-    "ColmapRigFrameSet": true,
-    "ColmapVideoMetadataSet": true,
-    "ConsistencyGraph": true,
-    "DepthMap": true,
-    "FeatureSet": true,
-    "FlowField": true,
-    "GaussianCloud": true,
-    "Image": true,
-    "ImageSequence": true,
-    "ImuCalibration": true,
-    "ImuSequence": true,
-    "InstanceSet": true,
-    "MaterialSet": true,
-    "Mesh": true,
-    "NormalMap": true,
-    "PointCloud": true,
-    "PointScan": true,
-    "PointVisibility": true,
-    "PoseGraph": true,
-    "Reconstruction": true,
-    "ScanSet": true,
-    "SceneGraph": true,
-    "StateTrajectory": true,
-    "TensorDict": true,
-    "VolumeAsset": true
-  },
-  "exceptions": {
-    "unknown_codec": {
-      "module": "sceneio.io.registry",
-      "qualname": "FormatError",
-      "message_prefix": "unknown format id "
+        "message_prefix": "cannot pickle 'mappingproxy' object",
+        "outcome": "raises"
+      },
+      "qualname": "Inspection",
+      "repr_normalized": "Inspection(format='npy', payload_kind='tensor', byte_size=128, shape=(2, 3), dtype='float32', count=6, channels=None, arrays=(), metadata=mappingproxy({}))"
     },
-    "unknown_native_feature": {
-      "module": "sceneio.io.registry",
-      "qualname": "FormatError",
-      "message_prefix": "unknown native feature "
-    },
-    "duplicate_registration": {
-      "module": "builtins",
-      "qualname": "ValueError",
-      "message_prefix": "codec id already registered: "
-    }
-  },
-  "native_features": {
-    "arrow": {
-      "name": "arrow",
-      "build_option": "SCENEIO_WITH_ARROW",
-      "available": false,
-      "formats": [
-        "parquet",
-        "arrow_ipc"
-      ]
-    },
-    "avif": {
-      "name": "avif",
-      "build_option": "SCENEIO_WITH_AVIF",
-      "available": false,
-      "formats": [
-        "avif"
-      ]
-    },
-    "draco": {
-      "name": "draco",
-      "build_option": "SCENEIO_WITH_DRACO",
-      "available": false,
-      "formats": [
-        "gltf",
-        "glb"
-      ]
-    },
-    "e57": {
-      "name": "e57",
-      "build_option": "SCENEIO_WITH_E57",
-      "available": false,
-      "formats": [
-        "e57"
-      ]
-    },
-    "hdf5": {
-      "name": "hdf5",
-      "build_option": "SCENEIO_WITH_HDF5",
-      "available": false,
-      "formats": [
-        "hdf5",
-        "hloc_features",
-        "hloc_matches"
-      ]
-    },
-    "jxl": {
-      "name": "jxl",
-      "build_option": "SCENEIO_WITH_JXL",
-      "available": false,
-      "formats": [
-        "jpeg_xl"
-      ]
-    },
-    "openvdb": {
-      "name": "openvdb",
-      "build_option": "SCENEIO_WITH_OPENVDB",
-      "available": false,
-      "formats": [
-        "openvdb"
-      ]
-    },
-    "tiff": {
-      "name": "tiff",
-      "build_option": "SCENEIO_WITH_TIFF",
-      "available": false,
-      "formats": [
-        "tiff"
-      ]
-    },
-    "usd": {
-      "name": "usd",
-      "build_option": "SCENEIO_WITH_USD",
-      "available": false,
-      "formats": [
-        "usd",
-        "usdz"
-      ]
+    "NativeFeatureCapabilities": {
+      "module": "sceneio.io._registry.model",
+      "pickle": {
+        "equal": true,
+        "outcome": "roundtrip",
+        "type_identity": true
+      },
+      "qualname": "NativeFeatureCapabilities",
+      "repr_normalized": "NativeFeatureCapabilities(name='hdf5', build_option='SCENEIO_WITH_HDF5', available=False, formats=('hdf5', 'hloc_features', 'hloc_matches'))"
     }
   }
 }

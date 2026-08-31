@@ -22,7 +22,7 @@ import numpy as np
 import pytest
 
 import sceneio
-from bench import bench_io
+from bench.io_bench import runner as bench_io
 from sceneio import _core
 from sceneio.io import _inspection, registry
 from sceneio.io._builtin_manifest import (
@@ -546,7 +546,7 @@ def _normalized_inspection(info) -> dict[str, object]:
         json.dumps(
             {
                 "format": info.format,
-                "datatype": info.datatype,
+                "payload_kind": info.payload_kind,
                 "byte_size": info.byte_size,
                 "shape": info.shape,
                 "dtype": info.dtype,
@@ -568,10 +568,10 @@ def _normalized_inspection(info) -> dict[str, object]:
 
 def _lower_inspect(format_id: str, path: Path):
     inspector = getattr(reconstruction_inspector, _INSPECTOR_NAMES[format_id])
-    datatype = registry.REGISTRY[format_id].datatype
+    payload_kind= registry.REGISTRY[format_id].payload_kind
     if format_id in {"tum", "kitti"}:
-        return inspector(path, format_id, datatype)
-    return inspector(path, datatype)
+        return inspector(path, format_id, payload_kind)
+    return inspector(path, payload_kind)
 
 
 def _malformed_path(root: Path, format_id: str) -> Path:
@@ -651,7 +651,7 @@ def test_reconstruction_definitions_preserve_order_contract_and_identity():
         assert registry.REGISTRY[codec.id] is codec
         assert registry.BUILTIN_DEFINITIONS[position] is codec
         assert codec.record.__name__ == expected["record"]
-        assert codec.datatype == expected["datatype"]
+        assert codec.payload_kind == expected["payload_kind"]
         assert list(codec.extensions) == expected["extensions"]
         assert [value.hex() for value in codec.magic] == expected["magic_hex"]
         assert list(codec.filenames) == expected["filenames"]
@@ -813,63 +813,22 @@ def test_reconstruction_inspector_reload_is_inert():
     assert tuple(registry.REGISTRY.items()) == before_items
 
 
-@pytest.mark.parametrize(
-    ("wrapper_name", "delegate_name"),
-    [
-        ("_inspect_colmap_db", "_inspect_reconstruction_colmap_db"),
-        ("_inspect_euroc_state", "_inspect_reconstruction_euroc_state"),
-        ("_inspect_g2o", "_inspect_reconstruction_g2o"),
-        ("_inspect_bundler", "_inspect_reconstruction_bundler"),
-        ("_inspect_bal", "_inspect_reconstruction_bal"),
-        ("_inspect_nvm", "_inspect_reconstruction_nvm"),
-        ("_inspect_transforms", "_inspect_reconstruction_transforms"),
-        ("_inspect_openmvg", "_inspect_reconstruction_openmvg"),
-        ("_inspect_colmap_binary", "_inspect_reconstruction_colmap_binary"),
-        ("_inspect_colmap_text", "_inspect_reconstruction_colmap_text"),
-    ],
-)
-def test_reconstruction_facade_preserves_two_argument_wrappers(
-    wrapper_name,
-    delegate_name,
-    monkeypatch,
-):
-    marker = object()
-    calls = []
-
-    def inspect_family(path, datatype):
-        calls.append((path, datatype))
-        return marker
-
-    monkeypatch.setattr(_inspection, delegate_name, inspect_family)
-    path = Path("reconstruction.fixture")
-    wrapper = getattr(_inspection, wrapper_name)
-    assert tuple(inspect.signature(wrapper).parameters) == ("path", "datatype")
-    assert wrapper(path, "reconstruction") is marker
-    assert calls == [(path, "reconstruction")]
-
-
-def test_pose_text_facade_preserves_three_argument_wrapper(monkeypatch):
-    marker = object()
-    calls = []
-
-    def inspect_family(path, format_id, datatype):
-        calls.append((path, format_id, datatype))
-        return marker
-
-    monkeypatch.setattr(
-        _inspection,
-        "_inspect_reconstruction_pose_text",
-        inspect_family,
+@pytest.mark.parametrize("format_id", RECONSTRUCTION_IDS)
+def test_reconstruction_inspection_dispatch_uses_family_implementation(format_id):
+    table = (
+        _inspection._FORMAT_AWARE_INSPECTORS
+        if format_id in {"tum", "kitti"}
+        else _inspection._PATH_INSPECTORS
     )
-    path = Path("poses.fixture")
-    wrapper = _inspection._inspect_pose_text
-    assert tuple(inspect.signature(wrapper).parameters) == (
-        "path",
-        "format_id",
-        "datatype",
+    selected = table[format_id]
+    expected = getattr(
+        reconstruction_inspector,
+        _INSPECTOR_NAMES[format_id],
     )
-    assert wrapper(path, "tum", "posed_views") is marker
-    assert calls == [(path, "tum", "posed_views")]
+    assert (selected.__module__, selected.__name__) == (
+        expected.__module__,
+        expected.__name__,
+    )
 
 
 def test_repository_coverage_tracks_all_reconstruction_inspectors():

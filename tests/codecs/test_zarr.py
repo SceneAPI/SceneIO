@@ -164,7 +164,7 @@ def test_zarr_inspection_reads_metadata_without_array_decode(tmp_path, monkeypat
     result = sceneio.inspect(path)
 
     assert result.format == "zarr"
-    assert result.datatype == "tensor_dict"
+    assert result.payload_kind == "tensor_dict"
     assert result.count == len(arrays)
     assert result.byte_size == sum(
         item.stat().st_size for item in path.rglob("*") if item.is_file()

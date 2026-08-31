@@ -411,7 +411,7 @@ def test_public_registry_detect_read_write_and_inspect(tmp_path):
     _assert_graph_equal(decoded, graph)
     inspection = sceneio.inspect(path)
     assert inspection.format == "g2o"
-    assert inspection.datatype == "pose_graph"
+    assert inspection.payload_kind == "pose_graph"
     assert inspection.shape == (3,)
     assert inspection.count == 3
     assert inspection.metadata["num_nodes"] == 3

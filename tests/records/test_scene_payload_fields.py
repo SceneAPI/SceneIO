@@ -125,7 +125,7 @@ def test_point_scene_fields_are_exact_owned_and_owner_retaining():
         np.array([0.0, 0.3, 0.6], np.float32),
     )
 
-    legacy = _core.point_cloud(
+    empty = _core.point_cloud(
         np.zeros((0, 3), np.float32),
         display_colors=np.zeros((0, 3), np.float32),
         display_opacities=np.zeros((0,), np.float32),
@@ -134,13 +134,13 @@ def test_point_scene_fields_are_exact_owned_and_owner_retaining():
         velocities=np.zeros((0, 3), np.float32),
         accelerations=np.zeros((0, 3), np.float32),
     )
-    assert legacy.display_colors.shape == (0, 3)
-    assert legacy.display_opacities.shape == (0,)
-    assert legacy.widths.shape == (0,)
-    assert legacy.ids.shape == (0,)
-    assert legacy.velocities.shape == (0, 3)
-    assert legacy.accelerations.shape == (0, 3)
-    assert legacy.display_color_space == "unknown"
+    assert empty.display_colors.shape == (0, 3)
+    assert empty.display_opacities.shape == (0,)
+    assert empty.widths.shape == (0,)
+    assert empty.ids.shape == (0,)
+    assert empty.velocities.shape == (0, 3)
+    assert empty.accelerations.shape == (0, 3)
+    assert empty.display_color_space == "unknown"
 
 
 def test_point_scene_field_validation_is_closed_and_shape_exact():
@@ -215,7 +215,7 @@ def test_mesh_fields_are_exact_owned_and_owner_retaining():
         views["vertex_display_colors"], np.ones((3, 3))
     )
 
-    legacy = _core.mesh(
+    empty = _core.mesh(
         np.zeros((0, 3), np.float32),
         np.array([0], np.uint64),
         np.array([], np.uint64),
@@ -224,14 +224,14 @@ def test_mesh_fields_are_exact_owned_and_owner_retaining():
         vertex_display_opacities=np.zeros((0,), np.float32),
         corner_display_opacities=np.zeros((0,), np.float32),
     )
-    assert legacy.vertex_display_colors.shape == (0, 3)
-    assert legacy.corner_display_colors.shape == (0, 3)
-    assert legacy.vertex_display_opacities.shape == (0,)
-    assert legacy.corner_display_opacities.shape == (0,)
-    assert legacy.display_color_space == "unknown"
-    assert legacy.orientation == "unknown"
-    assert not legacy.has_double_sided
-    assert legacy.double_sided is None
+    assert empty.vertex_display_colors.shape == (0, 3)
+    assert empty.corner_display_colors.shape == (0, 3)
+    assert empty.vertex_display_opacities.shape == (0,)
+    assert empty.corner_display_opacities.shape == (0,)
+    assert empty.display_color_space == "unknown"
+    assert empty.orientation == "unknown"
+    assert not empty.has_double_sided
+    assert empty.double_sided is None
 
 
 def test_mesh_field_validation_is_closed_and_shape_exact():
@@ -285,7 +285,10 @@ def test_existing_point_and_mesh_writers_refuse_extended_fields(tmp_path):
             with pytest.raises(ValueError, match="cannot represent"):
                 writer(cloud)
         with pytest.raises(ValueError, match="unsupported"):
-            write_e57(cloud, tmp_path / f"{field}.e57")
+            write_e57(
+                _core.scan_set((_core.point_scan(cloud, timestamp=0.0),)),
+                tmp_path / f"{field}.e57",
+            )
 
     mesh_writers = [
         _core.write_ply_mesh,
@@ -342,7 +345,10 @@ def test_extended_field_path_writers_preserve_destinations(tmp_path):
     with pytest.raises(ValueError, match="USD:"):
         write_usd(scene, usd)
     with pytest.raises(ValueError, match="unsupported"):
-        write_e57(_extended_points(), e57)
+        write_e57(
+            _core.scan_set((_core.point_scan(_extended_points(), timestamp=0.0),)),
+            e57,
+        )
 
     for path in (obj, gltf, binary, usd, e57):
         assert path.read_bytes() == b"sentinel"

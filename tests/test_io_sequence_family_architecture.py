@@ -483,7 +483,7 @@ def test_sequence_family_and_registry_reload_keep_live_access():
         from functools import partial
         from pathlib import Path
 
-        from sceneio import _core
+        from sceneio import Codec, _core
         from sceneio.io import registry
         from sceneio.io._inspectors.model import Inspection
         from sceneio.io._registry.families import sequences
@@ -528,20 +528,20 @@ def test_sequence_family_and_registry_reload_keep_live_access():
         def inspect_frame(path):
             return Inspection(
                 format="sequence_probe",
-                datatype="image",
+                payload_kind="image",
                 byte_size=Path(path).stat().st_size,
                 shape=(2, 3, 1),
                 dtype="uint8",
                 channels=1,
             )
 
-        probe = registry.Codec(
+        probe = Codec(
             "sequence-probe",
             (".seqprobe",),
             lambda path: path,
             lambda record, path: None,
             record=_core.Image,
-            datatype="image",
+            payload_kind="image",
             inspect=inspect_frame,
         )
         with tempfile.TemporaryDirectory() as temporary:
@@ -581,22 +581,15 @@ def test_sequence_family_and_registry_reload_keep_live_access():
     subprocess.run([sys.executable, "-c", code], check=True)
 
 
-def test_y4m_facade_wrapper_preserves_signature_and_delegation(monkeypatch):
-    marker = object()
-    calls = []
-
-    def inspect_family(path, datatype):
-        calls.append((path, datatype))
-        return marker
-
-    monkeypatch.setattr(_inspection, "_inspect_sequence_y4m", inspect_family)
-    path = Path("sequence.y4m")
-    assert tuple(inspect.signature(_inspection._inspect_y4m).parameters) == (
-        "path",
-        "datatype",
+@pytest.mark.parametrize(
+    "format_id",
+    ["y4m", "webm", "theora", "animated_webp", "apng"],
+)
+def test_sequence_inspection_dispatch_uses_family_implementation(format_id):
+    assert _inspection._PATH_INSPECTORS[format_id] is getattr(
+        sequence_inspector,
+        f"inspect_{format_id}",
     )
-    assert _inspection._inspect_y4m(path, "image_sequence") is marker
-    assert calls == [(path, "image_sequence")]
 
 
 def test_repository_coverage_keeps_sequence_inspection_ownership_exact():

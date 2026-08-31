@@ -36,14 +36,14 @@ def _validate_payload_contracts(definitions: tuple[Codec, ...]) -> None:
     formats_by_payload = {payload_id: [] for payload_id in BUILTIN_CODEC_PAYLOAD_KINDS}
     for codec in definitions:
         try:
-            payload = BUILTIN_CODEC_PAYLOAD_KINDS[codec.datatype]
+            payload = BUILTIN_CODEC_PAYLOAD_KINDS[codec.payload_kind]
         except KeyError:
             raise ValueError(
-                f"built-in codec {codec.id!r} has undeclared payload kind {codec.datatype!r}"
+                f"built-in codec {codec.id!r} has undeclared payload kind {codec.payload_kind!r}"
             ) from None
-        if payload_ids_by_format.get(codec.id) != codec.datatype:
+        if payload_ids_by_format.get(codec.id) != codec.payload_kind:
             raise ValueError(
-                f"built-in codec {codec.id!r} is not related to payload kind {codec.datatype!r}"
+                f"built-in codec {codec.id!r} is not related to payload kind {codec.payload_kind!r}"
             )
         if codec.record is None and not payload.dynamic_output:
             raise ValueError(
@@ -55,9 +55,9 @@ def _validate_payload_contracts(definitions: tuple[Codec, ...]) -> None:
                 raise ValueError(
                     f"built-in codec {codec.id!r} record type "
                     f"{record_name!r} is not declared by "
-                    f"payload kind {codec.datatype!r}"
+                    f"payload kind {codec.payload_kind!r}"
                 )
-        formats_by_payload[codec.datatype].append(codec.id)
+        formats_by_payload[codec.payload_kind].append(codec.id)
 
     unused_payloads = tuple(
         payload_id for payload_id, format_ids in formats_by_payload.items() if not format_ids
@@ -83,7 +83,7 @@ class BuiltinAssembly:
         self,
         canonical_ids: tuple[str, ...] = CANONICAL_BUILTIN_IDS,
     ) -> None:
-        # The facade always uses the manifest default. Supplying a reduced set
+        # The public registry always uses the manifest default. A reduced set
         # exists only for isolated state-machine contracts.
         ids = tuple(canonical_ids)
         if any(not isinstance(format_id, str) or not format_id for format_id in ids):

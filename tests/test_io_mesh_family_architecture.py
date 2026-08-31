@@ -22,6 +22,7 @@ from sceneio.io._builtin_manifest import (
     FAMILY_MEMBERS,
 )
 from sceneio.io._inspectors import meshes as mesh_inspector
+from sceneio.io._inspectors import points as point_inspector
 from sceneio.io._registry.families import meshes as mesh_family
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -218,31 +219,21 @@ def test_mesh_family_and_registry_reload_are_idempotent():
 
 
 @pytest.mark.parametrize(
-    ("wrapper_name", "delegate_name"),
+    ("format_id", "inspector_name"),
     [
-        ("_inspect_ply_mesh", "_inspect_mesh_ply"),
-        ("_inspect_stl", "_inspect_mesh_stl"),
-        ("_inspect_off", "_inspect_mesh_off"),
+        ("ply_mesh", "inspect_ply_mesh"),
+        ("stl", "inspect_stl"),
+        ("off", "inspect_off"),
     ],
 )
-def test_mesh_inspector_facade_preserves_historical_wrapper_signatures(
-    wrapper_name,
-    delegate_name,
-    monkeypatch,
+def test_mesh_inspection_dispatch_uses_family_implementation(
+    format_id,
+    inspector_name,
 ):
-    marker = object()
-    calls = []
-
-    def inspect_family(path, datatype):
-        calls.append((path, datatype))
-        return marker
-
-    monkeypatch.setattr(_inspection, delegate_name, inspect_family)
-    path = Path("mesh.fixture")
-    wrapper = getattr(_inspection, wrapper_name)
-    assert tuple(inspect.signature(wrapper).parameters) == ("path", "datatype")
-    assert wrapper(path, "mesh") is marker
-    assert calls == [(path, "mesh")]
+    assert _inspection._PATH_INSPECTORS[format_id] is getattr(
+        mesh_inspector,
+        inspector_name,
+    )
 
 
 def test_repository_coverage_tracks_only_moved_mesh_inspectors():
@@ -346,8 +337,8 @@ end_header
     renamed.unlink()
 
 
-def test_point_ply_inspection_ownership_remains_in_facade():
+def test_point_ply_inspection_uses_point_family_implementation():
     source = inspect.getsource(mesh_inspector)
     assert "validate_mesh_ply_header" in source
     assert "validate_point_ply_header" not in source
-    assert _inspection._inspect_ply.__module__ == "sceneio.io._inspection"
+    assert _inspection._PATH_INSPECTORS["ply"] is point_inspector.inspect_ply

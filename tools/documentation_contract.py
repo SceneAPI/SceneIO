@@ -18,7 +18,6 @@ from typing import Any
 import sceneio
 from sceneio.contracts import (
     BUILTIN_CODEC_PAYLOAD_KINDS,
-    PUBLIC_TYPE_ALIASES,
     PUBLIC_TYPE_CONTRACTS,
 )
 from sceneio.io._builtin_manifest import (
@@ -26,7 +25,7 @@ from sceneio.io._builtin_manifest import (
     CANONICAL_BUILTIN_IDS,
     FAMILY_MEMBERS,
 )
-from sceneio.io.registry import CodecCapabilities, NativeFeatureCapabilities
+from sceneio.io._registry.model import CodecCapabilities, NativeFeatureCapabilities
 
 ROOT = Path(__file__).parents[1]
 CONTRACT_PATH = Path("tests/contracts/documentation_v1.toml")
@@ -336,8 +335,8 @@ def render_public_contract_summary(
         f"**{kinds['vocabulary']}** vocabularies, "
         f"**{kinds['error']}** errors, and "
         f"**{kinds['wire_record']}** wire record. The catalog records "
-        f"**{len(PUBLIC_TYPE_ALIASES)} supported alias paths** and relates "
-        f"all **{len(BUILTIN_CODEC_PAYLOAD_KINDS)} built-in payload kinds** "
+        "canonical-only public identities and relates all "
+        f"**{len(BUILTIN_CODEC_PAYLOAD_KINDS)} built-in payload kinds** "
         "to the public types and formats they carry. Values come directly "
         "from `sceneio.contracts.PUBLIC_TYPE_CONTRACTS` and "
         "`sceneio.contracts.BUILTIN_CODEC_PAYLOAD_KINDS`."
@@ -349,11 +348,10 @@ def render_public_type_rows(
     _capabilities: Mapping[str, CodecCapabilities],
     _native_features: Mapping[str, NativeFeatureCapabilities],
 ) -> str:
-    """Render the canonical class-kind-alias coverage matrix."""
+    """Render the canonical class-kind coverage matrix."""
 
     rows = []
     for path, contract in PUBLIC_TYPE_CONTRACTS.items():
-        aliases = ", ".join(f"`{alias}`" for alias in contract.aliases) or "-"
         detail = (
             f"`{contract.specialized_contract.profile.id}`"
             if contract.kind == "representation"
@@ -361,7 +359,7 @@ def render_public_type_rows(
             if contract.procedure_role is not None
             else "-"
         )
-        rows.append(f"| `{path}` | `{contract.kind}` | {aliases} | {detail} |")
+        rows.append(f"| `{path}` | `{contract.kind}` | {detail} |")
     return "\n".join(rows)
 
 

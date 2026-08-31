@@ -31,7 +31,6 @@ import sceneio.matching
 import sceneio.testing
 from sceneio.contracts import (
     BUILTIN_CODEC_PAYLOAD_KINDS,
-    PUBLIC_TYPE_ALIASES,
     PUBLIC_TYPE_CONTRACTS,
     ContractEvidence,
     ContractMember,
@@ -100,13 +99,12 @@ def _exported_class_paths() -> dict[int, tuple[type[object], set[str]]]:
 def _minimal_descriptor(
     canonical_path: str,
     *,
-    aliases: tuple[str, ...] = (),
+    implementation_paths: tuple[str, ...] = (),
     relations: tuple[ContractRelation, ...] = (),
 ) -> PublicTypeContract:
     return PublicTypeContract(
         canonical_path=canonical_path,
-        aliases=aliases,
-        implementation_paths=(),
+        implementation_paths=implementation_paths,
         kind="descriptor",
         stability="stable",
         summary="Focused registry validation fixture.",
@@ -151,8 +149,10 @@ def test_frozen_census_exactly_matches_every_public_class_identity() -> None:
     for cls, exported_paths in exports.values():
         contract = public_type_contract(cls)
         resolved_paths.add(contract.canonical_path)
-        supported_paths = {contract.canonical_path, *contract.aliases}
-        assert exported_paths <= supported_paths, (contract, exported_paths)
+        assert exported_paths == {contract.canonical_path}, (
+            contract,
+            exported_paths,
+        )
         for path in exported_paths:
             assert _resolve(path) is cls
     assert resolved_paths == set(PUBLIC_TYPE_CONTRACTS)
@@ -207,6 +207,14 @@ def test_representation_envelopes_adapt_the_authoritative_objects() -> None:
         assert sceneio.representation_contract(path) is specialized
 
 
+def test_public_classes_have_resolvable_definition_identities() -> None:
+    for cls, _ in _exported_class_paths().values():
+        definition: object = importlib.import_module(cls.__module__)
+        for part in cls.__qualname__.split("."):
+            definition = getattr(definition, part)
+        assert definition is cls
+
+
 def test_non_representation_contracts_match_runtime_surface() -> None:
     procedure_roles = {
         "sceneio.mapping.MapperTraits": "traits",
@@ -236,9 +244,9 @@ def test_non_representation_contracts_match_runtime_surface() -> None:
                 assert member.semantics
 
         canonical_cls = _resolve(contract.canonical_path)
-        for alias in (*contract.aliases, *contract.implementation_paths):
-            assert _resolve(alias) is canonical_cls
-            assert public_type_contract(alias) is contract
+        for implementation_path in contract.implementation_paths:
+            assert _resolve(implementation_path) is canonical_cls
+            assert public_type_contract(implementation_path) is contract
         assert public_type_contract(canonical_cls) is contract
         assert contract.procedure_role == procedure_roles.get(path)
 
@@ -387,7 +395,7 @@ def test_vocabulary_contracts_preserve_exact_runtime_values() -> None:
     assert public_type_contract(sceneio.formats.FormatSpec).kind == "vocabulary"
 
 
-def test_lookup_canonical_alias_class_instance_and_short_name_rules() -> None:
+def test_lookup_canonical_implementation_class_instance_and_short_name_rules() -> None:
     contract = PUBLIC_TYPE_CONTRACTS["sceneio.Point3DRecord"]
     value = sceneio.Point3DRecord(7, (1.0, 2.0, 3.0), (4, 5, 6), 0)
     assert sceneio.public_type_contract is public_type_contract
@@ -397,15 +405,14 @@ def test_lookup_canonical_alias_class_instance_and_short_name_rules() -> None:
     assert public_type_contract("Point3DRecord") is contract
     assert public_type_contract(sceneio.Point3DRecord) is contract
     assert public_type_contract(value) is contract
-    assert not PUBLIC_TYPE_ALIASES
     _validate_runtime_identities()
 
-    wrong_alias = dataclasses.replace(
+    wrong_implementation = dataclasses.replace(
         contract,
-        aliases=("sceneio.SceneGraph",),
+        implementation_paths=("sceneio.SceneGraph",),
     )
     with pytest.raises(ValueError, match="does not resolve to canonical identity"):
-        _validate_runtime_identities((wrong_alias,))
+        _validate_runtime_identities((wrong_implementation,))
 
     assert public_type_contract("DepthMap") is PUBLIC_TYPE_CONTRACTS[
         "sceneio.DepthMap"
@@ -454,11 +461,17 @@ def test_model_and_registry_reject_malformed_contracts() -> None:
             kind="procedure_value",
         )
 
-    first = _minimal_descriptor("sceneio.ContractFixtureA", aliases=("sceneio.Shared",))
-    second = _minimal_descriptor("sceneio.ContractFixtureB", aliases=("sceneio.Shared",))
+    first = _minimal_descriptor(
+        "sceneio.ContractFixtureA",
+        implementation_paths=("sceneio.Shared",),
+    )
+    second = _minimal_descriptor(
+        "sceneio.ContractFixtureB",
+        implementation_paths=("sceneio.Shared",),
+    )
     with pytest.raises(ValueError, match="resolves to both"):
         _build_path_index((first, second))
-    duplicate = dataclasses.replace(first, aliases=())
+    duplicate = dataclasses.replace(first, implementation_paths=())
     with pytest.raises(ValueError, match="duplicate canonical"):
         _build_path_index((duplicate, duplicate))
 
@@ -468,7 +481,7 @@ def test_model_and_registry_reject_malformed_contracts() -> None:
     )
     indexes = _build_path_index((invalid_relation,))
     with pytest.raises(ValueError, match="unknown contains relation target"):
-        _validate_catalog((invalid_relation,), indexes[2])
+        _validate_catalog((invalid_relation,), indexes[1])
 
     representation = PUBLIC_TYPE_CONTRACTS["sceneio.SceneGraph"]
     mismatched = dataclasses.replace(
@@ -477,7 +490,7 @@ def test_model_and_registry_reject_malformed_contracts() -> None:
     )
     indexes = _build_path_index((mismatched,))
     with pytest.raises(ValueError, match="specialized contract key differs"):
-        _validate_catalog((mismatched,), indexes[2])
+        _validate_catalog((mismatched,), indexes[1])
 
 
 def test_contract_models_and_public_mappings_are_immutable() -> None:
@@ -490,8 +503,7 @@ def test_contract_models_and_public_mappings_are_immutable() -> None:
         BUILTIN_CODEC_PAYLOAD_KINDS["changed"] = object()  # type: ignore[index]
 
 
-def test_consolidated_catalog_has_no_alias_or_adapter_relations() -> None:
-    assert not PUBLIC_TYPE_ALIASES
+def test_consolidated_catalog_has_no_adapter_relations() -> None:
     assert all(
         relation.kind != "adapts_to"
         for contract in PUBLIC_TYPE_CONTRACTS.values()
@@ -534,7 +546,7 @@ def test_every_evidence_path_and_exact_node_exists() -> None:
 def test_payload_catalog_exactly_covers_builtin_registry() -> None:
     payload_ids = tuple(BUILTIN_CODEC_PAYLOAD_KINDS)
     assert payload_ids == tuple(SNAPSHOT["payloads"]["ids"])
-    assert len(payload_ids) == SNAPSHOT["payload_kind_count"] == 26
+    assert len(payload_ids) == SNAPSHOT["payload_kind_count"] == 27
     definitions = io_registry.BUILTIN_DEFINITIONS
     assert tuple(codec.id for codec in definitions) == CANONICAL_BUILTIN_IDS
     assert len(definitions) == SNAPSHOT["builtin_format_count"] == 74
@@ -548,7 +560,7 @@ def test_payload_catalog_exactly_covers_builtin_registry() -> None:
 
     for payload_id, payload in BUILTIN_CODEC_PAYLOAD_KINDS.items():
         assert (
-            tuple(codec.id for codec in definitions if codec.datatype == payload_id)
+            tuple(codec.id for codec in definitions if codec.payload_kind == payload_id)
             == payload.format_ids
         )
         for public_path in payload.public_types:
@@ -561,31 +573,37 @@ def test_payload_catalog_exactly_covers_builtin_registry() -> None:
         )
 
     for codec in definitions:
-        payload = BUILTIN_CODEC_PAYLOAD_KINDS[codec.datatype]
-        assert codec.payload_kind == codec.datatype
-        assert codec.capabilities().payload_kind == codec.datatype
+        payload = BUILTIN_CODEC_PAYLOAD_KINDS[codec.payload_kind]
+        assert not hasattr(codec, "datatype")
+        assert codec.capabilities().payload_kind == codec.payload_kind
         if codec.record is None:
             assert payload.dynamic_output
         else:
             assert public_type_contract(codec.record).canonical_path in payload.public_types
     assert {codec.id for codec in definitions if codec.record is None} == {
         "pfm",
-        "flo",
-        "tiff",
         "npy",
     }
     assert {
         payload.id for payload in BUILTIN_CODEC_PAYLOAD_KINDS.values() if payload.dynamic_output
-    } == {"depth_map", "flow", "image_or_mask_or_stack", "tensor"}
+    } == {"depth_map", "tensor"}
 
 
-def test_payload_kind_alias_does_not_change_dataclass_compatibility_shape() -> None:
+def test_payload_kind_is_the_only_codec_payload_field() -> None:
     codec = io_registry.BUILTIN_DEFINITIONS[0]
     capabilities = codec.capabilities()
-    assert "payload_kind" not in {field.name for field in dataclasses.fields(codec)}
-    assert "payload_kind" not in {field.name for field in dataclasses.fields(capabilities)}
-    assert "payload_kind=" not in repr(codec)
-    assert "payload_kind=" not in repr(capabilities)
+    assert "payload_kind" in {field.name for field in dataclasses.fields(codec)}
+    assert "payload_kind" in {
+        field.name for field in dataclasses.fields(capabilities)
+    }
+    assert "datatype" not in {field.name for field in dataclasses.fields(codec)}
+    assert "datatype" not in {
+        field.name for field in dataclasses.fields(capabilities)
+    }
+    assert "payload_kind=" in repr(codec)
+    assert "payload_kind=" in repr(capabilities)
+    assert not hasattr(codec, "datatype")
+    assert not hasattr(capabilities, "datatype")
 
 
 def test_builtin_payload_validation_is_closed_but_runtime_extensions_remain_open(
@@ -593,7 +611,7 @@ def test_builtin_payload_validation_is_closed_but_runtime_extensions_remain_open
 ) -> None:
     invalid = dataclasses.replace(
         io_registry.BUILTIN_DEFINITIONS[0],
-        datatype="vendor.external_payload",
+        payload_kind="vendor.external_payload",
     )
     invalid_definitions = (invalid, *io_registry.BUILTIN_DEFINITIONS[1:])
     with pytest.raises(ValueError, match="undeclared payload kind"):
@@ -635,13 +653,13 @@ def test_builtin_payload_validation_is_closed_but_runtime_extensions_remain_open
     with pytest.raises(ValueError, match="assigned to multiple payload kinds"):
         _validate_payload_contracts(io_registry.BUILTIN_DEFINITIONS)
 
-    extension = io_registry.Codec(
+    extension = sceneio.Codec(
         id="test_external_payload_contract",
         extensions=(".external-contract",),
         read=lambda path: path,
         write=None,
         record=None,
-        datatype="vendor.external_payload",
+        payload_kind="vendor.external_payload",
     )
     try:
         assert io_registry.register(extension) is extension
@@ -655,7 +673,7 @@ def test_catalog_serialization_is_detached_plain_and_process_deterministic() -> 
     payload = catalog_dict()
     assert payload["contract_schema_version"] == 2
     assert len(payload["contracts"]) == 131
-    assert len(payload["builtin_codec_payload_kinds"]) == 26
+    assert len(payload["builtin_codec_payload_kinds"]) == 27
 
     def visit(value: object) -> None:
         assert not inspect.isclass(value)

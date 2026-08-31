@@ -16,7 +16,7 @@ def build_splat_codecs(
     _sog_writer,
     _sog_point_reader,
 ) -> tuple[Codec, ...]:
-    """Build the splat family with facade-owned SOG path adapters."""
+    """Build the splat family with registry-owned SOG path adapters."""
 
     return (
         Codec(
@@ -25,7 +25,7 @@ def build_splat_codecs(
             _mmap_reader(_core.read_gaussian_ply),
             _file_sink_writer(_core.write_gaussian_ply),
             record=_core.GaussianCloud,
-            datatype="splat",
+            payload_kind="splat",
             magic=(b"ply",),
             read_points=_mmap_selector_reader(
                 _core.read_gaussian_ply_points
@@ -37,7 +37,7 @@ def build_splat_codecs(
             _mmap_reader(_core.read_compressed_ply),
             _file_sink_writer(_core.write_compressed_ply),
             record=_core.GaussianCloud,
-            datatype="splat",
+            payload_kind="splat",
             magic=(b"ply",),
             read_points=_mmap_selector_reader(
                 _core.read_compressed_ply_points
@@ -66,7 +66,7 @@ def build_splat_codecs(
             _sog_reader,
             _sog_writer,
             record=_core.GaussianCloud,
-            datatype="splat",
+            payload_kind="splat",
             filenames=("meta.json",),
             is_directory=True,
             dir_marker="meta.json",
@@ -98,7 +98,7 @@ def build_splat_codecs(
             _mmap_reader(_core.read_ksplat),
             _file_sink_writer(_core.write_ksplat),
             record=_core.GaussianCloud,
-            datatype="splat",
+            payload_kind="splat",
             read_points=_mmap_selector_reader(_core.read_ksplat_points),
             lossy=True,
             supported_features=(
@@ -124,7 +124,7 @@ def build_splat_codecs(
             _mmap_reader(_core.read_spz),
             _file_sink_writer(_core.write_spz),
             record=_core.GaussianCloud,
-            datatype="splat",
+            payload_kind="splat",
             magic=(b"\x1f\x8b", b"NGSP"),
             lossy=True,
             supported_features=(
@@ -135,14 +135,14 @@ def build_splat_codecs(
             ),
         ),
         # antimatter15 .splat is headerless, so detection is extension-only.
-        # It is the web-viewer sibling of SPZ; both expose the splat datatype.
+        # It is the web-viewer sibling of SPZ; both expose the splat payload_kind.
         Codec(
             "splat",
             (".splat",),
             _mmap_reader(_core.read_splat),
             _file_sink_writer(_core.write_splat),
             record=_core.GaussianCloud,
-            datatype="splat",
+            payload_kind="splat",
             read_points=_mmap_selector_reader(_core.read_splat_points),
             lossy=True,
             supported_features=("rgb8", "opacity8", "scale8", "quaternion8"),

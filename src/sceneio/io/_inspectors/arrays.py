@@ -18,13 +18,13 @@ from sceneio.io._inspectors.common import (
 from sceneio.io._inspectors.model import ArrayInspection, Inspection
 
 
-def inspect_pfm(path: Path, datatype: str) -> Inspection:
+def inspect_pfm(path: Path, payload_kind: str) -> Inspection:
     height, width, channels, little_endian = _compiled_buffer_inspect(
         path, _core._inspect_pfm
     )
     return _image(
         "pfm",
-        datatype,
+        payload_kind,
         path.stat().st_size,
         height,
         width,
@@ -57,13 +57,13 @@ def npy_header(stream: BinaryIO) -> tuple[tuple[int, ...], str, bool]:
     return tuple(shape), dtype, fortran
 
 
-def inspect_npy(path: Path, datatype: str) -> Inspection:
+def inspect_npy(path: Path, payload_kind: str) -> Inspection:
     shape, dtype, fortran = _compiled_buffer_inspect(path, _core._inspect_npy)
     shape = tuple(shape)
     count = math.prod(shape)
     return Inspection(
         "npy",
-        datatype,
+        payload_kind,
         path.stat().st_size,
         shape=shape,
         dtype=dtype,
@@ -72,7 +72,7 @@ def inspect_npy(path: Path, datatype: str) -> Inspection:
     )
 
 
-def inspect_npz(path: Path, datatype: str) -> Inspection:
+def inspect_npz(path: Path, payload_kind: str) -> Inspection:
     arrays = []
     with path.open("rb") as raw, zipfile.ZipFile(path) as archive:
         seen = set()
@@ -125,14 +125,14 @@ def inspect_npz(path: Path, datatype: str) -> Inspection:
             arrays.append(ArrayInspection(name, shape, dtype))
     return Inspection(
         "npz",
-        datatype,
+        payload_kind,
         path.stat().st_size,
         count=len(arrays),
         arrays=tuple(arrays),
     )
 
 
-def inspect_safetensors(path: Path, datatype: str) -> Inspection:
+def inspect_safetensors(path: Path, payload_kind: str) -> Inspection:
     arrays_raw, attrs = _compiled_buffer_inspect(
         path, _core._inspect_safetensors
     )
@@ -142,7 +142,7 @@ def inspect_safetensors(path: Path, datatype: str) -> Inspection:
     )
     return Inspection(
         "safetensors",
-        datatype,
+        payload_kind,
         path.stat().st_size,
         count=len(arrays),
         arrays=arrays,
@@ -150,7 +150,7 @@ def inspect_safetensors(path: Path, datatype: str) -> Inspection:
     )
 
 
-def inspect_flo(path: Path, datatype: str) -> Inspection:
+def inspect_flo(path: Path, payload_kind: str) -> Inspection:
     file_size = path.stat().st_size
     with path.open("rb") as stream:
         header = _exact(stream, 12, "FLO header")
@@ -160,16 +160,30 @@ def inspect_flo(path: Path, datatype: str) -> Inspection:
     expected = 12 + width * height * 2 * 4
     if width < 1 or height < 1 or expected > file_size:
         raise ValueError("flo: invalid dimensions or payload size")
-    return _image("flo", datatype, file_size, height, width, 2, "float32")
+    return _image(
+        "flo",
+        payload_kind,
+        file_size,
+        height,
+        width,
+        2,
+        "float32",
+        component_order="uv",
+        u_axis="right",
+        v_axis="down",
+        row_order="top_to_bottom",
+        unit="pixels",
+        invalid_policy="component_abs_gt_1e9",
+    )
 
 
-def inspect_dmb(path: Path, datatype: str) -> Inspection:
+def inspect_dmb(path: Path, payload_kind: str) -> Inspection:
     height, width, channels, image_type = _compiled_buffer_inspect(
         path, _core._inspect_dmb
     )
     return Inspection(
         "dmb",
-        datatype,
+        payload_kind,
         path.stat().st_size,
         shape=(height, width),
         dtype="float32",

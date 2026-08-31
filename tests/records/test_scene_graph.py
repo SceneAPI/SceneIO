@@ -133,7 +133,7 @@ def test_scene_graph_public_surface_and_typed_payloads():
     assert scene.node_resets_transform_stack.tolist() == [0, 1, 0, 0, 0]
     assert scene.node_purpose[3] == "guide"
     assert scene.node_semantic_labels[2] == "vegetation"
-    assert scene.mesh_at(0).num_faces == 1
+    assert scene.mesh_primitive_at(0).num_faces == 1
     assert scene.point_cloud_at(0).num_points == 1
     assert scene.gaussian_cloud_at(0).num_gaussians == 1
     assert scene.volume_at(0).grid_name == "density"
@@ -181,7 +181,7 @@ def test_scene_graph_public_surface_and_typed_payloads():
         meshes=[_mesh(material=0)],
         materials=_core.material_set(["surface"]),
     )
-    assert material_scene.mesh_at(0).primitive_materials.tolist() == [0]
+    assert material_scene.mesh_primitive_at(0).primitive_materials.tolist() == [0]
     assert material_scene.materials.names == ["surface"]
 
 
@@ -191,7 +191,7 @@ def test_scene_graph_numeric_views_and_nested_payload_outlive_parent_name():
     transforms = scene.node_local_transforms
     transforms_again = scene.node_local_transforms
     resets = scene.node_resets_transform_stack
-    mesh = scene.mesh_at(0)
+    mesh = scene.mesh_primitive_at(0)
     instances = scene.instance_set_at(0)
     del scene
     gc.collect()
@@ -239,7 +239,7 @@ def test_scene_graph_factory_owns_array_and_payload_copies():
     mesh.positions[0, 0] = 9
 
     assert scene.node_local_transforms[0, 0, 0] == 1
-    assert scene.mesh_at(0).positions[0, 0] == 0
+    assert scene.mesh_primitive_at(0).positions[0, 0] == 0
 
 
 @pytest.mark.parametrize("operation", [copy.copy, copy.deepcopy, pickle.dumps])

@@ -413,7 +413,7 @@ def test_public_detect_read_write_inspect_and_capabilities(tmp_path):
     _assert_mesh_equal(sceneio.read(source), _core.read_obj(obj, mtl))
     info = sceneio.inspect(source)
     assert info.format == "obj"
-    assert info.datatype == "mesh"
+    assert info.payload_kind == "mesh"
     assert info.shape == (5, 3)
     assert info.dtype == "float32"
     assert info.count == 5

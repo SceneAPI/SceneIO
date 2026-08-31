@@ -3,9 +3,9 @@
 Measures, per codec, encode (write) + decode (read) throughput (MB/s over the raw
 payload) and peak Python allocation (tracemalloc), for sceneio._core vs the oracle
 library where one exists, on representative payloads for all 74 codecs. Read
-measurements retain the legacy whole-file bytes/copy-decode path beside the
+measurements retain the whole-file bytes/copy-decode baseline beside the
 public registry mmap path, so their peak delta captures the input copy O1
-removes and, for NPY/FLO, the decoded-array copy O2 removes. Write measurements
+removes and, for NPY, the decoded-array copy O2 removes. Write measurements
 retain the in-memory bytes encoder beside the public file sink, so their peak
 delta captures the output-sized Python allocation O3 removes. Ordinary runs
 render unavailable comparisons as "-"; strict qualification requires every
@@ -2520,66 +2520,7 @@ def _run_benchmark(args, tmp):
                     inspect_rss / 1e6,
                 )
             )
-            if s.id == "flo":
-                typed_record = _core.flow_field(rec)
-                typed_path = os.path.join(tmp, "flo-typed.bin")
-
-                def _typed_read(fp=fp):
-                    if args.cold_cache:
-                        _evict_file_cache(fp)
-                    return sceneio.read_flow(fp, format="flo")
-
-                def _typed_write(
-                    destination=typed_path,
-                    value=typed_record,
-                ):
-                    return sceneio.write_flow(
-                        value, destination, format="flo"
-                    )
-
-                def _typed_inspect(fp=fp):
-                    if args.cold_cache:
-                        _evict_file_cache(fp)
-                    return sceneio.inspect_flow(fp, format="flo")
-
-                typed_read_time, typed_read_peak = _measure(
-                    _typed_read, args.runs
-                )
-                typed_read_rss = _measure_in_process_rss(_typed_read)
-                typed_write_time, typed_write_peak = _measure(
-                    _typed_write, args.runs
-                )
-                typed_write_rss = _measure_in_process_rss(_typed_write)
-                typed_inspect_time, typed_inspect_peak = _measure(
-                    _typed_inspect, args.runs
-                )
-                typed_inspect_rss = _measure_in_process_rss(_typed_inspect)
-                typed_decoded = _typed_read()
-                if not np.array_equal(
-                    np.asarray(typed_decoded.vectors), rec, equal_nan=True
-                ):
-                    raise AssertionError("typed FLO values differ")
-                if Path(typed_path).read_bytes() != enc:
-                    raise AssertionError("typed FLO sink bytes differ")
-                typed_info = _typed_inspect()
-                if (
-                    typed_info.shape != rec.shape
-                    or typed_info.metadata.get("component_order") != "uv"
-                ):
-                    raise AssertionError("typed FLO inspection differs")
-                typed_adapter_metrics = {
-                    "format": "flo",
-                    "read_mbps": pmb / typed_read_time,
-                    "read_peak_mb": typed_read_peak / 1e6,
-                    "read_rss_mb": typed_read_rss / 1e6,
-                    "write_mbps": pmb / typed_write_time,
-                    "write_peak_mb": typed_write_peak / 1e6,
-                    "write_rss_mb": typed_write_rss / 1e6,
-                    "inspect_ms": typed_inspect_time * 1000,
-                    "inspect_peak_mb": typed_inspect_peak / 1e6,
-                    "inspect_rss_mb": typed_inspect_rss / 1e6,
-                }
-            elif s.id == "pfm":
+            if s.id == "pfm":
                 depth_encoding = sceneio.DepthEncoding(
                     "meters", 1.0, "none"
                 )

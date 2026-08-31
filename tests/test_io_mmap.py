@@ -106,6 +106,18 @@ def _fingerprint(value):
                 else None
             ),
         )
+    elif isinstance(value, _core.FlowField):
+        fields = (
+            value.height,
+            value.width,
+            value.component_order,
+            value.u_axis,
+            value.v_axis,
+            value.row_order,
+            value.unit,
+            value.invalid_policy,
+            _array_fingerprint(value.vectors),
+        )
     elif isinstance(value, _core.NormalMap):
         fields = (
             value.height,

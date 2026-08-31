@@ -74,7 +74,7 @@ def _next_tokens(
         return result
 
 
-def inspect_netpbm(path: Path, datatype: str) -> Inspection:
+def inspect_netpbm(path: Path, payload_kind: str) -> Inspection:
     magic, width_raw, height_raw, maxval_raw = _next_tokens(
         path, 4, extended_whitespace=True
     )
@@ -88,7 +88,7 @@ def inspect_netpbm(path: Path, datatype: str) -> Inspection:
     channels = 1 if magic in {b"P2", b"P5"} else 3
     return _image(
         "netpbm",
-        datatype,
+        payload_kind,
         path.stat().st_size,
         height,
         width,
@@ -99,7 +99,7 @@ def inspect_netpbm(path: Path, datatype: str) -> Inspection:
     )
 
 
-def inspect_png(path: Path, datatype: str) -> Inspection:
+def inspect_png(path: Path, payload_kind: str) -> Inspection:
     file_size = path.stat().st_size
     with path.open("rb") as stream:
         if _exact(stream, 8, "PNG signature") != b"\x89PNG\r\n\x1a\n":
@@ -198,7 +198,7 @@ def inspect_png(path: Path, datatype: str) -> Inspection:
         raise ValueError("png: unsupported color type")
     return _image(
         "png",
-        datatype,
+        payload_kind,
         file_size,
         height,
         width,
@@ -212,7 +212,7 @@ _JPEG_SOF = {0xC0, 0xC1, 0xC2}
 _JPEG_ALL_SOF = set(range(0xC0, 0xD0)) - {0xC4, 0xC8, 0xCC}
 
 
-def inspect_jpeg(path: Path, datatype: str) -> Inspection:
+def inspect_jpeg(path: Path, payload_kind: str) -> Inspection:
     file_size = path.stat().st_size
     with path.open("rb") as stream:
         if _exact(stream, 2, "JPEG SOI") != b"\xff\xd8":
@@ -273,7 +273,7 @@ def inspect_jpeg(path: Path, datatype: str) -> Inspection:
                 height, width, channels, precision, progressive = image_info
                 return _image(
                     "jpeg",
-                    datatype,
+                    payload_kind,
                     file_size,
                     height,
                     width,
@@ -284,7 +284,7 @@ def inspect_jpeg(path: Path, datatype: str) -> Inspection:
                 )
 
 
-def inspect_bmp(path: Path, datatype: str) -> Inspection:
+def inspect_bmp(path: Path, payload_kind: str) -> Inspection:
     (
         height,
         width,
@@ -296,7 +296,7 @@ def inspect_bmp(path: Path, datatype: str) -> Inspection:
     ) = _compiled_buffer_inspect(path, _core._inspect_bmp)
     return _image(
         "bmp",
-        datatype,
+        payload_kind,
         path.stat().st_size,
         height,
         width,
@@ -309,7 +309,7 @@ def inspect_bmp(path: Path, datatype: str) -> Inspection:
     )
 
 
-def inspect_tga(path: Path, datatype: str) -> Inspection:
+def inspect_tga(path: Path, payload_kind: str) -> Inspection:
     (
         height,
         width,
@@ -321,7 +321,7 @@ def inspect_tga(path: Path, datatype: str) -> Inspection:
     ) = _compiled_buffer_inspect(path, _core._inspect_tga)
     return _image(
         "tga",
-        datatype,
+        payload_kind,
         path.stat().st_size,
         height,
         width,
@@ -337,7 +337,7 @@ def inspect_tga(path: Path, datatype: str) -> Inspection:
 _HDR_RESOLUTION = re.compile(rb"^-Y\s+(\d+)\s+\+X\s+(\d+)\s*$")
 
 
-def inspect_hdr(path: Path, datatype: str) -> Inspection:
+def inspect_hdr(path: Path, payload_kind: str) -> Inspection:
     with path.open("rb") as stream:
         signature = stream.readline(_HEADER_LIMIT + 1).rstrip(b"\r\n")
         if signature not in {b"#?RADIANCE", b"#?RGBE"}:
@@ -362,7 +362,7 @@ def inspect_hdr(path: Path, datatype: str) -> Inspection:
         height, width = (int(value) for value in match.groups())
         return _image(
             "hdr",
-            datatype,
+            payload_kind,
             path.stat().st_size,
             height,
             width,
@@ -383,7 +383,7 @@ def _cstr(stream: BinaryIO, what: str, limit: int = 4096) -> bytes:
     raise ValueError(f"{what} is too long")
 
 
-def inspect_exr(path: Path, datatype: str) -> Inspection:
+def inspect_exr(path: Path, payload_kind: str) -> Inspection:
     with path.open("rb") as stream:
         stream.seek(0, 2)
         file_size = stream.tell()
@@ -472,7 +472,7 @@ def inspect_exr(path: Path, datatype: str) -> Inspection:
         raise ValueError("exr: unsupported channel set")
     return _image(
         "exr",
-        datatype,
+        payload_kind,
         file_size,
         height,
         width,
@@ -487,7 +487,7 @@ def inspect_exr(path: Path, datatype: str) -> Inspection:
     )
 
 
-def inspect_webp(path: Path, datatype: str) -> Inspection:
+def inspect_webp(path: Path, payload_kind: str) -> Inspection:
     file_size = path.stat().st_size
     with path.open("rb") as stream:
         header = _exact(stream, 12, "WebP RIFF header")
@@ -558,7 +558,7 @@ def inspect_webp(path: Path, datatype: str) -> Inspection:
             height, width = canvas
         return _image(
             "webp",
-            datatype,
+            payload_kind,
             file_size,
             height,
             width,

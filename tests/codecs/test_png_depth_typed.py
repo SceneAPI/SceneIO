@@ -292,7 +292,7 @@ def test_public_read_write_inspect_and_raw_api_unchanged(tmp_path):
     assert raw.dtype == "uint16" and raw.channels == 1
     np.testing.assert_array_equal(raw.pixels, values)
     assert info.format == "png"
-    assert info.datatype == "depth_map"
+    assert info.payload_kind == "depth_map"
     assert info.shape == values.shape
     assert info.dtype == "float32"
     assert info.channels == 1

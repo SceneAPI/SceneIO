@@ -1,6 +1,6 @@
 # TIFF collection selection benchmark
 
-FC4 has a dedicated benchmark because the typed collection selectors do not
+FC4 has a dedicated benchmark because compound collection selectors do not
 fit the generic one-selector codec benchmark. The executable source is
 [`bench/io_bench/tiff_collections.py`](../bench/io_bench/tiff_collections.py).
 
@@ -27,14 +27,14 @@ three timed runs plus separate allocation/RSS passes:
 
 | operation | median ms | traced peak MB | RSS growth MB |
 |---|---:|---:|---:|
-| typed selected page + window | 2.279 | 1.146 | 1.245 |
+| selected page + window | 2.279 | 1.146 | 1.245 |
 | direct tifffile full decode + slice | 67.086 | 84.602 | 83.542 |
-| typed full collection read | 76.818 | 84.604 | 134.619 |
-| typed metadata-only inspection | 0.674 | 0.179 | 0.020 |
+| full collection read | 76.818 | 84.604 | 134.619 |
+| metadata-only inspection | 0.674 | 0.179 | 0.020 |
 
-Against the full-decode-and-slice control, the selected typed read reduced
+Against the full-decode-and-slice control, the selected read reduced
 traced peak allocation by 98.65% (1.35% of the control peak). Exact array
-equality is checked for the full typed read, selected typed read, and provider
+equality is checked for the full collection read, selected read, and provider
 control before a result is emitted. The executable test also runs a small
 fixture in the normal suite.
 
@@ -61,9 +61,9 @@ after a registry-only warm-up:
 
 | operation | median fresh-process RSS growth |
 |---|---:|
-| typed full collection read | 139,366,400 bytes |
-| typed selected page + window | 19,849,216 bytes |
-| typed metadata-only inspection | 4,300,800 bytes |
+| full collection read | 139,366,400 bytes |
+| selected page + window | 19,849,216 bytes |
+| metadata-only inspection | 4,300,800 bytes |
 
 The bounded selection uses 14.24% of full-read resident growth and inspection
 uses 3.09%. All samples use the Windows `psutil_peak_wset` lifetime-peak

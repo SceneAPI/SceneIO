@@ -2,10 +2,10 @@ schema_version = 2
 baseline_identity_count = 126
 catalog_identity_count = 131
 representation_count = 90
-payload_kind_count = 26
+payload_kind_count = 27
 builtin_format_count = 74
-catalog_json_bytes = 175709
-catalog_json_sha256 = "c4aca35317a08c308f3310843c57c34632a8ad2ab8123d04d0ebf3b56608e479"
+catalog_json_bytes = 174131
+catalog_json_sha256 = "e99e750afe329bf307136f038c93ea4e46b7dd951a50ab395a8875d635d7bef1"
 baseline_namespaces = [
   "sceneio",
   "sceneio.colmap",
@@ -192,7 +192,6 @@ ids = [
   "feature_set",
   "flow",
   "image",
-  "image_or_mask_or_stack",
   "image_sequence",
   "match_graph",
   "mesh",
@@ -204,7 +203,9 @@ ids = [
   "point_visibility",
   "pose_graph",
   "posed_views",
+  "raster_collection",
   "rtmv_dataset",
+  "scan_set",
   "sparse_model",
   "sparse_volume",
   "splat",
@@ -233,7 +234,6 @@ format_ids = [
   "exr",
   "webp",
   "avif",
-  "tiff",
   "y4m",
   "webm",
   "theora",
@@ -261,13 +261,14 @@ format_ids = [
   "pts",
   "las",
   "laz",
-  "e57",
   "colmap_fused_visibility",
   "g2o",
   "transforms_json",
   "tum",
   "kitti",
+  "tiff",
   "rtmv",
+  "e57",
   "colmap_sparse",
   "colmap_sparse_txt",
   "bundler",

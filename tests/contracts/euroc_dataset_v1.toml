@@ -3,7 +3,7 @@ contract_date = "2026-08-03"
 format_id = "euroc_dataset"
 profile = "bounded EuRoC MAV ASL directory"
 container_kind = "multi_file"
-datatype = "visual_inertial_dataset"
+payload_kind = "visual_inertial_dataset"
 reference = "EuRoC MAV Dataset ASL sensor.yaml and data.csv schemas"
 
 [layout]

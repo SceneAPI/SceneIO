@@ -1,9 +1,4 @@
-"""Bounded computer-vision TIFF adapter backed by upstream ``tifffile``.
-
-The provider handles classic TIFF and BigTIFF directly from file paths. The
-legacy projection intentionally supports one unambiguous image/mask/stack;
-the additive typed API preserves bounded CV series and homogeneous pyramids.
-"""
+"""Bounded TIFF raster-collection adapter backed by upstream ``tifffile``."""
 
 from __future__ import annotations
 
@@ -103,33 +98,6 @@ def _classify_raster(
     raise ValueError(f"TIFF: unsupported or ambiguous axes {axes!r} and shape {shape!r}")
 
 
-def _validate_file_layout(tiff):
-    if len(tiff.series) != 1:
-        raise ValueError("TIFF: exactly one image series is supported")
-    series = tiff.series[0]
-    if len(series.levels) != 1:
-        raise ValueError("TIFF: pyramidal image series are unsupported")
-    axes = str(series.axes)
-    shape = tuple(int(value) for value in series.shape)
-    dtype = np.dtype(series.dtype)
-    if not series.pages:
-        raise ValueError("TIFF: image series has no pages")
-    for page in series.pages:
-        page = _metadata_page(page)
-        orientation = page.tags.get("Orientation")
-        if orientation is not None and int(orientation.value) != 1:
-            raise ValueError("TIFF: only top-left orientation is supported")
-        planar = page.planarconfig
-        if planar is not None and int(planar) != 1:
-            raise ValueError("TIFF: planar-separate samples are unsupported")
-    kind, _normalized_axes, channels = _classify_raster(axes, shape, dtype)
-    return series, axes, shape, dtype, kind, channels
-
-
-def _image_metadata(series, channels: int) -> tuple[str, str]:
-    return _image_metadata_from_page(_metadata_page(series.pages[0]), channels)
-
-
 def _image_metadata_from_page(page, channels: int) -> tuple[str, str]:
     photometric = int(page.photometric)
     if channels == 1:
@@ -146,26 +114,6 @@ def _image_metadata_from_page(page, channels: int) -> tuple[str, str]:
     if extras == (2,):
         return "srgb", "straight"
     raise ValueError("TIFF image: RGBA samples require associated or unassociated alpha")
-
-
-def read_tiff(path: str | Path):
-    """Read one bounded CV TIFF series."""
-
-    tifffile = _require_tifffile()
-    with tifffile.TiffFile(path) as tiff:
-        series, axes, _shape, _dtype, kind, channels = _validate_file_layout(tiff)
-        if kind == "image":
-            color_space, alpha_mode = _image_metadata(series, channels)
-        decoded = _native_c_array(series.asarray(), "TIFF")
-    if kind == "mask":
-        return Mask(decoded)
-    if kind == "stack":
-        return _core.tensor_dict({"pages": decoded}, attrs={"axes": axes})
-    return _core.image(
-        decoded,
-        color_space=color_space,
-        alpha_mode=alpha_mode,
-    )
 
 
 def _image_write_args(image) -> tuple[np.ndarray, dict[str, object]]:
@@ -209,90 +157,6 @@ def _stack_write_args(tensors) -> tuple[np.ndarray, dict[str, object]]:
         "photometric": "minisblack",
         "metadata": {"axes": attrs["axes"]},
     }
-
-
-def write_tiff(
-    value,
-    path: str | Path,
-    *,
-    bigtiff: bool | None = None,
-) -> None:
-    """Write one Image, Mask, or bounded grayscale TensorDict stack."""
-
-    if isinstance(value, _core.Image):
-        array, kwargs = _image_write_args(value)
-    elif isinstance(value, Mask):
-        array = _native_c_array(value.mask, "TIFF mask")
-        kwargs = {"photometric": "minisblack"}
-    elif isinstance(value, _core.TensorDict):
-        array, kwargs = _stack_write_args(value)
-    else:
-        raise TypeError("TIFF: expected an Image, Mask, or TensorDict stack")
-
-    tifffile = _require_tifffile()
-    destination = Path(path)
-    destination.parent.mkdir(parents=False, exist_ok=True)
-    descriptor, temporary_name = tempfile.mkstemp(
-        prefix=f".{destination.name}.",
-        suffix=".tmp",
-        dir=destination.parent,
-    )
-    os.close(descriptor)
-    temporary = Path(temporary_name)
-    try:
-        tifffile.imwrite(
-            temporary,
-            array,
-            bigtiff=bigtiff,
-            software="SceneIO",
-            **kwargs,
-        )
-        os.replace(temporary, destination)
-    finally:
-        with suppress(FileNotFoundError):
-            temporary.unlink()
-
-
-def inspect_tiff(path: str | Path) -> Inspection:
-    """Inspect bounded TIFF metadata without decoding sample payloads."""
-
-    tifffile = _require_tifffile()
-    source = Path(path)
-    with tifffile.TiffFile(source) as tiff:
-        series, axes, shape, dtype, kind, channels = _validate_file_layout(tiff)
-        if kind == "image":
-            _image_metadata(series, channels)
-        page_count = len(series.pages)
-        bigtiff = bool(tiff.is_bigtiff)
-    if kind == "stack":
-        return Inspection(
-            format="tiff",
-            datatype="image_stack",
-            byte_size=source.stat().st_size,
-            shape=shape,
-            dtype=dtype.name,
-            count=shape[0],
-            channels=1,
-            arrays=(ArrayInspection("pages", shape, dtype.name),),
-            metadata={
-                "axes": axes,
-                "bigtiff": bigtiff,
-                "page_count": page_count,
-            },
-        )
-    return Inspection(
-        format="tiff",
-        datatype="mask" if kind == "mask" else "image",
-        byte_size=source.stat().st_size,
-        shape=shape,
-        dtype=dtype.name,
-        channels=channels,
-        metadata={
-            "axes": axes,
-            "bigtiff": bigtiff,
-            "page_count": page_count,
-        },
-    )
 
 
 @dataclass(frozen=True)
@@ -610,7 +474,7 @@ def _level_payload(info: _CollectionLevel, array: np.ndarray):
     )
 
 
-def read_tiff_collection(
+def read_tiff(
     path: str | Path,
     *,
     series_index: int | None = None,
@@ -696,7 +560,7 @@ def _inspection_level(info: _CollectionLevel) -> dict[str, object]:
     }
 
 
-def inspect_tiff_collection(path: str | Path) -> Inspection:
+def inspect_tiff(path: str | Path) -> Inspection:
     """Inspect every supported series and level without decoding samples."""
 
     tifffile = _require_tifffile()
@@ -716,7 +580,7 @@ def inspect_tiff_collection(path: str | Path) -> Inspection:
     )
     return Inspection(
         format="tiff",
-        datatype="raster_collection",
+        payload_kind="raster_collection",
         byte_size=source.stat().st_size,
         count=len(infos),
         arrays=arrays,
@@ -822,7 +686,7 @@ def _assert_reopened_collection(
                 raise RuntimeError("TIFF collection reopen changed raster topology")
 
 
-def write_tiff_collection(
+def write_tiff(
     value: RasterCollection,
     path: str | Path,
     *,
@@ -1527,7 +1391,7 @@ def inspect_tiff_label_map(
     )
     return Inspection(
         format="tiff",
-        datatype=f"{kind}_map",
+        payload_kind=f"{kind}_map",
         byte_size=byte_size,
         shape=shape,
         dtype=None if kind == "panoptic" else dtype,
@@ -1625,12 +1489,9 @@ def write_tiff_label_map(
 __all__ = [
     "LABEL_MAP_SCHEMA",
     "inspect_tiff",
-    "inspect_tiff_collection",
     "inspect_tiff_label_map",
     "read_tiff",
-    "read_tiff_collection",
     "read_tiff_label_map",
     "write_tiff",
-    "write_tiff_collection",
     "write_tiff_label_map",
 ]

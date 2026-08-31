@@ -274,9 +274,6 @@ def _execute_operation(
                 )
             keywords[name] = tuple(value)
         return sceneio.read_tiff_collection(arguments["path"], **keywords)
-    if kind == "sceneio_inspect_tiff_collection":
-        arguments = _require_arguments(operation, {"path"})
-        return sceneio.inspect_tiff_collection(arguments["path"])
     if kind == "sceneio_read_partial":
         arguments = _require_arguments(
             operation,

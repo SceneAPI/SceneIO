@@ -35,7 +35,7 @@
       "sha256": "16bb9c19a1eac3e2c5b73fcb8e1769189d60c5f23f1225c29e47595696246170",
       "inspection": {
         "format": "pfm",
-        "datatype": "depth_map",
+        "payload_kind": "depth_map",
         "shape": [
           3,
           4,
@@ -55,7 +55,7 @@
       "sha256": "230e271ef7d33c5bff2a1dfa4eb30bec20465f7e497b3358ae123e922c045abd",
       "inspection": {
         "format": "npy",
-        "datatype": "tensor",
+        "payload_kind": "tensor",
         "shape": [
           3,
           4
@@ -74,7 +74,7 @@
       "sha256": "867a0a04cc1c6277cd3c56686eb5257825ef1cb8c6217afe561b986c83012722",
       "inspection": {
         "format": "npz",
-        "datatype": "tensor_dict",
+        "payload_kind": "tensor_dict",
         "shape": null,
         "dtype": null,
         "channels": null,
@@ -105,7 +105,7 @@
       "sha256": "ce982f2f8365e9183025b2dea025a88a53ba26554eb77b8dbe4e9d2786fa0015",
       "inspection": {
         "format": "safetensors",
-        "datatype": "tensor_dict",
+        "payload_kind": "tensor_dict",
         "shape": null,
         "dtype": null,
         "channels": null,
@@ -140,7 +140,7 @@
       "sha256": "7458ad0d1b63a975754361a9dc1d0716503ad21d3eec72667f84ea3f5ee87e67",
       "inspection": {
         "format": "flo",
-        "datatype": "flow",
+        "payload_kind": "flow",
         "shape": [
           3,
           4,
@@ -150,7 +150,14 @@
         "channels": 2,
         "count": null,
         "arrays": [],
-        "metadata": {}
+        "metadata": {
+          "component_order": "uv",
+          "u_axis": "right",
+          "v_axis": "down",
+          "row_order": "top_to_bottom",
+          "unit": "pixels",
+          "invalid_policy": "component_abs_gt_1e9"
+        }
       }
     },
     "dmb": {
@@ -158,7 +165,7 @@
       "sha256": "f4abdfc881498e7beb33eabdeb12b10a6640e4eb8a093e4a29396ea1706f58cb",
       "inspection": {
         "format": "dmb",
-        "datatype": "depth_map",
+        "payload_kind": "depth_map",
         "shape": [
           3,
           4

@@ -1,4 +1,4 @@
-"""Compatibility contracts for shared metadata-inspection services."""
+"""Contracts for shared metadata-inspection services."""
 
 from __future__ import annotations
 
@@ -6,7 +6,6 @@ import ast
 import inspect
 import io
 import json
-import pickle
 import subprocess
 import sys
 import typing
@@ -16,6 +15,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+import sceneio
 from sceneio import _core
 from sceneio.io import _gltf, _image_sequence, _inspection, _obj
 from sceneio.io._inspectors import calibration, common, model
@@ -73,7 +73,7 @@ def _examples():
     }
 
 
-def test_shared_inspection_types_preserve_exact_b2bda1d_contract():
+def test_shared_inspection_types_match_the_current_contract():
     contract = json.loads(CONTRACT.read_text(encoding="utf-8"))
     for name, value in _examples().items():
         value_type = type(value)
@@ -82,38 +82,15 @@ def test_shared_inspection_types_preserve_exact_b2bda1d_contract():
         assert value_type.__qualname__ == expected["qualname"]
         assert str(inspect.signature(value_type)) == expected["signature"]
         assert repr(value) == expected["repr"]
-        assert (
-            pickle.dumps(value_type, protocol=4).hex()
-            == expected["type_pickle_protocol_4_hex"]
-        )
-        if name == "ArrayInspection":
-            payload = bytes.fromhex(expected["instance_pickle_protocol_4_hex"])
-            assert pickle.dumps(value, protocol=4) == payload
-            restored = pickle.loads(payload)
-            assert type(restored) is model.ArrayInspection
-            assert restored == value
-        else:
-            outcome = expected["instance_pickle_protocol_4"]
-            with pytest.raises(
-                TypeError,
-                match=outcome["message"],
-            ):
-                pickle.dumps(value, protocol=4)
 
 
-def test_compatibility_facade_and_lower_consumers_share_exact_model_objects():
-    assert _inspection.ArrayInspection is model.ArrayInspection
-    assert _inspection.Inspection is model.Inspection
+def test_public_inspection_types_and_consumers_share_exact_model_objects():
+    assert sceneio.ArrayInspection is model.ArrayInspection
+    assert sceneio.Inspection is model.Inspection
     assert typing.get_type_hints(model.Inspection)["metadata"] == Mapping[
         str,
         model.MetadataValue,
     ]
-    assert _inspection._compiled_buffer_inspect is common._compiled_buffer_inspect
-    assert _inspection._HEADER_LIMIT is common._HEADER_LIMIT
-    assert _inspection._IMAGE_PIXEL_CAP is common._IMAGE_PIXEL_CAP
-    assert _inspection._exact is common._exact
-    assert _inspection._unsigned_decimal is common._unsigned_decimal
-    assert _inspection._image is common._image
     assert calibration.Inspection is model.Inspection
     assert _obj.Inspection is model.Inspection
     assert _gltf.Inspection is model.Inspection
@@ -129,7 +106,7 @@ def test_inspection_metadata_recursively_detaches_and_freezes_containers():
             }
         ]
     }
-    info = model.Inspection("e57", "point_scan_set", 64, metadata=source)
+    info = model.Inspection("e57", "scan_set", 64, metadata=source)
 
     source["scans"][0]["name"] = "changed"
     source["scans"].append({"name": "scan-b", "point_fields": []})
@@ -145,7 +122,7 @@ def test_inspection_metadata_recursively_detaches_and_freezes_containers():
         scans[0]["name"] = "mutated"
 
 
-def test_common_exact_and_unsigned_decimal_preserve_historical_grammar():
+def test_common_exact_and_unsigned_decimal_use_the_declared_grammar():
     assert common._exact(io.BytesIO(b"abc"), 3, "sample") == b"abc"
     with pytest.raises(ValueError, match=r"^truncated sample$"):
         common._exact(io.BytesIO(b"ab"), 3, "sample")
@@ -198,7 +175,7 @@ def test_common_image_preserves_shapes_metadata_and_dimension_limits():
 
 
 @pytest.mark.parametrize(
-    ("format_id", "datatype", "data", "expected"),
+    ("format_id", "payload_kind", "data", "expected"),
     [
         (
             "pfm",
@@ -209,22 +186,25 @@ def test_common_image_preserves_shapes_metadata_and_dimension_limits():
         (
             "flo",
             "flow",
-            _core.write_flo(np.arange(24, dtype=np.float32).reshape(3, 4, 2)),
+            _core.write_flo(
+                _core.flow_field(
+                    np.arange(24, dtype=np.float32).reshape(3, 4, 2)
+                )
+            ),
             ((3, 4, 2), 2, "float32"),
         ),
     ],
 )
-def test_non_image_family_consumers_preserve_shared_image_result(
+def test_non_image_family_consumers_return_shared_image_result(
     tmp_path,
     format_id,
-    datatype,
+    payload_kind,
     data,
     expected,
 ):
     path = tmp_path / format_id
     path.write_bytes(data)
-    inspect_format = getattr(_inspection, f"_inspect_{format_id}")
-    result = inspect_format(path, datatype)
+    result = _inspection.inspect_path(path, format_id, payload_kind)
     assert (result.shape, result.channels, result.dtype) == expected
 
 
@@ -246,7 +226,7 @@ def test_common_buffer_inspector_falls_back_for_empty_file_and_releases_path(
     renamed.unlink()
 
 
-def test_lower_inspection_modules_do_not_import_compatibility_facades():
+def test_lower_inspection_modules_do_not_import_public_facades():
     for module in (model, common, calibration):
         _assert_lower_only_imports(inspect.getsource(module))
 
@@ -260,22 +240,16 @@ def test_lower_inspection_modules_do_not_import_compatibility_facades():
             _assert_lower_only_imports(forbidden_source)
 
 
-def test_facade_reload_remains_acyclic_and_preserves_shared_identity():
+def test_inspection_dispatch_reload_remains_acyclic():
     code = """
 import importlib
 
 from sceneio.io import _inspection
-from sceneio.io._inspectors import common, model
+from sceneio.io._inspectors import arrays, model
 
 for _ in range(2):
-    facade = importlib.reload(_inspection)
-    assert facade.ArrayInspection is model.ArrayInspection
-    assert facade.Inspection is model.Inspection
-    assert facade._compiled_buffer_inspect is common._compiled_buffer_inspect
-    assert facade._HEADER_LIMIT is common._HEADER_LIMIT
-    assert facade._IMAGE_PIXEL_CAP is common._IMAGE_PIXEL_CAP
-    assert facade._exact is common._exact
-    assert facade._unsigned_decimal is common._unsigned_decimal
-    assert facade._image is common._image
+    dispatcher = importlib.reload(_inspection)
+    assert dispatcher.Inspection is model.Inspection
+    assert dispatcher._PATH_INSPECTORS["npy"] is arrays.inspect_npy
 """
     subprocess.run([sys.executable, "-c", code], check=True)

@@ -70,7 +70,7 @@ def _write_valid_arrays(root: Path) -> dict[str, Path]:
             },
             attrs={"unit": "m", "frame": "opencv"},
         ),
-        "flo": (
+        "flo": _core.flow_field(
             np.arange(3 * 4 * 2, dtype=np.float32).reshape(3, 4, 2) / 5
         ),
         "dmb": _core.depth_map(
@@ -92,7 +92,7 @@ def _normalized_inspection(info) -> dict[str, object]:
         json.dumps(
             {
                 "format": info.format,
-                "datatype": info.datatype,
+                "payload_kind": info.payload_kind,
                 "shape": info.shape,
                 "dtype": info.dtype,
                 "channels": info.channels,
@@ -202,18 +202,14 @@ def test_array_adapter_closures_preserve_exact_native_targets():
 
     flo = codecs["flo"]
     assert inspect.getclosurevars(flo.read).nonlocals == {
-        "view_fn": _core.read_flo_view,
-        "fallback_fn": _core.read_flo,
+        "fn": _core.read_flo,
     }
     assert inspect.getclosurevars(flo.write).nonlocals == {
         "fn": _core.write_flo,
-        "prepare": registry._canon,
+        "prepare": None,
     }
-    nested_reader = inspect.getclosurevars(flo.read_window).nonlocals["reader"]
-    assert nested_reader is not flo.read
-    assert inspect.getclosurevars(nested_reader).nonlocals == {
-        "view_fn": _core.read_flo_view,
-        "fallback_fn": _core.read_flo,
+    assert inspect.getclosurevars(flo.read_window).nonlocals == {
+        "fn": _core.read_flo_window,
     }
 
     assert inspect.getclosurevars(codecs["dmb"].read).nonlocals == {
@@ -348,55 +344,24 @@ def test_array_family_reload_is_inert_and_registry_reload_is_exact():
 
 
 @pytest.mark.parametrize(
-    ("wrapper_name", "delegate_name"),
+    ("format_id", "inspector_name"),
     [
-        ("_inspect_pfm", "_inspect_array_pfm"),
-        ("_inspect_npy", "_inspect_array_npy"),
-        ("_inspect_npz", "_inspect_array_npz"),
-        ("_inspect_safetensors", "_inspect_array_safetensors"),
-        ("_inspect_flo", "_inspect_array_flo"),
-        ("_inspect_dmb", "_inspect_array_dmb"),
+        ("pfm", "inspect_pfm"),
+        ("npy", "inspect_npy"),
+        ("npz", "inspect_npz"),
+        ("safetensors", "inspect_safetensors"),
+        ("flo", "inspect_flo"),
+        ("dmb", "inspect_dmb"),
     ],
 )
-def test_array_inspector_facade_preserves_wrapper_signatures(
-    wrapper_name,
-    delegate_name,
-    monkeypatch,
+def test_array_inspection_dispatch_uses_family_implementation(
+    format_id,
+    inspector_name,
 ):
-    marker = object()
-    calls = []
-
-    def inspect_family(path, datatype):
-        calls.append((path, datatype))
-        return marker
-
-    monkeypatch.setattr(_inspection, delegate_name, inspect_family)
-    path = Path("array.fixture")
-    wrapper = getattr(_inspection, wrapper_name)
-    assert tuple(inspect.signature(wrapper).parameters) == ("path", "datatype")
-    assert wrapper(path, "array") is marker
-    assert calls == [(path, "array")]
-
-
-def test_npy_header_facade_preserves_signature_and_delegate(monkeypatch):
-    marker = ((2, 3), "float32", False)
-    calls = []
-
-    def inspect_header(stream):
-        calls.append(stream)
-        return marker
-
-    monkeypatch.setattr(
-        _inspection,
-        "_inspect_array_npy_header",
-        inspect_header,
+    assert _inspection._PATH_INSPECTORS[format_id] is getattr(
+        array_inspector,
+        inspector_name,
     )
-    stream = io.BytesIO(b"header")
-    assert tuple(inspect.signature(_inspection._npy_header).parameters) == (
-        "stream",
-    )
-    assert _inspection._npy_header(stream) == marker
-    assert calls == [stream]
 
 
 def test_repository_coverage_tracks_all_array_inspectors():
@@ -428,7 +393,7 @@ def test_array_inspection_matches_parent_contract_and_full_read(
 
     lower = getattr(array_inspector, f"inspect_{format_id}")(
         path,
-        registry.REGISTRY[format_id].datatype,
+        registry.REGISTRY[format_id].payload_kind,
     )
     public = sceneio.inspect(path, format=format_id)
     assert _normalized_inspection(lower) == expected["inspection"]
@@ -436,7 +401,7 @@ def test_array_inspection_matches_parent_contract_and_full_read(
 
     full = sceneio.read(path, format=format_id)
     if format_id in {"pfm", "npy", "flo"}:
-        array = np.asarray(full)
+        array = np.asarray(full.vectors if format_id == "flo" else full)
         assert list(array.shape) == expected["inspection"]["shape"]
         assert str(array.dtype) == expected["inspection"]["dtype"]
     elif format_id == "dmb":
@@ -472,7 +437,7 @@ def test_malformed_array_inspection_matches_parent_contract(
     path.write_bytes(_MALFORMED[format_id])
     inspector = getattr(array_inspector, f"inspect_{format_id}")
     with pytest.raises(Exception) as lower_error:
-        inspector(path, registry.REGISTRY[format_id].datatype)
+        inspector(path, registry.REGISTRY[format_id].payload_kind)
     assert type(lower_error.value).__name__ == expected["cause_type"]
     assert str(lower_error.value) == expected["cause_message"]
 
@@ -507,7 +472,7 @@ def test_public_array_inspection_does_not_call_captured_or_dynamic_decoders(
         "read_safetensors_slices",
         "read_safetensors_slices_view",
         "read_flo",
-        "read_flo_view",
+        "read_flo_window",
         "read_dmb",
     ):
         monkeypatch.setattr(_core, name, fail)
@@ -594,7 +559,7 @@ def test_large_array_inspections_are_bounded_and_release_paths(
     try:
         info = getattr(array_inspector, f"inspect_{format_id}")(
             path,
-            registry.REGISTRY[format_id].datatype,
+            registry.REGISTRY[format_id].payload_kind,
         )
         _, peak = tracemalloc.get_traced_memory()
     finally:

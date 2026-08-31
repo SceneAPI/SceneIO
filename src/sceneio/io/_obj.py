@@ -71,7 +71,7 @@ def inspect_obj(path: str) -> Inspection:
     vertices = values["num_vertices"]
     return Inspection(
         format="obj",
-        datatype="mesh",
+        payload_kind="mesh",
         byte_size=obj_size + mtl_size,
         shape=(vertices, 3),
         dtype="float32",

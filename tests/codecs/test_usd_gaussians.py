@@ -614,7 +614,7 @@ def test_inspection_validates_without_constructing_record(tmp_path, monkeypatch)
     )
     info = sceneio.inspect(path)
 
-    assert info.datatype == "scene_graph"
+    assert info.payload_kind == "scene_graph"
     assert info.shape == (2, 3)
     assert info.count == 1
     assert info.metadata["num_gaussian_clouds"] == 1

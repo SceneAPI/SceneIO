@@ -120,10 +120,6 @@ class RtmvDataset:
 
         return bool(self.segmentation_paths)
 
-
-RtmvDataset.__module__ = "sceneio.io"
-
-
 @dataclass(frozen=True, slots=True)
 class _Frame:
     id: str
@@ -540,7 +536,7 @@ def inspect_rtmv_directory(frame_access: ImageFrameAccess, path: str) -> Inspect
     byte_size = sum(item.stat().st_size for item in root.iterdir() if item.is_file())
     return Inspection(
         format="rtmv",
-        datatype="rtmv_dataset",
+        payload_kind="rtmv_dataset",
         byte_size=byte_size,
         shape=(len(frames), height, width, rgb_channels),
         dtype="float32",

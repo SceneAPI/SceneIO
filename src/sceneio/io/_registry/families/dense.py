@@ -19,9 +19,9 @@ from sceneio.io._registry.adapters import (
 from sceneio.io._registry.model import Codec
 
 
-def _inspector(function, datatype: str):
+def _inspector(function, payload_kind: str):
     def inspect(path: str):
-        return function(Path(path), datatype)
+        return function(Path(path), payload_kind)
 
     return inspect
 
@@ -33,7 +33,7 @@ DENSE_CODECS: tuple[Codec, ...] = (
         _mmap_reader(_core.read_colmap_mvs_depth),
         _file_sink_writer(_core.write_colmap_mvs_depth),
         record=_core.DepthMap,
-        datatype="depth_map",
+        payload_kind="depth_map",
         inspect=_inspector(inspect_colmap_mvs_depth, "depth_map"),
         read_window=_mmap_selector_reader(
             _core.read_colmap_mvs_depth_window
@@ -53,7 +53,7 @@ DENSE_CODECS: tuple[Codec, ...] = (
         _mmap_reader(_core.read_colmap_mvs_normal),
         _file_sink_writer(_core.write_colmap_mvs_normal),
         record=_core.NormalMap,
-        datatype="normal_map",
+        payload_kind="normal_map",
         inspect=_inspector(inspect_colmap_mvs_normal, "normal_map"),
         read_window=_mmap_selector_reader(
             _core.read_colmap_mvs_normal_window
@@ -71,7 +71,7 @@ DENSE_CODECS: tuple[Codec, ...] = (
         _mmap_reader(_core.read_colmap_mvs_consistency),
         _file_sink_writer(_core.write_colmap_mvs_consistency),
         record=_core.ConsistencyGraph,
-        datatype="consistency_graph",
+        payload_kind="consistency_graph",
         inspect=_inspector(
             inspect_colmap_mvs_consistency, "consistency_graph"
         ),
@@ -87,7 +87,7 @@ DENSE_CODECS: tuple[Codec, ...] = (
         _mmap_reader(_core.read_colmap_fused_visibility),
         _file_sink_writer(_core.write_colmap_fused_visibility),
         record=_core.PointVisibility,
-        datatype="point_visibility",
+        payload_kind="point_visibility",
         filenames=("fused.ply.vis",),
         inspect=_inspector(
             inspect_colmap_fused_visibility, "point_visibility"

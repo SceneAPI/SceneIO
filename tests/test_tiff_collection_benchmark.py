@@ -1,4 +1,4 @@
-"""Executable contract for the typed TIFF collection benchmark."""
+"""Executable contract for the TIFF raster-collection benchmark."""
 
 from __future__ import annotations
 
@@ -38,10 +38,10 @@ def test_tiff_collection_benchmark_small_fixture_is_exact(
     assert result["fixture"]["logical_bytes"] == 4 * 128 * 160 * 2
     assert result["selection"]["shape"] == [2, 72, 108]
     assert set(result["metrics"]) == {
-        "typed_full_read",
-        "typed_selected_read",
+        "full_read",
+        "selected_read",
         "provider_full_then_slice",
-        "typed_inspect",
+        "inspect",
     }
     for metrics in result["metrics"].values():
         assert metrics["ms"] >= 0
@@ -53,12 +53,12 @@ def test_tiff_collection_benchmark_small_fixture_is_exact(
     assert captured["samples"] == 3
     assert captured["timeout_seconds"] == 75
     assert [case.label for case in captured["cases"]] == [
-        "typed_full_read",
-        "typed_selected_read",
-        "typed_inspect",
+        "full_read",
+        "selected_read",
+        "inspect",
     ]
     assert [case.operation.kind for case in captured["cases"]] == [
+        "sceneio_read",
         "sceneio_read_tiff_collection",
-        "sceneio_read_tiff_collection",
-        "sceneio_inspect_tiff_collection",
+        "sceneio_inspect",
     ]

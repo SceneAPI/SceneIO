@@ -71,7 +71,7 @@ def _validate_classic_zip_extent(path: Path, format_name: str) -> None:
         )
 
 
-def inspect_gaussian_ply(path: Path, datatype: str) -> Inspection:
+def inspect_gaussian_ply(path: Path, payload_kind: str) -> Inspection:
     """Inspect a Gaussian PLY header without decoding its records."""
 
     count = None
@@ -196,7 +196,7 @@ def inspect_gaussian_ply(path: Path, datatype: str) -> Inspection:
     degree = {0: 0, 9: 1, 24: 2, 45: 3}[rest]
     return Inspection(
         "gaussian_ply",
-        datatype,
+        payload_kind,
         _size(path),
         shape=(count,),
         dtype="float32",
@@ -209,7 +209,7 @@ def inspect_gaussian_ply(path: Path, datatype: str) -> Inspection:
     )
 
 
-def inspect_compressed_ply(path: Path, datatype: str) -> Inspection:
+def inspect_compressed_ply(path: Path, payload_kind: str) -> Inspection:
     """Inspect a compressed Gaussian PLY header and declared extents."""
 
     file_size = _size(path)
@@ -220,7 +220,7 @@ def inspect_compressed_ply(path: Path, datatype: str) -> Inspection:
     )
     return Inspection(
         "compressed_ply",
-        datatype,
+        payload_kind,
         file_size,
         shape=(vertex.count,),
         dtype="float32",
@@ -229,7 +229,7 @@ def inspect_compressed_ply(path: Path, datatype: str) -> Inspection:
     )
 
 
-def inspect_sog(path: Path, datatype: str) -> Inspection:
+def inspect_sog(path: Path, payload_kind: str) -> Inspection:
     """Inspect a bundled or unbundled SOG container."""
 
     metadata_path = path / "meta.json" if path.is_dir() else path
@@ -330,7 +330,7 @@ def inspect_sog(path: Path, datatype: str) -> Inspection:
         packaging = "zip"
     return Inspection(
         "sog",
-        datatype,
+        payload_kind,
         byte_size,
         shape=(count,),
         dtype="float32",
@@ -346,7 +346,7 @@ def inspect_sog(path: Path, datatype: str) -> Inspection:
     )
 
 
-def inspect_ksplat(path: Path, datatype: str) -> Inspection:
+def inspect_ksplat(path: Path, payload_kind: str) -> Inspection:
     """Inspect KSplat headers without decoding point records."""
 
     file_size = _size(path)
@@ -381,7 +381,7 @@ def inspect_ksplat(path: Path, datatype: str) -> Inspection:
     )
     return Inspection(
         "ksplat",
-        datatype,
+        payload_kind,
         file_size,
         shape=(count,),
         dtype="float32",
@@ -400,7 +400,7 @@ def inspect_ksplat(path: Path, datatype: str) -> Inspection:
     )
 
 
-def inspect_spz(path: Path, datatype: str) -> Inspection:
+def inspect_spz(path: Path, payload_kind: str) -> Inspection:
     """Inspect legacy gzip or v4 SPZ metadata."""
 
     version = None
@@ -451,7 +451,7 @@ def inspect_spz(path: Path, datatype: str) -> Inspection:
         raise ValueError("SPZ: unsupported SH degree")
     return Inspection(
         "spz",
-        datatype,
+        payload_kind,
         _size(path),
         shape=(count,),
         dtype="float32",
@@ -464,7 +464,7 @@ def inspect_spz(path: Path, datatype: str) -> Inspection:
     )
 
 
-def inspect_splat(path: Path, datatype: str) -> Inspection:
+def inspect_splat(path: Path, payload_kind: str) -> Inspection:
     """Inspect the size-derived record count of a headerless SPLAT file."""
 
     size = _size(path)
@@ -473,7 +473,7 @@ def inspect_splat(path: Path, datatype: str) -> Inspection:
     count = size // 32
     return Inspection(
         "splat",
-        datatype,
+        payload_kind,
         size,
         shape=(count,),
         dtype="float32",

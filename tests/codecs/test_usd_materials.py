@@ -177,7 +177,7 @@ def _assert_constant_material(scene) -> None:
     np.testing.assert_array_equal(scene.materials.roughness, [0.75])
     assert scene.materials.alpha_modes == ["blend"]
     np.testing.assert_array_equal(
-        scene.mesh_at(0).primitive_materials,
+        scene.mesh_primitive_at(0).primitive_materials,
         [0],
     )
 
@@ -461,8 +461,12 @@ def test_subset_bindings_map_exact_runs_and_cross_write(tmp_path):
     source.write_text(valid_usda, encoding="utf-8")
 
     scene = sceneio.read_scene(source)
-    np.testing.assert_array_equal(scene.mesh_at(0).primitive_offsets, [0, 1, 2, 3, 4])
-    np.testing.assert_array_equal(scene.mesh_at(0).primitive_materials, [0, 1, 0, 1])
+    np.testing.assert_array_equal(
+        scene.mesh_primitive_at(0).primitive_offsets, [0, 1, 2, 3, 4]
+    )
+    np.testing.assert_array_equal(
+        scene.mesh_primitive_at(0).primitive_materials, [0, 1, 0, 1]
+    )
 
     output = tmp_path / "subsets.usdz"
     sceneio.write_scene(scene, output)
@@ -480,7 +484,7 @@ def test_subset_bindings_map_exact_runs_and_cross_write(tmp_path):
     ]
     assert "int[] indices = [0, 2]" in subset_a.to_string()
     assert "int[] indices = [1, 3]" in subset_b.to_string()
-    actual = sceneio.read_scene(output).mesh_at(0)
+    actual = sceneio.read_scene(output).mesh_primitive_at(0)
     np.testing.assert_array_equal(actual.primitive_offsets, [0, 1, 2, 3, 4])
     np.testing.assert_array_equal(actual.primitive_materials, [0, 1, 0, 1])
 

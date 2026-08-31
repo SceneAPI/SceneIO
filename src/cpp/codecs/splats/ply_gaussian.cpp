@@ -254,7 +254,7 @@ GaussianCloud read_gaussian_ply_points(nb::handle source, size_t start,
 }
 
 nb::bytes write_gaussian_ply(const GaussianCloud &g) {
-    require_legacy_gaussian_conventions(g, "gaussian PLY writer");
+    require_3dgs_gaussian_conventions(g, "gaussian PLY writer");
     std::string h = "ply\nformat binary_little_endian 1.0\nelement vertex " + std::to_string(g.n) + "\n";
     h += "property float x\nproperty float y\nproperty float z\n";
     h += "property float f_dc_0\nproperty float f_dc_1\nproperty float f_dc_2\n";

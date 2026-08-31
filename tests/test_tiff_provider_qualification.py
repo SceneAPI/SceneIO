@@ -1,4 +1,4 @@
-"""Pinned tifffile/Zarr behaviors relied on by typed TIFF collections."""
+"""Pinned tifffile/Zarr behaviors relied on by TIFF raster collections."""
 
 from __future__ import annotations
 
@@ -53,14 +53,12 @@ def test_tifffile_ome_frames_use_keyframe_metadata_and_sceneio_refuses_deliberat
         sceneio.FormatError,
         match="OME-XML and OME axes 'TZYX' are outside the bounded CV profile",
     ):
-        sceneio.inspect_tiff_collection(path)
+        sceneio.inspect(path)
     with pytest.raises(
         sceneio.FormatError,
         match="OME-XML and OME axes 'TZYX' are outside the bounded CV profile",
     ):
-        sceneio.read_tiff_collection(path)
-    with pytest.raises(sceneio.FormatError, match="unsupported or ambiguous axes"):
-        sceneio.inspect(path)
+        sceneio.read(path)
 
 
 def test_pinned_public_ome_4d_fixture_reaches_the_same_deliberate_boundary():
@@ -83,7 +81,7 @@ def test_pinned_public_ome_4d_fixture_reaches_the_same_deliberate_boundary():
         sceneio.FormatError,
         match="OME-XML and OME axes 'TCZYX' are outside the bounded CV profile",
     ):
-        sceneio.inspect_tiff_collection(path)
+        sceneio.inspect(path)
 
 
 def test_tifffile_subifd_base_aszarr_is_group_unless_level_is_selected(tmp_path):

@@ -1,4 +1,4 @@
-"""Ordered format detection independent of the registry facade."""
+"""Ordered format detection independent of registry state."""
 
 from __future__ import annotations
 

@@ -412,7 +412,7 @@ def inspect_zarr(path: str | Path) -> Inspection:
     zarr_format = int(group.metadata.zarr_format)
     return Inspection(
         format="zarr",
-        datatype="tensor_dict",
+        payload_kind="tensor_dict",
         byte_size=byte_size,
         count=len(items),
         arrays=_array_inspections(items),

@@ -42,7 +42,7 @@
   "registry": {
     "colmap_sparse": {
       "record": "Reconstruction",
-      "datatype": "sparse_model",
+      "payload_kind": "sparse_model",
       "extensions": [],
       "magic_hex": [],
       "filenames": [],
@@ -76,7 +76,7 @@
     },
     "transforms_json": {
       "record": "PosedViewSet",
-      "datatype": "posed_views",
+      "payload_kind": "posed_views",
       "extensions": [],
       "magic_hex": [],
       "filenames": [
@@ -112,7 +112,7 @@
     },
     "tum": {
       "record": "PosedViewSet",
-      "datatype": "posed_views",
+      "payload_kind": "posed_views",
       "extensions": [],
       "magic_hex": [],
       "filenames": [],
@@ -146,7 +146,7 @@
     },
     "kitti": {
       "record": "PosedViewSet",
-      "datatype": "posed_views",
+      "payload_kind": "posed_views",
       "extensions": [],
       "magic_hex": [],
       "filenames": [],
@@ -180,7 +180,7 @@
     },
     "euroc_state": {
       "record": "StateTrajectory",
-      "datatype": "state_trajectory",
+      "payload_kind": "state_trajectory",
       "extensions": [],
       "magic_hex": [
         "2374696d657374616d70205b6e735d2c"
@@ -229,7 +229,7 @@
     },
     "g2o": {
       "record": "PoseGraph",
-      "datatype": "pose_graph",
+      "payload_kind": "pose_graph",
       "extensions": [
         ".g2o"
       ],
@@ -278,7 +278,7 @@
     },
     "colmap_db": {
       "record": "ColmapDatabase",
-      "datatype": "match_graph",
+      "payload_kind": "match_graph",
       "extensions": [
         ".db"
       ],
@@ -350,7 +350,7 @@
     },
     "colmap_sparse_txt": {
       "record": "Reconstruction",
-      "datatype": "sparse_model",
+      "payload_kind": "sparse_model",
       "extensions": [],
       "magic_hex": [],
       "filenames": [],
@@ -384,7 +384,7 @@
     },
     "bundler": {
       "record": "Reconstruction",
-      "datatype": "sparse_model",
+      "payload_kind": "sparse_model",
       "extensions": [
         ".out"
       ],
@@ -421,7 +421,7 @@
     },
     "bal": {
       "record": "Reconstruction",
-      "datatype": "sparse_model",
+      "payload_kind": "sparse_model",
       "extensions": [
         ".bal"
       ],
@@ -469,7 +469,7 @@
     },
     "nvm": {
       "record": "Reconstruction",
-      "datatype": "sparse_model",
+      "payload_kind": "sparse_model",
       "extensions": [
         ".nvm"
       ],
@@ -506,7 +506,7 @@
     },
     "openmvg": {
       "record": "Reconstruction",
-      "datatype": "sparse_model",
+      "payload_kind": "sparse_model",
       "extensions": [],
       "magic_hex": [],
       "filenames": [
@@ -585,7 +585,7 @@
       "detected": "colmap_sparse",
       "inspection": {
         "format": "colmap_sparse",
-        "datatype": "sparse_model",
+        "payload_kind": "sparse_model",
         "byte_size": 201,
         "shape": [
           1
@@ -698,7 +698,7 @@
       "detected": "transforms_json",
       "inspection": {
         "format": "transforms_json",
-        "datatype": "posed_views",
+        "payload_kind": "posed_views",
         "byte_size": 216,
         "shape": [
           1
@@ -771,7 +771,7 @@
       "detected": "explicit_only",
       "inspection": {
         "format": "tum",
-        "datatype": "posed_views",
+        "payload_kind": "posed_views",
         "byte_size": 16,
         "shape": [
           1
@@ -829,7 +829,7 @@
       "detected": "explicit_only",
       "inspection": {
         "format": "kitti",
-        "datatype": "posed_views",
+        "payload_kind": "posed_views",
         "byte_size": 24,
         "shape": [
           1
@@ -887,7 +887,7 @@
       "detected": "euroc_state",
       "inspection": {
         "format": "euroc_state",
-        "datatype": "state_trajectory",
+        "payload_kind": "state_trajectory",
         "byte_size": 626,
         "shape": [
           1
@@ -987,7 +987,7 @@
       "detected": "g2o",
       "inspection": {
         "format": "g2o",
-        "datatype": "pose_graph",
+        "payload_kind": "pose_graph",
         "byte_size": 249,
         "shape": [
           2
@@ -1106,7 +1106,7 @@
       "detected": "colmap_db",
       "inspection": {
         "format": "colmap_db",
-        "datatype": "match_graph",
+        "payload_kind": "match_graph",
         "byte_size": 77824,
         "shape": [
           2
@@ -1880,7 +1880,7 @@
       "detected": "colmap_sparse_txt",
       "inspection": {
         "format": "colmap_sparse_txt",
-        "datatype": "sparse_model",
+        "payload_kind": "sparse_model",
         "byte_size": 574,
         "shape": [
           1
@@ -1993,7 +1993,7 @@
       "detected": "bundler",
       "inspection": {
         "format": "bundler",
-        "datatype": "sparse_model",
+        "payload_kind": "sparse_model",
         "byte_size": 82,
         "shape": [
           1
@@ -2106,7 +2106,7 @@
       "detected": "bal",
       "inspection": {
         "format": "bal",
-        "datatype": "sparse_model",
+        "payload_kind": "sparse_model",
         "byte_size": 136,
         "shape": [
           1
@@ -2220,7 +2220,7 @@
       "detected": "nvm",
       "inspection": {
         "format": "nvm",
-        "datatype": "sparse_model",
+        "payload_kind": "sparse_model",
         "byte_size": 73,
         "shape": [
           1
@@ -2333,7 +2333,7 @@
       "detected": "openmvg",
       "inspection": {
         "format": "openmvg",
-        "datatype": "sparse_model",
+        "payload_kind": "sparse_model",
         "byte_size": 644,
         "shape": [
           1

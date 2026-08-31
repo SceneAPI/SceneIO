@@ -154,7 +154,7 @@ def test_image_sequence_frame_dependencies_are_injected_at_runtime():
 
         from sceneio.io import _image_sequence as adapter
         from sceneio.io._frame_access import ImageFrameAccess
-        from sceneio.io._inspection import Inspection
+        from sceneio.io._inspectors.model import Inspection
 
         root = Path(tempfile.mkdtemp())
         frame = root / "frame.PGM"
@@ -165,7 +165,7 @@ def test_image_sequence_frame_dependencies_are_injected_at_runtime():
             calls.append(path)
             return Inspection(
                 format="netpbm",
-                datatype="image",
+                payload_kind="image",
                 byte_size=7,
                 shape=(2, 3, 1),
                 dtype="uint8",
@@ -200,13 +200,13 @@ def test_image_sequence_frame_dependencies_are_injected_at_runtime():
 def test_third_party_registration_is_outside_builtin_completeness_boundary(
     tmp_path,
 ):
-    extension = registry.Codec(
+    extension = sceneio.Codec(
         "third_party_contract_probe",
         (".contract-probe", "not-dotted"),
         lambda path: path,
         None,
         record=_core.Image,
-        datatype="image",
+        payload_kind="image",
     )
     before = registry.REGISTRY
     try:
@@ -275,7 +275,7 @@ def test_repository_coverage_manifest_is_complete_and_resolvable():
                 inspect_path(
                     ROOT / "build" / "__missing_r1_inspection_fixture__",
                     item["id"],
-                    codec.datatype,
+                    codec.payload_kind,
                 )
             except Exception as exc:
                 if "does not provide metadata inspection" in str(exc):

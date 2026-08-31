@@ -3864,7 +3864,7 @@ def test_inspect_matches_decoded_metadata_without_blob_arrays(tmp_path):
     sceneio.write(_database(), path)
     info = sceneio.inspect(path)
     assert info.format == "colmap_db"
-    assert info.datatype == "match_graph"
+    assert info.payload_kind == "match_graph"
     assert info.count == 2
     assert info.shape == (2,)
     assert info.metadata["num_cameras"] == 1

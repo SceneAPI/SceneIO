@@ -160,14 +160,12 @@ def _entry(
     rules: tuple[str, ...],
     refusal: str,
     evidence: tuple[ContractEvidence, ...],
-    aliases: tuple[str, ...] = (),
     implementation_paths: tuple[str, ...] = (),
     procedure_role: str | None = None,
     relations: tuple[ContractRelation, ...] = (),
 ) -> PublicTypeContract:
     return PublicTypeContract(
         canonical_path=canonical_path,
-        aliases=aliases,
         implementation_paths=implementation_paths,
         kind=kind,  # type: ignore[arg-type]
         stability="stable",
@@ -181,10 +179,6 @@ def _entry(
     )
 
 
-def _representation_aliases(canonical_path: str) -> tuple[str, ...]:
-    return ()
-
-
 def _representation_entries() -> tuple[PublicTypeContract, ...]:
     entries: list[PublicTypeContract] = []
     for canonical_path, specialized in REPRESENTATION_CONTRACTS.items():
@@ -194,7 +188,6 @@ def _representation_entries() -> tuple[PublicTypeContract, ...]:
         entries.append(
             PublicTypeContract(
                 canonical_path=canonical_path,
-                aliases=_representation_aliases(canonical_path),
                 implementation_paths=(),
                 kind="representation",
                 stability="provisional",
@@ -217,11 +210,16 @@ def _representation_entries() -> tuple[PublicTypeContract, ...]:
 
 
 def _descriptor_entries() -> tuple[PublicTypeContract, ...]:
-    surface = _node(_SURFACE_TEST, "public_identity", "member_shape", "alias_identity")
+    surface = _node(
+        _SURFACE_TEST,
+        "public_identity",
+        "member_shape",
+        "implementation_identity",
+    )
     return (
         _entry(
             "sceneio.ArrayInspection",
-            implementation_paths=("sceneio.io._inspection.ArrayInspection",),
+            implementation_paths=("sceneio.io._inspectors.model.ArrayInspection",),
             kind="descriptor",
             summary="Immutable shape and dtype summary for one named array.",
             members=_fields(
@@ -234,9 +232,9 @@ def _descriptor_entries() -> tuple[PublicTypeContract, ...]:
             evidence=(
                 surface,
                 _node(
-                    "tests/test_io_inspection_shared.py::test_shared_inspection_types_preserve_exact_b2bda1d_contract",
+                    "tests/test_io_inspection_shared.py::test_shared_inspection_types_match_the_current_contract",
                     "construction",
-                    "compatibility",
+                    "contract",
                 ),
             ),
         ),
@@ -263,14 +261,14 @@ def _descriptor_entries() -> tuple[PublicTypeContract, ...]:
         ),
         _entry(
             "sceneio.CodecCapabilities",
-            implementation_paths=("sceneio.io.registry.CodecCapabilities",),
+            implementation_paths=("sceneio.io._registry.model.CodecCapabilities",),
             kind="descriptor",
             summary="Frozen discovery metadata for one registered codec.",
             members=_fields(
                 "CodecCapabilities",
                 (
                     ("format", "str"),
-                    ("datatype", "str"),
+                    ("payload_kind", "str"),
                     ("record_type", "str | None"),
                     ("extensions", "tuple[str, ...]"),
                     ("filenames", "tuple[str, ...]"),
@@ -296,7 +294,7 @@ def _descriptor_entries() -> tuple[PublicTypeContract, ...]:
                     "unsupported_features",
                 ),
                 semantics={
-                    "datatype": "Stable legacy name for the codec payload kind.",
+                    "payload_kind": "Declared output payload kind for the codec.",
                     "available": "Derived from required optional-provider features.",
                     "partial_selectors": "Ordered bounded selector names exposed by public read_partial.",
                 },
@@ -495,12 +493,12 @@ def _descriptor_entries() -> tuple[PublicTypeContract, ...]:
         ),
         _entry(
             "sceneio.Inspection",
-            implementation_paths=("sceneio.io._inspection.Inspection",),
+            implementation_paths=("sceneio.io._inspectors.model.Inspection",),
             kind="descriptor",
             summary="Immutable metadata-only inspection result for one format payload.",
             members=_fields(
                 "Inspection",
-                (("format", "str"), ("datatype", "str"), ("byte_size", "int")),
+                (("format", "str"), ("payload_kind", "str"), ("byte_size", "int")),
                 (
                     ("shape", "tuple[int, ...] | None", "None"),
                     ("dtype", "str | None", "None"),
@@ -551,7 +549,7 @@ def _descriptor_entries() -> tuple[PublicTypeContract, ...]:
         ),
         _entry(
             "sceneio.NativeFeatureCapabilities",
-            implementation_paths=("sceneio.io.registry.NativeFeatureCapabilities",),
+            implementation_paths=("sceneio.io._registry.model.NativeFeatureCapabilities",),
             kind="descriptor",
             summary="Frozen build-option and format metadata for one optional native seam.",
             members=_fields(
@@ -660,7 +658,7 @@ def _descriptor_entries() -> tuple[PublicTypeContract, ...]:
         ),
         _entry(
             "sceneio.Codec",
-            implementation_paths=("sceneio.io.registry.Codec",),
+            implementation_paths=("sceneio.io._registry.model.Codec",),
             kind="descriptor",
             summary="One format's immutable read/write/inspect/partial dispatch definition.",
             members=_fields(
@@ -671,7 +669,7 @@ def _descriptor_entries() -> tuple[PublicTypeContract, ...]:
                     ("read", "Callable[[str], object]"),
                     ("write", "Callable[[object, str], None] | None"),
                     ("record", "type | None"),
-                    ("datatype", "str"),
+                    ("payload_kind", "str"),
                 ),
                 (
                     ("magic", "tuple[bytes, ...]", "()"),
@@ -715,7 +713,7 @@ def _descriptor_entries() -> tuple[PublicTypeContract, ...]:
                     "unsupported_features",
                 ),
                 semantics={
-                    "datatype": "Stable legacy field naming the codec payload kind.",
+                    "payload_kind": "Declared output payload kind for the codec.",
                     "record": "Static output class when the format does not require profile-dependent dispatch.",
                 },
             ),
@@ -741,7 +739,12 @@ def _descriptor_entries() -> tuple[PublicTypeContract, ...]:
 
 
 def _wire_entries() -> tuple[PublicTypeContract, ...]:
-    surface = _node(_SURFACE_TEST, "public_identity", "member_shape", "alias_identity")
+    surface = _node(
+        _SURFACE_TEST,
+        "public_identity",
+        "member_shape",
+        "implementation_identity",
+    )
     return (
         _entry(
             "sceneio.Point3DRecord",
@@ -784,7 +787,12 @@ def _wire_entries() -> tuple[PublicTypeContract, ...]:
 
 
 def _procedure_entries() -> tuple[PublicTypeContract, ...]:
-    surface = _node(_SURFACE_TEST, "public_identity", "member_shape", "alias_identity")
+    surface = _node(
+        _SURFACE_TEST,
+        "public_identity",
+        "member_shape",
+        "implementation_identity",
+    )
     return (
         _entry(
             "sceneio.mapping.MapperTraits",
@@ -1115,7 +1123,12 @@ def _protocol_entries() -> tuple[PublicTypeContract, ...]:
 
 
 def _vocabulary_entries() -> tuple[PublicTypeContract, ...]:
-    surface = _node(_SURFACE_TEST, "public_identity", "member_shape", "alias_identity")
+    surface = _node(
+        _SURFACE_TEST,
+        "public_identity",
+        "member_shape",
+        "implementation_identity",
+    )
     return (
         _entry(
             "sceneio.CameraModel",
@@ -1206,11 +1219,9 @@ def _error_entries() -> tuple[PublicTypeContract, ...]:
         summary: str,
         refusal: str,
         retry_policy: str = "non_retryable",
-        aliases: tuple[str, ...] = (),
     ) -> PublicTypeContract:
         return _entry(
             canonical,
-            aliases=aliases,
             implementation_paths=(implementation,),
             kind="error",
             summary=summary,
@@ -1339,7 +1350,6 @@ def _contract_metadata_entries() -> tuple[PublicTypeContract, ...]:
                 "PublicTypeContract",
                 (
                     ("canonical_path", "str"),
-                    ("aliases", "tuple[str, ...]"),
                     ("implementation_paths", "tuple[str, ...]"),
                     ("kind", "ContractKind"),
                     ("stability", "ContractStability"),
@@ -1356,7 +1366,6 @@ def _contract_metadata_entries() -> tuple[PublicTypeContract, ...]:
                     ("specialized_contract", "object | None", "None"),
                 ),
                 ordered=(
-                    "aliases",
                     "implementation_paths",
                     "members",
                     "rules",
@@ -1365,7 +1374,7 @@ def _contract_metadata_entries() -> tuple[PublicTypeContract, ...]:
                 ),
             ),
             rules=(
-                "Canonical paths, aliases, members, evidence, relations, and kind-specific requirements are validated atomically.",
+                "Canonical paths, implementation identities, members, evidence, relations, and kind-specific requirements are validated atomically.",
             ),
             refusal="Incomplete, duplicate, ambiguous, or kind-incompatible entries are rejected before publication.",
             evidence=evidence,

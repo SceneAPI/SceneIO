@@ -306,7 +306,7 @@ def test_public_dispatch_detection_inspection_and_capabilities(tmp_path):
     assert sceneio.detect(path) == "euroc_state"
     _assert_equal(sceneio.read(path), expected)
     info = sceneio.inspect(path)
-    assert (info.format, info.datatype, info.count, info.shape) == (
+    assert (info.format, info.payload_kind, info.count, info.shape) == (
         "euroc_state",
         "state_trajectory",
         9,

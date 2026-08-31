@@ -7,6 +7,9 @@
 > [`format_coverage.md`](format_coverage.md). Counts and “current” statements
 > below describe their dated implementation checkpoints and are not rewritten
 > to match later registry growth.
+> Compatibility facades and aliases mentioned in those checkpoints were
+> removed by the later pre-1 consolidation; current ownership is documented in
+> [`core_architecture.md`](core_architecture.md).
 
 ## Licensed public fixture corpus (complete locally, 2026-08-03)
 

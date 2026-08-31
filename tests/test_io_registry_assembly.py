@@ -346,7 +346,7 @@ def test_publication_is_one_update_and_rejections_leave_target_unchanged():
     assert failing.calls == 0
 
 
-def test_public_registration_and_family_installer_keep_legacy_behavior():
+def test_public_registration_and_family_installer_keep_canonical_behavior():
     class Duck:
         id = "assembly_duck_probe"
 
@@ -377,17 +377,17 @@ def test_public_registration_and_family_installer_keep_legacy_behavior():
     assert id(registry.REGISTRY) == registry_id
     assert tuple(registry.REGISTRY.items()) == before
 
-    family = (_codec("legacy-family-a"), _codec("legacy-family-b"))
+    family = (_codec("runtime-family-a"), _codec("runtime-family-b"))
     assert registry._install_builtin_family(
         family,
-        ("legacy-family-a", "legacy-family-b"),
+        ("runtime-family-a", "runtime-family-b"),
     ) is None
     try:
-        assert registry.REGISTRY["legacy-family-a"] is family[0]
-        assert registry.REGISTRY["legacy-family-b"] is family[1]
+        assert registry.REGISTRY["runtime-family-a"] is family[0]
+        assert registry.REGISTRY["runtime-family-b"] is family[1]
     finally:
-        registry.REGISTRY.pop("legacy-family-a")
-        registry.REGISTRY.pop("legacy-family-b")
+        registry.REGISTRY.pop("runtime-family-a")
+        registry.REGISTRY.pop("runtime-family-b")
     assert tuple(registry.REGISTRY.items()) == before
 
     failures = (
@@ -602,7 +602,7 @@ def test_old_and_reloaded_sequence_codecs_share_live_extension_catalog():
         import tempfile
         from pathlib import Path
 
-        from sceneio import _core
+        from sceneio import Codec, _core
         from sceneio.io import registry
         from sceneio.io._inspectors.model import Inspection
 
@@ -615,20 +615,20 @@ def test_old_and_reloaded_sequence_codecs_share_live_extension_catalog():
         def inspect_frame(path):
             return Inspection(
                 format="assembly_sequence_probe",
-                datatype="image",
+                payload_kind="image",
                 byte_size=Path(path).stat().st_size,
                 shape=(2, 3, 1),
                 dtype="uint8",
                 channels=1,
             )
 
-        probe = registry.Codec(
+        probe = Codec(
             "assembly-sequence-probe",
             (".assemblyprobe",),
             lambda path: path,
             lambda record, path: None,
             record=_core.Image,
-            datatype="image",
+            payload_kind="image",
             inspect=inspect_frame,
         )
         with tempfile.TemporaryDirectory() as temporary:
@@ -845,7 +845,7 @@ def test_assembly_dependency_direction_and_import_delta_are_exact():
         "streaming": (
             "tests/test_io_mmap.py::",
             "tests/test_io_streaming.py::",
-            16,
+            15,
         ),
         "inspection": (
             "tests/test_io_mmap.py::",

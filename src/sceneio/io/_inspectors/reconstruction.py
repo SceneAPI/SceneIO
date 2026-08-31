@@ -37,7 +37,7 @@ def _iter_data_lines(path: Path):
                 yield stripped
 
 
-def inspect_colmap_db(path: Path, datatype: str) -> Inspection:
+def inspect_colmap_db(path: Path, payload_kind: str) -> Inspection:
     """Inspect SQL metadata without fetching any feature/match BLOB."""
 
     values = _core.inspect_colmap_db(str(path))
@@ -116,7 +116,7 @@ def inspect_colmap_db(path: Path, datatype: str) -> Inspection:
         )
     return Inspection(
         format="colmap_db",
-        datatype=datatype,
+        payload_kind=payload_kind,
         byte_size=_size(path),
         shape=(values["num_images"],),
         count=values["num_images"],
@@ -128,7 +128,7 @@ def inspect_colmap_db(path: Path, datatype: str) -> Inspection:
 def inspect_pose_text(
     path: Path,
     format_id: str,
-    datatype: str,
+    payload_kind: str,
 ) -> Inspection:
     expected = 8 if format_id == "tum" else 12
     count = 0
@@ -138,7 +138,7 @@ def inspect_pose_text(
         count += 1
     return Inspection(
         format_id,
-        datatype,
+        payload_kind,
         _size(path),
         shape=(count,),
         dtype="float64",
@@ -146,7 +146,7 @@ def inspect_pose_text(
     )
 
 
-def inspect_euroc_state(path: Path, datatype: str) -> Inspection:
+def inspect_euroc_state(path: Path, payload_kind: str) -> Inspection:
     count, first_timestamp, last_timestamp = _compiled_buffer_inspect(
         path, _core._inspect_euroc_state
     )
@@ -168,7 +168,7 @@ def inspect_euroc_state(path: Path, datatype: str) -> Inspection:
         metadata["last_timestamp_ns"] = last_timestamp
     return Inspection(
         "euroc_state",
-        datatype,
+        payload_kind,
         _size(path),
         shape=(count,),
         dtype="float64",
@@ -177,11 +177,11 @@ def inspect_euroc_state(path: Path, datatype: str) -> Inspection:
     )
 
 
-def inspect_g2o(path: Path, datatype: str) -> Inspection:
+def inspect_g2o(path: Path, payload_kind: str) -> Inspection:
     nodes, edges, fixed = _compiled_buffer_inspect(path, _core._inspect_g2o)
     return Inspection(
         "g2o",
-        datatype,
+        payload_kind,
         _size(path),
         shape=(nodes,),
         dtype="float64",
@@ -200,14 +200,14 @@ def inspect_g2o(path: Path, datatype: str) -> Inspection:
     )
 
 
-def inspect_bundler(path: Path, datatype: str) -> Inspection:
+def inspect_bundler(path: Path, payload_kind: str) -> Inspection:
     file_size = _size(path)
     cameras, points = _compiled_buffer_inspect(
         path, _core._inspect_bundler
     )
     return Inspection(
         "bundler",
-        datatype,
+        payload_kind,
         file_size,
         shape=(cameras,),
         dtype="float64",
@@ -220,13 +220,13 @@ def inspect_bundler(path: Path, datatype: str) -> Inspection:
     )
 
 
-def inspect_bal(path: Path, datatype: str) -> Inspection:
+def inspect_bal(path: Path, payload_kind: str) -> Inspection:
     cameras, points, observations = _compiled_buffer_inspect(
         path, _core._inspect_bal
     )
     return Inspection(
         "bal",
-        datatype,
+        payload_kind,
         _size(path),
         shape=(cameras,),
         dtype="float64",
@@ -240,11 +240,11 @@ def inspect_bal(path: Path, datatype: str) -> Inspection:
     )
 
 
-def inspect_nvm(path: Path, datatype: str) -> Inspection:
+def inspect_nvm(path: Path, payload_kind: str) -> Inspection:
     cameras, points = _compiled_buffer_inspect(path, _core._inspect_nvm)
     return Inspection(
         "nvm",
-        datatype,
+        payload_kind,
         _size(path),
         shape=(cameras,),
         dtype="float64",
@@ -257,13 +257,13 @@ def inspect_nvm(path: Path, datatype: str) -> Inspection:
     )
 
 
-def inspect_transforms(path: Path, datatype: str) -> Inspection:
+def inspect_transforms(path: Path, payload_kind: str) -> Inspection:
     views, cameras = _compiled_buffer_inspect(
         path, _core._inspect_transforms_json
     )
     return Inspection(
         "transforms_json",
-        datatype,
+        payload_kind,
         _size(path),
         shape=(views,),
         dtype="float64",
@@ -272,13 +272,13 @@ def inspect_transforms(path: Path, datatype: str) -> Inspection:
     )
 
 
-def inspect_openmvg(path: Path, datatype: str) -> Inspection:
+def inspect_openmvg(path: Path, payload_kind: str) -> Inspection:
     cameras, images, points = _compiled_buffer_inspect(
         path, _core._inspect_openmvg
     )
     return Inspection(
         "openmvg",
-        datatype,
+        payload_kind,
         _size(path),
         shape=(images,),
         dtype="float64",
@@ -291,7 +291,7 @@ def inspect_openmvg(path: Path, datatype: str) -> Inspection:
     )
 
 
-def inspect_colmap_binary(path: Path, datatype: str) -> Inspection:
+def inspect_colmap_binary(path: Path, payload_kind: str) -> Inspection:
     counts = {}
     for filename, key in (
         ("cameras.bin", "num_cameras"),
@@ -302,7 +302,7 @@ def inspect_colmap_binary(path: Path, datatype: str) -> Inspection:
             counts[key] = struct.unpack("<Q", _exact(stream, 8, filename))[0]
     return Inspection(
         "colmap_sparse",
-        datatype,
+        payload_kind,
         _directory_size(path),
         shape=(counts["num_images"],),
         dtype="float64",
@@ -311,7 +311,7 @@ def inspect_colmap_binary(path: Path, datatype: str) -> Inspection:
     )
 
 
-def inspect_colmap_text(path: Path, datatype: str) -> Inspection:
+def inspect_colmap_text(path: Path, payload_kind: str) -> Inspection:
     cameras, images, points = _core._inspect_colmap_txt(str(path))
     counts = {
         "num_cameras": cameras,
@@ -320,7 +320,7 @@ def inspect_colmap_text(path: Path, datatype: str) -> Inspection:
     }
     return Inspection(
         "colmap_sparse_txt",
-        datatype,
+        payload_kind,
         _directory_size(path),
         shape=(counts["num_images"],),
         dtype="float64",

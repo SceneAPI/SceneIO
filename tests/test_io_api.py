@@ -137,13 +137,13 @@ def test_write_to_read_only_format_raises(tmp_path):
     expected = sceneio.Inspection(
         "ro_test", "depth_map", 0, shape=(2, 3), dtype="float32"
     )
-    ro = registry.Codec(
+    ro = sceneio.Codec(
         "ro_test",
         (".rotest",),
         lambda p: None,
         None,
         record=None,
-        datatype="depth_map",
+        payload_kind="depth_map",
         inspect=lambda path: expected,
     )
     registry.REGISTRY["ro_test"] = ro

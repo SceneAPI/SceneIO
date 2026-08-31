@@ -51,7 +51,7 @@
     ["pts", ["read_pts"], ["write_pts"], ["_inspect_pts"], ["read_pts_points"]],
     ["las", ["read_las"], ["write_las"], [], ["read_las_points"]],
     ["laz", ["read_laz"], ["write_laz"], [], ["read_laz_points"]],
-    ["flo", ["read_flo", "read_flo_view"], ["write_flo"], [], ["read_flo", "read_flo_view"]],
+    ["flo", ["read_flo"], ["write_flo"], [], ["read_flo_window"]],
     ["dmb", ["read_dmb"], ["write_dmb"], ["_inspect_dmb"], ["read_dmb_window"]],
     ["bundler", ["read_bundler"], ["write_bundler"], ["_inspect_bundler"], []],
     ["bal", ["read_bal"], ["write_bal"], ["_inspect_bal"], []],

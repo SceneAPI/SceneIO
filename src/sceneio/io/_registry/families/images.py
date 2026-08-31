@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from sceneio import _core
+from sceneio._data import RasterCollection
 from sceneio.io._avif import inspect_avif, read_avif, write_avif
 from sceneio.io._registry.adapters import (
     _file_sink_writer,
@@ -19,7 +20,7 @@ IMAGE_CODECS: tuple[Codec, ...] = (
         _mmap_reader(_core.read_netpbm),
         _file_sink_writer(_core.write_netpbm),
         record=_core.Image,
-        datatype="image",
+        payload_kind="image",
         magic=(b"P2", b"P3", b"P5", b"P6"),
         read_window=_mmap_selector_reader(_core.read_netpbm_window),
         supported_features=("p2", "p3", "p5", "p6", "uint8", "uint16"),
@@ -31,7 +32,7 @@ IMAGE_CODECS: tuple[Codec, ...] = (
         _mmap_reader(_core.read_png),
         _file_sink_writer(_core.write_png),
         record=_core.Image,
-        datatype="image",
+        payload_kind="image",
         magic=(b"\x89PNG\r\n\x1a\n",),
         supported_features=(
             "grayscale",
@@ -49,7 +50,7 @@ IMAGE_CODECS: tuple[Codec, ...] = (
         _mmap_reader(_core.read_jpeg),
         _file_sink_writer(_core.write_jpeg),
         record=_core.Image,
-        datatype="image",
+        payload_kind="image",
         magic=(b"\xff\xd8\xff",),
         lossy=True,
         supported_features=("baseline", "progressive", "grayscale_read", "rgb"),
@@ -61,7 +62,7 @@ IMAGE_CODECS: tuple[Codec, ...] = (
         _mmap_reader(_core.read_bmp),
         _file_sink_writer(_core.write_bmp),
         record=_core.Image,
-        datatype="image",
+        payload_kind="image",
         magic=(b"BM",),
         supported_features=(
             "windows_v3_v4_v5",
@@ -87,7 +88,7 @@ IMAGE_CODECS: tuple[Codec, ...] = (
         _mmap_reader(_core.read_tga),
         _file_sink_writer(_core.write_tga),
         record=_core.Image,
-        datatype="image",
+        payload_kind="image",
         supported_features=(
             "uncompressed",
             "rle",
@@ -111,7 +112,7 @@ IMAGE_CODECS: tuple[Codec, ...] = (
         _mmap_reader(_core.read_hdr),
         _file_sink_writer(_core.write_hdr),
         record=_core.Image,
-        datatype="image",
+        payload_kind="image",
         magic=(b"#?RADIANCE", b"#?RGBE"),
         lossy=True,
         supported_features=("rgbe", "rle", "float32_rgb"),
@@ -122,7 +123,7 @@ IMAGE_CODECS: tuple[Codec, ...] = (
         _mmap_reader(_core.read_exr),
         _file_sink_writer(_core.write_exr),
         record=_core.Image,
-        datatype="image",
+        payload_kind="image",
         magic=(b"\x76\x2f\x31\x01",),
         supported_features=(
             "single_channel",
@@ -139,7 +140,7 @@ IMAGE_CODECS: tuple[Codec, ...] = (
         _mmap_reader(_core.read_webp),
         _file_sink_writer(_core.write_webp),
         record=_core.Image,
-        datatype="image",
+        payload_kind="image",
         read_window=_mmap_selector_reader(_core.read_webp_window),
         lossy=True,
         supported_features=("lossless", "lossy", "rgb", "rgba"),
@@ -151,7 +152,7 @@ IMAGE_CODECS: tuple[Codec, ...] = (
         read_avif,
         write_avif,
         record=_core.Image,
-        datatype="image",
+        payload_kind="image",
         inspect=inspect_avif,
         streams_write=False,
         requires_features=("PIL",),
@@ -189,8 +190,8 @@ IMAGE_CODECS: tuple[Codec, ...] = (
         (".tif", ".tiff"),
         read_tiff,
         write_tiff,
-        record=None,
-        datatype="image_or_mask_or_stack",
+        record=RasterCollection,
+        payload_kind="raster_collection",
         magic=(b"II*\x00", b"MM\x00*", b"II+\x00", b"MM\x00+"),
         inspect=inspect_tiff,
         requires_features=("tifffile", "zarr"),
@@ -209,7 +210,7 @@ IMAGE_CODECS: tuple[Codec, ...] = (
             "unassociated_alpha",
             "metadata_only_inspect",
             "transactional_path_write",
-            "typed_raster_collection",
+            "raster_collection",
             "multiple_series",
             "pyramids",
             "series_selection",
@@ -221,8 +222,6 @@ IMAGE_CODECS: tuple[Codec, ...] = (
             "byteorder_selection",
         ),
         unsupported_features=(
-            "legacy_multiple_series",
-            "legacy_pyramids",
             "planar_separate",
             "non_top_left_orientation",
             "palette",

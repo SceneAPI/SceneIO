@@ -16,7 +16,7 @@ O3 write-path delta:
 codec              payloadMB   fileMB   bytesW    sinkW  bPeakMB  sPeakMB   bRSSMB   sRSSMB
 -------------------------------------------------------------------------------------------
 fmt                      1.0      2.0        -        3        -      0.4        -      0.5
-bytesW/sinkW = legacy bytes+file/public file-sink write MB/s.
+bytesW/sinkW = baseline bytes+file/public file-sink write MB/s.
 bPeakMB/sPeakMB = peak Python allocation for bytes/file-sink writes (O3 delta).
 bRSSMB/sRSSMB = sampled resident-set growth for bytes/file-sink writes.
 

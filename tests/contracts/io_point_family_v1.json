@@ -35,7 +35,7 @@
       "sha256": "6a42c00445074769a1e2654a900a35029956d4c8f4da88da90d9a0235b03572a",
       "inspection": {
         "format": "ply",
-        "datatype": "point_cloud",
+        "payload_kind": "point_cloud",
         "byte_size": 163,
         "shape": [
           4,
@@ -72,7 +72,7 @@
       "sha256": "266d244eb82808729c37ad6ec7b6ddedb29f0416d1e705acbe89c65e1aa6f5e4",
       "inspection": {
         "format": "pcd",
-        "datatype": "point_cloud",
+        "payload_kind": "point_cloud",
         "byte_size": 211,
         "shape": [
           4,
@@ -130,7 +130,7 @@
       "sha256": "02bdb9d41286899904cf460527021889b12402a1bbfc6064040209ec19fd1795",
       "inspection": {
         "format": "xyz",
-        "datatype": "point_cloud",
+        "payload_kind": "point_cloud",
         "byte_size": 47,
         "shape": [
           4,
@@ -153,7 +153,7 @@
       "sha256": "3916ace1de36a7a3cc64ca20d5beaf2fe41498c21d8414d42c3305c8a0ecaffe",
       "inspection": {
         "format": "pts",
-        "datatype": "point_cloud",
+        "payload_kind": "point_cloud",
         "byte_size": 49,
         "shape": [
           4,
@@ -173,7 +173,7 @@
       "sha256": "ad0267c03c2c2f377c2d5e93a37204401561e076a0d76d5805b61a92a043f46b",
       "inspection": {
         "format": "las",
-        "datatype": "point_cloud",
+        "payload_kind": "point_cloud",
         "byte_size": 307,
         "shape": [
           4,
@@ -196,7 +196,7 @@
       "sha256": "aa789b2f76ef83755980cfa9c1dbf5efc8d61bd415af7598b1b1547a19d5efeb",
       "inspection": {
         "format": "laz",
-        "datatype": "point_cloud",
+        "payload_kind": "point_cloud",
         "byte_size": 388,
         "shape": [
           4,

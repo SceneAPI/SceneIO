@@ -2175,10 +2175,8 @@ def execute_case(request: Mapping[str, Any]) -> Any:
     raise ValueError(f"unsupported {case_id}/{provider}/{operation} operation")
 
 
-# Compatibility aliases used by small local runners and focused tests.
+# Canonical mapping used by the large-benchmark worker.
 CASE_DEFINITIONS = dict(_CASE_BY_ID)
-scene_cases = case_definitions
-build_scene_cases = case_definitions
 
 
 __all__ = [
@@ -2192,7 +2190,6 @@ __all__ = [
     "ProviderUnavailable",
     "build_colmap_fixture",
     "build_glb_fixture",
-    "build_scene_cases",
     "build_spz_fixture",
     "case_definitions",
     "compare_case",
@@ -2207,6 +2204,5 @@ __all__ = [
     "prepare_case",
     "provider_adapters",
     "provider_fixture",
-    "scene_cases",
     "validate_common_input",
 ]

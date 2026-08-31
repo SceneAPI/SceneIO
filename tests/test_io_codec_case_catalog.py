@@ -35,7 +35,7 @@ def test_case_catalog_is_complete_ordered_and_immutable():
         codec_cases.CASES_BY_ID["changed"] = definitions[0]
 
 
-def test_case_catalog_preserves_the_legacy_fixture_partitions():
+def test_case_catalog_preserves_the_canonical_fixture_partitions():
     assert tuple(case.id for case in codec_cases.BUFFER_CASES) == (
         "pfm",
         "gaussian_ply",

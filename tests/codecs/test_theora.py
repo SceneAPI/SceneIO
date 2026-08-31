@@ -234,7 +234,7 @@ def test_public_write_inspect_and_direct_sink_are_exact(tmp_path):
     assert _oracle_packets(path.read_bytes())
     info = sceneio.inspect(path)
     assert info.format == "theora"
-    assert info.datatype == "image_sequence"
+    assert info.payload_kind == "image_sequence"
     assert info.shape == (4, 18, 22, 3)
     assert info.dtype == "uint8" and info.channels == 3
     assert [array.name for array in info.arrays] == ["y", "u", "v"]

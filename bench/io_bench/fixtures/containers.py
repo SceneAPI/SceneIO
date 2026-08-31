@@ -125,11 +125,21 @@ def _e57_fixture(scale):
         [1.25, -2.5, 3.75, 0.9238795325, 0.0, 0.3826834324, 0.0],
         dtype=np.float64,
     )
-    record = _core.point_cloud(
+    cloud = _core.point_cloud(
         positions,
         colors=colors,
         intensity=intensity,
         viewpoint=viewpoint,
+    )
+    record = _core.scan_set(
+        (
+            _core.point_scan(
+                cloud,
+                scan_id=0,
+                timestamp=0.0,
+                viewpoint=viewpoint,
+            ),
+        )
     )
     return record, {
         "positions": positions,

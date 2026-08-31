@@ -214,8 +214,7 @@ PointScan make_point_scan(
             result.invalid_states, invalid_states->data(), count);
     }
     if (row_indices) {
-        result.has_row_indices = true;
-        result.has_column_indices = true;
+        result.has_row_column_indices = true;
         assign_nonempty(result.row_indices, row_indices->data(), count);
         assign_nonempty(result.column_indices, column_indices->data(), count);
     }
@@ -310,14 +309,15 @@ void validate_point_scan(const PointScan &scan, const char *context) {
     const size_t count = scan.point_cloud.n;
     if ((scan.has_invalid_states && scan.invalid_states.size() != count) ||
         (!scan.has_invalid_states && !scan.invalid_states.empty()) ||
-        scan.has_row_indices != scan.has_column_indices ||
-        (scan.has_row_indices &&
+        (scan.has_row_column_indices &&
          (scan.row_indices.size() != count ||
-          scan.column_indices.size() != count)))
+          scan.column_indices.size() != count)) ||
+        (!scan.has_row_column_indices &&
+         (!scan.row_indices.empty() || !scan.column_indices.empty())))
         throw std::invalid_argument(prefix + "stored-row field lengths disagree");
     validate_bounds(scan.row_minimum, scan.row_maximum, "row");
     validate_bounds(scan.column_minimum, scan.column_maximum, "column");
-    if (scan.has_row_indices)
+    if (scan.has_row_column_indices)
         for (size_t index = 0; index < count; ++index)
             if (scan.row_indices[index] < scan.row_minimum ||
                 scan.row_indices[index] > scan.row_maximum ||
@@ -362,13 +362,7 @@ void register_point_scan(nb::module_ &module) {
         .def_prop_ro("point_cloud", [](nb::handle_t<PointScan> self) -> PointCloud & {
             return nb::cast<PointScan &>(self).point_cloud;
         }, nb::rv_policy::reference_internal)
-        .def_prop_ro("cloud", [](nb::handle_t<PointScan> self) -> PointCloud & {
-            return nb::cast<PointScan &>(self).point_cloud;
-        }, nb::rv_policy::reference_internal)
         .def_prop_ro("num_stored_points", [](const PointScan &scan) {
-            return scan.num_stored_points();
-        })
-        .def_prop_ro("num_points", [](const PointScan &scan) {
             return scan.num_stored_points();
         })
         .def_prop_ro("num_valid_points", [](const PointScan &scan) {
@@ -377,14 +371,8 @@ void register_point_scan(nb::module_ &module) {
         .def_prop_ro("has_invalid_states", [](const PointScan &scan) {
             return scan.has_invalid_states;
         })
-        .def_prop_ro("has_row_indices", [](const PointScan &scan) {
-            return scan.has_row_indices;
-        })
-        .def_prop_ro("has_column_indices", [](const PointScan &scan) {
-            return scan.has_column_indices;
-        })
         .def_prop_ro("has_row_column_indices", [](const PointScan &scan) {
-            return scan.has_row_indices && scan.has_column_indices;
+            return scan.has_row_column_indices;
         })
         .def_prop_ro("invalid_states", [](nb::handle_t<PointScan> self) {
             const auto &scan = nb::cast<const PointScan &>(self);

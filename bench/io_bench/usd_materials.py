@@ -130,7 +130,7 @@ def _verify(path: Path, *, expected, face_count: int, material_count: int) -> No
     inspected = sceneio.inspect(path)
     if (
         actual.num_meshes != 1
-        or actual.mesh_at(0).num_faces != face_count
+        or actual.mesh_primitive_at(0).num_faces != face_count
         or actual.materials.num_materials != material_count
         or actual.external_asset_kinds != ["texture"]
         or inspected.metadata["num_materials"] != material_count
@@ -138,12 +138,12 @@ def _verify(path: Path, *, expected, face_count: int, material_count: int) -> No
     ):
         raise AssertionError("rich USD material benchmark counts differ")
     np.testing.assert_array_equal(
-        actual.mesh_at(0).primitive_offsets,
-        expected.mesh_at(0).primitive_offsets,
+        actual.mesh_primitive_at(0).primitive_offsets,
+        expected.mesh_primitive_at(0).primitive_offsets,
     )
     np.testing.assert_array_equal(
-        actual.mesh_at(0).primitive_materials,
-        expected.mesh_at(0).primitive_materials,
+        actual.mesh_primitive_at(0).primitive_materials,
+        expected.mesh_primitive_at(0).primitive_materials,
     )
     np.testing.assert_array_equal(
         actual.materials.base_colors,

@@ -361,7 +361,7 @@ def test_public_read_write_inspect_and_raw_api_unchanged(tmp_path):
     assert isinstance(raw, _core.Image)
     _assert_bits_equal(raw.pixels, values)
     assert info.format == "exr"
-    assert info.datatype == "depth_map"
+    assert info.payload_kind == "depth_map"
     assert info.shape == values.shape
     assert info.dtype == "float32"
     assert info.channels == 1

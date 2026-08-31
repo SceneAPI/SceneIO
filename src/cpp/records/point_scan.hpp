@@ -19,8 +19,7 @@ struct PointScan {
     std::vector<int64_t> row_indices;
     std::vector<int64_t> column_indices;
     bool has_invalid_states = false;
-    bool has_row_indices = false;
-    bool has_column_indices = false;
+    bool has_row_column_indices = false;
     int64_t row_minimum = 0;
     int64_t row_maximum = 0;
     int64_t column_minimum = 0;

@@ -33,7 +33,6 @@ struct Image {
     uint32_t maxval = 255;             // netpbm sample range 0..maxval — metadata, arrays never rescaled
 
     size_t count() const { return height * width * channels; }
-    size_t num_samples() const { return height * width * channels; }  // alias for the netpbm codec
 };
 
 inline const char *image_dtype_name(PixelType t) {

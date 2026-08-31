@@ -13,7 +13,11 @@ from sceneio import _core
 
 
 def _pixels(value):
-    return np.asarray(value.pixels if isinstance(value, _core.Image) else value)
+    if isinstance(value, _core.Image):
+        return np.asarray(value.pixels)
+    if isinstance(value, _core.FlowField):
+        return np.asarray(value.vectors)
+    return np.asarray(value)
 
 
 def _assert_image_window(partial, full, window):
@@ -40,6 +44,23 @@ def _assert_image_window(partial, full, window):
             full.channels,
             full.channel_order,
             full.row_order,
+        )
+    elif isinstance(full, _core.FlowField):
+        assert isinstance(partial, _core.FlowField)
+        assert (
+            partial.component_order,
+            partial.u_axis,
+            partial.v_axis,
+            partial.row_order,
+            partial.unit,
+            partial.invalid_policy,
+        ) == (
+            full.component_order,
+            full.u_axis,
+            full.v_axis,
+            full.row_order,
+            full.unit,
+            full.invalid_policy,
         )
 
 

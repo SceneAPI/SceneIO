@@ -113,7 +113,7 @@ def _normalized_inspection(info) -> dict[str, object]:
         json.dumps(
             {
                 "format": info.format,
-                "datatype": info.datatype,
+                "payload_kind": info.payload_kind,
                 "byte_size": info.byte_size,
                 "shape": info.shape,
                 "dtype": info.dtype,
@@ -354,7 +354,7 @@ def _codec_descriptor(codec) -> dict[str, object]:
         "id": codec.id,
         "extensions": list(codec.extensions),
         "record": codec.record.__name__,
-        "datatype": codec.datatype,
+        "payload_kind": codec.payload_kind,
         "magic": [value.hex() for value in codec.magic],
         "filenames": list(codec.filenames),
         "is_directory": codec.is_directory,
@@ -750,6 +750,7 @@ def test_splat_family_reload_is_inert_and_registry_reload_is_exact():
         import tempfile
         from pathlib import Path
 
+        from sceneio import Codec
         import sceneio.io as public_io
         from sceneio.io import registry
         from sceneio.io._builtin_manifest import (
@@ -812,7 +813,7 @@ def test_splat_family_reload_is_inert_and_registry_reload_is_exact():
                 == public_io.get("sog").capabilities()
             )
 
-        extension = reloaded_registry.Codec(
+        extension = Codec(
             "reload_probe",
             (".reload-probe",),
             lambda path: path,
@@ -925,37 +926,23 @@ def test_splat_inspector_reload_is_inert():
 
 
 @pytest.mark.parametrize(
-    ("wrapper_name", "delegate_name"),
+    "format_id",
     [
-        ("_inspect_gaussian_ply", "_inspect_splat_gaussian_ply"),
-        ("_inspect_compressed_ply", "_inspect_splat_compressed_ply"),
-        ("_inspect_sog", "_inspect_splat_sog"),
-        ("_inspect_ksplat", "_inspect_splat_ksplat"),
-        ("_inspect_spz", "_inspect_splat_spz"),
-        ("_inspect_splat", "_inspect_splat_splat"),
+        "gaussian_ply",
+        "compressed_ply",
+        "sog",
+        "ksplat",
+        "spz",
+        "splat",
     ],
 )
-def test_splat_inspector_facade_preserves_wrapper_signatures(
-    wrapper_name,
-    delegate_name,
-    monkeypatch,
-):
-    marker = object()
-    calls = []
-
-    def inspect_family(path, datatype):
-        calls.append((path, datatype))
-        return marker
-
-    monkeypatch.setattr(_inspection, delegate_name, inspect_family)
-    path = Path("splat.fixture")
-    wrapper = getattr(_inspection, wrapper_name)
-    assert tuple(inspect.signature(wrapper).parameters) == (
-        "path",
-        "datatype",
+def test_splat_inspection_dispatch_uses_family_implementation(format_id):
+    selected = _inspection._PATH_INSPECTORS[format_id]
+    expected = getattr(splat_inspector, f"inspect_{format_id}")
+    assert (selected.__module__, selected.__name__) == (
+        expected.__module__,
+        expected.__name__,
     )
-    assert wrapper(path, "splat") is marker
-    assert calls == [(path, "splat")]
 
 
 def test_repository_coverage_tracks_all_splat_inspectors():
@@ -992,7 +979,7 @@ def test_splat_valid_artifacts_match_exact_parent(
     lower_info = getattr(
         splat_inspector,
         INSPECTOR_NAMES[format_id],
-    )(path, registry.REGISTRY[format_id].datatype)
+    )(path, registry.REGISTRY[format_id].payload_kind)
     decoded = sceneio.read(path, format=format_id)
     assert _normalized_inspection(info) == expected["inspection"]
     assert _normalized_inspection(lower_info) == expected["inspection"]
@@ -1029,7 +1016,7 @@ def test_splat_family_uniform_public_path_and_path_release(tmp_path):
         decoded = sceneio.read(path, format=format_id)
         explicit = sceneio.read(path, format=format_id)
         assert info.format == format_id
-        assert info.datatype == "splat"
+        assert info.payload_kind == "splat"
         assert info.count == cloud.num_gaussians
         assert _record_fingerprint(decoded) == _record_fingerprint(explicit)
 

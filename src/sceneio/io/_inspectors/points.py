@@ -17,7 +17,7 @@ def _size(path: Path) -> int:
     return path.stat().st_size
 
 
-def inspect_las(path: Path, datatype: str) -> Inspection:
+def inspect_las(path: Path, payload_kind: str) -> Inspection:
     file_size = _size(path)
     with path.open("rb") as stream:
         header = _exact(stream, min(255, file_size), "LAS public header")
@@ -79,7 +79,7 @@ def inspect_las(path: Path, datatype: str) -> Inspection:
         raise ValueError("las: truncated or malformed point data")
     return Inspection(
         "las",
-        datatype,
+        payload_kind,
         file_size,
         shape=(count, 3),
         dtype="float32",
@@ -93,7 +93,7 @@ def inspect_las(path: Path, datatype: str) -> Inspection:
     )
 
 
-def inspect_laz(path: Path, datatype: str) -> Inspection:
+def inspect_laz(path: Path, payload_kind: str) -> Inspection:
     """Inspect the LAS public header and LASzip VLR without decoding chunks."""
 
     file_size = _size(path)
@@ -225,7 +225,7 @@ def inspect_laz(path: Path, datatype: str) -> Inspection:
 
     return Inspection(
         "laz",
-        datatype,
+        payload_kind,
         file_size,
         shape=(count, 3),
         dtype="float32",
@@ -240,14 +240,14 @@ def inspect_laz(path: Path, datatype: str) -> Inspection:
     )
 
 
-def inspect_ply(path: Path, datatype: str) -> Inspection:
+def inspect_ply(path: Path, payload_kind: str) -> Inspection:
     file_size = _size(path)
     header = parse_ply_header(path)
     metadata = validate_point_ply_header(header, file_size)
     count = header.vertex.count
     return Inspection(
         "ply",
-        datatype,
+        payload_kind,
         file_size,
         shape=(count, 3),
         dtype="float32",
@@ -256,13 +256,13 @@ def inspect_ply(path: Path, datatype: str) -> Inspection:
     )
 
 
-def inspect_pcd(path: Path, datatype: str) -> Inspection:
+def inspect_pcd(path: Path, payload_kind: str) -> Inspection:
     file_size = _size(path)
     header = parse_pcd_header(path)
     metadata = validate_point_pcd_header(header, path)
     return Inspection(
         "pcd",
-        datatype,
+        payload_kind,
         file_size,
         shape=(header.points, 3),
         dtype="float32",
@@ -271,11 +271,11 @@ def inspect_pcd(path: Path, datatype: str) -> Inspection:
     )
 
 
-def inspect_xyz(path: Path, datatype: str) -> Inspection:
+def inspect_xyz(path: Path, payload_kind: str) -> Inspection:
     count, columns = _core._inspect_xyz_file(path)
     return Inspection(
         "xyz",
-        datatype,
+        payload_kind,
         _size(path),
         shape=(count, 3),
         dtype="float32",
@@ -289,11 +289,11 @@ def inspect_xyz(path: Path, datatype: str) -> Inspection:
     )
 
 
-def inspect_pts(path: Path, datatype: str) -> Inspection:
+def inspect_pts(path: Path, payload_kind: str) -> Inspection:
     count = _compiled_buffer_inspect(path, _core._inspect_pts)
     return Inspection(
         "pts",
-        datatype,
+        payload_kind,
         _size(path),
         shape=(count, 3),
         dtype="float32",

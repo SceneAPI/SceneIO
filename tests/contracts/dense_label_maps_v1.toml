@@ -1,15 +1,15 @@
 schema_version = 1
 contract_date = "2026-08-04"
-status = "adapters_qualified_oracle_generated"
+status = "qualified_oracle_generated"
 schema = "sceneio.label_map/1"
 marker_array = "__sceneio_label_map_v1__"
 public_namespace = "sceneio"
 public_symbols = ["InstanceMap", "LabelTaxonomy", "PanopticMap", "SemanticMap"]
-typed_io = ["inspect_label_map", "read_label_map", "write_label_map"]
+label_map_io = ["inspect_label_map", "read_label_map", "write_label_map"]
 carrier_formats = ["npz", "zarr", "tiff"]
 projection_formats = ["ncore_v4"]
 pending_adapters = []
-raw_compatibility = "Raw NPZ/Zarr remain TensorDict operations, raw TIFF remains Image/Mask/TensorDict, and raw NCore remains NCore records; typed meaning is activated only through the exact versioned declaration."
+carrier_boundary = "NPZ and Zarr decode as TensorDict, TIFF decodes as RasterCollection, and NCore decodes as NCore records; label-map meaning is activated only through the exact versioned declaration."
 
 [label_taxonomy]
 fields = ["semantic_ids", "names", "identity", "version", "display_colors", "is_thing"]
@@ -73,7 +73,7 @@ activation = "SEGMENTATION qualifier plus descriptor-owned __sceneio_label_map_v
 qualifiers = ["semantic", "instance", "panoptic"]
 unknown_field_policy = "reject"
 item_extension_policy = "typed extension belongs to the component descriptor; per-item overrides are rejected"
-raw_compatibility = "camera masks remain boolean Mask projections; non-label NCore components are unchanged"
+carrier_boundary = "camera masks remain boolean Mask projections; non-label NCore components retain their declared records"
 
 [benchmark]
 entrypoint = "bench/bench_label_maps.py"

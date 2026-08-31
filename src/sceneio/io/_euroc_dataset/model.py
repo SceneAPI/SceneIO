@@ -270,7 +270,4 @@ class VisualInertialDataset:
     def has_ground_truth(self) -> bool:
         return self.ground_truth is not None
 
-
-VisualInertialDataset.__module__ = "sceneio.io"
-
 __all__ = ["VisualInertialDataset"]

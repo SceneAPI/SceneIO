@@ -528,10 +528,10 @@ void validate_point_cloud(
         throw std::invalid_argument(
             prefix +
             "display_color_space must be unknown|linear|srgb");
-    // PointCloud has historically preserved every float bit pattern, including
-    // NaN payloads and unknown/non-positive unit tags. Format writers apply
-    // their own representability rules; structural validation must not narrow
-    // that established record contract.
+    // PointCloud preserves every float bit pattern, including NaN payloads and
+    // unknown/non-positive unit tags. Format writers apply their own
+    // representability rules; structural validation does not narrow that
+    // record contract.
     for (double value : cloud.origin)
         if (!std::isfinite(value))
             throw std::invalid_argument(

@@ -406,7 +406,7 @@ Columns: **Ext/id** · **Record** · **Lib/oracle (license)** · **R/W** ·
 | ✅ PCD | `PointCloud` | independent parser + Open3D (MIT) | R+W | PCD 0.7 ASCII/binary/LZF `binary_compressed`; organization/viewpoint; binary point ranges |
 | ✅ LAS | `PointCloud` | laspy (BSD) | R+W | mmap; point formats 0‑10; internal waveform formats 4/5/9/10 retain a validated lossless sidecar |
 | ✅ LAZ | `PointCloud` | LAZperf 3.4.0 (Apache‑2.0/BSD‑3-Clause/BSD‑2-Clause) + laspy/lazrs oracle | R+W | formats 0‑3 and 6‑8; mmap, seekable direct sink, inspect, and chunk-aware point ranges; waveform/extra-byte/metadata extensions reject |
-| ✅ E57 | `PointCloud`; typed `PointScan` / `ScanSet` | pye57 (MIT) / libE57Format (BSL-1.0) | R+W | optional `sceneio[e57]`; generic one-scan projection remains compatible; typed APIs preserve ordered Cartesian scans, raw invalid states, sparse row/column organization, exact RGB8/float32 values, WXYZ scan-to-reference poses, header-only inspection, and fixed-capacity stored-row ranges; spherical data, imagery, extensions, and nonexact narrowing refuse |
+| ✅ E57 | `ScanSet` containing `PointScan` records | pye57 (MIT) / libE57Format (BSL-1.0) | R+W | optional `sceneio[e57]`; generic read/write/inspect use the canonical scan set; `read_e57_scan` selects a scan or fixed-capacity stored-row range; ordered Cartesian scans, raw invalid states, sparse row/column organization, exact RGB8/float32 values, WXYZ scan-to-reference poses, and header-only inspection are preserved; spherical data, imagery, extensions, and nonexact narrowing refuse |
 | ✅ `.xyz` / ✅ count-prefixed `.pts` | `PointCloud` | independent parser | R+W | `.pts` is a distinct count-validated grammar, not an alias |
 
 ### 3d. Meshes
@@ -440,7 +440,7 @@ Columns: **Ext/id** · **Record** · **Lib/oracle (license)** · **R/W** ·
 | ✅ PNG | `Image` (raw) + `DepthMap` (typed) | Pillow+pypng / lodepng (zlib) | R+W | 8/16‑bit, palette, interlace; explicit grayscale uint16 typed-depth adapter |
 | ✅ JPEG | `Image` | Pillow / stb (public domain) | R+W | lossy; gray/RGB read, RGB write |
 | ✅ Radiance HDR | `Image` | numpy RGBE / stb (public domain) | R+W | float32 RGB; lossy RGBE encode |
-| ✅ TIFF | `Image` / `Mask` / grayscale-stack `TensorDict` | tifffile (BSD-3-Clause) | R+W | optional `sceneio[tiff]`; bounded single-series uint8/uint16/float32/boolean profile, BigTIFF, alpha metadata |
+| ✅ TIFF | `RasterCollection` | tifffile (BSD-3-Clause) | R+W | optional `sceneio[tiff]`; generic read/write/inspect cover simple rasters, stacks, bounded multi-series collections and homogeneous pyramids; `read_tiff_collection` provides series/level/page/window selection; uint8/uint16/float32/boolean, BigTIFF, axes, and alpha metadata are preserved |
 | ✅ WebP | `Image` | Pillow / libwebp (BSD) | R+W | lossy+lossless RGB/RGBA |
 | ✅ OpenEXR | `Image` (raw) + `DepthMap` (typed) | OpenEXR (BSD‑3) / tinyexr | R+W | HALF→FLOAT; PIZ/ZIP/RLE; explicit named scalar depth channel |
 | ✅ BMP / TGA | `Image` | stb_image (PD/MIT) + Pillow | R+W | BMP BI_RGB/bitfields/palette and TGA raw/RLE/palette; strict unsupported-variant guards |
@@ -452,7 +452,7 @@ Columns: **Ext/id** · **Record** · **Lib/oracle (license)** · **R/W** ·
 |---|---|---|---|---|
 | ✅ 16‑bit depth PNG | `DepthMap` | pypng oracle + lodepng | R+W | mandatory external encoding; TUM 1/5000 and ScanNet mm profiles tested; no implicit scale |
 | ✅ scalar depth EXR | `DepthMap` | OpenEXR / tinyexr | R+W | mandatory external encoding and exact UTF-8 channel name; HALF/FLOAT values preserved; no implicit scale |
-| ✅ `.flo` (Middlebury) | ndarray (raw) + `FlowField` (typed) | manual | R+W | magic 202021.25; mapped raw view; typed semantic adapters with strict writer guards |
+| ✅ `.flo` (Middlebury) | `FlowField` | manual | R+W | magic 202021.25; fixed UV/+right/+down/pixel conventions; owning full and bounded-window reads; strict writer guards |
 | ✅ `.dmb` (Gipuma) | `DepthMap` | independent NumPy parser | R+W | scalar float32 Gipuma depth; unknown scale, zero-invalid; bounded windows; distinct from COLMAP MVS matrices |
 | ✅ COLMAP MVS depth | `DepthMap` | independent `struct`/NumPy parser | R+W | exact ampersand header, planar little-endian f32 camera-Z values, nonpositive-invalid, bounded windows |
 | ✅ COLMAP MVS normal | `NormalMap` | independent `struct`/NumPy parser | R+W | exact three-channel planar little-endian f32 camera-frame normals; bounded windows |

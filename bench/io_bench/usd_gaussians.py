@@ -127,7 +127,7 @@ def _assert_cloud_bits(actual, expected) -> None:
         raise AssertionError("USD Gaussian benchmark metadata differs")
 
 
-def _legacy_cloud(cloud):
+def _three_dgs_cloud(cloud):
     return sceneio.convert_gaussian_conventions(
         cloud,
         scale_space="log",
@@ -173,7 +173,7 @@ def run_benchmark(
         for encoding in encodings:
             if encoding == "gaussian_ply":
                 path = root / f"gaussians-{gaussian_count}.ply"
-                expected = _legacy_cloud(cloud)
+                expected = _three_dgs_cloud(cloud)
 
                 def write() -> None:
                     sceneio.write(expected, path, format="gaussian_ply")

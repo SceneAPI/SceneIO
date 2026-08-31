@@ -33,7 +33,6 @@ def _evidence_dict(evidence) -> dict[str, object]:
 def _contract_dict(contract) -> dict[str, object]:
     return {
         "canonical_path": contract.canonical_path,
-        "aliases": list(contract.aliases),
         "implementation_paths": list(contract.implementation_paths),
         "kind": contract.kind,
         "stability": contract.stability,

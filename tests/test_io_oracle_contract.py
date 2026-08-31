@@ -113,10 +113,11 @@ def test_tiff_collection_oracle_profile_is_executable_and_complete():
         "RasterSeries",
         "RasterCollection",
     ]
-    assert profile["typed_apis"] == [
+    assert profile["apis"] == [
+        "read",
+        "inspect",
         "read_tiff_collection",
-        "inspect_tiff_collection",
-        "write_tiff_collection",
+        "write_tiff",
     ]
     assert set(profile["qualified_operations"]) == {
         "classic_and_bigtiff",

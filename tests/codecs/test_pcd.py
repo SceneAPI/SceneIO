@@ -464,7 +464,7 @@ def test_public_detection_inspection_dispatch_and_partial(tmp_path):
     info = sceneio.inspect(path)
     assert (
         info.format,
-        info.datatype,
+        info.payload_kind,
         info.shape,
         info.dtype,
         info.count,

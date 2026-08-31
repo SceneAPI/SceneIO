@@ -2,7 +2,7 @@
 // codecs decode into this same GaussianCloud (registered once), so a splat
 // loaded from either format has an identical in-memory layout.
 //
-// Existing codecs default to the raw / pre-activation 3DGS PLY conventions:
+// 3DGS-family codecs use the raw / pre-activation PLY conventions:
 //   means (N,3), scales (N,3, log space), quats (N,4, WXYZ),
 //   opacity (N, logit space), sh_dc (N,3), sh_rest (N,R) channel-grouped
 //   [R.. G.. B..] with R in {0,9,24,45}.
@@ -38,7 +38,7 @@ struct GaussianCloud {
     std::string source_precision = "float32";
     std::string projection_mode_hint = "perspective";
     std::string sorting_mode_hint = "zDepth";
-    // Semantic metadata beyond byte layout. The legacy factory defaults are
+    // Semantic metadata beyond byte layout. The canonical factory defaults are
     // intentionally conservative: raw 3DGS quaternions are magnitude-
     // unconstrained, RGB transfer and coordinates are not tagged by PLY, and
     // no metric scale is inferred.
@@ -209,7 +209,7 @@ inline void validate_gaussian_conventions(
     }
 }
 
-inline void require_legacy_gaussian_conventions(
+inline void require_3dgs_gaussian_conventions(
     const GaussianCloud &cloud, const char *context,
     const char *declared_coordinate_frame = "unknown") {
     validate_gaussian_structure(cloud, context);

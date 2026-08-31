@@ -115,7 +115,7 @@ default_ci = false
 expected_size_bytes = 4110336
 expected_sha256 = "d45bebb09f7326610f950b2808103824187c20260bcc498ba9c4873d5ff1689a"
 observed_result = "pye57 exposes one Cartesian scan plus an images2D visual reference and broader scan metadata; SceneIO reports the unrepresented scan metadata and refuses the file."
-notes = "Official real-producer imagery refusal vector; imagery is not dropped from typed scans silently."
+notes = "Official real-producer imagery refusal vector; imagery is not dropped from scans silently."
 
 [[sources]]
 id = "e57_pump_extensions"
@@ -420,7 +420,7 @@ redistribution = "permitted_with_attribution"
 default_ci = false
 expected_size_bytes = 7889559
 expected_sha256 = "caf707ca2ba6c42c40ded92245432d350a781fcdd03c0b178834f5eb5e5b96f3"
-observed_result = "Typed TIFF collection inspect now traverses TiffFrame metadata through its keyframe and deliberately refuses the TCZYX OME-XML profile; generic inspect independently refuses the ambiguous axes."
+observed_result = "TIFF collection inspection traverses TiffFrame metadata through its keyframe and deliberately refuses the TCZYX OME-XML profile."
 notes = "Official future-profile vector for multi-series/volume TIFF hardening; do not count it as supported or broaden the current Image contract silently."
 
 [[sources]]
@@ -620,7 +620,7 @@ mode = "oracle_derived"
 source_ids = ["dxgl_apple_multiview"]
 oracle_source_ids = ["numpy"]
 formats = ["flo"]
-evidence = ["tests/codecs/test_flo.py", "tests/codecs/test_flo_typed.py"]
+evidence = ["tests/codecs/test_flo.py", "tests/codecs/test_flo_integration.py"]
 derivation = "Project CC0 depth through two known camera transforms with an independent NumPy oracle, then serialize Middlebury FLO bytes independently."
 qualification = "finite valid vectors and invalid-mask behavior compare bit-exactly"
 

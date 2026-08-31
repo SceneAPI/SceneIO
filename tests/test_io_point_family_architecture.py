@@ -88,7 +88,7 @@ def _normalized_inspection(info) -> dict[str, object]:
         json.dumps(
             {
                 "format": info.format,
-                "datatype": info.datatype,
+                "payload_kind": info.payload_kind,
                 "byte_size": info.byte_size,
                 "shape": info.shape,
                 "dtype": info.dtype,
@@ -247,34 +247,23 @@ def test_point_family_reload_is_inert_and_registry_reload_is_exact():
 
 
 @pytest.mark.parametrize(
-    ("wrapper_name", "delegate_name"),
+    "format_id",
     [
-        ("_inspect_ply", "_inspect_point_ply"),
-        ("_inspect_pcd", "_inspect_point_pcd"),
-        ("_inspect_xyz", "_inspect_point_xyz"),
-        ("_inspect_pts", "_inspect_point_pts"),
-        ("_inspect_las", "_inspect_point_las"),
-        ("_inspect_laz", "_inspect_point_laz"),
+        "ply",
+        "pcd",
+        "xyz",
+        "pts",
+        "las",
+        "laz",
     ],
 )
-def test_point_inspector_facade_preserves_wrapper_signatures(
-    wrapper_name,
-    delegate_name,
-    monkeypatch,
-):
-    marker = object()
-    calls = []
-
-    def inspect_family(path, datatype):
-        calls.append((path, datatype))
-        return marker
-
-    monkeypatch.setattr(_inspection, delegate_name, inspect_family)
-    path = Path("point.fixture")
-    wrapper = getattr(_inspection, wrapper_name)
-    assert tuple(inspect.signature(wrapper).parameters) == ("path", "datatype")
-    assert wrapper(path, "point_cloud") is marker
-    assert calls == [(path, "point_cloud")]
+def test_point_inspection_dispatch_uses_family_implementation(format_id):
+    selected = _inspection._PATH_INSPECTORS[format_id]
+    expected = getattr(point_inspector, f"inspect_{format_id}")
+    assert (selected.__module__, selected.__name__) == (
+        expected.__module__,
+        expected.__name__,
+    )
 
 
 def test_repository_coverage_tracks_all_point_inspectors():
@@ -308,7 +297,7 @@ def test_point_inspection_matches_parent_contract_and_full_read(
 
     lower = getattr(point_inspector, f"inspect_{format_id}")(
         path,
-        registry.REGISTRY[format_id].datatype,
+        registry.REGISTRY[format_id].payload_kind,
     )
     public = sceneio.inspect(path, format=format_id)
     assert _normalized_inspection(lower) == expected["inspection"]
@@ -330,7 +319,7 @@ def test_malformed_point_inspection_matches_parent_contract(
     path.write_bytes(b"bad")
     inspector = getattr(point_inspector, f"inspect_{format_id}")
     with pytest.raises(Exception) as lower_error:
-        inspector(path, registry.REGISTRY[format_id].datatype)
+        inspector(path, registry.REGISTRY[format_id].payload_kind)
     assert type(lower_error.value).__name__ == expected["cause_type"]
     assert str(lower_error.value) == expected["cause_message"]
 

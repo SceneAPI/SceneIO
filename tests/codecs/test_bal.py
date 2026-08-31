@@ -436,7 +436,7 @@ def test_public_detect_read_write_and_inspect(tmp_path):
     assert_reconstruction_matches_raw(record, oracle_read(FIXTURE))
     info = sceneio.inspect(path)
     assert info.format == "bal"
-    assert info.datatype == "sparse_model"
+    assert info.payload_kind == "sparse_model"
     assert info.shape == (2,)
     assert info.dtype == "float64"
     assert info.count == 2

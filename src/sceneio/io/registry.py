@@ -1,8 +1,8 @@
 """Codec registry — the single place a format is wired into ``sceneio.io``.
 
-Each :class:`Codec` binds a format id to its file extensions, a magic-byte
-sniff, a reader, an optional writer, the record type it yields, and the
-DataType it serializes. ``read()`` / ``write()`` / ``detect()`` dispatch
+Each :class:`sceneio.Codec` binds a format id to its file extensions, a
+magic-byte sniff, a reader, an optional writer, the record type it yields, and
+its payload kind. ``read()`` / ``write()`` / ``detect()`` dispatch
 through this registry, so **adding a format is one** :func:`register` call
 (plus the compiled codec). See ``docs/core_architecture.md``.
 """
@@ -20,9 +20,11 @@ from sceneio.io._frame_access import ImageFrameAccess
 from sceneio.io._hdf5 import classify_hdf5
 from sceneio.io._inspection import inspect_codec
 from sceneio.io._ply import classify_ply
-from sceneio.io._registry import adapters as _shared_adapters
-from sceneio.io._registry import model as _shared_model
-from sceneio.io._registry import native_features as _shared_native_features
+from sceneio.io._registry.adapters import (
+    _file_sink_writer,
+    _mmap_reader,
+    _mmap_selector_reader,
+)
 from sceneio.io._registry.assembly import BuiltinAssembly as _BuiltinAssembly
 from sceneio.io._registry.assembly import (
     publish_builtin_definitions as _publish_builtin_definitions,
@@ -39,18 +41,15 @@ from sceneio.io._registry.families.points import POINT_CODECS
 from sceneio.io._registry.families.reconstruction import RECONSTRUCTION_CODECS
 from sceneio.io._registry.families.sequences import build_sequence_codecs
 from sceneio.io._registry.families.splats import build_splat_codecs
-
-Codec = _shared_model.Codec
-CodecCapabilities = _shared_model.CodecCapabilities
-NativeFeatureCapabilities = _shared_model.NativeFeatureCapabilities
-_array_window_reader = _shared_adapters._array_window_reader
-_bytes_reader = _shared_adapters._bytes_reader
-_file_sink_writer = _shared_adapters._file_sink_writer
-_mmap_reader = _shared_adapters._mmap_reader
-_mmap_selector_reader = _shared_adapters._mmap_selector_reader
-_mmap_view_reader = _shared_adapters._mmap_view_reader
-_NATIVE_FEATURE_FORMATS = _shared_native_features.NATIVE_FEATURE_FORMATS
-_native_feature_snapshots = _shared_native_features.native_feature_snapshots
+from sceneio.io._registry.model import (
+    Codec as _Codec,
+)
+from sceneio.io._registry.model import (
+    NativeFeatureCapabilities as _NativeFeatureCapabilities,
+)
+from sceneio.io._registry.native_features import (
+    native_feature_snapshots as _native_feature_snapshots,
+)
 
 
 class FormatError(SceneIoError):
@@ -59,11 +58,11 @@ class FormatError(SceneIoError):
 
 def native_feature_capabilities(
     name: str | None = None,
-) -> NativeFeatureCapabilities | dict[str, NativeFeatureCapabilities]:
+) -> _NativeFeatureCapabilities | dict[str, _NativeFeatureCapabilities]:
     """Return immutable compiled-state metadata for optional native features."""
 
     return _native_feature_snapshots(
-        getattr(_core, "__native_features__", ()),
+        _core.__native_features__,
         name,
         unknown_feature=lambda feature: FormatError(
             f"unknown native feature {feature!r}"
@@ -71,7 +70,7 @@ def native_feature_capabilities(
     )
 
 
-REGISTRY: dict[str, Codec]
+REGISTRY: dict[str, _Codec]
 _IS_REGISTRY_RELOAD = "REGISTRY" in globals()
 if not _IS_REGISTRY_RELOAD:
     REGISTRY = {}
@@ -83,7 +82,7 @@ _RUNTIME_EXTENSIONS = tuple(
 _BUILTIN_ASSEMBLY = _BuiltinAssembly()
 
 
-def register(codec: Codec) -> Codec:
+def register(codec: _Codec) -> _Codec:
     if codec.id in REGISTRY:
         raise ValueError(f"codec id already registered: {codec.id!r}")
     REGISTRY[codec.id] = codec
@@ -92,21 +91,21 @@ def register(codec: Codec) -> Codec:
 
 def _define_builtin_family(
     family_name: str,
-    codecs: tuple[Codec, ...],
-) -> tuple[Codec, ...]:
+    codecs: tuple[_Codec, ...],
+) -> tuple[_Codec, ...]:
     """Stage one complete built-in family without mutating ``REGISTRY``."""
 
     return _BUILTIN_ASSEMBLY.add_family(family_name, codecs)
 
 
 def _install_builtin_family(
-    codecs: tuple[Codec, ...],
+    codecs: tuple[_Codec, ...],
     expected_ids: tuple[str, ...],
 ) -> None:
     """Validate one complete built-in family before installing any member."""
 
     definitions = tuple(codecs)
-    if any(type(codec) is not Codec for codec in definitions):
+    if any(type(codec) is not _Codec for codec in definitions):
         raise TypeError("built-in family entries must be Codec instances")
     actual_ids = tuple(codec.id for codec in definitions)
     if len(actual_ids) != len(set(actual_ids)):
@@ -122,7 +121,7 @@ def _install_builtin_family(
         REGISTRY[codec.id] = codec
 
 
-def get(format_id: str) -> Codec:
+def get(format_id: str) -> _Codec:
     try:
         return REGISTRY[format_id]
     except KeyError:
@@ -147,7 +146,7 @@ def _inspect_registered_path(path: str | Path):
     fmt = detect(path)
     codec = get(fmt)
     try:
-        return inspect_codec(path, fmt, codec.datatype, codec.inspect)
+        return inspect_codec(path, fmt, codec.payload_kind, codec.inspect)
     except FormatError:
         raise
     except Exception as exc:
@@ -247,8 +246,8 @@ _define_builtin_family(
 # This immutable tuple is the repository-owned completeness boundary. Built-ins
 # become visible only after the complete canonical set validates successfully.
 # The same mutable REGISTRY then remains the public extension point.
-BUILTIN_DEFINITIONS: tuple[Codec, ...] = _BUILTIN_ASSEMBLY.finalize()
-_PUBLICATION_TARGET: dict[str, Codec] = {} if _IS_REGISTRY_RELOAD else REGISTRY
+BUILTIN_DEFINITIONS: tuple[_Codec, ...] = _BUILTIN_ASSEMBLY.finalize()
+_PUBLICATION_TARGET: dict[str, _Codec] = {} if _IS_REGISTRY_RELOAD else REGISTRY
 _publish_builtin_definitions(_PUBLICATION_TARGET, BUILTIN_DEFINITIONS)
 if _IS_REGISTRY_RELOAD:
     _PENDING_REGISTRY = _PUBLICATION_TARGET

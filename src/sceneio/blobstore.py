@@ -58,8 +58,3 @@ def validate_sha(sha: str) -> None:
     """
     if len(sha) != 64 or not all(c in "0123456789abcdef" for c in sha):
         raise SceneIoError(f"Invalid sha: {sha!r}")
-
-
-# Backwards-compatible private alias so the sceneapi core (and any other
-# importer) can keep the historic ``_validate_sha`` name.
-_validate_sha = validate_sha

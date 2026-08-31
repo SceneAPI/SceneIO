@@ -4,6 +4,16 @@
   the earlier existing-format R6 gate closed at packaged source commit
   `105b3017dae37345a6974f289e661d9173186a2a`. Exact current capabilities and
   validation state are maintained in [`format_coverage.md`](format_coverage.md).
+- **Superseded FLO design:** the pre-1 contract reset consolidated the raw and
+  typed FLO paths onto `FlowField`. Historical sections below that describe
+  `read_flo_view` or `read_flow` document the earlier checkpoint, not the
+  current API.
+- **Post-0.3 representation consolidation:** E57 now uses `ScanSet` for
+  generic read/write/inspect plus `read_e57_scan` for selection; TIFF uses
+  `RasterCollection` plus `read_tiff_collection` for selection. Historical
+  one-scan/simple-raster projections and duplicated format-specific full-I/O
+  helpers below are not current APIs. `bench/io_bench/runner.py` owns the
+  benchmark implementation; `bench/bench_io.py` is only its CLI shim.
 - **Post-R6 ecosystem closure:** the 54-codec COLMAP dense and companion-I/O
   checkpoint closes at packaged source `2253e0f`; exact-head runs
   `30469273173`, `30469271293`, and build-only package run `30470889876`

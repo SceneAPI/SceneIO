@@ -328,7 +328,6 @@ def test_native_feature_manifest_reads_compiled_extension_state(monkeypatch):
         registry._core,
         "__native_features__",
         ("hdf5",),
-        raising=False,
     )
     assert sceneio.native_features("hdf5").available
     assert not sceneio.native_features("tiff").available
@@ -339,13 +338,13 @@ def test_native_feature_manifest_reads_compiled_extension_state(monkeypatch):
 
 
 def test_codec_metadata_normalizes_sequences_and_rejects_conflicts():
-    codec = registry.Codec(
+    codec = sceneio.Codec(
         "metadata_test",
         [".meta"],
         lambda path: path,
         None,
         record=None,
-        datatype="tensor",
+        payload_kind="tensor",
         supported_features=["one"],
         unsupported_features=["two"],
     )
@@ -356,24 +355,24 @@ def test_codec_metadata_normalizes_sequences_and_rejects_conflicts():
     assert not codec.capabilities().streams_write
 
     with pytest.raises(ValueError, match="overlap"):
-        registry.Codec(
+        sceneio.Codec(
             "bad",
             (),
             lambda path: path,
             None,
             record=None,
-            datatype="tensor",
+            payload_kind="tensor",
             supported_features=("same",),
             unsupported_features=("same",),
         )
     with pytest.raises(ValueError, match="disagree"):
-        registry.Codec(
+        sceneio.Codec(
             "bad-dir",
             (),
             lambda path: path,
             None,
             record=None,
-            datatype="tensor",
+            payload_kind="tensor",
             is_directory=True,
             container_kind="file",
         )

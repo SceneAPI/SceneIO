@@ -23,7 +23,7 @@ FIXTURE_CONTRACT = tomllib.loads(
 
 def test_contract_identity_public_surface_and_live_fields() -> None:
     assert CONTRACT["schema_version"] == 1
-    assert CONTRACT["status"] == "adapters_qualified_oracle_generated"
+    assert CONTRACT["status"] == "qualified_oracle_generated"
     assert date.fromisoformat(CONTRACT["contract_date"]).isoformat() == CONTRACT[
         "contract_date"
     ]
@@ -43,7 +43,7 @@ def test_contract_identity_public_surface_and_live_fields() -> None:
         assert sceneio.representation_contract(record).representation == (
             f"sceneio.{name}"
         )
-    for name in CONTRACT["typed_io"]:
+    for name in CONTRACT["label_map_io"]:
         assert getattr(sceneio, name) is getattr(sceneio.io, name)
         assert name in sceneio.__all__
         assert name in sceneio.io.__all__
@@ -95,7 +95,7 @@ def test_generic_carrier_claims_match_dependency_boundaries() -> None:
         "instance",
         "panoptic",
     ]
-    assert "TensorDict" in CONTRACT["raw_compatibility"]
+    assert "RasterCollection" in CONTRACT["carrier_boundary"]
 
 
 def test_focused_benchmark_contract_is_present_and_qualifying() -> None:

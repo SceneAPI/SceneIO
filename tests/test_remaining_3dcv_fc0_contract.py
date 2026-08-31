@@ -83,7 +83,7 @@ def test_fc0_decisions_are_complete_provisional_and_nonpublic():
     assert implemented_format["id"] == "euroc_dataset"
     assert implemented_format["family_module"].endswith(".families.datasets")
     assert implemented_format["container_kind"] == "multi_file"
-    assert implemented_format["datatype"] == "visual_inertial_dataset"
+    assert implemented_format["payload_kind"] == "visual_inertial_dataset"
     assert implemented_format["directory_probe_required"] is True
     assert set(implemented_format["required_globs"]) == {
         "mav0/cam*/data.csv",
@@ -137,7 +137,7 @@ def test_fc0_decisions_are_complete_provisional_and_nonpublic():
             _assert_evidence(reference)
 
 
-def test_fc0_freezes_signatures_errors_and_legacy_construction():
+def test_fc0_freezes_signatures_errors_and_canonical_construction():
     assert str(inspect.signature(sceneio.read_partial)) == CONTRACT[
         "read_partial_signature"
     ]
@@ -222,7 +222,7 @@ def test_fc0_provider_ledger_matches_dependencies_capabilities_and_evidence():
         for reference in row["evidence"]:
             _assert_evidence(reference)
 
-    projections = CONTRACT["legacy_projections"]
+    projections = CONTRACT["canonical_records"]
     projected_formats = {
         format_id for row in projections for format_id in row["formats"]
     }

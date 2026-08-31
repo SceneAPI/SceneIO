@@ -849,7 +849,7 @@ def inspect_euroc_dataset(
     )
     return Inspection(
         format="euroc_dataset",
-        datatype="visual_inertial_dataset",
+        payload_kind="visual_inertial_dataset",
         byte_size=_directory_size(layout.root),
         count=count,
         metadata={

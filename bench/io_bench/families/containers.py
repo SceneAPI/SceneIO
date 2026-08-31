@@ -186,7 +186,19 @@ def _assert_partial_parquet(actual, payload) -> None:
 
 def _tiff_fixture(scale):
     side = max(1, int(1024 * scale**0.5))
-    return _img_u8(side, side)
+    image, pixels = _img_u8(side, side)
+    level = sceneio.RasterLevel(
+        0,
+        "YXC",
+        pixels.shape,
+        pixels.dtype.name,
+        "image",
+        image,
+    )
+    collection = sceneio.RasterCollection(
+        (sceneio.RasterSeries(0, None, (level,)),)
+    )
+    return collection, pixels
 
 
 def _tiff_oracle_write(array, path) -> None:
@@ -198,19 +210,21 @@ def _tiff_oracle_read(path):
         return np.asarray(image)
 
 
-def _assert_tiff_image(actual, expected) -> None:
-    np.testing.assert_array_equal(np.asarray(actual.pixels), expected)
+def _assert_tiff_collection(actual, expected) -> None:
+    np.testing.assert_array_equal(actual.series[0].levels[0].array, expected)
 
 
 def _assert_tiff_array(actual, expected) -> None:
     np.testing.assert_array_equal(actual, expected)
 
 
-def _assert_e57_cloud(actual, expected) -> None:
-    np.testing.assert_array_equal(actual.positions, expected["positions"])
-    np.testing.assert_array_equal(actual.colors, expected["colors"])
-    np.testing.assert_array_equal(actual.intensities, expected["intensity"])
-    np.testing.assert_array_equal(actual.viewpoint, expected["viewpoint"])
+def _assert_e57_scan_set(actual, expected) -> None:
+    assert actual.num_scans == 1
+    scan = actual.scans[0]
+    np.testing.assert_array_equal(scan.point_cloud.positions, expected["positions"])
+    np.testing.assert_array_equal(scan.point_cloud.colors, expected["colors"])
+    np.testing.assert_array_equal(scan.point_cloud.intensities, expected["intensity"])
+    np.testing.assert_array_equal(scan.viewpoint, expected["viewpoint"])
 
 
 def _assert_e57_payload(actual, expected) -> None:
@@ -246,7 +260,7 @@ def _assert_usd_scene(actual, expected) -> None:
     assert actual.num_meshes == actual.num_mesh_primitives == 1
     assert actual.num_nodes == 1
     assert list(actual.node_names) == [expected["attrs"]["node_name"]]
-    mesh = actual.mesh_at(0)
+    mesh = actual.mesh_primitive_at(0)
     for name, value in expected["arrays"].items():
         observed = np.asarray(getattr(mesh, name))
         assert observed.dtype == value.dtype
@@ -359,7 +373,7 @@ def build_container_specs(scale):
             (_tiff_oracle_write if PILImage else None),
             (_tiff_oracle_read if PILImage else None),
             lambda _record, payload: payload.nbytes,
-            _assert_tiff_image,
+            _assert_tiff_collection,
             _assert_tiff_array,
         ),
         PathSpec(
@@ -371,7 +385,7 @@ def build_container_specs(scale):
             e57_write,
             e57_read,
             _e57_nbytes,
-            _assert_e57_cloud,
+            _assert_e57_scan_set,
             _assert_e57_payload,
         ),
         PathSpec(

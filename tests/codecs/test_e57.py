@@ -27,12 +27,26 @@ def _fixture(count: int = 23):
             positions,
             colors=colors,
             intensity=intensity,
-            viewpoint=viewpoint,
         ),
         positions,
         colors,
         intensity,
         viewpoint,
+    )
+
+
+def _scan_set(cloud, *, timestamp: float = 0.0, viewpoint=None):
+    if viewpoint is None:
+        viewpoint = cloud.viewpoint
+    return _core.scan_set(
+        (
+            _core.point_scan(
+                cloud,
+                scan_id=0,
+                timestamp=timestamp,
+                viewpoint=np.asarray(viewpoint, dtype=np.float64),
+            ),
+        )
     )
 
 
@@ -81,7 +95,7 @@ def test_sceneio_e57_write_is_exact_for_direct_upstream_reader(tmp_path):
     cloud, positions, colors, intensity, viewpoint = _fixture()
     path = tmp_path / "sceneio.e57"
 
-    sceneio.write(cloud, path)
+    sceneio.write(_scan_set(cloud, viewpoint=viewpoint), path)
 
     assert sceneio.detect(path) == "e57"
     with pye57.E57(str(path)) as oracle:
@@ -121,19 +135,21 @@ def test_sceneio_reads_direct_upstream_e57_exactly(tmp_path):
             rotation=viewpoint[3:],
         )
 
-    cloud = sceneio.read(path)
-
-    assert isinstance(cloud, _core.PointCloud)
+    scans = sceneio.read(path)
+    assert isinstance(scans, _core.ScanSet)
+    assert scans.num_scans == 1
+    scan = scans.scans[0]
+    cloud = scan.point_cloud
     np.testing.assert_array_equal(np.asarray(cloud.positions), positions)
     np.testing.assert_array_equal(np.asarray(cloud.colors), colors)
     np.testing.assert_array_equal(np.asarray(cloud.intensities), intensity)
-    np.testing.assert_allclose(cloud.viewpoint, viewpoint, rtol=0, atol=0)
+    np.testing.assert_allclose(scan.viewpoint, viewpoint, rtol=0, atol=0)
     assert cloud.coordinate_frame == "unknown"
     assert cloud.scale_to_meters == 1.0
     assert cloud.intensity_range == "unknown"
 
 
-def test_e57_invalid_cartesian_points_are_explicitly_filtered(tmp_path):
+def test_e57_invalid_cartesian_states_and_valid_projection_are_preserved(tmp_path):
     _cloud, positions, colors, intensity, _viewpoint = _fixture(8)
     invalid = np.array([0, 1, 0, 0, 2, 0, 0, 0], dtype=np.int8)
     payload = _raw_payload(positions, colors, intensity)
@@ -142,25 +158,31 @@ def test_e57_invalid_cartesian_points_are_explicitly_filtered(tmp_path):
     with pye57.E57(str(path), mode="w") as oracle:
         oracle.write_scan_raw(payload)
 
-    cloud = sceneio.read(path)
+    scan = sceneio.read(path).scans[0]
 
     selected = invalid == 0
-    np.testing.assert_array_equal(np.asarray(cloud.positions), positions[selected])
-    np.testing.assert_array_equal(np.asarray(cloud.colors), colors[selected])
+    np.testing.assert_array_equal(scan.invalid_states, invalid)
     np.testing.assert_array_equal(
-        np.asarray(cloud.intensities),
+        np.asarray(scan.point_cloud.positions),
+        np.where(selected[:, None], positions, 0.0),
+    )
+    valid = scan.valid_point_cloud()
+    np.testing.assert_array_equal(np.asarray(valid.positions), positions[selected])
+    np.testing.assert_array_equal(np.asarray(valid.colors), colors[selected])
+    np.testing.assert_array_equal(
+        np.asarray(valid.intensities),
         intensity[selected],
     )
     info = sceneio.inspect(path)
-    assert info.shape == (int(np.count_nonzero(selected)), 3)
-    assert info.count == int(np.count_nonzero(selected))
+    assert info.shape == (1,)
+    assert info.count == len(invalid)
     assert info.metadata["stored_point_count"] == len(invalid)
 
 
 def test_e57_inspect_does_not_decode_points(tmp_path, monkeypatch):
     cloud, *_ = _fixture(5)
     path = tmp_path / "inspect.e57"
-    sceneio.write(cloud, path)
+    sceneio.write(_scan_set(cloud), path)
 
     def fail_read(*_args, **_kwargs):
         raise AssertionError("point decode was called")
@@ -169,18 +191,19 @@ def test_e57_inspect_does_not_decode_points(tmp_path, monkeypatch):
     info = sceneio.inspect(path)
 
     assert info.format == "e57"
-    assert info.shape == (5, 3)
+    assert info.payload_kind == "scan_set"
+    assert info.shape == (1,)
     assert info.count == 5
-    assert info.metadata == {
-        "scan_count": 1,
-        "has_colors": True,
-        "has_intensity": True,
-        "has_invalid_state": False,
-        "stored_point_count": 5,
-    }
+    assert info.metadata["scan_count"] == 1
+    assert info.metadata["stored_point_count"] == 5
+    scan = info.metadata["scans"][0]
+    assert scan["has_colors"] is True
+    assert scan["has_intensity"] is True
+    assert scan["has_invalid_state"] is False
+    assert scan["stored_point_count"] == 5
 
 
-def test_e57_rejects_multiple_scans(tmp_path):
+def test_e57_reads_multiple_scans(tmp_path):
     _cloud, positions, *_ = _fixture(3)
     path = tmp_path / "two.e57"
     translations = (
@@ -217,10 +240,7 @@ def test_e57_rejects_multiple_scans(tmp_path):
                 atol=0,
             )
 
-    with pytest.raises(sceneio.FormatError, match="exactly one data3D scan"):
-        sceneio.read(path)
-
-    scans = sceneio.read_e57_scans(path)
+    scans = sceneio.read(path)
     assert isinstance(scans, _core.ScanSet)
     assert scans.num_scans == 2
     assert scans.scan_ids.tolist() == [0, 1]
@@ -236,7 +256,7 @@ def test_e57_rejects_multiple_scans(tmp_path):
         )
 
 
-def test_e57_typed_scan_preserves_stored_rows_invalid_states_and_indices(tmp_path):
+def test_e57_scan_preserves_stored_rows_invalid_states_and_indices(tmp_path):
     positions, colors, intensity, invalid, rows, columns = _structured_fixture()
     path = tmp_path / "structured.e57"
     with pye57.E57(str(path), mode="w") as oracle:
@@ -282,7 +302,7 @@ def test_e57_typed_scan_preserves_stored_rows_invalid_states_and_indices(tmp_pat
     )
 
 
-def test_e57_typed_pose_is_scan_to_reference_wxyz(tmp_path):
+def test_e57_pose_is_scan_to_reference_wxyz(tmp_path):
     positions = np.array([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]], dtype=np.float32)
     rotation = np.array(
         [np.sqrt(0.5), 0.0, 0.0, np.sqrt(0.5)], dtype=np.float64
@@ -312,7 +332,7 @@ def test_e57_typed_pose_is_scan_to_reference_wxyz(tmp_path):
     )
 
 
-def test_e57_typed_scan_owns_buffers_after_source_close(tmp_path):
+def test_e57_scan_owns_buffers_after_source_close(tmp_path):
     positions, colors, intensity, invalid, rows, columns = _structured_fixture()
     path = tmp_path / "owned.e57"
     with pye57.E57(str(path), mode="w") as oracle:
@@ -333,7 +353,7 @@ def test_e57_typed_scan_owns_buffers_after_source_close(tmp_path):
     np.testing.assert_array_equal(np.asarray(scan.row_indices), rows[1:5])
 
 
-def test_e57_typed_stored_range_streams_without_read_scan_raw(tmp_path, monkeypatch):
+def test_e57_stored_range_streams_without_read_scan_raw(tmp_path, monkeypatch):
     positions, colors, intensity, invalid, rows, columns = _structured_fixture()
     path = tmp_path / "range.e57"
     with pye57.E57(str(path), mode="w") as oracle:
@@ -371,7 +391,7 @@ def test_e57_typed_stored_range_streams_without_read_scan_raw(tmp_path, monkeypa
         sceneio.read_e57_scan(path, stored_point_range=(0, len(positions) + 1))
 
 
-def test_e57_typed_stored_range_crosses_provider_chunk_boundary(tmp_path, monkeypatch):
+def test_e57_stored_range_crosses_provider_chunk_boundary(tmp_path, monkeypatch):
     count = _e57._RANGE_BUFFER_CAPACITY + 3
     axis = np.arange(count, dtype=np.float32)
     positions = np.column_stack((axis / 4, axis / 8, -axis / 16))
@@ -400,7 +420,7 @@ def test_e57_typed_stored_range_crosses_provider_chunk_boundary(tmp_path, monkey
     np.testing.assert_array_equal(selected.invalid_states, invalid[start:])
 
 
-def test_e57_all_invalid_typed_scan_has_empty_valid_projection(
+def test_e57_all_invalid_scan_has_empty_valid_projection(
     tmp_path, monkeypatch
 ):
     positions = np.arange(12, dtype=np.float32).reshape(4, 3)
@@ -428,21 +448,23 @@ def test_e57_all_invalid_typed_scan_has_empty_valid_projection(
     projected = scan.valid_point_cloud()
     assert projected.num_points == 0
     assert np.asarray(projected.positions).shape == (0, 3)
-    with pytest.raises(sceneio.FormatError, match="no valid Cartesian points"):
-        sceneio.read(path)
+    decoded = sceneio.read(path).scans[0]
+    assert decoded.num_stored_points == 4
+    assert decoded.num_valid_points == 0
 
     authored = _core.point_scan(
         _core.point_cloud(positions),
+        scan_id=0,
         invalid_states=invalid,
         timestamp=0.0,
     )
     with pytest.raises(sceneio.FormatError, match="no valid Cartesian points"):
-        sceneio.write_e57_scans(authored, tmp_path / "refused.e57")
+        sceneio.write(_core.scan_set((authored,)), tmp_path / "refused.e57")
 
 
-def test_e57_typed_inspect_reports_all_scans_without_decoding(tmp_path, monkeypatch):
+def test_e57_inspect_reports_all_scans_without_decoding(tmp_path, monkeypatch):
     positions, colors, intensity, invalid, rows, columns = _structured_fixture()
-    path = tmp_path / "inspect-typed.e57"
+    path = tmp_path / "inspect.e57"
     with pye57.E57(str(path), mode="w") as oracle:
         oracle.write_scan_raw(
             _raw_payload(positions, colors, intensity)
@@ -454,24 +476,19 @@ def test_e57_typed_inspect_reports_all_scans_without_decoding(tmp_path, monkeypa
         )
 
     def fail_read(*_args, **_kwargs):
-        raise AssertionError("typed inspect must not decode point payloads")
+        raise AssertionError("inspect must not decode point payloads")
 
     monkeypatch.setattr(pye57.E57, "read_scan_raw", fail_read)
-    info = sceneio.inspect_e57_scans(path)
-    assert info.datatype == "point_scan_set"
+    info = sceneio.inspect(path)
+    assert info.payload_kind == "scan_set"
     assert info.shape == (1,)
     assert info.count == len(positions)
     assert info.dtype is None
     assert info.metadata["valid_point_count"] is None
     assert info.metadata["scans"][0]["stored_point_count"] == len(positions)
-    selected = _e57.inspect_e57_scans(path, scan_index=0)
-    assert selected.shape == (1,)
-    assert selected.count == len(positions)
-    assert selected.dtype is None
-    assert len(selected.metadata["scans"]) == 1
 
 
-def test_e57_typed_guards_reject_non_e57_states_ids_and_empty_files(tmp_path):
+def test_e57_guards_reject_non_e57_states_ids_and_empty_files(tmp_path):
     positions = np.arange(6, dtype=np.float32).reshape(2, 3)
     invalid_path = tmp_path / "invalid-state.e57"
     with pye57.E57(str(invalid_path), mode="w") as oracle:
@@ -488,7 +505,7 @@ def test_e57_typed_guards_reject_non_e57_states_ids_and_empty_files(tmp_path):
         timestamp=1.0,
     )
     with pytest.raises(sceneio.FormatError, match="E57 states"):
-        sceneio.write(bad_state, tmp_path / "bad-state.e57")
+        sceneio.write(_core.scan_set((bad_state,)), tmp_path / "bad-state.e57")
     with pytest.raises(ValueError, match="must fit int64"):
         _e57._exact_int64(
             np.array([2**63], dtype=np.uint64), "rowIndex"
@@ -500,21 +517,24 @@ def test_e57_typed_guards_reject_non_e57_states_ids_and_empty_files(tmp_path):
         timestamp=1.0,
     )
     with pytest.raises(sceneio.FormatError, match="scan_id is not representable"):
-        sceneio.write(custom_id, tmp_path / "custom-id.e57")
+        sceneio.write(_core.scan_set((custom_id,)), tmp_path / "custom-id.e57")
     missing_timestamp = _core.point_scan(cloud, scan_id=0)
     with pytest.raises(sceneio.FormatError, match="require a timestamp"):
-        sceneio.write(missing_timestamp, tmp_path / "missing-timestamp.e57")
+        sceneio.write(
+            _core.scan_set((missing_timestamp,)),
+            tmp_path / "missing-timestamp.e57",
+        )
 
     empty_path = tmp_path / "empty.e57"
     with pye57.E57(str(empty_path), mode="w"):
         pass
     with pytest.raises(ValueError, match="no data3D scans"):
-        _e57.read_e57_scans(empty_path)
+        _e57.read_e57(empty_path)
     with pytest.raises(ValueError, match="no data3D scans"):
-        _e57.inspect_e57_scans(empty_path)
+        _e57.inspect_e57(empty_path)
 
 
-def test_e57_typed_scan_set_write_reopens_with_provider_oracle(tmp_path):
+def test_e57_scan_set_write_reopens_with_provider_oracle(tmp_path):
     positions, colors, intensity, invalid, rows, columns = _structured_fixture()
     cloud = _core.point_cloud(positions, colors=colors, intensity=intensity)
     scan = _core.point_scan(
@@ -535,7 +555,7 @@ def test_e57_typed_scan_set_write_reopens_with_provider_oracle(tmp_path):
         ),
     )
     output = tmp_path / "authored.e57"
-    sceneio.write_e57_scans(_core.scan_set([scan]), output)
+    sceneio.write(_core.scan_set((scan,)), output)
 
     with pye57.E57(str(output)) as oracle:
         assert oracle.scan_count == 1
@@ -560,26 +580,12 @@ def test_e57_typed_scan_set_write_reopens_with_provider_oracle(tmp_path):
             atol=1e-12,
         )
 
-    for label, value in (
-        ("cloud", cloud),
-        ("scan", scan),
-        ("scan-set", _core.scan_set([scan])),
-    ):
-        candidate = tmp_path / f"public-{label}.e57"
-        sceneio.write_e57_scans(value, candidate)
-        with pye57.E57(str(candidate)) as oracle:
-            assert oracle.scan_count == 1
-            raw = oracle.read_scan_raw(0)
-        selector = slice(None) if label == "cloud" else invalid == 0
-        np.testing.assert_array_equal(
-            np.column_stack(
-                [raw["cartesianX"], raw["cartesianY"], raw["cartesianZ"]]
-            )[selector],
-            positions[selector],
-        )
+    for label, value in (("cloud", cloud), ("scan", scan)):
+        with pytest.raises(sceneio.FormatError, match="expected a ScanSet"):
+            sceneio.write(value, tmp_path / f"noncanonical-{label}.e57")
 
 
-def test_e57_typed_writer_refuses_unrepresentable_guid_and_bounds(tmp_path):
+def test_e57_writer_refuses_unrepresentable_guid_and_bounds(tmp_path):
     positions, _colors, _intensity, invalid, rows, columns = _structured_fixture()
     cloud = _core.point_cloud(positions)
     with_guid = _core.point_scan(
@@ -595,7 +601,7 @@ def test_e57_typed_writer_refuses_unrepresentable_guid_and_bounds(tmp_path):
         timestamp=1.0,
     )
     with pytest.raises(sceneio.FormatError, match="scan GUIDs"):
-        sceneio.write(with_guid, tmp_path / "guid.e57")
+        sceneio.write(_core.scan_set((with_guid,)), tmp_path / "guid.e57")
 
     wide_bounds = _core.point_scan(
         cloud,
@@ -609,10 +615,10 @@ def test_e57_typed_writer_refuses_unrepresentable_guid_and_bounds(tmp_path):
         timestamp=1.0,
     )
     with pytest.raises(sceneio.FormatError, match="row bounds"):
-        sceneio.write(wide_bounds, tmp_path / "wide.e57")
+        sceneio.write(_core.scan_set((wide_bounds,)), tmp_path / "wide.e57")
 
 
-def test_e57_typed_multi_scan_write_is_transactional(tmp_path, monkeypatch):
+def test_e57_multi_scan_write_is_transactional(tmp_path, monkeypatch):
     positions, _colors, _intensity, invalid, rows, columns = _structured_fixture()
     base = _core.point_cloud(positions)
     first = _core.point_scan(
@@ -699,13 +705,16 @@ def test_e57_rejects_nonintegral_colors(tmp_path, monkeypatch):
 def test_e57_record_outlives_closed_and_removed_source(tmp_path):
     cloud, positions, *_ = _fixture(5)
     path = tmp_path / "lifetime.e57"
-    sceneio.write(cloud, path)
+    sceneio.write(_scan_set(cloud), path)
 
     decoded = sceneio.read(path)
     path.unlink()
     gc.collect()
 
-    np.testing.assert_array_equal(np.asarray(decoded.positions), positions)
+    np.testing.assert_array_equal(
+        np.asarray(decoded.scans[0].point_cloud.positions),
+        positions,
+    )
 
 
 @pytest.mark.parametrize(
@@ -743,7 +752,7 @@ def test_e57_writer_refuses_unrepresentable_cloud_conventions(
 ):
     cloud = _core.point_cloud(np.ones((2, 3), np.float32), **kwargs)
     with pytest.raises(sceneio.FormatError, match=message):
-        sceneio.write(cloud, tmp_path / "bad.e57")
+        sceneio.write(_scan_set(cloud), tmp_path / "bad.e57")
 
 
 def test_e57_failed_provider_write_preserves_destination(
@@ -758,7 +767,7 @@ def test_e57_failed_provider_write_preserves_destination(
 
     monkeypatch.setattr(pye57.E57, "write_scan_raw", fail_write)
     with pytest.raises(sceneio.FormatError, match="injected provider failure"):
-        sceneio.write(cloud, path)
+        sceneio.write(_scan_set(cloud), path)
 
     assert path.read_bytes() == b"previous"
     assert not tuple(tmp_path.glob(".preserve.e57.*"))
@@ -768,11 +777,9 @@ def test_e57_capability_and_open_license_inventory():
     capabilities = sceneio.capabilities("e57")
     assert capabilities.available
     assert capabilities.requires_features == ("pye57",)
-    assert "single_scan" in capabilities.supported_features
-    assert "typed_multiple_scans" in capabilities.supported_features
-    assert "typed_organized_row_column" in capabilities.supported_features
-    assert "typed_stored_point_range" in capabilities.supported_features
-    assert "legacy_multiple_scans" in capabilities.unsupported_features
+    assert "multiple_scans" in capabilities.supported_features
+    assert "organized_row_column" in capabilities.supported_features
+    assert "stored_point_ranges" in capabilities.supported_features
 
     license_root = Path(__file__).resolve().parents[2] / "LICENSES"
     assert "Permission is hereby granted" in (

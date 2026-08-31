@@ -118,7 +118,7 @@ def test_manifest_order_exact_timing_inspect_and_partial(tmp_path):
 
     info = sceneio.inspect(directory)
     assert info.format == "image_sequence"
-    assert info.datatype == "image_sequence"
+    assert info.payload_kind == "image_sequence"
     assert info.shape == (3, 3, 4, 1)
     assert info.dtype == "uint8"
     assert info.count == 3

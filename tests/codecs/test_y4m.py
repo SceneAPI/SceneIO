@@ -310,7 +310,7 @@ def test_public_detect_read_write_inspect_and_partial(tmp_path):
     _assert_sequence(sceneio.read(source), oracle_read(source.read_bytes()), "422")
     info = sceneio.inspect(source)
     assert info.format == "y4m"
-    assert info.datatype == "image_sequence"
+    assert info.payload_kind == "image_sequence"
     assert info.shape == (3, 5, 7, 3)
     assert info.dtype == "uint8"
     assert info.count == 3
