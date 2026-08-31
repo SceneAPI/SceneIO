@@ -88,6 +88,96 @@ selectors. **74** provide streaming reads and **71** provide streaming writes. T
 values come directly from `CANONICAL_BUILTIN_IDS` and `sceneio.capabilities()`.
 <!-- sceneio-inventory-summary:end -->
 
+### Format-to-memory matrix
+
+Each row names the canonical data element and exact top-level value returned by
+generic `sceneio.read()`. Aggregate values retain their canonical child records.
+The rows are generated from `CANONICAL_BUILTIN_IDS`, `sceneio.capabilities()`,
+and `BUILTIN_CODEC_PAYLOAD_KINDS` rather than maintained as a second inventory.
+Explicit typed adapters are additive: PFM, PNG, and EXR can also produce
+`DepthMap`; NPZ, Zarr, and TIFF can also produce `SemanticMap`, `InstanceMap`,
+or `PanopticMap`. Those interpretations require their typed APIs and do not
+silently change generic reads.
+
+| Format ID | In-memory data element | Generic `sceneio.read()` value |
+|---|---|---|
+<!-- sceneio-format-memory-rows:start -->
+| `pfm` | `depth_map` — Depth map | `numpy.ndarray` |
+| `colmap_sparse` | `sparse_model` — Sparse model | `sceneio.Reconstruction` |
+| `gaussian_ply` | `splat` — Gaussian splat | `sceneio.GaussianCloud` |
+| `compressed_ply` | `splat` — Gaussian splat | `sceneio.GaussianCloud` |
+| `sog` | `splat` — Gaussian splat | `sceneio.GaussianCloud` |
+| `ksplat` | `splat` — Gaussian splat | `sceneio.GaussianCloud` |
+| `ply_mesh` | `mesh` — Mesh | `sceneio.Mesh` |
+| `obj` | `mesh` — Mesh | `sceneio.Mesh` |
+| `stl` | `mesh` — Mesh | `sceneio.Mesh` |
+| `off` | `mesh` — Mesh | `sceneio.Mesh` |
+| `gltf` | `scene_graph` — Scene graph | `sceneio.SceneGraph` |
+| `glb` | `scene_graph` — Scene graph | `sceneio.SceneGraph` |
+| `usd` | `scene_graph` — Scene graph | `sceneio.SceneGraph` |
+| `usdz` | `scene_graph` — Scene graph | `sceneio.SceneGraph` |
+| `ply` | `point_cloud` — Point cloud | `sceneio.PointCloud` |
+| `pcd` | `point_cloud` — Point cloud | `sceneio.PointCloud` |
+| `spz` | `splat` — Gaussian splat | `sceneio.GaussianCloud` |
+| `transforms_json` | `posed_views` — Posed views | `sceneio.PosedViewSet` |
+| `tum` | `posed_views` — Posed views | `sceneio.PosedViewSet` |
+| `kitti` | `posed_views` — Posed views | `sceneio.PosedViewSet` |
+| `euroc_state` | `state_trajectory` — State trajectory | `sceneio.StateTrajectory` |
+| `opencv_yaml` | `camera_rig` — Camera rig | `sceneio.CameraRig` |
+| `opencv_xml` | `camera_rig` — Camera rig | `sceneio.CameraRig` |
+| `ros_camera_info` | `camera_rig` — Camera rig | `sceneio.CameraRig` |
+| `kalibr` | `camera_rig` — Camera rig | `sceneio.CameraRig` |
+| `g2o` | `pose_graph` — Pose graph | `sceneio.PoseGraph` |
+| `colmap_db` | `match_graph` — Match graph | `sceneio.ColmapDatabase` |
+| `npy` | `tensor` — Tensor | `numpy.ndarray` |
+| `npz` | `tensor_dict` — Tensor dictionary | `sceneio.TensorDict` |
+| `safetensors` | `tensor_dict` — Tensor dictionary | `sceneio.TensorDict` |
+| `netpbm` | `image` — Image | `sceneio.Image` |
+| `png` | `image` — Image | `sceneio.Image` |
+| `jpeg` | `image` — Image | `sceneio.Image` |
+| `bmp` | `image` — Image | `sceneio.Image` |
+| `tga` | `image` — Image | `sceneio.Image` |
+| `hdr` | `image` — Image | `sceneio.Image` |
+| `exr` | `image` — Image | `sceneio.Image` |
+| `webp` | `image` — Image | `sceneio.Image` |
+| `avif` | `image` — Image | `sceneio.Image` |
+| `y4m` | `image_sequence` — Image sequence | `sceneio.ImageSequence` |
+| `webm` | `image_sequence` — Image sequence | `sceneio.ImageSequence` |
+| `theora` | `image_sequence` — Image sequence | `sceneio.ImageSequence` |
+| `animated_webp` | `image_sequence` — Image sequence | `sceneio.ImageSequence` |
+| `apng` | `image_sequence` — Image sequence | `sceneio.ImageSequence` |
+| `animated_avif` | `image_sequence` — Image sequence | `sceneio.ImageSequence` |
+| `rtmv` | `rtmv_dataset` — RTMV dataset | `sceneio.RtmvDataset` |
+| `image_sequence` | `image_sequence` — Image sequence | `sceneio.ImageSequence` |
+| `colmap_sparse_txt` | `sparse_model` — Sparse model | `sceneio.Reconstruction` |
+| `xyz` | `point_cloud` — Point cloud | `sceneio.PointCloud` |
+| `pts` | `point_cloud` — Point cloud | `sceneio.PointCloud` |
+| `las` | `point_cloud` — Point cloud | `sceneio.PointCloud` |
+| `laz` | `point_cloud` — Point cloud | `sceneio.PointCloud` |
+| `flo` | `flow` — Optical flow | `sceneio.FlowField` |
+| `dmb` | `depth_map` — Depth map | `sceneio.DepthMap` |
+| `bundler` | `sparse_model` — Sparse model | `sceneio.Reconstruction` |
+| `bal` | `sparse_model` — Sparse model | `sceneio.Reconstruction` |
+| `nvm` | `sparse_model` — Sparse model | `sceneio.Reconstruction` |
+| `openmvg` | `sparse_model` — Sparse model | `sceneio.Reconstruction` |
+| `splat` | `splat` — Gaussian splat | `sceneio.GaussianCloud` |
+| `colmap_mvs_depth` | `depth_map` — Depth map | `sceneio.DepthMap` |
+| `colmap_mvs_normal` | `normal_map` — Normal map | `sceneio.NormalMap` |
+| `colmap_mvs_consistency` | `consistency_graph` — Consistency graph | `sceneio.ConsistencyGraph` |
+| `colmap_fused_visibility` | `point_visibility` — Point visibility | `sceneio.PointVisibility` |
+| `hdf5` | `tensor_dict` — Tensor dictionary | `sceneio.TensorDict` |
+| `hloc_features` | `feature_set` — Feature set | `sceneio.HlocFeatureStore` |
+| `hloc_matches` | `match_graph` — Match graph | `sceneio.HlocMatchStore` |
+| `ncore_v4` | `ncore_dataset` — NCore dataset | `sceneio.NCoreDataset` |
+| `euroc_dataset` | `visual_inertial_dataset` — Visual-inertial dataset | `sceneio.VisualInertialDataset` |
+| `zarr` | `tensor_dict` — Tensor dictionary | `sceneio.TensorDict` |
+| `tiff` | `raster_collection` — Raster collection | `sceneio.RasterCollection` |
+| `e57` | `scan_set` — Scan set | `sceneio.ScanSet` |
+| `parquet` | `numeric_table` — Numeric table | `sceneio.TensorDict` |
+| `arrow_ipc` | `numeric_table` — Numeric table | `sceneio.TensorDict` |
+| `openvdb` | `sparse_volume` — Sparse volume | `sceneio.TensorDict` |
+<!-- sceneio-format-memory-rows:end -->
+
 The root API is the public I/O surface:
 
 ```python

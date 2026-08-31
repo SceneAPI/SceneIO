@@ -381,6 +381,32 @@ def render_payload_kind_rows(
     return "\n".join(rows)
 
 
+def render_format_memory_rows(
+    capabilities: Mapping[str, CodecCapabilities],
+    _native_features: Mapping[str, NativeFeatureCapabilities],
+) -> str:
+    """Render one built-in format per row with its canonical loaded value."""
+
+    rows = []
+    for format_id in CANONICAL_BUILTIN_IDS:
+        capability = capabilities[format_id]
+        try:
+            payload = BUILTIN_CODEC_PAYLOAD_KINDS[capability.payload_kind]
+        except KeyError:
+            raise DocumentationContractError(
+                f"built-in {format_id!r} has no payload-kind contract"
+            ) from None
+        loaded_type = (
+            "`numpy.ndarray`"
+            if capability.record_type is None
+            else f"`sceneio.{capability.record_type}`"
+        )
+        rows.append(
+            f"| `{format_id}` | `{payload.id}` — {payload.title} | {loaded_type} |"
+        )
+    return "\n".join(rows)
+
+
 Renderer = Callable[[Mapping[str, CodecCapabilities], Mapping[str, NativeFeatureCapabilities]], str]
 _RENDERERS: Mapping[str, Renderer] = {
     "inventory_summary": render_inventory_summary,
@@ -391,6 +417,7 @@ _RENDERERS: Mapping[str, Renderer] = {
     "public_contract_summary": render_public_contract_summary,
     "public_type_rows": render_public_type_rows,
     "payload_kind_rows": render_payload_kind_rows,
+    "format_memory_rows": render_format_memory_rows,
 }
 
 

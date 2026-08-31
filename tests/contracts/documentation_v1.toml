@@ -34,6 +34,11 @@ marker = "sceneio-inventory-summary"
 renderer = "inventory_summary"
 
 [[generated_section]]
+document = "README.md"
+marker = "sceneio-format-memory-rows"
+renderer = "format_memory_rows"
+
+[[generated_section]]
 document = "docs/format_coverage.md"
 marker = "sceneio-inventory-summary"
 renderer = "inventory_summary"
