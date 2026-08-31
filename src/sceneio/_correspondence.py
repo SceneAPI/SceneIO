@@ -201,7 +201,7 @@ def read_colmap_database_pair(path: str, image_id1: int, image_id2: int) -> Corr
     storage = _core.read_colmap_db_pair(path, image_id1, image_id2)
     with sqlite3.connect(f"file:{path}?mode=ro", uri=True) as database:
         rows = database.execute(
-            "SELECT image_id, name FROM images WHERE image_id IN (?1, ?2)",
+            "SELECT image_id, name FROM images WHERE image_id IN (?, ?)",
             (image_id1, image_id2),
         ).fetchall()
     names = {int(image_id): str(name) for image_id, name in rows}

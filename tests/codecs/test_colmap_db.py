@@ -3840,6 +3840,7 @@ def test_absent_and_present_empty_rows_roundtrip_distinctly(tmp_path):
     assert decoded._correspondence_storage.geometry_present.tolist() == [0]
 
 
+@pytest.mark.filterwarnings("error::DeprecationWarning")
 def test_partial_image_and_pair_equal_slices_of_full_read(tmp_path):
     path = tmp_path / "partial.db"
     sceneio.write(_database(), path)
