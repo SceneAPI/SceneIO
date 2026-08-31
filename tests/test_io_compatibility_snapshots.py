@@ -243,7 +243,7 @@ def _exception_outcome(operation, expected_prefix: str):
 
 def _public_snapshot():
     record_names = (
-        "Camera",
+        "CameraIntrinsics",
         "CameraRig",
         "ColmapDatabase",
         "ColmapMarkerSet",
@@ -261,16 +261,13 @@ def _public_snapshot():
         "ImuCalibration",
         "ImuSequence",
         "InstanceSet",
-        "MatchGraph",
         "MaterialSet",
         "Mesh",
-        "MeshScene",
         "NormalMap",
         "PointCloud",
         "PointScan",
         "PointVisibility",
         "PoseGraph",
-        "PosedViewSet",
         "Reconstruction",
         "ScanSet",
         "SceneGraph",
@@ -318,21 +315,18 @@ def _public_snapshot():
         "types": types,
         "format_error": _type_contract(sceneio.FormatError),
         "source_identity": {
-            "Codec": sceneio.io.Codec is registry.Codec,
-            "CodecCapabilities": (
-                sceneio.io.CodecCapabilities is registry.CodecCapabilities
-            ),
+            "Codec": sceneio.Codec is registry.Codec,
+            "CodecCapabilities": sceneio.CodecCapabilities is registry.CodecCapabilities,
             "NativeFeatureCapabilities": (
-                sceneio.io.NativeFeatureCapabilities
-                is registry.NativeFeatureCapabilities
+                sceneio.NativeFeatureCapabilities is registry.NativeFeatureCapabilities
             ),
-            "ArrayInspection": sceneio.io.ArrayInspection is ArrayInspection,
-            "Inspection": sceneio.io.Inspection is Inspection,
-            "DepthEncoding": sceneio.io.DepthEncoding is DepthEncoding,
-            "FormatError": sceneio.io.FormatError is registry.FormatError,
+            "ArrayInspection": sceneio.ArrayInspection is ArrayInspection,
+            "Inspection": sceneio.Inspection is Inspection,
+            "DepthEncoding": sceneio.DepthEncoding is DepthEncoding,
+            "FormatError": sceneio.FormatError is registry.FormatError,
         },
         "core_record_identity": {
-            name: getattr(sceneio.io, name) is getattr(_core, name)
+            name: getattr(sceneio, name) is getattr(_core, name)
             for name in record_names
         },
         "exceptions": {
@@ -1525,7 +1519,7 @@ def _assert_benchmark_components_and_metric_semantics_are_explicit():
         "_mesh_obj",
         "_mesh_off",
         "_mesh_ply",
-        "_mesh_scene",
+        "_scene_graph",
         "_mesh_stl",
     )
     mesh_oracle_names = (
@@ -1664,7 +1658,7 @@ def _assert_benchmark_components_and_metric_semantics_are_explicit():
         assert_trimesh_geometry(spec.orr(core_encoded), payload)
 
     if mesh_oracle_module.trimesh is not None:
-        gltf_record, gltf_payload = mesh_fixture_module._mesh_scene(9)
+        gltf_record, gltf_payload = mesh_fixture_module._scene_graph(9)
         oracle_files = mesh_oracle_module._trimesh_gltf_w(
             gltf_payload
         )
@@ -2332,11 +2326,17 @@ def _assert_benchmark_components_and_metric_semantics_are_explicit():
     }
     reconstruction_core_bindings = {
         "transforms_json": (
-            _core.write_transforms_json,
-            _core.read_transforms_json,
+            reconstruction_family_module._write_transforms_json,
+            reconstruction_family_module._read_transforms_json,
         ),
-        "tum": (_core.write_tum, _core.read_tum),
-        "kitti": (_core.write_kitti, _core.read_kitti),
+        "tum": (
+            reconstruction_family_module._write_tum,
+            reconstruction_family_module._read_tum,
+        ),
+        "kitti": (
+            reconstruction_family_module._write_kitti,
+            reconstruction_family_module._read_kitti,
+        ),
         "euroc_state": (
             _core.write_euroc_state,
             _core.read_euroc_state,
@@ -2356,7 +2356,9 @@ def _assert_benchmark_components_and_metric_semantics_are_explicit():
         record, payload = spec.make()
         reconstruction_payloads[spec.id] = payload
         expected_nbytes = (
-            sum(value.nbytes for value in payload.values())
+            reconstruction_family_module._posed_view_nbytes(record, spec.id)
+            if spec.id in {"transforms_json", "tum", "kitti"}
+            else sum(value.nbytes for value in payload.values())
             if isinstance(payload, dict)
             else benchmark._record_nbytes(record)
         )
@@ -3281,17 +3283,18 @@ def _assert_benchmark_representative_fixtures_match_checked_fingerprints():
     animation, _ = benchmark._animated_webp_fixture(8)
     apng_animation, _ = benchmark._apng_fixture(8)
     point_cloud, _ = benchmark._pc_ply(16)
-    mesh_scene, _ = benchmark._mesh_scene(9)
+    scene_graph, _ = benchmark._scene_graph(9)
     gaussian_cloud, _ = benchmark._gauss(16)
     calibration, _ = benchmark._single_calibration()
     specs = benchmark._specs(0.001)
     tensors, _ = next(spec for spec in specs if spec.id == "npz").make()
     reconstruction = benchmark._poses_and_reconstruction(0.001)[0]
     reconstruction_payload = {
+        "camera_ids": list(reconstruction.camera_ids),
         "cameras": [
             _record_projection(
                 camera,
-                ("id", "model", "width", "height", "params"),
+                ("model", "width", "height", "params"),
             )
             for camera in reconstruction.cameras
         ],
@@ -3442,13 +3445,14 @@ def _assert_benchmark_representative_fixtures_match_checked_fingerprints():
                 "has_intensity",
             ),
         ),
-        "mesh_scene": {
+        "scene_graph": {
             **_record_projection(
-                mesh_scene,
+                scene_graph,
                 (
                     "mesh_primitive_offsets",
                     "mesh_names",
-                    "node_meshes",
+                    "node_payload_kinds",
+                    "node_payload_indices",
                     "node_child_offsets",
                     "node_children",
                     "node_local_transforms",
@@ -3458,7 +3462,7 @@ def _assert_benchmark_representative_fixtures_match_checked_fingerprints():
                     "scene_names",
                     "default_scene",
                     "num_meshes",
-                    "num_primitives",
+                    "num_mesh_primitives",
                     "num_nodes",
                     "num_scenes",
                     "has_materials",
@@ -3466,7 +3470,7 @@ def _assert_benchmark_representative_fixtures_match_checked_fingerprints():
             ),
             "primitives": [
                 _record_projection(
-                    mesh_scene.primitive_at(index),
+                    scene_graph.mesh_primitive_at(index),
                     (
                         "positions",
                         "face_offsets",
@@ -3481,7 +3485,7 @@ def _assert_benchmark_representative_fixtures_match_checked_fingerprints():
                         "local_transform",
                     ),
                 )
-                for index in range(mesh_scene.num_primitives)
+                for index in range(scene_graph.num_mesh_primitives)
             ],
         },
         "gaussian_cloud": _record_projection(

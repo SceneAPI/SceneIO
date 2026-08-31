@@ -9,8 +9,7 @@ import pytest
 import tifffile
 
 import sceneio
-from sceneio import _core
-from sceneio.data import InstanceMap, LabelTaxonomy, Mask, PanopticMap, SemanticMap
+from sceneio import InstanceMap, LabelTaxonomy, Mask, PanopticMap, SemanticMap, _core
 from sceneio.io import _tiff
 
 

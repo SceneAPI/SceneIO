@@ -10,12 +10,14 @@ from typing import Any
 
 import numpy as np
 
+from sceneio import _core
 from sceneio._camera_models import (
     CAMERA_MODEL_PARAMETER_COUNTS as _CAMERA_PARAMETER_COUNTS,
 )
 from sceneio._camera_models import (
     CAMERA_MODEL_PARAMETER_COUNTS_BY_NAME as _CAMERA_PARAMETER_COUNTS_BY_NAME,
 )
+from sceneio._data.features import CorrespondenceGraph
 
 UINT32_MAX = 0xFFFFFFFF
 UINT64_MAX = 0xFFFFFFFFFFFFFFFF
@@ -86,158 +88,85 @@ def _validate_metadata(value, name: str) -> None:
 
 
 @dataclass(frozen=True)
-class MappingCamera:
-    camera_id: int
-    model_id: int
-    width: int
-    height: int
-    params: np.ndarray
-    has_prior_focal_length: bool = False
-
-    def __post_init__(self) -> None:
-        _uint(self.camera_id, UINT32_MAX - 1, "camera_id")
-        if self.camera_id == 0:
-            raise ColmapAdapterError("camera_id must be positive")
-        _uint(self.model_id, UINT32_MAX, "model_id")
-        _uint(self.width, UINT64_MAX, "camera width")
-        _uint(self.height, UINT64_MAX, "camera height")
-        if not self.width or not self.height:
-            raise ColmapAdapterError("camera dimensions must be positive")
-        params = np.asarray(self.params)
-        object.__setattr__(
-            self,
-            "params",
-            _array(
-                params,
-                np.float64,
-                (params.size,),
-                "camera params",
-                finite=True,
-            ),
-        )
-        if (
-            self.model_id >= len(_CAMERA_PARAMETER_COUNTS)
-            or params.size != _CAMERA_PARAMETER_COUNTS[self.model_id]
-        ):
-            raise ColmapAdapterError("camera model/parameter count disagrees")
-        if not isinstance(self.has_prior_focal_length, bool):
-            raise ColmapAdapterError("has_prior_focal_length must be boolean")
-
-
-@dataclass(frozen=True)
-class MappingImage:
-    image_id: int
-    camera_id: int
-    time_id: int
-    name: str
-    keypoints: np.ndarray
-
-    def __post_init__(self) -> None:
-        _uint(self.image_id, UINT32_MAX - 1, "image_id")
-        _uint(self.camera_id, UINT32_MAX - 1, "image camera_id")
-        if self.image_id == 0 or self.camera_id == 0:
-            raise ColmapAdapterError("image_id and image camera_id must be positive")
-        _uint(self.time_id, UINT32_MAX, "image time_id")
-        _nonempty_text(self.name, "image name")
-        keypoints = np.asarray(self.keypoints)
-        if keypoints.ndim != 2 or keypoints.shape[1:] != (2,):
-            raise ColmapAdapterError("keypoints must have shape (N, 2)")
-        object.__setattr__(
-            self,
-            "keypoints",
-            _array(
-                keypoints,
-                np.float32,
-                keypoints.shape,
-                "keypoints",
-                finite=True,
-            ),
-        )
-
-
-@dataclass(frozen=True)
-class MappingMatch:
-    """Two-view matches with optional XYZW+XYZ ``cam2_from_cam1`` pose."""
-
-    image_id1: int
-    image_id2: int
-    config: int
-    matches: np.ndarray
-    relative_pose: np.ndarray | None = None
-
-    def __post_init__(self) -> None:
-        _uint(self.image_id1, UINT32_MAX - 1, "match image_id1")
-        _uint(self.image_id2, UINT32_MAX - 1, "match image_id2")
-        if self.image_id1 == self.image_id2:
-            raise ColmapAdapterError("a match pair must use two images")
-        if (
-            isinstance(self.config, bool)
-            or not isinstance(self.config, int)
-            or self.config not in range(10)
-        ):
-            raise ColmapAdapterError("match config must be a two-view configuration in 0..9")
-        matches = np.asarray(self.matches)
-        if matches.ndim != 2 or matches.shape[1:] != (2,):
-            raise ColmapAdapterError("matches must have shape (N, 2)")
-        object.__setattr__(
-            self,
-            "matches",
-            _array(matches, np.uint32, matches.shape, "matches"),
-        )
-        if self.relative_pose is not None:
-            pose = _array(
-                self.relative_pose,
-                np.float64,
-                (7,),
-                "relative_pose",
-                finite=True,
-            )
-            quaternion_norm = float(np.linalg.norm(pose[:4]))
-            if not np.isfinite(quaternion_norm) or abs(quaternion_norm - 1.0) > 1e-10:
-                raise ColmapAdapterError("relative_pose quaternion must be unit length")
-            object.__setattr__(self, "relative_pose", pose)
-
-
-@dataclass(frozen=True)
 class MappingInput:
+    """PCMAPIN aggregate composed only from canonical semantic records."""
+
     version: int
-    cameras: tuple[MappingCamera, ...]
-    images: tuple[MappingImage, ...]
-    matches: tuple[MappingMatch, ...]
+    cameras: Mapping[int, _core.CameraIntrinsics]
+    camera_prior_focal_length: Mapping[int, bool]
+    image_ids: Mapping[str, int]
+    image_camera_ids: Mapping[str, int]
+    image_time_ids: Mapping[str, int]
+    correspondences: CorrespondenceGraph
     _owner: Any = field(default=None, repr=False, compare=False)
 
     def __post_init__(self) -> None:
         if self.version not in (1, 2):
             raise ColmapAdapterError("MappingInput version must be 1 or 2")
-        camera_ids = {item.camera_id for item in self.cameras}
-        image_ids = {item.image_id for item in self.images}
-        if len(camera_ids) != len(self.cameras):
+
+        cameras = dict(self.cameras)
+        for camera_id, intrinsics in cameras.items():
+            _uint(camera_id, UINT32_MAX - 1, "camera_id")
+            if camera_id == 0:
+                raise ColmapAdapterError("camera_id must be positive")
+            if not isinstance(intrinsics, _core.CameraIntrinsics):
+                raise ColmapAdapterError("MappingInput cameras must be CameraIntrinsics")
+        if len(cameras) != len(self.cameras):
             raise ColmapAdapterError("MappingInput camera ids must be unique")
-        if len(image_ids) != len(self.images):
+
+        prior = dict(self.camera_prior_focal_length)
+        if set(prior) != set(cameras) or any(not isinstance(value, bool) for value in prior.values()):
+            raise ColmapAdapterError(
+                "MappingInput camera prior flags must be boolean and align with cameras"
+            )
+
+        image_ids = dict(self.image_ids)
+        if len(set(image_ids.values())) != len(image_ids):
             raise ColmapAdapterError("MappingInput image ids must be unique")
-        if any(item.camera_id not in camera_ids for item in self.images):
-            raise ColmapAdapterError("MappingInput images must reference a declared camera")
-        if any(
-            item.image_id1 not in image_ids or item.image_id2 not in image_ids
-            for item in self.matches
-        ):
-            raise ColmapAdapterError("MappingInput matches must reference declared images")
-        pairs = {
-            (min(item.image_id1, item.image_id2), max(item.image_id1, item.image_id2))
-            for item in self.matches
+        for name, image_id in image_ids.items():
+            _nonempty_text(name, "image name")
+            _uint(image_id, UINT32_MAX - 1, "image_id")
+            if image_id == 0:
+                raise ColmapAdapterError("image_id must be positive")
+
+        camera_refs = dict(self.image_camera_ids)
+        time_ids = dict(self.image_time_ids)
+        expected_names = set(image_ids)
+        if set(camera_refs) != expected_names or set(time_ids) != expected_names:
+            raise ColmapAdapterError("MappingInput image metadata must align by image name")
+        for camera_id in camera_refs.values():
+            _uint(camera_id, UINT32_MAX - 1, "image camera_id")
+            if camera_id not in cameras:
+                raise ColmapAdapterError(
+                    "MappingInput images must reference a declared camera"
+                )
+        for time_id in time_ids.values():
+            _uint(time_id, UINT32_MAX, "image time_id")
+
+        if not isinstance(self.correspondences, CorrespondenceGraph):
+            raise ColmapAdapterError(
+                "MappingInput correspondences must be CorrespondenceGraph"
+            )
+        if set(self.correspondences.features) != expected_names:
+            raise ColmapAdapterError(
+                "MappingInput correspondence features must align with image metadata"
+            )
+        unordered_pairs = {
+            frozenset(pair)
+            for pair in self.correspondences.pairs
         }
-        if len(pairs) != len(self.matches):
+        if len(unordered_pairs) != len(self.correspondences.pairs):
             raise ColmapAdapterError("MappingInput match pairs must be unique")
-        keypoint_counts = {item.image_id: item.keypoints.shape[0] for item in self.images}
-        for item in self.matches:
-            for start in range(0, item.matches.shape[0], _VALIDATION_CHUNK):
-                chunk = item.matches[start : start + _VALIDATION_CHUNK]
-                if bool(np.any(chunk[:, 0] >= keypoint_counts[item.image_id1])) or bool(
-                    np.any(chunk[:, 1] >= keypoint_counts[item.image_id2])
-                ):
-                    raise ColmapAdapterError(
-                        "MappingInput match index exceeds an image's keypoints"
-                    )
+        if self.correspondences.index_validation != "eager":
+            raise ColmapAdapterError(
+                "MappingInput correspondences require eager feature-index validation"
+            )
+
+        object.__setattr__(self, "cameras", MappingProxyType(cameras))
+        object.__setattr__(self, "camera_prior_focal_length", MappingProxyType(prior))
+        object.__setattr__(self, "image_ids", MappingProxyType(image_ids))
+        object.__setattr__(self, "image_camera_ids", MappingProxyType(camera_refs))
+        object.__setattr__(self, "image_time_ids", MappingProxyType(time_ids))
 
 
 @dataclass(frozen=True)
@@ -585,101 +514,6 @@ class MegaLocArtifacts:
         metadata = dict(self.metadata)
         _validate_metadata(metadata, "MegaLoc metadata")
         object.__setattr__(self, "metadata", MappingProxyType(metadata))
-
-
-@dataclass(frozen=True)
-class SimilarityTransform:
-    scale: float
-    quaternion_wxyz: np.ndarray
-    translation: np.ndarray
-
-    def __post_init__(self) -> None:
-        if not np.isfinite(self.scale) or self.scale <= 0:
-            raise ColmapAdapterError("Sim3 scale must be finite and positive")
-        quaternion = _array(
-            self.quaternion_wxyz,
-            np.float64,
-            (4,),
-            "Sim3 quaternion",
-            finite=True,
-        )
-        norm = float(np.linalg.norm(quaternion))
-        if not np.isfinite(norm) or abs(norm - 1.0) > 1e-10:
-            raise ColmapAdapterError("Sim3 quaternion must be unit length")
-        object.__setattr__(self, "quaternion_wxyz", quaternion)
-        object.__setattr__(
-            self,
-            "translation",
-            _array(
-                self.translation,
-                np.float64,
-                (3,),
-                "Sim3 translation",
-                finite=True,
-            ),
-        )
-
-
-@dataclass(frozen=True)
-class SiftFeatures:
-    keypoints: np.ndarray
-    descriptors: np.ndarray
-
-    def __post_init__(self) -> None:
-        keypoints = np.asarray(self.keypoints)
-        descriptors = np.asarray(self.descriptors)
-        if keypoints.ndim != 2 or keypoints.shape[1:] != (4,):
-            raise ColmapAdapterError("SIFT keypoints must have shape (N, 4)")
-        if descriptors.shape != (keypoints.shape[0], 128):
-            raise ColmapAdapterError("SIFT descriptors must have shape (N, 128)")
-        object.__setattr__(
-            self,
-            "keypoints",
-            _array(
-                keypoints,
-                np.float32,
-                keypoints.shape,
-                "SIFT keypoints",
-                finite=True,
-            ),
-        )
-        object.__setattr__(
-            self,
-            "descriptors",
-            _array(
-                descriptors,
-                np.uint8,
-                descriptors.shape,
-                "SIFT descriptors",
-            ),
-        )
-
-
-@dataclass(frozen=True)
-class NamedMatches:
-    image_name1: str
-    image_name2: str
-    matches: np.ndarray
-
-    def __post_init__(self) -> None:
-        _nonempty_text(self.image_name1, "match image_name1")
-        _nonempty_text(self.image_name2, "match image_name2")
-        if self.image_name1 == self.image_name2:
-            raise ColmapAdapterError("a match block must use two images")
-        if any(
-            character.isspace()
-            for name in (self.image_name1, self.image_name2)
-            for character in name
-        ):
-            raise ColmapAdapterError("match image names cannot contain whitespace")
-        matches = np.asarray(self.matches)
-        if matches.ndim != 2 or matches.shape[1:] != (2,):
-            raise ColmapAdapterError("named matches must have shape (N, 2)")
-        object.__setattr__(
-            self,
-            "matches",
-            _array(matches, np.uint32, matches.shape, "named matches"),
-        )
 
 
 @dataclass(frozen=True)

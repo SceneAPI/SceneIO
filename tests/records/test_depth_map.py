@@ -12,10 +12,8 @@ This is a *record* (not a codec), so there are no read_*/write_* here -- the
 three codec-tier parity kinds ride on this record once its first codec lands
 (16-bit depth PNG / .dmb / EXR-depth, later work items). Optical flow (.flo) is
 a SEPARATE bare-(H,W,2)-ndarray codec and intentionally does NOT use this
-scalar record. Note the deliberate cross-namespace name split: this is
-_core.DepthMap (policy-tagged sentinels + raw unscrubbed values), distinct from
-sceneio.data.DepthMap (the frozen validation contract: bool valid mask, strict
->0/[0,1]).
+scalar record. The canonical record retains both raw source encoding facts and
+semantic validity in one identity.
 """
 
 from __future__ import annotations
@@ -325,7 +323,7 @@ def test_validation_errors():
 
 def test_confidence_range_unconstrained():
     # Confidence carries RAW stored scores -- values outside [0,1] are accepted
-    # verbatim, pinning the intentional divergence from sceneio.data.ConfidenceMap
+    # verbatim, pinning the intentional divergence from sceneio.ConfidenceMap
     # (which requires [0,1]). Reader records, never normalizes.
     depth = np.zeros((2, 3), np.float32)
     conf = np.array([[3.7, -0.2, 100.0], [-5.0, 0.5, 1e9]], np.float32)
@@ -402,16 +400,11 @@ def test_big_endian_input_rejected_or_byte_preserved():
 
 # --- public re-export identity (the item's scaffold seam) -------------------
 def test_reexport_identity():
-    # The suite otherwise uses only _core, so a wrong-class typo in the io
-    # re-export or the flat sceneio forward would pass everything. Pin that both
-    # bind THIS record and that the deliberate cross-namespace name split is
-    # intact: sceneio.data.DepthMap (the frozen validation contract) is a DISTINCT
-    # class, not this raw-values record.
+    # The root export is the sole public identity; sceneio.io only owns I/O
+    # operations and registry metadata.
     import sceneio
-    import sceneio.data
     import sceneio.io
 
-    assert sceneio.io.DepthMap is _core.DepthMap
-    assert sceneio.DepthMap is _core.DepthMap  # flat forward off sceneio
-    assert sceneio.data.DepthMap is not _core.DepthMap  # distinct validation contract
-    assert isinstance(_core.depth_map(np.zeros((1, 1), np.float32)), sceneio.io.DepthMap)
+    assert sceneio.DepthMap is _core.DepthMap
+    assert not hasattr(sceneio.io, "DepthMap")
+    assert isinstance(_core.depth_map(np.zeros((1, 1), np.float32)), sceneio.DepthMap)

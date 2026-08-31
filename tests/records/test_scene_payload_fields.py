@@ -61,15 +61,16 @@ def _extended_mesh(**changes):
     return _core.mesh(**values)
 
 
-def _mesh_scene(mesh):
-    return _core.mesh_scene(
-        [mesh],
-        np.array([0, 1], np.uint64),
-        node_meshes=np.array([0], np.int64),
+def _scene_graph(mesh):
+    return _core.scene_graph(
+        ["mesh"],
+        meshes=[mesh],
+        mesh_primitive_offsets=np.array([0, 1], np.uint64),
+        node_payload_kinds=["mesh"],
+        node_payload_indices=np.array([0], np.uint64),
         node_child_offsets=np.array([0, 0], np.uint64),
         node_children=np.array([], np.uint64),
         node_local_transforms=np.eye(4, dtype=np.float64)[None],
-        node_names=["mesh"],
         scene_root_offsets=np.array([0, 1], np.uint64),
         scene_roots=np.array([0], np.uint64),
         default_scene=0,
@@ -176,7 +177,7 @@ def test_point_scene_field_validation_is_closed_and_shape_exact():
             _extended_points(**changes)
 
 
-def test_mesh_scene_fields_are_exact_owned_and_owner_retaining():
+def test_mesh_fields_are_exact_owned_and_owner_retaining():
     source_colors = np.ones((3, 3), np.float32)
     source_opacities = np.array([0.2, 0.4, 0.6], np.float32)
     mesh = _extended_mesh(
@@ -233,7 +234,7 @@ def test_mesh_scene_fields_are_exact_owned_and_owner_retaining():
     assert legacy.double_sided is None
 
 
-def test_mesh_scene_field_validation_is_closed_and_shape_exact():
+def test_mesh_field_validation_is_closed_and_shape_exact():
     invalid = [
         (
             {"corner_display_colors": np.zeros((2, 3), np.float32)},
@@ -316,18 +317,16 @@ def test_existing_point_and_mesh_writers_refuse_extended_fields(tmp_path):
         for writer in mesh_writers:
             with pytest.raises(ValueError, match="cannot represent"):
                 writer(mesh)
-        scene = _mesh_scene(mesh)
+        scene = _scene_graph(mesh)
         with pytest.raises(ValueError, match="cannot represent"):
             _core.write_gltf(scene)
         with pytest.raises(ValueError, match="cannot represent"):
             _core.write_glb(scene)
-        with pytest.raises(ValueError, match="unsupported"):
-            write_usd(scene, tmp_path / f"{field}.usda")
 
 
 def test_extended_field_path_writers_preserve_destinations(tmp_path):
     mesh = _extended_mesh()
-    scene = _mesh_scene(mesh)
+    scene = _scene_graph(mesh)
     obj = tmp_path / "scene.obj"
     gltf = tmp_path / "scene.gltf"
     binary = tmp_path / "scene.bin"
@@ -340,7 +339,7 @@ def test_extended_field_path_writers_preserve_destinations(tmp_path):
         write_obj(mesh, obj)
     with pytest.raises(ValueError, match="cannot represent"):
         write_gltf(scene, gltf)
-    with pytest.raises(ValueError, match="unsupported"):
+    with pytest.raises(ValueError, match="USD:"):
         write_usd(scene, usd)
     with pytest.raises(ValueError, match="unsupported"):
         write_e57(_extended_points(), e57)

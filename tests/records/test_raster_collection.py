@@ -6,8 +6,7 @@ import numpy as np
 import pytest
 
 import sceneio
-from sceneio import _core
-from sceneio.data import Mask, RasterCollection, RasterLevel, RasterSeries
+from sceneio import Mask, RasterCollection, RasterLevel, RasterSeries, _core
 from sceneio.errors import ContractViolation
 
 

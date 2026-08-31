@@ -97,7 +97,7 @@ void register_image(nb::module_ &m) {
         // dtype-polymorphic zero-copy view. Because the getter returns a
         // dynamically-typed nb::object, rv_policy::reference_internal cannot
         // attach the owner the way the fixed-dtype records (GaussianCloud,
-        // PosedViewSet) do through a bare-ndarray return. Instead
+        // PoseStorage) do through a bare-ndarray return. Instead
         // sio::view(self, ...) bakes `self` in as the array's owner, so the
         // backing buffer stays alive for as long as the returned array does
         // (the gc.collect() lifetime test in tests/records/test_image.py pins

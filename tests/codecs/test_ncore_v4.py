@@ -1159,7 +1159,7 @@ def test_pinned_upstream_standard_profile_fixture_is_accepted_exactly():
     mask = sceneio.read_ncore_semantic_component(
         path, sceneio.NCoreSelection("masks", "default")
     ).items[0].to_sceneio()
-    assert isinstance(mask, sceneio.data.Mask)
+    assert isinstance(mask, sceneio.Mask)
     np.testing.assert_array_equal(mask.mask, [[False, True], [True, False]])
 
     point_item = sceneio.NCoreItem(

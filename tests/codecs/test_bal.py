@@ -216,7 +216,7 @@ def assert_reconstruction_matches_raw(record, raw):
     )
     for index, parameters in enumerate(raw["cameras"]):
         camera = record.cameras[index]
-        assert camera.id == index + 1
+        assert record.camera_ids[index] == index + 1
         assert camera.model == "RADIAL"
         assert (camera.width, camera.height) == (0, 0)
         np.testing.assert_array_equal(

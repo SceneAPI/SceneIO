@@ -5,20 +5,30 @@ kept in [`docs/releases/`](docs/releases/).
 
 ## Unreleased
 
-- Reconciled the README and active documentation with the 74-format,
-  103-representation SceneIO 0.3.0 release; clearly separated current
-  contracts from completed implementation evidence.
-- Added documentation checks for package metadata, README Python examples,
-  plan status, and generated architecture ownership facts.
-- Added immutable, machine-readable contracts for every public class identity,
-  deterministic generic lookup/serialization, and generated coverage docs.
-- Added a distinct 26-entry built-in codec payload-kind vocabulary covering all
-  74 built-ins while preserving `Codec.datatype` and open runtime extensions.
+No unreleased changes yet.
+
+## [0.4.0] - 2026-08-30
+
+- Consolidated all 90 public data representations onto one canonical type per
+  concept, with root-level public identities and no legacy alias or adapter
+  layer.
+- Unified camera intrinsics, features, correspondence graphs, depth maps,
+  posed views, tracked point clouds, and static mesh scenes without reducing
+  the format-I/O capability inventory.
+- Made `SceneGraph` the glTF, GLB, USD, and USDZ scene representation;
+  `PointCloud` now carries optional track CSR data; and `CorrespondenceGraph`
+  now carries both raw and verified pair channels.
+- Removed the public `sceneio.data` and `sceneio.canonical` namespaces and the
+  duplicate `sceneio.io.<Type>` aliases. This is an intentional pre-1 contract
+  reset; no legacy compatibility layer is shipped.
+- Added immutable, machine-readable contracts for all 131 public class
+  identities and the 26 built-in codec payload kinds, with deterministic
+  lookup, serialization, generated documentation, and executable evidence.
 - Canonicalized all camera-model ids, names, parameter counts, and layouts in
   one 18-model manifest consumed by Python and generated C++ code.
-- Added explicit bidirectional `sceneio.canonical` adapters for native and
-  neutral camera, feature, match, depth, and posed-view records, with checked
-  context inputs and loss/refusal behavior.
+- Preserved the complete 74-format I/O inventory: 74 readable, 73 writable,
+  74 inspectable, 43 bounded selectors across 37 formats, 74 streaming reads,
+  and 71 streaming writes.
 
 ## [0.3.0] - 2026-08-29
 
@@ -48,6 +58,7 @@ scope, compatibility boundaries, and validation matrix.
 - Published the first compiled, stable-ABI SceneIO format-I/O tier with 23
   codecs and Linux, macOS, and Windows wheels.
 
-[Unreleased]: https://github.com/SceneAPI/SceneIO/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/SceneAPI/SceneIO/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/SceneAPI/SceneIO/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/SceneAPI/SceneIO/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/SceneAPI/SceneIO/releases/tag/v0.2.0

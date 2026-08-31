@@ -59,7 +59,7 @@ def _make(nodes: int = 3, edges: int = 2, **kwargs):
 def test_public_type_shapes_dtypes_and_metadata():
     graph = _make()
     assert isinstance(graph, sceneio.PoseGraph)
-    assert isinstance(graph, sceneio.io.PoseGraph)
+    assert not hasattr(sceneio.io, "PoseGraph")
     assert graph.num_nodes == 3
     assert graph.num_edges == 2
     assert graph.node_ids.shape == (3,)

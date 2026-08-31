@@ -23,7 +23,7 @@ set(SCENEIO_BINDING_SOURCES
 set(SCENEIO_RECORD_SOURCES
   src/cpp/records/reconstruction.cpp
   src/cpp/records/gaussian_cloud.cpp
-  src/cpp/records/posed_view_set.cpp
+  src/cpp/records/pose_storage.cpp
   src/cpp/records/tensor_dict.cpp
   src/cpp/records/image.cpp
   src/cpp/records/image_sequence.cpp
@@ -37,7 +37,6 @@ set(SCENEIO_RECORD_SOURCES
   src/cpp/records/feature_match.cpp
   src/cpp/records/material_set.cpp
   src/cpp/records/mesh.cpp
-  src/cpp/records/mesh_scene.cpp
   src/cpp/records/instance_set.cpp
   src/cpp/records/scene_graph.cpp
   src/cpp/records/dense_mvs.cpp
@@ -137,7 +136,7 @@ set(SCENEIO_CORE_SOURCES
   src/cpp/bindings/splats.cpp
   src/cpp/records/reconstruction.cpp
   src/cpp/records/gaussian_cloud.cpp
-  src/cpp/records/posed_view_set.cpp
+  src/cpp/records/pose_storage.cpp
   src/cpp/records/tensor_dict.cpp
   src/cpp/records/image.cpp
   src/cpp/records/image_sequence.cpp
@@ -151,7 +150,6 @@ set(SCENEIO_CORE_SOURCES
   src/cpp/records/feature_match.cpp
   src/cpp/records/material_set.cpp
   src/cpp/records/mesh.cpp
-  src/cpp/records/mesh_scene.cpp
   src/cpp/records/instance_set.cpp
   src/cpp/records/scene_graph.cpp
   src/cpp/records/dense_mvs.cpp

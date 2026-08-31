@@ -9,7 +9,7 @@ import numpy as np
 import pytest
 
 import sceneio
-from sceneio.data import InstanceMap, LabelTaxonomy, PanopticMap, SemanticMap
+from sceneio import InstanceMap, LabelTaxonomy, PanopticMap, SemanticMap
 from sceneio.io._ncore.model import (
     NCoreArray,
     NCoreComponent,

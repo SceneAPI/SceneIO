@@ -62,7 +62,7 @@ def _make(count: int = 3, **kwargs):
 def test_public_type_shapes_dtypes_and_metadata():
     rig = _make()
     assert isinstance(rig, sceneio.CameraRig)
-    assert isinstance(rig, sceneio.io.CameraRig)
+    assert not hasattr(sceneio.io, "CameraRig")
     assert rig.num_cameras == 3
     assert rig.camera_ids.shape == (3,)
     assert rig.camera_ids.dtype == np.uint32

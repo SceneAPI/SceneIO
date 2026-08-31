@@ -6,8 +6,8 @@ from bench.io_bench.fixtures.meshes import (
     _mesh_obj,
     _mesh_off,
     _mesh_ply,
-    _mesh_scene,
     _mesh_stl,
+    _scene_graph,
 )
 from bench.io_bench.model import Spec
 from bench.io_bench.oracles.meshes import (
@@ -67,7 +67,7 @@ def build_mesh_specs(scale):
         ),
         Spec(
             "glb",
-            lambda: _mesh_scene(max(3, points // 3)),
+            lambda: _scene_graph(max(3, points // 3)),
             _core.write_glb,
             _core.read_glb,
             (_trimesh_glb_w if trimesh else None),

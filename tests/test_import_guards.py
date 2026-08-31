@@ -5,7 +5,7 @@
    property the contract plane depends on.
 2. ``sceneio.mapping`` and ``sceneio.matching`` never import
    each other (the extraction option for each domain contract). Both
-   may import ``sceneio.data``.
+   may import the private canonical-record implementation package.
 3. Every name in each namespace's ``__all__`` imports.
 4. ``import sceneio.testing`` never imports pytest (pytest stays a
    lazy, in-function import) — verified in a subprocess.
@@ -89,22 +89,20 @@ def test_mapping_and_matching_never_import_each_other(
             )
 
 
-def test_mapping_and_matching_may_import_data() -> None:
+def test_mapping_and_matching_may_import_private_data_implementation() -> None:
     # Positive control: the isolation guard must not be trivially green.
     mapping_imports = _imported_modules(SRC_ROOT / "mapping" / "__init__.py")
     matching_imports = _imported_modules(SRC_ROOT / "matching" / "__init__.py")
-    assert any(m.startswith("sceneio.data") for m in mapping_imports)
-    assert any(m.startswith("sceneio.data") for m in matching_imports)
+    assert any(m.startswith("sceneio._data") for m in mapping_imports)
+    assert any(m.startswith("sceneio._data") for m in matching_imports)
 
 
 @pytest.mark.parametrize(
     "namespace",
     [
         "sceneio",
-        "sceneio.canonical",
         "sceneio.colmap",
         "sceneio.contracts",
-        "sceneio.data",
         "sceneio.formats",
         "sceneio.mapping",
         "sceneio.matching",
@@ -141,13 +139,19 @@ def test_plain_import_is_numpy_lazy() -> None:
         "import sceneio\n"
         "assert 'numpy' not in sys.modules, "
         "'plain `import sceneio` should not import numpy'\n"
-        "import sceneio.data\n"
+        "_ = sceneio.Mask\n"
         "assert 'numpy' in sys.modules\n"
     )
     result = subprocess.run(
         [sys.executable, "-c", code], capture_output=True, text=True, check=False
     )
     assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.parametrize("namespace", ["sceneio.data", "sceneio.canonical"])
+def test_removed_legacy_namespaces_do_not_import(namespace: str) -> None:
+    with pytest.raises((ImportError, FileNotFoundError)):
+        importlib.import_module(namespace)
 
 
 def test_native_test_controls_are_absent_from_default_build() -> None:

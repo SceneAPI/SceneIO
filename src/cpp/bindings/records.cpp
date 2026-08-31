@@ -7,7 +7,7 @@
 
 void register_reconstruction(nanobind::module_ &);
 void register_gaussian_cloud(nanobind::module_ &);
-void register_posed_view_set(nanobind::module_ &);
+void register_pose_storage(nanobind::module_ &);
 void register_tensor_dict(nanobind::module_ &);
 void register_image(nanobind::module_ &);
 void register_image_sequence(nanobind::module_ &);
@@ -21,7 +21,6 @@ void register_pose_graph(nanobind::module_ &);
 void register_feature_match(nanobind::module_ &);
 void register_material_set(nanobind::module_ &);
 void register_mesh(nanobind::module_ &);
-void register_mesh_scene(nanobind::module_ &);
 void register_instance_set(nanobind::module_ &);
 void register_scene_graph(nanobind::module_ &);
 void register_dense_mvs_records(nanobind::module_ &);
@@ -30,10 +29,10 @@ void register_point_scan(nanobind::module_ &);
 namespace sio::bindings {
 namespace {
 
-constexpr std::array<RegistrationDescriptor, 21> RECORDS{{
+constexpr std::array<RegistrationDescriptor, 20> RECORDS{{
     {0, "reconstruction", &::register_reconstruction},
     {1, "gaussian_cloud", &::register_gaussian_cloud},
-    {2, "posed_view_set", &::register_posed_view_set},
+    {2, "pose_storage", &::register_pose_storage},
     {3, "tensor_dict", &::register_tensor_dict},
     {4, "image", &::register_image},
     {5, "image_sequence", &::register_image_sequence},
@@ -47,11 +46,10 @@ constexpr std::array<RegistrationDescriptor, 21> RECORDS{{
     {13, "feature_match", &::register_feature_match},
     {14, "material_set", &::register_material_set},
     {15, "mesh", &::register_mesh},
-    {16, "mesh_scene", &::register_mesh_scene},
-    {17, "instance_set", &::register_instance_set},
-    {18, "scene_graph", &::register_scene_graph},
-    {19, "dense_mvs", &::register_dense_mvs_records},
-    {20, "point_scan", &::register_point_scan},
+    {16, "instance_set", &::register_instance_set},
+    {17, "scene_graph", &::register_scene_graph},
+    {18, "dense_mvs", &::register_dense_mvs_records},
+    {19, "point_scan", &::register_point_scan},
 }};
 
 } // namespace

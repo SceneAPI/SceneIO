@@ -23,7 +23,7 @@
 #include <vector>
 
 #include "io/common.hpp"
-#include "records/mesh_scene.hpp"
+#include "records/scene_graph.hpp"
 
 #define CGLTF_IMPLEMENTATION
 #define CGLTF_WRITE_IMPLEMENTATION
@@ -188,19 +188,19 @@ void reject_extensions(const cgltf_data &data) {
             "glTF extensions are outside the plain core subset");
     if (data.skins_count != 0)
         throw std::invalid_argument(
-            "glTF skins are not representable by MeshScene");
+            "glTF skins are not representable by SceneGraph");
     if (data.cameras_count != 0)
         throw std::invalid_argument(
-            "glTF cameras are not representable by MeshScene");
+            "glTF cameras are not representable by the supported SceneGraph profile");
     if (data.lights_count != 0)
         throw std::invalid_argument(
-            "glTF lights are not representable by MeshScene");
+            "glTF lights are not representable by the supported SceneGraph profile");
     if (data.animations_count != 0)
         throw std::invalid_argument(
-            "glTF animation is not representable by MeshScene");
+            "glTF animation is not representable by the supported SceneGraph profile");
     if (data.variants_count != 0)
         throw std::invalid_argument(
-            "glTF material variants are not representable by MeshScene");
+            "glTF material variants are not representable by the supported SceneGraph profile");
     reject_extras(data.extras, "document");
 }
 
@@ -219,7 +219,7 @@ void reject_unrepresented_content(const cgltf_data &data) {
             static_cast<cgltf_size>(
                 std::numeric_limits<int64_t>::max()))
         throw std::length_error(
-            "glTF domain count exceeds MeshScene index capacity");
+            "glTF domain count exceeds SceneGraph index capacity");
     for (cgltf_size index = 0; index < data.buffers_count; ++index) {
         validate_uri(data.buffers[index].uri, "glTF buffer URI");
         reject_extras(data.buffers[index].extras, "buffer");
@@ -820,10 +820,12 @@ struct Selection {
     size_t index = 0;
 };
 
-MeshScene decode_scene(
-    const cgltf_data &data, Selection selection) {
+SceneGraph decode_scene(
+    const cgltf_data &data, Selection selection,
+    const char *source_representation) {
     reject_unrepresented_content(data);
-    MeshScene result;
+    SceneGraph result;
+    result.source_representation = source_representation;
     if (data.materials_count != 0) {
         result.materials = decode_materials(data);
         result.has_material_set = true;
@@ -857,12 +859,12 @@ MeshScene decode_scene(
                 const size_t current = begin + local;
                 if (selection.kind != Selection::Kind::Primitive ||
                     selection.index == current)
-                    result.primitives.push_back(
+                    result.meshes.push_back(
                         decode_primitive(
                             data, source.primitives[local]));
             }
             result.mesh_primitive_offsets.push_back(
-                static_cast<uint64_t>(result.primitives.size()));
+                static_cast<uint64_t>(result.meshes.size()));
         }
         global_primitive = end;
     }
@@ -876,23 +878,37 @@ MeshScene decode_scene(
             "glTF primitive_id is out of range");
 
     if (selection.kind == Selection::Kind::All) {
-        std::vector<std::string> node_names;
-        node_names.reserve(data.nodes_count);
+        result.n = static_cast<size_t>(data.nodes_count);
+        result.node_names.reserve(data.nodes_count);
+        result.node_parents.assign(result.n, -1);
+        result.node_resets_transform_stack.assign(result.n, 0);
+        result.node_visibility.assign(result.n, 0);
+        result.node_purpose.assign(result.n, 0);
+        result.node_payload_kinds.assign(result.n, 0);
+        result.node_payload_indices.assign(
+            result.n, std::numeric_limits<uint64_t>::max());
+        result.node_semantic_taxonomies.resize(result.n);
+        result.node_semantic_labels.resize(result.n);
         result.node_child_offsets.push_back(0);
         for (size_t index = 0;
              index < static_cast<size_t>(data.nodes_count); ++index) {
             const cgltf_node &node = data.nodes[index];
-            node_names.push_back(source_name(node.name));
-            result.node_meshes.push_back(
-                node.mesh
-                    ? static_cast<int64_t>(
-                          cgltf_mesh_index(&data, node.mesh))
-                    : -1);
+            result.node_names.push_back(source_name(node.name));
+            if (node.mesh) {
+                result.node_payload_kinds[index] =
+                    static_cast<uint8_t>(ScenePayloadKind::Mesh);
+                result.node_payload_indices[index] =
+                    cgltf_mesh_index(&data, node.mesh);
+            }
             for (size_t child = 0;
                  child < static_cast<size_t>(node.children_count);
-                 ++child)
-                result.node_children.push_back(
-                    cgltf_node_index(&data, node.children[child]));
+                 ++child) {
+                const uint64_t child_index =
+                    cgltf_node_index(&data, node.children[child]);
+                result.node_children.push_back(child_index);
+                result.node_parents[static_cast<size_t>(child_index)] =
+                    static_cast<int64_t>(index);
+            }
             result.node_child_offsets.push_back(
                 static_cast<uint64_t>(
                     result.node_children.size()));
@@ -904,13 +920,12 @@ MeshScene decode_scene(
                         static_cast<double>(
                             column_major[column * 4 + row]));
         }
-        std::vector<std::string> scene_names;
-        scene_names.reserve(data.scenes_count);
+        result.scene_names.reserve(data.scenes_count);
         result.scene_root_offsets.push_back(0);
         for (size_t index = 0;
              index < static_cast<size_t>(data.scenes_count); ++index) {
             const cgltf_scene &scene = data.scenes[index];
-            scene_names.push_back(source_name(scene.name));
+            result.scene_names.push_back(source_name(scene.name));
             for (size_t root = 0;
                  root < static_cast<size_t>(scene.nodes_count);
                  ++root)
@@ -925,27 +940,44 @@ MeshScene decode_scene(
                 ? static_cast<int64_t>(
                       data.scene - data.scenes)
                 : -1;
-        assign_mesh_scene_names(
-            result, mesh_names, node_names, scene_names);
+        result.mesh_names = std::move(mesh_names);
     } else {
+        result.n = 0;
+        result.node_parents.clear();
         result.node_child_offsets = {0};
+        result.node_resets_transform_stack.clear();
+        result.node_visibility.clear();
+        result.node_purpose.clear();
+        result.node_payload_kinds.clear();
+        result.node_payload_indices.clear();
+        result.node_semantic_taxonomies.clear();
+        result.node_semantic_labels.clear();
         result.scene_root_offsets = {0};
         result.default_scene = -1;
-        assign_mesh_scene_names(
-            result, mesh_names, {}, {});
+        result.mesh_names = std::move(mesh_names);
     }
-    validate_mesh_scene(result, "glTF decode");
+    if (result.has_material_set) {
+        for (const std::string &path :
+             material_texture_paths(result.materials)) {
+            result.external_asset_uris.push_back(path);
+            result.external_asset_kinds.emplace_back("texture");
+            result.external_asset_sources.push_back(path);
+        }
+    }
+    validate_scene_graph(result, "glTF decode");
     return result;
 }
 
-MeshScene read_document(
+SceneGraph read_document(
     nb::handle source, nb::dict resources,
     cgltf_file_type expected, Selection selection) {
     sio::ByteView bytes(source);
     ParsedData parsed = parse_document(bytes, expected);
     auto pins = load_buffers(parsed, std::move(resources));
     nb::gil_scoped_release release;
-    return decode_scene(*parsed.value, selection);
+    return decode_scene(
+        *parsed.value, selection,
+        expected == cgltf_file_type_glb ? "glb" : "gltf");
 }
 
 nb::dict inspect_document(
@@ -1290,14 +1322,82 @@ cgltf_filter_type writer_filter(uint8_t code, bool magnification) {
     return values[code];
 }
 
+bool identity_transform(const double *values) {
+    for (size_t row = 0; row < 4; ++row)
+        for (size_t column = 0; column < 4; ++column) {
+            const double expected = row == column ? 1.0 : 0.0;
+            if (values[row * 4 + column] != expected) return false;
+        }
+    return true;
+}
+
+void validate_gltf_scene(
+    const SceneGraph &scene, const char *context) {
+    validate_scene_graph(scene, context);
+    const std::string prefix = std::string(context) + ": ";
+    if (!scene.point_clouds.empty() ||
+        !scene.gaussian_clouds.empty() || scene.has_camera_rig ||
+        !scene.volumes.empty() || !scene.instances.empty())
+        throw std::invalid_argument(
+            prefix + "glTF supports mesh payloads only");
+    if (scene.default_prim >= 0 || scene.has_selected_time ||
+        scene.has_time_range || scene.up_axis != "y" ||
+        scene.meters_per_unit != 1.0)
+        throw std::invalid_argument(
+            prefix + "USD stage metadata is not representable by glTF");
+    for (size_t node = 0; node < scene.n; ++node) {
+        const auto kind = static_cast<ScenePayloadKind>(
+            scene.node_payload_kinds[node]);
+        if (kind != ScenePayloadKind::None &&
+            kind != ScenePayloadKind::Mesh)
+            throw std::invalid_argument(
+                prefix + "glTF nodes support mesh payloads only");
+        if (scene.node_resets_transform_stack[node] != 0 ||
+            scene.node_visibility[node] != 0 ||
+            scene.node_purpose[node] != 0 ||
+            !scene.node_semantic_taxonomies[node].empty() ||
+            !scene.node_semantic_labels[node].empty())
+            throw std::invalid_argument(
+                prefix + "USD node metadata is not representable by glTF");
+    }
+    for (size_t index = 0;
+         index < scene.external_asset_kinds.size(); ++index)
+        if (scene.external_asset_kinds[index] != "texture" ||
+            scene.external_asset_sources[index] !=
+                scene.external_asset_uris[index])
+            throw std::invalid_argument(
+                prefix + "non-glTF external asset provenance cannot be written");
+    for (size_t primitive = 0;
+         primitive < scene.meshes.size(); ++primitive) {
+        const Mesh &mesh = scene.meshes[primitive];
+        if (mesh.coordinate_frame != "opengl" ||
+            mesh.scale_to_meters != 1.0 ||
+            !identity_transform(mesh.local_transform))
+            throw std::invalid_argument(
+                prefix + "mesh primitives must use canonical glTF "
+                         "right-handed Y-up geometry");
+        if (mesh.f == 0 ||
+            mesh.f > std::numeric_limits<size_t>::max() / 3 ||
+            mesh.c != mesh.f * 3)
+            throw std::invalid_argument(
+                prefix + "mesh primitives must contain triangles");
+        if (mesh.primitive_offsets.size() != 2 ||
+            mesh.primitive_offsets[0] != 0 ||
+            mesh.primitive_offsets[1] != mesh.f ||
+            mesh.primitive_materials.size() != 1)
+            throw std::invalid_argument(
+                prefix + "each glTF primitive must contain one face range");
+    }
+}
+
 void build_writer_model(
-    WriterModel &model, const MeshScene &scene,
+    WriterModel &model, const SceneGraph &scene,
     const std::string &buffer_uri,
     bool binary_container) {
-    validate_mesh_scene(scene, "glTF writer");
-    model.mesh_names = mesh_scene_mesh_names(scene);
-    model.node_names = mesh_scene_node_names(scene);
-    model.scene_names = mesh_scene_scene_names(scene);
+    validate_gltf_scene(scene, "glTF writer");
+    model.mesh_names = scene.mesh_names;
+    model.node_names = scene.node_names;
+    model.scene_names = scene.scene_names;
     model.material_names_value =
         scene.has_material_set
             ? material_names(scene.materials)
@@ -1309,7 +1409,7 @@ void build_writer_model(
     model.buffer_uri = buffer_uri;
 
     size_t attribute_count = 0;
-    for (const Mesh &mesh : scene.primitives) {
+    for (const Mesh &mesh : scene.meshes) {
         require_no_extended_mesh_fields(mesh, "glTF writer");
         if (mesh.has_corner_normals() ||
             mesh.has_corner_uvs() ||
@@ -1331,16 +1431,16 @@ void build_writer_model(
                 "glTF attribute count overflows size_t");
         attribute_count += primitive_attributes;
     }
-    if (scene.primitives.size() >
+    if (scene.meshes.size() >
         std::numeric_limits<size_t>::max() - attribute_count)
         throw std::length_error(
             "glTF accessor count overflows size_t");
     const size_t accessor_count =
-        attribute_count + scene.primitives.size();
+        attribute_count + scene.meshes.size();
     model.views.resize(accessor_count);
     model.accessors.resize(accessor_count);
     model.attributes.resize(attribute_count);
-    model.primitives.resize(scene.primitives.size());
+    model.primitives.resize(scene.meshes.size());
     model.meshes.resize(scene.num_meshes());
     model.materials.resize(
         scene.has_material_set
@@ -1375,7 +1475,7 @@ void build_writer_model(
              local <
              static_cast<size_t>(target_mesh.primitives_count);
              ++local, ++primitive_index) {
-            const Mesh &mesh = scene.primitives[primitive_index];
+            const Mesh &mesh = scene.meshes[primitive_index];
             cgltf_primitive &primitive =
                 model.primitives[primitive_index];
             primitive.type = cgltf_primitive_type_triangles;
@@ -1524,10 +1624,11 @@ void build_writer_model(
         node.name = model.node_names[index].empty()
                         ? nullptr
                         : model.node_names[index].data();
-        const int64_t mesh = scene.node_meshes[index];
-        if (mesh >= 0)
+        if (scene.node_payload_kinds[index] ==
+            static_cast<uint8_t>(ScenePayloadKind::Mesh))
             node.mesh =
-                &model.meshes[static_cast<size_t>(mesh)];
+                &model.meshes[static_cast<size_t>(
+                    scene.node_payload_indices[index])];
         node.children_count =
             static_cast<cgltf_size>(
                 scene.node_child_offsets[index + 1] -
@@ -1622,7 +1723,7 @@ void build_writer_model(
     model.data.scenes = model.scenes.data();
     model.data.scenes_count = model.scenes.size();
     if (scene.default_scene >= 0)
-    model.data.scene =
+        model.data.scene =
             &model.scenes[
                 static_cast<size_t>(scene.default_scene)];
 }
@@ -1693,7 +1794,7 @@ private:
 };
 
 EncodedScene encode_scene(
-    const MeshScene &scene, const std::string &buffer_uri,
+    const SceneGraph &scene, const std::string &buffer_uri,
     bool binary_container) {
     if (!binary_container) {
         if (buffer_uri.empty())
@@ -1770,7 +1871,7 @@ std::string make_glb(EncodedScene encoded) {
 }
 
 nb::tuple write_gltf(
-    const MeshScene &scene, const std::string &buffer_uri) {
+    const SceneGraph &scene, const std::string &buffer_uri) {
     EncodedScene encoded;
     {
         nb::gil_scoped_release release;
@@ -1784,7 +1885,7 @@ nb::tuple write_gltf(
 }
 
 nb::bytes write_gltf_json(
-    const MeshScene &scene, const std::string &buffer_uri) {
+    const SceneGraph &scene, const std::string &buffer_uri) {
     EncodedScene encoded;
     {
         nb::gil_scoped_release release;
@@ -1795,7 +1896,7 @@ nb::bytes write_gltf_json(
 }
 
 nb::bytes write_gltf_bin(
-    const MeshScene &scene, const std::string &buffer_uri) {
+    const SceneGraph &scene, const std::string &buffer_uri) {
     EncodedScene encoded;
     {
         nb::gil_scoped_release release;
@@ -1822,7 +1923,7 @@ size_t write_file(
 }
 
 nb::tuple write_gltf_to_files(
-    const MeshScene &scene, const std::string &buffer_uri,
+    const SceneGraph &scene, const std::string &buffer_uri,
     nb::handle json_path, nb::handle binary_path) {
     EncodedScene encoded;
     {
@@ -1840,7 +1941,7 @@ nb::tuple write_gltf_to_files(
     return nb::make_tuple(json_calls, binary_calls);
 }
 
-nb::bytes write_glb(const MeshScene &scene) {
+nb::bytes write_glb(const SceneGraph &scene) {
     std::string encoded;
     {
         nb::gil_scoped_release release;

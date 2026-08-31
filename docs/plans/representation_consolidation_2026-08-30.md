@@ -1,701 +1,420 @@
-# Representation consolidation implementation plan
+# In-memory representation merging plan
 
-- **Status:** proposed and ready for implementation as of 2026-08-30.
-- **Baseline:** the SceneIO 0.3 public surface in the current worktree: 103
-  contracted data representations, 144 total public class identities, 26
-  built-in payload kinds, 74 built-in codecs, and 5 existing bidirectional
-  loaded-to-neutral adapter pairs.
-- **Purpose:** reduce duplicate semantic ownership across loaded, neutral,
-  COLMAP-wire, and scene representations without weakening storage fidelity or
-  changing existing public behavior.
-- **Compatibility posture:** treat the current API as stable. Consolidation is
-  additive in this program. Existing classes, import paths, constructors,
-  fields, defaults, reprs, pickle behavior, codec return classes, writer input
-  contracts, errors, and wire bytes remain unchanged.
-- **Primary authorities:**
-  [`canonicalization.md`](../canonicalization.md) owns conversion and refusal
-  behavior,
-  [`representation_normalization.md`](../representation_normalization.md) owns
-  numeric normalization and coordinate semantics, and
-  [`public_type_contracts.md`](../public_type_contracts.md) owns public identity
-  and relationship coverage.
+- **Status:** implementation and local qualification complete as of
+  2026-08-30; hosted cross-platform and sanitizer qualification follows the
+  final branch push.
+- **Baseline:** SceneIO 0.3.0 at `182c9120`; 103 contracted
+  representations, 144 public class identities, 51 representation alias
+  paths, and 5 bidirectional loaded/neutral adapter pairs.
+- **Owner decision:** SceneIO is a new project. No legacy API, import-path,
+  constructor, pickle, or generic-read compatibility is required for this
+  consolidation.
+- **Release posture:** make one direct contract reset for 0.4.0. Do not ship
+  aliases, deprecations, compatibility wrappers, or parallel old/new models.
+- **Target:** 90 contracted representations, one public path per
+  representation, and no representation adapters. Coordinate, unit, and dtype
+  conversions that change values remain explicit operations.
+- **Result:** 90 contracted representations, 131 public class identities,
+  zero aliases, and zero representation adapters. The complete 74-reader,
+  73-writer, and 74-inspector built-in I/O inventory remains available.
 
-## 1. Outcome and finite boundary
+This plan supersedes the earlier additive-adapter proposal. That proposal was
+appropriate only under a stable-API assumption. The repository currently
+labels the surface stable, but the project owner has explicitly removed that
+constraint. Following the new/alpha guidance adapted from AIP-181 and AIP-205,
+the duplicate shapes should be corrected directly before the API is frozen.
 
-This program ends with a small, explicit conversion graph between public
-representations that describe the same semantic object at different fidelity
-levels. It does **not** attempt to force all values into one universal record.
+## 1. Reviewed findings
 
-The target outcome is:
+### Required findings
 
-1. Every supported representation conversion has one implementation owner,
-   one machine-readable relationship, one documented fidelity boundary, and
-   focused executable evidence.
-2. Format-specific classes retain only format-specific or storage-specific
-   responsibilities. Shared transform, calibration, feature, correspondence,
-   and scene meaning belongs to an existing canonical record.
-3. Generic `sceneio.read()` continues to return storage-faithful records.
-   Projection remains an explicit caller action through `sceneio.canonical`.
-4. Missing context, unrepresentable meaning, and metadata loss remain three
-   different outcomes. Missing geometric context always refuses; omittable
-   metadata requires explicit loss acknowledgement; exact conversions need
-   neither.
-5. The number of public representations does not need to decrease. A wire view
-   and a semantic view may remain separate indefinitely when the boundary
-   protects round-trip fidelity.
+| Finding | Category | Severity / confidence | Evidence | Impact | Direct correction |
+|---|---|---|---|---|---|
+| Loaded and neutral models duplicate the same domain nouns | design smell: duplicate abstraction | high / high | `src/cpp/records/feature_match.hpp:15` contains `struct FeatureSet {`; `src/sceneio/data/features.py:32` contains `class FeatureSet:` | Callers choose between identities and reconstruct conversion policy | Keep one canonical model per noun and update codecs and procedures to use it directly |
+| The adapter layer institutionalizes the duplicate model split | code smell: middle man and shotgun surgery | high / high | `src/sceneio/contracts/manifest.py:199` contains `adapter_targets = {`; `src/sceneio/canonical.py:841` begins the ten adapter exports | A field change crosses the native type, neutral type, adapter, relation table, tests, and docs | Remove representation adapters after callers converge on the canonical models |
+| Collection identity is mixed into reusable value objects | design smell: deficient ownership | medium / high | `src/sceneio/colmap/models.py:90` declares `camera_id: int` beside camera intrinsic fields | The same intrinsic calibration needs multiple wrapper types depending on its container | Put ids and source-only flags on `Reconstruction`, `ColmapDatabase`, and `MappingInput`; keep intrinsics identity-free |
+| Static mesh scenes have two competing aggregate owners | design smell: duplicate abstraction | high / high | `src/cpp/records/scene_graph.hpp:4` says `compatibility record for static mesh-only callers.` | glTF and USD callers receive different scene models and shared scene logic drifts | Extend `SceneGraph` to cover the complete static mesh subset, migrate codecs, delete `MeshScene` |
+| Tracked and untracked point clouds are separate classes despite an additive relationship | design smell: alternative classes with different interfaces | medium / high | `src/cpp/records/point_cloud.hpp:41` contains `struct PointCloud {`; `src/sceneio/data/pointcloud.py:38` contains `class TrackedPointCloud:` | Mapping results cannot flow directly into point-cloud codecs | Add optional track CSR data to `PointCloud` and delete `TrackedPointCloud` |
+| Contract metadata overstates stability | API contract defect | high / high | `pyproject.toml:3` is `version = "0.3.0"`; `src/sceneio/contracts/manifest.py:222` sets `stability="stable"` for every representation | The catalog blocks pre-1 design correction and contradicts the owner's release posture | Mark the redesigned representation surface `provisional` until its 1.0 freeze |
 
-### Included consolidation seams
-
-- COLMAP `SimilarityTransform` and neutral `sceneio.data.Sim3`.
-- COLMAP `MappingCamera` and neutral `sceneio.data.CameraIntrinsics`.
-- COLMAP `SiftFeatures`, loaded `sceneio.FeatureSet`, and neutral
-  `sceneio.data.FeatureSet`.
-- COLMAP `NamedMatches` and neutral `sceneio.data.PairCorrespondences`.
-- Compatibility `sceneio.MeshScene` and rich `sceneio.SceneGraph` on the exact
-  mutually representable mesh-only subset.
-- One internal adapter manifest from which public `adapts_to` relationships and
-  the documentation conversion matrix are derived.
-
-### Explicit non-goals
-
-- Do not alias two classes merely because they share a short name.
-- Do not replace `MappingInput`, `Reconstruction`, `ColmapDatabase`, or an MVS
-  workspace with a generic bag of neutral records.
-- Do not merge `PointCloud`, `PointScan`, and `ScanSet`; their current
-  composition preserves stored rows, invalid states, scan metadata, and
-  aggregation correctly.
-- Do not merge `Mask`, `SemanticMap`, `InstanceMap`, and `PanopticMap`; their
-  element domains and semantic invariants are intentionally distinct.
-- Do not merge NCore schema records with NCore payload records.
-- Do not make `allow_loss=True` the default and do not let it authorize a
-  coordinate, unit, frame, or transform-direction guess.
-- Do not add a magic `canonicalize(value)` dispatcher. Several conversions
-  require caller-owned context that a generic function could only guess.
-- Do not change any built-in codec's `record`, `datatype`, `payload_kind`,
-  detection behavior, or generic read result.
-- Do not deprecate a wire/storage class merely because an adapter exists.
-
-## 2. Current evidence and consolidation decisions
-
-SceneIO already establishes the correct high-level distinction: loaded records
-preserve source facts while `sceneio.data` supplies the smaller procedure
-floor. The existing camera, feature, match, depth, and posed-view pairs are
-therefore not duplicate identities; their checked adapters are the model for
-this program.
-
-| Candidate | Shared meaning | Non-shared facts | Decision |
-|---|---|---|---|
-| `sceneio.colmap.SimilarityTransform` / `sceneio.data.Sim3` | Positive scale, proper rotation, translation | WXYZ quaternion sample/sign versus rotation matrix; neutral convention tag | Add strict bidirectional adapters; keep both classes |
-| `sceneio.colmap.MappingCamera` / `sceneio.data.CameraIntrinsics` | Camera model, dimensions, ordered parameters | Mapping camera id and prior-focal flag | Reuse one camera-field conversion policy; require context/loss acknowledgement |
-| `sceneio.colmap.SiftFeatures` / `sceneio.FeatureSet` / `sceneio.data.FeatureSet` | Pixel keypoints and descriptors | SIFT fixes 4 columns, uint8, 128 descriptors; neutral features retain only XY | Use loaded `FeatureSet` as the exact SIFT bridge, then the existing neutral adapter for the smaller subset |
-| `sceneio.colmap.NamedMatches` / `sceneio.data.PairCorrespondences` | Ordered endpoint pair and indexed correspondences | Wire endpoint names; neutral optional scores and geometry | Add ordered pair-map adapters with strict refusal for unsupported neutral fields |
-| `sceneio.MeshScene` / `sceneio.SceneGraph` | Mesh payloads, hierarchy, local transforms, names, materials | Rich scene payload kinds, visibility, purpose, semantics, instances, assets, time, and stage metadata | Add a strict mesh-only projection; keep both public scene models |
-
-### Representations investigated but not selected
-
-| Representations | Reason not to consolidate |
-|---|---|
-| Existing native/neutral camera, feature, match, depth, and posed-view pairs | They already share semantic authority through checked adapters while preserving distinct storage and procedure roles |
-| `PointCloud`, `PointScan`, `ScanSet` | `PointScan` contains a point cloud plus stored-row/scan facts; `ScanSet` is an ordered aggregate |
-| `DepthMap`, `Pointmap`, `RayMap`, `NormalMap`, `FlowField` | Similar array shapes do not imply the same physical quantity, coordinate rule, or conversion |
-| `Mask`, `SemanticMap`, `InstanceMap`, `PanopticMap` | Separate classes prevent binary, class-label, instance-id, and packed panoptic values from being confused |
-| NCore schema/payload classes | Metadata declarations and materialized component values have different lifetime and loading behavior |
-| `ColmapMvsWorkspace`, `LegacyMvsWorkspace` | They coordinate different on-disk ecosystems and expose different valid operations |
-| `WorkspaceInspection`, `WorkspaceValidation` | They are related result views, not interchangeable representations |
-
-## 3. Design principles
-
-1. **One semantic authority, multiple fidelity views.** Consolidate validation,
-   conversion, and relationships before considering identity removal.
-2. **Explicit direction and context.** Function names identify source and
-   target. Required convention, id, scale, frame, and name mappings are keyword
-   arguments rather than inferred defaults.
-3. **Exact by default.** An adapter either preserves the declared shared
-   contract or refuses. Only named, storage-only omissions may be acknowledged
-   with `allow_loss=True`.
-4. **No semantic mega-type.** A type that represents every camera, map, scene,
-   or match mode through optional fields would make invalid states easier to
-   construct and would move validation into scattered branches.
-5. **Wire views stay close to codecs.** Parsing and writing retain their
-   current wire-specific classes. Canonical adapters do not become hidden
-   codec steps.
-6. **Relations are generated from one adapter manifest.** Production code must
-   not maintain a function list, contract edge list, and documentation table
-   independently.
-7. **Provider-independent conversion.** In-memory conversion must not serialize
-   through a temporary file or import an optional codec provider.
-8. **Owned results.** Converted arrays and nested records have explicit
-   ownership and remain valid after the source name, mapped file, or provider
-   handle is released.
-9. **Stable APIs change additively.** Guidance from
-   [AIP-180](https://google.aip.dev/180) and
-   [AIP-181](https://google.aip.dev/181) is adapted to this local Python SDK:
-   add adapters and relationships; do not change stable classes in place.
-10. **Removal is a separately approved versioning event.** Any future identity,
-    constructor, or return-type removal follows
-    [AIP-185](https://google.aip.dev/185), not this implementation program.
-
-## 4. API review findings and required corrections
-
-The AIP references below are compatibility guidance adapted to a stable local
-SDK. HTTP resources, pagination, authentication, and retry semantics are not
+The AIP references are design guardrails for the local SDK, not a claim that
+SceneIO is a Google resource-oriented API. Resource naming, HTTP methods,
+pagination, authentication, retries, and long-running operations are not
 applicable.
 
-| Finding | Evidence and risk | Basis | Compatibility-safe correction |
-|---|---|---|---|
-| Adapter relationships are maintained as a one-target dictionary | `contracts.manifest._representation_entries()` can express only one `adapts_to` target per representation | [AIP-180](https://google.aip.dev/180), [AIP-202](https://google.aip.dev/202) | Replace the hand table with a directional internal adapter manifest that supports multiple targets without altering `ContractRelation` |
-| Sim3 meaning has two validators and no declared bridge | COLMAP stores WXYZ quaternion plus scale/translation; neutral `Sim3` stores rotation plus convention | [AIP-190](https://google.aip.dev/190), [AIP-192](https://google.aip.dev/192) | Add explicitly named conversion functions and reciprocal catalog relationships; never infer direction |
-| COLMAP leaf records re-state camera/feature/match semantics | Mapping and text records validate shapes and camera models independently of existing native/neutral records | [AIP-190](https://google.aip.dev/190), [AIP-180](https://google.aip.dev/180) | Route shared conversion math through the canonical layer while retaining wire-specific constraints and classes |
-| `MeshScene` and `SceneGraph` are documented as projection-related but expose no in-memory projection API | Users must reassemble a scene or round-trip through USD to cross the boundary | [AIP-192](https://google.aip.dev/192), [AIP-180](https://google.aip.dev/180) | Add strict provider-free conversion for the exact mesh-only subset; preserve both read paths |
-| Removing the apparent duplicates would change stable constructors and read outcomes | Existing snapshots and codec tests contract those identities and shapes | [AIP-180](https://google.aip.dev/180), [AIP-185](https://google.aip.dev/185) | Make removal explicitly out of scope; record a future major-version decision gate instead |
+### Investigated and deliberately not merged
 
-## 5. Target architecture
-
-```text
-format/wire view                 checked canonical layer       semantic/storage authority
-
-colmap.SimilarityTransform  ──>  sceneio.canonical  ─────────> data.Sim3
-colmap.MappingCamera        ──>  sceneio.canonical  ─────────> data.CameraIntrinsics
-colmap.SiftFeatures         ──>  sceneio.canonical  ─────────> sceneio.FeatureSet
-                                                              └─> data.FeatureSet (existing)
-tuple[colmap.NamedMatches]  ──>  sceneio.canonical  ─────────> map[pair, PairCorrespondences]
-sceneio.MeshScene           <──  sceneio.canonical  ────────> sceneio.SceneGraph
-```
-
-The implementation ownership is:
-
-```text
-src/sceneio/contracts/_adapters.py
-  stdlib-only directional adapter definitions and validation
-
-src/sceneio/contracts/manifest.py
-  derives public adapts_to relations from _adapters.py
-
-src/sceneio/canonical.py
-  explicit runtime conversion implementations; imports NumPy/_core lazily
-
-src/sceneio/data/transforms.py
-  Sim3-owned quaternion/matrix conversion behavior
-
-tools/documentation_contract.py
-  renders the current adapter matrix from _adapters.py
-```
-
-Dependency direction remains:
-
-```text
-contracts.model <- contracts._adapters <- contracts.manifest/registry/docs
-
-sceneio.canonical -> sceneio.data + sceneio._core + selected public wire types
-```
-
-`contracts._adapters` must not import NumPy, `_core`, `sceneio.canonical`, a
-provider, or a runtime public class. Operation paths and representation paths
-are strings. Runtime function resolution is tested only when the caller imports
-`sceneio.canonical`.
-
-## 6. Internal adapter manifest
-
-Add one frozen internal `_AdapterDefinition` for each **direction**, because
-context and fidelity may differ between the forward and inverse operations.
-
-| Field | Required meaning |
+| Types | Decision |
 |---|---|
-| `id` | Stable lower-snake-case internal identity |
-| `source` | Canonical public representation path |
-| `target` | Canonical public representation path; an operation may convert an ordered collection of that representation |
-| `operation` | Exact `sceneio.canonical` function path |
-| `inverse` | Opposite adapter id, or `None` for a one-way projection |
-| `fidelity` | `exact`, `conditional`, or `loss_acknowledged` |
-| `required_context` | Ordered keyword names callers must provide |
-| `refusal` | Concise statement of non-representable meaning |
-| `evidence` | Exact pytest node ids proving the direction |
+| `PointCloud`, `PointScan`, `ScanSet` | Keep composition. A scan adds stored-row validity, acquisition metadata, and organization; a scan set is an ordered aggregate. Only `TrackedPointCloud` folds into `PointCloud`. |
+| `DepthMap`, `Pointmap`, `RayMap`, `NormalMap`, `FlowField` | Keep separate physical quantities and coordinate rules. Similar array shape is not shared meaning. |
+| `Mask`, `SemanticMap`, `InstanceMap`, `PanopticMap` | Keep separate element domains and invariants. |
+| `Calibration`, `CameraIntrinsics`, `RayMap` | Keep the tagged calibration union and its two genuinely different alternatives. |
+| NCore schema and payload records | Keep declaration and materialized-value lifetimes separate. |
+| `ColmapMvsWorkspace`, `LegacyMvsWorkspace` | Keep different on-disk ecosystems and operations separate. |
+| `WorkspaceInspection`, `WorkspaceValidation` | Keep observation and policy result views separate. |
+| `Reconstruction`, `MappingResult`, `SceneGraph` | Keep file reconstruction, procedure result, and general scene aggregates separate; make them compose the same leaf records. |
 
-Construction must reject:
+## 2. Canonical ownership rules
 
-- duplicate ids or duplicate `(source, target, operation)` tuples;
-- unknown source or target representation paths;
-- a missing operation, malformed function path, or operation absent from
-  `sceneio.canonical.__all__` during runtime validation;
-- a non-reciprocal inverse declaration;
-- `exact` fidelity with `allow_loss` context;
-- empty refusal/evidence or evidence outside the repository;
-- an adapter relation that is not reflected in both public type contracts when
-  an inverse exists.
+1. **One noun, one public class, one public path.** Public representations live
+   at `sceneio.<Type>`.
+2. **Values do not own collection identity.** Numeric ids, names, database row
+   presence, and source profiles belong to the aggregate or codec provenance
+   that defines them.
+3. **Canonical records are faithful supersets, not least-common-denominator
+   DTOs.** Optional fields are allowed only when absence is a valid state of
+   the noun. Mutually exclusive variants remain discriminated.
+4. **Codecs translate format syntax, not object models.** Every codec reads and
+   writes the canonical record for its payload kind. It may retain private
+   provenance needed for exact re-emission, but it may not publish a second
+   leaf representation.
+5. **Procedures accept the same records that codecs return.** A mapper or
+   matcher may validate a narrower profile without requiring a conversion
+   class.
+6. **Conversions live with the semantic owner.** Quaternion/matrix, coordinate,
+   unit, or dtype operations remain explicit methods or `sceneio.coordinates`
+   functions. Identity-only representation adapters disappear.
+7. **No semantic mega-type.** Types remain separate when merging would combine
+   different physical quantities or make invalid states routinely
+   representable.
 
-The manifest is metadata only. It does not dispatch conversions dynamically.
-Callers continue to select an explicit function so required context remains
-visible at the call site.
+## 3. Merge matrix
 
-## 7. Additive runtime API
+The following 13 public representations are removed. No replacement wrapper
+types are added, so the contracted representation count falls from 103 to 90.
 
-Signatures below are the intended review surface. Type spellings may be
-normalized during implementation, but names, direction, required context, and
-default-loss policy must not drift without updating this plan first.
+| Remove | Canonical survivor | Required shape change |
+|---|---|---|
+| `sceneio.Camera`, `sceneio.colmap.MappingCamera` | `sceneio.CameraIntrinsics` | Move camera ids and prior-focal flags to their owning aggregates |
+| `sceneio.data.FeatureSet`, `sceneio.colmap.SiftFeatures` | `sceneio.FeatureSet` | Make the existing loaded record the complete feature contract; derive descriptor dtype/dimension from the array |
+| `sceneio.MatchGraph` | `sceneio.CorrespondenceGraph` | Preserve raw and verified pair channels plus optional source metadata in the aggregate |
+| `sceneio.colmap.NamedMatches` | `sceneio.PairCorrespondences` within `CorrespondenceGraph` | Use ordered string pair keys; support externally indexed pairs when features are not loaded |
+| `sceneio.data.DepthMap` | `sceneio.DepthMap` | Add explicit validity while retaining unit, scale, convention, confidence, and encoding facts |
+| `sceneio.data.PosedViewSet` | `sceneio.PosedViewSet` | Store canonical `SE3`, `FrameMeta`, optional images/calibrations, names, and timestamps in one aligned set |
+| `sceneio.colmap.SimilarityTransform` | `sceneio.Sim3` | Add deterministic WXYZ construction/materialization and explicit source/target frame context |
+| `sceneio.MeshScene` | `sceneio.SceneGraph` | Add mesh grouping and named scene/root sets before migrating glTF and USD |
+| `sceneio.data.TrackedPointCloud` | `sceneio.PointCloud` | Add optional per-point track CSR arrays using canonical image identities |
+| `sceneio.colmap.MappingImage`, `sceneio.colmap.MappingMatch` | Canonical records composed by `sceneio.colmap.MappingInput` | Replace leaf wrappers with ids/times/names plus `FeatureSet` and `PairCorrespondences` collections |
 
-### Sim3
+The retained canonical paths move from `sceneio.data` to the root where
+necessary. A move is not an alias: the old path is removed.
 
-```text
-sceneio.data.Sim3.from_quaternion_wxyz(
-    scale,
-    quaternion_wxyz,
-    translation,
-    *,
-    convention,
-) -> Sim3
+## 4. Target record contracts
 
-sim3.to_quaternion_wxyz() -> tuple[float, np.ndarray, np.ndarray]
+### 4.1 `CameraIntrinsics`
 
-sceneio.canonical.sim3_from_colmap(
-    value,
-    *,
-    convention,
-) -> sceneio.data.Sim3
+Canonical fields are `model`, `width`, `height`, and ordered float64 `params`.
+`CameraModel` remains the single view of `src/sceneio/_camera_models.py`.
 
-sceneio.canonical.similarity_transform_from_neutral(
-    value,
-    *,
-    convention,
-) -> sceneio.colmap.SimilarityTransform
-```
+- `Reconstruction` owns aligned `camera_ids` and `cameras`.
+- `ColmapDatabase` owns camera ids and prior-focal flags.
+- `MappingInput` owns camera ids and references from images.
+- `PosedViewSet` and `CameraRig` reference `CameraIntrinsics` without inventing
+  ids when the source has none.
 
-Rules:
+The native binding becomes the implementation of `CameraIntrinsics`; the
+Python duplicate and `MappingCamera` are deleted.
 
-- `convention` is required in both directions because the COLMAP text record
-  has no direction tag.
-- Neutral-to-wire conversion refuses when `value.convention != convention`;
-  callers explicitly invert or rebuild the transform first.
-- Quaternion-to-matrix conversion preserves mathematical rotation, not the
-  original quaternion sign bit. Exact wire re-emission uses the original
-  `SimilarityTransform` record.
-- Matrix-to-quaternion output is deterministic and uses the existing
-  canonical sign policy.
+### 4.2 `FeatureSet`, `PairCorrespondences`, and `CorrespondenceGraph`
 
-### Mapping cameras
+`FeatureSet` owns only feature payload meaning:
 
-```text
-sceneio.canonical.camera_intrinsics_from_mapping(
-    value,
-    *,
-    allow_loss=False,
-) -> sceneio.data.CameraIntrinsics
+- float32 keypoints with a declared layout for 2-, 4-, or 6-column profiles;
+- optional numeric descriptors, scores, colors, extractor metadata, image
+  size, pixel center, and quality;
+- `None` means absent and a zero-row array means present-but-empty; redundant
+  `has_*` and `*_present` flags are removed when that distinction suffices;
+- image id, image name, camera id, and time id move to the containing dataset.
 
-sceneio.canonical.mapping_camera_from_neutral(
-    value,
-    *,
-    camera_id,
-    has_prior_focal_length=False,
-) -> sceneio.colmap.MappingCamera
-```
+`PairCorrespondences` remains a discriminated indexed/coordinate value. It
+owns optional scores and `TwoViewGeometry`. `CorrespondenceGraph` owns:
 
-Rules:
+- canonical image keys and optional `FeatureSet` values;
+- ordered pair keys;
+- raw and verified correspondence channels without collapsing one into the
+  other;
+- relative poses and semantic two-view metadata where present;
+- explicit deferred index validation when a named-match file has no feature
+  payload, rather than pretending indices have already been checked.
 
-- Camera model ids, names, parameter counts, and order continue to come only
-  from `sceneio._camera_models`.
-- `camera_id` is collection identity and is supplied on materialization.
-- Projecting a true `has_prior_focal_length` flag requires
-  `allow_loss=True`; the neutral intrinsic contract has no equivalent field.
-- Existing native-camera adapters reuse the same private field-to-intrinsics
-  helper so model validation has one owner.
+COLMAP SQL row presence, application/user version, and exact database profile
+remain on `ColmapDatabase` as aggregate provenance. They do not justify a
+second `MatchGraph` class.
 
-### SIFT feature text
-
-```text
-sceneio.canonical.feature_set_from_sift(
-    value,
-    *,
-    image_id=0,
-    image_name="image",
-    camera_id=0,
-    image_size=(1, 1),
-) -> sceneio.FeatureSet
-
-sceneio.canonical.sift_features_from_native(
-    value,
-    *,
-    allow_loss=False,
-) -> sceneio.colmap.SiftFeatures
-```
-
-Rules:
-
-- SIFT-to-native is exact for keypoint columns and descriptor values. It sets
-  the first-pixel center and supplied collection metadata explicitly.
-- Native-to-SIFT requires exactly four float32 keypoint columns and a present
-  `(N, 128)` uint8 descriptor matrix.
-- Scores, colors, quality, time, extractor metadata, dimensions, ids, and
-  names are refused unless `allow_loss=True` acknowledges each omitted
-  storage-only field.
-- Neutral `FeatureSet` is not used as the exact intermediate because its Nx2
-  keypoints intentionally omit SIFT scale and orientation. Callers may then use
-  the existing `feature_set_from_native(..., allow_loss=True)` projection.
-
-### Named matches
+`MappingInput` is reshaped to compose these canonical values:
 
 ```text
-sceneio.canonical.correspondence_pairs_from_named(
-    values,
-) -> Mapping[tuple[str, str], sceneio.data.PairCorrespondences]
-
-sceneio.canonical.named_matches_from_pairs(
-    values,
-    *,
-    allow_loss=False,
-) -> tuple[sceneio.colmap.NamedMatches, ...]
+MappingInput
+  version
+  cameras: camera_id -> CameraIntrinsics
+  images: image_id/name/camera_id/time_id metadata + FeatureSet
+  correspondences: CorrespondenceGraph
 ```
 
-Rules:
+The SIFT and named-match text readers return `FeatureSet` and
+`CorrespondenceGraph` directly. Their writers validate the required SIFT or
+indexed-pair profile and refuse values the format cannot encode.
 
-- Pair order and correspondence column order are preserved; endpoint reversal
-  is never performed implicitly.
-- Duplicate or self pairs refuse.
-- Wire-to-neutral produces indexed pairs with no invented scores or geometry.
-- Neutral-to-wire refuses coordinate-mode pairs. Scores and geometry require
-  explicit loss acknowledgement because the text format cannot carry them.
-- Output ordering is insertion order from the supplied mapping and is tested.
+### 4.3 `DepthMap`
 
-### Mesh scenes
+The survivor contains:
 
-```text
-sceneio.canonical.scene_graph_from_mesh_scene(value) -> sceneio.SceneGraph
-sceneio.canonical.mesh_scene_from_scene_graph(value) -> sceneio.MeshScene
-```
+- float32 `depth`;
+- optional boolean `valid`;
+- optional raw confidence;
+- declared unit and `scale_to_meters`;
+- `camera_z`, `ray_distance`, or `unspecified` depth convention;
+- source invalid encoding when exact re-emission needs it.
 
-The first implementation ships **without** `allow_loss`. It supports only a
-proven exact subset and refuses everything else. Before coding either function,
-RC4 must publish the field-level correspondence table described below.
+The array remains in declared record units. Procedures request an explicit
+normalized view or validate the declared scale; codecs do not silently rescale.
+Validity is semantic, while a zero/NaN/negative sentinel is encoding metadata.
 
-## 8. Fidelity and refusal policy
+### 4.4 `PosedViewSet`
 
-### Fidelity vocabulary
+The survivor stores index-aligned canonical values:
 
-| Fidelity | Meaning |
-|---|---|
-| `exact` | Every declared source fact has a target representation and round-trips semantically |
-| `conditional` | Exact only when stated shape, dtype, profile, convention, or metadata predicates hold; otherwise refuses |
-| `loss_acknowledged` | Shared meaning is preserved, but named storage-only facts may be omitted only with `allow_loss=True` |
+- `poses: tuple[SE3, ...]`;
+- names and optional timestamps;
+- optional image references and calibrations;
+- one `FrameMeta` declaring world-frame and scale provenance.
 
-No adapter may call a conversion `lossless` merely because values are
-numerically close. Dtype, ordering, presence, duplicate policy, quaternion
-sign policy, frame, scale, units, and ownership are part of fidelity.
+Source quaternion order, pose direction, and axis frame are normalized into
+`SE3` during reading. Source encoding needed for exact writing is aggregate
+provenance, not a second public posed-view type. `ViewInput` remains separate
+because it is a procedure input that requires an image and may contain priors.
 
-### Refusal categories
+### 4.5 `Sim3`
 
-Tests and docs use stable categories even when full messages remain
-human-oriented:
+`Sim3` owns positive scale, a proper rotation, translation, and explicit
+source/target frame meaning. It gains WXYZ quaternion constructors and
+materializers using the same deterministic sign policy as `SE3`.
 
-- `missing_context`: convention, id/name map, scale, frame, or calibration is
-  required and absent;
-- `semantic_mismatch`: source meaning cannot be represented by the target;
-- `profile_mismatch`: source shape/dtype/profile is outside the adapter's
-  bounded subset;
-- `metadata_loss`: named storage-only facts require acknowledgement;
-- `range_or_dtype`: target carrier cannot represent the numeric values;
-- `invalid_source`: the input violates its own public representation contract.
+The COLMAP text API reads and writes `Sim3` directly. Because the text payload
+does not declare frame direction, its reader requires source/target context;
+it must not guess a pose convention.
 
-Use existing exception classes. Do not introduce a new exception hierarchy in
-this program. `TypeError` remains for wrong object types; `ContractViolation`
-remains the canonical semantic/refusal error; format-specific readers and
-writers retain their existing format errors.
+### 4.6 `PointCloud`
 
-## 9. Work breakdown and dependency order
+Add optional track CSR arrays to the existing SoA record:
 
-Each RC unit is independently reviewable and leaves the tree green. No later
-unit starts while an earlier unit has unresolved compatibility or import
-failures.
+- preserve float32 or float64 positions without implicit narrowing;
+- `track_offsets` aligned to points;
+- canonical image keys or an aggregate-owned image-key table;
+- non-negative keypoint indices.
 
-```text
-RC0 adapter authority
- ├─> RC1 Sim3
- ├─> RC2 mapping cameras
- ├─> RC3 SIFT and named matches
- └─> RC4 MeshScene/SceneGraph characterization and projection
+No tracks remains the ordinary point-cloud profile. `TrackObservation` may
+remain as an ergonomic row view/factory, but `TrackedPointCloud` is deleted.
 
-RC1 + RC2 + RC3 + RC4 -> RC5 generated contracts/docs -> RC6 qualification
-```
+### 4.7 `SceneGraph`
 
-### RC0 — establish one adapter authority without behavior change
+Before deleting `MeshScene`, extend `SceneGraph` to preserve every static mesh
+fact:
 
-**Owned files**
+- primitive-to-mesh grouping and mesh names;
+- node hierarchy, child order, local transforms, and reset-stack state;
+- named scene root sets and `default_scene`;
+- materials and per-primitive associations;
+- stage axis, units, source representation, and default-prim meaning.
 
-- new `src/sceneio/contracts/_adapters.py`
-- `src/sceneio/contracts/manifest.py`
-- `src/sceneio/contracts/registry.py`
-- `tests/test_public_type_contracts.py`
-- new `tests/test_representation_consolidation.py`
+glTF, GLB, USD, and USDZ then share `SceneGraph`. Mesh-only writers validate a
+mesh-only profile and refuse point, splat, camera, volume, instance, external
+asset, semantic, visibility, purpose, or time features they cannot encode.
+
+## 5. Namespace and contract reset
+
+The final namespace rule is intentionally strict:
+
+- `sceneio.<Type>` is the only public path for every representation.
+- `sceneio.io` exposes I/O operations and registry objects, not record aliases.
+- `sceneio.data` is removed from the public package. Implementation-only Python
+  models move under a private module such as `sceneio._data`.
+- `sceneio.colmap` and `sceneio.colmap_mvs` retain only source-specific
+  aggregates, workspace types, and operations that have no generic semantic
+  equivalent.
+- `sceneio.canonical` is deleted after its callers disappear.
+- `adapts_to` relations are removed from the public contract model and
+  manifest.
+
+The public contract schema is bumped from 1 to 2 because `adapts_to` is removed
+from the relation vocabulary and root-only representation paths become a
+validated rule. Catalog membership changes are captured by the new snapshot;
+membership alone is not the reason for a schema bump. Representation entries
+use `provisional` through the 0.x line. The 1.0 release process may promote
+reviewed entries to `stable`.
+
+No legacy import-path table, unpickler hook, forwarding module, `__getattr__`
+fallback, or deprecated constructor is included.
+
+## 6. Implementation sequence
+
+All work lands on one consolidation branch and merges only after the final
+contract is complete. Logical commits may be reviewed separately, but the
+default branch must never contain a half-migrated public model.
+
+### M0 - freeze semantics, not old identities
 
 **Work**
 
-- Encode the current five bidirectional pairs as ten directional definitions.
-- Derive every existing `adapts_to` relation from the adapter definitions.
-- Generalize relation generation from one target to ordered multiple targets.
-- Validate ids, paths, inverse symmetry, evidence, and lazy operation strings.
-- Add a runtime audit that imports `sceneio.canonical` only on demand and proves
-  every operation exists in `canonical.__all__`.
-- Freeze current root exports, constructors, repr/pickle outcomes, and the 74
-  generic codec return identities before adding new adapters.
+- Change the affected public contracts to `provisional` and declare the 0.4.0
+  contract reset.
+- Add characterization fixtures for every format currently producing a type
+  in the merge matrix.
+- Record semantic round-trips, encoded byte identity where promised, array
+  ownership, dtype/layout, conventions, absence-versus-empty behavior, and
+  refusal cases.
+- Add a test containing the exact 13-name removal set and the 90-representation
+  target.
 
-**Exit gate**
+**Exit gate:** characterization tests pass on the unchanged baseline; every
+field in a removed type has an assigned target owner or an explicit deletion
+rationale.
 
-- The serialized public catalog is byte-identical to the pre-RC0 baseline.
-- Plain `import sceneio` and `import sceneio.contracts` remain NumPy/core/provider
-  lazy.
-- Removing any current adapter function or reciprocal relation fails a focused
-  contract test.
-
-### RC1 — consolidate Sim3 conversion policy
-
-**Owned files**
-
-- `src/sceneio/data/transforms.py`
-- `src/sceneio/canonical.py`
-- `src/sceneio/contracts/_adapters.py`
-- `tests/test_data_transforms.py`
-- `tests/test_representation_consolidation.py`
-- `tests/test_colmap_ecosystem_adapters.py`
+### M1 - canonical namespace, transforms, and cameras
 
 **Work**
 
-- Put quaternion/matrix conversion on `Sim3` using the same validation and
-  deterministic sign policy already used by `SE3`.
-- Add the two explicit canonical functions and lazy namespace exports.
-- Require convention agreement in both directions.
-- Add reciprocal adapter definitions and `adapts_to` relations.
-- Keep `read_similarity_transform` and `write_similarity_transform` signatures,
-  return type, accepted type, formatting, and precision-17 bytes unchanged.
+- Establish root exports for canonical semantic records and update internal
+  imports away from `sceneio.data`.
+- Move `SE3`, `Sim3`, `CameraModel`, `CameraIntrinsics`, `Calibration`, and
+  related foundational types to their final implementation modules.
+- Merge `Camera` and `MappingCamera` into `CameraIntrinsics`; reshape owning
+  aggregates for ids and prior-focal flags.
+- Make similarity text I/O use `Sim3`; delete `SimilarityTransform`.
 
-**Exit gate**
+**Exit gate:** all 18 camera models and Sim3 edge cases pass; no duplicate
+camera or similarity class remains.
 
-- Identity, nontrivial rotation, near-180-degree rotation, negative input
-  quaternion sign, arbitrary positive scale, and translation round-trip within
-  the existing float64 tolerance.
-- Missing/wrong convention and malformed types refuse before producing a
-  target value.
-- Rewriting the original wire record remains byte-identical.
-
-### RC2 — consolidate camera field conversion
-
-**Owned files**
-
-- `src/sceneio/canonical.py`
-- `src/sceneio/colmap/models.py` only if shared validation can replace copied
-  logic without changing exceptions/messages
-- `src/sceneio/contracts/_adapters.py`
-- `tests/test_canonicalization.py`
-- `tests/test_representation_consolidation.py`
-- camera-manifest parity tests
+### M2 - features, correspondences, and COLMAP mapping input
 
 **Work**
 
-- Extract one private field-to-`CameraIntrinsics` conversion that accepts model
-  id, dimensions, and ordered parameters.
-- Route both `camera_intrinsics_from_native` and the new mapping-camera adapter
-  through that helper.
-- Add neutral-to-mapping materialization with explicit id and prior flag.
-- Exercise all camera models from the single camera-model manifest.
-- Preserve current `MappingCamera` constructor validation and error prefixes.
+- Expand native `FeatureSet` to the reviewed canonical schema and migrate
+  matching procedure contracts.
+- Replace `MatchGraph` with `CorrespondenceGraph` and preserve raw/verified
+  channels and exact COLMAP database provenance at the aggregate boundary.
+- Reshape `MappingInput` to compose canonical camera, feature, and pair values.
+- Migrate SIFT, named-match, HLoc, COLMAP database, and mapping-input codecs.
+- Delete the six superseded feature/match leaf classes listed in the matrix.
 
-**Exit gate**
+**Exit gate:** all feature profiles, detector-free pairs, raw and verified DB
+rows, absent/empty rows, pair order, and exact-profile writes pass without an
+adapter call.
 
-- All camera models round-trip model id, dimensions, parameter dtype/order, and
-  values exactly.
-- Prior-focal loss refuses by default and succeeds only when acknowledged.
-- The existing native camera adapter behavior and camera-manifest Python/C++
-  parity remain unchanged.
-
-### RC3 — consolidate SIFT and named-match leaf semantics
-
-**Owned files**
-
-- `src/sceneio/canonical.py`
-- `src/sceneio/contracts/_adapters.py`
-- `tests/test_representation_consolidation.py`
-- `tests/test_colmap_ecosystem_adapters.py`
-- feature/match record tests
+### M3 - depth and posed views
 
 **Work**
 
-- Add exact SIFT-to-native feature materialization.
-- Add conditional native-to-SIFT projection with enumerated loss checks.
-- Add named-match sequence to ordered neutral pair-map conversion and inverse.
-- Reuse existing native/neutral feature and match helpers where their contracts
-  overlap; do not copy dtype/range policy into the COLMAP module.
-- Add size/ownership tests proving conversion allocates only the owned target
-  payload and does not retain a mapped source file accidentally.
-- Do not add a `MappingInput` aggregate projection. Its version, time ids,
-  camera links, configuration codes, and relative poses have no single current
-  neutral aggregate that preserves them all.
+- Merge validity and storage conventions into the native `DepthMap`.
+- Make mapping inputs and dense-map/workspace codecs use that type directly.
+- Redesign native `PosedViewSet` around `SE3`, `FrameMeta`, optional images,
+  calibrations, names, and timestamps.
+- Migrate pose codecs and procedure call sites; delete both neutral duplicates.
 
-**Exit gate**
+**Exit gate:** scale, invalid-value, camera-z/ray-distance, pose direction,
+axes, timestamp, and missing-image cases are explicit and tested.
 
-- SIFT keypoints and descriptors round-trip exactly on the bounded profile.
-- Every omitted native feature field is either default or named in the loss
-  refusal.
-- Named pair order, endpoint order, indices, empty pairs, and duplicate
-  refusal are exact.
-- Existing SIFT and feature-match wire bytes and reader result identities are
-  unchanged.
-
-### RC4 — characterize and implement the scene projection
-
-**Owned files**
-
-- `src/sceneio/canonical.py`
-- `src/sceneio/contracts/_adapters.py`
-- `src/cpp/records/mesh_scene.*` and `scene_graph.*` only if a shared native
-  helper is required for correct ownership/performance
-- `tests/test_representation_consolidation.py`
-- `tests/records/test_mesh_scene.py`
-- `tests/records/test_scene_graph.py`
-- `tests/codecs/test_usd_scene.py`
-- glTF/USD compatibility snapshots
-
-**Characterization gate before implementation**
-
-Create and review a field-level table covering:
-
-- primitive grouping and mesh indices;
-- node parent/child topology and root ordering;
-- local transforms and reset-stack semantics;
-- mesh/node/scene names and default-scene/default-prim meaning;
-- material sets and per-mesh material associations;
-- up axis, coordinate frame, and meters-per-unit;
-- visibility, purpose, semantic labels/taxonomies;
-- point, Gaussian, camera, volume, instance, and external-asset payloads;
-- selected time and time-range metadata;
-- empty scenes, multiple scenes, and multiple primitives per mesh.
-
-Every row must be classified as exact, conditionally exact, unrepresentable,
-or requiring a separately approved semantic conversion. Do not implement the
-adapter while any field remains “probably equivalent.”
-
-**Work after characterization passes**
-
-- Implement provider-free owned conversion for the exact subset.
-- Preserve node and child order; never flatten or synthesize hierarchy merely
-  to make conversion succeed.
-- Refuse rich payload kinds and metadata with no `MeshScene` carrier.
-- Refuse coordinate/unit changes rather than applying an implicit transform.
-- Add the reciprocal relation only if both directions have a non-empty exact
-  subset. Otherwise publish only the direction proved by tests.
-- Keep generic USD/glTF reads, `read_scene`, and both writer surfaces unchanged.
-
-**Exit gate**
-
-- Exact-subset conversion round-trips all representable fields and owns its
-  nested records/arrays.
-- Every rich-only field causes a targeted refusal.
-- No adapter imports TinyUSDZ or serializes through USD/glTF.
-- Legacy USD/glTF bytes, generic read type, rich read type, and inspection
-  behavior remain unchanged.
-
-**Stop condition**
-
-If exact conversion requires topology mutation, provider round-tripping, or
-unbounded payload copying that exceeds the existing record ownership model,
-stop RC4 and document the types as related but deliberately non-adaptable. Do
-not weaken fidelity to complete the matrix.
-
-### RC5 — generate relationships and documentation
-
-**Owned files**
-
-- `tools/documentation_contract.py`
-- `tests/contracts/documentation_v1.toml`
-- `tests/test_documentation_consistency.py`
-- `docs/canonicalization.md`
-- `docs/public_type_contracts.md`
-- `docs/colmap_adapters.md`
-- `README.md` and `docs/README.md`
+### M4 - point clouds
 
 **Work**
 
-- Generate the canonical adapter table from the internal manifest, including
-  direction, operation, fidelity, required context, and refusal summary.
-- Generate `adapts_to` relationships from the same definitions.
-- Document why an adapter relation does not claim universal losslessness.
-- Add one concise example for Sim3, mapping camera, SIFT, named matches, and
-  mesh-scene projection.
-- Update deterministic catalog snapshots only for intentional additive
-  relations; public representation and type counts remain unchanged.
-- Keep historical completed plans immutable.
+- Add track CSR storage and validation to `PointCloud`.
+- Update `MappingResult.geometry`, reconstruction projections, coordinate
+  conversion, and tests to use `PointCloud`.
+- Delete `TrackedPointCloud` without weakening ordinary point-codec profiles.
 
-**Exit gate**
+**Exit gate:** tracked clouds flow into supported point writers when their
+profile is representable, float64 positions are never silently narrowed, and
+writers otherwise issue a precise refusal.
 
-- No hand-maintained adapter row or relationship remains outside the manifest.
-- Documentation generation is idempotent and current.
-- Every documented operation exists, every operation has exact evidence, and
-  every reciprocal relation has an inverse definition.
-
-### RC6 — final compatibility and package qualification
-
-**Owned surface**
-
-- full source tree, package metadata, wheel smoke, release notes, and CI gates
+### M5 - scenes
 
 **Work**
 
-- Run focused, complete, import, documentation, dependency, source-closure,
-  sdist, and installed-wheel validation.
-- Compare the complete existing public API and codec capability snapshots.
-- Verify optional provider availability cannot change adapter metadata.
-- Run Windows and non-Windows native/provider lanes affected by the scene
-  projection.
-- Record exact test counts, skips, artifact hashes, and environment-dependent
-  exclusions before moving this plan to `docs/plans/completed/`.
+- Complete the field-level `MeshScene` to `SceneGraph` ownership table.
+- Extend `SceneGraph`, then migrate glTF/GLB and USD/USDZ readers, writers,
+  inspectors, partial reads, and snapshots.
+- Delete `MeshScene`, its bindings, factories, payload references, and tests
+  that assert the old identity.
 
-**Exit gate**
+**Exit gate:** every former `MeshScene` field round-trips through `SceneGraph`;
+rich-only features still refuse in narrower writers before output mutation.
 
-- All tests and documentation checks pass.
-- Source and installed wheel expose the same adapter functions and relations.
-- No existing public identity, constructor, repr, pickle outcome, generic read
-  result, writer contract, exception class, or wire byte snapshot changed.
-- The plan is archived only after the implementation and release-facing docs
-  are complete.
+### M6 - remove superseded architecture
 
-## 10. Verification strategy
+**Work**
 
-### Per-unit focused gate
+- Delete `sceneio.canonical`, all ten representation adapter functions, the
+  `adapter_targets` table, and `adapts_to` contract relations.
+- Remove all `sceneio.io.<Type>` and `sceneio.data.<Type>` public aliases and
+  the public `sceneio.data` package.
+- Bump the contract schema, regenerate the public catalog, and assert 90
+  representations and zero aliases.
+- Rewrite README, architecture, normalization, format coverage, COLMAP, and
+  public-contract docs around one canonical in-memory model. Remove
+  `docs/canonicalization.md` after its remaining semantic conversion guidance
+  is moved to the owning docs.
+
+**Exit gate:** repository search finds none of the 13 removed class names in
+source or current docs, none of the old public paths in tests, and no
+representation-adapter concept in the contract model.
+
+### M7 - qualification and release
+
+**Work**
+
+- Run focused record/codec tests after each merge unit and the complete suite
+  after M6.
+- Build an sdist and platform wheel from the same source, install into a clean
+  CPython 3.12 environment, and run wheel smoke plus contract tests against the
+  installation.
+- Run the affected Windows, Linux, macOS, sanitizer, provider, and optional USD
+  lanes.
+- Publish 0.4.0 release notes as a clean pre-1 contract reset, not a migration
+  guide.
+
+**Exit gate:** source and installed wheel expose exactly the same canonical
+types, codec return types, payload relationships, and contract catalog.
+
+## 7. Verification
+
+### Required focused gates
 
 ```powershell
 uv run ruff check .
-uv run ruff format --check src/sceneio tests tools
-uv run python -m pytest -q tests/test_representation_consolidation.py
-uv run python -m pytest -q tests/test_canonicalization.py tests/test_data_transforms.py
-uv run python -m pytest -q tests/test_public_type_contracts.py tests/test_representation_contracts.py
-uv run python -m pytest -q tests/test_colmap_ecosystem_adapters.py
 uv run python tools/documentation_contract.py --check
-uv run python -m pytest -q tests/test_documentation_consistency.py tests/test_import_guards.py
+uv run python -m pytest -q tests/test_public_type_contracts.py tests/test_representation_contracts.py
+uv run python -m pytest -q tests/test_data_calibration.py tests/test_data_transforms.py
+uv run python -m pytest -q tests/test_data_features.py tests/test_mapping_contracts.py
+uv run python -m pytest -q tests/test_colmap_ecosystem_adapters.py tests/test_colmap_db_contract.py
+uv run python -m pytest -q tests/records/test_depth_map.py tests/test_data_views.py
+uv run python -m pytest -q tests/records/test_point_cloud.py tests/test_data_pointcloud_priors.py
+uv run python -m pytest -q tests/records/test_scene_graph.py tests/codecs/test_gltf.py tests/codecs/test_usd_scene.py
 ```
 
-RC4 additionally runs:
+Rename focused test files as their old model names disappear; do not retain a
+test module solely to preserve legacy terminology.
 
-```powershell
-uv run python -m pytest -q tests/records/test_mesh_scene.py tests/records/test_scene_graph.py
-uv run python -m pytest -q tests/codecs/test_usd.py tests/codecs/test_usd_scene.py
-uv run python -m pytest -q tests/codecs/test_gltf.py
-```
+### Contract gates
 
-Use the repository's exact glTF test filename if it differs; do not silently
-skip that compatibility family.
-
-### Required negative tests
-
-- Unknown adapter source/target/operation or duplicate adapter id.
-- Broken inverse relationship or one-sided public relation.
-- Operation omitted from `sceneio.canonical.__all__`.
-- Adapter metadata import loading NumPy, `_core`, or an optional provider.
-- Missing or unsupported Sim3 convention.
-- Non-unit quaternion, improper rotation, non-positive scale, and wrong dtype.
-- Mapping-camera prior flag discarded without acknowledgement.
-- SIFT wrong keypoint width, descriptor dimension/dtype, and unacknowledged
-  native metadata.
-- Named self-pair, duplicate pair, coordinate-mode pair, score/geometry loss,
-  and reversed endpoint assumptions.
-- Mesh scene with unsupported payload, visibility, purpose, semantics, time,
-  units, axis, grouping, root, or material state.
-- Converted view retaining a dead mapped file/provider owner accidentally.
-- Any change to existing generic read return classes or writer accepted types.
+- the built-in I/O inventory remains exactly 74 readable, 73 writable, 74
+  inspectable, 37 formats with 43 partial selectors, 74 streaming readers, and
+  71 streaming writers;
+- built-in format ids/order, extensions, container kinds, detection,
+  availability, lossy flags, partial selectors, streaming flags, mmap/buffer
+  entry points, and optional-provider boundaries match the frozen 0.3
+  capability snapshot;
+- exactly 90 representation entries;
+- zero representation aliases;
+- no `adapts_to` relations;
+- no canonical path beginning with `sceneio.data.` or `sceneio.io.`;
+- every built-in codec's `record` resolves to its canonical payload class;
+- every public class has one normalization profile and executable evidence;
+- the 13 removed names fail public lookup and import tests;
+- plain `import sceneio` remains provider-lazy and does not eagerly load the
+  compiled core unless the final root-export design requires it and that cost
+  is explicitly accepted.
 
 ### Final gate
 
@@ -707,105 +426,45 @@ uv pip check
 git diff --check
 ```
 
-The package gate must additionally build an sdist, build the platform wheel
-from that exact sdist, install it into a clean CPython 3.12 environment with
-base dependencies, and run `python -m sceneio._wheel_smoke` plus the focused
-adapter tests against the installed package rather than the source tree.
+Local qualification on 2026-08-30 completed with 5,068 tests passed and 73
+expected optional-provider skips. Ruff, the documentation contract, dependency
+integrity, the 74-codec benchmark sweep, source/sdist/wheel closure, the
+isolated installed-wheel smoke test, and 45 installed-wheel canonical contract
+tests also passed.
 
-## 11. Compatibility and deprecation policy
+## 8. Stop conditions
 
-The following are prohibited in this program:
+- Stop a proposed merge if it combines different physical quantities,
+  coordinate meanings, or lifetimes merely because array shapes match.
+- Stop if a canonical type needs many mutually exclusive optional fields; use
+  a discriminated semantic type instead.
+- Keep format-specific provenance on the owning aggregate when moving it onto
+  a leaf would pollute all callers.
+- Do not preserve an old class just to make an intermediate commit easier.
+  Temporary branch-local scaffolding must be gone before merge.
+- Do not weaken byte, dtype, ordering, absence, convention, ownership, or
+  refusal tests to reach the target count.
+- If a new public representation is genuinely required, review it explicitly
+  and adjust the 90-count gate in the same design change; do not add a wrapper
+  that recreates a removed duplicate under another name.
 
-- replacing a public class with an alias to a different class object;
-- changing dataclass or native constructor fields/defaults;
-- changing `__module__`, `__qualname__`, repr, equality, copy, or pickle policy;
-- changing a generic reader's output class;
-- making a writer silently accept a broader semantic profile;
-- changing error classes or stable message prefixes;
-- moving public import paths or eagerly importing `canonical`;
-- marking a class deprecated solely because its semantic projection exists.
+## 9. Definition of done
 
-A future deprecation proposal may be opened only when all of these are true:
+- [x] The 13 superseded representations are deleted.
+- [x] Canonical paths are root-only and representation aliases are zero.
+- [x] `sceneio.canonical` and `adapts_to` are gone.
+- [x] Codecs and procedures consume the same record identities directly.
+- [x] Collection ids and format provenance have one explicit aggregate owner.
+- [x] The public contract schema is version 2 with 90 provisional
+      representations.
+- [x] Current docs describe one in-memory model and contain no legacy examples.
+- [x] Local focused, full, documentation, dependency, source, sdist, and wheel
+      gates pass on the final tree.
+- [ ] Hosted Windows, Linux, macOS, sanitizer, provider, and optional USD gates
+      pass on the final pushed commit.
+- [x] No compatibility shim, deprecated alias, forwarding module, or old-name
+      pickle hook remains.
 
-1. A replacement adapter has shipped for at least one release and is documented
-   at every old entry point.
-2. The replacement preserves every required contract field or the proposal
-   proves why the old representation adds no remaining fidelity.
-3. Installed-wheel telemetry or repository call-site evidence shows the old
-   type can be retired; absence of internal calls alone is insufficient.
-4. A migration guide covers construction, reading, writing, type checks,
-   serialization, and errors.
-5. Removal is approved for a major API version and the old version remains
-   available for its documented compatibility window.
-
-Likely outcome: `SimilarityTransform`, `SiftFeatures`, `NamedMatches`,
-`MappingCamera`, and `MeshScene` remain as useful wire/storage views even after
-semantic consolidation. This plan does not assume eventual deletion.
-
-## 12. Documentation and evidence ownership
-
-- `docs/canonicalization.md` becomes the current human conversion matrix and
-  refusal guide.
-- `docs/public_type_contracts.md` remains the exhaustive identity and relation
-  view; it does not copy conversion implementation prose.
-- `docs/representation_normalization.md` remains authoritative for units,
-  coordinate frames, scale, and normalization profiles.
-- `docs/colmap_adapters.md` continues to document wire readers/writers and links
-  to canonical projections rather than redefining them.
-- Format coverage continues to describe codec behavior; adapters must not make
-  a codec appear to return its projection automatically.
-- Exact pytest node ids in `_adapters.py` own executable evidence.
-- This plan remains active under `docs/plans/` and moves to
-  `docs/plans/completed/` only after RC6.
-
-## 13. Risks and stop conditions
-
-| Risk | Stop condition | Required response |
-|---|---|---|
-| False consolidation erases source facts | A conversion needs to invent/drop an unacknowledged field | Keep the source representation and add/refine a conditional adapter |
-| Generic dispatch hides required context | An implementation selects convention, scale, id, frame, or names from defaults | Remove the dispatch/default and require the context explicitly |
-| Adapter metadata becomes an import hub | Importing contracts loads NumPy, `_core`, canonical, or a provider | Move runtime objects back to string paths and lazy validation |
-| Stable behavior drifts | Constructor, repr, pickle, read result, writer input, or error snapshot changes | Revert and use an additive function or future major-version proposal |
-| Conversion policy is duplicated | One rule must be edited in canonical and a codec/wire model | Move the shared rule to its semantic owner and retain only wire-specific checks |
-| Scene projection is only approximately correct | Topology, grouping, materials, units, or metadata cannot round-trip exactly | Narrow the subset or stop RC4; never relabel approximate output as exact |
-| `allow_loss` becomes semantic permission | A frame/unit/coordinate mismatch succeeds with the flag | Refuse unconditionally and add the missing explicit geometric conversion |
-| New public metadata type escapes the catalog | RC0 exposes an adapter class publicly | Keep it internal or classify it in the public type catalog before exposure |
-| Docs imply automatic projection | A format table or example says `read()` returns a neutral/canonical target | Correct the docs and add a regression assertion for the actual return class |
-
-## 14. Completion checklist
-
-- [ ] Existing five adapter pairs are represented by one internal authority
-      with no catalog-byte or behavior change in RC0.
-- [ ] Adapter metadata supports multiple ordered targets and reciprocal
-      direction validation.
-- [ ] `SimilarityTransform` and `Sim3` have explicit checked conversion with a
-      required convention.
-- [ ] Native and mapping cameras share one camera-field conversion policy for
-      all camera models.
-- [ ] SIFT text converts exactly to the loaded feature carrier and conditionally
-      back without hidden metadata loss.
-- [ ] Named match blocks convert to/from ordered indexed-pair mappings with
-      explicit refusal for unsupported neutral data.
-- [ ] The MeshScene/SceneGraph field correspondence is fully classified before
-      implementation.
-- [ ] Any shipped scene adapter is provider-free, owned, exact on its declared
-      subset, and strict elsewhere.
-- [ ] Every adapter has an exact function path, fidelity class, context list,
-      refusal rule, inverse policy, and executable evidence.
-- [ ] Public `adapts_to` relations and docs are generated from the adapter
-      authority.
-- [ ] No new generic dispatcher or semantic mega-type exists.
-- [ ] Existing public identities, aliases, constructors, fields, defaults,
-      reprs, pickle outcomes, errors, and lazy imports are unchanged.
-- [ ] All 74 generic codec rows retain their result identities and behavior.
-- [ ] Focused, full, documentation, dependency, source, sdist, and installed-
-      wheel gates pass.
-- [ ] Release notes describe additive projection APIs without promising class
-      removal.
-- [ ] This plan is archived only after all implementation and qualification
-      evidence is recorded.
-
-Consolidation is complete when users and maintainers have one authoritative
-path for shared meaning and no conversion must be reconstructed ad hoc. It is
-not complete merely because two class names were made identical or the public
-representation count decreased.
+The consolidation is complete when a user can read a value from a codec, pass
+that same object to a compatible procedure, and write it again without first
+choosing between loaded and neutral identities.

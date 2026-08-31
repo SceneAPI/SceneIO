@@ -8,7 +8,10 @@ direction is ``"opencv_world2cam"`` — COLMAP's native pose direction.
 
 Conversion helpers to/from COLMAP's world-to-camera quaternion form
 (``qvec`` as ``(w, x, y, z)`` + ``tvec``, the ``images.txt`` layout) are
-provided so adapters never hand-roll the inversion.
+provided so adapters never hand-roll the inversion. Relative poses use the
+separate ``"opencv_second_from_first"`` and
+``"opencv_first_from_second"`` inverse pair; camera/world and relative-frame
+roles cannot be relabeled as one another.
 """
 
 from __future__ import annotations
@@ -18,16 +21,42 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from sceneio.data._validation import as_float64, ensure_choice
+from sceneio._data._validation import as_float64, ensure_choice
 from sceneio.errors import ContractViolation
 
 DEFAULT_CONVENTION = "opencv_cam2world"
 
-POSE_CONVENTIONS: frozenset[str] = frozenset({"opencv_cam2world", "opencv_world2cam"})
+POSE_CONVENTIONS: frozenset[str] = frozenset(
+    {
+        "opencv_cam2world",
+        "opencv_world2cam",
+        "opencv_second_from_first",
+        "opencv_first_from_second",
+    }
+)
 
-_FLIPPED = {"opencv_cam2world": "opencv_world2cam", "opencv_world2cam": "opencv_cam2world"}
+_FLIPPED = {
+    "opencv_cam2world": "opencv_world2cam",
+    "opencv_world2cam": "opencv_cam2world",
+    "opencv_second_from_first": "opencv_first_from_second",
+    "opencv_first_from_second": "opencv_second_from_first",
+}
 
 _ROTATION_ATOL = 1e-5
+
+
+def _requires_inverse(name: str, current: str, requested: str) -> bool:
+    """Validate a convention change and report whether inversion is required."""
+
+    ensure_choice(f"{name}.convention", requested, POSE_CONVENTIONS)
+    if requested == current:
+        return False
+    if requested != _FLIPPED[current]:
+        raise ContractViolation(
+            f"{name}: cannot convert between unrelated frame roles "
+            f"{current!r} and {requested!r}"
+        )
+    return True
 
 
 def _validate_rotation(name: str, rotation: np.ndarray) -> None:
@@ -98,6 +127,72 @@ def _validated_unit_quat(name: str, qvec_wxyz: object) -> np.ndarray:
     return q / norm
 
 
+def _se3_batch_from_quaternion_wxyz(
+    quaternions_wxyz: object,
+    translations: object,
+    *,
+    convention: str,
+) -> tuple[tuple[SE3, ...], np.ndarray, np.ndarray]:
+    """Build trusted canonical poses with one vectorized validation pass."""
+
+    try:
+        quaternions = np.asarray(quaternions_wxyz, dtype=np.float64)
+        translation_values = np.asarray(translations, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ContractViolation(
+            "SE3 batch: expected numeric quaternion and translation arrays"
+        ) from exc
+    if quaternions.ndim != 2 or quaternions.shape[1] != 4:
+        raise ContractViolation(
+            "SE3 batch quaternions: expected shape (N, 4), "
+            f"got {quaternions.shape}"
+        )
+    if translation_values.shape != (len(quaternions), 3):
+        raise ContractViolation(
+            "SE3 batch translations: expected shape "
+            f"({len(quaternions)}, 3), got {translation_values.shape}"
+        )
+    if (
+        (quaternions.size and not np.isfinite(quaternions).all())
+        or (translation_values.size and not np.isfinite(translation_values).all())
+    ):
+        raise ContractViolation("SE3 batch: arrays contain non-finite values (NaN/Inf)")
+    ensure_choice("SE3 batch.convention", convention, POSE_CONVENTIONS)
+    norms = np.linalg.norm(quaternions, axis=1)
+    invalid = np.flatnonzero(np.abs(norms - 1.0) > 1e-3)
+    if invalid.size:
+        index = int(invalid[0])
+        raise ContractViolation(
+            "SE3 batch quaternions"
+            f"[{index}]: quaternion is not unit-norm (|q| = {norms[index]:.6f})"
+        )
+    normalized = quaternions / norms[:, None]
+    w, x, y, z = normalized.T
+    rotations = np.empty((len(normalized), 3, 3), dtype=np.float64)
+    rotations[:, 0, 0] = 1.0 - 2.0 * (y * y + z * z)
+    rotations[:, 0, 1] = 2.0 * (x * y - z * w)
+    rotations[:, 0, 2] = 2.0 * (x * z + y * w)
+    rotations[:, 1, 0] = 2.0 * (x * y + z * w)
+    rotations[:, 1, 1] = 1.0 - 2.0 * (x * x + z * z)
+    rotations[:, 1, 2] = 2.0 * (y * z - x * w)
+    rotations[:, 2, 0] = 2.0 * (x * z - y * w)
+    rotations[:, 2, 1] = 2.0 * (y * z + x * w)
+    rotations[:, 2, 2] = 1.0 - 2.0 * (x * x + y * y)
+
+    poses: list[SE3] = []
+    for rotation, translation in zip(
+        rotations,
+        translation_values,
+        strict=True,
+    ):
+        pose = object.__new__(SE3)
+        object.__setattr__(pose, "rotation", rotation)
+        object.__setattr__(pose, "translation", translation)
+        object.__setattr__(pose, "convention", convention)
+        poses.append(pose)
+    return tuple(poses), rotations, translation_values
+
+
 @dataclass(frozen=True)
 class SE3:
     """A rigid transform: ``x_out = rotation @ x_in + translation``.
@@ -122,6 +217,31 @@ class SE3:
     def identity(cls, convention: str = DEFAULT_CONVENTION) -> SE3:
         return cls(np.eye(3), np.zeros(3), convention=convention)
 
+    @classmethod
+    def from_quaternion_wxyz(
+        cls,
+        quaternion_wxyz: object,
+        translation: object,
+        *,
+        convention: str,
+    ) -> SE3:
+        """Build a rigid transform from a deterministic WXYZ quaternion."""
+
+        quaternion = _validated_unit_quat(
+            "SE3.from_quaternion_wxyz.quaternion_wxyz",
+            quaternion_wxyz,
+        )
+        return cls(
+            _quat_wxyz_to_rotation(quaternion),
+            translation,
+            convention=convention,
+        )
+
+    def to_quaternion_wxyz(self) -> np.ndarray:
+        """Return a normalized WXYZ quaternion with deterministic sign."""
+
+        return _rotation_to_quat_wxyz(self.rotation)
+
     @property
     def matrix(self) -> np.ndarray:
         """The 4x4 homogeneous matrix form."""
@@ -140,9 +260,8 @@ class SE3:
         )
 
     def as_convention(self, convention: str) -> SE3:
-        """Re-express this transform under ``convention`` (flip if needed)."""
-        ensure_choice("SE3.as_convention.convention", convention, POSE_CONVENTIONS)
-        if convention == self.convention:
+        """Re-express this transform under its paired inverse convention."""
+        if not _requires_inverse("SE3.as_convention", self.convention, convention):
             return self
         return self.inverse()
 
@@ -208,6 +327,34 @@ class Sim3:
     def from_se3(cls, se3: SE3, *, scale: float = 1.0) -> Sim3:
         return cls(scale, se3.rotation, se3.translation, convention=se3.convention)
 
+    @classmethod
+    def from_quaternion_wxyz(
+        cls,
+        scale: float,
+        quaternion_wxyz: object,
+        translation: object,
+        *,
+        convention: str,
+    ) -> Sim3:
+        """Build a similarity transform from a deterministic WXYZ quaternion.
+
+        ``convention`` is required because a bare similarity-transform text
+        record does not identify the source and target frames.
+        """
+        quaternion = _validated_unit_quat(
+            "Sim3.from_quaternion_wxyz.quaternion_wxyz", quaternion_wxyz
+        )
+        return cls(
+            scale,
+            _quat_wxyz_to_rotation(quaternion),
+            translation,
+            convention=convention,
+        )
+
+    def to_quaternion_wxyz(self) -> np.ndarray:
+        """Return a normalized WXYZ quaternion with a deterministic sign."""
+        return _rotation_to_quat_wxyz(self.rotation)
+
     @property
     def matrix(self) -> np.ndarray:
         """The 4x4 homogeneous matrix form (rotation block scaled)."""
@@ -226,3 +373,9 @@ class Sim3:
             -scale * (rotation @ self.translation),
             convention=_FLIPPED[self.convention],
         )
+
+    def as_convention(self, convention: str) -> Sim3:
+        """Re-express this transform under its paired inverse convention."""
+        if not _requires_inverse("Sim3.as_convention", self.convention, convention):
+            return self
+        return self.inverse()

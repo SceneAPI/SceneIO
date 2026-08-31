@@ -21,6 +21,40 @@ from bench.io_bench.oracles.reconstruction import (
     _g2o_oracle_write,
 )
 from sceneio import _core
+from sceneio._posed_views import posed_view_storage, posed_views_from_storage
+
+
+def _write_transforms_json(value):
+    return _core.write_transforms_json(
+        posed_view_storage(value, profile="transforms_json")
+    )
+
+
+def _read_transforms_json(data):
+    return posed_views_from_storage(
+        _core.read_transforms_json(data),
+        source_profile="transforms_json",
+    )
+
+
+def _write_tum(value):
+    return _core.write_tum(posed_view_storage(value, profile="tum"))
+
+
+def _read_tum(data):
+    return posed_views_from_storage(_core.read_tum(data), source_profile="tum")
+
+
+def _write_kitti(value):
+    return _core.write_kitti(posed_view_storage(value, profile="kitti"))
+
+
+def _read_kitti(data):
+    return posed_views_from_storage(_core.read_kitti(data), source_profile="kitti")
+
+
+def _posed_view_nbytes(value, profile):
+    return _record_nbytes(posed_view_storage(value, profile=profile))
 
 
 def _euroc_payload_nbytes(payload):
@@ -43,29 +77,29 @@ def build_reconstruction_specs(scale, pose_bundle=None):
         Spec(
             "transforms_json",
             lambda: (transforms, transforms),
-            _core.write_transforms_json,
-            _core.read_transforms_json,
+            _write_transforms_json,
+            _read_transforms_json,
             None,
             None,
-            lambda rec, p: _record_nbytes(rec),
+            lambda rec, p: _posed_view_nbytes(rec, "transforms_json"),
         ),
         Spec(
             "tum",
             lambda: (tum, tum),
-            _core.write_tum,
-            _core.read_tum,
+            _write_tum,
+            _read_tum,
             None,
             None,
-            lambda rec, p: _record_nbytes(rec),
+            lambda rec, p: _posed_view_nbytes(rec, "tum"),
         ),
         Spec(
             "kitti",
             lambda: (kitti, kitti),
-            _core.write_kitti,
-            _core.read_kitti,
+            _write_kitti,
+            _read_kitti,
             None,
             None,
-            lambda rec, p: _record_nbytes(rec),
+            lambda rec, p: _posed_view_nbytes(rec, "kitti"),
         ),
         Spec(
             "euroc_state",

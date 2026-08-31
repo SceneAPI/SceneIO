@@ -11,7 +11,7 @@ Three runtime-checkable Protocols cover the matching stage:
     two :class:`FeatureSet` operands and returns ``mode="indexed"``
     correspondences (index pairs into those sets).
   * detector-free (``detector_free=True``): ``match_pair`` receives two
-    image refs (:data:`~sceneio.data.ImageRef`) and returns
+    image refs (:data:`~sceneio._data.ImageRef`) and returns
     ``mode="coordinates"`` correspondences — there are no persistent
     per-image keypoints to index into.
 
@@ -24,7 +24,7 @@ Three runtime-checkable Protocols cover the matching stage:
   attach the estimated two-view geometry. Mode is preserved; the output
   is a subset (``len(out) <= len(in)``).
 
-This namespace imports only :mod:`sceneio.data` — never
+This namespace imports only :mod:`sceneio._data` — never
 :mod:`sceneio.mapping` (guard-tested), so either can graduate to
 its own distribution later.
 """
@@ -35,8 +35,9 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Protocol, runtime_checkable
 
-from sceneio.data import FeatureSet, ImageRef, PairCorrespondences
-from sceneio.data._validation import ensure_bool
+from sceneio import FeatureSet
+from sceneio._data import ImageRef, PairCorrespondences
+from sceneio._data._validation import ensure_bool
 from sceneio.errors import ContractViolation
 
 __all__ = [

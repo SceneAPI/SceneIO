@@ -16,8 +16,7 @@ import pytest
 from _support.partial_read import _fresh_process_partial_rss
 
 import sceneio
-from sceneio import _core
-from sceneio.io import FormatError
+from sceneio import FormatError, _core
 
 
 def _three_view_reconstruction():
@@ -78,18 +77,15 @@ def test_single_colmap_image_equals_full_image_slice(tmp_path, format_id):
             np.asarray(full.image_camera_ids)[row : row + 1],
         )
         camera = partial.cameras[0]
-        expected_camera = next(
-            item
-            for item in full.cameras
-            if item.id == int(np.asarray(full.image_camera_ids)[row])
-        )
+        expected_camera_id = int(np.asarray(full.image_camera_ids)[row])
+        expected_camera = full.cameras[list(full.camera_ids).index(expected_camera_id)]
         assert (
-            camera.id,
+            partial.camera_ids[0],
             camera.model_id,
             camera.width,
             camera.height,
         ) == (
-            expected_camera.id,
+            expected_camera_id,
             expected_camera.model_id,
             expected_camera.width,
             expected_camera.height,

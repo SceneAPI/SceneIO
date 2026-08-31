@@ -25,7 +25,7 @@ distinction, explicit conversion surface, and verification rules are in
 inspection, and decoded records expose the same immutable convention contract.
 The complementary
 [`representation_normalization.md`](representation_normalization.md) contract
-classifies all 103 public data representations by structural normalization,
+classifies all 90 public data representations by structural normalization,
 scale source/unit, coordinate source, supported conversion, refusal behavior,
 and executable evidence.
 
@@ -67,7 +67,7 @@ Current tables: [data structures](#data-structures-memory-records),
 Everything marked ✅ is implemented by the compiled `sceneio._core` or by a
 repository-owned adapter around a separately installed, optimized permissive
 provider. SceneIO owns the schema, convention guards, public mapping, and tests
-in both cases. SceneIO 0.3.0 packages the complete current registry.
+in both cases. SceneIO 0.4.0 packages the complete current registry.
 
 ## Validation history
 
@@ -383,9 +383,9 @@ complete and format capabilities are unchanged.
 > velocities, and accelerations to `PointCloud`, and float display
 > colors/opacities, orientation, and tri-state double-sidedness to `Mesh`.
 > Every existing point/mesh writer refuses these fields until it has an exact
-> format mapping. This
-> does not change the legacy codec return contract: `sceneio.read()` for the
-> accepted USD/USDZ profile still returns `MeshScene`.
+> format mapping. In 0.4, both `sceneio.read()` and `sceneio.read_scene()`
+> return the canonical `SceneGraph`; mesh-only stages occupy its exact static
+> mesh subset.
 >
 > **USD U2 stage checkpoint (2026-07-30):** the public additive
 > `sceneio.read_scene()` API returns `SceneGraph` for bounded USD-family
@@ -600,7 +600,7 @@ complete and format capabilities are unchanged.
 > nested paths, text root attributes, named reads, and leading-axis
 > hyperslabs. The hloc adapters preserve descriptor orientation/dtype,
 > uncertainty, dense source extents, endpoint names, and mixed score presence
-> in native `FeatureSet`/`MatchGraph` records. Independent h5py fixtures and
+> in canonical `FeatureSet`/`CorrespondenceGraph` records. Independent h5py fixtures and
 > benchmark providers cover all three, and the match layout follows hloc's
 > current
 > [`names_to_pair`](https://github.com/cvg/Hierarchical-Localization/blob/master/hloc/utils/parsers.py)
@@ -624,7 +624,8 @@ complete and format capabilities are unchanged.
 > generated 5,000-dataset file, a one-dataset read changed from 447.016 ms
 > to 0.522 ms and full inspection from 459.803 ms to 363.624 ms.
 > The hloc match reader now converts dense integer rows and optional
-> float16/float32 scores directly into final native `MatchGraph` storage,
+> float16/float32 scores directly into private correspondence storage before
+> exposing the canonical `CorrespondenceGraph`,
 > changing read throughput from 843 to 1,194 MB/s and traced peak from
 > 62.9 to 33.6 MB. High-group-count hloc object enumeration and native
 > descriptor transposition remain explicit optimization follow-ups.
@@ -1265,10 +1266,9 @@ SoA, zero-copy to numpy/torch (DLPack), conventions carried as metadata.
 | `ImuSequence` | raw inertial observations | ✅ record / ⬜ dataset adapter | exact int64-ns measurement instants, float64 angular velocity and linear acceleration, closed unit/axis vocabularies, sensor id, and explicit clock domain |
 | `CameraRig` | `camera_rig` | ✅ record / ⬜ datatype | ordered cameras; ragged model parameters; exact optional K/R/P; extrinsic, ROI/binning, topic, and time-offset metadata with explicit conventions |
 | `PoseGraph` | `pose_graph` | ✅ record / ⬜ datatype | ordered typed SE(3) nodes/edges, fixed-node flags, exact ids, XYZW transforms, and symmetric 6×6 information matrices with explicit direction/order metadata |
-| `FeatureSet` | `feature_set` | ✅ record / ⬜ datatype | per-image id/name/camera/size/time; Nx{2,4,6} f32 keypoints with explicit first-pixel center; descriptors in u8/i8/f16/f32/f64 with dtype/dimension/name presence; optional RGB colors, quality, and scores |
-| `MatchGraph` | `match_graph` | ✅ record / ⬜ datatype | canonical COLMAP image pairs and pair ids; ragged raw/verified u32 matches; optional parallel scores, provenance flags/retrieval score, F/E/H, config, relative pose, and recovered endpoint cameras |
-| `PairCorrespondences` / `CorrespondenceGraph` | neutral correspondence models | ✅ Python records | indexed or detector-free coordinate matches with optional scores and two-view geometry; the graph validates ordered image pairs and references to per-image feature sets |
-| `TrackObservation` / `TrackedPointCloud` | neutral sparse-track models | ✅ Python records | per-point lists of `(image_id, keypoint_idx)` observations aligned with sparse XYZ; compiled `Reconstruction` carries the corresponding compact CSR track representation |
+| `FeatureSet` | `features` | ✅ canonical record | Nx{2,4,6} f32 keypoints with explicit first-pixel center; descriptors in u8/i8/i16/f16/f32/f64; optional scores, RGB colors, quality, image size, and extractor metadata; collection identity stays on its aggregate |
+| `PairCorrespondences` / `CorrespondenceGraph` | `matches` | ✅ canonical records | indexed or detector-free coordinate pairs; raw and verified channels; optional scores, F/E/H, configuration, relative pose, source/retrieval metadata, and recovered endpoint cameras; ordered pair and feature-index validation |
+| `TrackObservation` / `PointCloud` tracks | `track_observation` / `point_cloud` | ✅ canonical records | optional compact CSR image/keypoint observations aligned with sparse XYZ; an untracked cloud uses the same `PointCloud` type |
 | `Mask` | neutral dense mask | ✅ Python record | bool HxW with `True` meaning that a pixel participates; reusable by feature, depth, segmentation, and dataset adapters without format-specific duplication |
 | `LabelTaxonomy` | dense-label vocabulary | ✅ Python record | ordered unique int32 semantic ids, UTF-8 names, explicit identity/version, and optional RGB display colors plus thing/stuff flags |
 | `SemanticMap` | semantic labels | ✅ Python record | C-contiguous int32 HxW class ids, explicit void id, optional independent validity, and optional checked taxonomy |
@@ -1282,7 +1282,7 @@ SoA, zero-copy to numpy/torch (DLPack), conventions carried as metadata.
 | `ColmapMaxxSchemaInfo` | COLMAP DB companion | ✅ nested record | exact schema/minimum-reader versions and producer version/commit; absent as `None` outside owned MAXX rows |
 | `MaterialSet` | `material_set` | ✅ record / ⬜ datatype | metallic-roughness factors, alpha modes, URI texture references, UV sets, and sampler metadata; material names may be empty or repeated as glTF permits |
 | `Mesh` | `mesh` | ✅ record / ⬜ datatype | polygon-preserving ragged topology; vertex/corner normals, UVs, RGBA8 and additive float display RGB/opacity; primitive/material domains; coordinate metadata, local transform, orientation, and tri-state double-sidedness |
-| `MeshScene` | `mesh_scene` | ✅ record / ⬜ datatype | ordered mesh primitives, mesh-to-primitive ranges, shared materials, node hierarchy/local transforms, scene roots, names, and default scene |
+| `SceneGraph` | `scene_graph` | ✅ canonical record | typed mesh/point/Gaussian/camera/instance/semantic/volume payloads; mesh groups and primitives; shared materials; node hierarchy/local transforms; scene roots/names/default; stage metadata and dependencies |
 
 ## Formats (codecs)
 
@@ -1403,15 +1403,15 @@ public-domain SQLite amalgamation statically linked into `_core`.
 | `obj` | `Mesh` + `MaterialSet` | R+W | pinned **TinyObjLoader** + **trimesh 4** | polygon-preserving independent indices; vertex/corner normals and UVs; RGB8, object/group/smoothing domains; strict single-library MTL factors and texture maps; adjacent paired OBJ/MTL output |
 | `stl` | `Mesh` | R+W | independent `struct`/text parsers + **trimesh 4** | strict binary LE and ASCII; canonical unwelded triangle soup; facet normals; bounded face ranges; ambiguous facet attributes/colors reject |
 | `off` | `Mesh` | R+W | independent token parser + **trimesh 4** | strict record-per-line (1 MiB cap) polygon-preserving ASCII OFF/NOFF/COFF/ST variants; exact vertex normals, UVs, and RGBA8; bounded face ranges |
-| `gltf` | `MeshScene` | R+W | **pygltflib 1.16** + **trimesh 4** | glTF 2.0 JSON with mapped external or base64 data buffers; strided/sparse accessors, triangle primitives, nodes/scenes, metallic-roughness materials, and URI images; mesh/primitive selectors; atomic paired `.gltf` + `.bin` sink |
-| `glb` | `MeshScene` | R+W | **pygltflib 1.16** + **trimesh 4** | GLB 2.0 with embedded BIN; same canonical scene/material subset and selectors as `gltf`; single-file mmap and direct sink |
+| `gltf` | `SceneGraph` | R+W | **pygltflib 1.16** + **trimesh 4** | glTF 2.0 JSON with mapped external or base64 data buffers; strided/sparse accessors, triangle primitives, mesh groups, nodes/scenes, metallic-roughness materials, and URI images; mesh/primitive selectors; atomic paired `.gltf` + `.bin` sink |
+| `glb` | `SceneGraph` | R+W | **pygltflib 1.16** + **trimesh 4** | GLB 2.0 with embedded BIN; same canonical scene/material subset and selectors as `gltf`; single-file mmap and direct sink |
 | `pcd` | `PointCloud` | R+W | independent NumPy/stdlib parser + **Open3D 0.19** | PCD 0.7 ASCII, little-endian binary, and LZF `binary_compressed`; organized dimensions and viewpoint; packed RGB/intensity; bounded binary point ranges |
 | `euroc_state` | `StateTrajectory` | R+W | independent stdlib CSV parser + EuRoC schema | exact int64-ns timestamps; p/q(WXYZ)/v/gyro-bias/accel-bias; canonical-header detection; bounded state ranges |
 | `opencv_yaml` / `opencv_xml` | `CameraRig` | R+W | **PyYAML** / stdlib ElementTree | exact K/D plus optional R/P; schema-signature detection; generic YAML/XML extensions intentionally unclaimed |
 | `ros_camera_info` | `CameraRig` | R+W | **PyYAML** + ROS CameraInfo schema | exact K/D/R/P, distortion model, binning, ROI, and rectify flag |
 | `kalibr` | `CameraRig` | R+W | **PyYAML** + Kalibr schema | pinhole/omni intrinsics, distortion, topics, camera-chain or IMU extrinsics, and camera↔IMU time offsets |
 | `g2o` | `PoseGraph` | R+W | independent strict parser + g2o BSD-3 source semantics | `VERTEX_SE3:QUAT`, `EDGE_SE3:QUAT`, `FIX`; XYZW; exact upper-triangle information; unsupported mixed types/parameters reject |
-| `colmap_db` | `ColmapDatabase` (`FeatureSet` + `MatchGraph` + nested companions) | inspect, R+W all four exact profiles, partial | stdlib **sqlite3** + **pycolmap 4.1.1** | exact structural identity and selected-profile writes for stock 3.13/4.1.1/current and owned MAXX; decoded exact records preserve their profile through public writes, while constructed core records retain the hybrid compatibility route; stock rig/frame/prior, current recovered cameras, and MAXX descriptors/colors/scores/provenance/quality/extended priors/markers/metadata-only video/ownership round-trip; conversion reports enumerate identity changes and incompatible fields before destination access; migration-derived pre-ownership databases remain legacy/unknown and are a C4 classification item |
+| `colmap_db` | `ColmapDatabase` (`FeatureSet` + `CorrespondenceGraph` + nested companions) | inspect, R+W all four exact profiles, partial | stdlib **sqlite3** + **pycolmap 4.1.1** | exact structural identity and selected-profile writes for stock 3.13/4.1.1/current and owned MAXX; decoded records preserve their exact profile, while newly constructed records use the package-owned hybrid default; stock rig/frame/prior, current recovered cameras, and MAXX descriptors/colors/scores/provenance/quality/extended priors/markers/metadata-only video/ownership round-trip; conversion reports enumerate identity changes and incompatible fields before destination access |
 | `laz` | `PointCloud` | R+W | **laspy 2.7 + lazrs 0.8.1** | pinned LAZperf 3.4.0; standard formats 0–3/6–8; strict LASzip VLR/chunk extents; chunk-aware ranges; seekable streaming sink |
 | `image_sequence` | `ImageSequence` | R+W | independent manifest/PGM fixtures + existing image-codec parity suites | flat image directories; deterministic natural order or strict versioned manifest; lazy owned paths; exact optional timing; heterogeneous frames reject; transactional bounded-copy writer; frame ranges |
 | `y4m` | `ImageSequence` | R+W | independent Python parser/writer + exact golden bytes | original dependency-free YUV4MPEG2 subset; uint8 mono/4:2:0/4:2:2/4:4:4 planar frames, odd dimensions, exact rational timing, mmap, streaming sink, inspect, and frame ranges; no RGB conversion or video-framework dependency |
@@ -1423,14 +1423,14 @@ public-domain SQLite amalgamation statically linked into `_core`.
 | `animated_avif` | `ImageSequence` | R+W | direct Pillow/libavif comparison plus specification-derived BMFF/timing checks in `tests/codecs/test_avif.py` | optional `sceneio[avif]`; owned packed 8-bit frames, exact accepted timing and bounded frame ranges; whole-millisecond contiguous timing is required for write; no loop/background/audio/subtitles; encoded output is provider-buffered |
 | `rtmv` | `RtmvDataset` containing a `PosedViewSet` plus lazy RGB/depth/segmentation paths | R, inspect, partial | independently authored NumPy camera matrices and OpenEXR files in `tests/codecs/test_rtmv.py` | strict flat contiguous five-digit directory layout; complete metadata/header validation; RTMV row-vector matrices normalize to OpenGL camera-to-world; encoded layers and exact object JSON stay path-backed; bounded frame selection; intentionally read-only |
 | `hdf5` | `TensorDict` | R+W, inspect, partial | independent **h5py** layouts in `tests/codecs/test_hdf5_hloc.py` | optional `sceneio[hdf5]`; numeric/bool datasets, nested paths, text root attrs, selected-path named reads, leading-axis hyperslabs, and atomic replacement; full reads reject indirect/virtual/object/reference/vlen layouts, while partial reads validate the selected paths and ancestors |
-| `hloc_features` | `HlocFeatureStore` of native `FeatureSet` | R+W, inspect | independent **h5py** documented layout | preserves keypoints, D×N wire descriptors as native N×D with uint8/int8/f16/f32/f64 dtype, scores, image size, nested names, and keypoint uncertainty |
-| `hloc_matches` | `HlocMatchStore` + native `MatchGraph` | R+W, inspect | independent **h5py** documented layout | preserves dense `matches0`, optional `matching_scores0`, exact endpoint names, source extents/dtypes, pair order, and mixed score presence |
+| `hloc_features` | `HlocFeatureStore` of `FeatureSet` | R+W, inspect | independent **h5py** documented layout | preserves keypoints, D×N wire descriptors as canonical N×D with uint8/int8/f16/f32/f64 dtype, scores, image size, nested names, and keypoint uncertainty |
+| `hloc_matches` | `HlocMatchStore` + `CorrespondenceGraph` | R+W, inspect | independent **h5py** documented layout | preserves dense `matches0`, optional `matching_scores0`, exact endpoint names, source extents/dtypes, pair order, and mixed score presence |
 | `zarr` | `TensorDict`; explicit typed dense-label overlay | R+W, inspect, partial | direct **zarr-python/numcodecs** | optional `sceneio[zarr]`; numeric/bool v2/v3 directory stores, nested names, text attrs, named reads, leading-axis slices, transactional replacement, fixed-width normalization, and direct owned-array retention for `sceneio.label_map/1` reads |
-| `tiff` | legacy `Image` / `Mask` / grayscale-stack `TensorDict`; typed `RasterCollection`; explicit typed dense label map | R+W, inspect; typed series/level/page/window selection | **tifffile** plus **Zarr** and independent producer/consumer checks | optional `sceneio[tiff]`; the generic API retains the bounded one-series/one-level projection; typed collection APIs preserve classic/BigTIFF, endian, strip/tile layout, bounded CV series and homogeneous SubIFD pyramids, exact axes/dtypes, and transactional deterministic writes; arbitrary OME axes and nonportable writer topologies refuse; semantic/instance/panoptic pages still require the exact label-map adapter |
-| `e57` | legacy `PointCloud`; typed `PointScan` / `ScanSet` | R+W, inspect; typed scan/range selection | direct **pye57/libE57Format** | optional `sceneio[e57]`; generic API retains exactly one unorganized Cartesian scan with invalid rows filtered; additive typed APIs preserve ordered scans, stored rows, raw invalid states, sparse row/column organization and bounds, exact float32 coordinates/intensity, integral RGB8, and WXYZ scan-to-reference pose; typed inspection is header-only and selected ranges use fixed-capacity provider chunks |
+| `tiff` | `Image` / `Mask` / grayscale-stack `TensorDict`; typed `RasterCollection`; explicit typed dense label map | R+W, inspect; typed series/level/page/window selection | **tifffile** plus **Zarr** and independent producer/consumer checks | optional `sceneio[tiff]`; the generic API retains the bounded one-series/one-level projection; typed collection APIs preserve classic/BigTIFF, endian, strip/tile layout, bounded CV series and homogeneous SubIFD pyramids, exact axes/dtypes, and transactional deterministic writes; arbitrary OME axes and nonportable writer topologies refuse; semantic/instance/panoptic pages still require the exact label-map adapter |
+| `e57` | `PointCloud`; typed `PointScan` / `ScanSet` | R+W, inspect; typed scan/range selection | direct **pye57/libE57Format** | optional `sceneio[e57]`; generic API retains exactly one unorganized Cartesian scan with invalid rows filtered; typed APIs preserve ordered scans, stored rows, raw invalid states, sparse row/column organization and bounds, exact float32 coordinates/intensity, integral RGB8, and WXYZ scan-to-reference pose; typed inspection is header-only and selected ranges use fixed-capacity provider chunks |
 | `parquet` / `arrow_ipc` | `TensorDict` numeric table | R+W, inspect; Parquet named-column partial | direct **PyArrow** | optional `sceneio[arrow]`; scalar/fixed-width numeric columns, equal row counts, text attrs, mmap/threaded provider paths, transactional writes |
 | `openvdb` | sparse-grid `TensorDict` | R+W, inspect | direct **TinyVDB** | optional `sceneio[openvdb]`; one nonempty identity-transform, zero-background float32 scalar grid; ZIP/active-mask output; packaged upstream seed is fully replaced and provenance-pinned; rebuilt active count is verified and provider topology loss refuses |
-| `usd` / `usdz` | `MeshScene` compatibility projection; additive `SceneGraph` | R+W, rich static 3D-CV profile R+W, bounded selected-time R, inspect and prim selection | direct **TinyUSDZ** plus repository-owned selected-time grammar | optional `sceneio[usd]`; `.usd`/`.usda`, historical `.usdc` reads through crate 10, and aligned uncompressed USDZ; legacy static mesh bytes/API unchanged; `read_scene` maps bounded hierarchy/metadata/static transforms, prim selection, polygon meshes, points, PreviewSurface constants/textures and direct/subset bindings, portable PNG/JPEG/EXR references, official float/half Gaussian fields, static camera/render-product pairs, direct scalar-float OpenVDB references, one inherited semantic pair, and static PointInstancer rows; direct USDA/USDA-root USDZ matrix and visibility samples materialize at `time=` with OpenUSD-compatible interpolation/holding; `write_scene` streams deterministic static USDA sidecars or self-contained USDZ, while volume-bearing USDZ refuses; current crates, USDC writes/selected time, composition, animation preservation/dynamic writing, sampled payloads, multiple semantic labels/taxonomies, and broader volume/instance schemas remain unavailable; SceneIO's Linux wheel is manylinux2014, while the separately installed TinyUSDZ 0.9.4 x86-64 binary requires manylinux 2.27/2.28 |
+| `usd` / `usdz` | `SceneGraph` | R+W, rich static 3D-CV profile R+W, bounded selected-time R, inspect and prim selection | direct **TinyUSDZ** plus repository-owned selected-time grammar | optional `sceneio[usd]`; `.usd`/`.usda`, historical `.usdc` reads through crate 10, and aligned uncompressed USDZ; generic and scene-specific APIs share one canonical graph; hierarchy/metadata/static transforms, prim selection, polygon meshes, points, PreviewSurface constants/textures and direct/subset bindings, portable PNG/JPEG/EXR references, official float/half Gaussian fields, static camera/render-product pairs, direct scalar-float OpenVDB references, one inherited semantic pair, and static PointInstancer rows; direct USDA/USDA-root USDZ matrix and visibility samples materialize at `time=` with OpenUSD-compatible interpolation/holding; writers stream deterministic static USDA sidecars or self-contained USDZ, while volume-bearing USDZ refuses; current crates, USDC writes/selected time, composition, animation preservation/dynamic writing, sampled payloads, multiple semantic labels/taxonomies, and broader volume/instance schemas remain unavailable; SceneIO's Linux wheel is manylinux2014, while the separately installed TinyUSDZ 0.9.4 x86-64 binary requires manylinux 2.27/2.28 |
 
 ### Repository-owned COLMAP workflow adapters
 
@@ -1666,7 +1666,7 @@ names from `_core.__native_features__`.
 | frame range `frames=(start,stop)` | image directories, RTMV directories, raw Y4M, animated AVIF, WebM, Ogg/Theora | `ImageSequence` or `RtmvDataset`; directory payloads remain lazy encoded paths, RTMV rebuilds only selected validated metadata records, raw codecs copy only selected planes, WebM begins decode at the required preceding keyframe, and the result always contains exactly the requested frames; animated WebP and APNG currently expose full composited reads and do not claim a bounded frame selector |
 | `image_id` | COLMAP binary + text | one-image `Reconstruction` plus every camera required by its retained modern rig/frame (or its one legacy camera); no point-container read |
 | `image_id` | COLMAP SQLite database | one compiled `FeatureSet`; unrelated keypoint/descriptor BLOBs remain unread |
-| unordered `pair=(image_id1,image_id2)` | COLMAP SQLite database | one compiled `MatchGraph` with raw/verified matches and optional geometry |
+| unordered `pair=(image_id1,image_id2)` | COLMAP SQLite database | one canonical `CorrespondenceGraph` with raw/verified matches and optional geometry |
 | `tensors=(...)` | safetensors | selected complete tensors as a mapped `TensorDict`; other payload pages remain untouched |
 | `slices={name: (start, stop)}` | safetensors | contiguous leading-axis slices as a mapped `TensorDict` |
 

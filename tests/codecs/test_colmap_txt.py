@@ -227,7 +227,7 @@ def test_modern_partial_image_keeps_its_frame_and_rig(ref):
 def test_camera_parity(ref):
     rec, tdir, _ = ref
     R = _core.read_colmap_txt(tdir)
-    ours = {c.id: c for c in R.cameras}
+    ours = dict(zip(R.camera_ids, R.cameras, strict=True))
     for cid, cam in rec.cameras.items():
         c = ours[int(cid)]
         assert (c.width, c.height) == (cam.width, cam.height)

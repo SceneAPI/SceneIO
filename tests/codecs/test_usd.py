@@ -12,6 +12,7 @@ import tinyusdz
 import sceneio
 from sceneio import _core
 from sceneio.io import _usd
+from sceneio.io._usd import stage as usd_stage
 
 
 def _fixture():
@@ -52,17 +53,17 @@ def _fixture():
     )
     transforms = np.tile(np.eye(4, dtype=np.float64), (2, 1, 1))
     transforms[0, :3, 3] = [2.5, -3.25, 4.125]
-    scene = _core.mesh_scene(
-        [mesh],
-        np.array([0, 1], dtype=np.uint64),
-        node_meshes=np.array([-1, 0], dtype=np.int64),
+    scene = _core.scene_graph(
+        ["World", "Surface"],
+        meshes=[mesh],
+        node_payload_kinds=["none", "mesh"],
+        node_payload_indices=np.array(
+            [np.iinfo(np.uint64).max, 0],
+            dtype=np.uint64,
+        ),
         node_child_offsets=np.array([0, 1, 1], dtype=np.uint64),
         node_children=np.array([1], dtype=np.uint64),
         node_local_transforms=transforms,
-        node_names=["World", "Surface"],
-        scene_root_offsets=np.array([0, 1], dtype=np.uint64),
-        scene_roots=np.array([0], dtype=np.uint64),
-        default_scene=0,
     )
     return scene
 
@@ -86,14 +87,14 @@ def _assert_mesh_equal(actual, expected):
 
 def _assert_scene_equal(actual, expected):
     assert actual.num_meshes == expected.num_meshes
-    assert actual.num_primitives == expected.num_primitives
+    assert actual.num_mesh_primitives == expected.num_mesh_primitives
     assert actual.num_nodes == expected.num_nodes
     assert actual.num_scenes == expected.num_scenes
     assert actual.default_scene == expected.default_scene
     assert list(actual.node_names) == list(expected.node_names)
     for name in (
         "mesh_primitive_offsets",
-        "node_meshes",
+        "node_payload_indices",
         "node_child_offsets",
         "node_children",
         "node_local_transforms",
@@ -105,9 +106,11 @@ def _assert_scene_equal(actual, expected):
         assert left.dtype == right.dtype
         assert left.shape == right.shape
         assert left.tobytes() == right.tobytes()
-    for index in range(actual.num_primitives):
+    assert actual.node_payload_kinds == expected.node_payload_kinds
+    for index in range(actual.num_mesh_primitives):
         _assert_mesh_equal(
-            actual.primitive_at(index), expected.primitive_at(index)
+            actual.mesh_primitive_at(index),
+            expected.mesh_primitive_at(index),
         )
 
 
@@ -140,7 +143,7 @@ def test_sceneio_usd_writer_is_readable_by_upstream_oracle(tmp_path, suffix):
     mesh = meshes[0]
     np.testing.assert_array_equal(
         np.asarray(mesh.get_attribute("points").value),
-        np.asarray(scene.primitive_at(0).positions),
+        np.asarray(scene.mesh_at(0).positions),
     )
     np.testing.assert_array_equal(
         np.asarray(mesh.get_attribute("faceVertexCounts").value),
@@ -148,7 +151,7 @@ def test_sceneio_usd_writer_is_readable_by_upstream_oracle(tmp_path, suffix):
     )
     np.testing.assert_array_equal(
         np.asarray(mesh.get_attribute("faceVertexIndices").value),
-        np.asarray(scene.primitive_at(0).face_indices).astype(np.int32),
+        np.asarray(scene.mesh_at(0).face_indices).astype(np.int32),
     )
     rendered = tinyusdz.tydra.convert_to_render_scene(stage)
     assert [(node.abs_path, node.name) for node in rendered.nodes()] == [
@@ -180,8 +183,8 @@ def Xform "World"
     scene = sceneio.read(path)
 
     assert list(scene.node_names) == ["World", "Triangle"]
-    assert np.asarray(scene.node_meshes).tolist() == [-1, 0]
-    mesh = scene.primitive_at(0)
+    assert scene.node_payload_kinds == ["none", "mesh"]
+    mesh = scene.mesh_at(0)
     np.testing.assert_array_equal(
         np.asarray(mesh.positions),
         np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0]], np.float32),
@@ -212,8 +215,8 @@ def test_usd_record_outlives_removed_source(tmp_path, suffix):
     gc.collect()
 
     np.testing.assert_array_equal(
-        np.asarray(decoded.primitive_at(0).positions),
-        np.asarray(_fixture().primitive_at(0).positions),
+        np.asarray(decoded.mesh_at(0).positions),
+        np.asarray(_fixture().mesh_at(0).positions),
     )
 
 
@@ -225,7 +228,7 @@ def test_usd_inspection_matches_decoded_scene(tmp_path, suffix):
     result = sceneio.inspect(path)
 
     assert result.format == ("usdz" if suffix == ".usdz" else "usd")
-    assert result.datatype == "mesh_scene"
+    assert result.datatype == "scene_graph"
     assert result.shape == (4, 3)
     assert result.dtype == "float32"
     assert result.count == 1
@@ -257,19 +260,19 @@ def test_usd_inspection_matches_decoded_scene(tmp_path, suffix):
     }
 
 
-def test_usd_inspection_does_not_construct_mesh_scene(tmp_path, monkeypatch):
+def test_usd_inspection_does_not_construct_scene_graph(tmp_path, monkeypatch):
     path = tmp_path / "inspect.usd"
     sceneio.write(_fixture(), path)
 
-    def fail_full_decode(_stage):
-        raise AssertionError("inspection must not build a MeshScene")
+    def fail_full_decode(*_args, **_kwargs):
+        raise AssertionError("inspection must not build a SceneGraph")
 
-    monkeypatch.setattr(_usd.legacy, "_stage_to_scene", fail_full_decode)
+    monkeypatch.setattr(usd_stage, "stage_to_scene_graph", fail_full_decode)
 
     assert sceneio.inspect(path).shape == (4, 3)
 
 
-def test_usd_reader_refuses_non_cv_stage_conventions(tmp_path):
+def test_usd_reader_preserves_declared_stage_conventions(tmp_path):
     path = tmp_path / "z_up.usda"
     path.write_text(
         """#usda 1.0
@@ -284,10 +287,9 @@ def Xform "World"
         encoding="utf-8",
     )
 
-    with pytest.raises(
-        sceneio.FormatError, match=r"upAxis='Y'.*metersPerUnit=1"
-    ):
-        sceneio.read(path)
+    scene = sceneio.read(path)
+    assert scene.up_axis == "z"
+    assert scene.meters_per_unit == 0.01
 
 
 def test_usd_reader_refuses_subdivision_surfaces(tmp_path):
@@ -337,26 +339,25 @@ def test_usd_reader_refuses_unqualified_usdc_versions_before_provider(
         sceneio.read(path, format="usdz" if suffix == ".usdz" else "usd")
 
 
-def test_usd_writer_refuses_transform_on_mesh_node(tmp_path):
+def test_usd_writer_preserves_transform_on_mesh_node(tmp_path):
     source = _fixture()
     transforms = np.array(source.node_local_transforms, copy=True)
     transforms[0] = np.eye(4)
     transforms[1, 0, 3] = 1
-    scene = _core.mesh_scene(
-        [source.primitive_at(0)],
-        np.array(source.mesh_primitive_offsets, copy=True),
-        node_meshes=np.array(source.node_meshes, copy=True),
+    scene = _core.scene_graph(
+        list(source.node_names),
+        meshes=[source.mesh_at(0)],
+        node_payload_kinds=list(source.node_payload_kinds),
+        node_payload_indices=np.array(source.node_payload_indices, copy=True),
         node_child_offsets=np.array(source.node_child_offsets, copy=True),
         node_children=np.array(source.node_children, copy=True),
         node_local_transforms=transforms,
-        node_names=list(source.node_names),
-        scene_root_offsets=np.array(source.scene_root_offsets, copy=True),
-        scene_roots=np.array(source.scene_roots, copy=True),
-        default_scene=0,
     )
 
-    with pytest.raises(sceneio.FormatError, match="mesh-referencing nodes"):
-        sceneio.write(scene, tmp_path / "invalid.usd")
+    path = tmp_path / "transformed.usd"
+    sceneio.write(scene, path)
+    decoded = sceneio.read(path)
+    np.testing.assert_array_equal(decoded.node_local_transforms, transforms)
 
 
 def test_usd_existing_destination_survives_package_failure(
@@ -365,11 +366,11 @@ def test_usd_existing_destination_survives_package_failure(
     path = tmp_path / "preserved.usdz"
     path.write_bytes(b"keep")
 
-    def fail(source, destination):
+    def fail(source, destination, **_kwargs):
         destination.write_bytes(b"partial")
         raise RuntimeError("injected failure")
 
-    monkeypatch.setattr(_usd.legacy, "_write_usdz_archive", fail)
+    monkeypatch.setattr(_usd.package, "write_usdz_archive", fail)
     with pytest.raises(RuntimeError, match="injected failure"):
         sceneio.write_usdz(_fixture(), path)
 

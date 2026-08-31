@@ -1,11 +1,12 @@
-"""Validation tests for sceneio.data.pointcloud and .priors."""
+"""Validation tests for sceneio.pointcloud and .priors."""
 
 from __future__ import annotations
 
 import numpy as np
 import pytest
 
-from sceneio.data import SE3, PosePrior, TrackedPointCloud, TrackObservation
+import sceneio
+from sceneio import SE3, PosePrior, TrackObservation, point_cloud
 from sceneio.errors import ContractViolation
 
 
@@ -25,77 +26,101 @@ class TestTrackObservation:
             TrackObservation(image_id="a.jpg", keypoint_idx=bad)  # type: ignore[arg-type]
 
 
-class TestTrackedPointCloud:
+class TestPointCloudTracks:
     def test_valid_full(self) -> None:
-        cloud = TrackedPointCloud(
-            xyz=np.zeros((2, 3), dtype=np.float32),
-            rgb=np.zeros((2, 3), dtype=np.uint8),
+        cloud = point_cloud(
+            np.zeros((2, 3), dtype=np.float32),
+            colors=np.zeros((2, 3), dtype=np.uint8),
             tracks=(
                 (TrackObservation("a.jpg", 0), TrackObservation("b.jpg", 1)),
                 (),
             ),
         )
-        assert len(cloud) == 2
-        assert cloud.tracks is not None
+        assert cloud.num_points == 2
+        assert cloud.has_tracks and cloud.tracks is not None
         assert len(cloud.tracks[0]) == 2
+        np.testing.assert_array_equal(cloud.track_offsets, [0, 2, 2])
+        assert tuple(cloud.track_image_ids) == ("a.jpg", "b.jpg")
+        np.testing.assert_array_equal(cloud.track_keypoint_indices, [0, 1])
 
-    def test_float64_xyz_accepted(self) -> None:
-        TrackedPointCloud(xyz=np.zeros((3, 3), dtype=np.float64))
+    def test_untracked_cloud_uses_same_type(self) -> None:
+        cloud = point_cloud(np.zeros((3, 3), dtype=np.float32))
+        assert not cloud.has_tracks
+        assert cloud.tracks is None
 
     def test_tracks_lists_normalized_to_tuples(self) -> None:
-        cloud = TrackedPointCloud(
-            xyz=np.zeros((1, 3), dtype=np.float32),
+        cloud = point_cloud(
+            np.zeros((1, 3), dtype=np.float32),
             tracks=[[TrackObservation("a.jpg", 0)]],
         )
         assert isinstance(cloud.tracks, tuple)
         assert isinstance(cloud.tracks[0], tuple)
 
     def test_xyz_wrong_shape_raises(self) -> None:
-        with pytest.raises(ContractViolation, match=r"TrackedPointCloud\.xyz"):
-            TrackedPointCloud(xyz=np.zeros((2, 2), dtype=np.float32))
+        with pytest.raises(ContractViolation, match=r"PointCloud\.positions"):
+            point_cloud(np.zeros((2, 2), dtype=np.float32))
 
     def test_xyz_wrong_dtype_raises(self) -> None:
-        with pytest.raises(ContractViolation, match=r"TrackedPointCloud\.xyz"):
-            TrackedPointCloud(xyz=np.zeros((2, 3), dtype=np.int32))
+        with pytest.raises(ContractViolation, match=r"PointCloud\.positions"):
+            point_cloud(np.zeros((2, 3), dtype=np.int32))
 
-    def test_xyz_non_finite_raises(self) -> None:
+    def test_source_float_payload_semantics_remain_available(self) -> None:
         xyz = np.zeros((2, 3), dtype=np.float32)
         xyz[0, 0] = np.nan
-        with pytest.raises(ContractViolation, match="non-finite"):
-            TrackedPointCloud(xyz=xyz)
+        cloud = point_cloud(xyz)
+        assert np.isnan(cloud.positions[0, 0])
 
     def test_rgb_wrong_dtype_raises(self) -> None:
-        with pytest.raises(ContractViolation, match=r"TrackedPointCloud\.rgb.*uint8"):
-            TrackedPointCloud(
-                xyz=np.zeros((2, 3), dtype=np.float32),
-                rgb=np.zeros((2, 3), dtype=np.float32),
+        with pytest.raises(ContractViolation, match=r"PointCloud\.colors.*uint8"):
+            point_cloud(
+                np.zeros((2, 3), dtype=np.float32),
+                colors=np.zeros((2, 3), dtype=np.float32),
             )
 
     def test_rgb_length_mismatch_raises(self) -> None:
-        with pytest.raises(ContractViolation, match=r"TrackedPointCloud\.rgb"):
-            TrackedPointCloud(
-                xyz=np.zeros((2, 3), dtype=np.float32),
-                rgb=np.zeros((3, 3), dtype=np.uint8),
+        with pytest.raises(ContractViolation, match=r"PointCloud"):
+            point_cloud(
+                np.zeros((2, 3), dtype=np.float32),
+                colors=np.zeros((3, 3), dtype=np.uint8),
             )
 
     def test_tracks_length_mismatch_raises(self) -> None:
         with pytest.raises(ContractViolation, match="one track per point"):
-            TrackedPointCloud(xyz=np.zeros((2, 3), dtype=np.float32), tracks=((),))
+            point_cloud(np.zeros((2, 3), dtype=np.float32), tracks=((),))
 
     def test_tracks_not_a_sequence_raises(self) -> None:
-        with pytest.raises(ContractViolation, match=r"TrackedPointCloud\.tracks"):
-            TrackedPointCloud(xyz=np.zeros((1, 3), dtype=np.float32), tracks=42)  # type: ignore[arg-type]
+        with pytest.raises(ContractViolation, match=r"PointCloud\.tracks"):
+            point_cloud(np.zeros((1, 3), dtype=np.float32), tracks=42)  # type: ignore[arg-type]
 
     def test_track_entry_not_a_sequence_raises(self) -> None:
         with pytest.raises(ContractViolation, match=r"tracks\[0\]"):
-            TrackedPointCloud(xyz=np.zeros((1, 3), dtype=np.float32), tracks=(42,))  # type: ignore[arg-type]
+            point_cloud(np.zeros((1, 3), dtype=np.float32), tracks=(42,))  # type: ignore[arg-type]
 
     def test_track_obs_wrong_type_raises(self) -> None:
         with pytest.raises(ContractViolation, match="TrackObservation entries"):
-            TrackedPointCloud(
-                xyz=np.zeros((1, 3), dtype=np.float32),
+            point_cloud(
+                np.zeros((1, 3), dtype=np.float32),
                 tracks=((("a.jpg", 0),),),  # type: ignore[arg-type]
             )
+
+    def test_canonical_csr_input(self) -> None:
+        cloud = point_cloud(
+            np.zeros((2, 3), dtype=np.float32),
+            track_offsets=np.array([0, 1, 1], dtype=np.uint64),
+            track_image_ids=("a.jpg",),
+            track_keypoint_indices=np.array([7], dtype=np.uint64),
+        )
+        assert cloud.tracks == ((TrackObservation("a.jpg", 7),), ())
+
+    def test_point_codec_refuses_tracks_without_touching_destination(self, tmp_path) -> None:
+        cloud = point_cloud(
+            np.zeros((1, 3), dtype=np.float32),
+            tracks=((TrackObservation("a.jpg", 0),),),
+        )
+        destination = tmp_path / "tracked.xyz"
+        with pytest.raises(sceneio.FormatError, match="tracks"):
+            sceneio.write(cloud, destination, format="xyz")
+        assert not destination.exists()
 
 
 class TestPosePrior:

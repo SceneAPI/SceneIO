@@ -778,10 +778,10 @@
       "is_directory": false,
       "dir_marker": "cameras.bin",
       "container_kind": "multi_file",
-      "datatype": "mesh_scene",
+      "datatype": "scene_graph",
       "record": {
         "module": "sceneio._core",
-        "qualname": "MeshScene"
+        "qualname": "SceneGraph"
       },
       "selectors": [
         "mesh_id",
@@ -828,8 +828,8 @@
       ],
       "capabilities": {
         "format": "gltf",
-        "datatype": "mesh_scene",
-        "record_type": "MeshScene",
+        "datatype": "scene_graph",
+        "record_type": "SceneGraph",
         "extensions": [
           ".gltf"
         ],
@@ -896,10 +896,10 @@
       "is_directory": false,
       "dir_marker": "cameras.bin",
       "container_kind": "file",
-      "datatype": "mesh_scene",
+      "datatype": "scene_graph",
       "record": {
         "module": "sceneio._core",
-        "qualname": "MeshScene"
+        "qualname": "SceneGraph"
       },
       "selectors": [
         "mesh_id",
@@ -945,8 +945,8 @@
       ],
       "capabilities": {
         "format": "glb",
-        "datatype": "mesh_scene",
-        "record_type": "MeshScene",
+        "datatype": "scene_graph",
+        "record_type": "SceneGraph",
         "extensions": [
           ".glb"
         ],
@@ -1015,10 +1015,10 @@
       "is_directory": false,
       "dir_marker": "cameras.bin",
       "container_kind": "file",
-      "datatype": "mesh_scene",
+      "datatype": "scene_graph",
       "record": {
         "module": "sceneio._core",
-        "qualname": "MeshScene"
+        "qualname": "SceneGraph"
       },
       "selectors": [],
       "streams_read": true,
@@ -1081,8 +1081,8 @@
       ],
       "capabilities": {
         "format": "usd",
-        "datatype": "mesh_scene",
-        "record_type": "MeshScene",
+        "datatype": "scene_graph",
+        "record_type": "SceneGraph",
         "extensions": [
           ".usd",
           ".usda",
@@ -1167,10 +1167,10 @@
       "is_directory": false,
       "dir_marker": "cameras.bin",
       "container_kind": "file",
-      "datatype": "mesh_scene",
+      "datatype": "scene_graph",
       "record": {
         "module": "sceneio._core",
-        "qualname": "MeshScene"
+        "qualname": "SceneGraph"
       },
       "selectors": [],
       "streams_read": true,
@@ -1234,8 +1234,8 @@
       ],
       "capabilities": {
         "format": "usdz",
-        "datatype": "mesh_scene",
-        "record_type": "MeshScene",
+        "datatype": "scene_graph",
+        "record_type": "SceneGraph",
         "extensions": [
           ".usdz"
         ],
@@ -1536,7 +1536,7 @@
       "container_kind": "file",
       "datatype": "posed_views",
       "record": {
-        "module": "sceneio._core",
+        "module": "sceneio._data.views",
         "qualname": "PosedViewSet"
       },
       "selectors": [],
@@ -1578,7 +1578,7 @@
       "container_kind": "file",
       "datatype": "posed_views",
       "record": {
-        "module": "sceneio._core",
+        "module": "sceneio._data.views",
         "qualname": "PosedViewSet"
       },
       "selectors": [],
@@ -1618,7 +1618,7 @@
       "container_kind": "file",
       "datatype": "posed_views",
       "record": {
-        "module": "sceneio._core",
+        "module": "sceneio._data.views",
         "qualname": "PosedViewSet"
       },
       "selectors": [],

@@ -224,12 +224,12 @@ def test_write_scene_hierarchy_cross_reads_and_roundtrips(tmp_path, suffix):
     )
 
 
-def test_read_scene_mesh_projection_preserves_legacy_read_contract(tmp_path):
+def test_generic_read_and_read_scene_share_scene_graph_contract(tmp_path):
     path = tmp_path / "mesh.usda"
     path.write_text(_MESH_USDA, encoding="utf-8")
 
     rich = sceneio.read_scene(path)
-    legacy = sceneio.read(path)
+    generic = sceneio.read(path)
 
     assert isinstance(rich, sceneio.SceneGraph)
     assert rich.node_payload_kinds == ["none", "mesh", "none"]
@@ -238,8 +238,12 @@ def test_read_scene_mesh_projection_preserves_legacy_read_contract(tmp_path):
         rich.mesh_at(0).positions,
         [[0, 0, 0], [1, 0, 0], [0, 1, 0]],
     )
-    assert isinstance(legacy, sceneio.MeshScene)
-    assert legacy.num_primitives == 1
+    assert isinstance(generic, sceneio.SceneGraph)
+    assert generic.node_payload_kinds == rich.node_payload_kinds
+    np.testing.assert_array_equal(
+        generic.mesh_at(0).positions,
+        rich.mesh_at(0).positions,
+    )
 
 
 def test_read_scene_maps_indexed_mesh_and_complete_points_payload(tmp_path):
@@ -384,13 +388,8 @@ def test_write_scene_geometry_cross_reads_and_roundtrips(tmp_path, suffix):
     assert "vector3f[] velocities = [(1, 0, 0), (0, 1, 0)]" in point_text
     assert "vector3f[] accelerations = [(0, 0, 1), (1, 1, 1)]" in point_text
     assert "float3[] extent = [(1.95, 2.95, 3.95)," in point_text
-    with pytest.raises(
-        sceneio.FormatError,
-        match=r"UsdGeomPoints requires sceneio\.read_scene",
-    ):
-        sceneio.read(path)
-
-    actual = sceneio.read_scene(path)
+    actual = sceneio.read(path)
+    assert isinstance(actual, sceneio.SceneGraph)
     assert actual.node_payload_kinds == expected.node_payload_kinds
     np.testing.assert_array_equal(
         actual.node_local_transforms,
@@ -1016,7 +1015,7 @@ def test_rich_inspection_reports_stage_metadata_and_projection_boundary(
 
     result = sceneio.inspect(hierarchy)
 
-    assert result.datatype == "mesh_scene"
+    assert result.datatype == "scene_graph"
     assert result.metadata["representation"] == "usda"
     assert result.metadata["up_axis"] == "z"
     assert result.metadata["meters_per_unit"] == 0.01

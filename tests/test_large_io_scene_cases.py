@@ -109,7 +109,8 @@ def test_glb_smoke_uses_trimesh_common_input(tmp_path):
         rtol=0,
         atol=0,
     )
-    assert int(np.asarray(scene.node_meshes)[instance_index]) == 0
+    assert scene.node_payload_kinds[instance_index] == "mesh"
+    assert int(np.asarray(scene.node_payload_indices)[instance_index]) == 0
     validation = cases_scene.validate_common_input(artifact)
     assert validation["status"] == "pass"
 

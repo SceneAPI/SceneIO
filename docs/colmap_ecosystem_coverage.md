@@ -157,7 +157,7 @@ Remote C0 evidence for correction and validation commit `7046761`:
   keep the six-table payload reader guarded until each additional field is
   represented.
 - [x] Represent recovered `camera1`/`camera2` values, endpoint-local SQL NULL,
-  and prior-focal flags in `MatchGraph`.
+  and prior-focal flags in `CorrespondenceGraph.source_metadata`.
 - [x] Represent stock rigs, rig sensors, frames, frame data, and both stock
   pose-prior layouts.
 - [x] Represent extended MAXX pose priors, descriptor
@@ -212,10 +212,9 @@ C1b recovered-camera contract:
   repository-owned little-endian wire order: camera id, model id, width,
   height, prior-focal byte, parameter count, and float64 parameters. MAXX uses
   the same wire layout; C1d now represents its additional columns and tables;
-- `MatchGraph.camera1_present` / `camera2_present` preserve each SQL NULL,
-  prior-focal arrays preserve the serialized flag, and
-  `recovered_camera1(index)` / `recovered_camera2(index)` return typed
-  `Camera` values only when present;
+- `CorrespondenceGraph.source_metadata` preserves each recovered-camera SQL
+  NULL through key presence, preserves the serialized prior-focal flag, and
+  exposes typed `CameraIntrinsics` values only when present;
 - full reads and indexed pair reads use the same parser. Bounds, exact
   exhaustion, known model/parameter cardinality, dimensions, canonical flags,
   and finite numeric values are checked before the record is returned;
@@ -279,8 +278,9 @@ C1d MAXX extension read contract:
   and float64 descriptor matrices retain their raw row-major bytes. Optional
   RGB keypoint colors, image quality, and uint32 image time IDs are exposed by
   full and indexed image reads.
-- `MatchGraph` exposes per-pair score-row presence, float32 scores parallel to
-  raw matches, raw provenance flags, and retrieval-score presence.
+- `CorrespondenceGraph` exposes optional per-pair float32 score arrays parallel
+  to raw matches; `source_metadata` retains score-row presence, raw provenance
+  flags, and retrieval-score presence.
   Provenance-only pairs are retained even when neither endpoint image nor a
   match/geometry row exists. Unknown provenance bits and IEEE score payloads
   are not rewritten.

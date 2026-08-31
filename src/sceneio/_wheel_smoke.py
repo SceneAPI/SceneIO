@@ -24,6 +24,7 @@ import numpy as np
 
 import sceneio
 from sceneio import _core
+from sceneio._posed_views import posed_views_from_storage
 from sceneio.coordinates import CoordinateConvention, coordinate_convention
 from sceneio.io import registry
 
@@ -347,7 +348,7 @@ def _numpy_archives(root: Path, values: np.ndarray) -> None:
 
 
 def _smoke_label_maps():
-    taxonomy = sceneio.data.LabelTaxonomy(
+    taxonomy = sceneio._data.LabelTaxonomy(
         np.array([0, 4], np.int32),
         ("background", "object"),
         "sceneio.smoke",
@@ -356,20 +357,20 @@ def _smoke_label_maps():
         np.array([False, True], np.bool_),
     )
     valid = np.array([[True, True], [False, True]])
-    semantic = sceneio.data.SemanticMap(
+    semantic = sceneio._data.SemanticMap(
         np.array([[0, 4], [-1, 4]], np.int32),
         -1,
         valid,
         taxonomy,
     )
-    instance = sceneio.data.InstanceMap(
+    instance = sceneio._data.InstanceMap(
         np.array([[0, 9], [0, 9]], np.int64),
         0,
         valid,
         np.array([9], np.int64),
         np.array([4], np.int32),
     )
-    panoptic = sceneio.data.PanopticMap(semantic, instance)
+    panoptic = sceneio._data.PanopticMap(semantic, instance)
     return semantic, instance, panoptic
 
 
@@ -409,11 +410,11 @@ def _assert_smoke_instance_table(actual, expected) -> None:
 
 def _assert_smoke_label_map(actual, expected) -> None:
     assert type(actual) is type(expected)
-    if isinstance(expected, sceneio.data.SemanticMap):
+    if isinstance(expected, sceneio._data.SemanticMap):
         np.testing.assert_array_equal(actual.class_ids, expected.class_ids)
         assert actual.void_id == expected.void_id
         _assert_smoke_taxonomy(actual.taxonomy, expected.taxonomy)
-    elif isinstance(expected, sceneio.data.InstanceMap):
+    elif isinstance(expected, sceneio._data.InstanceMap):
         np.testing.assert_array_equal(actual.instance_ids, expected.instance_ids)
         assert actual.background_id == expected.background_id
         _assert_smoke_instance_table(actual, expected)
@@ -910,41 +911,42 @@ def _gltf_glb(root: Path) -> None:
         vertex_uvs=np.array([[0, 0], [1, 0], [0, 1]], np.float32),
         coordinate_frame="opengl",
     )
-    mesh_scene = _core.mesh_scene(
-        [primitive],
-        np.array([0, 1], np.uint64),
+    scene_graph = _core.scene_graph(
+        ["node"],
+        meshes=[primitive],
+        mesh_primitive_offsets=np.array([0, 1], np.uint64),
         mesh_names=["triangle"],
-        node_meshes=np.array([0], np.int64),
+        node_payload_kinds=["mesh"],
+        node_payload_indices=np.array([0], np.uint64),
         node_child_offsets=np.array([0, 0], np.uint64),
         node_children=np.array([], np.uint64),
         node_local_transforms=np.eye(4, dtype=np.float64)[None],
-        node_names=["node"],
         scene_root_offsets=np.array([0, 1], np.uint64),
         scene_roots=np.array([0], np.uint64),
         scene_names=["main"],
         default_scene=0,
     )
-    assert sceneio.MeshScene is _core.MeshScene
+    assert sceneio.SceneGraph is _core.SceneGraph
     for suffix, format_id in ((".gltf", "gltf"), (".glb", "glb")):
         path = root / f"mesh{suffix}"
-        sceneio.write(mesh_scene, path)
+        sceneio.write(scene_graph, path)
         assert sceneio.detect(path) == format_id
         decoded = sceneio.read(path)
         assert decoded.mesh_names == ["triangle"]
         assert np.array_equal(
-            decoded.primitive_at(0).positions, primitive.positions
+            decoded.mesh_primitive_at(0).positions, primitive.positions
         )
         assert sceneio.inspect(path).metadata["num_nodes"] == 1
         selected = sceneio.read_partial(path, primitive_id=0)
-        assert selected.num_primitives == 1
+        assert selected.num_mesh_primitives == 1
         assert np.array_equal(
-            selected.primitive_at(0).face_indices,
+            selected.mesh_primitive_at(0).face_indices,
             primitive.face_indices,
         )
         selected_mesh = sceneio.read_partial(path, mesh_id=0)
-        assert selected_mesh.num_primitives == 1
+        assert selected_mesh.num_mesh_primitives == 1
         assert np.array_equal(
-            selected_mesh.primitive_at(0).positions,
+            selected_mesh.mesh_primitive_at(0).positions,
             primitive.positions,
         )
 
@@ -1127,14 +1129,23 @@ def _reconstruction_formats(root: Path) -> None:
         b"1.5 -2.5 3.5 10 20 30 1 0 0 4.5 -5.5\n"
         b"0\n"
     )
-    transforms_json = _core.read_transforms_json(
-        b'{"camera_model":"PINHOLE","fl_x":500,"fl_y":510,'
-        b'"cx":320,"cy":240,"w":640,"h":480,"frames":['
-        b'{"file_path":"a.png","transform_matrix":'
-        b"[[1,0,0,1],[0,1,0,2],[0,0,1,3],[0,0,0,1]]}]}"
+    transforms_json = posed_views_from_storage(
+        _core.read_transforms_json(
+            b'{"camera_model":"PINHOLE","fl_x":500,"fl_y":510,'
+            b'"cx":320,"cy":240,"w":640,"h":480,"frames":['
+            b'{"file_path":"a.png","transform_matrix":'
+            b"[[1,0,0,1],[0,1,0,2],[0,0,1,3],[0,0,0,1]]}]}"
+        ),
+        source_profile="transforms_json",
     )
-    tum = _core.read_tum(b"0 1 2 3 0 0 0 1\n")
-    kitti = _core.read_kitti(b"1 0 0 1 0 1 0 2 0 0 1 3\n")
+    tum = posed_views_from_storage(
+        _core.read_tum(b"0 1 2 3 0 0 0 1\n"),
+        source_profile="tum",
+    )
+    kitti = posed_views_from_storage(
+        _core.read_kitti(b"1 0 0 1 0 1 0 2 0 0 1 3\n"),
+        source_profile="kitti",
+    )
     cases = (
         ("colmap_sparse", root / "colmap-binary", reconstruction),
         ("transforms_json", root / "transforms.json", transforms_json),
@@ -1171,7 +1182,7 @@ def _reconstruction_formats(root: Path) -> None:
             )
             assert selected.num_images == 1
         _remove_smoke_artifact(path)
-        if isinstance(decoded, _core.PosedViewSet):
+        if isinstance(decoded, sceneio.PosedViewSet):
             assert decoded.num_views == 1
         else:
             assert decoded.num_images == 1
@@ -1337,8 +1348,7 @@ def _pose_graph(root: Path) -> None:
 
 
 def _colmap_database(root: Path) -> None:
-    camera = _core.camera(
-        5,
+    camera = _core.camera_intrinsics(
         1,
         640,
         480,
@@ -1356,7 +1366,7 @@ def _colmap_database(root: Path) -> None:
         )
         for image_id in (2, 11)
     ]
-    graph = _core.match_graph(
+    graph = _core.correspondence_storage(
         np.array([[2, 11]], np.uint32),
         np.array([0, 1], np.uint64),
         np.array([[0, 1]], np.uint32),
@@ -1369,13 +1379,14 @@ def _colmap_database(root: Path) -> None:
         match_present=np.array([1], np.uint8),
     )
     database = _core.colmap_database(
+        np.array([5], np.uint32),
         [camera],
         features,
         graph,
         prior_focal_length=np.array([1], np.uint8),
     )
     assert sceneio.FeatureSet is _core.FeatureSet
-    assert sceneio.MatchGraph is _core.MatchGraph
+    assert sceneio.CorrespondenceGraph.__name__ == "CorrespondenceGraph"
     assert sceneio.ColmapDatabase is _core.ColmapDatabase
     assert sceneio.ColmapDatabaseConversionReport.__name__ == (
         "ColmapDatabaseConversionReport"
@@ -1390,11 +1401,14 @@ def _colmap_database(root: Path) -> None:
     assert sceneio.detect(path) == "colmap_db"
     decoded = sceneio.read(path)
     assert decoded.num_images == 2
-    assert decoded.match_graph.image_pairs.tolist() == [[2, 11]]
+    np.testing.assert_array_equal(
+        decoded.correspondences.pairs[("2.jpg", "11.jpg")].indices,
+        [[0, 1]],
+    )
     selected_image = sceneio.read_partial(path, image_id=11)
     assert selected_image.image_name == "11.jpg"
     selected_pair = sceneio.read_partial(path, pair=(11, 2))
-    assert selected_pair.matches.tolist() == [[0, 1]]
+    assert selected_pair.pairs[("2.jpg", "11.jpg")].indices.tolist() == [[0, 1]]
     inspected = sceneio.inspect(path)
     assert inspected.metadata["num_cameras"] == 1
     assert inspected.metadata["num_matches"] == 1
@@ -1466,9 +1480,13 @@ def _colmap_database(root: Path) -> None:
     assert maxx.feature(2).keypoint_colors.tolist() == [[1, 2, 3]]
     assert maxx.markers.marker_types.tolist() == [3]
     assert maxx.video_metadata.video_frame_indices.tolist() == [0]
-    assert maxx.match_graph.source_flags.tolist() == [65]
+    assert maxx.correspondences.source_metadata[("2.jpg", "3")]["source_flags"] == 65
     assert sceneio.read_partial(maxx_path, image_id=2).quality == 0.75
-    assert sceneio.read_partial(maxx_path, pair=(3, 2)).source_flags.tolist() == [65]
+    assert (
+        sceneio.read_partial(maxx_path, pair=(3, 2))
+        .source_metadata[("2.jpg", "3")]["source_flags"]
+        == 65
+    )
     assert sceneio.inspect(maxx_path).metadata["num_markers"] == 1
     report = sceneio.colmap_database_conversion_report(
         maxx, profile="maxx-v1"
@@ -1488,6 +1506,7 @@ def _colmap_database(root: Path) -> None:
 def _hdf5_formats(root: Path) -> None:
     if not sceneio.capabilities("hdf5").available:
         return
+    from sceneio._correspondence import graph_from_storage
 
     tensors = _core.tensor_dict(
         {
@@ -1532,7 +1551,7 @@ def _hdf5_formats(root: Path) -> None:
     )
     assert sceneio.inspect(feature_path).metadata["image_count"] == 1
 
-    graph = _core.match_graph(
+    graph = _core.correspondence_storage(
         np.array([[1, 2]], dtype=np.uint32),
         np.array([0, 2], dtype=np.uint64),
         np.array([[0, 1], [2, 3]], dtype=np.uint32),
@@ -1549,13 +1568,21 @@ def _hdf5_formats(root: Path) -> None:
         (4,),
         ("int16",),
         ("float16",),
-        graph,
+        graph_from_storage(
+            graph,
+            image_names=("db/a.jpg", "query/b.jpg"),
+        ),
     )
     match_path = root / "matches.h5"
     sceneio.write(match_store, match_path)
     assert sceneio.detect(match_path) == "hloc_matches"
     decoded_matches = sceneio.read(match_path)
-    np.testing.assert_array_equal(decoded_matches.graph.matches, graph.matches)
+    np.testing.assert_array_equal(
+        decoded_matches.correspondences.pairs[
+            ("db/a.jpg", "query/b.jpg")
+        ].indices,
+        graph.matches,
+    )
     assert sceneio.inspect(match_path).metadata["pair_count"] == 1
 
 
@@ -1785,17 +1812,14 @@ def _usd_formats(root: Path) -> None:
         np.array([0, 1, 2], dtype=np.uint64),
         coordinate_frame="opengl",
     )
-    source = _core.mesh_scene(
-        [mesh],
-        np.array([0, 1], dtype=np.uint64),
-        node_meshes=np.array([0], dtype=np.int64),
+    source = _core.scene_graph(
+        ["Triangle"],
+        meshes=[mesh],
+        node_payload_kinds=["mesh"],
+        node_payload_indices=np.array([0], dtype=np.uint64),
         node_child_offsets=np.array([0, 0], dtype=np.uint64),
         node_children=np.empty(0, dtype=np.uint64),
         node_local_transforms=np.eye(4, dtype=np.float64)[None],
-        node_names=["Triangle"],
-        scene_root_offsets=np.array([0, 1], dtype=np.uint64),
-        scene_roots=np.array([0], dtype=np.uint64),
-        default_scene=0,
     )
     for format_id, suffix in (("usd", ".usd"), ("usdz", ".usdz")):
         path = root / f"scene{suffix}"
@@ -1803,7 +1827,7 @@ def _usd_formats(root: Path) -> None:
         assert sceneio.detect(path) == format_id
         decoded = sceneio.read(path)
         np.testing.assert_array_equal(
-            decoded.primitive_at(0).positions,
+            decoded.mesh_at(0).positions,
             positions,
         )
         info = sceneio.inspect(path)
@@ -2052,7 +2076,7 @@ def _rtmv_dataset(root: Path) -> None:
     dataset = sceneio.read(directory)
     assert dataset.num_frames == 2
     assert dataset.object_counts == (0, 1)
-    assert dataset.views.num_cameras == 2
+    assert sum(value is not None for value in dataset.views.calibrations) == 2
     assert sceneio.inspect(directory).shape == (2, 3, 4, 4)
     assert sceneio.read_partial(directory, frames=(1, 2)).frame_ids == (
         "00001",
@@ -2137,13 +2161,13 @@ def _ncore_v4(root: Path) -> None:
         strict=True,
     ):
         if kind == "semantic":
-            expected_labels = sceneio.data.SemanticMap(
+            expected_labels = sceneio._data.SemanticMap(
                 source_labels.class_ids,
                 source_labels.void_id,
                 taxonomy=source_labels.taxonomy,
             )
         elif kind == "instance":
-            expected_labels = sceneio.data.InstanceMap(
+            expected_labels = sceneio._data.InstanceMap(
                 source_labels.instance_ids,
                 source_labels.background_id,
                 table_instance_ids=source_labels.table_instance_ids,
@@ -2156,13 +2180,13 @@ def _ncore_v4(root: Path) -> None:
                 order="C",
             )
             semantic_ids[semantic_ids == source_labels.semantic.void_id] = 0
-            expected_labels = sceneio.data.PanopticMap(
-                sceneio.data.SemanticMap(
+            expected_labels = sceneio._data.PanopticMap(
+                sceneio._data.SemanticMap(
                     semantic_ids,
                     source_labels.semantic.void_id,
                     taxonomy=source_labels.semantic.taxonomy,
                 ),
-                sceneio.data.InstanceMap(
+                sceneio._data.InstanceMap(
                     source_labels.instance.instance_ids,
                     source_labels.instance.background_id,
                     table_instance_ids=source_labels.instance.table_instance_ids,
@@ -2388,17 +2412,19 @@ def _dense_mvs(root: Path) -> None:
 
 
 def _colmap_adapters(root: Path) -> None:
+    from sceneio import (
+        CorrespondenceGraph,
+        PairCorrespondences,
+        Sim3,
+        camera_intrinsics,
+        feature_set,
+    )
     from sceneio.colmap import (
-        MappingCamera,
-        MappingImage,
         MappingInput,
         MegaLocArtifacts,
         MegaLocImage,
-        NamedMatches,
         RigConfigCamera,
         RigConfiguration,
-        SiftFeatures,
-        SimilarityTransform,
         inspect_mapping_input,
         inspect_megaloc_artifacts,
         read_extended_sparse_model,
@@ -2420,32 +2446,28 @@ def _colmap_adapters(root: Path) -> None:
         write_sift_features,
         write_similarity_transform,
     )
-
+    mapping_features = {
+        "frame.png": feature_set(np.array([[1, 2]], dtype=np.float32))
+    }
     mapping = MappingInput(
-        2,
-        (
-            MappingCamera(
-                1,
+        version=2,
+        cameras={
+            1: camera_intrinsics(
                 1,
                 640,
                 480,
                 np.array([500, 500, 320, 240], dtype=np.float64),
-            ),
-        ),
-        (
-            MappingImage(
-                1,
-                1,
-                2,
-                "frame.png",
-                np.array([[1, 2]], dtype=np.float32),
-            ),
-        ),
-        (),
+            )
+        },
+        camera_prior_focal_length={1: False},
+        image_ids={"frame.png": 1},
+        image_camera_ids={"frame.png": 1},
+        image_time_ids={"frame.png": 2},
+        correspondences=CorrespondenceGraph(mapping_features, {}),
     )
     mapping_path = root / "mapping.pcmapin"
     write_mapping_input(mapping, mapping_path)
-    assert read_mapping_input(mapping_path).images[0].time_id == 2
+    assert read_mapping_input(mapping_path).image_time_ids["frame.png"] == 2
     assert inspect_mapping_input(mapping_path)["num_images"] == 1
 
     megaloc = MegaLocArtifacts(
@@ -2485,7 +2507,7 @@ def _colmap_adapters(root: Path) -> None:
 
     sift_path = root / "sift.txt"
     write_sift_features(
-        SiftFeatures(
+        feature_set(
             np.array([[1, 2, 3, 4]], dtype=np.float32),
             np.arange(128, dtype=np.uint8).reshape(1, 128),
         ),
@@ -2508,27 +2530,38 @@ def _colmap_adapters(root: Path) -> None:
 
     match_path = root / "matches.txt"
     write_feature_matches(
-        (
-            NamedMatches(
-                "left.png",
-                "right.png",
-                np.array([[0, 1]], dtype=np.uint32),
-            ),
+        CorrespondenceGraph(
+            {},
+            {
+                ("left.png", "right.png"): PairCorrespondences.from_indices(
+                    np.array([[0, 1]], dtype=np.uint32)
+                )
+            },
+            index_validation="deferred",
         ),
         match_path,
     )
-    assert read_feature_matches(match_path)[0].matches[0, 1] == 1
+    assert (
+        read_feature_matches(match_path)
+        .pairs[("left.png", "right.png")]
+        .indices[0, 1]
+        == 1
+    )
 
     sim3_path = root / "sim3.txt"
     write_similarity_transform(
-        SimilarityTransform(
+        Sim3.from_quaternion_wxyz(
             2.0,
             np.array([1, 0, 0, 0], dtype=np.float64),
             np.array([1, 2, 3], dtype=np.float64),
+            convention="opencv_cam2world",
         ),
         sim3_path,
     )
-    assert read_similarity_transform(sim3_path).scale == 2.0
+    assert (
+        read_similarity_transform(sim3_path, convention="opencv_cam2world").scale
+        == 2.0
+    )
 
     sparse = root / "sparse"
     sparse.mkdir()

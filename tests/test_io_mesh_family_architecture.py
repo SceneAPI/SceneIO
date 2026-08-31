@@ -88,10 +88,10 @@ def test_mesh_definitions_preserve_canonical_order_and_identity():
     assert definitions[1].record is _core.Mesh
     assert definitions[2].record is _core.Mesh
     assert definitions[3].record is _core.Mesh
-    assert definitions[4].record is _core.MeshScene
-    assert definitions[5].record is _core.MeshScene
-    assert definitions[6].record is _core.MeshScene
-    assert definitions[7].record is _core.MeshScene
+    assert definitions[4].record is _core.SceneGraph
+    assert definitions[5].record is _core.SceneGraph
+    assert definitions[6].record is _core.SceneGraph
+    assert definitions[7].record is _core.SceneGraph
 
 
 def test_mesh_bespoke_adapter_and_selector_identities_are_exact():

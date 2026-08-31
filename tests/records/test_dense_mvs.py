@@ -120,7 +120,7 @@ def test_dense_records_are_public():
     assert sceneio.NormalMap is _core.NormalMap
     assert sceneio.ConsistencyGraph is _core.ConsistencyGraph
     assert sceneio.PointVisibility is _core.PointVisibility
-    assert sceneio.io.NormalMap is _core.NormalMap
+    assert not hasattr(sceneio.io, "NormalMap")
 
 
 def test_depth_convention_is_additive_and_guarded():

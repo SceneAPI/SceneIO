@@ -1448,7 +1448,7 @@ def inspect_scene(
 
     return Inspection(
         format=format_id,
-        datatype="mesh_scene" if mesh_projection_available else "scene_graph",
+        datatype="scene_graph",
         byte_size=Path(path).stat().st_size,
         shape=(vertices, 3),
         dtype="float32" if primitive_count else None,
@@ -1536,6 +1536,33 @@ def _validate_writable_scene(scene) -> tuple[object, ...]:
             "USD: external asset writing is not available for: "
             + ", ".join(unsupported_assets)
         )
+    mesh_offsets = np.asarray(scene.mesh_primitive_offsets)
+    if not np.array_equal(
+        mesh_offsets,
+        np.arange(scene.num_meshes + 1, dtype=np.uint64),
+    ):
+        raise ValueError(
+            "USD: logical meshes with multiple primitive payloads are not "
+            "representable without changing the node hierarchy"
+        )
+    if scene.num_scenes:
+        roots = np.flatnonzero(np.asarray(scene.node_parents) == -1)
+        scene_offsets = np.asarray(scene.scene_root_offsets)
+        scene_roots = np.asarray(scene.scene_roots)
+        compatible_scene = (
+            scene.num_scenes == 1
+            and scene.default_scene == 0
+            and scene.scene_names == [""]
+            and np.array_equal(
+                scene_offsets,
+                np.array([0, len(scene_roots)], dtype=np.uint64),
+            )
+            and set(map(int, scene_roots)) == set(map(int, roots))
+        )
+        if not compatible_scene:
+            raise ValueError(
+                "USD: named or multiple document scene sets are not representable"
+            )
     materials.validate_writable_materials(scene)
     names = tuple(scene.node_names)
     for name in names:
@@ -1555,6 +1582,8 @@ def _validate_writable_scene(scene) -> tuple[object, ...]:
     children = np.asarray(scene.node_children)
     payload_indices = np.asarray(scene.node_payload_indices)
     node_paths = _node_paths(names, parents)
+    if len(node_paths) != len(set(node_paths)):
+        raise ValueError("USD: sibling node names must be unique")
     used_meshes: set[int] = set()
     used_points: set[int] = set()
     used_gaussians: set[int] = set()

@@ -20,8 +20,6 @@ from sceneio.representations import REPRESENTATION_CONTRACTS
 
 BASELINE_PUBLIC_TYPE_NAMESPACES = (
     "sceneio",
-    "sceneio.io",
-    "sceneio.data",
     "sceneio.colmap",
     "sceneio.colmap_mvs",
     "sceneio.formats",
@@ -184,30 +182,10 @@ def _entry(
 
 
 def _representation_aliases(canonical_path: str) -> tuple[str, ...]:
-    if canonical_path.count(".") == 1:
-        return (f"sceneio.io.{canonical_path.rsplit('.', 1)[-1]}",)
-    if canonical_path in {
-        "sceneio.data.RasterCollection",
-        "sceneio.data.RasterLevel",
-        "sceneio.data.RasterSeries",
-    }:
-        return (f"sceneio.{canonical_path.rsplit('.', 1)[-1]}",)
     return ()
 
 
 def _representation_entries() -> tuple[PublicTypeContract, ...]:
-    adapter_targets = {
-        "sceneio.Camera": "sceneio.data.CameraIntrinsics",
-        "sceneio.data.CameraIntrinsics": "sceneio.Camera",
-        "sceneio.FeatureSet": "sceneio.data.FeatureSet",
-        "sceneio.data.FeatureSet": "sceneio.FeatureSet",
-        "sceneio.MatchGraph": "sceneio.data.CorrespondenceGraph",
-        "sceneio.data.CorrespondenceGraph": "sceneio.MatchGraph",
-        "sceneio.DepthMap": "sceneio.data.DepthMap",
-        "sceneio.data.DepthMap": "sceneio.DepthMap",
-        "sceneio.PosedViewSet": "sceneio.data.PosedViewSet",
-        "sceneio.data.PosedViewSet": "sceneio.PosedViewSet",
-    }
     entries: list[PublicTypeContract] = []
     for canonical_path, specialized in REPRESENTATION_CONTRACTS.items():
         evidence = tuple(
@@ -219,7 +197,7 @@ def _representation_entries() -> tuple[PublicTypeContract, ...]:
                 aliases=_representation_aliases(canonical_path),
                 implementation_paths=(),
                 kind="representation",
-                stability="stable",
+                stability="provisional",
                 summary=(
                     "Numeric normalization, scale, coordinate, and conversion "
                     f"contract for {canonical_path}."
@@ -230,11 +208,6 @@ def _representation_entries() -> tuple[PublicTypeContract, ...]:
                 evidence=evidence,
                 relations=(
                     _relation("profile", f"representation-profile:{specialized.profile.id}"),
-                    *(
-                        (_relation("adapts_to", adapter_targets[canonical_path]),)
-                        if canonical_path in adapter_targets
-                        else ()
-                    ),
                 ),
                 specialized_contract_key=canonical_path,
                 specialized_contract=specialized,
@@ -248,7 +221,6 @@ def _descriptor_entries() -> tuple[PublicTypeContract, ...]:
     return (
         _entry(
             "sceneio.ArrayInspection",
-            aliases=("sceneio.io.ArrayInspection",),
             implementation_paths=("sceneio.io._inspection.ArrayInspection",),
             kind="descriptor",
             summary="Immutable shape and dtype summary for one named array.",
@@ -291,7 +263,6 @@ def _descriptor_entries() -> tuple[PublicTypeContract, ...]:
         ),
         _entry(
             "sceneio.CodecCapabilities",
-            aliases=("sceneio.io.CodecCapabilities",),
             implementation_paths=("sceneio.io.registry.CodecCapabilities",),
             kind="descriptor",
             summary="Frozen discovery metadata for one registered codec.",
@@ -350,7 +321,6 @@ def _descriptor_entries() -> tuple[PublicTypeContract, ...]:
         ),
         _entry(
             "sceneio.ColmapDatabaseConversionReport",
-            aliases=("sceneio.io.ColmapDatabaseConversionReport",),
             implementation_paths=("sceneio.colmap_db.ColmapDatabaseConversionReport",),
             kind="descriptor",
             summary="Destination-free report for an exact COLMAP database profile conversion.",
@@ -400,7 +370,6 @@ def _descriptor_entries() -> tuple[PublicTypeContract, ...]:
         ),
         _entry(
             "sceneio.CoordinateConvention",
-            aliases=("sceneio.io.CoordinateConvention",),
             implementation_paths=("sceneio.coordinates.CoordinateConvention",),
             kind="descriptor",
             summary="Immutable coordinate, pose, image, depth, and scale convention value.",
@@ -474,7 +443,6 @@ def _descriptor_entries() -> tuple[PublicTypeContract, ...]:
         ),
         _entry(
             "sceneio.DepthEncoding",
-            aliases=("sceneio.io.DepthEncoding",),
             implementation_paths=("sceneio.io._depth.DepthEncoding",),
             kind="descriptor",
             summary="Explicit stored-depth unit, scale, invalid-value, and channel contract.",
@@ -500,7 +468,6 @@ def _descriptor_entries() -> tuple[PublicTypeContract, ...]:
         ),
         _entry(
             "sceneio.FormatCoordinateContract",
-            aliases=("sceneio.io.FormatCoordinateContract",),
             implementation_paths=("sceneio.coordinates.FormatCoordinateContract",),
             kind="descriptor",
             summary="Per-format coordinate status, domains, writer rule, and conversion boundary.",
@@ -528,7 +495,6 @@ def _descriptor_entries() -> tuple[PublicTypeContract, ...]:
         ),
         _entry(
             "sceneio.Inspection",
-            aliases=("sceneio.io.Inspection",),
             implementation_paths=("sceneio.io._inspection.Inspection",),
             kind="descriptor",
             summary="Immutable metadata-only inspection result for one format payload.",
@@ -585,7 +551,6 @@ def _descriptor_entries() -> tuple[PublicTypeContract, ...]:
         ),
         _entry(
             "sceneio.NativeFeatureCapabilities",
-            aliases=("sceneio.io.NativeFeatureCapabilities",),
             implementation_paths=("sceneio.io.registry.NativeFeatureCapabilities",),
             kind="descriptor",
             summary="Frozen build-option and format metadata for one optional native seam.",
@@ -694,7 +659,7 @@ def _descriptor_entries() -> tuple[PublicTypeContract, ...]:
             ),
         ),
         _entry(
-            "sceneio.io.Codec",
+            "sceneio.Codec",
             implementation_paths=("sceneio.io.registry.Codec",),
             kind="descriptor",
             summary="One format's immutable read/write/inspect/partial dispatch definition.",
@@ -889,7 +854,7 @@ def _procedure_entries() -> tuple[PublicTypeContract, ...]:
                 (("poses", "tuple[SE3 | None, ...]"), ("frame", "FrameMeta")),
                 (
                     ("calibrations", "tuple[Calibration | None, ...] | None", "None"),
-                    ("geometry", "TrackedPointCloud | None", "None"),
+                    ("geometry", "PointCloud | None", "None"),
                     ("dense", "tuple[tuple[Pointmap, ConfidenceMap] | None, ...] | None", "None"),
                     ("stats", "Mapping[str, object]", "<factory>"),
                 ),
@@ -913,7 +878,8 @@ def _procedure_entries() -> tuple[PublicTypeContract, ...]:
             ),
             relations=(
                 _relation("output_of", "sceneio.mapping.Mapper"),
-                _relation("contains", "sceneio.data.FrameMeta"),
+                _relation("contains", "sceneio.FrameMeta"),
+                _relation("contains", "sceneio.PointCloud"),
             ),
         ),
         _entry(
@@ -1067,7 +1033,7 @@ def _protocol_entries() -> tuple[PublicTypeContract, ...]:
                 ),
             ),
             relations=(
-                _relation("input_to", "sceneio.data.ViewInput"),
+                _relation("input_to", "sceneio.ViewInput"),
                 _relation("output_of", "sceneio.mapping.MappingResult"),
             ),
         ),
@@ -1087,8 +1053,8 @@ def _protocol_entries() -> tuple[PublicTypeContract, ...]:
             refusal="Invalid operands or outputs fail matcher conformance.",
             evidence=(signature_evidence,),
             relations=(
-                _relation("input_to", "sceneio.data.ImageRef"),
-                _relation("output_of", "sceneio.data.FeatureSet"),
+                _relation("input_to", "sceneio.ImageRef"),
+                _relation("output_of", "sceneio.FeatureSet"),
             ),
         ),
         _entry(
@@ -1113,8 +1079,8 @@ def _protocol_entries() -> tuple[PublicTypeContract, ...]:
                 ),
             ),
             relations=(
-                _relation("input_to", "sceneio.data.PairCorrespondences"),
-                _relation("output_of", "sceneio.data.PairCorrespondences"),
+                _relation("input_to", "sceneio.PairCorrespondences"),
+                _relation("output_of", "sceneio.PairCorrespondences"),
             ),
         ),
         _entry(
@@ -1143,7 +1109,7 @@ def _protocol_entries() -> tuple[PublicTypeContract, ...]:
                     "procedure_conformance",
                 ),
             ),
-            relations=(_relation("output_of", "sceneio.data.PairCorrespondences"),),
+            relations=(_relation("output_of", "sceneio.PairCorrespondences"),),
         ),
     )
 
@@ -1152,8 +1118,8 @@ def _vocabulary_entries() -> tuple[PublicTypeContract, ...]:
     surface = _node(_SURFACE_TEST, "public_identity", "member_shape", "alias_identity")
     return (
         _entry(
-            "sceneio.data.CameraModel",
-            implementation_paths=("sceneio.data.calibration.CameraModel",),
+            "sceneio.CameraModel",
+            implementation_paths=("sceneio._data.calibration.CameraModel",),
             kind="vocabulary",
             summary="Closed public COLMAP camera-model vocabulary used by neutral calibration records.",
             members=tuple(_enum_value(value, value) for value in CAMERA_MODEL_NAMES),
@@ -1280,7 +1246,6 @@ def _error_entries() -> tuple[PublicTypeContract, ...]:
             "sceneio.SceneIoError",
             "Normalized public format detection, inspection, read, or write failure.",
             "Provider-specific failures do not escape public I/O without normalization.",
-            aliases=("sceneio.io.FormatError",),
         ),
         error(
             "sceneio.colmap.ColmapAdapterError",

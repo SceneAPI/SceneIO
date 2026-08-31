@@ -111,8 +111,8 @@
     }
   },
   "sog_encoding_contract": {
-    "generator": "SceneIO 0.3.0",
-    "metadata_sha256": "742d2354c144cb43a5fbf0df5a6e1ddfc89b7076e031ffbe9c5140b1b6441a3b",
+    "generator": "SceneIO 0.4.0",
+    "metadata_sha256": "ec159eac08f53077632a1b4eda2c4d043b519c20ef1545d045959165166728ef",
     "means_min_z_hex": "-0x1.193ea7aad030ap+0",
     "members": [
       "means_l.webp",
@@ -224,7 +224,7 @@
     },
     "sog": {
       "byte_size": 4698,
-      "sha256": "9792ce4b15542cff16b4aaf22eb06434fe8799d829f87284cda4811b98da8982",
+      "sha256": "2e3eb3dd5e32c8dbc7b73f5446c2fe82cc312334b64e5f9ef01e542d7cf61585",
       "record_sha256": "35db6f3b74ecf866b2d5c53d4e94f9bef2cc8b49ccab751ed96439765b61a8b7",
       "inspection": {
         "format": "sog",
@@ -402,7 +402,7 @@
         },
         "meta.json": {
           "byte_size": 3582,
-          "sha256": "742d2354c144cb43a5fbf0df5a6e1ddfc89b7076e031ffbe9c5140b1b6441a3b"
+          "sha256": "ec159eac08f53077632a1b4eda2c4d043b519c20ef1545d045959165166728ef"
         },
         "quats.webp": {
           "byte_size": 98,

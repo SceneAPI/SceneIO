@@ -146,34 +146,21 @@ def test_reads_independent_rtmv_layout_and_preserves_lazy_layers(tmp_path):
         dataset.segmentation_channels,
     ) == (4, 4, 4)
     assert all(Path(path).is_absolute() for path in dataset.rgb_paths)
-    assert dataset.views.pose_convention == "camera_to_world"
-    assert dataset.views.axis_frame == "opengl"
-    assert dataset.views.quaternion_order == "wxyz"
-    # RTMV stores XYZW quaternions.  The independently derived WXYZ values
-    # below pin both component order and the row-vector -> camera-to-world
-    # normalization performed while building the posed-view record.
-    np.testing.assert_allclose(
-        np.asarray(dataset.views.quaternions),
-        np.asarray(
-            [
-                [
-                    math.cos((index + 1) * 0.1),
-                    *(np.asarray([1.0, 2.0, 3.0]) / math.sqrt(14.0)
-                      * math.sin((index + 1) * 0.1)),
-                ]
-                for index in range(3)
-            ],
-            dtype=np.float64,
-        ),
-        atol=1e-12,
-        rtol=0.0,
-    )
-    np.testing.assert_allclose(
-        np.asarray(dataset.views.translations),
-        [[0.25, -0.5, 2.0], [1.25, -0.5, 2.0], [2.25, -0.5, 2.0]],
-        atol=1e-12,
-    )
-    for index, camera in enumerate(dataset.views.cameras):
+    assert all(pose.convention == "opencv_cam2world" for pose in dataset.views.poses)
+    assert dataset.views.coordinates.camera_axes == "opencv"
+    assert dataset.views.coordinates.pose_direction == "camera_to_world"
+    opengl_from_opencv = np.diag([1.0, -1.0, -1.0, 1.0])
+    for index, pose in enumerate(dataset.views.poses):
+        source = np.asarray(_metadata(index)["camera_data"]["cam2world"]).T
+        np.testing.assert_allclose(
+            pose.matrix,
+            source @ opengl_from_opencv,
+            atol=1e-12,
+            rtol=0.0,
+        )
+    for index, calibration in enumerate(dataset.views.calibrations):
+        assert calibration is not None and calibration.intrinsics is not None
+        camera = calibration.intrinsics
         assert camera.model == "PINHOLE"
         assert (camera.width, camera.height) == (4, 3)
         np.testing.assert_allclose(
@@ -222,16 +209,20 @@ def test_partial_read_is_exact_slice_of_full_read(tmp_path):
     assert selected.depth_paths == full.depth_paths[1:3]
     assert selected.segmentation_paths == full.segmentation_paths[1:3]
     assert selected.object_counts == full.object_counts[1:3]
-    np.testing.assert_array_equal(
-        np.asarray(selected.views.quaternions),
-        np.asarray(full.views.quaternions)[1:3],
-    )
-    np.testing.assert_array_equal(
-        np.asarray(selected.views.translations),
-        np.asarray(full.views.translations)[1:3],
-    )
-    assert [tuple(camera.params) for camera in selected.views.cameras] == [
-        tuple(camera.params) for camera in full.views.cameras[1:3]
+    for selected_pose, full_pose in zip(
+        selected.views.poses,
+        full.views.poses[1:3],
+        strict=True,
+    ):
+        np.testing.assert_array_equal(selected_pose.matrix, full_pose.matrix)
+    assert [
+        tuple(calibration.intrinsics.params)
+        for calibration in selected.views.calibrations
+        if calibration is not None and calibration.intrinsics is not None
+    ] == [
+        tuple(calibration.intrinsics.params)
+        for calibration in full.views.calibrations[1:3]
+        if calibration is not None and calibration.intrinsics is not None
     ]
 
 

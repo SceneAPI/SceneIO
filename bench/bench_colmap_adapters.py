@@ -12,9 +12,8 @@ from pathlib import Path
 
 import numpy as np
 
+from sceneio import CorrespondenceGraph, camera_intrinsics, feature_set
 from sceneio.colmap import (
-    MappingCamera,
-    MappingImage,
     MappingInput,
     MegaLocArtifacts,
     MegaLocImage,
@@ -62,18 +61,28 @@ def run(*, rows: int, repeats: int) -> list[str]:
         root = Path(raw_root)
         keypoints = np.arange(rows * 2, dtype=np.float32).reshape(rows, 2)
         mapping = MappingInput(
-            2,
-            (
-                MappingCamera(
-                    1,
+            version=2,
+            cameras={
+                1: camera_intrinsics(
                     1,
                     4096,
                     2160,
                     np.array([2000, 2000, 2048, 1080], dtype=np.float64),
-                ),
+                )
+            },
+            camera_prior_focal_length={1: False},
+            image_ids={"frame.png": 1},
+            image_camera_ids={"frame.png": 1},
+            image_time_ids={"frame.png": 1},
+            correspondences=CorrespondenceGraph(
+                {
+                    "frame.png": feature_set(
+                        keypoints,
+                        image_size=(4096, 2160),
+                    )
+                },
+                {},
             ),
-            (MappingImage(1, 1, 1, "frame.png", keypoints),),
-            (),
         )
         mapping_path = root / "mapping.pcmapin"
         write_mapping_input(mapping, mapping_path)

@@ -7,8 +7,7 @@ import pytest
 from _support.partial_read import _assert_image_window
 
 import sceneio
-from sceneio import _core
-from sceneio.io import FormatError
+from sceneio import FormatError, _core
 
 
 @pytest.mark.parametrize("channels", [1, 3])

@@ -13,7 +13,7 @@ from itertools import pairwise
 
 import numpy as np
 
-from sceneio.data.dense import Mask
+from sceneio._data.dense import Mask
 from sceneio.errors import ContractViolation
 
 RASTER_AXES: frozenset[str] = frozenset({"YX", "YXC", "CYX", "IYX", "QYX", "TYX", "ZYX"})

@@ -5,7 +5,7 @@
 > Later format work followed the now-completed
 > [`format-gap plan`](format_gap_implementation_plan.md). Its original goals
 > and non-goals below describe that initial scope; use
-> [`format_coverage.md`](format_coverage.md) for SceneIO 0.3.0 capabilities.
+> [`format_coverage.md`](format_coverage.md) for current capabilities.
 
 The original design explains how to implement read/write **and** the
 in-memory representation for the safe format set

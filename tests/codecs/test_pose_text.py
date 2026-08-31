@@ -164,13 +164,13 @@ def _rand_rotations(n, seed):
 
 
 def _pvs_tum(quats_xyzw, trans, stamps):
-    return _core.posed_view_set(
+    return _core.pose_storage(
         quats_xyzw, trans, timestamps=np.asarray(stamps, np.float64), quaternion_order="xyzw"
     )
 
 
 def _pvs_kitti(quats_wxyz, trans):
-    return _core.posed_view_set(quats_wxyz, trans, quaternion_order="wxyz")
+    return _core.pose_storage(quats_wxyz, trans, quaternion_order="wxyz")
 
 
 # =========================== TUM ===========================================
@@ -249,7 +249,7 @@ def test_tum_write_defaults_stamps_to_index():
     # a PosedViewSet with no timestamps -> writer emits 0,1,2,... as the stamp
     q = _rand_quats_xyzw(3, 9)
     t = _rand_trans(3, 10)
-    pvs = _core.posed_view_set(q, t, quaternion_order="xyzw")  # no timestamps
+    pvs = _core.pose_storage(q, t, quaternion_order="xyzw")  # no timestamps
     _, _, s = oracle_read_tum(_core.write_tum(pvs))
     np.testing.assert_array_equal(s, np.arange(3, dtype=np.float64))
 
@@ -260,7 +260,7 @@ def test_tum_torch_interop():
     t = _rand_trans(5, 12)
     s = np.arange(5, dtype=np.float64)
     # build the record from torch tensors (float64), then round-trip
-    pvs = _core.posed_view_set(
+    pvs = _core.pose_storage(
         torch.from_numpy(q).contiguous(),
         torch.from_numpy(t).contiguous(),
         timestamps=torch.from_numpy(s).contiguous(),
@@ -376,7 +376,7 @@ def test_kitti_rotation_is_orthonormal():
 
 
 def test_write_tum_rejects_foreign_convention():
-    pvs = _core.posed_view_set(
+    pvs = _core.pose_storage(
         np.array([[0.0, 0.0, 0.0, 1.0]]),
         np.array([[0.0, 0.0, 0.0]]),
         quaternion_order="xyzw",
@@ -387,7 +387,7 @@ def test_write_tum_rejects_foreign_convention():
 
 
 def test_write_kitti_rejects_foreign_convention():
-    pvs = _core.posed_view_set(
+    pvs = _core.pose_storage(
         np.array([[1.0, 0.0, 0.0, 0.0]]),
         np.array([[0.0, 0.0, 0.0]]),
         pose_convention="world_to_camera",
@@ -429,7 +429,7 @@ def test_kitti_torch_interop():
     torch = pytest.importorskip("torch")
     canon, mats = _rand_rotations(5, 32)
     t = _rand_trans(5, 33)
-    pvs = _core.posed_view_set(
+    pvs = _core.pose_storage(
         torch.from_numpy(canon).contiguous(),
         torch.from_numpy(t).contiguous(),
         quaternion_order="wxyz",
@@ -441,11 +441,11 @@ def test_kitti_torch_interop():
     )
 
 
-def test_pose_records_are_posedviewset():
-    assert type(_core.read_tum(TUM_TEXT.encode())).__name__ == "PosedViewSet"
+def test_pose_records_use_private_pose_storage():
+    assert type(_core.read_tum(TUM_TEXT.encode())).__name__ == "PoseStorage"
     canon, _ = _rand_rotations(1, 40)
     data = oracle_write_kitti(canon, _rand_trans(1, 41))
-    assert type(_core.read_kitti(data)).__name__ == "PosedViewSet"
+    assert type(_core.read_kitti(data)).__name__ == "PoseStorage"
 
 
 def test_tum_malformed_line_raises():

@@ -10,25 +10,32 @@ priors are always optional; a backend's traits declare what it consumes.
 frame, the scale class (``arbitrary | normalized | metric``), and where
 that scale claim comes from (``model_claimed | prior_anchored |
 unknown``).
+
+``PosedViewSet`` is the canonical in-memory pose collection. Its poses are
+always OpenCV camera-to-world transforms; source quaternion order, camera
+axes, and pose direction remain private codec-boundary concerns.
 """
 
 from __future__ import annotations
 
+import math
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from numbers import Real
 from typing import Literal
 
 import numpy as np
 
-from sceneio.data._validation import (
+from sceneio import _core
+from sceneio._data._validation import (
     ensure_choice,
     ensure_instance,
     ensure_optional_instance,
 )
-from sceneio.data.calibration import Calibration
-from sceneio.data.dense import DepthMap, Mask
-from sceneio.data.priors import PosePrior
-from sceneio.data.transforms import SE3
+from sceneio._data.calibration import Calibration
+from sceneio._data.dense import Mask
+from sceneio._data.priors import PosePrior
+from sceneio._data.transforms import SE3
 from sceneio.errors import ContractViolation
 from sceneio.imagesource import MaterializedImage
 
@@ -103,7 +110,7 @@ class ViewInput:
     name: str | None = None
     calibration: Calibration | None = None
     pose_prior: PosePrior | None = None
-    depth_prior: DepthMap | None = None
+    depth_prior: _core.DepthMap | None = None
     mask: Mask | None = None
 
     def __post_init__(self) -> None:
@@ -116,7 +123,9 @@ class ViewInput:
             "ViewInput.calibration", self.calibration, Calibration, "Calibration"
         )
         ensure_optional_instance("ViewInput.pose_prior", self.pose_prior, PosePrior, "PosePrior")
-        ensure_optional_instance("ViewInput.depth_prior", self.depth_prior, DepthMap, "DepthMap")
+        ensure_optional_instance(
+            "ViewInput.depth_prior", self.depth_prior, _core.DepthMap, "DepthMap"
+        )
         ensure_optional_instance("ViewInput.mask", self.mask, Mask, "Mask")
 
         sizes: list[tuple[str, tuple[int, int]]] = []
@@ -149,32 +158,101 @@ class ViewInput:
 
 @dataclass(frozen=True)
 class PosedViewSet:
-    """Views with index-aligned poses in a declared frame."""
+    """Canonical posed views with index-aligned optional metadata.
 
-    views: tuple[ViewInput, ...]
-    poses: tuple[SE3, ...]  # aligned to views
+    Every pose uses ``opencv_cam2world``. Optional fields are normalized to
+    tuples of length ``N`` containing ``None`` for missing values. Empty pose
+    sets are valid because supported trajectory formats can encode them.
+    """
+
+    poses: tuple[SE3, ...]
     frame: FrameMeta
+    names: tuple[str | None, ...] = ()
+    timestamps: tuple[float | None, ...] = ()
+    images: tuple[ImageRef | None, ...] = ()
+    calibrations: tuple[Calibration | None, ...] = ()
+    _source_storage: object | None = field(default=None, init=False, repr=False, compare=False)
+    _source_profile: str | None = field(default=None, init=False, repr=False, compare=False)
+    _source_signature: object | None = field(default=None, init=False, repr=False, compare=False)
 
     def __post_init__(self) -> None:
-        views = _as_typed_tuple("PosedViewSet.views", self.views, ViewInput)
         poses = _as_typed_tuple("PosedViewSet.poses", self.poses, SE3)
-        if not views:
-            raise ContractViolation("PosedViewSet.views: expected at least one view")
-        if len(poses) != len(views):
-            raise ContractViolation(
-                f"PosedViewSet.poses: expected one pose per view ({len(views)}), got {len(poses)}"
-            )
-        conventions = {pose.convention for pose in poses}
-        if len(conventions) > 1:
-            raise ContractViolation(
-                f"PosedViewSet.poses: mixed pose conventions {sorted(conventions)}"
-            )
         ensure_instance("PosedViewSet.frame", self.frame, FrameMeta, "FrameMeta")
-        object.__setattr__(self, "views", views)
+        for index, pose in enumerate(poses):
+            if pose.convention != "opencv_cam2world":
+                raise ContractViolation(
+                    f"PosedViewSet.poses[{index}]: expected convention "
+                    f"'opencv_cam2world', got {pose.convention!r}"
+                )
+        count = len(poses)
+        names = _as_optional_tuple("PosedViewSet.names", self.names, count)
+        for index, name in enumerate(names):
+            if name is not None and (not isinstance(name, str) or not name):
+                raise ContractViolation(
+                    f"PosedViewSet.names[{index}]: expected a non-empty str or None, "
+                    f"got {name!r}"
+                )
+        timestamps = _as_optional_tuple("PosedViewSet.timestamps", self.timestamps, count)
+        normalized_timestamps: list[float | None] = []
+        for index, timestamp in enumerate(timestamps):
+            if timestamp is None:
+                normalized_timestamps.append(None)
+                continue
+            if isinstance(timestamp, bool) or not isinstance(timestamp, Real):
+                raise ContractViolation(
+                    f"PosedViewSet.timestamps[{index}]: expected a finite number or None, "
+                    f"got {type(timestamp).__name__}"
+                )
+            value = float(timestamp)
+            if not math.isfinite(value):
+                raise ContractViolation(
+                    f"PosedViewSet.timestamps[{index}]: expected a finite number or None, "
+                    f"got {value!r}"
+                )
+            normalized_timestamps.append(value)
+        images = _as_optional_tuple("PosedViewSet.images", self.images, count)
+        for index, image in enumerate(images):
+            if image is not None:
+                _validate_image_ref(f"PosedViewSet.images[{index}]", image)
+        calibrations = _as_optional_tuple(
+            "PosedViewSet.calibrations", self.calibrations, count
+        )
+        for index, calibration in enumerate(calibrations):
+            if calibration is not None and not isinstance(calibration, Calibration):
+                raise ContractViolation(
+                    f"PosedViewSet.calibrations[{index}]: expected Calibration or None, "
+                    f"got {type(calibration).__name__}"
+                )
         object.__setattr__(self, "poses", poses)
+        object.__setattr__(self, "names", names)
+        object.__setattr__(self, "timestamps", tuple(normalized_timestamps))
+        object.__setattr__(self, "images", images)
+        object.__setattr__(self, "calibrations", calibrations)
+
+    @property
+    def num_views(self) -> int:
+        """Number of aligned poses/views."""
+
+        return len(self.poses)
 
     def __len__(self) -> int:
-        return len(self.views)
+        return len(self.poses)
+
+
+def _as_optional_tuple(name: str, value: object, count: int) -> tuple:
+    if isinstance(value, tuple) and not value:
+        return (None,) * count
+    if not isinstance(value, Sequence) or isinstance(value, str | bytes):
+        raise ContractViolation(
+            f"{name}: expected a sequence with one item per pose, "
+            f"got {type(value).__name__}"
+        )
+    result = tuple(value)
+    if len(result) != count:
+        raise ContractViolation(
+            f"{name}: expected one item per pose ({count}), got {len(result)}"
+        )
+    return result
 
 
 def _as_typed_tuple(name: str, value: object, expected: type) -> tuple:

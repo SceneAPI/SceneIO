@@ -5,7 +5,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from sceneio.data import (
+from sceneio import (
     InstanceMap,
     LabelTaxonomy,
     Mask,

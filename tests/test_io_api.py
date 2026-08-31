@@ -321,7 +321,7 @@ def test_mesh_off_roundtrip_via_public_api(tmp_path):
 
 
 @pytest.mark.parametrize(("suffix", "format_id"), [(".gltf", "gltf"), (".glb", "glb")])
-def test_mesh_scene_roundtrip_via_public_api(tmp_path, suffix, format_id):
+def test_scene_graph_roundtrip_via_public_api(tmp_path, suffix, format_id):
     positions = np.array(
         [[0, 0, 0], [1, 0, 0], [0, 1, 0]],
         dtype=np.float32,
@@ -332,9 +332,10 @@ def test_mesh_scene_roundtrip_via_public_api(tmp_path, suffix, format_id):
         np.array([0, 1, 2], np.uint64),
         coordinate_frame="opengl",
     )
-    source = _core.mesh_scene(
-        [primitive],
-        np.array([0, 1], np.uint64),
+    source = _core.scene_graph(
+        [],
+        meshes=[primitive],
+        mesh_primitive_offsets=np.array([0, 1], np.uint64),
         mesh_names=["triangle"],
     )
     path = tmp_path / f"scene{suffix}"
@@ -343,9 +344,15 @@ def test_mesh_scene_roundtrip_via_public_api(tmp_path, suffix, format_id):
 
     assert sceneio.detect(path) == format_id
     decoded = sceneio.read(path)
-    assert isinstance(decoded, sceneio.MeshScene)
+    assert isinstance(decoded, sceneio.SceneGraph)
     assert decoded.mesh_names == ["triangle"]
-    np.testing.assert_array_equal(decoded.primitive_at(0).positions, positions)
+    np.testing.assert_array_equal(
+        decoded.mesh_primitive_at(0).positions,
+        positions,
+    )
     assert sceneio.inspect(path).metadata["num_primitives"] == 1
     selected = sceneio.read_partial(path, primitive_id=0)
-    np.testing.assert_array_equal(selected.primitive_at(0).positions, positions)
+    np.testing.assert_array_equal(
+        selected.mesh_primitive_at(0).positions,
+        positions,
+    )

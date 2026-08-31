@@ -935,6 +935,10 @@ def validate_writable_point_cloud(
             f"USD: {context} quantized color/intensity fields are not "
             "representable; use float display fields explicitly"
         )
+    if cloud.has_tracks:
+        raise ValueError(
+            f"USD: {context} point observation tracks are not representable"
+        )
     if tuple(cloud.origin) != (0.0, 0.0, 0.0):
         raise ValueError(
             f"USD: {context} origin is not representable; use a node transform"

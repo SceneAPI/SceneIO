@@ -41,7 +41,7 @@ the base runtime remains NumPy-only.
 | [laz-perf point-color-time LAS](https://github.com/hobuinc/laz-perf) (Apache-2.0) | `las` | 37,417 B | `d88c5f2a…0d6a`; 1,065 points |
 | [laz-perf point10-1.1 LAZ](https://github.com/hobuinc/laz-perf) (Apache-2.0) | `laz` | 366 B | `46833620…9d9f`; one-point supported producer smoke |
 | [TUM freiburg1 XYZ trajectory](https://cvg.cit.tum.de/data/datasets/rgbd-dataset) (CC-BY-4.0) | `tum` | 201,100 B | `aac0319a…ede2`; real timestamp/pose sequence |
-| [Khronos Box glTF + GLB](https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/Box) (CC0) | `gltf`, `glb` | 3,791 / 1,664 B | `f98a369e…13b` / `ed52f719…54e`; 24-corner `MeshScene` |
+| [Khronos Box glTF + GLB](https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/Box) (CC0) | `gltf`, `glb` | 3,791 / 1,664 B | `f98a369e…13b` / `ed52f719…54e`; 24-corner `SceneGraph` |
 
 The DX.GL archive is the coherent anchor rather than merely another image. Its
 `transforms.json`, masks, depth maps, normals, RGB views, and point cloud share

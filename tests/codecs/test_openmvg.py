@@ -295,8 +295,10 @@ def test_cross_impl_oracle_parity():
     np.testing.assert_allclose(_quat_align(o["quats"], q), o["quats"], atol=1e-12)
     np.testing.assert_allclose(t, o["trans"], atol=1e-12)
     assert R.num_cameras == len(o["cameras"])
-    for c, oc in zip(R.cameras, o["cameras"], strict=True):
-        assert int(c.id) == oc["id"]
+    for camera_id, c, oc in zip(
+        np.asarray(R.camera_ids), R.cameras, o["cameras"], strict=True
+    ):
+        assert int(camera_id) == oc["id"]
         assert int(c.model_id) == oc["model_id"]
         assert (int(c.width), int(c.height)) == (oc["w"], oc["h"])
         np.testing.assert_allclose(np.asarray(c.params), oc["params"], atol=1e-12)
@@ -442,7 +444,7 @@ def test_intrinsic_model_mapping(name, disto, exp_model, exp_params):
     )
     R = _core.read_openmvg(fixture)
     c = R.cameras[0]
-    assert int(c.id) == 0
+    assert int(np.asarray(R.camera_ids)[0]) == 0
     assert int(c.model_id) == exp_model
     assert (int(c.width), int(c.height)) == (640, 480)
     np.testing.assert_allclose(np.asarray(c.params), exp_params, atol=1e-12)

@@ -44,7 +44,7 @@ _SCHEMA_TARGETS = frozenset(
 )
 _OPERATION_TARGETS = frozenset({"mapping", "matching"})
 _PUBLIC_RELATION_KINDS = frozenset(
-    {"adapts_to", "contains", "input_to", "output_of", "specializes"}
+    {"contains", "input_to", "output_of", "specializes"}
 )
 _FIXED_RELATION_TARGETS = MappingProxyType(
     {
@@ -57,7 +57,7 @@ _EXTERNAL_PUBLIC_TARGETS = frozenset(
     {
         # ImageRef is a documented public union alias, not a class identity,
         # so it is intentionally outside the class-contract census.
-        "sceneio.data.ImageRef",
+        "sceneio.ImageRef",
     }
 )
 _BUILTIN_PARENT_ERRORS = frozenset({"builtins.Exception", "builtins.ValueError"})
@@ -218,7 +218,6 @@ def _object_candidate_paths(subject: type[object] | object) -> tuple[str, ...]:
 
     candidates = [f"{module}.{qualname}", f"{module}.{name}"]
     public_prefixes = (
-        "sceneio.data",
         "sceneio.colmap_mvs",
         "sceneio.colmap",
         "sceneio.mapping",
@@ -228,11 +227,13 @@ def _object_candidate_paths(subject: type[object] | object) -> tuple[str, ...]:
     )
     if module == "sceneio._core" or module.startswith("sceneio._core."):
         candidates.append(f"sceneio.{name}")
+    if module == "sceneio._data" or module.startswith("sceneio._data."):
+        candidates.append(f"sceneio.{name}")
     for prefix in public_prefixes:
         if module == prefix or module.startswith(f"{prefix}."):
             candidates.append(f"{prefix}.{name}")
     if module == "sceneio.io" or module.startswith("sceneio.io."):
-        candidates.extend((f"sceneio.io.{name}", f"sceneio.{name}"))
+        candidates.append(f"sceneio.{name}")
 
     # Preserve order while removing duplicates.
     return tuple(dict.fromkeys(candidates))

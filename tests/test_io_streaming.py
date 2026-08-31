@@ -29,7 +29,7 @@ def test_all_single_file_sinks_are_byte_identical(tmp_path, buffer_codecs):
         assert direct.read_bytes() == spec.data, spec.id
 
         public = tmp_path / f"public-{spec.id}.bin"
-        sceneio.write(spec.value, public, format=spec.id)
+        sceneio.write(spec.public_value, public, format=spec.id)
         assert public.read_bytes() == spec.data, spec.id
 
         # The thread-local sink scope must never leak into a later buffer call.

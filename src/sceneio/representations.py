@@ -418,14 +418,15 @@ _PROFILES = {
             "mixed",
             "record_declared",
             "direct",
-            ("record_length_unit", "meter", "stored_sample", "dimensionless", "unit_interval"),
+            ("record_length_unit", "meter", "stored_sample", "dimensionless", "unit_interval", "index"),
             scale_fields=("scale_to_meters", "coordinate_frame", "intensity_range", "display_color_space"),
             rules=(
                 "Positions are float32 plus a float64 origin; for a qualified scale, (position + origin) * scale_to_meters yields meters.",
                 "Normals, intensities, colors, widths, and display fields retain their recorded semantics; motion fields have no independent time-base field.",
+                "Optional track CSR columns preserve exact image identities and nonnegative keypoint indices for every point observation.",
                 "Explicit coordinate conversion transforms positions/origin/motion, scales widths under a similarity, and unit-normalizes nonzero normals.",
             ),
-            refusal="An unknown frame/default scale is not metric, motion timing needs source context, and acquisition metadata/sidecars convert only when preservable.",
+            refusal="An unknown frame/default scale is not metric, motion timing needs source context, and formats without observation tracks refuse tracked clouds rather than discarding them.",
         ),
         _profile(
             "point_scan",
@@ -478,16 +479,6 @@ _PROFILES = {
             refusal="Metric conversion requires the owning frame scale and, for camera-frame points, the owning pose.",
         ),
         _profile(
-            "tracked_point_cloud",
-            "canonical",
-            "arbitrary",
-            "unknown",
-            "requires_context",
-            ("source_length_unit", "index", "stored_sample"),
-            rules=("XYZ is float32 and tracks preserve exact image/keypoint identities; optional RGB is uint8.",),
-            refusal="The record has no frame or scale field, so physical conversion requires external context.",
-        ),
-        _profile(
             "gaussian_cloud",
             "declared",
             "mixed",
@@ -532,16 +523,6 @@ _PROFILES = {
             refusal="An unknown frame with the default numeric scale is not a metric claim; reflections, winding changes, and unsupported fields need explicit policy.",
         ),
         _profile(
-            "mesh_scene",
-            "aggregate",
-            "metric",
-            "fixed",
-            "requires_context",
-            ("meter", "dimensionless", "index"),
-            rules=("glTF-style scene transforms and geometry use right-handed Y-up meters; child meshes retain typed attribute contracts.",),
-            refusal="Unsupported cameras, animation, skins, morph targets, or extensions are not flattened into this record.",
-        ),
-        _profile(
             "scene_graph",
             "aggregate",
             "record_declared",
@@ -552,6 +533,7 @@ _PROFILES = {
             rules=(
                 "Stage geometry and transform translations use stage units; value * meters_per_unit yields meters.",
                 "Child payloads retain their own activation, sample, and attribute contracts.",
+                "Logical mesh groups preserve heterogeneous glTF primitives, while named scene root sets preserve multi-scene documents.",
             ),
             refusal="A child with unknown spatial semantics is not relabeled from stage metadata without an explicit adapter rule.",
         ),
@@ -689,27 +671,16 @@ _PROFILES = {
         ),
         _profile(
             "posed_views",
-            "declared",
-            "record_declared",
-            "record_declared",
-            "direct",
-            ("record_length_unit", "meter", "second", "pixel"),
-            scale_fields=("scale_to_meters", "axis_frame", "pose_convention", "quaternion_order"),
-            rules=(
-                "Translations use record units and timestamps remain source seconds; pose direction, axes, and quaternion order are explicit.",
-                "Explicit coordinate conversion normalizes quaternion magnitude while applying the requested order, direction, frame, and unit transform.",
-            ),
-            refusal="Unknown scale or unsupported frame mapping requires caller-supplied context.",
-        ),
-        _profile(
-            "posed_views_parent",
-            "aggregate",
+            "canonical",
             "component_declared",
             "parent_declared",
             "requires_context",
-            ("frame_length_unit", "pixel"),
+            ("frame_length_unit", "meter", "second", "pixel"),
             scale_fields=("FrameMeta.scale", "FrameMeta.scale_provenance", "SE3.convention"),
-            rules=("Each pose is a proper float64 SE3 and the shared FrameMeta declares world-frame and scale class.",),
+            rules=(
+                "Every pose is a proper float64 OpenCV camera-to-world SE3; source axis, quaternion-order, and pose-direction encodings are normalized at codec boundaries.",
+                "Names, timestamps, image references, and calibrations are index-aligned optional metadata; the shared FrameMeta declares world frame and scale class.",
+            ),
             refusal="Only scale='metric' establishes meters; normalized or arbitrary scale must not be treated as metric.",
         ),
         _profile(
@@ -1018,7 +989,7 @@ _PROFILES = {
             scale_fields=("pixel_center", "descriptor_dtype", "relative_pose"),
             rules=(
                 "COLMAP/SIFT keypoints and matches preserve canonical endpoint ids, pixel convention, and descriptor values.",
-                "MappingMatch relative_pose is unit XYZW cam2_from_cam1; its translation inherits reconstruction units.",
+                "MappingInput relative poses are canonical SE3 second-from-first transforms; their translation inherits reconstruction units.",
             ),
             refusal="Descriptor or keypoint normalization is not inferred from file names or extractor labels.",
         ),
@@ -1140,7 +1111,6 @@ def _build_contracts() -> dict[str, RepresentationNormalizationContract]:
                 evidence,
             )
 
-    register("camera_intrinsics", ("tests/records/test_camera_rig.py",), "sceneio.Camera")
     register("camera_rig", ("tests/records/test_camera_rig.py",), "sceneio.CameraRig")
     register("colmap_database", ("tests/codecs/test_colmap_db.py",), "sceneio.ColmapDatabase")
     register("colmap_marker_companion", ("tests/codecs/test_colmap_db.py",), "sceneio.ColmapMarkerSet")
@@ -1165,10 +1135,8 @@ def _build_contracts() -> dict[str, RepresentationNormalizationContract]:
         "sceneio.VisualInertialDataset",
     )
     register("instances", ("tests/records/test_instance_set.py",), "sceneio.InstanceSet")
-    register("matches", ("tests/codecs/test_colmap_db.py",), "sceneio.MatchGraph")
     register("materials", ("tests/records/test_material_set.py",), "sceneio.MaterialSet")
     register("mesh", ("tests/records/test_mesh.py",), "sceneio.Mesh")
-    register("mesh_scene", ("tests/records/test_mesh_scene.py",), "sceneio.MeshScene")
     register(
         "ncore_schema",
         ("tests/codecs/test_ncore_v4.py",),
@@ -1194,66 +1162,68 @@ def _build_contracts() -> dict[str, RepresentationNormalizationContract]:
     register("posed_views", ("tests/test_coordinate_math_oracle.py",), "sceneio.PosedViewSet")
     register("reconstruction_colmap", ("tests/codecs/test_colmap.py",), "sceneio.Reconstruction")
     register("rtmv_dataset", ("tests/codecs/test_rtmv.py",), "sceneio.RtmvDataset")
-    register("scene_graph", ("tests/records/test_scene_graph.py",), "sceneio.SceneGraph")
+    register(
+        "scene_graph",
+        (
+            "tests/records/test_scene_graph.py",
+            "tests/records/test_scene_graph_mesh_groups.py",
+        ),
+        "sceneio.SceneGraph",
+    )
     register("scan_set", ("tests/records/test_point_scan.py",), "sceneio.ScanSet")
     register("state_trajectory", ("tests/records/test_state_trajectory.py",), "sceneio.StateTrajectory")
     register("tensor_container", ("tests/records/test_tensor_dict.py",), "sceneio.TensorDict")
     register("volume_reference", ("tests/records/test_scene_graph.py",), "sceneio.VolumeAsset")
 
-    register("se3", ("tests/test_data_transforms.py",), "sceneio.data.SE3")
-    register("calibration_union", ("tests/test_data_calibration.py",), "sceneio.data.Calibration")
-    register("camera_intrinsics", ("tests/test_data_calibration.py",), "sceneio.data.CameraIntrinsics")
-    register("confidence_unit_interval", ("tests/test_data_dense.py",), "sceneio.data.ConfidenceMap")
-    register("matches", ("tests/test_data_features.py",), "sceneio.data.CorrespondenceGraph", "sceneio.data.PairCorrespondences", "sceneio.data.TwoViewGeometry")
-    register("depth_parent_scale", ("tests/test_data_dense.py",), "sceneio.data.DepthMap")
-    register("features", ("tests/test_data_features.py",), "sceneio.data.FeatureSet")
-    register("frame_meta", ("tests/test_data_views.py",), "sceneio.data.FrameMeta")
+    register("se3", ("tests/test_data_transforms.py",), "sceneio.SE3")
+    register("calibration_union", ("tests/test_data_calibration.py",), "sceneio.Calibration")
+    register("camera_intrinsics", ("tests/test_data_calibration.py",), "sceneio.CameraIntrinsics")
+    register("confidence_unit_interval", ("tests/test_data_dense.py",), "sceneio.ConfidenceMap")
+    register("matches", ("tests/test_data_features.py",), "sceneio.CorrespondenceGraph", "sceneio.PairCorrespondences", "sceneio.TwoViewGeometry")
+    register("frame_meta", ("tests/test_data_views.py",), "sceneio.FrameMeta")
     register(
         "instance_labels",
         ("tests/test_data_label_maps.py", "tests/codecs/test_label_map_carriers.py"),
-        "sceneio.data.InstanceMap",
+        "sceneio.InstanceMap",
     )
     register(
         "label_taxonomy",
         ("tests/test_data_label_maps.py", "tests/codecs/test_label_map_carriers.py"),
-        "sceneio.data.LabelTaxonomy",
+        "sceneio.LabelTaxonomy",
     )
-    register("binary_mask", ("tests/test_data_dense.py",), "sceneio.data.Mask")
+    register("binary_mask", ("tests/test_data_dense.py",), "sceneio.Mask")
     register(
         "raster_collection",
         ("tests/records/test_raster_collection.py",),
-        "sceneio.data.RasterCollection",
-        "sceneio.data.RasterLevel",
-        "sceneio.data.RasterSeries",
+        "sceneio.RasterCollection",
+        "sceneio.RasterLevel",
+        "sceneio.RasterSeries",
     )
     register(
         "panoptic_labels",
         ("tests/test_data_label_maps.py", "tests/codecs/test_label_map_carriers.py"),
-        "sceneio.data.PanopticMap",
+        "sceneio.PanopticMap",
     )
-    register("pointmap_parent_scale", ("tests/test_data_dense.py",), "sceneio.data.Pointmap")
-    register("pose_prior", ("tests/test_data_pointcloud_priors.py",), "sceneio.data.PosePrior")
-    register("posed_views_parent", ("tests/test_data_views.py",), "sceneio.data.PosedViewSet")
-    register("unit_ray_map", ("tests/test_data_calibration.py",), "sceneio.data.RayMap")
+    register("pointmap_parent_scale", ("tests/test_data_dense.py",), "sceneio.Pointmap")
+    register("pose_prior", ("tests/test_data_pointcloud_priors.py",), "sceneio.PosePrior")
+    register("unit_ray_map", ("tests/test_data_calibration.py",), "sceneio.RayMap")
     register(
         "semantic_labels",
         ("tests/test_data_label_maps.py", "tests/codecs/test_label_map_carriers.py"),
-        "sceneio.data.SemanticMap",
+        "sceneio.SemanticMap",
     )
-    register("sim3", ("tests/test_data_transforms.py",), "sceneio.data.Sim3")
-    register("track_observation", ("tests/test_data_pointcloud_priors.py",), "sceneio.data.TrackObservation")
-    register("tracked_point_cloud", ("tests/test_data_pointcloud_priors.py",), "sceneio.data.TrackedPointCloud")
-    register("view_input", ("tests/test_data_views.py",), "sceneio.data.ViewInput")
+    register("sim3", ("tests/test_data_transforms.py",), "sceneio.Sim3")
+    register("track_observation", ("tests/test_data_pointcloud_priors.py",), "sceneio.TrackObservation")
+    register("view_input", ("tests/test_data_views.py",), "sceneio.ViewInput")
 
     colmap_evidence = ("tests/test_colmap_ecosystem_adapters.py",)
-    register("colmap_adapter_calibration", colmap_evidence, "sceneio.colmap.CharucoBoard", "sceneio.colmap.CharucoCalibration", "sceneio.colmap.MappingCamera")
+    register("colmap_adapter_calibration", colmap_evidence, "sceneio.colmap.CharucoBoard", "sceneio.colmap.CharucoCalibration")
     register("colmap_adapter_scene", colmap_evidence, "sceneio.colmap.ExtendedSparseModel", "sceneio.colmap.MappingInput", "sceneio.colmap.SparseExtensions")
     register("megaloc_artifacts", colmap_evidence, "sceneio.colmap.MegaLocArtifacts")
     register("structural_metadata", colmap_evidence, "sceneio.colmap.IdTags", "sceneio.colmap.MegaLocImage")
     register("retrieval_pair", colmap_evidence, "sceneio.colmap.MegaLocPair")
-    register("colmap_adapter_features", colmap_evidence, "sceneio.colmap.MappingImage", "sceneio.colmap.MappingMatch", "sceneio.colmap.NamedMatches", "sceneio.colmap.SiftFeatures", "sceneio.colmap.SparseMarkerProjection")
+    register("colmap_adapter_features", colmap_evidence, "sceneio.colmap.SparseMarkerProjection")
     register("colmap_rig_configuration", colmap_evidence, "sceneio.colmap.RigConfigCamera", "sceneio.colmap.RigConfiguration")
-    register("colmap_adapter_sim3", colmap_evidence, "sceneio.colmap.SimilarityTransform")
     register("colmap_marker_companion", colmap_evidence, "sceneio.colmap.SparseMarker")
     register("time_metadata", colmap_evidence, "sceneio.colmap.TimeFrame")
 
@@ -1278,8 +1248,8 @@ def _public_path(value: object) -> str:
         or module.startswith("sceneio.io._")
     ):
         return f"sceneio.{name}"
-    if module.startswith("sceneio.data."):
-        return f"sceneio.data.{name}"
+    if module.startswith("sceneio._data."):
+        return f"sceneio.{name}"
     if module.startswith("sceneio.colmap."):
         return f"sceneio.colmap.{name}"
     if module == "sceneio.colmap_mvs":
@@ -1292,16 +1262,13 @@ def representation_contract(
 ) -> RepresentationNormalizationContract:
     """Return the normalization/scaling contract for a record or public name.
 
-    A bare class name is accepted only when it is unambiguous. For example,
-    ``"Image"`` resolves to ``sceneio.Image`` while ``"DepthMap"`` must be
-    qualified because both the compiled I/O record and neutral data contract
-    are public.
+    A bare class name is accepted only when it is unambiguous. Canonical
+    qualified names use the sole public representation path, ``sceneio.<Type>``
+    (or a retained source-specific aggregate namespace).
     """
 
     if isinstance(value, str):
         key = value
-        if key.startswith("sceneio.io."):
-            key = "sceneio." + key.removeprefix("sceneio.io.")
         contract = REPRESENTATION_CONTRACTS.get(key)
         if contract is not None:
             return contract

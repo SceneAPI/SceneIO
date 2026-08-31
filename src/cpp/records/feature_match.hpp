@@ -49,7 +49,7 @@ struct FeatureSet {
     double quality = 0.0;
 };
 
-struct MatchGraph {
+struct CorrespondenceStorage {
     size_t pair_count = 0;
     std::vector<int64_t> pair_ids;       // pair_count
     std::vector<uint32_t> image_pairs;   // pair_count * 2, low id first
@@ -230,7 +230,7 @@ struct ColmapDatabase {
     std::vector<Camera> cameras;
     std::vector<uint8_t> prior_focal_length;  // cameras.size(), 0/1
     std::vector<FeatureSet> features;
-    MatchGraph match_graph;
+    CorrespondenceStorage correspondence_storage;
     ColmapRigFrameSet rig_frames;
     ColmapPosePriorSet pose_priors;
     ColmapMarkerSet markers;
@@ -250,8 +250,8 @@ struct ColmapDatabase {
 int64_t colmap_pair_id(uint32_t image_id1, uint32_t image_id2);
 void validate_feature_set(
     const FeatureSet &features, const char *context = "feature_set");
-void validate_match_graph(
-    const MatchGraph &graph, const char *context = "match_graph");
+void validate_correspondence_storage(
+    const CorrespondenceStorage &graph, const char *context = "correspondence_storage");
 void validate_colmap_rig_frames(
     const ColmapRigFrameSet &value,
     const char *context = "colmap_rig_frames");

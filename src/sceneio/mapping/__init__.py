@@ -1,6 +1,6 @@
 """The neutral mapping procedure contract.
 
-A :class:`Mapper` turns a sequence of :class:`~sceneio.data.ViewInput`
+A :class:`Mapper` turns a sequence of :class:`~sceneio._data.ViewInput`
 into a :class:`MappingResult`. The contract is neutral between the
 classical and feed-forward families: correspondences are *optional* at
 the signature level, and :class:`MapperTraits` declares what a concrete
@@ -20,7 +20,7 @@ Honesty rules a conforming implementation must follow (exercised by
   (same per-view ``None`` for ``calibrations`` / ``dense`` entries).
   At least one view must be registered.
 
-This namespace imports only :mod:`sceneio.data` — never
+This namespace imports only :mod:`sceneio._data` — never
 :mod:`sceneio.matching` (guard-tested), so either can graduate to
 its own distribution later.
 """
@@ -33,17 +33,17 @@ from typing import Protocol, runtime_checkable
 
 import numpy as np
 
-from sceneio.data import (
+from sceneio import PointCloud
+from sceneio._data import (
     Calibration,
     ConfidenceMap,
     CorrespondenceGraph,
     FrameMeta,
     Pointmap,
-    TrackedPointCloud,
     ViewInput,
 )
-from sceneio.data._validation import ensure_bool, ensure_instance
-from sceneio.data.transforms import SE3
+from sceneio._data._validation import ensure_bool, ensure_instance
+from sceneio._data.transforms import SE3
 from sceneio.errors import ContractViolation
 
 __all__ = [
@@ -139,7 +139,7 @@ class MappingResult:
     poses: tuple[SE3 | None, ...]
     frame: FrameMeta
     calibrations: tuple[Calibration | None, ...] | None = None
-    geometry: TrackedPointCloud | None = None
+    geometry: PointCloud | None = None
     dense: tuple[tuple[Pointmap, ConfidenceMap] | None, ...] | None = None
     stats: Mapping[str, object] = field(default_factory=dict)
 
@@ -173,8 +173,8 @@ class MappingResult:
             ensure_instance(
                 "MappingResult.geometry",
                 self.geometry,
-                TrackedPointCloud,
-                "TrackedPointCloud",
+                PointCloud,
+                "PointCloud",
             )
         if self.dense is not None:
             dense = self._validated_dense(self.dense, len(poses))

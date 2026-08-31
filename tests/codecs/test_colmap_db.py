@@ -1480,7 +1480,7 @@ def test_read_maxx_extension_rows_losslessly(tmp_path):
 
     database = _core.read_colmap_db(str(path))
     features = [database.feature(image_id) for image_id in range(1, 6)]
-    graph = database.match_graph
+    graph = database._correspondence_storage
     priors = database.pose_priors
     markers = database.markers
     videos = database.video_metadata
@@ -1632,10 +1632,10 @@ def test_maxx_present_empty_rows_and_deterministic_order(tmp_path):
     assert empty.keypoints.shape == (0, 2)
     assert empty.descriptors.shape == (0, 128)
     assert empty.keypoint_colors.shape == (0, 3)
-    assert database.match_graph.match_present.tolist() == [1]
-    assert database.match_graph.match_score_present.tolist() == [1]
-    assert database.match_graph.matches.shape == (0, 2)
-    assert database.match_graph.scores.shape == (0,)
+    assert database._correspondence_storage.match_present.tolist() == [1]
+    assert database._correspondence_storage.match_score_present.tolist() == [1]
+    assert database._correspondence_storage.matches.shape == (0, 2)
+    assert database._correspondence_storage.scores.shape == (0,)
 
 
 def test_maxx_extended_pose_null_and_all_nan_blob_presence(tmp_path):
@@ -2402,32 +2402,32 @@ def test_read_current_profile_recovered_cameras_and_partial_pair(tmp_path):
     partial = _core.read_colmap_db_pair(str(path), 11, 2)
 
     assert database.profile == "colmap-main-64805cb870b5"
-    assert database.match_graph.camera1_present.tolist() == [1]
-    assert database.match_graph.camera2_present.tolist() == [1]
-    assert database.match_graph.camera1_prior_focal_length.tolist() == [1]
-    assert database.match_graph.camera2_prior_focal_length.tolist() == [0]
-    assert _camera_fingerprint(database.match_graph.recovered_camera1(0)) == (
-        23,
+    assert database._correspondence_storage.camera1_present.tolist() == [1]
+    assert database._correspondence_storage.camera2_present.tolist() == [1]
+    assert database._correspondence_storage.camera1_prior_focal_length.tolist() == [1]
+    assert database._correspondence_storage.camera2_prior_focal_length.tolist() == [0]
+    assert database._correspondence_storage.recovered_camera1_ids == [23]
+    assert database._correspondence_storage.recovered_camera2_ids == [24]
+    assert _camera_fingerprint(database._correspondence_storage.recovered_camera1(0)) == (
         1,
         640,
         480,
         np.array([500.0, 501.0, 320.0, 240.0], np.float64).tobytes(),
     )
-    assert _camera_fingerprint(database.match_graph.recovered_camera2(0)) == (
-        24,
+    assert _camera_fingerprint(database._correspondence_storage.recovered_camera2(0)) == (
         0,
         800,
         600,
         np.array([700.0, 400.0, 300.0], np.float64).tobytes(),
     )
-    assert _graph_fingerprint(partial) == _graph_fingerprint(database.match_graph)
+    assert _graph_fingerprint(partial) == _graph_fingerprint(database._correspondence_storage)
 
 
 def test_read_current_profile_preserves_null_recovered_camera(tmp_path):
     path = tmp_path / "current-null.db"
     _current_recovered_camera_database(path, camera1=None, camera2=None)
 
-    graph = _core.read_colmap_db(str(path)).match_graph
+    graph = _core.read_colmap_db(str(path))._correspondence_storage
 
     assert graph.camera1_present.tolist() == [0]
     assert graph.camera2_present.tolist() == [0]
@@ -2459,23 +2459,24 @@ def test_read_current_profile_preserves_asymmetric_endpoint_nulls_and_pair_filte
         ],
     )
 
-    full = _core.read_colmap_db(str(path)).match_graph
+    full = _core.read_colmap_db(str(path))._correspondence_storage
     selected = _core.read_colmap_db_pair(str(path), 11, 3)
-    expected_camera = _core.camera(
-        44,
+    expected_camera = _core.camera_intrinsics(
         0,
         800,
         600,
         np.array([700.0, 400.0, 300.0], np.float64),
     )
-    expected = _core.match_graph(
+    expected = _core.correspondence_storage(
         np.array([[3, 11]], np.uint32),
         np.array([0, 0], np.uint64),
         np.empty((0, 2), np.uint32),
         np.array([0, 0], np.uint64),
         np.empty((0, 2), np.uint32),
         recovered_camera1=[None],
+        recovered_camera1_ids=np.array([0], np.uint32),
         recovered_camera2=[expected_camera],
+        recovered_camera2_ids=np.array([44], np.uint32),
         camera2_prior_focal_length=np.array([0], np.uint8),
         match_present=np.array([0], np.uint8),
     )
@@ -2504,7 +2505,7 @@ def test_partial_pair_does_not_decode_malformed_unselected_camera(tmp_path):
     assert selected.image_pairs.tolist() == [[3, 11]]
     assert selected.camera1_present.tolist() == [0]
     assert selected.camera2_present.tolist() == [1]
-    assert selected.recovered_camera2(0).id == 44
+    assert selected.recovered_camera2_ids[0] == 44
 
 
 def test_recovered_camera_uses_full_upstream_integer_domain(tmp_path):
@@ -2518,13 +2519,13 @@ def test_recovered_camera_uses_full_upstream_integer_domain(tmp_path):
         ),
     )
 
-    recovered = _core.read_colmap_db(str(path)).match_graph.recovered_camera1(0)
+    graph = _core.read_colmap_db(str(path))._correspondence_storage
+    recovered = graph.recovered_camera1(0)
 
-    assert recovered.id == 2**32 - 2
+    assert graph.recovered_camera1_ids[0] == 2**32 - 2
     assert recovered.width == 2**63 + 17
     assert recovered.height == 2**64 - 1
-    constructed = _core.camera(
-        2**32 - 2,
+    constructed = _core.camera_intrinsics(
         1,
         2**63 + 17,
         2**64 - 1,
@@ -2532,12 +2533,14 @@ def test_recovered_camera_uses_full_upstream_integer_domain(tmp_path):
     )
     assert _camera_fingerprint(constructed) == _camera_fingerprint(recovered)
     with pytest.raises(ValueError, match="UINT32_MAX"):
-        _core.camera(
-            2**32 - 1,
-            1,
-            640,
-            480,
-            np.array([500.0, 501.0, 320.0, 240.0], np.float64),
+        _core.correspondence_storage(
+            np.array([[2, 11]], np.uint32),
+            np.array([0, 0], np.uint64),
+            np.empty((0, 2), np.uint32),
+            np.array([0, 0], np.uint64),
+            np.empty((0, 2), np.uint32),
+            recovered_camera1=[constructed],
+            recovered_camera1_ids=np.array([2**32 - 1], np.uint32),
         )
 
 
@@ -2785,9 +2788,10 @@ def test_conversion_report_maxx_ownership_and_refusal_matrix(tmp_path):
         2, 1, "producer", "commit"
     )
     invalid_maxx = _core.colmap_database(
+        np.asarray(_database().camera_ids, dtype=np.uint32),
         _database().cameras,
         [_database().feature_at(0), _database().feature_at(1)],
-        _database().match_graph,
+        _database()._correspondence_storage,
         prior_focal_length=np.array([1], np.uint8),
         maxx_schema_info=invalid_ownership,
     )
@@ -2907,7 +2911,7 @@ def test_exact_writer_rejects_nan_real_without_opening_destination(
     _maxx_extension_database(source)
     database = sceneio.read(source)
     if field == "retrieval":
-        database.match_graph.retrieval_scores[0] = np.nan
+        database._correspondence_storage.retrieval_scores[0] = np.nan
     elif field == "pts":
         database.video_metadata.pts_seconds[0] = np.nan
     elif field == "projection":
@@ -2975,20 +2979,20 @@ def test_public_write_rejects_profile_for_other_formats_before_output(tmp_path):
 
 
 def test_legacy_writer_rejects_recovered_two_view_cameras(tmp_path):
-    camera = _core.camera(
-        23,
+    camera = _core.camera_intrinsics(
         1,
         640,
         480,
         np.array([500.0, 501.0, 320.0, 240.0], np.float64),
     )
-    graph = _core.match_graph(
+    graph = _core.correspondence_storage(
         np.array([[2, 11]], np.uint32),
         np.array([0, 0], np.uint64),
         np.empty((0, 2), np.uint32),
         np.array([0, 0], np.uint64),
         np.empty((0, 2), np.uint32),
         recovered_camera1=[camera],
+        recovered_camera1_ids=np.array([23], np.uint32),
     )
     value = _database(graph=graph)
 
@@ -3000,9 +3004,10 @@ def test_hybrid_constructor_rejects_application_identity():
     template = _database()
     with pytest.raises(ValueError, match="application_id=0"):
         _core.colmap_database(
+            np.asarray(template.camera_ids, dtype=np.uint32),
             template.cameras,
             [template.feature_at(i) for i in range(template.num_images)],
-            template.match_graph,
+            template._correspondence_storage,
             prior_focal_length=template.prior_focal_length,
             application_id=123,
         )
@@ -3054,7 +3059,7 @@ def _graph(
     F = np.arange(9, dtype=np.float64).reshape(1, 3, 3)
     E = (np.arange(9, dtype=np.float64) + 20).reshape(1, 3, 3)
     H = (np.arange(9, dtype=np.float64) + 40).reshape(1, 3, 3)
-    return _core.match_graph(
+    return _core.correspondence_storage(
         np.array([[2, 11]], np.uint32),
         np.array([0, len(raw)], np.uint64),
         raw,
@@ -3076,8 +3081,7 @@ def _graph(
 
 
 def _database(*, graph=None, features=None):
-    camera = _core.camera(
-        5,
+    camera = _core.camera_intrinsics(
         1,
         640,
         480,
@@ -3086,6 +3090,7 @@ def _database(*, graph=None, features=None):
     if features is None:
         features = [_feature(2, "a.jpg", keypoint_columns=4), _feature(11, "b.jpg")]
     return _core.colmap_database(
+        np.array([5], np.uint32),
         [camera],
         features,
         _graph() if graph is None else graph,
@@ -3192,7 +3197,9 @@ def _graph_fingerprint(value):
     )
     cameras = tuple(
         (
+            int(value.recovered_camera1_ids[index]),
             _camera_fingerprint(value.recovered_camera1(index)),
+            int(value.recovered_camera2_ids[index]),
             _camera_fingerprint(value.recovered_camera2(index)),
         )
         for index in range(value.num_pairs)
@@ -3213,7 +3220,6 @@ def _camera_fingerprint(value):
     if value is None:
         return None
     return (
-        value.id,
         value.model_id,
         value.width,
         value.height,
@@ -3240,17 +3246,19 @@ def _database_fingerprint(value):
         value.user_version,
         tuple(
             (
-                camera.id,
+                camera_id,
                 camera.model_id,
                 camera.width,
                 camera.height,
                 np.asarray(camera.params).tobytes(),
             )
-            for camera in value.cameras
+            for camera_id, camera in zip(
+                value.camera_ids, value.cameras, strict=True
+            )
         ),
         np.asarray(value.prior_focal_length).tobytes(),
         tuple(_feature_fingerprint(value.feature_at(i)) for i in range(value.num_images)),
-        _graph_fingerprint(value.match_graph),
+        _graph_fingerprint(value._correspondence_storage),
         _array_fields_fingerprint(
             value.rig_frames,
             (
@@ -3418,8 +3426,8 @@ def test_feature_set_accepts_every_colmap_keypoint_layout(columns):
         (np.zeros((2, 2), np.float32), np.zeros((3, 4), np.uint8), "must be \\(N,D\\)"),
         (
             np.zeros((2, 2), np.float32),
-            np.zeros((2, 4), np.int16),
-            "uint8, int8, float16, float32, or float64",
+            np.zeros((2, 4), np.bool_),
+            "numeric",
         ),
     ],
 )
@@ -3454,29 +3462,29 @@ def test_match_graph_ragged_fields_and_colmap_pair_ids():
 
 
 def test_match_graph_recovered_camera_contract_and_lifetime():
-    camera1 = _core.camera(
-        23,
+    camera1 = _core.camera_intrinsics(
         1,
         640,
         480,
         np.array([500.0, 501.0, 320.0, 240.0], np.float64),
     )
-    camera2 = _core.camera(
-        24,
+    camera2 = _core.camera_intrinsics(
         0,
         800,
         600,
         np.array([700.0, 400.0, 300.0], np.float64),
     )
-    value = _core.match_graph(
+    value = _core.correspondence_storage(
         np.array([[2, 11]], np.uint32),
         np.array([0, 0], np.uint64),
         np.empty((0, 2), np.uint32),
         np.array([0, 0], np.uint64),
         np.empty((0, 2), np.uint32),
         recovered_camera1=[camera1],
+        recovered_camera1_ids=np.array([23], np.uint32),
         camera1_prior_focal_length=np.array([1], np.uint8),
         recovered_camera2=[camera2],
+        recovered_camera2_ids=np.array([24], np.uint32),
         camera2_prior_focal_length=np.array([0], np.uint8),
     )
 
@@ -3484,6 +3492,8 @@ def test_match_graph_recovered_camera_contract_and_lifetime():
     assert value.camera2_present.tolist() == [1]
     assert value.camera1_prior_focal_length.tolist() == [1]
     assert value.camera2_prior_focal_length.tolist() == [0]
+    assert value.recovered_camera1_ids == [23]
+    assert value.recovered_camera2_ids == [24]
     recovered = value.recovered_camera1(0)
     assert _camera_fingerprint(recovered) == _camera_fingerprint(camera1)
     params = recovered.params
@@ -3506,14 +3516,14 @@ def test_match_graph_recovered_camera_contract_and_lifetime():
         pytest.param(
             {
                 "recovered_camera1": lambda: [
-                    _core.camera(
-                        23,
+                    _core.camera_intrinsics(
                         0,
                         10,
                         10,
                         np.array([5.0, 5.0, 5.0], np.float64),
                     )
                 ],
+                "recovered_camera1_ids": np.array([23], np.uint32),
                 "camera1_present": np.array([0], np.uint8),
             },
             "camera1_present must agree",
@@ -3522,6 +3532,7 @@ def test_match_graph_recovered_camera_contract_and_lifetime():
         pytest.param(
             {
                 "recovered_camera1": [],
+                "recovered_camera1_ids": np.empty(0, np.uint32),
             },
             "must have P camera-or-None values",
             id="wrong-camera-count",
@@ -3529,14 +3540,14 @@ def test_match_graph_recovered_camera_contract_and_lifetime():
         pytest.param(
             {
                 "recovered_camera1": lambda: [
-                    _core.camera(
-                        23,
+                    _core.camera_intrinsics(
                         0,
                         10,
                         10,
                         np.array([5.0, 5.0, 5.0], np.float64),
                     )
                 ],
+                "recovered_camera1_ids": np.array([23], np.uint32),
                 "geometry_present": np.array([0], np.uint8),
             },
             "absent geometry",
@@ -3551,7 +3562,7 @@ def test_match_graph_recovered_camera_rejects_inconsistent_presence(
     if callable(kwargs.get("recovered_camera1")):
         kwargs["recovered_camera1"] = kwargs["recovered_camera1"]()
     with pytest.raises(ValueError, match=message):
-        _core.match_graph(
+        _core.correspondence_storage(
             np.array([[2, 11]], np.uint32),
             np.array([0, 0], np.uint64),
             np.empty((0, 2), np.uint32),
@@ -3562,7 +3573,7 @@ def test_match_graph_recovered_camera_rejects_inconsistent_presence(
 
 
 def test_match_graph_scores_keep_owner_alive():
-    value = _core.match_graph(
+    value = _core.correspondence_storage(
         np.array([[2, 11]], np.uint32),
         np.array([0, 1], np.uint64),
         np.array([[0, 0]], np.uint32),
@@ -3581,28 +3592,28 @@ def test_match_graph_scores_keep_owner_alive():
 @pytest.mark.parametrize(
     "call",
     [
-        lambda: _core.match_graph(
+        lambda: _core.correspondence_storage(
             np.array([[11, 2]], np.uint32),
             np.array([0, 0], np.uint64),
             np.empty((0, 2), np.uint32),
             np.array([0, 0], np.uint64),
             np.empty((0, 2), np.uint32),
         ),
-        lambda: _core.match_graph(
+        lambda: _core.correspondence_storage(
             np.array([[2, 11]], np.uint32),
             np.array([1, 1], np.uint64),
             np.empty((0, 2), np.uint32),
             np.array([0, 0], np.uint64),
             np.empty((0, 2), np.uint32),
         ),
-        lambda: _core.match_graph(
+        lambda: _core.correspondence_storage(
             np.array([[2, 11]], np.uint32),
             np.array([0, 1], np.uint64),
             np.empty((0, 2), np.uint32),
             np.array([0, 0], np.uint64),
             np.empty((0, 2), np.uint32),
         ),
-        lambda: _core.match_graph(
+        lambda: _core.correspondence_storage(
             np.array([[2, 11]], np.uint32),
             np.array([0, 1], np.uint64),
             np.array([[0, 0]], np.uint32),
@@ -3619,7 +3630,7 @@ def test_match_graph_rejects_invalid_pairs_offsets_and_presence(call):
 
 
 def test_database_rejects_out_of_range_match_indices_and_camera_mismatch():
-    graph = _core.match_graph(
+    graph = _core.correspondence_storage(
         np.array([[2, 11]], np.uint32),
         np.array([0, 1], np.uint64),
         np.array([[99, 0]], np.uint32),
@@ -3661,7 +3672,7 @@ def test_sceneio_roundtrip_sqlite_oracle_and_all_geometry_fields(tmp_path):
         assert (rows, cols) == (2, 2)
         np.testing.assert_array_equal(
             np.frombuffer(data, np.uint32).reshape(rows, cols),
-            expected.match_graph.matches,
+            expected._correspondence_storage.matches,
         )
         geometry = connection.execute(
             "SELECT rows,cols,data,config,F,E,H,qvec,tvec "
@@ -3672,9 +3683,9 @@ def test_sceneio_roundtrip_sqlite_oracle_and_all_geometry_fields(tmp_path):
         for blob, source in zip(
             geometry[4:7],
             (
-                expected.match_graph.fundamental_matrices[0],
-                expected.match_graph.essential_matrices[0],
-                expected.match_graph.homographies[0],
+                expected._correspondence_storage.fundamental_matrices[0],
+                expected._correspondence_storage.essential_matrices[0],
+                expected._correspondence_storage.homographies[0],
             ),
             strict=True,
         ):
@@ -3701,12 +3712,12 @@ def test_pycolmap_reads_sceneio_writer(tmp_path):
         )
         np.testing.assert_array_equal(
             database.read_matches(2, 11),
-            _database().match_graph.matches,
+            _database()._correspondence_storage.matches,
         )
         geometry = database.read_two_view_geometry(2, 11)
         np.testing.assert_array_equal(
             geometry.inlier_matches,
-            _database().match_graph.verified_matches,
+            _database()._correspondence_storage.verified_matches,
         )
         np.testing.assert_array_equal(geometry.F, np.arange(9).reshape(3, 3))
     finally:
@@ -3768,12 +3779,12 @@ def test_sceneio_reads_pycolmap_writer(tmp_path):
 
     value = sceneio.read(path)
     assert value.image_ids == [2, 11]
-    assert value.match_graph.image_pairs.tolist() == [[2, 11]]
-    assert value.match_graph.pair_ids.tolist() == [2 * 2_147_483_647 + 11]
+    assert value._correspondence_storage.image_pairs.tolist() == [[2, 11]]
+    assert value._correspondence_storage.pair_ids.tolist() == [2 * 2_147_483_647 + 11]
     # pycolmap canonicalizes the unordered (11,2) request to pair (2,11)
     # and swaps match columns to preserve endpoint meaning.
-    np.testing.assert_array_equal(value.match_graph.matches, [[0, 1]])
-    np.testing.assert_array_equal(value.match_graph.fundamental_matrices[0], np.eye(3))
+    np.testing.assert_array_equal(value._correspondence_storage.matches, [[0, 1]])
+    np.testing.assert_array_equal(value._correspondence_storage.fundamental_matrices[0], np.eye(3))
 
 
 def test_absent_and_present_empty_rows_roundtrip_distinctly(tmp_path):
@@ -3795,7 +3806,7 @@ def test_absent_and_present_empty_rows_roundtrip_distinctly(tmp_path):
         extractor_type=0,
         keypoints_present=True,
     )
-    graph = _core.match_graph(
+    graph = _core.correspondence_storage(
         np.array([[2, 11]], np.uint32),
         np.array([0, 0], np.uint64),
         np.empty((0, 2), np.uint32),
@@ -3825,8 +3836,8 @@ def test_absent_and_present_empty_rows_roundtrip_distinctly(tmp_path):
     assert not decoded.feature(2).keypoints_present
     assert decoded.feature(11).keypoints_present
     assert decoded.feature(11).descriptors.shape == (0, 8)
-    assert decoded.match_graph.match_present.tolist() == [1]
-    assert decoded.match_graph.geometry_present.tolist() == [0]
+    assert decoded._correspondence_storage.match_present.tolist() == [1]
+    assert decoded._correspondence_storage.geometry_present.tolist() == [0]
 
 
 def test_partial_image_and_pair_equal_slices_of_full_read(tmp_path):
@@ -3836,7 +3847,9 @@ def test_partial_image_and_pair_equal_slices_of_full_read(tmp_path):
     selected_image = sceneio.read_partial(path, image_id=11)
     selected_pair = sceneio.read_partial(path, pair=(11, 2))
     assert _feature_fingerprint(selected_image) == _feature_fingerprint(full.feature(11))
-    assert _graph_fingerprint(selected_pair) == _graph_fingerprint(full.match_graph)
+    assert _graph_fingerprint(selected_pair._storage) == _graph_fingerprint(
+        full._correspondence_storage
+    )
     capabilities = sceneio.capabilities("colmap_db")
     assert capabilities.partial_selectors == ("image_id", "pair")
     assert "stock_rig_frame_reads" in capabilities.supported_features
@@ -3879,7 +3892,7 @@ def test_inspect_large_blob_has_bounded_python_allocation(tmp_path):
         extractor_type=0,
     )
     path = tmp_path / "large.db"
-    sceneio.write(_database(features=[large], graph=_core.match_graph(
+    sceneio.write(_database(features=[large], graph=_core.correspondence_storage(
         np.empty((0, 2), np.uint32),
         np.array([0], np.uint64),
         np.empty((0, 2), np.uint32),
@@ -4105,7 +4118,7 @@ def test_writer_guard_failure_does_not_modify_existing_file(tmp_path):
         image_size=(640, 480),
         extractor_type=0,
     )
-    empty_graph = _core.match_graph(
+    empty_graph = _core.correspondence_storage(
         np.empty((0, 2), np.uint32),
         np.array([0], np.uint64),
         np.empty((0, 2), np.uint32),
@@ -4131,7 +4144,7 @@ def test_colmap_writer_refuses_hloc_pixel_centers_atomically(tmp_path):
         extractor_type=0,
         pixel_center=(0.0, 0.0),
     )
-    empty_graph = _core.match_graph(
+    empty_graph = _core.correspondence_storage(
         np.empty((0, 2), np.uint32),
         np.array([0], np.uint64),
         np.empty((0, 2), np.uint32),
@@ -4157,7 +4170,7 @@ def test_writer_rejects_float_descriptors(tmp_path):
         image_size=(640, 480),
         extractor_type=-1,
     )
-    empty_graph = _core.match_graph(
+    empty_graph = _core.correspondence_storage(
         np.empty((0, 2), np.uint32),
         np.array([0], np.uint64),
         np.empty((0, 2), np.uint32),
@@ -4233,7 +4246,7 @@ def test_decoded_arrays_outlive_closed_and_removed_database(tmp_path):
     sceneio.write(_database(), path)
     value = sceneio.read(path)
     keypoints = value.feature(2).keypoints
-    matches = value.match_graph.matches
+    matches = value._correspondence_storage.matches
     expected_keypoints = keypoints.copy()
     expected_matches = matches.copy()
     del value
@@ -4516,8 +4529,7 @@ def test_randomized_sparse_ids_ragged_matches_and_optional_geometry(tmp_path):
                 replace=False,
             )
         )
-        camera = _core.camera(
-            19,
+        camera = _core.camera_intrinsics(
             1,
             64,
             48,
@@ -4590,7 +4602,7 @@ def test_randomized_sparse_ids_ragged_matches_and_optional_geometry(tmp_path):
             geometry_flags
             * rng.integers(0, 2, pair_count, dtype=np.uint8)
         )
-        graph = _core.match_graph(
+        graph = _core.correspondence_storage(
             image_pairs,
             np.asarray(raw_offsets, np.uint64),
             np.asarray(raw_values, np.uint32).reshape(-1, 2),
@@ -4613,6 +4625,7 @@ def test_randomized_sparse_ids_ragged_matches_and_optional_geometry(tmp_path):
             geometry_present=geometry_flags,
         )
         expected = _core.colmap_database(
+            np.array([19], np.uint32),
             [camera],
             features,
             graph,

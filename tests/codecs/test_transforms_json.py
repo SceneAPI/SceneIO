@@ -402,7 +402,7 @@ def test_missing_frames_raises():
 def test_write_rejects_foreign_convention():
     # a record whose tags aren't transforms.json-native (opencv here, the factory
     # default) must be rejected, not silently relabeled opengl on the next read.
-    pvs = _core.posed_view_set(
+    pvs = _core.pose_storage(
         np.array([[1.0, 0.0, 0.0, 0.0]]), np.array([[0.0, 0.0, 0.0]]), axis_frame="opencv"
     )
     with pytest.raises(ValueError, match="opengl"):

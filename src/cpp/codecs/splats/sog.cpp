@@ -1277,7 +1277,7 @@ EncodedSog encode_sog_layers(const GaussianCloud &cloud) {
 
     json metadata;
     metadata["version"] = 2;
-    metadata["asset"] = {{"generator", "SceneIO 0.3.0"}};
+    metadata["asset"] = {{"generator", "SceneIO 0.4.0"}};
     metadata["count"] = cloud.n;
     metadata["means"] = {
         {"mins",

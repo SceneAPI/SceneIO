@@ -489,15 +489,18 @@ void select_colmap_rig_frame_for_image(
 }
 
 void register_reconstruction(nb::module_ &m) {
-    nb::class_<Camera>(m, "Camera")
-        .def_ro("id", &Camera::id)
-        .def_ro("model_id", &Camera::model_id)
-        .def_prop_ro("model", [](const Camera &c) { return colmap_model_info(c.model_id).name; })
-        .def_ro("width", &Camera::width)
-        .def_ro("height", &Camera::height)
-        .def_prop_ro("params", [](const Camera &c) { return vw(c.params, {c.params.size()}); })
-        .def("__repr__", [](const Camera &c) {
-            return "<Camera id=" + std::to_string(c.id) + " model=" + colmap_model_info(c.model_id).name +
+    nb::class_<CameraIntrinsics>(m, "CameraIntrinsics")
+        .def_ro("model_id", &CameraIntrinsics::model_id)
+        .def_prop_ro("model", [](const CameraIntrinsics &c) {
+            return colmap_model_info(c.model_id).name;
+        })
+        .def_ro("width", &CameraIntrinsics::width)
+        .def_ro("height", &CameraIntrinsics::height)
+        .def_prop_ro("params", [](const CameraIntrinsics &c) {
+            return vw(c.params, {c.params.size()});
+        })
+        .def("__repr__", [](const CameraIntrinsics &c) {
+            return "<CameraIntrinsics model=" + std::string(colmap_model_info(c.model_id).name) +
                    " " + std::to_string(c.width) + "x" + std::to_string(c.height) + ">";
         });
 
@@ -509,7 +512,12 @@ void register_reconstruction(nb::module_ &m) {
         .def_ro("has_rig_frame_model", &Reconstruction::has_rig_frame_model)
         .def_prop_ro("num_rigs", [](const Reconstruction &r) { return r.num_rigs(); })
         .def_prop_ro("num_frames", [](const Reconstruction &r) { return r.num_frames(); })
-        .def_prop_ro("cameras", [](const Reconstruction &r) { return r.cameras; })
+        .def_prop_ro("camera_ids", [](const Reconstruction &r) {
+            return ::camera_ids(r.cameras);
+        })
+        .def_prop_ro("cameras", [](const Reconstruction &r) {
+            return camera_intrinsics(r.cameras);
+        })
         .def_prop_ro("image_ids", [](const Reconstruction &r) { return vw(r.img_ids, {r.num_images()}); }, ri)
         .def_prop_ro("quaternions", [](const Reconstruction &r) { return vw(r.quats, {r.num_images(), 4}); }, ri)
         .def_prop_ro("translations", [](const Reconstruction &r) { return vw(r.trans, {r.num_images(), 3}); }, ri)

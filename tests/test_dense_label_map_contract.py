@@ -8,7 +8,6 @@ from datetime import date
 from pathlib import Path
 
 import sceneio
-import sceneio.data
 import sceneio.io
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -29,7 +28,7 @@ def test_contract_identity_public_surface_and_live_fields() -> None:
         "contract_date"
     ]
     assert CONTRACT["schema"] == sceneio.LABEL_MAP_SCHEMA
-    assert CONTRACT["public_namespace"] == "sceneio.data"
+    assert CONTRACT["public_namespace"] == "sceneio"
     expected_fields = {
         "LabelTaxonomy": CONTRACT["label_taxonomy"]["fields"],
         "SemanticMap": CONTRACT["semantic_map"]["fields"],
@@ -38,11 +37,11 @@ def test_contract_identity_public_surface_and_live_fields() -> None:
     }
     assert sorted(expected_fields) == CONTRACT["public_symbols"]
     for name, fields in expected_fields.items():
-        record = getattr(sceneio.data, name)
+        record = getattr(sceneio, name)
         assert dataclasses.is_dataclass(record)
         assert [field.name for field in dataclasses.fields(record)] == fields
         assert sceneio.representation_contract(record).representation == (
-            f"sceneio.data.{name}"
+            f"sceneio.{name}"
         )
     for name in CONTRACT["typed_io"]:
         assert getattr(sceneio, name) is getattr(sceneio.io, name)

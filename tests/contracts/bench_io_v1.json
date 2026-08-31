@@ -15,9 +15,9 @@
       "_apng_fixture",
       "_gauss",
       "_img_u8",
-      "_mesh_scene",
       "_pc_ply",
       "_poses_and_reconstruction",
+      "_scene_graph",
       "_single_calibration",
       "_specs",
       "_theora_fixture",
@@ -31,15 +31,15 @@
       "_theora_fixture": "bench/io_bench/fixtures/sequences.py",
       "_gauss": "bench/io_bench/fixtures/splats.py",
       "_img_u8": "bench/io_bench/fixtures/images.py",
-      "_mesh_scene": "bench/io_bench/fixtures/meshes.py",
       "_pc_ply": "bench/io_bench/fixtures/points.py",
       "_poses_and_reconstruction": "bench/io_bench/fixtures/reconstruction.py",
       "_single_calibration": "bench/io_bench/fixtures/calibration.py",
       "_specs": "bench/io_bench/runner.py",
-      "_y4m_fixture": "bench/io_bench/fixtures/sequences.py"
+      "_y4m_fixture": "bench/io_bench/fixtures/sequences.py",
+      "_scene_graph": "bench/io_bench/fixtures/meshes.py"
     },
     "parent_and_candidate_builder_ast_sha256": "ce8dda677da61550035dcd2062d4cb53aed20f21e37024d87d5f50449ba1fbfd",
-    "current_builder_ast_sha256": "cef56f6af4454372216c8e4f415a1740fbd091fc29392fbfaadfe020fa53beaf",
+    "current_builder_ast_sha256": "46af28b0d94035f91ddf1c7b6d8af8a30f32d6f06932cab00640fb467fb59078",
     "fixtures": {
       "camera_calibration": "5e2b5f1e70aa57bd8d219b06a16ce36dfec48aa4d0905ef45cdf503cca8b511c",
       "gaussian_cloud": "dc358708428493fafd834f6c9626f87dd1e91626d324fea3865320561176b1cf",
@@ -48,10 +48,10 @@
       "image_sequence_apng_rgba": "d4a801f1636913bc101cffa5309bfbcc39aa2e6c9a3b8952b3af816867ce57ea",
       "image_sequence_webm_rgb": "f253269b01d4220c153c9403bfb3ceaa1c7e64a084e69b5ea864a5a9c8735d24",
       "image_sequence_yuv420": "f4bd49409011672e13a22eaf899edb621715440e9c3103c6bec692463fafd398",
-      "mesh_scene": "69f8355dbb149640abafa5221ab7a6a09f56562d588a044796591ce5016b8b6d",
       "point_cloud_ply": "718f1d8592ca964d6b8303ca73f77f8739a525d954d50865cc904705fd939da3",
-      "reconstruction": "32b1c26e3bb277b76c6ce3506fd34591483a13fb1c9b5cb960f7f84aad1eb39f",
-      "tensor_dict": "988ba625ca1f012b60705dea6b395eb741b58cc63660cc7c443dedbeef0fa377"
+      "reconstruction": "7f6f1e97a6029761a0a86c10d9859a8a935a6ed82f43cb73e891a379d6855b9e",
+      "tensor_dict": "988ba625ca1f012b60705dea6b395eb741b58cc63660cc7c443dedbeef0fa377",
+      "scene_graph": "8dbc439473cfdeb59f1f8772bfb84d2a719d2e7104f3ac29e113839d914c0656"
     }
   },
   "r3_2_family_extraction": {
@@ -229,7 +229,7 @@
       "family_functions": {
         "build_mesh_specs": {
           "source": "bench/io_bench/families/meshes.py",
-          "ast_sha256": "90d898ad80f52032c0591625a75f414b26b6d83276547f53db768c51e4c0726a"
+          "ast_sha256": "b73de1cb9fcfdea7c9061a62c4f2b093e5878e59099c0f57dcf49e5b7222fa48"
         }
       },
       "facade_family_exports": [
@@ -247,10 +247,6 @@
         "_mesh_ply": {
           "source": "bench/io_bench/fixtures/meshes.py",
           "ast_sha256": "a42e855a44e0967327c73907808d2cb9e14d8f5162e44fea9732eb5a430aec6e"
-        },
-        "_mesh_scene": {
-          "source": "bench/io_bench/fixtures/meshes.py",
-          "ast_sha256": "c789d470bda4cb21f855291c7e9be81bbbcdf861b95332381b95e30f92053e12"
         },
         "_mesh_stl": {
           "source": "bench/io_bench/fixtures/meshes.py",
@@ -303,6 +299,10 @@
         "_trimesh_stl_w": {
           "source": "bench/io_bench/oracles/meshes.py",
           "ast_sha256": "6d80bb3c841e7d8c87ade156a03086ef360b32885602ade2e7c6c9e9d47d478d"
+        },
+        "_scene_graph": {
+          "source": "bench/io_bench/fixtures/meshes.py",
+          "ast_sha256": "c690802ebbcf5c76ffdb1580655c254ee931c3518f24b2978b0de63684de9474"
         }
       },
       "optional_oracle_bindings": [
@@ -393,7 +393,7 @@
       "family_functions": {
         "build_reconstruction_specs": {
           "source": "bench/io_bench/families/reconstruction.py",
-          "ast_sha256": "835e6ff5be2dcb54bf8cfd95c3dacaf3a3f6ff37217e6e9f9ac735f7dce3c061"
+          "ast_sha256": "cbe6746efe256fcf967491cf02dcf16a07f7ad04e2233684a69098ed7116baf1"
         }
       },
       "facade_family_exports": [
@@ -450,7 +450,7 @@
         },
         "_poses_and_reconstruction": {
           "source": "bench/io_bench/fixtures/reconstruction.py",
-          "ast_sha256": "2ff5e65be2129f43a7ba4c76e1ff7a1478923ebf3f7531f0d4c0020d6b22b2f4"
+          "ast_sha256": "5bb6b981e7908dd34c6224f108d98ac45eb0e4d11714ce3dbaa8cca327f2b59a"
         }
       },
       "facade_constant_exports": [
@@ -664,7 +664,7 @@
     "facade": "bench/bench_io.py",
     "facade_attribute_policy": "alias_all_non_dunder_runner_globals",
     "facade_attribute_count": 189,
-    "facade_attributes_sha256": "5ac12624f3a946edcc318dbf69cb538a2ddfd215b1444fce3924827996cd8d4b",
+    "facade_attributes_sha256": "f3f63983ca83fb2050bb76a7148b99accd482e50df9ccd6037c52b8f815ae30e",
     "facade_rebinding_policy": "propagate_historical_attribute_mutations_to_runner",
     "facade_first_import_policy": "preserve_initialized_runner_objects_and_rebindings",
     "facade_reload_policy": "reset_runner_source_definitions_and_restore_aliases",
@@ -672,16 +672,16 @@
     "star_import_count": 72,
     "star_import_sha256": "7b18ab7bb60a1cbf82bc6a68d5ebd3c7416d149cd69c08daa90c468b4c1aa151",
     "function_ast_sha256": {
-      "_colmap_db_fixture": "21fca110721a74e5314b837211e72d958a2e8b9ed59bb7c204027f90c26a7ab6",
-      "_colmap_db_payload_nbytes": "a68d8e879f360c0595f76f747079ce07c4822774f22b5b4cefee8bd396dffb32",
+      "_colmap_db_fixture": "ab90c5b0ce3b9d884b4af44992868c80701c9e740bac1b0560c24a2507ac5fe4",
+      "_colmap_db_payload_nbytes": "0182dee86467192bd95f4859ff3d6c5491aa2dec7df50c0ac8d1b20ac21712c0",
       "_colmap_blob": "1510f9e3f19529d08b1e29d8ff6ab25ff568d1f41b5d93c20e55819b46a75d74",
-      "_sqlite_reference_write_colmap_db": "21d9bf176dcc34b91c663cbb60f09d552433237dde94e982fe35f0c6a33fa408",
+      "_sqlite_reference_write_colmap_db": "3d333a54a0fedcf4b9f99571dcd279076aeff6be2079a926356340bdaa1ca9c3",
       "_sqlite_reference_query": "81eefe9fd08369ddb528afee8f3fe393faefa895480d270f1c6e25aba5967c1d",
       "_sqlite_reference_read_colmap_db": "e50153bfd1dbdd129545abc1b1f7b37d691a6da220634d7b219ec013e7e03bc6",
       "_sqlite_reference_inspect_colmap_db": "1a4f469a1d30e9b035f81039d678e6fb4749923bdecf372315675e8674507982",
       "_sqlite_reference_read_colmap_db_image": "1590c76b16a2c935a7f00736180a5b4858f5d86cd852367749385b8d203f367e",
       "_sqlite_reference_read_colmap_db_pair": "ec87e08a59243c23622d83a9a00112a5a0657a119c948d39d7d357b747714d85",
-      "_assert_colmap_db_equal": "da1cf206f5c6dbebc8f20ecf10631ad1fea998a6c83adb97354936611f3b7dce",
+      "_assert_colmap_db_equal": "c4fbc722d77d2b98b6cfeb390d92364d6981d71b7d84760aa5f9d9d9314631f0",
       "_evict_file_cache": "ce88899f9525aecc749764372ed3d85fde9f9af62ad95feb4e90cee38f77cc83",
       "_stored_size": "f76c384c22cdbd196f96fc51960866d546db6584300845583135805d9bd54f32",
       "_specs": "153fd71dbbd54191b09297c807042017390edb1588069c3b2ec78b7412f0ea82",
@@ -694,10 +694,10 @@
       "_partial_request": "570f508726b04dc83f2b079cf481559348e1df3f578fad2c2ebafae8e9674b0e",
       "main": "c5b809e8ca512be16dd7e496fdfe65e903374265ad8f82f3f291cb9ac6f3c1fc",
       "_run_large_safetensors": "4c7533d0bc4c406858f7e00ed0704966c9a8133655a2629a63075ad7e3a9f29d",
-      "_benchmark_colmap_db": "0fc2a9533c139fb1a09b94adfb2efee2fc1e8cc423cba6dccc813ab8a92144d3",
+      "_benchmark_colmap_db": "d6d88ec39d620393a191a3d542564b83bd3aad96668c5ef6c58ed3cbcac2bda9",
       "_benchmark_path_spec": "3bac92c60c0e5e8a35b1d698ab1005988398c7aaa6e8393634e65c7e45efc512",
-      "_benchmark_gltf": "589f18f0c1bac962a14902f113d1bbcf32edc07168015792e9a42d0826506093",
-      "_run_benchmark": "f2d050d0fb665f7f25a12807c0d9b7d531a403ff4079530ee9fda8346fd5d5d6"
+      "_benchmark_gltf": "3e6901a8b273c6eebb8c3601a9b9586504637db988d57afef0975f84e904867d",
+      "_run_benchmark": "b9046e0eb04f1019f3743fcaa9ec4107bcd6ef6fe5ecb9b9746b8d8e98a13b44"
     }
   },
   "r3_1a_equivalence": {

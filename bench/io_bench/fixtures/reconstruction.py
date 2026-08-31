@@ -10,6 +10,7 @@ import numpy as np
 
 from bench.io_bench.oracles.reconstruction import _bal_oracle_write
 from sceneio import _core
+from sceneio._posed_views import posed_views_from_storage
 
 
 def _poses_and_reconstruction(scale=1.0):
@@ -23,12 +24,21 @@ def _poses_and_reconstruction(scale=1.0):
         + b"0\n"
     )
     frame = b'{"file_path":"a.png","transform_matrix":[[1,0,0,1],[0,1,0,2],[0,0,1,3],[0,0,0,1]]}'
-    transforms = _core.read_transforms_json(
-        b'{"camera_model":"PINHOLE","fl_x":500,"fl_y":510,"cx":320,"cy":240,'
-        b'"w":640,"h":480,"frames":[' + b",".join([frame] * views) + b"]}"
+    transforms = posed_views_from_storage(
+        _core.read_transforms_json(
+            b'{"camera_model":"PINHOLE","fl_x":500,"fl_y":510,"cx":320,"cy":240,'
+            b'"w":640,"h":480,"frames":[' + b",".join([frame] * views) + b"]}"
+        ),
+        source_profile="transforms_json",
     )
-    tum = _core.read_tum(b"0 1 2 3 0 0 0 1\n" * views)
-    kitti = _core.read_kitti(b"1 0 0 1 0 1 0 2 0 0 1 3\n" * views)
+    tum = posed_views_from_storage(
+        _core.read_tum(b"0 1 2 3 0 0 0 1\n" * views),
+        source_profile="tum",
+    )
+    kitti = posed_views_from_storage(
+        _core.read_kitti(b"1 0 0 1 0 1 0 2 0 0 1 3\n" * views),
+        source_profile="kitti",
+    )
     return reconstruction, transforms, tum, kitti
 
 

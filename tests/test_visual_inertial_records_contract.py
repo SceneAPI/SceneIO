@@ -36,12 +36,12 @@ def test_fc1_public_surface_and_registry_boundary():
     ]
     assert CONTRACT["core_factories"] == ["imu_calibration", "imu_sequence"]
     for name in ("ImuCalibration", "ImuSequence"):
-        assert getattr(sceneio, name) is getattr(sceneio.io, name)
         assert getattr(sceneio, name) is getattr(_core, name)
+        assert not hasattr(sceneio.io, name)
         assert sceneio.representation_contract(name).representation == (
             f"sceneio.{name}"
         )
-    assert sceneio.VisualInertialDataset is sceneio.io.VisualInertialDataset
+    assert not hasattr(sceneio.io, "VisualInertialDataset")
     assert sceneio.representation_contract(
         "VisualInertialDataset"
     ).representation == "sceneio.VisualInertialDataset"

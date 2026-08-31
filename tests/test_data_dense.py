@@ -1,17 +1,17 @@
-"""Validation tests for sceneio.data.dense."""
+"""Validation tests for sceneio.dense."""
 
 from __future__ import annotations
 
 import numpy as np
 import pytest
 
-from sceneio.data import ConfidenceMap, DepthMap, Mask, Pointmap
+from sceneio import ConfidenceMap, Mask, Pointmap, depth_map
 from sceneio.errors import ContractViolation
 
 
 class TestDepthMap:
     def test_valid_without_mask(self) -> None:
-        d = DepthMap(depth=np.ones((4, 5), dtype=np.float32))
+        d = depth_map(np.ones((4, 5), dtype=np.float32))
         assert d.shape == (4, 5)
         assert d.valid is None
 
@@ -20,27 +20,27 @@ class TestDepthMap:
         depth[0, 0] = 1.5
         valid = np.zeros((2, 2), dtype=bool)
         valid[0, 0] = True
-        DepthMap(depth=depth, valid=valid)
+        depth_map(depth, valid=valid)
 
     def test_wrong_dtype_raises(self) -> None:
         with pytest.raises(ContractViolation, match="expected dtype float32, got float64"):
-            DepthMap(depth=np.ones((2, 2), dtype=np.float64))
+            depth_map(np.ones((2, 2), dtype=np.float64))
 
     def test_wrong_ndim_raises(self) -> None:
         with pytest.raises(ContractViolation, match=r"DepthMap\.depth.*2-D"):
-            DepthMap(depth=np.ones((2, 2, 1), dtype=np.float32))
+            depth_map(np.ones((2, 2, 1), dtype=np.float32))
 
     def test_mask_shape_mismatch_raises(self) -> None:
         with pytest.raises(ContractViolation, match=r"DepthMap\.valid"):
-            DepthMap(
-                depth=np.ones((2, 2), dtype=np.float32),
+            depth_map(
+                np.ones((2, 2), dtype=np.float32),
                 valid=np.ones((3, 3), dtype=bool),
             )
 
     def test_mask_wrong_dtype_raises(self) -> None:
         with pytest.raises(ContractViolation, match=r"DepthMap\.valid.*dtype bool"):
-            DepthMap(
-                depth=np.ones((2, 2), dtype=np.float32),
+            depth_map(
+                np.ones((2, 2), dtype=np.float32),
                 valid=np.ones((2, 2), dtype=np.uint8),
             )
 
@@ -48,19 +48,19 @@ class TestDepthMap:
         depth = np.ones((2, 2), dtype=np.float32)
         depth[0, 0] = np.nan
         with pytest.raises(ContractViolation, match="non-finite"):
-            DepthMap(depth=depth)
+            depth_map(depth)
 
     def test_nan_on_valid_pixel_raises(self) -> None:
         depth = np.full((2, 2), np.nan, dtype=np.float32)
         with pytest.raises(ContractViolation, match="non-finite"):
-            DepthMap(depth=depth, valid=np.ones((2, 2), dtype=bool))
+            depth_map(depth, valid=np.ones((2, 2), dtype=bool))
 
     @pytest.mark.parametrize("bad", [0.0, -1.0])
     def test_non_positive_valid_depth_raises(self, bad: float) -> None:
         depth = np.ones((2, 2), dtype=np.float32)
         depth[1, 1] = bad
         with pytest.raises(ContractViolation, match="must be > 0"):
-            DepthMap(depth=depth)
+            depth_map(depth)
 
 
 class TestPointmap:

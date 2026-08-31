@@ -5,14 +5,13 @@ from __future__ import annotations
 import os
 
 from sceneio.io._inspectors.model import Inspection
-from sceneio.io._usd import legacy
-from sceneio.io._usd.stage import read_scene, write_scene
+from sceneio.io._usd.stage import inspect_scene, read_scene, write_scene
 
 
 def read_usd(path: str | os.PathLike[str]):
-    """Read the compatibility static-mesh profile as a MeshScene."""
+    """Read the bounded USD profile as a SceneGraph."""
 
-    return legacy.read_usd(path)
+    return read_scene(path)
 
 
 def inspect_usd(
@@ -20,27 +19,27 @@ def inspect_usd(
     *,
     format_id: str = "usd",
 ) -> Inspection:
-    """Inspect stage structure and rich-read compatibility."""
+    """Inspect stage structure and SceneGraph compatibility."""
 
-    return legacy.inspect_usd(path, format_id=format_id)
+    return inspect_scene(path, format_id=format_id)
 
 
 def inspect_usdz(path: str | os.PathLike[str]) -> Inspection:
     """Inspect an aligned USDZ package."""
 
-    return legacy.inspect_usdz(path)
+    return inspect_scene(path, format_id="usdz")
 
 
 def write_usd(scene, path: str | os.PathLike[str]) -> None:
-    """Write the compatibility MeshScene profile as USDA or USDZ."""
+    """Write the bounded SceneGraph profile as USDA or USDZ."""
 
-    legacy.write_usd(scene, path)
+    write_scene(scene, path)
 
 
 def write_usdz(scene, path: str | os.PathLike[str]) -> None:
-    """Write the compatibility MeshScene profile as USDZ."""
+    """Write the bounded SceneGraph profile as USDZ."""
 
-    legacy.write_usdz(scene, path)
+    write_scene(scene, path, encoding="usdz")
 
 
 __all__ = [

@@ -10,91 +10,25 @@ optionally carrying its verified two-view geometry).
 
 from __future__ import annotations
 
-import math
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from types import MappingProxyType
 from typing import Literal
 
 import numpy as np
 
-from sceneio.data._validation import (
+from sceneio import _core
+from sceneio._data._validation import (
     ensure_array,
     ensure_choice,
     ensure_instance,
     ensure_integer_array,
 )
+from sceneio._data.transforms import SE3
 from sceneio.errors import ContractViolation
 
 CORRESPONDENCE_MODES: frozenset[str] = frozenset({"indexed", "coordinates"})
-
-
-@dataclass(frozen=True)
-class FeatureSet:
-    """Per-image keypoints with optional descriptors and scores.
-
-    ``descriptors`` may be any numeric dtype; the dtype tag is exposed
-    as :attr:`descriptor_dtype` and can never drift from the array.
-    """
-
-    keypoints: np.ndarray  # (N, 2) float32, (x, y) pixel coordinates
-    descriptors: np.ndarray | None = None  # (N, D), any numeric dtype
-    scores: np.ndarray | None = None  # (N,) float32
-    pixel_center: tuple[float, float] = (0.5, 0.5)
-
-    def __post_init__(self) -> None:
-        keypoints = ensure_array(
-            "FeatureSet.keypoints",
-            self.keypoints,
-            dtypes=(np.float32,),
-            shape=(None, 2),
-            finite=True,
-        )
-        n = keypoints.shape[0]
-        if (
-            not isinstance(self.pixel_center, tuple)
-            or len(self.pixel_center) != 2
-            or any(
-                isinstance(value, bool)
-                or not isinstance(value, int | float)
-                or not math.isfinite(float(value))
-                for value in self.pixel_center
-            )
-        ):
-            raise ContractViolation(
-                "FeatureSet.pixel_center: expected two finite numbers"
-            )
-        object.__setattr__(
-            self,
-            "pixel_center",
-            tuple(float(value) for value in self.pixel_center),
-        )
-        if self.descriptors is not None:
-            descriptors = ensure_array("FeatureSet.descriptors", self.descriptors, shape=(n, None))
-            if not np.issubdtype(descriptors.dtype, np.number):
-                raise ContractViolation(
-                    f"FeatureSet.descriptors: expected a numeric dtype, "
-                    f"got {descriptors.dtype.name}"
-                )
-        if self.scores is not None:
-            ensure_array(
-                "FeatureSet.scores",
-                self.scores,
-                dtypes=(np.float32,),
-                shape=(n,),
-                finite=True,
-            )
-
-    def __len__(self) -> int:
-        return int(self.keypoints.shape[0])
-
-    @property
-    def descriptor_dtype(self) -> str | None:
-        """The descriptor dtype tag (``"float32"``, ``"uint8"``, ...) or None."""
-        return None if self.descriptors is None else self.descriptors.dtype.name
-
-    @property
-    def descriptor_dim(self) -> int | None:
-        return None if self.descriptors is None else int(self.descriptors.shape[1])
+INDEX_VALIDATION_MODES: frozenset[str] = frozenset({"eager", "deferred"})
 
 
 @dataclass(frozen=True)
@@ -252,11 +186,21 @@ class CorrespondenceGraph:
     correspondence columns/sides follow that order.
     """
 
-    features: Mapping[str, FeatureSet]
+    features: Mapping[str, _core.FeatureSet]
     pairs: Mapping[tuple[str, str], PairCorrespondences]
+    verified_pairs: Mapping[tuple[str, str], PairCorrespondences] = field(
+        default_factory=dict
+    )
+    configurations: Mapping[tuple[str, str], int] = field(default_factory=dict)
+    relative_poses: Mapping[tuple[str, str], SE3] = field(default_factory=dict)
+    source_metadata: Mapping[tuple[str, str], Mapping[str, object]] = field(
+        default_factory=dict
+    )
+    index_validation: Literal["eager", "deferred"] = "eager"
+    _storage: object | None = field(default=None, init=False, repr=False, compare=False)
 
     def __post_init__(self) -> None:
-        features: dict[str, FeatureSet] = {}
+        features: dict[str, _core.FeatureSet] = {}
         for image_id, feature_set in dict(self.features).items():
             if not isinstance(image_id, str) or not image_id:
                 raise ContractViolation(
@@ -266,47 +210,147 @@ class CorrespondenceGraph:
             ensure_instance(
                 f"CorrespondenceGraph.features[{image_id!r}]",
                 feature_set,
-                FeatureSet,
+                _core.FeatureSet,
                 "FeatureSet",
             )
             features[image_id] = feature_set
-        pairs: dict[tuple[str, str], PairCorrespondences] = {}
-        for key, pair in dict(self.pairs).items():
-            if (
-                not isinstance(key, tuple)
-                or len(key) != 2
-                or not all(isinstance(part, str) and part for part in key)
+        ensure_choice(
+            "CorrespondenceGraph.index_validation",
+            self.index_validation,
+            INDEX_VALIDATION_MODES,
+        )
+
+        def validate_pairs(
+            values: Mapping[tuple[str, str], PairCorrespondences],
+            channel: str,
+        ) -> dict[tuple[str, str], PairCorrespondences]:
+            pairs: dict[tuple[str, str], PairCorrespondences] = {}
+            for key, pair in dict(values).items():
+                self._validate_pair_key(key, pair, channel)
+                if pair.mode == "indexed" and self.index_validation == "eager":
+                    self._validate_pair_indices(key, pair, features, channel)
+                pairs[key] = pair
+            return pairs
+
+        pairs = validate_pairs(self.pairs, "pairs")
+        verified_pairs = validate_pairs(self.verified_pairs, "verified_pairs")
+        known_pairs = set(pairs) | set(verified_pairs)
+
+        configurations: dict[tuple[str, str], int] = {}
+        for key, config in dict(self.configurations).items():
+            self._validate_metadata_key(key, known_pairs, "configurations")
+            if isinstance(config, bool) or not isinstance(config, int) or config not in range(10):
+                raise ContractViolation(
+                    f"CorrespondenceGraph.configurations[{key!r}]: "
+                    "expected an integer in 0..9"
+                )
+            configurations[key] = config
+
+        relative_poses: dict[tuple[str, str], SE3] = {}
+        for key, pose in dict(self.relative_poses).items():
+            self._validate_metadata_key(key, known_pairs, "relative_poses")
+            ensure_instance(
+                f"CorrespondenceGraph.relative_poses[{key!r}]",
+                pose,
+                SE3,
+                "SE3",
+            )
+            if pose.convention != "opencv_second_from_first":
+                raise ContractViolation(
+                    f"CorrespondenceGraph.relative_poses[{key!r}]: expected "
+                    "convention='opencv_second_from_first'"
+                )
+            relative_poses[key] = pose
+
+        source_metadata: dict[tuple[str, str], Mapping[str, object]] = {}
+        for key, metadata in dict(self.source_metadata).items():
+            self._validate_metadata_key(key, known_pairs, "source_metadata")
+            if not isinstance(metadata, Mapping) or any(
+                not isinstance(name, str) or not name for name in metadata
             ):
                 raise ContractViolation(
-                    f"CorrespondenceGraph.pairs: keys must be (image_a, image_b) "
-                    f"tuples of non-empty str, got {key!r}"
+                    f"CorrespondenceGraph.source_metadata[{key!r}]: expected "
+                    "a mapping with non-empty string keys"
                 )
-            image_a, image_b = key
-            if image_a == image_b:
-                raise ContractViolation(
-                    f"CorrespondenceGraph.pairs: self-pair {key!r} is not allowed"
-                )
-            ensure_instance(
-                f"CorrespondenceGraph.pairs[{key!r}]",
-                pair,
-                PairCorrespondences,
-                "PairCorrespondences",
+            source_metadata[key] = MappingProxyType(dict(metadata))
+
+        object.__setattr__(self, "features", MappingProxyType(features))
+        object.__setattr__(self, "pairs", MappingProxyType(pairs))
+        object.__setattr__(self, "verified_pairs", MappingProxyType(verified_pairs))
+        object.__setattr__(self, "configurations", MappingProxyType(configurations))
+        object.__setattr__(self, "relative_poses", MappingProxyType(relative_poses))
+        object.__setattr__(self, "source_metadata", MappingProxyType(source_metadata))
+
+    @staticmethod
+    def _validate_metadata_key(
+        key: object,
+        known_pairs: set[tuple[str, str]],
+        channel: str,
+    ) -> None:
+        if key not in known_pairs:
+            raise ContractViolation(
+                f"CorrespondenceGraph.{channel}: key {key!r} has no raw or "
+                "verified correspondence pair"
             )
-            if pair.mode == "indexed":
-                assert pair.indices is not None
-                for side, image_id in enumerate(key):
-                    if image_id not in features:
-                        raise ContractViolation(
-                            f"CorrespondenceGraph.pairs[{key!r}]: indexed pair "
-                            f"references image {image_id!r} with no FeatureSet"
-                        )
-                    if len(pair) and int(pair.indices[:, side].max()) >= len(features[image_id]):
-                        raise ContractViolation(
-                            f"CorrespondenceGraph.pairs[{key!r}]: index "
-                            f"{int(pair.indices[:, side].max())} out of range for "
-                            f"FeatureSet {image_id!r} of {len(features[image_id])} "
-                            f"keypoints"
-                        )
-            pairs[key] = pair
-        object.__setattr__(self, "features", features)
-        object.__setattr__(self, "pairs", pairs)
+
+    @staticmethod
+    def _validate_pair_key(
+        key: object,
+        pair: object,
+        channel: str,
+    ) -> None:
+        if (
+            not isinstance(key, tuple)
+            or len(key) != 2
+            or not all(isinstance(part, str) and part for part in key)
+        ):
+            raise ContractViolation(
+                f"CorrespondenceGraph.{channel}: keys must be (image_a, image_b) "
+                f"tuples of non-empty str, got {key!r}"
+            )
+        image_a, image_b = key
+        if image_a == image_b:
+            raise ContractViolation(
+                f"CorrespondenceGraph.{channel}: self-pair {key!r} is not allowed"
+            )
+        ensure_instance(
+            f"CorrespondenceGraph.{channel}[{key!r}]",
+            pair,
+            PairCorrespondences,
+            "PairCorrespondences",
+        )
+
+    @staticmethod
+    def _validate_pair_indices(
+        key: tuple[str, str],
+        pair: PairCorrespondences,
+        features: Mapping[str, _core.FeatureSet],
+        channel: str,
+    ) -> None:
+        assert pair.indices is not None
+        for side, image_id in enumerate(key):
+            if image_id not in features:
+                raise ContractViolation(
+                    f"CorrespondenceGraph.{channel}[{key!r}]: indexed pair "
+                    f"references image {image_id!r} with no FeatureSet"
+                )
+            if len(pair) and int(pair.indices[:, side].max()) >= len(features[image_id]):
+                raise ContractViolation(
+                    f"CorrespondenceGraph.{channel}[{key!r}]: index "
+                    f"{int(pair.indices[:, side].max())} out of range for "
+                    f"FeatureSet {image_id!r} of {len(features[image_id])} keypoints"
+                )
+
+    def validate_indices(self) -> CorrespondenceGraph:
+        """Return the same graph after eager endpoint index validation."""
+        if self.index_validation == "eager":
+            return self
+        return CorrespondenceGraph(
+            self.features,
+            self.pairs,
+            self.verified_pairs,
+            self.configurations,
+            self.relative_poses,
+            self.source_metadata,
+            index_validation="eager",
+        )

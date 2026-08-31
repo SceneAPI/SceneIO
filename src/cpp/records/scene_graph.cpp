@@ -137,6 +137,8 @@ SceneGraph make_scene_graph(
     std::optional<std::vector<std::string>>
         node_semantic_labels,
     std::vector<Mesh> meshes,
+    std::optional<u64_array> mesh_primitive_offsets,
+    std::optional<std::vector<std::string>> mesh_names,
     std::vector<PointCloud> point_clouds,
     std::vector<GaussianCloud> gaussian_clouds,
     std::optional<CameraRig> cameras,
@@ -151,6 +153,10 @@ SceneGraph make_scene_graph(
     double meters_per_unit,
     const std::string &source_representation,
     nb::object default_prim,
+    std::optional<u64_array> scene_root_offsets,
+    std::optional<u64_array> scene_roots,
+    std::optional<std::vector<std::string>> scene_names,
+    nb::object default_scene,
     std::optional<double> selected_time,
     std::optional<double> start_time_code,
     std::optional<double> end_time_code,
@@ -194,6 +200,37 @@ SceneGraph make_scene_graph(
          node_payload_indices->shape(0) != count))
         throw std::invalid_argument(
             "scene_graph: node_payload_indices must be (N,) uint64");
+    if (mesh_primitive_offsets &&
+        (mesh_primitive_offsets->ndim() != 1 ||
+         mesh_primitive_offsets->shape(0) == 0))
+        throw std::invalid_argument(
+            "scene_graph: mesh_primitive_offsets must be (G+1,) uint64");
+    const size_t mesh_count =
+        mesh_primitive_offsets
+            ? mesh_primitive_offsets->shape(0) - 1
+            : meshes.size();
+    if (mesh_names && mesh_names->size() != mesh_count)
+        throw std::invalid_argument(
+            "scene_graph: mesh_names must have one entry per logical mesh");
+    if (scene_root_offsets &&
+        (scene_root_offsets->ndim() != 1 ||
+         scene_root_offsets->shape(0) == 0))
+        throw std::invalid_argument(
+            "scene_graph: scene_root_offsets must be (S+1,) uint64");
+    if (scene_roots && scene_roots->ndim() != 1)
+        throw std::invalid_argument(
+            "scene_graph: scene_roots must be (R,) uint64");
+    if (scene_root_offsets.has_value() != scene_roots.has_value())
+        throw std::invalid_argument(
+            "scene_graph: scene root offsets and values must be provided "
+            "together");
+    const size_t scene_count =
+        scene_root_offsets
+            ? scene_root_offsets->shape(0) - 1
+            : 0;
+    if (scene_names && scene_names->size() != scene_count)
+        throw std::invalid_argument(
+            "scene_graph: scene_names must have one entry per scene");
     if (external_asset_uris.size() !=
         external_asset_kinds.size())
         throw std::invalid_argument(
@@ -288,6 +325,20 @@ SceneGraph make_scene_graph(
             std::vector<std::string>(count));
 
     result.meshes = std::move(meshes);
+    if (mesh_primitive_offsets) {
+        assign_nonempty(
+            result.mesh_primitive_offsets,
+            mesh_primitive_offsets->data(), mesh_count + 1);
+    } else {
+        result.mesh_primitive_offsets.resize(
+            result.meshes.size() + 1);
+        for (size_t index = 0;
+             index <= result.meshes.size(); ++index)
+            result.mesh_primitive_offsets[index] =
+                static_cast<uint64_t>(index);
+    }
+    result.mesh_names = mesh_names.value_or(
+        std::vector<std::string>(mesh_count));
     result.point_clouds = std::move(point_clouds);
     result.gaussian_clouds = std::move(gaussian_clouds);
     if (cameras) {
@@ -310,6 +361,20 @@ SceneGraph make_scene_graph(
     result.default_prim = default_prim.is_none()
                               ? -1
                               : nb::cast<int64_t>(default_prim);
+    result.scene_root_offsets.assign(1, 0);
+    if (scene_root_offsets)
+        assign_nonempty(
+            result.scene_root_offsets,
+            scene_root_offsets->data(), scene_count + 1);
+    if (scene_roots)
+        assign_nonempty(
+            result.scene_roots, scene_roots->data(),
+            scene_roots->shape(0));
+    result.scene_names = scene_names.value_or(
+        std::vector<std::string>(scene_count));
+    result.default_scene = default_scene.is_none()
+                               ? -1
+                               : nb::cast<int64_t>(default_scene);
     if (selected_time) {
         result.has_selected_time = true;
         result.selected_time = *selected_time;
@@ -408,6 +473,34 @@ void validate_scene_graph(
         scene.node_semantic_labels.size() != count)
         throw std::invalid_argument(
             prefix + "inconsistent SceneGraph node-domain lengths");
+    if (scene.mesh_primitive_offsets.empty() ||
+        scene.mesh_primitive_offsets.front() != 0 ||
+        scene.mesh_primitive_offsets.back() != scene.meshes.size() ||
+        scene.mesh_names.size() != scene.num_meshes())
+        throw std::invalid_argument(
+            prefix + "logical mesh groups must span all mesh primitives");
+    for (size_t mesh = 0; mesh < scene.num_meshes(); ++mesh) {
+        if (scene.mesh_primitive_offsets[mesh] >=
+            scene.mesh_primitive_offsets[mesh + 1])
+            throw std::invalid_argument(
+                prefix + "logical mesh groups must be non-empty and monotonic");
+        validate_text(
+            scene.mesh_names[mesh], prefix + "mesh name", true);
+    }
+    if (scene.scene_root_offsets.empty() ||
+        scene.scene_root_offsets.front() != 0 ||
+        scene.scene_root_offsets.back() != scene.scene_roots.size() ||
+        scene.scene_names.size() != scene.num_scenes())
+        throw std::invalid_argument(
+            prefix + "scene root offsets must span all scene roots");
+    for (size_t index = 0; index < scene.num_scenes(); ++index) {
+        if (scene.scene_root_offsets[index] >
+            scene.scene_root_offsets[index + 1])
+            throw std::invalid_argument(
+                prefix + "scene root offsets must be monotonic");
+        validate_text(
+            scene.scene_names[index], prefix + "scene name", true);
+    }
     if (scene.node_child_offsets.front() != 0 ||
         scene.node_child_offsets.back() !=
             scene.node_children.size())
@@ -458,20 +551,9 @@ void validate_scene_graph(
         throw std::invalid_argument(
             prefix + "node graph must be acyclic");
 
-    std::vector<std::unordered_set<std::string>> sibling_names(
-        count + 1);
     for (size_t node = 0; node < count; ++node) {
         validate_text(
-            scene.node_names[node], prefix + "node name", false);
-        const size_t parent_slot =
-            expected_parents[node] < 0
-                ? count
-                : static_cast<size_t>(expected_parents[node]);
-        if (!sibling_names[parent_slot]
-                 .insert(scene.node_names[node])
-                 .second)
-            throw std::invalid_argument(
-                prefix + "sibling node names must be unique");
+            scene.node_names[node], prefix + "node name", true);
         for (size_t element = 0; element < 16; ++element)
             if (!std::isfinite(
                     scene.node_local_transforms[
@@ -508,7 +590,7 @@ void validate_scene_graph(
                                  "no-payload index");
                 continue;
             case ScenePayloadKind::Mesh:
-                bound = scene.meshes.size();
+                bound = scene.num_meshes();
                 break;
             case ScenePayloadKind::PointCloud:
                 bound = scene.point_clouds.size();
@@ -540,6 +622,20 @@ void validate_scene_graph(
               static_cast<size_t>(scene.default_prim)] != -1)))
         throw std::invalid_argument(
             prefix + "default prim must be a root node index");
+    for (uint64_t root : scene.scene_roots) {
+        if (root >= count)
+            throw std::invalid_argument(
+                prefix + "scene root index is out of range");
+        if (expected_parents[static_cast<size_t>(root)] != -1)
+            throw std::invalid_argument(
+                prefix + "scene roots cannot have parents");
+    }
+    if (scene.default_scene < -1 ||
+        (scene.default_scene >= 0 &&
+         static_cast<size_t>(scene.default_scene) >=
+             scene.num_scenes()))
+        throw std::invalid_argument(
+            prefix + "default scene index is out of range");
 
     for (size_t index = 0; index < scene.meshes.size(); ++index) {
         validate_mesh(
@@ -667,10 +763,12 @@ void validate_scene_graph(
     if (scene.source_representation != "unknown" &&
         scene.source_representation != "usda" &&
         scene.source_representation != "usdc" &&
-        scene.source_representation != "usdz")
+        scene.source_representation != "usdz" &&
+        scene.source_representation != "gltf" &&
+        scene.source_representation != "glb")
         throw std::invalid_argument(
             prefix + "source_representation must be "
-                     "unknown|usda|usdc|usdz");
+                     "unknown|usda|usdc|usdz|gltf|glb");
     if (!std::isfinite(scene.time_codes_per_second) ||
         scene.time_codes_per_second <= 0.0)
         throw std::invalid_argument(
@@ -726,7 +824,17 @@ void register_scene_graph(nb::module_ &module) {
         .def_prop_ro(
             "num_meshes",
             [](const SceneGraph &value) {
-                return value.meshes.size();
+                return value.num_meshes();
+            })
+        .def_prop_ro(
+            "num_mesh_primitives",
+            [](const SceneGraph &value) {
+                return value.num_mesh_primitives();
+            })
+        .def_prop_ro(
+            "num_scenes",
+            [](const SceneGraph &value) {
+                return value.num_scenes();
             })
         .def_prop_ro(
             "num_point_clouds",
@@ -879,6 +987,22 @@ void register_scene_graph(nb::module_ &module) {
             },
             reference_internal)
         .def(
+            "mesh_primitive_at",
+            [](SceneGraph &value, size_t index) -> Mesh & {
+                return payload_at(value.meshes, index);
+            },
+            reference_internal)
+        .def_prop_ro(
+            "mesh_primitive_offsets",
+            [](nb::handle_t<SceneGraph> self) {
+                const auto &value =
+                    nb::cast<const SceneGraph &>(self);
+                return owned_view(
+                    self, value.mesh_primitive_offsets,
+                    {value.mesh_primitive_offsets.size()});
+            })
+        .def_ro("mesh_names", &SceneGraph::mesh_names)
+        .def(
             "point_cloud_at",
             [](SceneGraph &value,
                size_t index) -> PointCloud & {
@@ -947,6 +1071,31 @@ void register_scene_graph(nb::module_ &module) {
             &SceneGraph::source_representation)
         .def_ro("default_prim", &SceneGraph::default_prim)
         .def_prop_ro(
+            "scene_root_offsets",
+            [](nb::handle_t<SceneGraph> self) {
+                const auto &value =
+                    nb::cast<const SceneGraph &>(self);
+                return owned_view(
+                    self, value.scene_root_offsets,
+                    {value.scene_root_offsets.size()});
+            })
+        .def_prop_ro(
+            "scene_roots",
+            [](nb::handle_t<SceneGraph> self) {
+                const auto &value =
+                    nb::cast<const SceneGraph &>(self);
+                return owned_view(
+                    self, value.scene_roots,
+                    {value.scene_roots.size()});
+            })
+        .def_ro("scene_names", &SceneGraph::scene_names)
+        .def_prop_ro(
+            "default_scene",
+            [](const SceneGraph &value) -> nb::object {
+                if (value.default_scene < 0) return nb::none();
+                return nb::int_(value.default_scene);
+            })
+        .def_prop_ro(
             "selected_time",
             [](const SceneGraph &value) -> nb::object {
                 if (!value.has_selected_time)
@@ -976,7 +1125,7 @@ void register_scene_graph(nb::module_ &module) {
                 return "<SceneGraph nodes=" +
                        std::to_string(value.n) +
                        " meshes=" +
-                       std::to_string(value.meshes.size()) +
+                       std::to_string(value.num_meshes()) +
                        " points=" +
                        std::to_string(
                            value.point_clouds.size()) +
@@ -1000,6 +1149,8 @@ void register_scene_graph(nb::module_ &module) {
         "node_semantic_taxonomies"_a = nb::none(),
         "node_semantic_labels"_a = nb::none(),
         "meshes"_a = std::vector<Mesh>{},
+        "mesh_primitive_offsets"_a = nb::none(),
+        "mesh_names"_a = nb::none(),
         "point_clouds"_a = std::vector<PointCloud>{},
         "gaussian_clouds"_a =
             std::vector<GaussianCloud>{},
@@ -1015,6 +1166,10 @@ void register_scene_graph(nb::module_ &module) {
         "up_axis"_a = "y", "meters_per_unit"_a = 1.0,
         "source_representation"_a = "unknown",
         "default_prim"_a = nb::none(),
+        "scene_root_offsets"_a = nb::none(),
+        "scene_roots"_a = nb::none(),
+        "scene_names"_a = nb::none(),
+        "default_scene"_a = nb::none(),
         "selected_time"_a = nb::none(),
         "start_time_code"_a = nb::none(),
         "end_time_code"_a = nb::none(),

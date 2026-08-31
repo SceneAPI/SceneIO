@@ -8,6 +8,7 @@ import numpy as np
 
 from _support.codec_cases import BUFFER_CASES
 from sceneio import _core
+from sceneio._posed_views import posed_views_from_storage
 
 
 @dataclass(frozen=True, slots=True)
@@ -18,6 +19,7 @@ class BufferCodecCase:
     reader: object
     writer: object
     value: object
+    public_value: object
     data: bytes
 
 
@@ -219,15 +221,16 @@ def build_buffer_codec_cases() -> tuple[BufferCodecCase, ...]:
         ),
         coordinate_frame="opengl",
     )
-    mesh_scene = _core.mesh_scene(
-        [mesh_glb],
-        np.array([0, 1], np.uint64),
+    scene_graph = _core.scene_graph(
+        ["node"],
+        meshes=[mesh_glb],
+        mesh_primitive_offsets=np.array([0, 1], np.uint64),
         mesh_names=["triangle"],
-        node_meshes=np.array([0], np.int64),
+        node_payload_kinds=["mesh"],
+        node_payload_indices=np.array([0], np.uint64),
         node_child_offsets=np.array([0, 0], np.uint64),
         node_children=np.array([], np.uint64),
         node_local_transforms=np.eye(4, dtype=np.float64)[None],
-        node_names=["node"],
         scene_root_offsets=np.array([0, 1], np.uint64),
         scene_roots=np.array([0], np.uint64),
         scene_names=["scene"],
@@ -385,6 +388,13 @@ def build_buffer_codec_cases() -> tuple[BufferCodecCase, ...]:
     )
     tum = _core.read_tum(b"0 1 2 3 0 0 0 1\n")
     kitti = _core.read_kitti(b"1 0 0 1 0 1 0 2 0 0 1 3\n")
+    public_poses = {
+        "transforms_json": posed_views_from_storage(
+            transforms, source_profile="transforms_json"
+        ),
+        "tum": posed_views_from_storage(tum, source_profile="tum"),
+        "kitti": posed_views_from_storage(kitti, source_profile="kitti"),
+    }
     state_quaternions = rng.standard_normal((13, 4))
     state_trajectory = _core.state_trajectory(
         np.arange(13, dtype=np.int64) + 1_400_000_000_000_000_000,
@@ -477,12 +487,13 @@ def build_buffer_codec_cases() -> tuple[BufferCodecCase, ...]:
         fixed=np.array([1, 0, 0], np.uint8),
     )
 
-    def case(codec_id, reader, writer, value):
+    def case(codec_id, reader, writer, value, *, public_value=None):
         return BufferCodecCase(
             codec_id,
             reader,
             writer,
             value,
+            value if public_value is None else public_value,
             bytes(writer(value)),
         )
 
@@ -513,9 +524,22 @@ def build_buffer_codec_cases() -> tuple[BufferCodecCase, ...]:
             _core.read_transforms_json,
             _core.write_transforms_json,
             transforms,
+            public_value=public_poses["transforms_json"],
         ),
-        case("tum", _core.read_tum, _core.write_tum, tum),
-        case("kitti", _core.read_kitti, _core.write_kitti, kitti),
+        case(
+            "tum",
+            _core.read_tum,
+            _core.write_tum,
+            tum,
+            public_value=public_poses["tum"],
+        ),
+        case(
+            "kitti",
+            _core.read_kitti,
+            _core.write_kitti,
+            kitti,
+            public_value=public_poses["kitti"],
+        ),
         case(
             "euroc_state",
             _core.read_euroc_state,
@@ -594,7 +618,7 @@ def build_buffer_codec_cases() -> tuple[BufferCodecCase, ...]:
         case("ply_mesh", _core.read_ply_mesh, _core.write_ply_mesh, mesh),
         case("stl", _core.read_stl, _core.write_stl, mesh_stl),
         case("off", _core.read_off, _core.write_off, mesh_off),
-        case("glb", _core.read_glb, _core.write_glb, mesh_scene),
+        case("glb", _core.read_glb, _core.write_glb, scene_graph),
         case("pcd", _core.read_pcd, _core.write_pcd, points_pcd),
         case("las", _core.read_las, _core.write_las, points_las),
         case("laz", _core.read_laz, _core.write_laz, points_las),

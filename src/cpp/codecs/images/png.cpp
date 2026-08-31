@@ -202,6 +202,7 @@ DepthMap read_png_depth(nb::handle source, const std::string &unit,
                         static_cast<float>(image.u16[index]);
             });
     }
+    depth_map_derive_validity(result);
     return result;
 }
 
@@ -295,6 +296,9 @@ nb::bytes write_png(const Image &img, size_t lanes) {
 nb::bytes write_png_depth(const DepthMap &depth, const std::string &unit,
                           double scale_to_meters,
                           const std::string &invalid_policy, size_t lanes) {
+    if (!depth_map_validity_matches_policy(depth))
+        throw std::invalid_argument(
+            "PNG depth: validity mask disagrees with invalid_policy encoding");
     require_png_depth_encoding(unit, scale_to_meters, invalid_policy);
     if (depth.unit != unit || depth.scale_to_meters != scale_to_meters ||
         depth.invalid_policy != invalid_policy)

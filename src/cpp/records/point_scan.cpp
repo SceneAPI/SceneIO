@@ -109,6 +109,24 @@ PointCloud project_valid_cloud(const PointScan &scan) {
     copy_selected_rows(source.ids, result.ids, rows);
     copy_selected_rows(source.velocities, result.velocities, rows, 3);
     copy_selected_rows(source.accelerations, result.accelerations, rows, 3);
+    if (source.has_tracks()) {
+        result.track_offsets.reserve(rows.size() + 1);
+        result.track_offsets.push_back(0);
+        for (size_t row : rows) {
+            const size_t begin = source.track_offsets[row];
+            const size_t end = source.track_offsets[row + 1];
+            result.track_image_ids.insert(
+                result.track_image_ids.end(),
+                source.track_image_ids.begin() + begin,
+                source.track_image_ids.begin() + end);
+            result.track_keypoint_indices.insert(
+                result.track_keypoint_indices.end(),
+                source.track_keypoint_indices.begin() + begin,
+                source.track_keypoint_indices.begin() + end);
+            result.track_offsets.push_back(
+                result.track_image_ids.size());
+        }
+    }
     result.display_color_space = source.display_color_space;
     result.coordinate_frame = source.coordinate_frame;
     result.scale_to_meters = source.scale_to_meters;

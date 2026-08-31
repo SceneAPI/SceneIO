@@ -55,9 +55,9 @@ serialization and USDZ packaging remain repository-owned. A future profile
 version may add a separately qualified upstream provider for current USDC and
 evaluated composition/time; version 1 does not imply it.
 
-The existing static `MeshScene` API remains compatible. Rich USD scenes use a
-new `SceneGraph` API; a mesh-only projection continues to support current
-`sceneio.read()` callers.
+SceneIO 0.4 consolidates the former static and rich scene models into one
+`SceneGraph` contract. Both `sceneio.read()` and `read_scene()` return that
+identity; the mesh-only profile is a supported subset, not a second model.
 
 ## Authoritative references
 
@@ -229,11 +229,11 @@ Bounded materials/assets are the active C2 unit; current-crate and selected
 animated-value work remains U6.
 Inspection reports representation/crate version, typed prim counts, time
 range, authored dependencies/variants, unsupported features, and whether the
-legacy mesh projection is available.
+static mesh subset is available.
 
-The compatibility `sceneio.read()` path still requires Y-up and one meter per
-unit and returns `MeshScene`; its deterministic bytes are unchanged. Both
-paths refuse data outside their stated mapping. TinyUSDZ is locally qualified
+The generic `sceneio.read()` path returns `SceneGraph` and preserves the same
+bounded profile as `read_scene()`; both refuse data outside their stated
+mapping. TinyUSDZ is locally qualified
 only through crate version 10, and the official crate-10 time-sample fixture
 exposes timestamps but not values; SceneIO refuses later crate versions before
 provider dispatch.
@@ -485,13 +485,11 @@ sceneio.write_scene(
 )
 ```
 
-Compatibility rules:
+Public routing rules:
 
-- `sceneio.read()` continues returning `MeshScene` for an accepted mesh-only
-  stage.
-- `sceneio.read()` refuses a stage containing supported non-mesh 3D-CV payloads
-  and directs callers to `read_scene()`; it never drops those prims.
-- `read_scene()` always returns `SceneGraph`, including for mesh-only stages.
+- `sceneio.read()` and `read_scene()` both return `SceneGraph`, including for
+  mesh-only stages.
+- Neither path drops supported non-mesh 3D-CV payloads.
 - `write()` retains its current deterministic `.usd` ASCII behavior.
 - `write_scene()` selects `.usda`, `.usdc`, or `.usdz` from the extension;
   `.usd` remains ASCII unless `encoding="usdc"` is explicitly requested.
@@ -615,7 +613,6 @@ Keep schema logic isolated so the repository remains expandable:
 | inherited semantic labels | `src/sceneio/io/_usd/semantics.py` |
 | point instances | `src/sceneio/io/_usd/instances.py` |
 | provider selection/version ceiling | `src/sceneio/io/_usd/provider.py` |
-| compatibility `MeshScene` behavior | `src/sceneio/io/_usd/legacy.py`; do not mix rich payload behavior back into it |
 
 Provider adapters may normalize upstream API quirks, but the in-memory mapping,
 validation, deterministic USDA writer, USDZ packager, capability reporting,
@@ -748,13 +745,13 @@ independently plus destination preservation.
 - [x] Split `_usd.py` into a facade plus bounded modules:
       `_usd/provider.py`, `_usd/stage.py`, `_usd/geometry.py`,
       `_usd/materials.py`, `_usd/gaussians.py`, `_usd/cameras.py`, and
-      `_usd/package.py`; compatibility mesh behavior is isolated in
-      `_usd/legacy.py`.
+      `_usd/package.py`; the unified `SceneGraph` routing lives in
+      `_usd/stage.py`.
 - [x] Add `.usdc` routing under the existing `usd` codec id, bounded by the
       qualified crate-10 ceiling.
-- [x] Implement `read_scene()` and hierarchy-only `write_scene()` without
-      changing the old mesh-only return contract; typed payload writes remain
-      their U3-U5 units.
+- [x] Implement `read_scene()` and hierarchy-only `write_scene()`; typed
+      payload writes remain their U3-U5 units. SceneIO 0.4 later unified the
+      generic and rich return contracts on `SceneGraph`.
 - [x] Map `defaultPrim`, Y/Z up-axis, units, provider-evaluated ordered static
       transforms, reset-transform-stack state, visibility, purpose,
       validated finite mesh extent (with record bounds derived from positions),

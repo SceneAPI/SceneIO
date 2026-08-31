@@ -1,11 +1,11 @@
-"""Validation + conversion tests for sceneio.data.transforms."""
+"""Validation + conversion tests for sceneio.transforms."""
 
 from __future__ import annotations
 
 import numpy as np
 import pytest
 
-from sceneio.data import DEFAULT_CONVENTION, POSE_CONVENTIONS, SE3, Sim3
+from sceneio import DEFAULT_CONVENTION, POSE_CONVENTIONS, SE3, Sim3
 from sceneio.errors import ContractViolation, SceneIoError
 
 
@@ -59,7 +59,12 @@ class TestSE3:
             SE3(np.eye(3), np.zeros(3), convention="ros_cam2world")
 
     def test_conventions_vocabulary(self) -> None:
-        assert {"opencv_cam2world", "opencv_world2cam"} == POSE_CONVENTIONS
+        assert {
+            "opencv_cam2world",
+            "opencv_world2cam",
+            "opencv_second_from_first",
+            "opencv_first_from_second",
+        } == POSE_CONVENTIONS
 
     def test_inverse_flips_convention_and_roundtrips(self) -> None:
         pose = SE3(_rot_z(0.3), np.array([1.0, -2.0, 3.0]))
@@ -82,6 +87,8 @@ class TestSE3:
     def test_as_convention_unknown_raises(self) -> None:
         with pytest.raises(ContractViolation, match="as_convention"):
             SE3.identity().as_convention("nerf")
+        with pytest.raises(ContractViolation, match="unrelated frame roles"):
+            SE3.identity().as_convention("opencv_second_from_first")
 
     def test_colmap_roundtrip(self) -> None:
         rng = np.random.default_rng(7)
@@ -179,3 +186,39 @@ class TestSim3:
         assert s.scale == 3.0
         assert s.convention == pose.convention
         np.testing.assert_allclose(s.rotation, pose.rotation)
+
+    def test_quaternion_wxyz_roundtrip(self) -> None:
+        expected = np.array([np.cos(0.3), 0.0, 0.0, np.sin(0.3)])
+        transform = Sim3.from_quaternion_wxyz(
+            2.5,
+            expected,
+            [1.0, 2.0, 3.0],
+            convention="opencv_world2cam",
+        )
+        assert transform.convention == "opencv_world2cam"
+        np.testing.assert_allclose(transform.to_quaternion_wxyz(), expected, atol=1e-12)
+
+    def test_quaternion_wxyz_requires_explicit_convention(self) -> None:
+        with pytest.raises(TypeError, match="convention"):
+            Sim3.from_quaternion_wxyz(  # type: ignore[call-arg]
+                1.0,
+                [1.0, 0.0, 0.0, 0.0],
+                [0.0, 0.0, 0.0],
+            )
+
+    def test_quaternion_wxyz_rejects_non_unit_input(self) -> None:
+        with pytest.raises(ContractViolation, match="unit-norm"):
+            Sim3.from_quaternion_wxyz(
+                1.0,
+                [2.0, 0.0, 0.0, 0.0],
+                [0.0, 0.0, 0.0],
+                convention="opencv_cam2world",
+            )
+
+    def test_as_convention(self) -> None:
+        transform = Sim3(2.0, _rot_z(0.2), np.array([1.0, 2.0, 3.0]))
+        assert transform.as_convention(transform.convention) is transform
+        flipped = transform.as_convention("opencv_world2cam")
+        np.testing.assert_allclose(flipped.matrix @ transform.matrix, np.eye(4), atol=1e-12)
+        with pytest.raises(ContractViolation, match="unrelated frame roles"):
+            transform.as_convention("opencv_second_from_first")

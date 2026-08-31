@@ -59,15 +59,10 @@ _OPENCV_C2W = replace(
     name="opencv_camera_to_world_metric",
     pose_direction="camera_to_world",
 )
-_OPENGL_C2W = replace(
+_CANONICAL_POSED_VIEWS = replace(
     _OPENCV_C2W,
-    name="opengl_camera_to_world_metric",
-    camera_axes="opengl",
-)
-_TUM = replace(
-    _OPENCV_C2W,
-    name="tum_opencv_camera_to_world_metric",
-    quaternion_order="xyzw",
+    name="canonical_posed_views",
+    quaternion_order="wxyz",
 )
 _OPENGL_SCENE = CoordinateConvention(
     name="gltf_scene",
@@ -110,12 +105,13 @@ def _fixed(
     reference: str,
     *,
     conversion: str = "requires_context",
+    writer_requirement: str = "record convention must match the format",
 ) -> FormatCoordinateContract:
     return FormatCoordinateContract(
         "fixed",
         domains,
         convention,
-        "record convention must match the format",
+        writer_requirement,
         conversion,
         reference,
     )
@@ -192,9 +188,27 @@ _RAW: dict[str, FormatCoordinateContract] = {
     "ply": _unspecified(("spatial",)),
     "pcd": _unspecified(("spatial",), "https://pointclouds.org/documentation/tutorials/pcd_file_format.html"),
     "spz": _unspecified(("spatial",)),
-    "transforms_json": _fixed(("camera", "image", "spatial"), _OPENGL_C2W, _SCENEIO_DOC, conversion="supported"),
-    "tum": _fixed(("camera", "trajectory"), _TUM, "https://cvg.cit.tum.de/data/datasets/rgbd-dataset/file_formats", conversion="supported"),
-    "kitti": _fixed(("camera", "trajectory"), _OPENCV_C2W, "https://www.cvlibs.net/datasets/kitti/eval_odometry.php", conversion="supported"),
+    "transforms_json": _fixed(
+        ("camera", "image", "spatial"),
+        _CANONICAL_POSED_VIEWS,
+        _SCENEIO_DOC,
+        conversion="supported",
+        writer_requirement="canonical OpenCV camera-to-world poses are encoded in the format's OpenGL storage axes",
+    ),
+    "tum": _fixed(
+        ("camera", "trajectory"),
+        _CANONICAL_POSED_VIEWS,
+        "https://cvg.cit.tum.de/data/datasets/rgbd-dataset/file_formats",
+        conversion="supported",
+        writer_requirement="canonical WXYZ poses are encoded in TUM's XYZW field order",
+    ),
+    "kitti": _fixed(
+        ("camera", "trajectory"),
+        _CANONICAL_POSED_VIEWS,
+        "https://www.cvlibs.net/datasets/kitti/eval_odometry.php",
+        conversion="supported",
+        writer_requirement="canonical poses are encoded as KITTI camera-to-world matrices",
+    ),
     "euroc_state": _fixed(("camera", "trajectory"), _EUROC, "https://projects.asl.ethz.ch/datasets/doku.php?id=kmavvisualinertialdatasets"),
     "opencv_yaml": _fixed(("camera", "image"), _OPENCV_METRIC, "https://docs.opencv.org/4.x/d9/d0c/group__calib3d.html"),
     "opencv_xml": _fixed(("camera", "image"), _OPENCV_METRIC, "https://docs.opencv.org/4.x/d9/d0c/group__calib3d.html"),
@@ -220,7 +234,12 @@ _RAW: dict[str, FormatCoordinateContract] = {
     "animated_webp": _SEQUENCE,
     "apng": _SEQUENCE,
     "animated_avif": _SEQUENCE,
-    "rtmv": _fixed(("camera", "depth", "image", "spatial"), _OPENGL_C2W, _SCENEIO_DOC),
+    "rtmv": _fixed(
+        ("camera", "depth", "image", "spatial"),
+        _CANONICAL_POSED_VIEWS,
+        _SCENEIO_DOC,
+        writer_requirement="RTMV is read-only; decoded poses use the canonical posed-view convention",
+    ),
     "image_sequence": _SEQUENCE,
     "colmap_sparse_txt": _COLMAP_RECONSTRUCTION,
     "xyz": _unspecified(("spatial",)),

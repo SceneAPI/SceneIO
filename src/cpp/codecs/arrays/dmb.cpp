@@ -121,6 +121,7 @@ DepthMap decode_dmb(const uint8_t *data, const DmbInfo &info,
                     payload + (source_index + col) * sizeof(float));
         }
     }
+    depth_map_derive_validity(result);
     return result;
 }
 
@@ -161,6 +162,9 @@ nb::tuple inspect_dmb(nb::handle source) {
 }
 
 void validate_write(const DepthMap &depth) {
+    if (!depth_map_validity_matches_policy(depth))
+        throw std::invalid_argument(
+            "dmb: validity mask disagrees with invalid_policy encoding");
     if (depth.height == 0 || depth.width == 0 ||
         depth.height > kDimCap || depth.width > kDimCap)
         throw std::invalid_argument(

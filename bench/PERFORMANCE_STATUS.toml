@@ -138,7 +138,7 @@ id = "usd"
 family = "meshes"
 adapter = "repo"
 implementation_owner = "python"
-sources = ["src/sceneio/io/_usd/__init__.py", "src/sceneio/io/_usd/legacy.py", "src/sceneio/io/_usd/provider.py", "src/sceneio/io/_usd/package.py", "src/sceneio/io/_usd/geometry.py", "src/sceneio/io/_usd/stage.py", "src/sceneio/io/_usd/materials.py", "src/sceneio/io/_usd/gaussians.py", "src/sceneio/io/_usd/cameras.py"]
+sources = ["src/sceneio/io/_usd/__init__.py", "src/sceneio/io/_usd/provider.py", "src/sceneio/io/_usd/package.py", "src/sceneio/io/_usd/geometry.py", "src/sceneio/io/_usd/stage.py", "src/sceneio/io/_usd/materials.py", "src/sceneio/io/_usd/gaussians.py", "src/sceneio/io/_usd/cameras.py"]
 source_suite = "tests/codecs/test_usd.py"
 additional_source_suites = ["tests/codecs/test_usd_scene.py"]
 documentation = "docs/format_coverage.md"
@@ -149,7 +149,7 @@ id = "usdz"
 family = "meshes"
 adapter = "repo"
 implementation_owner = "python"
-sources = ["src/sceneio/io/_usd/__init__.py", "src/sceneio/io/_usd/legacy.py", "src/sceneio/io/_usd/provider.py", "src/sceneio/io/_usd/package.py", "src/sceneio/io/_usd/geometry.py", "src/sceneio/io/_usd/stage.py", "src/sceneio/io/_usd/materials.py", "src/sceneio/io/_usd/gaussians.py", "src/sceneio/io/_usd/cameras.py"]
+sources = ["src/sceneio/io/_usd/__init__.py", "src/sceneio/io/_usd/provider.py", "src/sceneio/io/_usd/package.py", "src/sceneio/io/_usd/geometry.py", "src/sceneio/io/_usd/stage.py", "src/sceneio/io/_usd/materials.py", "src/sceneio/io/_usd/gaussians.py", "src/sceneio/io/_usd/cameras.py"]
 source_suite = "tests/codecs/test_usd.py"
 additional_source_suites = ["tests/codecs/test_usd_scene.py"]
 documentation = "docs/format_coverage.md"
@@ -920,7 +920,7 @@ backend = "sceneio-native"
 backend_owner = "repo"
 backend_source = "src/cpp/codecs/splats/sog.cpp"
 backend_version = "sceneio-sog-canonical-v1"
-backend_source_sha256 = "ec193f474bf5e7ceb24262ebb4e98f87b189ee9e145f9fcd95c62123a1d087cb"
+backend_source_sha256 = "c3b5a791d488ddbe74751576e9ee274cce52a3b3c2e7e3d13395d64eb28b3477"
 backend_dependencies = ["libwebp 1.5.0", "miniz 3.0.2", "musl/fdlibm log1p 1.2.5", "nlohmann_json 3.11.3"]
 transport_status = "qualified"
 status = "provisional"
@@ -1496,7 +1496,7 @@ comparator = "direct-tinyusdz-stage"
 fixture = "usd:default"
 backend = "sceneio-usda-stream"
 backend_owner = "repo"
-backend_source = "src/sceneio/io/_usd/legacy.py"
+backend_source = "src/sceneio/io/_usd/stage.py"
 backend_version = "sceneio-usd-static-v1"
 transport_status = "qualified"
 status = "provisional"
@@ -1509,13 +1509,13 @@ evidence_gaps = ["candidate comparison on all required toolchains"]
 codec_id = "usd"
 profile = "default"
 direction = "decode"
-settings = { profile = "static_cv_mesh_scene" }
+settings = { profile = "static_cv_scene_graph" }
 fidelity = "lossless"
 comparator = "direct-tinyusdz-stage"
 fixture = "usd:default"
 backend = "tinyusdz"
 backend_owner = "fetched"
-backend_source = "src/sceneio/io/_usd/legacy.py"
+backend_source = "src/sceneio/io/_usd/stage.py"
 backend_version = "tinyusdz >=0.9.4,<1"
 backend_dependencies = ["tinyusdz >=0.9.4,<1"]
 transport_status = "qualified"
@@ -1548,13 +1548,13 @@ evidence_gaps = ["candidate comparison on all required toolchains"]
 codec_id = "usdz"
 profile = "default"
 direction = "decode"
-settings = { profile = "static_cv_mesh_scene" }
+settings = { profile = "static_cv_scene_graph" }
 fidelity = "lossless"
 comparator = "direct-tinyusdz-stage"
 fixture = "usdz:default"
 backend = "tinyusdz"
 backend_owner = "fetched"
-backend_source = "src/sceneio/io/_usd/legacy.py"
+backend_source = "src/sceneio/io/_usd/stage.py"
 backend_version = "tinyusdz >=0.9.4,<1"
 backend_dependencies = ["tinyusdz >=0.9.4,<1"]
 transport_status = "qualified"

@@ -2212,9 +2212,9 @@ void read_geometries(
     }
 }
 
-MatchGraph make_graph(
+CorrespondenceStorage make_graph(
     const std::map<int64_t, PairRow> &rows) {
-    MatchGraph graph;
+    CorrespondenceStorage graph;
     graph.pair_count = rows.size();
     graph.pair_ids.reserve(rows.size());
     graph.image_pairs.reserve(rows.size() * 2);
@@ -2317,7 +2317,7 @@ MatchGraph make_graph(
     graph.has_scores = any_scores;
     if (!any_scores)
         graph.scores.clear();
-    validate_match_graph(graph, "COLMAP database");
+    validate_correspondence_storage(graph, "COLMAP database");
     return graph;
 }
 
@@ -2355,7 +2355,7 @@ ColmapDatabase read_database(const std::string &path) {
     read_match_scores(database, rows);
     read_geometries(database, rows);
     read_pair_provenance(database, rows);
-    result.match_graph = make_graph(rows);
+    result.correspondence_storage = make_graph(rows);
     result.markers = read_markers(database);
     result.video_metadata = read_videos(database);
     validate_colmap_database(result, "COLMAP database");
@@ -2465,7 +2465,7 @@ size_t image_feature_rows(
     return rows;
 }
 
-MatchGraph read_pair(
+CorrespondenceStorage read_pair(
     const std::string &path, uint32_t image_id1,
     uint32_t image_id2) {
     require_little_endian();
@@ -2485,7 +2485,7 @@ MatchGraph read_pair(
     if (rows.empty())
         throw std::out_of_range(
             "COLMAP database: image pair was not found");
-    MatchGraph graph = make_graph(rows);
+    CorrespondenceStorage graph = make_graph(rows);
     if (!graph.match_present[0] &&
         !graph.geometry_present[0])
         return graph;
@@ -2821,7 +2821,7 @@ void write_rows(
         }
     }
 
-    if (value.match_graph.has_scores)
+    if (value.correspondence_storage.has_scores)
         throw std::invalid_argument(
             "COLMAP database writer: match scores "
             "are not representable");
@@ -2835,7 +2835,7 @@ void write_rows(
         "INSERT INTO two_view_geometries("
         "pair_id,rows,cols,data,config,F,E,H,qvec,tvec"
         ") VALUES(?1,?2,2,?3,?4,?5,?6,?7,?8,?9)");
-    const MatchGraph &graph = value.match_graph;
+    const CorrespondenceStorage &graph = value.correspondence_storage;
     for (size_t pair = 0; pair < graph.pair_count; ++pair) {
         if (graph.match_present[pair]) {
             const size_t begin =
@@ -3091,7 +3091,7 @@ std::vector<std::string> profile_incompatibilities(
         add("selected stock profile cannot represent extended "
             "pose-prior fields");
 
-    const MatchGraph &graph = value.match_graph;
+    const CorrespondenceStorage &graph = value.correspondence_storage;
     if (!profile.recovered_two_view_cameras &&
         (any_present(graph.camera1_present) ||
          any_present(graph.camera2_present)))
@@ -3498,7 +3498,7 @@ void write_camera_feature_rows(
 }
 
 void write_match_rows(
-    sqlite3 *database, const MatchGraph &graph,
+    sqlite3 *database, const CorrespondenceStorage &graph,
     const ColmapDbProfileSpec &profile) {
     Statement matches(
         database,
@@ -3885,7 +3885,7 @@ void write_profile_rows(
     write_rig_frame_rows(database, value.rig_frames);
     write_camera_feature_rows(database, value, profile);
     write_pose_prior_rows(database, value.pose_priors, profile);
-    write_match_rows(database, value.match_graph, profile);
+    write_match_rows(database, value.correspondence_storage, profile);
     write_maxx_rows(database, value, profile);
 }
 
@@ -3906,10 +3906,10 @@ void validate_colmap_encodable(const ColmapDatabase &value) {
                 "COLMAP database writer: descriptors "
                 "must be uint8");
     }
-    if (value.match_graph.has_scores ||
+    if (value.correspondence_storage.has_scores ||
         std::any_of(
-            value.match_graph.provenance_present.begin(),
-            value.match_graph.provenance_present.end(),
+            value.correspondence_storage.provenance_present.begin(),
+            value.correspondence_storage.provenance_present.end(),
             [](uint8_t present) { return present != 0; }))
         throw std::invalid_argument(
             "COLMAP database writer: match scores and provenance "
@@ -3931,12 +3931,12 @@ void validate_colmap_encodable(const ColmapDatabase &value) {
             "COLMAP database writer: MAXX marker, video metadata, "
             "and ownership rows require an exact-profile writer");
     if (std::any_of(
-            value.match_graph.camera1_present.begin(),
-            value.match_graph.camera1_present.end(),
+            value.correspondence_storage.camera1_present.begin(),
+            value.correspondence_storage.camera1_present.end(),
             [](uint8_t present) { return present != 0; }) ||
         std::any_of(
-            value.match_graph.camera2_present.begin(),
-            value.match_graph.camera2_present.end(),
+            value.correspondence_storage.camera2_present.begin(),
+            value.correspondence_storage.camera2_present.end(),
             [](uint8_t present) { return present != 0; }))
         throw std::invalid_argument(
             "COLMAP database writer: recovered two-view cameras "

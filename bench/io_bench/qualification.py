@@ -400,6 +400,52 @@ O5_PARTIAL_DIRECTIONAL_ALLOCATION_LIMITS = MappingProxyType(
     }
 )
 
+PATH_READ_ALLOCATION_HEADROOM_MB = 0.25
+CANONICAL_POSED_VIEW_READ_NATIVE_RATIO = 1.5
+
+
+def canonical_posed_view_read_regressed(
+    public_full_seconds: float,
+    native_full_seconds: float,
+) -> bool:
+    """Bound canonical-record construction against the native full parser."""
+
+    values = (public_full_seconds, native_full_seconds)
+    if any(not math.isfinite(value) or value < 0.0 for value in values):
+        raise ValueError("canonical-read latency metrics must be finite and non-negative")
+    if native_full_seconds == 0.0:
+        raise ValueError("native full-read latency must be positive")
+    return (
+        public_full_seconds
+        > native_full_seconds * CANONICAL_POSED_VIEW_READ_NATIVE_RATIO
+    )
+
+
+def path_read_allocation_regressed(
+    bytes_peak_mb: float,
+    path_peak_mb: float,
+    decoded_output_floor_mb: float,
+) -> bool:
+    """Check mapped-read allocation above the unavoidable decoded output.
+
+    Native records usually allocate their payload outside Python's traced heap,
+    so the original 25% whole-file-copy ratio remains the active limit. Public
+    Python records have a visible decoded-output floor shared by both routes;
+    those reads receive only a small fixed allowance above that independently
+    measured floor.
+    """
+
+    values = (bytes_peak_mb, path_peak_mb, decoded_output_floor_mb)
+    if any(not math.isfinite(value) or value < 0.0 for value in values):
+        raise ValueError("path-read allocation metrics must be finite and non-negative")
+    if bytes_peak_mb < 0.5:
+        return False
+    limit = max(
+        bytes_peak_mb * 0.25,
+        decoded_output_floor_mb + PATH_READ_ALLOCATION_HEADROOM_MB,
+    )
+    return path_peak_mb >= limit
+
 
 def validate_o5_allocation_controls(
     operation: str,
@@ -710,11 +756,15 @@ _validate_qualification_manifest()
 
 
 __all__ = [
+    "CANONICAL_POSED_VIEW_READ_NATIVE_RATIO",
     "COMPARISON_QUALIFICATIONS",
     "O5_INSPECTION_DIRECTIONAL_ALLOCATION_LIMITS",
     "O5_PARTIAL_DIRECTIONAL_ALLOCATION_LIMITS",
+    "PATH_READ_ALLOCATION_HEADROOM_MB",
     "ComparisonQualification",
+    "canonical_posed_view_read_regressed",
     "measure_spec_comparison",
+    "path_read_allocation_regressed",
     "validate_benchmark_coverage",
     "validate_o5_allocation_controls",
     "validate_strict_providers",

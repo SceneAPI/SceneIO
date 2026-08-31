@@ -538,6 +538,8 @@ def _cloud_payload(cloud) -> tuple[dict[str, np.ndarray], np.ndarray, np.ndarray
         raise ValueError("E57: 16-bit colors are unsupported")
     if cloud.has_las_waveform:
         raise ValueError("E57: LAS waveform data are unsupported")
+    if cloud.has_tracks:
+        raise ValueError("E57: point observation tracks are unsupported")
     extended_fields = (
         "display_colors",
         "display_opacities",

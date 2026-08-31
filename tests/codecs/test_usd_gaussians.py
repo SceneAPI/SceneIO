@@ -700,12 +700,13 @@ def test_write_requires_explicit_usd_convention_conversion(tmp_path):
         sceneio.write_scene(_scene(raw), tmp_path / "raw.usda")
 
 
-def test_legacy_read_does_not_project_gaussians_to_mesh(tmp_path):
+def test_generic_read_preserves_gaussian_payload(tmp_path):
     path = tmp_path / "rich.usda"
     path.write_text(_FLOAT_FIXTURE, encoding="utf-8")
 
-    with pytest.raises(sceneio.FormatError, match="unsupported type"):
-        sceneio.read(path)
+    scene = sceneio.read(path)
+    assert isinstance(scene, sceneio.SceneGraph)
+    assert scene.num_gaussian_clouds == 1
 
 
 def test_empty_particle_field_roundtrips(tmp_path):

@@ -465,7 +465,7 @@ def test_copy_deepcopy_and_pickle_are_explicitly_unsupported():
 def test_public_export_and_repr():
     mesh = _full_mesh()
     assert sceneio.Mesh is _core.Mesh
-    assert sceneio.io.Mesh is _core.Mesh
+    assert not hasattr(sceneio.io, "Mesh")
     assert repr(mesh) == (
         "<Mesh vertices=6 faces=3 corners=10 primitives=2>"
     )

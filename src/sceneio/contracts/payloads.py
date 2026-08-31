@@ -127,7 +127,7 @@ _PAYLOADS = (
         "depth_map",
         "Depth map",
         "Stored or explicitly typed depth rasters.",
-        ("sceneio.DepthMap", "sceneio.data.DepthMap"),
+        ("sceneio.DepthMap",),
         ("pfm", "dmb", "colmap_mvs_depth"),
         dynamic_output_rule=(
             "Generic PFM may return an image-shaped value; typed depth APIs "
@@ -166,8 +166,8 @@ _PAYLOADS = (
         "TIFF payload selected by exact series, level, page, and typed profile.",
         (
             "sceneio.Image",
-            "sceneio.data.Mask",
-            "sceneio.data.RasterCollection",
+            "sceneio.Mask",
+            "sceneio.RasterCollection",
             "sceneio.TensorDict",
         ),
         ("tiff",),
@@ -199,7 +199,7 @@ _PAYLOADS = (
         (
             "sceneio.ColmapDatabase",
             "sceneio.HlocMatchStore",
-            "sceneio.MatchGraph",
+            "sceneio.CorrespondenceGraph",
         ),
         ("colmap_db", "hloc_matches"),
         logical_data_type_id="match_graph",
@@ -212,10 +212,10 @@ _PAYLOADS = (
         ("ply_mesh", "obj", "stl", "off"),
     ),
     _payload(
-        "mesh_scene",
-        "Mesh scene",
-        "Mesh hierarchy, transforms, and bounded material associations.",
-        ("sceneio.MeshScene", "sceneio.SceneGraph"),
+        "scene_graph",
+        "Scene graph",
+        "Typed scene hierarchy, logical mesh groups, named scenes, and bounded material associations.",
+        ("sceneio.SceneGraph",),
         ("gltf", "glb", "usd", "usdz"),
     ),
     _payload(

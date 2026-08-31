@@ -70,19 +70,18 @@ def _hloc_match_fixture(scale):
         len(matches),
         dtype=np.float32,
     )
-    graph = _core.match_graph(
-        np.array([[1, 2]], np.uint32),
-        np.array([0, len(matches)], np.uint64),
-        matches,
-        np.zeros(2, np.uint64),
-        np.empty((0, 2), np.uint32),
-        scores=scores,
-        match_score_present=np.ones(1, np.uint8),
-        match_present=np.ones(1, np.uint8),
-        geometry_present=np.zeros(1, np.uint8),
-    )
     names = ("benchmark-a.jpg", "benchmark-b.jpg")
     pair = (names,)
+    graph = sceneio.CorrespondenceGraph(
+        features={},
+        pairs={
+            names: sceneio.PairCorrespondences.from_indices(
+                matches,
+                scores=scores,
+            )
+        },
+        index_validation="deferred",
+    )
     store = sceneio.HlocMatchStore(
         names,
         pair,
@@ -283,14 +282,15 @@ def _usd_fixture(scale):
         vertex_uvs=uvs,
         coordinate_frame="opengl",
     )
-    scene = _core.mesh_scene(
-        [mesh],
-        np.array([0, 1], dtype=np.uint64),
-        node_meshes=np.array([0], dtype=np.int64),
+    scene = _core.scene_graph(
+        ["Surface"],
+        meshes=[mesh],
+        mesh_primitive_offsets=np.array([0, 1], dtype=np.uint64),
+        node_payload_kinds=["mesh"],
+        node_payload_indices=np.array([0], dtype=np.uint64),
         node_child_offsets=np.array([0, 0], dtype=np.uint64),
         node_children=np.empty(0, dtype=np.uint64),
         node_local_transforms=np.eye(4, dtype=np.float64)[None],
-        node_names=["Surface"],
         scene_root_offsets=np.array([0, 1], dtype=np.uint64),
         scene_roots=np.array([0], dtype=np.uint64),
         default_scene=0,

@@ -186,6 +186,6 @@ def test_repr_and_public_reexports():
     import sceneio.io
 
     assert sceneio.FlowField is _core.FlowField
-    assert sceneio.io.FlowField is _core.FlowField
+    assert not hasattr(sceneio.io, "FlowField")
     assert "FlowField" in sceneio.__all__
-    assert "FlowField" in sceneio.io.__all__
+    assert "FlowField" not in sceneio.io.__all__

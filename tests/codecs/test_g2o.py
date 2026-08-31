@@ -10,8 +10,7 @@ import numpy as np
 import pytest
 
 import sceneio
-from sceneio import _core
-from sceneio.io import FormatError
+from sceneio import FormatError, _core
 
 
 def _upper(values: np.ndarray) -> list[float]:

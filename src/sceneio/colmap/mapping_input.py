@@ -12,17 +12,18 @@ from pathlib import Path
 
 import numpy as np
 
+from sceneio import camera_intrinsics, feature_set
 from sceneio._camera_models import (
     CAMERA_MODEL_PARAMETER_COUNTS as _CAMERA_PARAM_COUNTS,
 )
+from sceneio._data.features import CorrespondenceGraph, PairCorrespondences
+from sceneio._data.transforms import SE3
+from sceneio.errors import ContractViolation
 
 from .models import (
     UINT32_MAX,
     ColmapAdapterError,
-    MappingCamera,
-    MappingImage,
     MappingInput,
-    MappingMatch,
 )
 
 _MAGIC = b"PCMAPIN\0"
@@ -99,9 +100,15 @@ def read_mapping_input(path) -> MappingInput:
 
     owner = _open_mapping(path)
     cursor = None
-    cameras = []
-    images = []
-    matches = []
+    cameras = {}
+    camera_priors = {}
+    image_ids = {}
+    image_camera_ids = {}
+    image_time_ids = {}
+    features = {}
+    pairs = {}
+    configurations = {}
+    relative_poses = {}
     params = None
     keypoints = None
     relative_pose = None
@@ -134,16 +141,15 @@ def read_mapping_input(path) -> MappingInput:
             prior = cursor.unpack(_U8, f"camera {index} prior flag")
             if prior not in (0, 1):
                 raise ColmapAdapterError(f"MappingInput camera {index} prior flag is not 0 or 1")
-            cameras.append(
-                MappingCamera(
-                    camera_id,
-                    model_id,
-                    width,
-                    height,
-                    params,
-                    bool(prior),
-                )
+            if camera_id in cameras:
+                raise ColmapAdapterError("MappingInput camera ids must be unique")
+            cameras[camera_id] = camera_intrinsics(
+                model_id,
+                width,
+                height,
+                params,
             )
+            camera_priors[camera_id] = bool(prior)
 
         minimum_image_bytes = 20 if version == 2 else 16
         num_images = cursor.count(minimum_image_bytes, "image")
@@ -164,15 +170,16 @@ def read_mapping_input(path) -> MappingInput:
                 (num_keypoints, 2),
                 f"image {index} keypoints",
             )
-            images.append(
-                MappingImage(
-                    image_id,
-                    camera_id,
-                    time_id,
-                    name,
-                    keypoints,
+            if image_id in image_ids.values() or name in image_ids:
+                raise ColmapAdapterError(
+                    "MappingInput image ids and names must be unique"
                 )
-            )
+            image_ids[name] = image_id
+            image_camera_ids[name] = camera_id
+            image_time_ids[name] = time_id
+            features[name] = feature_set(keypoints)
+
+        image_names = {image_id: name for name, image_id in image_ids.items()}
 
         num_matches = cursor.count(17, "match")
         for index in range(num_matches):
@@ -187,25 +194,60 @@ def read_mapping_input(path) -> MappingInput:
             )
             num_pairs = cursor.unpack(_U32, f"match {index} pair count")
             pair_values = cursor.array("<u4", (num_pairs, 2), f"match {index} pairs")
-            matches.append(
-                MappingMatch(
-                    image_id1,
-                    image_id2,
-                    config,
-                    pair_values,
-                    relative_pose,
+            if image_id1 not in image_names or image_id2 not in image_names:
+                raise ColmapAdapterError(
+                    "MappingInput matches must reference declared images"
                 )
-            )
+            key = (image_names[image_id1], image_names[image_id2])
+            if key[0] == key[1] or frozenset(key) in {
+                frozenset(existing) for existing in pairs
+            }:
+                raise ColmapAdapterError("MappingInput match pairs must be unique")
+            pairs[key] = PairCorrespondences.from_indices(pair_values)
+            configurations[key] = config
+            if relative_pose is not None:
+                relative_poses[key] = SE3.from_quaternion_wxyz(
+                    relative_pose[[3, 0, 1, 2]],
+                    relative_pose[4:7],
+                    convention="opencv_second_from_first",
+                )
 
         if cursor.offset != cursor.size:
             raise ColmapAdapterError("MappingInput has trailing bytes after its match records")
-        return MappingInput(
-            version,
-            tuple(cameras),
-            tuple(images),
-            tuple(matches),
-            owner,
+        graph = CorrespondenceGraph(
+            features,
+            pairs,
+            configurations=configurations,
+            relative_poses=relative_poses,
         )
+        return MappingInput(
+            version=version,
+            cameras=cameras,
+            camera_prior_focal_length=camera_priors,
+            image_ids=image_ids,
+            image_camera_ids=image_camera_ids,
+            image_time_ids=image_time_ids,
+            correspondences=graph,
+            _owner=owner,
+        )
+    except ContractViolation as exc:
+        message = str(exc)
+        cursor = None
+        params = None
+        keypoints = None
+        relative_pose = None
+        pair_values = None
+        cameras.clear()
+        camera_priors.clear()
+        image_ids.clear()
+        image_camera_ids.clear()
+        image_time_ids.clear()
+        features.clear()
+        pairs.clear()
+        configurations.clear()
+        relative_poses.clear()
+        owner.close()
+        raise ColmapAdapterError(f"invalid MappingInput semantics: {message}") from None
     except Exception as exc:
         error_type = type(exc)
         message = str(exc)
@@ -218,8 +260,14 @@ def read_mapping_input(path) -> MappingInput:
         relative_pose = None
         pair_values = None
         cameras.clear()
-        images.clear()
-        matches.clear()
+        camera_priors.clear()
+        image_ids.clear()
+        image_camera_ids.clear()
+        image_time_ids.clear()
+        features.clear()
+        pairs.clear()
+        configurations.clear()
+        relative_poses.clear()
         owner.close()
         raise error_type(message) from None
 
@@ -231,10 +279,14 @@ def inspect_mapping_input(path) -> dict[str, int]:
     return {
         "version": record.version,
         "num_cameras": len(record.cameras),
-        "num_images": len(record.images),
-        "num_matches": len(record.matches),
-        "num_keypoints": sum(item.keypoints.shape[0] for item in record.images),
-        "num_correspondences": sum(item.matches.shape[0] for item in record.matches),
+        "num_images": len(record.image_ids),
+        "num_matches": len(record.correspondences.pairs),
+        "num_keypoints": sum(
+            len(item) for item in record.correspondences.features.values()
+        ),
+        "num_correspondences": sum(
+            len(item) for item in record.correspondences.pairs.values()
+        ),
     }
 
 
@@ -259,15 +311,40 @@ def write_mapping_input(value: MappingInput, path) -> None:
 
     if not isinstance(value, MappingInput):
         raise TypeError("value must be a MappingInput")
-    if value.version == 1 and any(image.time_id != UINT32_MAX for image in value.images):
+    if value.version == 1 and any(
+        time_id != UINT32_MAX for time_id in value.image_time_ids.values()
+    ):
         raise ColmapAdapterError("MappingInput v1 cannot represent image time_id values")
-    for index, image in enumerate(value.images):
+    if value.correspondences.verified_pairs:
+        raise ColmapAdapterError("MappingInput cannot encode verified correspondences")
+    if value.correspondences.source_metadata:
+        raise ColmapAdapterError("MappingInput cannot encode correspondence source metadata")
+    for index, name in enumerate(value.image_ids):
         try:
-            encoded = image.name.encode("utf-8")
+            encoded = name.encode("utf-8")
         except UnicodeEncodeError as exc:
             raise ColmapAdapterError(f"MappingInput image {index} name is not valid UTF-8") from exc
         if len(encoded) > _MAX_TEXT_BYTES:
             raise ColmapAdapterError(f"MappingInput image {index} name exceeds its bound")
+        features = value.correspondences.features[name]
+        if features.keypoints.shape[1:] != (2,):
+            raise ColmapAdapterError("MappingInput keypoints must have shape (N, 2)")
+        if (
+            features.descriptors is not None
+            or features.scores is not None
+            or features.keypoint_colors is not None
+            or features.quality is not None
+        ):
+            raise ColmapAdapterError(
+                "MappingInput cannot encode descriptors, scores, colors, or quality"
+            )
+    for _pair, correspondences in value.correspondences.pairs.items():
+        if correspondences.mode != "indexed" or correspondences.indices is None:
+            raise ColmapAdapterError("MappingInput requires indexed correspondences")
+        if correspondences.scores is not None or correspondences.geometry is not None:
+            raise ColmapAdapterError(
+                "MappingInput cannot encode match scores or two-view matrices"
+            )
     target = Path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
     temporary = None
@@ -282,51 +359,62 @@ def write_mapping_input(value: MappingInput, path) -> None:
             temporary = Path(stream.name)
             stream.write(_HEADER.pack(_MAGIC, value.version))
             stream.write(_U32.pack(_u32_size(len(value.cameras), "cameras")))
-            for camera in value.cameras:
-                stream.write(_U32.pack(camera.camera_id))
+            for camera_id, camera in value.cameras.items():
+                stream.write(_U32.pack(camera_id))
                 stream.write(_U32.pack(camera.model_id))
                 stream.write(_U64.pack(camera.width))
                 stream.write(_U64.pack(camera.height))
                 stream.write(_U32.pack(_u32_size(camera.params.size, "camera parameters")))
                 _write_array(stream, camera.params)
-                stream.write(_U8.pack(int(camera.has_prior_focal_length)))
+                stream.write(
+                    _U8.pack(int(value.camera_prior_focal_length[camera_id]))
+                )
 
-            stream.write(_U32.pack(_u32_size(len(value.images), "images")))
-            for image in value.images:
-                name = image.name.encode("utf-8")
-                stream.write(_U32.pack(image.image_id))
-                stream.write(_U32.pack(image.camera_id))
+            stream.write(_U32.pack(_u32_size(len(value.image_ids), "images")))
+            for image_name, image_id in value.image_ids.items():
+                name = image_name.encode("utf-8")
+                stream.write(_U32.pack(image_id))
+                stream.write(_U32.pack(value.image_camera_ids[image_name]))
                 if value.version == 2:
-                    stream.write(_U32.pack(image.time_id))
+                    stream.write(_U32.pack(value.image_time_ids[image_name]))
                 stream.write(_U32.pack(_u32_size(len(name), "image name")))
                 stream.write(name)
+                features = value.correspondences.features[image_name]
                 stream.write(
                     _U32.pack(
                         _u32_size(
-                            image.keypoints.shape[0],
+                            features.keypoints.shape[0],
                             "image keypoints",
                         )
                     )
                 )
-                _write_array(stream, image.keypoints)
+                _write_array(stream, features.keypoints)
 
-            stream.write(_U32.pack(_u32_size(len(value.matches), "matches")))
-            for match in value.matches:
-                stream.write(_U32.pack(match.image_id1))
-                stream.write(_U32.pack(match.image_id2))
-                stream.write(_I32.pack(match.config))
-                stream.write(_U8.pack(int(match.relative_pose is not None)))
-                if match.relative_pose is not None:
-                    _write_array(stream, match.relative_pose)
+            stream.write(
+                _U32.pack(_u32_size(len(value.correspondences.pairs), "matches"))
+            )
+            for pair, correspondences in value.correspondences.pairs.items():
+                stream.write(_U32.pack(value.image_ids[pair[0]]))
+                stream.write(_U32.pack(value.image_ids[pair[1]]))
+                stream.write(_I32.pack(value.correspondences.configurations.get(pair, 0)))
+                relative_pose = value.correspondences.relative_poses.get(pair)
+                stream.write(_U8.pack(int(relative_pose is not None)))
+                if relative_pose is not None:
+                    quaternion = relative_pose.to_quaternion_wxyz()
+                    wire_pose = np.concatenate(
+                        (quaternion[1:4], quaternion[0:1], relative_pose.translation)
+                    )
+                    _write_array(stream, wire_pose)
+                assert correspondences.indices is not None
                 stream.write(
                     _U32.pack(
                         _u32_size(
-                            match.matches.shape[0],
+                            correspondences.indices.shape[0],
                             "match correspondences",
                         )
                     )
                 )
-                _write_array(stream, match.matches)
+                _write_array(stream, correspondences.indices)
             stream.flush()
             os.fsync(stream.fileno())
         os.replace(temporary, target)

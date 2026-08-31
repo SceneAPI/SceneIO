@@ -13,8 +13,7 @@ import numpy as np
 import pytest
 
 import sceneio
-from sceneio import _core
-from sceneio.data import InstanceMap, LabelTaxonomy, PanopticMap, SemanticMap
+from sceneio import InstanceMap, LabelTaxonomy, PanopticMap, SemanticMap, _core
 from sceneio.io import _label_map
 
 SCHEMA = "sceneio.label_map/1"

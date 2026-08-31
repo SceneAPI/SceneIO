@@ -14,7 +14,7 @@ from pathlib import Path
 import numpy as np
 
 from sceneio import _core
-from sceneio.data.dense import (
+from sceneio._data.dense import (
     InstanceMap,
     LabelTaxonomy,
     PanopticMap,

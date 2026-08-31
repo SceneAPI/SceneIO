@@ -9,11 +9,17 @@ from pathlib import Path
 
 import numpy as np
 
+from sceneio import (
+    CorrespondenceGraph,
+    FeatureSet,
+    PairCorrespondences,
+    Sim3,
+    feature_set,
+)
+from sceneio.errors import ContractViolation
+
 from .models import (
     ColmapAdapterError,
-    NamedMatches,
-    SiftFeatures,
-    SimilarityTransform,
 )
 
 _MAX_LINE_BYTES = 2 << 20
@@ -102,8 +108,12 @@ def _sift_descriptor(token: str, label: str) -> int:
     return int(value)
 
 
-def read_similarity_transform(path) -> SimilarityTransform:
-    """Read COLMAP's one-line ``scale qw qx qy qz tx ty tz`` format."""
+def read_similarity_transform(path, *, convention: str) -> Sim3:
+    """Read COLMAP's one-line ``scale qw qx qy qz tx ty tz`` format.
+
+    The format carries no frame-direction metadata, so callers must name the
+    convention explicitly.
+    """
 
     rows = [(line_number, value) for line_number, value in _lines(path) if value]
     if len(rows) != 1:
@@ -115,17 +125,25 @@ def read_similarity_transform(path) -> SimilarityTransform:
         [_finite(field, f"Sim3 field {index}") for index, field in enumerate(fields)],
         dtype=np.float64,
     )
-    return SimilarityTransform(values[0], values[1:5], values[5:8])
+    try:
+        return Sim3.from_quaternion_wxyz(
+            values[0],
+            values[1:5],
+            values[5:8],
+            convention=convention,
+        )
+    except ContractViolation as exc:
+        raise ColmapAdapterError(f"invalid Sim3 record: {exc}") from exc
 
 
-def write_similarity_transform(value: SimilarityTransform, path) -> None:
+def write_similarity_transform(value: Sim3, path) -> None:
     """Write COLMAP's locale-independent precision-17 Sim3 text."""
 
-    if not isinstance(value, SimilarityTransform):
-        raise TypeError("value must be SimilarityTransform")
+    if not isinstance(value, Sim3):
+        raise TypeError("value must be Sim3")
     values = (
         value.scale,
-        *value.quaternion_wxyz.tolist(),
+        *value.to_quaternion_wxyz().tolist(),
         *value.translation.tolist(),
     )
     _atomic_text(
@@ -136,7 +154,7 @@ def write_similarity_transform(value: SimilarityTransform, path) -> None:
     )
 
 
-def read_sift_features(path) -> SiftFeatures:
+def read_sift_features(path) -> FeatureSet:
     """Read one COLMAP SIFT text file with exact uint8 descriptors."""
 
     iterator = iter(_lines(path))
@@ -150,7 +168,7 @@ def read_sift_features(path) -> SiftFeatures:
         iterator.close()
 
 
-def _read_sift_rows(iterator, file_size: int) -> SiftFeatures:
+def _read_sift_rows(iterator, file_size: int) -> FeatureSet:
     try:
         header_line, header = next(iterator)
     except StopIteration as exc:
@@ -182,18 +200,34 @@ def _read_sift_rows(iterator, file_size: int) -> SiftFeatures:
     for line_number, value in iterator:
         if value:
             raise ColmapAdapterError(f"SIFT line {line_number} follows the declared feature rows")
-    return SiftFeatures(keypoints, descriptors)
+    return feature_set(keypoints, descriptors)
 
 
-def write_sift_features(value: SiftFeatures, path) -> None:
+def write_sift_features(value: FeatureSet, path) -> None:
     """Stream a canonical SIFT text file."""
 
-    if not isinstance(value, SiftFeatures):
-        raise TypeError("value must be SiftFeatures")
+    if not isinstance(value, FeatureSet):
+        raise TypeError("value must be FeatureSet")
+    keypoints = np.asarray(value.keypoints)
+    descriptors = value.descriptors
+    if keypoints.ndim != 2 or keypoints.shape[1:] != (4,):
+        raise ColmapAdapterError("SIFT keypoints must have shape (N, 4)")
+    if (
+        descriptors is None
+        or descriptors.dtype != np.uint8
+        or descriptors.shape != (keypoints.shape[0], 128)
+    ):
+        raise ColmapAdapterError(
+            "SIFT descriptors must have dtype uint8 and shape (N, 128)"
+        )
+    if value.scores is not None or value.keypoint_colors is not None or value.quality is not None:
+        raise ColmapAdapterError(
+            "SIFT text cannot encode feature scores, colors, or quality"
+        )
 
     def write(stream) -> None:
         stream.write(f"{value.keypoints.shape[0]} 128\n")
-        for keypoint, descriptor in zip(value.keypoints, value.descriptors, strict=True):
+        for keypoint, descriptor in zip(keypoints, descriptors, strict=True):
             fields = [
                 *(format(float(item), ".9g") for item in keypoint),
                 *(str(int(item)) for item in descriptor),
@@ -344,7 +378,7 @@ def write_image_pairs(
     _atomic_text(cap_path, write_caps)
 
 
-def read_feature_matches(path) -> tuple[NamedMatches, ...]:
+def read_feature_matches(path) -> CorrespondenceGraph:
     """Read strict COLMAP feature-match blocks separated by blank lines."""
 
     rows = iter(_lines(path))
@@ -354,8 +388,8 @@ def read_feature_matches(path) -> tuple[NamedMatches, ...]:
         rows.close()
 
 
-def _read_feature_match_rows(rows) -> tuple[NamedMatches, ...]:
-    result: list[NamedMatches] = []
+def _read_feature_match_rows(rows) -> CorrespondenceGraph:
+    result: dict[tuple[str, str], PairCorrespondences] = {}
     seen = set()
     while True:
         try:
@@ -387,28 +421,32 @@ def _read_feature_match_rows(rows) -> tuple[NamedMatches, ...]:
             if len(values) > _MAX_RECORDS:
                 raise ColmapAdapterError("match block has too many rows")
         matches = np.asarray(values, dtype=np.uint32).reshape(-1, 2)
-        result.append(NamedMatches(names[0], names[1], matches))
-    return tuple(result)
+        result[(names[0], names[1])] = PairCorrespondences.from_indices(matches)
+    return CorrespondenceGraph({}, result, index_validation="deferred")
 
 
-def write_feature_matches(value: tuple[NamedMatches, ...], path) -> None:
+def write_feature_matches(value: CorrespondenceGraph, path) -> None:
     """Stream canonical blank-line-delimited COLMAP match blocks."""
 
-    if any(not isinstance(item, NamedMatches) for item in value):
-        raise TypeError("value must contain NamedMatches records")
-    seen: set[tuple[str, str]] = set()
-    for index, item in enumerate(value):
-        key = tuple(sorted((item.image_name1, item.image_name2)))
-        if item.image_name1 == item.image_name2 or key in seen:
+    if not isinstance(value, CorrespondenceGraph):
+        raise TypeError("value must be CorrespondenceGraph")
+    if value.verified_pairs:
+        raise ColmapAdapterError("feature-match text cannot encode a verified channel")
+    for index, (key, pair) in enumerate(value.pairs.items()):
+        if any(any(character.isspace() for character in name) for name in key):
+            raise ColmapAdapterError(f"match block {index} image names cannot contain whitespace")
+        if pair.mode != "indexed" or pair.indices is None:
+            raise ColmapAdapterError("feature-match text requires indexed correspondences")
+        if pair.scores is not None or pair.geometry is not None:
             raise ColmapAdapterError(
-                f"match block {index} is duplicate or self-paired"
+                "feature-match text cannot encode scores or two-view geometry"
             )
-        seen.add(key)
 
     def write(stream) -> None:
-        for item in value:
-            stream.write(f"{item.image_name1} {item.image_name2}\n")
-            for first, second in item.matches:
+        for (image_name1, image_name2), pair in value.pairs.items():
+            stream.write(f"{image_name1} {image_name2}\n")
+            assert pair.indices is not None
+            for first, second in pair.indices:
                 stream.write(f"{int(first)} {int(second)}\n")
             stream.write("\n")
 
