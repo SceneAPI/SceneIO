@@ -3049,7 +3049,7 @@
     "extension_capture": "build/apng-56-row-benchmark.json",
     "extension_base_commit": "3c07bcefabbd0d9be935ffd22c5ef1e7f4642321",
     "rows": 74,
-    "structural_projection_sha256": "3f392b8d9f248457a2a8f0d8d40b56d6e7a962a2012d113e4fae94d6de4d6a2d",
+    "structural_projection_sha256": "4db1a9dc8b3efc82d638e2e34fa4cfac613e2e32e29c4b7c24c6627b9a5c1a52",
     "representation_reset": {
       "release": "0.4.0",
       "date": "2026-08-30",
@@ -3057,7 +3057,9 @@
       "baseline_structural_projection_sha256": "5b68b2f03f8de343dd681a531cc7f1a293dcfe94c565e164cfc725f0c109ad01",
       "changes": [
         "Reconstruction payload accounting includes the aggregate-owned camera_ids array.",
-        "Unified SceneGraph USD output emits the standard mesh extent property."
+        "Unified SceneGraph USD output emits the standard mesh extent property.",
+        "FLO uses its canonical FlowField path and no longer reports a redundant typed-adapter metric block.",
+        "TIFF uses its canonical RasterCollection path, adding 16 bytes to the deterministic fixture encoding."
       ]
     },
     "excluded_key_suffixes": [

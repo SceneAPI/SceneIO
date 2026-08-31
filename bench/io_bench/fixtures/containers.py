@@ -129,7 +129,6 @@ def _e57_fixture(scale):
         positions,
         colors=colors,
         intensity=intensity,
-        viewpoint=viewpoint,
     )
     record = _core.scan_set(
         (

@@ -1227,7 +1227,7 @@ def test_assembly_dependency_direction_and_import_delta_are_exact():
     assert benchmark_contract["rows"] == 74
     assert len(CANONICAL_BUILTIN_IDS) == benchmark_contract["rows"]
     assert benchmark_contract["structural_projection_sha256"] == (
-        "3f392b8d9f248457a2a8f0d8d40b56d6e7a962a2012d113e4fae94d6de4d6a2d"
+        "4db1a9dc8b3efc82d638e2e34fa4cfac613e2e32e29c4b7c24c6627b9a5c1a52"
     )
     assert benchmark_contract["representation_reset"] == {
         "release": "0.4.0",
@@ -1240,6 +1240,10 @@ def test_assembly_dependency_direction_and_import_delta_are_exact():
             "Reconstruction payload accounting includes the aggregate-owned "
             "camera_ids array.",
             "Unified SceneGraph USD output emits the standard mesh extent property.",
+            "FLO uses its canonical FlowField path and no longer reports a "
+            "redundant typed-adapter metric block.",
+            "TIFF uses its canonical RasterCollection path, adding 16 bytes "
+            "to the deterministic fixture encoding.",
         ],
     }
     rows = [

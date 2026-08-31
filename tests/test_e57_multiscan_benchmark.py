@@ -4,6 +4,23 @@ import numpy as np
 import pytest
 
 from bench.io_bench import e57_multiscan
+from bench.io_bench.fixtures.containers import _e57_fixture
+
+
+def test_e57_single_scan_fixture_owns_pose_on_scan():
+    record, payload = _e57_fixture(scale=0.001)
+    assert record.num_scans == 1
+    scan = record.scans[0]
+    np.testing.assert_array_equal(scan.viewpoint, payload["viewpoint"])
+    assert scan.point_cloud.viewpoint == (
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+    )
 
 
 def test_e57_multiscan_fixture_is_deterministic():

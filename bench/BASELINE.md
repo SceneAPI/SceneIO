@@ -4351,9 +4351,10 @@ rows and the same result schema. A clean capture of baseline commit
 `182c9120` reproduces structural projection SHA-256
 `5b68b2f03f8de343dd681a531cc7f1a293dcfe94c565e164cfc725f0c109ad01`.
 The consolidated capture records
-`3f392b8d9f248457a2a8f0d8d40b56d6e7a962a2012d113e4fae94d6de4d6a2d`.
+`4db1a9dc8b3efc82d638e2e34fa4cfac613e2e32e29c4b7c24c6627b9a5c1a52`.
 
-The stable projection differs in exactly seven values:
+The stable projection differs in eight numeric values and one structural
+field:
 
 - Bundler, NVM, OpenMVG, and both COLMAP sparse rows count the explicit
   aggregate-owned `camera_ids` array, increasing each logical payload by
@@ -4361,6 +4362,10 @@ The stable projection differs in exactly seven values:
 - USD and USDZ add the standard two-value mesh `extent` property, increasing
   the deterministic fixture by 92 bytes. All mesh arrays and topology remain
   identical.
+- The canonical TIFF `RasterCollection` path adds 16 bytes to the
+  deterministic fixture encoding while preserving its pixel payload.
+- FLO now uses `FlowField` directly, so the redundant `typed_adapter` metric
+  block is `null`; the ordinary FLO metrics cover the same canonical path.
 
 Both captures use the ordinary one-run, scale-0.001, no-oracle command. The
 full consolidated sweep completes without a failed codec, and
