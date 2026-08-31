@@ -127,6 +127,72 @@ def _validated_unit_quat(name: str, qvec_wxyz: object) -> np.ndarray:
     return q / norm
 
 
+def _se3_batch_from_quaternion_wxyz(
+    quaternions_wxyz: object,
+    translations: object,
+    *,
+    convention: str,
+) -> tuple[tuple[SE3, ...], np.ndarray, np.ndarray]:
+    """Build trusted canonical poses with one vectorized validation pass."""
+
+    try:
+        quaternions = np.asarray(quaternions_wxyz, dtype=np.float64)
+        translation_values = np.asarray(translations, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ContractViolation(
+            "SE3 batch: expected numeric quaternion and translation arrays"
+        ) from exc
+    if quaternions.ndim != 2 or quaternions.shape[1] != 4:
+        raise ContractViolation(
+            "SE3 batch quaternions: expected shape (N, 4), "
+            f"got {quaternions.shape}"
+        )
+    if translation_values.shape != (len(quaternions), 3):
+        raise ContractViolation(
+            "SE3 batch translations: expected shape "
+            f"({len(quaternions)}, 3), got {translation_values.shape}"
+        )
+    if (
+        (quaternions.size and not np.isfinite(quaternions).all())
+        or (translation_values.size and not np.isfinite(translation_values).all())
+    ):
+        raise ContractViolation("SE3 batch: arrays contain non-finite values (NaN/Inf)")
+    ensure_choice("SE3 batch.convention", convention, POSE_CONVENTIONS)
+    norms = np.linalg.norm(quaternions, axis=1)
+    invalid = np.flatnonzero(np.abs(norms - 1.0) > 1e-3)
+    if invalid.size:
+        index = int(invalid[0])
+        raise ContractViolation(
+            "SE3 batch quaternions"
+            f"[{index}]: quaternion is not unit-norm (|q| = {norms[index]:.6f})"
+        )
+    normalized = quaternions / norms[:, None]
+    w, x, y, z = normalized.T
+    rotations = np.empty((len(normalized), 3, 3), dtype=np.float64)
+    rotations[:, 0, 0] = 1.0 - 2.0 * (y * y + z * z)
+    rotations[:, 0, 1] = 2.0 * (x * y - z * w)
+    rotations[:, 0, 2] = 2.0 * (x * z + y * w)
+    rotations[:, 1, 0] = 2.0 * (x * y + z * w)
+    rotations[:, 1, 1] = 1.0 - 2.0 * (x * x + z * z)
+    rotations[:, 1, 2] = 2.0 * (y * z - x * w)
+    rotations[:, 2, 0] = 2.0 * (x * z - y * w)
+    rotations[:, 2, 1] = 2.0 * (y * z + x * w)
+    rotations[:, 2, 2] = 1.0 - 2.0 * (x * x + y * y)
+
+    poses: list[SE3] = []
+    for rotation, translation in zip(
+        rotations,
+        translation_values,
+        strict=True,
+    ):
+        pose = object.__new__(SE3)
+        object.__setattr__(pose, "rotation", rotation)
+        object.__setattr__(pose, "translation", translation)
+        object.__setattr__(pose, "convention", convention)
+        poses.append(pose)
+    return tuple(poses), rotations, translation_values
+
+
 @dataclass(frozen=True)
 class SE3:
     """A rigid transform: ``x_out = rotation @ x_in + translation``.

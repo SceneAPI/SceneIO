@@ -174,6 +174,119 @@ def _invert_rigid(matrix: np.ndarray) -> np.ndarray:
     return result
 
 
+def _quaternion_matrices(values: np.ndarray, order: str) -> np.ndarray:
+    """Convert a batch of Hamilton quaternions without per-pose Python work."""
+
+    quaternions = np.asarray(values, dtype=np.float64)
+    if quaternions.ndim != 2 or quaternions.shape[1] != 4:
+        raise ValueError("posed-view quaternions must have shape (N, 4)")
+    if order == "wxyz":
+        ordered = quaternions
+    elif order == "xyzw":
+        ordered = quaternions[:, (3, 0, 1, 2)]
+    else:
+        raise ValueError(f"unsupported quaternion order {order!r}")
+    norms = np.linalg.norm(ordered, axis=1)
+    if norms.size and (not np.isfinite(norms).all() or np.any(norms <= 0.0)):
+        raise ValueError("cannot convert a zero or non-finite quaternion")
+    normalized = ordered / norms[:, None]
+    w, x, y, z = normalized.T
+    rotations = np.empty((len(normalized), 3, 3), dtype=np.float64)
+    rotations[:, 0, 0] = 1.0 - 2.0 * (y * y + z * z)
+    rotations[:, 0, 1] = 2.0 * (x * y - z * w)
+    rotations[:, 0, 2] = 2.0 * (x * z + y * w)
+    rotations[:, 1, 0] = 2.0 * (x * y + z * w)
+    rotations[:, 1, 1] = 1.0 - 2.0 * (x * x + z * z)
+    rotations[:, 1, 2] = 2.0 * (y * z - x * w)
+    rotations[:, 2, 0] = 2.0 * (x * z - y * w)
+    rotations[:, 2, 1] = 2.0 * (y * z + x * w)
+    rotations[:, 2, 2] = 1.0 - 2.0 * (x * x + y * y)
+    return rotations
+
+
+def _matrix_quaternions(rotations: np.ndarray, order: str) -> np.ndarray:
+    """Convert proper rotation matrices to deterministic unit quaternions."""
+
+    matrices = np.asarray(rotations, dtype=np.float64)
+    if matrices.ndim != 3 or matrices.shape[1:] != (3, 3):
+        raise ValueError("posed-view rotations must have shape (N, 3, 3)")
+    count = len(matrices)
+    quaternions = np.empty((count, 4), dtype=np.float64)
+    traces = np.trace(matrices, axis1=1, axis2=2)
+    trace_branch = traces > 0.0
+    x_branch = (
+        ~trace_branch
+        & (matrices[:, 0, 0] > matrices[:, 1, 1])
+        & (matrices[:, 0, 0] > matrices[:, 2, 2])
+    )
+    y_branch = (
+        ~trace_branch
+        & ~x_branch
+        & (matrices[:, 1, 1] > matrices[:, 2, 2])
+    )
+    z_branch = ~(trace_branch | x_branch | y_branch)
+
+    if np.any(trace_branch):
+        rows = matrices[trace_branch]
+        scale = np.sqrt(traces[trace_branch] + 1.0) * 2.0
+        quaternions[trace_branch, 0] = 0.25 * scale
+        quaternions[trace_branch, 1] = (rows[:, 2, 1] - rows[:, 1, 2]) / scale
+        quaternions[trace_branch, 2] = (rows[:, 0, 2] - rows[:, 2, 0]) / scale
+        quaternions[trace_branch, 3] = (rows[:, 1, 0] - rows[:, 0, 1]) / scale
+    if np.any(x_branch):
+        rows = matrices[x_branch]
+        scale = np.sqrt(
+            1.0 + rows[:, 0, 0] - rows[:, 1, 1] - rows[:, 2, 2]
+        ) * 2.0
+        quaternions[x_branch, 0] = (rows[:, 2, 1] - rows[:, 1, 2]) / scale
+        quaternions[x_branch, 1] = 0.25 * scale
+        quaternions[x_branch, 2] = (rows[:, 0, 1] + rows[:, 1, 0]) / scale
+        quaternions[x_branch, 3] = (rows[:, 0, 2] + rows[:, 2, 0]) / scale
+    if np.any(y_branch):
+        rows = matrices[y_branch]
+        scale = np.sqrt(
+            1.0 + rows[:, 1, 1] - rows[:, 0, 0] - rows[:, 2, 2]
+        ) * 2.0
+        quaternions[y_branch, 0] = (rows[:, 0, 2] - rows[:, 2, 0]) / scale
+        quaternions[y_branch, 1] = (rows[:, 0, 1] + rows[:, 1, 0]) / scale
+        quaternions[y_branch, 2] = 0.25 * scale
+        quaternions[y_branch, 3] = (rows[:, 1, 2] + rows[:, 2, 1]) / scale
+    if np.any(z_branch):
+        rows = matrices[z_branch]
+        scale = np.sqrt(
+            1.0 + rows[:, 2, 2] - rows[:, 0, 0] - rows[:, 1, 1]
+        ) * 2.0
+        quaternions[z_branch, 0] = (rows[:, 1, 0] - rows[:, 0, 1]) / scale
+        quaternions[z_branch, 1] = (rows[:, 0, 2] + rows[:, 2, 0]) / scale
+        quaternions[z_branch, 2] = (rows[:, 1, 2] + rows[:, 2, 1]) / scale
+        quaternions[z_branch, 3] = 0.25 * scale
+
+    norms = np.linalg.norm(quaternions, axis=1)
+    if norms.size and (not np.isfinite(norms).all() or np.any(norms <= 0.0)):
+        raise ValueError("cannot convert a non-finite rotation matrix")
+    quaternions /= norms[:, None]
+    quaternions[quaternions[:, 0] < 0.0] *= -1.0
+    if order == "wxyz":
+        return quaternions
+    if order == "xyzw":
+        return quaternions[:, (1, 2, 3, 0)]
+    raise ValueError(f"unsupported quaternion order {order!r}")
+
+
+def _invert_rigid_batch(matrices: np.ndarray) -> np.ndarray:
+    """Invert a batch of rigid transforms."""
+
+    result = np.broadcast_to(np.eye(4, dtype=np.float64), matrices.shape).copy()
+    rotations = matrices[:, :3, :3].transpose(0, 2, 1)
+    result[:, :3, :3] = rotations
+    result[:, :3, 3] = -np.einsum(
+        "nij,nj->ni",
+        rotations,
+        matrices[:, :3, 3],
+    )
+    return result
+
+
 def _require_rigid_transform(matrix: np.ndarray) -> None:
     rotation = matrix[:3, :3]
     if not np.allclose(
@@ -245,28 +358,31 @@ def _convert_posed_views(
     inverse_world = np.linalg.inv(transform)
     source_quaternions = np.asarray(record.quaternions)
     source_translations = np.asarray(record.translations)
-    quaternions = np.empty_like(source_quaternions, dtype=np.float64)
-    translations = np.empty_like(source_translations, dtype=np.float64)
-    for index, (quaternion, translation) in enumerate(
-        zip(source_quaternions, source_translations, strict=True)
-    ):
-        pose = np.eye(4, dtype=np.float64)
-        pose[:3, :3] = _quaternion_matrix(quaternion, source.quaternion_order)
-        pose[:3, 3] = np.asarray(translation, dtype=np.float64) * source_scale
-        world_to_camera = (
-            pose if source.pose_direction == "world_to_camera" else _invert_rigid(pose)
-        )
-        converted = camera_basis @ world_to_camera @ inverse_world
-        output = (
-            converted
-            if target.pose_direction == "world_to_camera"
-            else _invert_rigid(converted)
-        )
-        quaternions[index] = _matrix_quaternion(
-            output[:3, :3],
-            target.quaternion_order,
-        )
-        translations[index] = output[:3, 3] / target_scale
+    poses = np.broadcast_to(
+        np.eye(4, dtype=np.float64),
+        (len(source_quaternions), 4, 4),
+    ).copy()
+    poses[:, :3, :3] = _quaternion_matrices(
+        source_quaternions,
+        source.quaternion_order,
+    )
+    poses[:, :3, 3] = source_translations * source_scale
+    world_to_camera = (
+        poses
+        if source.pose_direction == "world_to_camera"
+        else _invert_rigid_batch(poses)
+    )
+    converted = camera_basis @ world_to_camera @ inverse_world
+    output = (
+        converted
+        if target.pose_direction == "world_to_camera"
+        else _invert_rigid_batch(converted)
+    )
+    quaternions = _matrix_quaternions(
+        output[:, :3, :3],
+        target.quaternion_order,
+    )
+    translations = output[:, :3, 3] / target_scale
     timestamps = np.asarray(record.timestamps)
     camera_indices = np.asarray(record.camera_indices)
     cameras = list(record.cameras)

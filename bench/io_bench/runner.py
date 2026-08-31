@@ -1950,6 +1950,8 @@ def _run_benchmark(args, tmp):
     o4_rows = []
     inspect_rows = []
     partial_rows = []
+    decoded_output_allocation_floors = {}
+    canonical_read_latency_controls = {}
 
     print_primary_header()
     for s in specs:
@@ -1970,7 +1972,19 @@ def _run_benchmark(args, tmp):
             fmb = len(enc) / 1e6
 
             wt, _ = _measure(lambda: s.w(rec), args.runs)
-            rt, _ = _measure(lambda: s.r(enc), args.runs)
+            rt, decoded_output_peak = _measure(
+                lambda: s.r(enc),
+                args.runs,
+            )
+            decoded_output_allocation_floors[s.id] = (
+                decoded_output_peak / 1e6
+            )
+            if s.id == "transforms_json":
+                native_read_time, _ = _measure(
+                    lambda: _core.read_transforms_json(enc),
+                    args.runs,
+                )
+                canonical_read_latency_controls[s.id] = native_read_time
             sioW, sioR = pmb / wt, pmb / rt
             o4_metrics = {}
             typed_adapter_metrics = None
@@ -3319,7 +3333,7 @@ def _run_benchmark(args, tmp):
                 "O5 inspection failed directional latency guard: "
                 + ", ".join(regressions)
             )
-        json_controls = {"transforms_json", "openmvg"}
+        json_controls = {"openmvg"}
         missing_json = json_controls - by_codec.keys()
         if missing_json:
             raise RuntimeError(
@@ -3336,6 +3350,27 @@ def _run_benchmark(args, tmp):
                 "O5 full JSON read exceeded 3x its independent metadata "
                 "parser control: "
                 + ", ".join(json_read_regressions)
+            )
+        canonical_controls = {"transforms_json"}
+        missing_canonical = canonical_controls - canonical_read_latency_controls.keys()
+        if missing_canonical:
+            raise RuntimeError(
+                "missing canonical posed-view read controls: "
+                + ", ".join(sorted(missing_canonical))
+            )
+        canonical_read_regressions = sorted(
+            codec_id
+            for codec_id in canonical_controls
+            if qualification.canonical_posed_view_read_regressed(
+                by_codec[codec_id][0],
+                canonical_read_latency_controls[codec_id],
+            )
+        )
+        if canonical_read_regressions:
+            raise RuntimeError(
+                "O5 canonical posed-view read exceeded 1.5x its native full-parser "
+                "control: "
+                + ", ".join(canonical_read_regressions)
             )
         qualification.validate_o5_allocation_controls(
             "inspection",
@@ -3505,7 +3540,11 @@ def _run_benchmark(args, tmp):
                 continue
             bytes_peak = result["bytes_peak_mb"]
             mmap_peak = result["mmap_peak_mb"]
-            if bytes_peak >= 0.5 and mmap_peak >= bytes_peak * 0.25:
+            if qualification.path_read_allocation_regressed(
+                bytes_peak,
+                mmap_peak,
+                decoded_output_allocation_floors.get(result["codec"], 0.0),
+            ):
                 failures.append(
                     f"mmap-memory-regression:{result['codec']}"
                 )

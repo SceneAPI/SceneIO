@@ -607,6 +607,46 @@ def test_pose_contract_cartesian_product_matches_matrix_oracle():
         _assert_pose_contract_case(*case)
 
 
+def test_pose_batch_conversion_covers_every_quaternion_branch():
+    quaternions = np.array(
+        [
+            [1.0, 0.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0, 0.0],
+            [0.0, 0.0, 1.0, 0.0],
+            [0.0, 0.0, 0.0, 1.0],
+            [0.5, 0.5, 0.5, 0.5],
+        ],
+        dtype=np.float64,
+    )
+    translations = np.arange(15, dtype=np.float64).reshape(5, 3) - 7.0
+    source = _core.pose_storage(
+        quaternions,
+        translations,
+        quaternion_order="wxyz",
+        pose_convention="world_to_camera",
+        axis_frame="opencv",
+    )
+    target = replace(
+        source.coordinates,
+        name="xyzw_batch_target",
+        quaternion_order="xyzw",
+    )
+
+    converted = sceneio.convert_coordinates(source, target=target)
+
+    for index, expected_quaternion in enumerate(quaternions):
+        actual_quaternion = np.asarray(converted.quaternions)[index][[3, 0, 1, 2]]
+        actual = _matrix_from_wxyz(
+            actual_quaternion,
+            np.asarray(converted.translations)[index],
+        )
+        expected = _matrix_from_wxyz(
+            expected_quaternion,
+            translations[index],
+        )
+        np.testing.assert_allclose(actual, expected, atol=1e-12)
+
+
 def test_pose_world_frame_change_requires_an_explicit_rigid_map():
     record = _core.pose_storage(
         np.array([[1.0, 0.0, 0.0, 0.0]], dtype=np.float64),

@@ -410,6 +410,27 @@ def test_o5_directional_allocation_controls_are_narrow_and_accept_gains():
             )
 
 
+def test_path_read_allocation_guard_accounts_for_the_decoded_output_floor():
+    assert qualification.PATH_READ_ALLOCATION_HEADROOM_MB == 0.25
+    assert not qualification.path_read_allocation_regressed(3.2, 0.79, 0.0)
+    assert qualification.path_read_allocation_regressed(3.2, 0.8, 0.0)
+    assert not qualification.path_read_allocation_regressed(8.0, 7.04, 6.8)
+    assert qualification.path_read_allocation_regressed(8.0, 7.05, 6.8)
+    assert not qualification.path_read_allocation_regressed(0.49, 9.0, 0.0)
+    with pytest.raises(ValueError, match="finite and non-negative"):
+        qualification.path_read_allocation_regressed(1.0, float("nan"), 0.0)
+
+
+def test_canonical_pose_read_guard_uses_the_native_full_parser_control():
+    assert qualification.CANONICAL_POSED_VIEW_READ_NATIVE_RATIO == 1.5
+    assert not qualification.canonical_posed_view_read_regressed(0.015, 0.01)
+    assert qualification.canonical_posed_view_read_regressed(0.0151, 0.01)
+    with pytest.raises(ValueError, match="finite and non-negative"):
+        qualification.canonical_posed_view_read_regressed(float("nan"), 0.01)
+    with pytest.raises(ValueError, match="must be positive"):
+        qualification.canonical_posed_view_read_regressed(0.01, 0.0)
+
+
 @pytest.mark.parametrize(
     ("peaks", "directional_limits", "message"),
     [

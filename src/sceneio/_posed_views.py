@@ -9,7 +9,7 @@ import numpy as np
 
 from sceneio import _core
 from sceneio._data.calibration import Calibration
-from sceneio._data.transforms import SE3
+from sceneio._data.transforms import _se3_batch_from_quaternion_wxyz
 from sceneio._data.views import FrameMeta, PosedViewSet
 from sceneio.coordinate_conversion import convert_coordinates
 from sceneio.coordinates import COLMAP_COORDINATES
@@ -48,15 +48,77 @@ def _calibration_signature(value: Calibration | None) -> object:
     return ("rays", directions.dtype.str, directions.shape, directions.tobytes(order="C"))
 
 
-def _semantic_signature(value: PosedViewSet) -> object:
+def _semantic_signature(
+    value: PosedViewSet,
+    *,
+    rotations: np.ndarray | None = None,
+    translations: np.ndarray | None = None,
+    calibration_catalog: tuple[Calibration, ...] | None = None,
+    calibration_indices: np.ndarray | None = None,
+) -> object:
+    if rotations is None:
+        rotations = np.asarray(
+            [pose.rotation for pose in value.poses],
+            dtype=np.float64,
+        ).reshape((-1, 3, 3))
+    if translations is None:
+        translations = np.asarray(
+            [pose.translation for pose in value.poses],
+            dtype=np.float64,
+        ).reshape((-1, 3))
+    count = len(value.poses)
+    if rotations.shape != (count, 3, 3) or translations.shape != (count, 3):
+        raise ValueError("posed-view signature arrays are not index-aligned")
+
+    if (calibration_catalog is None) != (calibration_indices is None):
+        raise ValueError(
+            "posed-view calibration catalog and indices must be provided together"
+        )
+    if calibration_catalog is not None and calibration_indices is not None:
+        source_indices = np.asarray(calibration_indices, dtype=np.int32)
+        if source_indices.shape != (count,):
+            raise ValueError("posed-view calibration indices are not index-aligned")
+        catalog: list[object] = []
+        catalog_by_signature: dict[object, int] = {}
+        source_to_canonical = np.empty(len(calibration_catalog), dtype=np.int32)
+        for source_index, calibration in enumerate(calibration_catalog):
+            calibration_signature = _calibration_signature(calibration)
+            catalog_index = catalog_by_signature.get(calibration_signature)
+            if catalog_index is None:
+                catalog_index = len(catalog)
+                catalog_by_signature[calibration_signature] = catalog_index
+                catalog.append(calibration_signature)
+            source_to_canonical[source_index] = catalog_index
+        signature_indices = np.full(count, -1, dtype=np.int32)
+        valid = (source_indices >= 0) & (source_indices < len(calibration_catalog))
+        signature_indices[valid] = source_to_canonical[source_indices[valid]]
+        catalog_signatures = tuple(catalog)
+    else:
+        catalog: list[object] = []
+        catalog_by_signature: dict[object, int] = {}
+        signature_indices = np.full(count, -1, dtype=np.int32)
+        calibration_cache: dict[int, object] = {}
+        for index, calibration in enumerate(value.calibrations):
+            if calibration is None:
+                continue
+            key = id(calibration)
+            signature = calibration_cache.get(key)
+            if signature is None:
+                signature = _calibration_signature(calibration)
+                calibration_cache[key] = signature
+            catalog_index = catalog_by_signature.get(signature)
+            if catalog_index is None:
+                catalog_index = len(catalog)
+                catalog_by_signature[signature] = catalog_index
+                catalog.append(signature)
+            signature_indices[index] = catalog_index
+        catalog_signatures = tuple(catalog)
     return (
-        tuple(
-            (
-                pose.convention,
-                pose.rotation.tobytes(order="C"),
-                pose.translation.tobytes(order="C"),
-            )
-            for pose in value.poses
+        (
+            count,
+            "opencv_cam2world",
+            rotations.tobytes(order="C"),
+            translations.tobytes(order="C"),
         ),
         (
             value.frame.world_frame,
@@ -65,9 +127,94 @@ def _semantic_signature(value: PosedViewSet) -> object:
         ),
         value.names,
         value.timestamps,
-        tuple(image is None for image in value.images),
-        tuple(_calibration_signature(item) for item in value.calibrations),
+        bytes(image is not None for image in value.images),
+        (catalog_signatures, signature_indices.tobytes(order="C")),
     )
+
+
+def _matches_semantic_signature(value: PosedViewSet, signature: object) -> bool:
+    """Compare a pose set with its exact snapshot using bounded scratch memory."""
+
+    if not isinstance(signature, tuple) or len(signature) != 6:
+        return False
+    (
+        pose_signature,
+        frame_signature,
+        names,
+        timestamps,
+        image_presence,
+        calibration_signature,
+    ) = signature
+    if not isinstance(pose_signature, tuple) or len(pose_signature) != 4:
+        return False
+    expected_count, expected_convention, rotation_bytes, translation_bytes = (
+        pose_signature
+    )
+    count = len(value.poses)
+    if (
+        expected_count != count
+        or len(rotation_bytes) != count * 9 * np.dtype(np.float64).itemsize
+        or len(translation_bytes) != count * 3 * np.dtype(np.float64).itemsize
+        or frame_signature
+        != (
+            value.frame.world_frame,
+            value.frame.scale,
+            value.frame.scale_provenance,
+        )
+        or names != value.names
+        or timestamps != value.timestamps
+        or len(image_presence) != count
+        or not isinstance(calibration_signature, tuple)
+        or len(calibration_signature) != 2
+    ):
+        return False
+
+    calibration_catalog, calibration_index_bytes = calibration_signature
+    if len(calibration_index_bytes) != count * np.dtype(np.int32).itemsize:
+        return False
+    expected_calibration_indices = np.frombuffer(
+        calibration_index_bytes,
+        dtype=np.int32,
+    )
+    calibration_index_by_signature = {
+        item: index for index, item in enumerate(calibration_catalog)
+    }
+    rotation_view = memoryview(rotation_bytes)
+    translation_view = memoryview(translation_bytes)
+    rotation_stride = 9 * np.dtype(np.float64).itemsize
+    translation_stride = 3 * np.dtype(np.float64).itemsize
+    calibration_cache: dict[int, object] = {}
+    for index, pose in enumerate(value.poses):
+        if pose.convention != expected_convention:
+            return False
+        rotation_start = index * rotation_stride
+        translation_start = index * translation_stride
+        if pose.rotation.tobytes(order="C") != rotation_view[
+            rotation_start : rotation_start + rotation_stride
+        ]:
+            return False
+        if pose.translation.tobytes(order="C") != translation_view[
+            translation_start : translation_start + translation_stride
+        ]:
+            return False
+        if (value.images[index] is not None) != bool(image_presence[index]):
+            return False
+        calibration = value.calibrations[index]
+        if calibration is None:
+            current_calibration_index = -1
+        else:
+            key = id(calibration)
+            current_calibration_signature = calibration_cache.get(key)
+            if current_calibration_signature is None:
+                current_calibration_signature = _calibration_signature(calibration)
+                calibration_cache[key] = current_calibration_signature
+            current_calibration_index = calibration_index_by_signature.get(
+                current_calibration_signature,
+                -2,
+            )
+        if current_calibration_index != int(expected_calibration_indices[index]):
+            return False
+    return True
 
 
 def posed_views_from_storage(
@@ -88,13 +235,10 @@ def posed_views_from_storage(
     normalized = convert_coordinates(storage, _CANONICAL_COORDINATES)
     quaternions = np.asarray(normalized.quaternions)
     translations = np.asarray(normalized.translations)
-    poses = tuple(
-        SE3.from_quaternion_wxyz(
-            quaternion,
-            translation,
-            convention="opencv_cam2world",
-        )
-        for quaternion, translation in zip(quaternions, translations, strict=True)
+    poses, rotations, translations = _se3_batch_from_quaternion_wxyz(
+        quaternions,
+        translations,
+        convention="opencv_cam2world",
     )
     count = len(poses)
     raw_names = tuple(normalized.names)
@@ -111,14 +255,19 @@ def posed_views_from_storage(
     )
     camera_indices = np.asarray(normalized.camera_indices)
     cameras = tuple(normalized.cameras)
-    calibrations: list[Calibration | None] = []
-    for index in range(count):
-        camera_index = int(camera_indices[index]) if camera_indices.shape == (count,) else -1
-        calibrations.append(
-            Calibration.from_intrinsics(cameras[camera_index])
-            if 0 <= camera_index < len(cameras)
-            else None
+    calibration_catalog = tuple(
+        Calibration.from_intrinsics(camera) for camera in cameras
+    )
+    calibrations = tuple(
+        calibration_catalog[camera_index]
+        if 0 <= camera_index < len(calibration_catalog)
+        else None
+        for camera_index in (
+            camera_indices.astype(np.intp, copy=False)
+            if camera_indices.shape == (count,)
+            else np.full(count, -1, dtype=np.intp)
         )
+    )
     result = PosedViewSet(
         poses=poses,
         frame=FrameMeta(
@@ -129,11 +278,32 @@ def posed_views_from_storage(
         names=names,
         timestamps=timestamps,
         images=images,
-        calibrations=tuple(calibrations),
+        calibrations=calibrations,
     )
     object.__setattr__(result, "_source_storage", storage)
     object.__setattr__(result, "_source_profile", source_profile)
-    object.__setattr__(result, "_source_signature", _semantic_signature(result))
+    aligned_camera_indices = (
+        camera_indices
+        if camera_indices.shape == (count,)
+        else np.full(count, -1, dtype=np.int32)
+    )
+    signature_indices = np.where(
+        (aligned_camera_indices >= 0)
+        & (aligned_camera_indices < len(calibration_catalog)),
+        aligned_camera_indices,
+        -1,
+    ).astype(np.int32, copy=False)
+    object.__setattr__(
+        result,
+        "_source_signature",
+        _semantic_signature(
+            result,
+            rotations=rotations,
+            translations=translations,
+            calibration_catalog=calibration_catalog,
+            calibration_indices=signature_indices,
+        ),
+    )
     return result
 
 
@@ -201,7 +371,7 @@ def posed_view_storage(value: object, *, profile: str) -> object:
     if (
         value._source_profile == profile
         and value._source_storage is not None
-        and value._source_signature == _semantic_signature(value)
+        and _matches_semantic_signature(value, value._source_signature)
     ):
         return value._source_storage
     if value.frame.world_frame != "arbitrary":
