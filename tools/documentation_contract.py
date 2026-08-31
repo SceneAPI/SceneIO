@@ -381,13 +381,16 @@ def render_payload_kind_rows(
     return "\n".join(rows)
 
 
-def render_format_memory_rows(
+def render_format_memory_matrix(
     capabilities: Mapping[str, CodecCapabilities],
     _native_features: Mapping[str, NativeFeatureCapabilities],
 ) -> str:
-    """Render one built-in format per row with its canonical loaded value."""
+    """Render the complete format-to-memory table as one Markdown block."""
 
-    rows = []
+    rows = [
+        "| Format ID | In-memory data element | Generic `sceneio.read()` value |",
+        "|---|---|---|",
+    ]
     for format_id in CANONICAL_BUILTIN_IDS:
         capability = capabilities[format_id]
         try:
@@ -417,7 +420,7 @@ _RENDERERS: Mapping[str, Renderer] = {
     "public_contract_summary": render_public_contract_summary,
     "public_type_rows": render_public_type_rows,
     "payload_kind_rows": render_payload_kind_rows,
-    "format_memory_rows": render_format_memory_rows,
+    "format_memory_matrix": render_format_memory_matrix,
 }
 
 

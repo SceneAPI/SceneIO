@@ -300,22 +300,21 @@ def test_generated_architecture_facts_match_ownership_manifest():
 
 
 def test_readme_format_memory_matrix_covers_every_builtin_once():
-    expected = documentation_contract.render_format_memory_rows(
+    expected = documentation_contract.render_format_memory_matrix(
         sceneio.capabilities(), sceneio.native_features()
     )
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     match = re.search(
-        r"<!-- sceneio-format-memory-rows:start -->\n"
+        r"<!-- sceneio-format-memory-matrix:start -->\n"
         r"(.*?)\n"
-        r"<!-- sceneio-format-memory-rows:end -->",
+        r"<!-- sceneio-format-memory-matrix:end -->",
         readme,
         re.DOTALL,
     )
     assert match is not None
     assert match.group(1) == expected
-    assert [line.split("`", maxsplit=2)[1] for line in expected.splitlines()] == list(
-        CANONICAL_BUILTIN_IDS
-    )
+    rows = expected.splitlines()[2:]
+    assert [line.split("`", maxsplit=2)[1] for line in rows] == list(CANONICAL_BUILTIN_IDS)
 
 
 def test_release_version_surfaces_agree():

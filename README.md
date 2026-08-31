@@ -99,9 +99,9 @@ Explicit typed adapters are additive: PFM, PNG, and EXR can also produce
 or `PanopticMap`. Those interpretations require their typed APIs and do not
 silently change generic reads.
 
+<!-- sceneio-format-memory-matrix:start -->
 | Format ID | In-memory data element | Generic `sceneio.read()` value |
 |---|---|---|
-<!-- sceneio-format-memory-rows:start -->
 | `pfm` | `depth_map` — Depth map | `numpy.ndarray` |
 | `colmap_sparse` | `sparse_model` — Sparse model | `sceneio.Reconstruction` |
 | `gaussian_ply` | `splat` — Gaussian splat | `sceneio.GaussianCloud` |
@@ -176,7 +176,7 @@ silently change generic reads.
 | `parquet` | `numeric_table` — Numeric table | `sceneio.TensorDict` |
 | `arrow_ipc` | `numeric_table` — Numeric table | `sceneio.TensorDict` |
 | `openvdb` | `sparse_volume` — Sparse volume | `sceneio.TensorDict` |
-<!-- sceneio-format-memory-rows:end -->
+<!-- sceneio-format-memory-matrix:end -->
 
 The root API is the public I/O surface:
 
